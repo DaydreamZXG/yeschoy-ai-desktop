@@ -568,6 +568,33 @@
         "The apply control remains disabled and the projection reports networkAttempted, configurationRead, configurationWritten, and credentialAccessed as false for every tool and line selection.",
         "RU-001 local discovery and RU-002 account and billing readiness behavior remain available and unchanged, and no NewAPI, server, Nginx, DNS, database, updater, or production resource is modified."
       ]
+    },
+    {
+      "id": "REQ-032",
+      "statement": "RU-005 preserves all prior truthful client boundaries and completes a cohesive client-side V1 candidate with beginner guidance, bounded two-line connectivity evidence, settings and security truth, complete multilingual states, candidate bundle preparation, and an actionable future NewAPI handoff without claiming production or backend readiness.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-043",
+        "E-CODE-024",
+        "E-PROP-007",
+        "E-EXT-029",
+        "E-EXT-030",
+        "E-EXT-031",
+        "E-EXT-032"
+      ],
+      "acceptance": [
+        "The default destination gives a beginner one ordered path through local tool discovery, line choice and preview, account integration truth, and diagnostics, with no API, Base URL, configuration-file, or secret knowledge required.",
+        "The account and billing destination still displays no fabricated login, balance, usage, model ID, official price, actual price, or recharge result, and configuration apply remains disabled for every tool and line.",
+        "Connectivity runs only after an explicit user action, checks exactly yeschoy.com:443 and api.yeschoy.com:443 through a closed local query, returns only bounded DNS and TCP outcomes with latency and correlation, sends no HTTP or model request, and never accesses or uploads a credential, cookie, prompt, response, configuration, complete local path, or raw network error.",
+        "The diagnostic UI distinguishes default, processing, partial success, complete failure, stale result, invalid projection, and recovery, and explicitly says TCP reachability does not prove API, account, model, or billing health.",
+        "Settings makes language selection, no-retained-backup policy, secret boundary, inactive telemetry upload, inactive updater, candidate version, and release gates visible without exposing an action that exceeds current authority.",
+        "A candidate-only Tauri bundle overlay exists for local Windows and macOS packaging while automatic updater artifacts remain disabled; the release checklist requires native-platform builds, macOS Developer ID signing and notarization for direct public distribution, and an explicit unsigned-Windows beta warning until a real signing path exists.",
+        "All four supported languages contain the candidate navigation and page copy, the UI remains usable at 320 CSS pixels, and keyboard focus remains visible.",
+        "The future NewAPI handoff names the exact interfaces needed for authorization, bootstrap, account, usage, models, server-projected official-versus-actual prices, tool keys, telemetry, compatibility catalog, and update separation while recording that none is deployed or modified by RU-005."
+      ]
     }
   ]
 }

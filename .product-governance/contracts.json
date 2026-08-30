@@ -666,6 +666,178 @@
         "E-PROP-005"
       ],
       "status": "specified"
+    },
+    {
+      "id": "line-connectivity-check@v1",
+      "kind": "query",
+      "owner": "diagnostics",
+      "consumers": [
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/line-connectivity-check@v1",
+      "authorization": "Callable only by the bundled local desktop webview after an explicit user action. It may resolve and open TCP port 443 only for the two compiled first-party hosts and grants no HTTP, model, account, credential, configuration, filesystem-write, telemetry, updater, DNS-change, or server-management authority.",
+      "idempotency": "The query is read-only and creates no retained record. Repeating it produces a new point-in-time observation; the UI accepts only the newest requestId.",
+      "compatibility": "Version 1 always checks exactly two compiled line hosts and returns the closed outcome vocabulary. Adding a host, protocol request, payload, redirect, secret, repair action, or outcome requires a new contract version and accepted decision.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One explicit bounded connectivity request.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Caller-generated correlation identifier used to reject stale UI results.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          }
+        },
+        "required": [
+          "requestId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Point-in-time DNS and TCP-443 evidence for both approved 野菜API line hosts.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "The unchanged caller request identifier.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "startedAtEpochMs": {
+            "type": "integer",
+            "description": "Local start timestamp in Unix milliseconds.",
+            "minimum": 0
+          },
+          "completedAtEpochMs": {
+            "type": "integer",
+            "description": "Local completion timestamp in Unix milliseconds.",
+            "minimum": 0
+          },
+          "lines": {
+            "type": "array",
+            "description": "Exactly one observation for each approved line in stable product order.",
+            "minItems": 2,
+            "maxItems": 2,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "description": "One bounded line-host observation.",
+              "properties": {
+                "lineId": {
+                  "type": "string",
+                  "description": "Stable product line identifier.",
+                  "enum": [
+                    "mainland_optimized",
+                    "global_accelerated"
+                  ]
+                },
+                "displayName": {
+                  "type": "string",
+                  "description": "Compiled beginner-readable Chinese line name; localized display is owned by the client.",
+                  "enum": [
+                    "大陆优化",
+                    "全球加速"
+                  ]
+                },
+                "rootUrl": {
+                  "type": "string",
+                  "description": "Compiled HTTPS root shown for identification only; no HTTP request is made.",
+                  "enum": [
+                    "https://yeschoy.com",
+                    "https://api.yeschoy.com"
+                  ]
+                },
+                "host": {
+                  "type": "string",
+                  "description": "Compiled first-party hostname used for the bounded resolver and socket operation.",
+                  "enum": [
+                    "yeschoy.com",
+                    "api.yeschoy.com"
+                  ]
+                },
+                "port": {
+                  "type": "integer",
+                  "description": "The only permitted TCP destination port.",
+                  "enum": [
+                    443
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "description": "Bounded DNS and TCP outcome with no API-health inference.",
+                  "enum": [
+                    "reachable",
+                    "dns_failed",
+                    "connect_failed",
+                    "timed_out"
+                  ]
+                },
+                "latencyMs": {
+                  "type": "integer",
+                  "description": "Elapsed local wall-clock milliseconds for this bounded observation; it is not a model-response speed claim.",
+                  "minimum": 0,
+                  "maximum": 60000
+                },
+                "reasonCode": {
+                  "type": "string",
+                  "description": "Stable safe presentation reason that contains no raw resolver or socket error.",
+                  "enum": [
+                    "tcp_443_reachable",
+                    "dns_resolution_failed",
+                    "tcp_connection_failed",
+                    "connectivity_check_timed_out"
+                  ]
+                }
+              },
+              "required": [
+                "lineId",
+                "displayName",
+                "rootUrl",
+                "host",
+                "port",
+                "status",
+                "latencyMs",
+                "reasonCode"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "requestId",
+          "startedAtEpochMs",
+          "completedAtEpochMs",
+          "lines"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal"
+      ],
+      "observability": {
+        "correlation": "The requestId is returned unchanged and may be shown locally in advanced details.",
+        "audit": "RU-005 creates no retained diagnostic record and uploads no event.",
+        "metrics": "Latency and outcome exist only in the current in-memory page state; no metric, hostname result, address, or error text is uploaded or persisted."
+      },
+      "errorSemantics": [
+        "An invalid requestId rejects the whole query before any DNS or TCP operation.",
+        "The implementation uses only the two compiled host and port pairs and accepts no caller-provided URL, host, port, path, header, body, credential, proxy, or redirect.",
+        "DNS resolution failure, TCP connection failure, and timeout remain distinct safe reason codes; raw resolver and socket errors and resolved addresses are never returned.",
+        "A reachable result proves only that a TCP connection to port 443 completed at that moment and must not be presented as proof of TLS, HTTP, API, account, model, price, billing, or inference health.",
+        "One line failure does not suppress the other line result, and a stale request completion cannot replace the newest visible result."
+      ],
+      "requirementRefs": [
+        "REQ-032"
+      ],
+      "evidenceRefs": [
+        "E-USER-043",
+        "E-PROP-007",
+        "E-CODE-024"
+      ],
+      "status": "specified"
     }
   ]
 }

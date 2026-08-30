@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU005-AS-05",
+  "assertion": "All four locale files have structurally identical candidate copy and the responsive stylesheet preserves usable navigation, actions, and cards down to 320 CSS pixels with visible keyboard focus.",
+  "testSelector": "tests/work_packages/ru005/test_acceptance.py::test_candidate_locales_and_responsive_states_are_complete",
+  "acceptanceCommandId": "ru005-as-05-locales",
+  "runId": "RU-005/WP-RU005-CLIENT-V1-CANDIDATE@2026-08-30T10:06:04.377178+00:00",
+  "packageId": "WP-RU005-CLIENT-V1-CANDIDATE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru005/test_acceptance.py::test_candidate_locales_and_responsive_states_are_complete",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:a2bfd7a2a8fdc4b2eba608bc9b152d7073a1e942685f3f969742d7b85d76fb4a",
+    "machineReportSha256": "sha256:962e346ede7aff04f328aec7b74337569705e9e33caa352ce14ae23ee23a9044",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:89337c0775aac7526dad91a9f42479151f5e9b1ad448006e7d306693573c95ac",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:f62cf25bce9deffcfbc8c499180f3e5f261546a447bf1b3f7870add8a163cf4b",
+  "releaseUnitId": "RU-005",
+  "releaseUnitHash": "sha256:328984152b8550b884550578b82a06855eb069cb350a7f29ec204266d604404a"
+}

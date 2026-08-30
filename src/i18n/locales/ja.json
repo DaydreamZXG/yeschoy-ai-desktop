@@ -3411,5 +3411,159 @@
     "applyBlocked": "すべての安全条件が整った後に公開",
     "openTools": "先にローカルツールを確認",
     "openAccount": "アカウント接続状態を確認"
+  },
+  "yeschoyCandidate": {
+    "navigationLabel": "クライアントの主要画面",
+    "edition": "公式デスクトップアシスタント · V1候補版",
+    "nav": {
+      "home": "はじめる",
+      "account": "アカウント",
+      "setup": "かんたん設定",
+      "diagnostics": "診断",
+      "tools": "ローカルツール",
+      "settings": "設定"
+    },
+    "home": {
+      "eyebrow": "初めてなら、ここから",
+      "title": "APIの知識は不要。4つの手順で正しい場所へ。",
+      "description": "ツール、回線、安全境界をわかりやすく説明します。ローカルでできることは今すぐ実行し、アカウント、モデル、価格は偽の値を使わずサーバーを待ちます。",
+      "stage": "クライアント V1候補版 · v{{version}}",
+      "scopeLabel": "現在のクライアント範囲",
+      "toolsCount": "種類の固定ツール",
+      "linesCount": "本の野菜API回線",
+      "writesCount": "回の設定書き込み",
+      "start": "ローカルツールの確認から始める",
+      "startNote": "Key、Base URL、モデル名、設定ファイルの知識は不要です",
+      "journeyEyebrow": "利用の流れ",
+      "journeyTitle": "各手順で何が起きるかを明確に",
+      "securityEntry": "安全性とリリース状況を見る",
+      "backendRequired": "サーバー待ち",
+      "clientReady": "クライアントで利用可能",
+      "steps": {
+        "tools": {
+          "title": "インストール済みツールを探す",
+          "body": "固定のバージョンコマンドだけで Claude Code、Codex、OpenCode、Pi、DSH を確認します。",
+          "action": "ローカルツールを確認"
+        },
+        "setup": {
+          "title": "ツールと回線を選ぶ",
+          "body": "中国本土最適化またはグローバル高速回線を、設定の読み書きなしでプレビューします。",
+          "action": "設定プレビューを開く"
+        },
+        "diagnostics": {
+          "title": "問題があれば先に回線確認",
+          "body": "クリック後にだけ、固定2ドメインの名前解決と443番ポートをAPI要求なしで確認します。",
+          "action": "回線を確認"
+        },
+        "account": {
+          "title": "ログイン後に残高・使用量・価格を表示",
+          "body": "画面は準備済みですが、NewAPIのファーストパーティ端末認証と価格投影を待っています。",
+          "action": "連携状況を見る"
+        }
+      },
+      "truthTitle": "候補版は設定成功を装いません",
+      "truthBody": "モデルIDは実アカウントのカタログから、価格はNewAPI管理の公式基準とユーザー実価格から取得し、将来のKeyはOSの安全な資格情報層だけに置きます。"
+    }
+  },
+  "yeschoyDiagnostics": {
+    "eyebrow": "読み取り専用の回線診断",
+    "title": "まず、このPCから2回線に届くか確認します。",
+    "description": "名前解決や接続の問題と、さらにAPI調査が必要な問題を分ける狭いネットワーク検査です。モデル呼び出しやアカウント利用はありません。",
+    "scopeTitle": "この検査が行う3つのこと",
+    "scopeDns": "yeschoy.com と api.yeschoy.com を名前解決",
+    "scopeTcp": "固定2ホストのTCP 443番ポートへ接続",
+    "scopeNoApi": "HTTP、API、モデル、課金要求は送信しない",
+    "checking": "2回線を確認中…",
+    "retry": "2回線をもう一度確認",
+    "start": "2回線を確認",
+    "consent": "クリック後のみ通信し、Key、Cookie、設定、プロンプト、応答内容は送りません。",
+    "openTools": "ローカルツールを確認",
+    "openSetup": "設定プレビューを見る",
+    "resultsEyebrow": "このPC · 現在の結果",
+    "resultsTitle": "2回線を個別に確認",
+    "processing": "名前解決と443番ポート接続を実行中…",
+    "checkedAt": "{{time}} に完了",
+    "invalidTitle": "結果が不完全でした",
+    "invalidBody": "古い値や推測値では補いません。同じ安全な検査を再実行できます。",
+    "status": {
+      "waiting": "未確認",
+      "checking": "確認中",
+      "reachable": "443番ポート到達可",
+      "dns_failed": "名前解決失敗",
+      "connect_failed": "接続未成立",
+      "timed_out": "タイムアウト"
+    },
+    "elapsed": "所要時間",
+    "reason": {
+      "tcp_443_reachable": "この時点でTCP接続が成立しました。",
+      "dns_resolution_failed": "固定ホスト名をネットワークアドレスに解決できませんでした。",
+      "tcp_connection_failed": "ホストは処理されましたがTCP接続は成立しませんでした。",
+      "connectivity_check_timed_out": "制限時間内に完了せず、待機を終了しました。"
+    },
+    "noResult": "実行すると、このPCの現在の結果を表示します",
+    "disclaimerTitle": "ポート到達はAPI正常の証明ではありません",
+    "disclaimerBody": "TLS、HTTP、アカウント、モデル、価格、残高、推論の正常性は証明せず、モデル速度比較にも使いません。",
+    "advancedDetails": "検査境界を見る",
+    "requestId": "検査ID",
+    "retention": "結果の保持",
+    "notRetained": "現在の画面メモリのみ。履歴は保持しません"
+  },
+  "yeschoySettings": {
+    "eyebrow": "設定と安全境界",
+    "title": "できること、まだ開かないことを一か所で。",
+    "description": "隠れた高度なスイッチはありません。候補版は検証済みのローカル機能だけを許可し、サーバー、資格情報、設定書き込み、公開条件を明示します。",
+    "versionLabel": "現在のクライアント",
+    "candidateStage": "クライアント候補版 · 公開版ではありません",
+    "languageTitle": "表示言語",
+    "languageNote": "言語設定はこのPCだけに保存し、アカウントには同期しません。",
+    "securityEyebrow": "ローカルとプライバシー",
+    "securityTitle": "既定で最小権限",
+    "localPolicy": "候補版の固定ポリシー",
+    "security": {
+      "apiKeys": {
+        "title": "API Key",
+        "body": "現在は取得、読み取り、保存をしません。将来はOS資格情報保管庫とツール固有ヘルパーが必須です。",
+        "state": "未連携"
+      },
+      "configFiles": {
+        "title": "ツール設定ファイル",
+        "body": "予定フィールドだけを表示し、既存内容の読み取り、書き込み、修復、削除は行いません。",
+        "state": "プレビューのみ"
+      },
+      "backupHistory": {
+        "title": "設定バックアップ",
+        "body": "履歴は保持しません。将来の書き込みでも処理中の暗号化一時ロールバックだけを使い、成功後に削除します。",
+        "state": "履歴なし"
+      },
+      "telemetry": {
+        "title": "エラーと利用データの送信",
+        "body": "収集と削除の仕組みを検証するまで、テレメトリ、クラッシュ、ログ、診断結果を自動送信しません。",
+        "state": "無効"
+      }
+    },
+    "releaseEyebrow": "Windows と macOS",
+    "releaseTitle": "リリース準備はリリース成功ではありません",
+    "notPublicRelease": "公開条件は未達",
+    "release": {
+      "macos": {
+        "title": "macOS 直接配布",
+        "body": "候補ビルド入口は準備済み。公開前にDeveloper ID署名、強化ランタイム、公証、実機確認が必要です。",
+        "state": "署名と公証の証拠待ち"
+      },
+      "windows": {
+        "title": "Windows テスト配布",
+        "body": "候補インストーラーは生成可能です。信頼された署名がない間は明示したテスト版のみで、OSの評価機能に止められる場合があります。",
+        "state": "コード署名の証拠なし"
+      },
+      "updater": {
+        "title": "自動更新",
+        "body": "更新成果物と実行時アップデーターは無効です。秘密鍵保管、公開鍵固定、不正署名テスト後にのみ有効化します。",
+        "state": "無効"
+      }
+    },
+    "backendTitle": "NewAPI は変更していません",
+    "backendBody": "ログイン、残高、使用量、モデル、価格、チャージ、ツールKeyには将来の狭い /api/desktop/v1 が必要です。Web Cookieや汎用Token CRUDで代用しません。",
+    "openAccount": "アカウント画面を見る",
+    "openDiagnostics": "回線診断を開く"
   }
 }

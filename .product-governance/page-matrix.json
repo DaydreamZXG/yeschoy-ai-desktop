@@ -374,6 +374,178 @@
           "correlation": "No operationId or receipt exists."
         }
       }
+    },
+    {
+      "id": "PROFILE-CLIENT-CANDIDATE-STATIC",
+      "states": {
+        "default": {
+          "behavior": "Show the ordered beginner journey or client security and release truth with clear links to the available local destinations.",
+          "visibleTruth": "The client candidate is usable for local discovery, preview, settings, and explicit diagnostics while backend-dependent and release-signing capabilities remain unavailable.",
+          "prohibitedClaims": ["Do not call the client production-ready, logged in, configured, signed, notarized, auto-updating, or connected to account data."],
+          "allowedActions": ["switch_destination", "change_language", "view_security_boundary"],
+          "freshness": "Candidate capabilities and blockers are compiled into the current application version and have no remote freshness claim.",
+          "recovery": "The user can move to another local destination or restart the application without restoring data.",
+          "correlation": "Static guidance creates no remote or persistent operation identity."
+        },
+        "loading": {
+          "behavior": "Reserve a skeleton only for a future signed remote readiness projection and keep all unavailable capabilities disabled.",
+          "visibleTruth": "RU-005 does not load account, model, price, update, or compatibility data on these pages.",
+          "prohibitedClaims": ["Do not show cached or sample remote facts while a future request is unresolved."],
+          "allowedActions": [],
+          "freshness": "A future newest request identity would own this state.",
+          "recovery": "A future failure returns to a truthful unavailable state.",
+          "correlation": "No request identity exists in RU-005 static pages."
+        },
+        "empty": {
+          "behavior": "Explain that no account, model, price, signed-update, or release-signing evidence is available rather than filling the page with default values.",
+          "visibleTruth": "Remote and release-security facts are absent, while the local candidate features remain separately accessible.",
+          "prohibitedClaims": ["Do not render absence as zero balance, free pricing, no updates, or successful signing."],
+          "allowedActions": ["switch_destination", "view_backend_handoff"],
+          "freshness": "No remote timestamp exists.",
+          "recovery": "A later frozen integration may replace the unavailable sections.",
+          "correlation": "No operation is created."
+        },
+        "partial": {
+          "behavior": "Show each ready local feature and each blocked remote or release feature independently.",
+          "visibleTruth": "Only named client-side capabilities are implemented; every backend and signing gate remains explicit.",
+          "prohibitedClaims": ["Do not promote one completed local feature into full V1 or production readiness."],
+          "allowedActions": ["switch_destination", "change_language", "view_security_boundary"],
+          "freshness": "Each state is tied to the current candidate version.",
+          "recovery": "Use the corresponding destination; blocked capabilities require a later release.",
+          "correlation": "Static state has no request identity."
+        },
+        "error": {
+          "behavior": "Show a safe client rendering error with no backend, credential, configuration, or update inference.",
+          "visibleTruth": "The page did not render its local projection.",
+          "prohibitedClaims": ["Do not attribute an unclassified client error to the network, account, API, or configuration."],
+          "allowedActions": ["restart_client"],
+          "freshness": "No failed projection becomes current.",
+          "recovery": "Restart the client; no data rollback is required because static pages write no product data.",
+          "correlation": "Only a safe local error class may be shown."
+        },
+        "expired": {
+          "behavior": "Mark any future remote readiness or update evidence stale and retain only compiled candidate facts.",
+          "visibleTruth": "No stale remote result is current.",
+          "prohibitedClaims": ["Do not keep an expired update, price, model, or account state looking live."],
+          "allowedActions": ["view_current_candidate_state"],
+          "freshness": "Compiled facts remain bound to the app version; future remote facts require their own expiry.",
+          "recovery": "Return to current local candidate truth.",
+          "correlation": "Expired remote identities are not present in RU-005."
+        },
+        "conflict": {
+          "behavior": "Prefer the stricter blocked state if implementation, backend, signing, or update evidence disagrees.",
+          "visibleTruth": "The candidate cannot prove the disputed capability.",
+          "prohibitedClaims": ["Do not choose a favorable readiness or release claim from conflicting evidence."],
+          "allowedActions": ["view_security_boundary", "view_backend_handoff"],
+          "freshness": "Conflict persists until a later accepted decision and verified release unit.",
+          "recovery": "Keep the capability disabled and update the governed evidence before release.",
+          "correlation": "No secret or raw signing material is displayed."
+        },
+        "recovery": {
+          "behavior": "Route the user to the exact local feature or explain which later backend or signing gate is required.",
+          "visibleTruth": "Recovery has not completed until the named capability has verified evidence.",
+          "prohibitedClaims": ["Do not offer force-enable, unsigned auto-update, plaintext-key, retained-backup, or fake-login shortcuts."],
+          "allowedActions": ["switch_destination", "restart_client"],
+          "freshness": "Guidance is fixed to the current candidate version.",
+          "recovery": "Use only an available local destination or wait for a later verified release.",
+          "correlation": "No persistent recovery record exists."
+        },
+        "processing": {
+          "behavior": "Show processing only when the user has started a local scan or bounded connectivity check on its owning page.",
+          "visibleTruth": "Static home and settings pages do not perform background network, update, telemetry, or configuration work.",
+          "prohibitedClaims": ["Do not animate login, billing, update, signing, configuration, or telemetry as processing."],
+          "allowedActions": [],
+          "freshness": "No static-page processing timestamp exists.",
+          "recovery": "Return to the default static projection.",
+          "correlation": "No operation identity is created."
+        }
+      }
+    },
+    {
+      "id": "PROFILE-READONLY-LINE-CONNECTIVITY",
+      "states": {
+        "default": {
+          "behavior": "Show both approved line hosts, the DNS and TCP-443 scope, and one explicit start action with no prior result.",
+          "visibleTruth": "No connectivity operation has run and no API, account, model, price, or inference health is known.",
+          "prohibitedClaims": ["Do not run automatically or show a sample latency or health result."],
+          "allowedActions": ["start_line_connectivity_check", "switch_to_local_tools"],
+          "freshness": "No timestamp exists before the first explicit check.",
+          "recovery": "The user may start the bounded check or leave without changing the machine.",
+          "correlation": "A requestId is created only after the user starts the check."
+        },
+        "loading": {
+          "behavior": "Keep both line cards visible, mark them checking, and disable duplicate submission for the active request.",
+          "visibleTruth": "Only DNS resolution and TCP port 443 connection attempts are in progress.",
+          "prohibitedClaims": ["Do not imply that TLS, HTTP, login, model calls, prices, or billing are being tested."],
+          "allowedActions": [],
+          "freshness": "Only the newest requestId may complete the page.",
+          "recovery": "Timeout and safe failures become per-line results.",
+          "correlation": "Both checks belong to one active requestId."
+        },
+        "empty": {
+          "behavior": "Show both lines as unreachable with their bounded safe failure classes and no guessed cause.",
+          "visibleTruth": "Neither host completed a TCP-443 connection in the newest check.",
+          "prohibitedClaims": ["Do not declare either server down or recommend changing DNS, proxy, firewall, or system settings from this evidence alone."],
+          "allowedActions": ["retry_line_connectivity_check", "switch_to_local_tools"],
+          "freshness": "Show the newest completion time.",
+          "recovery": "Retry creates a new requestId; external network changes remain the user's decision.",
+          "correlation": "Safe reason codes and requestId are visible; raw errors and addresses are absent."
+        },
+        "partial": {
+          "behavior": "Show each line outcome independently when one connects and the other fails.",
+          "visibleTruth": "Only the named host completed TCP-443 at the recorded moment.",
+          "prohibitedClaims": ["Do not turn TCP reachability into an API or performance recommendation."],
+          "allowedActions": ["retry_line_connectivity_check", "open_configuration_preview"],
+          "freshness": "Both outcomes share one newest completion time.",
+          "recovery": "The user may retry or preview either line without a configuration write.",
+          "correlation": "Both outcomes belong to one requestId."
+        },
+        "error": {
+          "behavior": "Reject an invalid or incomplete projection and clear prior results from the active state.",
+          "visibleTruth": "The bounded query did not return exactly one result for both approved lines.",
+          "prohibitedClaims": ["Do not reuse an older result as if it belonged to the failed request."],
+          "allowedActions": ["retry_line_connectivity_check"],
+          "freshness": "The failed request cannot become current.",
+          "recovery": "Retry starts a new bounded request.",
+          "correlation": "Only a safe local error class and failed requestId may be shown."
+        },
+        "expired": {
+          "behavior": "Discard an older completion if a newer connectivity request exists.",
+          "visibleTruth": "The superseded result is not current.",
+          "prohibitedClaims": ["Do not merge results or latencies from different requests."],
+          "allowedActions": ["view_current_connectivity_check"],
+          "freshness": "Only the newest started requestId can own the page.",
+          "recovery": "Continue waiting for or showing the newest request.",
+          "correlation": "Older identities remain transient only."
+        },
+        "conflict": {
+          "behavior": "Reject any response with duplicated, missing, swapped, or unapproved line identity.",
+          "visibleTruth": "The projection cannot prove it belongs to the fixed two-host catalog.",
+          "prohibitedClaims": ["Do not accept a caller-provided or redirected host as an approved line."],
+          "allowedActions": ["retry_line_connectivity_check"],
+          "freshness": "No conflicted projection becomes current.",
+          "recovery": "Run a new compiled-catalog check.",
+          "correlation": "No host, path, header, or credential supplied by content is executed."
+        },
+        "recovery": {
+          "behavior": "Explain whether the bounded evidence was DNS failure, TCP failure, timeout, partial reachability, or invalid projection and offer only retry or navigation.",
+          "visibleTruth": "The client has not repaired or modified the network, DNS, proxy, firewall, server, or API.",
+          "prohibitedClaims": ["Do not offer automatic network repair, configuration apply, credential entry, or production changes."],
+          "allowedActions": ["retry_line_connectivity_check", "switch_to_local_tools", "open_configuration_preview"],
+          "freshness": "Recovery always creates a new request identity.",
+          "recovery": "Retry the same two compiled host checks after the user independently changes conditions.",
+          "correlation": "No retained diagnostic history exists."
+        },
+        "processing": {
+          "behavior": "Run both fixed-host checks concurrently within bounded resolver and connection timeouts.",
+          "visibleTruth": "No HTTP request, API payload, credential, cookie, model prompt, configuration content, telemetry, or update check is processed.",
+          "prohibitedClaims": ["Do not display successful API or model health while only a socket connection is processing."],
+          "allowedActions": [],
+          "freshness": "Processing ends at the bounded timeout or a complete two-line projection.",
+          "recovery": "Each failure becomes a safe result without hiding the other line.",
+          "correlation": "One requestId owns both transient tasks."
+        }
+      }
     }
   ],
   "pages": [
@@ -391,6 +563,11 @@
       "purpose": "Show account, balance, usage, tool health, and the primary configuration action.",
       "trackScope": ["account", "billing", "tool-config", "diagnostics"],
       "dataOwners": ["account", "billing", "tool-config", "diagnostics"],
+      "entryConditions": [],
+      "actions": ["switch_destination", "change_language", "view_security_boundary"],
+      "exitRoutes": ["/account", "/configure-preview", "/tools", "/diagnostics", "/settings"],
+      "permissions": ["local deterministic candidate-readiness projection only"],
+      "stateProfileRef": "PROFILE-CLIENT-CANDIDATE-STATIC",
       "states": {}
     },
     {
@@ -463,6 +640,11 @@
       "purpose": "Collect bounded evidence, explain failures, and offer safe repair actions.",
       "trackScope": ["diagnostics", "tool-config", "security-update"],
       "dataOwners": ["diagnostics", "tool-config", "security-update"],
+      "entryConditions": [],
+      "actions": ["start_line_connectivity_check", "retry_line_connectivity_check", "view_current_connectivity_check", "switch_to_local_tools", "open_configuration_preview"],
+      "exitRoutes": ["/", "/tools", "/configure-preview"],
+      "permissions": ["DNS resolution and TCP port 443 connection for exactly yeschoy.com and api.yeschoy.com after explicit user action"],
+      "stateProfileRef": "PROFILE-READONLY-LINE-CONNECTIVITY",
       "states": {}
     },
     {
@@ -529,6 +711,11 @@
       "purpose": "Expose advanced technical details, recent operation results, update policy, and diagnostic export controls without retained configuration backups.",
       "trackScope": ["desktop-platform", "security-update", "tool-config"],
       "dataOwners": ["desktop-platform", "security-update", "tool-config"],
+      "entryConditions": [],
+      "actions": ["change_language", "switch_destination", "view_security_boundary", "view_backend_handoff"],
+      "exitRoutes": ["/", "/account", "/tools"],
+      "permissions": ["local language preference and read-only compiled security and release truth only"],
+      "stateProfileRef": "PROFILE-CLIENT-CANDIDATE-STATIC",
       "states": {}
     }
   ]

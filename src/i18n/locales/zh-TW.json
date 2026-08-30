@@ -3412,5 +3412,159 @@
     "applyBlocked": "等待安全條件齊備後開放",
     "openTools": "先檢查本機工具",
     "openAccount": "查看帳戶接入狀態"
+  },
+  "yeschoyCandidate": {
+    "navigationLabel": "客戶端主要頁面",
+    "edition": "官方桌面助手 · V1 候選版",
+    "nav": {
+      "home": "開始",
+      "account": "帳戶",
+      "setup": "一鍵設定",
+      "diagnostics": "診斷",
+      "tools": "本機工具",
+      "settings": "設定"
+    },
+    "home": {
+      "eyebrow": "第一次使用，從這裡開始",
+      "title": "不用懂 API，跟著四步就能走到正確位置。",
+      "description": "客戶端把工具、線路和安全邊界翻成白話。能在本機完成的現在就做；依賴伺服器的帳戶、模型和價格會明確等候，不用假資料湊數。",
+      "stage": "客戶端 V1 候選版 · v{{version}}",
+      "scopeLabel": "目前客戶端範圍",
+      "toolsCount": "款固定工具",
+      "linesCount": "條野菜線路",
+      "writesCount": "次設定寫入",
+      "start": "從檢查本機工具開始",
+      "startNote": "不需要 Key、Base URL、模型名稱或設定檔知識",
+      "journeyEyebrow": "你的使用路線",
+      "journeyTitle": "每一步都知道發生了什麼",
+      "securityEntry": "查看安全與發佈狀態",
+      "backendRequired": "等待伺服器",
+      "clientReady": "客戶端可用",
+      "steps": {
+        "tools": {
+          "title": "找到已安裝的工具",
+          "body": "只執行固定版本命令，識別 Claude Code、Codex、OpenCode、Pi 和 DSH。",
+          "action": "檢查本機工具"
+        },
+        "setup": {
+          "title": "選擇工具和線路",
+          "body": "預覽大陸最佳化或全球加速會對應到哪裡，不讀取、更不修改設定。",
+          "action": "開啟設定預覽"
+        },
+        "diagnostics": {
+          "title": "遇到問題先查線路",
+          "body": "你點擊後才檢查兩個固定網域的解析和 443 連接埠，不傳送 API 請求。",
+          "action": "檢查線路"
+        },
+        "account": {
+          "title": "登入後看餘額、用量與價格",
+          "body": "頁面已準備好，等 NewAPI 的第一方裝置授權和價格投影接入後再開放。",
+          "action": "查看接入狀態"
+        }
+      },
+      "truthTitle": "候選版不會假裝已設定成功",
+      "truthBody": "模型 ID 必須來自真實帳戶目錄；價格必須來自 NewAPI 維護的官網基準與目前使用者實際價；Key 未來只進入系統安全憑據層。"
+    }
+  },
+  "yeschoyDiagnostics": {
+    "eyebrow": "唯讀線路診斷",
+    "title": "先確認電腦能不能連到兩條線路。",
+    "description": "這是一項很窄的網路檢查，用來分清網域或連線問題，以及還需要繼續查 API 的問題。它不會呼叫模型，也不會使用你的帳戶。",
+    "scopeTitle": "本次檢查只做三件事",
+    "scopeDns": "解析 yeschoy.com 與 api.yeschoy.com",
+    "scopeTcp": "嘗試連線兩個網域的 TCP 443 連接埠",
+    "scopeNoApi": "不傳送 HTTP、API、模型或計費請求",
+    "checking": "正在檢查兩條線路…",
+    "retry": "重新檢查兩條線路",
+    "start": "檢查兩條線路",
+    "consent": "只有點擊後才連網；不帶 Key、Cookie、設定、提示詞或回應內容。",
+    "openTools": "檢查本機工具",
+    "openSetup": "查看設定預覽",
+    "resultsEyebrow": "目前電腦 · 即時結果",
+    "resultsTitle": "兩條線路分開看",
+    "processing": "正在解析並連線 443 連接埠…",
+    "checkedAt": "完成於 {{time}}",
+    "invalidTitle": "這次結果不完整",
+    "invalidBody": "沒有用舊結果或猜測值填補。可以重新執行同一項安全檢查。",
+    "status": {
+      "waiting": "尚未檢查",
+      "checking": "檢查中",
+      "reachable": "443 連接埠可達",
+      "dns_failed": "網域解析失敗",
+      "connect_failed": "連線未建立",
+      "timed_out": "檢查逾時"
+    },
+    "elapsed": "本次耗時",
+    "reason": {
+      "tcp_443_reachable": "電腦在這一刻建立了 TCP 連線。",
+      "dns_resolution_failed": "電腦未能把固定網域解析為網路位址。",
+      "tcp_connection_failed": "網域已處理，但 TCP 連線沒有建立。",
+      "connectivity_check_timed_out": "檢查在限定時間內沒有完成，已停止等待。"
+    },
+    "noResult": "執行後顯示這台電腦的即時結果",
+    "disclaimerTitle": "連接埠可達，不代表 API 一定正常",
+    "disclaimerBody": "這個結果不能證明 TLS、HTTP、帳戶、模型、價格、餘額或推理服務健康，也不用於比較模型速度。",
+    "advancedDetails": "查看本次檢查邊界",
+    "requestId": "檢查編號",
+    "retention": "結果保存",
+    "notRetained": "僅目前頁面記憶體，不保留歷史"
+  },
+  "yeschoySettings": {
+    "eyebrow": "設定與安全邊界",
+    "title": "哪些能做，哪些還沒開放，一處說清。",
+    "description": "這裡不藏進階開關。候選版只允許已驗證的本機能力，伺服器、密鑰、設定寫入和正式發佈條件都保持明確。",
+    "versionLabel": "目前客戶端",
+    "candidateStage": "客戶端候選版 · 不是正式發佈",
+    "languageTitle": "介面語言",
+    "languageNote": "語言偏好只保存在這台電腦；不會同步到帳戶。",
+    "securityEyebrow": "本機與隱私",
+    "securityTitle": "預設最小權限",
+    "localPolicy": "候選版固定策略",
+    "security": {
+      "apiKeys": {
+        "title": "API 密鑰",
+        "body": "目前不取得、不讀取、不保存。未來必須透過系統安全憑據層和工具原生助手提供。",
+        "state": "未接入"
+      },
+      "configFiles": {
+        "title": "工具設定檔",
+        "body": "目前只顯示計畫欄位，不讀取現有內容，也不寫入、修復或移除設定。",
+        "state": "只做預覽"
+      },
+      "backupHistory": {
+        "title": "設定備份",
+        "body": "不保留備份歷史。未來寫入只允許交易期間的加密臨時回滾快照，成功後刪除。",
+        "state": "不保留歷史"
+      },
+      "telemetry": {
+        "title": "錯誤與使用資料上傳",
+        "body": "候選版不自動上傳遙測、崩潰、日誌或診斷結果；接收與刪除機制未驗證前保持關閉。",
+        "state": "已關閉"
+      }
+    },
+    "releaseEyebrow": "Windows 與 macOS",
+    "releaseTitle": "發佈準備不是發佈成功",
+    "notPublicRelease": "正式發佈門檻未通過",
+    "release": {
+      "macos": {
+        "title": "macOS 直接分發",
+        "body": "候選構建入口已準備；公開分發前仍需 Developer ID 簽名、強化執行階段、公證和真機檢查。",
+        "state": "等待簽名與公證證據"
+      },
+      "windows": {
+        "title": "Windows 測試分發",
+        "body": "可以產生候選安裝包；沒有受信程式碼簽名時只可作為明確標示的測試包，可能遇到系統信譽攔截。",
+        "state": "目前無程式碼簽名證據"
+      },
+      "updater": {
+        "title": "自動更新",
+        "body": "更新包產生與執行階段更新器都未啟用。只有私鑰安全託管、公鑰固化和錯簽測試完成後才開放。",
+        "state": "已關閉"
+      }
+    },
+    "backendTitle": "NewAPI 目前沒有被改動",
+    "backendBody": "登入、餘額、用量、模型、價格、儲值和工具 Key 需要未來的 /api/desktop/v1 窄權限介面；候選版不會用網站 Cookie 或通用 Token CRUD 代替。",
+    "openAccount": "查看帳戶頁面",
+    "openDiagnostics": "開啟線路診斷"
   }
 }

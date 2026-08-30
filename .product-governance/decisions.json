@@ -951,6 +951,48 @@
           "diagnostics"
         ]
       }
+    },
+    {
+      "id": "DEC-047",
+      "question": "What bounded implementation unit may finish the client-side V1 candidate after RU-004 without implying that backend-dependent or release-security capabilities are ready?",
+      "choice": "Freeze RU-005 as a client-side V1 candidate successor that supersedes RU-004. Preserve the account, billing, five-tool discovery, and configuration-preview truth boundaries; add one beginner home journey, a user-triggered read-only diagnostic that resolves and attempts TCP port 443 only for yeschoy.com and api.yeschoy.com without credentials or API payloads, and a settings and security surface that exposes language, privacy, secret, backup, update, and release state. Prepare but do not publish Windows and macOS candidate bundles, keep updater artifacts and telemetry upload disabled, label Windows unsigned beta limitations and macOS signing and notarization as unmet release gates, and update the future NewAPI handoff without modifying any server or production resource.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-30T17:59:48+08:00",
+      "evidenceRefs": [
+        "E-USER-043",
+        "E-CODE-024",
+        "E-PROP-007",
+        "E-EXT-029",
+        "E-EXT-030",
+        "E-EXT-031",
+        "E-EXT-032"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-029",
+          "REQ-030",
+          "REQ-031",
+          "REQ-032"
+        ],
+        "pageRefs": [
+          "PAGE-HOME",
+          "PAGE-ACCOUNT",
+          "PAGE-BILLING",
+          "PAGE-TOOLS",
+          "PAGE-CONFIGURE-PREVIEW",
+          "PAGE-DIAGNOSTICS",
+          "PAGE-SETTINGS"
+        ],
+        "domainRefs": [
+          "account",
+          "billing",
+          "tool-config",
+          "diagnostics",
+          "desktop-platform",
+          "security-update"
+        ]
+      }
     }
   ]
 }

@@ -678,6 +678,218 @@
         "The verifier cannot produce six valid semantic proofs under mandatory read-only isolation."
       ],
       "status": "planned"
+    },
+    {
+      "id": "WP-RU005-CLIENT-V1-CANDIDATE",
+      "wave": "integration",
+      "owner": "desktop-client",
+      "riskClass": "high",
+      "objective": "Supersede the RU-004 client surface and finish one cohesive client-side V1 candidate with beginner guidance, explicit two-line DNS and TCP-443 diagnostics, settings and security truth, complete multilingual states, candidate bundle preparation, and a current future-backend handoff while every unavailable backend, credential, configuration-write, telemetry, updater, signing, and production capability remains blocked.",
+      "deliverables": [
+        "A responsive beginner home and stable navigation across home, account, one-click preview, diagnostics, local tools, and settings.",
+        "A closed line-connectivity-check@v1 Tauri query that accepts no URL or network input and checks only yeschoy.com:443 and api.yeschoy.com:443 after explicit user action.",
+        "A diagnostic experience covering idle, processing, full failure, partial success, success, invalid projection, stale response, and retry without claiming API or model health.",
+        "A settings and security truth surface covering four languages, no retained backup history, OS-vault future secret boundary, disabled telemetry upload, disabled updater, candidate version, and platform release gates.",
+        "A candidate-only bundle overlay and release checklist for native Windows and macOS builds without signed-update artifacts or false signing and notarization claims.",
+        "An updated NewAPI future-interface handoff covering every backend dependency and preserving the no-production-change boundary.",
+        "Executable acceptance evidence for user flow, fixed network authority, correlation and stale-result safety, secret and configuration boundaries, multilingual state completeness, release truth, and backend handoff completeness."
+      ],
+      "requirementRefs": [
+        "REQ-029",
+        "REQ-030",
+        "REQ-031",
+        "REQ-032"
+      ],
+      "decisionRefs": [
+        "DEC-047"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No real website or device login, account query, balance, usage, model catalog, price projection, recharge, token, API key, credential-vault, or payment operation.",
+        "No configuration read, configuration write, retained backup, rollback transaction, repair, install, update, uninstall, exact-version allowlist activation, or DSH automatic adapter.",
+        "No HTTP request, TLS/API semantic check, model request, prompt, inference, performance recommendation, network repair, custom host, redirect, proxy change, DNS change, or server mutation in diagnostics.",
+        "No telemetry or crash upload, updater initialization, update artifact, signing key, private key, certificate, notarization submission, public release, NewAPI, Nginx, DNS, database, server, or production change."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "package.json",
+        "src/App.tsx",
+        "src/index.css",
+        "src/candidate/**",
+        "src/diagnostics/**",
+        "src/settings/**",
+        "src/i18n/locales/en.json",
+        "src/i18n/locales/ja.json",
+        "src/i18n/locales/zh-TW.json",
+        "src/i18n/locales/zh.json",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/capabilities/default.json",
+        "src-tauri/src/connectivity.rs",
+        "src-tauri/src/connectivity_core.rs",
+        "src-tauri/src/lib.rs",
+        "src-tauri/tauri.candidate.conf.json",
+        "tests/work_packages/ru005/**",
+        "outputs/野菜API-NewAPI-未来改造清单.md",
+        "outputs/野菜API-桌面客户端-V1-候选版发布清单.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        "src-tauri/src/tool_discovery.rs",
+        "src-tauri/src/tool_discovery_core.rs",
+        "src-tauri/src/commands/**",
+        "src-tauri/src/database/**",
+        "src-tauri/src/services/**",
+        "src-tauri/src/proxy/**",
+        "src/contexts/UpdateContext.tsx",
+        "src/components/UpdateBadge.tsx",
+        "scripts/rewrite-updater-manifest.mjs",
+        ".github/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "RU-005 creates no account, credential, model, price, configuration, backup, diagnostic history, telemetry queue, update state, signing record, or server data.",
+        "rollback": "Revert only the listed client, Tauri connectivity, candidate packaging, locale, acceptance, and handoff document paths to RU-004; no user or server data restoration is involved."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve all three prior query contracts, add one closed two-host DNS and TCP-443 query, and fail closed for backend, configuration, update, and release-security capabilities.",
+        "supportedVersions": "RU-005 supports the current candidate application version and zero production NewAPI desktop versions, zero automatically configurable tool versions, zero signed update channels, and zero claimed signed public artifacts.",
+        "removalGate": "Adding a host, HTTP/API probe, credential, configuration write, telemetry upload, updater, signed artifact claim, or backend activation requires a superseding accepted decision, contract, and frozen release unit."
+      },
+      "inputContracts": [
+        "tool-discovery-scan@v1",
+        "desktop-account-readiness@v1",
+        "guided-configuration-preview@v1"
+      ],
+      "outputContracts": [
+        "line-connectivity-check@v1"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru005-as-01-journey",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru005/test_acceptance.py::test_beginner_candidate_journey_is_complete_and_truthful",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru005-as-02-connectivity-authority",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru005/test_acceptance.py::test_connectivity_runtime_has_exact_bounded_authority",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru005-as-03-connectivity-freshness",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru005/test_acceptance.py::test_connectivity_ui_rejects_stale_or_invalid_results",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru005-as-04-security",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru005/test_acceptance.py::test_settings_exposes_security_truth_without_new_authority",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru005-as-05-locales",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru005/test_acceptance.py::test_candidate_locales_and_responsive_states_are_complete",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru005-as-06-release",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru005/test_acceptance.py::test_candidate_packaging_and_release_claims_fail_closed",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru005-as-07-backend-handoff",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru005/test_acceptance.py::test_future_newapi_handoff_is_dependency_complete",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru005-as-08-preservation",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru005/test_acceptance.py::test_prior_flows_remain_and_side_effects_stay_blocked",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU005-AS-01",
+          "assertion": "The default candidate destination presents one ordered beginner path and stable navigation to account, preview, diagnostics, local tools, and settings while every remote fact remains unavailable.",
+          "testSelector": "tests/work_packages/ru005/test_acceptance.py::test_beginner_candidate_journey_is_complete_and_truthful",
+          "acceptanceCommandId": "ru005-as-01-journey"
+        },
+        {
+          "id": "RU005-AS-02",
+          "assertion": "The new Tauri query accepts only requestId, compiles exactly yeschoy.com:443 and api.yeschoy.com:443, performs DNS and TCP only after invocation, and returns no address, raw error, secret, payload, configuration, or filesystem authority.",
+          "testSelector": "tests/work_packages/ru005/test_acceptance.py::test_connectivity_runtime_has_exact_bounded_authority",
+          "acceptanceCommandId": "ru005-as-02-connectivity-authority"
+        },
+        {
+          "id": "RU005-AS-03",
+          "assertion": "The diagnostic UI requires exactly one result for each approved line, accepts only the newest requestId, exposes explicit retry and all bounded states, and labels TCP reachability as narrower than API health.",
+          "testSelector": "tests/work_packages/ru005/test_acceptance.py::test_connectivity_ui_rejects_stale_or_invalid_results",
+          "acceptanceCommandId": "ru005-as-03-connectivity-freshness"
+        },
+        {
+          "id": "RU005-AS-04",
+          "assertion": "Settings truthfully exposes language, no retained backup history, future OS-vault credential policy, inactive telemetry upload, inactive updater, and unmet signing gates without an activation or secret-bearing action.",
+          "testSelector": "tests/work_packages/ru005/test_acceptance.py::test_settings_exposes_security_truth_without_new_authority",
+          "acceptanceCommandId": "ru005-as-04-security"
+        },
+        {
+          "id": "RU005-AS-05",
+          "assertion": "All four locale files have structurally identical candidate copy and the responsive stylesheet preserves usable navigation, actions, and cards down to 320 CSS pixels with visible keyboard focus.",
+          "testSelector": "tests/work_packages/ru005/test_acceptance.py::test_candidate_locales_and_responsive_states_are_complete",
+          "acceptanceCommandId": "ru005-as-05-locales"
+        },
+        {
+          "id": "RU005-AS-06",
+          "assertion": "Candidate packaging can be invoked locally with bundle output enabled while updater artifacts remain disabled, and the release checklist blocks public claims until native builds, macOS signing and notarization, and the chosen Windows signing or explicit unsigned-beta warning are evidenced.",
+          "testSelector": "tests/work_packages/ru005/test_acceptance.py::test_candidate_packaging_and_release_claims_fail_closed",
+          "acceptanceCommandId": "ru005-as-06-release"
+        },
+        {
+          "id": "RU005-AS-07",
+          "assertion": "The future NewAPI handoff includes first-party authorization, bootstrap, account, usage, models, server-projected prices, tool keys, compatibility, telemetry isolation, update separation, security errors, rollout order, and open backend blockers and explicitly says no current deployment or change occurred.",
+          "testSelector": "tests/work_packages/ru005/test_acceptance.py::test_future_newapi_handoff_is_dependency_complete",
+          "acceptanceCommandId": "ru005-as-07-backend-handoff"
+        },
+        {
+          "id": "RU005-AS-08",
+          "assertion": "Five-tool discovery, two-line preview, account and billing unavailable truth, visible fixed FX, visible model-ID placeholder, disabled apply, DSH abstention, and no NewAPI or production mutation remain present after candidate integration.",
+          "testSelector": "tests/work_packages/ru005/test_acceptance.py::test_prior_flows_remain_and_side_effects_stay_blocked",
+          "acceptanceCommandId": "ru005-as-08-preservation"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "The implementation requires a caller-provided network target, HTTP or model request, credential, configuration content, filesystem write outside build output, telemetry upload, updater, signing key, or production authority.",
+        "A required implementation change falls outside allowedPaths or touches any forbidden path.",
+        "Any backend-dependent UI would need a fabricated account, model, price, balance, usage, recharge, login, key, compatibility, or configuration-success value.",
+        "The candidate cannot keep updater artifacts disabled or cannot distinguish candidate packaging from signed public release."
+      ],
+      "status": "planned"
     }
   ]
 }

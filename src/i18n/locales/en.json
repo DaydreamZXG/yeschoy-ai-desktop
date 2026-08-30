@@ -3411,5 +3411,159 @@
     "applyBlocked": "Available after every safety condition is ready",
     "openTools": "Check local tools first",
     "openAccount": "View account connection status"
+  },
+  "yeschoyCandidate": {
+    "navigationLabel": "Main client destinations",
+    "edition": "Official desktop assistant · V1 candidate",
+    "nav": {
+      "home": "Start",
+      "account": "Account",
+      "setup": "One-click setup",
+      "diagnostics": "Diagnostics",
+      "tools": "Local tools",
+      "settings": "Settings"
+    },
+    "home": {
+      "eyebrow": "First time here? Start here",
+      "title": "No API knowledge required. Follow four clear steps.",
+      "description": "The client translates tools, routes, and safety boundaries into plain language. Local work is available now; account, model, and price data wait visibly for the server instead of using fake values.",
+      "stage": "Client V1 candidate · v{{version}}",
+      "scopeLabel": "Current client scope",
+      "toolsCount": "fixed tools",
+      "linesCount": "YesChoy lines",
+      "writesCount": "configuration writes",
+      "start": "Start by checking local tools",
+      "startNote": "No Key, Base URL, model name, or configuration-file knowledge needed",
+      "journeyEyebrow": "Your path",
+      "journeyTitle": "Know what happens at every step",
+      "securityEntry": "View security and release status",
+      "backendRequired": "Server required",
+      "clientReady": "Available in client",
+      "steps": {
+        "tools": {
+          "title": "Find tools already installed",
+          "body": "Run fixed version commands only for Claude Code, Codex, OpenCode, Pi, and DSH.",
+          "action": "Check local tools"
+        },
+        "setup": {
+          "title": "Choose a tool and line",
+          "body": "Preview mainland or global routing without reading or changing configuration.",
+          "action": "Open setup preview"
+        },
+        "diagnostics": {
+          "title": "Check the lines when something feels wrong",
+          "body": "Only after you click, resolve two fixed hosts and try port 443 without an API request.",
+          "action": "Check connectivity"
+        },
+        "account": {
+          "title": "View balance, usage, and prices after login",
+          "body": "The page is ready, but waits for first-party device authorization and server price projections.",
+          "action": "View integration status"
+        }
+      },
+      "truthTitle": "The candidate never pretends setup succeeded",
+      "truthBody": "Model IDs must come from the real account catalog; prices must come from NewAPI's maintained official baseline and actual user price; future Keys belong only in the secure OS credential layer."
+    }
+  },
+  "yeschoyDiagnostics": {
+    "eyebrow": "Read-only line diagnostics",
+    "title": "First, see whether this computer can reach both lines.",
+    "description": "This narrow network check separates name or connection trouble from issues that still require API investigation. It never calls a model or uses your account.",
+    "scopeTitle": "This check does only three things",
+    "scopeDns": "Resolve yeschoy.com and api.yeschoy.com",
+    "scopeTcp": "Try TCP port 443 on both fixed hosts",
+    "scopeNoApi": "Send no HTTP, API, model, or billing request",
+    "checking": "Checking both lines…",
+    "retry": "Check both lines again",
+    "start": "Check both lines",
+    "consent": "Network access starts only after your click and carries no Key, Cookie, configuration, prompt, or response content.",
+    "openTools": "Check local tools",
+    "openSetup": "View setup preview",
+    "resultsEyebrow": "This computer · Current observation",
+    "resultsTitle": "See each line separately",
+    "processing": "Resolving and connecting to port 443…",
+    "checkedAt": "Completed at {{time}}",
+    "invalidTitle": "This result was incomplete",
+    "invalidBody": "No old or guessed values were used to fill it. You can run the same safe check again.",
+    "status": {
+      "waiting": "Not checked",
+      "checking": "Checking",
+      "reachable": "Port 443 reachable",
+      "dns_failed": "Name resolution failed",
+      "connect_failed": "Connection not established",
+      "timed_out": "Check timed out"
+    },
+    "elapsed": "Elapsed",
+    "reason": {
+      "tcp_443_reachable": "The computer established a TCP connection at this moment.",
+      "dns_resolution_failed": "The computer could not resolve the fixed host name.",
+      "tcp_connection_failed": "The host was handled, but a TCP connection was not established.",
+      "connectivity_check_timed_out": "The bounded check did not finish and stopped waiting."
+    },
+    "noResult": "Run the check to see this computer's current result",
+    "disclaimerTitle": "A reachable port does not prove the API is healthy",
+    "disclaimerBody": "This does not prove TLS, HTTP, account, model, price, balance, or inference health and is not a model speed comparison.",
+    "advancedDetails": "View check boundary",
+    "requestId": "Check ID",
+    "retention": "Result retention",
+    "notRetained": "Current page memory only; no history retained"
+  },
+  "yeschoySettings": {
+    "eyebrow": "Settings and safety boundaries",
+    "title": "See what is available and what remains closed.",
+    "description": "There are no hidden advanced switches. The candidate allows only verified local capabilities and keeps server, credential, configuration-write, and public-release gates explicit.",
+    "versionLabel": "Current client",
+    "candidateStage": "Client candidate · Not a public release",
+    "languageTitle": "Interface language",
+    "languageNote": "The preference stays on this computer and is not synchronized to an account.",
+    "securityEyebrow": "Local device and privacy",
+    "securityTitle": "Least privilege by default",
+    "localPolicy": "Fixed candidate policy",
+    "security": {
+      "apiKeys": {
+        "title": "API Keys",
+        "body": "Not fetched, read, or stored today. A future release must use the OS credential vault and tool-native helpers.",
+        "state": "Not integrated"
+      },
+      "configFiles": {
+        "title": "Tool configuration files",
+        "body": "Only planned fields are shown. Existing content is not read, written, repaired, or removed.",
+        "state": "Preview only"
+      },
+      "backupHistory": {
+        "title": "Configuration backups",
+        "body": "No backup history is retained. A future write may use only an encrypted temporary rollback snapshot that is deleted after success.",
+        "state": "No history"
+      },
+      "telemetry": {
+        "title": "Error and usage uploads",
+        "body": "The candidate automatically uploads no telemetry, crashes, logs, or diagnostics until collection and deletion controls are verified.",
+        "state": "Disabled"
+      }
+    },
+    "releaseEyebrow": "Windows and macOS",
+    "releaseTitle": "Release preparation is not release success",
+    "notPublicRelease": "Public-release gates not met",
+    "release": {
+      "macos": {
+        "title": "Direct macOS distribution",
+        "body": "The candidate build entry is ready. Public distribution still requires Developer ID signing, hardened runtime, notarization, and device checks.",
+        "state": "Signing and notarization evidence pending"
+      },
+      "windows": {
+        "title": "Windows test distribution",
+        "body": "A candidate installer can be built. Without trusted code signing it is only an explicitly labelled test package and may face OS reputation blocking.",
+        "state": "No code-signing evidence"
+      },
+      "updater": {
+        "title": "Automatic updates",
+        "body": "Update artifacts and the runtime updater remain off until the private key, embedded public key, and bad-signature tests are ready.",
+        "state": "Disabled"
+      }
+    },
+    "backendTitle": "NewAPI has not been changed",
+    "backendBody": "Login, balance, usage, models, prices, recharge, and tool Keys require future narrow /api/desktop/v1 endpoints. The candidate will not substitute website Cookies or generic Token CRUD.",
+    "openAccount": "View account page",
+    "openDiagnostics": "Open line diagnostics"
   }
 }

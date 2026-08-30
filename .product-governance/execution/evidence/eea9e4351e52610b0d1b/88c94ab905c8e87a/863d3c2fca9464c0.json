@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU005-AS-06",
+  "assertion": "Candidate packaging can be invoked locally with bundle output enabled while updater artifacts remain disabled, and the release checklist blocks public claims until native builds, macOS signing and notarization, and the chosen Windows signing or explicit unsigned-beta warning are evidenced.",
+  "testSelector": "tests/work_packages/ru005/test_acceptance.py::test_candidate_packaging_and_release_claims_fail_closed",
+  "acceptanceCommandId": "ru005-as-06-release",
+  "runId": "RU-005/WP-RU005-CLIENT-V1-CANDIDATE@2026-08-30T10:06:04.377178+00:00",
+  "packageId": "WP-RU005-CLIENT-V1-CANDIDATE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru005/test_acceptance.py::test_candidate_packaging_and_release_claims_fail_closed",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:d5bd589b044e8282c1790a116a734c41a57253655c4e1057634180a2710f86f2",
+    "machineReportSha256": "sha256:1b7fe70051d5f084cea11e1954637edab72a68f2b5294aa279732ed74eed362d",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:6f2571234a4135703e3377a1190e47e7ef07cad6dfa3dbc41a952077e827bc71",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:512465911a43daa00791d4d995eabf22ee0cb0d7dd91e130f5dc75d6520bf090",
+  "releaseUnitId": "RU-005",
+  "releaseUnitHash": "sha256:328984152b8550b884550578b82a06855eb069cb350a7f29ec204266d604404a"
+}

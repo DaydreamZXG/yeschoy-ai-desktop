@@ -3,7 +3,10 @@ import type { CSSProperties } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 import { createAccountReadiness } from "./account/readiness";
+import { CandidateHomeView } from "./candidate/CandidateHomeView";
 import { ConfigurationPreviewView } from "./configuration/ConfigurationPreviewView";
+import { DiagnosticsView } from "./diagnostics/DiagnosticsView";
+import { SettingsView } from "./settings/SettingsView";
 
 type ToolId = "claude" | "codex" | "opencode" | "pi" | "dsh";
 type ToolStatus =
@@ -45,7 +48,13 @@ type ViewPhase =
   | "conflict"
   | "error";
 
-type AppView = "account" | "setup" | "tools";
+type AppView =
+  | "home"
+  | "account"
+  | "setup"
+  | "diagnostics"
+  | "tools"
+  | "settings";
 
 const TOOL_CATALOG: Array<{
   id: ToolId;
@@ -71,7 +80,7 @@ function isCompleteProjection(response: ScanResponse): boolean {
 
 function App() {
   const { t, i18n } = useTranslation();
-  const [view, setView] = useState<AppView>("account");
+  const [view, setView] = useState<AppView>("home");
   const [phase, setPhase] = useState<ViewPhase>("default");
   const [scan, setScan] = useState<ScanResponse | null>(null);
   const latestRequestRef = useRef("");
@@ -134,7 +143,7 @@ function App() {
         <button
           className="brand"
           type="button"
-          onClick={() => setView("account")}
+          onClick={() => setView("home")}
           aria-label={t("yeschoyDiscovery.brandName")}
         >
           <span className="brand-mark" aria-hidden="true">
@@ -146,15 +155,23 @@ function App() {
         <div className="topbar-actions">
           <nav
             className="view-switcher"
-            aria-label={t("yeschoyAccount.navigationLabel")}
+            aria-label={t("yeschoyCandidate.navigationLabel")}
           >
+            <button
+              type="button"
+              className={view === "home" ? "is-active" : undefined}
+              aria-current={view === "home" ? "page" : undefined}
+              onClick={() => setView("home")}
+            >
+              {t("yeschoyCandidate.nav.home")}
+            </button>
             <button
               type="button"
               className={view === "account" ? "is-active" : undefined}
               aria-current={view === "account" ? "page" : undefined}
               onClick={() => setView("account")}
             >
-              {t("yeschoyAccount.accountNav")}
+              {t("yeschoyCandidate.nav.account")}
             </button>
             <button
               type="button"
@@ -162,7 +179,15 @@ function App() {
               aria-current={view === "setup" ? "page" : undefined}
               onClick={() => setView("setup")}
             >
-              {t("yeschoyConfiguration.navigation")}
+              {t("yeschoyCandidate.nav.setup")}
+            </button>
+            <button
+              type="button"
+              className={view === "diagnostics" ? "is-active" : undefined}
+              aria-current={view === "diagnostics" ? "page" : undefined}
+              onClick={() => setView("diagnostics")}
+            >
+              {t("yeschoyCandidate.nav.diagnostics")}
             </button>
             <button
               type="button"
@@ -170,17 +195,33 @@ function App() {
               aria-current={view === "tools" ? "page" : undefined}
               onClick={() => setView("tools")}
             >
-              {t("yeschoyAccount.toolsNav")}
+              {t("yeschoyCandidate.nav.tools")}
+            </button>
+            <button
+              type="button"
+              className={view === "settings" ? "is-active" : undefined}
+              aria-current={view === "settings" ? "page" : undefined}
+              onClick={() => setView("settings")}
+            >
+              {t("yeschoyCandidate.nav.settings")}
             </button>
           </nav>
           <div className="edition-pill">
             <span className="edition-dot" aria-hidden="true" />
-            {t("yeschoyAccount.edition")}
+            {t("yeschoyCandidate.edition")}
           </div>
         </div>
       </header>
 
-      {view === "account" ? (
+      {view === "home" ? (
+        <CandidateHomeView
+          onOpenAccount={() => setView("account")}
+          onOpenSetup={() => setView("setup")}
+          onOpenDiagnostics={() => setView("diagnostics")}
+          onOpenTools={() => setView("tools")}
+          onOpenSettings={() => setView("settings")}
+        />
+      ) : view === "account" ? (
         <div className="account-workspace" id="top">
           <section className="account-hero" aria-labelledby="account-title">
             <div className="readiness-specimen" aria-hidden="true">
@@ -305,6 +346,16 @@ function App() {
         <ConfigurationPreviewView
           onOpenAccount={() => setView("account")}
           onOpenTools={() => setView("tools")}
+        />
+      ) : view === "diagnostics" ? (
+        <DiagnosticsView
+          onOpenSetup={() => setView("setup")}
+          onOpenTools={() => setView("tools")}
+        />
+      ) : view === "settings" ? (
+        <SettingsView
+          onOpenAccount={() => setView("account")}
+          onOpenDiagnostics={() => setView("diagnostics")}
         />
       ) : (
         <div className="workspace" id="top">

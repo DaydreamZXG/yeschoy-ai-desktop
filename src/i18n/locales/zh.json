@@ -3411,5 +3411,159 @@
     "applyBlocked": "等待安全条件齐备后开放",
     "openTools": "先检查本机工具",
     "openAccount": "查看账户接入状态"
+  },
+  "yeschoyCandidate": {
+    "navigationLabel": "客户端主要页面",
+    "edition": "官方桌面助手 · V1 候选版",
+    "nav": {
+      "home": "开始",
+      "account": "账户",
+      "setup": "一键配置",
+      "diagnostics": "诊断",
+      "tools": "本机工具",
+      "settings": "设置"
+    },
+    "home": {
+      "eyebrow": "第一次使用，从这里开始",
+      "title": "不用懂 API，跟着四步就能走到正确位置。",
+      "description": "客户端把工具、线路和安全边界翻成普通话。能在本机完成的现在就做；依赖服务端的账号、模型和价格会明确等候，不用假数据凑数。",
+      "stage": "客户端 V1 候选版 · v{{version}}",
+      "scopeLabel": "当前客户端范围",
+      "toolsCount": "款固定工具",
+      "linesCount": "条野菜线路",
+      "writesCount": "次配置写入",
+      "start": "从检查本机工具开始",
+      "startNote": "不需要 Key、Base URL、模型名或配置文件知识",
+      "journeyEyebrow": "你的使用路线",
+      "journeyTitle": "每一步都知道发生了什么",
+      "securityEntry": "查看安全与发布状态",
+      "backendRequired": "等待服务端",
+      "clientReady": "客户端可用",
+      "steps": {
+        "tools": {
+          "title": "找到已经安装的工具",
+          "body": "只运行固定版本命令，识别 Claude Code、Codex、OpenCode、Pi 和 DSH。",
+          "action": "检查本机工具"
+        },
+        "setup": {
+          "title": "选择工具和线路",
+          "body": "预览大陆优化或全球加速会对应到哪里，不读取、更不会修改配置。",
+          "action": "打开配置预览"
+        },
+        "diagnostics": {
+          "title": "遇到问题先查线路",
+          "body": "你点击后才检查两个固定域名的解析和 443 端口，不发送 API 请求。",
+          "action": "检查线路"
+        },
+        "account": {
+          "title": "登录后看余额、用量与价格",
+          "body": "页面已经准备好，等 NewAPI 的第一方设备授权和价格投影接入后再开放。",
+          "action": "查看接入状态"
+        }
+      },
+      "truthTitle": "候选版不会假装已经配置成功",
+      "truthBody": "模型 ID 会展示，但必须来自真实账户目录；价格必须来自 NewAPI 维护的官网基准与当前用户实际价；Key 以后只进入系统安全凭据层。"
+    }
+  },
+  "yeschoyDiagnostics": {
+    "eyebrow": "只读线路诊断",
+    "title": "先确认电脑能不能碰到两条线路。",
+    "description": "这是一项很窄的网络检查，用来分清“域名或连接有问题”和“还需要继续查 API”。它不会调用模型，也不会使用你的账号。",
+    "scopeTitle": "本次检查只做三件事",
+    "scopeDns": "解析 yeschoy.com 与 api.yeschoy.com",
+    "scopeTcp": "尝试连接两个域名的 TCP 443 端口",
+    "scopeNoApi": "不发送 HTTP、API、模型或计费请求",
+    "checking": "正在检查两条线路…",
+    "retry": "重新检查两条线路",
+    "start": "检查两条线路",
+    "consent": "只有点击后才联网；不带 Key、Cookie、配置、提示词或响应内容。",
+    "openTools": "检查本机工具",
+    "openSetup": "查看配置预览",
+    "resultsEyebrow": "当前电脑 · 即时结果",
+    "resultsTitle": "两条线路分开看",
+    "processing": "正在解析并连接 443 端口…",
+    "checkedAt": "完成于 {{time}}",
+    "invalidTitle": "这次结果不完整",
+    "invalidBody": "没有用旧结果或猜测值填补。可以重新运行同一项安全检查。",
+    "status": {
+      "waiting": "尚未检查",
+      "checking": "检查中",
+      "reachable": "443 端口可达",
+      "dns_failed": "域名解析失败",
+      "connect_failed": "连接未建立",
+      "timed_out": "检查超时"
+    },
+    "elapsed": "本次耗时",
+    "reason": {
+      "tcp_443_reachable": "电脑在这一刻建立了 TCP 连接。",
+      "dns_resolution_failed": "电脑未能把固定域名解析为网络地址。",
+      "tcp_connection_failed": "域名已处理，但 TCP 连接没有建立。",
+      "connectivity_check_timed_out": "检查在限定时间内没有完成，已停止等待。"
+    },
+    "noResult": "运行后显示这台电脑的即时结果",
+    "disclaimerTitle": "端口可达，不等于 API 一定正常",
+    "disclaimerBody": "这个结果不能证明 TLS、HTTP、账号、模型、价格、余额或推理服务健康，也不用于比较模型速度。",
+    "advancedDetails": "查看本次检查边界",
+    "requestId": "检查编号",
+    "retention": "结果保存",
+    "notRetained": "仅当前页面内存，不保留历史"
+  },
+  "yeschoySettings": {
+    "eyebrow": "设置与安全边界",
+    "title": "哪些能做，哪些还没开放，一处说清。",
+    "description": "这里不藏高级开关。候选版只允许已经验证的本机能力，服务端、密钥、配置写入和正式发布条件都会保持显式。",
+    "versionLabel": "当前客户端",
+    "candidateStage": "客户端候选版 · 不是正式发布",
+    "languageTitle": "界面语言",
+    "languageNote": "语言偏好只保存在这台电脑；不会同步到账号。",
+    "securityEyebrow": "本机与隐私",
+    "securityTitle": "默认最小权限",
+    "localPolicy": "候选版固定策略",
+    "security": {
+      "apiKeys": {
+        "title": "API 密钥",
+        "body": "当前不获取、不读取、不保存。未来必须通过系统安全凭据层和工具原生助手提供。",
+        "state": "未接入"
+      },
+      "configFiles": {
+        "title": "工具配置文件",
+        "body": "当前只展示计划字段，不读取现有内容，也不写入、修复或移除配置。",
+        "state": "只做预览"
+      },
+      "backupHistory": {
+        "title": "配置备份",
+        "body": "不保留备份历史。未来写入只允许事务期间的加密临时回滚快照，成功后删除。",
+        "state": "不保留历史"
+      },
+      "telemetry": {
+        "title": "错误与使用数据上传",
+        "body": "候选版不自动上传遥测、崩溃、日志或诊断结果；服务端接收与删除机制未验证前保持关闭。",
+        "state": "已关闭"
+      }
+    },
+    "releaseEyebrow": "Windows 与 macOS",
+    "releaseTitle": "发布准备不是发布成功",
+    "notPublicRelease": "正式发布门槛未通过",
+    "release": {
+      "macos": {
+        "title": "macOS 直接分发",
+        "body": "候选构建入口已准备；公开分发前仍需 Developer ID 签名、强化运行时、公证和真机检查。",
+        "state": "等待签名与公证证据"
+      },
+      "windows": {
+        "title": "Windows 测试分发",
+        "body": "可以生成候选安装包；没有受信代码签名时只可作为明确标注的测试包，用户可能遇到系统信誉拦截。",
+        "state": "当前无代码签名证据"
+      },
+      "updater": {
+        "title": "自动更新",
+        "body": "更新包生成与运行时更新器都未启用。只有更新私钥安全托管、公钥固化和错签测试完成后才开放。",
+        "state": "已关闭"
+      }
+    },
+    "backendTitle": "NewAPI 目前没有被改动",
+    "backendBody": "登录、余额、用量、模型、价格、充值和工具 Key 需要未来的 /api/desktop/v1 窄权限接口；候选版不会调用网站 Cookie 或通用 Token CRUD 代替。",
+    "openAccount": "查看账户页面",
+    "openDiagnostics": "打开线路诊断"
   }
 }

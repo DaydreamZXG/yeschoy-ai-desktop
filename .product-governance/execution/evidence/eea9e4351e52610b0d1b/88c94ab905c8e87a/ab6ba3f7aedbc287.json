@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU005-AS-03",
+  "assertion": "The diagnostic UI requires exactly one result for each approved line, accepts only the newest requestId, exposes explicit retry and all bounded states, and labels TCP reachability as narrower than API health.",
+  "testSelector": "tests/work_packages/ru005/test_acceptance.py::test_connectivity_ui_rejects_stale_or_invalid_results",
+  "acceptanceCommandId": "ru005-as-03-connectivity-freshness",
+  "runId": "RU-005/WP-RU005-CLIENT-V1-CANDIDATE@2026-08-30T10:06:04.377178+00:00",
+  "packageId": "WP-RU005-CLIENT-V1-CANDIDATE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru005/test_acceptance.py::test_connectivity_ui_rejects_stale_or_invalid_results",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:6f8e3fd910215efe3ad0c4b9e3adae3700597bccfcf7c66d8a3d5e52e64e2f7c",
+    "machineReportSha256": "sha256:4070ae5633b8a4c69820d11abeadc924d7f3fce21857563b5cb5a920b5394d77",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:df83420dd010a7f97d28cf94da5f99f84f86bc3a6a2ee38f6a4cbfa8ba46b0b7",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:bbf9768653c7eef810c54b836cefcbfad74501b537995dde9c64900dfeab0ab6",
+  "releaseUnitId": "RU-005",
+  "releaseUnitHash": "sha256:328984152b8550b884550578b82a06855eb069cb350a7f29ec204266d604404a"
+}

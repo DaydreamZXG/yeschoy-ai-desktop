@@ -64,6 +64,22 @@
       "reportSha256": "sha256:f0aa85c9fbc6746b8adb8525ff1eef02ea14afe005cbf9c1b74d2701bffcdec5",
       "releaseUnitId": "RU-004",
       "releaseUnitHash": "sha256:e85eb26617a41ad248815fb1e1de1277ab979dfd9fb4c98a363126a0fa067a90"
+    },
+    {
+      "id": "RU-005/WP-RU005-CLIENT-V1-CANDIDATE@2026-08-30T10:06:04.377178+00:00",
+      "packageId": "WP-RU005-CLIENT-V1-CANDIDATE",
+      "baselineCommit": "72644de236a7139b4ee9506615f71a0a6807277f",
+      "baselineTreeHash": "sha256:a8ea599db68797e1bb71b7936ed7321e8539192dd15c6f00835e5e42d266f974",
+      "baselineSnapshotPath": "execution/baselines/88c94ab905c8e87a.eea9e4351e52610b0d1b.json",
+      "baselineSnapshotSha256": "sha256:012a49e76b2b2734b5c2f6028848b18e3c4f684caa4eb36b015f36dad04ab3d3",
+      "assignedTo": "root",
+      "status": "completed",
+      "startedAt": "2026-08-30T10:06:04.377178+00:00",
+      "finishedAt": "2026-08-30T10:32:31.124951+00:00",
+      "reportPath": "execution/reports/88c94ab905c8e87a.eea9e4351e52610b0d1b.json",
+      "reportSha256": "sha256:0007d75f6b6ecfa0f58a61525f561ec3c7834594805ca0b55e5d7ad24326a343",
+      "releaseUnitId": "RU-005",
+      "releaseUnitHash": "sha256:328984152b8550b884550578b82a06855eb069cb350a7f29ec204266d604404a"
     }
   ]
 }

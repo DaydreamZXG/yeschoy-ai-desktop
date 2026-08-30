@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU005-AS-02",
+  "assertion": "The new Tauri query accepts only requestId, compiles exactly yeschoy.com:443 and api.yeschoy.com:443, performs DNS and TCP only after invocation, and returns no address, raw error, secret, payload, configuration, or filesystem authority.",
+  "testSelector": "tests/work_packages/ru005/test_acceptance.py::test_connectivity_runtime_has_exact_bounded_authority",
+  "acceptanceCommandId": "ru005-as-02-connectivity-authority",
+  "runId": "RU-005/WP-RU005-CLIENT-V1-CANDIDATE@2026-08-30T10:06:04.377178+00:00",
+  "packageId": "WP-RU005-CLIENT-V1-CANDIDATE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru005/test_acceptance.py::test_connectivity_runtime_has_exact_bounded_authority",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:1664ec5f3b107b67472e6a892d246132783e3b6e56d070bf61357d1506a874b5",
+    "machineReportSha256": "sha256:ef66fe8eeb67c59111657eb33a975ac7312df5543ad96f7d5d216b472b8c660c",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:93fead040376bb2758d9d343a0522ed9dc60eadbdea12e002f53e05e7b8430f6",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:2a405729fe9aa35e8aabc3e73da05243437f419fec6459eb128bf14437d103d9",
+  "releaseUnitId": "RU-005",
+  "releaseUnitHash": "sha256:328984152b8550b884550578b82a06855eb069cb350a7f29ec204266d604404a"
+}

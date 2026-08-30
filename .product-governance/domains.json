@@ -43,7 +43,7 @@
       "trackScope": ["diagnostics"],
       "invariants": ["A diagnostic conclusion names only causes supported by collected evidence."],
       "commands": [],
-      "queries": [],
+      "queries": ["line-connectivity-check@v1"],
       "emits": [],
       "consumes": []
     },

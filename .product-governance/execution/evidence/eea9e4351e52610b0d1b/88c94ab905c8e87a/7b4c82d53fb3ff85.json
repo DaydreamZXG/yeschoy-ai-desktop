@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU005-AS-01",
+  "assertion": "The default candidate destination presents one ordered beginner path and stable navigation to account, preview, diagnostics, local tools, and settings while every remote fact remains unavailable.",
+  "testSelector": "tests/work_packages/ru005/test_acceptance.py::test_beginner_candidate_journey_is_complete_and_truthful",
+  "acceptanceCommandId": "ru005-as-01-journey",
+  "runId": "RU-005/WP-RU005-CLIENT-V1-CANDIDATE@2026-08-30T10:06:04.377178+00:00",
+  "packageId": "WP-RU005-CLIENT-V1-CANDIDATE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru005/test_acceptance.py::test_beginner_candidate_journey_is_complete_and_truthful",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:535aa8b9e1e0e6cef0c4464bcce12a87cb010ec846bbe78ae83afaae4df3128e",
+    "machineReportSha256": "sha256:783e55738c85938f0b4dba2104823224ce02b15a792a2a1f09fdf09b751b3c78",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:61ca33b8fec94586ecf49b7cd820f151ba7fe3df964fcc9184646c201b202d97",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:285e9b997f88263fb76f522ea870b5fb601db3b89406c5fe7ff5640a302ca598",
+  "releaseUnitId": "RU-005",
+  "releaseUnitHash": "sha256:328984152b8550b884550578b82a06855eb069cb350a7f29ec204266d604404a"
+}

@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "ru001-read-only",
-  "description": "RU-001 exposes only Tauri core defaults and the bundled read-only discovery command.",
+  "identifier": "ru005-bounded-client",
+  "description": "RU-005 exposes Tauri core defaults plus bundled read-only tool discovery and fixed-host DNS and TCP-443 diagnostics.",
   "windows": ["main"],
   "permissions": ["core:default"]
 }

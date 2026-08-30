@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU005-AS-07",
+  "assertion": "The future NewAPI handoff includes first-party authorization, bootstrap, account, usage, models, server-projected prices, tool keys, compatibility, telemetry isolation, update separation, security errors, rollout order, and open backend blockers and explicitly says no current deployment or change occurred.",
+  "testSelector": "tests/work_packages/ru005/test_acceptance.py::test_future_newapi_handoff_is_dependency_complete",
+  "acceptanceCommandId": "ru005-as-07-backend-handoff",
+  "runId": "RU-005/WP-RU005-CLIENT-V1-CANDIDATE@2026-08-30T10:06:04.377178+00:00",
+  "packageId": "WP-RU005-CLIENT-V1-CANDIDATE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru005/test_acceptance.py::test_future_newapi_handoff_is_dependency_complete",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:89a8fa5e965297aa912ecb022de67128282ee17bd4ae0d28fff1c60a674a3326",
+    "machineReportSha256": "sha256:1412447bf2269b330d36310252426666d75f7bb05722a2f80148b9819f1306ff",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:32c71d2665253575f101862e354e60531a21ed943d8430c85e7befac766b2e85",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:015c0c440a71b7afea7ad3196b57db12e6bce39fa81a240910aad66e8d3810a5",
+  "releaseUnitId": "RU-005",
+  "releaseUnitHash": "sha256:328984152b8550b884550578b82a06855eb069cb350a7f29ec204266d604404a"
+}

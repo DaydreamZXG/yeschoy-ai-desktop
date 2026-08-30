@@ -3112,6 +3112,663 @@
         "releaseUnitHash": "sha256:e85eb26617a41ad248815fb1e1de1277ab979dfd9fb4c98a363126a0fa067a90",
         "snapshotPath": "execution/release-unit-snapshots/e85eb26617a41ad248815fb1e1de1277ab979dfd9fb4c98a363126a0fa067a90/release-unit.json"
       }
+    },
+    {
+      "id": "RU-005",
+      "status": "frozen",
+      "objective": "Supersede RU-004 and finish the bounded client-side V1 candidate with beginner guidance, secret-free two-line DNS and TCP-443 diagnostics, settings and security truth, complete multilingual states, candidate package preparation, and future NewAPI handoff without activating any backend, configuration-write, updater, telemetry, signing, or production capability.",
+      "decisionRef": "DEC-047",
+      "dependsOnReleaseUnits": [
+        "RU-004"
+      ],
+      "supersedesReleaseUnits": [
+        "RU-004"
+      ],
+      "roots": {
+        "workPackages": [
+          "WP-RU005-CLIENT-V1-CANDIDATE"
+        ],
+        "requirements": [
+          "REQ-032"
+        ],
+        "nonFunctionalRequirements": [],
+        "domains": [],
+        "contracts": [
+          "line-connectivity-check@v1"
+        ],
+        "stateMachines": [],
+        "pages": [
+          "PAGE-HOME",
+          "PAGE-DIAGNOSTICS",
+          "PAGE-SETTINGS"
+        ],
+        "journeys": [],
+        "dataLifecycleResources": [],
+        "aiScenarios": [],
+        "entitlements": [],
+        "trackCoverage": []
+      },
+      "closure": {
+        "workPackages": [
+          "WP-RU005-CLIENT-V1-CANDIDATE"
+        ],
+        "requirements": [
+          "REQ-002",
+          "REQ-003",
+          "REQ-004",
+          "REQ-008",
+          "REQ-011",
+          "REQ-012",
+          "REQ-013",
+          "REQ-015",
+          "REQ-026",
+          "REQ-028",
+          "REQ-029",
+          "REQ-030",
+          "REQ-031",
+          "REQ-032"
+        ],
+        "nonFunctionalRequirements": [],
+        "domains": [
+          "account",
+          "billing",
+          "desktop-platform",
+          "diagnostics",
+          "security-update",
+          "tool-config"
+        ],
+        "contracts": [
+          "desktop-account-readiness@v1",
+          "guided-configuration-preview@v1",
+          "line-connectivity-check@v1",
+          "tool-discovery-scan@v1"
+        ],
+        "stateMachines": [],
+        "pages": [
+          "PAGE-ACCOUNT",
+          "PAGE-BILLING",
+          "PAGE-CONFIGURE-PREVIEW",
+          "PAGE-DIAGNOSTICS",
+          "PAGE-HOME",
+          "PAGE-SETTINGS",
+          "PAGE-TOOLS"
+        ],
+        "pageStateProfiles": [
+          "PROFILE-CLIENT-CANDIDATE-STATIC",
+          "PROFILE-CONFIGURATION-PREVIEW-ONLY",
+          "PROFILE-DESKTOP-ACCOUNT-READINESS",
+          "PROFILE-READONLY-LINE-CONNECTIVITY",
+          "PROFILE-READONLY-TOOL-DISCOVERY"
+        ],
+        "journeys": [],
+        "actors": [],
+        "dataLifecycleResources": [],
+        "aiScenarios": [],
+        "entitlements": [],
+        "trackCoverage": [],
+        "evidence": [
+          "E-CODE-001",
+          "E-CODE-002",
+          "E-CODE-004",
+          "E-CODE-005",
+          "E-CODE-006",
+          "E-CODE-007",
+          "E-CODE-008",
+          "E-CODE-014",
+          "E-CODE-021",
+          "E-CODE-022",
+          "E-CODE-023",
+          "E-CODE-024",
+          "E-EXT-022",
+          "E-EXT-023",
+          "E-EXT-024",
+          "E-EXT-025",
+          "E-EXT-026",
+          "E-EXT-027",
+          "E-EXT-028",
+          "E-EXT-029",
+          "E-EXT-030",
+          "E-EXT-031",
+          "E-EXT-032",
+          "E-PROP-003",
+          "E-PROP-004",
+          "E-PROP-005",
+          "E-PROP-006",
+          "E-PROP-007",
+          "E-USER-001",
+          "E-USER-002",
+          "E-USER-003",
+          "E-USER-004",
+          "E-USER-005",
+          "E-USER-009",
+          "E-USER-010",
+          "E-USER-011",
+          "E-USER-016",
+          "E-USER-017",
+          "E-USER-018",
+          "E-USER-019",
+          "E-USER-022",
+          "E-USER-023",
+          "E-USER-034",
+          "E-USER-035",
+          "E-USER-036",
+          "E-USER-037",
+          "E-USER-038",
+          "E-USER-039",
+          "E-USER-040",
+          "E-USER-041",
+          "E-USER-042",
+          "E-USER-043"
+        ],
+        "decisions": [
+          "DEC-043",
+          "DEC-046",
+          "DEC-047"
+        ],
+        "conflicts": [],
+        "glossaryTerms": [
+          "TERM-ACCOUNT-SESSION",
+          "TERM-ACTUAL-PRICE",
+          "TERM-LINE",
+          "TERM-MODEL-ID",
+          "TERM-OFFICIAL-PRICE",
+          "TERM-READY",
+          "TERM-TOOL-KEY"
+        ],
+        "resources": [],
+        "tracks": [
+          "account",
+          "billing",
+          "desktop-platform",
+          "diagnostics",
+          "security-update",
+          "tool-config"
+        ]
+      },
+      "deferredSnapshot": {
+        "schemaVersion": 1,
+        "catalogHash": "sha256:fe7620b29726be71df91028255e66c1f20de1e95001d78d6bffb0a14ecc750ee",
+        "items": [
+          {
+            "subjectKind": "actors",
+            "subjectId": "*",
+            "message": "No product actors are defined"
+          },
+          {
+            "subjectKind": "aiScenarios",
+            "subjectId": "*",
+            "message": "No AI scenarios are defined"
+          },
+          {
+            "subjectKind": "dataLifecycleResources",
+            "subjectId": "*",
+            "message": "No data lifecycle resources are defined"
+          },
+          {
+            "subjectKind": "entitlements",
+            "subjectId": "*",
+            "message": "No entitlement capabilities are defined"
+          },
+          {
+            "subjectKind": "journeys",
+            "subjectId": "*",
+            "message": "No end-to-end journeys are defined"
+          },
+          {
+            "subjectKind": "nonFunctionalRequirements",
+            "subjectId": "NFR-accessibility",
+            "message": "High-impact non-functional requirement is unresolved: NFR-accessibility (unknown)"
+          },
+          {
+            "subjectKind": "nonFunctionalRequirements",
+            "subjectId": "NFR-ai_cost",
+            "message": "High-impact non-functional requirement is unresolved: NFR-ai_cost (unknown)"
+          },
+          {
+            "subjectKind": "nonFunctionalRequirements",
+            "subjectId": "NFR-ai_quality",
+            "message": "High-impact non-functional requirement is unresolved: NFR-ai_quality (unknown)"
+          },
+          {
+            "subjectKind": "nonFunctionalRequirements",
+            "subjectId": "NFR-backup_restore",
+            "message": "High-impact non-functional requirement is unresolved: NFR-backup_restore (unknown)"
+          },
+          {
+            "subjectKind": "nonFunctionalRequirements",
+            "subjectId": "NFR-capacity",
+            "message": "High-impact non-functional requirement is unresolved: NFR-capacity (unknown)"
+          },
+          {
+            "subjectKind": "nonFunctionalRequirements",
+            "subjectId": "NFR-commerce",
+            "message": "High-impact non-functional requirement is unresolved: NFR-commerce (unknown)"
+          },
+          {
+            "subjectKind": "nonFunctionalRequirements",
+            "subjectId": "NFR-migration",
+            "message": "High-impact non-functional requirement is unresolved: NFR-migration (unknown)"
+          },
+          {
+            "subjectKind": "nonFunctionalRequirements",
+            "subjectId": "NFR-observability",
+            "message": "High-impact non-functional requirement is unresolved: NFR-observability (unknown)"
+          },
+          {
+            "subjectKind": "nonFunctionalRequirements",
+            "subjectId": "NFR-operations",
+            "message": "High-impact non-functional requirement is unresolved: NFR-operations (unknown)"
+          },
+          {
+            "subjectKind": "nonFunctionalRequirements",
+            "subjectId": "NFR-performance",
+            "message": "High-impact non-functional requirement is unresolved: NFR-performance (unknown)"
+          },
+          {
+            "subjectKind": "nonFunctionalRequirements",
+            "subjectId": "NFR-privacy",
+            "message": "High-impact non-functional requirement is unresolved: NFR-privacy (unknown)"
+          },
+          {
+            "subjectKind": "nonFunctionalRequirements",
+            "subjectId": "NFR-reliability",
+            "message": "High-impact non-functional requirement is unresolved: NFR-reliability (unknown)"
+          },
+          {
+            "subjectKind": "nonFunctionalRequirements",
+            "subjectId": "NFR-security",
+            "message": "High-impact non-functional requirement is unresolved: NFR-security (unknown)"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-CONFIGURE",
+            "message": "Page PAGE-CONFIGURE has no behavior for state conflict"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-CONFIGURE",
+            "message": "Page PAGE-CONFIGURE has no behavior for state default"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-CONFIGURE",
+            "message": "Page PAGE-CONFIGURE has no behavior for state empty"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-CONFIGURE",
+            "message": "Page PAGE-CONFIGURE has no behavior for state error"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-CONFIGURE",
+            "message": "Page PAGE-CONFIGURE has no behavior for state expired"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-CONFIGURE",
+            "message": "Page PAGE-CONFIGURE has no behavior for state loading"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-CONFIGURE",
+            "message": "Page PAGE-CONFIGURE has no behavior for state partial"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-CONFIGURE",
+            "message": "Page PAGE-CONFIGURE has no behavior for state processing"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-CONFIGURE",
+            "message": "Page PAGE-CONFIGURE has no behavior for state recovery"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-MODELS",
+            "message": "Page PAGE-MODELS has no behavior for state conflict"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-MODELS",
+            "message": "Page PAGE-MODELS has no behavior for state default"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-MODELS",
+            "message": "Page PAGE-MODELS has no behavior for state empty"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-MODELS",
+            "message": "Page PAGE-MODELS has no behavior for state error"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-MODELS",
+            "message": "Page PAGE-MODELS has no behavior for state expired"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-MODELS",
+            "message": "Page PAGE-MODELS has no behavior for state loading"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-MODELS",
+            "message": "Page PAGE-MODELS has no behavior for state partial"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-MODELS",
+            "message": "Page PAGE-MODELS has no behavior for state processing"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-MODELS",
+            "message": "Page PAGE-MODELS has no behavior for state recovery"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-ONBOARDING",
+            "message": "Page PAGE-ONBOARDING has no behavior for state conflict"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-ONBOARDING",
+            "message": "Page PAGE-ONBOARDING has no behavior for state default"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-ONBOARDING",
+            "message": "Page PAGE-ONBOARDING has no behavior for state empty"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-ONBOARDING",
+            "message": "Page PAGE-ONBOARDING has no behavior for state error"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-ONBOARDING",
+            "message": "Page PAGE-ONBOARDING has no behavior for state expired"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-ONBOARDING",
+            "message": "Page PAGE-ONBOARDING has no behavior for state loading"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-ONBOARDING",
+            "message": "Page PAGE-ONBOARDING has no behavior for state partial"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-ONBOARDING",
+            "message": "Page PAGE-ONBOARDING has no behavior for state processing"
+          },
+          {
+            "subjectKind": "pages",
+            "subjectId": "PAGE-ONBOARDING",
+            "message": "Page PAGE-ONBOARDING has no behavior for state recovery"
+          },
+          {
+            "subjectKind": "stateMachines",
+            "subjectId": "*",
+            "message": "No canonical state machines are defined"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "ability_estimate::account",
+            "message": "Capability ability_estimate/account remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "ability_estimate::billing",
+            "message": "Capability ability_estimate/billing remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "ability_estimate::desktop-platform",
+            "message": "Capability ability_estimate/desktop-platform remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "ability_estimate::diagnostics",
+            "message": "Capability ability_estimate/diagnostics remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "ability_estimate::security-update",
+            "message": "Capability ability_estimate/security-update remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "ability_estimate::tool-config",
+            "message": "Capability ability_estimate/tool-config remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "attempt::account",
+            "message": "Capability attempt/account remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "attempt::billing",
+            "message": "Capability attempt/billing remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "attempt::desktop-platform",
+            "message": "Capability attempt/desktop-platform remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "attempt::diagnostics",
+            "message": "Capability attempt/diagnostics remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "attempt::security-update",
+            "message": "Capability attempt/security-update remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "attempt::tool-config",
+            "message": "Capability attempt/tool-config remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "evidence::account",
+            "message": "Capability evidence/account remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "evidence::billing",
+            "message": "Capability evidence/billing remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "evidence::desktop-platform",
+            "message": "Capability evidence/desktop-platform remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "evidence::diagnostics",
+            "message": "Capability evidence/diagnostics remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "evidence::security-update",
+            "message": "Capability evidence/security-update remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "evidence::tool-config",
+            "message": "Capability evidence/tool-config remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "global_ask::account",
+            "message": "Capability global_ask/account remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "global_ask::billing",
+            "message": "Capability global_ask/billing remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "global_ask::desktop-platform",
+            "message": "Capability global_ask/desktop-platform remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "global_ask::diagnostics",
+            "message": "Capability global_ask/diagnostics remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "global_ask::security-update",
+            "message": "Capability global_ask/security-update remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "global_ask::tool-config",
+            "message": "Capability global_ask/tool-config remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "mastery::account",
+            "message": "Capability mastery/account remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "mastery::billing",
+            "message": "Capability mastery/billing remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "mastery::desktop-platform",
+            "message": "Capability mastery/desktop-platform remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "mastery::diagnostics",
+            "message": "Capability mastery/diagnostics remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "mastery::security-update",
+            "message": "Capability mastery/security-update remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "mastery::tool-config",
+            "message": "Capability mastery/tool-config remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "planning::account",
+            "message": "Capability planning/account remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "planning::billing",
+            "message": "Capability planning/billing remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "planning::desktop-platform",
+            "message": "Capability planning/desktop-platform remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "planning::diagnostics",
+            "message": "Capability planning/diagnostics remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "planning::security-update",
+            "message": "Capability planning/security-update remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "planning::tool-config",
+            "message": "Capability planning/tool-config remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "reflection::account",
+            "message": "Capability reflection/account remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "reflection::billing",
+            "message": "Capability reflection/billing remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "reflection::desktop-platform",
+            "message": "Capability reflection/desktop-platform remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "reflection::diagnostics",
+            "message": "Capability reflection/diagnostics remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "reflection::security-update",
+            "message": "Capability reflection/security-update remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "reflection::tool-config",
+            "message": "Capability reflection/tool-config remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "report::account",
+            "message": "Capability report/account remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "report::billing",
+            "message": "Capability report/billing remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "report::desktop-platform",
+            "message": "Capability report/desktop-platform remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "report::diagnostics",
+            "message": "Capability report/diagnostics remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "report::security-update",
+            "message": "Capability report/security-update remains unknown"
+          },
+          {
+            "subjectKind": "trackCoverage",
+            "subjectId": "report::tool-config",
+            "message": "Capability report/tool-config remains unknown"
+          }
+        ]
+      },
+      "freeze": {
+        "releaseUnitId": "RU-005",
+        "decisionId": "DEC-047",
+        "commit": "72644de236a7139b4ee9506615f71a0a6807277f",
+        "frozenAt": "2026-08-30T10:05:52.365600+00:00",
+        "releaseUnitHash": "sha256:328984152b8550b884550578b82a06855eb069cb350a7f29ec204266d604404a",
+        "snapshotPath": "execution/release-unit-snapshots/328984152b8550b884550578b82a06855eb069cb350a7f29ec204266d604404a/release-unit.json"
+      }
     }
   ]
 }

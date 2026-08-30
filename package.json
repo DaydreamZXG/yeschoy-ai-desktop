@@ -1,7 +1,7 @@
 {
   "name": "yeschoy-desktop",
   "version": "0.1.0",
-  "description": "All-in-One Assistant for Claude Code, Codex & Gemini CLI",
+  "description": "Official beginner-friendly desktop assistant for 野菜API",
   "type": "module",
   "scripts": {
     "dev": "pnpm tauri dev",
@@ -9,10 +9,12 @@
     "tauri": "tauri",
     "dev:renderer": "vite",
     "build:renderer": "vite build",
+    "build:candidate": "pnpm tauri build --config src-tauri/tauri.candidate.conf.json",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
     "test:unit": "vitest run",
+    "test:candidate": "vitest run src/candidate/readiness.test.ts src/diagnostics/contract.test.ts src/configuration/preview.test.ts",
     "test:unit:watch": "vitest watch"
   },
   "keywords": [],

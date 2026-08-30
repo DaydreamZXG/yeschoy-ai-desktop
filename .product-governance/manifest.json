@@ -30,7 +30,8 @@
     "billing": "DEC-043",
     "tool-config": "DEC-046",
     "desktop-platform": "DEC-046",
-    "diagnostics": "DEC-046"
+    "diagnostics": "DEC-046",
+    "security-update": "DEC-047"
   },
   "requiredPageStates": [
     "default",

@@ -1145,6 +1145,93 @@
         "E-USER-042",
         "E-PROP-005"
       ]
+    },
+    {
+      "id": "E-USER-043",
+      "claim": "The product owner authorized one continuous goal to finish the client-side 野菜API V1 candidate without incremental approval pauses, while preserving the existing prohibition on changing NewAPI, servers, Nginx, DNS, databases, or production and without fabricating backend-dependent success.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-08-30:finish-client-v1-candidate-goal",
+      "observedAt": "2026-08-30T17:59:48+08:00",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-024",
+      "claim": "At commit 72644de the desktop shell has truthful account and billing unavailable states, a five-tool read-only local scan, and a five-tool two-line configuration preview, but it has no home guidance destination, no line-connectivity query, no settings and security destination, bundle output is disabled, updater artifacts are disabled, and the Tauri runtime exposes only scan_tools_read_only.",
+      "class": "code_observed",
+      "locator": "command:2026-08-30:audit-repository-and-inspect-client-candidate-gaps",
+      "observedAt": "2026-08-30T17:59:48+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-029",
+      "claim": "Current official Tauri v2 distribution guidance supports platform-specific installers and states that direct macOS distribution requires code signing and notarization while Windows distribution provides installer and code-signing paths.",
+      "class": "external_verified",
+      "locator": "https://v2.tauri.app/distribute/",
+      "observedAt": "2026-08-30T17:59:48+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-030",
+      "claim": "Current Apple guidance requires appropriate Developer ID signing, hardened runtime, secure timestamping, notarization review, and testing for directly distributed macOS software.",
+      "class": "external_verified",
+      "locator": "https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution",
+      "observedAt": "2026-08-30T17:59:48+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-031",
+      "claim": "Current Microsoft guidance states that unsigned downloads can show SmartScreen warnings, may be blocked by enterprise policy or Smart App Control, and do not carry publisher reputation between versions.",
+      "class": "external_verified",
+      "locator": "https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/smartscreen-reputation",
+      "observedAt": "2026-08-30T17:59:48+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-032",
+      "claim": "Current Tauri v2 updater guidance requires signed update artifacts, keeps the verification public key in the client, and requires the signing private key only in the protected build environment; update signature verification cannot be disabled.",
+      "class": "external_verified",
+      "locator": "https://v2.tauri.app/plugin/updater/",
+      "observedAt": "2026-08-30T17:59:48+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-007",
+      "claim": "RU-005 should supersede RU-004 and finish the bounded client-side V1 candidate by adding a guided home, user-triggered secret-free DNS and TCP-443 diagnostics for only the two approved line hosts, a settings and security truth surface, complete multilingual page states, candidate bundle configuration, and platform and backend handoff checklists while login, models, prices, credentials, configuration writes, retained backups, telemetry upload, signed updates, and production release remain unavailable.",
+      "class": "proposed",
+      "locator": "inline:ru005-client-v1-candidate-boundary",
+      "observedAt": "2026-08-30T17:59:48+08:00",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-USER-043",
+        "E-CODE-024",
+        "E-EXT-029",
+        "E-EXT-030",
+        "E-EXT-031",
+        "E-EXT-032",
+        "E-USER-010",
+        "E-USER-011",
+        "E-USER-037"
+      ]
     }
   ]
 }
