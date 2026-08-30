@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU002-AS-01",
+  "assertion": "The local readiness projection has exactly one RU-002 status, backend_upgrade_required, marks every remote capability unavailable, reports networkAttempted false, and identifies only the future /api/desktop/v1 namespace.",
+  "testSelector": "tests/work_packages/ru002/test_acceptance.py::test_readiness_projection_is_fail_closed",
+  "acceptanceCommandId": "ru002-as-01-readiness",
+  "runId": "RU-002/WP-RU002-ACCOUNT-BILLING-SHELL@2026-08-30T08:34:07.549995+00:00",
+  "packageId": "WP-RU002-ACCOUNT-BILLING-SHELL",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru002/test_acceptance.py::test_readiness_projection_is_fail_closed",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:b6752063b2f62c66d0f97bfba4e8a584719151f765ce079669316abfd3714a78",
+    "machineReportSha256": "sha256:3b591aaf0d9e02c7cbfa2722faf19db13d5ef8150414de25c1ccd3e89c36a72f",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:e003db388d84c098977820dcf897551dabf39dd16fbfb58387efbf6904a5864a",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:ff90470aaab7bd58e58299a752cc1ad44c8b48ba9a0d25bdde3c2cd39f553b31",
+  "releaseUnitId": "RU-002",
+  "releaseUnitHash": "sha256:1cd08bf6bc0db59124c8e1331698bdd10eb7e0772daa04be51942517e4ac5a00"
+}

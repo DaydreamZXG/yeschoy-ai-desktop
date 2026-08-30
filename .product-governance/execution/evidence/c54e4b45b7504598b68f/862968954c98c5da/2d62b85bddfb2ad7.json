@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU002-AS-03",
+  "assertion": "RU-002 account-owned source performs no fetch, HTTP client, Tauri remote invocation, external open, storage write, cookie access, credential access, token handling, or secret-bearing URL construction.",
+  "testSelector": "tests/work_packages/ru002/test_acceptance.py::test_account_shell_adds_no_network_or_secret_authority",
+  "acceptanceCommandId": "ru002-as-03-authority",
+  "runId": "RU-002/WP-RU002-ACCOUNT-BILLING-SHELL@2026-08-30T08:34:07.549995+00:00",
+  "packageId": "WP-RU002-ACCOUNT-BILLING-SHELL",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru002/test_acceptance.py::test_account_shell_adds_no_network_or_secret_authority",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:9e66e13f61dbcbfdd37e9bb254877fa473a3263af01dfb45e56db05fcce7b541",
+    "machineReportSha256": "sha256:5a4ec2eab62e1f8992505b1d928e316d9b20e02f69cff25a5dff5bf12c712236",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:259cc9e8c54efcb44f825d0b4a54ba37cf362b0006b9c52cafecac164f6ea50e",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:ae37724658bc860e4fbb672bf9c5cb73517c42691bf1397ea4b4a399cbffed57",
+  "releaseUnitId": "RU-002",
+  "releaseUnitHash": "sha256:1cd08bf6bc0db59124c8e1331698bdd10eb7e0772daa04be51942517e4ac5a00"
+}

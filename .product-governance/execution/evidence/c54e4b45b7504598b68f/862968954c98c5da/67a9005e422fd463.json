@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU002-AS-05",
+  "assertion": "The successor shell still invokes only scan_tools_read_only for the five-tool scan and preserves stale-request rejection, exact tool identities, and the absence of configuration actions.",
+  "testSelector": "tests/work_packages/ru002/test_acceptance.py::test_ru001_discovery_remains_wired",
+  "acceptanceCommandId": "ru002-as-05-discovery",
+  "runId": "RU-002/WP-RU002-ACCOUNT-BILLING-SHELL@2026-08-30T08:34:07.549995+00:00",
+  "packageId": "WP-RU002-ACCOUNT-BILLING-SHELL",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru002/test_acceptance.py::test_ru001_discovery_remains_wired",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:e5619581b70cc63ee7c04b69d4e8df113489c391618452f51a1ce4c88f080cad",
+    "machineReportSha256": "sha256:a8b73dcceda68d8b8565b588bbd580c6143c4d4733957f944d7f869cec971460",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:75bdcaf4a5a15c7ceeb797131ba9d4f8939a5998928091cd1c1fe49193a91d6c",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:e7627bea9845055a6b4af62a904cd55d5421329508f52e63bd72a0356243e2f6",
+  "releaseUnitId": "RU-002",
+  "releaseUnitHash": "sha256:1cd08bf6bc0db59124c8e1331698bdd10eb7e0772daa04be51942517e4ac5a00"
+}

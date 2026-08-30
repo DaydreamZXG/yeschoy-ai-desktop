@@ -1,18 +1,18 @@
 # 野菜API 桌面客户端：NewAPI未来接口与改造清单
 
-状态：后端改造建议，当前不实施  
-日期：2026-08-29  
-源码参考：NewAPI提交 `ac381acf4bf41204b97bb26b4c58c83275877a2e`
+状态：后端改造建议，当前未部署、当前不实施
+核对日期：2026-08-30
+上游源码参考：NewAPI 官方 GitHub HEAD `918427d8ab41f6adaa4113d0496f1f8621855b70`
 
 ## 1. 结论
 
 不要让桌面客户端直接拼接NewAPI现有的网页登录、Token CRUD和内部计费结构来“先跑起来”。正确做法是在未来增加一个窄权限、版本化的桌面接口层，底层复用NewAPI现有账号、模型、定价、Token和日志能力，但只暴露官方客户端真正需要的动作。
 
-当前只记录方案，不修改NewAPI、服务器、Nginx、数据库、DNS或线上配置。
+当前 RU-002 只更新客户端界面和这份建议，不修改 NewAPI、服务器、Nginx、数据库、DNS 或任何线上配置。客户端也不会把下文提案当成已经部署的能力。
 
 ## 2. 现有源码观察与上线前核验
 
-固定源码快照中已经观察到：
+固定到上述官方 GitHub 提交后，已经观察到：
 
 | 现有路由 | 能力 | 对桌面V1的判断 |
 |---|---|---|
@@ -25,13 +25,27 @@
 | `GET /api/log/self`、`/api/log/self/stat` | 用户用量日志与统计 | 可复用查询，但需补设备/工具归因和稳定DTO |
 | `/api/user/topup/*`及支付路由 | 充值与支付 | V1只打开第一方钱包网页，不在客户端复制支付 |
 
-源码入口：[API路由](https://github.com/QuantumNous/new-api/blob/ac381acf4bf41204b97bb26b4c58c83275877a2e/router/api-router.go)、[价格接口](https://github.com/QuantumNous/new-api/blob/ac381acf4bf41204b97bb26b4c58c83275877a2e/controller/pricing.go)、[价格结构](https://github.com/QuantumNous/new-api/blob/ac381acf4bf41204b97bb26b4c58c83275877a2e/model/pricing.go)
+源码入口：[API路由](https://github.com/QuantumNous/new-api/blob/918427d8ab41f6adaa4113d0496f1f8621855b70/router/api-router.go)、[认证说明](https://github.com/QuantumNous/new-api/blob/918427d8ab41f6adaa4113d0496f1f8621855b70/docs/authentication.md)、[价格接口](https://github.com/QuantumNous/new-api/blob/918427d8ab41f6adaa4113d0496f1f8621855b70/controller/pricing.go)、[价格结构](https://github.com/QuantumNous/new-api/blob/918427d8ab41f6adaa4113d0496f1f8621855b70/model/pricing.go)
 
-以上只是上游源码观察，不证明你们线上实例完全相同。未来动后端前先在不写数据的前提下确认：部署提交、定制分支、反向代理前缀、Cookie/Session行为、用户分组、Token表差异、日志保留、支付插件和错误响应格式。
+官方认证说明中的网页登录会话是浏览器契约：15 分钟 access token 放在浏览器内存，refresh token 通过 `HttpOnly`、`SameSite=Strict` Cookie 轮换。这不是可以直接复制给桌面端的设备授权契约；客户端不会读取网站 Cookie，也不会把浏览器 access token 当长期桌面凭证。
+
+### 2.1 2026-08-30 线上只读核验结果
+
+本次只发送了不带凭证、不会写数据的请求，观察到：
+
+| 地址与路径 | 只读结果 | 能证明什么 |
+|---|---|---|
+| `https://yeschoy.com/api/status` | 系统名“野菜API”，版本 `v1.0.0-rc.27` | 大陆优化入口公开状态 |
+| `https://api.yeschoy.com/api/status` | 同样为“野菜API”，版本 `v1.0.0-rc.27` | 全球加速入口当前指向同一站点语义 |
+| `/api/desktop/v1/bootstrap` | HTTP 404 | 提议的桌面命名空间当前未部署 |
+| `/api/user/self`（未登录） | HTTP 401 | 现有用户接口受登录保护；没有把它当桌面授权替代品 |
+| `/api/pricing`（公开读取） | 37 个模型，`pricing_version` 为 `a42d372ccf0b5dd13ecf71203521f9d2` | 当前存在公开价格结构，但不是稳定的“当前账号官网价与实际价”桌面投影 |
+
+这些结果只证明核验当时的公开行为，不证明部署提交与官方 GitHub HEAD 完全一致，也不冻结模型数量或价格版本。未来动后端前仍需确认：线上提交、私有定制分支、反向代理前缀、Cookie/Session 行为、用户分组、Token 表差异、日志保留、支付插件和错误响应格式。
 
 ## 3. 建议的新接口边界
 
-统一命名空间建议为 `/api/desktop/v1`。以下路径、字段和状态码都是**接口提案**，不是当前已存在的NewAPI能力。
+统一命名空间建议为 `/api/desktop/v1`。以下路径、字段和状态码全部都是**未来接口提案**，当前未部署，也不是当前已存在的 NewAPI 能力。
 
 ### 3.1 设备授权
 

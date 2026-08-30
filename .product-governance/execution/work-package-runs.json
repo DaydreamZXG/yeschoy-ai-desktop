@@ -16,6 +16,22 @@
       "reportSha256": "sha256:0fb3852cf9f20dea5c8968b7da9db56f6a4263c963834b56ab7386739101def8",
       "releaseUnitId": "RU-001",
       "releaseUnitHash": "sha256:861a466d99d23425391efd33192be1351ba481cb8aae375aae50d9f75ad35c4e"
+    },
+    {
+      "id": "RU-002/WP-RU002-ACCOUNT-BILLING-SHELL@2026-08-30T08:34:07.549995+00:00",
+      "packageId": "WP-RU002-ACCOUNT-BILLING-SHELL",
+      "baselineCommit": "260f0640fab3c80979f815affd844daa075fbf93",
+      "baselineTreeHash": "sha256:deddd61ae295b0bf5b227ec992b75ce83f97c43237405a3e02d276e25483fa6b",
+      "baselineSnapshotPath": "execution/baselines/862968954c98c5da.c54e4b45b7504598b68f.json",
+      "baselineSnapshotSha256": "sha256:6d2eaad10f7b038b6600f43c365da8ed5c016bd8c0c845565c97126a0e161003",
+      "assignedTo": "codex-root",
+      "status": "completed",
+      "startedAt": "2026-08-30T08:34:07.549995+00:00",
+      "finishedAt": "2026-08-30T08:47:14.390369+00:00",
+      "reportPath": "execution/reports/862968954c98c5da.c54e4b45b7504598b68f.json",
+      "reportSha256": "sha256:29b6c34c8e4d20ee115d976f2722d05d00687faa025fd62e15ba5c6fa269777a",
+      "releaseUnitId": "RU-002",
+      "releaseUnitHash": "sha256:1cd08bf6bc0db59124c8e1331698bdd10eb7e0772daa04be51942517e4ac5a00"
     }
   ]
 }

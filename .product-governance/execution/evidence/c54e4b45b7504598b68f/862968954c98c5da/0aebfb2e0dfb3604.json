@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU002-AS-06",
+  "assertion": "The future NewAPI specification names current GitHub HEAD and deployed readiness evidence, marks /api/desktop/v1 paths as proposed and not deployed, and states that this unit changes no NewAPI or production resource.",
+  "testSelector": "tests/work_packages/ru002/test_acceptance.py::test_future_newapi_spec_is_current_and_proposed",
+  "acceptanceCommandId": "ru002-as-06-spec",
+  "runId": "RU-002/WP-RU002-ACCOUNT-BILLING-SHELL@2026-08-30T08:34:07.549995+00:00",
+  "packageId": "WP-RU002-ACCOUNT-BILLING-SHELL",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru002/test_acceptance.py::test_future_newapi_spec_is_current_and_proposed",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:05a31abb464383c245cc95fc5e7935f30d830da5b39c6696026d5a94a0280704",
+    "machineReportSha256": "sha256:44c392c102d912e2ead2b418b19456c02c9f39c6a5700566c74ce1b6d4d68192",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:8e180cade9de4e14ab5499cba021872fb68363af7f3a593da2c3ccb7bc608a72",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:8300e707e18f9b3d5541a9ad7fd2342ef6e787e8eec5f68b48f110453aa93372",
+  "releaseUnitId": "RU-002",
+  "releaseUnitHash": "sha256:1cd08bf6bc0db59124c8e1331698bdd10eb7e0772daa04be51942517e4ac5a00"
+}

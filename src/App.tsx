@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
+import { createAccountReadiness } from "./account/readiness";
 
 type ToolId = "claude" | "codex" | "opencode" | "pi" | "dsh";
 type ToolStatus =
@@ -43,6 +44,8 @@ type ViewPhase =
   | "conflict"
   | "error";
 
+type AppView = "account" | "tools";
+
 const TOOL_CATALOG: Array<{
   id: ToolId;
   displayName: string;
@@ -67,10 +70,15 @@ function isCompleteProjection(response: ScanResponse): boolean {
 
 function App() {
   const { t, i18n } = useTranslation();
+  const [view, setView] = useState<AppView>("account");
   const [phase, setPhase] = useState<ViewPhase>("default");
   const [scan, setScan] = useState<ScanResponse | null>(null);
   const latestRequestRef = useRef("");
   const requestSequenceRef = useRef(0);
+  const accountReadiness = useMemo(
+    () => createAccountReadiness("account-shell"),
+    [],
+  );
 
   const resultsById = useMemo(
     () => new Map(scan?.tools.map((tool) => [tool.toolId, tool]) ?? []),
@@ -120,11 +128,12 @@ function App() {
     : null;
 
   return (
-    <main className="app-shell" data-phase={phase}>
+    <main className="app-shell" data-phase={phase} data-view={view}>
       <header className="topbar">
-        <a
+        <button
           className="brand"
-          href="#top"
+          type="button"
+          onClick={() => setView("account")}
           aria-label={t("yeschoyDiscovery.brandName")}
         >
           <span className="brand-mark" aria-hidden="true">
@@ -132,149 +141,297 @@ function App() {
             <span className="leaf leaf-right" />
           </span>
           <span>{t("yeschoyDiscovery.brandName")}</span>
-        </a>
-        <div className="edition-pill">
-          <span className="edition-dot" aria-hidden="true" />
-          {t("yeschoyDiscovery.edition")}
+        </button>
+        <div className="topbar-actions">
+          <nav
+            className="view-switcher"
+            aria-label={t("yeschoyAccount.navigationLabel")}
+          >
+            <button
+              type="button"
+              className={view === "account" ? "is-active" : undefined}
+              aria-current={view === "account" ? "page" : undefined}
+              onClick={() => setView("account")}
+            >
+              {t("yeschoyAccount.accountNav")}
+            </button>
+            <button
+              type="button"
+              className={view === "tools" ? "is-active" : undefined}
+              aria-current={view === "tools" ? "page" : undefined}
+              onClick={() => setView("tools")}
+            >
+              {t("yeschoyAccount.toolsNav")}
+            </button>
+          </nav>
+          <div className="edition-pill">
+            <span className="edition-dot" aria-hidden="true" />
+            {t("yeschoyAccount.edition")}
+          </div>
         </div>
       </header>
 
-      <div className="workspace" id="top">
-        <section className="intro-panel" aria-labelledby="page-title">
-          <div>
-            <p className="eyebrow">{t("yeschoyDiscovery.eyebrow")}</p>
-            <h1 id="page-title">{t("yeschoyDiscovery.title")}</h1>
-            <p className="intro-copy">{t("yeschoyDiscovery.description")}</p>
-
-            <div
-              className="trust-list"
-              aria-label={t("yeschoyDiscovery.trustTitle")}
-            >
-              <span>{t("yeschoyDiscovery.localOnly")}</span>
-              <span>{t("yeschoyDiscovery.noChanges")}</span>
-              <span>{t("yeschoyDiscovery.noApiKnowledge")}</span>
+      {view === "account" ? (
+        <div className="account-workspace" id="top">
+          <section className="account-hero" aria-labelledby="account-title">
+            <div className="readiness-specimen" aria-hidden="true">
+              <span className="specimen-ring specimen-ring-outer" />
+              <span className="specimen-ring specimen-ring-inner" />
+              <span className="specimen-stem" />
+              <span className="specimen-leaf specimen-leaf-one" />
+              <span className="specimen-leaf specimen-leaf-two" />
+              <span className="specimen-leaf specimen-leaf-three" />
             </div>
-          </div>
-
-          <div className="scan-action">
-            <button
-              className="primary-action"
-              type="button"
-              onClick={runReadOnlyScan}
-              disabled={phase === "loading"}
-              data-testid="scan-tools-action"
-            >
-              <span className="button-orbit" aria-hidden="true" />
-              {phase === "loading"
-                ? t("yeschoyDiscovery.scanning")
-                : scan || phase === "error"
-                  ? t("yeschoyDiscovery.rescanButton")
-                  : t("yeschoyDiscovery.scanButton")}
-            </button>
-            <p>{t("yeschoyDiscovery.privacyNote")}</p>
-          </div>
-
-          <div className="scope-note">
-            <span>{t("yeschoyDiscovery.scopeLabel")}</span>
-            <p>{t("yeschoyDiscovery.scopeText")}</p>
-          </div>
-        </section>
-
-        <section
-          className="discovery-panel"
-          aria-labelledby="discovery-heading"
-        >
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">{t("yeschoyDiscovery.railLabel")}</p>
-              <h2 id="discovery-heading">{t("yeschoyDiscovery.toolsTitle")}</h2>
+            <div className="account-hero-copy">
+              <p className="eyebrow">{t("yeschoyAccount.eyebrow")}</p>
+              <h1 id="account-title">{t("yeschoyAccount.title")}</h1>
+              <p className="intro-copy">{t("yeschoyAccount.description")}</p>
+              <div className="readiness-state" role="status">
+                <span className="readiness-state-dot" aria-hidden="true" />
+                <span>{t("yeschoyAccount.waitingForBackend")}</span>
+                <code>{accountReadiness.status}</code>
+              </div>
             </div>
-            <div className="scan-meta" aria-live="polite">
-              {phase === "loading" && t("yeschoyDiscovery.processingLocal")}
-              {completedAt &&
-                t("yeschoyDiscovery.checkedAt", { time: completedAt })}
+
+            <div className="account-boundary">
+              <p className="account-boundary-title">
+                {t("yeschoyAccount.boundaryTitle")}
+              </p>
+              <p>{t("yeschoyAccount.boundaryBody")}</p>
+              <button
+                className="secondary-action"
+                type="button"
+                onClick={() => setView("tools")}
+              >
+                {t("yeschoyAccount.openTools")}
+              </button>
             </div>
-          </div>
+          </section>
 
-          {phase === "error" && (
-            <div className="error-banner" role="alert">
-              <strong>{t("yeschoyDiscovery.scanErrorTitle")}</strong>
-              <span>{t("yeschoyDiscovery.scanErrorBody")}</span>
+          <section className="account-ledger" aria-labelledby="ledger-title">
+            <div className="panel-heading account-heading">
+              <div>
+                <p className="eyebrow">{t("yeschoyAccount.ledgerEyebrow")}</p>
+                <h2 id="ledger-title">{t("yeschoyAccount.ledgerTitle")}</h2>
+              </div>
+              <span className="ledger-freshness">
+                {t("yeschoyAccount.noRemoteData")}
+              </span>
             </div>
-          )}
 
-          <div className="tool-rail" aria-busy={phase === "loading"}>
-            <span className="rail-line" aria-hidden="true" />
-            {TOOL_CATALOG.map((tool, index) => {
-              const result = resultsById.get(tool.id);
-              const status =
-                phase === "loading"
-                  ? "checking"
-                  : (result?.status ?? "waiting");
-              return (
-                <article
-                  className="tool-card"
-                  data-status={status}
-                  key={tool.id}
-                  style={{ "--rail-index": index } as CSSProperties}
-                >
-                  <div className="tool-mark" aria-hidden="true">
-                    {tool.mark}
-                  </div>
-                  <div className="tool-main">
-                    <div className="tool-title-row">
-                      <h3>{tool.displayName}</h3>
-                      <span className="status-label">
-                        {t(`yeschoyDiscovery.status.${status}`)}
-                      </span>
-                    </div>
-                    <p className="tool-description">
-                      {t(`yeschoyDiscovery.toolDescriptions.${tool.id}`)}
-                    </p>
-                    {result && (
-                      <div className="tool-evidence">
-                        {result.version && (
-                          <span>
-                            {t("yeschoyDiscovery.exactVersion")}
-                            <code>{result.version}</code>
-                          </span>
-                        )}
-                        {result.status === "multiple_installations" && (
-                          <span>
-                            {t("yeschoyDiscovery.candidateCount", {
-                              count: result.candidateCount,
-                            })}
-                          </span>
-                        )}
-                        <span className="reason-text">
-                          {t(`yeschoyDiscovery.reason.${result.reasonCode}`)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <span className="rail-node" aria-hidden="true" />
-                </article>
-              );
-            })}
-          </div>
+            <div className="metric-grid">
+              {(["balance", "todayUsage", "monthUsage"] as const).map(
+                (metric) => (
+                  <article className="metric-card" key={metric}>
+                    <span>{t(`yeschoyAccount.metrics.${metric}`)}</span>
+                    <strong aria-label={t("yeschoyAccount.loginToView")}>
+                      —
+                    </strong>
+                    <small>{t("yeschoyAccount.loginToView")}</small>
+                  </article>
+                ),
+              )}
+            </div>
 
-          {scan && (
-            <details className="scan-details">
-              <summary>{t("yeschoyDiscovery.advancedDetails")}</summary>
-              <dl>
+            <article className="price-sheet">
+              <div className="price-sheet-heading">
                 <div>
-                  <dt>{t("yeschoyDiscovery.platform")}</dt>
-                  <dd>{scan.platform}</dd>
+                  <p className="section-kicker">
+                    {t("yeschoyAccount.priceKicker")}
+                  </p>
+                  <h3>{t("yeschoyAccount.priceTitle")}</h3>
+                </div>
+                <span className="pending-label">
+                  {t("yeschoyAccount.pending")}
+                </span>
+              </div>
+
+              <dl className="price-comparison">
+                <div className="model-id-row">
+                  <dt>{t("yeschoyAccount.modelId")}</dt>
+                  <dd>{t("yeschoyAccount.loginToView")}</dd>
                 </div>
                 <div>
-                  <dt>{t("yeschoyDiscovery.requestId")}</dt>
-                  <dd>{scan.requestId}</dd>
+                  <dt>{t("yeschoyAccount.officialPrice")}</dt>
+                  <dd>—</dd>
+                  <small>{t("yeschoyAccount.serverProjectionRequired")}</small>
+                </div>
+                <div>
+                  <dt>{t("yeschoyAccount.actualPrice")}</dt>
+                  <dd>—</dd>
+                  <small>{t("yeschoyAccount.serverProjectionRequired")}</small>
                 </div>
               </dl>
+
+              <div className="fx-note">
+                <span>{t("yeschoyAccount.fixedFx")}</span>
+                <strong>
+                  1 USD = {accountReadiness.comparisonFx.usdToCny} CNY
+                </strong>
+                <small>{t("yeschoyAccount.fxDisclaimer")}</small>
+              </div>
+            </article>
+
+            <article className="wallet-sheet" aria-disabled="true">
+              <div>
+                <p className="section-kicker">
+                  {t("yeschoyAccount.rechargeKicker")}
+                </p>
+                <h3>{t("yeschoyAccount.rechargeTitle")}</h3>
+                <p>{t("yeschoyAccount.rechargeBody")}</p>
+              </div>
+              <span className="disabled-action">
+                {t("yeschoyAccount.notAvailable")}
+              </span>
+            </article>
+
+            <details className="server-details">
+              <summary>{t("yeschoyAccount.whyUnavailable")}</summary>
+              <p>{t("yeschoyAccount.serverExplanation")}</p>
+              <code>{accountReadiness.serverNamespace}</code>
             </details>
-          )}
-        </section>
-      </div>
+          </section>
+        </div>
+      ) : (
+        <div className="workspace" id="top">
+          <section className="intro-panel" aria-labelledby="page-title">
+            <div>
+              <p className="eyebrow">{t("yeschoyDiscovery.eyebrow")}</p>
+              <h1 id="page-title">{t("yeschoyDiscovery.title")}</h1>
+              <p className="intro-copy">{t("yeschoyDiscovery.description")}</p>
+
+              <div
+                className="trust-list"
+                aria-label={t("yeschoyDiscovery.trustTitle")}
+              >
+                <span>{t("yeschoyDiscovery.localOnly")}</span>
+                <span>{t("yeschoyDiscovery.noChanges")}</span>
+                <span>{t("yeschoyDiscovery.noApiKnowledge")}</span>
+              </div>
+            </div>
+
+            <div className="scan-action">
+              <button
+                className="primary-action"
+                type="button"
+                onClick={runReadOnlyScan}
+                disabled={phase === "loading"}
+                data-testid="scan-tools-action"
+              >
+                <span className="button-orbit" aria-hidden="true" />
+                {phase === "loading"
+                  ? t("yeschoyDiscovery.scanning")
+                  : scan || phase === "error"
+                    ? t("yeschoyDiscovery.rescanButton")
+                    : t("yeschoyDiscovery.scanButton")}
+              </button>
+              <p>{t("yeschoyDiscovery.privacyNote")}</p>
+            </div>
+
+            <div className="scope-note">
+              <span>{t("yeschoyDiscovery.scopeLabel")}</span>
+              <p>{t("yeschoyDiscovery.scopeText")}</p>
+            </div>
+          </section>
+
+          <section
+            className="discovery-panel"
+            aria-labelledby="discovery-heading"
+          >
+            <div className="panel-heading">
+              <div>
+                <p className="eyebrow">{t("yeschoyDiscovery.railLabel")}</p>
+                <h2 id="discovery-heading">
+                  {t("yeschoyDiscovery.toolsTitle")}
+                </h2>
+              </div>
+              <div className="scan-meta" aria-live="polite">
+                {phase === "loading" && t("yeschoyDiscovery.processingLocal")}
+                {completedAt &&
+                  t("yeschoyDiscovery.checkedAt", { time: completedAt })}
+              </div>
+            </div>
+
+            {phase === "error" && (
+              <div className="error-banner" role="alert">
+                <strong>{t("yeschoyDiscovery.scanErrorTitle")}</strong>
+                <span>{t("yeschoyDiscovery.scanErrorBody")}</span>
+              </div>
+            )}
+
+            <div className="tool-rail" aria-busy={phase === "loading"}>
+              <span className="rail-line" aria-hidden="true" />
+              {TOOL_CATALOG.map((tool, index) => {
+                const result = resultsById.get(tool.id);
+                const status =
+                  phase === "loading"
+                    ? "checking"
+                    : (result?.status ?? "waiting");
+                return (
+                  <article
+                    className="tool-card"
+                    data-status={status}
+                    key={tool.id}
+                    style={{ "--rail-index": index } as CSSProperties}
+                  >
+                    <div className="tool-mark" aria-hidden="true">
+                      {tool.mark}
+                    </div>
+                    <div className="tool-main">
+                      <div className="tool-title-row">
+                        <h3>{tool.displayName}</h3>
+                        <span className="status-label">
+                          {t(`yeschoyDiscovery.status.${status}`)}
+                        </span>
+                      </div>
+                      <p className="tool-description">
+                        {t(`yeschoyDiscovery.toolDescriptions.${tool.id}`)}
+                      </p>
+                      {result && (
+                        <div className="tool-evidence">
+                          {result.version && (
+                            <span>
+                              {t("yeschoyDiscovery.exactVersion")}
+                              <code>{result.version}</code>
+                            </span>
+                          )}
+                          {result.status === "multiple_installations" && (
+                            <span>
+                              {t("yeschoyDiscovery.candidateCount", {
+                                count: result.candidateCount,
+                              })}
+                            </span>
+                          )}
+                          <span className="reason-text">
+                            {t(`yeschoyDiscovery.reason.${result.reasonCode}`)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <span className="rail-node" aria-hidden="true" />
+                  </article>
+                );
+              })}
+            </div>
+
+            {scan && (
+              <details className="scan-details">
+                <summary>{t("yeschoyDiscovery.advancedDetails")}</summary>
+                <dl>
+                  <div>
+                    <dt>{t("yeschoyDiscovery.platform")}</dt>
+                    <dd>{scan.platform}</dd>
+                  </div>
+                  <div>
+                    <dt>{t("yeschoyDiscovery.requestId")}</dt>
+                    <dd>{scan.requestId}</dd>
+                  </div>
+                </dl>
+              </details>
+            )}
+          </section>
+        </div>
+      )}
     </main>
   );
 }

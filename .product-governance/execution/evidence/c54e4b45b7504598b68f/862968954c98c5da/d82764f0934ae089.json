@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU002-AS-04",
+  "assertion": "The client displays exactly 1 USD = 6.75 CNY as a fixed display-only comparison context, explicitly not a live exchange rate or billing input, and displays no independent numeric model price.",
+  "testSelector": "tests/work_packages/ru002/test_acceptance.py::test_fixed_fx_is_display_only",
+  "acceptanceCommandId": "ru002-as-04-fx",
+  "runId": "RU-002/WP-RU002-ACCOUNT-BILLING-SHELL@2026-08-30T08:34:07.549995+00:00",
+  "packageId": "WP-RU002-ACCOUNT-BILLING-SHELL",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru002/test_acceptance.py::test_fixed_fx_is_display_only",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:a38e59f6d495af5830e0c1a0f65edf961c2117c282ab5aaa1bdd0ef7bd66cfa1",
+    "machineReportSha256": "sha256:84b4f969c4496c89cd89caed04e44b993cb95541fec9220e07861d81821d254a",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:27cd6684e386330b27bbc4cc9809fe18c3f32b7f4630e68d5163e7fcfe20aa10",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:43f6898fef147a341f1b71dca81b19796cc0fd4aff29117e0dbb3fd9d54b480f",
+  "releaseUnitId": "RU-002",
+  "releaseUnitHash": "sha256:1cd08bf6bc0db59124c8e1331698bdd10eb7e0772daa04be51942517e4ac5a00"
+}
