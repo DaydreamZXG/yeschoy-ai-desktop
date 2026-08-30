@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "terms": [
+    {
+      "id": "TERM-ACCOUNT-SESSION",
+      "term": "野菜账号会话",
+      "definition": "由野菜API网站授权给桌面客户端、只用于账户和客户端管理接口的凭证状态。",
+      "owner": "account",
+      "aliases": ["账号登录凭证"]
+    },
+    {
+      "id": "TERM-TOOL-KEY",
+      "term": "工具调用 Key",
+      "definition": "写入受支持工具、用于调用模型转发接口的 API 凭证；不得与账号会话混用。",
+      "owner": "security-update",
+      "aliases": ["工具 API Key", "中转 Key"]
+    },
+    {
+      "id": "TERM-LINE",
+      "term": "线路",
+      "definition": "面向用户的 API 接入入口类别，例如大陆优化或全球线路；实际端点在高级信息中可见。",
+      "owner": "diagnostics",
+      "aliases": ["接入线路"]
+    },
+    {
+      "id": "TERM-MODEL-ID",
+      "term": "模型 ID",
+      "definition": "请求和本地工具配置中使用的真实模型标识，不得被推荐标签取代或隐藏。",
+      "owner": "billing",
+      "aliases": ["真实模型名"]
+    },
+    {
+      "id": "TERM-OFFICIAL-PRICE",
+      "term": "官网价格",
+      "definition": "模型厂商公开价格源在指定核对时间、单位和计费条件下声明的价格。",
+      "owner": "billing",
+      "aliases": ["厂商零售价"]
+    },
+    {
+      "id": "TERM-ACTUAL-PRICE",
+      "term": "野菜实际价格",
+      "definition": "依据当前用户、计费分组、模型、缓存、阶梯和价格版本计算的野菜API价格。",
+      "owner": "billing",
+      "aliases": ["本站价格"]
+    },
+    {
+      "id": "TERM-READY",
+      "term": "已经可以使用",
+      "definition": "本地配置写入、读取回验和工具所需协议的最小连通性测试均成功后的状态。",
+      "owner": "diagnostics",
+      "aliases": ["配置成功"]
+    }
+  ]
+}

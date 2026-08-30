@@ -1,0 +1,291 @@
+{
+  "schemaVersion": 1,
+  "requirements": [
+    {
+      "id": "NFR-security",
+      "category": "security",
+      "statement": "Define and verify credential isolation, local privilege, remote-content isolation, and signed-update requirements.",
+      "scope": "target",
+      "impact": "high",
+      "state": "unknown",
+      "owner": "security-update",
+      "evidenceRefs": [],
+      "acceptance": [],
+      "targetDimensions": ["credential exposure", "remote IPC boundary", "update authenticity"],
+      "blockingDecisionRef": "DEC-010",
+      "proposedVerification": {
+        "condition": "No approved secret flow reaches logs or an unauthorized consumer, and unsigned or tampered updates are rejected.",
+        "method": "Threat model review, secret-flow tests, IPC capability tests, and signed-update adversarial tests.",
+        "environment": "Supported Windows and macOS targets with production-equivalent packaging keys in a controlled release environment.",
+        "dataVolume": "Representative account, tool-key, temporary rollback snapshot, crash, log, and update cases; exact matrix pending.",
+        "evidenceArtifact": ".product-governance/evidence/nfr-security.json",
+        "reviewCadence": "Before every production release and after any credential or updater contract change.",
+        "minimumEvidenceLevel": 5
+      }
+    },
+    {
+      "id": "NFR-privacy",
+      "category": "privacy",
+      "statement": "Define and verify collection, consent, retention, deletion, diagnostic export, and third-party disclosure rules.",
+      "scope": "target",
+      "impact": "high",
+      "state": "unknown",
+      "owner": "security-update",
+      "evidenceRefs": [],
+      "acceptance": [],
+      "targetDimensions": ["data minimization", "retention and deletion", "consent and disclosure"],
+      "blockingDecisionRef": "DEC-010",
+      "proposedVerification": {
+        "condition": "Every collected field has an approved purpose and lifecycle, and diagnostics exclude prompts, project contents, and secrets.",
+        "method": "Data-flow inventory, lifecycle review, diagnostic bundle inspection, and consent-state tests.",
+        "environment": "Clean and upgraded local profiles on supported Windows and macOS targets.",
+        "dataVolume": "All declared data resources and every export, deletion, and consent state; exact fixtures pending.",
+        "evidenceArtifact": ".product-governance/evidence/nfr-privacy.json",
+        "reviewCadence": "Before release and whenever telemetry, diagnostics, or credential storage changes.",
+        "minimumEvidenceLevel": 5
+      }
+    },
+    {
+      "id": "NFR-reliability",
+      "category": "reliability",
+      "statement": "Define and verify deterministic configuration transactions, recovery, retries, expiry, and partial-failure behavior.",
+      "scope": "target",
+      "impact": "high",
+      "state": "unknown",
+      "owner": "tool-config",
+      "evidenceRefs": [],
+      "acceptance": [],
+      "targetDimensions": ["transaction completion", "rollback correctness", "partial and stale state handling"],
+      "blockingDecisionRef": "DEC-010",
+      "proposedVerification": {
+        "condition": "No injected write, validation, network, or relaunch failure silently loses pre-existing configuration.",
+        "method": "Integration tests with fault injection across temporary-snapshot creation, write, validation, probe, rollback, cleanup, and relaunch boundaries.",
+        "environment": "Real filesystem semantics on supported Windows and macOS versions.",
+        "dataVolume": "Every supported tool, file-state class, and defined failure boundary; exact matrix pending.",
+        "evidenceArtifact": ".product-governance/evidence/nfr-reliability.json",
+        "reviewCadence": "Every release that changes a tool adapter or transaction engine.",
+        "minimumEvidenceLevel": 4
+      }
+    },
+    {
+      "id": "NFR-observability",
+      "category": "observability",
+      "statement": "Define and verify privacy-safe operation correlation, local diagnostics, support lookup, and failure classification.",
+      "scope": "target",
+      "impact": "high",
+      "state": "unknown",
+      "owner": "diagnostics",
+      "evidenceRefs": [],
+      "acceptance": [],
+      "targetDimensions": ["operation correlation", "failure classification", "secret-free support evidence"],
+      "blockingDecisionRef": "DEC-010",
+      "proposedVerification": {
+        "condition": "Every material local operation can be traced without exposing credentials, prompts, or project contents.",
+        "method": "Integration tests and structured diagnostic export inspection for successful, partial, failed, and recovered operations.",
+        "environment": "Supported Windows and macOS targets with representative network and filesystem failures.",
+        "dataVolume": "All operation types and error classes; exact event counts pending.",
+        "evidenceArtifact": ".product-governance/evidence/nfr-observability.json",
+        "reviewCadence": "Before release and after any diagnostic schema change.",
+        "minimumEvidenceLevel": 4
+      }
+    },
+    {
+      "id": "NFR-performance",
+      "category": "performance",
+      "statement": "Define and verify startup, scan, page response, price calculation, and configuration-operation responsiveness.",
+      "scope": "target",
+      "impact": "high",
+      "state": "unknown",
+      "owner": "desktop-platform",
+      "evidenceRefs": [],
+      "acceptance": [],
+      "targetDimensions": ["startup latency", "tool scan latency", "interactive responsiveness"],
+      "blockingDecisionRef": "DEC-010",
+      "proposedVerification": {
+        "condition": "Measured operations meet product-owner-approved thresholds on the minimum supported devices.",
+        "method": "Repeatable cold/warm startup, scan, navigation, and configuration benchmarks.",
+        "environment": "Approved minimum and representative Windows and macOS hardware; targets pending.",
+        "dataVolume": "Representative tool counts, pricing catalog sizes, usage records, and unfinished transaction snapshots; volumes pending.",
+        "evidenceArtifact": ".product-governance/evidence/nfr-performance.json",
+        "reviewCadence": "Before release and after dependency or startup-path changes.",
+        "minimumEvidenceLevel": 5
+      }
+    },
+    {
+      "id": "NFR-capacity",
+      "category": "capacity",
+      "statement": "Define and verify supported local catalog, usage history, log, unfinished-transaction, and concurrent-operation limits.",
+      "scope": "target",
+      "impact": "high",
+      "state": "unknown",
+      "owner": "desktop-platform",
+      "evidenceRefs": [],
+      "acceptance": [],
+      "targetDimensions": ["catalog size", "history and log volume", "unfinished transaction and concurrent operation bounds"],
+      "blockingDecisionRef": "DEC-010",
+      "proposedVerification": {
+        "condition": "The client remains correct and responsive at approved local data and operation limits.",
+        "method": "Load and soak tests with bounded model, usage, unfinished-transaction, and diagnostic datasets.",
+        "environment": "Approved minimum Windows and macOS devices; targets pending.",
+        "dataVolume": "Product-owner-approved maximum catalog, history, log, unfinished-transaction, and operation volumes; currently unknown.",
+        "evidenceArtifact": ".product-governance/evidence/nfr-capacity.json",
+        "reviewCadence": "Before release and when data-retention or catalog contracts change.",
+        "minimumEvidenceLevel": 5
+      }
+    },
+    {
+      "id": "NFR-accessibility",
+      "category": "accessibility",
+      "statement": "Define and verify keyboard, screen-reader, scaling, contrast, focus, and plain-language requirements.",
+      "scope": "target",
+      "impact": "high",
+      "state": "unknown",
+      "owner": "desktop-platform",
+      "evidenceRefs": [],
+      "acceptance": [],
+      "targetDimensions": ["keyboard and focus", "screen reader semantics", "scaling and contrast"],
+      "blockingDecisionRef": "DEC-010",
+      "proposedVerification": {
+        "condition": "All V1 journeys remain operable with approved assistive technologies and display scaling targets.",
+        "method": "Automated accessibility checks plus manual keyboard, screen-reader, scaling, and contrast review.",
+        "environment": "Supported Windows and macOS versions with approved assistive technologies.",
+        "dataVolume": "Every V1 page, required state, dialog, and primary action; exact device matrix pending.",
+        "evidenceArtifact": ".product-governance/evidence/nfr-accessibility.json",
+        "reviewCadence": "Every visual release and after navigation or component-library changes.",
+        "minimumEvidenceLevel": 5
+      }
+    },
+    {
+      "id": "NFR-ai_quality",
+      "category": "ai_quality",
+      "statement": "Determine whether any V1 recommendation is AI-generated and define deterministic or evaluated quality boundaries accordingly.",
+      "scope": "target",
+      "impact": "high",
+      "state": "unknown",
+      "owner": "diagnostics",
+      "evidenceRefs": [],
+      "acceptance": [],
+      "targetDimensions": ["recommendation provenance", "unsupported-claim prevention", "abstention behavior"],
+      "blockingDecisionRef": "DEC-010",
+      "proposedVerification": {
+        "condition": "No AI-generated candidate is presented as a verified configuration, diagnosis, compatibility, or price fact.",
+        "method": "Architecture inspection and, if AI scenarios exist, scenario evaluation against approved datasets and abstention cases.",
+        "environment": "Frozen V1 recommendation and diagnostic paths; AI use decision pending.",
+        "dataVolume": "All recommendation and diagnosis scenarios, or an approved not-applicable decision if none use AI.",
+        "evidenceArtifact": ".product-governance/evidence/nfr-ai-quality.json",
+        "reviewCadence": "Before activating any AI-generated recommendation or diagnosis.",
+        "minimumEvidenceLevel": 5
+      }
+    },
+    {
+      "id": "NFR-ai_cost",
+      "category": "ai_cost",
+      "statement": "Define and verify the bounded cost of connectivity probes and any future AI-assisted client scenario.",
+      "scope": "target",
+      "impact": "high",
+      "state": "unknown",
+      "owner": "billing",
+      "evidenceRefs": [],
+      "acceptance": [],
+      "targetDimensions": ["probe request cost", "retry cost", "cost attribution"],
+      "blockingDecisionRef": "DEC-010",
+      "proposedVerification": {
+        "condition": "Every billable client-generated request has an approved purpose, bound, attribution, and retry policy.",
+        "method": "Contract tests and cost reconciliation against server usage records.",
+        "environment": "Test account and production-equivalent pricing rules without modifying production billing.",
+        "dataVolume": "Every probe, retry, cancellation, and recovery path; numeric budget pending.",
+        "evidenceArtifact": ".product-governance/evidence/nfr-ai-cost.json",
+        "reviewCadence": "Before release and after any probe or AI scenario changes.",
+        "minimumEvidenceLevel": 4
+      }
+    },
+    {
+      "id": "NFR-commerce",
+      "category": "commerce",
+      "statement": "Define and verify price-display accuracy, billing-authority messaging, wallet handoff, and paid-capability boundaries.",
+      "scope": "target",
+      "impact": "high",
+      "state": "unknown",
+      "owner": "billing",
+      "evidenceRefs": [],
+      "acceptance": [],
+      "targetDimensions": ["price comparison accuracy", "billing authority", "wallet handoff integrity"],
+      "blockingDecisionRef": "DEC-010",
+      "proposedVerification": {
+        "condition": "Displayed actual prices reconcile with approved server pricing inputs and wallet links remain first-party.",
+        "method": "Pricing contract tests, tier/group fixtures, source-freshness tests, and wallet destination validation.",
+        "environment": "Controlled accounts across approved pricing groups and billing modes.",
+        "dataVolume": "Every supported billing mode, group, cache class, tier, and unavailable-price case; exact matrix pending.",
+        "evidenceArtifact": ".product-governance/evidence/nfr-commerce.json",
+        "reviewCadence": "Before release and whenever pricing or wallet routing changes.",
+        "minimumEvidenceLevel": 4
+      }
+    },
+    {
+      "id": "NFR-migration",
+      "category": "migration",
+      "statement": "Define and verify client-data, configuration-adapter, and updater compatibility across supported versions.",
+      "scope": "target",
+      "impact": "high",
+      "state": "unknown",
+      "owner": "desktop-platform",
+      "evidenceRefs": [],
+      "acceptance": [],
+      "targetDimensions": ["client schema upgrade", "adapter compatibility", "forward and rollback behavior"],
+      "blockingDecisionRef": "DEC-010",
+      "proposedVerification": {
+        "condition": "Approved previous-version client data migrates safely, and any unfinished configuration transaction is recovered or explicitly blocks migration without corrupting third-party tool configuration.",
+        "method": "Migration and downgrade contract tests against immutable version fixtures.",
+        "environment": "Supported Windows and macOS upgrade and rollback paths.",
+        "dataVolume": "Every supported predecessor version and declared schema transition; initial baseline pending.",
+        "evidenceArtifact": ".product-governance/evidence/nfr-migration.json",
+        "reviewCadence": "Every release containing a schema or adapter contract change.",
+        "minimumEvidenceLevel": 3
+      }
+    },
+    {
+      "id": "NFR-backup_restore",
+      "category": "backup_restore",
+      "statement": "Define and verify encrypted transaction-scoped rollback, cleanup, crash recovery, and the prohibition on retained configuration-backup history.",
+      "scope": "target",
+      "impact": "high",
+      "state": "unknown",
+      "owner": "tool-config",
+      "evidenceRefs": [],
+      "acceptance": [],
+      "targetDimensions": ["snapshot completeness", "restore fidelity", "cleanup and crash recovery"],
+      "blockingDecisionRef": "DEC-010",
+      "proposedVerification": {
+        "condition": "Every failed or interrupted supported configuration transaction restores the exact prior state without secret disclosure, while every successful transaction leaves no retained snapshot.",
+        "method": "Production-like snapshot, corruption, restore, cleanup, crash, relaunch, and version-transition rehearsals.",
+        "environment": "Supported Windows and macOS filesystems with real permissions and representative tool configurations.",
+        "dataVolume": "Every supported tool, file-state class, secret-bearing case, and transaction interruption boundary; exact counts pending.",
+        "evidenceArtifact": ".product-governance/evidence/nfr-backup-restore.json",
+        "reviewCadence": "Before release and after any snapshot format, adapter, cleanup, or recovery change.",
+        "minimumEvidenceLevel": 6
+      }
+    },
+    {
+      "id": "NFR-operations",
+      "category": "operations",
+      "statement": "Define and verify release signing, update publication, incident response, rollback, support, and key-custody operations.",
+      "scope": "target",
+      "impact": "high",
+      "state": "unknown",
+      "owner": "security-update",
+      "evidenceRefs": [],
+      "acceptance": [],
+      "targetDimensions": ["release integrity", "rollback readiness", "signing-key custody and incident response"],
+      "blockingDecisionRef": "DEC-010",
+      "proposedVerification": {
+        "condition": "A production-like signed release can be published, updated, rolled back, and investigated under approved access controls.",
+        "method": "End-to-end release rehearsal, signature verification, failed-update recovery, key-rotation, and incident tabletop exercises.",
+        "environment": "Production-equivalent Windows and macOS signing, notarization, hosting, and updater environments.",
+        "dataVolume": "Complete release artifact matrix and declared failure scenarios; platform list pending.",
+        "evidenceArtifact": ".product-governance/evidence/nfr-operations.json",
+        "reviewCadence": "Every production release and after any signing, hosting, or updater change.",
+        "minimumEvidenceLevel": 6
+      }
+    }
+  ]
+}

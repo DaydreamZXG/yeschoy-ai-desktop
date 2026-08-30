@@ -1,0 +1,200 @@
+{
+  "schemaVersion": 1,
+  "contracts": [
+    {
+      "id": "tool-discovery-scan@v1",
+      "kind": "query",
+      "owner": "tool-config",
+      "consumers": [
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/tool-discovery-scan@v1",
+      "authorization": "Callable only by the bundled local desktop webview; it grants no account, credential, filesystem-write, installation, update, or network authority.",
+      "idempotency": "The query is read-only. Repeating one request against the same executable paths yields an equivalent projection; the UI accepts results only for its newest requestId.",
+      "compatibility": "Version 1 always returns the fixed five-tool catalog and the declared conservative statuses. New fields or status meanings require a new contract version.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One local read-only discovery request.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Caller-generated correlation identifier used to reject stale UI results.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          }
+        },
+        "required": [
+          "requestId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "The complete bounded projection for the five V1 tools.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "The unchanged caller request identifier.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "platform": {
+            "type": "string",
+            "description": "The platform family on which discovery ran.",
+            "enum": [
+              "windows",
+              "macos",
+              "linux",
+              "unknown"
+            ]
+          },
+          "startedAtEpochMs": {
+            "type": "integer",
+            "description": "Local monotonic correlation timestamp expressed as Unix milliseconds for freshness display.",
+            "minimum": 0
+          },
+          "completedAtEpochMs": {
+            "type": "integer",
+            "description": "Completion timestamp expressed as Unix milliseconds and never earlier than startedAtEpochMs.",
+            "minimum": 0
+          },
+          "tools": {
+            "type": "array",
+            "description": "Exactly one result for every V1 tool in stable product order.",
+            "minItems": 5,
+            "maxItems": 5,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "description": "One truthful local tool-discovery result.",
+              "properties": {
+                "toolId": {
+                  "type": "string",
+                  "description": "Stable tool identifier.",
+                  "enum": [
+                    "claude",
+                    "codex",
+                    "opencode",
+                    "pi",
+                    "dsh"
+                  ]
+                },
+                "displayName": {
+                  "type": "string",
+                  "description": "Beginner-readable official tool name.",
+                  "enum": [
+                    "Claude Code",
+                    "Codex",
+                    "OpenCode",
+                    "Pi",
+                    "DSH"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "description": "Observed installation and executable outcome without inferred configuration health.",
+                  "enum": [
+                    "not_found",
+                    "detected_unverified",
+                    "probe_failed",
+                    "probe_timed_out",
+                    "multiple_installations"
+                  ]
+                },
+                "version": {
+                  "type": "string",
+                  "description": "Exact normalized version output when available, otherwise an empty string.",
+                  "maxLength": 256
+                },
+                "candidateCount": {
+                  "type": "integer",
+                  "description": "Number of distinct executable candidates found after canonical-path deduplication.",
+                  "minimum": 0,
+                  "maximum": 32
+                },
+                "locationHint": {
+                  "type": "string",
+                  "description": "A sanitized source hint such as PATH or common location, never a complete user path or OS username.",
+                  "enum": [
+                    "none",
+                    "path",
+                    "common_location",
+                    "multiple"
+                  ]
+                },
+                "compatibility": {
+                  "type": "string",
+                  "description": "Conservative automatic-configuration eligibility for this release unit.",
+                  "enum": [
+                    "not_applicable",
+                    "unverified_read_only"
+                  ]
+                },
+                "reasonCode": {
+                  "type": "string",
+                  "description": "Stable presentation reason with no raw command output or secret-bearing diagnostic text.",
+                  "enum": [
+                    "tool_not_found",
+                    "exact_version_not_allowlisted",
+                    "version_command_failed",
+                    "version_command_timed_out",
+                    "multiple_executables_found"
+                  ]
+                }
+              },
+              "required": [
+                "toolId",
+                "displayName",
+                "status",
+                "version",
+                "candidateCount",
+                "locationHint",
+                "compatibility",
+                "reasonCode"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "requestId",
+          "platform",
+          "startedAtEpochMs",
+          "completedAtEpochMs",
+          "tools"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "internal"
+      ],
+      "observability": {
+        "correlation": "requestId is returned unchanged and shown in advanced local details only.",
+        "audit": "RU-001 emits no persistent audit record; the current in-memory result is the sole local projection.",
+        "metrics": "RU-001 sends no telemetry and records no persistent metrics; elapsed time is computed in memory for the current scan only."
+      },
+      "errorSemantics": [
+        "An invalid requestId rejects the whole query before any probe starts.",
+        "A missing executable is a successful not_found result rather than a command failure.",
+        "A non-zero or empty version command becomes probe_failed for only that tool and raw stdout or stderr is not returned.",
+        "A probe exceeding the bounded timeout is killed and becomes probe_timed_out for only that tool.",
+        "More than one canonical executable becomes multiple_installations and no candidate is silently selected as compatible.",
+        "Any detected version not backed by a verified exact-version allowlist is unverified_read_only."
+      ],
+      "requirementRefs": [
+        "REQ-003",
+        "REQ-012",
+        "REQ-026",
+        "REQ-028",
+        "REQ-029"
+      ],
+      "evidenceRefs": [
+        "E-USER-040",
+        "E-USER-037",
+        "E-CODE-014"
+      ],
+      "status": "specified"
+    }
+  ]
+}

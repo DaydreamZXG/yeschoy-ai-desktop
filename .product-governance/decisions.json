@@ -1,0 +1,824 @@
+{
+  "schemaVersion": 1,
+  "decisions": [
+    {
+      "id": "DEC-001",
+      "question": "What is the official product display name?",
+      "choice": "野菜API",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T14:35:00+08:00",
+      "evidenceRefs": ["E-USER-008"],
+      "affects": {
+        "requirementRefs": ["REQ-001"],
+        "pageRefs": ["PAGE-ONBOARDING", "PAGE-HOME"],
+        "domainRefs": ["desktop-platform"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-002",
+      "question": "Who is V1 primarily for?",
+      "choice": "Novice users who already installed an AI tool but cannot configure APIs, routes, models, or local files.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T14:15:00+08:00",
+      "evidenceRefs": ["E-USER-004"],
+      "affects": {
+        "requirementRefs": ["REQ-001", "REQ-003", "REQ-004", "REQ-012"],
+        "pageRefs": ["PAGE-ONBOARDING", "PAGE-TOOLS", "PAGE-CONFIGURE"],
+        "domainRefs": ["tool-config", "desktop-platform"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-003",
+      "question": "Which tools are in the V1 support set?",
+      "choice": "Claude Code, Codex, OpenCode, Pi, and DSH (DeepSeek Harness).",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T14:20:00+08:00",
+      "evidenceRefs": ["E-USER-005"],
+      "affects": {
+        "requirementRefs": ["REQ-003", "REQ-004"],
+        "pageRefs": ["PAGE-TOOLS", "PAGE-CONFIGURE"],
+        "domainRefs": ["tool-config", "diagnostics"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-004",
+      "question": "Should V1 install third-party tools?",
+      "choice": "No. V1 detects and configures existing installations; installation is deferred.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T14:15:00+08:00",
+      "evidenceRefs": ["E-USER-004"],
+      "affects": {
+        "requirementRefs": ["REQ-012"],
+        "pageRefs": ["PAGE-TOOLS"],
+        "domainRefs": ["desktop-platform"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-005",
+      "question": "How transparent must model selection be?",
+      "choice": "Show the exact model ID together with beginner-friendly labels, compatibility, and recommendations.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T14:25:00+08:00",
+      "evidenceRefs": ["E-USER-006"],
+      "affects": {
+        "requirementRefs": ["REQ-006"],
+        "pageRefs": ["PAGE-MODELS", "PAGE-CONFIGURE"],
+        "domainRefs": ["billing", "tool-config"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-006",
+      "question": "Does V1 compare pricing?",
+      "choice": "Yes. Compare official vendor pricing with the authenticated user's actual 野菜API pricing using explicit input, output, cache, tier, and timestamp context.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T14:30:00+08:00",
+      "evidenceRefs": ["E-USER-007", "E-CODE-002"],
+      "affects": {
+        "requirementRefs": ["REQ-007"],
+        "pageRefs": ["PAGE-MODELS", "PAGE-BILLING"],
+        "domainRefs": ["billing"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-007",
+      "question": "What is the target account authorization experience?",
+      "choice": "Open a first-party 野菜API website authorization page in the system browser; the website handles its existing login methods and grants the official client access.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T14:10:00+08:00",
+      "evidenceRefs": ["E-USER-003"],
+      "affects": {
+        "requirementRefs": ["REQ-002", "REQ-010"],
+        "pageRefs": ["PAGE-ONBOARDING", "PAGE-ACCOUNT"],
+        "domainRefs": ["account", "security-update"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-008",
+      "question": "May the current phase modify NewAPI or production infrastructure?",
+      "choice": "No. Produce the client and a later backend-change specification only; do not change NewAPI, servers, Nginx, or production configuration now.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T14:05:00+08:00",
+      "evidenceRefs": ["E-USER-002"],
+      "affects": {
+        "requirementRefs": ["REQ-013"],
+        "pageRefs": [],
+        "domainRefs": ["account", "billing", "security-update"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-009",
+      "question": "Should the client reuse CC Switch as a configuration-engine foundation?",
+      "choice": "Proposed: fork or extract the Tauri/Rust configuration adapters, backup, and atomic-write mechanisms while replacing the product experience and adding first-party account/billing layers.",
+      "status": "superseded",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T16:05:00+08:00",
+      "evidenceRefs": ["E-INF-001"]
+    },
+    {
+      "id": "DEC-010",
+      "question": "What measurable non-functional targets and verification environments must V1 meet?",
+      "choice": "Pending product policy, platform support decisions, and measured baselines; do not invent numeric thresholds.",
+      "status": "proposed",
+      "evidenceRefs": ["E-USER-002", "E-USER-004"]
+    },
+    {
+      "id": "DEC-011",
+      "question": "What are the official V1 line identities and root endpoints?",
+      "choice": "Mainland optimized: https://yeschoy.com. Cloudflare global acceleration: https://api.yeschoy.com.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T15:00:00+08:00",
+      "evidenceRefs": ["E-USER-009"],
+      "affects": {
+        "requirementRefs": ["REQ-008", "REQ-014"],
+        "pageRefs": ["PAGE-CONFIGURE", "PAGE-DIAGNOSTICS", "PAGE-SETTINGS"],
+        "domainRefs": ["diagnostics", "tool-config"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-012",
+      "question": "Do the two official lines have different account, key, model, or pricing semantics?",
+      "choice": "No. They share account, API key, model availability, and pricing; only the network path differs.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T15:05:00+08:00",
+      "evidenceRefs": ["E-USER-010"],
+      "affects": {
+        "requirementRefs": ["REQ-014"],
+        "pageRefs": ["PAGE-CONFIGURE", "PAGE-DIAGNOSTICS"],
+        "domainRefs": ["diagnostics", "tool-config", "billing", "account"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-013",
+      "question": "Which models does the V1 model selector show by default, and what happens when a model is unavailable or removed?",
+      "choice": "Default to models available to the current account and compatible with the selected tool; allow viewing all models with unavailable entries disabled and explained; never silently substitute a removed model.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T15:10:00+08:00",
+      "evidenceRefs": ["E-USER-011"],
+      "affects": {
+        "requirementRefs": ["REQ-006"],
+        "pageRefs": ["PAGE-MODELS", "PAGE-CONFIGURE"],
+        "domainRefs": ["billing", "tool-config"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-014",
+      "question": "Which source owns model availability, exact IDs, actual pricing, compatibility, recommendations, descriptions, and official pricing?",
+      "choice": "NewAPI live data owns current-account availability, exact IDs, and actual user pricing. A versioned first-party 野菜API catalog owns compatibility, recommendations, descriptions, and sourced official pricing; it ships in the signed client until a future server interface distributes it.",
+      "status": "superseded",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T15:15:00+08:00",
+      "evidenceRefs": ["E-USER-012", "E-CODE-001", "E-CODE-002"],
+      "affects": {
+        "requirementRefs": ["REQ-006", "REQ-007", "REQ-015"],
+        "pageRefs": ["PAGE-MODELS", "PAGE-CONFIGURE", "PAGE-BILLING"],
+        "domainRefs": ["billing", "tool-config", "security-update"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-015",
+      "question": "What unit, currency, tier, and comparability rules govern official-versus-actual price display?",
+      "choice": "Use CNY per one million tokens as the primary display, preserve official source currency, show a dated comparison-only exchange rate, separate input/output/cache and tier dimensions, preserve native units for non-token billing, and suppress savings claims when stale or incomparable.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T15:20:00+08:00",
+      "evidenceRefs": ["E-USER-013"],
+      "affects": {
+        "requirementRefs": ["REQ-007"],
+        "pageRefs": ["PAGE-MODELS", "PAGE-BILLING"],
+        "domainRefs": ["billing"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-016",
+      "question": "Does the client automatically track short-term market exchange-rate movement for official-price comparison?",
+      "choice": "No. V1 uses a fixed, versioned, comparison-only exchange rate and the product owner updates it only when movement is considered material; the exact value and change threshold remain unresolved.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T15:25:00+08:00",
+      "evidenceRefs": ["E-USER-014"],
+      "affects": {
+        "requirementRefs": ["REQ-007"],
+        "pageRefs": ["PAGE-MODELS", "PAGE-BILLING"],
+        "domainRefs": ["billing"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-017",
+      "question": "What fixed USD-to-CNY rate does the initial signed model catalog use for price comparison?",
+      "choice": "1 USD = 6.75 CNY.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T15:30:00+08:00",
+      "evidenceRefs": ["E-USER-015"],
+      "affects": {
+        "requirementRefs": ["REQ-007"],
+        "pageRefs": ["PAGE-MODELS", "PAGE-BILLING"],
+        "domainRefs": ["billing"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-018",
+      "question": "Which source owns the numeric official-price baseline and the current user's actual price?",
+      "choice": "NewAPI owns both numeric values: its governed base pricing is the official-price baseline and its user, group, and special billing rules produce the actual price. The desktop client does not duplicate price numbers; its signed catalog only supplements compatibility, descriptions, recommendations, and price provenance metadata until NewAPI exposes that metadata.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T15:35:00+08:00",
+      "evidenceRefs": ["E-USER-016", "E-CODE-002", "E-CODE-006", "E-CODE-007", "E-CODE-008"],
+      "affects": {
+        "requirementRefs": ["REQ-006", "REQ-007", "REQ-015"],
+        "pageRefs": ["PAGE-MODELS", "PAGE-CONFIGURE", "PAGE-BILLING"],
+        "domainRefs": ["billing", "tool-config", "security-update"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-019",
+      "question": "What invariant distinguishes NewAPI official-price fields from 野菜API discounts?",
+      "choice": "NewAPI model_ratio, model_price, and base billing expressions always store the corresponding vendor official price. User discounts, promotions, and channel-specific adjustments are applied only through separately identifiable group ratios or special billing rules and never overwrite the official baseline.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T15:40:00+08:00",
+      "evidenceRefs": ["E-USER-017"],
+      "affects": {
+        "requirementRefs": ["REQ-007", "REQ-015"],
+        "pageRefs": ["PAGE-MODELS", "PAGE-BILLING"],
+        "domainRefs": ["billing"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-020",
+      "question": "How does the official desktop client complete first-party account authorization?",
+      "choice": "Use a system-browser device authorization flow: request a short-lived single-use device code, let the website perform normal login and explicit device approval, poll for completion, then store a device-scoped session in the operating system credential store. No password, website cookie, API key, or final session credential appears in a URL. Cancellation, rejection, expiry, network interruption, logout, and website-side device revocation are explicit states.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T15:45:00+08:00",
+      "evidenceRefs": ["E-USER-003", "E-USER-018"],
+      "affects": {
+        "requirementRefs": ["REQ-002", "REQ-010"],
+        "pageRefs": ["PAGE-ONBOARDING", "PAGE-ACCOUNT"],
+        "domainRefs": ["account", "security-update"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-021",
+      "question": "What expiry, refresh, reauthorization, and revocation rules govern a desktop account session?",
+      "choice": "The single-use device code expires after 10 minutes. The access token expires after one hour and refreshes automatically. The remembered device session expires after 30 days of inactivity and requires reauthorization after an absolute maximum of 90 days. Logout or website-side device revocation removes refresh eligibility; the next online request clears local account credentials and enters an explicit revoked state. A long-offline client that cannot refresh requires login again, and sensitive account actions remain on the first-party website.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T15:50:00+08:00",
+      "evidenceRefs": ["E-USER-019"],
+      "affects": {
+        "requirementRefs": ["REQ-002", "REQ-010", "REQ-011"],
+        "pageRefs": ["PAGE-ONBOARDING", "PAGE-ACCOUNT", "PAGE-BILLING"],
+        "domainRefs": ["account", "billing", "security-update"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-022",
+      "question": "At what granularity are relay API keys created and reused?",
+      "choice": "Create one independent relay API key per account, device, and supported tool. Reuse it idempotently across repeated configuration, line changes, and model changes. A different device gets different keys. If a reinstall cannot prove the prior device identity, treat it as a new device and leave old keys active until explicit revocation.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T15:55:00+08:00",
+      "evidenceRefs": ["E-USER-020"],
+      "affects": {
+        "requirementRefs": ["REQ-010", "REQ-016"],
+        "pageRefs": ["PAGE-CONFIGURE", "PAGE-ACCOUNT", "PAGE-BILLING"],
+        "domainRefs": ["account", "billing", "tool-config", "security-update"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-023",
+      "question": "How do logout, device revocation, local configuration removal, and individual tool-key rotation differ?",
+      "choice": "Logout clears only the desktop account session. Revoking a lost or untrusted device also revokes every tool key for that device. Individual tool-key rotation creates the replacement, backs up and writes the target configuration, verifies it, and only then revokes the old key; failure preserves the old key and restores the original configuration. Removing local tool configuration asks separately whether its remote key should also be revoked.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T16:00:00+08:00",
+      "evidenceRefs": ["E-USER-021"],
+      "affects": {
+        "requirementRefs": ["REQ-004", "REQ-005", "REQ-010", "REQ-016"],
+        "pageRefs": ["PAGE-CONFIGURE", "PAGE-ACCOUNT", "PAGE-TOOLS"],
+        "domainRefs": ["account", "tool-config", "security-update"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-024",
+      "question": "Does V1 retain configuration backup history, and what rollback artifact may exist during a write?",
+      "choice": "V1 retains no configuration backup history. A material write may create only an encrypted temporary rollback snapshot for the active transaction. Successful validation deletes it immediately; failure restores from it and deletes it after recovery. A crash may leave only an unfinished-transaction snapshot for recovery on the next launch. The snapshot is never uploaded or used for cross-device restore, and a secure-storage failure blocks the write rather than falling back to plaintext.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T16:05:00+08:00",
+      "evidenceRefs": ["E-USER-022", "E-CODE-004"],
+      "affects": {
+        "requirementRefs": ["REQ-004", "REQ-005", "REQ-009", "REQ-010", "REQ-014", "REQ-016"],
+        "pageRefs": ["PAGE-CONFIGURE", "PAGE-DIAGNOSTICS", "PAGE-SETTINGS"],
+        "domainRefs": ["tool-config", "diagnostics", "security-update"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-025",
+      "question": "Should the client reuse CC Switch as a configuration-engine foundation after persistent backup history is excluded?",
+      "choice": "Directly fork the CC Switch Tauri/Rust/Web project as the technical foundation. Reuse only reviewed configuration adapters, atomic-write, process/path detection, and release engineering; replace the provider-centric experience with 野菜API branding, first-party account and billing, novice guidance, diagnostics, and telemetry. Preserve MIT notices, audit dependency licenses, use only ephemeral encrypted rollback snapshots, and review rather than automatically merge upstream changes.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T16:50:00+08:00",
+      "evidenceRefs": ["E-USER-022", "E-USER-031", "E-CODE-003", "E-CODE-004", "E-CODE-005", "E-INF-001"],
+      "affects": {
+        "requirementRefs": ["REQ-003", "REQ-004", "REQ-005", "REQ-013", "REQ-021"],
+        "pageRefs": ["PAGE-ONBOARDING", "PAGE-HOME", "PAGE-TOOLS", "PAGE-CONFIGURE", "PAGE-SETTINGS"],
+        "domainRefs": ["tool-config", "desktop-platform", "security-update"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-026",
+      "question": "Which account and key-management capabilities may a desktop device session exercise?",
+      "choice": "Apply least privilege. The session may read the current account profile, balance, usage, available models, and prices; create or reuse, rotate, and revoke only the current device's per-tool relay keys; and log out the current device. Password, email, payment data, recharge records, user groups, other devices, other-device key plaintext, and administrative settings are website-only or inaccessible to the desktop session.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T16:10:00+08:00",
+      "evidenceRefs": ["E-USER-023"],
+      "affects": {
+        "requirementRefs": ["REQ-002", "REQ-010", "REQ-011", "REQ-016"],
+        "pageRefs": ["PAGE-ONBOARDING", "PAGE-ACCOUNT", "PAGE-BILLING", "PAGE-CONFIGURE"],
+        "domainRefs": ["account", "billing", "tool-config", "security-update"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-027",
+      "question": "Which Windows and macOS versions and CPU architectures are officially supported in V1?",
+      "choice": "Officially support Windows 10 22H2 x64 and Windows 11 x64, with a visible Windows 10 end-of-support warning. Treat Windows 11 ARM64 running the x64 build under emulation as best-effort, not officially supported. Officially support macOS 13 and later and ship a Universal binary for Intel and Apple Silicon. Install or guide installation of the official WebView2 runtime when absent.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T16:15:00+08:00",
+      "evidenceRefs": ["E-USER-024", "E-EXT-002", "E-EXT-003", "E-EXT-004"],
+      "affects": {
+        "requirementRefs": ["REQ-017"],
+        "pageRefs": ["PAGE-ONBOARDING", "PAGE-SETTINGS"],
+        "domainRefs": ["desktop-platform", "security-update"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-028",
+      "question": "How is macOS V1 distributed while minimizing prominent exposure of the individual signer identity?",
+      "choice": "Distribute a signed and notarized Universal DMG from the first-party 野菜API website and do not list V1 in the Mac App Store. Use the existing individual Apple Developer Program membership and Developer ID. Product pages and ordinary UI do not proactively display the personal legal name, while the product makes no anonymity promise and accepts that technical certificate inspection can identify the signer.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T16:30:00+08:00",
+      "evidenceRefs": ["E-USER-026", "E-USER-027", "E-EXT-006", "E-EXT-007", "E-EXT-008"],
+      "affects": {
+        "requirementRefs": ["REQ-017", "REQ-018"],
+        "pageRefs": ["PAGE-ONBOARDING", "PAGE-SETTINGS"],
+        "domainRefs": ["desktop-platform", "security-update"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-029",
+      "question": "How does public release proceed while Windows lacks a signing identity?",
+      "choice": "Continue Windows and macOS development and testing in parallel, allow the signed and notarized macOS build to publish first, and keep Windows internal until trusted signing is available. Prefer a 野菜API organization publisher, but accept a personal publisher identity as the fallback. Never publish an unsigned or self-signed Windows package to novice users; select direct signing or Store MSIX only after release-engineering validation.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T16:35:00+08:00",
+      "evidenceRefs": ["E-USER-028", "E-EXT-009", "E-EXT-010"],
+      "affects": {
+        "requirementRefs": ["REQ-017", "REQ-019"],
+        "pageRefs": ["PAGE-ONBOARDING", "PAGE-SETTINGS"],
+        "domainRefs": ["desktop-platform", "security-update"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-030",
+      "question": "Is operational telemetry uploaded by default, and what privacy boundary governs it?",
+      "choice": "Use first-party basic operational telemetry enabled by default to detect failures early. Before any upload, provide conspicuous plain-language notice and an easy disable control that does not affect core functionality. Enforce a strict allowlist for versions, platform, tool and adapter identity, operation stage/result/error/duration, line class, model ID, sanitized crash fingerprint and stack, and a rotating pseudonymous telemetry ID separated from account and device authorization identity. Never automatically upload secrets, prompts, responses, project content, complete paths, OS usernames, clipboard content, full configuration, or raw memory dumps.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T16:40:00+08:00",
+      "evidenceRefs": ["E-USER-029", "E-EXT-011", "E-EXT-012"],
+      "affects": {
+        "requirementRefs": ["REQ-010", "REQ-020"],
+        "pageRefs": ["PAGE-ONBOARDING", "PAGE-SETTINGS", "PAGE-DIAGNOSTICS"],
+        "domainRefs": ["diagnostics", "security-update", "desktop-platform"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-031",
+      "question": "How long are telemetry events, crash envelopes, aggregate trends, identifiers, and pending local uploads retained?",
+      "choice": "Retain ordinary operational events for 30 days, sanitized crash events and code stacks for 90 days, and irreversibly de-identified aggregate trends for 12 months. Rotate the pseudonymous telemetry ID every 30 days and expire the local pending-upload queue after seven days. Disabling telemetry immediately clears the local queue and may request deletion of raw historical events; incident-specific retention extensions require a recorded scope, reason, approver, and deletion date.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T16:45:00+08:00",
+      "evidenceRefs": ["E-USER-030", "E-EXT-011"],
+      "affects": {
+        "requirementRefs": ["REQ-020"],
+        "pageRefs": ["PAGE-SETTINGS", "PAGE-DIAGNOSTICS"],
+        "domainRefs": ["diagnostics", "security-update"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-032",
+      "question": "What stable application identifier does the desktop product use across packaging, credential storage, and updates?",
+      "choice": "Use com.yeschoy.desktop as the official stable application identifier.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T16:55:00+08:00",
+      "evidenceRefs": ["E-USER-032"],
+      "affects": {
+        "requirementRefs": ["REQ-022"],
+        "pageRefs": [],
+        "domainRefs": ["desktop-platform", "security-update"],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-033",
+      "question": "Should the official desktop client directly consume NewAPI's broad website session and generic token CRUD interfaces?",
+      "choice": "Proposed: add a versioned, least-privilege desktop API boundary that reuses NewAPI domain services internally but exposes only device authorization, current-account read projections, and current-device per-tool key operations. Do not treat the proposed /api/desktop/v1 paths as existing until implemented and verified against the deployed instance.",
+      "status": "proposed",
+      "evidenceRefs": [
+        "E-USER-002",
+        "E-USER-018",
+        "E-USER-023",
+        "E-CODE-001",
+        "E-CODE-011"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-002",
+          "REQ-010",
+          "REQ-011",
+          "REQ-016"
+        ],
+        "pageRefs": [
+          "PAGE-ONBOARDING",
+          "PAGE-ACCOUNT",
+          "PAGE-BILLING",
+          "PAGE-CONFIGURE"
+        ],
+        "domainRefs": [
+          "account",
+          "billing",
+          "tool-config",
+          "security-update"
+        ],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-034",
+      "question": "Where should complex official-versus-actual pricing semantics be evaluated for the desktop client?",
+      "choice": "Proposed: NewAPI produces a versioned desktop pricing projection and quote result from its canonical base pricing, group ratios, and special billing expressions. The desktop displays the projection and never implements a second billing-expression interpreter or numeric price table.",
+      "status": "proposed",
+      "evidenceRefs": [
+        "E-USER-016",
+        "E-USER-017",
+        "E-CODE-002",
+        "E-CODE-006",
+        "E-CODE-007",
+        "E-CODE-008"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-006",
+          "REQ-007",
+          "REQ-015"
+        ],
+        "pageRefs": [
+          "PAGE-MODELS",
+          "PAGE-BILLING",
+          "PAGE-CONFIGURE"
+        ],
+        "domainRefs": [
+          "billing"
+        ],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-035",
+      "question": "May the fork retain the upstream update identity or use ordinary local storage for 野菜API account and tool secrets?",
+      "choice": "Proposed: no. Replace or disable every CC Switch update endpoint and key before release, establish an independent 野菜API update trust root, and keep desktop sessions, tool keys, and rollback keys only in an explicit operating-system credential vault rather than ordinary SQLite, logs, or front-end persistence.",
+      "status": "proposed",
+      "evidenceRefs": [
+        "E-USER-022",
+        "E-USER-023",
+        "E-USER-032",
+        "E-CODE-009",
+        "E-CODE-010"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-004",
+          "REQ-005",
+          "REQ-010",
+          "REQ-017",
+          "REQ-018",
+          "REQ-019",
+          "REQ-022"
+        ],
+        "pageRefs": [
+          "PAGE-ONBOARDING",
+          "PAGE-SETTINGS",
+          "PAGE-CONFIGURE"
+        ],
+        "domainRefs": [
+          "desktop-platform",
+          "security-update",
+          "tool-config"
+        ],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-036",
+      "question": "How should Claude Code and Codex receive their per-tool relay keys without leaving plaintext secrets in their normal configuration files?",
+      "choice": "Keep each key only in the operating-system credential vault and ship a signed local credential helper. Configure Claude Code through apiKeyHelper and Codex through model_providers.yeschoy.auth.command. Do not write ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN, experimental_bearer_token, or a 野菜 key in auth.json. A tool version that cannot use the verified helper contract is unsupported for one-click configuration rather than receiving a plaintext fallback.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T21:49:32+08:00",
+      "evidenceRefs": [
+        "E-USER-033",
+        "E-USER-034",
+        "E-EXT-014",
+        "E-EXT-015",
+        "E-EXT-016",
+        "E-CODE-015",
+        "E-CODE-016",
+        "E-PROP-001"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-004",
+          "REQ-010",
+          "REQ-016",
+          "REQ-023"
+        ],
+        "pageRefs": [
+          "PAGE-TOOLS",
+          "PAGE-CONFIGURE",
+          "PAGE-DIAGNOSTICS",
+          "PAGE-SETTINGS"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "security-update",
+          "diagnostics"
+        ],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-037",
+      "question": "How should OpenCode, Pi, and DSH receive their per-tool relay keys while preserving the confirmed operating-system-vault and no-plaintext-fallback boundary?",
+      "choice": "OpenCode loads a signed 野菜 auth plugin whose runtime loader calls the credential helper; Pi uses its native models.json apiKey !command contract; DSH installs a pinned out-of-tree credential provider that resolves the 野菜 credential reference from the operating-system vault instead of .credentials.yaml. Each integration is version-gated and fail-closed, and no tool receives a plaintext fallback.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T22:05:33+08:00",
+      "evidenceRefs": [
+        "E-USER-036",
+        "E-USER-033",
+        "E-CODE-018",
+        "E-CODE-019",
+        "E-CODE-020",
+        "E-EXT-017",
+        "E-EXT-018",
+        "E-EXT-019",
+        "E-EXT-020",
+        "E-EXT-021",
+        "E-PROP-002"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-004",
+          "REQ-010",
+          "REQ-016",
+          "REQ-024"
+        ],
+        "pageRefs": [
+          "PAGE-TOOLS",
+          "PAGE-CONFIGURE",
+          "PAGE-DIAGNOSTICS",
+          "PAGE-SETTINGS"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "security-update",
+          "diagnostics"
+        ],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-038",
+      "question": "Which DSH profiles may 野菜API V1 configure automatically?",
+      "choice": "V1 configures only the DSH web profile. Headless, sdk, sdk-minimal, acp, and any other profile are read-only discovery targets that show an unsupported-for-automatic-configuration status and receive no plugin, patch, settings, or credential writes.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-29T22:01:43+08:00",
+      "evidenceRefs": [
+        "E-USER-035",
+        "E-EXT-021"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-016",
+          "REQ-024",
+          "REQ-025"
+        ],
+        "pageRefs": [
+          "PAGE-TOOLS",
+          "PAGE-CONFIGURE",
+          "PAGE-DIAGNOSTICS",
+          "PAGE-SETTINGS"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "diagnostics",
+          "security-update"
+        ],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-039",
+      "question": "How should 野菜API V1 decide whether an installed third-party tool version is safe to configure automatically?",
+      "choice": "Use a signed exact-version allowlist produced only by the complete Windows and macOS adapter matrix. At each release baseline, test the latest three stable versions of Claude Code, Codex, OpenCode, and Pi; evaluate DSH separately against one exact prerelease tag. Do not infer support from a minimum version or open semver range. Unknown, newly released, failed, or prerelease versions outside the explicit DSH evaluation remain read-only until a signed client update adds verified evidence.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-30T15:02:27+08:00",
+      "evidenceRefs": [
+        "E-USER-037",
+        "E-EXT-022",
+        "E-EXT-023",
+        "E-PROP-003",
+        "E-USER-034",
+        "E-USER-036"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-004",
+          "REQ-016",
+          "REQ-023",
+          "REQ-024",
+          "REQ-025",
+          "REQ-026"
+        ],
+        "pageRefs": [
+          "PAGE-TOOLS",
+          "PAGE-CONFIGURE",
+          "PAGE-DIAGNOSTICS",
+          "PAGE-SETTINGS"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform",
+          "security-update",
+          "diagnostics"
+        ],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-040",
+      "question": "How should DSH be presented in V1 given that its current upstream tag is prerelease but the product owner considers the version materially settled?",
+      "choice": "Treat an exact allowlisted DSH web version as a normal V1 supported tool without a Developer Preview product badge. Continue to display the exact upstream version in advanced details and diagnostics, and do not claim support until that exact tag passes the same mandatory platform, credential, configuration, request, recovery, removal, and secret-leak gates. This product presentation decision does not rename the upstream tag or infer compatibility for another DSH tag or profile.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-30T15:11:28+08:00",
+      "evidenceRefs": [
+        "E-USER-038",
+        "E-EXT-022",
+        "E-EXT-023",
+        "E-USER-035",
+        "E-USER-037"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-016",
+          "REQ-024",
+          "REQ-025",
+          "REQ-026",
+          "REQ-027"
+        ],
+        "pageRefs": [
+          "PAGE-TOOLS",
+          "PAGE-CONFIGURE",
+          "PAGE-DIAGNOSTICS",
+          "PAGE-SETTINGS"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform",
+          "security-update",
+          "diagnostics"
+        ],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-041",
+      "question": "Must a fully verified normal-support DSH web adapter be complete before the agreed V1 product may be released?",
+      "choice": "No. DSH web remains a normal V1 support target, but its incomplete compatibility does not block the overall V1 release. If no exact DSH version has passed the mandatory matrix at release time, the client reports DSH as detected but not currently supported for automatic configuration, performs no configuration or credential writes, and may add normal support later only through a trusted signed client update after the exact version passes.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-30T15:16:47+08:00",
+      "evidenceRefs": [
+        "E-USER-039",
+        "E-USER-038",
+        "E-USER-035",
+        "E-USER-037",
+        "E-EXT-022",
+        "E-EXT-023"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-016",
+          "REQ-024",
+          "REQ-025",
+          "REQ-026",
+          "REQ-027",
+          "REQ-028"
+        ],
+        "pageRefs": [
+          "PAGE-TOOLS",
+          "PAGE-CONFIGURE",
+          "PAGE-DIAGNOSTICS",
+          "PAGE-SETTINGS"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform",
+          "security-update",
+          "diagnostics"
+        ],
+        "workPackageRefs": []
+      }
+    },
+    {
+      "id": "DEC-042",
+      "question": "What is the first implementation release unit authorized for the 野菜API desktop client?",
+      "choice": "Freeze and implement RU-001 only: establish the 野菜API desktop shell and brand, then perform local read-only discovery and truthful compatibility reporting for Claude Code, Codex, OpenCode, Pi, and DSH. The unit performs no network request, account or billing action, NewAPI change, credential access, configuration read or write, third-party installation, automatic update, or telemetry upload. Until a later signed exact-version allowlist is verified, every detected version remains read-only and is never presented as ready for one-click configuration.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-30T15:26:57+08:00",
+      "evidenceRefs": [
+        "E-USER-040",
+        "E-USER-037",
+        "E-CODE-014"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-003",
+          "REQ-012",
+          "REQ-026",
+          "REQ-028",
+          "REQ-029"
+        ],
+        "pageRefs": [
+          "PAGE-TOOLS"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform"
+        ]
+      }
+    }
+  ]
+}

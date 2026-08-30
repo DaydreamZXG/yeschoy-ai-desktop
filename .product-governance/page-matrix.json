@@ -1,0 +1,212 @@
+{
+  "schemaVersion": 1,
+  "stateProfiles": [
+    {
+      "id": "PROFILE-READONLY-TOOL-DISCOVERY",
+      "states": {
+        "default": {
+          "behavior": "Show the 野菜API welcome shell, the fixed five-tool list, and one primary button labelled to check installed tools.",
+          "visibleTruth": "No discovery result exists yet; the page says that the check is local and read-only and that no API knowledge is required.",
+          "prohibitedClaims": [
+            "Do not claim that any tool is installed, configured, compatible, connected, or ready before a scan result exists."
+          ],
+          "allowedActions": [
+            "start_read_only_scan"
+          ],
+          "freshness": "No result timestamp is shown before the first scan.",
+          "recovery": "The user may start the local scan or close the app without changing the machine.",
+          "correlation": "A requestId is generated only when the user starts a scan."
+        },
+        "loading": {
+          "behavior": "Keep all five tool cards visible with per-tool checking indicators and disable duplicate scan submission while the current request is active.",
+          "visibleTruth": "The page says that local executables and their version output are being checked and that no configuration or network action is running.",
+          "prohibitedClaims": [
+            "Do not show cached installation or compatibility results as the active scan result."
+          ],
+          "allowedActions": [],
+          "freshness": "The active requestId and start time own the pending result.",
+          "recovery": "If the request fails, transition to error while retaining no invented tool status.",
+          "correlation": "Only the active requestId may complete this state."
+        },
+        "empty": {
+          "behavior": "Show all five tools as not found and explain that this is not an application error.",
+          "visibleTruth": "The most recent completed local scan found no executable candidate for any supported tool.",
+          "prohibitedClaims": [
+            "Do not claim the tools are uninstalled when they may exist outside the bounded discovery locations."
+          ],
+          "allowedActions": [
+            "rescan_tools"
+          ],
+          "freshness": "Show the completion time of the newest accepted requestId.",
+          "recovery": "The user may install a tool independently and rescan; RU-001 never installs it.",
+          "correlation": "Advanced details show the newest accepted requestId without a complete local path."
+        },
+        "partial": {
+          "behavior": "Show each of the five tool results independently so found, not-found, failed, timed-out, and read-only states can coexist.",
+          "visibleTruth": "Only observations from the newest completed local scan appear, including exact version text for successful probes.",
+          "prohibitedClaims": [
+            "Do not promote one tool's success into a claim about another tool or about configuration health."
+          ],
+          "allowedActions": [
+            "rescan_tools",
+            "view_sanitized_details"
+          ],
+          "freshness": "All cards share the newest accepted scan completion time.",
+          "recovery": "A failed or missing tool can be rescanned without hiding valid results for the other tools.",
+          "correlation": "Every visible card belongs to the same newest requestId."
+        },
+        "error": {
+          "behavior": "Show a plain-language scan failure without replacing it with guessed installation results.",
+          "visibleTruth": "The discovery query did not produce a valid complete five-tool projection.",
+          "prohibitedClaims": [
+            "Do not display the previous scan as if it were the failed request's current result."
+          ],
+          "allowedActions": [
+            "retry_scan"
+          ],
+          "freshness": "The failed requestId is identified and prior results are visibly stale or cleared.",
+          "recovery": "Retry creates a new requestId and performs the same bounded read-only scan.",
+          "correlation": "The safe local error class is correlated to the failed requestId; raw command output is not displayed."
+        },
+        "expired": {
+          "behavior": "Mark a superseded result as expired and prevent it from overwriting a newer request.",
+          "visibleTruth": "A scan completion arrived for an older requestId and was rejected from the current projection.",
+          "prohibitedClaims": [
+            "Do not merge cards from different request identities or completion times."
+          ],
+          "allowedActions": [
+            "view_current_scan"
+          ],
+          "freshness": "Only the newest started requestId is eligible to become current.",
+          "recovery": "Continue showing the newest active or completed request; no filesystem recovery is required.",
+          "correlation": "Both expired and current request identities remain in transient UI control flow only."
+        },
+        "conflict": {
+          "behavior": "Highlight every tool with multiple canonical executable candidates and explain that no candidate was silently chosen.",
+          "visibleTruth": "The bounded scan observed more than one distinct executable for at least one tool.",
+          "prohibitedClaims": [
+            "Do not claim compatibility, choose a preferred executable, or expose a configure action while installation identity is ambiguous."
+          ],
+          "allowedActions": [
+            "rescan_tools",
+            "view_sanitized_details"
+          ],
+          "freshness": "Candidate counts come only from the newest accepted scan.",
+          "recovery": "The user resolves the tool installation externally, then rescans; RU-001 changes no PATH or tool file.",
+          "correlation": "The conflict and sanitized candidate source classes are bound to one requestId."
+        },
+        "recovery": {
+          "behavior": "After a failed, timed-out, or superseded scan, explain that a clean rescan is the only in-app recovery action.",
+          "visibleTruth": "No write or rollback is necessary because discovery is read-only and stores no retained scan history.",
+          "prohibitedClaims": [
+            "Do not offer repair, install, update, configuration, credential, or restore operations in RU-001."
+          ],
+          "allowedActions": [
+            "rescan_tools"
+          ],
+          "freshness": "Recovery always creates a new requestId and never mutates an older result.",
+          "recovery": "Run another bounded local scan; if it fails again, preserve the truthful per-tool failure states.",
+          "correlation": "The recovery request receives its own requestId."
+        },
+        "processing": {
+          "behavior": "Represent each bounded version probe as in progress while keeping configuration and remote-service controls absent.",
+          "visibleTruth": "Only local executable discovery and a bounded --version command may be processing.",
+          "prohibitedClaims": [
+            "Do not imply that login, billing, API connectivity, model retrieval, updates, or configuration are processing."
+          ],
+          "allowedActions": [],
+          "freshness": "Processing belongs to the newest active requestId and expires when it is superseded.",
+          "recovery": "Each probe times out into a truthful per-tool result; the overall projection still completes when possible.",
+          "correlation": "Per-tool processing is aggregated under one requestId without persistent telemetry."
+        }
+      }
+    }
+  ],
+  "pages": [
+    {
+      "id": "PAGE-ONBOARDING",
+      "route": "/onboarding",
+      "purpose": "Explain the product and begin first-party browser authorization.",
+      "trackScope": ["account", "desktop-platform", "security-update"],
+      "dataOwners": ["account", "desktop-platform", "security-update"],
+      "states": {}
+    },
+    {
+      "id": "PAGE-HOME",
+      "route": "/",
+      "purpose": "Show account, balance, usage, tool health, and the primary configuration action.",
+      "trackScope": ["account", "billing", "tool-config", "diagnostics"],
+      "dataOwners": ["account", "billing", "tool-config", "diagnostics"],
+      "states": {}
+    },
+    {
+      "id": "PAGE-TOOLS",
+      "route": "/tools",
+      "purpose": "List the five V1 tools and their local read-only installation and compatibility observations.",
+      "trackScope": ["tool-config", "desktop-platform"],
+      "dataOwners": ["tool-config", "desktop-platform"],
+      "entryConditions": [],
+      "actions": [
+        "start_read_only_scan",
+        "rescan_tools",
+        "view_sanitized_details"
+      ],
+      "exitRoutes": [
+        "/"
+      ],
+      "permissions": [
+        "local executable discovery and bounded version execution only"
+      ],
+      "stateProfileRef": "PROFILE-READONLY-TOOL-DISCOVERY",
+      "states": {}
+    },
+    {
+      "id": "PAGE-CONFIGURE",
+      "route": "/configure",
+      "purpose": "Guide line and model selection, preview, transaction-scoped rollback, write, validation, and recovery.",
+      "trackScope": ["tool-config", "billing", "diagnostics", "security-update"],
+      "dataOwners": ["tool-config", "billing", "diagnostics", "security-update"],
+      "states": {}
+    },
+    {
+      "id": "PAGE-MODELS",
+      "route": "/models",
+      "purpose": "Show exact model IDs, compatibility, recommendations, availability, and price comparison.",
+      "trackScope": ["billing", "tool-config"],
+      "dataOwners": ["billing", "tool-config"],
+      "states": {}
+    },
+    {
+      "id": "PAGE-BILLING",
+      "route": "/billing",
+      "purpose": "Show balance, usage, cost detail, and the first-party wallet entry point.",
+      "trackScope": ["billing", "account"],
+      "dataOwners": ["billing", "account"],
+      "states": {}
+    },
+    {
+      "id": "PAGE-DIAGNOSTICS",
+      "route": "/diagnostics",
+      "purpose": "Collect bounded evidence, explain failures, and offer safe repair actions.",
+      "trackScope": ["diagnostics", "tool-config", "security-update"],
+      "dataOwners": ["diagnostics", "tool-config", "security-update"],
+      "states": {}
+    },
+    {
+      "id": "PAGE-ACCOUNT",
+      "route": "/account",
+      "purpose": "Show the authorized account, session state, and authorization management entry points.",
+      "trackScope": ["account", "security-update"],
+      "dataOwners": ["account", "security-update"],
+      "states": {}
+    },
+    {
+      "id": "PAGE-SETTINGS",
+      "route": "/settings",
+      "purpose": "Expose advanced technical details, recent operation results, update policy, and diagnostic export controls without retained configuration backups.",
+      "trackScope": ["desktop-platform", "security-update", "tool-config"],
+      "dataOwners": ["desktop-platform", "security-update", "tool-config"],
+      "states": {}
+    }
+  ]
+}

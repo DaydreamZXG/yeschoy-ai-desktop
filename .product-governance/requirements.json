@@ -1,0 +1,518 @@
+{
+  "schemaVersion": 1,
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "statement": "The client presents itself as the official 野菜API desktop client and guides a novice without requiring knowledge of API keys, base URLs, or configuration-file syntax.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": ["E-USER-001", "E-USER-004", "E-USER-008"],
+      "acceptance": [
+        "A first-time user can reach a ready-to-use supported tool through the guided flow without manually entering a base URL or editing a configuration file.",
+        "Advanced technical values remain inspectable without dominating the default flow."
+      ]
+    },
+    {
+      "id": "REQ-002",
+      "statement": "The target client account flow uses first-party browser authorization and then displays account balance, usage, and recharge entry points.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "account",
+      "evidenceRefs": ["E-USER-001", "E-USER-003", "E-USER-018", "E-USER-019", "E-USER-023", "E-CODE-001"],
+      "acceptance": [
+        "The client never asks the user to choose GitHub or LinuxDo as a desktop-specific login provider.",
+        "If the website session is absent, the website performs its normal login before authorization.",
+        "The device code is short-lived and single-use, and the client exposes waiting, approved, rejected, expired, cancelled, and network-interrupted states.",
+        "Passwords, website cookies, API keys, and final desktop session credentials never appear in an authorization URL.",
+        "The website names and revokes authorized devices, and the client obeys revocation on its next online request.",
+        "A device code expires after 10 minutes, an access token after one hour, an inactive remembered session after 30 days, and every device requires reauthorization no later than 90 days.",
+        "The issued device session contains only the approved current-account read and current-device key-management scopes.",
+        "A backend device/authorization contract is specified before this target flow is implemented."
+      ]
+    },
+    {
+      "id": "REQ-003",
+      "statement": "V1 detects installed instances of Claude Code, Codex, OpenCode, Pi, and DSH and reports installed, not found, configured, needs attention, and unsupported-version states.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": ["E-USER-004", "E-USER-005"],
+      "acceptance": [
+        "Every supported tool has an explicit detection contract and version evidence.",
+        "Not found is not presented as an error.",
+        "An unsupported or ambiguous installation is not modified."
+      ]
+    },
+    {
+      "id": "REQ-004",
+      "statement": "The guided configuration flow selects a line and model, previews the change, creates an encrypted temporary rollback snapshot, writes only owned fields, validates the result, tests connectivity, and rolls back on failure without retaining backup history.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": ["E-USER-004", "E-USER-005", "E-USER-022", "E-CODE-004", "E-CODE-005"],
+      "acceptance": [
+        "Unrelated user configuration survives a successful change.",
+        "A failed write or validation restores the exact pre-operation state.",
+        "Concurrent external edits produce a visible conflict instead of a silent overwrite."
+      ]
+    },
+    {
+      "id": "REQ-005",
+      "statement": "Every material local-configuration change uses an encrypted transaction-scoped rollback snapshot that is removed after success or completed recovery; V1 provides no retained backup history or arbitrary user-invoked restore points.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": ["E-USER-004", "E-USER-022", "E-CODE-004"],
+      "acceptance": [
+        "The encrypted temporary snapshot is durably created and bound to the target file identity before the write starts.",
+        "Successful validation deletes the snapshot immediately; failed validation restores the exact pre-operation state and deletes the snapshot only after recovery completes.",
+        "An interrupted transaction is detected on the next launch and recovery is attempted before another write to the same target.",
+        "A recovery failure preserves the unfinished-transaction snapshot and operation identifier until recovery succeeds or the user explicitly abandons it.",
+        "Snapshots are never uploaded, retained as history, exposed as arbitrary restore points, or used for cross-device restore.",
+        "If the operating-system credential store is unavailable, the write is blocked rather than creating a plaintext snapshot."
+      ]
+    },
+    {
+      "id": "REQ-006",
+      "statement": "Model selection shows the exact model ID and augments it with compatibility, recommendation, speed/quality positioning, availability, and searchable metadata.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "billing",
+      "evidenceRefs": ["E-USER-006", "E-CODE-001", "E-CODE-002"],
+      "acceptance": [
+        "The exact model ID is visible and copyable before configuration.",
+        "The default list contains only models available to the current account and compatible with the selected tool.",
+        "An all-models view keeps unavailable entries visible but disabled and explains the reason.",
+        "Incompatible models are disabled with a reason rather than silently substituted.",
+        "A recommended default never prevents explicit user selection.",
+        "A removed or newly unavailable selected model requires a new user choice and is never silently replaced."
+      ]
+    },
+    {
+      "id": "REQ-007",
+      "statement": "Model cards compare official vendor price and authenticated-user actual 野菜API price using the same unit and currency context, including input, output, cache, tier, group, and source freshness when applicable.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "billing",
+      "evidenceRefs": ["E-USER-007", "E-CODE-002"],
+      "acceptance": [
+        "The official price includes a source URL and last-verified time.",
+        "The actual price reflects the current user's eligible group and pricing version.",
+        "CNY per one million tokens is the primary comparable display while the official source currency remains visible.",
+        "The initial fixed comparison rate is 1 USD = 6.75 CNY and displays its value, version, and effective date without auto-following short-term market movement.",
+        "The fixed comparison rate is never presented as or applied as the server billing rate.",
+        "Input, output, cache read, cache write, context tiers, and time tiers are shown separately when they differ.",
+        "Image, audio, per-request, and other non-token billing preserve their native comparable units.",
+        "If prices cannot be compared on one basis, the client says so and does not fabricate a discount.",
+        "Stale official prices or an unapproved exchange-rate basis suppress savings conclusions.",
+        "All client totals are labelled estimates and server billing remains authoritative."
+      ]
+    },
+    {
+      "id": "REQ-008",
+      "statement": "The client exposes a mainland-optimized line rooted at https://yeschoy.com and a Cloudflare global-acceleration line rooted at https://api.yeschoy.com, with the effective tool endpoint visible in advanced details.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "diagnostics",
+      "evidenceRefs": ["E-USER-009"],
+      "acceptance": [
+        "The labels and root endpoints match the accepted line decision.",
+        "Protocol-specific path rules are applied by each tool adapter rather than stored as a misleading universal suffix.",
+        "The selected effective endpoint is inspectable before configuration."
+      ]
+    },
+    {
+      "id": "REQ-009",
+      "statement": "Diagnostics distinguish installation, configuration, DNS/TLS/network, authentication, balance, model availability, protocol compatibility, and upstream-service failures and offer safe repair actions.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "diagnostics",
+      "evidenceRefs": ["E-USER-004", "E-USER-022", "E-CODE-001"],
+      "acceptance": [
+        "Diagnostics never send prompt or project contents.",
+        "Every repair action previews affected files and creates an encrypted temporary rollback snapshot when it changes local state.",
+        "A failed diagnosis is reported as unknown rather than a guessed cause."
+      ]
+    },
+    {
+      "id": "REQ-010",
+      "statement": "Account session credentials, relay API keys, local tool configurations, logs, temporary rollback snapshots, and updater trust are separated by purpose and protected according to their sensitivity.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "security-update",
+      "evidenceRefs": ["E-USER-003", "E-USER-018", "E-USER-019", "E-USER-021", "E-USER-022", "E-USER-023", "E-USER-029", "E-CODE-004"],
+      "acceptance": [
+        "Account-session credentials are never written into a tool configuration.",
+        "A desktop session cannot change identity, payment, group, other-device, or administrative state and cannot retrieve another device's complete tool key.",
+        "Logout, device revocation, absolute expiry, inactivity expiry, and refresh failure clear the local account session without silently deleting independent tool keys.",
+        "Secrets are redacted from logs, analytics, crash reports, and screenshots generated by diagnostics.",
+        "Automatic telemetry accepts only schema-validated allowlisted fields and rejects unknown or oversized fields at both client and first-party ingestion boundaries.",
+        "Updates are accepted only after cryptographic signature verification against a pinned application key.",
+        "Remote authorization content has no privileged desktop IPC access."
+      ]
+    },
+    {
+      "id": "REQ-011",
+      "statement": "The client displays balance and usage and opens the existing first-party wallet page in the system browser for recharge during V1.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "billing",
+      "evidenceRefs": ["E-USER-001", "E-USER-023", "E-CODE-001"],
+      "acceptance": [
+        "Balance and usage identify freshness and retry state.",
+        "Recharge does not embed payment credentials or duplicate payment settlement in the client.",
+        "Password, email, payment data, recharge-record mutation, and other sensitive account actions remain on the first-party website.",
+        "The external wallet destination is restricted to the configured first-party origin."
+      ]
+    },
+    {
+      "id": "REQ-012",
+      "statement": "V1 does not download, install, update, or uninstall third-party AI tools.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": ["E-USER-004"],
+      "acceptance": [
+        "A missing tool receives installation guidance only.",
+        "No V1 action elevates privileges to install a third-party tool."
+      ]
+    },
+    {
+      "id": "REQ-013",
+      "statement": "The current product phase remains client-only and produces a separate future NewAPI change specification without applying backend or production changes.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": ["E-USER-002"],
+      "acceptance": [
+        "No NewAPI, server, Nginx, DNS, database, or production configuration is modified in this phase.",
+        "Backend-dependent capabilities remain visibly specified or unavailable rather than simulated as complete."
+      ]
+    },
+    {
+      "id": "REQ-014",
+      "statement": "The two official lines share account, API key, model availability, and pricing semantics; the client measures their network behavior, recommends one, permits override, and never silently rewrites an already configured line.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "diagnostics",
+      "evidenceRefs": ["E-USER-009", "E-USER-010", "E-USER-022"],
+      "acceptance": [
+        "The same account credential, tool key, model choice, and price projection work across both configured line roots.",
+        "Recommendation uses comparable measurements and does not oscillate on a transient result.",
+        "Changing an already configured tool to another line requires user confirmation and the normal temporary-rollback transaction."
+      ]
+    },
+    {
+      "id": "REQ-015",
+      "statement": "Model facts have explicit owners: NewAPI live data owns current-account availability, exact IDs, the numeric official-price baseline, and actual user pricing; a versioned first-party catalog owns compatibility, recommendations, descriptions, and any price provenance metadata not yet returned by NewAPI, but never a duplicate price number.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "billing",
+      "evidenceRefs": ["E-USER-016", "E-USER-017", "E-CODE-001", "E-CODE-002", "E-CODE-006", "E-CODE-007", "E-CODE-008"],
+      "acceptance": [
+        "No client-side fuzzy match changes an exact server model ID.",
+        "A newly available model without catalog metadata remains identifiable but is not declared compatible without evidence.",
+        "The client derives both comparison values from NewAPI's pricing semantics and never embeds an independently maintained numeric official-price table.",
+        "The bundled catalog is covered by the signed client artifact and may supplement source and verification metadata until a versioned server contract supersedes it.",
+        "NewAPI model_ratio, model_price, and base billing expressions remain vendor official prices; discounts and promotions are represented only by separately identifiable group or special billing rules.",
+        "Automatically imported aggregator or channel prices cannot overwrite an official baseline until they are verified against the corresponding vendor source.",
+        "Tiered expressions, per-request prices, media units, current-user groups, and special pricing rules are preserved rather than reduced to a universal multiplier formula."
+      ]
+    },
+    {
+      "id": "REQ-016",
+      "statement": "Relay API keys are isolated by account, device, and tool and are created or reused idempotently without changing when the selected line or model changes.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "security-update",
+      "evidenceRefs": ["E-USER-020", "E-USER-021", "E-USER-022", "E-USER-023"],
+      "acceptance": [
+        "Claude Code, Codex, OpenCode, Pi, and DSH on one device never share a relay key with one another.",
+        "Repeated configuration, model switching, and line switching reuse the same account-device-tool key.",
+        "A second device receives distinct keys so that usage and revocation remain attributable.",
+        "The desktop session can manage only keys owned by its own device and never receives another device key's complete plaintext.",
+        "A reinstall that cannot securely recover the prior device identity creates a new device identity and does not silently revoke old keys.",
+        "Logging out preserves tool keys, while revoking a device cascades to every tool key owned by that device.",
+        "A tool-key rotation revokes the old key only after a temporary rollback snapshot is created and the replacement configuration is written, read back, and connectivity-tested successfully.",
+        "Removing local configuration requires a separate explicit choice before its remote key is revoked.",
+        "Only the fields required by a target tool receive the relay key, and the complete key is never written to logs, diagnostics, analytics, or crash reports."
+      ]
+    },
+    {
+      "id": "REQ-017",
+      "statement": "V1 has an explicit tested platform matrix: Windows 10 22H2 x64 and Windows 11 x64, plus macOS 13 and later as a Universal Intel and Apple Silicon build; Windows 11 ARM64 x64-emulation is best-effort and not an official release blocker.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": ["E-USER-024", "E-EXT-002", "E-EXT-003", "E-EXT-004"],
+      "acceptance": [
+        "Release qualification runs on Windows 10 22H2 x64, supported Windows 11 x64 versions, macOS 13 Intel, and macOS 13 or later Apple Silicon.",
+        "The macOS artifact is a signed Universal binary containing Intel and Apple Silicon architectures.",
+        "Windows WebView2 absence is detected and resolved through the official Microsoft runtime path.",
+        "Windows 10 users receive a plain-language operating-system end-of-support warning without being falsely told the client itself is unsupported.",
+        "Windows 11 ARM64 x64-emulation defects are documented as best-effort compatibility and do not block V1 unless promoted by a later accepted decision."
+      ]
+    },
+    {
+      "id": "REQ-018",
+      "statement": "macOS V1 is distributed from the first-party website as a Developer ID-signed and notarized Universal DMG using the existing individual membership, without a Mac App Store listing or an anonymity promise.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "security-update",
+      "evidenceRefs": ["E-USER-026", "E-USER-027", "E-EXT-006", "E-EXT-007", "E-EXT-008"],
+      "acceptance": [
+        "The public DMG and contained app pass Developer ID signature verification and Apple notarization checks before publication.",
+        "The public download origin is first-party and the app update trust chain is independent from transport security alone.",
+        "V1 has no Mac App Store product page under the individual legal name.",
+        "The website and normal client UI do not proactively publish the signer's personal legal name, while documentation never claims the package is anonymous or that certificate inspection cannot identify the signer.",
+        "Unsigned or ad-hoc-signed macOS artifacts remain internal-only."
+      ]
+    },
+    {
+      "id": "REQ-019",
+      "statement": "Windows and macOS are developed in parallel, but macOS may publish first and Windows remains internal-only until it has trusted signing under a preferred organization or accepted personal publisher identity.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "security-update",
+      "evidenceRefs": ["E-USER-028", "E-EXT-009", "E-EXT-010"],
+      "acceptance": [
+        "No unsigned or self-signed Windows package is offered through a public novice-user download path.",
+        "The macOS public release does not wait for unresolved Windows signing if its own release unit is otherwise complete.",
+        "Windows direct signing and Microsoft Store MSIX are evaluated against configuration-file access, update behavior, signing identity, and support burden before one is selected.",
+        "A personal Windows publisher identity is permitted only as an explicit fallback and is not described as anonymous.",
+        "Public release artifacts and update metadata use consistent signing identities so trust does not reset unnecessarily between versions."
+      ]
+    },
+    {
+      "id": "REQ-020",
+      "statement": "V1 uploads first-party basic operational telemetry by default only after conspicuous notice, allows disabling it without loss of core functionality, and enforces a strict data allowlist that excludes user content and secrets.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "diagnostics",
+      "evidenceRefs": ["E-USER-029", "E-USER-030", "E-EXT-011", "E-EXT-012"],
+      "acceptance": [
+        "No telemetry leaves the device before the first-run notice is shown.",
+        "Disabling telemetry stops future event and crash-envelope upload, deletes the local pending queue, and leaves login, billing, configuration, diagnostics, and model use functional.",
+        "The event schema permits only app, OS, architecture, tool, adapter, operation, line class, model ID, duration, anonymous error, sanitized crash, and rotating pseudonymous telemetry-ID fields.",
+        "Account IDs, authorization device IDs, relay keys, prompts, responses, project or configuration content, complete paths, OS usernames, clipboard data, and raw memory dumps are never automatically uploaded.",
+        "Crash stacks are normalized and scrubbed locally before upload, and raw diagnostic materials require a separate user-initiated preview and send action.",
+        "No third-party analytics SDK may independently collect or expand telemetry fields.",
+        "Ordinary events expire after 30 days, sanitized crash events after 90 days, irreversibly de-identified aggregate trends after 12 months, telemetry IDs rotate every 30 days, and local pending uploads expire after seven days.",
+        "Disabling telemetry clears pending local events and offers a raw historical-event deletion request; any incident-specific extension records scope, reason, approver, and deletion date."
+      ]
+    },
+    {
+      "id": "REQ-021",
+      "statement": "The client directly forks CC Switch as its technical foundation while preserving required notices, auditing dependency licenses, maintaining reviewed upstream provenance, and replacing the provider-centric product layer with the confirmed 野菜API experience and security boundaries.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": ["E-USER-022", "E-USER-031", "E-CODE-003", "E-CODE-004", "E-CODE-005", "E-INF-001"],
+      "acceptance": [
+        "The distributed product retains the CC Switch MIT license and copyright notice and has a recorded dependency-license audit.",
+        "Reused adapters and file operations pass the 野菜API tool-version, ownership, secret, conflict, and temporary-rollback contracts before they are declared supported.",
+        "Provider-centric screens and persistent backup-history behavior are not exposed as the V1 novice experience.",
+        "First-party account, billing, authorization, key, pricing, diagnostics, and telemetry modules have explicit boundaries from upstream-derived configuration code.",
+        "Every merged upstream change is reviewed and tested; no automatic upstream merge reaches a release branch."
+      ]
+    },
+    {
+      "id": "REQ-022",
+      "statement": "The stable application identifier is com.yeschoy.desktop across macOS packaging, Windows identity, operating-system credential namespaces, local application data, and signed update channels.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": ["E-USER-032"],
+      "acceptance": [
+        "Forked CC Switch identifiers are removed or explicitly migrated before any public artifact is built.",
+        "macOS bundles, Windows packages, credential-store entries, local application-data roots, telemetry application identity, and update metadata consistently use com.yeschoy.desktop.",
+        "Beta and stable channels remain cryptographically and operationally separable without changing the product's stable root identity.",
+        "Any future identifier migration requires a separate accepted migration decision and tested credential, data, and updater transition."
+      ]
+    },
+    {
+      "id": "REQ-023",
+      "statement": "Claude Code and Codex receive the current device's per-tool relay key through a tool-native credential-helper contract backed by the operating-system credential vault, without storing the complete key in their ordinary configuration or official-login cache.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "security-update",
+      "evidenceRefs": [
+        "E-USER-033",
+        "E-USER-034",
+        "E-EXT-014",
+        "E-EXT-015",
+        "E-EXT-016",
+        "E-PROP-001"
+      ],
+      "acceptance": [
+        "Claude Code configuration uses a verified apiKeyHelper path and contains no complete 野菜 relay key.",
+        "Codex configuration uses a verified model-provider auth.command path and contains no complete 野菜 relay key in config.toml or auth.json.",
+        "The helper reads only the requested account-device-tool credential and never logs, persists, copies, or emits it outside the requesting tool's standard output.",
+        "External ANTHROPIC_AUTH_TOKEN or ANTHROPIC_API_KEY values that outrank Claude apiKeyHelper are detected or reported as an explicit override rather than misreported as a healthy 野菜 configuration.",
+        "An unavailable operating-system credential vault or unsupported tool version blocks configuration and never triggers a plaintext fallback.",
+        "The helper packaging and path remain valid after signed install, app update, app relocation scenarios in scope, and Windows or macOS restart.",
+        "The minimum supported Claude Code and Codex versions are established by executable configuration and tool-level request tests on every official platform target."
+      ]
+    },
+    {
+      "id": "REQ-024",
+      "statement": "OpenCode, Pi, and DSH receive the current device's per-tool relay key through a version-verified runtime credential bridge backed by the operating-system credential vault, without storing the complete key in their ordinary configuration, tool-owned plaintext credential files, the 野菜 database, logs, or telemetry.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "security-update",
+      "evidenceRefs": [
+        "E-USER-036",
+        "E-USER-033",
+        "E-EXT-017",
+        "E-EXT-018",
+        "E-EXT-019",
+        "E-EXT-020",
+        "E-EXT-021",
+        "E-PROP-002"
+      ],
+      "acceptance": [
+        "OpenCode configuration contains no complete 野菜 key in options.apiKey or auth.json, and a pinned signed authentication loader obtains the key only at runtime from the credential helper.",
+        "Pi models.json stores only a non-secret !command for apiKey, leaves auth.json untouched, and detects any higher-priority credential override before reporting a healthy configuration.",
+        "DSH settings contains only the 野菜 credential reference, the 野菜 key never enters .credentials.yaml or .env, and the pinned credential provider preserves all required non-野菜 reference and record behavior.",
+        "A missing plugin, helper, credential provider, operating-system vault, or supported tool version blocks configuration and never triggers a literal-key, environment-file, or separate-secret-file fallback.",
+        "Each supported Windows and macOS tool version passes a real tool-level request with the configured line and exact model ID while secret scanners find no full key in persistent files, logs, telemetry, diagnostics, or crash artifacts.",
+        "Removal changes only receipt-matching 野菜 fields and components, preserves unrelated providers and tool credentials, and does not promise restoration of overwritten third-party defaults because V1 has no history backup."
+      ]
+    },
+    {
+      "id": "REQ-025",
+      "statement": "DSH V1 provides automatic configuration only for an explicitly detected and supported web profile; every other DSH profile is discovery-only and receives no writes.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-035",
+        "E-EXT-021"
+      ],
+      "acceptance": [
+        "A supported web profile can enter the normal inspect, preview, credential, transaction, read-back, and tool-probe flow only after its profile identity and composed configuration are unambiguous.",
+        "Headless, sdk, sdk-minimal, acp, custom, and unknown profiles are labeled discovery-only and expose no configure, repair, remove, line-switch, or model-write action in V1.",
+        "Discovery-only probes create no profile, install no plugin, modify no package dependency, write no patch or settings file, and create no credential entry or configuration receipt.",
+        "Health, credential, plugin, and configuration results from the web profile are never projected onto another profile.",
+        "Adding automatic support for another profile requires a later accepted scope decision and independent version, file, credential, rollback, and tool-level request evidence."
+      ]
+    },
+    {
+      "id": "REQ-026",
+      "statement": "V1 automatically configures a third-party tool only when that exact tool version is present in the signed compatibility allowlist backed by complete platform, credential, configuration, request, conflict, recovery, removal, and secret-leak evidence.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-037",
+        "E-USER-038",
+        "E-EXT-022",
+        "E-EXT-023",
+        "E-PROP-003"
+      ],
+      "acceptance": [
+        "Every allowlisted version names its exact upstream tag or package version, adapter-contract version, supported platform cells, evidence set, and client catalog version.",
+        "A minimum-version comparison, an open semantic-version range, source-level feature presence, or a successful test on only one platform cannot independently grant automatic-configuration support.",
+        "A newly released, unknown, prerelease, failed, unparsable, or multiply installed version stays read-only and cannot create credentials, write configuration, install plugins, or alter defaults unless its exact identity is explicitly allowlisted.",
+        "Each allowlisted platform cell passes detection, configuration preview, credential delivery, atomic write and read-back, real tool-level request, override and conflict handling, interrupted-transaction recovery, receipt-matching removal, and complete-secret scanning.",
+        "Compatibility allowlist changes ship only inside a signed client or signed compatibility artifact governed by the updater trust boundary, and a stale or unverifiable catalog fails closed.",
+        "An exact DSH upstream prerelease tag may be allowlisted only after the full matrix passes; when it passes, it is presented as normal V1 support without a product preview badge while its exact upstream version remains visible, and it does not imply support for another DSH tag or profile."
+      ]
+    },
+    {
+      "id": "REQ-027",
+      "statement": "An exact allowlisted DSH web version is presented as normal V1 support without a Developer Preview product badge, while its exact upstream version identity remains visible and no support is inferred before full verification or across tags and profiles.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-038",
+        "E-USER-035",
+        "E-USER-037",
+        "E-EXT-022",
+        "E-EXT-023"
+      ],
+      "acceptance": [
+        "A DSH web version appears as normally supported only after its exact platform cells pass the same mandatory verification gates as every other supported tool.",
+        "Normal product presentation adds no Developer Preview, beta, or experimental badge solely because the verified upstream tag contains a prerelease suffix.",
+        "Advanced details, configuration preview, receipts, diagnostics, and support evidence preserve the exact upstream DSH version string without renaming it as a stable upstream release.",
+        "An unverified, failed, unknown, or different DSH tag remains read-only and cannot inherit normal support from an allowlisted tag.",
+        "The normal-support target remains limited to the web profile; every other DSH profile stays discovery-only and receives no writes."
+      ]
+    },
+    {
+      "id": "REQ-028",
+      "statement": "Incomplete DSH web compatibility does not block the overall V1 release; until an exact DSH version completes every mandatory gate, DSH remains discovery-only with no configuration or credential writes and may gain normal support only through a later trusted signed client update.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-039",
+        "E-USER-038",
+        "E-USER-035",
+        "E-USER-037",
+        "E-EXT-022",
+        "E-EXT-023"
+      ],
+      "acceptance": [
+        "The overall V1 release-readiness result is not failed solely because no exact DSH web version has yet completed every required platform and security cell.",
+        "An unverified DSH installation is visibly reported as detected but not currently supported for automatic configuration and exposes no configure, repair, remove, line-switch, model-write, plugin-install, or credential action.",
+        "Allowing the overall release never relaxes the exact-version allowlist, credential-vault, no-plaintext-fallback, web-profile-only, or truthful-support-display boundaries.",
+        "A later signed client update may add normal DSH support only after an exact version passes the complete matrix; discovery-only status does not silently convert into support.",
+        "Release notes, product pages, and in-app supported-tool lists state the actually verified tool set and do not claim DSH automatic configuration before evidence exists."
+      ]
+    },
+    {
+      "id": "REQ-029",
+      "statement": "RU-001 provides a beginner-readable 野菜API desktop shell that performs only local read-only discovery of Claude Code, Codex, OpenCode, Pi, and DSH and reports exact detected versions and conservative compatibility truth without contacting a server or changing the machine.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-040",
+        "E-USER-004",
+        "E-USER-005",
+        "E-USER-037",
+        "E-CODE-014"
+      ],
+      "acceptance": [
+        "The primary screen names 野菜API and explains in plain language that it is checking already-installed tools without asking for an API key, Base URL, model name, or configuration-file path.",
+        "One explicit scan returns exactly one result for each of Claude Code, Codex, OpenCode, Pi, and DSH and distinguishes not found, detected but unverified, executable failure or timeout, and ambiguous multiple-installation states.",
+        "Every detected version string remains visible; a version not present in a later verified exact-version allowlist is reported as read-only and exposes no configure, repair, remove, install, line, model, credential, login, billing, recharge, updater, or telemetry action.",
+        "The scan performs no HTTP or other network request, does not read tool configuration contents, does not access a credential store, and creates, modifies, or deletes no user or tool file.",
+        "A failed or timed-out probe affects only that tool card, keeps the other tool results visible, provides a safe rescan action, and never guesses installation or compatibility.",
+        "Repeated scans replace stale results by request identity so an older completion cannot overwrite the newest visible scan."
+      ]
+    }
+  ]
+}

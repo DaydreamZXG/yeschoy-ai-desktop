@@ -29,3 +29,6 @@ copilot-api
 .history
 CODEBUDDY.md
 mainWindow.js
+
+# Read-only upstream/reference checkouts kept outside the governed source tree.
+/work/

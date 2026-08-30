@@ -1,0 +1,179 @@
+{
+  "schemaVersion": 1,
+  "packages": [
+    {
+      "id": "WP-RU001-DESKTOP-DISCOVERY",
+      "wave": "producer",
+      "owner": "desktop-client",
+      "riskClass": "high",
+      "objective": "Replace the inherited CC Switch runtime surface with a branded, least-authority 野菜API shell and implement the frozen five-tool local read-only discovery query and its beginner-facing result states.",
+      "deliverables": [
+        "A minimal Tauri runtime that exposes only tool-discovery-scan@v1 to the RU-001 frontend and does not initialize inherited provider, database, network, updater, telemetry, credential, configuration, or installation services.",
+        "A bounded cross-platform scanner for Claude Code, Codex, OpenCode, Pi, and DSH with exact version display, canonical candidate deduplication, timeout handling, sanitized location classes, and conservative read-only compatibility.",
+        "A distinctive accessible 野菜API first screen covering default, loading, empty, partial, error, expired, conflict, recovery, and processing behavior with no unavailable product actions.",
+        "Executable acceptance evidence for catalog completeness, conservative compatibility, conflict handling, failure isolation, no-side-effect authority, and stale-request rejection."
+      ],
+      "requirementRefs": [
+        "REQ-003",
+        "REQ-012",
+        "REQ-026",
+        "REQ-028",
+        "REQ-029"
+      ],
+      "decisionRefs": [
+        "DEC-042"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No account login, device authorization, balance, usage, pricing, recharge, or NewAPI integration.",
+        "No API key, operating-system credential vault, model, line, configuration-file content, configuration write, backup, rollback, repair, or tool lifecycle action.",
+        "No automatic update, compatibility download, telemetry, crash upload, server, Nginx, DNS, database, or production change.",
+        "No claim that any detected tool version is approved for automatic configuration."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "package.json",
+        "src/App.tsx",
+        "src/index.css",
+        "src/main.tsx",
+        "src/i18n/locales/en.json",
+        "src/i18n/locales/ja.json",
+        "src/i18n/locales/zh-TW.json",
+        "src/i18n/locales/zh.json",
+        "src-tauri/Cargo.lock",
+        "src-tauri/Cargo.toml",
+        "src-tauri/capabilities/default.json",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/main.rs",
+        "src-tauri/src/tool_discovery.rs",
+        "src-tauri/src/tool_discovery_core.rs",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/tauri.windows.conf.json",
+        "tests/work_packages/ru001/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "outputs/**",
+        "work/**",
+        "src-tauri/src/commands/**",
+        "src-tauri/src/database/**",
+        "src-tauri/src/services/**",
+        "src-tauri/src/proxy/**",
+        "src/contexts/UpdateContext.tsx",
+        "src/components/UpdateBadge.tsx",
+        "scripts/rewrite-updater-manifest.mjs"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "RU-001 creates no application database, account record, configuration receipt, compatibility cache, or retained scan history.",
+        "rollback": "Revert only the listed allowed paths to the upstream fork baseline; no user or server data migration or restoration is involved."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Consume the fixed tool-discovery-scan@v1 projection and fail closed: every successful version probe is unverified_read_only until a later frozen release unit introduces signed exact-version evidence.",
+        "supportedVersions": "RU-001 discovers arbitrary installed version strings but supports zero versions for automatic configuration; the scanner command contract is tool-discovery-scan@v1 only.",
+        "removalGate": "Changing the five-tool catalog, enabling a configuration action, adding a remote catalog, or changing status semantics requires a superseding accepted decision and a newly frozen release unit."
+      },
+      "inputContracts": [],
+      "outputContracts": [
+        "tool-discovery-scan@v1"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru001-as-01-catalog",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru001/test_acceptance.py::test_fixed_catalog_and_empty_state",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru001-as-02-read-only",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru001/test_acceptance.py::test_detected_version_is_exact_and_read_only",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru001-as-03-conflict",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru001/test_acceptance.py::test_multiple_installations_fail_closed",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru001-as-04-failure-isolation",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru001/test_acceptance.py::test_probe_failure_and_timeout_are_isolated",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru001-as-05-authority",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru001/test_acceptance.py::test_runtime_exposes_no_forbidden_authority",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru001-as-06-freshness",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru001/test_acceptance.py::test_ui_rejects_stale_scan_completion",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU001-AS-01",
+          "assertion": "When no executable exists, the result still contains each of the fixed five tools exactly once and every card truthfully reports not found without treating absence as an application error.",
+          "testSelector": "tests/work_packages/ru001/test_acceptance.py::test_fixed_catalog_and_empty_state",
+          "acceptanceCommandId": "ru001-as-01-catalog"
+        },
+        {
+          "id": "RU001-AS-02",
+          "assertion": "A successful version probe preserves the exact normalized version, reports the sanitized source class, and remains unverified read-only with no automatic-configuration action.",
+          "testSelector": "tests/work_packages/ru001/test_acceptance.py::test_detected_version_is_exact_and_read_only",
+          "acceptanceCommandId": "ru001-as-02-read-only"
+        },
+        {
+          "id": "RU001-AS-03",
+          "assertion": "Two distinct canonical executable candidates produce a visible multiple-installation conflict and the scanner neither selects one nor grants compatibility.",
+          "testSelector": "tests/work_packages/ru001/test_acceptance.py::test_multiple_installations_fail_closed",
+          "acceptanceCommandId": "ru001-as-03-conflict"
+        },
+        {
+          "id": "RU001-AS-04",
+          "assertion": "A failed or timed-out version command affects only its own tool result, returns no raw command output, and does not prevent a complete five-tool projection.",
+          "testSelector": "tests/work_packages/ru001/test_acceptance.py::test_probe_failure_and_timeout_are_isolated",
+          "acceptanceCommandId": "ru001-as-04-failure-isolation"
+        },
+        {
+          "id": "RU001-AS-05",
+          "assertion": "The RU-001 runtime registers only the discovery command, has no network or updater permission, and the scanner source contains no configuration, credential, lifecycle, or filesystem-write authority.",
+          "testSelector": "tests/work_packages/ru001/test_acceptance.py::test_runtime_exposes_no_forbidden_authority",
+          "acceptanceCommandId": "ru001-as-05-authority"
+        },
+        {
+          "id": "RU001-AS-06",
+          "assertion": "If two scans overlap, completion of the older request cannot replace the newest request's visible state and the UI exposes a new explicit rescan action after recovery.",
+          "testSelector": "tests/work_packages/ru001/test_acceptance.py::test_ui_rejects_stale_scan_completion",
+          "acceptanceCommandId": "ru001-as-06-freshness"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "The frozen query or page-state contract is missing, contradictory, or requires a status not defined by tool-discovery-scan@v1.",
+        "A required implementation change falls outside allowedPaths or touches any forbidden path.",
+        "The implementation would need network, updater, telemetry, configuration content, credential, filesystem-write, tool installation, server, NewAPI, Nginx, DNS, database, or production authority.",
+        "A detected version would need to be presented as automatically configurable without a later verified exact-version allowlist."
+      ],
+      "status": "planned"
+    }
+  ]
+}

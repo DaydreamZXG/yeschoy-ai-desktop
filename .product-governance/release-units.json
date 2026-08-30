@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "releaseUnits": [
+    {
+      "id": "RU-001",
+      "status": "review",
+      "objective": "Implement only the branded 野菜API desktop foundation and the fixed five-tool local read-only discovery experience without claiming full-product or V1 release readiness.",
+      "decisionRef": "DEC-042",
+      "dependsOnReleaseUnits": [],
+      "supersedesReleaseUnits": [],
+      "roots": {
+        "workPackages": [
+          "WP-RU001-DESKTOP-DISCOVERY"
+        ],
+        "requirements": [],
+        "nonFunctionalRequirements": [],
+        "domains": [],
+        "contracts": [],
+        "stateMachines": [],
+        "pages": [
+          "PAGE-TOOLS"
+        ],
+        "journeys": [],
+        "dataLifecycleResources": [],
+        "aiScenarios": [],
+        "entitlements": [],
+        "trackCoverage": []
+      },
+      "closure": null,
+      "deferredSnapshot": null,
+      "freeze": null
+    }
+  ]
+}

@@ -1,0 +1,429 @@
+{
+  "schemaVersion": 1,
+  "capabilities": [
+    {
+      "capability": "evidence",
+      "tracks": {
+        "account": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "billing": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "tool-config": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "diagnostics": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "desktop-platform": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "security-update": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        }
+      }
+    },
+    {
+      "capability": "attempt",
+      "tracks": {
+        "account": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "billing": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "tool-config": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "diagnostics": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "desktop-platform": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "security-update": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        }
+      }
+    },
+    {
+      "capability": "reflection",
+      "tracks": {
+        "account": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "billing": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "tool-config": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "diagnostics": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "desktop-platform": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "security-update": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        }
+      }
+    },
+    {
+      "capability": "mastery",
+      "tracks": {
+        "account": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "billing": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "tool-config": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "diagnostics": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "desktop-platform": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "security-update": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        }
+      }
+    },
+    {
+      "capability": "ability_estimate",
+      "tracks": {
+        "account": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "billing": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "tool-config": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "diagnostics": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "desktop-platform": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "security-update": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        }
+      }
+    },
+    {
+      "capability": "planning",
+      "tracks": {
+        "account": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "billing": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "tool-config": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "diagnostics": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "desktop-platform": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "security-update": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        }
+      }
+    },
+    {
+      "capability": "report",
+      "tracks": {
+        "account": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "billing": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "tool-config": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "diagnostics": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "desktop-platform": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "security-update": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        }
+      }
+    },
+    {
+      "capability": "global_ask",
+      "tracks": {
+        "account": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "billing": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "tool-config": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "diagnostics": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "desktop-platform": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        },
+        "security-update": {
+          "status": "unknown",
+          "producer": null,
+          "consumers": [],
+          "contract": null,
+          "evidenceRefs": [],
+          "decisionRef": null
+        }
+      }
+    }
+  ]
+}

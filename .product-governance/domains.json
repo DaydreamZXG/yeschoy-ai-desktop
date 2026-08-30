@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "domains": [
+    {
+      "id": "account",
+      "owner": "product-architecture",
+      "owns": ["account-session", "device-authorization"],
+      "trackScope": ["account"],
+      "invariants": ["An account session is never projected into a third-party tool configuration."],
+      "commands": [],
+      "queries": [],
+      "emits": [],
+      "consumes": []
+    },
+    {
+      "id": "billing",
+      "owner": "product-architecture",
+      "owns": ["pricing-catalog", "usage-projection", "balance-projection"],
+      "trackScope": ["billing"],
+      "invariants": ["Client cost calculations are estimates; the server billing ledger is authoritative."],
+      "commands": [],
+      "queries": [],
+      "emits": [],
+      "consumes": []
+    },
+    {
+      "id": "tool-config",
+      "owner": "product-architecture",
+      "owns": ["tool-installation-observation", "tool-config-projection", "config-transaction-rollback"],
+      "trackScope": ["tool-config"],
+      "invariants": ["A configuration write cannot commit without an encrypted transaction-scoped rollback snapshot and external-change check; no successful transaction retains backup history."],
+      "commands": [],
+      "queries": ["tool-discovery-scan@v1"],
+      "emits": [],
+      "consumes": []
+    },
+    {
+      "id": "diagnostics",
+      "owner": "product-architecture",
+      "owns": ["diagnostic-run", "line-measurement"],
+      "trackScope": ["diagnostics"],
+      "invariants": ["A diagnostic conclusion names only causes supported by collected evidence."],
+      "commands": [],
+      "queries": [],
+      "emits": [],
+      "consumes": []
+    },
+    {
+      "id": "desktop-platform",
+      "owner": "product-architecture",
+      "owns": ["desktop-app-identity", "platform-capability"],
+      "trackScope": ["desktop-platform"],
+      "invariants": ["V1 observes but does not install, update, or uninstall third-party AI tools."],
+      "commands": [],
+      "queries": [],
+      "emits": [],
+      "consumes": []
+    },
+    {
+      "id": "security-update",
+      "owner": "product-architecture",
+      "owns": ["credential-store-record", "update-trust-policy", "release-artifact"],
+      "trackScope": ["security-update"],
+      "invariants": ["No secret is emitted to ordinary logs, analytics, crash reports, or diagnostic exports."],
+      "commands": [],
+      "queries": [],
+      "emits": [],
+      "consumes": []
+    }
+  ]
+}
