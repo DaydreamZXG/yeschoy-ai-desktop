@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU003-AS-01",
+  "assertion": "The preview planner exposes exactly the five approved tools and exactly the mainland-optimized and global-accelerated line roots in stable order.",
+  "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_fixed_tool_and_line_catalogs",
+  "acceptanceCommandId": "ru003-as-01-catalog",
+  "runId": "RU-003/WP-RU003-CONFIGURATION-PREVIEW@2026-08-30T09:11:21.728129+00:00",
+  "packageId": "WP-RU003-CONFIGURATION-PREVIEW",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:c7157972184a5c2af3fde2855915edae34a2b41942ba2455ebf2721612b88dab",
+  "releaseUnitId": "RU-003",
+  "releaseUnitHash": "sha256:d2640d4c4be72abb1919bda52ad99394a30f9162c03115934948c96c7d3d194b"
+}

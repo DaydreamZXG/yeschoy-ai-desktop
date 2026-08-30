@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU004-AS-02",
+  "assertion": "The implementation and runtime tests preserve the documented Claude root and /v1 projection for Codex, OpenCode, and Pi without another host or suffix.",
+  "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_documented_endpoint_projection",
+  "acceptanceCommandId": "ru004-as-02-endpoints",
+  "runId": "RU-004/WP-RU004-RU003-VERIFICATION@2026-08-30T09:27:17.976756+00:00",
+  "packageId": "WP-RU004-RU003-VERIFICATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru003/test_acceptance.py::test_documented_endpoint_projection",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:c75fdd42a1565331b67801e6fa9becbd9dddee360aefb6bf2b9071ad0c1835a4",
+    "machineReportSha256": "sha256:ca853f5aa1e9e3343c3c33c6b97c91ce894d2349bc01fc277ba013522b3c6048",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:2385583cd246ea179761398a24984500a87a149e5ea5b573c581a3fb27abd581",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:cbd91319578d71cd9b019896aba9dd246d83baa80841b30e3590283f7a6f3103",
+  "releaseUnitId": "RU-004",
+  "releaseUnitHash": "sha256:e85eb26617a41ad248815fb1e1de1277ab979dfd9fb4c98a363126a0fa067a90"
+}

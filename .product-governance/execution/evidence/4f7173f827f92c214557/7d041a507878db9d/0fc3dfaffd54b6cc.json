@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU003-AS-05",
+  "assertion": "DSH displays the selected approved line root but returns no protocol endpoint, target file, or owned field and includes dsh_web_adapter_required.",
+  "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_dsh_adapter_abstains",
+  "acceptanceCommandId": "ru003-as-05-dsh",
+  "runId": "RU-003/WP-RU003-CONFIGURATION-PREVIEW@2026-08-30T09:11:21.728129+00:00",
+  "packageId": "WP-RU003-CONFIGURATION-PREVIEW",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru003/test_acceptance.py::test_dsh_adapter_abstains",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:3763f92d8ea573389bd7726513b2ebb3f681d4499bcd91eddfc75da1b553dd20",
+    "machineReportSha256": "sha256:eb14f66bbc6573a4442e70eaf093113859213416c183c0d831667cc9c251a73e",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:3182ee1cbe76fff994ef829d23e30f5b1237474964f3f67c59380277fe71c7a8",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:fbd8c9720b892201374927d33151352fbc25c1cc3d3946089ed9aa564750dfb0",
+  "releaseUnitId": "RU-003",
+  "releaseUnitHash": "sha256:d2640d4c4be72abb1919bda52ad99394a30f9162c03115934948c96c7d3d194b"
+}

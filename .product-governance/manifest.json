@@ -28,8 +28,9 @@
   "trackDecisionRefs": {
     "account": "DEC-043",
     "billing": "DEC-043",
-    "tool-config": "DEC-042",
-    "desktop-platform": "DEC-042"
+    "tool-config": "DEC-046",
+    "desktop-platform": "DEC-046",
+    "diagnostics": "DEC-046"
   },
   "requiredPageStates": [
     "default",

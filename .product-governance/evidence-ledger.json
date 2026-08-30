@@ -1032,6 +1032,119 @@
         "E-EXT-024",
         "E-CODE-021"
       ]
+    },
+    {
+      "id": "E-USER-042",
+      "claim": "The product owner authorized implementation to continue after RU-002 and accepted starting the next client-only one-click configuration foundation while preserving the decision not to modify NewAPI, servers, Nginx, DNS, databases, or production configuration in this phase.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-08-30:authorize-ru003-client-configuration-foundation",
+      "observedAt": "2026-08-30T17:04:56+08:00",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-025",
+      "claim": "The current official Codex configuration reference documents ~/.codex/config.toml, model_providers.<id>.base_url, responses-only wire_api, and model_providers.<id>.auth.command as a command that prints a bearer token to stdout; auth.command must not be combined with env_key, experimental_bearer_token, or requires_openai_auth.",
+      "class": "external_verified",
+      "locator": "https://learn.chatgpt.com/docs/config-file/config-reference",
+      "observedAt": "2026-08-30T17:04:56+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-026",
+      "claim": "The current official Claude Code documentation identifies ANTHROPIC_BASE_URL as the custom endpoint setting and apiKeyHelper as a dynamic script-based credential source, supporting a preview of owned settings without placing a literal API key in settings.",
+      "class": "external_verified",
+      "locator": "https://code.claude.com/docs/en/team; https://code.claude.com/docs/en/env-vars; https://code.claude.com/docs/en/llm-gateway",
+      "observedAt": "2026-08-30T17:04:56+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-027",
+      "claim": "The current official OpenCode provider documentation defines custom providers under provider.<id>, uses @ai-sdk/openai-compatible for OpenAI-compatible chat-completions endpoints, accepts options.baseURL, and identifies model entries by their exact model IDs.",
+      "class": "external_verified",
+      "locator": "https://opencode.ai/docs/providers/",
+      "observedAt": "2026-08-30T17:04:56+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-028",
+      "claim": "The current official Pi models documentation identifies ~/.pi/agent/models.json, provider baseUrl and api fields, exact model IDs, OpenAI-compatible API modes, and an apiKey value beginning with ! as a command evaluated at request time.",
+      "class": "external_verified",
+      "locator": "https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/models.md",
+      "observedAt": "2026-08-30T17:04:56+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-022",
+      "claim": "The locally installed official @deepseek-ai/dsh package is version 0.1.0-rc.6, points to github.com/deepseek-ai/deepseek-harness, and documents dsh web as the web-profile alias, but its public CLI documentation does not establish a stable user-owned Base URL field or a safe automatic-write adapter contract.",
+      "class": "code_observed",
+      "locator": "command:2026-08-30:dsh-version-help-and-installed-package-metadata",
+      "observedAt": "2026-08-30T17:04:56+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-005",
+      "claim": "RU-003 should add a deterministic beginner configuration-preview planner for the fixed five-tool catalog and the two product-approved line roots. It may show only evidenced target fields and derived protocol endpoints, must leave the model ID unavailable until a server catalog exists, and must block all configuration, credential, file-read, file-write, connectivity, and rollback actions until later backend, secure-helper, and exact-version evidence is frozen.",
+      "class": "proposed",
+      "locator": "inline:ru003-configuration-preview-boundary",
+      "observedAt": "2026-08-30T17:04:56+08:00",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-USER-042",
+        "E-USER-010",
+        "E-USER-011",
+        "E-USER-037",
+        "E-EXT-025",
+        "E-EXT-026",
+        "E-EXT-027",
+        "E-EXT-028",
+        "E-CODE-022"
+      ]
+    },
+    {
+      "id": "E-CODE-023",
+      "claim": "The first governed RU-003 verification run executed five scenarios successfully but the catalog scenario failed because invoking Vitest inside the mandatory read-only source sandbox attempted to create vitest.config.ts.timestamp-*.mjs in the project root. After replacing that nested runner with direct Node TypeScript module execution, local execution passed all six scenarios; redispatch was then blocked because the dispatcher revalidated the completed RU-002 dependency against RU-003's intentionally superseding current UI outputs.",
+      "class": "code_observed",
+      "locator": ".product-governance/execution/reports/7d041a507878db9d.4f7173f827f92c214557.json; command:2026-08-30:pytest-ru003-six-pass-after-readonly-runner-correction; command:2026-08-30:redispatch-ru003-dependency-current-output-conflict",
+      "observedAt": "2026-08-30T17:25:40+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-006",
+      "claim": "A verification-only successor release unit should preserve RU-003 product behavior and source exactly, use the corrected direct-module acceptance scenario under the mandatory read-only sandbox, retain the original failed run as historical evidence, and avoid replaying the dispatcher dependency check that compares intentionally superseded UI outputs to RU-002.",
+      "class": "proposed",
+      "locator": "inline:ru004-ru003-verification-correction",
+      "observedAt": "2026-08-30T17:25:40+08:00",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-CODE-023",
+        "E-USER-042",
+        "E-PROP-005"
+      ]
     }
   ]
 }

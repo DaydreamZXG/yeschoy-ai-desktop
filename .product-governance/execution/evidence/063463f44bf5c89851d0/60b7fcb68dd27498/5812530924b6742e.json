@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU004-AS-03",
+  "assertion": "The configuration-preview source exposes no network, credential, configuration read or write, browser storage, external-open, Tauri, updater, telemetry, or production operation and keeps all side-effect flags false.",
+  "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_preview_has_no_side_effect_authority",
+  "acceptanceCommandId": "ru004-as-03-authority",
+  "runId": "RU-004/WP-RU004-RU003-VERIFICATION@2026-08-30T09:27:17.976756+00:00",
+  "packageId": "WP-RU004-RU003-VERIFICATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru003/test_acceptance.py::test_preview_has_no_side_effect_authority",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:a31674357070e49756834f46ee1b57fe1f1440cb608bd51ff36a35c872d5e7cd",
+    "machineReportSha256": "sha256:16a2227518d4dee930fade1a9a0205d75edd8b9e50880789985032b89f13a429",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:ce22efe3afe3b4a4f6d205bb362127b0ed1e91bf17a5e977310f8d4606c5ba80",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:416c6b818e986c8c7c748c3bf8c89fb8331d13b568b84caa136b834e405ceb6a",
+  "releaseUnitId": "RU-004",
+  "releaseUnitHash": "sha256:e85eb26617a41ad248815fb1e1de1277ab979dfd9fb4c98a363126a0fa067a90"
+}

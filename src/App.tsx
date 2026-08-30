@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 import { createAccountReadiness } from "./account/readiness";
+import { ConfigurationPreviewView } from "./configuration/ConfigurationPreviewView";
 
 type ToolId = "claude" | "codex" | "opencode" | "pi" | "dsh";
 type ToolStatus =
@@ -44,7 +45,7 @@ type ViewPhase =
   | "conflict"
   | "error";
 
-type AppView = "account" | "tools";
+type AppView = "account" | "setup" | "tools";
 
 const TOOL_CATALOG: Array<{
   id: ToolId;
@@ -154,6 +155,14 @@ function App() {
               onClick={() => setView("account")}
             >
               {t("yeschoyAccount.accountNav")}
+            </button>
+            <button
+              type="button"
+              className={view === "setup" ? "is-active" : undefined}
+              aria-current={view === "setup" ? "page" : undefined}
+              onClick={() => setView("setup")}
+            >
+              {t("yeschoyConfiguration.navigation")}
             </button>
             <button
               type="button"
@@ -292,6 +301,11 @@ function App() {
             </details>
           </section>
         </div>
+      ) : view === "setup" ? (
+        <ConfigurationPreviewView
+          onOpenAccount={() => setView("account")}
+          onOpenTools={() => setView("tools")}
+        />
       ) : (
         <div className="workspace" id="top">
           <section className="intro-panel" aria-labelledby="page-title">

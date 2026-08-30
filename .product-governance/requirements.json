@@ -539,6 +539,35 @@
         "The runtime makes no account, pricing, usage, authorization, wallet, or other network request and persists no password, website cookie, access token, refresh token, API key, account profile, or scan history.",
         "The updated future NewAPI specification is pinned to current official GitHub evidence, distinguishes current routes from proposed /api/desktop/v1 routes, and records the deployed 404 readiness result without changing NewAPI or production infrastructure."
       ]
+    },
+    {
+      "id": "REQ-031",
+      "statement": "RU-003 preserves RU-002 and adds a beginner-readable local configuration preview for Claude Code, Codex, OpenCode, Pi, and DSH across the mainland-optimized and global-accelerated lines without reading or changing any tool configuration, accessing a credential, contacting a server, or inventing a model ID.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-042",
+        "E-USER-010",
+        "E-USER-011",
+        "E-USER-037",
+        "E-EXT-025",
+        "E-EXT-026",
+        "E-EXT-027",
+        "E-EXT-028",
+        "E-CODE-022",
+        "E-PROP-005"
+      ],
+      "acceptance": [
+        "The configuration destination presents exactly Claude Code, Codex, OpenCode, Pi, and DSH in stable order and lets the user choose exactly one tool for the current preview.",
+        "The line step presents exactly mainland optimized at https://yeschoy.com and global accelerated at https://api.yeschoy.com, and the selected line root remains visible in the summary.",
+        "Claude Code previews the approved root URL, Codex, OpenCode, and Pi preview the selected root with /v1, and DSH explicitly withholds a protocol endpoint and write target because its exact web-profile adapter is not verified.",
+        "The preview names only evidenced user-owned fields, exposes no literal secret or complete user path, and clearly states that it has not read an existing configuration.",
+        "Model ID remains visibly unavailable pending the first-party model catalog; the UI displays no sample model, guessed model, price, connectivity result, or supported-version claim.",
+        "The apply control remains disabled and the projection reports networkAttempted, configurationRead, configurationWritten, and credentialAccessed as false for every tool and line selection.",
+        "RU-001 local discovery and RU-002 account and billing readiness behavior remain available and unchanged, and no NewAPI, server, Nginx, DNS, database, updater, or production resource is modified."
+      ]
     }
   ]
 }

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU004-AS-04",
+  "assertion": "Every preview keeps modelId empty with server_catalog_required, apply blocked, all mandatory blocker codes present, and the visible apply control disabled.",
+  "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_model_and_apply_remain_truthfully_blocked",
+  "acceptanceCommandId": "ru004-as-04-model",
+  "runId": "RU-004/WP-RU004-RU003-VERIFICATION@2026-08-30T09:27:17.976756+00:00",
+  "packageId": "WP-RU004-RU003-VERIFICATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru003/test_acceptance.py::test_model_and_apply_remain_truthfully_blocked",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:d5a0634dae28b3e470538331869278ffb389f351ab046c82bedc29c90a78fb26",
+    "machineReportSha256": "sha256:f26fb5a6a81f327c997be4add66fe062bd9f25d7df8fd450804e0aa5d57a486b",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:e62e627062a2fa310b27890e86330728668565f3ad7e65a8862ec780e1b51213",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:ff8527fcbdc0a97964b9025a2acd5c44d180eab41a1d3dbe45a339c8463e86fe",
+  "releaseUnitId": "RU-004",
+  "releaseUnitHash": "sha256:e85eb26617a41ad248815fb1e1de1277ab979dfd9fb4c98a363126a0fa067a90"
+}

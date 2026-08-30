@@ -32,7 +32,7 @@
       "trackScope": ["tool-config"],
       "invariants": ["A configuration write cannot commit without an encrypted transaction-scoped rollback snapshot and external-change check; no successful transaction retains backup history."],
       "commands": [],
-      "queries": ["tool-discovery-scan@v1"],
+      "queries": ["tool-discovery-scan@v1", "guided-configuration-preview@v1"],
       "emits": [],
       "consumes": []
     },

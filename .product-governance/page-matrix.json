@@ -248,6 +248,132 @@
           "correlation": "Only the authorization requestId and non-secret user code may be presented."
         }
       }
+    },
+    {
+      "id": "PROFILE-CONFIGURATION-PREVIEW-ONLY",
+      "states": {
+        "default": {
+          "behavior": "Show the fixed five-tool selector, two approved line choices, unavailable model step, and a deterministic preview summary for the current default selection.",
+          "visibleTruth": "The page is planning only; it has not read configuration, contacted a server, accessed a credential, or established automatic-configuration support.",
+          "prohibitedClaims": [
+            "Do not call the preview configured, connected, compatible, tested, or ready to apply."
+          ],
+          "allowedActions": [
+            "select_preview_tool",
+            "select_preview_line",
+            "switch_to_local_tools",
+            "switch_to_account"
+          ],
+          "freshness": "The projection is compiled into RU-003 and has no remote freshness timestamp.",
+          "recovery": "The user may change the selection or leave without changing the machine.",
+          "correlation": "Each selection creates a transient requestId for the pure local projection."
+        },
+        "loading": {
+          "behavior": "Reserve a bounded placeholder for a future model-catalog request while keeping apply disabled and all remote facts hidden.",
+          "visibleTruth": "RU-003 does not enter this state because it performs no network request.",
+          "prohibitedClaims": [
+            "Do not retain a previous model or price as current while a future request is unresolved."
+          ],
+          "allowedActions": [],
+          "freshness": "A future newest requestId would own this state.",
+          "recovery": "A future failure returns to an unavailable model state without guessing.",
+          "correlation": "The reserved state belongs to exactly one future requestId."
+        },
+        "empty": {
+          "behavior": "Keep the selected tool and line visible while explaining that no server model catalog is available.",
+          "visibleTruth": "No real model ID, price, or model recommendation was obtained.",
+          "prohibitedClaims": [
+            "Do not render a sample or default model as a real account option."
+          ],
+          "allowedActions": [
+            "select_preview_tool",
+            "select_preview_line",
+            "switch_to_account"
+          ],
+          "freshness": "No server data timestamp exists.",
+          "recovery": "A later frozen server integration may replace the empty model step.",
+          "correlation": "The local selection requestId remains transient."
+        },
+        "partial": {
+          "behavior": "Show the evidenced tool target fields and selected line root while withholding any endpoint or target that is not established, including DSH.",
+          "visibleTruth": "Only the named documented preview fields are available; model, credential, support, write, and connectivity facts are absent.",
+          "prohibitedClaims": [
+            "Do not fill an unverified field from another tool adapter."
+          ],
+          "allowedActions": [
+            "select_preview_tool",
+            "select_preview_line",
+            "switch_to_local_tools"
+          ],
+          "freshness": "The preview catalog is fixed to RU-003 evidence.",
+          "recovery": "Choose another tool or wait for a later verified adapter release.",
+          "correlation": "The partial preview belongs to the newest local selection requestId."
+        },
+        "error": {
+          "behavior": "Reject an invalid local selection and show no preview or apply action.",
+          "visibleTruth": "The pure projection did not accept the tool, line, or request identity.",
+          "prohibitedClaims": [
+            "Do not fall back to an arbitrary tool, line, model, endpoint, or file."
+          ],
+          "allowedActions": [
+            "reset_preview_selection"
+          ],
+          "freshness": "No failed selection becomes current.",
+          "recovery": "Reset to the fixed first tool and first line without any side effect.",
+          "correlation": "The safe local error is associated only with the rejected requestId."
+        },
+        "expired": {
+          "behavior": "Discard a superseded selection result before it can replace the newest visible preview.",
+          "visibleTruth": "An older local projection no longer owns the selected tool or line.",
+          "prohibitedClaims": [
+            "Do not merge the endpoint, file, or fields of different selections."
+          ],
+          "allowedActions": [
+            "view_current_preview"
+          ],
+          "freshness": "Only the newest selection requestId is current.",
+          "recovery": "Continue with the newest projection; no file recovery is required.",
+          "correlation": "Expired identities remain transient and are not logged."
+        },
+        "conflict": {
+          "behavior": "Keep apply disabled when tool identity, exact version, profile, target ownership, or external-change safety cannot be proved.",
+          "visibleTruth": "The required future write preconditions are not satisfied.",
+          "prohibitedClaims": [
+            "Do not silently choose an executable, profile, configuration owner, or merge result."
+          ],
+          "allowedActions": [
+            "switch_to_local_tools"
+          ],
+          "freshness": "A conflict cannot be cleared by the static preview catalog.",
+          "recovery": "A later exact-version adapter and transactional read-back flow must resolve it.",
+          "correlation": "No secret-bearing or complete local path is included in conflict details."
+        },
+        "recovery": {
+          "behavior": "Explain the missing backend, model catalog, secure credential helper, exact-version allowlist, and DSH adapter prerequisites by name.",
+          "visibleTruth": "No rollback exists because RU-003 never begins a write transaction.",
+          "prohibitedClaims": [
+            "Do not offer backup restore, repair, credential entry, or force apply in this release unit."
+          ],
+          "allowedActions": [
+            "switch_to_local_tools",
+            "switch_to_account"
+          ],
+          "freshness": "Recovery guidance is fixed to the RU-003 release boundary.",
+          "recovery": "Wait for a later frozen integration or inspect the local tool discovery result.",
+          "correlation": "No persistent operation or recovery identity is created."
+        },
+        "processing": {
+          "behavior": "Reserve the future transaction state for encrypted temporary snapshot, guarded write, read-back, tool probe, and rollback while exposing none of those operations in RU-003.",
+          "visibleTruth": "No configuration operation is processing in RU-003.",
+          "prohibitedClaims": [
+            "Do not animate or label the disabled apply control as if a write, test, or rollback has started."
+          ],
+          "allowedActions": [],
+          "freshness": "RU-003 has no operation timestamp.",
+          "recovery": "No transaction recovery is required because no transaction can start.",
+          "correlation": "No operationId or receipt exists."
+        }
+      }
     }
   ],
   "pages": [
@@ -364,6 +490,37 @@
         "local deterministic readiness projection only"
       ],
       "stateProfileRef": "PROFILE-DESKTOP-ACCOUNT-READINESS",
+      "states": {}
+    },
+    {
+      "id": "PAGE-CONFIGURE-PREVIEW",
+      "route": "/configure-preview",
+      "purpose": "Guide a beginner through tool and line selection and show a truthful configuration preview while every side-effecting operation remains blocked.",
+      "trackScope": [
+        "tool-config",
+        "desktop-platform"
+      ],
+      "dataOwners": [
+        "tool-config",
+        "desktop-platform"
+      ],
+      "entryConditions": [],
+      "actions": [
+        "select_preview_tool",
+        "select_preview_line",
+        "reset_preview_selection",
+        "view_current_preview",
+        "switch_to_local_tools",
+        "switch_to_account"
+      ],
+      "exitRoutes": [
+        "/tools",
+        "/account"
+      ],
+      "permissions": [
+        "pure local deterministic preview projection only"
+      ],
+      "stateProfileRef": "PROFILE-CONFIGURATION-PREVIEW-ONLY",
       "states": {}
     },
     {

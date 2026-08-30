@@ -3342,5 +3342,74 @@
       "pi": "轻量、可扩展的编程代理",
       "dsh": "DeepSeek Harness；当前保持只读发现"
     }
+  },
+  "yeschoyConfiguration": {
+    "navigation": "一键配置",
+    "eyebrow": "一步一步，不碰配置文件",
+    "title": "选工具，选线路。剩下的交给客户端。",
+    "description": "先用看得懂的方式确认会改哪里。当前版本只生成安全预览，不读取你的配置，也不会写入任何内容。",
+    "previewOnly": "当前仅生成预览 · 未读取电脑配置",
+    "stepsLabel": "配置步骤",
+    "steps": {
+      "tool": "选择工具",
+      "line": "选择线路",
+      "model": "选择模型",
+      "review": "确认变更"
+    },
+    "modelUnavailable": "登录后获取模型 ID",
+    "reviewReady": "预览已随选择更新",
+    "chooseTool": "01 · 你想使用哪个工具？",
+    "chooseLine": "02 · 选择更适合你的线路",
+    "toolNotes": {
+      "claude": "Claude 命令行",
+      "codex": "OpenAI 编程代理",
+      "opencode": "开源终端助手",
+      "pi": "轻量编程代理",
+      "dsh": "DeepSeek Harness"
+    },
+    "lines": {
+      "mainland_optimized": {
+        "name": "大陆优化",
+        "note": "中国大陆网络优先"
+      },
+      "global_accelerated": {
+        "name": "全球加速",
+        "note": "Cloudflare 全球线路"
+      }
+    },
+    "previewEyebrow": "本次变更预览",
+    "previewTitle": "先看清，再决定",
+    "notApplied": "尚未应用",
+    "selectedTool": "工具",
+    "selectedLine": "线路",
+    "lineRoot": "线路根地址",
+    "effectiveEndpoint": "工具实际端点",
+    "withheld": "等待适配器验证",
+    "dshReason": "DSH 的 web profile 写入字段尚未完成精确验证，因此不猜地址。",
+    "targetFile": "计划配置位置",
+    "modelId": "模型 ID",
+    "ownedFields": "以后只会管理这些字段",
+    "notReadFromComputer": "字段名来自官方文档，不是从电脑读取",
+    "dshFieldsWithheld": "DSH 暂不展示写入字段，等精确版本适配器验证完成后再开放。",
+    "safetyTitle": "这次预览做了什么？",
+    "safetyBody": "所有动作都停在你的电脑之外",
+    "safety": {
+      "networkAttempted": "联网请求",
+      "configurationRead": "读取现有配置",
+      "configurationWritten": "写入配置文件",
+      "credentialAccessed": "访问 API 密钥"
+    },
+    "notPerformed": "未执行",
+    "whyBlocked": "为什么现在还不能点击应用？",
+    "blockers": {
+      "desktop_backend_required": "桌面安全执行层尚未接入",
+      "server_model_catalog_required": "账户模型目录尚未接入",
+      "secure_credential_helper_required": "系统安全凭据助手尚未接入",
+      "exact_version_allowlist_required": "工具精确版本白名单尚未签发",
+      "dsh_web_adapter_required": "DSH web profile 适配器尚未验证"
+    },
+    "applyBlocked": "等待安全条件齐备后开放",
+    "openTools": "先检查本机工具",
+    "openAccount": "查看账户接入状态"
   }
 }

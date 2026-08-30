@@ -3343,5 +3343,74 @@
       "pi": "輕量、可擴充的程式設計代理",
       "dsh": "DeepSeek Harness；目前維持唯讀探索"
     }
+  },
+  "yeschoyConfiguration": {
+    "navigation": "一鍵設定",
+    "eyebrow": "一步一步，不碰設定檔",
+    "title": "選工具，選線路。剩下的交給用戶端。",
+    "description": "先用看得懂的方式確認會改哪裡。目前版本只產生安全預覽，不讀取你的設定，也不會寫入任何內容。",
+    "previewOnly": "目前僅產生預覽 · 未讀取電腦設定",
+    "stepsLabel": "設定步驟",
+    "steps": {
+      "tool": "選擇工具",
+      "line": "選擇線路",
+      "model": "選擇模型",
+      "review": "確認變更"
+    },
+    "modelUnavailable": "登入後取得模型 ID",
+    "reviewReady": "預覽已隨選擇更新",
+    "chooseTool": "01 · 你想使用哪個工具？",
+    "chooseLine": "02 · 選擇更適合你的線路",
+    "toolNotes": {
+      "claude": "Claude 命令列",
+      "codex": "OpenAI 程式設計代理",
+      "opencode": "開源終端助手",
+      "pi": "輕量程式設計代理",
+      "dsh": "DeepSeek Harness"
+    },
+    "lines": {
+      "mainland_optimized": {
+        "name": "大陸最佳化",
+        "note": "中國大陸網路優先"
+      },
+      "global_accelerated": {
+        "name": "全球加速",
+        "note": "Cloudflare 全球線路"
+      }
+    },
+    "previewEyebrow": "本次變更預覽",
+    "previewTitle": "先看清，再決定",
+    "notApplied": "尚未套用",
+    "selectedTool": "工具",
+    "selectedLine": "線路",
+    "lineRoot": "線路根網址",
+    "effectiveEndpoint": "工具實際端點",
+    "withheld": "等待介面卡驗證",
+    "dshReason": "DSH 的 web profile 寫入欄位尚未完成精確驗證，因此不猜測網址。",
+    "targetFile": "計畫設定位置",
+    "modelId": "模型 ID",
+    "ownedFields": "之後只會管理這些欄位",
+    "notReadFromComputer": "欄位名稱來自官方文件，不是從電腦讀取",
+    "dshFieldsWithheld": "DSH 暫不顯示寫入欄位，待精確版本介面卡驗證完成後再開放。",
+    "safetyTitle": "這次預覽做了什麼？",
+    "safetyBody": "所有動作都停在你的電腦之外",
+    "safety": {
+      "networkAttempted": "網路請求",
+      "configurationRead": "讀取現有設定",
+      "configurationWritten": "寫入設定檔",
+      "credentialAccessed": "存取 API 金鑰"
+    },
+    "notPerformed": "未執行",
+    "whyBlocked": "為什麼現在還不能點擊套用？",
+    "blockers": {
+      "desktop_backend_required": "桌面安全執行層尚未接入",
+      "server_model_catalog_required": "帳戶模型目錄尚未接入",
+      "secure_credential_helper_required": "系統安全憑證助手尚未接入",
+      "exact_version_allowlist_required": "工具精確版本白名單尚未簽發",
+      "dsh_web_adapter_required": "DSH web profile 介面卡尚未驗證"
+    },
+    "applyBlocked": "等待安全條件齊備後開放",
+    "openTools": "先檢查本機工具",
+    "openAccount": "查看帳戶接入狀態"
   }
 }

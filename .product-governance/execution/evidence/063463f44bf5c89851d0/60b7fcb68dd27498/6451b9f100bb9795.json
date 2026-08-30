@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU004-AS-06",
+  "assertion": "The account, configuration-preview, and local-tool navigation remains present, scan_tools_read_only remains the only Tauri invocation, and account readiness remains backend_upgrade_required.",
+  "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_prior_release_unit_flows_remain_available",
+  "acceptanceCommandId": "ru004-as-06-preservation",
+  "runId": "RU-004/WP-RU004-RU003-VERIFICATION@2026-08-30T09:27:17.976756+00:00",
+  "packageId": "WP-RU004-RU003-VERIFICATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru003/test_acceptance.py::test_prior_release_unit_flows_remain_available",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:3caf9f41bf39a2ce1707361e7fbb42c507abe2814338299b701053f95da1f604",
+    "machineReportSha256": "sha256:6a9251010b8754ad5cf49ef02d31c83e6108ec951d311ab3d208d362d0d24f18",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:422786cbc1204fb9a43dd5e0b3f9fb59dda301265157172e7b33868e93c4327b",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:f15177cf7e8a91e5956dee372330f14a8427ecbbc968d64aa865830640d782dc",
+  "releaseUnitId": "RU-004",
+  "releaseUnitHash": "sha256:e85eb26617a41ad248815fb1e1de1277ab979dfd9fb4c98a363126a0fa067a90"
+}

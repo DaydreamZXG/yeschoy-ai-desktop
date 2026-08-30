@@ -3342,5 +3342,74 @@
       "pi": "A lightweight, extensible coding agent",
       "dsh": "DeepSeek Harness; discovery remains read only"
     }
+  },
+  "yeschoyConfiguration": {
+    "navigation": "One-click setup",
+    "eyebrow": "Step by step, without touching settings files",
+    "title": "Choose a tool and a route. The client handles the rest.",
+    "description": "First, review exactly what would change in plain language. This build only creates a safe preview; it does not read or write your settings.",
+    "previewOnly": "Preview only · No computer settings were read",
+    "stepsLabel": "Setup steps",
+    "steps": {
+      "tool": "Choose a tool",
+      "line": "Choose a route",
+      "model": "Choose a model",
+      "review": "Review changes"
+    },
+    "modelUnavailable": "Model IDs appear after sign-in",
+    "reviewReady": "Preview updated with your choices",
+    "chooseTool": "01 · Which tool do you want to use?",
+    "chooseLine": "02 · Choose the route that fits you",
+    "toolNotes": {
+      "claude": "Claude command line",
+      "codex": "OpenAI coding agent",
+      "opencode": "Open-source terminal agent",
+      "pi": "Lightweight coding agent",
+      "dsh": "DeepSeek Harness"
+    },
+    "lines": {
+      "mainland_optimized": {
+        "name": "Mainland optimized",
+        "note": "Prioritized for mainland China"
+      },
+      "global_accelerated": {
+        "name": "Global accelerated",
+        "note": "Cloudflare global route"
+      }
+    },
+    "previewEyebrow": "Change preview",
+    "previewTitle": "See it clearly before deciding",
+    "notApplied": "Not applied",
+    "selectedTool": "Tool",
+    "selectedLine": "Route",
+    "lineRoot": "Route root URL",
+    "effectiveEndpoint": "Effective tool endpoint",
+    "withheld": "Waiting for adapter verification",
+    "dshReason": "DSH web-profile write fields are not precisely verified, so no endpoint is guessed.",
+    "targetFile": "Planned settings location",
+    "modelId": "Model ID",
+    "ownedFields": "Only these fields may be managed later",
+    "notReadFromComputer": "Field names come from official docs, not your computer",
+    "dshFieldsWithheld": "DSH write fields remain hidden until an exact-version adapter is verified.",
+    "safetyTitle": "What did this preview do?",
+    "safetyBody": "Every action stopped before touching your computer",
+    "safety": {
+      "networkAttempted": "Network request",
+      "configurationRead": "Read existing settings",
+      "configurationWritten": "Write settings file",
+      "credentialAccessed": "Access API key"
+    },
+    "notPerformed": "Not performed",
+    "whyBlocked": "Why can’t Apply be clicked yet?",
+    "blockers": {
+      "desktop_backend_required": "The secure desktop execution layer is not connected",
+      "server_model_catalog_required": "The account model catalog is not connected",
+      "secure_credential_helper_required": "The secure system credential helper is not connected",
+      "exact_version_allowlist_required": "The exact-version tool allowlist is not signed",
+      "dsh_web_adapter_required": "The DSH web-profile adapter is not verified"
+    },
+    "applyBlocked": "Available after every safety condition is ready",
+    "openTools": "Check local tools first",
+    "openAccount": "View account connection status"
   }
 }

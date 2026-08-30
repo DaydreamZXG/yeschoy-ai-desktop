@@ -341,6 +341,343 @@
         "The future server specification would be presented as current deployed behavior or require modifying NewAPI, server, Nginx, DNS, database, or production configuration."
       ],
       "status": "planned"
+    },
+    {
+      "id": "WP-RU003-CONFIGURATION-PREVIEW",
+      "wave": "consumer",
+      "owner": "desktop-client",
+      "riskClass": "high",
+      "objective": "Preserve RU-002 and implement only the beginner-facing five-tool, two-line configuration preview plus the pure guided-configuration-preview@v1 planner, with every write-capable prerequisite visibly and mechanically blocked.",
+      "deliverables": [
+        "A coherent Configure destination with one guided sequence for tool selection, line selection, unavailable model truth, and review.",
+        "A pure deterministic guided-configuration-preview@v1 implementation for Claude Code, Codex, OpenCode, Pi, and DSH across the two approved line roots.",
+        "Per-tool documented field and target previews with DSH endpoint and write target withheld rather than guessed.",
+        "A disabled apply area that names the backend, model catalog, credential helper, exact-version allowlist, and DSH adapter blockers without reading or changing the machine.",
+        "Executable acceptance evidence for fixed catalogs, endpoint derivation, fail-closed side effects, truthful model state, DSH abstention, and RU-001/RU-002 preservation."
+      ],
+      "requirementRefs": [
+        "REQ-004",
+        "REQ-008",
+        "REQ-013",
+        "REQ-026",
+        "REQ-031"
+      ],
+      "decisionRefs": [
+        "DEC-045"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No real model catalog, model ID, recommendation, price, connectivity result, supported-version decision, or signed compatibility artifact.",
+        "No configuration read, merge, write, backup, encrypted snapshot, rollback, receipt, remove, repair, or external-change check.",
+        "No API key, website credential, operating-system credential vault, credential helper execution, plugin installation, or process environment mutation.",
+        "No account, billing, authorization, wallet, NewAPI, server, Nginx, DNS, database, production, updater, telemetry, or third-party package lifecycle change."
+      ],
+      "dependsOn": [
+        "WP-RU002-ACCOUNT-BILLING-SHELL"
+      ],
+      "allowedPaths": [
+        "src/App.tsx",
+        "src/index.css",
+        "src/configuration/**",
+        "src/i18n/locales/en.json",
+        "src/i18n/locales/ja.json",
+        "src/i18n/locales/zh-TW.json",
+        "src/i18n/locales/zh.json",
+        "tests/work_packages/ru003/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "outputs/**",
+        "work/**",
+        "src-tauri/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "vite.config.ts",
+        "vitest.config.ts",
+        "src/contexts/UpdateContext.tsx",
+        "src/components/UpdateBadge.tsx",
+        "scripts/rewrite-updater-manifest.mjs"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "RU-003 creates no configuration, credential, model, compatibility, selection, preview, receipt, backup, audit, cache, or retained history record.",
+        "rollback": "Revert only the listed client preview, locale, and acceptance paths to RU-002; no user, tool, account, or server data migration or restoration is involved."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve tool-discovery-scan@v1 and desktop-account-readiness@v1 unchanged, and expose only the fail-closed guided-configuration-preview@v1 projection.",
+        "supportedVersions": "RU-003 supports zero tool versions for automatic configuration; the preview is independent of installed-version eligibility and never upgrades discovery truth.",
+        "removalGate": "Enabling apply, model selection, credential delivery, configuration reads or writes, connectivity testing, DSH endpoint derivation, or rollback requires a superseding frozen release unit with the corresponding deployed and executable evidence."
+      },
+      "inputContracts": [
+        "tool-discovery-scan@v1",
+        "desktop-account-readiness@v1"
+      ],
+      "outputContracts": [
+        "guided-configuration-preview@v1"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru003-as-01-catalog",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru003/test_acceptance.py::test_fixed_tool_and_line_catalogs",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru003-as-02-endpoints",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru003/test_acceptance.py::test_documented_endpoint_projection",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru003-as-03-authority",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru003/test_acceptance.py::test_preview_has_no_side_effect_authority",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru003-as-04-model",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru003/test_acceptance.py::test_model_and_apply_remain_truthfully_blocked",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru003-as-05-dsh",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru003/test_acceptance.py::test_dsh_adapter_abstains",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru003-as-06-preservation",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru003/test_acceptance.py::test_prior_release_unit_flows_remain_available",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU003-AS-01",
+          "assertion": "The preview planner exposes exactly the five approved tools and exactly the mainland-optimized and global-accelerated line roots in stable order.",
+          "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_fixed_tool_and_line_catalogs",
+          "acceptanceCommandId": "ru003-as-01-catalog"
+        },
+        {
+          "id": "RU003-AS-02",
+          "assertion": "Claude Code uses the selected root as its documented preview endpoint, Codex, OpenCode, and Pi append /v1, and no other host or protocol suffix appears.",
+          "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_documented_endpoint_projection",
+          "acceptanceCommandId": "ru003-as-02-endpoints"
+        },
+        {
+          "id": "RU003-AS-03",
+          "assertion": "The RU-003 implementation performs no network, credential, configuration read or write, storage, process, Tauri, external-open, updater, telemetry, or production operation and every side-effect flag is false.",
+          "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_preview_has_no_side_effect_authority",
+          "acceptanceCommandId": "ru003-as-03-authority"
+        },
+        {
+          "id": "RU003-AS-04",
+          "assertion": "Every preview leaves modelId empty with server_catalog_required, keeps apply blocked, names all mandatory blockers, and the UI contains no enabled apply or fabricated model action.",
+          "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_model_and_apply_remain_truthfully_blocked",
+          "acceptanceCommandId": "ru003-as-04-model"
+        },
+        {
+          "id": "RU003-AS-05",
+          "assertion": "DSH displays the selected approved line root but returns no protocol endpoint, target file, or owned field and includes dsh_web_adapter_required.",
+          "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_dsh_adapter_abstains",
+          "acceptanceCommandId": "ru003-as-05-dsh"
+        },
+        {
+          "id": "RU003-AS-06",
+          "assertion": "The navigation still exposes the RU-001 local discovery and RU-002 account destinations, scan_tools_read_only remains the only Tauri invocation, and the readiness shell remains fail closed.",
+          "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_prior_release_unit_flows_remain_available",
+          "acceptanceCommandId": "ru003-as-06-preservation"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "A required implementation behavior needs a real server model, account, credential, configuration, file, process, network, connectivity, rollback, updater, telemetry, or production operation.",
+        "A required change falls outside allowedPaths, touches a forbidden path, or changes either prior frozen contract.",
+        "A preview field, endpoint, model, target, credential mechanism, supported version, or DSH adapter would need to be guessed rather than traced to current evidence.",
+        "The UI would present the disabled preview as a completed or available one-click configuration operation."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU004-RU003-VERIFICATION",
+      "wave": "consumer",
+      "owner": "product-verification",
+      "riskClass": "high",
+      "objective": "Verify the unchanged RU-003 configuration-preview implementation under mandatory read-only source isolation using the corrected direct-module runner and the same six semantic acceptance boundaries.",
+      "deliverables": [
+        "Read-only executable proof that the fixed five-tool and two-line catalogs and endpoint projection behave as frozen.",
+        "Read-only executable proof that model and apply remain blocked, DSH abstains, all side-effect flags remain false, and prior account and discovery flows remain wired.",
+        "A content-addressed verifier report and six verifier-owned semantic scenario evidence records without any implementation or production change."
+      ],
+      "requirementRefs": [
+        "REQ-004",
+        "REQ-008",
+        "REQ-013",
+        "REQ-026",
+        "REQ-031"
+      ],
+      "decisionRefs": [
+        "DEC-045",
+        "DEC-046"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No source, test, locale, style, configuration, credential, account, server, production, governance-history, or prior execution-record modification.",
+        "No Vitest, Vite, Corepack, package download, or other runner that creates a cache or temporary file beneath the source tree.",
+        "No automatic-configuration, model, credential, write, connectivity, rollback, or DSH-support activation claim."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src/App.tsx",
+        "src/index.css",
+        "src/configuration/**",
+        "src/i18n/locales/en.json",
+        "src/i18n/locales/ja.json",
+        "src/i18n/locales/zh-TW.json",
+        "src/i18n/locales/zh.json",
+        "tests/work_packages/ru003/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "outputs/**",
+        "work/**",
+        "src-tauri/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "vite.config.ts",
+        "vitest.config.ts",
+        "src/contexts/UpdateContext.tsx",
+        "src/components/UpdateBadge.tsx",
+        "scripts/rewrite-updater-manifest.mjs"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "The verification-only unit writes no product or user data and creates only verifier-owned execution evidence outside the source boundary.",
+        "rollback": "No source rollback exists because source modification is forbidden; verifier-owned evidence retains the immutable historical outcome."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Verify guided-configuration-preview@v1 exactly as frozen while preserving both prior contracts unchanged and fail closed for every side effect.",
+        "supportedVersions": "The verified projection still supports zero tool versions for automatic configuration and verifies only preview behavior.",
+        "removalGate": "Any source change or capability activation requires another implementation release unit; this package is strictly verification-only."
+      },
+      "inputContracts": [
+        "tool-discovery-scan@v1",
+        "desktop-account-readiness@v1",
+        "guided-configuration-preview@v1"
+      ],
+      "outputContracts": [],
+      "acceptanceCommands": [
+        {
+          "id": "ru004-as-01-catalog",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru003/test_acceptance.py::test_fixed_tool_and_line_catalogs",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru004-as-02-endpoints",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru003/test_acceptance.py::test_documented_endpoint_projection",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru004-as-03-authority",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru003/test_acceptance.py::test_preview_has_no_side_effect_authority",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru004-as-04-model",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru003/test_acceptance.py::test_model_and_apply_remain_truthfully_blocked",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru004-as-05-dsh",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru003/test_acceptance.py::test_dsh_adapter_abstains",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru004-as-06-preservation",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru003/test_acceptance.py::test_prior_release_unit_flows_remain_available",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU004-AS-01",
+          "assertion": "Direct execution of the pure TypeScript module under read-only isolation returns exactly the five approved tools, the two approved line roots, and the four documented global endpoints.",
+          "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_fixed_tool_and_line_catalogs",
+          "acceptanceCommandId": "ru004-as-01-catalog"
+        },
+        {
+          "id": "RU004-AS-02",
+          "assertion": "The implementation and runtime tests preserve the documented Claude root and /v1 projection for Codex, OpenCode, and Pi without another host or suffix.",
+          "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_documented_endpoint_projection",
+          "acceptanceCommandId": "ru004-as-02-endpoints"
+        },
+        {
+          "id": "RU004-AS-03",
+          "assertion": "The configuration-preview source exposes no network, credential, configuration read or write, browser storage, external-open, Tauri, updater, telemetry, or production operation and keeps all side-effect flags false.",
+          "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_preview_has_no_side_effect_authority",
+          "acceptanceCommandId": "ru004-as-03-authority"
+        },
+        {
+          "id": "RU004-AS-04",
+          "assertion": "Every preview keeps modelId empty with server_catalog_required, apply blocked, all mandatory blocker codes present, and the visible apply control disabled.",
+          "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_model_and_apply_remain_truthfully_blocked",
+          "acceptanceCommandId": "ru004-as-04-model"
+        },
+        {
+          "id": "RU004-AS-05",
+          "assertion": "DSH preserves the selected line root while withholding protocol endpoint, target file, owned fields, and automatic support and naming the missing web-profile adapter.",
+          "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_dsh_adapter_abstains",
+          "acceptanceCommandId": "ru004-as-05-dsh"
+        },
+        {
+          "id": "RU004-AS-06",
+          "assertion": "The account, configuration-preview, and local-tool navigation remains present, scan_tools_read_only remains the only Tauri invocation, and account readiness remains backend_upgrade_required.",
+          "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_prior_release_unit_flows_remain_available",
+          "acceptanceCommandId": "ru004-as-06-preservation"
+        }
+      ],
+      "verificationOnly": true,
+      "stopConditions": [
+        "Any owned source path changes after dispatch.",
+        "Any semantic scenario requires a write beneath the source tree or a network package download.",
+        "The current source differs from the RU-003 product boundary or activates a previously blocked capability.",
+        "The verifier cannot produce six valid semantic proofs under mandatory read-only isolation."
+      ],
+      "status": "planned"
     }
   ]
 }

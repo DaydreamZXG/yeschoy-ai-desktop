@@ -371,6 +371,301 @@
         "E-PROP-004"
       ],
       "status": "specified"
+    },
+    {
+      "id": "guided-configuration-preview@v1",
+      "kind": "query",
+      "owner": "tool-config",
+      "consumers": [
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/guided-configuration-preview@v1",
+      "authorization": "Callable only by the bundled local desktop webview. It grants no network, credential, configuration-read, configuration-write, rollback, installation, updater, telemetry, account, billing, or production authority.",
+      "idempotency": "The query is a pure deterministic projection. The same requestId, toolId, and lineId produce the same preview with no observable side effect.",
+      "compatibility": "Version 1 contains the fixed five-tool and two-line preview catalog and always blocks apply. Enabling a model, credential, write, test, or new adapter requires a superseding contract version and frozen release unit.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One transient local configuration-preview selection.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Caller-generated transient correlation identifier.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Stable selected tool identifier.",
+            "enum": [
+              "claude",
+              "codex",
+              "opencode",
+              "pi",
+              "dsh"
+            ]
+          },
+          "lineId": {
+            "type": "string",
+            "description": "Stable selected product line identifier.",
+            "enum": [
+              "mainland_optimized",
+              "global_accelerated"
+            ]
+          }
+        },
+        "required": [
+          "requestId",
+          "toolId",
+          "lineId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "A truthful preview-only projection that cannot mutate the machine.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "The unchanged caller request identifier.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Projection schema version.",
+            "enum": [
+              1
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "The only RU-003 preview capability state.",
+            "enum": [
+              "preview_only"
+            ]
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Stable selected tool identifier.",
+            "enum": [
+              "claude",
+              "codex",
+              "opencode",
+              "pi",
+              "dsh"
+            ]
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Beginner-readable official tool name.",
+            "enum": [
+              "Claude Code",
+              "Codex",
+              "OpenCode",
+              "Pi",
+              "DSH"
+            ]
+          },
+          "lineId": {
+            "type": "string",
+            "description": "Stable selected product line identifier.",
+            "enum": [
+              "mainland_optimized",
+              "global_accelerated"
+            ]
+          },
+          "lineName": {
+            "type": "string",
+            "description": "Beginner-readable selected line name.",
+            "enum": [
+              "大陆优化",
+              "全球加速"
+            ]
+          },
+          "rootUrl": {
+            "type": "string",
+            "description": "The exact product-approved root URL for the selected line.",
+            "enum": [
+              "https://yeschoy.com",
+              "https://api.yeschoy.com"
+            ]
+          },
+          "protocolEndpoint": {
+            "type": "string",
+            "description": "The documented protocol endpoint preview, or an empty string when withheld.",
+            "maxLength": 256
+          },
+          "endpointStatus": {
+            "type": "string",
+            "description": "Whether the endpoint is a documented preview or withheld as unverified.",
+            "enum": [
+              "documented_preview",
+              "withheld_unverified"
+            ]
+          },
+          "targetFile": {
+            "type": "string",
+            "description": "Sanitized documented target file hint, or an empty string when withheld.",
+            "maxLength": 256
+          },
+          "ownedFields": {
+            "type": "array",
+            "description": "Documented fields a later verified adapter may own; never values read from the machine.",
+            "minItems": 0,
+            "maxItems": 12,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "description": "One sanitized configuration field name.",
+              "maxLength": 128
+            }
+          },
+          "model": {
+            "type": "object",
+            "description": "Truthful model-selection availability for this client-only unit.",
+            "properties": {
+              "status": {
+                "type": "string",
+                "description": "The prerequisite that prevents a real model selection.",
+                "enum": [
+                  "server_catalog_required"
+                ]
+              },
+              "modelId": {
+                "type": "string",
+                "description": "Always empty because no server model catalog is available.",
+                "enum": [
+                  ""
+                ]
+              }
+            },
+            "required": [
+              "status",
+              "modelId"
+            ],
+            "additionalProperties": false
+          },
+          "apply": {
+            "type": "object",
+            "description": "Fail-closed apply readiness and named prerequisites.",
+            "properties": {
+              "status": {
+                "type": "string",
+                "description": "The only permitted apply state in RU-003.",
+                "enum": [
+                  "blocked"
+                ]
+              },
+              "blockers": {
+                "type": "array",
+                "description": "Every missing prerequisite for safe automatic configuration.",
+                "minItems": 4,
+                "maxItems": 5,
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "description": "One stable missing-prerequisite code.",
+                  "enum": [
+                    "desktop_backend_required",
+                    "server_model_catalog_required",
+                    "secure_credential_helper_required",
+                    "exact_version_allowlist_required",
+                    "dsh_web_adapter_required"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "status",
+              "blockers"
+            ],
+            "additionalProperties": false
+          },
+          "networkAttempted": {
+            "type": "boolean",
+            "description": "Whether the preview attempted any network request.",
+            "enum": [
+              false
+            ]
+          },
+          "configurationRead": {
+            "type": "boolean",
+            "description": "Whether any existing configuration content was read.",
+            "enum": [
+              false
+            ]
+          },
+          "configurationWritten": {
+            "type": "boolean",
+            "description": "Whether any configuration content was written.",
+            "enum": [
+              false
+            ]
+          },
+          "credentialAccessed": {
+            "type": "boolean",
+            "description": "Whether any credential source was accessed or executed.",
+            "enum": [
+              false
+            ]
+          }
+        },
+        "required": [
+          "requestId",
+          "schemaVersion",
+          "status",
+          "toolId",
+          "displayName",
+          "lineId",
+          "lineName",
+          "rootUrl",
+          "protocolEndpoint",
+          "endpointStatus",
+          "targetFile",
+          "ownedFields",
+          "model",
+          "apply",
+          "networkAttempted",
+          "configurationRead",
+          "configurationWritten",
+          "credentialAccessed"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal"
+      ],
+      "observability": {
+        "correlation": "requestId exists only in transient local UI state.",
+        "audit": "RU-003 writes no configuration receipt or persistent audit record because it performs no operation.",
+        "metrics": "RU-003 records and uploads no preview, tool, line, model, credential, or configuration metric."
+      },
+      "errorSemantics": [
+        "An invalid requestId, toolId, or lineId rejects the pure projection without any side effect.",
+        "DSH returns an empty protocolEndpoint and targetFile with endpointStatus withheld_unverified instead of guessing an adapter contract.",
+        "The model remains server_catalog_required and an empty modelId is never rendered as a real model.",
+        "Every projection blocks apply and keeps all four side-effect flags false.",
+        "No future server availability or newly installed tool silently upgrades this contract into a write-capable flow."
+      ],
+      "requirementRefs": [
+        "REQ-004",
+        "REQ-008",
+        "REQ-013",
+        "REQ-026",
+        "REQ-031"
+      ],
+      "evidenceRefs": [
+        "E-USER-042",
+        "E-EXT-025",
+        "E-EXT-026",
+        "E-EXT-027",
+        "E-EXT-028",
+        "E-CODE-022",
+        "E-PROP-005"
+      ],
+      "status": "specified"
     }
   ]
 }

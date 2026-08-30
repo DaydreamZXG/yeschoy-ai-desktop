@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU003-AS-06",
+  "assertion": "The navigation still exposes the RU-001 local discovery and RU-002 account destinations, scan_tools_read_only remains the only Tauri invocation, and the readiness shell remains fail closed.",
+  "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_prior_release_unit_flows_remain_available",
+  "acceptanceCommandId": "ru003-as-06-preservation",
+  "runId": "RU-003/WP-RU003-CONFIGURATION-PREVIEW@2026-08-30T09:11:21.728129+00:00",
+  "packageId": "WP-RU003-CONFIGURATION-PREVIEW",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru003/test_acceptance.py::test_prior_release_unit_flows_remain_available",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:160a54c68659fafadb1686a6d115c25f6ba20a5c0aa2a398a00e3d45f84d7470",
+    "machineReportSha256": "sha256:6a9251010b8754ad5cf49ef02d31c83e6108ec951d311ab3d208d362d0d24f18",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:3f7b6740bc3d1aa51ebd3040146867c896fc234f281c92f9b6e5543080dd6ab8",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:0b1b3f05cd276920d3849c5ed4a2c1312757be38ba6af70eb338585e414efea8",
+  "releaseUnitId": "RU-003",
+  "releaseUnitHash": "sha256:d2640d4c4be72abb1919bda52ad99394a30f9162c03115934948c96c7d3d194b"
+}

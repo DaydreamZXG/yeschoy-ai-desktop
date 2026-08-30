@@ -3342,5 +3342,74 @@
       "pi": "軽量で拡張可能なコーディングエージェント",
       "dsh": "DeepSeek Harness。現在は読み取り専用で検出"
     }
+  },
+  "yeschoyConfiguration": {
+    "navigation": "ワンクリック設定",
+    "eyebrow": "設定ファイルに触れず、一歩ずつ",
+    "title": "ツールと回線を選ぶ。あとはクライアントに任せる。",
+    "description": "まず、どこを変更する予定かを分かりやすく確認します。このビルドは安全なプレビューのみを作成し、設定の読み書きは行いません。",
+    "previewOnly": "プレビューのみ · PC の設定は未読取",
+    "stepsLabel": "設定手順",
+    "steps": {
+      "tool": "ツールを選択",
+      "line": "回線を選択",
+      "model": "モデルを選択",
+      "review": "変更を確認"
+    },
+    "modelUnavailable": "ログイン後にモデル ID を取得",
+    "reviewReady": "選択に合わせてプレビューを更新済み",
+    "chooseTool": "01 · どのツールを使いますか？",
+    "chooseLine": "02 · あなたに合う回線を選択",
+    "toolNotes": {
+      "claude": "Claude コマンドライン",
+      "codex": "OpenAI コーディングエージェント",
+      "opencode": "オープンソース端末エージェント",
+      "pi": "軽量コーディングエージェント",
+      "dsh": "DeepSeek Harness"
+    },
+    "lines": {
+      "mainland_optimized": {
+        "name": "中国本土向け最適化",
+        "note": "中国本土のネットワークを優先"
+      },
+      "global_accelerated": {
+        "name": "グローバル高速化",
+        "note": "Cloudflare グローバル回線"
+      }
+    },
+    "previewEyebrow": "変更プレビュー",
+    "previewTitle": "確認してから決める",
+    "notApplied": "未適用",
+    "selectedTool": "ツール",
+    "selectedLine": "回線",
+    "lineRoot": "回線ルート URL",
+    "effectiveEndpoint": "ツールの実効エンドポイント",
+    "withheld": "アダプター検証待ち",
+    "dshReason": "DSH web profile の書込フィールドが精密検証されていないため、アドレスを推測しません。",
+    "targetFile": "設定予定の場所",
+    "modelId": "モデル ID",
+    "ownedFields": "後で管理する可能性があるフィールドのみ",
+    "notReadFromComputer": "フィールド名は公式文書由来で、PC からの読取ではありません",
+    "dshFieldsWithheld": "DSH の書込フィールドは、厳密なバージョンのアダプター検証後に公開します。",
+    "safetyTitle": "このプレビューが行ったこと",
+    "safetyBody": "すべての操作は PC に触れる前に停止",
+    "safety": {
+      "networkAttempted": "ネットワーク要求",
+      "configurationRead": "既存設定の読取",
+      "configurationWritten": "設定ファイルへの書込",
+      "credentialAccessed": "API キーへのアクセス"
+    },
+    "notPerformed": "未実行",
+    "whyBlocked": "今はなぜ適用を押せないのですか？",
+    "blockers": {
+      "desktop_backend_required": "安全なデスクトップ実行層が未接続",
+      "server_model_catalog_required": "アカウントのモデル一覧が未接続",
+      "secure_credential_helper_required": "安全なシステム認証情報ヘルパーが未接続",
+      "exact_version_allowlist_required": "ツールの厳密バージョン許可リストが未署名",
+      "dsh_web_adapter_required": "DSH web profile アダプターが未検証"
+    },
+    "applyBlocked": "すべての安全条件が整った後に公開",
+    "openTools": "先にローカルツールを確認",
+    "openAccount": "アカウント接続状態を確認"
   }
 }

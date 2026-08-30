@@ -887,6 +887,70 @@
           "billing"
         ]
       }
+    },
+    {
+      "id": "DEC-045",
+      "question": "What implementation boundary should follow RU-002 before the real desktop backend, model catalog, credential helpers, and exact-version allowlist are available?",
+      "choice": "Freeze RU-003 as a client-only successor to RU-002. Add a complete beginner configuration-preview flow for Claude Code, Codex, OpenCode, Pi, and DSH with the approved mainland and global line roots, evidenced per-tool target fields, and deterministic protocol-endpoint derivation. Keep model ID explicitly unavailable and keep apply, connectivity testing, credential access, configuration reads and writes, rollback, server calls, and production changes blocked. DSH shows the selected line root but no derived protocol endpoint or write target until an exact web-profile adapter is verified.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-30T17:04:56+08:00",
+      "evidenceRefs": [
+        "E-USER-042",
+        "E-USER-010",
+        "E-USER-011",
+        "E-USER-037",
+        "E-EXT-025",
+        "E-EXT-026",
+        "E-EXT-027",
+        "E-EXT-028",
+        "E-CODE-022",
+        "E-PROP-005"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-004",
+          "REQ-008",
+          "REQ-013",
+          "REQ-026",
+          "REQ-031"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE-PREVIEW"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform",
+          "diagnostics"
+        ]
+      }
+    },
+    {
+      "id": "DEC-046",
+      "question": "How should the accepted RU-003 implementation be verified after the original frozen acceptance runner proved incompatible with mandatory read-only isolation and redispatch rechecked superseded dependency outputs?",
+      "choice": "Create RU-004 as a verification-only successor to RU-003. Preserve the RU-003 product scope, source, contract, page, and blocked side-effect boundary without modification; execute the same six semantic scenarios using the corrected direct Node TypeScript module loader plus read-only source assertions; retain the original failed run as immutable historical evidence; and declare no work-package dependency because RU-004 changes no implementation and its release-unit dependency and supersession preserve the authority chain.",
+      "status": "accepted",
+      "decidedBy": "product architecture",
+      "decidedAt": "2026-08-30T17:25:40+08:00",
+      "evidenceRefs": [
+        "E-CODE-023",
+        "E-PROP-006",
+        "E-USER-042",
+        "E-PROP-005"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-031"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE-PREVIEW"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform",
+          "diagnostics"
+        ]
+      }
     }
   ]
 }

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU003-AS-02",
+  "assertion": "Claude Code uses the selected root as its documented preview endpoint, Codex, OpenCode, and Pi append /v1, and no other host or protocol suffix appears.",
+  "testSelector": "tests/work_packages/ru003/test_acceptance.py::test_documented_endpoint_projection",
+  "acceptanceCommandId": "ru003-as-02-endpoints",
+  "runId": "RU-003/WP-RU003-CONFIGURATION-PREVIEW@2026-08-30T09:11:21.728129+00:00",
+  "packageId": "WP-RU003-CONFIGURATION-PREVIEW",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru003/test_acceptance.py::test_documented_endpoint_projection",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:a6ddb89314b9846aa5274567bc79400b3166c4691b41c4a9e45143befe9e65b5",
+    "machineReportSha256": "sha256:ca853f5aa1e9e3343c3c33c6b97c91ce894d2349bc01fc277ba013522b3c6048",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:ff32b3e927f830633dd911b727dbd68a8c1600054e2106df837040861fd5a22a",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:141c8db0b3380484641cd5f4f694e1660a8d13686ffc08c21416fc3544beb93c",
+  "releaseUnitId": "RU-003",
+  "releaseUnitHash": "sha256:d2640d4c4be72abb1919bda52ad99394a30f9162c03115934948c96c7d3d194b"
+}
