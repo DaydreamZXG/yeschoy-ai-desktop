@@ -513,6 +513,32 @@
         "A failed or timed-out probe affects only that tool card, keeps the other tool results visible, provides a safe rescan action, and never guesses installation or compatibility.",
         "Repeated scans replace stale results by request identity so an older completion cannot overwrite the newest visible scan."
       ]
+    },
+    {
+      "id": "REQ-030",
+      "statement": "RU-002 preserves RU-001 and adds a beginner-readable account and billing shell that truthfully reports the missing desktop backend boundary without contacting account services, storing credentials, fabricating values, or enabling recharge.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "account",
+      "evidenceRefs": [
+        "E-USER-041",
+        "E-USER-002",
+        "E-USER-003",
+        "E-USER-016",
+        "E-USER-023",
+        "E-EXT-024",
+        "E-CODE-021",
+        "E-PROP-004"
+      ],
+      "acceptance": [
+        "The shell exposes clear Account and Local tools destinations and preserves the complete fixed five-tool read-only scan behavior from RU-001.",
+        "The account destination states that secure website authorization requires a future server upgrade and exposes no control that pretends authorization can currently begin or complete.",
+        "Balance, today usage, month usage, model ID, official price, actual price, and recharge remain visibly unavailable instead of showing zero, sample, cached, or inferred values.",
+        "The fixed 1 USD = 6.75 CNY comparison rate is labelled display-only and not presented as a live exchange rate or a billing input.",
+        "The runtime makes no account, pricing, usage, authorization, wallet, or other network request and persists no password, website cookie, access token, refresh token, API key, account profile, or scan history.",
+        "The updated future NewAPI specification is pinned to current official GitHub evidence, distinguishes current routes from proposed /api/desktop/v1 routes, and records the deployed 404 readiness result without changing NewAPI or production infrastructure."
+      ]
     }
   ]
 }

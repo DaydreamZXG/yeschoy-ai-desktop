@@ -195,6 +195,182 @@
         "E-CODE-014"
       ],
       "status": "specified"
+    },
+    {
+      "id": "desktop-account-readiness@v1",
+      "kind": "query",
+      "owner": "account",
+      "consumers": [
+        "billing",
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-account-readiness@v1",
+      "authorization": "Callable only by the bundled local shell. It grants no network, account, credential, wallet, payment, configuration, updater, telemetry, or server authority.",
+      "idempotency": "The query is a deterministic compiled-capability projection. Repeating it in RU-002 returns the same backend_upgrade_required truth except for the caller requestId.",
+      "compatibility": "Version 1 has exactly one runtime status, backend_upgrade_required. A later deployed account integration requires a superseding contract and release unit rather than changing this meaning.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One local account-capability readiness request.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Caller-generated local correlation identifier.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          }
+        },
+        "required": [
+          "requestId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "A fail-closed RU-002 projection that prevents unavailable remote capabilities from appearing live.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "The unchanged caller request identifier.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Projection schema version.",
+            "enum": [
+              1
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "The only truthful account capability state in RU-002.",
+            "enum": [
+              "backend_upgrade_required"
+            ]
+          },
+          "networkAttempted": {
+            "type": "boolean",
+            "description": "Whether this projection attempted any account network request.",
+            "enum": [
+              false
+            ]
+          },
+          "serverNamespace": {
+            "type": "string",
+            "description": "The future first-party namespace required before activation.",
+            "enum": [
+              "/api/desktop/v1"
+            ]
+          },
+          "authorization": {
+            "type": "string",
+            "description": "Whether website device authorization is available in this client-only unit.",
+            "enum": [
+              "unavailable"
+            ]
+          },
+          "accountSummary": {
+            "type": "string",
+            "description": "Whether real account balance and summary data is available.",
+            "enum": [
+              "unavailable"
+            ]
+          },
+          "usage": {
+            "type": "string",
+            "description": "Whether real account usage data is available.",
+            "enum": [
+              "unavailable"
+            ]
+          },
+          "pricing": {
+            "type": "string",
+            "description": "Whether a server-authoritative official-versus-actual price projection is available.",
+            "enum": [
+              "unavailable"
+            ]
+          },
+          "recharge": {
+            "type": "string",
+            "description": "Whether a verified first-party recharge destination is available.",
+            "enum": [
+              "unavailable"
+            ]
+          },
+          "comparisonFx": {
+            "type": "object",
+            "description": "Product-approved display context that is not a live rate or billing input.",
+            "properties": {
+              "usdToCny": {
+                "type": "string",
+                "description": "The product-approved fixed USD-to-CNY comparison display rate.",
+                "enum": [
+                  "6.75"
+                ]
+              },
+              "purpose": {
+                "type": "string",
+                "description": "The sole permitted purpose of the fixed rate.",
+                "enum": [
+                  "display_only"
+                ]
+              },
+              "liveRate": {
+                "type": "boolean",
+                "description": "Whether the fixed display rate is a live market exchange rate.",
+                "enum": [
+                  false
+                ]
+              }
+            },
+            "required": [
+              "usdToCny",
+              "purpose",
+              "liveRate"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "requestId",
+          "schemaVersion",
+          "status",
+          "networkAttempted",
+          "serverNamespace",
+          "authorization",
+          "accountSummary",
+          "usage",
+          "pricing",
+          "recharge",
+          "comparisonFx"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal"
+      ],
+      "observability": {
+        "correlation": "requestId exists only in transient local UI state.",
+        "audit": "RU-002 creates no account or authorization audit record because it performs no remote or persistent account operation.",
+        "metrics": "RU-002 records and uploads no account, billing, or readiness metric."
+      },
+      "errorSemantics": [
+        "The projection never falls back to browser cookies, browser access tokens, a manually pasted PAT, generic NewAPI token CRUD, or public pricing interpretation.",
+        "Unavailable balance, usage, price, model, and wallet data are represented as unavailable rather than zero or stale values.",
+        "A future server becoming reachable does not silently activate RU-002; activation requires a superseding frozen contract and executable deployed integration evidence."
+      ],
+      "requirementRefs": [
+        "REQ-030"
+      ],
+      "evidenceRefs": [
+        "E-USER-041",
+        "E-EXT-024",
+        "E-CODE-021",
+        "E-PROP-004"
+      ],
+      "status": "specified"
     }
   ]
 }

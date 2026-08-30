@@ -819,6 +819,74 @@
           "desktop-platform"
         ]
       }
+    },
+    {
+      "id": "DEC-043",
+      "question": "What client-only successor release unit is authorized after RU-001 when the deployed NewAPI still lacks the approved desktop authorization boundary?",
+      "choice": "Freeze RU-002 as a successor to RU-001. Preserve the branded five-tool read-only discovery experience and add the production account and billing information architecture, complete page states, fixed display-only 1 USD = 6.75 CNY context, and an updated future NewAPI change specification. The only runtime account projection in this unit is backend_upgrade_required: it performs no account network request, stores no credential, shows no fabricated account or numeric billing value, and exposes no active recharge or authorization action until a later frozen unit verifies a deployed least-privilege /api/desktop/v1 contract.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-30T16:24:07+08:00",
+      "evidenceRefs": [
+        "E-USER-041",
+        "E-USER-002",
+        "E-USER-003",
+        "E-USER-016",
+        "E-USER-023",
+        "E-EXT-024",
+        "E-CODE-021",
+        "E-PROP-004"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-002",
+          "REQ-011",
+          "REQ-015",
+          "REQ-030"
+        ],
+        "pageRefs": [
+          "PAGE-ACCOUNT",
+          "PAGE-BILLING",
+          "PAGE-TOOLS"
+        ],
+        "domainRefs": [
+          "account",
+          "billing",
+          "desktop-platform",
+          "tool-config"
+        ]
+      }
+    },
+    {
+      "id": "DEC-044",
+      "question": "Which future server boundary may activate the desktop account and billing shell?",
+      "choice": "Only a versioned first-party /api/desktop/v1 boundary may activate it. The future server reuses NewAPI domain services internally but exposes device authorization, device-scoped rotating sessions, narrow current-account and usage projections, server-evaluated official-versus-actual pricing, and a first-party wallet URL. The desktop must not use broad website cookies, browser access tokens, generic token CRUD, or a client-side billing-expression interpreter as a shortcut.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-30T16:24:07+08:00",
+      "evidenceRefs": [
+        "E-USER-003",
+        "E-USER-018",
+        "E-USER-023",
+        "E-EXT-024",
+        "E-CODE-021"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-002",
+          "REQ-011",
+          "REQ-015",
+          "REQ-030"
+        ],
+        "pageRefs": [
+          "PAGE-ACCOUNT",
+          "PAGE-BILLING"
+        ],
+        "domainRefs": [
+          "account",
+          "billing"
+        ]
+      }
     }
   ]
 }

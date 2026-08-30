@@ -813,6 +813,40 @@
         "releaseUnitHash": "sha256:861a466d99d23425391efd33192be1351ba481cb8aae375aae50d9f75ad35c4e",
         "snapshotPath": "execution/release-unit-snapshots/861a466d99d23425391efd33192be1351ba481cb8aae375aae50d9f75ad35c4e/release-unit.json"
       }
+    },
+    {
+      "id": "RU-002",
+      "status": "review",
+      "objective": "Preserve RU-001 and implement only the honest client-side account and billing information architecture plus a fail-closed backend-readiness projection and current future-NewAPI change specification, without activating any remote account capability.",
+      "decisionRef": "DEC-043",
+      "dependsOnReleaseUnits": [
+        "RU-001"
+      ],
+      "supersedesReleaseUnits": [
+        "RU-001"
+      ],
+      "roots": {
+        "workPackages": [
+          "WP-RU002-ACCOUNT-BILLING-SHELL"
+        ],
+        "requirements": [],
+        "nonFunctionalRequirements": [],
+        "domains": [],
+        "contracts": [],
+        "stateMachines": [],
+        "pages": [
+          "PAGE-ACCOUNT",
+          "PAGE-BILLING"
+        ],
+        "journeys": [],
+        "dataLifecycleResources": [],
+        "aiScenarios": [],
+        "entitlements": [],
+        "trackCoverage": []
+      },
+      "closure": null,
+      "deferredSnapshot": null,
+      "freeze": null
     }
   ]
 }

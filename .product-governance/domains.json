@@ -8,7 +8,9 @@
       "trackScope": ["account"],
       "invariants": ["An account session is never projected into a third-party tool configuration."],
       "commands": [],
-      "queries": [],
+      "queries": [
+        "desktop-account-readiness@v1"
+      ],
       "emits": [],
       "consumes": []
     },

@@ -26,6 +26,8 @@
     "security-update"
   ],
   "trackDecisionRefs": {
+    "account": "DEC-043",
+    "billing": "DEC-043",
     "tool-config": "DEC-042",
     "desktop-platform": "DEC-042"
   },
