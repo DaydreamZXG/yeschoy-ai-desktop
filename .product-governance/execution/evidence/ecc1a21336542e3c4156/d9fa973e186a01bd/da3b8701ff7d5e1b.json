@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU001-AS-03",
+  "assertion": "Two distinct canonical executable candidates produce a visible multiple-installation conflict and the scanner neither selects one nor grants compatibility.",
+  "testSelector": "tests/work_packages/ru001/test_acceptance.py::test_multiple_installations_fail_closed",
+  "acceptanceCommandId": "ru001-as-03-conflict",
+  "runId": "RU-001/WP-RU001-DESKTOP-DISCOVERY@2026-08-30T07:32:09.578069+00:00",
+  "packageId": "WP-RU001-DESKTOP-DISCOVERY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru001/test_acceptance.py::test_multiple_installations_fail_closed",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:c35f2fe277813daaf2daa8bcf512cbce26bbf31ce39e496a65285e6023b24945",
+    "machineReportSha256": "sha256:477de41bb94a693fb636cd522779cf90539cfd95c1fb69f13d42853af65c38fc",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:9e83bfd8a02c941c0ef9731cf943c83b81bbebb95d132cef43fd3de8f0451377",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:a7c02e65ff7a5a47cd5569e3480006b59d208502a8954ffc6e1d3d8b5c8ec099",
+  "releaseUnitId": "RU-001",
+  "releaseUnitHash": "sha256:861a466d99d23425391efd33192be1351ba481cb8aae375aae50d9f75ad35c4e"
+}

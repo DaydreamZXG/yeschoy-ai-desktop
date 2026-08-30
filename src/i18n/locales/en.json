@@ -3254,5 +3254,56 @@
     "expiredHint": "Run the {{tool}} command to refresh your login",
     "queryFailed": "Query failed",
     "refresh": "Refresh"
+  },
+  "yeschoyDiscovery": {
+    "brandName": "野菜API",
+    "edition": "Official desktop assistant · Read-only preview",
+    "eyebrow": "Start correctly without learning API setup",
+    "title": "Let’s see where your AI tools are.",
+    "description": "We will find tools already installed on this computer and read the versions they report. You do not need to enter a key, URL, or model name.",
+    "trustTitle": "What this check can do",
+    "localOnly": "Checks this computer only",
+    "noChanges": "Does not change settings",
+    "noApiKnowledge": "No API knowledge needed",
+    "scanButton": "Check which tools I installed",
+    "rescanButton": "Check again",
+    "scanning": "Checking this computer…",
+    "privacyNote": "Runs fixed version checks only. No network access, configuration reads, or saved scan history.",
+    "scopeLabel": "This build",
+    "scopeText": "This build only performs safe discovery. Sign-in, balance, recharge, and one-click setup will arrive after their contracts are approved.",
+    "railLabel": "Local tool map",
+    "toolsTitle": "Five tools, one clear view",
+    "processingLocal": "Checking each tool…",
+    "checkedAt": "Checked at {{time}}",
+    "scanErrorTitle": "This check did not finish",
+    "scanErrorBody": "An older result was not shown as current. You can run the check again.",
+    "exactVersion": "Version",
+    "candidateCount": "Found {{count}} executable locations",
+    "advancedDetails": "View check details",
+    "platform": "Platform",
+    "requestId": "Check ID",
+    "status": {
+      "waiting": "Waiting to check",
+      "checking": "Checking",
+      "not_found": "Not found yet",
+      "detected_unverified": "Found · Read only",
+      "probe_failed": "Found · Cannot run",
+      "probe_timed_out": "Found · Check timed out",
+      "multiple_installations": "Multiple installs found"
+    },
+    "reason": {
+      "tool_not_found": "This is not an error; install it separately and check again",
+      "exact_version_not_allowlisted": "Version shown; automatic setup is not enabled",
+      "version_command_failed": "The version command failed, so compatibility is not guessed",
+      "version_command_timed_out": "The version command was stopped without blocking other tools",
+      "multiple_executables_found": "No installation was silently selected"
+    },
+    "toolDescriptions": {
+      "claude": "Anthropic’s command-line coding assistant",
+      "codex": "OpenAI’s local coding agent",
+      "opencode": "An open-source terminal coding assistant",
+      "pi": "A lightweight, extensible coding agent",
+      "dsh": "DeepSeek Harness; discovery remains read only"
+    }
   }
 }

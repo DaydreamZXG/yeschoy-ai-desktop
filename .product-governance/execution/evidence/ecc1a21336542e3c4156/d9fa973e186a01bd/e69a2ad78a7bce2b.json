@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU001-AS-02",
+  "assertion": "A successful version probe preserves the exact normalized version, reports the sanitized source class, and remains unverified read-only with no automatic-configuration action.",
+  "testSelector": "tests/work_packages/ru001/test_acceptance.py::test_detected_version_is_exact_and_read_only",
+  "acceptanceCommandId": "ru001-as-02-read-only",
+  "runId": "RU-001/WP-RU001-DESKTOP-DISCOVERY@2026-08-30T07:32:09.578069+00:00",
+  "packageId": "WP-RU001-DESKTOP-DISCOVERY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru001/test_acceptance.py::test_detected_version_is_exact_and_read_only",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:bbb843f611876efb295edd2e64a3e379434d1f39747d975eb994222fe0bfe019",
+    "machineReportSha256": "sha256:0a931583dcbbd0c24f0f0c502fd7704c0d9673b46633f97ead8ed83fec2fbd51",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:35c83c63ff2c9ed7476d8cc92a83708c1d58622c5bc00974100dd20ec42097b7",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:b475adcaabd180bf2dd4dc8fc5b526995c8a89b43cd3b21d1b8bd57b07f8d100",
+  "releaseUnitId": "RU-001",
+  "releaseUnitHash": "sha256:861a466d99d23425391efd33192be1351ba481cb8aae375aae50d9f75ad35c4e"
+}

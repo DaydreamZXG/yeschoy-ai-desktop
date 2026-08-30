@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU001-AS-01",
+  "assertion": "When no executable exists, the result still contains each of the fixed five tools exactly once and every card truthfully reports not found without treating absence as an application error.",
+  "testSelector": "tests/work_packages/ru001/test_acceptance.py::test_fixed_catalog_and_empty_state",
+  "acceptanceCommandId": "ru001-as-01-catalog",
+  "runId": "RU-001/WP-RU001-DESKTOP-DISCOVERY@2026-08-30T07:32:09.578069+00:00",
+  "packageId": "WP-RU001-DESKTOP-DISCOVERY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru001/test_acceptance.py::test_fixed_catalog_and_empty_state",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:aeda8d60ffd44f1edd31ea20ed668304df4c247ea8a1a9e132c184132e04e48b",
+    "machineReportSha256": "sha256:ee093bdee164e378118830d2b2d6be1d48139289238271d228dbe924179b0878",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:1853b3cd7534fb6d0594cf937202883774e6aac031ebe65b3e0f8cf2c24d346c",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:45cba9aafe3ed165f7f8e02dd88dce5cb064683929a7819daa4a9a5fc3a2f93b",
+  "releaseUnitId": "RU-001",
+  "releaseUnitHash": "sha256:861a466d99d23425391efd33192be1351ba481cb8aae375aae50d9f75ad35c4e"
+}

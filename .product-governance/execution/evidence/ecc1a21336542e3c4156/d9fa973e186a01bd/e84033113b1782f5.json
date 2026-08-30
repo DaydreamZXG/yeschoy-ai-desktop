@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU001-AS-06",
+  "assertion": "If two scans overlap, completion of the older request cannot replace the newest request's visible state and the UI exposes a new explicit rescan action after recovery.",
+  "testSelector": "tests/work_packages/ru001/test_acceptance.py::test_ui_rejects_stale_scan_completion",
+  "acceptanceCommandId": "ru001-as-06-freshness",
+  "runId": "RU-001/WP-RU001-DESKTOP-DISCOVERY@2026-08-30T07:32:09.578069+00:00",
+  "packageId": "WP-RU001-DESKTOP-DISCOVERY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru001/test_acceptance.py::test_ui_rejects_stale_scan_completion",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:850840bd207c619bace7eb6f27dde90b51e299ef3ef1eef9897e68e3d4506095",
+    "machineReportSha256": "sha256:bc63fed51fb2f2f03906c7ca32c5fe16235c13f4b0e86fabd547eb84906abfba",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:e88befaf3c4042f340f003ccbe6e58d3e65df51f2bd518c44a0df94b90c0c2ce",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:c231fa87eab074c890f02ef015bd39ef8f002bbe65dff1a048ebf0ff8ae34c00",
+  "releaseUnitId": "RU-001",
+  "releaseUnitHash": "sha256:861a466d99d23425391efd33192be1351ba481cb8aae375aae50d9f75ad35c4e"
+}

@@ -1,0 +1,1765 @@
+{
+  "schemaVersion": 1,
+  "releaseUnitId": "RU-001",
+  "releaseUnitHash": "sha256:861a466d99d23425391efd33192be1351ba481cb8aae375aae50d9f75ad35c4e",
+  "decisionId": "DEC-042",
+  "objective": "Implement only the branded 野菜API desktop foundation and the fixed five-tool local read-only discovery experience without claiming full-product or V1 release readiness.",
+  "dependsOnReleaseUnits": [],
+  "supersedesReleaseUnits": [],
+  "roots": {
+    "workPackages": [
+      "WP-RU001-DESKTOP-DISCOVERY"
+    ],
+    "requirements": [],
+    "nonFunctionalRequirements": [],
+    "domains": [],
+    "contracts": [],
+    "stateMachines": [],
+    "pages": [
+      "PAGE-TOOLS"
+    ],
+    "journeys": [],
+    "dataLifecycleResources": [],
+    "aiScenarios": [],
+    "entitlements": [],
+    "trackCoverage": []
+  },
+  "commit": "a7b7e4e82262d66deb303f2ef0dddf62265a4544",
+  "frozenAt": "2026-08-30T07:31:47.403944+00:00",
+  "catalogManifest": {
+    "schemaVersion": 1,
+    "product": {
+      "name": "野菜API",
+      "createdAt": "2026-08-29T06:28:13.295272+00:00"
+    },
+    "authority": {
+      "bundleRoot": ".product-governance",
+      "precedence": [
+        "user_confirmed",
+        "applicable_policy",
+        "frozen_decision",
+        "code_observed",
+        "existing_document",
+        "inferred",
+        "proposed"
+      ]
+    },
+    "tracks": [
+      "account",
+      "billing",
+      "tool-config",
+      "diagnostics",
+      "desktop-platform",
+      "security-update"
+    ],
+    "trackDecisionRefs": {
+      "tool-config": "DEC-042",
+      "desktop-platform": "DEC-042"
+    },
+    "requiredPageStates": [
+      "default",
+      "loading",
+      "empty",
+      "partial",
+      "error",
+      "expired",
+      "conflict",
+      "recovery",
+      "processing"
+    ],
+    "dualTrackCapabilities": [
+      "evidence",
+      "attempt",
+      "reflection",
+      "mastery",
+      "ability_estimate",
+      "planning",
+      "report",
+      "global_ask"
+    ],
+    "requiredNfrCategories": [
+      "security",
+      "privacy",
+      "reliability",
+      "observability",
+      "performance",
+      "capacity",
+      "accessibility",
+      "ai_quality",
+      "ai_cost",
+      "commerce",
+      "migration",
+      "backup_restore",
+      "operations"
+    ]
+  },
+  "closure": {
+    "workPackages": [
+      "WP-RU001-DESKTOP-DISCOVERY"
+    ],
+    "requirements": [
+      "REQ-003",
+      "REQ-012",
+      "REQ-026",
+      "REQ-028",
+      "REQ-029"
+    ],
+    "nonFunctionalRequirements": [],
+    "domains": [
+      "desktop-platform",
+      "tool-config"
+    ],
+    "contracts": [
+      "tool-discovery-scan@v1"
+    ],
+    "stateMachines": [],
+    "pages": [
+      "PAGE-TOOLS"
+    ],
+    "pageStateProfiles": [
+      "PROFILE-READONLY-TOOL-DISCOVERY"
+    ],
+    "journeys": [],
+    "actors": [],
+    "dataLifecycleResources": [],
+    "aiScenarios": [],
+    "entitlements": [],
+    "trackCoverage": [],
+    "evidence": [
+      "E-CODE-014",
+      "E-EXT-022",
+      "E-EXT-023",
+      "E-PROP-003",
+      "E-USER-004",
+      "E-USER-005",
+      "E-USER-034",
+      "E-USER-035",
+      "E-USER-036",
+      "E-USER-037",
+      "E-USER-038",
+      "E-USER-039",
+      "E-USER-040"
+    ],
+    "decisions": [
+      "DEC-042"
+    ],
+    "conflicts": [],
+    "glossaryTerms": [],
+    "resources": [],
+    "tracks": [
+      "desktop-platform",
+      "tool-config"
+    ]
+  },
+  "deferredSnapshot": {
+    "schemaVersion": 1,
+    "catalogHash": "sha256:8f78732b21d708dc8d79a61304d057aa7899e24274f4e6fe93586881d90f206f",
+    "items": [
+      {
+        "subjectKind": "actors",
+        "subjectId": "*",
+        "message": "No product actors are defined"
+      },
+      {
+        "subjectKind": "aiScenarios",
+        "subjectId": "*",
+        "message": "No AI scenarios are defined"
+      },
+      {
+        "subjectKind": "dataLifecycleResources",
+        "subjectId": "*",
+        "message": "No data lifecycle resources are defined"
+      },
+      {
+        "subjectKind": "entitlements",
+        "subjectId": "*",
+        "message": "No entitlement capabilities are defined"
+      },
+      {
+        "subjectKind": "journeys",
+        "subjectId": "*",
+        "message": "No end-to-end journeys are defined"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-accessibility",
+        "message": "High-impact non-functional requirement is unresolved: NFR-accessibility (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-ai_cost",
+        "message": "High-impact non-functional requirement is unresolved: NFR-ai_cost (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-ai_quality",
+        "message": "High-impact non-functional requirement is unresolved: NFR-ai_quality (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-backup_restore",
+        "message": "High-impact non-functional requirement is unresolved: NFR-backup_restore (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-capacity",
+        "message": "High-impact non-functional requirement is unresolved: NFR-capacity (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-commerce",
+        "message": "High-impact non-functional requirement is unresolved: NFR-commerce (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-migration",
+        "message": "High-impact non-functional requirement is unresolved: NFR-migration (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-observability",
+        "message": "High-impact non-functional requirement is unresolved: NFR-observability (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-operations",
+        "message": "High-impact non-functional requirement is unresolved: NFR-operations (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-performance",
+        "message": "High-impact non-functional requirement is unresolved: NFR-performance (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-privacy",
+        "message": "High-impact non-functional requirement is unresolved: NFR-privacy (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-reliability",
+        "message": "High-impact non-functional requirement is unresolved: NFR-reliability (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-security",
+        "message": "High-impact non-functional requirement is unresolved: NFR-security (unknown)"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ACCOUNT",
+        "message": "Page PAGE-ACCOUNT has no behavior for state conflict"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ACCOUNT",
+        "message": "Page PAGE-ACCOUNT has no behavior for state default"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ACCOUNT",
+        "message": "Page PAGE-ACCOUNT has no behavior for state empty"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ACCOUNT",
+        "message": "Page PAGE-ACCOUNT has no behavior for state error"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ACCOUNT",
+        "message": "Page PAGE-ACCOUNT has no behavior for state expired"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ACCOUNT",
+        "message": "Page PAGE-ACCOUNT has no behavior for state loading"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ACCOUNT",
+        "message": "Page PAGE-ACCOUNT has no behavior for state partial"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ACCOUNT",
+        "message": "Page PAGE-ACCOUNT has no behavior for state processing"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ACCOUNT",
+        "message": "Page PAGE-ACCOUNT has no behavior for state recovery"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-BILLING",
+        "message": "Page PAGE-BILLING has no behavior for state conflict"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-BILLING",
+        "message": "Page PAGE-BILLING has no behavior for state default"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-BILLING",
+        "message": "Page PAGE-BILLING has no behavior for state empty"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-BILLING",
+        "message": "Page PAGE-BILLING has no behavior for state error"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-BILLING",
+        "message": "Page PAGE-BILLING has no behavior for state expired"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-BILLING",
+        "message": "Page PAGE-BILLING has no behavior for state loading"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-BILLING",
+        "message": "Page PAGE-BILLING has no behavior for state partial"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-BILLING",
+        "message": "Page PAGE-BILLING has no behavior for state processing"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-BILLING",
+        "message": "Page PAGE-BILLING has no behavior for state recovery"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state conflict"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state default"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state empty"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state error"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state expired"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state loading"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state partial"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state processing"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state recovery"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-DIAGNOSTICS",
+        "message": "Page PAGE-DIAGNOSTICS has no behavior for state conflict"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-DIAGNOSTICS",
+        "message": "Page PAGE-DIAGNOSTICS has no behavior for state default"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-DIAGNOSTICS",
+        "message": "Page PAGE-DIAGNOSTICS has no behavior for state empty"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-DIAGNOSTICS",
+        "message": "Page PAGE-DIAGNOSTICS has no behavior for state error"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-DIAGNOSTICS",
+        "message": "Page PAGE-DIAGNOSTICS has no behavior for state expired"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-DIAGNOSTICS",
+        "message": "Page PAGE-DIAGNOSTICS has no behavior for state loading"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-DIAGNOSTICS",
+        "message": "Page PAGE-DIAGNOSTICS has no behavior for state partial"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-DIAGNOSTICS",
+        "message": "Page PAGE-DIAGNOSTICS has no behavior for state processing"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-DIAGNOSTICS",
+        "message": "Page PAGE-DIAGNOSTICS has no behavior for state recovery"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-HOME",
+        "message": "Page PAGE-HOME has no behavior for state conflict"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-HOME",
+        "message": "Page PAGE-HOME has no behavior for state default"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-HOME",
+        "message": "Page PAGE-HOME has no behavior for state empty"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-HOME",
+        "message": "Page PAGE-HOME has no behavior for state error"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-HOME",
+        "message": "Page PAGE-HOME has no behavior for state expired"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-HOME",
+        "message": "Page PAGE-HOME has no behavior for state loading"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-HOME",
+        "message": "Page PAGE-HOME has no behavior for state partial"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-HOME",
+        "message": "Page PAGE-HOME has no behavior for state processing"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-HOME",
+        "message": "Page PAGE-HOME has no behavior for state recovery"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-MODELS",
+        "message": "Page PAGE-MODELS has no behavior for state conflict"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-MODELS",
+        "message": "Page PAGE-MODELS has no behavior for state default"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-MODELS",
+        "message": "Page PAGE-MODELS has no behavior for state empty"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-MODELS",
+        "message": "Page PAGE-MODELS has no behavior for state error"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-MODELS",
+        "message": "Page PAGE-MODELS has no behavior for state expired"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-MODELS",
+        "message": "Page PAGE-MODELS has no behavior for state loading"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-MODELS",
+        "message": "Page PAGE-MODELS has no behavior for state partial"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-MODELS",
+        "message": "Page PAGE-MODELS has no behavior for state processing"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-MODELS",
+        "message": "Page PAGE-MODELS has no behavior for state recovery"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state conflict"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state default"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state empty"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state error"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state expired"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state loading"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state partial"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state processing"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state recovery"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-SETTINGS",
+        "message": "Page PAGE-SETTINGS has no behavior for state conflict"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-SETTINGS",
+        "message": "Page PAGE-SETTINGS has no behavior for state default"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-SETTINGS",
+        "message": "Page PAGE-SETTINGS has no behavior for state empty"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-SETTINGS",
+        "message": "Page PAGE-SETTINGS has no behavior for state error"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-SETTINGS",
+        "message": "Page PAGE-SETTINGS has no behavior for state expired"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-SETTINGS",
+        "message": "Page PAGE-SETTINGS has no behavior for state loading"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-SETTINGS",
+        "message": "Page PAGE-SETTINGS has no behavior for state partial"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-SETTINGS",
+        "message": "Page PAGE-SETTINGS has no behavior for state processing"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-SETTINGS",
+        "message": "Page PAGE-SETTINGS has no behavior for state recovery"
+      },
+      {
+        "subjectKind": "stateMachines",
+        "subjectId": "*",
+        "message": "No canonical state machines are defined"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "ability_estimate::account",
+        "message": "Capability ability_estimate/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "ability_estimate::billing",
+        "message": "Capability ability_estimate/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "ability_estimate::desktop-platform",
+        "message": "Capability ability_estimate/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "ability_estimate::diagnostics",
+        "message": "Capability ability_estimate/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "ability_estimate::security-update",
+        "message": "Capability ability_estimate/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "ability_estimate::tool-config",
+        "message": "Capability ability_estimate/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "attempt::account",
+        "message": "Capability attempt/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "attempt::billing",
+        "message": "Capability attempt/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "attempt::desktop-platform",
+        "message": "Capability attempt/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "attempt::diagnostics",
+        "message": "Capability attempt/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "attempt::security-update",
+        "message": "Capability attempt/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "attempt::tool-config",
+        "message": "Capability attempt/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "evidence::account",
+        "message": "Capability evidence/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "evidence::billing",
+        "message": "Capability evidence/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "evidence::desktop-platform",
+        "message": "Capability evidence/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "evidence::diagnostics",
+        "message": "Capability evidence/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "evidence::security-update",
+        "message": "Capability evidence/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "evidence::tool-config",
+        "message": "Capability evidence/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "global_ask::account",
+        "message": "Capability global_ask/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "global_ask::billing",
+        "message": "Capability global_ask/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "global_ask::desktop-platform",
+        "message": "Capability global_ask/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "global_ask::diagnostics",
+        "message": "Capability global_ask/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "global_ask::security-update",
+        "message": "Capability global_ask/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "global_ask::tool-config",
+        "message": "Capability global_ask/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "mastery::account",
+        "message": "Capability mastery/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "mastery::billing",
+        "message": "Capability mastery/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "mastery::desktop-platform",
+        "message": "Capability mastery/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "mastery::diagnostics",
+        "message": "Capability mastery/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "mastery::security-update",
+        "message": "Capability mastery/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "mastery::tool-config",
+        "message": "Capability mastery/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "planning::account",
+        "message": "Capability planning/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "planning::billing",
+        "message": "Capability planning/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "planning::desktop-platform",
+        "message": "Capability planning/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "planning::diagnostics",
+        "message": "Capability planning/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "planning::security-update",
+        "message": "Capability planning/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "planning::tool-config",
+        "message": "Capability planning/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "reflection::account",
+        "message": "Capability reflection/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "reflection::billing",
+        "message": "Capability reflection/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "reflection::desktop-platform",
+        "message": "Capability reflection/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "reflection::diagnostics",
+        "message": "Capability reflection/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "reflection::security-update",
+        "message": "Capability reflection/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "reflection::tool-config",
+        "message": "Capability reflection/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "report::account",
+        "message": "Capability report/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "report::billing",
+        "message": "Capability report/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "report::desktop-platform",
+        "message": "Capability report/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "report::diagnostics",
+        "message": "Capability report/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "report::security-update",
+        "message": "Capability report/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "report::tool-config",
+        "message": "Capability report/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "tracks",
+        "subjectId": "account",
+        "message": "Declared track account lacks an accepted scope decision"
+      },
+      {
+        "subjectKind": "tracks",
+        "subjectId": "billing",
+        "message": "Declared track billing lacks an accepted scope decision"
+      },
+      {
+        "subjectKind": "tracks",
+        "subjectId": "diagnostics",
+        "message": "Declared track diagnostics lacks an accepted scope decision"
+      },
+      {
+        "subjectKind": "tracks",
+        "subjectId": "security-update",
+        "message": "Declared track security-update lacks an accepted scope decision"
+      }
+    ]
+  },
+  "artifacts": {
+    "evidenceLedger": {
+      "schemaVersion": 1,
+      "entries": [
+        {
+          "id": "E-CODE-014",
+          "claim": "The inspected CC Switch implementation discovers supported CLIs through the PATH-default command plus audited fallback directories, executes bounded --version probes, distinguishes not-found from installed-but-broken, and has separate Windows command-script and App Execution Alias handling.",
+          "class": "code_observed",
+          "locator": "work/cc-switch-upstream/src-tauri/src/commands/misc.rs:153-177,749-814,1043-1104,1962-2055",
+          "observedAt": "2026-08-29T21:31:00+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-EXT-022",
+          "claim": "On 2026-08-29, the latest published stable GitHub releases were Claude Code v2.1.251, Codex rust-v0.151.0, OpenCode v1.18.25, and Pi v0.84.4. The DSH repository had no GitHub Release and its newest tag was dsh-v0.1.2-alpha.1, so these versions are current research anchors rather than a verified 野菜API support matrix.",
+          "class": "external_verified",
+          "locator": "https://github.com/anthropics/claude-code/releases/tag/v2.1.251; https://github.com/openai/codex/releases/tag/rust-v0.151.0; https://github.com/anomalyco/opencode/releases/tag/v1.18.25; https://github.com/earendil-works/pi/releases/tag/v0.84.4; https://github.com/deepseek-ai/deepseek-harness/tags",
+          "observedAt": "2026-08-29T22:42:10+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-EXT-023",
+          "claim": "Exact-tag source inspection found the required extension seams in the current research anchors: Claude Code v2.1.251 includes recent apiKeyHelper-only gateway fixes; Codex rust-v0.146.0 through rust-v0.151.0 each include command-backed provider bearer-token schema and tests; OpenCode v1.18.25 exposes the authentication loader hook; Pi v0.84.4 documents request-time !command apiKey resolution; and DSH dsh-v0.1.2-alpha.1 exposes a credential-provider seam but explicitly ships no keyring or helper-command provider. This verifies source structure, not cross-platform 野菜API compatibility.",
+          "class": "external_verified",
+          "locator": "https://github.com/anthropics/claude-code/blob/v2.1.251/CHANGELOG.md; https://github.com/openai/codex/blob/rust-v0.151.0/codex-rs/core/config.schema.json; https://github.com/openai/codex/blob/rust-v0.151.0/codex-rs/core/tests/suite/client.rs; https://github.com/anomalyco/opencode/blob/v1.18.25/packages/plugin/src/index.ts; https://github.com/earendil-works/pi/blob/v0.84.4/packages/coding-agent/docs/models.md; https://github.com/deepseek-ai/deepseek-harness/blob/dsh-v0.1.2-alpha.1/packages/credentials/credentials/README.md",
+          "observedAt": "2026-08-29T22:42:10+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-PROP-003",
+          "claim": "V1 should configure only exact tool versions that passed the complete Windows and macOS adapter matrix, with the signed client carrying the allowlist. The first verification cohort should use the three latest stable releases at test-baseline time for Claude Code, Codex, OpenCode, and Pi, while DSH is evaluated separately against one exact prerelease tag. Unknown, newly released, and failed versions remain read-only and never receive a plaintext compatibility fallback.",
+          "class": "proposed",
+          "locator": "outputs/野菜API-V1-工具版本支持与验证矩阵.md:1",
+          "observedAt": "2026-08-29T22:42:10+08:00",
+          "scope": "proposal",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": [
+            "E-EXT-022",
+            "E-EXT-023",
+            "E-USER-034",
+            "E-USER-036"
+          ]
+        },
+        {
+          "id": "E-USER-004",
+          "claim": "V1 serves novice users who already installed their AI tools but do not know how to configure them; tool installation is deferred.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-29:v1-user-and-install-scope",
+          "observedAt": "2026-08-29T14:15:00+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-005",
+          "claim": "V1 supports Claude Code, Codex, OpenCode, Pi, and DSH (DeepSeek Harness).",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-29:v1-five-tools",
+          "observedAt": "2026-08-29T14:20:00+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-034",
+          "claim": "The product owner confirmed the Claude Code and Codex credential-helper rule: their per-tool relay keys stay in the operating-system credential vault, unsupported versions must prompt for upgrade, and the client must never fall back to plaintext key storage for compatibility.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-29:confirm-tool-helper-no-plaintext",
+          "observedAt": "2026-08-29T21:49:32+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-035",
+          "claim": "The product owner confirmed that DSH V1 formally supports one-click configuration only for the web profile; headless, sdk, sdk-minimal, acp, and other profiles are read-only discovery targets and must not be modified in V1.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-29:confirm-dsh-web-profile-only",
+          "observedAt": "2026-08-29T22:01:43+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-036",
+          "claim": "The product owner confirmed the V1 secure credential integration for the remaining tools: OpenCode uses a signed authentication plugin whose runtime loader calls the credential helper, Pi uses its native command-backed apiKey contract, and DSH uses a version-pinned operating-system-vault credential provider. Missing or incompatible security components must block configuration with no plaintext fallback.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-29:confirm-opencode-pi-dsh-secure-integration",
+          "observedAt": "2026-08-29T22:05:33+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-037",
+          "claim": "The product owner accepted the exact-version compatibility allowlist for V1: automatic configuration is enabled only for exact tool versions that passed the complete matrix, while unknown, newly released, failed, and otherwise unverified versions remain read-only until a trusted compatibility update adds them.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-30:accept-exact-version-allowlist",
+          "observedAt": "2026-08-30T15:02:27+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-038",
+          "claim": "The product owner rejected presenting DSH as a Developer Preview and stated that the current DSH version is materially settled. DSH web is therefore a normal V1 support target after exact-version verification, without a product preview badge; this product decision does not convert the upstream prerelease tag into an official stable release or prove compatibility before testing.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-30:reject-dsh-developer-preview",
+          "observedAt": "2026-08-30T15:11:28+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-039",
+          "claim": "The product owner confirmed that incomplete DSH web compatibility must not block the overall V1 release. If no exact DSH version has passed the mandatory matrix at release time, DSH remains discovery-only with no configuration or credential writes until a later trusted client update adds verified support.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-30:dsh-does-not-block-v1-release",
+          "observedAt": "2026-08-30T15:16:47+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-040",
+          "claim": "The product owner authorized development to begin with a governed first release unit limited to the 野菜API desktop shell, product branding, and read-only discovery and compatibility reporting for Claude Code, Codex, OpenCode, Pi, and DSH; account login, billing, recharge, NewAPI changes, secrets, configuration writes, automatic updates, and telemetry are excluded from this unit.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-30:authorize-ru001-read-only-client-foundation",
+          "observedAt": "2026-08-30T15:26:57+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        }
+      ]
+    },
+    "conflictRegister": {
+      "schemaVersion": 1,
+      "conflicts": []
+    },
+    "decisionRegister": {
+      "schemaVersion": 1,
+      "decisions": [
+        {
+          "id": "DEC-042",
+          "question": "What is the first implementation release unit authorized for the 野菜API desktop client?",
+          "choice": "Freeze and implement RU-001 only: establish the 野菜API desktop shell and brand, then perform local read-only discovery and truthful compatibility reporting for Claude Code, Codex, OpenCode, Pi, and DSH. The unit performs no network request, account or billing action, NewAPI change, credential access, configuration read or write, third-party installation, automatic update, or telemetry upload. Until a later signed exact-version allowlist is verified, every detected version remains read-only and is never presented as ready for one-click configuration.",
+          "status": "accepted",
+          "decidedBy": "product owner",
+          "decidedAt": "2026-08-30T15:26:57+08:00",
+          "evidenceRefs": [
+            "E-USER-040",
+            "E-USER-037",
+            "E-CODE-014"
+          ],
+          "affects": {
+            "requirementRefs": [
+              "REQ-003",
+              "REQ-012",
+              "REQ-026",
+              "REQ-028",
+              "REQ-029"
+            ],
+            "pageRefs": [
+              "PAGE-TOOLS"
+            ],
+            "domainRefs": [
+              "tool-config",
+              "desktop-platform"
+            ]
+          }
+        }
+      ]
+    },
+    "glossary": {
+      "schemaVersion": 1,
+      "terms": []
+    },
+    "requirements": {
+      "schemaVersion": 1,
+      "requirements": [
+        {
+          "id": "REQ-003",
+          "statement": "V1 detects installed instances of Claude Code, Codex, OpenCode, Pi, and DSH and reports installed, not found, configured, needs attention, and unsupported-version states.",
+          "scope": "target",
+          "impact": "high",
+          "state": "confirmed",
+          "owner": "tool-config",
+          "evidenceRefs": [
+            "E-USER-004",
+            "E-USER-005"
+          ],
+          "acceptance": [
+            "Every supported tool has an explicit detection contract and version evidence.",
+            "Not found is not presented as an error.",
+            "An unsupported or ambiguous installation is not modified."
+          ]
+        },
+        {
+          "id": "REQ-012",
+          "statement": "V1 does not download, install, update, or uninstall third-party AI tools.",
+          "scope": "target",
+          "impact": "high",
+          "state": "confirmed",
+          "owner": "desktop-platform",
+          "evidenceRefs": [
+            "E-USER-004"
+          ],
+          "acceptance": [
+            "A missing tool receives installation guidance only.",
+            "No V1 action elevates privileges to install a third-party tool."
+          ]
+        },
+        {
+          "id": "REQ-026",
+          "statement": "V1 automatically configures a third-party tool only when that exact tool version is present in the signed compatibility allowlist backed by complete platform, credential, configuration, request, conflict, recovery, removal, and secret-leak evidence.",
+          "scope": "target",
+          "impact": "critical",
+          "state": "confirmed",
+          "owner": "tool-config",
+          "evidenceRefs": [
+            "E-USER-037",
+            "E-USER-038",
+            "E-EXT-022",
+            "E-EXT-023",
+            "E-PROP-003"
+          ],
+          "acceptance": [
+            "Every allowlisted version names its exact upstream tag or package version, adapter-contract version, supported platform cells, evidence set, and client catalog version.",
+            "A minimum-version comparison, an open semantic-version range, source-level feature presence, or a successful test on only one platform cannot independently grant automatic-configuration support.",
+            "A newly released, unknown, prerelease, failed, unparsable, or multiply installed version stays read-only and cannot create credentials, write configuration, install plugins, or alter defaults unless its exact identity is explicitly allowlisted.",
+            "Each allowlisted platform cell passes detection, configuration preview, credential delivery, atomic write and read-back, real tool-level request, override and conflict handling, interrupted-transaction recovery, receipt-matching removal, and complete-secret scanning.",
+            "Compatibility allowlist changes ship only inside a signed client or signed compatibility artifact governed by the updater trust boundary, and a stale or unverifiable catalog fails closed.",
+            "An exact DSH upstream prerelease tag may be allowlisted only after the full matrix passes; when it passes, it is presented as normal V1 support without a product preview badge while its exact upstream version remains visible, and it does not imply support for another DSH tag or profile."
+          ]
+        },
+        {
+          "id": "REQ-028",
+          "statement": "Incomplete DSH web compatibility does not block the overall V1 release; until an exact DSH version completes every mandatory gate, DSH remains discovery-only with no configuration or credential writes and may gain normal support only through a later trusted signed client update.",
+          "scope": "target",
+          "impact": "critical",
+          "state": "confirmed",
+          "owner": "tool-config",
+          "evidenceRefs": [
+            "E-USER-039",
+            "E-USER-038",
+            "E-USER-035",
+            "E-USER-037",
+            "E-EXT-022",
+            "E-EXT-023"
+          ],
+          "acceptance": [
+            "The overall V1 release-readiness result is not failed solely because no exact DSH web version has yet completed every required platform and security cell.",
+            "An unverified DSH installation is visibly reported as detected but not currently supported for automatic configuration and exposes no configure, repair, remove, line-switch, model-write, plugin-install, or credential action.",
+            "Allowing the overall release never relaxes the exact-version allowlist, credential-vault, no-plaintext-fallback, web-profile-only, or truthful-support-display boundaries.",
+            "A later signed client update may add normal DSH support only after an exact version passes the complete matrix; discovery-only status does not silently convert into support.",
+            "Release notes, product pages, and in-app supported-tool lists state the actually verified tool set and do not claim DSH automatic configuration before evidence exists."
+          ]
+        },
+        {
+          "id": "REQ-029",
+          "statement": "RU-001 provides a beginner-readable 野菜API desktop shell that performs only local read-only discovery of Claude Code, Codex, OpenCode, Pi, and DSH and reports exact detected versions and conservative compatibility truth without contacting a server or changing the machine.",
+          "scope": "target",
+          "impact": "high",
+          "state": "confirmed",
+          "owner": "tool-config",
+          "evidenceRefs": [
+            "E-USER-040",
+            "E-USER-004",
+            "E-USER-005",
+            "E-USER-037",
+            "E-CODE-014"
+          ],
+          "acceptance": [
+            "The primary screen names 野菜API and explains in plain language that it is checking already-installed tools without asking for an API key, Base URL, model name, or configuration-file path.",
+            "One explicit scan returns exactly one result for each of Claude Code, Codex, OpenCode, Pi, and DSH and distinguishes not found, detected but unverified, executable failure or timeout, and ambiguous multiple-installation states.",
+            "Every detected version string remains visible; a version not present in a later verified exact-version allowlist is reported as read-only and exposes no configure, repair, remove, install, line, model, credential, login, billing, recharge, updater, or telemetry action.",
+            "The scan performs no HTTP or other network request, does not read tool configuration contents, does not access a credential store, and creates, modifies, or deletes no user or tool file.",
+            "A failed or timed-out probe affects only that tool card, keeps the other tool results visible, provides a safe rescan action, and never guesses installation or compatibility.",
+            "Repeated scans replace stale results by request identity so an older completion cannot overwrite the newest visible scan."
+          ]
+        }
+      ]
+    },
+    "journeys": {
+      "schemaVersion": 1,
+      "actors": [],
+      "journeys": []
+    },
+    "domains": {
+      "schemaVersion": 1,
+      "domains": [
+        {
+          "id": "desktop-platform",
+          "owner": "product-architecture",
+          "trackScope": [
+            "desktop-platform"
+          ],
+          "invariants": [
+            "V1 observes but does not install, update, or uninstall third-party AI tools."
+          ]
+        },
+        {
+          "id": "tool-config",
+          "owner": "product-architecture",
+          "trackScope": [
+            "tool-config"
+          ],
+          "invariants": [
+            "A configuration write cannot commit without an encrypted transaction-scoped rollback snapshot and external-change check; no successful transaction retains backup history."
+          ]
+        }
+      ]
+    },
+    "stateMachines": {
+      "schemaVersion": 1,
+      "machines": []
+    },
+    "contracts": {
+      "schemaVersion": 1,
+      "contracts": [
+        {
+          "id": "tool-discovery-scan@v1",
+          "kind": "query",
+          "owner": "tool-config",
+          "consumers": [
+            "desktop-platform"
+          ],
+          "schemaLocator": "inline://contracts.json#/contracts/tool-discovery-scan@v1",
+          "authorization": "Callable only by the bundled local desktop webview; it grants no account, credential, filesystem-write, installation, update, or network authority.",
+          "idempotency": "The query is read-only. Repeating one request against the same executable paths yields an equivalent projection; the UI accepts results only for its newest requestId.",
+          "compatibility": "Version 1 always returns the fixed five-tool catalog and the declared conservative statuses. New fields or status meanings require a new contract version.",
+          "inputSchema": {
+            "type": "object",
+            "description": "One local read-only discovery request.",
+            "properties": {
+              "requestId": {
+                "type": "string",
+                "description": "Caller-generated correlation identifier used to reject stale UI results.",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9_-]+$"
+              }
+            },
+            "required": [
+              "requestId"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "description": "The complete bounded projection for the five V1 tools.",
+            "properties": {
+              "requestId": {
+                "type": "string",
+                "description": "The unchanged caller request identifier.",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "platform": {
+                "type": "string",
+                "description": "The platform family on which discovery ran.",
+                "enum": [
+                  "windows",
+                  "macos",
+                  "linux",
+                  "unknown"
+                ]
+              },
+              "startedAtEpochMs": {
+                "type": "integer",
+                "description": "Local monotonic correlation timestamp expressed as Unix milliseconds for freshness display.",
+                "minimum": 0
+              },
+              "completedAtEpochMs": {
+                "type": "integer",
+                "description": "Completion timestamp expressed as Unix milliseconds and never earlier than startedAtEpochMs.",
+                "minimum": 0
+              },
+              "tools": {
+                "type": "array",
+                "description": "Exactly one result for every V1 tool in stable product order.",
+                "minItems": 5,
+                "maxItems": 5,
+                "uniqueItems": true,
+                "items": {
+                  "type": "object",
+                  "description": "One truthful local tool-discovery result.",
+                  "properties": {
+                    "toolId": {
+                      "type": "string",
+                      "description": "Stable tool identifier.",
+                      "enum": [
+                        "claude",
+                        "codex",
+                        "opencode",
+                        "pi",
+                        "dsh"
+                      ]
+                    },
+                    "displayName": {
+                      "type": "string",
+                      "description": "Beginner-readable official tool name.",
+                      "enum": [
+                        "Claude Code",
+                        "Codex",
+                        "OpenCode",
+                        "Pi",
+                        "DSH"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Observed installation and executable outcome without inferred configuration health.",
+                      "enum": [
+                        "not_found",
+                        "detected_unverified",
+                        "probe_failed",
+                        "probe_timed_out",
+                        "multiple_installations"
+                      ]
+                    },
+                    "version": {
+                      "type": "string",
+                      "description": "Exact normalized version output when available, otherwise an empty string.",
+                      "maxLength": 256
+                    },
+                    "candidateCount": {
+                      "type": "integer",
+                      "description": "Number of distinct executable candidates found after canonical-path deduplication.",
+                      "minimum": 0,
+                      "maximum": 32
+                    },
+                    "locationHint": {
+                      "type": "string",
+                      "description": "A sanitized source hint such as PATH or common location, never a complete user path or OS username.",
+                      "enum": [
+                        "none",
+                        "path",
+                        "common_location",
+                        "multiple"
+                      ]
+                    },
+                    "compatibility": {
+                      "type": "string",
+                      "description": "Conservative automatic-configuration eligibility for this release unit.",
+                      "enum": [
+                        "not_applicable",
+                        "unverified_read_only"
+                      ]
+                    },
+                    "reasonCode": {
+                      "type": "string",
+                      "description": "Stable presentation reason with no raw command output or secret-bearing diagnostic text.",
+                      "enum": [
+                        "tool_not_found",
+                        "exact_version_not_allowlisted",
+                        "version_command_failed",
+                        "version_command_timed_out",
+                        "multiple_executables_found"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "toolId",
+                    "displayName",
+                    "status",
+                    "version",
+                    "candidateCount",
+                    "locationHint",
+                    "compatibility",
+                    "reasonCode"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "requestId",
+              "platform",
+              "startedAtEpochMs",
+              "completedAtEpochMs",
+              "tools"
+            ],
+            "additionalProperties": false
+          },
+          "dataClasses": [
+            "internal"
+          ],
+          "observability": {
+            "correlation": "requestId is returned unchanged and shown in advanced local details only.",
+            "audit": "RU-001 emits no persistent audit record; the current in-memory result is the sole local projection.",
+            "metrics": "RU-001 sends no telemetry and records no persistent metrics; elapsed time is computed in memory for the current scan only."
+          },
+          "errorSemantics": [
+            "An invalid requestId rejects the whole query before any probe starts.",
+            "A missing executable is a successful not_found result rather than a command failure.",
+            "A non-zero or empty version command becomes probe_failed for only that tool and raw stdout or stderr is not returned.",
+            "A probe exceeding the bounded timeout is killed and becomes probe_timed_out for only that tool.",
+            "More than one canonical executable becomes multiple_installations and no candidate is silently selected as compatible.",
+            "Any detected version not backed by a verified exact-version allowlist is unverified_read_only."
+          ],
+          "requirementRefs": [
+            "REQ-003",
+            "REQ-012",
+            "REQ-026",
+            "REQ-028",
+            "REQ-029"
+          ],
+          "evidenceRefs": [
+            "E-USER-040",
+            "E-USER-037",
+            "E-CODE-014"
+          ],
+          "status": "specified"
+        }
+      ]
+    },
+    "pageMatrix": {
+      "schemaVersion": 1,
+      "stateProfiles": [
+        {
+          "id": "PROFILE-READONLY-TOOL-DISCOVERY",
+          "states": {
+            "default": {
+              "behavior": "Show the 野菜API welcome shell, the fixed five-tool list, and one primary button labelled to check installed tools.",
+              "visibleTruth": "No discovery result exists yet; the page says that the check is local and read-only and that no API knowledge is required.",
+              "prohibitedClaims": [
+                "Do not claim that any tool is installed, configured, compatible, connected, or ready before a scan result exists."
+              ],
+              "allowedActions": [
+                "start_read_only_scan"
+              ],
+              "freshness": "No result timestamp is shown before the first scan.",
+              "recovery": "The user may start the local scan or close the app without changing the machine.",
+              "correlation": "A requestId is generated only when the user starts a scan."
+            },
+            "loading": {
+              "behavior": "Keep all five tool cards visible with per-tool checking indicators and disable duplicate scan submission while the current request is active.",
+              "visibleTruth": "The page says that local executables and their version output are being checked and that no configuration or network action is running.",
+              "prohibitedClaims": [
+                "Do not show cached installation or compatibility results as the active scan result."
+              ],
+              "allowedActions": [],
+              "freshness": "The active requestId and start time own the pending result.",
+              "recovery": "If the request fails, transition to error while retaining no invented tool status.",
+              "correlation": "Only the active requestId may complete this state."
+            },
+            "empty": {
+              "behavior": "Show all five tools as not found and explain that this is not an application error.",
+              "visibleTruth": "The most recent completed local scan found no executable candidate for any supported tool.",
+              "prohibitedClaims": [
+                "Do not claim the tools are uninstalled when they may exist outside the bounded discovery locations."
+              ],
+              "allowedActions": [
+                "rescan_tools"
+              ],
+              "freshness": "Show the completion time of the newest accepted requestId.",
+              "recovery": "The user may install a tool independently and rescan; RU-001 never installs it.",
+              "correlation": "Advanced details show the newest accepted requestId without a complete local path."
+            },
+            "partial": {
+              "behavior": "Show each of the five tool results independently so found, not-found, failed, timed-out, and read-only states can coexist.",
+              "visibleTruth": "Only observations from the newest completed local scan appear, including exact version text for successful probes.",
+              "prohibitedClaims": [
+                "Do not promote one tool's success into a claim about another tool or about configuration health."
+              ],
+              "allowedActions": [
+                "rescan_tools",
+                "view_sanitized_details"
+              ],
+              "freshness": "All cards share the newest accepted scan completion time.",
+              "recovery": "A failed or missing tool can be rescanned without hiding valid results for the other tools.",
+              "correlation": "Every visible card belongs to the same newest requestId."
+            },
+            "error": {
+              "behavior": "Show a plain-language scan failure without replacing it with guessed installation results.",
+              "visibleTruth": "The discovery query did not produce a valid complete five-tool projection.",
+              "prohibitedClaims": [
+                "Do not display the previous scan as if it were the failed request's current result."
+              ],
+              "allowedActions": [
+                "retry_scan"
+              ],
+              "freshness": "The failed requestId is identified and prior results are visibly stale or cleared.",
+              "recovery": "Retry creates a new requestId and performs the same bounded read-only scan.",
+              "correlation": "The safe local error class is correlated to the failed requestId; raw command output is not displayed."
+            },
+            "expired": {
+              "behavior": "Mark a superseded result as expired and prevent it from overwriting a newer request.",
+              "visibleTruth": "A scan completion arrived for an older requestId and was rejected from the current projection.",
+              "prohibitedClaims": [
+                "Do not merge cards from different request identities or completion times."
+              ],
+              "allowedActions": [
+                "view_current_scan"
+              ],
+              "freshness": "Only the newest started requestId is eligible to become current.",
+              "recovery": "Continue showing the newest active or completed request; no filesystem recovery is required.",
+              "correlation": "Both expired and current request identities remain in transient UI control flow only."
+            },
+            "conflict": {
+              "behavior": "Highlight every tool with multiple canonical executable candidates and explain that no candidate was silently chosen.",
+              "visibleTruth": "The bounded scan observed more than one distinct executable for at least one tool.",
+              "prohibitedClaims": [
+                "Do not claim compatibility, choose a preferred executable, or expose a configure action while installation identity is ambiguous."
+              ],
+              "allowedActions": [
+                "rescan_tools",
+                "view_sanitized_details"
+              ],
+              "freshness": "Candidate counts come only from the newest accepted scan.",
+              "recovery": "The user resolves the tool installation externally, then rescans; RU-001 changes no PATH or tool file.",
+              "correlation": "The conflict and sanitized candidate source classes are bound to one requestId."
+            },
+            "recovery": {
+              "behavior": "After a failed, timed-out, or superseded scan, explain that a clean rescan is the only in-app recovery action.",
+              "visibleTruth": "No write or rollback is necessary because discovery is read-only and stores no retained scan history.",
+              "prohibitedClaims": [
+                "Do not offer repair, install, update, configuration, credential, or restore operations in RU-001."
+              ],
+              "allowedActions": [
+                "rescan_tools"
+              ],
+              "freshness": "Recovery always creates a new requestId and never mutates an older result.",
+              "recovery": "Run another bounded local scan; if it fails again, preserve the truthful per-tool failure states.",
+              "correlation": "The recovery request receives its own requestId."
+            },
+            "processing": {
+              "behavior": "Represent each bounded version probe as in progress while keeping configuration and remote-service controls absent.",
+              "visibleTruth": "Only local executable discovery and a bounded --version command may be processing.",
+              "prohibitedClaims": [
+                "Do not imply that login, billing, API connectivity, model retrieval, updates, or configuration are processing."
+              ],
+              "allowedActions": [],
+              "freshness": "Processing belongs to the newest active requestId and expires when it is superseded.",
+              "recovery": "Each probe times out into a truthful per-tool result; the overall projection still completes when possible.",
+              "correlation": "Per-tool processing is aggregated under one requestId without persistent telemetry."
+            }
+          }
+        }
+      ],
+      "pages": [
+        {
+          "id": "PAGE-TOOLS",
+          "route": "/tools",
+          "purpose": "List the five V1 tools and their local read-only installation and compatibility observations.",
+          "trackScope": [
+            "tool-config",
+            "desktop-platform"
+          ],
+          "dataOwners": [
+            "tool-config",
+            "desktop-platform"
+          ],
+          "entryConditions": [],
+          "actions": [
+            "start_read_only_scan",
+            "rescan_tools",
+            "view_sanitized_details"
+          ],
+          "exitRoutes": [
+            "/"
+          ],
+          "permissions": [
+            "local executable discovery and bounded version execution only"
+          ],
+          "stateProfileRef": "PROFILE-READONLY-TOOL-DISCOVERY",
+          "states": {}
+        }
+      ]
+    },
+    "trackCoverage": {
+      "schemaVersion": 1,
+      "capabilities": []
+    },
+    "dataLifecycle": {
+      "schemaVersion": 1,
+      "resources": []
+    },
+    "aiScenarios": {
+      "schemaVersion": 1,
+      "scenarios": []
+    },
+    "entitlements": {
+      "schemaVersion": 1,
+      "capabilities": []
+    },
+    "nonFunctionalRequirements": {
+      "schemaVersion": 1,
+      "requirements": []
+    },
+    "workPackages": {
+      "schemaVersion": 1,
+      "packages": [
+        {
+          "id": "WP-RU001-DESKTOP-DISCOVERY",
+          "wave": "producer",
+          "owner": "desktop-client",
+          "riskClass": "high",
+          "objective": "Replace the inherited CC Switch runtime surface with a branded, least-authority 野菜API shell and implement the frozen five-tool local read-only discovery query and its beginner-facing result states.",
+          "deliverables": [
+            "A minimal Tauri runtime that exposes only tool-discovery-scan@v1 to the RU-001 frontend and does not initialize inherited provider, database, network, updater, telemetry, credential, configuration, or installation services.",
+            "A bounded cross-platform scanner for Claude Code, Codex, OpenCode, Pi, and DSH with exact version display, canonical candidate deduplication, timeout handling, sanitized location classes, and conservative read-only compatibility.",
+            "A distinctive accessible 野菜API first screen covering default, loading, empty, partial, error, expired, conflict, recovery, and processing behavior with no unavailable product actions.",
+            "Executable acceptance evidence for catalog completeness, conservative compatibility, conflict handling, failure isolation, no-side-effect authority, and stale-request rejection."
+          ],
+          "requirementRefs": [
+            "REQ-003",
+            "REQ-012",
+            "REQ-026",
+            "REQ-028",
+            "REQ-029"
+          ],
+          "decisionRefs": [
+            "DEC-042"
+          ],
+          "blockingDecisionRefs": [],
+          "nonGoals": [
+            "No account login, device authorization, balance, usage, pricing, recharge, or NewAPI integration.",
+            "No API key, operating-system credential vault, model, line, configuration-file content, configuration write, backup, rollback, repair, or tool lifecycle action.",
+            "No automatic update, compatibility download, telemetry, crash upload, server, Nginx, DNS, database, or production change.",
+            "No claim that any detected tool version is approved for automatic configuration."
+          ],
+          "dependsOn": [],
+          "allowedPaths": [
+            "package.json",
+            "src/App.tsx",
+            "src/index.css",
+            "src/main.tsx",
+            "src/i18n/locales/en.json",
+            "src/i18n/locales/ja.json",
+            "src/i18n/locales/zh-TW.json",
+            "src/i18n/locales/zh.json",
+            "src-tauri/Cargo.lock",
+            "src-tauri/Cargo.toml",
+            "src-tauri/capabilities/default.json",
+            "src-tauri/src/lib.rs",
+            "src-tauri/src/main.rs",
+            "src-tauri/src/tool_discovery.rs",
+            "src-tauri/src/tool_discovery_core.rs",
+            "src-tauri/tauri.conf.json",
+            "src-tauri/tauri.windows.conf.json",
+            "tests/work_packages/ru001/**"
+          ],
+          "forbiddenPaths": [
+            ".product-governance/**",
+            "outputs/**",
+            "work/**",
+            "src-tauri/src/commands/**",
+            "src-tauri/src/database/**",
+            "src-tauri/src/services/**",
+            "src-tauri/src/proxy/**",
+            "src/contexts/UpdateContext.tsx",
+            "src/components/UpdateBadge.tsx",
+            "scripts/rewrite-updater-manifest.mjs"
+          ],
+          "migrationPolicy": {
+            "mode": "none",
+            "ownedPaths": [],
+            "dataBackfill": "RU-001 creates no application database, account record, configuration receipt, compatibility cache, or retained scan history.",
+            "rollback": "Revert only the listed allowed paths to the upstream fork baseline; no user or server data migration or restoration is involved."
+          },
+          "compatibilityPolicy": {
+            "strategy": "Consume the fixed tool-discovery-scan@v1 projection and fail closed: every successful version probe is unverified_read_only until a later frozen release unit introduces signed exact-version evidence.",
+            "supportedVersions": "RU-001 discovers arbitrary installed version strings but supports zero versions for automatic configuration; the scanner command contract is tool-discovery-scan@v1 only.",
+            "removalGate": "Changing the five-tool catalog, enabling a configuration action, adding a remote catalog, or changing status semantics requires a superseding accepted decision and a newly frozen release unit."
+          },
+          "inputContracts": [],
+          "outputContracts": [
+            "tool-discovery-scan@v1"
+          ],
+          "acceptanceCommands": [
+            {
+              "id": "ru001-as-01-catalog",
+              "kind": "scenario_test",
+              "adapter": "pytest-json@1",
+              "selector": "tests/work_packages/ru001/test_acceptance.py::test_fixed_catalog_and_empty_state",
+              "cwd": ".",
+              "timeoutSeconds": 300
+            },
+            {
+              "id": "ru001-as-02-read-only",
+              "kind": "scenario_test",
+              "adapter": "pytest-json@1",
+              "selector": "tests/work_packages/ru001/test_acceptance.py::test_detected_version_is_exact_and_read_only",
+              "cwd": ".",
+              "timeoutSeconds": 300
+            },
+            {
+              "id": "ru001-as-03-conflict",
+              "kind": "scenario_test",
+              "adapter": "pytest-json@1",
+              "selector": "tests/work_packages/ru001/test_acceptance.py::test_multiple_installations_fail_closed",
+              "cwd": ".",
+              "timeoutSeconds": 300
+            },
+            {
+              "id": "ru001-as-04-failure-isolation",
+              "kind": "scenario_test",
+              "adapter": "pytest-json@1",
+              "selector": "tests/work_packages/ru001/test_acceptance.py::test_probe_failure_and_timeout_are_isolated",
+              "cwd": ".",
+              "timeoutSeconds": 300
+            },
+            {
+              "id": "ru001-as-05-authority",
+              "kind": "scenario_test",
+              "adapter": "pytest-json@1",
+              "selector": "tests/work_packages/ru001/test_acceptance.py::test_runtime_exposes_no_forbidden_authority",
+              "cwd": ".",
+              "timeoutSeconds": 300
+            },
+            {
+              "id": "ru001-as-06-freshness",
+              "kind": "scenario_test",
+              "adapter": "pytest-json@1",
+              "selector": "tests/work_packages/ru001/test_acceptance.py::test_ui_rejects_stale_scan_completion",
+              "cwd": ".",
+              "timeoutSeconds": 300
+            }
+          ],
+          "requiredAcceptanceScenarios": [
+            {
+              "id": "RU001-AS-01",
+              "assertion": "When no executable exists, the result still contains each of the fixed five tools exactly once and every card truthfully reports not found without treating absence as an application error.",
+              "testSelector": "tests/work_packages/ru001/test_acceptance.py::test_fixed_catalog_and_empty_state",
+              "acceptanceCommandId": "ru001-as-01-catalog"
+            },
+            {
+              "id": "RU001-AS-02",
+              "assertion": "A successful version probe preserves the exact normalized version, reports the sanitized source class, and remains unverified read-only with no automatic-configuration action.",
+              "testSelector": "tests/work_packages/ru001/test_acceptance.py::test_detected_version_is_exact_and_read_only",
+              "acceptanceCommandId": "ru001-as-02-read-only"
+            },
+            {
+              "id": "RU001-AS-03",
+              "assertion": "Two distinct canonical executable candidates produce a visible multiple-installation conflict and the scanner neither selects one nor grants compatibility.",
+              "testSelector": "tests/work_packages/ru001/test_acceptance.py::test_multiple_installations_fail_closed",
+              "acceptanceCommandId": "ru001-as-03-conflict"
+            },
+            {
+              "id": "RU001-AS-04",
+              "assertion": "A failed or timed-out version command affects only its own tool result, returns no raw command output, and does not prevent a complete five-tool projection.",
+              "testSelector": "tests/work_packages/ru001/test_acceptance.py::test_probe_failure_and_timeout_are_isolated",
+              "acceptanceCommandId": "ru001-as-04-failure-isolation"
+            },
+            {
+              "id": "RU001-AS-05",
+              "assertion": "The RU-001 runtime registers only the discovery command, has no network or updater permission, and the scanner source contains no configuration, credential, lifecycle, or filesystem-write authority.",
+              "testSelector": "tests/work_packages/ru001/test_acceptance.py::test_runtime_exposes_no_forbidden_authority",
+              "acceptanceCommandId": "ru001-as-05-authority"
+            },
+            {
+              "id": "RU001-AS-06",
+              "assertion": "If two scans overlap, completion of the older request cannot replace the newest request's visible state and the UI exposes a new explicit rescan action after recovery.",
+              "testSelector": "tests/work_packages/ru001/test_acceptance.py::test_ui_rejects_stale_scan_completion",
+              "acceptanceCommandId": "ru001-as-06-freshness"
+            }
+          ],
+          "verificationOnly": false,
+          "stopConditions": [
+            "The frozen query or page-state contract is missing, contradictory, or requires a status not defined by tool-discovery-scan@v1.",
+            "A required implementation change falls outside allowedPaths or touches any forbidden path.",
+            "The implementation would need network, updater, telemetry, configuration content, credential, filesystem-write, tool installation, server, NewAPI, Nginx, DNS, database, or production authority.",
+            "A detected version would need to be presented as automatically configurable without a later verified exact-version allowlist."
+          ],
+          "status": "planned"
+        }
+      ]
+    }
+  }
+}

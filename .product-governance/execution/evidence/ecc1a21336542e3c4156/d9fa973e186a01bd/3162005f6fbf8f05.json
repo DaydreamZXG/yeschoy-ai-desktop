@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU001-AS-04",
+  "assertion": "A failed or timed-out version command affects only its own tool result, returns no raw command output, and does not prevent a complete five-tool projection.",
+  "testSelector": "tests/work_packages/ru001/test_acceptance.py::test_probe_failure_and_timeout_are_isolated",
+  "acceptanceCommandId": "ru001-as-04-failure-isolation",
+  "runId": "RU-001/WP-RU001-DESKTOP-DISCOVERY@2026-08-30T07:32:09.578069+00:00",
+  "packageId": "WP-RU001-DESKTOP-DISCOVERY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru001/test_acceptance.py::test_probe_failure_and_timeout_are_isolated",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:7c4e279a251278a6607eb5b04df9a6d7623eab4a013e6df0270290825ac6c41b",
+    "machineReportSha256": "sha256:ed35485cc815a847835109e83dfd8ce3b40bc5db9bfb70d7e7efc53220cd8afe",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:ef81c778a8a246e97f6a956f48ab6b0c28f40a823fe5c092f630bddaaa18147d",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:99b249496482ea6a144ccdcd85980d7508bde3028b190ec03678f5bbfce82072",
+  "releaseUnitId": "RU-001",
+  "releaseUnitHash": "sha256:861a466d99d23425391efd33192be1351ba481cb8aae375aae50d9f75ad35c4e"
+}

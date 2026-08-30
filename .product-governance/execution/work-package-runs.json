@@ -1,4 +1,21 @@
 {
   "schemaVersion": 1,
-  "runs": []
+  "runs": [
+    {
+      "id": "RU-001/WP-RU001-DESKTOP-DISCOVERY@2026-08-30T07:32:09.578069+00:00",
+      "packageId": "WP-RU001-DESKTOP-DISCOVERY",
+      "baselineCommit": "a7b7e4e82262d66deb303f2ef0dddf62265a4544",
+      "baselineTreeHash": "sha256:97ef36e8636a6f331ddbbf7f2098061746c1305288f9dc5bb41f8edb5a4a2e85",
+      "baselineSnapshotPath": "execution/baselines/d9fa973e186a01bd.ecc1a21336542e3c4156.json",
+      "baselineSnapshotSha256": "sha256:0e71011a5491438a3ad6a4961d5982bdefa4e323b6eec094b06c9388453f1835",
+      "assignedTo": "codex-root",
+      "status": "completed",
+      "startedAt": "2026-08-30T07:32:09.578069+00:00",
+      "finishedAt": "2026-08-30T08:00:37.834885+00:00",
+      "reportPath": "execution/reports/d9fa973e186a01bd.ecc1a21336542e3c4156.json",
+      "reportSha256": "sha256:0fb3852cf9f20dea5c8968b7da9db56f6a4263c963834b56ab7386739101def8",
+      "releaseUnitId": "RU-001",
+      "releaseUnitHash": "sha256:861a466d99d23425391efd33192be1351ba481cb8aae375aae50d9f75ad35c4e"
+    }
+  ]
 }

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU001-AS-05",
+  "assertion": "The RU-001 runtime registers only the discovery command, has no network or updater permission, and the scanner source contains no configuration, credential, lifecycle, or filesystem-write authority.",
+  "testSelector": "tests/work_packages/ru001/test_acceptance.py::test_runtime_exposes_no_forbidden_authority",
+  "acceptanceCommandId": "ru001-as-05-authority",
+  "runId": "RU-001/WP-RU001-DESKTOP-DISCOVERY@2026-08-30T07:32:09.578069+00:00",
+  "packageId": "WP-RU001-DESKTOP-DISCOVERY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru001/test_acceptance.py::test_runtime_exposes_no_forbidden_authority",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:a14b93c0ed5a57f6d8a44e98171573cb4993533ada4c66a763722d6fdbb6e477",
+    "machineReportSha256": "sha256:bfe4c48bf47ca16a1f06c1a512adb0979ae341389e605a4ef00899955c0de129",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:0f9beaeecb854ff4f2d3a015bf6fd0738403d49aac67a54b721b10592109b086",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:3cdd6f9f95f7a296ac8d722d570aa840151dc616929c83ce999c15e107547290",
+  "releaseUnitId": "RU-001",
+  "releaseUnitHash": "sha256:861a466d99d23425391efd33192be1351ba481cb8aae375aae50d9f75ad35c4e"
+}

@@ -4,11 +4,10 @@
     "windows": [
       {
         "label": "main",
-        "title": "CC Switch",
-        "titleBarStyle": "Visible",
-        "visible": false,
-        "minWidth": 900,
-        "minHeight": 600
+        "title": "野菜API",
+        "visible": true,
+        "minWidth": 860,
+        "minHeight": 640
       }
     ]
   }

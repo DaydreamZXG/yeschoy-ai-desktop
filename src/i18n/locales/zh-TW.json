@@ -3255,5 +3255,56 @@
     "expiredHint": "請執行 {{tool}} 命令重新整理登入",
     "queryFailed": "查詢失敗",
     "refresh": "重新整理"
+  },
+  "yeschoyDiscovery": {
+    "brandName": "野菜API",
+    "edition": "官方桌面助手 · 唯讀預覽",
+    "eyebrow": "不必懂 API，也能先走對第一步",
+    "title": "先看看你的 AI 工具在哪裡。",
+    "description": "我們會在這台電腦上找出已安裝的工具，並讀取它們自行回報的版本。你不必填寫 Key、網址或模型名稱。",
+    "trustTitle": "本次檢查邊界",
+    "localOnly": "只在本機檢查",
+    "noChanges": "不會修改設定",
+    "noApiKnowledge": "不需要 API 知識",
+    "scanButton": "檢查我安裝了哪些工具",
+    "rescanButton": "重新檢查",
+    "scanning": "正在本機檢查…",
+    "privacyNote": "只執行固定的版本查詢；不連網、不讀取設定內容，也不保留掃描紀錄。",
+    "scopeLabel": "本版本範圍",
+    "scopeText": "目前只做安全探索。登入、餘額、加值和一鍵設定會在各自契約確認後逐步加入。",
+    "railLabel": "本機工具圖譜",
+    "toolsTitle": "五款工具，一處看清",
+    "processingLocal": "正在逐項確認…",
+    "checkedAt": "檢查完成 {{time}}",
+    "scanErrorTitle": "這次檢查沒有完成",
+    "scanErrorBody": "沒有用舊結果冒充最新狀態。你可以直接重新檢查。",
+    "exactVersion": "版本",
+    "candidateCount": "發現 {{count}} 個執行位置",
+    "advancedDetails": "查看本次檢查詳情",
+    "platform": "系統",
+    "requestId": "檢查編號",
+    "status": {
+      "waiting": "等待檢查",
+      "checking": "正在檢查",
+      "not_found": "暫未找到",
+      "detected_unverified": "已找到 · 唯讀",
+      "probe_failed": "已找到 · 無法執行",
+      "probe_timed_out": "已找到 · 檢查逾時",
+      "multiple_installations": "發現多處安裝"
+    },
+    "reason": {
+      "tool_not_found": "這不是錯誤，安裝後可重新檢查",
+      "exact_version_not_allowlisted": "版本已顯示，尚未開放自動設定",
+      "version_command_failed": "版本命令未成功，不猜測相容性",
+      "version_command_timed_out": "版本命令已停止，不影響其他工具",
+      "multiple_executables_found": "未擅自選擇其中一個版本"
+    },
+    "toolDescriptions": {
+      "claude": "Anthropic 的命令列程式設計助手",
+      "codex": "OpenAI 的本機程式設計代理",
+      "opencode": "開源的終端 AI 程式設計工具",
+      "pi": "輕量、可擴充的程式設計代理",
+      "dsh": "DeepSeek Harness；目前維持唯讀探索"
+    }
   }
 }

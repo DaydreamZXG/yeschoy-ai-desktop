@@ -3254,5 +3254,56 @@
     "expiredHint": "{{tool}}コマンドを実行してログインを更新してください",
     "queryFailed": "クエリに失敗しました",
     "refresh": "更新"
+  },
+  "yeschoyDiscovery": {
+    "brandName": "野菜API",
+    "edition": "公式デスクトップアシスタント · 読み取り専用プレビュー",
+    "eyebrow": "API の知識がなくても、正しい一歩目から",
+    "title": "AI ツールの場所を確認しましょう。",
+    "description": "このコンピューターにインストール済みのツールを探し、各ツールが報告するバージョンを読み取ります。Key、URL、モデル名の入力は不要です。",
+    "trustTitle": "この確認で行うこと",
+    "localOnly": "この端末だけを確認",
+    "noChanges": "設定を変更しない",
+    "noApiKnowledge": "API の知識は不要",
+    "scanButton": "インストール済みツールを確認",
+    "rescanButton": "もう一度確認",
+    "scanning": "この端末を確認中…",
+    "privacyNote": "固定のバージョン確認だけを実行します。通信、設定内容の読み取り、履歴保存は行いません。",
+    "scopeLabel": "このビルドの範囲",
+    "scopeText": "現在は安全な検出のみです。ログイン、残高、チャージ、ワンクリック設定は各契約の承認後に追加します。",
+    "railLabel": "ローカルツールマップ",
+    "toolsTitle": "5つのツールを、ひと目で",
+    "processingLocal": "順番に確認中…",
+    "checkedAt": "{{time}} に確認完了",
+    "scanErrorTitle": "今回の確認は完了しませんでした",
+    "scanErrorBody": "古い結果を最新として表示していません。そのまま再確認できます。",
+    "exactVersion": "バージョン",
+    "candidateCount": "実行場所を {{count}} 件検出",
+    "advancedDetails": "確認の詳細を表示",
+    "platform": "システム",
+    "requestId": "確認 ID",
+    "status": {
+      "waiting": "確認待ち",
+      "checking": "確認中",
+      "not_found": "まだ見つかりません",
+      "detected_unverified": "検出済み · 読み取り専用",
+      "probe_failed": "検出済み · 実行できません",
+      "probe_timed_out": "検出済み · 確認タイムアウト",
+      "multiple_installations": "複数のインストールを検出"
+    },
+    "reason": {
+      "tool_not_found": "エラーではありません。別途インストール後に再確認できます",
+      "exact_version_not_allowlisted": "バージョンを表示しました。自動設定はまだ利用できません",
+      "version_command_failed": "バージョン取得に失敗したため、互換性を推測しません",
+      "version_command_timed_out": "他のツールに影響せず、バージョン確認を停止しました",
+      "multiple_executables_found": "いずれかを自動選択していません"
+    },
+    "toolDescriptions": {
+      "claude": "Anthropic のコマンドライン・コーディングアシスタント",
+      "codex": "OpenAI のローカル・コーディングエージェント",
+      "opencode": "オープンソースのターミナル向けコーディングツール",
+      "pi": "軽量で拡張可能なコーディングエージェント",
+      "dsh": "DeepSeek Harness。現在は読み取り専用で検出"
+    }
   }
 }
