@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU011-AS-01",
+  "assertion": "Native discovery accepts only one requestId, returns exactly the two frozen desktop application identities, observes only compiled local locations and public bundle metadata, and exposes no complete path, command-line substitution, network, credential or write authority.",
+  "testSelector": "tests/work_packages/ru011/test_acceptance.py::test_desktop_discovery_contract_and_native_boundary",
+  "acceptanceCommandId": "ru011-desktop-contract",
+  "runId": "RU-011/WP-RU011-DESKTOP-FIRST-EXPERIENCE@2026-08-31T09:31:50.596798+00:00",
+  "packageId": "WP-RU011-DESKTOP-FIRST-EXPERIENCE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru011/test_acceptance.py::test_desktop_discovery_contract_and_native_boundary",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:2fcf1e0ec6c7e6d3c141f22bca0388228f25179407e343a2cfb1646d6167c99c",
+    "machineReportSha256": "sha256:b830245d67e5d5871132738beea266f46b5baa635ccfb82070f7c0ad4034470b",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:1713ea637ce3ec8feec0df43eed8bb968fff3d75131c3de69863d86487463dc2",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:e4a7af17c656fb091023e0e589048bc49e5106dd79e4d899761015e9abe4ef33",
+  "releaseUnitId": "RU-011",
+  "releaseUnitHash": "sha256:e5c28d2dc7e7520636dc03064749d3eeb9e72169a372962e5163f8e5e4ee7bdf"
+}

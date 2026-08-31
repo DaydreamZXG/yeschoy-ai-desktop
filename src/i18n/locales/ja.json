@@ -3467,15 +3467,101 @@
     "openTools": "先にローカルツールを確認",
     "openAccount": "アカウント接続状態を確認"
   },
+  "yeschoyDesktop": {
+    "home": {
+      "kicker": "野菜API デスクトップアシスタント",
+      "title": "いつものデスクトップ AI を野菜APIへ。",
+      "description": "使い慣れたアプリを選び、回線とモデルを順番に設定します。技術設定の知識は必要ありません。",
+      "localCheck": "このコンピューターのアプリ",
+      "checking": "デスクトップアプリを確認中…",
+      "checkFailed": "確認を完了できませんでした",
+      "detectedCount": "デスクトップアプリを {{count}} 件検出",
+      "refresh": "再確認",
+      "myAppsEyebrow": "マイアプリ",
+      "myAppsTitle": "インストール済みアプリから始める",
+      "checkedAt": "{{time}} に確認",
+      "errorTitle": "デスクトップアプリの状態を取得できません",
+      "errorBody": "古い結果には置き換えていません。再確認できます。ほかのローカル機能は利用できます。",
+      "version": "デスクトップ版 {{version}}",
+      "startSetup": "接続を始める",
+      "viewSetup": "接続手順を見る",
+      "detectionBoundary": "検出はこのコンピューターにアプリがあることだけを示します。ログイン、モデル権限、野菜API接続は別々に確認します。"
+    },
+    "apps": {
+      "claude_desktop": {
+        "name": "Claude Desktop",
+        "surface": "Claude アプリの Code ワークスペース",
+        "note": "claude コマンドではなくデスクトップアプリを確認します"
+      },
+      "codex_desktop": {
+        "name": "Codex",
+        "surface": "ChatGPT デスクトップアプリの Codex",
+        "note": "codex コマンドではなくグラフィカルアプリを確認します"
+      }
+    },
+    "status": {
+      "checking": "確認中",
+      "detected_unverified": "インストール済み",
+      "not_found": "標準の場所では未検出",
+      "multiple_installations": "複数のインストールを検出",
+      "unsupported_platform": "現在のシステムは未対応"
+    },
+    "account": {
+      "kicker": "野菜アカウント",
+      "waiting": "サーバー待ち",
+      "title": "残高と使用量",
+      "balance": "利用可能残高",
+      "loginRequired": "ログイン後に実データを表示",
+      "usage": "今月の使用量",
+      "fx": "価格比較レート",
+      "action": "アカウント準備状況を見る"
+    },
+    "flow": {
+      "kicker": "ガイド付き接続",
+      "title": "4 ステップで利用開始",
+      "continue": "設定を続ける",
+      "steps": {
+        "app": {
+          "title": "アプリを選択",
+          "body": "Claude または Codex デスクトップ"
+        },
+        "line": {
+          "title": "回線を選択",
+          "body": "中国本土最適化またはグローバル"
+        },
+        "model": { "title": "モデルを選択", "body": "実際のモデル ID を表示" },
+        "connect": { "title": "接続を完了", "body": "安全条件の確認後に有効化" }
+      }
+    },
+    "secondary": {
+      "label": "その他のクライアントツール",
+      "diagnostics": "回線診断",
+      "diagnosticsBody": "野菜の 2 回線だけを確認",
+      "cli": "コマンドラインツール",
+      "cliBody": "上級者向け Claude Code、Codex、OpenCode、Pi、DSH",
+      "security": "セキュリティとバージョン",
+      "securityBody": "候補版 {{version}} · 自動アップロードなし"
+    },
+    "setup": {
+      "kicker": "デスクトップアプリ接続",
+      "title": "アプリ、回線、モデルの順に選択。",
+      "description": "デスクトップアプリから始めます。技術情報は詳細にまとめ、初心者はアプリとモデルだけに集中できます。",
+      "steps": { "app": "デスクトップアプリ" },
+      "chooseApp": "使用するデスクトップアプリを選んでください",
+      "technicalDetails": "技術情報を表示",
+      "technicalBoundary": "公式情報に基づく接続プレビューです。アプリ設定の読み取りや変更は行っていません。",
+      "connectBlocked": "接続条件はまだ揃っていません"
+    }
+  },
   "yeschoyCandidate": {
     "navigationLabel": "クライアントの主要画面",
-    "edition": "公式デスクトップアシスタント · V1候補版",
+    "edition": "野菜API デスクトップアシスタント · プレビュー",
     "nav": {
-      "home": "はじめる",
+      "home": "マイアプリ",
       "account": "アカウント",
-      "setup": "かんたん設定",
+      "setup": "接続",
       "diagnostics": "診断",
-      "tools": "ローカルツール",
+      "tools": "高度なツール",
       "settings": "設定"
     },
     "home": {

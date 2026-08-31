@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="garden" x1="128" y1="96" x2="896" y2="928" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2E7658"/>
+      <stop offset="1" stop-color="#123E31"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="344" y1="226" x2="658" y2="710" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F4FAF5"/>
+      <stop offset="1" stop-color="#CFE8D7"/>
+    </linearGradient>
+    <filter id="shadow" x="180" y="154" width="680" height="734" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="24" stdDeviation="26" flood-color="#09261E" flood-opacity=".28"/>
+    </filter>
+  </defs>
+  <rect x="48" y="48" width="928" height="928" rx="224" fill="url(#garden)"/>
+  <path d="M182 662c115 108 239 162 372 162 112 0 210-38 292-114" fill="none" stroke="#79B891" stroke-width="34" stroke-linecap="round" opacity=".52"/>
+  <g filter="url(#shadow)">
+    <path d="M507 728c-7-188 20-333 81-434" fill="none" stroke="#F0A46B" stroke-width="38" stroke-linecap="round"/>
+    <path d="M511 574C375 561 276 475 264 329c139-8 250 78 264 218 2 17-4 27-17 27Z" fill="url(#leaf)"/>
+    <path d="M557 468c19-128 99-207 223-218 8 124-59 221-192 247-22 4-34-7-31-29Z" fill="url(#leaf)"/>
+    <path d="M511 573c-54-74-117-137-189-190" fill="none" stroke="#2E7658" stroke-width="22" stroke-linecap="round" opacity=".8"/>
+    <path d="M578 482c47-62 98-111 154-146" fill="none" stroke="#2E7658" stroke-width="22" stroke-linecap="round" opacity=".8"/>
+  </g>
+  <circle cx="182" cy="662" r="34" fill="#F0A46B"/>
+  <circle cx="846" cy="710" r="34" fill="#F0A46B"/>
+</svg>

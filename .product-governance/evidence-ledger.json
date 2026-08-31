@@ -2,6 +2,68 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "E-USER-047",
+      "claim": "The product owner rejects the engineering-candidate appearance, requires a real 野菜API application icon and a substantially more desktop-like beginner experience, and confirms that Claude and Codex desktop applications rather than their command-line binaries are the primary V1 integration targets. The owner then explicitly directs implementation to begin.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-08-31:没有搞个图标吗;小白助手肯定是桌面版不是命令行版本;你动手呗",
+      "observedAt": "2026-08-31T17:26:24+08:00",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-031",
+      "claim": "The current client invokes scan_tools_read_only and derives Claude and Codex presence from the claude and codex executables; it has no separate desktop-application discovery contract. The current bundle config does not declare application icons, and the locally built signed app contains no packaged icon resource. On the current macOS host, /Applications/Claude.app identifies as com.anthropic.claudefordesktop and /Applications/ChatGPT.app identifies as com.openai.codex.",
+      "class": "code_observed",
+      "locator": "src/App.tsx; src-tauri/src/tool_discovery_core.rs; src-tauri/tauri.conf.json; command:2026-08-31:inspect-app-bundles-and-current-discovery",
+      "observedAt": "2026-08-31T17:26:24+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-036",
+      "claim": "Anthropic's current official documentation distinguishes the Claude desktop application's Code surface from the CLI and states that desktop gateway routing is configured through the app's third-party inference configuration rather than ANTHROPIC_BASE_URL or settings.json.",
+      "class": "external_verified",
+      "locator": "https://code.claude.com/docs/en/llm-gateway-connect#desktop-app",
+      "observedAt": "2026-08-31T17:26:24+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-037",
+      "claim": "OpenAI's current official documentation exposes a graphical desktop application with a Codex entry and separately documents user-level custom model providers with a base URL, wire API and authentication configuration for local Codex clients.",
+      "class": "external_verified",
+      "locator": "https://learn.chatgpt.com/docs/app; https://learn.chatgpt.com/docs/config-file/config-advanced#custom-model-providers",
+      "observedAt": "2026-08-31T17:26:24+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-009",
+      "claim": "RU-011 should replace the candidate's CLI-first landing experience with a desktop-application-first native-feeling shell, a distinct vegetable-leaf brand icon, a bounded two-application local discovery projection, and a beginner flow from application choice through line and real model selection to an honestly blocked connection step. CLI discovery remains secondary, and server login, secrets, configuration writes, installation, updating, payment and production resources remain outside the unit.",
+      "class": "proposed",
+      "locator": "inline:ru011-desktop-first-experience-boundary",
+      "observedAt": "2026-08-31T17:26:24+08:00",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-USER-047",
+        "E-CODE-031",
+        "E-EXT-036",
+        "E-EXT-037",
+        "E-USER-045",
+        "E-USER-046"
+      ]
+    },
+    {
       "id": "E-CODE-030",
       "claim": "The RU-009 follow-up dispatch fails because its explicit RU-008 package dependency validates current outputs, including the candidate config replaced by RU-009. RU-008 completed reports still exist, but their config hash differs from the accepted current source. RU-009 freeze validation and first run pass. The global verifier is unchanged.",
       "class": "code_observed",

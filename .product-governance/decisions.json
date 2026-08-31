@@ -2,6 +2,41 @@
   "schemaVersion": 1,
   "decisions": [
     {
+      "id": "DEC-053",
+      "question": "What product correction is authorized after the owner rejects the candidate icon, visual quality and command-line-first target model?",
+      "choice": "Freeze RU-011 as a client-only successor to RU-010. Make Claude Desktop and the graphical Codex surface the primary application targets; discover their actual desktop bundles separately from the preserved advanced CLI scanner. Replace the candidate landing presentation with a compact application-oriented desktop shell and original 野菜API leaf-and-route icon. The beginner path is application, line, real public model ID and connection readiness, with technical details secondary. Keep configuration application, secrets, login, balance, usage, recharge, installation, automatic update, telemetry, server and production changes blocked. Do not label detection, a documented provider interface or a public model declaration as proven end-to-end compatibility.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-31T17:26:24+08:00",
+      "evidenceRefs": [
+        "E-USER-047",
+        "E-CODE-031",
+        "E-EXT-036",
+        "E-EXT-037",
+        "E-PROP-009"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-003",
+          "REQ-026",
+          "REQ-029",
+          "REQ-031",
+          "REQ-032",
+          "REQ-034",
+          "REQ-037"
+        ],
+        "domainRefs": [
+          "desktop-platform",
+          "tool-config"
+        ],
+        "pageRefs": [
+          "PAGE-HOME",
+          "PAGE-CONFIGURE-PREVIEW",
+          "PAGE-TOOLS"
+        ]
+      }
+    },
+    {
       "id": "DEC-052",
       "question": "How should receipt completion consume evidence after the successor legitimately replaces files owned by its historical predecessor?",
       "choice": "Supersede RU-009 with RU-010 without changing product or packaging behavior. Keep the transitive frozen history and all prior reports. Replace the overlapping live predecessor-package prerequisite with a self-contained current-state run that executes all six RU-008 semantic scenarios and both RU-009 packaging checks under the same registered adapter and mandatory source isolation. Finish the signed-but-unnotarized local artifact receipt and explicit distribution limitations. Do not change global verifier code, skip tests, weaken signature checks, publish or modify servers.",

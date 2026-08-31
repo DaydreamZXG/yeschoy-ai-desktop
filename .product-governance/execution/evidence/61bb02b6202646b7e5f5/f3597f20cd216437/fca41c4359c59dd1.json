@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU011-AS-05",
+  "assertion": "All four locale objects remain structurally identical and the desktop shell preserves responsive navigation, visible focus and reduced-motion behavior down to 320 CSS pixels.",
+  "testSelector": "tests/work_packages/ru011/test_acceptance.py::test_locales_responsive_focus_and_reduced_motion",
+  "acceptanceCommandId": "ru011-visual-access",
+  "runId": "RU-011/WP-RU011-DESKTOP-FIRST-EXPERIENCE@2026-08-31T09:31:50.596798+00:00",
+  "packageId": "WP-RU011-DESKTOP-FIRST-EXPERIENCE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru011/test_acceptance.py::test_locales_responsive_focus_and_reduced_motion",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:af4ef4fba123f828547f2dc21f8a701e86a3c2ccf76b7b10cf23fedbcd0a14dc",
+    "machineReportSha256": "sha256:463a0a885fdc9bad0937d2e04ac7022de87e292d3d0e0e1766f16557ca5da94f",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:6c4c7cdcaf8c97c1384b3207ec2a6d23740a41209c07a40909681c944289e914",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:ecd9da31f34b4f761ab226231bed700abfd9e4812bc829e5ced671fbeab54bce",
+  "releaseUnitId": "RU-011",
+  "releaseUnitHash": "sha256:e5c28d2dc7e7520636dc03064749d3eeb9e72169a372962e5163f8e5e4ee7bdf"
+}

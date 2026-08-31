@@ -56,6 +56,7 @@
       ],
       "commands": [],
       "queries": [
+        "desktop-app-discovery@v1",
         "tool-discovery-scan@v1",
         "guided-configuration-preview@v1",
         "public-service-catalog@v1"
@@ -94,7 +95,8 @@
         "desktop-platform"
       ],
       "invariants": [
-        "V1 observes but does not install, update, or uninstall third-party AI tools."
+        "V1 observes but does not install, update, or uninstall third-party AI tools.",
+        "A desktop application observation is separate from a command-line executable observation and cannot prove login, configuration or end-to-end compatibility."
       ],
       "commands": [],
       "queries": [],

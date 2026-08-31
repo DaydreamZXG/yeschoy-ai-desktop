@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { createAccountReadiness } from "./account/readiness";
 import { CandidateHomeView } from "./candidate/CandidateHomeView";
 import { ConfigurationPreviewView } from "./configuration/ConfigurationPreviewView";
+import type { DesktopAppId } from "./desktop-apps/contract";
 import { DiagnosticsView } from "./diagnostics/DiagnosticsView";
 import { SettingsView } from "./settings/SettingsView";
 
@@ -81,6 +82,8 @@ function isCompleteProjection(response: ScanResponse): boolean {
 function App() {
   const { t, i18n } = useTranslation();
   const [view, setView] = useState<AppView>("home");
+  const [selectedDesktopApp, setSelectedDesktopApp] =
+    useState<DesktopAppId>("claude_desktop");
   const [phase, setPhase] = useState<ViewPhase>("default");
   const [scan, setScan] = useState<ScanResponse | null>(null);
   const latestRequestRef = useRef("");
@@ -216,7 +219,10 @@ function App() {
       {view === "home" ? (
         <CandidateHomeView
           onOpenAccount={() => setView("account")}
-          onOpenSetup={() => setView("setup")}
+          onOpenSetup={(appId) => {
+            setSelectedDesktopApp(appId);
+            setView("setup");
+          }}
           onOpenDiagnostics={() => setView("diagnostics")}
           onOpenTools={() => setView("tools")}
           onOpenSettings={() => setView("settings")}
@@ -344,6 +350,7 @@ function App() {
         </div>
       ) : view === "setup" ? (
         <ConfigurationPreviewView
+          initialDesktopAppId={selectedDesktopApp}
           onOpenAccount={() => setView("account")}
           onOpenTools={() => setView("tools")}
         />

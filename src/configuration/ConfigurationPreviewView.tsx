@@ -1,18 +1,38 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import claudeIcon from "../assets/icons/claude.svg";
+import codexIcon from "../assets/icons/chatgpt.svg";
+import type { DesktopAppId } from "../desktop-apps/contract";
 import { ServiceCatalogPanel } from "../service-catalog/ServiceCatalogPanel";
 import type { ToolAccessPlan } from "../service-catalog/access-plan";
-import {
-  CONFIGURATION_LINES,
-  CONFIGURATION_TOOLS,
-  createConfigurationPreview,
-} from "./preview";
+import { CONFIGURATION_LINES, createConfigurationPreview } from "./preview";
 import type { ConfigurationLineId, ConfigurationToolId } from "./preview";
 
 interface ConfigurationPreviewViewProps {
+  initialDesktopAppId?: DesktopAppId;
   onOpenAccount: () => void;
   onOpenTools: () => void;
 }
+
+const DESKTOP_APPLICATIONS: Array<{
+  id: DesktopAppId;
+  toolId: ConfigurationToolId;
+  displayName: string;
+  icon: string;
+}> = [
+  {
+    id: "claude_desktop",
+    toolId: "claude",
+    displayName: "Claude Desktop",
+    icon: claudeIcon,
+  },
+  {
+    id: "codex_desktop",
+    toolId: "codex",
+    displayName: "Codex",
+    icon: codexIcon,
+  },
+];
 
 const SIDE_EFFECT_TRUTHS = [
   "networkAttempted",
@@ -22,11 +42,20 @@ const SIDE_EFFECT_TRUTHS = [
 ] as const;
 
 export function ConfigurationPreviewView({
+  initialDesktopAppId = "claude_desktop",
   onOpenAccount,
   onOpenTools,
 }: ConfigurationPreviewViewProps) {
   const { t } = useTranslation();
-  const [toolId, setToolId] = useState<ConfigurationToolId>("claude");
+  const initialApplication =
+    DESKTOP_APPLICATIONS.find((app) => app.id === initialDesktopAppId) ??
+    DESKTOP_APPLICATIONS[0];
+  const [desktopAppId, setDesktopAppId] = useState<DesktopAppId>(
+    initialApplication.id,
+  );
+  const [toolId, setToolId] = useState<ConfigurationToolId>(
+    initialApplication.toolId,
+  );
   const [lineId, setLineId] =
     useState<ConfigurationLineId>("mainland_optimized");
   const [accessPlan, setAccessPlan] = useState<ToolAccessPlan | null>(null);
@@ -43,6 +72,9 @@ export function ConfigurationPreviewView({
   );
 
   const endpointWithheld = preview.endpointStatus === "withheld_unverified";
+  const desktopApplication =
+    DESKTOP_APPLICATIONS.find((app) => app.id === desktopAppId) ??
+    DESKTOP_APPLICATIONS[0];
 
   return (
     <div
@@ -54,9 +86,9 @@ export function ConfigurationPreviewView({
         aria-labelledby="configuration-title"
       >
         <div className="configuration-hero-copy">
-          <p className="eyebrow">{t("yeschoyConfiguration.eyebrow")}</p>
-          <h1 id="configuration-title">{t("yeschoyConfiguration.title")}</h1>
-          <p className="intro-copy">{t("yeschoyConfiguration.description")}</p>
+          <p className="eyebrow">{t("yeschoyDesktop.setup.kicker")}</p>
+          <h1 id="configuration-title">{t("yeschoyDesktop.setup.title")}</h1>
+          <p className="intro-copy">{t("yeschoyDesktop.setup.description")}</p>
           <div className="preview-boundary" role="status">
             <span className="preview-boundary-dot" aria-hidden="true" />
             {t("yeschoyConfiguration.previewOnly")}
@@ -70,8 +102,8 @@ export function ConfigurationPreviewView({
           <li data-state="current">
             <span>01</span>
             <div>
-              <strong>{t("yeschoyConfiguration.steps.tool")}</strong>
-              <small>{preview.displayName}</small>
+              <strong>{t("yeschoyDesktop.setup.steps.app")}</strong>
+              <small>{desktopApplication.displayName}</small>
             </div>
           </li>
           <li data-state="current">
@@ -101,21 +133,27 @@ export function ConfigurationPreviewView({
 
         <div className="configuration-selectors">
           <fieldset className="tool-selector">
-            <legend>{t("yeschoyConfiguration.chooseTool")}</legend>
+            <legend>{t("yeschoyDesktop.setup.chooseApp")}</legend>
             <div className="configuration-tool-grid">
-              {CONFIGURATION_TOOLS.map((tool) => (
+              {DESKTOP_APPLICATIONS.map((app) => (
                 <button
                   type="button"
-                  key={tool.id}
-                  className={toolId === tool.id ? "is-selected" : undefined}
-                  aria-pressed={toolId === tool.id}
-                  onClick={() => setToolId(tool.id)}
+                  key={app.id}
+                  className={
+                    desktopAppId === app.id ? "is-selected" : undefined
+                  }
+                  aria-pressed={desktopAppId === app.id}
+                  onClick={() => {
+                    setDesktopAppId(app.id);
+                    setToolId(app.toolId);
+                    setAccessPlan(null);
+                  }}
                 >
-                  <span aria-hidden="true">{tool.mark}</span>
-                  <strong>{tool.displayName}</strong>
-                  <small>
-                    {t(`yeschoyConfiguration.toolNotes.${tool.id}`)}
-                  </small>
+                  <span className="configuration-app-icon" aria-hidden="true">
+                    <img src={app.icon} alt="" />
+                  </span>
+                  <strong>{app.displayName}</strong>
+                  <small>{t(`yeschoyDesktop.apps.${app.id}.surface`)}</small>
                 </button>
               ))}
             </div>
@@ -195,7 +233,7 @@ export function ConfigurationPreviewView({
           <div className="preview-summary-grid">
             <div>
               <span>{t("yeschoyConfiguration.selectedTool")}</span>
-              <strong>{preview.displayName}</strong>
+              <strong>{desktopApplication.displayName}</strong>
             </div>
             <div>
               <span>{t("yeschoyConfiguration.selectedLine")}</span>
@@ -204,31 +242,6 @@ export function ConfigurationPreviewView({
           </div>
 
           <dl className="preview-facts">
-            <div>
-              <dt>{t("yeschoyConfiguration.lineRoot")}</dt>
-              <dd>
-                <code>{preview.rootUrl}</code>
-              </dd>
-            </div>
-            <div data-withheld={endpointWithheld || undefined}>
-              <dt>{t("yeschoyConfiguration.effectiveEndpoint")}</dt>
-              <dd>
-                {endpointWithheld ? (
-                  <span>{t("yeschoyConfiguration.withheld")}</span>
-                ) : (
-                  <code>{preview.protocolEndpoint}</code>
-                )}
-              </dd>
-              {endpointWithheld && (
-                <small>{t("yeschoyConfiguration.dshReason")}</small>
-              )}
-            </div>
-            <div data-withheld={!preview.targetFile || undefined}>
-              <dt>{t("yeschoyConfiguration.targetFile")}</dt>
-              <dd>
-                {preview.targetFile || t("yeschoyConfiguration.withheld")}
-              </dd>
-            </div>
             <div>
               <dt>{t("yeschoyConfiguration.modelId")}</dt>
               <dd>
@@ -245,23 +258,28 @@ export function ConfigurationPreviewView({
             )}
           </dl>
 
-          <div className="owned-fields">
-            <div className="owned-fields-heading">
-              <strong>{t("yeschoyConfiguration.ownedFields")}</strong>
-              <small>{t("yeschoyConfiguration.notReadFromComputer")}</small>
-            </div>
-            {preview.ownedFields.length ? (
-              <div className="field-chip-list">
-                {preview.ownedFields.map((field) => (
-                  <code key={field}>{field}</code>
-                ))}
+          <details className="desktop-technical-details">
+            <summary>{t("yeschoyDesktop.setup.technicalDetails")}</summary>
+            <dl>
+              <div>
+                <dt>{t("yeschoyConfiguration.lineRoot")}</dt>
+                <dd>
+                  <code>{preview.rootUrl}</code>
+                </dd>
               </div>
-            ) : (
-              <p className="withheld-copy">
-                {t("yeschoyConfiguration.dshFieldsWithheld")}
-              </p>
-            )}
-          </div>
+              <div data-withheld={endpointWithheld || undefined}>
+                <dt>{t("yeschoyConfiguration.effectiveEndpoint")}</dt>
+                <dd>
+                  {endpointWithheld ? (
+                    t("yeschoyConfiguration.withheld")
+                  ) : (
+                    <code>{preview.protocolEndpoint}</code>
+                  )}
+                </dd>
+              </div>
+            </dl>
+            <p>{t("yeschoyDesktop.setup.technicalBoundary")}</p>
+          </details>
         </article>
 
         <div className="safety-ledger">
@@ -303,7 +321,7 @@ export function ConfigurationPreviewView({
             disabled
             data-testid="configuration-apply-blocked"
           >
-            {t("yeschoyConfiguration.applyBlocked")}
+            {t("yeschoyDesktop.setup.connectBlocked")}
           </button>
           <div>
             <button type="button" onClick={onOpenTools}>

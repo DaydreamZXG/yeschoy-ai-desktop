@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU011-AS-03",
+  "assertion": "Home and setup present Claude Desktop and Codex as the primary applications and an application-line-model-readiness path, while the five CLI tools remain only in a clearly secondary advanced destination.",
+  "testSelector": "tests/work_packages/ru011/test_acceptance.py::test_desktop_first_beginner_flow_and_cli_secondary",
+  "acceptanceCommandId": "ru011-beginner-flow",
+  "runId": "RU-011/WP-RU011-DESKTOP-FIRST-EXPERIENCE@2026-08-31T09:31:50.596798+00:00",
+  "packageId": "WP-RU011-DESKTOP-FIRST-EXPERIENCE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru011/test_acceptance.py::test_desktop_first_beginner_flow_and_cli_secondary",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:968bb3eb2c05fd83ec0779c109faed16e245700bf889c4b883172004119cc638",
+    "machineReportSha256": "sha256:1692c1331145d8b8485447f90ed6c327560db56a99c567b7e15481efc1cae895",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:855d793f4ff2a1b1706cf4f2ef8e2c505793b3b01ee58a20731297fb919e5ee2",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:10f633f9c046d81b0262e89cf0520b23f8392b5e35e977e0c87ca52e15279368",
+  "releaseUnitId": "RU-011",
+  "releaseUnitHash": "sha256:e5c28d2dc7e7520636dc03064749d3eeb9e72169a372962e5163f8e5e4ee7bdf"
+}

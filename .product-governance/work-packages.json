@@ -2,6 +2,191 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "WP-RU011-DESKTOP-FIRST-EXPERIENCE",
+      "wave": "consumer",
+      "owner": "desktop-platform",
+      "riskClass": "high",
+      "objective": "Supersede the current candidate presentation with an original-icon, desktop-application-first beginner experience. Add bounded read-only discovery for Claude Desktop and Codex desktop, make those graphical applications the primary home and setup targets, retain CLI discovery as a secondary advanced destination, and preserve all server, credential, configuration-write, telemetry, updater and release boundaries.",
+      "deliverables": [
+        "Original 野菜API vector source and generated macOS/Windows application icon assets wired into the Tauri bundle configuration.",
+        "A specified native desktop-app-discovery@v1 implementation for exactly Claude Desktop and Codex desktop with sanitized states and no CLI substitution.",
+        "A compact desktop-oriented shell and application-tray home with application, line, real model-ID and connection-readiness flow in beginner language.",
+        "A secondary advanced entry for the preserved five-tool command-line scanner and truthful per-capability unavailable states.",
+        "Four-locale copy parity, responsive and reduced-motion styling, semantic scenario tests and a bounded visual/runtime verification record."
+      ],
+      "requirementRefs": [
+        "REQ-037"
+      ],
+      "decisionRefs": [
+        "DEC-053"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No website or NewAPI login, balance, usage, recharge, key issuance, OS-vault credential helper or configuration write.",
+        "No third-party application installation, launch, update or removal and no claim that desktop detection proves connection or compatibility.",
+        "No server, NewAPI, Nginx, DNS, database, CI, automatic updater, telemetry upload, notarization submission, public release or production change."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src/App.tsx",
+        "src/index.css",
+        "src/candidate/**",
+        "src/desktop-apps/**",
+        "src/configuration/ConfigurationPreviewView.tsx",
+        "src/assets/brand/**",
+        "src/i18n/locales/en.json",
+        "src/i18n/locales/ja.json",
+        "src/i18n/locales/zh-TW.json",
+        "src/i18n/locales/zh.json",
+        "src-tauri/icons/**",
+        "src-tauri/src/desktop_app_discovery.rs",
+        "src-tauri/src/desktop_app_discovery_core.rs",
+        "src-tauri/src/lib.rs",
+        "src-tauri/tauri.conf.json",
+        "tests/work_packages/ru011/**",
+        "outputs/野菜API-桌面优先改版验证记录.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        ".github/**",
+        "src-tauri/Info.plist",
+        "src-tauri/tauri.candidate.conf.json",
+        "src-tauri/src/tool_discovery.rs",
+        "src-tauri/src/tool_discovery_core.rs",
+        "src-tauri/src/connectivity.rs",
+        "src-tauri/src/connectivity_core.rs",
+        "src-tauri/src/service_catalog.rs",
+        "src-tauri/src/service_catalog_core.rs",
+        "src-tauri/src/database/**",
+        "src-tauri/src/proxy/**",
+        "src-tauri/src/services/**",
+        "src/account/**",
+        "src/service-catalog/**",
+        "src/configuration/preview.ts",
+        "contracts/**",
+        "outputs/野菜API-NewAPI-未来改造清单.md",
+        "outputs/野菜API-后端技术交接-客户端接入.md",
+        "outputs/野菜API-macOS-候选包构建记录.md",
+        "outputs/野菜API-桌面客户端-V1-候选版发布清单.md"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No user data, configuration, credential, application installation or retained scan history is created or migrated.",
+        "rollback": "Revert the RU-011 owned runtime and brand files to the prior signed candidate source; historical frozen snapshots and signed artifacts remain immutable."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve existing public catalog, connectivity, account-unavailable, configuration-preview and CLI discovery behavior while changing their navigation priority and adding a separate desktop application projection.",
+        "supportedVersions": "Desktop detection is bounded to compiled macOS and Windows locations and identifiers; every detected version remains configuration-unverified in this unit.",
+        "removalGate": "Do not remove the advanced CLI scanner until a separately accepted product decision retires it and its supported-tool obligations."
+      },
+      "inputContracts": [
+        "guided-configuration-preview@v1",
+        "public-service-catalog@v1",
+        "tool-discovery-scan@v1"
+      ],
+      "outputContracts": [
+        "desktop-app-discovery@v1"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru011-desktop-contract",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru011/test_acceptance.py::test_desktop_discovery_contract_and_native_boundary",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru011-desktop-freshness",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru011/test_acceptance.py::test_desktop_projection_freshness_and_fail_closed_states",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru011-beginner-flow",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru011/test_acceptance.py::test_desktop_first_beginner_flow_and_cli_secondary",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru011-brand",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru011/test_acceptance.py::test_original_brand_icon_and_bundle_wiring",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru011-visual-access",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru011/test_acceptance.py::test_locales_responsive_focus_and_reduced_motion",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru011-preservation",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru011/test_acceptance.py::test_server_secret_write_and_release_boundaries_remain_blocked",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU011-AS-01",
+          "assertion": "Native discovery accepts only one requestId, returns exactly the two frozen desktop application identities, observes only compiled local locations and public bundle metadata, and exposes no complete path, command-line substitution, network, credential or write authority.",
+          "testSelector": "tests/work_packages/ru011/test_acceptance.py::test_desktop_discovery_contract_and_native_boundary",
+          "acceptanceCommandId": "ru011-desktop-contract"
+        },
+        {
+          "id": "RU011-AS-02",
+          "assertion": "The actual UI accepts only its newest complete two-app projection and keeps not-found, multiple, unsupported, detected-unverified, retry and stale responses distinct without claiming configuration success.",
+          "testSelector": "tests/work_packages/ru011/test_acceptance.py::test_desktop_projection_freshness_and_fail_closed_states",
+          "acceptanceCommandId": "ru011-desktop-freshness"
+        },
+        {
+          "id": "RU011-AS-03",
+          "assertion": "Home and setup present Claude Desktop and Codex as the primary applications and an application-line-model-readiness path, while the five CLI tools remain only in a clearly secondary advanced destination.",
+          "testSelector": "tests/work_packages/ru011/test_acceptance.py::test_desktop_first_beginner_flow_and_cli_secondary",
+          "acceptanceCommandId": "ru011-beginner-flow"
+        },
+        {
+          "id": "RU011-AS-04",
+          "assertion": "The application bundles an original non-upstream 野菜API icon source and complete generated macOS and Windows icon assets through explicit Tauri bundle icon configuration.",
+          "testSelector": "tests/work_packages/ru011/test_acceptance.py::test_original_brand_icon_and_bundle_wiring",
+          "acceptanceCommandId": "ru011-brand"
+        },
+        {
+          "id": "RU011-AS-05",
+          "assertion": "All four locale objects remain structurally identical and the desktop shell preserves responsive navigation, visible focus and reduced-motion behavior down to 320 CSS pixels.",
+          "testSelector": "tests/work_packages/ru011/test_acceptance.py::test_locales_responsive_focus_and_reduced_motion",
+          "acceptanceCommandId": "ru011-visual-access"
+        },
+        {
+          "id": "RU011-AS-06",
+          "assertion": "Existing anonymous model reads and local diagnostics remain user-triggered, model IDs remain real public values, and account, balance, usage, recharge, credentials, apply, telemetry, updater, server and production authority stay disabled.",
+          "testSelector": "tests/work_packages/ru011/test_acceptance.py::test_server_secret_write_and_release_boundaries_remain_blocked",
+          "acceptanceCommandId": "ru011-preservation"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Implementation would require a server, account, billing, payment, credential, configuration-write, installation, launch, updater, telemetry or production action.",
+        "A desktop application identity or configuration mechanism cannot be verified from bounded local or current official evidence.",
+        "A required source change falls outside allowedPaths or changes the frozen public service, connectivity or packaging contracts.",
+        "Visual or runtime acceptance cannot distinguish detected, connected, configured and compatible states."
+      ],
+      "status": "planned"
+    },
+    {
       "id": "WP-RU010-CANDIDATE-RECEIPT",
       "wave": "release",
       "owner": "desktop-platform",

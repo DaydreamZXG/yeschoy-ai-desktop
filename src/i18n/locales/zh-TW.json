@@ -3468,15 +3468,95 @@
     "openTools": "先檢查本機工具",
     "openAccount": "查看帳戶接入狀態"
   },
+  "yeschoyDesktop": {
+    "home": {
+      "kicker": "野菜API 桌面助手",
+      "title": "讓桌面 AI，直接用上野菜API。",
+      "description": "選一個你熟悉的應用程式，線路和模型由我們一步步帶你完成。主流程不要求理解任何技術設定。",
+      "localCheck": "本機應用程式",
+      "checking": "正在識別桌面應用程式…",
+      "checkFailed": "這次沒有完成識別",
+      "detectedCount": "偵測到 {{count}} 個桌面應用程式",
+      "refresh": "重新檢查",
+      "myAppsEyebrow": "我的應用程式",
+      "myAppsTitle": "從已安裝的桌面應用程式開始",
+      "checkedAt": "{{time}} 檢查",
+      "errorTitle": "暫時無法讀取桌面應用程式狀態",
+      "errorBody": "沒有使用舊結果代替。你可以重新檢查，其他功能不受影響。",
+      "version": "桌面版 {{version}}",
+      "startSetup": "開始接入",
+      "viewSetup": "查看接入方式",
+      "detectionBoundary": "偵測到應用程式只代表它在這台電腦上；登入、模型權限和野菜API接入仍會逐項確認。"
+    },
+    "apps": {
+      "claude_desktop": {
+        "name": "Claude Desktop",
+        "surface": "Claude 應用程式裡的 Code 工作區",
+        "note": "識別 Claude 桌面應用程式，不使用 claude 指令代替"
+      },
+      "codex_desktop": {
+        "name": "Codex",
+        "surface": "ChatGPT 桌面應用程式裡的 Codex 工作區",
+        "note": "識別圖形桌面應用程式，不使用 codex 指令代替"
+      }
+    },
+    "status": {
+      "checking": "檢查中",
+      "detected_unverified": "已安裝",
+      "not_found": "未在常用位置發現",
+      "multiple_installations": "發現多個安裝",
+      "unsupported_platform": "目前系統暫不支援"
+    },
+    "account": {
+      "kicker": "野菜帳戶",
+      "waiting": "等待服務端",
+      "title": "餘額和用量",
+      "balance": "可用餘額",
+      "loginRequired": "登入後顯示真實資料",
+      "usage": "本月用量",
+      "fx": "價格比較匯率",
+      "action": "查看帳戶接入狀態"
+    },
+    "flow": {
+      "kicker": "一鍵接入",
+      "title": "四步走到可以使用",
+      "continue": "繼續設定",
+      "steps": {
+        "app": { "title": "選擇應用程式", "body": "Claude 或 Codex 桌面版" },
+        "line": { "title": "選擇線路", "body": "中國大陸最佳化或全球加速" },
+        "model": { "title": "選擇模型", "body": "顯示真實模型 ID" },
+        "connect": { "title": "完成接入", "body": "安全條件齊備後開放" }
+      }
+    },
+    "secondary": {
+      "label": "其他客戶端工具",
+      "diagnostics": "線路診斷",
+      "diagnosticsBody": "只檢查兩條野菜線路",
+      "cli": "命令列工具",
+      "cliBody": "進階使用者的 Claude Code、Codex、OpenCode、Pi 與 DSH",
+      "security": "安全與版本",
+      "securityBody": "候選版 {{version}} · 不自動上傳資料"
+    },
+    "setup": {
+      "kicker": "桌面應用程式接入",
+      "title": "先選應用程式，再選線路和模型。",
+      "description": "這裡按照桌面應用程式引導。技術設定收在進階資訊裡，新手只需要看熟悉的應用程式和模型。",
+      "steps": { "app": "桌面應用程式" },
+      "chooseApp": "你準備使用哪個桌面應用程式？",
+      "technicalDetails": "查看進階技術資訊",
+      "technicalBoundary": "目前只展示官方文件允許的接入預覽；尚未讀取或寫入你的應用程式設定。",
+      "connectBlocked": "接入條件尚未全部齊備"
+    }
+  },
   "yeschoyCandidate": {
     "navigationLabel": "客戶端主要頁面",
-    "edition": "官方桌面助手 · V1 候選版",
+    "edition": "野菜API 桌面助手 · 預覽版",
     "nav": {
-      "home": "開始",
+      "home": "我的應用程式",
       "account": "帳戶",
-      "setup": "一鍵設定",
+      "setup": "接入",
       "diagnostics": "診斷",
-      "tools": "本機工具",
+      "tools": "進階工具",
       "settings": "設定"
     },
     "home": {

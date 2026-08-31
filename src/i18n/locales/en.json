@@ -3467,15 +3467,98 @@
     "openTools": "Check local tools first",
     "openAccount": "View account connection status"
   },
+  "yeschoyDesktop": {
+    "home": {
+      "kicker": "YesChoy desktop assistant",
+      "title": "Bring YesChoy API to the desktop apps you already use.",
+      "description": "Choose a familiar app and follow the guided line and model steps. The main path requires no technical configuration knowledge.",
+      "localCheck": "Apps on this computer",
+      "checking": "Finding desktop apps…",
+      "checkFailed": "The check did not finish",
+      "detectedCount": "Found {{count}} desktop apps",
+      "refresh": "Check again",
+      "myAppsEyebrow": "My apps",
+      "myAppsTitle": "Start with an installed desktop app",
+      "checkedAt": "Checked at {{time}}",
+      "errorTitle": "Desktop app status is unavailable",
+      "errorBody": "No older result was substituted. Check again when ready; other local features still work.",
+      "version": "Desktop version {{version}}",
+      "startSetup": "Start setup",
+      "viewSetup": "View setup path",
+      "detectionBoundary": "Detection only means the app is present on this computer. Sign-in, model access, and the YesChoy connection are verified separately."
+    },
+    "apps": {
+      "claude_desktop": {
+        "name": "Claude Desktop",
+        "surface": "The Code workspace in the Claude app",
+        "note": "Checks the desktop app, never the claude command as a substitute"
+      },
+      "codex_desktop": {
+        "name": "Codex",
+        "surface": "The Codex workspace in the ChatGPT desktop app",
+        "note": "Checks the graphical app, never the codex command as a substitute"
+      }
+    },
+    "status": {
+      "checking": "Checking",
+      "detected_unverified": "Installed",
+      "not_found": "Not found in common locations",
+      "multiple_installations": "Multiple installs found",
+      "unsupported_platform": "Not supported on this system"
+    },
+    "account": {
+      "kicker": "YesChoy account",
+      "waiting": "Server pending",
+      "title": "Balance and usage",
+      "balance": "Available balance",
+      "loginRequired": "Real values appear after sign-in",
+      "usage": "Usage this month",
+      "fx": "Comparison exchange rate",
+      "action": "View account readiness"
+    },
+    "flow": {
+      "kicker": "Guided setup",
+      "title": "Four steps to a usable app",
+      "continue": "Continue setup",
+      "steps": {
+        "app": { "title": "Choose an app", "body": "Claude or Codex desktop" },
+        "line": { "title": "Choose a line", "body": "Mainland or global" },
+        "model": { "title": "Choose a model", "body": "See the real model ID" },
+        "connect": {
+          "title": "Finish connection",
+          "body": "Opens after safety gates pass"
+        }
+      }
+    },
+    "secondary": {
+      "label": "Other client tools",
+      "diagnostics": "Line diagnostics",
+      "diagnosticsBody": "Checks only the two YesChoy lines",
+      "cli": "Command-line tools",
+      "cliBody": "Advanced Claude Code, Codex, OpenCode, Pi, and DSH tools",
+      "security": "Security and version",
+      "securityBody": "Candidate {{version}} · no automatic uploads"
+    },
+    "setup": {
+      "kicker": "Desktop app setup",
+      "title": "Choose the app, then the line and model.",
+      "description": "This path starts from desktop apps. Technical details stay in the advanced section so beginners can focus on apps and model names they recognize.",
+      "steps": { "app": "Desktop app" },
+      "chooseApp": "Which desktop app do you want to use?",
+      "technicalDetails": "View advanced technical details",
+      "technicalBoundary": "This is a documented setup preview only. No application settings have been read or changed.",
+      "connectBlocked": "Connection requirements are not ready yet"
+    }
+  },
   "yeschoyCandidate": {
     "navigationLabel": "Main client destinations",
-    "edition": "Official desktop assistant · V1 candidate",
+    "edition": "YesChoy desktop assistant · Preview",
     "nav": {
-      "home": "Start",
+      "home": "My apps",
       "account": "Account",
-      "setup": "One-click setup",
+      "setup": "Connect",
       "diagnostics": "Diagnostics",
-      "tools": "Local tools",
+      "tools": "Advanced tools",
       "settings": "Settings"
     },
     "home": {

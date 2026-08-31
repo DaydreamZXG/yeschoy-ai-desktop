@@ -2,6 +2,30 @@
   "schemaVersion": 1,
   "requirements": [
     {
+      "id": "REQ-037",
+      "statement": "RU-011 supersedes the candidate's command-line-first presentation with a branded desktop-application-first beginner experience for Claude Desktop and the Codex desktop surface while preserving truthful client-only, security and server boundaries.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-047",
+        "E-CODE-031",
+        "E-EXT-036",
+        "E-EXT-037",
+        "E-PROP-009"
+      ],
+      "acceptance": [
+        "The installed application and every bundled installer use an original 野菜API icon rather than the inherited upstream icon, and the icon is declared in the base Tauri bundle configuration for macOS and Windows outputs.",
+        "The primary home destination detects exactly Claude Desktop and the Codex desktop surface through bounded local application locations and identifiers, never substitutes a claude or codex command for a desktop application, never returns a complete user path, and rejects stale or structurally incomplete projections.",
+        "The default navigation and application cards lead with desktop applications, recognizable app identities, installation state and the next beginner action; command-line discovery remains reachable only as a secondary advanced destination.",
+        "The setup destination presents desktop application, line and real public model ID as the visible path and hides Base URL, configuration file and credential implementation details from the primary flow.",
+        "Claude Desktop and Codex desktop configuration remain explicitly unverified and unapplied until their separate documented adapters, first-party account boundary, secure credentials and exact-version evidence exist; no detected application is described as connected or configured.",
+        "The visual system uses the frozen cool garden palette, clear Chinese-first typography, compact desktop navigation and application-tray signature; keyboard focus, reduced motion and a usable 320 CSS pixel layout are preserved.",
+        "Existing anonymous public catalog reads, account and billing unavailable truth, fixed 6.75 comparison FX, diagnostics, disabled configuration writes, inactive telemetry and updater boundaries remain intact, and no NewAPI, server, Nginx, DNS, database, production or public-release resource is changed."
+      ]
+    },
+    {
       "id": "REQ-036",
       "statement": "The local macOS candidate does not claim another application's URL protocol, and its release identity, hardened runtime, signature and notarization state are independently verifiable without enabling unfinished features.",
       "scope": "target",

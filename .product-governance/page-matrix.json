@@ -829,7 +829,7 @@
     {
       "id": "PAGE-HOME",
       "route": "/",
-      "purpose": "Show account, balance, usage, tool health, and the primary configuration action.",
+      "purpose": "Give a beginner a desktop-application-first starting point with honest account, connection and next-action state.",
       "trackScope": [
         "account",
         "billing",
@@ -844,6 +844,9 @@
       ],
       "entryConditions": [],
       "actions": [
+        "scan_primary_desktop_apps",
+        "choose_primary_desktop_app",
+        "begin_desktop_setup_preview",
         "switch_destination",
         "change_language",
         "view_security_boundary"
@@ -856,7 +859,8 @@
         "/settings"
       ],
       "permissions": [
-        "local deterministic candidate-readiness projection only"
+        "local deterministic candidate-readiness projection only",
+        "desktop-app-discovery@v1 bounded read-only local query"
       ],
       "stateProfileRef": "PROFILE-CLIENT-CANDIDATE-STATIC",
       "states": {}

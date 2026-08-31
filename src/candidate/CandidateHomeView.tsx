@@ -1,16 +1,33 @@
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
+import claudeIcon from "../assets/icons/claude.svg";
+import codexIcon from "../assets/icons/chatgpt.svg";
+import {
+  isDesktopAppScanResponse,
+  type DesktopAppId,
+  type DesktopAppScanResponse,
+} from "../desktop-apps/contract";
 import { createCandidateReadiness } from "./readiness";
 
 interface CandidateHomeViewProps {
   onOpenAccount: () => void;
-  onOpenSetup: () => void;
+  onOpenSetup: (appId: DesktopAppId) => void;
   onOpenDiagnostics: () => void;
   onOpenTools: () => void;
   onOpenSettings: () => void;
 }
 
-const JOURNEY_STEPS = ["tools", "setup", "diagnostics", "account"] as const;
+const APP_CATALOG: Array<{
+  id: DesktopAppId;
+  icon: string;
+  accent: "clay" | "ink";
+}> = [
+  { id: "claude_desktop", icon: claudeIcon, accent: "clay" },
+  { id: "codex_desktop", icon: codexIcon, accent: "ink" },
+];
+
+type ScanPhase = "loading" | "ready" | "error";
 
 export function CandidateHomeView({
   onOpenAccount,
@@ -19,119 +36,261 @@ export function CandidateHomeView({
   onOpenTools,
   onOpenSettings,
 }: CandidateHomeViewProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const readiness = useMemo(() => createCandidateReadiness(), []);
-  const actions = {
-    tools: onOpenTools,
-    setup: onOpenSetup,
-    diagnostics: onOpenDiagnostics,
-    account: onOpenAccount,
-  };
+  const [phase, setPhase] = useState<ScanPhase>("loading");
+  const [scan, setScan] = useState<DesktopAppScanResponse | null>(null);
+  const [selectedApp, setSelectedApp] =
+    useState<DesktopAppId>("claude_desktop");
+  const latestRequest = useRef("");
+  const requestSequence = useRef(0);
+
+  const scanDesktopApps = useCallback(async () => {
+    const requestId = `desktop-${Date.now().toString(36)}-${++requestSequence.current}`;
+    latestRequest.current = requestId;
+    setScan(null);
+    setPhase("loading");
+    try {
+      const result: unknown = await invoke("scan_desktop_apps_read_only", {
+        request: { requestId },
+      });
+      if (latestRequest.current !== requestId) return;
+      if (!isDesktopAppScanResponse(result, requestId)) {
+        throw new Error("invalid_projection");
+      }
+      setScan(result);
+      const firstDetected = result.apps.find(
+        (app) => app.status === "detected_unverified",
+      );
+      if (firstDetected) setSelectedApp(firstDetected.appId);
+      setPhase("ready");
+    } catch {
+      if (latestRequest.current !== requestId) return;
+      setScan(null);
+      setPhase("error");
+    }
+  }, []);
+
+  useEffect(() => {
+    void scanDesktopApps();
+    return () => {
+      latestRequest.current = "";
+    };
+  }, [scanDesktopApps]);
+
+  const byId = useMemo(
+    () => new Map(scan?.apps.map((app) => [app.appId, app]) ?? []),
+    [scan],
+  );
+  const detectedCount = scan?.apps.filter(
+    (app) => app.status === "detected_unverified",
+  ).length;
+  const checkedAt = scan
+    ? new Intl.DateTimeFormat(i18n.resolvedLanguage, {
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(scan.completedAtEpochMs)
+    : null;
 
   return (
-    <div className="candidate-home" data-testid="candidate-home-view">
-      <section className="candidate-hero" aria-labelledby="candidate-title">
-        <div className="candidate-hero-copy">
-          <p className="eyebrow">{t("yeschoyCandidate.home.eyebrow")}</p>
-          <h1 id="candidate-title">{t("yeschoyCandidate.home.title")}</h1>
-          <p className="intro-copy">{t("yeschoyCandidate.home.description")}</p>
-          <div className="candidate-stage" role="status">
-            <span aria-hidden="true" />
-            {t("yeschoyCandidate.home.stage", {
-              version: readiness.version,
-            })}
-          </div>
+    <div className="desktop-home" data-testid="candidate-home-view">
+      <section className="desktop-welcome" aria-labelledby="desktop-home-title">
+        <div>
+          <p className="desktop-kicker">{t("yeschoyDesktop.home.kicker")}</p>
+          <h1 id="desktop-home-title">{t("yeschoyDesktop.home.title")}</h1>
+          <p>{t("yeschoyDesktop.home.description")}</p>
         </div>
-
-        <div
-          className="candidate-counts"
-          aria-label={t("yeschoyCandidate.home.scopeLabel")}
-        >
+        <div className="home-status-cluster">
+          <span className="local-state-dot" aria-hidden="true" />
           <div>
-            <strong>{readiness.supportedToolCount}</strong>
-            <span>{t("yeschoyCandidate.home.toolsCount")}</span>
-          </div>
-          <div>
-            <strong>{readiness.supportedLineCount}</strong>
-            <span>{t("yeschoyCandidate.home.linesCount")}</span>
-          </div>
-          <div>
-            <strong>0</strong>
-            <span>{t("yeschoyCandidate.home.writesCount")}</span>
-          </div>
-        </div>
-
-        <button
-          className="primary-action candidate-primary"
-          type="button"
-          onClick={onOpenTools}
-        >
-          {t("yeschoyCandidate.home.start")}
-        </button>
-        <p className="candidate-start-note">
-          {t("yeschoyCandidate.home.startNote")}
-        </p>
-      </section>
-
-      <section className="candidate-journey" aria-labelledby="journey-title">
-        <div className="panel-heading candidate-heading">
-          <div>
-            <p className="eyebrow">
-              {t("yeschoyCandidate.home.journeyEyebrow")}
-            </p>
-            <h2 id="journey-title">
-              {t("yeschoyCandidate.home.journeyTitle")}
-            </h2>
+            <strong>{t("yeschoyDesktop.home.localCheck")}</strong>
+            <small>
+              {phase === "loading"
+                ? t("yeschoyDesktop.home.checking")
+                : phase === "error"
+                  ? t("yeschoyDesktop.home.checkFailed")
+                  : t("yeschoyDesktop.home.detectedCount", {
+                      count: detectedCount ?? 0,
+                    })}
+            </small>
           </div>
           <button
             type="button"
-            className="text-action"
-            onClick={onOpenSettings}
+            onClick={scanDesktopApps}
+            disabled={phase === "loading"}
           >
-            {t("yeschoyCandidate.home.securityEntry")}
+            {t("yeschoyDesktop.home.refresh")}
           </button>
         </div>
+      </section>
 
-        <ol className="journey-list">
-          {JOURNEY_STEPS.map((step, index) => {
-            const blocked = step === "account";
-            return (
-              <li key={step} data-state={blocked ? "blocked" : "available"}>
-                <span className="journey-index">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <div>
-                  <div className="journey-title-row">
-                    <strong>
-                      {t(`yeschoyCandidate.home.steps.${step}.title`)}
-                    </strong>
-                    <span>
-                      {t(
-                        blocked
-                          ? "yeschoyCandidate.home.backendRequired"
-                          : "yeschoyCandidate.home.clientReady",
-                      )}
-                    </span>
-                  </div>
-                  <p>{t(`yeschoyCandidate.home.steps.${step}.body`)}</p>
-                  <button type="button" onClick={actions[step]}>
-                    {t(`yeschoyCandidate.home.steps.${step}.action`)}
-                  </button>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
-
-        <aside className="candidate-truth">
-          <span className="truth-mark" aria-hidden="true">
-            i
-          </span>
-          <div>
-            <strong>{t("yeschoyCandidate.home.truthTitle")}</strong>
-            <p>{t("yeschoyCandidate.home.truthBody")}</p>
+      <div className="desktop-home-grid">
+        <section className="my-apps-panel" aria-labelledby="my-apps-title">
+          <div className="desktop-section-heading">
+            <div>
+              <span>{t("yeschoyDesktop.home.myAppsEyebrow")}</span>
+              <h2 id="my-apps-title">{t("yeschoyDesktop.home.myAppsTitle")}</h2>
+            </div>
+            {checkedAt && (
+              <small>
+                {t("yeschoyDesktop.home.checkedAt", { time: checkedAt })}
+              </small>
+            )}
           </div>
+
+          {phase === "error" && (
+            <div className="desktop-scan-error" role="alert">
+              <strong>{t("yeschoyDesktop.home.errorTitle")}</strong>
+              <span>{t("yeschoyDesktop.home.errorBody")}</span>
+            </div>
+          )}
+
+          <div className="desktop-app-deck" aria-busy={phase === "loading"}>
+            <span className="app-deck-route" aria-hidden="true" />
+            {APP_CATALOG.map((app) => {
+              const result = byId.get(app.id);
+              const status =
+                phase === "loading"
+                  ? "checking"
+                  : (result?.status ?? "not_found");
+              const selected = selectedApp === app.id;
+              return (
+                <article
+                  className="desktop-app-card"
+                  data-accent={app.accent}
+                  data-status={status}
+                  data-selected={selected || undefined}
+                  key={app.id}
+                >
+                  <button
+                    className="app-card-select"
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setSelectedApp(app.id)}
+                  >
+                    <span className="app-card-icon" aria-hidden="true">
+                      <img src={app.icon} alt="" />
+                    </span>
+                    <span className="app-card-copy">
+                      <strong>{t(`yeschoyDesktop.apps.${app.id}.name`)}</strong>
+                      <small>
+                        {t(`yeschoyDesktop.apps.${app.id}.surface`)}
+                      </small>
+                    </span>
+                    <span className="app-card-status">
+                      <i aria-hidden="true" />
+                      {t(`yeschoyDesktop.status.${status}`)}
+                    </span>
+                  </button>
+                  <div className="app-card-evidence">
+                    <span>
+                      {result?.version
+                        ? t("yeschoyDesktop.home.version", {
+                            version: result.version,
+                          })
+                        : t(`yeschoyDesktop.apps.${app.id}.note`)}
+                    </span>
+                    <button type="button" onClick={() => onOpenSetup(app.id)}>
+                      {t(
+                        result?.status === "detected_unverified"
+                          ? "yeschoyDesktop.home.startSetup"
+                          : "yeschoyDesktop.home.viewSetup",
+                      )}
+                      <span aria-hidden="true">→</span>
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          <div className="desktop-app-boundary">
+            <span aria-hidden="true">i</span>
+            <p>{t("yeschoyDesktop.home.detectionBoundary")}</p>
+          </div>
+        </section>
+
+        <aside className="account-peek" aria-labelledby="account-peek-title">
+          <div className="account-peek-topline">
+            <span>{t("yeschoyDesktop.account.kicker")}</span>
+            <span data-state="waiting">
+              {t("yeschoyDesktop.account.waiting")}
+            </span>
+          </div>
+          <h2 id="account-peek-title">{t("yeschoyDesktop.account.title")}</h2>
+          <div className="account-peek-balance">
+            <small>{t("yeschoyDesktop.account.balance")}</small>
+            <strong>—</strong>
+            <span>{t("yeschoyDesktop.account.loginRequired")}</span>
+          </div>
+          <div className="account-peek-row">
+            <span>{t("yeschoyDesktop.account.usage")}</span>
+            <strong>—</strong>
+          </div>
+          <div className="account-peek-row">
+            <span>{t("yeschoyDesktop.account.fx")}</span>
+            <strong>1 USD = 6.75 CNY</strong>
+          </div>
+          <button type="button" onClick={onOpenAccount}>
+            {t("yeschoyDesktop.account.action")}
+          </button>
         </aside>
+      </div>
+
+      <section
+        className="desktop-setup-path"
+        aria-labelledby="setup-path-title"
+      >
+        <div className="desktop-section-heading">
+          <div>
+            <span>{t("yeschoyDesktop.flow.kicker")}</span>
+            <h2 id="setup-path-title">{t("yeschoyDesktop.flow.title")}</h2>
+          </div>
+          <button type="button" onClick={() => onOpenSetup(selectedApp)}>
+            {t("yeschoyDesktop.flow.continue")}
+          </button>
+        </div>
+        <ol className="desktop-flow-rail">
+          {(["app", "line", "model", "connect"] as const).map((step, index) => (
+            <li
+              key={step}
+              data-state={
+                index === 0 ? "current" : index === 3 ? "blocked" : "next"
+              }
+            >
+              <span>{index + 1}</span>
+              <div>
+                <strong>{t(`yeschoyDesktop.flow.steps.${step}.title`)}</strong>
+                <small>{t(`yeschoyDesktop.flow.steps.${step}.body`)}</small>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section
+        className="desktop-secondary-actions"
+        aria-label={t("yeschoyDesktop.secondary.label")}
+      >
+        <button type="button" onClick={onOpenDiagnostics}>
+          <span aria-hidden="true">⌁</span>
+          <strong>{t("yeschoyDesktop.secondary.diagnostics")}</strong>
+          <small>{t("yeschoyDesktop.secondary.diagnosticsBody")}</small>
+        </button>
+        <button type="button" onClick={onOpenTools}>
+          <span aria-hidden="true">›_</span>
+          <strong>{t("yeschoyDesktop.secondary.cli")}</strong>
+          <small>{t("yeschoyDesktop.secondary.cliBody")}</small>
+        </button>
+        <button type="button" onClick={onOpenSettings}>
+          <span aria-hidden="true">◌</span>
+          <strong>{t("yeschoyDesktop.secondary.security")}</strong>
+          <small>
+            {t("yeschoyDesktop.secondary.securityBody", {
+              version: readiness.version,
+            })}
+          </small>
+        </button>
       </section>
     </div>
   );

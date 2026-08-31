@@ -2,6 +2,204 @@
   "schemaVersion": 1,
   "contracts": [
     {
+      "id": "desktop-app-discovery@v1",
+      "kind": "query",
+      "owner": "tool-config",
+      "consumers": [
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-app-discovery@v1",
+      "authorization": "Callable only by the bundled local desktop webview. It may inspect only compiled desktop-application locations and a bounded application metadata file. It grants no network, account, credential, configuration-write, installation, launch, update, telemetry or server authority.",
+      "idempotency": "The query is read-only. Repeating one request against unchanged compiled application locations produces an equivalent projection; only the newest requestId may become current in the UI.",
+      "compatibility": "Version 1 returns exactly Claude Desktop and Codex desktop in stable order. A detected bundle remains unverified for configuration and end-to-end service use. Adding an application, location, launch action or compatibility meaning requires a new contract version.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One bounded desktop-application discovery request.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Caller-generated transient correlation identifier.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          }
+        },
+        "required": [
+          "requestId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Complete sanitized projection for the two primary desktop applications.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "The unchanged caller request identifier.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "platform": {
+            "type": "string",
+            "description": "Platform family on which discovery ran.",
+            "enum": [
+              "windows",
+              "macos",
+              "linux",
+              "unknown"
+            ]
+          },
+          "startedAtEpochMs": {
+            "type": "integer",
+            "description": "Local request start time.",
+            "minimum": 0
+          },
+          "completedAtEpochMs": {
+            "type": "integer",
+            "description": "Local request completion time, never earlier than the start time.",
+            "minimum": 0
+          },
+          "apps": {
+            "type": "array",
+            "description": "Exactly one sanitized result for each primary desktop application in stable order.",
+            "minItems": 2,
+            "maxItems": 2,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "description": "One desktop-application observation.",
+              "properties": {
+                "appId": {
+                  "type": "string",
+                  "description": "Stable product application identifier.",
+                  "enum": [
+                    "claude_desktop",
+                    "codex_desktop"
+                  ]
+                },
+                "displayName": {
+                  "type": "string",
+                  "description": "Beginner-facing desktop application name.",
+                  "enum": [
+                    "Claude Desktop",
+                    "Codex"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "description": "Bounded installation observation only.",
+                  "enum": [
+                    "detected_unverified",
+                    "not_found",
+                    "multiple_installations",
+                    "unsupported_platform"
+                  ]
+                },
+                "version": {
+                  "type": "string",
+                  "description": "Sanitized application version when available, otherwise empty.",
+                  "maxLength": 128
+                },
+                "candidateCount": {
+                  "type": "integer",
+                  "description": "Number of distinct compiled-location candidates.",
+                  "minimum": 0,
+                  "maximum": 8
+                },
+                "locationHint": {
+                  "type": "string",
+                  "description": "Sanitized location class, never a complete path or username.",
+                  "enum": [
+                    "none",
+                    "applications",
+                    "user_applications",
+                    "local_app_data",
+                    "program_files",
+                    "multiple",
+                    "unsupported"
+                  ]
+                },
+                "bundleIdentifier": {
+                  "type": "string",
+                  "description": "Verified public bundle identifier on macOS, otherwise empty.",
+                  "enum": [
+                    "",
+                    "com.anthropic.claudefordesktop",
+                    "com.openai.codex"
+                  ]
+                },
+                "configurationStatus": {
+                  "type": "string",
+                  "description": "Configuration remains unavailable regardless of detection.",
+                  "enum": [
+                    "not_applicable",
+                    "documented_unverified"
+                  ]
+                },
+                "reasonCode": {
+                  "type": "string",
+                  "description": "Closed presentation reason without raw filesystem or process text.",
+                  "enum": [
+                    "desktop_app_not_found",
+                    "desktop_app_detected_adapter_unverified",
+                    "multiple_desktop_apps_found",
+                    "desktop_platform_not_supported"
+                  ]
+                }
+              },
+              "required": [
+                "appId",
+                "displayName",
+                "status",
+                "version",
+                "candidateCount",
+                "locationHint",
+                "bundleIdentifier",
+                "configurationStatus",
+                "reasonCode"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "requestId",
+          "platform",
+          "startedAtEpochMs",
+          "completedAtEpochMs",
+          "apps"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "internal"
+      ],
+      "observability": {
+        "correlation": "requestId is transient and only the latest application projection is displayed.",
+        "audit": "No discovery history, path, identifier or version is persisted or uploaded.",
+        "metrics": "No telemetry or persistent local metric is emitted."
+      },
+      "errorSemantics": [
+        "Invalid request identity rejects before filesystem inspection.",
+        "A missing compiled location is a successful not_found observation and never proves that the application is uninstalled everywhere.",
+        "macOS candidates whose public bundle identifier does not match the compiled expected identifier are ignored rather than treated as the target application.",
+        "More than one accepted candidate returns a conflict and no path is selected or exposed.",
+        "Linux and unknown platforms return unsupported_platform for both entries without scanning commands or inventing installation state.",
+        "Detection never promotes configurationStatus beyond documented_unverified and never means logged in, connected, configured or compatible."
+      ],
+      "requirementRefs": [
+        "REQ-037"
+      ],
+      "evidenceRefs": [
+        "E-USER-047",
+        "E-CODE-031",
+        "E-EXT-036",
+        "E-EXT-037",
+        "E-PROP-009"
+      ],
+      "status": "specified"
+    },
+    {
       "id": "tool-discovery-scan@v1",
       "kind": "query",
       "owner": "tool-config",

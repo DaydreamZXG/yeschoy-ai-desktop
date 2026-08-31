@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU011-AS-04",
+  "assertion": "The application bundles an original non-upstream 野菜API icon source and complete generated macOS and Windows icon assets through explicit Tauri bundle icon configuration.",
+  "testSelector": "tests/work_packages/ru011/test_acceptance.py::test_original_brand_icon_and_bundle_wiring",
+  "acceptanceCommandId": "ru011-brand",
+  "runId": "RU-011/WP-RU011-DESKTOP-FIRST-EXPERIENCE@2026-08-31T09:31:50.596798+00:00",
+  "packageId": "WP-RU011-DESKTOP-FIRST-EXPERIENCE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru011/test_acceptance.py::test_original_brand_icon_and_bundle_wiring",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:c18f14e3197eeb758d16e323199d4230ce073b1ac2df6f9a32629da096813620",
+    "machineReportSha256": "sha256:fb83d2e5877db90705529259833d2e5be458e823481719b4381fa858562044aa",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:9e2d314ea775bbfc3b11035118e6e00de1610f8769c99873ab312c174eab580d",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:7e830075664c8ead2680529008fbe4679bd73288f7a92fae6531c88fd4fafba2",
+  "releaseUnitId": "RU-011",
+  "releaseUnitHash": "sha256:e5c28d2dc7e7520636dc03064749d3eeb9e72169a372962e5163f8e5e4ee7bdf"
+}
