@@ -2,6 +2,20 @@
   "schemaVersion": 1,
   "requirements": [
     {
+      "id": "REQ-036",
+      "statement": "The local macOS candidate does not claim another application's URL protocol, and its release identity, hardened runtime, signature and notarization state are independently verifiable without enabling unfinished features.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": ["E-USER-046", "E-CODE-029"],
+      "acceptance": [
+        "The source macOS plist declares no URL handlers, document handlers or replacement callback scheme; no new deep-link runtime is added.",
+        "Candidate build configuration keeps hardened runtime enabled, updater artifacts disabled and private credentials absent.",
+        "The rebuilt actual app has the expected identity and architecture and no inherited URL handler; final signed artifact verification and honest notarization status are recorded separately from source tests."
+      ]
+    },
+    {
       "id": "REQ-035",
       "statement": "RU-008 provides pnpm-compatible read-only semantic acceptance for the unchanged current client and prepares a signed local macOS candidate without claiming notarization, public release or backend-dependent readiness.",
       "scope": "target",

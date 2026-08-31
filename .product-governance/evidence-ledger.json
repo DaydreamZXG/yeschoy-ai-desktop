@@ -2,6 +2,17 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "E-CODE-029",
+      "claim": "The first c67c683a macOS build inherited CFBundleURLTypes declaring ccswitch from src-tauri/Info.plist. The signing process later exited with timestamps differ by 1673 seconds. Neither that intermediate app nor the earlier candidate is a verified installer.",
+      "class": "code_observed",
+      "locator": "src-tauri/Info.plist; outputs/野菜API-macOS-候选包构建记录.md; command:tauri build session 79669",
+      "observedAt": "2026-08-31T08:32:55Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
       "id": "E-USER-046",
       "claim": "The owner agrees to candidate packaging and confirms installation of the requested Developer ID Application certificate after being told that signing and notarization preparation will follow.",
       "class": "user_confirmed",

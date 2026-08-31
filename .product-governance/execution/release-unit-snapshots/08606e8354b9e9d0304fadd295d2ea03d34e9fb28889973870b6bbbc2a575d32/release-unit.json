@@ -1,0 +1,1724 @@
+{
+  "schemaVersion": 1,
+  "releaseUnitId": "RU-009",
+  "releaseUnitHash": "sha256:08606e8354b9e9d0304fadd295d2ea03d34e9fb28889973870b6bbbc2a575d32",
+  "decisionId": "DEC-051",
+  "objective": "Remove inherited macOS protocol registration and verify a locally signed candidate without runtime or public-release changes.",
+  "dependsOnReleaseUnits": [
+    "RU-008"
+  ],
+  "supersedesReleaseUnits": [
+    "RU-008"
+  ],
+  "roots": {
+    "workPackages": [
+      "WP-RU009-MACOS-BUNDLE-METADATA"
+    ],
+    "requirements": [
+      "REQ-036"
+    ],
+    "nonFunctionalRequirements": [],
+    "domains": [],
+    "contracts": [],
+    "stateMachines": [],
+    "pages": [],
+    "journeys": [],
+    "dataLifecycleResources": [],
+    "aiScenarios": [],
+    "entitlements": [],
+    "trackCoverage": []
+  },
+  "commit": "bea898a67be5883b3def6d576d3d1bceded9cf60",
+  "frozenAt": "2026-08-31T08:35:37.779442+00:00",
+  "catalogManifest": {
+    "schemaVersion": 1,
+    "product": {
+      "name": "野菜API",
+      "createdAt": "2026-08-29T06:28:13.295272+00:00"
+    },
+    "authority": {
+      "bundleRoot": ".product-governance",
+      "precedence": [
+        "user_confirmed",
+        "applicable_policy",
+        "frozen_decision",
+        "code_observed",
+        "existing_document",
+        "inferred",
+        "proposed"
+      ]
+    },
+    "tracks": [
+      "account",
+      "billing",
+      "tool-config",
+      "diagnostics",
+      "desktop-platform",
+      "security-update"
+    ],
+    "trackDecisionRefs": {
+      "account": "DEC-043",
+      "billing": "DEC-043",
+      "tool-config": "DEC-046",
+      "desktop-platform": "DEC-046",
+      "diagnostics": "DEC-046",
+      "security-update": "DEC-047"
+    },
+    "requiredPageStates": [
+      "default",
+      "loading",
+      "empty",
+      "partial",
+      "error",
+      "expired",
+      "conflict",
+      "recovery",
+      "processing"
+    ],
+    "dualTrackCapabilities": [
+      "evidence",
+      "attempt",
+      "reflection",
+      "mastery",
+      "ability_estimate",
+      "planning",
+      "report",
+      "global_ask"
+    ],
+    "requiredNfrCategories": [
+      "security",
+      "privacy",
+      "reliability",
+      "observability",
+      "performance",
+      "capacity",
+      "accessibility",
+      "ai_quality",
+      "ai_cost",
+      "commerce",
+      "migration",
+      "backup_restore",
+      "operations"
+    ]
+  },
+  "closure": {
+    "workPackages": [
+      "WP-RU009-MACOS-BUNDLE-METADATA"
+    ],
+    "requirements": [
+      "REQ-031",
+      "REQ-034",
+      "REQ-036"
+    ],
+    "nonFunctionalRequirements": [],
+    "domains": [
+      "desktop-platform",
+      "diagnostics",
+      "tool-config"
+    ],
+    "contracts": [
+      "public-service-catalog@v1"
+    ],
+    "stateMachines": [],
+    "pages": [
+      "PAGE-CONFIGURE-PREVIEW"
+    ],
+    "pageStateProfiles": [
+      "PROFILE-PUBLIC-CATALOG-PREVIEW"
+    ],
+    "journeys": [],
+    "actors": [],
+    "dataLifecycleResources": [],
+    "aiScenarios": [],
+    "entitlements": [],
+    "trackCoverage": [],
+    "evidence": [
+      "E-CODE-022",
+      "E-CODE-023",
+      "E-CODE-026",
+      "E-CODE-029",
+      "E-EXT-025",
+      "E-EXT-026",
+      "E-EXT-027",
+      "E-EXT-028",
+      "E-EXT-035",
+      "E-PROP-005",
+      "E-PROP-006",
+      "E-PROP-008",
+      "E-USER-010",
+      "E-USER-011",
+      "E-USER-037",
+      "E-USER-042",
+      "E-USER-045",
+      "E-USER-046"
+    ],
+    "decisions": [
+      "DEC-046",
+      "DEC-051"
+    ],
+    "conflicts": [],
+    "glossaryTerms": [
+      "TERM-LINE",
+      "TERM-READY"
+    ],
+    "resources": [],
+    "tracks": [
+      "desktop-platform",
+      "diagnostics",
+      "tool-config"
+    ]
+  },
+  "deferredSnapshot": {
+    "schemaVersion": 1,
+    "catalogHash": "sha256:0546469a5ecc7637d057beeaf4f80d8c847af77a33e6638e17373eb18a0a7074",
+    "items": [
+      {
+        "subjectKind": "actors",
+        "subjectId": "*",
+        "message": "No product actors are defined"
+      },
+      {
+        "subjectKind": "aiScenarios",
+        "subjectId": "*",
+        "message": "No AI scenarios are defined"
+      },
+      {
+        "subjectKind": "dataLifecycleResources",
+        "subjectId": "*",
+        "message": "No data lifecycle resources are defined"
+      },
+      {
+        "subjectKind": "entitlements",
+        "subjectId": "*",
+        "message": "No entitlement capabilities are defined"
+      },
+      {
+        "subjectKind": "journeys",
+        "subjectId": "*",
+        "message": "No end-to-end journeys are defined"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-accessibility",
+        "message": "High-impact non-functional requirement is unresolved: NFR-accessibility (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-ai_cost",
+        "message": "High-impact non-functional requirement is unresolved: NFR-ai_cost (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-ai_quality",
+        "message": "High-impact non-functional requirement is unresolved: NFR-ai_quality (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-backup_restore",
+        "message": "High-impact non-functional requirement is unresolved: NFR-backup_restore (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-capacity",
+        "message": "High-impact non-functional requirement is unresolved: NFR-capacity (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-commerce",
+        "message": "High-impact non-functional requirement is unresolved: NFR-commerce (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-migration",
+        "message": "High-impact non-functional requirement is unresolved: NFR-migration (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-observability",
+        "message": "High-impact non-functional requirement is unresolved: NFR-observability (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-operations",
+        "message": "High-impact non-functional requirement is unresolved: NFR-operations (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-performance",
+        "message": "High-impact non-functional requirement is unresolved: NFR-performance (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-privacy",
+        "message": "High-impact non-functional requirement is unresolved: NFR-privacy (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-reliability",
+        "message": "High-impact non-functional requirement is unresolved: NFR-reliability (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-security",
+        "message": "High-impact non-functional requirement is unresolved: NFR-security (unknown)"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state conflict"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state default"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state empty"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state error"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state expired"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state loading"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state partial"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state processing"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state recovery"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-MODELS",
+        "message": "Page PAGE-MODELS has no behavior for state conflict"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-MODELS",
+        "message": "Page PAGE-MODELS has no behavior for state default"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-MODELS",
+        "message": "Page PAGE-MODELS has no behavior for state empty"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-MODELS",
+        "message": "Page PAGE-MODELS has no behavior for state error"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-MODELS",
+        "message": "Page PAGE-MODELS has no behavior for state expired"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-MODELS",
+        "message": "Page PAGE-MODELS has no behavior for state loading"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-MODELS",
+        "message": "Page PAGE-MODELS has no behavior for state partial"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-MODELS",
+        "message": "Page PAGE-MODELS has no behavior for state processing"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-MODELS",
+        "message": "Page PAGE-MODELS has no behavior for state recovery"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state conflict"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state default"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state empty"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state error"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state expired"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state loading"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state partial"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state processing"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state recovery"
+      },
+      {
+        "subjectKind": "stateMachines",
+        "subjectId": "*",
+        "message": "No canonical state machines are defined"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "ability_estimate::account",
+        "message": "Capability ability_estimate/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "ability_estimate::billing",
+        "message": "Capability ability_estimate/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "ability_estimate::desktop-platform",
+        "message": "Capability ability_estimate/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "ability_estimate::diagnostics",
+        "message": "Capability ability_estimate/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "ability_estimate::security-update",
+        "message": "Capability ability_estimate/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "ability_estimate::tool-config",
+        "message": "Capability ability_estimate/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "attempt::account",
+        "message": "Capability attempt/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "attempt::billing",
+        "message": "Capability attempt/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "attempt::desktop-platform",
+        "message": "Capability attempt/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "attempt::diagnostics",
+        "message": "Capability attempt/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "attempt::security-update",
+        "message": "Capability attempt/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "attempt::tool-config",
+        "message": "Capability attempt/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "evidence::account",
+        "message": "Capability evidence/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "evidence::billing",
+        "message": "Capability evidence/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "evidence::desktop-platform",
+        "message": "Capability evidence/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "evidence::diagnostics",
+        "message": "Capability evidence/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "evidence::security-update",
+        "message": "Capability evidence/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "evidence::tool-config",
+        "message": "Capability evidence/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "global_ask::account",
+        "message": "Capability global_ask/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "global_ask::billing",
+        "message": "Capability global_ask/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "global_ask::desktop-platform",
+        "message": "Capability global_ask/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "global_ask::diagnostics",
+        "message": "Capability global_ask/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "global_ask::security-update",
+        "message": "Capability global_ask/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "global_ask::tool-config",
+        "message": "Capability global_ask/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "mastery::account",
+        "message": "Capability mastery/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "mastery::billing",
+        "message": "Capability mastery/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "mastery::desktop-platform",
+        "message": "Capability mastery/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "mastery::diagnostics",
+        "message": "Capability mastery/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "mastery::security-update",
+        "message": "Capability mastery/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "mastery::tool-config",
+        "message": "Capability mastery/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "planning::account",
+        "message": "Capability planning/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "planning::billing",
+        "message": "Capability planning/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "planning::desktop-platform",
+        "message": "Capability planning/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "planning::diagnostics",
+        "message": "Capability planning/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "planning::security-update",
+        "message": "Capability planning/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "planning::tool-config",
+        "message": "Capability planning/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "reflection::account",
+        "message": "Capability reflection/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "reflection::billing",
+        "message": "Capability reflection/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "reflection::desktop-platform",
+        "message": "Capability reflection/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "reflection::diagnostics",
+        "message": "Capability reflection/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "reflection::security-update",
+        "message": "Capability reflection/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "reflection::tool-config",
+        "message": "Capability reflection/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "report::account",
+        "message": "Capability report/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "report::billing",
+        "message": "Capability report/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "report::desktop-platform",
+        "message": "Capability report/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "report::diagnostics",
+        "message": "Capability report/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "report::security-update",
+        "message": "Capability report/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "report::tool-config",
+        "message": "Capability report/tool-config remains unknown"
+      }
+    ]
+  },
+  "artifacts": {
+    "evidenceLedger": {
+      "schemaVersion": 1,
+      "entries": [
+        {
+          "id": "E-CODE-022",
+          "claim": "The locally installed official @deepseek-ai/dsh package is version 0.1.0-rc.6, points to github.com/deepseek-ai/deepseek-harness, and documents dsh web as the web-profile alias, but its public CLI documentation does not establish a stable user-owned Base URL field or a safe automatic-write adapter contract.",
+          "class": "code_observed",
+          "locator": "command:2026-08-30:dsh-version-help-and-installed-package-metadata",
+          "observedAt": "2026-08-30T17:04:56+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-CODE-023",
+          "claim": "The first governed RU-003 verification run executed five scenarios successfully but the catalog scenario failed because invoking Vitest inside the mandatory read-only source sandbox attempted to create vitest.config.ts.timestamp-*.mjs in the project root. After replacing that nested runner with direct Node TypeScript module execution, local execution passed all six scenarios; redispatch was then blocked because the dispatcher revalidated the completed RU-002 dependency against RU-003's intentionally superseding current UI outputs.",
+          "class": "code_observed",
+          "locator": ".product-governance/execution/reports/7d041a507878db9d.4f7173f827f92c214557.json; command:2026-08-30:pytest-ru003-six-pass-after-readonly-runner-correction; command:2026-08-30:redispatch-ru003-dependency-current-output-conflict",
+          "observedAt": "2026-08-30T17:25:40+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-CODE-026",
+          "claim": "The current client only registers local discovery and TCP diagnostics; configuration preview has no real model selection and account readiness is compiled unavailable.",
+          "class": "code_observed",
+          "locator": "src-tauri/src/lib.rs; src/configuration/preview.ts; src/account/readiness.ts",
+          "observedAt": "2026-08-31T11:08:29+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-CODE-029",
+          "claim": "The first c67c683a macOS build inherited CFBundleURLTypes declaring ccswitch from src-tauri/Info.plist. The signing process later exited with timestamps differ by 1673 seconds. Neither that intermediate app nor the earlier candidate is a verified installer.",
+          "class": "code_observed",
+          "locator": "src-tauri/Info.plist; outputs/野菜API-macOS-候选包构建记录.md; command:tauri build session 79669",
+          "observedAt": "2026-08-31T08:32:55Z",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-EXT-025",
+          "claim": "The current official Codex configuration reference documents ~/.codex/config.toml, model_providers.<id>.base_url, responses-only wire_api, and model_providers.<id>.auth.command as a command that prints a bearer token to stdout; auth.command must not be combined with env_key, experimental_bearer_token, or requires_openai_auth.",
+          "class": "external_verified",
+          "locator": "https://learn.chatgpt.com/docs/config-file/config-reference",
+          "observedAt": "2026-08-30T17:04:56+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-EXT-026",
+          "claim": "The current official Claude Code documentation identifies ANTHROPIC_BASE_URL as the custom endpoint setting and apiKeyHelper as a dynamic script-based credential source, supporting a preview of owned settings without placing a literal API key in settings.",
+          "class": "external_verified",
+          "locator": "https://code.claude.com/docs/en/team; https://code.claude.com/docs/en/env-vars; https://code.claude.com/docs/en/llm-gateway",
+          "observedAt": "2026-08-30T17:04:56+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-EXT-027",
+          "claim": "The current official OpenCode provider documentation defines custom providers under provider.<id>, uses @ai-sdk/openai-compatible for OpenAI-compatible chat-completions endpoints, accepts options.baseURL, and identifies model entries by their exact model IDs.",
+          "class": "external_verified",
+          "locator": "https://opencode.ai/docs/providers/",
+          "observedAt": "2026-08-30T17:04:56+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-EXT-028",
+          "claim": "The current official Pi models documentation identifies ~/.pi/agent/models.json, provider baseUrl and api fields, exact model IDs, OpenAI-compatible API modes, and an apiKey value beginning with ! as a command evaluated at request time.",
+          "class": "external_verified",
+          "locator": "https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/models.md",
+          "observedAt": "2026-08-30T17:04:56+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-EXT-035",
+          "claim": "The inspected deployed NewAPI revision exposes public pricing with usable groups and supported endpoints; its pricing_version values are source constants, not revisions of price data.",
+          "class": "external_verified",
+          "locator": "https://github.com/QuantumNous/new-api/blob/eb48396d5fe97d27772d0cd5e3ca8aa5caa4f3e9/controller/pricing.go",
+          "observedAt": "2026-08-31T11:08:29+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-PROP-005",
+          "claim": "RU-003 should add a deterministic beginner configuration-preview planner for the fixed five-tool catalog and the two product-approved line roots. It may show only evidenced target fields and derived protocol endpoints, must leave the model ID unavailable until a server catalog exists, and must block all configuration, credential, file-read, file-write, connectivity, and rollback actions until later backend, secure-helper, and exact-version evidence is frozen.",
+          "class": "proposed",
+          "locator": "inline:ru003-configuration-preview-boundary",
+          "observedAt": "2026-08-30T17:04:56+08:00",
+          "scope": "proposal",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": [
+            "E-USER-042",
+            "E-USER-010",
+            "E-USER-011",
+            "E-USER-037",
+            "E-EXT-025",
+            "E-EXT-026",
+            "E-EXT-027",
+            "E-EXT-028",
+            "E-CODE-022"
+          ]
+        },
+        {
+          "id": "E-PROP-006",
+          "claim": "A verification-only successor release unit should preserve RU-003 product behavior and source exactly, use the corrected direct-module acceptance scenario under the mandatory read-only sandbox, retain the original failed run as historical evidence, and avoid replaying the dispatcher dependency check that compares intentionally superseded UI outputs to RU-002.",
+          "class": "proposed",
+          "locator": "inline:ru004-ru003-verification-correction",
+          "observedAt": "2026-08-30T17:25:40+08:00",
+          "scope": "proposal",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": [
+            "E-CODE-023",
+            "E-USER-042",
+            "E-PROP-005"
+          ]
+        },
+        {
+          "id": "E-PROP-008",
+          "claim": "A client-only public catalog reader and tool-access preview can use bounded anonymous GETs and project no credentials or account facts. Defensive response/time/concurrency bounds are implementation limits, not claimed production capacity or service SLA. Desktop bootstrap recognition is only a contract check, never authorization.",
+          "class": "inferred",
+          "locator": "conversation:2026-08-31:client-only public-catalog integration scope",
+          "observedAt": "2026-08-31T11:08:29+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": [
+            "E-USER-045",
+            "E-CODE-026",
+            "E-EXT-035"
+          ]
+        },
+        {
+          "id": "E-USER-010",
+          "claim": "The mainland-optimized and Cloudflare global-acceleration lines share the same account, API key, model availability, and pricing semantics; only the network path differs.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-29:shared-line-semantics",
+          "observedAt": "2026-08-29T15:05:00+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-011",
+          "claim": "The default model list shows models available to the current account and compatible with the selected tool; all models may be viewed with unavailable entries disabled and explained, and a removed model is never silently substituted.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-29:model-list-visibility-policy",
+          "observedAt": "2026-08-29T15:10:00+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-037",
+          "claim": "The product owner accepted the exact-version compatibility allowlist for V1: automatic configuration is enabled only for exact tool versions that passed the complete matrix, while unknown, newly released, failed, and otherwise unverified versions remain read-only until a trusted compatibility update adds them.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-30:accept-exact-version-allowlist",
+          "observedAt": "2026-08-30T15:02:27+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-042",
+          "claim": "The product owner authorized implementation to continue after RU-002 and accepted starting the next client-only one-click configuration foundation while preserving the decision not to modify NewAPI, servers, Nginx, DNS, databases, or production configuration in this phase.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-30:authorize-ru003-client-configuration-foundation",
+          "observedAt": "2026-08-30T17:04:56+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-045",
+          "claim": "The owner directs implementation in the desktop client and a concrete backend handoff for their technical colleague; do not modify server code or production configuration.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-31:不，你先改我们的工具接入，服务器端要改的你列出来，我回头让技术老哥改，我们不碰服务器的代码",
+          "observedAt": "2026-08-31T11:08:29+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-046",
+          "claim": "The owner agrees to candidate packaging and confirms installation of the requested Developer ID Application certificate after being told that signing and notarization preparation will follow.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-31:咱们是不是应该打包;好，Developer ID Application 证书怎么处理;好了",
+          "observedAt": "2026-08-31T07:54:59.695Z",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        }
+      ]
+    },
+    "conflictRegister": {
+      "schemaVersion": 1,
+      "conflicts": []
+    },
+    "decisionRegister": {
+      "schemaVersion": 1,
+      "decisions": [
+        {
+          "id": "DEC-046",
+          "question": "How should the accepted RU-003 implementation be verified after the original frozen acceptance runner proved incompatible with mandatory read-only isolation and redispatch rechecked superseded dependency outputs?",
+          "choice": "Create RU-004 as a verification-only successor to RU-003. Preserve the RU-003 product scope, source, contract, page, and blocked side-effect boundary without modification; execute the same six semantic scenarios using the corrected direct Node TypeScript module loader plus read-only source assertions; retain the original failed run as immutable historical evidence; and declare no work-package dependency because RU-004 changes no implementation and its release-unit dependency and supersession preserve the authority chain.",
+          "status": "accepted",
+          "decidedBy": "product architecture",
+          "decidedAt": "2026-08-30T17:25:40+08:00",
+          "evidenceRefs": [
+            "E-CODE-023",
+            "E-PROP-006",
+            "E-USER-042",
+            "E-PROP-005"
+          ],
+          "affects": {
+            "requirementRefs": [
+              "REQ-031"
+            ],
+            "pageRefs": [
+              "PAGE-CONFIGURE-PREVIEW"
+            ],
+            "domainRefs": [
+              "tool-config",
+              "desktop-platform",
+              "diagnostics"
+            ]
+          }
+        },
+        {
+          "id": "DEC-051",
+          "question": "How should the candidate packaging continue after discovering inherited URL registration and an unsuccessful first signing attempt?",
+          "choice": "Freeze RU-009 as a packaging-only successor to RU-008. Remove the inherited macOS URL registration at source, register no replacement protocol or login callback, and explicitly retain hardened runtime and disabled updater artifacts. Preserve all current runtime behavior and prior acceptance evidence. Rebuild from an identified clean source commit, verify the actual app and local DMG, and record signing, timestamp, architecture, contents, hashes, Gatekeeper and notarization separately. Only submit to Apple when user-configured local notarization credentials are available. No server, business credentials, application installation, runtime feature, public release or GitHub push changes.",
+          "status": "accepted",
+          "decidedBy": "product architecture within owner-authorized packaging continuation",
+          "decidedAt": "2026-08-31T08:34:00Z",
+          "evidenceRefs": [
+            "E-USER-046",
+            "E-CODE-029"
+          ],
+          "affects": {
+            "requirementRefs": [
+              "REQ-036"
+            ],
+            "domainRefs": [
+              "desktop-platform"
+            ],
+            "pageRefs": []
+          }
+        }
+      ]
+    },
+    "glossary": {
+      "schemaVersion": 1,
+      "terms": [
+        {
+          "id": "TERM-LINE",
+          "term": "线路",
+          "definition": "面向用户的 API 接入入口类别，例如大陆优化或全球线路；实际端点在高级信息中可见。",
+          "owner": "diagnostics",
+          "aliases": [
+            "接入线路"
+          ]
+        },
+        {
+          "id": "TERM-READY",
+          "term": "已经可以使用",
+          "definition": "本地配置写入、读取回验和工具所需协议的最小连通性测试均成功后的状态。",
+          "owner": "diagnostics",
+          "aliases": [
+            "配置成功"
+          ]
+        }
+      ]
+    },
+    "requirements": {
+      "schemaVersion": 1,
+      "requirements": [
+        {
+          "id": "REQ-031",
+          "statement": "RU-003 preserves RU-002 and adds a beginner-readable local configuration preview for Claude Code, Codex, OpenCode, Pi, and DSH across the mainland-optimized and global-accelerated lines without reading or changing any tool configuration, accessing a credential, contacting a server, or inventing a model ID.",
+          "scope": "target",
+          "impact": "critical",
+          "state": "confirmed",
+          "owner": "tool-config",
+          "evidenceRefs": [
+            "E-USER-042",
+            "E-USER-010",
+            "E-USER-011",
+            "E-USER-037",
+            "E-EXT-025",
+            "E-EXT-026",
+            "E-EXT-027",
+            "E-EXT-028",
+            "E-CODE-022",
+            "E-PROP-005"
+          ],
+          "acceptance": [
+            "The configuration destination presents exactly Claude Code, Codex, OpenCode, Pi, and DSH in stable order and lets the user choose exactly one tool for the current preview.",
+            "The line step presents exactly mainland optimized at https://yeschoy.com and global accelerated at https://api.yeschoy.com, and the selected line root remains visible in the summary.",
+            "Claude Code previews the approved root URL, Codex, OpenCode, and Pi preview the selected root with /v1, and DSH explicitly withholds a protocol endpoint and write target because its exact web-profile adapter is not verified.",
+            "The preview names only evidenced user-owned fields, exposes no literal secret or complete user path, and clearly states that it has not read an existing configuration.",
+            "Model ID remains visibly unavailable pending the first-party model catalog; the UI displays no sample model, guessed model, price, connectivity result, or supported-version claim.",
+            "The apply control remains disabled and the projection reports networkAttempted, configurationRead, configurationWritten, and credentialAccessed as false for every tool and line selection.",
+            "RU-001 local discovery and RU-002 account and billing readiness behavior remain available and unchanged, and no NewAPI, server, Nginx, DNS, database, updater, or production resource is modified."
+          ]
+        },
+        {
+          "id": "REQ-034",
+          "statement": "RU-007 supplies a real anonymous first-party model/group catalog and protocol-aware five-tool preview plus an implementable backend handoff while server, credential, account and configuration-write authority remain absent.",
+          "scope": "target",
+          "impact": "critical",
+          "state": "confirmed",
+          "owner": "tool-config",
+          "evidenceRefs": [
+            "E-USER-045",
+            "E-CODE-026",
+            "E-EXT-035",
+            "E-PROP-008"
+          ],
+          "acceptance": [
+            "Only explicit user action can request the three fixed GET paths on one compiled HTTPS origin; no custom URLs, redirects, auth headers, cookies, raw upstream errors, expressions or persisted metadata reach the renderer.",
+            "Public catalog facts are labelled non-user-specific; groups are independent of network lines; models retain real IDs and declared protocols while installation compatibility, group-specific stream restrictions and account authorization remain unverified.",
+            "Line changes, refreshes and unmounts invalidate prior requests and selections; malformed, partial and failed responses never fall back to sample models, default ratios or cached authentication.",
+            "Claude Code requires declared anthropic, Codex requires openai-response, OpenCode and Pi require openai for this preview profile; DSH continues to abstain. Missing declarations block the corresponding preview without claiming that a positive declaration proves real compatibility.",
+            "No balance or actual account price is fabricated. Server display exchange rate and fixed 6.75 official comparison FX are distinct. No numeric price projection or client expression execution is introduced.",
+            "Bootstrap absence, transport failure, unsupported contract and recognized contract are distinguishable; recognition cannot activate login or apply. The backend handoff includes schema, examples, actual deployed-source evidence, missing services and server-owned acceptance.",
+            "Existing candidate regression plus new contract, protocol, race/recovery, UI and handoff tests pass; current native suite compiles and runs without skipped tests."
+          ]
+        },
+        {
+          "id": "REQ-036",
+          "statement": "The local macOS candidate does not claim another application's URL protocol, and its release identity, hardened runtime, signature and notarization state are independently verifiable without enabling unfinished features.",
+          "scope": "target",
+          "impact": "high",
+          "state": "confirmed",
+          "owner": "desktop-platform",
+          "evidenceRefs": [
+            "E-USER-046",
+            "E-CODE-029"
+          ],
+          "acceptance": [
+            "The source macOS plist declares no URL handlers, document handlers or replacement callback scheme; no new deep-link runtime is added.",
+            "Candidate build configuration keeps hardened runtime enabled, updater artifacts disabled and private credentials absent.",
+            "The rebuilt actual app has the expected identity and architecture and no inherited URL handler; final signed artifact verification and honest notarization status are recorded separately from source tests."
+          ]
+        }
+      ]
+    },
+    "journeys": {
+      "schemaVersion": 1,
+      "actors": [],
+      "journeys": []
+    },
+    "domains": {
+      "schemaVersion": 1,
+      "domains": [
+        {
+          "id": "desktop-platform",
+          "owner": "product-architecture",
+          "trackScope": [
+            "desktop-platform"
+          ],
+          "invariants": [
+            "V1 observes but does not install, update, or uninstall third-party AI tools."
+          ]
+        },
+        {
+          "id": "diagnostics",
+          "owner": "product-architecture",
+          "trackScope": [
+            "diagnostics"
+          ],
+          "invariants": [
+            "A diagnostic conclusion names only causes supported by collected evidence."
+          ]
+        },
+        {
+          "id": "tool-config",
+          "owner": "product-architecture",
+          "trackScope": [
+            "tool-config"
+          ],
+          "invariants": [
+            "A configuration write cannot commit without an encrypted transaction-scoped rollback snapshot and external-change check; no successful transaction retains backup history."
+          ]
+        }
+      ]
+    },
+    "stateMachines": {
+      "schemaVersion": 1,
+      "machines": []
+    },
+    "contracts": {
+      "schemaVersion": 1,
+      "contracts": [
+        {
+          "id": "public-service-catalog@v1",
+          "kind": "query",
+          "owner": "tool-config",
+          "consumers": [
+            "desktop-platform"
+          ],
+          "schemaLocator": "inline://contracts.json#/contracts/public-service-catalog@v1",
+          "authorization": "Bundled local UI, explicit read action only. Three fixed anonymous HTTPS GET paths on the selected compiled first-party origin. No credential, browser session, admin, configuration, server-management, payment, updater or telemetry authority.",
+          "idempotency": "No retained state. A refresh has a new requestId; only the newest request for the current line can be consumed. No automatic retry or pricing_version-based cache.",
+          "compatibility": "Version 1 projects public model metadata only. Bootstrap contract recognition is deliberately separate from account and tool-write authorization. Existing local-only preview v1 remains pure and unchanged.",
+          "inputSchema": {
+            "type": "object",
+            "description": "Bounded explicit catalog read",
+            "properties": {
+              "requestId": {
+                "type": "string",
+                "description": "Caller correlation",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9_-]+$"
+              },
+              "lineId": {
+                "type": "string",
+                "description": "Compiled line identity",
+                "enum": [
+                  "mainland_optimized",
+                  "global_accelerated"
+                ]
+              }
+            },
+            "required": [
+              "requestId",
+              "lineId"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "description": "Sanitized public, point-in-time service catalog with no account authorization",
+            "properties": {
+              "requestId": {
+                "type": "string",
+                "description": "Correlation echoed unchanged",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "lineId": {
+                "type": "string",
+                "description": "Compiled line identity",
+                "enum": [
+                  "mainland_optimized",
+                  "global_accelerated"
+                ]
+              },
+              "observedAtEpochMs": {
+                "type": "integer",
+                "description": "Local completion time, not server freshness guarantee",
+                "minimum": 0
+              },
+              "catalogStatus": {
+                "type": "string",
+                "description": "Public catalog availability",
+                "enum": [
+                  "available",
+                  "unavailable"
+                ]
+              },
+              "catalogError": {
+                "type": "string",
+                "description": "Closed safe failure code",
+                "enum": [
+                  "none",
+                  "network_error",
+                  "timed_out",
+                  "http_error",
+                  "invalid_response",
+                  "response_too_large"
+                ]
+              },
+              "serviceVersion": {
+                "type": "string",
+                "description": "Public server version or empty when unavailable",
+                "maxLength": 100
+              },
+              "backendDisplayExchangeRate": {
+                "type": "string",
+                "description": "Backend display setting only, never the comparison FX",
+                "maxLength": 40
+              },
+              "groups": {
+                "type": "array",
+                "description": "Public visible groups; not account entitlements",
+                "items": {
+                  "type": "object",
+                  "description": "Public group metadata",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Exact group ID",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "Untrusted display-only description",
+                      "maxLength": 1000
+                    },
+                    "multiplier": {
+                      "type": "string",
+                      "description": "Observed positive group multiplier, not a final price",
+                      "maxLength": 40
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "description",
+                    "multiplier"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 0,
+                "maxItems": 128,
+                "uniqueItems": true
+              },
+              "models": {
+                "type": "array",
+                "description": "Public model metadata",
+                "items": {
+                  "type": "object",
+                  "description": "Public model",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Exact model ID",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "groups": {
+                      "type": "array",
+                      "description": "Known group memberships",
+                      "items": {
+                        "type": "string",
+                        "description": "Group ID",
+                        "minLength": 1,
+                        "maxLength": 128
+                      },
+                      "minItems": 0,
+                      "maxItems": 128,
+                      "uniqueItems": true
+                    },
+                    "endpoints": {
+                      "type": "array",
+                      "description": "Declared protocol IDs, not actual test results",
+                      "items": {
+                        "type": "string",
+                        "description": "Endpoint ID",
+                        "minLength": 1,
+                        "maxLength": 80
+                      },
+                      "minItems": 0,
+                      "maxItems": 32,
+                      "uniqueItems": true
+                    },
+                    "billingMode": {
+                      "type": "string",
+                      "description": "Billing category only, no evaluated price",
+                      "enum": [
+                        "ratio",
+                        "per_request",
+                        "tiered_expr",
+                        "unknown"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "groups",
+                    "endpoints",
+                    "billingMode"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 0,
+                "maxItems": 2048,
+                "uniqueItems": true
+              },
+              "desktopBackend": {
+                "type": "object",
+                "description": "Bootstrap schema observation only",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "description": "No status authorizes a session",
+                    "enum": [
+                      "not_deployed",
+                      "contract_recognized",
+                      "incompatible",
+                      "unavailable"
+                    ]
+                  },
+                  "error": {
+                    "type": "string",
+                    "description": "Closed transport or parsing outcome",
+                    "enum": [
+                      "none",
+                      "network_error",
+                      "timed_out",
+                      "http_error",
+                      "invalid_response",
+                      "response_too_large"
+                    ]
+                  },
+                  "declaredCapabilities": {
+                    "type": "array",
+                    "description": "Declared feature names; none is automatically activated",
+                    "items": {
+                      "type": "string",
+                      "description": "Known capability",
+                      "enum": [
+                        "device_authorization",
+                        "account_read",
+                        "usage_read",
+                        "models_read",
+                        "pricing_read",
+                        "tool_keys_manage"
+                      ]
+                    },
+                    "minItems": 0,
+                    "maxItems": 6,
+                    "uniqueItems": true
+                  }
+                },
+                "required": [
+                  "status",
+                  "error",
+                  "declaredCapabilities"
+                ],
+                "additionalProperties": false
+              },
+              "userSpecific": {
+                "type": "boolean",
+                "description": "This unit never authenticates",
+                "enum": [
+                  false
+                ]
+              },
+              "secretsAccessed": {
+                "type": "boolean",
+                "description": "This unit never reads a credential",
+                "enum": [
+                  false
+                ]
+              }
+            },
+            "required": [
+              "requestId",
+              "lineId",
+              "observedAtEpochMs",
+              "catalogStatus",
+              "catalogError",
+              "serviceVersion",
+              "backendDisplayExchangeRate",
+              "groups",
+              "models",
+              "desktopBackend",
+              "userSpecific",
+              "secretsAccessed"
+            ],
+            "additionalProperties": false
+          },
+          "dataClasses": [
+            "public",
+            "internal"
+          ],
+          "observability": {
+            "correlation": "Echo requestId and local observation time; never echo raw errors or URLs from a remote payload.",
+            "audit": "No persisted audit or upload in this client-only unit.",
+            "metrics": "No telemetry; outcome and observation time exist only in the current UI state."
+          },
+          "errorSemantics": [
+            "Reject invalid input before networking.",
+            "Only static HTTPS origins and fixed paths are permitted; redirects and arbitrary backend URLs are never followed.",
+            "Response bodies, item counts and execution time are defensively bounded; unknown metadata is discarded without widening permissions.",
+            "Malformed pricing clears groups/models; a valid empty catalog is not an error and is not replaced with samples.",
+            "No raw server message, billing expression, secret, personal information or price is returned to the renderer.",
+            "Recognized bootstrap cannot produce authenticated, compatible or applied state."
+          ],
+          "requirementRefs": [
+            "REQ-034"
+          ],
+          "evidenceRefs": [
+            "E-USER-045",
+            "E-CODE-026",
+            "E-EXT-035",
+            "E-PROP-008"
+          ],
+          "status": "specified"
+        }
+      ]
+    },
+    "pageMatrix": {
+      "schemaVersion": 1,
+      "stateProfiles": [
+        {
+          "id": "PROFILE-PUBLIC-CATALOG-PREVIEW",
+          "states": {
+            "default": {
+              "behavior": "Show tool/line choices and an explicit read-catalog button; no request, model, authorization or price exists.",
+              "visibleTruth": "Public metadata is a point-in-time observation only; account-specific models, final prices, key readiness and apply remain unavailable.",
+              "prohibitedClaims": [
+                "No login, payment, valid key, exact tool compatibility, account-specific eligibility or successful configuration may be inferred."
+              ],
+              "allowedActions": [
+                "select_preview_tool",
+                "select_preview_line",
+                "read_public_service_catalog",
+                "select_public_group",
+                "select_public_model",
+                "refresh_public_catalog",
+                "switch_to_account",
+                "switch_to_local_tools"
+              ],
+              "freshness": "No retained cache or invented TTL; show local observation time. Clear selection on refresh and origin changes and reject older completions.",
+              "recovery": "Retry explicitly; all sensitive actions remain disabled and no rollback is necessary.",
+              "correlation": "Only the newest requestId and selected line may populate the panel."
+            },
+            "loading": {
+              "behavior": "Clear prior catalog and selection, show request progress, disable duplicate refresh and accept only the newest request identity.",
+              "visibleTruth": "Public metadata is a point-in-time observation only; account-specific models, final prices, key readiness and apply remain unavailable.",
+              "prohibitedClaims": [
+                "No login, payment, valid key, exact tool compatibility, account-specific eligibility or successful configuration may be inferred."
+              ],
+              "allowedActions": [
+                "select_preview_tool",
+                "select_preview_line",
+                "read_public_service_catalog",
+                "select_public_group",
+                "select_public_model",
+                "refresh_public_catalog",
+                "switch_to_account",
+                "switch_to_local_tools"
+              ],
+              "freshness": "No retained cache or invented TTL; show local observation time. Clear selection on refresh and origin changes and reject older completions.",
+              "recovery": "Retry explicitly; all sensitive actions remain disabled and no rollback is necessary.",
+              "correlation": "Only the newest requestId and selected line may populate the panel."
+            },
+            "empty": {
+              "behavior": "A valid public response contains no selectable group or model; show an honest empty state and allow refresh.",
+              "visibleTruth": "Public metadata is a point-in-time observation only; account-specific models, final prices, key readiness and apply remain unavailable.",
+              "prohibitedClaims": [
+                "No login, payment, valid key, exact tool compatibility, account-specific eligibility or successful configuration may be inferred."
+              ],
+              "allowedActions": [
+                "select_preview_tool",
+                "select_preview_line",
+                "read_public_service_catalog",
+                "select_public_group",
+                "select_public_model",
+                "refresh_public_catalog",
+                "switch_to_account",
+                "switch_to_local_tools"
+              ],
+              "freshness": "No retained cache or invented TTL; show local observation time. Clear selection on refresh and origin changes and reject older completions.",
+              "recovery": "Retry explicitly; all sensitive actions remain disabled and no rollback is necessary.",
+              "correlation": "Only the newest requestId and selected line may populate the panel."
+            },
+            "partial": {
+              "behavior": "Display available public facts independently of bootstrap recognition; label public visibility, unknown account access and unverified tool/group compatibility.",
+              "visibleTruth": "Public metadata is a point-in-time observation only; account-specific models, final prices, key readiness and apply remain unavailable.",
+              "prohibitedClaims": [
+                "No login, payment, valid key, exact tool compatibility, account-specific eligibility or successful configuration may be inferred."
+              ],
+              "allowedActions": [
+                "select_preview_tool",
+                "select_preview_line",
+                "read_public_service_catalog",
+                "select_public_group",
+                "select_public_model",
+                "refresh_public_catalog",
+                "switch_to_account",
+                "switch_to_local_tools"
+              ],
+              "freshness": "No retained cache or invented TTL; show local observation time. Clear selection on refresh and origin changes and reject older completions.",
+              "recovery": "Retry explicitly; all sensitive actions remain disabled and no rollback is necessary.",
+              "correlation": "Only the newest requestId and selected line may populate the panel."
+            },
+            "error": {
+              "behavior": "Clear the failed public catalog and selection; show only a safe mapped error with retry, never a raw upstream message.",
+              "visibleTruth": "Public metadata is a point-in-time observation only; account-specific models, final prices, key readiness and apply remain unavailable.",
+              "prohibitedClaims": [
+                "No login, payment, valid key, exact tool compatibility, account-specific eligibility or successful configuration may be inferred."
+              ],
+              "allowedActions": [
+                "select_preview_tool",
+                "select_preview_line",
+                "read_public_service_catalog",
+                "select_public_group",
+                "select_public_model",
+                "refresh_public_catalog",
+                "switch_to_account",
+                "switch_to_local_tools"
+              ],
+              "freshness": "No retained cache or invented TTL; show local observation time. Clear selection on refresh and origin changes and reject older completions.",
+              "recovery": "Retry explicitly; all sensitive actions remain disabled and no rollback is necessary.",
+              "correlation": "Only the newest requestId and selected line may populate the panel."
+            },
+            "expired": {
+              "behavior": "Discard responses from old request IDs, a previous line, refreshed data or an unmounted panel; never restore old selections.",
+              "visibleTruth": "Public metadata is a point-in-time observation only; account-specific models, final prices, key readiness and apply remain unavailable.",
+              "prohibitedClaims": [
+                "No login, payment, valid key, exact tool compatibility, account-specific eligibility or successful configuration may be inferred."
+              ],
+              "allowedActions": [
+                "select_preview_tool",
+                "select_preview_line",
+                "read_public_service_catalog",
+                "select_public_group",
+                "select_public_model",
+                "refresh_public_catalog",
+                "switch_to_account",
+                "switch_to_local_tools"
+              ],
+              "freshness": "No retained cache or invented TTL; show local observation time. Clear selection on refresh and origin changes and reject older completions.",
+              "recovery": "Retry explicitly; all sensitive actions remain disabled and no rollback is necessary.",
+              "correlation": "Only the newest requestId and selected line may populate the panel."
+            },
+            "conflict": {
+              "behavior": "Explain missing protocol declarations, mismatched group membership or DSH abstention; do not generate a misleading compatible preview.",
+              "visibleTruth": "Public metadata is a point-in-time observation only; account-specific models, final prices, key readiness and apply remain unavailable.",
+              "prohibitedClaims": [
+                "No login, payment, valid key, exact tool compatibility, account-specific eligibility or successful configuration may be inferred."
+              ],
+              "allowedActions": [
+                "select_preview_tool",
+                "select_preview_line",
+                "read_public_service_catalog",
+                "select_public_group",
+                "select_public_model",
+                "refresh_public_catalog",
+                "switch_to_account",
+                "switch_to_local_tools"
+              ],
+              "freshness": "No retained cache or invented TTL; show local observation time. Clear selection on refresh and origin changes and reject older completions.",
+              "recovery": "Retry explicitly; all sensitive actions remain disabled and no rollback is necessary.",
+              "correlation": "Only the newest requestId and selected line may populate the panel."
+            },
+            "recovery": {
+              "behavior": "Retry the same bounded read with a new request identity; do not repair, mutate a server, read credentials or modify a tool.",
+              "visibleTruth": "Public metadata is a point-in-time observation only; account-specific models, final prices, key readiness and apply remain unavailable.",
+              "prohibitedClaims": [
+                "No login, payment, valid key, exact tool compatibility, account-specific eligibility or successful configuration may be inferred."
+              ],
+              "allowedActions": [
+                "select_preview_tool",
+                "select_preview_line",
+                "read_public_service_catalog",
+                "select_public_group",
+                "select_public_model",
+                "refresh_public_catalog",
+                "switch_to_account",
+                "switch_to_local_tools"
+              ],
+              "freshness": "No retained cache or invented TTL; show local observation time. Clear selection on refresh and origin changes and reject older completions.",
+              "recovery": "Retry explicitly; all sensitive actions remain disabled and no rollback is necessary.",
+              "correlation": "Only the newest requestId and selected line may populate the panel."
+            },
+            "processing": {
+              "behavior": "A current bounded HTTP read owns its request identity until completion; switching line invalidates it and leaves no saved state.",
+              "visibleTruth": "Public metadata is a point-in-time observation only; account-specific models, final prices, key readiness and apply remain unavailable.",
+              "prohibitedClaims": [
+                "No login, payment, valid key, exact tool compatibility, account-specific eligibility or successful configuration may be inferred."
+              ],
+              "allowedActions": [
+                "select_preview_tool",
+                "select_preview_line",
+                "read_public_service_catalog",
+                "select_public_group",
+                "select_public_model",
+                "refresh_public_catalog",
+                "switch_to_account",
+                "switch_to_local_tools"
+              ],
+              "freshness": "No retained cache or invented TTL; show local observation time. Clear selection on refresh and origin changes and reject older completions.",
+              "recovery": "Retry explicitly; all sensitive actions remain disabled and no rollback is necessary.",
+              "correlation": "Only the newest requestId and selected line may populate the panel."
+            }
+          }
+        }
+      ],
+      "pages": [
+        {
+          "id": "PAGE-CONFIGURE-PREVIEW",
+          "route": "/configure-preview",
+          "purpose": "Select a tool and line, optionally read the public service catalog, select a group and real model ID, and inspect an unverified access preview without a credential or configuration write.",
+          "trackScope": [
+            "tool-config",
+            "desktop-platform"
+          ],
+          "dataOwners": [
+            "tool-config",
+            "desktop-platform"
+          ],
+          "entryConditions": [],
+          "actions": [
+            "select_preview_tool",
+            "select_preview_line",
+            "reset_preview_selection",
+            "view_current_preview",
+            "switch_to_local_tools",
+            "switch_to_account",
+            "read_public_service_catalog",
+            "select_public_group",
+            "select_public_model",
+            "refresh_public_catalog"
+          ],
+          "exitRoutes": [
+            "/tools",
+            "/account"
+          ],
+          "permissions": [
+            "pure local deterministic preview projection only",
+            "public-service-catalog@v1 anonymous fixed-origin GET query after explicit user action"
+          ],
+          "stateProfileRef": "PROFILE-PUBLIC-CATALOG-PREVIEW",
+          "states": {}
+        }
+      ]
+    },
+    "trackCoverage": {
+      "schemaVersion": 1,
+      "capabilities": []
+    },
+    "dataLifecycle": {
+      "schemaVersion": 1,
+      "resources": []
+    },
+    "aiScenarios": {
+      "schemaVersion": 1,
+      "scenarios": []
+    },
+    "entitlements": {
+      "schemaVersion": 1,
+      "capabilities": []
+    },
+    "nonFunctionalRequirements": {
+      "schemaVersion": 1,
+      "requirements": []
+    },
+    "workPackages": {
+      "schemaVersion": 1,
+      "packages": [
+        {
+          "id": "WP-RU009-MACOS-BUNDLE-METADATA",
+          "wave": "release",
+          "owner": "desktop-platform",
+          "riskClass": "high",
+          "objective": "Correct inherited macOS bundle metadata and create a verified local signed candidate without changing runtime behavior or expanding distribution authority.",
+          "deliverables": [
+            "Source Info.plist declares no inherited or replacement URL scheme or document handler.",
+            "Candidate config explicitly enables hardened runtime and disables updater artifacts without embedding signing credentials.",
+            "Actual app and local DMG have separate metadata, signature, timestamp, content and hash checks with explicit notarization and platform limits."
+          ],
+          "requirementRefs": [
+            "REQ-036"
+          ],
+          "decisionRefs": [
+            "DEC-051"
+          ],
+          "blockingDecisionRefs": [],
+          "nonGoals": [
+            "No runtime feature, protocol callback, account, credential, configuration, payment, telemetry, updater, server, CI or public release changes."
+          ],
+          "dependsOn": [
+            "WP-RU008-VERIFIED-MACOS-CANDIDATE"
+          ],
+          "allowedPaths": [
+            "src-tauri/Info.plist",
+            "src-tauri/tauri.candidate.conf.json",
+            "tests/work_packages/ru009/**",
+            "outputs/野菜API-macOS-候选包构建记录.md",
+            "outputs/野菜API-桌面客户端-V1-候选版发布清单.md"
+          ],
+          "forbiddenPaths": [
+            ".product-governance/**",
+            "work/**",
+            ".github/**",
+            "src/**",
+            "src-tauri/src/**",
+            "src-tauri/Cargo.toml",
+            "src-tauri/Cargo.lock",
+            "src-tauri/tauri.conf.json",
+            "package.json",
+            "pnpm-lock.yaml",
+            "tests/work_packages/ru008/**"
+          ],
+          "migrationPolicy": {
+            "mode": "none",
+            "ownedPaths": [],
+            "dataBackfill": "No installation, Launch Services database edit or user data migration.",
+            "rollback": "Keep failed artifacts quarantined in the local build directory; do not restore the conflicting protocol registration or revoke certificates."
+          },
+          "compatibilityPolicy": {
+            "strategy": "Preserve all RU-008 runtime behavior; remove only unused inherited packaging registration.",
+            "supportedVersions": "Local Intel macOS candidate only; Apple Silicon and Windows remain unverified here.",
+            "removalGate": "No public distribution claim until platform and product release gates pass."
+          },
+          "inputContracts": [
+            "public-service-catalog@v1"
+          ],
+          "outputContracts": [],
+          "acceptanceCommands": [
+            {
+              "id": "ru009-plist",
+              "kind": "scenario_test",
+              "adapter": "pytest-json@1",
+              "selector": "tests/work_packages/ru009/test_acceptance.py::test_bundle_metadata_has_no_external_handlers",
+              "cwd": ".",
+              "timeoutSeconds": 300
+            },
+            {
+              "id": "ru009-config",
+              "kind": "scenario_test",
+              "adapter": "pytest-json@1",
+              "selector": "tests/work_packages/ru009/test_acceptance.py::test_candidate_identity_and_signing_boundaries",
+              "cwd": ".",
+              "timeoutSeconds": 300
+            }
+          ],
+          "requiredAcceptanceScenarios": [
+            {
+              "id": "RU009-AS-01",
+              "assertion": "Parsing the actual source plist yields no URL or document registration, including on repeated reads; no new deep-link runtime is enabled.",
+              "testSelector": "tests/work_packages/ru009/test_acceptance.py::test_bundle_metadata_has_no_external_handlers",
+              "acceptanceCommandId": "ru009-plist"
+            },
+            {
+              "id": "RU009-AS-02",
+              "assertion": "Actual base/candidate config preserves identity, explicitly retains hardened runtime, disables updater artifacts, and contains no signing/notary secrets or callback override.",
+              "testSelector": "tests/work_packages/ru009/test_acceptance.py::test_candidate_identity_and_signing_boundaries",
+              "acceptanceCommandId": "ru009-config"
+            }
+          ],
+          "verificationOnly": false,
+          "stopConditions": [
+            "A correction requires runtime, server, callback, credential or install changes.",
+            "Signing requires exposing secrets, disabling security checks or modifying the system clock.",
+            "Any formal acceptance, actual signature or artifact identity check fails; no claim of release readiness may follow."
+          ],
+          "status": "planned"
+        }
+      ]
+    }
+  }
+}

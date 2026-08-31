@@ -2,6 +2,16 @@
   "schemaVersion": 1,
   "decisions": [
     {
+      "id": "DEC-051",
+      "question": "How should the candidate packaging continue after discovering inherited URL registration and an unsuccessful first signing attempt?",
+      "choice": "Freeze RU-009 as a packaging-only successor to RU-008. Remove the inherited macOS URL registration at source, register no replacement protocol or login callback, and explicitly retain hardened runtime and disabled updater artifacts. Preserve all current runtime behavior and prior acceptance evidence. Rebuild from an identified clean source commit, verify the actual app and local DMG, and record signing, timestamp, architecture, contents, hashes, Gatekeeper and notarization separately. Only submit to Apple when user-configured local notarization credentials are available. No server, business credentials, application installation, runtime feature, public release or GitHub push changes.",
+      "status": "accepted",
+      "decidedBy": "product architecture within owner-authorized packaging continuation",
+      "decidedAt": "2026-08-31T08:34:00Z",
+      "evidenceRefs": ["E-USER-046", "E-CODE-029"],
+      "affects": {"requirementRefs": ["REQ-036"], "domainRefs": ["desktop-platform"], "pageRefs": []}
+    },
+    {
       "id": "DEC-050",
       "question": "How may the client reach a reproducible local signed candidate while preserving pnpm and failed governance history?",
       "choice": "Supersede RU-007 with RU-008 without changing product behavior. Replace the npm-only Vitest governance adapter with registered pytest-json@1 scenarios that execute real TypeScript contract/access modules and React components through an in-memory loader under mandatory read-only source isolation. Preserve the independent pnpm candidate tests and native suite, the old failed report, and all no-account/no-key/no-config-write boundaries. After tests pass, allow a macOS local candidate build signed by the installed Developer ID identity, with hardened runtime, no private-key export, no updater artifacts and no public distribution. Notarization is a separate Apple submission requiring user-configured local credentials and successful ticket verification. No NewAPI, server, CI, dependency-manager, global skill or product-feature changes.",
