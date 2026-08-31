@@ -122,6 +122,9 @@ def test_current_candidate_and_native_matrix():
     for job in ci["jobs"].values():
         node = next(s for s in steps(job) if s.get("uses", "").startswith("actions/setup-node@"))
         assert node["with"]["node-version"] == "22"
+        pnpm = next(s for s in steps(job) if s.get("uses", "").startswith("pnpm/action-setup@"))
+        assert pnpm["uses"] == "pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86"
+        assert "version" not in pnpm.get("with", {})  # Keep packageManager authoritative.
 
 
 def test_workflows_have_no_release_or_secret_authority():

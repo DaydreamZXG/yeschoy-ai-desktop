@@ -15,6 +15,8 @@
 
 Node 使用 22，pnpm 由 package.json 的 packageManager 固定，Rust 与 rust-toolchain.toml 的 1.95 对齐。Actions 固定到已核对的 commit SHA。Rust 缓存按操作系统、架构、工具链文件和 Cargo.lock 隔离，不复用宽泛的上游缓存键。
 
+pnpm 安装 Action 使用 [v6.0.10](https://github.com/pnpm/action-setup/releases/tag/v6.0.10) 的 Node 24 Action 运行时，避免旧版 Action 的 Node 20 弃用警告；这不升级项目的 Node 22 或 pnpm 10.12.3。
+
 ## 原失败与修复
 
 旧运行 [33335919230](https://github.com/DaydreamZXG/yeschoy-ai-desktop/actions/runs/33335919230) 首轮 Windows 编译成功，随后把 TEMP/TMP 改成 WSL UNC 路径，再调用 cargo test 导致重新链接。Windows 的 link.exe / mt.exe 因临时 manifest 路径报 c1010070 / LNK1327，业务测试尚未开始。
