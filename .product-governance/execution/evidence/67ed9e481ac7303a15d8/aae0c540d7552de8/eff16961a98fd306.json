@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU006-AS-02",
+  "assertion": "The frontend uses the current candidate commands and all three native platform jobs run lint and nonempty current library tests.",
+  "testSelector": "tests/work_packages/ru006/test_acceptance.py::test_current_candidate_and_native_matrix",
+  "acceptanceCommandId": "ru006-as-02-platforms",
+  "runId": "RU-006/WP-RU006-CANDIDATE-CI@2026-08-31T02:24:10.562497+00:00",
+  "packageId": "WP-RU006-CANDIDATE-CI",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru006/test_acceptance.py::test_current_candidate_and_native_matrix",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:b73d84dd6cf3faa32c03c167ecbf545d8ddc912b566b49d3309aa7af4c57f500",
+    "machineReportSha256": "sha256:5365ab76517d5029048fbf922687d6e6764c2fd99553b7828995fa16605adaae",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:2b5afc337c35aec1489a675edcde9f61809a69242f57bf29e26567de8fe897b0",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:e24cc86ed60691319772c30601577fa9641b046f21dbed8ca5c85b2b6dfcf8b4",
+  "releaseUnitId": "RU-006",
+  "releaseUnitHash": "sha256:54b5ed786d356e74fb0ad3e5419840ae4e07c6857fe378296184b831cbab8fbc"
+}

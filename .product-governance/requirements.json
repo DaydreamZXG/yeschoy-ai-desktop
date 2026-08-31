@@ -2,6 +2,28 @@
   "schemaVersion": 1,
   "requirements": [
     {
+      "id": "REQ-033",
+      "statement": "The current candidate branch and nightly schedule execute the same bounded read-only-source CI checks with explicit Windows x64 and macOS Intel/Apple Silicon native results, rejecting empty/stale/skipped test suites without pretending to validate legacy WSL configuration writes or public release.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-044",
+        "E-CODE-025",
+        "E-EXT-033",
+        "E-EXT-034"
+      ],
+      "acceptance": [
+        "Push and PR to main and product/** trigger candidate checks without path filters silently omitting current changes; manual runs and nightly reuse run the same workflow definition.",
+        "Frontend checks execute the existing test:candidate script and RU-005 acceptance, not superseded upstream or historical acceptance suites; package installation is frozen-lockfile.",
+        "Windows x64, macOS Intel and Apple Silicon run Rust formatting, Clippy and current library tests using native temporary directories and current crate identity; no WSL path or old atomic-write selector remains.",
+        "A test runner fails for compile errors, missing or ambiguous test artifacts, stale identity, zero tests, missing required candidate cases, test failures, ignored/filtered cases and timeouts.",
+        "Workflows use read-only contents permissions, pinned action SHAs, no persisted checkout credentials, no inherited secrets, no release/deployment commands and isolated native caches.",
+        "Local semantic tests do not substitute for actual hosted results; the CI guide identifies the old incident, current scopes, native test proof, nightly recovery and release/WSL limitations."
+      ]
+    },
+    {
       "id": "REQ-001",
       "statement": "The client presents itself as the official 野菜API desktop client and guides a novice without requiring knowledge of API keys, base URLs, or configuration-file syntax.",
       "scope": "target",

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU006-AS-05",
+  "assertion": "Missing, old, duplicate, or zero-test artifacts fail closed before a success can be claimed.",
+  "testSelector": "tests/work_packages/ru006/test_acceptance.py::test_runner_rejects_stale_empty_or_ambiguous_artifacts",
+  "acceptanceCommandId": "ru006-as-05-stale",
+  "runId": "RU-006/WP-RU006-CANDIDATE-CI@2026-08-31T02:24:10.562497+00:00",
+  "packageId": "WP-RU006-CANDIDATE-CI",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru006/test_acceptance.py::test_runner_rejects_stale_empty_or_ambiguous_artifacts",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:271b81c2e7c0f3ddd45ff58ab13220a515b9d5c7f3cb56f35f0f5c147b197da0",
+    "machineReportSha256": "sha256:a0ce43e9d72742a4fe4daf3001bedf73d1b09a3468ffee3ebdb0560244d0409e",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:27d62b216b2ea2ff855eaf7c24e46baf62b888d88fb93f9a8e89a2e7b30ae00f",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:f34dfba23da0a20be27b57c691109cedc66c86703b6c21db53df4f407bb5f8e2",
+  "releaseUnitId": "RU-006",
+  "releaseUnitHash": "sha256:54b5ed786d356e74fb0ad3e5419840ae4e07c6857fe378296184b831cbab8fbc"
+}

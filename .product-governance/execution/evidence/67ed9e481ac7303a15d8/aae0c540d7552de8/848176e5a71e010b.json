@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU006-AS-06",
+  "assertion": "Compile, execution, ignored/filtered test counts, incomplete summaries, missing baseline cases and timeout failures cannot produce a green result.",
+  "testSelector": "tests/work_packages/ru006/test_acceptance.py::test_runner_rejects_compile_test_skip_and_timeout_failures",
+  "acceptanceCommandId": "ru006-as-06-failure",
+  "runId": "RU-006/WP-RU006-CANDIDATE-CI@2026-08-31T02:24:10.562497+00:00",
+  "packageId": "WP-RU006-CANDIDATE-CI",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru006/test_acceptance.py::test_runner_rejects_compile_test_skip_and_timeout_failures",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:be633e274ef8ba50429e06905c7448a036e6b2602a0da141ec958beb0f4114d3",
+    "machineReportSha256": "sha256:3f02f75a2352d670d70d30f7c11ebfbe897cc02aaadf6fecc594954851ab8562",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:d86f1d4bb1654464ea93ddef61adf9c458a6ef952b35f0a9c5a7dd3fbfafc174",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:57efda364c0a692c710fc8def54e7d03de1ab8dc3a9b1b68fb9b6cfa9da75870",
+  "releaseUnitId": "RU-006",
+  "releaseUnitHash": "sha256:54b5ed786d356e74fb0ad3e5419840ae4e07c6857fe378296184b831cbab8fbc"
+}

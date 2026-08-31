@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU006-AS-03",
+  "assertion": "Only read-only contents, pinned actions and non-persisted checkout credentials exist; no WSL overrides, publish commands or masked failures.",
+  "testSelector": "tests/work_packages/ru006/test_acceptance.py::test_workflows_have_no_release_or_secret_authority",
+  "acceptanceCommandId": "ru006-as-03-authority",
+  "runId": "RU-006/WP-RU006-CANDIDATE-CI@2026-08-31T02:24:10.562497+00:00",
+  "packageId": "WP-RU006-CANDIDATE-CI",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru006/test_acceptance.py::test_workflows_have_no_release_or_secret_authority",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:1c7796f0ec511be2b533968f2e8d814f3ecdd1f0d3d4e14eea8143d965f5418d",
+    "machineReportSha256": "sha256:017cd11e1300ec8162282a98dc5e76d978e2898e8ea63e2352964f08a37a7f27",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:c7b8627c4c43216ccf38eceaf971a6302f115fbfafd138e5d849a3d9c59492ba",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:ae9596feba235460847794ce97e1652ad2d7bac8592bb08517c704b942e54824",
+  "releaseUnitId": "RU-006",
+  "releaseUnitHash": "sha256:54b5ed786d356e74fb0ad3e5419840ae4e07c6857fe378296184b831cbab8fbc"
+}

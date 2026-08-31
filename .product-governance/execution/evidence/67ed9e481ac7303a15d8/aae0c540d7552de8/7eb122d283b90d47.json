@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU006-AS-04",
+  "assertion": "The native runner uses cargo machine artifacts for yeschoy_desktop_lib and verifies a complete successful run.",
+  "testSelector": "tests/work_packages/ru006/test_acceptance.py::test_runner_selects_current_artifact_and_runs_all_cases",
+  "acceptanceCommandId": "ru006-as-04-success",
+  "runId": "RU-006/WP-RU006-CANDIDATE-CI@2026-08-31T02:24:10.562497+00:00",
+  "packageId": "WP-RU006-CANDIDATE-CI",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru006/test_acceptance.py::test_runner_selects_current_artifact_and_runs_all_cases",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:c742e65c934924fb7270090fd36490b8952675c52bdcda7b92f9dca4d4e9b637",
+    "machineReportSha256": "sha256:2c1de1ca9d6036d2d1561f998db230db0f94fc759bc8e746d78ae478ca0f2ae4",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:e27b4416a771a8ac2bf3bf92efca42ae1c06e3c75bf22750d737360def7000e3",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:20d820214fbcbce986eec8c6150636c1ed1ee62298c3b2b439365f3f608206d2",
+  "releaseUnitId": "RU-006",
+  "releaseUnitHash": "sha256:54b5ed786d356e74fb0ad3e5419840ae4e07c6857fe378296184b831cbab8fbc"
+}

@@ -2,6 +2,181 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "WP-RU006-CANDIDATE-CI",
+      "wave": "integration",
+      "owner": "desktop-client",
+      "riskClass": "medium",
+      "objective": "The current candidate branch and nightly schedule execute the same bounded read-only-source CI checks with explicit Windows x64 and macOS Intel/Apple Silicon native results, rejecting empty/stale/skipped test suites without pretending to validate legacy WSL configuration writes or public release.",
+      "deliverables": [
+        "Push and PR to main and product/** trigger candidate checks without path filters silently omitting current changes; manual runs and nightly reuse run the same workflow definition.",
+        "Frontend checks execute the existing test:candidate script and RU-005 acceptance, not superseded upstream or historical acceptance suites; package installation is frozen-lockfile.",
+        "Windows x64, macOS Intel and Apple Silicon run Rust formatting, Clippy and current library tests using native temporary directories and current crate identity; no WSL path or old atomic-write selector remains.",
+        "A test runner fails for compile errors, missing or ambiguous test artifacts, stale identity, zero tests, missing required candidate cases, test failures, ignored/filtered cases and timeouts.",
+        "Workflows use read-only contents permissions, pinned action SHAs, no persisted checkout credentials, no inherited secrets, no release/deployment commands and isolated native caches.",
+        "Local semantic tests do not substitute for actual hosted results; the CI guide identifies the old incident, current scopes, native test proof, nightly recovery and release/WSL limitations."
+      ],
+      "requirementRefs": [
+        "REQ-033"
+      ],
+      "decisionRefs": [
+        "DEC-048"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No product runtime, UI, tool configuration, credential, NewAPI, server, deployment, release, signing or updater changes.",
+        "No restored upstream config module or claim of WSL write compatibility; no skipped-failure green CI.",
+        "No alteration of inherited release or repository-management workflows beyond the two CI entrypoints."
+      ],
+      "dependsOn": [
+        "WP-RU005-CLIENT-V1-CANDIDATE"
+      ],
+      "allowedPaths": [
+        ".github/workflows/ci.yml",
+        ".github/workflows/wsl2-nightly.yml",
+        "scripts/ci/**",
+        "tests/work_packages/ru006/**",
+        "outputs/野菜API-CI验证说明.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "src/**",
+        "src-tauri/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "work/**",
+        ".github/workflows/release.yml",
+        ".github/workflows/sync-r2.yml",
+        ".github/workflows/stale.yml",
+        ".github/workflows/claude.yml",
+        ".github/workflows/labeler.yml"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "Only repository CI definitions and validation helpers change; no user or server data is touched.",
+        "rollback": "Revert the two CI definitions and owned CI helpers through Git; preserve run history and do not change secrets or production."
+      },
+      "compatibilityPolicy": {
+        "strategy": "CI consumes the unchanged RU-005 source and tests; scheduled and push workflows share one definition and current library identity.",
+        "supportedVersions": "Current candidate commit on windows-2025 x64, macos-15-intel x64 and macos-15 arm64 runners; no installer or WSL write compatibility claim.",
+        "removalGate": "Runtime, credentials, WSL configuration writes, signing, deployments or release authorization require a separate accepted frozen unit."
+      },
+      "inputContracts": [
+        "tool-discovery-scan@v1",
+        "line-connectivity-check@v1"
+      ],
+      "outputContracts": [],
+      "acceptanceCommands": [
+        {
+          "id": "ru006-as-01-triggers",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru006/test_acceptance.py::test_triggers_and_nightly_reuse",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru006-as-02-platforms",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru006/test_acceptance.py::test_current_candidate_and_native_matrix",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru006-as-03-authority",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru006/test_acceptance.py::test_workflows_have_no_release_or_secret_authority",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru006-as-04-success",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru006/test_acceptance.py::test_runner_selects_current_artifact_and_runs_all_cases",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru006-as-05-stale",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru006/test_acceptance.py::test_runner_rejects_stale_empty_or_ambiguous_artifacts",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru006-as-06-failure",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru006/test_acceptance.py::test_runner_rejects_compile_test_skip_and_timeout_failures",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru006-as-07-recovery",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru006/test_acceptance.py::test_ci_guide_preserves_scope_and_recovery",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU006-AS-01",
+          "assertion": "Main and product branches, manual invocation, and the preserved nightly schedule all bind to the same current CI.",
+          "testSelector": "tests/work_packages/ru006/test_acceptance.py::test_triggers_and_nightly_reuse",
+          "acceptanceCommandId": "ru006-as-01-triggers"
+        },
+        {
+          "id": "RU006-AS-02",
+          "assertion": "The frontend uses the current candidate commands and all three native platform jobs run lint and nonempty current library tests.",
+          "testSelector": "tests/work_packages/ru006/test_acceptance.py::test_current_candidate_and_native_matrix",
+          "acceptanceCommandId": "ru006-as-02-platforms"
+        },
+        {
+          "id": "RU006-AS-03",
+          "assertion": "Only read-only contents, pinned actions and non-persisted checkout credentials exist; no WSL overrides, publish commands or masked failures.",
+          "testSelector": "tests/work_packages/ru006/test_acceptance.py::test_workflows_have_no_release_or_secret_authority",
+          "acceptanceCommandId": "ru006-as-03-authority"
+        },
+        {
+          "id": "RU006-AS-04",
+          "assertion": "The native runner uses cargo machine artifacts for yeschoy_desktop_lib and verifies a complete successful run.",
+          "testSelector": "tests/work_packages/ru006/test_acceptance.py::test_runner_selects_current_artifact_and_runs_all_cases",
+          "acceptanceCommandId": "ru006-as-04-success"
+        },
+        {
+          "id": "RU006-AS-05",
+          "assertion": "Missing, old, duplicate, or zero-test artifacts fail closed before a success can be claimed.",
+          "testSelector": "tests/work_packages/ru006/test_acceptance.py::test_runner_rejects_stale_empty_or_ambiguous_artifacts",
+          "acceptanceCommandId": "ru006-as-05-stale"
+        },
+        {
+          "id": "RU006-AS-06",
+          "assertion": "Compile, execution, ignored/filtered test counts, incomplete summaries, missing baseline cases and timeout failures cannot produce a green result.",
+          "testSelector": "tests/work_packages/ru006/test_acceptance.py::test_runner_rejects_compile_test_skip_and_timeout_failures",
+          "acceptanceCommandId": "ru006-as-06-failure"
+        },
+        {
+          "id": "RU006-AS-07",
+          "assertion": "The CI guide explains clean reruns and concurrency cancellation without claiming WSL write or release readiness.",
+          "testSelector": "tests/work_packages/ru006/test_acceptance.py::test_ci_guide_preserves_scope_and_recovery",
+          "acceptanceCommandId": "ru006-as-07-recovery"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Any source modification is needed outside the CI-only owned paths.",
+        "GitHub operation would require publishing, external credentials, a permissions change or modifying NewAPI/production.",
+        "Current native test failures require changes to frozen product behavior; report evidence and create a successor authority instead of masking them."
+      ],
+      "status": "planned"
+    },
+    {
       "id": "WP-RU001-DESKTOP-DISCOVERY",
       "wave": "producer",
       "owner": "desktop-client",

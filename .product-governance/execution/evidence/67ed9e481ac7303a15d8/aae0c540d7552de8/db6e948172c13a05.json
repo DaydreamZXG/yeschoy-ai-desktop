@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU006-AS-07",
+  "assertion": "The CI guide explains clean reruns and concurrency cancellation without claiming WSL write or release readiness.",
+  "testSelector": "tests/work_packages/ru006/test_acceptance.py::test_ci_guide_preserves_scope_and_recovery",
+  "acceptanceCommandId": "ru006-as-07-recovery",
+  "runId": "RU-006/WP-RU006-CANDIDATE-CI@2026-08-31T02:24:10.562497+00:00",
+  "packageId": "WP-RU006-CANDIDATE-CI",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru006/test_acceptance.py::test_ci_guide_preserves_scope_and_recovery",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:7cc5e8a58480f1b87590cac9ff412a06f580a390b31188abb09c6bac78c438c4",
+    "machineReportSha256": "sha256:6100428eceb0c95438d6f79f7aae362f8592e6d349aefe04ab42442fc07603d5",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:25298ec9848ca30eb76e95a7eebf07e4e7eccf3ecf4a357e9c324e8bfe9bc3dc",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:edb9c7c3c828be132a0cf9ed9822d80655d5c3453bb338b1ac6e846d76ecbf95",
+  "releaseUnitId": "RU-006",
+  "releaseUnitHash": "sha256:54b5ed786d356e74fb0ad3e5419840ae4e07c6857fe378296184b831cbab8fbc"
+}

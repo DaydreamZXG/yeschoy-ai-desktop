@@ -2,6 +2,29 @@
   "schemaVersion": 1,
   "decisions": [
     {
+      "id": "DEC-048",
+      "question": "How should inherited upstream CI be adapted without expanding candidate runtime or release authority?",
+      "choice": "Freeze RU-006 as a CI-only unit depending on the completed RU-005 candidate. Replace main-only upstream checks with current candidate checks on main and product/** push and PR plus manual invocation; retain nightly scheduling by reusing the same workflow at the same commit. Run frontend type checking, current candidate tests and acceptance, Rust formatting/Clippy, and nonempty native test execution on Windows x64 and both macOS architectures. Keep native temp directories; fail for missing/current test identities, empty/ignored/filtered suites, compile and test failures. Do not compile the inactive CC Switch config module merely to preserve an irrelevant WSL write test. Explicitly state that this unit does not validate WSL configuration writes, signing, installers, runtime GUI, or production. No release, deployment, secret, repository-permission, NewAPI or product behavior change.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-31T10:23:32+08:00",
+      "evidenceRefs": [
+        "E-USER-044",
+        "E-CODE-025",
+        "E-EXT-033",
+        "E-EXT-034"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-033"
+        ],
+        "domainRefs": [
+          "desktop-platform"
+        ],
+        "pageRefs": []
+      }
+    },
+    {
       "id": "DEC-001",
       "question": "What is the official product display name?",
       "choice": "野菜API",

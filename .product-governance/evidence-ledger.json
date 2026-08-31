@@ -2,6 +2,50 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "E-USER-044",
+      "claim": "After diagnosing the inherited WSL2 Nightly failure, the product owner authorized adapting the client CI, pushing the correction, and verifying Windows and macOS results without modifying NewAPI or publishing installers.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-08-31:好，你先适配好",
+      "observedAt": "2026-08-31T10:23:32+08:00",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-025",
+      "claim": "Run 33335919230 at commit 548d897 compiled Windows tests with native temp, then failed with c1010070 and LNK1327 when cargo re-linked under a WSL UNC TEMP. The inherited workflows also name an unregistered config atomic-write test and cc_switch_lib, while ci.yml only triggers main and the active crate is yeschoy_desktop_lib with six pure tests.",
+      "class": "code_observed",
+      "locator": "https://github.com/DaydreamZXG/yeschoy-ai-desktop/actions/runs/33335919230",
+      "observedAt": "2026-08-31T10:23:32+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-033",
+      "claim": "GitHub currently provides windows-2025 x64, macos-15-intel Intel, and macos-15 arm64 hosted runners for private repositories; hosted runs consume the account's Actions allowance.",
+      "class": "external_verified",
+      "locator": "https://docs.github.com/en/actions/reference/runners/github-hosted-runners",
+      "observedAt": "2026-08-31T10:23:32+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-034",
+      "claim": "GitHub workflows with workflow_call can be called by another workflow through a local ./.github/workflows/file.yml reference at the caller's commit without inheriting secrets.",
+      "class": "external_verified",
+      "locator": "https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows",
+      "observedAt": "2026-08-31T10:23:32+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
       "id": "E-USER-001",
       "claim": "野菜API is an official desktop client whose first priority includes account access, balance, recharge, and usage visibility.",
       "class": "user_confirmed",
