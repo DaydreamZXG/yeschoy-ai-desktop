@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU010-AS-06",
+  "assertion": "Real React component rejects obsolete responses after line change or unmount, clears on refresh, and preserves both preview panes when the same line is clicked again.",
+  "testSelector": "tests/work_packages/ru008/test_acceptance.py::test_ui_selection_races_and_preview_consistency",
+  "acceptanceCommandId": "ru010-race",
+  "runId": "RU-010/WP-RU010-CANDIDATE-RECEIPT@2026-08-31T08:51:07.659501+00:00",
+  "packageId": "WP-RU010-CANDIDATE-RECEIPT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru008/test_acceptance.py::test_ui_selection_races_and_preview_consistency",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:aa28f52e7fe51038f97b98fc68e69529fcd91b5e85ae1031481d2fa380b2bfa3",
+    "machineReportSha256": "sha256:60d7f3da6b7da525c610272ad238f363039ae5aa011244b19d97304ef540ea80",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:cd1bd49506a6f6e0d680b2ed11aef36a0a97af48247fafb292089055a112512d",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:f6cbf3ef428cb75de247e41f5a8c85726fd068815e9210635808c5874d208aca",
+  "releaseUnitId": "RU-010",
+  "releaseUnitHash": "sha256:e0facd0d5a997113b323cf5a99b5712d6d7da5eccf41a75718ce3536b8ba6134"
+}

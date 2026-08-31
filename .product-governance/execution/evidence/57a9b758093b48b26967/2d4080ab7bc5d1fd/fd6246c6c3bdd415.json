@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU010-AS-05",
+  "assertion": "Real React component reads only on user action, rejects raw errors and malformed results, handles empty/retry states and renders metadata as text.",
+  "testSelector": "tests/work_packages/ru008/test_acceptance.py::test_ui_read_recovery_and_untrusted_text",
+  "acceptanceCommandId": "ru010-recovery",
+  "runId": "RU-010/WP-RU010-CANDIDATE-RECEIPT@2026-08-31T08:51:07.659501+00:00",
+  "packageId": "WP-RU010-CANDIDATE-RECEIPT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru008/test_acceptance.py::test_ui_read_recovery_and_untrusted_text",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:a2460840f9c8084be7d814d835f45a5358272b1f485435ca148684f28ba2aeb1",
+    "machineReportSha256": "sha256:b3946dfe5f76f3476455a1cc935094ca1673682cd623057a64dc7bd22d10d91b",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:3688bbd9fd6a7765e794442c1a522f0b4ed5317fc6548ecc50ab740bec8e5224",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:840bcae16fc68982c47f58500419b5ec8a82d67872077c31ff4d4aa622a2d434",
+  "releaseUnitId": "RU-010",
+  "releaseUnitHash": "sha256:e0facd0d5a997113b323cf5a99b5712d6d7da5eccf41a75718ce3536b8ba6134"
+}

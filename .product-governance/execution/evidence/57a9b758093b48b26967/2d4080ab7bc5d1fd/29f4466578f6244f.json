@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU010-AS-02",
+  "assertion": "Actual base/candidate config preserves identity, explicitly retains hardened runtime, disables updater artifacts, and contains no signing/notary secrets or callback override.",
+  "testSelector": "tests/work_packages/ru009/test_acceptance.py::test_candidate_identity_and_signing_boundaries",
+  "acceptanceCommandId": "ru010-config",
+  "runId": "RU-010/WP-RU010-CANDIDATE-RECEIPT@2026-08-31T08:51:07.659501+00:00",
+  "packageId": "WP-RU010-CANDIDATE-RECEIPT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru009/test_acceptance.py::test_candidate_identity_and_signing_boundaries",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:d0702bd1a4d30ae48f82a1d9dc0b95252dd8eaa1164c1c6cb1a80a728bba4622",
+    "machineReportSha256": "sha256:ee8b4f04e0b2f6e748ad4da78b9e38d14ca000970d4cad6c1c9c73fb0badd428",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:1730bc859ed0c27d498a2846f7529c0ed56827c358a114d7361e2e5873ac89c9",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:fdbdc6c835bba2e93711e7169bcc6ea54ca4f54865baf83e5d7141e39515b204",
+  "releaseUnitId": "RU-010",
+  "releaseUnitHash": "sha256:e0facd0d5a997113b323cf5a99b5712d6d7da5eccf41a75718ce3536b8ba6134"
+}

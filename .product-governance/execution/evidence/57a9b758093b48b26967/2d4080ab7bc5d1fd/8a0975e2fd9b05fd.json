@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU010-AS-01",
+  "assertion": "Parsing the actual source plist yields no URL or document registration, including on repeated reads; no new deep-link runtime is enabled.",
+  "testSelector": "tests/work_packages/ru009/test_acceptance.py::test_bundle_metadata_has_no_external_handlers",
+  "acceptanceCommandId": "ru010-plist",
+  "runId": "RU-010/WP-RU010-CANDIDATE-RECEIPT@2026-08-31T08:51:07.659501+00:00",
+  "packageId": "WP-RU010-CANDIDATE-RECEIPT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru009/test_acceptance.py::test_bundle_metadata_has_no_external_handlers",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:f3713196668476bd5128afb569c092e7c0564209c5efa8e705432873a0417a30",
+    "machineReportSha256": "sha256:0e710e070e7bb448fb6c6f46d9cd8ecb4787bf366cec60a6327b3164495baffa",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:14108605b8028ea2d3f2521fdfba613d97bb35eb46b8c459518ef7972b638b9a",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:4e1d0985517596b1c7b6190a02b24d2bef3151aab0208fb18bb188da3d2a6742",
+  "releaseUnitId": "RU-010",
+  "releaseUnitHash": "sha256:e0facd0d5a997113b323cf5a99b5712d6d7da5eccf41a75718ce3536b8ba6134"
+}

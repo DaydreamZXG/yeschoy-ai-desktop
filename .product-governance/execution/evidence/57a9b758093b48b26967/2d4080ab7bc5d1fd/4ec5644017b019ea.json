@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU010-AS-04",
+  "assertion": "Actual per-tool access plans preserve model/group membership, endpoint rules, DSH abstention and disabled application.",
+  "testSelector": "tests/work_packages/ru008/test_acceptance.py::test_tool_access_runtime_protocol_matrix",
+  "acceptanceCommandId": "ru010-access",
+  "runId": "RU-010/WP-RU010-CANDIDATE-RECEIPT@2026-08-31T08:51:07.659501+00:00",
+  "packageId": "WP-RU010-CANDIDATE-RECEIPT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru008/test_acceptance.py::test_tool_access_runtime_protocol_matrix",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:c196e0508ee0f9eb9cee01b80939f57f46b271177cb213e78800cae6b06fc2bf",
+    "machineReportSha256": "sha256:4ce367e7e6c60264eb6461f6b7b792eed60505b3e186fbe2e3fb3bdd043091e8",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:109b79e3a7ff529f68a7ca1ad050fb146f791f10cee9fe7a7bfa6af8af535b3d",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:eb6deee28725f886251ef9f7a42479b0af4d9aaee4bcd1c9da1ded455c235da8",
+  "releaseUnitId": "RU-010",
+  "releaseUnitHash": "sha256:e0facd0d5a997113b323cf5a99b5712d6d7da5eccf41a75718ce3536b8ba6134"
+}

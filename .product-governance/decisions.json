@@ -2,6 +2,27 @@
   "schemaVersion": 1,
   "decisions": [
     {
+      "id": "DEC-052",
+      "question": "How should receipt completion consume evidence after the successor legitimately replaces files owned by its historical predecessor?",
+      "choice": "Supersede RU-009 with RU-010 without changing product or packaging behavior. Keep the transitive frozen history and all prior reports. Replace the overlapping live predecessor-package prerequisite with a self-contained current-state run that executes all six RU-008 semantic scenarios and both RU-009 packaging checks under the same registered adapter and mandatory source isolation. Finish the signed-but-unnotarized local artifact receipt and explicit distribution limitations. Do not change global verifier code, skip tests, weaken signature checks, publish or modify servers.",
+      "status": "accepted",
+      "decidedBy": "product architecture within owner-authorized packaging continuation",
+      "decidedAt": "2026-08-31T08:49:52.692Z",
+      "evidenceRefs": [
+        "E-USER-046",
+        "E-CODE-030"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-036"
+        ],
+        "domainRefs": [
+          "desktop-platform"
+        ],
+        "pageRefs": []
+      }
+    },
+    {
       "id": "DEC-051",
       "question": "How should the candidate packaging continue after discovering inherited URL registration and an unsuccessful first signing attempt?",
       "choice": "Freeze RU-009 as a packaging-only successor to RU-008. Remove the inherited macOS URL registration at source, register no replacement protocol or login callback, and explicitly retain hardened runtime and disabled updater artifacts. Preserve all current runtime behavior and prior acceptance evidence. Rebuild from an identified clean source commit, verify the actual app and local DMG, and record signing, timestamp, architecture, contents, hashes, Gatekeeper and notarization separately. Only submit to Apple when user-configured local notarization credentials are available. No server, business credentials, application installation, runtime feature, public release or GitHub push changes.",

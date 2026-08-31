@@ -2,6 +2,17 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "E-CODE-030",
+      "claim": "The RU-009 follow-up dispatch fails because its explicit RU-008 package dependency validates current outputs, including the candidate config replaced by RU-009. RU-008 completed reports still exist, but their config hash differs from the accepted current source. RU-009 freeze validation and first run pass. The global verifier is unchanged.",
+      "class": "code_observed",
+      "locator": "command:dispatch_work_package.py --release-unit RU-009 session 26815; execution/reports/ce53d3336e8c469b.2b52a3c9a7e9b300c25a.json; src-tauri/tauri.candidate.conf.json; /Users/zxg/.codex/skills/govern-product-build/scripts/dispatch_work_package.py:212-229",
+      "observedAt": "2026-08-31T08:49:52.692Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
       "id": "E-CODE-029",
       "claim": "The first c67c683a macOS build inherited CFBundleURLTypes declaring ccswitch from src-tauri/Info.plist. The signing process later exited with timestamps differ by 1673 seconds. Neither that intermediate app nor the earlier candidate is a verified installer.",
       "class": "code_observed",

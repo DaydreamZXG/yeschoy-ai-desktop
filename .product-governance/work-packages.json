@@ -2,6 +2,188 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "WP-RU010-CANDIDATE-RECEIPT",
+      "wave": "release",
+      "owner": "desktop-platform",
+      "riskClass": "high",
+      "objective": "Preserve the RU-009 packaging correction and finish the actual signed candidate receipt under an independent current-state acceptance run; replay all six RU-008 semantic scenarios as well as the two packaging regressions. Historical superseded outputs are evidence, not live package prerequisites for files this successor now owns. No runtime or signature policy changes.",
+      "deliverables": [
+        "Source Info.plist declares no inherited or replacement URL scheme or document handler.",
+        "Candidate config explicitly enables hardened runtime and disables updater artifacts without embedding signing credentials.",
+        "Actual app and local DMG have separate metadata, signature, timestamp, content and hash checks with explicit notarization and platform limits.",
+        "All prior six current-client semantic scenarios execute again under the new read-only-source run; no historical proof or global verifier is modified."
+      ],
+      "requirementRefs": [
+        "REQ-036"
+      ],
+      "decisionRefs": [
+        "DEC-052"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No runtime feature, protocol callback, account, credential, configuration, payment, telemetry, updater, server, CI or public release changes."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src-tauri/Info.plist",
+        "src-tauri/tauri.candidate.conf.json",
+        "tests/work_packages/ru009/**",
+        "outputs/野菜API-macOS-候选包构建记录.md",
+        "outputs/野菜API-桌面客户端-V1-候选版发布清单.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        ".github/**",
+        "src/**",
+        "src-tauri/src/**",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "package.json",
+        "pnpm-lock.yaml",
+        "tests/work_packages/ru008/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No installation, Launch Services database edit or user data migration.",
+        "rollback": "Keep failed artifacts quarantined in the local build directory; do not restore the conflicting protocol registration or revoke certificates."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve all RU-008 runtime behavior; remove only unused inherited packaging registration.",
+        "supportedVersions": "Local Intel macOS candidate only; Apple Silicon and Windows remain unverified here.",
+        "removalGate": "No public distribution claim until platform and product release gates pass."
+      },
+      "inputContracts": [
+        "public-service-catalog@v1"
+      ],
+      "outputContracts": [],
+      "acceptanceCommands": [
+        {
+          "id": "ru010-plist",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru009/test_acceptance.py::test_bundle_metadata_has_no_external_handlers",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru010-config",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru009/test_acceptance.py::test_candidate_identity_and_signing_boundaries",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru010-contract",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru008/test_acceptance.py::test_catalog_contract_runtime_boundary",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru010-access",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru008/test_acceptance.py::test_tool_access_runtime_protocol_matrix",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru010-recovery",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru008/test_acceptance.py::test_ui_read_recovery_and_untrusted_text",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru010-race",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru008/test_acceptance.py::test_ui_selection_races_and_preview_consistency",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru010-handoff",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru008/test_acceptance.py::test_bootstrap_handoff_and_transport_boundary",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru010-release",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru008/test_acceptance.py::test_candidate_release_boundary",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU010-AS-01",
+          "assertion": "Parsing the actual source plist yields no URL or document registration, including on repeated reads; no new deep-link runtime is enabled.",
+          "testSelector": "tests/work_packages/ru009/test_acceptance.py::test_bundle_metadata_has_no_external_handlers",
+          "acceptanceCommandId": "ru010-plist"
+        },
+        {
+          "id": "RU010-AS-02",
+          "assertion": "Actual base/candidate config preserves identity, explicitly retains hardened runtime, disables updater artifacts, and contains no signing/notary secrets or callback override.",
+          "testSelector": "tests/work_packages/ru009/test_acceptance.py::test_candidate_identity_and_signing_boundaries",
+          "acceptanceCommandId": "ru010-config"
+        },
+        {
+          "id": "RU010-AS-03",
+          "assertion": "Real catalog validator rejects mismatched, malformed, duplicate, oversize and authorization-inconsistent inputs.",
+          "testSelector": "tests/work_packages/ru008/test_acceptance.py::test_catalog_contract_runtime_boundary",
+          "acceptanceCommandId": "ru010-contract"
+        },
+        {
+          "id": "RU010-AS-04",
+          "assertion": "Actual per-tool access plans preserve model/group membership, endpoint rules, DSH abstention and disabled application.",
+          "testSelector": "tests/work_packages/ru008/test_acceptance.py::test_tool_access_runtime_protocol_matrix",
+          "acceptanceCommandId": "ru010-access"
+        },
+        {
+          "id": "RU010-AS-05",
+          "assertion": "Real React component reads only on user action, rejects raw errors and malformed results, handles empty/retry states and renders metadata as text.",
+          "testSelector": "tests/work_packages/ru008/test_acceptance.py::test_ui_read_recovery_and_untrusted_text",
+          "acceptanceCommandId": "ru010-recovery"
+        },
+        {
+          "id": "RU010-AS-06",
+          "assertion": "Real React component rejects obsolete responses after line change or unmount, clears on refresh, and preserves both preview panes when the same line is clicked again.",
+          "testSelector": "tests/work_packages/ru008/test_acceptance.py::test_ui_selection_races_and_preview_consistency",
+          "acceptanceCommandId": "ru010-race"
+        },
+        {
+          "id": "RU010-AS-07",
+          "assertion": "Bootstrap schema/examples, native fixed-origin transport, secret exclusion and backend handoff stay consistent.",
+          "testSelector": "tests/work_packages/ru008/test_acceptance.py::test_bootstrap_handoff_and_transport_boundary",
+          "acceptanceCommandId": "ru010-handoff"
+        },
+        {
+          "id": "RU010-AS-08",
+          "assertion": "Candidate configuration keeps updater off, contains no signing/notary secrets, distinguishes signed from notarized and preserves disabled account/configuration actions.",
+          "testSelector": "tests/work_packages/ru008/test_acceptance.py::test_candidate_release_boundary",
+          "acceptanceCommandId": "ru010-release"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "A correction requires runtime, server, callback, credential or install changes.",
+        "Signing requires exposing secrets, disabling security checks or modifying the system clock.",
+        "Any formal acceptance, actual signature or artifact identity check fails; no claim of release readiness may follow."
+      ],
+      "status": "planned"
+    },
+    {
       "id": "WP-RU009-MACOS-BUNDLE-METADATA",
       "wave": "release",
       "owner": "desktop-platform",
