@@ -1,0 +1,885 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-008/WP-RU008-VERIFIED-MACOS-CANDIDATE@2026-08-31T08:07:00.114142+00:00",
+  "packageId": "WP-RU008-VERIFIED-MACOS-CANDIDATE",
+  "baselineCommit": "c67c683a6baa01236e6a53083253aa8fab92acb5",
+  "baselineTreeHash": "sha256:c9c2ee98ca400ad66b58bd758230bca682c930953d356ea9f0b37a656ca150d8",
+  "testedTreeHash": "sha256:3d64cf74070175fdb3870a0d92233dad66d81fa7d37257c28b3e19556bfbb2fb",
+  "testedSnapshotPath": "execution/tested-snapshots/ce53d3336e8c469b.2b52a3c9a7e9b300c25a.json",
+  "testedSnapshotSha256": "sha256:45707109f353ee55c0e8a87d10bc126bbd5f8b15cb44ab7677c070c15ea25222",
+  "sourceDiff": {
+    "outputs/野菜API-macOS-候选包构建记录.md": "sha256:f8c062f4ef92f9b9ac19ec676da9cbd946ab932c5c534eab34023300b8aaf96d"
+  },
+  "ownedResultHashes": {
+    "outputs/野菜API-macOS-候选包构建记录.md": "sha256:f8c062f4ef92f9b9ac19ec676da9cbd946ab932c5c534eab34023300b8aaf96d"
+  },
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      "package.json",
+      "src/App.tsx",
+      "src/index.css",
+      "src/candidate/**",
+      "src/configuration/**",
+      "src/service-catalog/**",
+      "src/i18n/locales/en.json",
+      "src/i18n/locales/ja.json",
+      "src/i18n/locales/zh-TW.json",
+      "src/i18n/locales/zh.json",
+      "src-tauri/Cargo.toml",
+      "src-tauri/Cargo.lock",
+      "src-tauri/capabilities/default.json",
+      "src-tauri/src/lib.rs",
+      "src-tauri/src/service_catalog.rs",
+      "src-tauri/src/service_catalog_core.rs",
+      "contracts/desktop-bootstrap.v1.schema.json",
+      "contracts/fixtures/desktop-bootstrap/**",
+      "outputs/野菜API-NewAPI-未来改造清单.md",
+      "outputs/野菜API-后端技术交接-客户端接入.md",
+      "tests/work_packages/ru008/**",
+      "src-tauri/tauri.candidate.conf.json",
+      "outputs/野菜API-桌面客户端-V1-候选版发布清单.md",
+      "outputs/野菜API-macOS-候选包构建记录.md"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      "contracts/desktop-bootstrap.v1.schema.json": "sha256:7bd7308d113ab7c0cae904798b00bc699655bc67bc11b6322f655cc1ddd70fbe",
+      "contracts/fixtures/desktop-bootstrap/incompatible.json": "sha256:101d8cee9993247c30cf6540ebc78e56986aa094f81990d6584641cd252e7625",
+      "contracts/fixtures/desktop-bootstrap/recognized.json": "sha256:8850a70562f6ae3a66bbceab246749a954a3736e209e0022077ba3f037948a04",
+      "outputs/野菜API-NewAPI-未来改造清单.md": "sha256:993415d21118bf56f55b0a27d806d7b398d875169a6d92fd22dc623831a6803b",
+      "outputs/野菜API-macOS-候选包构建记录.md": "sha256:f8c062f4ef92f9b9ac19ec676da9cbd946ab932c5c534eab34023300b8aaf96d",
+      "outputs/野菜API-后端技术交接-客户端接入.md": "sha256:f895d8f585297fb1769afaf45e59f5df8a75b6d41581afa8698becc555940ff4",
+      "outputs/野菜API-桌面客户端-V1-候选版发布清单.md": "sha256:c9e970223f6ad1cea215c2f7f0424801d5048a7ff6ff228c39ddcee9cdef7a2f",
+      "package.json": "sha256:46e2d4b5db6145602a3a9c6216ebf4aceca604dde879d61cb97a1fb8a64266c1",
+      "src-tauri/Cargo.lock": "sha256:a169e30dcb54526a13bd067c1a9db1fd530ce75bfb624306af2ef109cf02fb33",
+      "src-tauri/Cargo.toml": "sha256:0f617bd91bbe83af866c5ebeb25dca796b1b5a221f39e0673b69188e65d26f32",
+      "src-tauri/capabilities/default.json": "sha256:41b8337953bee00e3a4b010999391c6af17d5043c6c3c97269736267effb5cba",
+      "src-tauri/src/lib.rs": "sha256:2bf79c3f6a9abda874d3723502739f131a373c1db83a3884f29bbeb515db2efd",
+      "src-tauri/src/service_catalog.rs": "sha256:efce93beeaf0a1d9b6d798184eb0a12e8868babfe153c6b592129a49a5f62099",
+      "src-tauri/src/service_catalog_core.rs": "sha256:1e73b49f784b0f5ace61afccf3dab4d92f8aa70b158812e3be9ea9c5b2f01818",
+      "src-tauri/tauri.candidate.conf.json": "sha256:896194d825a49b798b5a1f18a7b4bcc00726eed0880275201094c45ff2320f1c",
+      "src/App.tsx": "sha256:9db85c5c5d7dc148d24c71edfd5064e41ff9231c2e6d979f8fd6a622c5b7e3ad",
+      "src/candidate/CandidateHomeView.tsx": "sha256:2badadf243f8c91fd3775d458edb0b1751437071eb1a2e8127e7dbc5f2d727f3",
+      "src/candidate/readiness.test.ts": "sha256:e830c2bcbff32648385e563e6627dedf24cd8960ada72142470b0c706db94fcc",
+      "src/candidate/readiness.ts": "sha256:9599311cc20d55a68e20c3e4de3ee4c3861dfc676ac30bca21593bb1b01ae65e",
+      "src/configuration/ConfigurationPreviewView.tsx": "sha256:64720af4a808c0f2f9b3e43c72ce77524102cc9a96766c2254ef3c4e87156816",
+      "src/configuration/preview.test.ts": "sha256:9bb5838feb92af30fc23b2a2fcae71267e82ca8aea51f5645d0216cbdb812a57",
+      "src/configuration/preview.ts": "sha256:f1ea20dbb02e518d59f108d04475f166fac7334757bd20e72d7b71d7d6a37813",
+      "src/i18n/locales/en.json": "sha256:346322ebd9e4f3fcfbcb93b3217859a2315fefc95a9de1536a8eaa2c2439f920",
+      "src/i18n/locales/ja.json": "sha256:3a5e65a0ade9b644b554eb09cb6bedba5a250dcb154d37f09aba9b88d1082c2f",
+      "src/i18n/locales/zh-TW.json": "sha256:db3a4551f3ac7e9aaf6bc3818590e7323f02d0fdb3bf0fb84bb20cf2569d19bf",
+      "src/i18n/locales/zh.json": "sha256:b5ba1986c5113361676b7952ace153758d4a396bc96b1e306ce36a635027599f",
+      "src/index.css": "sha256:d881040fd269fe7874e0cc6437a1e0820e99af414446388fbb59f83785c3dfc1",
+      "src/service-catalog/ServiceCatalogPanel.test.tsx": "sha256:0eb43634293803849134d9805470562f2bff74cde53aa7b15cb4c1d3140a25eb",
+      "src/service-catalog/ServiceCatalogPanel.tsx": "sha256:eba9f9d25c179affdd960489e639abf1dbbce40ac214d1bc0a11e2469ab9e7d3",
+      "src/service-catalog/access-plan.test.ts": "sha256:c41aad45c2e3dd1b0fae85ce1e9b21643f36eab48b47ec64719e7c76c1859221",
+      "src/service-catalog/access-plan.ts": "sha256:82188362372d42b3421810ff03ffdd4a1f6f71ad364dc0b00610fea7991aed07",
+      "src/service-catalog/contract.test.ts": "sha256:381c6b05a5867f82a3b882e8699ac829aa017ef3d25941ffe4d70f933b7cee6c",
+      "src/service-catalog/contract.ts": "sha256:96059fc3897d2643d07478338a0752dc05ad5b14bf1f2ab800a3b8021f03fb39",
+      "src/service-catalog/handoff.test.ts": "sha256:af2e0b97b5a4d314f26fb3f1befc9425df0b7c863a20f68397be3d9cad95ee47",
+      "src/service-catalog/test-fixtures.ts": "sha256:38f07909200a0af051895f57d7813f12df2db57e9466b544cc452199f9f99bfb",
+      "tests/work_packages/ru008/runtime.cjs": "sha256:4d01d8b6e80fe3a2d033c7603f71eb6858dfcf068599ff3db72a9d653c8ba137",
+      "tests/work_packages/ru008/test_acceptance.py": "sha256:a5b59ec4bd1f74ce6d7a928c3482da01fb39a638652a0ab831bc9a800fd99724"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:1ac196a3e09012951dae134d92f35f27a6b110e24a12d4e90f5f3bdd5c7294f1",
+  "sourceScopeFailures": [],
+  "integrityFailures": [],
+  "assignedTo": "root",
+  "startedAt": "2026-08-31T08:07:00.114142+00:00",
+  "finishedAt": "2026-08-31T08:07:51.315035+00:00",
+  "passed": true,
+  "commands": [
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru008-contract",
+        "kind": "scenario_test",
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_catalog_contract_runtime_boundary",
+        "cwd": ".",
+        "timeoutSeconds": 300
+      },
+      "runnerMetadata": {
+        "adapter": "pytest-json@1",
+        "declaredCwd": ".",
+        "cwd": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop",
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_catalog_contract_runtime_boundary",
+        "selectorRealpath": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/tests/work_packages/ru008/test_acceptance.py",
+        "runnerArgv": [
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru008/test_acceptance.py::test_catalog_contract_runtime_boundary",
+          "--report",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-v_1fgvlq/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-v_1fgvlq/pytest-basetemp"
+        ],
+        "sandboxedArgv": [
+          "/usr/bin/sandbox-exec",
+          "-p",
+          "(version 1)\n(allow default)\n(deny file-write*\n  (require-not\n    (require-any\n      (subpath \"/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-v_1fgvlq\")\n      (literal \"/dev/null\"))))\n",
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru008/test_acceptance.py::test_catalog_contract_runtime_boundary",
+          "--report",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-v_1fgvlq/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-v_1fgvlq/pytest-basetemp"
+        ],
+        "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "pythonRealpath": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+        "pythonExecutableSha256": "sha256:6b24be8ba00c4abc8b3e7e2620bd710e2cf7a4312d00c147f8f05fbb6f3d297a",
+        "pytestVersion": "8.4.2",
+        "pytestDistributionVersion": "8.4.2",
+        "pytestModulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+        "pytestModuleSha256": "sha256:66993a5e3905005e0981159b4794d10b1adacf341a58a44d696ad2c4442dcdc6",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "executable": "/usr/bin/sandbox-exec",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea",
+          "policySha256": "sha256:ec02be6f8ca7e4a1b58d0977d53c1e0e9b22d6a53436788e545f1af081dd8422",
+          "projectRoot": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop",
+          "writableRoot": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-v_1fgvlq",
+          "policyVersion": 1
+        }
+      },
+      "machineReport": {
+        "adapter": "pytest-json@1",
+        "collectedNodeIds": [
+          "tests/work_packages/ru008/test_acceptance.py::test_catalog_contract_runtime_boundary"
+        ],
+        "collectionErrors": [],
+        "deselectedNodeIds": [],
+        "pytestExitCode": 0,
+        "pytestRootPath": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop",
+        "runner": {
+          "distributionVersion": "8.4.2",
+          "modulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+          "moduleVersion": "8.4.2",
+          "name": "pytest",
+          "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "pythonVersion": "3.9.6"
+        },
+        "schemaVersion": 1,
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_catalog_contract_runtime_boundary",
+        "tests": [
+          {
+            "nodeId": "tests/work_packages/ru008/test_acceptance.py::test_catalog_contract_runtime_boundary",
+            "phases": {
+              "call": {
+                "outcome": "passed"
+              },
+              "setup": {
+                "outcome": "passed"
+              },
+              "teardown": {
+                "outcome": "passed"
+              }
+            }
+          }
+        ]
+      },
+      "process": {
+        "actualExitCode": 0,
+        "timedOut": false,
+        "stdout": "============================= test session starts ==============================\nplatform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0\nrootdir: /Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop\nplugins: anyio-4.12.1\ncollected 1 item\n\ntests/work_packages/ru008/test_acceptance.py .                           [100%]\n\n============================== 1 passed in 0.46s ===============================\n",
+        "stderr": ""
+      },
+      "validationErrors": [],
+      "runnerProof": {
+        "schemaVersion": 1,
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_catalog_contract_runtime_boundary",
+        "cwd": ".",
+        "executedPassingTests": 1,
+        "actualExitCode": 0,
+        "runnerMetadataSha256": "sha256:8ef201b6fecc058c794333829c755698a310eec042a2904139d3dba03511ef51",
+        "machineReportSha256": "sha256:7e9513dcf614580597321e905495c4bee41e0f5b73ded418b8cacbdbd9f093f3",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "policySha256": "sha256:ec02be6f8ca7e4a1b58d0977d53c1e0e9b22d6a53436788e545f1af081dd8422",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+        }
+      },
+      "passed": true,
+      "id": "ru008-contract",
+      "kind": "scenario_test",
+      "actualExitCode": 0,
+      "timedOut": false,
+      "scenarioId": "RU008-AS-01"
+    },
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru008-access",
+        "kind": "scenario_test",
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_tool_access_runtime_protocol_matrix",
+        "cwd": ".",
+        "timeoutSeconds": 300
+      },
+      "runnerMetadata": {
+        "adapter": "pytest-json@1",
+        "declaredCwd": ".",
+        "cwd": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop",
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_tool_access_runtime_protocol_matrix",
+        "selectorRealpath": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/tests/work_packages/ru008/test_acceptance.py",
+        "runnerArgv": [
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru008/test_acceptance.py::test_tool_access_runtime_protocol_matrix",
+          "--report",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-g85e_6sm/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-g85e_6sm/pytest-basetemp"
+        ],
+        "sandboxedArgv": [
+          "/usr/bin/sandbox-exec",
+          "-p",
+          "(version 1)\n(allow default)\n(deny file-write*\n  (require-not\n    (require-any\n      (subpath \"/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-g85e_6sm\")\n      (literal \"/dev/null\"))))\n",
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru008/test_acceptance.py::test_tool_access_runtime_protocol_matrix",
+          "--report",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-g85e_6sm/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-g85e_6sm/pytest-basetemp"
+        ],
+        "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "pythonRealpath": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+        "pythonExecutableSha256": "sha256:6b24be8ba00c4abc8b3e7e2620bd710e2cf7a4312d00c147f8f05fbb6f3d297a",
+        "pytestVersion": "8.4.2",
+        "pytestDistributionVersion": "8.4.2",
+        "pytestModulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+        "pytestModuleSha256": "sha256:66993a5e3905005e0981159b4794d10b1adacf341a58a44d696ad2c4442dcdc6",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "executable": "/usr/bin/sandbox-exec",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea",
+          "policySha256": "sha256:3802a6421c2e6429766ff9ec8f2bd79dd65d6da12782f06fbe02fc67660c4d9a",
+          "projectRoot": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop",
+          "writableRoot": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-g85e_6sm",
+          "policyVersion": 1
+        }
+      },
+      "machineReport": {
+        "adapter": "pytest-json@1",
+        "collectedNodeIds": [
+          "tests/work_packages/ru008/test_acceptance.py::test_tool_access_runtime_protocol_matrix"
+        ],
+        "collectionErrors": [],
+        "deselectedNodeIds": [],
+        "pytestExitCode": 0,
+        "pytestRootPath": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop",
+        "runner": {
+          "distributionVersion": "8.4.2",
+          "modulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+          "moduleVersion": "8.4.2",
+          "name": "pytest",
+          "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "pythonVersion": "3.9.6"
+        },
+        "schemaVersion": 1,
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_tool_access_runtime_protocol_matrix",
+        "tests": [
+          {
+            "nodeId": "tests/work_packages/ru008/test_acceptance.py::test_tool_access_runtime_protocol_matrix",
+            "phases": {
+              "call": {
+                "outcome": "passed"
+              },
+              "setup": {
+                "outcome": "passed"
+              },
+              "teardown": {
+                "outcome": "passed"
+              }
+            }
+          }
+        ]
+      },
+      "process": {
+        "actualExitCode": 0,
+        "timedOut": false,
+        "stdout": "============================= test session starts ==============================\nplatform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0\nrootdir: /Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop\nplugins: anyio-4.12.1\ncollected 1 item\n\ntests/work_packages/ru008/test_acceptance.py .                           [100%]\n\n============================== 1 passed in 0.45s ===============================\n",
+        "stderr": ""
+      },
+      "validationErrors": [],
+      "runnerProof": {
+        "schemaVersion": 1,
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_tool_access_runtime_protocol_matrix",
+        "cwd": ".",
+        "executedPassingTests": 1,
+        "actualExitCode": 0,
+        "runnerMetadataSha256": "sha256:6eac812c4c411f61af5b3b11adea1cdbdf4ddc45378c28b4694e80143338df3e",
+        "machineReportSha256": "sha256:4ce367e7e6c60264eb6461f6b7b792eed60505b3e186fbe2e3fb3bdd043091e8",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "policySha256": "sha256:3802a6421c2e6429766ff9ec8f2bd79dd65d6da12782f06fbe02fc67660c4d9a",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+        }
+      },
+      "passed": true,
+      "id": "ru008-access",
+      "kind": "scenario_test",
+      "actualExitCode": 0,
+      "timedOut": false,
+      "scenarioId": "RU008-AS-02"
+    },
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru008-recovery",
+        "kind": "scenario_test",
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_ui_read_recovery_and_untrusted_text",
+        "cwd": ".",
+        "timeoutSeconds": 300
+      },
+      "runnerMetadata": {
+        "adapter": "pytest-json@1",
+        "declaredCwd": ".",
+        "cwd": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop",
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_ui_read_recovery_and_untrusted_text",
+        "selectorRealpath": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/tests/work_packages/ru008/test_acceptance.py",
+        "runnerArgv": [
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru008/test_acceptance.py::test_ui_read_recovery_and_untrusted_text",
+          "--report",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-xa0glz5u/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-xa0glz5u/pytest-basetemp"
+        ],
+        "sandboxedArgv": [
+          "/usr/bin/sandbox-exec",
+          "-p",
+          "(version 1)\n(allow default)\n(deny file-write*\n  (require-not\n    (require-any\n      (subpath \"/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-xa0glz5u\")\n      (literal \"/dev/null\"))))\n",
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru008/test_acceptance.py::test_ui_read_recovery_and_untrusted_text",
+          "--report",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-xa0glz5u/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-xa0glz5u/pytest-basetemp"
+        ],
+        "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "pythonRealpath": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+        "pythonExecutableSha256": "sha256:6b24be8ba00c4abc8b3e7e2620bd710e2cf7a4312d00c147f8f05fbb6f3d297a",
+        "pytestVersion": "8.4.2",
+        "pytestDistributionVersion": "8.4.2",
+        "pytestModulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+        "pytestModuleSha256": "sha256:66993a5e3905005e0981159b4794d10b1adacf341a58a44d696ad2c4442dcdc6",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "executable": "/usr/bin/sandbox-exec",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea",
+          "policySha256": "sha256:e1437718f948b553830d989ab233eca87a887a4c24738bbcbd06aff792639fc1",
+          "projectRoot": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop",
+          "writableRoot": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-xa0glz5u",
+          "policyVersion": 1
+        }
+      },
+      "machineReport": {
+        "adapter": "pytest-json@1",
+        "collectedNodeIds": [
+          "tests/work_packages/ru008/test_acceptance.py::test_ui_read_recovery_and_untrusted_text"
+        ],
+        "collectionErrors": [],
+        "deselectedNodeIds": [],
+        "pytestExitCode": 0,
+        "pytestRootPath": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop",
+        "runner": {
+          "distributionVersion": "8.4.2",
+          "modulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+          "moduleVersion": "8.4.2",
+          "name": "pytest",
+          "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "pythonVersion": "3.9.6"
+        },
+        "schemaVersion": 1,
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_ui_read_recovery_and_untrusted_text",
+        "tests": [
+          {
+            "nodeId": "tests/work_packages/ru008/test_acceptance.py::test_ui_read_recovery_and_untrusted_text",
+            "phases": {
+              "call": {
+                "outcome": "passed"
+              },
+              "setup": {
+                "outcome": "passed"
+              },
+              "teardown": {
+                "outcome": "passed"
+              }
+            }
+          }
+        ]
+      },
+      "process": {
+        "actualExitCode": 0,
+        "timedOut": false,
+        "stdout": "============================= test session starts ==============================\nplatform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0\nrootdir: /Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop\nplugins: anyio-4.12.1\ncollected 1 item\n\ntests/work_packages/ru008/test_acceptance.py .                           [100%]\n\n============================== 1 passed in 1.34s ===============================\n",
+        "stderr": ""
+      },
+      "validationErrors": [],
+      "runnerProof": {
+        "schemaVersion": 1,
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_ui_read_recovery_and_untrusted_text",
+        "cwd": ".",
+        "executedPassingTests": 1,
+        "actualExitCode": 0,
+        "runnerMetadataSha256": "sha256:a9ed19991ad04758984c42e2447f209f88b851064dfbbc0e469fdf652e5897ac",
+        "machineReportSha256": "sha256:b3946dfe5f76f3476455a1cc935094ca1673682cd623057a64dc7bd22d10d91b",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "policySha256": "sha256:e1437718f948b553830d989ab233eca87a887a4c24738bbcbd06aff792639fc1",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+        }
+      },
+      "passed": true,
+      "id": "ru008-recovery",
+      "kind": "scenario_test",
+      "actualExitCode": 0,
+      "timedOut": false,
+      "scenarioId": "RU008-AS-03"
+    },
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru008-race",
+        "kind": "scenario_test",
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_ui_selection_races_and_preview_consistency",
+        "cwd": ".",
+        "timeoutSeconds": 300
+      },
+      "runnerMetadata": {
+        "adapter": "pytest-json@1",
+        "declaredCwd": ".",
+        "cwd": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop",
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_ui_selection_races_and_preview_consistency",
+        "selectorRealpath": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/tests/work_packages/ru008/test_acceptance.py",
+        "runnerArgv": [
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru008/test_acceptance.py::test_ui_selection_races_and_preview_consistency",
+          "--report",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-b8ecvn64/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-b8ecvn64/pytest-basetemp"
+        ],
+        "sandboxedArgv": [
+          "/usr/bin/sandbox-exec",
+          "-p",
+          "(version 1)\n(allow default)\n(deny file-write*\n  (require-not\n    (require-any\n      (subpath \"/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-b8ecvn64\")\n      (literal \"/dev/null\"))))\n",
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru008/test_acceptance.py::test_ui_selection_races_and_preview_consistency",
+          "--report",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-b8ecvn64/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-b8ecvn64/pytest-basetemp"
+        ],
+        "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "pythonRealpath": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+        "pythonExecutableSha256": "sha256:6b24be8ba00c4abc8b3e7e2620bd710e2cf7a4312d00c147f8f05fbb6f3d297a",
+        "pytestVersion": "8.4.2",
+        "pytestDistributionVersion": "8.4.2",
+        "pytestModulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+        "pytestModuleSha256": "sha256:66993a5e3905005e0981159b4794d10b1adacf341a58a44d696ad2c4442dcdc6",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "executable": "/usr/bin/sandbox-exec",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea",
+          "policySha256": "sha256:014c52db238d4d31ae13da34ffbb28216dd141ba97af1ede9672868e71283c5e",
+          "projectRoot": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop",
+          "writableRoot": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-b8ecvn64",
+          "policyVersion": 1
+        }
+      },
+      "machineReport": {
+        "adapter": "pytest-json@1",
+        "collectedNodeIds": [
+          "tests/work_packages/ru008/test_acceptance.py::test_ui_selection_races_and_preview_consistency"
+        ],
+        "collectionErrors": [],
+        "deselectedNodeIds": [],
+        "pytestExitCode": 0,
+        "pytestRootPath": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop",
+        "runner": {
+          "distributionVersion": "8.4.2",
+          "modulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+          "moduleVersion": "8.4.2",
+          "name": "pytest",
+          "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "pythonVersion": "3.9.6"
+        },
+        "schemaVersion": 1,
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_ui_selection_races_and_preview_consistency",
+        "tests": [
+          {
+            "nodeId": "tests/work_packages/ru008/test_acceptance.py::test_ui_selection_races_and_preview_consistency",
+            "phases": {
+              "call": {
+                "outcome": "passed"
+              },
+              "setup": {
+                "outcome": "passed"
+              },
+              "teardown": {
+                "outcome": "passed"
+              }
+            }
+          }
+        ]
+      },
+      "process": {
+        "actualExitCode": 0,
+        "timedOut": false,
+        "stdout": "============================= test session starts ==============================\nplatform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0\nrootdir: /Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop\nplugins: anyio-4.12.1\ncollected 1 item\n\ntests/work_packages/ru008/test_acceptance.py .                           [100%]\n\n============================== 1 passed in 1.27s ===============================\n",
+        "stderr": ""
+      },
+      "validationErrors": [],
+      "runnerProof": {
+        "schemaVersion": 1,
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_ui_selection_races_and_preview_consistency",
+        "cwd": ".",
+        "executedPassingTests": 1,
+        "actualExitCode": 0,
+        "runnerMetadataSha256": "sha256:45ebcf4a6b934d214cdc6c315db0fbf6ec166cdac3b1770de4916ca95afe9faf",
+        "machineReportSha256": "sha256:60d7f3da6b7da525c610272ad238f363039ae5aa011244b19d97304ef540ea80",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "policySha256": "sha256:014c52db238d4d31ae13da34ffbb28216dd141ba97af1ede9672868e71283c5e",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+        }
+      },
+      "passed": true,
+      "id": "ru008-race",
+      "kind": "scenario_test",
+      "actualExitCode": 0,
+      "timedOut": false,
+      "scenarioId": "RU008-AS-04"
+    },
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru008-handoff",
+        "kind": "scenario_test",
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_bootstrap_handoff_and_transport_boundary",
+        "cwd": ".",
+        "timeoutSeconds": 300
+      },
+      "runnerMetadata": {
+        "adapter": "pytest-json@1",
+        "declaredCwd": ".",
+        "cwd": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop",
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_bootstrap_handoff_and_transport_boundary",
+        "selectorRealpath": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/tests/work_packages/ru008/test_acceptance.py",
+        "runnerArgv": [
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru008/test_acceptance.py::test_bootstrap_handoff_and_transport_boundary",
+          "--report",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-y08ae34q/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-y08ae34q/pytest-basetemp"
+        ],
+        "sandboxedArgv": [
+          "/usr/bin/sandbox-exec",
+          "-p",
+          "(version 1)\n(allow default)\n(deny file-write*\n  (require-not\n    (require-any\n      (subpath \"/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-y08ae34q\")\n      (literal \"/dev/null\"))))\n",
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru008/test_acceptance.py::test_bootstrap_handoff_and_transport_boundary",
+          "--report",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-y08ae34q/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-y08ae34q/pytest-basetemp"
+        ],
+        "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "pythonRealpath": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+        "pythonExecutableSha256": "sha256:6b24be8ba00c4abc8b3e7e2620bd710e2cf7a4312d00c147f8f05fbb6f3d297a",
+        "pytestVersion": "8.4.2",
+        "pytestDistributionVersion": "8.4.2",
+        "pytestModulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+        "pytestModuleSha256": "sha256:66993a5e3905005e0981159b4794d10b1adacf341a58a44d696ad2c4442dcdc6",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "executable": "/usr/bin/sandbox-exec",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea",
+          "policySha256": "sha256:b102d7f0708a74e5790d519365b6cd60f535302b104f62abd2e89edfb68e8534",
+          "projectRoot": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop",
+          "writableRoot": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-y08ae34q",
+          "policyVersion": 1
+        }
+      },
+      "machineReport": {
+        "adapter": "pytest-json@1",
+        "collectedNodeIds": [
+          "tests/work_packages/ru008/test_acceptance.py::test_bootstrap_handoff_and_transport_boundary"
+        ],
+        "collectionErrors": [],
+        "deselectedNodeIds": [],
+        "pytestExitCode": 0,
+        "pytestRootPath": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop",
+        "runner": {
+          "distributionVersion": "8.4.2",
+          "modulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+          "moduleVersion": "8.4.2",
+          "name": "pytest",
+          "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "pythonVersion": "3.9.6"
+        },
+        "schemaVersion": 1,
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_bootstrap_handoff_and_transport_boundary",
+        "tests": [
+          {
+            "nodeId": "tests/work_packages/ru008/test_acceptance.py::test_bootstrap_handoff_and_transport_boundary",
+            "phases": {
+              "call": {
+                "outcome": "passed"
+              },
+              "setup": {
+                "outcome": "passed"
+              },
+              "teardown": {
+                "outcome": "passed"
+              }
+            }
+          }
+        ]
+      },
+      "process": {
+        "actualExitCode": 0,
+        "timedOut": false,
+        "stdout": "============================= test session starts ==============================\nplatform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0\nrootdir: /Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop\nplugins: anyio-4.12.1\ncollected 1 item\n\ntests/work_packages/ru008/test_acceptance.py .                           [100%]\n\n============================== 1 passed in 0.02s ===============================\n",
+        "stderr": ""
+      },
+      "validationErrors": [],
+      "runnerProof": {
+        "schemaVersion": 1,
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_bootstrap_handoff_and_transport_boundary",
+        "cwd": ".",
+        "executedPassingTests": 1,
+        "actualExitCode": 0,
+        "runnerMetadataSha256": "sha256:b7e8a676eddb9308586dc9ca26f07661df3e6806bd63b2c90329b1511df9cdf3",
+        "machineReportSha256": "sha256:bea2035d61fa3330d175208faf8316176711d27da5fe2c4540c12fcf6d603418",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "policySha256": "sha256:b102d7f0708a74e5790d519365b6cd60f535302b104f62abd2e89edfb68e8534",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+        }
+      },
+      "passed": true,
+      "id": "ru008-handoff",
+      "kind": "scenario_test",
+      "actualExitCode": 0,
+      "timedOut": false,
+      "scenarioId": "RU008-AS-05"
+    },
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru008-release",
+        "kind": "scenario_test",
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_candidate_release_boundary",
+        "cwd": ".",
+        "timeoutSeconds": 300
+      },
+      "runnerMetadata": {
+        "adapter": "pytest-json@1",
+        "declaredCwd": ".",
+        "cwd": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop",
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_candidate_release_boundary",
+        "selectorRealpath": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/tests/work_packages/ru008/test_acceptance.py",
+        "runnerArgv": [
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru008/test_acceptance.py::test_candidate_release_boundary",
+          "--report",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-g19kft7u/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-g19kft7u/pytest-basetemp"
+        ],
+        "sandboxedArgv": [
+          "/usr/bin/sandbox-exec",
+          "-p",
+          "(version 1)\n(allow default)\n(deny file-write*\n  (require-not\n    (require-any\n      (subpath \"/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-g19kft7u\")\n      (literal \"/dev/null\"))))\n",
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru008/test_acceptance.py::test_candidate_release_boundary",
+          "--report",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-g19kft7u/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-g19kft7u/pytest-basetemp"
+        ],
+        "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "pythonRealpath": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+        "pythonExecutableSha256": "sha256:6b24be8ba00c4abc8b3e7e2620bd710e2cf7a4312d00c147f8f05fbb6f3d297a",
+        "pytestVersion": "8.4.2",
+        "pytestDistributionVersion": "8.4.2",
+        "pytestModulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+        "pytestModuleSha256": "sha256:66993a5e3905005e0981159b4794d10b1adacf341a58a44d696ad2c4442dcdc6",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "executable": "/usr/bin/sandbox-exec",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea",
+          "policySha256": "sha256:b61b46a43c63e36b1cdc692ef9a6dd295a17ca75f205055e229eba38d7fb8e28",
+          "projectRoot": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop",
+          "writableRoot": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-g19kft7u",
+          "policyVersion": 1
+        }
+      },
+      "machineReport": {
+        "adapter": "pytest-json@1",
+        "collectedNodeIds": [
+          "tests/work_packages/ru008/test_acceptance.py::test_candidate_release_boundary"
+        ],
+        "collectionErrors": [],
+        "deselectedNodeIds": [],
+        "pytestExitCode": 0,
+        "pytestRootPath": "/Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop",
+        "runner": {
+          "distributionVersion": "8.4.2",
+          "modulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+          "moduleVersion": "8.4.2",
+          "name": "pytest",
+          "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "pythonVersion": "3.9.6"
+        },
+        "schemaVersion": 1,
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_candidate_release_boundary",
+        "tests": [
+          {
+            "nodeId": "tests/work_packages/ru008/test_acceptance.py::test_candidate_release_boundary",
+            "phases": {
+              "call": {
+                "outcome": "passed"
+              },
+              "setup": {
+                "outcome": "passed"
+              },
+              "teardown": {
+                "outcome": "passed"
+              }
+            }
+          }
+        ]
+      },
+      "process": {
+        "actualExitCode": 0,
+        "timedOut": false,
+        "stdout": "============================= test session starts ==============================\nplatform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0\nrootdir: /Users/zxg/Documents/Codex/2026-08-29/xiaobai-ai-desktop\nplugins: anyio-4.12.1\ncollected 1 item\n\ntests/work_packages/ru008/test_acceptance.py .                           [100%]\n\n============================== 1 passed in 0.03s ===============================\n",
+        "stderr": ""
+      },
+      "validationErrors": [],
+      "runnerProof": {
+        "schemaVersion": 1,
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru008/test_acceptance.py::test_candidate_release_boundary",
+        "cwd": ".",
+        "executedPassingTests": 1,
+        "actualExitCode": 0,
+        "runnerMetadataSha256": "sha256:c4c7d268b3f338d9266b435fb5ccf8938dff1493c717170b0876b0d9de9a8eb0",
+        "machineReportSha256": "sha256:e3c3c15348b47ef2f403f03170c66528b8b0c86d7a40a40240888b598f949b28",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "policySha256": "sha256:b61b46a43c63e36b1cdc692ef9a6dd295a17ca75f205055e229eba38d7fb8e28",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+        }
+      },
+      "passed": true,
+      "id": "ru008-release",
+      "kind": "scenario_test",
+      "actualExitCode": 0,
+      "timedOut": false,
+      "scenarioId": "RU008-AS-06"
+    }
+  ],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU008-AS-01",
+      "path": "execution/evidence/2b52a3c9a7e9b300c25a/ce53d3336e8c469b/f9f40b14bf595042.json",
+      "sha256": "sha256:5b99aa2cdac5394c2abf8dda3c6d00f78e820e9460d41e294b415394a1b064e1"
+    },
+    {
+      "scenarioId": "RU008-AS-02",
+      "path": "execution/evidence/2b52a3c9a7e9b300c25a/ce53d3336e8c469b/e55439b2a2c57499.json",
+      "sha256": "sha256:a108a6d9100dd8fe6c7385bf15d853e74f8391186631c195fea01fed63a8513d"
+    },
+    {
+      "scenarioId": "RU008-AS-03",
+      "path": "execution/evidence/2b52a3c9a7e9b300c25a/ce53d3336e8c469b/d032bea2eea4ab06.json",
+      "sha256": "sha256:51b7194c13b622cf38ef18b4e5014ffa143e5c2cf43d57b7a4ad2c8f78b75989"
+    },
+    {
+      "scenarioId": "RU008-AS-04",
+      "path": "execution/evidence/2b52a3c9a7e9b300c25a/ce53d3336e8c469b/4e3b521d54f47a43.json",
+      "sha256": "sha256:460634cc1ec4ff0d3a51210dd976ad4c4cbcb37a24124a61916a4c9f05b70e26"
+    },
+    {
+      "scenarioId": "RU008-AS-05",
+      "path": "execution/evidence/2b52a3c9a7e9b300c25a/ce53d3336e8c469b/a61b7a8895d461ee.json",
+      "sha256": "sha256:beedce1cc2b678e04538c28b7826d9d3efc0929a12e00fc0141517ba6d18b61e"
+    },
+    {
+      "scenarioId": "RU008-AS-06",
+      "path": "execution/evidence/2b52a3c9a7e9b300c25a/ce53d3336e8c469b/7d5aa4743d3fae3a.json",
+      "sha256": "sha256:a9996be49b78dfd1755c59fcb15f181495c4f74caec5c5d1b0330a70223b6710"
+    }
+  ],
+  "scenarioEvidenceFailures": [],
+  "releaseUnitId": "RU-008",
+  "releaseUnitHash": "sha256:0d5713b1966fec3bea90454b2d40b1a131be594042b055949f2df6340aa7ef8d"
+}

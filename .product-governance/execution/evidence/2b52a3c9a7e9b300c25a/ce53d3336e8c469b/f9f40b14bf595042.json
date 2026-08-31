@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU008-AS-01",
+  "assertion": "Real catalog validator rejects mismatched, malformed, duplicate, oversize and authorization-inconsistent inputs.",
+  "testSelector": "tests/work_packages/ru008/test_acceptance.py::test_catalog_contract_runtime_boundary",
+  "acceptanceCommandId": "ru008-contract",
+  "runId": "RU-008/WP-RU008-VERIFIED-MACOS-CANDIDATE@2026-08-31T08:07:00.114142+00:00",
+  "packageId": "WP-RU008-VERIFIED-MACOS-CANDIDATE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru008/test_acceptance.py::test_catalog_contract_runtime_boundary",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:8ef201b6fecc058c794333829c755698a310eec042a2904139d3dba03511ef51",
+    "machineReportSha256": "sha256:7e9513dcf614580597321e905495c4bee41e0f5b73ded418b8cacbdbd9f093f3",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:ec02be6f8ca7e4a1b58d0977d53c1e0e9b22d6a53436788e545f1af081dd8422",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:13c0b2ecfd6da0bccbfe5a328325c0a3513b5e27b3d151018e1ac985ccdc75d9",
+  "releaseUnitId": "RU-008",
+  "releaseUnitHash": "sha256:0d5713b1966fec3bea90454b2d40b1a131be594042b055949f2df6340aa7ef8d"
+}
