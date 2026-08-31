@@ -112,6 +112,54 @@
       "reportSha256": "sha256:b8c032582191dfaad42ee6ec5c78ac50eccd0e960b4b4ac64aeaecd08fb7b969",
       "releaseUnitId": "RU-006",
       "releaseUnitHash": "sha256:54b5ed786d356e74fb0ad3e5419840ae4e07c6857fe378296184b831cbab8fbc"
+    },
+    {
+      "id": "RU-007/WP-RU007-CLIENT-SERVICE-INTEGRATION@2026-08-31T03:08:32.546761+00:00",
+      "packageId": "WP-RU007-CLIENT-SERVICE-INTEGRATION",
+      "baselineCommit": "7f2be6ba58550a5e2aba5e5e2646e1be37302546",
+      "baselineTreeHash": "sha256:02e1d2704b5f3ff4a68ea381e135c27907e671c83936ad0da015a4d757ecec8d",
+      "baselineSnapshotPath": "execution/baselines/844c10cbf87bca3c.7ae8d67e9c1415981843.json",
+      "baselineSnapshotSha256": "sha256:c70e17846963b3f2e089acfa5a5c12cddc15a1e66c3465185e54d6671eb927dc",
+      "assignedTo": "root",
+      "status": "failed",
+      "startedAt": "2026-08-31T03:08:32.546761+00:00",
+      "finishedAt": "2026-08-31T03:25:19.533413+00:00",
+      "reportPath": "execution/reports/844c10cbf87bca3c.7ae8d67e9c1415981843.json",
+      "reportSha256": "sha256:cd36d48c273422a4f72fd63d44fb6875d558736c922e20bdeecc9ec1f42e5699",
+      "releaseUnitId": "RU-007",
+      "releaseUnitHash": "sha256:771a5fd581a39bd2c394e265b9406c18ed05fc215f30b97a89bc4de9cb16ad05"
+    },
+    {
+      "id": "RU-008/WP-RU008-VERIFIED-MACOS-CANDIDATE@2026-08-31T07:55:03.100073+00:00",
+      "packageId": "WP-RU008-VERIFIED-MACOS-CANDIDATE",
+      "baselineCommit": "7f2be6ba58550a5e2aba5e5e2646e1be37302546",
+      "baselineTreeHash": "sha256:d21aeb28942c2e253e4efabaa875711efb1871551e42d1b0398e60725543c08b",
+      "baselineSnapshotPath": "execution/baselines/ce53d3336e8c469b.d7b996e29b1fbe3f57df.json",
+      "baselineSnapshotSha256": "sha256:694bd1965b4bf9a0d993eafe6bb6e94c11f656d7ec5f0eb458b543499073238c",
+      "assignedTo": "root",
+      "status": "completed",
+      "startedAt": "2026-08-31T07:55:03.100073+00:00",
+      "finishedAt": "2026-08-31T07:57:13.574042+00:00",
+      "reportPath": "execution/reports/ce53d3336e8c469b.d7b996e29b1fbe3f57df.json",
+      "reportSha256": "sha256:1aa7f84d4c0bc32c95793aff96613e0ccd6abb0e03bb2940e88ca90c0aed7e21",
+      "releaseUnitId": "RU-008",
+      "releaseUnitHash": "sha256:0d5713b1966fec3bea90454b2d40b1a131be594042b055949f2df6340aa7ef8d"
+    },
+    {
+      "id": "RU-008/WP-RU008-VERIFIED-MACOS-CANDIDATE@2026-08-31T07:58:46.497157+00:00",
+      "packageId": "WP-RU008-VERIFIED-MACOS-CANDIDATE",
+      "baselineCommit": "7f2be6ba58550a5e2aba5e5e2646e1be37302546",
+      "baselineTreeHash": "sha256:ea96632817c63164adae2bb108b99280bca94fb582252fed92f84c998a9dfd8d",
+      "baselineSnapshotPath": "execution/baselines/ce53d3336e8c469b.8ef192c78462e5949540.json",
+      "baselineSnapshotSha256": "sha256:a047f933e191ecac924bea80d84d6f5faf75dca5ff1d3a1a5da9a0a8180519cf",
+      "assignedTo": "root",
+      "status": "completed",
+      "startedAt": "2026-08-31T07:58:46.497157+00:00",
+      "finishedAt": "2026-08-31T07:59:09.022636+00:00",
+      "reportPath": "execution/reports/ce53d3336e8c469b.8ef192c78462e5949540.json",
+      "reportSha256": "sha256:23548761bdc661464cfd563ff42bd7ea5642eb68ca7c5f717f0de3282fa75d07",
+      "releaseUnitId": "RU-008",
+      "releaseUnitHash": "sha256:0d5713b1966fec3bea90454b2d40b1a131be594042b055949f2df6340aa7ef8d"
     }
   ]
 }

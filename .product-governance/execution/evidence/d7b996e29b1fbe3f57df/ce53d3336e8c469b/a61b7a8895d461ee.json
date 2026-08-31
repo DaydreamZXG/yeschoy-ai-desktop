@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU008-AS-05",
+  "assertion": "Bootstrap schema/examples, native fixed-origin transport, secret exclusion and backend handoff stay consistent.",
+  "testSelector": "tests/work_packages/ru008/test_acceptance.py::test_bootstrap_handoff_and_transport_boundary",
+  "acceptanceCommandId": "ru008-handoff",
+  "runId": "RU-008/WP-RU008-VERIFIED-MACOS-CANDIDATE@2026-08-31T07:55:03.100073+00:00",
+  "packageId": "WP-RU008-VERIFIED-MACOS-CANDIDATE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru008/test_acceptance.py::test_bootstrap_handoff_and_transport_boundary",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:5061d2335eb912f2dae8614d33a45facbe7b16b8b0a5bec86b1a9e6900633f5f",
+    "machineReportSha256": "sha256:bea2035d61fa3330d175208faf8316176711d27da5fe2c4540c12fcf6d603418",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:08c6e3b0deea0d962ae2e768ff72b04143ba075562984eb6908e1e60f5561b3d",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:3e0462782bbb5f08271cf151323f973b9a949f382c05837c53c76e78c53a0c1d",
+  "releaseUnitId": "RU-008",
+  "releaseUnitHash": "sha256:0d5713b1966fec3bea90454b2d40b1a131be594042b055949f2df6340aa7ef8d"
+}

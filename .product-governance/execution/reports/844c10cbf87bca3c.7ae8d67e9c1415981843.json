@@ -1,0 +1,285 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-007/WP-RU007-CLIENT-SERVICE-INTEGRATION@2026-08-31T03:08:32.546761+00:00",
+  "packageId": "WP-RU007-CLIENT-SERVICE-INTEGRATION",
+  "baselineCommit": "7f2be6ba58550a5e2aba5e5e2646e1be37302546",
+  "baselineTreeHash": "sha256:02e1d2704b5f3ff4a68ea381e135c27907e671c83936ad0da015a4d757ecec8d",
+  "testedTreeHash": "sha256:6d698dda7da9b5bedbf8e2865cf5d288e7db4b3f6a9b98b39118da200dc768bf",
+  "testedSnapshotPath": "execution/tested-snapshots/844c10cbf87bca3c.7ae8d67e9c1415981843.json",
+  "testedSnapshotSha256": "sha256:2ed472099b9433e0e97690fc83efd66edb35b3876c740e3b44bf9c752293e53e",
+  "sourceDiff": {
+    "contracts/desktop-bootstrap.v1.schema.json": "sha256:7bd7308d113ab7c0cae904798b00bc699655bc67bc11b6322f655cc1ddd70fbe",
+    "contracts/fixtures/desktop-bootstrap/incompatible.json": "sha256:101d8cee9993247c30cf6540ebc78e56986aa094f81990d6584641cd252e7625",
+    "contracts/fixtures/desktop-bootstrap/recognized.json": "sha256:8850a70562f6ae3a66bbceab246749a954a3736e209e0022077ba3f037948a04",
+    "outputs/野菜API-NewAPI-未来改造清单.md": "sha256:993415d21118bf56f55b0a27d806d7b398d875169a6d92fd22dc623831a6803b",
+    "outputs/野菜API-后端技术交接-客户端接入.md": "sha256:564dd71a3fc16465eab54d478a7032f16b729f4f21f9e2d3ed600d4a20ca9d80",
+    "package.json": "sha256:46e2d4b5db6145602a3a9c6216ebf4aceca604dde879d61cb97a1fb8a64266c1",
+    "src-tauri/Cargo.lock": "sha256:a169e30dcb54526a13bd067c1a9db1fd530ce75bfb624306af2ef109cf02fb33",
+    "src-tauri/Cargo.toml": "sha256:0f617bd91bbe83af866c5ebeb25dca796b1b5a221f39e0673b69188e65d26f32",
+    "src-tauri/src/lib.rs": "sha256:2bf79c3f6a9abda874d3723502739f131a373c1db83a3884f29bbeb515db2efd",
+    "src-tauri/src/service_catalog.rs": "sha256:efce93beeaf0a1d9b6d798184eb0a12e8868babfe153c6b592129a49a5f62099",
+    "src-tauri/src/service_catalog_core.rs": "sha256:1e73b49f784b0f5ace61afccf3dab4d92f8aa70b158812e3be9ea9c5b2f01818",
+    "src/configuration/ConfigurationPreviewView.tsx": "sha256:e80ee38287e86fdb7e0fded54c030bf3c67967b70475ce0677e07b61851d3f5e",
+    "src/i18n/locales/en.json": "sha256:346322ebd9e4f3fcfbcb93b3217859a2315fefc95a9de1536a8eaa2c2439f920",
+    "src/i18n/locales/ja.json": "sha256:3a5e65a0ade9b644b554eb09cb6bedba5a250dcb154d37f09aba9b88d1082c2f",
+    "src/i18n/locales/zh-TW.json": "sha256:db3a4551f3ac7e9aaf6bc3818590e7323f02d0fdb3bf0fb84bb20cf2569d19bf",
+    "src/i18n/locales/zh.json": "sha256:b5ba1986c5113361676b7952ace153758d4a396bc96b1e306ce36a635027599f",
+    "src/index.css": "sha256:d881040fd269fe7874e0cc6437a1e0820e99af414446388fbb59f83785c3dfc1",
+    "src/service-catalog/ServiceCatalogPanel.test.tsx": "sha256:d7e347590737139d1bf893bae1c8168632d13102c6358ec43682fa106e203ac5",
+    "src/service-catalog/ServiceCatalogPanel.tsx": "sha256:eba9f9d25c179affdd960489e639abf1dbbce40ac214d1bc0a11e2469ab9e7d3",
+    "src/service-catalog/access-plan.test.ts": "sha256:c41aad45c2e3dd1b0fae85ce1e9b21643f36eab48b47ec64719e7c76c1859221",
+    "src/service-catalog/access-plan.ts": "sha256:82188362372d42b3421810ff03ffdd4a1f6f71ad364dc0b00610fea7991aed07",
+    "src/service-catalog/contract.test.ts": "sha256:381c6b05a5867f82a3b882e8699ac829aa017ef3d25941ffe4d70f933b7cee6c",
+    "src/service-catalog/contract.ts": "sha256:96059fc3897d2643d07478338a0752dc05ad5b14bf1f2ab800a3b8021f03fb39",
+    "src/service-catalog/handoff.test.ts": "sha256:af2e0b97b5a4d314f26fb3f1befc9425df0b7c863a20f68397be3d9cad95ee47",
+    "src/service-catalog/test-fixtures.ts": "sha256:38f07909200a0af051895f57d7813f12df2db57e9466b544cc452199f9f99bfb"
+  },
+  "ownedResultHashes": {
+    "contracts/desktop-bootstrap.v1.schema.json": "sha256:7bd7308d113ab7c0cae904798b00bc699655bc67bc11b6322f655cc1ddd70fbe",
+    "contracts/fixtures/desktop-bootstrap/incompatible.json": "sha256:101d8cee9993247c30cf6540ebc78e56986aa094f81990d6584641cd252e7625",
+    "contracts/fixtures/desktop-bootstrap/recognized.json": "sha256:8850a70562f6ae3a66bbceab246749a954a3736e209e0022077ba3f037948a04",
+    "outputs/野菜API-NewAPI-未来改造清单.md": "sha256:993415d21118bf56f55b0a27d806d7b398d875169a6d92fd22dc623831a6803b",
+    "outputs/野菜API-后端技术交接-客户端接入.md": "sha256:564dd71a3fc16465eab54d478a7032f16b729f4f21f9e2d3ed600d4a20ca9d80",
+    "package.json": "sha256:46e2d4b5db6145602a3a9c6216ebf4aceca604dde879d61cb97a1fb8a64266c1",
+    "src-tauri/Cargo.lock": "sha256:a169e30dcb54526a13bd067c1a9db1fd530ce75bfb624306af2ef109cf02fb33",
+    "src-tauri/Cargo.toml": "sha256:0f617bd91bbe83af866c5ebeb25dca796b1b5a221f39e0673b69188e65d26f32",
+    "src-tauri/src/lib.rs": "sha256:2bf79c3f6a9abda874d3723502739f131a373c1db83a3884f29bbeb515db2efd",
+    "src-tauri/src/service_catalog.rs": "sha256:efce93beeaf0a1d9b6d798184eb0a12e8868babfe153c6b592129a49a5f62099",
+    "src-tauri/src/service_catalog_core.rs": "sha256:1e73b49f784b0f5ace61afccf3dab4d92f8aa70b158812e3be9ea9c5b2f01818",
+    "src/configuration/ConfigurationPreviewView.tsx": "sha256:e80ee38287e86fdb7e0fded54c030bf3c67967b70475ce0677e07b61851d3f5e",
+    "src/i18n/locales/en.json": "sha256:346322ebd9e4f3fcfbcb93b3217859a2315fefc95a9de1536a8eaa2c2439f920",
+    "src/i18n/locales/ja.json": "sha256:3a5e65a0ade9b644b554eb09cb6bedba5a250dcb154d37f09aba9b88d1082c2f",
+    "src/i18n/locales/zh-TW.json": "sha256:db3a4551f3ac7e9aaf6bc3818590e7323f02d0fdb3bf0fb84bb20cf2569d19bf",
+    "src/i18n/locales/zh.json": "sha256:b5ba1986c5113361676b7952ace153758d4a396bc96b1e306ce36a635027599f",
+    "src/index.css": "sha256:d881040fd269fe7874e0cc6437a1e0820e99af414446388fbb59f83785c3dfc1",
+    "src/service-catalog/ServiceCatalogPanel.test.tsx": "sha256:d7e347590737139d1bf893bae1c8168632d13102c6358ec43682fa106e203ac5",
+    "src/service-catalog/ServiceCatalogPanel.tsx": "sha256:eba9f9d25c179affdd960489e639abf1dbbce40ac214d1bc0a11e2469ab9e7d3",
+    "src/service-catalog/access-plan.test.ts": "sha256:c41aad45c2e3dd1b0fae85ce1e9b21643f36eab48b47ec64719e7c76c1859221",
+    "src/service-catalog/access-plan.ts": "sha256:82188362372d42b3421810ff03ffdd4a1f6f71ad364dc0b00610fea7991aed07",
+    "src/service-catalog/contract.test.ts": "sha256:381c6b05a5867f82a3b882e8699ac829aa017ef3d25941ffe4d70f933b7cee6c",
+    "src/service-catalog/contract.ts": "sha256:96059fc3897d2643d07478338a0752dc05ad5b14bf1f2ab800a3b8021f03fb39",
+    "src/service-catalog/handoff.test.ts": "sha256:af2e0b97b5a4d314f26fb3f1befc9425df0b7c863a20f68397be3d9cad95ee47",
+    "src/service-catalog/test-fixtures.ts": "sha256:38f07909200a0af051895f57d7813f12df2db57e9466b544cc452199f9f99bfb"
+  },
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      "package.json",
+      "src/App.tsx",
+      "src/index.css",
+      "src/candidate/**",
+      "src/configuration/**",
+      "src/service-catalog/**",
+      "src/i18n/locales/en.json",
+      "src/i18n/locales/ja.json",
+      "src/i18n/locales/zh-TW.json",
+      "src/i18n/locales/zh.json",
+      "src-tauri/Cargo.toml",
+      "src-tauri/Cargo.lock",
+      "src-tauri/capabilities/default.json",
+      "src-tauri/src/lib.rs",
+      "src-tauri/src/service_catalog.rs",
+      "src-tauri/src/service_catalog_core.rs",
+      "contracts/desktop-bootstrap.v1.schema.json",
+      "contracts/fixtures/desktop-bootstrap/**",
+      "outputs/野菜API-NewAPI-未来改造清单.md",
+      "outputs/野菜API-后端技术交接-客户端接入.md"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      "contracts/desktop-bootstrap.v1.schema.json": "sha256:7bd7308d113ab7c0cae904798b00bc699655bc67bc11b6322f655cc1ddd70fbe",
+      "contracts/fixtures/desktop-bootstrap/incompatible.json": "sha256:101d8cee9993247c30cf6540ebc78e56986aa094f81990d6584641cd252e7625",
+      "contracts/fixtures/desktop-bootstrap/recognized.json": "sha256:8850a70562f6ae3a66bbceab246749a954a3736e209e0022077ba3f037948a04",
+      "outputs/野菜API-NewAPI-未来改造清单.md": "sha256:993415d21118bf56f55b0a27d806d7b398d875169a6d92fd22dc623831a6803b",
+      "outputs/野菜API-后端技术交接-客户端接入.md": "sha256:564dd71a3fc16465eab54d478a7032f16b729f4f21f9e2d3ed600d4a20ca9d80",
+      "package.json": "sha256:46e2d4b5db6145602a3a9c6216ebf4aceca604dde879d61cb97a1fb8a64266c1",
+      "src-tauri/Cargo.lock": "sha256:a169e30dcb54526a13bd067c1a9db1fd530ce75bfb624306af2ef109cf02fb33",
+      "src-tauri/Cargo.toml": "sha256:0f617bd91bbe83af866c5ebeb25dca796b1b5a221f39e0673b69188e65d26f32",
+      "src-tauri/capabilities/default.json": "sha256:41b8337953bee00e3a4b010999391c6af17d5043c6c3c97269736267effb5cba",
+      "src-tauri/src/lib.rs": "sha256:2bf79c3f6a9abda874d3723502739f131a373c1db83a3884f29bbeb515db2efd",
+      "src-tauri/src/service_catalog.rs": "sha256:efce93beeaf0a1d9b6d798184eb0a12e8868babfe153c6b592129a49a5f62099",
+      "src-tauri/src/service_catalog_core.rs": "sha256:1e73b49f784b0f5ace61afccf3dab4d92f8aa70b158812e3be9ea9c5b2f01818",
+      "src/App.tsx": "sha256:9db85c5c5d7dc148d24c71edfd5064e41ff9231c2e6d979f8fd6a622c5b7e3ad",
+      "src/candidate/CandidateHomeView.tsx": "sha256:2badadf243f8c91fd3775d458edb0b1751437071eb1a2e8127e7dbc5f2d727f3",
+      "src/candidate/readiness.test.ts": "sha256:e830c2bcbff32648385e563e6627dedf24cd8960ada72142470b0c706db94fcc",
+      "src/candidate/readiness.ts": "sha256:9599311cc20d55a68e20c3e4de3ee4c3861dfc676ac30bca21593bb1b01ae65e",
+      "src/configuration/ConfigurationPreviewView.tsx": "sha256:e80ee38287e86fdb7e0fded54c030bf3c67967b70475ce0677e07b61851d3f5e",
+      "src/configuration/preview.test.ts": "sha256:9bb5838feb92af30fc23b2a2fcae71267e82ca8aea51f5645d0216cbdb812a57",
+      "src/configuration/preview.ts": "sha256:f1ea20dbb02e518d59f108d04475f166fac7334757bd20e72d7b71d7d6a37813",
+      "src/i18n/locales/en.json": "sha256:346322ebd9e4f3fcfbcb93b3217859a2315fefc95a9de1536a8eaa2c2439f920",
+      "src/i18n/locales/ja.json": "sha256:3a5e65a0ade9b644b554eb09cb6bedba5a250dcb154d37f09aba9b88d1082c2f",
+      "src/i18n/locales/zh-TW.json": "sha256:db3a4551f3ac7e9aaf6bc3818590e7323f02d0fdb3bf0fb84bb20cf2569d19bf",
+      "src/i18n/locales/zh.json": "sha256:b5ba1986c5113361676b7952ace153758d4a396bc96b1e306ce36a635027599f",
+      "src/index.css": "sha256:d881040fd269fe7874e0cc6437a1e0820e99af414446388fbb59f83785c3dfc1",
+      "src/service-catalog/ServiceCatalogPanel.test.tsx": "sha256:d7e347590737139d1bf893bae1c8168632d13102c6358ec43682fa106e203ac5",
+      "src/service-catalog/ServiceCatalogPanel.tsx": "sha256:eba9f9d25c179affdd960489e639abf1dbbce40ac214d1bc0a11e2469ab9e7d3",
+      "src/service-catalog/access-plan.test.ts": "sha256:c41aad45c2e3dd1b0fae85ce1e9b21643f36eab48b47ec64719e7c76c1859221",
+      "src/service-catalog/access-plan.ts": "sha256:82188362372d42b3421810ff03ffdd4a1f6f71ad364dc0b00610fea7991aed07",
+      "src/service-catalog/contract.test.ts": "sha256:381c6b05a5867f82a3b882e8699ac829aa017ef3d25941ffe4d70f933b7cee6c",
+      "src/service-catalog/contract.ts": "sha256:96059fc3897d2643d07478338a0752dc05ad5b14bf1f2ab800a3b8021f03fb39",
+      "src/service-catalog/handoff.test.ts": "sha256:af2e0b97b5a4d314f26fb3f1befc9425df0b7c863a20f68397be3d9cad95ee47",
+      "src/service-catalog/test-fixtures.ts": "sha256:38f07909200a0af051895f57d7813f12df2db57e9466b544cc452199f9f99bfb"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:0bdf6e16b4455e34d6b0da558d408d724e91d2dbf2eb96638535665da54a89ec",
+  "sourceScopeFailures": [],
+  "integrityFailures": [],
+  "assignedTo": "root",
+  "startedAt": "2026-08-31T03:08:32.546761+00:00",
+  "finishedAt": "2026-08-31T03:25:19.533413+00:00",
+  "passed": false,
+  "commands": [
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru007-contract",
+        "kind": "scenario_test",
+        "adapter": "vitest-json@1",
+        "selector": "src/service-catalog/contract.test.ts",
+        "cwd": ".",
+        "timeoutSeconds": 300
+      },
+      "runnerMetadata": null,
+      "machineReport": {
+        "schemaVersion": 1,
+        "adapter": "vitest-json@1",
+        "selector": "src/service-catalog/contract.test.ts",
+        "runnerError": "ValueError: package.json must pin vitest to one exact semantic version"
+      },
+      "process": null,
+      "validationErrors": [
+        "ValueError: package.json must pin vitest to one exact semantic version"
+      ],
+      "runnerProof": null,
+      "passed": false,
+      "id": "ru007-contract",
+      "kind": "scenario_test",
+      "actualExitCode": null,
+      "timedOut": false,
+      "scenarioId": "RU007-AS-01"
+    },
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru007-access",
+        "kind": "scenario_test",
+        "adapter": "vitest-json@1",
+        "selector": "src/service-catalog/access-plan.test.ts",
+        "cwd": ".",
+        "timeoutSeconds": 300
+      },
+      "runnerMetadata": null,
+      "machineReport": {
+        "schemaVersion": 1,
+        "adapter": "vitest-json@1",
+        "selector": "src/service-catalog/access-plan.test.ts",
+        "runnerError": "ValueError: package.json must pin vitest to one exact semantic version"
+      },
+      "process": null,
+      "validationErrors": [
+        "ValueError: package.json must pin vitest to one exact semantic version"
+      ],
+      "runnerProof": null,
+      "passed": false,
+      "id": "ru007-access",
+      "kind": "scenario_test",
+      "actualExitCode": null,
+      "timedOut": false,
+      "scenarioId": "RU007-AS-02"
+    },
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru007-ui",
+        "kind": "scenario_test",
+        "adapter": "vitest-json@1",
+        "selector": "src/service-catalog/ServiceCatalogPanel.test.tsx",
+        "cwd": ".",
+        "timeoutSeconds": 300
+      },
+      "runnerMetadata": null,
+      "machineReport": {
+        "schemaVersion": 1,
+        "adapter": "vitest-json@1",
+        "selector": "src/service-catalog/ServiceCatalogPanel.test.tsx",
+        "runnerError": "ValueError: package.json must pin vitest to one exact semantic version"
+      },
+      "process": null,
+      "validationErrors": [
+        "ValueError: package.json must pin vitest to one exact semantic version"
+      ],
+      "runnerProof": null,
+      "passed": false,
+      "id": "ru007-ui",
+      "kind": "scenario_test",
+      "actualExitCode": null,
+      "timedOut": false,
+      "scenarioId": "RU007-AS-03"
+    },
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru007-handoff",
+        "kind": "scenario_test",
+        "adapter": "vitest-json@1",
+        "selector": "src/service-catalog/handoff.test.ts",
+        "cwd": ".",
+        "timeoutSeconds": 300
+      },
+      "runnerMetadata": null,
+      "machineReport": {
+        "schemaVersion": 1,
+        "adapter": "vitest-json@1",
+        "selector": "src/service-catalog/handoff.test.ts",
+        "runnerError": "ValueError: package.json must pin vitest to one exact semantic version"
+      },
+      "process": null,
+      "validationErrors": [
+        "ValueError: package.json must pin vitest to one exact semantic version"
+      ],
+      "runnerProof": null,
+      "passed": false,
+      "id": "ru007-handoff",
+      "kind": "scenario_test",
+      "actualExitCode": null,
+      "timedOut": false,
+      "scenarioId": "RU007-AS-04"
+    }
+  ],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU007-AS-01",
+      "path": "execution/evidence/7ae8d67e9c1415981843/844c10cbf87bca3c/69ec79ada6c3d3d8.json",
+      "sha256": "sha256:b5b0bba6c32f367ae6a54214791149ff7bfd2c879a859a20c4fedb705ec692e8"
+    },
+    {
+      "scenarioId": "RU007-AS-02",
+      "path": "execution/evidence/7ae8d67e9c1415981843/844c10cbf87bca3c/a8fda87f2c08f70f.json",
+      "sha256": "sha256:88906ef62f6544539a20bf32c9d46a0742620fc1a1785e0b681cac7c6517af00"
+    },
+    {
+      "scenarioId": "RU007-AS-03",
+      "path": "execution/evidence/7ae8d67e9c1415981843/844c10cbf87bca3c/77713f033849746b.json",
+      "sha256": "sha256:84b54685876eb3ab1dbdf924330a9425efab66e80e95281c4b3b300e0b9dfa90"
+    },
+    {
+      "scenarioId": "RU007-AS-04",
+      "path": "execution/evidence/7ae8d67e9c1415981843/844c10cbf87bca3c/ee9d047872fd225f.json",
+      "sha256": "sha256:bee64b57c0b621fee20955ee128cbc6c2d27187a5d59c8a96c98e76e68aee368"
+    }
+  ],
+  "scenarioEvidenceFailures": [
+    "RU007-AS-01: registered runner proof is invalid",
+    "RU007-AS-02: registered runner proof is invalid",
+    "RU007-AS-03: registered runner proof is invalid",
+    "RU007-AS-04: registered runner proof is invalid"
+  ],
+  "releaseUnitId": "RU-007",
+  "releaseUnitHash": "sha256:771a5fd581a39bd2c394e265b9406c18ed05fc215f30b97a89bc4de9cb16ad05"
+}

@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU007-AS-03",
+  "assertion": "Explicit fetch, empty/error/retry, refresh and line-change races, latest-result isolation and safe text-only rendering.",
+  "testSelector": "src/service-catalog/ServiceCatalogPanel.test.tsx",
+  "acceptanceCommandId": "ru007-ui",
+  "runId": "RU-007/WP-RU007-CLIENT-SERVICE-INTEGRATION@2026-08-31T03:08:32.546761+00:00",
+  "packageId": "WP-RU007-CLIENT-SERVICE-INTEGRATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:5ebce0a31fe44d611a851e7a6dbc4f3cc653b8788420f17a733b02d68fbf4f79",
+  "releaseUnitId": "RU-007",
+  "releaseUnitHash": "sha256:771a5fd581a39bd2c394e265b9406c18ed05fc215f30b97a89bc4de9cb16ad05"
+}

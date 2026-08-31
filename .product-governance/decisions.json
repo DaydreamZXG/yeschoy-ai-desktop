@@ -2,6 +2,56 @@
   "schemaVersion": 1,
   "decisions": [
     {
+      "id": "DEC-050",
+      "question": "How may the client reach a reproducible local signed candidate while preserving pnpm and failed governance history?",
+      "choice": "Supersede RU-007 with RU-008 without changing product behavior. Replace the npm-only Vitest governance adapter with registered pytest-json@1 scenarios that execute real TypeScript contract/access modules and React components through an in-memory loader under mandatory read-only source isolation. Preserve the independent pnpm candidate tests and native suite, the old failed report, and all no-account/no-key/no-config-write boundaries. After tests pass, allow a macOS local candidate build signed by the installed Developer ID identity, with hardened runtime, no private-key export, no updater artifacts and no public distribution. Notarization is a separate Apple submission requiring user-configured local credentials and successful ticket verification. No NewAPI, server, CI, dependency-manager, global skill or product-feature changes.",
+      "status": "accepted",
+      "decidedBy": "product architecture within owner-authorized candidate packaging scope",
+      "decidedAt": "2026-08-31T07:54:59.695Z",
+      "evidenceRefs": [
+        "E-USER-046",
+        "E-CODE-027",
+        "E-CODE-028"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-034",
+          "REQ-035"
+        ],
+        "domainRefs": [
+          "desktop-platform",
+          "tool-config"
+        ],
+        "pageRefs": []
+      }
+    },
+    {
+      "id": "DEC-049",
+      "question": "What client-only integration may proceed while server changes belong to the owner's technical colleague?",
+      "choice": "Supersede RU-005 with RU-007. Preserve prior local discovery, pure preview, account-unavailable, disabled apply/telemetry/updater and CI semantics; add a user-triggered native reader for anonymous GET /api/status, /api/pricing and /api/desktop/v1/bootstrap at the selected compiled first-party line only. Display actual public model IDs, group metadata, declared protocols and billing modes, with user-specific access explicitly unverified. Make tool/group/model selection produce a protocol-aware preview, not executable configuration. Reject stale, malformed, overlarge and redirected responses; do not parse group prose as protocol authority or use constant pricing_version as a cache revision. Deliver a machine-readable bootstrap handoff and complete prioritized backend integration checklist including the audited deployed revision, money-unit distinctions, session/key isolation and acceptance criteria. No server code, SSH, production changes, business login, key access, configuration read/write or paid model call in this unit.",
+      "status": "accepted",
+      "decidedBy": "product architecture under owner-authorized client-only scope",
+      "decidedAt": "2026-08-31T11:08:29+08:00",
+      "evidenceRefs": [
+        "E-USER-045",
+        "E-CODE-026",
+        "E-EXT-035",
+        "E-PROP-008"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-034"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE-PREVIEW"
+        ]
+      }
+    },
+    {
       "id": "DEC-048",
       "question": "How should inherited upstream CI be adapted without expanding candidate runtime or release authority?",
       "choice": "Freeze RU-006 as a CI-only unit depending on the completed RU-005 candidate. Replace main-only upstream checks with current candidate checks on main and product/** push and PR plus manual invocation; retain nightly scheduling by reusing the same workflow at the same commit. Run frontend type checking, current candidate tests and acceptance, Rust formatting/Clippy, and nonempty native test execution on Windows x64 and both macOS architectures. Keep native temp directories; fail for missing/current test identities, empty/ignored/filtered suites, compile and test failures. Do not compile the inactive CC Switch config module merely to preserve an irrelevant WSL write test. Explicitly state that this unit does not validate WSL configuration writes, signing, installers, runtime GUI, or production. No release, deployment, secret, repository-permission, NewAPI or product behavior change.",
@@ -31,11 +81,20 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T14:35:00+08:00",
-      "evidenceRefs": ["E-USER-008"],
+      "evidenceRefs": [
+        "E-USER-008"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-001"],
-        "pageRefs": ["PAGE-ONBOARDING", "PAGE-HOME"],
-        "domainRefs": ["desktop-platform"],
+        "requirementRefs": [
+          "REQ-001"
+        ],
+        "pageRefs": [
+          "PAGE-ONBOARDING",
+          "PAGE-HOME"
+        ],
+        "domainRefs": [
+          "desktop-platform"
+        ],
         "workPackageRefs": []
       }
     },
@@ -46,11 +105,25 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T14:15:00+08:00",
-      "evidenceRefs": ["E-USER-004"],
+      "evidenceRefs": [
+        "E-USER-004"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-001", "REQ-003", "REQ-004", "REQ-012"],
-        "pageRefs": ["PAGE-ONBOARDING", "PAGE-TOOLS", "PAGE-CONFIGURE"],
-        "domainRefs": ["tool-config", "desktop-platform"],
+        "requirementRefs": [
+          "REQ-001",
+          "REQ-003",
+          "REQ-004",
+          "REQ-012"
+        ],
+        "pageRefs": [
+          "PAGE-ONBOARDING",
+          "PAGE-TOOLS",
+          "PAGE-CONFIGURE"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform"
+        ],
         "workPackageRefs": []
       }
     },
@@ -61,11 +134,22 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T14:20:00+08:00",
-      "evidenceRefs": ["E-USER-005"],
+      "evidenceRefs": [
+        "E-USER-005"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-003", "REQ-004"],
-        "pageRefs": ["PAGE-TOOLS", "PAGE-CONFIGURE"],
-        "domainRefs": ["tool-config", "diagnostics"],
+        "requirementRefs": [
+          "REQ-003",
+          "REQ-004"
+        ],
+        "pageRefs": [
+          "PAGE-TOOLS",
+          "PAGE-CONFIGURE"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "diagnostics"
+        ],
         "workPackageRefs": []
       }
     },
@@ -76,11 +160,19 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T14:15:00+08:00",
-      "evidenceRefs": ["E-USER-004"],
+      "evidenceRefs": [
+        "E-USER-004"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-012"],
-        "pageRefs": ["PAGE-TOOLS"],
-        "domainRefs": ["desktop-platform"],
+        "requirementRefs": [
+          "REQ-012"
+        ],
+        "pageRefs": [
+          "PAGE-TOOLS"
+        ],
+        "domainRefs": [
+          "desktop-platform"
+        ],
         "workPackageRefs": []
       }
     },
@@ -91,11 +183,21 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T14:25:00+08:00",
-      "evidenceRefs": ["E-USER-006"],
+      "evidenceRefs": [
+        "E-USER-006"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-006"],
-        "pageRefs": ["PAGE-MODELS", "PAGE-CONFIGURE"],
-        "domainRefs": ["billing", "tool-config"],
+        "requirementRefs": [
+          "REQ-006"
+        ],
+        "pageRefs": [
+          "PAGE-MODELS",
+          "PAGE-CONFIGURE"
+        ],
+        "domainRefs": [
+          "billing",
+          "tool-config"
+        ],
         "workPackageRefs": []
       }
     },
@@ -106,11 +208,21 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T14:30:00+08:00",
-      "evidenceRefs": ["E-USER-007", "E-CODE-002"],
+      "evidenceRefs": [
+        "E-USER-007",
+        "E-CODE-002"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-007"],
-        "pageRefs": ["PAGE-MODELS", "PAGE-BILLING"],
-        "domainRefs": ["billing"],
+        "requirementRefs": [
+          "REQ-007"
+        ],
+        "pageRefs": [
+          "PAGE-MODELS",
+          "PAGE-BILLING"
+        ],
+        "domainRefs": [
+          "billing"
+        ],
         "workPackageRefs": []
       }
     },
@@ -121,11 +233,22 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T14:10:00+08:00",
-      "evidenceRefs": ["E-USER-003"],
+      "evidenceRefs": [
+        "E-USER-003"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-002", "REQ-010"],
-        "pageRefs": ["PAGE-ONBOARDING", "PAGE-ACCOUNT"],
-        "domainRefs": ["account", "security-update"],
+        "requirementRefs": [
+          "REQ-002",
+          "REQ-010"
+        ],
+        "pageRefs": [
+          "PAGE-ONBOARDING",
+          "PAGE-ACCOUNT"
+        ],
+        "domainRefs": [
+          "account",
+          "security-update"
+        ],
         "workPackageRefs": []
       }
     },
@@ -136,11 +259,19 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T14:05:00+08:00",
-      "evidenceRefs": ["E-USER-002"],
+      "evidenceRefs": [
+        "E-USER-002"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-013"],
+        "requirementRefs": [
+          "REQ-013"
+        ],
         "pageRefs": [],
-        "domainRefs": ["account", "billing", "security-update"],
+        "domainRefs": [
+          "account",
+          "billing",
+          "security-update"
+        ],
         "workPackageRefs": []
       }
     },
@@ -151,14 +282,19 @@
       "status": "superseded",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T16:05:00+08:00",
-      "evidenceRefs": ["E-INF-001"]
+      "evidenceRefs": [
+        "E-INF-001"
+      ]
     },
     {
       "id": "DEC-010",
       "question": "What measurable non-functional targets and verification environments must V1 meet?",
       "choice": "Pending product policy, platform support decisions, and measured baselines; do not invent numeric thresholds.",
       "status": "proposed",
-      "evidenceRefs": ["E-USER-002", "E-USER-004"]
+      "evidenceRefs": [
+        "E-USER-002",
+        "E-USER-004"
+      ]
     },
     {
       "id": "DEC-011",
@@ -167,11 +303,23 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T15:00:00+08:00",
-      "evidenceRefs": ["E-USER-009"],
+      "evidenceRefs": [
+        "E-USER-009"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-008", "REQ-014"],
-        "pageRefs": ["PAGE-CONFIGURE", "PAGE-DIAGNOSTICS", "PAGE-SETTINGS"],
-        "domainRefs": ["diagnostics", "tool-config"],
+        "requirementRefs": [
+          "REQ-008",
+          "REQ-014"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE",
+          "PAGE-DIAGNOSTICS",
+          "PAGE-SETTINGS"
+        ],
+        "domainRefs": [
+          "diagnostics",
+          "tool-config"
+        ],
         "workPackageRefs": []
       }
     },
@@ -182,11 +330,23 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T15:05:00+08:00",
-      "evidenceRefs": ["E-USER-010"],
+      "evidenceRefs": [
+        "E-USER-010"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-014"],
-        "pageRefs": ["PAGE-CONFIGURE", "PAGE-DIAGNOSTICS"],
-        "domainRefs": ["diagnostics", "tool-config", "billing", "account"],
+        "requirementRefs": [
+          "REQ-014"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE",
+          "PAGE-DIAGNOSTICS"
+        ],
+        "domainRefs": [
+          "diagnostics",
+          "tool-config",
+          "billing",
+          "account"
+        ],
         "workPackageRefs": []
       }
     },
@@ -197,11 +357,21 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T15:10:00+08:00",
-      "evidenceRefs": ["E-USER-011"],
+      "evidenceRefs": [
+        "E-USER-011"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-006"],
-        "pageRefs": ["PAGE-MODELS", "PAGE-CONFIGURE"],
-        "domainRefs": ["billing", "tool-config"],
+        "requirementRefs": [
+          "REQ-006"
+        ],
+        "pageRefs": [
+          "PAGE-MODELS",
+          "PAGE-CONFIGURE"
+        ],
+        "domainRefs": [
+          "billing",
+          "tool-config"
+        ],
         "workPackageRefs": []
       }
     },
@@ -212,11 +382,27 @@
       "status": "superseded",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T15:15:00+08:00",
-      "evidenceRefs": ["E-USER-012", "E-CODE-001", "E-CODE-002"],
+      "evidenceRefs": [
+        "E-USER-012",
+        "E-CODE-001",
+        "E-CODE-002"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-006", "REQ-007", "REQ-015"],
-        "pageRefs": ["PAGE-MODELS", "PAGE-CONFIGURE", "PAGE-BILLING"],
-        "domainRefs": ["billing", "tool-config", "security-update"],
+        "requirementRefs": [
+          "REQ-006",
+          "REQ-007",
+          "REQ-015"
+        ],
+        "pageRefs": [
+          "PAGE-MODELS",
+          "PAGE-CONFIGURE",
+          "PAGE-BILLING"
+        ],
+        "domainRefs": [
+          "billing",
+          "tool-config",
+          "security-update"
+        ],
         "workPackageRefs": []
       }
     },
@@ -227,11 +413,20 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T15:20:00+08:00",
-      "evidenceRefs": ["E-USER-013"],
+      "evidenceRefs": [
+        "E-USER-013"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-007"],
-        "pageRefs": ["PAGE-MODELS", "PAGE-BILLING"],
-        "domainRefs": ["billing"],
+        "requirementRefs": [
+          "REQ-007"
+        ],
+        "pageRefs": [
+          "PAGE-MODELS",
+          "PAGE-BILLING"
+        ],
+        "domainRefs": [
+          "billing"
+        ],
         "workPackageRefs": []
       }
     },
@@ -242,11 +437,20 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T15:25:00+08:00",
-      "evidenceRefs": ["E-USER-014"],
+      "evidenceRefs": [
+        "E-USER-014"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-007"],
-        "pageRefs": ["PAGE-MODELS", "PAGE-BILLING"],
-        "domainRefs": ["billing"],
+        "requirementRefs": [
+          "REQ-007"
+        ],
+        "pageRefs": [
+          "PAGE-MODELS",
+          "PAGE-BILLING"
+        ],
+        "domainRefs": [
+          "billing"
+        ],
         "workPackageRefs": []
       }
     },
@@ -257,11 +461,20 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T15:30:00+08:00",
-      "evidenceRefs": ["E-USER-015"],
+      "evidenceRefs": [
+        "E-USER-015"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-007"],
-        "pageRefs": ["PAGE-MODELS", "PAGE-BILLING"],
-        "domainRefs": ["billing"],
+        "requirementRefs": [
+          "REQ-007"
+        ],
+        "pageRefs": [
+          "PAGE-MODELS",
+          "PAGE-BILLING"
+        ],
+        "domainRefs": [
+          "billing"
+        ],
         "workPackageRefs": []
       }
     },
@@ -272,11 +485,29 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T15:35:00+08:00",
-      "evidenceRefs": ["E-USER-016", "E-CODE-002", "E-CODE-006", "E-CODE-007", "E-CODE-008"],
+      "evidenceRefs": [
+        "E-USER-016",
+        "E-CODE-002",
+        "E-CODE-006",
+        "E-CODE-007",
+        "E-CODE-008"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-006", "REQ-007", "REQ-015"],
-        "pageRefs": ["PAGE-MODELS", "PAGE-CONFIGURE", "PAGE-BILLING"],
-        "domainRefs": ["billing", "tool-config", "security-update"],
+        "requirementRefs": [
+          "REQ-006",
+          "REQ-007",
+          "REQ-015"
+        ],
+        "pageRefs": [
+          "PAGE-MODELS",
+          "PAGE-CONFIGURE",
+          "PAGE-BILLING"
+        ],
+        "domainRefs": [
+          "billing",
+          "tool-config",
+          "security-update"
+        ],
         "workPackageRefs": []
       }
     },
@@ -287,11 +518,21 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T15:40:00+08:00",
-      "evidenceRefs": ["E-USER-017"],
+      "evidenceRefs": [
+        "E-USER-017"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-007", "REQ-015"],
-        "pageRefs": ["PAGE-MODELS", "PAGE-BILLING"],
-        "domainRefs": ["billing"],
+        "requirementRefs": [
+          "REQ-007",
+          "REQ-015"
+        ],
+        "pageRefs": [
+          "PAGE-MODELS",
+          "PAGE-BILLING"
+        ],
+        "domainRefs": [
+          "billing"
+        ],
         "workPackageRefs": []
       }
     },
@@ -302,11 +543,23 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T15:45:00+08:00",
-      "evidenceRefs": ["E-USER-003", "E-USER-018"],
+      "evidenceRefs": [
+        "E-USER-003",
+        "E-USER-018"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-002", "REQ-010"],
-        "pageRefs": ["PAGE-ONBOARDING", "PAGE-ACCOUNT"],
-        "domainRefs": ["account", "security-update"],
+        "requirementRefs": [
+          "REQ-002",
+          "REQ-010"
+        ],
+        "pageRefs": [
+          "PAGE-ONBOARDING",
+          "PAGE-ACCOUNT"
+        ],
+        "domainRefs": [
+          "account",
+          "security-update"
+        ],
         "workPackageRefs": []
       }
     },
@@ -317,11 +570,25 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T15:50:00+08:00",
-      "evidenceRefs": ["E-USER-019"],
+      "evidenceRefs": [
+        "E-USER-019"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-002", "REQ-010", "REQ-011"],
-        "pageRefs": ["PAGE-ONBOARDING", "PAGE-ACCOUNT", "PAGE-BILLING"],
-        "domainRefs": ["account", "billing", "security-update"],
+        "requirementRefs": [
+          "REQ-002",
+          "REQ-010",
+          "REQ-011"
+        ],
+        "pageRefs": [
+          "PAGE-ONBOARDING",
+          "PAGE-ACCOUNT",
+          "PAGE-BILLING"
+        ],
+        "domainRefs": [
+          "account",
+          "billing",
+          "security-update"
+        ],
         "workPackageRefs": []
       }
     },
@@ -332,11 +599,25 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T15:55:00+08:00",
-      "evidenceRefs": ["E-USER-020"],
+      "evidenceRefs": [
+        "E-USER-020"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-010", "REQ-016"],
-        "pageRefs": ["PAGE-CONFIGURE", "PAGE-ACCOUNT", "PAGE-BILLING"],
-        "domainRefs": ["account", "billing", "tool-config", "security-update"],
+        "requirementRefs": [
+          "REQ-010",
+          "REQ-016"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE",
+          "PAGE-ACCOUNT",
+          "PAGE-BILLING"
+        ],
+        "domainRefs": [
+          "account",
+          "billing",
+          "tool-config",
+          "security-update"
+        ],
         "workPackageRefs": []
       }
     },
@@ -347,11 +628,26 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T16:00:00+08:00",
-      "evidenceRefs": ["E-USER-021"],
+      "evidenceRefs": [
+        "E-USER-021"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-004", "REQ-005", "REQ-010", "REQ-016"],
-        "pageRefs": ["PAGE-CONFIGURE", "PAGE-ACCOUNT", "PAGE-TOOLS"],
-        "domainRefs": ["account", "tool-config", "security-update"],
+        "requirementRefs": [
+          "REQ-004",
+          "REQ-005",
+          "REQ-010",
+          "REQ-016"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE",
+          "PAGE-ACCOUNT",
+          "PAGE-TOOLS"
+        ],
+        "domainRefs": [
+          "account",
+          "tool-config",
+          "security-update"
+        ],
         "workPackageRefs": []
       }
     },
@@ -362,11 +658,29 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T16:05:00+08:00",
-      "evidenceRefs": ["E-USER-022", "E-CODE-004"],
+      "evidenceRefs": [
+        "E-USER-022",
+        "E-CODE-004"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-004", "REQ-005", "REQ-009", "REQ-010", "REQ-014", "REQ-016"],
-        "pageRefs": ["PAGE-CONFIGURE", "PAGE-DIAGNOSTICS", "PAGE-SETTINGS"],
-        "domainRefs": ["tool-config", "diagnostics", "security-update"],
+        "requirementRefs": [
+          "REQ-004",
+          "REQ-005",
+          "REQ-009",
+          "REQ-010",
+          "REQ-014",
+          "REQ-016"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE",
+          "PAGE-DIAGNOSTICS",
+          "PAGE-SETTINGS"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "diagnostics",
+          "security-update"
+        ],
         "workPackageRefs": []
       }
     },
@@ -377,11 +691,34 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T16:50:00+08:00",
-      "evidenceRefs": ["E-USER-022", "E-USER-031", "E-CODE-003", "E-CODE-004", "E-CODE-005", "E-INF-001"],
+      "evidenceRefs": [
+        "E-USER-022",
+        "E-USER-031",
+        "E-CODE-003",
+        "E-CODE-004",
+        "E-CODE-005",
+        "E-INF-001"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-003", "REQ-004", "REQ-005", "REQ-013", "REQ-021"],
-        "pageRefs": ["PAGE-ONBOARDING", "PAGE-HOME", "PAGE-TOOLS", "PAGE-CONFIGURE", "PAGE-SETTINGS"],
-        "domainRefs": ["tool-config", "desktop-platform", "security-update"],
+        "requirementRefs": [
+          "REQ-003",
+          "REQ-004",
+          "REQ-005",
+          "REQ-013",
+          "REQ-021"
+        ],
+        "pageRefs": [
+          "PAGE-ONBOARDING",
+          "PAGE-HOME",
+          "PAGE-TOOLS",
+          "PAGE-CONFIGURE",
+          "PAGE-SETTINGS"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform",
+          "security-update"
+        ],
         "workPackageRefs": []
       }
     },
@@ -392,11 +729,28 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T16:10:00+08:00",
-      "evidenceRefs": ["E-USER-023"],
+      "evidenceRefs": [
+        "E-USER-023"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-002", "REQ-010", "REQ-011", "REQ-016"],
-        "pageRefs": ["PAGE-ONBOARDING", "PAGE-ACCOUNT", "PAGE-BILLING", "PAGE-CONFIGURE"],
-        "domainRefs": ["account", "billing", "tool-config", "security-update"],
+        "requirementRefs": [
+          "REQ-002",
+          "REQ-010",
+          "REQ-011",
+          "REQ-016"
+        ],
+        "pageRefs": [
+          "PAGE-ONBOARDING",
+          "PAGE-ACCOUNT",
+          "PAGE-BILLING",
+          "PAGE-CONFIGURE"
+        ],
+        "domainRefs": [
+          "account",
+          "billing",
+          "tool-config",
+          "security-update"
+        ],
         "workPackageRefs": []
       }
     },
@@ -407,11 +761,24 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T16:15:00+08:00",
-      "evidenceRefs": ["E-USER-024", "E-EXT-002", "E-EXT-003", "E-EXT-004"],
+      "evidenceRefs": [
+        "E-USER-024",
+        "E-EXT-002",
+        "E-EXT-003",
+        "E-EXT-004"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-017"],
-        "pageRefs": ["PAGE-ONBOARDING", "PAGE-SETTINGS"],
-        "domainRefs": ["desktop-platform", "security-update"],
+        "requirementRefs": [
+          "REQ-017"
+        ],
+        "pageRefs": [
+          "PAGE-ONBOARDING",
+          "PAGE-SETTINGS"
+        ],
+        "domainRefs": [
+          "desktop-platform",
+          "security-update"
+        ],
         "workPackageRefs": []
       }
     },
@@ -422,11 +789,26 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T16:30:00+08:00",
-      "evidenceRefs": ["E-USER-026", "E-USER-027", "E-EXT-006", "E-EXT-007", "E-EXT-008"],
+      "evidenceRefs": [
+        "E-USER-026",
+        "E-USER-027",
+        "E-EXT-006",
+        "E-EXT-007",
+        "E-EXT-008"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-017", "REQ-018"],
-        "pageRefs": ["PAGE-ONBOARDING", "PAGE-SETTINGS"],
-        "domainRefs": ["desktop-platform", "security-update"],
+        "requirementRefs": [
+          "REQ-017",
+          "REQ-018"
+        ],
+        "pageRefs": [
+          "PAGE-ONBOARDING",
+          "PAGE-SETTINGS"
+        ],
+        "domainRefs": [
+          "desktop-platform",
+          "security-update"
+        ],
         "workPackageRefs": []
       }
     },
@@ -437,11 +819,24 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T16:35:00+08:00",
-      "evidenceRefs": ["E-USER-028", "E-EXT-009", "E-EXT-010"],
+      "evidenceRefs": [
+        "E-USER-028",
+        "E-EXT-009",
+        "E-EXT-010"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-017", "REQ-019"],
-        "pageRefs": ["PAGE-ONBOARDING", "PAGE-SETTINGS"],
-        "domainRefs": ["desktop-platform", "security-update"],
+        "requirementRefs": [
+          "REQ-017",
+          "REQ-019"
+        ],
+        "pageRefs": [
+          "PAGE-ONBOARDING",
+          "PAGE-SETTINGS"
+        ],
+        "domainRefs": [
+          "desktop-platform",
+          "security-update"
+        ],
         "workPackageRefs": []
       }
     },
@@ -452,11 +847,26 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T16:40:00+08:00",
-      "evidenceRefs": ["E-USER-029", "E-EXT-011", "E-EXT-012"],
+      "evidenceRefs": [
+        "E-USER-029",
+        "E-EXT-011",
+        "E-EXT-012"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-010", "REQ-020"],
-        "pageRefs": ["PAGE-ONBOARDING", "PAGE-SETTINGS", "PAGE-DIAGNOSTICS"],
-        "domainRefs": ["diagnostics", "security-update", "desktop-platform"],
+        "requirementRefs": [
+          "REQ-010",
+          "REQ-020"
+        ],
+        "pageRefs": [
+          "PAGE-ONBOARDING",
+          "PAGE-SETTINGS",
+          "PAGE-DIAGNOSTICS"
+        ],
+        "domainRefs": [
+          "diagnostics",
+          "security-update",
+          "desktop-platform"
+        ],
         "workPackageRefs": []
       }
     },
@@ -467,11 +877,22 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T16:45:00+08:00",
-      "evidenceRefs": ["E-USER-030", "E-EXT-011"],
+      "evidenceRefs": [
+        "E-USER-030",
+        "E-EXT-011"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-020"],
-        "pageRefs": ["PAGE-SETTINGS", "PAGE-DIAGNOSTICS"],
-        "domainRefs": ["diagnostics", "security-update"],
+        "requirementRefs": [
+          "REQ-020"
+        ],
+        "pageRefs": [
+          "PAGE-SETTINGS",
+          "PAGE-DIAGNOSTICS"
+        ],
+        "domainRefs": [
+          "diagnostics",
+          "security-update"
+        ],
         "workPackageRefs": []
       }
     },
@@ -482,11 +903,18 @@
       "status": "accepted",
       "decidedBy": "product owner",
       "decidedAt": "2026-08-29T16:55:00+08:00",
-      "evidenceRefs": ["E-USER-032"],
+      "evidenceRefs": [
+        "E-USER-032"
+      ],
       "affects": {
-        "requirementRefs": ["REQ-022"],
+        "requirementRefs": [
+          "REQ-022"
+        ],
         "pageRefs": [],
-        "domainRefs": ["desktop-platform", "security-update"],
+        "domainRefs": [
+          "desktop-platform",
+          "security-update"
+        ],
         "workPackageRefs": []
       }
     },

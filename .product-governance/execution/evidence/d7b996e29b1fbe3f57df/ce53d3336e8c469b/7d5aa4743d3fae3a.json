@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU008-AS-06",
+  "assertion": "Candidate configuration keeps updater off, contains no signing/notary secrets, distinguishes signed from notarized and preserves disabled account/configuration actions.",
+  "testSelector": "tests/work_packages/ru008/test_acceptance.py::test_candidate_release_boundary",
+  "acceptanceCommandId": "ru008-release",
+  "runId": "RU-008/WP-RU008-VERIFIED-MACOS-CANDIDATE@2026-08-31T07:55:03.100073+00:00",
+  "packageId": "WP-RU008-VERIFIED-MACOS-CANDIDATE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru008/test_acceptance.py::test_candidate_release_boundary",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:d2df512b11ce8a6f57df8883c3a80f14d3083e3ffe4e343366ce83f36065ccea",
+    "machineReportSha256": "sha256:e3c3c15348b47ef2f403f03170c66528b8b0c86d7a40a40240888b598f949b28",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:f201c2132deef95e1653deddd74969ac4b455ec0eedf6205f2b05889fe0898af",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:eabdc277bd442bd93ea8fb2ede599ae3cdc46ca10dcc1a2b51b6f36c21d6f3c2",
+  "releaseUnitId": "RU-008",
+  "releaseUnitHash": "sha256:0d5713b1966fec3bea90454b2d40b1a131be594042b055949f2df6340aa7ef8d"
+}

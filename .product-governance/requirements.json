@@ -2,6 +2,46 @@
   "schemaVersion": 1,
   "requirements": [
     {
+      "id": "REQ-035",
+      "statement": "RU-008 provides pnpm-compatible read-only semantic acceptance for the unchanged current client and prepares a signed local macOS candidate without claiming notarization, public release or backend-dependent readiness.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-046",
+        "E-CODE-027",
+        "E-CODE-028"
+      ],
+      "acceptance": [
+        "Registered read-only-source semantic acceptance covers the actual runtime modules and React state transitions without requiring npm layout or changing pnpm dependencies.",
+        "Local signed macOS app/bundle output is separately checked for identity, hardened runtime, contents, hashes and honest notarization status; no installer upload or public release."
+      ]
+    },
+    {
+      "id": "REQ-034",
+      "statement": "RU-007 supplies a real anonymous first-party model/group catalog and protocol-aware five-tool preview plus an implementable backend handoff while server, credential, account and configuration-write authority remain absent.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-045",
+        "E-CODE-026",
+        "E-EXT-035",
+        "E-PROP-008"
+      ],
+      "acceptance": [
+        "Only explicit user action can request the three fixed GET paths on one compiled HTTPS origin; no custom URLs, redirects, auth headers, cookies, raw upstream errors, expressions or persisted metadata reach the renderer.",
+        "Public catalog facts are labelled non-user-specific; groups are independent of network lines; models retain real IDs and declared protocols while installation compatibility, group-specific stream restrictions and account authorization remain unverified.",
+        "Line changes, refreshes and unmounts invalidate prior requests and selections; malformed, partial and failed responses never fall back to sample models, default ratios or cached authentication.",
+        "Claude Code requires declared anthropic, Codex requires openai-response, OpenCode and Pi require openai for this preview profile; DSH continues to abstain. Missing declarations block the corresponding preview without claiming that a positive declaration proves real compatibility.",
+        "No balance or actual account price is fabricated. Server display exchange rate and fixed 6.75 official comparison FX are distinct. No numeric price projection or client expression execution is introduced.",
+        "Bootstrap absence, transport failure, unsupported contract and recognized contract are distinguishable; recognition cannot activate login or apply. The backend handoff includes schema, examples, actual deployed-source evidence, missing services and server-owned acceptance.",
+        "Existing candidate regression plus new contract, protocol, race/recovery, UI and handoff tests pass; current native suite compiles and runs without skipped tests."
+      ]
+    },
+    {
       "id": "REQ-033",
       "statement": "The current candidate branch and nightly schedule execute the same bounded read-only-source CI checks with explicit Windows x64 and macOS Intel/Apple Silicon native results, rejecting empty/stale/skipped test suites without pretending to validate legacy WSL configuration writes or public release.",
       "scope": "target",
@@ -30,7 +70,11 @@
       "impact": "critical",
       "state": "confirmed",
       "owner": "desktop-platform",
-      "evidenceRefs": ["E-USER-001", "E-USER-004", "E-USER-008"],
+      "evidenceRefs": [
+        "E-USER-001",
+        "E-USER-004",
+        "E-USER-008"
+      ],
       "acceptance": [
         "A first-time user can reach a ready-to-use supported tool through the guided flow without manually entering a base URL or editing a configuration file.",
         "Advanced technical values remain inspectable without dominating the default flow."
@@ -43,7 +87,14 @@
       "impact": "critical",
       "state": "confirmed",
       "owner": "account",
-      "evidenceRefs": ["E-USER-001", "E-USER-003", "E-USER-018", "E-USER-019", "E-USER-023", "E-CODE-001"],
+      "evidenceRefs": [
+        "E-USER-001",
+        "E-USER-003",
+        "E-USER-018",
+        "E-USER-019",
+        "E-USER-023",
+        "E-CODE-001"
+      ],
       "acceptance": [
         "The client never asks the user to choose GitHub or LinuxDo as a desktop-specific login provider.",
         "If the website session is absent, the website performs its normal login before authorization.",
@@ -62,7 +113,10 @@
       "impact": "high",
       "state": "confirmed",
       "owner": "tool-config",
-      "evidenceRefs": ["E-USER-004", "E-USER-005"],
+      "evidenceRefs": [
+        "E-USER-004",
+        "E-USER-005"
+      ],
       "acceptance": [
         "Every supported tool has an explicit detection contract and version evidence.",
         "Not found is not presented as an error.",
@@ -76,7 +130,13 @@
       "impact": "critical",
       "state": "confirmed",
       "owner": "tool-config",
-      "evidenceRefs": ["E-USER-004", "E-USER-005", "E-USER-022", "E-CODE-004", "E-CODE-005"],
+      "evidenceRefs": [
+        "E-USER-004",
+        "E-USER-005",
+        "E-USER-022",
+        "E-CODE-004",
+        "E-CODE-005"
+      ],
       "acceptance": [
         "Unrelated user configuration survives a successful change.",
         "A failed write or validation restores the exact pre-operation state.",
@@ -90,7 +150,11 @@
       "impact": "critical",
       "state": "confirmed",
       "owner": "tool-config",
-      "evidenceRefs": ["E-USER-004", "E-USER-022", "E-CODE-004"],
+      "evidenceRefs": [
+        "E-USER-004",
+        "E-USER-022",
+        "E-CODE-004"
+      ],
       "acceptance": [
         "The encrypted temporary snapshot is durably created and bound to the target file identity before the write starts.",
         "Successful validation deletes the snapshot immediately; failed validation restores the exact pre-operation state and deletes the snapshot only after recovery completes.",
@@ -107,7 +171,11 @@
       "impact": "high",
       "state": "confirmed",
       "owner": "billing",
-      "evidenceRefs": ["E-USER-006", "E-CODE-001", "E-CODE-002"],
+      "evidenceRefs": [
+        "E-USER-006",
+        "E-CODE-001",
+        "E-CODE-002"
+      ],
       "acceptance": [
         "The exact model ID is visible and copyable before configuration.",
         "The default list contains only models available to the current account and compatible with the selected tool.",
@@ -124,7 +192,10 @@
       "impact": "critical",
       "state": "confirmed",
       "owner": "billing",
-      "evidenceRefs": ["E-USER-007", "E-CODE-002"],
+      "evidenceRefs": [
+        "E-USER-007",
+        "E-CODE-002"
+      ],
       "acceptance": [
         "The official price includes a source URL and last-verified time.",
         "The actual price reflects the current user's eligible group and pricing version.",
@@ -145,7 +216,9 @@
       "impact": "high",
       "state": "confirmed",
       "owner": "diagnostics",
-      "evidenceRefs": ["E-USER-009"],
+      "evidenceRefs": [
+        "E-USER-009"
+      ],
       "acceptance": [
         "The labels and root endpoints match the accepted line decision.",
         "Protocol-specific path rules are applied by each tool adapter rather than stored as a misleading universal suffix.",
@@ -159,7 +232,11 @@
       "impact": "high",
       "state": "confirmed",
       "owner": "diagnostics",
-      "evidenceRefs": ["E-USER-004", "E-USER-022", "E-CODE-001"],
+      "evidenceRefs": [
+        "E-USER-004",
+        "E-USER-022",
+        "E-CODE-001"
+      ],
       "acceptance": [
         "Diagnostics never send prompt or project contents.",
         "Every repair action previews affected files and creates an encrypted temporary rollback snapshot when it changes local state.",
@@ -173,7 +250,16 @@
       "impact": "critical",
       "state": "confirmed",
       "owner": "security-update",
-      "evidenceRefs": ["E-USER-003", "E-USER-018", "E-USER-019", "E-USER-021", "E-USER-022", "E-USER-023", "E-USER-029", "E-CODE-004"],
+      "evidenceRefs": [
+        "E-USER-003",
+        "E-USER-018",
+        "E-USER-019",
+        "E-USER-021",
+        "E-USER-022",
+        "E-USER-023",
+        "E-USER-029",
+        "E-CODE-004"
+      ],
       "acceptance": [
         "Account-session credentials are never written into a tool configuration.",
         "A desktop session cannot change identity, payment, group, other-device, or administrative state and cannot retrieve another device's complete tool key.",
@@ -191,7 +277,11 @@
       "impact": "high",
       "state": "confirmed",
       "owner": "billing",
-      "evidenceRefs": ["E-USER-001", "E-USER-023", "E-CODE-001"],
+      "evidenceRefs": [
+        "E-USER-001",
+        "E-USER-023",
+        "E-CODE-001"
+      ],
       "acceptance": [
         "Balance and usage identify freshness and retry state.",
         "Recharge does not embed payment credentials or duplicate payment settlement in the client.",
@@ -206,7 +296,9 @@
       "impact": "high",
       "state": "confirmed",
       "owner": "desktop-platform",
-      "evidenceRefs": ["E-USER-004"],
+      "evidenceRefs": [
+        "E-USER-004"
+      ],
       "acceptance": [
         "A missing tool receives installation guidance only.",
         "No V1 action elevates privileges to install a third-party tool."
@@ -219,7 +311,9 @@
       "impact": "critical",
       "state": "confirmed",
       "owner": "desktop-platform",
-      "evidenceRefs": ["E-USER-002"],
+      "evidenceRefs": [
+        "E-USER-002"
+      ],
       "acceptance": [
         "No NewAPI, server, Nginx, DNS, database, or production configuration is modified in this phase.",
         "Backend-dependent capabilities remain visibly specified or unavailable rather than simulated as complete."
@@ -232,7 +326,11 @@
       "impact": "high",
       "state": "confirmed",
       "owner": "diagnostics",
-      "evidenceRefs": ["E-USER-009", "E-USER-010", "E-USER-022"],
+      "evidenceRefs": [
+        "E-USER-009",
+        "E-USER-010",
+        "E-USER-022"
+      ],
       "acceptance": [
         "The same account credential, tool key, model choice, and price projection work across both configured line roots.",
         "Recommendation uses comparable measurements and does not oscillate on a transient result.",
@@ -246,7 +344,15 @@
       "impact": "critical",
       "state": "confirmed",
       "owner": "billing",
-      "evidenceRefs": ["E-USER-016", "E-USER-017", "E-CODE-001", "E-CODE-002", "E-CODE-006", "E-CODE-007", "E-CODE-008"],
+      "evidenceRefs": [
+        "E-USER-016",
+        "E-USER-017",
+        "E-CODE-001",
+        "E-CODE-002",
+        "E-CODE-006",
+        "E-CODE-007",
+        "E-CODE-008"
+      ],
       "acceptance": [
         "No client-side fuzzy match changes an exact server model ID.",
         "A newly available model without catalog metadata remains identifiable but is not declared compatible without evidence.",
@@ -264,7 +370,12 @@
       "impact": "critical",
       "state": "confirmed",
       "owner": "security-update",
-      "evidenceRefs": ["E-USER-020", "E-USER-021", "E-USER-022", "E-USER-023"],
+      "evidenceRefs": [
+        "E-USER-020",
+        "E-USER-021",
+        "E-USER-022",
+        "E-USER-023"
+      ],
       "acceptance": [
         "Claude Code, Codex, OpenCode, Pi, and DSH on one device never share a relay key with one another.",
         "Repeated configuration, model switching, and line switching reuse the same account-device-tool key.",
@@ -284,7 +395,12 @@
       "impact": "critical",
       "state": "confirmed",
       "owner": "desktop-platform",
-      "evidenceRefs": ["E-USER-024", "E-EXT-002", "E-EXT-003", "E-EXT-004"],
+      "evidenceRefs": [
+        "E-USER-024",
+        "E-EXT-002",
+        "E-EXT-003",
+        "E-EXT-004"
+      ],
       "acceptance": [
         "Release qualification runs on Windows 10 22H2 x64, supported Windows 11 x64 versions, macOS 13 Intel, and macOS 13 or later Apple Silicon.",
         "The macOS artifact is a signed Universal binary containing Intel and Apple Silicon architectures.",
@@ -300,7 +416,13 @@
       "impact": "critical",
       "state": "confirmed",
       "owner": "security-update",
-      "evidenceRefs": ["E-USER-026", "E-USER-027", "E-EXT-006", "E-EXT-007", "E-EXT-008"],
+      "evidenceRefs": [
+        "E-USER-026",
+        "E-USER-027",
+        "E-EXT-006",
+        "E-EXT-007",
+        "E-EXT-008"
+      ],
       "acceptance": [
         "The public DMG and contained app pass Developer ID signature verification and Apple notarization checks before publication.",
         "The public download origin is first-party and the app update trust chain is independent from transport security alone.",
@@ -316,7 +438,11 @@
       "impact": "critical",
       "state": "confirmed",
       "owner": "security-update",
-      "evidenceRefs": ["E-USER-028", "E-EXT-009", "E-EXT-010"],
+      "evidenceRefs": [
+        "E-USER-028",
+        "E-EXT-009",
+        "E-EXT-010"
+      ],
       "acceptance": [
         "No unsigned or self-signed Windows package is offered through a public novice-user download path.",
         "The macOS public release does not wait for unresolved Windows signing if its own release unit is otherwise complete.",
@@ -332,7 +458,12 @@
       "impact": "critical",
       "state": "confirmed",
       "owner": "diagnostics",
-      "evidenceRefs": ["E-USER-029", "E-USER-030", "E-EXT-011", "E-EXT-012"],
+      "evidenceRefs": [
+        "E-USER-029",
+        "E-USER-030",
+        "E-EXT-011",
+        "E-EXT-012"
+      ],
       "acceptance": [
         "No telemetry leaves the device before the first-run notice is shown.",
         "Disabling telemetry stops future event and crash-envelope upload, deletes the local pending queue, and leaves login, billing, configuration, diagnostics, and model use functional.",
@@ -351,7 +482,14 @@
       "impact": "critical",
       "state": "confirmed",
       "owner": "desktop-platform",
-      "evidenceRefs": ["E-USER-022", "E-USER-031", "E-CODE-003", "E-CODE-004", "E-CODE-005", "E-INF-001"],
+      "evidenceRefs": [
+        "E-USER-022",
+        "E-USER-031",
+        "E-CODE-003",
+        "E-CODE-004",
+        "E-CODE-005",
+        "E-INF-001"
+      ],
       "acceptance": [
         "The distributed product retains the CC Switch MIT license and copyright notice and has a recorded dependency-license audit.",
         "Reused adapters and file operations pass the 野菜API tool-version, ownership, secret, conflict, and temporary-rollback contracts before they are declared supported.",
@@ -367,7 +505,9 @@
       "impact": "critical",
       "state": "confirmed",
       "owner": "desktop-platform",
-      "evidenceRefs": ["E-USER-032"],
+      "evidenceRefs": [
+        "E-USER-032"
+      ],
       "acceptance": [
         "Forked CC Switch identifiers are removed or explicitly migrated before any public artifact is built.",
         "macOS bundles, Windows packages, credential-store entries, local application-data roots, telemetry application identity, and update metadata consistently use com.yeschoy.desktop.",

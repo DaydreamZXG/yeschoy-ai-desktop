@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU007-AS-02",
+  "assertion": "Use real model/group membership and per-tool protocol gates; preserve DSH abstention, source boundaries and no-write truth.",
+  "testSelector": "src/service-catalog/access-plan.test.ts",
+  "acceptanceCommandId": "ru007-access",
+  "runId": "RU-007/WP-RU007-CLIENT-SERVICE-INTEGRATION@2026-08-31T03:08:32.546761+00:00",
+  "packageId": "WP-RU007-CLIENT-SERVICE-INTEGRATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:847004e744343c99a799d9ad1c035a79cb4e43f4b42c6a5cee7c790a7d705e66",
+  "releaseUnitId": "RU-007",
+  "releaseUnitHash": "sha256:771a5fd581a39bd2c394e265b9406c18ed05fc215f30b97a89bc4de9cb16ad05"
+}

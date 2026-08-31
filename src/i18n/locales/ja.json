@@ -1,4 +1,59 @@
 {
+  "yeschoyCatalog": {
+    "eyebrow": "野菜APIの公開カタログ",
+    "title": "グループとモデルを選ぶ",
+    "read": "モデル一覧を読み込む",
+    "refresh": "再読み込み",
+    "loading": "読み込み中…",
+    "loadingNote": "サービス状態と公開一覧のみを読み取ります。ログインやKey発行は行いません。",
+    "publicNotice": "公開モデルの表示はアカウントの利用権限を意味しません。ツール設定を変更せず、接続内容をプレビューします。",
+    "observed": "読込時刻 {{time}}",
+    "empty": "公開一覧に選択可能なモデルがありません。再読み込みするか、後でもう一度お試しください。",
+    "groupLabel": "サービスグループ",
+    "chooseGroup": "グループを選択",
+    "groupHelp": "グループはモデル範囲と課金ルールを決めます。大陸・グローバル回線はネットワーク経路であり、グループとは別です。",
+    "noGroupDescription": "サーバーからグループの説明が提供されていません。",
+    "multiplier": "公開グループ倍率：{{value}}。アカウントの最終価格ではありません。",
+    "searchLabel": "モデルを検索",
+    "searchPlaceholder": "モデルID・キーワード",
+    "modelLabel": "モデル ID",
+    "chooseModel": "モデルを選択",
+    "modelCount": "{{count}} 件のモデル",
+    "requiredProtocol": "必要なインターフェース",
+    "billingLabel": "課金タイプ",
+    "compatibilityNotice": "アカウント権限、グループのストリーミング制限、ツールの正確なバージョンは未検証です。宣言されたインターフェースは互換性テストの結果ではありません。設定の適用は未開放です。",
+    "priceTitle": "最終価格を表示しない理由",
+    "priceNotice": "公式価格比較の固定レートは {{comparisonFx}}、バックエンド表示レートは {{backendFx}} です。用途は異なります。公開課金タイプだけを読み取り、式の実行、残高や実際の価格の推測は行いません。",
+    "unknown": "未提供",
+    "publicReadAttempted": "公開一覧の読取を試行済み",
+    "backend": {
+      "not_deployed": "デスクトップ認証APIは未配備です。",
+      "contract_recognized": "API構造を認識しました。認証や機能の有効化を意味しません。",
+      "incompatible": "APIのバージョンまたは構造が一致しません。未認証のままです。",
+      "unavailable": "デスクトップAPIを確認できません。公開一覧は独立して閲覧できます。"
+    },
+    "errors": {
+      "none": "",
+      "network_error": "接続に失敗しました。ネットワークを確認して再試行してください。",
+      "timed_out": "読み込みがタイムアウトしました。回線を変更するか、後で再試行してください。",
+      "http_error": "サービスが一覧を返しませんでした。後で再試行してください。",
+      "invalid_response": "応答が契約に一致しないため使用しません。再読み込みするかサポートへ連絡してください。",
+      "response_too_large": "応答がクライアントの安全上限を超えたため、読み込みを停止しました。",
+      "catalog_busy": "前回の読み込みが終了していません。少し待って再試行してください。",
+      "client_unavailable": "現在の環境では一覧を読み取れません。デスクトップアプリで再試行してください。"
+    },
+    "protocol": {
+      "protocol_declared": "必要なインターフェースは宣言済み・互換性未検証",
+      "protocol_not_declared": "このモデルはツールが必要とするインターフェースを宣言していません",
+      "dsh_unverified": "DSHの正確なアダプターは未検証です"
+    },
+    "billing": {
+      "ratio": "トークン・倍率課金",
+      "per_request": "リクエスト課金",
+      "tiered_expr": "段階・式による課金",
+      "unknown": "課金タイプ未確認"
+    }
+  },
   "app": {
     "title": "CC Switch",
     "description": "Claude Code・Codex・Gemini CLI のためのオールインワンアシスタント"
@@ -3392,7 +3447,7 @@
     "notReadFromComputer": "フィールド名は公式文書由来で、PC からの読取ではありません",
     "dshFieldsWithheld": "DSH の書込フィールドは、厳密なバージョンのアダプター検証後に公開します。",
     "safetyTitle": "このプレビューが行ったこと",
-    "safetyBody": "すべての操作は PC に触れる前に停止",
+    "safetyBody": "公開情報の読み取りのみ。認証情報やローカル設定には触れません",
     "safety": {
       "networkAttempted": "ネットワーク要求",
       "configurationRead": "既存設定の読取",
@@ -3462,7 +3517,7 @@
         }
       },
       "truthTitle": "候補版は設定成功を装いません",
-      "truthBody": "モデルIDは実アカウントのカタログから、価格はNewAPI管理の公式基準とユーザー実価格から取得し、将来のKeyはOSの安全な資格情報層だけに置きます。"
+      "truthBody": "モデルIDはサーバーの公開カタログから取得しますが、アカウントの利用権限を示すものではありません。価格はNewAPI管理の公式基準とユーザー実価格から取得し、将来のKeyはOSの安全な資格情報層だけに置きます。"
     }
   },
   "yeschoyDiagnostics": {
@@ -3562,7 +3617,7 @@
       }
     },
     "backendTitle": "NewAPI は変更していません",
-    "backendBody": "ログイン、残高、使用量、モデル、価格、チャージ、ツールKeyには将来の狭い /api/desktop/v1 が必要です。Web Cookieや汎用Token CRUDで代用しません。",
+    "backendBody": "公開モデルカタログは手動で取得できます。ログイン、残高、使用量、アカウントで利用可能なモデル、実価格、チャージ、ツールKeyには将来の限定的な /api/desktop/v1 が必要です。Web Cookieや汎用Token CRUDで代用しません。",
     "openAccount": "アカウント画面を見る",
     "openDiagnostics": "回線診断を開く"
   }

@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU007-AS-01",
+  "assertion": "Reject malformed, stale, mismatched, duplicate and inconsistent native projections with no fallback facts.",
+  "testSelector": "src/service-catalog/contract.test.ts",
+  "acceptanceCommandId": "ru007-contract",
+  "runId": "RU-007/WP-RU007-CLIENT-SERVICE-INTEGRATION@2026-08-31T03:08:32.546761+00:00",
+  "packageId": "WP-RU007-CLIENT-SERVICE-INTEGRATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:d423baa01f017f0e82015ab4a2978ab29ace0645f7fa55a572438ecba23c3fde",
+  "releaseUnitId": "RU-007",
+  "releaseUnitHash": "sha256:771a5fd581a39bd2c394e265b9406c18ed05fc215f30b97a89bc4de9cb16ad05"
+}

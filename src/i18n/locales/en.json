@@ -1,4 +1,59 @@
 {
+  "yeschoyCatalog": {
+    "eyebrow": "Public catalog from YesChoy",
+    "title": "Choose a group and model",
+    "read": "Read model catalog",
+    "refresh": "Read again",
+    "loading": "Reading…",
+    "loadingNote": "Reads service status and the public catalog only. No sign-in or key creation.",
+    "publicNotice": "Public visibility does not grant account access. This produces a preview without changing tool settings.",
+    "observed": "Read at {{time}}",
+    "empty": "There are no selectable models in the public catalog. Read again or try later.",
+    "groupLabel": "Service group",
+    "chooseGroup": "Choose a service group",
+    "groupHelp": "Groups determine model access and billing rules. Mainland/global lines select the network route, not the group.",
+    "noGroupDescription": "The server supplied no group description.",
+    "multiplier": "Public group multiplier: {{value}}. This is not your account's final price.",
+    "searchLabel": "Find a model",
+    "searchPlaceholder": "Model ID or keyword",
+    "modelLabel": "Model ID",
+    "chooseModel": "Choose a model",
+    "modelCount": "{{count}} models found",
+    "requiredProtocol": "Required interface",
+    "billingLabel": "Billing type",
+    "compatibilityNotice": "Account access, group-specific streaming restrictions and the exact tool version still need verification. A declared interface is not a compatibility test. Applying settings remains unavailable.",
+    "priceTitle": "Why is there no final price yet?",
+    "priceNotice": "The official-price comparison rate is fixed at {{comparisonFx}}; the backend display rate is {{backendFx}}. They serve different purposes. This view reads public billing types without evaluating expressions or inferring your balance or actual price.",
+    "unknown": "not provided",
+    "publicReadAttempted": "Public catalog read attempted",
+    "backend": {
+      "not_deployed": "Desktop authorization endpoints are not deployed.",
+      "contract_recognized": "Desktop contract recognized; no authorization or feature activation is implied.",
+      "incompatible": "Desktop contract or version mismatch. No authorization granted.",
+      "unavailable": "Desktop endpoint could not be verified. The public catalog can still be browsed independently."
+    },
+    "errors": {
+      "none": "",
+      "network_error": "Connection failed. Check your network and read again.",
+      "timed_out": "The request timed out. Change lines or try again later.",
+      "http_error": "The service did not return a catalog. Try again later.",
+      "invalid_response": "The response does not match the catalog contract and was rejected. Read again or contact support.",
+      "response_too_large": "The response exceeded the client's safety limit. Reading stopped.",
+      "catalog_busy": "The previous read is still finishing. Try again shortly.",
+      "client_unavailable": "This environment cannot read the catalog right now. Retry in the desktop app."
+    },
+    "protocol": {
+      "protocol_declared": "Required interface declared; compatibility is unverified",
+      "protocol_not_declared": "This model does not declare the interface required by the tool",
+      "dsh_unverified": "The exact DSH adapter has not been verified"
+    },
+    "billing": {
+      "ratio": "Token / multiplier",
+      "per_request": "Per request",
+      "tiered_expr": "Tiered / expression",
+      "unknown": "Unrecognized billing type"
+    }
+  },
   "app": {
     "title": "CC Switch",
     "description": "All-in-One Assistant for Claude Code, Codex & Gemini CLI"
@@ -3392,7 +3447,7 @@
     "notReadFromComputer": "Field names come from official docs, not your computer",
     "dshFieldsWithheld": "DSH write fields remain hidden until an exact-version adapter is verified.",
     "safetyTitle": "What did this preview do?",
-    "safetyBody": "Every action stopped before touching your computer",
+    "safetyBody": "Public reads only; credentials and local configuration stay untouched",
     "safety": {
       "networkAttempted": "Network request",
       "configurationRead": "Read existing settings",
@@ -3462,7 +3517,7 @@
         }
       },
       "truthTitle": "The candidate never pretends setup succeeded",
-      "truthBody": "Model IDs must come from the real account catalog; prices must come from NewAPI's maintained official baseline and actual user price; future Keys belong only in the secure OS credential layer."
+      "truthBody": "Model IDs come from the public server catalog, not proof of account access; prices must come from NewAPI's maintained official baseline and actual user price; future Keys belong only in the secure OS credential layer."
     }
   },
   "yeschoyDiagnostics": {
@@ -3562,7 +3617,7 @@
       }
     },
     "backendTitle": "NewAPI has not been changed",
-    "backendBody": "Login, balance, usage, models, prices, recharge, and tool Keys require future narrow /api/desktop/v1 endpoints. The candidate will not substitute website Cookies or generic Token CRUD.",
+    "backendBody": "The public model catalog can be read manually. Login, balance, usage, account-available models, actual prices, recharge, and tool Keys still require future narrow /api/desktop/v1 endpoints, not website Cookies or generic Token CRUD.",
     "openAccount": "View account page",
     "openDiagnostics": "Open line diagnostics"
   }

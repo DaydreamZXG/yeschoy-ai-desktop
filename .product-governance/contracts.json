@@ -838,6 +838,305 @@
         "E-CODE-024"
       ],
       "status": "specified"
+    },
+    {
+      "id": "public-service-catalog@v1",
+      "kind": "query",
+      "owner": "tool-config",
+      "consumers": [
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/public-service-catalog@v1",
+      "authorization": "Bundled local UI, explicit read action only. Three fixed anonymous HTTPS GET paths on the selected compiled first-party origin. No credential, browser session, admin, configuration, server-management, payment, updater or telemetry authority.",
+      "idempotency": "No retained state. A refresh has a new requestId; only the newest request for the current line can be consumed. No automatic retry or pricing_version-based cache.",
+      "compatibility": "Version 1 projects public model metadata only. Bootstrap contract recognition is deliberately separate from account and tool-write authorization. Existing local-only preview v1 remains pure and unchanged.",
+      "inputSchema": {
+        "type": "object",
+        "description": "Bounded explicit catalog read",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Caller correlation",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "lineId": {
+            "type": "string",
+            "description": "Compiled line identity",
+            "enum": [
+              "mainland_optimized",
+              "global_accelerated"
+            ]
+          }
+        },
+        "required": [
+          "requestId",
+          "lineId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Sanitized public, point-in-time service catalog with no account authorization",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Correlation echoed unchanged",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "lineId": {
+            "type": "string",
+            "description": "Compiled line identity",
+            "enum": [
+              "mainland_optimized",
+              "global_accelerated"
+            ]
+          },
+          "observedAtEpochMs": {
+            "type": "integer",
+            "description": "Local completion time, not server freshness guarantee",
+            "minimum": 0
+          },
+          "catalogStatus": {
+            "type": "string",
+            "description": "Public catalog availability",
+            "enum": [
+              "available",
+              "unavailable"
+            ]
+          },
+          "catalogError": {
+            "type": "string",
+            "description": "Closed safe failure code",
+            "enum": [
+              "none",
+              "network_error",
+              "timed_out",
+              "http_error",
+              "invalid_response",
+              "response_too_large"
+            ]
+          },
+          "serviceVersion": {
+            "type": "string",
+            "description": "Public server version or empty when unavailable",
+            "maxLength": 100
+          },
+          "backendDisplayExchangeRate": {
+            "type": "string",
+            "description": "Backend display setting only, never the comparison FX",
+            "maxLength": 40
+          },
+          "groups": {
+            "type": "array",
+            "description": "Public visible groups; not account entitlements",
+            "items": {
+              "type": "object",
+              "description": "Public group metadata",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Exact group ID",
+                  "minLength": 1,
+                  "maxLength": 128
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Untrusted display-only description",
+                  "maxLength": 1000
+                },
+                "multiplier": {
+                  "type": "string",
+                  "description": "Observed positive group multiplier, not a final price",
+                  "maxLength": 40
+                }
+              },
+              "required": [
+                "id",
+                "description",
+                "multiplier"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0,
+            "maxItems": 128,
+            "uniqueItems": true
+          },
+          "models": {
+            "type": "array",
+            "description": "Public model metadata",
+            "items": {
+              "type": "object",
+              "description": "Public model",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Exact model ID",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "groups": {
+                  "type": "array",
+                  "description": "Known group memberships",
+                  "items": {
+                    "type": "string",
+                    "description": "Group ID",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "minItems": 0,
+                  "maxItems": 128,
+                  "uniqueItems": true
+                },
+                "endpoints": {
+                  "type": "array",
+                  "description": "Declared protocol IDs, not actual test results",
+                  "items": {
+                    "type": "string",
+                    "description": "Endpoint ID",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "minItems": 0,
+                  "maxItems": 32,
+                  "uniqueItems": true
+                },
+                "billingMode": {
+                  "type": "string",
+                  "description": "Billing category only, no evaluated price",
+                  "enum": [
+                    "ratio",
+                    "per_request",
+                    "tiered_expr",
+                    "unknown"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "groups",
+                "endpoints",
+                "billingMode"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0,
+            "maxItems": 2048,
+            "uniqueItems": true
+          },
+          "desktopBackend": {
+            "type": "object",
+            "description": "Bootstrap schema observation only",
+            "properties": {
+              "status": {
+                "type": "string",
+                "description": "No status authorizes a session",
+                "enum": [
+                  "not_deployed",
+                  "contract_recognized",
+                  "incompatible",
+                  "unavailable"
+                ]
+              },
+              "error": {
+                "type": "string",
+                "description": "Closed transport or parsing outcome",
+                "enum": [
+                  "none",
+                  "network_error",
+                  "timed_out",
+                  "http_error",
+                  "invalid_response",
+                  "response_too_large"
+                ]
+              },
+              "declaredCapabilities": {
+                "type": "array",
+                "description": "Declared feature names; none is automatically activated",
+                "items": {
+                  "type": "string",
+                  "description": "Known capability",
+                  "enum": [
+                    "device_authorization",
+                    "account_read",
+                    "usage_read",
+                    "models_read",
+                    "pricing_read",
+                    "tool_keys_manage"
+                  ]
+                },
+                "minItems": 0,
+                "maxItems": 6,
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "status",
+              "error",
+              "declaredCapabilities"
+            ],
+            "additionalProperties": false
+          },
+          "userSpecific": {
+            "type": "boolean",
+            "description": "This unit never authenticates",
+            "enum": [
+              false
+            ]
+          },
+          "secretsAccessed": {
+            "type": "boolean",
+            "description": "This unit never reads a credential",
+            "enum": [
+              false
+            ]
+          }
+        },
+        "required": [
+          "requestId",
+          "lineId",
+          "observedAtEpochMs",
+          "catalogStatus",
+          "catalogError",
+          "serviceVersion",
+          "backendDisplayExchangeRate",
+          "groups",
+          "models",
+          "desktopBackend",
+          "userSpecific",
+          "secretsAccessed"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal"
+      ],
+      "observability": {
+        "correlation": "Echo requestId and local observation time; never echo raw errors or URLs from a remote payload.",
+        "audit": "No persisted audit or upload in this client-only unit.",
+        "metrics": "No telemetry; outcome and observation time exist only in the current UI state."
+      },
+      "errorSemantics": [
+        "Reject invalid input before networking.",
+        "Only static HTTPS origins and fixed paths are permitted; redirects and arbitrary backend URLs are never followed.",
+        "Response bodies, item counts and execution time are defensively bounded; unknown metadata is discarded without widening permissions.",
+        "Malformed pricing clears groups/models; a valid empty catalog is not an error and is not replaced with samples.",
+        "No raw server message, billing expression, secret, personal information or price is returned to the renderer.",
+        "Recognized bootstrap cannot produce authenticated, compatible or applied state."
+      ],
+      "requirementRefs": [
+        "REQ-034"
+      ],
+      "evidenceRefs": [
+        "E-USER-045",
+        "E-CODE-026",
+        "E-EXT-035",
+        "E-PROP-008"
+      ],
+      "status": "specified"
     }
   ]
 }

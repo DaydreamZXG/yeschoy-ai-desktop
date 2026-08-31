@@ -14,7 +14,7 @@
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
     "test:unit": "vitest run",
-    "test:candidate": "vitest run src/candidate/readiness.test.ts src/diagnostics/contract.test.ts src/configuration/preview.test.ts",
+    "test:candidate": "vitest run src/candidate/readiness.test.ts src/diagnostics/contract.test.ts src/configuration/preview.test.ts src/service-catalog/contract.test.ts src/service-catalog/access-plan.test.ts src/service-catalog/ServiceCatalogPanel.test.tsx src/service-catalog/handoff.test.ts",
     "test:unit:watch": "vitest watch"
   },
   "keywords": [],

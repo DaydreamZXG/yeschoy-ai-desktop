@@ -2,6 +2,87 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "E-USER-046",
+      "claim": "The owner agrees to candidate packaging and confirms installation of the requested Developer ID Application certificate after being told that signing and notarization preparation will follow.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-08-31:咱们是不是应该打包;好，Developer ID Application 证书怎么处理;好了",
+      "observedAt": "2026-08-31T07:54:59.695Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-027",
+      "claim": "RU-007 formal acceptance did not execute because vitest-json@1 requires exact Vitest, package-lock.json and a non-symlink install, while this repository uses pnpm. Existing tests/work_packages/ru003 provides a precedent for real TypeScript execution through pytest without mutating source.",
+      "class": "code_observed",
+      "locator": ".product-governance/execution/reports/844c10cbf87bca3c.7ae8d67e9c1415981843.json; tests/work_packages/ru003/test_acceptance.py",
+      "observedAt": "2026-08-31T07:54:59.695Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-028",
+      "claim": "Local security find-identity reports a valid Developer ID Application signing identity; xcrun notarytool history reports no yeschoy-notary keychain profile. This proves neither successful signing nor notarization.",
+      "class": "code_observed",
+      "locator": "command:security find-identity -v -p codesigning; xcrun notarytool history --keychain-profile yeschoy-notary",
+      "observedAt": "2026-08-31T07:54:59.695Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-USER-045",
+      "claim": "The owner directs implementation in the desktop client and a concrete backend handoff for their technical colleague; do not modify server code or production configuration.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-08-31:不，你先改我们的工具接入，服务器端要改的你列出来，我回头让技术老哥改，我们不碰服务器的代码",
+      "observedAt": "2026-08-31T11:08:29+08:00",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-026",
+      "claim": "The current client only registers local discovery and TCP diagnostics; configuration preview has no real model selection and account readiness is compiled unavailable.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/lib.rs; src/configuration/preview.ts; src/account/readiness.ts",
+      "observedAt": "2026-08-31T11:08:29+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-035",
+      "claim": "The inspected deployed NewAPI revision exposes public pricing with usable groups and supported endpoints; its pricing_version values are source constants, not revisions of price data.",
+      "class": "external_verified",
+      "locator": "https://github.com/QuantumNous/new-api/blob/eb48396d5fe97d27772d0cd5e3ca8aa5caa4f3e9/controller/pricing.go",
+      "observedAt": "2026-08-31T11:08:29+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-008",
+      "claim": "A client-only public catalog reader and tool-access preview can use bounded anonymous GETs and project no credentials or account facts. Defensive response/time/concurrency bounds are implementation limits, not claimed production capacity or service SLA. Desktop bootstrap recognition is only a contract check, never authorization.",
+      "class": "inferred",
+      "locator": "conversation:2026-08-31:client-only public-catalog integration scope",
+      "observedAt": "2026-08-31T11:08:29+08:00",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-USER-045",
+        "E-CODE-026",
+        "E-EXT-035"
+      ]
+    },
+    {
       "id": "E-USER-044",
       "claim": "After diagnosing the inherited WSL2 Nightly failure, the product owner authorized adapting the client CI, pushing the correction, and verifying Windows and macOS results without modifying NewAPI or publishing installers.",
       "class": "user_confirmed",

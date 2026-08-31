@@ -1,4 +1,59 @@
 {
+  "yeschoyCatalog": {
+    "eyebrow": "來自野菜API的公開目錄",
+    "title": "選分組，再選模型",
+    "read": "讀取模型目錄",
+    "refresh": "重新讀取",
+    "loading": "正在讀取…",
+    "loadingNote": "只讀取服務狀態和公開目錄，不登入、不領取 Key。",
+    "publicNotice": "這裡顯示公開模型，不代表你的帳號已獲授權。僅產生接入預覽，不改工具設定。",
+    "observed": "讀取於 {{time}}",
+    "empty": "目前公開目錄沒有可選模型。可以重新讀取，或稍後再試。",
+    "groupLabel": "服務分組",
+    "chooseGroup": "請選擇服務分組",
+    "groupHelp": "分組決定模型範圍與計費規則；大陸/全球是網路線路，兩者不同。",
+    "noGroupDescription": "伺服器未提供分組說明。",
+    "multiplier": "公開分組倍率 {{value}}，不是目前帳號的最終價格。",
+    "searchLabel": "尋找模型",
+    "searchPlaceholder": "輸入模型 ID 或關鍵字",
+    "modelLabel": "模型 ID",
+    "chooseModel": "請選擇模型",
+    "modelCount": "找到 {{count}} 個模型",
+    "requiredProtocol": "工具需要的介面",
+    "billingLabel": "計費類型",
+    "compatibilityNotice": "仍需驗證帳號權限、分組的串流限制和工具精確版本。介面聲明不是相容性測試結果，套用設定尚未開放。",
+    "priceTitle": "為何暫不顯示最終價格？",
+    "priceNotice": "官網價比較匯率固定為 {{comparisonFx}}；後台顯示匯率為 {{backendFx}}，用途不同。目前只讀取公開計費類型，不執行計費運算式，也不推算帳號餘額或實際價格。",
+    "unknown": "未提供",
+    "publicReadAttempted": "已嘗試讀取公開目錄",
+    "backend": {
+      "not_deployed": "桌面授權介面尚未上線。",
+      "contract_recognized": "已識別桌面介面結構；不代表已授權或功能已開通。",
+      "incompatible": "桌面介面版本或結構不符，維持未授權。",
+      "unavailable": "暫時無法驗證桌面介面，仍可獨立瀏覽公開目錄。"
+    },
+    "errors": {
+      "none": "",
+      "network_error": "網路連線失敗。請檢查網路後重新讀取。",
+      "timed_out": "讀取逾時。可以切換線路或稍後重試。",
+      "http_error": "服務暫時沒有回傳目錄。請稍後重新讀取。",
+      "invalid_response": "回傳資料不符合目錄契約，已拒絕使用。請重新讀取或聯絡支援。",
+      "response_too_large": "回傳目錄超出客戶端安全限制，已停止讀取。",
+      "catalog_busy": "上一次讀取尚在結束，請稍後重新讀取。",
+      "client_unavailable": "目前環境暫時無法讀取目錄。請在桌面客戶端中重試。"
+    },
+    "protocol": {
+      "protocol_declared": "已聲明所需介面，實際相容性待驗證",
+      "protocol_not_declared": "此模型未聲明這項工具需要的介面",
+      "dsh_unverified": "DSH 精確適配方式尚未驗證"
+    },
+    "billing": {
+      "ratio": "Token / 倍率計費",
+      "per_request": "按次計費",
+      "tiered_expr": "階梯或運算式計費",
+      "unknown": "尚未識別計費類型"
+    }
+  },
   "app": {
     "title": "CC Switch",
     "description": "Claude Code / Codex / Gemini CLI 全方位輔助工具"
@@ -3393,7 +3448,7 @@
     "notReadFromComputer": "欄位名稱來自官方文件，不是從電腦讀取",
     "dshFieldsWithheld": "DSH 暫不顯示寫入欄位，待精確版本介面卡驗證完成後再開放。",
     "safetyTitle": "這次預覽做了什麼？",
-    "safetyBody": "所有動作都停在你的電腦之外",
+    "safetyBody": "公開讀取之外，不接觸金鑰或本機設定",
     "safety": {
       "networkAttempted": "網路請求",
       "configurationRead": "讀取現有設定",
@@ -3463,7 +3518,7 @@
         }
       },
       "truthTitle": "候選版不會假裝已設定成功",
-      "truthBody": "模型 ID 必須來自真實帳戶目錄；價格必須來自 NewAPI 維護的官網基準與目前使用者實際價；Key 未來只進入系統安全憑據層。"
+      "truthBody": "模型 ID 來自服務端公開目錄，不代表你的帳戶已獲授權；價格必須來自 NewAPI 維護的官網基準與目前使用者實際價；Key 未來只進入系統安全憑據層。"
     }
   },
   "yeschoyDiagnostics": {
@@ -3563,7 +3618,7 @@
       }
     },
     "backendTitle": "NewAPI 目前沒有被改動",
-    "backendBody": "登入、餘額、用量、模型、價格、儲值和工具 Key 需要未來的 /api/desktop/v1 窄權限介面；候選版不會用網站 Cookie 或通用 Token CRUD 代替。",
+    "backendBody": "公開模型目錄可手動讀取；登入、餘額、用量、帳戶可用模型、實際價格、儲值和工具 Key 仍需要未來的 /api/desktop/v1 窄權限介面，不會用網站 Cookie 或通用 Token CRUD 代替。",
     "openAccount": "查看帳戶頁面",
     "openDiagnostics": "開啟線路診斷"
   }

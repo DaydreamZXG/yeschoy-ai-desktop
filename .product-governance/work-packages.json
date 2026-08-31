@@ -2,6 +2,345 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "WP-RU008-VERIFIED-MACOS-CANDIDATE",
+      "wave": "integration",
+      "owner": "desktop-client",
+      "riskClass": "high",
+      "objective": "Supersede RU-007 with RU-008 without changing product behavior. Replace the npm-only Vitest governance adapter with registered pytest-json@1 scenarios that execute real TypeScript contract/access modules and React components through an in-memory loader under mandatory read-only source isolation. Preserve the independent pnpm candidate tests and native suite, the old failed report, and all no-account/no-key/no-config-write boundaries. After tests pass, allow a macOS local candidate build signed by the installed Developer ID identity, with hardened runtime, no private-key export, no updater artifacts and no public distribution. Notarization is a separate Apple submission requiring user-configured local credentials and successful ticket verification. No NewAPI, server, CI, dependency-manager, global skill or product-feature changes.",
+      "deliverables": [
+        "Only explicit user action can request the three fixed GET paths on one compiled HTTPS origin; no custom URLs, redirects, auth headers, cookies, raw upstream errors, expressions or persisted metadata reach the renderer.",
+        "Public catalog facts are labelled non-user-specific; groups are independent of network lines; models retain real IDs and declared protocols while installation compatibility, group-specific stream restrictions and account authorization remain unverified.",
+        "Line changes, refreshes and unmounts invalidate prior requests and selections; malformed, partial and failed responses never fall back to sample models, default ratios or cached authentication.",
+        "Claude Code requires declared anthropic, Codex requires openai-response, OpenCode and Pi require openai for this preview profile; DSH continues to abstain. Missing declarations block the corresponding preview without claiming that a positive declaration proves real compatibility.",
+        "No balance or actual account price is fabricated. Server display exchange rate and fixed 6.75 official comparison FX are distinct. No numeric price projection or client expression execution is introduced.",
+        "Bootstrap absence, transport failure, unsupported contract and recognized contract are distinguishable; recognition cannot activate login or apply. The backend handoff includes schema, examples, actual deployed-source evidence, missing services and server-owned acceptance.",
+        "Existing candidate regression plus new contract, protocol, race/recovery, UI and handoff tests pass; current native suite compiles and runs without skipped tests.",
+        "Registered read-only-source semantic acceptance covers the actual runtime modules and React state transitions without requiring npm layout or changing pnpm dependencies.",
+        "Local signed macOS app/bundle output is separately checked for identity, hardened runtime, contents, hashes and honest notarization status; no installer upload or public release."
+      ],
+      "requirementRefs": [
+        "REQ-034",
+        "REQ-035"
+      ],
+      "decisionRefs": [
+        "DEC-049",
+        "DEC-050"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server/NewAPI/SSH, account login, API keys, local tool config read/write, payment, updater, telemetry, CI or public release changes.",
+        "No package-manager migration, global skill modification, weaker source isolation, skipped existing tests or retroactive rewrite of failed evidence.",
+        "No private signing key or notarization password export, printing, repository storage or transmission to NewAPI."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "package.json",
+        "src/App.tsx",
+        "src/index.css",
+        "src/candidate/**",
+        "src/configuration/**",
+        "src/service-catalog/**",
+        "src/i18n/locales/en.json",
+        "src/i18n/locales/ja.json",
+        "src/i18n/locales/zh-TW.json",
+        "src/i18n/locales/zh.json",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/capabilities/default.json",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/service_catalog.rs",
+        "src-tauri/src/service_catalog_core.rs",
+        "contracts/desktop-bootstrap.v1.schema.json",
+        "contracts/fixtures/desktop-bootstrap/**",
+        "outputs/野菜API-NewAPI-未来改造清单.md",
+        "outputs/野菜API-后端技术交接-客户端接入.md",
+        "tests/work_packages/ru008/**",
+        "src-tauri/tauri.candidate.conf.json",
+        "outputs/野菜API-桌面客户端-V1-候选版发布清单.md",
+        "outputs/野菜API-macOS-候选包构建记录.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        ".github/**",
+        "src-tauri/src/tool_discovery.rs",
+        "src-tauri/src/tool_discovery_core.rs",
+        "src-tauri/src/connectivity.rs",
+        "src-tauri/src/connectivity_core.rs",
+        "src-tauri/src/database/**",
+        "src-tauri/src/proxy/**",
+        "src-tauri/src/services/**",
+        "src/account/readiness.ts",
+        "tests/work_packages/ru005/**",
+        "tests/work_packages/ru006/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "Acceptance and local build only; no user or server data.",
+        "rollback": "Keep candidate outputs local; revert owned new test/build documentation if needed. Never revoke existing certificates."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve RU-007 runtime and pnpm/native tests. Add read-only executable acceptance and separately evidenced local signing.",
+        "supportedVersions": "Current locked project dependencies and host architecture only; no untested Windows, Universal or authenticated compatibility claim.",
+        "removalGate": "Public distribution and notarized claims require explicit successful platform evidence and all relevant product gates."
+      },
+      "inputContracts": [
+        "tool-discovery-scan@v1",
+        "guided-configuration-preview@v1",
+        "desktop-account-readiness@v1"
+      ],
+      "outputContracts": [
+        "public-service-catalog@v1"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru008-contract",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru008/test_acceptance.py::test_catalog_contract_runtime_boundary",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru008-access",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru008/test_acceptance.py::test_tool_access_runtime_protocol_matrix",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru008-recovery",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru008/test_acceptance.py::test_ui_read_recovery_and_untrusted_text",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru008-race",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru008/test_acceptance.py::test_ui_selection_races_and_preview_consistency",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru008-handoff",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru008/test_acceptance.py::test_bootstrap_handoff_and_transport_boundary",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru008-release",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru008/test_acceptance.py::test_candidate_release_boundary",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU008-AS-01",
+          "assertion": "Real catalog validator rejects mismatched, malformed, duplicate, oversize and authorization-inconsistent inputs.",
+          "testSelector": "tests/work_packages/ru008/test_acceptance.py::test_catalog_contract_runtime_boundary",
+          "acceptanceCommandId": "ru008-contract"
+        },
+        {
+          "id": "RU008-AS-02",
+          "assertion": "Actual per-tool access plans preserve model/group membership, endpoint rules, DSH abstention and disabled application.",
+          "testSelector": "tests/work_packages/ru008/test_acceptance.py::test_tool_access_runtime_protocol_matrix",
+          "acceptanceCommandId": "ru008-access"
+        },
+        {
+          "id": "RU008-AS-03",
+          "assertion": "Real React component reads only on user action, rejects raw errors and malformed results, handles empty/retry states and renders metadata as text.",
+          "testSelector": "tests/work_packages/ru008/test_acceptance.py::test_ui_read_recovery_and_untrusted_text",
+          "acceptanceCommandId": "ru008-recovery"
+        },
+        {
+          "id": "RU008-AS-04",
+          "assertion": "Real React component rejects obsolete responses after line change or unmount, clears on refresh, and preserves both preview panes when the same line is clicked again.",
+          "testSelector": "tests/work_packages/ru008/test_acceptance.py::test_ui_selection_races_and_preview_consistency",
+          "acceptanceCommandId": "ru008-race"
+        },
+        {
+          "id": "RU008-AS-05",
+          "assertion": "Bootstrap schema/examples, native fixed-origin transport, secret exclusion and backend handoff stay consistent.",
+          "testSelector": "tests/work_packages/ru008/test_acceptance.py::test_bootstrap_handoff_and_transport_boundary",
+          "acceptanceCommandId": "ru008-handoff"
+        },
+        {
+          "id": "RU008-AS-06",
+          "assertion": "Candidate configuration keeps updater off, contains no signing/notary secrets, distinguishes signed from notarized and preserves disabled account/configuration actions.",
+          "testSelector": "tests/work_packages/ru008/test_acceptance.py::test_candidate_release_boundary",
+          "acceptanceCommandId": "ru008-release"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Any runtime change would activate accounts, credentials, local configuration writes or unknown tool compatibility.",
+        "Signing/notarization would require exposing a secret, bypassing verification, accepting an agreement, changing Apple account security or publishing externally without user authority.",
+        "Any required acceptance fails, source isolation fails, or output provenance cannot be established."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU007-CLIENT-SERVICE-INTEGRATION",
+      "wave": "integration",
+      "owner": "desktop-client",
+      "riskClass": "high",
+      "objective": "Supersede RU-005 with RU-007. Preserve prior local discovery, pure preview, account-unavailable, disabled apply/telemetry/updater and CI semantics; add a user-triggered native reader for anonymous GET /api/status, /api/pricing and /api/desktop/v1/bootstrap at the selected compiled first-party line only. Display actual public model IDs, group metadata, declared protocols and billing modes, with user-specific access explicitly unverified. Make tool/group/model selection produce a protocol-aware preview, not executable configuration. Reject stale, malformed, overlarge and redirected responses; do not parse group prose as protocol authority or use constant pricing_version as a cache revision. Deliver a machine-readable bootstrap handoff and complete prioritized backend integration checklist including the audited deployed revision, money-unit distinctions, session/key isolation and acceptance criteria. No server code, SSH, production changes, business login, key access, configuration read/write or paid model call in this unit.",
+      "deliverables": [
+        "Only explicit user action can request the three fixed GET paths on one compiled HTTPS origin; no custom URLs, redirects, auth headers, cookies, raw upstream errors, expressions or persisted metadata reach the renderer.",
+        "Public catalog facts are labelled non-user-specific; groups are independent of network lines; models retain real IDs and declared protocols while installation compatibility, group-specific stream restrictions and account authorization remain unverified.",
+        "Line changes, refreshes and unmounts invalidate prior requests and selections; malformed, partial and failed responses never fall back to sample models, default ratios or cached authentication.",
+        "Claude Code requires declared anthropic, Codex requires openai-response, OpenCode and Pi require openai for this preview profile; DSH continues to abstain. Missing declarations block the corresponding preview without claiming that a positive declaration proves real compatibility.",
+        "No balance or actual account price is fabricated. Server display exchange rate and fixed 6.75 official comparison FX are distinct. No numeric price projection or client expression execution is introduced.",
+        "Bootstrap absence, transport failure, unsupported contract and recognized contract are distinguishable; recognition cannot activate login or apply. The backend handoff includes schema, examples, actual deployed-source evidence, missing services and server-owned acceptance.",
+        "Existing candidate regression plus new contract, protocol, race/recovery, UI and handoff tests pass; current native suite compiles and runs without skipped tests."
+      ],
+      "requirementRefs": [
+        "REQ-034"
+      ],
+      "decisionRefs": [
+        "DEC-049"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server code, SSH, deployment, infrastructure, business data, authentication, token creation, payment, credential access, tool configuration read/write, updater or telemetry changes.",
+        "No fabricated account availability, model recommendation, group protocol certainty, final price, latency SLA or production-readiness claim."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "package.json",
+        "src/App.tsx",
+        "src/index.css",
+        "src/candidate/**",
+        "src/configuration/**",
+        "src/service-catalog/**",
+        "src/i18n/locales/en.json",
+        "src/i18n/locales/ja.json",
+        "src/i18n/locales/zh-TW.json",
+        "src/i18n/locales/zh.json",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/capabilities/default.json",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/service_catalog.rs",
+        "src-tauri/src/service_catalog_core.rs",
+        "contracts/desktop-bootstrap.v1.schema.json",
+        "contracts/fixtures/desktop-bootstrap/**",
+        "outputs/野菜API-NewAPI-未来改造清单.md",
+        "outputs/野菜API-后端技术交接-客户端接入.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        ".github/**",
+        "src-tauri/src/tool_discovery.rs",
+        "src-tauri/src/tool_discovery_core.rs",
+        "src-tauri/src/connectivity.rs",
+        "src-tauri/src/connectivity_core.rs",
+        "src-tauri/src/database/**",
+        "src-tauri/src/proxy/**",
+        "src-tauri/src/services/**",
+        "src/account/readiness.ts",
+        "tests/work_packages/ru005/**",
+        "tests/work_packages/ru006/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "Transient public metadata only; no credentials, local tool files, customer or server data changes.",
+        "rollback": "Revert owned client source and contract files through Git; no user data recovery."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve legacy pure preview and account-readiness contracts, add a separate anonymous public metadata query and honest tool-access plan.",
+        "supportedVersions": "Current client and inspected public NewAPI response shape; no automatically writable tool version or authenticated server capability is activated.",
+        "removalGate": "Account credentials, configuration writes and production backend activation require their own accepted authority and backend contract verification."
+      },
+      "inputContracts": [
+        "tool-discovery-scan@v1",
+        "guided-configuration-preview@v1",
+        "desktop-account-readiness@v1"
+      ],
+      "outputContracts": [
+        "public-service-catalog@v1"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru007-contract",
+          "kind": "scenario_test",
+          "adapter": "vitest-json@1",
+          "selector": "src/service-catalog/contract.test.ts",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru007-access",
+          "kind": "scenario_test",
+          "adapter": "vitest-json@1",
+          "selector": "src/service-catalog/access-plan.test.ts",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru007-ui",
+          "kind": "scenario_test",
+          "adapter": "vitest-json@1",
+          "selector": "src/service-catalog/ServiceCatalogPanel.test.tsx",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru007-handoff",
+          "kind": "scenario_test",
+          "adapter": "vitest-json@1",
+          "selector": "src/service-catalog/handoff.test.ts",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU007-AS-01",
+          "assertion": "Reject malformed, stale, mismatched, duplicate and inconsistent native projections with no fallback facts.",
+          "testSelector": "src/service-catalog/contract.test.ts",
+          "acceptanceCommandId": "ru007-contract"
+        },
+        {
+          "id": "RU007-AS-02",
+          "assertion": "Use real model/group membership and per-tool protocol gates; preserve DSH abstention, source boundaries and no-write truth.",
+          "testSelector": "src/service-catalog/access-plan.test.ts",
+          "acceptanceCommandId": "ru007-access"
+        },
+        {
+          "id": "RU007-AS-03",
+          "assertion": "Explicit fetch, empty/error/retry, refresh and line-change races, latest-result isolation and safe text-only rendering.",
+          "testSelector": "src/service-catalog/ServiceCatalogPanel.test.tsx",
+          "acceptanceCommandId": "ru007-ui"
+        },
+        {
+          "id": "RU007-AS-04",
+          "assertion": "Executable bootstrap contract examples, security boundaries, backend ownership and preserved client-only regression.",
+          "testSelector": "src/service-catalog/handoff.test.ts",
+          "acceptanceCommandId": "ru007-handoff"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Any request or implementation requires a secret, login session, arbitrary host, remote write, configuration mutation or privileged operation.",
+        "Unknown backend behavior would have to be presented as a current account fact or a compatible tool.",
+        "A path outside the frozen client-only ownership must change."
+      ],
+      "status": "planned"
+    },
+    {
       "id": "WP-RU006-CANDIDATE-CI",
       "wave": "integration",
       "owner": "desktop-client",

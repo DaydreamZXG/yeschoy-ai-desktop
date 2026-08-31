@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU007-AS-04",
+  "assertion": "Executable bootstrap contract examples, security boundaries, backend ownership and preserved client-only regression.",
+  "testSelector": "src/service-catalog/handoff.test.ts",
+  "acceptanceCommandId": "ru007-handoff",
+  "runId": "RU-007/WP-RU007-CLIENT-SERVICE-INTEGRATION@2026-08-31T03:08:32.546761+00:00",
+  "packageId": "WP-RU007-CLIENT-SERVICE-INTEGRATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:9291c5ba38caccce513e80c84a367c7c8e00affdaec1801e54f3afa595f97cc8",
+  "releaseUnitId": "RU-007",
+  "releaseUnitHash": "sha256:771a5fd581a39bd2c394e265b9406c18ed05fc215f30b97a89bc4de9cb16ad05"
+}

@@ -1,14 +1,13 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ServiceCatalogPanel } from "../service-catalog/ServiceCatalogPanel";
+import type { ToolAccessPlan } from "../service-catalog/access-plan";
 import {
   CONFIGURATION_LINES,
   CONFIGURATION_TOOLS,
   createConfigurationPreview,
 } from "./preview";
-import type {
-  ConfigurationLineId,
-  ConfigurationToolId,
-} from "./preview";
+import type { ConfigurationLineId, ConfigurationToolId } from "./preview";
 
 interface ConfigurationPreviewViewProps {
   onOpenAccount: () => void;
@@ -30,6 +29,8 @@ export function ConfigurationPreviewView({
   const [toolId, setToolId] = useState<ConfigurationToolId>("claude");
   const [lineId, setLineId] =
     useState<ConfigurationLineId>("mainland_optimized");
+  const [accessPlan, setAccessPlan] = useState<ToolAccessPlan | null>(null);
+  const [catalogAttempted, setCatalogAttempted] = useState(false);
 
   const preview = useMemo(
     () =>
@@ -54,12 +55,8 @@ export function ConfigurationPreviewView({
       >
         <div className="configuration-hero-copy">
           <p className="eyebrow">{t("yeschoyConfiguration.eyebrow")}</p>
-          <h1 id="configuration-title">
-            {t("yeschoyConfiguration.title")}
-          </h1>
-          <p className="intro-copy">
-            {t("yeschoyConfiguration.description")}
-          </p>
+          <h1 id="configuration-title">{t("yeschoyConfiguration.title")}</h1>
+          <p className="intro-copy">{t("yeschoyConfiguration.description")}</p>
           <div className="preview-boundary" role="status">
             <span className="preview-boundary-dot" aria-hidden="true" />
             {t("yeschoyConfiguration.previewOnly")}
@@ -84,11 +81,13 @@ export function ConfigurationPreviewView({
               <small>{preview.lineName}</small>
             </div>
           </li>
-          <li data-state="locked">
+          <li data-state={accessPlan ? "preview" : "current"}>
             <span>03</span>
             <div>
               <strong>{t("yeschoyConfiguration.steps.model")}</strong>
-              <small>{t("yeschoyConfiguration.modelUnavailable")}</small>
+              <small>
+                {accessPlan?.modelId || t("yeschoyCatalog.chooseModel")}
+              </small>
             </div>
           </li>
           <li data-state="preview">
@@ -131,7 +130,11 @@ export function ConfigurationPreviewView({
                   key={line.id}
                   className={lineId === line.id ? "is-selected" : undefined}
                   aria-pressed={lineId === line.id}
-                  onClick={() => setLineId(line.id)}
+                  onClick={() => {
+                    if (lineId === line.id) return;
+                    setLineId(line.id);
+                    setAccessPlan(null);
+                  }}
                 >
                   <span className="line-signal" aria-hidden="true">
                     <i />
@@ -151,6 +154,12 @@ export function ConfigurationPreviewView({
             </div>
           </fieldset>
         </div>
+        <ServiceCatalogPanel
+          toolId={toolId}
+          lineId={lineId}
+          onPlanChange={setAccessPlan}
+          onReadAttempt={() => setCatalogAttempted(true)}
+        />
       </section>
 
       <section
@@ -172,7 +181,9 @@ export function ConfigurationPreviewView({
         </div>
 
         <div className="route-specimen" aria-hidden="true">
-          <span className="route-origin">{preview.displayName.slice(0, 1)}</span>
+          <span className="route-origin">
+            {preview.displayName.slice(0, 1)}
+          </span>
           <span className="route-line" />
           <span className="route-midpoint" />
           <span className="route-destination">
@@ -220,8 +231,18 @@ export function ConfigurationPreviewView({
             </div>
             <div>
               <dt>{t("yeschoyConfiguration.modelId")}</dt>
-              <dd>{t("yeschoyConfiguration.modelUnavailable")}</dd>
+              <dd>
+                <code>
+                  {accessPlan?.modelId || t("yeschoyCatalog.chooseModel")}
+                </code>
+              </dd>
             </div>
+            {accessPlan && (
+              <div>
+                <dt>{t("yeschoyCatalog.groupLabel")}</dt>
+                <dd>{accessPlan.groupId}</dd>
+              </div>
+            )}
           </dl>
 
           <div className="owned-fields">
@@ -252,7 +273,13 @@ export function ConfigurationPreviewView({
             {SIDE_EFFECT_TRUTHS.map((truth) => (
               <li key={truth}>
                 <span>{t(`yeschoyConfiguration.safety.${truth}`)}</span>
-                <strong>{t("yeschoyConfiguration.notPerformed")}</strong>
+                <strong>
+                  {t(
+                    truth === "networkAttempted" && catalogAttempted
+                      ? "yeschoyCatalog.publicReadAttempted"
+                      : "yeschoyConfiguration.notPerformed",
+                  )}
+                </strong>
               </li>
             ))}
           </ul>
