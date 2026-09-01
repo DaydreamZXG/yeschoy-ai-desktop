@@ -1,4 +1,4 @@
-export const CANDIDATE_VERSION = "0.1.0" as const;
+export const CANDIDATE_VERSION = "0.2.0" as const;
 
 export type CandidateCapabilityId =
   | "tool_discovery"
@@ -13,6 +13,7 @@ export type CandidateCapabilityId =
 
 export type CandidateCapabilityStatus =
   | "available_client_side"
+  | "integration_candidate"
   | "backend_required"
   | "security_evidence_required"
   | "disabled_in_candidate";
@@ -39,8 +40,8 @@ const CAPABILITIES: CandidateCapability[] = [
   { id: "tool_discovery", status: "available_client_side" },
   { id: "configuration_preview", status: "available_client_side" },
   { id: "line_connectivity", status: "available_client_side" },
-  { id: "account_and_billing", status: "backend_required" },
-  { id: "model_and_pricing", status: "backend_required" },
+  { id: "account_and_billing", status: "integration_candidate" },
+  { id: "model_and_pricing", status: "integration_candidate" },
   {
     id: "secure_tool_credentials",
     status: "security_evidence_required",

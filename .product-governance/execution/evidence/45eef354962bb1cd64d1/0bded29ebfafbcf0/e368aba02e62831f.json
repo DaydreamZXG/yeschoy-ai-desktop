@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU023-AS-03",
+  "assertion": "The 0.2.0 candidate typechecks and builds, and its handoff proves no server or tool-configuration edit while retaining deployment and server-side least-privilege restrictions as production blockers before DSH work begins.",
+  "testSelector": "tests/work_packages/ru023/test_acceptance.py::test_candidate_build_and_server_handoff",
+  "acceptanceCommandId": "ru023-build-handoff",
+  "runId": "RU-023/WP-RU023-DESKTOP-V2-ACCOUNT@2026-09-01T13:02:59.676096+00:00",
+  "packageId": "WP-RU023-DESKTOP-V2-ACCOUNT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru023/test_acceptance.py::test_candidate_build_and_server_handoff",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:f140e8da444dcfaa55cc9891a165a10b2db81cf2bae4f3797fdabec50692917c",
+    "machineReportSha256": "sha256:945fc29fd6e41d66f0f2fb83a01f50769970e04d40e5d3a802f9b619d05f9f95",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:0274a8b304840d26fe1b8e6d492ba78e3eb6e3583de4d09296d18eb833d4acc3",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:d781e2558d5b032417c6a6422244e4dad19fe5df95bcedfa3df0428fb53073ba",
+  "releaseUnitId": "RU-023",
+  "releaseUnitHash": "sha256:6b4f4273884c2e3aefa8ba2cfaa185d031c650f0a191c6f7ea257699ebfcb710"
+}

@@ -1,8 +1,19 @@
 # 野菜API：DSH 重点接入与真实费用对比
 
-日期：2026-08-31。性质：只读研究与后续产品提案，不是已实现或已上线说明。
+日期：2026-09-01（在 2026-08-31 初稿上复核）。性质：只读研究与后续产品提案，不是已实现或已上线说明。
 
 本次未访问生产服务器，未修改 NewAPI、第三方工具配置或密钥，未发起模型请求，未安装或启动 DSH。只修改本地研究记录和需求索引；既有 RU-014 的界面实现与冻结快照不变。
+
+## 0. 2026-09-01 官方源复核结论
+
+- 官方项目仍明确标为 **developer preview**，并警告会发生破坏性兼容变化；因此 DSH 适配必须按发布版本锁定，不能写一个“永远兼容 master”的通用修改器。
+- 官方当前源码/预发布标签为 `dsh-v0.1.2-alpha.3`，提交 `dd6322d604e00eec1ba5e0c8541159906a21094a`；npm 的 `alpha` 标签也是 `0.1.2-alpha.3`，但 `latest` 与 `next` 仍是 `0.1.1-rc.2`。用户直接运行不带标签的 `npx @deepseek-ai/dsh web`，拿到的不是 alpha.3。
+- 官方运行形态仍是 `npx @deepseek-ai/dsh web`，默认启动 `http://127.0.0.1:3080` 并打开系统浏览器。官方 release `dsh-v0.1.2-alpha.3` 没有 macOS/Windows 桌面安装资产；网上可见的 Electron/Tauri 安装包属于社区项目，不能在野菜助手里标为“DeepSeek 官方桌面版”。
+- Web 端已具备较完整的本机访问保护：启动时生成一次性 URL token，根路径换取绑定 host/port 的 HttpOnly、SameSite=Strict Cookie，并检查 Host、Origin 和跨站来源；官方明确不支持 `--host 0.0.0.0`。野菜助手应复用系统浏览器打开回环地址，不把 DSH 页面嵌入拥有野菜账户和原生权限的主窗口，也不开放局域网。
+- 自定义中转站的官方配置入口已明确：Provider ID、Base URL、`openai-completions` 协议、凭据引用及模型列表；模型发现会调用兼容的 `GET /models`。`supportsDeveloperRole`、`maxTokensField`、推理格式和图片输入属于真实兼容开关，必须对野菜线路与选定模型做请求级测试，不能仅凭“OpenAI 兼容”四个字猜测。
+- 默认凭据提供器仍把密钥保存在 `$DSH_HOME/.credentials.yaml`。官方文档明确承认：文件权限只能防其他 OS 用户，DSH 自己的同用户工具进程仍可读取，属于“隐藏而非安全边界”。野菜助手首版不能把长期野菜密钥直接写进去。
+
+**因此，下一实现单元建议定为“受控启动 + 版本化 Provider + 专用工具密钥”，不是给现有高级工具页加一个按钮。** 服务端须先提供当前设备、当前工具专用且可撤销/限额的 API key；客户端用系统安全存储保管，并通过经过审计的 DSH credential-provider/helper 向 DSH 解析。若暂时只能用环境变量或 `.credentials.yaml`，必须明确标成降低安全级别的内部试验，不能默认给普通用户开启。
 
 ## 1. 已确认的方向与当前差距
 
@@ -18,15 +29,15 @@
 
 DSH 官方提供 `web` 可视界面，启动本地服务后由浏览器访问；不能将这个入口称为官方原生桌面安装器。官方 README 同时说明项目仍处于开发者预览阶段，支持范围必须绑定实际验证过的版本，而不是假定所有新版本都兼容。
 
-本次固定核查源码提交 `0a53fb55bea101816fa226bb964ae2bed71c343b`。根 `package.json` 为 `0.1.2-alpha.2`，声明 Node `^22.19.0 || >=24.0.0`；这是源码要求，不是已验证的 npm 发布包或本机安装版本，旧文档的 `0.1.0-rc.6` 不能沿用为当前支持证据。
+本次最新固定核查源码标签 `dsh-v0.1.2-alpha.3`，提交 `dd6322d604e00eec1ba5e0c8541159906a21094a`。根 `package.json` 为 `0.1.2-alpha.3`，声明 Node `^22.19.0 || >=24.0.0`；这是源码要求，不是默认 npm 渠道或本机安装版本，旧文档的 `0.1.0-rc.6` 不能沿用为当前支持证据。
 
-另一次只读查询显示 [npm 默认发布版本](https://registry.npmjs.org/@deepseek-ai%2Fdsh/latest) 当前是 `0.1.1-rc.2`，与上述源码不同。后续必须对选定发布包重新核查接口、校验产物和运行验证，不能直接使用 master 调研结果承诺默认安装版兼容。
+只读查询显示 [npm 默认发布版本](https://registry.npmjs.org/@deepseek-ai%2Fdsh/latest) 当前是 `0.1.1-rc.2`，`latest`/`next` 均指向它，而 `alpha` 指向 `0.1.2-alpha.3`。后续必须先选择一个渠道并固定 tarball integrity，再对那个实际发布包核查接口和运行；不能用 alpha.3 文档承诺默认安装的 rc.2 一定兼容。
 
 自定义 provider 支持独立 ID、基础 URL、协议、凭据引用及模型列表；`llm-pi-ai` 的 `openai-completions` 配置提供了接 Chat 兼容接口的路径。`compat`、图片输入和推理格式是需要验证的声明，不会自动证明线路支持这些功能。选择默认模型也不等于强制替换所有已有会话的模型。
 
 默认凭据存储仍是 `$DSH_HOME/.credentials.yaml`，而不是系统钥匙串；官方凭据扩展说明中的 keyring/helper/KMS provider 尚未随包提供。因此我们需要自己的适配，不能说是“现成安全接入”。
 
-来源：[启动说明](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/README.md)、[运行环境声明](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/package.json)、[供应商配置](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/docs/user/guide/providers.zh.md)、[凭据扩展契约](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/credentials/credentials/README.md)、[默认本地存储](https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/credentials/credentials-local/README.md)。本节是源码/文档核查，不是本机启动测试。
+来源：[启动说明](https://github.com/deepseek-ai/deepseek-harness/blob/dd6322d604e00eec1ba5e0c8541159906a21094a/README.md)、[运行环境声明](https://github.com/deepseek-ai/deepseek-harness/blob/dd6322d604e00eec1ba5e0c8541159906a21094a/package.json)、[供应商配置](https://github.com/deepseek-ai/deepseek-harness/blob/dd6322d604e00eec1ba5e0c8541159906a21094a/docs/user/guide/providers.zh.md)、[浏览器连接安全](https://github.com/deepseek-ai/deepseek-harness/blob/dd6322d604e00eec1ba5e0c8541159906a21094a/packages/client/connection/README.zh.md)、[凭据扩展契约](https://github.com/deepseek-ai/deepseek-harness/blob/dd6322d604e00eec1ba5e0c8541159906a21094a/packages/credentials/credentials/README.md)、[默认本地存储](https://github.com/deepseek-ai/deepseek-harness/blob/dd6322d604e00eec1ba5e0c8541159906a21094a/packages/credentials/credentials-local/README.zh.md)。本节是源码/文档核查，不是本机启动测试。
 
 ### 2.2 面向用户的接入流程（打开方式已确认，实现待验证）
 
@@ -37,6 +48,19 @@ DSH 官方提供 `web` 可视界面，启动本地服务后由浏览器访问；
 5. 启动失败、端口被占用、版本不支持、密钥不可用时说明下一步，不把“找到程序”显示成“接入成功”。
 
 已确认首版复用 DSH 官方浏览器界面，不另做独立窗口。不能把具备项目文件/命令执行能力的 DSH 页面直接加载到拥有野菜账户、密钥或原生命令权限的主窗口。将来如需改为嵌入式窗口，须另行决定并验证隔离方案。
+
+### 2.2.1 建议冻结的首版适配边界
+
+1. **识别，不代装。** 识别独立 `dsh` 命令及准确版本；有多个安装时让用户选，不猜 PATH。未安装时展示官方 npm 方式和所需 Node 版本，安装动作另行授权。
+2. **专用 Provider。** 只管理固定 Provider ID `yeschoy` 下的配置片段，Base URL 只允许两条野菜线路的 `/v1`，协议先以 `openai-completions` 为候选。完整模型 ID 来自账号模型接口；不覆盖其他 provider 和已有会话模型。
+3. **专用密钥。** DSH 不得复用 desktop session/access/refresh token。服务端创建 `tool=dsh`、`device=<current>` 的专用 API key，并支持撤销、轮换、额度/模型范围和最后使用时间。该接口仍属于生产阻塞项，当前客户端未实现。
+4. **系统安全存储桥。** 野菜助手保管专用 key；DSH 配置只保存 credential reference。后续实现一个固定版本、固定来源的 credential provider/helper。任何读取路径都不得接受模型传入的 key 名称或任意服务名，日志只记引用和结果，不记值。
+5. **受控进程。** 由原生层直接启动固定的 DSH 可执行文件，不经 shell、不在线执行未固定的 `npx` 安装；指定回环 host、已选择端口、`--no-open` 和受控 `DSH_HOME`，记录 PID 与版本而非命令行密钥。
+6. **只开真实回环 URL。** 等待 DSH 输出的启动就绪信号，但只接受预先选择的 `http://127.0.0.1:<port>/` 或 `http://localhost:<port>/` 根地址及其一次性 token；拒绝任意 host、路径和重定向，然后交给系统浏览器。
+7. **生命周期可解释。** 显示“未安装 / 已安装 / 正在启动 / 已运行 / 端口冲突 / 版本不支持 / 配置需确认”；退出野菜助手时不擅自杀掉用户原本启动的 DSH，只管理自己创建且 PID/启动令牌匹配的进程。
+8. **事务写入。** 配置前先解析并校验现有 YAML，只补丁式修改野菜命名空间；文件在操作间变化、YAML 不认识、已有同名 provider 不是野菜生成时停止并让用户选择。失败时恢复本次写入前镜像，但不保留长期备份历史。
+
+第一轮兼容矩阵至少覆盖 macOS Intel/Apple Silicon、Windows x64，以及 npm `latest` 与选定 alpha 中实际支持的一个版本；每个版本分别验证模型列表、普通 Chat、流式输出、工具调用/结果、推理字段、长输出字段、取消与 401/429。只有全部必要用例通过的模型才显示“一键接入”。
 
 ### 2.3 实现前的安全与兼容验证
 

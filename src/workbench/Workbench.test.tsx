@@ -55,6 +55,70 @@ function discovery(requestId: string, version = "1.2.3") {
     ],
   };
 }
+function signedOut(requestId: string) {
+  return {
+    requestId,
+    schemaVersion: 2,
+    status: "signed_out",
+    userCode: "",
+    pollAfterSeconds: 0,
+    expiresAtEpochMs: 0,
+    observedAtEpochMs: 1,
+    account: {
+      available: false,
+      displayName: "",
+      username: "",
+      balanceQuota: "",
+      usedQuota: "",
+      requestCount: "",
+      quotaPerUnit: "",
+    },
+    usage: {
+      available: false,
+      consumedQuota: "",
+      requestRate: "",
+      tokenCount: "",
+    },
+    models: [],
+    comparisonFx: "6.75",
+    reasonCode: "signed_out",
+  };
+}
+function signedIn(requestId: string) {
+  return {
+    ...signedOut(requestId),
+    status: "signed_in",
+    observedAtEpochMs: 1_788_195_600_000,
+    account: {
+      available: true,
+      displayName: "野菜测试用户",
+      username: "member@example.com",
+      balanceQuota: "350000",
+      usedQuota: "120000",
+      requestCount: "42",
+      quotaPerUnit: "500000",
+    },
+    usage: {
+      available: true,
+      consumedQuota: "120000",
+      requestRate: "42",
+      tokenCount: "980000",
+    },
+    models: [
+      {
+        id: "glm-5.3",
+        description: "",
+        billingMode: "ratio",
+        pricingAvailable: true,
+        officialInputCnyPerMillion: "13.5",
+        officialOutputCnyPerMillion: "54",
+        actualInputCnyPerMillion: "6.75",
+        actualOutputCnyPerMillion: "27",
+      },
+    ],
+    reasonCode: "none",
+  };
+}
 const callbacks = () => ({
   onOpenAccount: vi.fn(),
   onOpenSetup: vi.fn(),
@@ -78,6 +142,8 @@ beforeEach(async () => {
       return discovery(request.requestId);
     if (command === "read_public_service_catalog")
       return catalogFixture(request.requestId, request.lineId);
+    if (command === "account_inspect_v2")
+      return signedOut(request.requestId);
     throw Error("Not available in test");
   });
   for (const [language, resource] of Object.entries(locales))
@@ -142,14 +208,22 @@ describe("official workbench", () => {
         }
         if (label === c.usage) {
           expect(
-            screen.getByRole("button", { name: c.recharge }),
-          ).toBeDisabled();
-          expect(screen.getByText(c.accountStatus)).toBeInTheDocument();
+            await screen.findByRole("button", { name: c.signIn }),
+          ).toBeEnabled();
+          expect(screen.getByText(c.signInBody)).toBeInTheDocument();
         }
       }
-      expect(native.mock.calls.map((call) => call[0])).toEqual([
-        "scan_desktop_apps_read_only",
-      ]);
+      const commands = native.mock.calls.map((call) => call[0]);
+      expect(
+        commands.every((command) =>
+          ["scan_desktop_apps_read_only", "account_inspect_v2"].includes(
+            command,
+          ),
+        ),
+      ).toBe(true);
+      expect(
+        commands.filter((command) => command === "account_inspect_v2"),
+      ).toHaveLength(2);
     },
   );
   it("keeps user-interface translation keys aligned in all four languages", () => {
@@ -325,15 +399,15 @@ describe("official workbench", () => {
     expect(screen.getByTestId("configuration-apply-blocked")).toBeDisabled();
     expect(native).toHaveBeenCalledTimes(1);
   });
-  it("navigates to models and billing without automatic network, auth, money or config actions", async () => {
+  it("navigates to models and billing without automatic money or config actions", async () => {
     render(<App />);
     await screen.findByText("1.2.3");
     fireEvent.click(screen.getByRole("button", { name: "用量账单" }));
-    expect(screen.getByRole("button", { name: "充值暂未开放" })).toBeDisabled();
-    expect(screen.getByText("账户功能暂未开放")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "网页登录" }),
+    ).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "模型与价格" }));
-    expect(native).toHaveBeenCalledTimes(1);
-    expect(screen.getByText("价格暂不可用")).toBeInTheDocument();
+    expect(await screen.findByText("登录后可查看当前账号可用模型和实际价格。")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "获取模型列表" }));
     await screen.findByRole("combobox", { name: /服务分组/ });
     fireEvent.change(screen.getByRole("combobox", { name: /服务分组/ }), {
@@ -345,12 +419,37 @@ describe("official workbench", () => {
     expect(screen.getAllByText("test/model").length).toBeGreaterThan(1);
     expect(native.mock.calls.map((call) => call[0])).toEqual([
       "scan_desktop_apps_read_only",
+      "account_inspect_v2",
+      "account_inspect_v2",
       "read_public_service_catalog",
     ]);
     fireEvent.change(screen.getByRole("combobox", { name: "使用线路" }), {
       target: { value: "global_accelerated" },
     });
     expect(screen.queryByText("test/model")).not.toBeInTheDocument();
+  });
+  it("renders signed-in account facts and the auditable price comparison", async () => {
+    native.mockImplementation(async (command, args) => {
+      const request = (args as Args).request;
+      if (command === "scan_desktop_apps_read_only")
+        return discovery(request.requestId);
+      if (command === "account_inspect_v2") return signedIn(request.requestId);
+      if (command === "read_public_service_catalog")
+        return catalogFixture(request.requestId, request.lineId);
+      throw Error("Not available in test");
+    });
+    render(<App />);
+    await screen.findByText("1.2.3");
+    fireEvent.click(screen.getByRole("button", { name: "用量账单" }));
+    expect(await screen.findByText("野菜测试用户")).toBeInTheDocument();
+    expect(screen.getByText(/0\.70/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /去充值/ })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "模型与价格" }));
+    expect(await screen.findByText("glm-5.3")).toBeInTheDocument();
+    expect(screen.getByText("¥13.50")).toBeInTheDocument();
+    expect(screen.getByText("¥6.75")).toBeInTheDocument();
+    expect(screen.getByText(/50%/)).toBeInTheDocument();
   });
   it("syncs appearance controls, follows system changes and persists only an enum", async () => {
     const save = vi.spyOn(Storage.prototype, "setItem");

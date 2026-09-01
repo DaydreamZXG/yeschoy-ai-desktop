@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU023-AS-02",
+  "assertion": "The desktop UI provides plain sign-in, waiting, signed-in, partial, retry and signed-out states; shows truthful account and cumulative usage; exact account model IDs; complete ratio-price official-versus-actual rows; and fixed 6.75 context without raw errors or secrets.",
+  "testSelector": "tests/work_packages/ru023/test_acceptance.py::test_renderer_account_and_pricing_states",
+  "acceptanceCommandId": "ru023-renderer-account",
+  "runId": "RU-023/WP-RU023-DESKTOP-V2-ACCOUNT@2026-09-01T13:05:16.064346+00:00",
+  "packageId": "WP-RU023-DESKTOP-V2-ACCOUNT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru023/test_acceptance.py::test_renderer_account_and_pricing_states",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:2eb245cfb367becf8fb69da9ee04b011d1f3481a8299e964de3ee120c5f119f6",
+    "machineReportSha256": "sha256:82d63713c65b05a2d7a044b592b64a67cefbc38de10c3d604e611b320cc79100",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:e04fd18b0dbe111b6b2887fb836ec4c1f2f65e43fc6c50efdb0fb7ce851e29cf",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:4a222846d223c1417f53e9f0acac37736b5735b491ad6b3c85281530e4fc058d",
+  "releaseUnitId": "RU-023",
+  "releaseUnitHash": "sha256:6b4f4273884c2e3aefa8ba2cfaa185d031c650f0a191c6f7ea257699ebfcb710"
+}

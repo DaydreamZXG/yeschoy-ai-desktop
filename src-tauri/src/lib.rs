@@ -1,3 +1,4 @@
+mod account_v2;
 mod connectivity;
 mod connectivity_core;
 mod desktop_app_discovery;
@@ -13,12 +14,19 @@ mod window_appearance;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(account_v2::AccountV2State::default())
         .setup(|app| {
             window_appearance::initialize(app)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             desktop_app_discovery::scan_desktop_apps_read_only,
+            account_v2::account_inspect_v2,
+            account_v2::account_begin_authorization_v2,
+            account_v2::account_poll_authorization_v2,
+            account_v2::account_cancel_authorization_v2,
+            account_v2::account_logout_v2,
+            account_v2::account_open_wallet_v2,
             tool_discovery::scan_tools_read_only,
             tool_discovery_v2::scan_tools_read_only_v2,
             window_appearance::set_window_appearance,

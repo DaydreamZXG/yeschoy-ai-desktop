@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU023-AS-02",
+  "assertion": "The desktop UI provides plain sign-in, waiting, signed-in, partial, retry and signed-out states; shows truthful account and cumulative usage; exact account model IDs; complete ratio-price official-versus-actual rows; and fixed 6.75 context without raw errors or secrets.",
+  "testSelector": "tests/work_packages/ru023/test_acceptance.py::test_renderer_account_and_pricing_states",
+  "acceptanceCommandId": "ru023-renderer-account",
+  "runId": "RU-023/WP-RU023-DESKTOP-V2-ACCOUNT@2026-09-01T13:02:18.293476+00:00",
+  "packageId": "WP-RU023-DESKTOP-V2-ACCOUNT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-023",
+  "releaseUnitHash": "sha256:6b4f4273884c2e3aefa8ba2cfaa185d031c650f0a191c6f7ea257699ebfcb710"
+}

@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU023-AS-03",
+  "assertion": "The 0.2.0 candidate typechecks and builds, and its handoff proves no server or tool-configuration edit while retaining deployment and server-side least-privilege restrictions as production blockers before DSH work begins.",
+  "testSelector": "tests/work_packages/ru023/test_acceptance.py::test_candidate_build_and_server_handoff",
+  "acceptanceCommandId": "ru023-build-handoff",
+  "runId": "RU-023/WP-RU023-DESKTOP-V2-ACCOUNT@2026-09-01T12:22:34.898215+00:00",
+  "packageId": "WP-RU023-DESKTOP-V2-ACCOUNT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:cd848e3a32bac516eb0032597217264b14bd2db2c04b100d1500e574c206e678",
+  "releaseUnitId": "RU-023",
+  "releaseUnitHash": "sha256:6b4f4273884c2e3aefa8ba2cfaa185d031c650f0a191c6f7ea257699ebfcb710"
+}

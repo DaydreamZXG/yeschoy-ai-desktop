@@ -18,4 +18,19 @@ describe("client candidate readiness", () => {
     expect(readiness.telemetryUploadEnabled).toBe(false);
     expect(readiness.automaticUpdateEnabled).toBe(false);
   });
+
+  it("marks the v2 account and price surfaces as integration candidates", () => {
+    const readiness = createCandidateReadiness();
+    expect(readiness.version).toBe("0.2.0");
+    expect(
+      readiness.capabilities
+        .filter((capability) => capability.status === "integration_candidate")
+        .map((capability) => capability.id),
+    ).toEqual(["account_and_billing", "model_and_pricing"]);
+    expect(
+      readiness.capabilities.find(
+        (capability) => capability.id === "secure_tool_credentials",
+      )?.status,
+    ).toBe("security_evidence_required");
+  });
 });

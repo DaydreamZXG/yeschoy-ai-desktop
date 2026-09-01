@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU023-AS-01",
+  "assertion": "The native owner restricts origins, paths, redirects and browser destinations; keeps pending device and session credentials out of IPC; stores refresh state only in the OS credential store; rotates safely; and handles denial, expiry, revocation, refresh failure and logout without tool or server mutation.",
+  "testSelector": "tests/work_packages/ru023/test_acceptance.py::test_native_account_security_boundary",
+  "acceptanceCommandId": "ru023-native-account",
+  "runId": "RU-023/WP-RU023-DESKTOP-V2-ACCOUNT@2026-09-01T13:05:16.064346+00:00",
+  "packageId": "WP-RU023-DESKTOP-V2-ACCOUNT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru023/test_acceptance.py::test_native_account_security_boundary",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:0bc22e67fabf2c0d054180817da300c61dd0f176fc8744f9c02511538039862c",
+    "machineReportSha256": "sha256:2d769854a3ad4dff20d974acd0216198abf2a1aff5a7e55dcbc44e26e0403fb5",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:9bb9246cbdabc73870b1f54ade534df52bf610b1706f26726435044819703dae",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:d284f5513f03dc434eef22cb6c72ba58ed4cf2d62bc6e082787c46764d088379",
+  "releaseUnitId": "RU-023",
+  "releaseUnitHash": "sha256:6b4f4273884c2e3aefa8ba2cfaa185d031c650f0a191c6f7ea257699ebfcb710"
+}

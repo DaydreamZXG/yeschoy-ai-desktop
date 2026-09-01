@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU023-AS-01",
+  "assertion": "The native owner restricts origins, paths, redirects and browser destinations; keeps pending device and session credentials out of IPC; stores refresh state only in the OS credential store; rotates safely; and handles denial, expiry, revocation, refresh failure and logout without tool or server mutation.",
+  "testSelector": "tests/work_packages/ru023/test_acceptance.py::test_native_account_security_boundary",
+  "acceptanceCommandId": "ru023-native-account",
+  "runId": "RU-023/WP-RU023-DESKTOP-V2-ACCOUNT@2026-09-01T12:22:34.898215+00:00",
+  "packageId": "WP-RU023-DESKTOP-V2-ACCOUNT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:e0921b535fa311f45ccd91dac8ab562e5bb609f77a38d16932632cc15629b34a",
+  "releaseUnitId": "RU-023",
+  "releaseUnitHash": "sha256:6b4f4273884c2e3aefa8ba2cfaa185d031c650f0a191c6f7ea257699ebfcb710"
+}
