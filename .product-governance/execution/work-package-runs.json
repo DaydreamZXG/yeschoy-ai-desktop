@@ -441,11 +441,11 @@
       "baselineSnapshotPath": "execution/baselines/4548f2556ad6efc3.d7bef5e2546283e9b8bd.json",
       "baselineSnapshotSha256": "sha256:65d5973817585e0a89e83aaaef967055cc5b5196d4c45efe1683f94e4084a21e",
       "assignedTo": "codex-primary",
-      "status": "in_progress",
+      "status": "completed",
       "startedAt": "2026-09-01T10:34:00.510821+00:00",
-      "finishedAt": null,
-      "reportPath": null,
-      "reportSha256": null,
+      "finishedAt": "2026-09-01T10:51:39.843813+00:00",
+      "reportPath": "execution/reports/4548f2556ad6efc3.d7bef5e2546283e9b8bd.json",
+      "reportSha256": "sha256:bf1c8e9a2daeba1cc50a24f533c35a7030892c9fa1a403f647d4eca4efb3042d",
       "releaseUnitId": "RU-022",
       "releaseUnitHash": "sha256:ecb2c20bc301f4dbf9ac55d7879c8d0d364f1ade3fddcb4d71df8cb8d4468439"
     }

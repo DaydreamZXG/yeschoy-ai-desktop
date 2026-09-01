@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU022-AS-03",
+  "assertion": "The final receipt proves per-artifact source, exact hashes, architecture, signing state and honest host-test limitations with no runtime or server change in RU-022.",
+  "testSelector": "tests/work_packages/ru022/test_acceptance.py::test_final_cross_platform_receipt",
+  "acceptanceCommandId": "ru022-artifacts",
+  "runId": "RU-022/WP-RU022-WINDOWS-TAURI-ARGS@2026-09-01T10:34:00.510821+00:00",
+  "packageId": "WP-RU022-WINDOWS-TAURI-ARGS",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru022/test_acceptance.py::test_final_cross_platform_receipt",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:71548baa291f0fb7d5fb360019ff3ec7fdffd8dde3b8d03ace612a1e58008b4c",
+    "machineReportSha256": "sha256:f8ea5198a619a2e448c6066bbd5bb1c153f856746fe786f17a4978c4e6e0e8f1",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:8f09cf83e8c209a6bc64f8b512b08b62859e7c005e019db6d07bdffc3c377b78",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:9c871960a42833a5caae543b3b8b735fd6ef13b2c9edb6e94295c9374feb1ab8",
+  "releaseUnitId": "RU-022",
+  "releaseUnitHash": "sha256:ecb2c20bc301f4dbf9ac55d7879c8d0d364f1ade3fddcb4d71df8cb8d4468439"
+}

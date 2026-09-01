@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU022-AS-02",
+  "assertion": "The workflow remains manual, private-artifact-only and unsigned, and retains all current renderer and native tests without release or updater authority.",
+  "testSelector": "tests/work_packages/ru022/test_acceptance.py::test_windows_workflow_remains_private_and_bounded",
+  "acceptanceCommandId": "ru022-workflow-boundary",
+  "runId": "RU-022/WP-RU022-WINDOWS-TAURI-ARGS@2026-09-01T10:34:00.510821+00:00",
+  "packageId": "WP-RU022-WINDOWS-TAURI-ARGS",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru022/test_acceptance.py::test_windows_workflow_remains_private_and_bounded",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:8a92e836e30210ed0f33cbc0edc1752952cb73310fb79107ffea0976ca73c450",
+    "machineReportSha256": "sha256:4eb5ba454170f46556db8c1a5d94cb919a66af774ba15fdb42f06e887a2009b1",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:b9671e5cfc3b8e1ed985832e6099a96dc54b76260e16e87b55357fc125eadbfd",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:118887c9380307487fba3b10d8599a768f1e9f7179dc566bede7bba1ac81bba2",
+  "releaseUnitId": "RU-022",
+  "releaseUnitHash": "sha256:ecb2c20bc301f4dbf9ac55d7879c8d0d364f1ade3fddcb4d71df8cb8d4468439"
+}

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU022-AS-01",
+  "assertion": "Frozen pnpm and locked Cargo gates precede a Windows-compatible candidate NSIS Tauri invocation without a redundant trailing Cargo argument.",
+  "testSelector": "tests/work_packages/ru022/test_acceptance.py::test_windows_tauri_command_follows_locked_gates",
+  "acceptanceCommandId": "ru022-command",
+  "runId": "RU-022/WP-RU022-WINDOWS-TAURI-ARGS@2026-09-01T10:34:00.510821+00:00",
+  "packageId": "WP-RU022-WINDOWS-TAURI-ARGS",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru022/test_acceptance.py::test_windows_tauri_command_follows_locked_gates",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:6a94b98438da0d72bd9aef671e779137688ee366e6b95eae9bf56cf69f588466",
+    "machineReportSha256": "sha256:d3cd29441651d9f27f8c6d9fed42bf56c64660e2d2120110ec857172731a5e78",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:7082762b4f109c09fbc0d085977090392db4f36626405ec60533cd647e1db7c2",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:92d9f4759ad532a4a6b21f7014b3cfb302dffe2a10ae01bd0718adddcc0760e0",
+  "releaseUnitId": "RU-022",
+  "releaseUnitHash": "sha256:ecb2c20bc301f4dbf9ac55d7879c8d0d364f1ade3fddcb4d71df8cb8d4468439"
+}

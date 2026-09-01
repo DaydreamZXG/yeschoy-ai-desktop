@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "releaseUnit": "RU-022",
+  "testAndPackagingCommit": "d61a881fcfc1a8039b36025ee4b56fac5685970f",
+  "productionRuntime": {
+    "releaseUnit": "RU-017",
+    "digest": "5719056743ccea57281e05f90d05e14db223c10d640c43f822b9e2972f68e956",
+    "sourceFileCount": 794,
+    "note": "RU-021 changed only cfg(test); RU-022 changed only the private workflow."
+  },
+  "artifacts": {
+    "macosUniversal": {
+      "path": "release/ru018-local/野菜API-0.1.0-20260901-macOS-universal.dmg",
+      "appBinaryPath": "release/ru018-local/dmg-stage/野菜API.app/Contents/MacOS/yeschoy-desktop",
+      "sourceCommit": "4dbc44ca7df4235a4d838e8041e15ed7e3c03f69",
+      "sha256": "a1665be5243e1bff65abaff8860d74b5a6f125713dc4aeb2c1c0d425c1ca7809",
+      "appBinarySha256": "fcdf2cb1d4ef0098845b9e56757ab5dcc3abde36b95cc7ec1232d9d890ebe67f",
+      "architectures": [
+        "x86_64",
+        "arm64"
+      ],
+      "developerIdSigned": true,
+      "teamId": "BRG82P5ZB7",
+      "notarized": true,
+      "stapled": true,
+      "gatekeeperAccepted": true,
+      "intelLaunchTested": true,
+      "appleSiliconLaunchTested": false,
+      "appNotarizationSubmissionId": "820282ab-fd18-4bff-addf-b0174e23c9a8",
+      "dmgNotarizationSubmissionId": "c295c831-b8b5-424a-8b4b-7cf57f8bab49"
+    },
+    "windowsX64": {
+      "path": "release/ru022-local/windows/野菜API-0.1.0-20260901-Windows-x64-内测版.exe",
+      "sourceCommit": "d61a881fcfc1a8039b36025ee4b56fac5685970f",
+      "sha256": "d6a1201ca215c1eda9cb836fa94635773f46d493983cf2957037a07abf723fc2",
+      "sizeBytes": 1880511,
+      "architecture": "x86_64",
+      "packageType": "nsis",
+      "codeSigned": false,
+      "workflowRunId": 33498149702,
+      "workflowUrl": "https://github.com/DaydreamZXG/yeschoy-ai-desktop/actions/runs/33498149702",
+      "workflowConclusion": "success",
+      "rendererTests": 136,
+      "nativeTests": 27,
+      "smartScreenWarningExpected": true
+    }
+  },
+  "boundaries": {
+    "productionRuntimeChangedByRu022": false,
+    "serverChanged": false,
+    "databaseChanged": false,
+    "publicReleaseCreated": false,
+    "updaterEnabled": false,
+    "userToolConfigurationChanged": false
+  }
+}
