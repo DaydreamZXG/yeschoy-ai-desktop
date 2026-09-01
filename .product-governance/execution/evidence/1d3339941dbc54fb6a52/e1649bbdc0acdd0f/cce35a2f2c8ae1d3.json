@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU017-AS-03",
+  "assertion": "Existing workbench remains truthful.",
+  "testSelector": "tests/work_packages/ru012/test_acceptance.py::test_workbench_ui",
+  "acceptanceCommandId": "ru017-workbench",
+  "runId": "RU-017/WP-RU017-CLIENT-REPAIR@2026-08-31T16:51:44.711622+00:00",
+  "packageId": "WP-RU017-CLIENT-REPAIR",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru012/test_acceptance.py::test_workbench_ui",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:a8c215a3bc2dab7a831249952a0104f46432c5def677e5f7de50b5f6644b4c0a",
+    "machineReportSha256": "sha256:081df2ebe555934359b073bbf276aca0f19252ef8467a671c51c536d667b60b5",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:e01390f75551abacd0f23ce174dcd5ed08cb25c9b3bd1e197b324ef1e4d941dd",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:92523340c90ec45ab2f575672abe4241732ad260e8a4b47699408d8809fe58c7",
+  "releaseUnitId": "RU-017",
+  "releaseUnitHash": "sha256:302de51af1a20ba3bfb794eb5f3148eb8725eee90f8753546e1a9de984e95d0d"
+}

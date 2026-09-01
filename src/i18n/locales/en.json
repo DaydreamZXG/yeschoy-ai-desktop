@@ -1,57 +1,57 @@
 {
   "yeschoyCatalog": {
-    "eyebrow": "Public catalog from YesChoy",
-    "title": "Choose a group and model",
-    "read": "Read model catalog",
-    "refresh": "Read again",
-    "loading": "Reading…",
-    "loadingNote": "Reads service status and the public catalog only. No sign-in or key creation.",
-    "publicNotice": "Public visibility does not grant account access. This produces a preview without changing tool settings.",
-    "observed": "Read at {{time}}",
-    "empty": "There are no selectable models in the public catalog. Read again or try later.",
+    "eyebrow": "野菜API models",
+    "title": "Choose a model",
+    "read": "Get model list",
+    "refresh": "Refresh list",
+    "loading": "Loading…",
+    "loadingNote": "Getting the latest model list…",
+    "publicNotice": "Browse models now. Which ones your account can use still needs to be checked after sign-in.",
+    "observed": "Updated at {{time}}",
+    "empty": "No models available. Refresh the list or try again later.",
     "groupLabel": "Service group",
     "chooseGroup": "Choose a service group",
-    "groupHelp": "Groups determine model access and billing rules. Mainland/global lines select the network route, not the group.",
-    "noGroupDescription": "The server supplied no group description.",
-    "multiplier": "Public group multiplier: {{value}}. This is not your account's final price.",
+    "groupHelp": "Models and prices may differ between groups.",
+    "noGroupDescription": "No group description available.",
+    "multiplier": "Group multiplier: {{value}}. This is not your final price.",
     "searchLabel": "Find a model",
     "searchPlaceholder": "Model ID or keyword",
     "modelLabel": "Model ID",
     "chooseModel": "Choose a model",
     "modelCount": "{{count}} models found",
-    "requiredProtocol": "Required interface",
+    "requiredProtocol": "View connection type",
     "billingLabel": "Billing type",
-    "compatibilityNotice": "Account access, group-specific streaming restrictions and the exact tool version still need verification. A declared interface is not a compatibility test. Applying settings remains unavailable.",
+    "compatibilityNotice": "Compatibility with this app still needs to be confirmed. No settings will be applied.",
     "priceTitle": "Why is there no final price yet?",
-    "priceNotice": "The official-price comparison rate is fixed at {{comparisonFx}}; the backend display rate is {{backendFx}}. They serve different purposes. This view reads public billing types without evaluating expressions or inferring your balance or actual price.",
+    "priceNotice": "Your account prices are not available in this version. Reference prices use 1 USD = {{comparisonFx}} CNY for comparison. Your bill shows actual charges.",
     "unknown": "not provided",
-    "publicReadAttempted": "Public catalog read attempted",
+    "publicReadAttempted": "Requested",
     "backend": {
-      "not_deployed": "Desktop authorization endpoints are not deployed.",
-      "contract_recognized": "Desktop contract recognized; no authorization or feature activation is implied.",
-      "incompatible": "Desktop contract or version mismatch. No authorization granted.",
-      "unavailable": "Desktop endpoint could not be verified. The public catalog can still be browsed independently."
+      "not_deployed": "Sign-in is not available yet.",
+      "contract_recognized": "Your sign-in status has not been confirmed.",
+      "incompatible": "Account features are unavailable. You can still browse models.",
+      "unavailable": "Account status could not be checked. You can still browse models."
     },
     "errors": {
       "none": "",
-      "network_error": "Connection failed. Check your network and read again.",
-      "timed_out": "The request timed out. Change lines or try again later.",
-      "http_error": "The service did not return a catalog. Try again later.",
-      "invalid_response": "The response does not match the catalog contract and was rejected. Read again or contact support.",
-      "response_too_large": "The response exceeded the client's safety limit. Reading stopped.",
-      "catalog_busy": "The previous read is still finishing. Try again shortly.",
-      "client_unavailable": "This environment cannot read the catalog right now. Retry in the desktop app."
+      "network_error": "Connection failed. Check your network and try again.",
+      "timed_out": "Loading timed out. Try another line or try again later.",
+      "http_error": "The model list is unavailable. Try again later.",
+      "invalid_response": "Could not load the model list. Refresh or try again later.",
+      "response_too_large": "The model list is too large to load. Try again later.",
+      "catalog_busy": "The previous request is still finishing. Try again shortly.",
+      "client_unavailable": "Models could not be loaded. Restart the app and try again."
     },
     "protocol": {
-      "protocol_declared": "Required interface declared; compatibility is unverified",
-      "protocol_not_declared": "This model does not declare the interface required by the tool",
-      "dsh_unverified": "The exact DSH adapter has not been verified"
+      "protocol_declared": "Model selected; compatibility not confirmed",
+      "protocol_not_declared": "Support for this app is not confirmed",
+      "dsh_unverified": "Support for DSH is not confirmed"
     },
     "billing": {
-      "ratio": "Token / multiplier",
+      "ratio": "Usage-based billing",
       "per_request": "Per request",
-      "tiered_expr": "Tiered / expression",
-      "unknown": "Unrecognized billing type"
+      "tiered_expr": "Tiered or other billing",
+      "unknown": "Billing method not confirmed"
     }
   },
   "app": {
@@ -3348,29 +3348,39 @@
     "serverExplanation": "The existing NewAPI website session is not a safe desktop sign-in protocol. One-time device authorization, a narrow session, and server-generated pricing must be added first. The planned isolated API prefix is:"
   },
   "yeschoyDiscovery": {
+    "codexCli": "Codex CLI",
+    "bundledStatus": "Desktop app component",
+    "componentDetails": "Why isn't this a duplicate?",
+    "componentsIgnored": "Also found {{count}} bundled desktop app components. They are not standalone installations and do not need to be selected or removed.",
+    "desktopAction": "View desktop apps",
+    "selection": {
+      "single_installation": "Standalone installation identified automatically",
+      "path_precedence": "Current default version identified — no selection needed",
+      "bundled_only": "Only a bundled desktop app component was found, not a standalone CLI. You can continue with the desktop app."
+    },
     "brandName": "野菜API",
-    "edition": "Official desktop assistant · Read-only preview",
-    "eyebrow": "Start correctly without learning API setup",
-    "title": "Let’s see where your AI tools are.",
-    "description": "We will find tools already installed on this computer and read the versions they report. You do not need to enter a key, URL, or model name.",
-    "trustTitle": "What this check can do",
+    "edition": "Official desktop assistant",
+    "eyebrow": "Other AI tools",
+    "title": "Find installed tools",
+    "description": "Find command-line tools on this computer and see their versions without changing settings.",
+    "trustTitle": "About this check",
     "localOnly": "Checks this computer only",
     "noChanges": "Does not change settings",
-    "noApiKnowledge": "No API knowledge needed",
+    "noApiKnowledge": "No connection details needed",
     "scanButton": "Check which tools I installed",
     "rescanButton": "Check again",
     "scanning": "Checking this computer…",
-    "privacyNote": "Runs fixed version checks only. No network access, configuration reads, or saved scan history.",
-    "scopeLabel": "This build",
-    "scopeText": "This build only performs safe discovery. Sign-in, balance, recharge, and one-click setup will arrive after their contracts are approved.",
-    "railLabel": "Local tool map",
-    "toolsTitle": "Five tools, one clear view",
+    "privacyNote": "Checks names and versions only. No network access or settings changes.",
+    "scopeLabel": "Please note",
+    "scopeText": "This checks installed tools. Automatic setup is not available yet.",
+    "railLabel": "This computer",
+    "toolsTitle": "Tools",
     "processingLocal": "Checking each tool…",
     "checkedAt": "Checked at {{time}}",
     "scanErrorTitle": "This check did not finish",
-    "scanErrorBody": "An older result was not shown as current. You can run the check again.",
+    "scanErrorBody": "Try again. If the check still fails, restart the app.",
     "exactVersion": "Version",
-    "candidateCount": "Found {{count}} executable locations",
+    "candidateCount": "Found {{count}} installations",
     "advancedDetails": "View check details",
     "platform": "Platform",
     "requestId": "Check ID",
@@ -3378,7 +3388,7 @@
       "waiting": "Waiting to check",
       "checking": "Checking",
       "not_found": "Not found yet",
-      "detected_unverified": "Found · Read only",
+      "detected_unverified": "Found",
       "probe_failed": "Found · Cannot run",
       "probe_timed_out": "Found · Check timed out",
       "multiple_installations": "Multiple installs found"
@@ -3386,16 +3396,16 @@
     "reason": {
       "tool_not_found": "This is not an error; install it separately and check again",
       "exact_version_not_allowlisted": "Version shown; automatic setup is not enabled",
-      "version_command_failed": "The version command failed, so compatibility is not guessed",
-      "version_command_timed_out": "The version command was stopped without blocking other tools",
-      "multiple_executables_found": "No installation was silently selected"
+      "version_command_failed": "Could not read the version. Check whether the tool runs normally.",
+      "version_command_timed_out": "Reading the version timed out. Try again later.",
+      "multiple_executables_found": "Multiple standalone versions have no clear default. No removal is needed; view desktop apps, or check again after adjusting your installation."
     },
     "toolDescriptions": {
       "claude": "Anthropic’s command-line coding assistant",
       "codex": "OpenAI’s local coding agent",
       "opencode": "An open-source terminal coding assistant",
       "pi": "A lightweight, extensible coding agent",
-      "dsh": "DeepSeek Harness; discovery remains read only"
+      "dsh": "DeepSeek Harness"
     }
   },
   "yeschoyConfiguration": {
@@ -3403,16 +3413,16 @@
     "eyebrow": "Step by step, without touching settings files",
     "title": "Choose a tool and a route. The client handles the rest.",
     "description": "First, review exactly what would change in plain language. This build only creates a safe preview; it does not read or write your settings.",
-    "previewOnly": "Preview only · No computer settings were read",
+    "previewOnly": "For review only. App settings stay unchanged.",
     "stepsLabel": "Setup steps",
     "steps": {
       "tool": "Choose a tool",
       "line": "Choose a route",
       "model": "Choose a model",
-      "review": "Review changes"
+      "review": "Review choices"
     },
     "modelUnavailable": "Model IDs appear after sign-in",
-    "reviewReady": "Preview updated with your choices",
+    "reviewReady": "Review your selections",
     "chooseTool": "01 · Which tool do you want to use?",
     "chooseLine": "02 · Choose the route that fits you",
     "toolNotes": {
@@ -3432,30 +3442,30 @@
         "note": "Cloudflare global route"
       }
     },
-    "previewEyebrow": "Change preview",
-    "previewTitle": "See it clearly before deciding",
+    "previewEyebrow": "Your choices",
+    "previewTitle": "Review setup",
     "notApplied": "Not applied",
-    "selectedTool": "Tool",
+    "selectedTool": "App",
     "selectedLine": "Route",
-    "lineRoot": "Route root URL",
-    "effectiveEndpoint": "Effective tool endpoint",
-    "withheld": "Waiting for adapter verification",
+    "lineRoot": "Line address",
+    "effectiveEndpoint": "Connection address",
+    "withheld": "Not available yet",
     "dshReason": "DSH web-profile write fields are not precisely verified, so no endpoint is guessed.",
     "targetFile": "Planned settings location",
     "modelId": "Model ID",
     "ownedFields": "Only these fields may be managed later",
     "notReadFromComputer": "Field names come from official docs, not your computer",
     "dshFieldsWithheld": "DSH write fields remain hidden until an exact-version adapter is verified.",
-    "safetyTitle": "What did this preview do?",
-    "safetyBody": "Public reads only; credentials and local configuration stay untouched",
+    "safetyTitle": "View activity",
+    "safetyBody": "Your app settings stay unchanged.",
     "safety": {
-      "networkAttempted": "Network request",
-      "configurationRead": "Read existing settings",
-      "configurationWritten": "Write settings file",
-      "credentialAccessed": "Access API key"
+      "networkAttempted": "Get model list",
+      "configurationRead": "Read app settings",
+      "configurationWritten": "Change app settings",
+      "credentialAccessed": "Use an API key"
     },
-    "notPerformed": "Not performed",
-    "whyBlocked": "Why can’t Apply be clicked yet?",
+    "notPerformed": "Not done",
+    "whyBlocked": "Why is setup unavailable?",
     "blockers": {
       "desktop_backend_required": "The secure desktop execution layer is not connected",
       "server_model_catalog_required": "The account model catalog is not connected",
@@ -3464,8 +3474,9 @@
       "dsh_web_adapter_required": "The DSH web-profile adapter is not verified"
     },
     "applyBlocked": "Available after every safety condition is ready",
-    "openTools": "Check local tools first",
-    "openAccount": "View account connection status"
+    "openTools": "View other tools",
+    "openAccount": "View account",
+    "unavailableReason": "This version cannot connect apps automatically yet. You can explore lines and models without changing app settings."
   },
   "yeschoyDesktop": {
     "home": {
@@ -3480,8 +3491,8 @@
       "myAppsEyebrow": "My apps",
       "myAppsTitle": "Start with an installed desktop app",
       "checkedAt": "Checked at {{time}}",
-      "errorTitle": "Desktop app status is unavailable",
-      "errorBody": "No older result was substituted. Check again when ready; other local features still work.",
+      "errorTitle": "Could not check apps",
+      "errorBody": "Try again. Other features are still available.",
       "version": "Desktop version {{version}}",
       "startSetup": "Start setup",
       "viewSetup": "View setup path",
@@ -3521,9 +3532,18 @@
       "title": "Four steps to a usable app",
       "continue": "Continue setup",
       "steps": {
-        "app": { "title": "Choose an app", "body": "Claude or Codex desktop" },
-        "line": { "title": "Choose a line", "body": "Mainland or global" },
-        "model": { "title": "Choose a model", "body": "See the real model ID" },
+        "app": {
+          "title": "Choose an app",
+          "body": "Claude or Codex desktop"
+        },
+        "line": {
+          "title": "Choose a line",
+          "body": "Mainland or global"
+        },
+        "model": {
+          "title": "Choose a model",
+          "body": "See the real model ID"
+        },
         "connect": {
           "title": "Finish connection",
           "body": "Opens after safety gates pass"
@@ -3540,14 +3560,16 @@
       "securityBody": "Candidate {{version}} · no automatic uploads"
     },
     "setup": {
-      "kicker": "Desktop app setup",
-      "title": "Choose the app, then the line and model.",
-      "description": "This path starts from desktop apps. Technical details stay in the advanced section so beginners can focus on apps and model names they recognize.",
-      "steps": { "app": "Desktop app" },
+      "kicker": "Desktop apps",
+      "title": "Set up an app",
+      "description": "Choose an app, a connection line and a model to review your setup.",
+      "steps": {
+        "app": "Desktop app"
+      },
       "chooseApp": "Which desktop app do you want to use?",
-      "technicalDetails": "View advanced technical details",
-      "technicalBoundary": "This is a documented setup preview only. No application settings have been read or changed.",
-      "connectBlocked": "Connection requirements are not ready yet"
+      "technicalDetails": "Connection details",
+      "technicalBoundary": "These details describe the selected line. They have not been applied to your app.",
+      "connectBlocked": "One-click setup unavailable"
     }
   },
   "yeschoyCandidate": {
@@ -3604,69 +3626,69 @@
     }
   },
   "yeschoyDiagnostics": {
-    "eyebrow": "Read-only line diagnostics",
-    "title": "First, see whether this computer can reach both lines.",
-    "description": "This narrow network check separates name or connection trouble from issues that still require API investigation. It never calls a model or uses your account.",
-    "scopeTitle": "This check does only three things",
-    "scopeDns": "Resolve yeschoy.com and api.yeschoy.com",
-    "scopeTcp": "Try TCP port 443 on both fixed hosts",
-    "scopeNoApi": "Send no HTTP, API, model, or billing request",
+    "eyebrow": "Network check",
+    "title": "Check your connection",
+    "description": "Check whether this computer can reach both lines to help find network problems.",
+    "scopeTitle": "What is checked",
+    "scopeDns": "Find the network address of each line",
+    "scopeTcp": "Try a basic network connection",
+    "scopeNoApi": "No conversations sent or model charges incurred",
     "checking": "Checking both lines…",
     "retry": "Check both lines again",
     "start": "Check both lines",
-    "consent": "Network access starts only after your click and carries no Key, Cookie, configuration, prompt, or response content.",
-    "openTools": "Check local tools",
-    "openSetup": "View setup preview",
-    "resultsEyebrow": "This computer · Current observation",
-    "resultsTitle": "See each line separately",
-    "processing": "Resolving and connecting to port 443…",
+    "consent": "The check connects only when you start it and does not use account details.",
+    "openTools": "View other tools",
+    "openSetup": "Choose an app",
+    "resultsEyebrow": "This computer",
+    "resultsTitle": "Results",
+    "processing": "Checking connection…",
     "checkedAt": "Completed at {{time}}",
     "invalidTitle": "This result was incomplete",
-    "invalidBody": "No old or guessed values were used to fill it. You can run the same safe check again.",
+    "invalidBody": "Try again. If the check still fails, check your network connection.",
     "status": {
       "waiting": "Not checked",
       "checking": "Checking",
-      "reachable": "Port 443 reachable",
-      "dns_failed": "Name resolution failed",
-      "connect_failed": "Connection not established",
+      "reachable": "Basic connection works",
+      "dns_failed": "Line address not found",
+      "connect_failed": "Could not connect",
       "timed_out": "Check timed out"
     },
     "elapsed": "Elapsed",
     "reason": {
-      "tcp_443_reachable": "The computer established a TCP connection at this moment.",
-      "dns_resolution_failed": "The computer could not resolve the fixed host name.",
-      "tcp_connection_failed": "The host was handled, but a TCP connection was not established.",
-      "connectivity_check_timed_out": "The bounded check did not finish and stopped waiting."
+      "tcp_443_reachable": "This computer can currently make a basic connection.",
+      "dns_resolution_failed": "The line address could not be found. Check your network and try again.",
+      "tcp_connection_failed": "The line address was found, but the connection failed. Try again later.",
+      "connectivity_check_timed_out": "The check took too long. Try another line or try again later."
     },
     "noResult": "Run the check to see this computer's current result",
-    "disclaimerTitle": "A reachable port does not prove the API is healthy",
-    "disclaimerBody": "This does not prove TLS, HTTP, account, model, price, balance, or inference health and is not a model speed comparison.",
-    "advancedDetails": "View check boundary",
+    "disclaimerTitle": "A connection does not guarantee model availability",
+    "disclaimerBody": "This checks the network only, not model availability, response speed or account balance.",
+    "advancedDetails": "View check details",
     "requestId": "Check ID",
     "retention": "Result retention",
-    "notRetained": "Current page memory only; no history retained"
+    "notRetained": "Not kept after leaving this page"
   },
   "yeschoySettings": {
-    "eyebrow": "Settings and safety boundaries",
+    "eyebrow": "Preferences",
     "title": "See what is available and what remains closed.",
     "description": "There are no hidden advanced switches. The candidate allows only verified local capabilities and keeps server, credential, configuration-write, and public-release gates explicit.",
-    "versionLabel": "Current client",
-    "candidateStage": "Client candidate · Not a public release",
+    "versionLabel": "Version",
+    "candidateStage": "Test version",
     "languageTitle": "Interface language",
     "languageNote": "The preference stays on this computer and is not synchronized to an account.",
-    "securityEyebrow": "Local device and privacy",
-    "securityTitle": "Least privilege by default",
-    "localPolicy": "Fixed candidate policy",
+    "securityEyebrow": "Your data",
+    "securityTitle": "Privacy & security",
+    "localPolicy": "Current settings",
     "security": {
       "apiKeys": {
-        "title": "API Keys",
-        "body": "Not fetched, read, or stored today. A future release must use the OS credential vault and tool-native helpers.",
-        "state": "Not integrated"
+        "title": "Account privacy",
+        "body": "The app does not read your website passwords, sign-in details or API keys.",
+        "state": "Not accessed"
       },
       "configFiles": {
-        "title": "Tool configuration files",
-        "body": "Only planned fields are shown. Existing content is not read, written, repaired, or removed.",
-        "state": "Preview only"
+        "title": "App settings",
+        "body": "Browsing apps and choosing models does not read or change your app settings.",
+        "state": "Unchanged"
       },
       "backupHistory": {
         "title": "Configuration backups",
@@ -3674,13 +3696,13 @@
         "state": "No history"
       },
       "telemetry": {
-        "title": "Error and usage uploads",
-        "body": "The candidate automatically uploads no telemetry, crashes, logs, or diagnostics until collection and deletion controls are verified.",
+        "title": "Usage & error reports",
+        "body": "This version does not automatically upload usage history, error reports or check results.",
         "state": "Disabled"
       }
     },
-    "releaseEyebrow": "Windows and macOS",
-    "releaseTitle": "Release preparation is not release success",
+    "releaseEyebrow": "Version information",
+    "releaseTitle": "App updates",
     "notPublicRelease": "Public-release gates not met",
     "release": {
       "macos": {
@@ -3695,13 +3717,13 @@
       },
       "updater": {
         "title": "Automatic updates",
-        "body": "Update artifacts and the runtime updater remain off until the private key, embedded public key, and bad-signature tests are ready.",
+        "body": "Automatic updates are not available in this version.",
         "state": "Disabled"
       }
     },
-    "backendTitle": "NewAPI has not been changed",
-    "backendBody": "The public model catalog can be read manually. Login, balance, usage, account-available models, actual prices, recharge, and tool Keys still require future narrow /api/desktop/v1 endpoints, not website Cookies or generic Token CRUD.",
-    "openAccount": "View account page",
-    "openDiagnostics": "Open line diagnostics"
+    "backendTitle": "Account features unavailable",
+    "backendBody": "Sign-in, balance and recharge are not available yet. You can still browse models and check your connection.",
+    "openAccount": "View account",
+    "openDiagnostics": "Check connection"
   }
 }

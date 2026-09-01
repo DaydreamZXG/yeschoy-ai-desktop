@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU017-AS-05",
+  "assertion": "Exact repaired artifacts match source, identity, architecture, hashes/signature; separate platform evidence captured.",
+  "testSelector": "tests/work_packages/ru017/test_acceptance.py::test_local_artifacts",
+  "acceptanceCommandId": "ru017-artifact",
+  "runId": "RU-017/WP-RU017-CLIENT-REPAIR@2026-08-31T16:51:44.711622+00:00",
+  "packageId": "WP-RU017-CLIENT-REPAIR",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru017/test_acceptance.py::test_local_artifacts",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:90e1b55cf2c361f73ccfaaf513dc3e5a8640803c5764c14a75c5384be8ebe767",
+    "machineReportSha256": "sha256:468604bf683a735120f33616f1f34db7cb947d88386722bee4bfc8ac0b40624a",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:893cf23398e6d608588615064e89390211a9b167c3c56913825551f713f88da1",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:872f8b27f306fece89227b7cf04757fa9821070b9df8af279cc9742526370fc1",
+  "releaseUnitId": "RU-017",
+  "releaseUnitHash": "sha256:302de51af1a20ba3bfb794eb5f3148eb8725eee90f8753546e1a9de984e95d0d"
+}

@@ -14,6 +14,8 @@
       {
         "label": "main",
         "title": "野菜API",
+        "titleBarStyle": "Transparent",
+        "hiddenTitle": true,
         "width": 1120,
         "height": 760,
         "minWidth": 860,

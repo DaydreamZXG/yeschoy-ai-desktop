@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU014-AS-03",
+  "assertion": "Every preview continues to withhold configuration writes and credentials and preserves line/protocol and unverified DSH constraints.",
+  "testSelector": "tests/work_packages/ru012/test_acceptance.py::test_preview_preservation",
+  "acceptanceCommandId": "ru014-preview_preservation",
+  "runId": "RU-014/WP-RU014-PLAIN-COPY@2026-08-31T14:06:44.011500+00:00",
+  "packageId": "WP-RU014-PLAIN-COPY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru012/test_acceptance.py::test_preview_preservation",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:b563d630e4931e0aec63421fa4da1b563a68e275b3329cdd3417582fcb55050f",
+    "machineReportSha256": "sha256:0531afff30ce10012141e7ae11d90cf3e69f7a28a591168a951d5295e909948c",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:00d25e813cef241c8abdbe4f29f5c9db378d3f20a239f9110141280a3c34a883",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:176a621a167f6f9a79840a123852486fb3370e506227329626a9fbb007e7ab27",
+  "releaseUnitId": "RU-014",
+  "releaseUnitHash": "sha256:d648734a3e3304d2ae93839d7dee70e01758cea0095841b807e5388316451da0"
+}

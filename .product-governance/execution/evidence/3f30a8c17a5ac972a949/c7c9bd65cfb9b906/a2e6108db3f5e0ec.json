@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU016-AS-03",
+  "assertion": "The exact recorded app and DMG exist, match hashes and identity, use x86_64 only, retain a valid Developer ID signature and bundle the expected icon.",
+  "testSelector": "tests/work_packages/ru016/test_acceptance.py::test_local_artifacts",
+  "acceptanceCommandId": "ru016-artifact",
+  "runId": "RU-016/WP-RU016-LOCAL-PACKAGE@2026-08-31T15:46:45.195812+00:00",
+  "packageId": "WP-RU016-LOCAL-PACKAGE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:893db24234c0fc797d9f994273b09554cb68aed23910dafc1146c36a263e7356",
+  "releaseUnitId": "RU-016",
+  "releaseUnitHash": "sha256:c2aac4a0a9b514a5f890beacc49aa761a6c7e1c4b62e0f99c1b75023d9ec55a6"
+}

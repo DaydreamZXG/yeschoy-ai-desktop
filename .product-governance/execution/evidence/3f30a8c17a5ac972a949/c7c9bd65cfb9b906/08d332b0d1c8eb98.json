@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU016-AS-01",
+  "assertion": "Existing bundle identity, hardened runtime and inactive updater boundaries remain unchanged.",
+  "testSelector": "tests/work_packages/ru009/test_acceptance.py::test_candidate_identity_and_signing_boundaries",
+  "acceptanceCommandId": "ru016-metadata",
+  "runId": "RU-016/WP-RU016-LOCAL-PACKAGE@2026-08-31T15:46:45.195812+00:00",
+  "packageId": "WP-RU016-LOCAL-PACKAGE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru009/test_acceptance.py::test_candidate_identity_and_signing_boundaries",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:6949154a2295663a26a33dd28e6d2b6415b708299bfe30c7cce0bb44208ce2ac",
+    "machineReportSha256": "sha256:ee8b4f04e0b2f6e748ad4da78b9e38d14ca000970d4cad6c1c9c73fb0badd428",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:db480d2481e752590138e23df02b797c564d4c6b0bf8fc191e31cfb15e43e780",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:cf1b1d51b41ee2e46f44921b94b0518431f8ab6edabdd6dd4abe7045466fa110",
+  "releaseUnitId": "RU-016",
+  "releaseUnitHash": "sha256:c2aac4a0a9b514a5f890beacc49aa761a6c7e1c4b62e0f99c1b75023d9ec55a6"
+}

@@ -2,6 +2,771 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "WP-RU018-CROSS-PLATFORM-PACKAGING",
+      "wave": "consumer",
+      "owner": "desktop-platform",
+      "riskClass": "high",
+      "objective": "Package the unchanged RU-017 client for universal macOS and unsigned Windows internal testing, and hand off the minimal NewAPI API/persistence boundary.",
+      "deliverables": [
+        "Developer ID signed and notarized universal macOS app and DMG with verified arm64 and x86_64 slices, exact hash and honest host-test boundary.",
+        "Manual private-repository Windows 2022 internal workflow and downloaded unsigned NSIS artifact with exact hash and SmartScreen limitation.",
+        "Version-pinned server-owner handoff distinguishing reusable NewAPI records and APIs, Redis-only transient state, and the evidence threshold for any later schema migration."
+      ],
+      "requirementRefs": [
+        "REQ-046"
+      ],
+      "decisionRefs": [
+        "DEC-062"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No renderer or Rust runtime behavior changes, server/NewAPI/Nginx/database changes, user tool writes, DSH activation, account activation or credential access.",
+        "No Windows code-signing claim, Apple Silicon native launch claim, tag, GitHub Release, updater artifact, public download or full-product readiness claim.",
+        "No inherited broad upstream release workflow execution."
+      ],
+      "dependsOn": [
+        "WP-RU017-CLIENT-REPAIR"
+      ],
+      "allowedPaths": [
+        ".github/workflows/yeschoy-windows-internal.yml",
+        "tests/work_packages/ru018/**",
+        "outputs/野菜API-跨平台内测构建与后端边界记录.md",
+        "outputs/yeschoy-ru018-artifacts.json",
+        "release/ru018-local/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        ".github/workflows/release.yml",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/**",
+        "src-tauri/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No client or server data migration. Server schema advice is documentation only and defaults to no new schema on deployed NewAPI v1.0.0-rc.27.",
+        "rollback": "Retain RU-017 Intel artifact; remove only RU-018 local artifacts and the isolated internal workflow if requested."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Package the exact RU-017 runtime for additional operating-system architectures without changing its contracts.",
+        "supportedVersions": "macOS universal internal build; Windows x64 unsigned NSIS internal build; NewAPI handoff pinned to v1.0.0-rc.27.",
+        "removalGate": "Public distribution, updater enablement, Windows signing or server activation requires a later decision, evidence and freeze."
+      },
+      "inputContracts": [
+        "tool-discovery-scan@v2",
+        "desktop-window-appearance@v1",
+        "desktop-account-readiness@v1"
+      ],
+      "outputContracts": [],
+      "acceptanceCommands": [
+        {
+          "id": "ru018-workflow",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru018/test_acceptance.py::test_windows_internal_workflow",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru018-backend",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru018/test_acceptance.py::test_backend_boundary",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru018-artifacts",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru018/test_acceptance.py::test_cross_platform_artifacts",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU018-AS-01",
+          "assertion": "Windows internal workflow is manual, x64 Windows 2022, locked, artifact-only and contains no release, updater or signing path.",
+          "testSelector": "tests/work_packages/ru018/test_acceptance.py::test_windows_internal_workflow",
+          "acceptanceCommandId": "ru018-workflow"
+        },
+        {
+          "id": "RU018-AS-02",
+          "assertion": "Backend handoff reuses deployed NewAPI persistence, scopes Redis device authorization safely and makes every future schema condition explicit.",
+          "testSelector": "tests/work_packages/ru018/test_acceptance.py::test_backend_boundary",
+          "acceptanceCommandId": "ru018-backend"
+        },
+        {
+          "id": "RU018-AS-03",
+          "assertion": "Delivered universal macOS and Windows internal artifacts have exact architecture, signature/state, source and hash evidence without overstated platform validation.",
+          "testSelector": "tests/work_packages/ru018/test_acceptance.py::test_cross_platform_artifacts",
+          "acceptanceCommandId": "ru018-artifacts"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "A runtime source, server, database, public release, updater or user-machine configuration change is required.",
+        "Apple signing/notarization cannot use the existing authorized identity/profile or Windows build would require a secret/signing claim.",
+        "A delivered artifact cannot be bound to the exact source and verification receipt."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU017-CLIENT-REPAIR",
+      "wave": "consumer",
+      "owner": "desktop-platform",
+      "riskClass": "high",
+      "objective": "Fix titlebar and standalone CLI identification; deliver isolated signed notarized Intel repair build.",
+      "deliverables": [
+        "Transparent native titlebar and fixed light/dark background retain native decorations. Do not force application or OS appearance, so system mode stays automatic.",
+        "Version 2 deduplicates canonical aliases, excludes macOS .app internal executables before probing, selects only standalone candidate or unique earliest absolute PATH candidate. Ties and common-only ambiguity remain unresolved with desktop/retry actions. No user installation or configuration changes.",
+        "Fixed five-tool closed projection includes independent and bundled counts and selection reason. Only selected candidate probed; never fall back silently after failure. Reject stale/malformed responses. v1 stays unchanged.",
+        "Plain four-locale copy distinguishes Codex CLI. Test native selection, React/IPC theme ordering and scan transitions, workbench/cost regression and exact signed notarized local Intel package. No account, DSH, server, updater or public release activation."
+      ],
+      "requirementRefs": [
+        "REQ-045"
+      ],
+      "decisionRefs": [
+        "DEC-061"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server, NewAPI, credentials, user installs/configs, managed DSH, account activation, updater, telemetry, GitHub or public release changes.",
+        "No custom window decorations or guessed executable choice/configuration success."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src/App.tsx",
+        "src/index.css",
+        "src/workbench/**",
+        "src/tool-discovery/**",
+        "src/i18n/locales/zh.json",
+        "src/i18n/locales/zh-TW.json",
+        "src/i18n/locales/en.json",
+        "src/i18n/locales/ja.json",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/tool_discovery.rs",
+        "src-tauri/src/tool_discovery_v2.rs",
+        "src-tauri/src/tool_selection_core.rs",
+        "src-tauri/src/window_appearance.rs",
+        "src-tauri/tauri.conf.json",
+        "tests/work_packages/ru017/**",
+        "outputs/野菜API-标题栏与安装识别修复记录.md",
+        "outputs/yeschoy-ru017-artifacts.json",
+        "release/ru017-local/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        ".github/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src/account/**",
+        "src/billing/**",
+        "src/configuration/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No data migration. Preserve existing appearance enum only.",
+        "rollback": "Retain prior installer; revert repair-owned source if requested."
+      },
+      "compatibilityPolicy": {
+        "strategy": "v1 available, active UI v2; background is visual-only.",
+        "supportedVersions": "0.1.0 dated internal Intel macOS; no new tool compatibility claim.",
+        "removalGate": "Retain desktop guidance, unavailable states and historical evidence."
+      },
+      "inputContracts": [
+        "tool-discovery-scan@v1",
+        "desktop-account-readiness@v1"
+      ],
+      "outputContracts": [
+        "tool-discovery-scan@v2",
+        "desktop-window-appearance@v1"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru017-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru017/test_acceptance.py::test_native_selection",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru017-ui",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru017/test_acceptance.py::test_repair_ui",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru017-workbench",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru012/test_acceptance.py::test_workbench_ui",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru017-cost",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru015/test_acceptance.py::test_comparison_ui",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru017-artifact",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru017/test_acceptance.py::test_local_artifacts",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU017-AS-01",
+          "assertion": "Native selection excludes bundles/aliases, honors unique PATH precedence, refuses ties/bounds; native style retains decorations.",
+          "testSelector": "tests/work_packages/ru017/test_acceptance.py::test_native_selection",
+          "acceptanceCommandId": "ru017-native"
+        },
+        {
+          "id": "RU017-AS-02",
+          "assertion": "Strict v2 projection, automatic selection, failure/retry/stale states and serialized latest theme transitions execute.",
+          "testSelector": "tests/work_packages/ru017/test_acceptance.py::test_repair_ui",
+          "acceptanceCommandId": "ru017-ui"
+        },
+        {
+          "id": "RU017-AS-03",
+          "assertion": "Existing workbench remains truthful.",
+          "testSelector": "tests/work_packages/ru012/test_acceptance.py::test_workbench_ui",
+          "acceptanceCommandId": "ru017-workbench"
+        },
+        {
+          "id": "RU017-AS-04",
+          "assertion": "Cost comparison remains honest without live evidence.",
+          "testSelector": "tests/work_packages/ru015/test_acceptance.py::test_comparison_ui",
+          "acceptanceCommandId": "ru017-cost"
+        },
+        {
+          "id": "RU017-AS-05",
+          "assertion": "Exact repaired artifacts match source, identity, architecture, hashes/signature; separate platform evidence captured.",
+          "testSelector": "tests/work_packages/ru017/test_acceptance.py::test_local_artifacts",
+          "acceptanceCommandId": "ru017-artifact"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Server, secret, user config/install, OS setting or public release authority needed.",
+        "No deterministic target: report unresolved with recovery, never silently pick.",
+        "Signing needs new credentials/export; missing evidence reported honestly."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU016-LOCAL-PACKAGE",
+      "wave": "consumer",
+      "owner": "desktop-platform",
+      "riskClass": "high",
+      "objective": "Build and inspect the unchanged verified client locally; no feature activation or public release.",
+      "deliverables": [
+        "Intel macOS app and DMG signed with the existing Developer ID identity.",
+        "Exact artifact verification and delivery receipt; all missing capabilities explicitly listed."
+      ],
+      "requirementRefs": [
+        "REQ-044"
+      ],
+      "decisionRefs": [
+        "DEC-060"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No renderer, Rust runtime, dependency or version changes.",
+        "No DSH launch, account activation, server modifications, credential export, automatic update, GitHub push or public release.",
+        "No Windows or Apple Silicon build claim; no completed-full-product claim."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "tests/work_packages/ru016/**",
+        "outputs/野菜API-内测构建交付记录.md",
+        "outputs/yeschoy-ru016-artifacts.json",
+        "release/ru016-local/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "src/**",
+        "src-tauri/src/**",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/tauri.candidate.conf.json",
+        "package.json",
+        "pnpm-lock.yaml",
+        "work/**",
+        ".github/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No migration or user data change; build artifacts are isolated.",
+        "rollback": "Retain previous installers; delete only the explicitly identified new build if later requested."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Existing candidate runtime and configuration; separate build identification by filename and hashes.",
+        "supportedVersions": "0.1.0 internal-test artifact, Intel macOS only verified.",
+        "removalGate": "Do not replace the user's installed app or older releases without explicit instruction."
+      },
+      "inputContracts": ["desktop-account-readiness@v1"],
+      "outputContracts": [],
+      "acceptanceCommands": [
+        {
+          "id": "ru016-metadata",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru009/test_acceptance.py::test_candidate_identity_and_signing_boundaries",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru016-handlers",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru009/test_acceptance.py::test_bundle_metadata_has_no_external_handlers",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru016-artifact",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru016/test_acceptance.py::test_local_artifacts",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru016-workbench",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru012/test_acceptance.py::test_workbench_ui",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru016-cost",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru015/test_acceptance.py::test_comparison_ui",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU016-AS-01",
+          "assertion": "Existing bundle identity, hardened runtime and inactive updater boundaries remain unchanged.",
+          "testSelector": "tests/work_packages/ru009/test_acceptance.py::test_candidate_identity_and_signing_boundaries",
+          "acceptanceCommandId": "ru016-metadata"
+        },
+        {
+          "id": "RU016-AS-02",
+          "assertion": "No external URL or document handler is introduced.",
+          "testSelector": "tests/work_packages/ru009/test_acceptance.py::test_bundle_metadata_has_no_external_handlers",
+          "acceptanceCommandId": "ru016-handlers"
+        },
+        {
+          "id": "RU016-AS-03",
+          "assertion": "The exact recorded app and DMG exist, match hashes and identity, use x86_64 only, retain a valid Developer ID signature and bundle the expected icon.",
+          "testSelector": "tests/work_packages/ru016/test_acceptance.py::test_local_artifacts",
+          "acceptanceCommandId": "ru016-artifact"
+        },
+        {
+          "id": "RU016-AS-04",
+          "assertion": "Existing production workbench remains truthful and does not invoke new capabilities.",
+          "testSelector": "tests/work_packages/ru012/test_acceptance.py::test_workbench_ui",
+          "acceptanceCommandId": "ru016-workbench"
+        },
+        {
+          "id": "RU016-AS-05",
+          "assertion": "Cost comparison preserves honest unavailable production and validated display states.",
+          "testSelector": "tests/work_packages/ru015/test_acceptance.py::test_comparison_ui",
+          "acceptanceCommandId": "ru016-cost"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Source changes or capability activation would be required; reopen a distinct unit rather than changing runtime during packaging.",
+        "Signing needs unknown credentials or key export, or any destructive replacement of a user installation.",
+        "Missing notarization or native/platform evidence must be reported, never replaced by a public-ready claim."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU015-COST-VIEW",
+      "wave": "consumer",
+      "owner": "billing",
+      "riskClass": "high",
+      "objective": "Implement the internal cost receipt verifier and billing comparison surface while live billing remains unavailable.",
+      "deliverables": [
+        "Strict normalized receipt verifier with deterministic integer-money reconciliation and explicit exclusions.",
+        "Four-locale cost comparison component with calculation details and honest unavailable runtime.",
+        "Executable arithmetic, boundary and UI acceptance."
+      ],
+      "requirementRefs": [
+        "REQ-043"
+      ],
+      "decisionRefs": [
+        "DEC-059"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server, authentication, credential, configuration, model request or payment changes.",
+        "No runtime sample bills or new import/data acquisition path.",
+        "No DSH launch or package/release changes.",
+        "No duplicate price catalog or expression interpreter."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src/billing/**",
+        "src/workbench/AccountView.tsx",
+        "tests/work_packages/ru015/**",
+        "outputs/野菜API-费用对比客户端验证记录.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "src-tauri/**",
+        "work/**",
+        ".github/**",
+        "src/account/**",
+        "src/service-catalog/**",
+        "src/configuration/**",
+        "package.json",
+        "pnpm-lock.yaml"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No persisted data, account or receipt storage is added.",
+        "rollback": "Revert owned renderer files; there is no user data migration."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Internal normalized receipt view contract only; production provides no receipt until a later authenticated producer is separately specified and verified.",
+        "supportedVersions": "schemaVersion 1 with fixed comparison FX 6.75; unsupported currency or calculation version is rejected.",
+        "removalGate": "Preserve unavailable live account/usage/price truth and existing workbench navigation."
+      },
+      "inputContracts": [
+        "desktop-account-readiness@v1"
+      ],
+      "outputContracts": [],
+      "acceptanceCommands": [
+        {
+          "id": "ru015-receipt-validation",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru015/test_acceptance.py::test_receipt_validation",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru015-comparison-ui",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru015/test_acceptance.py::test_comparison_ui",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru015-existing-workbench",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru012/test_acceptance.py::test_workbench_ui",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU015-AS-01",
+          "assertion": "The real verifier computes same-cohort totals using exact money arithmetic and rejects cross-account, stale, duplicate, malformed, inconsistent or unproven receipts; cache lines are not double counted; missing, pending and unsupported funding remain excluded.",
+          "testSelector": "tests/work_packages/ru015/test_acceptance.py::test_receipt_validation",
+          "acceptanceCommandId": "ru015-receipt-validation"
+        },
+        {
+          "id": "RU015-AS-02",
+          "assertion": "The actual component renders unavailable, invalid, expired, partial, zero and negative comparisons honestly in four languages, offers full-ID per-line calculation details and sends no network request or native invocation.",
+          "testSelector": "tests/work_packages/ru015/test_acceptance.py::test_comparison_ui",
+          "acceptanceCommandId": "ru015-comparison-ui"
+        },
+        {
+          "id": "RU015-AS-03",
+          "assertion": "Existing workbench flows, strict native projections, navigation, appearance and unavailable billing truth continue to pass.",
+          "testSelector": "tests/work_packages/ru012/test_acceptance.py::test_workbench_ui",
+          "acceptanceCommandId": "ru015-existing-workbench"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "An implementation would activate live account or billing without a specified and verified authenticated producer.",
+        "Receipt semantics cannot satisfy the published invariant or a required source edit falls outside allowedPaths.",
+        "Any numeric sample is reachable as production account data."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU013-WORKBENCH",
+      "wave": "consumer",
+      "owner": "desktop-platform",
+      "riskClass": "medium",
+      "objective": "Implement the approved workbench visual system and navigation, retaining existing truthful native contracts. Reconcile acceptance with the repository's pnpm installation through pytest scenarios that execute and validate the exact Vitest JSON test reports in a temporary runner directory.",
+      "deliverables": [
+        "Compact overview and application cards with actual installation states and honest account readiness.",
+        "Unified typography, icon treatment, light/dark/system tokens and responsive ancillary pages.",
+        "Regression tests and visual verification record."
+      ],
+      "requirementRefs": [
+        "REQ-038"
+      ],
+      "decisionRefs": [
+        "DEC-054",
+        "DEC-055"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server or NewAPI change.",
+        "No account login, money, configuration, credential, installation, launch, update, telemetry or public release authority.",
+        "No sample data or mock backend in production."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src/App.tsx",
+        "src/index.css",
+        "src/workbench/**",
+        "src/candidate/CandidateHomeView.tsx",
+        "src/configuration/ConfigurationPreviewView.tsx",
+        "src/settings/SettingsView.tsx",
+        "src/i18n/locales/zh.json",
+        "src/i18n/locales/zh-TW.json",
+        "src/i18n/locales/en.json",
+        "src/i18n/locales/ja.json",
+        "tests/work_packages/ru012/**",
+        "outputs/野菜API-工作台改版验证记录.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "src-tauri/**",
+        "work/**",
+        ".github/**",
+        "contracts/**",
+        "src/account/**",
+        "src/desktop-apps/**",
+        "src/diagnostics/**",
+        "src/service-catalog/**",
+        "src/configuration/preview.ts",
+        "package.json",
+        "pnpm-lock.yaml"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No user, account, credential or configuration migration. An optional theme enum is the sole new persisted preference.",
+        "rollback": "Revert RU-012 owned renderer files. The unused theme preference is harmless; no account or configuration data changes."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve existing native commands and response validation. Only presentation, navigation and local appearance preference change.",
+        "supportedVersions": "Same native desktop application discovery targets as RU-011; no new supported adapter claim.",
+        "removalGate": "Do not remove advanced CLI discovery or backend-unavailable states."
+      },
+      "inputContracts": [
+        "desktop-app-discovery@v1",
+        "guided-configuration-preview@v1",
+        "public-service-catalog@v1",
+        "tool-discovery-scan@v1"
+      ],
+      "outputContracts": [],
+      "acceptanceCommands": [
+        {
+          "id": "ru013-workbench_ui",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru012/test_acceptance.py::test_workbench_ui",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru013-catalog_preservation",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru012/test_acceptance.py::test_catalog_preservation",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru013-preview_preservation",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru012/test_acceptance.py::test_preview_preservation",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU013-AS-01",
+          "assertion": "Actual React workbench preserves truthful unavailable values, complete discovery validation, retry/latest-request semantics, selected-app setup, navigation and local-only accessible appearance transitions without broadening native authority.",
+          "testSelector": "tests/work_packages/ru012/test_acceptance.py::test_workbench_ui",
+          "acceptanceCommandId": "ru013-workbench_ui"
+        },
+        {
+          "id": "RU013-AS-02",
+          "assertion": "Catalog loading, complete/incomplete projections, stale line responses, selected model identity, errors and blocked application remain intact.",
+          "testSelector": "tests/work_packages/ru012/test_acceptance.py::test_catalog_preservation",
+          "acceptanceCommandId": "ru013-catalog_preservation"
+        },
+        {
+          "id": "RU013-AS-03",
+          "assertion": "Every preview continues to withhold configuration writes and credentials and preserves line/protocol and unverified DSH constraints.",
+          "testSelector": "tests/work_packages/ru012/test_acceptance.py::test_preview_preservation",
+          "acceptanceCommandId": "ru013-preview_preservation"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "A change requires a new backend command, secret, account, payment, configuration-write or production authority.",
+        "A prototype value or unverified connection claim would enter runtime.",
+        "A required edit falls outside owned renderer paths."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU012-WORKBENCH",
+      "wave": "consumer",
+      "owner": "desktop-platform",
+      "riskClass": "medium",
+      "objective": "Implement the approved workbench visual system and navigation, retaining existing truthful native contracts.",
+      "deliverables": [
+        "Compact overview and application cards with actual installation states and honest account readiness.",
+        "Unified typography, icon treatment, light/dark/system tokens and responsive ancillary pages.",
+        "Regression tests and visual verification record."
+      ],
+      "requirementRefs": [
+        "REQ-038"
+      ],
+      "decisionRefs": [
+        "DEC-054"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server or NewAPI change.",
+        "No account login, money, configuration, credential, installation, launch, update, telemetry or public release authority.",
+        "No sample data or mock backend in production."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src/App.tsx",
+        "src/index.css",
+        "src/workbench/**",
+        "src/candidate/CandidateHomeView.tsx",
+        "src/configuration/ConfigurationPreviewView.tsx",
+        "src/settings/SettingsView.tsx",
+        "src/i18n/locales/zh.json",
+        "src/i18n/locales/zh-TW.json",
+        "src/i18n/locales/en.json",
+        "src/i18n/locales/ja.json",
+        "tests/work_packages/ru012/**",
+        "outputs/野菜API-工作台改版验证记录.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "src-tauri/**",
+        "work/**",
+        ".github/**",
+        "contracts/**",
+        "src/account/**",
+        "src/desktop-apps/**",
+        "src/diagnostics/**",
+        "src/service-catalog/**",
+        "src/configuration/preview.ts",
+        "package.json",
+        "pnpm-lock.yaml"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No user, account, credential or configuration migration. An optional theme enum is the sole new persisted preference.",
+        "rollback": "Revert RU-012 owned renderer files. The unused theme preference is harmless; no account or configuration data changes."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve existing native commands and response validation. Only presentation, navigation and local appearance preference change.",
+        "supportedVersions": "Same native desktop application discovery targets as RU-011; no new supported adapter claim.",
+        "removalGate": "Do not remove advanced CLI discovery or backend-unavailable states."
+      },
+      "inputContracts": [
+        "desktop-app-discovery@v1",
+        "guided-configuration-preview@v1",
+        "public-service-catalog@v1",
+        "tool-discovery-scan@v1"
+      ],
+      "outputContracts": [],
+      "acceptanceCommands": [
+        {
+          "id": "ru012-workbench",
+          "kind": "scenario_test",
+          "adapter": "vitest-json@1",
+          "selector": "src/workbench/Workbench.test.tsx",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru012-catalog",
+          "kind": "scenario_test",
+          "adapter": "vitest-json@1",
+          "selector": "src/service-catalog/ServiceCatalogPanel.test.tsx",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru012-preview",
+          "kind": "scenario_test",
+          "adapter": "vitest-json@1",
+          "selector": "src/configuration/preview.test.ts",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU012-AS-01",
+          "assertion": "Actual React workbench preserves truthful unavailable values, complete discovery validation, retry/latest-request semantics, selected-app setup, navigation and local-only accessible appearance transitions without broadening native authority.",
+          "testSelector": "src/workbench/Workbench.test.tsx",
+          "acceptanceCommandId": "ru012-workbench"
+        },
+        {
+          "id": "RU012-AS-02",
+          "assertion": "Catalog loading, complete/incomplete projections, stale line responses, selected model identity, errors and blocked application remain intact.",
+          "testSelector": "src/service-catalog/ServiceCatalogPanel.test.tsx",
+          "acceptanceCommandId": "ru012-catalog"
+        },
+        {
+          "id": "RU012-AS-03",
+          "assertion": "Every preview continues to withhold configuration writes and credentials and preserves line/protocol and unverified DSH constraints.",
+          "testSelector": "src/configuration/preview.test.ts",
+          "acceptanceCommandId": "ru012-preview"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "A change requires a new backend command, secret, account, payment, configuration-write or production authority.",
+        "A prototype value or unverified connection claim would enter runtime.",
+        "A required edit falls outside owned renderer paths."
+      ],
+      "status": "planned"
+    },
+    {
       "id": "WP-RU011-DESKTOP-FIRST-EXPERIENCE",
       "wave": "consumer",
       "owner": "desktop-platform",
@@ -1809,6 +2574,139 @@
         "A required implementation change falls outside allowedPaths or touches any forbidden path.",
         "Any backend-dependent UI would need a fabricated account, model, price, balance, usage, recharge, login, key, compatibility, or configuration-success value.",
         "The candidate cannot keep updater artifacts disabled or cannot distinguish candidate packaging from signed public release."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU014-PLAIN-COPY",
+      "wave": "consumer",
+      "owner": "desktop-platform",
+      "riskClass": "medium",
+      "objective": "Refine desktop copy and information hierarchy for nontechnical users without changing capability, native operations or safety semantics.",
+      "deliverables": [
+        "Plain-language overview, setup, models, billing, diagnostics and settings without developer/release checklists.",
+        "Copy and truthful-state regression tests in four locales.",
+        "Copy verification record stating unchanged desktop architecture and no packaging."
+      ],
+      "requirementRefs": [
+        "REQ-038",
+        "REQ-039"
+      ],
+      "decisionRefs": [
+        "DEC-054",
+        "DEC-055",
+        "DEC-056"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server or NewAPI change.",
+        "No account login, money, configuration, credential, installation, launch, update, telemetry or public release authority.",
+        "No sample data or mock backend in production."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src/App.tsx",
+        "src/index.css",
+        "src/workbench/**",
+        "src/candidate/CandidateHomeView.tsx",
+        "src/configuration/ConfigurationPreviewView.tsx",
+        "src/settings/SettingsView.tsx",
+        "src/i18n/locales/zh.json",
+        "src/i18n/locales/zh-TW.json",
+        "src/i18n/locales/en.json",
+        "src/i18n/locales/ja.json",
+        "tests/work_packages/ru012/**",
+        "outputs/野菜API-工作台改版验证记录.md",
+        "src/service-catalog/ServiceCatalogPanel.tsx",
+        "src/service-catalog/ServiceCatalogPanel.test.tsx",
+        "outputs/野菜API-界面文案清理记录.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "src-tauri/**",
+        "work/**",
+        ".github/**",
+        "contracts/**",
+        "src/account/**",
+        "src/desktop-apps/**",
+        "src/diagnostics/**",
+        "src/configuration/preview.ts",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/service-catalog/contract.ts",
+        "src/service-catalog/access-plan.ts",
+        "src/service-catalog/handoff.ts",
+        "src/service-catalog/test-fixtures.ts"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No user, account, credential or configuration migration. An optional theme enum is the sole new persisted preference.",
+        "rollback": "Revert RU-012 owned renderer files. The unused theme preference is harmless; no account or configuration data changes."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve existing native commands and response validation. Only presentation, navigation and local appearance preference change.",
+        "supportedVersions": "Same native desktop application discovery targets as RU-011; no new supported adapter claim.",
+        "removalGate": "Do not remove advanced CLI discovery or backend-unavailable states."
+      },
+      "inputContracts": [
+        "desktop-app-discovery@v1",
+        "guided-configuration-preview@v1",
+        "public-service-catalog@v1",
+        "tool-discovery-scan@v1"
+      ],
+      "outputContracts": [],
+      "acceptanceCommands": [
+        {
+          "id": "ru014-workbench_ui",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru012/test_acceptance.py::test_workbench_ui",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru014-catalog_preservation",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru012/test_acceptance.py::test_catalog_preservation",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru014-preview_preservation",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru012/test_acceptance.py::test_preview_preservation",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU014-AS-01",
+          "assertion": "Actual React workbench preserves truthful unavailable values, complete discovery validation, retry/latest-request semantics, selected-app setup, navigation and local-only accessible appearance transitions without broadening native authority. Copy is plain and localized, without backend paths or release-audit instructions.",
+          "testSelector": "tests/work_packages/ru012/test_acceptance.py::test_workbench_ui",
+          "acceptanceCommandId": "ru014-workbench_ui"
+        },
+        {
+          "id": "RU014-AS-02",
+          "assertion": "Catalog loading, complete/incomplete projections, stale line responses, selected model identity, errors and blocked application remain intact.",
+          "testSelector": "tests/work_packages/ru012/test_acceptance.py::test_catalog_preservation",
+          "acceptanceCommandId": "ru014-catalog_preservation"
+        },
+        {
+          "id": "RU014-AS-03",
+          "assertion": "Every preview continues to withhold configuration writes and credentials and preserves line/protocol and unverified DSH constraints.",
+          "testSelector": "tests/work_packages/ru012/test_acceptance.py::test_preview_preservation",
+          "acceptanceCommandId": "ru014-preview_preservation"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "A change requires a new backend command, secret, account, payment, configuration-write or production authority.",
+        "A prototype value or unverified connection claim would enter runtime.",
+        "A required edit falls outside owned renderer paths."
       ],
       "status": "planned"
     }

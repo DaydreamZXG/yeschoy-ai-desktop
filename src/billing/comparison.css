@@ -1,0 +1,213 @@
+.cost-comparison {
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  margin-block: 22px;
+}
+.cost-comparison h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cost-comparison h2 svg,
+.cost-method svg {
+  width: 17px;
+  height: 17px;
+}
+.cost-coverage,
+.cost-period {
+  color: var(--muted);
+  font-size: 12px;
+}
+.cost-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 18px 0 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.cost-totals > div {
+  padding: 18px;
+  min-width: 0;
+  position: relative;
+}
+.cost-totals > div + div {
+  border-inline-start: 1px solid var(--line);
+}
+.cost-totals dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+.cost-totals dd {
+  margin: 6px 0 0;
+  font-size: clamp(20px, 2.3vw, 29px);
+  line-height: 1.3;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.cost-totals > [data-direction="saved"] {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.cost-totals > [data-direction="more"] {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+.cost-totals small {
+  display: block;
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.cost-notice,
+.cost-assumption,
+.cost-method p,
+.cost-exclusions {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.cost-notice,
+.cost-assumption {
+  margin: 15px 0 0;
+}
+.cost-method {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.cost-method summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--accent);
+  cursor: pointer;
+  width: fit-content;
+  font-size: 12px;
+}
+.cost-method summary::after {
+  content: "+";
+  margin-inline-start: 6px;
+}
+.cost-method[open] summary::after {
+  content: "−";
+}
+.cost-receipts {
+  margin-top: 22px;
+}
+.cost-receipts h3 {
+  font-size: 14px;
+}
+.cost-receipt {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-top: 8px;
+  padding: 12px;
+  background: var(--subtle);
+}
+.cost-receipt summary {
+  cursor: pointer;
+  font-size: 12px;
+}
+.cost-receipt summary > span {
+  float: right;
+  font-variant-numeric: tabular-nums;
+  margin-inline-start: 12px;
+}
+.cost-receipt code,
+.cost-exclusions code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.cost-metadata {
+  font-size: 12px;
+  margin-block: 18px;
+}
+.cost-metadata > div {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 10px;
+  margin: 6px 0;
+}
+.cost-metadata dt {
+  color: var(--muted);
+}
+.cost-metadata dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.cost-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.cost-table-scroll table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.cost-table-scroll caption {
+  text-align: start;
+  color: var(--muted);
+  padding-bottom: 8px;
+}
+.cost-table-scroll th,
+.cost-table-scroll td {
+  padding: 9px 6px;
+  border-bottom: 1px solid var(--line);
+  text-align: end;
+}
+.cost-table-scroll th:first-child {
+  text-align: start;
+}
+.cost-table-scroll thead {
+  color: var(--muted);
+}
+.cost-exclusions ul {
+  list-style: none;
+  padding: 0;
+}
+.cost-exclusions li {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  padding: 6px 0;
+}
+.cost-exclusions li > span {
+  flex-shrink: 0;
+}
+.cost-comparison summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: 3px;
+}
+@media (max-width: 640px) {
+  .cost-comparison {
+    padding: 16px;
+  }
+  .cost-totals {
+    grid-template-columns: 1fr;
+  }
+  .cost-totals > div + div {
+    border-inline-start: 0;
+    border-top: 1px solid var(--line);
+  }
+  .cost-totals > div {
+    padding: 14px;
+  }
+  .cost-metadata > div {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .cost-exclusions li {
+    flex-direction: column;
+    gap: 2px;
+  }
+}

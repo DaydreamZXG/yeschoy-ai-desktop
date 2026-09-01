@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU017-AS-04",
+  "assertion": "Cost comparison remains honest without live evidence.",
+  "testSelector": "tests/work_packages/ru015/test_acceptance.py::test_comparison_ui",
+  "acceptanceCommandId": "ru017-cost",
+  "runId": "RU-017/WP-RU017-CLIENT-REPAIR@2026-08-31T16:33:11.847327+00:00",
+  "packageId": "WP-RU017-CLIENT-REPAIR",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru015/test_acceptance.py::test_comparison_ui",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:fa9fcf5db666650c23ee55a424128a9ef31dbd7191003c2c68c52665d2e871ca",
+    "machineReportSha256": "sha256:ed78d5366ef6217ff8ae854fcd66069cf93d5fb0525d2902fe0f013455345e68",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:b1a14c2035b55920ad54c1fdb4380193cd84f77bef799a9fa0a13de8ba24cd74",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:59917da7cce841ffef01701161ed65a1ec171b53311464ac164ad02376fc2312",
+  "releaseUnitId": "RU-017",
+  "releaseUnitHash": "sha256:302de51af1a20ba3bfb794eb5f3148eb8725eee90f8753546e1a9de984e95d0d"
+}

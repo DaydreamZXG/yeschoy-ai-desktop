@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { createCandidateReadiness } from "../candidate/readiness";
+import { AppearancePicker } from "../workbench/WorkbenchChrome";
+import type { Appearance } from "../workbench/appearance";
+import { useWorkbenchCopy } from "../workbench/copy";
 
 type Language = "zh" | "zh-TW" | "en" | "ja";
 
@@ -14,22 +17,22 @@ const LANGUAGES: Array<{ id: Language; label: string }> = [
 interface SettingsViewProps {
   onOpenAccount: () => void;
   onOpenDiagnostics: () => void;
+  appearance?: Appearance;
+  onAppearanceChange?: (appearance: Appearance) => void;
 }
 
-const SECURITY_ROWS = [
-  "apiKeys",
-  "configFiles",
-  "backupHistory",
-  "telemetry",
-] as const;
+const SECURITY_ROWS = ["apiKeys", "configFiles", "telemetry"] as const;
 
-const RELEASE_ROWS = ["macos", "windows", "updater"] as const;
+const RELEASE_ROWS = ["updater"] as const;
 
 export function SettingsView({
   onOpenAccount,
   onOpenDiagnostics,
+  appearance = "system",
+  onAppearanceChange,
 }: SettingsViewProps) {
   const { t, i18n } = useTranslation();
+  const c = useWorkbenchCopy();
   const readiness = useMemo(() => createCandidateReadiness(), []);
   const activeLanguage = (i18n.resolvedLanguage ?? i18n.language) as Language;
 
@@ -48,8 +51,8 @@ export function SettingsView({
       <section className="settings-hero" aria-labelledby="settings-title">
         <div>
           <p className="eyebrow">{t("yeschoySettings.eyebrow")}</p>
-          <h1 id="settings-title">{t("yeschoySettings.title")}</h1>
-          <p className="intro-copy">{t("yeschoySettings.description")}</p>
+          <h1 id="settings-title">{c.settings}</h1>
+          <p className="intro-copy">{c.settingsDescription}</p>
         </div>
 
         <div className="candidate-version-card">
@@ -58,6 +61,16 @@ export function SettingsView({
           <small>{t("yeschoySettings.candidateStage")}</small>
         </div>
 
+        {onAppearanceChange && (
+          <section className="settings-appearance">
+            <h2>{c.theme}</h2>
+            <AppearancePicker
+              value={appearance}
+              onChange={onAppearanceChange}
+            />
+            <p>{c.themeNote}</p>
+          </section>
+        )}
         <div className="settings-language">
           <p className="section-kicker">{t("yeschoySettings.languageTitle")}</p>
           <div
@@ -119,7 +132,6 @@ export function SettingsView({
               </p>
               <h3>{t("yeschoySettings.releaseTitle")}</h3>
             </div>
-            <span>{t("yeschoySettings.notPublicRelease")}</span>
           </div>
           <div className="release-row-list">
             {RELEASE_ROWS.map((row) => (

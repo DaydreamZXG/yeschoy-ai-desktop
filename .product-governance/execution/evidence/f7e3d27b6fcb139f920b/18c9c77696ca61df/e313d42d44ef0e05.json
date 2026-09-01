@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU014-AS-02",
+  "assertion": "Catalog loading, complete/incomplete projections, stale line responses, selected model identity, errors and blocked application remain intact.",
+  "testSelector": "tests/work_packages/ru012/test_acceptance.py::test_catalog_preservation",
+  "acceptanceCommandId": "ru014-catalog_preservation",
+  "runId": "RU-014/WP-RU014-PLAIN-COPY@2026-08-31T14:06:44.011500+00:00",
+  "packageId": "WP-RU014-PLAIN-COPY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru012/test_acceptance.py::test_catalog_preservation",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:699fa66d8ab7fc16e21d4f8cc826a0c7400107542d631ae403045b981f5034ec",
+    "machineReportSha256": "sha256:bc2572418b4a61299c9b3095c0bfdea2726e257bae5e2d04fbdf91b5dd81a0ec",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:0b65d167406135bf86142aed91ae53ad743c8df5333f69d53927ef4e3ab7fc3d",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:b2c98fe744c81bb9debf141011ac6a5ebe796df5774a24fa0a07390e2f3a02ae",
+  "releaseUnitId": "RU-014",
+  "releaseUnitHash": "sha256:d648734a3e3304d2ae93839d7dee70e01758cea0095841b807e5388316451da0"
+}

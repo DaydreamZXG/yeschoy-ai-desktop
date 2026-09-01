@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU017-AS-01",
+  "assertion": "Native selection excludes bundles/aliases, honors unique PATH precedence, refuses ties/bounds; native style retains decorations.",
+  "testSelector": "tests/work_packages/ru017/test_acceptance.py::test_native_selection",
+  "acceptanceCommandId": "ru017-native",
+  "runId": "RU-017/WP-RU017-CLIENT-REPAIR@2026-08-31T16:33:11.847327+00:00",
+  "packageId": "WP-RU017-CLIENT-REPAIR",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru017/test_acceptance.py::test_native_selection",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:a2cc4447970a09249161803f892ecc85a29fabdf7d16e8d6746e13c558afa01c",
+    "machineReportSha256": "sha256:730524596353c3104610646a1d343454f820b7aa14c12dacd2378f933a3bc2e7",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:dc44936b60f0bf9fa32985189f676f0d0b3e5072bb43b63df9c6d25c61cc8f8a",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:5bfceafeecbf207c71014e93027af51c3964296849b5dab5eaf3ad7d956dbd6f",
+  "releaseUnitId": "RU-017",
+  "releaseUnitHash": "sha256:302de51af1a20ba3bfb794eb5f3148eb8725eee90f8753546e1a9de984e95d0d"
+}

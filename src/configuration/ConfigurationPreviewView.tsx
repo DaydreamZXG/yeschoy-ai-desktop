@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import claudeIcon from "../assets/icons/claude.svg";
 import codexIcon from "../assets/icons/chatgpt.svg";
 import type { DesktopAppId } from "../desktop-apps/contract";
+import { AppGlyph } from "../workbench/AppGlyph";
 import { ServiceCatalogPanel } from "../service-catalog/ServiceCatalogPanel";
 import type { ToolAccessPlan } from "../service-catalog/access-plan";
 import { CONFIGURATION_LINES, createConfigurationPreview } from "./preview";
@@ -110,7 +111,9 @@ export function ConfigurationPreviewView({
             <span>02</span>
             <div>
               <strong>{t("yeschoyConfiguration.steps.line")}</strong>
-              <small>{preview.lineName}</small>
+              <small>
+                {t(`yeschoyConfiguration.lines.${preview.lineId}.name`)}
+              </small>
             </div>
           </li>
           <li data-state={accessPlan ? "preview" : "current"}>
@@ -149,8 +152,12 @@ export function ConfigurationPreviewView({
                     setAccessPlan(null);
                   }}
                 >
-                  <span className="configuration-app-icon" aria-hidden="true">
-                    <img src={app.icon} alt="" />
+                  <span
+                    className="configuration-app-icon"
+                    data-app={app.id}
+                    aria-hidden="true"
+                  >
+                    <AppGlyph source={app.icon} />
                   </span>
                   <strong>{app.displayName}</strong>
                   <small>{t(`yeschoyDesktop.apps.${app.id}.surface`)}</small>
@@ -237,7 +244,9 @@ export function ConfigurationPreviewView({
             </div>
             <div>
               <span>{t("yeschoyConfiguration.selectedLine")}</span>
-              <strong>{preview.lineName}</strong>
+              <strong>
+                {t(`yeschoyConfiguration.lines.${preview.lineId}.name`)}
+              </strong>
             </div>
           </div>
 
@@ -282,11 +291,11 @@ export function ConfigurationPreviewView({
           </details>
         </article>
 
-        <div className="safety-ledger">
-          <div className="safety-ledger-heading">
-            <strong>{t("yeschoyConfiguration.safetyTitle")}</strong>
-            <small>{t("yeschoyConfiguration.safetyBody")}</small>
-          </div>
+        <p className="configuration-privacy-note">
+          {t("yeschoyConfiguration.safetyBody")}
+        </p>
+        <details className="safety-ledger">
+          <summary>{t("yeschoyConfiguration.safetyTitle")}</summary>
           <ul>
             {SIDE_EFFECT_TRUTHS.map((truth) => (
               <li key={truth}>
@@ -301,17 +310,11 @@ export function ConfigurationPreviewView({
               </li>
             ))}
           </ul>
-        </div>
+        </details>
 
         <details className="preview-blockers">
           <summary>{t("yeschoyConfiguration.whyBlocked")}</summary>
-          <ul>
-            {preview.apply.blockers.map((blocker) => (
-              <li key={blocker}>
-                {t(`yeschoyConfiguration.blockers.${blocker}`)}
-              </li>
-            ))}
-          </ul>
+          <p>{t("yeschoyConfiguration.unavailableReason")}</p>
         </details>
 
         <div className="configuration-actions">

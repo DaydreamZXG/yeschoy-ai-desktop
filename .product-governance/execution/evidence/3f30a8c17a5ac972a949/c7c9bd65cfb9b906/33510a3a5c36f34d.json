@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU016-AS-02",
+  "assertion": "No external URL or document handler is introduced.",
+  "testSelector": "tests/work_packages/ru009/test_acceptance.py::test_bundle_metadata_has_no_external_handlers",
+  "acceptanceCommandId": "ru016-handlers",
+  "runId": "RU-016/WP-RU016-LOCAL-PACKAGE@2026-08-31T15:46:45.195812+00:00",
+  "packageId": "WP-RU016-LOCAL-PACKAGE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru009/test_acceptance.py::test_bundle_metadata_has_no_external_handlers",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:89a8c23b437c34f488f3cedec6886c60ccb7d37dcab5614d5fe4e81b5c3a8942",
+    "machineReportSha256": "sha256:0e710e070e7bb448fb6c6f46d9cd8ecb4787bf366cec60a6327b3164495baffa",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:682687451cd0c4284ad966fd3634ec7f5ba2b5d7cbe61bfb0e0d9cb98a7c5d23",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:2fee22f763faae14476f4189a387823d571b098478982f883910008d073bbb69",
+  "releaseUnitId": "RU-016",
+  "releaseUnitHash": "sha256:c2aac4a0a9b514a5f890beacc49aa761a6c7e1c4b62e0f99c1b75023d9ec55a6"
+}

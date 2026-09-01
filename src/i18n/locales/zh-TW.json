@@ -1,57 +1,57 @@
 {
   "yeschoyCatalog": {
-    "eyebrow": "來自野菜API的公開目錄",
-    "title": "選分組，再選模型",
-    "read": "讀取模型目錄",
-    "refresh": "重新讀取",
-    "loading": "正在讀取…",
-    "loadingNote": "只讀取服務狀態和公開目錄，不登入、不領取 Key。",
-    "publicNotice": "這裡顯示公開模型，不代表你的帳號已獲授權。僅產生接入預覽，不改工具設定。",
-    "observed": "讀取於 {{time}}",
-    "empty": "目前公開目錄沒有可選模型。可以重新讀取，或稍後再試。",
+    "eyebrow": "野菜API 模型",
+    "title": "選擇模型",
+    "read": "取得模型清單",
+    "refresh": "重新整理清單",
+    "loading": "正在載入…",
+    "loadingNote": "正在取得最新模型清單…",
+    "publicNotice": "可以先瀏覽模型；你的帳戶能使用哪些模型，還需登入後確認。",
+    "observed": "更新於 {{time}}",
+    "empty": "暫無可選模型，請重新整理或稍後再試。",
     "groupLabel": "服務分組",
     "chooseGroup": "請選擇服務分組",
-    "groupHelp": "分組決定模型範圍與計費規則；大陸/全球是網路線路，兩者不同。",
-    "noGroupDescription": "伺服器未提供分組說明。",
-    "multiplier": "公開分組倍率 {{value}}，不是目前帳號的最終價格。",
+    "groupHelp": "不同分組提供的模型和價格可能不同。",
+    "noGroupDescription": "暫無分組說明。",
+    "multiplier": "分組倍率 {{value}}，不代表你的最終價格。",
     "searchLabel": "尋找模型",
     "searchPlaceholder": "輸入模型 ID 或關鍵字",
     "modelLabel": "模型 ID",
     "chooseModel": "請選擇模型",
     "modelCount": "找到 {{count}} 個模型",
-    "requiredProtocol": "工具需要的介面",
+    "requiredProtocol": "查看連線方式",
     "billingLabel": "計費類型",
-    "compatibilityNotice": "仍需驗證帳號權限、分組的串流限制和工具精確版本。介面聲明不是相容性測試結果，套用設定尚未開放。",
+    "compatibilityNotice": "此模型能否用於所選應用還需確認，目前不會自動設定。",
     "priceTitle": "為何暫不顯示最終價格？",
-    "priceNotice": "官網價比較匯率固定為 {{comparisonFx}}；後台顯示匯率為 {{backendFx}}，用途不同。目前只讀取公開計費類型，不執行計費運算式，也不推算帳號餘額或實際價格。",
+    "priceNotice": "此版本暫不支援查詢你的實際價格。官網價對比使用固定匯率 1 美元 = {{comparisonFx}} 元，實際費用以帳單為準。",
     "unknown": "未提供",
-    "publicReadAttempted": "已嘗試讀取公開目錄",
+    "publicReadAttempted": "已嘗試取得",
     "backend": {
-      "not_deployed": "桌面授權介面尚未上線。",
-      "contract_recognized": "已識別桌面介面結構；不代表已授權或功能已開通。",
-      "incompatible": "桌面介面版本或結構不符，維持未授權。",
-      "unavailable": "暫時無法驗證桌面介面，仍可獨立瀏覽公開目錄。"
+      "not_deployed": "登入功能暫未開放。",
+      "contract_recognized": "尚未確認你的登入狀態。",
+      "incompatible": "帳戶功能暫不可用，可繼續瀏覽模型。",
+      "unavailable": "暫時無法檢查帳戶狀態，可繼續瀏覽模型。"
     },
     "errors": {
       "none": "",
-      "network_error": "網路連線失敗。請檢查網路後重新讀取。",
-      "timed_out": "讀取逾時。可以切換線路或稍後重試。",
-      "http_error": "服務暫時沒有回傳目錄。請稍後重新讀取。",
-      "invalid_response": "回傳資料不符合目錄契約，已拒絕使用。請重新讀取或聯絡支援。",
-      "response_too_large": "回傳目錄超出客戶端安全限制，已停止讀取。",
-      "catalog_busy": "上一次讀取尚在結束，請稍後重新讀取。",
-      "client_unavailable": "目前環境暫時無法讀取目錄。請在桌面客戶端中重試。"
+      "network_error": "網路連線失敗，請檢查網路後重試。",
+      "timed_out": "載入逾時，請換一條線路或稍後重試。",
+      "http_error": "模型清單暫不可用，請稍後重試。",
+      "invalid_response": "模型清單載入失敗，請重新整理或稍後重試。",
+      "response_too_large": "模型清單太大，暫時無法載入。請稍後再試。",
+      "catalog_busy": "上次載入尚未結束，請稍後重試。",
+      "client_unavailable": "暫時無法載入模型，請重新啟動應用後重試。"
     },
     "protocol": {
-      "protocol_declared": "已聲明所需介面，實際相容性待驗證",
-      "protocol_not_declared": "此模型未聲明這項工具需要的介面",
-      "dsh_unverified": "DSH 精確適配方式尚未驗證"
+      "protocol_declared": "已選模型，使用前仍需確認",
+      "protocol_not_declared": "暫不能確認此模型支援目前應用",
+      "dsh_unverified": "暫不能確認此模型能否用於 DSH"
     },
     "billing": {
-      "ratio": "Token / 倍率計費",
+      "ratio": "按用量計費",
       "per_request": "按次計費",
-      "tiered_expr": "階梯或運算式計費",
-      "unknown": "尚未識別計費類型"
+      "tiered_expr": "階梯或其他計費方式",
+      "unknown": "計費方式暫不明確"
     }
   },
   "app": {
@@ -3349,29 +3349,39 @@
     "serverExplanation": "現有 NewAPI 網頁工作階段不是桌面用戶端的安全登入協定。我們要先加入一次性裝置授權、窄權限工作階段和伺服器價格投影，再開放真實帳戶能力。規劃使用的獨立介面前綴是："
   },
   "yeschoyDiscovery": {
+    "codexCli": "Codex（命令列）",
+    "bundledStatus": "桌面應用元件",
+    "componentDetails": "為什麼不算多處安裝？",
+    "componentsIgnored": "另找到 {{count}} 個桌面應用內建的元件，它們不屬於獨立安裝，無需選擇或刪除。",
+    "desktopAction": "查看桌面應用",
+    "selection": {
+      "single_installation": "已自動識別獨立安裝",
+      "path_precedence": "已識別目前預設版本，無需選擇",
+      "bundled_only": "僅找到桌面應用內建的元件，未找到獨立命令列版本。使用桌面應用無需處理這裡。"
+    },
     "brandName": "野菜API",
-    "edition": "官方桌面助手 · 唯讀預覽",
-    "eyebrow": "不必懂 API，也能先走對第一步",
-    "title": "先看看你的 AI 工具在哪裡。",
-    "description": "我們會在這台電腦上找出已安裝的工具，並讀取它們自行回報的版本。你不必填寫 Key、網址或模型名稱。",
-    "trustTitle": "本次檢查邊界",
+    "edition": "官方桌面助手",
+    "eyebrow": "其他 AI 工具",
+    "title": "查看已安裝的工具",
+    "description": "尋找這台電腦上的命令列工具並顯示版本，不會修改設定。",
+    "trustTitle": "檢查說明",
     "localOnly": "只在本機檢查",
     "noChanges": "不會修改設定",
-    "noApiKnowledge": "不需要 API 知識",
+    "noApiKnowledge": "無需填寫連線資訊",
     "scanButton": "檢查我安裝了哪些工具",
     "rescanButton": "重新檢查",
     "scanning": "正在本機檢查…",
-    "privacyNote": "只執行固定的版本查詢；不連網、不讀取設定內容，也不保留掃描紀錄。",
-    "scopeLabel": "本版本範圍",
-    "scopeText": "目前只做安全探索。登入、餘額、加值和一鍵設定會在各自契約確認後逐步加入。",
-    "railLabel": "本機工具圖譜",
-    "toolsTitle": "五款工具，一處看清",
+    "privacyNote": "只檢查名稱和版本，不連網，不更改設定。",
+    "scopeLabel": "使用提示",
+    "scopeText": "這裡只檢查已安裝的工具，暫時不能自動設定。",
+    "railLabel": "這台電腦",
+    "toolsTitle": "工具清單",
     "processingLocal": "正在逐項確認…",
     "checkedAt": "檢查完成 {{time}}",
     "scanErrorTitle": "這次檢查沒有完成",
-    "scanErrorBody": "沒有用舊結果冒充最新狀態。你可以直接重新檢查。",
+    "scanErrorBody": "請重新檢查。如果仍然失敗，請重新啟動應用後再試。",
     "exactVersion": "版本",
-    "candidateCount": "發現 {{count}} 個執行位置",
+    "candidateCount": "發現 {{count}} 處安裝",
     "advancedDetails": "查看本次檢查詳情",
     "platform": "系統",
     "requestId": "檢查編號",
@@ -3379,7 +3389,7 @@
       "waiting": "等待檢查",
       "checking": "正在檢查",
       "not_found": "暫未找到",
-      "detected_unverified": "已找到 · 唯讀",
+      "detected_unverified": "已找到",
       "probe_failed": "已找到 · 無法執行",
       "probe_timed_out": "已找到 · 檢查逾時",
       "multiple_installations": "發現多處安裝"
@@ -3387,16 +3397,16 @@
     "reason": {
       "tool_not_found": "這不是錯誤，安裝後可重新檢查",
       "exact_version_not_allowlisted": "版本已顯示，尚未開放自動設定",
-      "version_command_failed": "版本命令未成功，不猜測相容性",
-      "version_command_timed_out": "版本命令已停止，不影響其他工具",
-      "multiple_executables_found": "未擅自選擇其中一個版本"
+      "version_command_failed": "無法取得版本，請檢查工具能否正常執行。",
+      "version_command_timed_out": "取得版本逾時，可以稍後重試。",
+      "multiple_executables_found": "有多個獨立版本，無法確定預設版本。無需刪除；可先查看桌面應用，或調整安裝後重新檢查。"
     },
     "toolDescriptions": {
       "claude": "Anthropic 的命令列程式設計助手",
       "codex": "OpenAI 的本機程式設計代理",
       "opencode": "開源的終端 AI 程式設計工具",
       "pi": "輕量、可擴充的程式設計代理",
-      "dsh": "DeepSeek Harness；目前維持唯讀探索"
+      "dsh": "DeepSeek Harness"
     }
   },
   "yeschoyConfiguration": {
@@ -3404,16 +3414,16 @@
     "eyebrow": "一步一步，不碰設定檔",
     "title": "選工具，選線路。剩下的交給用戶端。",
     "description": "先用看得懂的方式確認會改哪裡。目前版本只產生安全預覽，不讀取你的設定，也不會寫入任何內容。",
-    "previewOnly": "目前僅產生預覽 · 未讀取電腦設定",
+    "previewOnly": "僅供查看，不會更改應用設定",
     "stepsLabel": "設定步驟",
     "steps": {
       "tool": "選擇工具",
       "line": "選擇線路",
       "model": "選擇模型",
-      "review": "確認變更"
+      "review": "確認選擇"
     },
     "modelUnavailable": "登入後取得模型 ID",
-    "reviewReady": "預覽已隨選擇更新",
+    "reviewReady": "查看已選內容",
     "chooseTool": "01 · 你想使用哪個工具？",
     "chooseLine": "02 · 選擇更適合你的線路",
     "toolNotes": {
@@ -3433,30 +3443,30 @@
         "note": "Cloudflare 全球線路"
       }
     },
-    "previewEyebrow": "本次變更預覽",
-    "previewTitle": "先看清，再決定",
+    "previewEyebrow": "你的選擇",
+    "previewTitle": "確認接入資訊",
     "notApplied": "尚未套用",
-    "selectedTool": "工具",
+    "selectedTool": "應用",
     "selectedLine": "線路",
-    "lineRoot": "線路根網址",
-    "effectiveEndpoint": "工具實際端點",
-    "withheld": "等待介面卡驗證",
+    "lineRoot": "線路位址",
+    "effectiveEndpoint": "連線位址",
+    "withheld": "暫未提供",
     "dshReason": "DSH 的 web profile 寫入欄位尚未完成精確驗證，因此不猜測網址。",
     "targetFile": "計畫設定位置",
     "modelId": "模型 ID",
     "ownedFields": "之後只會管理這些欄位",
     "notReadFromComputer": "欄位名稱來自官方文件，不是從電腦讀取",
     "dshFieldsWithheld": "DSH 暫不顯示寫入欄位，待精確版本介面卡驗證完成後再開放。",
-    "safetyTitle": "這次預覽做了什麼？",
-    "safetyBody": "公開讀取之外，不接觸金鑰或本機設定",
+    "safetyTitle": "查看操作記錄",
+    "safetyBody": "你的應用設定保持不變。",
     "safety": {
-      "networkAttempted": "網路請求",
-      "configurationRead": "讀取現有設定",
-      "configurationWritten": "寫入設定檔",
-      "credentialAccessed": "存取 API 金鑰"
+      "networkAttempted": "取得模型清單",
+      "configurationRead": "讀取應用設定",
+      "configurationWritten": "更改應用設定",
+      "credentialAccessed": "使用金鑰"
     },
-    "notPerformed": "未執行",
-    "whyBlocked": "為什麼現在還不能點擊套用？",
+    "notPerformed": "尚未進行",
+    "whyBlocked": "為什麼暫時不能接入？",
     "blockers": {
       "desktop_backend_required": "桌面安全執行層尚未接入",
       "server_model_catalog_required": "帳戶模型目錄尚未接入",
@@ -3465,8 +3475,9 @@
       "dsh_web_adapter_required": "DSH web profile 介面卡尚未驗證"
     },
     "applyBlocked": "等待安全條件齊備後開放",
-    "openTools": "先檢查本機工具",
-    "openAccount": "查看帳戶接入狀態"
+    "openTools": "查看其他工具",
+    "openAccount": "查看帳戶",
+    "unavailableReason": "此版本還不能自動連線應用。你可以先選擇線路和模型，所有選擇都不會修改應用設定。"
   },
   "yeschoyDesktop": {
     "home": {
@@ -3481,8 +3492,8 @@
       "myAppsEyebrow": "我的應用程式",
       "myAppsTitle": "從已安裝的桌面應用程式開始",
       "checkedAt": "{{time}} 檢查",
-      "errorTitle": "暫時無法讀取桌面應用程式狀態",
-      "errorBody": "沒有使用舊結果代替。你可以重新檢查，其他功能不受影響。",
+      "errorTitle": "無法檢查應用",
+      "errorBody": "請重新檢查，其他功能仍可使用。",
       "version": "桌面版 {{version}}",
       "startSetup": "開始接入",
       "viewSetup": "查看接入方式",
@@ -3522,10 +3533,22 @@
       "title": "四步走到可以使用",
       "continue": "繼續設定",
       "steps": {
-        "app": { "title": "選擇應用程式", "body": "Claude 或 Codex 桌面版" },
-        "line": { "title": "選擇線路", "body": "中國大陸最佳化或全球加速" },
-        "model": { "title": "選擇模型", "body": "顯示真實模型 ID" },
-        "connect": { "title": "完成接入", "body": "安全條件齊備後開放" }
+        "app": {
+          "title": "選擇應用程式",
+          "body": "Claude 或 Codex 桌面版"
+        },
+        "line": {
+          "title": "選擇線路",
+          "body": "中國大陸最佳化或全球加速"
+        },
+        "model": {
+          "title": "選擇模型",
+          "body": "顯示真實模型 ID"
+        },
+        "connect": {
+          "title": "完成接入",
+          "body": "安全條件齊備後開放"
+        }
       }
     },
     "secondary": {
@@ -3538,14 +3561,16 @@
       "securityBody": "候選版 {{version}} · 不自動上傳資料"
     },
     "setup": {
-      "kicker": "桌面應用程式接入",
-      "title": "先選應用程式，再選線路和模型。",
-      "description": "這裡按照桌面應用程式引導。技術設定收在進階資訊裡，新手只需要看熟悉的應用程式和模型。",
-      "steps": { "app": "桌面應用程式" },
+      "kicker": "桌面應用",
+      "title": "應用接入",
+      "description": "選擇應用、線路和模型，查看你的接入方案。",
+      "steps": {
+        "app": "桌面應用程式"
+      },
       "chooseApp": "你準備使用哪個桌面應用程式？",
-      "technicalDetails": "查看進階技術資訊",
-      "technicalBoundary": "目前只展示官方文件允許的接入預覽；尚未讀取或寫入你的應用程式設定。",
-      "connectBlocked": "接入條件尚未全部齊備"
+      "technicalDetails": "連線詳情",
+      "technicalBoundary": "這些是所選線路的連線資訊，尚未套用到你的應用。",
+      "connectBlocked": "一鍵接入暫未開放"
     }
   },
   "yeschoyCandidate": {
@@ -3602,69 +3627,69 @@
     }
   },
   "yeschoyDiagnostics": {
-    "eyebrow": "唯讀線路診斷",
-    "title": "先確認電腦能不能連到兩條線路。",
-    "description": "這是一項很窄的網路檢查，用來分清網域或連線問題，以及還需要繼續查 API 的問題。它不會呼叫模型，也不會使用你的帳戶。",
-    "scopeTitle": "本次檢查只做三件事",
-    "scopeDns": "解析 yeschoy.com 與 api.yeschoy.com",
-    "scopeTcp": "嘗試連線兩個網域的 TCP 443 連接埠",
-    "scopeNoApi": "不傳送 HTTP、API、模型或計費請求",
+    "eyebrow": "網路檢查",
+    "title": "檢查線路連線",
+    "description": "看看這台電腦能否連到兩條線路，幫助你排查網路問題。",
+    "scopeTitle": "檢查內容",
+    "scopeDns": "尋找兩條線路的網路位址",
+    "scopeTcp": "嘗試建立基礎網路連線",
+    "scopeNoApi": "不會傳送對話或產生模型費用",
     "checking": "正在檢查兩條線路…",
     "retry": "重新檢查兩條線路",
     "start": "檢查兩條線路",
-    "consent": "只有點擊後才連網；不帶 Key、Cookie、設定、提示詞或回應內容。",
-    "openTools": "檢查本機工具",
-    "openSetup": "查看設定預覽",
-    "resultsEyebrow": "目前電腦 · 即時結果",
-    "resultsTitle": "兩條線路分開看",
-    "processing": "正在解析並連線 443 連接埠…",
+    "consent": "點擊後開始連網檢查，不使用你的帳戶資訊。",
+    "openTools": "查看其他工具",
+    "openSetup": "選擇應用",
+    "resultsEyebrow": "這台電腦",
+    "resultsTitle": "檢查結果",
+    "processing": "正在檢查連線…",
     "checkedAt": "完成於 {{time}}",
     "invalidTitle": "這次結果不完整",
-    "invalidBody": "沒有用舊結果或猜測值填補。可以重新執行同一項安全檢查。",
+    "invalidBody": "請重新檢查。如果仍然失敗，請檢查網路連線。",
     "status": {
       "waiting": "尚未檢查",
       "checking": "檢查中",
-      "reachable": "443 連接埠可達",
-      "dns_failed": "網域解析失敗",
-      "connect_failed": "連線未建立",
+      "reachable": "基礎連線正常",
+      "dns_failed": "找不到線路位址",
+      "connect_failed": "無法連線線路",
       "timed_out": "檢查逾時"
     },
     "elapsed": "本次耗時",
     "reason": {
-      "tcp_443_reachable": "電腦在這一刻建立了 TCP 連線。",
-      "dns_resolution_failed": "電腦未能把固定網域解析為網路位址。",
-      "tcp_connection_failed": "網域已處理，但 TCP 連線沒有建立。",
-      "connectivity_check_timed_out": "檢查在限定時間內沒有完成，已停止等待。"
+      "tcp_443_reachable": "這台電腦目前可以建立基礎連線。",
+      "dns_resolution_failed": "無法查到線路位址，請檢查網路後重試。",
+      "tcp_connection_failed": "找到了線路位址，但沒有連上。請稍後重試。",
+      "connectivity_check_timed_out": "等待時間過長，請換一條線路或稍後重試。"
     },
     "noResult": "執行後顯示這台電腦的即時結果",
-    "disclaimerTitle": "連接埠可達，不代表 API 一定正常",
-    "disclaimerBody": "這個結果不能證明 TLS、HTTP、帳戶、模型、價格、餘額或推理服務健康，也不用於比較模型速度。",
-    "advancedDetails": "查看本次檢查邊界",
+    "disclaimerTitle": "連線正常，不代表模型一定可用",
+    "disclaimerBody": "這次只檢查網路連線。模型能否使用、回覆速度和帳戶餘額不在檢查範圍內。",
+    "advancedDetails": "查看檢查詳情",
     "requestId": "檢查編號",
     "retention": "結果保存",
-    "notRetained": "僅目前頁面記憶體，不保留歷史"
+    "notRetained": "離開頁面後不保留"
   },
   "yeschoySettings": {
-    "eyebrow": "設定與安全邊界",
+    "eyebrow": "偏好設定",
     "title": "哪些能做，哪些還沒開放，一處說清。",
     "description": "這裡不藏進階開關。候選版只允許已驗證的本機能力，伺服器、密鑰、設定寫入和正式發佈條件都保持明確。",
-    "versionLabel": "目前客戶端",
-    "candidateStage": "客戶端候選版 · 不是正式發佈",
+    "versionLabel": "目前版本",
+    "candidateStage": "測試版",
     "languageTitle": "介面語言",
     "languageNote": "語言偏好只保存在這台電腦；不會同步到帳戶。",
-    "securityEyebrow": "本機與隱私",
-    "securityTitle": "預設最小權限",
-    "localPolicy": "候選版固定策略",
+    "securityEyebrow": "你的資料",
+    "securityTitle": "隱私與安全",
+    "localPolicy": "目前設定",
     "security": {
       "apiKeys": {
-        "title": "API 密鑰",
-        "body": "目前不取得、不讀取、不保存。未來必須透過系統安全憑據層和工具原生助手提供。",
-        "state": "未接入"
+        "title": "帳戶隱私",
+        "body": "不會讀取你的網站密碼、登入資訊或 API 金鑰。",
+        "state": "不讀取"
       },
       "configFiles": {
-        "title": "工具設定檔",
-        "body": "目前只顯示計畫欄位，不讀取現有內容，也不寫入、修復或移除設定。",
-        "state": "只做預覽"
+        "title": "應用設定",
+        "body": "查看應用和選擇模型不會讀取或更改你的應用設定。",
+        "state": "保持不變"
       },
       "backupHistory": {
         "title": "設定備份",
@@ -3672,13 +3697,13 @@
         "state": "不保留歷史"
       },
       "telemetry": {
-        "title": "錯誤與使用資料上傳",
-        "body": "候選版不自動上傳遙測、崩潰、日誌或診斷結果；接收與刪除機制未驗證前保持關閉。",
+        "title": "使用情況與錯誤報告",
+        "body": "此版本不會自動上傳使用記錄、錯誤報告或檢查結果。",
         "state": "已關閉"
       }
     },
-    "releaseEyebrow": "Windows 與 macOS",
-    "releaseTitle": "發佈準備不是發佈成功",
+    "releaseEyebrow": "版本資訊",
+    "releaseTitle": "應用更新",
     "notPublicRelease": "正式發佈門檻未通過",
     "release": {
       "macos": {
@@ -3693,13 +3718,13 @@
       },
       "updater": {
         "title": "自動更新",
-        "body": "更新包產生與執行階段更新器都未啟用。只有私鑰安全託管、公鑰固化和錯簽測試完成後才開放。",
+        "body": "此版本暫不支援自動更新。",
         "state": "已關閉"
       }
     },
-    "backendTitle": "NewAPI 目前沒有被改動",
-    "backendBody": "公開模型目錄可手動讀取；登入、餘額、用量、帳戶可用模型、實際價格、儲值和工具 Key 仍需要未來的 /api/desktop/v1 窄權限介面，不會用網站 Cookie 或通用 Token CRUD 代替。",
-    "openAccount": "查看帳戶頁面",
-    "openDiagnostics": "開啟線路診斷"
+    "backendTitle": "帳戶功能暫未開放",
+    "backendBody": "此版本暫不支援登入、查詢餘額和儲值。你仍可以查看模型和檢查網路連線。",
+    "openAccount": "查看帳戶",
+    "openDiagnostics": "檢查連線"
   }
 }

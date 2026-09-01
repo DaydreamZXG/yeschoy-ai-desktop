@@ -2,6 +2,173 @@
   "schemaVersion": 1,
   "decisions": [
     {
+      "id": "DEC-062",
+      "question": "How should the repaired client reach Apple Silicon and Windows internal testers, and what is the minimum future NewAPI persistence change?",
+      "choice": "Create RU-018 as a packaging and handoff successor that depends on RU-017 without changing its runtime source. Build one signed and notarized universal macOS DMG with arm64 and x86_64 slices. Add a separate manual artifact-only Windows 2022 workflow for an unsigned NSIS internal installer in the private origin; do not use the inherited tag release workflow and do not publish a release or updater. For the server handoff, target deployed NewAPI v1.0.0-rc.27: reuse existing users, user_sessions, logs with Other JSON, tokens, pricing/options and top-up/payment records; keep pending device authorization codes in Redis with short TTL, one-time consumption and polling limits. Add no database schema by default. A later migration is allowed only if the server owner proves production schema drift or required immutable billing evidence cannot be retained in the existing JSON/options boundary. No server is changed in this unit.",
+      "status": "accepted",
+      "decidedBy": "implementation owner within explicit cross-platform build and server-analysis request",
+      "decidedAt": "2026-09-01T09:24:05Z",
+      "evidenceRefs": [
+        "E-USER-054",
+        "E-CODE-036",
+        "E-EXT-039",
+        "E-PROP-011"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-046"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "desktop-platform",
+          "account",
+          "billing"
+        ]
+      }
+    },
+    {
+      "id": "DEC-061",
+      "question": "How are these two installed-client defects repaired?",
+      "choice": "Transparent native titlebar and fixed light/dark background retain native decorations. Do not force application or OS appearance, so system mode stays automatic. Version 2 deduplicates canonical aliases, excludes macOS .app internal executables before probing, selects only standalone candidate or unique earliest absolute PATH candidate. Ties and common-only ambiguity remain unresolved with desktop/retry actions. No user installation or configuration changes. Fixed five-tool closed projection includes independent and bundled counts and selection reason. Only selected candidate probed; never fall back silently after failure. Reject stale/malformed responses. v1 stays unchanged. Plain four-locale copy distinguishes Codex CLI. Test native selection, React/IPC theme ordering and scan transitions, workbench/cost regression and exact signed notarized local Intel package. No account, DSH, server, updater or public release activation. Keep 0.1.0; dated repair filename and hashes distinguish build, prior installer retained.",
+      "status": "accepted",
+      "decidedBy": "implementation owner within explicit user repair request",
+      "decidedAt": "2026-08-31T16:32:34.828Z",
+      "evidenceRefs": [
+        "E-USER-053",
+        "E-CODE-035"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-045"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "desktop-platform",
+          "tool-config"
+        ]
+      }
+    },
+    {
+      "id": "DEC-060",
+      "question": "May the verified renderer be built into a local installable artifact without claiming unfinished DSH and account features are complete?",
+      "choice": "Build the current verified client as an Intel macOS local internal-test artifact using the existing candidate configuration and available Developer ID identity. Preserve version 0.1.0 and distinguish this build by dated filename and hashes. No runtime capability changes, server changes, GitHub publication, updater activation or claim of full-product readiness. The user has requested a version; creating an inspectable local artifact is an implementation step, not acceptance of a reduced final product. DSH launch/configuration and authenticated billing remain explicitly uncompleted.",
+      "status": "accepted",
+      "decidedBy": "implementation owner within the user's request to build an installable client",
+      "decidedAt": "2026-08-31T15:32:29.828Z",
+      "evidenceRefs": [
+        "E-USER-052",
+        "E-CODE-034"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-044"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "desktop-platform"
+        ]
+      }
+    },
+    {
+      "id": "DEC-059",
+      "question": "Which independently deliverable client work may proceed while desktop account and historical billing endpoints are absent?",
+      "choice": "Implement and verify the client cost-comparison presentation and an internal normalized receipt verifier as RU-015, superseding RU-014 renderer ownership only where required. Real account and billing data remain unavailable. No live producer, import route, mock runtime data, second numeric price table or billing-expression engine is added. The verifier checks signed-in subject/context, freshness, priced line arithmetic, currency conversion and same-cohort totals before any future authenticated producer may display an estimate. DSH runtime and packaging remain later independently verified work, not declared complete by this unit.",
+      "status": "accepted",
+      "decidedBy": "implementation owner within product owner's client implementation request",
+      "decidedAt": "2026-08-31T15:04:03.047Z",
+      "evidenceRefs": [
+        "E-USER-052",
+        "E-USER-050",
+        "E-CODE-034"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-043"
+        ],
+        "pageRefs": [
+          "PAGE-BILLING"
+        ],
+        "domainRefs": [
+          "billing",
+          "desktop-platform"
+        ]
+      }
+    },
+    {
+      "id": "DEC-058",
+      "question": "May the initial DSH integration launch the official local interface in the user's browser instead of requiring a separate native or embedded window?",
+      "choice": "Yes. The initial DSH experience uses the Yeschoy assistant as the launch entry and opens the official local web interface in the user's browser. Do not require a terminal step from beginners or embed the DSH interface into the privileged Yeschoy window. Version, installation, process lifecycle, configuration and credential verification remain prerequisites for a later implementation unit. This presentation decision does not approve all pricing proposals, change the existing release gate or authorize server changes.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-31T14:47:01.524Z",
+      "evidenceRefs": ["E-USER-051"],
+      "affects": {
+        "requirementRefs": ["REQ-040", "REQ-042"],
+        "pageRefs": ["PAGE-TOOLS", "PAGE-CONFIGURE-PREVIEW"],
+        "domainRefs": ["tool-config", "desktop-platform"]
+      }
+    },
+    {
+      "id": "DEC-057",
+      "question": "What priorities and truth requirements does the owner add for DSH and usage-cost comparison?",
+      "choice": "Prioritize investigation of DSH integration and require a visible, auditable comparison of official API cost for the same usage against actual Yeschoy charges. Record the research proposal without authorizing runtime behavior, server changes, an embedded DSH window, guessed billing data or a change to the existing DSH release gate. Preserve all historical frozen units.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-31T14:35:39.045Z",
+      "evidenceRefs": ["E-USER-050"],
+      "affects": {
+        "requirementRefs": ["REQ-040", "REQ-041"],
+        "pageRefs": ["PAGE-TOOLS", "PAGE-BILLING"],
+        "domainRefs": ["tool-config", "billing"]
+      }
+    },
+    {
+      "id": "DEC-055",
+      "question": "How is the pnpm repository validated without changing product dependencies to satisfy an npm-only verification adapter?",
+      "choice": "Supersede RU-012 with RU-013 solely to correct the test execution contract. Retain the accepted DEC-054 workbench scope and all no-server/no-secret/no-release boundaries. Use registered pytest-json scenarios to execute the unchanged selected React/Vitest tests via the locally locked Vitest installation, parse JSON reports, reject skipped or failed tests and use a temporary config/cache inside the verifier sandbox. No product scope, dependency, runtime command or source-isolation weakening is authorized.",
+      "status": "accepted",
+      "decidedBy": "implementation owner within DEC-054 scope",
+      "decidedAt": "2026-08-31T13:37:02.893Z",
+      "evidenceRefs": [
+        "E-USER-048",
+        "E-CODE-032"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-038"
+        ],
+        "domainRefs": [
+          "desktop-platform"
+        ],
+        "pageRefs": []
+      }
+    },
+    {
+      "id": "DEC-054",
+      "question": "Which visual correction replaces the rejected RU-011 presentation?",
+      "choice": "Implement the approved compact blue/cyan workbench layout as RU-012, superseding RU-011 visual presentation only. Use a consistent system sans-serif type scale with monospace model IDs and tabular amounts, light/dark/system appearance stored only as a local preference, overview/app/model/billing navigation and cohesive configuration, diagnostics and settings. Preserve original app icon identity and all native contracts. Prototype values, mock authorization and mock connection completion must not enter runtime. Account, billing, recharge and configuration-write remain unavailable until separately implemented and verified. No server, release, signing or package distribution is authorized.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-31T22:00:00+08:00",
+      "evidenceRefs": [
+        "E-USER-048"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-038"
+        ],
+        "domainRefs": [
+          "desktop-platform"
+        ],
+        "pageRefs": [
+          "PAGE-HOME",
+          "PAGE-CONFIGURE-PREVIEW",
+          "PAGE-ACCOUNT",
+          "PAGE-BILLING"
+        ]
+      }
+    },
+    {
       "id": "DEC-053",
       "question": "What product correction is authorized after the owner rejects the candidate icon, visual quality and command-line-first target model?",
       "choice": "Freeze RU-011 as a client-only successor to RU-010. Make Claude Desktop and the graphical Codex surface the primary application targets; discover their actual desktop bundles separately from the preserved advanced CLI scanner. Replace the candidate landing presentation with a compact application-oriented desktop shell and original 野菜API leaf-and-route icon. The beginner path is application, line, real public model ID and connection readiness, with technical details secondary. Keep configuration application, secrets, login, balance, usage, recharge, installation, automatic update, telemetry, server and production changes blocked. Do not label detection, a documented provider interface or a public model declaration as proven end-to-end compatibility.",
@@ -1509,6 +1676,27 @@
           "desktop-platform",
           "security-update"
         ]
+      }
+    },
+    {
+      "id": "DEC-056",
+      "question": "How should the desktop workbench communicate with nontechnical users?",
+      "choice": "Keep the existing installable Tauri desktop architecture and approved look. Supersede RU-013 for copy and information-hierarchy refinement only: remove implementation/release checklists and backend paths from normal UI; use plain action, status, error and recovery language across four locales. Preserve full model IDs and true unknown/unavailable/disabled states. Developer details remain in project documents; user-relevant connection details may be collapsed. No native command, contract, account, pricing, payment, credential, tool-configuration, server, packaging or release changes.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-08-31T14:04:44.835Z",
+      "evidenceRefs": [
+        "E-USER-049"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-038",
+          "REQ-039"
+        ],
+        "domainRefs": [
+          "desktop-platform"
+        ],
+        "pageRefs": []
       }
     }
   ]

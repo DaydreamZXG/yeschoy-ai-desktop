@@ -50,7 +50,7 @@ describe("catalog selection and recovery", () => {
         onOpenTools={vi.fn()}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "读取模型目录" }));
+    fireEvent.click(screen.getByRole("button", { name: "获取模型列表" }));
     await screen.findByRole("combobox", { name: /服务分组/ });
     fireEvent.change(screen.getByRole("combobox", { name: /服务分组/ }), {
       target: { value: "test-group" },
@@ -58,7 +58,7 @@ describe("catalog selection and recovery", () => {
     fireEvent.change(screen.getByRole("combobox", { name: /模型 ID/ }), {
       target: { value: "test/model" },
     });
-    const preview = screen.getByRole("region", { name: "先看清，再决定" });
+    const preview = screen.getByRole("region", { name: "确认接入信息" });
     expect(preview).toHaveTextContent("test/model");
     fireEvent.click(
       screen.getByRole("button", { name: /大陆优化 中国大陆网络优先/ }),
@@ -87,7 +87,7 @@ describe("catalog selection and recovery", () => {
       />,
     );
     expect(mockedInvoke).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "读取模型目录" }));
+    fireEvent.click(screen.getByRole("button", { name: "获取模型列表" }));
     await screen.findByRole("combobox", { name: /服务分组/ });
     expect(mockedInvoke).toHaveBeenCalledWith("read_public_service_catalog", {
       request: {
@@ -110,10 +110,8 @@ describe("catalog selection and recovery", () => {
         }),
       ),
     );
-    expect(screen.getByText("桌面授权接口尚未上线。")).toBeInTheDocument();
-    expect(
-      screen.getByText("已声明所需接口，实际兼容性待验证"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("登录功能暂未开放。")).toBeInTheDocument();
+    expect(screen.getByText("已选模型，使用前仍需确认")).toBeInTheDocument();
   });
   it("clears selection on refresh and reports a valid empty catalog", async () => {
     respond();
@@ -121,7 +119,7 @@ describe("catalog selection and recovery", () => {
     render(
       <ServiceCatalogPanel toolId="pi" lineId="mainland_optimized" {...cb} />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "读取模型目录" }));
+    fireEvent.click(screen.getByRole("button", { name: "获取模型列表" }));
     await screen.findByRole("combobox", { name: /服务分组/ });
     fireEvent.change(screen.getByRole("combobox", { name: /服务分组/ }), {
       target: { value: "test-group" },
@@ -134,8 +132,8 @@ describe("catalog selection and recovery", () => {
       groups: [],
       models: [],
     }));
-    fireEvent.click(screen.getByRole("button", { name: "重新读取" }));
-    await screen.findByText(/当前公开目录没有可选模型/);
+    fireEvent.click(screen.getByRole("button", { name: "刷新列表" }));
+    await screen.findByText(/暂无可选模型/);
     expect(cb.onPlanChange).toHaveBeenLastCalledWith(null);
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
@@ -153,13 +151,13 @@ describe("catalog selection and recovery", () => {
     const view = render(
       <ServiceCatalogPanel toolId="pi" lineId="mainland_optimized" {...cb} />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "读取模型目录" }));
-    expect(screen.getByRole("button", { name: "正在读取…" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "获取模型列表" }));
+    expect(screen.getByRole("button", { name: "正在加载…" })).toBeDisabled();
     view.rerender(
       <ServiceCatalogPanel toolId="pi" lineId="global_accelerated" {...cb} />,
     );
     respond();
-    fireEvent.click(screen.getByRole("button", { name: "读取模型目录" }));
+    fireEvent.click(screen.getByRole("button", { name: "获取模型列表" }));
     await screen.findByRole("combobox", { name: /服务分组/ });
     fireEvent.change(screen.getByRole("combobox", { name: /服务分组/ }), {
       target: { value: "test-group" },
@@ -185,18 +183,18 @@ describe("catalog selection and recovery", () => {
         {...callbacks()}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "读取模型目录" }));
+    fireEvent.click(screen.getByRole("button", { name: "获取模型列表" }));
     await screen.findByRole("alert");
     expect(document.body.textContent).not.toContain("private-password");
     mockedInvoke.mockResolvedValueOnce({
       success: true,
       data: ["guessed-model"],
     });
-    fireEvent.click(screen.getByRole("button", { name: "重新读取" }));
-    await screen.findByText(/返回的数据不符合目录契约/);
+    fireEvent.click(screen.getByRole("button", { name: "刷新列表" }));
+    await screen.findByText(/模型列表加载失败/);
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     respond();
-    fireEvent.click(screen.getByRole("button", { name: "重新读取" }));
+    fireEvent.click(screen.getByRole("button", { name: "刷新列表" }));
     await screen.findByRole("combobox", { name: /服务分组/ });
   });
   it("treats group prose as text rather than executable HTML or protocol evidence", async () => {
@@ -213,7 +211,7 @@ describe("catalog selection and recovery", () => {
         {...callbacks()}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "读取模型目录" }));
+    fireEvent.click(screen.getByRole("button", { name: "获取模型列表" }));
     await screen.findByRole("combobox", { name: /服务分组/ });
     fireEvent.change(screen.getByRole("combobox", { name: /服务分组/ }), {
       target: { value: "test-group" },
@@ -226,7 +224,7 @@ describe("catalog selection and recovery", () => {
     ).toBeInTheDocument();
     expect(document.querySelector(".service-catalog-panel img")).toBeNull();
     expect(
-      screen.getByText("该模型未声明此工具需要的接口"),
+      screen.getByText("暂不能确认此模型支持当前应用"),
     ).toBeInTheDocument();
   });
 });

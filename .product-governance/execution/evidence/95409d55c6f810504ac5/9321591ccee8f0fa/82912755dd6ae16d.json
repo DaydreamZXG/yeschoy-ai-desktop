@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU013-AS-01",
+  "assertion": "Actual React workbench preserves truthful unavailable values, complete discovery validation, retry/latest-request semantics, selected-app setup, navigation and local-only accessible appearance transitions without broadening native authority.",
+  "testSelector": "tests/work_packages/ru012/test_acceptance.py::test_workbench_ui",
+  "acceptanceCommandId": "ru013-workbench_ui",
+  "runId": "RU-013/WP-RU013-WORKBENCH@2026-08-31T13:37:08.888449+00:00",
+  "packageId": "WP-RU013-WORKBENCH",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru012/test_acceptance.py::test_workbench_ui",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:0a6ec476d8f0bb6f39a89833b24f229288efe7b59b1707aeb972043849bcd96a",
+    "machineReportSha256": "sha256:081df2ebe555934359b073bbf276aca0f19252ef8467a671c51c536d667b60b5",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:2965eb497227ce9b1831bf3e8e28964d8d581c332aeb7849745f9506f8a86ea6",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:40f01bfbf44ea23e95baa9d40edcea5fa06b158334d33c3814284b3c2c039f58",
+  "releaseUnitId": "RU-013",
+  "releaseUnitHash": "sha256:a6bcab094ca06d81e6b9b3a994b5a7119dc61f42dc95c35e899ee378da8e2bb5"
+}

@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU012-AS-02",
+  "assertion": "Catalog loading, complete/incomplete projections, stale line responses, selected model identity, errors and blocked application remain intact.",
+  "testSelector": "src/service-catalog/ServiceCatalogPanel.test.tsx",
+  "acceptanceCommandId": "ru012-catalog",
+  "runId": "RU-012/WP-RU012-WORKBENCH@2026-08-31T13:15:01.490357+00:00",
+  "packageId": "WP-RU012-WORKBENCH",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:a9991467562e5d3f1685fd0743c6b77b4e75d28952e7b91a9574da0d49fff50a",
+  "releaseUnitId": "RU-012",
+  "releaseUnitHash": "sha256:0d80020b2ef85fae451d942a588a61982d13e9a7658aec791d2debbdfa99822a"
+}

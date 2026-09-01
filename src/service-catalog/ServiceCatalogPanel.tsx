@@ -255,20 +255,18 @@ export function ServiceCatalogPanel({
                     <code>{plan.modelId}</code>
                   </dd>
                 </div>
-                {plan.requiredProtocol && (
-                  <div>
-                    <dt>{t("yeschoyCatalog.requiredProtocol")}</dt>
-                    <dd>
-                      <code>{plan.requiredProtocol}</code>
-                    </dd>
-                  </div>
-                )}
                 <div>
                   <dt>{t("yeschoyCatalog.billingLabel")}</dt>
                   <dd>{t(`yeschoyCatalog.billing.${plan.billingMode}`)}</dd>
                 </div>
               </dl>
               <p>{t("yeschoyCatalog.compatibilityNotice")}</p>
+              {plan.requiredProtocol && (
+                <details>
+                  <summary>{t("yeschoyCatalog.requiredProtocol")}</summary>
+                  <code>{plan.requiredProtocol}</code>
+                </details>
+              )}
             </div>
           )}
           <details className="catalog-price-boundary">

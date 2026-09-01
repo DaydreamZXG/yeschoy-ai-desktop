@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU012-AS-03",
+  "assertion": "Every preview continues to withhold configuration writes and credentials and preserves line/protocol and unverified DSH constraints.",
+  "testSelector": "src/configuration/preview.test.ts",
+  "acceptanceCommandId": "ru012-preview",
+  "runId": "RU-012/WP-RU012-WORKBENCH@2026-08-31T13:15:01.490357+00:00",
+  "packageId": "WP-RU012-WORKBENCH",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:c7b3ca5b46b89f363adfa30ae3de8c2565e1be7eaa531ded1ca897207ea47eef",
+  "releaseUnitId": "RU-012",
+  "releaseUnitHash": "sha256:0d80020b2ef85fae451d942a588a61982d13e9a7658aec791d2debbdfa99822a"
+}

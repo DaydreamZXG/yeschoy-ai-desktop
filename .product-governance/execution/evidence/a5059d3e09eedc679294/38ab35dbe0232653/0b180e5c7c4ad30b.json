@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU015-AS-02",
+  "assertion": "The actual component renders unavailable, invalid, expired, partial, zero and negative comparisons honestly in four languages, offers full-ID per-line calculation details and sends no network request or native invocation.",
+  "testSelector": "tests/work_packages/ru015/test_acceptance.py::test_comparison_ui",
+  "acceptanceCommandId": "ru015-comparison-ui",
+  "runId": "RU-015/WP-RU015-COST-VIEW@2026-08-31T15:08:13.198027+00:00",
+  "packageId": "WP-RU015-COST-VIEW",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru015/test_acceptance.py::test_comparison_ui",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:df038d5b57ef4c8a4c56b4f90c86a76da073d3892a931fe51d2b48ee383eb46c",
+    "machineReportSha256": "sha256:ed78d5366ef6217ff8ae854fcd66069cf93d5fb0525d2902fe0f013455345e68",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:fbba669f8dcc0e057d1b6f6831f51e00618dea06572adaa8acf5c02a57c574cb",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:8a2f3e367d7e0f3de8f120be726b3f5c88699e965f41e9705538ce483a4b9093",
+  "releaseUnitId": "RU-015",
+  "releaseUnitHash": "sha256:8f7f67122c3db5ad0ac098ebadb2e95f924b04c6efbc7cecd8dc48a7160b4747"
+}

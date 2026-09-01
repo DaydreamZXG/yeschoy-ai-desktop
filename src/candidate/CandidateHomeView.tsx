@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
+import {
+  ArrowRight,
+  ChevronRight,
+  CircleAlert,
+  Globe2,
+  Plug,
+  Puzzle,
+  RefreshCw,
+} from "lucide-react";
 import claudeIcon from "../assets/icons/claude.svg";
 import codexIcon from "../assets/icons/chatgpt.svg";
 import {
@@ -8,7 +17,13 @@ import {
   type DesktopAppId,
   type DesktopAppScanResponse,
 } from "../desktop-apps/contract";
-import { createCandidateReadiness } from "./readiness";
+import {
+  AccountSummary,
+  EmptyBilling,
+  WorkbenchFooter,
+} from "../workbench/WorkbenchChrome";
+import { useWorkbenchCopy } from "../workbench/copy";
+import { AppGlyph } from "../workbench/AppGlyph";
 
 interface CandidateHomeViewProps {
   onOpenAccount: () => void;
@@ -17,16 +32,10 @@ interface CandidateHomeViewProps {
   onOpenTools: () => void;
   onOpenSettings: () => void;
 }
-
-const APP_CATALOG: Array<{
-  id: DesktopAppId;
-  icon: string;
-  accent: "clay" | "ink";
-}> = [
+const APP_CATALOG = [
   { id: "claude_desktop", icon: claudeIcon, accent: "clay" },
   { id: "codex_desktop", icon: codexIcon, accent: "ink" },
-];
-
+] as const;
 type ScanPhase = "loading" | "ready" | "error";
 
 export function CandidateHomeView({
@@ -34,17 +43,13 @@ export function CandidateHomeView({
   onOpenSetup,
   onOpenDiagnostics,
   onOpenTools,
-  onOpenSettings,
 }: CandidateHomeViewProps) {
   const { t, i18n } = useTranslation();
-  const readiness = useMemo(() => createCandidateReadiness(), []);
+  const c = useWorkbenchCopy();
   const [phase, setPhase] = useState<ScanPhase>("loading");
   const [scan, setScan] = useState<DesktopAppScanResponse | null>(null);
-  const [selectedApp, setSelectedApp] =
-    useState<DesktopAppId>("claude_desktop");
   const latestRequest = useRef("");
   const requestSequence = useRef(0);
-
   const scanDesktopApps = useCallback(async () => {
     const requestId = `desktop-${Date.now().toString(36)}-${++requestSequence.current}`;
     latestRequest.current = requestId;
@@ -55,14 +60,9 @@ export function CandidateHomeView({
         request: { requestId },
       });
       if (latestRequest.current !== requestId) return;
-      if (!isDesktopAppScanResponse(result, requestId)) {
+      if (!isDesktopAppScanResponse(result, requestId))
         throw new Error("invalid_projection");
-      }
       setScan(result);
-      const firstDetected = result.apps.find(
-        (app) => app.status === "detected_unverified",
-      );
-      if (firstDetected) setSelectedApp(firstDetected.appId);
       setPhase("ready");
     } catch {
       if (latestRequest.current !== requestId) return;
@@ -70,21 +70,27 @@ export function CandidateHomeView({
       setPhase("error");
     }
   }, []);
-
   useEffect(() => {
     void scanDesktopApps();
     return () => {
       latestRequest.current = "";
     };
   }, [scanDesktopApps]);
-
   const byId = useMemo(
     () => new Map(scan?.apps.map((app) => [app.appId, app]) ?? []),
     [scan],
   );
-  const detectedCount = scan?.apps.filter(
-    (app) => app.status === "detected_unverified",
-  ).length;
+  // Count application identities, not installations. Unsupported scans cannot
+  // establish a total, while multiple installations still establish presence.
+  const detectedCount = scan?.apps.some(
+    (app) => app.status === "unsupported_platform",
+  )
+    ? undefined
+    : scan?.apps.filter(
+        (app) =>
+          app.status === "detected_unverified" ||
+          app.status === "multiple_installations",
+      ).length;
   const checkedAt = scan
     ? new Intl.DateTimeFormat(i18n.resolvedLanguage, {
         hour: "2-digit",
@@ -93,205 +99,184 @@ export function CandidateHomeView({
     : null;
 
   return (
-    <div className="desktop-home" data-testid="candidate-home-view">
-      <section className="desktop-welcome" aria-labelledby="desktop-home-title">
-        <div>
-          <p className="desktop-kicker">{t("yeschoyDesktop.home.kicker")}</p>
-          <h1 id="desktop-home-title">{t("yeschoyDesktop.home.title")}</h1>
-          <p>{t("yeschoyDesktop.home.description")}</p>
-        </div>
-        <div className="home-status-cluster">
-          <span className="local-state-dot" aria-hidden="true" />
-          <div>
-            <strong>{t("yeschoyDesktop.home.localCheck")}</strong>
-            <small>
-              {phase === "loading"
-                ? t("yeschoyDesktop.home.checking")
-                : phase === "error"
-                  ? t("yeschoyDesktop.home.checkFailed")
-                  : t("yeschoyDesktop.home.detectedCount", {
-                      count: detectedCount ?? 0,
-                    })}
-            </small>
-          </div>
+    <div
+      className="desktop-home workbench-page"
+      data-testid="candidate-home-view"
+    >
+      <header className="workbench-page-heading">
+        <h1>{c.home}</h1>
+        <div className="page-heading-actions">
+          <span className="checked-at" role="status">
+            {checkedAt
+              ? `${c.lastChecked} ${checkedAt}`
+              : phase === "loading"
+                ? c.checking
+                : c.failedScan}
+          </span>
           <button
             type="button"
+            className="subtle-button"
             onClick={scanDesktopApps}
             disabled={phase === "loading"}
           >
-            {t("yeschoyDesktop.home.refresh")}
+            <RefreshCw
+              aria-hidden="true"
+              className={phase === "loading" ? "is-spinning" : undefined}
+            />
+            {c.refresh}
           </button>
         </div>
-      </section>
-
-      <div className="desktop-home-grid">
-        <section className="my-apps-panel" aria-labelledby="my-apps-title">
-          <div className="desktop-section-heading">
-            <div>
-              <span>{t("yeschoyDesktop.home.myAppsEyebrow")}</span>
-              <h2 id="my-apps-title">{t("yeschoyDesktop.home.myAppsTitle")}</h2>
-            </div>
-            {checkedAt && (
-              <small>
-                {t("yeschoyDesktop.home.checkedAt", { time: checkedAt })}
-              </small>
-            )}
-          </div>
-
-          {phase === "error" && (
-            <div className="desktop-scan-error" role="alert">
-              <strong>{t("yeschoyDesktop.home.errorTitle")}</strong>
-              <span>{t("yeschoyDesktop.home.errorBody")}</span>
-            </div>
-          )}
-
-          <div className="desktop-app-deck" aria-busy={phase === "loading"}>
-            <span className="app-deck-route" aria-hidden="true" />
-            {APP_CATALOG.map((app) => {
-              const result = byId.get(app.id);
-              const status =
-                phase === "loading"
-                  ? "checking"
-                  : (result?.status ?? "not_found");
-              const selected = selectedApp === app.id;
-              return (
-                <article
-                  className="desktop-app-card"
-                  data-accent={app.accent}
-                  data-status={status}
-                  data-selected={selected || undefined}
-                  key={app.id}
-                >
-                  <button
-                    className="app-card-select"
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => setSelectedApp(app.id)}
-                  >
-                    <span className="app-card-icon" aria-hidden="true">
-                      <img src={app.icon} alt="" />
-                    </span>
-                    <span className="app-card-copy">
-                      <strong>{t(`yeschoyDesktop.apps.${app.id}.name`)}</strong>
-                      <small>
-                        {t(`yeschoyDesktop.apps.${app.id}.surface`)}
-                      </small>
-                    </span>
-                    <span className="app-card-status">
-                      <i aria-hidden="true" />
-                      {t(`yeschoyDesktop.status.${status}`)}
-                    </span>
-                  </button>
-                  <div className="app-card-evidence">
-                    <span>
-                      {result?.version
-                        ? t("yeschoyDesktop.home.version", {
-                            version: result.version,
-                          })
-                        : t(`yeschoyDesktop.apps.${app.id}.note`)}
-                    </span>
-                    <button type="button" onClick={() => onOpenSetup(app.id)}>
-                      {t(
-                        result?.status === "detected_unverified"
-                          ? "yeschoyDesktop.home.startSetup"
-                          : "yeschoyDesktop.home.viewSetup",
-                      )}
-                      <span aria-hidden="true">→</span>
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-
-          <div className="desktop-app-boundary">
-            <span aria-hidden="true">i</span>
-            <p>{t("yeschoyDesktop.home.detectionBoundary")}</p>
-          </div>
-        </section>
-
-        <aside className="account-peek" aria-labelledby="account-peek-title">
-          <div className="account-peek-topline">
-            <span>{t("yeschoyDesktop.account.kicker")}</span>
-            <span data-state="waiting">
-              {t("yeschoyDesktop.account.waiting")}
-            </span>
-          </div>
-          <h2 id="account-peek-title">{t("yeschoyDesktop.account.title")}</h2>
-          <div className="account-peek-balance">
-            <small>{t("yeschoyDesktop.account.balance")}</small>
-            <strong>—</strong>
-            <span>{t("yeschoyDesktop.account.loginRequired")}</span>
-          </div>
-          <div className="account-peek-row">
-            <span>{t("yeschoyDesktop.account.usage")}</span>
-            <strong>—</strong>
-          </div>
-          <div className="account-peek-row">
-            <span>{t("yeschoyDesktop.account.fx")}</span>
-            <strong>1 USD = 6.75 CNY</strong>
-          </div>
-          <button type="button" onClick={onOpenAccount}>
-            {t("yeschoyDesktop.account.action")}
-          </button>
-        </aside>
-      </div>
-
-      <section
-        className="desktop-setup-path"
-        aria-labelledby="setup-path-title"
-      >
-        <div className="desktop-section-heading">
+      </header>
+      <AccountSummary
+        detected={detectedCount}
+        scanning={phase === "loading"}
+        onOpenAccount={onOpenAccount}
+        onOpenApps={() => onOpenSetup("claude_desktop")}
+      />
+      <section className="onboarding-panel" aria-labelledby="onboarding-title">
+        <div className="onboarding-stepbar">
+          <ol>
+            {[c.stepAccount, c.stepApp, c.stepConnect].map((step, i) => (
+              <li key={step} data-state={i === 0 ? "pending" : undefined}>
+                <span>{i + 1}</span>
+                {step}
+              </li>
+            ))}
+          </ol>
+          <span className="status-badge">{c.accountPending}</span>
+        </div>
+        <div className="onboarding-body">
           <div>
-            <span>{t("yeschoyDesktop.flow.kicker")}</span>
-            <h2 id="setup-path-title">{t("yeschoyDesktop.flow.title")}</h2>
+            <h2 id="onboarding-title">{c.firstTitle}</h2>
+            <p>{c.firstBody}</p>
           </div>
-          <button type="button" onClick={() => onOpenSetup(selectedApp)}>
-            {t("yeschoyDesktop.flow.continue")}
+          <button
+            type="button"
+            className="primary-action"
+            onClick={() => onOpenSetup("claude_desktop")}
+          >
+            {c.stepApp}
+            <ArrowRight aria-hidden="true" />
           </button>
         </div>
-        <ol className="desktop-flow-rail">
-          {(["app", "line", "model", "connect"] as const).map((step, index) => (
-            <li
-              key={step}
-              data-state={
-                index === 0 ? "current" : index === 3 ? "blocked" : "next"
-              }
-            >
-              <span>{index + 1}</span>
-              <div>
-                <strong>{t(`yeschoyDesktop.flow.steps.${step}.title`)}</strong>
-                <small>{t(`yeschoyDesktop.flow.steps.${step}.body`)}</small>
-              </div>
-            </li>
-          ))}
-        </ol>
       </section>
-
-      <section
-        className="desktop-secondary-actions"
-        aria-label={t("yeschoyDesktop.secondary.label")}
-      >
-        <button type="button" onClick={onOpenDiagnostics}>
-          <span aria-hidden="true">⌁</span>
-          <strong>{t("yeschoyDesktop.secondary.diagnostics")}</strong>
-          <small>{t("yeschoyDesktop.secondary.diagnosticsBody")}</small>
-        </button>
-        <button type="button" onClick={onOpenTools}>
-          <span aria-hidden="true">›_</span>
-          <strong>{t("yeschoyDesktop.secondary.cli")}</strong>
-          <small>{t("yeschoyDesktop.secondary.cliBody")}</small>
-        </button>
-        <button type="button" onClick={onOpenSettings}>
-          <span aria-hidden="true">◌</span>
-          <strong>{t("yeschoyDesktop.secondary.security")}</strong>
-          <small>
-            {t("yeschoyDesktop.secondary.securityBody", {
-              version: readiness.version,
-            })}
-          </small>
-        </button>
+      <section className="my-apps-panel" aria-labelledby="my-apps-title">
+        <div className="workbench-section-heading">
+          <h2 id="my-apps-title">
+            {c.appSection}
+            <small>{c.appHint}</small>
+          </h2>
+          <button
+            type="button"
+            className="text-button"
+            onClick={onOpenDiagnostics}
+          >
+            <Globe2 aria-hidden="true" />
+            {c.help}
+          </button>
+        </div>
+        {phase === "error" && (
+          <div className="desktop-scan-error" role="alert">
+            <CircleAlert aria-hidden="true" />
+            <div>
+              <strong>{t("yeschoyDesktop.home.errorTitle")}</strong>
+              <p>{c.uncertainNote}</p>
+            </div>
+          </div>
+        )}
+        <div className="desktop-app-deck" aria-busy={phase === "loading"}>
+          {APP_CATALOG.map((app) => {
+            const result = byId.get(app.id);
+            const status =
+              phase === "loading"
+                ? "checking"
+                : phase === "error"
+                  ? "unknown"
+                  : (result?.status ?? "unknown");
+            const found = status === "detected_unverified";
+            const note =
+              phase === "loading"
+                ? c.loadingNote
+                : found
+                  ? c.detectedNote
+                  : status === "multiple_installations"
+                    ? c.multipleNote
+                    : status === "not_found"
+                      ? c.absentNote
+                      : status === "unsupported_platform"
+                        ? c.unsupportedNote
+                        : c.uncertainNote;
+            return (
+              <article
+                className="desktop-app-card"
+                key={app.id}
+                data-accent={app.accent}
+                data-status={status}
+              >
+                <header className="app-card-header">
+                  <span className="app-card-icon">
+                    <AppGlyph source={app.icon} />
+                  </span>
+                  <div className="app-card-copy">
+                    <h3>{t(`yeschoyDesktop.apps.${app.id}.name`)}</h3>
+                    <small>{t(`yeschoyDesktop.apps.${app.id}.surface`)}</small>
+                  </div>
+                  <span className="app-card-status">
+                    {status === "unknown"
+                      ? c.appUnknown
+                      : t(`yeschoyDesktop.status.${status}`)}
+                  </span>
+                </header>
+                <div className="app-card-body">
+                  <dl>
+                    <div>
+                      <dt>{c.version}</dt>
+                      <dd>
+                        {result?.version ? <code>{result.version}</code> : "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{c.model}</dt>
+                      <dd>{c.notConfigured}</dd>
+                    </div>
+                    <div>
+                      <dt>{c.line}</dt>
+                      <dd>{c.notConfigured}</dd>
+                    </div>
+                  </dl>
+                  <p className="app-card-note">{note}</p>
+                </div>
+                <footer className="app-card-footer">
+                  <span>
+                    <Plug aria-hidden="true" />
+                    {c.notConnected}
+                  </span>
+                  <button
+                    type="button"
+                    className="primary-action"
+                    onClick={() => onOpenSetup(app.id)}
+                  >
+                    {c.viewSetup}
+                    <ChevronRight aria-hidden="true" />
+                  </button>
+                </footer>
+              </article>
+            );
+          })}
+        </div>
+        <div className="more-apps-strip">
+          <span>
+            <Puzzle aria-hidden="true" />
+            {c.moreApps}
+          </span>
+          <button type="button" className="text-button" onClick={onOpenTools}>
+            {c.advancedAction}
+            <ChevronRight aria-hidden="true" />
+          </button>
+        </div>
       </section>
+      <EmptyBilling onOpenAccount={onOpenAccount} />
+      <WorkbenchFooter />
     </div>
   );
 }

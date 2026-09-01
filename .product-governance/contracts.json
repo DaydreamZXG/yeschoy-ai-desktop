@@ -2,6 +2,282 @@
   "schemaVersion": 1,
   "contracts": [
     {
+      "id": "tool-discovery-scan@v2",
+      "kind": "query",
+      "owner": "tool-config",
+      "consumers": [
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/tool-discovery-scan@v2",
+      "authorization": "Callable only by the bundled local desktop webview; it grants no account, credential, filesystem-write, installation, update, or network authority.",
+      "idempotency": "The query is read-only. Repeating one request against the same executable paths yields an equivalent projection; the UI accepts results only for its newest requestId.",
+      "compatibility": "Active renderer uses new v2 command; v1 unchanged. All versions remain unverified read-only.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One local read-only discovery request.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Caller-generated correlation identifier used to reject stale UI results.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          }
+        },
+        "required": [
+          "requestId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "The complete bounded projection for the five V1 tools.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "The unchanged caller request identifier.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "platform": {
+            "type": "string",
+            "description": "The platform family on which discovery ran.",
+            "enum": [
+              "windows",
+              "macos",
+              "linux",
+              "unknown"
+            ]
+          },
+          "startedAtEpochMs": {
+            "type": "integer",
+            "description": "Local monotonic correlation timestamp expressed as Unix milliseconds for freshness display.",
+            "minimum": 0
+          },
+          "completedAtEpochMs": {
+            "type": "integer",
+            "description": "Completion timestamp expressed as Unix milliseconds and never earlier than startedAtEpochMs.",
+            "minimum": 0
+          },
+          "tools": {
+            "type": "array",
+            "description": "Exactly one result for every V1 tool in stable product order.",
+            "minItems": 5,
+            "maxItems": 5,
+            "uniqueItems": true,
+            "items": {
+              "type": "object",
+              "description": "One truthful local tool-discovery result.",
+              "properties": {
+                "toolId": {
+                  "type": "string",
+                  "description": "Stable tool identifier.",
+                  "enum": [
+                    "claude",
+                    "codex",
+                    "opencode",
+                    "pi",
+                    "dsh"
+                  ]
+                },
+                "displayName": {
+                  "type": "string",
+                  "description": "Beginner-readable official tool name.",
+                  "enum": [
+                    "Claude Code",
+                    "Codex",
+                    "OpenCode",
+                    "Pi",
+                    "DSH"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "description": "Observed installation and executable outcome without inferred configuration health.",
+                  "enum": [
+                    "not_found",
+                    "detected_unverified",
+                    "probe_failed",
+                    "probe_timed_out",
+                    "multiple_installations"
+                  ]
+                },
+                "version": {
+                  "type": "string",
+                  "description": "Exact normalized version output when available, otherwise an empty string.",
+                  "maxLength": 256
+                },
+                "candidateCount": {
+                  "type": "integer",
+                  "description": "Distinct standalone executables only; aliases deduplicated, max 32. Reaching bound forces unresolved.",
+                  "minimum": 0,
+                  "maximum": 32
+                },
+                "locationHint": {
+                  "type": "string",
+                  "description": "A sanitized source hint such as PATH or common location, never a complete user path or OS username.",
+                  "enum": [
+                    "none",
+                    "path",
+                    "common_location",
+                    "multiple"
+                  ]
+                },
+                "compatibility": {
+                  "type": "string",
+                  "description": "Conservative automatic-configuration eligibility for this release unit.",
+                  "enum": [
+                    "not_applicable",
+                    "unverified_read_only"
+                  ]
+                },
+                "reasonCode": {
+                  "type": "string",
+                  "description": "Stable presentation reason with no raw command output or secret-bearing diagnostic text.",
+                  "enum": [
+                    "tool_not_found",
+                    "exact_version_not_allowlisted",
+                    "version_command_failed",
+                    "version_command_timed_out",
+                    "multiple_executables_found"
+                  ]
+                },
+                "bundledCount": {
+                  "type": "integer",
+                  "description": "Ignored deduplicated macOS app-internal components, capped at 32.",
+                  "minimum": 0,
+                  "maximum": 32
+                },
+                "selection": {
+                  "type": "string",
+                  "description": "Read-only probe resolution, never configuration authority.",
+                  "enum": [
+                    "not_found",
+                    "bundled_only",
+                    "single_installation",
+                    "path_precedence",
+                    "unresolved"
+                  ]
+                }
+              },
+              "required": [
+                "toolId",
+                "displayName",
+                "status",
+                "version",
+                "candidateCount",
+                "locationHint",
+                "compatibility",
+                "reasonCode",
+                "bundledCount",
+                "selection"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "requestId",
+          "platform",
+          "startedAtEpochMs",
+          "completedAtEpochMs",
+          "tools"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "internal"
+      ],
+      "observability": {
+        "correlation": "requestId is returned unchanged and shown in advanced local details only.",
+        "audit": "RU-001 emits no persistent audit record; the current in-memory result is the sole local projection.",
+        "metrics": "RU-001 sends no telemetry and records no persistent metrics; elapsed time is computed in memory for the current scan only."
+      },
+      "errorSemantics": [
+        "Validate request before discovery; never expose complete paths or raw diagnostic output.",
+        "Absolute PATH/common directories only; canonical deduplication; macOS .app/Contents/{MacOS,Resources,Frameworks,Helpers} entries or canonical targets are bundled and never probed.",
+        "One standalone auto-selects; multiple select unique lowest absolute PATH rank. Equal rank, common-only ambiguity or candidate bound remains unresolved, not probed.",
+        "Zero standalone is not_found; bundled_only explains desktop component. Selected probe failure/timeout never switches target; only sanitized numeric semantic-style version returned, otherwise probe_failed.",
+        "UI enforces closed projection and newest correlation; stale or malformed results cannot enable capabilities."
+      ],
+      "requirementRefs": [
+        "REQ-045"
+      ],
+      "evidenceRefs": [
+        "E-USER-053",
+        "E-CODE-035"
+      ],
+      "status": "specified"
+    },
+    {
+      "id": "desktop-window-appearance@v1",
+      "kind": "command",
+      "owner": "desktop-platform",
+      "consumers": [
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-window-appearance@v1",
+      "authorization": "Bundled main window only. Fixed background palette; no arbitrary colors/windows, filesystem, credentials, network or OS preference authority.",
+      "idempotency": "Same fixed palette is idempotent. Renderer serializes/coalesces calls; native acknowledges assignment on main thread. Transient presentation only; no canonical resource write or domain event.",
+      "compatibility": "Native decorations and OS appearance retained. CSS owns web content; native Window background only. Browser preview skips native call.",
+      "inputSchema": {
+        "type": "object",
+        "description": "Resolved UI palette.",
+        "properties": {
+          "theme": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark"
+            ],
+            "description": "Fixed palette."
+          }
+        },
+        "required": [
+          "theme"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Assignment acknowledged, not a paint guarantee.",
+        "properties": {
+          "theme": {
+            "type": "string",
+            "enum": [
+              "light",
+              "dark"
+            ],
+            "description": "Assigned palette."
+          }
+        },
+        "required": [
+          "theme"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "internal"
+      ],
+      "observability": {
+        "correlation": "Serialized presentation calls.",
+        "audit": "No persistent logging.",
+        "metrics": "No telemetry."
+      },
+      "errorSemantics": [
+        "Reject non-main caller or unknown theme before assignment.",
+        "Catch native failure without business side effects; next update retries. System matchMedia remains untouched."
+      ],
+      "requirementRefs": [
+        "REQ-045"
+      ],
+      "evidenceRefs": [
+        "E-USER-053",
+        "E-CODE-035"
+      ],
+      "status": "specified"
+    },
+    {
       "id": "desktop-app-discovery@v1",
       "kind": "query",
       "owner": "tool-config",

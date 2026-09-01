@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU017-AS-02",
+  "assertion": "Strict v2 projection, automatic selection, failure/retry/stale states and serialized latest theme transitions execute.",
+  "testSelector": "tests/work_packages/ru017/test_acceptance.py::test_repair_ui",
+  "acceptanceCommandId": "ru017-ui",
+  "runId": "RU-017/WP-RU017-CLIENT-REPAIR@2026-08-31T16:33:11.847327+00:00",
+  "packageId": "WP-RU017-CLIENT-REPAIR",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru017/test_acceptance.py::test_repair_ui",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:3975d667b541c1d4ab9c13019fc3cc2a8e954f372217ed23916d1d9be7ccbfeb",
+    "machineReportSha256": "sha256:d3a89d956ac36d3c6ffd2eaacc7d7e1c7cf696c15daa5207411e4e33d1038441",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:a226d9de4202f98d5bec311f0ce0c11015b7dd2c448ed452ba48d1400168ecc2",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:e9f564f160985768ea136b72aee3ab6548985cbf69ab1fbbb5e0a1d5421ebf9c",
+  "releaseUnitId": "RU-017",
+  "releaseUnitHash": "sha256:302de51af1a20ba3bfb794eb5f3148eb8725eee90f8753546e1a9de984e95d0d"
+}

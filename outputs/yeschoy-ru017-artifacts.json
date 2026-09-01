@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "buildLabel": "0.1.0-20260901-RU017-repair",
+  "version": "0.1.0",
+  "platform": "macos-x86_64",
+  "fullProductReady": false,
+  "publicRelease": false,
+  "liveBilling": false,
+  "managedDshLaunch": false,
+  "createdAt": "2026-08-31T16:48:34.182Z",
+  "baselineCommit": "b73e8f6cb86b9aaac20c71aa01768eb24becccb0",
+  "includesUncommittedSource": true,
+  "sourceDigest": "5719056743ccea57281e05f90d05e14db223c10d640c43f822b9e2972f68e956",
+  "sourceFileCount": 794,
+  "appPath": "release/ru017-local/dmg-stage/野菜API.app",
+  "dmgPath": "release/ru017-local/野菜API-0.1.0-20260901-修复版-macOS-x64.dmg",
+  "dmgBytes": 3232245,
+  "platformValidationLog": "release/ru017-local/platform-validation.log",
+  "notarization": {
+    "id": "d1e7d709-1ead-455d-a77c-540ba252477f",
+    "status": "Accepted",
+    "stapled": true,
+    "gatekeeper": "accepted; Notarized Developer ID"
+  },
+  "nativeCheck": {
+    "bundleOpened": true,
+    "observedDesktopApps": 2,
+    "screenshot": "release/ru017-local/native-window-active.png",
+    "nativeDarkTitlebar": "visually verified while focused",
+    "automatedClicks": "not verified; no Accessibility authority",
+    "nativeLightAndWindowGestures": "not exercised; default native behavior retained",
+    "codexCoexistence": "runtime fixtures verified; user scan not exercised"
+  },
+  "files": {
+    "release/ru017-local/build.log": "9cd4552487eb11212c9bdbdf63248f21f462d87155d9092a8828d42276a15853",
+    "release/ru017-local/dmg-stage/野菜API.app/Contents/CodeResources": "df65268647b2b34c400437fdc99cad3f065e5460b6eac7df4b4f6ebc146485d3",
+    "release/ru017-local/dmg-stage/野菜API.app/Contents/Info.plist": "0595ed3731f018d1971adb9efc89da8b1e57ef14b26e0131eae014b7b817c9da",
+    "release/ru017-local/dmg-stage/野菜API.app/Contents/MacOS/yeschoy-desktop": "448009f416e43fb98194816e107d163855d7d088c3a1d67645ea6940dcd1f56e",
+    "release/ru017-local/dmg-stage/野菜API.app/Contents/Resources/icon.icns": "66a98a829386015c0a255ad04a7ff314bf8e490e57d41fa876bb3f3aaeb0172a",
+    "release/ru017-local/dmg-stage/野菜API.app/Contents/_CodeSignature/CodeResources": "e0a804ebae832f27197d077d47544db9e44b5b725b81add19b4f8a7abebb2697",
+    "release/ru017-local/native-window-active.png": "188048311f49bf2f6fe36b7ae9400ff0d1db72b08a3fba98d3b08c20dc214408",
+    "release/ru017-local/native-window.png": "3e9559116d712724ebec460731d221ccc7cec81ac07852e8707f7b87830b8cc5",
+    "release/ru017-local/platform-validation.log": "b1466cb316b13c293859e26df9e82e5d170326b4a5b6d4355d9bd852c49e6fd0",
+    "release/ru017-local/野菜API-0.1.0-20260901-修复版-macOS-x64.dmg": "cdad2badba7cd66d991a774e68f99f6cb9a9cf4509c611f5e103fce56110db29"
+  }
+}

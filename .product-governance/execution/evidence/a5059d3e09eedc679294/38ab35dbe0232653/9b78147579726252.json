@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU015-AS-01",
+  "assertion": "The real verifier computes same-cohort totals using exact money arithmetic and rejects cross-account, stale, duplicate, malformed, inconsistent or unproven receipts; cache lines are not double counted; missing, pending and unsupported funding remain excluded.",
+  "testSelector": "tests/work_packages/ru015/test_acceptance.py::test_receipt_validation",
+  "acceptanceCommandId": "ru015-receipt-validation",
+  "runId": "RU-015/WP-RU015-COST-VIEW@2026-08-31T15:08:13.198027+00:00",
+  "packageId": "WP-RU015-COST-VIEW",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru015/test_acceptance.py::test_receipt_validation",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:035191f2a0c0d312d601f31f88437edeee4e24faad74fdc2da149d4e03ca1ec9",
+    "machineReportSha256": "sha256:49f2a68628f599e5e728f3438c0b3caa9c4a24a5ec1a61a65277225c97f25077",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:6af8d2865de58a0f67897b0f9b8c914531b54a1f2222b9353d3dd0028661b2fc",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:398c2663c0b66aa43ca98e7d20aadd0a3a298072ea966634ff2e9ada2b52abb7",
+  "releaseUnitId": "RU-015",
+  "releaseUnitHash": "sha256:8f7f67122c3db5ad0ac098ebadb2e95f924b04c6efbc7cecd8dc48a7160b4747"
+}

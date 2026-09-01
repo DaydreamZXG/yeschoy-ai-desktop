@@ -59,9 +59,9 @@ impl From<DiscoveryResult> for ToolProjection {
 }
 
 #[derive(Clone, Debug)]
-struct Candidate {
-    path: PathBuf,
-    location_hint: LocationHint,
+pub(crate) struct Candidate {
+    pub(crate) path: PathBuf,
+    pub(crate) location_hint: LocationHint,
 }
 
 /// Implements the frozen `tool-discovery-scan@v1` query.
@@ -160,7 +160,7 @@ fn add_candidates(
 }
 
 #[cfg(target_os = "windows")]
-fn executable_filenames(executable_name: &str) -> Vec<String> {
+pub(crate) fn executable_filenames(executable_name: &str) -> Vec<String> {
     ["exe", "cmd", "bat"]
         .into_iter()
         .map(|extension| format!("{executable_name}.{extension}"))
@@ -168,12 +168,12 @@ fn executable_filenames(executable_name: &str) -> Vec<String> {
 }
 
 #[cfg(not(target_os = "windows"))]
-fn executable_filenames(executable_name: &str) -> Vec<String> {
+pub(crate) fn executable_filenames(executable_name: &str) -> Vec<String> {
     vec![executable_name.to_string()]
 }
 
 #[cfg(unix)]
-fn is_executable_candidate(path: &Path) -> bool {
+pub(crate) fn is_executable_candidate(path: &Path) -> bool {
     use std::os::unix::fs::PermissionsExt;
     path.metadata()
         .map(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
@@ -181,11 +181,11 @@ fn is_executable_candidate(path: &Path) -> bool {
 }
 
 #[cfg(not(unix))]
-fn is_executable_candidate(path: &Path) -> bool {
+pub(crate) fn is_executable_candidate(path: &Path) -> bool {
     path.is_file()
 }
 
-async fn probe_version(candidate: &Candidate) -> ProbeObservation {
+pub(crate) async fn probe_version(candidate: &Candidate) -> ProbeObservation {
     let Some(mut command) = version_command(&candidate.path) else {
         return ProbeObservation::Failed {
             location_hint: candidate.location_hint,
@@ -262,7 +262,7 @@ fn version_command(path: &Path) -> Option<Command> {
     Some(command)
 }
 
-fn common_binary_directories() -> Vec<PathBuf> {
+pub(crate) fn common_binary_directories() -> Vec<PathBuf> {
     let mut directories = Vec::new();
 
     #[cfg(target_os = "windows")]
@@ -293,7 +293,7 @@ fn common_binary_directories() -> Vec<PathBuf> {
     directories
 }
 
-fn validate_request_id(request_id: &str) -> Result<(), String> {
+pub(crate) fn validate_request_id(request_id: &str) -> Result<(), String> {
     if request_id.is_empty()
         || request_id.len() > 64
         || !request_id
@@ -305,7 +305,7 @@ fn validate_request_id(request_id: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn unix_epoch_ms() -> u64 {
+pub(crate) fn unix_epoch_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
@@ -314,7 +314,7 @@ fn unix_epoch_ms() -> u64 {
         .unwrap_or(u64::MAX)
 }
 
-const fn platform_name() -> &'static str {
+pub(crate) const fn platform_name() -> &'static str {
     if cfg!(target_os = "windows") {
         "windows"
     } else if cfg!(target_os = "macos") {

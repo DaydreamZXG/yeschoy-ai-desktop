@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU012-AS-01",
+  "assertion": "Actual React workbench preserves truthful unavailable values, complete discovery validation, retry/latest-request semantics, selected-app setup, navigation and local-only accessible appearance transitions without broadening native authority.",
+  "testSelector": "src/workbench/Workbench.test.tsx",
+  "acceptanceCommandId": "ru012-workbench",
+  "runId": "RU-012/WP-RU012-WORKBENCH@2026-08-31T13:15:01.490357+00:00",
+  "packageId": "WP-RU012-WORKBENCH",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:f35df5b08b6e8f517ff42d67fe5f069da01aa4f4db41d20f9a620cb7b03f3d37",
+  "releaseUnitId": "RU-012",
+  "releaseUnitHash": "sha256:0d80020b2ef85fae451d942a588a61982d13e9a7658aec791d2debbdfa99822a"
+}

@@ -2,6 +2,176 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "E-USER-054",
+      "claim": "Owner authorizes continuing with an Apple Silicon capable macOS build and a Windows internal-test build, and asks whether the future NewAPI desktop backend needs database changes or only interface integration. Existing no-server-change boundary remains in force.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-01:大概是差不多这样，苹果芯片和win系统的啥时候做呢？; 可以，然后我想知道改服务器后端的话需要动数据库吗？还是只接接口就行",
+      "observedAt": "2026-09-01T09:24:05Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-036",
+      "claim": "The current build host is Intel macOS with only x86_64-apple-darwin installed. The inherited tag-triggered release workflow publishes broad upstream-named assets and requires updater signing secrets; it is not a safe Windows internal-build path. The private origin can instead run a separate manual Windows 2022 artifact-only workflow without signing, updater, tag or release authority.",
+      "class": "code_observed",
+      "locator": "command:2026-09-01:uname-and-rustup-targets; .github/workflows/release.yml; gh:DaydreamZXG/yeschoy-ai-desktop:visibility=PRIVATE",
+      "observedAt": "2026-09-01T09:24:05Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-039",
+      "claim": "Anonymous read-only inspection shows both approved Yeschoy origins report NewAPI v1.0.0-rc.27, the public pricing route responds, and the proposed desktop bootstrap route is absent. That exact official NewAPI tag already persists revocable user sessions through AutoMigrate and records applied model, group, completion, cache and fixed-price billing inputs in consumption log Other data. Therefore a desktop device authorization adapter can reuse existing business tables and user_sessions, with only short-lived authorization state in Redis; immutable official-price provenance can be added to existing option/log JSON without a schema change.",
+      "class": "external_verified",
+      "locator": "https://yeschoy.com/api/status;https://yeschoy.com/api/pricing;https://yeschoy.com/api/desktop/v1/bootstrap;https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.27/model/user_session.go;https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.27/model/main.go;https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.27/service/log_info_generate.go;https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.27/router/api-router.go",
+      "observedAt": "2026-09-01T09:24:05Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-011",
+      "claim": "The minimal future server handoff should add a desktop device-authorization API namespace, place pending device and user codes in Redis with short TTL and one-time consumption, issue final credentials through existing NewAPI user_sessions, aggregate existing user, log, pricing, token and top-up data, and avoid new database schema unless deployment audit disproves the observed tag or an immutable billing field cannot fit existing JSON/options storage.",
+      "class": "proposed",
+      "locator": "inline:ru018-newapi-interface-and-database-boundary",
+      "observedAt": "2026-09-01T09:24:05Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-USER-054",
+        "E-EXT-039",
+        "E-CODE-034",
+        "E-CODE-033"
+      ]
+    },
+    {
+      "id": "E-USER-053",
+      "claim": "Owner requests fixing mismatched native titlebar and confusing multiple Codex detection in installed beginner client.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-01:这顶上好像UI没配上？这个发现多处安装codex，也没有选择的方式，而且让用户选择好困难吧？; 那你解决啊",
+      "observedAt": "2026-08-31T16:32:34.828Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-035",
+      "claim": "Current native config uses default titlebar, appearance hook only styles DOM; discovery treats distinct binaries as conflicts including app-bundled codex. Locked Tauri supports Transparent titlebar and native Window background without custom decorations.",
+      "class": "code_observed",
+      "locator": "src-tauri/tauri.conf.json:13;src/workbench/appearance.ts:14;src-tauri/src/tool_discovery.rs:97;src-tauri/Cargo.lock:3330;local-registry:tauri-2.10.3/src/window/mod.rs:1891",
+      "observedAt": "2026-08-31T16:32:34.828Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-USER-052",
+      "claim": "The owner explicitly directs implementation to proceed through delivery of an installable version after accepting the DSH browser-launch experience and requesting auditable official-versus-actual cost comparison. Existing no-server-change and no-fabricated-data boundaries remain in force.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-08-31:好，你动手吧，然后推进到把版本做出来",
+      "observedAt": "2026-08-31T15:04:03.047Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-034",
+      "claim": "Anonymous read-only GET of /api/desktop/v1/bootstrap returned HTTP 404 with JSON error envelopes on both approved Yeschoy origins. No credential was sent. Current client account readiness remains backend_upgrade_required. This prevents claiming live account, tool-key or historical billing integration.",
+      "class": "code_observed",
+      "locator": "command:2026-08-31:anonymous-bootstrap-check:yeschoy.com=404,api.yeschoy.com=404; src/account/readiness.ts",
+      "observedAt": "2026-08-31T15:04:03.047Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-USER-051",
+      "claim": "The owner accepts the proposed DSH experience: launch DSH from the Yeschoy assistant and open its official local interface in the user's browser. This resolves the presentation choice only; it does not confirm implementation, an embedded native window, credential compatibility or all proposed pricing semantics.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-08-31:question=DSH先由我们的助手一键启动再打开它官方的浏览器界面你能接受吗;answer=可以",
+      "observedAt": "2026-08-31T14:47:01.524Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-038",
+      "claim": "At the pinned DSH source commit, the official entry is a local browser-based web UI; custom provider configuration and a credentials extension seam exist, but default credentials persist to a local YAML file and no keyring/helper provider ships. This establishes an integration path, not runtime compatibility or an installed native desktop application.",
+      "class": "external_verified",
+      "locator": "https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/README.md; https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/docs/user/guide/providers.zh.md; https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/credentials/credentials/README.md; https://github.com/deepseek-ai/deepseek-harness/blob/0a53fb55bea101816fa226bb964ae2bed71c343b/packages/credentials/credentials-local/README.md",
+      "observedAt": "2026-08-31T14:40:00Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-033",
+      "claim": "The locally inspected NewAPI upstream snapshot has consumption quota, token fields, model mapping and partial price/rule traces, distinguishes subscription from wallet debit, and its standard usage summary sums consume logs with separate last-minute RPM/TPM. These structures do not prove production deployment parity or a complete historical official-price-versus-net-charge projection.",
+      "class": "code_observed",
+      "locator": "work/new-api-upstream@ac381acf4bf41204b97bb26b4c58c83275877a2e:model/log.go:58-80,618-672; work/new-api-upstream/service/log_info_generate.go:81-115,151-204,307-325; outputs/野菜API-DSH重点接入与真实费用对比研究.md",
+      "observedAt": "2026-08-31T14:35:39.045Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-USER-050",
+      "claim": "The owner identifies DSH as an important integration priority and requests an honest, auditable comparison of the official API cost for the user's usage against actual Yeschoy charges, with visible savings only when the arithmetic and data withstand expert review.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-08-31:还有一个很重要的是dsh很重要;如果使用官网应该付多少钱;我们这边实际付了多少钱;算法还是要经得起检验的",
+      "observedAt": "2026-08-31T14:35:39.045Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-010",
+      "claim": "The linked research proposes a first-class DSH graphical entry and same-cohort historical cost comparison with settled ledger charges, immutable official pricing provenance, explicit cache and tier semantics, fixed comparison FX, coverage and audit details. These are research proposals, not deployed contracts or verified adapters; the official DSH browser interface versus a separate isolated window remains a user-visible choice.",
+      "class": "proposed",
+      "locator": "outputs/野菜API-DSH重点接入与真实费用对比研究.md",
+      "observedAt": "2026-08-31T14:35:39.045Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": ["E-USER-050", "E-USER-045", "E-USER-049", "E-EXT-038", "E-CODE-033"]
+    },
+    {
+      "id": "E-CODE-032",
+      "claim": "RU-012 semantic Vitest verification did not execute because its adapter requires exact npm package.json/package-lock pinning, while this repository uses pnpm with a ranged manifest. Direct pnpm execution of all eight candidate test files passed 38 tests. The correction will use registered pytest scenarios that validate actual selected Vitest machine output under source-readonly isolation, without altering dependency manifests.",
+      "class": "code_observed",
+      "locator": ".product-governance/execution/reports/e750939c1fb8fba1.5fb567a05d030e70502d.json; package.json; pnpm-lock.yaml",
+      "observedAt": "2026-08-31T13:37:02.893Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-USER-048",
+      "claim": "The owner approves the Cockpit-inspired light/dark workbench prototype and explicitly requests implementation in the client with further refinement of typography and visual detail. Existing client-only and no-server-change scope remains in force.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-08-31:对对对差不多就是这样子你做出来吧，但是细节上再优化优化，搞漂亮点，包括字体等等",
+      "observedAt": "2026-08-31T22:00:00+08:00",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
       "id": "E-USER-047",
       "claim": "The product owner rejects the engineering-candidate appearance, requires a real 野菜API application icon and a substantially more desktop-like beginner experience, and confirms that Claude and Codex desktop applications rather than their command-line binaries are the primary V1 integration targets. The owner then explicitly directs implementation to begin.",
       "class": "user_confirmed",
@@ -1441,6 +1611,17 @@
         "E-USER-011",
         "E-USER-037"
       ]
+    },
+    {
+      "id": "E-USER-049",
+      "claim": "Owner accepts the revised look and requires plain end-user wording throughout the installed desktop app, without engineering or release-audit commentary.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-08-31:看见了，我感觉还可以，但是你做的是web版本吧？不是应用吧？然后你是否想明白你不要在这个应用写一些奇奇怪怪的话，比如你的工程语言？",
+      "observedAt": "2026-08-31T14:04:44.835Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
     }
   ]
 }

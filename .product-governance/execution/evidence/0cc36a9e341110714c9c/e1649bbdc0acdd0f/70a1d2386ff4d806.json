@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU017-AS-05",
+  "assertion": "Exact repaired artifacts match source, identity, architecture, hashes/signature; separate platform evidence captured.",
+  "testSelector": "tests/work_packages/ru017/test_acceptance.py::test_local_artifacts",
+  "acceptanceCommandId": "ru017-artifact",
+  "runId": "RU-017/WP-RU017-CLIENT-REPAIR@2026-08-31T16:33:11.847327+00:00",
+  "packageId": "WP-RU017-CLIENT-REPAIR",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:89a43772d088c72f2e47caba0f95b2236bb0f20c958e8a30f42b426f75286ecd",
+  "releaseUnitId": "RU-017",
+  "releaseUnitHash": "sha256:302de51af1a20ba3bfb794eb5f3148eb8725eee90f8753546e1a9de984e95d0d"
+}

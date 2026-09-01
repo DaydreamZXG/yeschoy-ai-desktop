@@ -1,0 +1,200 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-012/WP-RU012-WORKBENCH@2026-08-31T13:15:01.490357+00:00",
+  "packageId": "WP-RU012-WORKBENCH",
+  "baselineCommit": "b73e8f6cb86b9aaac20c71aa01768eb24becccb0",
+  "baselineTreeHash": "sha256:d6c7d88a027404045a5c6dad2b2141291fd9ab17ea7f08e6767ef6d70a1bfcc9",
+  "testedTreeHash": "sha256:8dc194853570df459732f02f4099c02744e3bec9dd0ae87e1b1889f129ea7e33",
+  "testedSnapshotPath": "execution/tested-snapshots/e750939c1fb8fba1.5fb567a05d030e70502d.json",
+  "testedSnapshotSha256": "sha256:5e470ae68f26e5954f419a35c8861bf0632925daca01b091f2da89869a61f0b4",
+  "sourceDiff": {
+    "src/App.tsx": "sha256:dbb138aab1433da2c51c8a62b6ffc4decf028a99872c50125ca3748cb59d2f74",
+    "src/candidate/CandidateHomeView.tsx": "sha256:08e06989faa4968ff8b34fcfe8e0bed69cecfeca34cd8cfa837321b6609605b6",
+    "src/configuration/ConfigurationPreviewView.tsx": "sha256:a601de5bd4f5d7ecfc4e1953289f305c02d3e6ec011d855bf5f7d0a2e38527cf",
+    "src/index.css": "sha256:3baa052dd09d507e5106cc77bbff91b148e937e20e29fc7adf646307ff42ea14",
+    "src/settings/SettingsView.tsx": "sha256:815fd5a4dc7e243ac254b0035f6a25d32e4e54d6e01eed6938a0658881847590",
+    "src/workbench/AccountView.tsx": "sha256:43c69dd0a507626538f21b29e76b433982d79469df8370500ebe3d60d03bf7db",
+    "src/workbench/AppGlyph.tsx": "sha256:11713e7babc4abe20de9a33791580289bb99c723baf4557a1a1ead85818849c7",
+    "src/workbench/ModelsView.tsx": "sha256:b04333ea3fe0bbece3e5cd40c6ced974cfa2d88aba026b21962a0de66aab0238",
+    "src/workbench/Workbench.test.tsx": "sha256:b1ba647c652d9c2527112f994d33188c00ca5eaecba5436a7e0fd7937705d758",
+    "src/workbench/WorkbenchChrome.tsx": "sha256:d9504daee6b3094db3c0e708b3c7990074ac2350415930198f1e8369f0bd93aa",
+    "src/workbench/appearance.ts": "sha256:23418aeaffd98f38b757399a0b82f8b21cf9461d1a310340a0e7dbad027ee93d",
+    "src/workbench/copy.ts": "sha256:bf5b7dbb6f4d14e6ac84dd9b8a2ad0a338a4c5163206c16de7483e040d6d728f"
+  },
+  "ownedResultHashes": {
+    "src/App.tsx": "sha256:dbb138aab1433da2c51c8a62b6ffc4decf028a99872c50125ca3748cb59d2f74",
+    "src/candidate/CandidateHomeView.tsx": "sha256:08e06989faa4968ff8b34fcfe8e0bed69cecfeca34cd8cfa837321b6609605b6",
+    "src/configuration/ConfigurationPreviewView.tsx": "sha256:a601de5bd4f5d7ecfc4e1953289f305c02d3e6ec011d855bf5f7d0a2e38527cf",
+    "src/index.css": "sha256:3baa052dd09d507e5106cc77bbff91b148e937e20e29fc7adf646307ff42ea14",
+    "src/settings/SettingsView.tsx": "sha256:815fd5a4dc7e243ac254b0035f6a25d32e4e54d6e01eed6938a0658881847590",
+    "src/workbench/AccountView.tsx": "sha256:43c69dd0a507626538f21b29e76b433982d79469df8370500ebe3d60d03bf7db",
+    "src/workbench/AppGlyph.tsx": "sha256:11713e7babc4abe20de9a33791580289bb99c723baf4557a1a1ead85818849c7",
+    "src/workbench/ModelsView.tsx": "sha256:b04333ea3fe0bbece3e5cd40c6ced974cfa2d88aba026b21962a0de66aab0238",
+    "src/workbench/Workbench.test.tsx": "sha256:b1ba647c652d9c2527112f994d33188c00ca5eaecba5436a7e0fd7937705d758",
+    "src/workbench/WorkbenchChrome.tsx": "sha256:d9504daee6b3094db3c0e708b3c7990074ac2350415930198f1e8369f0bd93aa",
+    "src/workbench/appearance.ts": "sha256:23418aeaffd98f38b757399a0b82f8b21cf9461d1a310340a0e7dbad027ee93d",
+    "src/workbench/copy.ts": "sha256:bf5b7dbb6f4d14e6ac84dd9b8a2ad0a338a4c5163206c16de7483e040d6d728f"
+  },
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      "src/App.tsx",
+      "src/index.css",
+      "src/workbench/**",
+      "src/candidate/CandidateHomeView.tsx",
+      "src/configuration/ConfigurationPreviewView.tsx",
+      "src/settings/SettingsView.tsx",
+      "src/i18n/locales/zh.json",
+      "src/i18n/locales/zh-TW.json",
+      "src/i18n/locales/en.json",
+      "src/i18n/locales/ja.json",
+      "tests/work_packages/ru012/**",
+      "outputs/野菜API-工作台改版验证记录.md"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      "src/App.tsx": "sha256:dbb138aab1433da2c51c8a62b6ffc4decf028a99872c50125ca3748cb59d2f74",
+      "src/candidate/CandidateHomeView.tsx": "sha256:08e06989faa4968ff8b34fcfe8e0bed69cecfeca34cd8cfa837321b6609605b6",
+      "src/configuration/ConfigurationPreviewView.tsx": "sha256:a601de5bd4f5d7ecfc4e1953289f305c02d3e6ec011d855bf5f7d0a2e38527cf",
+      "src/i18n/locales/en.json": "sha256:ab89bbc947067a75ee328420c615b4315c8b9267b701654fd8daa2029394e508",
+      "src/i18n/locales/ja.json": "sha256:ab748dd8c8c3e5aa18a8d811d5ba9878e9a844e4fde05d5232e5ac727316a45b",
+      "src/i18n/locales/zh-TW.json": "sha256:381c6258c470b3c0cb8cf6d9c4f93809e7075a2ea1148a21016c66ac5da0cd51",
+      "src/i18n/locales/zh.json": "sha256:a16c87a58f58329e8d9ff7be05f5507930f21c3bad08a13780b6ddbf197bc748",
+      "src/index.css": "sha256:3baa052dd09d507e5106cc77bbff91b148e937e20e29fc7adf646307ff42ea14",
+      "src/settings/SettingsView.tsx": "sha256:815fd5a4dc7e243ac254b0035f6a25d32e4e54d6e01eed6938a0658881847590",
+      "src/workbench/AccountView.tsx": "sha256:43c69dd0a507626538f21b29e76b433982d79469df8370500ebe3d60d03bf7db",
+      "src/workbench/AppGlyph.tsx": "sha256:11713e7babc4abe20de9a33791580289bb99c723baf4557a1a1ead85818849c7",
+      "src/workbench/ModelsView.tsx": "sha256:b04333ea3fe0bbece3e5cd40c6ced974cfa2d88aba026b21962a0de66aab0238",
+      "src/workbench/Workbench.test.tsx": "sha256:b1ba647c652d9c2527112f994d33188c00ca5eaecba5436a7e0fd7937705d758",
+      "src/workbench/WorkbenchChrome.tsx": "sha256:d9504daee6b3094db3c0e708b3c7990074ac2350415930198f1e8369f0bd93aa",
+      "src/workbench/appearance.ts": "sha256:23418aeaffd98f38b757399a0b82f8b21cf9461d1a310340a0e7dbad027ee93d",
+      "src/workbench/copy.ts": "sha256:bf5b7dbb6f4d14e6ac84dd9b8a2ad0a338a4c5163206c16de7483e040d6d728f"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:39cc0ead07087e08de9ab9ec69f064d28f48f71f1faf61caa0e800d97b89e9dc",
+  "sourceScopeFailures": [],
+  "integrityFailures": [],
+  "assignedTo": "root",
+  "startedAt": "2026-08-31T13:15:01.490357+00:00",
+  "finishedAt": "2026-08-31T13:35:56.120822+00:00",
+  "passed": false,
+  "commands": [
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru012-workbench",
+        "kind": "scenario_test",
+        "adapter": "vitest-json@1",
+        "selector": "src/workbench/Workbench.test.tsx",
+        "cwd": ".",
+        "timeoutSeconds": 300
+      },
+      "runnerMetadata": null,
+      "machineReport": {
+        "schemaVersion": 1,
+        "adapter": "vitest-json@1",
+        "selector": "src/workbench/Workbench.test.tsx",
+        "runnerError": "ValueError: package.json must pin vitest to one exact semantic version"
+      },
+      "process": null,
+      "validationErrors": [
+        "ValueError: package.json must pin vitest to one exact semantic version"
+      ],
+      "runnerProof": null,
+      "passed": false,
+      "id": "ru012-workbench",
+      "kind": "scenario_test",
+      "actualExitCode": null,
+      "timedOut": false,
+      "scenarioId": "RU012-AS-01"
+    },
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru012-catalog",
+        "kind": "scenario_test",
+        "adapter": "vitest-json@1",
+        "selector": "src/service-catalog/ServiceCatalogPanel.test.tsx",
+        "cwd": ".",
+        "timeoutSeconds": 300
+      },
+      "runnerMetadata": null,
+      "machineReport": {
+        "schemaVersion": 1,
+        "adapter": "vitest-json@1",
+        "selector": "src/service-catalog/ServiceCatalogPanel.test.tsx",
+        "runnerError": "ValueError: package.json must pin vitest to one exact semantic version"
+      },
+      "process": null,
+      "validationErrors": [
+        "ValueError: package.json must pin vitest to one exact semantic version"
+      ],
+      "runnerProof": null,
+      "passed": false,
+      "id": "ru012-catalog",
+      "kind": "scenario_test",
+      "actualExitCode": null,
+      "timedOut": false,
+      "scenarioId": "RU012-AS-02"
+    },
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru012-preview",
+        "kind": "scenario_test",
+        "adapter": "vitest-json@1",
+        "selector": "src/configuration/preview.test.ts",
+        "cwd": ".",
+        "timeoutSeconds": 300
+      },
+      "runnerMetadata": null,
+      "machineReport": {
+        "schemaVersion": 1,
+        "adapter": "vitest-json@1",
+        "selector": "src/configuration/preview.test.ts",
+        "runnerError": "ValueError: package.json must pin vitest to one exact semantic version"
+      },
+      "process": null,
+      "validationErrors": [
+        "ValueError: package.json must pin vitest to one exact semantic version"
+      ],
+      "runnerProof": null,
+      "passed": false,
+      "id": "ru012-preview",
+      "kind": "scenario_test",
+      "actualExitCode": null,
+      "timedOut": false,
+      "scenarioId": "RU012-AS-03"
+    }
+  ],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU012-AS-01",
+      "path": "execution/evidence/5fb567a05d030e70502d/e750939c1fb8fba1/a31c102d0b9cd8e8.json",
+      "sha256": "sha256:f12ef176479b6f3266105c2ee14b7dba2e47b5d3fa4c6bc696e11a8bdfd4bc05"
+    },
+    {
+      "scenarioId": "RU012-AS-02",
+      "path": "execution/evidence/5fb567a05d030e70502d/e750939c1fb8fba1/b2d6bdea92cb2474.json",
+      "sha256": "sha256:9eb1aabc32cb946ca79791788c3375d8d335489f0868c0474c503b73fd3075bf"
+    },
+    {
+      "scenarioId": "RU012-AS-03",
+      "path": "execution/evidence/5fb567a05d030e70502d/e750939c1fb8fba1/2a49e9c15b852618.json",
+      "sha256": "sha256:80e5a1230884edcaa9093ef7cf8497bfa2d50d95e6e1a3c546f967e9cd7414a6"
+    }
+  ],
+  "scenarioEvidenceFailures": [
+    "RU012-AS-01: registered runner proof is invalid",
+    "RU012-AS-02: registered runner proof is invalid",
+    "RU012-AS-03: registered runner proof is invalid"
+  ],
+  "releaseUnitId": "RU-012",
+  "releaseUnitHash": "sha256:0d80020b2ef85fae451d942a588a61982d13e9a7658aec791d2debbdfa99822a"
+}

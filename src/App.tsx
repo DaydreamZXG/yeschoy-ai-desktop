@@ -1,45 +1,21 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
-import { createAccountReadiness } from "./account/readiness";
+import { WorkbenchSidebar, type AppView } from "./workbench/WorkbenchChrome";
+import { useAppearance } from "./workbench/appearance";
+import { AccountView } from "./workbench/AccountView";
+import { ModelsView } from "./workbench/ModelsView";
 import { CandidateHomeView } from "./candidate/CandidateHomeView";
 import { ConfigurationPreviewView } from "./configuration/ConfigurationPreviewView";
 import type { DesktopAppId } from "./desktop-apps/contract";
 import { DiagnosticsView } from "./diagnostics/DiagnosticsView";
 import { SettingsView } from "./settings/SettingsView";
-
-type ToolId = "claude" | "codex" | "opencode" | "pi" | "dsh";
-type ToolStatus =
-  | "not_found"
-  | "detected_unverified"
-  | "probe_failed"
-  | "probe_timed_out"
-  | "multiple_installations";
-
-interface ToolResult {
-  toolId: ToolId;
-  displayName: string;
-  status: ToolStatus;
-  version: string;
-  candidateCount: number;
-  locationHint: "none" | "path" | "common_location" | "multiple";
-  compatibility: "not_applicable" | "unverified_read_only";
-  reasonCode:
-    | "tool_not_found"
-    | "exact_version_not_allowlisted"
-    | "version_command_failed"
-    | "version_command_timed_out"
-    | "multiple_executables_found";
-}
-
-interface ScanResponse {
-  requestId: string;
-  platform: "windows" | "macos" | "linux" | "unknown";
-  startedAtEpochMs: number;
-  completedAtEpochMs: number;
-  tools: ToolResult[];
-}
+import {
+  TOOL_CATALOG,
+  decodeScan,
+  type ScanResponse,
+} from "./tool-discovery/contract";
 
 type ViewPhase =
   | "default"
@@ -48,36 +24,6 @@ type ViewPhase =
   | "partial"
   | "conflict"
   | "error";
-
-type AppView =
-  | "home"
-  | "account"
-  | "setup"
-  | "diagnostics"
-  | "tools"
-  | "settings";
-
-const TOOL_CATALOG: Array<{
-  id: ToolId;
-  displayName: string;
-  mark: string;
-}> = [
-  { id: "claude", displayName: "Claude Code", mark: "C" },
-  { id: "codex", displayName: "Codex", mark: "X" },
-  { id: "opencode", displayName: "OpenCode", mark: "O" },
-  { id: "pi", displayName: "Pi", mark: "π" },
-  { id: "dsh", displayName: "DSH", mark: "D" },
-];
-
-const EXPECTED_TOOL_IDS = TOOL_CATALOG.map((tool) => tool.id);
-
-function isCompleteProjection(response: ScanResponse): boolean {
-  if (response.tools.length !== EXPECTED_TOOL_IDS.length) return false;
-  const ids = response.tools.map((tool) => tool.toolId);
-  return EXPECTED_TOOL_IDS.every(
-    (toolId) => ids.filter((candidate) => candidate === toolId).length === 1,
-  );
-}
 
 function App() {
   const { t, i18n } = useTranslation();
@@ -88,10 +34,25 @@ function App() {
   const [scan, setScan] = useState<ScanResponse | null>(null);
   const latestRequestRef = useRef("");
   const requestSequenceRef = useRef(0);
-  const accountReadiness = useMemo(
-    () => createAccountReadiness("account-shell"),
+  const shellRef = useRef<HTMLElement>(null);
+  const previousView = useRef(view);
+  const { appearance, changeAppearance } = useAppearance();
+  useEffect(
+    () => () => {
+      latestRequestRef.current = "";
+    },
     [],
   );
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+    if (previousView.current === view) return;
+    previousView.current = view;
+    const heading = shellRef.current?.querySelector("h1");
+    if (heading) {
+      heading.tabIndex = -1;
+      heading.focus({ preventScroll: true });
+    }
+  }, [view]);
 
   const resultsById = useMemo(
     () => new Map(scan?.tools.map((tool) => [tool.toolId, tool]) ?? []),
@@ -106,12 +67,13 @@ function App() {
     setPhase("loading");
 
     try {
-      const response = await invoke<ScanResponse>("scan_tools_read_only", {
+      const raw = await invoke<unknown>("scan_tools_read_only_v2", {
         request: { requestId },
       });
 
       if (latestRequestRef.current !== requestId) return;
-      if (response.requestId !== requestId || !isCompleteProjection(response)) {
+      const response = decodeScan(raw, requestId);
+      if (!response) {
         throw new Error("invalid_projection");
       }
 
@@ -141,80 +103,18 @@ function App() {
     : null;
 
   return (
-    <main className="app-shell" data-phase={phase} data-view={view}>
-      <header className="topbar">
-        <button
-          className="brand"
-          type="button"
-          onClick={() => setView("home")}
-          aria-label={t("yeschoyDiscovery.brandName")}
-        >
-          <span className="brand-mark" aria-hidden="true">
-            <span className="leaf leaf-left" />
-            <span className="leaf leaf-right" />
-          </span>
-          <span>{t("yeschoyDiscovery.brandName")}</span>
-        </button>
-        <div className="topbar-actions">
-          <nav
-            className="view-switcher"
-            aria-label={t("yeschoyCandidate.navigationLabel")}
-          >
-            <button
-              type="button"
-              className={view === "home" ? "is-active" : undefined}
-              aria-current={view === "home" ? "page" : undefined}
-              onClick={() => setView("home")}
-            >
-              {t("yeschoyCandidate.nav.home")}
-            </button>
-            <button
-              type="button"
-              className={view === "account" ? "is-active" : undefined}
-              aria-current={view === "account" ? "page" : undefined}
-              onClick={() => setView("account")}
-            >
-              {t("yeschoyCandidate.nav.account")}
-            </button>
-            <button
-              type="button"
-              className={view === "setup" ? "is-active" : undefined}
-              aria-current={view === "setup" ? "page" : undefined}
-              onClick={() => setView("setup")}
-            >
-              {t("yeschoyCandidate.nav.setup")}
-            </button>
-            <button
-              type="button"
-              className={view === "diagnostics" ? "is-active" : undefined}
-              aria-current={view === "diagnostics" ? "page" : undefined}
-              onClick={() => setView("diagnostics")}
-            >
-              {t("yeschoyCandidate.nav.diagnostics")}
-            </button>
-            <button
-              type="button"
-              className={view === "tools" ? "is-active" : undefined}
-              aria-current={view === "tools" ? "page" : undefined}
-              onClick={() => setView("tools")}
-            >
-              {t("yeschoyCandidate.nav.tools")}
-            </button>
-            <button
-              type="button"
-              className={view === "settings" ? "is-active" : undefined}
-              aria-current={view === "settings" ? "page" : undefined}
-              onClick={() => setView("settings")}
-            >
-              {t("yeschoyCandidate.nav.settings")}
-            </button>
-          </nav>
-          <div className="edition-pill">
-            <span className="edition-dot" aria-hidden="true" />
-            {t("yeschoyCandidate.edition")}
-          </div>
-        </div>
-      </header>
+    <main
+      ref={shellRef}
+      className="app-shell"
+      data-phase={phase}
+      data-view={view}
+    >
+      <WorkbenchSidebar
+        view={view}
+        onNavigate={setView}
+        appearance={appearance}
+        onAppearance={changeAppearance}
+      />
 
       {view === "home" ? (
         <CandidateHomeView
@@ -228,126 +128,9 @@ function App() {
           onOpenSettings={() => setView("settings")}
         />
       ) : view === "account" ? (
-        <div className="account-workspace" id="top">
-          <section className="account-hero" aria-labelledby="account-title">
-            <div className="readiness-specimen" aria-hidden="true">
-              <span className="specimen-ring specimen-ring-outer" />
-              <span className="specimen-ring specimen-ring-inner" />
-              <span className="specimen-stem" />
-              <span className="specimen-leaf specimen-leaf-one" />
-              <span className="specimen-leaf specimen-leaf-two" />
-              <span className="specimen-leaf specimen-leaf-three" />
-            </div>
-            <div className="account-hero-copy">
-              <p className="eyebrow">{t("yeschoyAccount.eyebrow")}</p>
-              <h1 id="account-title">{t("yeschoyAccount.title")}</h1>
-              <p className="intro-copy">{t("yeschoyAccount.description")}</p>
-              <div className="readiness-state" role="status">
-                <span className="readiness-state-dot" aria-hidden="true" />
-                <span>{t("yeschoyAccount.waitingForBackend")}</span>
-                <code>{accountReadiness.status}</code>
-              </div>
-            </div>
-
-            <div className="account-boundary">
-              <p className="account-boundary-title">
-                {t("yeschoyAccount.boundaryTitle")}
-              </p>
-              <p>{t("yeschoyAccount.boundaryBody")}</p>
-              <button
-                className="secondary-action"
-                type="button"
-                onClick={() => setView("tools")}
-              >
-                {t("yeschoyAccount.openTools")}
-              </button>
-            </div>
-          </section>
-
-          <section className="account-ledger" aria-labelledby="ledger-title">
-            <div className="panel-heading account-heading">
-              <div>
-                <p className="eyebrow">{t("yeschoyAccount.ledgerEyebrow")}</p>
-                <h2 id="ledger-title">{t("yeschoyAccount.ledgerTitle")}</h2>
-              </div>
-              <span className="ledger-freshness">
-                {t("yeschoyAccount.noRemoteData")}
-              </span>
-            </div>
-
-            <div className="metric-grid">
-              {(["balance", "todayUsage", "monthUsage"] as const).map(
-                (metric) => (
-                  <article className="metric-card" key={metric}>
-                    <span>{t(`yeschoyAccount.metrics.${metric}`)}</span>
-                    <strong aria-label={t("yeschoyAccount.loginToView")}>
-                      —
-                    </strong>
-                    <small>{t("yeschoyAccount.loginToView")}</small>
-                  </article>
-                ),
-              )}
-            </div>
-
-            <article className="price-sheet">
-              <div className="price-sheet-heading">
-                <div>
-                  <p className="section-kicker">
-                    {t("yeschoyAccount.priceKicker")}
-                  </p>
-                  <h3>{t("yeschoyAccount.priceTitle")}</h3>
-                </div>
-                <span className="pending-label">
-                  {t("yeschoyAccount.pending")}
-                </span>
-              </div>
-
-              <dl className="price-comparison">
-                <div className="model-id-row">
-                  <dt>{t("yeschoyAccount.modelId")}</dt>
-                  <dd>{t("yeschoyAccount.loginToView")}</dd>
-                </div>
-                <div>
-                  <dt>{t("yeschoyAccount.officialPrice")}</dt>
-                  <dd>—</dd>
-                  <small>{t("yeschoyAccount.serverProjectionRequired")}</small>
-                </div>
-                <div>
-                  <dt>{t("yeschoyAccount.actualPrice")}</dt>
-                  <dd>—</dd>
-                  <small>{t("yeschoyAccount.serverProjectionRequired")}</small>
-                </div>
-              </dl>
-
-              <div className="fx-note">
-                <span>{t("yeschoyAccount.fixedFx")}</span>
-                <strong>
-                  1 USD = {accountReadiness.comparisonFx.usdToCny} CNY
-                </strong>
-                <small>{t("yeschoyAccount.fxDisclaimer")}</small>
-              </div>
-            </article>
-
-            <article className="wallet-sheet" aria-disabled="true">
-              <div>
-                <p className="section-kicker">
-                  {t("yeschoyAccount.rechargeKicker")}
-                </p>
-                <h3>{t("yeschoyAccount.rechargeTitle")}</h3>
-                <p>{t("yeschoyAccount.rechargeBody")}</p>
-              </div>
-              <span className="disabled-action">
-                {t("yeschoyAccount.notAvailable")}
-              </span>
-            </article>
-
-            <details className="server-details">
-              <summary>{t("yeschoyAccount.whyUnavailable")}</summary>
-              <p>{t("yeschoyAccount.serverExplanation")}</p>
-              <code>{accountReadiness.serverNamespace}</code>
-            </details>
-          </section>
-        </div>
+        <AccountView />
+      ) : view === "models" ? (
+        <ModelsView />
       ) : view === "setup" ? (
         <ConfigurationPreviewView
           initialDesktopAppId={selectedDesktopApp}
@@ -361,6 +144,8 @@ function App() {
         />
       ) : view === "settings" ? (
         <SettingsView
+          appearance={appearance}
+          onAppearanceChange={changeAppearance}
           onOpenAccount={() => setView("account")}
           onOpenDiagnostics={() => setView("diagnostics")}
         />
@@ -451,9 +236,16 @@ function App() {
                     </div>
                     <div className="tool-main">
                       <div className="tool-title-row">
-                        <h3>{tool.displayName}</h3>
+                        <h3>
+                          {tool.id === "codex"
+                            ? t("yeschoyDiscovery.codexCli")
+                            : tool.displayName}
+                        </h3>
                         <span className="status-label">
-                          {t(`yeschoyDiscovery.status.${status}`)}
+                          {result?.selection === "bundled_only" &&
+                          phase !== "loading"
+                            ? t("yeschoyDiscovery.bundledStatus")
+                            : t(`yeschoyDiscovery.status.${status}`)}
                         </span>
                       </div>
                       <p className="tool-description">
@@ -461,6 +253,14 @@ function App() {
                       </p>
                       {result && (
                         <div className="tool-evidence">
+                          {result.selection !== "not_found" &&
+                            result.selection !== "unresolved" && (
+                              <span className="selection-note">
+                                {t(
+                                  `yeschoyDiscovery.selection.${result.selection}`,
+                                )}
+                              </span>
+                            )}
                           {result.version && (
                             <span>
                               {t("yeschoyDiscovery.exactVersion")}
@@ -474,9 +274,47 @@ function App() {
                               })}
                             </span>
                           )}
-                          <span className="reason-text">
-                            {t(`yeschoyDiscovery.reason.${result.reasonCode}`)}
-                          </span>
+                          {result.selection !== "bundled_only" && (
+                            <span className="reason-text">
+                              {t(
+                                `yeschoyDiscovery.reason.${result.reasonCode}`,
+                              )}
+                            </span>
+                          )}
+                          {result.bundledCount > 0 &&
+                            result.candidateCount > 0 && (
+                              <details className="tool-selection-details">
+                                <summary>
+                                  {t("yeschoyDiscovery.componentDetails")}
+                                </summary>
+                                <p>
+                                  {t("yeschoyDiscovery.componentsIgnored", {
+                                    count: result.bundledCount,
+                                  })}
+                                </p>
+                              </details>
+                            )}
+                          {(result.selection === "unresolved" ||
+                            result.selection === "bundled_only") && (
+                            <div className="tool-recovery-actions">
+                              <button
+                                type="button"
+                                className="secondary-action"
+                                onClick={() => setView("setup")}
+                              >
+                                {t("yeschoyDiscovery.desktopAction")}
+                              </button>
+                              {result.selection === "unresolved" && (
+                                <button
+                                  type="button"
+                                  className="text-action"
+                                  onClick={runReadOnlyScan}
+                                >
+                                  {t("yeschoyDiscovery.rescanButton")}
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

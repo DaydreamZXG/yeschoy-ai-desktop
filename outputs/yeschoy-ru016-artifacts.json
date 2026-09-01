@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "buildLabel": "0.1.0-20260831-RU016-internal",
+  "version": "0.1.0",
+  "platform": "macos-x86_64",
+  "fullProductReady": false,
+  "publicRelease": false,
+  "liveBilling": false,
+  "managedDshLaunch": false,
+  "createdAt": "2026-08-31T15:44:32.823Z",
+  "baselineCommit": "b73e8f6cb86b9aaac20c71aa01768eb24becccb0",
+  "includesUncommittedSource": true,
+  "sourceDigest": "be123f84448c4a3ee2fcbc7ce4af2b08f56d5aaee424c3290efd664db614fca6",
+  "sourceFileCount": 788,
+  "appPath": "release/ru016-local/dmg-stage/野菜API.app",
+  "dmgPath": "release/ru016-local/野菜API-0.1.0-20260831-内测-macOS-x64.dmg",
+  "dmgBytes": 3208042,
+  "platformValidationLog": "release/ru016-local/platform-validation.log",
+  "notarization": {
+    "id": "17883176-13bb-479c-bd7c-d435aab5db65",
+    "status": "Accepted",
+    "stapled": true,
+    "gatekeeper": "accepted; Notarized Developer ID"
+  },
+  "nativeCheck": {
+    "bundleOpened": true,
+    "observedDesktopApps": 2,
+    "screenshot": "release/ru016-local/native-home.png",
+    "automatedClicks": "not verified; System Events lacks Accessibility authorization"
+  },
+  "files": {
+    "release/ru016-local/platform-validation.log": "4286fdb08147633ba46ea2e26a34a9d2d9dc85ac0f8609458a21ff6b3cb0625d",
+    "release/ru016-local/dmg-stage/野菜API.app/Contents/CodeResources": "4af7b70f7e8af35db97765f0967aa4bf0861f6aa3c7d3ce36e7ff589e9a90bfc",
+    "release/ru016-local/dmg-stage/野菜API.app/Contents/Info.plist": "0595ed3731f018d1971adb9efc89da8b1e57ef14b26e0131eae014b7b817c9da",
+    "release/ru016-local/dmg-stage/野菜API.app/Contents/MacOS/yeschoy-desktop": "4844f694497a502926db6bef1e2d755db0c657b17bafc7b4000ea3a086fc7864",
+    "release/ru016-local/dmg-stage/野菜API.app/Contents/Resources/icon.icns": "66a98a829386015c0a255ad04a7ff314bf8e490e57d41fa876bb3f3aaeb0172a",
+    "release/ru016-local/dmg-stage/野菜API.app/Contents/_CodeSignature/CodeResources": "e0a804ebae832f27197d077d47544db9e44b5b725b81add19b4f8a7abebb2697",
+    "release/ru016-local/野菜API-0.1.0-20260831-内测-macOS-x64.dmg": "eba3f49776ae87cb2daf96d1c3f6346288a08c7e071d63de1e5cc2acf53d1549",
+    "release/ru016-local/build.log": "7e1dc4656d80f3a19b26faa3bd1c48c472a3d1bfeb30abebae9bfc695757458b",
+    "release/ru016-local/native-home.png": "aece887b6fa153c891ca6c000bd2aa7bca99587368de865ec5540a06b86c9c05"
+  }
+}

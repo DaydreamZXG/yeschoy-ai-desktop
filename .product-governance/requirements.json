@@ -2,6 +2,145 @@
   "schemaVersion": 1,
   "requirements": [
     {
+      "id": "REQ-046",
+      "statement": "Package the verified repaired client for Apple Silicon capable macOS and unsigned Windows internal testing, while delivering a version-pinned NewAPI interface-versus-database handoff without changing any server or publishing a release.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-054",
+        "E-CODE-036",
+        "E-EXT-039",
+        "E-PROP-011"
+      ],
+      "acceptance": [
+        "Build a Developer ID signed and notarized universal macOS application and DMG containing both arm64 and x86_64 executable slices. Exercise the Intel slice on this host and report that native Apple Silicon launch remains untested without an M-series host.",
+        "Use a separate manual private-repository Windows 2022 workflow that runs locked tests and builds only an unsigned internal NSIS installer, uploads a workflow artifact, and never creates a tag, release, updater artifact or public download.",
+        "Preserve the RU-017 runtime source and all account, DSH, credential, configuration-write, telemetry and updater boundaries; package evidence must bind every delivered artifact to source, architecture, signature state and hash.",
+        "Give the server owner a version-pinned endpoint and persistence matrix. Reuse NewAPI users, user_sessions, logs, tokens, pricing/options and top-up/payment records; use Redis only for expiring one-time device authorization state; add no new schema by default and name the exact audit condition that would justify a later migration.",
+        "Perform no server, NewAPI, Nginx, database, production, user-tool configuration or public-release mutation."
+      ]
+    },
+    {
+      "id": "REQ-045",
+      "statement": "Repair native macOS titlebar consistency and automatically resolve standalone-versus-bundled CLI coexistence without asking beginners to choose paths.",
+      "scope": "target",
+      "impact": "medium",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-053",
+        "E-CODE-035"
+      ],
+      "acceptance": [
+        "Transparent native titlebar and fixed light/dark background retain native decorations. Do not force application or OS appearance, so system mode stays automatic.",
+        "Version 2 deduplicates canonical aliases, excludes macOS .app internal executables before probing, selects only standalone candidate or unique earliest absolute PATH candidate. Ties and common-only ambiguity remain unresolved with desktop/retry actions. No user installation or configuration changes.",
+        "Fixed five-tool closed projection includes independent and bundled counts and selection reason. Only selected candidate probed; never fall back silently after failure. Reject stale/malformed responses. v1 stays unchanged.",
+        "Plain four-locale copy distinguishes Codex CLI. Test native selection, React/IPC theme ordering and scan transitions, workbench/cost regression and exact signed notarized local Intel package. No account, DSH, server, updater or public release activation."
+      ]
+    },
+    {
+      "id": "REQ-044",
+      "statement": "RU-016 packages the existing verified client into a clearly identified local Intel macOS internal-test build without introducing new runtime behavior or treating the incomplete product as ready.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-052",
+        "E-CODE-034"
+      ],
+      "acceptance": [
+        "Build the current source using the existing candidate Tauri config; verify the bundle identity, version, icon, Intel architecture and Developer ID signature.",
+        "Preserve no updater/deep-link authority and no server or NewAPI modifications; retain existing unavailable billing and DSH states.",
+        "Keep an isolated dated installer, artifact hashes and a handoff recording tests, precise limitations, signing/notarization status and backend next steps.",
+        "Exercise the actual native application on this Intel Mac. Do not claim Windows or Apple Silicon validation or public release."
+      ]
+    },
+    {
+      "id": "REQ-043",
+      "statement": "RU-015 supplies a truthful, accessible cost-comparison component and an internal normalized receipt validation boundary without activating account or billing network access.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "billing",
+      "evidenceRefs": [
+        "E-USER-052",
+        "E-USER-050",
+        "E-CODE-034"
+      ],
+      "acceptance": [
+        "Production billing shows unavailable amounts with an explanation and an auditable comparison-method disclosure; it never fills them using mock requests, zeroes or public prices.",
+        "The pure receipt verifier checks complete closed structure, account and period identity, freshness, unique rows, settled and excluded cohort membership, normalized quantities and prices, immutable price metadata, fixed USD-to-CNY 6.75 conversion, sum consistency and decimal integer arithmetic before calculating differences.",
+        "Official comparable totals and corresponding actual net charges use exactly the same included rows; pending, missing, unverified model or unsupported funding rows are excluded with reasons and coverage, not assigned invented official costs.",
+        "Zero official totals omit percentages; zero and negative differences render neutrally or as a higher cost rather than fabricated savings. Tiny amounts do not render a contradictory zero-price percentage.",
+        "Actual settled net debit is supplied as ledger evidence, not recomputed from an advertised ratio. The normalized priced lines are supplied by a future server pricing projection; the client stores no price catalog or expression evaluator.",
+        "Four-locale UI, full model IDs, breakdown disclosure, partial/unavailable/invalid/expired states, keyboard focus and narrow layouts are tested. The future authenticated producer and its external API schema remain unimplemented."
+      ]
+    },
+    {
+      "id": "REQ-042",
+      "statement": "The first DSH graphical integration opens the official local interface in the user's browser from the Yeschoy assistant rather than requiring a native or embedded DSH window.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": ["E-USER-051"],
+      "acceptance": [
+        "The intended beginner journey uses the assistant to launch DSH and opens its official local browser interface without asking the user to type a shell command.",
+        "The Yeschoy application remains the installable assistant; the DSH browser interface is not presented as an official native desktop installer and receives no Yeschoy native bridge permissions.",
+        "Recording this presentation choice does not enable a launch button or claim automatic configuration before version, process, configuration and credential contracts are separately implemented and verified."
+      ]
+    },
+    {
+      "id": "REQ-040",
+      "statement": "DSH is a priority integration target whose actual graphical workflow, provider configuration and security boundaries must be investigated before claiming automatic support.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": ["E-USER-050"],
+      "acceptance": [
+        "Research distinguishes current official graphical capabilities, current client implementation and proposed integration, with primary-source locators and exact-version limitations.",
+        "Any implementation obtains its own frozen scope and verifies the selected DSH version, credentials, configuration preservation and platform behavior before showing supported or connected.",
+        "Investigation performs no server changes or paid model requests and does not install, launch or configure DSH or access user credentials."
+      ]
+    },
+    {
+      "id": "REQ-041",
+      "statement": "The client must make official-versus-Yeschoy usage-cost savings visible only through an honest same-usage comparison that can be checked against official pricing and actual billing records.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "billing",
+      "evidenceRefs": ["E-USER-050"],
+      "acceptance": [
+        "Current unit-price comparisons and historical actual-charge comparisons are distinguished, and unavailable amounts are never replaced with invented savings.",
+        "A professional user can trace compared amounts to the same usage, model, applicable official pricing and Yeschoy billing; assumptions and unsupported comparisons remain explicit.",
+        "Detailed calculation, settlement, currency, refund, coverage and display semantics remain proposals until their contract and reconciliation evidence are approved in a later implementation unit."
+      ]
+    },
+    {
+      "id": "REQ-038",
+      "statement": "RU-012 replaces RU-011 visual presentation with the owner-approved compact desktop workbench while preserving truthful runtime capability and network boundaries.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-048"
+      ],
+      "acceptance": [
+        "Overview shows actual read-only desktop installation results and explicitly unavailable account metrics, never prototype financial, model or connected data.",
+        "Primary navigation separates overview, application setup, model catalog and billing; diagnostics, settings and advanced CLI discovery remain available.",
+        "Light, dark and system appearance use one token system; font roles use local system sans-serif and monospace IDs without remote font calls; only the theme preference may be stored.",
+        "Newest-request guards, complete projection validation, retry and no-write boundaries survive navigation, rerenders and theme changes; unknown scan failures are never shown as app not installed.",
+        "Anonymous catalog reads and two-line diagnostics remain explicit user actions; no login, payment, credential, configuration, server, updater or telemetry action is added.",
+        "Four-locale parity, keyboard focus, responsive 320px layout, full model IDs and reduced-motion support are covered by tests and visual review."
+      ]
+    },
+    {
       "id": "REQ-037",
       "statement": "RU-011 supersedes the candidate's command-line-first presentation with a branded desktop-application-first beginner experience for Claude Desktop and the Codex desktop surface while preserving truthful client-only, security and server boundaries.",
       "scope": "target",
@@ -794,6 +933,23 @@
         "A candidate-only Tauri bundle overlay exists for local Windows and macOS packaging while automatic updater artifacts remain disabled; the release checklist requires native-platform builds, macOS Developer ID signing and notarization for direct public distribution, and an explicit unsigned-Windows beta warning until a real signing path exists.",
         "All four supported languages contain the candidate navigation and page copy, the UI remains usable at 320 CSS pixels, and keyboard focus remains visible.",
         "The future NewAPI handoff names the exact interfaces needed for authorization, bootstrap, account, usage, models, server-projected official-versus-actual prices, tool keys, telemetry, compatibility catalog, and update separation while recording that none is deployed or modified by RU-005."
+      ]
+    },
+    {
+      "id": "REQ-039",
+      "statement": "The desktop workbench uses concise end-user copy, not implementation, architecture or release-audit instructions.",
+      "scope": "target",
+      "impact": "medium",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-049"
+      ],
+      "acceptance": [
+        "Pages explain available actions, actual state and recovery; no backend namespace, future security implementation, certification checklist or descriptions of the target user appear in normal UI.",
+        "Unavailable sign-in, balance, recharge and configuration remain unavailable and disabled. Discovery is not successful connection; network reachability is not model health.",
+        "Full model IDs, group identity, price uncertainty and fixed comparison FX remain visible. Optional protocol details are collapsed rather than changing evidence.",
+        "Four locales have aligned, nonempty copy. React navigation, catalog refresh, stale-result rejection, error recovery, read-only preview and theme tests pass."
       ]
     }
   ]

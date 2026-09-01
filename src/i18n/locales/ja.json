@@ -1,57 +1,57 @@
 {
   "yeschoyCatalog": {
-    "eyebrow": "野菜APIの公開カタログ",
-    "title": "グループとモデルを選ぶ",
-    "read": "モデル一覧を読み込む",
-    "refresh": "再読み込み",
+    "eyebrow": "野菜API のモデル",
+    "title": "モデルを選ぶ",
+    "read": "モデル一覧を取得",
+    "refresh": "一覧を更新",
     "loading": "読み込み中…",
-    "loadingNote": "サービス状態と公開一覧のみを読み取ります。ログインやKey発行は行いません。",
-    "publicNotice": "公開モデルの表示はアカウントの利用権限を意味しません。ツール設定を変更せず、接続内容をプレビューします。",
-    "observed": "読込時刻 {{time}}",
-    "empty": "公開一覧に選択可能なモデルがありません。再読み込みするか、後でもう一度お試しください。",
+    "loadingNote": "最新のモデル一覧を取得しています…",
+    "publicNotice": "モデルを閲覧できます。ご利用可能なモデルはログイン後の確認が必要です。",
+    "observed": "{{time}} 更新",
+    "empty": "選択できるモデルがありません。更新するか、しばらくしてからお試しください。",
     "groupLabel": "サービスグループ",
     "chooseGroup": "グループを選択",
-    "groupHelp": "グループはモデル範囲と課金ルールを決めます。大陸・グローバル回線はネットワーク経路であり、グループとは別です。",
-    "noGroupDescription": "サーバーからグループの説明が提供されていません。",
-    "multiplier": "公開グループ倍率：{{value}}。アカウントの最終価格ではありません。",
+    "groupHelp": "グループによってモデルや料金が異なる場合があります。",
+    "noGroupDescription": "グループの説明はありません。",
+    "multiplier": "グループ倍率：{{value}}。実際の料金とは異なります。",
     "searchLabel": "モデルを検索",
     "searchPlaceholder": "モデルID・キーワード",
     "modelLabel": "モデル ID",
     "chooseModel": "モデルを選択",
     "modelCount": "{{count}} 件のモデル",
-    "requiredProtocol": "必要なインターフェース",
+    "requiredProtocol": "接続方式を見る",
     "billingLabel": "課金タイプ",
-    "compatibilityNotice": "アカウント権限、グループのストリーミング制限、ツールの正確なバージョンは未検証です。宣言されたインターフェースは互換性テストの結果ではありません。設定の適用は未開放です。",
+    "compatibilityNotice": "このアプリで利用できるかは未確認です。設定は適用しません。",
     "priceTitle": "最終価格を表示しない理由",
-    "priceNotice": "公式価格比較の固定レートは {{comparisonFx}}、バックエンド表示レートは {{backendFx}} です。用途は異なります。公開課金タイプだけを読み取り、式の実行、残高や実際の価格の推測は行いません。",
+    "priceNotice": "このバージョンではご利用料金を確認できません。参考価格の比較には 1 USD = {{comparisonFx}} CNY を使用します。実際の料金は請求明細をご確認ください。",
     "unknown": "未提供",
-    "publicReadAttempted": "公開一覧の読取を試行済み",
+    "publicReadAttempted": "取得を試行済み",
     "backend": {
-      "not_deployed": "デスクトップ認証APIは未配備です。",
-      "contract_recognized": "API構造を認識しました。認証や機能の有効化を意味しません。",
-      "incompatible": "APIのバージョンまたは構造が一致しません。未認証のままです。",
-      "unavailable": "デスクトップAPIを確認できません。公開一覧は独立して閲覧できます。"
+      "not_deployed": "ログインはまだ利用できません。",
+      "contract_recognized": "ログイン状態は未確認です。",
+      "incompatible": "アカウント機能は現在利用できません。モデルは閲覧できます。",
+      "unavailable": "アカウント状態を確認できません。モデルは閲覧できます。"
     },
     "errors": {
       "none": "",
-      "network_error": "接続に失敗しました。ネットワークを確認して再試行してください。",
-      "timed_out": "読み込みがタイムアウトしました。回線を変更するか、後で再試行してください。",
-      "http_error": "サービスが一覧を返しませんでした。後で再試行してください。",
-      "invalid_response": "応答が契約に一致しないため使用しません。再読み込みするかサポートへ連絡してください。",
-      "response_too_large": "応答がクライアントの安全上限を超えたため、読み込みを停止しました。",
-      "catalog_busy": "前回の読み込みが終了していません。少し待って再試行してください。",
-      "client_unavailable": "現在の環境では一覧を読み取れません。デスクトップアプリで再試行してください。"
+      "network_error": "接続できません。ネットワークを確認して再試行してください。",
+      "timed_out": "読み込みがタイムアウトしました。別の回線を選ぶか、後でもう一度お試しください。",
+      "http_error": "モデル一覧を取得できません。後でもう一度お試しください。",
+      "invalid_response": "モデル一覧を読み込めません。更新するか、後でもう一度お試しください。",
+      "response_too_large": "モデル一覧が大きすぎて読み込めません。後でもう一度お試しください。",
+      "catalog_busy": "前の読み込みが完了していません。少し待ってからお試しください。",
+      "client_unavailable": "モデルを読み込めません。アプリを再起動してから再試行してください。"
     },
     "protocol": {
-      "protocol_declared": "必要なインターフェースは宣言済み・互換性未検証",
-      "protocol_not_declared": "このモデルはツールが必要とするインターフェースを宣言していません",
-      "dsh_unverified": "DSHの正確なアダプターは未検証です"
+      "protocol_declared": "モデルを選択しました。互換性は未確認です",
+      "protocol_not_declared": "このアプリへの対応は未確認です",
+      "dsh_unverified": "DSH への対応は未確認です"
     },
     "billing": {
-      "ratio": "トークン・倍率課金",
+      "ratio": "使用量に応じた料金",
       "per_request": "リクエスト課金",
-      "tiered_expr": "段階・式による課金",
-      "unknown": "課金タイプ未確認"
+      "tiered_expr": "段階制またはその他の料金",
+      "unknown": "料金方式は未確認です"
     }
   },
   "app": {
@@ -3348,29 +3348,39 @@
     "serverExplanation": "既存の NewAPI Web セッションは安全なデスクトップログイン方式ではありません。ワンタイム端末認証、限定セッション、サーバー生成価格を先に追加する必要があります。予定する独立 API プレフィックス："
   },
   "yeschoyDiscovery": {
+    "codexCli": "Codex（コマンドライン）",
+    "bundledStatus": "デスクトップアプリの構成要素",
+    "componentDetails": "重複インストールではない理由",
+    "componentsIgnored": "デスクトップアプリ内の構成要素を {{count}} 件検出しました。独立したインストールではないため、選択や削除は不要です。",
+    "desktopAction": "デスクトップアプリを見る",
+    "selection": {
+      "single_installation": "独立したインストールを自動で確認しました",
+      "path_precedence": "現在の既定バージョンを確認しました。選択は不要です",
+      "bundled_only": "デスクトップアプリ内の構成要素のみ見つかりました。独立したコマンドライン版はありませんが、デスクトップアプリはそのまま利用できます。"
+    },
     "brandName": "野菜API",
-    "edition": "公式デスクトップアシスタント · 読み取り専用プレビュー",
-    "eyebrow": "API の知識がなくても、正しい一歩目から",
-    "title": "AI ツールの場所を確認しましょう。",
-    "description": "このコンピューターにインストール済みのツールを探し、各ツールが報告するバージョンを読み取ります。Key、URL、モデル名の入力は不要です。",
-    "trustTitle": "この確認で行うこと",
+    "edition": "公式デスクトップアシスタント",
+    "eyebrow": "その他の AI ツール",
+    "title": "インストール済みツールを探す",
+    "description": "この端末のコマンドラインツールとバージョンを確認します。設定は変更しません。",
+    "trustTitle": "確認について",
     "localOnly": "この端末だけを確認",
     "noChanges": "設定を変更しない",
-    "noApiKnowledge": "API の知識は不要",
+    "noApiKnowledge": "接続情報の入力は不要",
     "scanButton": "インストール済みツールを確認",
     "rescanButton": "もう一度確認",
     "scanning": "この端末を確認中…",
-    "privacyNote": "固定のバージョン確認だけを実行します。通信、設定内容の読み取り、履歴保存は行いません。",
-    "scopeLabel": "このビルドの範囲",
-    "scopeText": "現在は安全な検出のみです。ログイン、残高、チャージ、ワンクリック設定は各契約の承認後に追加します。",
-    "railLabel": "ローカルツールマップ",
-    "toolsTitle": "5つのツールを、ひと目で",
+    "privacyNote": "名前とバージョンのみ確認します。ネットワークへの接続や設定変更はしません。",
+    "scopeLabel": "ご利用にあたって",
+    "scopeText": "インストール済みツールの確認のみです。自動設定はまだ利用できません。",
+    "railLabel": "この端末",
+    "toolsTitle": "ツール一覧",
     "processingLocal": "順番に確認中…",
     "checkedAt": "{{time}} に確認完了",
     "scanErrorTitle": "今回の確認は完了しませんでした",
-    "scanErrorBody": "古い結果を最新として表示していません。そのまま再確認できます。",
+    "scanErrorBody": "もう一度お試しください。失敗が続く場合はアプリを再起動してください。",
     "exactVersion": "バージョン",
-    "candidateCount": "実行場所を {{count}} 件検出",
+    "candidateCount": "{{count}} か所のインストールを検出",
     "advancedDetails": "確認の詳細を表示",
     "platform": "システム",
     "requestId": "確認 ID",
@@ -3378,7 +3388,7 @@
       "waiting": "確認待ち",
       "checking": "確認中",
       "not_found": "まだ見つかりません",
-      "detected_unverified": "検出済み · 読み取り専用",
+      "detected_unverified": "検出済み",
       "probe_failed": "検出済み · 実行できません",
       "probe_timed_out": "検出済み · 確認タイムアウト",
       "multiple_installations": "複数のインストールを検出"
@@ -3386,16 +3396,16 @@
     "reason": {
       "tool_not_found": "エラーではありません。別途インストール後に再確認できます",
       "exact_version_not_allowlisted": "バージョンを表示しました。自動設定はまだ利用できません",
-      "version_command_failed": "バージョン取得に失敗したため、互換性を推測しません",
-      "version_command_timed_out": "他のツールに影響せず、バージョン確認を停止しました",
-      "multiple_executables_found": "いずれかを自動選択していません"
+      "version_command_failed": "バージョンを取得できません。ツールが正常に動くか確認してください。",
+      "version_command_timed_out": "バージョンの取得がタイムアウトしました。後でもう一度お試しください。",
+      "multiple_executables_found": "独立したバージョンが複数あり、既定を特定できません。削除は不要です。デスクトップアプリを確認するか、インストールを調整して再確認してください。"
     },
     "toolDescriptions": {
       "claude": "Anthropic のコマンドライン・コーディングアシスタント",
       "codex": "OpenAI のローカル・コーディングエージェント",
       "opencode": "オープンソースのターミナル向けコーディングツール",
       "pi": "軽量で拡張可能なコーディングエージェント",
-      "dsh": "DeepSeek Harness。現在は読み取り専用で検出"
+      "dsh": "DeepSeek Harness"
     }
   },
   "yeschoyConfiguration": {
@@ -3403,16 +3413,16 @@
     "eyebrow": "設定ファイルに触れず、一歩ずつ",
     "title": "ツールと回線を選ぶ。あとはクライアントに任せる。",
     "description": "まず、どこを変更する予定かを分かりやすく確認します。このビルドは安全なプレビューのみを作成し、設定の読み書きは行いません。",
-    "previewOnly": "プレビューのみ · PC の設定は未読取",
+    "previewOnly": "確認のみです。アプリの設定は変更しません。",
     "stepsLabel": "設定手順",
     "steps": {
       "tool": "ツールを選択",
       "line": "回線を選択",
       "model": "モデルを選択",
-      "review": "変更を確認"
+      "review": "選択内容を確認"
     },
     "modelUnavailable": "ログイン後にモデル ID を取得",
-    "reviewReady": "選択に合わせてプレビューを更新済み",
+    "reviewReady": "選択内容を見る",
     "chooseTool": "01 · どのツールを使いますか？",
     "chooseLine": "02 · あなたに合う回線を選択",
     "toolNotes": {
@@ -3432,30 +3442,30 @@
         "note": "Cloudflare グローバル回線"
       }
     },
-    "previewEyebrow": "変更プレビュー",
-    "previewTitle": "確認してから決める",
+    "previewEyebrow": "選択内容",
+    "previewTitle": "設定内容の確認",
     "notApplied": "未適用",
-    "selectedTool": "ツール",
+    "selectedTool": "アプリ",
     "selectedLine": "回線",
-    "lineRoot": "回線ルート URL",
-    "effectiveEndpoint": "ツールの実効エンドポイント",
-    "withheld": "アダプター検証待ち",
+    "lineRoot": "回線アドレス",
+    "effectiveEndpoint": "接続先",
+    "withheld": "まだ確認できません",
     "dshReason": "DSH web profile の書込フィールドが精密検証されていないため、アドレスを推測しません。",
     "targetFile": "設定予定の場所",
     "modelId": "モデル ID",
     "ownedFields": "後で管理する可能性があるフィールドのみ",
     "notReadFromComputer": "フィールド名は公式文書由来で、PC からの読取ではありません",
     "dshFieldsWithheld": "DSH の書込フィールドは、厳密なバージョンのアダプター検証後に公開します。",
-    "safetyTitle": "このプレビューが行ったこと",
-    "safetyBody": "公開情報の読み取りのみ。認証情報やローカル設定には触れません",
+    "safetyTitle": "操作内容を見る",
+    "safetyBody": "アプリの設定は変更しません。",
     "safety": {
-      "networkAttempted": "ネットワーク要求",
-      "configurationRead": "既存設定の読取",
-      "configurationWritten": "設定ファイルへの書込",
-      "credentialAccessed": "API キーへのアクセス"
+      "networkAttempted": "モデル一覧の取得",
+      "configurationRead": "アプリ設定の読み取り",
+      "configurationWritten": "アプリ設定の変更",
+      "credentialAccessed": "APIキーの使用"
     },
-    "notPerformed": "未実行",
-    "whyBlocked": "今はなぜ適用を押せないのですか？",
+    "notPerformed": "未実施",
+    "whyBlocked": "今は設定できない理由",
     "blockers": {
       "desktop_backend_required": "安全なデスクトップ実行層が未接続",
       "server_model_catalog_required": "アカウントのモデル一覧が未接続",
@@ -3464,8 +3474,9 @@
       "dsh_web_adapter_required": "DSH web profile アダプターが未検証"
     },
     "applyBlocked": "すべての安全条件が整った後に公開",
-    "openTools": "先にローカルツールを確認",
-    "openAccount": "アカウント接続状態を確認"
+    "openTools": "他のツールを見る",
+    "openAccount": "アカウントを見る",
+    "unavailableReason": "このバージョンではアプリを自動設定できません。設定を変更せずに回線やモデルを確認できます。"
   },
   "yeschoyDesktop": {
     "home": {
@@ -3480,8 +3491,8 @@
       "myAppsEyebrow": "マイアプリ",
       "myAppsTitle": "インストール済みアプリから始める",
       "checkedAt": "{{time}} に確認",
-      "errorTitle": "デスクトップアプリの状態を取得できません",
-      "errorBody": "古い結果には置き換えていません。再確認できます。ほかのローカル機能は利用できます。",
+      "errorTitle": "アプリを確認できません",
+      "errorBody": "もう一度お試しください。他の機能は引き続き利用できます。",
       "version": "デスクトップ版 {{version}}",
       "startSetup": "接続を始める",
       "viewSetup": "接続手順を見る",
@@ -3529,8 +3540,14 @@
           "title": "回線を選択",
           "body": "中国本土最適化またはグローバル"
         },
-        "model": { "title": "モデルを選択", "body": "実際のモデル ID を表示" },
-        "connect": { "title": "接続を完了", "body": "安全条件の確認後に有効化" }
+        "model": {
+          "title": "モデルを選択",
+          "body": "実際のモデル ID を表示"
+        },
+        "connect": {
+          "title": "接続を完了",
+          "body": "安全条件の確認後に有効化"
+        }
       }
     },
     "secondary": {
@@ -3543,14 +3560,16 @@
       "securityBody": "候補版 {{version}} · 自動アップロードなし"
     },
     "setup": {
-      "kicker": "デスクトップアプリ接続",
-      "title": "アプリ、回線、モデルの順に選択。",
-      "description": "デスクトップアプリから始めます。技術情報は詳細にまとめ、初心者はアプリとモデルだけに集中できます。",
-      "steps": { "app": "デスクトップアプリ" },
+      "kicker": "デスクトップアプリ",
+      "title": "アプリの設定",
+      "description": "アプリ、回線、モデルを選んで設定内容を確認できます。",
+      "steps": {
+        "app": "デスクトップアプリ"
+      },
       "chooseApp": "使用するデスクトップアプリを選んでください",
-      "technicalDetails": "技術情報を表示",
-      "technicalBoundary": "公式情報に基づく接続プレビューです。アプリ設定の読み取りや変更は行っていません。",
-      "connectBlocked": "接続条件はまだ揃っていません"
+      "technicalDetails": "接続の詳細",
+      "technicalBoundary": "選択した回線の情報です。アプリにはまだ反映されていません。",
+      "connectBlocked": "ワンクリック設定は準備中"
     }
   },
   "yeschoyCandidate": {
@@ -3607,69 +3626,69 @@
     }
   },
   "yeschoyDiagnostics": {
-    "eyebrow": "読み取り専用の回線診断",
-    "title": "まず、このPCから2回線に届くか確認します。",
-    "description": "名前解決や接続の問題と、さらにAPI調査が必要な問題を分ける狭いネットワーク検査です。モデル呼び出しやアカウント利用はありません。",
-    "scopeTitle": "この検査が行う3つのこと",
-    "scopeDns": "yeschoy.com と api.yeschoy.com を名前解決",
-    "scopeTcp": "固定2ホストのTCP 443番ポートへ接続",
-    "scopeNoApi": "HTTP、API、モデル、課金要求は送信しない",
+    "eyebrow": "ネットワーク確認",
+    "title": "回線の接続を確認",
+    "description": "この端末から2つの回線に接続できるか確認し、ネットワークの問題を調べます。",
+    "scopeTitle": "確認する内容",
+    "scopeDns": "各回線のネットワークアドレス",
+    "scopeTcp": "基本的なネットワーク接続",
+    "scopeNoApi": "会話の送信やモデル料金の発生はありません",
     "checking": "2回線を確認中…",
     "retry": "2回線をもう一度確認",
     "start": "2回線を確認",
-    "consent": "クリック後のみ通信し、Key、Cookie、設定、プロンプト、応答内容は送りません。",
-    "openTools": "ローカルツールを確認",
-    "openSetup": "設定プレビューを見る",
-    "resultsEyebrow": "このPC · 現在の結果",
-    "resultsTitle": "2回線を個別に確認",
-    "processing": "名前解決と443番ポート接続を実行中…",
+    "consent": "開始するとネットワーク接続を確認します。アカウント情報は使用しません。",
+    "openTools": "他のツールを見る",
+    "openSetup": "アプリを選ぶ",
+    "resultsEyebrow": "この端末",
+    "resultsTitle": "確認結果",
+    "processing": "接続を確認しています…",
     "checkedAt": "{{time}} に完了",
     "invalidTitle": "結果が不完全でした",
-    "invalidBody": "古い値や推測値では補いません。同じ安全な検査を再実行できます。",
+    "invalidBody": "もう一度お試しください。失敗が続く場合はネットワーク接続をご確認ください。",
     "status": {
       "waiting": "未確認",
       "checking": "確認中",
-      "reachable": "443番ポート到達可",
-      "dns_failed": "名前解決失敗",
-      "connect_failed": "接続未成立",
+      "reachable": "基本的な接続は正常",
+      "dns_failed": "回線アドレスが見つかりません",
+      "connect_failed": "回線に接続できません",
       "timed_out": "タイムアウト"
     },
     "elapsed": "所要時間",
     "reason": {
-      "tcp_443_reachable": "この時点でTCP接続が成立しました。",
-      "dns_resolution_failed": "固定ホスト名をネットワークアドレスに解決できませんでした。",
-      "tcp_connection_failed": "ホストは処理されましたがTCP接続は成立しませんでした。",
-      "connectivity_check_timed_out": "制限時間内に完了せず、待機を終了しました。"
+      "tcp_443_reachable": "この端末から基本的な接続を確認できました。",
+      "dns_resolution_failed": "回線アドレスが見つかりません。ネットワークを確認して再試行してください。",
+      "tcp_connection_failed": "回線アドレスは見つかりましたが、接続できません。後でもう一度お試しください。",
+      "connectivity_check_timed_out": "確認に時間がかかりすぎました。別の回線を選ぶか、後でもう一度お試しください。"
     },
     "noResult": "実行すると、このPCの現在の結果を表示します",
-    "disclaimerTitle": "ポート到達はAPI正常の証明ではありません",
-    "disclaimerBody": "TLS、HTTP、アカウント、モデル、価格、残高、推論の正常性は証明せず、モデル速度比較にも使いません。",
-    "advancedDetails": "検査境界を見る",
+    "disclaimerTitle": "接続できてもモデルが使えるとは限りません",
+    "disclaimerBody": "ネットワーク接続のみの確認です。モデルの利用可否、応答速度、残高は確認しません。",
+    "advancedDetails": "確認の詳細を見る",
     "requestId": "検査ID",
     "retention": "結果の保持",
-    "notRetained": "現在の画面メモリのみ。履歴は保持しません"
+    "notRetained": "このページを離れると保持されません"
   },
   "yeschoySettings": {
-    "eyebrow": "設定と安全境界",
+    "eyebrow": "環境設定",
     "title": "できること、まだ開かないことを一か所で。",
     "description": "隠れた高度なスイッチはありません。候補版は検証済みのローカル機能だけを許可し、サーバー、資格情報、設定書き込み、公開条件を明示します。",
-    "versionLabel": "現在のクライアント",
-    "candidateStage": "クライアント候補版 · 公開版ではありません",
+    "versionLabel": "バージョン",
+    "candidateStage": "テスト版",
     "languageTitle": "表示言語",
     "languageNote": "言語設定はこのPCだけに保存し、アカウントには同期しません。",
-    "securityEyebrow": "ローカルとプライバシー",
-    "securityTitle": "既定で最小権限",
-    "localPolicy": "候補版の固定ポリシー",
+    "securityEyebrow": "データの取り扱い",
+    "securityTitle": "プライバシーと安全",
+    "localPolicy": "現在の設定",
     "security": {
       "apiKeys": {
-        "title": "API Key",
-        "body": "現在は取得、読み取り、保存をしません。将来はOS資格情報保管庫とツール固有ヘルパーが必須です。",
-        "state": "未連携"
+        "title": "アカウントのプライバシー",
+        "body": "ウェブサイトのパスワード、ログイン情報、APIキーは読み取りません。",
+        "state": "読み取りません"
       },
       "configFiles": {
-        "title": "ツール設定ファイル",
-        "body": "予定フィールドだけを表示し、既存内容の読み取り、書き込み、修復、削除は行いません。",
-        "state": "プレビューのみ"
+        "title": "アプリの設定",
+        "body": "アプリの確認やモデルの選択では、アプリ設定を読み取り・変更しません。",
+        "state": "変更しません"
       },
       "backupHistory": {
         "title": "設定バックアップ",
@@ -3677,13 +3696,13 @@
         "state": "履歴なし"
       },
       "telemetry": {
-        "title": "エラーと利用データの送信",
-        "body": "収集と削除の仕組みを検証するまで、テレメトリ、クラッシュ、ログ、診断結果を自動送信しません。",
+        "title": "使用状況とエラーレポート",
+        "body": "このバージョンでは使用履歴、エラーレポート、確認結果を自動送信しません。",
         "state": "無効"
       }
     },
-    "releaseEyebrow": "Windows と macOS",
-    "releaseTitle": "リリース準備はリリース成功ではありません",
+    "releaseEyebrow": "バージョン情報",
+    "releaseTitle": "アプリの更新",
     "notPublicRelease": "公開条件は未達",
     "release": {
       "macos": {
@@ -3698,13 +3717,13 @@
       },
       "updater": {
         "title": "自動更新",
-        "body": "更新成果物と実行時アップデーターは無効です。秘密鍵保管、公開鍵固定、不正署名テスト後にのみ有効化します。",
+        "body": "このバージョンは自動更新に対応していません。",
         "state": "無効"
       }
     },
-    "backendTitle": "NewAPI は変更していません",
-    "backendBody": "公開モデルカタログは手動で取得できます。ログイン、残高、使用量、アカウントで利用可能なモデル、実価格、チャージ、ツールKeyには将来の限定的な /api/desktop/v1 が必要です。Web Cookieや汎用Token CRUDで代用しません。",
-    "openAccount": "アカウント画面を見る",
-    "openDiagnostics": "回線診断を開く"
+    "backendTitle": "アカウント機能は準備中",
+    "backendBody": "ログイン、残高確認、チャージはまだ利用できません。モデルの確認と接続チェックは利用できます。",
+    "openAccount": "アカウントを見る",
+    "openDiagnostics": "接続を確認"
   }
 }

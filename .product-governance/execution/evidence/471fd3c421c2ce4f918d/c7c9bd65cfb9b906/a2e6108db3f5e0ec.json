@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU016-AS-03",
+  "assertion": "The exact recorded app and DMG exist, match hashes and identity, use x86_64 only, retain a valid Developer ID signature and bundle the expected icon.",
+  "testSelector": "tests/work_packages/ru016/test_acceptance.py::test_local_artifacts",
+  "acceptanceCommandId": "ru016-artifact",
+  "runId": "RU-016/WP-RU016-LOCAL-PACKAGE@2026-08-31T15:49:55.756872+00:00",
+  "packageId": "WP-RU016-LOCAL-PACKAGE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru016/test_acceptance.py::test_local_artifacts",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:0b17404d7886e3ad6356c3dfd15df83bcc4ee8959e5170cb5dbac6e726eae919",
+    "machineReportSha256": "sha256:2f810891fbac63a5d83b702c37147e412c574e37bd7e20753809784bc8085944",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:b3d8d3a41fe52fe593125caff455c5458bf9d96c7a653935354ac7458f761d60",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:30a64fcf58278f855f87280ad5a948a5aa437600ddd800046465242ab0f4cba5",
+  "releaseUnitId": "RU-016",
+  "releaseUnitHash": "sha256:c2aac4a0a9b514a5f890beacc49aa761a6c7e1c4b62e0f99c1b75023d9ec55a6"
+}
