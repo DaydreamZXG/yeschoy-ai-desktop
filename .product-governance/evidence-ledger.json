@@ -2,6 +2,58 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "E-CODE-038",
+      "claim": "After the conditional matchMedia jsdom polyfill removed the Windows-specific exception, the seven inherited tests/integration/App.test.tsx cases still failed because they assert the upstream provider-list and unified-skills-panel interface that the frozen 野菜 workbench intentionally replaced. In contrast, the eleven current candidate, diagnostics, configuration, service-catalog, billing and workbench test files execute 75 current-product tests successfully when explicitly selected with release and work trees excluded.",
+      "class": "code_observed",
+      "locator": "command:2026-09-01:vitest-inherited-app-seven-fail-after-matchmedia;command:2026-09-01:vitest-current-workbench-five-files-75-pass;tests/integration/App.test.tsx;src/workbench/Workbench.test.tsx",
+      "observedAt": "2026-09-01T10:10:12Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-013",
+      "claim": "A second narrow successor should retain the test-only matchMedia correction, replace the Windows workflow's broad inherited pnpm test:unit gate with an explicit closed list of current-product Vitest files, keep the full locked Rust suite, and finish the artifact receipt without changing runtime or server behavior.",
+      "class": "proposed",
+      "locator": "inline:ru020-current-product-windows-gate",
+      "observedAt": "2026-09-01T10:10:12Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-USER-054",
+        "E-CODE-037",
+        "E-CODE-038"
+      ]
+    },
+    {
+      "id": "E-CODE-037",
+      "claim": "The first clean Windows 2022 internal-build run at GitHub Actions run 33494328525 installed the locked dependency graph and passed 143 renderer test files, but seven App integration cases failed before native build because jsdom does not implement window.matchMedia and the shared test setup did not provide a polyfill. The failure is confined to the test harness; no runtime source, server, database or user configuration was changed.",
+      "class": "code_observed",
+      "locator": "https://github.com/DaydreamZXG/yeschoy-ai-desktop/actions/runs/33494328525;src/workbench/appearance.ts:18;tests/setupGlobals.ts",
+      "observedAt": "2026-09-01T10:00:38Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-012",
+      "claim": "A narrow successor should add a standards-shaped matchMedia polyfill only to the shared jsdom setup, rerun the existing manual private Windows workflow, retain the accepted notarized universal macOS artifact, and issue a replacement cross-platform receipt without changing application runtime behavior or the server handoff.",
+      "class": "proposed",
+      "locator": "inline:ru019-windows-ci-harness-repair",
+      "observedAt": "2026-09-01T10:00:38Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-USER-054",
+        "E-CODE-037",
+        "E-EXT-031"
+      ]
+    },
+    {
       "id": "E-USER-054",
       "claim": "Owner authorizes continuing with an Apple Silicon capable macOS build and a Windows internal-test build, and asks whether the future NewAPI desktop backend needs database changes or only interface integration. Existing no-server-change boundary remains in force.",
       "class": "user_confirmed",

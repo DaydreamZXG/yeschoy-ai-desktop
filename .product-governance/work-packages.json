@@ -2,6 +2,230 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "WP-RU020-CURRENT-WINDOWS-GATE",
+      "wave": "consumer",
+      "owner": "desktop-platform",
+      "riskClass": "medium",
+      "objective": "Gate the Windows internal package on the closed current-product renderer suite plus the full native suite, then finish the cross-platform artifact receipt.",
+      "deliverables": [
+        "Conditional jsdom matchMedia polyfill retained from the failed RU-019 attempt.",
+        "Manual private Windows workflow with an explicit current-product renderer selection, full locked Rust test, unsigned NSIS build and artifact-only upload.",
+        "Successful downloaded Windows installer and replacement cross-platform evidence receipt."
+      ],
+      "requirementRefs": [
+        "REQ-048"
+      ],
+      "decisionRefs": [
+        "DEC-064"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No change to application renderer or Rust runtime, obsolete inherited UI tests, account, price, payment, credential, tool adapter, configuration-write, telemetry or updater behavior.",
+        "No server, NewAPI, Nginx, database, production, user-tool configuration, Windows signing, public download, tag or GitHub Release change.",
+        "No claim of Apple Silicon native launch or signed Windows public-distribution readiness."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        ".github/workflows/yeschoy-windows-internal.yml",
+        "tests/setupGlobals.ts",
+        "tests/work_packages/ru020/**",
+        "outputs/yeschoy-ru020-artifacts.json",
+        "release/ru020-local/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        ".github/workflows/release.yml",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/**",
+        "src-tauri/**",
+        "tests/integration/App.test.tsx",
+        "outputs/野菜API-跨平台内测构建与后端边界记录.md"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No client or server data exists in this test-gate and packaging correction.",
+        "rollback": "Restore the prior Windows gate and remove only RU-020 receipt/artifact; no runtime, user or server data restoration is involved."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Test the exact current product surface explicitly, preserve all runtime binaries and contracts, and retain the full native suite.",
+        "supportedVersions": "Same RU-017 client runtime, retained macOS universal internal artifact, and Windows x64 unsigned NSIS internal artifact.",
+        "removalGate": "Adding or dropping a current-product test file, changing runtime behavior, or expanding signing, updater, release or server authority requires a later accepted unit."
+      },
+      "inputContracts": [
+        "tool-discovery-scan@v2",
+        "desktop-window-appearance@v1",
+        "desktop-account-readiness@v1"
+      ],
+      "outputContracts": [],
+      "acceptanceCommands": [
+        {
+          "id": "ru020-test-gate",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru020/test_acceptance.py::test_windows_renderer_gate_is_current_and_closed",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru020-workflow-boundary",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru020/test_acceptance.py::test_windows_workflow_remains_private_and_bounded",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru020-artifacts",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru020/test_acceptance.py::test_final_cross_platform_receipt",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU020-AS-01",
+          "assertion": "The Windows renderer gate contains every current product test file, excludes obsolete inherited integration and artifact trees, and retains the conditional matchMedia harness correction.",
+          "testSelector": "tests/work_packages/ru020/test_acceptance.py::test_windows_renderer_gate_is_current_and_closed",
+          "acceptanceCommandId": "ru020-test-gate"
+        },
+        {
+          "id": "RU020-AS-02",
+          "assertion": "The manual private workflow retains full locked native tests and unsigned NSIS artifact-only authority with no release, updater or signing path.",
+          "testSelector": "tests/work_packages/ru020/test_acceptance.py::test_windows_workflow_remains_private_and_bounded",
+          "acceptanceCommandId": "ru020-workflow-boundary"
+        },
+        {
+          "id": "RU020-AS-03",
+          "assertion": "The final receipt proves exact hashes, architecture, signing state, source and honest host-test limitations for both delivered platform artifacts.",
+          "testSelector": "tests/work_packages/ru020/test_acceptance.py::test_final_cross_platform_receipt",
+          "acceptanceCommandId": "ru020-artifacts"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "The closed current-product renderer suite or full native suite fails on the clean Windows runner.",
+        "A required edit touches application runtime, server, production, user configuration, signing, updater or public-release authority.",
+        "Either artifact cannot be tied to a successful platform build and exact receipt."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU019-WINDOWS-CI-REPAIR",
+      "wave": "consumer",
+      "owner": "desktop-platform",
+      "riskClass": "medium",
+      "objective": "Repair the jsdom-only Windows renderer verification gap and finish the unchanged client's cross-platform internal artifact receipt.",
+      "deliverables": [
+        "Standards-shaped, conditional matchMedia polyfill in the shared test setup with a focused regression assertion.",
+        "Successful existing manual Windows 2022 run and downloaded unsigned x64 NSIS installer with exact workflow receipt and hash.",
+        "Replacement cross-platform receipt covering the retained notarized universal macOS DMG and the Windows internal installer."
+      ],
+      "requirementRefs": [
+        "REQ-047"
+      ],
+      "decisionRefs": [
+        "DEC-063"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No application runtime, Rust runtime, account, price, payment, credential, tool adapter, configuration-write, telemetry or updater change.",
+        "No server, NewAPI, Nginx, database, production, user-tool configuration, Windows signing, public download, tag or GitHub Release change.",
+        "No claim that the retained universal app was launched natively on Apple Silicon or that the unsigned Windows installer is suitable for public distribution."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "tests/setupGlobals.ts",
+        "tests/work_packages/ru019/**",
+        "outputs/yeschoy-ru019-artifacts.json",
+        "release/ru019-local/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        ".github/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/**",
+        "src-tauri/**",
+        "outputs/野菜API-跨平台内测构建与后端边界记录.md"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No client or server data exists in this test-harness and packaging correction.",
+        "rollback": "Remove the conditional test polyfill and RU-019 receipt/artifact only; the notarized RU-018 macOS artifact remains intact and no user or server data restoration is involved."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Keep the exact runtime source and existing manual artifact-only workflow; make its jsdom verification environment explicit and deterministic.",
+        "supportedVersions": "Same RU-017 client runtime, retained macOS universal internal artifact, and Windows x64 unsigned NSIS internal artifact.",
+        "removalGate": "Any runtime behavior, workflow authority, signing, updater, public release or server change requires another accepted decision and frozen unit."
+      },
+      "inputContracts": [
+        "tool-discovery-scan@v2",
+        "desktop-window-appearance@v1",
+        "desktop-account-readiness@v1"
+      ],
+      "outputContracts": [],
+      "acceptanceCommands": [
+        {
+          "id": "ru019-test-harness",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru019/test_acceptance.py::test_match_media_polyfill_is_conditional_and_complete",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru019-private-workflow",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru019/test_acceptance.py::test_existing_windows_workflow_remains_private_and_bounded",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru019-artifacts",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru019/test_acceptance.py::test_replacement_cross_platform_receipt",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU019-AS-01",
+          "assertion": "The shared jsdom environment supplies a complete listener-compatible matchMedia implementation only when absent, and the correction touches no application runtime source.",
+          "testSelector": "tests/work_packages/ru019/test_acceptance.py::test_match_media_polyfill_is_conditional_and_complete",
+          "acceptanceCommandId": "ru019-test-harness"
+        },
+        {
+          "id": "RU019-AS-02",
+          "assertion": "The existing Windows workflow remains manual, locked, private-artifact-only, unsigned and free of tag, release and updater authority.",
+          "testSelector": "tests/work_packages/ru019/test_acceptance.py::test_existing_windows_workflow_remains_private_and_bounded",
+          "acceptanceCommandId": "ru019-private-workflow"
+        },
+        {
+          "id": "RU019-AS-03",
+          "assertion": "The replacement receipt proves exact hashes, architecture, signing state, source and honest host-test limitations for both delivered platform artifacts.",
+          "testSelector": "tests/work_packages/ru019/test_acceptance.py::test_replacement_cross_platform_receipt",
+          "acceptanceCommandId": "ru019-artifacts"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "The Windows rerun exposes a runtime, native-code, installer or source defect beyond the jsdom test environment.",
+        "A required edit touches application runtime, server, production, user configuration, signing, updater or release authority.",
+        "Either artifact cannot be tied to a successful platform build and exact receipt."
+      ],
+      "status": "planned"
+    },
+    {
       "id": "WP-RU018-CROSS-PLATFORM-PACKAGING",
       "wave": "consumer",
       "owner": "desktop-platform",

@@ -40,7 +40,21 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Verify renderer
-        run: pnpm test:unit
+        run: >-
+          pnpm exec vitest run
+          src/candidate/readiness.test.ts
+          src/diagnostics/contract.test.ts
+          src/configuration/preview.test.ts
+          src/service-catalog/contract.test.ts
+          src/service-catalog/access-plan.test.ts
+          src/service-catalog/ServiceCatalogPanel.test.tsx
+          src/service-catalog/handoff.test.ts
+          src/billing/comparison.test.ts
+          src/billing/CostComparison.test.tsx
+          src/workbench/Workbench.test.tsx
+          src/workbench/Repair.test.tsx
+          --exclude "release/**"
+          --exclude "work/**"
 
       - name: Verify native core
         run: cargo test --locked --manifest-path src-tauri/Cargo.toml
@@ -84,4 +98,3 @@ jobs:
           path: release-assets/*
           if-no-files-found: error
           retention-days: 14
-

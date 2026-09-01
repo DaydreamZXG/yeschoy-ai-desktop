@@ -7,6 +7,29 @@ if (typeof globalThis.ResizeObserver === "undefined") {
   } as unknown as typeof globalThis.ResizeObserver;
 }
 
+// jsdom does not implement matchMedia. Keep the test environment aligned with
+// the browser contract used by appearance hooks without replacing a real host
+// implementation when one is available.
+if (
+  typeof globalThis.window !== "undefined" &&
+  typeof globalThis.window.matchMedia !== "function"
+) {
+  Object.defineProperty(globalThis.window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: (query: string): MediaQueryList => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }),
+  });
+}
+
 const storage = new Map<string, string>();
 
 if (

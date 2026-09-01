@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-018/WP-RU018-CROSS-PLATFORM-PACKAGING@2026-09-01T09:26:04.859811+00:00",
+  "packageId": "WP-RU018-CROSS-PLATFORM-PACKAGING",
+  "baselineCommit": "b73e8f6cb86b9aaac20c71aa01768eb24becccb0",
+  "baselineTreeHash": "sha256:56d4e5b8b2cf9aeda9c7dcbfac806accb518db2361e094ca86ca74eb176c29f5",
+  "testedTreeHash": "sha256:3c5c3b0ee545db901e127697524ec1f22e84d917c3204ea525eca108ec70853d",
+  "testedSnapshotPath": "execution/tested-snapshots/912534ef5800a4ec.a5614638b3f42502a5be.json",
+  "testedSnapshotSha256": "sha256:a092aed02b4d5ad184bf5162f634bf131ff96b79941cab13bdc520e8db4ec831",
+  "sourceDiff": {
+    ".github/workflows/yeschoy-windows-internal.yml": "sha256:4fc7726e176df712836d29e6b227624a4387635b73078ad096c620c189141f8d",
+    ".product-governance/decisions.json": "sha256:efd97d72f41408e4fbd027ffcda305c647d259b9e1d2aff59b7bbf7c74e2aa35",
+    ".product-governance/evidence-ledger.json": "sha256:c4a56e9a608bd295428ba0013e0ba18ffcf908c67c627383f8f73720e9ab9fd8",
+    ".product-governance/release-units.json": "sha256:b9fc3a8809ec8baf12e9ef024973915d13a5a99f1e00629c60d8d4e73dc7b6f3",
+    ".product-governance/reports/RU-019.review.json": "sha256:a8b54b710c9c1a76466640f914b7110e64aeb7b4543b310ff1111e1184bea388",
+    ".product-governance/requirements.json": "sha256:26b72e13e569de08e15caac9b0d8ed72a1107c0c1c25794de19004d770f86df3",
+    ".product-governance/work-packages.json": "sha256:923d10000597843982c7f446cf76f879a75cd66cc22db6035d4c197fbb4cb513",
+    "outputs/野菜API-跨平台内测构建与后端边界记录.md": "sha256:b2c61ab7c260da2a9fcbbd6bfafca95c702e816da84ec7fcba5032f69a8fea6a",
+    "tests/work_packages/ru018/test_acceptance.py": "sha256:ffc1a701bc01f8485ba6136558a6ff17f8dd2cb04c88c8ab85222725a1cc78a5"
+  },
+  "ownedResultHashes": {
+    ".github/workflows/yeschoy-windows-internal.yml": "sha256:4fc7726e176df712836d29e6b227624a4387635b73078ad096c620c189141f8d",
+    ".product-governance/decisions.json": "sha256:efd97d72f41408e4fbd027ffcda305c647d259b9e1d2aff59b7bbf7c74e2aa35",
+    ".product-governance/evidence-ledger.json": "sha256:c4a56e9a608bd295428ba0013e0ba18ffcf908c67c627383f8f73720e9ab9fd8",
+    ".product-governance/release-units.json": "sha256:b9fc3a8809ec8baf12e9ef024973915d13a5a99f1e00629c60d8d4e73dc7b6f3",
+    ".product-governance/reports/RU-019.review.json": "sha256:a8b54b710c9c1a76466640f914b7110e64aeb7b4543b310ff1111e1184bea388",
+    ".product-governance/requirements.json": "sha256:26b72e13e569de08e15caac9b0d8ed72a1107c0c1c25794de19004d770f86df3",
+    ".product-governance/work-packages.json": "sha256:923d10000597843982c7f446cf76f879a75cd66cc22db6035d4c197fbb4cb513",
+    "outputs/野菜API-跨平台内测构建与后端边界记录.md": "sha256:b2c61ab7c260da2a9fcbbd6bfafca95c702e816da84ec7fcba5032f69a8fea6a",
+    "tests/work_packages/ru018/test_acceptance.py": "sha256:ffc1a701bc01f8485ba6136558a6ff17f8dd2cb04c88c8ab85222725a1cc78a5"
+  },
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      ".github/workflows/yeschoy-windows-internal.yml",
+      "tests/work_packages/ru018/**",
+      "outputs/野菜API-跨平台内测构建与后端边界记录.md",
+      "outputs/yeschoy-ru018-artifacts.json",
+      "release/ru018-local/**"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      ".github/workflows/yeschoy-windows-internal.yml": "sha256:4fc7726e176df712836d29e6b227624a4387635b73078ad096c620c189141f8d",
+      "outputs/野菜API-跨平台内测构建与后端边界记录.md": "sha256:b2c61ab7c260da2a9fcbbd6bfafca95c702e816da84ec7fcba5032f69a8fea6a",
+      "tests/work_packages/ru018/test_acceptance.py": "sha256:ffc1a701bc01f8485ba6136558a6ff17f8dd2cb04c88c8ab85222725a1cc78a5"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:8ab117b38f946fa78e37be3e1a3f86e8a437fd8da57585ebf12cb8e7c7e48cb2",
+  "sourceScopeFailures": [
+    "changed forbidden path: .product-governance/decisions.json",
+    "changed forbidden path: .product-governance/evidence-ledger.json",
+    "changed forbidden path: .product-governance/release-units.json",
+    "changed forbidden path: .product-governance/reports/RU-019.review.json",
+    "changed forbidden path: .product-governance/requirements.json",
+    "changed forbidden path: .product-governance/work-packages.json"
+  ],
+  "integrityFailures": [],
+  "assignedTo": "codex-primary",
+  "startedAt": "2026-09-01T09:26:04.859811+00:00",
+  "finishedAt": "2026-09-01T10:01:59.353743+00:00",
+  "passed": false,
+  "commands": [],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU018-AS-01",
+      "path": "execution/evidence/a5614638b3f42502a5be/912534ef5800a4ec/fe559de67b568f38.json",
+      "sha256": "sha256:b6e863723721f576bc9e69f46ef5227b519af763e21e7f5ef3afac2c2f2508bf"
+    },
+    {
+      "scenarioId": "RU018-AS-02",
+      "path": "execution/evidence/a5614638b3f42502a5be/912534ef5800a4ec/0e23d2ad91e00047.json",
+      "sha256": "sha256:a57d45591ed5c1112642963a316832331a55815b8e1ae37ac5ea663b3777b788"
+    },
+    {
+      "scenarioId": "RU018-AS-03",
+      "path": "execution/evidence/a5614638b3f42502a5be/912534ef5800a4ec/632c0960ee226f1c.json",
+      "sha256": "sha256:d95c945694190131e6317e17e7099d65bce65cc3f11ac2961395e0c8eb03c91b"
+    }
+  ],
+  "scenarioEvidenceFailures": [
+    "RU018-AS-01: registered runner proof is invalid",
+    "RU018-AS-02: registered runner proof is invalid",
+    "RU018-AS-03: registered runner proof is invalid"
+  ],
+  "releaseUnitId": "RU-018",
+  "releaseUnitHash": "sha256:e74afe6339d74d615355e06bcf8f612d0219439ed9a739ebc3f0e5dfa1ac856a"
+}

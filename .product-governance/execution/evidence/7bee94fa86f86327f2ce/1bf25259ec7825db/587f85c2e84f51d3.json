@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU019-AS-03",
+  "assertion": "The replacement receipt proves exact hashes, architecture, signing state, source and honest host-test limitations for both delivered platform artifacts.",
+  "testSelector": "tests/work_packages/ru019/test_acceptance.py::test_replacement_cross_platform_receipt",
+  "acceptanceCommandId": "ru019-artifacts",
+  "runId": "RU-019/WP-RU019-WINDOWS-CI-REPAIR@2026-09-01T10:02:16.654853+00:00",
+  "packageId": "WP-RU019-WINDOWS-CI-REPAIR",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:77753eb81cc704427ed664e45ffd004a7fc6ebe74125c3495f32c067e6aa6e4a",
+  "releaseUnitId": "RU-019",
+  "releaseUnitHash": "sha256:984adbb528a7ccfe57064eaf39ad7ea4e8ed95e55f837c3cd37782b393b67b2a"
+}

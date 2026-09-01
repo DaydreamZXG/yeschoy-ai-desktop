@@ -2,6 +2,55 @@
   "schemaVersion": 1,
   "decisions": [
     {
+      "id": "DEC-064",
+      "question": "Which renderer tests should gate the current 野菜 Windows package after the jsdom repair proves inherited upstream App tests no longer describe this product?",
+      "choice": "Create RU-020 as a narrow successor that depends on and supersedes RU-019. Retain its conditional matchMedia test polyfill, and change only the private manual Windows workflow so its renderer gate explicitly runs the current frozen candidate, diagnostics, configuration, service-catalog, billing and workbench test files while excluding release and inherited work trees. Keep cargo test --locked and the unsigned artifact-only NSIS path. Do not modify runtime source to satisfy obsolete upstream UI assertions.",
+      "status": "accepted",
+      "decidedBy": "implementation owner within the product owner's explicit instruction to continue cross-platform packaging without incremental approval pauses",
+      "decidedAt": "2026-09-01T10:10:12Z",
+      "evidenceRefs": [
+        "E-USER-054",
+        "E-CODE-037",
+        "E-CODE-038",
+        "E-PROP-013"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-046",
+          "REQ-047",
+          "REQ-048"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "desktop-platform"
+        ]
+      }
+    },
+    {
+      "id": "DEC-063",
+      "question": "How should the clean-Windows matchMedia test-harness failure be corrected without reopening the accepted client or server architecture?",
+      "choice": "Create RU-019 as a narrow successor that depends on and supersedes RU-018. Add a standards-shaped matchMedia polyfill only to tests/setupGlobals.ts, preserve every runtime and server file, rerun the existing manual private Windows artifact workflow, retain the already accepted notarized universal macOS DMG, and produce a replacement artifact receipt. Windows remains unsigned internal-test software with an expected SmartScreen warning; no public release or updater is created.",
+      "status": "accepted",
+      "decidedBy": "implementation owner within the product owner's explicit instruction to continue cross-platform packaging without incremental approval pauses",
+      "decidedAt": "2026-09-01T10:00:38Z",
+      "evidenceRefs": [
+        "E-USER-054",
+        "E-CODE-037",
+        "E-PROP-012",
+        "E-EXT-031"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-046",
+          "REQ-047"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "desktop-platform"
+        ]
+      }
+    },
+    {
       "id": "DEC-062",
       "question": "How should the repaired client reach Apple Silicon and Windows internal testers, and what is the minimum future NewAPI persistence change?",
       "choice": "Create RU-018 as a packaging and handoff successor that depends on RU-017 without changing its runtime source. Build one signed and notarized universal macOS DMG with arm64 and x86_64 slices. Add a separate manual artifact-only Windows 2022 workflow for an unsigned NSIS internal installer in the private origin; do not use the inherited tag release workflow and do not publish a release or updater. For the server handoff, target deployed NewAPI v1.0.0-rc.27: reuse existing users, user_sessions, logs with Other JSON, tokens, pricing/options and top-up/payment records; keep pending device authorization codes in Redis with short TTL, one-time consumption and polling limits. Add no database schema by default. A later migration is allowed only if the server owner proves production schema drift or required immutable billing evidence cannot be retained in the existing JSON/options boundary. No server is changed in this unit.",

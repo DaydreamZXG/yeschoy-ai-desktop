@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU019-AS-01",
+  "assertion": "The shared jsdom environment supplies a complete listener-compatible matchMedia implementation only when absent, and the correction touches no application runtime source.",
+  "testSelector": "tests/work_packages/ru019/test_acceptance.py::test_match_media_polyfill_is_conditional_and_complete",
+  "acceptanceCommandId": "ru019-test-harness",
+  "runId": "RU-019/WP-RU019-WINDOWS-CI-REPAIR@2026-09-01T10:02:16.654853+00:00",
+  "packageId": "WP-RU019-WINDOWS-CI-REPAIR",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru019/test_acceptance.py::test_match_media_polyfill_is_conditional_and_complete",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:7e293b8f5d8228afd8768db5074fae52118faf442f2f12f0f81d9f44db84a202",
+    "machineReportSha256": "sha256:d5d2bdc42af75aa9a0f97ad349f2f77fc9732527df939fc1ae1720e632b7f4b1",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:cbb62e6672dfb390eaa075f65cba821dfdb740e238893f5767d437cf3f7a4591",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:a98b0e1887afc37b3ccbc7cdf3246b80ea51800501f4a16d09d36965b39b00cf",
+  "releaseUnitId": "RU-019",
+  "releaseUnitHash": "sha256:984adbb528a7ccfe57064eaf39ad7ea4e8ed95e55f837c3cd37782b393b67b2a"
+}

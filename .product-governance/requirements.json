@@ -2,6 +2,45 @@
   "schemaVersion": 1,
   "requirements": [
     {
+      "id": "REQ-048",
+      "statement": "Use the current frozen 野菜 product tests, not obsolete inherited upstream App tests, as the Windows renderer gate; retain full native tests and finish the unchanged runtime's Windows internal artifact.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-054",
+        "E-CODE-037",
+        "E-CODE-038",
+        "E-PROP-013"
+      ],
+      "acceptance": [
+        "The manual Windows workflow explicitly executes all current candidate, diagnostics, configuration, service-catalog, billing and workbench Vitest files and excludes release and inherited work trees; it does not execute obsolete tests/integration/App.test.tsx.",
+        "The shared conditional matchMedia test polyfill remains in force and the exact current renderer selection passes with no failed tests before packaging.",
+        "The workflow also runs cargo test --locked and builds an unsigned x64 NSIS internal installer only after both renderer and native gates pass.",
+        "A replacement receipt binds the resulting Windows installer and retained notarized universal macOS DMG to exact evidence without any runtime, server, database, updater or public-release change."
+      ]
+    },
+    {
+      "id": "REQ-047",
+      "statement": "Repair only the cross-platform renderer test harness exposed by the clean Windows runner, then produce and bind the unsigned Windows x64 installer alongside the already accepted universal macOS artifact without changing runtime behavior or any server boundary.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-054",
+        "E-CODE-037",
+        "E-PROP-012"
+      ],
+      "acceptance": [
+        "The shared jsdom setup provides matchMedia only when the environment omits it and exposes the listener methods required by the appearance hook without changing application runtime source.",
+        "The existing manual private Windows 2022 workflow completes locked renderer and Rust tests, builds one unsigned x64 NSIS installer, uploads only a private workflow artifact, and creates no tag, release, updater artifact or signing claim.",
+        "The replacement receipt binds the Windows installer and retained universal macOS DMG to exact hashes, source identity, architecture, signature state and platform-test limitations.",
+        "No server, NewAPI, Nginx, database, production, user-tool configuration, application runtime source or public release is changed."
+      ]
+    },
+    {
       "id": "REQ-046",
       "statement": "Package the verified repaired client for Apple Silicon capable macOS and unsigned Windows internal testing, while delivering a version-pinned NewAPI interface-versus-database handoff without changing any server or publishing a release.",
       "scope": "target",

@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU018-AS-02",
+  "assertion": "Backend handoff reuses deployed NewAPI persistence, scopes Redis device authorization safely and makes every future schema condition explicit.",
+  "testSelector": "tests/work_packages/ru018/test_acceptance.py::test_backend_boundary",
+  "acceptanceCommandId": "ru018-backend",
+  "runId": "RU-018/WP-RU018-CROSS-PLATFORM-PACKAGING@2026-09-01T09:26:04.859811+00:00",
+  "packageId": "WP-RU018-CROSS-PLATFORM-PACKAGING",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-018",
+  "releaseUnitHash": "sha256:e74afe6339d74d615355e06bcf8f612d0219439ed9a739ebc3f0e5dfa1ac856a"
+}

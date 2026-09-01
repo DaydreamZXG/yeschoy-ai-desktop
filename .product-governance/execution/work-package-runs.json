@@ -377,13 +377,45 @@
       "baselineSnapshotPath": "execution/baselines/912534ef5800a4ec.a5614638b3f42502a5be.json",
       "baselineSnapshotSha256": "sha256:0c155393388d6ae07ad38cda8864704708316d27493052fd717562b72493bc1e",
       "assignedTo": "codex-primary",
-      "status": "in_progress",
+      "status": "failed",
       "startedAt": "2026-09-01T09:26:04.859811+00:00",
+      "finishedAt": "2026-09-01T10:01:59.353743+00:00",
+      "reportPath": "execution/reports/912534ef5800a4ec.a5614638b3f42502a5be.json",
+      "reportSha256": "sha256:ae842387ad76776803432b356fe70e3f8ab6fa8f7881f2c0084c42486bab1ac5",
+      "releaseUnitId": "RU-018",
+      "releaseUnitHash": "sha256:e74afe6339d74d615355e06bcf8f612d0219439ed9a739ebc3f0e5dfa1ac856a"
+    },
+    {
+      "id": "RU-019/WP-RU019-WINDOWS-CI-REPAIR@2026-09-01T10:02:16.654853+00:00",
+      "packageId": "WP-RU019-WINDOWS-CI-REPAIR",
+      "baselineCommit": "4dbc44ca7df4235a4d838e8041e15ed7e3c03f69",
+      "baselineTreeHash": "sha256:bda07b7e0220844b0160c986dec0e99ae7557e8c9366f46cc09cf1eb7eb16b11",
+      "baselineSnapshotPath": "execution/baselines/1bf25259ec7825db.7bee94fa86f86327f2ce.json",
+      "baselineSnapshotSha256": "sha256:4ff9ddda82e8227ee2bb56c29e75ef2223565ec4bde9a0fafb220abf52937b66",
+      "assignedTo": "codex-primary",
+      "status": "failed",
+      "startedAt": "2026-09-01T10:02:16.654853+00:00",
+      "finishedAt": "2026-09-01T10:08:32.608390+00:00",
+      "reportPath": "execution/reports/1bf25259ec7825db.7bee94fa86f86327f2ce.json",
+      "reportSha256": "sha256:a67387f4c2e28f11e70666620876e6a6c3a835555c9821db5bf9473b39694c3b",
+      "releaseUnitId": "RU-019",
+      "releaseUnitHash": "sha256:984adbb528a7ccfe57064eaf39ad7ea4e8ed95e55f837c3cd37782b393b67b2a"
+    },
+    {
+      "id": "RU-020/WP-RU020-CURRENT-WINDOWS-GATE@2026-09-01T10:10:16.098012+00:00",
+      "packageId": "WP-RU020-CURRENT-WINDOWS-GATE",
+      "baselineCommit": "4dbc44ca7df4235a4d838e8041e15ed7e3c03f69",
+      "baselineTreeHash": "sha256:b9465ef5e8138e93f2d9d48397e750205c81af6b4b9f658c83a8f58478fdda81",
+      "baselineSnapshotPath": "execution/baselines/e86ee3e1b9f6b761.d2c4e98e62d06f08cf2e.json",
+      "baselineSnapshotSha256": "sha256:62c6208f1acfeba21bdfdb960ea0bd1d66bd0426d19e8c189f98675f1fdc7888",
+      "assignedTo": "codex-primary",
+      "status": "in_progress",
+      "startedAt": "2026-09-01T10:10:16.098012+00:00",
       "finishedAt": null,
       "reportPath": null,
       "reportSha256": null,
-      "releaseUnitId": "RU-018",
-      "releaseUnitHash": "sha256:e74afe6339d74d615355e06bcf8f612d0219439ed9a739ebc3f0e5dfa1ac856a"
+      "releaseUnitId": "RU-020",
+      "releaseUnitHash": "sha256:8357fc4a707c801855b006afc92842a92f51066a82c4a5303ebadf04a58d3cf8"
     }
   ]
 }
