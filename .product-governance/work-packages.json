@@ -3159,6 +3159,139 @@
         "A required edit falls outside owned renderer paths."
       ],
       "status": "planned"
+    },
+    {
+      "id": "WP-RU023-DESKTOP-V2-ACCOUNT",
+      "wave": "consumer",
+      "owner": "account",
+      "riskClass": "critical",
+      "objective": "Implement and package the bounded internal 0.2.0 desktop consumer of NewAPI desktop-integration-v2 without exposing credentials to the renderer or changing server or tool configuration state.",
+      "deliverables": [
+        "Native fixed-origin v2 bootstrap, browser device authorization, secure credential rotation, account, cumulative usage, account-model pricing, wallet and logout commands.",
+        "Beginner-readable account and model-price states with exact model IDs, fixed 6.75 comparison context, truthful unavailable values and no engineering copy.",
+        "Cross-platform tests, candidate build and a version-pinned server deployment and least-privilege blocker handoff."
+      ],
+      "requirementRefs": [
+        "REQ-051"
+      ],
+      "decisionRefs": [
+        "DEC-067"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No NewAPI, Nginx, DNS, Redis, database, production, browser-session, payment settlement, recharge-record or deployment change.",
+        "No tool key creation, Claude, Codex, OpenCode, Pi or DSH configuration read or write, rollback backup, automatic repair or retained history.",
+        "No telemetry upload, updater activation, public release or production-readiness claim."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/account/**",
+        "src/candidate/readiness.ts",
+        "src/candidate/readiness.test.ts",
+        "src/workbench/AccountView.tsx",
+        "src/workbench/ModelsView.tsx",
+        "src/workbench/copy.ts",
+        "src/workbench/Workbench.test.tsx",
+        "src/index.css",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/account_v2.rs",
+        "src-tauri/tauri.conf.json",
+        "tests/work_packages/ru023/**",
+        "outputs/野菜API-客户端v2接入与上线阻塞清单.md",
+        "outputs/野菜API-DSH重点接入与真实费用对比研究.md",
+        "release/ru023-local/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        ".github/**",
+        "src-tauri/src/config/**",
+        "src-tauri/src/tool_discovery.rs",
+        "src-tauri/src/tool_discovery_core.rs",
+        "src-tauri/src/tool_discovery_v2.rs",
+        "src-tauri/src/desktop_app_discovery.rs",
+        "src-tauri/src/desktop_app_discovery_core.rs",
+        "src/configuration/**",
+        "src/tool-discovery/**",
+        "src/desktop-apps/**",
+        "src/diagnostics/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "There is no local database or ordinary-file migration. A successful user authorization creates one operating-system credential-store item at runtime.",
+        "rollback": "Revert RU-023 code and clear the application credential-store item through logout or operating-system credential management. No server, tool configuration or user file restoration is required."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Recognize only desktop-integration-v2 and exact advertised paths from the pinned server commit while preserving v1 fail-closed readiness code for historical tests and fallback explanation.",
+        "supportedVersions": "Client 0.2.0 on macOS x86_64/arm64 and Windows x64; server contract desktop-integration-v2 with minimum client version no greater than 0.2.0.",
+        "removalGate": "Any new origin, path, client secret exposure, tool key action, billing expression evaluator, configuration write or production claim requires a later accepted release unit."
+      },
+      "inputContracts": [
+        "desktop-account-readiness@v1",
+        "public-service-catalog@v1"
+      ],
+      "outputContracts": [
+        "desktop-account-session@v2"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru023-native-account",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru023/test_acceptance.py::test_native_account_security_boundary",
+          "cwd": ".",
+          "timeoutSeconds": 600
+        },
+        {
+          "id": "ru023-renderer-account",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru023/test_acceptance.py::test_renderer_account_and_pricing_states",
+          "cwd": ".",
+          "timeoutSeconds": 600
+        },
+        {
+          "id": "ru023-build-handoff",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru023/test_acceptance.py::test_candidate_build_and_server_handoff",
+          "cwd": ".",
+          "timeoutSeconds": 900
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU023-AS-01",
+          "assertion": "The native owner restricts origins, paths, redirects and browser destinations; keeps pending device and session credentials out of IPC; stores refresh state only in the OS credential store; rotates safely; and handles denial, expiry, revocation, refresh failure and logout without tool or server mutation.",
+          "testSelector": "tests/work_packages/ru023/test_acceptance.py::test_native_account_security_boundary",
+          "acceptanceCommandId": "ru023-native-account"
+        },
+        {
+          "id": "RU023-AS-02",
+          "assertion": "The desktop UI provides plain sign-in, waiting, signed-in, partial, retry and signed-out states; shows truthful account and cumulative usage; exact account model IDs; complete ratio-price official-versus-actual rows; and fixed 6.75 context without raw errors or secrets.",
+          "testSelector": "tests/work_packages/ru023/test_acceptance.py::test_renderer_account_and_pricing_states",
+          "acceptanceCommandId": "ru023-renderer-account"
+        },
+        {
+          "id": "RU023-AS-03",
+          "assertion": "The 0.2.0 candidate typechecks and builds, and its handoff proves no server or tool-configuration edit while retaining deployment and server-side least-privilege restrictions as production blockers before DSH work begins.",
+          "testSelector": "tests/work_packages/ru023/test_acceptance.py::test_candidate_build_and_server_handoff",
+          "acceptanceCommandId": "ru023-build-handoff"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "The v2 response cannot be validated without returning a credential, arbitrary URL, raw billing expression or raw server body to the renderer.",
+        "The operating-system credential store is unavailable and the implementation would otherwise persist a plaintext refresh token.",
+        "A required change touches a server, production resource, tool configuration, telemetry or public-release authority.",
+        "The internal candidate would be presented as production-ready before deployment and server-side desktop-session route restriction are verified."
+      ],
+      "status": "planned"
     }
   ]
 }

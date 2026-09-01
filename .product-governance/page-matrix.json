@@ -125,46 +125,46 @@
       "id": "PROFILE-DESKTOP-ACCOUNT-READINESS",
       "states": {
         "default": {
-          "behavior": "Show the account and billing composition with one clear backend-upgrade-required notice and unavailable placeholders for every remote fact.",
-          "visibleTruth": "The secure first-party desktop authorization interface is not deployed, so no account, balance, usage, price, model, or wallet fact has been requested.",
+          "behavior": "Inspect the selected first-party line for the exact desktop v2 contract, restore a remembered OS-credential-store session when possible, otherwise show one clear website sign-in action.",
+          "visibleTruth": "No account value is current until the newest native projection succeeds; an undeployed or incompatible server remains visibly unavailable.",
           "prohibitedClaims": [
             "Do not claim that login, account data, billing data, or recharge is available, and do not show zero or sample numbers."
           ],
           "allowedActions": [
-            "view_server_requirements",
+            "begin_first_party_authorization",
+            "retry_account_projection",
             "switch_to_local_tools"
           ],
-          "freshness": "No remote freshness timestamp exists in RU-002.",
-          "recovery": "A later verified server integration release replaces this projection; the user cannot repair the missing backend from the client.",
-          "correlation": "A transient local requestId identifies only the deterministic readiness projection."
+          "freshness": "The newest requestId owns current account truth and successful data shows its local observation time.",
+          "recovery": "Retry the selected line or start first-party website authorization; no password or API key is entered in the client.",
+          "correlation": "Only the requestId and safe state cross IPC; credentials and raw server bodies remain native-only."
         },
         "loading": {
-          "behavior": "Reserve a clear skeleton for a future newest account request while hiding all prior numeric values from the active result.",
-          "visibleTruth": "A future integration may be checking current account data; RU-002 itself never enters this network state.",
+          "behavior": "Show a quiet current-request skeleton while the native layer validates bootstrap, restores or refreshes the session, and reads account projections.",
+          "visibleTruth": "The newest native request is unresolved; prior numbers are not current.",
           "prohibitedClaims": [
             "Do not keep an old balance or price visually current while a newer request is unresolved."
           ],
           "allowedActions": [],
-          "freshness": "Only the newest future requestId may produce current data.",
-          "recovery": "A failed future request transitions to error without inventing completion.",
-          "correlation": "Future loading belongs to exactly one requestId."
+          "freshness": "Only the newest requestId may produce current data.",
+          "recovery": "A failed request transitions to a closed safe error without inventing completion.",
+          "correlation": "Loading belongs to exactly one transient requestId."
         },
         "empty": {
-          "behavior": "Explain that an authorized future account returned no usage or comparable pricing rows while keeping the known account state separate.",
+          "behavior": "Keep the signed-in account visible while explaining that the server returned no usage or comparable ratio-price rows.",
           "visibleTruth": "The server returned a successful but empty projection for the selected range.",
           "prohibitedClaims": [
             "Do not convert missing usage or price rows into a zero-cost or free-service claim."
           ],
           "allowedActions": [
-            "change_usage_range",
             "retry_account_projection"
           ],
           "freshness": "Show the server data timestamp and selected range.",
-          "recovery": "The user may retry or select another range after the future contract is active.",
+          "recovery": "The user may retry without converting missing data into zero.",
           "correlation": "The empty result remains bound to its server requestId and data timestamp."
         },
         "partial": {
-          "behavior": "Show each available future projection independently and mark unavailable balance, usage, pricing, or wallet data by name.",
+          "behavior": "Show each successfully validated account, usage, model, pricing or wallet projection independently and mark the missing section by name.",
           "visibleTruth": "Only the named server projections completed successfully.",
           "prohibitedClaims": [
             "Do not derive a missing official price from an actual price or a missing balance from cached usage."
@@ -173,13 +173,13 @@
             "retry_missing_projection",
             "switch_to_local_tools"
           ],
-          "freshness": "Each future projection shows its own server timestamp and pricing version where applicable.",
+          "freshness": "The page shows the native observation time; missing sections remain unavailable.",
           "recovery": "Retry only the missing projection without erasing truthful completed sections.",
           "correlation": "Each partial section retains its originating requestId."
         },
         "error": {
           "behavior": "Show a stable safe error class and hide unverified numeric account and billing values.",
-          "visibleTruth": "The newest future account request did not produce a valid projection.",
+          "visibleTruth": "The newest account request did not produce a valid projection.",
           "prohibitedClaims": [
             "Do not parse a server message into a guessed balance, price, authorization, or payment state."
           ],
@@ -193,7 +193,7 @@
         },
         "expired": {
           "behavior": "Replace account facts with an expired-session notice and remove active wallet and billing actions.",
-          "visibleTruth": "The future desktop session or data freshness window has expired and current account truth is unavailable.",
+          "visibleTruth": "The desktop session or pending authorization has expired and current account truth is unavailable.",
           "prohibitedClaims": [
             "Do not keep cached account, price, usage, or wallet data looking live."
           ],
@@ -202,11 +202,11 @@
             "switch_to_local_tools"
           ],
           "freshness": "Expired data keeps only a visible stale timestamp if retained in memory for explanation.",
-          "recovery": "Reauthorize through the system browser after the future server contract is active.",
+          "recovery": "Start a new authorization through the system browser.",
           "correlation": "The expired device session ID is never displayed or logged."
         },
         "conflict": {
-          "behavior": "Explain a future authorization replay, already-used code, device revocation, or newest-request conflict without choosing a successful state.",
+          "behavior": "Explain authorization replay, already-used code, device revocation, or newest-request conflict without choosing a successful state.",
           "visibleTruth": "The server rejected the operation because the device authorization or session identity no longer owns the expected state.",
           "prohibitedClaims": [
             "Do not treat an already-used or mismatched authorization as approved."
@@ -216,12 +216,12 @@
             "switch_to_local_tools"
           ],
           "freshness": "Conflicted credentials and results are immediately ineligible for current display.",
-          "recovery": "Start a new single-use authorization request in a future integrated release.",
+          "recovery": "Start a new single-use authorization request.",
           "correlation": "The user sees a safe conflict code and support requestId only."
         },
         "recovery": {
           "behavior": "Show the exact safe next step for backend unavailable, network retry, expired session, rejection, or revocation.",
-          "visibleTruth": "Recovery has not completed until the corresponding future server response succeeds.",
+          "visibleTruth": "Recovery has not completed until the corresponding server response succeeds.",
           "prohibitedClaims": [
             "Do not auto-authorize, auto-recharge, or silently fall back to broad website credentials."
           ],
@@ -231,19 +231,19 @@
             "switch_to_local_tools"
           ],
           "freshness": "Recovery starts a new request identity and invalidates superseded results.",
-          "recovery": "Follow only the action allowed by the stable server error code; RU-002 exposes only the server-requirements explanation.",
+          "recovery": "Follow only the action allowed by the stable native reason code.",
           "correlation": "Every future recovery attempt receives a new requestId."
         },
         "processing": {
-          "behavior": "Reserve a waiting-for-browser-approval state that shows the non-secret user code and expiry only after the future device authorization contract exists.",
-          "visibleTruth": "A future device authorization may be pending, denied, approved, cancelled, expired, or slowed down; RU-002 never fabricates one.",
+          "behavior": "Show the non-secret short code, remaining approval window and a cancel action while the website decides the device authorization.",
+          "visibleTruth": "The device authorization is pending; approval, denial, cancellation, expiry and server-directed slow-down remain distinct outcomes.",
           "prohibitedClaims": [
             "Do not put passwords, cookies, access tokens, refresh tokens, API keys, or final session credentials in a URL or visible code."
           ],
           "allowedActions": [
             "cancel_device_authorization"
           ],
-          "freshness": "The future server-provided expiry owns the pending state and cannot be extended by the client.",
+          "freshness": "The server-provided expiry owns the pending state and cannot be extended by the client.",
           "recovery": "Cancellation or expiry requires a new authorization request; slow_down obeys the server interval.",
           "correlation": "Only the authorization requestId and non-secret user code may be presented."
         }
@@ -922,6 +922,20 @@
         "billing",
         "tool-config"
       ],
+      "entryConditions": [],
+      "actions": [
+        "select_first_party_line",
+        "retry_account_projection",
+        "begin_first_party_authorization"
+      ],
+      "exitRoutes": [
+        "/account",
+        "/tools"
+      ],
+      "permissions": [
+        "sanitized native current-account model and ratio-price projection only"
+      ],
+      "stateProfileRef": "PROFILE-DESKTOP-ACCOUNT-READINESS",
       "states": {}
     },
     {
@@ -938,7 +952,10 @@
       ],
       "entryConditions": [],
       "actions": [
-        "view_server_requirements",
+        "begin_first_party_authorization",
+        "retry_account_projection",
+        "open_first_party_wallet",
+        "logout_current_desktop_session",
         "switch_to_local_tools"
       ],
       "exitRoutes": [
@@ -946,7 +963,7 @@
         "/account"
       ],
       "permissions": [
-        "local deterministic readiness projection only"
+        "sanitized native current-account and cumulative-usage projection only"
       ],
       "stateProfileRef": "PROFILE-DESKTOP-ACCOUNT-READINESS",
       "states": {}
@@ -998,7 +1015,10 @@
       ],
       "entryConditions": [],
       "actions": [
-        "view_server_requirements",
+        "begin_first_party_authorization",
+        "retry_account_projection",
+        "open_first_party_wallet",
+        "logout_current_desktop_session",
         "switch_to_local_tools"
       ],
       "exitRoutes": [
@@ -1006,7 +1026,7 @@
         "/billing"
       ],
       "permissions": [
-        "local deterministic readiness projection only"
+        "sanitized native current-account and cumulative-usage projection only"
       ],
       "stateProfileRef": "PROFILE-DESKTOP-ACCOUNT-READINESS",
       "states": {}

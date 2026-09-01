@@ -1724,6 +1724,55 @@
       "status": "active",
       "verificationLevel": 0,
       "basisRefs": []
+    },
+    {
+      "id": "E-USER-055",
+      "claim": "Owner authorizes connecting the desktop client to the newly implemented NewAPI desktop v2 boundary now, with DSH research to follow after the client integration is complete.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-01:可以接入呗，接入完后我们研究dsh",
+      "observedAt": "2026-09-01T11:00:00+08:00",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-041",
+      "claim": "The owner repository branch codex/desktop-api-v2 at commit 2e5973a3705688a81867985a7e5a899b72be674c exposes desktop-integration-v2 bootstrap, five-minute Redis-backed browser device authorization, rotating dashboard sessions, existing current-user account, usage, model and pricing paths, and a first-party wallet URL without a database migration. The issued dashboard session is not yet server-enforced as a desktop-only least-privilege scope, and the branch is not evidence of deployment.",
+      "class": "code_observed",
+      "locator": "https://github.com/yeschoy/new-api/tree/2e5973a3705688a81867985a7e5a899b72be674c;controller/desktop.go;service/desktop_device_authorization.go;middleware/auth.go",
+      "observedAt": "2026-09-01T11:00:00+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-040",
+      "claim": "The current Rust keyring crate documents a cross-platform v1 interface that stores secrets in macOS Keychain Services and Windows Credential Manager.",
+      "class": "external_verified",
+      "locator": "https://docs.rs/keyring/4.2.0/keyring/v1/index.html",
+      "observedAt": "2026-09-01T11:00:00+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-016",
+      "claim": "RU-023 should supersede RU-022 as an internal desktop 0.2.0 integration candidate: validate the fixed NewAPI v2 bootstrap on either compiled first-party line, complete system-browser device authorization, retain refresh credentials only in the operating-system credential store, keep access credentials in native memory, return only sanitized account, cumulative usage, model and comparable price projections to the renderer, and open only the bootstrap-provided first-party wallet URL. Tool-key creation, configuration writes, telemetry, updater and server changes remain excluded, and production release remains blocked until the v2 branch is deployed with server-enforced desktop-session route restrictions.",
+      "class": "proposed",
+      "locator": "inline:ru023-desktop-v2-internal-candidate",
+      "observedAt": "2026-09-01T11:00:00+08:00",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-USER-055",
+        "E-CODE-041",
+        "E-EXT-040",
+        "E-USER-049"
+      ]
     }
   ]
 }

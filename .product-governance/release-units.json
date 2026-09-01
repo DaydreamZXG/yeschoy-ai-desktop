@@ -14426,6 +14426,41 @@
         "releaseUnitHash": "sha256:d648734a3e3304d2ae93839d7dee70e01758cea0095841b807e5388316451da0",
         "snapshotPath": "execution/release-unit-snapshots/d648734a3e3304d2ae93839d7dee70e01758cea0095841b807e5388316451da0/release-unit.json"
       }
+    },
+    {
+      "id": "RU-023",
+      "status": "review",
+      "objective": "Deliver the internal desktop 0.2.0 consumer of NewAPI desktop-integration-v2 with native-only credential authority and truthful account and model-price UI, while deferring tool configuration and production release.",
+      "decisionRef": "DEC-067",
+      "dependsOnReleaseUnits": [
+        "RU-022"
+      ],
+      "supersedesReleaseUnits": [
+        "RU-022"
+      ],
+      "roots": {
+        "workPackages": [
+          "WP-RU023-DESKTOP-V2-ACCOUNT"
+        ],
+        "requirements": [
+          "REQ-051"
+        ],
+        "nonFunctionalRequirements": [],
+        "domains": [],
+        "contracts": [
+          "desktop-account-session@v2"
+        ],
+        "stateMachines": [],
+        "pages": [],
+        "journeys": [],
+        "dataLifecycleResources": [],
+        "aiScenarios": [],
+        "entitlements": [],
+        "trackCoverage": []
+      },
+      "closure": null,
+      "deferredSnapshot": null,
+      "freeze": null
     }
   ]
 }

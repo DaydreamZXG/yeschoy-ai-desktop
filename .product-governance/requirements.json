@@ -1028,6 +1028,31 @@
         "Full model IDs, group identity, price uncertainty and fixed comparison FX remain visible. Optional protocol details are collapsed rather than changing evidence.",
         "Four locales have aligned, nonempty copy. React navigation, catalog refresh, stale-result rejection, error recovery, read-only preview and theme tests pass."
       ]
+    },
+    {
+      "id": "REQ-051",
+      "statement": "RU-023 delivers an internal desktop 0.2.0 client integration with the fixed first-party NewAPI desktop v2 contract for browser authorization, secure remembered session, truthful account and cumulative usage, account-aware model pricing and first-party wallet opening without changing any server or tool configuration.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "account",
+      "evidenceRefs": [
+        "E-USER-055",
+        "E-CODE-041",
+        "E-EXT-040",
+        "E-PROP-016",
+        "E-USER-049"
+      ],
+      "acceptance": [
+        "Only https://yeschoy.com and https://api.yeschoy.com may be selected as API origins; redirects, caller-provided URLs, unrecognized bootstrap paths and a client version below the advertised minimum fail closed.",
+        "The system browser opens only the verified first-party authorization URL; the UI shows the non-secret short user code and explicit waiting, rejected, expired, cancelled, network and retry states without exposing the device code or any token.",
+        "Refresh token and session ID are stored only in macOS Keychain or Windows Credential Manager, the access token remains in native memory, and authenticated network calls occur only in the Rust layer with no secret returned to JavaScript, log, ordinary file, configuration, telemetry or diagnostic output.",
+        "A successful session shows the current username or display name, remaining balance, cumulative consumption, cumulative token usage, request count, server observation time and a retry action; absent or malformed fields remain unavailable instead of becoming zero.",
+        "The model page uses the current account's available model IDs and NewAPI pricing metadata, keeps exact model IDs visible, labels the fixed 6.75 conversion, and displays official-reference versus current-account rates only for ratio-priced rows whose inputs are complete; unsupported pricing is marked unavailable.",
+        "Recharge opens only the bootstrap-provided HTTPS wallet URL on the yeschoy.com first-party origin; logout revokes the current desktop session when possible and clears local credentials without changing browser sessions, tool keys or configurations.",
+        "Tool-key creation, DSH or other tool writes, backups, server code, database, Nginx, deployment, telemetry upload, updater activation and public release are outside RU-023.",
+        "The candidate and handoff state explicitly retain a production blocker until the server branch is deployed and desktop-issued sessions are restricted server-side to approved desktop routes."
+      ]
     }
   ]
 }

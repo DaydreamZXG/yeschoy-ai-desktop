@@ -1611,6 +1611,313 @@
         "E-PROP-008"
       ],
       "status": "specified"
+    },
+    {
+      "id": "desktop-account-session@v2",
+      "kind": "command",
+      "owner": "account",
+      "consumers": [
+        "billing",
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-account-session@v2",
+      "authorization": "Bundled local desktop webview commands only. The native owner accepts one compiled line ID, validates desktop-integration-v2, permits only its exact allowlisted read/session paths, opens only a first-party authorization or wallet URL, and never returns a device code, access token, refresh token or session ID to the renderer.",
+      "idempotency": "Inspect and refresh are newest-request read projections; authorization creation replaces any prior in-memory pending request; polling consumes a single device code at most once; refresh rotates and durably replaces the stored credential bundle; logout is repeatable and always clears local credentials after the bounded revoke attempt.",
+      "compatibility": "Version 2 recognizes schema_version 2, contract_id desktop-integration-v2, client minimum no greater than 0.2.0, fixed USD/CNY 6.75, and the exact v2 and existing read paths. Any new origin, path, secret exposure, tool-key action, write, payment mutation or pricing expression requires a new contract version and release unit.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One explicit account action against a compiled first-party line.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Transient renderer correlation.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "lineId": {
+            "type": "string",
+            "description": "Compiled first-party API origin selector.",
+            "enum": [
+              "mainland_optimized",
+              "global_accelerated"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "description": "Bounded native account operation.",
+            "enum": [
+              "inspect",
+              "begin_authorization",
+              "poll_authorization",
+              "cancel_authorization",
+              "refresh",
+              "logout",
+              "open_wallet"
+            ]
+          }
+        },
+        "required": [
+          "requestId",
+          "lineId",
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Sanitized account/session projection with no credential material.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Unchanged correlation.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Native projection schema.",
+            "enum": [2]
+          },
+          "status": {
+            "type": "string",
+            "description": "Closed user-visible state.",
+            "enum": [
+              "signed_out",
+              "authorization_pending",
+              "signed_in",
+              "cancelled",
+              "denied",
+              "expired",
+              "session_expired",
+              "backend_unavailable",
+              "incompatible_server",
+              "secure_storage_unavailable",
+              "network_error",
+              "invalid_response"
+            ]
+          },
+          "userCode": {
+            "type": "string",
+            "description": "Non-secret short verification code or empty.",
+            "maxLength": 16
+          },
+          "pollAfterSeconds": {
+            "type": "integer",
+            "description": "Server-governed next poll delay.",
+            "minimum": 0,
+            "maximum": 60
+          },
+          "expiresAtEpochMs": {
+            "type": "integer",
+            "description": "Pending authorization expiry or zero.",
+            "minimum": 0
+          },
+          "observedAtEpochMs": {
+            "type": "integer",
+            "description": "Local completion time for current account facts or zero.",
+            "minimum": 0
+          },
+          "account": {
+            "type": "object",
+            "description": "Current-user safe display and quota facts only. No email, linked identity, permission or session field crosses IPC.",
+            "properties": {
+              "available": {
+                "type": "boolean",
+                "description": "Whether the remaining fields are current server facts."
+              },
+              "displayName": {
+                "type": "string",
+                "description": "Safe user-selected display name or empty.",
+                "maxLength": 160
+              },
+              "username": {
+                "type": "string",
+                "description": "Current account username or empty.",
+                "maxLength": 160
+              },
+              "balanceQuota": {
+                "type": "string",
+                "description": "Exact non-negative integer quota or empty.",
+                "maxLength": 40
+              },
+              "usedQuota": {
+                "type": "string",
+                "description": "Exact non-negative cumulative integer quota or empty.",
+                "maxLength": 40
+              },
+              "requestCount": {
+                "type": "string",
+                "description": "Exact non-negative cumulative request count or empty.",
+                "maxLength": 40
+              },
+              "quotaPerUnit": {
+                "type": "string",
+                "description": "Current positive server quota units per USD or empty.",
+                "maxLength": 40
+              }
+            },
+            "required": [
+              "available",
+              "displayName",
+              "username",
+              "balanceQuota",
+              "usedQuota",
+              "requestCount",
+              "quotaPerUnit"
+            ],
+            "additionalProperties": false
+          },
+          "usage": {
+            "type": "object",
+            "description": "Cumulative server quota, request-rate and token-rate facts with no raw log content.",
+            "properties": {
+              "available": {
+                "type": "boolean",
+                "description": "Whether the remaining fields are current server facts."
+              },
+              "consumedQuota": {
+                "type": "string",
+                "description": "Exact cumulative consumption quota or empty.",
+                "maxLength": 40
+              },
+              "requestRate": {
+                "type": "string",
+                "description": "Server summary RPM fact or empty.",
+                "maxLength": 40
+              },
+              "tokenCount": {
+                "type": "string",
+                "description": "Server summary token count or empty.",
+                "maxLength": 40
+              }
+            },
+            "required": [
+              "available",
+              "consumedQuota",
+              "requestRate",
+              "tokenCount"
+            ],
+            "additionalProperties": false
+          },
+          "models": {
+            "type": "array",
+            "description": "Exact current-account available model identifiers with safe ratio-pricing projections only.",
+            "items": {
+              "type": "object",
+              "description": "One exact available model and safe price projection.",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Exact model ID.",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Untrusted plain model description after length bounding.",
+                  "maxLength": 500
+                },
+                "billingMode": {
+                  "type": "string",
+                  "description": "Closed billing category.",
+                  "enum": ["ratio", "per_request", "tiered_expr", "unknown"]
+                },
+                "pricingAvailable": {
+                  "type": "boolean",
+                  "description": "Whether all four comparable ratio prices are present."
+                },
+                "officialInputCnyPerMillion": {
+                  "type": "string",
+                  "description": "Fixed-FX official-reference input rate or empty.",
+                  "maxLength": 40
+                },
+                "officialOutputCnyPerMillion": {
+                  "type": "string",
+                  "description": "Fixed-FX official-reference output rate or empty.",
+                  "maxLength": 40
+                },
+                "actualInputCnyPerMillion": {
+                  "type": "string",
+                  "description": "Current-account input rate or empty.",
+                  "maxLength": 40
+                },
+                "actualOutputCnyPerMillion": {
+                  "type": "string",
+                  "description": "Current-account output rate or empty.",
+                  "maxLength": 40
+                }
+              },
+              "required": [
+                "id",
+                "description",
+                "billingMode",
+                "pricingAvailable",
+                "officialInputCnyPerMillion",
+                "officialOutputCnyPerMillion",
+                "actualInputCnyPerMillion",
+                "actualOutputCnyPerMillion"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 2048
+          },
+          "comparisonFx": {
+            "type": "string",
+            "description": "Fixed official comparison conversion.",
+            "enum": ["6.75"]
+          },
+          "reasonCode": {
+            "type": "string",
+            "description": "Closed safe recovery reason; never a raw server body.",
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "requestId",
+          "schemaVersion",
+          "status",
+          "userCode",
+          "pollAfterSeconds",
+          "expiresAtEpochMs",
+          "observedAtEpochMs",
+          "account",
+          "usage",
+          "models",
+          "comparisonFx",
+          "reasonCode"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal",
+        "personal",
+        "sensitive"
+      ],
+      "observability": {
+        "correlation": "Only a transient requestId and local observation timestamp cross IPC; pending device codes, session identifiers and credentials never do.",
+        "audit": "The first-party server owns authorization, refresh and revoke records. The client stores no account audit history.",
+        "metrics": "No telemetry upload. Current status, sanitized account facts and price projections exist only in renderer memory."
+      },
+      "errorSemantics": [
+        "Invalid line IDs, request IDs, origins, bootstrap fields, path fields, redirects, oversized bodies and first-party URL mismatches fail before secret use or browser opening.",
+        "Authorization pending and slow_down obey server retry_after; denial, expiry, already-used authorization, session revocation and refresh failure cannot become signed_in.",
+        "A new refresh bundle is written to the operating-system credential store before old in-memory credentials are replaced; storage failure returns secure_storage_unavailable and does not expose the bundle.",
+        "Account, usage, models and pricing are independently nullable; missing data is unavailable and cannot be fabricated as zero.",
+        "Only complete ratio-priced rows produce official-reference and current-account price values. Billing expressions, fixed-request pricing without an official comparator and malformed ratios remain unavailable.",
+        "The current v2 server branch is an internal integration dependency, not production readiness; deployment and server-side desktop scope enforcement remain explicit release blockers."
+      ],
+      "requirementRefs": [
+        "REQ-051"
+      ],
+      "evidenceRefs": [
+        "E-USER-055",
+        "E-CODE-041",
+        "E-EXT-040",
+        "E-PROP-016"
+      ],
+      "status": "specified"
     }
   ]
 }

@@ -14,7 +14,9 @@
       "invariants": [
         "An account session is never projected into a third-party tool configuration."
       ],
-      "commands": [],
+      "commands": [
+        "desktop-account-session@v2"
+      ],
       "queries": [
         "desktop-account-readiness@v1"
       ],

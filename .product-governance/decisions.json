@@ -1795,6 +1795,36 @@
         ],
         "pageRefs": []
       }
+    },
+    {
+      "id": "DEC-067",
+      "question": "How may the client integrate the newly implemented NewAPI desktop v2 branch before deployment and server-side desktop scope enforcement are proven?",
+      "choice": "Freeze RU-023 as an internal 0.2.0 integration candidate that depends on and supersedes RU-022. Accept the v2 server-declared five-minute device-code lifetime as the protocol truth for this candidate, without rewriting historical v1 readiness or claiming the complete target session policy is production-ready. Confine all v2 HTTP, browser opening and secret handling to a new native module; allow only the two compiled first-party origins and the exact validated bootstrap paths; retain refresh credentials only in the operating-system credential store; return sanitized account, cumulative usage, available-model and ratio-price projections to the renderer; and keep tool-key/configuration work for the later DSH unit. No server, deployment or database mutation is authorized. Public production release remains blocked until the v2 branch is deployed and the server enforces desktop-issued sessions against a least-privilege route allowlist.",
+      "status": "accepted",
+      "decidedBy": "product architecture within the owner's explicit client-integration authorization",
+      "decidedAt": "2026-09-01T11:00:00+08:00",
+      "evidenceRefs": [
+        "E-USER-055",
+        "E-CODE-041",
+        "E-EXT-040",
+        "E-PROP-016"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-051"
+        ],
+        "pageRefs": [
+          "PAGE-ACCOUNT",
+          "PAGE-BILLING",
+          "PAGE-MODELS"
+        ],
+        "domainRefs": [
+          "account",
+          "billing",
+          "desktop-platform",
+          "security-update"
+        ]
+      }
     }
   ]
 }
