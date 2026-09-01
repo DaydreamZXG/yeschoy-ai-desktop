@@ -17,6 +17,7 @@ import {
   ChartNoAxesCombined,
 } from "lucide-react";
 import brandIcon from "../assets/brand/yeschoy-app-icon.svg";
+import { CANDIDATE_VERSION } from "../candidate/readiness";
 import type { Appearance } from "./appearance";
 import { useWorkbenchCopy } from "./copy";
 
@@ -134,7 +135,7 @@ export function WorkbenchSidebar({
           <ChevronRight aria-hidden="true" />
         </button>
         <small className="sidebar-edition">
-          野菜API <span>0.1.0 · {c.edition}</span>
+          野菜API <span>{CANDIDATE_VERSION} · {c.edition}</span>
         </small>
       </div>
     </aside>
