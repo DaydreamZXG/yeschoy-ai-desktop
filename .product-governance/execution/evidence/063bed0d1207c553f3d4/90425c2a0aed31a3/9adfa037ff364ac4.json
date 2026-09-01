@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU021-AS-01",
+  "assertion": "Every absolute selection fixture uses a platform-aware helper, explicit relative rejection remains, and production code before cfg(test) is unchanged from the frozen baseline.",
+  "testSelector": "tests/work_packages/ru021/test_acceptance.py::test_native_selection_fixtures_are_platform_aware_and_test_only",
+  "acceptanceCommandId": "ru021-native-fixtures",
+  "runId": "RU-021/WP-RU021-NATIVE-PATH-TESTS@2026-09-01T10:22:50.736440+00:00",
+  "packageId": "WP-RU021-NATIVE-PATH-TESTS",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru021/test_acceptance.py::test_native_selection_fixtures_are_platform_aware_and_test_only",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:0669ed2c0e0eec25d59ee08954ce984052186ef7dccdd947b621f74e7fc80fa5",
+    "machineReportSha256": "sha256:f10b56ccd8ef3e2622b391657fb63834d091f112e85d2eb5bf6e67f640fc9a54",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:67ef917d214944c38ef21671bd831c2073c77af2490d56d7d4097a919cbd7cdd",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:dd2e30d859e55bf28f91bb49a39df0e5011ca5424c655a08386caf38222273e4",
+  "releaseUnitId": "RU-021",
+  "releaseUnitHash": "sha256:f3a005c877a0c446758e7d6a5a45b2c5dea34b0b1dc6671648c3c588c15ed148"
+}

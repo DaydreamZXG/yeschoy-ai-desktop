@@ -2,6 +2,31 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "E-CODE-040",
+      "claim": "GitHub Actions Windows run 33497321898 passed all 136 selected renderer tests and all 27 platform-applicable native tests after the fixture correction. Packaging then failed before compilation because PowerShell plus pnpm exec delivered the trailing --locked to the Tauri command parser as an unsupported build option. The immediately preceding pnpm install --frozen-lockfile and cargo test --locked gates already prove both dependency locks before packaging.",
+      "class": "code_observed",
+      "locator": "https://github.com/DaydreamZXG/yeschoy-ai-desktop/actions/runs/33497321898;.github/workflows/yeschoy-windows-internal.yml",
+      "observedAt": "2026-09-01T10:34:18Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-015",
+      "claim": "A packaging-command-only successor should retain both successful locked dependency gates, remove the redundant trailing -- --locked from the Windows Tauri build invocation, rerun the same tests and build, and finish the artifact receipt without touching runtime or server code.",
+      "class": "proposed",
+      "locator": "inline:ru022-windows-tauri-argument-repair",
+      "observedAt": "2026-09-01T10:34:18Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-USER-054",
+        "E-CODE-040"
+      ]
+    },
+    {
       "id": "E-CODE-039",
       "claim": "GitHub Actions Windows run 33496289692 passed the closed eleven-file renderer gate with 136 tests, then compiled the native crate and failed seven of 27 Rust tests in tool_selection_core because its cfg(test) fixtures use Unix absolute path literals. On Windows those literals are relative, so Inventory correctly rejects them before selection. Twenty other native tests passed, and production discovery supplies real platform-native PathBuf values.",
       "class": "code_observed",

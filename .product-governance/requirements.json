@@ -2,6 +2,25 @@
   "schemaVersion": 1,
   "requirements": [
     {
+      "id": "REQ-050",
+      "statement": "Use the Windows-compatible Tauri build invocation after frozen pnpm and locked Cargo gates pass, then produce the unsigned private NSIS artifact without changing runtime or dependency resolution.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-054",
+        "E-CODE-040",
+        "E-PROP-015"
+      ],
+      "acceptance": [
+        "The workflow preserves pnpm install --frozen-lockfile and cargo test --locked before the Tauri build step.",
+        "The Windows Tauri build invocation uses the candidate config and NSIS bundle without the PowerShell-incompatible redundant trailing -- --locked argument.",
+        "The same clean run passes 136 current renderer tests and all platform-applicable native tests before producing and uploading the unsigned installer.",
+        "The final per-artifact receipt proves exact hashes, source commits, architectures and security limitations without any runtime, server, database, updater or public-release change."
+      ]
+    },
+    {
       "id": "REQ-049",
       "statement": "Make the installation-selection core's cfg(test) path fixtures portable so the unchanged production logic is verified with native absolute-path semantics on both macOS and Windows before packaging.",
       "scope": "target",

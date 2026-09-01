@@ -2,6 +2,29 @@
   "schemaVersion": 1,
   "decisions": [
     {
+      "id": "DEC-066",
+      "question": "How should the Windows-only Tauri --locked argument parsing failure be corrected after both lock gates and all tests pass?",
+      "choice": "Create RU-022 as a packaging-command-only successor that depends on and supersedes RU-021. Preserve pnpm install --frozen-lockfile, cargo test --locked, all renderer/native tests and candidate NSIS configuration; remove only the redundant trailing -- --locked passed through pnpm exec to Tauri on Windows. Rerun the same private artifact workflow and create no tag, release, updater, signature or server change.",
+      "status": "accepted",
+      "decidedBy": "implementation owner within the product owner's explicit instruction to adapt and package Apple Silicon and Windows without incremental approval pauses",
+      "decidedAt": "2026-09-01T10:34:18Z",
+      "evidenceRefs": [
+        "E-USER-054",
+        "E-CODE-040",
+        "E-PROP-015"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-046",
+          "REQ-050"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "desktop-platform"
+        ]
+      }
+    },
+    {
       "id": "DEC-065",
       "question": "How should the native Windows failures caused by Unix-only tool-selection test paths be fixed?",
       "choice": "Create RU-021 as a narrow successor that depends on and supersedes RU-020 and directly supersedes the file-owning RU-017 for this test-only correction. Modify only the cfg(test) module in tool_selection_core so synthetic paths use a drive-rooted absolute path on Windows and slash-rooted absolute path elsewhere. Preserve production path validation and selection byte-for-byte. Rerun the unchanged current-product renderer gate, full locked native suite and unsigned private NSIS packaging workflow. Retain the accepted universal macOS artifact with its own exact source commit and hash.",

@@ -2,6 +2,118 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "WP-RU022-WINDOWS-TAURI-ARGS",
+      "wave": "consumer",
+      "owner": "desktop-platform",
+      "riskClass": "low",
+      "objective": "Remove only the redundant Windows-incompatible trailing Tauri build argument, rerun the already passing gates and finish the cross-platform artifact receipt.",
+      "deliverables": [
+        "Windows Tauri NSIS command compatible with PowerShell and pnpm exec while both earlier lock gates remain mandatory.",
+        "Successful private Windows workflow and downloaded unsigned x64 NSIS installer.",
+        "Final per-artifact source and security receipt."
+      ],
+      "requirementRefs": [
+        "REQ-050"
+      ],
+      "decisionRefs": [
+        "DEC-066"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No application or native runtime, test selection, dependency, lockfile, account, billing, credential, configuration, telemetry or updater change.",
+        "No server, NewAPI, Nginx, database, production, user-tool configuration, Windows signing, public download, tag or GitHub Release change.",
+        "No Apple Silicon native-launch or Windows public-distribution claim."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        ".github/workflows/yeschoy-windows-internal.yml",
+        "tests/work_packages/ru022/**",
+        "outputs/yeschoy-ru022-artifacts.json",
+        "release/ru022-local/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        ".github/workflows/release.yml",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/**",
+        "src-tauri/**",
+        "tests/integration/App.test.tsx",
+        "outputs/野菜API-跨平台内测构建与后端边界记录.md"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No runtime, client or server data is changed by a CI argument correction.",
+        "rollback": "Restore the old invocation and remove only RU-022 receipt/artifact; no runtime, user or server data restoration is involved."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Keep dependency resolution frozen in the install and test gates, then invoke Tauri with only supported Windows build options.",
+        "supportedVersions": "Same production runtime and Windows x64 unsigned NSIS internal artifact target.",
+        "removalGate": "Any dependency, runtime, signing, updater, public release or server authority change requires a later accepted unit."
+      },
+      "inputContracts": [
+        "tool-discovery-scan@v2",
+        "desktop-window-appearance@v1",
+        "desktop-account-readiness@v1"
+      ],
+      "outputContracts": [],
+      "acceptanceCommands": [
+        {
+          "id": "ru022-command",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru022/test_acceptance.py::test_windows_tauri_command_follows_locked_gates",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru022-workflow-boundary",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru022/test_acceptance.py::test_windows_workflow_remains_private_and_bounded",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru022-artifacts",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru022/test_acceptance.py::test_final_cross_platform_receipt",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU022-AS-01",
+          "assertion": "Frozen pnpm and locked Cargo gates precede a Windows-compatible candidate NSIS Tauri invocation without a redundant trailing Cargo argument.",
+          "testSelector": "tests/work_packages/ru022/test_acceptance.py::test_windows_tauri_command_follows_locked_gates",
+          "acceptanceCommandId": "ru022-command"
+        },
+        {
+          "id": "RU022-AS-02",
+          "assertion": "The workflow remains manual, private-artifact-only and unsigned, and retains all current renderer and native tests without release or updater authority.",
+          "testSelector": "tests/work_packages/ru022/test_acceptance.py::test_windows_workflow_remains_private_and_bounded",
+          "acceptanceCommandId": "ru022-workflow-boundary"
+        },
+        {
+          "id": "RU022-AS-03",
+          "assertion": "The final receipt proves per-artifact source, exact hashes, architecture, signing state and honest host-test limitations with no runtime or server change in RU-022.",
+          "testSelector": "tests/work_packages/ru022/test_acceptance.py::test_final_cross_platform_receipt",
+          "acceptanceCommandId": "ru022-artifacts"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "The same clean Windows workflow fails an applicable renderer, native or packaging gate after the argument correction.",
+        "A required edit touches runtime, dependencies, server, production, user configuration, signing, updater or public-release authority.",
+        "The installer cannot be tied to the successful workflow and exact receipt."
+      ],
+      "status": "planned"
+    },
+    {
       "id": "WP-RU021-NATIVE-PATH-TESTS",
       "wave": "consumer",
       "owner": "desktop-platform",

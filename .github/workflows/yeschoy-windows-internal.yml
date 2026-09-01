@@ -60,7 +60,7 @@ jobs:
         run: cargo test --locked --manifest-path src-tauri/Cargo.toml
 
       - name: Build unsigned internal NSIS installer
-        run: pnpm exec tauri build --config src-tauri/tauri.candidate.conf.json --bundles nsis -- --locked
+        run: pnpm exec tauri build --config src-tauri/tauri.candidate.conf.json --bundles nsis
 
       - name: Prepare exact internal artifact
         shell: pwsh

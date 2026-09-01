@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU021-AS-02",
+  "assertion": "The private manual Windows workflow keeps the closed 136-test renderer gate, full locked native suite and unsigned artifact-only NSIS boundary.",
+  "testSelector": "tests/work_packages/ru021/test_acceptance.py::test_windows_workflow_keeps_current_renderer_and_full_native_gates",
+  "acceptanceCommandId": "ru021-workflow-boundary",
+  "runId": "RU-021/WP-RU021-NATIVE-PATH-TESTS@2026-09-01T10:22:50.736440+00:00",
+  "packageId": "WP-RU021-NATIVE-PATH-TESTS",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru021/test_acceptance.py::test_windows_workflow_keeps_current_renderer_and_full_native_gates",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:7801919c2a9be70d8d4ca9607e6f90e6db5639a09247ae0fa13480189c8147f2",
+    "machineReportSha256": "sha256:f4537cc74157ce7169dbf729eb4097495fb5d8530da733ce25f39465938f7cbf",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:898f1cb21feeafa411b8013bfeff88101ac22fdb456afd44e189153d22ae3b43",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:83bb0f7bb13a23674473aed0453227cc448ed6e17db3361dd61656a101a921fb",
+  "releaseUnitId": "RU-021",
+  "releaseUnitHash": "sha256:f3a005c877a0c446758e7d6a5a45b2c5dea34b0b1dc6671648c3c588c15ed148"
+}
