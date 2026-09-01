@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU020-AS-02",
+  "assertion": "The manual private workflow retains full locked native tests and unsigned NSIS artifact-only authority with no release, updater or signing path.",
+  "testSelector": "tests/work_packages/ru020/test_acceptance.py::test_windows_workflow_remains_private_and_bounded",
+  "acceptanceCommandId": "ru020-workflow-boundary",
+  "runId": "RU-020/WP-RU020-CURRENT-WINDOWS-GATE@2026-09-01T10:10:16.098012+00:00",
+  "packageId": "WP-RU020-CURRENT-WINDOWS-GATE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru020/test_acceptance.py::test_windows_workflow_remains_private_and_bounded",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:4f535b127afedcb0237848f9ef16337c29076c4b7a26ba09ec9ae7dd1c0297da",
+    "machineReportSha256": "sha256:07d631f05836bf32c0a91dc4138eab8d65b0a736798d20db5def521e75d49f32",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:c985a8198d34afef732e7b969b84ffab0cb64f4e7ac5c823c493586ec2abe892",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:8a48ed35662fec78a5ba3a44f6deedbaf2d9e7a68aa4da70e852934a7c72a5cf",
+  "releaseUnitId": "RU-020",
+  "releaseUnitHash": "sha256:8357fc4a707c801855b006afc92842a92f51066a82c4a5303ebadf04a58d3cf8"
+}

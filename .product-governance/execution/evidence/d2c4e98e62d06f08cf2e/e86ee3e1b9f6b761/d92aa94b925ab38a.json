@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU020-AS-03",
+  "assertion": "The final receipt proves exact hashes, architecture, signing state, source and honest host-test limitations for both delivered platform artifacts.",
+  "testSelector": "tests/work_packages/ru020/test_acceptance.py::test_final_cross_platform_receipt",
+  "acceptanceCommandId": "ru020-artifacts",
+  "runId": "RU-020/WP-RU020-CURRENT-WINDOWS-GATE@2026-09-01T10:10:16.098012+00:00",
+  "packageId": "WP-RU020-CURRENT-WINDOWS-GATE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:2a872747872d3d32aa52c264d0b5955989b4bf624bac2788259ea9962979b2ec",
+  "releaseUnitId": "RU-020",
+  "releaseUnitHash": "sha256:8357fc4a707c801855b006afc92842a92f51066a82c4a5303ebadf04a58d3cf8"
+}

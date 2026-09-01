@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU020-AS-01",
+  "assertion": "The Windows renderer gate contains every current product test file, excludes obsolete inherited integration and artifact trees, and retains the conditional matchMedia harness correction.",
+  "testSelector": "tests/work_packages/ru020/test_acceptance.py::test_windows_renderer_gate_is_current_and_closed",
+  "acceptanceCommandId": "ru020-test-gate",
+  "runId": "RU-020/WP-RU020-CURRENT-WINDOWS-GATE@2026-09-01T10:10:16.098012+00:00",
+  "packageId": "WP-RU020-CURRENT-WINDOWS-GATE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru020/test_acceptance.py::test_windows_renderer_gate_is_current_and_closed",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:5c98e3ffc111463f764c051dc8ff10bb8f293b4706ec8d65fa90abe54e60ef79",
+    "machineReportSha256": "sha256:ec7e26d54ee4f7c2e6f7575685a8d4f93a637cc920db5d18f8bb0e508f5346b9",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:76d791d7d8275bad276757e4d01f06622424730d495b092bc946092034240c55",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:0d27b7ab1fa69aaf9164d6559f759d8b7eefc255ae7a1e585291f653783e7b9e",
+  "releaseUnitId": "RU-020",
+  "releaseUnitHash": "sha256:8357fc4a707c801855b006afc92842a92f51066a82c4a5303ebadf04a58d3cf8"
+}

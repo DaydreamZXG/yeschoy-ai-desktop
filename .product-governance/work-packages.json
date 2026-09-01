@@ -2,6 +2,120 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "WP-RU021-NATIVE-PATH-TESTS",
+      "wave": "consumer",
+      "owner": "desktop-platform",
+      "riskClass": "medium",
+      "objective": "Make only the native selection test fixtures platform-aware, then complete the unchanged production runtime's Windows internal package and cross-platform receipt.",
+      "deliverables": [
+        "Platform-native absolute-path helper and converted tool_selection_core cfg(test) fixtures with unchanged production code.",
+        "Successful clean Windows run of 136 renderer tests, all applicable native tests, unsigned NSIS build and private artifact upload.",
+        "Downloaded Windows installer plus final per-artifact cross-platform receipt."
+      ],
+      "requirementRefs": [
+        "REQ-049"
+      ],
+      "decisionRefs": [
+        "DEC-065"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No change outside cfg(test) in tool_selection_core and no change to renderer, production discovery, account, price, payment, credential, adapter, configuration-write, telemetry or updater behavior.",
+        "No server, NewAPI, Nginx, database, production, user-tool configuration, Windows signing, public download, tag or GitHub Release change.",
+        "No claim of Apple Silicon native launch or signed Windows public-distribution readiness."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src-tauri/src/tool_selection_core.rs",
+        "tests/work_packages/ru021/**",
+        "outputs/yeschoy-ru021-artifacts.json",
+        "release/ru021-local/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        ".github/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/**",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/tool_discovery.rs",
+        "src-tauri/src/tool_discovery_v2.rs",
+        "tests/integration/App.test.tsx",
+        "outputs/野菜API-跨平台内测构建与后端边界记录.md"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No runtime, client or server data is changed by test-fixture portability.",
+        "rollback": "Restore the cfg(test) fixture literals and remove only RU-021 receipt/artifact; no runtime, user or server data restoration is involved."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve production selection code exactly and make its synthetic test inputs obey each host's absolute-path grammar.",
+        "supportedVersions": "Same RU-017 production client runtime, retained macOS universal internal artifact, and Windows x64 unsigned NSIS internal artifact.",
+        "removalGate": "Any production selection change, skipped applicable native behavior, signing, updater, public release or server authority requires a later accepted unit."
+      },
+      "inputContracts": [
+        "tool-discovery-scan@v2",
+        "desktop-window-appearance@v1",
+        "desktop-account-readiness@v1"
+      ],
+      "outputContracts": [],
+      "acceptanceCommands": [
+        {
+          "id": "ru021-native-fixtures",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru021/test_acceptance.py::test_native_selection_fixtures_are_platform_aware_and_test_only",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru021-workflow-boundary",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru021/test_acceptance.py::test_windows_workflow_keeps_current_renderer_and_full_native_gates",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru021-artifacts",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru021/test_acceptance.py::test_final_cross_platform_receipt",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU021-AS-01",
+          "assertion": "Every absolute selection fixture uses a platform-aware helper, explicit relative rejection remains, and production code before cfg(test) is unchanged from the frozen baseline.",
+          "testSelector": "tests/work_packages/ru021/test_acceptance.py::test_native_selection_fixtures_are_platform_aware_and_test_only",
+          "acceptanceCommandId": "ru021-native-fixtures"
+        },
+        {
+          "id": "RU021-AS-02",
+          "assertion": "The private manual Windows workflow keeps the closed 136-test renderer gate, full locked native suite and unsigned artifact-only NSIS boundary.",
+          "testSelector": "tests/work_packages/ru021/test_acceptance.py::test_windows_workflow_keeps_current_renderer_and_full_native_gates",
+          "acceptanceCommandId": "ru021-workflow-boundary"
+        },
+        {
+          "id": "RU021-AS-03",
+          "assertion": "The final receipt proves per-artifact source, exact hashes, architecture, signing state and honest host-test limitations with no production-runtime or server change in RU-021.",
+          "testSelector": "tests/work_packages/ru021/test_acceptance.py::test_final_cross_platform_receipt",
+          "acceptanceCommandId": "ru021-artifacts"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "A production-code change outside cfg(test) is required to pass the Windows native suite.",
+        "A required edit touches server, production, user configuration, signing, updater or public-release authority.",
+        "The clean Windows workflow still fails an applicable renderer, native or packaging gate."
+      ],
+      "status": "planned"
+    },
+    {
       "id": "WP-RU020-CURRENT-WINDOWS-GATE",
       "wave": "consumer",
       "owner": "desktop-platform",

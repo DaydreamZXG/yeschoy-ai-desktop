@@ -409,13 +409,29 @@
       "baselineSnapshotPath": "execution/baselines/e86ee3e1b9f6b761.d2c4e98e62d06f08cf2e.json",
       "baselineSnapshotSha256": "sha256:62c6208f1acfeba21bdfdb960ea0bd1d66bd0426d19e8c189f98675f1fdc7888",
       "assignedTo": "codex-primary",
-      "status": "in_progress",
+      "status": "failed",
       "startedAt": "2026-09-01T10:10:16.098012+00:00",
+      "finishedAt": "2026-09-01T10:21:23.131781+00:00",
+      "reportPath": "execution/reports/e86ee3e1b9f6b761.d2c4e98e62d06f08cf2e.json",
+      "reportSha256": "sha256:102e09fd02ee0d080e2af089dd327a26fe766db116f1f49663a535c3e96aac45",
+      "releaseUnitId": "RU-020",
+      "releaseUnitHash": "sha256:8357fc4a707c801855b006afc92842a92f51066a82c4a5303ebadf04a58d3cf8"
+    },
+    {
+      "id": "RU-021/WP-RU021-NATIVE-PATH-TESTS@2026-09-01T10:22:50.736440+00:00",
+      "packageId": "WP-RU021-NATIVE-PATH-TESTS",
+      "baselineCommit": "c4deb41b3c92cb4008a0ff9068cd8a2c4538b75f",
+      "baselineTreeHash": "sha256:16c52d22f54921aedd15d6c4510fa6ad618a4030a38fbc2bdf6b0eaccbe79df0",
+      "baselineSnapshotPath": "execution/baselines/90425c2a0aed31a3.063bed0d1207c553f3d4.json",
+      "baselineSnapshotSha256": "sha256:e01df3ed4ef05e4b44dff53575d2498e174626396635e195abbe81a96cb84629",
+      "assignedTo": "codex-primary",
+      "status": "in_progress",
+      "startedAt": "2026-09-01T10:22:50.736440+00:00",
       "finishedAt": null,
       "reportPath": null,
       "reportSha256": null,
-      "releaseUnitId": "RU-020",
-      "releaseUnitHash": "sha256:8357fc4a707c801855b006afc92842a92f51066a82c4a5303ebadf04a58d3cf8"
+      "releaseUnitId": "RU-021",
+      "releaseUnitHash": "sha256:f3a005c877a0c446758e7d6a5a45b2c5dea34b0b1dc6671648c3c588c15ed148"
     }
   ]
 }

@@ -2,6 +2,31 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "E-CODE-039",
+      "claim": "GitHub Actions Windows run 33496289692 passed the closed eleven-file renderer gate with 136 tests, then compiled the native crate and failed seven of 27 Rust tests in tool_selection_core because its cfg(test) fixtures use Unix absolute path literals. On Windows those literals are relative, so Inventory correctly rejects them before selection. Twenty other native tests passed, and production discovery supplies real platform-native PathBuf values.",
+      "class": "code_observed",
+      "locator": "https://github.com/DaydreamZXG/yeschoy-ai-desktop/actions/runs/33496289692;src-tauri/src/tool_selection_core.rs:101-230",
+      "observedAt": "2026-09-01T10:22:20Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-014",
+      "claim": "A narrow successor should replace only Unix-literal cfg(test) fixtures in tool_selection_core with platform-native synthetic absolute paths, keep production selection code unchanged, rerun the same Windows renderer/native/build workflow and finish the cross-platform receipt.",
+      "class": "proposed",
+      "locator": "inline:ru021-platform-native-selection-fixtures",
+      "observedAt": "2026-09-01T10:22:20Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-USER-054",
+        "E-CODE-039"
+      ]
+    },
+    {
       "id": "E-CODE-038",
       "claim": "After the conditional matchMedia jsdom polyfill removed the Windows-specific exception, the seven inherited tests/integration/App.test.tsx cases still failed because they assert the upstream provider-list and unified-skills-panel interface that the frozen 野菜 workbench intentionally replaced. In contrast, the eleven current candidate, diagnostics, configuration, service-catalog, billing and workbench test files execute 75 current-product tests successfully when explicitly selected with release and work trees excluded.",
       "class": "code_observed",

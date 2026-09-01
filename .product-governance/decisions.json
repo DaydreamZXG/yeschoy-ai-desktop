@@ -2,6 +2,31 @@
   "schemaVersion": 1,
   "decisions": [
     {
+      "id": "DEC-065",
+      "question": "How should the native Windows failures caused by Unix-only tool-selection test paths be fixed?",
+      "choice": "Create RU-021 as a narrow successor that depends on and supersedes RU-020 and directly supersedes the file-owning RU-017 for this test-only correction. Modify only the cfg(test) module in tool_selection_core so synthetic paths use a drive-rooted absolute path on Windows and slash-rooted absolute path elsewhere. Preserve production path validation and selection byte-for-byte. Rerun the unchanged current-product renderer gate, full locked native suite and unsigned private NSIS packaging workflow. Retain the accepted universal macOS artifact with its own exact source commit and hash.",
+      "status": "accepted",
+      "decidedBy": "implementation owner within the product owner's explicit instruction to adapt and package Apple Silicon and Windows without incremental approval pauses",
+      "decidedAt": "2026-09-01T10:22:20Z",
+      "evidenceRefs": [
+        "E-USER-054",
+        "E-CODE-039",
+        "E-PROP-014"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-046",
+          "REQ-048",
+          "REQ-049"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "desktop-platform",
+          "tool-config"
+        ]
+      }
+    },
+    {
       "id": "DEC-064",
       "question": "Which renderer tests should gate the current 野菜 Windows package after the jsdom repair proves inherited upstream App tests no longer describe this product?",
       "choice": "Create RU-020 as a narrow successor that depends on and supersedes RU-019. Retain its conditional matchMedia test polyfill, and change only the private manual Windows workflow so its renderer gate explicitly runs the current frozen candidate, diagnostics, configuration, service-catalog, billing and workbench test files while excluding release and inherited work trees. Keep cargo test --locked and the unsigned artifact-only NSIS path. Do not modify runtime source to satisfy obsolete upstream UI assertions.",

@@ -109,18 +109,39 @@ pub fn exact_version(value: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn add(inventory: &mut Inventory, path: &str, rank: Option<usize>) {
-        inventory.add(Path::new(path), PathBuf::from(path), rank, true);
+
+    fn absolute(parts: &[&str]) -> PathBuf {
+        #[cfg(windows)]
+        let mut path = PathBuf::from(r"C:\");
+        #[cfg(not(windows))]
+        let mut path = PathBuf::from("/");
+        for part in parts {
+            path.push(part);
+        }
+        assert!(path.is_absolute());
+        path
     }
+
+    fn add(inventory: &mut Inventory, parts: &[&str], rank: Option<usize>) {
+        let path = absolute(parts);
+        inventory.add(&path, path.clone(), rank, true);
+    }
+
     #[test]
     fn standalone_and_desktop_component_are_not_conflicting() {
         let mut inventory = Inventory::default();
         add(
             &mut inventory,
-            "/Applications/ChatGPT.app/Contents/Resources/codex",
+            &[
+                "Applications",
+                "ChatGPT.app",
+                "Contents",
+                "Resources",
+                "codex",
+            ],
             Some(0),
         );
-        add(&mut inventory, "/users/local/bin/codex", Some(3));
+        add(&mut inventory, &["users", "local", "bin", "codex"], Some(3));
         assert_eq!(inventory.bundled_count(), 1);
         assert_eq!(inventory.standalone.len(), 1);
         assert_eq!(inventory.selection().0, "single_installation");
@@ -128,24 +149,20 @@ mod tests {
     #[test]
     fn aliases_deduplicate_and_keep_earliest_rank() {
         let mut inventory = Inventory::default();
+        let canonical = absolute(&["release", "bin", "codex"]);
         inventory.add(
-            Path::new("/local/bin/codex"),
-            "/release/bin/codex".into(),
+            &absolute(&["local", "bin", "codex"]),
+            canonical.clone(),
             None,
             true,
         );
         inventory.add(
-            Path::new("/npm/bin/codex"),
-            "/release/bin/codex".into(),
+            &absolute(&["npm", "bin", "codex"]),
+            canonical.clone(),
             Some(2),
             true,
         );
-        inventory.add(
-            Path::new("/link/codex"),
-            "/release/bin/codex".into(),
-            Some(1),
-            true,
-        );
+        inventory.add(&absolute(&["link", "codex"]), canonical, Some(1), true);
         assert_eq!(inventory.standalone.len(), 1);
         assert_eq!(inventory.selection().1.unwrap().path_rank, Some(1));
     }
@@ -153,8 +170,14 @@ mod tests {
     fn alias_into_bundle_is_excluded() {
         let mut inventory = Inventory::default();
         inventory.add(
-            Path::new("/local/bin/codex"),
-            "/Applications/ChatGPT.app/Contents/Resources/codex".into(),
+            &absolute(&["local", "bin", "codex"]),
+            absolute(&[
+                "Applications",
+                "ChatGPT.app",
+                "Contents",
+                "Resources",
+                "codex",
+            ]),
             Some(0),
             true,
         );
@@ -164,21 +187,21 @@ mod tests {
     #[test]
     fn unique_path_priority_not_version_or_alphabetical_order() {
         let mut inventory = Inventory::default();
-        add(&mut inventory, "/a/new/codex", Some(5));
-        add(&mut inventory, "/z/old/codex", Some(1));
-        add(&mut inventory, "/common/codex", None);
+        add(&mut inventory, &["a", "new", "codex"], Some(5));
+        add(&mut inventory, &["z", "old", "codex"], Some(1));
+        add(&mut inventory, &["common", "codex"], None);
         assert_eq!(inventory.selection().0, "path_precedence");
         assert_eq!(
             inventory.selection().1.unwrap().path,
-            Path::new("/z/old/codex")
+            absolute(&["z", "old", "codex"])
         );
     }
     #[test]
     fn same_rank_and_common_only_ambiguity_are_not_guessed() {
         for rank in [Some(0), None] {
             let mut inventory = Inventory::default();
-            add(&mut inventory, "/bin/codex.exe", rank);
-            add(&mut inventory, "/bin/codex.cmd", rank);
+            add(&mut inventory, &["bin", "codex.exe"], rank);
+            add(&mut inventory, &["bin", "codex.cmd"], rank);
             assert_eq!(inventory.selection().0, "unresolved");
             assert!(inventory.selection().1.is_none());
         }
@@ -188,28 +211,35 @@ mod tests {
         let mut inventory = Inventory::default();
         inventory.add(
             Path::new("bin/codex"),
-            "/tmp/project/bin/codex".into(),
+            absolute(&["tmp", "project", "bin", "codex"]),
             Some(0),
             true,
         );
-        inventory.add(Path::new(""), "/tmp/project/codex".into(), Some(0), true);
+        inventory.add(
+            Path::new(""),
+            absolute(&["tmp", "project", "codex"]),
+            Some(0),
+            true,
+        );
         assert_eq!(inventory.selection().0, "not_found");
     }
     #[test]
     fn bound_fails_closed_and_bundle_limit_does_not_hide_standalone() {
         let mut inventory = Inventory::default();
         for n in 0..40 {
+            let app = format!("A{n}.app");
             add(
                 &mut inventory,
-                &format!("/A{n}.app/Contents/MacOS/codex"),
+                &[&app, "Contents", "MacOS", "codex"],
                 Some(n),
             );
         }
-        add(&mut inventory, "/local/codex", None);
+        add(&mut inventory, &["local", "codex"], None);
         assert_eq!(inventory.bundled_count(), LIMIT);
         assert_eq!(inventory.selection().0, "single_installation");
         for n in 0..40 {
-            add(&mut inventory, &format!("/bin/{n}/codex"), Some(n));
+            let item = n.to_string();
+            add(&mut inventory, &["bin", &item, "codex"], Some(n));
         }
         assert_eq!(inventory.standalone.len(), LIMIT);
         assert_eq!(inventory.selection().0, "unresolved");
@@ -217,15 +247,11 @@ mod tests {
     #[test]
     fn ordinary_app_named_folder_is_not_a_bundle_component() {
         let mut inventory = Inventory::default();
-        add(&mut inventory, "/project.app/bin/codex", None);
+        add(&mut inventory, &["project.app", "bin", "codex"], None);
         assert_eq!(inventory.selection().0, "single_installation");
         let mut non_mac = Inventory::default();
-        non_mac.add(
-            Path::new("/A.app/Contents/MacOS/codex"),
-            "/A.app/Contents/MacOS/codex".into(),
-            None,
-            false,
-        );
+        let path = absolute(&["A.app", "Contents", "MacOS", "codex"]);
+        non_mac.add(&path, path.clone(), None, false);
         assert_eq!(non_mac.selection().0, "single_installation");
     }
     #[test]

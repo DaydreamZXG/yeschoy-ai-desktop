@@ -2,6 +2,25 @@
   "schemaVersion": 1,
   "requirements": [
     {
+      "id": "REQ-049",
+      "statement": "Make the installation-selection core's cfg(test) path fixtures portable so the unchanged production logic is verified with native absolute-path semantics on both macOS and Windows before packaging.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-054",
+        "E-CODE-039",
+        "E-PROP-014"
+      ],
+      "acceptance": [
+        "All tool_selection_core tests construct native absolute paths through a platform-aware test helper; relative and empty-path rejection remains explicit.",
+        "Only cfg(test) code changes in tool_selection_core; production Inventory, bundle classification, deduplication, bounds and selection code remain byte-for-byte unchanged.",
+        "The clean Windows workflow passes all 136 selected renderer tests and every platform-applicable locked native test before building the unsigned x64 NSIS installer.",
+        "The final receipt records per-artifact source commits and exact hashes and states that RU-021 changed tests only, not production runtime, server, database, updater or release authority."
+      ]
+    },
+    {
       "id": "REQ-048",
       "statement": "Use the current frozen 野菜 product tests, not obsolete inherited upstream App tests, as the Windows renderer gate; retain full native tests and finish the unchanged runtime's Windows internal artifact.",
       "scope": "target",
