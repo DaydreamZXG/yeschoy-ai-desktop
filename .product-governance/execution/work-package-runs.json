@@ -640,6 +640,22 @@
       "reportSha256": "sha256:9100bcb8d539f056390995af9a95628a1ab689f9a7b303e55965696dbb015dd4",
       "releaseUnitId": "RU-027",
       "releaseUnitHash": "sha256:c0a8f7867c08ac1207c0ba1ed218525a15054af289190cd5fa143fc193f67e0a"
+    },
+    {
+      "id": "RU-027/WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS@2026-09-02T11:08:33.342903+00:00",
+      "packageId": "WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS",
+      "baselineCommit": "a688f3e11a7f3d7e5e96d1d2e32377d70909e7cb",
+      "baselineTreeHash": "sha256:59f73db61b57db025778cacffa076cc467f05c6ed597f09bd33f938e7c8510b3",
+      "baselineSnapshotPath": "execution/baselines/2426b50d4864a9ae.00cb2e86c9990b4e58d2.json",
+      "baselineSnapshotSha256": "sha256:75642b7fcd9ba76fe8c30bf8371f61c57ec99d3a42a7beb67ef52c6e3985cfae",
+      "assignedTo": "root",
+      "status": "completed",
+      "startedAt": "2026-09-02T11:08:33.342903+00:00",
+      "finishedAt": "2026-09-02T11:12:02.138673+00:00",
+      "reportPath": "execution/reports/2426b50d4864a9ae.00cb2e86c9990b4e58d2.json",
+      "reportSha256": "sha256:ca1a99ecc9f86dfc2e581c9908f93804a39364c87ba38c7e46e2352353b64837",
+      "releaseUnitId": "RU-027",
+      "releaseUnitHash": "sha256:c0a8f7867c08ac1207c0ba1ed218525a15054af289190cd5fa143fc193f67e0a"
     }
   ]
 }

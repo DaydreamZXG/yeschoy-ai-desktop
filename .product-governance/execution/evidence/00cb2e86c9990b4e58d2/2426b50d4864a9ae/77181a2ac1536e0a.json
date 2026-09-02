@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU027-AS-01",
+  "assertion": "All five adapters preserve unrelated configuration, use only operating-system-backed secrets, read back owned fields and can become ready only after a bounded tool-level request succeeds.",
+  "testSelector": "tests/work_packages/ru027/test_acceptance.py::test_native_verified_adapter_transactions",
+  "acceptanceCommandId": "ru027-native",
+  "runId": "RU-027/WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS@2026-09-02T11:08:33.342903+00:00",
+  "packageId": "WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru027/test_acceptance.py::test_native_verified_adapter_transactions",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:f402fca74b36032429c698a71596fc6a1eb0607982d5a37769327e096fc12efb",
+    "machineReportSha256": "sha256:19704031be05d6faa00e17c338d67e100cfd4c29e676c71bd730682fe7ec44ab",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:9980d251756023cbecf3921b5ac81efe9cc460eaa5730f8258b56d9466149d96",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:f7075afbbbd98bededb8c7731637875e71640794e8d13f613d07c6636ed113bf",
+  "releaseUnitId": "RU-027",
+  "releaseUnitHash": "sha256:c0a8f7867c08ac1207c0ba1ed218525a15054af289190cd5fa143fc193f67e0a"
+}

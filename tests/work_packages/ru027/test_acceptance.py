@@ -52,6 +52,7 @@ def test_native_verified_adapter_transactions(tmp_path: Path) -> None:
     assert "test result: ok. 51 passed" in output
 
     activation = read("src-tauri/src/tool_activation.rs")
+    desktop_discovery = read("src-tauri/src/desktop_app_discovery.rs")
     adapters = {
         "claude_code": "src-tauri/src/tool_adapters/claude_code.rs",
         "claude_desktop": "src-tauri/src/tool_adapters/claude_desktop.rs",
@@ -68,6 +69,8 @@ def test_native_verified_adapter_transactions(tmp_path: Path) -> None:
     assert '"ready"' in activation
     assert activation.index("verify_adapter(") < activation.rindex('"ready"')
     assert "restore_after_failure(" in activation
+    assert "windows_sys::Win32::Storage::FileSystem" in desktop_discovery
+    assert "windows_sys::Win32::System::Diagnostics::Debug" not in desktop_discovery
 
 
 def resolve_node_modules() -> Dict[str, str]:
