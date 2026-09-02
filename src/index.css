@@ -122,10 +122,12 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 summary:focus-visible,
-a:focus-visible,
-h1[tabindex="-1"]:focus-visible {
+a:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 3px;
+}
+h1[tabindex="-1"]:focus {
+  outline: none;
 }
 button svg {
   width: 16px;
@@ -1082,8 +1084,7 @@ details dl div {
   align-items: flex-start;
   border-color: var(--accent-line);
   background:
-    linear-gradient(90deg, var(--accent-soft), transparent 38%),
-    var(--surface);
+    linear-gradient(90deg, var(--accent-soft), transparent 38%), var(--surface);
 }
 .authorization-mark,
 .account-avatar-large,
@@ -1231,6 +1232,27 @@ details dl div {
   border-top: 1px solid var(--line);
   border-radius: 0;
   background: transparent;
+}
+.account-model-catalog-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.account-model-catalog-status > div {
+  display: grid;
+  gap: 4px;
+}
+.account-model-catalog-status strong {
+  font-size: 13px;
+  font-weight: 550;
+}
+.account-model-catalog-status small {
+  color: var(--muted);
+  font-size: 11px;
 }
 .price-comparison-panel {
   margin-top: 22px;
@@ -1456,6 +1478,37 @@ details dl div {
   display: grid;
   gap: 23px;
 }
+.account-model-selector {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.9fr) auto;
+  align-items: end;
+  gap: 16px;
+  margin-top: 22px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.account-model-selector h2 {
+  font-size: 16px;
+}
+.account-model-selector p:not(.eyebrow) {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.account-model-selector label {
+  display: grid;
+  gap: 7px;
+}
+.account-model-selector label span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.account-model-selector .secondary-action {
+  min-height: 38px;
+}
 .configuration-tool-grid,
 .line-selector-grid {
   display: grid;
@@ -1605,6 +1658,67 @@ details dl div {
 .desktop-technical-details dl div {
   grid-template-columns: 1fr;
   gap: 4px;
+}
+.success-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 11px;
+  font-weight: 600;
+}
+.setup-privacy-note,
+.setup-result {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 13px;
+  border-radius: 10px;
+}
+.setup-privacy-note {
+  background: var(--subtle);
+  color: var(--muted);
+}
+.setup-privacy-note svg,
+.setup-result svg {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  margin-top: 1px;
+}
+.setup-privacy-note p,
+.setup-result p {
+  display: grid;
+  gap: 3px;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.setup-privacy-note strong,
+.setup-result strong {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.setup-result.is-success {
+  border: 1px solid color-mix(in srgb, var(--success) 24%, transparent);
+  background: var(--success-soft);
+  color: var(--success);
+}
+.setup-result.is-error {
+  border: 1px solid color-mix(in srgb, var(--danger) 22%, transparent);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.setup-apply {
+  width: 100%;
+  justify-content: center;
+}
+.setup-apply svg {
+  width: 16px;
+  height: 16px;
 }
 .safety-ledger {
   border-top: 1px solid var(--line);
@@ -2381,6 +2495,14 @@ details dl div {
   .discovery-panel,
   .configuration-preview-panel {
     padding: 18px;
+  }
+  .account-model-selector {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+  .account-model-catalog-status {
+    align-items: flex-start;
+    flex-direction: column;
   }
   .account-metrics {
     grid-template-columns: 1fr;

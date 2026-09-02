@@ -1,18 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowDownUp, BadgePercent, Layers3 } from "lucide-react";
-import { useAccountSession } from "../account/useAccountSession";
-import { ServiceCatalogPanel } from "../service-catalog/ServiceCatalogPanel";
+import type { AccountSessionController } from "../account/useAccountSession";
 import {
   CONFIGURATION_LINES,
   type ConfigurationLineId,
   type ConfigurationToolId,
 } from "../configuration/preview";
-import type { ToolAccessPlan } from "../service-catalog/access-plan";
 import { useWorkbenchCopy } from "./copy";
 import { WorkbenchFooter } from "./WorkbenchChrome";
 
-const noReadSideEffect = () => {};
 const EMPTY_MODELS: never[] = [];
 
 function price(value: string): string {
@@ -20,26 +17,29 @@ function price(value: string): string {
   return Number.isFinite(number) ? `¥${number.toFixed(2)}` : "—";
 }
 
-export function ModelsView() {
+export function ModelsView({
+  line,
+  onLineChange,
+  session,
+  onOpenAccount,
+}: {
+  line: ConfigurationLineId;
+  onLineChange: (line: ConfigurationLineId) => void;
+  session: AccountSessionController;
+  onOpenAccount: () => void;
+}) {
   const c = useWorkbenchCopy();
   const { t } = useTranslation();
   const [tool, setTool] = useState<ConfigurationToolId>("claude");
-  const [line, setLine] =
-    useState<ConfigurationLineId>("mainland_optimized");
-  const [plan, setPlan] = useState<ToolAccessPlan | null>(null);
   const [selectedModelId, setSelectedModelId] = useState("");
-  const { projection, loading, refresh } = useAccountSession(line);
+  const { projection, loading, refresh } = session;
   const accountModels =
     projection?.status === "signed_in" ? projection.models : EMPTY_MODELS;
 
   useEffect(() => {
-    if (plan && accountModels.some((model) => model.id === plan.modelId)) {
-      setSelectedModelId(plan.modelId);
-      return;
-    }
     if (!accountModels.some((model) => model.id === selectedModelId))
       setSelectedModelId(accountModels[0]?.id ?? "");
-  }, [accountModels, plan, selectedModelId]);
+  }, [accountModels, selectedModelId]);
 
   const selected = accountModels.find((model) => model.id === selectedModelId);
   const savings = useMemo(() => {
@@ -82,7 +82,7 @@ export function ModelsView() {
             <select
               value={line}
               onChange={(event) =>
-                setLine(event.target.value as ConfigurationLineId)
+                onLineChange(event.target.value as ConfigurationLineId)
               }
             >
               {CONFIGURATION_LINES.map((item) => (
@@ -93,12 +93,31 @@ export function ModelsView() {
             </select>
           </label>
         </div>
-        <ServiceCatalogPanel
-          toolId={tool}
-          lineId={line}
-          onPlanChange={setPlan}
-          onReadAttempt={noReadSideEffect}
-        />
+        <div className="account-model-catalog-status" role="status">
+          <div>
+            <strong>
+              {projection?.status === "signed_in"
+                ? c.availableModels.replace(
+                    "{{count}}",
+                    String(accountModels.length),
+                  )
+                : c.priceSignInRequired}
+            </strong>
+            <small>{c.fullId}</small>
+          </div>
+          <button
+            type="button"
+            className="secondary-action"
+            onClick={() =>
+              projection?.status === "signed_in"
+                ? void refresh()
+                : onOpenAccount()
+            }
+            disabled={loading}
+          >
+            {projection?.status === "signed_in" ? c.refresh : c.signIn}
+          </button>
+        </div>
       </section>
 
       <section className="price-comparison-panel account-price-panel">
@@ -125,10 +144,10 @@ export function ModelsView() {
             <button
               type="button"
               className="secondary-action"
-              onClick={() => void refresh()}
+              onClick={onOpenAccount}
               disabled={loading}
             >
-              {c.retry}
+              {c.signIn}
             </button>
           </div>
         ) : accountModels.length === 0 ? (
@@ -198,9 +217,7 @@ export function ModelsView() {
                     </article>
                   </div>
                 ) : (
-                  <p className="account-inline-warning">
-                    {c.priceUnavailable}
-                  </p>
+                  <p className="account-inline-warning">{c.priceUnavailable}</p>
                 )}
               </>
             )}
@@ -209,8 +226,12 @@ export function ModelsView() {
 
         <div className="fx-note">
           <span>{c.fx}</span>
-          <strong>1 USD = 6.75 CNY</strong>
-          <small>{c.fxNote}</small>
+          <strong>
+            {projection?.comparisonFx
+              ? `1 USD = ${projection.comparisonFx} CNY`
+              : "—"}
+          </strong>
+          <small>{c.serverFxNote}</small>
         </div>
         <p className="price-method-note">{c.priceMethodNote}</p>
       </section>

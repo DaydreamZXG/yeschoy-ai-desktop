@@ -17,6 +17,7 @@ import {
   ChartNoAxesCombined,
 } from "lucide-react";
 import brandIcon from "../assets/brand/yeschoy-app-icon.svg";
+import { quotaToUsd, type AccountProjection } from "../account/session";
 import { CANDIDATE_VERSION } from "../candidate/readiness";
 import type { Appearance } from "./appearance";
 import { useWorkbenchCopy } from "./copy";
@@ -65,13 +66,23 @@ export function WorkbenchSidebar({
   onNavigate,
   appearance,
   onAppearance,
+  accountProjection,
+  accountLoading,
 }: {
   view: AppView;
   onNavigate: (view: AppView) => void;
   appearance: Appearance;
   onAppearance: (value: Appearance) => void;
+  accountProjection: AccountProjection | null;
+  accountLoading: boolean;
 }) {
   const c = useWorkbenchCopy();
+  const signedIn = accountProjection?.status === "signed_in";
+  const accountName = signedIn
+    ? accountProjection.account.displayName ||
+      accountProjection.account.username ||
+      c.signedInAs
+    : c.guest;
   const nav = [
     { id: "home", label: c.home, icon: LayoutDashboard },
     { id: "setup", label: c.apps, icon: Blocks },
@@ -129,13 +140,22 @@ export function WorkbenchSidebar({
             <CircleUserRound aria-hidden="true" />
           </span>
           <span>
-            <strong>{c.guest}</strong>
-            <small>{c.accountNote}</small>
+            <strong>{accountName}</strong>
+            <small>
+              {signedIn
+                ? c.signedInStatus
+                : accountLoading
+                  ? c.checking
+                  : c.accountNote}
+            </small>
           </span>
           <ChevronRight aria-hidden="true" />
         </button>
         <small className="sidebar-edition">
-          野菜API <span>{CANDIDATE_VERSION} · {c.edition}</span>
+          野菜API{" "}
+          <span>
+            {CANDIDATE_VERSION} · {c.edition}
+          </span>
         </small>
       </div>
     </aside>
@@ -146,28 +166,69 @@ export function AccountSummary({
   scanning = false,
   onOpenAccount,
   onOpenApps,
+  accountProjection,
+  accountLoading = false,
 }: {
   detected?: number;
   scanning?: boolean;
   onOpenAccount: () => void;
   onOpenApps?: () => void;
+  accountProjection: AccountProjection | null;
+  accountLoading?: boolean;
 }) {
   const c = useWorkbenchCopy();
+  const signedIn = accountProjection?.status === "signed_in";
+  const account = signedIn ? accountProjection.account : null;
+  const usage = signedIn ? accountProjection.usage : null;
+  const balance = account?.available
+    ? quotaToUsd(account.balanceQuota, account.quotaPerUnit)
+    : null;
+  const spentQuota = usage?.available
+    ? usage.consumedQuota
+    : (account?.usedQuota ?? "");
+  const spent = account?.available
+    ? quotaToUsd(spentQuota, account.quotaPerUnit)
+    : null;
+  const compact = (value: string) => {
+    const number = Number(value);
+    return Number.isFinite(number)
+      ? new Intl.NumberFormat(undefined, { notation: "compact" }).format(number)
+      : null;
+  };
+  const money = (value: number | null) =>
+    value === null
+      ? null
+      : new Intl.NumberFormat(undefined, {
+          style: "currency",
+          currency: "USD",
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        }).format(value);
+  const accountValues = [
+    { label: c.balance, icon: Wallet, value: money(balance), unit: "USD" },
+    { label: c.spent, icon: ReceiptText, value: money(spent), unit: "USD" },
+    {
+      label: c.tokens,
+      icon: ChartNoAxesCombined,
+      value: usage?.available ? compact(usage.tokenCount) : null,
+      unit: "tokens",
+    },
+  ];
   return (
     <section className="workbench-stats" aria-label={c.usage}>
-      {[
-        { label: c.balance, icon: Wallet },
-        { label: c.spent, icon: ReceiptText },
-        { label: c.tokens, icon: ChartNoAxesCombined },
-      ].map(({ label, icon: Icon }, i) => (
+      {accountValues.map(({ label, icon: Icon, value, unit }, i) => (
         <article className="summary-card" key={label}>
           <span className="summary-label">
             <Icon aria-hidden="true" />
             {label}
           </span>
-          <strong aria-label={c.noAccountData}>—</strong>
+          <strong aria-label={value ? undefined : c.noAccountData}>
+            {value ?? "—"}
+          </strong>
           <div className="summary-bottom">
-            <span>{c.unavailable}</span>
+            <span>
+              {value ? unit : accountLoading ? c.checking : c.unavailable}
+            </span>
             {i === 0 && (
               <button
                 type="button"

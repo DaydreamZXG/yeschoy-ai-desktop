@@ -217,6 +217,7 @@ describe("beginner scan recovery", () => {
     expect(card.textContent).not.toMatch(/已接通|已连接/);
     expect(native.mock.calls.map(([cmd]) => cmd)).toEqual([
       "scan_desktop_apps_read_only",
+      "account_inspect_v2",
       "scan_tools_read_only_v2",
     ]);
   });
@@ -267,8 +268,8 @@ describe("beginner scan recovery", () => {
       native.mock.calls.every(([cmd]) =>
         [
           "scan_desktop_apps_read_only",
+          "account_inspect_v2",
           "scan_tools_read_only_v2",
-          "read_public_service_catalog",
         ].includes(cmd),
       ),
     ).toBe(true);

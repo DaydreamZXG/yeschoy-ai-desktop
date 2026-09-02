@@ -11,6 +11,8 @@ import { ConfigurationPreviewView } from "./configuration/ConfigurationPreviewVi
 import type { DesktopAppId } from "./desktop-apps/contract";
 import { DiagnosticsView } from "./diagnostics/DiagnosticsView";
 import { SettingsView } from "./settings/SettingsView";
+import { useAccountSession } from "./account/useAccountSession";
+import type { ConfigurationLineId } from "./configuration/preview";
 import {
   TOOL_CATALOG,
   decodeScan,
@@ -31,6 +33,9 @@ function App() {
   const [selectedDesktopApp, setSelectedDesktopApp] =
     useState<DesktopAppId>("claude_desktop");
   const [phase, setPhase] = useState<ViewPhase>("default");
+  const [accountLineId, setAccountLineId] =
+    useState<ConfigurationLineId>("mainland_optimized");
+  const accountSession = useAccountSession(accountLineId);
   const [scan, setScan] = useState<ScanResponse | null>(null);
   const latestRequestRef = useRef("");
   const requestSequenceRef = useRef(0);
@@ -114,6 +119,8 @@ function App() {
         onNavigate={setView}
         appearance={appearance}
         onAppearance={changeAppearance}
+        accountProjection={accountSession.projection}
+        accountLoading={accountSession.loading}
       />
 
       {view === "home" ? (
@@ -126,14 +133,27 @@ function App() {
           onOpenDiagnostics={() => setView("diagnostics")}
           onOpenTools={() => setView("tools")}
           onOpenSettings={() => setView("settings")}
+          accountSession={accountSession}
         />
       ) : view === "account" ? (
-        <AccountView />
+        <AccountView
+          lineId={accountLineId}
+          onLineChange={setAccountLineId}
+          session={accountSession}
+        />
       ) : view === "models" ? (
-        <ModelsView />
+        <ModelsView
+          line={accountLineId}
+          onLineChange={setAccountLineId}
+          session={accountSession}
+          onOpenAccount={() => setView("account")}
+        />
       ) : view === "setup" ? (
         <ConfigurationPreviewView
           initialDesktopAppId={selectedDesktopApp}
+          lineId={accountLineId}
+          onLineChange={setAccountLineId}
+          session={accountSession}
           onOpenAccount={() => setView("account")}
           onOpenTools={() => setView("tools")}
         />

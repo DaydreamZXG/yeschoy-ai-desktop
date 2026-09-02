@@ -1825,6 +1825,37 @@
           "security-update"
         ]
       }
+    },
+    {
+      "id": "DEC-068",
+      "question": "What bounded client correction may replace the RU-023 preview-oriented behavior after the owner verified the deployed NewAPI desktop interfaces?",
+      "choice": "Freeze RU-024 as an internal functional client candidate that depends on and supersedes RU-023. A desktop session is one first-party account session and survives switching between the two compiled origins; only a real authorization failure clears it. Price comparison uses the positive usd_exchange_rate returned by NewAPI status instead of a compiled constant. The shell owns one shared account projection, and Claude Desktop Code workspace plus Codex gain a native-only one-click setup transaction that validates the selected account model, reuses or creates a dedicated NewAPI tool token, writes only the target fields with volatile rollback, and never returns the token or local path to JavaScript. No retained backup history, server edit, database migration, DSH adapter, other-tool write, telemetry, updater or public-release claim is authorized.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-09-02T00:00:00+08:00",
+      "evidenceRefs": [
+        "E-USER-056",
+        "E-CODE-042",
+        "E-PROP-017"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-052"
+        ],
+        "pageRefs": [
+          "PAGE-HOME",
+          "PAGE-ACCOUNT",
+          "PAGE-BILLING",
+          "PAGE-MODELS",
+          "PAGE-CONFIGURE-PREVIEW"
+        ],
+        "domainRefs": [
+          "account",
+          "billing",
+          "tool-config",
+          "desktop-platform"
+        ]
+      }
     }
   ]
 }

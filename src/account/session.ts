@@ -54,7 +54,7 @@ export interface AccountModel {
 
 export interface AccountProjection {
   requestId: string;
-  schemaVersion: 2;
+  schemaVersion: 3;
   status: AccountStatus;
   userCode: string;
   pollAfterSeconds: number;
@@ -63,7 +63,7 @@ export interface AccountProjection {
   account: AccountSummary;
   usage: UsageSummary;
   models: AccountModel[];
-  comparisonFx: "6.75";
+  comparisonFx: string;
   reasonCode: string;
 }
 
@@ -80,7 +80,11 @@ function exactKeys(value: RecordValue, names: string[]): boolean {
   );
 }
 
-function safeText(value: unknown, maximum: number, empty = true): value is string {
+function safeText(
+  value: unknown,
+  maximum: number,
+  empty = true,
+): value is string {
   return (
     typeof value === "string" &&
     (empty || value.length > 0) &&
@@ -210,7 +214,7 @@ export function decodeAccountProjection(
       "reasonCode",
     ]) ||
     value.requestId !== requestId ||
-    value.schemaVersion !== 2 ||
+    value.schemaVersion !== 3 ||
     !ACCOUNT_STATUSES.includes(value.status as AccountStatus) ||
     !safeText(value.userCode, 16) ||
     !Number.isSafeInteger(value.pollAfterSeconds) ||
@@ -226,7 +230,7 @@ export function decodeAccountProjection(
     value.models.length > 2048 ||
     !value.models.every(model) ||
     new Set(value.models.map((row) => row.id)).size !== value.models.length ||
-    value.comparisonFx !== "6.75" ||
+    !decimalText(value.comparisonFx) ||
     !safeText(value.reasonCode, 80, false)
   )
     return null;
@@ -240,6 +244,11 @@ export function decodeAccountProjection(
   } else if (value.userCode !== "") return null;
   if (value.status === "signed_in") {
     if (!(value.account as AccountSummary).available) return null;
+    if (
+      value.models.some((row) => (row as AccountModel).pricingAvailable) &&
+      (value.comparisonFx === "" || Number(value.comparisonFx) <= 0)
+    )
+      return null;
   } else if (
     (value.account as AccountSummary).available ||
     (value.usage as UsageSummary).available ||

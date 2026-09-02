@@ -13,6 +13,7 @@ import { ServiceCatalogPanel } from "./ServiceCatalogPanel";
 import { ConfigurationPreviewView } from "../configuration/ConfigurationPreviewView";
 import { catalogFixture } from "./test-fixtures";
 import type { ConfigurationLineId } from "../configuration/preview";
+import type { AccountSessionController } from "../account/useAccountSession";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 const mockedInvoke = vi.mocked(invoke);
@@ -25,6 +26,54 @@ function respond() {
     const { request } = args as RequestArgs;
     return catalogFixture(request.requestId, request.lineId);
   });
+}
+function signedInSession(): AccountSessionController {
+  return {
+    projection: {
+      requestId: "account-test",
+      schemaVersion: 3,
+      status: "signed_in",
+      userCode: "",
+      pollAfterSeconds: 0,
+      expiresAtEpochMs: 0,
+      observedAtEpochMs: 1,
+      account: {
+        available: true,
+        displayName: "Test",
+        username: "test",
+        balanceQuota: "1",
+        usedQuota: "0",
+        requestCount: "0",
+        quotaPerUnit: "1",
+      },
+      usage: {
+        available: true,
+        consumedQuota: "0",
+        requestRate: "0",
+        tokenCount: "0",
+      },
+      models: [
+        {
+          id: "glm-5.3",
+          description: "",
+          billingMode: "ratio",
+          pricingAvailable: true,
+          officialInputCnyPerMillion: "2",
+          officialOutputCnyPerMillion: "8",
+          actualInputCnyPerMillion: "1",
+          actualOutputCnyPerMillion: "4",
+        },
+      ],
+      comparisonFx: "1",
+      reasonCode: "none",
+    },
+    loading: false,
+    refresh: vi.fn(async () => null),
+    beginAuthorization: vi.fn(async () => null),
+    cancelAuthorization: vi.fn(async () => null),
+    logout: vi.fn(async () => null),
+    openWallet: vi.fn(async () => true),
+  };
 }
 beforeEach(async () => {
   mockedInvoke.mockReset();
@@ -42,39 +91,29 @@ beforeEach(async () => {
 });
 
 describe("catalog selection and recovery", () => {
-  it("preserves the shared preview when the selected line is clicked again", async () => {
-    respond();
+  it("uses the shared signed-in model list without a second public catalog flow", async () => {
+    const onLineChange = vi.fn();
     render(
       <ConfigurationPreviewView
+        lineId="mainland_optimized"
+        onLineChange={onLineChange}
+        session={signedInSession()}
         onOpenAccount={vi.fn()}
         onOpenTools={vi.fn()}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: "获取模型列表" }));
-    await screen.findByRole("combobox", { name: /服务分组/ });
-    fireEvent.change(screen.getByRole("combobox", { name: /服务分组/ }), {
-      target: { value: "test-group" },
-    });
-    fireEvent.change(screen.getByRole("combobox", { name: /模型 ID/ }), {
-      target: { value: "test/model" },
-    });
     const preview = screen.getByRole("region", { name: "确认接入信息" });
-    expect(preview).toHaveTextContent("test/model");
+    expect(preview).toHaveTextContent("glm-5.3");
     fireEvent.click(
       screen.getByRole("button", { name: /大陆优化 中国大陆网络优先/ }),
     );
-    expect(preview).toHaveTextContent("test/model");
-    expect(preview).toHaveTextContent("test-group");
-    expect(screen.getByRole("combobox", { name: /模型 ID/ })).toHaveValue(
-      "test/model",
-    );
+    expect(preview).toHaveTextContent("glm-5.3");
+    expect(onLineChange).not.toHaveBeenCalled();
     fireEvent.click(
       screen.getByRole("button", { name: /全球加速 Cloudflare 全球线路/ }),
     );
-    expect(preview).not.toHaveTextContent("test/model");
-    expect(preview).not.toHaveTextContent("test-group");
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
-    expect(mockedInvoke).toHaveBeenCalledTimes(1);
+    expect(onLineChange).toHaveBeenCalledWith("global_accelerated");
+    expect(mockedInvoke).not.toHaveBeenCalled();
   });
   it("only reads on user action and emits a real ID preview without authorization", async () => {
     respond();

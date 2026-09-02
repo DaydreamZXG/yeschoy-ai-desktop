@@ -1773,6 +1773,43 @@
         "E-EXT-040",
         "E-USER-049"
       ]
+    },
+    {
+      "id": "E-USER-056",
+      "claim": "After testing the deployed client and server integration, the owner requires one shared signed-in state across both first-party lines, NewAPI-owned USD/CNY comparison settings, a working authenticated model list, and real one-click setup instead of preview-only or disabled controls.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-02:明明我登陆了还是显示没登录，对比汇率跟着我们的newAPI来走，一键接入暂未开放？为啥啥功能都没用啊",
+      "observedAt": "2026-09-02T00:00:00+08:00",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-042",
+      "claim": "Current client code binds both in-memory and stored desktop sessions to one line ID and deletes the stored credential when another first-party line is selected; it also fixes the comparison conversion to 6.75, renders the sidebar account as a guest, and hard-disables configuration apply. The deployed NewAPI status endpoint currently returns usd_exchange_rate 1 and quota_per_unit 500000 on both lines, and its desktop-session allowlist permits the token list, create, reveal, update and delete routes needed by a native-only setup transaction.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/account_v2.rs;src/workbench/WorkbenchChrome.tsx;src/configuration/ConfigurationPreviewView.tsx;https://yeschoy.com/api/status;https://api.yeschoy.com/api/status;../new-api/middleware/auth.go;../new-api/controller/token.go",
+      "observedAt": "2026-09-02T00:00:00+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-017",
+      "claim": "RU-024 should supersede RU-023 as an internal functional client candidate: make the first-party desktop session line-independent, project NewAPI status USD/CNY settings, share account state across the shell, use the authenticated model list, and add one native-only setup command for Claude Desktop's Code workspace and Codex. The command reuses or creates one dedicated unrestricted tool token per target, validates the selected account model and compiled origin, writes only owned fields with transaction-scoped in-memory rollback, returns no credential or path, and retains no backup history. DSH, other tools, server code, deployment, updater, telemetry and public release remain outside the unit.",
+      "class": "proposed",
+      "locator": "inline:ru024-functional-client-activation",
+      "observedAt": "2026-09-02T00:00:00+08:00",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-USER-056",
+        "E-CODE-042",
+        "E-USER-049"
+      ]
     }
   ]
 }

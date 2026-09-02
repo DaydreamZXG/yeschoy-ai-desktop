@@ -1053,6 +1053,30 @@
         "Tool-key creation, DSH or other tool writes, backups, server code, database, Nginx, deployment, telemetry upload, updater activation and public release are outside RU-023.",
         "The candidate and handoff state explicitly retain a production blocker until the server branch is deployed and desktop-issued sessions are restricted server-side to approved desktop routes."
       ]
+    },
+    {
+      "id": "REQ-052",
+      "statement": "RU-024 turns the deployed NewAPI integration into one coherent internal functional client candidate with shared first-party account state, server-owned comparison conversion, authenticated models, and native-only one-click setup for Claude Desktop's Code workspace and Codex.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-056",
+        "E-CODE-042",
+        "E-PROP-017",
+        "E-USER-049"
+      ],
+      "acceptance": [
+        "Changing between mainland optimized and global accelerated never deletes or invalidates a valid desktop credential; only confirmed expiry, revocation, logout or an authenticated 401/403 clears it.",
+        "The overview, sidebar, account, model and setup destinations consume one shared account projection and cannot simultaneously label the same current session signed in and signed out.",
+        "The account model list is the selection authority for setup and prices; stale public-preview blockers and guest-only copy no longer disable an authenticated user.",
+        "The positive usd_exchange_rate from the selected NewAPI status response is displayed and used for comparable official-reference and current-account CNY prices; an absent or malformed rate makes comparison unavailable instead of falling back to 6.75.",
+        "One-click setup supports exactly Claude Desktop's Code workspace and Codex in this unit, validates one selected account model and compiled first-party line, and reports a closed success or recovery reason.",
+        "The native command reuses or creates one dedicated unrestricted NewAPI tool token for the selected target, prefixes it for relay use, never returns it to JavaScript, and deletes a newly created token if the local write cannot commit.",
+        "Claude setup changes only the owned env fields in the existing settings object; Codex setup changes only its active model/provider table and OPENAI_API_KEY. Existing unrelated fields are preserved, writes are atomic, and an in-memory transaction snapshot restores all touched files after failure without retained backup history.",
+        "DSH, OpenCode, Pi, other tool writes, NewAPI source, database schema, Nginx, DNS, deployment, telemetry, updater and public release remain outside RU-024."
+      ]
     }
   ]
 }

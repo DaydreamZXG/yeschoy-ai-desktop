@@ -58,7 +58,7 @@ function discovery(requestId: string, version = "1.2.3") {
 function signedOut(requestId: string) {
   return {
     requestId,
-    schemaVersion: 2,
+    schemaVersion: 3,
     status: "signed_out",
     userCode: "",
     pollAfterSeconds: 0,
@@ -80,7 +80,7 @@ function signedOut(requestId: string) {
       tokenCount: "",
     },
     models: [],
-    comparisonFx: "6.75",
+    comparisonFx: "",
     reasonCode: "signed_out",
   };
 }
@@ -110,21 +110,32 @@ function signedIn(requestId: string) {
         description: "",
         billingMode: "ratio",
         pricingAvailable: true,
-        officialInputCnyPerMillion: "13.5",
-        officialOutputCnyPerMillion: "54",
-        actualInputCnyPerMillion: "6.75",
-        actualOutputCnyPerMillion: "27",
+        officialInputCnyPerMillion: "2",
+        officialOutputCnyPerMillion: "8",
+        actualInputCnyPerMillion: "1",
+        actualOutputCnyPerMillion: "4",
       },
     ],
+    comparisonFx: "1",
     reasonCode: "none",
   };
 }
+const accountSession = () => ({
+  projection: null,
+  loading: false,
+  refresh: vi.fn(async () => null),
+  beginAuthorization: vi.fn(async () => null),
+  cancelAuthorization: vi.fn(async () => null),
+  logout: vi.fn(async () => null),
+  openWallet: vi.fn(async () => true),
+});
 const callbacks = () => ({
   onOpenAccount: vi.fn(),
   onOpenSetup: vi.fn(),
   onOpenDiagnostics: vi.fn(),
   onOpenTools: vi.fn(),
   onOpenSettings: vi.fn(),
+  accountSession: accountSession(),
 });
 type Args = {
   request: {
@@ -142,8 +153,7 @@ beforeEach(async () => {
       return discovery(request.requestId);
     if (command === "read_public_service_catalog")
       return catalogFixture(request.requestId, request.lineId);
-    if (command === "account_inspect_v2")
-      return signedOut(request.requestId);
+    if (command === "account_inspect_v2") return signedOut(request.requestId);
     throw Error("Not available in test");
   });
   for (const [language, resource] of Object.entries(locales))
@@ -197,13 +207,13 @@ describe("official workbench", () => {
         checkCopy();
         if (label === c.apps) {
           expect(
-            screen.getByTestId("configuration-apply-blocked"),
-          ).toBeDisabled();
-          expect(container.querySelector(".safety-ledger")).not.toHaveAttribute(
-            "open",
-          );
+            screen.getByTestId("configuration-apply-action"),
+          ).toBeEnabled();
           expect(
-            container.querySelector(".preview-blockers"),
+            screen.getByTestId("configuration-apply-action"),
+          ).toHaveTextContent(c.signInFirst);
+          expect(
+            container.querySelector(".desktop-technical-details"),
           ).not.toHaveAttribute("open");
         }
         if (label === c.usage) {
@@ -223,7 +233,7 @@ describe("official workbench", () => {
       ).toBe(true);
       expect(
         commands.filter((command) => command === "account_inspect_v2"),
-      ).toHaveLength(2);
+      ).toHaveLength(1);
     },
   );
   it("keeps user-interface translation keys aligned in all four languages", () => {
@@ -262,20 +272,24 @@ describe("official workbench", () => {
     expect(screen.queryByText("¥128.60")).not.toBeInTheDocument();
     expect(native.mock.calls.map((call) => call[0])).toEqual([
       "scan_desktop_apps_read_only",
+      "account_inspect_v2",
     ]);
   });
-  it("takes the overview's choose-app action to application selection", async () => {
+  it("takes the application navigation to the working setup flow", async () => {
     render(<App />);
     await screen.findByText("1.2.3");
-    fireEvent.click(screen.getByRole("button", { name: "选择应用" }));
+    fireEvent.click(screen.getByRole("button", { name: "应用接入" }));
     expect(
       screen.getByTestId("configuration-preview-view"),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { level: 1, name: "应用接入" }),
     ).toHaveFocus();
-    expect(screen.getByTestId("configuration-apply-blocked")).toBeDisabled();
-    expect(native).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("configuration-apply-action")).toBeEnabled();
+    expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
+      "先去登录",
+    );
+    expect(native).toHaveBeenCalledTimes(2);
   });
   it("rejects an incomplete or mismatched result, shows unknown not absent, and retries", async () => {
     native.mockResolvedValueOnce(discovery("wrong-request"));
@@ -383,7 +397,7 @@ describe("official workbench", () => {
     expect(screen.queryByText("old-0.0.1")).not.toBeInTheDocument();
     expect(screen.getByText("1.2.3")).toBeInTheDocument();
   });
-  it("keeps the chosen desktop application in setup and blocks writes", async () => {
+  it("keeps the chosen desktop application and directs signed-out users to login", async () => {
     render(<App />);
     await screen.findByText("1.2.3");
     const codex = screen
@@ -396,10 +410,13 @@ describe("official workbench", () => {
     expect(
       screen.getByRole("button", { name: /Codex ChatGPT/ }),
     ).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByTestId("configuration-apply-blocked")).toBeDisabled();
-    expect(native).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("configuration-apply-action")).toBeEnabled();
+    expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
+      "先去登录",
+    );
+    expect(native).toHaveBeenCalledTimes(2);
   });
-  it("navigates to models and billing without automatic money or config actions", async () => {
+  it("uses one shared signed-out account state across billing and pricing", async () => {
     render(<App />);
     await screen.findByText("1.2.3");
     fireEvent.click(screen.getByRole("button", { name: "用量账单" }));
@@ -407,26 +424,23 @@ describe("official workbench", () => {
       await screen.findByRole("button", { name: "网页登录" }),
     ).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "模型与价格" }));
-    expect(await screen.findByText("登录后可查看当前账号可用模型和实际价格。")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "获取模型列表" }));
-    await screen.findByRole("combobox", { name: /服务分组/ });
-    fireEvent.change(screen.getByRole("combobox", { name: /服务分组/ }), {
-      target: { value: "test-group" },
-    });
-    fireEvent.change(screen.getByRole("combobox", { name: /模型 ID/ }), {
-      target: { value: "test/model" },
-    });
-    expect(screen.getAllByText("test/model").length).toBeGreaterThan(1);
+    expect(
+      await screen.findAllByText("登录后可查看当前账号可用模型和实际价格。"),
+    ).toHaveLength(2);
     expect(native.mock.calls.map((call) => call[0])).toEqual([
       "scan_desktop_apps_read_only",
       "account_inspect_v2",
-      "account_inspect_v2",
-      "read_public_service_catalog",
     ]);
     fireEvent.change(screen.getByRole("combobox", { name: "使用线路" }), {
       target: { value: "global_accelerated" },
     });
-    expect(screen.queryByText("test/model")).not.toBeInTheDocument();
+    expect(
+      await screen.findAllByText("登录后可查看当前账号可用模型和实际价格。"),
+    ).toHaveLength(2);
+    await act(async () => {});
+    expect(
+      native.mock.calls.filter((call) => call[0] === "account_inspect_v2"),
+    ).toHaveLength(2);
   });
   it("renders signed-in account facts and the auditable price comparison", async () => {
     native.mockImplementation(async (command, args) => {
@@ -441,15 +455,94 @@ describe("official workbench", () => {
     render(<App />);
     await screen.findByText("1.2.3");
     fireEvent.click(screen.getByRole("button", { name: "用量账单" }));
-    expect(await screen.findByText("野菜测试用户")).toBeInTheDocument();
+    expect(await screen.findAllByText("野菜测试用户")).toHaveLength(2);
     expect(screen.getByText(/0\.70/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /去充值/ })).toBeEnabled();
 
     fireEvent.click(screen.getByRole("button", { name: "模型与价格" }));
-    expect(await screen.findByText("glm-5.3")).toBeInTheDocument();
-    expect(screen.getByText("¥13.50")).toBeInTheDocument();
-    expect(screen.getByText("¥6.75")).toBeInTheDocument();
+    expect((await screen.findAllByText("glm-5.3")).length).toBeGreaterThan(1);
+    expect(screen.getByText("¥2.00")).toBeInTheDocument();
+    expect(screen.getByText("¥1.00")).toBeInTheDocument();
+    expect(screen.getByText("1 USD = 1 CNY")).toBeInTheDocument();
     expect(screen.getByText(/50%/)).toBeInTheDocument();
+  });
+  it("keeps the signed-in account visible while a new route is refreshing", async () => {
+    let inspections = 0;
+    let finishRouteRefresh: () => void = () => {};
+    native.mockImplementation(async (command, args) => {
+      const request = (args as Args).request;
+      if (command === "scan_desktop_apps_read_only")
+        return discovery(request.requestId);
+      if (command === "account_inspect_v2") {
+        inspections += 1;
+        if (inspections === 1) return signedIn(request.requestId);
+        if (inspections === 2)
+          return new Promise((resolve) => {
+            finishRouteRefresh = () => resolve(signedIn(request.requestId));
+          });
+        return {
+          ...signedOut(request.requestId),
+          status: "network_error",
+          reasonCode: "network_error",
+        };
+      }
+      throw Error("Not available in test");
+    });
+    render(<App />);
+    await screen.findAllByText("野菜测试用户");
+    fireEvent.click(screen.getByRole("button", { name: "模型与价格" }));
+    expect((await screen.findAllByText("glm-5.3")).length).toBeGreaterThan(1);
+    fireEvent.change(screen.getByRole("combobox", { name: "使用线路" }), {
+      target: { value: "global_accelerated" },
+    });
+    expect(screen.getAllByText("野菜测试用户")).toHaveLength(1);
+    expect(screen.getAllByText("glm-5.3").length).toBeGreaterThan(1);
+    await act(async () => finishRouteRefresh());
+    fireEvent.change(screen.getByRole("combobox", { name: "使用线路" }), {
+      target: { value: "mainland_optimized" },
+    });
+    await act(async () => {});
+    expect(screen.getAllByText("野菜测试用户")).toHaveLength(1);
+    expect(screen.getAllByText("glm-5.3").length).toBeGreaterThan(1);
+  });
+  it("configures the selected desktop app with the signed-in account model", async () => {
+    native.mockImplementation(async (command, args) => {
+      const request = (args as Args).request;
+      if (command === "scan_desktop_apps_read_only")
+        return discovery(request.requestId);
+      if (command === "account_inspect_v2") return signedIn(request.requestId);
+      if (command === "configure_desktop_tool_v1")
+        return {
+          requestId: request.requestId,
+          schemaVersion: 1,
+          status: "configured",
+          toolId: "codex_desktop",
+          modelId: "glm-5.3",
+          observedAtEpochMs: 1_788_195_600_000,
+          reasonCode: "none",
+        };
+      throw Error("Not available in test");
+    });
+    render(<App />);
+    await screen.findByText("1.2.3");
+    const codex = screen
+      .getByRole("heading", { name: "Codex" })
+      .closest("article")!;
+    fireEvent.click(within(codex).getByRole("button", { name: "查看接入" }));
+    await screen.findByRole("button", { name: "一键接入" });
+    fireEvent.click(screen.getByTestId("configuration-apply-action"));
+    expect(await screen.findByText("接入成功")).toBeInTheDocument();
+    expect(
+      screen.getByText("Codex 已连接野菜API，重新打开应用即可使用。"),
+    ).toBeInTheDocument();
+    expect(native).toHaveBeenCalledWith("configure_desktop_tool_v1", {
+      request: {
+        requestId: expect.stringMatching(/^activate-/),
+        lineId: "mainland_optimized",
+        toolId: "codex_desktop",
+        modelId: "glm-5.3",
+      },
+    });
   });
   it("syncs appearance controls, follows system changes and persists only an enum", async () => {
     const save = vi.spyOn(Storage.prototype, "setItem");
@@ -469,7 +562,7 @@ describe("official workbench", () => {
     systemDark = true;
     act(() => appearanceListener());
     expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(native).toHaveBeenCalledTimes(1);
+    expect(native).toHaveBeenCalledTimes(2);
   });
   it("keeps appearance usable when storage fails and rejects invalid preferences", async () => {
     localStorage.setItem(APPEARANCE_KEY, "unexpected-value");

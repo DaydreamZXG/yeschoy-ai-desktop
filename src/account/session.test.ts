@@ -4,7 +4,7 @@ import { decodeAccountProjection, quotaToUsd } from "./session";
 function signedIn(requestId = "account-test-1") {
   return {
     requestId,
-    schemaVersion: 2,
+    schemaVersion: 3,
     status: "signed_in",
     userCode: "",
     pollAfterSeconds: 0,
@@ -31,13 +31,13 @@ function signedIn(requestId = "account-test-1") {
         description: "",
         billingMode: "ratio",
         pricingAvailable: true,
-        officialInputCnyPerMillion: "13.5",
-        officialOutputCnyPerMillion: "54",
-        actualInputCnyPerMillion: "6.75",
-        actualOutputCnyPerMillion: "27",
+        officialInputCnyPerMillion: "14",
+        officialOutputCnyPerMillion: "56",
+        actualInputCnyPerMillion: "7",
+        actualOutputCnyPerMillion: "28",
       },
     ],
-    comparisonFx: "6.75",
+    comparisonFx: "7",
     reasonCode: "none",
   };
 }

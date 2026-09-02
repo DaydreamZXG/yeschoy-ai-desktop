@@ -5,6 +5,7 @@ mod desktop_app_discovery;
 mod desktop_app_discovery_core;
 mod service_catalog;
 mod service_catalog_core;
+mod tool_activation;
 mod tool_discovery;
 mod tool_discovery_core;
 mod tool_discovery_v2;
@@ -27,6 +28,7 @@ pub fn run() {
             account_v2::account_cancel_authorization_v2,
             account_v2::account_logout_v2,
             account_v2::account_open_wallet_v2,
+            tool_activation::configure_desktop_tool_v1,
             tool_discovery::scan_tools_read_only,
             tool_discovery_v2::scan_tools_read_only_v2,
             window_appearance::set_window_appearance,

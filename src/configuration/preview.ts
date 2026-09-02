@@ -5,9 +5,7 @@ export type ConfigurationToolId =
   | "pi"
   | "dsh";
 
-export type ConfigurationLineId =
-  | "mainland_optimized"
-  | "global_accelerated";
+export type ConfigurationLineId = "mainland_optimized" | "global_accelerated";
 
 export interface ConfigurationToolDefinition {
   id: ConfigurationToolId;
@@ -188,9 +186,7 @@ export function createConfigurationPreview(
     lineId: line.id,
     lineName: line.displayName,
     rootUrl: line.rootUrl,
-    protocolEndpoint: isDsh
-      ? ""
-      : `${line.rootUrl}${tool.protocolSuffix}`,
+    protocolEndpoint: isDsh ? "" : `${line.rootUrl}${tool.protocolSuffix}`,
     endpointStatus: tool.endpointStatus,
     targetFile: tool.targetFile,
     ownedFields: tool.ownedFields,

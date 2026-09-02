@@ -24,6 +24,7 @@ import {
 } from "../workbench/WorkbenchChrome";
 import { useWorkbenchCopy } from "../workbench/copy";
 import { AppGlyph } from "../workbench/AppGlyph";
+import type { AccountSessionController } from "../account/useAccountSession";
 
 interface CandidateHomeViewProps {
   onOpenAccount: () => void;
@@ -31,6 +32,7 @@ interface CandidateHomeViewProps {
   onOpenDiagnostics: () => void;
   onOpenTools: () => void;
   onOpenSettings: () => void;
+  accountSession: AccountSessionController;
 }
 const APP_CATALOG = [
   { id: "claude_desktop", icon: claudeIcon, accent: "clay" },
@@ -43,6 +45,7 @@ export function CandidateHomeView({
   onOpenSetup,
   onOpenDiagnostics,
   onOpenTools,
+  accountSession,
 }: CandidateHomeViewProps) {
   const { t, i18n } = useTranslation();
   const c = useWorkbenchCopy();
@@ -132,30 +135,59 @@ export function CandidateHomeView({
         scanning={phase === "loading"}
         onOpenAccount={onOpenAccount}
         onOpenApps={() => onOpenSetup("claude_desktop")}
+        accountProjection={accountSession.projection}
+        accountLoading={accountSession.loading}
       />
       <section className="onboarding-panel" aria-labelledby="onboarding-title">
         <div className="onboarding-stepbar">
           <ol>
             {[c.stepAccount, c.stepApp, c.stepConnect].map((step, i) => (
-              <li key={step} data-state={i === 0 ? "pending" : undefined}>
+              <li
+                key={step}
+                data-state={
+                  i === 0 && accountSession.projection?.status !== "signed_in"
+                    ? "pending"
+                    : i === 0
+                      ? "complete"
+                      : undefined
+                }
+              >
                 <span>{i + 1}</span>
                 {step}
               </li>
             ))}
           </ol>
-          <span className="status-badge">{c.accountPending}</span>
+          <span className="status-badge">
+            {accountSession.projection?.status === "signed_in"
+              ? c.accountReady
+              : c.accountPending}
+          </span>
         </div>
         <div className="onboarding-body">
           <div>
-            <h2 id="onboarding-title">{c.firstTitle}</h2>
-            <p>{c.firstBody}</p>
+            <h2 id="onboarding-title">
+              {accountSession.projection?.status === "signed_in"
+                ? c.firstTitle
+                : c.signInFirstTitle}
+            </h2>
+            <p>
+              {accountSession.projection?.status === "signed_in"
+                ? c.firstBody
+                : c.signInFirstBody}
+            </p>
           </div>
           <button
             type="button"
             className="primary-action"
-            onClick={() => onOpenSetup("claude_desktop")}
+            onClick={() =>
+              accountSession.projection?.status === "signed_in"
+                ? onOpenSetup("claude_desktop")
+                : onOpenAccount()
+            }
           >
-            {c.stepApp}
+            {accountSession.projection?.status === "signed_in"
+              ? c.stepApp
+              : c.signIn}
             <ArrowRight aria-hidden="true" />
           </button>
         </div>

@@ -17,7 +17,7 @@ use serde_json::{json, Value};
 
 use crate::connectivity_core::{request_id_is_valid, CONNECTIVITY_LINES};
 
-const CLIENT_VERSION: &str = "0.2.0";
+const CLIENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const MAX_RESPONSE_BYTES: usize = 2 * 1024 * 1024;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(20);
 const KEYRING_SERVICE: &str = "com.yeschoy.desktop.account";
@@ -57,7 +57,6 @@ struct PendingAuthorization {
 
 #[derive(Clone)]
 struct AccessSession {
-    line_id: String,
     access_token: String,
     access_expires_at: i64,
 }
@@ -65,6 +64,7 @@ struct AccessSession {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct StoredSession {
+    #[serde(default)]
     line_id: String,
     refresh_token: String,
     session_id: String,
@@ -150,7 +150,7 @@ pub struct AccountProjection {
     account: AccountSummary,
     usage: UsageSummary,
     models: Vec<AccountModel>,
-    comparison_fx: &'static str,
+    comparison_fx: String,
     reason_code: &'static str,
 }
 
@@ -158,7 +158,7 @@ impl AccountProjection {
     fn empty(request_id: String, status: &'static str, reason_code: &'static str) -> Self {
         Self {
             request_id,
-            schema_version: 2,
+            schema_version: 3,
             status,
             user_code: String::new(),
             poll_after_seconds: 0,
@@ -167,12 +167,16 @@ impl AccountProjection {
             account: AccountSummary::default(),
             usage: UsageSummary::default(),
             models: Vec::new(),
-            comparison_fx: "6.75",
+            comparison_fx: String::new(),
             reason_code,
         }
     }
 
-    fn pending(request_id: String, pending: &PendingAuthorization, reason_code: &'static str) -> Self {
+    fn pending(
+        request_id: String,
+        pending: &PendingAuthorization,
+        reason_code: &'static str,
+    ) -> Self {
         let mut projection = Self::empty(request_id, "authorization_pending", reason_code);
         projection.user_code = pending.user_code.clone();
         projection.poll_after_seconds = pending.poll_after_seconds;
@@ -405,7 +409,8 @@ async fn fetch_bootstrap(line_id: &str) -> Result<DesktopBootstrap, AccountProje
         || !data.models_read
         || !data.pricing_read
         || !data.tool_keys_manage
-        || (data.official_usd_cny_rate - 6.75).abs() > f64::EPSILON
+        || !data.official_usd_cny_rate.is_finite()
+        || data.official_usd_cny_rate <= 0.0
         || !paths_match
         || !wallet_url_is_allowed(&data.wallet_url)
     {
@@ -531,7 +536,6 @@ fn install_auth_bundle(
     save_stored_session(&stored)?;
     let mut runtime = state.runtime.lock().map_err(|_| ())?;
     runtime.access = Some(AccessSession {
-        line_id: line_id.to_owned(),
         access_token: bundle.access_token,
         access_expires_at: bundle.access_expires_at,
     });
@@ -548,6 +552,40 @@ enum AccountProjectionFailure {
     SecureStorage,
     SessionExpired,
     InvalidResponse,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum NativeSessionFailure {
+    SignedOut,
+    ServerUnavailable,
+}
+
+pub(crate) async fn native_session_access(
+    state: &AccountV2State,
+    line_id: &str,
+) -> Result<(String, String), NativeSessionFailure> {
+    let bootstrap = fetch_bootstrap(line_id)
+        .await
+        .map_err(|_| NativeSessionFailure::ServerUnavailable)?;
+    let access_token = refresh_access(state, &bootstrap, line_id)
+        .await
+        .map_err(|failure| match failure {
+            AccountProjectionFailure::SessionExpired => NativeSessionFailure::SignedOut,
+            _ => NativeSessionFailure::ServerUnavailable,
+        })?;
+    Ok((bootstrap.origin, access_token))
+}
+
+pub(crate) async fn native_account_json(
+    method: Method,
+    url: &str,
+    access_token: &str,
+    body: Option<Value>,
+) -> Result<(u16, Value), ()> {
+    let response = send_json(method, url, Some(access_token), body)
+        .await
+        .map_err(|_| ())?;
+    Ok((response.status.as_u16(), response.value))
 }
 
 fn failure_projection(request_id: String, failure: AccountProjectionFailure) -> AccountProjection {
@@ -597,15 +635,16 @@ async fn refresh_access(
         .access
         .clone()
     {
-        if access.line_id == line_id && access.access_expires_at > now_epoch_seconds() + 30 {
+        if access.access_expires_at > now_epoch_seconds() + 30 {
             return Ok(access.access_token);
         }
     }
-    let Some(stored) = load_stored_session().map_err(|_| AccountProjectionFailure::SecureStorage)?
+    let Some(stored) =
+        load_stored_session().map_err(|_| AccountProjectionFailure::SecureStorage)?
     else {
         return Err(AccountProjectionFailure::SessionExpired);
     };
-    if stored.line_id != line_id || stored.refresh_expires_at <= now_epoch_seconds() {
+    if stored.refresh_expires_at <= now_epoch_seconds() {
         let _ = delete_stored_session();
         return Err(AccountProjectionFailure::SessionExpired);
     }
@@ -675,22 +714,29 @@ async fn account_data(
         status_value.as_ref().map(|value| &value.value),
     );
     let usage_summary = parse_usage(usage_value.as_ref().map(|value| &value.value));
+    let comparison_fx = data_object(status_value.as_ref().map(|value| &value.value))
+        .and_then(|data| positive_number(data.get("usd_exchange_rate")));
     let models = parse_models(
         models_value.as_ref().map(|value| &value.value),
         pricing_value.as_ref().map(|value| &value.value),
         account_value.as_ref().map(|value| &value.value),
+        comparison_fx,
     );
     if !account_summary.available {
         return Err(AccountProjectionFailure::InvalidResponse);
     }
-    let reason_code = if usage_summary.available && models_value.is_some() && pricing_value.is_some() {
+    let reason_code = if usage_summary.available
+        && models_value.is_some()
+        && pricing_value.is_some()
+        && comparison_fx.is_some()
+    {
         "none"
     } else {
         "partial_data"
     };
     Ok(AccountProjection {
         request_id,
-        schema_version: 2,
+        schema_version: 3,
         status: "signed_in",
         user_code: String::new(),
         poll_after_seconds: 0,
@@ -699,7 +745,7 @@ async fn account_data(
         account: account_summary,
         usage: usage_summary,
         models,
-        comparison_fx: "6.75",
+        comparison_fx: comparison_fx.map(decimal).unwrap_or_default(),
         reason_code,
     })
 }
@@ -728,7 +774,9 @@ fn non_negative_integer(value: Option<&Value>) -> Option<String> {
 }
 
 fn positive_number(value: Option<&Value>) -> Option<f64> {
-    value?.as_f64().filter(|number| number.is_finite() && *number > 0.0)
+    value?
+        .as_f64()
+        .filter(|number| number.is_finite() && *number > 0.0)
 }
 
 fn bounded_text(value: Option<&Value>, maximum: usize) -> String {
@@ -736,9 +784,10 @@ fn bounded_text(value: Option<&Value>, maximum: usize) -> String {
         return String::new();
     };
     if value.chars().count() > maximum
-        || value
-            .chars()
-            .any(|character| character.is_control() || matches!(character, '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}'))
+        || value.chars().any(|character| {
+            character.is_control()
+                || matches!(character, '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
+        })
     {
         return String::new();
     }
@@ -792,7 +841,12 @@ fn parse_usage(value: Option<&Value>) -> UsageSummary {
     }
 }
 
-fn parse_models(models: Option<&Value>, pricing: Option<&Value>, account: Option<&Value>) -> Vec<AccountModel> {
+fn parse_models(
+    models: Option<&Value>,
+    pricing: Option<&Value>,
+    account: Option<&Value>,
+    comparison_fx: Option<f64>,
+) -> Vec<AccountModel> {
     let available = data_value(models)
         .and_then(Value::as_array)
         .map(|items| {
@@ -821,11 +875,17 @@ fn parse_models(models: Option<&Value>, pricing: Option<&Value>, account: Option
     let account_ratio = group_ratios
         .get(&user_group)
         .and_then(|value| positive_number(Some(value)))
-        .or_else(|| group_ratios.get("default").and_then(|value| positive_number(Some(value))));
+        .or_else(|| {
+            group_ratios
+                .get("default")
+                .and_then(|value| positive_number(Some(value)))
+        });
     let mut by_name = BTreeMap::new();
     if let Some(rows) = pricing_root.get("data").and_then(Value::as_array) {
         for row in rows.iter().take(4096) {
-            let Some(object) = row.as_object() else { continue };
+            let Some(object) = row.as_object() else {
+                continue;
+            };
             let name = bounded_text(object.get("model_name"), 200);
             if !name.is_empty() && available.contains(&name) {
                 by_name.entry(name).or_insert_with(|| object.clone());
@@ -853,9 +913,10 @@ fn parse_models(models: Option<&Value>, pricing: Option<&Value>, account: Option
             let comparable = billing_mode == "ratio"
                 && ratio.is_some()
                 && completion.is_some()
-                && account_ratio.is_some();
+                && account_ratio.is_some()
+                && comparison_fx.is_some();
             let (official_input, official_output, actual_input, actual_output) = if comparable {
-                let official_input = ratio.unwrap() * 2.0 * 6.75;
+                let official_input = ratio.unwrap() * 2.0 * comparison_fx.unwrap();
                 let official_output = official_input * completion.unwrap();
                 let actual_input = official_input * account_ratio.unwrap();
                 let actual_output = official_output * account_ratio.unwrap();
@@ -904,7 +965,10 @@ fn decimal(value: f64) -> String {
 }
 
 fn money(value: f64) -> String {
-    format!("{value:.4}").trim_end_matches('0').trim_end_matches('.').to_owned()
+    format!("{value:.4}")
+        .trim_end_matches('0')
+        .trim_end_matches('.')
+        .to_owned()
 }
 
 async fn inspect_inner(
@@ -1066,7 +1130,11 @@ fn auth_error(value: &Value) -> (String, u64) {
         .and_then(Value::as_str)
         .unwrap_or("invalid_response")
         .to_owned();
-    let retry = object.get("retry_after").and_then(Value::as_u64).unwrap_or(0).min(60);
+    let retry = object
+        .get("retry_after")
+        .and_then(Value::as_u64)
+        .unwrap_or(0)
+        .min(60);
     (code, retry)
 }
 
@@ -1154,9 +1222,16 @@ pub async fn account_poll_authorization_v2(
                 if let Ok(mut runtime) = state.runtime.lock() {
                     runtime.pending = None;
                 }
-                AccountProjection::empty(request.request_id, "expired", "authorization_already_used")
+                AccountProjection::empty(
+                    request.request_id,
+                    "expired",
+                    "authorization_already_used",
+                )
             }
-            _ => failure_projection(request.request_id, AccountProjectionFailure::InvalidResponse),
+            _ => failure_projection(
+                request.request_id,
+                AccountProjectionFailure::InvalidResponse,
+            ),
         });
     }
     let envelope: DataEnvelope<AuthBundle> = match serde_json::from_value(response.value) {
@@ -1254,7 +1329,9 @@ pub async fn account_open_wallet_v2(
         .map_err(|_| "wallet_unavailable".to_owned())?
         .wallet_url
         .clone();
-    let wallet = stored.filter(|value| value == &bootstrap.wallet_url).unwrap_or(bootstrap.wallet_url);
+    let wallet = stored
+        .filter(|value| value == &bootstrap.wallet_url)
+        .unwrap_or(bootstrap.wallet_url);
     if !wallet_url_is_allowed(&wallet) {
         return Err("wallet_unavailable".into());
     }
@@ -1280,8 +1357,12 @@ mod tests {
             line_id: "https://attacker.invalid".into(),
         }));
         assert!(wallet_url_is_allowed("https://yeschoy.com/wallet/"));
-        assert!(!wallet_url_is_allowed("https://yeschoy.com.attacker.invalid/wallet/"));
-        assert!(!wallet_url_is_allowed("https://yeschoy.com/wallet/?next=https://attacker.invalid"));
+        assert!(!wallet_url_is_allowed(
+            "https://yeschoy.com.attacker.invalid/wallet/"
+        ));
+        assert!(!wallet_url_is_allowed(
+            "https://yeschoy.com/wallet/?next=https://attacker.invalid"
+        ));
         assert!(authorization_url_is_allowed(
             "https://yeschoy.com/desktop-authorize?user_code=ABCD-2345",
             "ABCD-2345"
@@ -1304,11 +1385,11 @@ mod tests {
                 {"model_name": "model-b", "quota_type": 1, "model_price": 0.1}
             ]
         });
-        let rows = parse_models(Some(&models), Some(&pricing), Some(&account));
+        let rows = parse_models(Some(&models), Some(&pricing), Some(&account), Some(7.0));
         assert_eq!(rows.len(), 2);
         assert!(rows[0].pricing_available);
-        assert_eq!(rows[0].official_input_cny_per_million, "13.5");
-        assert_eq!(rows[0].actual_input_cny_per_million, "6.75");
+        assert_eq!(rows[0].official_input_cny_per_million, "14");
+        assert_eq!(rows[0].actual_input_cny_per_million, "7");
         assert!(!rows[1].pricing_available);
         assert!(rows[1].official_input_cny_per_million.is_empty());
     }
@@ -1318,7 +1399,13 @@ mod tests {
         let projection = AccountProjection::empty("safe".into(), "signed_out", "signed_out");
         let value = serde_json::to_value(projection).unwrap();
         let serialized = value.to_string();
-        for forbidden in ["accessToken", "refreshToken", "sessionId", "deviceCode", "walletUrl"] {
+        for forbidden in [
+            "accessToken",
+            "refreshToken",
+            "sessionId",
+            "deviceCode",
+            "walletUrl",
+        ] {
             assert!(!serialized.contains(forbidden));
         }
     }

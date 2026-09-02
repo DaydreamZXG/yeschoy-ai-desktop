@@ -3292,6 +3292,95 @@
         "The internal candidate would be presented as production-ready before deployment and server-side desktop-session route restriction are verified."
       ],
       "status": "planned"
+    },
+    {
+      "id": "WP-RU024-FUNCTIONAL-CLIENT-ACTIVATION",
+      "wave": "consumer",
+      "owner": "tool-config",
+      "riskClass": "critical",
+      "objective": "Replace RU-023's split preview state with one internally testable functional client candidate for shared account, NewAPI currency projection and native-only Claude Desktop Code workspace and Codex setup.",
+      "deliverables": [
+        "Line-independent native session and dynamic NewAPI comparison-rate projection.",
+        "One shared renderer account session used by overview, sidebar, account, models and setup.",
+        "Native-only dedicated tool-token acquisition plus atomic owned-field configuration for Claude Desktop Code workspace and Codex.",
+        "Cross-platform tests and internal 0.3.0 candidate packages."
+      ],
+      "requirementRefs": ["REQ-052"],
+      "decisionRefs": ["DEC-068"],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No NewAPI, Nginx, DNS, Redis, database schema, production or deployment change.",
+        "No DSH, OpenCode, Pi or other tool configuration; no application install, update or removal.",
+        "No retained backup history, telemetry upload, automatic updater or public-release claim."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/App.tsx",
+        "src/account/**",
+        "src/candidate/**",
+        "src/configuration/**",
+        "src/workbench/**",
+        "src/index.css",
+        "src/i18n/locales/zh.json",
+        "src/i18n/locales/zh-TW.json",
+        "src/i18n/locales/en.json",
+        "src/i18n/locales/ja.json",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/account_v2.rs",
+        "src-tauri/src/tool_activation.rs",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/tauri.candidate.conf.json",
+        "tests/work_packages/ru024/**",
+        "outputs/野菜API-0.3.0客户端可用化验证记录.md",
+        "release/ru024-local/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        ".github/**",
+        "src-tauri/src/desktop_app_discovery.rs",
+        "src-tauri/src/desktop_app_discovery_core.rs",
+        "src-tauri/src/tool_discovery.rs",
+        "src-tauri/src/tool_discovery_core.rs",
+        "src-tauri/src/tool_discovery_v2.rs",
+        "src/desktop-apps/**",
+        "src/tool-discovery/**",
+        "src/diagnostics/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No schema or history migration. A setup click may create one ordinary NewAPI tool token for the selected target and current user.",
+        "rollback": "Local configuration is restored from an in-memory operation snapshot if commit fails; a tool token created by that failed operation is deleted. No backup history remains."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Recognize only desktop-integration-v2, the two compiled first-party origins, the current account's model IDs, and standard per-user Claude and Codex paths on macOS and Windows.",
+        "supportedVersions": "Internal client 0.3.0 on macOS x86_64/arm64 and Windows x64; NewAPI desktop-integration-v2.",
+        "removalGate": "Any additional tool, server path, retained secret copy, installer mutation or public-release claim requires a successor release unit."
+      },
+      "inputContracts": ["desktop-account-session@v2", "public-service-catalog@v1"],
+      "outputContracts": ["desktop-account-session@v3", "desktop-tool-activation@v1"],
+      "acceptanceCommands": [
+        {"id": "ru024-native", "kind": "scenario_test", "adapter": "pytest-json@1", "selector": "tests/work_packages/ru024/test_acceptance.py::test_native_session_price_and_activation", "cwd": ".", "timeoutSeconds": 900},
+        {"id": "ru024-renderer", "kind": "scenario_test", "adapter": "pytest-json@1", "selector": "tests/work_packages/ru024/test_acceptance.py::test_shared_account_and_setup_ui", "cwd": ".", "timeoutSeconds": 900},
+        {"id": "ru024-build", "kind": "scenario_test", "adapter": "pytest-json@1", "selector": "tests/work_packages/ru024/test_acceptance.py::test_internal_candidate_build", "cwd": ".", "timeoutSeconds": 1200}
+      ],
+      "requiredAcceptanceScenarios": [
+        {"id": "RU024-AS-01", "assertion": "A valid stored session survives first-party line switching, NewAPI status owns comparison FX, and no confirmed non-auth failure clears credentials.", "testSelector": "tests/work_packages/ru024/test_acceptance.py::test_native_session_price_and_activation", "acceptanceCommandId": "ru024-native"},
+        {"id": "RU024-AS-02", "assertion": "One shared renderer session drives sidebar, overview, account, prices and setup, and an authenticated model enables real one-click setup with closed success and recovery states.", "testSelector": "tests/work_packages/ru024/test_acceptance.py::test_shared_account_and_setup_ui", "acceptanceCommandId": "ru024-renderer"},
+        {"id": "RU024-AS-03", "assertion": "The 0.3.0 client typechecks, tests and builds without server edits, retained backups, secret-bearing IPC, DSH claims, updater activation or production-readiness claims.", "testSelector": "tests/work_packages/ru024/test_acceptance.py::test_internal_candidate_build", "acceptanceCommandId": "ru024-build"}
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "A tool token would have to cross IPC, enter logs or remain after a failed first-time local commit.",
+        "An unowned user configuration field cannot be preserved or restored transactionally.",
+        "The change requires a server source, deployment, database schema, DSH, updater, telemetry or public-release mutation."
+      ],
+      "status": "planned"
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowUpRight,
@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import type { ConfigurationLineId } from "../configuration/preview";
 import { quotaToUsd } from "../account/session";
-import { useAccountSession } from "../account/useAccountSession";
+import type { AccountSessionController } from "../account/useAccountSession";
 import { WorkbenchFooter } from "./WorkbenchChrome";
 import { useWorkbenchCopy } from "./copy";
 
@@ -36,12 +36,18 @@ function compact(value: string, locale: string): string {
     : "—";
 }
 
-export function AccountView() {
+export function AccountView({
+  lineId,
+  onLineChange,
+  session,
+}: {
+  lineId: ConfigurationLineId;
+  onLineChange: (lineId: ConfigurationLineId) => void;
+  session: AccountSessionController;
+}) {
   const c = useWorkbenchCopy();
   const { i18n } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language;
-  const [lineId, setLineId] =
-    useState<ConfigurationLineId>("mainland_optimized");
   const {
     projection,
     loading,
@@ -50,7 +56,7 @@ export function AccountView() {
     cancelAuthorization,
     logout,
     openWallet,
-  } = useAccountSession(lineId);
+  } = session;
   const signedIn = projection?.status === "signed_in";
   const pending = projection?.status === "authorization_pending";
   const account = projection?.account;
@@ -60,12 +66,11 @@ export function AccountView() {
     : null;
   const spentQuota = usage?.available
     ? usage.consumedQuota
-    : account?.usedQuota ?? "";
+    : (account?.usedQuota ?? "");
   const spent = account?.available
     ? quotaToUsd(spentQuota, account.quotaPerUnit)
     : null;
-  const displayName =
-    account?.displayName || account?.username || c.signedInAs;
+  const displayName = account?.displayName || account?.username || c.signedInAs;
   const observed = useMemo(
     () =>
       projection?.observedAtEpochMs
@@ -116,7 +121,7 @@ export function AccountView() {
             aria-label={c.selectLine}
             value={lineId}
             onChange={(event) =>
-              setLineId(event.target.value as ConfigurationLineId)
+              onLineChange(event.target.value as ConfigurationLineId)
             }
             disabled={pending || loading}
           >

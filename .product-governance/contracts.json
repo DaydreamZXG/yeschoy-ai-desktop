@@ -1918,6 +1918,161 @@
         "E-PROP-016"
       ],
       "status": "specified"
+    },
+    {
+      "id": "desktop-account-session@v3",
+      "kind": "command",
+      "owner": "account",
+      "consumers": [
+        "billing",
+        "desktop-platform",
+        "tool-config"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-account-session@v3",
+      "authorization": "Bundled local desktop webview commands only. The native owner accepts only one compiled line ID and never returns a device code, access token, refresh token, session ID, tool token or local path to the renderer.",
+      "idempotency": "Inspect and refresh are newest-request projections. One stored desktop session is reusable on either compiled first-party origin. Only confirmed authentication failure, expiry, explicit logout or revocation clears the credential.",
+      "compatibility": "Version 3 supersedes version 2 by removing line ownership from session validity and replacing the fixed 6.75 comparison with the selected NewAPI status usd_exchange_rate. An invalid or absent server rate disables price comparison rather than using a fallback.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One bounded account command issued by the bundled desktop renderer.",
+        "properties": {
+          "requestId": {"type": "string", "description": "Opaque renderer correlation ID.", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9_-]+$"},
+          "lineId": {"type": "string", "description": "Selected compiled first-party API origin.", "enum": ["mainland_optimized", "global_accelerated"]},
+          "action": {"type": "string", "description": "Requested account lifecycle operation.", "enum": ["inspect", "begin_authorization", "poll_authorization", "cancel_authorization", "refresh", "logout", "open_wallet"]}
+        },
+        "required": ["requestId", "lineId", "action"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Sanitized shared account/session projection with no credential material.",
+        "properties": {
+          "requestId": {"type": "string", "description": "Unchanged correlation ID.", "minLength": 1, "maxLength": 64},
+          "schemaVersion": {"type": "integer", "description": "Native account projection schema version.", "enum": [3]},
+          "status": {"type": "string", "description": "Closed user-visible session state.", "enum": ["signed_out", "authorization_pending", "signed_in", "cancelled", "denied", "expired", "session_expired", "backend_unavailable", "incompatible_server", "secure_storage_unavailable", "network_error", "invalid_response"]},
+          "userCode": {"type": "string", "description": "Non-secret short authorization code or empty string.", "maxLength": 16},
+          "pollAfterSeconds": {"type": "integer", "description": "Server-governed next authorization poll delay.", "minimum": 0, "maximum": 60},
+          "expiresAtEpochMs": {"type": "integer", "description": "Pending authorization expiry or zero.", "minimum": 0},
+          "observedAtEpochMs": {"type": "integer", "description": "Local completion time for current account facts or zero.", "minimum": 0},
+          "account": {
+            "type": "object",
+            "description": "Current-user safe display and quota facts only.",
+            "properties": {
+              "available": {"type": "boolean", "description": "Whether the remaining account fields are current server facts."},
+              "displayName": {"type": "string", "description": "Safe user-selected display name or empty string.", "maxLength": 160},
+              "username": {"type": "string", "description": "Current account username or empty string.", "maxLength": 160},
+              "balanceQuota": {"type": "string", "description": "Exact non-negative remaining quota or empty string.", "maxLength": 40},
+              "usedQuota": {"type": "string", "description": "Exact non-negative cumulative used quota or empty string.", "maxLength": 40},
+              "requestCount": {"type": "string", "description": "Exact non-negative cumulative request count or empty string.", "maxLength": 40},
+              "quotaPerUnit": {"type": "string", "description": "Current positive server quota units per USD or empty string.", "maxLength": 40}
+            },
+            "required": ["available", "displayName", "username", "balanceQuota", "usedQuota", "requestCount", "quotaPerUnit"],
+            "additionalProperties": false
+          },
+          "usage": {
+            "type": "object",
+            "description": "Cumulative server quota, request-rate and token-rate facts.",
+            "properties": {
+              "available": {"type": "boolean", "description": "Whether the remaining usage fields are current server facts."},
+              "consumedQuota": {"type": "string", "description": "Exact cumulative consumption quota or empty string.", "maxLength": 40},
+              "requestRate": {"type": "string", "description": "Server summary RPM fact or empty string.", "maxLength": 40},
+              "tokenCount": {"type": "string", "description": "Server summary token count or empty string.", "maxLength": 40}
+            },
+            "required": ["available", "consumedQuota", "requestRate", "tokenCount"],
+            "additionalProperties": false
+          },
+          "models": {
+            "type": "array",
+            "description": "Exact current-account available model identifiers with comparable pricing projections.",
+            "items": {
+              "type": "object",
+              "description": "One exact available model and its safe price projection.",
+              "properties": {
+                "id": {"type": "string", "description": "Exact model ID.", "minLength": 1, "maxLength": 200},
+                "description": {"type": "string", "description": "Bounded untrusted plain model description.", "maxLength": 500},
+                "billingMode": {"type": "string", "description": "Closed billing category.", "enum": ["ratio", "per_request", "tiered_expr", "unknown"]},
+                "pricingAvailable": {"type": "boolean", "description": "Whether all four comparable prices are present."},
+                "officialInputCnyPerMillion": {"type": "string", "description": "NewAPI comparison-rate official-reference input price or empty string.", "maxLength": 40},
+                "officialOutputCnyPerMillion": {"type": "string", "description": "NewAPI comparison-rate official-reference output price or empty string.", "maxLength": 40},
+                "actualInputCnyPerMillion": {"type": "string", "description": "Current-account input price or empty string.", "maxLength": 40},
+                "actualOutputCnyPerMillion": {"type": "string", "description": "Current-account output price or empty string.", "maxLength": 40}
+              },
+              "required": ["id", "description", "billingMode", "pricingAvailable", "officialInputCnyPerMillion", "officialOutputCnyPerMillion", "actualInputCnyPerMillion", "actualOutputCnyPerMillion"],
+              "additionalProperties": false
+            },
+            "maxItems": 2048
+          },
+          "comparisonFx": {"type": "string", "description": "Positive NewAPI usd_exchange_rate used for comparison or empty string when unavailable.", "maxLength": 40, "pattern": "^(?:|(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"},
+          "reasonCode": {"type": "string", "description": "Closed safe recovery reason; never a raw server body.", "minLength": 1, "maxLength": 80}
+        },
+        "required": ["requestId", "schemaVersion", "status", "userCode", "pollAfterSeconds", "expiresAtEpochMs", "observedAtEpochMs", "account", "usage", "models", "comparisonFx", "reasonCode"],
+        "additionalProperties": false
+      },
+      "dataClasses": ["public", "internal", "personal", "sensitive"],
+      "observability": {
+        "correlation": "Only a transient requestId and local observation timestamp cross IPC.",
+        "audit": "The first-party server owns session audit records; the client stores no account history.",
+        "metrics": "No telemetry upload; sanitized current state exists only in memory."
+      },
+      "errorSemantics": [
+        "A transport or non-authentication server failure on one line cannot erase a credential that may still be valid on the other line.",
+        "Malformed NewAPI currency settings disable comparison rows without changing account or session truth.",
+        "All remote bodies and errors are reduced to closed renderer states."
+      ],
+      "requirementRefs": ["REQ-052"],
+      "evidenceRefs": ["E-USER-056", "E-CODE-042", "E-PROP-017"],
+      "status": "specified"
+    },
+    {
+      "id": "desktop-tool-activation@v1",
+      "kind": "command",
+      "owner": "tool-config",
+      "consumers": ["desktop-platform"],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-tool-activation@v1",
+      "authorization": "Explicit click in the bundled desktop shell while a valid desktop session exists. The native owner permits only claude_desktop or codex_desktop, one compiled line, and one exact current-account model ID.",
+      "idempotency": "Repeated setup reuses one dedicated token per target and replaces only the owned target fields. A newly created token is deleted when local commit fails.",
+      "compatibility": "Version 1 supports macOS and Windows paths for Claude Desktop's Code workspace and Codex only. DSH, OpenCode, Pi and any install or update action require a successor contract.",
+      "inputSchema": {
+        "type": "object",
+        "description": "Explicit native-only request to configure one supported desktop tool.",
+        "properties": {
+          "requestId": {"type": "string", "description": "Opaque renderer correlation ID.", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9_-]+$"},
+          "lineId": {"type": "string", "description": "Selected compiled first-party API origin.", "enum": ["mainland_optimized", "global_accelerated"]},
+          "toolId": {"type": "string", "description": "Supported configuration target.", "enum": ["claude_desktop", "codex_desktop"]},
+          "modelId": {"type": "string", "description": "Exact model ID selected from the current account model list.", "minLength": 1, "maxLength": 200}
+        },
+        "required": ["requestId", "lineId", "toolId", "modelId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Closed activation result with no token or local path.",
+        "properties": {
+          "requestId": {"type": "string", "description": "Unchanged correlation ID.", "minLength": 1, "maxLength": 64},
+          "schemaVersion": {"type": "integer", "description": "Native activation result schema version.", "enum": [1]},
+          "status": {"type": "string", "description": "Closed activation outcome.", "enum": ["configured", "signed_out", "unsupported_model", "server_unavailable", "configuration_failed", "invalid_request"]},
+          "toolId": {"type": "string", "description": "Configuration target echoed after validation.", "enum": ["claude_desktop", "codex_desktop"]},
+          "modelId": {"type": "string", "description": "Validated configured model ID or empty string.", "maxLength": 200},
+          "observedAtEpochMs": {"type": "integer", "description": "Local completion timestamp.", "minimum": 0},
+          "reasonCode": {"type": "string", "description": "Closed safe recovery reason; never a raw server body or local path.", "minLength": 1, "maxLength": 80}
+        },
+        "required": ["requestId", "schemaVersion", "status", "toolId", "modelId", "observedAtEpochMs", "reasonCode"],
+        "additionalProperties": false
+      },
+      "dataClasses": ["public", "internal", "sensitive"],
+      "observability": {
+        "correlation": "Only request, tool, model, time and closed status cross IPC.",
+        "audit": "No local history is retained; NewAPI owns tool-token audit state.",
+        "metrics": "No telemetry upload and no secret-bearing log."
+      },
+      "errorSemantics": [
+        "The token is never returned to JavaScript, copied to a diagnostic, or included in an error.",
+        "A local write failure restores every touched file from the volatile transaction snapshot before returning configuration_failed.",
+        "Unrecognized tool, line or model values fail before token creation or file access."
+      ],
+      "requirementRefs": ["REQ-052"],
+      "evidenceRefs": ["E-USER-056", "E-CODE-042", "E-PROP-017"],
+      "status": "specified"
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "name": "yeschoy-desktop",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Official beginner-friendly desktop assistant for 野菜API",
   "type": "module",
   "scripts": {
@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
-    "test:unit": "vitest run",
+    "test:unit": "vitest run --exclude 'release/**' --exclude 'work/**' --exclude 'tests/**'",
     "test:candidate": "vitest run src/candidate/readiness.test.ts src/diagnostics/contract.test.ts src/configuration/preview.test.ts src/service-catalog/contract.test.ts src/service-catalog/access-plan.test.ts src/service-catalog/ServiceCatalogPanel.test.tsx src/service-catalog/handoff.test.ts",
     "test:unit:watch": "vitest watch"
   },

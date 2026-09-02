@@ -19,10 +19,21 @@ export function useAccountSession(lineId: ConfigurationLineId) {
       setLoading(true);
       try {
         const result = await runAccountCommand(command, lineId);
-        if (latest.current === current) setProjection(result);
+        if (latest.current === current)
+          setProjection((previous) =>
+            previous?.status === "signed_in" &&
+            [
+              "backend_unavailable",
+              "incompatible_server",
+              "secure_storage_unavailable",
+              "network_error",
+              "invalid_response",
+            ].includes(result.status)
+              ? previous
+              : result,
+          );
         return result;
       } catch {
-        if (latest.current === current) setProjection(null);
         return null;
       } finally {
         if (latest.current === current) setLoading(false);
@@ -32,7 +43,6 @@ export function useAccountSession(lineId: ConfigurationLineId) {
   );
 
   useEffect(() => {
-    setProjection(null);
     void execute("account_inspect_v2");
     return () => {
       latest.current += 1;
@@ -65,3 +75,5 @@ export function useAccountSession(lineId: ConfigurationLineId) {
     },
   };
 }
+
+export type AccountSessionController = ReturnType<typeof useAccountSession>;
