@@ -1836,6 +1836,32 @@
         "E-PROP-017",
         "E-USER-056"
       ]
+    },
+    {
+      "id": "E-CODE-044",
+      "claim": "RU-025 proved the native and renderer scenarios under mandatory source-readonly isolation, but Vite's default bundled config loader attempted to write node_modules/.vite-temp and the build scenario was correctly rejected. A verifier-style manual sandbox run passed when a temporary equivalent production config was loaded through Vite's runner loader, keeping both config and output inside the writable verifier directory.",
+      "class": "code_observed",
+      "locator": ".product-governance/execution/reports/0d3d775f08290997.ac00879306c07b8a8b1b.json;tests/work_packages/ru026/test_acceptance.py;command:2026-09-02:ru026-vite-runner-readonly-pass",
+      "observedAt": "2026-09-02T16:10:00+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-019",
+      "claim": "RU-026 should supersede RU-025 without changing product behavior, preserve both prior failed reports, and run the same verification-only scenarios with a temporary Vite production config and non-bundling config loader under mandatory source-readonly isolation.",
+      "class": "proposed",
+      "locator": "inline:ru026-final-readonly-functional-client-verification",
+      "observedAt": "2026-09-02T16:10:00+08:00",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-CODE-044",
+        "E-PROP-018",
+        "E-USER-056"
+      ]
     }
   ]
 }

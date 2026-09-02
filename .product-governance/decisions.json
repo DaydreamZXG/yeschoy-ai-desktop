@@ -1881,6 +1881,24 @@
           "desktop-platform"
         ]
       }
+    },
+    {
+      "id": "DEC-070",
+      "question": "How should final source-readonly verification handle Vite's default source-adjacent temporary config without weakening isolation or changing the product?",
+      "choice": "Create RU-026 as a verification-only successor to RU-025. Preserve both failed predecessor reports. Keep the successful native and renderer scenarios unchanged; for the renderer build scenario, generate an equivalent production-only Vite config inside verifier temporary storage, load it with Vite's runner config loader, and write all build output there. No source-write exception, product source change, server change, package change, DSH scope, updater or public-release claim is authorized.",
+      "status": "accepted",
+      "decidedBy": "product architecture within the owner's accepted client scope",
+      "decidedAt": "2026-09-02T16:10:00+08:00",
+      "evidenceRefs": [
+        "E-CODE-044",
+        "E-PROP-019",
+        "E-USER-056"
+      ],
+      "affects": {
+        "requirementRefs": ["REQ-052"],
+        "pageRefs": [],
+        "domainRefs": ["account", "billing", "tool-config", "desktop-platform"]
+      }
     }
   ]
 }

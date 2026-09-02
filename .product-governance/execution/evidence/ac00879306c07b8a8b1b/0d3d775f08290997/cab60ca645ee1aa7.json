@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU025-AS-03",
+  "assertion": "The unchanged 0.3.0 candidate typechecks and builds renderer output only in verifier temporary storage while retaining no-updater and no-secret-IPC boundaries.",
+  "testSelector": "tests/work_packages/ru025/test_acceptance.py::test_internal_candidate_build",
+  "acceptanceCommandId": "ru025-build",
+  "runId": "RU-025/WP-RU025-READONLY-FUNCTIONAL-CLIENT-VERIFICATION@2026-09-02T07:57:20.038555+00:00",
+  "packageId": "WP-RU025-READONLY-FUNCTIONAL-CLIENT-VERIFICATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:34212ae31b34c7c7647b8d5f7bc40be049ec2e9deccc31085e9c6f68dff6b5db",
+  "releaseUnitId": "RU-025",
+  "releaseUnitHash": "sha256:0941be1362ef9cfb68a7a540fca0d0bda36c3e7d7070da65135635e388f052c6"
+}

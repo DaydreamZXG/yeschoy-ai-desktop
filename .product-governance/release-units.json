@@ -16192,6 +16192,28 @@
         "releaseUnitHash": "sha256:0941be1362ef9cfb68a7a540fca0d0bda36c3e7d7070da65135635e388f052c6",
         "snapshotPath": "execution/release-unit-snapshots/0941be1362ef9cfb68a7a540fca0d0bda36c3e7d7070da65135635e388f052c6/release-unit.json"
       }
+    },
+    {
+      "id": "RU-026",
+      "status": "review",
+      "objective": "Complete source-readonly verification of the unchanged RU-024 functional client with temporary Vite configuration and output.",
+      "decisionRef": "DEC-070",
+      "dependsOnReleaseUnits": ["RU-025"],
+      "supersedesReleaseUnits": ["RU-025"],
+      "roots": {
+        "workPackages": ["WP-RU026-FINAL-READONLY-FUNCTIONAL-CLIENT-VERIFICATION"],
+        "requirements": ["REQ-052"],
+        "nonFunctionalRequirements": [],
+        "domains": [],
+        "contracts": ["desktop-account-session@v3", "desktop-tool-activation@v1"],
+        "stateMachines": [],
+        "pages": [],
+        "journeys": [],
+        "dataLifecycleResources": [],
+        "aiScenarios": [],
+        "entitlements": [],
+        "trackCoverage": []
+      }
     }
   ]
 }
