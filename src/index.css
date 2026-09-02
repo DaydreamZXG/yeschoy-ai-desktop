@@ -1420,10 +1420,7 @@ details dl div {
 }
 /* Existing configuration, diagnostic and advanced flows keep their contracts. */
 .configuration-workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.85fr);
-  align-items: start;
-  gap: 22px;
+  display: block;
 }
 .configuration-guide,
 .configuration-preview-panel {
@@ -1514,41 +1511,10 @@ details dl div {
   width: 14px;
   height: 14px;
 }
-.account-model-selector {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.9fr) auto;
-  align-items: end;
-  gap: 16px;
-  margin-top: 22px;
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-.account-model-selector h2 {
-  font-size: 16px;
-}
-.account-model-selector p:not(.eyebrow) {
-  margin-top: 5px;
-  color: var(--muted);
-  font-size: 12px;
-}
-.account-model-selector label {
-  display: grid;
-  gap: 7px;
-}
-.account-model-selector label span {
-  color: var(--muted);
-  font-size: 11px;
-}
-.account-model-selector .secondary-action {
-  min-height: 38px;
-}
 .configuration-tool-grid,
 .line-selector-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 .configuration-tool-grid button {
@@ -1678,10 +1644,218 @@ details dl div {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
-.line-selector-grid button {
+.connection-builder {
+  position: relative;
+  overflow: hidden;
+  margin-top: 24px;
+  padding: 25px;
+  border: 1px solid var(--accent-line);
+  border-radius: 18px;
+  background:
+    radial-gradient(
+      circle at 96% 0%,
+      color-mix(in srgb, var(--accent) 10%, transparent) 0 90px,
+      transparent 91px
+    ),
+    linear-gradient(145deg, var(--surface), var(--subtle));
+  box-shadow: var(--shadow);
+}
+.connection-builder-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+.connection-builder-heading h2 {
+  font-size: 25px;
+  font-weight: 680;
+  letter-spacing: -0.7px;
+}
+.connection-builder-heading > div > p:last-child {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.connection-builder-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 310px;
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--success) 25%, transparent);
+  border-radius: 999px;
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.connection-builder-status svg {
+  width: 14px;
+  height: 14px;
+}
+.connection-choice-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 22px;
+}
+.connection-choice-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--accent-soft));
+}
+.choice-card-heading,
+.connection-summary-intro {
+  display: flex;
+  align-items: flex-start;
   gap: 11px;
-  justify-content: flex-start;
-  padding: 14px;
+}
+.choice-card-heading {
+  margin-bottom: 17px;
+}
+.choice-card-heading h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+.choice-card-heading p {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.choice-number {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.model-picker {
+  display: grid;
+  gap: 7px;
+}
+.model-picker > span {
+  color: var(--muted);
+  font-size: 10px;
+}
+.model-picker select {
+  min-height: 50px;
+  border-color: var(--accent-line);
+  border-radius: 11px;
+  background: var(--subtle);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+}
+.model-choice-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.model-choice-meta .text-button {
+  min-height: 26px;
+  padding: 3px 5px;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: 10px;
+}
+.model-choice-meta svg {
+  width: 12px;
+  height: 12px;
+}
+.model-price-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+.model-price-comparison article {
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--subtle);
+}
+.model-price-comparison article > span {
+  color: var(--muted);
+  font-size: 10px;
+}
+.model-price-comparison article.yeschoy-price-card {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+.model-price-comparison .yeschoy-price-card > span,
+.model-price-comparison .yeschoy-price-card dd {
+  color: var(--accent);
+}
+.model-price-comparison dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+.model-price-comparison dt {
+  color: var(--muted);
+  font-size: 9px;
+}
+.model-price-comparison dd {
+  margin-top: 1px;
+  font-size: 13px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.model-price-comparison > small {
+  align-self: center;
+  color: var(--faint);
+  font-size: 9px;
+}
+.model-saving {
+  justify-self: end;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 9px;
+  font-weight: 600;
+}
+.model-price-unavailable,
+.model-sign-in-callout {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--subtle);
+  color: var(--muted);
+  font-size: 11px;
+}
+.model-sign-in-callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.connection-choice-card .line-selector-grid {
+  grid-template-columns: 1fr;
+}
+.line-selector-grid button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  justify-content: stretch;
+  min-height: 70px;
+  padding: 13px 14px;
   text-align: left;
 }
 .line-selector-grid strong,
@@ -1697,34 +1871,113 @@ details dl div {
   font-size: 11px;
   margin-top: 3px;
 }
-.line-signal {
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
+.line-selection-dot {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--accent-line);
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 4px var(--surface);
+}
+.line-selector-grid button.is-selected .line-selection-dot {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.line-selected-check {
+  width: 17px;
   height: 17px;
-  flex-shrink: 0;
   color: var(--accent);
 }
-.line-signal i {
-  width: 3px;
-  height: 7px;
-  border-radius: 2px;
-  background: currentColor;
-}
-.line-signal i:nth-child(2) {
-  height: 12px;
-}
-.line-signal i:nth-child(3) {
-  height: 17px;
-}
 .configuration-preview-panel {
-  position: sticky;
-  top: 25px;
-  padding: 21px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
+  position: static;
+  margin-top: 14px;
+  padding: 17px 19px;
+  border: 1px solid var(--accent-line);
+  border-radius: 16px;
+  background: linear-gradient(110deg, var(--accent-soft), var(--surface) 48%);
   box-shadow: var(--shadow);
+}
+.connection-summary-row {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.8fr) minmax(330px, 1.5fr) auto;
+  align-items: center;
+  gap: 22px;
+}
+.connection-summary-intro h2 {
+  font-size: 14px;
+}
+.connection-summary-intro p:last-child {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.45;
+}
+.connection-selection-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) auto minmax(0, 1.2fr) auto minmax(
+      0,
+      0.8fr
+    );
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.connection-selection-flow > span {
+  min-width: 0;
+}
+.connection-selection-flow small,
+.connection-selection-flow strong {
+  display: block;
+}
+.connection-selection-flow small {
+  color: var(--muted);
+  font-size: 9px;
+}
+.connection-selection-flow strong {
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 620;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.connection-selection-flow .selection-model-id {
+  font-family: var(--font-mono);
+}
+.connection-selection-flow > svg {
+  width: 13px;
+  height: 13px;
+  color: var(--accent);
+}
+.configuration-preview-panel .setup-apply {
+  width: auto;
+  min-width: 150px;
+  min-height: 43px;
+  border-radius: 11px;
+}
+.connection-details {
+  margin-top: 13px;
+  padding: 0;
+  border-top: 1px solid color-mix(in srgb, var(--accent) 12%, var(--line));
+}
+.connection-details summary {
+  padding-bottom: 3px;
+  font-size: 10px;
+}
+.connection-details dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding-top: 10px;
+}
+.connection-details dt {
+  color: var(--muted);
+  font-size: 9px;
+}
+.connection-details dd {
+  margin-top: 3px;
+  overflow-wrap: anywhere;
 }
 .panel-heading,
 .catalog-heading {
@@ -1917,6 +2170,14 @@ details dl div {
 }
 .configuration-actions > button {
   min-height: 40px;
+}
+.configuration-secondary-actions {
+  margin-top: 8px;
+  padding-top: 0;
+  border-top: 0;
+}
+.configuration-secondary-actions > div {
+  justify-content: flex-end;
 }
 .service-catalog-panel {
   padding: 20px;
@@ -2473,6 +2734,9 @@ details dl div {
   .app-card-status {
     margin-left: auto;
   }
+  .configuration-tool-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .configuration-workspace,
   .diagnostics-workspace,
   .workspace,
@@ -2493,6 +2757,16 @@ details dl div {
   }
 }
 @media (max-width: 900px) {
+  .connection-choice-grid {
+    grid-template-columns: 1fr;
+  }
+  .connection-summary-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .connection-selection-flow {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
   .workbench-stats {
     grid-template-columns: 1fr 1fr;
   }
@@ -2641,6 +2915,43 @@ details dl div {
   .account-model-selector {
     grid-template-columns: 1fr;
     align-items: stretch;
+  }
+  .configuration-tool-grid {
+    grid-template-columns: 1fr;
+  }
+  .connection-builder {
+    padding: 19px;
+  }
+  .connection-builder-heading {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .connection-builder-status {
+    max-width: none;
+  }
+  .model-price-comparison {
+    grid-template-columns: 1fr;
+  }
+  .model-saving {
+    justify-self: start;
+  }
+  .connection-summary-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+  .connection-selection-flow {
+    grid-column: auto;
+    grid-row: auto;
+    grid-template-columns: 1fr;
+  }
+  .connection-selection-flow > svg {
+    display: none;
+  }
+  .configuration-preview-panel .setup-apply {
+    width: 100%;
+  }
+  .connection-details dl {
+    grid-template-columns: 1fr;
   }
   .installation-choice {
     grid-template-columns: 1fr;

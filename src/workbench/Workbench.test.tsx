@@ -566,7 +566,7 @@ describe("official workbench", () => {
     fireEvent.click(within(codex).getByRole("button", { name: "查看接入" }));
     await screen.findByRole("button", { name: "一键接入" });
     fireEvent.click(screen.getByTestId("configuration-apply-action"));
-    expect((await screen.findAllByText("接入完成")).length).toBeGreaterThan(1);
+    expect(await screen.findByText("接入完成")).toBeInTheDocument();
     expect(
       screen.getByText(
         "Codex Desktop 已使用所选模型完成真实回复，现在可以直接使用。",

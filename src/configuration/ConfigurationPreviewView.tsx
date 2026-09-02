@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
+  ArrowRight,
   CheckCircle2,
   LoaderCircle,
   RefreshCw,
+  ShieldCheck,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AccountSessionController } from "../account/useAccountSession";
@@ -114,6 +116,23 @@ const UX = {
     unsupportedProfile: "这个版本的应用不支持安全自动接入，原配置没有改动。",
     launchFailed:
       "设置已经恢复，因为应用未能正常启动。请确认应用可以手动打开。",
+    builderKicker: "模型与线路",
+    builderTitle: "选好，就能用",
+    builderIntro: "选择模型和网络线路，助手会自动配置、验证并打开应用。",
+    modelChoice: "选择模型",
+    modelQuestion: "想用哪个 AI？",
+    lineChoice: "选择连接线路",
+    lineQuestion: "按你所在的位置选择，价格不会因此改变",
+    officialPrice: "官网参考价",
+    yeschoyPrice: "野菜 API 价",
+    inputPrice: "输入",
+    outputPrice: "输出",
+    perMillion: "每百万 tokens",
+    priceUnavailable: "这个模型暂时没有可核验的价格对比。",
+    saveInputOutput: "输入省 {{input}} · 输出省 {{output}}",
+    finishChoice: "完成接入",
+    finishHint: "写入应用并发送测试消息；验证失败会恢复原设置。",
+    connectionDetails: "查看连接详情",
   },
   en: {
     checking: "Checking this computer…",
@@ -156,6 +175,26 @@ const UX = {
       "This application version does not support safe automatic setup. Existing settings were not changed.",
     launchFailed:
       "Settings were restored because the application could not start. Make sure it opens normally.",
+    builderKicker: "Model and connection",
+    builderTitle: "Choose it, then use it",
+    builderIntro:
+      "Choose a model and network line. The assistant configures, verifies, and opens the app.",
+    modelChoice: "Choose a model",
+    modelQuestion: "Which AI do you want to use?",
+    lineChoice: "Choose a connection line",
+    lineQuestion: "Choose for your location. Pricing stays the same.",
+    officialPrice: "Official reference",
+    yeschoyPrice: "Yeschoy API",
+    inputPrice: "Input",
+    outputPrice: "Output",
+    perMillion: "per million tokens",
+    priceUnavailable:
+      "Verified price comparison is unavailable for this model.",
+    saveInputOutput: "Save {{input}} on input · {{output}} on output",
+    finishChoice: "Finish setup",
+    finishHint:
+      "Update the app and send a test message. Failed verification restores the previous settings.",
+    connectionDetails: "View connection details",
   },
 } as const;
 
@@ -187,6 +226,27 @@ function targetTone(target?: ActivationTarget) {
   if (target.status === "available") return "ready";
   if (target.status === "selection_required") return "attention";
   return "muted";
+}
+
+function formatModelPrice(value: string): string {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return "—";
+  return `¥${new Intl.NumberFormat("zh-CN", {
+    maximumFractionDigits: 4,
+  }).format(amount)}`;
+}
+
+function savingPercent(official: string, actual: string): string | null {
+  const officialAmount = Number(official);
+  const actualAmount = Number(actual);
+  if (
+    !Number.isFinite(officialAmount) ||
+    !Number.isFinite(actualAmount) ||
+    officialAmount <= 0 ||
+    actualAmount > officialAmount
+  )
+    return null;
+  return `${Math.round((1 - actualAmount / officialAmount) * 100)}%`;
 }
 
 export function ConfigurationPreviewView({
@@ -303,6 +363,19 @@ export function ConfigurationPreviewView({
       model.supportedEndpointTypes?.includes(endpoint),
     );
   }, [accountModels, endpoint]);
+  const selectedModel = models.find((model) => model.id === selectedModelId);
+  const inputSaving = selectedModel?.pricingAvailable
+    ? savingPercent(
+        selectedModel.officialInputCnyPerMillion,
+        selectedModel.actualInputCnyPerMillion,
+      )
+    : null;
+  const outputSaving = selectedModel?.pricingAvailable
+    ? savingPercent(
+        selectedModel.officialOutputCnyPerMillion,
+        selectedModel.actualOutputCnyPerMillion,
+      )
+    : null;
 
   useEffect(() => {
     if (!models.some((model) => model.id === selectedModelId)) {
@@ -450,40 +523,6 @@ export function ConfigurationPreviewView({
           </div>
         </div>
 
-        <ol
-          className="configuration-steps"
-          aria-label={t("yeschoyConfiguration.stepsLabel")}
-        >
-          <li data-state="current">
-            <span>01</span>
-            <div>
-              <strong>{t("yeschoyDesktop.setup.steps.app")}</strong>
-              <small>{application.displayName}</small>
-            </div>
-          </li>
-          <li data-state="current">
-            <span>02</span>
-            <div>
-              <strong>{t("yeschoyConfiguration.steps.line")}</strong>
-              <small>{t(`yeschoyConfiguration.lines.${lineId}.name`)}</small>
-            </div>
-          </li>
-          <li data-state={selectedModelId ? "current" : undefined}>
-            <span>03</span>
-            <div>
-              <strong>{t("yeschoyConfiguration.steps.model")}</strong>
-              <small>{selectedModelId || c.chooseModel}</small>
-            </div>
-          </li>
-          <li data-state={configured ? "current" : undefined}>
-            <span>04</span>
-            <div>
-              <strong>{t("yeschoyConfiguration.steps.review")}</strong>
-              <small>{configured ? ux.readyTitle : c.readyToConnect}</small>
-            </div>
-          </li>
-        </ol>
-
         <div className="configuration-selectors">
           <fieldset className="tool-selector">
             <div className="selector-heading">
@@ -603,92 +642,193 @@ export function ConfigurationPreviewView({
               </span>
             ) : null}
           </div>
-
-          <fieldset className="line-selector">
-            <legend>{t("yeschoyConfiguration.chooseLine")}</legend>
-            <div className="line-selector-grid">
-              {CONFIGURATION_LINES.map((line) => (
-                <button
-                  type="button"
-                  key={line.id}
-                  className={lineId === line.id ? "is-selected" : undefined}
-                  aria-pressed={lineId === line.id}
-                  onClick={() => {
-                    if (lineId === line.id) return;
-                    onLineChange(line.id);
-                    resetResult();
-                  }}
-                >
-                  <span className="line-signal" aria-hidden="true">
-                    <i />
-                    <i />
-                    <i />
-                  </span>
-                  <span>
-                    <strong>
-                      {t(`yeschoyConfiguration.lines.${line.id}.name`)}
-                    </strong>
-                    <small>
-                      {t(`yeschoyConfiguration.lines.${line.id}.note`)}
-                    </small>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </fieldset>
         </div>
 
         <section
-          className="account-model-selector"
-          aria-labelledby="setup-model-title"
+          className="connection-builder"
+          aria-labelledby="connection-builder-title"
         >
-          <div>
-            <p className="eyebrow">{c.accountModels}</p>
-            <h2 id="setup-model-title">{c.chooseModel}</h2>
-            <p>
-              {signedIn
-                ? c.availableModels.replace("{{count}}", String(models.length))
-                : c.priceSignInRequired}
-            </p>
-          </div>
-          {signedIn ? (
-            <>
-              <label>
-                <span>{c.fullId}</span>
-                <select
-                  value={selectedModelId}
-                  onChange={(event) => {
-                    setSelectedModelId(event.target.value);
-                    resetResult();
-                  }}
-                  disabled={session.loading || models.length === 0}
-                >
-                  {models.map((model) => (
-                    <option key={model.id} value={model.id}>
-                      {model.id}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                className="secondary-action"
-                onClick={() => void session.refresh()}
-                disabled={session.loading}
-              >
-                <RefreshCw aria-hidden="true" />
-                {c.refresh}
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              className="primary-action compact-primary"
-              onClick={onOpenAccount}
+          <header className="connection-builder-heading">
+            <div>
+              <p className="eyebrow">{ux.builderKicker}</p>
+              <h2 id="connection-builder-title">{ux.builderTitle}</h2>
+              <p>{ux.builderIntro}</p>
+            </div>
+            <span className="connection-builder-status">
+              <ShieldCheck aria-hidden="true" />
+              {c.setupSafety}
+            </span>
+          </header>
+
+          <div className="connection-choice-grid">
+            <section
+              className="connection-choice-card model-choice-card"
+              aria-labelledby="setup-model-title"
             >
-              {c.signIn}
-            </button>
-          )}
+              <div className="choice-card-heading">
+                <span className="choice-number" aria-hidden="true">
+                  1
+                </span>
+                <div>
+                  <h3 id="setup-model-title">{ux.modelChoice}</h3>
+                  <p>{ux.modelQuestion}</p>
+                </div>
+              </div>
+              {signedIn ? (
+                <>
+                  <label className="model-picker">
+                    <span>{c.fullId}</span>
+                    <select
+                      value={selectedModelId}
+                      onChange={(event) => {
+                        setSelectedModelId(event.target.value);
+                        resetResult();
+                      }}
+                      disabled={session.loading || models.length === 0}
+                    >
+                      {models.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.id}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="model-choice-meta">
+                    <span>
+                      {c.availableModels.replace(
+                        "{{count}}",
+                        String(models.length),
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      className="text-button"
+                      onClick={() => void session.refresh()}
+                      disabled={session.loading}
+                    >
+                      <RefreshCw aria-hidden="true" />
+                      {c.refresh}
+                    </button>
+                  </div>
+                  {selectedModel?.pricingAvailable ? (
+                    <div className="model-price-comparison">
+                      <article>
+                        <span>{ux.officialPrice}</span>
+                        <dl>
+                          <div>
+                            <dt>{ux.inputPrice}</dt>
+                            <dd>
+                              {formatModelPrice(
+                                selectedModel.officialInputCnyPerMillion,
+                              )}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>{ux.outputPrice}</dt>
+                            <dd>
+                              {formatModelPrice(
+                                selectedModel.officialOutputCnyPerMillion,
+                              )}
+                            </dd>
+                          </div>
+                        </dl>
+                      </article>
+                      <article className="yeschoy-price-card">
+                        <span>{ux.yeschoyPrice}</span>
+                        <dl>
+                          <div>
+                            <dt>{ux.inputPrice}</dt>
+                            <dd>
+                              {formatModelPrice(
+                                selectedModel.actualInputCnyPerMillion,
+                              )}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>{ux.outputPrice}</dt>
+                            <dd>
+                              {formatModelPrice(
+                                selectedModel.actualOutputCnyPerMillion,
+                              )}
+                            </dd>
+                          </div>
+                        </dl>
+                      </article>
+                      <small>{ux.perMillion}</small>
+                      {inputSaving && outputSaving && (
+                        <strong className="model-saving">
+                          {ux.saveInputOutput
+                            .replace("{{input}}", inputSaving)
+                            .replace("{{output}}", outputSaving)}
+                        </strong>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="model-price-unavailable">
+                      {ux.priceUnavailable}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="model-sign-in-callout">
+                  <p>{c.priceSignInRequired}</p>
+                  <button
+                    type="button"
+                    className="primary-action compact-primary"
+                    onClick={onOpenAccount}
+                  >
+                    {c.signIn}
+                  </button>
+                </div>
+              )}
+            </section>
+
+            <section
+              className="connection-choice-card line-selector"
+              aria-labelledby="setup-line-title"
+            >
+              <div className="choice-card-heading">
+                <span className="choice-number" aria-hidden="true">
+                  2
+                </span>
+                <div>
+                  <h3 id="setup-line-title">{ux.lineChoice}</h3>
+                  <p>{ux.lineQuestion}</p>
+                </div>
+              </div>
+              <div className="line-selector-grid">
+                {CONFIGURATION_LINES.map((line) => (
+                  <button
+                    type="button"
+                    key={line.id}
+                    className={lineId === line.id ? "is-selected" : undefined}
+                    aria-pressed={lineId === line.id}
+                    onClick={() => {
+                      if (lineId === line.id) return;
+                      onLineChange(line.id);
+                      resetResult();
+                    }}
+                  >
+                    <span className="line-selection-dot" aria-hidden="true" />
+                    <span>
+                      <strong>
+                        {t(`yeschoyConfiguration.lines.${line.id}.name`)}
+                      </strong>
+                      <small>
+                        {t(`yeschoyConfiguration.lines.${line.id}.note`)}
+                      </small>
+                    </span>
+                    {lineId === line.id && (
+                      <CheckCircle2
+                        className="line-selected-check"
+                        aria-hidden="true"
+                      />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </section>
+          </div>
         </section>
       </section>
 
@@ -696,65 +836,80 @@ export function ConfigurationPreviewView({
         className="configuration-preview-panel"
         aria-labelledby="configuration-preview-title"
       >
-        <div className="panel-heading configuration-preview-heading">
-          <div>
-            <p className="eyebrow">{c.yourSelection}</p>
-            <h2 id="configuration-preview-title">{c.confirmSetup}</h2>
+        <div className="connection-summary-row">
+          <div className="connection-summary-intro">
+            <span className="choice-number" aria-hidden="true">
+              3
+            </span>
+            <div>
+              <p className="eyebrow">{c.yourSelection}</p>
+              <h2 id="configuration-preview-title">{ux.finishChoice}</h2>
+              <p>{ux.finishHint}</p>
+            </div>
           </div>
-          <span className={configured ? "success-badge" : "preview-only-badge"}>
-            {configured ? ux.readyTitle : c.readyToConnect}
-          </span>
+
+          <div className="connection-selection-flow">
+            <span>
+              <small>{t("yeschoyConfiguration.selectedTool")}</small>
+              <strong>{application.displayName}</strong>
+            </span>
+            <ArrowRight aria-hidden="true" />
+            <span>
+              <small>{t("yeschoyConfiguration.modelId")}</small>
+              <strong className="selection-model-id">
+                {selectedModelId || c.chooseModel}
+              </strong>
+            </span>
+            <ArrowRight aria-hidden="true" />
+            <span>
+              <small>{t("yeschoyConfiguration.selectedLine")}</small>
+              <strong>{t(`yeschoyConfiguration.lines.${lineId}.name`)}</strong>
+            </span>
+          </div>
+
+          <button
+            className="primary-action setup-apply"
+            type="button"
+            onClick={() => void apply()}
+            disabled={(signedIn && !canApply) || applyPhase === "applying"}
+            data-testid="configuration-apply-action"
+          >
+            {applyPhase === "applying" ? (
+              <LoaderCircle className="is-spinning" aria-hidden="true" />
+            ) : (
+              <ArrowRight aria-hidden="true" />
+            )}
+            {actionLabel}
+          </button>
         </div>
 
-        <article className="preview-sheet">
-          <div className="preview-summary-grid">
-            <div>
-              <span>{t("yeschoyConfiguration.selectedTool")}</span>
-              <strong>{application.displayName}</strong>
-            </div>
-            <div>
-              <span>{t("yeschoyConfiguration.selectedLine")}</span>
-              <strong>{t(`yeschoyConfiguration.lines.${lineId}.name`)}</strong>
-            </div>
-          </div>
-          <dl className="preview-facts">
+        <details className="desktop-technical-details connection-details">
+          <summary>{ux.connectionDetails}</summary>
+          <dl>
             <div>
               <dt>{t("yeschoyConfiguration.modelId")}</dt>
               <dd>
                 <code>{selectedModelId || c.chooseModel}</code>
               </dd>
             </div>
+            <div>
+              <dt>{t("yeschoyConfiguration.lineRoot")}</dt>
+              <dd>
+                <code>{preview.rootUrl}</code>
+              </dd>
+            </div>
+            <div>
+              <dt>{t("yeschoyConfiguration.effectiveEndpoint")}</dt>
+              <dd>
+                <code>
+                  {activationToolId === "dsh_web"
+                    ? `${preview.rootUrl}/v1`
+                    : preview.protocolEndpoint}
+                </code>
+              </dd>
+            </div>
           </dl>
-          <details className="desktop-technical-details">
-            <summary>{t("yeschoyDesktop.setup.technicalDetails")}</summary>
-            <dl>
-              <div>
-                <dt>{t("yeschoyConfiguration.lineRoot")}</dt>
-                <dd>
-                  <code>{preview.rootUrl}</code>
-                </dd>
-              </div>
-              <div>
-                <dt>{t("yeschoyConfiguration.effectiveEndpoint")}</dt>
-                <dd>
-                  <code>
-                    {activationToolId === "dsh_web"
-                      ? `${preview.rootUrl}/v1`
-                      : preview.protocolEndpoint}
-                  </code>
-                </dd>
-              </div>
-            </dl>
-          </details>
-        </article>
-
-        <div className="setup-privacy-note">
-          <CheckCircle2 aria-hidden="true" />
-          <p>
-            <strong>{c.setupSafetyTitle}</strong>
-            <span>{c.setupSafetyBody}</span>
-          </p>
-        </div>
+        </details>
 
         {applyPhase === "applying" && (
           <div className="setup-progress" role="status">
@@ -785,19 +940,7 @@ export function ConfigurationPreviewView({
           </div>
         )}
 
-        <div className="configuration-actions">
-          <button
-            className="primary-action setup-apply"
-            type="button"
-            onClick={() => void apply()}
-            disabled={(signedIn && !canApply) || applyPhase === "applying"}
-            data-testid="configuration-apply-action"
-          >
-            {applyPhase === "applying" && (
-              <LoaderCircle className="is-spinning" aria-hidden="true" />
-            )}
-            {actionLabel}
-          </button>
+        <div className="configuration-actions configuration-secondary-actions">
           <div>
             <button type="button" onClick={onOpenTools}>
               {c.viewOtherTools}

@@ -102,8 +102,20 @@ describe("catalog selection and recovery", () => {
         onOpenTools={vi.fn()}
       />,
     );
-    const preview = screen.getByRole("region", { name: "确认接入信息" });
+    const preview = screen.getByRole("region", { name: "完成接入" });
     expect(preview).toHaveTextContent("glm-5.3");
+    expect(
+      screen.getByRole("heading", { name: "选好，就能用" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("官网参考价")).toBeInTheDocument();
+    expect(screen.getByText("野菜 API 价")).toBeInTheDocument();
+    expect(screen.getByText("输入省 50% · 输出省 50%")).toBeInTheDocument();
+    expect(
+      screen.getByText("按你所在的位置选择，价格不会因此改变"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
+      "一键接入",
+    );
     fireEvent.click(
       screen.getByRole("button", { name: /大陆优化 中国大陆网络优先/ }),
     );
