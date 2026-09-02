@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU024-AS-03",
+  "assertion": "The 0.3.0 client typechecks, tests and builds without server edits, retained backups, secret-bearing IPC, DSH claims, updater activation or production-readiness claims.",
+  "testSelector": "tests/work_packages/ru024/test_acceptance.py::test_internal_candidate_build",
+  "acceptanceCommandId": "ru024-build",
+  "runId": "RU-024/WP-RU024-FUNCTIONAL-CLIENT-ACTIVATION@2026-09-02T07:50:30.083316+00:00",
+  "packageId": "WP-RU024-FUNCTIONAL-CLIENT-ACTIVATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-024",
+  "releaseUnitHash": "sha256:fdd8d4cad283c177bb25f04b1954dc48dca26445344afecd62a96e67ed0faea4"
+}

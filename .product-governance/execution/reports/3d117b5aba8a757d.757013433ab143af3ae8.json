@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-024/WP-RU024-FUNCTIONAL-CLIENT-ACTIVATION@2026-09-02T07:50:30.083316+00:00",
+  "packageId": "WP-RU024-FUNCTIONAL-CLIENT-ACTIVATION",
+  "baselineCommit": "2defd8ce6e15f125f72bbca93b02ecfc2dc6657e",
+  "baselineTreeHash": "sha256:e63a94da770e382bbe7a8f2b49e4767d56967224252eeaddf2d4d1c76836ea04",
+  "testedTreeHash": "sha256:e63a94da770e382bbe7a8f2b49e4767d56967224252eeaddf2d4d1c76836ea04",
+  "testedSnapshotPath": "execution/tested-snapshots/3d117b5aba8a757d.757013433ab143af3ae8.json",
+  "testedSnapshotSha256": "sha256:0eae5f9893919077419cf3f31747e8e8449381cde7f9cc95d6f05cb83976ee46",
+  "sourceDiff": {},
+  "ownedResultHashes": {},
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      "package.json",
+      "pnpm-lock.yaml",
+      "src/App.tsx",
+      "src/account/**",
+      "src/candidate/**",
+      "src/configuration/**",
+      "src/workbench/**",
+      "src/index.css",
+      "src/i18n/locales/zh.json",
+      "src/i18n/locales/zh-TW.json",
+      "src/i18n/locales/en.json",
+      "src/i18n/locales/ja.json",
+      "src-tauri/Cargo.toml",
+      "src-tauri/Cargo.lock",
+      "src-tauri/src/lib.rs",
+      "src-tauri/src/account_v2.rs",
+      "src-tauri/src/tool_activation.rs",
+      "src-tauri/tauri.conf.json",
+      "src-tauri/tauri.candidate.conf.json",
+      "tests/work_packages/ru024/**",
+      "outputs/野菜API-0.3.0客户端可用化验证记录.md",
+      "release/ru024-local/**"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      "outputs/野菜API-0.3.0客户端可用化验证记录.md": "sha256:3bf3984ceb041298de89f2ede34ff12bac845b3dd5a31ab7deeba3d3bb221a5d",
+      "package.json": "sha256:233c91ed7d5b9c93fbf2389e8ed1daccae85a30d073430d786ec8452fd5a6bf0",
+      "pnpm-lock.yaml": "sha256:40016cef2ca79be59e608ea6b7cc8b2bd36bd5db71d8273c6d8314bf19aaf91c",
+      "src-tauri/Cargo.lock": "sha256:7298f154b50cbae41caf96954ca0003896a172f05ba159e4e9e2874620479b36",
+      "src-tauri/Cargo.toml": "sha256:0f3d6458f0d740fdbdeca0ae66d8cd123d88ab6ef756c34fec35081d74e763de",
+      "src-tauri/src/account_v2.rs": "sha256:0c02200911d38af75980d045259a3f0ca16b9fe67c24407d8216c3a0ff901465",
+      "src-tauri/src/lib.rs": "sha256:881e1ad463b52fc990e905911ee1b5856f5d8051eebd0589a9c7484d8f961122",
+      "src-tauri/src/tool_activation.rs": "sha256:efe585e66eead9821efb23c60d92b7599a7dd540cb7e54f6cf487beaf5c86f40",
+      "src-tauri/tauri.candidate.conf.json": "sha256:789219fb2c74a78c4151ebe785be185c0386504b0356e428f7286f125a4bb8fc",
+      "src-tauri/tauri.conf.json": "sha256:0ebbbeb1179773abd38a0f190cb1e388b1a9803286f062429b49bf11670d0a5b",
+      "src/App.tsx": "sha256:0d1a3aed3e859bb5285ff07a3e51f59e4e1703a4a14bb6cad8e82ed73736f15a",
+      "src/account/readiness.ts": "sha256:8bc90bea3fb25d8a7720ede2642f830687cede7c2ee3c41508fe6845eac07434",
+      "src/account/session.test.ts": "sha256:7be4df9ccc99326e3a0ef1e4342397ac40e25879e56f40979dd8016f225d8097",
+      "src/account/session.ts": "sha256:d085fac819f33408a437cb140c070a3bec3906a9d37064763ec1aa37866dc4e9",
+      "src/account/useAccountSession.ts": "sha256:c9d803207c248d14f380152f4f832fc6457515fc6e4b7c50b5eae7e97325da9f",
+      "src/candidate/CandidateHomeView.tsx": "sha256:66f0d8c269b851a68e17a69ff79c0e156f3f31cd349091f635b1a9f7881cdc5e",
+      "src/candidate/readiness.test.ts": "sha256:a5fffbe14954678f2dbfb54746e99222b00d3717f9ffe11b33f96edcd121daff",
+      "src/candidate/readiness.ts": "sha256:3d7b0a66e7b8b5a48db9041b10adc0b830bcdc93b682597207f0def8e227e2cc",
+      "src/configuration/ConfigurationPreviewView.tsx": "sha256:0ac8a31593e9d500a52d19e692e829ed6a5eb8954b89e4306ef590f8dc5b692a",
+      "src/configuration/activation.test.ts": "sha256:506a1efe9aac388bd8d7329a9e6099c025c4fae85def6d860ec6154e1faefae9",
+      "src/configuration/activation.ts": "sha256:24c4751a1c48791df8ca6a3eb3c6df50ee48968030360413ea7de2899c3d7933",
+      "src/configuration/preview.test.ts": "sha256:9bb5838feb92af30fc23b2a2fcae71267e82ca8aea51f5645d0216cbdb812a57",
+      "src/configuration/preview.ts": "sha256:c376a46ca38a776caa7f8177e7d12413cbc2b63f9f299e39e8de731bf3352784",
+      "src/i18n/locales/en.json": "sha256:a97c0528faae92facbc2b5e97dafd4a42384429f2a778f3e096167e4ba117c3d",
+      "src/i18n/locales/ja.json": "sha256:5814095fff089ac98fc99bb4864cefe00e59ca167cce5a88069ced17b81f7ee3",
+      "src/i18n/locales/zh-TW.json": "sha256:b958c029a1fcda36cf1020759f4a5bd8c26c05999a661b6b25f200658b82187f",
+      "src/i18n/locales/zh.json": "sha256:f6f84ffd0991077b62510e65c543c23a18ad4edb9ad1dde301cf2df2332f95ab",
+      "src/index.css": "sha256:f8201570bee06bd9d91aa5c3a9f3ce8538d79ca34de0083abf3cf223c534a291",
+      "src/workbench/AccountView.tsx": "sha256:161439b3eb2ab1eafed1a1cb3bfcc920b89dea0709c17ef22c3b5e3c356a23f4",
+      "src/workbench/AppGlyph.tsx": "sha256:11713e7babc4abe20de9a33791580289bb99c723baf4557a1a1ead85818849c7",
+      "src/workbench/ModelsView.tsx": "sha256:d9796a66d5dae11d864cc842f38b130156d652c6a3edc069fec11f8161531e07",
+      "src/workbench/Repair.test.tsx": "sha256:3fde6f5f6e6f6ceb34ec9b8b23f88433caffb65dd06cb33e762117c27ed240a3",
+      "src/workbench/Workbench.test.tsx": "sha256:c35699c85eb081f59ec7e5db5f8faa45d2cfda721ba91e424c6f170c39796c79",
+      "src/workbench/WorkbenchChrome.tsx": "sha256:5e60e3f98bb4d98df5ce12c7708f0d42c25ff6bc007a677608910bcd8b0f69ad",
+      "src/workbench/appearance.ts": "sha256:a129a525bda25654d3fe90827e5211889dcc6d7f75f31588a9cb04eb62dc8a20",
+      "src/workbench/copy.ts": "sha256:7142f9e3a6b65bed0669088e19df566130cfcd211187fc84d94254e4757bc169",
+      "src/workbench/nativeAppearance.ts": "sha256:78016e0d116f0548b434445c57e8c83eb0b687e3acddc5ada148347bd657b73d",
+      "tests/work_packages/ru024/test_acceptance.py": "sha256:f995425e7a0d1892afea34b55a1d71596c5da40658e24bd8e3c350368677e10f"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:154b1163d34f644df18fe7a770ca10671acf75f92702baff7dda8dc2482e2f39",
+  "sourceScopeFailures": [],
+  "integrityFailures": [
+    "non-verification work package produced no source change"
+  ],
+  "assignedTo": "codex-root",
+  "startedAt": "2026-09-02T07:50:30.083316+00:00",
+  "finishedAt": "2026-09-02T07:50:38.586979+00:00",
+  "passed": false,
+  "commands": [],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU024-AS-01",
+      "path": "execution/evidence/757013433ab143af3ae8/3d117b5aba8a757d/ffe8e381dd629971.json",
+      "sha256": "sha256:06ee1f2dcfdc916a4226b9f917ddf4d5664a9dde0a5c9a6d1cea5a1e1520ad63"
+    },
+    {
+      "scenarioId": "RU024-AS-02",
+      "path": "execution/evidence/757013433ab143af3ae8/3d117b5aba8a757d/23d71f4d67ca01c4.json",
+      "sha256": "sha256:907784c58039090f37c7e7745b6690bbca427c2a90c90f9b13a6a8cd3a580d46"
+    },
+    {
+      "scenarioId": "RU024-AS-03",
+      "path": "execution/evidence/757013433ab143af3ae8/3d117b5aba8a757d/e2407159604b7783.json",
+      "sha256": "sha256:9061c9625c6415c3cb51d9325e3f28a823d34f9c4786b9d129d8c783625a024d"
+    }
+  ],
+  "scenarioEvidenceFailures": [
+    "RU024-AS-01: registered runner proof is invalid",
+    "RU024-AS-02: registered runner proof is invalid",
+    "RU024-AS-03: registered runner proof is invalid"
+  ],
+  "releaseUnitId": "RU-024",
+  "releaseUnitHash": "sha256:fdd8d4cad283c177bb25f04b1954dc48dca26445344afecd62a96e67ed0faea4"
+}

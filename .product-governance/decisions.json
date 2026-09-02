@@ -1856,6 +1856,31 @@
           "desktop-platform"
         ]
       }
+    },
+    {
+      "id": "DEC-069",
+      "question": "How should the completed RU-024 client be governed after its product tests and packages passed but its first formal run used an invalid post-implementation baseline and source-writing acceptance helpers?",
+      "choice": "Create RU-025 as a verification-only successor without changing product behavior, contracts, packages or release claims. Preserve the failed RU-024 report. Re-execute the same native session, dynamic pricing, native-only activation, shared renderer state and candidate build boundaries with pytest-json@1 while placing all Vitest reports, Vite output, caches and Cargo targets in verifier-provided temporary directories under mandatory source-readonly isolation. No client, server, database, deployment, credential, configuration, DSH, telemetry, updater or public-release change is authorized.",
+      "status": "accepted",
+      "decidedBy": "product architecture within the owner's accepted client scope",
+      "decidedAt": "2026-09-02T16:00:00+08:00",
+      "evidenceRefs": [
+        "E-CODE-043",
+        "E-PROP-018",
+        "E-USER-056"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-052"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "account",
+          "billing",
+          "tool-config",
+          "desktop-platform"
+        ]
+      }
     }
   ]
 }

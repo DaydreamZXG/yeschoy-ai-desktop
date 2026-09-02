@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU024-AS-01",
+  "assertion": "A valid stored session survives first-party line switching, NewAPI status owns comparison FX, and no confirmed non-auth failure clears credentials.",
+  "testSelector": "tests/work_packages/ru024/test_acceptance.py::test_native_session_price_and_activation",
+  "acceptanceCommandId": "ru024-native",
+  "runId": "RU-024/WP-RU024-FUNCTIONAL-CLIENT-ACTIVATION@2026-09-02T07:50:30.083316+00:00",
+  "packageId": "WP-RU024-FUNCTIONAL-CLIENT-ACTIVATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-024",
+  "releaseUnitHash": "sha256:fdd8d4cad283c177bb25f04b1954dc48dca26445344afecd62a96e67ed0faea4"
+}

@@ -1810,6 +1810,32 @@
         "E-CODE-042",
         "E-USER-049"
       ]
+    },
+    {
+      "id": "E-CODE-043",
+      "claim": "RU-024 product tests and both platform builds passed, but its first governance run was dispatched after implementation and its acceptance helpers attempted build output beneath the source tree. The verifier correctly retained a failed report with no valid runner proof. Existing repository precedent uses pytest tmp_path for Vitest reports, caches and compiler target output under mandatory source-readonly isolation.",
+      "class": "code_observed",
+      "locator": ".product-governance/execution/reports/3d117b5aba8a757d.757013433ab143af3ae8.json;tests/work_packages/ru024/test_acceptance.py;tests/work_packages/ru012/test_acceptance.py;https://github.com/DaydreamZXG/yeschoy-ai-desktop/actions/runs/33604114617",
+      "observedAt": "2026-09-02T16:00:00+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-018",
+      "claim": "RU-025 should supersede RU-024 without changing product behavior and verify the unchanged 0.3.0 client through a verification-only package. Its pytest scenarios keep all Vitest, Vite and Cargo outputs in verifier-provided temporary directories, execute the native and renderer suites under source-readonly isolation, and preserve the original failed RU-024 run as historical evidence.",
+      "class": "proposed",
+      "locator": "inline:ru025-readonly-functional-client-verification",
+      "observedAt": "2026-09-02T16:00:00+08:00",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-CODE-043",
+        "E-PROP-017",
+        "E-USER-056"
+      ]
     }
   ]
 }

@@ -3381,6 +3381,95 @@
         "The change requires a server source, deployment, database schema, DSH, updater, telemetry or public-release mutation."
       ],
       "status": "planned"
+    },
+    {
+      "id": "WP-RU025-READONLY-FUNCTIONAL-CLIENT-VERIFICATION",
+      "wave": "integration",
+      "owner": "desktop-platform",
+      "riskClass": "critical",
+      "objective": "Verify the unchanged RU-024 0.3.0 functional client result with a correct pre-verification baseline and source-readonly semantic runners.",
+      "deliverables": [
+        "Verifier-owned native session, pricing and activation proof.",
+        "Verifier-owned shared renderer account and one-click setup proof.",
+        "Verifier-owned typecheck and renderer build proof with no source mutation."
+      ],
+      "requirementRefs": ["REQ-052"],
+      "decisionRefs": ["DEC-068", "DEC-069"],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No product source, package, behavior, contract or installation artifact change.",
+        "No server, NewAPI, Nginx, DNS, Redis, database, deployment or production change.",
+        "No DSH, other-tool write, telemetry, updater or public-release claim."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/App.tsx",
+        "src/account/**",
+        "src/candidate/**",
+        "src/configuration/**",
+        "src/service-catalog/ServiceCatalogPanel.test.tsx",
+        "src/workbench/**",
+        "src/index.css",
+        "src/i18n/locales/zh.json",
+        "src/i18n/locales/zh-TW.json",
+        "src/i18n/locales/en.json",
+        "src/i18n/locales/ja.json",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/account_v2.rs",
+        "src-tauri/src/tool_activation.rs",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/tauri.candidate.conf.json",
+        "tests/work_packages/ru025/**",
+        "outputs/野菜API-0.3.0客户端可用化验证记录.md",
+        "release/ru024-local/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        ".github/**",
+        "src-tauri/src/desktop_app_discovery.rs",
+        "src-tauri/src/desktop_app_discovery_core.rs",
+        "src-tauri/src/tool_discovery.rs",
+        "src-tauri/src/tool_discovery_core.rs",
+        "src-tauri/src/tool_discovery_v2.rs",
+        "src/desktop-apps/**",
+        "src/tool-discovery/**",
+        "src/diagnostics/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "Verification only; no migration or runtime action.",
+        "rollback": "No product change to roll back; retain the immutable RU-024 failure and RU-025 verifier evidence."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Verify the exact unchanged RU-024 state and its existing platform artifacts.",
+        "supportedVersions": "Internal client 0.3.0 on macOS x86_64/arm64 and Windows x64; NewAPI desktop-integration-v2.",
+        "removalGate": "Any product, adapter, server or release change requires a later implementation release unit."
+      },
+      "inputContracts": ["desktop-account-session@v3", "desktop-tool-activation@v1"],
+      "outputContracts": [],
+      "acceptanceCommands": [
+        {"id": "ru025-native", "kind": "scenario_test", "adapter": "pytest-json@1", "selector": "tests/work_packages/ru025/test_acceptance.py::test_native_session_price_and_activation", "cwd": ".", "timeoutSeconds": 1200},
+        {"id": "ru025-renderer", "kind": "scenario_test", "adapter": "pytest-json@1", "selector": "tests/work_packages/ru025/test_acceptance.py::test_shared_account_and_setup_ui", "cwd": ".", "timeoutSeconds": 600},
+        {"id": "ru025-build", "kind": "scenario_test", "adapter": "pytest-json@1", "selector": "tests/work_packages/ru025/test_acceptance.py::test_internal_candidate_build", "cwd": ".", "timeoutSeconds": 600}
+      ],
+      "requiredAcceptanceScenarios": [
+        {"id": "RU025-AS-01", "assertion": "The unchanged native client preserves first-party sessions across line switches, uses NewAPI status FX and keeps tool credentials out of IPC while its native suite passes under source-readonly isolation.", "testSelector": "tests/work_packages/ru025/test_acceptance.py::test_native_session_price_and_activation", "acceptanceCommandId": "ru025-native"},
+        {"id": "RU025-AS-02", "assertion": "The unchanged React client uses one shared account state and exposes authenticated-model one-click setup with its selected interaction suites passing under source-readonly isolation.", "testSelector": "tests/work_packages/ru025/test_acceptance.py::test_shared_account_and_setup_ui", "acceptanceCommandId": "ru025-renderer"},
+        {"id": "RU025-AS-03", "assertion": "The unchanged 0.3.0 candidate typechecks and builds renderer output only in verifier temporary storage while retaining no-updater and no-secret-IPC boundaries.", "testSelector": "tests/work_packages/ru025/test_acceptance.py::test_internal_candidate_build", "acceptanceCommandId": "ru025-build"}
+      ],
+      "verificationOnly": true,
+      "stopConditions": [
+        "A test or build attempts to write into the source tree.",
+        "Verification requires changing product source, server state or installation artifacts.",
+        "A required runner cannot produce valid machine proof for the exact selector."
+      ],
+      "status": "planned"
     }
   ]
 }

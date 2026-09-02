@@ -15614,6 +15614,39 @@
         "releaseUnitHash": "sha256:fdd8d4cad283c177bb25f04b1954dc48dca26445344afecd62a96e67ed0faea4",
         "snapshotPath": "execution/release-unit-snapshots/fdd8d4cad283c177bb25f04b1954dc48dca26445344afecd62a96e67ed0faea4/release-unit.json"
       }
+    },
+    {
+      "id": "RU-025",
+      "status": "review",
+      "objective": "Verify the unchanged RU-024 functional client result under mandatory source-readonly execution with corrected temporary-output runners.",
+      "decisionRef": "DEC-069",
+      "dependsOnReleaseUnits": [
+        "RU-024"
+      ],
+      "supersedesReleaseUnits": [
+        "RU-024"
+      ],
+      "roots": {
+        "workPackages": [
+          "WP-RU025-READONLY-FUNCTIONAL-CLIENT-VERIFICATION"
+        ],
+        "requirements": [
+          "REQ-052"
+        ],
+        "nonFunctionalRequirements": [],
+        "domains": [],
+        "contracts": [
+          "desktop-account-session@v3",
+          "desktop-tool-activation@v1"
+        ],
+        "stateMachines": [],
+        "pages": [],
+        "journeys": [],
+        "dataLifecycleResources": [],
+        "aiScenarios": [],
+        "entitlements": [],
+        "trackCoverage": []
+      }
     }
   ]
 }
