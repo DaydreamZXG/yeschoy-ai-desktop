@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU026-AS-01",
+  "assertion": "The unchanged native client preserves first-party sessions across line switches, uses NewAPI status FX and keeps tool credentials out of IPC while its native suite passes under source-readonly isolation.",
+  "testSelector": "tests/work_packages/ru026/test_acceptance.py::test_native_session_price_and_activation",
+  "acceptanceCommandId": "ru026-native",
+  "runId": "RU-026/WP-RU026-FINAL-READONLY-FUNCTIONAL-CLIENT-VERIFICATION@2026-09-02T08:03:32.911999+00:00",
+  "packageId": "WP-RU026-FINAL-READONLY-FUNCTIONAL-CLIENT-VERIFICATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru026/test_acceptance.py::test_native_session_price_and_activation",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:71868ba67252c5f8b8cd4a915a5afb4a857ce50d27cb29e5ce90e844183e719a",
+    "machineReportSha256": "sha256:174a8662d872f75b5cb88f1356d658826e969ca4276416b6bdfe360039cac436",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:363a6f8a583bfd191de57b14713e1e01c29f8661df40662d816856e2d3890c68",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:311662935610e0b1153a10c81fc0d19266bd530b94caf34f620ab18c162c5147",
+  "releaseUnitId": "RU-026",
+  "releaseUnitHash": "sha256:aef7c53c07f42b85a5345f9918bfbb035988bc85895744275b61624813764621"
+}

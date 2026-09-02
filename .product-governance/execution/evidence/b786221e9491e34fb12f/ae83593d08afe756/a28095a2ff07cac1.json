@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU026-AS-03",
+  "assertion": "The unchanged 0.3.0 candidate typechecks and produces a Vite production renderer build entirely inside verifier temporary storage.",
+  "testSelector": "tests/work_packages/ru026/test_acceptance.py::test_internal_candidate_build",
+  "acceptanceCommandId": "ru026-build",
+  "runId": "RU-026/WP-RU026-FINAL-READONLY-FUNCTIONAL-CLIENT-VERIFICATION@2026-09-02T08:03:32.911999+00:00",
+  "packageId": "WP-RU026-FINAL-READONLY-FUNCTIONAL-CLIENT-VERIFICATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru026/test_acceptance.py::test_internal_candidate_build",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:94658207303554ce3ce54a7a1a55bd0380b452ef6eec097f2e7336a1f7ebe1e7",
+    "machineReportSha256": "sha256:e7d2ad605241e9bb2e625946465bedf05329c3777c34dbaac5052e728e1993e0",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:b182697614d23a0ea004dcd37dccfc4b1b123a217d38d01fab18f58c70bbcfb4",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:8d8dfc7f73989a919e4fc922560fd2f88577121cd74d5c8b722ffa5199bde54a",
+  "releaseUnitId": "RU-026",
+  "releaseUnitHash": "sha256:aef7c53c07f42b85a5345f9918bfbb035988bc85895744275b61624813764621"
+}

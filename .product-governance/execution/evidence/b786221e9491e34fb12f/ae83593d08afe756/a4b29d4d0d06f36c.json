@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU026-AS-02",
+  "assertion": "The unchanged React client uses one shared account state and exposes authenticated-model one-click setup with its selected interaction suites passing under source-readonly isolation.",
+  "testSelector": "tests/work_packages/ru026/test_acceptance.py::test_shared_account_and_setup_ui",
+  "acceptanceCommandId": "ru026-renderer",
+  "runId": "RU-026/WP-RU026-FINAL-READONLY-FUNCTIONAL-CLIENT-VERIFICATION@2026-09-02T08:03:32.911999+00:00",
+  "packageId": "WP-RU026-FINAL-READONLY-FUNCTIONAL-CLIENT-VERIFICATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru026/test_acceptance.py::test_shared_account_and_setup_ui",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:ad86ecd7934d71651255c9c0e65255108f624105785454d407cb86cf658c0f42",
+    "machineReportSha256": "sha256:693b237ac57585baf2b811b3060f1e10cf9a5890d2b593286c89004bb3a133c2",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:e9796370b81f2bc5f16887079463f20106d70e4354af7c40001dc7d6c6ea9ba4",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:c07299ba88aeec8e702fa89a53a9d97d8d5849069938ba7d02ad84ce4101ba57",
+  "releaseUnitId": "RU-026",
+  "releaseUnitHash": "sha256:aef7c53c07f42b85a5345f9918bfbb035988bc85895744275b61624813764621"
+}
