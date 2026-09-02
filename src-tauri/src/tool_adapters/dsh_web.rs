@@ -23,6 +23,10 @@ use crate::tool_adapters::{
 
 static RPC_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 
+fn start_arguments() -> [&'static str; 6] {
+    ["web", "--host", "127.0.0.1", "--port", "0", "--no-open"]
+}
+
 pub(crate) struct DshRuntime {
     child: Child,
     url: String,
@@ -229,7 +233,7 @@ async fn start_process(
 ) -> Result<DshRuntime, AdapterFailure> {
     let mut command = Command::new(&installation.path);
     command
-        .args(["web", "--host", "127.0.0.1", "--port", "0"])
+        .args(start_arguments())
         .env("YESCHOY_DSH_API_KEY", key)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -448,5 +452,13 @@ llm-pi-ai:
         assert!(validated_loopback_url("dsh web: http://127.0.0.1:3018").is_some());
         assert!(validated_loopback_url("dsh web: https://evil.example:3018").is_none());
         assert!(validated_loopback_url("debug http://127.0.0.1:3018").is_none());
+    }
+
+    #[test]
+    fn latest_release_candidate_does_not_open_before_verification() {
+        assert_eq!(
+            start_arguments(),
+            ["web", "--host", "127.0.0.1", "--port", "0", "--no-open"]
+        );
     }
 }

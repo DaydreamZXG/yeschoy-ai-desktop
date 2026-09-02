@@ -49,7 +49,7 @@ def test_native_verified_adapter_transactions(tmp_path: Path) -> None:
         "--lib",
         env=environment,
     )
-    assert "test result: ok. 51 passed" in output
+    assert "test result: ok. 52 passed" in output
 
     activation = read("src-tauri/src/tool_activation.rs")
     desktop_discovery = read("src-tauri/src/desktop_app_discovery.rs")
@@ -71,6 +71,10 @@ def test_native_verified_adapter_transactions(tmp_path: Path) -> None:
     assert "restore_after_failure(" in activation
     assert "windows_sys::Win32::Storage::FileSystem" in desktop_discovery
     assert "windows_sys::Win32::System::Diagnostics::Debug" not in desktop_discovery
+    adapter_registry = read("src-tauri/src/tool_adapters/mod.rs")
+    dsh_adapter = read("src-tauri/src/tool_adapters/dsh_web.rs")
+    assert '"0.1.1-rc.2"' in adapter_registry
+    assert '"--no-open"' in dsh_adapter
 
 
 def resolve_node_modules() -> Dict[str, str]:

@@ -2,7 +2,7 @@
 
 日期：2026-09-02  
 发布单元：RU-027  
-验收运行：`RU-027/WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS@2026-09-02T11:08:33.342903+00:00`  
+验收运行：`RU-027/WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS@2026-09-02T11:53:20.718904+00:00`  
 范围：仅桌面客户端；未修改 NewAPI、服务器、Nginx 或线上数据库。
 
 ## 本版结论
@@ -27,10 +27,13 @@
 
 - TypeScript 类型检查：通过。
 - 前端单元测试：24 个文件、279 项测试通过。
-- Rust 原生单元测试：51 项通过。
+- Rust 原生单元测试：52 项通过。
 - Rust 全目标检查：通过；仅有未使用分支的编译警告。
 - RU-027 四项验收：通过。
-- 本机发现：Claude Code 2.1.233、Claude Desktop 1.40609.1、Codex Desktop 26.825.51511、DSH 0.1.0-rc.6 均能唯一识别；本机没有安装 Pi，因此 Pi 的真实账号请求仍需在装有 Pi 的验收机上做发布前设备验证。
+- 本机发现：Claude Code 2.1.233、Claude Desktop 1.40609.1、Codex Desktop 26.825.51511、Pi 0.84.4、DSH 0.1.1-rc.2 均能识别。Pi 使用的是迁移后的官方包 `@earendil-works/pi-coding-agent`；DSH 使用 npm `latest`/`next` 当前共同指向的正式候选版。
+- Pi 0.84.4 实机验证：能读取客户端生成的 `models.json` / `settings.json`、执行签名客户端的钥匙串 helper，并把真实 Chat Completions 请求送达 NewAPI。所测模型随后均被 NewAPI 拒绝，明确返回 `admin-only` 用户组没有可用渠道；因此不能把本次结果表述为“模型回复成功”。失败后配置、专用令牌和钥匙串记录均已清理，账号登录会话已恢复为完整 JSON。
+- DSH 0.1.1-rc.2 实机验证：`dsh web --host 127.0.0.1 --port 0 --no-open` 正常启动并返回受限回环地址；`session.create` 和 `session.models` RPC 均返回 `ok: true`。最新版新增的默认自动打开浏览器行为已用 `--no-open` 抑制，只允许客户端在真实验证完成后打开一次。
+- Windows x64 CI：前端、Rust 原生测试、NSIS 打包和产物上传均通过；安装器 SHA-256 为 `1806b8b9d42ecdbf9630a2ee347faa01d71c7109bfa246d8ad737d9f2d086f7c`。
 
 ## macOS 安装包
 
@@ -46,6 +49,6 @@
 
 ## 尚未冒充为已完成的事项
 
-- Windows x64 源码由现有 Windows CI 做原生编译与安装包验证；macOS 本机缺少 Windows `llvm-rc`，不以跨平台失败冒充 Windows 已验收。
-- Pi 在本机未安装，所以当前证据覆盖配置合并、密钥边界、失败回滚和验证命令，但不覆盖真实 Pi 二进制的账号请求。
+- Windows 安装器尚未代码签名，内测运行时可能触发 SmartScreen；CI 通过不等于完成 Windows 签名发布。
+- Pi 与 DSH 已证明本地配置、凭证边界、版本发现、进程/RPC 和到达 NewAPI 的请求链路；但当前 `Root User / admin-only` 账号组没有可用模型渠道，尚未取得最终模型回复。要完成端到端回复验收，需要先由服务器维护者修复该账号组的渠道可用性或提供一个有可用 Chat 模型的测试账号。
 - Claude Desktop 的官方第三方网关需要本客户端的本机回环代理保持运行；退出野菜API 后，Claude Desktop 连接应明确视为不可用，重新打开野菜API 会恢复代理。

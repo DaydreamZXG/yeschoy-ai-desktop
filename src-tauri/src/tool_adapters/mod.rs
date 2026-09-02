@@ -126,7 +126,7 @@ fn version_supported(tool_id: &str, version: &str) -> bool {
         "claude_desktop" => matches!(version, "1.40609.0" | "1.40609.1" | "1.4.2.0"),
         "codex_desktop" => matches!(version, "26.825.51511" | "2026.901.1200.0"),
         "pi" => matches!(version, "0.84.2" | "0.84.3" | "0.84.4"),
-        "dsh_web" => matches!(version, "0.1.0-rc.6" | "0.1.2-alpha.1"),
+        "dsh_web" => matches!(version, "0.1.0-rc.6" | "0.1.1-rc.2" | "0.1.2-alpha.1"),
         _ => false,
     }
 }
@@ -296,6 +296,7 @@ mod tests {
     fn supported_versions_are_exact_not_ranges() {
         assert!(version_supported("pi", "0.84.4"));
         assert!(!version_supported("pi", "0.84.5"));
+        assert!(version_supported("dsh_web", "0.1.1-rc.2"));
         assert!(!version_supported("dsh_web", "0.1.2"));
     }
 }
