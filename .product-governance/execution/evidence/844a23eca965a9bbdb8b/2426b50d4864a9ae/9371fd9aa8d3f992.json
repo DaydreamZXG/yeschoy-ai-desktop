@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU027-AS-02",
+  "assertion": "The beginner UI names five distinct targets, resolves installation ambiguity and never presents configuration-only or verification-failed state as ready.",
+  "testSelector": "tests/work_packages/ru027/test_acceptance.py::test_five_target_beginner_journey",
+  "acceptanceCommandId": "ru027-renderer",
+  "runId": "RU-027/WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS@2026-09-02T10:44:34.540334+00:00",
+  "packageId": "WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:eafc6591c69b7c651aa5d5f0a8a8d2bd77c48eeee4f96f425fcf9f23b9605894",
+  "releaseUnitId": "RU-027",
+  "releaseUnitHash": "sha256:c0a8f7867c08ac1207c0ba1ed218525a15054af289190cd5fa143fc193f67e0a"
+}

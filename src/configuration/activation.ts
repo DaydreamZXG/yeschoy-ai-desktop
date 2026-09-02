@@ -1,13 +1,63 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { DesktopAppId } from "../desktop-apps/contract";
 import type { ConfigurationLineId } from "./preview";
 
+export const ACTIVATION_TOOL_IDS = [
+  "claude_code",
+  "claude_desktop",
+  "codex_desktop",
+  "pi",
+  "dsh_web",
+] as const;
+
+export type ActivationToolId = (typeof ACTIVATION_TOOL_IDS)[number];
+
+export const ACTIVATION_TARGET_STATUSES = [
+  "not_found",
+  "available",
+  "selection_required",
+  "unsupported_version",
+] as const;
+
+export type ActivationTargetStatus =
+  (typeof ACTIVATION_TARGET_STATUSES)[number];
+
+export interface ActivationInstallation {
+  installationId: string;
+  label: string;
+  version: string;
+  supported: boolean;
+  recommended: boolean;
+}
+
+export interface ActivationTarget {
+  toolId: ActivationToolId;
+  displayName: string;
+  surface: string;
+  status: ActivationTargetStatus;
+  installations: ActivationInstallation[];
+}
+
+export interface ActivationTargetScan {
+  requestId: string;
+  schemaVersion: 1;
+  platform: "macos" | "windows" | "linux" | "unknown";
+  targets: ActivationTarget[];
+}
+
 export const TOOL_ACTIVATION_STATUSES = [
-  "configured",
+  "ready",
   "signed_out",
+  "tool_not_found",
+  "multiple_installations",
+  "unsupported_version",
+  "unsupported_profile",
   "unsupported_model",
-  "server_unavailable",
+  "external_override",
+  "secure_storage_unavailable",
   "configuration_failed",
+  "launch_failed",
+  "verification_failed",
+  "server_unavailable",
   "invalid_request",
 ] as const;
 
@@ -15,9 +65,9 @@ export type ToolActivationStatus = (typeof TOOL_ACTIVATION_STATUSES)[number];
 
 export interface ToolActivationProjection {
   requestId: string;
-  schemaVersion: 1;
+  schemaVersion: 2;
   status: ToolActivationStatus;
-  toolId: DesktopAppId;
+  toolId: ActivationToolId;
   modelId: string;
   observedAtEpochMs: number;
   reasonCode: string;
@@ -25,6 +75,13 @@ export interface ToolActivationProjection {
 
 function object(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function exactKeys(value: Record<string, unknown>, keys: readonly string[]) {
+  return (
+    Object.keys(value).length === keys.length &&
+    keys.every((key) => Object.prototype.hasOwnProperty.call(value, key))
+  );
 }
 
 function safeText(
@@ -40,27 +97,103 @@ function safeText(
   );
 }
 
+function decodeInstallation(value: unknown): ActivationInstallation | null {
+  if (!object(value)) return null;
+  if (
+    !exactKeys(value, [
+      "installationId",
+      "label",
+      "version",
+      "supported",
+      "recommended",
+    ]) ||
+    !/^i[0-9a-f]{16}$/.test(String(value.installationId)) ||
+    !safeText(value.label, 100, false) ||
+    !safeText(value.version, 80) ||
+    typeof value.supported !== "boolean" ||
+    typeof value.recommended !== "boolean"
+  )
+    return null;
+  return value as unknown as ActivationInstallation;
+}
+
+function decodeTarget(value: unknown): ActivationTarget | null {
+  if (!object(value)) return null;
+  if (
+    !exactKeys(value, [
+      "toolId",
+      "displayName",
+      "surface",
+      "status",
+      "installations",
+    ]) ||
+    !ACTIVATION_TOOL_IDS.includes(value.toolId as ActivationToolId) ||
+    !safeText(value.displayName, 80, false) ||
+    !safeText(value.surface, 120, false) ||
+    !ACTIVATION_TARGET_STATUSES.includes(
+      value.status as ActivationTargetStatus,
+    ) ||
+    !Array.isArray(value.installations) ||
+    value.installations.length > 8
+  )
+    return null;
+  const installations = value.installations.map(decodeInstallation);
+  if (installations.some((item) => item === null)) return null;
+  return {
+    ...(value as unknown as Omit<ActivationTarget, "installations">),
+    installations: installations as ActivationInstallation[],
+  };
+}
+
+export function decodeActivationTargetScan(
+  value: unknown,
+  requestId: string,
+): ActivationTargetScan | null {
+  if (!object(value)) return null;
+  if (
+    !exactKeys(value, ["requestId", "schemaVersion", "platform", "targets"]) ||
+    value.requestId !== requestId ||
+    value.schemaVersion !== 1 ||
+    !["macos", "windows", "linux", "unknown"].includes(
+      String(value.platform),
+    ) ||
+    !Array.isArray(value.targets) ||
+    value.targets.length !== ACTIVATION_TOOL_IDS.length
+  )
+    return null;
+  const targets = value.targets.map(decodeTarget);
+  if (targets.some((target) => target === null)) return null;
+  const toolIds = targets.map((target) => target!.toolId);
+  if (
+    new Set(toolIds).size !== ACTIVATION_TOOL_IDS.length ||
+    !ACTIVATION_TOOL_IDS.every((toolId) => toolIds.includes(toolId))
+  )
+    return null;
+  return {
+    ...(value as unknown as Omit<ActivationTargetScan, "targets">),
+    targets: targets as ActivationTarget[],
+  };
+}
+
 export function decodeToolActivation(
   value: unknown,
   requestId: string,
 ): ToolActivationProjection | null {
   if (!object(value)) return null;
-  const keys = [
-    "requestId",
-    "schemaVersion",
-    "status",
-    "toolId",
-    "modelId",
-    "observedAtEpochMs",
-    "reasonCode",
-  ];
   if (
-    Object.keys(value).length !== keys.length ||
-    !keys.every((key) => Object.prototype.hasOwnProperty.call(value, key)) ||
+    !exactKeys(value, [
+      "requestId",
+      "schemaVersion",
+      "status",
+      "toolId",
+      "modelId",
+      "observedAtEpochMs",
+      "reasonCode",
+    ]) ||
     value.requestId !== requestId ||
-    value.schemaVersion !== 1 ||
+    value.schemaVersion !== 2 ||
     !TOOL_ACTIVATION_STATUSES.includes(value.status as ToolActivationStatus) ||
-    !["claude_desktop", "codex_desktop"].includes(value.toolId as string) ||
+    !ACTIVATION_TOOL_IDS.includes(value.toolId as ActivationToolId) ||
     !safeText(value.modelId, 200, false) ||
     !Number.isSafeInteger(value.observedAtEpochMs) ||
     (value.observedAtEpochMs as number) < 0 ||
@@ -70,16 +203,29 @@ export function decodeToolActivation(
   return value as unknown as ToolActivationProjection;
 }
 
-let sequence = 0;
+let scanSequence = 0;
+let activationSequence = 0;
+
+export async function scanActivationTargets(): Promise<ActivationTargetScan> {
+  scanSequence += 1;
+  const requestId = `target-scan-${Date.now().toString(36)}-${scanSequence.toString(36)}`;
+  const raw = await invoke<unknown>("scan_activation_targets_v1", {
+    request: { requestId },
+  });
+  const result = decodeActivationTargetScan(raw, requestId);
+  if (!result) throw new Error("invalid_activation_target_scan");
+  return result;
+}
 
 export async function activateDesktopTool(input: {
   lineId: ConfigurationLineId;
-  toolId: DesktopAppId;
+  toolId: ActivationToolId;
   modelId: string;
+  installationId: string;
 }): Promise<ToolActivationProjection> {
-  sequence += 1;
-  const requestId = `activate-${Date.now().toString(36)}-${sequence.toString(36)}`;
-  const raw = await invoke<unknown>("configure_desktop_tool_v1", {
+  activationSequence += 1;
+  const requestId = `activate-${Date.now().toString(36)}-${activationSequence.toString(36)}`;
+  const raw = await invoke<unknown>("configure_desktop_tool_v2", {
     request: { requestId, ...input },
   });
   const result = decodeToolActivation(raw, requestId);

@@ -21,7 +21,7 @@ describe("client candidate readiness", () => {
 
   it("marks the v2 account and price surfaces as integration candidates", () => {
     const readiness = createCandidateReadiness();
-    expect(readiness.version).toBe("0.3.0");
+    expect(readiness.version).toBe("0.4.0");
     expect(
       readiness.capabilities
         .filter((capability) => capability.status === "integration_candidate")

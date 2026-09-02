@@ -231,7 +231,7 @@ mod tests {
                 "printf 'secret-looking-error\\n'",
                 "probe_failed",
             ),
-            ("timeout", "exec /bin/sleep 4", "probe_timed_out"),
+            ("timeout", "exec /bin/sleep 12", "probe_timed_out"),
         ] {
             let binary = fixture.binary(&format!("{name}/codex"), body);
             let result = project_inventory(

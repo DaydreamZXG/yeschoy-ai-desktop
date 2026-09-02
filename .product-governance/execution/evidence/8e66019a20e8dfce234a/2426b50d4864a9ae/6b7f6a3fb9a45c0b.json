@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU027-AS-04",
+  "assertion": "The 0.4.0 internal candidate typechecks, passes selected tests and produces macOS and Windows-ready package inputs without modifying server or production resources.",
+  "testSelector": "tests/work_packages/ru027/test_acceptance.py::test_internal_candidate_build",
+  "acceptanceCommandId": "ru027-build",
+  "runId": "RU-027/WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS@2026-09-02T10:54:56.379325+00:00",
+  "packageId": "WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru027/test_acceptance.py::test_internal_candidate_build",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:81e1ffdff12507b77ff1f43877f3f47e254f9db4e9da3bca61b4a303ff72197f",
+    "machineReportSha256": "sha256:62930526195b88d900d1a488b9f4ef9fa41cb36e050fb5bfb537b96e397acf15",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:112fda0a6ca0bc9ed38c500c61f91ed07cfd336ea1fa1cf45d937b48d771ddfe",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:e5015de113f54dcaf3f09a98874325eed55d19221d365373a1642f9ddb0f0ff9",
+  "releaseUnitId": "RU-027",
+  "releaseUnitHash": "sha256:c0a8f7867c08ac1207c0ba1ed218525a15054af289190cd5fa143fc193f67e0a"
+}

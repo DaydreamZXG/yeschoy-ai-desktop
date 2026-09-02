@@ -16,7 +16,7 @@ import {
   Wallet,
   ChartNoAxesCombined,
 } from "lucide-react";
-import brandIcon from "../assets/brand/yeschoy-app-icon.svg";
+import brandIcon from "../assets/brand/yecai-logo.png";
 import { quotaToUsd, type AccountProjection } from "../account/session";
 import { CANDIDATE_VERSION } from "../candidate/readiness";
 import type { Appearance } from "./appearance";
@@ -117,7 +117,9 @@ export function WorkbenchSidebar({
         onClick={() => onNavigate("home")}
         aria-label="野菜API"
       >
-        <img src={brandIcon} alt="" />
+        <span className="workbench-brand-mark" aria-hidden="true">
+          <img src={brandIcon} alt="" />
+        </span>
         <span>
           <strong>野菜API</strong>
           <small>{c.subtitle}</small>

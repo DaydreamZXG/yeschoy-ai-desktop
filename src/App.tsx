@@ -151,6 +151,7 @@ function App() {
       ) : view === "setup" ? (
         <ConfigurationPreviewView
           initialDesktopAppId={selectedDesktopApp}
+          enableLocalActivation
           lineId={accountLineId}
           onLineChange={setAccountLineId}
           session={accountSession}

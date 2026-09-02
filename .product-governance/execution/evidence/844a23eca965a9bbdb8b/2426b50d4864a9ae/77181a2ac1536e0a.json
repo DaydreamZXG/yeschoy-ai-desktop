@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU027-AS-01",
+  "assertion": "All five adapters preserve unrelated configuration, use only operating-system-backed secrets, read back owned fields and can become ready only after a bounded tool-level request succeeds.",
+  "testSelector": "tests/work_packages/ru027/test_acceptance.py::test_native_verified_adapter_transactions",
+  "acceptanceCommandId": "ru027-native",
+  "runId": "RU-027/WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS@2026-09-02T10:44:34.540334+00:00",
+  "packageId": "WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:e1acf73cdc31e44f6e0608bf2b5f160199986ec337adfc461c35d4e9dbf4cbb9",
+  "releaseUnitId": "RU-027",
+  "releaseUnitHash": "sha256:c0a8f7867c08ac1207c0ba1ed218525a15054af289190cd5fa143fc193f67e0a"
+}

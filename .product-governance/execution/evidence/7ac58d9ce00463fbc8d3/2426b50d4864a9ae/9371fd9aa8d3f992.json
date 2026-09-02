@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU027-AS-02",
+  "assertion": "The beginner UI names five distinct targets, resolves installation ambiguity and never presents configuration-only or verification-failed state as ready.",
+  "testSelector": "tests/work_packages/ru027/test_acceptance.py::test_five_target_beginner_journey",
+  "acceptanceCommandId": "ru027-renderer",
+  "runId": "RU-027/WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS@2026-09-02T10:50:07.897458+00:00",
+  "packageId": "WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru027/test_acceptance.py::test_five_target_beginner_journey",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:ac1916eb97194cd0cce1e48de639d0c576ef83f888834ba3957b621a600e4d02",
+    "machineReportSha256": "sha256:0ac153daf87f8dfd4992dc556d7c8886a9a126f810cb6adb5a686b8c3d917feb",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:35ed9ef644012eb32edd573739ce6668b25e7457ec4fff43f2cc24f6061b761c",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:e07f285015faf9e5843ba12f6a8e87b9e95e759a687c84de0d8f8237f1e72b5d",
+  "releaseUnitId": "RU-027",
+  "releaseUnitHash": "sha256:c0a8f7867c08ac1207c0ba1ed218525a15054af289190cd5fa143fc193f67e0a"
+}

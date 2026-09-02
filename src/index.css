@@ -293,9 +293,24 @@ details dl div {
   background: transparent;
   color: var(--ink);
 }
-.workbench-brand img {
+.workbench-brand-mark {
+  display: grid;
+  flex: 0 0 auto;
   width: 42px;
   height: 42px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--line) 75%, #d9ead8);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 3px 10px #1f5b3520;
+}
+.workbench-brand-mark img {
+  width: 42px;
+  height: 42px;
+  max-width: none;
+  object-fit: cover;
+  transform: scale(1.55);
 }
 .workbench-brand strong {
   display: block;
@@ -1478,6 +1493,27 @@ details dl div {
   display: grid;
   gap: 23px;
 }
+.selector-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+.selector-heading legend {
+  margin: 0;
+}
+.selector-heading .text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-size: 11px;
+}
+.selector-heading .text-button svg {
+  width: 14px;
+  height: 14px;
+}
 .account-model-selector {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(220px, 0.9fr) auto;
@@ -1517,28 +1553,36 @@ details dl div {
 }
 .configuration-tool-grid button {
   display: grid;
-  grid-template-columns: 30px 1fr;
-  gap: 1px 9px;
-  justify-items: start;
-  padding: 13px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px 11px;
+  min-height: 89px;
+  padding: 14px;
   text-align: left;
 }
-.configuration-tool-grid strong {
+.configuration-app-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+.configuration-tool-grid .configuration-app-copy strong {
   font-size: 12px;
 }
-.configuration-tool-grid small {
+.configuration-tool-grid .configuration-app-copy small {
   color: var(--muted);
   font-size: 11px;
+  line-height: 1.4;
 }
 .configuration-app-icon {
   display: grid;
   place-items: center;
-  grid-row: span 2;
-  align-self: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  grid-row: 1 / span 2;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   background: #e6eaf1;
+  color: #2563eb;
+  font-size: 16px;
 }
 .configuration-app-icon img {
   width: 20px;
@@ -1549,6 +1593,90 @@ details dl div {
   background: var(--accent-soft);
   border-color: var(--accent);
   color: var(--accent);
+}
+.configuration-target-status {
+  grid-column: 2;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--subtle);
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.3;
+}
+.configuration-target-status[data-tone="ready"] {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.configuration-target-status[data-tone="attention"] {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+.configuration-tool-grid button.is-selected .configuration-target-status {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 18%, transparent);
+}
+.configuration-app-icon[data-app="claude_code"] .application-glyph,
+.configuration-app-icon[data-app="claude_desktop"] .application-glyph {
+  color: #b56040;
+}
+.configuration-app-icon[data-app="pi"] {
+  background: #eaf6ef;
+  color: #207753;
+  font-family: var(--font-ui);
+}
+.configuration-app-icon[data-app="dsh_web"] {
+  background: #e8effc;
+  color: #315c9f;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+}
+.installation-choice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, auto);
+  align-items: center;
+  gap: 15px;
+  padding: 15px 16px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--faint);
+  border-radius: 11px;
+  background: var(--surface);
+}
+.installation-choice[data-state="ready"] {
+  border-left-color: var(--success);
+}
+.installation-choice[data-state="attention"] {
+  border-left-color: var(--warning);
+}
+.installation-choice strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.installation-choice p,
+.installation-choice label small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.installation-choice label {
+  display: grid;
+  gap: 6px;
+}
+.installation-choice label > span {
+  color: var(--muted);
+  font-size: 11px;
+}
+.installation-chip {
+  justify-self: end;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: var(--subtle);
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }
 .line-selector-grid button {
   gap: 11px;
@@ -1670,6 +1798,7 @@ details dl div {
   font-weight: 600;
 }
 .setup-privacy-note,
+.setup-progress,
 .setup-result {
   display: flex;
   align-items: flex-start;
@@ -1683,6 +1812,7 @@ details dl div {
   color: var(--muted);
 }
 .setup-privacy-note svg,
+.setup-progress svg,
 .setup-result svg {
   flex: 0 0 auto;
   width: 17px;
@@ -1690,6 +1820,7 @@ details dl div {
   margin-top: 1px;
 }
 .setup-privacy-note p,
+.setup-progress p,
 .setup-result p {
   display: grid;
   gap: 3px;
@@ -1697,10 +1828,16 @@ details dl div {
   line-height: 1.55;
 }
 .setup-privacy-note strong,
+.setup-progress strong,
 .setup-result strong {
   color: var(--ink);
   font-size: 12px;
   font-weight: 600;
+}
+.setup-progress {
+  border: 1px solid var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 .setup-result.is-success {
   border: 1px solid color-mix(in srgb, var(--success) 24%, transparent);
@@ -2410,7 +2547,12 @@ details dl div {
   .workbench-brand {
     width: fit-content;
   }
-  .workbench-brand img {
+  .workbench-brand-mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+  .workbench-brand-mark img {
     width: 34px;
     height: 34px;
   }
@@ -2499,6 +2641,13 @@ details dl div {
   .account-model-selector {
     grid-template-columns: 1fr;
     align-items: stretch;
+  }
+  .installation-choice {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+  .installation-chip {
+    justify-self: start;
   }
   .account-model-catalog-status {
     align-items: flex-start;

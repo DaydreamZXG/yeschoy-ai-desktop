@@ -1899,6 +1899,25 @@
         "pageRefs": [],
         "domainRefs": ["account", "billing", "tool-config", "desktop-platform"]
       }
+    },
+    {
+      "id": "DEC-071",
+      "question": "What client implementation authority may correct false-success activation and make the owner's required Codex, Claude, Pi and DSH one-click journey directly usable without changing NewAPI or the server?",
+      "choice": "Create RU-027 as an implementation successor to RU-026. Replace the ambiguous Claude target with separate Claude Code and Claude Desktop targets; retain Codex Desktop and add Pi plus DSH web. One explicit click may acquire or reuse a dedicated NewAPI tool key natively, but the key must be stored only in the operating-system credential store and supplied to a tool through the signed client helper or the client-owned DSH launch process, never through renderer IPC or ordinary configuration. Preserve unrelated user configuration with atomic write and volatile rollback, resolve installation ambiguity before writing, read back the exact owned fields, launch or reload the selected target where supported, and return ready only after a bounded tool-level request proves the selected line, model and credential work. Configuration-only, restart-pending, unsupported-version, multiple-installation, override and verification failures are not success. Keep NewAPI, server, database, deployment, updater, telemetry and public production release out of scope.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-09-02T16:45:00+08:00",
+      "evidenceRefs": [
+        "E-USER-057",
+        "E-CODE-045",
+        "E-EXT-041",
+        "E-PROP-020"
+      ],
+      "affects": {
+        "requirementRefs": ["REQ-053"],
+        "pageRefs": ["PAGE-CONFIGURE-PREVIEW", "PAGE-TOOLS"],
+        "domainRefs": ["tool-config", "desktop-platform", "account", "diagnostics"]
+      }
     }
   ]
 }

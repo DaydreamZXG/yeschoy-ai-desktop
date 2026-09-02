@@ -130,6 +130,7 @@ pub struct AccountModel {
     id: String,
     description: String,
     billing_mode: &'static str,
+    supported_endpoint_types: Vec<String>,
     pricing_available: bool,
     official_input_cny_per_million: String,
     official_output_cny_per_million: String,
@@ -648,9 +649,24 @@ async fn refresh_access(
         let _ = delete_stored_session();
         return Err(AccountProjectionFailure::SessionExpired);
     }
+
+    // A login belongs to the 野菜API account, not to the currently selected
+    // acceleration route. Refresh through the route that issued the session,
+    // then use the short-lived access token with whichever route the user is
+    // viewing. This keeps a mainland/global switch from looking like logout.
+    let refresh_line_id = if line_origin(&stored.line_id).is_some() {
+        stored.line_id.clone()
+    } else {
+        line_id.to_owned()
+    };
+    let refresh_origin = if refresh_line_id == line_id {
+        bootstrap.origin.clone()
+    } else {
+        fetch_bootstrap(&refresh_line_id).await?.origin
+    };
     let response = send_json(
         Method::POST,
-        &format!("{}{}", bootstrap.origin, REFRESH_PATH),
+        &format!("{}{}", refresh_origin, REFRESH_PATH),
         None,
         Some(json!({
             "refresh_token": stored.refresh_token,
@@ -675,7 +691,7 @@ async fn refresh_access(
         return Err(AccountProjectionFailure::InvalidResponse);
     }
     let access_token = envelope.data.access_token.clone();
-    install_auth_bundle(state, line_id, envelope.data)
+    install_auth_bundle(state, &refresh_line_id, envelope.data)
         .map_err(|_| AccountProjectionFailure::SecureStorage)?;
     Ok(access_token)
 }
@@ -908,6 +924,22 @@ fn parse_models(
                 _ if quota_type == Some(1) => "per_request",
                 _ => "unknown",
             };
+            let supported_endpoint_types = row
+                .get("supported_endpoint_types")
+                .and_then(Value::as_array)
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .filter(|value| {
+                    !value.is_empty()
+                        && value.chars().count() <= 80
+                        && !value.chars().any(char::is_control)
+                })
+                .take(32)
+                .map(str::to_owned)
+                .collect::<BTreeSet<_>>()
+                .into_iter()
+                .collect();
             let ratio = positive_number(row.get("model_ratio"));
             let completion = positive_number(row.get("completion_ratio"));
             let comparable = billing_mode == "ratio"
@@ -933,6 +965,7 @@ fn parse_models(
                 id,
                 description,
                 billing_mode,
+                supported_endpoint_types,
                 pricing_available: comparable,
                 official_input_cny_per_million: official_input,
                 official_output_cny_per_million: official_output,
@@ -948,6 +981,7 @@ fn unpriced_model(id: String) -> AccountModel {
         id,
         description: String::new(),
         billing_mode: "unknown",
+        supported_endpoint_types: Vec::new(),
         pricing_available: false,
         official_input_cny_per_million: String::new(),
         official_output_cny_per_million: String::new(),

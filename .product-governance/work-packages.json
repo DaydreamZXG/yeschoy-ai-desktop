@@ -3561,6 +3561,103 @@
         "A registered runner cannot produce valid machine proof for the exact selector."
       ],
       "status": "planned"
+    },
+    {
+      "id": "WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS",
+      "wave": "consumer",
+      "owner": "tool-config",
+      "riskClass": "critical",
+      "objective": "Replace the 0.3.0 configuration-only activation with a native secure and tool-verified one-click journey for Claude Code, Claude Desktop, Codex Desktop, Pi and DSH web, then build an internal installable candidate without changing NewAPI or server state.",
+      "deliverables": [
+        "One native credential helper backed by macOS Keychain or Windows Credential Manager and usable by allowlisted target adapters without renderer exposure.",
+        "Five explicit target adapters with atomic owned-field writes, readback, rollback and closed recovery states.",
+        "Real target identity and installation selection in the beginner configuration UI, with ready shown only after tool-level verification.",
+        "Native, renderer, secret-scan, cross-platform fixture and internal package evidence."
+      ],
+      "requirementRefs": ["REQ-053"],
+      "decisionRefs": ["DEC-071"],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No NewAPI, server, Nginx, DNS, Redis, database, deployment or production mutation.",
+        "No OpenCode adapter, third-party application installation, automatic tool update, telemetry upload or automatic updater.",
+        "No retained configuration backup history and no public production-readiness claim."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/App.tsx",
+        "src/account/**",
+        "src/assets/brand/**",
+        "src/candidate/**",
+        "src/configuration/**",
+        "src/desktop-apps/**",
+        "src/tool-discovery/**",
+        "src/workbench/**",
+        "src/index.css",
+        "src/i18n/locales/zh.json",
+        "src/i18n/locales/zh-TW.json",
+        "src/i18n/locales/en.json",
+        "src/i18n/locales/ja.json",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/main.rs",
+        "src-tauri/src/account_v2.rs",
+        "src-tauri/src/tool_activation.rs",
+        "src-tauri/src/tool_credentials.rs",
+        "src-tauri/src/tool_adapters/**",
+        "src-tauri/src/desktop_app_discovery.rs",
+        "src-tauri/src/desktop_app_discovery_core.rs",
+        "src-tauri/src/tool_discovery.rs",
+        "src-tauri/src/tool_discovery_core.rs",
+        "src-tauri/src/tool_discovery_v2.rs",
+        "src-tauri/src/tool_selection_core.rs",
+        "src-tauri/icons/**",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/tauri.candidate.conf.json",
+        "tests/work_packages/ru027/**",
+        "outputs/野菜API-0.4.0真实一键接入验证记录.md",
+        "release/ru027-local/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        ".github/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No schema or history migration. Existing 0.3.0 configuration is treated as unverified input and is replaced only for exact fields the new adapter owns after user activation.",
+        "rollback": "Each activation uses volatile snapshots and removes a newly created token and credential on a failed first transaction when ownership is provable. No retained backup history is created."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Match explicit target identity, platform, exact discovered version and DSH profile. Unknown versions, ambiguous installations and higher-precedence overrides remain non-writing states.",
+        "supportedVersions": "Internal 0.4.0 candidate on macOS x86_64/arm64 and Windows x64; exact target versions proven by the RU-027 fixture and installed-tool evidence only.",
+        "removalGate": "Any OpenCode support, additional DSH profile, third-party installer mutation, server dependency, secret storage fallback or public-release claim requires a successor authority."
+      },
+      "inputContracts": ["desktop-account-session@v3", "public-service-catalog@v1", "desktop-tool-activation@v1"],
+      "outputContracts": ["desktop-tool-activation@v2"],
+      "acceptanceCommands": [
+        {"id": "ru027-native", "kind": "scenario_test", "adapter": "pytest-json@1", "selector": "tests/work_packages/ru027/test_acceptance.py::test_native_verified_adapter_transactions", "cwd": ".", "timeoutSeconds": 1200},
+        {"id": "ru027-renderer", "kind": "scenario_test", "adapter": "pytest-json@1", "selector": "tests/work_packages/ru027/test_acceptance.py::test_five_target_beginner_journey", "cwd": ".", "timeoutSeconds": 900},
+        {"id": "ru027-security", "kind": "scenario_test", "adapter": "pytest-json@1", "selector": "tests/work_packages/ru027/test_acceptance.py::test_secret_and_failure_boundaries", "cwd": ".", "timeoutSeconds": 900},
+        {"id": "ru027-build", "kind": "scenario_test", "adapter": "pytest-json@1", "selector": "tests/work_packages/ru027/test_acceptance.py::test_internal_candidate_build", "cwd": ".", "timeoutSeconds": 1800}
+      ],
+      "requiredAcceptanceScenarios": [
+        {"id": "RU027-AS-01", "assertion": "All five adapters preserve unrelated configuration, use only operating-system-backed secrets, read back owned fields and can become ready only after a bounded tool-level request succeeds.", "testSelector": "tests/work_packages/ru027/test_acceptance.py::test_native_verified_adapter_transactions", "acceptanceCommandId": "ru027-native"},
+        {"id": "RU027-AS-02", "assertion": "The beginner UI names five distinct targets, resolves installation ambiguity and never presents configuration-only or verification-failed state as ready.", "testSelector": "tests/work_packages/ru027/test_acceptance.py::test_five_target_beginner_journey", "acceptanceCommandId": "ru027-renderer"},
+        {"id": "RU027-AS-03", "assertion": "Synthetic complete secrets are absent from renderer IPC, ordinary configuration, logs, diagnostics, arguments and retained snapshots across failure, rollback and retry scenarios.", "testSelector": "tests/work_packages/ru027/test_acceptance.py::test_secret_and_failure_boundaries", "acceptanceCommandId": "ru027-security"},
+        {"id": "RU027-AS-04", "assertion": "The 0.4.0 internal candidate typechecks, passes selected tests and produces macOS and Windows-ready package inputs without modifying server or production resources.", "testSelector": "tests/work_packages/ru027/test_acceptance.py::test_internal_candidate_build", "acceptanceCommandId": "ru027-build"}
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Any target would require a complete tool key in renderer IPC, ordinary configuration, process arguments or retained local history.",
+        "A target cannot be distinguished from another installed product or its exact owned configuration fields cannot be preserved and rolled back.",
+        "A successful file write or direct relay probe is the only available evidence while the target tool itself did not make a bounded request.",
+        "The implementation requires NewAPI, server, database, deployment, telemetry or updater mutation."
+      ],
+      "status": "planned"
     }
   ]
 }

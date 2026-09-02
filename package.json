@@ -1,19 +1,19 @@
 {
   "name": "yeschoy-desktop",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Official beginner-friendly desktop assistant for 野菜API",
   "type": "module",
   "scripts": {
     "dev": "pnpm tauri dev",
     "build": "pnpm tauri build",
     "tauri": "tauri",
-    "dev:renderer": "vite",
+    "dev:renderer": "vite --host 127.0.0.1 --port 1420",
     "build:renderer": "vite build",
     "build:candidate": "pnpm tauri build --config src-tauri/tauri.candidate.conf.json",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
-    "test:unit": "vitest run --exclude 'release/**' --exclude 'work/**' --exclude 'tests/**'",
+    "test:unit": "vitest run --dir src --exclude 'release/**' --exclude 'work/**' --exclude 'tests/**'",
     "test:candidate": "vitest run src/candidate/readiness.test.ts src/diagnostics/contract.test.ts src/configuration/preview.test.ts src/service-catalog/contract.test.ts src/service-catalog/access-plan.test.ts src/service-catalog/ServiceCatalogPanel.test.tsx src/service-catalog/handoff.test.ts",
     "test:unit:watch": "vitest watch"
   },

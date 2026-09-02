@@ -6,18 +6,29 @@ mod desktop_app_discovery_core;
 mod service_catalog;
 mod service_catalog_core;
 mod tool_activation;
+mod tool_adapters;
+mod tool_credentials;
 mod tool_discovery;
 mod tool_discovery_core;
 mod tool_discovery_v2;
 mod tool_selection_core;
 mod window_appearance;
 
+pub use tool_credentials::credential_helper_exit_code;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let claude_runtime = tool_adapters::claude_desktop::ClaudeDesktopRuntimeState::default();
+    let resume_claude_runtime = claude_runtime.clone();
     tauri::Builder::default()
         .manage(account_v2::AccountV2State::default())
-        .setup(|app| {
+        .manage(claude_runtime)
+        .manage(tool_adapters::dsh_web::DshRuntimeState::default())
+        .setup(move |app| {
             window_appearance::initialize(app)?;
+            tauri::async_runtime::spawn(tool_adapters::claude_desktop::resume_if_configured(
+                resume_claude_runtime.clone(),
+            ));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -28,7 +39,8 @@ pub fn run() {
             account_v2::account_cancel_authorization_v2,
             account_v2::account_logout_v2,
             account_v2::account_open_wallet_v2,
-            tool_activation::configure_desktop_tool_v1,
+            tool_activation::scan_activation_targets_v1,
+            tool_activation::configure_desktop_tool_v2,
             tool_discovery::scan_tools_read_only,
             tool_discovery_v2::scan_tools_read_only_v2,
             window_appearance::set_window_appearance,

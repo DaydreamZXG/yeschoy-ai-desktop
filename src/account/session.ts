@@ -45,6 +45,7 @@ export interface AccountModel {
   id: string;
   description: string;
   billingMode: "ratio" | "per_request" | "tiered_expr" | "unknown";
+  supportedEndpointTypes?: string[];
   pricingAvailable: boolean;
   officialInputCnyPerMillion: string;
   officialOutputCnyPerMillion: string;
@@ -159,24 +160,39 @@ function usage(value: unknown): value is UsageSummary {
 }
 
 function model(value: unknown): value is AccountModel {
+  const baseKeys = [
+    "id",
+    "description",
+    "billingMode",
+    "pricingAvailable",
+    "officialInputCnyPerMillion",
+    "officialOutputCnyPerMillion",
+    "actualInputCnyPerMillion",
+    "actualOutputCnyPerMillion",
+  ];
   if (
     !object(value) ||
-    !exactKeys(value, [
-      "id",
-      "description",
-      "billingMode",
-      "pricingAvailable",
-      "officialInputCnyPerMillion",
-      "officialOutputCnyPerMillion",
-      "actualInputCnyPerMillion",
-      "actualOutputCnyPerMillion",
-    ]) ||
+    !(
+      exactKeys(value, baseKeys) ||
+      exactKeys(value, [...baseKeys, "supportedEndpointTypes"])
+    ) ||
     !safeText(value.id, 200, false) ||
     !safeText(value.description, 500) ||
     !["ratio", "per_request", "tiered_expr", "unknown"].includes(
       value.billingMode as string,
     ) ||
     typeof value.pricingAvailable !== "boolean"
+  )
+    return false;
+  if (
+    value.supportedEndpointTypes !== undefined &&
+    (!Array.isArray(value.supportedEndpointTypes) ||
+      value.supportedEndpointTypes.length > 32 ||
+      !value.supportedEndpointTypes.every((endpoint) =>
+        safeText(endpoint, 80, false),
+      ) ||
+      new Set(value.supportedEndpointTypes).size !==
+        value.supportedEndpointTypes.length)
   )
     return false;
   const prices = [

@@ -11,7 +11,11 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::process::Command;
 use tokio::time::timeout;
 
-const PROBE_TIMEOUT: Duration = Duration::from_millis(2_500);
+// Large packaged JavaScript CLIs such as Claude Code can take several seconds
+// on a cold start (and development StrictMode can trigger two scans together).
+// Eight seconds is still bounded, but avoids telling beginners an installed
+// application is missing just because its version process warmed up slowly.
+const PROBE_TIMEOUT: Duration = Duration::from_secs(8);
 const MAX_CANDIDATES: usize = 32;
 
 #[derive(Debug, Deserialize)]
@@ -102,7 +106,7 @@ async fn scan_tool(spec: ToolSpec) -> DiscoveryResult {
     classify(spec, observation)
 }
 
-fn discover_candidates(executable_name: &str) -> Vec<Candidate> {
+pub(crate) fn discover_candidates(executable_name: &str) -> Vec<Candidate> {
     let mut canonical_candidates: HashMap<PathBuf, Candidate> = HashMap::new();
 
     if let Some(path_value) = env::var_os("PATH") {

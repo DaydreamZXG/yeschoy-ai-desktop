@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU027-AS-03",
+  "assertion": "Synthetic complete secrets are absent from renderer IPC, ordinary configuration, logs, diagnostics, arguments and retained snapshots across failure, rollback and retry scenarios.",
+  "testSelector": "tests/work_packages/ru027/test_acceptance.py::test_secret_and_failure_boundaries",
+  "acceptanceCommandId": "ru027-security",
+  "runId": "RU-027/WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS@2026-09-02T10:43:46.102378+00:00",
+  "packageId": "WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-027",
+  "releaseUnitHash": "sha256:c0a8f7867c08ac1207c0ba1ed218525a15054af289190cd5fa143fc193f67e0a"
+}

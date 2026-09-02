@@ -270,6 +270,7 @@ describe("beginner scan recovery", () => {
           "scan_desktop_apps_read_only",
           "account_inspect_v2",
           "scan_tools_read_only_v2",
+          "scan_activation_targets_v1",
         ].includes(cmd),
       ),
     ).toBe(true);

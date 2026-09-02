@@ -9,6 +9,10 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[cfg(target_os = "windows")]
+use windows_sys::Win32::System::Diagnostics::Debug::{
+    GetFileVersionInfoSizeW, GetFileVersionInfoW, VerQueryValueW, VS_FIXEDFILEINFO,
+};
+#[cfg(target_os = "windows")]
 use winreg::enums::{KEY_READ, KEY_WOW64_32KEY, KEY_WOW64_64KEY};
 #[cfg(target_os = "windows")]
 use winreg::{RegKey, HKCR, HKCU, HKLM};
@@ -67,6 +71,51 @@ struct Candidate {
     location_hint: LocationHint,
     bundle_identifier: String,
     version: String,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct DesktopActivationCandidate {
+    pub(crate) path: PathBuf,
+    pub(crate) location_hint: &'static str,
+    pub(crate) version: String,
+}
+
+pub(crate) fn activation_candidates(app_id: &str) -> Vec<DesktopActivationCandidate> {
+    let Some(spec) = DESKTOP_APP_SPECS.into_iter().find(|spec| spec.id == app_id) else {
+        return Vec::new();
+    };
+
+    #[cfg(target_os = "macos")]
+    let candidates = discover_macos_candidates(spec);
+    #[cfg(target_os = "windows")]
+    let candidates = discover_windows_candidates(spec);
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let candidates: Vec<Candidate> = Vec::new();
+
+    candidates
+        .into_iter()
+        .filter(|candidate| candidate.path.is_absolute() && activation_path_exists(&candidate.path))
+        .map(|candidate| DesktopActivationCandidate {
+            path: candidate.path,
+            location_hint: candidate.location_hint.as_str(),
+            version: candidate.version,
+        })
+        .collect()
+}
+
+#[cfg(target_os = "macos")]
+fn activation_path_exists(path: &Path) -> bool {
+    path.is_dir() && path.extension().is_some_and(|extension| extension == "app")
+}
+
+#[cfg(target_os = "windows")]
+fn activation_path_exists(path: &Path) -> bool {
+    path.is_file()
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+fn activation_path_exists(_path: &Path) -> bool {
+    false
 }
 
 /// Implements the frozen `desktop-app-discovery@v1` query.
@@ -191,17 +240,13 @@ fn plist_string(source: &str, key: &str) -> Option<String> {
 
 #[cfg(target_os = "windows")]
 fn discover_windows_candidates(spec: DesktopAppSpec) -> Vec<Candidate> {
-    let packaged = discover_windows_package_candidates(spec);
-    if !packaged.is_empty() {
-        return packaged;
-    }
-
-    let registered = discover_windows_uninstall_candidates(spec);
-    if !registered.is_empty() {
-        return registered;
-    }
-
     let mut accepted = HashMap::new();
+    for candidate in discover_windows_package_candidates(spec)
+        .into_iter()
+        .chain(discover_windows_uninstall_candidates(spec))
+    {
+        accepted.entry(candidate.path.clone()).or_insert(candidate);
+    }
     if let Some(root) = env::var_os("LOCALAPPDATA") {
         collect_windows_path_candidates(
             &mut accepted,
@@ -228,6 +273,84 @@ fn discover_windows_candidates(spec: DesktopAppSpec) -> Vec<Candidate> {
     }
 
     discover_windows_protocol_candidate(spec)
+}
+
+#[cfg(target_os = "windows")]
+fn windows_app_relative_executables(app_id: &str) -> &'static [&'static str] {
+    match app_id {
+        "claude_desktop" => &[
+            "Claude.exe",
+            "app\\Claude.exe",
+            "Claude\\Claude.exe",
+            "VFS\\ProgramFilesX64\\Anthropic\\Claude\\Claude.exe",
+        ],
+        "codex_desktop" => &[
+            "Codex.exe",
+            "ChatGPT.exe",
+            "app\\Codex.exe",
+            "app\\ChatGPT.exe",
+            "OpenAI\\Codex\\Codex.exe",
+            "OpenAI\\ChatGPT\\ChatGPT.exe",
+            "VFS\\ProgramFilesX64\\OpenAI\\ChatGPT\\ChatGPT.exe",
+        ],
+        _ => &[],
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn executable_below(root: &Path, app_id: &str) -> Option<PathBuf> {
+    windows_app_relative_executables(app_id)
+        .iter()
+        .map(|relative| root.join(relative))
+        .find(|path| path.is_file())
+        .map(|path| std::fs::canonicalize(&path).unwrap_or(path))
+}
+
+#[cfg(target_os = "windows")]
+fn windows_file_version(path: &Path) -> Option<String> {
+    use std::os::windows::ffi::OsStrExt;
+
+    let wide = path
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    let mut ignored = 0u32;
+    let size = unsafe { GetFileVersionInfoSizeW(wide.as_ptr(), &mut ignored) };
+    if size == 0 || size > 16 * 1024 * 1024 {
+        return None;
+    }
+    let mut buffer = vec![0u8; size as usize];
+    if unsafe { GetFileVersionInfoW(wide.as_ptr(), 0, size, buffer.as_mut_ptr().cast()) } == 0 {
+        return None;
+    }
+    let query = ['\\' as u16, 0];
+    let mut value = std::ptr::null_mut();
+    let mut value_len = 0u32;
+    if unsafe {
+        VerQueryValueW(
+            buffer.as_ptr().cast(),
+            query.as_ptr(),
+            &mut value,
+            &mut value_len,
+        )
+    } == 0
+        || value.is_null()
+        || value_len < std::mem::size_of::<VS_FIXEDFILEINFO>() as u32
+    {
+        return None;
+    }
+    let info = unsafe { &*(value.cast::<VS_FIXEDFILEINFO>()) };
+    if info.dwSignature != 0xFEEF04BD {
+        return None;
+    }
+    Some(format!(
+        "{}.{}.{}.{}",
+        info.dwFileVersionMS >> 16,
+        info.dwFileVersionMS & 0xffff,
+        info.dwFileVersionLS >> 16,
+        info.dwFileVersionLS & 0xffff
+    ))
 }
 
 #[cfg(any(target_os = "windows", test))]
@@ -277,11 +400,12 @@ fn collect_windows_path_candidates(
             continue;
         }
         let canonical = std::fs::canonicalize(&path).unwrap_or(path);
+        let version = windows_file_version(&canonical).unwrap_or_default();
         accepted.entry(canonical.clone()).or_insert(Candidate {
             path: canonical,
             location_hint,
             bundle_identifier: String::new(),
-            version: String::new(),
+            version,
         });
     }
 }
@@ -368,41 +492,41 @@ fn windows_version_key(raw: &str) -> [u64; 4] {
 
 #[cfg(target_os = "windows")]
 fn discover_windows_package_candidates(spec: DesktopAppSpec) -> Vec<Candidate> {
-    let repositories = [
-        "Software\\Classes\\ActivatableClasses\\Package",
-        "Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\AppModel\\Repository\\Packages",
-        "Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\AppModel\\Repository\\Families",
-    ];
-    let mut accepted: HashMap<String, Candidate> = HashMap::new();
-    for repository in repositories {
-        let Ok(packages) = HKCU.open_subkey_with_flags(repository, KEY_READ) else {
+    const REPOSITORY: &str = "Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\AppModel\\Repository\\Packages";
+    let mut accepted: HashMap<PathBuf, Candidate> = HashMap::new();
+    let Ok(packages) = HKCU.open_subkey_with_flags(REPOSITORY, KEY_READ) else {
+        return Vec::new();
+    };
+    for package_full_name in packages.enum_keys().filter_map(Result::ok) {
+        let Some((identity, package_version)) = parse_windows_package_identity(&package_full_name)
+        else {
             continue;
         };
-        for package_full_name in packages.enum_keys().filter_map(Result::ok) {
-            let Some((identity, version)) = parse_windows_package_identity(&package_full_name)
-            else {
-                continue;
-            };
-            if !windows_package_identity_matches(spec.id, &identity) {
-                continue;
-            }
-            let key = compact_windows_name(&identity);
-            let candidate = Candidate {
-                path: PathBuf::from(format!("package-{key}")),
-                location_hint: LocationHint::LocalAppData,
-                bundle_identifier: String::new(),
-                version,
-            };
-            let replace = accepted
-                .get(&key)
-                .map(|current| {
-                    windows_version_key(&candidate.version) > windows_version_key(&current.version)
-                })
-                .unwrap_or(true);
-            if replace {
-                accepted.insert(key, candidate);
-            }
+        if !windows_package_identity_matches(spec.id, &identity) {
+            continue;
         }
+        let Ok(package) = packages.open_subkey_with_flags(&package_full_name, KEY_READ) else {
+            continue;
+        };
+        let root: String = package
+            .get_value("PackageRootFolder")
+            .or_else(|_| package.get_value("Path"))
+            .unwrap_or_default();
+        let Some(path) = (!root.is_empty())
+            .then(|| executable_below(Path::new(&root), spec.id))
+            .flatten()
+        else {
+            continue;
+        };
+        let version = windows_file_version(&path)
+            .filter(|value| !value.is_empty())
+            .unwrap_or(package_version);
+        accepted.entry(path.clone()).or_insert(Candidate {
+            path,
+            location_hint: LocationHint::LocalAppData,
+            bundle_identifier: String::new(),
+            version,
+        });
     }
     let mut candidates: Vec<_> = accepted.into_values().collect();
     candidates.sort_by(|left, right| left.path.cmp(&right.path));
@@ -412,7 +536,7 @@ fn discover_windows_package_candidates(spec: DesktopAppSpec) -> Vec<Candidate> {
 
 #[cfg(target_os = "windows")]
 fn discover_windows_uninstall_candidates(spec: DesktopAppSpec) -> Vec<Candidate> {
-    let mut accepted: HashMap<String, Candidate> = HashMap::new();
+    let mut accepted: HashMap<PathBuf, Candidate> = HashMap::new();
     for (hive_name, hive) in [("hkcu", &HKCU), ("hklm", &HKLM)] {
         for view in [KEY_WOW64_64KEY, KEY_WOW64_32KEY] {
             collect_windows_uninstall_candidates(&mut accepted, spec, hive_name, hive, view);
@@ -426,7 +550,7 @@ fn discover_windows_uninstall_candidates(spec: DesktopAppSpec) -> Vec<Candidate>
 
 #[cfg(target_os = "windows")]
 fn collect_windows_uninstall_candidates(
-    accepted: &mut HashMap<String, Candidate>,
+    accepted: &mut HashMap<PathBuf, Candidate>,
     spec: DesktopAppSpec,
     hive_name: &str,
     hive: &RegKey,
@@ -446,27 +570,71 @@ fn collect_windows_uninstall_candidates(
             continue;
         }
         let version: String = item.get_value("DisplayVersion").unwrap_or_default();
-        let key = compact_windows_name(&display_name);
+        let display_icon: String = item.get_value("DisplayIcon").unwrap_or_default();
+        let install_location: String = item.get_value("InstallLocation").unwrap_or_default();
+        let icon_path = parse_windows_display_icon(&display_icon)
+            .map(PathBuf::from)
+            .filter(|path| path.is_file())
+            .map(|path| std::fs::canonicalize(&path).unwrap_or(path));
+        let install_path = (!install_location.is_empty())
+            .then(|| executable_below(Path::new(&install_location), spec.id))
+            .flatten();
+        let Some(path) = icon_path.or(install_path) else {
+            continue;
+        };
         let candidate = Candidate {
-            path: PathBuf::from(format!("uninstall-{hive_name}-{key}")),
+            path: path.clone(),
             location_hint: if hive_name == "hkcu" {
                 LocationHint::LocalAppData
             } else {
                 LocationHint::ProgramFiles
             },
             bundle_identifier: String::new(),
-            version,
+            version: windows_file_version(&path)
+                .filter(|value| !value.is_empty())
+                .unwrap_or(version),
         };
         let replace = accepted
-            .get(&key)
+            .get(&path)
             .map(|current| {
                 windows_version_key(&candidate.version) > windows_version_key(&current.version)
             })
             .unwrap_or(true);
         if replace {
-            accepted.insert(key, candidate);
+            accepted.insert(path, candidate);
         }
     }
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn parse_windows_display_icon(raw: &str) -> Option<String> {
+    let value = raw.trim();
+    if value.is_empty() || value.len() > 32_768 || value.contains(['\r', '\n']) {
+        return None;
+    }
+    let path = if let Some(rest) = value.strip_prefix('"') {
+        rest.split_once('"')?.0
+    } else {
+        value.split_once(",-").map(|pair| pair.0).unwrap_or(value)
+    }
+    .trim();
+    (!path.is_empty() && path.to_ascii_lowercase().ends_with(".exe")).then(|| path.to_owned())
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn parse_windows_protocol_command(raw: &str) -> Option<String> {
+    let value = raw.trim();
+    if value.is_empty() || value.len() > 32_768 || value.contains(['\r', '\n']) {
+        return None;
+    }
+    let path = if let Some(rest) = value.strip_prefix('"') {
+        rest.split_once('"')?.0
+    } else {
+        let lower = value.to_ascii_lowercase();
+        let end = lower.find(".exe")? + 4;
+        &value[..end]
+    };
+    (!path.is_empty() && path.to_ascii_lowercase().ends_with(".exe")).then(|| path.to_owned())
 }
 
 #[cfg(target_os = "windows")]
@@ -478,16 +646,28 @@ fn discover_windows_protocol_candidate(spec: DesktopAppSpec) -> Vec<Candidate> {
     };
     for protocol in protocols {
         let user_path = format!("Software\\Classes\\{protocol}\\shell\\open\\command");
-        let registered = HKCU.open_subkey_with_flags(&user_path, KEY_READ).is_ok()
-            || HKCR
-                .open_subkey_with_flags(format!("{protocol}\\shell\\open\\command"), KEY_READ)
-                .is_ok();
-        if registered {
+        let command = HKCU
+            .open_subkey_with_flags(&user_path, KEY_READ)
+            .ok()
+            .and_then(|key| key.get_value::<String, _>("").ok())
+            .or_else(|| {
+                HKCR.open_subkey_with_flags(format!("{protocol}\\shell\\open\\command"), KEY_READ)
+                    .ok()
+                    .and_then(|key| key.get_value::<String, _>("").ok())
+            });
+        let path = command
+            .as_deref()
+            .and_then(parse_windows_protocol_command)
+            .map(PathBuf::from)
+            .filter(|path| path.is_file())
+            .map(|path| std::fs::canonicalize(&path).unwrap_or(path));
+        if let Some(path) = path {
+            let version = windows_file_version(&path).unwrap_or_default();
             return vec![Candidate {
-                path: PathBuf::from(format!("protocol-{protocol}")),
+                path,
                 location_hint: LocationHint::LocalAppData,
                 bundle_identifier: String::new(),
-                version: String::new(),
+                version,
             }];
         }
     }
@@ -614,6 +794,14 @@ mod tests {
         );
         assert!(
             windows_relative_paths("codex_desktop", true).contains(&"OpenAI\\ChatGPT\\ChatGPT.exe")
+        );
+        assert_eq!(
+            parse_windows_display_icon("\"C:\\Program Files\\OpenAI\\ChatGPT.exe\",0"),
+            Some("C:\\Program Files\\OpenAI\\ChatGPT.exe".into())
+        );
+        assert_eq!(
+            parse_windows_protocol_command("\"C:\\Apps\\Claude.exe\" \"%1\""),
+            Some("C:\\Apps\\Claude.exe".into())
         );
     }
 }

@@ -1,24 +1,21 @@
-use std::{
-    env,
-    fs::{self, File, OpenOptions},
-    io::{self, Write},
-    path::{Path, PathBuf},
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use reqwest::{Method, Url};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Map, Value};
-use toml_edit::{value, DocumentMut, Item, Table};
+use serde_json::{json, Value};
 
 use crate::{
     account_v2::{
         native_account_json, native_session_access, AccountV2State, NativeSessionFailure,
     },
     connectivity_core::request_id_is_valid,
+    tool_adapters::{
+        self, claude_code, claude_desktop, codex_desktop, dsh_web, pi, AdapterFailure,
+        ResolvedInstallation,
+    },
+    tool_credentials::{self, CredentialFailure, ToolCredential},
 };
 
-const MAX_CONFIG_BYTES: u64 = 2 * 1024 * 1024;
 const TOKEN_PAGE_SIZE: &str = "100";
 
 #[derive(Debug, Deserialize)]
@@ -28,6 +25,7 @@ pub struct ToolActivationRequest {
     line_id: String,
     tool_id: String,
     model_id: String,
+    installation_id: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -50,7 +48,7 @@ impl ToolActivationProjection {
     ) -> Self {
         Self {
             request_id: request.request_id.clone(),
-            schema_version: 1,
+            schema_version: 2,
             status,
             tool_id: request.tool_id.clone(),
             model_id: request.model_id.clone(),
@@ -65,6 +63,7 @@ enum ActivationFailure {
     SignedOut,
     UnsupportedModel,
     ServerUnavailable,
+    Adapter(AdapterFailure),
     ConfigurationFailed(&'static str),
 }
 
@@ -78,6 +77,45 @@ impl ActivationFailure {
             Self::ServerUnavailable => {
                 ToolActivationProjection::new(request, "server_unavailable", "server_unavailable")
             }
+            Self::Adapter(error) => match error {
+                AdapterFailure::ToolNotFound => {
+                    ToolActivationProjection::new(request, "tool_not_found", "tool_not_found")
+                }
+                AdapterFailure::MultipleInstallations => ToolActivationProjection::new(
+                    request,
+                    "multiple_installations",
+                    "installation_selection_required",
+                ),
+                AdapterFailure::UnsupportedVersion => ToolActivationProjection::new(
+                    request,
+                    "unsupported_version",
+                    "exact_version_not_supported",
+                ),
+                AdapterFailure::UnsupportedProfile => ToolActivationProjection::new(
+                    request,
+                    "unsupported_profile",
+                    "profile_not_supported",
+                ),
+                AdapterFailure::ExternalOverride => ToolActivationProjection::new(
+                    request,
+                    "external_override",
+                    "higher_precedence_override",
+                ),
+                AdapterFailure::SecureStorageUnavailable => ToolActivationProjection::new(
+                    request,
+                    "secure_storage_unavailable",
+                    "secure_storage_unavailable",
+                ),
+                AdapterFailure::ConfigurationFailed(reason) => {
+                    ToolActivationProjection::new(request, "configuration_failed", reason)
+                }
+                AdapterFailure::LaunchFailed => {
+                    ToolActivationProjection::new(request, "launch_failed", "tool_launch_failed")
+                }
+                AdapterFailure::VerificationFailed(reason) => {
+                    ToolActivationProjection::new(request, "verification_failed", reason)
+                }
+            },
             Self::ConfigurationFailed(reason) => {
                 ToolActivationProjection::new(request, "configuration_failed", reason)
             }
@@ -114,8 +152,16 @@ fn request_is_valid(request: &ToolActivationRequest) -> bool {
             request.line_id.as_str(),
             "mainland_optimized" | "global_accelerated"
         )
-        && matches!(request.tool_id.as_str(), "claude_desktop" | "codex_desktop")
+        && matches!(
+            request.tool_id.as_str(),
+            "claude_code" | "claude_desktop" | "codex_desktop" | "pi" | "dsh_web"
+        )
         && bounded_plain_text(&request.model_id, 200)
+        && request.installation_id.len() <= 128
+        && request
+            .installation_id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-'))
 }
 
 fn data(value: &Value) -> Option<&Value> {
@@ -183,8 +229,9 @@ async fn validate_model(
 
 fn model_supports_tool(pricing: &Value, model_id: &str, tool_id: &str) -> bool {
     let required_endpoint = match tool_id {
-        "claude_desktop" => "anthropic",
+        "claude_code" | "claude_desktop" => "anthropic",
         "codex_desktop" => "openai-response",
+        "pi" | "dsh_web" => "openai",
         _ => return false,
     };
     data(pricing)
@@ -204,8 +251,12 @@ fn model_supports_tool(pricing: &Value, model_id: &str, tool_id: &str) -> bool {
 
 fn token_name(tool_id: &str) -> &'static str {
     match tool_id {
+        "claude_code" => "野菜API Claude Code",
         "claude_desktop" => "野菜API Claude Desktop",
-        _ => "野菜API Codex",
+        "codex_desktop" => "野菜API Codex Desktop",
+        "pi" => "野菜API Pi",
+        "dsh_web" => "野菜API DSH web",
+        _ => "野菜API Desktop",
     }
 }
 
@@ -382,316 +433,181 @@ async fn delete_created_token(origin: &str, access_token: &str, lease: &TokenLea
     }
 }
 
-fn user_home() -> Option<PathBuf> {
-    #[cfg(target_os = "windows")]
-    {
-        env::var_os("USERPROFILE").map(PathBuf::from).or_else(|| {
-            let drive = env::var_os("HOMEDRIVE")?;
-            let path = env::var_os("HOMEPATH")?;
-            let mut home = PathBuf::from(drive);
-            home.push(path);
-            Some(home)
-        })
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        env::var_os("HOME").map(PathBuf::from)
-    }
+enum PreparedAdapter {
+    ClaudeCode(claude_code::Prepared),
+    ClaudeDesktop(claude_desktop::Prepared),
+    CodexDesktop(codex_desktop::Prepared),
+    Pi(pi::Prepared),
+    DshWeb(dsh_web::Prepared),
 }
 
-fn ensure_safe_parent(path: &Path) -> io::Result<()> {
-    let parent = path
-        .parent()
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "missing parent"))?;
-    if parent.exists() {
-        let metadata = fs::symlink_metadata(parent)?;
-        if metadata.file_type().is_symlink() || !metadata.is_dir() {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "unsafe parent"));
-        }
-    } else {
-        fs::create_dir(parent)?;
-    }
-    if path.exists() {
-        let metadata = fs::symlink_metadata(path)?;
-        if metadata.file_type().is_symlink() || !metadata.is_file() {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "unsafe target"));
-        }
-        if metadata.len() > MAX_CONFIG_BYTES {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "oversized target",
-            ));
+impl PreparedAdapter {
+    fn commit(&mut self) -> Result<(), AdapterFailure> {
+        match self {
+            Self::ClaudeCode(value) => value.commit(),
+            Self::ClaudeDesktop(value) => value.commit(),
+            Self::CodexDesktop(value) => value.commit(),
+            Self::Pi(value) => value.commit(),
+            Self::DshWeb(value) => value.commit(),
         }
     }
-    Ok(())
-}
 
-fn read_snapshot(path: &Path) -> io::Result<Option<Vec<u8>>> {
-    ensure_safe_parent(path)?;
-    if !path.exists() {
-        return Ok(None);
-    }
-    fs::read(path).map(Some)
-}
-
-fn create_temp_file(path: &Path) -> io::Result<(PathBuf, File)> {
-    let parent = path.parent().expect("validated target parent");
-    let file_name = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("config");
-    for attempt in 0..16u8 {
-        let temp = parent.join(format!(
-            ".{file_name}.yeschoy-{}-{}-{attempt}.tmp",
-            std::process::id(),
-            now_epoch_ms()
-        ));
-        let mut options = OpenOptions::new();
-        options.write(true).create_new(true);
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::OpenOptionsExt;
-            options.mode(0o600);
-        }
-        match options.open(&temp) {
-            Ok(file) => return Ok((temp, file)),
-            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
-            Err(error) => return Err(error),
+    fn rollback(&mut self) -> Result<(), AdapterFailure> {
+        match self {
+            Self::ClaudeCode(value) => value.rollback(),
+            Self::ClaudeDesktop(value) => value.rollback(),
+            Self::CodexDesktop(value) => value.rollback(),
+            Self::Pi(value) => value.rollback(),
+            Self::DshWeb(value) => value.rollback(),
         }
     }
-    Err(io::Error::new(
-        io::ErrorKind::AlreadyExists,
-        "temporary file collision",
-    ))
-}
 
-#[cfg(target_os = "windows")]
-fn replace_file(temp: &Path, target: &Path) -> io::Result<()> {
-    use std::os::windows::ffi::OsStrExt;
-    use windows_sys::Win32::Storage::FileSystem::{
-        MoveFileExW, MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH,
-    };
-    let mut from = temp
-        .as_os_str()
-        .encode_wide()
-        .chain(Some(0))
-        .collect::<Vec<_>>();
-    let mut to = target
-        .as_os_str()
-        .encode_wide()
-        .chain(Some(0))
-        .collect::<Vec<_>>();
-    let success = unsafe {
-        MoveFileExW(
-            from.as_mut_ptr(),
-            to.as_mut_ptr(),
-            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
-        )
-    };
-    if success == 0 {
-        Err(io::Error::last_os_error())
-    } else {
-        Ok(())
-    }
-}
-
-#[cfg(not(target_os = "windows"))]
-fn replace_file(temp: &Path, target: &Path) -> io::Result<()> {
-    fs::rename(temp, target)
-}
-
-fn atomic_write(path: &Path, bytes: &[u8]) -> io::Result<()> {
-    ensure_safe_parent(path)?;
-    if bytes.len() as u64 > MAX_CONFIG_BYTES {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "oversized content",
-        ));
-    }
-    let existing_permissions = fs::metadata(path)
-        .ok()
-        .map(|metadata| metadata.permissions());
-    let (temp, mut file) = create_temp_file(path)?;
-    let result = (|| {
-        file.write_all(bytes)?;
-        file.sync_all()?;
-        drop(file);
-        if let Some(permissions) = existing_permissions {
-            fs::set_permissions(&temp, permissions)?;
+    fn local_gateway_token(&self) -> Option<&str> {
+        match self {
+            Self::ClaudeDesktop(value) => Some(value.local_token()),
+            _ => None,
         }
-        replace_file(&temp, path)
-    })();
-    if result.is_err() {
-        let _ = fs::remove_file(&temp);
-    }
-    result
-}
-
-fn restore_snapshot(path: &Path, snapshot: Option<&[u8]>) -> io::Result<()> {
-    match snapshot {
-        Some(bytes) => atomic_write(path, bytes),
-        None if path.exists() => fs::remove_file(path),
-        None => Ok(()),
     }
 }
 
-fn claude_settings(
-    existing: Option<&[u8]>,
+fn prepare_adapter(
+    request: &ToolActivationRequest,
     origin: &str,
-    key: &str,
-    model: &str,
-) -> Result<Vec<u8>, ()> {
-    let mut root = match existing {
-        Some(bytes) if !bytes.is_empty() => {
-            serde_json::from_slice::<Value>(bytes).map_err(|_| ())?
-        }
-        _ => Value::Object(Map::new()),
-    };
-    let root = root.as_object_mut().ok_or(())?;
-    if !root.contains_key("env") {
-        root.insert("env".into(), Value::Object(Map::new()));
-    }
-    let env = root
-        .get_mut("env")
-        .and_then(Value::as_object_mut)
-        .ok_or(())?;
-    for field in [
-        "ANTHROPIC_MODEL",
-        "ANTHROPIC_DEFAULT_HAIKU_MODEL",
-        "ANTHROPIC_DEFAULT_SONNET_MODEL",
-        "ANTHROPIC_DEFAULT_OPUS_MODEL",
-    ] {
-        env.insert(field.into(), model.into());
-    }
-    env.insert("ANTHROPIC_BASE_URL".into(), origin.into());
-    env.insert("ANTHROPIC_AUTH_TOKEN".into(), key.into());
-    let mut bytes = serde_json::to_vec_pretty(&root).map_err(|_| ())?;
-    bytes.push(b'\n');
-    Ok(bytes)
-}
-
-fn codex_config(existing: Option<&[u8]>, origin: &str, model: &str) -> Result<Vec<u8>, ()> {
-    let source = existing
-        .map(std::str::from_utf8)
-        .transpose()
-        .map_err(|_| ())?
-        .unwrap_or("");
-    let mut document = if source.trim().is_empty() {
-        DocumentMut::new()
-    } else {
-        source.parse::<DocumentMut>().map_err(|_| ())?
-    };
-    document["model_provider"] = value("yeschoy");
-    document["model"] = value(model);
-    if document.get("model_providers").is_none() {
-        let mut table = Table::new();
-        table.set_implicit(true);
-        document.insert("model_providers", Item::Table(table));
-    }
-    let providers = document
-        .get_mut("model_providers")
-        .and_then(Item::as_table_like_mut)
-        .ok_or(())?;
-    if providers.get("yeschoy").is_none() {
-        providers.insert("yeschoy", Item::Table(Table::new()));
-    }
-    let provider = providers
-        .get_mut("yeschoy")
-        .and_then(Item::as_table_like_mut)
-        .ok_or(())?;
-    provider.insert("name", value("野菜API"));
-    provider.insert(
-        "base_url",
-        value(format!("{}/v1", origin.trim_end_matches('/'))),
-    );
-    provider.insert("wire_api", value("responses"));
-    provider.insert("requires_openai_auth", value(true));
-    Ok(document.to_string().into_bytes())
-}
-
-fn codex_auth(existing: Option<&[u8]>, key: &str) -> Result<Vec<u8>, ()> {
-    let mut root = match existing {
-        Some(bytes) if !bytes.is_empty() => {
-            serde_json::from_slice::<Value>(bytes).map_err(|_| ())?
-        }
-        _ => Value::Object(Map::new()),
-    };
-    root.as_object_mut()
-        .ok_or(())?
-        .insert("OPENAI_API_KEY".into(), key.into());
-    let mut bytes = serde_json::to_vec_pretty(&root).map_err(|_| ())?;
-    bytes.push(b'\n');
-    Ok(bytes)
-}
-
-fn configure_claude(
-    home: &Path,
-    origin: &str,
-    key: &str,
-    model: &str,
-) -> Result<(), ActivationFailure> {
-    let path = home.join(".claude").join("settings.json");
-    let before = read_snapshot(&path)
-        .map_err(|_| ActivationFailure::ConfigurationFailed("configuration_read_failed"))?;
-    let after = claude_settings(before.as_deref(), origin, key, model)
-        .map_err(|_| ActivationFailure::ConfigurationFailed("configuration_parse_failed"))?;
-    atomic_write(&path, &after)
-        .map_err(|_| ActivationFailure::ConfigurationFailed("configuration_write_failed"))
-}
-
-fn configure_codex(
-    home: &Path,
-    origin: &str,
-    key: &str,
-    model: &str,
-) -> Result<(), ActivationFailure> {
-    let directory = home.join(".codex");
-    let config_path = directory.join("config.toml");
-    let auth_path = directory.join("auth.json");
-    let config_before = read_snapshot(&config_path)
-        .map_err(|_| ActivationFailure::ConfigurationFailed("configuration_read_failed"))?;
-    let auth_before = read_snapshot(&auth_path)
-        .map_err(|_| ActivationFailure::ConfigurationFailed("configuration_read_failed"))?;
-    let config_after = codex_config(config_before.as_deref(), origin, model)
-        .map_err(|_| ActivationFailure::ConfigurationFailed("configuration_parse_failed"))?;
-    let auth_after = codex_auth(auth_before.as_deref(), key)
-        .map_err(|_| ActivationFailure::ConfigurationFailed("configuration_parse_failed"))?;
-    atomic_write(&config_path, &config_after)
-        .map_err(|_| ActivationFailure::ConfigurationFailed("configuration_write_failed"))?;
-    if atomic_write(&auth_path, &auth_after).is_err() {
-        let _ = restore_snapshot(&config_path, config_before.as_deref());
-        return Err(ActivationFailure::ConfigurationFailed(
-            "configuration_write_failed",
-        ));
-    }
-    Ok(())
-}
-
-fn configure_local_tool(
-    tool_id: &str,
-    origin: &str,
-    key: &str,
-    model: &str,
-) -> Result<(), ActivationFailure> {
-    let home = user_home()
+    previous: Option<&ToolCredential>,
+) -> Result<PreparedAdapter, AdapterFailure> {
+    let home = tool_adapters::user_home()
         .filter(|path| path.is_absolute() && path.is_dir())
-        .ok_or(ActivationFailure::ConfigurationFailed("home_unavailable"))?;
-    match tool_id {
-        "claude_desktop" => configure_claude(&home, origin, key, model),
-        "codex_desktop" => configure_codex(&home, origin, key, model),
-        _ => Err(ActivationFailure::ConfigurationFailed("invalid_request")),
+        .ok_or(AdapterFailure::ConfigurationFailed("home_unavailable"))?;
+    match request.tool_id.as_str() {
+        "claude_code" => {
+            claude_code::prepare(&home, origin, &request.model_id).map(PreparedAdapter::ClaudeCode)
+        }
+        "claude_desktop" => claude_desktop::prepare(
+            &home,
+            &request.model_id,
+            previous.and_then(|record| record.local_gateway_token.as_deref()),
+        )
+        .map(PreparedAdapter::ClaudeDesktop),
+        "codex_desktop" => codex_desktop::prepare(&home, origin, &request.model_id)
+            .map(PreparedAdapter::CodexDesktop),
+        "pi" => pi::prepare(&home, origin, &request.model_id).map(PreparedAdapter::Pi),
+        "dsh_web" => {
+            dsh_web::prepare(&home, origin, &request.model_id).map(PreparedAdapter::DshWeb)
+        }
+        _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
+}
+
+async fn verify_adapter(
+    request: &ToolActivationRequest,
+    installation: &ResolvedInstallation,
+    credential: &ToolCredential,
+    claude_runtime: &claude_desktop::ClaudeDesktopRuntimeState,
+    dsh_runtime: &dsh_web::DshRuntimeState,
+) -> Result<(), AdapterFailure> {
+    match request.tool_id.as_str() {
+        "claude_code" => claude_code::verify(installation, &request.model_id).await,
+        "claude_desktop" => {
+            claude_desktop::verify_and_launch(claude_runtime, installation, credential.clone())
+                .await
+        }
+        "codex_desktop" => codex_desktop::verify_and_launch(installation).await,
+        "pi" => pi::verify(installation, &request.model_id).await,
+        "dsh_web" => {
+            dsh_web::verify_launch_and_keep(
+                dsh_runtime,
+                installation,
+                &credential.api_key,
+                &request.model_id,
+            )
+            .await
+        }
+        _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
+    }
+}
+
+async fn restore_after_failure(
+    request: &ToolActivationRequest,
+    prepared: &mut PreparedAdapter,
+    credential_before: Option<&str>,
+    previous_record: Option<ToolCredential>,
+    origin: &str,
+    access_token: &str,
+    lease: &TokenLease,
+    claude_runtime: &claude_desktop::ClaudeDesktopRuntimeState,
+) -> Option<AdapterFailure> {
+    let rollback_failure = prepared.rollback().err();
+    let credential_failure = tool_credentials::restore(&request.tool_id, credential_before).err();
+    if request.tool_id == "claude_desktop" {
+        claude_runtime.stop().await;
+        if let Some(previous) = previous_record {
+            let _ = claude_runtime.start(previous).await;
+        }
+    }
+    delete_created_token(origin, access_token, lease).await;
+    if rollback_failure.is_some() {
+        Some(AdapterFailure::ConfigurationFailed(
+            "configuration_rollback_failed",
+        ))
+    } else if credential_failure.is_some() {
+        Some(AdapterFailure::SecureStorageUnavailable)
+    } else {
+        None
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ActivationTargetScanRequest {
+    request_id: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActivationTargetScanResponse {
+    request_id: String,
+    schema_version: u8,
+    platform: &'static str,
+    targets: Vec<tool_adapters::TargetProjection>,
 }
 
 #[tauri::command]
-pub async fn configure_desktop_tool_v1(
-    state: tauri::State<'_, AccountV2State>,
+pub async fn scan_activation_targets_v1(
+    request: ActivationTargetScanRequest,
+) -> Result<ActivationTargetScanResponse, String> {
+    if !request_id_is_valid(&request.request_id) {
+        return Err("invalid_activation_target_scan".into());
+    }
+    Ok(ActivationTargetScanResponse {
+        request_id: request.request_id,
+        schema_version: 1,
+        platform: crate::tool_discovery::platform_name(),
+        targets: tool_adapters::scan_targets().await,
+    })
+}
+
+#[tauri::command]
+pub async fn configure_desktop_tool_v2(
+    account_state: tauri::State<'_, AccountV2State>,
+    claude_runtime: tauri::State<'_, claude_desktop::ClaudeDesktopRuntimeState>,
+    dsh_runtime: tauri::State<'_, dsh_web::DshRuntimeState>,
     request: ToolActivationRequest,
 ) -> Result<ToolActivationProjection, String> {
     if !request_is_valid(&request) {
         return Err("invalid_tool_activation_request".into());
     }
-    let (origin, access_token) = match native_session_access(&state, &request.line_id).await {
+
+    // Resolve identity and exact version before account or token access. An
+    // unavailable or ambiguous installation can never create a server token.
+    let installation =
+        match tool_adapters::resolve_installation(&request.tool_id, &request.installation_id).await
+        {
+            Ok(value) => value,
+            Err(error) => return Ok(ActivationFailure::Adapter(error).projection(&request)),
+        };
+
+    let (origin, access_token) = match native_session_access(&account_state, &request.line_id).await
+    {
         Ok(value) => value,
         Err(NativeSessionFailure::SignedOut) => {
             return Ok(ActivationFailure::SignedOut.projection(&request))
@@ -705,20 +621,92 @@ pub async fn configure_desktop_tool_v1(
     {
         return Ok(error.projection(&request));
     }
+
+    let credential_before = match tool_credentials::snapshot(&request.tool_id) {
+        Ok(value) => value,
+        Err(_) => {
+            return Ok(
+                ActivationFailure::Adapter(AdapterFailure::SecureStorageUnavailable)
+                    .projection(&request),
+            )
+        }
+    };
+    let previous_record = match tool_credentials::load(&request.tool_id) {
+        Ok(value) => Some(value),
+        Err(CredentialFailure::Missing) if credential_before.is_none() => None,
+        Err(_) => {
+            return Ok(
+                ActivationFailure::Adapter(AdapterFailure::SecureStorageUnavailable)
+                    .projection(&request),
+            )
+        }
+    };
+
     let lease = match acquire_token(&origin, &access_token, &request.tool_id).await {
         Ok(value) => value,
         Err(error) => return Ok(error.projection(&request)),
     };
-    if let Err(error) =
-        configure_local_tool(&request.tool_id, &origin, &lease.key, &request.model_id)
-    {
+    let mut prepared = match prepare_adapter(&request, &origin, previous_record.as_ref()) {
+        Ok(value) => value,
+        Err(error) => {
+            delete_created_token(&origin, &access_token, &lease).await;
+            return Ok(ActivationFailure::Adapter(error).projection(&request));
+        }
+    };
+    let credential = ToolCredential {
+        api_key: lease.key.clone(),
+        origin: origin.clone(),
+        model_id: request.model_id.clone(),
+        local_gateway_token: prepared.local_gateway_token().map(str::to_owned),
+    };
+    if tool_credentials::store(&request.tool_id, &credential).is_err() {
         delete_created_token(&origin, &access_token, &lease).await;
-        return Ok(error.projection(&request));
+        return Ok(
+            ActivationFailure::Adapter(AdapterFailure::SecureStorageUnavailable)
+                .projection(&request),
+        );
     }
+    if let Err(error) = prepared.commit() {
+        let cleanup = restore_after_failure(
+            &request,
+            &mut prepared,
+            credential_before.as_deref(),
+            previous_record,
+            &origin,
+            &access_token,
+            &lease,
+            &claude_runtime,
+        )
+        .await;
+        return Ok(ActivationFailure::Adapter(cleanup.unwrap_or(error)).projection(&request));
+    }
+    if let Err(error) = verify_adapter(
+        &request,
+        &installation,
+        &credential,
+        &claude_runtime,
+        &dsh_runtime,
+    )
+    .await
+    {
+        let cleanup = restore_after_failure(
+            &request,
+            &mut prepared,
+            credential_before.as_deref(),
+            previous_record,
+            &origin,
+            &access_token,
+            &lease,
+            &claude_runtime,
+        )
+        .await;
+        return Ok(ActivationFailure::Adapter(cleanup.unwrap_or(error)).projection(&request));
+    }
+
     Ok(ToolActivationProjection::new(
         &request,
-        "configured",
-        "configured",
+        "ready",
+        "tool_request_verified",
     ))
 }
 
@@ -727,75 +715,49 @@ mod tests {
     use super::*;
 
     #[test]
-    fn claude_merge_preserves_unowned_fields() {
-        let before = br#"{"permissions":{"allow":["Read"]},"env":{"KEEP":"yes"}}"#;
-        let bytes = claude_settings(Some(before), "https://yeschoy.com", "sk-secret", "glm-5.3")
-            .expect("valid settings");
-        let value: Value = serde_json::from_slice(&bytes).expect("json");
-        assert_eq!(value["permissions"]["allow"][0], "Read");
-        assert_eq!(value["env"]["KEEP"], "yes");
-        assert_eq!(value["env"]["ANTHROPIC_MODEL"], "glm-5.3");
-        assert_eq!(value["env"]["ANTHROPIC_AUTH_TOKEN"], "sk-secret");
-    }
-
-    #[test]
-    fn codex_merge_preserves_unowned_fields_and_sets_responses_provider() {
-        let before =
-            b"model_reasoning_effort = \"high\"\n[notice]\nhide_full_access_warning = true\n";
-        let bytes =
-            codex_config(Some(before), "https://api.yeschoy.com", "glm-5.3").expect("valid config");
-        let text = String::from_utf8(bytes).expect("utf8");
-        let document = text.parse::<DocumentMut>().expect("toml");
-        assert_eq!(document["model_provider"].as_str(), Some("yeschoy"));
-        assert_eq!(document["model"].as_str(), Some("glm-5.3"));
-        assert_eq!(document["model_reasoning_effort"].as_str(), Some("high"));
-        assert_eq!(
-            document["model_providers"]["yeschoy"]["base_url"].as_str(),
-            Some("https://api.yeschoy.com/v1")
-        );
-        assert_eq!(
-            document["model_providers"]["yeschoy"]["wire_api"].as_str(),
-            Some("responses")
-        );
-    }
-
-    #[test]
-    fn renderer_projection_contains_no_secret_or_path() {
-        let request = ToolActivationRequest {
-            request_id: "activate-1".into(),
+    fn request_requires_one_of_five_exact_targets_and_selection_shape() {
+        let valid = ToolActivationRequest {
+            request_id: "activation-1".into(),
             line_id: "mainland_optimized".into(),
-            tool_id: "codex_desktop".into(),
+            tool_id: "pi".into(),
             model_id: "glm-5.3".into(),
+            installation_id: "i0123456789abcdef".into(),
         };
-        let serialized = serde_json::to_string(&ToolActivationProjection::new(
-            &request,
-            "configured",
-            "configured",
-        ))
-        .expect("projection");
-        for forbidden in ["apiKey", "token", "path", "sk-"] {
-            assert!(!serialized.contains(forbidden));
-        }
+        assert!(request_is_valid(&valid));
+        let mut invalid = valid;
+        invalid.tool_id = "opencode".into();
+        assert!(!request_is_valid(&invalid));
     }
 
     #[test]
-    fn model_must_support_the_selected_desktop_protocol() {
+    fn protocol_support_is_target_specific() {
         let pricing = json!({
             "success": true,
             "data": [
-                {
-                    "model_name": "glm-5.3",
-                    "supported_endpoint_types": ["anthropic", "openai-response"]
-                },
-                {
-                    "model_name": "chat-only",
-                    "supported_endpoint_types": ["openai"]
-                }
+                {"model_name": "chat", "supported_endpoint_types": ["openai"]},
+                {"model_name": "responses", "supported_endpoint_types": ["openai-response"]},
+                {"model_name": "messages", "supported_endpoint_types": ["anthropic"]}
             ]
         });
-        assert!(model_supports_tool(&pricing, "glm-5.3", "claude_desktop"));
-        assert!(model_supports_tool(&pricing, "glm-5.3", "codex_desktop"));
-        assert!(!model_supports_tool(&pricing, "chat-only", "codex_desktop"));
-        assert!(!model_supports_tool(&pricing, "missing", "claude_desktop"));
+        assert!(model_supports_tool(&pricing, "chat", "pi"));
+        assert!(model_supports_tool(&pricing, "chat", "dsh_web"));
+        assert!(model_supports_tool(&pricing, "responses", "codex_desktop"));
+        assert!(model_supports_tool(&pricing, "messages", "claude_code"));
+        assert!(model_supports_tool(&pricing, "messages", "claude_desktop"));
+        assert!(!model_supports_tool(&pricing, "chat", "codex_desktop"));
+    }
+
+    #[test]
+    fn token_names_are_distinct_per_target() {
+        let names = [
+            token_name("claude_code"),
+            token_name("claude_desktop"),
+            token_name("codex_desktop"),
+            token_name("pi"),
+            token_name("dsh_web"),
+        ];
+        for (index, left) in names.iter().enumerate() {
+            assert!(!names[index + 1..].contains(left));
+        }
     }
 }

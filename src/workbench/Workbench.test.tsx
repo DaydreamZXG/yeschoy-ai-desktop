@@ -55,6 +55,35 @@ function discovery(requestId: string, version = "1.2.3") {
     ],
   };
 }
+function activationTargetScan(requestId: string) {
+  const definitions = [
+    ["claude_code", "Claude Code", "2.1.233"],
+    ["claude_desktop", "Claude Desktop", "1.40609.1"],
+    ["codex_desktop", "Codex Desktop", "26.825.51511"],
+    ["pi", "Pi", "0.84.4"],
+    ["dsh_web", "DSH web", "0.1.0-rc.6"],
+  ] as const;
+  return {
+    requestId,
+    schemaVersion: 1,
+    platform: "macos",
+    targets: definitions.map(([toolId, displayName, version], index) => ({
+      toolId,
+      displayName,
+      surface: "本机应用",
+      status: "available",
+      installations: [
+        {
+          installationId: `i${String(index + 1).padStart(16, "0")}`,
+          label: "安装 1 · 系统应用",
+          version,
+          supported: true,
+          recommended: true,
+        },
+      ],
+    })),
+  };
+}
 function signedOut(requestId: string) {
   return {
     requestId,
@@ -154,6 +183,8 @@ beforeEach(async () => {
     if (command === "read_public_service_catalog")
       return catalogFixture(request.requestId, request.lineId);
     if (command === "account_inspect_v2") return signedOut(request.requestId);
+    if (command === "scan_activation_targets_v1")
+      return activationTargetScan(request.requestId);
     throw Error("Not available in test");
   });
   for (const [language, resource] of Object.entries(locales))
@@ -226,9 +257,11 @@ describe("official workbench", () => {
       const commands = native.mock.calls.map((call) => call[0]);
       expect(
         commands.every((command) =>
-          ["scan_desktop_apps_read_only", "account_inspect_v2"].includes(
-            command,
-          ),
+          [
+            "scan_desktop_apps_read_only",
+            "account_inspect_v2",
+            "scan_activation_targets_v1",
+          ].includes(command),
         ),
       ).toBe(true);
       expect(
@@ -289,7 +322,7 @@ describe("official workbench", () => {
     expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
       "先去登录",
     );
-    expect(native).toHaveBeenCalledTimes(2);
+    expect(native).toHaveBeenCalledTimes(3);
   });
   it("rejects an incomplete or mismatched result, shows unknown not absent, and retries", async () => {
     native.mockResolvedValueOnce(discovery("wrong-request"));
@@ -408,13 +441,13 @@ describe("official workbench", () => {
     fireEvent.click(openSetup);
     expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
     expect(
-      screen.getByRole("button", { name: /Codex ChatGPT/ }),
+      screen.getByRole("button", { name: /Codex Desktop ChatGPT/ }),
     ).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("configuration-apply-action")).toBeEnabled();
     expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
       "先去登录",
     );
-    expect(native).toHaveBeenCalledTimes(2);
+    expect(native).toHaveBeenCalledTimes(3);
   });
   it("uses one shared signed-out account state across billing and pricing", async () => {
     render(<App />);
@@ -511,15 +544,17 @@ describe("official workbench", () => {
       if (command === "scan_desktop_apps_read_only")
         return discovery(request.requestId);
       if (command === "account_inspect_v2") return signedIn(request.requestId);
-      if (command === "configure_desktop_tool_v1")
+      if (command === "scan_activation_targets_v1")
+        return activationTargetScan(request.requestId);
+      if (command === "configure_desktop_tool_v2")
         return {
           requestId: request.requestId,
-          schemaVersion: 1,
-          status: "configured",
+          schemaVersion: 2,
+          status: "ready",
           toolId: "codex_desktop",
           modelId: "glm-5.3",
           observedAtEpochMs: 1_788_195_600_000,
-          reasonCode: "none",
+          reasonCode: "tool_request_verified",
         };
       throw Error("Not available in test");
     });
@@ -531,16 +566,19 @@ describe("official workbench", () => {
     fireEvent.click(within(codex).getByRole("button", { name: "查看接入" }));
     await screen.findByRole("button", { name: "一键接入" });
     fireEvent.click(screen.getByTestId("configuration-apply-action"));
-    expect(await screen.findByText("接入成功")).toBeInTheDocument();
+    expect((await screen.findAllByText("接入完成")).length).toBeGreaterThan(1);
     expect(
-      screen.getByText("Codex 已连接野菜API，重新打开应用即可使用。"),
+      screen.getByText(
+        "Codex Desktop 已使用所选模型完成真实回复，现在可以直接使用。",
+      ),
     ).toBeInTheDocument();
-    expect(native).toHaveBeenCalledWith("configure_desktop_tool_v1", {
+    expect(native).toHaveBeenCalledWith("configure_desktop_tool_v2", {
       request: {
         requestId: expect.stringMatching(/^activate-/),
         lineId: "mainland_optimized",
         toolId: "codex_desktop",
         modelId: "glm-5.3",
+        installationId: "i0000000000000003",
       },
     });
   });

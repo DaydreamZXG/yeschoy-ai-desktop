@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU027-AS-04",
+  "assertion": "The 0.4.0 internal candidate typechecks, passes selected tests and produces macOS and Windows-ready package inputs without modifying server or production resources.",
+  "testSelector": "tests/work_packages/ru027/test_acceptance.py::test_internal_candidate_build",
+  "acceptanceCommandId": "ru027-build",
+  "runId": "RU-027/WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS@2026-09-02T08:51:31.835979+00:00",
+  "packageId": "WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-027",
+  "releaseUnitHash": "sha256:c0a8f7867c08ac1207c0ba1ed218525a15054af289190cd5fa143fc193f67e0a"
+}

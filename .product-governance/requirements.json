@@ -1077,6 +1077,31 @@
         "Claude setup changes only the owned env fields in the existing settings object; Codex setup changes only its active model/provider table and OPENAI_API_KEY. Existing unrelated fields are preserved, writes are atomic, and an in-memory transaction snapshot restores all touched files after failure without retained backup history.",
         "DSH, OpenCode, Pi, other tool writes, NewAPI source, database schema, Nginx, DNS, deployment, telemetry, updater and public release remain outside RU-024."
       ]
+    },
+    {
+      "id": "REQ-053",
+      "statement": "RU-027 replaces configuration-only success with a native verified one-click journey for Claude Code, Claude Desktop, Codex Desktop, Pi and DSH web, without changing NewAPI or server behavior.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-057",
+        "E-CODE-045",
+        "E-EXT-041",
+        "E-PROP-020"
+      ],
+      "acceptance": [
+        "The UI presents five unambiguous targets: Claude Code, Claude Desktop, Codex Desktop, Pi and DSH web. Desktop and command-line identities are never silently substituted for each other.",
+        "One click validates the shared signed-in account, compiled first-party line, exact account model, supported endpoint protocol and one unambiguous installed target before creating or revealing any tool key.",
+        "Each target reuses one dedicated NewAPI token whose secret is retained only in macOS Keychain or Windows Credential Manager. Renderer IPC, ordinary JSON/TOML/YAML, logs, diagnostics, process arguments and retained snapshots contain no complete key.",
+        "Claude Code uses apiKeyHelper and its user settings; Codex uses a user-level Responses provider with command-backed auth while preserving official auth.json; Pi uses models.json apiKey !command plus explicit default provider/model ownership; Claude Desktop uses its real 3P profile rather than Claude Code settings; DSH supports only the web profile and receives its key transiently from the native owner.",
+        "Every adapter captures volatile snapshots, checks for external change, writes only owned fields atomically, reads those fields back, and restores all touched files plus removes a newly created token when commit cannot finish. No historical backup UI or retained backup is introduced.",
+        "A ready result requires a bounded tool-level request using the configured provider, exact model and selected line. A successful direct HTTP probe or successful file write alone cannot produce ready.",
+        "Multiple installations, unsupported or unverified versions, external higher-precedence configuration, missing helper, secure-storage failure, launch failure, authentication failure, model mismatch, timeout and tool-request failure return distinct non-success states with a safe recovery action.",
+        "macOS Apple Silicon and Intel plus Windows x64 fixtures cover spaces and Unicode paths, conflicting installations, damaged and read-only configuration, concurrent changes, helper failure and interruption recovery; an installable internal candidate is built only after native and renderer scenarios pass.",
+        "No NewAPI source, server, database, Nginx, DNS, deployment, telemetry or updater behavior changes in RU-027, and passing this unit does not by itself claim public production readiness."
+      ]
     }
   ]
 }

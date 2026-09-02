@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU027-AS-03",
+  "assertion": "Synthetic complete secrets are absent from renderer IPC, ordinary configuration, logs, diagnostics, arguments and retained snapshots across failure, rollback and retry scenarios.",
+  "testSelector": "tests/work_packages/ru027/test_acceptance.py::test_secret_and_failure_boundaries",
+  "acceptanceCommandId": "ru027-security",
+  "runId": "RU-027/WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS@2026-09-02T10:44:34.540334+00:00",
+  "packageId": "WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru027/test_acceptance.py::test_secret_and_failure_boundaries",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:72d6c9d5fdced3937d376e1098fcf1f425545ca8c3fc9a9033a97452fe65bd5f",
+    "machineReportSha256": "sha256:e209448bb618600f79939eb3130b1e278b9f5444b4cf6eaa72ecb9bea7794c67",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:027d03b200d0af038a725174694dc39af3ccf99215696a15c7aa40564aecd5c9",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:c7b016a62065f9d1c75a44b7e227a0cdf1761c21820f786bfe6ffcd01e6846f3",
+  "releaseUnitId": "RU-027",
+  "releaseUnitHash": "sha256:c0a8f7867c08ac1207c0ba1ed218525a15054af289190cd5fa143fc193f67e0a"
+}

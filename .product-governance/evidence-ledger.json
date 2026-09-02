@@ -1862,6 +1862,54 @@
         "E-PROP-018",
         "E-USER-056"
       ]
+    },
+    {
+      "id": "E-USER-057",
+      "claim": "The product owner requires the client to solve true one-click use for Codex, Claude, Pi and DSH: configuration must leave the selected installed tool directly usable, and a written configuration alone is not success. The client remains the only implementation scope; NewAPI and server code must not be changed.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-02:true-one-click-tool-activation",
+      "observedAt": "2026-09-02T16:45:00+08:00",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-045",
+      "claim": "The current 0.3.0 activation command accepts only claude_desktop and codex_desktop, maps claude_desktop to the Claude Code user settings path, writes Codex API material to auth.json, returns configured immediately after local writes, and has no Pi or DSH activation branch. Read-only discovery already scans Claude Code, Codex, OpenCode, Pi and DSH, while a reusable Pi native models.json adapter exists elsewhere in the repository.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/tool_activation.rs:111-118,627-708;src-tauri/src/tool_discovery_v2.rs:41-58;src-tauri/src/pi_config/mod.rs:34-223",
+      "observedAt": "2026-09-02T16:45:00+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-041",
+      "claim": "Current primary documentation exposes deterministic third-party seams: Codex user-level model providers and Responses wire API, Claude Code user settings and apiKeyHelper reload behavior, Pi models.json providers with request-time !command key resolution, and DSH web-profile custom OpenAI-compatible providers plus profile/plugin credential seams.",
+      "class": "external_verified",
+      "locator": "https://developers.openai.com/codex/config-file/config-reference;https://code.claude.com/docs/en/settings;https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/models.md;https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/user/guide/providers.md;https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/architecture.md",
+      "observedAt": "2026-09-02T16:45:00+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-020",
+      "claim": "RU-027 should supersede the RU-026 verification authority and replace false-success activation with one deterministic native transaction for five explicit targets: Claude Code, Claude Desktop, Codex Desktop, Pi and DSH web. Per-tool keys remain in the operating-system credential store and are resolved only by an allowlisted helper or an in-memory DSH launch environment. Each adapter preserves unrelated user configuration, reads back owned fields, validates the selected exact model and line, and reports ready only after a bounded tool-level request succeeds. Multiple installations, unsupported versions, external overrides, launch failures and verification failures remain closed non-success states. The unit changes no server, NewAPI, database, deployment, updater or telemetry behavior.",
+      "class": "proposed",
+      "locator": "inline:ru027-verified-one-click-adapters",
+      "observedAt": "2026-09-02T16:45:00+08:00",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-USER-057",
+        "E-CODE-045",
+        "E-EXT-041"
+      ]
     }
   ]
 }
