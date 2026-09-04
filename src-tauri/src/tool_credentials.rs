@@ -22,6 +22,8 @@ pub(crate) struct ToolCredential {
     pub(crate) model_id: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) local_gateway_token: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) codex_transport: Option<String>,
 }
 
 #[derive(Debug)]
@@ -42,7 +44,7 @@ fn entry(tool_id: &str) -> Result<Entry, CredentialFailure> {
     Entry::new(SERVICE, tool_id).map_err(|_| CredentialFailure::Unavailable)
 }
 
-fn record_is_valid(record: &ToolCredential) -> bool {
+fn record_is_valid(tool_id: &str, record: &ToolCredential) -> bool {
     let key = record.api_key.as_str();
     let model = record.model_id.as_str();
     let local = record.local_gateway_token.as_deref().unwrap_or("");
@@ -57,6 +59,12 @@ fn record_is_valid(record: &ToolCredential) -> bool {
         && !model.is_empty()
         && model.chars().count() <= 200
         && !model.chars().any(char::is_control)
+        && (record.codex_transport.is_none()
+            || (tool_id == "codex_desktop"
+                && matches!(
+                    record.codex_transport.as_deref(),
+                    Some("direct_responses" | "chat_bridge")
+                )))
         && (local.is_empty()
             || ((32..=256).contains(&local.len())
                 && !local
@@ -72,7 +80,7 @@ pub(crate) fn load(tool_id: &str) -> Result<ToolCredential, CredentialFailure> {
     };
     let record: ToolCredential =
         serde_json::from_str(&payload).map_err(|_| CredentialFailure::Invalid)?;
-    record_is_valid(&record)
+    record_is_valid(tool_id, &record)
         .then_some(record)
         .ok_or(CredentialFailure::Invalid)
 }
@@ -86,7 +94,7 @@ pub(crate) fn snapshot(tool_id: &str) -> Result<Option<String>, CredentialFailur
 }
 
 pub(crate) fn store(tool_id: &str, record: &ToolCredential) -> Result<(), CredentialFailure> {
-    if !record_is_valid(record) {
+    if !record_is_valid(tool_id, record) {
         return Err(CredentialFailure::Invalid);
     }
     let payload = serde_json::to_string(record).map_err(|_| CredentialFailure::Invalid)?;
@@ -263,5 +271,22 @@ mod tests {
         assert!(shell_helper_command("openclaw")
             .expect("command")
             .contains("credential-helper openclaw"));
+    }
+
+    #[test]
+    fn transport_metadata_is_codex_only_and_backward_compatible() {
+        let mut record = ToolCredential {
+            api_key: "synthetic-test-key-0001".into(),
+            origin: "https://yeschoy.com".into(),
+            model_id: "gpt-5.5".into(),
+            local_gateway_token: None,
+            codex_transport: None,
+        };
+        assert!(record_is_valid("codex_desktop", &record));
+        record.codex_transport = Some("chat_bridge".into());
+        assert!(record_is_valid("codex_desktop", &record));
+        assert!(!record_is_valid("pi", &record));
+        record.codex_transport = Some("caller_route".into());
+        assert!(!record_is_valid("codex_desktop", &record));
     }
 }

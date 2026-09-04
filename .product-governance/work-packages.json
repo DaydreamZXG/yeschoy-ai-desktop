@@ -2,6 +2,125 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "WP-RU031-CODEX-PROTOCOL-ROUTING",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "critical",
+      "objective": "Make the current account's OpenAI-compatible models visible and genuinely usable in Codex Desktop through direct Responses or a secure client-local Chat bridge.",
+      "deliverables": [
+        "Codex model visibility and native activation routing derived from current account and pricing endpoint evidence",
+        "Loopback-only Responses-to-Chat bridge with stream, tool and continuation handling and OS-secure credential resolution",
+        "Transactional Codex provider plus owned model-catalog projection with target verification and rollback",
+        "Coherent 0.4.3 client build and regression evidence"
+      ],
+      "requirementRefs": [
+        "REQ-057"
+      ],
+      "decisionRefs": [
+        "DEC-075"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No NewAPI, Nginx, DNS, server database, server source, production deployment or channel-metadata mutation.",
+        "No renderer-visible complete key, plaintext key in Codex config or model catalog, caller-selected upstream URL, non-loopback listener, telemetry or retained backup history.",
+        "No automatic updater activation, Windows publisher-signature claim, new third-party application or public production-readiness claim."
+      ],
+      "dependsOn": [
+        "WP-RU030-GLOBAL-ORIGIN-RESTORE"
+      ],
+      "allowedPaths": [
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/**",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/src/**",
+        "tests/work_packages/ru031/**",
+        "outputs/野菜API-0.4.2-线路恢复验收.md",
+        "outputs/野菜API-0.4.3-Codex兼容验收.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        "release-assets/**",
+        "src-tauri/target/**",
+        "dist/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No server or local database migration. Existing keychain records without transport metadata remain valid as direct configurations until the user explicitly activates a model again.",
+        "rollback": "Restore the volatile snapshots of both Codex config and the owned catalog plus the prior keychain payload, delete only a newly created server token whose ownership is proven, and stop a newly started bridge after failed activation."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Use current server endpoint metadata rather than model-name or version allowlists. Prefer direct Responses and bridge only current openai-only models; ordinary Codex version strings remain informational.",
+        "supportedVersions": "0.4.3 client candidate on macOS 12 or later for Apple Silicon and Intel, and Windows 10/11 x64. Codex eligibility remains capability-based, not exact-version based.",
+        "removalGate": "Removing the bridge requires live server metadata and target-level evidence that every exposed Codex model accepts Responses directly; server changes, updater activation or broader protocol claims require a later unit."
+      },
+      "inputContracts": [
+        "desktop-account-session@v3",
+        "public-service-catalog@v1"
+      ],
+      "outputContracts": [
+        "desktop-tool-activation@v3"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru031-routing",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru031/test_acceptance.py::test_codex_model_visibility_and_routing",
+          "cwd": ".",
+          "timeoutSeconds": 1200
+        },
+        {
+          "id": "ru031-security",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru031/test_acceptance.py::test_codex_catalog_secret_and_rollback_boundaries",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        },
+        {
+          "id": "ru031-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru031/test_acceptance.py::test_client_only_build_and_version",
+          "cwd": ".",
+          "timeoutSeconds": 1200
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU031-AS-01",
+          "assertion": "Codex shows account models advertising either Responses or Chat, prefers direct Responses, and uses the local bridge only for Chat-only models with stream, tool and continuation conversion tests passing.",
+          "testSelector": "tests/work_packages/ru031/test_acceptance.py::test_codex_model_visibility_and_routing",
+          "acceptanceCommandId": "ru031-routing"
+        },
+        {
+          "id": "RU031-AS-02",
+          "assertion": "Codex config and its owned model catalog commit and roll back together, user-owned settings remain protected, complete keys stay in OS secure storage, and bridged target verification cannot succeed without the loopback service.",
+          "testSelector": "tests/work_packages/ru031/test_acceptance.py::test_codex_catalog_secret_and_rollback_boundaries",
+          "acceptanceCommandId": "ru031-security"
+        },
+        {
+          "id": "RU031-AS-03",
+          "assertion": "The client-only 0.4.3 renderer and native code compile from coherent version inputs without any server, database, telemetry or updater activation change.",
+          "testSelector": "tests/work_packages/ru031/test_acceptance.py::test_client_only_build_and_version",
+          "acceptanceCommandId": "ru031-build"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "An openai-only model cannot complete the selected Codex installation's harmless real request through the local bridge.",
+        "The bridge would need a caller-controlled upstream, non-loopback listener, plaintext key, renderer secret or retained credential backup.",
+        "A user-owned model catalog or unrelated Codex setting cannot be preserved and transactionally restored.",
+        "Implementation requires NewAPI, server database, Nginx, DNS, production deployment, telemetry or automatic updater mutation."
+      ],
+      "status": "planned"
+    },
+    {
       "id": "WP-RU030-GLOBAL-ORIGIN-RESTORE",
       "wave": "integration",
       "owner": "desktop-platform",

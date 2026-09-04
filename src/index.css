@@ -1957,6 +1957,15 @@ details dl div {
   width: 12px;
   height: 12px;
 }
+.connection-compatibility-label {
+  margin-left: auto;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+  color: var(--success);
+  font-weight: 650;
+}
 .model-price-comparison {
   display: grid;
   grid-template-columns: 1fr 1fr;

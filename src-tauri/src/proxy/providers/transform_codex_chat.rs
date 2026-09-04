@@ -9,8 +9,8 @@ use super::codex_chat_common::{
     response_function_call_item, response_function_call_item_with_namespace,
     split_leading_think_block,
 };
-use crate::provider::CodexChatReasoningConfig;
-use crate::proxy::{
+use crate::codex_bridge::CodexChatReasoningConfig;
+use crate::codex_bridge::{
     error::ProxyError,
     json_canonical::{
         canonical_json_string, canonicalize_json_string_if_parseable, canonicalize_tool_arguments,

@@ -736,6 +736,22 @@
       "reportSha256": "sha256:5851756bcf49946630bd244810aee2dbc737c186935cbb5441fc2e63efd96644",
       "releaseUnitId": "RU-030",
       "releaseUnitHash": "sha256:10f9f693695cbd84b4298ea8e1f1c6af8f491d1e98fa5cd42a9acef63117b113"
+    },
+    {
+      "id": "RU-031/WP-RU031-CODEX-PROTOCOL-ROUTING@2026-09-04T10:00:41.312364+00:00",
+      "packageId": "WP-RU031-CODEX-PROTOCOL-ROUTING",
+      "baselineCommit": "6cda548b61890fcf60f4dd94becda3afd2fa9fbb",
+      "baselineTreeHash": "sha256:a9c30d696c4ef473f087225aafc0baa7cbb7107d8e2f57d2feec67e839124c76",
+      "baselineSnapshotPath": "execution/baselines/fa3274638b286af0.2ab0de34ff377960b450.json",
+      "baselineSnapshotSha256": "sha256:7e31e4ea15baf53434c146268b5e11207e5d622d5ed58b450caf19f182099d0b",
+      "assignedTo": "root",
+      "status": "completed",
+      "startedAt": "2026-09-04T10:00:41.312364+00:00",
+      "finishedAt": "2026-09-04T10:24:48.808863+00:00",
+      "reportPath": "execution/reports/fa3274638b286af0.2ab0de34ff377960b450.json",
+      "reportSha256": "sha256:186cf31be292e8202746b76c6525b2acfaf4a0b688237bbc6126dc90473ccfcc",
+      "releaseUnitId": "RU-031",
+      "releaseUnitHash": "sha256:c39ecdd5a373c018fc97a7d956eca65864759afa010d236572d4c8ab21ae3079"
     }
   ]
 }

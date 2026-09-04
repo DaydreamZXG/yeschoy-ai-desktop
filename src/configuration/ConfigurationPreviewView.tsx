@@ -14,6 +14,7 @@ import {
   groupLabel,
 } from "./BillingGroupPicker";
 import { chooseBillingGroup } from "./billing";
+import { modelSupportsTool } from "./modelCompatibility";
 import type { AccountSessionController } from "../account/useAccountSession";
 import claudeIcon from "../assets/icons/claude.svg";
 import codexIcon from "../assets/icons/chatgpt.svg";
@@ -154,6 +155,8 @@ const UX = {
     finishChoice: "完成接入",
     finishHint: "写入应用并发送测试消息；验证失败会恢复原设置。",
     connectionDetails: "查看连接详情",
+    directConnection: "直接连接",
+    automaticCompatibility: "自动兼容",
   },
   en: {
     checking: "Checking this computer…",
@@ -216,6 +219,8 @@ const UX = {
     finishHint:
       "Update the app and send a test message. Failed verification restores the previous settings.",
     connectionDetails: "View connection details",
+    directConnection: "Direct connection",
+    automaticCompatibility: "Automatic compatibility",
   },
 } as const;
 
@@ -235,13 +240,6 @@ function previewTool(toolId: ActivationToolId): ConfigurationToolId {
   if (toolId === "hermes") return "hermes";
   if (toolId === "openclaw") return "openclaw";
   return "claude";
-}
-
-function requiredEndpoint(toolId: ActivationToolId): string {
-  if (toolId === "claude_code" || toolId === "claude_desktop")
-    return "anthropic";
-  if (toolId === "codex_desktop") return "openai-response";
-  return "openai";
 }
 
 function targetTone(target?: ActivationTarget) {
@@ -356,16 +354,15 @@ export function ConfigurationPreviewView({
   const signedIn = session.projection?.status === "signed_in";
   const accountModels =
     signedIn && session.projection ? session.projection.models : [];
-  const endpoint = requiredEndpoint(activationToolId);
   const models = useMemo(() => {
     const hasCompatibilityEvidence = accountModels.some(
       (model) => model.supportedEndpointTypes !== undefined,
     );
     if (!hasCompatibilityEvidence) return accountModels;
     return accountModels.filter((model) =>
-      model.supportedEndpointTypes?.includes(endpoint),
+      modelSupportsTool(activationToolId, model.supportedEndpointTypes ?? []),
     );
-  }, [accountModels, endpoint]);
+  }, [accountModels, activationToolId]);
   const selectedModel = models.find((model) => model.id === selectedModelId);
   const selectedBillingGroup = selectedModel?.billing?.groups.find(
     (g) => g.id === billingGroup,
@@ -730,6 +727,15 @@ export function ConfigurationPreviewView({
                         String(models.length),
                       )}
                     </span>
+                    {activationToolId === "codex_desktop" && selectedModel ? (
+                      <span className="connection-compatibility-label">
+                        {selectedModel.supportedEndpointTypes?.includes(
+                          "openai-response",
+                        )
+                          ? ux.directConnection
+                          : ux.automaticCompatibility}
+                      </span>
+                    ) : null}
                     <button
                       type="button"
                       className="text-button"

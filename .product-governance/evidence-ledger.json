@@ -2,6 +2,54 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "E-USER-061",
+      "claim": "The owner rejects protocol-locked Codex model visibility, expects NewAPI-format-compatible models to remain usable, and explicitly asks the client-only correction to be completed.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-04:codex-model-format-conversion",
+      "scope": "target",
+      "observedAt": "2026-09-04T17:54:19+08:00",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-049",
+      "claim": "The current client filters Codex Desktop account models to exact openai-response metadata, validates the same exact endpoint during activation, and writes no Codex model catalog, so account-available openai models are hidden and a selected custom model may not appear in Codex Desktop.",
+      "class": "code_observed",
+      "locator": "src/configuration/ConfigurationPreviewView.tsx;src-tauri/src/tool_activation.rs;src-tauri/src/tool_adapters/codex_desktop.rs;command:2026-09-04:codex-filter-and-catalog-audit",
+      "scope": "current",
+      "observedAt": "2026-09-04T17:54:19+08:00",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-050",
+      "claim": "The local NewAPI source has explicit Responses-to-Chat request, response and streaming converters, but only channels configured for the corresponding endpoint advertise openai-response; the live pricing projection currently advertises several GPT and Codex model IDs only as openai.",
+      "class": "code_observed",
+      "locator": "../new-api/relaykit/relayconvert/text_converter_registry.go;../new-api/relay/channel/advancedcustom/adaptor.go;../new-api/common/endpoint_type.go;https://yeschoy.com/api/pricing;https://api.yeschoy.com/api/pricing;command:2026-09-04:newapi-response-chat-capability-audit",
+      "scope": "current",
+      "observedAt": "2026-09-04T17:54:19+08:00",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-022",
+      "claim": "A client-only 0.4.3 successor should show every account model compatible with Codex through either direct Responses or local Responses-to-Chat bridging, choose direct Responses when advertised, keep the tool key in OS secure storage, generate an owned Codex model catalog, keep the helper app running for bridged traffic, and preserve transaction rollback plus target-level verification.",
+      "class": "proposed",
+      "locator": "inline:ru031-codex-protocol-routing",
+      "scope": "proposal",
+      "observedAt": "2026-09-04T17:54:19+08:00",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-USER-061",
+        "E-CODE-049",
+        "E-CODE-050"
+      ]
+    },
+    {
       "id": "E-USER-060",
       "claim": "The owner confirms api.yeschoy.com has been restored and asks the client release candidate to use it again.",
       "class": "user_confirmed",

@@ -1,4 +1,5 @@
 mod account_v2;
+mod codex_bridge;
 mod connectivity;
 mod connectivity_core;
 mod desktop_app_discovery;
@@ -20,14 +21,20 @@ pub use tool_credentials::credential_helper_exit_code;
 pub fn run() {
     let claude_runtime = tool_adapters::claude_desktop::ClaudeDesktopRuntimeState::default();
     let resume_claude_runtime = claude_runtime.clone();
+    let codex_bridge = codex_bridge::CodexBridgeRuntimeState::default();
+    let resume_codex_bridge = codex_bridge.clone();
     tauri::Builder::default()
         .manage(account_v2::AccountV2State::default())
         .manage(claude_runtime)
+        .manage(codex_bridge)
         .manage(tool_adapters::dsh_web::DshRuntimeState::default())
         .setup(move |app| {
             window_appearance::initialize(app)?;
             tauri::async_runtime::spawn(tool_adapters::claude_desktop::resume_if_configured(
                 resume_claude_runtime.clone(),
+            ));
+            tauri::async_runtime::spawn(codex_bridge::resume_if_configured(
+                resume_codex_bridge.clone(),
             ));
             Ok(())
         })

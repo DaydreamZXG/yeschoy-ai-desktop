@@ -2,6 +2,34 @@
   "schemaVersion": 1,
   "decisions": [
     {
+      "id": "DEC-075",
+      "question": "How should the desktop client expose and configure NewAPI models whose live metadata differs between OpenAI Chat and Responses protocols?",
+      "choice": "Create a client-only 0.4.3 successor. For Codex Desktop, treat openai-response and openai as usable account evidence, prefer direct Responses when both exist, and route openai-only models through a loopback-only bridge that reuses the repository's mature Responses-to-Chat conversion behavior. Generate an owned Codex model catalog for the exact selected model. Keep the complete API key in OS secure storage and command-backed auth, bind the bridge only to loopback, restrict its upstream to the two compiled first-party origins, preserve user-owned catalogs and unrelated settings, and keep target-level reply verification plus full rollback. Do not modify NewAPI, Nginx, DNS, server database or production configuration.",
+      "status": "accepted",
+      "decidedBy": "product owner plus current client, NewAPI and live pricing evidence",
+      "decidedAt": "2026-09-04T17:54:19+08:00",
+      "evidenceRefs": [
+        "E-USER-061",
+        "E-CODE-049",
+        "E-CODE-050",
+        "E-PROP-022"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-057"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE-PREVIEW",
+          "PAGE-MODELS"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform",
+          "security-update"
+        ]
+      }
+    },
+    {
       "id": "DEC-074",
       "question": "How should the desktop client reactivate api.yeschoy.com after live recovery evidence?",
       "choice": "Restore global_accelerated to https://api.yeschoy.com in a 0.4.2 client successor while keeping mainland_optimized at https://yeschoy.com. Preserve exactly two beginner-facing line choices and the stable line IDs. Remove yeschoy.pro from active selection and credential allowlists rather than adding a third choice or an automatic cross-origin fallback. Keep the existing line-stable account refresh, explicit user selection, secret, rollback and target-verification boundaries. Rebuild and verify macOS universal and unsigned Windows x64 candidates. Do not modify NewAPI, Nginx, DNS, database or production server code.",

@@ -9,6 +9,7 @@ use crate::{
         billing_groups, native_account_json, native_session_access, AccountV2State,
         NativeSessionFailure,
     },
+    codex_bridge::CodexBridgeRuntimeState,
     connectivity_core::request_id_is_valid,
     tool_adapters::{
         self, claude_code, claude_desktop, codex_desktop, dsh_web, hermes, openclaw, pi,
@@ -205,7 +206,7 @@ async fn validate_model(
     model_id: &str,
     tool_id: &str,
     billing_group: &str,
-) -> Result<(), ActivationFailure> {
+) -> Result<Option<codex_desktop::CodexTransport>, ActivationFailure> {
     let (status, value) = native_account_json(
         Method::GET,
         &format!("{origin}/api/user/models"),
@@ -246,8 +247,12 @@ async fn validate_model(
     {
         return Err(ActivationFailure::UnsupportedGroup);
     }
-    if model_supports_tool(&pricing, model_id, tool_id) {
-        Ok(())
+    if tool_id == "codex_desktop" {
+        codex_transport(&pricing, model_id)
+            .map(Some)
+            .ok_or(ActivationFailure::UnsupportedModel)
+    } else if model_supports_tool(&pricing, model_id, tool_id) {
+        Ok(None)
     } else {
         Err(ActivationFailure::UnsupportedModel)
     }
@@ -256,7 +261,9 @@ async fn validate_model(
 fn model_supports_tool(pricing: &Value, model_id: &str, tool_id: &str) -> bool {
     let required_endpoint = match tool_id {
         "claude_code" | "claude_desktop" => "anthropic",
-        "codex_desktop" => "openai-response",
+        "codex_desktop" => {
+            return codex_transport(pricing, model_id).is_some();
+        }
         "pi" | "dsh_web" | "hermes" | "openclaw" => "openai",
         _ => return false,
     };
@@ -273,6 +280,30 @@ fn model_supports_tool(pricing: &Value, model_id: &str, tool_id: &str) -> bool {
                 .iter()
                 .any(|endpoint| endpoint.as_str() == Some(required_endpoint))
         })
+}
+
+fn codex_transport(pricing: &Value, model_id: &str) -> Option<codex_desktop::CodexTransport> {
+    let endpoints = data(pricing)
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_object)
+        .find(|row| row.get("model_name").and_then(Value::as_str) == Some(model_id))?
+        .get("supported_endpoint_types")?
+        .as_array()?;
+    if endpoints
+        .iter()
+        .any(|endpoint| endpoint.as_str() == Some("openai-response"))
+    {
+        Some(codex_desktop::CodexTransport::DirectResponses)
+    } else if endpoints
+        .iter()
+        .any(|endpoint| endpoint.as_str() == Some("openai"))
+    {
+        Some(codex_desktop::CodexTransport::ChatBridge)
+    } else {
+        None
+    }
 }
 
 fn token_name(tool_id: &str) -> &'static str {
@@ -571,6 +602,7 @@ fn prepare_adapter(
     request: &ToolActivationRequest,
     origin: &str,
     previous: Option<&ToolCredential>,
+    codex_transport: Option<codex_desktop::CodexTransport>,
 ) -> Result<PreparedAdapter, AdapterFailure> {
     let home = tool_adapters::user_home()
         .filter(|path| path.is_absolute() && path.is_dir())
@@ -585,8 +617,13 @@ fn prepare_adapter(
             previous.and_then(|record| record.local_gateway_token.as_deref()),
         )
         .map(PreparedAdapter::ClaudeDesktop),
-        "codex_desktop" => codex_desktop::prepare(&home, origin, &request.model_id)
-            .map(PreparedAdapter::CodexDesktop),
+        "codex_desktop" => codex_desktop::prepare(
+            &home,
+            origin,
+            &request.model_id,
+            codex_transport.ok_or(AdapterFailure::ConfigurationFailed("invalid_request"))?,
+        )
+        .map(PreparedAdapter::CodexDesktop),
         "pi" => pi::prepare(&home, origin, &request.model_id).map(PreparedAdapter::Pi),
         "dsh_web" => {
             dsh_web::prepare(&home, origin, &request.model_id).map(PreparedAdapter::DshWeb)
@@ -638,13 +675,25 @@ async fn restore_after_failure(
     access_token: &str,
     lease: &TokenLease,
     claude_runtime: &claude_desktop::ClaudeDesktopRuntimeState,
+    codex_bridge: &CodexBridgeRuntimeState,
+    bridge_started: bool,
 ) -> Option<AdapterFailure> {
     let rollback_failure = prepared.rollback().err();
     let credential_failure = tool_credentials::restore(&request.tool_id, credential_before).err();
     if request.tool_id == "claude_desktop" {
         claude_runtime.stop().await;
-        if let Some(previous) = previous_record {
+        if let Some(previous) = previous_record.clone() {
             let _ = claude_runtime.start(previous).await;
+        }
+    }
+    if request.tool_id == "codex_desktop" && bridge_started {
+        codex_bridge.stop().await;
+        if previous_record
+            .as_ref()
+            .and_then(|record| record.codex_transport.as_deref())
+            == Some("chat_bridge")
+        {
+            let _ = codex_bridge.ensure_started().await;
         }
     }
     delete_created_token(origin, access_token, lease).await;
@@ -694,6 +743,7 @@ pub async fn configure_desktop_tool_v2(
     account_state: tauri::State<'_, AccountV2State>,
     claude_runtime: tauri::State<'_, claude_desktop::ClaudeDesktopRuntimeState>,
     dsh_runtime: tauri::State<'_, dsh_web::DshRuntimeState>,
+    codex_bridge: tauri::State<'_, CodexBridgeRuntimeState>,
     request: ToolActivationRequest,
 ) -> Result<ToolActivationProjection, String> {
     if !request_is_valid(&request) {
@@ -720,7 +770,7 @@ pub async fn configure_desktop_tool_v2(
             return Ok(ActivationFailure::ServerUnavailable.projection(&request))
         }
     };
-    if let Err(error) = validate_model(
+    let codex_transport = match validate_model(
         &origin,
         &access_token,
         &request.model_id,
@@ -729,8 +779,9 @@ pub async fn configure_desktop_tool_v2(
     )
     .await
     {
-        return Ok(error.projection(&request));
-    }
+        Ok(value) => value,
+        Err(error) => return Ok(error.projection(&request)),
+    };
 
     let credential_before = match tool_credentials::snapshot(&request.tool_id) {
         Ok(value) => value,
@@ -763,20 +814,41 @@ pub async fn configure_desktop_tool_v2(
         Ok(value) => value,
         Err(error) => return Ok(error.projection(&request)),
     };
-    let mut prepared = match prepare_adapter(&request, &origin, previous_record.as_ref()) {
-        Ok(value) => value,
-        Err(error) => {
-            delete_created_token(&origin, &access_token, &lease).await;
-            return Ok(ActivationFailure::Adapter(error).projection(&request));
+    let mut prepared =
+        match prepare_adapter(&request, &origin, previous_record.as_ref(), codex_transport) {
+            Ok(value) => value,
+            Err(error) => {
+                delete_created_token(&origin, &access_token, &lease).await;
+                return Ok(ActivationFailure::Adapter(error).projection(&request));
+            }
+        };
+    let bridge_started = if codex_transport == Some(codex_desktop::CodexTransport::ChatBridge) {
+        match codex_bridge.ensure_started().await {
+            Ok(value) => value,
+            Err(_) => {
+                delete_created_token(&origin, &access_token, &lease).await;
+                return Ok(
+                    ActivationFailure::Adapter(AdapterFailure::ConfigurationFailed(
+                        "local_bridge_unavailable",
+                    ))
+                    .projection(&request),
+                );
+            }
         }
+    } else {
+        false
     };
     let credential = ToolCredential {
         api_key: lease.key.clone(),
         origin: origin.clone(),
         model_id: request.model_id.clone(),
         local_gateway_token: prepared.local_gateway_token().map(str::to_owned),
+        codex_transport: codex_transport.map(|value| value.credential_value().to_owned()),
     };
     if tool_credentials::store(&request.tool_id, &credential).is_err() {
+        if bridge_started {
+            codex_bridge.stop().await;
+        }
         delete_created_token(&origin, &access_token, &lease).await;
         return Ok(
             ActivationFailure::Adapter(AdapterFailure::SecureStorageUnavailable)
@@ -788,11 +860,13 @@ pub async fn configure_desktop_tool_v2(
             &request,
             &mut prepared,
             credential_before.as_deref(),
-            previous_record,
+            previous_record.clone(),
             &origin,
             &access_token,
             &lease,
             &claude_runtime,
+            &codex_bridge,
+            bridge_started,
         )
         .await;
         return Ok(ActivationFailure::Adapter(cleanup.unwrap_or(error)).projection(&request));
@@ -810,14 +884,22 @@ pub async fn configure_desktop_tool_v2(
             &request,
             &mut prepared,
             credential_before.as_deref(),
-            previous_record,
+            previous_record.clone(),
             &origin,
             &access_token,
             &lease,
             &claude_runtime,
+            &codex_bridge,
+            bridge_started,
         )
         .await;
         return Ok(ActivationFailure::Adapter(cleanup.unwrap_or(error)).projection(&request));
+    }
+
+    if request.tool_id == "codex_desktop"
+        && codex_transport == Some(codex_desktop::CodexTransport::DirectResponses)
+    {
+        codex_bridge.stop().await;
     }
 
     Ok(ToolActivationProjection::new(
@@ -1005,7 +1087,15 @@ mod tests {
         assert!(model_supports_tool(&pricing, "responses", "codex_desktop"));
         assert!(model_supports_tool(&pricing, "messages", "claude_code"));
         assert!(model_supports_tool(&pricing, "messages", "claude_desktop"));
-        assert!(!model_supports_tool(&pricing, "chat", "codex_desktop"));
+        assert!(model_supports_tool(&pricing, "chat", "codex_desktop"));
+        assert_eq!(
+            codex_transport(&pricing, "responses"),
+            Some(codex_desktop::CodexTransport::DirectResponses)
+        );
+        assert_eq!(
+            codex_transport(&pricing, "chat"),
+            Some(codex_desktop::CodexTransport::ChatBridge)
+        );
     }
 
     #[test]

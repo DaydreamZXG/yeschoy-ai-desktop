@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU031-AS-01",
+  "assertion": "Codex shows account models advertising either Responses or Chat, prefers direct Responses, and uses the local bridge only for Chat-only models with stream, tool and continuation conversion tests passing.",
+  "testSelector": "tests/work_packages/ru031/test_acceptance.py::test_codex_model_visibility_and_routing",
+  "acceptanceCommandId": "ru031-routing",
+  "runId": "RU-031/WP-RU031-CODEX-PROTOCOL-ROUTING@2026-09-04T10:00:41.312364+00:00",
+  "packageId": "WP-RU031-CODEX-PROTOCOL-ROUTING",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru031/test_acceptance.py::test_codex_model_visibility_and_routing",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:803282a8d7f0a3a5336657b2da30251727d0e42e37ca9462cbf6613269d542e5",
+    "machineReportSha256": "sha256:2799756c273fcd75e9e94487eeca6c2f9254c82072751208caf0dda1d3b78488",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:8c5a7ba4e5b40b0d51f2a4b7c47b408319bb57a999666d0ccd63a2ab20edd99b",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:af43e61b6b84f91aa1470307fd464e52f7ea727b6bce0cf8326857c379375bb6",
+  "releaseUnitId": "RU-031",
+  "releaseUnitHash": "sha256:c39ecdd5a373c018fc97a7d956eca65864759afa010d236572d4c8ab21ae3079"
+}

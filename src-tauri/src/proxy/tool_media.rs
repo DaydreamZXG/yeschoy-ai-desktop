@@ -6,7 +6,7 @@
 //! sanitizer reuses the same recognition and traversal rules when it needs to
 //! remove images for a text-only upstream.
 
-use crate::proxy::json_canonical::canonical_json_string;
+use crate::codex_bridge::json_canonical::canonical_json_string;
 use serde_json::{json, Map, Value};
 
 pub(crate) const WHOLE_DATA_URL_MIN_BYTES: usize = 8 * 1024;

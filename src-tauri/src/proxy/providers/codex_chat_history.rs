@@ -1,5 +1,5 @@
 use super::codex_chat_common::{is_empty_value, response_item_call_id};
-use crate::proxy::sse::{append_utf8_safe, strip_sse_field, take_sse_block};
+use crate::codex_bridge::sse::{append_utf8_safe, strip_sse_field, take_sse_block};
 use bytes::Bytes;
 use futures::{Stream, StreamExt};
 use serde_json::Value;

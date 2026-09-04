@@ -2,6 +2,30 @@
   "schemaVersion": 1,
   "requirements": [
     {
+      "id": "REQ-057",
+      "statement": "Make account-available OpenAI-compatible models genuinely usable in Codex Desktop through evidence-driven direct Responses or a client-local Responses-to-Chat bridge, with an owned model catalog and no server mutation.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-061",
+        "E-CODE-049",
+        "E-CODE-050",
+        "E-PROP-022"
+      ],
+      "acceptance": [
+        "Codex Desktop lists an account model when current pricing advertises either openai-response or openai; models without either endpoint remain hidden, and the exact model ID plus server-owned billing group stay visible.",
+        "Activation revalidates current account availability, billing group and endpoint metadata. It prefers direct Responses whenever advertised and uses a loopback-only Responses-to-Chat bridge only for openai-only models.",
+        "The local bridge converts request, non-stream response, streaming response, function tools, custom tools and previous-response tool history using the repository's mature CC Switch conversion behavior, while forwarding only to the closed selected yeschoy.com or api.yeschoy.com origin.",
+        "The complete tool key remains in OS secure storage and reaches Codex only through the signed command helper. It is absent from renderer IPC, ordinary Codex configuration, model catalogs, logs, paths and retained backup history.",
+        "One activation transaction writes the dedicated yeschoy provider and an owned model_catalog_json file, preserves unrelated Codex settings and user-owned catalogs, verifies both readbacks, launches the selected installation for a harmless real reply and restores both files plus credential on failure.",
+        "A bridged configuration resumes its loopback service when the helper app starts and does not claim readiness if the bridge cannot bind or the target-level request fails. Direct configurations do not depend on the bridge.",
+        "Renderer, native and release-unit tests cover direct priority, Chat fallback, unsupported protocols, visibility, catalog ownership, secret absence, streaming and tool conversion, restart, external change and rollback.",
+        "The client version advances coherently to 0.4.3. No NewAPI, Nginx, DNS, server database, production deployment, telemetry or automatic-update activation is part of this change."
+      ]
+    },
+    {
       "id": "REQ-056",
       "statement": "Restore the verified Cloudflare origin as the single global_accelerated route in the 0.4.2 client without adding a third beginner choice or weakening session, credential, configuration and verification boundaries.",
       "scope": "target",

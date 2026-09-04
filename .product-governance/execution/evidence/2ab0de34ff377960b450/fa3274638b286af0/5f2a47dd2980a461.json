@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU031-AS-03",
+  "assertion": "The client-only 0.4.3 renderer and native code compile from coherent version inputs without any server, database, telemetry or updater activation change.",
+  "testSelector": "tests/work_packages/ru031/test_acceptance.py::test_client_only_build_and_version",
+  "acceptanceCommandId": "ru031-build",
+  "runId": "RU-031/WP-RU031-CODEX-PROTOCOL-ROUTING@2026-09-04T10:00:41.312364+00:00",
+  "packageId": "WP-RU031-CODEX-PROTOCOL-ROUTING",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru031/test_acceptance.py::test_client_only_build_and_version",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:2db745f51b9c33e89d289f43551d60499773ce2073c5612fe9c1d28b7a436a3c",
+    "machineReportSha256": "sha256:6ed9c52c88aede865c56c873311f674574d244a550cfdb1446a041b906d788d9",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:4c1a3cad01a661c2f66ce73043d0fe54a3c86b717d472b79f88ead47105ba184",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:b3e952facfb8a0b89ed78cd8c8ea853a9b0979183a8b1e655a2ac6d3a39de740",
+  "releaseUnitId": "RU-031",
+  "releaseUnitHash": "sha256:c39ecdd5a373c018fc97a7d956eca65864759afa010d236572d4c8ab21ae3079"
+}

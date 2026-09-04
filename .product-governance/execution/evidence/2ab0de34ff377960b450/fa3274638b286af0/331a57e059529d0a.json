@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU031-AS-02",
+  "assertion": "Codex config and its owned model catalog commit and roll back together, user-owned settings remain protected, complete keys stay in OS secure storage, and bridged target verification cannot succeed without the loopback service.",
+  "testSelector": "tests/work_packages/ru031/test_acceptance.py::test_codex_catalog_secret_and_rollback_boundaries",
+  "acceptanceCommandId": "ru031-security",
+  "runId": "RU-031/WP-RU031-CODEX-PROTOCOL-ROUTING@2026-09-04T10:00:41.312364+00:00",
+  "packageId": "WP-RU031-CODEX-PROTOCOL-ROUTING",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru031/test_acceptance.py::test_codex_catalog_secret_and_rollback_boundaries",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:b28b36a5e25f14b8bd59c8694dcb48abbae9d42cd84e8154adcdeeaa1039e5b1",
+    "machineReportSha256": "sha256:8c99aa6fe367c9b9722136c3cecdc62ebb0a0a7472ea5d95089846013a319cec",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:36ce007b19bde3a9695f1062b5a8827a532ab180d2a30739369f76803ac1766d",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:61157a379e0b4b572a669446f029497d4c2d1226e9874e5a75ccef6e2ebe7a60",
+  "releaseUnitId": "RU-031",
+  "releaseUnitHash": "sha256:c39ecdd5a373c018fc97a7d956eca65864759afa010d236572d4c8ab21ae3079"
+}
