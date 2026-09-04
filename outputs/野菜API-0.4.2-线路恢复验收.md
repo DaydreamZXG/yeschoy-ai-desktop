@@ -32,7 +32,15 @@
 - 前端生产构建通过。
 - 候选验收的 Cargo、Vitest 与 Vite 输出均写入独立临时目录，不依赖旧构建缓存，也不改写受测源码。
 
+## 安装包状态
+
+- macOS 通用版已生成：`release/ru030-local/野菜API-0.4.2-macOS-universal.dmg`。
+- DMG 大小为 9,627,697 bytes，SHA-256 为 `9706693cf7c29378b3da93e61433bdfbc24b55dd55a5270ca04acef09ce98c84`。
+- 应用同时包含 `x86_64` 与 `arm64`，使用 `Developer ID Application: xiangguo Zheng (BRG82P5ZB7)` 签名。
+- Apple 公证已通过，submission ID 为 `e167ce03-eeab-412b-ad02-0e433bf81d49`；票据已钉入 DMG，Gatekeeper 复核结果为 `Notarized Developer ID`。
+- Windows 0.4.2 构建已从提交 `c6c4d794` 触发，但 GitHub Actions 在分配 runner 前因账户付款失败或消费上限不足而拒绝启动。失败运行号为 `33858702962`，未生成 0.4.2 Windows 安装包，也没有复用旧包。
+
 ## 发布前剩余实机项
 
 - 使用真实野菜API账户在 macOS 与 Windows 各完成一次登录、切到全球加速、刷新余额与模型、选择计费分组、一键接入和真实回复。
-- 重新生成并核对 0.4.2 macOS 通用公证 DMG 与 Windows x64 未签名内测 EXE；不得继续分发旧 0.4.1 安装包作为当前版本。
+- 处理 GitHub 账户的 Actions 付款或消费上限问题后，重新触发 Windows x64 未签名内测 EXE 构建并核对产物；不得继续分发旧 0.4.1 安装包作为当前版本。
