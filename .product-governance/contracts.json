@@ -2,6 +2,197 @@
   "schemaVersion": 1,
   "contracts": [
     {
+      "id": "desktop-tool-activation@v3",
+      "kind": "command",
+      "owner": "tool-config",
+      "consumers": [
+        "desktop-platform",
+        "diagnostics"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-tool-activation@v3",
+      "authorization": "One explicit click in the bundled desktop shell while a valid first-party desktop session exists. Native code accepts only two compiled active line IDs, seven closed target IDs, one exact current-account model ID, one exact current-account billing group and an optional opaque installation ID previously returned by native discovery.",
+      "idempotency": "Repeated activation reuses the target's dedicated NewAPI token and replaces only receipt-owned configuration fields. Ready is recomputed from a fresh readback and tool request on every activation; stale success is never reused.",
+      "compatibility": "Version 3 replaces exact-version denial with runtime/capability assessment and adds billing-group, Hermes and OpenClaw support. Version strings are informational; required runtime, owned-schema readback and target verification remain required. Active line IDs resolve only to yeschoy.com and yeschoy.pro in this unit; api.yeschoy.com remains inactive pending later validation.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One bounded native activation request for an explicitly selected tool identity.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Opaque renderer correlation ID.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "lineId": {
+            "type": "string",
+            "description": "Selected compiled first-party API origin.",
+            "enum": [
+              "mainland_optimized",
+              "global_accelerated"
+            ]
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Exact supported target identity.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "modelId": {
+            "type": "string",
+            "description": "Exact model ID selected from the current account model list.",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "installationId": {
+            "type": "string",
+            "description": "Opaque native discovery choice or empty for a unique installation.",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_-]*$"
+          },
+          "billingGroup": {
+            "type": "string",
+            "description": "Exact non-auto billing group returned for the selected account model.",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "requestId",
+          "lineId",
+          "toolId",
+          "modelId",
+          "installationId",
+          "billingGroup"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Sanitized activation state; only ready proves a successful tool-level request.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Unchanged correlation ID.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Activation projection schema version.",
+            "enum": [
+              3
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Closed activation outcome.",
+            "enum": [
+              "ready",
+              "signed_out",
+              "tool_not_found",
+              "multiple_installations",
+              "missing_runtime",
+              "unsupported_group",
+              "unsupported_profile",
+              "unsupported_model",
+              "external_override",
+              "secure_storage_unavailable",
+              "configuration_failed",
+              "launch_failed",
+              "verification_failed",
+              "server_unavailable",
+              "invalid_request"
+            ]
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Validated target identity.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "modelId": {
+            "type": "string",
+            "description": "Validated exact model ID or empty string.",
+            "maxLength": 200
+          },
+          "billingGroup": {
+            "type": "string",
+            "description": "Validated exact account billing group or empty string only on an invalid request.",
+            "maxLength": 128
+          },
+          "observedAtEpochMs": {
+            "type": "integer",
+            "description": "Local completion timestamp.",
+            "minimum": 0
+          },
+          "reasonCode": {
+            "type": "string",
+            "description": "Closed safe recovery reason without raw body, key or path.",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "requestId",
+          "schemaVersion",
+          "status",
+          "toolId",
+          "modelId",
+          "billingGroup",
+          "observedAtEpochMs",
+          "reasonCode"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal",
+        "sensitive"
+      ],
+      "observability": {
+        "correlation": "Only request ID, closed target/model/status/reason and observation time cross IPC.",
+        "audit": "NewAPI owns token audit state. Native code keeps no local secret-bearing history and only receipt metadata needed to prove field ownership.",
+        "metrics": "No telemetry upload. Tool verification output is bounded and reduced to a closed status before IPC."
+      },
+      "errorSemantics": [
+        "Invalid target, active line, model, billing group or installation identity fails before key acquisition or file access.",
+        "A configuration write without successful readback and tool-level request returns a non-ready status.",
+        "Newly created token and newly stored credential are removed when a failed first-time transaction can safely prove ownership; user-owned configuration and official login material are never guessed or deleted.",
+        "DSH is configurable only as the exact web profile; every other DSH profile is read-only and returns unsupported_profile.",
+        "Hermes and OpenClaw use non-literal command-backed credential resolution. A tool that cannot preserve this boundary cannot be configured by this contract.",
+        "api.yeschoy.com is not an active line or mutation fallback in this version. A later client authority must validate and activate it."
+      ],
+      "requirementRefs": [
+        "REQ-054",
+        "REQ-055"
+      ],
+      "evidenceRefs": [
+        "E-USER-058",
+        "E-CODE-046",
+        "E-EXT-042",
+        "E-USER-059",
+        "E-CODE-047",
+        "E-EXT-043",
+        "E-PROP-021"
+      ],
+      "status": "specified"
+    },
+    {
       "id": "tool-discovery-scan@v2",
       "kind": "query",
       "owner": "tool-config",

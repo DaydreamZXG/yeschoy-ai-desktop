@@ -3,7 +3,9 @@ export type ConfigurationToolId =
   | "codex"
   | "opencode"
   | "pi"
-  | "dsh";
+  | "dsh"
+  | "hermes"
+  | "openclaw";
 
 export type ConfigurationLineId = "mainland_optimized" | "global_accelerated";
 
@@ -14,13 +16,13 @@ export interface ConfigurationToolDefinition {
   targetFile: string;
   ownedFields: readonly string[];
   protocolSuffix: "" | "/v1";
-  endpointStatus: "documented_preview" | "withheld_unverified";
+  endpointStatus: "documented_preview";
 }
 
 export interface ConfigurationLineDefinition {
   id: ConfigurationLineId;
   displayName: string;
-  rootUrl: "https://yeschoy.com" | "https://api.yeschoy.com";
+  rootUrl: "https://yeschoy.com" | "https://yeschoy.pro";
 }
 
 export interface ConfigurationPreviewRequest {
@@ -39,7 +41,7 @@ export interface ConfigurationPreviewProjection {
   lineName: string;
   rootUrl: ConfigurationLineDefinition["rootUrl"];
   protocolEndpoint: string;
-  endpointStatus: "documented_preview" | "withheld_unverified";
+  endpointStatus: "documented_preview";
   targetFile: string;
   ownedFields: readonly string[];
   model: {
@@ -60,8 +62,7 @@ export type ConfigurationBlocker =
   | "desktop_backend_required"
   | "server_model_catalog_required"
   | "secure_credential_helper_required"
-  | "exact_version_allowlist_required"
-  | "dsh_web_adapter_required";
+  | "exact_version_allowlist_required";
 
 export const CONFIGURATION_TOOLS: readonly ConfigurationToolDefinition[] =
   Object.freeze([
@@ -125,10 +126,40 @@ export const CONFIGURATION_TOOLS: readonly ConfigurationToolDefinition[] =
       id: "dsh" as const,
       displayName: "DSH",
       mark: "D",
-      targetFile: "",
-      ownedFields: Object.freeze([]),
-      protocolSuffix: "" as const,
-      endpointStatus: "withheld_unverified" as const,
+      targetFile: "~/.dsh/settings.yaml",
+      ownedFields: Object.freeze([
+        "llm-pi-ai.providers.yeschoy",
+        "agent-default-model.provider",
+        "agent-default-model.model",
+      ]),
+      protocolSuffix: "/v1" as const,
+      endpointStatus: "documented_preview" as const,
+    }),
+    Object.freeze({
+      id: "hermes" as const,
+      displayName: "Hermes",
+      mark: "H",
+      targetFile: "~/.hermes/config.yaml",
+      ownedFields: Object.freeze([
+        "providers.yeschoy",
+        "model.provider",
+        "model.default",
+      ]),
+      protocolSuffix: "/v1" as const,
+      endpointStatus: "documented_preview" as const,
+    }),
+    Object.freeze({
+      id: "openclaw" as const,
+      displayName: "OpenClaw",
+      mark: "O",
+      targetFile: "~/.openclaw/openclaw.json",
+      ownedFields: Object.freeze([
+        "models.providers.yeschoy",
+        "secrets.providers.yeschoy-keychain",
+        "agents.defaults.model.primary",
+      ]),
+      protocolSuffix: "/v1" as const,
+      endpointStatus: "documented_preview" as const,
     }),
   ]);
 
@@ -142,7 +173,7 @@ export const CONFIGURATION_LINES: readonly ConfigurationLineDefinition[] =
     Object.freeze({
       id: "global_accelerated" as const,
       displayName: "全球加速",
-      rootUrl: "https://api.yeschoy.com" as const,
+      rootUrl: "https://yeschoy.pro" as const,
     }),
   ]);
 
@@ -172,11 +203,6 @@ export function createConfigurationPreview(
   if (!tool) throw new Error("invalid_tool_id");
   if (!line) throw new Error("invalid_line_id");
 
-  const isDsh = tool.id === "dsh";
-  const blockers = isDsh
-    ? Object.freeze([...BASE_BLOCKERS, "dsh_web_adapter_required" as const])
-    : BASE_BLOCKERS;
-
   return Object.freeze({
     requestId: request.requestId,
     schemaVersion: 1,
@@ -186,7 +212,7 @@ export function createConfigurationPreview(
     lineId: line.id,
     lineName: line.displayName,
     rootUrl: line.rootUrl,
-    protocolEndpoint: isDsh ? "" : `${line.rootUrl}${tool.protocolSuffix}`,
+    protocolEndpoint: `${line.rootUrl}${tool.protocolSuffix}`,
     endpointStatus: tool.endpointStatus,
     targetFile: tool.targetFile,
     ownedFields: tool.ownedFields,
@@ -196,7 +222,7 @@ export function createConfigurationPreview(
     }),
     apply: Object.freeze({
       status: "blocked" as const,
-      blockers,
+      blockers: BASE_BLOCKERS,
     }),
     networkAttempted: false,
     configurationRead: false,

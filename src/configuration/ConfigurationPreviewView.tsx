@@ -8,6 +8,12 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import {
+  BillingGroupPicker,
+  BillingPrices,
+  groupLabel,
+} from "./BillingGroupPicker";
+import { chooseBillingGroup } from "./billing";
 import type { AccountSessionController } from "../account/useAccountSession";
 import claudeIcon from "../assets/icons/claude.svg";
 import codexIcon from "../assets/icons/chatgpt.svg";
@@ -80,17 +86,32 @@ const APPLICATIONS: readonly ApplicationChoice[] = [
     surface: "DeepSeek Harness 浏览器工作台",
     mark: "D",
   },
+  {
+    id: "hermes",
+    toolId: "hermes",
+    displayName: "Hermes",
+    surface: "Hermes 桌面与命令行助手",
+    mark: "H",
+  },
+  {
+    id: "openclaw",
+    toolId: "openclaw",
+    displayName: "OpenClaw",
+    surface: "小龙虾智能助手",
+    mark: "O",
+  },
 ];
 
 const UX = {
   zh: {
     checking: "正在检查这台电脑…",
     checkAgain: "重新检查应用",
-    installed: "已找到",
+    installed: "已找到 · 接入时验证",
     chooseInstall: "选择要使用的安装位置",
     chooseInstallHint: "发现了多个安装。助手已优先选中可用版本，你也可以更换。",
     missing: "未在这台电脑找到该应用，请先安装后重新检查。",
-    unsupported: "找到了应用，但当前版本暂不支持自动接入。",
+    unsupported:
+      "找到了应用，但缺少启动所需的组件。请确认应用安装完整后重新检查。",
     scanFailed: "暂时无法检查本机应用，请重新检查。",
     unavailable: "等待检查",
     version: "版本",
@@ -102,7 +123,7 @@ const UX = {
     readyBody: "{{app}} 已使用所选模型完成真实回复，现在可以直接使用。",
     selectInstallFirst: "先选择安装位置",
     installFirst: "请先安装应用",
-    updateFirst: "当前版本暂不支持",
+    updateFirst: "缺少运行组件",
     connectionFailed:
       "应用没有完成真实连接，所有本机改动已恢复。请检查线路后重试。",
     desktopTimedOut:
@@ -113,12 +134,12 @@ const UX = {
       "系统安全存储不可用，因此没有保存密钥，也没有改动应用设置。",
     externalOverride:
       "系统里已有更高优先级的设置。移除该设置后再试，原配置没有改动。",
-    unsupportedProfile: "这个版本的应用不支持安全自动接入，原配置没有改动。",
+    unsupportedProfile: "这个应用的运行方式暂不能自动配置，原设置没有改动。",
     launchFailed:
       "设置已经恢复，因为应用未能正常启动。请确认应用可以手动打开。",
-    builderKicker: "模型与线路",
+    builderKicker: "模型与计费分组",
     builderTitle: "选好，就能用",
-    builderIntro: "选择模型和网络线路，助手会自动配置、验证并打开应用。",
+    builderIntro: "选模型、比较分组价格，再一键完成接入。网络线路单独选择。",
     modelChoice: "选择模型",
     modelQuestion: "想用哪个 AI？",
     lineChoice: "选择连接线路",
@@ -143,7 +164,7 @@ const UX = {
       "More than one installation was found. A supported one is selected when possible.",
     missing: "This application was not found. Install it, then check again.",
     unsupported:
-      "The application was found, but this version cannot be connected automatically.",
+      "The application was found, but a required runtime component is missing.",
     scanFailed: "Applications could not be checked. Try again.",
     unavailable: "Waiting for check",
     version: "Version",
@@ -158,7 +179,7 @@ const UX = {
       "{{app}} completed a real response with the selected model and is ready to use.",
     selectInstallFirst: "Choose an installation first",
     installFirst: "Install the application first",
-    updateFirst: "This version is not supported",
+    updateFirst: "Runtime component missing",
     connectionFailed:
       "The application did not complete a real connection. Local changes were restored. Check the line and retry.",
     desktopTimedOut:
@@ -172,7 +193,7 @@ const UX = {
     externalOverride:
       "A higher-priority system setting is active. Remove it and retry; existing settings were not changed.",
     unsupportedProfile:
-      "This application version does not support safe automatic setup. Existing settings were not changed.",
+      "A required runtime is missing. Repair or reinstall the application, then try again. Existing settings were not changed.",
     launchFailed:
       "Settings were restored because the application could not start. Make sure it opens normally.",
     builderKicker: "Model and connection",
@@ -211,6 +232,8 @@ function previewTool(toolId: ActivationToolId): ConfigurationToolId {
   if (toolId === "codex_desktop") return "codex";
   if (toolId === "pi") return "pi";
   if (toolId === "dsh_web") return "dsh";
+  if (toolId === "hermes") return "hermes";
+  if (toolId === "openclaw") return "openclaw";
   return "claude";
 }
 
@@ -226,27 +249,6 @@ function targetTone(target?: ActivationTarget) {
   if (target.status === "available") return "ready";
   if (target.status === "selection_required") return "attention";
   return "muted";
-}
-
-function formatModelPrice(value: string): string {
-  const amount = Number(value);
-  if (!Number.isFinite(amount)) return "—";
-  return `¥${new Intl.NumberFormat("zh-CN", {
-    maximumFractionDigits: 4,
-  }).format(amount)}`;
-}
-
-function savingPercent(official: string, actual: string): string | null {
-  const officialAmount = Number(official);
-  const actualAmount = Number(actual);
-  if (
-    !Number.isFinite(officialAmount) ||
-    !Number.isFinite(actualAmount) ||
-    officialAmount <= 0 ||
-    actualAmount > officialAmount
-  )
-    return null;
-  return `${Math.round((1 - actualAmount / officialAmount) * 100)}%`;
 }
 
 export function ConfigurationPreviewView({
@@ -265,6 +267,7 @@ export function ConfigurationPreviewView({
     initialToolId(initialDesktopAppId),
   );
   const [selectedModelId, setSelectedModelId] = useState("");
+  const [billingGroup, setBillingGroup] = useState("");
   const [applyPhase, setApplyPhase] = useState<ApplyPhase>("idle");
   const [activation, setActivation] = useState<ToolActivationProjection | null>(
     null,
@@ -364,18 +367,23 @@ export function ConfigurationPreviewView({
     );
   }, [accountModels, endpoint]);
   const selectedModel = models.find((model) => model.id === selectedModelId);
-  const inputSaving = selectedModel?.pricingAvailable
-    ? savingPercent(
-        selectedModel.officialInputCnyPerMillion,
-        selectedModel.actualInputCnyPerMillion,
-      )
-    : null;
-  const outputSaving = selectedModel?.pricingAvailable
-    ? savingPercent(
-        selectedModel.officialOutputCnyPerMillion,
-        selectedModel.actualOutputCnyPerMillion,
-      )
-    : null;
+  const selectedBillingGroup = selectedModel?.billing?.groups.find(
+    (g) => g.id === billingGroup,
+  );
+  useEffect(() => {
+    setBillingGroup((previous) => chooseBillingGroup(selectedModel, previous));
+    setActivation(null);
+  }, [selectedModel]);
+
+  const contextKey = JSON.stringify([
+    activationToolId,
+    selectedModelId,
+    billingGroup,
+    lineId,
+    selectedInstallationId,
+  ]);
+  const currentContext = useRef(contextKey);
+  currentContext.current = contextKey;
 
   useEffect(() => {
     if (!models.some((model) => model.id === selectedModelId)) {
@@ -401,11 +409,13 @@ export function ConfigurationPreviewView({
     }
     if (
       !selectedModelId ||
+      !selectedBillingGroup ||
       !targetCanActivate ||
       !selectedInstallationId ||
       applyPhase === "applying"
     )
       return;
+    const submittedContext = currentContext.current;
     setApplyPhase("applying");
     setActivation(null);
     try {
@@ -414,24 +424,31 @@ export function ConfigurationPreviewView({
         toolId: activationToolId,
         modelId: selectedModelId,
         installationId: selectedInstallationId,
+        billingGroup,
       });
-      setActivation(result);
+      if (currentContext.current === submittedContext) setActivation(result);
     } catch {
-      setActivation({
-        requestId: "local",
-        schemaVersion: 2,
-        status: "configuration_failed",
-        toolId: activationToolId,
-        modelId: selectedModelId,
-        observedAtEpochMs: Date.now(),
-        reasonCode: "invalid_response",
-      });
+      if (currentContext.current === submittedContext)
+        setActivation({
+          requestId: "local",
+          schemaVersion: 3,
+          status: "configuration_failed",
+          toolId: activationToolId,
+          modelId: selectedModelId,
+          billingGroup,
+          observedAtEpochMs: Date.now(),
+          reasonCode: "invalid_response",
+        });
     } finally {
       setApplyPhase("finished");
     }
   };
 
-  const configured = activation?.status === "ready";
+  const configured =
+    activation?.status === "ready" &&
+    activation.billingGroup === billingGroup &&
+    activation.modelId === selectedModelId &&
+    activation.toolId === activationToolId;
   const activationResult = (() => {
     switch (activation?.status) {
       case "ready":
@@ -442,7 +459,9 @@ export function ConfigurationPreviewView({
         return ux.missingDuringSetup;
       case "multiple_installations":
         return ux.selectionRequired;
-      case "unsupported_version":
+      case "unsupported_group":
+        return "所选分组已不可用，请刷新账户数据后重新选择。";
+      case "missing_runtime":
         return ux.unsupported;
       case "unsupported_profile":
         return ux.unsupportedProfile;
@@ -473,10 +492,10 @@ export function ConfigurationPreviewView({
     if (scanPhase === "error") return ux.scanFailed;
     if (!target) return ux.unavailable;
     if (target.status === "not_found") return ux.missing;
-    if (target.status === "unsupported_version") return ux.unsupported;
+    if (target.status === "missing_runtime") return ux.unsupported;
     if (target.status === "selection_required")
       return `${target.installations.length} · ${ux.chooseInstall}`;
-    return `${ux.installed}${selectedInstallation?.version ? ` · ${ux.version} ${selectedInstallation.version}` : ""}`;
+    return `${ux.installed}${selectedInstallation?.version ? ` · ${ux.version} ${selectedInstallation.version}` : " · 版本未读取，不影响尝试接入"}`;
   })();
 
   const verifyingText =
@@ -486,7 +505,11 @@ export function ConfigurationPreviewView({
         ? ux.verifyingDsh
         : ux.verifying;
   const canApply =
-    signedIn && selectedModelId !== "" && targetCanActivate && !session.loading;
+    signedIn &&
+    selectedModelId !== "" &&
+    !!selectedBillingGroup &&
+    targetCanActivate &&
+    !session.loading;
   const actionLabel = !signedIn
     ? c.signInFirst
     : applyPhase === "applying"
@@ -497,7 +520,7 @@ export function ConfigurationPreviewView({
           ? ux.checking
           : target?.status === "not_found"
             ? ux.installFirst
-            : target?.status === "unsupported_version"
+            : target?.status === "missing_runtime"
               ? ux.updateFirst
               : target?.status === "selection_required" &&
                   !selectedInstallationId
@@ -556,7 +579,7 @@ export function ConfigurationPreviewView({
                       ? ux.scanFailed
                       : candidateTarget?.status === "not_found"
                         ? ux.installFirst
-                        : candidateTarget?.status === "unsupported_version"
+                        : candidateTarget?.status === "missing_runtime"
                           ? ux.updateFirst
                           : candidateTarget?.status === "selection_required"
                             ? `${candidateTarget.installations.length} · ${ux.chooseInstall}`
@@ -571,6 +594,7 @@ export function ConfigurationPreviewView({
                         : undefined
                     }
                     aria-pressed={activationToolId === candidate.id}
+                    disabled={applyPhase === "applying"}
                     onClick={() => {
                       setActivationToolId(candidate.id);
                       resetResult();
@@ -613,6 +637,7 @@ export function ConfigurationPreviewView({
                 <span>{ux.chooseInstall}</span>
                 <select
                   value={selectedInstallationId}
+                  disabled={applyPhase === "applying"}
                   onChange={(event) => {
                     setInstallations((current) => ({
                       ...current,
@@ -629,7 +654,7 @@ export function ConfigurationPreviewView({
                       disabled={!installation.supported}
                     >
                       {installation.label} ·{" "}
-                      {installation.version || ux.unavailable}
+                      {installation.version || "版本未读取"}
                       {installation.supported ? "" : ` · ${ux.updateFirst}`}
                     </option>
                   ))}
@@ -638,7 +663,8 @@ export function ConfigurationPreviewView({
               </label>
             ) : selectedInstallation ? (
               <span className="installation-chip">
-                {selectedInstallation.label} · {selectedInstallation.version}
+                {selectedInstallation.label} ·{" "}
+                {selectedInstallation.version || "版本未读取"}
               </span>
             ) : null}
           </div>
@@ -684,7 +710,11 @@ export function ConfigurationPreviewView({
                         setSelectedModelId(event.target.value);
                         resetResult();
                       }}
-                      disabled={session.loading || models.length === 0}
+                      disabled={
+                        session.loading ||
+                        models.length === 0 ||
+                        applyPhase === "applying"
+                      }
                     >
                       {models.map((model) => (
                         <option key={model.id} value={model.id}>
@@ -710,64 +740,6 @@ export function ConfigurationPreviewView({
                       {c.refresh}
                     </button>
                   </div>
-                  {selectedModel?.pricingAvailable ? (
-                    <div className="model-price-comparison">
-                      <article>
-                        <span>{ux.officialPrice}</span>
-                        <dl>
-                          <div>
-                            <dt>{ux.inputPrice}</dt>
-                            <dd>
-                              {formatModelPrice(
-                                selectedModel.officialInputCnyPerMillion,
-                              )}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>{ux.outputPrice}</dt>
-                            <dd>
-                              {formatModelPrice(
-                                selectedModel.officialOutputCnyPerMillion,
-                              )}
-                            </dd>
-                          </div>
-                        </dl>
-                      </article>
-                      <article className="yeschoy-price-card">
-                        <span>{ux.yeschoyPrice}</span>
-                        <dl>
-                          <div>
-                            <dt>{ux.inputPrice}</dt>
-                            <dd>
-                              {formatModelPrice(
-                                selectedModel.actualInputCnyPerMillion,
-                              )}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt>{ux.outputPrice}</dt>
-                            <dd>
-                              {formatModelPrice(
-                                selectedModel.actualOutputCnyPerMillion,
-                              )}
-                            </dd>
-                          </div>
-                        </dl>
-                      </article>
-                      <small>{ux.perMillion}</small>
-                      {inputSaving && outputSaving && (
-                        <strong className="model-saving">
-                          {ux.saveInputOutput
-                            .replace("{{input}}", inputSaving)
-                            .replace("{{output}}", outputSaving)}
-                        </strong>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="model-price-unavailable">
-                      {ux.priceUnavailable}
-                    </p>
-                  )}
                 </>
               ) : (
                 <div className="model-sign-in-callout">
@@ -784,51 +756,78 @@ export function ConfigurationPreviewView({
             </section>
 
             <section
-              className="connection-choice-card line-selector"
-              aria-labelledby="setup-line-title"
+              className="connection-choice-card billing-choice-card"
+              aria-label="计费分组"
             >
               <div className="choice-card-heading">
                 <span className="choice-number" aria-hidden="true">
                   2
                 </span>
                 <div>
-                  <h3 id="setup-line-title">{ux.lineChoice}</h3>
-                  <p>{ux.lineQuestion}</p>
+                  <h3>选择计费分组</h3>
+                  <p>选择价格与来源，不改变网络线路</p>
                 </div>
               </div>
-              <div className="line-selector-grid">
-                {CONFIGURATION_LINES.map((line) => (
-                  <button
-                    type="button"
-                    key={line.id}
-                    className={lineId === line.id ? "is-selected" : undefined}
-                    aria-pressed={lineId === line.id}
-                    onClick={() => {
-                      if (lineId === line.id) return;
-                      onLineChange(line.id);
-                      resetResult();
-                    }}
-                  >
-                    <span className="line-selection-dot" aria-hidden="true" />
-                    <span>
-                      <strong>
-                        {t(`yeschoyConfiguration.lines.${line.id}.name`)}
-                      </strong>
-                      <small>
-                        {t(`yeschoyConfiguration.lines.${line.id}.note`)}
-                      </small>
-                    </span>
-                    {lineId === line.id && (
-                      <CheckCircle2
-                        className="line-selected-check"
-                        aria-hidden="true"
-                      />
-                    )}
-                  </button>
-                ))}
-              </div>
+              <BillingGroupPicker
+                model={selectedModel}
+                selected={billingGroup}
+                disabled={applyPhase === "applying"}
+                onChange={(id) => {
+                  setBillingGroup(id);
+                  resetResult();
+                }}
+              />
+              <BillingPrices
+                model={selectedModel}
+                selected={billingGroup}
+                fx={session.projection?.comparisonFx ?? ""}
+              />
             </section>
           </div>
+
+          <section
+            className="connection-choice-card line-selector network-choice"
+            aria-labelledby="setup-line-title"
+          >
+            <div className="choice-card-heading">
+              <div>
+                <h3 id="setup-line-title">网络线路</h3>
+                <p>{ux.lineQuestion}</p>
+              </div>
+            </div>
+            <div className="line-selector-grid">
+              {CONFIGURATION_LINES.map((line) => (
+                <button
+                  type="button"
+                  key={line.id}
+                  className={lineId === line.id ? "is-selected" : undefined}
+                  aria-pressed={lineId === line.id}
+                  disabled={applyPhase === "applying"}
+                  onClick={() => {
+                    if (lineId === line.id) return;
+                    onLineChange(line.id);
+                    resetResult();
+                  }}
+                >
+                  <span className="line-selection-dot" aria-hidden="true" />
+                  <span>
+                    <strong>
+                      {t(`yeschoyConfiguration.lines.${line.id}.name`)}
+                    </strong>
+                    <small>
+                      {t(`yeschoyConfiguration.lines.${line.id}.note`)}
+                    </small>
+                  </span>
+                  {lineId === line.id && (
+                    <CheckCircle2
+                      className="line-selected-check"
+                      aria-hidden="true"
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
+          </section>
         </section>
       </section>
 
@@ -858,6 +857,16 @@ export function ConfigurationPreviewView({
               <small>{t("yeschoyConfiguration.modelId")}</small>
               <strong className="selection-model-id">
                 {selectedModelId || c.chooseModel}
+              </strong>
+            </span>
+            <ArrowRight aria-hidden="true" />
+            <span>
+              <small>计费分组</small>
+              <strong>
+                {billingGroup ? groupLabel(billingGroup) : "请选择分组"}
+                {selectedBillingGroup?.ratio != null
+                  ? ` · ${selectedBillingGroup.ratio}×`
+                  : ""}
               </strong>
             </span>
             <ArrowRight aria-hidden="true" />

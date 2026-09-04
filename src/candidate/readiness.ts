@@ -1,4 +1,4 @@
-export const CANDIDATE_VERSION = "0.4.0" as const;
+export const CANDIDATE_VERSION = "0.4.1" as const;
 
 export type CandidateCapabilityId =
   | "tool_discovery"
@@ -31,7 +31,7 @@ export interface CandidateReadiness {
   retainedBackupHistory: false;
   telemetryUploadEnabled: false;
   automaticUpdateEnabled: false;
-  supportedToolCount: 5;
+  supportedToolCount: 7;
   supportedLineCount: 2;
   capabilities: CandidateCapability[];
 }
@@ -60,7 +60,7 @@ export function createCandidateReadiness(): CandidateReadiness {
     retainedBackupHistory: false,
     telemetryUploadEnabled: false,
     automaticUpdateEnabled: false,
-    supportedToolCount: 5,
+    supportedToolCount: 7,
     supportedLineCount: 2,
     capabilities: CAPABILITIES.map((capability) => ({ ...capability })),
   };

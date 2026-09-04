@@ -10,6 +10,7 @@ describe("client candidate readiness", () => {
         .map((capability) => capability.id),
     ).toEqual(["tool_discovery", "configuration_preview", "line_connectivity"]);
     expect(readiness.productionReady).toBe(false);
+    expect(readiness.supportedToolCount).toBe(7);
   });
 
   it("keeps backup history, telemetry, and automatic updates disabled", () => {
@@ -21,7 +22,7 @@ describe("client candidate readiness", () => {
 
   it("marks the v2 account and price surfaces as integration candidates", () => {
     const readiness = createCandidateReadiness();
-    expect(readiness.version).toBe("0.4.0");
+    expect(readiness.version).toBe("0.4.1");
     expect(
       readiness.capabilities
         .filter((capability) => capability.status === "integration_candidate")

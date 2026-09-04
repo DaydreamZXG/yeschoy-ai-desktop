@@ -26,7 +26,7 @@ jobs:
           node-version: "20"
 
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@1.94.0
 
       - name: Enable locked pnpm
         shell: pwsh
@@ -39,22 +39,11 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify renderer types
+        run: pnpm typecheck
+
       - name: Verify renderer
-        run: >-
-          pnpm exec vitest run
-          src/candidate/readiness.test.ts
-          src/diagnostics/contract.test.ts
-          src/configuration/preview.test.ts
-          src/service-catalog/contract.test.ts
-          src/service-catalog/access-plan.test.ts
-          src/service-catalog/ServiceCatalogPanel.test.tsx
-          src/service-catalog/handoff.test.ts
-          src/billing/comparison.test.ts
-          src/billing/CostComparison.test.tsx
-          src/workbench/Workbench.test.tsx
-          src/workbench/Repair.test.tsx
-          --exclude "release/**"
-          --exclude "work/**"
+        run: pnpm test:unit
 
       - name: Verify native core
         run: cargo test --locked --manifest-path src-tauri/Cargo.toml
@@ -74,7 +63,7 @@ jobs:
 
           $version = (Get-Content -LiteralPath 'package.json' -Raw | ConvertFrom-Json).version
           New-Item -ItemType Directory -Force -Path 'release-assets' | Out-Null
-          $fileName = "野菜API-$version-20260901-Windows-x64-内测版.exe"
+          $fileName = "野菜API-$version-Windows-x64-内测版.exe"
           $destination = "release-assets/$fileName"
           Copy-Item -LiteralPath $installer.FullName -Destination $destination
           $sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $destination).Hash.ToLowerInvariant()

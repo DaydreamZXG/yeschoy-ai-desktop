@@ -13,10 +13,11 @@ const native = vi.mocked(invoke);
 function projection(requestId = "activate-test") {
   return {
     requestId,
-    schemaVersion: 2,
+    schemaVersion: 3,
     status: "ready",
     toolId: "codex_desktop",
     modelId: "glm-5.3",
+    billingGroup: "国模特价分组",
     observedAtEpochMs: 1_788_195_600_000,
     reasonCode: "tool_request_verified",
   };
@@ -29,7 +30,9 @@ function targetScan(requestId = "target-scan-test") {
       | "claude_desktop"
       | "codex_desktop"
       | "pi"
-      | "dsh_web",
+      | "dsh_web"
+      | "hermes"
+      | "openclaw",
     displayName: string,
   ) => ({
     toolId,
@@ -56,6 +59,8 @@ function targetScan(requestId = "target-scan-test") {
       target("codex_desktop", "Codex Desktop"),
       target("pi", "Pi"),
       target("dsh_web", "DSH web"),
+      target("hermes", "Hermes"),
+      target("openclaw", "OpenClaw"),
     ],
   };
 }
@@ -88,13 +93,13 @@ describe("desktop tool activation boundary", () => {
     ).toBeNull();
   });
 
-  it("accepts only a complete five-target installation scan", () => {
+  it("accepts only a complete seven-target installation scan", () => {
     expect(
       decodeActivationTargetScan(targetScan(), "target-scan-test"),
     ).toEqual(targetScan());
     expect(
       decodeActivationTargetScan(
-        { ...targetScan(), targets: targetScan().targets.slice(0, 4) },
+        { ...targetScan(), targets: targetScan().targets.slice(0, 6) },
         "target-scan-test",
       ),
     ).toBeNull();
@@ -108,6 +113,7 @@ describe("desktop tool activation boundary", () => {
       toolId: "codex_desktop",
       modelId: "glm-5.3",
       installationId: "i0123456789abcdef",
+      billingGroup: "国模特价分组",
     });
     expect(result.status).toBe("ready");
     expect(native).toHaveBeenCalledWith("configure_desktop_tool_v2", {
@@ -117,6 +123,7 @@ describe("desktop tool activation boundary", () => {
         toolId: "codex_desktop",
         modelId: "glm-5.3",
         installationId: "i0123456789abcdef",
+        billingGroup: "国模特价分组",
       },
     });
   });
@@ -131,9 +138,39 @@ describe("desktop tool activation boundary", () => {
       "codex_desktop",
       "pi",
       "dsh_web",
+      "hermes",
+      "openclaw",
     ]);
     expect(native).toHaveBeenCalledWith("scan_activation_targets_v1", {
       request: { requestId: expect.stringMatching(/^target-scan-/) },
     });
+  });
+
+  it("accepts future and unread versions as metadata, without a version whitelist", () => {
+    for (const version of ["2027.999.999.1", "", "future-beta"]) {
+      const scan = targetScan();
+      scan.targets.forEach((target) => {
+        target.installations[0].version = version;
+      });
+      expect(decodeActivationTargetScan(scan, scan.requestId)).toEqual(scan);
+    }
+  });
+
+  it("does not accept success for a different billing group", async () => {
+    native.mockImplementation(async (_command, args) => ({
+      ...projection(
+        (args as { request: { requestId: string } }).request.requestId,
+      ),
+      billingGroup: "default",
+    }));
+    await expect(
+      activateDesktopTool({
+        lineId: "mainland_optimized",
+        toolId: "codex_desktop",
+        modelId: "glm-5.3",
+        installationId: "i0123456789abcdef",
+        billingGroup: "国模特价分组",
+      }),
+    ).rejects.toThrow("invalid_tool_activation_projection");
   });
 });

@@ -2,6 +2,67 @@
   "schemaVersion": 1,
   "decisions": [
     {
+      "id": "DEC-073",
+      "question": "What bounded client authority may turn the current compatibility correction into a release candidate while api.yeschoy.com is temporarily unavailable?",
+      "choice": "Broaden the still-unfrozen RU-028 before implementation. The two selectable release-candidate lines are yeschoy.com for mainland optimization and yeschoy.pro for global acceleration. api.yeschoy.com remains a recognized first-party future origin but is not selectable, probed as healthy or used for automatic mutation fallback until a later client authority validates it. Preserve one account session across line changes, use only current NewAPI responses for available models, billing groups, exchange rate and actual price, and complete capability-based setup for Claude Code, Claude Desktop, Codex Desktop, Pi, DSH web, Hermes and OpenClaw. Secrets remain native and operating-system protected, configuration changes are field-owned with volatile rollback, and ready still requires a harmless target-level response. Produce a macOS universal candidate and an unsigned Windows x64 candidate with an explicit warning. Prepare updater integration, but do not activate or claim it until a Tauri update public key, signed artifacts and a published manifest are verified. Do not modify NewAPI, Nginx, DNS, database, server code or production infrastructure, and do not claim public production readiness from this unit alone.",
+      "status": "accepted",
+      "decidedBy": "product owner plus platform-security constraints",
+      "decidedAt": "2026-09-04T00:00:00+08:00",
+      "evidenceRefs": [
+        "E-USER-059",
+        "E-CODE-047",
+        "E-EXT-043",
+        "E-PROP-021",
+        "E-USER-058",
+        "E-USER-054"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-054",
+          "REQ-055"
+        ],
+        "pageRefs": [
+          "PAGE-HOME",
+          "PAGE-ACCOUNT",
+          "PAGE-BILLING",
+          "PAGE-MODELS",
+          "PAGE-CONFIGURE-PREVIEW",
+          "PAGE-TOOLS"
+        ],
+        "domainRefs": [
+          "account",
+          "billing",
+          "tool-config",
+          "diagnostics",
+          "desktop-platform",
+          "security-update"
+        ]
+      }
+    },
+    {
+      "id": "DEC-072",
+      "question": "Should ordinary application updates require an exact-version allowlist?",
+      "choice": "No. RU-028 supersedes RU-027 for compatibility. Versions are display metadata, never eligibility gates. Validate discovered identity and required runtime, then bounded help capabilities before credentials. Preserve owned schemas, readback and rollback. Claude Desktop has no stable preflight CLI: allow its existing 3P transaction as awaiting verification, not proof of compatibility. Only a target-level request yields ready. Missing capabilities and failed checks are distinct. No AI agent, upstream app modifications or server changes.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-09-03T02:40:34.776Z",
+      "evidenceRefs": [
+        "E-USER-058",
+        "E-CODE-046",
+        "E-EXT-042"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-054"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform"
+        ]
+      }
+    },
+    {
       "id": "DEC-066",
       "question": "How should the Windows-only Tauri --locked argument parsing failure be corrected after both lock gates and all tests pass?",
       "choice": "Create RU-022 as a packaging-command-only successor that depends on and supersedes RU-021. Preserve pnpm install --frozen-lockfile, cargo test --locked, all renderer/native tests and candidate NSIS configuration; remove only the redundant trailing -- --locked passed through pnpm exec to Tauri on Windows. Rerun the same private artifact workflow and create no tag, release, updater, signature or server change.",

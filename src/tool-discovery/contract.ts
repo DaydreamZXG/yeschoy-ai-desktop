@@ -4,6 +4,8 @@ export const TOOL_CATALOG = [
   { id: "opencode", displayName: "OpenCode", mark: "O" },
   { id: "pi", displayName: "Pi", mark: "π" },
   { id: "dsh", displayName: "DSH", mark: "D" },
+  { id: "hermes", displayName: "Hermes", mark: "H" },
+  { id: "openclaw", displayName: "OpenClaw", mark: "O" },
 ] as const;
 export interface ToolResult {
   toolId: (typeof TOOL_CATALOG)[number]["id"];
@@ -161,7 +163,7 @@ export function decodeScan(
     return null;
   if (
     !Array.isArray(value.tools) ||
-    value.tools.length !== 5 ||
+    value.tools.length !== TOOL_CATALOG.length ||
     !value.tools.every(tool)
   )
     return null;

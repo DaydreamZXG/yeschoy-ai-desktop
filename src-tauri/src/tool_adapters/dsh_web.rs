@@ -1,7 +1,7 @@
 use std::{
+    ffi::OsString,
     path::{Path, PathBuf},
     process::Stdio,
-    sync::atomic::{AtomicU64, Ordering},
     time::Duration,
 };
 
@@ -13,7 +13,7 @@ use tokio::{
     process::{Child, Command},
     sync::Mutex,
     task::JoinHandle,
-    time::{sleep, timeout},
+    time::timeout,
 };
 
 use crate::tool_adapters::{
@@ -21,10 +21,15 @@ use crate::tool_adapters::{
     AdapterFailure, ResolvedInstallation,
 };
 
-static RPC_SEQUENCE: AtomicU64 = AtomicU64::new(1);
+const VERIFICATION_PROMPT: &str = "仅回复 YESCHOY_OK，不要调用工具。";
+const STARTUP_OUTPUT_LIMIT: usize = 32 * 1024;
 
 fn start_arguments() -> [&'static str; 6] {
     ["web", "--host", "127.0.0.1", "--port", "0", "--no-open"]
+}
+
+fn headless_arguments() -> [&'static str; 3] {
+    ["--profile", "headless", VERIFICATION_PROMPT]
 }
 
 pub(crate) struct DshRuntime {
@@ -103,6 +108,14 @@ fn render(existing: Option<&[u8]>, origin: &str, model: &str) -> Result<Vec<u8>,
         Value::String(format!("{}/v1", origin.trim_end_matches('/'))),
     );
     provider.insert(
+        Value::String("compat".into()),
+        serde_yaml::to_value(json!({
+            "supportsDeveloperRole": false,
+            "maxTokensField": "max_tokens"
+        }))
+        .map_err(|_| ())?,
+    );
+    provider.insert(
         Value::String("models".into()),
         serde_yaml::to_value([json!({
             "id": model,
@@ -124,11 +137,25 @@ fn render(existing: Option<&[u8]>, origin: &str, model: &str) -> Result<Vec<u8>,
     Ok(bytes)
 }
 
-pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared, AdapterFailure> {
-    if std::env::var_os("DSH_HOME").is_some_and(|value| !value.is_empty()) {
-        return Err(AdapterFailure::ExternalOverride);
+fn dsh_home(default_home: &Path, custom: Option<OsString>) -> Result<PathBuf, AdapterFailure> {
+    let Some(custom) = custom.filter(|value| !value.is_empty()) else {
+        return Ok(default_home.join(".dsh"));
+    };
+    let path = PathBuf::from(custom);
+    let safe = path.is_absolute()
+        && path.parent().is_some()
+        && !path
+            .components()
+            .any(|part| matches!(part, std::path::Component::ParentDir));
+    if safe {
+        Ok(path)
+    } else {
+        Err(AdapterFailure::ExternalOverride)
     }
-    let path = home.join(".dsh").join("settings.yaml");
+}
+
+pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared, AdapterFailure> {
+    let path = dsh_home(home, std::env::var_os("DSH_HOME"))?.join("settings.yaml");
     let before = common::snapshot(&path)
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_read_failed"))?;
     let after = render(before.as_deref(), origin, model)
@@ -158,6 +185,8 @@ impl Prepared {
             && provider["baseURL"].as_str()
                 == Some(format!("{}/v1", self.origin.trim_end_matches('/')).as_str())
             && provider["models"][0]["id"].as_str() == Some(&self.model)
+            && provider["compat"]["supportsDeveloperRole"].as_bool() == Some(false)
+            && provider["compat"]["maxTokensField"].as_str() == Some("max_tokens")
             && value["agent-default-model"]["provider"].as_str() == Some("yeschoy")
             && value["agent-default-model"]["model"].as_str() == Some(&self.model);
         if correct {
@@ -175,8 +204,22 @@ impl Prepared {
 }
 
 fn validated_loopback_url(line: &str) -> Option<String> {
-    let raw = line.trim().strip_prefix("dsh web: ")?;
+    let raw = line
+        .trim()
+        .strip_prefix("dsh web: ")?
+        .split_whitespace()
+        .next()?;
     let url = Url::parse(raw).ok()?;
+    let query = url.query_pairs().collect::<Vec<_>>();
+    let valid_query = query.is_empty()
+        || (query.len() == 1
+            && query[0].0 == "token"
+            && !query[0].1.is_empty()
+            && query[0].1.len() <= 512
+            && query[0]
+                .1
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_')));
     if url.scheme() != "http"
         || !matches!(
             url.host_str(),
@@ -185,46 +228,43 @@ fn validated_loopback_url(line: &str) -> Option<String> {
         || url.port().is_none()
         || url.username() != ""
         || url.password().is_some()
-        || url.query().is_some()
+        || url.path() != "/"
+        || !valid_query
         || url.fragment().is_some()
     {
         return None;
     }
-    Some(url.to_string().trim_end_matches('/').to_owned())
+    Some(if query.is_empty() {
+        url.to_string().trim_end_matches('/').to_owned()
+    } else {
+        url.to_string()
+    })
 }
 
-async fn rpc(
-    client: &reqwest::Client,
-    base: &str,
-    method: &str,
-    payload: JsonValue,
-) -> Result<JsonValue, AdapterFailure> {
-    let rpc_id = format!("yeschoy-{}", RPC_SEQUENCE.fetch_add(1, Ordering::Relaxed));
-    let response = client
-        .post(format!("{base}/api/{method}"))
-        .json(&json!({
-            "type": "client-request",
-            "rpcId": rpc_id,
-            "method": method,
-            "payload": payload
-        }))
-        .timeout(Duration::from_secs(20))
-        .send()
+async fn verify_headless(
+    installation: &ResolvedInstallation,
+    key: &str,
+) -> Result<(), AdapterFailure> {
+    let working = common::temporary_working_directory("dsh-headless-verify")
+        .map_err(|_| AdapterFailure::VerificationFailed("verification_workspace_failed"))?;
+    let mut command = Command::new(&installation.path);
+    command
+        .args(headless_arguments())
+        .env("YESCHOY_DSH_API_KEY", key)
+        .current_dir(&working);
+    let result = common::run_bounded(command, Duration::from_secs(120))
         .await
-        .map_err(|_| AdapterFailure::VerificationFailed("dsh_api_unreachable"))?;
-    if !response.status().is_success() {
-        return Err(AdapterFailure::VerificationFailed("dsh_api_failed"));
-    }
-    let value: JsonValue = response
-        .json()
-        .await
-        .map_err(|_| AdapterFailure::VerificationFailed("dsh_api_invalid"))?;
-    if value.get("rpcId").and_then(JsonValue::as_str) != Some(&rpc_id)
-        || value["result"]["ok"].as_bool() != Some(true)
+        .map_err(|_| AdapterFailure::VerificationFailed("dsh_tool_rejected"));
+    let _ = std::fs::remove_dir_all(&working);
+    let output = result?;
+    if output.success
+        && output.stdout.len() <= STARTUP_OUTPUT_LIMIT
+        && String::from_utf8_lossy(&output.stdout).contains("YESCHOY_OK")
     {
-        return Err(AdapterFailure::VerificationFailed("dsh_tool_rejected"));
+        Ok(())
+    } else {
+        Err(AdapterFailure::VerificationFailed("dsh_tool_rejected"))
     }
-    Ok(value["result"]["value"].clone())
 }
 
 async fn start_process(
@@ -242,16 +282,29 @@ async fn start_process(
     let mut child = command.spawn().map_err(|_| AdapterFailure::LaunchFailed)?;
     let stdout = child.stdout.take().ok_or(AdapterFailure::LaunchFailed)?;
     let mut reader = BufReader::new(stdout);
-    let mut line = String::new();
-    let read = timeout(Duration::from_secs(30), reader.read_line(&mut line))
-        .await
-        .map_err(|_| AdapterFailure::LaunchFailed)?
-        .map_err(|_| AdapterFailure::LaunchFailed)?;
-    if read == 0 {
-        let _ = child.kill().await;
-        return Err(AdapterFailure::LaunchFailed);
-    }
-    let Some(url) = validated_loopback_url(&line) else {
+    let ready = timeout(Duration::from_secs(30), async {
+        let mut observed = 0usize;
+        loop {
+            let mut line = String::new();
+            let read = reader
+                .read_line(&mut line)
+                .await
+                .map_err(|_| AdapterFailure::LaunchFailed)?;
+            if read == 0 {
+                return Err(AdapterFailure::LaunchFailed);
+            }
+            observed = observed.saturating_add(read);
+            if observed > STARTUP_OUTPUT_LIMIT {
+                return Err(AdapterFailure::LaunchFailed);
+            }
+            if let Some(url) = validated_loopback_url(&line) {
+                return Ok(url);
+            }
+        }
+    })
+    .await
+    .map_err(|_| AdapterFailure::LaunchFailed)?;
+    let Ok(url) = ready else {
         let _ = child.kill().await;
         return Err(AdapterFailure::LaunchFailed);
     };
@@ -275,117 +328,14 @@ async fn start_process(
     })
 }
 
-async fn verify_runtime(runtime: &mut DshRuntime, model: &str) -> Result<(), AdapterFailure> {
-    let client = reqwest::Client::builder()
-        .no_proxy()
-        .build()
-        .map_err(|_| AdapterFailure::VerificationFailed("dsh_api_unreachable"))?;
-    let working = common::temporary_working_directory("dsh-web-verify")
-        .map_err(|_| AdapterFailure::VerificationFailed("verification_workspace_failed"))?;
-    let create = rpc(
-        &client,
-        &runtime.url,
-        "session.create",
-        json!({ "cwd": working }),
-    )
-    .await;
-    let create = match create {
-        Ok(value) => value,
-        Err(error) => {
-            let _ = std::fs::remove_dir_all(&working);
-            return Err(error);
-        }
-    };
-    let session_id = create["sessionId"]
-        .as_str()
-        .filter(|value| !value.is_empty())
-        .ok_or(AdapterFailure::VerificationFailed("dsh_session_invalid"))?;
-    let models = rpc(
-        &client,
-        &runtime.url,
-        "session.models",
-        json!({ "sessionId": session_id }),
-    )
-    .await?;
-    let model_available = models["groups"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .find(|group| group["id"].as_str() == Some("yeschoy"))
-        .and_then(|group| group["models"].as_array())
-        .is_some_and(|models| {
-            models
-                .iter()
-                .any(|entry| entry["id"].as_str() == Some(model))
-        });
-    if !model_available {
-        let _ = std::fs::remove_dir_all(&working);
-        return Err(AdapterFailure::VerificationFailed("dsh_model_not_loaded"));
-    }
-    let selected = rpc(
-        &client,
-        &runtime.url,
-        "session.selectModel",
-        json!({ "sessionId": session_id, "provider": "yeschoy", "model": model }),
-    )
-    .await?;
-    if selected["selected"]["provider"].as_str() != Some("yeschoy")
-        || selected["selected"]["model"].as_str() != Some(model)
-    {
-        let _ = std::fs::remove_dir_all(&working);
-        return Err(AdapterFailure::VerificationFailed("dsh_model_mismatch"));
-    }
-    rpc(
-        &client,
-        &runtime.url,
-        "session.prompt",
-        json!({
-            "sessionId": session_id,
-            "mode": "queue",
-            "content": [{"type": "text", "text": "仅回复 YESCHOY_OK，不要调用工具。"}]
-        }),
-    )
-    .await?;
-
-    let mut complete = false;
-    for _ in 0..150 {
-        sleep(Duration::from_millis(500)).await;
-        let history = rpc(
-            &client,
-            &runtime.url,
-            "session.history",
-            json!({ "sessionId": session_id, "maxMessages": 8 }),
-        )
-        .await?;
-        complete = history["events"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .any(|entry| entry["event"]["type"].as_str() == Some("assistant/message"));
-        if complete {
-            break;
-        }
-    }
-    let _ = std::fs::remove_dir_all(&working);
-    if complete {
-        Ok(())
-    } else {
-        Err(AdapterFailure::VerificationFailed("tool_request_timed_out"))
-    }
-}
-
 pub(crate) async fn verify_launch_and_keep(
     state: &DshRuntimeState,
     installation: &ResolvedInstallation,
     key: &str,
-    model: &str,
+    _model: &str,
 ) -> Result<(), AdapterFailure> {
-    let mut runtime = start_process(installation, key).await?;
-    if let Err(error) = verify_runtime(&mut runtime, model).await {
-        let _ = runtime.child.kill().await;
-        runtime.stdout_task.abort();
-        return Err(error);
-    }
+    verify_headless(installation, key).await?;
+    let runtime = start_process(installation, key).await?;
     open_browser(&runtime.url)?;
     let mut slot = state.runtime.lock().await;
     if let Some(mut previous) = slot.take() {
@@ -444,14 +394,44 @@ llm-pi-ai:
             value["llm-pi-ai"]["providers"]["yeschoy"]["apiKeyEnv"],
             "YESCHOY_DSH_API_KEY"
         );
+        assert_eq!(
+            value["llm-pi-ai"]["providers"]["yeschoy"]["compat"]["supportsDeveloperRole"],
+            false
+        );
+        assert_eq!(
+            value["llm-pi-ai"]["providers"]["yeschoy"]["compat"]["maxTokensField"],
+            "max_tokens"
+        );
         assert!(!String::from_utf8(bytes).unwrap().contains("sk-secret"));
     }
 
     #[test]
     fn only_loopback_startup_urls_are_accepted() {
         assert!(validated_loopback_url("dsh web: http://127.0.0.1:3018").is_some());
+        assert!(
+            validated_loopback_url("dsh web: http://127.0.0.1:3018/?token=abc_DEF-123").is_some()
+        );
         assert!(validated_loopback_url("dsh web: https://evil.example:3018").is_none());
         assert!(validated_loopback_url("debug http://127.0.0.1:3018").is_none());
+        assert!(validated_loopback_url("dsh web: http://127.0.0.1:3018/admin").is_none());
+        assert!(validated_loopback_url("dsh web: http://127.0.0.1:3018/?next=evil").is_none());
+        assert!(
+            validated_loopback_url("dsh web: http://127.0.0.1:3018/?token=ok&next=evil").is_none()
+        );
+    }
+
+    #[test]
+    fn custom_dsh_home_is_used_when_safe() {
+        let default = common::temporary_working_directory("dsh-default-home").unwrap();
+        let custom = common::temporary_working_directory("dsh-custom-home").unwrap();
+        assert_eq!(
+            dsh_home(&default, Some(custom.clone().into_os_string())).unwrap(),
+            custom
+        );
+        assert_eq!(dsh_home(&default, None).unwrap(), default.join(".dsh"));
+        assert!(dsh_home(&default, Some(OsString::from("relative/dsh"))).is_err());
+        let _ = std::fs::remove_dir_all(default);
+        let _ = std::fs::remove_dir_all(custom);
     }
 
     #[test]
@@ -459,6 +439,10 @@ llm-pi-ai:
         assert_eq!(
             start_arguments(),
             ["web", "--host", "127.0.0.1", "--port", "0", "--no-open"]
+        );
+        assert_eq!(
+            headless_arguments(),
+            ["--profile", "headless", VERIFICATION_PROMPT]
         );
     }
 }

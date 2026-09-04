@@ -6,17 +6,19 @@ use serde_json::{json, Value};
 
 use crate::{
     account_v2::{
-        native_account_json, native_session_access, AccountV2State, NativeSessionFailure,
+        billing_groups, native_account_json, native_session_access, AccountV2State,
+        NativeSessionFailure,
     },
     connectivity_core::request_id_is_valid,
     tool_adapters::{
-        self, claude_code, claude_desktop, codex_desktop, dsh_web, pi, AdapterFailure,
-        ResolvedInstallation,
+        self, claude_code, claude_desktop, codex_desktop, dsh_web, hermes, openclaw, pi,
+        AdapterFailure, ResolvedInstallation,
     },
     tool_credentials::{self, CredentialFailure, ToolCredential},
 };
 
 const TOKEN_PAGE_SIZE: &str = "100";
+static ACTIVATION_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -26,6 +28,7 @@ pub struct ToolActivationRequest {
     tool_id: String,
     model_id: String,
     installation_id: String,
+    billing_group: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -36,6 +39,7 @@ pub struct ToolActivationProjection {
     status: &'static str,
     tool_id: String,
     model_id: String,
+    billing_group: String,
     observed_at_epoch_ms: u64,
     reason_code: &'static str,
 }
@@ -48,20 +52,22 @@ impl ToolActivationProjection {
     ) -> Self {
         Self {
             request_id: request.request_id.clone(),
-            schema_version: 2,
+            schema_version: 3,
             status,
             tool_id: request.tool_id.clone(),
             model_id: request.model_id.clone(),
+            billing_group: request.billing_group.clone(),
             observed_at_epoch_ms: now_epoch_ms(),
             reason_code,
         }
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum ActivationFailure {
     SignedOut,
     UnsupportedModel,
+    UnsupportedGroup,
     ServerUnavailable,
     Adapter(AdapterFailure),
     ConfigurationFailed(&'static str),
@@ -74,6 +80,11 @@ impl ActivationFailure {
             Self::UnsupportedModel => {
                 ToolActivationProjection::new(request, "unsupported_model", "model_not_available")
             }
+            Self::UnsupportedGroup => ToolActivationProjection::new(
+                request,
+                "unsupported_group",
+                "group_not_available_for_model",
+            ),
             Self::ServerUnavailable => {
                 ToolActivationProjection::new(request, "server_unavailable", "server_unavailable")
             }
@@ -86,10 +97,10 @@ impl ActivationFailure {
                     "multiple_installations",
                     "installation_selection_required",
                 ),
-                AdapterFailure::UnsupportedVersion => ToolActivationProjection::new(
+                AdapterFailure::MissingRuntime => ToolActivationProjection::new(
                     request,
-                    "unsupported_version",
-                    "exact_version_not_supported",
+                    "missing_runtime",
+                    "required_runtime_not_found",
                 ),
                 AdapterFailure::UnsupportedProfile => ToolActivationProjection::new(
                     request,
@@ -154,9 +165,17 @@ fn request_is_valid(request: &ToolActivationRequest) -> bool {
         )
         && matches!(
             request.tool_id.as_str(),
-            "claude_code" | "claude_desktop" | "codex_desktop" | "pi" | "dsh_web"
+            "claude_code"
+                | "claude_desktop"
+                | "codex_desktop"
+                | "pi"
+                | "dsh_web"
+                | "hermes"
+                | "openclaw"
         )
         && bounded_plain_text(&request.model_id, 200)
+        && bounded_plain_text(&request.billing_group, 128)
+        && request.billing_group != "auto"
         && request.installation_id.len() <= 128
         && request
             .installation_id
@@ -185,6 +204,7 @@ async fn validate_model(
     access_token: &str,
     model_id: &str,
     tool_id: &str,
+    billing_group: &str,
 ) -> Result<(), ActivationFailure> {
     let (status, value) = native_account_json(
         Method::GET,
@@ -220,6 +240,12 @@ async fn validate_model(
     if !server_success(pricing_status, &pricing) {
         return Err(ActivationFailure::ServerUnavailable);
     }
+    if !billing_groups(&pricing, model_id)
+        .iter()
+        .any(|g| g.id == billing_group)
+    {
+        return Err(ActivationFailure::UnsupportedGroup);
+    }
     if model_supports_tool(&pricing, model_id, tool_id) {
         Ok(())
     } else {
@@ -231,7 +257,7 @@ fn model_supports_tool(pricing: &Value, model_id: &str, tool_id: &str) -> bool {
     let required_endpoint = match tool_id {
         "claude_code" | "claude_desktop" => "anthropic",
         "codex_desktop" => "openai-response",
-        "pi" | "dsh_web" => "openai",
+        "pi" | "dsh_web" | "hermes" | "openclaw" => "openai",
         _ => return false,
     };
     data(pricing)
@@ -256,6 +282,8 @@ fn token_name(tool_id: &str) -> &'static str {
         "codex_desktop" => "野菜API Codex Desktop",
         "pi" => "野菜API Pi",
         "dsh_web" => "野菜API DSH web",
+        "hermes" => "野菜API Hermes",
+        "openclaw" => "野菜API OpenClaw",
         _ => "野菜API Desktop",
     }
 }
@@ -271,14 +299,14 @@ fn token_search_url(origin: &str, name: &str) -> Result<String, ActivationFailur
 }
 
 async fn find_token_id(
+    api: &impl TokenApi,
     origin: &str,
-    access_token: &str,
     name: &str,
+    group: &str,
+    exact: bool,
 ) -> Result<Option<u64>, ActivationFailure> {
     let url = token_search_url(origin, name)?;
-    let (status, value) = native_account_json(Method::GET, &url, access_token, None)
-        .await
-        .map_err(|_| ActivationFailure::ServerUnavailable)?;
+    let (status, value) = api.request(Method::GET, &url, None).await?;
     if matches!(status, 401 | 403) {
         return Err(ActivationFailure::SignedOut);
     }
@@ -292,14 +320,58 @@ async fn find_token_id(
         .into_iter()
         .flatten()
         .filter_map(Value::as_object)
-        .filter(|token| token.get("name").and_then(Value::as_str) == Some(name))
+        .filter(|token| reusable_token(token, name, group, exact))
         .filter_map(|token| token.get("id").and_then(Value::as_u64))
         .max();
     Ok(id)
 }
 
-fn token_request(name: &str, id: Option<u64>) -> Value {
-    let mut body = json!({
+fn token_prefix(tool_id: &str, group: &str) -> String {
+    let code = match tool_id {
+        "claude_code" => "cc",
+        "claude_desktop" => "cd",
+        "codex_desktop" => "cx",
+        "pi" => "pi",
+        "dsh_web" => "ds",
+        "hermes" => "hm",
+        "openclaw" => "oc",
+        _ => "tool",
+    };
+    // A lookup label only. Always compare the complete group returned by NewAPI.
+    let hash = group.bytes().fold(0xcbf29ce484222325u64, |h, b| {
+        (h ^ u64::from(b)).wrapping_mul(0x100000001b3)
+    });
+    format!("野菜API {code}-{hash:016x}")
+}
+
+fn reusable_token(
+    token: &serde_json::Map<String, Value>,
+    name: &str,
+    group: &str,
+    exact: bool,
+) -> bool {
+    let actual = token.get("name").and_then(Value::as_str).unwrap_or("");
+    let name_matches = if exact {
+        actual == name
+    } else {
+        actual
+            .strip_prefix(&format!("{name}-"))
+            .is_some_and(|suffix| {
+                suffix.len() == 16 && suffix.bytes().all(|c| c.is_ascii_hexdigit())
+            })
+    };
+    let expiry = token
+        .get("expired_time")
+        .and_then(Value::as_i64)
+        .unwrap_or(0);
+    name_matches
+        && token.get("group").and_then(Value::as_str) == Some(group)
+        && token.get("status").and_then(Value::as_i64) == Some(1)
+        && (expiry == -1 || expiry > (now_epoch_ms() / 1000) as i64)
+}
+
+fn token_request(name: &str, group: &str) -> Value {
+    json!({
         "name": name,
         "remain_quota": 0,
         "expired_time": -1,
@@ -307,16 +379,10 @@ fn token_request(name: &str, id: Option<u64>) -> Value {
         "model_limits_enabled": false,
         "model_limits": "",
         "allow_ips": "",
-        "group": "",
+        "group": group,
         "auto_groups": [],
         "cross_group_retry": false
-    });
-    if let Some(id) = id {
-        body.as_object_mut()
-            .expect("token request is an object")
-            .insert("id".into(), id.into());
-    }
-    body
+    })
 }
 
 fn normalize_api_key(value: &str) -> Option<String> {
@@ -337,18 +403,13 @@ fn normalize_api_key(value: &str) -> Option<String> {
 }
 
 async fn fetch_token_key(
+    api: &impl TokenApi,
     origin: &str,
-    access_token: &str,
     id: u64,
 ) -> Result<String, ActivationFailure> {
-    let (status, value) = native_account_json(
-        Method::POST,
-        &format!("{origin}/api/token/{id}/key"),
-        access_token,
-        None,
-    )
-    .await
-    .map_err(|_| ActivationFailure::ServerUnavailable)?;
+    let (status, value) = api
+        .request(Method::POST, &format!("{origin}/api/token/{id}/key"), None)
+        .await?;
     if matches!(status, 401 | 403) {
         return Err(ActivationFailure::SignedOut);
     }
@@ -367,53 +428,83 @@ async fn acquire_token(
     origin: &str,
     access_token: &str,
     tool_id: &str,
+    group: &str,
 ) -> Result<TokenLease, ActivationFailure> {
-    let name = token_name(tool_id);
-    if let Some(id) = find_token_id(origin, access_token, name).await? {
-        let (status, value) = native_account_json(
-            Method::PUT,
-            &format!("{origin}/api/token/"),
-            access_token,
-            Some(token_request(name, Some(id))),
-        )
-        .await
-        .map_err(|_| ActivationFailure::ServerUnavailable)?;
-        if matches!(status, 401 | 403) {
-            return Err(ActivationFailure::SignedOut);
-        }
-        if !server_success(status, &value) {
-            return Err(ActivationFailure::ServerUnavailable);
-        }
+    acquire_token_using(&NativeTokenApi { access_token }, origin, tool_id, group).await
+}
+
+trait TokenApi {
+    fn request(
+        &self,
+        method: Method,
+        url: &str,
+        body: Option<Value>,
+    ) -> impl std::future::Future<Output = Result<(u16, Value), ActivationFailure>> + Send;
+}
+
+struct NativeTokenApi<'a> {
+    access_token: &'a str,
+}
+impl TokenApi for NativeTokenApi<'_> {
+    async fn request(
+        &self,
+        method: Method,
+        url: &str,
+        body: Option<Value>,
+    ) -> Result<(u16, Value), ActivationFailure> {
+        native_account_json(method, url, self.access_token, body)
+            .await
+            .map_err(|_| ActivationFailure::ServerUnavailable)
+    }
+}
+
+async fn acquire_token_using(
+    api: &impl TokenApi,
+    origin: &str,
+    tool_id: &str,
+    group: &str,
+) -> Result<TokenLease, ActivationFailure> {
+    let prefix = token_prefix(tool_id, group);
+    if let Some(id) = find_token_id(api, origin, &prefix, group, false).await? {
+        // Never rewrite an existing token's group, quota, expiry or restrictions.
         return Ok(TokenLease {
             id,
-            key: fetch_token_key(origin, access_token, id).await?,
+            key: fetch_token_key(api, origin, id).await?,
             created: false,
         });
     }
 
-    let (status, value) = native_account_json(
-        Method::POST,
-        &format!("{origin}/api/token/"),
-        access_token,
-        Some(token_request(name, None)),
-    )
-    .await
-    .map_err(|_| ActivationFailure::ServerUnavailable)?;
+    let mut nonce = [0u8; 8];
+    getrandom::fill(&mut nonce).map_err(|_| ActivationFailure::ServerUnavailable)?;
+    let name = format!("{prefix}-{:016x}", u64::from_be_bytes(nonce));
+
+    let (status, value) = api
+        .request(
+            Method::POST,
+            &format!("{origin}/api/token/"),
+            Some(token_request(&name, group)),
+        )
+        .await?;
     if matches!(status, 401 | 403) {
         return Err(ActivationFailure::SignedOut);
     }
     if !server_success(status, &value) {
         return Err(ActivationFailure::ServerUnavailable);
     }
-    let key = data(&value)
-        .and_then(Value::as_object)
-        .and_then(|value| value.get("key"))
-        .and_then(Value::as_str)
-        .and_then(normalize_api_key)
-        .ok_or(ActivationFailure::ServerUnavailable)?;
-    let id = find_token_id(origin, access_token, name)
+    // Standard NewAPI returns success with no data/key. Read the exact newly
+    // created name back, including its group, then use the dedicated key API.
+    let id = find_token_id(api, origin, &name, group, true)
         .await?
         .ok_or(ActivationFailure::ServerUnavailable)?;
+    let key = match fetch_token_key(api, origin, id).await {
+        Ok(key) => key,
+        Err(error) => {
+            let _ = api
+                .request(Method::DELETE, &format!("{origin}/api/token/{id}"), None)
+                .await;
+            return Err(error);
+        }
+    };
     Ok(TokenLease {
         id,
         key,
@@ -439,6 +530,8 @@ enum PreparedAdapter {
     CodexDesktop(codex_desktop::Prepared),
     Pi(pi::Prepared),
     DshWeb(dsh_web::Prepared),
+    Hermes(hermes::Prepared),
+    OpenClaw(openclaw::Prepared),
 }
 
 impl PreparedAdapter {
@@ -449,6 +542,8 @@ impl PreparedAdapter {
             Self::CodexDesktop(value) => value.commit(),
             Self::Pi(value) => value.commit(),
             Self::DshWeb(value) => value.commit(),
+            Self::Hermes(value) => value.commit(),
+            Self::OpenClaw(value) => value.commit(),
         }
     }
 
@@ -459,6 +554,8 @@ impl PreparedAdapter {
             Self::CodexDesktop(value) => value.rollback(),
             Self::Pi(value) => value.rollback(),
             Self::DshWeb(value) => value.rollback(),
+            Self::Hermes(value) => value.rollback(),
+            Self::OpenClaw(value) => value.rollback(),
         }
     }
 
@@ -494,6 +591,10 @@ fn prepare_adapter(
         "dsh_web" => {
             dsh_web::prepare(&home, origin, &request.model_id).map(PreparedAdapter::DshWeb)
         }
+        "hermes" => hermes::prepare(&home, origin, &request.model_id).map(PreparedAdapter::Hermes),
+        "openclaw" => {
+            openclaw::prepare(&home, origin, &request.model_id).map(PreparedAdapter::OpenClaw)
+        }
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
 }
@@ -522,6 +623,8 @@ async fn verify_adapter(
             )
             .await
         }
+        "hermes" => hermes::verify(installation, &request.model_id).await,
+        "openclaw" => openclaw::verify(installation, &request.model_id).await,
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
 }
@@ -597,7 +700,8 @@ pub async fn configure_desktop_tool_v2(
         return Err("invalid_tool_activation_request".into());
     }
 
-    // Resolve identity and exact version before account or token access. An
+    let _activation_guard = ACTIVATION_LOCK.lock().await;
+    // Resolve current identity/runtime before account or token access. An
     // unavailable or ambiguous installation can never create a server token.
     let installation =
         match tool_adapters::resolve_installation(&request.tool_id, &request.installation_id).await
@@ -616,8 +720,14 @@ pub async fn configure_desktop_tool_v2(
             return Ok(ActivationFailure::ServerUnavailable.projection(&request))
         }
     };
-    if let Err(error) =
-        validate_model(&origin, &access_token, &request.model_id, &request.tool_id).await
+    if let Err(error) = validate_model(
+        &origin,
+        &access_token,
+        &request.model_id,
+        &request.tool_id,
+        &request.billing_group,
+    )
+    .await
     {
         return Ok(error.projection(&request));
     }
@@ -642,7 +752,14 @@ pub async fn configure_desktop_tool_v2(
         }
     };
 
-    let lease = match acquire_token(&origin, &access_token, &request.tool_id).await {
+    let lease = match acquire_token(
+        &origin,
+        &access_token,
+        &request.tool_id,
+        &request.billing_group,
+    )
+    .await
+    {
         Ok(value) => value,
         Err(error) => return Ok(error.projection(&request)),
     };
@@ -714,14 +831,156 @@ pub async fn configure_desktop_tool_v2(
 mod tests {
     use super::*;
 
+    #[derive(Default)]
+    struct FakeTokens {
+        tokens: std::sync::Mutex<Vec<Value>>,
+        requests: std::sync::Mutex<Vec<(Method, String)>>,
+        fail_keys: std::sync::atomic::AtomicBool,
+    }
+
+    impl TokenApi for FakeTokens {
+        async fn request(
+            &self,
+            method: Method,
+            url: &str,
+            body: Option<Value>,
+        ) -> Result<(u16, Value), ActivationFailure> {
+            let path = Url::parse(url).unwrap().path().to_string();
+            self.requests
+                .lock()
+                .unwrap()
+                .push((method.clone(), path.clone()));
+            let mut tokens = self.tokens.lock().unwrap();
+            if method == Method::GET && path == "/api/token/search" {
+                return Ok((200, json!({"success":true,"data":{"items":tokens.clone()}})));
+            }
+            if method == Method::POST && path == "/api/token/" {
+                let mut token = body.unwrap();
+                assert!(token["name"].as_str().unwrap().len() <= 50);
+                assert_ne!(token["group"], "");
+                token["id"] = json!(tokens.len() + 1);
+                token["status"] = json!(1);
+                tokens.push(token);
+                // The standard server does not return a key or data here.
+                return Ok((200, json!({"success":true,"message":""})));
+            }
+            let id: u64 = path.split('/').nth(3).unwrap_or("").parse().unwrap_or(0);
+            if method == Method::POST && path.ends_with("/key") {
+                if self.fail_keys.load(std::sync::atomic::Ordering::Relaxed) {
+                    return Err(ActivationFailure::ServerUnavailable);
+                }
+                assert!(tokens.iter().any(|t| t["id"] == id));
+                return Ok((
+                    200,
+                    json!({"success":true,"data":{"key":format!("synthetic-only-test-token-{id:04}")}}),
+                ));
+            }
+            if method == Method::DELETE {
+                tokens.retain(|t| t["id"] != id);
+                return Ok((200, json!({"success":true})));
+            }
+            panic!("unexpected token operation: {method} {path}");
+        }
+    }
+
+    #[tokio::test]
+    async fn token_creation_without_key_reuses_only_the_selected_group_on_replay() {
+        let api = FakeTokens::default();
+        let first = acquire_token_using(&api, "https://mock.invalid", "pi", "default")
+            .await
+            .unwrap();
+        assert!(first.created);
+        let replay = acquire_token_using(&api, "https://mock.invalid", "pi", "default")
+            .await
+            .unwrap();
+        assert!(!replay.created);
+        assert_eq!(first.id, replay.id);
+        assert_eq!(first.key, replay.key);
+        let discounted = acquire_token_using(&api, "https://mock.invalid", "pi", "国模特价分组")
+            .await
+            .unwrap();
+        assert!(discounted.created);
+        assert_ne!(first.id, discounted.id);
+        let tokens = api.tokens.lock().unwrap();
+        assert_eq!(tokens[0]["group"], "default");
+        assert_eq!(tokens[1]["group"], "国模特价分组");
+        assert!(!api
+            .requests
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|(method, _)| method == Method::PUT));
+    }
+
+    #[tokio::test]
+    async fn failed_key_read_removes_only_the_new_token_and_leaves_original_group_unchanged() {
+        let api = FakeTokens::default();
+        acquire_token_using(&api, "https://mock.invalid", "pi", "default")
+            .await
+            .unwrap();
+        let before = api.tokens.lock().unwrap().clone();
+        api.fail_keys
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+        assert!(
+            acquire_token_using(&api, "https://mock.invalid", "pi", "discount")
+                .await
+                .is_err()
+        );
+        assert_eq!(*api.tokens.lock().unwrap(), before);
+        // Failure while reading an existing key must not delete it.
+        assert!(
+            acquire_token_using(&api, "https://mock.invalid", "pi", "default")
+                .await
+                .is_err()
+        );
+        assert_eq!(*api.tokens.lock().unwrap(), before);
+    }
+
     #[test]
-    fn request_requires_one_of_five_exact_targets_and_selection_shape() {
+    fn token_identity_checks_real_group_status_and_expiry_not_just_the_label() {
+        let prefix = token_prefix("pi", "special");
+        let mut token = json!({"name":format!("{prefix}-0123456789abcdef"),"group":"special","status":1,"expired_time":-1});
+        assert!(reusable_token(
+            token.as_object().unwrap(),
+            &prefix,
+            "special",
+            false
+        ));
+        token["group"] = json!("default");
+        assert!(!reusable_token(
+            token.as_object().unwrap(),
+            &prefix,
+            "special",
+            false
+        ));
+        token["group"] = json!("special");
+        token["status"] = json!(2);
+        assert!(!reusable_token(
+            token.as_object().unwrap(),
+            &prefix,
+            "special",
+            false
+        ));
+        token["status"] = json!(1);
+        token["expired_time"] = json!(1);
+        assert!(!reusable_token(
+            token.as_object().unwrap(),
+            &prefix,
+            "special",
+            false
+        ));
+        assert_ne!(prefix, token_prefix("pi", "default"));
+    }
+
+    #[test]
+    fn request_requires_one_of_seven_exact_targets_and_selection_shape() {
         let valid = ToolActivationRequest {
             request_id: "activation-1".into(),
             line_id: "mainland_optimized".into(),
             tool_id: "pi".into(),
             model_id: "glm-5.3".into(),
             installation_id: "i0123456789abcdef".into(),
+            billing_group: "default".into(),
         };
         assert!(request_is_valid(&valid));
         let mut invalid = valid;
@@ -741,6 +1000,8 @@ mod tests {
         });
         assert!(model_supports_tool(&pricing, "chat", "pi"));
         assert!(model_supports_tool(&pricing, "chat", "dsh_web"));
+        assert!(model_supports_tool(&pricing, "chat", "hermes"));
+        assert!(model_supports_tool(&pricing, "chat", "openclaw"));
         assert!(model_supports_tool(&pricing, "responses", "codex_desktop"));
         assert!(model_supports_tool(&pricing, "messages", "claude_code"));
         assert!(model_supports_tool(&pricing, "messages", "claude_desktop"));
@@ -755,6 +1016,8 @@ mod tests {
             token_name("codex_desktop"),
             token_name("pi"),
             token_name("dsh_web"),
+            token_name("hermes"),
+            token_name("openclaw"),
         ];
         for (index, left) in names.iter().enumerate() {
             assert!(!names[index + 1..].contains(left));

@@ -2,6 +2,85 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "E-USER-059",
+      "claim": "The owner is preparing the desktop client for release. yeschoy.com and yeschoy.pro are the two usable client origins now; api.yeschoy.com remains a first-party origin that will be repaired later but cannot currently be validated. All other client work should proceed, including truthful account and price behavior, general-version one-click setup, Hermes and OpenClaw, packaging and an update delivery plan. NewAPI, Nginx, database and server code remain outside the client work.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-04:release-candidate-routes-and-client-scope",
+      "scope": "target",
+      "observedAt": "2026-09-04T00:00:00+08:00",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-047",
+      "claim": "The active client still maps global_accelerated to api.yeschoy.com, while current dirty changes span account session, server-owned billing groups, activation, native adapters, icons and package version. Hermes and OpenClaw source modules exist only in the inherited codebase and are not registered by the stripped Tauri runtime. The JavaScript updater dependency exists, but the Rust plugin, capability, public key, endpoint, install flow and branded release workflow are not active.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/connectivity_core.rs;src/configuration/preview.ts;src-tauri/src/lib.rs;src-tauri/src/hermes_config.rs;src-tauri/src/openclaw_config.rs;src/lib/updater.ts;src-tauri/tauri.conf.json;.github/workflows/release.yml;command:2026-09-04:git-status-and-client-release-audit",
+      "scope": "current",
+      "observedAt": "2026-09-04T00:00:00+08:00",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-043",
+      "claim": "Current official documentation defines stable custom-provider and verification seams for Hermes and OpenClaw and requires signed Tauri updater artifacts. Hermes accepts OpenAI-compatible chat-completions providers in config.yaml and supports one-shot execution. OpenClaw supports custom openai-completions providers, default model selection, headless agent execution and non-literal secret references. Tauri requires updater signatures and a public key in the client; updater signing is separate from Apple or Windows platform signing.",
+      "class": "external_verified",
+      "locator": "https://github.com/hermes-agent-org/hermes/blob/main/website/docs/integrations/providers.md;https://hermes-agent.nousresearch.com/docs/reference/cli-commands;https://hermes-agent.nousresearch.com/docs/user-guide/secrets/command;https://docs.openclaw.ai/gateway/config-tools;https://docs.openclaw.ai/cli/agent;https://docs.openclaw.ai/gateway/secrets;https://v2.tauri.app/plugin/updater/;https://v2.tauri.app/distribute/sign/windows/",
+      "scope": "current",
+      "observedAt": "2026-09-04T00:00:00+08:00",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-021",
+      "claim": "RU-028 should be broadened before freeze into one client release-candidate correction that supersedes RU-027 and owns all existing client drift. It should activate yeschoy.com and yeschoy.pro, keep api.yeschoy.com dormant until a later validation, finish server-derived billing-group selection, extend secure verified setup to Hermes and OpenClaw, and produce macOS and Windows candidate artifacts. The updater may be wired and tested only after its public key, signed artifacts and manifest endpoint exist; otherwise the candidate must show no false update-ready claim.",
+      "class": "proposed",
+      "locator": "inline:ru028-client-release-candidate",
+      "scope": "proposal",
+      "observedAt": "2026-09-04T00:00:00+08:00",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-USER-059",
+        "E-CODE-047",
+        "E-EXT-043",
+        "E-USER-058"
+      ]
+    },
+    {
+      "id": "E-USER-058",
+      "claim": "Owner rejects exact-version gates and asks for general client integration without adapting every ordinary app update. Existing client-only boundary remains in force.",
+      "class": "user_confirmed",
+      "locator": "user-message:2026-09-03:你为啥不搞个通用的",
+      "scope": "target",
+      "observedAt": "2026-09-03T02:40:34.776Z",
+      "status": "active",
+      "verificationLevel": 1
+    },
+    {
+      "id": "E-CODE-046",
+      "claim": "All five adapters are gated by exact version strings before configuration. Native adapters already parse owned configuration, retain volatile rollback and perform target verification. Bundled Codex exec help does not expose the top-level approval flag.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/tool_adapters/mod.rs:123;src-tauri/src/tool_activation.rs:590;installed:/Applications/ChatGPT.app/Contents/Resources/codex exec --help",
+      "scope": "current",
+      "observedAt": "2026-09-03T02:40:34.776Z",
+      "status": "active",
+      "verificationLevel": 1
+    },
+    {
+      "id": "E-EXT-042",
+      "claim": "Codex documents custom provider base_url, responses wire_api and command-backed auth, independently of desktop build numbers.",
+      "class": "external_verified",
+      "locator": "https://learn.chatgpt.com/docs/config-file/config-reference",
+      "scope": "current",
+      "observedAt": "2026-09-03T02:40:34.776Z",
+      "status": "active",
+      "verificationLevel": 1
+    },
+    {
       "id": "E-CODE-040",
       "claim": "GitHub Actions Windows run 33497321898 passed all 136 selected renderer tests and all 27 platform-applicable native tests after the fixture correction. Packaging then failed before compilation because PowerShell plus pnpm exec delivered the trailing --locked to the Tauri command parser as an unsupported build option. The immediately preceding pnpm install --frozen-lockfile and cargo test --locked gates already prove both dependency locks before packaging.",
       "class": "code_observed",

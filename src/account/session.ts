@@ -41,6 +41,20 @@ export interface UsageSummary {
   tokenCount: string;
 }
 
+export interface BillingGroup {
+  id: string;
+  description: string;
+  ratio: number | null;
+}
+
+export interface ModelBilling {
+  groups: BillingGroup[];
+  baseInputUsd: number | null;
+  baseOutputUsd: number | null;
+  requestUsd: number | null;
+  expression: string;
+}
+
 export interface AccountModel {
   id: string;
   description: string;
@@ -51,6 +65,7 @@ export interface AccountModel {
   officialOutputCnyPerMillion: string;
   actualInputCnyPerMillion: string;
   actualOutputCnyPerMillion: string;
+  billing?: ModelBilling | null;
 }
 
 export interface AccountProjection {
@@ -174,7 +189,8 @@ function model(value: unknown): value is AccountModel {
     !object(value) ||
     !(
       exactKeys(value, baseKeys) ||
-      exactKeys(value, [...baseKeys, "supportedEndpointTypes"])
+      exactKeys(value, [...baseKeys, "supportedEndpointTypes"]) ||
+      exactKeys(value, [...baseKeys, "supportedEndpointTypes", "billing"])
     ) ||
     !safeText(value.id, 200, false) ||
     !safeText(value.description, 500) ||
@@ -184,6 +200,38 @@ function model(value: unknown): value is AccountModel {
     typeof value.pricingAvailable !== "boolean"
   )
     return false;
+  if (value.billing !== undefined && value.billing !== null) {
+    const billing = value.billing;
+    const amount = (n: unknown) =>
+      n === null || (typeof n === "number" && Number.isFinite(n) && n >= 0);
+    if (
+      !object(billing) ||
+      !exactKeys(billing, [
+        "groups",
+        "baseInputUsd",
+        "baseOutputUsd",
+        "requestUsd",
+        "expression",
+      ]) ||
+      !amount(billing.baseInputUsd) ||
+      !amount(billing.baseOutputUsd) ||
+      !amount(billing.requestUsd) ||
+      !safeText(billing.expression, 8192) ||
+      !Array.isArray(billing.groups) ||
+      billing.groups.length > 128 ||
+      !billing.groups.every(
+        (g) =>
+          object(g) &&
+          exactKeys(g, ["id", "description", "ratio"]) &&
+          safeText(g.id, 128, false) &&
+          g.id !== "auto" &&
+          safeText(g.description, 500) &&
+          amount(g.ratio),
+      ) ||
+      new Set(billing.groups.map((g) => g.id)).size !== billing.groups.length
+    )
+      return false;
+  }
   if (
     value.supportedEndpointTypes !== undefined &&
     (!Array.isArray(value.supportedEndpointTypes) ||

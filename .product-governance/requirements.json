@@ -2,6 +2,53 @@
   "schemaVersion": 1,
   "requirements": [
     {
+      "id": "REQ-055",
+      "statement": "Deliver one testable client-only release candidate with two currently usable first-party lines, truthful NewAPI-owned account and price data, and secure verified one-click setup for seven explicitly named tools while keeping the unavailable API origin and unproven updater inactive.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-059",
+        "E-CODE-047",
+        "E-EXT-043",
+        "E-PROP-021",
+        "E-USER-054"
+      ],
+      "acceptance": [
+        "The only selectable lines are mainland_optimized at https://yeschoy.com and global_accelerated at https://yeschoy.pro. api.yeschoy.com is neither selected nor health-claimed and cannot receive an automatic retry of a token or other mutating request.",
+        "Changing selectable lines preserves one valid first-party desktop session. Only logout, expiry, revocation or an authenticated authorization failure clears credentials; a route or network failure remains retryable.",
+        "Available model IDs, supported endpoint types, billing groups, group ratios, usd_exchange_rate and actual prices come from the current authenticated NewAPI responses. Missing or malformed data is unavailable, never compiled or invented.",
+        "The setup surface names Claude Code, Claude Desktop, Codex Desktop, Pi, DSH web, Hermes and OpenClaw separately, selects an unambiguous installation, shows exact model ID and billing group, and never gates an ordinary version string by allowlist.",
+        "Hermes and OpenClaw integrations preserve unrelated configuration and resolve their credential from the signed client helper or another non-literal operating-system-protected boundary. No complete API key crosses renderer IPC, appears in ordinary configuration, logs, diagnostics, process arguments or retained backup history.",
+        "Every supported target is ready only after readback and a harmless target-level request using the selected line, exact model and credential. Configuration-only, launch-only, direct relay probe, missing runtime, ambiguous installation, target timeout and failed response remain non-success states with recovery guidance.",
+        "Renderer and native tests cover sign-in projection consistency, line switching, group pricing, future versions, install ambiguity, configuration preservation, replay, concurrent change, rollback, secret absence and all seven tool identities.",
+        "The macOS universal and Windows x64 candidate build inputs use the branded icon and matching 0.4.x versions. The Windows artifact is explicitly unsigned. An updater is exposed only after a public update key, signed payloads, a versioned manifest and tamper/relaunch tests are present; otherwise settings truthfully describe it as unavailable.",
+        "No NewAPI, Nginx, DNS, database, server source, server deployment, telemetry upload, remote agent or public production-readiness claim is part of this client unit."
+      ]
+    },
+    {
+      "id": "REQ-054",
+      "statement": "Generalize installed-tool eligibility across ordinary versions without weakening identity, credential, configuration or verification boundaries.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-058",
+        "E-CODE-046",
+        "E-EXT-042"
+      ],
+      "acceptance": [
+        "Unknown, future and Windows four-component version strings never gate eligibility. Missing runtime is distinct from unsupported version.",
+        "Re-resolve selected identity and check required invocation capabilities before credentials. Help probes are bounded, isolated and secret-free; no model requests on scan or help.",
+        "Failed capability checks are retryable, not proof of incompatibility. Claude Desktop remains awaiting runtime verification through its existing 3P transaction.",
+        "Preserve schema parsing, unrelated configuration, readback, external-change detection and rollback. Codex JSON startup/error output alone cannot become ready.",
+        "UI displays detected version or unread version, installed/pending verification and actionable capability errors, with no forced downgrade.",
+        "Cover future versions, missing runtime, probe failure, replay, stale identity, races and recovery. No NewAPI/server mutations or universal-future-compatibility claims."
+      ]
+    },
+    {
       "id": "REQ-050",
       "statement": "Use the Windows-compatible Tauri build invocation after frozen pnpm and locked Cargo gates pass, then produce the unsigned private NSIS artifact without changing runtime or dependency resolution.",
       "scope": "target",

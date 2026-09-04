@@ -43,6 +43,71 @@ function signedIn(requestId = "account-test-1") {
 }
 
 describe("account v2 renderer boundary", () => {
+  const withBilling = () => {
+    const payload = signedIn();
+    return {
+      ...payload,
+      models: payload.models.map((model) => ({
+        ...model,
+        supportedEndpointTypes: ["openai", "anthropic"],
+        billing: {
+          groups: [
+            { id: "国模特价分组", description: "账户分组", ratio: 0.35 },
+          ],
+          baseInputUsd: 2,
+          baseOutputUsd: 8,
+          requestUsd: null,
+          expression: "",
+        },
+      })),
+    };
+  };
+
+  it("accepts account-specific groups, including zero and unavailable ratios", () => {
+    for (const ratio of [0, 0.35, null]) {
+      const payload = withBilling();
+      const billing = payload.models[0].billing;
+      const raw = {
+        ...payload,
+        models: [
+          {
+            ...payload.models[0],
+            billing: {
+              ...billing,
+              groups: [{ ...billing.groups[0], ratio }],
+            },
+          },
+        ],
+      };
+      expect(decodeAccountProjection(raw, "account-test-1")).toEqual(raw);
+    }
+  });
+
+  it("rejects ambiguous groups, invalid ratios and unexpected nested credential fields", () => {
+    const payload = withBilling();
+    const billing = payload.models[0].billing;
+    const group = billing.groups[0];
+    for (const groups of [
+      [group, group],
+      [{ ...group, ratio: -1 }],
+      [{ ...group, ratio: Infinity }],
+      [{ ...group, ratio: "0.35" }],
+      [{ ...group, id: "auto" }],
+      [{ ...group, id: "bad\nname" }],
+      [{ ...group, apiKey: "must-not-cross-renderer" }],
+    ]) {
+      expect(
+        decodeAccountProjection(
+          {
+            ...payload,
+            models: [{ ...payload.models[0], billing: { ...billing, groups } }],
+          },
+          "account-test-1",
+        ),
+      ).toBeNull();
+    }
+  });
+
   it("accepts a complete sanitized signed-in projection", () => {
     expect(decodeAccountProjection(signedIn(), "account-test-1")).toEqual(
       signedIn(),

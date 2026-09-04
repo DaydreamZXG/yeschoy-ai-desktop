@@ -11,7 +11,9 @@ const TOOL_PROTOCOL = {
   codex: "openai-response",
   opencode: "openai",
   pi: "openai",
-  dsh: null,
+  dsh: "openai",
+  hermes: "openai",
+  openclaw: "openai",
 } as const;
 
 export interface ToolAccessPlan {
@@ -21,7 +23,7 @@ export interface ToolAccessPlan {
   modelId: string;
   baseUrl: string;
   requiredProtocol: string;
-  status: "protocol_declared" | "protocol_not_declared" | "dsh_unverified";
+  status: "protocol_declared" | "protocol_not_declared";
   billingMode: BillingMode;
   accountAccess: "unverified";
   groupRestrictions: "unverified";
@@ -63,13 +65,10 @@ export function createToolAccessPlan(
     groupId: group.id,
     modelId: model.id,
     baseUrl: local.protocolEndpoint,
-    requiredProtocol: protocol ?? "",
-    status:
-      protocol === null
-        ? "dsh_unverified"
-        : model.endpoints.includes(protocol)
-          ? "protocol_declared"
-          : "protocol_not_declared",
+    requiredProtocol: protocol,
+    status: model.endpoints.includes(protocol)
+      ? "protocol_declared"
+      : "protocol_not_declared",
     billingMode: model.billingMode,
     accountAccess: "unverified",
     groupRestrictions: "unverified",

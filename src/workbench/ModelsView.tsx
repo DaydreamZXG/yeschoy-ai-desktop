@@ -1,6 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowDownUp, BadgePercent, Layers3 } from "lucide-react";
+import { ArrowDownUp, Layers3 } from "lucide-react";
+import {
+  BillingGroupPicker,
+  BillingPrices,
+} from "../configuration/BillingGroupPicker";
+import { chooseBillingGroup } from "../configuration/billing";
 import type { AccountSessionController } from "../account/useAccountSession";
 import {
   CONFIGURATION_LINES,
@@ -11,11 +16,6 @@ import { useWorkbenchCopy } from "./copy";
 import { WorkbenchFooter } from "./WorkbenchChrome";
 
 const EMPTY_MODELS: never[] = [];
-
-function price(value: string): string {
-  const number = Number(value);
-  return Number.isFinite(number) ? `¥${number.toFixed(2)}` : "—";
-}
 
 export function ModelsView({
   line,
@@ -32,6 +32,7 @@ export function ModelsView({
   const { t } = useTranslation();
   const [tool, setTool] = useState<ConfigurationToolId>("claude");
   const [selectedModelId, setSelectedModelId] = useState("");
+  const [billingGroup, setBillingGroup] = useState("");
   const { projection, loading, refresh } = session;
   const accountModels =
     projection?.status === "signed_in" ? projection.models : EMPTY_MODELS;
@@ -42,14 +43,10 @@ export function ModelsView({
   }, [accountModels, selectedModelId]);
 
   const selected = accountModels.find((model) => model.id === selectedModelId);
-  const savings = useMemo(() => {
-    if (!selected?.pricingAvailable) return null;
-    const official = Number(selected.officialInputCnyPerMillion);
-    const actual = Number(selected.actualInputCnyPerMillion);
-    if (!Number.isFinite(official) || !Number.isFinite(actual) || official <= 0)
-      return null;
-    return Math.max(0, ((official - actual) / official) * 100);
-  }, [selected]);
+  useEffect(
+    () => setBillingGroup((previous) => chooseBillingGroup(selected, previous)),
+    [selected],
+  );
 
   return (
     <div className="workbench-page models-workspace">
@@ -126,16 +123,6 @@ export function ModelsView({
             <ArrowDownUp aria-hidden="true" />
             {c.officialPrice} / {c.actualPrice}
           </h2>
-          {savings !== null && savings > 0 ? (
-            <span className="savings-badge">
-              <BadgePercent aria-hidden="true" />
-              {c.saveCompared} {savings.toFixed(0)}%
-            </span>
-          ) : (
-            <span className="status-badge">
-              {loading ? c.checking : c.priceUnavailable}
-            </span>
-          )}
         </div>
 
         {projection?.status !== "signed_in" ? (
@@ -175,50 +162,16 @@ export function ModelsView({
                     {selected.description}
                   </p>
                 )}
-                {selected.pricingAvailable ? (
-                  <div className="price-compare-grid">
-                    <article>
-                      <span>{c.officialPrice}</span>
-                      <dl>
-                        <div>
-                          <dt>{c.inputPrice}</dt>
-                          <dd>
-                            {price(selected.officialInputCnyPerMillion)}
-                            <small>{c.perMillionTokens}</small>
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>{c.outputPrice}</dt>
-                          <dd>
-                            {price(selected.officialOutputCnyPerMillion)}
-                            <small>{c.perMillionTokens}</small>
-                          </dd>
-                        </div>
-                      </dl>
-                    </article>
-                    <article className="actual-price-card">
-                      <span>{c.actualPrice}</span>
-                      <dl>
-                        <div>
-                          <dt>{c.inputPrice}</dt>
-                          <dd>
-                            {price(selected.actualInputCnyPerMillion)}
-                            <small>{c.perMillionTokens}</small>
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>{c.outputPrice}</dt>
-                          <dd>
-                            {price(selected.actualOutputCnyPerMillion)}
-                            <small>{c.perMillionTokens}</small>
-                          </dd>
-                        </div>
-                      </dl>
-                    </article>
-                  </div>
-                ) : (
-                  <p className="account-inline-warning">{c.priceUnavailable}</p>
-                )}
+                <BillingGroupPicker
+                  model={selected}
+                  selected={billingGroup}
+                  onChange={setBillingGroup}
+                />
+                <BillingPrices
+                  model={selected}
+                  selected={billingGroup}
+                  fx={projection?.comparisonFx ?? ""}
+                />
               </>
             )}
           </>

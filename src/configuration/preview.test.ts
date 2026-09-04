@@ -13,10 +13,12 @@ describe("guided configuration preview", () => {
       "opencode",
       "pi",
       "dsh",
+      "hermes",
+      "openclaw",
     ]);
     expect(CONFIGURATION_LINES).toMatchObject([
       { id: "mainland_optimized", rootUrl: "https://yeschoy.com" },
-      { id: "global_accelerated", rootUrl: "https://api.yeschoy.com" },
+      { id: "global_accelerated", rootUrl: "https://yeschoy.pro" },
     ]);
   });
 
@@ -25,6 +27,9 @@ describe("guided configuration preview", () => {
     ["codex", "https://yeschoy.com/v1"],
     ["opencode", "https://yeschoy.com/v1"],
     ["pi", "https://yeschoy.com/v1"],
+    ["dsh", "https://yeschoy.com/v1"],
+    ["hermes", "https://yeschoy.com/v1"],
+    ["openclaw", "https://yeschoy.com/v1"],
   ] as const)("projects the documented %s endpoint", (toolId, endpoint) => {
     const projection = createConfigurationPreview({
       requestId: `preview-${toolId}`,
@@ -40,18 +45,18 @@ describe("guided configuration preview", () => {
     expect(projection.credentialAccessed).toBe(false);
   });
 
-  it("withholds the unverified DSH adapter details", () => {
+  it("projects the documented DSH adapter details", () => {
     const projection = createConfigurationPreview({
       requestId: "preview-dsh",
       toolId: "dsh",
       lineId: "global_accelerated",
     });
 
-    expect(projection.rootUrl).toBe("https://api.yeschoy.com");
-    expect(projection.protocolEndpoint).toBe("");
-    expect(projection.targetFile).toBe("");
-    expect(projection.ownedFields).toEqual([]);
-    expect(projection.apply.blockers).toContain("dsh_web_adapter_required");
+    expect(projection.rootUrl).toBe("https://yeschoy.pro");
+    expect(projection.protocolEndpoint).toBe("https://yeschoy.pro/v1");
+    expect(projection.targetFile).toBe("~/.dsh/settings.yaml");
+    expect(projection.ownedFields).toContain("llm-pi-ai.providers.yeschoy");
+    expect(projection.endpointStatus).toBe("documented_preview");
   });
 
   it("never invents a model", () => {

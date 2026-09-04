@@ -5,13 +5,16 @@ import { createToolAccessPlan } from "./access-plan";
 import { catalogFixture } from "./test-fixtures";
 
 describe("tool access preview", () => {
-  it("derives the four documented protocol profiles on each fixed line", () => {
+  it("derives the documented protocol profiles on each fixed line", () => {
     for (const line of CONFIGURATION_LINES)
       for (const toolId of [
         "claude",
         "codex",
         "opencode",
         "pi",
+        "dsh",
+        "hermes",
+        "openclaw",
       ] as ConfigurationToolId[]) {
         const plan = createToolAccessPlan(
           catalogFixture("test-read", line.id),
@@ -69,7 +72,7 @@ describe("tool access preview", () => {
       ).status,
     ).toBe("protocol_not_declared");
   });
-  it("withholds DSH endpoint and refuses invalid model-group selections", () => {
+  it("declares the DSH endpoint and refuses invalid model-group selections", () => {
     const sample = catalogFixture();
     const dsh = createToolAccessPlan(
       sample,
@@ -78,8 +81,9 @@ describe("tool access preview", () => {
       "test-group",
       "test/model",
     );
-    expect(dsh.status).toBe("dsh_unverified");
-    expect(dsh.baseUrl).toBe("");
+    expect(dsh.status).toBe("protocol_declared");
+    expect(dsh.baseUrl).toBe("https://yeschoy.com/v1");
+    expect(dsh.requiredProtocol).toBe("openai");
     expect(() =>
       createToolAccessPlan(
         sample,

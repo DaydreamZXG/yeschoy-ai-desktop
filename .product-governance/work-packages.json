@@ -2,6 +2,151 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "WP-RU028-CAPABILITY-COMPATIBILITY",
+      "wave": "integration",
+      "owner": "desktop-platform",
+      "riskClass": "critical",
+      "objective": "Deliver and verify the bounded client-only 0.4.x release candidate without changing server or production infrastructure.",
+      "deliverables": [
+        "Two active first-party lines with line-stable session and server-owned billing-group pricing",
+        "Capability-based native eligibility and secure verified adapters for seven explicit tools",
+        "Truthful beginner setup, account, model, price, failure and updater-unavailable states",
+        "Branded macOS universal and unsigned Windows x64 release-candidate inputs",
+        "Native, renderer, security and packaging evidence"
+      ],
+      "requirementRefs": [
+        "REQ-054",
+        "REQ-055"
+      ],
+      "decisionRefs": [
+        "DEC-072",
+        "DEC-073"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No NewAPI, server, Nginx, DNS, Redis, database, server deployment or production-infrastructure mutation.",
+        "No OpenCode activation, third-party application installation, remote AI agent, telemetry upload or retained configuration backup history.",
+        "No api.yeschoy.com activation or mutation fallback before separate live validation.",
+        "No automatic updater activation without a real public key, signed artifact, published manifest and tamper/relaunch evidence.",
+        "No Windows publisher-signature or public production-readiness claim."
+      ],
+      "dependsOn": [
+        "WP-RU027-VERIFIED-ONE-CLICK-ADAPTERS"
+      ],
+      "allowedPaths": [
+        "package.json",
+        "pnpm-lock.yaml",
+        ".github/workflows/yeschoy-release.yml",
+        "src/**",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/tauri.candidate.conf.json",
+        "src-tauri/capabilities/**",
+        "src-tauri/icons/**",
+        "src-tauri/src/**",
+        "tests/work_packages/ru028/**",
+        "outputs/野菜API-通用兼容策略验证.md",
+        "outputs/野菜API-0.4.x-候选发布验收.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        "release-assets/**",
+        "src-tauri/target/**",
+        "dist/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No database, server schema or retained client-history migration. Existing tool configuration is unverified input and is replaced only for exact fields the selected adapter owns after explicit activation.",
+        "rollback": "Each activation uses volatile snapshots and removes a newly created token and credential on a failed first transaction when ownership is provable. No retained backup history is created."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Version 3 replaces exact-version denial with runtime/capability assessment, preserves current-account model and billing authority, and adds Hermes and OpenClaw through their documented custom-provider seams. Version strings are informational; owned-schema readback and target verification define readiness.",
+        "supportedVersions": "macOS 12 or later on Apple Silicon and Intel, and Windows 10/11 x64, subject to the actual packaging evidence. Third-party app versions are not allowlisted; a missing required runtime or failed tool request remains non-ready.",
+        "removalGate": "Activating api.yeschoy.com, automatic updates, third-party installation, plaintext credential fallback, Windows publisher signing, telemetry, server changes or a public production claim requires later evidence and authority."
+      },
+      "inputContracts": [
+        "desktop-account-session@v3",
+        "public-service-catalog@v1"
+      ],
+      "outputContracts": [
+        "desktop-tool-activation@v3"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru028-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru028/test_acceptance.py::test_native_capability_and_transaction_regressions",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        },
+        {
+          "id": "ru028-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru028/test_acceptance.py::test_renderer_compatibility_states",
+          "cwd": ".",
+          "timeoutSeconds": 900
+        },
+        {
+          "id": "ru028-security",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru028/test_acceptance.py::test_seven_target_secret_and_failure_boundaries",
+          "cwd": ".",
+          "timeoutSeconds": 1200
+        },
+        {
+          "id": "ru028-candidate",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru028/test_acceptance.py::test_release_candidate_inputs_and_update_gate",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU028-AS-01",
+          "assertion": "Native account, line, billing-group and adapter tests pass for yeschoy.com and yeschoy.pro; api.yeschoy.com is inactive, versions do not gate, and startup output alone is not a reply.",
+          "testSelector": "tests/work_packages/ru028/test_acceptance.py::test_native_capability_and_transaction_regressions",
+          "acceptanceCommandId": "ru028-native"
+        },
+        {
+          "id": "RU028-AS-02",
+          "assertion": "Renderer accepts only closed account and activation projections, shows all seven distinct tools, exact model and billing group, unknown/new versions without disabling activation, and actionable non-success states.",
+          "testSelector": "tests/work_packages/ru028/test_acceptance.py::test_renderer_compatibility_states",
+          "acceptanceCommandId": "ru028-renderer"
+        },
+        {
+          "id": "RU028-AS-03",
+          "assertion": "Synthetic complete secrets are absent from renderer IPC, ordinary configurations, diagnostics, logs, process arguments and retained history across seven adapters, failure, replay, race and rollback cases.",
+          "testSelector": "tests/work_packages/ru028/test_acceptance.py::test_seven_target_secret_and_failure_boundaries",
+          "acceptanceCommandId": "ru028-security"
+        },
+        {
+          "id": "RU028-AS-04",
+          "assertion": "The branded 0.4.x candidate typechecks, passes selected renderer and native suites and has coherent macOS universal and unsigned Windows x64 package inputs; updater UI remains inactive without signed-update evidence.",
+          "testSelector": "tests/work_packages/ru028/test_acceptance.py::test_release_candidate_inputs_and_update_gate",
+          "acceptanceCommandId": "ru028-candidate"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Any target would require a complete tool key in renderer IPC, ordinary configuration, process arguments or retained local history.",
+        "A target cannot be distinguished from another installed product or its exact owned configuration fields cannot be preserved and rolled back.",
+        "A successful file write or direct relay probe is the only available evidence while the target tool itself did not make a bounded request.",
+        "Hermes or OpenClaw would require a literal complete key in ordinary configuration or an unverified config shape.",
+        "A selectable line cannot be live-validated or a mutation would be retried automatically across origins.",
+        "The implementation requires NewAPI, server, database, server deployment, telemetry or production-infrastructure mutation.",
+        "An updater is presented as usable without a real public key, signed payload, published manifest and tamper/relaunch proof."
+      ],
+      "status": "planned"
+    },
+    {
       "id": "WP-RU022-WINDOWS-TAURI-ARGS",
       "wave": "consumer",
       "owner": "desktop-platform",
@@ -3657,7 +3802,7 @@
         "A successful file write or direct relay probe is the only available evidence while the target tool itself did not make a bounded request.",
         "The implementation requires NewAPI, server, database, deployment, telemetry or updater mutation."
       ],
-      "status": "planned"
+      "status": "retired"
     }
   ]
 }

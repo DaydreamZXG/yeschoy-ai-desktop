@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU028-AS-04",
+  "assertion": "The branded 0.4.x candidate typechecks, passes selected renderer and native suites and has coherent macOS universal and unsigned Windows x64 package inputs; updater UI remains inactive without signed-update evidence.",
+  "testSelector": "tests/work_packages/ru028/test_acceptance.py::test_release_candidate_inputs_and_update_gate",
+  "acceptanceCommandId": "ru028-candidate",
+  "runId": "RU-028/WP-RU028-CAPABILITY-COMPATIBILITY@2026-09-04T07:52:52.649630+00:00",
+  "packageId": "WP-RU028-CAPABILITY-COMPATIBILITY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-028",
+  "releaseUnitHash": "sha256:d376a5bf3433370346b09e6d86c0da3176dc8d76b2035d687de8811808408641"
+}

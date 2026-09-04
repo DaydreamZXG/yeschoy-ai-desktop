@@ -157,7 +157,7 @@ impl Prepared {
     }
 }
 
-fn bundled_runtime(app_path: &Path) -> Option<PathBuf> {
+pub(crate) fn bundled_runtime(app_path: &Path) -> Option<PathBuf> {
     #[cfg(target_os = "macos")]
     {
         let path = app_path.join("Contents").join("Resources").join("codex");
@@ -189,6 +189,8 @@ pub(crate) async fn verify_and_launch(
         .map_err(|_| AdapterFailure::VerificationFailed("verification_workspace_failed"))?;
     let mut command = Command::new(runtime);
     command.current_dir(&working).args([
+        "--ask-for-approval",
+        "never",
         "exec",
         "--ephemeral",
         "--skip-git-repo-check",
@@ -197,18 +199,34 @@ pub(crate) async fn verify_and_launch(
         "never",
         "--sandbox",
         "read-only",
-        "--ask-for-approval",
-        "never",
         "仅回复 YESCHOY_OK，不要使用工具。",
     ]);
     let result = common::run_bounded(command, Duration::from_secs(120)).await;
     let _ = std::fs::remove_dir_all(&working);
     let result =
         result.map_err(|_| AdapterFailure::VerificationFailed("tool_request_timed_out"))?;
-    if !result.success || result.stdout.is_empty() {
+    if !result.success || !completed_response(&result.stdout) {
         return Err(AdapterFailure::VerificationFailed("tool_request_failed"));
     }
     launch(&installation.path)
+}
+
+fn completed_response(output: &[u8]) -> bool {
+    let events: Vec<serde_json::Value> = output
+        .split(|byte| *byte == b'\n')
+        .filter_map(|line| serde_json::from_slice(line).ok())
+        .collect();
+    let failed = events
+        .iter()
+        .any(|e| matches!(e["type"].as_str(), Some("error" | "turn.failed")));
+    let replied = events.iter().any(|e| {
+        e["type"] == "item.completed"
+            && e["item"]["type"] == "agent_message"
+            && e["item"]["text"]
+                .as_str()
+                .is_some_and(|s| !s.trim().is_empty())
+    });
+    !failed && replied && events.iter().any(|e| e["type"] == "turn.completed")
 }
 
 #[cfg(target_os = "macos")]
@@ -238,12 +256,25 @@ mod tests {
     use super::*;
 
     #[test]
+    fn startup_events_and_failed_turns_are_not_success() {
+        assert!(!completed_response(
+            br#"{"type":"thread.started"}
+{"type":"turn.started"}"#
+        ));
+        let reply = b"{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"YESCHOY_OK\"}}\n{\"type\":\"turn.completed\"}";
+        assert!(completed_response(reply));
+        let mut failed = reply.to_vec();
+        failed.extend_from_slice(b"\n{\"type\":\"turn.failed\"}");
+        assert!(!completed_response(&failed));
+    }
+
+    #[test]
     fn render_preserves_official_auth_and_uses_command_auth() {
         let source =
             b"model_reasoning_effort = \"high\"\n[notice]\nhide_full_access_warning = true\n";
         let bytes = render(
             Some(source),
-            "https://api.yeschoy.com",
+            "https://yeschoy.pro",
             "glm-5.3",
             "/Applications/野菜 API.app/Contents/MacOS/野菜 API",
         )

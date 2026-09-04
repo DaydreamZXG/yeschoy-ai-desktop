@@ -62,6 +62,14 @@ function signedInSession(): AccountSessionController {
           officialOutputCnyPerMillion: "8",
           actualInputCnyPerMillion: "1",
           actualOutputCnyPerMillion: "4",
+          supportedEndpointTypes: ["anthropic", "openai"],
+          billing: {
+            groups: [{ id: "default", description: "标准分组", ratio: 0.5 }],
+            baseInputUsd: 2,
+            baseOutputUsd: 8,
+            requestUsd: null,
+            expression: "",
+          },
         },
       ],
       comparisonFx: "1",
@@ -108,8 +116,8 @@ describe("catalog selection and recovery", () => {
       screen.getByRole("heading", { name: "选好，就能用" }),
     ).toBeInTheDocument();
     expect(screen.getByText("官网参考价")).toBeInTheDocument();
-    expect(screen.getByText("野菜 API 价")).toBeInTheDocument();
-    expect(screen.getByText("输入省 50% · 输出省 50%")).toBeInTheDocument();
+    expect(screen.getByText("本分组价")).toBeInTheDocument();
+    expect(screen.getByText(/比参考价节省 50%/)).toBeInTheDocument();
     expect(
       screen.getByText("按你所在的位置选择，价格不会因此改变"),
     ).toBeInTheDocument();

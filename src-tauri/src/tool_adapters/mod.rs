@@ -3,6 +3,8 @@ pub(crate) mod claude_desktop;
 pub(crate) mod codex_desktop;
 pub(crate) mod common;
 pub(crate) mod dsh_web;
+pub(crate) mod hermes;
+pub(crate) mod openclaw;
 pub(crate) mod pi;
 
 use std::path::{Path, PathBuf};
@@ -19,7 +21,7 @@ use crate::{
 pub(crate) enum AdapterFailure {
     ToolNotFound,
     MultipleInstallations,
-    UnsupportedVersion,
+    MissingRuntime,
     UnsupportedProfile,
     ExternalOverride,
     SecureStorageUnavailable,
@@ -61,7 +63,7 @@ struct ObservedInstallation {
     location: &'static str,
 }
 
-const TARGETS: [(&str, &str, &str); 5] = [
+const TARGETS: [(&str, &str, &str); 7] = [
     ("claude_code", "Claude Code", "命令行与编辑器工作区"),
     ("claude_desktop", "Claude Desktop", "Claude 桌面应用"),
     (
@@ -71,6 +73,8 @@ const TARGETS: [(&str, &str, &str); 5] = [
     ),
     ("pi", "Pi", "Pi 编程助手"),
     ("dsh_web", "DSH web", "DeepSeek Harness 浏览器工作台"),
+    ("hermes", "Hermes", "Hermes 桌面与命令行助手"),
+    ("openclaw", "OpenClaw", "OpenClaw 智能助手"),
 ];
 
 pub(crate) fn user_home() -> Option<PathBuf> {
@@ -97,6 +101,8 @@ fn executable_for(tool_id: &str) -> Option<&'static str> {
         "claude_code" => Some("claude"),
         "pi" => Some("pi"),
         "dsh_web" => Some("dsh"),
+        "hermes" => Some("hermes"),
+        "openclaw" => Some("openclaw"),
         _ => None,
     }
 }
@@ -120,13 +126,14 @@ fn opaque_installation_id(path: &Path) -> String {
     format!("i{hash:016x}")
 }
 
-fn version_supported(tool_id: &str, version: &str) -> bool {
+fn can_attempt(tool_id: &str, installation: &ObservedInstallation) -> bool {
+    // Discovery already establishes product identity. A version is metadata,
+    // not evidence that a configuration contract has changed. The transaction
+    // parses/readbacks owned fields and the tool request proves usability.
     match tool_id {
-        "claude_code" => matches!(version, "2.1.233" | "2.1.248" | "2.1.250" | "2.1.251"),
-        "claude_desktop" => matches!(version, "1.40609.0" | "1.40609.1" | "1.4.2.0"),
-        "codex_desktop" => matches!(version, "26.825.51511" | "2026.901.1200.0"),
-        "pi" => matches!(version, "0.84.2" | "0.84.3" | "0.84.4"),
-        "dsh_web" => matches!(version, "0.1.0-rc.6" | "0.1.1-rc.2" | "0.1.2-alpha.1"),
+        "codex_desktop" => codex_desktop::bundled_runtime(&installation.path).is_some(),
+        "claude_desktop" => installation.path.exists(),
+        "claude_code" | "pi" | "dsh_web" | "hermes" | "openclaw" => installation.path.is_file(),
         _ => false,
     }
 }
@@ -178,7 +185,7 @@ async fn observe(tool_id: &str) -> Vec<ObservedInstallation> {
 fn projections(tool_id: &str, observed: &[ObservedInstallation]) -> Vec<InstallationProjection> {
     let supported_count = observed
         .iter()
-        .filter(|installation| version_supported(tool_id, &installation.version))
+        .filter(|installation| can_attempt(tool_id, installation))
         .count();
     observed
         .iter()
@@ -191,8 +198,8 @@ fn projections(tool_id: &str, observed: &[ObservedInstallation]) -> Vec<Installa
                 location_label(installation.location)
             ),
             version: installation.version.clone(),
-            supported: version_supported(tool_id, &installation.version),
-            recommended: version_supported(tool_id, &installation.version) && supported_count == 1,
+            supported: can_attempt(tool_id, installation),
+            recommended: can_attempt(tool_id, installation) && supported_count == 1,
         })
         .collect()
 }
@@ -215,12 +222,12 @@ pub(crate) async fn scan_targets() -> Vec<TargetProjection> {
         let observed = observe(tool_id).await;
         let supported_count = observed
             .iter()
-            .filter(|item| version_supported(tool_id, &item.version))
+            .filter(|item| can_attempt(tool_id, item))
             .count();
         let status = if observed.is_empty() {
             "not_found"
         } else if supported_count == 0 {
-            "unsupported_version"
+            "missing_runtime"
         } else {
             if observed.len() == 1 {
                 "available"
@@ -263,8 +270,8 @@ pub(crate) async fn resolve_installation(
             _ => return Err(AdapterFailure::MultipleInstallations),
         }
     };
-    if !version_supported(tool_id, &selected.version) {
-        return Err(AdapterFailure::UnsupportedVersion);
+    if !can_attempt(tool_id, selected) {
+        return Err(AdapterFailure::MissingRuntime);
     }
     Ok(ResolvedInstallation {
         path: selected.path.clone(),
@@ -293,10 +300,28 @@ mod tests {
     }
 
     #[test]
-    fn supported_versions_are_exact_not_ranges() {
-        assert!(version_supported("pi", "0.84.4"));
-        assert!(!version_supported("pi", "0.84.5"));
-        assert!(version_supported("dsh_web", "0.1.1-rc.2"));
-        assert!(!version_supported("dsh_web", "0.1.2"));
+    fn ordinary_future_and_unread_versions_do_not_gate_eligibility() {
+        let directory = common::temporary_working_directory("version-metadata").unwrap();
+        let path = directory.join("tool");
+        std::fs::write(&path, b"fixture").unwrap();
+        for tool_id in ["claude_code", "pi", "dsh_web"] {
+            for version in ["0.84.4", "0.84.5", "2027.999.123.0", "", "future-beta"] {
+                let observed = ObservedInstallation {
+                    path: path.clone(),
+                    version: version.into(),
+                    location: "path",
+                };
+                assert!(can_attempt(tool_id, &observed));
+                assert!(projections(tool_id, &[observed])[0].supported);
+            }
+        }
+        std::fs::remove_file(&path).unwrap();
+        let disappeared = ObservedInstallation {
+            path,
+            version: "0.84.4".into(),
+            location: "path",
+        };
+        assert!(!can_attempt("pi", &disappeared));
+        let _ = std::fs::remove_dir_all(directory);
     }
 }

@@ -7,6 +7,8 @@ export const ACTIVATION_TOOL_IDS = [
   "codex_desktop",
   "pi",
   "dsh_web",
+  "hermes",
+  "openclaw",
 ] as const;
 
 export type ActivationToolId = (typeof ACTIVATION_TOOL_IDS)[number];
@@ -15,7 +17,7 @@ export const ACTIVATION_TARGET_STATUSES = [
   "not_found",
   "available",
   "selection_required",
-  "unsupported_version",
+  "missing_runtime",
 ] as const;
 
 export type ActivationTargetStatus =
@@ -49,7 +51,8 @@ export const TOOL_ACTIVATION_STATUSES = [
   "signed_out",
   "tool_not_found",
   "multiple_installations",
-  "unsupported_version",
+  "missing_runtime",
+  "unsupported_group",
   "unsupported_profile",
   "unsupported_model",
   "external_override",
@@ -65,10 +68,11 @@ export type ToolActivationStatus = (typeof TOOL_ACTIVATION_STATUSES)[number];
 
 export interface ToolActivationProjection {
   requestId: string;
-  schemaVersion: 2;
+  schemaVersion: 3;
   status: ToolActivationStatus;
   toolId: ActivationToolId;
   modelId: string;
+  billingGroup: string;
   observedAtEpochMs: number;
   reasonCode: string;
 }
@@ -187,14 +191,16 @@ export function decodeToolActivation(
       "status",
       "toolId",
       "modelId",
+      "billingGroup",
       "observedAtEpochMs",
       "reasonCode",
     ]) ||
     value.requestId !== requestId ||
-    value.schemaVersion !== 2 ||
+    value.schemaVersion !== 3 ||
     !TOOL_ACTIVATION_STATUSES.includes(value.status as ToolActivationStatus) ||
     !ACTIVATION_TOOL_IDS.includes(value.toolId as ActivationToolId) ||
     !safeText(value.modelId, 200, false) ||
+    !safeText(value.billingGroup, 128, false) ||
     !Number.isSafeInteger(value.observedAtEpochMs) ||
     (value.observedAtEpochMs as number) < 0 ||
     !safeText(value.reasonCode, 80, false)
@@ -222,6 +228,7 @@ export async function activateDesktopTool(input: {
   toolId: ActivationToolId;
   modelId: string;
   installationId: string;
+  billingGroup: string;
 }): Promise<ToolActivationProjection> {
   activationSequence += 1;
   const requestId = `activate-${Date.now().toString(36)}-${activationSequence.toString(36)}`;
@@ -229,6 +236,12 @@ export async function activateDesktopTool(input: {
     request: { requestId, ...input },
   });
   const result = decodeToolActivation(raw, requestId);
-  if (!result) throw new Error("invalid_tool_activation_projection");
+  if (
+    !result ||
+    result.toolId !== input.toolId ||
+    result.modelId !== input.modelId ||
+    result.billingGroup !== input.billingGroup
+  )
+    throw new Error("invalid_tool_activation_projection");
   return result;
 }

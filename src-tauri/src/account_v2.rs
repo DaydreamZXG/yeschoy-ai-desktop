@@ -126,6 +126,24 @@ impl Default for UsageSummary {
 
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
+pub struct BillingGroup {
+    pub(crate) id: String,
+    description: String,
+    ratio: Option<f64>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelBilling {
+    groups: Vec<BillingGroup>,
+    base_input_usd: Option<f64>,
+    base_output_usd: Option<f64>,
+    request_usd: Option<f64>,
+    expression: String,
+}
+
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct AccountModel {
     id: String,
     description: String,
@@ -136,6 +154,7 @@ pub struct AccountModel {
     official_output_cny_per_million: String,
     actual_input_cny_per_million: String,
     actual_output_cny_per_million: String,
+    billing: Option<ModelBilling>,
 }
 
 #[derive(Debug, Serialize)]
@@ -718,7 +737,12 @@ async fn account_data(
         .any(|response| matches!(response, Ok(value) if value.status == StatusCode::UNAUTHORIZED || value.status == StatusCode::FORBIDDEN))
         || matches!(&pricing, Ok(value) if value.status == StatusCode::UNAUTHORIZED)
     {
-        return Err(AccountProjectionFailure::SessionExpired);
+        // The access token was already obtained (or refreshed) through the
+        // route that owns this account session. A second route can briefly lag
+        // behind or reject that token while deployments converge. Treat that
+        // as a route outage so the renderer keeps the signed-in projection;
+        // only refresh_access may prove the account session itself expired.
+        return Err(AccountProjectionFailure::BackendUnavailable);
     }
     let account_value = account.ok().filter(|value| value.status.is_success());
     let usage_value = usage.ok().filter(|value| value.status.is_success());
@@ -857,6 +881,53 @@ fn parse_usage(value: Option<&Value>) -> UsageSummary {
     }
 }
 
+fn nonnegative_number(value: Option<&Value>) -> Option<f64> {
+    value
+        .and_then(Value::as_f64)
+        .filter(|n| n.is_finite() && *n >= 0.0)
+}
+
+pub(crate) fn billing_groups(pricing: &Value, model_id: &str) -> Vec<BillingGroup> {
+    if pricing.get("success").and_then(Value::as_bool) != Some(true) {
+        return Vec::new();
+    }
+    let Some(usable) = pricing.get("usable_group").and_then(Value::as_object) else {
+        return Vec::new();
+    };
+    let rows = pricing.get("data").and_then(Value::as_array);
+    usable
+        .iter()
+        .filter_map(|(id, description)| {
+            if id.is_empty()
+                || id == "auto"
+                || id.chars().count() > 128
+                || id.chars().any(|c| {
+                    c.is_control() || matches!(c, '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
+                })
+            {
+                return None;
+            }
+            let enabled = rows
+                .into_iter()
+                .flatten()
+                .filter(|row| row["model_name"].as_str() == Some(model_id))
+                .any(|row| {
+                    row["enable_groups"].as_array().is_some_and(|groups| {
+                        groups
+                            .iter()
+                            .any(|g| g.as_str() == Some(id) || g.as_str() == Some("all"))
+                    })
+                });
+            enabled.then(|| BillingGroup {
+                id: id.clone(),
+                description: bounded_text(Some(description), 500),
+                ratio: nonnegative_number(pricing.get("group_ratio").and_then(|v| v.get(id))),
+            })
+        })
+        .take(128)
+        .collect()
+}
+
 fn parse_models(
     models: Option<&Value>,
     pricing: Option<&Value>,
@@ -961,8 +1032,13 @@ fn parse_models(
             } else {
                 (String::new(), String::new(), String::new(), String::new())
             };
+            let base_input = nonnegative_number(row.get("model_ratio")).map(|n| n * 2.0);
+            let base_output = base_input
+                .zip(nonnegative_number(row.get("completion_ratio")))
+                .map(|(input, completion)| input * completion)
+                .filter(|n| n.is_finite());
             AccountModel {
-                id,
+                id: id.clone(),
                 description,
                 billing_mode,
                 supported_endpoint_types,
@@ -971,6 +1047,13 @@ fn parse_models(
                 official_output_cny_per_million: official_output,
                 actual_input_cny_per_million: actual_input,
                 actual_output_cny_per_million: actual_output,
+                billing: Some(ModelBilling {
+                    groups: billing_groups(pricing.unwrap(), &id),
+                    base_input_usd: base_input.filter(|n| n.is_finite()),
+                    base_output_usd: base_output,
+                    request_usd: nonnegative_number(row.get("model_price")),
+                    expression: bounded_text(row.get("billing_expr"), 8192),
+                }),
             }
         })
         .collect()
@@ -987,6 +1070,7 @@ fn unpriced_model(id: String) -> AccountModel {
         official_output_cny_per_million: String::new(),
         actual_input_cny_per_million: String::new(),
         actual_output_cny_per_million: String::new(),
+        billing: None,
     }
 }
 
@@ -1426,6 +1510,47 @@ mod tests {
         assert_eq!(rows[0].actual_input_cny_per_million, "7");
         assert!(!rows[1].pricing_available);
         assert!(rows[1].official_input_cny_per_million.is_empty());
+    }
+
+    #[test]
+    fn billing_group_intersection_keeps_zero_and_unknown_prices_without_guessing() {
+        let pricing = json!({"success": true,
+            "usable_group": {"default": "", "special": "账户专属", "free": "", "unpriced": "", "other": "", "auto": ""},
+            "group_ratio": {"default": 1, "special": 0.35, "free": 0, "private": 0.1},
+            "data": [{"model_name": "m", "enable_groups": ["default", "special", "free", "unpriced", "private", "auto"]}]
+        });
+        let groups = billing_groups(&pricing, "m");
+        assert_eq!(
+            groups.iter().map(|g| g.id.as_str()).collect::<Vec<_>>(),
+            ["default", "free", "special", "unpriced"]
+        );
+        assert_eq!(
+            groups.iter().find(|g| g.id == "free").unwrap().ratio,
+            Some(0.0)
+        );
+        assert_eq!(
+            groups.iter().find(|g| g.id == "special").unwrap().ratio,
+            Some(0.35)
+        );
+        assert_eq!(
+            groups.iter().find(|g| g.id == "unpriced").unwrap().ratio,
+            None
+        );
+        assert!(billing_groups(&pricing, "missing-model").is_empty());
+        assert!(billing_groups(&json!({"success": false}), "m").is_empty());
+    }
+
+    #[test]
+    fn dynamic_billing_metadata_is_projected_without_claiming_flat_prices() {
+        let pricing = json!({"success": true, "usable_group": {"discount": ""}, "group_ratio": {"discount": 0.35},
+            "data": [{"model_name":"m", "enable_groups":["discount"], "billing_mode":"tiered_expr",
+                "model_ratio":0.11,"completion_ratio":3,"billing_expr":"tier(\"base\", p * 3 + c * 9)"}]});
+        let models = json!({"success":true,"data":["m"]});
+        let projected = parse_models(Some(&models), Some(&pricing), None, Some(7.0));
+        assert!(!projected[0].pricing_available);
+        let billing = projected[0].billing.as_ref().unwrap();
+        assert_eq!(billing.groups[0].ratio, Some(0.35));
+        assert_eq!(billing.expression, "tier(\"base\", p * 3 + c * 9)");
     }
 
     #[test]

@@ -62,6 +62,8 @@ function activationTargetScan(requestId: string) {
     ["codex_desktop", "Codex Desktop", "26.825.51511"],
     ["pi", "Pi", "0.84.4"],
     ["dsh_web", "DSH web", "0.1.0-rc.6"],
+    ["hermes", "Hermes", "0.21.0"],
+    ["openclaw", "OpenClaw", "2026.9.1"],
   ] as const;
   return {
     requestId,
@@ -143,6 +145,17 @@ function signedIn(requestId: string) {
         officialOutputCnyPerMillion: "8",
         actualInputCnyPerMillion: "1",
         actualOutputCnyPerMillion: "4",
+        supportedEndpointTypes: ["anthropic", "openai-response", "openai"],
+        billing: {
+          groups: [
+            { id: "default", description: "", ratio: 0.5 },
+            { id: "国模特价分组", description: "按所选分组计费", ratio: 0.35 },
+          ],
+          baseInputUsd: 2,
+          baseOutputUsd: 8,
+          requestUsd: null,
+          expression: "",
+        },
       },
     ],
     comparisonFx: "1",
@@ -538,21 +551,95 @@ describe("official workbench", () => {
     expect(screen.getAllByText("野菜测试用户")).toHaveLength(1);
     expect(screen.getAllByText("glm-5.3").length).toBeGreaterThan(1);
   });
-  it("configures the selected desktop app with the signed-in account model", async () => {
+  it.each(["default", "国模特价分组"])(
+    "configures the selected desktop app using the displayed billing group: %s",
+    async (billingGroup) => {
+      native.mockImplementation(async (command, args) => {
+        const request = (args as Args).request;
+        if (command === "scan_desktop_apps_read_only")
+          return discovery(request.requestId);
+        if (command === "account_inspect_v2")
+          return signedIn(request.requestId);
+        if (command === "scan_activation_targets_v1")
+          return activationTargetScan(request.requestId);
+        if (command === "configure_desktop_tool_v2")
+          return {
+            requestId: request.requestId,
+            schemaVersion: 3,
+            status: "ready",
+            toolId: "codex_desktop",
+            modelId: "glm-5.3",
+            billingGroup,
+            observedAtEpochMs: 1_788_195_600_000,
+            reasonCode: "tool_request_verified",
+          };
+        throw Error("Not available in test");
+      });
+      render(<App />);
+      await screen.findByText("1.2.3");
+      const codex = screen
+        .getByRole("heading", { name: "Codex" })
+        .closest("article")!;
+      fireEvent.click(within(codex).getByRole("button", { name: "查看接入" }));
+      await screen.findByRole("button", { name: "一键接入" });
+      if (billingGroup === "国模特价分组") {
+        fireEvent.click(screen.getByRole("radio", { name: /国模特价分组/ }));
+        expect(screen.getByText("¥0.70")).toBeInTheDocument();
+        expect(
+          screen.getByRole("radio", { name: /国模特价分组/ }),
+        ).toBeChecked();
+      }
+      fireEvent.click(screen.getByTestId("configuration-apply-action"));
+      expect(await screen.findByText("接入完成")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "Codex Desktop 已使用所选模型完成真实回复，现在可以直接使用。",
+        ),
+      ).toBeInTheDocument();
+      expect(native).toHaveBeenCalledWith("configure_desktop_tool_v2", {
+        request: {
+          requestId: expect.stringMatching(/^activate-/),
+          lineId: "mainland_optimized",
+          toolId: "codex_desktop",
+          modelId: "glm-5.3",
+          installationId: "i0000000000000003",
+          billingGroup,
+        },
+      });
+    },
+  );
+  it("allows setup when the group is valid but its dynamic price cannot be converted", async () => {
     native.mockImplementation(async (command, args) => {
       const request = (args as Args).request;
       if (command === "scan_desktop_apps_read_only")
         return discovery(request.requestId);
-      if (command === "account_inspect_v2") return signedIn(request.requestId);
       if (command === "scan_activation_targets_v1")
         return activationTargetScan(request.requestId);
+      if (command === "account_inspect_v2") {
+        const account = signedIn(request.requestId);
+        account.models[0] = {
+          ...account.models[0],
+          billingMode: "tiered_expr",
+          pricingAvailable: false,
+          officialInputCnyPerMillion: "",
+          officialOutputCnyPerMillion: "",
+          actualInputCnyPerMillion: "",
+          actualOutputCnyPerMillion: "",
+          billing: {
+            ...account.models[0].billing,
+            expression: 'param("service_tier") == "fast" ? p * 3 : p',
+          },
+        };
+        return account;
+      }
       if (command === "configure_desktop_tool_v2")
         return {
           requestId: request.requestId,
-          schemaVersion: 2,
+          schemaVersion: 3,
           status: "ready",
-          toolId: "codex_desktop",
+          toolId: "claude_desktop",
           modelId: "glm-5.3",
+          billingGroup: "default",
           observedAtEpochMs: 1_788_195_600_000,
           reasonCode: "tool_request_verified",
         };
@@ -560,28 +647,15 @@ describe("official workbench", () => {
     });
     render(<App />);
     await screen.findByText("1.2.3");
-    const codex = screen
-      .getByRole("heading", { name: "Codex" })
-      .closest("article")!;
-    fireEvent.click(within(codex).getByRole("button", { name: "查看接入" }));
-    await screen.findByRole("button", { name: "一键接入" });
+    fireEvent.click(screen.getByRole("button", { name: "应用接入" }));
+    expect(
+      await screen.findByText(/当前规则暂不能换算为固定单价，可以继续接入/),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("configuration-apply-action")).toBeEnabled();
     fireEvent.click(screen.getByTestId("configuration-apply-action"));
     expect(await screen.findByText("接入完成")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Codex Desktop 已使用所选模型完成真实回复，现在可以直接使用。",
-      ),
-    ).toBeInTheDocument();
-    expect(native).toHaveBeenCalledWith("configure_desktop_tool_v2", {
-      request: {
-        requestId: expect.stringMatching(/^activate-/),
-        lineId: "mainland_optimized",
-        toolId: "codex_desktop",
-        modelId: "glm-5.3",
-        installationId: "i0000000000000003",
-      },
-    });
   });
+
   it("syncs appearance controls, follows system changes and persists only an enum", async () => {
     const save = vi.spyOn(Storage.prototype, "setItem");
     render(<App />);

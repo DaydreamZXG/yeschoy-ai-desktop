@@ -1599,6 +1599,16 @@ details dl div {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
 }
+.configuration-app-icon[data-app="hermes"] {
+  background: #f4ecff;
+  color: #7450a8;
+  font-family: ui-rounded, "SF Pro Rounded", var(--font-ui);
+}
+.configuration-app-icon[data-app="openclaw"] {
+  background: #fff0e9;
+  color: #c64c2f;
+  font-family: ui-rounded, "SF Pro Rounded", var(--font-ui);
+}
 .installation-choice {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(180px, auto);
@@ -1644,6 +1654,170 @@ details dl div {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
+.billing-group-picker {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.billing-group-picker legend {
+  font-weight: 650;
+}
+.billing-choice-card .billing-group-picker legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.billing-group-picker > p {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 4px 0 14px;
+}
+.billing-group-grid {
+  display: grid;
+  gap: 8px;
+}
+.billing-group-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  cursor: pointer;
+  background: var(--surface);
+  min-width: 0;
+}
+.billing-group-option.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.billing-group-option:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.billing-group-option input {
+  accent-color: var(--accent);
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  padding: 0;
+  margin: 0;
+}
+.billing-group-info {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.billing-group-info strong {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.billing-group-info small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.billing-group-ratio {
+  font: 650 16px var(--font-mono);
+  color: var(--accent);
+  white-space: nowrap;
+}
+.billing-group-option > svg {
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+}
+.billing-prices {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.billing-prices > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.billing-prices > header strong {
+  font-size: 13px;
+}
+.billing-prices > header span {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.billing-tier {
+  margin-top: 14px;
+}
+.billing-tier h4 {
+  font-size: 12px;
+  margin: 0 0 7px;
+  font-weight: 650;
+}
+.billing-tier table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.billing-tier th,
+.billing-tier td {
+  padding: 8px 3px;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+}
+.billing-tier th:first-child {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 500;
+}
+.billing-tier thead th {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 11px;
+}
+.billing-tier td {
+  font-variant-numeric: tabular-nums;
+}
+.billing-tier td:last-child {
+  color: var(--accent);
+  font-weight: 700;
+}
+.billing-price-note {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 10px 0 0;
+}
+.billing-saving {
+  color: var(--success);
+  font-size: 12px;
+  font-weight: 650;
+}
+.billing-rule {
+  margin-top: 12px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.billing-rule summary {
+  cursor: pointer;
+}
+.billing-rule code {
+  display: block;
+  margin-top: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+}
+.network-choice {
+  margin-top: 18px;
+}
+.network-choice .line-selector-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .connection-builder {
   position: relative;
   overflow: hidden;
@@ -1695,9 +1869,15 @@ details dl div {
 }
 .connection-choice-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   margin-top: 22px;
+}
+.billing-choice-card .billing-group-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+.billing-choice-card .billing-prices {
+  max-width: none;
 }
 .connection-choice-card {
   min-width: 0;
@@ -1847,7 +2027,7 @@ details dl div {
   gap: 12px;
 }
 .connection-choice-card .line-selector-grid {
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .line-selector-grid button {
   display: grid;
@@ -1899,7 +2079,7 @@ details dl div {
 }
 .connection-summary-row {
   display: grid;
-  grid-template-columns: minmax(190px, 0.8fr) minmax(330px, 1.5fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 22px;
 }
@@ -1914,10 +2094,11 @@ details dl div {
 }
 .connection-selection-flow {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) auto minmax(0, 1.2fr) auto minmax(
-      0,
-      0.8fr
-    );
+  grid-template-columns:
+    minmax(0, 1fr) auto minmax(0, 1.2fr) auto minmax(0, 1.2fr)
+    auto minmax(0, 1fr);
+  grid-column: 1 / -1;
+  grid-row: 2;
   align-items: center;
   gap: 9px;
   min-width: 0;
