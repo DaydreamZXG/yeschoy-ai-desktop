@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU030-AS-03",
+  "assertion": "The 0.4.2 client typechecks and builds from coherent version inputs while telemetry and automatic updating remain disabled pending separate evidence.",
+  "testSelector": "tests/work_packages/ru030/test_acceptance.py::test_candidate_version_and_renderer_build",
+  "acceptanceCommandId": "ru030-candidate",
+  "runId": "RU-030/WP-RU030-GLOBAL-ORIGIN-RESTORE@2026-09-04T09:20:02.826138+00:00",
+  "packageId": "WP-RU030-GLOBAL-ORIGIN-RESTORE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru030/test_acceptance.py::test_candidate_version_and_renderer_build",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:0fe4ef40e6b95554109499a5e9b70fcd21fecd1f9c285e6ab5a0df06aa270d13",
+    "machineReportSha256": "sha256:168bba69f82c9ee668e31af8b2cd034eaee7874c8b6e079c9e5ced0ce803903d",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:6066e62cdf81c86472073b8dd59c70ff23cc40ffbbc41c46a7e015172079a3eb",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:c162d3fe86d33970d6f58bb1fcecfd57ff3e0ae03bf8f89fb17eb76eea72fefc",
+  "releaseUnitId": "RU-030",
+  "releaseUnitHash": "sha256:10f9f693695cbd84b4298ea8e1f1c6af8f491d1e98fa5cd42a9acef63117b113"
+}

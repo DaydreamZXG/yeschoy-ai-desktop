@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU030-AS-02",
+  "assertion": "Account line switching preserves the signed-in projection, refresh remains bound to the issuing line, seven adapters use the selected origin, and failure, replay, stale result, race and rollback tests pass without cross-origin mutation fallback.",
+  "testSelector": "tests/work_packages/ru030/test_acceptance.py::test_session_and_activation_regressions",
+  "acceptanceCommandId": "ru030-session-activation",
+  "runId": "RU-030/WP-RU030-GLOBAL-ORIGIN-RESTORE@2026-09-04T09:20:02.826138+00:00",
+  "packageId": "WP-RU030-GLOBAL-ORIGIN-RESTORE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru030/test_acceptance.py::test_session_and_activation_regressions",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:af2357b8803442009e7934960a2361846cd4d40a2a1a9460a870e6bfa1427ad5",
+    "machineReportSha256": "sha256:d4e7b1381843ed69b4f69beb33b8549748854f09fc7197ac2be56eb637705a1e",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:15a65e55939b9539bbcbbb9c98655979f24a73efebc292f6938e865b54c2bdcb",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:38fc1cfec2f039d4347bbbecd3518ad31203b403bda9571dfda290d85ff0c633",
+  "releaseUnitId": "RU-030",
+  "releaseUnitHash": "sha256:10f9f693695cbd84b4298ea8e1f1c6af8f491d1e98fa5cd42a9acef63117b113"
+}

@@ -2,6 +2,116 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "WP-RU030-GLOBAL-ORIGIN-RESTORE",
+      "wave": "integration",
+      "owner": "desktop-platform",
+      "riskClass": "critical",
+      "objective": "Restore api.yeschoy.com as the single global-acceleration origin and produce a verified 0.4.2 client candidate without server changes.",
+      "deliverables": [
+        "One closed two-line catalog using yeschoy.com and api.yeschoy.com across native and renderer authorities",
+        "Stable account session and seven-adapter activation behavior without automatic cross-origin fallback",
+        "Coherent 0.4.2 version and refreshed macOS universal and Windows x64 candidate evidence"
+      ],
+      "requirementRefs": [
+        "REQ-056"
+      ],
+      "decisionRefs": [
+        "DEC-074"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No third selectable line and no automatic retry of a token or other mutation across origins.",
+        "No NewAPI, Nginx, DNS, database, server source or production infrastructure mutation.",
+        "No automatic updater activation, telemetry, third-party application installation or Windows publisher-signature claim."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "package.json",
+        "src/**",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/src/**",
+        "tests/work_packages/ru030/**",
+        "outputs/野菜API-0.4.2-线路恢复验收.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        "release-assets/**",
+        "src-tauri/target/**",
+        "dist/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No database or retained-history migration. Stable line IDs preserve user selection semantics; a future activation replaces only the selected adapter's receipt-owned origin field.",
+        "rollback": "Revert the closed catalog mapping and rebuild the candidate. Adapter transactions retain their existing volatile snapshots and field-owned rollback behavior."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Keep both stable line IDs and restore only the global_accelerated origin from the temporary yeschoy.pro endpoint to the live-verified api.yeschoy.com endpoint.",
+        "supportedVersions": "0.4.2 client candidate on macOS 12 or later for Apple Silicon and Intel, and Windows 10/11 x64, subject to refreshed package evidence.",
+        "removalGate": "A third line, automatic cross-origin fallback, updater activation, server changes or production-ready claim requires separate evidence and authority."
+      },
+      "inputContracts": [],
+      "outputContracts": [
+        "line-connectivity-check@v1"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru030-lines",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru030/test_acceptance.py::test_two_line_origin_authority",
+          "cwd": ".",
+          "timeoutSeconds": 900
+        },
+        {
+          "id": "ru030-session-activation",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru030/test_acceptance.py::test_session_and_activation_regressions",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        },
+        {
+          "id": "ru030-candidate",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru030/test_acceptance.py::test_candidate_version_and_renderer_build",
+          "cwd": ".",
+          "timeoutSeconds": 1200
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU030-AS-01",
+          "assertion": "Exactly two stable line IDs map to yeschoy.com and api.yeschoy.com across native connectivity, renderer diagnostics, configuration preview and secure credential validation; yeschoy.pro is not active.",
+          "testSelector": "tests/work_packages/ru030/test_acceptance.py::test_two_line_origin_authority",
+          "acceptanceCommandId": "ru030-lines"
+        },
+        {
+          "id": "RU030-AS-02",
+          "assertion": "Account line switching preserves the signed-in projection, refresh remains bound to the issuing line, seven adapters use the selected origin, and failure, replay, stale result, race and rollback tests pass without cross-origin mutation fallback.",
+          "testSelector": "tests/work_packages/ru030/test_acceptance.py::test_session_and_activation_regressions",
+          "acceptanceCommandId": "ru030-session-activation"
+        },
+        {
+          "id": "RU030-AS-03",
+          "assertion": "The 0.4.2 client typechecks and builds from coherent version inputs while telemetry and automatic updating remain disabled pending separate evidence.",
+          "testSelector": "tests/work_packages/ru030/test_acceptance.py::test_candidate_version_and_renderer_build",
+          "acceptanceCommandId": "ru030-candidate"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "The live v2 bootstrap stops matching the closed desktop integration contract or the origin fails TLS.",
+        "Restoration would require accepting a caller-provided URL, silent fallback, renderer-visible key or a server mutation.",
+        "Session preservation, credential validation, adapter rollback, renderer type checking or package build fails."
+      ],
+      "status": "planned"
+    },
+    {
       "id": "WP-RU028-CAPABILITY-COMPATIBILITY",
       "wave": "integration",
       "owner": "desktop-platform",

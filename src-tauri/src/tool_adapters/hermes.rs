@@ -227,7 +227,7 @@ providers:
 "#;
         let bytes = render(
             Some(before),
-            "https://yeschoy.pro",
+            "https://api.yeschoy.com",
             "glm-5.3",
             "'/Applications/野菜 API.app/client' credential-helper hermes",
         )

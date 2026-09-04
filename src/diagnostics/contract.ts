@@ -15,8 +15,8 @@ export type ConnectivityReasonCode =
 export interface ConnectivityLineResult {
   lineId: ConnectivityLineId;
   displayName: "大陆优化" | "全球加速";
-  rootUrl: "https://yeschoy.com" | "https://yeschoy.pro";
-  host: "yeschoy.com" | "yeschoy.pro";
+  rootUrl: "https://yeschoy.com" | "https://api.yeschoy.com";
+  host: "yeschoy.com" | "api.yeschoy.com";
   port: 443;
   status: ConnectivityStatus;
   latencyMs: number;
@@ -41,8 +41,8 @@ export const CONNECTIVITY_LINES = [
   {
     lineId: "global_accelerated",
     displayName: "全球加速",
-    rootUrl: "https://yeschoy.pro",
-    host: "yeschoy.pro",
+    rootUrl: "https://api.yeschoy.com",
+    host: "api.yeschoy.com",
     port: 443,
   },
 ] as const;

@@ -274,7 +274,7 @@ mod tests {
             b"model_reasoning_effort = \"high\"\n[notice]\nhide_full_access_warning = true\n";
         let bytes = render(
             Some(source),
-            "https://yeschoy.pro",
+            "https://api.yeschoy.com",
             "glm-5.3",
             "/Applications/野菜 API.app/Contents/MacOS/野菜 API",
         )

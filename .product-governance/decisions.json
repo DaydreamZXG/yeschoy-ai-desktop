@@ -2,6 +2,37 @@
   "schemaVersion": 1,
   "decisions": [
     {
+      "id": "DEC-074",
+      "question": "How should the desktop client reactivate api.yeschoy.com after live recovery evidence?",
+      "choice": "Restore global_accelerated to https://api.yeschoy.com in a 0.4.2 client successor while keeping mainland_optimized at https://yeschoy.com. Preserve exactly two beginner-facing line choices and the stable line IDs. Remove yeschoy.pro from active selection and credential allowlists rather than adding a third choice or an automatic cross-origin fallback. Keep the existing line-stable account refresh, explicit user selection, secret, rollback and target-verification boundaries. Rebuild and verify macOS universal and unsigned Windows x64 candidates. Do not modify NewAPI, Nginx, DNS, database or production server code.",
+      "status": "accepted",
+      "decidedBy": "product owner plus live first-party endpoint evidence",
+      "decidedAt": "2026-09-04T17:08:00+08:00",
+      "evidenceRefs": [
+        "E-USER-060",
+        "E-EXT-044",
+        "E-CODE-048"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-056"
+        ],
+        "pageRefs": [
+          "PAGE-HOME",
+          "PAGE-ACCOUNT",
+          "PAGE-CONFIGURE-PREVIEW",
+          "PAGE-DIAGNOSTICS",
+          "PAGE-MODELS"
+        ],
+        "domainRefs": [
+          "account",
+          "desktop-platform",
+          "diagnostics",
+          "tool-config"
+        ]
+      }
+    },
+    {
       "id": "DEC-073",
       "question": "What bounded client authority may turn the current compatibility correction into a release candidate while api.yeschoy.com is temporarily unavailable?",
       "choice": "Broaden the still-unfrozen RU-028 before implementation. The two selectable release-candidate lines are yeschoy.com for mainland optimization and yeschoy.pro for global acceleration. api.yeschoy.com remains a recognized first-party future origin but is not selectable, probed as healthy or used for automatic mutation fallback until a later client authority validates it. Preserve one account session across line changes, use only current NewAPI responses for available models, billing groups, exchange rate and actual price, and complete capability-based setup for Claude Code, Claude Desktop, Codex Desktop, Pi, DSH web, Hermes and OpenClaw. Secrets remain native and operating-system protected, configuration changes are field-owned with volatile rollback, and ready still requires a harmless target-level response. Produce a macOS universal candidate and an unsigned Windows x64 candidate with an explicit warning. Prepare updater integration, but do not activate or claim it until a Tauri update public key, signed artifacts and a published manifest are verified. Do not modify NewAPI, Nginx, DNS, database, server code or production infrastructure, and do not claim public production readiness from this unit alone.",

@@ -2,6 +2,27 @@
   "schemaVersion": 1,
   "requirements": [
     {
+      "id": "REQ-056",
+      "statement": "Restore the verified Cloudflare origin as the single global_accelerated route in the 0.4.2 client without adding a third beginner choice or weakening session, credential, configuration and verification boundaries.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-060",
+        "E-EXT-044",
+        "E-CODE-048"
+      ],
+      "acceptance": [
+        "The two selectable line IDs remain mainland_optimized and global_accelerated, mapped exactly to https://yeschoy.com and https://api.yeschoy.com in native connectivity, account origin resolution, credential validation, renderer diagnostics and configuration previews.",
+        "yeschoy.pro is not selectable, accepted as a newly written credential origin, probed by diagnostics or used as an automatic fallback; existing unrelated third-party configuration is preserved.",
+        "Changing line selection preserves the existing first-party account session and refreshes through the line that issued it. A selected route failure remains retryable and never silently mutates through another origin.",
+        "All seven tool adapters receive the selected compiled origin, retain field-owned transaction and rollback behavior, and require their target-level verification before ready.",
+        "The package version is 0.4.2 across JavaScript, Cargo, Tauri and candidate readiness, with a newly signed and notarized macOS universal package and a newly built explicitly unsigned Windows x64 candidate.",
+        "No NewAPI, server, Nginx, DNS, database, telemetry or automatic-updater mutation is part of this client change."
+      ]
+    },
+    {
       "id": "REQ-055",
       "statement": "Deliver one testable client-only release candidate with two currently usable first-party lines, truthful NewAPI-owned account and price data, and secure verified one-click setup for seven explicitly named tools while keeping the unavailable API origin and unproven updater inactive.",
       "scope": "target",

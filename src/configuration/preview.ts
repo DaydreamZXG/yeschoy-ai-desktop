@@ -22,7 +22,7 @@ export interface ConfigurationToolDefinition {
 export interface ConfigurationLineDefinition {
   id: ConfigurationLineId;
   displayName: string;
-  rootUrl: "https://yeschoy.com" | "https://yeschoy.pro";
+  rootUrl: "https://yeschoy.com" | "https://api.yeschoy.com";
 }
 
 export interface ConfigurationPreviewRequest {
@@ -173,7 +173,7 @@ export const CONFIGURATION_LINES: readonly ConfigurationLineDefinition[] =
     Object.freeze({
       id: "global_accelerated" as const,
       displayName: "全球加速",
-      rootUrl: "https://yeschoy.pro" as const,
+      rootUrl: "https://api.yeschoy.com" as const,
     }),
   ]);
 

@@ -20,8 +20,8 @@ pub const CONNECTIVITY_LINES: [LineSpec; 2] = [
     LineSpec {
         line_id: "global_accelerated",
         display_name: "全球加速",
-        root_url: "https://yeschoy.pro",
-        host: "yeschoy.pro",
+        root_url: "https://api.yeschoy.com",
+        host: "api.yeschoy.com",
         port: 443,
     },
 ];
@@ -73,10 +73,10 @@ mod tests {
     fn catalog_is_exact_and_fixed_to_tls_port() {
         assert_eq!(CONNECTIVITY_LINES.len(), 2);
         assert_eq!(CONNECTIVITY_LINES[0].host, "yeschoy.com");
-        assert_eq!(CONNECTIVITY_LINES[1].host, "yeschoy.pro");
+        assert_eq!(CONNECTIVITY_LINES[1].host, "api.yeschoy.com");
         assert!(CONNECTIVITY_LINES
             .iter()
-            .all(|line| line.host != "api.yeschoy.com"));
+            .all(|line| line.host != "yeschoy.pro"));
         assert!(CONNECTIVITY_LINES.iter().all(|line| line.port == 443));
     }
 

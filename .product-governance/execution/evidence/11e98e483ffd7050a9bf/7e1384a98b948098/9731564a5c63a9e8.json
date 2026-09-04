@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU030-AS-03",
+  "assertion": "The 0.4.2 client typechecks and builds from coherent version inputs while telemetry and automatic updating remain disabled pending separate evidence.",
+  "testSelector": "tests/work_packages/ru030/test_acceptance.py::test_candidate_version_and_renderer_build",
+  "acceptanceCommandId": "ru030-candidate",
+  "runId": "RU-030/WP-RU030-GLOBAL-ORIGIN-RESTORE@2026-09-04T09:10:21.897193+00:00",
+  "packageId": "WP-RU030-GLOBAL-ORIGIN-RESTORE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:a6121cc6456a56241be2813899b59fe2557b5c556485b5cfc0536b08b30ec293",
+  "releaseUnitId": "RU-030",
+  "releaseUnitHash": "sha256:10f9f693695cbd84b4298ea8e1f1c6af8f491d1e98fa5cd42a9acef63117b113"
+}

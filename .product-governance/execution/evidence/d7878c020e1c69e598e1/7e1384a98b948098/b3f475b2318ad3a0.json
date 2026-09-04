@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU030-AS-01",
+  "assertion": "Exactly two stable line IDs map to yeschoy.com and api.yeschoy.com across native connectivity, renderer diagnostics, configuration preview and secure credential validation; yeschoy.pro is not active.",
+  "testSelector": "tests/work_packages/ru030/test_acceptance.py::test_two_line_origin_authority",
+  "acceptanceCommandId": "ru030-lines",
+  "runId": "RU-030/WP-RU030-GLOBAL-ORIGIN-RESTORE@2026-09-04T09:19:26.201654+00:00",
+  "packageId": "WP-RU030-GLOBAL-ORIGIN-RESTORE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-030",
+  "releaseUnitHash": "sha256:10f9f693695cbd84b4298ea8e1f1c6af8f491d1e98fa5cd42a9acef63117b113"
+}

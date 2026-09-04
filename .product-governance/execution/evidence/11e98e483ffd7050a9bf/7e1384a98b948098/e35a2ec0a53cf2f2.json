@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU030-AS-02",
+  "assertion": "Account line switching preserves the signed-in projection, refresh remains bound to the issuing line, seven adapters use the selected origin, and failure, replay, stale result, race and rollback tests pass without cross-origin mutation fallback.",
+  "testSelector": "tests/work_packages/ru030/test_acceptance.py::test_session_and_activation_regressions",
+  "acceptanceCommandId": "ru030-session-activation",
+  "runId": "RU-030/WP-RU030-GLOBAL-ORIGIN-RESTORE@2026-09-04T09:10:21.897193+00:00",
+  "packageId": "WP-RU030-GLOBAL-ORIGIN-RESTORE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:fcb2c2fee8e3545e18a85cbdd2383f9b83a632a42600ac7980356d4fe9540092",
+  "releaseUnitId": "RU-030",
+  "releaseUnitHash": "sha256:10f9f693695cbd84b4298ea8e1f1c6af8f491d1e98fa5cd42a9acef63117b113"
+}

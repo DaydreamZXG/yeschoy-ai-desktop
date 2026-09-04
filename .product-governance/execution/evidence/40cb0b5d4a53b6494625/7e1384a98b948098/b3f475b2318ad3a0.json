@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU030-AS-01",
+  "assertion": "Exactly two stable line IDs map to yeschoy.com and api.yeschoy.com across native connectivity, renderer diagnostics, configuration preview and secure credential validation; yeschoy.pro is not active.",
+  "testSelector": "tests/work_packages/ru030/test_acceptance.py::test_two_line_origin_authority",
+  "acceptanceCommandId": "ru030-lines",
+  "runId": "RU-030/WP-RU030-GLOBAL-ORIGIN-RESTORE@2026-09-04T09:20:02.826138+00:00",
+  "packageId": "WP-RU030-GLOBAL-ORIGIN-RESTORE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru030/test_acceptance.py::test_two_line_origin_authority",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:094f09c43693b6f5c99c5b4506e18e5ec66dd8c3659d815aa9703dc6ecac1cd0",
+    "machineReportSha256": "sha256:def07b5c7ac823e0b83c7c206426c0eaa7848b5af3e891074d201a534d4510df",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:5243855d3ff3910723acadc776ce92ac803fe7e024156395500be51eaff1b719",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:78e8285b22ddf42984e72e8026924abba4c10fd46bc15258200f764fdefd3f45",
+  "releaseUnitId": "RU-030",
+  "releaseUnitHash": "sha256:10f9f693695cbd84b4298ea8e1f1c6af8f491d1e98fa5cd42a9acef63117b113"
+}

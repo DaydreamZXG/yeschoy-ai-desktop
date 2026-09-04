@@ -18,7 +18,7 @@ describe("guided configuration preview", () => {
     ]);
     expect(CONFIGURATION_LINES).toMatchObject([
       { id: "mainland_optimized", rootUrl: "https://yeschoy.com" },
-      { id: "global_accelerated", rootUrl: "https://yeschoy.pro" },
+      { id: "global_accelerated", rootUrl: "https://api.yeschoy.com" },
     ]);
   });
 
@@ -52,8 +52,8 @@ describe("guided configuration preview", () => {
       lineId: "global_accelerated",
     });
 
-    expect(projection.rootUrl).toBe("https://yeschoy.pro");
-    expect(projection.protocolEndpoint).toBe("https://yeschoy.pro/v1");
+    expect(projection.rootUrl).toBe("https://api.yeschoy.com");
+    expect(projection.protocolEndpoint).toBe("https://api.yeschoy.com/v1");
     expect(projection.targetFile).toBe("~/.dsh/settings.yaml");
     expect(projection.ownedFields).toContain("llm-pi-ai.providers.yeschoy");
     expect(projection.endpointStatus).toBe("documented_preview");

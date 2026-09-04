@@ -52,7 +52,7 @@ fn record_is_valid(record: &ToolCredential) -> bool {
             .any(|value| value.is_control() || value.is_whitespace())
         && matches!(
             record.origin.as_str(),
-            "https://yeschoy.com" | "https://yeschoy.pro"
+            "https://yeschoy.com" | "https://api.yeschoy.com"
         )
         && !model.is_empty()
         && model.chars().count() <= 200

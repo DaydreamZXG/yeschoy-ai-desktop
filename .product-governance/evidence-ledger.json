@@ -2,6 +2,39 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "E-USER-060",
+      "claim": "The owner confirms api.yeschoy.com has been restored and asks the client release candidate to use it again.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-04:api-origin-restored",
+      "scope": "target",
+      "observedAt": "2026-09-04T17:03:00+08:00",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-044",
+      "claim": "api.yeschoy.com currently resolves through Cloudflare, validates TLS, returns the same canonical desktop-integration-v2 bootstrap as yeschoy.com and yeschoy.pro, exposes all six declared desktop capabilities, returns public pricing for 65 models, requires authorization for /v1/models, and accepts the bounded device-authorization start request.",
+      "class": "external_verified",
+      "locator": "https://api.yeschoy.com/api/status;https://api.yeschoy.com/api/desktop/v2/bootstrap;https://api.yeschoy.com/api/pricing;https://api.yeschoy.com/v1/models;command:2026-09-04:api-origin-dns-tls-bootstrap-pricing-and-auth-start-check",
+      "scope": "current",
+      "observedAt": "2026-09-04T17:06:00+08:00",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-048",
+      "claim": "The 0.4.1 client still compiles global_accelerated as yeschoy.pro in native connectivity, renderer diagnostics, configuration preview and credential validation, while all account and activation network origins are derived from that closed catalog.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/connectivity_core.rs;src-tauri/src/account_v2.rs;src-tauri/src/tool_credentials.rs;src/diagnostics/contract.ts;src/configuration/preview.ts",
+      "scope": "current",
+      "observedAt": "2026-09-04T17:07:00+08:00",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
       "id": "E-USER-059",
       "claim": "The owner is preparing the desktop client for release. yeschoy.com and yeschoy.pro are the two usable client origins now; api.yeschoy.com remains a first-party origin that will be repaired later but cannot currently be validated. All other client work should proceed, including truthful account and price behavior, general-version one-click setup, Hermes and OpenClaw, packaging and an update delivery plan. NewAPI, Nginx, database and server code remain outside the client work.",
       "class": "user_confirmed",
