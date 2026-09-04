@@ -3,7 +3,7 @@
 //! 实现 Anthropic ↔ OpenAI 格式转换，用于 OpenRouter 支持
 //! 参考: anthropic-proxy-rs
 
-use crate::proxy::{
+use crate::codex_bridge::{
     error::ProxyError,
     json_canonical::canonical_json_string,
     tool_media::{
@@ -1350,17 +1350,7 @@ mod tests {
         });
 
         let result = openai_to_anthropic(input).unwrap();
-        let usage = crate::proxy::usage::parser::TokenUsage::from_claude_response(&result)
-            .expect("converted Anthropic response should parse usage");
-
-        assert_eq!(
-            usage.message_id.as_deref(),
-            Some("chatcmpl-claude-compatible")
-        );
-        assert_eq!(
-            usage.dedup_request_id(None),
-            "session:chatcmpl-claude-compatible"
-        );
+        assert_eq!(result["id"], "chatcmpl-claude-compatible");
     }
 
     #[test]

@@ -9,6 +9,7 @@ use crate::{
         billing_groups, native_account_json, native_session_access, AccountV2State,
         NativeSessionFailure,
     },
+    claude_bridge::ClaudeTransport,
     codex_bridge::CodexBridgeRuntimeState,
     connectivity_core::request_id_is_valid,
     tool_adapters::{
@@ -141,6 +142,12 @@ struct TokenLease {
     created: bool,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ModelTransport {
+    Claude(ClaudeTransport),
+    Codex(codex_desktop::CodexTransport),
+}
+
 fn now_epoch_ms() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -206,7 +213,7 @@ async fn validate_model(
     model_id: &str,
     tool_id: &str,
     billing_group: &str,
-) -> Result<Option<codex_desktop::CodexTransport>, ActivationFailure> {
+) -> Result<Option<ModelTransport>, ActivationFailure> {
     let (status, value) = native_account_json(
         Method::GET,
         &format!("{origin}/api/user/models"),
@@ -249,6 +256,12 @@ async fn validate_model(
     }
     if tool_id == "codex_desktop" {
         codex_transport(&pricing, model_id)
+            .map(ModelTransport::Codex)
+            .map(Some)
+            .ok_or(ActivationFailure::UnsupportedModel)
+    } else if matches!(tool_id, "claude_code" | "claude_desktop") {
+        claude_transport(&pricing, model_id)
+            .map(ModelTransport::Claude)
             .map(Some)
             .ok_or(ActivationFailure::UnsupportedModel)
     } else if model_supports_tool(&pricing, model_id, tool_id) {
@@ -260,7 +273,9 @@ async fn validate_model(
 
 fn model_supports_tool(pricing: &Value, model_id: &str, tool_id: &str) -> bool {
     let required_endpoint = match tool_id {
-        "claude_code" | "claude_desktop" => "anthropic",
+        "claude_code" | "claude_desktop" => {
+            return claude_transport(pricing, model_id).is_some();
+        }
         "codex_desktop" => {
             return codex_transport(pricing, model_id).is_some();
         }
@@ -282,15 +297,36 @@ fn model_supports_tool(pricing: &Value, model_id: &str, tool_id: &str) -> bool {
         })
 }
 
-fn codex_transport(pricing: &Value, model_id: &str) -> Option<codex_desktop::CodexTransport> {
-    let endpoints = data(pricing)
+fn model_endpoints<'a>(pricing: &'a Value, model_id: &str) -> Option<&'a Vec<Value>> {
+    data(pricing)
         .and_then(Value::as_array)
         .into_iter()
         .flatten()
         .filter_map(Value::as_object)
         .find(|row| row.get("model_name").and_then(Value::as_str) == Some(model_id))?
         .get("supported_endpoint_types")?
-        .as_array()?;
+        .as_array()
+}
+
+fn claude_transport(pricing: &Value, model_id: &str) -> Option<ClaudeTransport> {
+    let endpoints = model_endpoints(pricing, model_id)?;
+    if endpoints
+        .iter()
+        .any(|endpoint| endpoint.as_str() == Some("anthropic"))
+    {
+        Some(ClaudeTransport::DirectAnthropic)
+    } else if endpoints
+        .iter()
+        .any(|endpoint| endpoint.as_str() == Some("openai"))
+    {
+        Some(ClaudeTransport::ChatBridge)
+    } else {
+        None
+    }
+}
+
+fn codex_transport(pricing: &Value, model_id: &str) -> Option<codex_desktop::CodexTransport> {
+    let endpoints = model_endpoints(pricing, model_id)?;
     if endpoints
         .iter()
         .any(|endpoint| endpoint.as_str() == Some("openai-response"))
@@ -592,6 +628,7 @@ impl PreparedAdapter {
 
     fn local_gateway_token(&self) -> Option<&str> {
         match self {
+            Self::ClaudeCode(value) => value.local_token(),
             Self::ClaudeDesktop(value) => Some(value.local_token()),
             _ => None,
         }
@@ -602,15 +639,23 @@ fn prepare_adapter(
     request: &ToolActivationRequest,
     origin: &str,
     previous: Option<&ToolCredential>,
-    codex_transport: Option<codex_desktop::CodexTransport>,
+    model_transport: Option<ModelTransport>,
 ) -> Result<PreparedAdapter, AdapterFailure> {
     let home = tool_adapters::user_home()
         .filter(|path| path.is_absolute() && path.is_dir())
         .ok_or(AdapterFailure::ConfigurationFailed("home_unavailable"))?;
     match request.tool_id.as_str() {
-        "claude_code" => {
-            claude_code::prepare(&home, origin, &request.model_id).map(PreparedAdapter::ClaudeCode)
-        }
+        "claude_code" => claude_code::prepare(
+            &home,
+            origin,
+            &request.model_id,
+            match model_transport {
+                Some(ModelTransport::Claude(value)) => value,
+                _ => return Err(AdapterFailure::ConfigurationFailed("invalid_request")),
+            },
+            previous.and_then(|record| record.local_gateway_token.as_deref()),
+        )
+        .map(PreparedAdapter::ClaudeCode),
         "claude_desktop" => claude_desktop::prepare(
             &home,
             &request.model_id,
@@ -621,7 +666,10 @@ fn prepare_adapter(
             &home,
             origin,
             &request.model_id,
-            codex_transport.ok_or(AdapterFailure::ConfigurationFailed("invalid_request"))?,
+            match model_transport {
+                Some(ModelTransport::Codex(value)) => value,
+                _ => return Err(AdapterFailure::ConfigurationFailed("invalid_request")),
+            },
         )
         .map(PreparedAdapter::CodexDesktop),
         "pi" => pi::prepare(&home, origin, &request.model_id).map(PreparedAdapter::Pi),
@@ -640,11 +688,20 @@ async fn verify_adapter(
     request: &ToolActivationRequest,
     installation: &ResolvedInstallation,
     credential: &ToolCredential,
+    claude_code_runtime: &claude_code::ClaudeCodeRuntimeState,
     claude_runtime: &claude_desktop::ClaudeDesktopRuntimeState,
     dsh_runtime: &dsh_web::DshRuntimeState,
 ) -> Result<(), AdapterFailure> {
     match request.tool_id.as_str() {
-        "claude_code" => claude_code::verify(installation, &request.model_id).await,
+        "claude_code" => {
+            claude_code::verify(
+                claude_code_runtime,
+                installation,
+                &request.model_id,
+                credential,
+            )
+            .await
+        }
         "claude_desktop" => {
             claude_desktop::verify_and_launch(claude_runtime, installation, credential.clone())
                 .await
@@ -674,12 +731,25 @@ async fn restore_after_failure(
     origin: &str,
     access_token: &str,
     lease: &TokenLease,
+    claude_code_runtime: &claude_code::ClaudeCodeRuntimeState,
     claude_runtime: &claude_desktop::ClaudeDesktopRuntimeState,
     codex_bridge: &CodexBridgeRuntimeState,
     bridge_started: bool,
 ) -> Option<AdapterFailure> {
     let rollback_failure = prepared.rollback().err();
     let credential_failure = tool_credentials::restore(&request.tool_id, credential_before).err();
+    if request.tool_id == "claude_code" {
+        claude_code_runtime.stop().await;
+        if previous_record
+            .as_ref()
+            .and_then(|record| record.claude_transport.as_deref())
+            == Some("chat_bridge")
+        {
+            if let Some(previous) = previous_record.clone() {
+                let _ = claude_code_runtime.start(previous).await;
+            }
+        }
+    }
     if request.tool_id == "claude_desktop" {
         claude_runtime.stop().await;
         if let Some(previous) = previous_record.clone() {
@@ -741,6 +811,7 @@ pub async fn scan_activation_targets_v1(
 #[tauri::command]
 pub async fn configure_desktop_tool_v2(
     account_state: tauri::State<'_, AccountV2State>,
+    claude_code_runtime: tauri::State<'_, claude_code::ClaudeCodeRuntimeState>,
     claude_runtime: tauri::State<'_, claude_desktop::ClaudeDesktopRuntimeState>,
     dsh_runtime: tauri::State<'_, dsh_web::DshRuntimeState>,
     codex_bridge: tauri::State<'_, CodexBridgeRuntimeState>,
@@ -770,7 +841,7 @@ pub async fn configure_desktop_tool_v2(
             return Ok(ActivationFailure::ServerUnavailable.projection(&request))
         }
     };
-    let codex_transport = match validate_model(
+    let model_transport = match validate_model(
         &origin,
         &access_token,
         &request.model_id,
@@ -815,14 +886,17 @@ pub async fn configure_desktop_tool_v2(
         Err(error) => return Ok(error.projection(&request)),
     };
     let mut prepared =
-        match prepare_adapter(&request, &origin, previous_record.as_ref(), codex_transport) {
+        match prepare_adapter(&request, &origin, previous_record.as_ref(), model_transport) {
             Ok(value) => value,
             Err(error) => {
                 delete_created_token(&origin, &access_token, &lease).await;
                 return Ok(ActivationFailure::Adapter(error).projection(&request));
             }
         };
-    let bridge_started = if codex_transport == Some(codex_desktop::CodexTransport::ChatBridge) {
+    let bridge_started = if model_transport
+        == Some(ModelTransport::Codex(
+            codex_desktop::CodexTransport::ChatBridge,
+        )) {
         match codex_bridge.ensure_started().await {
             Ok(value) => value,
             Err(_) => {
@@ -843,7 +917,14 @@ pub async fn configure_desktop_tool_v2(
         origin: origin.clone(),
         model_id: request.model_id.clone(),
         local_gateway_token: prepared.local_gateway_token().map(str::to_owned),
-        codex_transport: codex_transport.map(|value| value.credential_value().to_owned()),
+        codex_transport: match model_transport {
+            Some(ModelTransport::Codex(value)) => Some(value.credential_value().to_owned()),
+            _ => None,
+        },
+        claude_transport: match model_transport {
+            Some(ModelTransport::Claude(value)) => Some(value.credential_value().to_owned()),
+            _ => None,
+        },
     };
     if tool_credentials::store(&request.tool_id, &credential).is_err() {
         if bridge_started {
@@ -864,6 +945,7 @@ pub async fn configure_desktop_tool_v2(
             &origin,
             &access_token,
             &lease,
+            &claude_code_runtime,
             &claude_runtime,
             &codex_bridge,
             bridge_started,
@@ -875,6 +957,7 @@ pub async fn configure_desktop_tool_v2(
         &request,
         &installation,
         &credential,
+        &claude_code_runtime,
         &claude_runtime,
         &dsh_runtime,
     )
@@ -888,6 +971,7 @@ pub async fn configure_desktop_tool_v2(
             &origin,
             &access_token,
             &lease,
+            &claude_code_runtime,
             &claude_runtime,
             &codex_bridge,
             bridge_started,
@@ -897,9 +981,17 @@ pub async fn configure_desktop_tool_v2(
     }
 
     if request.tool_id == "codex_desktop"
-        && codex_transport == Some(codex_desktop::CodexTransport::DirectResponses)
+        && model_transport
+            == Some(ModelTransport::Codex(
+                codex_desktop::CodexTransport::DirectResponses,
+            ))
     {
         codex_bridge.stop().await;
+    }
+    if request.tool_id == "claude_code"
+        && model_transport == Some(ModelTransport::Claude(ClaudeTransport::DirectAnthropic))
+    {
+        claude_code_runtime.stop().await;
     }
 
     Ok(ToolActivationProjection::new(
@@ -1077,7 +1169,8 @@ mod tests {
             "data": [
                 {"model_name": "chat", "supported_endpoint_types": ["openai"]},
                 {"model_name": "responses", "supported_endpoint_types": ["openai-response"]},
-                {"model_name": "messages", "supported_endpoint_types": ["anthropic"]}
+                {"model_name": "messages", "supported_endpoint_types": ["anthropic"]},
+                {"model_name": "both", "supported_endpoint_types": ["openai", "anthropic"]}
             ]
         });
         assert!(model_supports_tool(&pricing, "chat", "pi"));
@@ -1087,6 +1180,8 @@ mod tests {
         assert!(model_supports_tool(&pricing, "responses", "codex_desktop"));
         assert!(model_supports_tool(&pricing, "messages", "claude_code"));
         assert!(model_supports_tool(&pricing, "messages", "claude_desktop"));
+        assert!(model_supports_tool(&pricing, "chat", "claude_code"));
+        assert!(model_supports_tool(&pricing, "chat", "claude_desktop"));
         assert!(model_supports_tool(&pricing, "chat", "codex_desktop"));
         assert_eq!(
             codex_transport(&pricing, "responses"),
@@ -1095,6 +1190,18 @@ mod tests {
         assert_eq!(
             codex_transport(&pricing, "chat"),
             Some(codex_desktop::CodexTransport::ChatBridge)
+        );
+        assert_eq!(
+            claude_transport(&pricing, "messages"),
+            Some(ClaudeTransport::DirectAnthropic)
+        );
+        assert_eq!(
+            claude_transport(&pricing, "chat"),
+            Some(ClaudeTransport::ChatBridge)
+        );
+        assert_eq!(
+            claude_transport(&pricing, "both"),
+            Some(ClaudeTransport::DirectAnthropic)
         );
     }
 

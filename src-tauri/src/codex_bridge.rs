@@ -23,6 +23,10 @@ const LISTEN_ADDRESS: &str = "127.0.0.1:15722";
 const MAX_REQUEST_BYTES: usize = 2 * 1024 * 1024;
 const MAX_RESPONSE_BYTES: u64 = 16 * 1024 * 1024;
 
+#[path = "proxy/providers/streaming.rs"]
+pub(crate) mod claude_streaming;
+#[path = "proxy/providers/transform.rs"]
+pub(crate) mod claude_transform;
 #[path = "proxy/providers/codex_chat_common.rs"]
 pub(crate) mod codex_chat_common;
 #[path = "proxy/providers/codex_chat_history.rs"]
@@ -41,7 +45,6 @@ pub(crate) mod streaming_codex_chat;
 pub(crate) mod tool_media;
 #[path = "proxy/providers/transform_codex_chat.rs"]
 pub(crate) mod transform_codex_chat;
-
 /// The bridge intentionally uses conservative automatic reasoning defaults.
 /// This shape is retained because the proven converter supports explicit
 /// provider capability metadata, while the desktop catalog does not invent it.
@@ -186,7 +189,7 @@ async fn health() -> impl IntoResponse {
     (StatusCode::OK, Json(json!({"status": "ready"})))
 }
 
-fn secure_equal(left: &str, right: &str) -> bool {
+pub(crate) fn secure_equal(left: &str, right: &str) -> bool {
     let left = left.as_bytes();
     let right = right.as_bytes();
     let mut difference = left.len() ^ right.len();

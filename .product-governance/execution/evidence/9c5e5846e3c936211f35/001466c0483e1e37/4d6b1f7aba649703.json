@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU032-AS-03",
+  "assertion": "The client-only 0.4.4 renderer and native code compile coherently, the macOS universal package is eligible for signing and notarization, and the Windows workflow gates one explicitly unsigned x64 NSIS artifact without claiming success when its runner is blocked.",
+  "testSelector": "tests/work_packages/ru032/test_acceptance.py::test_client_only_build_version_and_windows_workflow",
+  "acceptanceCommandId": "ru032-build",
+  "runId": "RU-032/WP-RU032-CLAUDE-PROTOCOL-ROUTING@2026-09-04T11:35:58.239023+00:00",
+  "packageId": "WP-RU032-CLAUDE-PROTOCOL-ROUTING",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru032/test_acceptance.py::test_client_only_build_version_and_windows_workflow",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:8b625e4b4a8c31b671c79a0fbfa0bf584522f9661f09573cd523d7137941fb34",
+    "machineReportSha256": "sha256:ebe7168ace4ba7dc83a11d33a373b3c768c1f902887f2ce74a72fbef5934873d",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:9308f7510eaa708fb645f9e697277aa6596804ad267f92e2a7ec95ec5f3fb08c",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:404df252919d80becbbfeeeb53c4d2bdc413c0ca34c679f3fcf339474b17ee4c",
+  "releaseUnitId": "RU-032",
+  "releaseUnitHash": "sha256:6e62c141d522e51b6dd60e17737f275fcc202a245c81876825f562927142bb94"
+}

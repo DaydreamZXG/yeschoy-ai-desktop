@@ -2,6 +2,126 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "WP-RU032-CLAUDE-PROTOCOL-ROUTING",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "critical",
+      "objective": "Make the current account's Anthropic- or OpenAI-compatible models visible and genuinely usable in Claude Code and Claude Desktop, then build truthful 0.4.4 macOS universal and Windows x64 candidates.",
+      "deliverables": [
+        "Claude model visibility and activation routing derived from current account and pricing endpoint evidence",
+        "Tool-isolated loopback Anthropic-to-Chat bridges with bidirectional stream, tool, media, reasoning and usage conversion",
+        "Transactional Claude Code and Claude Desktop configuration with OS-secure secrets, restart recovery, target verification and rollback",
+        "Coherent 0.4.4 source plus notarized macOS universal and unsigned Windows x64 candidate evidence"
+      ],
+      "requirementRefs": [
+        "REQ-058"
+      ],
+      "decisionRefs": [
+        "DEC-076"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No NewAPI, Nginx, DNS, server database, server source, production deployment or channel-metadata mutation.",
+        "No renderer-visible complete key, plaintext NewAPI key in Claude configuration, caller-selected upstream URL, non-loopback listener, telemetry or retained backup history.",
+        "No Windows publisher-signature claim, automatic updater activation, new third-party application or public production-readiness claim."
+      ],
+      "dependsOn": [
+        "WP-RU031-CODEX-PROTOCOL-ROUTING"
+      ],
+      "allowedPaths": [
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/**",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/src/**",
+        ".github/workflows/yeschoy-windows-internal.yml",
+        "tests/work_packages/ru032/**",
+        "outputs/野菜API-0.4.4-Claude兼容与双平台验收.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        "release-assets/**",
+        "src-tauri/target/**",
+        "dist/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No server or local database migration. Existing credentials without Claude transport metadata remain valid as native configurations until the user explicitly activates a model again.",
+        "rollback": "Restore volatile snapshots of the selected Claude target configuration and the prior keychain payload, delete only a newly created server token whose ownership is proven, stop a newly started bridge, and restore a previously active bridge from its prior keychain record."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Use current server endpoint metadata rather than model-name or application-version allowlists. Prefer native Anthropic and bridge only current openai-only models; ordinary Claude application version strings remain informational.",
+        "supportedVersions": "0.4.4 client candidate on macOS 12 or later for Apple Silicon and Intel, and Windows 10/11 x64. Claude eligibility remains capability-based, not exact-version based.",
+        "removalGate": "Removing the bridge requires live metadata and target-level evidence that every exposed Claude model accepts Anthropic Messages directly; server changes, signed Windows publishing or updater activation require a later unit."
+      },
+      "inputContracts": [
+        "desktop-account-session@v3",
+        "public-service-catalog@v1"
+      ],
+      "outputContracts": [
+        "desktop-tool-activation@v3"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru032-routing",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru032/test_acceptance.py::test_claude_visibility_and_protocol_routing",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        },
+        {
+          "id": "ru032-security",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru032/test_acceptance.py::test_claude_bridge_secret_restart_and_rollback_boundaries",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        },
+        {
+          "id": "ru032-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru032/test_acceptance.py::test_client_only_build_version_and_windows_workflow",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU032-AS-01",
+          "assertion": "Both Claude targets show account models advertising Anthropic or Chat, prefer native Anthropic and use isolated local bridges only for Chat-only models with non-stream, stream, tool, media, reasoning and usage conversion tests passing.",
+          "testSelector": "tests/work_packages/ru032/test_acceptance.py::test_claude_visibility_and_protocol_routing",
+          "acceptanceCommandId": "ru032-routing"
+        },
+        {
+          "id": "RU032-AS-02",
+          "assertion": "Complete NewAPI keys remain in OS secure storage, bridged targets receive only local tokens, both Claude routes resume independently, and failed activation restores configuration, credential and prior bridge state.",
+          "testSelector": "tests/work_packages/ru032/test_acceptance.py::test_claude_bridge_secret_restart_and_rollback_boundaries",
+          "acceptanceCommandId": "ru032-security"
+        },
+        {
+          "id": "RU032-AS-03",
+          "assertion": "The client-only 0.4.4 renderer and native code compile coherently, the macOS universal package is eligible for signing and notarization, and the Windows workflow gates one explicitly unsigned x64 NSIS artifact without claiming success when its runner is blocked.",
+          "testSelector": "tests/work_packages/ru032/test_acceptance.py::test_client_only_build_version_and_windows_workflow",
+          "acceptanceCommandId": "ru032-build"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "An openai-only model cannot complete the selected Claude target's harmless real request through the local bridge.",
+        "The bridge would need a caller-controlled upstream, non-loopback listener, plaintext NewAPI key, renderer secret or retained credential backup.",
+        "Claude Code and Claude Desktop cannot remain independently configured or prior configuration and bridge state cannot be restored.",
+        "Implementation requires NewAPI, server database, Nginx, DNS, production deployment, telemetry or automatic updater mutation.",
+        "The Windows workflow remains prevented from starting by an external GitHub account billing or spending-limit gate."
+      ],
+      "status": "planned"
+    },
+    {
       "id": "WP-RU031-CODEX-PROTOCOL-ROUTING",
       "wave": "integration",
       "owner": "tool-config",

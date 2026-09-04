@@ -2,6 +2,54 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "E-USER-062",
+      "claim": "The owner requires the Claude model limitation to be corrected and explicitly asks for both macOS and Windows deliverables. The existing client-only boundary remains in force.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-04:claude-format-compatibility-and-windows-release",
+      "scope": "target",
+      "observedAt": "2026-09-04T19:35:00+08:00",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-045",
+      "claim": "The live first-party pricing projection currently exposes 65 models with openai capability and only six with anthropic capability. Eight model IDs containing claude are openai-capable but are not marked anthropic, so an anthropic-only client filter hides them. The most recent Windows workflow was prevented from starting by the GitHub account payment or spending-limit gate and produced no runner steps or artifact.",
+      "class": "external_verified",
+      "locator": "https://yeschoy.com/api/pricing;https://api.github.com/repos/DaydreamZXG/yeschoy-ai-desktop/check-runs/100977882551/annotations;command:2026-09-04:live-claude-capability-and-windows-runner-audit",
+      "scope": "current",
+      "observedAt": "2026-09-04T19:35:00+08:00",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-051",
+      "claim": "The 0.4.3 renderer and native activation paths accept only anthropic metadata for Claude Code and Claude Desktop. Claude Desktop's loopback proxy rewrites the model but forwards Anthropic Messages unchanged, while the repository already contains tested Anthropic-to-OpenAI Chat request, non-stream response and streaming response conversion modules inherited from CC Switch.",
+      "class": "code_observed",
+      "locator": "src/configuration/modelCompatibility.ts:12-13;src-tauri/src/tool_activation.rs:261-305;src-tauri/src/tool_adapters/claude_desktop.rs:305-411;src-tauri/src/proxy/providers/transform.rs;src-tauri/src/proxy/providers/streaming.rs",
+      "scope": "current",
+      "observedAt": "2026-09-04T19:35:00+08:00",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-023",
+      "claim": "A client-only 0.4.4 successor should expose account models to both Claude targets when current pricing advertises anthropic or openai, prefer native Anthropic, route openai-only selections through separate loopback-only Claude bridges that reuse the mature bidirectional Chat converter, preserve OS-secure credentials and transactional rollback, and produce verified macOS universal and unsigned Windows x64 candidates without server changes.",
+      "class": "proposed",
+      "locator": "inline:ru032-claude-protocol-routing-and-dual-platform-candidate",
+      "scope": "proposal",
+      "observedAt": "2026-09-04T19:35:00+08:00",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-USER-062",
+        "E-EXT-045",
+        "E-CODE-051"
+      ]
+    },
+    {
       "id": "E-USER-061",
       "claim": "The owner rejects protocol-locked Codex model visibility, expects NewAPI-format-compatible models to remain usable, and explicitly asks the client-only correction to be completed.",
       "class": "user_confirmed",

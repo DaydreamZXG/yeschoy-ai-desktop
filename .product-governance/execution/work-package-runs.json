@@ -752,6 +752,22 @@
       "reportSha256": "sha256:186cf31be292e8202746b76c6525b2acfaf4a0b688237bbc6126dc90473ccfcc",
       "releaseUnitId": "RU-031",
       "releaseUnitHash": "sha256:c39ecdd5a373c018fc97a7d956eca65864759afa010d236572d4c8ab21ae3079"
+    },
+    {
+      "id": "RU-032/WP-RU032-CLAUDE-PROTOCOL-ROUTING@2026-09-04T11:35:58.239023+00:00",
+      "packageId": "WP-RU032-CLAUDE-PROTOCOL-ROUTING",
+      "baselineCommit": "18bf45b07fd252811b2a262236df5fda0115f1c1",
+      "baselineTreeHash": "sha256:75a5a32b304bfe5b28e89b7df5eb7ddff01993af65699129b34d96c589f048ed",
+      "baselineSnapshotPath": "execution/baselines/001466c0483e1e37.9c5e5846e3c936211f35.json",
+      "baselineSnapshotSha256": "sha256:c1e9549e247ea2bbe33087dd07d7165bc2a9f8cfc767480f8cfb6e61bc7347f4",
+      "assignedTo": "root",
+      "status": "completed",
+      "startedAt": "2026-09-04T11:35:58.239023+00:00",
+      "finishedAt": "2026-09-04T12:02:24.718498+00:00",
+      "reportPath": "execution/reports/001466c0483e1e37.9c5e5846e3c936211f35.json",
+      "reportSha256": "sha256:ed398cb495cfb1c80d201891dfcc635fb9056fe776010b855f9d962209de658f",
+      "releaseUnitId": "RU-032",
+      "releaseUnitHash": "sha256:6e62c141d522e51b6dd60e17737f275fcc202a245c81876825f562927142bb94"
     }
   ]
 }

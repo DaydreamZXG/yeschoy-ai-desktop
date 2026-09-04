@@ -2,6 +2,34 @@
   "schemaVersion": 1,
   "decisions": [
     {
+      "id": "DEC-076",
+      "question": "How should the client correct Claude model visibility and configuration while delivering the requested macOS and Windows candidates without changing NewAPI?",
+      "choice": "Create a client-only 0.4.4 successor. For Claude Code and Claude Desktop, treat anthropic and openai as usable account evidence, prefer native Anthropic whenever both are advertised, and route openai-only models through tool-specific loopback-only bridges that reuse the repository's mature Anthropic-to-OpenAI Chat request, response, streaming and tool conversion. Keep each complete NewAPI tool key in OS secure storage, give bridged clients only a per-tool local token, restrict outbound traffic to the selected compiled first-party origin, preserve unrelated settings with readback and rollback, and require a harmless target-level reply. Produce a signed notarized macOS universal DMG and attempt an explicitly unsigned Windows 10/11 x64 NSIS installer through the existing private workflow; a GitHub billing gate is an external release blocker and must not be reported as a built Windows artifact. Do not modify NewAPI, Nginx, DNS, server database, production configuration, telemetry or automatic updating.",
+      "status": "accepted",
+      "decidedBy": "product owner plus current client, live pricing and Windows runner evidence",
+      "decidedAt": "2026-09-04T19:35:00+08:00",
+      "evidenceRefs": [
+        "E-USER-062",
+        "E-EXT-045",
+        "E-CODE-051",
+        "E-PROP-023"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-058"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE-PREVIEW",
+          "PAGE-MODELS"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform",
+          "security-update"
+        ]
+      }
+    },
+    {
       "id": "DEC-075",
       "question": "How should the desktop client expose and configure NewAPI models whose live metadata differs between OpenAI Chat and Responses protocols?",
       "choice": "Create a client-only 0.4.3 successor. For Codex Desktop, treat openai-response and openai as usable account evidence, prefer direct Responses when both exist, and route openai-only models through a loopback-only bridge that reuses the repository's mature Responses-to-Chat conversion behavior. Generate an owned Codex model catalog for the exact selected model. Keep the complete API key in OS secure storage and command-backed auth, bind the bridge only to loopback, restrict its upstream to the two compiled first-party origins, preserve user-owned catalogs and unrelated settings, and keep target-level reply verification plus full rollback. Do not modify NewAPI, Nginx, DNS, server database or production configuration.",

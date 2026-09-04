@@ -24,6 +24,8 @@ pub(crate) struct ToolCredential {
     pub(crate) local_gateway_token: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub(crate) codex_transport: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) claude_transport: Option<String>,
 }
 
 #[derive(Debug)]
@@ -65,11 +67,19 @@ fn record_is_valid(tool_id: &str, record: &ToolCredential) -> bool {
                     record.codex_transport.as_deref(),
                     Some("direct_responses" | "chat_bridge")
                 )))
+        && (record.claude_transport.is_none()
+            || (matches!(tool_id, "claude_code" | "claude_desktop")
+                && matches!(
+                    record.claude_transport.as_deref(),
+                    Some("direct_anthropic" | "chat_bridge")
+                )))
         && (local.is_empty()
             || ((32..=256).contains(&local.len())
                 && !local
                     .chars()
                     .any(|value| value.is_control() || value.is_whitespace())))
+        && (tool_id != "claude_desktop" || !local.is_empty())
+        && (record.claude_transport.as_deref() != Some("chat_bridge") || !local.is_empty())
 }
 
 pub(crate) fn load(tool_id: &str) -> Result<ToolCredential, CredentialFailure> {
@@ -162,8 +172,15 @@ pub(crate) fn shell_helper_command(tool_id: &str) -> Result<String, CredentialFa
 fn bare_helper(tool_id: &str) -> i32 {
     match load(tool_id) {
         Ok(record) => {
+            let secret = if tool_id == "claude_code"
+                && record.claude_transport.as_deref() == Some("chat_bridge")
+            {
+                record.local_gateway_token.as_deref().unwrap_or("")
+            } else {
+                record.api_key.as_str()
+            };
             let mut output = io::stdout().lock();
-            if output.write_all(record.api_key.as_bytes()).is_ok()
+            if output.write_all(secret.as_bytes()).is_ok()
                 && output.write_all(b"\n").is_ok()
                 && output.flush().is_ok()
             {
@@ -281,6 +298,7 @@ mod tests {
             model_id: "gpt-5.5".into(),
             local_gateway_token: None,
             codex_transport: None,
+            claude_transport: None,
         };
         assert!(record_is_valid("codex_desktop", &record));
         record.codex_transport = Some("chat_bridge".into());
@@ -288,5 +306,24 @@ mod tests {
         assert!(!record_is_valid("pi", &record));
         record.codex_transport = Some("caller_route".into());
         assert!(!record_is_valid("codex_desktop", &record));
+    }
+
+    #[test]
+    fn claude_transport_requires_a_local_token_only_for_bridged_code() {
+        let mut record = ToolCredential {
+            api_key: "synthetic-test-key-0001".into(),
+            origin: "https://yeschoy.com".into(),
+            model_id: "claude-opus-5".into(),
+            local_gateway_token: None,
+            codex_transport: None,
+            claude_transport: Some("direct_anthropic".into()),
+        };
+        assert!(record_is_valid("claude_code", &record));
+        record.claude_transport = Some("chat_bridge".into());
+        assert!(!record_is_valid("claude_code", &record));
+        record.local_gateway_token = Some(format!("ycg-{}", "a".repeat(64)));
+        assert!(record_is_valid("claude_code", &record));
+        assert!(record_is_valid("claude_desktop", &record));
+        assert!(!record_is_valid("pi", &record));
     }
 }

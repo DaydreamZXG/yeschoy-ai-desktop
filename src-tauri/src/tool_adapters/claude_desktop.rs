@@ -1,25 +1,13 @@
 use std::{
     path::{Path, PathBuf},
-    sync::Arc,
     time::Duration,
 };
 
-use axum::{
-    body::{to_bytes, Body},
-    extract::State,
-    http::{header, Request, Response, StatusCode},
-    routing::any,
-    Router,
-};
 use serde_json::{json, Map, Value};
-use tokio::{
-    net::TcpListener,
-    sync::{broadcast, oneshot, Mutex},
-    task::JoinHandle,
-    time::timeout,
-};
+use tokio::time::timeout;
 
 use crate::{
+    claude_bridge::ClaudeBridgeRuntime,
     tool_adapters::{
         common::{self, ConfigFailure, FileTransaction},
         AdapterFailure, ResolvedInstallation,
@@ -32,29 +20,18 @@ const PROFILE_NAME: &str = "野菜API";
 const PROXY_ADDRESS: &str = "127.0.0.1:15729";
 const PROXY_BASE: &str = "http://127.0.0.1:15729/claude-desktop";
 const SAFE_ROUTE_MODEL: &str = "claude-sonnet-4-6";
-const MAX_PROXY_BODY: usize = 8 * 1024 * 1024;
 
-#[derive(Clone, Debug)]
-pub(crate) struct VerificationEvent {
-    model: String,
-}
-
-struct ProxyState {
-    credential: ToolCredential,
-    local_token: String,
-    client: reqwest::Client,
-    events: broadcast::Sender<VerificationEvent>,
-}
-
-struct ProxyRuntime {
-    shutdown: Option<oneshot::Sender<()>>,
-    task: JoinHandle<()>,
-    events: broadcast::Sender<VerificationEvent>,
-}
-
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub(crate) struct ClaudeDesktopRuntimeState {
-    runtime: Arc<Mutex<Option<ProxyRuntime>>>,
+    runtime: ClaudeBridgeRuntime,
+}
+
+impl Default for ClaudeDesktopRuntimeState {
+    fn default() -> Self {
+        Self {
+            runtime: ClaudeBridgeRuntime::new(PROXY_ADDRESS, "/claude-desktop"),
+        }
+    }
 }
 
 pub(crate) struct Prepared {
@@ -299,172 +276,19 @@ impl Prepared {
     }
 }
 
-fn unauthorized() -> Response<Body> {
-    Response::builder()
-        .status(StatusCode::UNAUTHORIZED)
-        .body(Body::from("unauthorized"))
-        .expect("static response")
-}
-
-async fn proxy_request(
-    State(state): State<Arc<ProxyState>>,
-    request: Request<Body>,
-) -> Response<Body> {
-    let authorization = request
-        .headers()
-        .get(header::AUTHORIZATION)
-        .and_then(|value| value.to_str().ok());
-    let expected = format!("Bearer {}", state.local_token);
-    if authorization != Some(expected.as_str()) {
-        return unauthorized();
-    }
-    let path = request.uri().path().to_owned();
-    let Some(upstream_path) = path.strip_prefix("/claude-desktop") else {
-        return Response::builder()
-            .status(StatusCode::NOT_FOUND)
-            .body(Body::empty())
-            .expect("static response");
-    };
-    let upstream_path = upstream_path.to_owned();
-    let is_message = upstream_path.ends_with("/v1/messages") || upstream_path == "/v1/messages";
-    let method = request.method().clone();
-    let anthropic_version = request.headers().get("anthropic-version").cloned();
-    let accept = request.headers().get(header::ACCEPT).cloned();
-    let body = match to_bytes(request.into_body(), MAX_PROXY_BODY).await {
-        Ok(bytes) => bytes,
-        Err(_) => {
-            return Response::builder()
-                .status(StatusCode::PAYLOAD_TOO_LARGE)
-                .body(Body::empty())
-                .expect("static response")
-        }
-    };
-    let mut outbound_body = body.to_vec();
-    if is_message {
-        let mut value: Value = match serde_json::from_slice(&outbound_body) {
-            Ok(value) => value,
-            Err(_) => {
-                return Response::builder()
-                    .status(StatusCode::BAD_REQUEST)
-                    .body(Body::empty())
-                    .expect("static response")
-            }
-        };
-        let Some(object) = value.as_object_mut() else {
-            return Response::builder()
-                .status(StatusCode::BAD_REQUEST)
-                .body(Body::empty())
-                .expect("static response");
-        };
-        object.insert("model".into(), state.credential.model_id.clone().into());
-        outbound_body = match serde_json::to_vec(&value) {
-            Ok(bytes) => bytes,
-            Err(_) => {
-                return Response::builder()
-                    .status(StatusCode::BAD_REQUEST)
-                    .body(Body::empty())
-                    .expect("static response")
-            }
-        };
-    }
-    let url = format!(
-        "{}{}",
-        state.credential.origin.trim_end_matches('/'),
-        upstream_path
-    );
-    let mut outbound = state
-        .client
-        .request(method, url)
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(
-            header::AUTHORIZATION,
-            format!("Bearer {}", state.credential.api_key),
-        )
-        .header("x-api-key", &state.credential.api_key)
-        .body(outbound_body);
-    if let Some(value) = anthropic_version {
-        outbound = outbound.header("anthropic-version", value);
-    }
-    if let Some(value) = accept {
-        outbound = outbound.header(header::ACCEPT, value);
-    }
-    let upstream = match outbound.send().await {
-        Ok(response) => response,
-        Err(_) => {
-            return Response::builder()
-                .status(StatusCode::BAD_GATEWAY)
-                .body(Body::empty())
-                .expect("static response")
-        }
-    };
-    let status = upstream.status();
-    let content_type = upstream.headers().get(header::CONTENT_TYPE).cloned();
-    if is_message && status.is_success() {
-        let _ = state.events.send(VerificationEvent {
-            model: state.credential.model_id.clone(),
-        });
-    }
-    let stream = upstream.bytes_stream();
-    let mut builder = Response::builder().status(status);
-    if let Some(content_type) = content_type {
-        builder = builder.header(header::CONTENT_TYPE, content_type);
-    }
-    builder
-        .body(Body::from_stream(stream))
-        .unwrap_or_else(|_| Response::new(Body::empty()))
-}
-
 impl ClaudeDesktopRuntimeState {
     pub(crate) async fn start(
         &self,
         credential: ToolCredential,
-    ) -> Result<broadcast::Receiver<VerificationEvent>, AdapterFailure> {
-        let local_token = credential
-            .local_gateway_token
-            .clone()
-            .filter(|value| value.starts_with("ycg-") && value.len() == 68)
-            .ok_or(AdapterFailure::SecureStorageUnavailable)?;
-        self.stop().await;
-        let listener = TcpListener::bind(PROXY_ADDRESS)
-            .await
-            .map_err(|_| AdapterFailure::LaunchFailed)?;
-        let (events, receiver) = broadcast::channel(8);
-        let proxy_state = Arc::new(ProxyState {
-            credential,
-            local_token,
-            client: reqwest::Client::builder()
-                .no_proxy()
-                .build()
-                .map_err(|_| AdapterFailure::LaunchFailed)?,
-            events: events.clone(),
-        });
-        let router = Router::new()
-            .route("/claude-desktop/{*path}", any(proxy_request))
-            .with_state(proxy_state);
-        let (shutdown, shutdown_rx) = oneshot::channel::<()>();
-        let task = tokio::spawn(async move {
-            let _ = axum::serve(listener, router)
-                .with_graceful_shutdown(async move {
-                    let _ = shutdown_rx.await;
-                })
-                .await;
-        });
-        *self.runtime.lock().await = Some(ProxyRuntime {
-            shutdown: Some(shutdown),
-            task,
-            events,
-        });
-        Ok(receiver)
+    ) -> Result<
+        tokio::sync::broadcast::Receiver<crate::claude_bridge::VerificationEvent>,
+        AdapterFailure,
+    > {
+        self.runtime.start(credential).await
     }
 
     pub(crate) async fn stop(&self) {
-        let runtime = self.runtime.lock().await.take();
-        if let Some(mut runtime) = runtime {
-            if let Some(shutdown) = runtime.shutdown.take() {
-                let _ = shutdown.send(());
-            }
-            runtime.task.abort();
-        }
+        self.runtime.stop().await;
     }
 }
 
@@ -480,7 +304,7 @@ pub(crate) async fn verify_and_launch(
         loop {
             match events.recv().await {
                 Ok(event) if event.model == expected_model => return Ok(()),
-                Ok(_) | Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                Ok(_) | Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
                 Err(_) => return Err(()),
             }
         }

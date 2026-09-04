@@ -2,6 +2,30 @@
   "schemaVersion": 1,
   "requirements": [
     {
+      "id": "REQ-058",
+      "statement": "Make every current-account model that advertises Anthropic Messages or OpenAI Chat genuinely usable in Claude Code and Claude Desktop through evidence-driven native routing or a client-local bidirectional bridge, then produce truthful macOS and Windows 0.4.4 candidates without server mutation.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-062",
+        "E-EXT-045",
+        "E-CODE-051",
+        "E-PROP-023"
+      ],
+      "acceptance": [
+        "Claude Code and Claude Desktop list a current-account model when pricing advertises anthropic or openai, hide models with neither protocol, show the exact model ID and billing group, and label native versus automatic compatibility in plain language.",
+        "Activation revalidates current account availability, billing group and endpoint metadata. It prefers native Anthropic whenever advertised and uses a local Chat bridge only for openai-only models.",
+        "The bridge converts Anthropic request bodies to OpenAI Chat, rewrites only to the exact selected model, converts non-stream and streaming responses back to Anthropic, and covers system prompts, images, tool definitions, tool calls, tool results, reasoning, usage and terminal errors using the repository's mature converter.",
+        "Claude Code and Claude Desktop use isolated loopback routes so both may remain configured simultaneously. Each complete NewAPI key stays in OS secure storage; bridged targets receive only a high-entropy local token, and outbound origins are restricted to yeschoy.com or api.yeschoy.com.",
+        "Claude Code direct activation stops an obsolete Claude Code bridge, Chat activation resumes it after helper restart, and Claude Desktop resumes its route after helper restart. Failed start, write, readback, launch or target verification restores the prior files, credential and bridge state without retained backups.",
+        "The client version advances coherently to 0.4.4. Renderer, native and release-unit tests cover routing priority, both Claude targets, secret boundaries, non-stream, stream, tools, restart, external change, replay and rollback.",
+        "A signed and notarized universal macOS DMG is verified on Apple Silicon and Intel architectures. A Windows 10/11 x64 NSIS installer is built and uploaded only after the Windows renderer and native gates pass; it is explicitly unsigned until a Windows certificate exists.",
+        "No NewAPI, Nginx, DNS, server source, server database, production deployment, telemetry or automatic-updater activation is part of this change. A blocked Windows runner is reported as an external blocker rather than a successful artifact."
+      ]
+    },
+    {
       "id": "REQ-057",
       "statement": "Make account-available OpenAI-compatible models genuinely usable in Codex Desktop through evidence-driven direct Responses or a client-local Responses-to-Chat bridge, with an owned model catalog and no server mutation.",
       "scope": "target",

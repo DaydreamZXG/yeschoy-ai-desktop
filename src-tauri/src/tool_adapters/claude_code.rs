@@ -4,6 +4,7 @@ use serde_json::{Map, Value};
 use tokio::process::Command;
 
 use crate::{
+    claude_bridge::{ClaudeBridgeRuntime, ClaudeTransport},
     tool_adapters::{
         common::{self, ConfigFailure, FileTransaction},
         AdapterFailure, ResolvedInstallation,
@@ -11,12 +12,29 @@ use crate::{
     tool_credentials,
 };
 
+const PROXY_ADDRESS: &str = "127.0.0.1:15728";
+const PROXY_BASE: &str = "http://127.0.0.1:15728/claude-code";
+
+#[derive(Clone)]
+pub(crate) struct ClaudeCodeRuntimeState {
+    runtime: ClaudeBridgeRuntime,
+}
+
+impl Default for ClaudeCodeRuntimeState {
+    fn default() -> Self {
+        Self {
+            runtime: ClaudeBridgeRuntime::new(PROXY_ADDRESS, "/claude-code"),
+        }
+    }
+}
+
 pub(crate) struct Prepared {
     transaction: FileTransaction,
     path: std::path::PathBuf,
     origin: String,
     model: String,
     helper: String,
+    local_token: Option<String>,
 }
 
 fn config_error(error: ConfigFailure) -> AdapterFailure {
@@ -76,7 +94,25 @@ fn higher_precedence_override() -> bool {
     .any(|key| std::env::var_os(key).is_some_and(|value| !value.is_empty()))
 }
 
-pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared, AdapterFailure> {
+fn new_local_token() -> Result<String, AdapterFailure> {
+    let mut bytes = [0u8; 32];
+    getrandom::fill(&mut bytes).map_err(|_| AdapterFailure::SecureStorageUnavailable)?;
+    let mut value = String::with_capacity(68);
+    value.push_str("ycg-");
+    for byte in bytes {
+        use std::fmt::Write as _;
+        write!(&mut value, "{byte:02x}").map_err(|_| AdapterFailure::SecureStorageUnavailable)?;
+    }
+    Ok(value)
+}
+
+pub(crate) fn prepare(
+    home: &Path,
+    origin: &str,
+    model: &str,
+    transport: ClaudeTransport,
+    existing_local_token: Option<&str>,
+) -> Result<Prepared, AdapterFailure> {
     if higher_precedence_override() {
         return Err(AdapterFailure::ExternalOverride);
     }
@@ -85,20 +121,41 @@ pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_read_failed"))?;
     let helper = tool_credentials::shell_helper_command("claude_code")
         .map_err(|_| AdapterFailure::SecureStorageUnavailable)?;
-    let after = render(before.as_deref(), origin, model, &helper)
+    let local_token = if transport == ClaudeTransport::ChatBridge {
+        Some(
+            existing_local_token
+                .filter(|value| value.starts_with("ycg-") && value.len() == 68)
+                .map(str::to_owned)
+                .map(Ok)
+                .unwrap_or_else(new_local_token)?,
+        )
+    } else {
+        None
+    };
+    let configured_origin = if transport == ClaudeTransport::ChatBridge {
+        PROXY_BASE
+    } else {
+        origin
+    };
+    let after = render(before.as_deref(), configured_origin, model, &helper)
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?;
     let transaction =
         FileTransaction::stage_with_snapshot(path.clone(), before, after).map_err(config_error)?;
     Ok(Prepared {
         transaction,
         path,
-        origin: origin.to_owned(),
+        origin: configured_origin.to_owned(),
         model: model.to_owned(),
         helper,
+        local_token,
     })
 }
 
 impl Prepared {
+    pub(crate) fn local_token(&self) -> Option<&str> {
+        self.local_token.as_deref()
+    }
+
     pub(crate) fn commit(&mut self) -> Result<(), AdapterFailure> {
         self.transaction.commit().map_err(config_error)?;
         let bytes = common::snapshot(&self.path)
@@ -136,9 +193,14 @@ impl Prepared {
 }
 
 pub(crate) async fn verify(
+    state: &ClaudeCodeRuntimeState,
     installation: &ResolvedInstallation,
     model: &str,
+    credential: &tool_credentials::ToolCredential,
 ) -> Result<(), AdapterFailure> {
+    if credential.claude_transport.as_deref() == Some("chat_bridge") {
+        state.start(credential.clone()).await?;
+    }
     let settings_path = super::user_home()
         .map(|home| home.join(".claude").join("settings.json"))
         .filter(|path| path.is_file())
@@ -184,6 +246,44 @@ pub(crate) async fn verify(
     }
 }
 
+impl ClaudeCodeRuntimeState {
+    pub(crate) async fn start(
+        &self,
+        credential: tool_credentials::ToolCredential,
+    ) -> Result<(), AdapterFailure> {
+        self.runtime.start(credential).await.map(|_| ())
+    }
+
+    pub(crate) async fn stop(&self) {
+        self.runtime.stop().await;
+    }
+}
+
+pub(crate) async fn resume_if_configured(state: ClaudeCodeRuntimeState) {
+    let Ok(credential) = tool_credentials::load("claude_code") else {
+        return;
+    };
+    if credential.claude_transport.as_deref() != Some("chat_bridge") {
+        return;
+    }
+    let Some(home) = super::user_home() else {
+        return;
+    };
+    let settings = common::snapshot(&home.join(".claude").join("settings.json"))
+        .ok()
+        .flatten()
+        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok());
+    let active = settings.as_ref().is_some_and(|value| {
+        value
+            .pointer("/env/ANTHROPIC_BASE_URL")
+            .and_then(Value::as_str)
+            == Some(PROXY_BASE)
+    });
+    if active {
+        let _ = state.start(credential).await;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -204,5 +304,12 @@ mod tests {
         assert_eq!(value["env"]["ANTHROPIC_MODEL"], "glm-5.3");
         assert!(value["env"].get("ANTHROPIC_AUTH_TOKEN").is_none());
         assert!(value.to_string().find("sk-old").is_none());
+    }
+
+    #[test]
+    fn chat_transport_uses_loopback_and_local_token() {
+        let token = new_local_token().unwrap();
+        assert_eq!(PROXY_BASE, "http://127.0.0.1:15728/claude-code");
+        assert!(token.starts_with("ycg-") && token.len() == 68);
     }
 }

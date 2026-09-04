@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU032-AS-01",
+  "assertion": "Both Claude targets show account models advertising Anthropic or Chat, prefer native Anthropic and use isolated local bridges only for Chat-only models with non-stream, stream, tool, media, reasoning and usage conversion tests passing.",
+  "testSelector": "tests/work_packages/ru032/test_acceptance.py::test_claude_visibility_and_protocol_routing",
+  "acceptanceCommandId": "ru032-routing",
+  "runId": "RU-032/WP-RU032-CLAUDE-PROTOCOL-ROUTING@2026-09-04T11:35:58.239023+00:00",
+  "packageId": "WP-RU032-CLAUDE-PROTOCOL-ROUTING",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru032/test_acceptance.py::test_claude_visibility_and_protocol_routing",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:451eb39bff84b524afa49d35acf33d674804f9d718d413604524a166a7a193a3",
+    "machineReportSha256": "sha256:2bce4abd14759865d4cfc8626902728460a796864e0d4922ef1975b5c73d8e09",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:4aad54354be18df7631504c1d3af39fe1cd79b26da31b5860797cf68084104b7",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:2df7010f246247b9d34044c094b3f659d4dc4702906564ca6054e9a735178e1b",
+  "releaseUnitId": "RU-032",
+  "releaseUnitHash": "sha256:6e62c141d522e51b6dd60e17737f275fcc202a245c81876825f562927142bb94"
+}

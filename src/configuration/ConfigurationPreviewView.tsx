@@ -14,7 +14,7 @@ import {
   groupLabel,
 } from "./BillingGroupPicker";
 import { chooseBillingGroup } from "./billing";
-import { modelSupportsTool } from "./modelCompatibility";
+import { modelConnectionMode, modelSupportsTool } from "./modelCompatibility";
 import type { AccountSessionController } from "../account/useAccountSession";
 import claudeIcon from "../assets/icons/claude.svg";
 import codexIcon from "../assets/icons/chatgpt.svg";
@@ -727,11 +727,15 @@ export function ConfigurationPreviewView({
                         String(models.length),
                       )}
                     </span>
-                    {activationToolId === "codex_desktop" && selectedModel ? (
+                    {selectedModel &&
+                    ["claude_code", "claude_desktop", "codex_desktop"].includes(
+                      activationToolId,
+                    ) ? (
                       <span className="connection-compatibility-label">
-                        {selectedModel.supportedEndpointTypes?.includes(
-                          "openai-response",
-                        )
+                        {modelConnectionMode(
+                          activationToolId,
+                          selectedModel.supportedEndpointTypes ?? [],
+                        ) === "direct"
                           ? ux.directConnection
                           : ux.automaticCompatibility}
                       </span>

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU032-AS-02",
+  "assertion": "Complete NewAPI keys remain in OS secure storage, bridged targets receive only local tokens, both Claude routes resume independently, and failed activation restores configuration, credential and prior bridge state.",
+  "testSelector": "tests/work_packages/ru032/test_acceptance.py::test_claude_bridge_secret_restart_and_rollback_boundaries",
+  "acceptanceCommandId": "ru032-security",
+  "runId": "RU-032/WP-RU032-CLAUDE-PROTOCOL-ROUTING@2026-09-04T11:35:58.239023+00:00",
+  "packageId": "WP-RU032-CLAUDE-PROTOCOL-ROUTING",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru032/test_acceptance.py::test_claude_bridge_secret_restart_and_rollback_boundaries",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:6f88abd16abeb44a00a609d1b68ca002a21cba0a01a9052c11766cf013067bd0",
+    "machineReportSha256": "sha256:33bd24c142387d5fd84331b1b816995ce3cdf577aa4bc7cc1e513591fafea036",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:a1f7f4883a1f73a42b279443c0ce87019dfee7ad5d62b8b86e8c0ef319287c85",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:4228bd899398f9377d664ee8808012d34e5027dcb2a325268da24e0ce2a52ab4",
+  "releaseUnitId": "RU-032",
+  "releaseUnitHash": "sha256:6e62c141d522e51b6dd60e17737f275fcc202a245c81876825f562927142bb94"
+}
