@@ -38,5 +38,5 @@ Hermes 与 OpenClaw 本轮完成了配置合并、秘密引用、回读和失败
 ## 仍需发布前实机确认
 
 - 使用真实野菜API账户，在干净的 Intel Mac、Apple Silicon Mac 和 Windows 10/11 分别走一次登录、切线路、选模型与分组、一键接入、失败恢复和充值跳转。
-- Windows 当前提交仍需由 GitHub 的手动 Windows x64 工作流重新构建；该包没有发布者代码签名，安装时会显示系统来源提醒。
+- Windows x64 已由 GitHub 手动工作流从提交 `3ed52d29a051814d493752ff885f73b1b1fdb367` 构建成功；该包没有发布者代码签名，安装时会显示系统来源提醒。产物与构建回执在 `release/ru028-windows-33854814146/`。
 - 自动更新保持关闭。启用前需要独立的 Tauri 更新签名密钥、公钥、已签名更新包、HTTPS 更新清单、篡改拒绝测试和重启安装测试；Apple Developer ID 证书不能代替更新签名密钥。
