@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU033-AS-01",
+  "assertion": "Both Codex transports use deterministic config, credential and exact provider-path verification, expose distinct bounded failures, launch only after success and preserve secret plus rollback boundaries under replay and recovery.",
+  "testSelector": "tests/work_packages/ru033/test_acceptance.py::test_codex_verification_and_failure_boundaries",
+  "acceptanceCommandId": "ru033-codex",
+  "runId": "RU-033/WP-RU033-CODEX-VERIFICATION-PRICE-SUMMARY@2026-09-04T14:30:36.913942+00:00",
+  "packageId": "WP-RU033-CODEX-VERIFICATION-PRICE-SUMMARY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru033/test_acceptance.py::test_codex_verification_and_failure_boundaries",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:cf79b1ab3e7f6280e98d6371aea599a7cf539ebc30408b2fb95d579481304471",
+    "machineReportSha256": "sha256:5e20bd0919696d1cbb801ed5fe4351f2a90af58a44f5b9b27a96e269710ba287",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:a4a9437d3cd3cc4d512114f400ed0e66556a4c8d21bd2ebdda678ebf355845df",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:71f07cb366a21dfe36732efa82d6031d5cf9130015a6e801c1b9fe4c451ce43c",
+  "releaseUnitId": "RU-033",
+  "releaseUnitHash": "sha256:ea3f6aa369cebf6b4c36663850414a6ad4bfbbb733f7ccaf624f5c891de101f6"
+}

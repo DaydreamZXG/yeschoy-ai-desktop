@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU033-AS-01",
+  "assertion": "Both Codex transports use deterministic config, credential and exact provider-path verification, expose distinct bounded failures, launch only after success and preserve secret plus rollback boundaries under replay and recovery.",
+  "testSelector": "tests/work_packages/ru033/test_acceptance.py::test_codex_verification_and_failure_boundaries",
+  "acceptanceCommandId": "ru033-codex",
+  "runId": "RU-033/WP-RU033-CODEX-VERIFICATION-PRICE-SUMMARY@2026-09-04T13:49:57.744353+00:00",
+  "packageId": "WP-RU033-CODEX-VERIFICATION-PRICE-SUMMARY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:e32d147a4cb668f215013a95e146e1944679e09e98857c2141052bd35b2e1197",
+  "releaseUnitId": "RU-033",
+  "releaseUnitHash": "sha256:ea3f6aa369cebf6b4c36663850414a6ad4bfbbb733f7ccaf624f5c891de101f6"
+}

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU033-AS-02",
+  "assertion": "The price surface renders one reproducible cache-heavy 100 million token official-versus-YesChoy estimate, honest tier ranges and cache fallback disclosure without detailed per-rate tables or invented unsupported prices.",
+  "testSelector": "tests/work_packages/ru033/test_acceptance.py::test_cache_heavy_price_summary",
+  "acceptanceCommandId": "ru033-pricing",
+  "runId": "RU-033/WP-RU033-CODEX-VERIFICATION-PRICE-SUMMARY@2026-09-04T14:30:36.913942+00:00",
+  "packageId": "WP-RU033-CODEX-VERIFICATION-PRICE-SUMMARY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru033/test_acceptance.py::test_cache_heavy_price_summary",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:1a03f42c0f76cda78bd6f6383917ed547581ae2c1eecb884149dd4f778c2d595",
+    "machineReportSha256": "sha256:a650de1204423a7975ba3cb4089b07b7d5670e21826f462924767b38deb34958",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:455cacc72362f8d481fbec21a22277d8604c503dd4fe47b7ca1ab17a135d0e49",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:ede8f45c6af6a0f2dc04424f8836cf991728b99c6c6cf508b28d5811b4293104",
+  "releaseUnitId": "RU-033",
+  "releaseUnitHash": "sha256:ea3f6aa369cebf6b4c36663850414a6ad4bfbbb733f7ccaf624f5c891de101f6"
+}

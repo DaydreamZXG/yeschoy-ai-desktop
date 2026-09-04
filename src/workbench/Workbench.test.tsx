@@ -507,8 +507,8 @@ describe("official workbench", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "模型与价格" }));
     expect((await screen.findAllByText("glm-5.3")).length).toBeGreaterThan(1);
-    expect(screen.getByText("¥2.00")).toBeInTheDocument();
-    expect(screen.getByText("¥1.00")).toBeInTheDocument();
+    expect(screen.getByText("¥260")).toBeInTheDocument();
+    expect(screen.getByText("¥130")).toBeInTheDocument();
     expect(screen.getByText("1 USD = 1 CNY")).toBeInTheDocument();
     expect(screen.getByText(/50%/)).toBeInTheDocument();
   });
@@ -584,7 +584,7 @@ describe("official workbench", () => {
       await screen.findByRole("button", { name: "一键接入" });
       if (billingGroup === "国模特价分组") {
         fireEvent.click(screen.getByRole("radio", { name: /国模特价分组/ }));
-        expect(screen.getByText("¥0.70")).toBeInTheDocument();
+        expect(screen.getByText("¥91")).toBeInTheDocument();
         expect(
           screen.getByRole("radio", { name: /国模特价分组/ }),
         ).toBeChecked();
@@ -649,7 +649,9 @@ describe("official workbench", () => {
     await screen.findByText("1.2.3");
     fireEvent.click(screen.getByRole("button", { name: "应用接入" }));
     expect(
-      await screen.findByText(/当前规则暂不能换算为固定单价，可以继续接入/),
+      await screen.findByText(
+        /当前规则无法可靠换算为 Token 费用，暂不展示估算/,
+      ),
     ).toBeInTheDocument();
     expect(screen.getByTestId("configuration-apply-action")).toBeEnabled();
     fireEvent.click(screen.getByTestId("configuration-apply-action"));

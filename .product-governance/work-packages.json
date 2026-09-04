@@ -2,6 +2,126 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id": "WP-RU033-CODEX-VERIFICATION-PRICE-SUMMARY",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "critical",
+      "objective": "Correct Codex activation verification on both compiled lines, simplify price comparison to a transparent cache-heavy 100 million token estimate, and build truthful 0.4.5 candidates.",
+      "deliverables": [
+        "Deterministic Codex configuration, credential, selected-provider model and desktop-launch verification with closed recovery reasons",
+        "Loopback Codex provider compatibility checks for current desktop runtimes",
+        "Concise reproducible 100 million token official-versus-YesChoy estimate with tier and fallback truth",
+        "Coherent 0.4.5 source plus notarized macOS universal and explicitly unsigned Windows x64 candidate evidence"
+      ],
+      "requirementRefs": [
+        "REQ-059"
+      ],
+      "decisionRefs": [
+        "DEC-077"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No NewAPI, Nginx, DNS, server database, server source, production deployment or pricing mutation.",
+        "No renderer-visible complete key, plaintext key in Codex configuration, caller-selected upstream, non-loopback listener, telemetry or retained backup history.",
+        "No exact-version allowlist, Windows publisher-signature claim, automatic updater activation or public production-readiness claim."
+      ],
+      "dependsOn": [
+        "WP-RU032-CLAUDE-PROTOCOL-ROUTING"
+      ],
+      "allowedPaths": [
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/**",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/src/**",
+        ".github/workflows/yeschoy-windows-internal.yml",
+        "tests/work_packages/ru033/**",
+        "outputs/野菜API-0.4.5-接入与价格验收.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        "release-assets/**",
+        "src-tauri/target/**",
+        "dist/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No server or local database migration. Existing tool credentials and configuration receipts remain readable; the next explicit activation replaces only owned Codex fields.",
+        "rollback": "Restore volatile snapshots of the selected target configuration and prior secure credential, delete only a newly created token whose ownership is proven, and restore prior bridge state."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Use capability and exact selected-provider behavior rather than application version strings or a full general-purpose agent transcript. Preserve the schema-v3 activation projection shape while applying the v4 verification semantics.",
+        "supportedVersions": "0.4.5 client candidate on macOS 12 or later for Apple Silicon and Intel, and Windows 10/11 x64. Ordinary Codex version strings remain informational.",
+        "removalGate": "Removing provider-path verification, cache fallback disclosure or rollback requires a superseding decision and evidence. Server changes, signed Windows publishing and updater activation require a later unit."
+      },
+      "inputContracts": [
+        "desktop-account-session@v3",
+        "public-service-catalog@v1",
+        "desktop-tool-activation@v3"
+      ],
+      "outputContracts": [
+        "desktop-tool-activation@v4"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru033-codex",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru033/test_acceptance.py::test_codex_verification_and_failure_boundaries",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        },
+        {
+          "id": "ru033-pricing",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru033/test_acceptance.py::test_cache_heavy_price_summary",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        },
+        {
+          "id": "ru033-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru033/test_acceptance.py::test_client_only_version_build_and_release_contract",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU033-AS-01",
+          "assertion": "Both Codex transports use deterministic config, credential and exact provider-path verification, expose distinct bounded failures, launch only after success and preserve secret plus rollback boundaries under replay and recovery.",
+          "testSelector": "tests/work_packages/ru033/test_acceptance.py::test_codex_verification_and_failure_boundaries",
+          "acceptanceCommandId": "ru033-codex"
+        },
+        {
+          "id": "RU033-AS-02",
+          "assertion": "The price surface renders one reproducible cache-heavy 100 million token official-versus-YesChoy estimate, honest tier ranges and cache fallback disclosure without detailed per-rate tables or invented unsupported prices.",
+          "testSelector": "tests/work_packages/ru033/test_acceptance.py::test_cache_heavy_price_summary",
+          "acceptanceCommandId": "ru033-pricing"
+        },
+        {
+          "id": "RU033-AS-03",
+          "assertion": "Version 0.4.5 compiles coherently, all client tests pass, macOS universal packaging remains signable and notarizable, and Windows x64 packaging stays explicitly unsigned and runner-gated.",
+          "testSelector": "tests/work_packages/ru033/test_acceptance.py::test_client_only_version_build_and_release_contract",
+          "acceptanceCommandId": "ru033-build"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "The selected model cannot complete a bounded response through its exact configured direct or loopback provider path.",
+        "A fix would require a caller-controlled upstream, non-loopback listener, plaintext NewAPI key, renderer secret or retained credential backup.",
+        "Pricing cannot be reproduced from current NewAPI base or expression rates, billing-group ratio and positive exchange rate.",
+        "Implementation requires NewAPI, server database, Nginx, DNS, production deployment, telemetry or automatic updater mutation."
+      ],
+      "status": "planned"
+    },
+    {
       "id": "WP-RU032-CLAUDE-PROTOCOL-ROUTING",
       "wave": "integration",
       "owner": "tool-config",

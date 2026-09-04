@@ -2,6 +2,192 @@
   "schemaVersion": 1,
   "contracts": [
     {
+      "id": "desktop-tool-activation@v4",
+      "kind": "command",
+      "owner": "tool-config",
+      "consumers": [
+        "desktop-platform",
+        "diagnostics"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-tool-activation@v4",
+      "authorization": "One explicit click in the bundled desktop shell while a valid first-party desktop session exists. Native code accepts only two compiled active line IDs, seven closed target IDs, one exact current-account model ID, one exact current-account billing group and an optional opaque installation ID previously returned by native discovery.",
+      "idempotency": "Repeated activation reuses the target's dedicated NewAPI token and replaces only receipt-owned configuration fields. Ready is recomputed from fresh readback, credential resolution, exact selected-provider response and target launch; stale success is never reused.",
+      "compatibility": "Version 4 is wire-compatible with the schema-v3 renderer projection and supersedes the fragile Codex full-agent gate. Codex version strings remain informational. Codex readiness requires native configuration and credential loading, one bounded response through the exact direct or loopback provider path and desktop launch, while unrelated plugin availability and evolving general-agent JSONL events are excluded from the installation decision. Other target semantics remain unchanged from version 3.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One bounded native activation request for an explicitly selected tool identity.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Opaque renderer correlation ID.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "lineId": {
+            "type": "string",
+            "description": "Selected compiled first-party API origin.",
+            "enum": [
+              "mainland_optimized",
+              "global_accelerated"
+            ]
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Exact supported target identity.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "modelId": {
+            "type": "string",
+            "description": "Exact model ID selected from the current account model list.",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "installationId": {
+            "type": "string",
+            "description": "Opaque native discovery choice or empty for a unique installation.",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_-]*$"
+          },
+          "billingGroup": {
+            "type": "string",
+            "description": "Exact non-auto billing group returned for the selected account model.",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "requestId",
+          "lineId",
+          "toolId",
+          "modelId",
+          "installationId",
+          "billingGroup"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Sanitized activation state. The schema remains renderer-compatible with version 3; Codex ready proves deterministic config, credential, exact provider-path response and desktop launch.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Unchanged correlation ID.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Wire-compatible activation projection schema version.",
+            "enum": [
+              3
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Closed activation outcome.",
+            "enum": [
+              "ready",
+              "signed_out",
+              "tool_not_found",
+              "multiple_installations",
+              "missing_runtime",
+              "unsupported_group",
+              "unsupported_profile",
+              "unsupported_model",
+              "external_override",
+              "secure_storage_unavailable",
+              "configuration_failed",
+              "launch_failed",
+              "verification_failed",
+              "server_unavailable",
+              "invalid_request"
+            ]
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Validated target identity.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "modelId": {
+            "type": "string",
+            "description": "Validated exact model ID or empty string.",
+            "maxLength": 200
+          },
+          "billingGroup": {
+            "type": "string",
+            "description": "Validated exact account billing group or empty string only on an invalid request.",
+            "maxLength": 128
+          },
+          "observedAtEpochMs": {
+            "type": "integer",
+            "description": "Local completion timestamp.",
+            "minimum": 0
+          },
+          "reasonCode": {
+            "type": "string",
+            "description": "Closed safe recovery reason without raw response body, key or path.",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "requestId",
+          "schemaVersion",
+          "status",
+          "toolId",
+          "modelId",
+          "billingGroup",
+          "observedAtEpochMs",
+          "reasonCode"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal",
+        "sensitive"
+      ],
+      "observability": {
+        "correlation": "Only request ID, closed target, model, billing group, status, reason and observation time cross IPC.",
+        "audit": "NewAPI owns token audit state. Native code keeps no local secret-bearing history and only receipt metadata needed to prove field ownership.",
+        "metrics": "No telemetry upload. Provider probe output is bounded and reduced to a closed status before IPC."
+      },
+      "errorSemantics": [
+        "Invalid target, active line, model, billing group or installation identity fails before key acquisition or file access.",
+        "Codex ready requires owned configuration readback, command-backed credential resolution, one bounded real response through the exact selected direct or loopback provider path and successful desktop launch.",
+        "Configuration, secure-storage, authentication, endpoint, model, invalid-response and launch failures are distinct closed outcomes. A failing transaction restores all touched files and prior credentials and deletes only a newly created token whose ownership is proven.",
+        "Complete keys never cross renderer IPC, appear in ordinary configuration or enter diagnostic text. Loopback compatibility endpoints return only public model metadata and health state.",
+        "Other supported targets retain the version-3 target-level verification and recovery behavior."
+      ],
+      "requirementRefs": [
+        "REQ-059"
+      ],
+      "evidenceRefs": [
+        "E-USER-063",
+        "E-EXT-046",
+        "E-CODE-052",
+        "E-PROP-024"
+      ],
+      "status": "specified"
+    },
+    {
       "id": "desktop-tool-activation@v3",
       "kind": "command",
       "owner": "tool-config",

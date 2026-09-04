@@ -2,6 +2,34 @@
   "schemaVersion": 1,
   "decisions": [
     {
+      "id": "DEC-077",
+      "question": "How should the client correct dual-line Codex activation failures and simplify price comparison without weakening truth or changing NewAPI?",
+      "choice": "Create a client-only 0.4.5 successor. Codex activation remains transactional, but ready is established by successful owned-field readback, Codex-native configuration and credential loading, one bounded real response through the exact selected direct or loopback provider path and successful desktop launch; a complete general-purpose Codex agent turn is no longer an installation gate because unrelated plugins, tools and evolving JSONL events can create false rollback. Return distinct closed reasons for credentials, line reachability, model rejection, invalid response and launch failure. Replace per-rate tables with one cache-heavy 100 million token example consisting of 10 million new input, 80 million cache reads and 10 million output; compute official and current-account YesChoy estimates from current NewAPI pricing, billing group ratio and exchange rate, show tier ranges where required and disclose any conservative cache fallback. Advance coherently to 0.4.5 and produce a notarized macOS universal candidate plus an explicitly unsigned Windows x64 candidate. Do not modify NewAPI, Nginx, DNS, server database, production configuration, telemetry or updater activation.",
+      "status": "accepted",
+      "decidedBy": "product owner plus current client, live route and isolated Codex runtime evidence",
+      "decidedAt": "2026-09-04T22:00:00+08:00",
+      "evidenceRefs": [
+        "E-USER-063",
+        "E-EXT-046",
+        "E-CODE-052",
+        "E-PROP-024"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-059"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE-PREVIEW",
+          "PAGE-MODELS"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "billing",
+          "desktop-platform"
+        ]
+      }
+    },
+    {
       "id": "DEC-076",
       "question": "How should the client correct Claude model visibility and configuration while delivering the requested macOS and Windows candidates without changing NewAPI?",
       "choice": "Create a client-only 0.4.4 successor. For Claude Code and Claude Desktop, treat anthropic and openai as usable account evidence, prefer native Anthropic whenever both are advertised, and route openai-only models through tool-specific loopback-only bridges that reuse the repository's mature Anthropic-to-OpenAI Chat request, response, streaming and tool conversion. Keep each complete NewAPI tool key in OS secure storage, give bridged clients only a per-tool local token, restrict outbound traffic to the selected compiled first-party origin, preserve unrelated settings with readback and rollback, and require a harmless target-level reply. Produce a signed notarized macOS universal DMG and attempt an explicitly unsigned Windows 10/11 x64 NSIS installer through the existing private workflow; a GitHub billing gate is an external release blocker and must not be reported as a built Windows artifact. Do not modify NewAPI, Nginx, DNS, server database, production configuration, telemetry or automatic updating.",

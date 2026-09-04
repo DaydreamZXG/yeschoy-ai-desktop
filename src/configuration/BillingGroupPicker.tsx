@@ -1,6 +1,6 @@
 import type { AccountModel } from "../account/session";
-import { CheckCircle2 } from "lucide-react";
-import { groupPrice } from "./billing";
+import { CheckCircle2, Landmark, Sprout } from "lucide-react";
+import { hundredMillionTokenEstimate } from "./billing";
 
 export const groupLabel = (id: string) => (id === "default" ? "标准分组" : id);
 
@@ -60,21 +60,18 @@ export function BillingGroupPicker({
   );
 }
 
-const rateLabels: Record<string, string> = {
-  p: "输入",
-  c: "输出",
-  cr: "缓存读取",
-  cc: "缓存写入",
-  cc1h: "缓存写入（1 小时）",
-  img: "图片输入",
-  img_o: "图片输出",
-  ai: "音频输入",
-  ao: "音频输出",
-  request: "每次请求",
-};
-function price(amount: number, currency: string) {
+function price(amount: number) {
   if (!Number.isFinite(amount)) return "—";
-  return `${currency === "CNY" ? "¥" : "US$"}${new Intl.NumberFormat("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 8 }).format(amount)}`;
+  return `¥${new Intl.NumberFormat("zh-CN", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount)}`;
+}
+
+function priceRange(range: { minimum: number; maximum: number }) {
+  if (Math.abs(range.maximum - range.minimum) < 0.005)
+    return price(range.minimum);
+  return `${price(range.minimum)} – ${price(range.maximum)}`;
 }
 
 export function BillingPrices({
@@ -88,9 +85,7 @@ export function BillingPrices({
 }) {
   const group = model?.billing?.groups.find((g) => g.id === selected);
   if (!model || !group) return null;
-  const { rows, currency, multiplier, unit } = groupPrice(model, group, fx);
-  const dynamic = model.billingMode === "tiered_expr";
-  const exchange = currency === "CNY" ? Number(fx) : 1;
+  const estimate = hundredMillionTokenEstimate(model, group, fx);
   return (
     <section
       className="billing-prices"
@@ -98,77 +93,48 @@ export function BillingPrices({
       aria-live="polite"
     >
       <header>
-        <strong>{groupLabel(group.id)} · 价格明细</strong>
-        <span>{unit === "request" ? "每次请求" : "每百万 tokens"}</span>
+        <div>
+          <strong>1 亿 Token 费用参考</strong>
+          <p>缓存型示例，不是账单预测</p>
+        </div>
+        {estimate?.savingPercent !== null &&
+          estimate?.savingPercent !== undefined && (
+            <span className="billing-saving-badge">
+              约省 {Math.round(estimate.savingPercent)}%
+            </span>
+          )}
       </header>
-      {dynamic && (
-        <p className="billing-price-note">
-          按分时或阶梯规则计费，下表列出各档单价；实际采用请求命中的档位。
-        </p>
-      )}
-      {rows.length ? (
-        rows.map((row, index) => (
-          <div className="billing-tier" key={`${row.name}-${index}`}>
-            {dynamic && <h4>{row.name}</h4>}
-            <table>
-              <thead>
-                <tr>
-                  <th>用量类型</th>
-                  <th>
-                    {dynamic || unit === "request"
-                      ? "基础价（倍率前）"
-                      : "官网参考价"}
-                  </th>
-                  <th>本分组价</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(row.rates)
-                  .filter(([key]) => key !== "constant")
-                  .map(([key, value]) => (
-                    <tr key={key}>
-                      <th scope="row">{rateLabels[key] ?? key}</th>
-                      <td>{price(value * exchange, currency)}</td>
-                      <td>{price(value * multiplier, currency)}</td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+      {estimate ? (
+        <>
+          <p className="billing-example-formula">
+            1,000 万新输入 + 8,000 万缓存读取 + 1,000 万输出
+          </p>
+          <div className="billing-comparison-grid">
+            <div className="billing-comparison-card is-official">
+              <Landmark aria-hidden="true" />
+              <span>使用官网预计</span>
+              <strong>{priceRange(estimate.official)}</strong>
+            </div>
+            <div className="billing-comparison-card is-yeschoy">
+              <Sprout aria-hidden="true" />
+              <span>使用野菜预计</span>
+              <strong>{priceRange(estimate.yeschoy)}</strong>
+            </div>
           </div>
-        ))
+          <p className="billing-price-note">
+            按 {groupLabel(group.id)} 当前倍率和 NewAPI 汇率（1 USD = {fx}{" "}
+            CNY）估算
+            {estimate.tiered ? "；不同请求档位会形成以上区间" : ""}。
+            {estimate.cacheFallback
+              ? "该模型没有单独的缓存读取价，缓存部分按输入价保守估算。"
+              : "不含另行发生的缓存写入，实际费用以请求命中的计费档位为准。"}
+          </p>
+        </>
       ) : (
         <p className="billing-price-note">
-          当前规则暂不能换算为固定单价，可以继续接入；费用按网站规则结算。
+          当前规则无法可靠换算为 Token
+          费用，暂不展示估算；实际费用以网站账单为准。
         </p>
-      )}
-      {group.ratio === null && (
-        <p className="billing-price-note">
-          暂未读到当前账户的倍率，不显示推测价格。
-        </p>
-      )}
-      {model.billingMode === "ratio" &&
-        group.ratio !== null &&
-        group.ratio < 1 &&
-        rows.length > 0 && (
-          <p className="billing-saving">
-            同等基础输入／输出用量，比参考价节省{" "}
-            {new Intl.NumberFormat("zh-CN", {
-              maximumFractionDigits: 2,
-            }).format((1 - group.ratio) * 100)}
-            %
-          </p>
-        )}
-      <p className="billing-price-note">
-        {currency === "CNY"
-          ? `换算汇率来自 NewAPI：1 USD = ${fx} CNY。`
-          : "暂未读到换算汇率，先显示美元价格。"}
-        倍率作用于基础计费，不代表所有请求都享有同一个官网折扣。
-      </p>
-      {dynamic && model.billing?.expression && (
-        <details className="billing-rule">
-          <summary>查看完整计费规则</summary>
-          <code>{model.billing.expression}</code>
-        </details>
       )}
     </section>
   );

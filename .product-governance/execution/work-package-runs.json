@@ -768,6 +768,38 @@
       "reportSha256": "sha256:ed398cb495cfb1c80d201891dfcc635fb9056fe776010b855f9d962209de658f",
       "releaseUnitId": "RU-032",
       "releaseUnitHash": "sha256:6e62c141d522e51b6dd60e17737f275fcc202a245c81876825f562927142bb94"
+    },
+    {
+      "id": "RU-033/WP-RU033-CODEX-VERIFICATION-PRICE-SUMMARY@2026-09-04T13:49:57.744353+00:00",
+      "packageId": "WP-RU033-CODEX-VERIFICATION-PRICE-SUMMARY",
+      "baselineCommit": "6caf6c9be7ca8e7557add98c7097d1033fa3dee7",
+      "baselineTreeHash": "sha256:0998676c941fc8eac067195360f7a350042a365e10fb1ec54b8b61187881cd7a",
+      "baselineSnapshotPath": "execution/baselines/4e6811d58a8874cf.ecca079c429142c34263.json",
+      "baselineSnapshotSha256": "sha256:5fb92e41ee3982f4286d7be2345ac6efd35fe2f8f703382e86d9fe49a0aabce4",
+      "assignedTo": "root",
+      "status": "failed",
+      "startedAt": "2026-09-04T13:49:57.744353+00:00",
+      "finishedAt": "2026-09-04T14:23:34.760341+00:00",
+      "reportPath": "execution/reports/4e6811d58a8874cf.ecca079c429142c34263.json",
+      "reportSha256": "sha256:5e6d0b247bab7572011872a92ec894013f13a64dd5b302e8ccc0f24488347d9a",
+      "releaseUnitId": "RU-033",
+      "releaseUnitHash": "sha256:ea3f6aa369cebf6b4c36663850414a6ad4bfbbb733f7ccaf624f5c891de101f6"
+    },
+    {
+      "id": "RU-033/WP-RU033-CODEX-VERIFICATION-PRICE-SUMMARY@2026-09-04T14:30:36.913942+00:00",
+      "packageId": "WP-RU033-CODEX-VERIFICATION-PRICE-SUMMARY",
+      "baselineCommit": "6caf6c9be7ca8e7557add98c7097d1033fa3dee7",
+      "baselineTreeHash": "sha256:0998676c941fc8eac067195360f7a350042a365e10fb1ec54b8b61187881cd7a",
+      "baselineSnapshotPath": "execution/baselines/4e6811d58a8874cf.d8715bf5507f1664c767.json",
+      "baselineSnapshotSha256": "sha256:5fb92e41ee3982f4286d7be2345ac6efd35fe2f8f703382e86d9fe49a0aabce4",
+      "assignedTo": "root",
+      "status": "completed",
+      "startedAt": "2026-09-04T14:30:36.913942+00:00",
+      "finishedAt": "2026-09-04T14:33:22.574789+00:00",
+      "reportPath": "execution/reports/4e6811d58a8874cf.d8715bf5507f1664c767.json",
+      "reportSha256": "sha256:abba0fb325134df324744fd6e79c4e2033c0c510148cf23dcdb6cb0b25e25d4b",
+      "releaseUnitId": "RU-033",
+      "releaseUnitHash": "sha256:ea3f6aa369cebf6b4c36663850414a6ad4bfbbb733f7ccaf624f5c891de101f6"
     }
   ]
 }

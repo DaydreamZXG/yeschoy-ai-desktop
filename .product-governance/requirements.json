@@ -2,6 +2,29 @@
   "schemaVersion": 1,
   "requirements": [
     {
+      "id": "REQ-059",
+      "statement": "Correct false dual-line Codex activation rollback and present a reproducible cache-heavy 100 million token official-versus-YesChoy estimate in a client-only 0.4.5 successor.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-063",
+        "E-EXT-046",
+        "E-CODE-052",
+        "E-PROP-024"
+      ],
+      "acceptance": [
+        "Codex Desktop activation for either compiled line writes and reads back only the owned provider, exact model and owned catalog, validates command-backed credential loading, completes one bounded real model response through the exact selected direct Responses or loopback Chat-conversion path, and launches the selected desktop installation before returning ready.",
+        "A full general-purpose Codex agent session, unrelated plugin availability and incidental JSONL event shape are not installation gates. Real configuration, secure-storage, authentication, line, model, invalid-response and launch failures remain non-ready, restore volatile snapshots and return distinct closed reason codes without raw body, key or local path.",
+        "The loopback Codex provider supports bounded HEAD Responses and GET Models compatibility checks without exposing credentials, accepting caller-selected upstreams or listening beyond loopback.",
+        "The price panel displays one concise 100 million token cache-heavy example: 10 million new input, 80 million cache reads and 10 million output. It derives official and current-account estimates from current NewAPI billing expressions or base prices, selected billing-group ratio and positive server exchange rate.",
+        "Multiple NewAPI price tiers produce an honest min-to-max estimate rather than hidden row selection. When no separate cache-read price exists, the calculation uses the input price and says so; request-priced or unparseable models remain unavailable rather than receiving an invented estimate.",
+        "The client version advances coherently to 0.4.5. Renderer and native tests cover calculation, tier range, fallback disclosure, both Codex transports, closed failures, secret boundaries and rollback. A notarized universal macOS DMG and an explicitly unsigned Windows 10/11 x64 NSIS candidate are produced only after their applicable gates pass.",
+        "No NewAPI, Nginx, DNS, server source, server database, production deployment, telemetry or automatic-updater activation is changed. Windows behavior is claimed only from Windows runner evidence, not macOS compilation alone."
+      ]
+    },
+    {
       "id": "REQ-058",
       "statement": "Make every current-account model that advertises Anthropic Messages or OpenAI Chat genuinely usable in Claude Code and Claude Desktop through evidence-driven native routing or a client-local bidirectional bridge, then produce truthful macOS and Windows 0.4.4 candidates without server mutation.",
       "scope": "target",

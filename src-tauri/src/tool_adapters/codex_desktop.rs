@@ -3,6 +3,8 @@ use std::{
     time::Duration,
 };
 
+use reqwest::{redirect::Policy, Client, StatusCode};
+use serde_json::{json, Value};
 use tokio::process::Command;
 use toml_edit::{value, Array, DocumentMut, Item, Table};
 
@@ -131,14 +133,14 @@ fn render(
     Ok(document.to_string().into_bytes())
 }
 
-fn catalog(model: &str, transport: CodexTransport) -> Result<Vec<u8>, AdapterFailure> {
+fn catalog_value(model: &str, transport: CodexTransport) -> Result<Value, AdapterFailure> {
     let template = match transport {
         CodexTransport::DirectResponses => {
             include_str!("../resources/codex_native_responses_template.json")
         }
         CodexTransport::ChatBridge => include_str!("../resources/gpt5_5_template.json"),
     };
-    let mut entry: serde_json::Value = serde_json::from_str(template)
+    let mut entry: Value = serde_json::from_str(template)
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?;
     let object = entry
         .as_object_mut()
@@ -155,8 +157,16 @@ fn catalog(model: &str, transport: CodexTransport) -> Result<Vec<u8>, AdapterFai
     object.insert("service_tiers".into(), serde_json::json!([]));
     object.remove("availability_nux");
     object.remove("upgrade");
-    serde_json::to_vec_pretty(&serde_json::json!({"models": [entry]}))
+    Ok(json!({"models": [entry]}))
+}
+
+fn catalog(model: &str, transport: CodexTransport) -> Result<Vec<u8>, AdapterFailure> {
+    serde_json::to_vec_pretty(&catalog_value(model, transport)?)
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_write_failed"))
+}
+
+pub(crate) fn bridge_catalog(model: &str) -> Result<Value, AdapterFailure> {
+    catalog_value(model, CodexTransport::ChatBridge)
 }
 
 pub(crate) fn prepare(
@@ -262,50 +272,141 @@ pub(crate) fn bundled_runtime(app_path: &Path) -> Option<PathBuf> {
 
 pub(crate) async fn verify_and_launch(
     installation: &ResolvedInstallation,
+    credential: &tool_credentials::ToolCredential,
 ) -> Result<(), AdapterFailure> {
-    let runtime = bundled_runtime(&installation.path).ok_or(AdapterFailure::LaunchFailed)?;
-    let working = common::temporary_working_directory("codex-desktop-verify")
-        .map_err(|_| AdapterFailure::VerificationFailed("verification_workspace_failed"))?;
-    let mut command = Command::new(runtime);
-    command.current_dir(&working).args([
-        "--ask-for-approval",
-        "never",
-        "exec",
-        "--ephemeral",
-        "--skip-git-repo-check",
-        "--json",
-        "--color",
-        "never",
-        "--sandbox",
-        "read-only",
-        "仅回复 YESCHOY_OK，不要使用工具。",
-    ]);
-    let result = common::run_bounded(command, Duration::from_secs(120)).await;
-    let _ = std::fs::remove_dir_all(&working);
-    let result =
-        result.map_err(|_| AdapterFailure::VerificationFailed("tool_request_timed_out"))?;
-    if !result.success || !completed_response(&result.stdout) {
-        return Err(AdapterFailure::VerificationFailed("tool_request_failed"));
-    }
+    bundled_runtime(&installation.path).ok_or(AdapterFailure::LaunchFailed)?;
+    verify_credential_helper(credential).await?;
+    verify_provider(credential).await?;
     launch(&installation.path)
 }
 
-fn completed_response(output: &[u8]) -> bool {
-    let events: Vec<serde_json::Value> = output
-        .split(|byte| *byte == b'\n')
-        .filter_map(|line| serde_json::from_slice(line).ok())
-        .collect();
-    let failed = events
-        .iter()
-        .any(|e| matches!(e["type"].as_str(), Some("error" | "turn.failed")));
-    let replied = events.iter().any(|e| {
-        e["type"] == "item.completed"
-            && e["item"]["type"] == "agent_message"
-            && e["item"]["text"]
-                .as_str()
-                .is_some_and(|s| !s.trim().is_empty())
-    });
-    !failed && replied && events.iter().any(|e| e["type"] == "turn.completed")
+async fn verify_credential_helper(
+    credential: &tool_credentials::ToolCredential,
+) -> Result<(), AdapterFailure> {
+    let helper = tool_credentials::executable_path()
+        .map_err(|_| AdapterFailure::VerificationFailed("credential_helper_failed"))?;
+    let mut command = Command::new(helper);
+    command.args(["credential-helper", "codex_desktop"]);
+    let result = common::run_bounded(command, Duration::from_secs(6))
+        .await
+        .map_err(|_| AdapterFailure::VerificationFailed("credential_helper_failed"))?;
+    let resolved = std::str::from_utf8(&result.stdout)
+        .ok()
+        .map(str::trim)
+        .unwrap_or("");
+    if !result.success || !codex_bridge::secure_equal(resolved, &credential.api_key) {
+        return Err(AdapterFailure::VerificationFailed(
+            "credential_helper_failed",
+        ));
+    }
+    Ok(())
+}
+
+fn provider_url(credential: &tool_credentials::ToolCredential) -> Result<String, AdapterFailure> {
+    match credential.codex_transport.as_deref() {
+        Some("direct_responses") => Ok(format!(
+            "{}/v1/responses",
+            credential.origin.trim_end_matches('/')
+        )),
+        Some("chat_bridge") => Ok(format!("{}/responses", codex_bridge::BASE_URL)),
+        _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
+    }
+}
+
+fn status_failure(status: StatusCode) -> Option<&'static str> {
+    match status.as_u16() {
+        200..=299 => None,
+        401 | 403 => Some("authentication_failed"),
+        404 | 405 => Some("endpoint_unavailable"),
+        408 => Some("provider_timed_out"),
+        429 => Some("provider_busy"),
+        400 | 409 | 422 => Some("model_request_rejected"),
+        500..=599 => Some("provider_unavailable"),
+        _ => Some("provider_request_failed"),
+    }
+}
+
+fn completed_provider_response(value: &Value) -> bool {
+    let completed = value
+        .get("status")
+        .and_then(Value::as_str)
+        .is_none_or(|status| status == "completed");
+    let output_text = value
+        .get("output_text")
+        .and_then(Value::as_str)
+        .is_some_and(|text| !text.trim().is_empty());
+    let output_item = value
+        .get("output")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(|item| item.get("content").and_then(Value::as_array))
+        .flatten()
+        .filter_map(|part| part.get("text").and_then(Value::as_str))
+        .any(|text| !text.trim().is_empty());
+    completed && (output_text || output_item)
+}
+
+async fn verify_provider(
+    credential: &tool_credentials::ToolCredential,
+) -> Result<(), AdapterFailure> {
+    const MAX_RESPONSE_BYTES: u64 = 2 * 1024 * 1024;
+    let client = Client::builder()
+        .redirect(Policy::none())
+        .connect_timeout(Duration::from_secs(12))
+        .timeout(Duration::from_secs(60))
+        .build()
+        .map_err(|_| AdapterFailure::VerificationFailed("provider_unavailable"))?;
+    let response = client
+        .post(provider_url(credential)?)
+        .bearer_auth(&credential.api_key)
+        .json(&json!({
+            "model": credential.model_id,
+            "input": [{
+                "role": "user",
+                "content": [{
+                    "type": "input_text",
+                    "text": "仅回复 YESCHOY_OK，不要使用工具。"
+                }]
+            }],
+            "stream": false
+        }))
+        .send()
+        .await
+        .map_err(|error| {
+            AdapterFailure::VerificationFailed(if error.is_timeout() {
+                "provider_timed_out"
+            } else {
+                "provider_unavailable"
+            })
+        })?;
+    if let Some(reason) = status_failure(response.status()) {
+        return Err(AdapterFailure::VerificationFailed(reason));
+    }
+    if response
+        .content_length()
+        .is_some_and(|length| length > MAX_RESPONSE_BYTES)
+    {
+        return Err(AdapterFailure::VerificationFailed(
+            "invalid_provider_response",
+        ));
+    }
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|_| AdapterFailure::VerificationFailed("invalid_provider_response"))?;
+    if bytes.len() as u64 > MAX_RESPONSE_BYTES {
+        return Err(AdapterFailure::VerificationFailed(
+            "invalid_provider_response",
+        ));
+    }
+    let value = serde_json::from_slice::<Value>(&bytes)
+        .map_err(|_| AdapterFailure::VerificationFailed("invalid_provider_response"))?;
+    completed_provider_response(&value)
+        .then_some(())
+        .ok_or(AdapterFailure::VerificationFailed(
+            "invalid_provider_response",
+        ))
 }
 
 #[cfg(target_os = "macos")]
@@ -335,16 +436,39 @@ mod tests {
     use super::*;
 
     #[test]
-    fn startup_events_and_failed_turns_are_not_success() {
-        assert!(!completed_response(
-            br#"{"type":"thread.started"}
-{"type":"turn.started"}"#
-        ));
-        let reply = b"{\"type\":\"item.completed\",\"item\":{\"type\":\"agent_message\",\"text\":\"YESCHOY_OK\"}}\n{\"type\":\"turn.completed\"}";
-        assert!(completed_response(reply));
-        let mut failed = reply.to_vec();
-        failed.extend_from_slice(b"\n{\"type\":\"turn.failed\"}");
-        assert!(!completed_response(&failed));
+    fn provider_response_requires_completed_assistant_text() {
+        assert!(completed_provider_response(&json!({
+            "status": "completed",
+            "output": [{
+                "type": "message",
+                "content": [{"type": "output_text", "text": "YESCHOY_OK"}]
+            }]
+        })));
+        assert!(!completed_provider_response(&json!({
+            "status": "failed",
+            "output_text": "YESCHOY_OK"
+        })));
+        assert!(!completed_provider_response(&json!({
+            "status": "completed",
+            "output": []
+        })));
+    }
+
+    #[test]
+    fn provider_statuses_have_closed_recovery_reasons() {
+        assert_eq!(
+            status_failure(StatusCode::UNAUTHORIZED),
+            Some("authentication_failed")
+        );
+        assert_eq!(
+            status_failure(StatusCode::TOO_MANY_REQUESTS),
+            Some("provider_busy")
+        );
+        assert_eq!(
+            status_failure(StatusCode::UNPROCESSABLE_ENTITY),
+            Some("model_request_rejected")
+        );
+        assert_eq!(status_failure(StatusCode::OK), None);
     }
 
     #[test]

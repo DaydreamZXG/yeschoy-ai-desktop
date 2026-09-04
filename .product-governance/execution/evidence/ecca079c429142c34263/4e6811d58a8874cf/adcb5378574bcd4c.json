@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU033-AS-02",
+  "assertion": "The price surface renders one reproducible cache-heavy 100 million token official-versus-YesChoy estimate, honest tier ranges and cache fallback disclosure without detailed per-rate tables or invented unsupported prices.",
+  "testSelector": "tests/work_packages/ru033/test_acceptance.py::test_cache_heavy_price_summary",
+  "acceptanceCommandId": "ru033-pricing",
+  "runId": "RU-033/WP-RU033-CODEX-VERIFICATION-PRICE-SUMMARY@2026-09-04T13:49:57.744353+00:00",
+  "packageId": "WP-RU033-CODEX-VERIFICATION-PRICE-SUMMARY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:7d2f10065fe0d21b6e4c549ed8111f94f9a4f7e4edeee1d83d090a4c7620de68",
+  "releaseUnitId": "RU-033",
+  "releaseUnitHash": "sha256:ea3f6aa369cebf6b4c36663850414a6ad4bfbbb733f7ccaf624f5c891de101f6"
+}

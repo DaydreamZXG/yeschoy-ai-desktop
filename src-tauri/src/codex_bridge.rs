@@ -142,7 +142,11 @@ impl CodexBridgeRuntimeState {
         };
         let router = Router::new()
             .route("/yeschoy/health", get(health))
-            .route("/yeschoy/v1/responses", post(responses))
+            .route("/yeschoy/v1/models", get(models))
+            .route(
+                "/yeschoy/v1/responses",
+                post(responses).head(responses_head),
+            )
             .layer(DefaultBodyLimit::max(MAX_REQUEST_BYTES))
             .with_state(state);
         let (shutdown, receive_shutdown) = oneshot::channel();
@@ -187,6 +191,36 @@ pub(crate) async fn resume_if_configured(runtime: CodexBridgeRuntimeState) {
 
 async fn health() -> impl IntoResponse {
     (StatusCode::OK, Json(json!({"status": "ready"})))
+}
+
+async fn responses_head() -> StatusCode {
+    StatusCode::OK
+}
+
+async fn models() -> Response {
+    let credential =
+        match tokio::task::spawn_blocking(|| tool_credentials::load("codex_desktop")).await {
+            Ok(Ok(value)) => value,
+            _ => {
+                return response_error(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "Secure credential unavailable",
+                )
+            }
+        };
+    if credential.codex_transport.as_deref() != Some("chat_bridge") {
+        return response_error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Compatibility connection is inactive",
+        );
+    }
+    match crate::tool_adapters::codex_desktop::bridge_catalog(&credential.model_id) {
+        Ok(value) => (StatusCode::OK, Json(value)).into_response(),
+        Err(_) => response_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Model catalog unavailable",
+        ),
+    }
 }
 
 pub(crate) fn secure_equal(left: &str, right: &str) -> bool {
@@ -351,5 +385,10 @@ mod tests {
         let chat = transform_codex_chat::responses_to_chat_completions(request).unwrap();
         assert_eq!(chat["model"], "gpt-5.5");
         assert_eq!(chat["messages"][0]["role"], "user");
+    }
+
+    #[tokio::test]
+    async fn responses_health_is_public_and_bounded() {
+        assert_eq!(responses_head().await, StatusCode::OK);
     }
 }

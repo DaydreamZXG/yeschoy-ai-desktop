@@ -117,6 +117,8 @@ const UX = {
     unavailable: "等待检查",
     version: "版本",
     verifying: "正在写入设置，并用这个应用发送一条真实验证消息…",
+    verifyingCodex:
+      "正在检查 Codex 设置、安全密钥和所选模型，成功后会自动打开应用…",
     verifyingDesktop:
       "已打开 Claude Desktop。请在应用里发送一条消息，助手会确认真实连接，最多等待 90 秒。",
     verifyingDsh: "正在启动 DSH，并通过它发送一条真实验证消息…",
@@ -125,8 +127,20 @@ const UX = {
     selectInstallFirst: "先选择安装位置",
     installFirst: "请先安装应用",
     updateFirst: "缺少运行组件",
-    connectionFailed:
-      "应用没有完成真实连接，所有本机改动已恢复。请检查线路后重试。",
+    connectionFailed: "没有完成接入，所有本机改动已恢复。请重新检查后再试。",
+    credentialHelperFailed:
+      "Codex 无法从系统安全存储读取工具密钥，设置已恢复。请退出后重新打开野菜 API 再试。",
+    authenticationFailed:
+      "所选线路没有接受工具密钥，设置已恢复。请刷新账户后重试。",
+    endpointUnavailable:
+      "所选线路暂时无法使用这个模型接口，设置已恢复。可以换一条线路或稍后重试。",
+    providerTimedOut:
+      "所选线路响应超时，设置已恢复。可以换一条线路或稍后重试。",
+    providerBusy: "当前模型请求较多，设置已恢复。请稍后重试或选择其他模型。",
+    modelRequestRejected:
+      "所选模型没有接受测试请求，设置已恢复。请刷新模型列表后重新选择。",
+    invalidProviderResponse:
+      "线路返回了无法识别的模型回复，设置已恢复。请稍后重试。",
     desktopTimedOut:
       "没有收到 Claude Desktop 的测试消息，接入未确认，本机改动已恢复。",
     missingDuringSetup: "刚才选择的应用已找不到，请重新检查。",
@@ -173,6 +187,8 @@ const UX = {
     version: "Version",
     verifying:
       "Updating settings and sending a real verification message through this application…",
+    verifyingCodex:
+      "Checking Codex settings, secure credentials, and the selected model, then opening the app…",
     verifyingDesktop:
       "Claude Desktop is open. Send a message there so the assistant can confirm the real connection. This waits up to 90 seconds.",
     verifyingDsh:
@@ -184,7 +200,21 @@ const UX = {
     installFirst: "Install the application first",
     updateFirst: "Runtime component missing",
     connectionFailed:
-      "The application did not complete a real connection. Local changes were restored. Check the line and retry.",
+      "Setup did not complete. Local changes were restored. Check again and retry.",
+    credentialHelperFailed:
+      "Codex could not read the tool key from secure system storage. Settings were restored. Reopen Yeschoy API and retry.",
+    authenticationFailed:
+      "The selected line did not accept the tool key. Settings were restored. Refresh the account and retry.",
+    endpointUnavailable:
+      "This model endpoint is unavailable on the selected line. Settings were restored. Try the other line or retry later.",
+    providerTimedOut:
+      "The selected line timed out. Settings were restored. Try the other line or retry later.",
+    providerBusy:
+      "The selected model is busy. Settings were restored. Retry later or choose another model.",
+    modelRequestRejected:
+      "The selected model rejected the verification request. Settings were restored. Refresh models and choose again.",
+    invalidProviderResponse:
+      "The line returned an unrecognized model response. Settings were restored. Retry later.",
     desktopTimedOut:
       "No test message arrived from Claude Desktop. The connection was not confirmed and local changes were restored.",
     missingDuringSetup:
@@ -471,9 +501,27 @@ export function ConfigurationPreviewView({
       case "launch_failed":
         return ux.launchFailed;
       case "verification_failed":
-        return activation.reasonCode === "waiting_for_desktop_request"
-          ? ux.desktopTimedOut
-          : ux.connectionFailed;
+        switch (activation.reasonCode) {
+          case "waiting_for_desktop_request":
+            return ux.desktopTimedOut;
+          case "credential_helper_failed":
+            return ux.credentialHelperFailed;
+          case "authentication_failed":
+            return ux.authenticationFailed;
+          case "endpoint_unavailable":
+            return ux.endpointUnavailable;
+          case "provider_timed_out":
+          case "provider_unavailable":
+            return ux.providerTimedOut;
+          case "provider_busy":
+            return ux.providerBusy;
+          case "model_request_rejected":
+            return ux.modelRequestRejected;
+          case "invalid_provider_response":
+            return ux.invalidProviderResponse;
+          default:
+            return ux.connectionFailed;
+        }
       case "server_unavailable":
         return c.setupServerUnavailable;
       case "configuration_failed":
@@ -498,9 +546,11 @@ export function ConfigurationPreviewView({
   const verifyingText =
     activationToolId === "claude_desktop"
       ? ux.verifyingDesktop
-      : activationToolId === "dsh_web"
-        ? ux.verifyingDsh
-        : ux.verifying;
+      : activationToolId === "codex_desktop"
+        ? ux.verifyingCodex
+        : activationToolId === "dsh_web"
+          ? ux.verifyingDsh
+          : ux.verifying;
   const canApply =
     signedIn &&
     selectedModelId !== "" &&

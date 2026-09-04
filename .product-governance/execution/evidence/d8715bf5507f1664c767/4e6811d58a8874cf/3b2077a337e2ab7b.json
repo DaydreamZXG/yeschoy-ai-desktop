@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU033-AS-03",
+  "assertion": "Version 0.4.5 compiles coherently, all client tests pass, macOS universal packaging remains signable and notarizable, and Windows x64 packaging stays explicitly unsigned and runner-gated.",
+  "testSelector": "tests/work_packages/ru033/test_acceptance.py::test_client_only_version_build_and_release_contract",
+  "acceptanceCommandId": "ru033-build",
+  "runId": "RU-033/WP-RU033-CODEX-VERIFICATION-PRICE-SUMMARY@2026-09-04T14:30:36.913942+00:00",
+  "packageId": "WP-RU033-CODEX-VERIFICATION-PRICE-SUMMARY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru033/test_acceptance.py::test_client_only_version_build_and_release_contract",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:c259bf769a21f1326fe784a2a20e7822d577e27ec59ee1289ede4e3407ad5b56",
+    "machineReportSha256": "sha256:b7057f60008ea99c73ffbf50dd028b4ab16cf1b22f05b7bd1eec472047f1e973",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:41f8423f0e832dfff1801eb2fa0e13ae57a470c3ce6922a9d717cd76dc623931",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:e4cfb7804e46495423249b7b082c42d5945ea0987ff21963712cbbc38c8957a4",
+  "releaseUnitId": "RU-033",
+  "releaseUnitHash": "sha256:ea3f6aa369cebf6b4c36663850414a6ad4bfbbb733f7ccaf624f5c891de101f6"
+}

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { AccountModel } from "../account/session";
-import { billingTiers, chooseBillingGroup, groupPrice } from "./billing";
+import {
+  billingTiers,
+  chooseBillingGroup,
+  groupPrice,
+  hundredMillionTokenEstimate,
+} from "./billing";
 
 export const timedRule =
   '(((weekday("Asia/Shanghai") >= 1 && weekday("Asia/Shanghai") <= 5) && ((hour("Asia/Shanghai") >= 9 && hour("Asia/Shanghai") < 12) || (hour("Asia/Shanghai") >= 14 && hour("Asia/Shanghai") < 18))) ? tier("高峰期", p * 3 + cr * 0.1 + c * 9) : tier("非高峰期", p * 1.5 + cr * 0.05 + c * 4.5))';
@@ -71,6 +76,59 @@ describe("billing display follows the selected NewAPI group", () => {
     expect(result.rows[0].rates.request * result.multiplier).toBeCloseTo(
       0.0035,
     );
+  });
+
+  it("compares a transparent cache-heavy 100M token example", () => {
+    const result = hundredMillionTokenEstimate(
+      fixture(),
+      fixture().billing!.groups[1],
+      "7",
+    );
+    expect(result).toMatchObject({
+      currency: "CNY",
+      official: { minimum: 448, maximum: 896 },
+      cacheFallback: false,
+      tiered: true,
+      savingPercent: 65,
+    });
+    expect(result?.yeschoy.minimum).toBeCloseTo(156.8);
+    expect(result?.yeschoy.maximum).toBeCloseTo(313.6);
+  });
+
+  it("uses the input rate as a disclosed conservative cache fallback", () => {
+    const model = fixture("ratio");
+    const result = hundredMillionTokenEstimate(
+      model,
+      model.billing!.groups[1],
+      "7",
+    );
+    expect(result).toMatchObject({
+      official: { minimum: 2520, maximum: 2520 },
+      yeschoy: { minimum: 882, maximum: 882 },
+      cacheFallback: true,
+      tiered: false,
+    });
+  });
+
+  it("does not invent a token estimate without FX, group ratio or token rates", () => {
+    const model = fixture();
+    expect(
+      hundredMillionTokenEstimate(model, model.billing!.groups[1], ""),
+    ).toBeNull();
+    expect(
+      hundredMillionTokenEstimate(
+        model,
+        { id: "unknown", description: "", ratio: null },
+        "7",
+      ),
+    ).toBeNull();
+    expect(
+      hundredMillionTokenEstimate(
+        fixture("per_request"),
+        model.billing!.groups[1],
+        "7",
+      ),
+    ).toBeNull();
   });
 
   it("keeps a valid choice on refresh and replaces an unavailable group on model change", () => {

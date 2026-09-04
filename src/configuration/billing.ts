@@ -233,3 +233,71 @@ export function groupPrice(
     unit: model.billingMode === "per_request" ? "request" : "tokens",
   };
 }
+
+export interface HundredMillionTokenEstimate {
+  currency: "CNY";
+  official: { minimum: number; maximum: number };
+  yeschoy: { minimum: number; maximum: number };
+  cacheFallback: boolean;
+  tiered: boolean;
+  savingPercent: number | null;
+}
+
+// A transparent, deliberately simple comparison for a cache-heavy workload:
+// 10M new input + 80M cache reads + 10M output = 100M tokens.
+const NEW_INPUT_MILLIONS = 10;
+const CACHE_READ_MILLIONS = 80;
+const OUTPUT_MILLIONS = 10;
+
+export function hundredMillionTokenEstimate(
+  model: AccountModel,
+  group: BillingGroup,
+  fx: string,
+): HundredMillionTokenEstimate | null {
+  const exchange = Number(fx);
+  if (!Number.isFinite(exchange) || exchange <= 0) return null;
+  if (group.ratio === null || !Number.isFinite(group.ratio) || group.ratio < 0)
+    return null;
+  const { rows, unit } = groupPrice(model, group, fx);
+  if (unit !== "tokens" || rows.length === 0) return null;
+
+  let cacheFallback = false;
+  const official = rows.flatMap((row) => {
+    const input = row.rates.p;
+    const output = row.rates.c;
+    if (
+      !Number.isFinite(input) ||
+      input < 0 ||
+      !Number.isFinite(output) ||
+      output < 0
+    )
+      return [];
+    const cacheRead = row.rates.cr;
+    const cache =
+      Number.isFinite(cacheRead) && cacheRead >= 0 ? cacheRead : input;
+    if (cache === input && cacheRead === undefined) cacheFallback = true;
+    return [
+      exchange *
+        (NEW_INPUT_MILLIONS * input +
+          CACHE_READ_MILLIONS * cache +
+          OUTPUT_MILLIONS * output),
+    ];
+  });
+  if (official.length !== rows.length || official.length === 0) return null;
+  const actual = official.map((amount) => amount * group.ratio!);
+  return {
+    currency: "CNY",
+    official: {
+      minimum: Math.min(...official),
+      maximum: Math.max(...official),
+    },
+    yeschoy: {
+      minimum: Math.min(...actual),
+      maximum: Math.max(...actual),
+    },
+    cacheFallback,
+    tiered: rows.length > 1,
+    savingPercent:
+      group.ratio < 1 ? Math.max(0, (1 - group.ratio) * 100) : null,
+  };
+}

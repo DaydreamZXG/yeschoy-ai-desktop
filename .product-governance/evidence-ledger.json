@@ -2,6 +2,54 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "E-USER-063",
+      "claim": "The owner reports that Codex Desktop activation fails on both selectable lines and requires the client to fix the false all-or-nothing gate. The owner also requires pricing to become a concise, approximately one-hundred-million-token official-versus-YesChoy comparison for a cache-heavy workload instead of a detailed per-rate table.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-04:dual-line-codex-failure-and-cache-heavy-price-summary",
+      "scope": "target",
+      "observedAt": "2026-09-04T22:00:00+08:00",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-046",
+      "claim": "Both compiled origins currently expose the Responses and Chat Completions routes behind authentication, return the same public gpt-5.6-sol pricing metadata, and classify gpt-5.6-sol as OpenAI Chat compatible in the Codex special billing group. Current Codex documentation specifies custom provider base_url, Responses wire protocol and command-backed bearer authentication.",
+      "class": "external_verified",
+      "locator": "https://yeschoy.com/api/pricing;https://api.yeschoy.com/api/pricing;https://yeschoy.com/v1/responses;https://api.yeschoy.com/v1/responses;https://learn.chatgpt.com/docs/config-file/config-reference;command:2026-09-04:dual-line-route-model-and-codex-config-probe",
+      "scope": "current",
+      "observedAt": "2026-09-04T22:00:00+08:00",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-052",
+      "claim": "The 0.4.4 Codex adapter treats any nonzero full-agent subprocess outcome or any unrecognized JSONL completion as one generic tool_request_failed result, rolls back a successfully read-back configuration and deletes a newly created token. An isolated current bundled Codex 0.152.1 probe successfully reads the generated provider, command-backed auth and local model catalog and emits item.completed plus turn.completed against a deterministic Responses server, so exact-version or basic config incompatibility is not the observed cause.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/tool_adapters/codex_desktop.rs:263-308;src-tauri/src/tool_activation.rs:929-978;command:2026-09-04:isolated-codex-0.152.1-provider-auth-catalog-probe",
+      "scope": "current",
+      "observedAt": "2026-09-04T22:00:00+08:00",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-024",
+      "claim": "A client-only 0.4.5 successor should replace the fragile full-agent activation gate with deterministic Codex config readback plus an exact selected-provider model probe and desktop launch, preserve rollback for real configuration, credential, provider or launch failures, return closed actionable reason codes, and replace detailed billing tables with a transparent cache-heavy one-hundred-million-token estimate using current NewAPI rates and exchange rate.",
+      "class": "proposed",
+      "locator": "inline:ru033-codex-verification-and-price-summary",
+      "scope": "proposal",
+      "observedAt": "2026-09-04T22:00:00+08:00",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-USER-063",
+        "E-EXT-046",
+        "E-CODE-052"
+      ]
+    },
+    {
       "id": "E-USER-062",
       "claim": "The owner requires the Claude model limitation to be corrected and explicitly asks for both macOS and Windows deliverables. The existing client-only boundary remains in force.",
       "class": "user_confirmed",

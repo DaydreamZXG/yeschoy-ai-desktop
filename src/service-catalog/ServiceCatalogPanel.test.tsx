@@ -115,9 +115,12 @@ describe("catalog selection and recovery", () => {
     expect(
       screen.getByRole("heading", { name: "选好，就能用" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("官网参考价")).toBeInTheDocument();
-    expect(screen.getByText("本分组价")).toBeInTheDocument();
-    expect(screen.getByText(/比参考价节省 50%/)).toBeInTheDocument();
+    expect(screen.getByText("1 亿 Token 费用参考")).toBeInTheDocument();
+    expect(screen.getByText("使用官网预计")).toBeInTheDocument();
+    expect(screen.getByText("使用野菜预计")).toBeInTheDocument();
+    expect(screen.getByText("¥260")).toBeInTheDocument();
+    expect(screen.getByText("¥130")).toBeInTheDocument();
+    expect(screen.getByText(/约省 50%/)).toBeInTheDocument();
     expect(
       screen.getByText("按你所在的位置选择，价格不会因此改变"),
     ).toBeInTheDocument();

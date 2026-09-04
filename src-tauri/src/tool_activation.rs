@@ -706,7 +706,7 @@ async fn verify_adapter(
             claude_desktop::verify_and_launch(claude_runtime, installation, credential.clone())
                 .await
         }
-        "codex_desktop" => codex_desktop::verify_and_launch(installation).await,
+        "codex_desktop" => codex_desktop::verify_and_launch(installation, credential).await,
         "pi" => pi::verify(installation, &request.model_id).await,
         "dsh_web" => {
             dsh_web::verify_launch_and_keep(

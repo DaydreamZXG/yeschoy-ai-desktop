@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU033-AS-03",
+  "assertion": "Version 0.4.5 compiles coherently, all client tests pass, macOS universal packaging remains signable and notarizable, and Windows x64 packaging stays explicitly unsigned and runner-gated.",
+  "testSelector": "tests/work_packages/ru033/test_acceptance.py::test_client_only_version_build_and_release_contract",
+  "acceptanceCommandId": "ru033-build",
+  "runId": "RU-033/WP-RU033-CODEX-VERIFICATION-PRICE-SUMMARY@2026-09-04T13:49:57.744353+00:00",
+  "packageId": "WP-RU033-CODEX-VERIFICATION-PRICE-SUMMARY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:00a51f63d5d48751c261b6a69ccaa40869948cc4c02fc9b6332f31229c0d85cd",
+  "releaseUnitId": "RU-033",
+  "releaseUnitHash": "sha256:ea3f6aa369cebf6b4c36663850414a6ad4bfbbb733f7ccaf624f5c891de101f6"
+}
