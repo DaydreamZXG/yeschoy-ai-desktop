@@ -1,6 +1,87 @@
 {
   "schemaVersion": 1,
   "requirements": [
+    {"id":"REQ-064","statement":"Prepare and deliver the approved current source and internal installers without false legacy storage failures or public-release side effects.","scope":"target","impact":"high","state":"confirmed","owner":"desktop-platform","evidenceRefs":["E-USER-068","E-CODE-056"],"acceptance":["Missing recovery key plus absent or lock-only directory is absence, not corruption; real/unknown recovery material remains protected and never causes key replacement. Synthetic fixtures require no real Keychain or tool configuration.","Existing native, renderer and production build regression passes without changing account, billing, activation or recovery contracts.","Source staging excludes installers and credentials. Push only the existing product branch, never v tags, Release/R2 or update manifests.","Internal macOS build is universal, Developer-ID signed, hardened and submitted for notarization; report accepted/stapled/verified only on actual tool evidence. Windows cross-built executable is explicitly unsigned and not claimed real-device verified. If a platform cannot finish, state the concrete blocker.","Record exact source identity and artifact SHA256 with known real-account and old-entry integration-test limitations. No server or public release changes."]},
+    {
+      "id": "REQ-063",
+      "statement": "Expose official estimated charge, Yecai charge and savings together on the existing summary card using unchanged comparable-record aggregates.",
+      "scope": "target",
+      "impact": "medium",
+      "state": "confirmed",
+      "owner": "account",
+      "evidenceRefs": ["E-USER-067", "E-USER-066"],
+      "acceptance": [
+        "Overview and account show all three labeled amounts without opening details, using the same native aggregate without recalculation or new requests.",
+        "Official amount remains labeled as estimated; recent comparable-record basis and existing detailed caveats remain accessible. Yecai charge is not claimed to be a cash receipt.",
+        "Positive savings, genuine zero, negative difference, loading and unavailable states remain distinct. Missing amounts use three unknown placeholders, never fabricated zeros.",
+        "Shared card is readable in light/dark and narrow layouts with no clipped figures. Details action retains keyboard focus behavior. Existing frontend regression, typecheck and renderer production build pass; no new release or real-account validation claim."
+      ]
+    },
+    {
+      "id": "REQ-062",
+      "statement": "Display website-aligned account currency and auditable recent estimated savings without new backend privileges or invented historical totals.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "account",
+      "evidenceRefs": [
+        "E-USER-066",
+        "E-EXT-047",
+        "E-CODE-055"
+      ],
+      "acceptance": [
+        "Current CNY status projects customer-facing RMB credits using quota_per_unit and usd_exchange_rate; missing/unsupported settings show unavailable, never USD or zero fallback. Cumulative consumed credits use account used_quota, not recent TPM.",
+        "Fetch only newest bounded 100 consumption records through the existing native desktop bearer and fixed first-party origin. Do not pass raw rows, metadata, credentials or user IDs into renderer IPC; failed logs do not sign out the account.",
+        "Match the website's quota, recorded special/group ratio, price and usd_exchange_rate formula for supported comparable records. Exclude malformed, non-consumption, free, subscription, special-fee and unknown basis records; both totals use the same included rows.",
+        "Keep negative savings truthful and distinguish available zero, no history, no comparable records, unavailable and refresh-stale states. Never imply recent-100-row calculations are cumulative/monthly or real cash savings.",
+        "Use a closed schema5 financial projection with finite bounded decimal strings, explicit counts and optional zero date window. Decoder preserves existing schema3/4 and rejects extra fields, impossible aggregates or signed-out finance.",
+        "Overview and account share currency/savings logic, provide concise receipt-like detail and current-rate explanation; retain actual usage as a secondary metric and clarify mainland/global network lines do not change price groups.",
+        "Run isolated native and renderer regressions, type/build, arithmetic and boundary fixtures plus local light/dark/narrow keyboard visual checks. No server changes or release/real-account validation claims."
+      ]
+    },
+    {
+      "id": "REQ-061",
+      "statement": "Make first setup and daily reuse simple without silent cost changes, secret exposure, lock-in or false success.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-065",
+        "E-CODE-054"
+      ],
+      "acceptance": [
+        "Read-only full current-tree baseline proof before product edits; immutable historical failures/proofs.",
+        "Installed/connected apps first and missing apps expandable. Full model IDs, group ratios, comparison assumptions and restoration remain visible or accessible.",
+        "Native Open for Claude Desktop/Codex Desktop/DSH needs no account login, rewrites no settings, issues no tokens and sends no paid test. DSH reuses live process and starts on explicit Open after assistant relaunch. Opened is not a new provider-verification claim.",
+        "No arbitrary renderer paths/URLs/commands/credentials. Serialize open/restore/activation; preserve unrelated edits, reject pending recovery or changed owned provider identity.",
+        "Missing saved model/group never silently picks a replacement, even after refresh errors; explicit selection shows new price before apply.",
+        "Failure states expose relevant account, model, group, line, installation or recovery actions. Quit names affected applications and explains DSH reopening.",
+        "Closed schema4 includes billing/protocol/cache fields with unavailable optional amounts omitted not zero; legacy3 remains renderer-readable.",
+        "Native isolated regression, ordinary-account/empty-app/price-change/error/double-click renderer tests, type/build and light/dark/narrow keyboard checks. No Windows real-device or release claims without evidence."
+      ]
+    },
+    {
+      "id": "REQ-060",
+      "statement": "Deliver a reversible app-centered desktop workbench with resilient login and audited pricing/security corrections.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-064",
+        "E-CODE-053"
+      ],
+      "acceptance": [
+        "Save one AES-GCM encrypted pre-connection baseline before configuration writes; key only in OS storage. Retain baseline through model/group switches; no history.",
+        "Local inspect and explicit restore need no login, serialize with activation, restore only owned fields by three-way comparison and preserve later edits. Invalid files are never overwritten. Interrupted operations retain recovery material and retry safely.",
+        "Legacy connections remove only identified YesChoy settings; unknown original values are not invented. No shared server tokens revoked.",
+        "Login retry survives transient errors, cancellation rejects stale results, stale signed-in data is disclosed. Navigation cannot discard ongoing setup.",
+        "Seven apps show persistent model, line, group and visible restore. Search retains full model IDs; UI receives keyboard, narrow-window, light/dark visual checks.",
+        "NewAPI cache ratios feed the shared 100-million-token estimator. Bridges refuse redirects and require completed usable replies; background-dependent connections explain lifecycle.",
+        "No server, NewAPI, DB, deployment, telemetry or updater changes. User-confirmed Windows build on another account remains independently unverified."
+      ]
+    },
     {
       "id": "REQ-059",
       "statement": "Correct false dual-line Codex activation rollback and present a reproducible cache-heavy 100 million token official-versus-YesChoy estimate in a client-only 0.4.5 successor.",

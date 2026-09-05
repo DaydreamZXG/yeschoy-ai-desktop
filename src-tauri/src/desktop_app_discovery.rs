@@ -143,13 +143,13 @@ fn observe_app(spec: DesktopAppSpec) -> DesktopAppObservation {
     #[cfg(target_os = "macos")]
     {
         let candidates = discover_macos_candidates(spec);
-        return classify_candidates(candidates);
+        classify_candidates(candidates)
     }
 
     #[cfg(target_os = "windows")]
     {
         let candidates = discover_windows_candidates(spec);
-        return classify_candidates(candidates);
+        classify_candidates(candidates)
     }
 
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]

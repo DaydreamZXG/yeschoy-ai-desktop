@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU035-AS-01",
+  "assertion": "Native open without probes/writes, DSH reuse/restart, identity guards and recovery regressions.",
+  "testSelector": "tests/work_packages/ru035/test_acceptance.py::test_native_daily_use_and_recovery",
+  "acceptanceCommandId": "ru035-native",
+  "runId": "RU-035/WP-RU035-DAILY-USE-UX@2026-09-05T05:28:54.147558+00:00",
+  "packageId": "WP-RU035-DAILY-USE-UX",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru035/test_acceptance.py::test_native_daily_use_and_recovery",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:b0f210644ce9137151ccbc6b6ec74fa21c162ad6a7a915c1831799c61f856728",
+    "machineReportSha256": "sha256:c1a471b8f02251a5183c262cf820551fb68ed7043bae8eaafee7c37d61ea3b92",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:6a9717cfcac279c95fc89d82cd5ae33e0c7463c6c3ededb67ea901e2a24d4010",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:360ecaa037aa618d0ba2a09b7afd651294e1a179c6d155d102fdb25b42dd0c9d",
+  "releaseUnitId": "RU-035",
+  "releaseUnitHash": "sha256:b6bbdd5ad979d1f89508e06105b2aa948d1fa6d4df172f2b87b9648d68a05718"
+}

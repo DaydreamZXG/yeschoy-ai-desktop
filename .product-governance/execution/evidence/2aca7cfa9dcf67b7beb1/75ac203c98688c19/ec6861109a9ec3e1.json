@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU037-AS-02",
+  "assertion": "Unchanged 0.4.6 client typechecks and renderer builds under source-readonly isolation without embedding preview data or claiming an installable release.",
+  "testSelector": "tests/work_packages/ru036/test_acceptance.py::test_build",
+  "acceptanceCommandId": "ru037-build",
+  "runId": "RU-037/WP-RU037-SAVINGS-CARD@2026-09-05T07:51:59.944106+00:00",
+  "packageId": "WP-RU037-SAVINGS-CARD",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru036/test_acceptance.py::test_build",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:b7569588e733af4b1d499e2f9cc208a79308d29352ab4ba95b30535a4fb752fa",
+    "machineReportSha256": "sha256:67a99a4153b1d73184213ca5ffd81a60a318ca1d37bcc35110c8132b7abecabc",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:14df7b495d7cf105b4865932b7e6444c8661164b8389e971034f34f0b1ad0a4b",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:018cf3d3a891f7db5a720bea58a392adcca401b9af5718f534d333b4e420b1a6",
+  "releaseUnitId": "RU-037",
+  "releaseUnitHash": "sha256:10b36de0929d40372f985ffb56ba148a6fb3b7763252cecf6a9ad5a9f95b0e6f"
+}

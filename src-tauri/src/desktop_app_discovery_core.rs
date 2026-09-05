@@ -57,6 +57,7 @@ pub enum DesktopAppObservation {
     Multiple {
         candidate_count: usize,
     },
+    #[allow(dead_code)] // Constructed on platforms other than Windows/macOS.
     Unsupported,
 }
 

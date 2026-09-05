@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 
 const zh = {
-  home: "概览",
+  home: "我的应用",
   apps: "应用接入",
   models: "模型与价格",
   usage: "用量账单",
@@ -18,7 +18,7 @@ const zh = {
   dark: "深色",
   system: "跟随系统",
   themeNote: "仅在这台电脑上保存外观偏好。",
-  balance: "可用余额",
+  balance: "可用额度",
   spent: "累计消费",
   tokens: "累计用量",
   installed: "已发现应用",
@@ -64,7 +64,7 @@ const zh = {
   emptyBills: "暂无账单",
   emptyBillsBody: "此版本暂不支持查看消费记录。",
   privacy: "只修改你确认的应用设置",
-  configurationBoundary: "密钥不会显示在界面中",
+  configurationBoundary: "随时可以恢复原设置",
   accountTitle: "账户充值",
   accountBody: "查看余额、用量和消费记录。",
   accountStatus: "账户功能暂未开放",
@@ -83,9 +83,9 @@ const zh = {
   officialPrice: "官网参考价",
   actualPrice: "野菜API实际价",
   priceUnavailable: "暂不可用",
-  fx: "对比汇率",
+  fx: "参考换算",
   fxNote: "由野菜API当前设置提供，不参与实际计费。",
-  serverFxNote: "来自野菜API当前设置，实际扣费仍以账单为准。",
+  serverFxNote: "来自网站价格设置，不是市场汇率；实际扣费以账单为准。",
   selectApp: "使用应用",
   selectLine: "使用线路",
   readinessTitle: "接入准备",

@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU038-AS-01",
+  "assertion": "Lock-only/absent recovery root with missing key is absent, while existing protected material remains an error; regression fixtures touch no real Keychain or user files. All current native tests pass.",
+  "testSelector": "tests/work_packages/ru038/test_acceptance.py::test_native_legacy_recovery",
+  "acceptanceCommandId": "ru038-native",
+  "runId": "RU-038/WP-RU038-INTERNAL-PACKAGING@2026-09-05T08:22:09.388346+00:00",
+  "packageId": "WP-RU038-INTERNAL-PACKAGING",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-038",
+  "releaseUnitHash": "sha256:0b8f6be38e1f2c8beda47014813d6e0a091122b24132dca30769a91e5015ce78"
+}

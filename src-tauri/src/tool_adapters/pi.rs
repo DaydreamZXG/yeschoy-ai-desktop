@@ -133,6 +133,10 @@ pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared
 }
 
 impl Prepared {
+    pub(crate) fn changes(&self) -> &[common::FileChange] {
+        self.transaction.changes()
+    }
+
     pub(crate) fn commit(&mut self) -> Result<(), AdapterFailure> {
         self.transaction.commit().map_err(config_error)?;
         let models = common::snapshot(&self.models_path)

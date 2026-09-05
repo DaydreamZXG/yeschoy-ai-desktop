@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { AccountModel } from "../account/session";
 import { CheckCircle2, Landmark, Sprout } from "lucide-react";
 import { hundredMillionTokenEstimate } from "./billing";
@@ -16,6 +17,7 @@ export function BillingGroupPicker({
   disabled?: boolean;
 }) {
   const groups = model?.billing?.groups ?? [];
+  const radioName = useId();
   return (
     <fieldset className="billing-group-picker" disabled={disabled}>
       <legend>选择计费分组</legend>
@@ -33,7 +35,7 @@ export function BillingGroupPicker({
             >
               <input
                 type="radio"
-                name="billing-group"
+                name={radioName}
                 value={group.id}
                 checked={selected === group.id}
                 onChange={() => onChange(group.id)}
@@ -62,9 +64,10 @@ export function BillingGroupPicker({
 
 function price(amount: number) {
   if (!Number.isFinite(amount)) return "—";
+  if (amount > 0 && amount < 0.01) return "< ¥0.01";
   return `¥${new Intl.NumberFormat("zh-CN", {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    maximumFractionDigits: Math.abs(amount) < 10 ? 2 : 0,
   }).format(amount)}`;
 }
 
@@ -100,7 +103,11 @@ export function BillingPrices({
         {estimate?.savingPercent !== null &&
           estimate?.savingPercent !== undefined && (
             <span className="billing-saving-badge">
-              约省 {Math.round(estimate.savingPercent)}%
+              约省{" "}
+              {estimate.savingPercent >= 99 && estimate.savingPercent < 100
+                ? Math.floor(estimate.savingPercent * 10) / 10
+                : Math.round(estimate.savingPercent)}
+              %
             </span>
           )}
       </header>
@@ -121,14 +128,17 @@ export function BillingPrices({
               <strong>{priceRange(estimate.yeschoy)}</strong>
             </div>
           </div>
-          <p className="billing-price-note">
-            按 {groupLabel(group.id)} 当前倍率和 NewAPI 汇率（1 USD = {fx}{" "}
-            CNY）估算
-            {estimate.tiered ? "；不同请求档位会形成以上区间" : ""}。
-            {estimate.cacheFallback
-              ? "该模型没有单独的缓存读取价，缓存部分按输入价保守估算。"
-              : "不含另行发生的缓存写入，实际费用以请求命中的计费档位为准。"}
-          </p>
+          <details className="billing-price-details">
+            <summary>这个价格怎么算？</summary>
+            <p className="billing-price-note">
+              按 {groupLabel(group.id)} 当前倍率和网站参考换算值 {fx} 估算
+              {estimate.tiered ? "；不同请求档位会形成以上区间" : ""}。
+              该换算值不是市场汇率。
+              {estimate.cacheFallback
+                ? "该模型没有单独的缓存读取价，缓存部分按输入价保守估算。"
+                : "不含另行发生的缓存写入，实际费用以请求命中的计费档位为准。"}
+            </p>
+          </details>
         </>
       ) : (
         <p className="billing-price-note">

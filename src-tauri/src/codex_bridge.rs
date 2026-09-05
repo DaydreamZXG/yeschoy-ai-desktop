@@ -34,14 +34,17 @@ pub(crate) mod codex_chat_history;
 #[path = "proxy/providers/codex_responses_sse.rs"]
 pub(crate) mod codex_responses_sse;
 #[path = "proxy/error.rs"]
+#[allow(dead_code)] // Shared upstream converter API; the desktop uses only its transport subset.
 pub(crate) mod error;
 #[path = "proxy/json_canonical.rs"]
+#[allow(dead_code)] // Shared upstream utilities also exercised by converter tests.
 pub(crate) mod json_canonical;
 #[path = "proxy/sse.rs"]
 pub(crate) mod sse;
 #[path = "proxy/providers/streaming_codex_chat.rs"]
 pub(crate) mod streaming_codex_chat;
 #[path = "proxy/tool_media.rs"]
+#[allow(dead_code)] // Keep upstream media helpers intact for converter compatibility.
 pub(crate) mod tool_media;
 #[path = "proxy/providers/transform_codex_chat.rs"]
 pub(crate) mod transform_codex_chat;
@@ -133,7 +136,9 @@ impl CodexBridgeRuntimeState {
 
         let listener = TcpListener::bind(LISTEN_ADDRESS).await.map_err(|_| ())?;
         let client = reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
             .connect_timeout(Duration::from_secs(15))
+            .read_timeout(Duration::from_secs(60))
             .build()
             .map_err(|_| ())?;
         let state = BridgeAppState {

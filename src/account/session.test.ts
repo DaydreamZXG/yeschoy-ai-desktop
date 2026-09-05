@@ -114,6 +114,49 @@ describe("account v2 renderer boundary", () => {
     );
   });
 
+  it("normalizes closed schema4 optional prices without turning missing values into zero", () => {
+    const previous = withBilling();
+    const billing = {
+      groups: [{ id: "default", description: "" }],
+      baseInputUsd: 0,
+      cacheReadUsd: 0,
+      expression: "",
+    };
+    const raw = {
+      ...previous,
+      schemaVersion: 4,
+      models: [{ ...previous.models[0], billing }],
+    };
+    const parsed = decodeAccountProjection(raw, raw.requestId)!;
+    expect(parsed.models[0].billing).toEqual({
+      ...billing,
+      groups: [{ id: "default", description: "", ratio: null }],
+      baseOutputUsd: null,
+      cacheWriteUsd: null,
+      requestUsd: null,
+    });
+    for (const invalid of [
+      null,
+      { ...billing, requestUsd: null },
+      { ...billing, apiKey: "not-allowed" },
+      { ...billing, groups: [{ id: "default", description: "", ratio: null }] },
+    ]) {
+      expect(
+        decodeAccountProjection(
+          { ...raw, models: [{ ...raw.models[0], billing: invalid }] },
+          raw.requestId,
+        ),
+      ).toBeNull();
+    }
+    const { billing: _omitted, ...withoutBilling } = raw.models[0];
+    expect(
+      decodeAccountProjection(
+        { ...raw, models: [withoutBilling] },
+        raw.requestId,
+      )?.models[0].billing,
+    ).toBeNull();
+  });
+
   it.each(["accessToken", "refreshToken", "deviceCode", "authorizationUrl"])(
     "rejects an unexpected secret-capable field: %s",
     (field) => {

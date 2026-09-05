@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU036-AS-02",
+  "assertion": "Use a closed schema5 financial projection with finite bounded decimal strings, explicit counts and optional zero date window. Decoder preserves existing schema3/4 and rejects extra fields, impossible aggregates or signed-out finance. Overview and account share currency/savings logic, provide concise receipt-like detail and current-rate explanation; retain actual usage as a secondary metric and clarify mainland/global network lines do not change price groups.",
+  "testSelector": "tests/work_packages/ru036/test_acceptance.py::test_renderer",
+  "acceptanceCommandId": "ru036-renderer",
+  "runId": "RU-036/WP-RU036-ACCOUNT-MONEY@2026-09-05T07:07:24.982635+00:00",
+  "packageId": "WP-RU036-ACCOUNT-MONEY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru036/test_acceptance.py::test_renderer",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:54cbca1a6a45833ed869b8b049427a0778344d672c4527fa4b79d96ddbf95856",
+    "machineReportSha256": "sha256:1edadb1c43fc562606ec8012943abadc37133e05c9d0e355eebed12166a85f87",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:e81cd82b9f66cb3e2c2a4c1e2680fb534c79be0a6745e26b78032d1b3412bbbd",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:d4f1ef9c767727d9b56560ed61505e2c0d3905da885d6f418fc1bcfb0f11b7f5",
+  "releaseUnitId": "RU-036",
+  "releaseUnitHash": "sha256:c7007ee164259041e894328b82de1035ca60bc864c83a924e9788d284e4012a6"
+}

@@ -143,7 +143,7 @@ fn safe_override(value: OsString) -> Result<PathBuf, AdapterFailure> {
     }
 }
 
-fn config_path(home: &Path) -> Result<PathBuf, AdapterFailure> {
+pub(crate) fn config_path(home: &Path) -> Result<PathBuf, AdapterFailure> {
     if let Some(path) = std::env::var_os("OPENCLAW_CONFIG_PATH").filter(|value| !value.is_empty()) {
         return safe_override(path);
     }
@@ -178,6 +178,10 @@ pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared
 }
 
 impl Prepared {
+    pub(crate) fn changes(&self) -> &[common::FileChange] {
+        self.transaction.changes()
+    }
+
     pub(crate) fn commit(&mut self) -> Result<(), AdapterFailure> {
         self.transaction.commit().map_err(config_error)?;
         let bytes = common::snapshot(&self.path)

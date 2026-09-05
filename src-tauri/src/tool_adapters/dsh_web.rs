@@ -8,6 +8,7 @@ use std::{
 use reqwest::Url;
 use serde_json::{json, Value as JsonValue};
 use serde_yaml::{Mapping, Value};
+use sha2::{Digest, Sha256};
 use tokio::{
     io::{AsyncBufReadExt, BufReader},
     process::{Child, Command},
@@ -36,11 +37,43 @@ pub(crate) struct DshRuntime {
     child: Child,
     url: String,
     stdout_task: JoinHandle<()>,
+    identity: [u8; 32],
 }
 
 #[derive(Default)]
 pub(crate) struct DshRuntimeState {
     runtime: Mutex<Option<DshRuntime>>,
+}
+
+impl DshRuntimeState {
+    pub(crate) async fn stop(&self) {
+        if let Some(mut runtime) = self.runtime.lock().await.take() {
+            let _ = runtime.child.kill().await;
+            runtime.stdout_task.abort();
+        }
+    }
+
+    async fn ensure_running(
+        &self,
+        installation: &ResolvedInstallation,
+        key: &str,
+        identity: [u8; 32],
+    ) -> Result<String, AdapterFailure> {
+        let mut slot = self.runtime.lock().await;
+        if let Some(runtime) = slot.as_mut() {
+            if runtime.identity == identity && matches!(runtime.child.try_wait(), Ok(None)) {
+                return Ok(runtime.url.clone());
+            }
+        }
+        if let Some(mut previous) = slot.take() {
+            let _ = previous.child.kill().await;
+            previous.stdout_task.abort();
+        }
+        let runtime = start_process(installation, key, identity).await?;
+        let url = runtime.url.clone();
+        *slot = Some(runtime);
+        Ok(url)
+    }
 }
 
 pub(crate) struct Prepared {
@@ -137,7 +170,10 @@ fn render(existing: Option<&[u8]>, origin: &str, model: &str) -> Result<Vec<u8>,
     Ok(bytes)
 }
 
-fn dsh_home(default_home: &Path, custom: Option<OsString>) -> Result<PathBuf, AdapterFailure> {
+pub(crate) fn dsh_home(
+    default_home: &Path,
+    custom: Option<OsString>,
+) -> Result<PathBuf, AdapterFailure> {
     let Some(custom) = custom.filter(|value| !value.is_empty()) else {
         return Ok(default_home.join(".dsh"));
     };
@@ -170,8 +206,16 @@ pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared
 }
 
 impl Prepared {
+    pub(crate) fn changes(&self) -> &[common::FileChange] {
+        self.transaction.changes()
+    }
+
     pub(crate) fn commit(&mut self) -> Result<(), AdapterFailure> {
         self.transaction.commit().map_err(config_error)?;
+        self.validate_existing()
+    }
+
+    pub(crate) fn validate_existing(&self) -> Result<(), AdapterFailure> {
         let bytes = common::snapshot(&self.path)
             .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_readback_failed"))?
             .ok_or(AdapterFailure::ConfigurationFailed(
@@ -270,6 +314,7 @@ async fn verify_headless(
 async fn start_process(
     installation: &ResolvedInstallation,
     key: &str,
+    identity: [u8; 32],
 ) -> Result<DshRuntime, AdapterFailure> {
     let mut command = Command::new(&installation.path);
     command
@@ -325,7 +370,36 @@ async fn start_process(
         child,
         url,
         stdout_task,
+        identity,
     })
+}
+
+pub(crate) async fn open_existing(
+    state: &DshRuntimeState,
+    installation: &ResolvedInstallation,
+    key: &str,
+) -> Result<(), AdapterFailure> {
+    let home = super::user_home().ok_or(AdapterFailure::LaunchFailed)?;
+    let path = dsh_home(&home, std::env::var_os("DSH_HOME"))?.join("settings.yaml");
+    let bytes = common::snapshot(&path)
+        .map_err(|_| AdapterFailure::LaunchFailed)?
+        .ok_or(AdapterFailure::LaunchFailed)?;
+    // Fingerprint only in native memory: a changed credential, installation,
+    // home or settings cannot accidentally reuse a stale process.
+    let mut fingerprint = Sha256::new();
+    for part in [
+        installation.path.to_string_lossy().as_bytes(),
+        path.to_string_lossy().as_bytes(),
+        key.as_bytes(),
+        bytes.as_slice(),
+    ] {
+        fingerprint.update((part.len() as u64).to_le_bytes());
+        fingerprint.update(part);
+    }
+    let url = state
+        .ensure_running(installation, key, fingerprint.finalize().into())
+        .await?;
+    open_browser(&url)
 }
 
 pub(crate) async fn verify_launch_and_keep(
@@ -335,15 +409,7 @@ pub(crate) async fn verify_launch_and_keep(
     _model: &str,
 ) -> Result<(), AdapterFailure> {
     verify_headless(installation, key).await?;
-    let runtime = start_process(installation, key).await?;
-    open_browser(&runtime.url)?;
-    let mut slot = state.runtime.lock().await;
-    if let Some(mut previous) = slot.take() {
-        let _ = previous.child.kill().await;
-        previous.stdout_task.abort();
-    }
-    *slot = Some(runtime);
-    Ok(())
+    open_existing(state, installation, key).await
 }
 
 #[cfg(target_os = "macos")]
@@ -373,6 +439,104 @@ fn open_browser(_url: &str) -> Result<(), AdapterFailure> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn daily_open_reuses_live_dsh_and_restarts_exited_child_without_probe() {
+        use std::os::unix::fs::PermissionsExt;
+        let home = common::temporary_working_directory("dsh-open").unwrap();
+        let path = home.join("fake-dsh");
+        // Any headless/model probe fails: only the existing web startup
+        // arguments may be used by daily Open.
+        std::fs::write(&path, b"#!/bin/sh\n[ \"$#\" -eq 6 ] || exit 61\n[ \"$1\" = web ] || exit 62\n[ \"$6\" = --no-open ] || exit 63\nprintf 'dsh web: http://127.0.0.1:3018/?token=synthetic\\n'\nexec /bin/sleep 60\n").unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let installation = ResolvedInstallation { path };
+        let state = DshRuntimeState::default();
+        let (a, b) = tokio::join!(
+            state.ensure_running(&installation, "synthetic-key", [1; 32]),
+            state.ensure_running(&installation, "synthetic-key", [1; 32]),
+        );
+        assert_eq!(a.unwrap(), b.unwrap());
+        let first_pid = state
+            .runtime
+            .lock()
+            .await
+            .as_ref()
+            .unwrap()
+            .child
+            .id()
+            .unwrap();
+        state
+            .ensure_running(&installation, "synthetic-key", [1; 32])
+            .await
+            .unwrap();
+        assert_eq!(
+            state.runtime.lock().await.as_ref().unwrap().child.id(),
+            Some(first_pid)
+        );
+        state
+            .runtime
+            .lock()
+            .await
+            .as_mut()
+            .unwrap()
+            .child
+            .kill()
+            .await
+            .unwrap();
+        state
+            .ensure_running(&installation, "synthetic-key", [1; 32])
+            .await
+            .unwrap();
+        let second_pid = state
+            .runtime
+            .lock()
+            .await
+            .as_ref()
+            .unwrap()
+            .child
+            .id()
+            .unwrap();
+        assert_ne!(first_pid, second_pid);
+        state
+            .ensure_running(&installation, "synthetic-new-key", [2; 32])
+            .await
+            .unwrap();
+        assert_ne!(
+            state.runtime.lock().await.as_ref().unwrap().child.id(),
+            Some(second_pid)
+        );
+        state.stop().await;
+        assert!(state.runtime.lock().await.is_none());
+        std::fs::remove_dir_all(home).unwrap();
+    }
+
+    #[test]
+    fn dsh_existing_validation_rejects_changed_destination_without_writing() {
+        let home = common::temporary_working_directory("dsh-existing").unwrap();
+        let path = home.join("settings.yaml");
+        let bytes = render(None, "https://yeschoy.com", "test-model").unwrap();
+        std::fs::write(&path, &bytes).unwrap();
+        let prepared = Prepared {
+            transaction: FileTransaction::stage_with_snapshot(
+                path.clone(),
+                Some(bytes.clone()),
+                bytes.clone(),
+            )
+            .unwrap(),
+            path: path.clone(),
+            origin: "https://yeschoy.com".into(),
+            model: "test-model".into(),
+        };
+        assert!(prepared.validate_existing().is_ok());
+        let changed = String::from_utf8(bytes)
+            .unwrap()
+            .replace("https://yeschoy.com/v1", "https://different.example/v1");
+        std::fs::write(&path, &changed).unwrap();
+        assert!(prepared.validate_existing().is_err());
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), changed);
+        std::fs::remove_dir_all(home).unwrap();
+    }
 
     #[test]
     fn yaml_merge_preserves_other_routes_and_contains_only_a_reference() {

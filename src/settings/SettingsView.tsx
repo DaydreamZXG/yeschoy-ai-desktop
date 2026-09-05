@@ -4,6 +4,7 @@ import { createCandidateReadiness } from "../candidate/readiness";
 import { AppearancePicker } from "../workbench/WorkbenchChrome";
 import type { Appearance } from "../workbench/appearance";
 import { useWorkbenchCopy } from "../workbench/copy";
+import { QuitAssistant } from "./QuitAssistant";
 
 type Language = "zh" | "zh-TW" | "en" | "ja";
 
@@ -97,6 +98,7 @@ export function SettingsView({
       </section>
 
       <section className="settings-ledger" aria-labelledby="security-title">
+        <QuitAssistant />
         <div className="panel-heading settings-heading">
           <div>
             <p className="eyebrow">{t("yeschoySettings.securityEyebrow")}</p>

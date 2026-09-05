@@ -1,6 +1,99 @@
 {
   "schemaVersion": 1,
   "entries": [
+    {"id":"E-USER-068","claim":"Owner authorizes uploading the current client source to the existing GitHub repository and building internal macOS universal and Windows installers. Public releases, tags, updater rollout and server changes remain excluded.","class":"user_confirmed","locator":"user:2026-09-05:可以，你动手吧; preceding internal packaging plan","observedAt":"2026-09-05T08:19:05Z","scope":"target","status":"active","verificationLevel":0,"basisRefs":[]},
+    {"id":"E-CODE-056","claim":"Read-only pre-package audit reproduced the legacy-open control flow: operation_lock creates connection-recovery directory before Store::open(false); a missing recovery key plus this lock-only directory is treated as storage failure. Valid older tool credentials are never reached. Current repo source and RU-037 tests are uncommitted; source audit found old binary release-assets that must not be staged. Developer ID and notary profile are available; Windows clang sysroot/cache and older cross-built artifact exist, while compiler runner/NSIS are absent from PATH.","class":"code_observed","locator":"src-tauri/src/connection_recovery.rs:65-82,184-216;src-tauri/src/open_connection.rs:76-88,103-107;git status;security find-identity -v -p codesigning;xcrun notarytool history --keychain-profile yeschoy-notary","observedAt":"2026-09-05T08:19:05Z","scope":"current","status":"active","verificationLevel":1,"basisRefs":[]},
+    {
+      "id": "E-USER-067",
+      "claim": "Owner requests the existing savings card directly show official equivalent charge, Yecai charge and the amount saved. This is a presentation-only iteration using the existing comparable-record aggregates, not a change to billing or historical estimation.",
+      "class": "user_confirmed",
+      "locator": "user:2026-09-05:这里改成官网应收多少钱，我们收多少钱，省了多少钱",
+      "observedAt": "2026-09-05T07:49:44Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-USER-066",
+      "claim": "Owner confirms public RMB credits, asks to replace cumulative consumption emphasis with money saved, and approves reusing the website's existing savings method plus route explanations. Explicitly authorizes local skill-validator repair before continuing.",
+      "class": "user_confirmed",
+      "locator": "user:2026-09-05:可以，可以复用这套;允许",
+      "observedAt": "2026-09-05T15:09:00+08:00",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-047",
+      "claim": "Read primary NewAPI ui-domain revision 63f3dd8: easy-savings derives site cost from charged quota and status.price, official equivalent from recorded effective ratio and usd_exchange_rate, using newest 100 self consume logs. Current public status selects CNY with quota_per_unit 500000, usd_exchange_rate 1, price 1. Desktop middleware already permits GET /api/log/self and controller binds authenticated user; subscription and violation fees require conservative exclusion. This is source/public-setting evidence, not a real-account or website deployment proof.",
+      "class": "external_verified",
+      "locator": "https://github.com/yeschoy/new-api/blob/63f3dd8fb908d6c55d5df483530beeebbcc740b6/web/src/features/dashboard/components/overview/easy-savings.ts;https://github.com/yeschoy/new-api/blob/63f3dd8fb908d6c55d5df483530beeebbcc740b6/middleware/auth.go;https://yeschoy.com/api/status",
+      "observedAt": "2026-09-05T15:09:00+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-055",
+      "claim": "Current desktop account schema4 projects raw quotas but account and overview hardcode USD; usage token_count comes from TPM and is not cumulative. No self-log list is fetched. RU035 current implementation completed all native/renderer/build verification before this successor. Existing session epoch and fixed native HTTPS boundary can be retained.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/account_v2.rs;src/account/session.ts;src/workbench/AccountView.tsx;src/workbench/WorkbenchChrome.tsx;.product-governance/execution/reports/14fb5761e4afc7ce.130975c393c64b1ec6e8.json",
+      "observedAt": "2026-09-05T15:09:00+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-066",
+        "E-EXT-047"
+      ]
+    },
+    {
+      "id": "E-USER-065",
+      "claim": "Owner approves installed-app-first entry, daily Open, DSH relaunch, missing-group price notice, actionable failures and contextual background lifecycle; client-only, preserving restore.",
+      "class": "user_confirmed",
+      "locator": "user:2026-09-05:好的，优化吧",
+      "observedAt": "2026-09-05T05:19:59.093Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-054",
+      "claim": "Current UI lacks launch-only and silently replaces missing billing groups. DSH verify_launch_and_keep bills a headless probe and restarts the process. RU-033 historical proof integrity passes but current-output check finds 54 changed owned files after RU-034. RU-034 failed before scenarios. Account schema v3 omits implemented protocol, billing and cache fields. Fresh current-tree verification is required; historical proofs remain unchanged.",
+      "class": "code_observed",
+      "locator": "src/configuration/ConfigurationPreviewView.tsx:414;src/workbench/AppLibraryView.tsx:251;src-tauri/src/tool_adapters/dsh_web.rs:346;validate_completed_run_integrity RU-033 check_current_outputs false=0 errors true=54 errors 2026-09-05",
+      "observedAt": "2026-09-05T05:19:59.093Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-USER-064",
+      "claim": "Owner authorizes UI redesign, UX analysis, audit fixes and restoration of pre-connection settings; Windows was built for the same repository using another GitHub account. Retain one recovery baseline, not backup history.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-05:ui-ux-and-restore-settings",
+      "scope": "target",
+      "observedAt": "2026-09-05T11:30:00+08:00",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-053",
+      "claim": "0.4.5 audit observed lost login polling, dropped post-success snapshots, nonpersistent setup UI state, missing cache-ratio projection and default redirects.",
+      "class": "code_observed",
+      "locator": "outputs/野菜API-0.4.5-项目体检-2026-09-05.md",
+      "scope": "current",
+      "observedAt": "2026-09-05T11:30:00+08:00",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
     {
       "id": "E-USER-063",
       "claim": "The owner reports that Codex Desktop activation fails on both selectable lines and requires the client to fix the false all-or-nothing gate. The owner also requires pricing to become a concise, approximately one-hundred-million-token official-versus-YesChoy comparison for a cache-heavy workload instead of a detailed per-rate table.",

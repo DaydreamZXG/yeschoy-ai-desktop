@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowDownUp, Layers3 } from "lucide-react";
 import {
@@ -10,8 +10,11 @@ import type { AccountSessionController } from "../account/useAccountSession";
 import {
   CONFIGURATION_LINES,
   type ConfigurationLineId,
-  type ConfigurationToolId,
 } from "../configuration/preview";
+import { type ActivationToolId } from "../configuration/activation";
+import { modelSupportsTool } from "../configuration/modelCompatibility";
+import { ModelPicker } from "../configuration/ModelPicker";
+import { WORKBENCH_APPS } from "./appCatalog";
 import { useWorkbenchCopy } from "./copy";
 import { WorkbenchFooter } from "./WorkbenchChrome";
 
@@ -30,12 +33,19 @@ export function ModelsView({
 }) {
   const c = useWorkbenchCopy();
   const { t } = useTranslation();
-  const [tool, setTool] = useState<ConfigurationToolId>("claude");
+  const [tool, setTool] = useState<ActivationToolId>("claude_desktop");
   const [selectedModelId, setSelectedModelId] = useState("");
   const [billingGroup, setBillingGroup] = useState("");
   const { projection, loading, refresh } = session;
-  const accountModels =
-    projection?.status === "signed_in" ? projection.models : EMPTY_MODELS;
+  const accountModels = useMemo(
+    () =>
+      projection?.status === "signed_in"
+        ? projection.models.filter((model) =>
+            modelSupportsTool(tool, model.supportedEndpointTypes ?? []),
+          )
+        : EMPTY_MODELS,
+    [projection, tool],
+  );
 
   useEffect(() => {
     if (!accountModels.some((model) => model.id === selectedModelId))
@@ -67,11 +77,14 @@ export function ModelsView({
             <select
               value={tool}
               onChange={(event) =>
-                setTool(event.target.value as ConfigurationToolId)
+                setTool(event.target.value as ActivationToolId)
               }
             >
-              <option value="claude">Claude Desktop</option>
-              <option value="codex">Codex</option>
+              {WORKBENCH_APPS.map((app) => (
+                <option value={app.id} key={app.id}>
+                  {app.name}
+                </option>
+              ))}
             </select>
           </label>
           <label>
@@ -141,19 +154,12 @@ export function ModelsView({
           <p>{c.partialData}</p>
         ) : (
           <>
-            <label className="account-model-picker">
-              <span>{c.fullId}</span>
-              <select
-                value={selectedModelId}
-                onChange={(event) => setSelectedModelId(event.target.value)}
-              >
-                {accountModels.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.id}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <ModelPicker
+              models={accountModels}
+              value={selectedModelId}
+              onChange={setSelectedModelId}
+              label={c.fullId}
+            />
             {selected && (
               <>
                 <code className="selected-price-model">{selected.id}</code>
@@ -181,7 +187,7 @@ export function ModelsView({
           <span>{c.fx}</span>
           <strong>
             {projection?.comparisonFx
-              ? `1 USD = ${projection.comparisonFx} CNY`
+              ? `参考换算值 ${projection.comparisonFx}`
               : "—"}
           </strong>
           <small>{c.serverFxNote}</small>

@@ -138,7 +138,25 @@ pub(crate) fn discover_candidates(executable_name: &str) -> Vec<Candidate> {
     }
 
     let mut candidates: Vec<Candidate> = canonical_candidates.into_values().collect();
-    candidates.sort_by(|left, right| left.path.cmp(&right.path));
+    let path_priority: Vec<PathBuf> = env::var_os("PATH")
+        .into_iter()
+        .flat_map(|value| env::split_paths(&value).collect::<Vec<_>>())
+        .flat_map(|dir| {
+            executable_filenames(executable_name)
+                .into_iter()
+                .map(move |name| dir.join(name))
+        })
+        .filter_map(|path| std::fs::canonicalize(path).ok())
+        .collect();
+    candidates.sort_by_key(|candidate| {
+        (
+            path_priority
+                .iter()
+                .position(|path| path == &candidate.path)
+                .unwrap_or(usize::MAX),
+            candidate.path.clone(),
+        )
+    });
     candidates.truncate(MAX_CANDIDATES);
     candidates
 }

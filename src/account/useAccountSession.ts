@@ -10,57 +10,92 @@ import {
 export function useAccountSession(lineId: ConfigurationLineId) {
   const [projection, setProjection] = useState<AccountProjection | null>(null);
   const [loading, setLoading] = useState(true);
+  const [lastError, setLastError] = useState<string | null>(null);
+  const [pollRevision, setPollRevision] = useState(0);
+  const projectionRef = useRef<AccountProjection | null>(null);
+  const authorizationLine = useRef(lineId);
   const latest = useRef(0);
+  projectionRef.current = projection;
 
   const execute = useCallback(
     async (command: AccountCommand) => {
       latest.current += 1;
       const current = latest.current;
       setLoading(true);
+      if (command === "account_begin_authorization_v2")
+        authorizationLine.current = lineId;
       try {
-        const result = await runAccountCommand(command, lineId);
-        if (latest.current === current)
+        const result = await runAccountCommand(
+          command,
+          command === "account_poll_authorization_v2"
+            ? authorizationLine.current
+            : lineId,
+        );
+        if (latest.current === current) {
+          const transient = [
+            "backend_unavailable",
+            "incompatible_server",
+            "secure_storage_unavailable",
+            "network_error",
+            "invalid_response",
+          ].includes(result.status);
+          setLastError(transient ? result.reasonCode : null);
           setProjection((previous) =>
-            previous?.status === "signed_in" &&
-            [
-              "backend_unavailable",
-              "incompatible_server",
-              "secure_storage_unavailable",
-              "network_error",
-              "invalid_response",
-            ].includes(result.status)
+            transient &&
+            (previous?.status === "signed_in" ||
+              previous?.status === "authorization_pending")
               ? previous
               : result,
           );
+        }
         return result;
       } catch {
+        if (latest.current === current) setLastError("network_error");
         return null;
       } finally {
-        if (latest.current === current) setLoading(false);
+        if (latest.current === current) {
+          setLoading(false);
+          // Retry scheduling must not depend on a changed projection object:
+          // transport exceptions and cached state can leave it identical.
+          setPollRevision((value) => value + 1);
+        }
       }
     },
     [lineId],
   );
 
   useEffect(() => {
-    void execute("account_inspect_v2");
+    void execute(
+      projectionRef.current?.status === "authorization_pending"
+        ? "account_poll_authorization_v2"
+        : "account_inspect_v2",
+    );
     return () => {
       latest.current += 1;
     };
   }, [execute]);
 
   useEffect(() => {
-    if (projection?.status !== "authorization_pending") return;
+    if (projection?.status !== "authorization_pending" || loading) return;
+    if (projection.expiresAtEpochMs <= Date.now()) {
+      setProjection({
+        ...projection,
+        status: "expired",
+        reasonCode: "authorization_expired",
+      });
+      return;
+    }
     const timer = window.setTimeout(
       () => void execute("account_poll_authorization_v2"),
       Math.max(1, projection.pollAfterSeconds) * 1000,
     );
     return () => window.clearTimeout(timer);
-  }, [execute, projection]);
+  }, [execute, projection, pollRevision, loading]);
 
   return {
     projection,
     loading,
+    lastError,
     refresh: () => execute("account_inspect_v2"),
     beginAuthorization: () => execute("account_begin_authorization_v2"),
     cancelAuthorization: () => execute("account_cancel_authorization_v2"),
@@ -76,4 +111,7 @@ export function useAccountSession(lineId: ConfigurationLineId) {
   };
 }
 
-export type AccountSessionController = ReturnType<typeof useAccountSession>;
+export type AccountSessionController = Omit<
+  ReturnType<typeof useAccountSession>,
+  "lastError"
+> & { lastError?: string | null };

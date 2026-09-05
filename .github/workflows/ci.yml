@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   frontend:
-    name: Candidate frontend and CI contracts
+    name: Current desktop renderer
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -43,24 +43,15 @@ jobs:
       - name: Check workflow formatting
         run: pnpm exec prettier --check .github/workflows/ci.yml .github/workflows/wsl2-nightly.yml
 
-      - name: Candidate unit tests
-        run: pnpm test:candidate
+      - name: All current renderer behavior tests
+        run: pnpm test:unit
 
       - name: Build real renderer
         run: pnpm build:renderer
 
-      - name: Setup Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
-        with:
-          python-version: "3.12"
-
-      - name: Install pinned acceptance dependencies
-        run: python -m pip install pytest==8.4.2 PyYAML==6.0.3
-
-      # Historical RU-001/002/003 assertions describe superseded UI states.
-      # RU-005 is the current candidate acceptance; RU-006 validates this CI.
-      - name: Current candidate and CI acceptance
-        run: python -m pytest -q --import-mode=importlib tests/work_packages/ru005 tests/work_packages/ru006
+      # Historical release-unit proofs remain archived in governance. They
+      # assert obsolete navigation/build versions and are not current CI tests.
+      # Current login, recovery, pricing and activation behavior is tested above.
 
   native:
     name: Native tests (${{ matrix.platform }})

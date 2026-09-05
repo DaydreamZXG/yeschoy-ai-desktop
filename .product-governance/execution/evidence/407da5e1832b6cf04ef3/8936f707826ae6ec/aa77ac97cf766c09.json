@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU038-AS-03",
+  "assertion": "0.4.6 typechecks and production renderer builds under read-only source isolation without preview content, updater artifacts or public release claims.",
+  "testSelector": "tests/work_packages/ru036/test_acceptance.py::test_build",
+  "acceptanceCommandId": "ru038-build",
+  "runId": "RU-038/WP-RU038-INTERNAL-PACKAGING@2026-09-05T08:22:09.388346+00:00",
+  "packageId": "WP-RU038-INTERNAL-PACKAGING",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-038",
+  "releaseUnitHash": "sha256:0b8f6be38e1f2c8beda47014813d6e0a091122b24132dca30769a91e5015ce78"
+}

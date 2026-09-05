@@ -6,11 +6,12 @@ use serde_json::{json, Value};
 
 use crate::{
     account_v2::{
-        billing_groups, native_account_json, native_session_access, AccountV2State,
-        NativeSessionFailure,
+        billing_groups, ensure_session_epoch, native_account_json, native_session_access,
+        native_session_epoch, AccountV2State, NativeSessionFailure,
     },
     claude_bridge::ClaudeTransport,
     codex_bridge::CodexBridgeRuntimeState,
+    connection_recovery::{self, Receipt, Store},
     connectivity_core::request_id_is_valid,
     tool_adapters::{
         self, claude_code, claude_desktop, codex_desktop, dsh_web, hermes, openclaw, pi,
@@ -20,7 +21,7 @@ use crate::{
 };
 
 const TOKEN_PAGE_SIZE: &str = "100";
-static ACTIVATION_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+pub(crate) static ACTIVATION_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -193,7 +194,9 @@ fn request_is_valid(request: &ToolActivationRequest) -> bool {
 
 fn data(value: &Value) -> Option<&Value> {
     let object = value.as_object()?;
-    (object.get("success")?.as_bool()? == true)
+    object
+        .get("success")?
+        .as_bool()?
         .then(|| object.get("data"))
         .flatten()
 }
@@ -342,6 +345,7 @@ fn codex_transport(pricing: &Value, model_id: &str) -> Option<codex_desktop::Cod
     }
 }
 
+#[cfg(test)]
 fn token_name(tool_id: &str) -> &'static str {
     match tool_id {
         "claude_code" => "野菜API Claude Code",
@@ -602,6 +606,18 @@ enum PreparedAdapter {
 }
 
 impl PreparedAdapter {
+    fn changes(&self) -> &[tool_adapters::common::FileChange] {
+        match self {
+            Self::ClaudeCode(v) => v.changes(),
+            Self::ClaudeDesktop(v) => v.changes(),
+            Self::CodexDesktop(v) => v.changes(),
+            Self::Pi(v) => v.changes(),
+            Self::DshWeb(v) => v.changes(),
+            Self::Hermes(v) => v.changes(),
+            Self::OpenClaw(v) => v.changes(),
+        }
+    }
+
     fn commit(&mut self) -> Result<(), AdapterFailure> {
         match self {
             Self::ClaudeCode(value) => value.commit(),
@@ -723,6 +739,7 @@ async fn verify_adapter(
     }
 }
 
+#[allow(clippy::too_many_arguments)] // Explicit transaction/runtime inputs; no hidden mutable global rollback context.
 async fn restore_after_failure(
     request: &ToolActivationRequest,
     prepared: &mut PreparedAdapter,
@@ -821,7 +838,20 @@ pub async fn configure_desktop_tool_v2(
         return Err("invalid_tool_activation_request".into());
     }
 
+    // Bind the click before waiting for discovery, locks or account bootstrap.
+    let session_epoch = match native_session_epoch(&account_state) {
+        Ok(epoch) => epoch,
+        Err(_) => return Ok(ActivationFailure::ServerUnavailable.projection(&request)),
+    };
     let _activation_guard = ACTIVATION_LOCK.lock().await;
+    let _process_guard = match connection_recovery::operation_lock() {
+        Ok(guard) => guard,
+        Err(_) => {
+            return Ok(
+                ActivationFailure::ConfigurationFailed("recovery_pending").projection(&request)
+            )
+        }
+    };
     // Resolve current identity/runtime before account or token access. An
     // unavailable or ambiguous installation can never create a server token.
     let installation =
@@ -831,16 +861,21 @@ pub async fn configure_desktop_tool_v2(
             Err(error) => return Ok(ActivationFailure::Adapter(error).projection(&request)),
         };
 
-    let (origin, access_token) = match native_session_access(&account_state, &request.line_id).await
-    {
-        Ok(value) => value,
-        Err(NativeSessionFailure::SignedOut) => {
-            return Ok(ActivationFailure::SignedOut.projection(&request))
-        }
-        Err(NativeSessionFailure::ServerUnavailable) => {
-            return Ok(ActivationFailure::ServerUnavailable.projection(&request))
-        }
-    };
+    let (origin, access_token) =
+        match native_session_access(&account_state, &request.line_id, session_epoch).await {
+            Ok(value) => value,
+            Err(NativeSessionFailure::SignedOut) => {
+                return Ok(ActivationFailure::SignedOut.projection(&request))
+            }
+            Err(NativeSessionFailure::ServerUnavailable) => {
+                return Ok(ActivationFailure::ServerUnavailable.projection(&request))
+            }
+            Err(NativeSessionFailure::AccountChanged) => {
+                return Ok(
+                    ActivationFailure::ConfigurationFailed("account_changed").projection(&request)
+                )
+            }
+        };
     let model_transport = match validate_model(
         &origin,
         &access_token,
@@ -874,6 +909,9 @@ pub async fn configure_desktop_tool_v2(
         }
     };
 
+    if ensure_session_epoch(&account_state, session_epoch).is_err() {
+        return Ok(ActivationFailure::ConfigurationFailed("account_changed").projection(&request));
+    }
     let lease = match acquire_token(
         &origin,
         &access_token,
@@ -885,12 +923,56 @@ pub async fn configure_desktop_tool_v2(
         Ok(value) => value,
         Err(error) => return Ok(error.projection(&request)),
     };
+    if ensure_session_epoch(&account_state, session_epoch).is_err() {
+        delete_created_token(&origin, &access_token, &lease).await;
+        return Ok(ActivationFailure::ConfigurationFailed("account_changed").projection(&request));
+    }
     let mut prepared =
         match prepare_adapter(&request, &origin, previous_record.as_ref(), model_transport) {
             Ok(value) => value,
             Err(error) => {
                 delete_created_token(&origin, &access_token, &lease).await;
                 return Ok(ActivationFailure::Adapter(error).projection(&request));
+            }
+        };
+    // Persist recovery BEFORE changing credentials or any target file.
+    let recovery = match Store::open(true) {
+        Ok(Some(value)) => value,
+        _ => {
+            delete_created_token(&origin, &access_token, &lease).await;
+            return Ok(
+                ActivationFailure::ConfigurationFailed("recovery_storage_unavailable")
+                    .projection(&request),
+            );
+        }
+    };
+    let receipt = Receipt {
+        tool_id: request.tool_id.clone(),
+        model_id: request.model_id.clone(),
+        line_id: request.line_id.clone(),
+        billing_group: request.billing_group.clone(),
+        updated_at_epoch_ms: now_epoch_ms(),
+        requires_background: request.tool_id == "claude_desktop"
+            || request.tool_id == "dsh_web"
+            || matches!(
+                model_transport,
+                Some(ModelTransport::Claude(ClaudeTransport::ChatBridge))
+                    | Some(ModelTransport::Codex(
+                        codex_desktop::CodexTransport::ChatBridge
+                    ))
+            ),
+    };
+    let mut recovery_record =
+        match recovery.begin(receipt, prepared.changes(), previous_record.as_ref()) {
+            Ok(record) => record,
+            Err(error) => {
+                delete_created_token(&origin, &access_token, &lease).await;
+                let reason = if error == connection_recovery::Failure::Changed {
+                    "recovery_pending"
+                } else {
+                    "recovery_storage_unavailable"
+                };
+                return Ok(ActivationFailure::ConfigurationFailed(reason).projection(&request));
             }
         };
     let bridge_started = if model_transport
@@ -900,6 +982,7 @@ pub async fn configure_desktop_tool_v2(
         match codex_bridge.ensure_started().await {
             Ok(value) => value,
             Err(_) => {
+                let _ = recovery.abandon(&recovery_record);
                 delete_created_token(&origin, &access_token, &lease).await;
                 return Ok(
                     ActivationFailure::Adapter(AdapterFailure::ConfigurationFailed(
@@ -927,6 +1010,7 @@ pub async fn configure_desktop_tool_v2(
         },
     };
     if tool_credentials::store(&request.tool_id, &credential).is_err() {
+        let _ = recovery.abandon(&recovery_record);
         if bridge_started {
             codex_bridge.stop().await;
         }
@@ -951,6 +1035,9 @@ pub async fn configure_desktop_tool_v2(
             bridge_started,
         )
         .await;
+        if cleanup.is_none() {
+            let _ = recovery.abandon(&recovery_record);
+        }
         return Ok(ActivationFailure::Adapter(cleanup.unwrap_or(error)).projection(&request));
     }
     if let Err(error) = verify_adapter(
@@ -977,7 +1064,39 @@ pub async fn configure_desktop_tool_v2(
             bridge_started,
         )
         .await;
+        if cleanup.is_none() {
+            let _ = recovery.abandon(&recovery_record);
+        }
         return Ok(ActivationFailure::Adapter(cleanup.unwrap_or(error)).projection(&request));
+    }
+
+    if recovery.finish(&mut recovery_record).is_err() {
+        if request.tool_id == "dsh_web" {
+            dsh_runtime.stop().await;
+        }
+        let cleanup = restore_after_failure(
+            &request,
+            &mut prepared,
+            credential_before.as_deref(),
+            previous_record.clone(),
+            &origin,
+            &access_token,
+            &lease,
+            &claude_code_runtime,
+            &claude_runtime,
+            &codex_bridge,
+            bridge_started,
+        )
+        .await;
+        if cleanup.is_none() {
+            let _ = recovery.abandon(&recovery_record);
+        }
+        if let Some(error) = cleanup {
+            return Ok(ActivationFailure::Adapter(error).projection(&request));
+        }
+        return Ok(
+            ActivationFailure::ConfigurationFailed("recovery_receipt_failed").projection(&request),
+        );
     }
 
     if request.tool_id == "codex_desktop"
@@ -999,6 +1118,295 @@ pub async fn configure_desktop_tool_v2(
         "ready",
         "tool_request_verified",
     ))
+}
+
+const CONNECTION_TOOLS: [&str; 7] = [
+    "claude_code",
+    "claude_desktop",
+    "codex_desktop",
+    "pi",
+    "dsh_web",
+    "hermes",
+    "openclaw",
+];
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ConnectionRequest {
+    request_id: String,
+    operation: String,
+    tool_id: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectionProjection {
+    tool_id: String,
+    state: &'static str,
+    model_id: String,
+    line_id: String,
+    billing_group: String,
+    updated_at_epoch_ms: u64,
+    restore_mode: &'static str,
+    requires_background: bool,
+    reason_code: &'static str,
+}
+
+impl ConnectionProjection {
+    fn empty(tool: &str) -> Self {
+        Self {
+            tool_id: tool.into(),
+            state: "not_connected",
+            model_id: String::new(),
+            line_id: String::new(),
+            billing_group: String::new(),
+            updated_at_epoch_ms: 0,
+            restore_mode: "none",
+            requires_background: false,
+            reason_code: "not_connected",
+        }
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConnectionResponse {
+    request_id: String,
+    schema_version: u8,
+    status: &'static str,
+    connections: Vec<ConnectionProjection>,
+    reason_code: &'static str,
+}
+
+fn inspect_connection(
+    tool: &str,
+    store: std::result::Result<Option<&Store>, ()>,
+) -> ConnectionProjection {
+    let mut projection = ConnectionProjection::empty(tool);
+    let stored = match store {
+        Ok(Some(store)) => store.load(tool),
+        Ok(None) => Ok(None),
+        Err(()) => Err(connection_recovery::Failure::Storage),
+    };
+    match stored {
+        Ok(Some(record)) => {
+            projection.state = if record.pending {
+                "recovery_pending"
+            } else if connection_recovery::configuration_matches(&record) {
+                "connected"
+            } else {
+                "changed"
+            };
+            projection.restore_mode = if record.original_known {
+                "original"
+            } else {
+                "remove_yeschoy"
+            };
+            projection.model_id = record.receipt.model_id;
+            projection.line_id = record.receipt.line_id;
+            projection.billing_group = record.receipt.billing_group;
+            projection.updated_at_epoch_ms = record.receipt.updated_at_epoch_ms;
+            projection.requires_background = record.receipt.requires_background;
+            projection.reason_code = projection.state;
+        }
+        Err(_) => {
+            projection.state = "unavailable";
+            projection.reason_code = "recovery_storage_unavailable";
+        }
+        Ok(None) => match tool_credentials::load(tool) {
+            Ok(credential) => {
+                projection.state = "legacy";
+                projection.restore_mode = "remove_yeschoy";
+                projection.model_id = credential.model_id.clone();
+                projection.line_id = if credential.origin == "https://api.yeschoy.com" {
+                    "global_accelerated"
+                } else {
+                    "mainland_optimized"
+                }
+                .into();
+                projection.requires_background = needs_background(tool, &credential);
+                projection.reason_code = "original_settings_unavailable";
+            }
+            Err(CredentialFailure::Missing) => {}
+            Err(_) => {
+                projection.state = "unavailable";
+                projection.reason_code = "secure_storage_unavailable";
+            }
+        },
+    }
+    projection
+}
+
+pub(crate) fn needs_background(tool: &str, credential: &ToolCredential) -> bool {
+    matches!(tool, "claude_desktop" | "dsh_web")
+        || credential.claude_transport.as_deref() == Some("chat_bridge")
+        || credential.codex_transport.as_deref() == Some("chat_bridge")
+}
+
+fn legacy_paths(tool: &str) -> Result<Vec<std::path::PathBuf>, AdapterFailure> {
+    let home = tool_adapters::user_home()
+        .ok_or(AdapterFailure::ConfigurationFailed("home_unavailable"))?;
+    Ok(match tool {
+        "claude_code" => vec![home.join(".claude/settings.json")],
+        "codex_desktop" => vec![
+            home.join(".codex/config.toml"),
+            home.join(".codex/yeschoy-model-catalog.json"),
+        ],
+        "claude_desktop" => {
+            let (a, b, c, d) = claude_desktop::current_paths(&home)?;
+            vec![a, b, c, d]
+        }
+        "pi" => vec![
+            home.join(".pi/agent/models.json"),
+            home.join(".pi/agent/settings.json"),
+        ],
+        "dsh_web" => {
+            vec![dsh_web::dsh_home(&home, std::env::var_os("DSH_HOME"))?.join("settings.yaml")]
+        }
+        "hermes" => {
+            vec![hermes::hermes_home(&home, std::env::var_os("HERMES_HOME"))?.join("config.yaml")]
+        }
+        "openclaw" => vec![openclaw::config_path(&home)?],
+        _ => return Err(AdapterFailure::UnsupportedProfile),
+    })
+}
+
+fn legacy_recovery(store: &Store, tool: &str) -> Result<Option<connection_recovery::Record>, ()> {
+    let credential = match tool_credentials::load(tool) {
+        Ok(value) => value,
+        Err(CredentialFailure::Missing) => return Ok(None),
+        Err(_) => return Err(()),
+    };
+    let mut changes = Vec::new();
+    for path in legacy_paths(tool).map_err(|_| ())? {
+        let before = tool_adapters::common::snapshot(&path).map_err(|_| ())?;
+        if let Some(bytes) = &before {
+            let transaction = tool_adapters::common::FileTransaction::stage_with_snapshot(
+                path,
+                before.clone(),
+                bytes.clone(),
+            )
+            .map_err(|_| ())?;
+            changes.extend_from_slice(transaction.changes());
+        }
+    }
+    if changes.is_empty() {
+        return Ok(None);
+    }
+    let receipt = Receipt {
+        tool_id: tool.into(),
+        model_id: credential.model_id.clone(),
+        line_id: if credential.origin == "https://api.yeschoy.com" {
+            "global_accelerated"
+        } else {
+            "mainland_optimized"
+        }
+        .into(),
+        billing_group: String::new(),
+        updated_at_epoch_ms: 0,
+        requires_background: needs_background(tool, &credential),
+    };
+    store
+        .begin(receipt, &changes, Some(&credential))
+        .map(Some)
+        .map_err(|_| ())
+}
+
+#[tauri::command]
+pub async fn manage_tool_connections_v1(
+    claude_code_runtime: tauri::State<'_, claude_code::ClaudeCodeRuntimeState>,
+    claude_runtime: tauri::State<'_, claude_desktop::ClaudeDesktopRuntimeState>,
+    dsh_runtime: tauri::State<'_, dsh_web::DshRuntimeState>,
+    codex_bridge: tauri::State<'_, CodexBridgeRuntimeState>,
+    request: ConnectionRequest,
+) -> Result<ConnectionResponse, String> {
+    if !request_id_is_valid(&request.request_id)
+        || !matches!(request.operation.as_str(), "inspect" | "restore")
+        || !(CONNECTION_TOOLS.contains(&request.tool_id.as_str())
+            || (request.operation == "inspect" && request.tool_id.is_empty()))
+    {
+        return Err("invalid_connection_request".into());
+    }
+    let _guard = ACTIVATION_LOCK.lock().await;
+    let _process_guard = if request.operation == "restore" {
+        Some(connection_recovery::operation_lock().map_err(|_| "connection_operation_busy")?)
+    } else {
+        None
+    };
+    let store = Store::open(request.operation == "restore");
+    let mut status = "ok";
+    let mut reason = "local_state";
+    if request.operation == "restore" {
+        let result = (|| -> Result<bool, ()> {
+            let store = store.as_ref().map_err(|_| ())?.as_ref().ok_or(())?;
+            let record = store.load(&request.tool_id).map_err(|_| ())?;
+            let mut record = match record {
+                Some(record) => Some(record),
+                None => legacy_recovery(store, &request.tool_id)?,
+            };
+            let mut kept = false;
+            if let Some(record) = &mut record {
+                record.pending = true;
+                store.save(record).map_err(|_| ())?;
+                kept = connection_recovery::restore_files(record).map_err(|_| ())?;
+            }
+            Ok(kept)
+        })();
+        if let Ok(kept) = result {
+            // Stop only this helper-owned runtime, never the third-party app or
+            // another provider. A running app may need to reopen its settings.
+            match request.tool_id.as_str() {
+                "claude_code" => claude_code_runtime.stop().await,
+                "claude_desktop" => claude_runtime.stop().await,
+                "codex_desktop" => codex_bridge.stop().await,
+                "dsh_web" => dsh_runtime.stop().await,
+                _ => {}
+            }
+            let cleaned = tool_credentials::restore(&request.tool_id, None).is_ok()
+                && store
+                    .as_ref()
+                    .ok()
+                    .and_then(|s| s.as_ref())
+                    .is_some_and(|s| s.remove(&request.tool_id).is_ok());
+            if cleaned {
+                status = if kept {
+                    "restored_with_changes"
+                } else {
+                    "restored"
+                };
+                reason = if kept {
+                    "later_changes_preserved"
+                } else {
+                    "local_settings_restored"
+                };
+            } else {
+                status = "recovery_failed";
+                reason = "recovery_cleanup_failed";
+            }
+        } else {
+            status = "recovery_failed";
+            reason = "recovery_not_completed";
+        }
+    }
+    let connections = CONNECTION_TOOLS
+        .iter()
+        .map(|tool| {
+            inspect_connection(
+                tool,
+                match &store {
+                    Ok(store) => Ok(store.as_ref()),
+                    Err(_) => Err(()),
+                },
+            )
+        })
+        .collect();
+    Ok(ConnectionResponse {
+        request_id: request.request_id,
+        schema_version: 1,
+        status,
+        connections,
+        reason_code: reason,
+    })
 }
 
 #[cfg(test)]

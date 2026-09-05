@@ -216,7 +216,8 @@ describe("beginner scan recovery", () => {
     expect(card.textContent).toContain("尚未开放自动配置");
     expect(card.textContent).not.toMatch(/已接通|已连接/);
     expect(native.mock.calls.map(([cmd]) => cmd)).toEqual([
-      "scan_desktop_apps_read_only",
+      "scan_activation_targets_v1",
+      "manage_tool_connections_v1",
       "account_inspect_v2",
       "scan_tools_read_only_v2",
     ]);
@@ -268,6 +269,7 @@ describe("beginner scan recovery", () => {
       native.mock.calls.every(([cmd]) =>
         [
           "scan_desktop_apps_read_only",
+          "manage_tool_connections_v1",
           "account_inspect_v2",
           "scan_tools_read_only_v2",
           "scan_activation_targets_v1",

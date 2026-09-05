@@ -152,6 +152,10 @@ pub(crate) fn prepare(
 }
 
 impl Prepared {
+    pub(crate) fn changes(&self) -> &[common::FileChange] {
+        self.transaction.changes()
+    }
+
     pub(crate) fn local_token(&self) -> Option<&str> {
         self.local_token.as_deref()
     }

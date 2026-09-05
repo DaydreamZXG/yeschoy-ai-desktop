@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-038/WP-RU038-INTERNAL-PACKAGING@2026-09-05T08:22:09.388346+00:00",
+  "packageId": "WP-RU038-INTERNAL-PACKAGING",
+  "baselineCommit": "d1abf2a698c578318a80bc5c0f21d204d9f28c71",
+  "baselineTreeHash": "sha256:688dca8536875d37d7a500c7dde856002f9973c4fefeb4b8ba335fd79c3f2b7e",
+  "testedTreeHash": "sha256:c172ec5a9062c4661a0ed801b2021616580a810ae8c02df5f4e6212ac9ad594b",
+  "testedSnapshotPath": "execution/tested-snapshots/8936f707826ae6ec.407da5e1832b6cf04ef3.json",
+  "testedSnapshotSha256": "sha256:d1721fe91a20285ef0f616c14a270ada1d4fa91a6f7fc758a9b88bc7a16dc105",
+  "sourceDiff": {
+    ".gitignore": "sha256:9226b2be0e47ec166db5de59fec3cea9168f081c476f952c2eb2f1cd8542827a",
+    "outputs/野菜API-0.4.6-内测打包.md": "sha256:81346e67070a177c8c8fccdf9ac47972e0a4918b0139dd11c39d920206ab3bbf",
+    "release-assets/0d809a88/windows/SHA256SUMS.txt": "deleted",
+    "release-assets/0d809a88/windows/windows-build-receipt.json": "deleted",
+    "release-assets/0d809a88/windows/野菜API-0.4.0-20260901-Windows-x64-内测版.exe": "deleted",
+    "release-assets/0d809a88/野菜API-0.4.0-新版一键接入-macOS-universal.dmg": "deleted",
+    "release-assets/1a05f4e7/windows/SHA256SUMS.txt": "deleted",
+    "release-assets/1a05f4e7/windows/windows-build-receipt.json": "deleted",
+    "release-assets/1a05f4e7/windows/野菜API-0.4.0-20260901-Windows-x64-内测版.exe": "deleted",
+    "release-assets/1a05f4e7/野菜API-0.4.0-新版图标-macOS-universal.dmg": "deleted",
+    "src-tauri/src/connection_recovery.rs": "sha256:df13fd8953dc783a08b4fb583af957099348c0b0ea11237963e2b406ca28733b",
+    "tests/work_packages/ru038/test_acceptance.py": "sha256:9fd0439c7e2239e7e81c51829d6a79e3fbe1e470fdfa0d6b9a67ae9f24bbab84"
+  },
+  "ownedResultHashes": {
+    ".gitignore": "sha256:9226b2be0e47ec166db5de59fec3cea9168f081c476f952c2eb2f1cd8542827a",
+    "outputs/野菜API-0.4.6-内测打包.md": "sha256:81346e67070a177c8c8fccdf9ac47972e0a4918b0139dd11c39d920206ab3bbf",
+    "release-assets/0d809a88/windows/SHA256SUMS.txt": "deleted",
+    "release-assets/0d809a88/windows/windows-build-receipt.json": "deleted",
+    "release-assets/0d809a88/windows/野菜API-0.4.0-20260901-Windows-x64-内测版.exe": "deleted",
+    "release-assets/0d809a88/野菜API-0.4.0-新版一键接入-macOS-universal.dmg": "deleted",
+    "release-assets/1a05f4e7/windows/SHA256SUMS.txt": "deleted",
+    "release-assets/1a05f4e7/windows/windows-build-receipt.json": "deleted",
+    "release-assets/1a05f4e7/windows/野菜API-0.4.0-20260901-Windows-x64-内测版.exe": "deleted",
+    "release-assets/1a05f4e7/野菜API-0.4.0-新版图标-macOS-universal.dmg": "deleted",
+    "src-tauri/src/connection_recovery.rs": "sha256:df13fd8953dc783a08b4fb583af957099348c0b0ea11237963e2b406ca28733b",
+    "tests/work_packages/ru038/test_acceptance.py": "sha256:9fd0439c7e2239e7e81c51829d6a79e3fbe1e470fdfa0d6b9a67ae9f24bbab84"
+  },
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      ".gitignore",
+      "src-tauri/src/connection_recovery.rs",
+      "tests/work_packages/ru038/**",
+      "outputs/野菜API-0.4.6-内测打包.md",
+      "release/**"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      ".gitignore": "sha256:9226b2be0e47ec166db5de59fec3cea9168f081c476f952c2eb2f1cd8542827a",
+      "outputs/野菜API-0.4.6-内测打包.md": "sha256:81346e67070a177c8c8fccdf9ac47972e0a4918b0139dd11c39d920206ab3bbf",
+      "src-tauri/src/connection_recovery.rs": "sha256:df13fd8953dc783a08b4fb583af957099348c0b0ea11237963e2b406ca28733b",
+      "tests/work_packages/ru038/test_acceptance.py": "sha256:9fd0439c7e2239e7e81c51829d6a79e3fbe1e470fdfa0d6b9a67ae9f24bbab84"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:922e0781cd231d244b150e7d44039ecfe6f3e0fe9c1babe83073f16d89c43db1",
+  "sourceScopeFailures": [
+    "changed forbidden path: release-assets/0d809a88/windows/SHA256SUMS.txt",
+    "changed forbidden path: release-assets/0d809a88/windows/windows-build-receipt.json",
+    "changed forbidden path: release-assets/0d809a88/windows/野菜API-0.4.0-20260901-Windows-x64-内测版.exe",
+    "changed forbidden path: release-assets/0d809a88/野菜API-0.4.0-新版一键接入-macOS-universal.dmg",
+    "changed forbidden path: release-assets/1a05f4e7/windows/SHA256SUMS.txt",
+    "changed forbidden path: release-assets/1a05f4e7/windows/windows-build-receipt.json",
+    "changed forbidden path: release-assets/1a05f4e7/windows/野菜API-0.4.0-20260901-Windows-x64-内测版.exe",
+    "changed forbidden path: release-assets/1a05f4e7/野菜API-0.4.0-新版图标-macOS-universal.dmg"
+  ],
+  "integrityFailures": [],
+  "assignedTo": "root",
+  "startedAt": "2026-09-05T08:22:09.388346+00:00",
+  "finishedAt": "2026-09-05T08:30:23.232944+00:00",
+  "passed": false,
+  "commands": [],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU038-AS-01",
+      "path": "execution/evidence/407da5e1832b6cf04ef3/8936f707826ae6ec/4775a966b21f814c.json",
+      "sha256": "sha256:3d10b1f0174a5d16938bb324315f66e7ef7148cbcaba040bb361f9c1982d9596"
+    },
+    {
+      "scenarioId": "RU038-AS-02",
+      "path": "execution/evidence/407da5e1832b6cf04ef3/8936f707826ae6ec/c68c887fd227547f.json",
+      "sha256": "sha256:3d5a07cfbc37fa04b88372d956f38455d114917d59722454548e1962e790e01b"
+    },
+    {
+      "scenarioId": "RU038-AS-03",
+      "path": "execution/evidence/407da5e1832b6cf04ef3/8936f707826ae6ec/aa77ac97cf766c09.json",
+      "sha256": "sha256:bc6a7028184f878bad8403b16ac770feaf747d954ae9a0ab0f4007c4e2b2c9e1"
+    }
+  ],
+  "scenarioEvidenceFailures": [
+    "RU038-AS-01: registered runner proof is invalid",
+    "RU038-AS-02: registered runner proof is invalid",
+    "RU038-AS-03: registered runner proof is invalid"
+  ],
+  "releaseUnitId": "RU-038",
+  "releaseUnitHash": "sha256:0b8f6be38e1f2c8beda47014813d6e0a091122b24132dca30769a91e5015ce78"
+}

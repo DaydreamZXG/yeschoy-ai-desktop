@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU038-AS-02",
+  "assertion": "Current renderer regression including shared financial cards and reversible connection actions passes unchanged.",
+  "testSelector": "tests/work_packages/ru036/test_acceptance.py::test_renderer",
+  "acceptanceCommandId": "ru038-renderer",
+  "runId": "RU-038/WP-RU038-INTERNAL-PACKAGING@2026-09-05T08:36:22.485420+00:00",
+  "packageId": "WP-RU038-INTERNAL-PACKAGING",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru036/test_acceptance.py::test_renderer",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:1b8f74e91127e90cb8b58a33f1b5fb0479e49d289497659e02485e02dad59b28",
+    "machineReportSha256": "sha256:1edadb1c43fc562606ec8012943abadc37133e05c9d0e355eebed12166a85f87",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:6d4307b8cedab7981fa21f61b318b6fd470e74a5ff3f61089b46b064d90fd94a",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:9658a8b0d7d218e543f1485fdfac7aaaa27c715d696e2a339966bb0b83c517cc",
+  "releaseUnitId": "RU-038",
+  "releaseUnitHash": "sha256:0b8f6be38e1f2c8beda47014813d6e0a091122b24132dca30769a91e5015ce78"
+}

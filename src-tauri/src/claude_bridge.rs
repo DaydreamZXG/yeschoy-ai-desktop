@@ -7,6 +7,8 @@ use axum::{
     routing::any,
     Router,
 };
+use bytes::Bytes;
+use futures::{Stream, StreamExt};
 use serde_json::{json, Value};
 use tokio::{
     net::TcpListener,
@@ -21,6 +23,15 @@ use crate::{
 };
 
 const MAX_BODY_BYTES: usize = 8 * 1024 * 1024;
+
+fn upstream_client() -> Result<reqwest::Client, reqwest::Error> {
+    reqwest::Client::builder()
+        .no_proxy()
+        .redirect(reqwest::redirect::Policy::none())
+        .connect_timeout(Duration::from_secs(15))
+        .read_timeout(Duration::from_secs(60))
+        .build()
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ClaudeTransport {
@@ -60,6 +71,8 @@ struct ProxyState {
 struct ProxyRuntime {
     shutdown: Option<oneshot::Sender<()>>,
     task: JoinHandle<()>,
+    credential: ToolCredential,
+    events: broadcast::Sender<VerificationEvent>,
 }
 
 #[derive(Clone)]
@@ -87,21 +100,31 @@ impl ClaudeBridgeRuntime {
             .clone()
             .filter(|value| value.starts_with("ycg-") && value.len() == 68)
             .ok_or(AdapterFailure::SecureStorageUnavailable)?;
-        self.stop().await;
+        // Opening an already configured app must not interrupt its requests.
+        // Keep check/start/store under the same lock as stop.
+        let mut slot = self.runtime.lock().await;
+        if let Some(runtime) = slot.as_ref() {
+            if runtime.credential == credential && !runtime.task.is_finished() {
+                return Ok(runtime.events.subscribe());
+            }
+        }
+        if let Some(mut previous) = slot.take() {
+            if let Some(shutdown) = previous.shutdown.take() {
+                let _ = shutdown.send(());
+            }
+            previous.task.abort();
+            let _ = previous.task.await;
+        }
         let listener = TcpListener::bind(self.address)
             .await
             .map_err(|_| AdapterFailure::LaunchFailed)?;
         let (events, receiver) = broadcast::channel(8);
         let proxy_state = Arc::new(ProxyState {
-            credential,
+            credential: credential.clone(),
             local_token,
             prefix: self.prefix,
-            client: reqwest::Client::builder()
-                .no_proxy()
-                .connect_timeout(Duration::from_secs(15))
-                .build()
-                .map_err(|_| AdapterFailure::LaunchFailed)?,
-            events,
+            client: upstream_client().map_err(|_| AdapterFailure::LaunchFailed)?,
+            events: events.clone(),
         });
         let router = Router::new()
             .fallback(any(proxy_request))
@@ -114,9 +137,11 @@ impl ClaudeBridgeRuntime {
                 })
                 .await;
         });
-        *self.runtime.lock().await = Some(ProxyRuntime {
+        *slot = Some(ProxyRuntime {
             shutdown: Some(shutdown),
             task,
+            credential,
+            events,
         });
         Ok(receiver)
     }
@@ -286,24 +311,37 @@ async fn proxy_request(
             Err(_) => error_response(StatusCode::BAD_GATEWAY, "invalid provider response"),
         };
     }
-    let _ = state.events.send(VerificationEvent {
-        model: state.credential.model_id.clone(),
-    });
     if transport == ClaudeTransport::DirectAnthropic {
-        let content_type = if streaming {
-            "text/event-stream"
-        } else {
-            "application/json"
+        if streaming {
+            return response(
+                status,
+                "text/event-stream",
+                Body::from_stream(verified_stream(upstream.bytes_stream(), state.clone())),
+            );
+        }
+        let bytes = match read_bounded(upstream).await {
+            Ok(bytes) => bytes,
+            Err(_) => return error_response(StatusCode::BAD_GATEWAY, "invalid provider response"),
         };
-        return response(
-            status,
-            content_type,
-            Body::from_stream(upstream.bytes_stream()),
-        );
+        if !serde_json::from_slice::<Value>(&bytes)
+            .ok()
+            .as_ref()
+            .is_some_and(usable_message)
+        {
+            return error_response(StatusCode::BAD_GATEWAY, "invalid provider response");
+        }
+        let _ = state.events.send(VerificationEvent {
+            model: state.credential.model_id.clone(),
+        });
+        return response(status, "application/json", Body::from(bytes));
     }
     if streaming {
         let stream = streaming::create_anthropic_sse_stream(upstream.bytes_stream());
-        return response(status, "text/event-stream", Body::from_stream(stream));
+        return response(
+            status,
+            "text/event-stream",
+            Body::from_stream(verified_stream(stream, state.clone())),
+        );
     }
     let bytes = match read_bounded(upstream).await {
         Ok(bytes) => bytes,
@@ -313,18 +351,207 @@ async fn proxy_request(
         .map_err(|_| ())
         .and_then(|value| transform::openai_to_anthropic(value).map_err(|_| ()))
     {
-        Ok(value) => value,
+        Ok(value) if usable_message(&value) => value,
+        Ok(_) => return error_response(StatusCode::BAD_GATEWAY, "invalid provider response"),
         Err(_) => return error_response(StatusCode::BAD_GATEWAY, "invalid provider response"),
     };
     match serde_json::to_vec(&value) {
-        Ok(bytes) => response(status, "application/json", Body::from(bytes)),
+        Ok(bytes) => {
+            let _ = state.events.send(VerificationEvent {
+                model: state.credential.model_id.clone(),
+            });
+            response(status, "application/json", Body::from(bytes))
+        }
         Err(_) => error_response(StatusCode::BAD_GATEWAY, "invalid provider response"),
+    }
+}
+
+fn usable_message(value: &Value) -> bool {
+    value["type"] == "message"
+        && value["role"] == "assistant"
+        && value["stop_reason"].as_str().is_some()
+        && value["content"].as_array().is_some_and(|content| {
+            content.iter().any(|block| {
+                block["text"]
+                    .as_str()
+                    .is_some_and(|text| !text.trim().is_empty())
+                    || (block["type"] == "tool_use" && block["name"].as_str().is_some())
+            })
+        })
+}
+
+#[derive(Default)]
+struct CompletionObserver {
+    buffer: Vec<u8>,
+    useful: bool,
+    stopped: bool,
+    failed: bool,
+}
+
+impl CompletionObserver {
+    fn push(&mut self, bytes: &[u8]) -> bool {
+        self.buffer.extend_from_slice(bytes);
+        if self.buffer.len() > MAX_BODY_BYTES {
+            self.failed = true;
+            self.buffer.clear();
+            return false;
+        }
+        while let Some(end) = self.buffer.iter().position(|b| *b == b'\n') {
+            let line: Vec<u8> = self.buffer.drain(..=end).collect();
+            let line = String::from_utf8_lossy(&line);
+            let Some(data) = line.trim().strip_prefix("data:") else {
+                continue;
+            };
+            let Ok(event) = serde_json::from_str::<Value>(data.trim()) else {
+                continue;
+            };
+            if event["type"] == "error" {
+                self.failed = true;
+            }
+            if event["type"] == "content_block_delta" {
+                self.useful |= event["delta"]["text"]
+                    .as_str()
+                    .is_some_and(|text| !text.trim().is_empty());
+            }
+            if event["type"] == "content_block_start" {
+                self.useful |= event["content_block"]["type"] == "tool_use"
+                    || event["content_block"]["text"]
+                        .as_str()
+                        .is_some_and(|text| !text.trim().is_empty());
+            }
+            if event["type"] == "message_stop" {
+                self.stopped = true;
+            }
+        }
+        self.useful && self.stopped && !self.failed
+    }
+}
+
+fn verified_stream<E: std::error::Error + Send + 'static>(
+    stream: impl Stream<Item = Result<Bytes, E>> + Send + 'static,
+    state: Arc<ProxyState>,
+) -> impl Stream<Item = Result<Bytes, std::io::Error>> + Send {
+    async_stream::stream! {
+        futures::pin_mut!(stream);
+        let mut observer = CompletionObserver::default();
+        let mut notified = false;
+        while let Some(chunk) = stream.next().await {
+            let bytes = match chunk {
+                Ok(bytes) => bytes,
+                Err(_) => { yield Err(std::io::Error::other("provider stream interrupted")); break; }
+            };
+            let completed = observer.push(&bytes);
+            yield Ok(bytes);
+            if completed && !notified {
+                notified = true;
+                let _ = state.events.send(VerificationEvent { model: state.credential.model_id.clone() });
+            }
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn repeated_open_keeps_live_claude_bridge_and_credential_change_restarts() {
+        let runtime = ClaudeBridgeRuntime::new("127.0.0.1:0", "/test");
+        let mut credential = ToolCredential {
+            api_key: "synthetic-test-key-only".into(),
+            origin: "https://yeschoy.com".into(),
+            model_id: "test-model".into(),
+            local_gateway_token: Some(format!("ycg-{}", "b".repeat(64))),
+            codex_transport: None,
+            claude_transport: None,
+        };
+        runtime.start(credential.clone()).await.unwrap();
+        let first = runtime.runtime.lock().await.as_ref().unwrap().task.id();
+        runtime.start(credential.clone()).await.unwrap();
+        assert_eq!(
+            runtime.runtime.lock().await.as_ref().unwrap().task.id(),
+            first
+        );
+        credential.model_id = "other-model".into();
+        runtime.start(credential).await.unwrap();
+        assert_ne!(
+            runtime.runtime.lock().await.as_ref().unwrap().task.id(),
+            first
+        );
+        runtime.stop().await;
+        assert!(runtime.runtime.lock().await.is_none());
+    }
+
+    #[tokio::test]
+    async fn upstream_redirects_never_forward_even_synthetic_credentials() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let destination = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        for status in [301, 302, 307, 308] {
+            let source = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let url = format!("http://{}/test", source.local_addr().unwrap());
+            let location = format!(
+                "http://{}/must-not-receive",
+                destination.local_addr().unwrap()
+            );
+            let server = tokio::spawn(async move {
+                let (mut socket, _) = source.accept().await.unwrap();
+                let mut request = [0u8; 2048];
+                let n = socket.read(&mut request).await.unwrap();
+                assert!(String::from_utf8_lossy(&request[..n]).contains("synthetic-test-only"));
+                socket.write_all(format!("HTTP/1.1 {status} Redirect\r\nLocation: {location}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").as_bytes()).await.unwrap();
+            });
+            let response = upstream_client()
+                .unwrap()
+                .get(url)
+                .header("x-api-key", "synthetic-test-only")
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(response.status().as_u16(), status);
+            server.await.unwrap();
+        }
+        assert!(
+            tokio::time::timeout(Duration::from_millis(30), destination.accept())
+                .await
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn response_headers_empty_bodies_and_errors_are_not_verification() {
+        assert!(!usable_message(
+            &serde_json::json!({"type":"error","error":{"message":"failed"}})
+        ));
+        assert!(!usable_message(
+            &serde_json::json!({"type":"message","role":"assistant","content":[],"stop_reason":"end_turn"})
+        ));
+        assert!(!usable_message(
+            &serde_json::json!({"type":"message","role":"assistant","content":[{"type":"text","text":"hello"}],"stop_reason":null})
+        ));
+        assert!(usable_message(
+            &serde_json::json!({"type":"message","role":"assistant","content":[{"type":"text","text":"hello"}],"stop_reason":"end_turn"})
+        ));
+    }
+
+    #[test]
+    fn stream_verification_requires_useful_complete_response_at_every_chunk_boundary() {
+        let text=b"event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"delta\":{\"text\":\"YESCHOY_OK\"}}\n\n";
+        let stop = b"event: message_stop\ndata: {\"type\":\"message_stop\"}\n\n";
+        let payload = [text.as_slice(), stop.as_slice()].concat();
+        for split in 0..payload.len() {
+            let mut observer = CompletionObserver::default();
+            observer.push(&payload[..split]);
+            assert!(observer.push(&payload[split..]), "chunk split {split}");
+        }
+        let mut truncated = CompletionObserver::default();
+        assert!(!truncated.push(text));
+        let mut empty = CompletionObserver::default();
+        assert!(!empty.push(stop));
+        let mut failed = CompletionObserver::default();
+        failed.push(text);
+        failed.push(b"data: {\"type\":\"error\"}\n\n");
+        assert!(!failed.push(stop));
+    }
 
     #[test]
     fn local_auth_accepts_claude_code_and_desktop_header_shapes_only() {

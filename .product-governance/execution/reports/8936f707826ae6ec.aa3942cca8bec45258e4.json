@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-038/WP-RU038-INTERNAL-PACKAGING@2026-09-05T08:33:58.253070+00:00",
+  "packageId": "WP-RU038-INTERNAL-PACKAGING",
+  "baselineCommit": "d1abf2a698c578318a80bc5c0f21d204d9f28c71",
+  "baselineTreeHash": "sha256:ce8c0bb44bc2d8c4cdae885dad62f86271e033596e99a015e1cda175208232fe",
+  "testedTreeHash": "sha256:ce8c0bb44bc2d8c4cdae885dad62f86271e033596e99a015e1cda175208232fe",
+  "testedSnapshotPath": "execution/tested-snapshots/8936f707826ae6ec.aa3942cca8bec45258e4.json",
+  "testedSnapshotSha256": "sha256:33ea558a95582d1a94b692cab3262121bb9ea5b01e3f1dfcda97e0df4d9b6e48",
+  "sourceDiff": {},
+  "ownedResultHashes": {},
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      ".gitignore",
+      "src-tauri/src/connection_recovery.rs",
+      "tests/work_packages/ru038/**",
+      "outputs/野菜API-0.4.6-内测打包.md",
+      "release/**"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      ".gitignore": "sha256:dd217d30b24d059aed2f428a266e9d2af173a887bd9cf8585b77720ae0d53c25",
+      "outputs/野菜API-0.4.6-内测打包.md": "sha256:256191062934b1edbcbec6dec91cf58258b4adc8970868c54a04dd18c6533a0e",
+      "src-tauri/src/connection_recovery.rs": "sha256:df13fd8953dc783a08b4fb583af957099348c0b0ea11237963e2b406ca28733b",
+      "tests/work_packages/ru038/test_acceptance.py": "sha256:9fd0439c7e2239e7e81c51829d6a79e3fbe1e470fdfa0d6b9a67ae9f24bbab84"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:b1d1a81af323973cfbe0300fb0886011575a882184fd3dbc167528ca773ad884",
+  "sourceScopeFailures": [],
+  "integrityFailures": [
+    "non-verification work package produced no source change"
+  ],
+  "assignedTo": "root",
+  "startedAt": "2026-09-05T08:33:58.253070+00:00",
+  "finishedAt": "2026-09-05T08:34:29.016629+00:00",
+  "passed": false,
+  "commands": [],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU038-AS-01",
+      "path": "execution/evidence/aa3942cca8bec45258e4/8936f707826ae6ec/4775a966b21f814c.json",
+      "sha256": "sha256:7bd8adb95ecef77cd943ad573d2c31b95aec141f91d5cdc2be52b027f5e5a588"
+    },
+    {
+      "scenarioId": "RU038-AS-02",
+      "path": "execution/evidence/aa3942cca8bec45258e4/8936f707826ae6ec/c68c887fd227547f.json",
+      "sha256": "sha256:47a5cef463f07ddc8dbae3dcf2d698d0f20238f141115f8ab0976c207121b2e4"
+    },
+    {
+      "scenarioId": "RU038-AS-03",
+      "path": "execution/evidence/aa3942cca8bec45258e4/8936f707826ae6ec/aa77ac97cf766c09.json",
+      "sha256": "sha256:383fc7565b5907843c653700c3d9b2c92d924a298f3a5b294f33cae6dd3386d6"
+    }
+  ],
+  "scenarioEvidenceFailures": [
+    "RU038-AS-01: registered runner proof is invalid",
+    "RU038-AS-02: registered runner proof is invalid",
+    "RU038-AS-03: registered runner proof is invalid"
+  ],
+  "releaseUnitId": "RU-038",
+  "releaseUnitHash": "sha256:0b8f6be38e1f2c8beda47014813d6e0a091122b24132dca30769a91e5015ce78"
+}

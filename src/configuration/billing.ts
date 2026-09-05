@@ -222,7 +222,16 @@ export function groupPrice(
       rows = [
         {
           name: "按量计费",
-          rates: { p: billing.baseInputUsd, c: billing.baseOutputUsd },
+          rates: {
+            p: billing.baseInputUsd,
+            c: billing.baseOutputUsd,
+            ...(billing.cacheReadUsd == null
+              ? {}
+              : { cr: billing.cacheReadUsd }),
+            ...(billing.cacheWriteUsd == null
+              ? {}
+              : { cc: billing.cacheWriteUsd }),
+          },
         },
       ];
   }

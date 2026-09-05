@@ -7,6 +7,7 @@ import {
   cleanup,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { StrictMode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import i18n from "i18next";
 import zh from "../i18n/locales/zh.json";
@@ -19,6 +20,7 @@ import { APPEARANCE_KEY, readAppearance } from "./appearance";
 import { workbenchCopies } from "./copy";
 import { catalogFixture } from "../service-catalog/test-fixtures";
 import { readFileSync } from "node:fs";
+import { connectionsFixture } from "../configuration/connection-test-fixtures";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 const native = vi.mocked(invoke);
@@ -188,9 +190,21 @@ type Args = {
 let systemDark = false;
 let appearanceListener: () => void = () => {};
 beforeEach(async () => {
+  HTMLDialogElement.prototype.showModal = function () {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.removeAttribute("open");
+  };
   native.mockReset();
   native.mockImplementation(async (command, args) => {
     const request = (args as Args).request;
+    if (command === "manage_tool_connections_v1")
+      return connectionsFixture(request.requestId);
+    if (command === "scan_activation_targets_v1")
+      return activationTargetScan(request.requestId);
+    if (command === "manage_tool_connections_v1")
+      return connectionsFixture(request.requestId);
     if (command === "scan_desktop_apps_read_only")
       return discovery(request.requestId);
     if (command === "read_public_service_catalog")
@@ -226,12 +240,58 @@ afterEach(() => {
 });
 
 describe("official workbench", () => {
+  it("restores saved selections under effect replay and keeps them across navigation", async () => {
+    native.mockImplementation(async (command, args) => {
+      const request = (args as Args).request;
+      if (command === "manage_tool_connections_v1") {
+        const result = connectionsFixture(request.requestId);
+        Object.assign(
+          result.connections.find((c) => c.toolId === "codex_desktop")!,
+          {
+            state: "connected",
+            restoreMode: "original",
+            modelId: "glm-5.3",
+            billingGroup: "国模特价分组",
+            lineId: "global_accelerated",
+            updatedAtEpochMs: 1,
+          },
+        );
+        return result;
+      }
+      if (command === "scan_activation_targets_v1")
+        return activationTargetScan(request.requestId);
+      if (command === "account_inspect_v2") return signedIn(request.requestId);
+      throw Error("Unexpected command");
+    });
+    render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    );
+    await screen.findByRole("button", { name: "恢复原设置" });
+    const card = screen
+      .getByRole("heading", { name: "Codex Desktop" })
+      .closest("article")!;
+    fireEvent.click(within(card).getByRole("button", { name: "调整接入" }));
+    await act(async () => {});
+    expect(screen.getByRole("radio", { name: /国模特价分组/ })).toBeChecked();
+    expect(
+      screen.getByRole("button", { name: /全球加速 Cloudflare/ }),
+    ).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "用量账单" }));
+    expect(
+      screen.getByRole("heading", { level: 1, name: "用量账单" }),
+    ).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "应用接入" }));
+    expect(screen.getByRole("radio", { name: /国模特价分组/ })).toBeChecked();
+    expect(screen.getByRole("button", { name: "恢复原设置" })).toBeEnabled();
+  });
   it.each(["zh", "zh-TW", "en", "ja"] as const)(
     "uses user-facing copy without engineering or release checklists in %s",
     async (language) => {
       await i18n.changeLanguage(language);
       const { container } = render(<App />);
-      await screen.findByText("1.2.3");
+      await screen.findByText("版本 1.40609.1");
       const c = workbenchCopies[language];
       const checkCopy = () => {
         expect(container.textContent).not.toMatch(
@@ -272,6 +332,7 @@ describe("official workbench", () => {
         commands.every((command) =>
           [
             "scan_desktop_apps_read_only",
+            "manage_tool_connections_v1",
             "account_inspect_v2",
             "scan_activation_targets_v1",
           ].includes(command),
@@ -303,27 +364,30 @@ describe("official workbench", () => {
           keys(zh[namespace]).sort(),
         );
   });
-  it("renders only real discovery evidence and unavailable account values", async () => {
+  it("prioritizes login over empty account statistics and preserves discovery truth", async () => {
     render(<App />);
-    await screen.findByText("1.2.3");
-    const stats = screen.getByRole("region", { name: "用量账单" });
-    expect(within(stats).getAllByLabelText("暂无账户数据")).toHaveLength(3);
-    expect(stats).toHaveTextContent("1个");
+    await screen.findByText("版本 1.40609.1");
+    expect(
+      screen.queryByRole("region", { name: "用量账单" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "登录野菜 API" })).toBeEnabled();
+    expect(screen.getAllByRole("article")).toHaveLength(7);
     const card = screen
       .getByRole("heading", { name: "Claude Desktop" })
       .closest("article")!;
-    expect(card).toHaveTextContent("尚未读取");
-    expect(card).toHaveTextContent("连接状态未确认");
+    expect(card).toHaveTextContent("待接入");
+    expect(card).toHaveTextContent("选择模型与分组");
     expect(card).not.toHaveTextContent("已接入");
     expect(screen.queryByText("¥128.60")).not.toBeInTheDocument();
     expect(native.mock.calls.map((call) => call[0])).toEqual([
-      "scan_desktop_apps_read_only",
+      "scan_activation_targets_v1",
+      "manage_tool_connections_v1",
       "account_inspect_v2",
     ]);
   });
   it("takes the application navigation to the working setup flow", async () => {
     render(<App />);
-    await screen.findByText("1.2.3");
+    await screen.findByText("版本 1.40609.1");
     fireEvent.click(screen.getByRole("button", { name: "应用接入" }));
     expect(
       screen.getByTestId("configuration-preview-view"),
@@ -335,7 +399,7 @@ describe("official workbench", () => {
     expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
       "先去登录",
     );
-    expect(native).toHaveBeenCalledTimes(3);
+    expect(native).toHaveBeenCalledTimes(4);
   });
   it("rejects an incomplete or mismatched result, shows unknown not absent, and retries", async () => {
     native.mockResolvedValueOnce(discovery("wrong-request"));
@@ -445,14 +509,15 @@ describe("official workbench", () => {
   });
   it("keeps the chosen desktop application and directs signed-out users to login", async () => {
     render(<App />);
-    await screen.findByText("1.2.3");
+    await screen.findByText("版本 1.40609.1");
     const codex = screen
-      .getByRole("heading", { name: "Codex" })
+      .getByRole("heading", { name: "Codex Desktop" })
       .closest("article")!;
-    const openSetup = within(codex).getByRole("button", { name: "查看接入" });
+    const openSetup = within(codex).getByRole("button", { name: "开始接入" });
     openSetup.focus();
     fireEvent.click(openSetup);
     expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "更换应用" }));
     expect(
       screen.getByRole("button", { name: /Codex Desktop ChatGPT/ }),
     ).toHaveAttribute("aria-pressed", "true");
@@ -460,11 +525,11 @@ describe("official workbench", () => {
     expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
       "先去登录",
     );
-    expect(native).toHaveBeenCalledTimes(3);
+    expect(native).toHaveBeenCalledTimes(4);
   });
   it("uses one shared signed-out account state across billing and pricing", async () => {
     render(<App />);
-    await screen.findByText("1.2.3");
+    await screen.findByText("版本 1.40609.1");
     fireEvent.click(screen.getByRole("button", { name: "用量账单" }));
     expect(
       await screen.findByRole("button", { name: "网页登录" }),
@@ -474,7 +539,8 @@ describe("official workbench", () => {
       await screen.findAllByText("登录后可查看当前账号可用模型和实际价格。"),
     ).toHaveLength(2);
     expect(native.mock.calls.map((call) => call[0])).toEqual([
-      "scan_desktop_apps_read_only",
+      "scan_activation_targets_v1",
+      "manage_tool_connections_v1",
       "account_inspect_v2",
     ]);
     fireEvent.change(screen.getByRole("combobox", { name: "使用线路" }), {
@@ -491,25 +557,61 @@ describe("official workbench", () => {
   it("renders signed-in account facts and the auditable price comparison", async () => {
     native.mockImplementation(async (command, args) => {
       const request = (args as Args).request;
+      if (command === "manage_tool_connections_v1")
+        return connectionsFixture(request.requestId);
+      if (command === "scan_activation_targets_v1")
+        return activationTargetScan(request.requestId);
       if (command === "scan_desktop_apps_read_only")
         return discovery(request.requestId);
-      if (command === "account_inspect_v2") return signedIn(request.requestId);
+      if (command === "account_inspect_v2") {
+        const old = signedIn(request.requestId);
+        return {
+          ...old,
+          schemaVersion: 5,
+          models: old.models.map(({ billing, ...model }) => {
+            const { requestUsd: _unknown, ...known } = billing;
+            return { ...model, billing: known };
+          }),
+          money: {
+            currency: "CNY",
+            balanceAmount: "0.7",
+            consumedAmount: "0.24",
+            displayRate: "1",
+          },
+          savings: {
+            status: "empty",
+            reasonCode: "no_history",
+            officialAmount: "",
+            siteAmount: "",
+            savedAmount: "",
+            referenceRate: "",
+            priceRate: "",
+            recordLimit: 100,
+            scannedCount: 0,
+            includedCount: 0,
+            excludedCount: 0,
+            oldestAtEpochMs: 0,
+            newestAtEpochMs: 0,
+          },
+        };
+      }
       if (command === "read_public_service_catalog")
         return catalogFixture(request.requestId, request.lineId);
       throw Error("Not available in test");
     });
     render(<App />);
-    await screen.findByText("1.2.3");
+    await screen.findByText("版本 1.40609.1");
     fireEvent.click(screen.getByRole("button", { name: "用量账单" }));
     expect(await screen.findAllByText("野菜测试用户")).toHaveLength(2);
-    expect(screen.getByText(/0\.70/)).toBeInTheDocument();
+    expect(screen.getByText("¥0.70")).toBeInTheDocument();
+    expect(screen.getAllByText("人民币额度")).toHaveLength(2);
     expect(screen.getByRole("button", { name: /去充值/ })).toBeEnabled();
 
     fireEvent.click(screen.getByRole("button", { name: "模型与价格" }));
     expect((await screen.findAllByText("glm-5.3")).length).toBeGreaterThan(1);
     expect(screen.getByText("¥260")).toBeInTheDocument();
     expect(screen.getByText("¥130")).toBeInTheDocument();
-    expect(screen.getByText("1 USD = 1 CNY")).toBeInTheDocument();
+    expect(screen.getByText("参考换算值 1")).toBeInTheDocument();
     expect(screen.getByText(/50%/)).toBeInTheDocument();
   });
   it("keeps the signed-in account visible while a new route is refreshing", async () => {
@@ -517,6 +619,10 @@ describe("official workbench", () => {
     let finishRouteRefresh: () => void = () => {};
     native.mockImplementation(async (command, args) => {
       const request = (args as Args).request;
+      if (command === "manage_tool_connections_v1")
+        return connectionsFixture(request.requestId);
+      if (command === "scan_activation_targets_v1")
+        return activationTargetScan(request.requestId);
       if (command === "scan_desktop_apps_read_only")
         return discovery(request.requestId);
       if (command === "account_inspect_v2") {
@@ -556,6 +662,10 @@ describe("official workbench", () => {
     async (billingGroup) => {
       native.mockImplementation(async (command, args) => {
         const request = (args as Args).request;
+        if (command === "manage_tool_connections_v1")
+          return connectionsFixture(request.requestId);
+        if (command === "scan_activation_targets_v1")
+          return activationTargetScan(request.requestId);
         if (command === "scan_desktop_apps_read_only")
           return discovery(request.requestId);
         if (command === "account_inspect_v2")
@@ -576,11 +686,11 @@ describe("official workbench", () => {
         throw Error("Not available in test");
       });
       render(<App />);
-      await screen.findByText("1.2.3");
+      await screen.findByText("版本 1.40609.1");
       const codex = screen
-        .getByRole("heading", { name: "Codex" })
+        .getByRole("heading", { name: "Codex Desktop" })
         .closest("article")!;
-      fireEvent.click(within(codex).getByRole("button", { name: "查看接入" }));
+      fireEvent.click(within(codex).getByRole("button", { name: "开始接入" }));
       await screen.findByRole("button", { name: "一键接入" });
       if (billingGroup === "国模特价分组") {
         fireEvent.click(screen.getByRole("radio", { name: /国模特价分组/ }));
@@ -593,7 +703,7 @@ describe("official workbench", () => {
       expect(await screen.findByText("接入完成")).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Codex Desktop 已使用所选模型完成真实回复，现在可以直接使用。",
+          "Codex Desktop 的设置已保存，所选模型已通过连接测试。重新打开应用后即可试用。",
         ),
       ).toBeInTheDocument();
       expect(native).toHaveBeenCalledWith("configure_desktop_tool_v2", {
@@ -611,6 +721,10 @@ describe("official workbench", () => {
   it("allows setup when the group is valid but its dynamic price cannot be converted", async () => {
     native.mockImplementation(async (command, args) => {
       const request = (args as Args).request;
+      if (command === "manage_tool_connections_v1")
+        return connectionsFixture(request.requestId);
+      if (command === "scan_activation_targets_v1")
+        return activationTargetScan(request.requestId);
       if (command === "scan_desktop_apps_read_only")
         return discovery(request.requestId);
       if (command === "scan_activation_targets_v1")
@@ -646,7 +760,7 @@ describe("official workbench", () => {
       throw Error("Not available in test");
     });
     render(<App />);
-    await screen.findByText("1.2.3");
+    await screen.findByText("版本 1.40609.1");
     fireEvent.click(screen.getByRole("button", { name: "应用接入" }));
     expect(
       await screen.findByText(
@@ -661,7 +775,7 @@ describe("official workbench", () => {
   it("syncs appearance controls, follows system changes and persists only an enum", async () => {
     const save = vi.spyOn(Storage.prototype, "setItem");
     render(<App />);
-    await screen.findByText("1.2.3");
+    await screen.findByText("版本 1.40609.1");
     fireEvent.click(screen.getByRole("button", { name: "深色" }));
     expect(document.documentElement.dataset.theme).toBe("dark");
     expect(save).toHaveBeenLastCalledWith(APPEARANCE_KEY, "dark");
@@ -676,7 +790,7 @@ describe("official workbench", () => {
     systemDark = true;
     act(() => appearanceListener());
     expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(native).toHaveBeenCalledTimes(2);
+    expect(native).toHaveBeenCalledTimes(3);
   });
   it("keeps appearance usable when storage fails and rejects invalid preferences", async () => {
     localStorage.setItem(APPEARANCE_KEY, "unexpected-value");
@@ -689,7 +803,7 @@ describe("official workbench", () => {
       throw Error("denied");
     });
     render(<App />);
-    await screen.findByText("1.2.3");
+    await screen.findByText("版本 1.40609.1");
     fireEvent.click(screen.getByRole("button", { name: "深色" }));
     expect(document.documentElement.dataset.theme).toBe("dark");
   });

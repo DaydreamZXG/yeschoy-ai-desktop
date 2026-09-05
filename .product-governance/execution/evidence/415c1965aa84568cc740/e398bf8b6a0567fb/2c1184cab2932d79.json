@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU036-AS-03",
+  "assertion": "Run isolated native and renderer regressions, type/build, arithmetic and boundary fixtures plus local light/dark/narrow keyboard visual checks. No server changes or release/real-account validation claims.",
+  "testSelector": "tests/work_packages/ru036/test_acceptance.py::test_build",
+  "acceptanceCommandId": "ru036-build",
+  "runId": "RU-036/WP-RU036-ACCOUNT-MONEY@2026-09-05T07:07:24.982635+00:00",
+  "packageId": "WP-RU036-ACCOUNT-MONEY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru036/test_acceptance.py::test_build",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:4b34cdec6b2b0635eee197c11d9515d46d27fdc1e5924d803c3e305431404c5f",
+    "machineReportSha256": "sha256:67a99a4153b1d73184213ca5ffd81a60a318ca1d37bcc35110c8132b7abecabc",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:14a6510ee5d92212c5aa7ac35c59683363ed9ca92e1305c407b5f81327a8124d",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:977626505151d927d43b4593ea48bcf2f72e244493201d9ee138718b8c3ff12a",
+  "releaseUnitId": "RU-036",
+  "releaseUnitHash": "sha256:c7007ee164259041e894328b82de1035ca60bc864c83a924e9788d284e4012a6"
+}

@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU035-BASE-AS",
+  "assertion": "Full inherited native security/recovery, renderer account/pricing and build tests pass without source writes.",
+  "testSelector": "tests/work_packages/ru035/test_acceptance.py::test_inherited_baseline",
+  "acceptanceCommandId": "ru035-baseline",
+  "runId": "RU-035/WP-RU035-BASELINE@2026-09-05T05:20:31.746498+00:00",
+  "packageId": "WP-RU035-BASELINE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:0be1f4be63cdee37e51cd4c01d1109844e716b6d781362287c8765b4bed11181",
+  "releaseUnitId": "RU-035",
+  "releaseUnitHash": "sha256:b6bbdd5ad979d1f89508e06105b2aa948d1fa6d4df172f2b87b9648d68a05718"
+}

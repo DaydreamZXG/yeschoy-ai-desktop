@@ -2,6 +2,496 @@
   "schemaVersion": 1,
   "packages": [
     {
+      "id":"WP-RU038-INTERNAL-PACKAGING","wave":"integration","owner":"desktop-platform","riskClass":"high",
+      "objective":"Prepare current source and internal macOS/Windows installers with a bounded legacy-open compatibility correction.",
+      "deliverables":["Lock-only recovery absence fix with isolated regression","Audited source branch push","Internal build artifacts and precise verification/limitation report"],
+      "requirementRefs":["REQ-064"],"decisionRefs":["DEC-082"],"blockingDecisionRefs":[],
+      "nonGoals":["No public release, tag, updater or server mutation","No billing, login, activation contract or unrelated product changes"],
+      "dependsOn":["WP-RU037-SAVINGS-CARD"],
+      "allowedPaths":[".gitignore","src-tauri/src/connection_recovery.rs","tests/work_packages/ru038/**","outputs/野菜API-0.4.6-内测打包.md","release/**"],
+      "forbiddenPaths":[".product-governance/**","src/**",".github/workflows/release.yml",".github/workflows/sync-r2.yml","src-tauri/target/**","work/**","release-assets/**"],
+      "migrationPolicy":{"mode":"none","ownedPaths":[],"dataBackfill":"No data or key migration; preserve all real user state.","rollback":"Only revert the bounded source fix if required; never delete or recreate existing recovery material."},
+      "compatibilityPolicy":{"strategy":"Preserve schema5 and legacy tool credentials; distinguish empty lock directory from protected recovery material.","supportedVersions":"0.4.6 internal candidate: macOS Intel/Apple Silicon and attempted Windows x64 NSIS.","removalGate":"No unverified platform, account or public-update readiness claim."},
+      "inputContracts":["desktop-account-session@v5"],"outputContracts":["desktop-account-session@v5"],
+      "acceptanceCommands":[
+        {"id":"ru038-native","kind":"scenario_test","adapter":"pytest-json@1","selector":"tests/work_packages/ru038/test_acceptance.py::test_native_legacy_recovery","cwd":".","timeoutSeconds":1800},
+        {"id":"ru038-renderer","kind":"scenario_test","adapter":"pytest-json@1","selector":"tests/work_packages/ru036/test_acceptance.py::test_renderer","cwd":".","timeoutSeconds":1800},
+        {"id":"ru038-build","kind":"scenario_test","adapter":"pytest-json@1","selector":"tests/work_packages/ru036/test_acceptance.py::test_build","cwd":".","timeoutSeconds":1800}
+      ],
+      "requiredAcceptanceScenarios":[
+        {"id":"RU038-AS-01","assertion":"Lock-only/absent recovery root with missing key is absent, while existing protected material remains an error; regression fixtures touch no real Keychain or user files. All current native tests pass.","testSelector":"tests/work_packages/ru038/test_acceptance.py::test_native_legacy_recovery","acceptanceCommandId":"ru038-native"},
+        {"id":"RU038-AS-02","assertion":"Current renderer regression including shared financial cards and reversible connection actions passes unchanged.","testSelector":"tests/work_packages/ru036/test_acceptance.py::test_renderer","acceptanceCommandId":"ru038-renderer"},
+        {"id":"RU038-AS-03","assertion":"0.4.6 typechecks and production renderer builds under read-only source isolation without preview content, updater artifacts or public release claims.","testSelector":"tests/work_packages/ru036/test_acceptance.py::test_build","acceptanceCommandId":"ru038-build"}
+      ],
+      "verificationOnly":false,"stopConditions":["Requires modifying server, credentials or unrelated user files","Unknown protected recovery material must never be replaced","External signing/build failures remain explicit, never faked"],"status":"planned"
+    },
+    {
+      "id": "WP-RU037-SAVINGS-CARD",
+      "wave": "consumer",
+      "owner": "account",
+      "riskClass": "medium",
+      "objective": "Expose three existing comparable charge amounts in the shared savings card without changing financial semantics.",
+      "deliverables": ["Three-amount summary card", "State regression and responsive visual checks"],
+      "requirementRefs": ["REQ-063"],
+      "decisionRefs": ["DEC-081"],
+      "blockingDecisionRefs": [],
+      "nonGoals": ["No financial algorithm, native, API, server, configuration, package or release changes"],
+      "dependsOn": ["WP-RU036-ACCOUNT-MONEY"],
+      "allowedPaths": ["src/workbench/Savings.tsx", "src/workbench/Savings.test.tsx", "src/workbench/workbench-v2.css", "outputs/野菜API-人民币额度与近期节省.md"],
+      "forbiddenPaths": [".product-governance/**", "src-tauri/**", "src/account/**", "work/**", "release-assets/**", "dist/**"],
+      "migrationPolicy": {"mode": "none", "ownedPaths": [], "dataBackfill": "No data changes.", "rollback": "Revert only this presentation iteration if needed."},
+      "compatibilityPolicy": {"strategy": "Render existing schema5 aggregates; preserve legacy absent-data handling and all calculation semantics.", "supportedVersions": "Current 0.4.6 client source, unchanged dependencies.", "removalGate": "New financial semantics, API access or publishing require new authority."},
+      "inputContracts": ["desktop-account-session@v5"],
+      "outputContracts": ["desktop-account-session@v5"],
+      "acceptanceCommands": [
+        {"id": "ru037-renderer", "kind": "scenario_test", "adapter": "pytest-json@1", "selector": "tests/work_packages/ru036/test_acceptance.py::test_renderer", "cwd": ".", "timeoutSeconds": 1800},
+        {"id": "ru037-build", "kind": "scenario_test", "adapter": "pytest-json@1", "selector": "tests/work_packages/ru036/test_acceptance.py::test_build", "cwd": ".", "timeoutSeconds": 1800}
+      ],
+      "requiredAcceptanceScenarios": [
+        {"id": "RU037-AS-01", "assertion": "All three amounts are visible in the shared card without details; positive, zero, negative and absent/loading states preserve truthful same-record comparison, stale status and accessible details action. Existing account/finance renderer regression passes.", "testSelector": "tests/work_packages/ru036/test_acceptance.py::test_renderer", "acceptanceCommandId": "ru037-renderer"},
+        {"id": "RU037-AS-02", "assertion": "Unchanged 0.4.6 client typechecks and renderer builds under source-readonly isolation without embedding preview data or claiming an installable release.", "testSelector": "tests/work_packages/ru036/test_acceptance.py::test_build", "acceptanceCommandId": "ru037-build"}
+      ],
+      "verificationOnly": false,
+      "stopConditions": ["Requires changing monetary basis, account contracts or API permissions", "Requires server, native, unrelated source or release mutations"],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU036-ACCOUNT-MONEY",
+      "wave": "integration",
+      "owner": "account",
+      "riskClass": "critical",
+      "objective": "Display website-aligned account currency and auditable recent estimated savings without new backend privileges or invented historical totals.",
+      "deliverables": [
+        "Website-aligned account money and bounded savings",
+        "Closed account schema5 with legacy decoder",
+        "Shared explanatory cards and route copy",
+        "Isolated regression and local visual evidence"
+      ],
+      "requirementRefs": [
+        "REQ-062"
+      ],
+      "decisionRefs": [
+        "DEC-080"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server, DB, deployment, telemetry or updater changes",
+        "No backup history, plaintext baseline, arbitrary shell agent or shared token revocation",
+        "No unverified Windows publication claims"
+      ],
+      "dependsOn": [
+        "WP-RU035-DAILY-USE-UX"
+      ],
+      "allowedPaths": [
+        "src/**",
+        "src-tauri/src/**",
+        "tests/work_packages/ru034/**",
+        "tests/work_packages/ru035/**",
+        "tests/work_packages/ru036/**",
+        "outputs/野菜API-人民币额度与近期节省.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        "release-assets/**",
+        "src-tauri/target/**",
+        "dist/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No DB migration. Baseline only on explicit setup; legacy originals unknown.",
+        "rollback": "Immediate failed-activation rollback; explicit original-baseline three-way restore. Keep journal until cleanup succeeds."
+      },
+      "compatibilityPolicy": {
+        "strategy": "IPC5 adds sanitized money and recent savings aggregates. Legacy3/4 remain readable without inventing monetary basis. Commands, auth and optional billing semantics stay unchanged.",
+        "supportedVersions": "Current macOS/Windows client source; unchanged runtime dependencies and package version.",
+        "removalGate": "New remote privileges, account writes or publication require new authority."
+      },
+      "inputContracts": [
+        "desktop-account-session@v4"
+      ],
+      "outputContracts": [
+        "desktop-account-session@v5"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru036-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru036/test_acceptance.py::test_native",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        },
+        {
+          "id": "ru036-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru036/test_acceptance.py::test_renderer",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        },
+        {
+          "id": "ru036-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru036/test_acceptance.py::test_build",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU036-AS-01",
+          "assertion": "Match the website's quota, recorded special/group ratio, price and usd_exchange_rate formula for supported comparable records. Exclude malformed, non-consumption, free, subscription, special-fee and unknown basis records; both totals use the same included rows. Current CNY status projects customer-facing RMB credits using quota_per_unit and usd_exchange_rate; missing/unsupported settings show unavailable, never USD or zero fallback. Cumulative consumed credits use account used_quota, not recent TPM.",
+          "testSelector": "tests/work_packages/ru036/test_acceptance.py::test_native",
+          "acceptanceCommandId": "ru036-native"
+        },
+        {
+          "id": "RU036-AS-02",
+          "assertion": "Use a closed schema5 financial projection with finite bounded decimal strings, explicit counts and optional zero date window. Decoder preserves existing schema3/4 and rejects extra fields, impossible aggregates or signed-out finance. Overview and account share currency/savings logic, provide concise receipt-like detail and current-rate explanation; retain actual usage as a secondary metric and clarify mainland/global network lines do not change price groups.",
+          "testSelector": "tests/work_packages/ru036/test_acceptance.py::test_renderer",
+          "acceptanceCommandId": "ru036-renderer"
+        },
+        {
+          "id": "RU036-AS-03",
+          "assertion": "Run isolated native and renderer regressions, type/build, arithmetic and boundary fixtures plus local light/dark/narrow keyboard visual checks. No server changes or release/real-account validation claims.",
+          "testSelector": "tests/work_packages/ru036/test_acceptance.py::test_build",
+          "acceptanceCommandId": "ru036-build"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Requires remote/server mutation",
+        "Requires irreversible overwrite or secret exposure",
+        "Defer only missing external release evidence"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU035-BASELINE",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "critical",
+      "objective": "Strictly read-only revalidation of inherited native/renderer/build source without claiming historical output equality.",
+      "deliverables": [
+        "Fresh inherited-tree regression proof"
+      ],
+      "requirementRefs": [
+        "REQ-061"
+      ],
+      "decisionRefs": [
+        "DEC-079"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server, DB, deployment, telemetry or updater changes",
+        "No backup history, plaintext baseline, arbitrary shell agent or shared token revocation",
+        "No unverified Windows publication claims"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src/**",
+        "src-tauri/src/**",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "package.json",
+        "pnpm-lock.yaml",
+        ".github/workflows/ci.yml",
+        ".github/workflows/yeschoy-windows-internal.yml",
+        "tests/work_packages/ru034/**",
+        "outputs/野菜API-0.4.6-UX与恢复设置.md",
+        "tests/work_packages/ru035/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        "release-assets/**",
+        "src-tauri/target/**",
+        "dist/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No DB migration. Baseline only on explicit setup; legacy originals unknown.",
+        "rollback": "Immediate failed-activation rollback; explicit original-baseline three-way restore. Keep journal until cleanup succeeds."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Capability validation; activation schema3 retained and management schema1 added.",
+        "supportedVersions": "Existing macOS Intel/Apple Silicon and Windows x64 source targets; device evidence separate.",
+        "removalGate": "Plaintext storage, destructive overwrite, remote mutation or publication needs new authority."
+      },
+      "inputContracts": ["desktop-connection-management@v1"],
+      "outputContracts": [],
+      "acceptanceCommands": [
+        {
+          "id": "ru035-baseline",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru035/test_acceptance.py::test_inherited_baseline",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU035-BASE-AS",
+          "assertion": "Full inherited native security/recovery, renderer account/pricing and build tests pass without source writes.",
+          "testSelector": "tests/work_packages/ru035/test_acceptance.py::test_inherited_baseline",
+          "acceptanceCommandId": "ru035-baseline"
+        }
+      ],
+      "verificationOnly": true,
+      "stopConditions": [
+        "Requires remote/server mutation",
+        "Requires irreversible overwrite or secret exposure",
+        "Defer only missing external release evidence"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU035-DAILY-USE-UX",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "critical",
+      "objective": "Implement approved first-setup and daily-use UX with safe open and explicit price-change review.",
+      "deliverables": [
+        "Launch-only desktop/DSH",
+        "Installed-first UX and contextual errors",
+        "Group-change review and safe quit",
+        "Closed account4 and verified UX report"
+      ],
+      "requirementRefs": [
+        "REQ-061"
+      ],
+      "decisionRefs": [
+        "DEC-079"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server, DB, deployment, telemetry or updater changes",
+        "No backup history, plaintext baseline, arbitrary shell agent or shared token revocation",
+        "No unverified Windows publication claims"
+      ],
+      "dependsOn": [
+        "WP-RU035-BASELINE"
+      ],
+      "allowedPaths": [
+        "src/**",
+        "src-tauri/src/**",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "package.json",
+        "pnpm-lock.yaml",
+        ".github/workflows/ci.yml",
+        ".github/workflows/yeschoy-windows-internal.yml",
+        "tests/work_packages/ru034/**",
+        "outputs/野菜API-0.4.6-UX与恢复设置.md",
+        "tests/work_packages/ru035/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        "release-assets/**",
+        "src-tauri/target/**",
+        "dist/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No DB migration. Baseline only on explicit setup; legacy originals unknown.",
+        "rollback": "Immediate failed-activation rollback; explicit original-baseline three-way restore. Keep journal until cleanup succeeds."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Keep activation/recovery, add open schema1 and backward-readable account4.",
+        "supportedVersions": "Existing macOS Intel/Apple Silicon and Windows x64 source targets; device evidence separate.",
+        "removalGate": "Plaintext storage, destructive overwrite, remote mutation or publication needs new authority."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v5",
+        "desktop-connection-management@v1"
+      ],
+      "outputContracts": [
+        "desktop-account-session@v4",
+        "desktop-open-connection@v1"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru035-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru035/test_acceptance.py::test_native_daily_use_and_recovery",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        },
+        {
+          "id": "ru035-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru035/test_acceptance.py::test_renderer_daily_use_and_price_changes",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        },
+        {
+          "id": "ru035-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru035/test_acceptance.py::test_client_build",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU035-AS-01",
+          "assertion": "Native open without probes/writes, DSH reuse/restart, identity guards and recovery regressions.",
+          "testSelector": "tests/work_packages/ru035/test_acceptance.py::test_native_daily_use_and_recovery",
+          "acceptanceCommandId": "ru035-native"
+        },
+        {
+          "id": "RU035-AS-02",
+          "assertion": "Ordinary-account installed-first, missing-group, errors, duplicate actions, keyboard and restore renderer behavior.",
+          "testSelector": "tests/work_packages/ru035/test_acceptance.py::test_renderer_daily_use_and_price_changes",
+          "acceptanceCommandId": "ru035-renderer"
+        },
+        {
+          "id": "RU035-AS-03",
+          "assertion": "Type/build with fixture exclusion; no publication claim.",
+          "testSelector": "tests/work_packages/ru035/test_acceptance.py::test_client_build",
+          "acceptanceCommandId": "ru035-build"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Requires remote/server mutation",
+        "Requires irreversible overwrite or secret exposure",
+        "Defer only missing external release evidence"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU034-REVERSIBLE-WORKBENCH",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "critical",
+      "objective": "Deliver a reversible app-centered desktop workbench with resilient login and audited pricing/security corrections.",
+      "deliverables": [
+        "Encrypted recovery and persistent native state",
+        "Redesigned workbench, model search and visible restore",
+        "Login, pricing and bridge fixes",
+        "UX report and tests"
+      ],
+      "requirementRefs": [
+        "REQ-060"
+      ],
+      "decisionRefs": [
+        "DEC-078"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server, DB, deployment, telemetry or updater changes",
+        "No backup history, plaintext baseline, arbitrary shell agent or shared token revocation",
+        "No unverified Windows publication claims"
+      ],
+      "dependsOn": [
+        "WP-RU033-CODEX-VERIFICATION-PRICE-SUMMARY"
+      ],
+      "allowedPaths": [
+        "src/**",
+        "src-tauri/src/**",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "package.json",
+        "pnpm-lock.yaml",
+        ".github/workflows/ci.yml",
+        ".github/workflows/yeschoy-windows-internal.yml",
+        "tests/work_packages/ru034/**",
+        "outputs/野菜API-0.4.6-UX与恢复设置.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "work/**",
+        "release-assets/**",
+        "src-tauri/target/**",
+        "dist/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No DB migration. Baseline only on explicit setup; legacy originals unknown.",
+        "rollback": "Immediate failed-activation rollback; explicit original-baseline three-way restore. Keep journal until cleanup succeeds."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Capability validation; activation schema3 retained and management schema1 added.",
+        "supportedVersions": "Existing macOS Intel/Apple Silicon and Windows x64 source targets; device evidence separate.",
+        "removalGate": "Plaintext storage, destructive overwrite, remote mutation or publication needs new authority."
+      },
+      "inputContracts": [
+        "desktop-account-session@v3",
+        "desktop-tool-activation@v4"
+      ],
+      "outputContracts": [
+        "desktop-tool-activation@v5",
+        "desktop-connection-management@v1"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru034-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru034/test_acceptance.py::test_native_recovery_and_security",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        },
+        {
+          "id": "ru034-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru034/test_acceptance.py::test_renderer_login_and_reversible_workbench",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        },
+        {
+          "id": "ru034-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru034/test_acceptance.py::test_client_build",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU034-AS-01",
+          "assertion": "Isolated native tests exercise encrypted restore, replay, switching, external edits, interrupted restore, legacy cleanup and bridge security.",
+          "testSelector": "tests/work_packages/ru034/test_acceptance.py::test_native_recovery_and_security",
+          "acceptanceCommandId": "ru034-native"
+        },
+        {
+          "id": "RU034-AS-02",
+          "assertion": "Renderer tests exercise login retry/cancel, persistent state, restore UX and cache pricing.",
+          "testSelector": "tests/work_packages/ru034/test_acceptance.py::test_renderer_login_and_reversible_workbench",
+          "acceptanceCommandId": "ru034-renderer"
+        },
+        {
+          "id": "RU034-AS-03",
+          "assertion": "Typecheck and renderer build pass without unverified external release claims.",
+          "testSelector": "tests/work_packages/ru034/test_acceptance.py::test_client_build",
+          "acceptanceCommandId": "ru034-build"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Requires remote/server mutation",
+        "Requires irreversible overwrite or secret exposure",
+        "Defer only missing external release evidence"
+      ],
+      "status": "planned"
+    },
+    {
       "id": "WP-RU033-CODEX-VERIFICATION-PRICE-SUMMARY",
       "wave": "integration",
       "owner": "tool-config",

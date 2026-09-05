@@ -1,4 +1,4 @@
-export const CANDIDATE_VERSION = "0.4.5" as const;
+export const CANDIDATE_VERSION = "0.4.6" as const;
 
 export type CandidateCapabilityId =
   | "tool_discovery"

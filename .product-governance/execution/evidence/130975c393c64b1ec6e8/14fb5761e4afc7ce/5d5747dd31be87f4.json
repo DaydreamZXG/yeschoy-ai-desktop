@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU035-AS-02",
+  "assertion": "Ordinary-account installed-first, missing-group, errors, duplicate actions, keyboard and restore renderer behavior.",
+  "testSelector": "tests/work_packages/ru035/test_acceptance.py::test_renderer_daily_use_and_price_changes",
+  "acceptanceCommandId": "ru035-renderer",
+  "runId": "RU-035/WP-RU035-DAILY-USE-UX@2026-09-05T05:28:54.147558+00:00",
+  "packageId": "WP-RU035-DAILY-USE-UX",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru035/test_acceptance.py::test_renderer_daily_use_and_price_changes",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:f75906a2e28c445fd6f6ab67a03e8fd18f4488990d812e214ad0de0b81541b9e",
+    "machineReportSha256": "sha256:f61c12bc3d6e63589cccb77fba87596c7dee436789e3c35899d0fe2ff03c602b",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:f38218cb311f5aba1b8d60a9860019bdcbef7adc5499b5cf5580a5cb6fab3cda",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:e1e6f9d0570e442fe4cc922249fbd39e5527cb5eb428fa7e742425a22a410494",
+  "releaseUnitId": "RU-035",
+  "releaseUnitHash": "sha256:b6bbdd5ad979d1f89508e06105b2aa948d1fa6d4df172f2b87b9648d68a05718"
+}

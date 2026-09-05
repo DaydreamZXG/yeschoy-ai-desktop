@@ -114,7 +114,10 @@ fn render(existing: Option<&[u8]>, origin: &str, model: &str, helper: &str) -> R
     Ok(bytes)
 }
 
-fn hermes_home(default_home: &Path, custom: Option<OsString>) -> Result<PathBuf, AdapterFailure> {
+pub(crate) fn hermes_home(
+    default_home: &Path,
+    custom: Option<OsString>,
+) -> Result<PathBuf, AdapterFailure> {
     if let Some(custom) = custom.filter(|value| !value.is_empty()) {
         let path = PathBuf::from(custom);
         if path.is_absolute()
@@ -153,6 +156,10 @@ pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared
 }
 
 impl Prepared {
+    pub(crate) fn changes(&self) -> &[common::FileChange] {
+        self.transaction.changes()
+    }
+
     pub(crate) fn commit(&mut self) -> Result<(), AdapterFailure> {
         self.transaction.commit().map_err(config_error)?;
         let bytes = common::snapshot(&self.path)

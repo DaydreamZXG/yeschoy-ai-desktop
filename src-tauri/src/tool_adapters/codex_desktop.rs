@@ -207,8 +207,16 @@ pub(crate) fn prepare(
 }
 
 impl Prepared {
+    pub(crate) fn changes(&self) -> &[common::FileChange] {
+        self.transaction.changes()
+    }
+
     pub(crate) fn commit(&mut self) -> Result<(), AdapterFailure> {
         self.transaction.commit().map_err(config_error)?;
+        self.validate_existing()
+    }
+
+    pub(crate) fn validate_existing(&self) -> Result<(), AdapterFailure> {
         let source = common::snapshot(&self.path)
             .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_readback_failed"))?
             .and_then(|bytes| String::from_utf8(bytes).ok())
@@ -227,6 +235,11 @@ impl Prepared {
             && provider["base_url"].as_str() == Some(self.base_url.as_str())
             && provider["wire_api"].as_str() == Some("responses")
             && provider["auth"]["command"].as_str() == Some(&self.helper_executable)
+            && provider["auth"]["args"].as_array().is_some_and(|args| {
+                args.len() == 2
+                    && args.get(0).and_then(toml_edit::Value::as_str) == Some("credential-helper")
+                    && args.get(1).and_then(toml_edit::Value::as_str) == Some("codex_desktop")
+            })
             && provider.get("requires_openai_auth").is_none()
             && provider.get("env_key").is_none()
             && provider.get("experimental_bearer_token").is_none()
@@ -410,7 +423,7 @@ async fn verify_provider(
 }
 
 #[cfg(target_os = "macos")]
-fn launch(path: &Path) -> Result<(), AdapterFailure> {
+pub(crate) fn launch(path: &Path) -> Result<(), AdapterFailure> {
     std::process::Command::new("/usr/bin/open")
         .arg(path)
         .spawn()
@@ -419,7 +432,7 @@ fn launch(path: &Path) -> Result<(), AdapterFailure> {
 }
 
 #[cfg(target_os = "windows")]
-fn launch(path: &Path) -> Result<(), AdapterFailure> {
+pub(crate) fn launch(path: &Path) -> Result<(), AdapterFailure> {
     std::process::Command::new(path)
         .spawn()
         .map(|_| ())
@@ -427,7 +440,7 @@ fn launch(path: &Path) -> Result<(), AdapterFailure> {
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-fn launch(_path: &Path) -> Result<(), AdapterFailure> {
+pub(crate) fn launch(_path: &Path) -> Result<(), AdapterFailure> {
     Err(AdapterFailure::UnsupportedProfile)
 }
 
@@ -546,5 +559,34 @@ mod tests {
         assert_eq!(std::fs::read(&config_path).unwrap(), original);
         assert!(!prepared.catalog_path.exists());
         let _ = std::fs::remove_dir_all(home);
+    }
+
+    #[test]
+    fn daily_open_rejects_changed_helper_target_without_writing() {
+        let home = common::temporary_working_directory("codex-open-helper").unwrap();
+        let mut prepared = prepare(
+            &home,
+            "https://yeschoy.com",
+            "test-model",
+            CodexTransport::DirectResponses,
+        )
+        .unwrap();
+        prepared.commit().unwrap();
+        let original = std::fs::read_to_string(&prepared.path).unwrap();
+        for args in [
+            vec!["credential-helper", "pi"],
+            vec!["other-command", "codex_desktop"],
+            vec!["credential-helper", "codex_desktop", "extra"],
+            vec!["credential-helper"],
+        ] {
+            let mut config = original.parse::<DocumentMut>().unwrap();
+            config["model_providers"]["yeschoy"]["auth"]["args"] =
+                value(args.into_iter().collect::<Array>());
+            let changed = config.to_string();
+            std::fs::write(&prepared.path, &changed).unwrap();
+            assert!(prepared.validate_existing().is_err());
+            assert_eq!(std::fs::read_to_string(&prepared.path).unwrap(), changed);
+        }
+        std::fs::remove_dir_all(home).unwrap();
     }
 }

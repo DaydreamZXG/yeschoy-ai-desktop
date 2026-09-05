@@ -1,11 +1,11 @@
 [package]
 name = "yeschoy-desktop"
-version = "0.4.5"
+version = "0.4.6"
 description = "Official beginner-friendly desktop assistant for 野菜API"
 authors = ["YesChoy"]
 license = "MIT"
 edition = "2021"
-rust-version = "1.85.0"
+rust-version = "1.89.0"
 autotests = false
 
 [lib]
@@ -17,6 +17,7 @@ doctest = false
 tauri-build = { version = "2.4.0", features = [] }
 
 [dependencies]
+aes-gcm = "0.10.3"
 axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio"] }
 async-stream = "0.3"
 base64 = "0.22"
@@ -34,7 +35,7 @@ serde_yaml = "0.9"
 sha2 = "0.10"
 tauri = { version = "2.8.2", default-features = false, features = ["wry"] }
 tokio = { version = "1", features = ["io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }
-toml_edit = "0.24"
+toml_edit = { version = "0.24", features = ["serde"] }
 thiserror = "2"
 
 [target.'cfg(windows)'.dependencies]

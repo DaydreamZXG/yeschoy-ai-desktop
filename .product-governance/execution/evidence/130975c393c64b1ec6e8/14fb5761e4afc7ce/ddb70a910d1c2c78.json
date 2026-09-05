@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU035-AS-03",
+  "assertion": "Type/build with fixture exclusion; no publication claim.",
+  "testSelector": "tests/work_packages/ru035/test_acceptance.py::test_client_build",
+  "acceptanceCommandId": "ru035-build",
+  "runId": "RU-035/WP-RU035-DAILY-USE-UX@2026-09-05T05:28:54.147558+00:00",
+  "packageId": "WP-RU035-DAILY-USE-UX",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru035/test_acceptance.py::test_client_build",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:7f768946e38918d42fde8a9b74c8f43fd3ef79ad8de28e9f1546255c4f35a935",
+    "machineReportSha256": "sha256:84c33dc80d27d038a404a4efa0be6dbc15b5b49b5a21425ecb57dcba94487a6b",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:a916a6e02c9e08df487b80cfc00fb3e668a2c09dbcb6f252ca67c24e569dec6f",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:5924fd199a4142c2fa24cc94e01cafa75c139a4cc5084f7b710dd19f07b67aaf",
+  "releaseUnitId": "RU-035",
+  "releaseUnitHash": "sha256:b6bbdd5ad979d1f89508e06105b2aa948d1fa6d4df172f2b87b9648d68a05718"
+}

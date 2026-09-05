@@ -1,6 +1,104 @@
 {
   "schemaVersion": 1,
   "decisions": [
+    {"id":"DEC-082","question":"How may the approved current client be prepared and delivered as internal installers?","choice":"RU-038 succeeds RU-037 for internal packaging. Preserve all existing product contracts and source work. Correct the observed lock-only recovery-directory false error so legacy connections can open without inventing or replacing recovery keys; any encrypted or unknown recovery material with a missing key remains a storage error. Add isolated no-Keychain regression fixtures. Exclude release-assets and local build inputs from source staging, audit secrets, commit and push only the existing product/yeschoy-v1 branch with no tags or public release. Build macOS universal using an installed Developer ID, hardened runtime and Keychain notary profile; verify both architectures, signatures and notarization. Attempt unsigned Windows x64 NSIS using available Windows build infrastructure or documented local cross compilation, with an explicit result or concrete blocker. Keep automatic update artifacts disabled. Record exact source commit, artifact hashes and unverified real-device/account limitations; never substitute a UI preview or compilation for installation/account validation. No server, DB, API permission, billing or other feature changes.","status":"accepted","decidedBy":"product owner scope with evidence-based compatibility repair","decidedAt":"2026-09-05T08:19:05Z","evidenceRefs":["E-USER-068","E-CODE-056"],"affects":{"requirementRefs":["REQ-064"],"pageRefs":["PAGE-TOOLS"],"domainRefs":["tool-config","desktop-platform"]}},
+    {
+      "id": "DEC-081",
+      "question": "How should the savings summary expose all three comparable amounts without changing billing semantics?",
+      "choice": "RU-037 is a presentation-only successor to completed RU-036. Show official equivalent charge explicitly marked estimated, Yecai charge and estimated savings directly on the shared summary card. Reuse schema5 officialAmount, siteAmount and savedAmount from the same included rows. Preserve recent-record scope, negative differences, genuine zero, unknown/loading states and accessible detailed calculation. Retain existing UI tokens and support narrow, light and dark views. No new account permissions, API/math/native/configuration/server changes, dependencies, packaging or publication. This authority depends on the verified current RU-036 result, not the superseded RU-035 source state; historical proofs remain unchanged.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-09-05T07:49:44Z",
+      "evidenceRefs": ["E-USER-067", "E-USER-066"],
+      "affects": {
+        "requirementRefs": ["REQ-063"],
+        "pageRefs": ["PAGE-ACCOUNT", "PAGE-BILLING"],
+        "domainRefs": ["account"]
+      }
+    },
+    {
+      "id": "DEC-080",
+      "question": "How should the desktop client reuse the website's RMB credit display and recent savings estimate without server changes?",
+      "choice": "RU-036 supersedes verified RU-035. Follow NewAPI status currency settings, using quota/quota_per_unit times usd_exchange_rate for CNY credits; never hardcode USD or market FX. Reimplement the website's mathematics independently: per comparable consumption log, site=chargedQuota/quotaPerUnit*price, official=chargedQuota/quotaPerUnit/recordedRatio*usd_exchange_rate. Existing desktop bearer may read only GET /api/log/self?p=1&page_size=100&type=2; no admin/user-ID/extra scope. Show recent estimated savings, not lifetime/monthly savings or cash discount. Exclude missing/invalid basis, subscriptions and special/add-on fees, preserve negative differences and disclose current rates, included/excluded counts and bounded recent window. Keep actual consumption as a secondary figure. Schema5 carries only sanitized money and aggregate savings; legacy3/4 show unknown financial basis, never fabricated currency or zero savings. Clarify network routes do not change billing groups. No NewAPI/server/database/deployment/real-account writes, packaging or publication.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-09-05T15:09:00+08:00",
+      "evidenceRefs": [
+        "E-USER-066",
+        "E-EXT-047",
+        "E-CODE-055"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-062"
+        ],
+        "pageRefs": [
+          "PAGE-ACCOUNT",
+          "PAGE-BILLING",
+          "PAGE-CONFIGURE-PREVIEW"
+        ],
+        "domainRefs": [
+          "account",
+          "billing",
+          "desktop-platform"
+        ]
+      }
+    },
+    {
+      "id": "DEC-079",
+      "question": "How should approved daily-use UX extend the workbench with current evidence?",
+      "choice": "RU-035 supersedes RU-034, retaining all historical proofs/failures. First execute strictly read-only full inherited-tree regression; implementation depends on that new proof rather than historical source equality. Then provide installed-first progressive disclosure, launch-only Claude Desktop/Codex Desktop/DSH via native discovery and existing credentials without configuration writes, token issuance or paid verification. Reuse live DSH and start on explicit Open after restart, not automatic browser launch. Terminal tools get truthful usage instructions. Changed owned settings/pending recovery are never overwritten. Missing saved model/group remains unselected until review; keep full IDs, rates and price assumptions. Add failure-specific actions and affected-app exit wording. Correct closed account projection schema4 with omitted unavailable optional prices/billing, while decoding legacy3. No server, DB, release publishing, updater, telemetry or unrelated user-file changes.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-09-05T05:19:59.093Z",
+      "evidenceRefs": [
+        "E-USER-065",
+        "E-CODE-054"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-061"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE-PREVIEW",
+          "PAGE-TOOLS",
+          "PAGE-MODELS"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform",
+          "account",
+          "billing"
+        ]
+      }
+    },
+    {
+      "id": "DEC-078",
+      "question": "How should UI/UX changes make connecting and restoring understandable without lock-in?",
+      "choice": "Implement RU-034 superseding RU-033: Cockpit-inspired app-centered workbench, one encrypted pre-connection baseline per tool, persistent sanitized connection state and visible three-way restoration preserving later edits. Legacy installs get limited YesChoy removal. Correct login retry/staleness, cache pricing, bridge completion/security and current-test CI. No server mutation, token revocation, telemetry, updater or unverified release claims.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-09-05T11:30:00+08:00",
+      "evidenceRefs": [
+        "E-USER-064",
+        "E-CODE-053"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-060"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE-PREVIEW",
+          "PAGE-MODELS"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform",
+          "account",
+          "billing"
+        ]
+      }
+    },
     {
       "id": "DEC-077",
       "question": "How should the client correct dual-line Codex activation failures and simplify price comparison without weakening truth or changing NewAPI?",

@@ -33,6 +33,23 @@ const fixture = (
 });
 
 describe("billing display follows the selected NewAPI group", () => {
+  it("uses site cache rates in the 100M-token comparison instead of charging cached input as new input", () => {
+    const model = fixture("ratio");
+    model.billing = {
+      ...model.billing!,
+      baseInputUsd: 0.2,
+      baseOutputUsd: 1.25,
+      cacheReadUsd: 0.02,
+      cacheWriteUsd: 0.25,
+      expression: "",
+    };
+    const group = { id: "special", description: "", ratio: 0.16 };
+    const result = hundredMillionTokenEstimate(model, group, "1")!;
+    expect(result.cacheFallback).toBe(false);
+    expect(result.official.minimum).toBeCloseTo(16.1);
+    expect(result.yeschoy.minimum).toBeCloseTo(2.576);
+    expect(result.savingPercent).toBeCloseTo(84);
+  });
   it("reads both time tiers without treating the model ratio as the dynamic price", () => {
     const model = fixture(),
       group = model.billing!.groups[1];

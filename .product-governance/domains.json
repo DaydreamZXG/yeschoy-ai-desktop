@@ -16,7 +16,8 @@
       ],
       "commands": [
         "desktop-account-session@v2",
-        "desktop-account-session@v3"
+        "desktop-account-session@v3",
+        "desktop-account-session@v4"
       ],
       "queries": [
         "desktop-account-readiness@v1"
@@ -55,10 +56,11 @@
         "tool-config"
       ],
       "invariants": [
-        "A configuration write cannot commit without an encrypted transaction-scoped rollback snapshot and external-change check; no successful transaction retains backup history."
+        "A configuration write cannot commit without a recovery snapshot and external-change check. DEC-078 authorizes one encrypted pre-connection baseline per tool until explicit restoration; no backup history."
       ],
       "commands": [
-        "desktop-tool-activation@v1"
+        "desktop-tool-activation@v1",
+        "desktop-open-connection@v1"
       ],
       "queries": [
         "desktop-app-discovery@v1",

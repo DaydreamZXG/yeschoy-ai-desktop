@@ -17,7 +17,10 @@ import {
   ChartNoAxesCombined,
 } from "lucide-react";
 import brandIcon from "../assets/brand/yecai-logo.png";
-import { quotaToUsd, type AccountProjection } from "../account/session";
+import { Fragment } from "react";
+import type { AccountProjection } from "../account/session";
+import { creditUnit, formatMoney } from "../account/finance";
+import { SavingsCard } from "./Savings";
 import { CANDIDATE_VERSION } from "../candidate/readiness";
 import type { Appearance } from "./appearance";
 import { useWorkbenchCopy } from "./copy";
@@ -102,6 +105,8 @@ export function WorkbenchSidebar({
     <button
       type="button"
       key={id}
+      aria-label={label}
+      title={label}
       aria-current={view === id ? "page" : undefined}
       onClick={() => onNavigate(id)}
     >
@@ -136,6 +141,8 @@ export function WorkbenchSidebar({
         <button
           type="button"
           className="sidebar-account"
+          aria-label={`${accountName} ${signedIn ? c.signedInStatus : accountLoading ? c.checking : c.accountNote}`}
+          title={accountName}
           onClick={() => onNavigate("account")}
         >
           <span className="account-avatar">
@@ -181,68 +188,66 @@ export function AccountSummary({
   const c = useWorkbenchCopy();
   const signedIn = accountProjection?.status === "signed_in";
   const account = signedIn ? accountProjection.account : null;
-  const usage = signedIn ? accountProjection.usage : null;
-  const balance = account?.available
-    ? quotaToUsd(account.balanceQuota, account.quotaPerUnit)
-    : null;
-  const spentQuota = usage?.available
-    ? usage.consumedQuota
-    : (account?.usedQuota ?? "");
-  const spent = account?.available
-    ? quotaToUsd(spentQuota, account.quotaPerUnit)
-    : null;
+  const money = signedIn ? accountProjection.money : undefined;
   const compact = (value: string) => {
     const number = Number(value);
-    return Number.isFinite(number)
+    return value !== "" && Number.isFinite(number)
       ? new Intl.NumberFormat(undefined, { notation: "compact" }).format(number)
       : null;
   };
-  const money = (value: number | null) =>
-    value === null
-      ? null
-      : new Intl.NumberFormat(undefined, {
-          style: "currency",
-          currency: "USD",
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        }).format(value);
   const accountValues = [
-    { label: c.balance, icon: Wallet, value: money(balance), unit: "USD" },
-    { label: c.spent, icon: ReceiptText, value: money(spent), unit: "USD" },
     {
-      label: c.tokens,
+      label: c.balance,
+      icon: Wallet,
+      value: money?.currency
+        ? formatMoney(money.balanceAmount, money.currency)
+        : null,
+      unit: creditUnit(money?.currency),
+    },
+    {
+      label: c.requestCount,
       icon: ChartNoAxesCombined,
-      value: usage?.available ? compact(usage.tokenCount) : null,
-      unit: "tokens",
+      value: account?.available ? compact(account.requestCount) : null,
+      unit: "次请求",
     },
   ];
   return (
     <section className="workbench-stats" aria-label={c.usage}>
       {accountValues.map(({ label, icon: Icon, value, unit }, i) => (
-        <article className="summary-card" key={label}>
-          <span className="summary-label">
-            <Icon aria-hidden="true" />
-            {label}
-          </span>
-          <strong aria-label={value ? undefined : c.noAccountData}>
-            {value ?? "—"}
-          </strong>
-          <div className="summary-bottom">
-            <span>
-              {value ? unit : accountLoading ? c.checking : c.unavailable}
+        <Fragment key={label}>
+          <article className="summary-card">
+            <span className="summary-label">
+              <Icon aria-hidden="true" />
+              {label}
             </span>
-            {i === 0 && (
-              <button
-                type="button"
-                className="text-button"
-                onClick={onOpenAccount}
-              >
-                {c.manage}
-                <ArrowUpRight aria-hidden="true" />
-              </button>
-            )}
-          </div>
-        </article>
+            <strong aria-label={value ? undefined : c.noAccountData}>
+              {value ?? "—"}
+            </strong>
+            <div className="summary-bottom">
+              <span>
+                {value ? unit : accountLoading ? c.checking : c.unavailable}
+              </span>
+              {i === 0 && (
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={onOpenAccount}
+                >
+                  {c.manage}
+                  <ArrowUpRight aria-hidden="true" />
+                </button>
+              )}
+            </div>
+          </article>
+          {i === 0 && (
+            <SavingsCard
+              savings={signedIn ? accountProjection.savings : undefined}
+              loading={accountLoading}
+              onDetails={onOpenAccount}
+              detailsLabel="查看账单"
+            />
+          )}
+        </Fragment>
       ))}
       <article className="summary-card">
         <span className="summary-label">

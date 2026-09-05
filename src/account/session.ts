@@ -1,5 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { ConfigurationLineId } from "../configuration/preview";
+import {
+  isAccountMoney,
+  isRecentSavings,
+  type AccountMoney,
+  type RecentSavings,
+} from "./finance";
 
 export const ACCOUNT_STATUSES = [
   "signed_out",
@@ -51,6 +57,8 @@ export interface ModelBilling {
   groups: BillingGroup[];
   baseInputUsd: number | null;
   baseOutputUsd: number | null;
+  cacheReadUsd?: number | null;
+  cacheWriteUsd?: number | null;
   requestUsd: number | null;
   expression: string;
 }
@@ -81,6 +89,8 @@ export interface AccountProjection {
   models: AccountModel[];
   comparisonFx: string;
   reasonCode: string;
+  money?: AccountMoney;
+  savings?: RecentSavings;
 }
 
 type RecordValue = Record<string, unknown>;
@@ -210,11 +220,15 @@ function model(value: unknown): value is AccountModel {
         "groups",
         "baseInputUsd",
         "baseOutputUsd",
+        ...(billing.cacheReadUsd === undefined ? [] : ["cacheReadUsd"]),
+        ...(billing.cacheWriteUsd === undefined ? [] : ["cacheWriteUsd"]),
         "requestUsd",
         "expression",
       ]) ||
       !amount(billing.baseInputUsd) ||
       !amount(billing.baseOutputUsd) ||
+      (billing.cacheReadUsd !== undefined && !amount(billing.cacheReadUsd)) ||
+      (billing.cacheWriteUsd !== undefined && !amount(billing.cacheWriteUsd)) ||
       !amount(billing.requestUsd) ||
       !safeText(billing.expression, 8192) ||
       !Array.isArray(billing.groups) ||
@@ -261,6 +275,26 @@ export function decodeAccountProjection(
   value: unknown,
   requestId: string,
 ): AccountProjection | null {
+  let finance: { money: AccountMoney; savings: RecentSavings } | undefined;
+  if (object(value) && value.schemaVersion === 5) {
+    if (!isAccountMoney(value.money) || !isRecentSavings(value.savings))
+      return null;
+    if (
+      value.status !== "signed_in" &&
+      (value.money.currency !== "" || value.savings.status !== "unavailable")
+    )
+      return null;
+    const { money, savings, ...legacy } = value;
+    finance = { money, savings };
+    value = { ...legacy, schemaVersion: 4 };
+  }
+  if (object(value) && value.schemaVersion === 4) {
+    if (!Array.isArray(value.models)) return null;
+    const normalized = value.models.map(normalizeModelV4);
+    if (normalized.some((m) => m === null)) return null;
+    // Internal consumers keep the established normalized schema3 type.
+    value = { ...value, schemaVersion: 3, models: normalized };
+  }
   if (
     !object(value) ||
     !exactKeys(value, [
@@ -319,7 +353,59 @@ export function decodeAccountProjection(
     value.models.length > 0
   )
     return null;
-  return value as unknown as AccountProjection;
+  return { ...value, ...finance } as unknown as AccountProjection;
+}
+
+function normalizeModelV4(value: unknown): unknown | null {
+  if (!object(value) || !Array.isArray(value.supportedEndpointTypes))
+    return null;
+  if (value.billing === undefined) return { ...value, billing: null };
+  if (!object(value.billing) || !Array.isArray(value.billing.groups))
+    return null;
+  const billing = value.billing;
+  const amountKeys = [
+    "baseInputUsd",
+    "baseOutputUsd",
+    "cacheReadUsd",
+    "cacheWriteUsd",
+    "requestUsd",
+  ];
+  if (
+    amountKeys.some(
+      (key) =>
+        key in billing &&
+        !(
+          typeof billing[key] === "number" &&
+          Number.isFinite(billing[key]) &&
+          Number(billing[key]) >= 0
+        ),
+    )
+  )
+    return null;
+  const groups = [];
+  for (const group of billing.groups as unknown[]) {
+    if (
+      !object(group) ||
+      ("ratio" in group &&
+        !(
+          typeof group.ratio === "number" &&
+          Number.isFinite(group.ratio) &&
+          group.ratio >= 0
+        ))
+    )
+      return null;
+    groups.push({ ...group, ratio: group.ratio ?? null });
+  }
+  return {
+    ...value,
+    billing: {
+      ...billing,
+      groups,
+      ...Object.fromEntries(
+        amountKeys.map((key) => [key, billing[key] ?? null]),
+      ),
+    },
+  };
 }
 
 let sequence = 0;

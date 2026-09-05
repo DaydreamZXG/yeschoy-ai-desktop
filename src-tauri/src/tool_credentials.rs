@@ -14,7 +14,7 @@ const ALLOWED_TOOLS: [&str; 7] = [
     "openclaw",
 ];
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct ToolCredential {
     pub(crate) api_key: String,

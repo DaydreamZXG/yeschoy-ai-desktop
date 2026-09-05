@@ -9,11 +9,12 @@ pub(crate) mod pi;
 
 use std::path::{Path, PathBuf};
 
+use futures::{stream, StreamExt};
 use serde::Serialize;
 
 use crate::{
     desktop_app_discovery,
-    tool_discovery::{self, probe_version, Candidate},
+    tool_discovery::{self, probe_version},
     tool_discovery_core::ProbeObservation,
 };
 
@@ -33,7 +34,6 @@ pub(crate) enum AdapterFailure {
 #[derive(Clone, Debug)]
 pub(crate) struct ResolvedInstallation {
     pub(crate) path: PathBuf,
-    pub(crate) version: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -140,29 +140,30 @@ fn can_attempt(tool_id: &str, installation: &ObservedInstallation) -> bool {
 
 async fn observe_cli(executable: &str) -> Vec<ObservedInstallation> {
     let candidates = tool_discovery::discover_candidates(executable);
-    let mut observed = Vec::new();
-    for candidate in candidates.into_iter().take(8) {
-        match probe_version(&candidate).await {
-            ProbeObservation::Found {
-                version,
-                location_hint,
-            } => observed.push(ObservedInstallation {
-                path: candidate.path,
-                version,
-                location: location_hint.as_str(),
-            }),
-            ProbeObservation::Failed { location_hint }
-            | ProbeObservation::TimedOut { location_hint } => {
-                observed.push(ObservedInstallation {
+    stream::iter(candidates.into_iter().take(8))
+        .map(|candidate| async move {
+            match probe_version(&candidate).await {
+                ProbeObservation::Found {
+                    version,
+                    location_hint,
+                } => Some(ObservedInstallation {
+                    path: candidate.path,
+                    version,
+                    location: location_hint.as_str(),
+                }),
+                ProbeObservation::Failed { location_hint }
+                | ProbeObservation::TimedOut { location_hint } => Some(ObservedInstallation {
                     path: candidate.path,
                     version: String::new(),
                     location: location_hint.as_str(),
-                });
+                }),
+                ProbeObservation::NotFound | ProbeObservation::MultipleInstallations { .. } => None,
             }
-            ProbeObservation::NotFound | ProbeObservation::MultipleInstallations { .. } => {}
-        }
-    }
-    observed
+        })
+        .buffered(2)
+        .filter_map(|item| async move { item })
+        .collect()
+        .await
 }
 
 async fn observe(tool_id: &str) -> Vec<ObservedInstallation> {
@@ -183,10 +184,9 @@ async fn observe(tool_id: &str) -> Vec<ObservedInstallation> {
 }
 
 fn projections(tool_id: &str, observed: &[ObservedInstallation]) -> Vec<InstallationProjection> {
-    let supported_count = observed
+    let preferred = observed
         .iter()
-        .filter(|installation| can_attempt(tool_id, installation))
-        .count();
+        .position(|installation| can_attempt(tool_id, installation));
     observed
         .iter()
         .enumerate()
@@ -199,7 +199,7 @@ fn projections(tool_id: &str, observed: &[ObservedInstallation]) -> Vec<Installa
             ),
             version: installation.version.clone(),
             supported: can_attempt(tool_id, installation),
-            recommended: can_attempt(tool_id, installation) && supported_count == 1,
+            recommended: preferred == Some(index),
         })
         .collect()
 }
@@ -217,33 +217,38 @@ fn location_label(value: &str) -> &'static str {
 }
 
 pub(crate) async fn scan_targets() -> Vec<TargetProjection> {
-    let mut result = Vec::with_capacity(TARGETS.len());
-    for (tool_id, display_name, surface) in TARGETS {
-        let observed = observe(tool_id).await;
-        let supported_count = observed
-            .iter()
-            .filter(|item| can_attempt(tool_id, item))
-            .count();
-        let status = if observed.is_empty() {
-            "not_found"
-        } else if supported_count == 0 {
-            "missing_runtime"
+    stream::iter(0..TARGETS.len())
+        .map(scan_target)
+        .buffered(3)
+        .collect()
+        .await
+}
+
+async fn scan_target(index: usize) -> TargetProjection {
+    let (tool_id, display_name, surface) = TARGETS[index];
+    let observed = observe(tool_id).await;
+    let supported_count = observed
+        .iter()
+        .filter(|item| can_attempt(tool_id, item))
+        .count();
+    let status = if observed.is_empty() {
+        "not_found"
+    } else if supported_count == 0 {
+        "missing_runtime"
+    } else {
+        if observed.len() == 1 {
+            "available"
         } else {
-            if observed.len() == 1 {
-                "available"
-            } else {
-                "selection_required"
-            }
-        };
-        result.push(TargetProjection {
-            tool_id,
-            display_name,
-            surface,
-            status,
-            installations: projections(tool_id, &observed),
-        });
+            "selection_required"
+        }
+    };
+    TargetProjection {
+        tool_id,
+        display_name,
+        surface,
+        status,
+        installations: projections(tool_id, &observed),
     }
-    result
 }
 
 pub(crate) async fn resolve_installation(
@@ -275,15 +280,23 @@ pub(crate) async fn resolve_installation(
     }
     Ok(ResolvedInstallation {
         path: selected.path.clone(),
-        version: selected.version.clone(),
     })
 }
 
-pub(crate) fn candidate_for_test(path: PathBuf) -> Candidate {
-    Candidate {
-        path,
-        location_hint: crate::tool_discovery_core::LocationHint::CommonLocation,
-    }
+/// User-level settings are shared by installations of the same product.
+/// Daily Open uses the same native preference order as discovery, never a
+/// renderer supplied path and never a version-number compatibility gate.
+pub(crate) async fn resolve_preferred_installation(
+    tool_id: &str,
+) -> Result<ResolvedInstallation, AdapterFailure> {
+    observe(tool_id)
+        .await
+        .into_iter()
+        .find(|candidate| can_attempt(tool_id, candidate))
+        .map(|candidate| ResolvedInstallation {
+            path: candidate.path,
+        })
+        .ok_or(AdapterFailure::ToolNotFound)
 }
 
 #[cfg(test)]

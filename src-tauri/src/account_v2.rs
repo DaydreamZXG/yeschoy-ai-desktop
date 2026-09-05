@@ -15,6 +15,9 @@ use semver::Version;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+use crate::account_finance::{
+    account_money, recent_savings, AccountMoney, RecentSavings, RECENT_LOGS_PATH,
+};
 use crate::connectivity_core::{request_id_is_valid, CONNECTIVITY_LINES};
 
 const CLIENT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -37,6 +40,8 @@ static HTTP_CLIENT: OnceLock<Result<Client, ()>> = OnceLock::new();
 #[derive(Default)]
 pub struct AccountV2State {
     runtime: Mutex<AccountRuntime>,
+    refresh_guard: tokio::sync::Mutex<()>,
+    poll_guard: tokio::sync::Mutex<()>,
 }
 
 #[derive(Default)]
@@ -44,6 +49,7 @@ struct AccountRuntime {
     pending: Option<PendingAuthorization>,
     access: Option<AccessSession>,
     wallet_url: Option<String>,
+    authorization_epoch: u64,
 }
 
 #[derive(Clone)]
@@ -78,7 +84,7 @@ pub struct AccountRequest {
     line_id: String,
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct AccountSummary {
     available: bool,
@@ -90,21 +96,7 @@ pub struct AccountSummary {
     quota_per_unit: String,
 }
 
-impl Default for AccountSummary {
-    fn default() -> Self {
-        Self {
-            available: false,
-            display_name: String::new(),
-            username: String::new(),
-            balance_quota: String::new(),
-            used_quota: String::new(),
-            request_count: String::new(),
-            quota_per_unit: String::new(),
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct UsageSummary {
     available: bool,
@@ -113,22 +105,12 @@ pub struct UsageSummary {
     token_count: String,
 }
 
-impl Default for UsageSummary {
-    fn default() -> Self {
-        Self {
-            available: false,
-            consumed_quota: String::new(),
-            request_rate: String::new(),
-            token_count: String::new(),
-        }
-    }
-}
-
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BillingGroup {
     pub(crate) id: String,
     description: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     ratio: Option<f64>,
 }
 
@@ -136,8 +118,15 @@ pub struct BillingGroup {
 #[serde(rename_all = "camelCase")]
 pub struct ModelBilling {
     groups: Vec<BillingGroup>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     base_input_usd: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     base_output_usd: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cache_read_usd: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cache_write_usd: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     request_usd: Option<f64>,
     expression: String,
 }
@@ -154,6 +143,7 @@ pub struct AccountModel {
     official_output_cny_per_million: String,
     actual_input_cny_per_million: String,
     actual_output_cny_per_million: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     billing: Option<ModelBilling>,
 }
 
@@ -171,6 +161,8 @@ pub struct AccountProjection {
     usage: UsageSummary,
     models: Vec<AccountModel>,
     comparison_fx: String,
+    money: AccountMoney,
+    savings: RecentSavings,
     reason_code: &'static str,
 }
 
@@ -178,7 +170,7 @@ impl AccountProjection {
     fn empty(request_id: String, status: &'static str, reason_code: &'static str) -> Self {
         Self {
             request_id,
-            schema_version: 3,
+            schema_version: 5,
             status,
             user_code: String::new(),
             poll_after_seconds: 0,
@@ -188,6 +180,8 @@ impl AccountProjection {
             usage: UsageSummary::default(),
             models: Vec::new(),
             comparison_fx: String::new(),
+            money: AccountMoney::default(),
+            savings: RecentSavings::default(),
             reason_code,
         }
     }
@@ -537,7 +531,17 @@ fn install_auth_bundle(
     state: &AccountV2State,
     line_id: &str,
     bundle: AuthBundle,
+    epoch: u64,
+    device_code: Option<&str>,
 ) -> Result<(), ()> {
+    let mut runtime = state.runtime.lock().map_err(|_| ())?;
+    if runtime.authorization_epoch != epoch
+        || device_code.is_some_and(|code| {
+            runtime.pending.as_ref().map(|p| p.device_code.as_str()) != Some(code)
+        })
+    {
+        return Err(());
+    }
     if bundle.token_type != "Bearer"
         || bundle.access_token.len() < 32
         || bundle.refresh_token.len() < 32
@@ -554,7 +558,6 @@ fn install_auth_bundle(
         refresh_expires_at: bundle.refresh_expires_at,
     };
     save_stored_session(&stored)?;
-    let mut runtime = state.runtime.lock().map_err(|_| ())?;
     runtime.access = Some(AccessSession {
         access_token: bundle.access_token,
         access_expires_at: bundle.access_expires_at,
@@ -578,21 +581,63 @@ enum AccountProjectionFailure {
 pub(crate) enum NativeSessionFailure {
     SignedOut,
     ServerUnavailable,
+    AccountChanged,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct NativeSessionEpoch(u64);
+
+pub(crate) fn native_session_epoch(
+    state: &AccountV2State,
+) -> Result<NativeSessionEpoch, NativeSessionFailure> {
+    state
+        .runtime
+        .lock()
+        .map(|runtime| NativeSessionEpoch(runtime.authorization_epoch))
+        .map_err(|_| NativeSessionFailure::ServerUnavailable)
+}
+
+pub(crate) fn ensure_session_epoch(
+    state: &AccountV2State,
+    expected: NativeSessionEpoch,
+) -> Result<(), NativeSessionFailure> {
+    if native_session_epoch(state)?.0 != expected.0 {
+        return Err(NativeSessionFailure::AccountChanged);
+    }
+    Ok(())
+}
+
+async fn session_bound_step<T>(
+    state: &AccountV2State,
+    epoch: NativeSessionEpoch,
+    step: impl std::future::Future<Output = Result<T, NativeSessionFailure>>,
+) -> Result<T, NativeSessionFailure> {
+    ensure_session_epoch(state, epoch)?;
+    let result = step.await;
+    ensure_session_epoch(state, epoch)?;
+    result
 }
 
 pub(crate) async fn native_session_access(
     state: &AccountV2State,
     line_id: &str,
+    epoch: NativeSessionEpoch,
 ) -> Result<(String, String), NativeSessionFailure> {
-    let bootstrap = fetch_bootstrap(line_id)
-        .await
-        .map_err(|_| NativeSessionFailure::ServerUnavailable)?;
-    let access_token = refresh_access(state, &bootstrap, line_id)
-        .await
-        .map_err(|failure| match failure {
-            AccountProjectionFailure::SessionExpired => NativeSessionFailure::SignedOut,
-            _ => NativeSessionFailure::ServerUnavailable,
-        })?;
+    let bootstrap = session_bound_step(state, epoch, async {
+        fetch_bootstrap(line_id)
+            .await
+            .map_err(|_| NativeSessionFailure::ServerUnavailable)
+    })
+    .await?;
+    let access_token = session_bound_step(state, epoch, async {
+        refresh_access(state, &bootstrap, line_id)
+            .await
+            .map_err(|failure| match failure {
+                AccountProjectionFailure::SessionExpired => NativeSessionFailure::SignedOut,
+                _ => NativeSessionFailure::ServerUnavailable,
+            })
+    })
+    .await?;
     Ok((bootstrap.origin, access_token))
 }
 
@@ -648,6 +693,14 @@ async fn refresh_access(
     bootstrap: &DesktopBootstrap,
     line_id: &str,
 ) -> Result<String, AccountProjectionFailure> {
+    // Refresh tokens may rotate. Concurrent page requests must share one
+    // refresh, rather than invalidating one another's credentials.
+    let _refresh_guard = state.refresh_guard.lock().await;
+    let epoch = state
+        .runtime
+        .lock()
+        .map_err(|_| AccountProjectionFailure::SecureStorage)?
+        .authorization_epoch;
     if let Some(access) = state
         .runtime
         .lock()
@@ -665,7 +718,13 @@ async fn refresh_access(
         return Err(AccountProjectionFailure::SessionExpired);
     };
     if stored.refresh_expires_at <= now_epoch_seconds() {
-        let _ = delete_stored_session();
+        let runtime = state
+            .runtime
+            .lock()
+            .map_err(|_| AccountProjectionFailure::SecureStorage)?;
+        if runtime.authorization_epoch == epoch {
+            let _ = delete_stored_session();
+        }
         return Err(AccountProjectionFailure::SessionExpired);
     }
 
@@ -695,9 +754,11 @@ async fn refresh_access(
     .await
     .map_err(AccountProjectionFailure::Transport)?;
     if response.status == StatusCode::UNAUTHORIZED || response.status == StatusCode::FORBIDDEN {
-        let _ = delete_stored_session();
         if let Ok(mut runtime) = state.runtime.lock() {
-            runtime.access = None;
+            if runtime.authorization_epoch == epoch {
+                let _ = delete_stored_session();
+                runtime.access = None;
+            }
         }
         return Err(AccountProjectionFailure::SessionExpired);
     }
@@ -710,7 +771,7 @@ async fn refresh_access(
         return Err(AccountProjectionFailure::InvalidResponse);
     }
     let access_token = envelope.data.access_token.clone();
-    install_auth_bundle(state, &refresh_line_id, envelope.data)
+    install_auth_bundle(state, &refresh_line_id, envelope.data, epoch, None)
         .map_err(|_| AccountProjectionFailure::SecureStorage)?;
     Ok(access_token)
 }
@@ -725,12 +786,14 @@ async fn account_data(
     let models_url = format!("{}{}", bootstrap.origin, MODELS_PATH);
     let pricing_url = format!("{}{}", bootstrap.origin, PRICING_PATH);
     let status_url = format!("{}/api/status", bootstrap.origin);
-    let (account, usage, models, pricing, status) = tokio::join!(
+    let logs_url = format!("{}{}", bootstrap.origin, RECENT_LOGS_PATH);
+    let (account, usage, models, pricing, status, logs) = tokio::join!(
         send_json(Method::GET, &account_url, Some(access_token), None),
         send_json(Method::GET, &usage_url, Some(access_token), None),
         send_json(Method::GET, &models_url, Some(access_token), None),
         send_json(Method::GET, &pricing_url, Some(access_token), None),
         send_json(Method::GET, &status_url, None, None),
+        send_json(Method::GET, &logs_url, Some(access_token), None),
     );
     if [&account, &usage, &models]
         .iter()
@@ -749,6 +812,7 @@ async fn account_data(
     let models_value = models.ok().filter(|value| value.status.is_success());
     let pricing_value = pricing.ok().filter(|value| value.status.is_success());
     let status_value = status.ok().filter(|value| value.status.is_success());
+    let logs_value = logs.ok().filter(|value| value.status.is_success());
     let account_summary = parse_account(
         account_value.as_ref().map(|value| &value.value),
         status_value.as_ref().map(|value| &value.value),
@@ -765,10 +829,21 @@ async fn account_data(
     if !account_summary.available {
         return Err(AccountProjectionFailure::InvalidResponse);
     }
+    let money = account_money(
+        status_value.as_ref().map(|v| &v.value),
+        &account_summary.balance_quota,
+        &account_summary.used_quota,
+    );
+    let savings = recent_savings(
+        status_value.as_ref().map(|v| &v.value),
+        logs_value.as_ref().map(|v| &v.value),
+    );
     let reason_code = if usage_summary.available
         && models_value.is_some()
         && pricing_value.is_some()
         && comparison_fx.is_some()
+        && !money.currency.is_empty()
+        && savings.status != "unavailable"
     {
         "none"
     } else {
@@ -776,7 +851,7 @@ async fn account_data(
     };
     Ok(AccountProjection {
         request_id,
-        schema_version: 3,
+        schema_version: 5,
         status: "signed_in",
         user_code: String::new(),
         poll_after_seconds: 0,
@@ -786,13 +861,15 @@ async fn account_data(
         usage: usage_summary,
         models,
         comparison_fx: comparison_fx.map(decimal).unwrap_or_default(),
+        money,
+        savings,
         reason_code,
     })
 }
 
 fn data_value(value: Option<&Value>) -> Option<&Value> {
     let envelope = value?.as_object()?;
-    if envelope.get("success")?.as_bool()? != true {
+    if !envelope.get("success")?.as_bool()? {
         return None;
     }
     envelope.get("data")
@@ -1051,6 +1128,14 @@ fn parse_models(
                     groups: billing_groups(pricing.unwrap(), &id),
                     base_input_usd: base_input.filter(|n| n.is_finite()),
                     base_output_usd: base_output,
+                    cache_read_usd: base_input
+                        .zip(nonnegative_number(row.get("cache_ratio")))
+                        .map(|(input, ratio)| input * ratio)
+                        .filter(|n| n.is_finite()),
+                    cache_write_usd: base_input
+                        .zip(nonnegative_number(row.get("cache_creation_ratio")))
+                        .map(|(input, ratio)| input * ratio)
+                        .filter(|n| n.is_finite()),
                     request_usd: nonnegative_number(row.get("model_price")),
                     expression: bounded_text(row.get("billing_expr"), 8192),
                 }),
@@ -1127,12 +1212,19 @@ pub async fn account_inspect_v2(
     if !request_is_valid(&request) {
         return Err("invalid_account_request".into());
     }
+    let epoch = state
+        .runtime
+        .lock()
+        .map_err(|_| "account_state_unavailable")?
+        .authorization_epoch;
     Ok(match inspect_inner(&state, &request).await {
         Ok(projection) => projection,
         Err(AccountProjectionFailure::SessionExpired) => {
-            let _ = delete_stored_session();
             if let Ok(mut runtime) = state.runtime.lock() {
-                runtime.access = None;
+                if runtime.authorization_epoch == epoch {
+                    let _ = delete_stored_session();
+                    runtime.access = None;
+                }
             }
             failure_projection(request.request_id, AccountProjectionFailure::SessionExpired)
         }
@@ -1148,6 +1240,15 @@ pub async fn account_begin_authorization_v2(
     if !request_is_valid(&request) {
         return Err("invalid_account_request".into());
     }
+    let epoch = {
+        let mut runtime = state
+            .runtime
+            .lock()
+            .map_err(|_| "account_state_unavailable")?;
+        runtime.authorization_epoch += 1;
+        runtime.pending = None;
+        runtime.authorization_epoch
+    };
     let bootstrap = match fetch_bootstrap(&request.line_id).await {
         Ok(value) => value,
         Err(error) => return Ok(failure_projection(request.request_id, error)),
@@ -1224,6 +1325,13 @@ pub async fn account_begin_authorization_v2(
             .runtime
             .lock()
             .map_err(|_| "account_state_unavailable".to_owned())?;
+        if runtime.authorization_epoch != epoch {
+            return Ok(AccountProjection::empty(
+                request.request_id,
+                "cancelled",
+                "authorization_cancelled",
+            ));
+        }
         runtime.pending = Some(pending.clone());
         runtime.wallet_url = Some(bootstrap.wallet_url);
     }
@@ -1264,22 +1372,27 @@ pub async fn account_poll_authorization_v2(
     if !request_is_valid(&request) {
         return Err("invalid_account_request".into());
     }
-    let pending = state
-        .runtime
-        .lock()
-        .map_err(|_| "account_state_unavailable".to_owned())?
-        .pending
-        .clone();
+    let _poll_guard = state.poll_guard.lock().await;
+    let (pending, epoch) = {
+        let runtime = state
+            .runtime
+            .lock()
+            .map_err(|_| "account_state_unavailable")?;
+        (runtime.pending.clone(), runtime.authorization_epoch)
+    };
     let Some(mut pending) = pending.filter(|pending| pending.line_id == request.line_id) else {
-        return Ok(AccountProjection::empty(
-            request.request_id,
-            "signed_out",
-            "no_pending_authorization",
-        ));
+        // Authorization may already have succeeded while account-data loading
+        // failed. Re-inspect the saved session instead of showing signed out.
+        return Ok(match inspect_inner(&state, &request).await {
+            Ok(projection) => projection,
+            Err(error) => failure_projection(request.request_id, error),
+        });
     };
     if pending.expires_at_epoch_ms <= now_epoch_ms() {
         if let Ok(mut runtime) = state.runtime.lock() {
-            runtime.pending = None;
+            if runtime.authorization_epoch == epoch {
+                runtime.pending = None;
+            }
         }
         return Ok(AccountProjection::empty(
             request.request_id,
@@ -1314,7 +1427,9 @@ pub async fn account_poll_authorization_v2(
                 if retry_after > 0 {
                     pending.poll_after_seconds = retry_after;
                     if let Ok(mut runtime) = state.runtime.lock() {
-                        runtime.pending = Some(pending.clone());
+                        if runtime.authorization_epoch == epoch {
+                            runtime.pending = Some(pending.clone());
+                        }
                     }
                 }
                 let reason = if code == "slow_down" {
@@ -1326,19 +1441,25 @@ pub async fn account_poll_authorization_v2(
             }
             "access_denied" => {
                 if let Ok(mut runtime) = state.runtime.lock() {
-                    runtime.pending = None;
+                    if runtime.authorization_epoch == epoch {
+                        runtime.pending = None;
+                    }
                 }
                 AccountProjection::empty(request.request_id, "denied", "authorization_denied")
             }
             "expired_token" => {
                 if let Ok(mut runtime) = state.runtime.lock() {
-                    runtime.pending = None;
+                    if runtime.authorization_epoch == epoch {
+                        runtime.pending = None;
+                    }
                 }
                 AccountProjection::empty(request.request_id, "expired", "authorization_expired")
             }
             "already_used" => {
                 if let Ok(mut runtime) = state.runtime.lock() {
-                    runtime.pending = None;
+                    if runtime.authorization_epoch == epoch {
+                        runtime.pending = None;
+                    }
                 }
                 AccountProjection::empty(
                     request.request_id,
@@ -1361,7 +1482,29 @@ pub async fn account_poll_authorization_v2(
             ))
         }
     };
-    if !envelope.success || install_auth_bundle(&state, &request.line_id, envelope.data).is_err() {
+    if state
+        .runtime
+        .lock()
+        .map_err(|_| "account_state_unavailable")?
+        .authorization_epoch
+        != epoch
+    {
+        return Ok(AccountProjection::empty(
+            request.request_id,
+            "cancelled",
+            "authorization_cancelled",
+        ));
+    }
+    if !envelope.success
+        || install_auth_bundle(
+            &state,
+            &request.line_id,
+            envelope.data,
+            epoch,
+            Some(&pending.device_code),
+        )
+        .is_err()
+    {
         return Ok(failure_projection(
             request.request_id,
             AccountProjectionFailure::SecureStorage,
@@ -1386,6 +1529,7 @@ pub fn account_cancel_authorization_v2(
         .lock()
         .map_err(|_| "account_state_unavailable".to_owned())?;
     runtime.pending = None;
+    runtime.authorization_epoch += 1;
     Ok(AccountProjection::empty(
         request.request_id,
         "cancelled",
@@ -1401,27 +1545,32 @@ pub async fn account_logout_v2(
     if !request_is_valid(&request) {
         return Err("invalid_account_request".into());
     }
-    if let Ok(bootstrap) = fetch_bootstrap(&request.line_id).await {
-        if let Ok(access_token) = refresh_access(&state, &bootstrap, &request.line_id).await {
+    let access = {
+        let mut runtime = state
+            .runtime
+            .lock()
+            .map_err(|_| "account_state_unavailable")?;
+        runtime.authorization_epoch += 1;
+        runtime.pending = None;
+        if delete_stored_session().is_err() {
+            return Ok(failure_projection(
+                request.request_id,
+                AccountProjectionFailure::SecureStorage,
+            ));
+        }
+        runtime.wallet_url = None;
+        runtime.access.take()
+    };
+    if let Some(access) = access {
+        if let Ok(bootstrap) = fetch_bootstrap(&request.line_id).await {
             let _ = send_json(
                 Method::DELETE,
                 &format!("{}{}", bootstrap.origin, LOGOUT_PATH),
-                Some(&access_token),
+                Some(&access.access_token),
                 None,
             )
             .await;
         }
-    }
-    if let Ok(mut runtime) = state.runtime.lock() {
-        runtime.pending = None;
-        runtime.access = None;
-        runtime.wallet_url = None;
-    }
-    if delete_stored_session().is_err() {
-        return Ok(failure_projection(
-            request.request_id,
-            AccountProjectionFailure::SecureStorage,
-        ));
     }
     Ok(AccountProjection::empty(
         request.request_id,
@@ -1459,6 +1608,99 @@ pub async fn account_open_wallet_v2(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn account_schema_four_omits_unknown_prices_but_keeps_zero() {
+        let projection =
+            AccountProjection::empty("account-test".into(), "signed_out", "signed_out");
+        assert_eq!(
+            serde_json::to_value(projection).unwrap()["schemaVersion"],
+            5
+        );
+        let billing = ModelBilling {
+            groups: vec![BillingGroup {
+                id: "default".into(),
+                description: String::new(),
+                ratio: None,
+            }],
+            base_input_usd: Some(0.0),
+            base_output_usd: Some(2.0),
+            cache_read_usd: Some(0.0),
+            cache_write_usd: None,
+            request_usd: None,
+            expression: String::new(),
+        };
+        let value = serde_json::to_value(billing).unwrap();
+        assert_eq!(value["baseInputUsd"], 0.0);
+        assert_eq!(value["cacheReadUsd"], 0.0);
+        assert!(value.get("cacheWriteUsd").is_none());
+        assert!(value.get("requestUsd").is_none());
+        assert!(value["groups"][0].get("ratio").is_none());
+    }
+
+    #[test]
+    fn cancelled_authorization_cannot_install_late_credentials() {
+        // Both branches reject before any OS credential storage operation.
+        let state = AccountV2State::default();
+        state.runtime.lock().unwrap().authorization_epoch = 2;
+        let bundle = || AuthBundle {
+            access_token: "synthetic".into(),
+            token_type: "Bearer".into(),
+            access_expires_at: 0,
+            refresh_token: "synthetic".into(),
+            refresh_expires_at: 0,
+            session_id: "synthetic".into(),
+        };
+        assert!(install_auth_bundle(&state, "mainland_optimized", bundle(), 1, None).is_err());
+        assert!(install_auth_bundle(
+            &state,
+            "mainland_optimized",
+            bundle(),
+            2,
+            Some("old-device-code")
+        )
+        .is_err());
+        assert!(state.runtime.lock().unwrap().access.is_none());
+    }
+
+    #[tokio::test]
+    async fn account_switch_before_session_step_never_polls_new_account_work() {
+        let state = AccountV2State::default();
+        let epoch = native_session_epoch(&state).unwrap();
+        state.runtime.lock().unwrap().authorization_epoch += 1;
+        let called = std::cell::Cell::new(false);
+        let result = session_bound_step(&state, epoch, async {
+            called.set(true);
+            Ok("new-account-credential")
+        })
+        .await;
+        assert_eq!(result, Err(NativeSessionFailure::AccountChanged));
+        assert!(!called.get());
+    }
+
+    #[tokio::test]
+    async fn account_switch_during_session_step_cannot_reach_tool_token_or_write() {
+        let state = AccountV2State::default();
+        let epoch = native_session_epoch(&state).unwrap();
+        let (started_tx, started_rx) = tokio::sync::oneshot::channel();
+        let (resume_tx, resume_rx) = tokio::sync::oneshot::channel();
+        let step = session_bound_step(&state, epoch, async {
+            started_tx.send(()).unwrap();
+            resume_rx.await.unwrap();
+            Ok("synthetic-new-account-credential")
+        });
+        let switch = async {
+            started_rx.await.unwrap();
+            state.runtime.lock().unwrap().authorization_epoch += 1;
+            resume_tx.send(()).unwrap();
+        };
+        let (result, ()) = tokio::join!(step, switch);
+        assert_eq!(result, Err(NativeSessionFailure::AccountChanged));
+        assert_eq!(
+            ensure_session_epoch(&state, epoch),
+            Err(NativeSessionFailure::AccountChanged)
+        );
+    }
 
     #[test]
     fn request_and_url_allowlists_reject_caller_controlled_network_targets() {

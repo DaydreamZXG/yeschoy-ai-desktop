@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU035-BASE-AS",
+  "assertion": "Full inherited native security/recovery, renderer account/pricing and build tests pass without source writes.",
+  "testSelector": "tests/work_packages/ru035/test_acceptance.py::test_inherited_baseline",
+  "acceptanceCommandId": "ru035-baseline",
+  "runId": "RU-035/WP-RU035-BASELINE@2026-09-05T05:23:54.896004+00:00",
+  "packageId": "WP-RU035-BASELINE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru035/test_acceptance.py::test_inherited_baseline",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:d5fbe2c0abf56941398dc03bcf4149c02fe0a64da3f31fba4d9f1c9d44b34c5b",
+    "machineReportSha256": "sha256:6dda6b581b45b24907d10cb9b2fe3037214344ba59127f0d579ee7cd26cce84b",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:328578be134049de0533c7ad20848c524e88b6eac6592669ca32d811c1945750",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:7a6d0c1f8da3dd72ce4f1c35bf8da92cea8928628e9586c3b455220c998c33ab",
+  "releaseUnitId": "RU-035",
+  "releaseUnitHash": "sha256:b6bbdd5ad979d1f89508e06105b2aa948d1fa6d4df172f2b87b9648d68a05718"
+}

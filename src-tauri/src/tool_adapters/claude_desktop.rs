@@ -115,7 +115,9 @@ fn meta_config(existing: Option<&[u8]>) -> Result<Vec<u8>, ()> {
     pretty(&value)
 }
 
-fn current_paths(home: &Path) -> Result<(PathBuf, PathBuf, PathBuf, PathBuf), AdapterFailure> {
+pub(crate) fn current_paths(
+    home: &Path,
+) -> Result<(PathBuf, PathBuf, PathBuf, PathBuf), AdapterFailure> {
     #[cfg(target_os = "macos")]
     let (normal, threep) = {
         let support = home.join("Library").join("Application Support");
@@ -217,12 +219,20 @@ pub(crate) fn prepare(
 }
 
 impl Prepared {
+    pub(crate) fn changes(&self) -> &[common::FileChange] {
+        self.transaction.changes()
+    }
+
     pub(crate) fn local_token(&self) -> &str {
         &self.local_token
     }
 
     pub(crate) fn commit(&mut self) -> Result<(), AdapterFailure> {
         self.transaction.commit().map_err(config_error)?;
+        self.validate_existing()
+    }
+
+    pub(crate) fn validate_existing(&self) -> Result<(), AdapterFailure> {
         let normal: Value = serde_json::from_slice(
             &common::snapshot(&self.normal_config_path)
                 .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_readback_failed"))?
@@ -345,7 +355,7 @@ pub(crate) async fn resume_if_configured(state: ClaudeDesktopRuntimeState) {
 }
 
 #[cfg(target_os = "macos")]
-fn launch(path: &Path) -> Result<(), AdapterFailure> {
+pub(crate) fn launch(path: &Path) -> Result<(), AdapterFailure> {
     std::process::Command::new("/usr/bin/open")
         .arg(path)
         .spawn()
@@ -354,7 +364,7 @@ fn launch(path: &Path) -> Result<(), AdapterFailure> {
 }
 
 #[cfg(target_os = "windows")]
-fn launch(path: &Path) -> Result<(), AdapterFailure> {
+pub(crate) fn launch(path: &Path) -> Result<(), AdapterFailure> {
     std::process::Command::new(path)
         .spawn()
         .map(|_| ())
@@ -362,7 +372,7 @@ fn launch(path: &Path) -> Result<(), AdapterFailure> {
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-fn launch(_path: &Path) -> Result<(), AdapterFailure> {
+pub(crate) fn launch(_path: &Path) -> Result<(), AdapterFailure> {
     Err(AdapterFailure::UnsupportedProfile)
 }
 

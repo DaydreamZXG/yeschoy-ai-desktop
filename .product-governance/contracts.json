@@ -2,6 +2,1457 @@
   "schemaVersion": 1,
   "contracts": [
     {
+      "id": "desktop-account-session@v5",
+      "kind": "command",
+      "owner": "account",
+      "consumers": [
+        "billing",
+        "desktop-platform",
+        "tool-config"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-account-session@v5",
+      "authorization": "Bundled local desktop webview commands only. The native owner accepts only one compiled line ID and never returns a device code, access token, refresh token, session ID, tool token or local path to the renderer.",
+      "idempotency": "Inspect and refresh are newest-request projections. One stored desktop session is reusable on either compiled first-party origin. Only confirmed authentication failure, expiry, explicit logout or revocation clears the credential.",
+      "compatibility": "IPC5 adds sanitized money and recent savings aggregates. Legacy3/4 remain readable without inventing monetary basis. Commands, auth and optional billing semantics stay unchanged.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One bounded account command issued by the bundled desktop renderer.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Opaque renderer correlation ID.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "lineId": {
+            "type": "string",
+            "description": "Selected compiled first-party API origin.",
+            "enum": [
+              "mainland_optimized",
+              "global_accelerated"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "description": "Requested account lifecycle operation.",
+            "enum": [
+              "inspect",
+              "begin_authorization",
+              "poll_authorization",
+              "cancel_authorization",
+              "refresh",
+              "logout",
+              "open_wallet"
+            ]
+          }
+        },
+        "required": [
+          "requestId",
+          "lineId",
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Sanitized shared account/session projection with no credential material.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Unchanged correlation ID.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "const": 5,
+            "description": "Closed native projection version"
+          },
+          "status": {
+            "type": "string",
+            "description": "Closed user-visible session state.",
+            "enum": [
+              "signed_out",
+              "authorization_pending",
+              "signed_in",
+              "cancelled",
+              "denied",
+              "expired",
+              "session_expired",
+              "backend_unavailable",
+              "incompatible_server",
+              "secure_storage_unavailable",
+              "network_error",
+              "invalid_response"
+            ]
+          },
+          "userCode": {
+            "type": "string",
+            "description": "Non-secret short authorization code or empty string.",
+            "maxLength": 16
+          },
+          "pollAfterSeconds": {
+            "type": "integer",
+            "description": "Server-governed next authorization poll delay.",
+            "minimum": 0,
+            "maximum": 60
+          },
+          "expiresAtEpochMs": {
+            "type": "integer",
+            "description": "Pending authorization expiry or zero.",
+            "minimum": 0
+          },
+          "observedAtEpochMs": {
+            "type": "integer",
+            "description": "Local completion time for current account facts or zero.",
+            "minimum": 0
+          },
+          "account": {
+            "type": "object",
+            "description": "Current-user safe display and quota facts only.",
+            "properties": {
+              "available": {
+                "type": "boolean",
+                "description": "Whether the remaining account fields are current server facts."
+              },
+              "displayName": {
+                "type": "string",
+                "description": "Safe user-selected display name or empty string.",
+                "maxLength": 160
+              },
+              "username": {
+                "type": "string",
+                "description": "Current account username or empty string.",
+                "maxLength": 160
+              },
+              "balanceQuota": {
+                "type": "string",
+                "description": "Exact non-negative remaining quota or empty string.",
+                "maxLength": 40
+              },
+              "usedQuota": {
+                "type": "string",
+                "description": "Exact non-negative cumulative used quota or empty string.",
+                "maxLength": 40
+              },
+              "requestCount": {
+                "type": "string",
+                "description": "Exact non-negative cumulative request count or empty string.",
+                "maxLength": 40
+              },
+              "quotaPerUnit": {
+                "type": "string",
+                "description": "Current positive server quota units per USD or empty string.",
+                "maxLength": 40
+              }
+            },
+            "required": [
+              "available",
+              "displayName",
+              "username",
+              "balanceQuota",
+              "usedQuota",
+              "requestCount",
+              "quotaPerUnit"
+            ],
+            "additionalProperties": false
+          },
+          "usage": {
+            "type": "object",
+            "description": "Cumulative server quota, request-rate and token-rate facts.",
+            "properties": {
+              "available": {
+                "type": "boolean",
+                "description": "Whether the remaining usage fields are current server facts."
+              },
+              "consumedQuota": {
+                "type": "string",
+                "description": "Exact cumulative consumption quota or empty string.",
+                "maxLength": 40
+              },
+              "requestRate": {
+                "type": "string",
+                "description": "Server summary RPM fact or empty string.",
+                "maxLength": 40
+              },
+              "tokenCount": {
+                "type": "string",
+                "description": "Server summary token count or empty string.",
+                "maxLength": 40
+              }
+            },
+            "required": [
+              "available",
+              "consumedQuota",
+              "requestRate",
+              "tokenCount"
+            ],
+            "additionalProperties": false
+          },
+          "models": {
+            "type": "array",
+            "description": "Exact current-account available model identifiers with comparable pricing projections.",
+            "items": {
+              "type": "object",
+              "description": "One exact available model and its safe price projection.",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Exact model ID.",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Bounded untrusted plain model description.",
+                  "maxLength": 500
+                },
+                "billingMode": {
+                  "type": "string",
+                  "description": "Closed billing category.",
+                  "enum": [
+                    "ratio",
+                    "per_request",
+                    "tiered_expr",
+                    "unknown"
+                  ]
+                },
+                "pricingAvailable": {
+                  "type": "boolean",
+                  "description": "Whether all four comparable prices are present."
+                },
+                "officialInputCnyPerMillion": {
+                  "type": "string",
+                  "description": "NewAPI comparison-rate official-reference input price or empty string.",
+                  "maxLength": 40
+                },
+                "officialOutputCnyPerMillion": {
+                  "type": "string",
+                  "description": "NewAPI comparison-rate official-reference output price or empty string.",
+                  "maxLength": 40
+                },
+                "actualInputCnyPerMillion": {
+                  "type": "string",
+                  "description": "Current-account input price or empty string.",
+                  "maxLength": 40
+                },
+                "actualOutputCnyPerMillion": {
+                  "type": "string",
+                  "description": "Current-account output price or empty string.",
+                  "maxLength": 40
+                },
+                "supportedEndpointTypes": {
+                  "type": "array",
+                  "description": "Observed endpoint types",
+                  "items": {
+                    "type": "string",
+                    "description": "Endpoint type",
+                    "maxLength": 80,
+                    "minLength": 1
+                  },
+                  "maxItems": 32,
+                  "uniqueItems": true
+                },
+                "billing": {
+                  "type": "object",
+                  "description": "Optional billing",
+                  "properties": {
+                    "groups": {
+                      "type": "array",
+                      "description": "Account groups excluding auto",
+                      "maxItems": 128,
+                      "items": {
+                        "type": "object",
+                        "description": "Group",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Group ID excluding auto",
+                            "maxLength": 128,
+                            "minLength": 1
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "Plain description",
+                            "maxLength": 500
+                          },
+                          "ratio": {
+                            "type": "number",
+                            "description": "Optional group ratio",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "description"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "baseInputUsd": {
+                      "type": "number",
+                      "description": "Optional base input USD",
+                      "minimum": 0
+                    },
+                    "baseOutputUsd": {
+                      "type": "number",
+                      "description": "Optional base output USD",
+                      "minimum": 0
+                    },
+                    "cacheReadUsd": {
+                      "type": "number",
+                      "description": "Optional cache read USD",
+                      "minimum": 0
+                    },
+                    "cacheWriteUsd": {
+                      "type": "number",
+                      "description": "Optional cache write USD",
+                      "minimum": 0
+                    },
+                    "requestUsd": {
+                      "type": "number",
+                      "description": "Optional request USD",
+                      "minimum": 0
+                    },
+                    "expression": {
+                      "type": "string",
+                      "description": "Audited expression",
+                      "maxLength": 8192
+                    }
+                  },
+                  "required": [
+                    "groups",
+                    "expression"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "description",
+                "billingMode",
+                "pricingAvailable",
+                "officialInputCnyPerMillion",
+                "officialOutputCnyPerMillion",
+                "actualInputCnyPerMillion",
+                "actualOutputCnyPerMillion",
+                "supportedEndpointTypes"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 2048
+          },
+          "comparisonFx": {
+            "type": "string",
+            "description": "Positive NewAPI usd_exchange_rate used for comparison or empty string when unavailable.",
+            "maxLength": 40,
+            "pattern": "^(?:|(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"
+          },
+          "reasonCode": {
+            "type": "string",
+            "description": "Closed safe recovery reason; never a raw server body.",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "money": {
+            "type": "object",
+            "description": "Native-only conversion of account credit amounts using current website settings.",
+            "properties": {
+              "currency": {
+                "type": "string",
+                "enum": [
+                  "",
+                  "CNY",
+                  "USD"
+                ],
+                "description": "Website selected currency; empty means all amounts unavailable."
+              },
+              "balanceAmount": {
+                "type": "string",
+                "description": "Nonnegative balance in selected display currency or empty.",
+                "maxLength": 40,
+                "pattern": "^(?:|(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"
+              },
+              "consumedAmount": {
+                "type": "string",
+                "description": "Cumulative account used_quota converted in selected display currency or empty.",
+                "maxLength": 40,
+                "pattern": "^(?:|(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"
+              },
+              "displayRate": {
+                "type": "string",
+                "description": "Website quota-unit display conversion, not market exchange rate.",
+                "maxLength": 40,
+                "pattern": "^(?:|(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"
+              }
+            },
+            "required": [
+              "currency",
+              "balanceAmount",
+              "consumedAmount",
+              "displayRate"
+            ],
+            "additionalProperties": false
+          },
+          "savings": {
+            "type": "object",
+            "description": "Bounded recent CNY reference estimate, never a lifetime saving or actual vendor invoice.",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "available",
+                  "empty",
+                  "no_comparable_records",
+                  "unavailable"
+                ],
+                "description": "Truthful recent estimate availability."
+              },
+              "reasonCode": {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "no_history",
+                  "missing_basis",
+                  "logs_unavailable",
+                  "settings_unavailable",
+                  "invalid_logs"
+                ],
+                "description": "Closed safe explanation."
+              },
+              "officialAmount": {
+                "type": "string",
+                "description": "CNY official reference equivalent over included rows.",
+                "maxLength": 40,
+                "pattern": "^(?:|(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"
+              },
+              "siteAmount": {
+                "type": "string",
+                "description": "CNY Yecai consumption cost over exactly the same rows.",
+                "maxLength": 40,
+                "pattern": "^(?:|(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"
+              },
+              "savedAmount": {
+                "type": "string",
+                "description": "Signed CNY difference; do not clamp negative.",
+                "maxLength": 40,
+                "pattern": "^(?:|-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"
+              },
+              "referenceRate": {
+                "type": "string",
+                "description": "Current website usd_exchange_rate for reference.",
+                "maxLength": 40,
+                "pattern": "^(?:|(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"
+              },
+              "priceRate": {
+                "type": "string",
+                "description": "Current website price per quota unit.",
+                "maxLength": 40,
+                "pattern": "^(?:|(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"
+              },
+              "recordLimit": {
+                "type": "integer",
+                "const": 100,
+                "description": "Maximum recent records scanned; not total history."
+              },
+              "scannedCount": {
+                "type": "integer",
+                "description": "Scanned bounded consumption records.",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "includedCount": {
+                "type": "integer",
+                "description": "Rows with comparable basis.",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "excludedCount": {
+                "type": "integer",
+                "description": "Skipped rows without comparable basis.",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "oldestAtEpochMs": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 8640000000000000,
+                "description": "Oldest included timestamp, or zero when complete date window unavailable."
+              },
+              "newestAtEpochMs": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 8640000000000000,
+                "description": "Newest included timestamp, or zero."
+              }
+            },
+            "required": [
+              "status",
+              "reasonCode",
+              "officialAmount",
+              "siteAmount",
+              "savedAmount",
+              "referenceRate",
+              "priceRate",
+              "recordLimit",
+              "scannedCount",
+              "includedCount",
+              "excludedCount",
+              "oldestAtEpochMs",
+              "newestAtEpochMs"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "requestId",
+          "schemaVersion",
+          "status",
+          "userCode",
+          "pollAfterSeconds",
+          "expiresAtEpochMs",
+          "observedAtEpochMs",
+          "account",
+          "usage",
+          "models",
+          "comparisonFx",
+          "reasonCode",
+          "money",
+          "savings"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal",
+        "personal",
+        "sensitive"
+      ],
+      "observability": {
+        "correlation": "Only a transient requestId and local observation timestamp cross IPC.",
+        "audit": "The first-party server owns session audit records; the client stores no account history.",
+        "metrics": "No telemetry upload; sanitized current state exists only in memory."
+      },
+      "errorSemantics": [
+        "A transport or non-authentication server failure on one line cannot erase a credential that may still be valid on the other line.",
+        "Malformed NewAPI currency settings disable comparison rows without changing account or session truth.",
+        "All remote bodies and errors are reduced to closed renderer states."
+      ],
+      "requirementRefs": [
+        "REQ-062"
+      ],
+      "evidenceRefs": [
+        "E-USER-066",
+        "E-EXT-047",
+        "E-CODE-055"
+      ],
+      "status": "specified"
+    },
+    {
+      "id": "desktop-account-session@v4",
+      "kind": "command",
+      "owner": "account",
+      "consumers": [
+        "billing",
+        "desktop-platform",
+        "tool-config"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-account-session@v4",
+      "authorization": "Bundled local desktop webview commands only. The native owner accepts only one compiled line ID and never returns a device code, access token, refresh token, session ID, tool token or local path to the renderer.",
+      "idempotency": "Inspect and refresh are newest-request projections. One stored desktop session is reusable on either compiled first-party origin. Only confirmed authentication failure, expiry, explicit logout or revocation clears the credential.",
+      "compatibility": "IPC4 explicitly carries protocols, billing groups and cache amounts; unavailable optional billing/numbers omitted. Renderer accepts legacy3 and normalizes missing amounts to internal null, preserving zero. Account command names/auth boundaries unchanged.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One bounded account command issued by the bundled desktop renderer.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Opaque renderer correlation ID.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "lineId": {
+            "type": "string",
+            "description": "Selected compiled first-party API origin.",
+            "enum": [
+              "mainland_optimized",
+              "global_accelerated"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "description": "Requested account lifecycle operation.",
+            "enum": [
+              "inspect",
+              "begin_authorization",
+              "poll_authorization",
+              "cancel_authorization",
+              "refresh",
+              "logout",
+              "open_wallet"
+            ]
+          }
+        },
+        "required": [
+          "requestId",
+          "lineId",
+          "action"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Sanitized shared account/session projection with no credential material.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Unchanged correlation ID.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Account projection version",
+            "const": 4
+          },
+          "status": {
+            "type": "string",
+            "description": "Closed user-visible session state.",
+            "enum": [
+              "signed_out",
+              "authorization_pending",
+              "signed_in",
+              "cancelled",
+              "denied",
+              "expired",
+              "session_expired",
+              "backend_unavailable",
+              "incompatible_server",
+              "secure_storage_unavailable",
+              "network_error",
+              "invalid_response"
+            ]
+          },
+          "userCode": {
+            "type": "string",
+            "description": "Non-secret short authorization code or empty string.",
+            "maxLength": 16
+          },
+          "pollAfterSeconds": {
+            "type": "integer",
+            "description": "Server-governed next authorization poll delay.",
+            "minimum": 0,
+            "maximum": 60
+          },
+          "expiresAtEpochMs": {
+            "type": "integer",
+            "description": "Pending authorization expiry or zero.",
+            "minimum": 0
+          },
+          "observedAtEpochMs": {
+            "type": "integer",
+            "description": "Local completion time for current account facts or zero.",
+            "minimum": 0
+          },
+          "account": {
+            "type": "object",
+            "description": "Current-user safe display and quota facts only.",
+            "properties": {
+              "available": {
+                "type": "boolean",
+                "description": "Whether the remaining account fields are current server facts."
+              },
+              "displayName": {
+                "type": "string",
+                "description": "Safe user-selected display name or empty string.",
+                "maxLength": 160
+              },
+              "username": {
+                "type": "string",
+                "description": "Current account username or empty string.",
+                "maxLength": 160
+              },
+              "balanceQuota": {
+                "type": "string",
+                "description": "Exact non-negative remaining quota or empty string.",
+                "maxLength": 40
+              },
+              "usedQuota": {
+                "type": "string",
+                "description": "Exact non-negative cumulative used quota or empty string.",
+                "maxLength": 40
+              },
+              "requestCount": {
+                "type": "string",
+                "description": "Exact non-negative cumulative request count or empty string.",
+                "maxLength": 40
+              },
+              "quotaPerUnit": {
+                "type": "string",
+                "description": "Current positive server quota units per USD or empty string.",
+                "maxLength": 40
+              }
+            },
+            "required": [
+              "available",
+              "displayName",
+              "username",
+              "balanceQuota",
+              "usedQuota",
+              "requestCount",
+              "quotaPerUnit"
+            ],
+            "additionalProperties": false
+          },
+          "usage": {
+            "type": "object",
+            "description": "Cumulative server quota, request-rate and token-rate facts.",
+            "properties": {
+              "available": {
+                "type": "boolean",
+                "description": "Whether the remaining usage fields are current server facts."
+              },
+              "consumedQuota": {
+                "type": "string",
+                "description": "Exact cumulative consumption quota or empty string.",
+                "maxLength": 40
+              },
+              "requestRate": {
+                "type": "string",
+                "description": "Server summary RPM fact or empty string.",
+                "maxLength": 40
+              },
+              "tokenCount": {
+                "type": "string",
+                "description": "Server summary token count or empty string.",
+                "maxLength": 40
+              }
+            },
+            "required": [
+              "available",
+              "consumedQuota",
+              "requestRate",
+              "tokenCount"
+            ],
+            "additionalProperties": false
+          },
+          "models": {
+            "type": "array",
+            "description": "Exact current-account available model identifiers with comparable pricing projections.",
+            "items": {
+              "type": "object",
+              "description": "One exact available model and its safe price projection.",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Exact model ID.",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Bounded untrusted plain model description.",
+                  "maxLength": 500
+                },
+                "billingMode": {
+                  "type": "string",
+                  "description": "Closed billing category.",
+                  "enum": [
+                    "ratio",
+                    "per_request",
+                    "tiered_expr",
+                    "unknown"
+                  ]
+                },
+                "pricingAvailable": {
+                  "type": "boolean",
+                  "description": "Whether all four comparable prices are present."
+                },
+                "officialInputCnyPerMillion": {
+                  "type": "string",
+                  "description": "NewAPI comparison-rate official-reference input price or empty string.",
+                  "maxLength": 40
+                },
+                "officialOutputCnyPerMillion": {
+                  "type": "string",
+                  "description": "NewAPI comparison-rate official-reference output price or empty string.",
+                  "maxLength": 40
+                },
+                "actualInputCnyPerMillion": {
+                  "type": "string",
+                  "description": "Current-account input price or empty string.",
+                  "maxLength": 40
+                },
+                "actualOutputCnyPerMillion": {
+                  "type": "string",
+                  "description": "Current-account output price or empty string.",
+                  "maxLength": 40
+                },
+                "supportedEndpointTypes": {
+                  "type": "array",
+                  "description": "Observed endpoint types",
+                  "items": {
+                    "type": "string",
+                    "description": "Endpoint type",
+                    "maxLength": 80,
+                    "minLength": 1
+                  },
+                  "maxItems": 32,
+                  "uniqueItems": true
+                },
+                "billing": {
+                  "type": "object",
+                  "description": "Optional billing",
+                  "properties": {
+                    "groups": {
+                      "type": "array",
+                      "description": "Account groups excluding auto",
+                      "maxItems": 128,
+                      "items": {
+                        "type": "object",
+                        "description": "Group",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "description": "Group ID excluding auto",
+                            "maxLength": 128,
+                            "minLength": 1
+                          },
+                          "description": {
+                            "type": "string",
+                            "description": "Plain description",
+                            "maxLength": 500
+                          },
+                          "ratio": {
+                            "type": "number",
+                            "description": "Optional group ratio",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "description"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "baseInputUsd": {
+                      "type": "number",
+                      "description": "Optional base input USD",
+                      "minimum": 0
+                    },
+                    "baseOutputUsd": {
+                      "type": "number",
+                      "description": "Optional base output USD",
+                      "minimum": 0
+                    },
+                    "cacheReadUsd": {
+                      "type": "number",
+                      "description": "Optional cache read USD",
+                      "minimum": 0
+                    },
+                    "cacheWriteUsd": {
+                      "type": "number",
+                      "description": "Optional cache write USD",
+                      "minimum": 0
+                    },
+                    "requestUsd": {
+                      "type": "number",
+                      "description": "Optional request USD",
+                      "minimum": 0
+                    },
+                    "expression": {
+                      "type": "string",
+                      "description": "Audited expression",
+                      "maxLength": 8192
+                    }
+                  },
+                  "required": [
+                    "groups",
+                    "expression"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "description",
+                "billingMode",
+                "pricingAvailable",
+                "officialInputCnyPerMillion",
+                "officialOutputCnyPerMillion",
+                "actualInputCnyPerMillion",
+                "actualOutputCnyPerMillion",
+                "supportedEndpointTypes"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 2048
+          },
+          "comparisonFx": {
+            "type": "string",
+            "description": "Positive NewAPI usd_exchange_rate used for comparison or empty string when unavailable.",
+            "maxLength": 40,
+            "pattern": "^(?:|(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"
+          },
+          "reasonCode": {
+            "type": "string",
+            "description": "Closed safe recovery reason; never a raw server body.",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "requestId",
+          "schemaVersion",
+          "status",
+          "userCode",
+          "pollAfterSeconds",
+          "expiresAtEpochMs",
+          "observedAtEpochMs",
+          "account",
+          "usage",
+          "models",
+          "comparisonFx",
+          "reasonCode"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal",
+        "personal",
+        "sensitive"
+      ],
+      "observability": {
+        "correlation": "Only a transient requestId and local observation timestamp cross IPC.",
+        "audit": "The first-party server owns session audit records; the client stores no account history.",
+        "metrics": "No telemetry upload; sanitized current state exists only in memory."
+      },
+      "errorSemantics": [
+        "A transport or non-authentication server failure on one line cannot erase a credential that may still be valid on the other line.",
+        "Malformed NewAPI currency settings disable comparison rows without changing account or session truth.",
+        "All remote bodies and errors are reduced to closed renderer states."
+      ],
+      "requirementRefs": [
+        "REQ-061"
+      ],
+      "evidenceRefs": [
+        "E-USER-065",
+        "E-CODE-054"
+      ],
+      "status": "specified"
+    },
+    {
+      "id": "desktop-open-connection@v1",
+      "kind": "command",
+      "owner": "tool-config",
+      "consumers": [
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-open-connection@v1",
+      "authorization": "Explicit bundled-renderer Open; native resolves compiled tool, installation and OS credential. No caller paths/URLs/commands or secrets. No login required.",
+      "idempotency": "Serialize with activation/restore and process lock; reuse live DSH. Never writes config, issues token or sends a paid probe.",
+      "compatibility": "Additive open_tool_connection_v1 for three targets. Native verifies existing active credential/provider fields including legacy; CLI tools expose instructions, not fake launch.",
+      "inputSchema": {
+        "type": "object",
+        "description": "Open request",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Transient ID",
+            "maxLength": 100,
+            "minLength": 1
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Compiled tool",
+            "maxLength": 80,
+            "enum": [
+              "claude_desktop",
+              "codex_desktop",
+              "dsh_web"
+            ]
+          }
+        },
+        "required": [
+          "requestId",
+          "toolId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Launch result",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Transient ID",
+            "maxLength": 100
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Projection version",
+            "const": 1
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Compiled tool",
+            "maxLength": 80,
+            "enum": [
+              "claude_desktop",
+              "codex_desktop",
+              "dsh_web"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Closed result",
+            "maxLength": 80,
+            "enum": [
+              "opened",
+              "not_connected",
+              "settings_changed",
+              "recovery_pending",
+              "secure_storage_unavailable",
+              "tool_not_found",
+              "launch_failed",
+              "busy"
+            ]
+          }
+        },
+        "required": [
+          "requestId",
+          "schemaVersion",
+          "toolId",
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "internal"
+      ],
+      "observability": {
+        "correlation": "Transient ID",
+        "audit": "No new history",
+        "metrics": "No upload"
+      },
+      "errorSemantics": [
+        "Opened is dispatch of application opening, not proof of response.",
+        "Changed owned settings/pending recovery/missing secret return non-success without mutation."
+      ],
+      "requirementRefs": [
+        "REQ-061"
+      ],
+      "evidenceRefs": [
+        "E-USER-065",
+        "E-CODE-054"
+      ],
+      "status": "specified"
+    },
+    {
+      "id": "desktop-tool-activation@v5",
+      "kind": "command",
+      "owner": "tool-config",
+      "consumers": [
+        "desktop-platform",
+        "diagnostics"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-tool-activation@v5",
+      "authorization": "One explicit click in the bundled desktop shell while a valid first-party desktop session exists. Native code accepts only two compiled active line IDs, seven closed target IDs, one exact current-account model ID, one exact current-account billing group and an optional opaque installation ID previously returned by native discovery.",
+      "idempotency": "Repeated activation reuses the target's dedicated NewAPI token and replaces only receipt-owned configuration fields. Ready is recomputed from fresh readback, credential resolution, exact selected-provider response and target launch; stale success is never reused.",
+      "compatibility": "Schema-v3 IPC retained; add encrypted pre-write recovery journal and active receipt. Failed activation rolls back immediately; explicit restore returns original baseline. Legacy originals remain unknown. Claude verification requires a complete usable response, not headers.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One bounded native activation request for an explicitly selected tool identity.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Opaque renderer correlation ID.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "lineId": {
+            "type": "string",
+            "description": "Selected compiled first-party API origin.",
+            "enum": [
+              "mainland_optimized",
+              "global_accelerated"
+            ]
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Exact supported target identity.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "modelId": {
+            "type": "string",
+            "description": "Exact model ID selected from the current account model list.",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "installationId": {
+            "type": "string",
+            "description": "Opaque native discovery choice or empty for a unique installation.",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_-]*$"
+          },
+          "billingGroup": {
+            "type": "string",
+            "description": "Exact non-auto billing group returned for the selected account model.",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "requestId",
+          "lineId",
+          "toolId",
+          "modelId",
+          "installationId",
+          "billingGroup"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Sanitized activation state. The schema remains renderer-compatible with version 3; Codex ready proves deterministic config, credential, exact provider-path response and desktop launch.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Unchanged correlation ID.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Wire-compatible activation projection schema version.",
+            "enum": [
+              3
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Closed activation outcome.",
+            "enum": [
+              "ready",
+              "signed_out",
+              "tool_not_found",
+              "multiple_installations",
+              "missing_runtime",
+              "unsupported_group",
+              "unsupported_profile",
+              "unsupported_model",
+              "external_override",
+              "secure_storage_unavailable",
+              "configuration_failed",
+              "launch_failed",
+              "verification_failed",
+              "server_unavailable",
+              "invalid_request"
+            ]
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Validated target identity.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "modelId": {
+            "type": "string",
+            "description": "Validated exact model ID or empty string.",
+            "maxLength": 200
+          },
+          "billingGroup": {
+            "type": "string",
+            "description": "Validated exact account billing group or empty string only on an invalid request.",
+            "maxLength": 128
+          },
+          "observedAtEpochMs": {
+            "type": "integer",
+            "description": "Local completion timestamp.",
+            "minimum": 0
+          },
+          "reasonCode": {
+            "type": "string",
+            "description": "Closed safe recovery reason without raw response body, key or path.",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "requestId",
+          "schemaVersion",
+          "status",
+          "toolId",
+          "modelId",
+          "billingGroup",
+          "observedAtEpochMs",
+          "reasonCode"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal",
+        "sensitive"
+      ],
+      "observability": {
+        "correlation": "Only request ID, closed target, model, billing group, status, reason and observation time cross IPC.",
+        "audit": "One encrypted baseline per tool; key in OS storage, erased after restore; no history or telemetry.",
+        "metrics": "No telemetry upload. Provider probe output is bounded and reduced to a closed status before IPC."
+      },
+      "errorSemantics": [
+        "Invalid target, active line, model, billing group or installation identity fails before key acquisition or file access.",
+        "Codex ready requires owned configuration readback, command-backed credential resolution, one bounded real response through the exact selected direct or loopback provider path and successful desktop launch.",
+        "Configuration, secure-storage, authentication, endpoint, model, invalid-response and launch failures are distinct closed outcomes. A failing transaction restores all touched files and prior credentials and deletes only a newly created token whose ownership is proven.",
+        "Complete keys never cross renderer IPC, appear in ordinary configuration or enter diagnostic text. Loopback compatibility endpoints return only public model metadata and health state.",
+        "Other supported targets retain the version-3 target-level verification and recovery behavior."
+      ],
+      "requirementRefs": [
+        "REQ-060"
+      ],
+      "evidenceRefs": [
+        "E-USER-064",
+        "E-CODE-053"
+      ],
+      "status": "specified"
+    },
+    {
+      "id": "desktop-connection-management@v1",
+      "kind": "command",
+      "owner": "tool-config",
+      "consumers": [
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-connection-management@v1",
+      "authorization": "Bundled renderer; restore explicitly targets one allowlisted tool. No login or caller-selected paths/shell commands.",
+      "idempotency": "Serializes with activation, replay becomes not_connected. Three-way owned-field restore plus optimistic file check; retain encrypted journal until file and credential cleanup succeed.",
+      "compatibility": "Legacy records offer only identified YesChoy removal. Seven formats supported; unsafe or invalid files never overwritten.",
+      "inputSchema": {
+        "type": "object",
+        "description": "Local management",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Opaque renderer correlation ID.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "operation": {
+            "type": "string",
+            "description": "Action",
+            "maxLength": 128,
+            "enum": [
+              "inspect",
+              "restore"
+            ]
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Target, empty for inspect",
+            "maxLength": 128,
+            "enum": [
+              "",
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          }
+        },
+        "required": [
+          "requestId",
+          "operation",
+          "toolId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Management result",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Unchanged correlation ID.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Schema",
+            "enum": [
+              1
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Outcome",
+            "maxLength": 128,
+            "enum": [
+              "ok",
+              "restored",
+              "restored_with_changes",
+              "recovery_failed"
+            ]
+          },
+          "connections": {
+            "type": "array",
+            "description": "Local states",
+            "items": {
+              "type": "object",
+              "description": "Sanitized local state, not fresh network health",
+              "properties": {
+                "toolId": {
+                  "type": "string",
+                  "description": "Tool",
+                  "maxLength": 128,
+                  "enum": [
+                    "claude_code",
+                    "claude_desktop",
+                    "codex_desktop",
+                    "pi",
+                    "dsh_web",
+                    "hermes",
+                    "openclaw"
+                  ]
+                },
+                "state": {
+                  "type": "string",
+                  "description": "State",
+                  "maxLength": 128,
+                  "enum": [
+                    "not_connected",
+                    "connected",
+                    "changed",
+                    "legacy",
+                    "recovery_pending",
+                    "unavailable"
+                  ]
+                },
+                "modelId": {
+                  "type": "string",
+                  "description": "Last model",
+                  "maxLength": 200
+                },
+                "lineId": {
+                  "type": "string",
+                  "description": "Compiled line or unknown",
+                  "maxLength": 128,
+                  "enum": [
+                    "",
+                    "mainland_optimized",
+                    "global_accelerated"
+                  ]
+                },
+                "billingGroup": {
+                  "type": "string",
+                  "description": "Last group",
+                  "maxLength": 128
+                },
+                "updatedAtEpochMs": {
+                  "type": "integer",
+                  "description": "Setup time or zero if unknown",
+                  "minimum": 0
+                },
+                "restoreMode": {
+                  "type": "string",
+                  "description": "Scope",
+                  "maxLength": 128,
+                  "enum": [
+                    "original",
+                    "remove_yeschoy",
+                    "none"
+                  ]
+                },
+                "requiresBackground": {
+                  "type": "boolean",
+                  "description": "Needs assistant runtime"
+                },
+                "reasonCode": {
+                  "type": "string",
+                  "description": "Safe reason",
+                  "maxLength": 80
+                }
+              },
+              "required": [
+                "toolId",
+                "state",
+                "modelId",
+                "lineId",
+                "billingGroup",
+                "updatedAtEpochMs",
+                "restoreMode",
+                "requiresBackground",
+                "reasonCode"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0,
+            "maxItems": 7
+          },
+          "reasonCode": {
+            "type": "string",
+            "description": "Safe reason",
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "requestId",
+          "schemaVersion",
+          "status",
+          "connections",
+          "reasonCode"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal",
+        "sensitive"
+      ],
+      "observability": {
+        "correlation": "Safe ID and closed outcomes",
+        "audit": "Single encrypted baseline; no history",
+        "metrics": "No upload"
+      },
+      "errorSemantics": [
+        "Preserve later changes and disclose restored_with_changes.",
+        "Invalid file or storage failure retains recovery for retry.",
+        "Do not revoke shared remote tokens."
+      ],
+      "requirementRefs": [
+        "REQ-060"
+      ],
+      "evidenceRefs": [
+        "E-USER-064",
+        "E-CODE-053"
+      ],
+      "status": "specified"
+    },
+    {
       "id": "desktop-tool-activation@v4",
       "kind": "command",
       "owner": "tool-config",

@@ -1,0 +1,205 @@
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  within,
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { invoke } from "@tauri-apps/api/core";
+import {
+  ConnectionProvider,
+  decodeConnections,
+  useToolConnections,
+  type ToolConnection,
+} from "./connections";
+import { connectionsFixture } from "./connection-test-fixtures";
+import { RestoreConnection } from "./RestoreConnection";
+vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+const native = vi.mocked(invoke);
+beforeEach(() => {
+  native.mockReset();
+  native.mockImplementation(async (_cmd, args) =>
+    connectionsFixture(
+      (args as { request: { requestId: string } }).request.requestId,
+    ),
+  );
+  HTMLDialogElement.prototype.showModal = function () {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.removeAttribute("open");
+  };
+});
+afterEach(cleanup);
+describe("reversible local connections", () => {
+  it("rejects secret fields, duplicate tools and mismatched replies", () => {
+    const valid = connectionsFixture("one");
+    expect(decodeConnections(valid, "one")).not.toBeNull();
+    expect(
+      decodeConnections({ ...valid, apiKey: "must-not-render" }, "one"),
+    ).toBeNull();
+    expect(decodeConnections(valid, "other")).toBeNull();
+    const duplicate = connectionsFixture("one");
+    duplicate.connections[1] = duplicate.connections[0];
+    expect(decodeConnections(duplicate, "one")).toBeNull();
+    const invalid = connectionsFixture("one");
+    invalid.connections[0].modelId = "injected\nline";
+    expect(decodeConnections(invalid, "one")).toBeNull();
+  });
+  it("loads local state without requiring login and restores only the requested tool", async () => {
+    const { result } = renderHook(() => useToolConnections());
+    await act(async () => {});
+    expect(result.current.connections).toHaveLength(7);
+    expect(result.current.error).toBe(false);
+    await act(async () => {
+      await result.current.restore("pi");
+    });
+    expect(native).toHaveBeenLastCalledWith("manage_tool_connections_v1", {
+      request: {
+        requestId: expect.any(String),
+        operation: "restore",
+        toolId: "pi",
+      },
+    });
+    expect(
+      native.mock.calls.every(
+        (call) => call[0] === "manage_tool_connections_v1",
+      ),
+    ).toBe(true);
+  });
+  it("retains the last local state when reading it fails", async () => {
+    const { result } = renderHook(() => useToolConnections());
+    await act(async () => {});
+    native.mockRejectedValueOnce(Error("unavailable"));
+    await act(async () => {
+      await result.current.refresh();
+    });
+    expect(result.current.connections).toHaveLength(7);
+    expect(result.current.error).toBe(true);
+  });
+  it.each([false, true])(
+    "settles loading after restore (failure: %s) supersedes a pending refresh",
+    async (failRestore) => {
+      const { result } = renderHook(() => useToolConnections());
+      await act(async () => {});
+      let finishRead!: (value: unknown) => void;
+      let finishRestore!: (value: unknown) => void;
+      let rejectRestore!: (cause: Error) => void;
+      let readId = "";
+      let restoreId = "";
+      native.mockClear();
+      native.mockImplementation(async (_command, args) => {
+        const request = (
+          args as {
+            request: { requestId: string; operation: string };
+          }
+        ).request;
+        if (request.operation === "inspect") {
+          readId = request.requestId;
+          return await new Promise((resolve) => {
+            finishRead = resolve;
+          });
+        }
+        restoreId = request.requestId;
+        return await new Promise((resolve, reject) => {
+          finishRestore = resolve;
+          rejectRestore = reject;
+        });
+      });
+      let read!: Promise<void>;
+      let restoring!: Promise<unknown>;
+      act(() => {
+        read = result.current.refresh();
+      });
+      expect(result.current.loading).toBe(true);
+      act(() => {
+        restoring = result.current.restore("pi").catch(() => undefined);
+      });
+      await act(async () => {
+        window.dispatchEvent(new Event("focus"));
+      });
+      expect(native).toHaveBeenCalledTimes(2);
+      await act(async () => {
+        if (failRestore) rejectRestore(Error("restore response unavailable"));
+        else
+          finishRestore({
+            ...connectionsFixture(restoreId),
+            status: "restored",
+          });
+        await restoring;
+      });
+      expect(result.current.loading).toBe(false);
+      expect(result.current.restoring).toBeNull();
+      expect(result.current.error).toBe(failRestore);
+      const stale = connectionsFixture(readId);
+      stale.connections.find((c) => c.toolId === "pi")!.modelId =
+        "stale-before-restore";
+      await act(async () => {
+        finishRead(stale);
+        await read;
+      });
+      expect(result.current.loading).toBe(false);
+      expect(
+        result.current.connections.find((c) => c.toolId === "pi")?.modelId,
+      ).toBe("");
+      expect(result.current.error).toBe(failRestore);
+    },
+  );
+  it.each(["original", "remove_yeschoy"] as const)(
+    "confirms %s recovery, preserves the cancel path and describes its limit",
+    async (mode) => {
+      const connection: ToolConnection = {
+        ...connectionsFixture("one").connections[0],
+        state: mode === "original" ? "connected" : "legacy",
+        restoreMode: mode,
+        modelId: "glm-5.3",
+      };
+      const restore = vi.fn().mockResolvedValue({
+        ...connectionsFixture("one"),
+        status: "restored_with_changes",
+      });
+      render(
+        <ConnectionProvider
+          value={{
+            connections: [connection],
+            loading: false,
+            error: false,
+            restoring: null,
+            opening: null,
+            open: vi.fn(),
+            refresh: vi.fn(),
+            restore,
+          }}
+        >
+          <RestoreConnection connection={connection} name="Claude Code" />
+        </ConnectionProvider>,
+      );
+      const label = mode === "original" ? "恢复原设置" : "撤销野菜设置";
+      fireEvent.click(screen.getByRole("button", { name: label }));
+      const dialog = screen.getByRole("dialog");
+      expect(
+        within(dialog).getByRole("button", { name: "先不恢复" }),
+      ).toHaveFocus();
+      expect(restore).not.toHaveBeenCalled();
+      if (mode === "remove_yeschoy")
+        expect(dialog).toHaveTextContent("无法找回原来的值");
+      fireEvent.click(within(dialog).getByRole("button", { name: "先不恢复" }));
+      expect(restore).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole("button", { name: label }));
+      await act(async () => {
+        fireEvent.click(
+          within(screen.getByRole("dialog")).getByRole("button", {
+            name: label,
+          }),
+        );
+      });
+      expect(restore).toHaveBeenCalledWith("claude_code");
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "你之后修改的内容已保留",
+      );
+    },
+  );
+});

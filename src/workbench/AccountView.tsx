@@ -13,21 +13,11 @@ import {
   Wallet,
 } from "lucide-react";
 import type { ConfigurationLineId } from "../configuration/preview";
-import { quotaToUsd } from "../account/session";
+import { creditUnit, formatMoney } from "../account/finance";
+import { SavingsCard, SavingsDetails } from "./Savings";
 import type { AccountSessionController } from "../account/useAccountSession";
 import { WorkbenchFooter } from "./WorkbenchChrome";
 import { useWorkbenchCopy } from "./copy";
-
-function money(value: number | null, locale: string): string {
-  return value === null
-    ? "—"
-    : new Intl.NumberFormat(locale, {
-        style: "currency",
-        currency: "USD",
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(value);
-}
 
 function compact(value: string, locale: string): string {
   const number = Number(value);
@@ -60,16 +50,7 @@ export function AccountView({
   const signedIn = projection?.status === "signed_in";
   const pending = projection?.status === "authorization_pending";
   const account = projection?.account;
-  const usage = projection?.usage;
-  const balance = account?.available
-    ? quotaToUsd(account.balanceQuota, account.quotaPerUnit)
-    : null;
-  const spentQuota = usage?.available
-    ? usage.consumedQuota
-    : (account?.usedQuota ?? "");
-  const spent = account?.available
-    ? quotaToUsd(spentQuota, account.quotaPerUnit)
-    : null;
+  const money = signedIn ? projection.money : undefined;
   const displayName = account?.displayName || account?.username || c.signedInAs;
   const observed = useMemo(
     () =>
@@ -115,21 +96,48 @@ export function AccountView({
           <h1>{c.usage}</h1>
           <p>{c.accountBody}</p>
         </div>
-        <label className="account-line-picker">
-          <Globe2 aria-hidden="true" />
-          <select
-            aria-label={c.selectLine}
-            value={lineId}
-            onChange={(event) =>
-              onLineChange(event.target.value as ConfigurationLineId)
-            }
-            disabled={pending || loading}
-          >
-            <option value="mainland_optimized">{c.mainlandLine}</option>
-            <option value="global_accelerated">{c.globalLine}</option>
-          </select>
-        </label>
+        <div className="account-route-control">
+          <label className="account-line-picker">
+            <Globe2 aria-hidden="true" />
+            <select
+              aria-label={c.selectLine}
+              value={lineId}
+              onChange={(event) =>
+                onLineChange(event.target.value as ConfigurationLineId)
+              }
+              disabled={pending || loading}
+            >
+              <option value="mainland_optimized">{c.mainlandLine}</option>
+              <option value="global_accelerated">{c.globalLine}</option>
+            </select>
+          </label>
+          <small>
+            {lineId === "mainland_optimized"
+              ? "中国大陆网络优先"
+              : "Cloudflare 全球线路，海外可优先尝试"}
+          </small>
+        </div>
       </header>
+      <p className="account-route-note">
+        线路只影响连接体验，不改变计费分组和倍率，也无需重新登录。
+      </p>
+      {session.lastError && (
+        <p className="workbench-notice" role="status">
+          <Clock3 />
+          {pending
+            ? "连接暂时中断，正在继续等待网页授权，无需重新登录。"
+            : signedIn
+              ? "暂时无法更新账户，以下是上次读取的数据。"
+              : "暂时无法连接账户，请重试。"}
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            disabled={loading}
+          >
+            重试
+          </button>
+        </p>
+      )}
 
       {loading && !projection ? (
         <section
@@ -217,27 +225,41 @@ export function AccountView({
           <section className="account-metrics" aria-label={c.usage}>
             <article className="summary-card account-balance-card">
               <span className="summary-label">{c.balance}</span>
-              <strong>{money(balance, locale)}</strong>
-              <div className="summary-bottom">USD</div>
+              <strong>
+                {formatMoney(money?.balanceAmount, money?.currency, locale)}
+              </strong>
+              <div className="summary-bottom">
+                {creditUnit(money?.currency)}
+              </div>
             </article>
+            <SavingsCard
+              savings={projection.savings}
+              onDetails={() => {
+                const details = document.getElementById(
+                  "savings-basis",
+                ) as HTMLDetailsElement | null;
+                if (details) {
+                  details.open = true;
+                  details.querySelector("summary")?.focus();
+                }
+              }}
+            />
             <article className="summary-card">
               <span className="summary-label">{c.spent}</span>
-              <strong>{money(spent, locale)}</strong>
-              <div className="summary-bottom">USD</div>
-            </article>
-            <article className="summary-card">
-              <span className="summary-label">{c.tokens}</span>
               <strong>
-                {usage?.available ? compact(usage.tokenCount, locale) : "—"}
+                {formatMoney(money?.consumedAmount, money?.currency, locale)}
               </strong>
-              <div className="summary-bottom">tokens</div>
+              <div className="summary-bottom">
+                {creditUnit(money?.currency)}
+              </div>
             </article>
             <article className="summary-card">
               <span className="summary-label">{c.requestCount}</span>
               <strong>{compact(account.requestCount, locale)}</strong>
-              <div className="summary-bottom">requests</div>
+              <div className="summary-bottom">次请求</div>
             </article>
           </section>
+          <SavingsDetails savings={projection.savings} />
 
           <section className="account-wallet-card">
             <div className="wallet-icon">

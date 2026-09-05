@@ -14,6 +14,8 @@ const MAX_PROCESS_OUTPUT_BYTES: u64 = 256 * 1024;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum ConfigFailure {
     Read,
+    #[allow(dead_code)]
+    // Closed shared adapter error mapping; some parsers return their own reason.
     Parse,
     ExternalChange,
     Write,
@@ -21,11 +23,12 @@ pub(crate) enum ConfigFailure {
     Rollback,
 }
 
-#[derive(Debug)]
-struct FileChange {
-    path: PathBuf,
-    before: Option<Vec<u8>>,
-    after: Vec<u8>,
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub(crate) struct FileChange {
+    pub(crate) path: PathBuf,
+    pub(crate) before: Option<Vec<u8>>,
+    pub(crate) after: Vec<u8>,
+    #[serde(skip)]
     written: bool,
 }
 
@@ -35,6 +38,11 @@ pub(crate) struct FileTransaction {
 }
 
 impl FileTransaction {
+    pub(crate) fn changes(&self) -> &[FileChange] {
+        &self.changes
+    }
+
+    #[cfg(test)]
     pub(crate) fn stage(path: PathBuf, after: Vec<u8>) -> Result<Self, ConfigFailure> {
         let mut transaction = Self::default();
         transaction.push(path, after)?;
@@ -91,13 +99,6 @@ impl FileTransaction {
         Ok(())
     }
 
-    pub(crate) fn before(&self, path: &Path) -> Option<&[u8]> {
-        self.changes
-            .iter()
-            .find(|change| change.path == path)
-            .and_then(|change| change.before.as_deref())
-    }
-
     pub(crate) fn commit(&mut self) -> Result<(), ConfigFailure> {
         for index in 0..self.changes.len() {
             let change = &self.changes[index];
@@ -151,8 +152,12 @@ fn epoch_ms() -> u64 {
         .min(u64::MAX as u128) as u64
 }
 
-fn ensure_safe_target(path: &Path) -> io::Result<()> {
-    if !path.is_absolute() {
+pub(crate) fn ensure_safe_target(path: &Path, maximum: u64) -> io::Result<()> {
+    if !path.is_absolute()
+        || path
+            .components()
+            .any(|part| matches!(part, std::path::Component::ParentDir))
+    {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             "relative target",
@@ -161,17 +166,29 @@ fn ensure_safe_target(path: &Path) -> io::Result<()> {
     let parent = path
         .parent()
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "missing parent"))?;
-    fs::create_dir_all(parent)?;
-    let parent_metadata = fs::symlink_metadata(parent)?;
-    if parent_metadata.file_type().is_symlink() || !parent_metadata.is_dir() {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "unsafe parent"));
+    // Read-only inspection must not create directories. Reject symlinks in
+    // every existing ancestor, not just the immediate parent.
+    for ancestor in parent.ancestors() {
+        match fs::symlink_metadata(ancestor) {
+            #[cfg(target_os = "macos")]
+            Ok(metadata)
+                if metadata.file_type().is_symlink()
+                    && ((ancestor == Path::new("/var")
+                        && fs::read_link(ancestor).ok().as_deref()
+                            == Some(Path::new("private/var")))
+                        || (ancestor == Path::new("/tmp")
+                            && fs::read_link(ancestor).ok().as_deref()
+                                == Some(Path::new("private/tmp")))) => {}
+            Ok(metadata) if metadata.file_type().is_symlink() || !metadata.is_dir() => {
+                return Err(io::Error::new(io::ErrorKind::InvalidData, "unsafe parent"));
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error),
+        }
     }
-    if path.exists() {
-        let metadata = fs::symlink_metadata(path)?;
-        if metadata.file_type().is_symlink()
-            || !metadata.is_file()
-            || metadata.len() > MAX_CONFIG_BYTES
-        {
+    if let Ok(metadata) = fs::symlink_metadata(path) {
+        if metadata.file_type().is_symlink() || !metadata.is_file() || metadata.len() > maximum {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "unsafe target"));
         }
     }
@@ -179,7 +196,11 @@ fn ensure_safe_target(path: &Path) -> io::Result<()> {
 }
 
 pub(crate) fn snapshot(path: &Path) -> io::Result<Option<Vec<u8>>> {
-    ensure_safe_target(path)?;
+    snapshot_bounded(path, MAX_CONFIG_BYTES)
+}
+
+pub(crate) fn snapshot_bounded(path: &Path, maximum: u64) -> io::Result<Option<Vec<u8>>> {
+    ensure_safe_target(path, maximum)?;
     if path.exists() {
         fs::read(path).map(Some)
     } else {
@@ -254,13 +275,19 @@ fn replace(temp: &Path, target: &Path) -> io::Result<()> {
 }
 
 pub(crate) fn atomic_write(path: &Path, bytes: &[u8]) -> io::Result<()> {
-    ensure_safe_target(path)?;
-    if bytes.len() as u64 > MAX_CONFIG_BYTES {
+    atomic_write_bounded(path, bytes, MAX_CONFIG_BYTES)
+}
+
+pub(crate) fn atomic_write_bounded(path: &Path, bytes: &[u8], maximum: u64) -> io::Result<()> {
+    ensure_safe_target(path, maximum)?;
+    if bytes.len() as u64 > maximum {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             "oversized content",
         ));
     }
+    fs::create_dir_all(path.parent().ok_or(io::ErrorKind::InvalidInput)?)?;
+    ensure_safe_target(path, maximum)?;
     let permissions = fs::metadata(path)
         .ok()
         .map(|metadata| metadata.permissions());
@@ -280,7 +307,8 @@ pub(crate) fn atomic_write(path: &Path, bytes: &[u8]) -> io::Result<()> {
     result
 }
 
-fn restore(path: &Path, before: Option<&[u8]>) -> io::Result<()> {
+pub(crate) fn restore(path: &Path, before: Option<&[u8]>) -> io::Result<()> {
+    ensure_safe_target(path, MAX_CONFIG_BYTES)?;
     match before {
         Some(bytes) => atomic_write(path, bytes),
         None if path.exists() => fs::remove_file(path),
@@ -292,6 +320,7 @@ fn restore(path: &Path, before: Option<&[u8]>) -> io::Result<()> {
 pub(crate) struct ProcessResult {
     pub(crate) success: bool,
     pub(crate) stdout: Vec<u8>,
+    #[allow(dead_code)] // Always drain/bound stderr, but never render raw output or credentials.
     pub(crate) stderr: Vec<u8>,
 }
 

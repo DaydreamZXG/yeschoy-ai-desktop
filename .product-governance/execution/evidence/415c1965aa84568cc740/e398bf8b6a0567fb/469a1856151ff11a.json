@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU036-AS-01",
+  "assertion": "Match the website's quota, recorded special/group ratio, price and usd_exchange_rate formula for supported comparable records. Exclude malformed, non-consumption, free, subscription, special-fee and unknown basis records; both totals use the same included rows. Current CNY status projects customer-facing RMB credits using quota_per_unit and usd_exchange_rate; missing/unsupported settings show unavailable, never USD or zero fallback. Cumulative consumed credits use account used_quota, not recent TPM.",
+  "testSelector": "tests/work_packages/ru036/test_acceptance.py::test_native",
+  "acceptanceCommandId": "ru036-native",
+  "runId": "RU-036/WP-RU036-ACCOUNT-MONEY@2026-09-05T07:07:24.982635+00:00",
+  "packageId": "WP-RU036-ACCOUNT-MONEY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru036/test_acceptance.py::test_native",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:67c19610fa24eb49547ed0a93c9333fd2d8a8e22219cecff07489a093a588700",
+    "machineReportSha256": "sha256:125ad62ac3dba2c3b27dbb31c67d8d326f9d2997d45ee497c51811a0a699e097",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:0d6ecdcfb6878f82f742c0488202614e8870f8827443f36ac2335413a6abb71e",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:28fcab47a903d675584b4716944d8cb3429c01b3b71d2327915455b7f859d016",
+  "releaseUnitId": "RU-036",
+  "releaseUnitHash": "sha256:c7007ee164259041e894328b82de1035ca60bc864c83a924e9788d284e4012a6"
+}

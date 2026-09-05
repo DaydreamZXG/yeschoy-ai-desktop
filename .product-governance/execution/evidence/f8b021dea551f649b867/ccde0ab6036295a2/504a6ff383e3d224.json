@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU034-AS-02",
+  "assertion": "Renderer tests exercise login retry/cancel, persistent state, restore UX and cache pricing.",
+  "testSelector": "tests/work_packages/ru034/test_acceptance.py::test_renderer_login_and_reversible_workbench",
+  "acceptanceCommandId": "ru034-renderer",
+  "runId": "RU-034/WP-RU034-REVERSIBLE-WORKBENCH@2026-09-05T03:28:51.097284+00:00",
+  "packageId": "WP-RU034-REVERSIBLE-WORKBENCH",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-034",
+  "releaseUnitHash": "sha256:a85992b4bde86db36fc67274c433b99866669d5a19cddf153c656cc450464d13"
+}
