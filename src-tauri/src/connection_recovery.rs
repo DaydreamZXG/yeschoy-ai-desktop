@@ -56,6 +56,14 @@ pub(crate) enum Failure {
 }
 type Result<T> = std::result::Result<T, Failure>;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum PendingRecoveryFailure {
+    Load,
+    Files,
+    Credential,
+    Receipt,
+}
+
 pub(crate) struct Store {
     root: PathBuf,
     key: [u8; 32],
@@ -268,6 +276,29 @@ impl Store {
             std::fs::remove_file(path).map_err(|_| Failure::Io)?;
         }
         Ok(())
+    }
+
+    /// Complete only an interrupted transaction for this exact tool. A
+    /// completed baseline remains available for explicit restore and switching.
+    /// The record is removed last so every partial failure stays recoverable.
+    pub(crate) fn recover_pending(
+        &self,
+        tool: &str,
+        clear_credential: impl FnOnce() -> bool,
+    ) -> std::result::Result<bool, PendingRecoveryFailure> {
+        let Some(record) = self.load(tool).map_err(|_| PendingRecoveryFailure::Load)? else {
+            return Ok(false);
+        };
+        if !record.pending {
+            return Ok(false);
+        }
+        restore_files(&record).map_err(|_| PendingRecoveryFailure::Files)?;
+        if !clear_credential() {
+            return Err(PendingRecoveryFailure::Credential);
+        }
+        self.remove(tool)
+            .map_err(|_| PendingRecoveryFailure::Receipt)?;
+        Ok(true)
     }
 
     pub(crate) fn begin(
@@ -825,6 +856,7 @@ mod tests {
             local_gateway_token: None,
             codex_transport: None,
             claude_transport: None,
+            models: vec![],
         }
     }
     fn merged(file: &FileChange, now: Value) -> (Value, bool) {
@@ -1073,6 +1105,79 @@ mod tests {
         for file in first {
             assert_eq!(common::snapshot(&file.path).unwrap(), file.before);
         }
+    }
+    #[test]
+    fn ru054_pending_retry_recovers_once_and_preserves_completed_records() {
+        use std::cell::Cell;
+
+        let f = Fixture::new();
+        let file = f.change(
+            "retry.json",
+            Some(br#"{"model":"old","theme":"dark"}"#),
+            br#"{"model":"new","theme":"dark"}"#,
+        );
+        let pending =
+            f.0.begin(receipt("pi"), std::slice::from_ref(&file), None)
+                .unwrap();
+        common::atomic_write(
+            &file.path,
+            br#"{"model":"new","theme":"light","later":true}"#,
+        )
+        .unwrap();
+        assert!(pending.pending);
+        let clears = Cell::new(0);
+        assert_eq!(
+            f.0.recover_pending("pi", || {
+                clears.set(clears.get() + 1);
+                true
+            }),
+            Ok(true)
+        );
+        assert_eq!(clears.get(), 1);
+        assert!(f.0.load("pi").unwrap().is_none());
+        assert_eq!(
+            document(&file.path, common::snapshot(&file.path).unwrap().as_deref()).unwrap(),
+            json!({"model":"old","theme":"light","later":true})
+        );
+        assert_eq!(f.0.recover_pending("pi", || false), Ok(false));
+
+        let completed_file = f.change(
+            "completed.json",
+            Some(br#"{"model":"old"}"#),
+            br#"{"model":"ready"}"#,
+        );
+        let mut completed =
+            f.0.begin(
+                receipt("claude_code"),
+                std::slice::from_ref(&completed_file),
+                None,
+            )
+            .unwrap();
+        common::atomic_write(&completed_file.path, &completed_file.after).unwrap();
+        f.0.finish(&mut completed).unwrap();
+        assert_eq!(
+            f.0.recover_pending("claude_code", || panic!("completed credential cleared")),
+            Ok(false)
+        );
+        assert_eq!(
+            common::snapshot(&completed_file.path).unwrap(),
+            Some(completed_file.after)
+        );
+        assert!(!f.0.load("claude_code").unwrap().unwrap().pending);
+
+        let failed_file = f.change(
+            "credential.json",
+            Some(br#"{"model":"before"}"#),
+            br#"{"model":"during"}"#,
+        );
+        f.0.begin(receipt("hermes"), std::slice::from_ref(&failed_file), None)
+            .unwrap();
+        common::atomic_write(&failed_file.path, &failed_file.after).unwrap();
+        assert_eq!(
+            f.0.recover_pending("hermes", || false),
+            Err(PendingRecoveryFailure::Credential)
+        );
+        assert!(f.0.load("hermes").unwrap().unwrap().pending);
     }
     #[test]
     fn legacy_cleanup_never_removes_other_claude_mode_or_later_model_endpoint() {

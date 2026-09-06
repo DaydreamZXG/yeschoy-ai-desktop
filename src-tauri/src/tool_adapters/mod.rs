@@ -2,21 +2,20 @@ pub(crate) mod claude_code;
 pub(crate) mod claude_desktop;
 pub(crate) mod codex_desktop;
 pub(crate) mod common;
+pub(crate) mod desktop_launch;
+pub(crate) mod desktop_lifecycle;
 pub(crate) mod dsh_web;
 pub(crate) mod hermes;
 pub(crate) mod openclaw;
 pub(crate) mod pi;
+pub(crate) mod terminal_launch;
 
 use std::path::{Path, PathBuf};
 
 use futures::{stream, StreamExt};
 use serde::Serialize;
 
-use crate::{
-    desktop_app_discovery,
-    tool_discovery::{self, probe_version},
-    tool_discovery_core::ProbeObservation,
-};
+use crate::{desktop_app_discovery, tool_discovery};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum AdapterFailure {
@@ -28,6 +27,7 @@ pub(crate) enum AdapterFailure {
     SecureStorageUnavailable,
     ConfigurationFailed(&'static str),
     LaunchFailed,
+    LaunchError(&'static str),
     VerificationFailed(&'static str),
 }
 
@@ -131,39 +131,28 @@ fn can_attempt(tool_id: &str, installation: &ObservedInstallation) -> bool {
     // not evidence that a configuration contract has changed. The transaction
     // parses/readbacks owned fields and the tool request proves usability.
     match tool_id {
-        "codex_desktop" => codex_desktop::bundled_runtime(&installation.path).is_some(),
-        "claude_desktop" => installation.path.exists(),
+        "codex_desktop" | "claude_desktop" => installation.path.exists(),
         "claude_code" | "pi" | "dsh_web" | "hermes" | "openclaw" => installation.path.is_file(),
         _ => false,
     }
 }
 
 async fn observe_cli(executable: &str) -> Vec<ObservedInstallation> {
-    let candidates = tool_discovery::discover_candidates(executable);
-    stream::iter(candidates.into_iter().take(8))
-        .map(|candidate| async move {
-            match probe_version(&candidate).await {
-                ProbeObservation::Found {
-                    version,
-                    location_hint,
-                } => Some(ObservedInstallation {
-                    path: candidate.path,
-                    version,
-                    location: location_hint.as_str(),
-                }),
-                ProbeObservation::Failed { location_hint }
-                | ProbeObservation::TimedOut { location_hint } => Some(ObservedInstallation {
-                    path: candidate.path,
-                    version: String::new(),
-                    location: location_hint.as_str(),
-                }),
-                ProbeObservation::NotFound | ProbeObservation::MultipleInstallations { .. } => None,
-            }
+    // Activation eligibility is based on the closed path inventory and atomic
+    // configuration readback, never on `--version` output. Starting five
+    // third-party CLIs here could add up to minutes of cold-start time before
+    // the beginner could even choose an app, so this scan remains read-only
+    // and process-free. Exact version diagnostics remain available through the
+    // dedicated tool discovery command.
+    tool_discovery::discover_candidates(executable)
+        .into_iter()
+        .take(8)
+        .map(|candidate| ObservedInstallation {
+            path: candidate.path,
+            version: String::new(),
+            location: candidate.location_hint.as_str(),
         })
-        .buffered(2)
-        .filter_map(|item| async move { item })
         .collect()
-        .await
 }
 
 async fn observe(tool_id: &str) -> Vec<ObservedInstallation> {
@@ -336,5 +325,23 @@ mod tests {
         };
         assert!(!can_attempt("pi", &disappeared));
         let _ = std::fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn discovered_codex_desktop_does_not_require_an_unused_bundled_cli() {
+        let directory = common::temporary_working_directory("codex-without-cli").unwrap();
+        let app = directory.join("Codex.app");
+        std::fs::create_dir(&app).unwrap();
+        let installation = ObservedInstallation {
+            path: app,
+            version: String::new(),
+            location: "applications",
+        };
+        assert!(can_attempt("codex_desktop", &installation));
+        assert!(projections("codex_desktop", &[installation])[0].supported);
+        assert!(!directory
+            .join("Codex.app/Contents/Resources/codex")
+            .exists());
+        std::fs::remove_dir_all(directory).unwrap();
     }
 }

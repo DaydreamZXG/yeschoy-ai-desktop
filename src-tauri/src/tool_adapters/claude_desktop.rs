@@ -41,6 +41,8 @@ pub(crate) struct Prepared {
     profile_path: PathBuf,
     meta_path: PathBuf,
     model: String,
+    model_ids: Vec<String>,
+    modern: bool,
     local_token: String,
 }
 
@@ -98,6 +100,24 @@ fn profile_config(model: &str, local_token: &str) -> Result<Vec<u8>, ()> {
             "supports1m": false
         }]
     }))
+}
+
+fn profile_catalog(model: &str, local_token: &str, model_ids: &[String]) -> Result<Vec<u8>, ()> {
+    let mut profile: Value =
+        serde_json::from_slice(&profile_config(model, local_token)?).map_err(|_| ())?;
+    // The configured default leads the vendor list. Claude Desktop validates
+    // the gateway route shape, while labelOverride preserves the real account
+    // model identity for the user.
+    let ordered = std::iter::once(model).chain(
+        model_ids
+            .iter()
+            .map(String::as_str)
+            .filter(|id| *id != model),
+    );
+    profile["inferenceModels"] = json!(ordered
+        .map(|id| json!({"name":crate::tool_model_profile::claude_gateway_route_id(id),"labelOverride":crate::tool_model_profile::display_name(id),"supports1m":false}))
+        .collect::<Vec<_>>());
+    pretty(&profile)
 }
 
 fn meta_config(existing: Option<&[u8]>) -> Result<Vec<u8>, ()> {
@@ -162,6 +182,32 @@ pub(crate) fn prepare(
     model: &str,
     existing_local_token: Option<&str>,
 ) -> Result<Prepared, AdapterFailure> {
+    prepare_inner(
+        home,
+        model,
+        existing_local_token,
+        &[model.to_owned()],
+        false,
+    )
+}
+
+pub(crate) fn prepare_catalog(
+    home: &Path,
+    model: &str,
+    existing_local_token: Option<&str>,
+    model_ids: &[String],
+) -> Result<Prepared, AdapterFailure> {
+    crate::chat_gateway::validate_catalog(model, model_ids)?;
+    prepare_inner(home, model, existing_local_token, model_ids, true)
+}
+
+fn prepare_inner(
+    home: &Path,
+    model: &str,
+    existing_local_token: Option<&str>,
+    model_ids: &[String],
+    modern: bool,
+) -> Result<Prepared, AdapterFailure> {
     let (normal_config_path, threep_config_path, profile_path, meta_path) = current_paths(home)?;
     let normal_before = common::snapshot(&normal_config_path)
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_read_failed"))?;
@@ -195,8 +241,12 @@ pub(crate) fn prepare(
         .push_with_snapshot(
             profile_path.clone(),
             profile_before,
-            profile_config(model, &local_token)
-                .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?,
+            if modern {
+                profile_catalog(model, &local_token, model_ids)
+            } else {
+                profile_config(model, &local_token)
+            }
+            .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?,
         )
         .map_err(config_error)?;
     transaction
@@ -214,6 +264,8 @@ pub(crate) fn prepare(
         profile_path,
         meta_path,
         model: model.to_owned(),
+        model_ids: model_ids.to_vec(),
+        modern,
         local_token,
     })
 }
@@ -223,16 +275,16 @@ impl Prepared {
         self.transaction.changes()
     }
 
-    pub(crate) fn local_token(&self) -> &str {
-        &self.local_token
-    }
-
     pub(crate) fn commit(&mut self) -> Result<(), AdapterFailure> {
         self.transaction.commit().map_err(config_error)?;
-        self.validate_existing()
+        self.validate_readback(true)
     }
 
     pub(crate) fn validate_existing(&self) -> Result<(), AdapterFailure> {
+        self.validate_readback(false)
+    }
+
+    fn validate_readback(&self, strict_default: bool) -> Result<(), AdapterFailure> {
         let normal: Value = serde_json::from_slice(
             &common::snapshot(&self.normal_config_path)
                 .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_readback_failed"))?
@@ -269,8 +321,40 @@ impl Prepared {
             && threep["deploymentMode"].as_str() == Some("3p")
             && profile["inferenceGatewayBaseUrl"].as_str() == Some(PROXY_BASE)
             && profile["inferenceGatewayApiKey"].as_str() == Some(&self.local_token)
-            && profile["inferenceModels"][0]["name"].as_str() == Some(SAFE_ROUTE_MODEL)
-            && profile["inferenceModels"][0]["labelOverride"].as_str() == Some(&self.model)
+            && (if self.modern {
+                let route_ids = self
+                    .model_ids
+                    .iter()
+                    .map(|id| crate::tool_model_profile::claude_gateway_route_id(id))
+                    .collect::<Vec<_>>();
+                crate::chat_gateway::catalog_matches(
+                    &profile["inferenceModels"],
+                    Some("name"),
+                    &route_ids,
+                ) && profile["inferenceModels"].as_array().is_some_and(|models| {
+                    models.iter().all(|model| {
+                        model["name"].as_str().is_some_and(|route| {
+                            self.model_ids
+                                .iter()
+                                .find(|id| {
+                                    crate::tool_model_profile::claude_gateway_route_id(id) == route
+                                })
+                                .is_some_and(|id| {
+                                    model["labelOverride"].as_str()
+                                        == Some(crate::tool_model_profile::display_name(id))
+                                })
+                        })
+                    })
+                }) && crate::chat_gateway::default_matches(
+                    profile["inferenceModels"][0]["name"].as_str(),
+                    &crate::tool_model_profile::claude_gateway_route_id(&self.model),
+                    &route_ids,
+                    strict_default,
+                )
+            } else {
+                profile["inferenceModels"][0]["name"].as_str() == Some(SAFE_ROUTE_MODEL)
+                    && profile["inferenceModels"][0]["labelOverride"].as_str() == Some(&self.model)
+            })
             && meta["appliedId"].as_str() == Some(PROFILE_ID);
         if correct {
             Ok(())
@@ -354,31 +438,101 @@ pub(crate) async fn resume_if_configured(state: ClaudeDesktopRuntimeState) {
     }
 }
 
-#[cfg(target_os = "macos")]
 pub(crate) fn launch(path: &Path) -> Result<(), AdapterFailure> {
-    std::process::Command::new("/usr/bin/open")
-        .arg(path)
-        .spawn()
-        .map(|_| ())
-        .map_err(|_| AdapterFailure::LaunchFailed)
-}
-
-#[cfg(target_os = "windows")]
-pub(crate) fn launch(path: &Path) -> Result<(), AdapterFailure> {
-    std::process::Command::new(path)
-        .spawn()
-        .map(|_| ())
-        .map_err(|_| AdapterFailure::LaunchFailed)
-}
-
-#[cfg(not(any(target_os = "macos", target_os = "windows")))]
-pub(crate) fn launch(_path: &Path) -> Result<(), AdapterFailure> {
-    Err(AdapterFailure::UnsupportedProfile)
+    super::desktop_launch::launch("claude_desktop", path)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ru042_claude_desktop_profile_real_identity_and_default_order_are_verified() {
+        let home = common::temporary_working_directory("claude-desktop-model-set").unwrap();
+        let normal_config_path = home.join("normal.json");
+        let threep_config_path = home.join("threep.json");
+        let profile_path = home.join("profile.json");
+        let meta_path = home.join("meta.json");
+        let ids = vec!["model-b".into(), "model-a".into()];
+        let token = "synthetic-local-token";
+        let mut transaction = FileTransaction::stage_with_snapshot(
+            normal_config_path.clone(),
+            None,
+            deployment_config(None).unwrap(),
+        )
+        .unwrap();
+        transaction
+            .push(threep_config_path.clone(), deployment_config(None).unwrap())
+            .unwrap();
+        transaction
+            .push(
+                profile_path.clone(),
+                profile_catalog("model-a", token, &ids).unwrap(),
+            )
+            .unwrap();
+        transaction
+            .push(meta_path.clone(), meta_config(None).unwrap())
+            .unwrap();
+        let mut prepared = Prepared {
+            transaction,
+            normal_config_path,
+            threep_config_path,
+            profile_path: profile_path.clone(),
+            meta_path,
+            model: "model-a".into(),
+            model_ids: ids,
+            modern: true,
+            local_token: token.into(),
+        };
+        prepared.commit().unwrap();
+        let mut profile: Value =
+            serde_json::from_slice(&std::fs::read(&profile_path).unwrap()).unwrap();
+        let first_route = crate::tool_model_profile::claude_gateway_route_id("model-a");
+        assert_eq!(profile["inferenceModels"][0]["name"], first_route);
+        assert_eq!(profile["inferenceModels"][0]["labelOverride"], "model-a");
+        for row in profile["inferenceModels"].as_array().unwrap() {
+            let route = row["name"].as_str().unwrap();
+            assert!(route.starts_with("anthropic/claude-router-"));
+            assert!(!route.contains("model-"));
+            assert_ne!(route, SAFE_ROUTE_MODEL);
+        }
+        profile["inferenceModels"]
+            .as_array_mut()
+            .unwrap()
+            .swap(0, 1);
+        std::fs::write(&profile_path, serde_json::to_vec(&profile).unwrap()).unwrap();
+        assert!(prepared.validate_existing().is_ok());
+        assert!(prepared.validate_readback(true).is_err());
+        profile["inferenceModels"][0]["name"] = "anthropic/claude-router-not-enrolled".into();
+        std::fs::write(&profile_path, serde_json::to_vec(&profile).unwrap()).unwrap();
+        assert!(prepared.validate_existing().is_err());
+        std::fs::remove_dir_all(home).unwrap();
+    }
+
+    #[test]
+    fn ru054_claude_desktop_catalog_uses_safe_routes_with_real_labels() {
+        ru042_claude_desktop_profile_real_identity_and_default_order_are_verified();
+    }
+
+    #[test]
+    fn ru056_claude_desktop_known_models_unlock_native_effort_without_fake_labels() {
+        let ids = vec!["deepseek-v4-flash".into(), "gpt-6-astra".into()];
+        let bytes = profile_catalog("deepseek-v4-flash", "synthetic-token", &ids).unwrap();
+        let profile: Value = serde_json::from_slice(&bytes).unwrap();
+        let deepseek = &profile["inferenceModels"][0];
+        let astra = &profile["inferenceModels"][1];
+        assert!(deepseek["name"]
+            .as_str()
+            .unwrap()
+            .starts_with("claude-sonnet-4-6-v"));
+        assert_eq!(deepseek["labelOverride"], "DeepSeek V4 Flash");
+        assert!(astra["name"]
+            .as_str()
+            .unwrap()
+            .starts_with("claude-opus-5-v"));
+        assert_eq!(astra["labelOverride"], "GPT-6 Astra");
+        assert_ne!(deepseek["name"], astra["name"]);
+    }
 
     #[test]
     fn profile_uses_local_token_and_safe_route_not_upstream_key() {

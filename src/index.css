@@ -1,4 +1,129 @@
 /* RU-012: one visual system for the official desktop workbench. */
+.model-picker-identity {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.model-picker-identity strong,
+.model-options strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+.model-picker-identity strong + code,
+.model-options strong + code {
+  margin-top: 3px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.connection-last-result {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.connection-last-result summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+.model-set-editor,
+.recent-request {
+  margin-top: 20px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.model-set-editor header,
+.recent-request header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.model-set-editor h3,
+.recent-request strong {
+  font-size: 14px;
+  font-weight: 650;
+}
+.model-set-editor p,
+.recent-request p {
+  margin: 7px 0;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.model-set-editor ul,
+.model-set-summary ul {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+}
+.model-set-editor li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+.model-set-editor label {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  cursor: pointer;
+}
+.model-set-editor code,
+.model-set-summary code,
+.recent-request code {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.model-set-editor small,
+.model-set-summary small,
+.recent-request small {
+  display: block;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+.model-set-editor li[data-unavailable="true"] small {
+  color: var(--warning);
+}
+.model-default-label {
+  font-size: 11px;
+  color: var(--accent);
+}
+.model-set-editor input[type="radio"] {
+  accent-color: var(--accent);
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+}
+.model-set-editor label > span {
+  flex: 1;
+  min-width: 0;
+}
+.model-set-summary {
+  width: 100%;
+}
+.model-set-summary li {
+  margin-top: 10px;
+}
+.request-outcome {
+  font-weight: 600;
+  color: var(--warning);
+}
+.request-outcome[data-outcome="ok"] {
+  color: var(--success);
+}
+@media (max-width: 680px) {
+  .model-set-editor header {
+    flex-direction: column;
+  }
+}
 :root {
   color-scheme: light;
   --font-ui:

@@ -8,7 +8,12 @@ import {
   type ReactNode,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { ACTIVATION_TOOL_IDS, type ActivationToolId } from "./activation";
+import {
+  ACTIVATION_TOOL_IDS,
+  decodeModelBindings,
+  type ModelBinding,
+  type ActivationToolId,
+} from "./activation";
 import type { ConfigurationLineId } from "./preview";
 import { openConnection, type OpenStatus } from "./launchApi";
 
@@ -28,10 +33,27 @@ export interface ToolConnection {
   restoreMode: "original" | "remove_yeschoy" | "none";
   requiresBackground: boolean;
   reasonCode: string;
+  models?: ModelBinding[];
+  lastRequest?: RequestObservation;
+}
+export interface RequestObservation {
+  modelId: string;
+  billingGroup: string;
+  lineId: ConfigurationLineId;
+  outcome:
+    | "ok"
+    | "timeout"
+    | "network_error"
+    | "upstream_error"
+    | "invalid_response"
+    | "stream_interrupted"
+    | "unknown_model";
+  httpStatus: number;
+  observedAtEpochMs: number;
 }
 export interface ConnectionResponse {
   requestId: string;
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   status: "ok" | "restored" | "restored_with_changes" | "recovery_failed";
   connections: ToolConnection[];
   reasonCode: string;
@@ -59,7 +81,7 @@ export function decodeConnections(
       "reasonCode",
     ]) ||
     value.requestId !== requestId ||
-    value.schemaVersion !== 1 ||
+    ![1, 2].includes(Number(value.schemaVersion)) ||
     !["ok", "restored", "restored_with_changes", "recovery_failed"].includes(
       String(value.status),
     ) ||
@@ -81,6 +103,10 @@ export function decodeConnections(
         "restoreMode",
         "requiresBackground",
         "reasonCode",
+        ...(value.schemaVersion === 2 ? ["models"] : []),
+        ...(value.schemaVersion === 2 && "lastRequest" in c
+          ? ["lastRequest"]
+          : []),
       ]) ||
       !ACTIVATION_TOOL_IDS.includes(c.toolId as ActivationToolId) ||
       ![
@@ -100,12 +126,44 @@ export function decodeConnections(
       !text(c.reasonCode, 80) ||
       !Number.isSafeInteger(c.updatedAtEpochMs) ||
       Number(c.updatedAtEpochMs) < 0 ||
-      typeof c.requiresBackground !== "boolean"
+      typeof c.requiresBackground !== "boolean" ||
+      (value.schemaVersion === 2 && !decodeModelBindings(c.models)) ||
+      ("lastRequest" in c && !validObservation(c.lastRequest))
     )
       return null;
   }
   if (new Set(value.connections.map((c) => c.toolId)).size !== 7) return null;
   return value as unknown as ConnectionResponse;
+}
+function validObservation(v: unknown): v is RequestObservation {
+  return (
+    object(v) &&
+    keys(v, [
+      "modelId",
+      "billingGroup",
+      "lineId",
+      "outcome",
+      "httpStatus",
+      "observedAtEpochMs",
+    ]) &&
+    text(v.modelId, 200) &&
+    text(v.billingGroup, 128) &&
+    ["mainland_optimized", "global_accelerated"].includes(String(v.lineId)) &&
+    [
+      "ok",
+      "timeout",
+      "network_error",
+      "upstream_error",
+      "invalid_response",
+      "stream_interrupted",
+      "unknown_model",
+    ].includes(String(v.outcome)) &&
+    Number.isInteger(v.httpStatus) &&
+    Number(v.httpStatus) >= 0 &&
+    Number(v.httpStatus) <= 599 &&
+    Number.isSafeInteger(v.observedAtEpochMs) &&
+    Number(v.observedAtEpochMs) >= 0
+  );
 }
 let sequence = 0;
 async function manage(

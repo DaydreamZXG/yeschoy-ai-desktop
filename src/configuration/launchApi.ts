@@ -1,10 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { ActivationToolId } from "./activation";
+import { ACTIVATION_TOOL_IDS, type ActivationToolId } from "./activation";
 
-export const OPENABLE_TOOLS = [
-  "claude_desktop",
-  "codex_desktop",
-  "dsh_web",
+export const OPENABLE_TOOLS = ACTIVATION_TOOL_IDS;
+export const TERMINAL_TOOLS = [
+  "claude_code",
+  "pi",
+  "hermes",
+  "openclaw",
 ] as const;
 export const OPEN_STATUSES = [
   "opened",

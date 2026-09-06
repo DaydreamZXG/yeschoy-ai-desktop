@@ -6,7 +6,11 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use tokio::{io::AsyncReadExt, process::Command, time::timeout};
+use tokio::{
+    io::{AsyncRead, AsyncReadExt},
+    process::Command,
+    time::timeout,
+};
 
 const MAX_CONFIG_BYTES: u64 = 2 * 1024 * 1024;
 const MAX_PROCESS_OUTPUT_BYTES: u64 = 256 * 1024;
@@ -324,51 +328,88 @@ pub(crate) struct ProcessResult {
     pub(crate) stderr: Vec<u8>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum ProcessFailure {
+    Start,
+    TimedOut,
+    Wait,
+    OutputRead,
+    OutputLimit,
+}
+
+impl ProcessFailure {
+    pub(crate) fn reason_code(self) -> &'static str {
+        match self {
+            Self::Start => "tool_start_failed",
+            Self::TimedOut => "tool_request_timed_out",
+            Self::Wait => "tool_wait_failed",
+            Self::OutputRead => "tool_output_read_failed",
+            Self::OutputLimit => "tool_output_limit_exceeded",
+        }
+    }
+}
+
+async fn read_process_output(reader: impl AsyncRead + Unpin) -> Result<Vec<u8>, ProcessFailure> {
+    let mut bytes = Vec::new();
+    reader
+        .take(MAX_PROCESS_OUTPUT_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .await
+        .map_err(|_| ProcessFailure::OutputRead)?;
+    if bytes.len() as u64 > MAX_PROCESS_OUTPUT_BYTES {
+        return Err(ProcessFailure::OutputLimit);
+    }
+    Ok(bytes)
+}
+
+// Pi print mode, Hermes -z and DSH headless document stdout as final assistant
+// text only. Accept the independent reply, never a banner, help or prompt echo.
+pub(crate) fn verification_reply(stdout: &[u8]) -> bool {
+    std::str::from_utf8(stdout).is_ok_and(|text| text.trim() == "YESCHOY_OK")
+}
+
 pub(crate) async fn run_bounded(
     mut command: Command,
     duration: Duration,
-) -> Result<ProcessResult, ()> {
+) -> Result<ProcessResult, ProcessFailure> {
     command
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .kill_on_drop(true);
-    let mut child = command.spawn().map_err(|_| ())?;
-    let stdout = child.stdout.take().ok_or(())?;
-    let stderr = child.stderr.take().ok_or(())?;
-    let stdout_task = tokio::spawn(async move {
-        let mut bytes = Vec::new();
-        stdout
-            .take(MAX_PROCESS_OUTPUT_BYTES)
-            .read_to_end(&mut bytes)
-            .await
-            .map(|_| bytes)
-    });
-    let stderr_task = tokio::spawn(async move {
-        let mut bytes = Vec::new();
-        stderr
-            .take(MAX_PROCESS_OUTPUT_BYTES)
-            .read_to_end(&mut bytes)
-            .await
-            .map(|_| bytes)
-    });
-
-    let status = match timeout(duration, child.wait()).await {
-        Ok(Ok(status)) => status,
-        Ok(Err(_)) => return Err(()),
-        Err(_) => {
-            let _ = child.kill().await;
-            let _ = child.wait().await;
-            return Err(());
-        }
-    };
-    let stdout = stdout_task.await.map_err(|_| ())?.map_err(|_| ())?;
-    let stderr = stderr_task.await.map_err(|_| ())?.map_err(|_| ())?;
-    Ok(ProcessResult {
-        success: status.success(),
-        stdout,
-        stderr,
+    let mut child = command.spawn().map_err(|_| ProcessFailure::Start)?;
+    let stdout = child.stdout.take().ok_or(ProcessFailure::OutputRead)?;
+    let stderr = child.stderr.take().ok_or(ProcessFailure::OutputRead)?;
+    // Own all three futures here. Dropping this future cancels both pipe reads;
+    // no detached reader tasks survive an error, deadline or caller cancellation.
+    // The deadline includes EOF even if a child exits while descendants retain
+    // its pipes. Output limits fail instead of accepting a truncated response.
+    let observed = timeout(duration, async {
+        let (status, stdout, stderr) = tokio::try_join!(
+            async { child.wait().await.map_err(|_| ProcessFailure::Wait) },
+            read_process_output(stdout),
+            read_process_output(stderr),
+        )?;
+        Ok::<_, ProcessFailure>(ProcessResult {
+            success: status.success(),
+            stdout,
+            stderr,
+        })
     })
+    .await;
+    match observed {
+        Ok(Ok(result)) => Ok(result),
+        failure => {
+            // Nonblocking kill plus kill_on_drop uses Tokio's child reaper. Do
+            // not add an unbounded wait after the verification deadline.
+            let _ = child.start_kill();
+            match failure {
+                Ok(Err(error)) => Err(error),
+                Err(_) => Err(ProcessFailure::TimedOut),
+                Ok(Ok(_)) => unreachable!(),
+            }
+        }
+    }
 }
 
 pub(crate) fn temporary_working_directory(label: &str) -> io::Result<PathBuf> {
@@ -390,9 +431,148 @@ pub(crate) fn temporary_working_directory(label: &str) -> io::Result<PathBuf> {
     ))
 }
 
+#[cfg(all(test, unix))]
+pub(crate) mod test_support {
+    use super::*;
+    use std::os::unix::fs::PermissionsExt;
+
+    pub(crate) struct Script {
+        directory: PathBuf,
+        pub(crate) path: PathBuf,
+    }
+
+    impl Script {
+        pub(crate) fn new(body: &str) -> Self {
+            let directory = temporary_working_directory("synthetic-cli").unwrap();
+            let path = directory.join("fixture-cli");
+            fs::write(&path, format!("#!/bin/sh\n{body}\n")).unwrap();
+            fs::set_permissions(&path, fs::Permissions::from_mode(0o700)).unwrap();
+            Self { directory, path }
+        }
+
+        pub(crate) fn installation(&self) -> super::super::ResolvedInstallation {
+            super::super::ResolvedInstallation {
+                path: self.path.clone(),
+            }
+        }
+
+        pub(crate) fn command(&self) -> Command {
+            Command::new(&self.path)
+        }
+    }
+
+    impl Drop for Script {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.directory);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn bounded_process_distinguishes_start_exit_timeout_and_output_limit() {
+        use test_support::Script;
+        let success = Script::new("printf 'YESCHOY_OK\\n'; printf 'synthetic diagnostic\\n' >&2");
+        let result = run_bounded(success.command(), Duration::from_secs(2))
+            .await
+            .unwrap();
+        assert!(result.success && verification_reply(&result.stdout));
+        assert_eq!(result.stderr, b"synthetic diagnostic\n");
+
+        let failure = Script::new("printf 'YESCHOY_OK\\n'; exit 17");
+        assert!(
+            !run_bounded(failure.command(), Duration::from_secs(2))
+                .await
+                .unwrap()
+                .success
+        );
+        let missing = Command::new(success.path.with_file_name("does-not-exist"));
+        assert_eq!(
+            run_bounded(missing, Duration::from_secs(2))
+                .await
+                .unwrap_err(),
+            ProcessFailure::Start
+        );
+
+        let stalled = Script::new("exec /bin/sleep 2");
+        assert_eq!(
+            run_bounded(stalled.command(), Duration::from_millis(30))
+                .await
+                .unwrap_err(),
+            ProcessFailure::TimedOut
+        );
+        let flooded = Script::new("head -c 262145 /dev/zero");
+        assert_eq!(
+            run_bounded(flooded.command(), Duration::from_secs(2))
+                .await
+                .unwrap_err(),
+            ProcessFailure::OutputLimit
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn bounded_process_deadline_includes_pipes_retained_after_parent_exit() {
+        let script = test_support::Script::new("/bin/sleep 0.4 &\nexit 0");
+        let result = timeout(
+            Duration::from_millis(300),
+            run_bounded(script.command(), Duration::from_millis(30)),
+        )
+        .await;
+        assert_eq!(
+            result
+                .expect("must not wait for the inherited pipe")
+                .unwrap_err(),
+            ProcessFailure::TimedOut
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn cancelling_bounded_process_reaps_its_owned_child() {
+        let script = test_support::Script::new(
+            "printf '%s' $$ > \"$YESCHOY_TEST_PID_FILE\"\nexec /bin/sleep 10",
+        );
+        let marker = script.path.with_file_name("pid");
+        let mut command = script.command();
+        command.env("YESCHOY_TEST_PID_FILE", &marker);
+        let pending = tokio::spawn(run_bounded(command, Duration::from_secs(20)));
+        let pid = timeout(Duration::from_secs(2), async {
+            loop {
+                if let Ok(value) = fs::read_to_string(&marker) {
+                    if let Ok(pid) = value.parse::<u32>() {
+                        break pid;
+                    }
+                }
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+        })
+        .await
+        .unwrap();
+        pending.abort();
+        assert!(pending.await.unwrap_err().is_cancelled());
+        timeout(Duration::from_secs(2), async {
+            loop {
+                let status = Command::new("/bin/kill")
+                    .args(["-0", &pid.to_string()])
+                    .stdout(Stdio::null())
+                    .stderr(Stdio::null())
+                    .status()
+                    .await
+                    .unwrap();
+                if !status.success() {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+        })
+        .await
+        .expect("cancelled verification child must be reaped");
+    }
 
     #[test]
     fn transaction_preserves_unrelated_bytes_and_rolls_back() {

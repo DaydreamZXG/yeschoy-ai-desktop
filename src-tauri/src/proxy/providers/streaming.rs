@@ -163,7 +163,6 @@ pub fn create_anthropic_sse_stream<E: std::error::Error + Send + 'static>(
         // 2) pending_message_delta: 缓存延迟到 [DONE] 发送，确保 usage 完整
         let mut has_emitted_message_delta = false;
         let mut pending_message_delta: Option<(Option<String>, Option<Value>)> = None;
-        let mut has_sent_message_stop = false;
         let mut stream_ended_with_error = false;
         let mut latest_usage: Option<Value> = None;
         let mut current_non_tool_block_type: Option<&'static str> = None;
@@ -181,17 +180,26 @@ pub fn create_anthropic_sse_stream<E: std::error::Error + Send + 'static>(
                         &mut utf8_remainder,
                         &bytes,
                     );
+                    if buffer.len() > crate::request_diagnostics::MAX_EVENT_BYTES {
+                        yield Ok(crate::request_diagnostics::sse_error(crate::request_diagnostics::StreamProtocol::Anthropic, crate::request_diagnostics::RequestOutcome::InvalidResponse));
+                        return;
+                    }
 
                     while let Some(line) = take_sse_block(&mut buffer) {
                         if line.trim().is_empty() {
                             continue;
                         }
 
+                        let is_error_event = line.lines().any(|l| strip_sse_field(l, "event").is_some_and(|event| event.trim() == "error"));
                         for l in line.lines() {
                             if let Some(data) = strip_sse_field(l, "data") {
                                 if data.trim() == "[DONE]" {
                                     log::debug!("[Claude/OpenRouter] <<< OpenAI SSE: [DONE]");
 
+                                    if !has_sent_message_start || (!has_emitted_message_delta && pending_message_delta.is_none()) {
+                                        yield Ok(crate::request_diagnostics::sse_error(crate::request_diagnostics::StreamProtocol::Anthropic, crate::request_diagnostics::RequestOutcome::StreamInterrupted));
+                                        return;
+                                    }
                                     // 流正常结束，发出缓存的 message_delta（含完整 usage）。
                                     if let Some((stop_reason, usage_json)) = pending_message_delta.take() {
                                         let event = build_message_delta_event(stop_reason, usage_json);
@@ -206,8 +214,19 @@ pub fn create_anthropic_sse_stream<E: std::error::Error + Send + 'static>(
                                         serde_json::to_string(&event).unwrap_or_default());
                                     log::debug!("[Claude/OpenRouter] >>> Anthropic SSE: message_stop");
                                     yield Ok(Bytes::from(sse_data));
-                                    has_sent_message_stop = true;
-                                    continue;
+                                    return;
+                                }
+
+                                let raw = match serde_json::from_str::<Value>(data) {
+                                    Ok(value) if value.is_object() => value,
+                                    _ => {
+                                        yield Ok(crate::request_diagnostics::sse_error(crate::request_diagnostics::StreamProtocol::Anthropic, crate::request_diagnostics::RequestOutcome::InvalidResponse));
+                                        return;
+                                    }
+                                };
+                                if is_error_event || raw.get("error").is_some() || raw["type"] == "error" {
+                                    yield Ok(crate::request_diagnostics::sse_error(crate::request_diagnostics::StreamProtocol::Anthropic, crate::request_diagnostics::RequestOutcome::UpstreamError));
+                                    return;
                                 }
 
                                 if let Ok(chunk) = serde_json::from_str::<OpenAIStreamChunk>(data) {
@@ -631,23 +650,19 @@ pub fn create_anthropic_sse_stream<E: std::error::Error + Send + 'static>(
                     }
                 }
                 Err(e) => {
-                    log::error!("Stream error: {e}");
+                    log::warn!("Provider stream interrupted");
                     stream_ended_with_error = true;
-                    let error_event = json!({
-                        "type": "error",
-                        "error": {
-                            "type": "stream_error",
-                            "message": format!("Stream error: {e}")
-                        }
-                    });
-                    let sse_data = format!("event: error\ndata: {}\n\n",
-                        serde_json::to_string(&error_event).unwrap_or_default());
-                    yield Ok(Bytes::from(sse_data));
+                    let outcome = if crate::request_diagnostics::transport_outcome(&e) == crate::request_diagnostics::RequestOutcome::Timeout { crate::request_diagnostics::RequestOutcome::Timeout } else { crate::request_diagnostics::RequestOutcome::StreamInterrupted };
+                    yield Ok(crate::request_diagnostics::sse_error(crate::request_diagnostics::StreamProtocol::Anthropic, outcome));
                     break;
                 }
             }
         }
 
+        if !stream_ended_with_error && (!buffer.trim().is_empty() || !utf8_remainder.is_empty()) {
+            yield Ok(crate::request_diagnostics::sse_error(crate::request_diagnostics::StreamProtocol::Anthropic, crate::request_diagnostics::RequestOutcome::StreamInterrupted));
+            return;
+        }
         // 流自然结束但未收到 [DONE] 时，确保发送缓存的 message_delta 和 message_stop。
         // 若上游已显式报错，则只保留 error 事件，避免把失败伪装成成功完成。
         if !stream_ended_with_error {
@@ -664,12 +679,14 @@ pub fn create_anthropic_sse_stream<E: std::error::Error + Send + 'static>(
                 false
             };
 
-            if emitted_pending_message_delta && !has_sent_message_stop {
+            if emitted_pending_message_delta {
                 let event = json!({"type": "message_stop"});
                 let sse_data = format!("event: message_stop\ndata: {}\n\n",
                     serde_json::to_string(&event).unwrap_or_default());
                 log::debug!("[Claude/OpenRouter] >>> Anthropic SSE: message_stop (at stream end)");
                 yield Ok(Bytes::from(sse_data));
+            } else {
+                yield Ok(crate::request_diagnostics::sse_error(crate::request_diagnostics::StreamProtocol::Anthropic, crate::request_diagnostics::RequestOutcome::StreamInterrupted));
             }
         }
     }
@@ -750,6 +767,20 @@ mod tests {
 
     fn event_type(event: &Value) -> Option<&str> {
         event.get("type").and_then(|v| v.as_str())
+    }
+
+    #[tokio::test]
+    async fn ru042_claude_error_done_and_partial_frames_do_not_complete() {
+        for input in [
+            "data: {\"error\":{\"message\":\"synthetic-secret\"}}\n\ndata: [DONE]\n\n",
+            "data: [DONE]\n\n",
+            "data: {\"id\":\"c\",\"model\":\"m\",\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: {\"unfinished\":",
+        ] {
+            let events = collect_anthropic_events(input).await;
+            assert!(events.iter().any(|event| event_type(event) == Some("error")));
+            assert!(!events.iter().any(|event| event_type(event) == Some("message_stop")));
+            assert!(!serde_json::to_string(&events).unwrap().contains("synthetic-secret"));
+        }
     }
 
     #[test]

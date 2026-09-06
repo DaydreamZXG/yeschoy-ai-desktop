@@ -163,11 +163,6 @@ export function ModelsView({
             {selected && (
               <>
                 <code className="selected-price-model">{selected.id}</code>
-                {selected.description && (
-                  <p className="selected-model-description">
-                    {selected.description}
-                  </p>
-                )}
                 <BillingGroupPicker
                   model={selected}
                   selected={billingGroup}

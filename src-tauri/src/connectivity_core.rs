@@ -38,6 +38,7 @@ pub enum ConnectivityStatus {
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ConnectivityReasonCode {
+    #[serde(rename = "tcp_443_reachable")]
     Tcp443Reachable,
     DnsResolutionFailed,
     TcpConnectionFailed,
@@ -70,7 +71,7 @@ mod tests {
     use super::{request_id_is_valid, CONNECTIVITY_LINES};
 
     #[test]
-    fn catalog_is_exact_and_fixed_to_tls_port() {
+    fn diagnostics_contract_catalog_is_exact_and_fixed_to_tls_port() {
         assert_eq!(CONNECTIVITY_LINES.len(), 2);
         assert_eq!(CONNECTIVITY_LINES[0].host, "yeschoy.com");
         assert_eq!(CONNECTIVITY_LINES[1].host, "api.yeschoy.com");
@@ -81,10 +82,12 @@ mod tests {
     }
 
     #[test]
-    fn request_id_rejects_network_or_path_input() {
+    fn diagnostics_contract_request_id_rejects_network_or_path_input() {
         assert!(request_id_is_valid("line-abc_123"));
         assert!(!request_id_is_valid("https://example.com"));
         assert!(!request_id_is_valid("../secret"));
         assert!(!request_id_is_valid(""));
+        assert!(request_id_is_valid(&"a".repeat(64)));
+        assert!(!request_id_is_valid(&"a".repeat(65)));
     }
 }

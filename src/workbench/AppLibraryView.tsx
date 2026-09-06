@@ -20,6 +20,7 @@ import { connectionLabel, useConnections } from "../configuration/connections";
 import { RestoreConnection } from "../configuration/RestoreConnection";
 import { OpenConnection } from "../configuration/OpenConnection";
 import { groupLabel } from "../configuration/BillingGroupPicker";
+import { RecentRequest } from "../configuration/RecentRequest";
 
 interface Props {
   onOpenAccount: () => void;
@@ -86,6 +87,8 @@ export function AppLibraryView({
       showAllApps ||
       !scan ||
       scanError ||
+      (detected === 0 &&
+        ["claude_desktop", "codex_desktop"].includes(app.id)) ||
       scan.targets.find((target) => target.toolId === app.id)?.status !==
         "not_found" ||
       connections?.connections.some(
@@ -106,7 +109,7 @@ export function AppLibraryView({
           <p>
             {configured
               ? "从这里打开应用，接着上次的工作。"
-              : "先选这台电脑上的应用，再连接你想用的模型。"}
+              : "选一个应用，安装并连接你想用的模型。"}
           </p>
         </div>
         <button
@@ -239,7 +242,11 @@ export function AppLibraryView({
               <div className="connection-card-body">
                 {active ? (
                   <>
-                    <span className="field-caption">当前模型</span>
+                    <span className="field-caption">
+                      {connection.models?.length
+                        ? "接入时默认模型"
+                        : "当前模型"}
+                    </span>
                     <code className="connection-model">
                       {connection.modelId || "待确认"}
                     </code>
@@ -266,13 +273,31 @@ export function AppLibraryView({
                             ? "使用时请保持野菜助手运行。"
                             : "设置已保存；可随时换回原来的服务。"}
                     </p>
+                    {(connection.models?.length ?? 0) > 1 && (
+                      <p className="connection-footnote">
+                        已配置 {connection.models!.length}{" "}
+                        个常用模型，可在应用内切换。
+                      </p>
+                    )}
+                    {connection.lastRequest && (
+                      <details className="connection-last-result">
+                        <summary>
+                          {connection.lastRequest.outcome === "ok"
+                            ? "最近一次请求已完成"
+                            : "最近一次请求未完成 · 查看原因"}
+                        </summary>
+                        <RecentRequest value={connection.lastRequest} />
+                      </details>
+                    )}
                   </>
                 ) : (
                   <div className="connection-empty">
                     <p>
                       {installed
                         ? "选择模型与分组，助手帮你完成配置。"
-                        : "安装应用后，回来检查即可接入。"}
+                        : ["claude_desktop", "codex_desktop"].includes(app.id)
+                          ? "野菜帮你选择安装包，装好后继续接入模型。"
+                          : "查看官方安装步骤，安装后由野菜完成模型接入。"}
                     </p>
                     <span>
                       {target?.installations[0]?.version
@@ -305,7 +330,13 @@ export function AppLibraryView({
                     className={active ? "subtle-button" : "connect-app-button"}
                     onClick={() => onOpenSetup(app.id)}
                   >
-                    {active ? "检查接入" : installed ? "开始接入" : "查看接入"}
+                    {active
+                      ? "检查接入"
+                      : installed
+                        ? "开始接入"
+                        : ["claude_desktop", "codex_desktop"].includes(app.id)
+                          ? "安装并接入"
+                          : "查看安装方式"}
                     <ArrowRight />
                   </button>
                 )}

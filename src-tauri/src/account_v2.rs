@@ -385,6 +385,16 @@ async fn send_json(
 }
 
 async fn fetch_bootstrap(line_id: &str) -> Result<DesktopBootstrap, AccountProjectionFailure> {
+    let permit = crate::shutdown_coordinator::global()
+        .admit_operation()
+        .map_err(|_| AccountProjectionFailure::BackendUnavailable)?;
+    permit
+        .cancel_safe(fetch_bootstrap_read(line_id))
+        .await
+        .map_err(|_| AccountProjectionFailure::BackendUnavailable)?
+}
+
+async fn fetch_bootstrap_read(line_id: &str) -> Result<DesktopBootstrap, AccountProjectionFailure> {
     let origin = line_origin(line_id).ok_or(AccountProjectionFailure::InvalidRequest)?;
     let response = send_json(
         Method::GET,
@@ -695,7 +705,13 @@ async fn refresh_access(
 ) -> Result<String, AccountProjectionFailure> {
     // Refresh tokens may rotate. Concurrent page requests must share one
     // refresh, rather than invalidating one another's credentials.
-    let _refresh_guard = state.refresh_guard.lock().await;
+    let permit = crate::shutdown_coordinator::global()
+        .admit_operation()
+        .map_err(|_| AccountProjectionFailure::BackendUnavailable)?;
+    let _refresh_guard = permit
+        .cancel_safe(state.refresh_guard.lock())
+        .await
+        .map_err(|_| AccountProjectionFailure::BackendUnavailable)?;
     let epoch = state
         .runtime
         .lock()
@@ -742,6 +758,9 @@ async fn refresh_access(
     } else {
         fetch_bootstrap(&refresh_line_id).await?.origin
     };
+    if permit.is_cancelled() {
+        return Err(AccountProjectionFailure::BackendUnavailable);
+    }
     let response = send_json(
         Method::POST,
         &format!("{}{}", refresh_origin, REFRESH_PATH),
@@ -777,6 +796,20 @@ async fn refresh_access(
 }
 
 async fn account_data(
+    request_id: String,
+    bootstrap: &DesktopBootstrap,
+    access_token: &str,
+) -> Result<AccountProjection, AccountProjectionFailure> {
+    let permit = crate::shutdown_coordinator::global()
+        .admit_operation()
+        .map_err(|_| AccountProjectionFailure::BackendUnavailable)?;
+    permit
+        .cancel_safe(account_data_read(request_id, bootstrap, access_token))
+        .await
+        .map_err(|_| AccountProjectionFailure::BackendUnavailable)?
+}
+
+async fn account_data_read(
     request_id: String,
     bootstrap: &DesktopBootstrap,
     access_token: &str,
@@ -1062,7 +1095,9 @@ fn parse_models(
             let Some(row) = by_name.get(&id) else {
                 return unpriced_model(id);
             };
-            let description = bounded_text(row.get("description"), 500);
+            // Pricing descriptions may contain internal upstream routing labels.
+            // They are not reviewed customer-facing model metadata. Keep the
+            // schema field empty instead of forwarding them across renderer IPC.
             let quota_type = row.get("quota_type").and_then(Value::as_i64);
             let billing_mode = match bounded_text(row.get("billing_mode"), 40).as_str() {
                 "tiered_expr" => "tiered_expr",
@@ -1116,7 +1151,7 @@ fn parse_models(
                 .filter(|n| n.is_finite());
             AccountModel {
                 id: id.clone(),
-                description,
+                description: String::new(),
                 billing_mode,
                 supported_endpoint_types,
                 pricing_available: comparable,
@@ -1209,6 +1244,9 @@ pub async fn account_inspect_v2(
     state: tauri::State<'_, AccountV2State>,
     request: AccountRequest,
 ) -> Result<AccountProjection, String> {
+    let _permit = crate::shutdown_coordinator::global()
+        .admit_operation()
+        .map_err(|_| "assistant_shutting_down")?;
     if !request_is_valid(&request) {
         return Err("invalid_account_request".into());
     }
@@ -1237,6 +1275,9 @@ pub async fn account_begin_authorization_v2(
     state: tauri::State<'_, AccountV2State>,
     request: AccountRequest,
 ) -> Result<AccountProjection, String> {
+    let _permit = crate::shutdown_coordinator::global()
+        .admit_operation()
+        .map_err(|_| "assistant_shutting_down")?;
     if !request_is_valid(&request) {
         return Err("invalid_account_request".into());
     }
@@ -1259,6 +1300,9 @@ pub async fn account_begin_authorization_v2(
             "backend_unavailable",
             "authorization_unavailable",
         ));
+    }
+    if _permit.is_cancelled() {
+        return Err("assistant_shutting_down".into());
     }
     let response = match send_json(
         Method::POST,
@@ -1335,6 +1379,9 @@ pub async fn account_begin_authorization_v2(
         runtime.pending = Some(pending.clone());
         runtime.wallet_url = Some(bootstrap.wallet_url);
     }
+    if _permit.is_cancelled() {
+        return Err("assistant_shutting_down".into());
+    }
     let reason = if open_system_browser(&authorization.verification_uri_complete).is_ok() {
         "authorization_pending"
     } else {
@@ -1369,10 +1416,16 @@ pub async fn account_poll_authorization_v2(
     state: tauri::State<'_, AccountV2State>,
     request: AccountRequest,
 ) -> Result<AccountProjection, String> {
+    let _permit = crate::shutdown_coordinator::global()
+        .admit_operation()
+        .map_err(|_| "assistant_shutting_down")?;
     if !request_is_valid(&request) {
         return Err("invalid_account_request".into());
     }
-    let _poll_guard = state.poll_guard.lock().await;
+    let _poll_guard = _permit
+        .cancel_safe(state.poll_guard.lock())
+        .await
+        .map_err(|_| "assistant_shutting_down")?;
     let (pending, epoch) = {
         let runtime = state
             .runtime
@@ -1404,6 +1457,9 @@ pub async fn account_poll_authorization_v2(
         Ok(value) => value,
         Err(error) => return Ok(failure_projection(request.request_id, error)),
     };
+    if _permit.is_cancelled() {
+        return Err("assistant_shutting_down".into());
+    }
     let response = match send_json(
         Method::POST,
         &format!("{}{}", bootstrap.origin, TOKEN_PATH),
@@ -1521,6 +1577,9 @@ pub fn account_cancel_authorization_v2(
     state: tauri::State<'_, AccountV2State>,
     request: AccountRequest,
 ) -> Result<AccountProjection, String> {
+    let _permit = crate::shutdown_coordinator::global()
+        .admit_operation()
+        .map_err(|_| "assistant_shutting_down")?;
     if !request_is_valid(&request) {
         return Err("invalid_account_request".into());
     }
@@ -1542,6 +1601,9 @@ pub async fn account_logout_v2(
     state: tauri::State<'_, AccountV2State>,
     request: AccountRequest,
 ) -> Result<AccountProjection, String> {
+    let _permit = crate::shutdown_coordinator::global()
+        .admit_operation()
+        .map_err(|_| "assistant_shutting_down")?;
     if !request_is_valid(&request) {
         return Err("invalid_account_request".into());
     }
@@ -1561,6 +1623,17 @@ pub async fn account_logout_v2(
         runtime.wallet_url = None;
         runtime.access.take()
     };
+    for tool in [
+        "claude_code",
+        "claude_desktop",
+        "codex_desktop",
+        "pi",
+        "dsh_web",
+        "hermes",
+        "openclaw",
+    ] {
+        crate::request_diagnostics::clear(tool);
+    }
     if let Some(access) = access {
         if let Ok(bootstrap) = fetch_bootstrap(&request.line_id).await {
             let _ = send_json(
@@ -1584,6 +1657,9 @@ pub async fn account_open_wallet_v2(
     state: tauri::State<'_, AccountV2State>,
     request: AccountRequest,
 ) -> Result<(), String> {
+    let _permit = crate::shutdown_coordinator::global()
+        .admit_operation()
+        .map_err(|_| "assistant_shutting_down")?;
     if !request_is_valid(&request) {
         return Err("invalid_account_request".into());
     }
@@ -1601,6 +1677,9 @@ pub async fn account_open_wallet_v2(
         .unwrap_or(bootstrap.wallet_url);
     if !wallet_url_is_allowed(&wallet) {
         return Err("wallet_unavailable".into());
+    }
+    if _permit.is_cancelled() {
+        return Err("assistant_shutting_down".into());
     }
     open_system_browser(&wallet).map_err(|_| "browser_open_failed".to_owned())
 }
@@ -1752,6 +1831,39 @@ mod tests {
         assert_eq!(rows[0].actual_input_cny_per_million, "7");
         assert!(!rows[1].pricing_available);
         assert!(rows[1].official_input_cny_per_million.is_empty());
+    }
+
+    #[test]
+    fn model_projection_omits_internal_descriptions_without_changing_prices() {
+        let models = json!({"success":true,"data":["claude-haiku-4-5"]});
+        let account = json!({"success":true,"data":{"group":"default"}});
+        let mut pricing = json!({"success":true,"group_ratio":{"default":0.5},
+        "usable_group":{"default":"标准分组"},"data":[{
+            "model_name":"claude-haiku-4-5","description":"Synthetic upstream via internal connector",
+            "quota_type":0,"model_ratio":1.0,"completion_ratio":3.0,
+            "enable_groups":["default"],"supported_endpoint_types":["anthropic"]
+        }]});
+        let projected = parse_models(Some(&models), Some(&pricing), Some(&account), Some(1.0));
+        assert_eq!(projected[0].id, "claude-haiku-4-5");
+        assert!(projected[0].description.is_empty());
+        assert_eq!(projected[0].actual_input_cny_per_million, "1");
+        assert_eq!(
+            projected[0].billing.as_ref().unwrap().groups[0].description,
+            "标准分组"
+        );
+        let serialized = serde_json::to_value(&projected).unwrap();
+        assert!(!serialized.to_string().contains("Synthetic upstream"));
+        pricing["data"][0]["description"] = json!("A different private channel label");
+        assert_eq!(
+            serialized,
+            serde_json::to_value(parse_models(
+                Some(&models),
+                Some(&pricing),
+                Some(&account),
+                Some(1.0)
+            ))
+            .unwrap()
+        );
     }
 
     #[test]

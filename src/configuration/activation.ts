@@ -13,6 +13,37 @@ export const ACTIVATION_TOOL_IDS = [
 
 export type ActivationToolId = (typeof ACTIVATION_TOOL_IDS)[number];
 
+export interface ModelBinding {
+  modelId: string;
+  billingGroup: string;
+}
+export function decodeModelBindings(value: unknown): ModelBinding[] | null {
+  if (!Array.isArray(value) || value.length > 200) return null;
+  if (
+    value.some(
+      (v) =>
+        !object(v) ||
+        !exactKeys(v, ["modelId", "billingGroup"]) ||
+        !safeText(v.modelId, 200, false) ||
+        !safeText(v.billingGroup, 128, false) ||
+        v.billingGroup === "auto",
+    )
+  )
+    return null;
+  if (new Set(value.map((v) => v.modelId)).size !== value.length) return null;
+  return value as ModelBinding[];
+}
+export function sameModelBindings(a: ModelBinding[], b: ModelBinding[]) {
+  return (
+    a.length === b.length &&
+    a.every((m) =>
+      b.some(
+        (n) => n.modelId === m.modelId && n.billingGroup === m.billingGroup,
+      ),
+    )
+  );
+}
+
 export const ACTIVATION_TARGET_STATUSES = [
   "not_found",
   "available",
@@ -48,6 +79,7 @@ export interface ActivationTargetScan {
 
 export const TOOL_ACTIVATION_STATUSES = [
   "ready",
+  "application_running",
   "signed_out",
   "tool_not_found",
   "multiple_installations",
@@ -68,13 +100,14 @@ export type ToolActivationStatus = (typeof TOOL_ACTIVATION_STATUSES)[number];
 
 export interface ToolActivationProjection {
   requestId: string;
-  schemaVersion: 3;
+  schemaVersion: 3 | 4;
   status: ToolActivationStatus;
   toolId: ActivationToolId;
   modelId: string;
   billingGroup: string;
   observedAtEpochMs: number;
   reasonCode: string;
+  models?: ModelBinding[];
 }
 
 function object(value: unknown): value is Record<string, unknown> {
@@ -194,9 +227,17 @@ export function decodeToolActivation(
       "billingGroup",
       "observedAtEpochMs",
       "reasonCode",
+      ...(value.schemaVersion === 4 ? ["models"] : []),
     ]) ||
     value.requestId !== requestId ||
-    value.schemaVersion !== 3 ||
+    ![3, 4].includes(Number(value.schemaVersion)) ||
+    (value.schemaVersion === 4 &&
+      (!decodeModelBindings(value.models) ||
+        !(value.models as ModelBinding[]).some(
+          (m) =>
+            m.modelId === value.modelId &&
+            m.billingGroup === value.billingGroup,
+        ))) ||
     !TOOL_ACTIVATION_STATUSES.includes(value.status as ToolActivationStatus) ||
     !ACTIVATION_TOOL_IDS.includes(value.toolId as ActivationToolId) ||
     !safeText(value.modelId, 200, false) ||
@@ -229,18 +270,42 @@ export async function activateDesktopTool(input: {
   modelId: string;
   installationId: string;
   billingGroup: string;
+  models?: ModelBinding[];
+  installationJobId?: string;
+  restartRunningApp?: boolean;
 }): Promise<ToolActivationProjection> {
+  if (
+    input.models &&
+    (!decodeModelBindings(input.models) ||
+      !input.models.some(
+        (m) =>
+          m.modelId === input.modelId && m.billingGroup === input.billingGroup,
+      ))
+  )
+    throw new Error("invalid_model_set");
   activationSequence += 1;
   const requestId = `activate-${Date.now().toString(36)}-${activationSequence.toString(36)}`;
   const raw = await invoke<unknown>("configure_desktop_tool_v2", {
-    request: { requestId, ...input },
+    request: {
+      requestId,
+      ...input,
+      ...(input.restartRunningApp ? { restartRunningApp: true } : {}),
+    },
   });
   const result = decodeToolActivation(raw, requestId);
   if (
     !result ||
     result.toolId !== input.toolId ||
     result.modelId !== input.modelId ||
-    result.billingGroup !== input.billingGroup
+    result.billingGroup !== input.billingGroup ||
+    (result.schemaVersion === 4 &&
+      !sameModelBindings(
+        result.models!,
+        input.models ?? [
+          { modelId: input.modelId, billingGroup: input.billingGroup },
+        ],
+      )) ||
+    (input.models && input.models.length > 1 && result.schemaVersion !== 4)
   )
     throw new Error("invalid_tool_activation_projection");
   return result;

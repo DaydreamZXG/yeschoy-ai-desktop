@@ -507,20 +507,6 @@ impl ChatToResponsesState {
         }
     }
 
-    fn has_substantive_output(&self) -> bool {
-        !self.text.text.trim().is_empty()
-            || !self.reasoning.text.trim().is_empty()
-            || !self.inline_think.buffer.trim().is_empty()
-            || !self.output_items.is_empty()
-            || self.tools.values().any(|state| {
-                state.added
-                    || !state.call_id.trim().is_empty()
-                    || !state.name.trim().is_empty()
-                    || !state.arguments.trim().is_empty()
-                    || !state.reasoning_content.trim().is_empty()
-            })
-    }
-
     /// 本回合最终产出里是否至少有一个可被 Codex 识别的工具调用 item。
     fn has_emitted_tool_call(&self) -> bool {
         self.output_items.iter().any(|(_, item)| {
@@ -534,6 +520,9 @@ impl ChatToResponsesState {
     fn finalize(&mut self) -> Vec<Bytes> {
         if self.completed {
             return Vec::new();
+        }
+        if self.finish_reason.is_none() {
+            return vec![self.failed_event(String::new(), Some("stream_interrupted".into()))];
         }
 
         let mut events = self.ensure_response_started();
@@ -757,12 +746,20 @@ impl ChatToResponsesState {
         index
     }
 
-    fn failed_event(&mut self, message: String, error_type: Option<String>) -> Bytes {
+    fn failed_event(&mut self, _message: String, error_type: Option<String>) -> Bytes {
         self.completed = true;
-        let mut error = json!({ "message": message });
-        if let Some(error_type) = error_type.filter(|value| !value.is_empty()) {
-            error["type"] = json!(error_type);
-        }
+        use crate::request_diagnostics::{error_json, RequestOutcome};
+        let outcome = match error_type.as_deref() {
+            Some("timeout") => RequestOutcome::Timeout,
+            Some("stream_error" | "stream_truncated" | "stream_interrupted") => {
+                RequestOutcome::StreamInterrupted
+            }
+            Some("invalid_response" | "upstream_tool_call_dropped") => {
+                RequestOutcome::InvalidResponse
+            }
+            _ => RequestOutcome::UpstreamError,
+        };
+        let error = error_json(outcome)["error"].clone();
 
         let mut response = self.base_response("failed", self.completed_output_items());
         response["error"] = error;
@@ -824,6 +821,10 @@ pub fn create_responses_sse_stream_from_chat_with_context<E: std::error::Error +
             match chunk {
                 Ok(bytes) => {
                     crate::codex_bridge::sse::append_utf8_safe(&mut buffer, &mut utf8_remainder, &bytes);
+                    if buffer.len() > crate::request_diagnostics::MAX_EVENT_BYTES {
+                        yield Ok(state.failed_event(String::new(), Some("invalid_response".into())));
+                        return;
+                    }
 
                     while let Some(block) = take_sse_block(&mut buffer) {
                         if block.trim().is_empty() {
@@ -855,7 +856,11 @@ pub fn create_responses_sse_stream_from_chat_with_context<E: std::error::Error +
 
                         let chunk: Value = match serde_json::from_str(&data) {
                             Ok(value) => value,
-                            Err(_) => continue,
+                            Err(_) => {
+                                yield Ok(state.failed_event(String::new(), Some("invalid_response".into())));
+                                stream_failed = true;
+                                break;
+                            },
                         };
 
                         if event_name.as_deref() == Some("error") || chunk.get("error").is_some() {
@@ -875,9 +880,10 @@ pub fn create_responses_sse_stream_from_chat_with_context<E: std::error::Error +
                     }
                 }
                 Err(e) => {
+                    let outcome = crate::request_diagnostics::transport_outcome(&e);
                     yield Ok(state.failed_event(
-                        format!("Stream error: {e}"),
-                        Some("stream_error".to_string()),
+                        String::new(),
+                        Some(if outcome == crate::request_diagnostics::RequestOutcome::Timeout { "timeout" } else { "stream_interrupted" }.to_string()),
                     ));
                     stream_failed = true;
                     break;
@@ -885,13 +891,12 @@ pub fn create_responses_sse_stream_from_chat_with_context<E: std::error::Error +
             }
         }
 
+        if !stream_failed && (!buffer.trim().is_empty() || !utf8_remainder.is_empty()) {
+            yield Ok(state.failed_event(String::new(), Some("stream_interrupted".into())));
+            return;
+        }
         if !stream_failed {
             if state.completed || state.finish_reason.is_some() {
-                for event in state.finalize() {
-                    yield Ok(event);
-                }
-            } else if state.has_substantive_output() {
-                state.finish_reason = Some("length".to_string());
                 for event in state.finalize() {
                     yield Ok(event);
                 }
@@ -906,25 +911,14 @@ pub fn create_responses_sse_stream_from_chat_with_context<E: std::error::Error +
 }
 
 fn extract_chat_sse_error(value: &Value) -> (String, Option<String>) {
-    let error = value.get("error").unwrap_or(value);
-    let message = error
-        .as_str()
-        .map(ToString::to_string)
-        .or_else(|| {
-            error
-                .get("message")
-                .or_else(|| error.get("detail"))
-                .and_then(|v| v.as_str())
-                .map(ToString::to_string)
-        })
-        .unwrap_or_else(|| error.to_string());
-    let error_type = error
-        .get("type")
-        .or_else(|| error.get("code"))
-        .and_then(|v| v.as_str())
-        .map(ToString::to_string);
-
-    (message, error_type)
+    let code = value.pointer("/error/code").and_then(Value::as_str);
+    let code = match code {
+        Some("timeout") => "timeout",
+        Some("stream_interrupted") => "stream_interrupted",
+        Some("invalid_response") => "invalid_response",
+        _ => "upstream_error",
+    };
+    (String::new(), Some(code.into()))
 }
 
 #[cfg(test)]
@@ -1139,7 +1133,7 @@ mod tests {
         .await;
 
         assert!(output.contains("event: response.failed"));
-        assert!(output.contains("upstream_tool_call_dropped"));
+        assert!(output.contains("invalid_response"));
         assert!(!output.contains("event: response.completed"));
         // 已经推给客户端的文本增量不受影响，用户仍能看到模型说了什么。
         assert!(output.contains("让我继续处理这个文件"));
@@ -1173,7 +1167,7 @@ mod tests {
         .await;
 
         assert!(output.contains("event: response.failed"));
-        assert!(output.contains("upstream_tool_call_dropped"));
+        assert!(output.contains("invalid_response"));
         assert!(!output.contains("event: response.completed"));
     }
 
@@ -1439,16 +1433,28 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn stream_end_with_output_without_finish_reason_emits_incomplete_without_failed() {
+    async fn ru042_codex_done_or_partial_frame_without_completion_fails() {
+        for chunks in [
+            vec!["data: [DONE]\n\n"],
+            vec!["data: {\"id\":\"c\",\"model\":\"m\",\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n", "data: {\"unfinished\":"],
+        ] {
+            let output = collect(chunks).await;
+            assert!(output.contains("response.failed"));
+            assert!(!output.contains("response.completed"));
+        }
+    }
+
+    #[tokio::test]
+    async fn ru042_stream_end_with_output_without_finish_reason_fails() {
         let output = collect(vec![
             "data: {\"id\":\"chatcmpl_truncated\",\"model\":\"gpt-5.4\",\"choices\":[{\"delta\":{\"content\":\"partial\"}}]}\n\n",
         ])
         .await;
 
-        assert!(output.contains("event: response.completed"));
-        assert!(output.contains("\"status\":\"incomplete\""));
-        assert!(output.contains("\"incomplete_details\":{\"reason\":\"max_output_tokens\"}"));
-        assert!(!output.contains("event: response.failed"));
+        assert!(!output.contains("event: response.completed"));
+        assert!(!output.contains("max_output_tokens"));
+        assert!(output.contains("event: response.failed"));
+        assert!(output.contains("stream_interrupted"));
     }
 
     #[tokio::test]
@@ -1459,7 +1465,7 @@ mod tests {
         .await;
 
         assert!(output.contains("event: response.failed"));
-        assert!(output.contains("stream_truncated"));
+        assert!(output.contains("stream_interrupted"));
         assert!(!output.contains("event: response.completed"));
     }
 
@@ -1472,8 +1478,8 @@ mod tests {
         .await;
 
         assert!(output.contains("event: response.failed"));
-        assert!(output.contains("bad request"));
-        assert!(output.contains("invalid_request_error"));
+        assert!(!output.contains("bad request"));
+        assert!(output.contains("upstream_error"));
         assert!(!output.contains("event: response.completed"));
     }
 
@@ -1486,8 +1492,8 @@ mod tests {
         .await;
 
         assert!(output.contains("event: response.failed"));
-        assert!(output.contains("quota exceeded"));
-        assert!(output.contains("rate_limit_exceeded"));
+        assert!(!output.contains("quota exceeded"));
+        assert!(output.contains("upstream_error"));
         assert!(!output.contains("event: response.completed"));
     }
 }

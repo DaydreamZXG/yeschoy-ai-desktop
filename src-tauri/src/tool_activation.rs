@@ -1,4 +1,7 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    path::PathBuf,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use reqwest::{Method, Url};
 use serde::{Deserialize, Serialize};
@@ -9,21 +12,37 @@ use crate::{
         billing_groups, ensure_session_epoch, native_account_json, native_session_access,
         native_session_epoch, AccountV2State, NativeSessionFailure,
     },
+    chat_gateway::ChatGatewayRuntimeState,
     claude_bridge::ClaudeTransport,
     codex_bridge::CodexBridgeRuntimeState,
     connection_recovery::{self, Receipt, Store},
     connectivity_core::request_id_is_valid,
+    shutdown_coordinator,
     tool_adapters::{
-        self, claude_code, claude_desktop, codex_desktop, dsh_web, hermes, openclaw, pi,
-        AdapterFailure, ResolvedInstallation,
+        self, claude_code, claude_desktop, codex_desktop, desktop_lifecycle, dsh_web, hermes,
+        openclaw, pi, AdapterFailure, ResolvedInstallation,
     },
-    tool_credentials::{self, CredentialFailure, ToolCredential},
+    tool_credentials::{self, CredentialFailure, ToolCredential, ToolModelRoute},
 };
 
 const TOKEN_PAGE_SIZE: &str = "100";
 pub(crate) static ACTIVATION_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
-#[derive(Debug, Deserialize)]
+// These generated-response routines remain available only to their isolated
+// adapter fixture suites. Keeping the symbols linked here makes that boundary
+// explicit without ever invoking them from the activation transaction.
+#[allow(dead_code)]
+fn isolated_adapter_diagnostic_contracts() {
+    let _claude_code = claude_code::verify;
+    let _claude_desktop = claude_desktop::verify_and_launch;
+    let _codex_desktop = codex_desktop::verify_and_launch;
+    let _pi = pi::verify;
+    let _dsh_web = dsh_web::verify_launch_and_keep;
+    let _hermes = hermes::verify;
+    let _openclaw = openclaw::verify;
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ToolActivationRequest {
     request_id: String,
@@ -32,6 +51,30 @@ pub struct ToolActivationRequest {
     model_id: String,
     installation_id: String,
     billing_group: String,
+    #[serde(default)]
+    models: Option<Vec<ModelBinding>>,
+    #[serde(default)]
+    installation_job_id: Option<String>,
+    #[serde(default)]
+    restart_running_app: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct ModelBinding {
+    pub(crate) model_id: String,
+    pub(crate) billing_group: String,
+}
+
+impl ToolActivationRequest {
+    fn bindings(&self) -> Vec<ModelBinding> {
+        self.models.clone().unwrap_or_else(|| {
+            vec![ModelBinding {
+                model_id: self.model_id.clone(),
+                billing_group: self.billing_group.clone(),
+            }]
+        })
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -45,6 +88,7 @@ pub struct ToolActivationProjection {
     billing_group: String,
     observed_at_epoch_ms: u64,
     reason_code: &'static str,
+    models: Vec<ModelBinding>,
 }
 
 impl ToolActivationProjection {
@@ -55,13 +99,14 @@ impl ToolActivationProjection {
     ) -> Self {
         Self {
             request_id: request.request_id.clone(),
-            schema_version: 3,
+            schema_version: 4,
             status,
             tool_id: request.tool_id.clone(),
             model_id: request.model_id.clone(),
             billing_group: request.billing_group.clone(),
             observed_at_epoch_ms: now_epoch_ms(),
             reason_code,
+            models: request.bindings(),
         }
     }
 }
@@ -126,6 +171,9 @@ impl ActivationFailure {
                 AdapterFailure::LaunchFailed => {
                     ToolActivationProjection::new(request, "launch_failed", "tool_launch_failed")
                 }
+                AdapterFailure::LaunchError(reason) => {
+                    ToolActivationProjection::new(request, "launch_failed", reason)
+                }
                 AdapterFailure::VerificationFailed(reason) => {
                     ToolActivationProjection::new(request, "verification_failed", reason)
                 }
@@ -185,11 +233,36 @@ fn request_is_valid(request: &ToolActivationRequest) -> bool {
         && bounded_plain_text(&request.model_id, 200)
         && bounded_plain_text(&request.billing_group, 128)
         && request.billing_group != "auto"
+        && valid_model_bindings(
+            &request.bindings(),
+            &request.model_id,
+            &request.billing_group,
+        )
         && request.installation_id.len() <= 128
+        && request
+            .installation_job_id
+            .as_ref()
+            .is_none_or(|id| request_id_is_valid(id))
         && request
             .installation_id
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-'))
+        && (!request.restart_running_app || desktop_lifecycle::requires_reload(&request.tool_id))
+}
+
+fn valid_model_bindings(models: &[ModelBinding], default: &str, group: &str) -> bool {
+    let mut ids = std::collections::HashSet::new();
+    !models.is_empty()
+        && models.len() <= 200
+        && models.iter().all(|m| {
+            bounded_plain_text(&m.model_id, 200)
+                && bounded_plain_text(&m.billing_group, 128)
+                && m.billing_group != "auto"
+                && ids.insert(m.model_id.as_str())
+        })
+        && models
+            .iter()
+            .any(|m| m.model_id == default && m.billing_group == group)
 }
 
 fn data(value: &Value) -> Option<&Value> {
@@ -210,13 +283,12 @@ fn server_success(status: u16, value: &Value) -> bool {
             == Some(true)
 }
 
-async fn validate_model(
+async fn validate_models(
     origin: &str,
     access_token: &str,
-    model_id: &str,
+    models: &[ModelBinding],
     tool_id: &str,
-    billing_group: &str,
-) -> Result<Option<ModelTransport>, ActivationFailure> {
+) -> Result<Vec<Option<ModelTransport>>, ActivationFailure> {
     let (status, value) = native_account_json(
         Method::GET,
         &format!("{origin}/api/user/models"),
@@ -233,7 +305,13 @@ async fn validate_model(
     }
     let available = data(&value)
         .and_then(Value::as_array)
-        .is_some_and(|models| models.iter().any(|model| model.as_str() == Some(model_id)));
+        .is_some_and(|available| {
+            models.iter().all(|binding| {
+                available
+                    .iter()
+                    .any(|m| m.as_str() == Some(&binding.model_id))
+            })
+        });
     if !available {
         return Err(ActivationFailure::UnsupportedModel);
     }
@@ -251,27 +329,34 @@ async fn validate_model(
     if !server_success(pricing_status, &pricing) {
         return Err(ActivationFailure::ServerUnavailable);
     }
-    if !billing_groups(&pricing, model_id)
+    models
         .iter()
-        .any(|g| g.id == billing_group)
-    {
-        return Err(ActivationFailure::UnsupportedGroup);
-    }
-    if tool_id == "codex_desktop" {
-        codex_transport(&pricing, model_id)
-            .map(ModelTransport::Codex)
-            .map(Some)
-            .ok_or(ActivationFailure::UnsupportedModel)
-    } else if matches!(tool_id, "claude_code" | "claude_desktop") {
-        claude_transport(&pricing, model_id)
-            .map(ModelTransport::Claude)
-            .map(Some)
-            .ok_or(ActivationFailure::UnsupportedModel)
-    } else if model_supports_tool(&pricing, model_id, tool_id) {
-        Ok(None)
-    } else {
-        Err(ActivationFailure::UnsupportedModel)
-    }
+        .map(|binding| {
+            let model_id = binding.model_id.as_str();
+            let billing_group = binding.billing_group.as_str();
+            if !billing_groups(&pricing, model_id)
+                .iter()
+                .any(|g| g.id == billing_group)
+            {
+                return Err(ActivationFailure::UnsupportedGroup);
+            }
+            if tool_id == "codex_desktop" {
+                codex_transport(&pricing, model_id)
+                    .map(ModelTransport::Codex)
+                    .map(Some)
+                    .ok_or(ActivationFailure::UnsupportedModel)
+            } else if matches!(tool_id, "claude_code" | "claude_desktop") {
+                claude_transport(&pricing, model_id)
+                    .map(ModelTransport::Claude)
+                    .map(Some)
+                    .ok_or(ActivationFailure::UnsupportedModel)
+            } else if model_supports_tool(&pricing, model_id, tool_id) {
+                Ok(None)
+            } else {
+                Err(ActivationFailure::UnsupportedModel)
+            }
+        })
+        .collect()
 }
 
 fn model_supports_tool(pricing: &Value, model_id: &str, tool_id: &str) -> bool {
@@ -549,6 +634,11 @@ async fn acquire_token_using(
     getrandom::fill(&mut nonce).map_err(|_| ActivationFailure::ServerUnavailable)?;
     let name = format!("{prefix}-{:016x}", u64::from_be_bytes(nonce));
 
+    if shutdown_coordinator::global().is_shutting_down() {
+        return Err(ActivationFailure::ConfigurationFailed(
+            "assistant_shutting_down",
+        ));
+    }
     let (status, value) = api
         .request(
             Method::POST,
@@ -593,6 +683,78 @@ async fn delete_created_token(origin: &str, access_token: &str, lease: &TokenLea
         )
         .await;
     }
+}
+
+async fn delete_created_tokens(origin: &str, access_token: &str, leases: &[(String, TokenLease)]) {
+    futures::future::join_all(
+        leases
+            .iter()
+            .map(|(_, lease)| delete_created_token(origin, access_token, lease)),
+    )
+    .await;
+}
+
+fn credential_for_models(
+    request: &ToolActivationRequest,
+    origin: &str,
+    transports: &[Option<ModelTransport>],
+    leases: &[(String, TokenLease)],
+    previous: Option<&ToolCredential>,
+) -> Result<ToolCredential, ActivationFailure> {
+    let models = request
+        .bindings()
+        .iter()
+        .zip(transports)
+        .map(|(m, transport)| {
+            let lease = leases
+                .iter()
+                .find(|(group, _)| group == &m.billing_group)
+                .ok_or(ActivationFailure::ConfigurationFailed("invalid_request"))?;
+            Ok(ToolModelRoute {
+                model_id: m.model_id.clone(),
+                billing_group: m.billing_group.clone(),
+                origin: origin.into(),
+                api_key: lease.1.key.clone(),
+                claude_transport: match transport {
+                    Some(ModelTransport::Claude(t)) => Some(t.credential_value().into()),
+                    _ => None,
+                },
+                codex_transport: match transport {
+                    Some(ModelTransport::Codex(t)) => Some(t.credential_value().into()),
+                    _ => None,
+                },
+            })
+        })
+        .collect::<Result<Vec<_>, ActivationFailure>>()?;
+    let default = models
+        .iter()
+        .find(|m| m.model_id == request.model_id)
+        .ok_or(ActivationFailure::ConfigurationFailed("invalid_request"))?;
+    let local_token = match previous
+        .and_then(|p| p.local_gateway_token.as_ref())
+        .filter(|v| v.starts_with("ycg-") && v.len() == 68)
+    {
+        Some(v) => v.clone(),
+        None => {
+            let mut bytes = [0u8; 32];
+            getrandom::fill(&mut bytes).map_err(|_| {
+                ActivationFailure::Adapter(AdapterFailure::SecureStorageUnavailable)
+            })?;
+            format!(
+                "ycg-{}",
+                bytes.iter().map(|b| format!("{b:02x}")).collect::<String>()
+            )
+        }
+    };
+    Ok(ToolCredential {
+        model_id: default.model_id.clone(),
+        api_key: default.api_key.clone(),
+        origin: origin.into(),
+        claude_transport: default.claude_transport.clone(),
+        codex_transport: default.codex_transport.clone(),
+        local_gateway_token: Some(local_token),
+        models,
+    })
 }
 
 enum PreparedAdapter {
@@ -641,101 +803,153 @@ impl PreparedAdapter {
             Self::OpenClaw(value) => value.rollback(),
         }
     }
-
-    fn local_gateway_token(&self) -> Option<&str> {
-        match self {
-            Self::ClaudeCode(value) => value.local_token(),
-            Self::ClaudeDesktop(value) => Some(value.local_token()),
-            _ => None,
-        }
-    }
 }
 
 fn prepare_adapter(
     request: &ToolActivationRequest,
-    origin: &str,
-    previous: Option<&ToolCredential>,
+    credential: &ToolCredential,
     model_transport: Option<ModelTransport>,
 ) -> Result<PreparedAdapter, AdapterFailure> {
     let home = tool_adapters::user_home()
         .filter(|path| path.is_absolute() && path.is_dir())
         .ok_or(AdapterFailure::ConfigurationFailed("home_unavailable"))?;
+    let models = credential.model_ids();
+    let local = credential.local_gateway_token.as_deref();
+    let origin = crate::chat_gateway::base_url(&request.tool_id)
+        .unwrap_or_else(|| credential.origin.clone());
     match request.tool_id.as_str() {
-        "claude_code" => claude_code::prepare(
+        "claude_code" => claude_code::prepare_catalog(
             &home,
-            origin,
+            &origin,
             &request.model_id,
             match model_transport {
-                Some(ModelTransport::Claude(value)) => value,
+                Some(ModelTransport::Claude(v)) => v,
                 _ => return Err(AdapterFailure::ConfigurationFailed("invalid_request")),
             },
-            previous.and_then(|record| record.local_gateway_token.as_deref()),
+            local,
+            &models,
         )
         .map(PreparedAdapter::ClaudeCode),
-        "claude_desktop" => claude_desktop::prepare(
+        "claude_desktop" => {
+            claude_desktop::prepare_catalog(&home, &request.model_id, local, &models)
+                .map(PreparedAdapter::ClaudeDesktop)
+        }
+        "codex_desktop" => codex_desktop::prepare_catalog(
             &home,
-            &request.model_id,
-            previous.and_then(|record| record.local_gateway_token.as_deref()),
-        )
-        .map(PreparedAdapter::ClaudeDesktop),
-        "codex_desktop" => codex_desktop::prepare(
-            &home,
-            origin,
+            &origin,
             &request.model_id,
             match model_transport {
-                Some(ModelTransport::Codex(value)) => value,
+                Some(ModelTransport::Codex(v)) => v,
                 _ => return Err(AdapterFailure::ConfigurationFailed("invalid_request")),
             },
+            &models,
         )
         .map(PreparedAdapter::CodexDesktop),
-        "pi" => pi::prepare(&home, origin, &request.model_id).map(PreparedAdapter::Pi),
-        "dsh_web" => {
-            dsh_web::prepare(&home, origin, &request.model_id).map(PreparedAdapter::DshWeb)
+        "pi" => {
+            pi::prepare_catalog(&home, &origin, &request.model_id, &models).map(PreparedAdapter::Pi)
         }
-        "hermes" => hermes::prepare(&home, origin, &request.model_id).map(PreparedAdapter::Hermes),
-        "openclaw" => {
-            openclaw::prepare(&home, origin, &request.model_id).map(PreparedAdapter::OpenClaw)
-        }
+        "dsh_web" => dsh_web::prepare_catalog(&home, &origin, &request.model_id, &models)
+            .map(PreparedAdapter::DshWeb),
+        "hermes" => hermes::prepare_catalog(&home, &origin, &request.model_id, &models)
+            .map(PreparedAdapter::Hermes),
+        "openclaw" => openclaw::prepare_catalog(&home, &origin, &request.model_id, &models)
+            .map(PreparedAdapter::OpenClaw),
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
 }
 
-async fn verify_adapter(
+async fn start_local_adapter(
     request: &ToolActivationRequest,
-    installation: &ResolvedInstallation,
     credential: &ToolCredential,
     claude_code_runtime: &claude_code::ClaudeCodeRuntimeState,
     claude_runtime: &claude_desktop::ClaudeDesktopRuntimeState,
+) -> Result<(), AdapterFailure> {
+    match request.tool_id.as_str() {
+        "claude_code" => claude_code_runtime.start(credential.clone()).await,
+        "claude_desktop" => claude_runtime.start(credential.clone()).await.map(|_| ()),
+        "codex_desktop" => codex_desktop::ensure_credential_ready(credential).await,
+        "pi" | "dsh_web" | "hermes" | "openclaw" => Ok(()),
+        _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
+    }
+}
+
+async fn open_configured_adapter(
+    request: &ToolActivationRequest,
+    installation: &ResolvedInstallation,
+    credential: &ToolCredential,
     dsh_runtime: &dsh_web::DshRuntimeState,
 ) -> Result<(), AdapterFailure> {
     match request.tool_id.as_str() {
-        "claude_code" => {
-            claude_code::verify(
-                claude_code_runtime,
-                installation,
-                &request.model_id,
-                credential,
-            )
-            .await
-        }
-        "claude_desktop" => {
-            claude_desktop::verify_and_launch(claude_runtime, installation, credential.clone())
-                .await
-        }
-        "codex_desktop" => codex_desktop::verify_and_launch(installation, credential).await,
-        "pi" => pi::verify(installation, &request.model_id).await,
+        "claude_desktop" => claude_desktop::launch(&installation.path),
+        "codex_desktop" => codex_desktop::launch(&installation.path),
         "dsh_web" => {
-            dsh_web::verify_launch_and_keep(
+            dsh_web::open_existing(
                 dsh_runtime,
                 installation,
-                &credential.api_key,
-                &request.model_id,
+                credential.client_token("dsh_web"),
             )
             .await
         }
-        "hermes" => hermes::verify(installation, &request.model_id).await,
-        "openclaw" => openclaw::verify(installation, &request.model_id).await,
+        "claude_code" | "pi" | "hermes" | "openclaw" => Ok(()),
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
+    }
+}
+
+struct DesktopReloadGuard {
+    tool_id: String,
+    path: PathBuf,
+    closed: bool,
+}
+
+impl DesktopReloadGuard {
+    fn new(request: &ToolActivationRequest, installation: &ResolvedInstallation) -> Self {
+        Self {
+            tool_id: request.tool_id.clone(),
+            path: installation.path.clone(),
+            closed: false,
+        }
+    }
+
+    fn record_normal_quit(&mut self, closed: bool) {
+        self.closed |= closed;
+    }
+
+    fn disarm(&mut self) {
+        self.closed = false;
+    }
+}
+
+impl Drop for DesktopReloadGuard {
+    fn drop(&mut self) {
+        if !self.closed {
+            return;
+        }
+        let result = match self.tool_id.as_str() {
+            "claude_desktop" => claude_desktop::launch(&self.path),
+            "codex_desktop" => codex_desktop::launch(&self.path),
+            _ => Ok(()),
+        };
+        if result.is_err() {
+            log::warn!("desktop_reload stage=rollback_reopen result=failed");
+        }
+    }
+}
+
+async fn stop_helper_runtime(
+    tool: &str,
+    claude_code_runtime: &claude_code::ClaudeCodeRuntimeState,
+    claude_runtime: &claude_desktop::ClaudeDesktopRuntimeState,
+    dsh_runtime: &dsh_web::DshRuntimeState,
+    codex_bridge: &CodexBridgeRuntimeState,
+) {
+    match tool {
+        "claude_code" => claude_code_runtime.stop().await,
+        "claude_desktop" => claude_runtime.stop().await,
+        "codex_desktop" => codex_bridge.stop().await,
+        "dsh_web" => dsh_runtime.stop().await,
+        // Pi, Hermes and OpenClaw share a gateway. Stopping it for one tool
+        // would interrupt other active tools, and recovery does not require it.
+        _ => {}
     }
 }
 
@@ -747,49 +961,71 @@ async fn restore_after_failure(
     previous_record: Option<ToolCredential>,
     origin: &str,
     access_token: &str,
-    lease: &TokenLease,
+    leases: &[(String, TokenLease)],
     claude_code_runtime: &claude_code::ClaudeCodeRuntimeState,
     claude_runtime: &claude_desktop::ClaudeDesktopRuntimeState,
     codex_bridge: &CodexBridgeRuntimeState,
+    dsh_runtime: &dsh_web::DshRuntimeState,
     bridge_started: bool,
+    permit: &shutdown_coordinator::OperationPermit,
 ) -> Option<AdapterFailure> {
     let rollback_failure = prepared.rollback().err();
     let credential_failure = tool_credentials::restore(&request.tool_id, credential_before).err();
-    if request.tool_id == "claude_code" {
-        claude_code_runtime.stop().await;
-        if previous_record
-            .as_ref()
-            .and_then(|record| record.claude_transport.as_deref())
-            == Some("chat_bridge")
-        {
-            if let Some(previous) = previous_record.clone() {
-                let _ = claude_code_runtime.start(previous).await;
+    let _ = permit
+        .cancel_safe(async {
+            if request.tool_id == "dsh_web" {
+                dsh_runtime.stop().await;
             }
-        }
-    }
-    if request.tool_id == "claude_desktop" {
-        claude_runtime.stop().await;
-        if let Some(previous) = previous_record.clone() {
-            let _ = claude_runtime.start(previous).await;
-        }
-    }
-    if request.tool_id == "codex_desktop" && bridge_started {
-        codex_bridge.stop().await;
-        if previous_record
-            .as_ref()
-            .and_then(|record| record.codex_transport.as_deref())
-            == Some("chat_bridge")
-        {
-            let _ = codex_bridge.ensure_started().await;
-        }
-    }
-    delete_created_token(origin, access_token, lease).await;
-    if rollback_failure.is_some() {
+            if request.tool_id == "claude_code" {
+                claude_code_runtime.stop().await;
+                if !shutdown_coordinator::global().is_shutting_down()
+                    && previous_record.as_ref().is_some_and(|record| {
+                        record.has_model_set()
+                            || record.claude_transport.as_deref() == Some("chat_bridge")
+                    })
+                {
+                    if let Some(previous) = previous_record.clone() {
+                        let _ = claude_code_runtime.start(previous).await;
+                    }
+                }
+            }
+            if request.tool_id == "claude_desktop" {
+                claude_runtime.stop().await;
+                if let Some(previous) = previous_record
+                    .clone()
+                    .filter(|_| !shutdown_coordinator::global().is_shutting_down())
+                {
+                    let _ = claude_runtime.start(previous).await;
+                }
+            }
+            if request.tool_id == "codex_desktop" && bridge_started {
+                codex_bridge.stop().await;
+                if !shutdown_coordinator::global().is_shutting_down()
+                    && previous_record.as_ref().is_some_and(|record| {
+                        record.has_model_set()
+                            || record.codex_transport.as_deref() == Some("chat_bridge")
+                    })
+                {
+                    let _ = codex_bridge.ensure_started().await;
+                }
+            }
+        })
+        .await;
+    delete_created_tokens(origin, access_token, leases).await;
+    restoration_failure(rollback_failure.is_some(), credential_failure.is_some())
+}
+
+// A failed restoration happens after writes. Keep it distinct from an initial
+// secure-storage failure so the UI cannot claim the settings were untouched.
+fn restoration_failure(files_failed: bool, credential_failed: bool) -> Option<AdapterFailure> {
+    if files_failed {
         Some(AdapterFailure::ConfigurationFailed(
             "configuration_rollback_failed",
         ))
-    } else if credential_failure.is_some() {
-        Some(AdapterFailure::SecureStorageUnavailable)
+    } else if credential_failed {
+        Some(AdapterFailure::ConfigurationFailed(
+            "credential_restore_failed",
+        ))
     } else {
         None
     }
@@ -826,44 +1062,189 @@ pub async fn scan_activation_targets_v1(
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)] // Tauri injects the independently owned runtime states.
 pub async fn configure_desktop_tool_v2(
     account_state: tauri::State<'_, AccountV2State>,
+    installation_state: tauri::State<'_, crate::app_installation::AppInstallationState>,
     claude_code_runtime: tauri::State<'_, claude_code::ClaudeCodeRuntimeState>,
     claude_runtime: tauri::State<'_, claude_desktop::ClaudeDesktopRuntimeState>,
     dsh_runtime: tauri::State<'_, dsh_web::DshRuntimeState>,
     codex_bridge: tauri::State<'_, CodexBridgeRuntimeState>,
+    chat_gateway: tauri::State<'_, ChatGatewayRuntimeState>,
     request: ToolActivationRequest,
 ) -> Result<ToolActivationProjection, String> {
     if !request_is_valid(&request) {
         return Err("invalid_tool_activation_request".into());
     }
-
-    // Bind the click before waiting for discovery, locks or account bootstrap.
-    let session_epoch = match native_session_epoch(&account_state) {
-        Ok(epoch) => epoch,
-        Err(_) => return Ok(ActivationFailure::ServerUnavailable.projection(&request)),
+    let cancelled =
+        || ActivationFailure::ConfigurationFailed("assistant_shutting_down").projection(&request);
+    let permit = match shutdown_coordinator::global().admit_operation() {
+        Ok(p) => p,
+        Err(_) => return Ok(cancelled()),
     };
-    let _activation_guard = ACTIVATION_LOCK.lock().await;
+    let session_epoch = if let Some(id) = request.installation_job_id.as_deref() {
+        let intent = crate::app_installation::Intent {
+            line_id: request.line_id.clone(),
+            model_id: request.model_id.clone(),
+            billing_group: request.billing_group.clone(),
+            models: request.bindings(),
+        };
+        match installation_state.claim(
+            id,
+            &request.tool_id,
+            &request.installation_id,
+            &intent,
+            &account_state,
+        ) {
+            Ok(epoch) => epoch,
+            Err(reason) => {
+                return Ok(ActivationFailure::ConfigurationFailed(reason).projection(&request))
+            }
+        }
+    } else {
+        match native_session_epoch(&account_state) {
+            Ok(epoch) => epoch,
+            Err(_) => return Ok(ActivationFailure::ServerUnavailable.projection(&request)),
+        }
+    };
+    let _activation_guard = match permit.cancel_safe(ACTIVATION_LOCK.lock()).await {
+        Ok(g) => g,
+        Err(_) => return Ok(cancelled()),
+    };
     let _process_guard = match connection_recovery::operation_lock() {
-        Ok(guard) => guard,
+        Ok(g) => g,
         Err(_) => {
             return Ok(
                 ActivationFailure::ConfigurationFailed("recovery_pending").projection(&request)
             )
         }
     };
-    // Resolve current identity/runtime before account or token access. An
-    // unavailable or ambiguous installation can never create a server token.
-    let installation =
-        match tool_adapters::resolve_installation(&request.tool_id, &request.installation_id).await
-        {
-            Ok(value) => value,
+    let installation = match permit
+        .cancel_safe(tool_adapters::resolve_installation(
+            &request.tool_id,
+            &request.installation_id,
+        ))
+        .await
+    {
+        Ok(Ok(v)) => v,
+        Ok(Err(e)) => return Ok(ActivationFailure::Adapter(e).projection(&request)),
+        Err(_) => return Ok(cancelled()),
+    };
+    if desktop_lifecycle::requires_reload(&request.tool_id) {
+        match desktop_lifecycle::is_running(&request.tool_id, &installation.path) {
+            Ok(true) if !request.restart_running_app => {
+                return Ok(ToolActivationProjection::new(
+                    &request,
+                    "application_running",
+                    "save_work_before_restart",
+                ))
+            }
+            Ok(_) => {}
             Err(error) => return Ok(ActivationFailure::Adapter(error).projection(&request)),
+        }
+    }
+    let mut reload_guard = DesktopReloadGuard::new(&request, &installation);
+    let mut recovery = match Store::open(false) {
+        Ok(store) => store,
+        Err(_) => {
+            return Ok(
+                ActivationFailure::ConfigurationFailed("recovery_storage_unavailable")
+                    .projection(&request),
+            )
+        }
+    };
+    if let Some(store) = recovery.as_ref() {
+        let pending = match store.load(&request.tool_id) {
+            Ok(Some(record)) => record.pending,
+            Ok(None) => false,
+            Err(_) => {
+                return Ok(
+                    ActivationFailure::ConfigurationFailed("recovery_storage_unavailable")
+                        .projection(&request),
+                )
+            }
         };
-
+        if pending {
+            // A pending record may restore application files. Desktop apps
+            // must be stopped before that local mutation, using the same
+            // explicit save-work consent as a normal update.
+            if desktop_lifecycle::requires_reload(&request.tool_id) {
+                if request.restart_running_app {
+                    match permit
+                        .cancel_safe(desktop_lifecycle::quit_normally(
+                            &request.tool_id,
+                            &installation.path,
+                        ))
+                        .await
+                    {
+                        Ok(Ok(closed)) => reload_guard.record_normal_quit(closed),
+                        Ok(Err(AdapterFailure::LaunchError("graceful_restart_required"))) => {
+                            return Ok(ToolActivationProjection::new(
+                                &request,
+                                "application_running",
+                                "graceful_restart_required",
+                            ));
+                        }
+                        Ok(Err(error)) => {
+                            return Ok(ActivationFailure::Adapter(error).projection(&request));
+                        }
+                        Err(_) => return Ok(cancelled()),
+                    }
+                } else {
+                    match desktop_lifecycle::is_running(&request.tool_id, &installation.path) {
+                        Ok(true) => {
+                            return Ok(ToolActivationProjection::new(
+                                &request,
+                                "application_running",
+                                "save_work_before_restart",
+                            ));
+                        }
+                        Ok(false) => {}
+                        Err(error) => {
+                            return Ok(ActivationFailure::Adapter(error).projection(&request));
+                        }
+                    }
+                }
+            }
+            if permit
+                .cancel_safe(stop_helper_runtime(
+                    &request.tool_id,
+                    &claude_code_runtime,
+                    &claude_runtime,
+                    &dsh_runtime,
+                    &codex_bridge,
+                ))
+                .await
+                .is_err()
+            {
+                return Ok(cancelled());
+            }
+            match store.recover_pending(&request.tool_id, || {
+                tool_credentials::restore(&request.tool_id, None).is_ok()
+            }) {
+                Ok(true) => crate::request_diagnostics::clear(&request.tool_id),
+                Ok(false) => {}
+                Err(failure) => {
+                    use connection_recovery::PendingRecoveryFailure as RecoveryFailure;
+                    let reason = match failure {
+                        RecoveryFailure::Load => "recovery_storage_unavailable",
+                        RecoveryFailure::Files => "configuration_rollback_failed",
+                        RecoveryFailure::Credential => "credential_restore_failed",
+                        RecoveryFailure::Receipt => "recovery_receipt_failed",
+                    };
+                    return Ok(ActivationFailure::ConfigurationFailed(reason).projection(&request));
+                }
+            }
+        }
+    }
+    // Session refresh and token issuance may mutate the account. Never drop
+    // these futures on shutdown; finish the bounded request then clean up.
+    if permit.is_cancelled() {
+        return Ok(cancelled());
+    }
     let (origin, access_token) =
         match native_session_access(&account_state, &request.line_id, session_epoch).await {
-            Ok(value) => value,
+            Ok(v) => v,
             Err(NativeSessionFailure::SignedOut) => {
                 return Ok(ActivationFailure::SignedOut.projection(&request))
             }
@@ -876,21 +1257,22 @@ pub async fn configure_desktop_tool_v2(
                 )
             }
         };
-    let model_transport = match validate_model(
-        &origin,
-        &access_token,
-        &request.model_id,
-        &request.tool_id,
-        &request.billing_group,
-    )
-    .await
+    let bindings = request.bindings();
+    let transports = match permit
+        .cancel_safe(validate_models(
+            &origin,
+            &access_token,
+            &bindings,
+            &request.tool_id,
+        ))
+        .await
     {
-        Ok(value) => value,
-        Err(error) => return Ok(error.projection(&request)),
+        Ok(Ok(v)) => v,
+        Ok(Err(e)) => return Ok(e.projection(&request)),
+        Err(_) => return Ok(cancelled()),
     };
-
     let credential_before = match tool_credentials::snapshot(&request.tool_id) {
-        Ok(value) => value,
+        Ok(v) => v,
         Err(_) => {
             return Ok(
                 ActivationFailure::Adapter(AdapterFailure::SecureStorageUnavailable)
@@ -899,7 +1281,7 @@ pub async fn configure_desktop_tool_v2(
         }
     };
     let previous_record = match tool_credentials::load(&request.tool_id) {
-        Ok(value) => Some(value),
+        Ok(v) => Some(v),
         Err(CredentialFailure::Missing) if credential_before.is_none() => None,
         Err(_) => {
             return Ok(
@@ -908,215 +1290,243 @@ pub async fn configure_desktop_tool_v2(
             )
         }
     };
-
-    if ensure_session_epoch(&account_state, session_epoch).is_err() {
-        return Ok(ActivationFailure::ConfigurationFailed("account_changed").projection(&request));
-    }
-    let lease = match acquire_token(
-        &origin,
-        &access_token,
-        &request.tool_id,
-        &request.billing_group,
-    )
-    .await
-    {
-        Ok(value) => value,
-        Err(error) => return Ok(error.projection(&request)),
-    };
-    if ensure_session_epoch(&account_state, session_epoch).is_err() {
-        delete_created_token(&origin, &access_token, &lease).await;
-        return Ok(ActivationFailure::ConfigurationFailed("account_changed").projection(&request));
-    }
-    let mut prepared =
-        match prepare_adapter(&request, &origin, previous_record.as_ref(), model_transport) {
-            Ok(value) => value,
-            Err(error) => {
-                delete_created_token(&origin, &access_token, &lease).await;
-                return Ok(ActivationFailure::Adapter(error).projection(&request));
+    let mut leases = Vec::new();
+    for binding in &bindings {
+        if leases
+            .iter()
+            .any(|(group, _)| group == &binding.billing_group)
+        {
+            continue;
+        }
+        if permit.is_cancelled() || ensure_session_epoch(&account_state, session_epoch).is_err() {
+            delete_created_tokens(&origin, &access_token, &leases).await;
+            return Ok(if permit.is_cancelled() {
+                cancelled()
+            } else {
+                ActivationFailure::ConfigurationFailed("account_changed").projection(&request)
+            });
+        }
+        match acquire_token(
+            &origin,
+            &access_token,
+            &request.tool_id,
+            &binding.billing_group,
+        )
+        .await
+        {
+            Ok(lease) => leases.push((binding.billing_group.clone(), lease)),
+            Err(e) => {
+                delete_created_tokens(&origin, &access_token, &leases).await;
+                return Ok(e.projection(&request));
             }
-        };
-    // Persist recovery BEFORE changing credentials or any target file.
-    let recovery = match Store::open(true) {
-        Ok(Some(value)) => value,
-        _ => {
-            delete_created_token(&origin, &access_token, &lease).await;
-            return Ok(
-                ActivationFailure::ConfigurationFailed("recovery_storage_unavailable")
-                    .projection(&request),
-            );
+        }
+    }
+    if permit.is_cancelled() || ensure_session_epoch(&account_state, session_epoch).is_err() {
+        delete_created_tokens(&origin, &access_token, &leases).await;
+        return Ok(if permit.is_cancelled() {
+            cancelled()
+        } else {
+            ActivationFailure::ConfigurationFailed("account_changed").projection(&request)
+        });
+    }
+    let credential = match credential_for_models(
+        &request,
+        &origin,
+        &transports,
+        &leases,
+        previous_record.as_ref(),
+    ) {
+        Ok(v) => v,
+        Err(e) => {
+            delete_created_tokens(&origin, &access_token, &leases).await;
+            return Ok(e.projection(&request));
         }
     };
+    let default_transport = bindings
+        .iter()
+        .position(|m| m.model_id == request.model_id)
+        .and_then(|i| transports[i]);
+    let mut prepared = match prepare_adapter(&request, &credential, default_transport) {
+        Ok(v) => v,
+        Err(e) => {
+            delete_created_tokens(&origin, &access_token, &leases).await;
+            return Ok(ActivationFailure::Adapter(e).projection(&request));
+        }
+    };
+    let recovery = match recovery.take() {
+        Some(store) => store,
+        None => match Store::open(true) {
+            Ok(Some(store)) => store,
+            _ => {
+                delete_created_tokens(&origin, &access_token, &leases).await;
+                return Ok(
+                    ActivationFailure::ConfigurationFailed("recovery_storage_unavailable")
+                        .projection(&request),
+                );
+            }
+        },
+    };
+    if desktop_lifecycle::requires_reload(&request.tool_id) {
+        if request.restart_running_app {
+            match permit
+                .cancel_safe(desktop_lifecycle::quit_normally(
+                    &request.tool_id,
+                    &installation.path,
+                ))
+                .await
+            {
+                Ok(Ok(closed)) => reload_guard.record_normal_quit(closed),
+                Ok(Err(AdapterFailure::LaunchError("graceful_restart_required"))) => {
+                    delete_created_tokens(&origin, &access_token, &leases).await;
+                    return Ok(ToolActivationProjection::new(
+                        &request,
+                        "application_running",
+                        "graceful_restart_required",
+                    ));
+                }
+                Ok(Err(error)) => {
+                    delete_created_tokens(&origin, &access_token, &leases).await;
+                    return Ok(ActivationFailure::Adapter(error).projection(&request));
+                }
+                Err(_) => {
+                    delete_created_tokens(&origin, &access_token, &leases).await;
+                    return Ok(cancelled());
+                }
+            }
+        } else {
+            match desktop_lifecycle::is_running(&request.tool_id, &installation.path) {
+                Ok(true) => {
+                    delete_created_tokens(&origin, &access_token, &leases).await;
+                    return Ok(ToolActivationProjection::new(
+                        &request,
+                        "application_running",
+                        "save_work_before_restart",
+                    ));
+                }
+                Ok(false) => {}
+                Err(error) => {
+                    delete_created_tokens(&origin, &access_token, &leases).await;
+                    return Ok(ActivationFailure::Adapter(error).projection(&request));
+                }
+            }
+        }
+    }
     let receipt = Receipt {
         tool_id: request.tool_id.clone(),
         model_id: request.model_id.clone(),
         line_id: request.line_id.clone(),
         billing_group: request.billing_group.clone(),
         updated_at_epoch_ms: now_epoch_ms(),
-        requires_background: request.tool_id == "claude_desktop"
-            || request.tool_id == "dsh_web"
-            || matches!(
-                model_transport,
-                Some(ModelTransport::Claude(ClaudeTransport::ChatBridge))
-                    | Some(ModelTransport::Codex(
-                        codex_desktop::CodexTransport::ChatBridge
-                    ))
-            ),
+        requires_background: true,
     };
     let mut recovery_record =
         match recovery.begin(receipt, prepared.changes(), previous_record.as_ref()) {
-            Ok(record) => record,
-            Err(error) => {
-                delete_created_token(&origin, &access_token, &lease).await;
-                let reason = if error == connection_recovery::Failure::Changed {
-                    "recovery_pending"
-                } else {
-                    "recovery_storage_unavailable"
-                };
-                return Ok(ActivationFailure::ConfigurationFailed(reason).projection(&request));
+            Ok(v) => v,
+            Err(e) => {
+                delete_created_tokens(&origin, &access_token, &leases).await;
+                return Ok(ActivationFailure::ConfigurationFailed(
+                    if e == connection_recovery::Failure::Changed {
+                        "recovery_pending"
+                    } else {
+                        "recovery_storage_unavailable"
+                    },
+                )
+                .projection(&request));
             }
         };
-    let bridge_started = if model_transport
-        == Some(ModelTransport::Codex(
-            codex_desktop::CodexTransport::ChatBridge,
-        )) {
-        match codex_bridge.ensure_started().await {
-            Ok(value) => value,
-            Err(_) => {
-                let _ = recovery.abandon(&recovery_record);
-                delete_created_token(&origin, &access_token, &lease).await;
-                return Ok(
-                    ActivationFailure::Adapter(AdapterFailure::ConfigurationFailed(
-                        "local_bridge_unavailable",
-                    ))
-                    .projection(&request),
-                );
-            }
-        }
+    let mut bridge_started = false;
+    let gateway_result = if request.tool_id == "codex_desktop" {
+        codex_bridge.ensure_started().await.map(|started| {
+            bridge_started = started;
+        })
+    } else if crate::chat_gateway::base_url(&request.tool_id).is_some() {
+        chat_gateway.ensure_started().await.map_err(|_| ())
     } else {
-        false
+        Ok(())
     };
-    let credential = ToolCredential {
-        api_key: lease.key.clone(),
-        origin: origin.clone(),
-        model_id: request.model_id.clone(),
-        local_gateway_token: prepared.local_gateway_token().map(str::to_owned),
-        codex_transport: match model_transport {
-            Some(ModelTransport::Codex(value)) => Some(value.credential_value().to_owned()),
-            _ => None,
-        },
-        claude_transport: match model_transport {
-            Some(ModelTransport::Claude(value)) => Some(value.credential_value().to_owned()),
-            _ => None,
-        },
-    };
-    if tool_credentials::store(&request.tool_id, &credential).is_err() {
+    if gateway_result.is_err() || permit.is_cancelled() {
         let _ = recovery.abandon(&recovery_record);
-        if bridge_started {
-            codex_bridge.stop().await;
-        }
-        delete_created_token(&origin, &access_token, &lease).await;
-        return Ok(
-            ActivationFailure::Adapter(AdapterFailure::SecureStorageUnavailable)
-                .projection(&request),
-        );
+        delete_created_tokens(&origin, &access_token, &leases).await;
+        return Ok(if permit.is_cancelled() {
+            cancelled()
+        } else {
+            ActivationFailure::ConfigurationFailed("local_bridge_unavailable").projection(&request)
+        });
     }
-    if let Err(error) = prepared.commit() {
-        let cleanup = restore_after_failure(
-            &request,
-            &mut prepared,
-            credential_before.as_deref(),
-            previous_record.clone(),
-            &origin,
-            &access_token,
-            &lease,
-            &claude_code_runtime,
-            &claude_runtime,
-            &codex_bridge,
-            bridge_started,
-        )
-        .await;
-        if cleanup.is_none() {
-            let _ = recovery.abandon(&recovery_record);
-        }
-        return Ok(ActivationFailure::Adapter(cleanup.unwrap_or(error)).projection(&request));
-    }
-    if let Err(error) = verify_adapter(
-        &request,
-        &installation,
-        &credential,
-        &claude_code_runtime,
-        &claude_runtime,
-        &dsh_runtime,
-    )
-    .await
-    {
-        let cleanup = restore_after_failure(
-            &request,
-            &mut prepared,
-            credential_before.as_deref(),
-            previous_record.clone(),
-            &origin,
-            &access_token,
-            &lease,
-            &claude_code_runtime,
-            &claude_runtime,
-            &codex_bridge,
-            bridge_started,
-        )
-        .await;
-        if cleanup.is_none() {
-            let _ = recovery.abandon(&recovery_record);
-        }
-        return Ok(ActivationFailure::Adapter(cleanup.unwrap_or(error)).projection(&request));
-    }
-
-    if recovery.finish(&mut recovery_record).is_err() {
-        if request.tool_id == "dsh_web" {
-            dsh_runtime.stop().await;
-        }
-        let cleanup = restore_after_failure(
-            &request,
-            &mut prepared,
-            credential_before.as_deref(),
-            previous_record.clone(),
-            &origin,
-            &access_token,
-            &lease,
-            &claude_code_runtime,
-            &claude_runtime,
-            &codex_bridge,
-            bridge_started,
-        )
-        .await;
-        if cleanup.is_none() {
-            let _ = recovery.abandon(&recovery_record);
-        }
-        if let Some(error) = cleanup {
-            return Ok(ActivationFailure::Adapter(error).projection(&request));
-        }
-        return Ok(
-            ActivationFailure::ConfigurationFailed("recovery_receipt_failed").projection(&request),
-        );
-    }
-
-    if request.tool_id == "codex_desktop"
-        && model_transport
-            == Some(ModelTransport::Codex(
-                codex_desktop::CodexTransport::DirectResponses,
+    // No cancellation point between credential publication and local file commit.
+    let local_result = tool_credentials::store(&request.tool_id, &credential)
+        .map_err(|_| AdapterFailure::SecureStorageUnavailable)
+        .and_then(|()| prepared.commit());
+    let configured = match local_result {
+        Err(e) => Err(e),
+        Ok(()) => match permit
+            .cancel_safe(start_local_adapter(
+                &request,
+                &credential,
+                &claude_code_runtime,
+                &claude_runtime,
             ))
-    {
-        codex_bridge.stop().await;
+            .await
+        {
+            Ok(result) => result,
+            Err(_) => Err(AdapterFailure::ConfigurationFailed(
+                "assistant_shutting_down",
+            )),
+        },
+    };
+    let result = configured.and_then(|()| {
+        if permit.is_cancelled() {
+            return Err(AdapterFailure::ConfigurationFailed(
+                "assistant_shutting_down",
+            ));
+        }
+        if ensure_session_epoch(&account_state, session_epoch).is_err() {
+            return Err(AdapterFailure::ConfigurationFailed("account_changed"));
+        }
+        recovery
+            .finish(&mut recovery_record)
+            .map_err(|_| AdapterFailure::ConfigurationFailed("recovery_receipt_failed"))
+    });
+    if let Err(error) = result {
+        let cleanup = restore_after_failure(
+            &request,
+            &mut prepared,
+            credential_before.as_deref(),
+            previous_record,
+            &origin,
+            &access_token,
+            &leases,
+            &claude_code_runtime,
+            &claude_runtime,
+            &codex_bridge,
+            &dsh_runtime,
+            bridge_started,
+            &permit,
+        )
+        .await;
+        if cleanup.is_none() {
+            let _ = recovery.abandon(&recovery_record);
+        }
+        return Ok(ActivationFailure::Adapter(cleanup.unwrap_or(error)).projection(&request));
     }
-    if request.tool_id == "claude_code"
-        && model_transport == Some(ModelTransport::Claude(ClaudeTransport::DirectAnthropic))
+    reload_guard.disarm();
+    if let Err(error) =
+        open_configured_adapter(&request, &installation, &credential, &dsh_runtime).await
     {
-        claude_code_runtime.stop().await;
+        let reason = match error {
+            AdapterFailure::LaunchError(reason) => reason,
+            _ => "configuration_ready_open_failed",
+        };
+        return Ok(ToolActivationProjection::new(
+            &request,
+            "launch_failed",
+            reason,
+        ));
     }
-
     Ok(ToolActivationProjection::new(
         &request,
         "ready",
-        "tool_request_verified",
+        "configuration_ready",
     ))
 }
 
@@ -1150,6 +1560,9 @@ pub struct ConnectionProjection {
     restore_mode: &'static str,
     requires_background: bool,
     reason_code: &'static str,
+    models: Vec<ModelBinding>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    last_request: Option<crate::request_diagnostics::RequestObservation>,
 }
 
 impl ConnectionProjection {
@@ -1164,6 +1577,8 @@ impl ConnectionProjection {
             restore_mode: "none",
             requires_background: false,
             reason_code: "not_connected",
+            models: vec![],
+            last_request: None,
         }
     }
 }
@@ -1234,11 +1649,42 @@ fn inspect_connection(
             }
         },
     }
+    if let Ok(credential) = tool_credentials::load(tool) {
+        projection.models = credential
+            .models
+            .iter()
+            .map(|m| ModelBinding {
+                model_id: m.model_id.clone(),
+                billing_group: m.billing_group.clone(),
+            })
+            .collect();
+        if projection.models.is_empty()
+            && !projection.model_id.is_empty()
+            && !projection.billing_group.is_empty()
+        {
+            projection.models.push(ModelBinding {
+                model_id: projection.model_id.clone(),
+                billing_group: projection.billing_group.clone(),
+            });
+        }
+        if projection.state == "changed"
+            && credential.has_model_set()
+            && tool_adapters::user_home().is_some_and(|home| {
+                crate::open_connection::validate_settings(&home, tool, &credential).is_ok()
+            })
+        {
+            projection.state = "connected";
+            projection.reason_code = "connected";
+        }
+        projection.requires_background = needs_background(tool, &credential);
+    }
+    projection.last_request = crate::request_diagnostics::latest(tool);
     projection
 }
 
 pub(crate) fn needs_background(tool: &str, credential: &ToolCredential) -> bool {
-    matches!(tool, "claude_desktop" | "dsh_web")
+    credential.has_model_set()
+        || matches!(tool, "claude_desktop" | "dsh_web")
         || credential.claude_transport.as_deref() == Some("chat_bridge")
         || credential.codex_transport.as_deref() == Some("chat_bridge")
 }
@@ -1327,7 +1773,13 @@ pub async fn manage_tool_connections_v1(
     {
         return Err("invalid_connection_request".into());
     }
-    let _guard = ACTIVATION_LOCK.lock().await;
+    let permit = shutdown_coordinator::global()
+        .admit_operation()
+        .map_err(|_| "assistant_shutting_down")?;
+    let _guard = permit
+        .cancel_safe(ACTIVATION_LOCK.lock())
+        .await
+        .map_err(|_| "assistant_shutting_down")?;
     let _process_guard = if request.operation == "restore" {
         Some(connection_recovery::operation_lock().map_err(|_| "connection_operation_busy")?)
     } else {
@@ -1353,21 +1805,28 @@ pub async fn manage_tool_connections_v1(
             Ok(kept)
         })();
         if let Ok(kept) = result {
-            // Stop only this helper-owned runtime, never the third-party app or
-            // another provider. A running app may need to reopen its settings.
-            match request.tool_id.as_str() {
-                "claude_code" => claude_code_runtime.stop().await,
-                "claude_desktop" => claude_runtime.stop().await,
-                "codex_desktop" => codex_bridge.stop().await,
-                "dsh_web" => dsh_runtime.stop().await,
-                _ => {}
-            }
+            // Complete the local file/key transaction before any async stop.
             let cleaned = tool_credentials::restore(&request.tool_id, None).is_ok()
                 && store
                     .as_ref()
                     .ok()
                     .and_then(|s| s.as_ref())
                     .is_some_and(|s| s.remove(&request.tool_id).is_ok());
+            crate::request_diagnostics::clear(&request.tool_id);
+            // Stop only this helper-owned runtime, never the third-party app or
+            // another provider. A running app may need to reopen its settings.
+            let _ = permit
+                .cancel_safe(async {
+                    stop_helper_runtime(
+                        &request.tool_id,
+                        &claude_code_runtime,
+                        &claude_runtime,
+                        &dsh_runtime,
+                        &codex_bridge,
+                    )
+                    .await;
+                })
+                .await;
             if cleaned {
                 status = if kept {
                     "restored_with_changes"
@@ -1402,7 +1861,7 @@ pub async fn manage_tool_connections_v1(
         .collect();
     Ok(ConnectionResponse {
         request_id: request.request_id,
-        schema_version: 1,
+        schema_version: 2,
         status,
         connections,
         reason_code: reason,
@@ -1412,6 +1871,86 @@ pub async fn manage_tool_connections_v1(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ru042_activation_models_require_explicit_unique_binding_and_default_member() {
+        let json = json!({"requestId":"fixture", "lineId":"mainland_optimized", "toolId":"pi", "modelId":"a", "billingGroup":"cheap", "installationId":"i0123456789abcdef"});
+        let legacy: ToolActivationRequest = serde_json::from_value(json.clone()).unwrap();
+        assert!(request_is_valid(&legacy));
+        let mut modern = json;
+        modern["models"] = json!([{"modelId":"a","billingGroup":"cheap"},{"modelId":"b","billingGroup":"standard"}]);
+        let r: ToolActivationRequest = serde_json::from_value(modern.clone()).unwrap();
+        assert!(request_is_valid(&r));
+        let leases = vec![
+            (
+                "cheap".into(),
+                TokenLease {
+                    id: 1,
+                    key: "synthetic-key-cheap".into(),
+                    created: false,
+                },
+            ),
+            (
+                "standard".into(),
+                TokenLease {
+                    id: 2,
+                    key: "synthetic-key-standard".into(),
+                    created: false,
+                },
+            ),
+        ];
+        let c =
+            credential_for_models(&r, "https://yeschoy.com", &[None, None], &leases, None).unwrap();
+        assert_eq!(
+            c.resolve_model("b").unwrap().api_key,
+            "synthetic-key-standard"
+        );
+        let c2 = credential_for_models(&r, "https://yeschoy.com", &[None, None], &leases, Some(&c))
+            .unwrap();
+        assert_eq!(c.local_gateway_token, c2.local_gateway_token);
+        let out = serde_json::to_value(ToolActivationProjection::new(
+            &r,
+            "ready",
+            "tool_request_verified",
+        ))
+        .unwrap();
+        assert_eq!(out["schemaVersion"], 4);
+        assert_eq!(out["models"].as_array().unwrap().len(), 2);
+        assert!(!out.to_string().contains("synthetic-key"));
+        for bad in [
+            json!([]),
+            json!([{"modelId":"b","billingGroup":"standard"}]),
+            json!([{"modelId":"a","billingGroup":"cheap"},{"modelId":"a","billingGroup":"standard"}]),
+        ] {
+            modern["models"] = bad;
+            assert!(!request_is_valid(
+                &serde_json::from_value(modern.clone()).unwrap()
+            ));
+        }
+    }
+
+    #[test]
+    fn restoration_errors_never_masquerade_as_initial_storage_failure() {
+        assert_eq!(restoration_failure(false, false), None);
+        assert_eq!(
+            restoration_failure(true, false),
+            Some(AdapterFailure::ConfigurationFailed(
+                "configuration_rollback_failed"
+            ))
+        );
+        assert_eq!(
+            restoration_failure(false, true),
+            Some(AdapterFailure::ConfigurationFailed(
+                "credential_restore_failed"
+            ))
+        );
+        assert_eq!(
+            restoration_failure(true, true),
+            Some(AdapterFailure::ConfigurationFailed(
+                "configuration_rollback_failed"
+            ))
+        );
+    }
 
     #[derive(Default)]
     struct FakeTokens {
@@ -1563,8 +2102,14 @@ mod tests {
             model_id: "glm-5.3".into(),
             installation_id: "i0123456789abcdef".into(),
             billing_group: "default".into(),
+            models: None,
+            installation_job_id: None,
+            restart_running_app: false,
         };
         assert!(request_is_valid(&valid));
+        let mut invalid = valid.clone();
+        invalid.restart_running_app = true;
+        assert!(!request_is_valid(&invalid));
         let mut invalid = valid;
         invalid.tool_id = "opencode".into();
         assert!(!request_is_valid(&invalid));

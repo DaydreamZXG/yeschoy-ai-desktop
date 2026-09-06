@@ -35,6 +35,36 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 describe("reversible local connections", () => {
+  it("ru042 decodes only secret-free latest request and model bindings", () => {
+    const base = connectionsFixture("one");
+    const value = {
+      ...base,
+      schemaVersion: 2,
+      connections: base.connections.map((c) => ({ ...c, models: [] })),
+    };
+    const observation = {
+      modelId: "gpt-6-astra",
+      billingGroup: "special",
+      lineId: "global_accelerated",
+      outcome: "timeout",
+      httpStatus: 504,
+      observedAtEpochMs: 1000,
+    };
+    Object.assign(value.connections[0], {
+      models: [{ modelId: "gpt-6-astra", billingGroup: "special" }],
+      lastRequest: observation,
+    });
+    expect(decodeConnections(value, "one")).not.toBeNull();
+    for (const lastRequest of [
+      { ...observation, apiKey: "synthetic-secret" },
+      { ...observation, outcome: "raw provider message" },
+      { ...observation, httpStatus: 999 },
+      { ...observation, lineId: "untrusted" },
+    ]) {
+      Object.assign(value.connections[0], { lastRequest });
+      expect(decodeConnections(value, "one")).toBeNull();
+    }
+  });
   it("rejects secret fields, duplicate tools and mismatched replies", () => {
     const valid = connectionsFixture("one");
     expect(decodeConnections(valid, "one")).not.toBeNull();

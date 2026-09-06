@@ -142,7 +142,7 @@ const zh = {
   setupSignedOut: "登录状态已失效，请重新登录后再试。",
   setupModelUnavailable: "这个模型当前不在你的账户可用列表中，请刷新后重选。",
   setupServerUnavailable: "暂时无法从野菜API获取接入信息，请稍后重试。",
-  setupWriteFailed: "无法安全更新本机应用设置，原有设置已保留。",
+  setupWriteFailed: "设置未能完整更新。请检查接入状态，如有待恢复设置，请先恢复原设置。",
   signInFirst: "先去登录",
   settingUp: "正在接入…",
   setupAgain: "重新写入",
@@ -314,7 +314,7 @@ const en: Copy = {
   setupServerUnavailable:
     "Could not retrieve setup information from 野菜API. Try again shortly.",
   setupWriteFailed:
-    "The app settings could not be updated safely. Existing settings were preserved.",
+    "Settings could not be fully updated. Check the connection status and restore any pending settings before retrying.",
   signInFirst: "Sign in first",
   settingUp: "Setting up…",
   setupAgain: "Write again",
@@ -465,7 +465,7 @@ const tw: Copy = {
   setupModelUnavailable:
     "這個模型目前不在你的帳戶可用清單中，請重新整理後重選。",
   setupServerUnavailable: "暫時無法從野菜API取得接入資訊，請稍後重試。",
-  setupWriteFailed: "無法安全更新本機應用設定，原有設定已保留。",
+  setupWriteFailed: "設定未能完整更新。請檢查接入狀態，如有待還原設定，請先還原原設定。",
   signInFirst: "先去登入",
   settingUp: "正在接入…",
   setupAgain: "重新寫入",
@@ -632,7 +632,7 @@ const ja: Copy = {
   setupServerUnavailable:
     "野菜APIから接続情報を取得できません。しばらくしてから再試行してください。",
   setupWriteFailed:
-    "アプリ設定を安全に更新できませんでした。既存設定は保持されています。",
+    "設定の更新が完了しませんでした。接続状態を確認し、復元待ちの設定があれば先に復元してください。",
   signInFirst: "先にログイン",
   settingUp: "設定中…",
   setupAgain: "もう一度書き込む",

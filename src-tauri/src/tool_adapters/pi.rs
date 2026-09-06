@@ -3,7 +3,9 @@ use std::{
     time::Duration,
 };
 
-use serde_json::{json, Map, Value};
+#[cfg(test)]
+use serde_json::json;
+use serde_json::{Map, Value};
 use tokio::process::Command;
 
 use crate::{
@@ -20,6 +22,7 @@ pub(crate) struct Prepared {
     settings_path: PathBuf,
     origin: String,
     model: String,
+    model_ids: Vec<String>,
     helper: String,
 }
 
@@ -55,10 +58,20 @@ fn pretty(value: &Value) -> Result<Vec<u8>, ()> {
     Ok(bytes)
 }
 
+#[cfg(test)]
 fn render_models(
     existing: Option<&[u8]>,
     origin: &str,
     model: &str,
+    helper: &str,
+) -> Result<Vec<u8>, ()> {
+    render_model_catalog(existing, origin, &[model.to_owned()], helper)
+}
+
+fn render_model_catalog(
+    existing: Option<&[u8]>,
+    origin: &str,
+    model_ids: &[String],
     helper: &str,
 ) -> Result<Vec<u8>, ()> {
     let mut root = parse_document(existing)?;
@@ -80,14 +93,12 @@ fn render_models(
     provider.insert("api".into(), "openai-completions".into());
     provider.insert("apiKey".into(), format!("!{helper}").into());
     provider.insert("authHeader".into(), true.into());
-    provider.insert(
-        "models".into(),
-        json!([{
-            "id": model,
-            "name": model,
-            "input": ["text"]
-        }]),
+    let models = crate::tool_model_profile::native_chat_catalog(
+        provider.get("models"),
+        model_ids,
+        crate::tool_model_profile::ModelConsumer::Pi,
     );
+    provider.insert("models".into(), models);
     pretty(&Value::Object(root.clone()))
 }
 
@@ -100,6 +111,30 @@ fn render_settings(existing: Option<&[u8]>, model: &str) -> Result<Vec<u8>, ()> 
 }
 
 pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared, AdapterFailure> {
+    prepare_inner(home, origin, model, &[model.to_owned()])
+}
+
+pub(crate) fn prepare_catalog(
+    home: &Path,
+    _origin: &str,
+    model: &str,
+    model_ids: &[String],
+) -> Result<Prepared, AdapterFailure> {
+    crate::chat_gateway::validate_catalog(model, model_ids)?;
+    prepare_inner(
+        home,
+        &crate::chat_gateway::base_url("pi").unwrap(),
+        model,
+        model_ids,
+    )
+}
+
+fn prepare_inner(
+    home: &Path,
+    origin: &str,
+    model: &str,
+    model_ids: &[String],
+) -> Result<Prepared, AdapterFailure> {
     if std::env::var_os("PI_CODING_AGENT_DIR").is_some_and(|value| !value.is_empty()) {
         return Err(AdapterFailure::ExternalOverride);
     }
@@ -112,8 +147,9 @@ pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_read_failed"))?;
     let helper = tool_credentials::shell_helper_command("pi")
         .map_err(|_| AdapterFailure::SecureStorageUnavailable)?;
-    let models_after = render_models(models_before.as_deref(), origin, model, &helper)
-        .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?;
+    let models_after =
+        render_model_catalog(models_before.as_deref(), origin, model_ids, &helper)
+            .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?;
     let settings_after = render_settings(settings_before.as_deref(), model)
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?;
     let mut transaction =
@@ -128,6 +164,7 @@ pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared
         settings_path,
         origin: origin.to_owned(),
         model: model.to_owned(),
+        model_ids: model_ids.to_vec(),
         helper,
     })
 }
@@ -139,6 +176,14 @@ impl Prepared {
 
     pub(crate) fn commit(&mut self) -> Result<(), AdapterFailure> {
         self.transaction.commit().map_err(config_error)?;
+        self.validate_readback(true)
+    }
+
+    pub(crate) fn validate_existing(&self) -> Result<(), AdapterFailure> {
+        self.validate_readback(false)
+    }
+
+    fn validate_readback(&self, strict_default: bool) -> Result<(), AdapterFailure> {
         let models = common::snapshot(&self.models_path)
             .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_readback_failed"))?
             .ok_or(AdapterFailure::ConfigurationFailed(
@@ -159,9 +204,18 @@ impl Prepared {
             && provider["api"].as_str() == Some("openai-completions")
             && provider["apiKey"].as_str() == Some(format!("!{}", self.helper).as_str())
             && provider["authHeader"].as_bool() == Some(true)
-            && provider["models"][0]["id"].as_str() == Some(&self.model)
+            && crate::chat_gateway::catalog_matches(
+                &provider["models"],
+                Some("id"),
+                &self.model_ids,
+            )
             && settings["defaultProvider"].as_str() == Some("yeschoy")
-            && settings["defaultModel"].as_str() == Some(&self.model);
+            && crate::chat_gateway::default_matches(
+                settings["defaultModel"].as_str(),
+                &self.model,
+                &self.model_ids,
+                strict_default,
+            );
         if correct {
             Ok(())
         } else {
@@ -195,18 +249,162 @@ pub(crate) async fn verify(
     ]);
     let result = common::run_bounded(command, Duration::from_secs(120)).await;
     let _ = std::fs::remove_dir_all(&working);
-    let result =
-        result.map_err(|_| AdapterFailure::VerificationFailed("tool_request_timed_out"))?;
-    if result.success && !result.stdout.is_empty() {
+    let result = result.map_err(|error| AdapterFailure::VerificationFailed(error.reason_code()))?;
+    if !result.success {
+        return Err(AdapterFailure::VerificationFailed("tool_request_failed"));
+    }
+    // Official print mode writes only the final assistant text to stdout:
+    // github.com/earendil-works/pi/.../src/modes/print-mode.ts
+    if common::verification_reply(&result.stdout) {
         Ok(())
     } else {
-        Err(AdapterFailure::VerificationFailed("tool_request_failed"))
+        Err(AdapterFailure::VerificationFailed("tool_response_invalid"))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ru043_pi_reapply_preserves_caps_and_restores_original_bytes() {
+        let home = common::temporary_working_directory("pi-profile-reapply").unwrap();
+        let path = home.join(".pi/agent/models.json");
+        let settings_path = home.join(".pi/agent/settings.json");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let original = br#"{"providers":{"yeschoy":{"models":[{"id":"gpt-6-astra","api":"old-api","baseUrl":"https://old.invalid/v1","headers":{"Authorization":"synthetic-old-key"},"maxTokens":4096,"contextWindow":65536,"compat":{"supportsDeveloperRole":false}}]},"other":{"apiKey":"synthetic-other"}}}"#;
+        let settings = br#"{"thinkingLevel":"low","futureSetting":true}"#;
+        std::fs::write(&path, original).unwrap();
+        std::fs::write(&settings_path, settings).unwrap();
+        let mut prepared = prepare_catalog(
+            &home,
+            "https://yeschoy.com",
+            "gpt-6-astra",
+            &["gpt-6-astra".into()],
+        )
+        .unwrap();
+        prepared.commit().unwrap();
+        let value: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        let model = &value["providers"]["yeschoy"]["models"][0];
+        assert_eq!(model["maxTokens"], 4096);
+        assert_eq!(model["contextWindow"], 65536);
+        assert_eq!(model["thinkingLevelMap"]["max"], "max");
+        assert_eq!(model["compat"]["supportsDeveloperRole"], false);
+        for key in ["api", "baseUrl", "headers"] {
+            assert!(model.get(key).is_none());
+        }
+        assert_eq!(
+            value["providers"]["yeschoy"]["baseUrl"],
+            format!("{}/v1", prepared.origin)
+        );
+        assert_eq!(value["providers"]["other"]["apiKey"], "synthetic-other");
+        let saved: Value = serde_json::from_slice(&std::fs::read(&settings_path).unwrap()).unwrap();
+        assert_eq!(saved["thinkingLevel"], "low");
+        prepared.rollback().unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), original);
+        assert_eq!(std::fs::read(&settings_path).unwrap(), settings);
+        std::fs::remove_dir_all(home).unwrap();
+    }
+
+    #[test]
+    fn ru042_pi_catalog_keeps_real_ids_and_accepts_registered_native_default() {
+        let home = common::temporary_working_directory("pi-model-set").unwrap();
+        let ids = vec!["model-a".into(), "供应商/model-b".into()];
+        let mut prepared = prepare_catalog(&home, "https://yeschoy.com", "model-a", &ids).unwrap();
+        prepared.commit().unwrap();
+        let models: Value =
+            serde_json::from_slice(&std::fs::read(&prepared.models_path).unwrap()).unwrap();
+        assert_eq!(
+            models["providers"]["yeschoy"]["baseUrl"],
+            format!("{}/v1", crate::chat_gateway::base_url("pi").unwrap())
+        );
+        assert_eq!(
+            models["providers"]["yeschoy"]["models"][1]["id"],
+            "供应商/model-b"
+        );
+        let mut settings: Value =
+            serde_json::from_slice(&std::fs::read(&prepared.settings_path).unwrap()).unwrap();
+        settings["defaultModel"] = json!("供应商/model-b");
+        std::fs::write(
+            &prepared.settings_path,
+            serde_json::to_vec(&settings).unwrap(),
+        )
+        .unwrap();
+        assert!(prepared.validate_existing().is_ok());
+        assert!(prepared.validate_readback(true).is_err());
+        settings["defaultModel"] = json!("not-enrolled");
+        std::fs::write(
+            &prepared.settings_path,
+            serde_json::to_vec(&settings).unwrap(),
+        )
+        .unwrap();
+        assert!(prepared.validate_existing().is_err());
+        std::fs::remove_dir_all(home).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn pi_verification_executes_fixture_and_rejects_banner_echo_and_failed_reply() {
+        use common::test_support::Script;
+        let valid = Script::new("[ \"$1\" = --print ] || exit 11\n[ \"$4\" = --provider ] || exit 12\n[ \"$5\" = yeschoy ] || exit 13\nprintf 'YESCHOY_OK\\n'");
+        assert!(verify(&valid.installation(), "fixture-model").await.is_ok());
+        for body in [
+            "printf 'Pi ready\\n'",
+            "printf 'Usage: pi [options]\\n'",
+            "printf '%s\\n' \"$*\"",
+            "printf '  \\n'",
+            "printf 'YESCHOY_OK\\n'; exit 17",
+        ] {
+            let script = Script::new(body);
+            assert!(
+                verify(&script.installation(), "fixture-model")
+                    .await
+                    .is_err(),
+                "{body}"
+            );
+        }
+    }
+
+    #[test]
+    fn pi_existing_validation_is_read_only_and_checks_both_owned_files() {
+        let directory = common::temporary_working_directory("pi-readonly").unwrap();
+        let models_path = directory.join("models.json");
+        let settings_path = directory.join("settings.json");
+        let origin = "https://yeschoy.com";
+        let model = "fixture-model";
+        let helper = "synthetic-helper credential-helper pi";
+        let models = render_models(None, origin, model, helper).unwrap();
+        let settings = render_settings(Some(br#"{"theme":"keep"}"#), model).unwrap();
+        std::fs::write(&models_path, &models).unwrap();
+        std::fs::write(&settings_path, &settings).unwrap();
+        let prepared = Prepared {
+            transaction: FileTransaction::stage_with_snapshot(
+                models_path.clone(),
+                Some(models.clone()),
+                models.clone(),
+            )
+            .unwrap(),
+            models_path: models_path.clone(),
+            settings_path: settings_path.clone(),
+            origin: origin.into(),
+            model: model.into(),
+            model_ids: vec![model.into()],
+            helper: helper.into(),
+        };
+        assert!(prepared.validate_existing().is_ok());
+        assert_eq!(std::fs::read(&models_path).unwrap(), models);
+        assert_eq!(std::fs::read(&settings_path).unwrap(), settings);
+        for (path, bytes) in [(&models_path, models), (&settings_path, settings)] {
+            let changed = String::from_utf8(bytes.clone())
+                .unwrap()
+                .replace(model, "different-model");
+            std::fs::write(path, &changed).unwrap();
+            assert!(prepared.validate_existing().is_err());
+            assert_eq!(std::fs::read_to_string(path).unwrap(), changed);
+            std::fs::write(path, bytes).unwrap();
+        }
+        std::fs::remove_dir_all(directory).unwrap();
+    }
 
     #[test]
     fn provider_merge_keeps_other_providers_and_has_no_literal_key() {

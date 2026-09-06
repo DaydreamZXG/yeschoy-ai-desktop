@@ -15,6 +15,9 @@ import {
 } from "./configuration/connections";
 import { DiagnosticsView } from "./diagnostics/DiagnosticsView";
 import { SettingsView } from "./settings/SettingsView";
+import { ShutdownProvider } from "./settings/QuitAssistant";
+import { InstallationProvider } from "./installation/InstallationProvider";
+import { InstallationNotice } from "./installation/InstallationPanel";
 import { useAccountSession } from "./account/useAccountSession";
 import type { ConfigurationLineId } from "./configuration/preview";
 import {
@@ -119,267 +122,288 @@ function App() {
     : null;
 
   return (
-    <ConnectionProvider value={connections}>
-      <main
-        ref={shellRef}
-        className="app-shell"
-        data-phase={phase}
-        data-view={view}
-      >
-        <WorkbenchSidebar
-          view={view}
-          onNavigate={setView}
-          appearance={appearance}
-          onAppearance={changeAppearance}
-          accountProjection={accountSession.projection}
-          accountLoading={accountSession.loading}
-        />
-
-        {(view === "setup" || setupVisited) && (
-          <div className="persistent-setup" hidden={view !== "setup"}>
-            <ConfigurationPreviewView
-              initialDesktopAppId={selectedDesktopApp}
-              enableLocalActivation
-              lineId={accountLineId}
-              onLineChange={setAccountLineId}
-              session={accountSession}
-              onOpenAccount={() => setView("account")}
-              onOpenTools={() => setView("tools")}
+    <InstallationProvider>
+      <ConnectionProvider value={connections}>
+        <ShutdownProvider>
+          <main
+            ref={shellRef}
+            className="app-shell"
+            data-phase={phase}
+            data-view={view}
+          >
+            <WorkbenchSidebar
+              view={view}
+              onNavigate={setView}
+              appearance={appearance}
+              onAppearance={changeAppearance}
+              accountProjection={accountSession.projection}
+              accountLoading={accountSession.loading}
             />
-          </div>
-        )}
-        {view === "home" ? (
-          <AppLibraryView
-            onOpenAccount={() => setView("account")}
-            onOpenSetup={(appId) => {
-              setSelectedDesktopApp(appId);
-              setView("setup");
-            }}
-            onOpenDiagnostics={() => setView("diagnostics")}
-            accountSession={accountSession}
-          />
-        ) : view === "account" ? (
-          <AccountView
-            lineId={accountLineId}
-            onLineChange={setAccountLineId}
-            session={accountSession}
-          />
-        ) : view === "models" ? (
-          <ModelsView
-            line={accountLineId}
-            onLineChange={setAccountLineId}
-            session={accountSession}
-            onOpenAccount={() => setView("account")}
-          />
-        ) : view === "setup" ? null : view === "diagnostics" ? (
-          <DiagnosticsView
-            onOpenSetup={() => setView("setup")}
-            onOpenTools={() => setView("tools")}
-          />
-        ) : view === "settings" ? (
-          <SettingsView
-            appearance={appearance}
-            onAppearanceChange={changeAppearance}
-            onOpenAccount={() => setView("account")}
-            onOpenDiagnostics={() => setView("diagnostics")}
-          />
-        ) : (
-          <div className="workspace" id="top">
-            <section className="intro-panel" aria-labelledby="page-title">
-              <div>
-                <p className="eyebrow">{t("yeschoyDiscovery.eyebrow")}</p>
-                <h1 id="page-title">{t("yeschoyDiscovery.title")}</h1>
-                <p className="intro-copy">
-                  {t("yeschoyDiscovery.description")}
-                </p>
 
-                <div
-                  className="trust-list"
-                  aria-label={t("yeschoyDiscovery.trustTitle")}
-                >
-                  <span>{t("yeschoyDiscovery.localOnly")}</span>
-                  <span>{t("yeschoyDiscovery.noChanges")}</span>
-                  <span>{t("yeschoyDiscovery.noApiKnowledge")}</span>
-                </div>
+            {(view === "setup" || setupVisited) && (
+              <div className="persistent-setup" hidden={view !== "setup"}>
+                <ConfigurationPreviewView
+                  initialDesktopAppId={selectedDesktopApp}
+                  enableLocalActivation
+                  active={view === "setup"}
+                  lineId={accountLineId}
+                  onLineChange={setAccountLineId}
+                  session={accountSession}
+                  onOpenAccount={() => setView("account")}
+                  onOpenTools={() => setView("tools")}
+                />
               </div>
+            )}
+            {view === "home" ? (
+              <AppLibraryView
+                onOpenAccount={() => setView("account")}
+                onOpenSetup={(appId) => {
+                  setSelectedDesktopApp(appId);
+                  setView("setup");
+                }}
+                onOpenDiagnostics={() => setView("diagnostics")}
+                accountSession={accountSession}
+              />
+            ) : view === "account" ? (
+              <AccountView
+                lineId={accountLineId}
+                onLineChange={setAccountLineId}
+                session={accountSession}
+              />
+            ) : view === "models" ? (
+              <ModelsView
+                line={accountLineId}
+                onLineChange={setAccountLineId}
+                session={accountSession}
+                onOpenAccount={() => setView("account")}
+              />
+            ) : view === "setup" ? null : view === "diagnostics" ? (
+              <DiagnosticsView
+                onOpenSetup={() => setView("setup")}
+                onOpenTools={() => setView("tools")}
+              />
+            ) : view === "settings" ? (
+              <SettingsView
+                appearance={appearance}
+                onAppearanceChange={changeAppearance}
+                onOpenAccount={() => setView("account")}
+                onOpenDiagnostics={() => setView("diagnostics")}
+              />
+            ) : (
+              <div className="workspace" id="top">
+                <section className="intro-panel" aria-labelledby="page-title">
+                  <div>
+                    <p className="eyebrow">{t("yeschoyDiscovery.eyebrow")}</p>
+                    <h1 id="page-title">{t("yeschoyDiscovery.title")}</h1>
+                    <p className="intro-copy">
+                      {t("yeschoyDiscovery.description")}
+                    </p>
 
-              <div className="scan-action">
-                <button
-                  className="primary-action"
-                  type="button"
-                  onClick={runReadOnlyScan}
-                  disabled={phase === "loading"}
-                  data-testid="scan-tools-action"
-                >
-                  <span className="button-orbit" aria-hidden="true" />
-                  {phase === "loading"
-                    ? t("yeschoyDiscovery.scanning")
-                    : scan || phase === "error"
-                      ? t("yeschoyDiscovery.rescanButton")
-                      : t("yeschoyDiscovery.scanButton")}
-                </button>
-                <p>{t("yeschoyDiscovery.privacyNote")}</p>
-              </div>
-
-              <div className="scope-note">
-                <span>{t("yeschoyDiscovery.scopeLabel")}</span>
-                <p>{t("yeschoyDiscovery.scopeText")}</p>
-              </div>
-            </section>
-
-            <section
-              className="discovery-panel"
-              aria-labelledby="discovery-heading"
-            >
-              <div className="panel-heading">
-                <div>
-                  <p className="eyebrow">{t("yeschoyDiscovery.railLabel")}</p>
-                  <h2 id="discovery-heading">
-                    {t("yeschoyDiscovery.toolsTitle")}
-                  </h2>
-                </div>
-                <div className="scan-meta" aria-live="polite">
-                  {phase === "loading" && t("yeschoyDiscovery.processingLocal")}
-                  {completedAt &&
-                    t("yeschoyDiscovery.checkedAt", { time: completedAt })}
-                </div>
-              </div>
-
-              {phase === "error" && (
-                <div className="error-banner" role="alert">
-                  <strong>{t("yeschoyDiscovery.scanErrorTitle")}</strong>
-                  <span>{t("yeschoyDiscovery.scanErrorBody")}</span>
-                </div>
-              )}
-
-              <div className="tool-rail" aria-busy={phase === "loading"}>
-                <span className="rail-line" aria-hidden="true" />
-                {TOOL_CATALOG.map((tool, index) => {
-                  const result = resultsById.get(tool.id);
-                  const status =
-                    phase === "loading"
-                      ? "checking"
-                      : (result?.status ?? "waiting");
-                  return (
-                    <article
-                      className="tool-card"
-                      data-status={status}
-                      key={tool.id}
-                      style={{ "--rail-index": index } as CSSProperties}
+                    <div
+                      className="trust-list"
+                      aria-label={t("yeschoyDiscovery.trustTitle")}
                     >
-                      <div className="tool-mark" aria-hidden="true">
-                        {tool.mark}
-                      </div>
-                      <div className="tool-main">
-                        <div className="tool-title-row">
-                          <h3>
-                            {tool.id === "codex"
-                              ? t("yeschoyDiscovery.codexCli")
-                              : tool.displayName}
-                          </h3>
-                          <span className="status-label">
-                            {result?.selection === "bundled_only" &&
-                            phase !== "loading"
-                              ? t("yeschoyDiscovery.bundledStatus")
-                              : t(`yeschoyDiscovery.status.${status}`)}
-                          </span>
-                        </div>
-                        <p className="tool-description">
-                          {t(`yeschoyDiscovery.toolDescriptions.${tool.id}`)}
-                        </p>
-                        {result && (
-                          <div className="tool-evidence">
-                            {result.selection !== "not_found" &&
-                              result.selection !== "unresolved" && (
-                                <span className="selection-note">
-                                  {t(
-                                    `yeschoyDiscovery.selection.${result.selection}`,
+                      <span>{t("yeschoyDiscovery.localOnly")}</span>
+                      <span>{t("yeschoyDiscovery.noChanges")}</span>
+                      <span>{t("yeschoyDiscovery.noApiKnowledge")}</span>
+                    </div>
+                  </div>
+
+                  <div className="scan-action">
+                    <button
+                      className="primary-action"
+                      type="button"
+                      onClick={runReadOnlyScan}
+                      disabled={phase === "loading"}
+                      data-testid="scan-tools-action"
+                    >
+                      <span className="button-orbit" aria-hidden="true" />
+                      {phase === "loading"
+                        ? t("yeschoyDiscovery.scanning")
+                        : scan || phase === "error"
+                          ? t("yeschoyDiscovery.rescanButton")
+                          : t("yeschoyDiscovery.scanButton")}
+                    </button>
+                    <p>{t("yeschoyDiscovery.privacyNote")}</p>
+                  </div>
+
+                  <div className="scope-note">
+                    <span>{t("yeschoyDiscovery.scopeLabel")}</span>
+                    <p>{t("yeschoyDiscovery.scopeText")}</p>
+                  </div>
+                </section>
+
+                <section
+                  className="discovery-panel"
+                  aria-labelledby="discovery-heading"
+                >
+                  <div className="panel-heading">
+                    <div>
+                      <p className="eyebrow">
+                        {t("yeschoyDiscovery.railLabel")}
+                      </p>
+                      <h2 id="discovery-heading">
+                        {t("yeschoyDiscovery.toolsTitle")}
+                      </h2>
+                    </div>
+                    <div className="scan-meta" aria-live="polite">
+                      {phase === "loading" &&
+                        t("yeschoyDiscovery.processingLocal")}
+                      {completedAt &&
+                        t("yeschoyDiscovery.checkedAt", { time: completedAt })}
+                    </div>
+                  </div>
+
+                  {phase === "error" && (
+                    <div className="error-banner" role="alert">
+                      <strong>{t("yeschoyDiscovery.scanErrorTitle")}</strong>
+                      <span>{t("yeschoyDiscovery.scanErrorBody")}</span>
+                    </div>
+                  )}
+
+                  <div className="tool-rail" aria-busy={phase === "loading"}>
+                    <span className="rail-line" aria-hidden="true" />
+                    {TOOL_CATALOG.map((tool, index) => {
+                      const result = resultsById.get(tool.id);
+                      const status =
+                        phase === "loading"
+                          ? "checking"
+                          : (result?.status ?? "waiting");
+                      return (
+                        <article
+                          className="tool-card"
+                          data-status={status}
+                          key={tool.id}
+                          style={{ "--rail-index": index } as CSSProperties}
+                        >
+                          <div className="tool-mark" aria-hidden="true">
+                            {tool.mark}
+                          </div>
+                          <div className="tool-main">
+                            <div className="tool-title-row">
+                              <h3>
+                                {tool.id === "codex"
+                                  ? t("yeschoyDiscovery.codexCli")
+                                  : tool.displayName}
+                              </h3>
+                              <span className="status-label">
+                                {result?.selection === "bundled_only" &&
+                                phase !== "loading"
+                                  ? t("yeschoyDiscovery.bundledStatus")
+                                  : t(`yeschoyDiscovery.status.${status}`)}
+                              </span>
+                            </div>
+                            <p className="tool-description">
+                              {t(
+                                `yeschoyDiscovery.toolDescriptions.${tool.id}`,
+                              )}
+                            </p>
+                            {result && (
+                              <div className="tool-evidence">
+                                {result.selection !== "not_found" &&
+                                  result.selection !== "unresolved" && (
+                                    <span className="selection-note">
+                                      {t(
+                                        `yeschoyDiscovery.selection.${result.selection}`,
+                                      )}
+                                    </span>
                                   )}
-                                </span>
-                              )}
-                            {result.version && (
-                              <span>
-                                {t("yeschoyDiscovery.exactVersion")}
-                                <code>{result.version}</code>
-                              </span>
-                            )}
-                            {result.status === "multiple_installations" && (
-                              <span>
-                                {t("yeschoyDiscovery.candidateCount", {
-                                  count: result.candidateCount,
-                                })}
-                              </span>
-                            )}
-                            {result.selection !== "bundled_only" && (
-                              <span className="reason-text">
-                                {t(
-                                  `yeschoyDiscovery.reason.${result.reasonCode}`,
+                                {result.version && (
+                                  <span>
+                                    {t("yeschoyDiscovery.exactVersion")}
+                                    <code>{result.version}</code>
+                                  </span>
                                 )}
-                              </span>
-                            )}
-                            {result.bundledCount > 0 &&
-                              result.candidateCount > 0 && (
-                                <details className="tool-selection-details">
-                                  <summary>
-                                    {t("yeschoyDiscovery.componentDetails")}
-                                  </summary>
-                                  <p>
-                                    {t("yeschoyDiscovery.componentsIgnored", {
-                                      count: result.bundledCount,
+                                {result.status === "multiple_installations" && (
+                                  <span>
+                                    {t("yeschoyDiscovery.candidateCount", {
+                                      count: result.candidateCount,
                                     })}
-                                  </p>
-                                </details>
-                              )}
-                            {(result.selection === "unresolved" ||
-                              result.selection === "bundled_only") && (
-                              <div className="tool-recovery-actions">
-                                <button
-                                  type="button"
-                                  className="secondary-action"
-                                  onClick={() => setView("setup")}
-                                >
-                                  {t("yeschoyDiscovery.desktopAction")}
-                                </button>
-                                {result.selection === "unresolved" && (
-                                  <button
-                                    type="button"
-                                    className="text-action"
-                                    onClick={runReadOnlyScan}
-                                  >
-                                    {t("yeschoyDiscovery.rescanButton")}
-                                  </button>
+                                  </span>
+                                )}
+                                {result.selection !== "bundled_only" && (
+                                  <span className="reason-text">
+                                    {t(
+                                      `yeschoyDiscovery.reason.${result.reasonCode}`,
+                                    )}
+                                  </span>
+                                )}
+                                {result.bundledCount > 0 &&
+                                  result.candidateCount > 0 && (
+                                    <details className="tool-selection-details">
+                                      <summary>
+                                        {t("yeschoyDiscovery.componentDetails")}
+                                      </summary>
+                                      <p>
+                                        {t(
+                                          "yeschoyDiscovery.componentsIgnored",
+                                          {
+                                            count: result.bundledCount,
+                                          },
+                                        )}
+                                      </p>
+                                    </details>
+                                  )}
+                                {(result.selection === "unresolved" ||
+                                  result.selection === "bundled_only") && (
+                                  <div className="tool-recovery-actions">
+                                    <button
+                                      type="button"
+                                      className="secondary-action"
+                                      onClick={() => setView("setup")}
+                                    >
+                                      {t("yeschoyDiscovery.desktopAction")}
+                                    </button>
+                                    {result.selection === "unresolved" && (
+                                      <button
+                                        type="button"
+                                        className="text-action"
+                                        onClick={runReadOnlyScan}
+                                      >
+                                        {t("yeschoyDiscovery.rescanButton")}
+                                      </button>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             )}
                           </div>
-                        )}
-                      </div>
-                      <span className="rail-node" aria-hidden="true" />
-                    </article>
-                  );
-                })}
-              </div>
+                          <span className="rail-node" aria-hidden="true" />
+                        </article>
+                      );
+                    })}
+                  </div>
 
-              {scan && (
-                <details className="scan-details">
-                  <summary>{t("yeschoyDiscovery.advancedDetails")}</summary>
-                  <dl>
-                    <div>
-                      <dt>{t("yeschoyDiscovery.platform")}</dt>
-                      <dd>{scan.platform}</dd>
-                    </div>
-                    <div>
-                      <dt>{t("yeschoyDiscovery.requestId")}</dt>
-                      <dd>{scan.requestId}</dd>
-                    </div>
-                  </dl>
-                </details>
-              )}
-            </section>
-          </div>
-        )}
-      </main>
-    </ConnectionProvider>
+                  {scan && (
+                    <details className="scan-details">
+                      <summary>{t("yeschoyDiscovery.advancedDetails")}</summary>
+                      <dl>
+                        <div>
+                          <dt>{t("yeschoyDiscovery.platform")}</dt>
+                          <dd>{scan.platform}</dd>
+                        </div>
+                        <div>
+                          <dt>{t("yeschoyDiscovery.requestId")}</dt>
+                          <dd>{scan.requestId}</dd>
+                        </div>
+                      </dl>
+                    </details>
+                  )}
+                </section>
+              </div>
+            )}
+          </main>
+          {view !== "setup" && (
+            <InstallationNotice
+              onOpen={(tool) => {
+                setSelectedDesktopApp(tool);
+                setView("setup");
+              }}
+            />
+          )}
+        </ShutdownProvider>
+      </ConnectionProvider>
+    </InstallationProvider>
   );
 }
 

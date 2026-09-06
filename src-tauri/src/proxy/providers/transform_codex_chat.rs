@@ -346,6 +346,7 @@ pub fn responses_to_chat_completions_with_reasoning(
     // token/成本/缓存命中率全部漏记（input/output/cache 全为 0）。
     // 与 Claude→openai_chat 路径共用同一 helper，保证两个客户端方向一致。
     super::transform::inject_openai_stream_include_usage(&mut result);
+    crate::codex_bridge::claude_transform::normalize_chat_parameters(&mut result);
 
     Ok(result)
 }
@@ -358,8 +359,8 @@ fn apply_reasoning_options(
 ) {
     let Some(config) = config else {
         if super::transform::supports_reasoning_effort(model) {
-            if let Some(effort) = body.pointer("/reasoning/effort") {
-                result["reasoning_effort"] = effort.clone();
+            if let Some(effort) = body.pointer("/reasoning/effort").and_then(Value::as_str) {
+                crate::tool_model_profile::apply_chat_effort(result, model, effort);
             }
         }
         return;
@@ -1960,74 +1961,46 @@ pub(crate) fn response_status_from_finish_reason(finish_reason: Option<&str>) ->
 ///
 /// 输出统一为 `{"error": {"message", "type", "code", "param"}}`，与 OpenAI Responses
 /// API 错误响应一致；Codex 客户端的错误处理只识别这个形状。
-pub fn chat_error_to_response_error(body: Option<&Value>) -> Value {
-    let Some(value) = body else {
-        return json!({
-            "error": {
-                "message": "Upstream returned an empty error response",
-                "type": "upstream_error",
-                "code": serde_json::Value::Null,
-                "param": serde_json::Value::Null,
-            }
-        });
-    };
-
-    if let Some(text) = value.as_str() {
-        return json!({
-            "error": {
-                "message": text,
-                "type": "upstream_error",
-                "code": serde_json::Value::Null,
-                "param": serde_json::Value::Null,
-            }
-        });
-    }
-
-    let source = value.get("error").unwrap_or(value);
-
-    let message = source
-        .get("message")
-        .or_else(|| source.get("detail"))
-        .or_else(|| source.get("status_msg"))
-        .or_else(|| source.pointer("/base_resp/status_msg"))
-        .and_then(|v| v.as_str())
-        .map(ToString::to_string)
-        .or_else(|| source.as_str().map(ToString::to_string))
-        .unwrap_or_else(|| {
-            // 没法从字段提取出文本，就把整个 JSON 序列化回去，方便用户排查。
-            serde_json::to_string(source).unwrap_or_else(|_| "Upstream error".to_string())
-        });
-
-    let error_type = source
-        .get("type")
-        .and_then(|v| v.as_str())
-        .map(ToString::to_string)
-        .unwrap_or_else(|| "upstream_error".to_string());
-
-    let code = source
-        .get("code")
-        .cloned()
-        .or_else(|| source.pointer("/base_resp/status_code").cloned())
-        .unwrap_or(serde_json::Value::Null);
-
-    let param = source
-        .get("param")
-        .cloned()
-        .unwrap_or(serde_json::Value::Null);
-
-    json!({
-        "error": {
-            "message": message,
-            "type": error_type,
-            "code": code,
-            "param": param,
-        }
-    })
+#[cfg(test)]
+fn chat_error_to_response_error(_body: Option<&Value>) -> Value {
+    crate::request_diagnostics::error_json(
+        crate::request_diagnostics::RequestOutcome::UpstreamError,
+    )
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ru043_responses_reasoning_reaches_chat_without_silent_downgrade() {
+        for effort in ["low", "medium", "high", "xhigh", "max"] {
+            let converted = responses_to_chat_completions(json!({"model":"gpt-6-astra","input":"fixture","reasoning":{"effort":effort},"max_output_tokens":300})).unwrap();
+            assert_eq!(converted["reasoning_effort"], effort);
+            assert_eq!(converted["model"], "gpt-6-astra");
+            assert_eq!(converted["max_completion_tokens"], 300);
+        }
+        for (effort, expected) in [
+            ("low", "low"),
+            ("medium", "high"),
+            ("high", "high"),
+            ("xhigh", "high"),
+            ("max", "max"),
+        ] {
+            let converted = responses_to_chat_completions(
+                json!({"model":"deepseek-v4-pro","input":"fixture","reasoning":{"effort":effort}}),
+            )
+            .unwrap();
+            assert_eq!(converted["reasoning_effort"], expected);
+            assert_eq!(converted["thinking"]["type"], "enabled");
+        }
+        let off = responses_to_chat_completions(
+            json!({"model":"deepseek-v4-flash","input":"fixture","reasoning":{"effort":"none"}}),
+        )
+        .unwrap();
+        assert_eq!(off["thinking"]["type"], "disabled");
+        assert!(off.get("reasoning_effort").is_none());
+    }
     use base64::{engine::general_purpose::STANDARD, Engine as _};
 
     fn large_test_image_data_url() -> String {
@@ -2306,7 +2279,8 @@ mod tests {
         assert_eq!(result["tools"][0]["function"]["name"], "get_weather");
         assert_eq!(result["tools"][0]["function"]["strict"], true);
         assert_eq!(result["tool_choice"]["function"]["name"], "get_weather");
-        assert_eq!(result["max_tokens"], 100);
+        assert_eq!(result["max_completion_tokens"], 100);
+        assert!(result.get("max_tokens").is_none());
         assert_eq!(result["reasoning_effort"], "high");
     }
 
@@ -4568,10 +4542,10 @@ mod tests {
 
         let result = chat_error_to_response_error(Some(&input));
 
-        assert_eq!(result["error"]["message"], "Invalid API key");
-        assert_eq!(result["error"]["type"], "invalid_request_error");
-        assert_eq!(result["error"]["code"], "invalid_api_key");
-        assert_eq!(result["error"]["param"], "api_key");
+        assert_eq!(result["error"]["type"], "yeschoy_bridge_error");
+        assert_eq!(result["error"]["code"], "upstream_error");
+        assert!(!result.to_string().contains("Invalid API key"));
+        assert!(result["error"].get("param").is_none());
     }
 
     #[test]
@@ -4586,13 +4560,8 @@ mod tests {
 
         let result = chat_error_to_response_error(Some(&input));
 
-        assert_eq!(
-            result["error"]["message"],
-            "invalid params, chat content has invalid message role: system"
-        );
-        assert_eq!(result["error"]["code"], 2013);
-        // type 没有显式给出，应该回落到 upstream_error
-        assert_eq!(result["error"]["type"], "upstream_error");
+        assert_eq!(result["error"]["code"], "upstream_error");
+        assert!(!result.to_string().contains("invalid params"));
     }
 
     #[test]
@@ -4601,21 +4570,15 @@ mod tests {
 
         let result = chat_error_to_response_error(Some(&input));
 
-        assert_eq!(result["error"]["message"], "Upstream timeout");
-        assert_eq!(result["error"]["type"], "upstream_error");
-        assert!(result["error"]["code"].is_null());
-        assert!(result["error"]["param"].is_null());
+        assert_eq!(result["error"]["code"], "upstream_error");
+        assert!(!result.to_string().contains("Upstream timeout"));
     }
 
     #[test]
     fn chat_error_to_response_error_handles_missing_body() {
         let result = chat_error_to_response_error(None);
 
-        assert_eq!(
-            result["error"]["message"],
-            "Upstream returned an empty error response"
-        );
-        assert_eq!(result["error"]["type"], "upstream_error");
+        assert_eq!(result["error"]["type"], "yeschoy_bridge_error");
     }
 
     #[test]
@@ -4627,8 +4590,8 @@ mod tests {
 
         let result = chat_error_to_response_error(Some(&input));
 
-        assert_eq!(result["error"]["message"], "rate limit exceeded");
-        assert_eq!(result["error"]["type"], "upstream_error");
+        assert_eq!(result["error"]["type"], "yeschoy_bridge_error");
+        assert!(!result.to_string().contains("rate limit exceeded"));
     }
     // Regression tests for tool_choice without tools guard
     // https://github.com/farion1231/cc-switch/issues/3557

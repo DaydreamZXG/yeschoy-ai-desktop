@@ -19,7 +19,7 @@ function projection(requestId = "activate-test") {
     modelId: "glm-5.3",
     billingGroup: "国模特价分组",
     observedAtEpochMs: 1_788_195_600_000,
-    reasonCode: "tool_request_verified",
+    reasonCode: "configuration_ready",
   };
 }
 
@@ -69,6 +69,41 @@ beforeEach(() => native.mockReset());
 afterEach(() => vi.restoreAllMocks());
 
 describe("desktop tool activation boundary", () => {
+  it("ru042 validates model-set responses and rejects silent extra enrollment", async () => {
+    const bindings = [
+      { modelId: "glm-5.3", billingGroup: "国模特价分组" },
+      { modelId: "gpt-6-astra", billingGroup: "default" },
+    ];
+    const response = { ...projection(), schemaVersion: 4, models: bindings };
+    expect(decodeToolActivation(response, "activate-test")).not.toBeNull();
+    for (const models of [
+      [],
+      [...bindings, bindings[0]],
+      [{ ...bindings[0], apiKey: "synthetic-secret" }],
+    ]) {
+      expect(
+        decodeToolActivation({ ...response, models }, "activate-test"),
+      ).toBeNull();
+    }
+    native.mockImplementation(async (_, args) => ({
+      ...response,
+      requestId: (args as { request: { requestId: string } }).request.requestId,
+      models: [
+        ...bindings,
+        { modelId: "not-selected", billingGroup: "default" },
+      ],
+    }));
+    await expect(
+      activateDesktopTool({
+        lineId: "mainland_optimized",
+        toolId: "codex_desktop",
+        modelId: "glm-5.3",
+        billingGroup: "国模特价分组",
+        installationId: "i0123456789abcdef",
+        models: bindings,
+      }),
+    ).rejects.toThrow("invalid_tool_activation_projection");
+  });
   it("accepts only the exact secret-free native projection", () => {
     expect(decodeToolActivation(projection(), "activate-test")).toEqual(
       projection(),
@@ -107,7 +142,11 @@ describe("desktop tool activation boundary", () => {
 
   it("invokes the native writer with the selected route, app and model", async () => {
     vi.spyOn(Date, "now").mockReturnValue(1234);
-    native.mockResolvedValue(projection("activate-ya-1"));
+    native.mockImplementation(async (_, args) =>
+      projection(
+        (args as { request: { requestId: string } }).request.requestId,
+      ),
+    );
     const result = await activateDesktopTool({
       lineId: "global_accelerated",
       toolId: "codex_desktop",
@@ -125,6 +164,29 @@ describe("desktop tool activation boundary", () => {
         installationId: "i0123456789abcdef",
         billingGroup: "国模特价分组",
       },
+    });
+  });
+
+  it("accepts the bounded running-app handoff and sends restart consent only after confirmation", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(2234);
+    native.mockImplementation(async (_, args) => ({
+      ...projection(
+        (args as { request: { requestId: string } }).request.requestId,
+      ),
+      status: "application_running",
+      reasonCode: "save_work_before_restart",
+    }));
+    const result = await activateDesktopTool({
+      lineId: "mainland_optimized",
+      toolId: "codex_desktop",
+      modelId: "glm-5.3",
+      installationId: "i0123456789abcdef",
+      billingGroup: "国模特价分组",
+      restartRunningApp: true,
+    });
+    expect(result.status).toBe("application_running");
+    expect(native).toHaveBeenCalledWith("configure_desktop_tool_v2", {
+      request: expect.objectContaining({ restartRunningApp: true }),
     });
   });
 

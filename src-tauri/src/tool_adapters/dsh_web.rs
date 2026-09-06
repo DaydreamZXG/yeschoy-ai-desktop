@@ -40,6 +40,14 @@ pub(crate) struct DshRuntime {
     identity: [u8; 32],
 }
 
+impl Drop for DshRuntime {
+    fn drop(&mut self) {
+        // The child has kill_on_drop; the separate pipe reader must not detach
+        // if shutdown is cancelled at its shared deadline.
+        self.stdout_task.abort();
+    }
+}
+
 #[derive(Default)]
 pub(crate) struct DshRuntimeState {
     runtime: Mutex<Option<DshRuntime>>,
@@ -81,6 +89,7 @@ pub(crate) struct Prepared {
     path: PathBuf,
     origin: String,
     model: String,
+    model_ids: Vec<String>,
 }
 
 fn config_error(error: ConfigFailure) -> AdapterFailure {
@@ -113,7 +122,17 @@ fn child_mapping<'a>(parent: &'a mut Mapping, key: &str) -> Result<&'a mut Mappi
         .ok_or(())
 }
 
+#[cfg(test)]
 fn render(existing: Option<&[u8]>, origin: &str, model: &str) -> Result<Vec<u8>, ()> {
+    render_catalog(existing, origin, model, &[model.to_owned()])
+}
+
+fn render_catalog(
+    existing: Option<&[u8]>,
+    origin: &str,
+    model: &str,
+    model_ids: &[String],
+) -> Result<Vec<u8>, ()> {
     let mut root = match existing {
         Some(bytes) if !bytes.is_empty() => {
             serde_yaml::from_slice::<Value>(bytes).map_err(|_| ())?
@@ -148,14 +167,19 @@ fn render(existing: Option<&[u8]>, origin: &str, model: &str) -> Result<Vec<u8>,
         }))
         .map_err(|_| ())?,
     );
+    let previous_models = provider
+        .get(Value::String("models".into()))
+        .map(serde_json::to_value)
+        .transpose()
+        .map_err(|_| ())?;
+    let models = crate::tool_model_profile::native_chat_catalog(
+        previous_models.as_ref(),
+        model_ids,
+        crate::tool_model_profile::ModelConsumer::Dsh,
+    );
     provider.insert(
         Value::String("models".into()),
-        serde_yaml::to_value([json!({
-            "id": model,
-            "name": model,
-            "input": ["text"]
-        })])
-        .map_err(|_| ())?,
+        serde_yaml::to_value(models).map_err(|_| ())?,
     );
     let defaults = child_mapping(root_map, "agent-default-model")?;
     defaults.insert(
@@ -191,10 +215,34 @@ pub(crate) fn dsh_home(
 }
 
 pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared, AdapterFailure> {
+    prepare_inner(home, origin, model, &[model.to_owned()])
+}
+
+pub(crate) fn prepare_catalog(
+    home: &Path,
+    _origin: &str,
+    model: &str,
+    model_ids: &[String],
+) -> Result<Prepared, AdapterFailure> {
+    crate::chat_gateway::validate_catalog(model, model_ids)?;
+    prepare_inner(
+        home,
+        &crate::chat_gateway::base_url("dsh_web").unwrap(),
+        model,
+        model_ids,
+    )
+}
+
+fn prepare_inner(
+    home: &Path,
+    origin: &str,
+    model: &str,
+    model_ids: &[String],
+) -> Result<Prepared, AdapterFailure> {
     let path = dsh_home(home, std::env::var_os("DSH_HOME"))?.join("settings.yaml");
     let before = common::snapshot(&path)
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_read_failed"))?;
-    let after = render(before.as_deref(), origin, model)
+    let after = render_catalog(before.as_deref(), origin, model, model_ids)
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?;
     Ok(Prepared {
         transaction: FileTransaction::stage_with_snapshot(path.clone(), before, after)
@@ -202,6 +250,7 @@ pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared
         path,
         origin: origin.to_owned(),
         model: model.to_owned(),
+        model_ids: model_ids.to_vec(),
     })
 }
 
@@ -212,10 +261,14 @@ impl Prepared {
 
     pub(crate) fn commit(&mut self) -> Result<(), AdapterFailure> {
         self.transaction.commit().map_err(config_error)?;
-        self.validate_existing()
+        self.validate_readback(true)
     }
 
     pub(crate) fn validate_existing(&self) -> Result<(), AdapterFailure> {
+        self.validate_readback(false)
+    }
+
+    fn validate_readback(&self, strict_default: bool) -> Result<(), AdapterFailure> {
         let bytes = common::snapshot(&self.path)
             .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_readback_failed"))?
             .ok_or(AdapterFailure::ConfigurationFailed(
@@ -228,11 +281,20 @@ impl Prepared {
             && provider["api"].as_str() == Some("openai-completions")
             && provider["baseURL"].as_str()
                 == Some(format!("{}/v1", self.origin.trim_end_matches('/')).as_str())
-            && provider["models"][0]["id"].as_str() == Some(&self.model)
+            && crate::chat_gateway::catalog_matches(
+                &provider["models"],
+                Some("id"),
+                &self.model_ids,
+            )
             && provider["compat"]["supportsDeveloperRole"].as_bool() == Some(false)
             && provider["compat"]["maxTokensField"].as_str() == Some("max_tokens")
             && value["agent-default-model"]["provider"].as_str() == Some("yeschoy")
-            && value["agent-default-model"]["model"].as_str() == Some(&self.model);
+            && crate::chat_gateway::default_matches(
+                value["agent-default-model"]["model"].as_str(),
+                &self.model,
+                &self.model_ids,
+                strict_default,
+            );
         if correct {
             Ok(())
         } else {
@@ -298,16 +360,19 @@ async fn verify_headless(
         .current_dir(&working);
     let result = common::run_bounded(command, Duration::from_secs(120))
         .await
-        .map_err(|_| AdapterFailure::VerificationFailed("dsh_tool_rejected"));
+        .map_err(|error| AdapterFailure::VerificationFailed(error.reason_code()));
     let _ = std::fs::remove_dir_all(&working);
     let output = result?;
-    if output.success
-        && output.stdout.len() <= STARTUP_OUTPUT_LIMIT
-        && String::from_utf8_lossy(&output.stdout).contains("YESCHOY_OK")
-    {
+    if !output.success {
+        return Err(AdapterFailure::VerificationFailed("tool_request_failed"));
+    }
+    // The headless runner writes the final assistant text to stdout and sends
+    // reasoning/progress to stderr. Never accept the prompt echoed in logs.
+    // github.com/deepseek-ai/deepseek-harness/packages/bundle/headless
+    if output.stdout.len() <= STARTUP_OUTPUT_LIMIT && common::verification_reply(&output.stdout) {
         Ok(())
     } else {
-        Err(AdapterFailure::VerificationFailed("dsh_tool_rejected"))
+        Err(AdapterFailure::VerificationFailed("tool_response_invalid"))
     }
 }
 
@@ -386,20 +451,43 @@ pub(crate) async fn open_existing(
         .ok_or(AdapterFailure::LaunchFailed)?;
     // Fingerprint only in native memory: a changed credential, installation,
     // home or settings cannot accidentally reuse a stale process.
+    let identity = runtime_identity(&installation.path, &path, key, &bytes)?;
+    let url = state.ensure_running(installation, key, identity).await?;
+    open_browser(&url)
+}
+
+fn runtime_identity(
+    installation: &Path,
+    path: &Path,
+    key: &str,
+    bytes: &[u8],
+) -> Result<[u8; 32], AdapterFailure> {
+    // DSH reloads model settings on its next request. Catalog/default changes
+    // do not change the process environment or require killing a live session.
+    let mut settings: JsonValue =
+        serde_yaml::from_slice(bytes).map_err(|_| AdapterFailure::LaunchFailed)?;
+    if settings["llm-pi-ai"]["providers"]["yeschoy"]["baseURL"].as_str()
+        == Some(format!("{}/v1", crate::chat_gateway::base_url("dsh_web").unwrap()).as_str())
+    {
+        if let Some(provider) = settings["llm-pi-ai"]["providers"]["yeschoy"].as_object_mut() {
+            provider.remove("models");
+        }
+        if let Some(defaults) = settings["agent-default-model"].as_object_mut() {
+            defaults.remove("model");
+        }
+    }
+    let settings = serde_json::to_vec(&settings).map_err(|_| AdapterFailure::LaunchFailed)?;
     let mut fingerprint = Sha256::new();
     for part in [
-        installation.path.to_string_lossy().as_bytes(),
+        installation.to_string_lossy().as_bytes(),
         path.to_string_lossy().as_bytes(),
         key.as_bytes(),
-        bytes.as_slice(),
+        settings.as_slice(),
     ] {
         fingerprint.update((part.len() as u64).to_le_bytes());
         fingerprint.update(part);
     }
-    let url = state
-        .ensure_running(installation, key, fingerprint.finalize().into())
-        .await?;
-    open_browser(&url)
+    Ok(fingerprint.finalize().into())
 }
 
 pub(crate) async fn verify_launch_and_keep(
@@ -439,6 +527,142 @@ fn open_browser(_url: &str) -> Result<(), AdapterFailure> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ru043_dsh_catalog_efforts_preserve_existing_budget() {
+        let existing = b"llm-pi-ai:\n  providers:\n    yeschoy:\n      reasoning: low\n      models:\n        - id: deepseek-v4-flash\n          maxTokens: 4096\n          contextWindow: 65536\n";
+        let bytes = render_catalog(
+            Some(existing),
+            "http://127.0.0.1:15730/dsh_web",
+            "deepseek-v4-flash",
+            &["deepseek-v4-flash".into()],
+        )
+        .unwrap();
+        let value: serde_json::Value = serde_yaml::from_slice(&bytes).unwrap();
+        let provider = &value["llm-pi-ai"]["providers"]["yeschoy"];
+        assert_eq!(provider["reasoning"], "low");
+        let model = &provider["models"][0];
+        assert_eq!(model["maxTokens"], 4096);
+        assert_eq!(model["contextWindow"], 65536);
+        assert_eq!(
+            model["reasoningEfforts"],
+            json!({"off":"none","low":"low","high":"high","max":"max"})
+        );
+        assert!(model.get("thinkingLevelMap").is_none());
+    }
+
+    #[test]
+    fn ru042_dsh_catalog_default_change_preserves_runtime_identity() {
+        let home = common::temporary_working_directory("dsh-model-set").unwrap();
+        let path = home.join("settings.yaml");
+        let installation = home.join("synthetic-dsh");
+        let ids = vec!["model-a".into(), "model-b".into()];
+        let origin = crate::chat_gateway::base_url("dsh_web").unwrap();
+        let bytes = render_catalog(None, &origin, "model-a", &ids).unwrap();
+        let before = runtime_identity(&installation, &path, "synthetic-local", &bytes).unwrap();
+        let mut prepared = Prepared {
+            transaction: FileTransaction::stage_with_snapshot(path.clone(), None, bytes.clone())
+                .unwrap(),
+            path: path.clone(),
+            origin,
+            model: "model-a".into(),
+            model_ids: ids,
+        };
+        prepared.commit().unwrap();
+        let mut settings: JsonValue = serde_yaml::from_slice(&bytes).unwrap();
+        settings["agent-default-model"]["model"] = "model-b".into();
+        let changed = serde_yaml::to_string(&settings).unwrap();
+        std::fs::write(&path, &changed).unwrap();
+        assert!(prepared.validate_existing().is_ok());
+        assert!(prepared.validate_readback(true).is_err());
+        assert_eq!(
+            before,
+            runtime_identity(&installation, &path, "synthetic-local", changed.as_bytes()).unwrap()
+        );
+        settings["llm-pi-ai"]["providers"]["yeschoy"]["models"] =
+            json!([{"id":"model-c","name":"model-c","input":["text"]}]);
+        let catalog_change = serde_yaml::to_string(&settings).unwrap();
+        assert_eq!(
+            before,
+            runtime_identity(
+                &installation,
+                &path,
+                "synthetic-local",
+                catalog_change.as_bytes()
+            )
+            .unwrap()
+        );
+        assert_ne!(
+            before,
+            runtime_identity(
+                &installation,
+                &path,
+                "rotated-local",
+                catalog_change.as_bytes()
+            )
+            .unwrap()
+        );
+        settings["agent-default-model"]["model"] = "not-enrolled".into();
+        std::fs::write(&path, serde_yaml::to_string(&settings).unwrap()).unwrap();
+        assert!(prepared.validate_existing().is_err());
+        std::fs::remove_dir_all(home).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn ru042_dsh_catalog_update_reuses_real_fixture_process() {
+        let fixture = common::test_support::Script::new("[ \"$1\" = web ] || exit 11\n[ \"$YESCHOY_DSH_API_KEY\" = synthetic-local ] || exit 12\nprintf 'dsh web: http://127.0.0.1:3018/?token=synthetic\\n'\nexec /bin/sleep 30");
+        let installation = fixture.installation();
+        let config = installation.path.with_extension("yaml");
+        let origin = crate::chat_gateway::base_url("dsh_web").unwrap();
+        let a = render_catalog(None, &origin, "model-a", &["model-a".into()]).unwrap();
+        let b = render_catalog(
+            None,
+            &origin,
+            "model-b",
+            &["model-a".into(), "model-b".into()],
+        )
+        .unwrap();
+        let a = runtime_identity(&installation.path, &config, "synthetic-local", &a).unwrap();
+        let b = runtime_identity(&installation.path, &config, "synthetic-local", &b).unwrap();
+        let state = DshRuntimeState::default();
+        state
+            .ensure_running(&installation, "synthetic-local", a)
+            .await
+            .unwrap();
+        let pid = state.runtime.lock().await.as_ref().unwrap().child.id();
+        state
+            .ensure_running(&installation, "synthetic-local", b)
+            .await
+            .unwrap();
+        assert_eq!(state.runtime.lock().await.as_ref().unwrap().child.id(), pid);
+        state.stop().await;
+        assert!(state.runtime.lock().await.is_none());
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn dsh_verification_executes_headless_fixture_and_rejects_prompt_echo() {
+        use common::test_support::Script;
+        let valid = Script::new("[ \"$1\" = --profile ] || exit 11\n[ \"$2\" = headless ] || exit 12\n[ \"$YESCHOY_DSH_API_KEY\" = synthetic-only ] || exit 13\nprintf 'dsh: reasoning: fixture\\n' >&2\nprintf 'YESCHOY_OK\\n'");
+        assert!(verify_headless(&valid.installation(), "synthetic-only")
+            .await
+            .is_ok());
+        for body in [
+            "printf 'DSH ready\\n'",
+            "printf 'Usage: dsh --profile headless\\n'",
+            "printf '%s\\n' \"$*\"",
+            "printf 'YESCHOY_OK\\n'; exit 17",
+        ] {
+            let script = Script::new(body);
+            assert!(
+                verify_headless(&script.installation(), "synthetic-only")
+                    .await
+                    .is_err(),
+                "{body}"
+            );
+        }
+    }
 
     #[cfg(unix)]
     #[tokio::test]
@@ -527,6 +751,7 @@ mod tests {
             path: path.clone(),
             origin: "https://yeschoy.com".into(),
             model: "test-model".into(),
+            model_ids: vec!["test-model".into()],
         };
         assert!(prepared.validate_existing().is_ok());
         let changed = String::from_utf8(bytes)

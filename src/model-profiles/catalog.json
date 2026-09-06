@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-09-05",
+  "models": [
+    {
+      "id": "gpt-6-astra",
+      "displayName": "GPT-6 Astra",
+      "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
+      "input": ["text", "image"],
+      "contextWindow": 1050000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://developers.openai.com/api/docs/models/gpt-6-astra"]
+    },
+    {
+      "id": "gpt-5.6-sol",
+      "displayName": "GPT-5.6 Sol",
+      "reasoningLevels": ["none", "low", "medium", "high", "xhigh", "max"],
+      "input": ["text", "image"],
+      "contextWindow": 1050000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://developers.openai.com/api/docs/models"]
+    },
+    {
+      "id": "gpt-5.6-terra",
+      "displayName": "GPT-5.6 Terra",
+      "reasoningLevels": ["none", "low", "medium", "high", "xhigh", "max"],
+      "input": ["text", "image"],
+      "contextWindow": 1050000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://developers.openai.com/api/docs/models"]
+    },
+    {
+      "id": "gpt-5.6-luna",
+      "displayName": "GPT-5.6 Luna",
+      "reasoningLevels": ["none", "low", "medium", "high", "xhigh", "max"],
+      "input": ["text", "image"],
+      "contextWindow": 1050000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://developers.openai.com/api/docs/models"]
+    },
+    {
+      "id": "gpt-5.6",
+      "displayName": "GPT-5.6",
+      "reasoningLevels": ["none", "low", "medium", "high", "xhigh", "max"],
+      "input": ["text", "image"],
+      "contextWindow": 1050000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://developers.openai.com/api/docs/models"]
+    },
+    {
+      "id": "gpt-5.4-mini",
+      "displayName": "GPT-5.4 Mini",
+      "reasoningLevels": ["low", "medium", "high", "xhigh"],
+      "defaultReasoning": "medium",
+      "sources": [
+        "https://github.com/openai/codex/blob/main/codex-rs/core/models.json"
+      ]
+    },
+    {
+      "id": "gpt-5.3-codex",
+      "displayName": "GPT-5.3 Codex",
+      "reasoningLevels": ["low", "medium", "high", "xhigh"],
+      "defaultReasoning": "medium",
+      "sources": [
+        "https://github.com/openai/codex/blob/main/codex-rs/core/models.json"
+      ]
+    },
+    {
+      "id": "gpt-5.2",
+      "displayName": "GPT-5.2",
+      "reasoningLevels": ["low", "medium", "high", "xhigh"],
+      "defaultReasoning": "medium",
+      "sources": [
+        "https://github.com/openai/codex/blob/main/codex-rs/core/models.json"
+      ]
+    },
+    {
+      "id": "deepseek-v4-flash",
+      "displayName": "DeepSeek V4 Flash",
+      "reasoningLevels": ["none", "low", "high", "max"],
+      "defaultReasoning": "high",
+      "reasoningMode": "deepseek",
+      "input": ["text"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 384000,
+      "sources": [
+        "https://api-docs.deepseek.com/quick_start/agent_integrations/codex/",
+        "https://api-docs.deepseek.com/quick_start/pricing/",
+        "https://api-docs.deepseek.com/guides/thinking_mode/"
+      ]
+    },
+    {
+      "id": "deepseek-v4-pro",
+      "displayName": "DeepSeek V4 Pro",
+      "reasoningLevels": ["none", "low", "high", "max"],
+      "defaultReasoning": "high",
+      "reasoningMode": "deepseek",
+      "input": ["text"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 384000,
+      "sources": [
+        "https://api-docs.deepseek.com/quick_start/agent_integrations/codex/",
+        "https://api-docs.deepseek.com/quick_start/pricing/",
+        "https://api-docs.deepseek.com/guides/thinking_mode/"
+      ]
+    },
+    {
+      "id": "claude-sonnet-4-6",
+      "displayName": "Claude Sonnet 4.6",
+      "reasoningLevels": ["low", "medium", "high", "max"],
+      "defaultReasoning": "high",
+      "sources": [
+        "https://platform.claude.com/docs/en/build-with-claude/effort"
+      ]
+    },
+    {
+      "id": "claude-opus-4-6",
+      "displayName": "Claude Opus 4.6",
+      "reasoningLevels": ["low", "medium", "high", "max"],
+      "defaultReasoning": "high",
+      "sources": [
+        "https://platform.claude.com/docs/en/build-with-claude/effort"
+      ]
+    },
+    {
+      "id": "claude-opus-4-7",
+      "displayName": "Claude Opus 4.7",
+      "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
+      "defaultReasoning": "high",
+      "sources": [
+        "https://platform.claude.com/docs/en/build-with-claude/effort"
+      ]
+    },
+    {
+      "id": "claude-opus-4-8",
+      "displayName": "Claude Opus 4.8",
+      "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
+      "defaultReasoning": "high",
+      "sources": [
+        "https://platform.claude.com/docs/en/build-with-claude/effort"
+      ]
+    },
+    {
+      "id": "claude-opus-5",
+      "displayName": "Claude Opus 5",
+      "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
+      "defaultReasoning": "high",
+      "sources": [
+        "https://platform.claude.com/docs/en/build-with-claude/effort"
+      ]
+    },
+    {
+      "id": "claude-sonnet-5",
+      "displayName": "Claude Sonnet 5",
+      "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
+      "defaultReasoning": "high",
+      "sources": [
+        "https://platform.claude.com/docs/en/build-with-claude/effort"
+      ]
+    }
+  ]
+}

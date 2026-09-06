@@ -151,3 +151,77 @@ pub async fn check_line_connectivity_read_only(
         lines: vec![mainland, global],
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn fixture_response(
+        request_id: &str,
+        outcomes: [(ConnectivityStatus, ConnectivityReasonCode); 2],
+    ) -> ConnectivityResponse {
+        ConnectivityResponse {
+            request_id: request_id.to_owned(),
+            started_at_epoch_ms: 1_788_607_800_000,
+            completed_at_epoch_ms: 1_788_607_800_030,
+            lines: CONNECTIVITY_LINES
+                .iter()
+                .zip(outcomes)
+                .enumerate()
+                .map(
+                    |(index, (line, (status, reason_code)))| ConnectivityLineResult {
+                        line_id: line.line_id,
+                        display_name: line.display_name,
+                        root_url: line.root_url,
+                        host: line.host,
+                        port: line.port,
+                        status,
+                        latency_ms: (index as u64 + 1) * 10,
+                        reason_code,
+                    },
+                )
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn diagnostics_contract_native_fixtures_match_real_serialization() {
+        // The renderer consumes this same file. The expected wire spelling is
+        // never re-created in TypeScript or in a second Rust projection type.
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../tests/work_packages/ru041/fixtures/connectivity-native.json"
+        ))
+        .expect("shared native connectivity fixture is valid JSON");
+        let reachable = (
+            ConnectivityStatus::Reachable,
+            ConnectivityReasonCode::Tcp443Reachable,
+        );
+        let actual = serde_json::json!({
+            "reachable": fixture_response("diag-fixture-reachable", [reachable, reachable]),
+            "mixed": fixture_response("diag-fixture-mixed", [reachable, (
+                ConnectivityStatus::DnsFailed,
+                ConnectivityReasonCode::DnsResolutionFailed,
+            )]),
+            "failed": fixture_response("diag-fixture-failed", [(
+                ConnectivityStatus::ConnectFailed,
+                ConnectivityReasonCode::TcpConnectionFailed,
+            ), (
+                ConnectivityStatus::TimedOut,
+                ConnectivityReasonCode::ConnectivityCheckTimedOut,
+            )]),
+        });
+        assert_eq!(actual, fixture);
+    }
+
+    #[test]
+    fn diagnostics_contract_request_cannot_supply_network_targets_or_secrets() {
+        let request: ConnectivityRequest =
+            serde_json::from_str(r#"{"requestId":"diag-1"}"#).unwrap();
+        assert_eq!(request.request_id, "diag-1");
+        for field in ["host", "url", "port", "path", "headers", "apiKey", "proxy"] {
+            let mut payload = serde_json::json!({"requestId": "diag-1"});
+            payload[field] = serde_json::json!("not-accepted");
+            assert!(serde_json::from_value::<ConnectivityRequest>(payload).is_err());
+        }
+    }
+}
