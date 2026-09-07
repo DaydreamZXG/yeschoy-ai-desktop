@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU051-AS-renderer",
+  "assertion": "Renderer scenarios prove missing/installed/guided UX, permission and failure recovery, double-click/lost response, cancellation, stale context and exactly-once activation handoff. Include selected-app refresh after another job finishes and logged-out Windows confirmation without auto-activation.",
+  "testSelector": "tests/work_packages/ru051/test_acceptance.py::test_renderer_installation",
+  "acceptanceCommandId": "ru051-renderer",
+  "runId": "RU-051/WP-RU051-INSTALLATION-RECOVERY@2026-09-06T08:27:28.785371+00:00",
+  "packageId": "WP-RU051-INSTALLATION-RECOVERY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru051/test_acceptance.py::test_renderer_installation",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:1fb6f334eaa77973926fda610380cd6f21f029d48a6b31a8acb6c68cf9de310f",
+    "machineReportSha256": "sha256:553491665fe7764c21e22b0f660eb2365592388610a15dbf3b0b863b44ae1b76",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:f3568ed41587f5b0344ace3bbcfaa769f1f3a97ddc96cded9604ed3cc3b287e8",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:acf777b458421289e25110edbbee971b674c9ca833c3fc72ca6a55fb6de513ec",
+  "releaseUnitId": "RU-051",
+  "releaseUnitHash": "sha256:6fa6721fbc0cb99f7ee7ea1acf9dc0812c74ff2f7f398857e4f22b6fca90fe1d"
+}

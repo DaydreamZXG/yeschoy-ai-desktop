@@ -1862,6 +1862,49 @@
         "The download origin serves an atomically published stable manifest when present and empty HTTP 204 when absent. Immutable versioned artifacts are published before the manifest, rollback disables the manifest without deleting old objects, and health truthfully reflects channel publication.",
         "Happy, failure, replay, stale-version, race and recovery scenarios pass together with renderer, native and publisher tests. A first updater-aware build is identified as the one-time manual bootstrap boundary rather than claiming older clients can discover an updater they do not contain."
       ]
+    },
+    {
+      "id": "REQ-093",
+      "statement": "Allow a controlled friend-client build to open its login and authorization-confirmation page on ai.yeschoy.io while reusing the existing Yeschoy token, account, model, billing, route, bridge, updater and application-adapter implementation without introducing a caller-editable network target.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "account",
+      "evidenceRefs": [
+        "E-USER-089",
+        "E-CODE-092",
+        "E-PROP-041"
+      ],
+      "acceptance": [
+        "The default build opens the canonical https://yeschoy.com/desktop-authorize page and a deliberately configured friend build opens the same fixed path on https://ai.yeschoy.io.",
+        "Only those two exact HTTPS origins are accepted at build time; HTTP, ports, credentials, paths, query strings, fragments, lookalike hosts and arbitrary runtime input fail closed.",
+        "The client validates the server-issued device authorization against the canonical Yeschoy response before constructing a fresh browser URL containing only one validated user_code parameter.",
+        "Token, refresh, logout, account, usage, models, pricing, tool keys, wallet, local bridge, update and route origins remain unchanged, and no unfinished OAuth PKCE endpoint becomes active.",
+        "Focused native tests and source-level happy, failure, replay, stale-input, race and recovery scenarios pass without packaging, publication or remote mutation."
+      ]
+    },
+    {
+      "id": "REQ-094",
+      "statement": "Prepare the native OAuth 2.0 Authorization Code plus PKCE S256 protocol engine before server deployment without activating an incomplete login or application-bridge path.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "account",
+      "evidenceRefs": [
+        "E-USER-090",
+        "E-CODE-093",
+        "E-EXT-063",
+        "E-PROP-042"
+      ],
+      "acceptance": [
+        "The client binds 127.0.0.1 on an operating-system-assigned nonzero port before constructing an exact loopback redirect URI and browser authorization URL.",
+        "Each preparation generates independent 32-byte state and verifier values, derives PKCE S256 from the encoded verifier, and passes the RFC 7636 challenge vector.",
+        "Only the two compiled authorization-page origins are accepted, while token, refresh and revoke requests remain fixed to https://yeschoy.com and use UTF-8 form encoding without client secrets.",
+        "The local callback accepts only GET, the exact Host and path, one state and exactly one code-or-error result; malformed, foreign and wrong-state requests do not consume the valid flow, while a valid callback can be claimed only once.",
+        "Token responses and scopes are bounded and parsed without exposing credential material through Debug or error values; one-time code and refresh requests have no automatic replay behavior in this module.",
+        "The protocol engine is compiled but intentionally dormant: the existing device authorization, account projection, secure session, tool-key, billing-group and seven-application bridge behavior remains unchanged until a later server-backed integration unit.",
+        "Native unit tests and governed happy, failure, replay, stale, race and recovery scenarios pass without packaging, publishing, server changes or user-state mutation."
+      ]
     }
   ]
 }

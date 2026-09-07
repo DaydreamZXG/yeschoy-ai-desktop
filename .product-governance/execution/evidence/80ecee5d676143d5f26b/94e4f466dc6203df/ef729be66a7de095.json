@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU073-AS-race",
+  "assertion": "The initially bound 127.0.0.1 listener remains owned throughout preparation and atomic phase transitions prevent concurrent duplicate callback claims.",
+  "testSelector": "tests/work_packages/ru073/test_acceptance.py::test_race_controls_hold_the_bound_listener_and_atomically_claim_one_callback",
+  "acceptanceCommandId": "ru073-race",
+  "runId": "RU-073/WP-RU073-PKCE-CLIENT-PREFLIGHT@2026-09-07T10:51:00.258815+00:00",
+  "packageId": "WP-RU073-PKCE-CLIENT-PREFLIGHT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru073/test_acceptance.py::test_race_controls_hold_the_bound_listener_and_atomically_claim_one_callback",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:635eb09a2c68ab51c139feb02205b187a3eb29420aa1e34ba4b05c11be8cd79b",
+    "machineReportSha256": "sha256:71f351b3725cc79ea91a13a47fd99709abc4a5ac742c21208b516b5b4bd2501b",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:ff2cb4f16aa7d39cadaa43693c6aae4618722952466b6fb3d822b238d5e77a1a",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:08846f446adc0c6b5f2920d3190e61181fd683f78e73300f8c8113d9254ccefb",
+  "releaseUnitId": "RU-073",
+  "releaseUnitHash": "sha256:1d24a66ba979b245e8cc271a4a9dc8deeb7380bb296e8e8b93c0193bd3446943"
+}

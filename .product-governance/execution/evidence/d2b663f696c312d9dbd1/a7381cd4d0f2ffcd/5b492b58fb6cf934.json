@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU071-AS-race",
+  "assertion": "Versioned files become immutable before an atomic stable manifest, so readers see either the old complete release, the new complete release or empty 204.",
+  "testSelector": "tests/work_packages/ru071/test_acceptance.py::test_channel_publication_is_atomic_and_artifacts_precede_manifest",
+  "acceptanceCommandId": "ru071-race",
+  "runId": "RU-071/WP-RU071-SELF-UPDATE-CLOSURE@2026-09-07T09:31:53.190767+00:00",
+  "packageId": "WP-RU071-SELF-UPDATE-CLOSURE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-071",
+  "releaseUnitHash": "sha256:0cab89775da79ef995e247b3b70aa4f79c94b05dc84c274dec90f245bf4dbabc"
+}

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU061-AS-builds",
+  "assertion": "Read-only typecheck, production renderer build, strict native tests/lint, Apple-Silicon compilation and Windows x64 compilation pass without creating or modifying an installer, release, server or updater artifact.",
+  "testSelector": "tests/work_packages/ru060/test_acceptance.py::test_cross_platform_builds_without_packaging",
+  "acceptanceCommandId": "ru061-builds",
+  "runId": "RU-061/WP-RU061-READONLY-CODEX-DSH-VERIFICATION@2026-09-07T03:48:27.473621+00:00",
+  "packageId": "WP-RU061-READONLY-CODEX-DSH-VERIFICATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru060/test_acceptance.py::test_cross_platform_builds_without_packaging",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:74a3a9678d822b6fc91ade6d459194c125c03ad0cea36057967eb80bcee165d2",
+    "machineReportSha256": "sha256:1593e79e6862671968fc59a79d1b9be76efeb3b0bfdcb93131ab7a378fa9fdcf",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:5928061fc66e973654f39a75a941b6b73c3aba31e20803006a3553fa41e7937b",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:bb1e6c12f9c51530e8b5da18c7ea0731e4bc0d6a6515990b1282e2e50d8f55e4",
+  "releaseUnitId": "RU-061",
+  "releaseUnitHash": "sha256:f308462164568b3b4a18039ae02a8d2cf9e6d25e16764f8882a4d4a9e344edf0"
+}

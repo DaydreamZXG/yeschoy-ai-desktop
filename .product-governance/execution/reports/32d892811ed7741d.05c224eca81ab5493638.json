@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-067/WP-RU067-WINDOWS-RUNTIME-HOTFIX@2026-09-07T06:51:13.709793+00:00",
+  "packageId": "WP-RU067-WINDOWS-RUNTIME-HOTFIX",
+  "baselineCommit": "df10e7a0516c4125866daff5cf91b76178c89d02",
+  "baselineTreeHash": "sha256:f0b6e4aac8825847efe3716f26832df7527f39222ab919ad7f83f11065418330",
+  "testedTreeHash": "sha256:67579eb1ff54c0cd97962f2d2cb43044fe10d4a0b242156b145a3cd6964c36dc",
+  "testedSnapshotPath": "execution/tested-snapshots/32d892811ed7741d.05c224eca81ab5493638.json",
+  "testedSnapshotSha256": "sha256:4cba4a2ca91236844976def715d916d20fde5f96659d1edb4be5f850e6a60a9e",
+  "sourceDiff": {
+    "outputs/野菜API-0.4.13-Windows运行时热修复.md": "sha256:4854bed78ffdaaa81402bdc177c9b891a2ae093d55f777da54cf8bc07f2e0ca2",
+    "package.json": "sha256:32363d271e4c0db5cb95a7767d8c80a663adcaeb008cb39e6ad98c35beb9f45d",
+    "src-tauri/Cargo.lock": "sha256:4c5e7d78f4bfdd70b2415d9dc02a050766bc5f50b738af9eb497ac4459d60695",
+    "src-tauri/Cargo.toml": "sha256:3c0df538d25c90310245f99231c70d8a9ca4207105b3ef1a08a94d463a110387",
+    "src-tauri/src/lib.rs": "sha256:f80df366287cc9cdba67e8fecc9110c4340f54ea4190708389d32c091f8380f7",
+    "src-tauri/tauri.conf.json": "sha256:df6061588493b1860635d81e1afa569338f4c4cabb3a81127d0f3355dcf52574",
+    "tests/work_packages/ru067/test_acceptance.py": "sha256:16d7f398b33b7fcd26bc5877f40b821328acaaafd013587ebd267324947a6800"
+  },
+  "ownedResultHashes": {
+    "outputs/野菜API-0.4.13-Windows运行时热修复.md": "sha256:4854bed78ffdaaa81402bdc177c9b891a2ae093d55f777da54cf8bc07f2e0ca2",
+    "package.json": "sha256:32363d271e4c0db5cb95a7767d8c80a663adcaeb008cb39e6ad98c35beb9f45d",
+    "src-tauri/Cargo.lock": "sha256:4c5e7d78f4bfdd70b2415d9dc02a050766bc5f50b738af9eb497ac4459d60695",
+    "src-tauri/Cargo.toml": "sha256:3c0df538d25c90310245f99231c70d8a9ca4207105b3ef1a08a94d463a110387",
+    "src-tauri/src/lib.rs": "sha256:f80df366287cc9cdba67e8fecc9110c4340f54ea4190708389d32c091f8380f7",
+    "src-tauri/tauri.conf.json": "sha256:df6061588493b1860635d81e1afa569338f4c4cabb3a81127d0f3355dcf52574",
+    "tests/work_packages/ru067/test_acceptance.py": "sha256:16d7f398b33b7fcd26bc5877f40b821328acaaafd013587ebd267324947a6800"
+  },
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      "package.json",
+      "src-tauri/Cargo.toml",
+      "src-tauri/Cargo.lock",
+      "src-tauri/tauri.conf.json",
+      "src-tauri/src/lib.rs",
+      "tests/work_packages/ru067/**",
+      "outputs/野菜API-0.4.13-Windows热修复.md",
+      "release/internal/0.4.13/**"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      "package.json": "sha256:32363d271e4c0db5cb95a7767d8c80a663adcaeb008cb39e6ad98c35beb9f45d",
+      "src-tauri/Cargo.lock": "sha256:4c5e7d78f4bfdd70b2415d9dc02a050766bc5f50b738af9eb497ac4459d60695",
+      "src-tauri/Cargo.toml": "sha256:3c0df538d25c90310245f99231c70d8a9ca4207105b3ef1a08a94d463a110387",
+      "src-tauri/src/lib.rs": "sha256:f80df366287cc9cdba67e8fecc9110c4340f54ea4190708389d32c091f8380f7",
+      "src-tauri/tauri.conf.json": "sha256:df6061588493b1860635d81e1afa569338f4c4cabb3a81127d0f3355dcf52574",
+      "tests/work_packages/ru067/installer.nsi": "sha256:f8d7ba335ae874b33c4a521e01db717f4d4c73876076140daa2b18171f8fc69d",
+      "tests/work_packages/ru067/test_acceptance.py": "sha256:16d7f398b33b7fcd26bc5877f40b821328acaaafd013587ebd267324947a6800"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:ab233ad77e27a6a2df98422b6cc6bc8d2bf54899f270e13a0c65fd7fa3d4f746",
+  "sourceScopeFailures": [
+    "changed path outside package ownership: outputs/野菜API-0.4.13-Windows运行时热修复.md"
+  ],
+  "integrityFailures": [],
+  "assignedTo": "root",
+  "startedAt": "2026-09-07T06:51:13.709793+00:00",
+  "finishedAt": "2026-09-07T07:13:11.796832+00:00",
+  "passed": false,
+  "commands": [],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU067-AS-production-and-exit",
+      "path": "execution/evidence/05c224eca81ab5493638/32d892811ed7741d/41c253e4dc64d280.json",
+      "sha256": "sha256:d206571b38da55fc0b315b50d28d667bf4fee5ac2c2e80853757e9bbef1e540c"
+    },
+    {
+      "scenarioId": "RU067-AS-renderer-embedded-artifact",
+      "path": "execution/evidence/05c224eca81ab5493638/32d892811ed7741d/b662a59dee47f694.json",
+      "sha256": "sha256:bbc650e5838bce26e7d1665332ae7e23d366e15482ac9449e2f39c739f53d22d"
+    }
+  ],
+  "scenarioEvidenceFailures": [
+    "RU067-AS-production-and-exit: registered runner proof is invalid",
+    "RU067-AS-renderer-embedded-artifact: registered runner proof is invalid"
+  ],
+  "releaseUnitId": "RU-067",
+  "releaseUnitHash": "sha256:8be7244fb3b868ffc8478de4ed5342cf139c698cec637aad836755da3de27683"
+}

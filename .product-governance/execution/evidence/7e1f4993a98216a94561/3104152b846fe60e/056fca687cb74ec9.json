@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU039-AS-02",
+  "assertion": "Both model surfaces neither render nor search raw upstream descriptions from stale fixtures, while IDs, selection, groups and current renderer regressions remain intact.",
+  "testSelector": "tests/work_packages/ru039/test_acceptance.py::test_renderer_model_metadata_privacy",
+  "acceptanceCommandId": "ru039-renderer",
+  "runId": "RU-039/WP-RU039-MODEL-PRIVACY-CLAUDE-PROBE@2026-09-05T09:12:37.700068+00:00",
+  "packageId": "WP-RU039-MODEL-PRIVACY-CLAUDE-PROBE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:106edd3ce40b0ae131c94a08dd26b28db19112887e16a3024f529be6896aca50",
+  "releaseUnitId": "RU-039",
+  "releaseUnitHash": "sha256:2df72617127753cd516239a90ae958b2a72415f1f6fff0bb956444b2e1b74e8c"
+}

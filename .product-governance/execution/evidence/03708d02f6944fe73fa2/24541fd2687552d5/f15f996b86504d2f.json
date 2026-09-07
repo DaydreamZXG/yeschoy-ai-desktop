@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU052-AS-server",
+  "assertion": "Run all existing private synchronizer tests plus executable official-feed ZIP, safe archive, approval/native receipt, atomic publisher, replay, downgrade, corrupt and last-good recovery cases.",
+  "testSelector": "tests/work_packages/ru052/test_acceptance.py::test_server_download_pipeline",
+  "acceptanceCommandId": "ru052-server",
+  "runId": "RU-052/WP-RU052-DOWNLOAD-COMPLETION@2026-09-06T09:52:17.190097+00:00",
+  "packageId": "WP-RU052-DOWNLOAD-COMPLETION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru052/test_acceptance.py::test_server_download_pipeline",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:b665f0ee53f5dcd745e728c1a5bacac72652d26fe6383763d7044c865a6732af",
+    "machineReportSha256": "sha256:6dac53c85e9aaccc4f17c6481cfe8a2004c962d9e0c1abac7fcd8bf9dc159584",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:9f07a66bb91e00e3896c12c7207602eee734db5d47d24fe951c106fc5509b32a",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:e5a61c11121b3f79ae3586c34c908d50cad174375d776ff68c165e6c1678a605",
+  "releaseUnitId": "RU-052",
+  "releaseUnitHash": "sha256:d51f11bb6da28360782d5b6c772a0f81048ec0136b9d22a6eecf405bbefaaf05"
+}

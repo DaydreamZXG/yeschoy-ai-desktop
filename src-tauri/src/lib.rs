@@ -23,6 +23,10 @@ mod connectivity_core;
 mod desktop_app_discovery;
 mod desktop_app_discovery_core;
 mod open_connection;
+// Client-first OAuth preparation. Deliberately dormant until the server and
+// local-bridge bearer/billing contract are deployed and integration-tested.
+#[allow(dead_code)]
+mod oauth_pkce;
 mod request_diagnostics;
 mod service_catalog;
 mod service_catalog_core;

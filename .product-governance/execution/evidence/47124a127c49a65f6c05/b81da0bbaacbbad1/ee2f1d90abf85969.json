@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU072-AS-failure",
+  "assertion": "Every non-allowlisted, non-HTTPS or structurally ambiguous authorization origin fails at build time.",
+  "testSelector": "tests/work_packages/ru072/test_acceptance.py::test_failure_rejects_arbitrary_or_ambiguous_origins",
+  "acceptanceCommandId": "ru072-failure",
+  "runId": "RU-072/WP-RU072-BRANDED-AUTHORIZATION-ORIGIN@2026-09-07T10:27:51.287240+00:00",
+  "packageId": "WP-RU072-BRANDED-AUTHORIZATION-ORIGIN",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru072/test_acceptance.py::test_failure_rejects_arbitrary_or_ambiguous_origins",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:bab046dcc9fdfbea74bb84817bc947822ac36d7dbe44d8e07b12ec722613335a",
+    "machineReportSha256": "sha256:97ecf5abe12651fbdb34281ddd5e54ef20d4ee46f4d0cae9ee0ed7fa32776091",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:f7bd2253cdc434045decc3a0bbcb8cff3b2e5387fc1c72438d5dbfddeef31b5c",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:e64d1960151e8ae57fd4707dd3878783a0ae2d7584ffb7b9a6d5df2c67d65cf2",
+  "releaseUnitId": "RU-072",
+  "releaseUnitHash": "sha256:b30f281f4544deff04bd573deb95a16abc423e8ab2da03e2891e7b918114c0cc"
+}

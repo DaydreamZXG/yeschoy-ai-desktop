@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU053-AS-renderer",
+  "assertion": "The beginner interface labels the mirror as domestic acceleration with pre-install vendor-signature checking, changes visibly on official fallback, and contains no implementation, approval or legal-risk language.",
+  "testSelector": "tests/work_packages/ru053/test_acceptance.py::test_beginner_source_and_fallback_ui",
+  "acceptanceCommandId": "ru053-renderer",
+  "runId": "RU-053/WP-RU053-DOMESTIC-DOWNLOAD-ENABLEMENT@2026-09-06T11:02:10.683681+00:00",
+  "packageId": "WP-RU053-DOMESTIC-DOWNLOAD-ENABLEMENT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru053/test_acceptance.py::test_beginner_source_and_fallback_ui",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:a84a9b8a5e8d45b194460fa77552e6f99640ed896d4738250c80d0030fe5fd23",
+    "machineReportSha256": "sha256:94f05ff202d1020e1cfe7c35c599d547189c3c13ad3d72ad3c4faaf95ccf7948",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:063ed63e5448702335d3e478b1fca51782e482d891945a2fa955ee6248f13835",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:be16d4dec3c1b50f2154ced3d485da181f8848b98ffd1235dcac6c9d5087b8dd",
+  "releaseUnitId": "RU-053",
+  "releaseUnitHash": "sha256:305f3db2338290220d7d0171d83f24f55c819222bb1b37cbc6f6f87663022ab7"
+}

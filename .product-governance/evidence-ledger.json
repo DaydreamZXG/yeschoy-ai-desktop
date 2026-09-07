@@ -3251,6 +3251,94 @@
         "E-CODE-091",
         "E-EXT-062"
       ]
+    },
+    {
+      "id": "E-USER-089",
+      "claim": "The product owner confirms that ai.yeschoy.io is used only as the browser login and authorization-confirmation page for a future friend-branded client. Token exchange, account, model, billing, route, local bridge, updater and application-adapter behavior continue to reuse the existing Yeschoy implementation.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-07:friend-client-authorization-page-only",
+      "observedAt": "2026-09-07T10:25:22Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-092",
+      "claim": "The current device-authorization client validates and opens the server-returned https://yeschoy.com/desktop-authorize URL directly, while all token, refresh, account, usage, model, pricing, tool-key and wallet endpoints remain separately fixed by the account module and bootstrap contract. There is no caller-controlled authorization-page origin and no build-time friend-client override.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/account_v2.rs:28-36,397-479,1274-1395;src-tauri/build.rs;outputs/野菜API-自动更新与解耦验收.md:260-281",
+      "observedAt": "2026-09-07T10:25:22Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-089"
+      ]
+    },
+    {
+      "id": "E-PROP-041",
+      "claim": "Add one compile-time, exact-origin authorization-page parameter with a closed allowlist of https://yeschoy.com and https://ai.yeschoy.io. Continue validating the legacy server response against the canonical Yeschoy origin, then construct the browser URL locally with only the validated user code. Keep the default build and every non-authorization endpoint unchanged; do not package, publish, enable unfinished PKCE endpoints or create a second backend.",
+      "class": "proposed",
+      "locator": "inline:ru072-branded-authorization-origin",
+      "observedAt": "2026-09-07T10:25:22Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-089",
+        "E-CODE-092"
+      ]
+    },
+    {
+      "id": "E-USER-090",
+      "claim": "The product owner confirms that client-side OAuth 2.0 plus PKCE preparation should proceed before server deployment because there are no current production users depending on the new flow; server deployment is required for live exchange validation, not for writing and testing the client protocol engine.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-07:client-first-pkce-preparation",
+      "observedAt": "2026-09-07T10:48:57Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-093",
+      "claim": "The desktop crate already contains the required base64, getrandom, SHA-256 and Tokio networking dependencies, but has no Yeschoy loopback PKCE implementation. The current production account path is device authorization and application activation still obtains group-specific long-lived tool keys; the supplied OAuth v1.1 contract does not define how a narrow OAuth token selects a billing group for the seven local application bridges.",
+      "class": "code_observed",
+      "locator": "src-tauri/Cargo.toml;src-tauri/src/account_v2.rs:28-80,391-451,668-834,1320-1660;src-tauri/src/tool_activation.rs:448-692,1240-1455;New API 客户端 OAuth 2.0 + PKCE 接口文档（Loopback 随机端口版）.md:1-1393",
+      "observedAt": "2026-09-07T10:48:57Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-090"
+      ]
+    },
+    {
+      "id": "E-EXT-063",
+      "claim": "A no-credential probe on 2026-09-07 found both branded /desktop-authorize pages returning HTTP 200 with identical response hashes, while POST https://yeschoy.com/api/oauth/token still returned HTTP 404; this permits client-side preparation but not a live OAuth exchange claim.",
+      "class": "external_verified",
+      "locator": "https://yeschoy.com/desktop-authorize;https://ai.yeschoy.io/desktop-authorize;https://yeschoy.com/api/oauth/token:accessed-2026-09-07",
+      "observedAt": "2026-09-07T10:48:57Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-042",
+      "claim": "Implement a dormant, dependency-closed native PKCE protocol engine now: bind 127.0.0.1:0 before URL construction, generate independent state and verifier values, derive S256, build the allowlisted branded authorization URL, strictly validate one-use callbacks, and construct fixed-origin exchange, refresh and revoke form requests. Keep it outside the active account and application-bridge path until the server and billing-group bearer semantics are explicitly declared and integration-tested.",
+      "class": "proposed",
+      "locator": "inline:ru073-pkce-client-preflight",
+      "observedAt": "2026-09-07T10:48:57Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-090",
+        "E-CODE-093",
+        "E-EXT-063"
+      ]
     }
   ]
 }

@@ -1,480 +1,436 @@
-import { Suspense, type ComponentType } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { http, HttpResponse } from "msw";
-import { providersApi } from "@/lib/api/providers";
+/** Current Yecai journeys: real App, hooks, providers and IPC decoders.
+ * Retired CC Switch homepage expectations are replaced, not skipped.
+ * useProviderActions/PiProviderForm/OpenClawProviderActions/UnifiedSkillsPanel
+ * and sync-section component suites remain in the full repository run.
+ */
+import { StrictMode } from "react";
 import {
-  resetProviderState,
-  setCurrentProviderId,
-  setLiveProviderIds,
-  setProviders,
-} from "../msw/state";
-import { emitTauriEvent } from "../msw/tauriMocks";
-import { server } from "../msw/server";
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { invoke } from "@tauri-apps/api/core";
+import i18n from "i18next";
+import App from "@/App";
+import zh from "@/i18n/locales/zh.json";
+import {
+  ACTIVATION_TOOL_IDS,
+  type ActivationToolId,
+} from "@/configuration/activation";
+import type { AccountProjection } from "@/account/session";
+import {
+  installationActive,
+  type InstallationProgress,
+} from "@/installation/api";
+import { installationInspectionFixture } from "@/installation/test-fixtures";
+import { connectionsFixture } from "@/configuration/connection-test-fixtures";
 
-const toastSuccessMock = vi.fn();
-const toastErrorMock = vi.fn();
-const skillsPanelMocks = vi.hoisted(() => ({
-  checkUpdates: vi.fn(),
-  openDiscovery: vi.fn(),
-}));
-
-vi.mock("sonner", () => ({
-  toast: {
-    success: (...args: unknown[]) => toastSuccessMock(...args),
-    error: (...args: unknown[]) => toastErrorMock(...args),
-  },
-}));
-
-vi.mock("@/components/providers/ProviderList", () => ({
-  ProviderList: ({
-    providers,
-    currentProviderId,
-    onSwitch,
-    onEdit,
-    onDuplicate,
-    onConfigureUsage,
-    onOpenWebsite,
-    onCreate,
-    onDelete,
-    onRemoveFromConfig,
-  }: any) => (
-    <div>
-      <div data-testid="provider-list">{JSON.stringify(providers)}</div>
-      <div data-testid="current-provider">{currentProviderId}</div>
-      <button onClick={() => onSwitch(providers[currentProviderId])}>
-        switch
-      </button>
-      <button onClick={() => onEdit(providers[currentProviderId])}>edit</button>
-      <button onClick={() => onDuplicate(providers[currentProviderId])}>
-        duplicate
-      </button>
-      <button onClick={() => onConfigureUsage(providers[currentProviderId])}>
-        usage
-      </button>
-      <button onClick={() => onOpenWebsite("https://example.com")}>
-        open-website
-      </button>
-      <button onClick={() => onDelete(Object.values(providers)[0])}>
-        delete
-      </button>
-      <button onClick={() => onRemoveFromConfig?.(Object.values(providers)[0])}>
-        remove
-      </button>
-      <button onClick={() => onCreate?.()}>create</button>
-    </div>
-  ),
-}));
-
-vi.mock("@/components/providers/AddProviderDialog", () => ({
-  AddProviderDialog: ({ open, onOpenChange, onSubmit, appId }: any) =>
-    open ? (
-      <div data-testid="add-provider-dialog">
-        <button
-          onClick={() =>
-            onSubmit({
-              name: `New ${appId} Provider`,
-              settingsConfig: {},
-              category: "custom",
-              sortIndex: 99,
-            })
-          }
-        >
-          confirm-add
-        </button>
-        <button onClick={() => onOpenChange(false)}>close-add</button>
-      </div>
-    ) : null,
-}));
-
-vi.mock("@/components/providers/EditProviderDialog", () => ({
-  EditProviderDialog: ({ open, provider, onSubmit, onOpenChange }: any) =>
-    open ? (
-      <div data-testid="edit-provider-dialog">
-        <button
-          onClick={() =>
-            onSubmit({
-              provider: {
-                ...provider,
-                name: `${provider.name}-edited`,
-              },
-              originalId: provider.id,
-            })
-          }
-        >
-          confirm-edit
-        </button>
-        <button onClick={() => onOpenChange(false)}>close-edit</button>
-      </div>
-    ) : null,
-}));
-
-vi.mock("@/components/UsageScriptModal", () => ({
-  default: ({ isOpen, provider, onSave, onClose }: any) =>
-    isOpen ? (
-      <div data-testid="usage-modal">
-        <span data-testid="usage-provider">{provider?.id}</span>
-        <button onClick={() => onSave("script-code")}>save-script</button>
-        <button onClick={() => onClose()}>close-usage</button>
-      </div>
-    ) : null,
-}));
-
-vi.mock("@/components/ConfirmDialog", () => ({
-  ConfirmDialog: ({ isOpen, message, onConfirm, onCancel }: any) =>
-    isOpen ? (
-      <div data-testid="confirm-dialog">
-        <div data-testid="confirm-message">{message}</div>
-        <button onClick={() => onConfirm()}>confirm-delete</button>
-        <button onClick={() => onCancel()}>cancel-delete</button>
-      </div>
-    ) : null,
-}));
-
-vi.mock("@/components/AppSwitcher", () => ({
-  AppSwitcher: ({ activeApp, onSwitch }: any) => (
-    <div data-testid="app-switcher">
-      <span>{activeApp}</span>
-      <button onClick={() => onSwitch("claude")}>switch-claude</button>
-      <button onClick={() => onSwitch("codex")}>switch-codex</button>
-      <button onClick={() => onSwitch("openclaw")}>switch-openclaw</button>
-    </div>
-  ),
-}));
-
-vi.mock("@/components/skills/UnifiedSkillsPanel", async () => {
-  const React = await import("react");
-  const MockUnifiedSkillsPanel = React.forwardRef(
-    ({ onCheckUpdatesStateChange }: any, ref) => {
-      React.useEffect(() => {
-        onCheckUpdatesStateChange?.({ isChecking: false, hasSkills: true });
-        return () =>
-          onCheckUpdatesStateChange?.({
-            isChecking: false,
-            hasSkills: false,
-          });
-      }, [onCheckUpdatesStateChange]);
-      React.useImperativeHandle(ref, () => ({
-        openDiscovery: skillsPanelMocks.openDiscovery,
-        openImport: vi.fn(),
-        openInstallFromZip: vi.fn(),
-        openRestoreFromBackup: vi.fn(),
-        checkUpdates: skillsPanelMocks.checkUpdates,
-      }));
-      return <div data-testid="unified-skills-panel" />;
+vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+const native = vi.mocked(invoke);
+type Request = {
+  requestId: string;
+  toolId: ActivationToolId;
+  action: string;
+  operation: string;
+  lineId: string;
+};
+let signedIn: boolean, connected: boolean, scanFails: boolean;
+let job: InstallationProgress | null;
+let unexpected: string[];
+const tick = async () => {
+  await act(async () => {});
+};
+const requests = (command: string) =>
+  native.mock.calls
+    .filter(([c]) => c === command)
+    .map(([, args]) => (args as { request: Request }).request);
+function account(requestId: string): AccountProjection {
+  return {
+    schemaVersion: 3,
+    requestId,
+    status: signedIn ? "signed_in" : "signed_out",
+    userCode: "",
+    pollAfterSeconds: 0,
+    expiresAtEpochMs: 0,
+    observedAtEpochMs: 1000,
+    account: {
+      available: signedIn,
+      displayName: signedIn ? "测试用户" : "",
+      username: signedIn ? "fixture-user" : "",
+      balanceQuota: "500000",
+      usedQuota: "1000",
+      requestCount: "2",
+      quotaPerUnit: "500000",
     },
+    usage: {
+      available: false,
+      consumedQuota: "",
+      requestRate: "",
+      tokenCount: "",
+    },
+    comparisonFx: "1",
+    reasonCode: signedIn ? "none" : "signed_out",
+    models: signedIn
+      ? [
+          {
+            id: "model-a",
+            description: "Private upstream via internal connector",
+            billingMode: "ratio",
+            supportedEndpointTypes: ["openai", "anthropic", "openai-response"],
+            pricingAvailable: false,
+            officialInputCnyPerMillion: "",
+            officialOutputCnyPerMillion: "",
+            actualInputCnyPerMillion: "",
+            actualOutputCnyPerMillion: "",
+            billing: {
+              groups: [
+                { id: "default", description: "标准", ratio: 0.7 },
+                { id: "优惠组", description: "账户价格", ratio: 0.15 },
+              ],
+              baseInputUsd: 2,
+              baseOutputUsd: 8,
+              cacheReadUsd: 0.2,
+              requestUsd: null,
+              expression: "",
+            },
+          },
+        ]
+      : [],
+  };
+}
+function plan(r: Request) {
+  return installationInspectionFixture({
+    request: {
+      requestId: r.requestId,
+      action: "inspect",
+      toolId: r.toolId,
+      jobId: "",
+    },
+  });
+}
+function card(name: string) {
+  const article = screen.getByRole("heading", { name }).closest("article");
+  expect(article).not.toBeNull();
+  return within(article!);
+}
+async function home() {
+  render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
   );
-  MockUnifiedSkillsPanel.displayName = "MockUnifiedSkillsPanel";
-  return { default: MockUnifiedSkillsPanel };
+  await tick();
+  expect(screen.getByRole("button", { name: "检查应用" })).toBeEnabled();
+}
+async function selectMissingCodex() {
+  await home();
+  fireEvent.click(
+    card("Codex Desktop").getByRole("button", { name: "安装并接入" }),
+  );
+  await tick();
+  return within(screen.getByRole("region", { name: "Codex Desktop 安装" }));
+}
+beforeEach(async () => {
+  i18n.addResourceBundle("zh", "translation", zh, true, true);
+  await i18n.changeLanguage("zh");
+  localStorage.clear();
+  signedIn = false;
+  connected = false;
+  scanFails = false;
+  job = null;
+  unexpected = [];
+  vi.stubGlobal("scrollTo", vi.fn());
+  // jsdom does not implement modal dialogs; emulate the browser open state.
+  HTMLDialogElement.prototype.showModal = function () {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close = function () {
+    this.removeAttribute("open");
+  };
+  native.mockReset();
+  native.mockImplementation(async (command, args) => {
+    if (command === "read_desktop_exit_state")
+      return { closeRequested: false, shutdown: null };
+    const r = (args as { request: Request }).request;
+    if (command === "account_begin_authorization_v2") {
+      signedIn = true;
+      return account(r.requestId);
+    }
+    if (command === "account_inspect_v2") return account(r.requestId);
+    if (command === "scan_activation_targets_v1") {
+      if (scanFails) throw Error("fixture scan unavailable");
+      return {
+        schemaVersion: 1,
+        requestId: r.requestId,
+        platform: "macos",
+        targets: ACTIVATION_TOOL_IDS.map((toolId, i) => ({
+          toolId,
+          displayName: toolId,
+          surface: "本机应用",
+          status:
+            connected && toolId === "codex_desktop" ? "available" : "not_found",
+          installations:
+            connected && toolId === "codex_desktop"
+              ? [
+                  {
+                    installationId: "i" + String(i + 1).padStart(16, "0"),
+                    label: "本机应用",
+                    version: "1.0.0",
+                    supported: true,
+                    recommended: true,
+                  },
+                ]
+              : [],
+        })),
+      };
+    }
+    if (command === "manage_tool_connections_v1") {
+      if (r.operation === "restore") {
+        expect(r.toolId).toBe("codex_desktop");
+        connected = false;
+      }
+      const result = connectionsFixture(r.requestId);
+      if (connected)
+        Object.assign(
+          result.connections.find((c) => c.toolId === "codex_desktop")!,
+          {
+            state: "connected",
+            modelId: "model-a",
+            lineId: "mainland_optimized",
+            billingGroup: "优惠组",
+            restoreMode: "original",
+            updatedAtEpochMs: 1,
+          },
+        );
+      return {
+        ...result,
+        status: r.operation === "restore" ? "restored" : "ok",
+      };
+    }
+    if (command === "manage_app_installation_v2") {
+      if (r.action === "start")
+        job = {
+          ...plan(r),
+          jobId: "job-1",
+          phase: "downloading",
+          canCancel: true,
+        };
+      if (r.action === "cancel" && job)
+        job = { ...job, phase: "cancelled", canCancel: false };
+      return {
+        ...(job && (job.toolId === r.toolId || installationActive(job))
+          ? job
+          : plan(r)),
+        requestId: r.requestId,
+      };
+    }
+    unexpected.push(command);
+    throw Error("Unexpected native boundary: " + command);
+  });
+});
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+  expect(unexpected).toEqual([]);
 });
 
-vi.mock("@/components/UpdateBadge", () => ({
-  UpdateBadge: ({ onClick }: any) => (
-    <button onClick={onClick}>update-badge</button>
-  ),
-}));
-
-vi.mock("@/components/mcp/McpPanel", () => ({
-  default: ({ open, onOpenChange }: any) =>
-    open ? (
-      <div data-testid="mcp-panel">
-        <button onClick={() => onOpenChange(false)}>close-mcp</button>
-      </div>
-    ) : (
-      <button onClick={() => onOpenChange(true)}>open-mcp</button>
-    ),
-}));
-
-const renderApp = (AppComponent: ComponentType) => {
-  const client = new QueryClient();
-  return render(
-    <QueryClientProvider client={client}>
-      <Suspense fallback={<div data-testid="loading">loading</div>}>
-        <AppComponent />
-      </Suspense>
-    </QueryClientProvider>,
-  );
-};
-
-describe("App integration with MSW", () => {
-  beforeEach(() => {
-    resetProviderState();
-    toastSuccessMock.mockReset();
-    toastErrorMock.mockReset();
-    skillsPanelMocks.checkUpdates.mockReset();
-    skillsPanelMocks.openDiscovery.mockReset();
-    localStorage.removeItem("cc-switch-last-view");
-    localStorage.removeItem("cc-switch-last-app");
-  });
-
-  it("covers basic provider flows via real hooks", async () => {
-    const { default: App } = await import("@/App");
-    renderApp(App);
-
-    await waitFor(() =>
-      expect(screen.getByTestId("provider-list").textContent).toContain(
-        "claude-1",
-      ),
+describe("ru051 current App integration", () => {
+  it("shows installation choices on a clean computer and performs only passive reads", async () => {
+    await home();
+    expect(screen.getAllByRole("button", { name: "安装并接入" })).toHaveLength(
+      2,
     );
-
-    fireEvent.click(screen.getByText("switch-codex"));
-    await waitFor(() =>
-      expect(screen.getByTestId("provider-list").textContent).toContain(
-        "codex-1",
-      ),
+    expect(screen.queryByTestId("provider-list")).not.toBeInTheDocument();
+    expect(new Set(native.mock.calls.map(([c]) => c))).toEqual(
+      new Set([
+        "read_desktop_exit_state",
+        "account_inspect_v2",
+        "manage_tool_connections_v1",
+        "scan_activation_targets_v1",
+        "manage_app_installation_v2",
+      ]),
     );
-
-    fireEvent.click(screen.getByText("usage"));
-    expect(screen.getByTestId("usage-modal")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("save-script"));
-    fireEvent.click(screen.getByText("close-usage"));
-
-    fireEvent.click(screen.getByText("create"));
-    expect(screen.getByTestId("add-provider-dialog")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("confirm-add"));
-    await waitFor(() =>
-      expect(screen.getByTestId("provider-list").textContent).toMatch(
-        /New codex Provider/,
-      ),
-    );
-
-    fireEvent.click(screen.getByText("edit"));
-    expect(screen.getByTestId("edit-provider-dialog")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("confirm-edit"));
-    await waitFor(() =>
-      expect(screen.getByTestId("provider-list").textContent).toMatch(
-        /-edited/,
-      ),
-    );
-
-    fireEvent.click(screen.getByText("switch"));
-    fireEvent.click(screen.getByText("duplicate"));
-    await waitFor(() =>
-      expect(screen.getByTestId("provider-list").textContent).toMatch(/copy/),
-    );
-
-    fireEvent.click(screen.getByText("open-website"));
-
-    emitTauriEvent("provider-switched", {
-      appType: "codex",
-      providerId: "codex-2",
-    });
-
-    expect(toastErrorMock).not.toHaveBeenCalled();
-    expect(toastSuccessMock).toHaveBeenCalled();
-  }, 10_000);
-
-  it("shows toast when auto sync fails in background", async () => {
-    const { default: App } = await import("@/App");
-    renderApp(App);
-
-    await waitFor(() =>
-      expect(screen.getByTestId("provider-list").textContent).toContain(
-        "claude-1",
-      ),
-    );
-
-    expect(() => {
-      emitTauriEvent("webdav-sync-status-updated", null);
-    }).not.toThrow();
-    expect(toastErrorMock).not.toHaveBeenCalled();
-
-    emitTauriEvent("webdav-sync-status-updated", {
-      source: "auto",
-      status: "error",
-      error: "network timeout",
-    });
-
-    await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalled();
-    });
-
-    toastErrorMock.mockReset();
-    expect(() => {
-      emitTauriEvent("s3-sync-status-updated", null);
-    }).not.toThrow();
-    expect(toastErrorMock).not.toHaveBeenCalled();
-
-    emitTauriEvent("s3-sync-status-updated", {
-      source: "auto",
-      status: "error",
-      error: "s3 timeout",
-    });
-
-    await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalled();
-    });
-  });
-
-  it("duplicates openclaw providers with a generated key that avoids live-only ids", async () => {
-    setProviders("openclaw", {
-      deepseek: {
-        id: "deepseek",
-        name: "DeepSeek",
-        settingsConfig: {
-          baseUrl: "https://api.deepseek.com",
-          apiKey: "test-key",
-          api: "openai-completions",
-          models: [],
-        },
-        category: "custom",
-        sortIndex: 0,
-        createdAt: Date.now(),
-      },
-    });
-    setCurrentProviderId("openclaw", "deepseek");
-    setLiveProviderIds("openclaw", ["deepseek-copy"]);
-
-    const { default: App } = await import("@/App");
-    renderApp(App);
-
-    fireEvent.click(screen.getByText("switch-openclaw"));
-
-    await waitFor(() =>
-      expect(screen.getByTestId("provider-list").textContent).toContain(
-        "deepseek",
-      ),
-    );
-
-    fireEvent.click(screen.getByText("duplicate"));
-
-    await waitFor(() => {
-      const providerList = screen.getByTestId("provider-list").textContent;
-      expect(providerList).toContain("deepseek-copy-2");
-      expect(providerList).toContain("DeepSeek copy");
-    });
-
-    expect(toastErrorMock).not.toHaveBeenCalledWith(
-      expect.stringContaining("Provider key is required for openclaw"),
-    );
-  });
-
-  it("warns without blocking when removing Pi's global default provider", async () => {
-    localStorage.setItem("cc-switch-last-app", "pi");
-    setProviders("pi", {
-      custom: {
-        id: "custom",
-        name: "Custom Pi",
-        settingsConfig: {
-          baseUrl: "https://api.example.com/v1",
-          apiKey: "test-key",
-          api: "openai-completions",
-          models: [{ id: "model-a" }],
-        },
-        category: "custom",
-        sortIndex: 0,
-        createdAt: Date.now(),
-      },
-    });
-    server.use(
-      http.post("http://tauri.local/get_pi_current_state", () =>
-        HttpResponse.json({
-          enabledProviderIds: ["custom"],
-          defaultProviderId: "custom",
-        }),
-      ),
-    );
-
-    const { default: App } = await import("@/App");
-    renderApp(App);
-
-    await waitFor(() =>
-      expect(screen.getByTestId("provider-list").textContent).toContain(
-        "Custom Pi",
-      ),
-    );
-    fireEvent.click(screen.getByText("remove"));
-
-    expect(screen.getByTestId("confirm-message")).toHaveTextContent(
-      "confirm.piDefaultProviderWarning",
-    );
-    fireEvent.click(screen.getByText("confirm-delete"));
-    await waitFor(() =>
-      expect(screen.queryByTestId("confirm-dialog")).not.toBeInTheDocument(),
-    );
-  });
-
-  it("shows toast when duplicate cannot load live provider ids", async () => {
-    setProviders("openclaw", {
-      deepseek: {
-        id: "deepseek",
-        name: "DeepSeek",
-        settingsConfig: {
-          baseUrl: "https://api.deepseek.com",
-          apiKey: "test-key",
-          api: "openai-completions",
-          models: [],
-        },
-        category: "custom",
-        sortIndex: 0,
-        createdAt: Date.now(),
-      },
-    });
-    setCurrentProviderId("openclaw", "deepseek");
-
-    const liveIdsSpy = vi
-      .spyOn(providersApi, "getOpenClawLiveProviderIds")
-      .mockRejectedValueOnce(new Error("broken config"));
-
-    const { default: App } = await import("@/App");
-    renderApp(App);
-
-    fireEvent.click(screen.getByText("switch-openclaw"));
-
-    await waitFor(() =>
-      expect(screen.getByTestId("provider-list").textContent).toContain(
-        "deepseek",
-      ),
-    );
-
-    fireEvent.click(screen.getByText("duplicate"));
-
-    await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalledWith(
-        expect.stringContaining("读取配置中的供应商标识失败"),
-      );
-    });
-
-    expect(screen.getByTestId("provider-list").textContent).not.toContain(
-      "deepseek-copy",
-    );
-
-    liveIdsSpy.mockRestore();
-  });
-
-  it("hosts the Skills check-update action in the App toolbar", async () => {
-    localStorage.setItem("cc-switch-last-view", "skills");
-    const { default: App } = await import("@/App");
-    renderApp(App);
-
     expect(
-      await screen.findByTestId("unified-skills-panel"),
-    ).toBeInTheDocument();
-    const checkUpdatesButton = await screen.findByRole("button", {
-      name: "skills.checkUpdates",
-    });
-    await waitFor(() => expect(checkUpdatesButton).toBeEnabled());
-
-    fireEvent.click(checkUpdatesButton);
-    expect(skillsPanelMocks.checkUpdates).toHaveBeenCalledTimes(1);
-  });
-
-  it("routes the Skills discover toolbar action through the panel guard", async () => {
-    localStorage.setItem("cc-switch-last-view", "skills");
-    const { default: App } = await import("@/App");
-    renderApp(App);
-
+      requests("manage_app_installation_v2").every(
+        (r) => r.action === "inspect",
+      ),
+    ).toBe(true);
     expect(
-      await screen.findByTestId("unified-skills-panel"),
-    ).toBeInTheDocument();
+      requests("manage_tool_connections_v1").every(
+        (r) => r.operation === "inspect",
+      ),
+    ).toBe(true);
+  });
+  it("opens the chosen missing app with an enabled install action, not the startup Claude plan", async () => {
+    const panel = await selectMissingCodex();
+    expect(panel.getByRole("button", { name: "先安装应用" })).toBeEnabled();
+    fireEvent.click(panel.getByRole("button", { name: "先安装应用" }));
+    await tick();
+    expect(panel.getByRole("status")).toHaveTextContent("正在下载应用");
+    expect(
+      requests("manage_app_installation_v2").filter(
+        (r) => r.action === "start",
+      ),
+    ).toEqual([expect.objectContaining({ toolId: "codex_desktop" })]);
+    expect(
+      native.mock.calls.some(([c]) => c === "configure_desktop_tool_v2"),
+    ).toBe(false);
+  });
+  it("keeps an installation visible across navigation without replaying start", async () => {
+    const panel = await selectMissingCodex();
+    fireEvent.click(panel.getByRole("button", { name: "先安装应用" }));
+    await tick();
+    fireEvent.click(screen.getByRole("button", { name: "用量账单" }));
+    await tick();
+    const notice = within(
+      screen.getByRole("complementary", { name: "正在进行的安装" }),
+    );
+    expect(notice.getByText("Codex Desktop")).toBeInTheDocument();
+    fireEvent.click(notice.getByRole("button", { name: "查看进度" }));
+    await tick();
+    expect(
+      screen.getByRole("region", { name: "Codex Desktop 安装" }),
+    ).toBeVisible();
+    expect(
+      requests("manage_app_installation_v2").filter(
+        (r) => r.action === "start",
+      ),
+    ).toHaveLength(1);
+  });
+  it("turns a failed download into an explicit retry without claiming a connection", async () => {
+    vi.useFakeTimers();
+    const panel = await selectMissingCodex();
+    fireEvent.click(panel.getByRole("button", { name: "先安装应用" }));
+    await tick();
+    job = {
+      ...job!,
+      phase: "failed",
+      canCancel: false,
+      reasonCode: "source_unavailable",
+    };
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1200);
+    });
+    expect(panel.getByRole("button", { name: "重试安装" })).toBeEnabled();
+    expect(screen.queryByText(/^接入成功$/)).not.toBeInTheDocument();
+    fireEvent.click(panel.getByRole("button", { name: "重试安装" }));
+    await tick();
+    expect(
+      requests("manage_app_installation_v2").filter(
+        (r) => r.action === "start",
+      ),
+    ).toHaveLength(2);
+  });
+  it("retains login across both network lines without restarting authorization", async () => {
+    await home();
+    fireEvent.click(screen.getByRole("button", { name: "用量账单" }));
+    await tick();
+    fireEvent.click(screen.getByRole("button", { name: "网页登录" }));
+    await tick();
+    expect(screen.getAllByText("测试用户").length).toBeGreaterThan(0);
+    fireEvent.change(screen.getByRole("combobox", { name: "使用线路" }), {
+      target: { value: "global_accelerated" },
+    });
+    await tick();
+    expect(screen.getAllByText("测试用户").length).toBeGreaterThan(0);
+    expect(
+      screen.queryByRole("button", { name: "网页登录" }),
+    ).not.toBeInTheDocument();
+    expect(requests("account_begin_authorization_v2")).toHaveLength(1);
+    expect(requests("account_inspect_v2").at(-1)?.lineId).toBe(
+      "global_accelerated",
+    );
+  });
+  it("restores only the explicitly confirmed app even when logged out", async () => {
+    connected = true;
+    await home();
     fireEvent.click(
-      await screen.findByRole("button", {
-        name: "skills.discover",
+      card("Codex Desktop").getByRole("button", { name: "恢复原设置" }),
+    );
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "先不恢复",
       }),
     );
-
-    expect(skillsPanelMocks.openDiscovery).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId("unified-skills-panel")).toBeInTheDocument();
+    expect(
+      requests("manage_tool_connections_v1").filter(
+        (r) => r.operation === "restore",
+      ),
+    ).toHaveLength(0);
+    fireEvent.click(
+      card("Codex Desktop").getByRole("button", { name: "恢复原设置" }),
+    );
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "恢复原设置",
+      }),
+    );
+    await tick();
+    expect(
+      requests("manage_tool_connections_v1").filter(
+        (r) => r.operation === "restore",
+      ),
+    ).toEqual([expect.objectContaining({ toolId: "codex_desktop" })]);
+    expect(card("Codex Desktop").getByRole("status")).toHaveTextContent(
+      "已恢复接入前的设置",
+    );
+    expect(requests("account_begin_authorization_v2")).toHaveLength(0);
+  });
+  it("keeps recovery available when detection fails and supports rechecking", async () => {
+    connected = true;
+    scanFails = true;
+    await home();
+    expect(
+      card("Codex Desktop").getByRole("button", { name: "恢复原设置" }),
+    ).toBeEnabled();
+    scanFails = false;
+    fireEvent.click(screen.getByRole("button", { name: "检查应用" }));
+    await tick();
+    expect(
+      card("Codex Desktop").getByRole("button", { name: "恢复原设置" }),
+    ).toBeEnabled();
+    expect(
+      requests("manage_tool_connections_v1").every(
+        (r) => r.operation === "inspect",
+      ),
+    ).toBe(true);
+  });
+  it("offers guided installation for other apps only after an explicit choice", async () => {
+    await home();
+    fireEvent.click(screen.getByRole("button", { name: "查看其他 5 个应用" }));
+    fireEvent.click(card("Pi").getByRole("button", { name: "查看安装方式" }));
+    await tick();
+    fireEvent.click(screen.getByRole("button", { name: "查看官方安装方式" }));
+    await tick();
+    expect(
+      requests("manage_app_installation_v2").filter(
+        (r) => r.action !== "inspect",
+      ),
+    ).toEqual([expect.objectContaining({ toolId: "pi", action: "help" })]);
+  });
+  it("exposes model and group choices without private upstream labels", async () => {
+    signedIn = true;
+    await selectMissingCodex();
+    fireEvent.click(screen.getByRole("combobox", { name: /完整模型 ID/ }));
+    expect(
+      within(screen.getByRole("listbox")).getByRole("option"),
+    ).toHaveTextContent("model-a");
+    expect(screen.queryByText(/Private upstream/)).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole("listbox")).getByRole("option"));
+    const discount = within(
+      screen.getByRole("group", { name: "选择计费分组" }),
+    ).getByRole("radio", { name: /优惠组/ });
+    fireEvent.click(discount);
+    expect(discount).toBeChecked();
+    expect(
+      requests("manage_app_installation_v2").every(
+        (r) => r.action === "inspect",
+      ),
+    ).toBe(true);
   });
 });

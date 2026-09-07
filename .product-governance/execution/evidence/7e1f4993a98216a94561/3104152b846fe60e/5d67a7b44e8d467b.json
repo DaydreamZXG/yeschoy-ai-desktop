@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU039-AS-03",
+  "assertion": "Current 0.4.7 client typechecks and builds production frontend with no server or real-user writes under source-readonly acceptance.",
+  "testSelector": "tests/work_packages/ru036/test_acceptance.py::test_build",
+  "acceptanceCommandId": "ru039-build",
+  "runId": "RU-039/WP-RU039-MODEL-PRIVACY-CLAUDE-PROBE@2026-09-05T09:12:37.700068+00:00",
+  "packageId": "WP-RU039-MODEL-PRIVACY-CLAUDE-PROBE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:37bea6a7d2ac648ffdd73d9839f0812f8eee1c964d3ae0b7a8f80c1a54855b14",
+  "releaseUnitId": "RU-039",
+  "releaseUnitHash": "sha256:2df72617127753cd516239a90ae958b2a72415f1f6fff0bb956444b2e1b74e8c"
+}

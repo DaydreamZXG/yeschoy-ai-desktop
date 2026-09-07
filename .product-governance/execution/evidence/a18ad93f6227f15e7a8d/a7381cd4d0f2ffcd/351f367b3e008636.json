@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU071-AS-failure",
+  "assertion": "No-update and check, manifest, signature or network failures remain truthful closed updater states and leave every unrelated domain interactive.",
+  "testSelector": "tests/work_packages/ru071/test_acceptance.py::test_failure_is_closed_and_does_not_block_other_domains",
+  "acceptanceCommandId": "ru071-failure",
+  "runId": "RU-071/WP-RU071-SELF-UPDATE-CLOSURE@2026-09-07T09:35:30.314855+00:00",
+  "packageId": "WP-RU071-SELF-UPDATE-CLOSURE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-071",
+  "releaseUnitHash": "sha256:0cab89775da79ef995e247b3b70aa4f79c94b05dc84c274dec90f245bf4dbabc"
+}

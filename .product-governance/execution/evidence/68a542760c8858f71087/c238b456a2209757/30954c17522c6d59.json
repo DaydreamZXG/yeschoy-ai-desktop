@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU056-AS-build",
+  "assertion": "Typecheck, production frontend build, macOS Apple-Silicon compile and Windows compile checks pass without packaging, signing, upload, version or server changes.",
+  "testSelector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_builds",
+  "acceptanceCommandId": "ru056-build",
+  "runId": "RU-056/WP-RU056-UNIFIED-ACTIVATION@2026-09-06T15:55:40.354015+00:00",
+  "packageId": "WP-RU056-UNIFIED-ACTIVATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:a342c943670dd0d9f0356fb7e4ade53fc595aac17ffeff97cfa5f4cb934112a1",
+  "releaseUnitId": "RU-056",
+  "releaseUnitHash": "sha256:ac6053e151c9949c81631663e53399e0801a5fa4f8056d8fe3891d7b0faa937c"
+}

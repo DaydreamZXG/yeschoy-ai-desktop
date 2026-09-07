@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU056-AS-native",
+  "assertion": "Native fixtures prove all seven adapters complete from transactional readback without invoking real-model verification, desktop apps require explicit normal-quit consent and never force terminate, helper runtimes are bounded, and failure restores and reopens safely.",
+  "testSelector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_native",
+  "acceptanceCommandId": "ru056-native",
+  "runId": "RU-056/WP-RU056-UNIFIED-ACTIVATION@2026-09-06T16:00:54.951520+00:00",
+  "packageId": "WP-RU056-UNIFIED-ACTIVATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_native",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:8adc10a1fc7189f53b928c1ac5ffd288b5705772e378868821db6636e0c4e100",
+    "machineReportSha256": "sha256:37660fdf8994b96501e16d0bd8d397a527a6ab5a23f1aaca4f28bccfef66f41f",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:1cc8af5972a9c92cd190c5989ef59c6bc6592cb7d5349c894231376dc444b68a",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:f7b86feb1b4a6ba6d44a2a234f4af300f7dbf91ec9f313614fac3a7fe2800338",
+  "releaseUnitId": "RU-056",
+  "releaseUnitHash": "sha256:ac6053e151c9949c81631663e53399e0801a5fa4f8056d8fe3891d7b0faa937c"
+}

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU051-AS-full-renderer",
+  "assertion": "All repository Vitest suites pass, including current App integration journeys, logged-out Windows confirmation and cross-app terminal-state recovery. No skipped failure or pass-count-only readiness claims.",
+  "testSelector": "tests/work_packages/ru051/test_acceptance.py::test_all_repository_renderer",
+  "acceptanceCommandId": "ru051-full-renderer",
+  "runId": "RU-051/WP-RU051-INSTALLATION-RECOVERY@2026-09-06T08:27:28.785371+00:00",
+  "packageId": "WP-RU051-INSTALLATION-RECOVERY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru051/test_acceptance.py::test_all_repository_renderer",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:381be369885f9eaa0675af6a64aaa01cf6d23a9a0e8c367117590401f9282baa",
+    "machineReportSha256": "sha256:1b9a2be790e8c6e709014f178da2ad088adf4795bef4be53d68dc0bff5144ac9",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:f28ea7db82d7384ac23fc622a566391bdd2699fbde342291bd16a3d9ceee6e31",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:bba1f87c1181fa1a9633dd466ee2d58a1df7e3740d1a658ad9fa3fd7f8bf0bde",
+  "releaseUnitId": "RU-051",
+  "releaseUnitHash": "sha256:6fa6721fbc0cb99f7ee7ea1acf9dc0812c74ff2f7f398857e4f22b6fca90fe1d"
+}

@@ -1,0 +1,11 @@
+{
+  "mode": "review",
+  "valid": false,
+  "errorCount": 1,
+  "warningCount": 0,
+  "errors": [
+    "Evidence E-CODE-058 level 2 requires a hashed artifact"
+  ],
+  "warnings": [],
+  "releaseUnitId": "RU-040"
+}

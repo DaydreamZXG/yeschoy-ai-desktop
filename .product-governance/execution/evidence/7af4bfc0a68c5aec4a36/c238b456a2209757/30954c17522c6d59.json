@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU056-AS-build",
+  "assertion": "Typecheck, production frontend build, macOS Apple-Silicon compile and Windows compile checks pass without packaging, signing, upload, version or server changes.",
+  "testSelector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_builds",
+  "acceptanceCommandId": "ru056-build",
+  "runId": "RU-056/WP-RU056-UNIFIED-ACTIVATION@2026-09-06T16:00:54.951520+00:00",
+  "packageId": "WP-RU056-UNIFIED-ACTIVATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_builds",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:b98cb9614eb68db1db774195d0520e4a08fd0f7cf0ff92d436b0eeb6d579f93c",
+    "machineReportSha256": "sha256:6336ed324fe1297db1ab4f9c82c01c8ab73f286e18967779663279bb38a756c3",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:4a487c097a4ba913e5817b70caf42cd43e70e4f1cc4a70630ba4198fa5a9c208",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:ab664ff823b8d65f3ada9c67595dc54700e6ddd2b83922c4d413aaaef3af73bd",
+  "releaseUnitId": "RU-056",
+  "releaseUnitHash": "sha256:ac6053e151c9949c81631663e53399e0801a5fa4f8056d8fe3891d7b0faa937c"
+}

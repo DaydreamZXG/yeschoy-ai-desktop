@@ -142,7 +142,8 @@ const zh = {
   setupSignedOut: "登录状态已失效，请重新登录后再试。",
   setupModelUnavailable: "这个模型当前不在你的账户可用列表中，请刷新后重选。",
   setupServerUnavailable: "暂时无法从野菜API获取接入信息，请稍后重试。",
-  setupWriteFailed: "设置未能完整更新。请检查接入状态，如有待恢复设置，请先恢复原设置。",
+  setupWriteFailed:
+    "设置未能完整更新。请检查接入状态，如有待恢复设置，请先恢复原设置。",
   signInFirst: "先去登录",
   settingUp: "正在接入…",
   setupAgain: "重新写入",
@@ -465,7 +466,8 @@ const tw: Copy = {
   setupModelUnavailable:
     "這個模型目前不在你的帳戶可用清單中，請重新整理後重選。",
   setupServerUnavailable: "暫時無法從野菜API取得接入資訊，請稍後重試。",
-  setupWriteFailed: "設定未能完整更新。請檢查接入狀態，如有待還原設定，請先還原原設定。",
+  setupWriteFailed:
+    "設定未能完整更新。請檢查接入狀態，如有待還原設定，請先還原原設定。",
   signInFirst: "先去登入",
   settingUp: "正在接入…",
   setupAgain: "重新寫入",

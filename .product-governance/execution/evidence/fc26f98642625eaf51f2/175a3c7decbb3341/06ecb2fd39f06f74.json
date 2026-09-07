@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU057-AS-windows-boundary",
+  "assertion": "The Windows workflow receipt and downloaded 0.4.10 Simplified-Chinese NSIS hash match the exact CI source, all required Windows workflow jobs passed, and no updater or public-release artifact is enabled or claimed.",
+  "testSelector": "tests/work_packages/ru057/test_acceptance.py::test_windows_artifact_and_release_boundary",
+  "acceptanceCommandId": "ru057-windows-and-boundary",
+  "runId": "RU-057/WP-RU057-DUAL-PLATFORM-PACKAGING@2026-09-06T16:20:12.767456+00:00",
+  "packageId": "WP-RU057-DUAL-PLATFORM-PACKAGING",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:f1792b7c4ed81337b528656ebb8093d4dea5bc41d539c3e73be6f611913bff60",
+  "releaseUnitId": "RU-057",
+  "releaseUnitHash": "sha256:0f9fa37c7cf657255030d6314680b6a70238ea3b6b8357065b8387534ba85b94"
+}

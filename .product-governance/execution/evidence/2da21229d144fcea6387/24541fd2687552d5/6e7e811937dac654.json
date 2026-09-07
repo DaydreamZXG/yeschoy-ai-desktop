@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU052-AS-renderer",
+  "assertion": "Run existing installer journeys and truthful official/mirror/unknown source presentation, fallback with no synthetic mirror claim, keeping full-selection consent.",
+  "testSelector": "tests/work_packages/ru052/test_acceptance.py::test_renderer_installation",
+  "acceptanceCommandId": "ru052-renderer",
+  "runId": "RU-052/WP-RU052-DOWNLOAD-COMPLETION@2026-09-06T09:11:04.179507+00:00",
+  "packageId": "WP-RU052-DOWNLOAD-COMPLETION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-052",
+  "releaseUnitHash": "sha256:d51f11bb6da28360782d5b6c772a0f81048ec0136b9d22a6eecf405bbefaaf05"
+}

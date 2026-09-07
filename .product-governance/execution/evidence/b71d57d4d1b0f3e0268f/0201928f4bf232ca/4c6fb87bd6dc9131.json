@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU054-AS-build",
+  "assertion": "Typecheck and production frontend build pass without version change, package, upload or deployment.",
+  "testSelector": "tests/work_packages/ru054/test_acceptance.py::test_build_without_packaging",
+  "acceptanceCommandId": "ru054-build",
+  "runId": "RU-055/WP-RU055-RETRY-CLAUDE-ROUTES@2026-09-06T13:11:58.278507+00:00",
+  "packageId": "WP-RU055-RETRY-CLAUDE-ROUTES",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-055",
+  "releaseUnitHash": "sha256:26f121d96d679e8168cc6c3ea4280fdd6c8d5f218998d20c8725072f213140d5"
+}

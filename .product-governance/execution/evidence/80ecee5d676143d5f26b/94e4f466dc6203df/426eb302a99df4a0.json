@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU073-AS-replay",
+  "assertion": "A valid callback is claimed at most once and the protocol module constructs one-time exchange and rotation forms without any automatic retry or replay loop.",
+  "testSelector": "tests/work_packages/ru073/test_acceptance.py::test_replay_is_claimed_once_and_one_time_forms_have_no_retry_loop",
+  "acceptanceCommandId": "ru073-replay",
+  "runId": "RU-073/WP-RU073-PKCE-CLIENT-PREFLIGHT@2026-09-07T10:51:00.258815+00:00",
+  "packageId": "WP-RU073-PKCE-CLIENT-PREFLIGHT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru073/test_acceptance.py::test_replay_is_claimed_once_and_one_time_forms_have_no_retry_loop",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:8ffb8a2f1385ebf2a54a8f5725c28255794577618ae2ef9ea8a54605119c7d8c",
+    "machineReportSha256": "sha256:16be7fa117296c723bbb7afcc180b0b4f6c2a6d2e2a74de6b8dda1ec56a74a21",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:669b1fd7ad214722c910cd6f24b9359f65485bb924108ae8273f506ab7850f10",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:49892691a09cfbee2974de11c1d3596fc57c108fdd6abbb04baf2e41773eeba4",
+  "releaseUnitId": "RU-073",
+  "releaseUnitHash": "sha256:1d24a66ba979b245e8cc271a4a9dc8deeb7380bb296e8e8b93c0193bd3446943"
+}

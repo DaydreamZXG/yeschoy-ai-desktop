@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU059-AS-windows",
+  "assertion": "The Windows hashes match, the payload is an x86_64 MSVC PE from the exact candidate, the pinned NSIS recipe is Simplified Chinese, and receipts preserve unsigned, cross-built, non-public and untested-on-Windows boundaries.",
+  "testSelector": "tests/work_packages/ru058/test_acceptance.py::test_windows_cross_artifact_and_release_boundary",
+  "acceptanceCommandId": "ru059-windows-cross-artifact",
+  "runId": "RU-059/WP-RU059-STANDALONE-CROSS-PACKAGING@2026-09-06T16:44:19.070432+00:00",
+  "packageId": "WP-RU059-STANDALONE-CROSS-PACKAGING",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru058/test_acceptance.py::test_windows_cross_artifact_and_release_boundary",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:f589799c74026e3b580f743db23332b503bf8a0a293276987faafff3b48a8572",
+    "machineReportSha256": "sha256:9e23add949b3a97244a5691403ca6e2062bd5a8dfb50d9a34650feb8be444c3b",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:bb2d3f5440477a30175e7b926c2cab0895e9ffa6ff7f8d5ed38f210883a5c157",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:2ca46f9ec5045a79e320440c10deade0a5f2113c95fa6dfe031ca1f1d389a018",
+  "releaseUnitId": "RU-059",
+  "releaseUnitHash": "sha256:4647fb1b6aede83aec28b2ee6095aef7cc0400097f0c2d204aaf5c39b22c359f"
+}

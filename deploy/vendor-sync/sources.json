@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {"id":"codex-macos-arm64","app":"codex","platform":"macos","architecture":"arm64","format":"dmg","url":"https://persistent.oaistatic.com/codex-app-prod/Codex.dmg","resolver":false,"identity":"com.openai.codex","teamId":"2DC432GLL2","evidence":"https://learn.chatgpt.com/docs/app"},
+    {"id":"codex-windows-x64","app":"codex","platform":"windows","architecture":"x64","format":"msix","url":"https://persistent.oaistatic.com/codex-app-prod/ChatGPT-x64.msix","resolver":false,"identity":"OpenAI.Codex","evidence":"https://learn.chatgpt.com/docs/enterprise/windows-deployment"},
+    {"id":"codex-windows-arm64","app":"codex","platform":"windows","architecture":"arm64","format":"msix","url":"https://persistent.oaistatic.com/codex-app-prod/ChatGPT-arm64.msix","resolver":false,"identity":"OpenAI.Codex","evidence":"https://learn.chatgpt.com/docs/enterprise/windows-deployment"},
+    {"id":"claude-macos-universal","app":"claude","platform":"macos","architecture":"universal","format":"zip","url":"https://downloads.claude.ai/releases/darwin/universal/RELEASES.json","resolver":"release_feed","identity":"com.anthropic.claudefordesktop","teamId":"Q6L2SF6YDW","evidence":"https://claude.com/download"},
+    {"id":"claude-windows-x64","app":"claude","platform":"windows","architecture":"x64","format":"msix","url":"https://claude.ai/api/desktop/win32/x64/msix/latest/redirect","resolver":true,"identity":"Claude","evidence":"https://support.claude.com/en/articles/12622703-deploy-claude-desktop-for-windows"},
+    {"id":"claude-windows-arm64","app":"claude","platform":"windows","architecture":"arm64","format":"msix","url":"https://claude.ai/api/desktop/win32/arm64/msix/latest/redirect","resolver":true,"identity":"Claude","evidence":"https://support.claude.com/en/articles/12622703-deploy-claude-desktop-for-windows"}
+  ]
+}

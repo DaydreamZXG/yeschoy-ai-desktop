@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU045-AS-storage_and_concurrency",
+  "assertion": "Lock contention, symlinked paths and full quota fail without overlapping runs, following symlinks, deleting arbitrary files or writing a public directory.",
+  "testSelector": "tests/work_packages/ru045/test_acceptance.py::test_storage_and_concurrency",
+  "acceptanceCommandId": "ru045-storage_and_concurrency",
+  "runId": "RU-045/WP-RU045-VENDOR-SYNC@2026-09-06T05:14:36.746472+00:00",
+  "packageId": "WP-RU045-VENDOR-SYNC",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-045",
+  "releaseUnitHash": "sha256:22aef0d114e2943ebe2bcc21a86ece3e4f0d9a2a5a7cae817f4ce9f1e91ce370"
+}

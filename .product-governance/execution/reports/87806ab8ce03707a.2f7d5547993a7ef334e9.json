@@ -1,0 +1,268 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-068/WP-RU068-CONNECTION-UX-RECOVERY@2026-09-07T07:45:38.483852+00:00",
+  "packageId": "WP-RU068-CONNECTION-UX-RECOVERY",
+  "baselineCommit": "df10e7a0516c4125866daff5cf91b76178c89d02",
+  "baselineTreeHash": "sha256:dd03631ed0ac9027a8ee591cdfc11025c710cbbe2deb48855f30612ce3cea8c7",
+  "testedTreeHash": "sha256:ee4219e281f7e1f2f306ee1db2420fe86ad5d427461a41b042173d3e26282e76",
+  "testedSnapshotPath": "execution/tested-snapshots/87806ab8ce03707a.2f7d5547993a7ef334e9.json",
+  "testedSnapshotSha256": "sha256:077f25b07449cfb6dad429a98a5524dab4a0bf5b1c6992b2747494e0d01e3267",
+  "sourceDiff": {
+    "src/configuration/ConfigurationPreviewView.test.tsx": "sha256:cca88f4a188a4c2dd522a9d5617ab39bd5375f540aeef9f56cac2361d798b0dc",
+    "src/configuration/ConfigurationPreviewView.tsx": "sha256:b654e53d13e3290e78a040bb0207616fe4cdfc359fe8a4f01852fb1e18544f78",
+    "tests/work_packages/ru068/test_acceptance.py": "sha256:68f03d2dc939075999412517829754955d8e5d599cd86412bfbf01c643d33f3c"
+  },
+  "ownedResultHashes": {
+    "src/configuration/ConfigurationPreviewView.test.tsx": "sha256:cca88f4a188a4c2dd522a9d5617ab39bd5375f540aeef9f56cac2361d798b0dc",
+    "src/configuration/ConfigurationPreviewView.tsx": "sha256:b654e53d13e3290e78a040bb0207616fe4cdfc359fe8a4f01852fb1e18544f78",
+    "tests/work_packages/ru068/test_acceptance.py": "sha256:68f03d2dc939075999412517829754955d8e5d599cd86412bfbf01c643d33f3c"
+  },
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      "src/configuration/ConfigurationPreviewView.tsx",
+      "src/configuration/ConfigurationPreviewView.test.tsx",
+      "src/configuration/OpenConnection.tsx",
+      "src/configuration/OpenConnection.test.tsx",
+      "src/configuration/connections.tsx",
+      "src/configuration/connections.test.tsx",
+      "src/configuration/launchApi.ts",
+      "src/index.css",
+      "tests/work_packages/ru068/**",
+      "outputs/野菜API-接入体验审计.md"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      "outputs/野菜API-接入体验审计.md": "sha256:cda7c7593c2146ba016072d382a5470887c8a56ad1cc3b7f109c0b948be4db82",
+      "src/configuration/ConfigurationPreviewView.test.tsx": "sha256:cca88f4a188a4c2dd522a9d5617ab39bd5375f540aeef9f56cac2361d798b0dc",
+      "src/configuration/ConfigurationPreviewView.tsx": "sha256:b654e53d13e3290e78a040bb0207616fe4cdfc359fe8a4f01852fb1e18544f78",
+      "src/configuration/OpenConnection.tsx": "sha256:d3e51e9b63d7ff7449094813271728209783c0e89c645e19a6b3813e061d8e88",
+      "src/configuration/connections.test.tsx": "sha256:4a96f69a187b05c1069a71342a36a5397a7d58e93ed65cd7d78b96a5ccced7ea",
+      "src/configuration/connections.tsx": "sha256:e7ea6577a6caaac3488030fc92c76d9d785a521f8913722214fba4b31d4d693e",
+      "src/configuration/launchApi.ts": "sha256:f9011663c5d36bfe4a8cc1c6f5749009d9213c4c47cd26b3b397921f7b3d65c1",
+      "src/index.css": "sha256:efae9f34003d622ed2f7f43f6b04154fb8e06a4c4c38b91fa7ea017c4760e463",
+      "tests/work_packages/ru068/test_acceptance.py": "sha256:68f03d2dc939075999412517829754955d8e5d599cd86412bfbf01c643d33f3c"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:bc8e071b8d82dcb280a08acbab07da19a7339d99e1ca953a3b2137ee6ad42788",
+  "sourceScopeFailures": [],
+  "integrityFailures": [],
+  "assignedTo": "/root",
+  "startedAt": "2026-09-07T07:45:38.483852+00:00",
+  "finishedAt": "2026-09-07T07:48:27.584363+00:00",
+  "passed": false,
+  "commands": [
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru068-configuration-ui",
+        "kind": "scenario_test",
+        "adapter": "vitest-json@1",
+        "selector": "src/configuration/ConfigurationPreviewView.test.tsx",
+        "cwd": ".",
+        "timeoutSeconds": 300
+      },
+      "runnerMetadata": null,
+      "machineReport": {
+        "schemaVersion": 1,
+        "adapter": "vitest-json@1",
+        "selector": "src/configuration/ConfigurationPreviewView.test.tsx",
+        "runnerError": "ValueError: package.json must pin vitest to one exact semantic version"
+      },
+      "process": null,
+      "validationErrors": [
+        "ValueError: package.json must pin vitest to one exact semantic version"
+      ],
+      "runnerProof": null,
+      "passed": false,
+      "id": "ru068-configuration-ui",
+      "kind": "scenario_test",
+      "actualExitCode": null,
+      "timedOut": false,
+      "scenarioId": "RU068-AS-nonmodal-restart"
+    },
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru068-connection-controller",
+        "kind": "scenario_test",
+        "adapter": "vitest-json@1",
+        "selector": "src/configuration/connections.test.tsx",
+        "cwd": ".",
+        "timeoutSeconds": 300
+      },
+      "runnerMetadata": null,
+      "machineReport": {
+        "schemaVersion": 1,
+        "adapter": "vitest-json@1",
+        "selector": "src/configuration/connections.test.tsx",
+        "runnerError": "ValueError: package.json must pin vitest to one exact semantic version"
+      },
+      "process": null,
+      "validationErrors": [
+        "ValueError: package.json must pin vitest to one exact semantic version"
+      ],
+      "runnerProof": null,
+      "passed": false,
+      "id": "ru068-connection-controller",
+      "kind": "scenario_test",
+      "actualExitCode": null,
+      "timedOut": false,
+      "scenarioId": "RU068-AS-independent-operations"
+    },
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru068-lifecycle-matrix",
+        "kind": "scenario_test",
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru068/test_acceptance.py::test_connection_ux_lifecycle_matrix",
+        "cwd": ".",
+        "timeoutSeconds": 300
+      },
+      "runnerMetadata": {
+        "adapter": "pytest-json@1",
+        "declaredCwd": ".",
+        "cwd": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "selector": "tests/work_packages/ru068/test_acceptance.py::test_connection_ux_lifecycle_matrix",
+        "selectorRealpath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/tests/work_packages/ru068/test_acceptance.py",
+        "runnerArgv": [
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru068/test_acceptance.py::test_connection_ux_lifecycle_matrix",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-blmsak_d/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-blmsak_d/pytest-basetemp"
+        ],
+        "sandboxedArgv": [
+          "/usr/bin/sandbox-exec",
+          "-p",
+          "(version 1)\n(allow default)\n(deny file-write*\n  (require-not\n    (require-any\n      (subpath \"/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-blmsak_d\")\n      (literal \"/dev/null\"))))\n",
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru068/test_acceptance.py::test_connection_ux_lifecycle_matrix",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-blmsak_d/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-blmsak_d/pytest-basetemp"
+        ],
+        "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "pythonRealpath": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+        "pythonExecutableSha256": "sha256:6b24be8ba00c4abc8b3e7e2620bd710e2cf7a4312d00c147f8f05fbb6f3d297a",
+        "pytestVersion": "8.4.2",
+        "pytestDistributionVersion": "8.4.2",
+        "pytestModulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+        "pytestModuleSha256": "sha256:66993a5e3905005e0981159b4794d10b1adacf341a58a44d696ad2c4442dcdc6",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "executable": "/usr/bin/sandbox-exec",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea",
+          "policySha256": "sha256:65eb220ff88ff6ec81a379603ca9476f9adc9a0943e37818f74fe6ab484184a8",
+          "projectRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+          "writableRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-blmsak_d",
+          "policyVersion": 1
+        }
+      },
+      "machineReport": {
+        "adapter": "pytest-json@1",
+        "collectedNodeIds": [
+          "tests/work_packages/ru068/test_acceptance.py::test_connection_ux_lifecycle_matrix"
+        ],
+        "collectionErrors": [],
+        "deselectedNodeIds": [],
+        "pytestExitCode": 0,
+        "pytestRootPath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "runner": {
+          "distributionVersion": "8.4.2",
+          "modulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+          "moduleVersion": "8.4.2",
+          "name": "pytest",
+          "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "pythonVersion": "3.9.6"
+        },
+        "schemaVersion": 1,
+        "selector": "tests/work_packages/ru068/test_acceptance.py::test_connection_ux_lifecycle_matrix",
+        "tests": [
+          {
+            "nodeId": "tests/work_packages/ru068/test_acceptance.py::test_connection_ux_lifecycle_matrix",
+            "phases": {
+              "call": {
+                "outcome": "passed"
+              },
+              "setup": {
+                "outcome": "passed"
+              },
+              "teardown": {
+                "outcome": "passed"
+              }
+            }
+          }
+        ]
+      },
+      "process": {
+        "actualExitCode": 0,
+        "timedOut": false,
+        "stdout": "============================= test session starts ==============================\nplatform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0\nrootdir: /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop\nplugins: anyio-4.12.1\ncollected 1 item\n\ntests/work_packages/ru068/test_acceptance.py .                           [100%]\n\n============================== 1 passed in 0.05s ===============================\n",
+        "stderr": ""
+      },
+      "validationErrors": [],
+      "runnerProof": {
+        "schemaVersion": 1,
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru068/test_acceptance.py::test_connection_ux_lifecycle_matrix",
+        "cwd": ".",
+        "executedPassingTests": 1,
+        "actualExitCode": 0,
+        "runnerMetadataSha256": "sha256:f4b66a24beeb799558068547177bfc960a93d9e492aabe449f2fa3e24935a0c6",
+        "machineReportSha256": "sha256:2db9bbb3227225f480c77469c76f92ccbef30903c3eace2e5775f9f4d26a4f0f",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "policySha256": "sha256:65eb220ff88ff6ec81a379603ca9476f9adc9a0943e37818f74fe6ab484184a8",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+        }
+      },
+      "passed": true,
+      "id": "ru068-lifecycle-matrix",
+      "kind": "scenario_test",
+      "actualExitCode": 0,
+      "timedOut": false,
+      "scenarioId": "RU068-AS-lifecycle-matrix"
+    }
+  ],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU068-AS-nonmodal-restart",
+      "path": "execution/evidence/2f7d5547993a7ef334e9/87806ab8ce03707a/d1c1a664bcc499e9.json",
+      "sha256": "sha256:bab6ffd7240f163bd764c764b4a976799f4d8215305c0f92534033b9d8831a27"
+    },
+    {
+      "scenarioId": "RU068-AS-independent-operations",
+      "path": "execution/evidence/2f7d5547993a7ef334e9/87806ab8ce03707a/01a82a1dcf0215e4.json",
+      "sha256": "sha256:5ad604a152229662582c4124d811fdbe4cd66bf2d5daa7794275014e5e67377f"
+    },
+    {
+      "scenarioId": "RU068-AS-lifecycle-matrix",
+      "path": "execution/evidence/2f7d5547993a7ef334e9/87806ab8ce03707a/10de080f61880c07.json",
+      "sha256": "sha256:9b234176383d03304061be0932f8fd7f645b70ff6d20423561f9fadc5f9a3d0c"
+    }
+  ],
+  "scenarioEvidenceFailures": [
+    "RU068-AS-nonmodal-restart: registered runner proof is invalid",
+    "RU068-AS-independent-operations: registered runner proof is invalid"
+  ],
+  "releaseUnitId": "RU-068",
+  "releaseUnitHash": "sha256:085c67d53ccd9d19623506eada57b39272dd511fd6a411edc6acd40243cc6171"
+}

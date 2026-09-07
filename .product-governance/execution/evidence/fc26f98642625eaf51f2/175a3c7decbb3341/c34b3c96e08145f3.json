@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU057-AS-macos",
+  "assertion": "The recorded 0.4.10 macOS DMG hash matches, its contained app is universal x86_64 and arm64, and current native tools verify disk image integrity, Developer ID signature, hardened runtime, notarization ticket and Gatekeeper acceptance.",
+  "testSelector": "tests/work_packages/ru057/test_acceptance.py::test_macos_artifact",
+  "acceptanceCommandId": "ru057-macos-artifact",
+  "runId": "RU-057/WP-RU057-DUAL-PLATFORM-PACKAGING@2026-09-06T16:20:12.767456+00:00",
+  "packageId": "WP-RU057-DUAL-PLATFORM-PACKAGING",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:de291a7213e1b606a6838eb739e85413860444448b4499a85cc446216148e855",
+  "releaseUnitId": "RU-057",
+  "releaseUnitHash": "sha256:0f9fa37c7cf657255030d6314680b6a70238ea3b6b8357065b8387534ba85b94"
+}

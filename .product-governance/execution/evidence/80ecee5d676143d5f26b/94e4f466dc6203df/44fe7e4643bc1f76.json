@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU073-AS-stale",
+  "assertion": "Expired or cancelled flows cannot yield credentials, while wrong-state and unrelated requests are rejected without consuming a still-valid flow.",
+  "testSelector": "tests/work_packages/ru073/test_acceptance.py::test_stale_cancelled_and_wrong_state_requests_do_not_become_credentials",
+  "acceptanceCommandId": "ru073-stale",
+  "runId": "RU-073/WP-RU073-PKCE-CLIENT-PREFLIGHT@2026-09-07T10:51:00.258815+00:00",
+  "packageId": "WP-RU073-PKCE-CLIENT-PREFLIGHT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru073/test_acceptance.py::test_stale_cancelled_and_wrong_state_requests_do_not_become_credentials",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:a698a15778e5f8e60908fad468698db9fc84631f5d0bac962e3f5f8fe2677a17",
+    "machineReportSha256": "sha256:aafee47dd786681fa6262acf4b81df61e1df88d45661cc45769a8c3952e143b2",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:5ba36bd54b6ccf070467a01612baa93c4d0f72766902191cae6a7a31370f4ce9",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:65310445a70202f5da13b058fe0b2b5b8cdcf746798625c89be13a7765afeabd",
+  "releaseUnitId": "RU-073",
+  "releaseUnitHash": "sha256:1d24a66ba979b245e8cc271a4a9dc8deeb7380bb296e8e8b93c0193bd3446943"
+}

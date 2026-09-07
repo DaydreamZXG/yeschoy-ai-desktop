@@ -1,0 +1,200 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-06T05:29:00Z",
+  "scope": "Private vendor sync only; no third-party public distribution or client update",
+  "host": "43.134.77.210",
+  "timer": {
+    "unit": "yeschoy-vendor-sync.timer",
+    "enabled": true,
+    "active": true,
+    "nextObservedRun": "2026-09-06T06:00:00Z",
+    "calendar": "00,06,12,18 UTC"
+  },
+  "service": {
+    "unit": "yeschoy-vendor-sync.service",
+    "dynamicUser": true,
+    "protectSystem": "strict",
+    "protectHome": true,
+    "capabilityBoundingSet": [],
+    "publicDirectoryInaccessible": true,
+    "exitStatus": 2,
+    "exitMeaning": "Completed with an upstream source challenge; timer remains active"
+  },
+  "budgetBytes": 17122514944,
+  "stagedBytes": 2754728531,
+  "deployedSyncSha256": "da90cf148d2e0c6d923d24ad580aa54be34ac2eb1a2842f9d1af04c6cba6169d",
+  "firstRun": {
+    "scriptSha256": "1e795c6400af0b303c776a18cde9ee745ee9e02bdfda857573a54fafaab35d03",
+    "finishedAt": "2026-09-06T05:25:35.493305+00:00",
+    "staged": 5,
+    "failed": 1
+  },
+  "replay": {
+    "finishedAt": "2026-09-06T05:28:04.526362+00:00",
+    "unchanged": 5,
+    "staged": 0,
+    "failed": 1
+  },
+  "catalog": {
+    "checkedAt": "2026-09-06T05:28:04.526362+00:00",
+    "sources": [
+      {
+        "id": "claude-macos-universal",
+        "status": "failed",
+        "error": "source_challenge",
+        "candidate": null
+      },
+      {
+        "id": "claude-windows-arm64",
+        "status": "downloaded_unverified",
+        "error": "",
+        "candidate": {
+          "metadata": {
+            "etag": "\"1d4afda20cc34247511f1cccd935a4a5\"",
+            "fingerprint": "310f62917c5ae36dcf1dfc6860dca9a5cc85573fae4ff0dd8bd5dc0d168b04a0",
+            "lastModified": "Sat, 05 Sep 2026 02:37:49 GMT",
+            "size": 261219221,
+            "url": "https://downloads.claude.ai/releases/win32/arm64/1.46388.4/Claude-50e62f90a2c85243eef42913398f7c8f1534abef.msix",
+            "versionHint": "unknown"
+          },
+          "package": {
+            "compatibility": "not_tested",
+            "identity": "Claude",
+            "publisher": "CN=\"Anthropic, PBC\", O=\"Anthropic, PBC\", L=San Francisco, S=California, C=US, SERIALNUMBER=4860621, OID.2.5.4.15=Private Organization, OID.1.3.6.1.4.1.311.60.2.1.2=Delaware, OID.1.3.6.1.4.1.311.60.2.1.3=US",
+            "signature": "pending_native_verification",
+            "version": "1.46388.4.0"
+          },
+          "path": "artifacts/26584e2b97e80df3e9ac3c745b806b9711aefb74b079af7c6687286734ebd327.msix",
+          "sha256": "26584e2b97e80df3e9ac3c745b806b9711aefb74b079af7c6687286734ebd327",
+          "stagedAt": "2026-09-06T05:25:35.488681+00:00"
+        }
+      },
+      {
+        "id": "claude-windows-x64",
+        "status": "downloaded_unverified",
+        "error": "",
+        "candidate": {
+          "metadata": {
+            "etag": "\"c05c5f821e0b75d3636ed43d5a1606dd\"",
+            "fingerprint": "89d01e6f261bf9ad846538c30b4f3424d5a8068aef6351f39bbe30ddc1fef0ec",
+            "lastModified": "Sat, 05 Sep 2026 02:37:43 GMT",
+            "size": 266539079,
+            "url": "https://downloads.claude.ai/releases/win32/x64/1.46388.4/Claude-50e62f90a2c85243eef42913398f7c8f1534abef.msix",
+            "versionHint": "unknown"
+          },
+          "package": {
+            "compatibility": "not_tested",
+            "identity": "Claude",
+            "publisher": "CN=\"Anthropic, PBC\", O=\"Anthropic, PBC\", L=San Francisco, S=California, C=US, SERIALNUMBER=4860621, OID.2.5.4.15=Private Organization, OID.1.3.6.1.4.1.311.60.2.1.2=Delaware, OID.1.3.6.1.4.1.311.60.2.1.3=US",
+            "signature": "pending_native_verification",
+            "version": "1.46388.4.0"
+          },
+          "path": "artifacts/f3925248cf40b46c59043878b4c4f1835e7687082b5a52217bd72b73bfbf0b12.msix",
+          "sha256": "f3925248cf40b46c59043878b4c4f1835e7687082b5a52217bd72b73bfbf0b12",
+          "stagedAt": "2026-09-06T05:25:15.351474+00:00"
+        }
+      },
+      {
+        "id": "codex-macos-arm64",
+        "status": "downloaded_unverified",
+        "error": "",
+        "candidate": {
+          "metadata": {
+            "etag": "\"0x8DF0B9DD65DD86F\"",
+            "fingerprint": "464ff1ee5b489abdf6b7ab02b42c85c7dfdea8ad1d468f73bf1dca4c1f3b21e1",
+            "lastModified": "Sat, 05 Sep 2026 22:34:24 GMT",
+            "size": 643007873,
+            "url": "https://persistent.oaistatic.com/codex-app-prod/Codex.dmg",
+            "versionHint": "unknown"
+          },
+          "package": {
+            "compatibility": "not_tested",
+            "identity": "pending_native_inspection",
+            "signature": "pending_native_verification",
+            "version": "unknown"
+          },
+          "path": "artifacts/b6ffed73d581047862e85de5b4d322ba431004949a5338736e7059182dff6082.dmg",
+          "sha256": "b6ffed73d581047862e85de5b4d322ba431004949a5338736e7059182dff6082",
+          "stagedAt": "2026-09-06T05:22:27.616258+00:00"
+        }
+      },
+      {
+        "id": "codex-windows-arm64",
+        "status": "downloaded_unverified",
+        "error": "",
+        "candidate": {
+          "metadata": {
+            "etag": "\"0x8DF0B6A16DD642F\"",
+            "fingerprint": "6fa709247ae7fa124855d1767dff20328121d13ea67a953db846622339588645",
+            "lastModified": "Sat, 05 Sep 2026 16:23:58 GMT",
+            "size": 787507242,
+            "url": "https://persistent.oaistatic.com/codex-app-prod/ChatGPT-arm64.msix",
+            "versionHint": "26.901.5280.0"
+          },
+          "package": {
+            "compatibility": "not_tested",
+            "identity": "OpenAI.Codex",
+            "publisher": "CN=50BDFD77-8903-4850-9FFE-6E8522F64D5B",
+            "signature": "pending_native_verification",
+            "version": "26.901.5280.0"
+          },
+          "path": "artifacts/fe741375d93dd8e5a27c94608549b1e829534413d170d38f1d54db99b2eb0a44.msix",
+          "sha256": "fe741375d93dd8e5a27c94608549b1e829534413d170d38f1d54db99b2eb0a44",
+          "stagedAt": "2026-09-06T05:24:49.289175+00:00"
+        }
+      },
+      {
+        "id": "codex-windows-x64",
+        "status": "downloaded_unverified",
+        "error": "",
+        "candidate": {
+          "metadata": {
+            "etag": "\"0x8DF0B69ED14FBAE\"",
+            "fingerprint": "15823f649be3d233e1747a51cb1f56df4946f2bfe088bb83dd206e1a3355e8c4",
+            "lastModified": "Sat, 05 Sep 2026 16:22:48 GMT",
+            "size": 796455116,
+            "url": "https://persistent.oaistatic.com/codex-app-prod/ChatGPT-x64.msix",
+            "versionHint": "26.901.5280.0"
+          },
+          "package": {
+            "compatibility": "not_tested",
+            "identity": "OpenAI.Codex",
+            "publisher": "CN=50BDFD77-8903-4850-9FFE-6E8522F64D5B",
+            "signature": "pending_native_verification",
+            "version": "26.901.5280.0"
+          },
+          "path": "artifacts/55031fb3704200e4a36d7751db8a0b9fc69e92fcd8644bf39741d66d7ead9b3a.msix",
+          "sha256": "55031fb3704200e4a36d7751db8a0b9fc69e92fcd8644bf39741d66d7ead9b3a",
+          "stagedAt": "2026-09-06T05:23:38.595681+00:00"
+        }
+      }
+    ]
+  },
+  "nativeVerification": {
+    "schemaVersion": 1,
+    "source": "codex-macos-arm64",
+    "sha256": "b6ffed73d581047862e85de5b4d322ba431004949a5338736e7059182dff6082",
+    "checkedAt": "2026-09-06T05:28:44.138942+00:00",
+    "package": {
+      "version": "26.901.51231",
+      "identity": "com.openai.codex",
+      "signature": "native_verified",
+      "compatibility": "not_tested",
+      "publisher": "2DC432GLL2"
+    },
+    "verifier": "macos_codesign_gatekeeper",
+    "installation": "not_tested",
+    "published": false
+  },
+  "unchangedOrigin": {
+    "ingressSha256": "aaa63d1459357d9cfa0c0e21dc86c13ed824fbf5fd178084b046975a9765e7e2",
+    "healthSha256": "17d04da44148f6043ff258f522aa60709f98456cc3f393dcca03e3583169fd52"
+  },
+  "notPerformed": [
+    "Claude macOS download blocked by official HTTP 403 challenge; no bypass attempted",
+    "Windows native signature verification and real installation/upgrade not run",
+    "No public mirror permission assumed; no packages published",
+    "No client UI, installer builds, updater signing, account or API changes",
+    "No external alert recipient configured; server journal only"
+  ]
+}

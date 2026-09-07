@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU067-AS-production-and-exit",
+  "assertion": "Source and cross-platform compilation prove release builds cannot omit custom-protocol and Windows close or native quit can reach cooperative shutdown without renderer JavaScript.",
+  "testSelector": "tests/work_packages/ru067/test_acceptance.py::test_release_build_and_native_exit_are_fail_safe",
+  "acceptanceCommandId": "ru067-source-contract",
+  "runId": "RU-067/WP-RU067-WINDOWS-RUNTIME-HOTFIX@2026-09-07T07:15:26.201323+00:00",
+  "packageId": "WP-RU067-WINDOWS-RUNTIME-HOTFIX",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru067/test_acceptance.py::test_release_build_and_native_exit_are_fail_safe",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:cfe10f2f064391bc0c32814467eb2d76bc5d928ee7f5a05978179a5343ce84f9",
+    "machineReportSha256": "sha256:fc6817eae35f1dfaf7949ddf490556d345ec4e0c882542636d43c5a368cfb880",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:48892fc1ed9ce5583d2173070c587ecf124c33a4f0f65f4f4145ac910f6551f8",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:e5ea7a57b17459fc10e0a50a92762d4cd93a6968a1dba875e330e75fd029bd80",
+  "releaseUnitId": "RU-067",
+  "releaseUnitHash": "sha256:8be7244fb3b868ffc8478de4ed5342cf139c698cec637aad836755da3de27683"
+}

@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-056/WP-RU056-UNIFIED-ACTIVATION@2026-09-06T15:54:09.651373+00:00",
+  "packageId": "WP-RU056-UNIFIED-ACTIVATION",
+  "baselineCommit": "df10e7a0516c4125866daff5cf91b76178c89d02",
+  "baselineTreeHash": "sha256:e9123e5bb6b3920253164b0aec096a47a4a03d66b8ad8c46d50614ca45201a93",
+  "testedTreeHash": "sha256:e9123e5bb6b3920253164b0aec096a47a4a03d66b8ad8c46d50614ca45201a93",
+  "testedSnapshotPath": "execution/tested-snapshots/c238b456a2209757.71bdfec04e8c0eb9c898.json",
+  "testedSnapshotSha256": "sha256:6504f61a424b9ae118fb0f1a3d96695d4e184c24ba2fb414ffc3179e52388d27",
+  "sourceDiff": {},
+  "ownedResultHashes": {},
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      "src-tauri/src/tool_activation.rs",
+      "src-tauri/src/tool_adapters/mod.rs",
+      "src-tauri/src/tool_adapters/desktop_lifecycle.rs",
+      "src-tauri/src/tool_adapters/claude_code.rs",
+      "src-tauri/src/tool_adapters/claude_desktop.rs",
+      "src-tauri/src/tool_adapters/codex_desktop.rs",
+      "src-tauri/src/tool_adapters/dsh_web.rs",
+      "src-tauri/src/claude_bridge.rs",
+      "src-tauri/src/tool_model_profile.rs",
+      "src-tauri/Cargo.toml",
+      "src-tauri/Cargo.lock",
+      "src/configuration/activation.ts",
+      "src/configuration/activation.test.ts",
+      "src/configuration/ConfigurationPreviewView.tsx",
+      "src/configuration/ConfigurationPreviewView.test.tsx",
+      "src/configuration/DailyUse.test.tsx",
+      "tests/work_packages/ru056/**",
+      "outputs/野菜API-统一快速接入.md"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      "outputs/野菜API-统一快速接入.md": "sha256:0189f396447fc332c7dc3525c2dedb506cb25f8052562e3fd455452ba3d6c709",
+      "src-tauri/Cargo.lock": "sha256:6a6c648d64c28b8599c4b53de6d9e772e0106c59171b94feb9c9aa83ae71bb3f",
+      "src-tauri/Cargo.toml": "sha256:036c4a602d976566b6d4345d42cd75aaa5d9d68cab141e4fc59d1ce45afed844",
+      "src-tauri/src/claude_bridge.rs": "sha256:c8970681c84efa7f98965262e369a406cbb4261b12f405c1be889d4efce8683f",
+      "src-tauri/src/tool_activation.rs": "sha256:3edc6815d479cf40ae00e87a7254e49d8b32af2a615570d1900839e23c44d806",
+      "src-tauri/src/tool_adapters/claude_code.rs": "sha256:a0a2008a724e15ce71a9ed0cea04b3d305365277db57ca9c68e1c0ae761ffe45",
+      "src-tauri/src/tool_adapters/claude_desktop.rs": "sha256:9dde8a7d0bd48844ba91d3525114c1a17a8d418b5c2cd55f2acc224195c36d2a",
+      "src-tauri/src/tool_adapters/codex_desktop.rs": "sha256:b1eaf54054865a1dfe0820e990c715273ec0bbc9fa03c0985e55ce9ace86baa1",
+      "src-tauri/src/tool_adapters/desktop_lifecycle.rs": "sha256:9dcb90e3bb2ea176cbd2308fad20402fb751f881a19472de08248318d80a520f",
+      "src-tauri/src/tool_adapters/dsh_web.rs": "sha256:d61875036fc95f451a8fcd1474476ef37dddcc3545755bf223c94c7c49451c5c",
+      "src-tauri/src/tool_adapters/mod.rs": "sha256:a0e48a4ed7805139d614970a0fdc34cdb84ba2baa19f9e0f5dee9f0f34e7ff95",
+      "src-tauri/src/tool_model_profile.rs": "sha256:e7af227151debcd67b299993c0246ae0af297a7b0fabb8810859be5f96097d5a",
+      "src/configuration/ConfigurationPreviewView.test.tsx": "sha256:9407745590c78869b6375a4bdae6168c294f197494ff8a301e3f855d9bb8e16a",
+      "src/configuration/ConfigurationPreviewView.tsx": "sha256:d958f4f8cd7a107c34cc316836f9b75a39ba4e23ace826c0be17afebcafd76c3",
+      "src/configuration/DailyUse.test.tsx": "sha256:9225843b7332ed138122f84a5eed0b53513899e30af8be9ab78591df0b3656f6",
+      "src/configuration/activation.test.ts": "sha256:39d1dee4cd5d2bb52fdb58dfa5afd4b92c176810f77e8add9929dea5946fc525",
+      "src/configuration/activation.ts": "sha256:c8a6a688a7254254fb7b8d5d766b6db014038c902528ad23bcaa4e1b6bfbbf7c",
+      "tests/work_packages/ru056/CONTRACT.md": "sha256:6e2fdab73e0728b24c3860692c6009569f0722d1aa0078eb16dd4d115c47056c",
+      "tests/work_packages/ru056/test_acceptance.py": "sha256:b4296e0439167b8bd8c1420ac918b99b55d2a87bb35697a6207281b1f868d654"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:988afe1c07fff289d1c88677a21970c13eb2e5a7476d379100348dcae890e543",
+  "sourceScopeFailures": [],
+  "integrityFailures": [
+    "non-verification work package produced no source change"
+  ],
+  "assignedTo": "root",
+  "startedAt": "2026-09-06T15:54:09.651373+00:00",
+  "finishedAt": "2026-09-06T15:54:24.188142+00:00",
+  "passed": false,
+  "commands": [],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU056-AS-native",
+      "path": "execution/evidence/71bdfec04e8c0eb9c898/c238b456a2209757/fe9bfefb10e8ba89.json",
+      "sha256": "sha256:2d7f802d830f4f9f37b0e78e8de4d150ec86546d3d6992c661ba1f54a06ac71f"
+    },
+    {
+      "scenarioId": "RU056-AS-renderer",
+      "path": "execution/evidence/71bdfec04e8c0eb9c898/c238b456a2209757/f8bf34f72e4f0354.json",
+      "sha256": "sha256:7fa553299403ab5e7b5a87668265c32206a6dbbe7a10ef37bfe8317d22dda39b"
+    },
+    {
+      "scenarioId": "RU056-AS-build",
+      "path": "execution/evidence/71bdfec04e8c0eb9c898/c238b456a2209757/30954c17522c6d59.json",
+      "sha256": "sha256:331f0e808542d0d768f27d905a05f65802c6466b50b8fb94bab69dc7a0edc314"
+    }
+  ],
+  "scenarioEvidenceFailures": [
+    "RU056-AS-native: registered runner proof is invalid",
+    "RU056-AS-renderer: registered runner proof is invalid",
+    "RU056-AS-build: registered runner proof is invalid"
+  ],
+  "releaseUnitId": "RU-056",
+  "releaseUnitHash": "sha256:ac6053e151c9949c81631663e53399e0801a5fa4f8056d8fe3891d7b0faa937c"
+}

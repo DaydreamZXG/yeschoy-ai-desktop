@@ -1,0 +1,83 @@
+{
+  "reachable": {
+    "requestId": "diag-fixture-reachable",
+    "startedAtEpochMs": 1788607800000,
+    "completedAtEpochMs": 1788607800030,
+    "lines": [
+      {
+        "lineId": "mainland_optimized",
+        "displayName": "大陆优化",
+        "rootUrl": "https://yeschoy.com",
+        "host": "yeschoy.com",
+        "port": 443,
+        "status": "reachable",
+        "latencyMs": 10,
+        "reasonCode": "tcp_443_reachable"
+      },
+      {
+        "lineId": "global_accelerated",
+        "displayName": "全球加速",
+        "rootUrl": "https://api.yeschoy.com",
+        "host": "api.yeschoy.com",
+        "port": 443,
+        "status": "reachable",
+        "latencyMs": 20,
+        "reasonCode": "tcp_443_reachable"
+      }
+    ]
+  },
+  "mixed": {
+    "requestId": "diag-fixture-mixed",
+    "startedAtEpochMs": 1788607800000,
+    "completedAtEpochMs": 1788607800030,
+    "lines": [
+      {
+        "lineId": "mainland_optimized",
+        "displayName": "大陆优化",
+        "rootUrl": "https://yeschoy.com",
+        "host": "yeschoy.com",
+        "port": 443,
+        "status": "reachable",
+        "latencyMs": 10,
+        "reasonCode": "tcp_443_reachable"
+      },
+      {
+        "lineId": "global_accelerated",
+        "displayName": "全球加速",
+        "rootUrl": "https://api.yeschoy.com",
+        "host": "api.yeschoy.com",
+        "port": 443,
+        "status": "dns_failed",
+        "latencyMs": 20,
+        "reasonCode": "dns_resolution_failed"
+      }
+    ]
+  },
+  "failed": {
+    "requestId": "diag-fixture-failed",
+    "startedAtEpochMs": 1788607800000,
+    "completedAtEpochMs": 1788607800030,
+    "lines": [
+      {
+        "lineId": "mainland_optimized",
+        "displayName": "大陆优化",
+        "rootUrl": "https://yeschoy.com",
+        "host": "yeschoy.com",
+        "port": 443,
+        "status": "connect_failed",
+        "latencyMs": 10,
+        "reasonCode": "tcp_connection_failed"
+      },
+      {
+        "lineId": "global_accelerated",
+        "displayName": "全球加速",
+        "rootUrl": "https://api.yeschoy.com",
+        "host": "api.yeschoy.com",
+        "port": 443,
+        "status": "timed_out",
+        "latencyMs": 20,
+        "reasonCode": "connectivity_check_timed_out"
+      }
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU073-AS-happy",
+  "assertion": "The native engine holds a random-port loopback listener, generates independent state and verifier material, derives S256, and builds branded authorization plus fixed-origin token requests without a client secret.",
+  "testSelector": "tests/work_packages/ru073/test_acceptance.py::test_happy_path_prepares_the_complete_client_owned_pkce_boundary",
+  "acceptanceCommandId": "ru073-happy",
+  "runId": "RU-073/WP-RU073-PKCE-CLIENT-PREFLIGHT@2026-09-07T10:51:00.258815+00:00",
+  "packageId": "WP-RU073-PKCE-CLIENT-PREFLIGHT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru073/test_acceptance.py::test_happy_path_prepares_the_complete_client_owned_pkce_boundary",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:0f19632c0b2e125bdc1b431f5bcd807c6952f2c1eb20e77e2ae0b3867e0fb41d",
+    "machineReportSha256": "sha256:68a0539ab29d92dc5bb0f8ac05af978a5c0f4617e06195faea4d288a0add73e4",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:27d6cce0bca610897bc807f8eff453964d21d838fa996c2799178ec1607e6c4d",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:03c25bf815aaa771ae73191af831232c12c8edfdcb6ea10170171d5325bc55e7",
+  "releaseUnitId": "RU-073",
+  "releaseUnitHash": "sha256:1d24a66ba979b245e8cc271a4a9dc8deeb7380bb296e8e8b93c0193bd3446943"
+}

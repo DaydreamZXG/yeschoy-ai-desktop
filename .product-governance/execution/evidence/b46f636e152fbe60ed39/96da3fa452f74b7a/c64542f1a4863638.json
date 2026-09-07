@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU046-AS-renderer",
+  "assertion": "Renderer scenarios prove missing/installed/guided UX, permission and failure recovery, double-click/lost response, cancellation, stale context and exactly-once activation handoff.",
+  "testSelector": "tests/work_packages/ru046/test_acceptance.py::test_renderer_installation",
+  "acceptanceCommandId": "ru046-renderer",
+  "runId": "RU-048/WP-RU048-APP-INSTALLATION@2026-09-06T06:34:43.845879+00:00",
+  "packageId": "WP-RU048-APP-INSTALLATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-048",
+  "releaseUnitHash": "sha256:45ae7ec46413ca6204963344472ebaf5cf3a07cad2dbca94261a7f97a471988d"
+}

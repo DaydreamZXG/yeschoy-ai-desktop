@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU071-AS-recovery",
+  "assertion": "Installation failure after drain attempts current-app relaunch, and operators can atomically disable channel authority without deleting immutable artifacts or touching third-party downloads.",
+  "testSelector": "tests/work_packages/ru071/test_acceptance.py::test_install_failure_relaunches_current_app_and_channel_can_be_disabled",
+  "acceptanceCommandId": "ru071-recovery",
+  "runId": "RU-071/WP-RU071-SELF-UPDATE-CLOSURE@2026-09-07T09:35:30.314855+00:00",
+  "packageId": "WP-RU071-SELF-UPDATE-CLOSURE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-071",
+  "releaseUnitHash": "sha256:0cab89775da79ef995e247b3b70aa4f79c94b05dc84c274dec90f245bf4dbabc"
+}

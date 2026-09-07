@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU056-AS-renderer",
+  "assertion": "Renderer tests prove a running desktop app receives a save-work confirmation and confirmed retry, setup copy does not claim a model response, and CLI targets explain new-session activation.",
+  "testSelector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_renderer",
+  "acceptanceCommandId": "ru056-renderer",
+  "runId": "RU-056/WP-RU056-UNIFIED-ACTIVATION@2026-09-06T15:03:32.078087+00:00",
+  "packageId": "WP-RU056-UNIFIED-ACTIVATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-056",
+  "releaseUnitHash": "sha256:ac6053e151c9949c81631663e53399e0801a5fa4f8056d8fe3891d7b0faa937c"
+}

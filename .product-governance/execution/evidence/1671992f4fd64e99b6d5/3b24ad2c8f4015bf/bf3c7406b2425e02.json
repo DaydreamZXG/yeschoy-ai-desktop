@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU045-AS-stale_and_failure_recovery",
+  "assertion": "Stale metadata, invalid range/size/type, interrupted state receipt, corrupt cache and upstream failure cannot erase the prior candidate or claim success.",
+  "testSelector": "tests/work_packages/ru045/test_acceptance.py::test_stale_and_failure_recovery",
+  "acceptanceCommandId": "ru045-stale_and_failure_recovery",
+  "runId": "RU-045/WP-RU045-VENDOR-SYNC@2026-09-06T05:32:39.968015+00:00",
+  "packageId": "WP-RU045-VENDOR-SYNC",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru045/test_acceptance.py::test_stale_and_failure_recovery",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:645bc766b47656a685923e2e141127126181017c94d8ce2729622de50b571764",
+    "machineReportSha256": "sha256:373cb863f619251536ed0ff7d55fae82b06426e66ea042dd26e21dd9ddd18d18",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:4e4c5654c9b07be603155138212003981a5e1e6247379e188f8a6ef4abf33ccb",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:52e5f06c59b4eca023408fe096e663d4670189dae147ebe666a74732d4a75559",
+  "releaseUnitId": "RU-045",
+  "releaseUnitHash": "sha256:22aef0d114e2943ebe2bcc21a86ece3e4f0d9a2a5a7cae817f4ce9f1e91ce370"
+}

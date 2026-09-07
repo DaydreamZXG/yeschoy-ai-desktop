@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU052-AS-renderer",
+  "assertion": "Run existing installer journeys and truthful official/mirror/unknown source presentation, fallback with no synthetic mirror claim, keeping full-selection consent.",
+  "testSelector": "tests/work_packages/ru052/test_acceptance.py::test_renderer_installation",
+  "acceptanceCommandId": "ru052-renderer",
+  "runId": "RU-052/WP-RU052-DOWNLOAD-COMPLETION@2026-09-06T09:52:17.190097+00:00",
+  "packageId": "WP-RU052-DOWNLOAD-COMPLETION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru052/test_acceptance.py::test_renderer_installation",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:de7593007393e173754d8390b3a92553f333aa4ec923b67a06371b74ff1147c2",
+    "machineReportSha256": "sha256:c01faf83ccfa4f6d3855df70a738aef16dd1024ba8588543eda5a5bacb34c3b4",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:e5f4eae592ac3055d7439ae0bef239cc9b630138fd54ee74a7d8a7b3b4c4c949",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:816e5f1c89950b3d364e37c4a2abbb37905f021532d67c63abeb8097838d9679",
+  "releaseUnitId": "RU-052",
+  "releaseUnitHash": "sha256:d51f11bb6da28360782d5b6c772a0f81048ec0136b9d22a6eecf405bbefaaf05"
+}

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU073-AS-recovery",
+  "assertion": "Removing or leaving the preflight engine unused preserves the existing device-code account and tool integration behavior with no stored-data migration.",
+  "testSelector": "tests/work_packages/ru073/test_acceptance.py::test_recovery_keeps_the_existing_device_flow_active_and_pkce_dormant",
+  "acceptanceCommandId": "ru073-recovery",
+  "runId": "RU-073/WP-RU073-PKCE-CLIENT-PREFLIGHT@2026-09-07T10:51:00.258815+00:00",
+  "packageId": "WP-RU073-PKCE-CLIENT-PREFLIGHT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru073/test_acceptance.py::test_recovery_keeps_the_existing_device_flow_active_and_pkce_dormant",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:de812e4952ba449f1d79056d9dfa4ad18622eee6de3beff894b70a01393da5ad",
+    "machineReportSha256": "sha256:ca88c1739eae98bf5de42404867de67e492892da3ff32275fd1543102b0e67e4",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:0f56b745811b9cc00d803e0472b0f993a8accb0a7abcb66afd5a263d77bdceeb",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:5cc61d13426f1f5b95df8fbddf47cccac8ebe608e90f98c78d403fb190acf88a",
+  "releaseUnitId": "RU-073",
+  "releaseUnitHash": "sha256:1d24a66ba979b245e8cc271a4a9dc8deeb7380bb296e8e8b93c0193bd3446943"
+}

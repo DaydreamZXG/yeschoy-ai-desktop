@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU043-AS-build",
+  "assertion": "Typecheck and production frontend build pass without version change or installer.",
+  "testSelector": "tests/work_packages/ru043/test_acceptance.py::test_build_model_capabilities",
+  "acceptanceCommandId": "ru043-build",
+  "runId": "RU-043/WP-RU043-MODEL-CAPABILITIES@2026-09-05T15:18:13.649805+00:00",
+  "packageId": "WP-RU043-MODEL-CAPABILITIES",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:e207493ce96bb5f721800a7995a5bb72ebf8b24f020c33886d6b8f8503f80138",
+  "releaseUnitId": "RU-043",
+  "releaseUnitHash": "sha256:4fc7b7807b60368a90aaf7943fa497c255153df6588f1e7dc1ba0bb8713cedf8"
+}

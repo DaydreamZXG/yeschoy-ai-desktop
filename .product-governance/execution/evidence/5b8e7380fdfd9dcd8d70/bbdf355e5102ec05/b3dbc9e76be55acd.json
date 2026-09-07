@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU043-AS-native",
+  "assertion": "Native fixtures prove exact IDs, per-model efforts, unknown defaults, routing and recovery regressions plus Windows/Apple compilation.",
+  "testSelector": "tests/work_packages/ru043/test_acceptance.py::test_native_model_capabilities",
+  "acceptanceCommandId": "ru043-native",
+  "runId": "RU-043/WP-RU043-MODEL-CAPABILITIES@2026-09-05T15:18:13.649805+00:00",
+  "packageId": "WP-RU043-MODEL-CAPABILITIES",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru043/test_acceptance.py::test_native_model_capabilities",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:bce0bf710a48cea35eaeb3fcde2676c06034e9b71ad893ad368cd5679ed7bc28",
+    "machineReportSha256": "sha256:2892687d76441f43f40c7dcbc23d9dff2bfd42e9bb95160c036984d45c0d30b3",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:a7df71804203d74f046169af4de995f6b9120ed6b631a0c50b10dec511516173",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:cb516a6605ad4263691d375faa97fd0e5f91f74399a38fb357aa2cd293328f6a",
+  "releaseUnitId": "RU-043",
+  "releaseUnitHash": "sha256:4fc7b7807b60368a90aaf7943fa497c255153df6588f1e7dc1ba0bb8713cedf8"
+}

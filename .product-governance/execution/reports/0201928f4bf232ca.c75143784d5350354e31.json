@@ -1,0 +1,461 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-055/WP-RU055-RETRY-CLAUDE-ROUTES@2026-09-06T12:34:49.579046+00:00",
+  "packageId": "WP-RU055-RETRY-CLAUDE-ROUTES",
+  "baselineCommit": "df10e7a0516c4125866daff5cf91b76178c89d02",
+  "baselineTreeHash": "sha256:bad3867d064437eca0d3636c2490393a9fcc928ab7344ab61d90bde0da159c77",
+  "testedTreeHash": "sha256:c5276e4cb31627c8921653a7c94105810c5bdabde501772871152b43215ed007",
+  "testedSnapshotPath": "execution/tested-snapshots/0201928f4bf232ca.c75143784d5350354e31.json",
+  "testedSnapshotSha256": "sha256:859dce5d3af701375aeba66f02ce065cf6f31d1ffa45f12ec18a38af56bbc687",
+  "sourceDiff": {
+    "outputs/野菜API-接入重试与Claude路由修复.md": "sha256:0370a125d45d802ff4ebd81203b1f2f7dd05b76376e370352e30f03522e2c269",
+    "src-tauri/src/claude_bridge.rs": "sha256:2dc0abd5e0e1b71c0a7a88a2a83081288d0c6e3d835bab707bbdacbe77937c80",
+    "src-tauri/src/connection_recovery.rs": "sha256:5d1ef55280e101edd6e3c41b2e21299bdb9fca8cf395ee832171625234f56f04",
+    "src-tauri/src/tool_activation.rs": "sha256:8890ca1948b979952d4c076153ffee3757f007da5b8f4b514bc876547fd064f6",
+    "src-tauri/src/tool_adapters/claude_code.rs": "sha256:caa8c7a5af2b66c991a60f53440e1bd00658d7d7ee4801de5f65fe6301a6d722",
+    "src-tauri/src/tool_adapters/claude_desktop.rs": "sha256:ba13a507184d54b8f8ade989a2fb1b54f1db538823e7589993ed8783043334b6",
+    "src-tauri/src/tool_model_profile.rs": "sha256:26cbc2cdf9336b3cd18a3f8edfcbd654894c226d0a3ab48f243993c14d8e8b54",
+    "src/configuration/ConfigurationPreviewView.test.tsx": "sha256:9407745590c78869b6375a4bdae6168c294f197494ff8a301e3f855d9bb8e16a",
+    "src/configuration/ConfigurationPreviewView.tsx": "sha256:1eda6e57719619364d177460f170271ac610ed3ede401e70928c76f15267fd7f"
+  },
+  "ownedResultHashes": {
+    "outputs/野菜API-接入重试与Claude路由修复.md": "sha256:0370a125d45d802ff4ebd81203b1f2f7dd05b76376e370352e30f03522e2c269",
+    "src-tauri/src/claude_bridge.rs": "sha256:2dc0abd5e0e1b71c0a7a88a2a83081288d0c6e3d835bab707bbdacbe77937c80",
+    "src-tauri/src/connection_recovery.rs": "sha256:5d1ef55280e101edd6e3c41b2e21299bdb9fca8cf395ee832171625234f56f04",
+    "src-tauri/src/tool_activation.rs": "sha256:8890ca1948b979952d4c076153ffee3757f007da5b8f4b514bc876547fd064f6",
+    "src-tauri/src/tool_adapters/claude_code.rs": "sha256:caa8c7a5af2b66c991a60f53440e1bd00658d7d7ee4801de5f65fe6301a6d722",
+    "src-tauri/src/tool_adapters/claude_desktop.rs": "sha256:ba13a507184d54b8f8ade989a2fb1b54f1db538823e7589993ed8783043334b6",
+    "src-tauri/src/tool_model_profile.rs": "sha256:26cbc2cdf9336b3cd18a3f8edfcbd654894c226d0a3ab48f243993c14d8e8b54",
+    "src/configuration/ConfigurationPreviewView.test.tsx": "sha256:9407745590c78869b6375a4bdae6168c294f197494ff8a301e3f855d9bb8e16a",
+    "src/configuration/ConfigurationPreviewView.tsx": "sha256:1eda6e57719619364d177460f170271ac610ed3ede401e70928c76f15267fd7f"
+  },
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      "src-tauri/src/connection_recovery.rs",
+      "src-tauri/src/tool_activation.rs",
+      "src-tauri/src/tool_model_profile.rs",
+      "src-tauri/src/tool_adapters/claude_desktop.rs",
+      "src-tauri/src/tool_adapters/claude_code.rs",
+      "src-tauri/src/claude_bridge.rs",
+      "src/configuration/ConfigurationPreviewView.tsx",
+      "src/configuration/ConfigurationPreviewView.test.tsx",
+      "src/configuration/connections.test.tsx",
+      "tests/work_packages/ru054/**",
+      "outputs/野菜API-接入重试与Claude路由修复.md"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      "outputs/野菜API-接入重试与Claude路由修复.md": "sha256:0370a125d45d802ff4ebd81203b1f2f7dd05b76376e370352e30f03522e2c269",
+      "src-tauri/src/claude_bridge.rs": "sha256:2dc0abd5e0e1b71c0a7a88a2a83081288d0c6e3d835bab707bbdacbe77937c80",
+      "src-tauri/src/connection_recovery.rs": "sha256:5d1ef55280e101edd6e3c41b2e21299bdb9fca8cf395ee832171625234f56f04",
+      "src-tauri/src/tool_activation.rs": "sha256:8890ca1948b979952d4c076153ffee3757f007da5b8f4b514bc876547fd064f6",
+      "src-tauri/src/tool_adapters/claude_code.rs": "sha256:caa8c7a5af2b66c991a60f53440e1bd00658d7d7ee4801de5f65fe6301a6d722",
+      "src-tauri/src/tool_adapters/claude_desktop.rs": "sha256:ba13a507184d54b8f8ade989a2fb1b54f1db538823e7589993ed8783043334b6",
+      "src-tauri/src/tool_model_profile.rs": "sha256:26cbc2cdf9336b3cd18a3f8edfcbd654894c226d0a3ab48f243993c14d8e8b54",
+      "src/configuration/ConfigurationPreviewView.test.tsx": "sha256:9407745590c78869b6375a4bdae6168c294f197494ff8a301e3f855d9bb8e16a",
+      "src/configuration/ConfigurationPreviewView.tsx": "sha256:1eda6e57719619364d177460f170271ac610ed3ede401e70928c76f15267fd7f",
+      "src/configuration/connections.test.tsx": "sha256:a3218acc8ab7a14434b2547b27f321ebbc79f80d248572c362bf8bc40f3e9654",
+      "tests/work_packages/ru054/CONTRACT.md": "sha256:93ff54d9c0a3962e623ab639f6977961a463fbb21d69bf1d22e076dfcab4f052",
+      "tests/work_packages/ru054/test_acceptance.py": "sha256:6c0ae3c16a52403cc7eb592a9c71bcaa82756ccb25178af16ad6a3595acf99b8"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:432122a85fa9e114e9d4f7e07d9ed26ecf1bbb5f82d3e6ba120f18487977a6c6",
+  "sourceScopeFailures": [],
+  "integrityFailures": [],
+  "assignedTo": "root",
+  "startedAt": "2026-09-06T12:34:49.579046+00:00",
+  "finishedAt": "2026-09-06T12:56:17.565185+00:00",
+  "passed": false,
+  "commands": [
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru054-native",
+        "kind": "scenario_test",
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru054/test_acceptance.py::test_native_retry_and_claude_routes",
+        "cwd": ".",
+        "timeoutSeconds": 2400
+      },
+      "runnerMetadata": {
+        "adapter": "pytest-json@1",
+        "declaredCwd": ".",
+        "cwd": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "selector": "tests/work_packages/ru054/test_acceptance.py::test_native_retry_and_claude_routes",
+        "selectorRealpath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/tests/work_packages/ru054/test_acceptance.py",
+        "runnerArgv": [
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru054/test_acceptance.py::test_native_retry_and_claude_routes",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-5_nfub80/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-5_nfub80/pytest-basetemp"
+        ],
+        "sandboxedArgv": [
+          "/usr/bin/sandbox-exec",
+          "-p",
+          "(version 1)\n(allow default)\n(deny file-write*\n  (require-not\n    (require-any\n      (subpath \"/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-5_nfub80\")\n      (literal \"/dev/null\"))))\n",
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru054/test_acceptance.py::test_native_retry_and_claude_routes",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-5_nfub80/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-5_nfub80/pytest-basetemp"
+        ],
+        "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "pythonRealpath": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+        "pythonExecutableSha256": "sha256:6b24be8ba00c4abc8b3e7e2620bd710e2cf7a4312d00c147f8f05fbb6f3d297a",
+        "pytestVersion": "8.4.2",
+        "pytestDistributionVersion": "8.4.2",
+        "pytestModulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+        "pytestModuleSha256": "sha256:66993a5e3905005e0981159b4794d10b1adacf341a58a44d696ad2c4442dcdc6",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "executable": "/usr/bin/sandbox-exec",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea",
+          "policySha256": "sha256:a9619bc3bbc1ccdf8b3050e28cf82184c08a1c017231c7f107d68c66fe2966e5",
+          "projectRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+          "writableRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-5_nfub80",
+          "policyVersion": 1
+        }
+      },
+      "machineReport": {
+        "adapter": "pytest-json@1",
+        "collectedNodeIds": [
+          "tests/work_packages/ru054/test_acceptance.py::test_native_retry_and_claude_routes"
+        ],
+        "collectionErrors": [],
+        "deselectedNodeIds": [],
+        "pytestExitCode": 1,
+        "pytestRootPath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "runner": {
+          "distributionVersion": "8.4.2",
+          "modulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+          "moduleVersion": "8.4.2",
+          "name": "pytest",
+          "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "pythonVersion": "3.9.6"
+        },
+        "schemaVersion": 1,
+        "selector": "tests/work_packages/ru054/test_acceptance.py::test_native_retry_and_claude_routes",
+        "tests": [
+          {
+            "nodeId": "tests/work_packages/ru054/test_acceptance.py::test_native_retry_and_claude_routes",
+            "phases": {
+              "call": {
+                "outcome": "failed"
+              },
+              "setup": {
+                "outcome": "passed"
+              },
+              "teardown": {
+                "outcome": "passed"
+              }
+            }
+          }
+        ]
+      },
+      "process": {
+        "actualExitCode": 1,
+        "timedOut": false,
+        "stdout": "============================= test session starts ==============================\nplatform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0\nrootdir: /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop\nplugins: anyio-4.12.1\ncollected 1 item\n\ntests/work_packages/ru054/test_acceptance.py F                           [100%]\n\n=================================== FAILURES ===================================\n_____________________ test_native_retry_and_claude_routes ______________________\n\ntmp_path = PosixPath('/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-5_nfub80/pytest-basetemp/test_native_retry_and_claude_r0')\n\n    def test_native_retry_and_claude_routes(tmp_path: Path) -> None:\n>       MODEL.test_native_model_capabilities(tmp_path)\n\ntests/work_packages/ru054/test_acceptance.py:25: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \ntests/work_packages/ru043/test_acceptance.py:17: in test_native_model_capabilities\n    PREVIOUS.test_native_model_sets_and_exit(tmp_path)\ntests/work_packages/ru042/test_acceptance.py:23: in test_native_model_sets_and_exit\n    PREVIOUS.test_native_cross_application_regressions(tmp_path)\ntests/work_packages/ru041/test_acceptance.py:72: in test_native_cross_application_regressions\n    windows = BASE.run(xwin, \"xwin\", \"clippy\", \"--target\", \"x86_64-pc-windows-msvc\", *args,\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\ntimeout = 1500\nenv = {'CARGO_HOME': '/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-5_nfub8...rget', 'CI': '1', 'CODEX_APP_TOOLS_PIPE_PATH': '/tmp/codex-browser-use/e822322c-4fe9-4aa0-a191-cf0f11650e82.sock', ...}\nargs = ('/Users/zxg/.local/bin/cargo-xwin', 'xwin', 'clippy', '--target', 'x86_64-pc-windows-msvc', '--manifest-path', ...)\nresult = CompletedProcess(args=('/Users/zxg/.local/bin/cargo-xwin', 'xwin', 'clippy', '--target', 'x86_64-pc-windows-msvc', '--...ACKTRACE=1` environment variable to display a backtrace\\nwarning: build failed, waiting for other jobs to finish...\\n')\n\n    def run(*args: str, timeout: int = 1200, env: dict[str, str] | None = None) -> str:\n        result = subprocess.run(args, cwd=ROOT, capture_output=True, text=True,\n                                timeout=timeout, env=env)\n        output = result.stdout + result.stderr\n>       assert result.returncode == 0, output[-24000:]\nE       AssertionError:    Compiling proc-macro2 v1.0.106\nE          Compiling unicode-ident v1.0.24\nE          Compiling quote v1.0.45\nE          Compiling libc v0.2.183\nE          Compiling cfg-if v1.0.4\nE          Compiling serde_core v1.0.228\nE          Compiling zerocopy v0.8.42\nE           Checking windows-link v0.2.1\nE          Compiling version_check v0.9.5\nE          Compiling zmij v1.0.21\nE          Compiling getrandom v0.2.17\nE          Compiling rand_core v0.6.4\nE          Compiling syn v2.0.117\nE          Compiling memchr v2.8.0\nE          Compiling icu_normalizer_data v2.1.1\nE          Compiling icu_properties_data v2.1.2\nE          Compiling serde v1.0.228\nE           Checking windows-sys v0.61.2\nE          Compiling stable_deref_trait v1.2.1\nE          Compiling siphasher v1.0.2\nE          Compiling phf_shared v0.11.3\nE          Compiling generic-array v0.14.7\nE          Compiling thiserror v2.0.18\nE          Compiling itoa v1.0.17\nE          Compiling smallvec v1.15.1\nE          Compiling siphasher v0.3.11\nE          Compiling getrandom v0.1.16\nE          Compiling parking_lot_core v0.9.12\nE          Compiling typeid v1.0.3\nE           Checking pin-project-lite v0.2.17\nE          Compiling fnv v1.0.7\nE           Checking bytes v1.11.1\nE          Compiling rand_core v0.5.1\nE          Compiling ident_case v1.0.1\nE          Compiling strsim v0.11.1\nE          Compiling syn v1.0.109\nE          Compiling thiserror v1.0.69\nE          Compiling ppv-lite86 v0.2.21\nE          Compiling serde_json v1.0.149\nE          Compiling litemap v0.8.1\nE          Compiling erased-serde v0.4.10\nE          Compiling writeable v0.6.2\nE          Compiling rand_chacha v0.3.1\nE          Compiling synstructure v0.13.2\nE          Compiling rand v0.8.5\nE          Compiling darling_core v0.21.3\nE          Compiling phf_generator v0.11.3\nE          Compiling rand_chacha v0.2.2\nE          Compiling rand_pcg v0.2.1\nE          Compiling phf_shared v0.8.0\nE           Checking futures-core v0.3.32\nE          Compiling proc-macro-hack v0.5.20+deprecated\nE          Compiling anyhow v1.0.102\nE          Compiling zerofrom-derive v0.1.6\nE          Compiling serde_derive v1.0.228\nE          Compiling yoke-derive v0.8.1\nE          Compiling zerovec-derive v0.11.2\nE          Compiling displaydoc v0.2.5\nE          Compiling zerofrom v0.1.6\nE          Compiling yoke v0.8.1\nE          Compiling thiserror-impl v2.0.18\nE          Compiling zerotrie v0.2.3\nE          Compiling zerovec v0.11.5\nE          Compiling tinystr v0.8.2\nE          Compiling potential_utf v0.1.4\nE          Compiling phf_macros v0.11.3\nE          Compiling icu_locale_core v2.1.1\nE          Compiling icu_collections v2.1.1\nE          Compiling darling_macro v0.21.3\nE          Compiling thiserror-impl v1.0.69\nE          Compiling darling v0.21.3\nE          Compiling icu_provider v2.1.1\nE          Compiling rand v0.7.3\nE          Compiling phf_shared v0.10.0\nE          Compiling byteorder v1.5.0\nE           Checking windows-link v0.1.3\nE          Compiling getrandom v0.4.2\nE          Compiling new_debug_unreachable v1.0.6\nE          Compiling scopeguard v1.2.0\nE          Compiling phf_generator v0.10.0\nE          Compiling lock_api v0.4.14\nE          Compiling icu_properties v2.1.2\nE          Compiling icu_normalizer v2.1.1\nE          Compiling serde_with_macros v3.17.0\nE          Compiling phf_generator v0.8.0\nE          Compiling phf_codegen v0.11.3\nE          Compiling string_cache_codegen v0.5.4\nE           Checking http v1.4.0\nE          Compiling precomputed-hash v0.1.1\nE          Compiling winnow v0.7.15\nE          Compiling mac v0.1.1\nE           Checking typenum v1.20.1\nE          Compiling futf v0.1.5\nE          Compiling idna_adapter v1.2.1\nE          Compiling phf_macros v0.10.0\nE          Compiling markup5ever v0.14.1\nE          Compiling phf_codegen v0.8.0\nE          Compiling parking_lot v0.12.5\nE          Compiling cssparser v0.29.6\nE          Compiling toml_datetime v0.7.5+spec-1.1.0\nE          Compiling serde_spanned v1.0.4\nE          Compiling semver v1.0.27\nE          Compiling log v0.4.29\nE          Compiling toml_writer v1.0.6+spec-1.1.0\nE          Compiling autocfg v1.5.0\nE          Compiling utf8_iter v1.0.4\nE          Compiling dtoa v1.0.11\nE          Compiling utf-8 v0.7.6\nE          Compiling percent-encoding v2.3.2\nE          Compiling bitflags v1.3.2\nE          Compiling tendril v0.4.3\nE          Compiling dtoa-short v0.3.5\nE          Compiling form_urlencoded v1.2.2\nE          Compiling idna v1.1.0\nE          Compiling phf v0.10.1\nE          Compiling indexmap v1.9.3\nE          Compiling toml_parser v1.0.9+spec-1.1.0\nE          Compiling uuid v1.22.0\nE          Compiling string_cache v0.8.9\nE          Compiling toml v0.9.12+spec-1.1.0\nE          Compiling selectors v0.24.0\nE           Checking windows-result v0.3.4\nE           Checking windows-strings v0.4.2\nE          Compiling phf v0.11.3\nE          Compiling windows-interface v0.59.3\nE          Compiling ctor v0.2.9\nE          Compiling windows-implement v0.60.2\nE          Compiling cssparser-macros v0.6.1\nE          Compiling aho-corasick v1.1.4\nE           Checking futures-sink v0.3.32\nE          Compiling unic-common v0.9.0\nE          Compiling nodrop v0.1.14\nE          Compiling matches v0.1.10\nE          Compiling hashbrown v0.16.1\nE           Checking once_cell v1.21.3\nE          Compiling camino v1.2.2\nE          Compiling convert_case v0.4.0\nE          Compiling regex-syntax v0.8.10\nE          Compiling equivalent v1.0.2\nE          Compiling unic-char-range v0.9.0\nE          Compiling derive_more v0.99.20\nE          Compiling unic-char-property v0.9.0\nE          Compiling indexmap v2.13.0\nE           Checking windows-core v0.61.2\nE          Compiling servo_arc v0.2.0\nE          Compiling unic-ucd-version v0.9.0\nE          Compiling url v2.5.8\nE           Checking socket2 v0.6.3\nE          Compiling regex-automata v0.4.14\nE           Checking mio v1.1.1\nE          Compiling fxhash v0.2.1\nE          Compiling swift-rs v1.0.7\nE          Compiling match_token v0.1.0\nE          Compiling tokio-macros v2.6.1\nE          Compiling phf v0.8.0\nE          Compiling serde_derive_internals v0.29.1\nE          Compiling schemars v0.8.22\nE          Compiling time-core v0.1.8\nE          Compiling crc32fast v1.5.0\nE          Compiling hashbrown v0.12.3\nE          Compiling num-conv v0.2.0\nE           Checking tokio v1.50.0\nE          Compiling schemars_derive v0.8.22\nE          Compiling html5ever v0.29.1\nE           Checking crypto-common v0.1.7\nE          Compiling regex v1.12.3\nE          Compiling unic-ucd-ident v0.9.0\nE           Checking futures-channel v0.3.32\nE          Compiling cfb v0.7.3\nE          Compiling cargo-platform v0.1.9\nE          Compiling jsonptr v0.6.3\nE          Compiling dunce v1.0.5\nE          Compiling dyn-clone v1.0.20\nE          Compiling same-file v1.0.6\nE          Compiling base64 v0.21.7\nE          Compiling infer v0.19.0\nE          Compiling walkdir v2.5.0\nE          Compiling json-patch v3.0.1\nE          Compiling cargo_metadata v0.19.2\nE          Compiling urlpattern v0.3.0\nE          Compiling kuchikiki v0.8.8-speedreader\nE          Compiling serde-untagged v0.1.9\nE          Compiling serde_with v3.17.0\nE           Checking windows-threading v0.1.0\nE          Compiling futures-macro v0.3.32\nE          Compiling glob v0.3.3\nE           Checking slab v0.4.12\nE          Compiling shlex v1.3.0\nE          Compiling find-msvc-tools v0.1.9\nE           Checking futures-io v0.3.32\nE           Checking futures-task v0.3.32\nE          Compiling cc v1.2.56\nE           Checking futures-util v0.3.32\nE           Checking windows-future v0.2.1\nE           Checking windows-collections v0.2.0\nE           Checking windows-numerics v0.2.0\nE           Checking tracing-core v0.1.36\nE          Compiling rustc_version v0.4.1\nE           Checking http-body v1.0.1\nE          Compiling option-ext v0.2.0\nE          Compiling tauri-utils v2.8.3\nE          Compiling simd-adler32 v0.3.8\nE          Compiling dirs-sys v0.5.0\nE          Compiling embed-resource v3.0.6\nE           Checking tracing v0.1.44\nE           Checking windows v0.61.3\nE          Compiling webview2-com-sys v0.38.2\nE           Checking bitflags v2.11.0\nE          Compiling heck v0.5.0\nE           Checking raw-window-handle v0.6.2\nE          Compiling crossbeam-utils v0.8.21\nE           Checking powerfmt v0.2.0\nE          Compiling httparse v1.10.1\nE          Compiling adler2 v2.0.1\nE           Checking tower-service v0.3.3\nE          Compiling miniz_oxide v0.8.9\nE           Checking deranged v0.5.8\nE          Compiling tauri-winres v0.3.5\nE          Compiling dirs v6.0.0\nE          Compiling time-macros v0.2.27\nE          Compiling cargo_toml v0.22.3\nE           Checking winapi-util v0.1.11\nE           Checking dpi v0.1.2\nE          Compiling cookie v0.18.1\nE          Compiling windows_x86_64_msvc v0.53.1\nE          Compiling windows_x86_64_msvc v0.52.6\nE           Checking try-lock v0.2.5\nE           Checking want v0.3.1\nE           Checking time v0.3.47\nE          Compiling flate2 v1.1.9\nE          Compiling block-buffer v0.10.4\nE          Compiling fdeflate v0.3.7\nE          Compiling webview2-com-macros v0.8.1\nE           Checking sync_wrapper v1.0.2\nE           Checking windows-version v0.1.7\nE           Checking tower-layer v0.3.3\nE           Checking pin-utils v0.1.0\nE          Compiling native-tls v0.2.18\nE           Checking httpdate v1.0.3\nE           Checking cpufeatures v0.2.17\nE           Checking unicode-segmentation v1.12.0\nE           Checking atomic-waker v1.1.2\nE          Compiling ucd-trie v0.1.7\nE           Checking hyper v1.8.1\nE          Compiling pest v2.9.0\nE          Compiling png v0.17.16\nE          Compiling digest v0.10.7\nE           Checking crossbeam-channel v0.5.15\nE          Compiling tauri-build v2.5.6\nE           Checking http-body-util v0.1.3\nE           Checking inout v0.1.4\nE           Checking schannel v0.1.29\nE          Compiling quick-xml v0.38.4\nE           Checking base64 v0.22.1\nE          Compiling wry v0.54.3\nE           Checking zeroize v1.9.0\nE          Compiling tauri-runtime v2.10.1\nE           Checking ipnet v2.12.0\nE           Checking subtle v2.6.1\nE           Checking hyper-util v0.1.20\nE           Checking universal-hash v0.5.1\nE          Compiling sha2 v0.10.9\nE          Compiling plist v1.8.0\nE           Checking cipher v0.4.4\nE           Checking windows-targets v0.52.6\nE           Checking windows-targets v0.53.5\nE          Compiling pest_meta v2.9.0\nE          Compiling ico v0.5.0\nE           Checking tower v0.5.3\nE           Checking tinyvec_macros v0.1.1\nE           Checking mime v0.3.17\nE           Checking opaque-debug v0.3.1\nE          Compiling tauri-runtime-wry v2.10.1\nE          Compiling getrandom v0.3.4\nE           Checking polyval v0.6.2\nE          Compiling pest_generator v2.9.0\nE           Checking tinyvec v1.13.2\nE          Compiling tauri-codegen v2.5.5\nE           Checking windows-sys v0.60.2\nE           Checking windows-sys v0.59.0\nE           Checking tokio-native-tls v0.3.1\nE           Checking keyboard-types v0.7.0\nE           Checking softbuffer v0.4.8\nE           Checking keyring-core v1.0.0\nE          Compiling serialize-to-javascript-impl v0.1.2\nE           Checking iri-string v0.7.10\nE           Checking zlib-rs v0.6.7\nE           Checking serialize-to-javascript v0.1.2\nE           Checking tower-http v0.6.8\nE           Checking windows-native-keyring-store v1.1.0\nE           Checking window-vibrancy v0.6.0\nE           Checking hyper-tls v0.6.0\nE          Compiling pest_derive v2.9.0\nE           Checking unicode-normalization v0.1.25\nE           Checking ghash v0.5.1\nE           Checking muda v0.17.1\nE           Checking axum-core v0.5.6\nE           Checking aes v0.8.4\nE           Checking ctr v0.9.2\nE           Checking rustls-pki-types v1.15.1\nE           Checking futures-executor v0.3.32\nE           Checking tokio-util v0.7.18\nE           Checking aead v0.5.2\nE          Compiling serde_repr v0.1.20\nE          Compiling async-stream-impl v0.3.6\nE           Checking serde_path_to_error v0.1.20\nE           Checking typed-path v0.12.3\nE           Checking ryu v1.0.23\nE           Checking unsafe-libyaml v0.2.11\nE           Checking matchit v0.8.4\nE           Checking async-stream v0.3.6\nE           Checking axum v0.8.9\nE           Checking reqwest v0.13.2\nE           Checking serde_yaml v0.9.34+deprecated\nE           Checking zip v8.6.0\nE           Checking aes-gcm v0.10.3\nE           Checking futures v0.3.32\nE           Checking caseless v0.2.2\nE           Checking json5 v0.4.1\nE           Checking keyring v4.2.0\nE           Checking toml_edit v0.24.1+spec-1.1.0\nE           Checking winreg v0.56.0\nE          Compiling tauri v2.10.3\nE          Compiling yeschoy-desktop v0.4.8 (/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/src-tauri)\nE          Compiling tauri-macros v2.5.5\nE       error: failed to run custom build command for `yeschoy-desktop v0.4.8 (/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/src-tauri)`\nE       \nE       Caused by:\nE         process didn't exit successfully: `/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-5_nfub80/pytest-basetemp/test_native_retry_and_claude_r0/cargo-target/debug/build/yeschoy-desktop-5d0fd3652af86d6a/build-script-build` (exit status: 101)\nE         --- stdout\nE         cargo:rerun-if-env-changed=TAURI_CONFIG\nE         cargo:rustc-check-cfg=cfg(desktop)\nE         cargo:rustc-cfg=desktop\nE         cargo:rustc-check-cfg=cfg(mobile)\nE         cargo:rerun-if-changed=/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/src-tauri/tauri.conf.json\nE         cargo:rerun-if-changed=/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/src-tauri/tauri.windows.conf.json\nE         cargo:rustc-env=TAURI_ANDROID_PACKAGE_NAME_APP_NAME=desktop\nE         cargo:rustc-env=TAURI_ANDROID_PACKAGE_NAME_PREFIX=com_yeschoy\nE         cargo:rustc-check-cfg=cfg(dev)\nE         cargo:rustc-cfg=dev\nE         cargo:PERMISSION_FILES_PATH=/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-5_nfub80/pytest-basetemp/test_native_retry_and_claude_r0/cargo-target/x86_64-pc-windows-msvc/debug/build/yeschoy-desktop-d6f0d147b2f876fc/out/app-manifest/__app__-permission-files\nE         cargo:rerun-if-changed=capabilities\nE         cargo:rerun-if-env-changed=REMOVE_UNUSED_COMMANDS\nE         cargo:rustc-env=TAURI_ENV_TARGET_TRIPLE=x86_64-pc-windows-msvc\nE         package.metadata does not exist\nE       \nE         --- stderr\nE       \nE         thread 'main' (827305) panicked at /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-5_nfub80/pytest-basetemp/test_native_retry_and_claude_r0/cargo-home/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-winres-0.3.5/src/lib.rs:536:14:\nE         called `Result::unwrap()` on an `Err` value: NotAttempted(\"llvm-rc\")\nE         note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nE       warning: build failed, waiting for other jobs to finish...\n\ntests/work_packages/ru034/test_acceptance.py:17: AssertionError\n=========================== short test summary info ============================\nFAILED tests/work_packages/ru054/test_acceptance.py::test_native_retry_and_claude_routes - AssertionError:    Compiling proc-macro2 v1.0.106\n   Compiling unicode-ident v1.0.24\n   Compiling quote v1.0.45\n   Compiling libc v0.2.183\n   Compiling cfg-if v1.0.4\n   Compiling serde_core v1.0.228\n   Compiling zerocopy v0.8.42\n    Checking windows-link v0.2.1\n   Compiling version_check v0.9.5\n   Compiling zmij v1.0.21\n   Compiling getrandom v0.2.17\n   Compiling rand_core v0.6.4\n   Compiling syn v2.0.117\n   Compiling memchr v2.8.0\n   Compiling icu_normalizer_data v2.1.1\n   Compiling icu_properties_data v2.1.2\n   Compiling serde v1.0.228\n    Checking windows-sys v0.61.2\n   Compiling stable_deref_trait v1.2.1\n   Compiling siphasher v1.0.2\n   Compiling phf_shared v0.11.3\n   Compiling generic-array v0.14.7\n   Compiling thiserror v2.0.18\n   Compiling itoa v1.0.17\n   Compiling smallvec v1.15.1\n   Compiling siphasher v0.3.11\n   Compiling getrandom v0.1.16\n   Compiling parking_lot_core v0.9.12\n   Compiling typeid v1.0.3\n    Checking pin-project-lite v0.2.17\n   Compiling fnv v1.0.7\n    Checking bytes v1.11.1\n   Compiling rand_core v0.5.1\n   Compiling ident_case v1.0.1\n   Compiling strsim v0.11.1\n   Compiling syn v1.0.109\n   Compiling thiserror v1.0.69\n   Compiling ppv-lite86 v0.2.21\n   Compiling serde_json v1.0.149\n   Compiling litemap v0.8.1\n   Compiling erased-serde v0.4.10\n   Compiling writeable v0.6.2\n   Compiling rand_chacha v0.3.1\n   Compiling synstructure v0.13.2\n   Compiling rand v0.8.5\n   Compiling darling_core v0.21.3\n   Compiling phf_generator v0.11.3\n   Compiling rand_chacha v0.2.2\n   Compiling rand_pcg v0.2.1\n   Compiling phf_shared v0.8.0\n    Checking futures-core v0.3.32\n   Compiling proc-macro-hack v0.5.20+deprecated\n   Compiling anyhow v1.0.102\n   Compiling zerofrom-derive v0.1.6\n   Compiling serde_derive v1.0.228\n   Compiling yoke-derive v0.8.1\n   Compiling zerovec-derive v0.11.2\n   Compiling displaydoc v0.2.5\n   Compiling zerofrom v0.1.6\n   Compiling yoke v0.8.1\n   Compiling thiserror-impl v2.0.18\n   Compiling zerotrie v0.2.3\n   Compiling zerovec v0.11.5\n   Compiling tinystr v0.8.2\n   Compiling potential_utf v0.1.4\n   Compiling phf_macros v0.11.3\n   Compiling icu_locale_core v2.1.1\n   Compiling icu_collections v2.1.1\n   Compiling darling_macro v0.21.3\n   Compiling thiserror-impl v1.0.69\n   Compiling darling v0.21.3\n   Compiling icu_provider v2.1.1\n   Compiling rand v0.7.3\n   Compiling phf_shared v0.10.0\n   Compiling byteorder v1.5.0\n    Checking windows-link v0.1.3\n   Compiling getrandom v0.4.2\n   Compiling new_debug_unreachable v1.0.6\n   Compiling scopeguard v1.2.0\n   Compiling phf_generator v0.10.0\n   Compiling lock_api v0.4.14\n   Compiling icu_properties v2.1.2\n   Compiling icu_normalizer v2.1.1\n   Compiling serde_with_macros v3.17.0\n   Compiling phf_generator v0.8.0\n   Compiling phf_codegen v0.11.3\n   Compiling string_cache_codegen v0.5.4\n    Checking http v1.4.0\n   Compiling precomputed-hash v0.1.1\n   Compiling winnow v0.7.15\n   Compiling mac v0.1.1\n    Checking typenum v1.20.1\n   Compiling futf v0.1.5\n   Compiling idna_adapter v1.2.1\n   Compiling phf_macros v0.10.0\n   Compiling markup5ever v0.14.1\n   Compiling phf_codegen v0.8.0\n   Compiling parking_lot v0.12.5\n   Compiling cssparser v0.29.6\n   Compiling toml_datetime v0.7.5+spec-1.1.0\n   Compiling serde_spanned v1.0.4\n   Compiling semver v1.0.27\n   Compiling log v0.4.29\n   Compiling toml_writer v1.0.6+spec-1.1.0\n   Compiling autocfg v1.5.0\n   Compiling utf8_iter v1.0.4\n   Compiling dtoa v1.0.11\n   Compiling utf-8 v0.7.6\n   Compiling percent-encoding v2.3.2\n   Compiling bitflags v1.3.2\n   Compiling tendril v0.4.3\n   Compiling dtoa-short v0.3.5\n   Compiling form_urlencoded v1.2.2\n   Compiling idna v1.1.0\n   Compiling phf v0.10.1\n   Compiling indexmap v1.9.3\n   Compiling toml_parser v1.0.9+spec-1.1.0\n   Compiling uuid v1.22.0\n   Compiling string_cache v0.8.9\n   Compiling toml v0.9.12+spec-1.1.0\n   Compiling selectors v0.24.0\n    Checking windows-result v0.3.4\n    Checking windows-strings v0.4.2\n   Compiling phf v0.11.3\n   Compiling windows-interface v0.59.3\n   Compiling ctor v0.2.9\n   Compiling windows-implement v0.60.2\n   Compiling cssparser-macros v0.6.1\n   Compiling aho-corasick v1.1.4\n    Checking futures-sink v0.3.32\n   Compiling unic-common v0.9.0\n   Compiling nodrop v0.1.14\n   Compiling matches v0.1.10\n   Compiling hashbrown v0.16.1\n    Checking once_cell v1.21.3\n   Compiling camino v1.2.2\n   Compiling convert_case v0.4.0\n   Compiling regex-syntax v0.8.10\n   Compiling equivalent v1.0.2\n   Compiling unic-char-range v0.9.0\n   Compiling derive_more v0.99.20\n   Compiling unic-char-property v0.9.0\n   Compiling indexmap v2.13.0\n    Checking windows-core v0.61.2\n   Compiling servo_arc v0.2.0\n   Compiling unic-ucd-version v0.9.0\n   Compiling url v2.5.8\n    Checking socket2 v0.6.3\n   Compiling regex-automata v0.4.14\n    Checking mio v1.1.1\n   Compiling fxhash v0.2.1\n   Compiling swift-rs v1.0.7\n   Compiling match_token v0.1.0\n   Compiling tokio-macros v2.6.1\n   Compiling phf v0.8.0\n   Compiling serde_derive_internals v0.29.1\n   Compiling schemars v0.8.22\n   Compiling time-core v0.1.8\n   Compiling crc32fast v1.5.0\n   Compiling hashbrown v0.12.3\n   Compiling num-conv v0.2.0\n    Checking tokio v1.50.0\n   Compiling schemars_derive v0.8.22\n   Compiling html5ever v0.29.1\n    Checking crypto-common v0.1.7\n   Compiling regex v1.12.3\n   Compiling unic-ucd-ident v0.9.0\n    Checking futures-channel v0.3.32\n   Compiling cfb v0.7.3\n   Compiling cargo-platform v0.1.9\n   Compiling jsonptr v0.6.3\n   Compiling dunce v1.0.5\n   Compiling dyn-clone v1.0.20\n   Compiling same-file v1.0.6\n   Compiling base64 v0.21.7\n   Compiling infer v0.19.0\n   Compiling walkdir v2.5.0\n   Compiling json-patch v3.0.1\n   Compiling cargo_metadata v0.19.2\n   Compiling urlpattern v0.3.0\n   Compiling kuchikiki v0.8.8-speedreader\n   Compiling serde-untagged v0.1.9\n   Compiling serde_with v3.17.0\n    Checking windows-threading v0.1.0\n   Compiling futures-macro v0.3.32\n   Compiling glob v0.3.3\n    Checking slab v0.4.12\n   Compiling shlex v1.3.0\n   Compiling find-msvc-tools v0.1.9\n    Checking futures-io v0.3.32\n    Checking futures-task v0.3.32\n   Compiling cc v1.2.56\n    Checking futures-util v0.3.32\n    Checking windows-future v0.2.1\n    Checking windows-collections v0.2.0\n    Checking windows-numerics v0.2.0\n    Checking tracing-core v0.1.36\n   Compiling rustc_version v0.4.1\n    Checking http-body v1.0.1\n   Compiling option-ext v0.2.0\n   Compiling tauri-utils v2.8.3\n   Compiling simd-adler32 v0.3.8\n   Compiling dirs-sys v0.5.0\n   Compiling embed-resource v3.0.6\n    Checking tracing v0.1.44\n    Checking windows v0.61.3\n   Compiling webview2-com-sys v0.38.2\n    Checking bitflags v2.11.0\n   Compiling heck v0.5.0\n    Checking raw-window-handle v0.6.2\n   Compiling crossbeam-utils v0.8.21\n    Checking powerfmt v0.2.0\n   Compiling httparse v1.10.1\n   Compiling adler2 v2.0.1\n    Checking tower-service v0.3.3\n   Compiling miniz_oxide v0.8.9\n    Checking deranged v0.5.8\n   Compiling tauri-winres v0.3.5\n   Compiling dirs v6.0.0\n   Compiling time-macros v0.2.27\n   Compiling cargo_toml v0.22.3\n    Checking winapi-util v0.1.11\n    Checking dpi v0.1.2\n   Compiling cookie v0.18.1\n   Compiling windows_x86_64_msvc v0.53.1\n   Compiling windows_x86_64_msvc v0.52.6\n    Checking try-lock v0.2.5\n    Checking want v0.3.1\n    Checking time v0.3.47\n   Compiling flate2 v1.1.9\n   Compiling block-buffer v0.10.4\n   Compiling fdeflate v0.3.7\n   Compiling webview2-com-macros v0.8.1\n    Checking sync_wrapper v1.0.2\n    Checking windows-version v0.1.7\n    Checking tower-layer v0.3.3\n    Checking pin-utils v0.1.0\n   Compiling native-tls v0.2.18\n    Checking httpdate v1.0.3\n    Checking cpufeatures v0.2.17\n    Checking unicode-segmentation v1.12.0\n    Checking atomic-waker v1.1.2\n   Compiling ucd-trie v0.1.7\n    Checking hyper v1.8.1\n   Compiling pest v2.9.0\n   Compiling png v0.17.16\n   Compiling digest v0.10.7\n    Checking crossbeam-channel v0.5.15\n   Compiling tauri-build v2.5.6\n    Checking http-body-util v0.1.3\n    Checking inout v0.1.4\n    Checking schannel v0.1.29\n   Compiling quick-xml v0.38.4\n    Checking base64 v0.22.1\n   Compiling wry v0.54.3\n    Checking zeroize v1.9.0\n   Compiling tauri-runtime v2.10.1\n    Checking ipnet v2.12.0\n    Checking subtle v2.6.1\n    Checking hyper-util v0.1.20\n    Checking universal-hash v0.5.1\n   Compiling sha2 v0.10.9\n   Compiling plist v1.8.0\n    Checking cipher v0.4.4\n    Checking windows-targets v0.52.6\n    Checking windows-targets v0.53.5\n   Compiling pest_meta v2.9.0\n   Compiling ico v0.5.0\n    Checking tower v0.5.3\n    Checking tinyvec_macros v0.1.1\n    Checking mime v0.3.17\n    Checking opaque-debug v0.3.1\n   Compiling tauri-runtime-wry v2.10.1\n   Compiling getrandom v0.3.4\n    Checking polyval v0.6.2\n   Compiling pest_generator v2.9.0\n    Checking tinyvec v1.13.2\n   Compiling tauri-codegen v2.5.5\n    Checking windows-sys v0.60.2\n    Checking windows-sys v0.59.0\n    Checking tokio-native-tls v0.3.1\n    Checking keyboard-types v0.7.0\n    Checking softbuffer v0.4.8\n    Checking keyring-core v1.0.0\n   Compiling serialize-to-javascript-impl v0.1.2\n    Checking iri-string v0.7.10\n    Checking zlib-rs v0.6.7\n    Checking serialize-to-javascript v0.1.2\n    Checking tower-http v0.6.8\n    Checking windows-native-keyring-store v1.1.0\n    Checking window-vibrancy v0.6.0\n    Checking hyper-tls v0.6.0\n   Compiling pest_derive v2.9.0\n    Checking unicode-normalization v0.1.25\n    Checking ghash v0.5.1\n    Checking muda v0.17.1\n    Checking axum-core v0.5.6\n    Checking aes v0.8.4\n    Checking ctr v0.9.2\n    Checking rustls-pki-types v1.15.1\n    Checking futures-executor v0.3.32\n    Checking tokio-util v0.7.18\n    Checking aead v0.5.2\n   Compiling serde_repr v0.1.20\n   Compiling async-stream-impl v0.3.6\n    Checking serde_path_to_error v0.1.20\n    Checking typed-path v0.12.3\n    Checking ryu v1.0.23\n    Checking unsafe-libyaml v0.2.11\n    Checking matchit v0.8.4\n    Checking async-stream v0.3.6\n    Checking axum v0.8.9\n    Checking reqwest v0.13.2\n    Checking serde_yaml v0.9.34+deprecated\n    Checking zip v8.6.0\n    Checking aes-gcm v0.10.3\n    Checking futures v0.3.32\n    Checking caseless v0.2.2\n    Checking json5 v0.4.1\n    Checking keyring v4.2.0\n    Checking toml_edit v0.24.1+spec-1.1.0\n    Checking winreg v0.56.0\n   Compiling tauri v2.10.3\n   Compiling yeschoy-desktop v0.4.8 (/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/src-tauri)\n   Compiling tauri-macros v2.5.5\nerror: failed to run custom build command for `yeschoy-desktop v0.4.8 (/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/src-tauri)`\n\nCaused by:\n  process didn't exit successfully: `/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-5_nfub80/pytest-basetemp/test_native_retry_and_claude_r0/cargo-target/debug/build/yeschoy-desktop-5d0fd3652af86d6a/build-script-build` (exit status: 101)\n  --- stdout\n  cargo:rerun-if-env-changed=TAURI_CONFIG\n  cargo:rustc-check-cfg=cfg(desktop)\n  cargo:rustc-cfg=desktop\n  cargo:rustc-check-cfg=cfg(mobile)\n  cargo:rerun-if-changed=/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/src-tauri/tauri.conf.json\n  cargo:rerun-if-changed=/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/src-tauri/tauri.windows.conf.json\n  cargo:rustc-env=TAURI_ANDROID_PACKAGE_NAME_APP_NAME=desktop\n  cargo:rustc-env=TAURI_ANDROID_PACKAGE_NAME_PREFIX=com_yeschoy\n  cargo:rustc-check-cfg=cfg(dev)\n  cargo:rustc-cfg=dev\n  cargo:PERMISSION_FILES_PATH=/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-5_nfub80/pytest-basetemp/test_native_retry_and_claude_r0/cargo-target/x86_64-pc-windows-msvc/debug/build/yeschoy-desktop-d6f0d147b2f876fc/out/app-manifest/__app__-permission-files\n  cargo:rerun-if-changed=capabilities\n  cargo:rerun-if-env-changed=REMOVE_UNUSED_COMMANDS\n  cargo:rustc-env=TAURI_ENV_TARGET_TRIPLE=x86_64-pc-windows-msvc\n  package.metadata does not exist\n\n  --- stderr\n\n  thread 'main' (827305) panicked at /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-5_nfub80/pytest-basetemp/test_native_retry_and_claude_r0/cargo-home/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-winres-0.3.5/src/lib.rs:536:14:\n  called `Result::unwrap()` on an `Err` value: NotAttempted(\"llvm-rc\")\n  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nwarning: build failed, waiting for other jobs to finish...\n======================== 1 failed in 329.68s (0:05:29) =========================\n",
+        "stderr": ""
+      },
+      "validationErrors": [],
+      "runnerProof": null,
+      "passed": false,
+      "id": "ru054-native",
+      "kind": "scenario_test",
+      "actualExitCode": 1,
+      "timedOut": false,
+      "scenarioId": "RU054-AS-native"
+    },
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru054-renderer",
+        "kind": "scenario_test",
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru054/test_acceptance.py::test_renderer_retry_copy",
+        "cwd": ".",
+        "timeoutSeconds": 2400
+      },
+      "runnerMetadata": {
+        "adapter": "pytest-json@1",
+        "declaredCwd": ".",
+        "cwd": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "selector": "tests/work_packages/ru054/test_acceptance.py::test_renderer_retry_copy",
+        "selectorRealpath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/tests/work_packages/ru054/test_acceptance.py",
+        "runnerArgv": [
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru054/test_acceptance.py::test_renderer_retry_copy",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-7wwdoba3/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-7wwdoba3/pytest-basetemp"
+        ],
+        "sandboxedArgv": [
+          "/usr/bin/sandbox-exec",
+          "-p",
+          "(version 1)\n(allow default)\n(deny file-write*\n  (require-not\n    (require-any\n      (subpath \"/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-7wwdoba3\")\n      (literal \"/dev/null\"))))\n",
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru054/test_acceptance.py::test_renderer_retry_copy",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-7wwdoba3/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-7wwdoba3/pytest-basetemp"
+        ],
+        "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "pythonRealpath": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+        "pythonExecutableSha256": "sha256:6b24be8ba00c4abc8b3e7e2620bd710e2cf7a4312d00c147f8f05fbb6f3d297a",
+        "pytestVersion": "8.4.2",
+        "pytestDistributionVersion": "8.4.2",
+        "pytestModulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+        "pytestModuleSha256": "sha256:66993a5e3905005e0981159b4794d10b1adacf341a58a44d696ad2c4442dcdc6",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "executable": "/usr/bin/sandbox-exec",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea",
+          "policySha256": "sha256:664f9fe7cbee223db0954fea93deac3cf9fc4122b7989457484e3ba26b1c9999",
+          "projectRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+          "writableRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-7wwdoba3",
+          "policyVersion": 1
+        }
+      },
+      "machineReport": {
+        "adapter": "pytest-json@1",
+        "collectedNodeIds": [
+          "tests/work_packages/ru054/test_acceptance.py::test_renderer_retry_copy"
+        ],
+        "collectionErrors": [],
+        "deselectedNodeIds": [],
+        "pytestExitCode": 0,
+        "pytestRootPath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "runner": {
+          "distributionVersion": "8.4.2",
+          "modulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+          "moduleVersion": "8.4.2",
+          "name": "pytest",
+          "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "pythonVersion": "3.9.6"
+        },
+        "schemaVersion": 1,
+        "selector": "tests/work_packages/ru054/test_acceptance.py::test_renderer_retry_copy",
+        "tests": [
+          {
+            "nodeId": "tests/work_packages/ru054/test_acceptance.py::test_renderer_retry_copy",
+            "phases": {
+              "call": {
+                "outcome": "passed"
+              },
+              "setup": {
+                "outcome": "passed"
+              },
+              "teardown": {
+                "outcome": "passed"
+              }
+            }
+          }
+        ]
+      },
+      "process": {
+        "actualExitCode": 0,
+        "timedOut": false,
+        "stdout": "============================= test session starts ==============================\nplatform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0\nrootdir: /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop\nplugins: anyio-4.12.1\ncollected 1 item\n\ntests/work_packages/ru054/test_acceptance.py .                           [100%]\n\n======================== 1 passed in 149.74s (0:02:29) =========================\n",
+        "stderr": ""
+      },
+      "validationErrors": [],
+      "runnerProof": {
+        "schemaVersion": 1,
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru054/test_acceptance.py::test_renderer_retry_copy",
+        "cwd": ".",
+        "executedPassingTests": 1,
+        "actualExitCode": 0,
+        "runnerMetadataSha256": "sha256:4d7e1137fa7e5bbc099347a505b81f24136b780265b6caa6d2147b01216a73a7",
+        "machineReportSha256": "sha256:4e5930c3e54ce45c376ebe977c3fedb609b5ce87b198863c0b25637f5b28cd75",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "policySha256": "sha256:664f9fe7cbee223db0954fea93deac3cf9fc4122b7989457484e3ba26b1c9999",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+        }
+      },
+      "passed": true,
+      "id": "ru054-renderer",
+      "kind": "scenario_test",
+      "actualExitCode": 0,
+      "timedOut": false,
+      "scenarioId": "RU054-AS-renderer"
+    },
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru054-build",
+        "kind": "scenario_test",
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru054/test_acceptance.py::test_build_without_packaging",
+        "cwd": ".",
+        "timeoutSeconds": 2400
+      },
+      "runnerMetadata": {
+        "adapter": "pytest-json@1",
+        "declaredCwd": ".",
+        "cwd": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "selector": "tests/work_packages/ru054/test_acceptance.py::test_build_without_packaging",
+        "selectorRealpath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/tests/work_packages/ru054/test_acceptance.py",
+        "runnerArgv": [
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru054/test_acceptance.py::test_build_without_packaging",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-olaby12j/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-olaby12j/pytest-basetemp"
+        ],
+        "sandboxedArgv": [
+          "/usr/bin/sandbox-exec",
+          "-p",
+          "(version 1)\n(allow default)\n(deny file-write*\n  (require-not\n    (require-any\n      (subpath \"/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-olaby12j\")\n      (literal \"/dev/null\"))))\n",
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru054/test_acceptance.py::test_build_without_packaging",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-olaby12j/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-olaby12j/pytest-basetemp"
+        ],
+        "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "pythonRealpath": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+        "pythonExecutableSha256": "sha256:6b24be8ba00c4abc8b3e7e2620bd710e2cf7a4312d00c147f8f05fbb6f3d297a",
+        "pytestVersion": "8.4.2",
+        "pytestDistributionVersion": "8.4.2",
+        "pytestModulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+        "pytestModuleSha256": "sha256:66993a5e3905005e0981159b4794d10b1adacf341a58a44d696ad2c4442dcdc6",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "executable": "/usr/bin/sandbox-exec",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea",
+          "policySha256": "sha256:7aa39a61ec275d43c182666de72516ca679ca65f28f956564fa6dcea5c5d04f9",
+          "projectRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+          "writableRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-olaby12j",
+          "policyVersion": 1
+        }
+      },
+      "machineReport": {
+        "adapter": "pytest-json@1",
+        "collectedNodeIds": [
+          "tests/work_packages/ru054/test_acceptance.py::test_build_without_packaging"
+        ],
+        "collectionErrors": [],
+        "deselectedNodeIds": [],
+        "pytestExitCode": 0,
+        "pytestRootPath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "runner": {
+          "distributionVersion": "8.4.2",
+          "modulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+          "moduleVersion": "8.4.2",
+          "name": "pytest",
+          "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "pythonVersion": "3.9.6"
+        },
+        "schemaVersion": 1,
+        "selector": "tests/work_packages/ru054/test_acceptance.py::test_build_without_packaging",
+        "tests": [
+          {
+            "nodeId": "tests/work_packages/ru054/test_acceptance.py::test_build_without_packaging",
+            "phases": {
+              "call": {
+                "outcome": "passed"
+              },
+              "setup": {
+                "outcome": "passed"
+              },
+              "teardown": {
+                "outcome": "passed"
+              }
+            }
+          }
+        ]
+      },
+      "process": {
+        "actualExitCode": 0,
+        "timedOut": false,
+        "stdout": "============================= test session starts ==============================\nplatform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0\nrootdir: /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop\nplugins: anyio-4.12.1\ncollected 1 item\n\ntests/work_packages/ru054/test_acceptance.py .                           [100%]\n\n============================== 1 passed in 21.31s ==============================\n",
+        "stderr": ""
+      },
+      "validationErrors": [],
+      "runnerProof": {
+        "schemaVersion": 1,
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru054/test_acceptance.py::test_build_without_packaging",
+        "cwd": ".",
+        "executedPassingTests": 1,
+        "actualExitCode": 0,
+        "runnerMetadataSha256": "sha256:81580e3ea7f997c7702f5c68f6e0145601c654384cc0f5cf0da1e4a219df0fa7",
+        "machineReportSha256": "sha256:f3aa11ca9b4d34767bb9db532307420e2a14f6a0fe2b992e6c552465ebb4f157",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "policySha256": "sha256:7aa39a61ec275d43c182666de72516ca679ca65f28f956564fa6dcea5c5d04f9",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+        }
+      },
+      "passed": true,
+      "id": "ru054-build",
+      "kind": "scenario_test",
+      "actualExitCode": 0,
+      "timedOut": false,
+      "scenarioId": "RU054-AS-build"
+    }
+  ],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU054-AS-native",
+      "path": "execution/evidence/c75143784d5350354e31/0201928f4bf232ca/cf0c5e3d92fdb4fc.json",
+      "sha256": "sha256:b85d05adf1af4516d8bc91144664bd9d902b927b7f73c1175861c43943d76dfc"
+    },
+    {
+      "scenarioId": "RU054-AS-renderer",
+      "path": "execution/evidence/c75143784d5350354e31/0201928f4bf232ca/fb46abf34ff8d12f.json",
+      "sha256": "sha256:5dd23ba870b14b9e1c27cd8f11de00fe550e8a44e5919bfebc1ec431dd1f8393"
+    },
+    {
+      "scenarioId": "RU054-AS-build",
+      "path": "execution/evidence/c75143784d5350354e31/0201928f4bf232ca/4c6fb87bd6dc9131.json",
+      "sha256": "sha256:61824c409f0aed45fcdb7f0ac5cc55a1eb97f0c73761aee0f8c76c92986eef4d"
+    }
+  ],
+  "scenarioEvidenceFailures": [
+    "RU054-AS-native: registered runner proof is invalid"
+  ],
+  "releaseUnitId": "RU-055",
+  "releaseUnitHash": "sha256:26f121d96d679e8168cc6c3ea4280fdd6c8d5f218998d20c8725072f213140d5"
+}

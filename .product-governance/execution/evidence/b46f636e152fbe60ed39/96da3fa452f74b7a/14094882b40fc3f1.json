@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU046-AS-native",
+  "assertion": "Native executable fixtures cover download/validator replay, cancellation, stage ordering, no-overwrite, malicious identity/source paths and cross-platform compilation. Include native one-use full-selection/account proof, exclusive destination race, quit-before-spawn, cancelled download, non-cancelled mutation drain, Windows handoff ownership and worker-error permit cleanup.",
+  "testSelector": "tests/work_packages/ru046/test_acceptance.py::test_native_installation",
+  "acceptanceCommandId": "ru046-native",
+  "runId": "RU-048/WP-RU048-APP-INSTALLATION@2026-09-06T06:34:43.845879+00:00",
+  "packageId": "WP-RU048-APP-INSTALLATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-048",
+  "releaseUnitHash": "sha256:45ae7ec46413ca6204963344472ebaf5cf3a07cad2dbca94261a7f97a471988d"
+}

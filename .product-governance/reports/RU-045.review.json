@@ -1,0 +1,11 @@
+{
+  "mode": "review",
+  "valid": false,
+  "errorCount": 1,
+  "warningCount": 0,
+  "errors": [
+    "Release-unit review validation requires RU-045.status=review"
+  ],
+  "warnings": [],
+  "releaseUnitId": "RU-045"
+}

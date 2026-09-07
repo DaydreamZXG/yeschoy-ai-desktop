@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-062/WP-RU062-DUAL-PLATFORM-PACKAGING@2026-09-07T04:46:20.948452+00:00",
+  "packageId": "WP-RU062-DUAL-PLATFORM-PACKAGING",
+  "baselineCommit": "df10e7a0516c4125866daff5cf91b76178c89d02",
+  "baselineTreeHash": "sha256:5433cc404a22171210b3bf14092312b0fb2092c6419e8a1636084431f43b77ef",
+  "testedTreeHash": "sha256:5433cc404a22171210b3bf14092312b0fb2092c6419e8a1636084431f43b77ef",
+  "testedSnapshotPath": "execution/tested-snapshots/d95e4b4514914cec.1d35f05833a8b1519da5.json",
+  "testedSnapshotSha256": "sha256:ebe38fd7dfa420a04d071b273987c35be13dcaefd4947ac11bee9623d84900d8",
+  "sourceDiff": {},
+  "ownedResultHashes": {},
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      "package.json",
+      "src-tauri/Cargo.toml",
+      "src-tauri/Cargo.lock",
+      "src-tauri/tauri.conf.json",
+      "tests/work_packages/ru062/**",
+      "outputs/野菜API-0.4.11-双平台打包.md",
+      "release/internal/0.4.11/**"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      "outputs/野菜API-0.4.11-双平台打包.md": "sha256:d6e6b33b09785cacb749454866c19ecf1acb12998525885b6b8f8cb1759d9440",
+      "package.json": "sha256:7c0b6f435e9cbf732143a4cbb8e8f58bf11cf8b78915eeaba26910226852ca2b",
+      "src-tauri/Cargo.lock": "sha256:5f68a68e2f6a3a4aaac976299972f64781969804f1cf7416734e47ff701036c0",
+      "src-tauri/Cargo.toml": "sha256:1bf5af0239e167b704a103b322186c6ef92f7f7494d54411d3fd420fa5fb6208",
+      "src-tauri/tauri.conf.json": "sha256:318d69018d7353607517746e2c238a7ba62428afdfa06d6a7aab63535782a9bc",
+      "tests/work_packages/ru062/installer.nsi": "sha256:cfa3190c2f3fac8a0363825ae2b66882263fa02415c0a51c14363fdf998e5cc6",
+      "tests/work_packages/ru062/test_acceptance.py": "sha256:75d687b0f0260421e9b34e5a45ecad8e7050307033a351c2e420e019010e6c77"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:4afc28710eab198095e5a452cdd24c05ac66390c4f39e44793d12a156ad7b93b",
+  "sourceScopeFailures": [],
+  "integrityFailures": [
+    "non-verification work package produced no source change"
+  ],
+  "assignedTo": "/root",
+  "startedAt": "2026-09-07T04:46:20.948452+00:00",
+  "finishedAt": "2026-09-07T04:46:31.795123+00:00",
+  "passed": false,
+  "commands": [],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU062-AS-macos",
+      "path": "execution/evidence/1d35f05833a8b1519da5/d95e4b4514914cec/3d017770363af0ef.json",
+      "sha256": "sha256:de7a8bda02b0346e72cc2b7b95059e4f595e0f951f1338ab4a38f6819b34e9d7"
+    },
+    {
+      "scenarioId": "RU062-AS-windows",
+      "path": "execution/evidence/1d35f05833a8b1519da5/d95e4b4514914cec/d59c4f329ae47ba9.json",
+      "sha256": "sha256:e8315b4cce38d3ea50810126fc4e0bc71e742140d559ccdf2d9a87ca4ec78e47"
+    }
+  ],
+  "scenarioEvidenceFailures": [
+    "RU062-AS-macos: registered runner proof is invalid",
+    "RU062-AS-windows: registered runner proof is invalid"
+  ],
+  "releaseUnitId": "RU-062",
+  "releaseUnitHash": "sha256:2e12e078ce19ce59640d63d7580ee0324a8f3883c605bb5ca30e6dfe57ec5b02"
+}

@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU054-AS-native",
+  "assertion": "Native fixtures prove one-click pending recovery, completed-record preservation, Claude Desktop alias/readback/exact route dispatch, Claude Code exact IDs with behavesAs, unknown rejection, and Apple-Silicon/Windows compilation.",
+  "testSelector": "tests/work_packages/ru054/test_acceptance.py::test_native_retry_and_claude_routes",
+  "acceptanceCommandId": "ru054-native",
+  "runId": "RU-055/WP-RU055-RETRY-CLAUDE-ROUTES@2026-09-06T12:34:49.579046+00:00",
+  "packageId": "WP-RU055-RETRY-CLAUDE-ROUTES",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:424d008c156ee1363bddce6d96508fa4466dd3cf9de6b68cd6dff173e0ca16d8",
+  "releaseUnitId": "RU-055",
+  "releaseUnitHash": "sha256:26f121d96d679e8168cc6c3ea4280fdd6c8d5f218998d20c8725072f213140d5"
+}

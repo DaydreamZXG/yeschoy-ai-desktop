@@ -1,0 +1,433 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-056/WP-RU056-UNIFIED-ACTIVATION@2026-09-06T15:55:40.354015+00:00",
+  "packageId": "WP-RU056-UNIFIED-ACTIVATION",
+  "baselineCommit": "df10e7a0516c4125866daff5cf91b76178c89d02",
+  "baselineTreeHash": "sha256:26b5d0b2f3a1e6f40f3b4e7b5503405147a0aadf67524fd214fbb318c7b56223",
+  "testedTreeHash": "sha256:e9123e5bb6b3920253164b0aec096a47a4a03d66b8ad8c46d50614ca45201a93",
+  "testedSnapshotPath": "execution/tested-snapshots/c238b456a2209757.68a542760c8858f71087.json",
+  "testedSnapshotSha256": "sha256:6504f61a424b9ae118fb0f1a3d96695d4e184c24ba2fb414ffc3179e52388d27",
+  "sourceDiff": {
+    "tests/work_packages/ru056/CONTRACT.md": "sha256:6e2fdab73e0728b24c3860692c6009569f0722d1aa0078eb16dd4d115c47056c"
+  },
+  "ownedResultHashes": {
+    "tests/work_packages/ru056/CONTRACT.md": "sha256:6e2fdab73e0728b24c3860692c6009569f0722d1aa0078eb16dd4d115c47056c"
+  },
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      "src-tauri/src/tool_activation.rs",
+      "src-tauri/src/tool_adapters/mod.rs",
+      "src-tauri/src/tool_adapters/desktop_lifecycle.rs",
+      "src-tauri/src/tool_adapters/claude_code.rs",
+      "src-tauri/src/tool_adapters/claude_desktop.rs",
+      "src-tauri/src/tool_adapters/codex_desktop.rs",
+      "src-tauri/src/tool_adapters/dsh_web.rs",
+      "src-tauri/src/claude_bridge.rs",
+      "src-tauri/src/tool_model_profile.rs",
+      "src-tauri/Cargo.toml",
+      "src-tauri/Cargo.lock",
+      "src/configuration/activation.ts",
+      "src/configuration/activation.test.ts",
+      "src/configuration/ConfigurationPreviewView.tsx",
+      "src/configuration/ConfigurationPreviewView.test.tsx",
+      "src/configuration/DailyUse.test.tsx",
+      "tests/work_packages/ru056/**",
+      "outputs/野菜API-统一快速接入.md"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      "outputs/野菜API-统一快速接入.md": "sha256:0189f396447fc332c7dc3525c2dedb506cb25f8052562e3fd455452ba3d6c709",
+      "src-tauri/Cargo.lock": "sha256:6a6c648d64c28b8599c4b53de6d9e772e0106c59171b94feb9c9aa83ae71bb3f",
+      "src-tauri/Cargo.toml": "sha256:036c4a602d976566b6d4345d42cd75aaa5d9d68cab141e4fc59d1ce45afed844",
+      "src-tauri/src/claude_bridge.rs": "sha256:c8970681c84efa7f98965262e369a406cbb4261b12f405c1be889d4efce8683f",
+      "src-tauri/src/tool_activation.rs": "sha256:3edc6815d479cf40ae00e87a7254e49d8b32af2a615570d1900839e23c44d806",
+      "src-tauri/src/tool_adapters/claude_code.rs": "sha256:a0a2008a724e15ce71a9ed0cea04b3d305365277db57ca9c68e1c0ae761ffe45",
+      "src-tauri/src/tool_adapters/claude_desktop.rs": "sha256:9dde8a7d0bd48844ba91d3525114c1a17a8d418b5c2cd55f2acc224195c36d2a",
+      "src-tauri/src/tool_adapters/codex_desktop.rs": "sha256:b1eaf54054865a1dfe0820e990c715273ec0bbc9fa03c0985e55ce9ace86baa1",
+      "src-tauri/src/tool_adapters/desktop_lifecycle.rs": "sha256:9dcb90e3bb2ea176cbd2308fad20402fb751f881a19472de08248318d80a520f",
+      "src-tauri/src/tool_adapters/dsh_web.rs": "sha256:d61875036fc95f451a8fcd1474476ef37dddcc3545755bf223c94c7c49451c5c",
+      "src-tauri/src/tool_adapters/mod.rs": "sha256:a0e48a4ed7805139d614970a0fdc34cdb84ba2baa19f9e0f5dee9f0f34e7ff95",
+      "src-tauri/src/tool_model_profile.rs": "sha256:e7af227151debcd67b299993c0246ae0af297a7b0fabb8810859be5f96097d5a",
+      "src/configuration/ConfigurationPreviewView.test.tsx": "sha256:9407745590c78869b6375a4bdae6168c294f197494ff8a301e3f855d9bb8e16a",
+      "src/configuration/ConfigurationPreviewView.tsx": "sha256:d958f4f8cd7a107c34cc316836f9b75a39ba4e23ace826c0be17afebcafd76c3",
+      "src/configuration/DailyUse.test.tsx": "sha256:9225843b7332ed138122f84a5eed0b53513899e30af8be9ab78591df0b3656f6",
+      "src/configuration/activation.test.ts": "sha256:39d1dee4cd5d2bb52fdb58dfa5afd4b92c176810f77e8add9929dea5946fc525",
+      "src/configuration/activation.ts": "sha256:c8a6a688a7254254fb7b8d5d766b6db014038c902528ad23bcaa4e1b6bfbbf7c",
+      "tests/work_packages/ru056/CONTRACT.md": "sha256:6e2fdab73e0728b24c3860692c6009569f0722d1aa0078eb16dd4d115c47056c",
+      "tests/work_packages/ru056/test_acceptance.py": "sha256:b4296e0439167b8bd8c1420ac918b99b55d2a87bb35697a6207281b1f868d654"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:988afe1c07fff289d1c88677a21970c13eb2e5a7476d379100348dcae890e543",
+  "sourceScopeFailures": [],
+  "integrityFailures": [],
+  "assignedTo": "root",
+  "startedAt": "2026-09-06T15:55:40.354015+00:00",
+  "finishedAt": "2026-09-06T15:56:37.678653+00:00",
+  "passed": false,
+  "commands": [
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru056-native",
+        "kind": "scenario_test",
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_native",
+        "cwd": ".",
+        "timeoutSeconds": 2400
+      },
+      "runnerMetadata": {
+        "adapter": "pytest-json@1",
+        "declaredCwd": ".",
+        "cwd": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "selector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_native",
+        "selectorRealpath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/tests/work_packages/ru056/test_acceptance.py",
+        "runnerArgv": [
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_native",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-x7cdvt9b/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-x7cdvt9b/pytest-basetemp"
+        ],
+        "sandboxedArgv": [
+          "/usr/bin/sandbox-exec",
+          "-p",
+          "(version 1)\n(allow default)\n(deny file-write*\n  (require-not\n    (require-any\n      (subpath \"/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-x7cdvt9b\")\n      (literal \"/dev/null\"))))\n",
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_native",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-x7cdvt9b/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-x7cdvt9b/pytest-basetemp"
+        ],
+        "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "pythonRealpath": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+        "pythonExecutableSha256": "sha256:6b24be8ba00c4abc8b3e7e2620bd710e2cf7a4312d00c147f8f05fbb6f3d297a",
+        "pytestVersion": "8.4.2",
+        "pytestDistributionVersion": "8.4.2",
+        "pytestModulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+        "pytestModuleSha256": "sha256:66993a5e3905005e0981159b4794d10b1adacf341a58a44d696ad2c4442dcdc6",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "executable": "/usr/bin/sandbox-exec",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea",
+          "policySha256": "sha256:83cb4062a6ab651aa5a6de679b792511adac0da3353799edc531d3974f8d99d1",
+          "projectRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+          "writableRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-x7cdvt9b",
+          "policyVersion": 1
+        }
+      },
+      "machineReport": {
+        "adapter": "pytest-json@1",
+        "collectedNodeIds": [
+          "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_native"
+        ],
+        "collectionErrors": [],
+        "deselectedNodeIds": [],
+        "pytestExitCode": 1,
+        "pytestRootPath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "runner": {
+          "distributionVersion": "8.4.2",
+          "modulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+          "moduleVersion": "8.4.2",
+          "name": "pytest",
+          "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "pythonVersion": "3.9.6"
+        },
+        "schemaVersion": 1,
+        "selector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_native",
+        "tests": [
+          {
+            "nodeId": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_native",
+            "phases": {
+              "call": {
+                "outcome": "failed"
+              },
+              "setup": {
+                "outcome": "passed"
+              },
+              "teardown": {
+                "outcome": "passed"
+              }
+            }
+          }
+        ]
+      },
+      "process": {
+        "actualExitCode": 1,
+        "timedOut": false,
+        "stdout": "============================= test session starts ==============================\nplatform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0\nrootdir: /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop\nplugins: anyio-4.12.1\ncollected 1 item\n\ntests/work_packages/ru056/test_acceptance.py F                           [100%]\n\n=================================== FAILURES ===================================\n________________________ test_unified_activation_native ________________________\n\ntmp_path = PosixPath('/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-x7cdvt9b/pytest-basetemp/test_unified_activation_native0')\n\n    def test_unified_activation_native(tmp_path: Path) -> None:\n>       output = run(\n            \"rustup\",\n            \"run\",\n            \"stable\",\n            \"cargo\",\n            \"test\",\n            \"--manifest-path\",\n            MANIFEST,\n            \"--locked\",\n            \"--lib\",\n            timeout=1800,\n        )\n\ntests/work_packages/ru056/test_acceptance.py:35: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\ntimeout = 1800, env = None\ncommand = ('rustup', 'run', 'stable', 'cargo', 'test', '--manifest-path', ...)\nresult = CompletedProcess(args=('rustup', 'run', 'stable', 'cargo', 'test', '--manifest-path', 'src-tauri/Cargo.toml', '--locke...5/xiaobai-ai-desktop/src-tauri/target/debug/.cargo-build-lock\\n\\nCaused by:\\n  Operation not permitted (os error 1)\\n')\n\n    def run(*command: str, timeout: int = 1800, env: dict[str, str] | None = None) -> str:\n        result = subprocess.run(\n            command,\n            cwd=ROOT,\n            env=env,\n            text=True,\n            stdout=subprocess.PIPE,\n            stderr=subprocess.STDOUT,\n            timeout=timeout,\n            check=False,\n        )\n>       assert result.returncode == 0, f\"{' '.join(command)} failed\\n{result.stdout[-12000:]}\"\nE       AssertionError: rustup run stable cargo test --manifest-path src-tauri/Cargo.toml --locked --lib failed\nE         error: failed to open: /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/src-tauri/target/debug/.cargo-build-lock\nE         \nE         Caused by:\nE           Operation not permitted (os error 1)\nE         \nE       assert 101 == 0\nE        +  where 101 = CompletedProcess(args=('rustup', 'run', 'stable', 'cargo', 'test', '--manifest-path', 'src-tauri/Cargo.toml', '--locke...5/xiaobai-ai-desktop/src-tauri/target/debug/.cargo-build-lock\\n\\nCaused by:\\n  Operation not permitted (os error 1)\\n').returncode\n\ntests/work_packages/ru056/test_acceptance.py:26: AssertionError\n=========================== short test summary info ============================\nFAILED tests/work_packages/ru056/test_acceptance.py::test_unified_activation_native - AssertionError: rustup run stable cargo test --manifest-path src-tauri/Cargo.toml --locked --lib failed\n  error: failed to open: /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/src-tauri/target/debug/.cargo-build-lock\n  \n  Caused by:\n    Operation not permitted (os error 1)\n  \nassert 101 == 0\n +  where 101 = CompletedProcess(args=('rustup', 'run', 'stable', 'cargo', 'test', '--manifest-path', 'src-tauri/Cargo.toml', '--locke...5/xiaobai-ai-desktop/src-tauri/target/debug/.cargo-build-lock\\n\\nCaused by:\\n  Operation not permitted (os error 1)\\n').returncode\n============================== 1 failed in 0.98s ===============================\n",
+        "stderr": ""
+      },
+      "validationErrors": [],
+      "runnerProof": null,
+      "passed": false,
+      "id": "ru056-native",
+      "kind": "scenario_test",
+      "actualExitCode": 1,
+      "timedOut": false,
+      "scenarioId": "RU056-AS-native"
+    },
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru056-renderer",
+        "kind": "scenario_test",
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_renderer",
+        "cwd": ".",
+        "timeoutSeconds": 1800
+      },
+      "runnerMetadata": {
+        "adapter": "pytest-json@1",
+        "declaredCwd": ".",
+        "cwd": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "selector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_renderer",
+        "selectorRealpath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/tests/work_packages/ru056/test_acceptance.py",
+        "runnerArgv": [
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_renderer",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-x4l9z_mx/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-x4l9z_mx/pytest-basetemp"
+        ],
+        "sandboxedArgv": [
+          "/usr/bin/sandbox-exec",
+          "-p",
+          "(version 1)\n(allow default)\n(deny file-write*\n  (require-not\n    (require-any\n      (subpath \"/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-x4l9z_mx\")\n      (literal \"/dev/null\"))))\n",
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_renderer",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-x4l9z_mx/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-x4l9z_mx/pytest-basetemp"
+        ],
+        "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "pythonRealpath": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+        "pythonExecutableSha256": "sha256:6b24be8ba00c4abc8b3e7e2620bd710e2cf7a4312d00c147f8f05fbb6f3d297a",
+        "pytestVersion": "8.4.2",
+        "pytestDistributionVersion": "8.4.2",
+        "pytestModulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+        "pytestModuleSha256": "sha256:66993a5e3905005e0981159b4794d10b1adacf341a58a44d696ad2c4442dcdc6",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "executable": "/usr/bin/sandbox-exec",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea",
+          "policySha256": "sha256:9896a3c2f66b2b39543c92cd596f52786112ee5c6380f50e398c97aa22302da3",
+          "projectRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+          "writableRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-x4l9z_mx",
+          "policyVersion": 1
+        }
+      },
+      "machineReport": {
+        "adapter": "pytest-json@1",
+        "collectedNodeIds": [
+          "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_renderer"
+        ],
+        "collectionErrors": [],
+        "deselectedNodeIds": [],
+        "pytestExitCode": 1,
+        "pytestRootPath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "runner": {
+          "distributionVersion": "8.4.2",
+          "modulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+          "moduleVersion": "8.4.2",
+          "name": "pytest",
+          "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "pythonVersion": "3.9.6"
+        },
+        "schemaVersion": 1,
+        "selector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_renderer",
+        "tests": [
+          {
+            "nodeId": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_renderer",
+            "phases": {
+              "call": {
+                "outcome": "failed"
+              },
+              "setup": {
+                "outcome": "passed"
+              },
+              "teardown": {
+                "outcome": "passed"
+              }
+            }
+          }
+        ]
+      },
+      "process": {
+        "actualExitCode": 1,
+        "timedOut": false,
+        "stdout": "============================= test session starts ==============================\nplatform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0\nrootdir: /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop\nplugins: anyio-4.12.1\ncollected 1 item\n\ntests/work_packages/ru056/test_acceptance.py F                           [100%]\n\n=================================== FAILURES ===================================\n_______________________ test_unified_activation_renderer _______________________\n\ntmp_path = PosixPath('/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-x4l9z_mx/pytest-basetemp/test_unified_activation_render0')\n\n    def test_unified_activation_renderer(tmp_path: Path) -> None:\n        report = tmp_path / \"vitest.json\"\n>       run(\n            \"pnpm\",\n            \"exec\",\n            \"vitest\",\n            \"run\",\n            \"--dir\",\n            \"src\",\n            \"--exclude\",\n            \"release/**\",\n            \"--exclude\",\n            \"work/**\",\n            \"--exclude\",\n            \"tests/**\",\n            \"--maxWorkers=2\",\n            \"--minWorkers=1\",\n            \"--reporter=json\",\n            \"--outputFile\",\n            str(report),\n            timeout=1800,\n        )\n\ntests/work_packages/ru056/test_acceptance.py:105: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\ntimeout = 1800, env = None\ncommand = ('pnpm', 'exec', 'vitest', 'run', '--dir', 'src', ...)\nresult = CompletedProcess(args=('pnpm', 'exec', 'vitest', 'run', '--dir', 'src', '--exclude', 'release/**', '--exclude', 'work/...s/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/vitest.config.ts.timestamp-1788710170485-690966a9a1e43.mjs'\\n}\\n\\n\\n\\n\")\n\n    def run(*command: str, timeout: int = 1800, env: dict[str, str] | None = None) -> str:\n        result = subprocess.run(\n            command,\n            cwd=ROOT,\n            env=env,\n            text=True,\n            stdout=subprocess.PIPE,\n            stderr=subprocess.STDOUT,\n            timeout=timeout,\n            check=False,\n        )\n>       assert result.returncode == 0, f\"{' '.join(command)} failed\\n{result.stdout[-12000:]}\"\nE       AssertionError: pnpm exec vitest run --dir src --exclude release/** --exclude work/** --exclude tests/** --maxWorkers=2 --minWorkers=1 --reporter=json --outputFile /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-x4l9z_mx/pytest-basetemp/test_unified_activation_render0/vitest.json failed\nE         ! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-10.12.3.tgz\nE         failed to load config from /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/vitest.config.ts\nE         \nE         ⎯⎯⎯⎯⎯⎯⎯ Startup Error ⎯⎯⎯⎯⎯⎯⎯⎯\nE         Error: EPERM: operation not permitted, open '/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/vitest.config.ts.timestamp-1788710170485-690966a9a1e43.mjs'\nE             at async open (node:internal/fs/promises:640:25)\nE             at async Object.writeFile (node:internal/fs/promises:1257:14)\nE             at async loadConfigFromBundledFile (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@5.4.19_@types+node@20.19.9_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:66956:5)\nE             at async loadConfigFromFile (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@5.4.19_@types+node@20.19.9_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:66799:24)\nE             at async resolveConfig (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@5.4.19_@types+node@20.19.9_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:66399:24)\nE             at async _createServer (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@5.4.19_@types+node@20.19.9_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:62999:18)\nE             at async createViteServer (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vitest@2.1.9_@types+node@20.19.9_jsdom@25.0.1_lightningcss@1.30.1_msw@2.11.6_@types+node@20.19.9_typescript@5.9.2_/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:9842:18)\nE             at async createVitest (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vitest@2.1.9_@types+node@20.19.9_jsdom@25.0.1_lightningcss@1.30.1_msw@2.11.6_@types+node@20.19.9_typescript@5.9.2_/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:11461:18)\nE             at async prepareVitest (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vitest@2.1.9_@types+node@20.19.9_jsdom@25.0.1_lightningcss@1.30.1_msw@2.11.6_@types+node@20.19.9_typescript@5.9.2_/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:11884:15)\nE             at async startVitest (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vitest@2.1.9_@types+node@20.19.9_jsdom@25.0.1_lightningcss@1.30.1_msw@2.11.6_@types+node@20.19.9_typescript@5.9.2_/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:11813:15) {\nE           errno: -1,\nE           code: 'EPERM',\nE           syscall: 'open',\nE           path: '/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/vitest.config.ts.timestamp-1788710170485-690966a9a1e43.mjs'\nE         }\nE         \nE         \nE         \nE         \nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=('pnpm', 'exec', 'vitest', 'run', '--dir', 'src', '--exclude', 'release/**', '--exclude', 'work/...s/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/vitest.config.ts.timestamp-1788710170485-690966a9a1e43.mjs'\\n}\\n\\n\\n\\n\").returncode\n\ntests/work_packages/ru056/test_acceptance.py:26: AssertionError\n=========================== short test summary info ============================\nFAILED tests/work_packages/ru056/test_acceptance.py::test_unified_activation_renderer - AssertionError: pnpm exec vitest run --dir src --exclude release/** --exclude work/** --exclude tests/** --maxWorkers=2 --minWorkers=1 --reporter=json --outputFile /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-x4l9z_mx/pytest-basetemp/test_unified_activation_render0/vitest.json failed\n  ! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-10.12.3.tgz\n  failed to load config from /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/vitest.config.ts\n  \n  ⎯⎯⎯⎯⎯⎯⎯ Startup Error ⎯⎯⎯⎯⎯⎯⎯⎯\n  Error: EPERM: operation not permitted, open '/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/vitest.config.ts.timestamp-1788710170485-690966a9a1e43.mjs'\n      at async open (node:internal/fs/promises:640:25)\n      at async Object.writeFile (node:internal/fs/promises:1257:14)\n      at async loadConfigFromBundledFile (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@5.4.19_@types+node@20.19.9_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:66956:5)\n      at async loadConfigFromFile (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@5.4.19_@types+node@20.19.9_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:66799:24)\n      at async resolveConfig (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@5.4.19_@types+node@20.19.9_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:66399:24)\n      at async _createServer (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@5.4.19_@types+node@20.19.9_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:62999:18)\n      at async createViteServer (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vitest@2.1.9_@types+node@20.19.9_jsdom@25.0.1_lightningcss@1.30.1_msw@2.11.6_@types+node@20.19.9_typescript@5.9.2_/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:9842:18)\n      at async createVitest (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vitest@2.1.9_@types+node@20.19.9_jsdom@25.0.1_lightningcss@1.30.1_msw@2.11.6_@types+node@20.19.9_typescript@5.9.2_/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:11461:18)\n      at async prepareVitest (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vitest@2.1.9_@types+node@20.19.9_jsdom@25.0.1_lightningcss@1.30.1_msw@2.11.6_@types+node@20.19.9_typescript@5.9.2_/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:11884:15)\n      at async startVitest (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vitest@2.1.9_@types+node@20.19.9_jsdom@25.0.1_lightningcss@1.30.1_msw@2.11.6_@types+node@20.19.9_typescript@5.9.2_/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:11813:15) {\n    errno: -1,\n    code: 'EPERM',\n    syscall: 'open',\n    path: '/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/vitest.config.ts.timestamp-1788710170485-690966a9a1e43.mjs'\n  }\n  \n  \n  \n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=('pnpm', 'exec', 'vitest', 'run', '--dir', 'src', '--exclude', 'release/**', '--exclude', 'work/...s/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/vitest.config.ts.timestamp-1788710170485-690966a9a1e43.mjs'\\n}\\n\\n\\n\\n\").returncode\n============================== 1 failed in 4.48s ===============================\n",
+        "stderr": ""
+      },
+      "validationErrors": [],
+      "runnerProof": null,
+      "passed": false,
+      "id": "ru056-renderer",
+      "kind": "scenario_test",
+      "actualExitCode": 1,
+      "timedOut": false,
+      "scenarioId": "RU056-AS-renderer"
+    },
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru056-build",
+        "kind": "scenario_test",
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_builds",
+        "cwd": ".",
+        "timeoutSeconds": 2400
+      },
+      "runnerMetadata": {
+        "adapter": "pytest-json@1",
+        "declaredCwd": ".",
+        "cwd": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "selector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_builds",
+        "selectorRealpath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/tests/work_packages/ru056/test_acceptance.py",
+        "runnerArgv": [
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_builds",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-mc80kp8e/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-mc80kp8e/pytest-basetemp"
+        ],
+        "sandboxedArgv": [
+          "/usr/bin/sandbox-exec",
+          "-p",
+          "(version 1)\n(allow default)\n(deny file-write*\n  (require-not\n    (require-any\n      (subpath \"/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-mc80kp8e\")\n      (literal \"/dev/null\"))))\n",
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_builds",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-mc80kp8e/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-mc80kp8e/pytest-basetemp"
+        ],
+        "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "pythonRealpath": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+        "pythonExecutableSha256": "sha256:6b24be8ba00c4abc8b3e7e2620bd710e2cf7a4312d00c147f8f05fbb6f3d297a",
+        "pytestVersion": "8.4.2",
+        "pytestDistributionVersion": "8.4.2",
+        "pytestModulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+        "pytestModuleSha256": "sha256:66993a5e3905005e0981159b4794d10b1adacf341a58a44d696ad2c4442dcdc6",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "executable": "/usr/bin/sandbox-exec",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea",
+          "policySha256": "sha256:cbddfcd50cd6392e98cb8bbd5d492f9d97c5316cba6e78779fd0e341f1c43976",
+          "projectRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+          "writableRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-mc80kp8e",
+          "policyVersion": 1
+        }
+      },
+      "machineReport": {
+        "adapter": "pytest-json@1",
+        "collectedNodeIds": [
+          "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_builds"
+        ],
+        "collectionErrors": [],
+        "deselectedNodeIds": [],
+        "pytestExitCode": 1,
+        "pytestRootPath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "runner": {
+          "distributionVersion": "8.4.2",
+          "modulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+          "moduleVersion": "8.4.2",
+          "name": "pytest",
+          "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "pythonVersion": "3.9.6"
+        },
+        "schemaVersion": 1,
+        "selector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_builds",
+        "tests": [
+          {
+            "nodeId": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_builds",
+            "phases": {
+              "call": {
+                "outcome": "failed"
+              },
+              "setup": {
+                "outcome": "passed"
+              },
+              "teardown": {
+                "outcome": "passed"
+              }
+            }
+          }
+        ]
+      },
+      "process": {
+        "actualExitCode": 1,
+        "timedOut": false,
+        "stdout": "============================= test session starts ==============================\nplatform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0\nrootdir: /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop\nplugins: anyio-4.12.1\ncollected 1 item\n\ntests/work_packages/ru056/test_acceptance.py F                           [100%]\n\n=================================== FAILURES ===================================\n________________________ test_unified_activation_builds ________________________\n\ntmp_path = PosixPath('/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-mc80kp8e/pytest-basetemp/test_unified_activation_builds0')\n\n    def test_unified_activation_builds(tmp_path: Path) -> None:\n        run(\n            \"pnpm\",\n            \"exec\",\n            \"prettier\",\n            \"--check\",\n            \"src/configuration/activation.ts\",\n            \"src/configuration/activation.test.ts\",\n            \"src/configuration/ConfigurationPreviewView.tsx\",\n            \"src/configuration/ConfigurationPreviewView.test.tsx\",\n            \"src/configuration/DailyUse.test.tsx\",\n        )\n        run(\"pnpm\", \"typecheck\")\n>       run(\"pnpm\", \"build:renderer\")\n\ntests/work_packages/ru056/test_acceptance.py:164: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\ntimeout = 1800, env = None, command = ('pnpm', 'build:renderer')\nresult = CompletedProcess(args=('pnpm', 'build:renderer'), returncode=1, stdout=\"\\n> yeschoy-desktop@0.4.9 build:renderer /User...tningcss@1.30.1/node_modules/vite/dist/node/cli.js:629:10)\\n\\u2009ELIFECYCLE\\u2009 Command failed with exit code 1.\\n\")\n\n    def run(*command: str, timeout: int = 1800, env: dict[str, str] | None = None) -> str:\n        result = subprocess.run(\n            command,\n            cwd=ROOT,\n            env=env,\n            text=True,\n            stdout=subprocess.PIPE,\n            stderr=subprocess.STDOUT,\n            timeout=timeout,\n            check=False,\n        )\n>       assert result.returncode == 0, f\"{' '.join(command)} failed\\n{result.stdout[-12000:]}\"\nE       AssertionError: pnpm build:renderer failed\nE         \nE         > yeschoy-desktop@0.4.9 build:renderer /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop\nE         > vite build\nE         \nE         failed to load config from /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/vite.config.ts\nE         error during build:\nE         Error: EPERM: operation not permitted, open '/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.vite-temp/vite.config.ts.timestamp-1788710196774-951114ca51829.mjs'\nE             at async open (node:internal/fs/promises:640:25)\nE             at async Object.writeFile (node:internal/fs/promises:1257:14)\nE             at async loadConfigFromBundledFile (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@7.3.0_@types+node@20.19.9_jiti@1.21.7_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/config.js:35905:3)\nE             at async bundleAndLoadConfigFile (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@7.3.0_@types+node@20.19.9_jiti@1.21.7_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/config.js:35795:17)\nE             at async loadConfigFromFile (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@7.3.0_@types+node@20.19.9_jiti@1.21.7_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/config.js:35762:42)\nE             at async resolveConfig (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@7.3.0_@types+node@20.19.9_jiti@1.21.7_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/config.js:35411:22)\nE             at async createBuilder (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@7.3.0_@types+node@20.19.9_jiti@1.21.7_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/config.js:33874:19)\nE             at async CAC.<anonymous> (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@7.3.0_@types+node@20.19.9_jiti@1.21.7_lightningcss@1.30.1/node_modules/vite/dist/node/cli.js:629:10)\nE          ELIFECYCLE  Command failed with exit code 1.\nE         \nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=('pnpm', 'build:renderer'), returncode=1, stdout=\"\\n> yeschoy-desktop@0.4.9 build:renderer /User...tningcss@1.30.1/node_modules/vite/dist/node/cli.js:629:10)\\n\\u2009ELIFECYCLE\\u2009 Command failed with exit code 1.\\n\").returncode\n\ntests/work_packages/ru056/test_acceptance.py:26: AssertionError\n=========================== short test summary info ============================\nFAILED tests/work_packages/ru056/test_acceptance.py::test_unified_activation_builds - AssertionError: pnpm build:renderer failed\n  \n  > yeschoy-desktop@0.4.9 build:renderer /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop\n  > vite build\n  \n  failed to load config from /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/vite.config.ts\n  error during build:\n  Error: EPERM: operation not permitted, open '/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.vite-temp/vite.config.ts.timestamp-1788710196774-951114ca51829.mjs'\n      at async open (node:internal/fs/promises:640:25)\n      at async Object.writeFile (node:internal/fs/promises:1257:14)\n      at async loadConfigFromBundledFile (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@7.3.0_@types+node@20.19.9_jiti@1.21.7_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/config.js:35905:3)\n      at async bundleAndLoadConfigFile (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@7.3.0_@types+node@20.19.9_jiti@1.21.7_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/config.js:35795:17)\n      at async loadConfigFromFile (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@7.3.0_@types+node@20.19.9_jiti@1.21.7_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/config.js:35762:42)\n      at async resolveConfig (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@7.3.0_@types+node@20.19.9_jiti@1.21.7_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/config.js:35411:22)\n      at async createBuilder (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@7.3.0_@types+node@20.19.9_jiti@1.21.7_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/config.js:33874:19)\n      at async CAC.<anonymous> (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@7.3.0_@types+node@20.19.9_jiti@1.21.7_lightningcss@1.30.1/node_modules/vite/dist/node/cli.js:629:10)\n   ELIFECYCLE  Command failed with exit code 1.\n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=('pnpm', 'build:renderer'), returncode=1, stdout=\"\\n> yeschoy-desktop@0.4.9 build:renderer /User...tningcss@1.30.1/node_modules/vite/dist/node/cli.js:629:10)\\n\\u2009ELIFECYCLE\\u2009 Command failed with exit code 1.\\n\").returncode\n============================== 1 failed in 25.53s ==============================\n",
+        "stderr": ""
+      },
+      "validationErrors": [],
+      "runnerProof": null,
+      "passed": false,
+      "id": "ru056-build",
+      "kind": "scenario_test",
+      "actualExitCode": 1,
+      "timedOut": false,
+      "scenarioId": "RU056-AS-build"
+    }
+  ],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU056-AS-native",
+      "path": "execution/evidence/68a542760c8858f71087/c238b456a2209757/fe9bfefb10e8ba89.json",
+      "sha256": "sha256:86950750bac38b2d308ddaa1b46f5c29079651392326c17324e2015b7a0c3520"
+    },
+    {
+      "scenarioId": "RU056-AS-renderer",
+      "path": "execution/evidence/68a542760c8858f71087/c238b456a2209757/f8bf34f72e4f0354.json",
+      "sha256": "sha256:f9fbfcf5af15b58015dab3519b5c0d43ab830e4ee0fe441cde25cc484e30a637"
+    },
+    {
+      "scenarioId": "RU056-AS-build",
+      "path": "execution/evidence/68a542760c8858f71087/c238b456a2209757/30954c17522c6d59.json",
+      "sha256": "sha256:516cef30afe713dad1cbf42c53fe314259dd63bdb55841ac5cf572403e8a368d"
+    }
+  ],
+  "scenarioEvidenceFailures": [
+    "RU056-AS-native: registered runner proof is invalid",
+    "RU056-AS-renderer: registered runner proof is invalid",
+    "RU056-AS-build: registered runner proof is invalid"
+  ],
+  "releaseUnitId": "RU-056",
+  "releaseUnitHash": "sha256:ac6053e151c9949c81631663e53399e0801a5fa4f8056d8fe3891d7b0faa937c"
+}

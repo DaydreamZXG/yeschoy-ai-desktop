@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU072-AS-replay",
+  "assertion": "Repeated URL construction is deterministic and cannot copy remote query, fragment, credential or redirect material into the browser target.",
+  "testSelector": "tests/work_packages/ru072/test_acceptance.py::test_replay_reconstructs_one_canonical_url_without_carrying_remote_query_fields",
+  "acceptanceCommandId": "ru072-replay",
+  "runId": "RU-072/WP-RU072-BRANDED-AUTHORIZATION-ORIGIN@2026-09-07T10:27:51.287240+00:00",
+  "packageId": "WP-RU072-BRANDED-AUTHORIZATION-ORIGIN",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru072/test_acceptance.py::test_replay_reconstructs_one_canonical_url_without_carrying_remote_query_fields",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:9eaed985321e37d96959bdc2bc6905df9658c5ad9a66edd2abe197054f0e9a3f",
+    "machineReportSha256": "sha256:d59d1d1dddc02e15979d53a9d7195cb6cc1e673716caa783aa67849824490045",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:0fd4a5602bf657d6848b992a7f427bb5bdb07e042665bf411808ee47f4db7b36",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:14d6e3bd2ce6861af198f6486c8f186f19e31d00697b76eeb4b9affbd4698213",
+  "releaseUnitId": "RU-072",
+  "releaseUnitHash": "sha256:b30f281f4544deff04bd573deb95a16abc423e8ab2da03e2891e7b918114c0cc"
+}

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU041-AS-03",
+  "assertion": "All version sources align at 0.4.8; typecheck and actual production bundle pass with prior privacy fixes retained.",
+  "testSelector": "tests/work_packages/ru041/test_acceptance.py::test_repair_version_and_production_build",
+  "acceptanceCommandId": "ru041-build",
+  "runId": "RU-041/WP-RU041-CROSS-APPLICATION-REPAIR@2026-09-05T11:29:49.516800+00:00",
+  "packageId": "WP-RU041-CROSS-APPLICATION-REPAIR",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru041/test_acceptance.py::test_repair_version_and_production_build",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:643fa1c735f8d6266024f1ba2f7e8e6bce80bb21a13c7313ac7e80e75726fe9d",
+    "machineReportSha256": "sha256:50c895794dbf8d8283ad70f2f6b9363e2615bc29ba69cabf982485bda0d6682b",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:9cbed2b882e68e9d928a6b6182764c385bad83e336c68ce9c38501057ce4b751",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:0b6dedb422c9680f293120f388f5a7af7d6b9ad28f331eb6670ce3d075c5fdee",
+  "releaseUnitId": "RU-041",
+  "releaseUnitHash": "sha256:976fd7fa0aeae2374b30c45065aea65dbde056b7bf137c790ae702d255d13891"
+}

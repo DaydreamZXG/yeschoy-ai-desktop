@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU060-AS-native-runtime",
+  "assertion": "Native fixtures prove wrapper identity is retained, bounded symlink parents are added only to child PATH, restricted-GUI-PATH DSH starts and returns a validated loopback URL, helper reuse remains owned, and no paid model prompt runs.",
+  "testSelector": "tests/work_packages/ru060/test_acceptance.py::test_native_runtime_and_dsh",
+  "acceptanceCommandId": "ru060-native-runtime",
+  "runId": "RU-060/WP-RU060-CODEX-ROUTE-AND-CLI-RUNTIME@2026-09-07T03:00:26.726352+00:00",
+  "packageId": "WP-RU060-CODEX-ROUTE-AND-CLI-RUNTIME",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru060/test_acceptance.py::test_native_runtime_and_dsh",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:8bf2bfd01ff6a04214aa3faa2968e18f3eb76621a0366be5abe3440db166bf3d",
+    "machineReportSha256": "sha256:71f93cf9dc62a971c608550c35c07467290c978d8cfb64e9176024425d2c21aa",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:5cdb25947c3eeaaa618c7c8218c3a5534ce85a4c399316a6a423e6286dc41d98",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:298542d2f9d871cc46904e8a1ee0c4a517def283034c3319105d6836aef4a394",
+  "releaseUnitId": "RU-060",
+  "releaseUnitHash": "sha256:dc264ef4005f7473dd30efc529ccf9a31b0d38b043c1e2a612cb95496905560e"
+}

@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-060/WP-RU060-CODEX-ROUTE-AND-CLI-RUNTIME@2026-09-07T03:41:56.726104+00:00",
+  "packageId": "WP-RU060-CODEX-ROUTE-AND-CLI-RUNTIME",
+  "baselineCommit": "df10e7a0516c4125866daff5cf91b76178c89d02",
+  "baselineTreeHash": "sha256:af7f2b489d02bb8082bd5f14d8f3b6d091bb7c763c6008aca2035a809b9d0eb4",
+  "testedTreeHash": "sha256:af7f2b489d02bb8082bd5f14d8f3b6d091bb7c763c6008aca2035a809b9d0eb4",
+  "testedSnapshotPath": "execution/tested-snapshots/a98853675cd4856c.425c0348ce1f0c8f17f2.json",
+  "testedSnapshotSha256": "sha256:adee2c541a12b592e7927857ba887b485de447cbd7cf9cc5ccfe10273bdc49af",
+  "sourceDiff": {},
+  "ownedResultHashes": {},
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      "src-tauri/src/tool_discovery.rs",
+      "src-tauri/src/tool_adapters/common.rs",
+      "src-tauri/src/tool_adapters/claude_code.rs",
+      "src-tauri/src/tool_adapters/dsh_web.rs",
+      "src-tauri/src/tool_adapters/hermes.rs",
+      "src-tauri/src/tool_adapters/openclaw.rs",
+      "src-tauri/src/tool_adapters/pi.rs",
+      "src-tauri/src/tool_adapters/terminal_launch.rs",
+      "src/configuration/RecentRequest.tsx",
+      "src/configuration/ConfigurationPreviewView.tsx",
+      "src/configuration/ConfigurationPreviewView.test.tsx",
+      "src/configuration/DailyUse.test.tsx",
+      "src/workbench/AppLibraryView.tsx",
+      "src/workbench/Workbench.test.tsx",
+      "tests/work_packages/ru060/**",
+      "outputs/野菜API-Codex路由与CLI运行时修复.md"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      "outputs/野菜API-Codex路由与CLI运行时修复.md": "sha256:17436bde5629815dcf3c4f2448ceb8442437eeaff796782ba3e7f0f70e181bc5",
+      "src-tauri/src/tool_adapters/claude_code.rs": "sha256:9dfd35652d25210d9427d80c07f135523bdaa211ad92fb148df546dee9900ff0",
+      "src-tauri/src/tool_adapters/common.rs": "sha256:970b6087224bb89cde8a97cd0aaf488e4e296670cfe534eaa439b4cd5cbbdaea",
+      "src-tauri/src/tool_adapters/dsh_web.rs": "sha256:c36b8c5151cab7318fc90909dfaae304086dd62949963169d06c8dfe58daac11",
+      "src-tauri/src/tool_adapters/hermes.rs": "sha256:d297c5f0d9dfa6228e947e9c90d9777149df159649926d416fca1c5ee0bae1ce",
+      "src-tauri/src/tool_adapters/openclaw.rs": "sha256:afa6a081cf150c1d1e2c53f159c1c9bdc17eaa11922223ccd46302ff9ba430cb",
+      "src-tauri/src/tool_adapters/pi.rs": "sha256:5f2b42f0c4ba50010647eaf581c412a5e87fa8bbad68aa374bf6d0de889923f1",
+      "src-tauri/src/tool_adapters/terminal_launch.rs": "sha256:b936d54e64f47988f7690dac402e9eaec5ac34fbd9288afdecefd535f9f637e5",
+      "src-tauri/src/tool_discovery.rs": "sha256:27ba155875b8e4b933a42885851859caedb8fcaf885c0f24f61bd3eeff3021af",
+      "src/configuration/ConfigurationPreviewView.test.tsx": "sha256:9407745590c78869b6375a4bdae6168c294f197494ff8a301e3f855d9bb8e16a",
+      "src/configuration/ConfigurationPreviewView.tsx": "sha256:e0699d07fb8c292966f961af9705cfbb955ef2733974d11366bf5f461c32dfb4",
+      "src/configuration/DailyUse.test.tsx": "sha256:81ad1768bb822b8a3f4dc2dd773538fd82758975cdc997f766652c1c6419e274",
+      "src/configuration/RecentRequest.tsx": "sha256:6327a2396d11c2afe2063563c1781ce1fe824d7eab052c5e0fb48b56d4a3e063",
+      "src/workbench/AppLibraryView.tsx": "sha256:df1306a996ee43ba9a4c0284df9ec334277fa4afa2ce64dc778103de41cd8986",
+      "src/workbench/Workbench.test.tsx": "sha256:d2cd2200aec6ac852d7c726692e5e437d119cd7b8893cc34b9d2cb0a25423bfe",
+      "tests/work_packages/ru060/test_acceptance.py": "sha256:15b787d9c1626b5f63581df9fbddf73bcee16360125dbb57ae8d33b369cb0346"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:aab84297a68fb33ea7b5b57a19d125d5241ab522135c6394b5e1ef072129b2cb",
+  "sourceScopeFailures": [],
+  "integrityFailures": [
+    "non-verification work package produced no source change"
+  ],
+  "assignedTo": "root",
+  "startedAt": "2026-09-07T03:41:56.726104+00:00",
+  "finishedAt": "2026-09-07T03:42:11.465010+00:00",
+  "passed": false,
+  "commands": [],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU060-AS-native-runtime",
+      "path": "execution/evidence/425c0348ce1f0c8f17f2/a98853675cd4856c/8067475ede6e0bc6.json",
+      "sha256": "sha256:a4e4ea516231c5774f7548fb909f34cfca4dabd789e6e7425fc3b10d26f35f34"
+    },
+    {
+      "scenarioId": "RU060-AS-route-ux",
+      "path": "execution/evidence/425c0348ce1f0c8f17f2/a98853675cd4856c/c5560993dc94e5ea.json",
+      "sha256": "sha256:04ae9184905a3610f3a4449955d3ebfb7961a4250745ba1d6bc60914a530ee91"
+    },
+    {
+      "scenarioId": "RU060-AS-builds",
+      "path": "execution/evidence/425c0348ce1f0c8f17f2/a98853675cd4856c/fcbde106ff553dee.json",
+      "sha256": "sha256:f9df8be1c312a6f5d562df97ec2b649ea232b4f66f6bc9573619aa04ed3c17dc"
+    }
+  ],
+  "scenarioEvidenceFailures": [
+    "RU060-AS-native-runtime: registered runner proof is invalid",
+    "RU060-AS-route-ux: registered runner proof is invalid",
+    "RU060-AS-builds: registered runner proof is invalid"
+  ],
+  "releaseUnitId": "RU-060",
+  "releaseUnitHash": "sha256:dc264ef4005f7473dd30efc529ccf9a31b0d38b043c1e2a612cb95496905560e"
+}

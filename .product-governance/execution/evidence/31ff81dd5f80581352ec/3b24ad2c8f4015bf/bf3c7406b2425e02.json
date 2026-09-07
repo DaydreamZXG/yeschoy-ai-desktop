@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU045-AS-stale_and_failure_recovery",
+  "assertion": "Stale metadata, invalid range/size/type, interrupted state receipt, corrupt cache and upstream failure cannot erase the prior candidate or claim success.",
+  "testSelector": "tests/work_packages/ru045/test_acceptance.py::test_stale_and_failure_recovery",
+  "acceptanceCommandId": "ru045-stale_and_failure_recovery",
+  "runId": "RU-045/WP-RU045-VENDOR-SYNC@2026-09-06T05:14:36.746472+00:00",
+  "packageId": "WP-RU045-VENDOR-SYNC",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-045",
+  "releaseUnitHash": "sha256:22aef0d114e2943ebe2bcc21a86ece3e4f0d9a2a5a7cae817f4ce9f1e91ce370"
+}

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU053-AS-server",
+  "assertion": "The explicit publisher needs no approval file, publishes only current official-origin immutable bytes, distinguishes optional native receipt from client-native-required state, prevents downgrade and concurrent or partial corruption, atomically disables to an empty catalog, and safely re-enables without deleting objects.",
+  "testSelector": "tests/work_packages/ru053/test_acceptance.py::test_server_publication_and_kill_switch",
+  "acceptanceCommandId": "ru053-server",
+  "runId": "RU-053/WP-RU053-DOMESTIC-DOWNLOAD-ENABLEMENT@2026-09-06T11:02:10.683681+00:00",
+  "packageId": "WP-RU053-DOMESTIC-DOWNLOAD-ENABLEMENT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru053/test_acceptance.py::test_server_publication_and_kill_switch",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:ac9a1a4e3aa90dac4c54b013f5c97f81875a747db3caaa60f51d31f4e04dbf4d",
+    "machineReportSha256": "sha256:546be47306cd7337d8718b41c2619533a8ea092b005a0c067d47581a21df1953",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:bdd76413d53e6dedc982fda5a5d76f3acd778ef20f16616640fc079a13675c89",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:f672a4bbfe831658e01b507622a08d9eda940bfe22e7a4f3b118da4b04203453",
+  "releaseUnitId": "RU-053",
+  "releaseUnitHash": "sha256:305f3db2338290220d7d0171d83f24f55c819222bb1b37cbc6f6f87663022ab7"
+}

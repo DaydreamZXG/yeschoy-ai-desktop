@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU042-AS-01",
+  "assertion": "Actual synthetic native tests exercise seven catalogs, exact A/B routing and group isolation, legacy migration, OS storage failure/rollback, in-flight state, stream errors, cooperative cancellation and Windows compilation. No real account or configuration access.",
+  "testSelector": "tests/work_packages/ru042/test_acceptance.py::test_native_model_sets_and_exit",
+  "acceptanceCommandId": "ru042-native",
+  "runId": "RU-042/WP-RU042-MODEL-SETS-AND-EXIT@2026-09-05T12:39:03.009122+00:00",
+  "packageId": "WP-RU042-MODEL-SETS-AND-EXIT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru042/test_acceptance.py::test_native_model_sets_and_exit",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:689979e073a7dec29cb82435032c91832c81f699bb979a9c41343e48b79da820",
+    "machineReportSha256": "sha256:52e35594497088762ad13bde97fcce86a148a9a4d8866d8e473bdb09674b8b1e",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:4d1ad165ea5ec309b82952dd057bc2dc7276f6f655235082881568a5525c5834",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:dc5a4832e35291b8e27419ecab3bdcb4e17ad34b9bcb1b1805c46cafaa2c32b0",
+  "releaseUnitId": "RU-042",
+  "releaseUnitHash": "sha256:8ae09b9951154bbe4c69b09b6be6cc39e2544d63526261ada54cac5997821225"
+}

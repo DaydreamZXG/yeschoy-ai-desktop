@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU067-AS-renderer-embedded-artifact",
+  "assertion": "The distinct 0.4.13 Windows x64 payload contains the current renderer asset paths and embedded runtime marker, excludes the dev-server marker, differs from 0.4.12 and is packaged by the closed Chinese NSIS recipe with truthful limits.",
+  "testSelector": "tests/work_packages/ru067/test_acceptance.py::test_corrected_windows_artifact_contains_renderer_and_is_distinct",
+  "acceptanceCommandId": "ru067-windows-artifact",
+  "runId": "RU-067/WP-RU067-WINDOWS-RUNTIME-HOTFIX@2026-09-07T07:14:32.630194+00:00",
+  "packageId": "WP-RU067-WINDOWS-RUNTIME-HOTFIX",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-067",
+  "releaseUnitHash": "sha256:8be7244fb3b868ffc8478de4ed5342cf139c698cec637aad836755da3de27683"
+}

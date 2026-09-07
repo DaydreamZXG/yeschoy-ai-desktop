@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU053-AS-build",
+  "assertion": "The final source passes production renderer checks plus macOS Apple-Silicon and Windows x64/ARM compile checks without building or publishing a Yecai package or updater artifact.",
+  "testSelector": "tests/work_packages/ru053/test_acceptance.py::test_cross_platform_build_inputs",
+  "acceptanceCommandId": "ru053-build",
+  "runId": "RU-053/WP-RU053-DOMESTIC-DOWNLOAD-ENABLEMENT@2026-09-06T11:02:10.683681+00:00",
+  "packageId": "WP-RU053-DOMESTIC-DOWNLOAD-ENABLEMENT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru053/test_acceptance.py::test_cross_platform_build_inputs",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:f15cbe16446579b931f713761d0404b6dd19662e5f30f50e497fb76fd6488626",
+    "machineReportSha256": "sha256:ea1bb5471aefff78d1290beee22e92ac2304342f83cde0dd939497734cb088ab",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:30dbe751f146e5fb1a51fae65cd0daa59ffdea57a6857889e6a5a1b9601283dd",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:318df446fb01f5135cd48c53ab8b1691355ddc10ee24bd44a27ea561b74f1f09",
+  "releaseUnitId": "RU-053",
+  "releaseUnitHash": "sha256:305f3db2338290220d7d0171d83f24f55c819222bb1b37cbc6f6f87663022ab7"
+}

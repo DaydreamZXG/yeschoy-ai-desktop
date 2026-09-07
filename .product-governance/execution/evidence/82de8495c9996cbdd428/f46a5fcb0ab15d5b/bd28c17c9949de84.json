@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU065-AS-settings-account-preserved",
+  "assertion": "Read-only source evidence confirms the stale Settings account boundary is absent and the application account route remains present.",
+  "testSelector": "tests/work_packages/ru063/test_acceptance.py::test_settings_removes_stale_account_unavailable_boundary",
+  "acceptanceCommandId": "ru065-settings-boundary",
+  "runId": "RU-065/WP-RU065-READONLY-SETTINGS-VERIFICATION@2026-09-07T05:21:36.950801+00:00",
+  "packageId": "WP-RU065-READONLY-SETTINGS-VERIFICATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru063/test_acceptance.py::test_settings_removes_stale_account_unavailable_boundary",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:5a481ca1da66ff3916d03f01617ff3ad9a97e51990887a246cd6becb9e4187ca",
+    "machineReportSha256": "sha256:cbcccd5fbecf67c8b45198c85c9171030a2030fed0a14949d75494f48927dac8",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:e15755bcf6e6bdcee027db0547e6d176c052765a0fcb6b781c12aa7900a1d23d",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:331c93201e6085da0fb167f090e9942a5918e78b1621ecdf679a8c5757d5feb8",
+  "releaseUnitId": "RU-065",
+  "releaseUnitHash": "sha256:183850ae04f956c50434c5c176a7565cb3250cc18f20202c57cfc3bd56ff58eb"
+}

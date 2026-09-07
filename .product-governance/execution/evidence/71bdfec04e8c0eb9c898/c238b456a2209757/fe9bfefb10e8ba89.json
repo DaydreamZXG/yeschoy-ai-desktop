@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU056-AS-native",
+  "assertion": "Native fixtures prove all seven adapters complete from transactional readback without invoking real-model verification, desktop apps require explicit normal-quit consent and never force terminate, helper runtimes are bounded, and failure restores and reopens safely.",
+  "testSelector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_native",
+  "acceptanceCommandId": "ru056-native",
+  "runId": "RU-056/WP-RU056-UNIFIED-ACTIVATION@2026-09-06T15:54:09.651373+00:00",
+  "packageId": "WP-RU056-UNIFIED-ACTIVATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-056",
+  "releaseUnitHash": "sha256:ac6053e151c9949c81631663e53399e0801a5fa4f8056d8fe3891d7b0faa937c"
+}

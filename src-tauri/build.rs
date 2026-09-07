@@ -1,4 +1,17 @@
 fn main() {
+    let authorization_page_origin = std::env::var("YESCHOY_AUTHORIZATION_PAGE_ORIGIN")
+        .unwrap_or_else(|_| "https://yeschoy.com".to_owned());
+    if !matches!(
+        authorization_page_origin.as_str(),
+        "https://yeschoy.com" | "https://ai.yeschoy.io"
+    ) {
+        panic!(
+            "YESCHOY_AUTHORIZATION_PAGE_ORIGIN must be exactly https://yeschoy.com or https://ai.yeschoy.io"
+        );
+    }
+    println!("cargo:rerun-if-env-changed=YESCHOY_AUTHORIZATION_PAGE_ORIGIN");
+    println!("cargo:rustc-env=YESCHOY_AUTHORIZATION_PAGE_ORIGIN={authorization_page_origin}");
+
     tauri_build::build();
 
     // Windows: Embed Common Controls v6 manifest for test binaries

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU053-AS-native",
+  "assertion": "The native client accepts only schema-2 closed compiled artifacts and both verification states still traverse unchanged local hash, identity, publisher, signature and operating-system trust checks; malformed or unavailable mirror data falls back to official sources without credentials.",
+  "testSelector": "tests/work_packages/ru053/test_acceptance.py::test_client_catalog_and_native_trust",
+  "acceptanceCommandId": "ru053-native",
+  "runId": "RU-053/WP-RU053-DOMESTIC-DOWNLOAD-ENABLEMENT@2026-09-06T11:02:10.683681+00:00",
+  "packageId": "WP-RU053-DOMESTIC-DOWNLOAD-ENABLEMENT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru053/test_acceptance.py::test_client_catalog_and_native_trust",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:19b9bd1d8acce2dd6248e515c5d4964d1306d91d79cebc85dee9db4c0eb21fa8",
+    "machineReportSha256": "sha256:1c8346465b55045ae1b04337f3d9be010a4c0bbde77c9db0c4596fc0cc73b7e0",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:956535635ab8e34d365c4830aecc54b595f87dc012669af0d6beadd7ffcdcce8",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:76b4a2176eb86cf8fcf116519584911ba50ed2bfd7b04759dc225dc065b73083",
+  "releaseUnitId": "RU-053",
+  "releaseUnitHash": "sha256:305f3db2338290220d7d0171d83f24f55c819222bb1b37cbc6f6f87663022ab7"
+}

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU071-AS-recovery",
+  "assertion": "Installation failure after drain attempts current-app relaunch, and operators can atomically disable channel authority without deleting immutable artifacts or touching third-party downloads.",
+  "testSelector": "tests/work_packages/ru071/test_acceptance.py::test_install_failure_relaunches_current_app_and_channel_can_be_disabled",
+  "acceptanceCommandId": "ru071-recovery",
+  "runId": "RU-071/WP-RU071-SELF-UPDATE-CLOSURE@2026-09-07T08:25:42.735975+00:00",
+  "packageId": "WP-RU071-SELF-UPDATE-CLOSURE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru071/test_acceptance.py::test_install_failure_relaunches_current_app_and_channel_can_be_disabled",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:8f5cbe60e9862fa57f1e50fdce6cf38184ee7c4aba4009bc735d85e9a45f0b20",
+    "machineReportSha256": "sha256:52d61fc8707bd4624f81b5c0a3f4a4bb24442a8ceb6589b668b6ca3a408bed8e",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:5162c127122a307d0c9c60aef5b7d846aacce0aac46bc9a88d19c12d8151a7e8",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:6a3c35b1f583921bf389738eab54581f98f74a94e97a286de47ab66bc71a8e76",
+  "releaseUnitId": "RU-071",
+  "releaseUnitHash": "sha256:0cab89775da79ef995e247b3b70aa4f79c94b05dc84c274dec90f245bf4dbabc"
+}

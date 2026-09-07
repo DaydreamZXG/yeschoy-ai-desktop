@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-055/WP-RU055-RETRY-CLAUDE-ROUTES@2026-09-06T13:11:58.278507+00:00",
+  "packageId": "WP-RU055-RETRY-CLAUDE-ROUTES",
+  "baselineCommit": "df10e7a0516c4125866daff5cf91b76178c89d02",
+  "baselineTreeHash": "sha256:c5276e4cb31627c8921653a7c94105810c5bdabde501772871152b43215ed007",
+  "testedTreeHash": "sha256:c5276e4cb31627c8921653a7c94105810c5bdabde501772871152b43215ed007",
+  "testedSnapshotPath": "execution/tested-snapshots/0201928f4bf232ca.b71d57d4d1b0f3e0268f.json",
+  "testedSnapshotSha256": "sha256:859dce5d3af701375aeba66f02ce065cf6f31d1ffa45f12ec18a38af56bbc687",
+  "sourceDiff": {},
+  "ownedResultHashes": {},
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      "src-tauri/src/connection_recovery.rs",
+      "src-tauri/src/tool_activation.rs",
+      "src-tauri/src/tool_model_profile.rs",
+      "src-tauri/src/tool_adapters/claude_desktop.rs",
+      "src-tauri/src/tool_adapters/claude_code.rs",
+      "src-tauri/src/claude_bridge.rs",
+      "src/configuration/ConfigurationPreviewView.tsx",
+      "src/configuration/ConfigurationPreviewView.test.tsx",
+      "src/configuration/connections.test.tsx",
+      "tests/work_packages/ru054/**",
+      "outputs/野菜API-接入重试与Claude路由修复.md"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      "outputs/野菜API-接入重试与Claude路由修复.md": "sha256:0370a125d45d802ff4ebd81203b1f2f7dd05b76376e370352e30f03522e2c269",
+      "src-tauri/src/claude_bridge.rs": "sha256:2dc0abd5e0e1b71c0a7a88a2a83081288d0c6e3d835bab707bbdacbe77937c80",
+      "src-tauri/src/connection_recovery.rs": "sha256:5d1ef55280e101edd6e3c41b2e21299bdb9fca8cf395ee832171625234f56f04",
+      "src-tauri/src/tool_activation.rs": "sha256:8890ca1948b979952d4c076153ffee3757f007da5b8f4b514bc876547fd064f6",
+      "src-tauri/src/tool_adapters/claude_code.rs": "sha256:caa8c7a5af2b66c991a60f53440e1bd00658d7d7ee4801de5f65fe6301a6d722",
+      "src-tauri/src/tool_adapters/claude_desktop.rs": "sha256:ba13a507184d54b8f8ade989a2fb1b54f1db538823e7589993ed8783043334b6",
+      "src-tauri/src/tool_model_profile.rs": "sha256:26cbc2cdf9336b3cd18a3f8edfcbd654894c226d0a3ab48f243993c14d8e8b54",
+      "src/configuration/ConfigurationPreviewView.test.tsx": "sha256:9407745590c78869b6375a4bdae6168c294f197494ff8a301e3f855d9bb8e16a",
+      "src/configuration/ConfigurationPreviewView.tsx": "sha256:1eda6e57719619364d177460f170271ac610ed3ede401e70928c76f15267fd7f",
+      "src/configuration/connections.test.tsx": "sha256:a3218acc8ab7a14434b2547b27f321ebbc79f80d248572c362bf8bc40f3e9654",
+      "tests/work_packages/ru054/CONTRACT.md": "sha256:93ff54d9c0a3962e623ab639f6977961a463fbb21d69bf1d22e076dfcab4f052",
+      "tests/work_packages/ru054/test_acceptance.py": "sha256:6c0ae3c16a52403cc7eb592a9c71bcaa82756ccb25178af16ad6a3595acf99b8"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:432122a85fa9e114e9d4f7e07d9ed26ecf1bbb5f82d3e6ba120f18487977a6c6",
+  "sourceScopeFailures": [],
+  "integrityFailures": [
+    "non-verification work package produced no source change"
+  ],
+  "assignedTo": "root",
+  "startedAt": "2026-09-06T13:11:58.278507+00:00",
+  "finishedAt": "2026-09-06T13:12:10.263466+00:00",
+  "passed": false,
+  "commands": [],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU054-AS-native",
+      "path": "execution/evidence/b71d57d4d1b0f3e0268f/0201928f4bf232ca/cf0c5e3d92fdb4fc.json",
+      "sha256": "sha256:00b0d09be687dcceff94fb1125afd8e9652ca416d5a45c3dacaf558403ea0415"
+    },
+    {
+      "scenarioId": "RU054-AS-renderer",
+      "path": "execution/evidence/b71d57d4d1b0f3e0268f/0201928f4bf232ca/fb46abf34ff8d12f.json",
+      "sha256": "sha256:583e7cf81aead823adb183f59dae8707cd9a6877050d020ac591b9580f22bef6"
+    },
+    {
+      "scenarioId": "RU054-AS-build",
+      "path": "execution/evidence/b71d57d4d1b0f3e0268f/0201928f4bf232ca/4c6fb87bd6dc9131.json",
+      "sha256": "sha256:1cd1660cdba3023e2f7e1068c379fc62a36414012d79a93174374a939b3a7a82"
+    }
+  ],
+  "scenarioEvidenceFailures": [
+    "RU054-AS-native: registered runner proof is invalid",
+    "RU054-AS-renderer: registered runner proof is invalid",
+    "RU054-AS-build: registered runner proof is invalid"
+  ],
+  "releaseUnitId": "RU-055",
+  "releaseUnitHash": "sha256:26f121d96d679e8168cc6c3ea4280fdd6c8d5f218998d20c8725072f213140d5"
+}

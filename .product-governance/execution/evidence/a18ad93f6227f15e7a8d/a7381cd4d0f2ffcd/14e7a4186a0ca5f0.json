@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU071-AS-replay",
+  "assertion": "Duplicate install attempts cannot download twice, install twice or request shutdown twice.",
+  "testSelector": "tests/work_packages/ru071/test_acceptance.py::test_duplicate_install_is_serialized_without_duplicate_shutdown",
+  "acceptanceCommandId": "ru071-replay",
+  "runId": "RU-071/WP-RU071-SELF-UPDATE-CLOSURE@2026-09-07T09:35:30.314855+00:00",
+  "packageId": "WP-RU071-SELF-UPDATE-CLOSURE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-071",
+  "releaseUnitHash": "sha256:0cab89775da79ef995e247b3b70aa4f79c94b05dc84c274dec90f245bf4dbabc"
+}

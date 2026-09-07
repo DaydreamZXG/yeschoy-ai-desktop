@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU071-AS-failure",
+  "assertion": "No-update and check, manifest, signature or network failures remain truthful closed updater states and leave every unrelated domain interactive.",
+  "testSelector": "tests/work_packages/ru071/test_acceptance.py::test_failure_is_closed_and_does_not_block_other_domains",
+  "acceptanceCommandId": "ru071-failure",
+  "runId": "RU-071/WP-RU071-SELF-UPDATE-CLOSURE@2026-09-07T08:25:42.735975+00:00",
+  "packageId": "WP-RU071-SELF-UPDATE-CLOSURE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru071/test_acceptance.py::test_failure_is_closed_and_does_not_block_other_domains",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:09d05cccf821fa1269107c4e23f9db541d8b9dc48d3dda49c1539b35f79f7f09",
+    "machineReportSha256": "sha256:c1a31d2bddf71270df8a5a6afeaf05bdff6f371e3b110d85b1f30de961a7256c",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:583ae02912c42bfa38d0f35d2e88a24ee7dd8c9759ef06252865fc7e7eca7b73",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:c9e5ecd6870ebab509137d8366d395a3a4e790f2c2e4a50763d1129e79c27284",
+  "releaseUnitId": "RU-071",
+  "releaseUnitHash": "sha256:0cab89775da79ef995e247b3b70aa4f79c94b05dc84c274dec90f245bf4dbabc"
+}

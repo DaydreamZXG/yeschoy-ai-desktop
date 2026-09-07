@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU054-AS-renderer",
+  "assertion": "Full renderer tests prove failed automatic recovery has truthful plain-language fallback instead of requiring restore as the normal retry path.",
+  "testSelector": "tests/work_packages/ru054/test_acceptance.py::test_renderer_retry_copy",
+  "acceptanceCommandId": "ru054-renderer",
+  "runId": "RU-055/WP-RU055-RETRY-CLAUDE-ROUTES@2026-09-06T13:13:13.302198+00:00",
+  "packageId": "WP-RU055-RETRY-CLAUDE-ROUTES",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru054/test_acceptance.py::test_renderer_retry_copy",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:548a60f98cc4fd055ed9ae588c936264ba1835b16ce5fff7764b86dd999eb5f0",
+    "machineReportSha256": "sha256:4e5930c3e54ce45c376ebe977c3fedb609b5ce87b198863c0b25637f5b28cd75",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:e5a813e03a925e8aa5ed5b4df63def46e86ca16b05a69c5bba1c090fc8351107",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:3c334baa538a880dd5119c7b79e1899efa600445d782b85f4c0d4f779c963dc1",
+  "releaseUnitId": "RU-055",
+  "releaseUnitHash": "sha256:26f121d96d679e8168cc6c3ea4280fdd6c8d5f218998d20c8725072f213140d5"
+}

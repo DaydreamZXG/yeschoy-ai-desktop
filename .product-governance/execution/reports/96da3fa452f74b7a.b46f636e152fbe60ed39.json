@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-048/WP-RU048-APP-INSTALLATION@2026-09-06T06:34:43.845879+00:00",
+  "packageId": "WP-RU048-APP-INSTALLATION",
+  "baselineCommit": "df10e7a0516c4125866daff5cf91b76178c89d02",
+  "baselineTreeHash": "sha256:f0aa48b9a18f45ffbf9893961d21d334bd5f41998f9be971181699c2c0b4a0ea",
+  "testedTreeHash": "sha256:d26bb69a21bd269c56c82ade671c47aff594339783c821da1edf199953582518",
+  "testedSnapshotPath": "execution/tested-snapshots/96da3fa452f74b7a.b46f636e152fbe60ed39.json",
+  "testedSnapshotSha256": "sha256:03f93c82a7d01b1bd9564b9798a3f008f1f78832e24b6381e4785649a207c4c5",
+  "sourceDiff": {
+    ".product-governance/decisions.json": "sha256:06dcb0cff0c6c0375f6cabc9a6ca911f6dd99472f37cf028413a849a126935c7",
+    ".product-governance/evidence-ledger.json": "sha256:649d99b6dbd3f46be8ca467a887ef13257aa353933cb3cdbac85be9fbf5ce1d7",
+    ".product-governance/release-units.json": "sha256:e4e9e7d67d0d481f8057069202b1c6ffa55132c3ceb3f2b423fafdbaf6c8aa74",
+    ".product-governance/requirements.json": "sha256:9a1c4152e957c78ca2e68a605d3f1ab5be69b9017a3bda00090a16ee1432ba4d",
+    ".product-governance/work-packages.json": "sha256:ce13296372110da11e7903e916de6a2aa86e51f9e5301f9f8c90ce1417ff4558",
+    "src-tauri/src/app_installation/cache.rs": "sha256:7ff51dd8a3aa6a3510e419103839630100eed11baa250529062e0eabb2d7013c",
+    "src-tauri/src/app_installation/catalog.rs": "sha256:2a979dcbfe3a3dcb0f29a074939fd3e1173a6a6835e06e54505f47a250c8a85f",
+    "src-tauri/src/app_installation/download.rs": "sha256:f960d6a31dc76ff1224bf5126aedd22c5714007e61d1aab0a0837bb3f46c3cf2",
+    "src-tauri/src/app_installation/mod.rs": "sha256:799f334a434b17f6204476911a07a2c7220eb7bda0547119913a3c51544fa84d",
+    "src-tauri/src/app_installation/platform.rs": "sha256:8a17c572663dbef1f34bc533bfd818bbb5794b680f39fd0dd6c5886b0b8447e8",
+    "src-tauri/src/app_installation/tests.rs": "sha256:bf45498c26bda3dfdeb3c4f9b6cfc501769c95a442c734b633aded2b415e0b98",
+    "src-tauri/src/app_installation/windows.ps1": "sha256:f1b6e85dc987849dbe41193cf4118a900667e789c3c805198c536fa3f8222091",
+    "src-tauri/src/lib.rs": "sha256:17b46a496b1efa29cc439a0486c7cc548954c18f53a0b3982658240b804e55e0",
+    "src-tauri/src/tool_activation.rs": "sha256:5cb4e4cf4329e103dc0e7ff45f4bce83385a95a71cdaecea54d2aa38d2856001",
+    "src/App.tsx": "sha256:4293c87ed44aad5bf1f079f6a94ed3b870f11a2c170fc1dfaefaf34e358b33a2",
+    "src/configuration/ConfigurationPreviewView.tsx": "sha256:6ce8a4223e06b9359db0c46ff3fd368c0c7d51b4325d3bc8b167faab3fd3c52e",
+    "src/configuration/activation.ts": "sha256:259639f2e8648f100f6bf35de26b38a844fed466e296a8a4f9858411deb0bb32",
+    "src/installation/InstallationPanel.tsx": "sha256:9e33d54aec66ea130803ac6bce6fc76b627773f350c5e13356268ad481d84198",
+    "src/installation/InstallationProvider.tsx": "sha256:51bd75c8375c63be8ce5bed9cf40dbf99e5e8524a69154f2bf8a859caf4e53da",
+    "src/installation/api.ts": "sha256:621c389b62edd9f64aeed29e20114691add0762103cd5942d14a0d3cd508be8c",
+    "src/installation/installation.css": "sha256:8720cb5ca5602518b402f82f37caa666eb4e8768598f65cb8e71aee324825e69",
+    "src/installation/installation.test.tsx": "sha256:38f582037893e93626888325e5dfa4f52a5e28a4e604f6446b8d85b8004f7fac",
+    "src/workbench/AppLibraryView.tsx": "sha256:ffc81dc6b91d0cf93635bf085ef58ae0f6e3d58cb2b421d3822503c0dfbe337f",
+    "tests/work_packages/ru046/test_acceptance.py": "sha256:3910be54fbb0c8f9d92d0badfcbc6a6dd7568f16a55139482cf70f0b68124679"
+  },
+  "ownedResultHashes": {
+    ".product-governance/decisions.json": "sha256:06dcb0cff0c6c0375f6cabc9a6ca911f6dd99472f37cf028413a849a126935c7",
+    ".product-governance/evidence-ledger.json": "sha256:649d99b6dbd3f46be8ca467a887ef13257aa353933cb3cdbac85be9fbf5ce1d7",
+    ".product-governance/release-units.json": "sha256:e4e9e7d67d0d481f8057069202b1c6ffa55132c3ceb3f2b423fafdbaf6c8aa74",
+    ".product-governance/requirements.json": "sha256:9a1c4152e957c78ca2e68a605d3f1ab5be69b9017a3bda00090a16ee1432ba4d",
+    ".product-governance/work-packages.json": "sha256:ce13296372110da11e7903e916de6a2aa86e51f9e5301f9f8c90ce1417ff4558",
+    "src-tauri/src/app_installation/cache.rs": "sha256:7ff51dd8a3aa6a3510e419103839630100eed11baa250529062e0eabb2d7013c",
+    "src-tauri/src/app_installation/catalog.rs": "sha256:2a979dcbfe3a3dcb0f29a074939fd3e1173a6a6835e06e54505f47a250c8a85f",
+    "src-tauri/src/app_installation/download.rs": "sha256:f960d6a31dc76ff1224bf5126aedd22c5714007e61d1aab0a0837bb3f46c3cf2",
+    "src-tauri/src/app_installation/mod.rs": "sha256:799f334a434b17f6204476911a07a2c7220eb7bda0547119913a3c51544fa84d",
+    "src-tauri/src/app_installation/platform.rs": "sha256:8a17c572663dbef1f34bc533bfd818bbb5794b680f39fd0dd6c5886b0b8447e8",
+    "src-tauri/src/app_installation/tests.rs": "sha256:bf45498c26bda3dfdeb3c4f9b6cfc501769c95a442c734b633aded2b415e0b98",
+    "src-tauri/src/app_installation/windows.ps1": "sha256:f1b6e85dc987849dbe41193cf4118a900667e789c3c805198c536fa3f8222091",
+    "src-tauri/src/lib.rs": "sha256:17b46a496b1efa29cc439a0486c7cc548954c18f53a0b3982658240b804e55e0",
+    "src-tauri/src/tool_activation.rs": "sha256:5cb4e4cf4329e103dc0e7ff45f4bce83385a95a71cdaecea54d2aa38d2856001",
+    "src/App.tsx": "sha256:4293c87ed44aad5bf1f079f6a94ed3b870f11a2c170fc1dfaefaf34e358b33a2",
+    "src/configuration/ConfigurationPreviewView.tsx": "sha256:6ce8a4223e06b9359db0c46ff3fd368c0c7d51b4325d3bc8b167faab3fd3c52e",
+    "src/configuration/activation.ts": "sha256:259639f2e8648f100f6bf35de26b38a844fed466e296a8a4f9858411deb0bb32",
+    "src/installation/InstallationPanel.tsx": "sha256:9e33d54aec66ea130803ac6bce6fc76b627773f350c5e13356268ad481d84198",
+    "src/installation/InstallationProvider.tsx": "sha256:51bd75c8375c63be8ce5bed9cf40dbf99e5e8524a69154f2bf8a859caf4e53da",
+    "src/installation/api.ts": "sha256:621c389b62edd9f64aeed29e20114691add0762103cd5942d14a0d3cd508be8c",
+    "src/installation/installation.css": "sha256:8720cb5ca5602518b402f82f37caa666eb4e8768598f65cb8e71aee324825e69",
+    "src/installation/installation.test.tsx": "sha256:38f582037893e93626888325e5dfa4f52a5e28a4e604f6446b8d85b8004f7fac",
+    "src/workbench/AppLibraryView.tsx": "sha256:ffc81dc6b91d0cf93635bf085ef58ae0f6e3d58cb2b421d3822503c0dfbe337f",
+    "tests/work_packages/ru046/test_acceptance.py": "sha256:3910be54fbb0c8f9d92d0badfcbc6a6dd7568f16a55139482cf70f0b68124679"
+  },
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      "src/installation/**",
+      "src/App.tsx",
+      "src/workbench/AppLibraryView.tsx",
+      "src/configuration/ConfigurationPreviewView.tsx",
+      "src-tauri/src/lib.rs",
+      "src-tauri/src/app_installation/**",
+      "tests/work_packages/ru046/**",
+      "outputs/野菜API-一键安装验收.md",
+      "src-tauri/src/tool_activation.rs",
+      "src/configuration/activation.ts"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      "src-tauri/src/app_installation/cache.rs": "sha256:7ff51dd8a3aa6a3510e419103839630100eed11baa250529062e0eabb2d7013c",
+      "src-tauri/src/app_installation/catalog.rs": "sha256:2a979dcbfe3a3dcb0f29a074939fd3e1173a6a6835e06e54505f47a250c8a85f",
+      "src-tauri/src/app_installation/download.rs": "sha256:f960d6a31dc76ff1224bf5126aedd22c5714007e61d1aab0a0837bb3f46c3cf2",
+      "src-tauri/src/app_installation/mod.rs": "sha256:799f334a434b17f6204476911a07a2c7220eb7bda0547119913a3c51544fa84d",
+      "src-tauri/src/app_installation/platform.rs": "sha256:8a17c572663dbef1f34bc533bfd818bbb5794b680f39fd0dd6c5886b0b8447e8",
+      "src-tauri/src/app_installation/tests.rs": "sha256:bf45498c26bda3dfdeb3c4f9b6cfc501769c95a442c734b633aded2b415e0b98",
+      "src-tauri/src/app_installation/windows.ps1": "sha256:f1b6e85dc987849dbe41193cf4118a900667e789c3c805198c536fa3f8222091",
+      "src-tauri/src/lib.rs": "sha256:17b46a496b1efa29cc439a0486c7cc548954c18f53a0b3982658240b804e55e0",
+      "src-tauri/src/tool_activation.rs": "sha256:5cb4e4cf4329e103dc0e7ff45f4bce83385a95a71cdaecea54d2aa38d2856001",
+      "src/App.tsx": "sha256:4293c87ed44aad5bf1f079f6a94ed3b870f11a2c170fc1dfaefaf34e358b33a2",
+      "src/configuration/ConfigurationPreviewView.tsx": "sha256:6ce8a4223e06b9359db0c46ff3fd368c0c7d51b4325d3bc8b167faab3fd3c52e",
+      "src/configuration/activation.ts": "sha256:259639f2e8648f100f6bf35de26b38a844fed466e296a8a4f9858411deb0bb32",
+      "src/installation/InstallationPanel.tsx": "sha256:9e33d54aec66ea130803ac6bce6fc76b627773f350c5e13356268ad481d84198",
+      "src/installation/InstallationProvider.tsx": "sha256:51bd75c8375c63be8ce5bed9cf40dbf99e5e8524a69154f2bf8a859caf4e53da",
+      "src/installation/api.ts": "sha256:621c389b62edd9f64aeed29e20114691add0762103cd5942d14a0d3cd508be8c",
+      "src/installation/installation.css": "sha256:8720cb5ca5602518b402f82f37caa666eb4e8768598f65cb8e71aee324825e69",
+      "src/installation/installation.test.tsx": "sha256:38f582037893e93626888325e5dfa4f52a5e28a4e604f6446b8d85b8004f7fac",
+      "src/workbench/AppLibraryView.tsx": "sha256:ffc81dc6b91d0cf93635bf085ef58ae0f6e3d58cb2b421d3822503c0dfbe337f",
+      "tests/work_packages/ru046/test_acceptance.py": "sha256:3910be54fbb0c8f9d92d0badfcbc6a6dd7568f16a55139482cf70f0b68124679"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:9d3e50f3842659383d26b15bfb81370d6ef22c81f7e993e278bd69398c218c93",
+  "sourceScopeFailures": [
+    "changed forbidden path: .product-governance/decisions.json",
+    "changed forbidden path: .product-governance/evidence-ledger.json",
+    "changed forbidden path: .product-governance/release-units.json",
+    "changed forbidden path: .product-governance/requirements.json",
+    "changed forbidden path: .product-governance/work-packages.json"
+  ],
+  "integrityFailures": [],
+  "assignedTo": "root",
+  "startedAt": "2026-09-06T06:34:43.845879+00:00",
+  "finishedAt": "2026-09-06T07:05:30.216538+00:00",
+  "passed": false,
+  "commands": [],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU046-AS-native",
+      "path": "execution/evidence/b46f636e152fbe60ed39/96da3fa452f74b7a/14094882b40fc3f1.json",
+      "sha256": "sha256:16982c19470b00cfef027722ed17f494b3290c968254113b17b98784661dc692"
+    },
+    {
+      "scenarioId": "RU046-AS-renderer",
+      "path": "execution/evidence/b46f636e152fbe60ed39/96da3fa452f74b7a/c64542f1a4863638.json",
+      "sha256": "sha256:a856f365a3073ca39518e5f77aea26c564e5936dd9788b5b8040ecdf5f2cb107"
+    },
+    {
+      "scenarioId": "RU046-AS-build",
+      "path": "execution/evidence/b46f636e152fbe60ed39/96da3fa452f74b7a/f0a00ea6a83cadc6.json",
+      "sha256": "sha256:5ceaa4d865ec4c209acc4eafc270d9bae5cd8d1d88c703729db30fcb26953bbe"
+    }
+  ],
+  "scenarioEvidenceFailures": [
+    "RU046-AS-native: registered runner proof is invalid",
+    "RU046-AS-renderer: registered runner proof is invalid",
+    "RU046-AS-build: registered runner proof is invalid"
+  ],
+  "releaseUnitId": "RU-048",
+  "releaseUnitHash": "sha256:45ae7ec46413ca6204963344472ebaf5cf3a07cad2dbca94261a7f97a471988d"
+}

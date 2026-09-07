@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU045-AS-sources_and_contract",
+  "assertion": "Source identity, HTTPS/host/private-address and configuration policy, hardened service and closed status contract.",
+  "testSelector": "tests/work_packages/ru045/test_acceptance.py::test_sources_and_contract",
+  "acceptanceCommandId": "ru045-sources_and_contract",
+  "runId": "RU-045/WP-RU045-VENDOR-SYNC@2026-09-06T05:32:39.968015+00:00",
+  "packageId": "WP-RU045-VENDOR-SYNC",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru045/test_acceptance.py::test_sources_and_contract",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:cc7390ee23e4b1f2b81f7b4c00732e957d100c798789cab9e5cf17c5f71ed587",
+    "machineReportSha256": "sha256:0eb206dfc69b289170d5a2ac8a014c63212fb9809f800f491429bf408c609227",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:168ab17e35b07a0f520389842d03c37b1991088ae8449acf98fe6a12f5efd251",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:d9b72eb9da5dd495ffd548e2362fc769487ab608988ad18bccf932a869239318",
+  "releaseUnitId": "RU-045",
+  "releaseUnitHash": "sha256:22aef0d114e2943ebe2bcc21a86ece3e4f0d9a2a5a7cae817f4ce9f1e91ce370"
+}

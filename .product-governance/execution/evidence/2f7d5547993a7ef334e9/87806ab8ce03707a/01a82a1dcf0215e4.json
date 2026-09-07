@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU068-AS-independent-operations",
+  "assertion": "Background refresh retains the last usable projection and application opening cannot globally erase or disable the independent connection-update journey.",
+  "testSelector": "src/configuration/connections.test.tsx",
+  "acceptanceCommandId": "ru068-connection-controller",
+  "runId": "RU-068/WP-RU068-CONNECTION-UX-RECOVERY@2026-09-07T07:45:38.483852+00:00",
+  "packageId": "WP-RU068-CONNECTION-UX-RECOVERY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:8365f5812d34e89fc73ff123e6102e3982819f02268ae07ea79d218238bc1da8",
+  "releaseUnitId": "RU-068",
+  "releaseUnitHash": "sha256:085c67d53ccd9d19623506eada57b39272dd511fd6a411edc6acd40243cc6171"
+}

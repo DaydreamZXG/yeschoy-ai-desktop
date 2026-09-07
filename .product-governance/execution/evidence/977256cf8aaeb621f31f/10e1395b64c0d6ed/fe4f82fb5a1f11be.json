@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU070-AS-final-cascade",
+  "assertion": "The final production CSS cascade renders a full-width action deck with filled Open and enabled-looking accent-outline Update connection settings actions.",
+  "testSelector": "tests/work_packages/ru070/test_acceptance.py::test_configured_action_hierarchy_survives_the_final_css_cascade",
+  "acceptanceCommandId": "ru070-final-css-cascade",
+  "runId": "RU-070/WP-RU070-CONFIGURED-ACTION-CASCADE@2026-09-07T07:57:05.311100+00:00",
+  "packageId": "WP-RU070-CONFIGURED-ACTION-CASCADE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru070/test_acceptance.py::test_configured_action_hierarchy_survives_the_final_css_cascade",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:ff9e76d9e9c1f163aec15a1914dd9175ad26d6d0e1cd21920aca46e7fc3a331e",
+    "machineReportSha256": "sha256:9020e60abac73bfa24c73c28343d0cece72c9e348b67be17ad57bdfa1418645f",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:d462f5b419886796f221872c40c5147a4c5eb2ee9857258929fd7ce44852bd10",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:1a89d1043c6b05189201b4374d52bcdbde9dadee942a5771d107fa4baf9886ce",
+  "releaseUnitId": "RU-070",
+  "releaseUnitHash": "sha256:0bbb36225bce95e1dd1f2a2e330f40d17b18bbf07ff96abd3ac4af809486fb7f"
+}

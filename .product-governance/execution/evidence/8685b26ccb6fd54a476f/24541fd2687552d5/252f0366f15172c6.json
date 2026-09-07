@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU052-AS-build",
+  "assertion": "Execute frontend production build/typecheck and macOS ARM plus Windows x64/ARM compilation without package/version/release changes.",
+  "testSelector": "tests/work_packages/ru052/test_acceptance.py::test_installation_build",
+  "acceptanceCommandId": "ru052-build",
+  "runId": "RU-052/WP-RU052-DOWNLOAD-COMPLETION@2026-09-06T09:41:11.380253+00:00",
+  "packageId": "WP-RU052-DOWNLOAD-COMPLETION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru052/test_acceptance.py::test_installation_build",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:6b27e22eb8029acb05358559a196d4a2675110a3fec040e6a7454ed42b46f913",
+    "machineReportSha256": "sha256:fec727de844e32fad9e47150a2f11200be4e08763e562c993d5a766d75254372",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:0cb653b4674cfbca66b0b32a977edeb48c436e2d2202486ad43a791cd5b7d021",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:e63580305fcfed3461c25dda59ef5f2f7925eee3751b0d6ca89a0902ee91895c",
+  "releaseUnitId": "RU-052",
+  "releaseUnitHash": "sha256:d51f11bb6da28360782d5b6c772a0f81048ec0136b9d22a6eecf405bbefaaf05"
+}

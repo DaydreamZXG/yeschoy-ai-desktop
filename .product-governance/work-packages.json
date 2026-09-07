@@ -8600,6 +8600,352 @@
         "Implementation would modify NewAPI, billing, account credentials, user tool configurations or third-party vendor binaries."
       ],
       "status": "planned"
+    },
+    {
+      "id": "WP-RU072-BRANDED-AUTHORIZATION-ORIGIN",
+      "wave": "producer",
+      "owner": "account",
+      "riskClass": "high",
+      "objective": "Add a closed compile-time authorization-page origin for the future friend build while preserving the existing Yeschoy device authorization, token and application-integration behavior.",
+      "deliverables": [
+        "Build-time exact HTTPS authorization-origin validation",
+        "Locally reconstructed canonical device-authorization browser URL",
+        "Unchanged default Yeschoy build behavior",
+        "Focused native and governed source-level regression evidence",
+        "Updated OAuth and product-variant boundary audit"
+      ],
+      "requirementRefs": [
+        "REQ-002",
+        "REQ-051",
+        "REQ-093"
+      ],
+      "decisionRefs": [
+        "DEC-116"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No second backend, tenant, account system, model catalog, billing implementation, route, bridge, updater or application adapter",
+        "No runtime-editable URL and no server-controlled token or API origin",
+        "No activation of the not-yet-deployed OAuth PKCE token, userinfo, revoke or bearer-resource contract",
+        "No package, installer, version bump, upload, release, DNS, server or user-configuration mutation"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src-tauri/build.rs",
+        "src-tauri/src/account_v2.rs",
+        "tests/work_packages/ru072/**",
+        "outputs/野菜API-自动更新与解耦验收.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release-assets/**",
+        "release/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/**",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/tauri.candidate.conf.json",
+        "src-tauri/src/app_update.rs",
+        "src-tauri/src/tool_activation.rs",
+        "src-tauri/src/tool_credentials.rs"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No account, credential, session, user configuration or schema migration. The default compiled origin remains https://yeschoy.com.",
+        "rollback": "Remove the build-time origin selection and return to opening the already-validated canonical Yeschoy authorization URL. Stored sessions and application configurations remain untouched."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve desktop-account-session@v5 and every current command, projection, device-code, refresh and tool-key behavior; change only the external browser page origin after canonical response validation.",
+        "supportedVersions": "Current device-authorization server contract and desktop client source. The friend origin is build-selectable but not claimed live until its authorization page is independently deployed and verified.",
+        "removalGate": "Do not activate the PKCE contract or replace device authorization until the fixed OAuth endpoints, narrow scopes, bearer resource behavior and local-bridge refresh path pass a separately frozen integration unit."
+      },
+      "inputContracts": [
+        "desktop-account-session@v5"
+      ],
+      "outputContracts": [
+        "desktop-account-session@v5"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru072-happy",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru072/test_acceptance.py::test_happy_path_uses_only_the_selected_allowlisted_page_origin",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru072-failure",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru072/test_acceptance.py::test_failure_rejects_arbitrary_or_ambiguous_origins",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru072-replay",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru072/test_acceptance.py::test_replay_reconstructs_one_canonical_url_without_carrying_remote_query_fields",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru072-stale",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru072/test_acceptance.py::test_stale_or_malicious_server_url_cannot_select_the_browser_origin",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru072-race",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru072/test_acceptance.py::test_origin_is_compile_time_and_has_no_runtime_mutation_surface",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru072-recovery",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru072/test_acceptance.py::test_default_build_recovers_to_the_existing_yeschoy_authorization_page",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU072-AS-happy",
+          "assertion": "The default and friend build variants construct the same fixed authorization path and one validated user-code parameter on their respective exact allowlisted HTTPS origins.",
+          "testSelector": "tests/work_packages/ru072/test_acceptance.py::test_happy_path_uses_only_the_selected_allowlisted_page_origin",
+          "acceptanceCommandId": "ru072-happy"
+        },
+        {
+          "id": "RU072-AS-failure",
+          "assertion": "Every non-allowlisted, non-HTTPS or structurally ambiguous authorization origin fails at build time.",
+          "testSelector": "tests/work_packages/ru072/test_acceptance.py::test_failure_rejects_arbitrary_or_ambiguous_origins",
+          "acceptanceCommandId": "ru072-failure"
+        },
+        {
+          "id": "RU072-AS-replay",
+          "assertion": "Repeated URL construction is deterministic and cannot copy remote query, fragment, credential or redirect material into the browser target.",
+          "testSelector": "tests/work_packages/ru072/test_acceptance.py::test_replay_reconstructs_one_canonical_url_without_carrying_remote_query_fields",
+          "acceptanceCommandId": "ru072-replay"
+        },
+        {
+          "id": "RU072-AS-stale",
+          "assertion": "A stale or malicious device-authorization response is rejected against the canonical Yeschoy service before the configured browser origin is consulted.",
+          "testSelector": "tests/work_packages/ru072/test_acceptance.py::test_stale_or_malicious_server_url_cannot_select_the_browser_origin",
+          "acceptanceCommandId": "ru072-stale"
+        },
+        {
+          "id": "RU072-AS-race",
+          "assertion": "Authorization-page origin is immutable within a compiled binary and cannot race with renderer, server or user-controlled runtime state.",
+          "testSelector": "tests/work_packages/ru072/test_acceptance.py::test_origin_is_compile_time_and_has_no_runtime_mutation_surface",
+          "acceptanceCommandId": "ru072-race"
+        },
+        {
+          "id": "RU072-AS-recovery",
+          "assertion": "When no friend-build override is supplied, compilation deterministically retains the existing Yeschoy authorization page and all non-page endpoints remain unchanged.",
+          "testSelector": "tests/work_packages/ru072/test_acceptance.py::test_default_build_recovers_to_the_existing_yeschoy_authorization_page",
+          "acceptanceCommandId": "ru072-recovery"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "The change requires a runtime-editable or server-returned browser origin.",
+        "Token, refresh, account, usage, model, pricing, tool-key, wallet, route, bridge, updater or application-adapter behavior must change.",
+        "The current device authorization response cannot be strictly validated before local URL reconstruction.",
+        "Focused native or governed source scenarios fail.",
+        "Completion would require package, publication, server, DNS or real user configuration mutation."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU073-PKCE-CLIENT-PREFLIGHT",
+      "wave": "producer",
+      "owner": "account",
+      "riskClass": "high",
+      "objective": "Implement the complete client-owned OAuth 2.0 PKCE protocol engine as compiled but dormant native code so server deployment is not a prerequisite for client development.",
+      "deliverables": [
+        "Random-port IPv4 loopback authorization preparation",
+        "Independent state and verifier generation with PKCE S256 derivation",
+        "Exact branded authorization URL and fixed Yeschoy token form builders",
+        "Strict non-consuming callback validation with one-use claiming",
+        "Bounded secret-safe OAuth token response parsing",
+        "Focused native and governed preflight evidence plus updated integration audit"
+      ],
+      "requirementRefs": [
+        "REQ-002",
+        "REQ-051",
+        "REQ-093",
+        "REQ-094"
+      ],
+      "decisionRefs": [
+        "DEC-116",
+        "DEC-117"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No activation of OAuth login, token refresh, logout, account projection or bearer model traffic in the current production path",
+        "No invention of billing-group selection, tool-key replacement or seven-application local-bridge bearer semantics absent from the supplied server contract",
+        "No change to the existing device authorization, stored session, account commands, model catalog, pricing, tool activation, updater or application adapters",
+        "No client secret, embedded WebView authorization, custom URL scheme, runtime-editable server origin or automatic replay of one-time credentials",
+        "No package, installer, version bump, upload, release, DNS, server or real user-state mutation"
+      ],
+      "dependsOn": [
+        "WP-RU072-BRANDED-AUTHORIZATION-ORIGIN"
+      ],
+      "allowedPaths": [
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/oauth_pkce.rs",
+        "tests/work_packages/ru073/**",
+        "outputs/野菜API-自动更新与解耦验收.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release-assets/**",
+        "release/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/**",
+        "src-tauri/build.rs",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/tauri.candidate.conf.json",
+        "src-tauri/src/account_v2.rs",
+        "src-tauri/src/app_update.rs",
+        "src-tauri/src/tool_activation.rs",
+        "src-tauri/src/tool_credentials.rs",
+        "src-tauri/src/chat_gateway.rs",
+        "src-tauri/src/claude_bridge.rs",
+        "src-tauri/src/codex_bridge.rs",
+        "src-tauri/src/tool_adapters/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No credentials, account sessions, tool keys, application settings or schemas are read or written by the dormant protocol engine.",
+        "rollback": "Remove the dormant oauth_pkce module declaration and source file. The active device authorization and every stored session remain untouched."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve desktop-account-session@v5 and all current runtime commands while adding only an uninvoked native protocol boundary matching the supplied OAuth v1.1 client contract.",
+        "supportedVersions": "Current macOS, Windows and Linux Rust targets at source/unit level. Live server compatibility remains unclaimed until a later integration unit runs against the deployed contract.",
+        "removalGate": "Do not wire the engine into account_begin_authorization_v2 or any local bridge until bootstrap capability, token/resource behavior, billing-group selection and bridge refresh semantics are frozen and integration-tested."
+      },
+      "inputContracts": [
+        "desktop-account-session@v5"
+      ],
+      "outputContracts": [
+        "desktop-account-session@v5"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru073-happy",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru073/test_acceptance.py::test_happy_path_prepares_the_complete_client_owned_pkce_boundary",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru073-failure",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru073/test_acceptance.py::test_failure_paths_reject_non_loopback_or_ambiguous_callback_input",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru073-replay",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru073/test_acceptance.py::test_replay_is_claimed_once_and_one_time_forms_have_no_retry_loop",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru073-stale",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru073/test_acceptance.py::test_stale_cancelled_and_wrong_state_requests_do_not_become_credentials",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru073-race",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru073/test_acceptance.py::test_race_controls_hold_the_bound_listener_and_atomically_claim_one_callback",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru073-recovery",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru073/test_acceptance.py::test_recovery_keeps_the_existing_device_flow_active_and_pkce_dormant",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU073-AS-happy",
+          "assertion": "The native engine holds a random-port loopback listener, generates independent state and verifier material, derives S256, and builds branded authorization plus fixed-origin token requests without a client secret.",
+          "testSelector": "tests/work_packages/ru073/test_acceptance.py::test_happy_path_prepares_the_complete_client_owned_pkce_boundary",
+          "acceptanceCommandId": "ru073-happy"
+        },
+        {
+          "id": "RU073-AS-failure",
+          "assertion": "Non-loopback redirect shapes, unsupported methods, foreign hosts, wrong paths, duplicate or mixed result parameters and malformed token responses fail closed without exposing secrets.",
+          "testSelector": "tests/work_packages/ru073/test_acceptance.py::test_failure_paths_reject_non_loopback_or_ambiguous_callback_input",
+          "acceptanceCommandId": "ru073-failure"
+        },
+        {
+          "id": "RU073-AS-replay",
+          "assertion": "A valid callback is claimed at most once and the protocol module constructs one-time exchange and rotation forms without any automatic retry or replay loop.",
+          "testSelector": "tests/work_packages/ru073/test_acceptance.py::test_replay_is_claimed_once_and_one_time_forms_have_no_retry_loop",
+          "acceptanceCommandId": "ru073-replay"
+        },
+        {
+          "id": "RU073-AS-stale",
+          "assertion": "Expired or cancelled flows cannot yield credentials, while wrong-state and unrelated requests are rejected without consuming a still-valid flow.",
+          "testSelector": "tests/work_packages/ru073/test_acceptance.py::test_stale_cancelled_and_wrong_state_requests_do_not_become_credentials",
+          "acceptanceCommandId": "ru073-stale"
+        },
+        {
+          "id": "RU073-AS-race",
+          "assertion": "The initially bound 127.0.0.1 listener remains owned throughout preparation and atomic phase transitions prevent concurrent duplicate callback claims.",
+          "testSelector": "tests/work_packages/ru073/test_acceptance.py::test_race_controls_hold_the_bound_listener_and_atomically_claim_one_callback",
+          "acceptanceCommandId": "ru073-race"
+        },
+        {
+          "id": "RU073-AS-recovery",
+          "assertion": "Removing or leaving the preflight engine unused preserves the existing device-code account and tool integration behavior with no stored-data migration.",
+          "testSelector": "tests/work_packages/ru073/test_acceptance.py::test_recovery_keeps_the_existing_device_flow_active_and_pkce_dormant",
+          "acceptanceCommandId": "ru073-recovery"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Implementation requires activating an endpoint that currently returns 404 or claiming live OAuth interoperability without a deployed server.",
+        "Implementation requires inventing a billing-group header, tool-key privilege, refresh delegation or local-bridge bearer contract absent from the supplied specification.",
+        "Existing account commands, device authorization, credential storage, tool activation, application adapters, package metadata or remote systems must change.",
+        "Native or governed happy, failure, replay, stale, race or recovery evidence fails.",
+        "Completion would require packaging, publishing, deployment or real user configuration mutation."
+      ],
+      "status": "planned"
     }
   ]
 }

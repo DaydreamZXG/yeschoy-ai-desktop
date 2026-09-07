@@ -1,0 +1,39 @@
+[Unit]
+Description=Yecai private official desktop package synchronizer
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+DynamicUser=yes
+StateDirectory=yeschoy-vendor-sync
+StateDirectoryMode=0700
+WorkingDirectory=/opt/yeschoy-vendor-sync
+Environment=PYTHONDONTWRITEBYTECODE=1
+EnvironmentFile=/opt/yeschoy-vendor-sync/budget.env
+ExecStart=/usr/bin/python3 /opt/yeschoy-vendor-sync/sync.py scan --state-dir /var/lib/yeschoy-vendor-sync --download --budget-bytes ${CACHE_BUDGET_BYTES}
+TimeoutStartSec=3h
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+InaccessiblePaths=-/srv/yeschoy-download/public -/opt/ganfu
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

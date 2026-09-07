@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU041-AS-02",
+  "assertion": "Native serialization fixture flows into renderer; success/partial/malformed/stale errors and all-seven opening/failed restoration UI are tested.",
+  "testSelector": "tests/work_packages/ru041/test_acceptance.py::test_renderer_diagnostics_opening_and_recovery",
+  "acceptanceCommandId": "ru041-renderer",
+  "runId": "RU-041/WP-RU041-CROSS-APPLICATION-REPAIR@2026-09-05T11:29:49.516800+00:00",
+  "packageId": "WP-RU041-CROSS-APPLICATION-REPAIR",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru041/test_acceptance.py::test_renderer_diagnostics_opening_and_recovery",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:84e93128e000fd7ad3d75d4139c22da7ddb62a867c961e16a3c16fda79eb2051",
+    "machineReportSha256": "sha256:5fcd1c1f1a2e103dd92470a5102d20857a2215d2261dc1659feb682d6f78786b",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:714598217e3a55a324ea11df2201b107d6b86b48df69dcf62a36bb60f3e88d6c",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:09534b7a5b00bed6936de0d1717aa2528aabd5ddcc9ceac66045fbd1e73b523c",
+  "releaseUnitId": "RU-041",
+  "releaseUnitHash": "sha256:976fd7fa0aeae2374b30c45065aea65dbde056b7bf137c790ae702d255d13891"
+}

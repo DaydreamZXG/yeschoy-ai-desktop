@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU039-AS-01",
+  "assertion": "Model projection suppresses raw descriptions without price/model/group drift; actual proxy returns valid empty/thinking startup responses without false activation evidence, preserves useful success, errors, auth and streaming; current native regressions pass.",
+  "testSelector": "tests/work_packages/ru039/test_acceptance.py::test_native_model_privacy_and_claude_probe",
+  "acceptanceCommandId": "ru039-native",
+  "runId": "RU-039/WP-RU039-MODEL-PRIVACY-CLAUDE-PROBE@2026-09-05T09:12:37.700068+00:00",
+  "packageId": "WP-RU039-MODEL-PRIVACY-CLAUDE-PROBE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru039/test_acceptance.py::test_native_model_privacy_and_claude_probe",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:d0d838d4f9fa62485f509b0c7cf0a64e3c809b0ad5930f530105e791074363f7",
+    "machineReportSha256": "sha256:be7f66acf1be6b2ee530e3cb3eb0633257332ef2acb268522f485f2a4cc796e3",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:eb59e5f594e0ed2442f67310ce0f981d8efcb4374b984fb969f6d253b5a5d012",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:92b4dbed926267222d53819d87c9b92b41cec77600e1c00c7643bb11e2a81b7c",
+  "releaseUnitId": "RU-039",
+  "releaseUnitHash": "sha256:2df72617127753cd516239a90ae958b2a72415f1f6fff0bb956444b2e1b74e8c"
+}

@@ -1,0 +1,10 @@
+[Unit]
+Description=Check official desktop installers every six hours
+
+[Timer]
+OnCalendar=*-*-* 00,06,12,18:00:00 UTC
+Persistent=yes
+Unit=yeschoy-vendor-sync.service
+
+[Install]
+WantedBy=timers.target

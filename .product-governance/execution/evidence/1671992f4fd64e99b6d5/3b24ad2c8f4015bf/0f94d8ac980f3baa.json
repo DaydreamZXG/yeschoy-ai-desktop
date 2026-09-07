@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU045-AS-download_replay_resume",
+  "assertion": "A valid interrupted download resumes with its validator, exact ranges and hash; repeated valid artifacts do not redownload.",
+  "testSelector": "tests/work_packages/ru045/test_acceptance.py::test_download_replay_resume",
+  "acceptanceCommandId": "ru045-download_replay_resume",
+  "runId": "RU-045/WP-RU045-VENDOR-SYNC@2026-09-06T05:32:39.968015+00:00",
+  "packageId": "WP-RU045-VENDOR-SYNC",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru045/test_acceptance.py::test_download_replay_resume",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:9a9bd6d5bc65a75d74eb96f49ef4c0ceb3a32592cf0b0bde3af288decf2b8a05",
+    "machineReportSha256": "sha256:945bf19e75f1ecfe271c5e61c7c112d26ad42038e774371c224669e3fe2b43c1",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:0ac8eade7183562d98d58555886e7ef28e529e96c9f4984d8924050282855136",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:45045d9fb5deeee61dd91136eb64a202aef8fdc071ac6ea10a3b46b986f0d5f3",
+  "releaseUnitId": "RU-045",
+  "releaseUnitHash": "sha256:22aef0d114e2943ebe2bcc21a86ece3e4f0d9a2a5a7cae817f4ce9f1e91ce370"
+}

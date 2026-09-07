@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU060-AS-route-ux",
+  "assertion": "Renderer tests distinguish Codex official login identity from actual relay traffic, treat no bridge observation as unverified, label a bridge completion as confirmed Yeschoy relay use and show the exact gpt-6-astra model ID even when Codex abbreviates its own status label.",
+  "testSelector": "tests/work_packages/ru060/test_acceptance.py::test_codex_route_evidence_ui",
+  "acceptanceCommandId": "ru060-route-ux",
+  "runId": "RU-060/WP-RU060-CODEX-ROUTE-AND-CLI-RUNTIME@2026-09-07T03:00:26.726352+00:00",
+  "packageId": "WP-RU060-CODEX-ROUTE-AND-CLI-RUNTIME",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:6e8cbcf762b332adab753b115298cef85376066ea3bf9567789585e2ce0e7579",
+  "releaseUnitId": "RU-060",
+  "releaseUnitHash": "sha256:dc264ef4005f7473dd30efc529ccf9a31b0d38b043c1e2a612cb95496905560e"
+}

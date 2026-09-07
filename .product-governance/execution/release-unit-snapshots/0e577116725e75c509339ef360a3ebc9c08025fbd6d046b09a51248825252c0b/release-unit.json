@@ -1,0 +1,3697 @@
+{
+  "schemaVersion": 1,
+  "releaseUnitId": "RU-066",
+  "releaseUnitHash": "sha256:0e577116725e75c509339ef360a3ebc9c08025fbd6d046b09a51248825252c0b",
+  "decisionId": "DEC-110",
+  "objective": "Package the exact RU-065 verified client as distinct 0.4.12 macOS universal and Windows x64 internal installers without publishing them.",
+  "dependsOnReleaseUnits": [
+    "RU-065"
+  ],
+  "supersedesReleaseUnits": [
+    "RU-065"
+  ],
+  "roots": {
+    "workPackages": [
+      "WP-RU066-DUAL-PLATFORM-PACKAGING"
+    ],
+    "requirements": [
+      "REQ-087"
+    ],
+    "nonFunctionalRequirements": [],
+    "domains": [],
+    "contracts": [
+      "desktop-account-session@v5",
+      "desktop-tool-activation@v10",
+      "desktop-open-connection@v2",
+      "desktop-connection-management@v2"
+    ],
+    "stateMachines": [],
+    "pages": [],
+    "journeys": [],
+    "dataLifecycleResources": [],
+    "aiScenarios": [],
+    "entitlements": [],
+    "trackCoverage": []
+  },
+  "commit": "df10e7a0516c4125866daff5cf91b76178c89d02",
+  "frozenAt": "2026-09-07T05:40:38.005896+00:00",
+  "catalogManifest": {
+    "schemaVersion": 1,
+    "product": {
+      "name": "野菜API",
+      "createdAt": "2026-08-29T06:28:13.295272+00:00"
+    },
+    "authority": {
+      "bundleRoot": ".product-governance",
+      "precedence": [
+        "user_confirmed",
+        "applicable_policy",
+        "frozen_decision",
+        "code_observed",
+        "existing_document",
+        "inferred",
+        "proposed"
+      ]
+    },
+    "tracks": [
+      "account",
+      "billing",
+      "tool-config",
+      "diagnostics",
+      "desktop-platform",
+      "security-update"
+    ],
+    "trackDecisionRefs": {
+      "account": "DEC-043",
+      "billing": "DEC-043",
+      "tool-config": "DEC-046",
+      "desktop-platform": "DEC-046",
+      "diagnostics": "DEC-046",
+      "security-update": "DEC-047"
+    },
+    "requiredPageStates": [
+      "default",
+      "loading",
+      "empty",
+      "partial",
+      "error",
+      "expired",
+      "conflict",
+      "recovery",
+      "processing"
+    ],
+    "dualTrackCapabilities": [
+      "evidence",
+      "attempt",
+      "reflection",
+      "mastery",
+      "ability_estimate",
+      "planning",
+      "report",
+      "global_ask"
+    ],
+    "requiredNfrCategories": [
+      "security",
+      "privacy",
+      "reliability",
+      "observability",
+      "performance",
+      "capacity",
+      "accessibility",
+      "ai_quality",
+      "ai_cost",
+      "commerce",
+      "migration",
+      "backup_restore",
+      "operations"
+    ]
+  },
+  "closure": {
+    "workPackages": [
+      "WP-RU066-DUAL-PLATFORM-PACKAGING"
+    ],
+    "requirements": [
+      "REQ-002",
+      "REQ-011",
+      "REQ-015",
+      "REQ-030",
+      "REQ-031",
+      "REQ-062",
+      "REQ-067",
+      "REQ-068",
+      "REQ-079",
+      "REQ-087"
+    ],
+    "nonFunctionalRequirements": [],
+    "domains": [
+      "account",
+      "billing",
+      "desktop-platform",
+      "diagnostics",
+      "tool-config"
+    ],
+    "contracts": [
+      "desktop-account-session@v5",
+      "desktop-connection-management@v2",
+      "desktop-open-connection@v2",
+      "desktop-tool-activation@v10"
+    ],
+    "stateMachines": [],
+    "pages": [
+      "PAGE-ACCOUNT",
+      "PAGE-BILLING",
+      "PAGE-CONFIGURE-PREVIEW",
+      "PAGE-TOOLS"
+    ],
+    "pageStateProfiles": [
+      "PROFILE-DESKTOP-ACCOUNT-READINESS",
+      "PROFILE-PUBLIC-CATALOG-PREVIEW",
+      "PROFILE-READONLY-TOOL-DISCOVERY"
+    ],
+    "journeys": [],
+    "actors": [],
+    "dataLifecycleResources": [],
+    "aiScenarios": [],
+    "entitlements": [],
+    "trackCoverage": [],
+    "evidence": [
+      "E-CODE-001",
+      "E-CODE-002",
+      "E-CODE-006",
+      "E-CODE-007",
+      "E-CODE-008",
+      "E-CODE-021",
+      "E-CODE-022",
+      "E-CODE-023",
+      "E-CODE-055",
+      "E-CODE-059",
+      "E-CODE-060",
+      "E-CODE-075",
+      "E-CODE-083",
+      "E-CODE-084",
+      "E-CODE-085",
+      "E-CODE-086",
+      "E-EXT-024",
+      "E-EXT-025",
+      "E-EXT-026",
+      "E-EXT-027",
+      "E-EXT-028",
+      "E-EXT-047",
+      "E-EXT-052",
+      "E-EXT-059",
+      "E-EXT-061",
+      "E-PROP-004",
+      "E-PROP-005",
+      "E-PROP-006",
+      "E-PROP-028",
+      "E-PROP-032",
+      "E-PROP-033",
+      "E-PROP-034",
+      "E-PROP-035",
+      "E-USER-001",
+      "E-USER-002",
+      "E-USER-003",
+      "E-USER-010",
+      "E-USER-011",
+      "E-USER-016",
+      "E-USER-017",
+      "E-USER-018",
+      "E-USER-019",
+      "E-USER-023",
+      "E-USER-037",
+      "E-USER-041",
+      "E-USER-042",
+      "E-USER-066",
+      "E-USER-070",
+      "E-USER-071",
+      "E-USER-080",
+      "E-USER-084",
+      "E-USER-085"
+    ],
+    "decisions": [
+      "DEC-043",
+      "DEC-046",
+      "DEC-110"
+    ],
+    "conflicts": [],
+    "glossaryTerms": [
+      "TERM-ACCOUNT-SESSION",
+      "TERM-ACTUAL-PRICE",
+      "TERM-LINE",
+      "TERM-MODEL-ID",
+      "TERM-OFFICIAL-PRICE",
+      "TERM-READY"
+    ],
+    "resources": [],
+    "tracks": [
+      "account",
+      "billing",
+      "desktop-platform",
+      "diagnostics",
+      "tool-config"
+    ]
+  },
+  "deferredSnapshot": {
+    "schemaVersion": 1,
+    "catalogHash": "sha256:903d8d0d2d3bcafa42a742403ca608438d36d6fbff4872640c3b1c5bf9c29e33",
+    "items": [
+      {
+        "subjectKind": "actors",
+        "subjectId": "*",
+        "message": "No product actors are defined"
+      },
+      {
+        "subjectKind": "aiScenarios",
+        "subjectId": "*",
+        "message": "No AI scenarios are defined"
+      },
+      {
+        "subjectKind": "dataLifecycleResources",
+        "subjectId": "*",
+        "message": "No data lifecycle resources are defined"
+      },
+      {
+        "subjectKind": "entitlements",
+        "subjectId": "*",
+        "message": "No entitlement capabilities are defined"
+      },
+      {
+        "subjectKind": "journeys",
+        "subjectId": "*",
+        "message": "No end-to-end journeys are defined"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-accessibility",
+        "message": "High-impact non-functional requirement is unresolved: NFR-accessibility (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-ai_cost",
+        "message": "High-impact non-functional requirement is unresolved: NFR-ai_cost (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-ai_quality",
+        "message": "High-impact non-functional requirement is unresolved: NFR-ai_quality (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-backup_restore",
+        "message": "High-impact non-functional requirement is unresolved: NFR-backup_restore (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-capacity",
+        "message": "High-impact non-functional requirement is unresolved: NFR-capacity (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-commerce",
+        "message": "High-impact non-functional requirement is unresolved: NFR-commerce (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-migration",
+        "message": "High-impact non-functional requirement is unresolved: NFR-migration (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-observability",
+        "message": "High-impact non-functional requirement is unresolved: NFR-observability (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-operations",
+        "message": "High-impact non-functional requirement is unresolved: NFR-operations (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-performance",
+        "message": "High-impact non-functional requirement is unresolved: NFR-performance (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-privacy",
+        "message": "High-impact non-functional requirement is unresolved: NFR-privacy (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-reliability",
+        "message": "High-impact non-functional requirement is unresolved: NFR-reliability (unknown)"
+      },
+      {
+        "subjectKind": "nonFunctionalRequirements",
+        "subjectId": "NFR-security",
+        "message": "High-impact non-functional requirement is unresolved: NFR-security (unknown)"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state conflict"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state default"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state empty"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state error"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state expired"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state loading"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state partial"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state processing"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-CONFIGURE",
+        "message": "Page PAGE-CONFIGURE has no behavior for state recovery"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state conflict"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state default"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state empty"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state error"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state expired"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state loading"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state partial"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state processing"
+      },
+      {
+        "subjectKind": "pages",
+        "subjectId": "PAGE-ONBOARDING",
+        "message": "Page PAGE-ONBOARDING has no behavior for state recovery"
+      },
+      {
+        "subjectKind": "stateMachines",
+        "subjectId": "*",
+        "message": "No canonical state machines are defined"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "ability_estimate::account",
+        "message": "Capability ability_estimate/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "ability_estimate::billing",
+        "message": "Capability ability_estimate/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "ability_estimate::desktop-platform",
+        "message": "Capability ability_estimate/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "ability_estimate::diagnostics",
+        "message": "Capability ability_estimate/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "ability_estimate::security-update",
+        "message": "Capability ability_estimate/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "ability_estimate::tool-config",
+        "message": "Capability ability_estimate/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "attempt::account",
+        "message": "Capability attempt/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "attempt::billing",
+        "message": "Capability attempt/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "attempt::desktop-platform",
+        "message": "Capability attempt/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "attempt::diagnostics",
+        "message": "Capability attempt/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "attempt::security-update",
+        "message": "Capability attempt/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "attempt::tool-config",
+        "message": "Capability attempt/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "evidence::account",
+        "message": "Capability evidence/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "evidence::billing",
+        "message": "Capability evidence/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "evidence::desktop-platform",
+        "message": "Capability evidence/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "evidence::diagnostics",
+        "message": "Capability evidence/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "evidence::security-update",
+        "message": "Capability evidence/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "evidence::tool-config",
+        "message": "Capability evidence/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "global_ask::account",
+        "message": "Capability global_ask/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "global_ask::billing",
+        "message": "Capability global_ask/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "global_ask::desktop-platform",
+        "message": "Capability global_ask/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "global_ask::diagnostics",
+        "message": "Capability global_ask/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "global_ask::security-update",
+        "message": "Capability global_ask/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "global_ask::tool-config",
+        "message": "Capability global_ask/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "mastery::account",
+        "message": "Capability mastery/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "mastery::billing",
+        "message": "Capability mastery/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "mastery::desktop-platform",
+        "message": "Capability mastery/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "mastery::diagnostics",
+        "message": "Capability mastery/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "mastery::security-update",
+        "message": "Capability mastery/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "mastery::tool-config",
+        "message": "Capability mastery/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "planning::account",
+        "message": "Capability planning/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "planning::billing",
+        "message": "Capability planning/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "planning::desktop-platform",
+        "message": "Capability planning/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "planning::diagnostics",
+        "message": "Capability planning/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "planning::security-update",
+        "message": "Capability planning/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "planning::tool-config",
+        "message": "Capability planning/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "reflection::account",
+        "message": "Capability reflection/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "reflection::billing",
+        "message": "Capability reflection/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "reflection::desktop-platform",
+        "message": "Capability reflection/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "reflection::diagnostics",
+        "message": "Capability reflection/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "reflection::security-update",
+        "message": "Capability reflection/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "reflection::tool-config",
+        "message": "Capability reflection/tool-config remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "report::account",
+        "message": "Capability report/account remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "report::billing",
+        "message": "Capability report/billing remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "report::desktop-platform",
+        "message": "Capability report/desktop-platform remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "report::diagnostics",
+        "message": "Capability report/diagnostics remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "report::security-update",
+        "message": "Capability report/security-update remains unknown"
+      },
+      {
+        "subjectKind": "trackCoverage",
+        "subjectId": "report::tool-config",
+        "message": "Capability report/tool-config remains unknown"
+      }
+    ]
+  },
+  "artifacts": {
+    "evidenceLedger": {
+      "schemaVersion": 1,
+      "entries": [
+        {
+          "id": "E-CODE-001",
+          "claim": "The inspected NewAPI source declares existing routes for login, refresh, self, user models, top-up, pricing, and session management.",
+          "class": "code_observed",
+          "locator": "work/new-api-upstream/router/api-router.go:34-112",
+          "observedAt": "2026-08-29T13:50:00+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-CODE-002",
+          "claim": "The inspected NewAPI pricing model exposes model ID, input/output/cache ratios, billing mode/expression, enabled groups, endpoint types, and a pricing version.",
+          "class": "code_observed",
+          "locator": "work/new-api-upstream/model/pricing.go:18-38",
+          "observedAt": "2026-08-29T13:55:00+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-CODE-006",
+          "claim": "The inspected NewAPI pricing UI derives token input price from model_ratio multiplied by two and by a selected or available group ratio, then applies output and cache multipliers.",
+          "class": "code_observed",
+          "locator": "work/new-api-upstream/web/src/features/pricing/lib/price.ts:63-98; work/new-api-upstream/web/src/features/pricing/lib/model-helpers.ts:60-95",
+          "observedAt": "2026-08-29T15:35:00+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-CODE-007",
+          "claim": "The inspected NewAPI pricing response structure has pricing values and a pricing version but no explicit official-source URL, official verification timestamp, or field declaring that the base value is a vendor official price.",
+          "class": "code_observed",
+          "locator": "work/new-api-upstream/model/pricing.go:18-38",
+          "observedAt": "2026-08-29T15:35:00+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-CODE-008",
+          "claim": "The inspected NewAPI models.dev ratio importer selects the cheapest non-zero provider price for duplicate model names, so imported base ratios are not mechanically guaranteed to be the model vendor's own official price.",
+          "class": "code_observed",
+          "locator": "work/new-api-upstream/controller/ratio_sync.go:881-905",
+          "observedAt": "2026-08-29T15:35:00+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-CODE-021",
+          "claim": "Read-only requests to the deployed first-party origins on 2026-08-30 returned system name 野菜API and version v1.0.0-rc.27 from both /api/status endpoints, HTTP 404 for /api/desktop/v1/bootstrap, HTTP 401 for unauthenticated /api/user/self, and a public /api/pricing projection containing 37 models plus pricing_version a42d372ccf0b5dd13ecf71203521f9d2. This verifies current public behavior only and does not establish a deployed desktop authorization or stable desktop pricing projection.",
+          "class": "code_observed",
+          "locator": "command:2026-08-30:curl-readonly-yeschoy-status-desktop-bootstrap-user-self-pricing",
+          "observedAt": "2026-08-30T16:24:07+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-CODE-022",
+          "claim": "The locally installed official @deepseek-ai/dsh package is version 0.1.0-rc.6, points to github.com/deepseek-ai/deepseek-harness, and documents dsh web as the web-profile alias, but its public CLI documentation does not establish a stable user-owned Base URL field or a safe automatic-write adapter contract.",
+          "class": "code_observed",
+          "locator": "command:2026-08-30:dsh-version-help-and-installed-package-metadata",
+          "observedAt": "2026-08-30T17:04:56+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-CODE-023",
+          "claim": "The first governed RU-003 verification run executed five scenarios successfully but the catalog scenario failed because invoking Vitest inside the mandatory read-only source sandbox attempted to create vitest.config.ts.timestamp-*.mjs in the project root. After replacing that nested runner with direct Node TypeScript module execution, local execution passed all six scenarios; redispatch was then blocked because the dispatcher revalidated the completed RU-002 dependency against RU-003's intentionally superseding current UI outputs.",
+          "class": "code_observed",
+          "locator": ".product-governance/execution/reports/7d041a507878db9d.4f7173f827f92c214557.json; command:2026-08-30:pytest-ru003-six-pass-after-readonly-runner-correction; command:2026-08-30:redispatch-ru003-dependency-current-output-conflict",
+          "observedAt": "2026-08-30T17:25:40+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-CODE-055",
+          "claim": "Current desktop account schema4 projects raw quotas but account and overview hardcode USD; usage token_count comes from TPM and is not cumulative. No self-log list is fetched. RU035 current implementation completed all native/renderer/build verification before this successor. Existing session epoch and fixed native HTTPS boundary can be retained.",
+          "class": "code_observed",
+          "locator": "src-tauri/src/account_v2.rs;src/account/session.ts;src/workbench/AccountView.tsx;src/workbench/WorkbenchChrome.tsx;.product-governance/execution/reports/14fb5761e4afc7ce.130975c393c64b1ec6e8.json",
+          "observedAt": "2026-09-05T15:09:00+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": [
+            "E-USER-066",
+            "E-EXT-047"
+          ]
+        },
+        {
+          "id": "E-CODE-059",
+          "claim": "Read-only audit reproduces native tcp443_reachable vs renderer tcp_443_reachable rejection. Desktop discovery discards Windows package launch identity. CLI open only shows instructions, Pi/Hermes success is stdout-nonempty, and restore errors fall through to misleading unchanged/restored copy.",
+          "class": "code_observed",
+          "locator": "src-tauri/src/connectivity_core.rs:38;src/diagnostics/contract.ts:50;src-tauri/src/desktop_app_discovery.rs:494;src-tauri/src/tool_adapters/codex_desktop.rs:434;src/configuration/OpenConnection.tsx:39;src-tauri/src/tool_activation.rs:787",
+          "observedAt": "2026-09-05T11:30:00Z",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-CODE-060",
+          "claim": "Current code fixes Claude internal model to Sonnet, overwrites request models in both bridges, persists one model per tool, drops some SSE errors, imposes 60-second read idle, and waits unbounded for activation lock on quit. Windows credential blob limit is 2560 bytes.",
+          "class": "code_observed",
+          "locator": "src-tauri/src/tool_adapters/claude_desktop.rs:87;src-tauri/src/claude_bridge.rs:190;src-tauri/src/codex_bridge.rs:290;src-tauri/src/lib.rs:38;src-tauri/src/tool_credentials.rs:19;tests/work_packages/ru042/CONTRACT.md",
+          "observedAt": "2026-09-05T12:50:00Z",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-CODE-075",
+          "claim": "The shared native activation command performs secure publication and atomic semantic readback, then synchronously runs seven different real-model verification paths with observed waits of 90, 120, 150 or 600 seconds; provider slowness therefore blocks the button and rolls back otherwise valid local configuration.",
+          "class": "code_observed",
+          "locator": "src-tauri/src/tool_activation.rs:841;src-tauri/src/tool_activation.rs:1305;src-tauri/src/tool_adapters/codex_desktop.rs:407;src-tauri/src/tool_adapters/claude_desktop.rs:389;src-tauri/src/tool_adapters/claude_code.rs:315;src-tauri/src/tool_adapters/pi.rs:231;src-tauri/src/tool_adapters/dsh_web.rs:493;src-tauri/src/tool_adapters/hermes.rs:253;src-tauri/src/tool_adapters/openclaw.rs:309",
+          "observedAt": "2026-09-06T22:20:00+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": [
+            "E-USER-080"
+          ]
+        },
+        {
+          "id": "E-CODE-083",
+          "claim": "The current Settings renderer still displays an obsolete account-unavailable boundary even though App.tsx exposes an AccountView and the current native desktop-account-session contract is implemented. The repository contains updater UI scaffolding, but the current Tauri shell does not register the updater plugin or commands, create updater artifacts, or configure update endpoints. The installation subsystem supports downloadable Codex Desktop and Claude Desktop artifacts, while the other catalogued agents remain guided-install targets.",
+          "class": "code_observed",
+          "locator": "src/settings/SettingsView.tsx;src/App.tsx;src-tauri/src/lib.rs;src-tauri/tauri.conf.json;src-tauri/src/app_installation/catalog.rs;src/installation/InstallationPanel.tsx",
+          "observedAt": "2026-09-07T05:12:19Z",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": [
+            "E-USER-084"
+          ]
+        },
+        {
+          "id": "E-CODE-084",
+          "claim": "The first audited RU-063 execution had no scope or integrity failures and its source-level account-preservation scenario passed. Its renderer scenario was rejected before execution only because the governance vitest-json adapter requires an exact Vitest version while this repository intentionally declares a compatible range. Direct execution of the focused renderer test passed, and the complete renderer suite passed 455 of 455 tests. The failed audited report remains immutable evidence.",
+          "class": "code_observed",
+          "locator": ".product-governance/execution/reports/91454bf3373f6a40.101e2a2cc36a2867db7d.json;command:pnpm-test-unit:2026-09-07T05:15:59Z",
+          "observedAt": "2026-09-07T05:17:39Z",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": [
+            "E-USER-084",
+            "E-CODE-083",
+            "E-PROP-032"
+          ]
+        },
+        {
+          "id": "E-CODE-085",
+          "claim": "RU-064 froze successfully but dispatch was correctly refused because its verification package declared the failed RU-063 package as an execution dependency. The release-unit dependency already supplies the frozen source authority; a source-read-only successor must have no work-package execution dependency on the failed run.",
+          "class": "code_observed",
+          "locator": "command:dispatch-work-package:RU-064:2026-09-07T05:20:04Z;.product-governance/execution/reports/91454bf3373f6a40.101e2a2cc36a2867db7d.json",
+          "observedAt": "2026-09-07T05:20:26Z",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": [
+            "E-CODE-084",
+            "E-PROP-033"
+          ]
+        },
+        {
+          "id": "E-CODE-086",
+          "claim": "RU-065 passed its source-read-only Settings verification with an empty source diff, while the current 0.4.11 local package receipt predates that cleanup and is explicitly unpublished. Current metadata remains 0.4.11, the latest direct renderer suite passed 455 of 455 tests, and the prior package established available Developer ID, notary, cargo-xwin and hash-pinned NSIS tooling. Reusing 0.4.11 for new source would make two different candidates indistinguishable.",
+          "class": "code_observed",
+          "locator": ".product-governance/execution/reports/f46a5fcb0ab15d5b.82de8495c9996cbdd428.json;release/internal/0.4.11/release-receipt.json;package.json;src-tauri/Cargo.toml;src-tauri/tauri.conf.json;command:pnpm-test-unit:2026-09-07T05:15:59Z",
+          "observedAt": "2026-09-07T05:35:53Z",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": [
+            "E-USER-085",
+            "E-CODE-084",
+            "E-PROP-034"
+          ]
+        },
+        {
+          "id": "E-EXT-024",
+          "claim": "The current official NewAPI GitHub HEAD 918427d8ab41f6adaa4113d0496f1f8621855b70 exposes browser login, refresh-cookie, current-user, pricing, usage-log, and top-up routes, but no /api/desktop/v1 device-authorization boundary. Its documented browser session keeps a 15-minute access token in browser memory and a rotating HttpOnly SameSite=Strict refresh cookie, so it is not a safe drop-in desktop-device credential contract.",
+          "class": "external_verified",
+          "locator": "https://github.com/QuantumNous/new-api/blob/918427d8ab41f6adaa4113d0496f1f8621855b70/router/api-router.go; https://github.com/QuantumNous/new-api/blob/918427d8ab41f6adaa4113d0496f1f8621855b70/docs/authentication.md",
+          "observedAt": "2026-08-30T16:24:07+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-EXT-025",
+          "claim": "The current official Codex configuration reference documents ~/.codex/config.toml, model_providers.<id>.base_url, responses-only wire_api, and model_providers.<id>.auth.command as a command that prints a bearer token to stdout; auth.command must not be combined with env_key, experimental_bearer_token, or requires_openai_auth.",
+          "class": "external_verified",
+          "locator": "https://learn.chatgpt.com/docs/config-file/config-reference",
+          "observedAt": "2026-08-30T17:04:56+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-EXT-026",
+          "claim": "The current official Claude Code documentation identifies ANTHROPIC_BASE_URL as the custom endpoint setting and apiKeyHelper as a dynamic script-based credential source, supporting a preview of owned settings without placing a literal API key in settings.",
+          "class": "external_verified",
+          "locator": "https://code.claude.com/docs/en/team; https://code.claude.com/docs/en/env-vars; https://code.claude.com/docs/en/llm-gateway",
+          "observedAt": "2026-08-30T17:04:56+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-EXT-027",
+          "claim": "The current official OpenCode provider documentation defines custom providers under provider.<id>, uses @ai-sdk/openai-compatible for OpenAI-compatible chat-completions endpoints, accepts options.baseURL, and identifies model entries by their exact model IDs.",
+          "class": "external_verified",
+          "locator": "https://opencode.ai/docs/providers/",
+          "observedAt": "2026-08-30T17:04:56+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-EXT-028",
+          "claim": "The current official Pi models documentation identifies ~/.pi/agent/models.json, provider baseUrl and api fields, exact model IDs, OpenAI-compatible API modes, and an apiKey value beginning with ! as a command evaluated at request time.",
+          "class": "external_verified",
+          "locator": "https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/models.md",
+          "observedAt": "2026-08-30T17:04:56+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-EXT-047",
+          "claim": "Read primary NewAPI ui-domain revision 63f3dd8: easy-savings derives site cost from charged quota and status.price, official equivalent from recorded effective ratio and usd_exchange_rate, using newest 100 self consume logs. Current public status selects CNY with quota_per_unit 500000, usd_exchange_rate 1, price 1. Desktop middleware already permits GET /api/log/self and controller binds authenticated user; subscription and violation fees require conservative exclusion. This is source/public-setting evidence, not a real-account or website deployment proof.",
+          "class": "external_verified",
+          "locator": "https://github.com/yeschoy/new-api/blob/63f3dd8fb908d6c55d5df483530beeebbcc740b6/web/src/features/dashboard/components/overview/easy-savings.ts;https://github.com/yeschoy/new-api/blob/63f3dd8fb908d6c55d5df483530beeebbcc740b6/middleware/auth.go;https://yeschoy.com/api/status",
+          "observedAt": "2026-09-05T15:09:00+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-EXT-052",
+          "claim": "Claude supports full-ID inferenceModels with display-only labels; Codex loads a custom catalog at startup; OpenAI SDK uses a 600-second inference timeout default. These support bounded implementation choices, not live relay compatibility.",
+          "class": "external_verified",
+          "locator": "https://claude.com/docs/third-party/claude-desktop/configuration#models",
+          "observedAt": "2026-09-05T12:50:00Z",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-EXT-059",
+          "claim": "Current CC Switch normal provider switching validates and writes configuration without force-killing user applications, while its user guidance distinguishes reload behavior: Codex and Claude Desktop need a restart, and Claude Code commonly applies subsequent changes to a new session.",
+          "class": "external_verified",
+          "locator": "https://github.com/farion1231/cc-switch/blob/38cfafdc199604b132be5eafe3f5384d85124a81/src-tauri/src/services/provider/mod.rs;https://github.com/farion1231/cc-switch/blob/38cfafdc199604b132be5eafe3f5384d85124a81/docs/user-manual/en/2-providers/2.2-switch.md;https://github.com/farion1231/cc-switch/blob/38cfafdc199604b132be5eafe3f5384d85124a81/docs/user-manual/en/2-providers/2.6-claude-desktop.md",
+          "observedAt": "2026-09-06T22:24:00+08:00",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": [
+            "E-USER-080"
+          ]
+        },
+        {
+          "id": "E-EXT-061",
+          "claim": "A live read of the configured domestic origin returned a six-artifact Codex and Claude Desktop catalog, all six artifact URLs accepted one-byte range requests with HTTP 206 and expected package MIME types, while the stable assistant update endpoint returned HTTP 204 and health metadata reported updatesPublished false.",
+          "class": "external_verified",
+          "locator": "https://ergou.qzz.io/apps/catalog.json;https://ergou.qzz.io/updates/stable.json;https://ergou.qzz.io/health.json;live-read:2026-09-07T05:07Z",
+          "observedAt": "2026-09-07T05:12:19Z",
+          "scope": "current",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": [
+            "E-CODE-083"
+          ]
+        },
+        {
+          "id": "E-PROP-004",
+          "claim": "RU-002 should preserve the verified RU-001 discovery experience and add a client-only account and billing shell whose sole runtime account projection is backend_upgrade_required. It must show no fabricated account, balance, usage, price, authorization, or wallet result and must make no production account request until a later frozen unit verifies the least-privilege desktop server contract.",
+          "class": "proposed",
+          "locator": "outputs/野菜API-NewAPI-未来改造清单.md:1",
+          "observedAt": "2026-08-30T16:24:07+08:00",
+          "scope": "proposal",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": [
+            "E-USER-041",
+            "E-USER-002",
+            "E-USER-018",
+            "E-USER-023",
+            "E-EXT-024",
+            "E-CODE-021"
+          ]
+        },
+        {
+          "id": "E-PROP-005",
+          "claim": "RU-003 should add a deterministic beginner configuration-preview planner for the fixed five-tool catalog and the two product-approved line roots. It may show only evidenced target fields and derived protocol endpoints, must leave the model ID unavailable until a server catalog exists, and must block all configuration, credential, file-read, file-write, connectivity, and rollback actions until later backend, secure-helper, and exact-version evidence is frozen.",
+          "class": "proposed",
+          "locator": "inline:ru003-configuration-preview-boundary",
+          "observedAt": "2026-08-30T17:04:56+08:00",
+          "scope": "proposal",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": [
+            "E-USER-042",
+            "E-USER-010",
+            "E-USER-011",
+            "E-USER-037",
+            "E-EXT-025",
+            "E-EXT-026",
+            "E-EXT-027",
+            "E-EXT-028",
+            "E-CODE-022"
+          ]
+        },
+        {
+          "id": "E-PROP-006",
+          "claim": "A verification-only successor release unit should preserve RU-003 product behavior and source exactly, use the corrected direct-module acceptance scenario under the mandatory read-only sandbox, retain the original failed run as historical evidence, and avoid replaying the dispatcher dependency check that compares intentionally superseded UI outputs to RU-002.",
+          "class": "proposed",
+          "locator": "inline:ru004-ru003-verification-correction",
+          "observedAt": "2026-08-30T17:25:40+08:00",
+          "scope": "proposal",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": [
+            "E-CODE-023",
+            "E-USER-042",
+            "E-PROP-005"
+          ]
+        },
+        {
+          "id": "E-PROP-028",
+          "claim": "Replace seven adapter-specific blocking verification definitions with one activation state machine: validate eligibility, obtain native credentials, atomically commit and read back owned settings, start only helper-owned local runtimes, and handle desktop reload through explicit normal-quit consent. Observe the first real user request asynchronously instead of gating configuration on it.",
+          "class": "proposed",
+          "locator": "inline:ru056-unified-activation",
+          "observedAt": "2026-09-06T22:28:00+08:00",
+          "scope": "proposal",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": [
+            "E-USER-080",
+            "E-CODE-075",
+            "E-EXT-059"
+          ]
+        },
+        {
+          "id": "E-PROP-032",
+          "claim": "Remove only the obsolete account-unavailable boundary and its duplicate account and diagnostics actions from Settings. Preserve the working account route, native account contract, updater truth, installation flows and all runtime behavior; verify the UI regression without packaging or remote mutation.",
+          "class": "proposed",
+          "locator": "inline:ru063-settings-account-cleanup",
+          "observedAt": "2026-09-07T05:12:19Z",
+          "scope": "proposal",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": [
+            "E-USER-084",
+            "E-CODE-083",
+            "E-EXT-061"
+          ]
+        },
+        {
+          "id": "E-PROP-033",
+          "claim": "Create a source-read-only successor to RU-063 that preserves the rejected adapter report, changes no product or package file, and re-runs the already-passing source-level scenario through the compatible pytest-json adapter to bind the final Settings state and preserved account route.",
+          "class": "proposed",
+          "locator": "inline:ru064-readonly-settings-verification",
+          "observedAt": "2026-09-07T05:17:39Z",
+          "scope": "proposal",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": [
+            "E-CODE-084"
+          ]
+        },
+        {
+          "id": "E-PROP-034",
+          "claim": "Supersede the undispatched RU-064 with the same read-only acceptance authority but no work-package execution dependency, preserving every earlier freeze and failed report while making no source or package change.",
+          "class": "proposed",
+          "locator": "inline:ru065-readonly-settings-verification",
+          "observedAt": "2026-09-07T05:20:26Z",
+          "scope": "proposal",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": [
+            "E-CODE-085"
+          ]
+        },
+        {
+          "id": "E-PROP-035",
+          "claim": "Package the exact current working source as distinct internal version 0.4.12: synchronize only version metadata, run the complete current tests and cross-platform compile gates, build a universal signed/notarized/stapled macOS DMG, and build a Simplified-Chinese unsigned Windows x64 NSIS installer from a fresh cargo-xwin payload. Record source and artifact hashes plus limitations; do not publish, upload or create updater artifacts.",
+          "class": "proposed",
+          "locator": "inline:ru066-0.4.12-dual-platform-internal-package",
+          "observedAt": "2026-09-07T05:35:53Z",
+          "scope": "proposal",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": [
+            "E-USER-085",
+            "E-CODE-086"
+          ]
+        },
+        {
+          "id": "E-USER-001",
+          "claim": "野菜API is an official desktop client whose first priority includes account access, balance, recharge, and usage visibility.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-29:official-client-priority",
+          "observedAt": "2026-08-29T14:00:00+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-002",
+          "claim": "The current phase changes only the desktop client; NewAPI, servers, Nginx, and production configuration remain unchanged.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-29:client-only-boundary",
+          "observedAt": "2026-08-29T14:05:00+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-003",
+          "claim": "Desktop authorization is first-party authorization by the 野菜API website, not direct third-party provider login inside the client.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-29:first-party-browser-authorization",
+          "observedAt": "2026-08-29T14:10:00+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-010",
+          "claim": "The mainland-optimized and Cloudflare global-acceleration lines share the same account, API key, model availability, and pricing semantics; only the network path differs.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-29:shared-line-semantics",
+          "observedAt": "2026-08-29T15:05:00+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-011",
+          "claim": "The default model list shows models available to the current account and compatible with the selected tool; all models may be viewed with unavailable entries disabled and explained, and a removed model is never silently substituted.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-29:model-list-visibility-policy",
+          "observedAt": "2026-08-29T15:10:00+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-016",
+          "claim": "The desktop client compares the official-price baseline already configured in NewAPI with the current user's NewAPI price; it must not maintain a second independent numeric official-price table.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-29:newapi-price-comparison-authority",
+          "observedAt": "2026-08-29T15:35:00+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-017",
+          "claim": "NewAPI model_ratio, model_price, and base billing expressions are always maintained as the corresponding vendor official price; all 野菜API discounts are layered separately through user group ratios or explicit special billing rules.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-29:newapi-official-base-price-invariant",
+          "observedAt": "2026-08-29T15:40:00+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-018",
+          "claim": "The desktop account login uses first-party device authorization: the client opens the system browser for website login and explicit device approval, polls for completion, never places passwords, cookies, API keys, or final session credentials in the URL, handles cancellation and expiry explicitly, and supports website-side device revocation.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-29:first-party-device-authorization-flow",
+          "observedAt": "2026-08-29T15:45:00+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-019",
+          "claim": "Desktop device authorization codes are single-use and expire after 10 minutes; access tokens last one hour and refresh automatically; the remembered device session expires after 30 days of inactivity and has a 90-day absolute reauthorization limit; logout, website revocation, and refresh failure are explicit invalidation paths, while sensitive account actions remain on the first-party website.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-29:desktop-session-lifetimes",
+          "observedAt": "2026-08-29T15:50:00+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-023",
+          "claim": "The desktop account session uses least privilege: it may read the current account profile, balance, usage, available models, and prices and manage only the current device's per-tool relay keys and logout. Password, email, payment data, recharge records, user groups, other devices, other-device key plaintext, and administrative settings remain website-only or inaccessible.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-29:desktop-session-scope",
+          "observedAt": "2026-08-29T16:10:00+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-037",
+          "claim": "The product owner accepted the exact-version compatibility allowlist for V1: automatic configuration is enabled only for exact tool versions that passed the complete matrix, while unknown, newly released, failed, and otherwise unverified versions remain read-only until a trusted compatibility update adds them.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-30:accept-exact-version-allowlist",
+          "observedAt": "2026-08-30T15:02:27+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-041",
+          "claim": "The product owner authorized the next client development unit for first-party website authorization, account balance and usage, recharge entry, and official-versus-actual price presentation while preserving the existing decision that NewAPI, servers, Nginx, and production configuration are not changed in the current phase.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-30:authorize-ru002-client-account-billing",
+          "observedAt": "2026-08-30T16:24:07+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-042",
+          "claim": "The product owner authorized implementation to continue after RU-002 and accepted starting the next client-only one-click configuration foundation while preserving the decision not to modify NewAPI, servers, Nginx, DNS, databases, or production configuration in this phase.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-08-30:authorize-ru003-client-configuration-foundation",
+          "observedAt": "2026-08-30T17:04:56+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-066",
+          "claim": "Owner confirms public RMB credits, asks to replace cumulative consumption emphasis with money saved, and approves reusing the website's existing savings method plus route explanations. Explicitly authorizes local skill-validator repair before continuing.",
+          "class": "user_confirmed",
+          "locator": "user:2026-09-05:可以，可以复用这套;允许",
+          "observedAt": "2026-09-05T15:09:00+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-070",
+          "claim": "The owner asks to resolve all findings in the preceding audit: diagnostics false error, Windows Codex launch, uneven application verification/daily opening, and incorrect restore-failure messages. Client-only work; preserve existing changes and do not mutate server or real account/tool settings during development.",
+          "class": "user_confirmed",
+          "locator": "user:2026-09-05:我觉得你应该把这些问题都解决",
+          "observedAt": "2026-09-05T11:30:00Z",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-071",
+          "claim": "User approves the diagnosed model identity, multi-model native switching and Windows exit improvements, and supplies a screenshot showing request retry after 1m3s. No packaging or server changes.",
+          "class": "user_confirmed",
+          "locator": "user:2026-09-05:这是失败时的错误详情，其他按你的想法完善一下；不要打包",
+          "observedAt": "2026-09-05T12:50:00Z",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 0,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-080",
+          "claim": "The product owner reports that one-click activation can remain on checking for a long time, asks whether running Codex or Claude should be safely closed before configuration, and rejects per-application fixes that leave Pi or another agent to fail next.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-09-06 screenshot version 0.4.9 prolonged Codex activation",
+          "observedAt": "2026-09-06T22:10:00+08:00",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-084",
+          "claim": "The owner asked whether assistant self-update and Codex or Claude downloads are implemented, identified the Settings message that says account functionality is unavailable as incorrect, and explicitly requested that the obsolete account-unavailable block be removed.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-09-07:settings-update-download-account-cleanup",
+          "observedAt": "2026-09-07T05:12:19Z",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        },
+        {
+          "id": "E-USER-085",
+          "claim": "The owner cancelled the handoff-document request and explicitly requested packaging. Earlier explicit scope in the same product thread requires both macOS and Windows packages; upload, release publication and automatic-update publication remain separate actions.",
+          "class": "user_confirmed",
+          "locator": "conversation:2026-09-07:package-after-settings-cleanup",
+          "observedAt": "2026-09-07T05:35:53Z",
+          "scope": "target",
+          "status": "active",
+          "verificationLevel": 1,
+          "basisRefs": []
+        }
+      ]
+    },
+    "conflictRegister": {
+      "schemaVersion": 1,
+      "conflicts": []
+    },
+    "decisionRegister": {
+      "schemaVersion": 1,
+      "decisions": [
+        {
+          "id": "DEC-043",
+          "question": "What client-only successor release unit is authorized after RU-001 when the deployed NewAPI still lacks the approved desktop authorization boundary?",
+          "choice": "Freeze RU-002 as a successor to RU-001. Preserve the branded five-tool read-only discovery experience and add the production account and billing information architecture, complete page states, fixed display-only 1 USD = 6.75 CNY context, and an updated future NewAPI change specification. The only runtime account projection in this unit is backend_upgrade_required: it performs no account network request, stores no credential, shows no fabricated account or numeric billing value, and exposes no active recharge or authorization action until a later frozen unit verifies a deployed least-privilege /api/desktop/v1 contract.",
+          "status": "accepted",
+          "decidedBy": "product owner",
+          "decidedAt": "2026-08-30T16:24:07+08:00",
+          "evidenceRefs": [
+            "E-USER-041",
+            "E-USER-002",
+            "E-USER-003",
+            "E-USER-016",
+            "E-USER-023",
+            "E-EXT-024",
+            "E-CODE-021",
+            "E-PROP-004"
+          ],
+          "affects": {
+            "requirementRefs": [
+              "REQ-002",
+              "REQ-011",
+              "REQ-015",
+              "REQ-030"
+            ],
+            "pageRefs": [
+              "PAGE-ACCOUNT",
+              "PAGE-BILLING",
+              "PAGE-TOOLS"
+            ],
+            "domainRefs": [
+              "account",
+              "billing",
+              "desktop-platform",
+              "tool-config"
+            ]
+          }
+        },
+        {
+          "id": "DEC-046",
+          "question": "How should the accepted RU-003 implementation be verified after the original frozen acceptance runner proved incompatible with mandatory read-only isolation and redispatch rechecked superseded dependency outputs?",
+          "choice": "Create RU-004 as a verification-only successor to RU-003. Preserve the RU-003 product scope, source, contract, page, and blocked side-effect boundary without modification; execute the same six semantic scenarios using the corrected direct Node TypeScript module loader plus read-only source assertions; retain the original failed run as immutable historical evidence; and declare no work-package dependency because RU-004 changes no implementation and its release-unit dependency and supersession preserve the authority chain.",
+          "status": "accepted",
+          "decidedBy": "product architecture",
+          "decidedAt": "2026-08-30T17:25:40+08:00",
+          "evidenceRefs": [
+            "E-CODE-023",
+            "E-PROP-006",
+            "E-USER-042",
+            "E-PROP-005"
+          ],
+          "affects": {
+            "requirementRefs": [
+              "REQ-031"
+            ],
+            "pageRefs": [
+              "PAGE-CONFIGURE-PREVIEW"
+            ],
+            "domainRefs": [
+              "tool-config",
+              "desktop-platform",
+              "diagnostics"
+            ]
+          }
+        },
+        {
+          "id": "DEC-110",
+          "question": "How should the owner-requested package be produced after the Settings cleanup without overwriting the earlier 0.4.11 artifacts or overstating Windows and updater readiness?",
+          "choice": "Create a release-only successor and package the exact current working source as 0.4.12. Change only synchronized version metadata plus closed packaging tests, receipts and local artifacts. Re-run complete current quality and compile gates, build a universal Developer-ID signed, hardened, Apple-notarized and stapled macOS DMG, and create a fresh x86_64-pc-windows-msvc payload inside a Simplified-Chinese current-user NSIS installer with hash-pinned temporary tools. Bind both RU-061 cross-platform proof and RU-065 Settings proof plus the exact current source hash. Keep Windows explicitly unsigned, cross-built and not real-device-tested; do not upload, publish updater metadata or mutate remote services.",
+          "status": "accepted",
+          "decidedBy": "architecture authority applying the owner's explicit current packaging request and the existing 0.4.11 receipt plus RU-065 verification evidence",
+          "decidedAt": "2026-09-07T05:35:53Z",
+          "evidenceRefs": [
+            "E-USER-085",
+            "E-CODE-086",
+            "E-PROP-035"
+          ],
+          "affects": {
+            "requirementRefs": [
+              "REQ-087"
+            ],
+            "pageRefs": [],
+            "domainRefs": [
+              "desktop-platform",
+              "account",
+              "tool-config"
+            ]
+          }
+        }
+      ]
+    },
+    "glossary": {
+      "schemaVersion": 1,
+      "terms": [
+        {
+          "id": "TERM-ACCOUNT-SESSION",
+          "term": "野菜账号会话",
+          "definition": "由野菜API网站授权给桌面客户端、只用于账户和客户端管理接口的凭证状态。",
+          "owner": "account",
+          "aliases": [
+            "账号登录凭证"
+          ]
+        },
+        {
+          "id": "TERM-ACTUAL-PRICE",
+          "term": "野菜实际价格",
+          "definition": "依据当前用户、计费分组、模型、缓存、阶梯和价格版本计算的野菜API价格。",
+          "owner": "billing",
+          "aliases": [
+            "本站价格"
+          ]
+        },
+        {
+          "id": "TERM-LINE",
+          "term": "线路",
+          "definition": "面向用户的 API 接入入口类别，例如大陆优化或全球线路；实际端点在高级信息中可见。",
+          "owner": "diagnostics",
+          "aliases": [
+            "接入线路"
+          ]
+        },
+        {
+          "id": "TERM-MODEL-ID",
+          "term": "模型 ID",
+          "definition": "请求和本地工具配置中使用的真实模型标识，不得被推荐标签取代或隐藏。",
+          "owner": "billing",
+          "aliases": [
+            "真实模型名"
+          ]
+        },
+        {
+          "id": "TERM-OFFICIAL-PRICE",
+          "term": "官网价格",
+          "definition": "模型厂商公开价格源在指定核对时间、单位和计费条件下声明的价格。",
+          "owner": "billing",
+          "aliases": [
+            "厂商零售价"
+          ]
+        },
+        {
+          "id": "TERM-READY",
+          "term": "已经可以使用",
+          "definition": "本地配置写入、读取回验和工具所需协议的最小连通性测试均成功后的状态。",
+          "owner": "diagnostics",
+          "aliases": [
+            "配置成功"
+          ]
+        }
+      ]
+    },
+    "requirements": {
+      "schemaVersion": 1,
+      "requirements": [
+        {
+          "id": "REQ-002",
+          "statement": "The target client account flow uses first-party browser authorization and then displays account balance, usage, and recharge entry points.",
+          "scope": "target",
+          "impact": "critical",
+          "state": "confirmed",
+          "owner": "account",
+          "evidenceRefs": [
+            "E-USER-001",
+            "E-USER-003",
+            "E-USER-018",
+            "E-USER-019",
+            "E-USER-023",
+            "E-CODE-001"
+          ],
+          "acceptance": [
+            "The client never asks the user to choose GitHub or LinuxDo as a desktop-specific login provider.",
+            "If the website session is absent, the website performs its normal login before authorization.",
+            "The device code is short-lived and single-use, and the client exposes waiting, approved, rejected, expired, cancelled, and network-interrupted states.",
+            "Passwords, website cookies, API keys, and final desktop session credentials never appear in an authorization URL.",
+            "The website names and revokes authorized devices, and the client obeys revocation on its next online request.",
+            "A device code expires after 10 minutes, an access token after one hour, an inactive remembered session after 30 days, and every device requires reauthorization no later than 90 days.",
+            "The issued device session contains only the approved current-account read and current-device key-management scopes.",
+            "A backend device/authorization contract is specified before this target flow is implemented."
+          ]
+        },
+        {
+          "id": "REQ-011",
+          "statement": "The client displays balance and usage and opens the existing first-party wallet page in the system browser for recharge during V1.",
+          "scope": "target",
+          "impact": "high",
+          "state": "confirmed",
+          "owner": "billing",
+          "evidenceRefs": [
+            "E-USER-001",
+            "E-USER-023",
+            "E-CODE-001"
+          ],
+          "acceptance": [
+            "Balance and usage identify freshness and retry state.",
+            "Recharge does not embed payment credentials or duplicate payment settlement in the client.",
+            "Password, email, payment data, recharge-record mutation, and other sensitive account actions remain on the first-party website.",
+            "The external wallet destination is restricted to the configured first-party origin."
+          ]
+        },
+        {
+          "id": "REQ-015",
+          "statement": "Model facts have explicit owners: NewAPI live data owns current-account availability, exact IDs, the numeric official-price baseline, and actual user pricing; a versioned first-party catalog owns compatibility, recommendations, descriptions, and any price provenance metadata not yet returned by NewAPI, but never a duplicate price number.",
+          "scope": "target",
+          "impact": "critical",
+          "state": "confirmed",
+          "owner": "billing",
+          "evidenceRefs": [
+            "E-USER-016",
+            "E-USER-017",
+            "E-CODE-001",
+            "E-CODE-002",
+            "E-CODE-006",
+            "E-CODE-007",
+            "E-CODE-008"
+          ],
+          "acceptance": [
+            "No client-side fuzzy match changes an exact server model ID.",
+            "A newly available model without catalog metadata remains identifiable but is not declared compatible without evidence.",
+            "The client derives both comparison values from NewAPI's pricing semantics and never embeds an independently maintained numeric official-price table.",
+            "The bundled catalog is covered by the signed client artifact and may supplement source and verification metadata until a versioned server contract supersedes it.",
+            "NewAPI model_ratio, model_price, and base billing expressions remain vendor official prices; discounts and promotions are represented only by separately identifiable group or special billing rules.",
+            "Automatically imported aggregator or channel prices cannot overwrite an official baseline until they are verified against the corresponding vendor source.",
+            "Tiered expressions, per-request prices, media units, current-user groups, and special pricing rules are preserved rather than reduced to a universal multiplier formula."
+          ]
+        },
+        {
+          "id": "REQ-030",
+          "statement": "RU-002 preserves RU-001 and adds a beginner-readable account and billing shell that truthfully reports the missing desktop backend boundary without contacting account services, storing credentials, fabricating values, or enabling recharge.",
+          "scope": "target",
+          "impact": "critical",
+          "state": "confirmed",
+          "owner": "account",
+          "evidenceRefs": [
+            "E-USER-041",
+            "E-USER-002",
+            "E-USER-003",
+            "E-USER-016",
+            "E-USER-023",
+            "E-EXT-024",
+            "E-CODE-021",
+            "E-PROP-004"
+          ],
+          "acceptance": [
+            "The shell exposes clear Account and Local tools destinations and preserves the complete fixed five-tool read-only scan behavior from RU-001.",
+            "The account destination states that secure website authorization requires a future server upgrade and exposes no control that pretends authorization can currently begin or complete.",
+            "Balance, today usage, month usage, model ID, official price, actual price, and recharge remain visibly unavailable instead of showing zero, sample, cached, or inferred values.",
+            "The fixed 1 USD = 6.75 CNY comparison rate is labelled display-only and not presented as a live exchange rate or a billing input.",
+            "The runtime makes no account, pricing, usage, authorization, wallet, or other network request and persists no password, website cookie, access token, refresh token, API key, account profile, or scan history.",
+            "The updated future NewAPI specification is pinned to current official GitHub evidence, distinguishes current routes from proposed /api/desktop/v1 routes, and records the deployed 404 readiness result without changing NewAPI or production infrastructure."
+          ]
+        },
+        {
+          "id": "REQ-031",
+          "statement": "RU-003 preserves RU-002 and adds a beginner-readable local configuration preview for Claude Code, Codex, OpenCode, Pi, and DSH across the mainland-optimized and global-accelerated lines without reading or changing any tool configuration, accessing a credential, contacting a server, or inventing a model ID.",
+          "scope": "target",
+          "impact": "critical",
+          "state": "confirmed",
+          "owner": "tool-config",
+          "evidenceRefs": [
+            "E-USER-042",
+            "E-USER-010",
+            "E-USER-011",
+            "E-USER-037",
+            "E-EXT-025",
+            "E-EXT-026",
+            "E-EXT-027",
+            "E-EXT-028",
+            "E-CODE-022",
+            "E-PROP-005"
+          ],
+          "acceptance": [
+            "The configuration destination presents exactly Claude Code, Codex, OpenCode, Pi, and DSH in stable order and lets the user choose exactly one tool for the current preview.",
+            "The line step presents exactly mainland optimized at https://yeschoy.com and global accelerated at https://api.yeschoy.com, and the selected line root remains visible in the summary.",
+            "Claude Code previews the approved root URL, Codex, OpenCode, and Pi preview the selected root with /v1, and DSH explicitly withholds a protocol endpoint and write target because its exact web-profile adapter is not verified.",
+            "The preview names only evidenced user-owned fields, exposes no literal secret or complete user path, and clearly states that it has not read an existing configuration.",
+            "Model ID remains visibly unavailable pending the first-party model catalog; the UI displays no sample model, guessed model, price, connectivity result, or supported-version claim.",
+            "The apply control remains disabled and the projection reports networkAttempted, configurationRead, configurationWritten, and credentialAccessed as false for every tool and line selection.",
+            "RU-001 local discovery and RU-002 account and billing readiness behavior remain available and unchanged, and no NewAPI, server, Nginx, DNS, database, updater, or production resource is modified."
+          ]
+        },
+        {
+          "id": "REQ-062",
+          "statement": "Display website-aligned account currency and auditable recent estimated savings without new backend privileges or invented historical totals.",
+          "scope": "target",
+          "impact": "high",
+          "state": "confirmed",
+          "owner": "account",
+          "evidenceRefs": [
+            "E-USER-066",
+            "E-EXT-047",
+            "E-CODE-055"
+          ],
+          "acceptance": [
+            "Current CNY status projects customer-facing RMB credits using quota_per_unit and usd_exchange_rate; missing/unsupported settings show unavailable, never USD or zero fallback. Cumulative consumed credits use account used_quota, not recent TPM.",
+            "Fetch only newest bounded 100 consumption records through the existing native desktop bearer and fixed first-party origin. Do not pass raw rows, metadata, credentials or user IDs into renderer IPC; failed logs do not sign out the account.",
+            "Match the website's quota, recorded special/group ratio, price and usd_exchange_rate formula for supported comparable records. Exclude malformed, non-consumption, free, subscription, special-fee and unknown basis records; both totals use the same included rows.",
+            "Keep negative savings truthful and distinguish available zero, no history, no comparable records, unavailable and refresh-stale states. Never imply recent-100-row calculations are cumulative/monthly or real cash savings.",
+            "Use a closed schema5 financial projection with finite bounded decimal strings, explicit counts and optional zero date window. Decoder preserves existing schema3/4 and rejects extra fields, impossible aggregates or signed-out finance.",
+            "Overview and account share currency/savings logic, provide concise receipt-like detail and current-rate explanation; retain actual usage as a secondary metric and clarify mainland/global network lines do not change price groups.",
+            "Run isolated native and renderer regressions, type/build, arithmetic and boundary fixtures plus local light/dark/narrow keyboard visual checks. No server changes or release/real-account validation claims."
+          ]
+        },
+        {
+          "id": "REQ-067",
+          "statement": "Repair cross-application diagnosis, platform launching, usable CLI opening and truthful verification/recovery without modifying servers or real user settings during development.",
+          "scope": "target",
+          "impact": "critical",
+          "state": "confirmed",
+          "owner": "tool-config",
+          "evidenceRefs": [
+            "E-USER-070",
+            "E-CODE-059"
+          ],
+          "acceptance": [
+            "Real Rust-serialized reachable/mixed/failure connectivity results are accepted by the renderer; stale, malformed, partial and invoke errors never invent network failures or lose valid per-line evidence.",
+            "Windows Store/MSIX discovery preserves validated package application identity; ordinary desktop executables remain supported and unsafe/unrelated launch targets are rejected. Initialization and daily opening share platform launcher.",
+            "CLI proof rejects banners/help/empty/failed output; typed process failures distinguish start, timeout, read/wait and nonzero execution; outputs/secrets never cross IPC.",
+            "All seven targets are offered launch-only opening after read-only validation; four CLI targets open a terminal using native-resolved paths without secrets or caller commands. Repeated open does not reconfigure or issue probes.",
+            "File or credential restoration failures are visible recovery-required states, never unchanged/restored success; account switch, stale reply and recovery journal boundaries remain intact.",
+            "All scoped regressions, renderer typecheck/production build and Windows compile are recorded separately from real platform/application acceptance. Internal 0.4.8 artifacts never imply complete live-user validation."
+          ]
+        },
+        {
+          "id": "REQ-068",
+          "statement": "Implement explicitly selected model sets with real identity and fixed per-model billing routes, honest request errors and cooperative bounded exit without packaging or server mutation.",
+          "scope": "target",
+          "impact": "critical",
+          "state": "confirmed",
+          "owner": "tool-config",
+          "evidenceRefs": [
+            "E-USER-071",
+            "E-CODE-060",
+            "E-EXT-052"
+          ],
+          "acceptance": [
+            "Up to the documented 200-entry catalog bound, unique full model IDs bind explicit billing groups; default is a member. No silent cross-group fallback or enrollment of unselected models. Legacy records upgrade on explicit activation only.",
+            "All seven adapters publish native model menus/catalogs via authenticated loopback routing; legitimate native default changes are not configuration corruption. In-flight requests retain their route. Unsupported optional vendor menus do not block default use.",
+            "Credential sets remain inside OS credential storage, handle the Windows per-blob bound transactionally, and never expose full keys through renderer, files, errors or diagnostics.",
+            "Claude identity uses real IDs rather than Sonnet display masking; both bridges route requested model exactly and isolate continuation history. Curated HTTP/SSE errors and in-memory last-request observations never turn failed streams into success.",
+            "Window close offers background/cancel/exit globally. Confirmed exit rejects new operations, cancels safe work, preserves in-flight account mutations and local rollback, and stops owned runtimes with bounded grace and recoverable progress.",
+            "Synthetic transaction/route/stream/exit tests, actual renderer tests/typecheck/build and Windows compilation pass. No installer, signed release, server change or live-account success is inferred from these tests."
+          ]
+        },
+        {
+          "id": "REQ-079",
+          "statement": "Make one-click activation fast and uniform for all seven supported agents by separating atomic local configuration from asynchronous real-model observation and by safely handling applications that must reload settings.",
+          "scope": "target",
+          "impact": "critical",
+          "state": "confirmed",
+          "owner": "tool-config",
+          "evidenceRefs": [
+            "E-USER-080",
+            "E-CODE-075",
+            "E-EXT-059",
+            "E-PROP-028"
+          ],
+          "acceptance": [
+            "All seven targets share one completion rule: exact account model/group eligibility, native secure credential storage, atomic owned-field commit and semantic readback, required helper-owned loopback readiness, and applicable open dispatch. The activation button never sends or waits for a paid upstream model prompt.",
+            "If Claude Desktop or Codex Desktop is already running, the first request returns application_running without account, key or file mutation. After an explicit save-work confirmation, native code requests normal quit, never force termination, stops if the app remains open, and reopens the exact discovered installation after success.",
+            "Claude Code, Pi, Hermes and OpenClaw never terminate an existing terminal or editor session and plainly state that a new session uses the new settings. DSH may reuse or restart only its assistant-owned runtime.",
+            "A successfully read-back configuration remains connected when the first real model request later reports upstream timeout, quota, model or provider failure; that observation appears in the existing recent-connection result and can guide model or line switching.",
+            "Synthetic native and renderer tests cover every adapter, running/not-running/refused desktop lifecycle branches, no-force-kill behavior, rollback/reopen behavior, truthful copy, and macOS Apple-Silicon plus Windows compilation without packaging."
+          ]
+        },
+        {
+          "id": "REQ-087",
+          "statement": "Package the RU-065 verified client, including the Settings account-boundary cleanup, as distinct 0.4.12 internal installers for universal macOS and Windows x64 without publishing or enabling automatic updates.",
+          "scope": "target",
+          "impact": "high",
+          "state": "confirmed",
+          "owner": "desktop-platform",
+          "evidenceRefs": [
+            "E-USER-085",
+            "E-CODE-086",
+            "E-PROP-035"
+          ],
+          "acceptance": [
+            "package.json, Cargo.toml, Cargo.lock and tauri.conf.json identify this candidate as 0.4.12, while the existing 0.4.11 artifacts remain unchanged and distinguishable.",
+            "The complete current renderer and native suites, TypeScript check, formatting, strict Rust lint, production renderer build, Apple-Silicon compilation and Windows x64 compilation pass before artifact acceptance.",
+            "The macOS DMG contains a universal x86_64 and arm64 app, uses the installed Developer ID identity with hardened runtime, receives accepted Apple notarization tickets for the app and DMG, is stapled, and passes codesign, Gatekeeper, stapler, architecture, bundle-version and disk-image verification.",
+            "The Windows payload is freshly cross-built for x86_64-pc-windows-msvc and packaged by the SHA-256 pinned makensis 3.12 bottle with a closed Simplified-Chinese current-user NSIS recipe, shortcuts, normal-close request and uninstall registration.",
+            "The Windows artifact is explicitly recorded as unsigned, cross-built and not installed on a real Windows device; it does not claim Authenticode, SmartScreen reputation or bundled WebView2 coverage.",
+            "A machine-readable receipt binds the current source-state hash, RU-061 cross-platform verification, RU-065 Settings verification, test counts, tool hashes and artifact hashes. No tag, GitHub Release, upload, updater artifact, update manifest, server, NewAPI, database or user configuration change occurs."
+          ]
+        }
+      ]
+    },
+    "journeys": {
+      "schemaVersion": 1,
+      "actors": [],
+      "journeys": []
+    },
+    "domains": {
+      "schemaVersion": 1,
+      "domains": [
+        {
+          "id": "account",
+          "owner": "product-architecture",
+          "trackScope": [
+            "account"
+          ],
+          "invariants": [
+            "An account session is never projected into a third-party tool configuration."
+          ]
+        },
+        {
+          "id": "billing",
+          "owner": "product-architecture",
+          "trackScope": [
+            "billing"
+          ],
+          "invariants": [
+            "Client cost calculations are estimates; the server billing ledger is authoritative."
+          ]
+        },
+        {
+          "id": "desktop-platform",
+          "owner": "product-architecture",
+          "trackScope": [
+            "desktop-platform"
+          ],
+          "invariants": [
+            "V1 observes but does not install, update, or uninstall third-party AI tools.",
+            "A desktop application observation is separate from a command-line executable observation and cannot prove login, configuration or end-to-end compatibility."
+          ]
+        },
+        {
+          "id": "diagnostics",
+          "owner": "product-architecture",
+          "trackScope": [
+            "diagnostics"
+          ],
+          "invariants": [
+            "A diagnostic conclusion names only causes supported by collected evidence."
+          ]
+        },
+        {
+          "id": "tool-config",
+          "owner": "product-architecture",
+          "trackScope": [
+            "tool-config"
+          ],
+          "invariants": [
+            "A configuration write cannot commit without a recovery snapshot and external-change check. DEC-078 authorizes one encrypted pre-connection baseline per tool until explicit restoration; no backup history."
+          ]
+        }
+      ]
+    },
+    "stateMachines": {
+      "schemaVersion": 1,
+      "machines": []
+    },
+    "contracts": {
+      "schemaVersion": 1,
+      "contracts": [
+        {
+          "id": "desktop-account-session@v5",
+          "kind": "command",
+          "owner": "account",
+          "consumers": [
+            "billing",
+            "desktop-platform",
+            "tool-config"
+          ],
+          "schemaLocator": "inline://contracts.json#/contracts/desktop-account-session@v5",
+          "authorization": "Bundled local desktop webview commands only. The native owner accepts only one compiled line ID and never returns a device code, access token, refresh token, session ID, tool token or local path to the renderer.",
+          "idempotency": "Inspect and refresh are newest-request projections. One stored desktop session is reusable on either compiled first-party origin. Only confirmed authentication failure, expiry, explicit logout or revocation clears the credential.",
+          "compatibility": "IPC5 adds sanitized money and recent savings aggregates. Legacy3/4 remain readable without inventing monetary basis. Commands, auth and optional billing semantics stay unchanged.",
+          "inputSchema": {
+            "type": "object",
+            "description": "One bounded account command issued by the bundled desktop renderer.",
+            "properties": {
+              "requestId": {
+                "type": "string",
+                "description": "Opaque renderer correlation ID.",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9_-]+$"
+              },
+              "lineId": {
+                "type": "string",
+                "description": "Selected compiled first-party API origin.",
+                "enum": [
+                  "mainland_optimized",
+                  "global_accelerated"
+                ]
+              },
+              "action": {
+                "type": "string",
+                "description": "Requested account lifecycle operation.",
+                "enum": [
+                  "inspect",
+                  "begin_authorization",
+                  "poll_authorization",
+                  "cancel_authorization",
+                  "refresh",
+                  "logout",
+                  "open_wallet"
+                ]
+              }
+            },
+            "required": [
+              "requestId",
+              "lineId",
+              "action"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "description": "Sanitized shared account/session projection with no credential material.",
+            "properties": {
+              "requestId": {
+                "type": "string",
+                "description": "Unchanged correlation ID.",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "schemaVersion": {
+                "type": "integer",
+                "const": 5,
+                "description": "Closed native projection version"
+              },
+              "status": {
+                "type": "string",
+                "description": "Closed user-visible session state.",
+                "enum": [
+                  "signed_out",
+                  "authorization_pending",
+                  "signed_in",
+                  "cancelled",
+                  "denied",
+                  "expired",
+                  "session_expired",
+                  "backend_unavailable",
+                  "incompatible_server",
+                  "secure_storage_unavailable",
+                  "network_error",
+                  "invalid_response"
+                ]
+              },
+              "userCode": {
+                "type": "string",
+                "description": "Non-secret short authorization code or empty string.",
+                "maxLength": 16
+              },
+              "pollAfterSeconds": {
+                "type": "integer",
+                "description": "Server-governed next authorization poll delay.",
+                "minimum": 0,
+                "maximum": 60
+              },
+              "expiresAtEpochMs": {
+                "type": "integer",
+                "description": "Pending authorization expiry or zero.",
+                "minimum": 0
+              },
+              "observedAtEpochMs": {
+                "type": "integer",
+                "description": "Local completion time for current account facts or zero.",
+                "minimum": 0
+              },
+              "account": {
+                "type": "object",
+                "description": "Current-user safe display and quota facts only.",
+                "properties": {
+                  "available": {
+                    "type": "boolean",
+                    "description": "Whether the remaining account fields are current server facts."
+                  },
+                  "displayName": {
+                    "type": "string",
+                    "description": "Safe user-selected display name or empty string.",
+                    "maxLength": 160
+                  },
+                  "username": {
+                    "type": "string",
+                    "description": "Current account username or empty string.",
+                    "maxLength": 160
+                  },
+                  "balanceQuota": {
+                    "type": "string",
+                    "description": "Exact non-negative remaining quota or empty string.",
+                    "maxLength": 40
+                  },
+                  "usedQuota": {
+                    "type": "string",
+                    "description": "Exact non-negative cumulative used quota or empty string.",
+                    "maxLength": 40
+                  },
+                  "requestCount": {
+                    "type": "string",
+                    "description": "Exact non-negative cumulative request count or empty string.",
+                    "maxLength": 40
+                  },
+                  "quotaPerUnit": {
+                    "type": "string",
+                    "description": "Current positive server quota units per USD or empty string.",
+                    "maxLength": 40
+                  }
+                },
+                "required": [
+                  "available",
+                  "displayName",
+                  "username",
+                  "balanceQuota",
+                  "usedQuota",
+                  "requestCount",
+                  "quotaPerUnit"
+                ],
+                "additionalProperties": false
+              },
+              "usage": {
+                "type": "object",
+                "description": "Cumulative server quota, request-rate and token-rate facts.",
+                "properties": {
+                  "available": {
+                    "type": "boolean",
+                    "description": "Whether the remaining usage fields are current server facts."
+                  },
+                  "consumedQuota": {
+                    "type": "string",
+                    "description": "Exact cumulative consumption quota or empty string.",
+                    "maxLength": 40
+                  },
+                  "requestRate": {
+                    "type": "string",
+                    "description": "Server summary RPM fact or empty string.",
+                    "maxLength": 40
+                  },
+                  "tokenCount": {
+                    "type": "string",
+                    "description": "Server summary token count or empty string.",
+                    "maxLength": 40
+                  }
+                },
+                "required": [
+                  "available",
+                  "consumedQuota",
+                  "requestRate",
+                  "tokenCount"
+                ],
+                "additionalProperties": false
+              },
+              "models": {
+                "type": "array",
+                "description": "Exact current-account available model identifiers with comparable pricing projections.",
+                "items": {
+                  "type": "object",
+                  "description": "One exact available model and its safe price projection.",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Exact model ID.",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "Bounded untrusted plain model description.",
+                      "maxLength": 500
+                    },
+                    "billingMode": {
+                      "type": "string",
+                      "description": "Closed billing category.",
+                      "enum": [
+                        "ratio",
+                        "per_request",
+                        "tiered_expr",
+                        "unknown"
+                      ]
+                    },
+                    "pricingAvailable": {
+                      "type": "boolean",
+                      "description": "Whether all four comparable prices are present."
+                    },
+                    "officialInputCnyPerMillion": {
+                      "type": "string",
+                      "description": "NewAPI comparison-rate official-reference input price or empty string.",
+                      "maxLength": 40
+                    },
+                    "officialOutputCnyPerMillion": {
+                      "type": "string",
+                      "description": "NewAPI comparison-rate official-reference output price or empty string.",
+                      "maxLength": 40
+                    },
+                    "actualInputCnyPerMillion": {
+                      "type": "string",
+                      "description": "Current-account input price or empty string.",
+                      "maxLength": 40
+                    },
+                    "actualOutputCnyPerMillion": {
+                      "type": "string",
+                      "description": "Current-account output price or empty string.",
+                      "maxLength": 40
+                    },
+                    "supportedEndpointTypes": {
+                      "type": "array",
+                      "description": "Observed endpoint types",
+                      "items": {
+                        "type": "string",
+                        "description": "Endpoint type",
+                        "maxLength": 80,
+                        "minLength": 1
+                      },
+                      "maxItems": 32,
+                      "uniqueItems": true
+                    },
+                    "billing": {
+                      "type": "object",
+                      "description": "Optional billing",
+                      "properties": {
+                        "groups": {
+                          "type": "array",
+                          "description": "Account groups excluding auto",
+                          "maxItems": 128,
+                          "items": {
+                            "type": "object",
+                            "description": "Group",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "Group ID excluding auto",
+                                "maxLength": 128,
+                                "minLength": 1
+                              },
+                              "description": {
+                                "type": "string",
+                                "description": "Plain description",
+                                "maxLength": 500
+                              },
+                              "ratio": {
+                                "type": "number",
+                                "description": "Optional group ratio",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "description"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "baseInputUsd": {
+                          "type": "number",
+                          "description": "Optional base input USD",
+                          "minimum": 0
+                        },
+                        "baseOutputUsd": {
+                          "type": "number",
+                          "description": "Optional base output USD",
+                          "minimum": 0
+                        },
+                        "cacheReadUsd": {
+                          "type": "number",
+                          "description": "Optional cache read USD",
+                          "minimum": 0
+                        },
+                        "cacheWriteUsd": {
+                          "type": "number",
+                          "description": "Optional cache write USD",
+                          "minimum": 0
+                        },
+                        "requestUsd": {
+                          "type": "number",
+                          "description": "Optional request USD",
+                          "minimum": 0
+                        },
+                        "expression": {
+                          "type": "string",
+                          "description": "Audited expression",
+                          "maxLength": 8192
+                        }
+                      },
+                      "required": [
+                        "groups",
+                        "expression"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "description",
+                    "billingMode",
+                    "pricingAvailable",
+                    "officialInputCnyPerMillion",
+                    "officialOutputCnyPerMillion",
+                    "actualInputCnyPerMillion",
+                    "actualOutputCnyPerMillion",
+                    "supportedEndpointTypes"
+                  ],
+                  "additionalProperties": false
+                },
+                "maxItems": 2048
+              },
+              "comparisonFx": {
+                "type": "string",
+                "description": "Positive NewAPI usd_exchange_rate used for comparison or empty string when unavailable.",
+                "maxLength": 40,
+                "pattern": "^(?:|(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"
+              },
+              "reasonCode": {
+                "type": "string",
+                "description": "Closed safe recovery reason; never a raw server body.",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "money": {
+                "type": "object",
+                "description": "Native-only conversion of account credit amounts using current website settings.",
+                "properties": {
+                  "currency": {
+                    "type": "string",
+                    "enum": [
+                      "",
+                      "CNY",
+                      "USD"
+                    ],
+                    "description": "Website selected currency; empty means all amounts unavailable."
+                  },
+                  "balanceAmount": {
+                    "type": "string",
+                    "description": "Nonnegative balance in selected display currency or empty.",
+                    "maxLength": 40,
+                    "pattern": "^(?:|(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"
+                  },
+                  "consumedAmount": {
+                    "type": "string",
+                    "description": "Cumulative account used_quota converted in selected display currency or empty.",
+                    "maxLength": 40,
+                    "pattern": "^(?:|(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"
+                  },
+                  "displayRate": {
+                    "type": "string",
+                    "description": "Website quota-unit display conversion, not market exchange rate.",
+                    "maxLength": 40,
+                    "pattern": "^(?:|(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"
+                  }
+                },
+                "required": [
+                  "currency",
+                  "balanceAmount",
+                  "consumedAmount",
+                  "displayRate"
+                ],
+                "additionalProperties": false
+              },
+              "savings": {
+                "type": "object",
+                "description": "Bounded recent CNY reference estimate, never a lifetime saving or actual vendor invoice.",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "available",
+                      "empty",
+                      "no_comparable_records",
+                      "unavailable"
+                    ],
+                    "description": "Truthful recent estimate availability."
+                  },
+                  "reasonCode": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "no_history",
+                      "missing_basis",
+                      "logs_unavailable",
+                      "settings_unavailable",
+                      "invalid_logs"
+                    ],
+                    "description": "Closed safe explanation."
+                  },
+                  "officialAmount": {
+                    "type": "string",
+                    "description": "CNY official reference equivalent over included rows.",
+                    "maxLength": 40,
+                    "pattern": "^(?:|(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"
+                  },
+                  "siteAmount": {
+                    "type": "string",
+                    "description": "CNY Yecai consumption cost over exactly the same rows.",
+                    "maxLength": 40,
+                    "pattern": "^(?:|(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"
+                  },
+                  "savedAmount": {
+                    "type": "string",
+                    "description": "Signed CNY difference; do not clamp negative.",
+                    "maxLength": 40,
+                    "pattern": "^(?:|-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"
+                  },
+                  "referenceRate": {
+                    "type": "string",
+                    "description": "Current website usd_exchange_rate for reference.",
+                    "maxLength": 40,
+                    "pattern": "^(?:|(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"
+                  },
+                  "priceRate": {
+                    "type": "string",
+                    "description": "Current website price per quota unit.",
+                    "maxLength": 40,
+                    "pattern": "^(?:|(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$"
+                  },
+                  "recordLimit": {
+                    "type": "integer",
+                    "const": 100,
+                    "description": "Maximum recent records scanned; not total history."
+                  },
+                  "scannedCount": {
+                    "type": "integer",
+                    "description": "Scanned bounded consumption records.",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "includedCount": {
+                    "type": "integer",
+                    "description": "Rows with comparable basis.",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "excludedCount": {
+                    "type": "integer",
+                    "description": "Skipped rows without comparable basis.",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "oldestAtEpochMs": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 8640000000000000,
+                    "description": "Oldest included timestamp, or zero when complete date window unavailable."
+                  },
+                  "newestAtEpochMs": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 8640000000000000,
+                    "description": "Newest included timestamp, or zero."
+                  }
+                },
+                "required": [
+                  "status",
+                  "reasonCode",
+                  "officialAmount",
+                  "siteAmount",
+                  "savedAmount",
+                  "referenceRate",
+                  "priceRate",
+                  "recordLimit",
+                  "scannedCount",
+                  "includedCount",
+                  "excludedCount",
+                  "oldestAtEpochMs",
+                  "newestAtEpochMs"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "requestId",
+              "schemaVersion",
+              "status",
+              "userCode",
+              "pollAfterSeconds",
+              "expiresAtEpochMs",
+              "observedAtEpochMs",
+              "account",
+              "usage",
+              "models",
+              "comparisonFx",
+              "reasonCode",
+              "money",
+              "savings"
+            ],
+            "additionalProperties": false
+          },
+          "dataClasses": [
+            "public",
+            "internal",
+            "personal",
+            "sensitive"
+          ],
+          "observability": {
+            "correlation": "Only a transient requestId and local observation timestamp cross IPC.",
+            "audit": "The first-party server owns session audit records; the client stores no account history.",
+            "metrics": "No telemetry upload; sanitized current state exists only in memory."
+          },
+          "errorSemantics": [
+            "A transport or non-authentication server failure on one line cannot erase a credential that may still be valid on the other line.",
+            "Malformed NewAPI currency settings disable comparison rows without changing account or session truth.",
+            "All remote bodies and errors are reduced to closed renderer states."
+          ],
+          "requirementRefs": [
+            "REQ-062"
+          ],
+          "evidenceRefs": [
+            "E-USER-066",
+            "E-EXT-047",
+            "E-CODE-055"
+          ],
+          "status": "specified"
+        },
+        {
+          "id": "desktop-connection-management@v2",
+          "kind": "command",
+          "owner": "tool-config",
+          "consumers": [
+            "desktop-platform"
+          ],
+          "schemaLocator": "inline://contracts.json#/contracts/desktop-connection-management@v2",
+          "authorization": "Bundled renderer; restore explicitly targets one allowlisted tool. No login or caller-selected paths/shell commands.",
+          "idempotency": "Serializes with activation, replay becomes not_connected. Three-way owned-field restore plus optimistic file check; retain encrypted journal until file and credential cleanup succeed.",
+          "compatibility": "Version 2 adds explicit configured models and an optional latest non-persistent sanitized request observation. Legacy v1 remains decodable. Default is not proof of every model response; native allowed selection is distinct from config integrity.",
+          "inputSchema": {
+            "type": "object",
+            "description": "Local management",
+            "properties": {
+              "requestId": {
+                "type": "string",
+                "description": "Opaque renderer correlation ID.",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9_-]+$"
+              },
+              "operation": {
+                "type": "string",
+                "description": "Action",
+                "maxLength": 128,
+                "enum": [
+                  "inspect",
+                  "restore"
+                ]
+              },
+              "toolId": {
+                "type": "string",
+                "description": "Target, empty for inspect",
+                "maxLength": 128,
+                "enum": [
+                  "",
+                  "claude_code",
+                  "claude_desktop",
+                  "codex_desktop",
+                  "pi",
+                  "dsh_web",
+                  "hermes",
+                  "openclaw"
+                ]
+              }
+            },
+            "required": [
+              "requestId",
+              "operation",
+              "toolId"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "description": "Management result",
+            "properties": {
+              "requestId": {
+                "type": "string",
+                "description": "Unchanged correlation ID.",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "schemaVersion": {
+                "type": "integer",
+                "description": "Schema",
+                "enum": [
+                  2
+                ]
+              },
+              "status": {
+                "type": "string",
+                "description": "Outcome",
+                "maxLength": 128,
+                "enum": [
+                  "ok",
+                  "restored",
+                  "restored_with_changes",
+                  "recovery_failed"
+                ]
+              },
+              "connections": {
+                "type": "array",
+                "description": "Local states",
+                "items": {
+                  "type": "object",
+                  "description": "Sanitized local state, not fresh network health",
+                  "properties": {
+                    "toolId": {
+                      "type": "string",
+                      "description": "Tool",
+                      "maxLength": 128,
+                      "enum": [
+                        "claude_code",
+                        "claude_desktop",
+                        "codex_desktop",
+                        "pi",
+                        "dsh_web",
+                        "hermes",
+                        "openclaw"
+                      ]
+                    },
+                    "state": {
+                      "type": "string",
+                      "description": "State",
+                      "maxLength": 128,
+                      "enum": [
+                        "not_connected",
+                        "connected",
+                        "changed",
+                        "legacy",
+                        "recovery_pending",
+                        "unavailable"
+                      ]
+                    },
+                    "modelId": {
+                      "type": "string",
+                      "description": "Last model",
+                      "maxLength": 200
+                    },
+                    "lineId": {
+                      "type": "string",
+                      "description": "Compiled line or unknown",
+                      "maxLength": 128,
+                      "enum": [
+                        "",
+                        "mainland_optimized",
+                        "global_accelerated"
+                      ]
+                    },
+                    "billingGroup": {
+                      "type": "string",
+                      "description": "Last group",
+                      "maxLength": 128
+                    },
+                    "updatedAtEpochMs": {
+                      "type": "integer",
+                      "description": "Setup time or zero if unknown",
+                      "minimum": 0
+                    },
+                    "restoreMode": {
+                      "type": "string",
+                      "description": "Scope",
+                      "maxLength": 128,
+                      "enum": [
+                        "original",
+                        "remove_yeschoy",
+                        "none"
+                      ]
+                    },
+                    "requiresBackground": {
+                      "type": "boolean",
+                      "description": "Needs assistant runtime"
+                    },
+                    "reasonCode": {
+                      "type": "string",
+                      "description": "Safe reason",
+                      "maxLength": 80
+                    },
+                    "models": {
+                      "type": "array",
+                      "description": "Unique models including default. Bound from vendor model catalog schema.",
+                      "items": {
+                        "type": "object",
+                        "description": "Explicit model and fixed billing group, no key.",
+                        "properties": {
+                          "modelId": {
+                            "type": "string",
+                            "description": "Full model ID.",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "billingGroup": {
+                            "type": "string",
+                            "description": "Explicit account group.",
+                            "minLength": 1,
+                            "maxLength": 128
+                          }
+                        },
+                        "required": [
+                          "modelId",
+                          "billingGroup"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "minItems": 0,
+                      "maxItems": 200
+                    },
+                    "lastRequest": {
+                      "type": "object",
+                      "description": "Latest observation in native memory only; absence means no observed request.",
+                      "properties": {
+                        "modelId": {
+                          "type": "string",
+                          "description": "Requested model ID.",
+                          "maxLength": 200
+                        },
+                        "billingGroup": {
+                          "type": "string",
+                          "description": "Configured billing group.",
+                          "maxLength": 128
+                        },
+                        "lineId": {
+                          "type": "string",
+                          "description": "Compiled network line.",
+                          "enum": [
+                            "mainland_optimized",
+                            "global_accelerated"
+                          ]
+                        },
+                        "outcome": {
+                          "type": "string",
+                          "description": "Closed result.",
+                          "enum": [
+                            "ok",
+                            "timeout",
+                            "network_error",
+                            "upstream_error",
+                            "invalid_response",
+                            "stream_interrupted",
+                            "unknown_model"
+                          ]
+                        },
+                        "httpStatus": {
+                          "type": "integer",
+                          "description": "HTTP status or zero for pre-response failure.",
+                          "minimum": 0,
+                          "maximum": 599
+                        },
+                        "observedAtEpochMs": {
+                          "type": "integer",
+                          "description": "Observation time.",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "modelId",
+                        "billingGroup",
+                        "lineId",
+                        "outcome",
+                        "httpStatus",
+                        "observedAtEpochMs"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "toolId",
+                    "state",
+                    "modelId",
+                    "lineId",
+                    "billingGroup",
+                    "updatedAtEpochMs",
+                    "restoreMode",
+                    "requiresBackground",
+                    "reasonCode",
+                    "models"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 0,
+                "maxItems": 7
+              },
+              "reasonCode": {
+                "type": "string",
+                "description": "Safe reason",
+                "maxLength": 80
+              }
+            },
+            "required": [
+              "requestId",
+              "schemaVersion",
+              "status",
+              "connections",
+              "reasonCode"
+            ],
+            "additionalProperties": false
+          },
+          "dataClasses": [
+            "public",
+            "internal",
+            "sensitive"
+          ],
+          "observability": {
+            "correlation": "Safe ID and closed outcomes",
+            "audit": "Single encrypted baseline; no history",
+            "metrics": "No upload"
+          },
+          "errorSemantics": [
+            "Preserve later changes and disclose restored_with_changes.",
+            "Invalid file or storage failure retains recovery for retry.",
+            "Do not revoke shared remote tokens."
+          ],
+          "requirementRefs": [
+            "REQ-068"
+          ],
+          "evidenceRefs": [
+            "E-USER-071",
+            "E-CODE-060",
+            "E-EXT-052"
+          ],
+          "status": "specified"
+        },
+        {
+          "id": "desktop-open-connection@v2",
+          "kind": "command",
+          "owner": "tool-config",
+          "consumers": [
+            "desktop-platform"
+          ],
+          "schemaLocator": "inline://contracts.json#/contracts/desktop-open-connection@v2",
+          "authorization": "Explicit bundled-renderer Open; native resolves compiled tool, installation and OS credential. No caller paths/URLs/commands or secrets. No login required.",
+          "idempotency": "Serialize with activation/restore and process lock; reuse live DSH. Never writes config, issues token or sends a paid probe.",
+          "compatibility": "Retain wire schema 1 and command name; accept all seven compiled tools. Four CLI targets open an OS terminal running only the native-resolved installed program, with no API key in arguments or script. Desktop targets use structured platform activation; DSH reuses its managed browser process.",
+          "inputSchema": {
+            "type": "object",
+            "description": "Open request",
+            "properties": {
+              "requestId": {
+                "type": "string",
+                "description": "Transient ID",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              "toolId": {
+                "type": "string",
+                "description": "Compiled tool",
+                "maxLength": 80,
+                "enum": [
+                  "claude_code",
+                  "claude_desktop",
+                  "codex_desktop",
+                  "pi",
+                  "dsh_web",
+                  "hermes",
+                  "openclaw"
+                ]
+              }
+            },
+            "required": [
+              "requestId",
+              "toolId"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "description": "Launch result",
+            "properties": {
+              "requestId": {
+                "type": "string",
+                "description": "Transient ID",
+                "maxLength": 100
+              },
+              "schemaVersion": {
+                "type": "integer",
+                "description": "Projection version",
+                "const": 1
+              },
+              "toolId": {
+                "type": "string",
+                "description": "Compiled tool",
+                "maxLength": 80,
+                "enum": [
+                  "claude_code",
+                  "claude_desktop",
+                  "codex_desktop",
+                  "pi",
+                  "dsh_web",
+                  "hermes",
+                  "openclaw"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "description": "Closed result",
+                "maxLength": 80,
+                "enum": [
+                  "opened",
+                  "not_connected",
+                  "settings_changed",
+                  "recovery_pending",
+                  "secure_storage_unavailable",
+                  "tool_not_found",
+                  "launch_failed",
+                  "busy"
+                ]
+              }
+            },
+            "required": [
+              "requestId",
+              "schemaVersion",
+              "toolId",
+              "status"
+            ],
+            "additionalProperties": false
+          },
+          "dataClasses": [
+            "internal"
+          ],
+          "observability": {
+            "correlation": "Transient ID",
+            "audit": "No new history",
+            "metrics": "No upload"
+          },
+          "errorSemantics": [
+            "Opened is dispatch of application opening, not proof of response.",
+            "Changed owned settings/pending recovery/missing secret return non-success without mutation.",
+            "Opening CLI terminal is an explicit user action, not a paid probe or proof of response. Validate owned settings and active credential read-only before launching; caller never supplies command, path or URL."
+          ],
+          "requirementRefs": [
+            "REQ-067"
+          ],
+          "evidenceRefs": [
+            "E-USER-070",
+            "E-CODE-059"
+          ],
+          "status": "specified"
+        },
+        {
+          "id": "desktop-tool-activation@v10",
+          "kind": "command",
+          "owner": "tool-config",
+          "consumers": [
+            "desktop-platform",
+            "diagnostics"
+          ],
+          "schemaLocator": "inline://contracts.json#/contracts/desktop-tool-activation@v10",
+          "authorization": "One explicit click in the bundled desktop shell while a valid first-party desktop session exists. Native code accepts only two compiled active line IDs, seven closed target IDs, exact current-account model/group bindings and an optional native installation handoff. restartRunningApp is accepted only for Claude Desktop or Codex Desktop after the renderer shows an explicit save-work confirmation; it authorizes a normal quit request and reopen, never force termination. Keys remain native.",
+          "idempotency": "Repeated activation reuses the target dedicated NewAPI token and replaces only receipt-owned fields. A same-tool pending encrypted transaction is recovered first; completed records are never auto-restored. A running desktop app returns application_running before account, key or file mutation unless the confirmed restart flag is present. Configuration ready is recomputed from atomic write/readback and local runtime readiness, not a paid model reply.",
+          "compatibility": "Wire schema remains version 4. The optional restartRunningApp boolean defaults false and application_running is a new closed outcome. Existing model catalogs, exact model/group routing, connection receipts and first-request diagnostics remain compatible. CLI tools keep current sessions untouched and take effect in a new session; Claude Desktop and Codex Desktop may be normally quit and reopened after explicit confirmation.",
+          "inputSchema": {
+            "type": "object",
+            "description": "One bounded native activation request for an explicitly selected tool identity.",
+            "properties": {
+              "requestId": {
+                "type": "string",
+                "description": "Opaque renderer correlation ID.",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9_-]+$"
+              },
+              "lineId": {
+                "type": "string",
+                "description": "Selected compiled first-party API origin.",
+                "enum": [
+                  "mainland_optimized",
+                  "global_accelerated"
+                ]
+              },
+              "toolId": {
+                "type": "string",
+                "description": "Exact supported target identity.",
+                "enum": [
+                  "claude_code",
+                  "claude_desktop",
+                  "codex_desktop",
+                  "pi",
+                  "dsh_web",
+                  "hermes",
+                  "openclaw"
+                ]
+              },
+              "modelId": {
+                "type": "string",
+                "description": "Exact model ID selected from the current account model list.",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "installationId": {
+                "type": "string",
+                "description": "Opaque native discovery choice or empty for a unique installation.",
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9_-]*$"
+              },
+              "billingGroup": {
+                "type": "string",
+                "description": "Exact non-auto billing group returned for the selected account model.",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "models": {
+                "type": "array",
+                "description": "Unique models including default. Bound from vendor model catalog schema.",
+                "items": {
+                  "type": "object",
+                  "description": "Explicit model and fixed billing group, no key.",
+                  "properties": {
+                    "modelId": {
+                      "type": "string",
+                      "description": "Full model ID.",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "billingGroup": {
+                      "type": "string",
+                      "description": "Explicit account group.",
+                      "minLength": 1,
+                      "maxLength": 128
+                    }
+                  },
+                  "required": [
+                    "modelId",
+                    "billingGroup"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 1,
+                "maxItems": 200
+              },
+              "installationJobId": {
+                "type": "string",
+                "description": "Optional one-use native installer confirmation. Binds exact tool, installed target, model set/default, group, line and native account epoch.",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9_-]+$"
+              },
+              "restartRunningApp": {
+                "type": "boolean",
+                "description": "Optional explicit consent to normally quit and reopen a running Claude Desktop or Codex Desktop instance after the user has saved work. False or absent never closes an app."
+              }
+            },
+            "required": [
+              "requestId",
+              "lineId",
+              "toolId",
+              "modelId",
+              "installationId",
+              "billingGroup"
+            ],
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "description": "Sanitized activation state. ready proves secure credential publication, atomic owned-field write/readback, required local gateway readiness and applicable open dispatch; it does not claim that an upstream model produced a reply.",
+            "properties": {
+              "requestId": {
+                "type": "string",
+                "description": "Unchanged correlation ID.",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "schemaVersion": {
+                "type": "integer",
+                "description": "Wire-compatible activation projection schema version.",
+                "enum": [
+                  4
+                ]
+              },
+              "status": {
+                "type": "string",
+                "description": "Closed activation outcome.",
+                "enum": [
+                  "ready",
+                  "application_running",
+                  "signed_out",
+                  "tool_not_found",
+                  "multiple_installations",
+                  "missing_runtime",
+                  "unsupported_group",
+                  "unsupported_profile",
+                  "unsupported_model",
+                  "external_override",
+                  "secure_storage_unavailable",
+                  "configuration_failed",
+                  "launch_failed",
+                  "verification_failed",
+                  "server_unavailable",
+                  "invalid_request"
+                ]
+              },
+              "toolId": {
+                "type": "string",
+                "description": "Validated target identity.",
+                "enum": [
+                  "claude_code",
+                  "claude_desktop",
+                  "codex_desktop",
+                  "pi",
+                  "dsh_web",
+                  "hermes",
+                  "openclaw"
+                ]
+              },
+              "modelId": {
+                "type": "string",
+                "description": "Validated exact model ID or empty string.",
+                "maxLength": 200
+              },
+              "billingGroup": {
+                "type": "string",
+                "description": "Validated exact account billing group or empty string only on an invalid request.",
+                "maxLength": 128
+              },
+              "observedAtEpochMs": {
+                "type": "integer",
+                "description": "Local completion timestamp.",
+                "minimum": 0
+              },
+              "reasonCode": {
+                "type": "string",
+                "description": "Closed safe recovery reason without raw response body, key or path.",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "models": {
+                "type": "array",
+                "description": "Unique models including default. Bound from vendor model catalog schema.",
+                "items": {
+                  "type": "object",
+                  "description": "Explicit model and fixed billing group, no key.",
+                  "properties": {
+                    "modelId": {
+                      "type": "string",
+                      "description": "Full model ID.",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "billingGroup": {
+                      "type": "string",
+                      "description": "Explicit account group.",
+                      "minLength": 1,
+                      "maxLength": 128
+                    }
+                  },
+                  "required": [
+                    "modelId",
+                    "billingGroup"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 0,
+                "maxItems": 200
+              }
+            },
+            "required": [
+              "requestId",
+              "schemaVersion",
+              "status",
+              "toolId",
+              "modelId",
+              "billingGroup",
+              "observedAtEpochMs",
+              "reasonCode",
+              "models"
+            ],
+            "additionalProperties": false
+          },
+          "dataClasses": [
+            "public",
+            "internal",
+            "sensitive"
+          ],
+          "observability": {
+            "correlation": "Only request ID, closed target, model, billing group, status, reason and observation time cross IPC.",
+            "audit": "One encrypted baseline per tool; key in OS storage, erased after restore; no history or telemetry.",
+            "metrics": "No telemetry upload. Provider probe output is bounded and reduced to a closed status before IPC."
+          },
+          "errorSemantics": [
+            "Invalid target, active line, model, billing group, installation identity or restart flag fails before key acquisition or file access.",
+            "A synchronous ready result requires the target credential in native secure storage, atomic configuration commit with semantic readback, the required helper-owned loopback runtime listening, and an applicable desktop or DSH open dispatch. It never waits for or bills an upstream model request.",
+            "Claude Desktop and Codex Desktop are checked again under the activation lock. If running and restartRunningApp is absent, application_running returns before mutation. With explicit consent native code requests a normal quit, waits only for a bounded exit, never force-terminates, and reopens only the exact discovered target.",
+            "A refused or incomplete normal quit leaves settings untouched and returns application_running with graceful_restart_required. CLI tools never terminate an existing terminal or editor session; their new configuration applies to a new session. Only helper-owned runtimes may be restarted.",
+            "Configuration, secure-storage, local-runtime and launch failures remain distinct closed outcomes. A failing local transaction restores touched files and prior credentials and deletes only a newly created token whose ownership is proven; a desktop app normally closed for the attempt is reopened against restored settings.",
+            "After ready, the first real application request is observed by the existing local gateway and exposed through recent connection results. An upstream timeout, quota, model or provider error does not roll back a configuration that was already atomically installed.",
+            "Complete keys never cross renderer IPC, appear in ordinary configuration or enter diagnostic text. Loopback compatibility endpoints return only public model metadata and health state.",
+            "Duplicate or unregistered model/group is rejected; no implicit default/group substitution. Cancellation before local write is safe; after write must restore locally or retain recovery state.",
+            "An installer handoff atomically consumes its one-use intent before credential or configuration work, checks full selection and exact installed target, and uses the captured native epoch throughout existing session-guarded activation.",
+            "A same-tool pending recovery record is self-healed only on a new explicit activation under the cross-process lock; incomplete file, credential or receipt cleanup remains non-ready with manual restore fallback.",
+            "Claude Desktop aliases are accepted only when derived from the current credential model set and resolve to exactly one real model, group and key before dispatch; Claude Code behavesAs never replaces the transmitted model ID."
+          ],
+          "requirementRefs": [
+            "REQ-079"
+          ],
+          "evidenceRefs": [
+            "E-USER-080",
+            "E-CODE-075",
+            "E-EXT-059",
+            "E-PROP-028"
+          ],
+          "status": "specified"
+        }
+      ]
+    },
+    "pageMatrix": {
+      "schemaVersion": 1,
+      "stateProfiles": [
+        {
+          "id": "PROFILE-DESKTOP-ACCOUNT-READINESS",
+          "states": {
+            "default": {
+              "behavior": "Inspect the selected first-party line for the exact desktop v2 contract, restore a remembered OS-credential-store session when possible, otherwise show one clear website sign-in action.",
+              "visibleTruth": "No account value is current until the newest native projection succeeds; an undeployed or incompatible server remains visibly unavailable.",
+              "prohibitedClaims": [
+                "Do not claim that login, account data, billing data, or recharge is available, and do not show zero or sample numbers."
+              ],
+              "allowedActions": [
+                "begin_first_party_authorization",
+                "retry_account_projection",
+                "switch_to_local_tools"
+              ],
+              "freshness": "The newest requestId owns current account truth and successful data shows its local observation time.",
+              "recovery": "Retry the selected line or start first-party website authorization; no password or API key is entered in the client.",
+              "correlation": "Only the requestId and safe state cross IPC; credentials and raw server bodies remain native-only."
+            },
+            "loading": {
+              "behavior": "Show a quiet current-request skeleton while the native layer validates bootstrap, restores or refreshes the session, and reads account projections.",
+              "visibleTruth": "The newest native request is unresolved; prior numbers are not current.",
+              "prohibitedClaims": [
+                "Do not keep an old balance or price visually current while a newer request is unresolved."
+              ],
+              "allowedActions": [],
+              "freshness": "Only the newest requestId may produce current data.",
+              "recovery": "A failed request transitions to a closed safe error without inventing completion.",
+              "correlation": "Loading belongs to exactly one transient requestId."
+            },
+            "empty": {
+              "behavior": "Keep the signed-in account visible while explaining that the server returned no usage or comparable ratio-price rows.",
+              "visibleTruth": "The server returned a successful but empty projection for the selected range.",
+              "prohibitedClaims": [
+                "Do not convert missing usage or price rows into a zero-cost or free-service claim."
+              ],
+              "allowedActions": [
+                "retry_account_projection"
+              ],
+              "freshness": "Show the server data timestamp and selected range.",
+              "recovery": "The user may retry without converting missing data into zero.",
+              "correlation": "The empty result remains bound to its server requestId and data timestamp."
+            },
+            "partial": {
+              "behavior": "Show each successfully validated account, usage, model, pricing or wallet projection independently and mark the missing section by name.",
+              "visibleTruth": "Only the named server projections completed successfully.",
+              "prohibitedClaims": [
+                "Do not derive a missing official price from an actual price or a missing balance from cached usage."
+              ],
+              "allowedActions": [
+                "retry_missing_projection",
+                "switch_to_local_tools"
+              ],
+              "freshness": "The page shows the native observation time; missing sections remain unavailable.",
+              "recovery": "Retry only the missing projection without erasing truthful completed sections.",
+              "correlation": "Each partial section retains its originating requestId."
+            },
+            "error": {
+              "behavior": "Show a stable safe error class and hide unverified numeric account and billing values.",
+              "visibleTruth": "The newest account request did not produce a valid projection.",
+              "prohibitedClaims": [
+                "Do not parse a server message into a guessed balance, price, authorization, or payment state."
+              ],
+              "allowedActions": [
+                "retry_account_projection",
+                "switch_to_local_tools"
+              ],
+              "freshness": "Any prior data is visibly expired and cannot be presented as current.",
+              "recovery": "Retry creates a new requestId; authentication failures require the explicit authorization recovery path.",
+              "correlation": "Only safe request and error codes may be shown; secrets and raw server bodies remain hidden."
+            },
+            "expired": {
+              "behavior": "Replace account facts with an expired-session notice and remove active wallet and billing actions.",
+              "visibleTruth": "The desktop session or pending authorization has expired and current account truth is unavailable.",
+              "prohibitedClaims": [
+                "Do not keep cached account, price, usage, or wallet data looking live."
+              ],
+              "allowedActions": [
+                "restart_first_party_authorization",
+                "switch_to_local_tools"
+              ],
+              "freshness": "Expired data keeps only a visible stale timestamp if retained in memory for explanation.",
+              "recovery": "Start a new authorization through the system browser.",
+              "correlation": "The expired device session ID is never displayed or logged."
+            },
+            "conflict": {
+              "behavior": "Explain authorization replay, already-used code, device revocation, or newest-request conflict without choosing a successful state.",
+              "visibleTruth": "The server rejected the operation because the device authorization or session identity no longer owns the expected state.",
+              "prohibitedClaims": [
+                "Do not treat an already-used or mismatched authorization as approved."
+              ],
+              "allowedActions": [
+                "restart_first_party_authorization",
+                "switch_to_local_tools"
+              ],
+              "freshness": "Conflicted credentials and results are immediately ineligible for current display.",
+              "recovery": "Start a new single-use authorization request.",
+              "correlation": "The user sees a safe conflict code and support requestId only."
+            },
+            "recovery": {
+              "behavior": "Show the exact safe next step for backend unavailable, network retry, expired session, rejection, or revocation.",
+              "visibleTruth": "Recovery has not completed until the corresponding server response succeeds.",
+              "prohibitedClaims": [
+                "Do not auto-authorize, auto-recharge, or silently fall back to broad website credentials."
+              ],
+              "allowedActions": [
+                "retry_account_projection",
+                "restart_first_party_authorization",
+                "switch_to_local_tools"
+              ],
+              "freshness": "Recovery starts a new request identity and invalidates superseded results.",
+              "recovery": "Follow only the action allowed by the stable native reason code.",
+              "correlation": "Every future recovery attempt receives a new requestId."
+            },
+            "processing": {
+              "behavior": "Show the non-secret short code, remaining approval window and a cancel action while the website decides the device authorization.",
+              "visibleTruth": "The device authorization is pending; approval, denial, cancellation, expiry and server-directed slow-down remain distinct outcomes.",
+              "prohibitedClaims": [
+                "Do not put passwords, cookies, access tokens, refresh tokens, API keys, or final session credentials in a URL or visible code."
+              ],
+              "allowedActions": [
+                "cancel_device_authorization"
+              ],
+              "freshness": "The server-provided expiry owns the pending state and cannot be extended by the client.",
+              "recovery": "Cancellation or expiry requires a new authorization request; slow_down obeys the server interval.",
+              "correlation": "Only the authorization requestId and non-secret user code may be presented."
+            }
+          }
+        },
+        {
+          "id": "PROFILE-PUBLIC-CATALOG-PREVIEW",
+          "states": {
+            "default": {
+              "behavior": "Show tool/line choices and an explicit read-catalog button; no request, model, authorization or price exists.",
+              "visibleTruth": "Public metadata is a point-in-time observation only; account-specific models, final prices, key readiness and apply remain unavailable.",
+              "prohibitedClaims": [
+                "No login, payment, valid key, exact tool compatibility, account-specific eligibility or successful configuration may be inferred."
+              ],
+              "allowedActions": [
+                "select_preview_tool",
+                "select_preview_line",
+                "read_public_service_catalog",
+                "select_public_group",
+                "select_public_model",
+                "refresh_public_catalog",
+                "switch_to_account",
+                "switch_to_local_tools"
+              ],
+              "freshness": "No retained cache or invented TTL; show local observation time. Clear selection on refresh and origin changes and reject older completions.",
+              "recovery": "Retry explicitly; all sensitive actions remain disabled and no rollback is necessary.",
+              "correlation": "Only the newest requestId and selected line may populate the panel."
+            },
+            "loading": {
+              "behavior": "Clear prior catalog and selection, show request progress, disable duplicate refresh and accept only the newest request identity.",
+              "visibleTruth": "Public metadata is a point-in-time observation only; account-specific models, final prices, key readiness and apply remain unavailable.",
+              "prohibitedClaims": [
+                "No login, payment, valid key, exact tool compatibility, account-specific eligibility or successful configuration may be inferred."
+              ],
+              "allowedActions": [
+                "select_preview_tool",
+                "select_preview_line",
+                "read_public_service_catalog",
+                "select_public_group",
+                "select_public_model",
+                "refresh_public_catalog",
+                "switch_to_account",
+                "switch_to_local_tools"
+              ],
+              "freshness": "No retained cache or invented TTL; show local observation time. Clear selection on refresh and origin changes and reject older completions.",
+              "recovery": "Retry explicitly; all sensitive actions remain disabled and no rollback is necessary.",
+              "correlation": "Only the newest requestId and selected line may populate the panel."
+            },
+            "empty": {
+              "behavior": "A valid public response contains no selectable group or model; show an honest empty state and allow refresh.",
+              "visibleTruth": "Public metadata is a point-in-time observation only; account-specific models, final prices, key readiness and apply remain unavailable.",
+              "prohibitedClaims": [
+                "No login, payment, valid key, exact tool compatibility, account-specific eligibility or successful configuration may be inferred."
+              ],
+              "allowedActions": [
+                "select_preview_tool",
+                "select_preview_line",
+                "read_public_service_catalog",
+                "select_public_group",
+                "select_public_model",
+                "refresh_public_catalog",
+                "switch_to_account",
+                "switch_to_local_tools"
+              ],
+              "freshness": "No retained cache or invented TTL; show local observation time. Clear selection on refresh and origin changes and reject older completions.",
+              "recovery": "Retry explicitly; all sensitive actions remain disabled and no rollback is necessary.",
+              "correlation": "Only the newest requestId and selected line may populate the panel."
+            },
+            "partial": {
+              "behavior": "Display available public facts independently of bootstrap recognition; label public visibility, unknown account access and unverified tool/group compatibility.",
+              "visibleTruth": "Public metadata is a point-in-time observation only; account-specific models, final prices, key readiness and apply remain unavailable.",
+              "prohibitedClaims": [
+                "No login, payment, valid key, exact tool compatibility, account-specific eligibility or successful configuration may be inferred."
+              ],
+              "allowedActions": [
+                "select_preview_tool",
+                "select_preview_line",
+                "read_public_service_catalog",
+                "select_public_group",
+                "select_public_model",
+                "refresh_public_catalog",
+                "switch_to_account",
+                "switch_to_local_tools"
+              ],
+              "freshness": "No retained cache or invented TTL; show local observation time. Clear selection on refresh and origin changes and reject older completions.",
+              "recovery": "Retry explicitly; all sensitive actions remain disabled and no rollback is necessary.",
+              "correlation": "Only the newest requestId and selected line may populate the panel."
+            },
+            "error": {
+              "behavior": "Clear the failed public catalog and selection; show only a safe mapped error with retry, never a raw upstream message.",
+              "visibleTruth": "Public metadata is a point-in-time observation only; account-specific models, final prices, key readiness and apply remain unavailable.",
+              "prohibitedClaims": [
+                "No login, payment, valid key, exact tool compatibility, account-specific eligibility or successful configuration may be inferred."
+              ],
+              "allowedActions": [
+                "select_preview_tool",
+                "select_preview_line",
+                "read_public_service_catalog",
+                "select_public_group",
+                "select_public_model",
+                "refresh_public_catalog",
+                "switch_to_account",
+                "switch_to_local_tools"
+              ],
+              "freshness": "No retained cache or invented TTL; show local observation time. Clear selection on refresh and origin changes and reject older completions.",
+              "recovery": "Retry explicitly; all sensitive actions remain disabled and no rollback is necessary.",
+              "correlation": "Only the newest requestId and selected line may populate the panel."
+            },
+            "expired": {
+              "behavior": "Discard responses from old request IDs, a previous line, refreshed data or an unmounted panel; never restore old selections.",
+              "visibleTruth": "Public metadata is a point-in-time observation only; account-specific models, final prices, key readiness and apply remain unavailable.",
+              "prohibitedClaims": [
+                "No login, payment, valid key, exact tool compatibility, account-specific eligibility or successful configuration may be inferred."
+              ],
+              "allowedActions": [
+                "select_preview_tool",
+                "select_preview_line",
+                "read_public_service_catalog",
+                "select_public_group",
+                "select_public_model",
+                "refresh_public_catalog",
+                "switch_to_account",
+                "switch_to_local_tools"
+              ],
+              "freshness": "No retained cache or invented TTL; show local observation time. Clear selection on refresh and origin changes and reject older completions.",
+              "recovery": "Retry explicitly; all sensitive actions remain disabled and no rollback is necessary.",
+              "correlation": "Only the newest requestId and selected line may populate the panel."
+            },
+            "conflict": {
+              "behavior": "Explain missing protocol declarations, mismatched group membership or DSH abstention; do not generate a misleading compatible preview.",
+              "visibleTruth": "Public metadata is a point-in-time observation only; account-specific models, final prices, key readiness and apply remain unavailable.",
+              "prohibitedClaims": [
+                "No login, payment, valid key, exact tool compatibility, account-specific eligibility or successful configuration may be inferred."
+              ],
+              "allowedActions": [
+                "select_preview_tool",
+                "select_preview_line",
+                "read_public_service_catalog",
+                "select_public_group",
+                "select_public_model",
+                "refresh_public_catalog",
+                "switch_to_account",
+                "switch_to_local_tools"
+              ],
+              "freshness": "No retained cache or invented TTL; show local observation time. Clear selection on refresh and origin changes and reject older completions.",
+              "recovery": "Retry explicitly; all sensitive actions remain disabled and no rollback is necessary.",
+              "correlation": "Only the newest requestId and selected line may populate the panel."
+            },
+            "recovery": {
+              "behavior": "Retry the same bounded read with a new request identity; do not repair, mutate a server, read credentials or modify a tool.",
+              "visibleTruth": "Public metadata is a point-in-time observation only; account-specific models, final prices, key readiness and apply remain unavailable.",
+              "prohibitedClaims": [
+                "No login, payment, valid key, exact tool compatibility, account-specific eligibility or successful configuration may be inferred."
+              ],
+              "allowedActions": [
+                "select_preview_tool",
+                "select_preview_line",
+                "read_public_service_catalog",
+                "select_public_group",
+                "select_public_model",
+                "refresh_public_catalog",
+                "switch_to_account",
+                "switch_to_local_tools"
+              ],
+              "freshness": "No retained cache or invented TTL; show local observation time. Clear selection on refresh and origin changes and reject older completions.",
+              "recovery": "Retry explicitly; all sensitive actions remain disabled and no rollback is necessary.",
+              "correlation": "Only the newest requestId and selected line may populate the panel."
+            },
+            "processing": {
+              "behavior": "A current bounded HTTP read owns its request identity until completion; switching line invalidates it and leaves no saved state.",
+              "visibleTruth": "Public metadata is a point-in-time observation only; account-specific models, final prices, key readiness and apply remain unavailable.",
+              "prohibitedClaims": [
+                "No login, payment, valid key, exact tool compatibility, account-specific eligibility or successful configuration may be inferred."
+              ],
+              "allowedActions": [
+                "select_preview_tool",
+                "select_preview_line",
+                "read_public_service_catalog",
+                "select_public_group",
+                "select_public_model",
+                "refresh_public_catalog",
+                "switch_to_account",
+                "switch_to_local_tools"
+              ],
+              "freshness": "No retained cache or invented TTL; show local observation time. Clear selection on refresh and origin changes and reject older completions.",
+              "recovery": "Retry explicitly; all sensitive actions remain disabled and no rollback is necessary.",
+              "correlation": "Only the newest requestId and selected line may populate the panel."
+            }
+          }
+        },
+        {
+          "id": "PROFILE-READONLY-TOOL-DISCOVERY",
+          "states": {
+            "default": {
+              "behavior": "Show the 野菜API welcome shell, the fixed five-tool list, and one primary button labelled to check installed tools.",
+              "visibleTruth": "No discovery result exists yet; the page says that the check is local and read-only and that no API knowledge is required.",
+              "prohibitedClaims": [
+                "Do not claim that any tool is installed, configured, compatible, connected, or ready before a scan result exists."
+              ],
+              "allowedActions": [
+                "start_read_only_scan"
+              ],
+              "freshness": "No result timestamp is shown before the first scan.",
+              "recovery": "The user may start the local scan or close the app without changing the machine.",
+              "correlation": "A requestId is generated only when the user starts a scan."
+            },
+            "loading": {
+              "behavior": "Keep all five tool cards visible with per-tool checking indicators and disable duplicate scan submission while the current request is active.",
+              "visibleTruth": "The page says that local executables and their version output are being checked and that no configuration or network action is running.",
+              "prohibitedClaims": [
+                "Do not show cached installation or compatibility results as the active scan result."
+              ],
+              "allowedActions": [],
+              "freshness": "The active requestId and start time own the pending result.",
+              "recovery": "If the request fails, transition to error while retaining no invented tool status.",
+              "correlation": "Only the active requestId may complete this state."
+            },
+            "empty": {
+              "behavior": "Show all five tools as not found and explain that this is not an application error.",
+              "visibleTruth": "The most recent completed local scan found no executable candidate for any supported tool.",
+              "prohibitedClaims": [
+                "Do not claim the tools are uninstalled when they may exist outside the bounded discovery locations."
+              ],
+              "allowedActions": [
+                "rescan_tools"
+              ],
+              "freshness": "Show the completion time of the newest accepted requestId.",
+              "recovery": "The user may install a tool independently and rescan; RU-001 never installs it.",
+              "correlation": "Advanced details show the newest accepted requestId without a complete local path."
+            },
+            "partial": {
+              "behavior": "Show each of the five tool results independently so found, not-found, failed, timed-out, and read-only states can coexist.",
+              "visibleTruth": "Only observations from the newest completed local scan appear, including exact version text for successful probes.",
+              "prohibitedClaims": [
+                "Do not promote one tool's success into a claim about another tool or about configuration health."
+              ],
+              "allowedActions": [
+                "rescan_tools",
+                "view_sanitized_details"
+              ],
+              "freshness": "All cards share the newest accepted scan completion time.",
+              "recovery": "A failed or missing tool can be rescanned without hiding valid results for the other tools.",
+              "correlation": "Every visible card belongs to the same newest requestId."
+            },
+            "error": {
+              "behavior": "Show a plain-language scan failure without replacing it with guessed installation results.",
+              "visibleTruth": "The discovery query did not produce a valid complete five-tool projection.",
+              "prohibitedClaims": [
+                "Do not display the previous scan as if it were the failed request's current result."
+              ],
+              "allowedActions": [
+                "retry_scan"
+              ],
+              "freshness": "The failed requestId is identified and prior results are visibly stale or cleared.",
+              "recovery": "Retry creates a new requestId and performs the same bounded read-only scan.",
+              "correlation": "The safe local error class is correlated to the failed requestId; raw command output is not displayed."
+            },
+            "expired": {
+              "behavior": "Mark a superseded result as expired and prevent it from overwriting a newer request.",
+              "visibleTruth": "A scan completion arrived for an older requestId and was rejected from the current projection.",
+              "prohibitedClaims": [
+                "Do not merge cards from different request identities or completion times."
+              ],
+              "allowedActions": [
+                "view_current_scan"
+              ],
+              "freshness": "Only the newest started requestId is eligible to become current.",
+              "recovery": "Continue showing the newest active or completed request; no filesystem recovery is required.",
+              "correlation": "Both expired and current request identities remain in transient UI control flow only."
+            },
+            "conflict": {
+              "behavior": "Highlight every tool with multiple canonical executable candidates and explain that no candidate was silently chosen.",
+              "visibleTruth": "The bounded scan observed more than one distinct executable for at least one tool.",
+              "prohibitedClaims": [
+                "Do not claim compatibility, choose a preferred executable, or expose a configure action while installation identity is ambiguous."
+              ],
+              "allowedActions": [
+                "rescan_tools",
+                "view_sanitized_details"
+              ],
+              "freshness": "Candidate counts come only from the newest accepted scan.",
+              "recovery": "The user resolves the tool installation externally, then rescans; RU-001 changes no PATH or tool file.",
+              "correlation": "The conflict and sanitized candidate source classes are bound to one requestId."
+            },
+            "recovery": {
+              "behavior": "After a failed, timed-out, or superseded scan, explain that a clean rescan is the only in-app recovery action.",
+              "visibleTruth": "No write or rollback is necessary because discovery is read-only and stores no retained scan history.",
+              "prohibitedClaims": [
+                "Do not offer repair, install, update, configuration, credential, or restore operations in RU-001."
+              ],
+              "allowedActions": [
+                "rescan_tools"
+              ],
+              "freshness": "Recovery always creates a new requestId and never mutates an older result.",
+              "recovery": "Run another bounded local scan; if it fails again, preserve the truthful per-tool failure states.",
+              "correlation": "The recovery request receives its own requestId."
+            },
+            "processing": {
+              "behavior": "Represent each bounded version probe as in progress while keeping configuration and remote-service controls absent.",
+              "visibleTruth": "Only local executable discovery and a bounded --version command may be processing.",
+              "prohibitedClaims": [
+                "Do not imply that login, billing, API connectivity, model retrieval, updates, or configuration are processing."
+              ],
+              "allowedActions": [],
+              "freshness": "Processing belongs to the newest active requestId and expires when it is superseded.",
+              "recovery": "Each probe times out into a truthful per-tool result; the overall projection still completes when possible.",
+              "correlation": "Per-tool processing is aggregated under one requestId without persistent telemetry."
+            }
+          }
+        }
+      ],
+      "pages": [
+        {
+          "id": "PAGE-ACCOUNT",
+          "route": "/account",
+          "purpose": "Show the authorized account, session state, and authorization management entry points.",
+          "trackScope": [
+            "account",
+            "billing"
+          ],
+          "dataOwners": [
+            "account",
+            "billing"
+          ],
+          "entryConditions": [],
+          "actions": [
+            "begin_first_party_authorization",
+            "retry_account_projection",
+            "open_first_party_wallet",
+            "logout_current_desktop_session",
+            "switch_to_local_tools"
+          ],
+          "exitRoutes": [
+            "/tools",
+            "/billing"
+          ],
+          "permissions": [
+            "sanitized native current-account and cumulative-usage projection only"
+          ],
+          "stateProfileRef": "PROFILE-DESKTOP-ACCOUNT-READINESS",
+          "states": {}
+        },
+        {
+          "id": "PAGE-BILLING",
+          "route": "/billing",
+          "purpose": "Show balance, usage, cost detail, and the first-party wallet entry point.",
+          "trackScope": [
+            "billing",
+            "account"
+          ],
+          "dataOwners": [
+            "billing",
+            "account"
+          ],
+          "entryConditions": [],
+          "actions": [
+            "begin_first_party_authorization",
+            "retry_account_projection",
+            "open_first_party_wallet",
+            "logout_current_desktop_session",
+            "switch_to_local_tools"
+          ],
+          "exitRoutes": [
+            "/tools",
+            "/account"
+          ],
+          "permissions": [
+            "sanitized native current-account and cumulative-usage projection only"
+          ],
+          "stateProfileRef": "PROFILE-DESKTOP-ACCOUNT-READINESS",
+          "states": {}
+        },
+        {
+          "id": "PAGE-CONFIGURE-PREVIEW",
+          "route": "/configure-preview",
+          "purpose": "Select a tool and line, optionally read the public service catalog, select a group and real model ID, and inspect an unverified access preview without a credential or configuration write.",
+          "trackScope": [
+            "tool-config",
+            "desktop-platform"
+          ],
+          "dataOwners": [
+            "tool-config",
+            "desktop-platform"
+          ],
+          "entryConditions": [],
+          "actions": [
+            "select_preview_tool",
+            "select_preview_line",
+            "reset_preview_selection",
+            "view_current_preview",
+            "switch_to_local_tools",
+            "switch_to_account",
+            "read_public_service_catalog",
+            "select_public_group",
+            "select_public_model",
+            "refresh_public_catalog"
+          ],
+          "exitRoutes": [
+            "/tools",
+            "/account"
+          ],
+          "permissions": [
+            "pure local deterministic preview projection only",
+            "public-service-catalog@v1 anonymous fixed-origin GET query after explicit user action"
+          ],
+          "stateProfileRef": "PROFILE-PUBLIC-CATALOG-PREVIEW",
+          "states": {}
+        },
+        {
+          "id": "PAGE-TOOLS",
+          "route": "/tools",
+          "purpose": "List the five V1 tools and their local read-only installation and compatibility observations.",
+          "trackScope": [
+            "tool-config",
+            "desktop-platform"
+          ],
+          "dataOwners": [
+            "tool-config",
+            "desktop-platform"
+          ],
+          "entryConditions": [],
+          "actions": [
+            "start_read_only_scan",
+            "rescan_tools",
+            "view_sanitized_details"
+          ],
+          "exitRoutes": [
+            "/"
+          ],
+          "permissions": [
+            "local executable discovery and bounded version execution only"
+          ],
+          "stateProfileRef": "PROFILE-READONLY-TOOL-DISCOVERY",
+          "states": {}
+        }
+      ]
+    },
+    "trackCoverage": {
+      "schemaVersion": 1,
+      "capabilities": []
+    },
+    "dataLifecycle": {
+      "schemaVersion": 1,
+      "resources": []
+    },
+    "aiScenarios": {
+      "schemaVersion": 1,
+      "scenarios": []
+    },
+    "entitlements": {
+      "schemaVersion": 1,
+      "capabilities": []
+    },
+    "nonFunctionalRequirements": {
+      "schemaVersion": 1,
+      "requirements": []
+    },
+    "workPackages": {
+      "schemaVersion": 1,
+      "packages": [
+        {
+          "id": "WP-RU066-DUAL-PLATFORM-PACKAGING",
+          "wave": "release",
+          "owner": "desktop-platform",
+          "riskClass": "high",
+          "objective": "Produce and verify distinct 0.4.12 internal macOS universal and Windows x64 installers from the exact RU-065 verified client without publishing them.",
+          "deliverables": [
+            "Synchronized 0.4.12 package, Cargo, lockfile and Tauri metadata",
+            "Developer-ID signed, hardened, Apple-notarized and stapled universal macOS DMG",
+            "Fresh unsigned Windows x64 payload and Simplified-Chinese current-user NSIS installer",
+            "Machine-readable source, test, tool, signature, notarization, artifact-hash and limitation receipt",
+            "Human-readable internal installation and verification summary"
+          ],
+          "requirementRefs": [
+            "REQ-087"
+          ],
+          "decisionRefs": [
+            "DEC-110"
+          ],
+          "blockingDecisionRefs": [],
+          "nonGoals": [
+            "No runtime source, account, billing, model, adapter, server, NewAPI, database, DNS or user-configuration behavior change",
+            "No tag, GitHub Release, public download, upload, updater artifact, update manifest or automatic rollout",
+            "No Windows Authenticode, SmartScreen, bundled WebView2 or real-device installation claim",
+            "No system-wide build-tool installation, secret export or replacement of existing 0.4.11 artifacts"
+          ],
+          "dependsOn": [
+            "WP-RU065-READONLY-SETTINGS-VERIFICATION"
+          ],
+          "allowedPaths": [
+            "package.json",
+            "src-tauri/Cargo.toml",
+            "src-tauri/Cargo.lock",
+            "src-tauri/tauri.conf.json",
+            "tests/work_packages/ru066/**",
+            "outputs/野菜API-0.4.12-双平台打包.md",
+            "release/internal/0.4.12/**"
+          ],
+          "forbiddenPaths": [
+            ".product-governance/**",
+            ".github/**",
+            "deploy/**",
+            "release-assets/**",
+            "release/internal/0.4.11/**",
+            "src/**",
+            "src-tauri/src/**",
+            "src-tauri/tauri.candidate.conf.json",
+            "pnpm-lock.yaml"
+          ],
+          "migrationPolicy": {
+            "mode": "none",
+            "ownedPaths": [],
+            "dataBackfill": "No database, account, credential, receipt or application-configuration migration. Installing 0.4.12 uses the existing compatible local data format.",
+            "rollback": "Retain the existing 0.4.11 installers and discard only unshipped 0.4.12 artifacts if any gate fails. Never alter user data, remote services or public update state."
+          },
+          "compatibilityPolicy": {
+            "strategy": "Preserve desktop-account-session@v5, desktop-tool-activation@v10, desktop-open-connection@v2 and desktop-connection-management@v2 exactly; this unit changes release identity and packaging outputs only.",
+            "supportedVersions": "Internal candidate for macOS 13+ universal Intel/Apple Silicon and Windows 10 22H2/Windows 11 x64. Windows requires an existing WebView2 Runtime and remains unverified on a real Windows host.",
+            "removalGate": "Do not publish or relabel the Windows artifact as signed or production-ready, and do not replace either artifact without equal source, test, signature, architecture and hash evidence."
+          },
+          "inputContracts": [
+            "desktop-account-session@v5",
+            "desktop-tool-activation@v10",
+            "desktop-open-connection@v2",
+            "desktop-connection-management@v2"
+          ],
+          "outputContracts": [
+            "desktop-account-session@v5",
+            "desktop-tool-activation@v10",
+            "desktop-open-connection@v2",
+            "desktop-connection-management@v2"
+          ],
+          "acceptanceCommands": [
+            {
+              "id": "ru066-macos-artifact",
+              "kind": "scenario_test",
+              "adapter": "pytest-json@1",
+              "selector": "tests/work_packages/ru066/test_acceptance.py::test_macos_artifact",
+              "cwd": ".",
+              "timeoutSeconds": 900
+            },
+            {
+              "id": "ru066-windows-artifact",
+              "kind": "scenario_test",
+              "adapter": "pytest-json@1",
+              "selector": "tests/work_packages/ru066/test_acceptance.py::test_windows_cross_artifact_and_release_boundary",
+              "cwd": ".",
+              "timeoutSeconds": 300
+            }
+          ],
+          "requiredAcceptanceScenarios": [
+            {
+              "id": "RU066-AS-macos",
+              "assertion": "The 0.4.12 macOS DMG hash matches and native tools verify image integrity, universal architecture, exact bundle version, Developer ID signature, hardened runtime, accepted app and DMG notarization tickets, stapling and Gatekeeper acceptance.",
+              "testSelector": "tests/work_packages/ru066/test_acceptance.py::test_macos_artifact",
+              "acceptanceCommandId": "ru066-macos-artifact"
+            },
+            {
+              "id": "RU066-AS-windows",
+              "assertion": "The 0.4.12 Windows hashes match, the payload is an x86_64 MSVC PE from the current source state, the hash-pinned NSIS 3.12 recipe is Simplified Chinese, and the receipt binds RU-061 plus RU-065 while preserving unsigned, cross-built, non-public and untested-on-Windows boundaries.",
+              "testSelector": "tests/work_packages/ru066/test_acceptance.py::test_windows_cross_artifact_and_release_boundary",
+              "acceptanceCommandId": "ru066-windows-artifact"
+            }
+          ],
+          "verificationOnly": false,
+          "stopConditions": [
+            "The complete current renderer or native suite, typecheck, format, strict lint, production build, Apple-Silicon compile or Windows x64 compile fails.",
+            "The current source state no longer matches the state used to produce either artifact.",
+            "macOS signing, hardened runtime, app or DMG notarization, staple, Gatekeeper, universal architecture or image verification fails.",
+            "The pinned makensis tool, closed recipe, Windows PE architecture or artifact hashes cannot be verified.",
+            "Completion would require public release, upload, updater publication, Windows signing claims, system-wide installation, server mutation, secret export or real user configuration."
+          ],
+          "status": "planned"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU043-AS-native",
+  "assertion": "Native fixtures prove exact IDs, per-model efforts, unknown defaults, routing and recovery regressions plus Windows/Apple compilation.",
+  "testSelector": "tests/work_packages/ru043/test_acceptance.py::test_native_model_capabilities",
+  "acceptanceCommandId": "ru043-native",
+  "runId": "RU-047/WP-RU047-BASELINE-VERIFICATION@2026-09-06T05:55:17.317930+00:00",
+  "packageId": "WP-RU047-BASELINE-VERIFICATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:d0c8a92ebc81e552a790d3bf370f1b6b311b0b9a7836e1de01709e8963a3390d",
+  "releaseUnitId": "RU-047",
+  "releaseUnitHash": "sha256:7f8f86ab59ada2b0c4e0b3beccc8d5fe64ecd7ad2b42198b3095bc993ae852cb"
+}

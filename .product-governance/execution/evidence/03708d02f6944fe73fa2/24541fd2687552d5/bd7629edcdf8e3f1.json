@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU052-AS-native",
+  "assertion": "Run existing native installation regressions and new strict catalog/official feed/ZIP extraction fixtures, malicious sources, artifact-bound resume, fallback and no-overwrite tests.",
+  "testSelector": "tests/work_packages/ru052/test_acceptance.py::test_native_installation",
+  "acceptanceCommandId": "ru052-native",
+  "runId": "RU-052/WP-RU052-DOWNLOAD-COMPLETION@2026-09-06T09:52:17.190097+00:00",
+  "packageId": "WP-RU052-DOWNLOAD-COMPLETION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru052/test_acceptance.py::test_native_installation",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:62aae4723c1908dee0eb25ec998fd8c964fd88a6adb8368d4972e0e44cb51dfa",
+    "machineReportSha256": "sha256:9b46532b0b9a53808f4af1e06ceb64353a59f2802280c175a8956ce4e1a8a9bd",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:d41dd0a850714528e3ea5b4f9576c00aca2b844ec3b8a9f0858f8d21eb7b7d0a",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:01d212a2b10db799bce8ddb4d446b16c0f75de5807a73f1c3fc7b35218c508b5",
+  "releaseUnitId": "RU-052",
+  "releaseUnitHash": "sha256:d51f11bb6da28360782d5b6c772a0f81048ec0136b9d22a6eecf405bbefaaf05"
+}

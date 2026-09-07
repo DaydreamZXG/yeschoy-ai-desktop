@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU042-AS-03",
+  "assertion": "Typecheck and actual production renderer compilation pass while version remains 0.4.8 and no installer, sign, upload or external-state mutation occurs.",
+  "testSelector": "tests/work_packages/ru042/test_acceptance.py::test_build_model_sets_and_exit",
+  "acceptanceCommandId": "ru042-build",
+  "runId": "RU-042/WP-RU042-MODEL-SETS-AND-EXIT@2026-09-05T12:39:03.009122+00:00",
+  "packageId": "WP-RU042-MODEL-SETS-AND-EXIT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru042/test_acceptance.py::test_build_model_sets_and_exit",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:296825ce1e725e4126ff129f4f52440616d7f05e3ee37535d38dfc719d43e2bb",
+    "machineReportSha256": "sha256:0fc3fc078917e3bad2bc84926da4d6d2f8c6c986c1b69daab6889330f15e8912",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:5146a773fcb8d046d37d76bf8f52507ef3aa1f1131b67d9f7a43b9766e0bfa5f",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:643d7fc9f2220c4df9e2f413bb1eeb824527fc066971cf3e74af199b9a67159e",
+  "releaseUnitId": "RU-042",
+  "releaseUnitHash": "sha256:8ae09b9951154bbe4c69b09b6be6cc39e2544d63526261ada54cac5997821225"
+}

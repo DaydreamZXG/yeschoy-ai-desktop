@@ -2935,6 +2935,63 @@
           "security-update"
         ]
       }
+    },
+    {
+      "id": "DEC-116",
+      "question": "How should ai.yeschoy.io participate in the friend-client login flow without creating a second product backend or expanding network authority?",
+      "choice": "Treat ai.yeschoy.io only as a compile-time browser authorization-page origin. Default builds retain https://yeschoy.com; friend builds may select exactly https://ai.yeschoy.io. Validate the legacy authorization response against the canonical Yeschoy service, discard its browser target after validation, and locally rebuild the fixed /desktop-authorize URL with one validated user_code. Do not expose an editable URL, do not let server response fields override token or API origins, and do not change account, model, billing, route, bridge, updater, adapter or package behavior. Keep the future PKCE branch disabled until its server and local-bridge contract is separately available and verified.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-09-07T10:25:22Z",
+      "evidenceRefs": [
+        "E-USER-089",
+        "E-CODE-092",
+        "E-PROP-041"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-002",
+          "REQ-051",
+          "REQ-093"
+        ],
+        "pageRefs": [
+          "PAGE-ACCOUNT"
+        ],
+        "domainRefs": [
+          "account",
+          "desktop-platform"
+        ]
+      }
+    },
+    {
+      "id": "DEC-117",
+      "question": "Must the server deploy the new OAuth endpoints before the desktop client can prepare for PKCE?",
+      "choice": "No. Implement and deterministically test the complete client-owned PKCE protocol boundary now, but keep it dormant and outside the current account and application-bridge path. Continue using device authorization in active builds. Activate PKCE only in a later integration unit after the server advertises the contract and defines how narrow bearer tokens support account data, billing-group selection and all seven local bridges. The friend build may use ai.yeschoy.io only for the browser authorization page; token and resource authority remains Yeschoy.",
+      "status": "accepted",
+      "decidedBy": "product owner for client-first preparation; architecture authority for the bounded dormant integration gate",
+      "decidedAt": "2026-09-07T10:48:57Z",
+      "evidenceRefs": [
+        "E-USER-090",
+        "E-CODE-093",
+        "E-EXT-063",
+        "E-PROP-042"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-002",
+          "REQ-051",
+          "REQ-093",
+          "REQ-094"
+        ],
+        "pageRefs": [
+          "PAGE-ACCOUNT"
+        ],
+        "domainRefs": [
+          "account",
+          "desktop-platform",
+          "tool-config"
+        ]
+      }
     }
   ]
 }

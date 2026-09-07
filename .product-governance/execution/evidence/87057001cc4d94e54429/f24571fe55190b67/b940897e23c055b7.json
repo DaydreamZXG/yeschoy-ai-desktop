@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU044-AS-origin-contract",
+  "assertion": "Closed health contract, 204 unpublished channels, public path/method restrictions and non-root read-only deployment contain no signing/SSH credential or published artifacts.",
+  "testSelector": "tests/work_packages/ru044/test_acceptance.py::test_origin_contract",
+  "acceptanceCommandId": "ru044-origin-contract",
+  "runId": "RU-044/WP-RU044-DOWNLOAD-ORIGIN@2026-09-06T04:43:22.627856+00:00",
+  "packageId": "WP-RU044-DOWNLOAD-ORIGIN",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru044/test_acceptance.py::test_origin_contract",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:bf39c0f0cf3e203b9ab91d4a8bd057da428e54effb28530347c19a7144c8d863",
+    "machineReportSha256": "sha256:f34bf53d08ec28c4a3f75fe9572fceab4c31c73ce591ab7001cf582067760db2",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:36a8002f20c08644493c7de276b47c655549b25d27e0892b36d38512ae11f697",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:4431f28c8c66c78c75f95a1be997068e26c907e468280427b2fe41e1e292b642",
+  "releaseUnitId": "RU-044",
+  "releaseUnitHash": "sha256:ce103477edb5976ae73e90d129b97b67127def60580f1b8e26ba729e41dd3e2f"
+}

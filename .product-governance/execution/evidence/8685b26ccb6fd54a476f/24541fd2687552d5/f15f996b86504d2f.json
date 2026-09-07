@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU052-AS-server",
+  "assertion": "Run all existing private synchronizer tests plus executable official-feed ZIP, safe archive, approval/native receipt, atomic publisher, replay, downgrade, corrupt and last-good recovery cases.",
+  "testSelector": "tests/work_packages/ru052/test_acceptance.py::test_server_download_pipeline",
+  "acceptanceCommandId": "ru052-server",
+  "runId": "RU-052/WP-RU052-DOWNLOAD-COMPLETION@2026-09-06T09:41:11.380253+00:00",
+  "packageId": "WP-RU052-DOWNLOAD-COMPLETION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:3242836ffdafc5265ba1af078229be7ec1dd0a4316ddd9df5b336a61541b30a9",
+  "releaseUnitId": "RU-052",
+  "releaseUnitHash": "sha256:d51f11bb6da28360782d5b6c772a0f81048ec0136b9d22a6eecf405bbefaaf05"
+}

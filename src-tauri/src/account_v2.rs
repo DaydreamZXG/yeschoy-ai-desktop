@@ -34,6 +34,10 @@ const USAGE_PATH: &str = "/api/log/self/stat";
 const MODELS_PATH: &str = "/api/user/models";
 const PRICING_PATH: &str = "/api/pricing";
 const TOOL_KEYS_PATH: &str = "/api/token/";
+const AUTHORIZATION_PAGE_PATH: &str = "/desktop-authorize";
+const CANONICAL_AUTHORIZATION_PAGE_ORIGIN: &str = "https://yeschoy.com";
+const PARTNER_AUTHORIZATION_PAGE_ORIGIN: &str = "https://ai.yeschoy.io";
+const COMPILED_AUTHORIZATION_PAGE_ORIGIN: &str = env!("YESCHOY_AUTHORIZATION_PAGE_ORIGIN");
 
 static HTTP_CLIENT: OnceLock<Result<Client, ()>> = OnceLock::new();
 
@@ -471,11 +475,44 @@ fn authorization_url_is_allowed(raw: &str, user_code: &str) -> bool {
         && url.port().is_none()
         && url.username().is_empty()
         && url.password().is_none()
-        && url.path() == "/desktop-authorize"
+        && url.path() == AUTHORIZATION_PAGE_PATH
         && url.fragment().is_none()
         && query.len() == 1
         && query[0].0 == "user_code"
         && query[0].1 == user_code
+}
+
+fn authorization_page_origin_is_allowed(raw: &str) -> bool {
+    if !matches!(
+        raw,
+        CANONICAL_AUTHORIZATION_PAGE_ORIGIN | PARTNER_AUTHORIZATION_PAGE_ORIGIN
+    ) {
+        return false;
+    }
+    let Ok(url) = Url::parse(raw) else {
+        return false;
+    };
+    url.scheme() == "https"
+        && matches!(url.host_str(), Some("yeschoy.com" | "ai.yeschoy.io"))
+        && url.port().is_none()
+        && url.username().is_empty()
+        && url.password().is_none()
+        && url.path() == "/"
+        && url.query().is_none()
+        && url.fragment().is_none()
+}
+
+fn browser_authorization_url_for_origin(origin: &str, user_code: &str) -> Option<String> {
+    if !authorization_page_origin_is_allowed(origin) || !user_code_is_valid(user_code) {
+        return None;
+    }
+    let mut url = Url::parse(&format!("{origin}{AUTHORIZATION_PAGE_PATH}")).ok()?;
+    url.query_pairs_mut().append_pair("user_code", user_code);
+    Some(url.into())
+}
+
+fn browser_authorization_url(user_code: &str) -> Option<String> {
+    browser_authorization_url_for_origin(COMPILED_AUTHORIZATION_PAGE_ORIGIN, user_code)
 }
 
 fn user_code_is_valid(value: &str) -> bool {
@@ -1356,6 +1393,12 @@ pub async fn account_begin_authorization_v2(
             AccountProjectionFailure::InvalidResponse,
         ));
     }
+    let Some(browser_url) = browser_authorization_url(&authorization.user_code) else {
+        return Ok(failure_projection(
+            request.request_id,
+            AccountProjectionFailure::InvalidResponse,
+        ));
+    };
     let pending = PendingAuthorization {
         line_id: request.line_id,
         device_code: authorization.device_code,
@@ -1382,7 +1425,7 @@ pub async fn account_begin_authorization_v2(
     if _permit.is_cancelled() {
         return Err("assistant_shutting_down".into());
     }
-    let reason = if open_system_browser(&authorization.verification_uri_complete).is_ok() {
+    let reason = if open_system_browser(&browser_url).is_ok() {
         "authorization_pending"
     } else {
         "browser_open_failed"
@@ -1810,6 +1853,59 @@ mod tests {
             "https://yeschoy.com/desktop-authorize?user_code=ABCD-2345&next=x",
             "ABCD-2345"
         ));
+    }
+
+    #[test]
+    fn authorization_page_origin_is_compile_time_and_exactly_allowlisted() {
+        assert!(authorization_page_origin_is_allowed(
+            CANONICAL_AUTHORIZATION_PAGE_ORIGIN
+        ));
+        assert!(authorization_page_origin_is_allowed(
+            PARTNER_AUTHORIZATION_PAGE_ORIGIN
+        ));
+        assert!(authorization_page_origin_is_allowed(
+            COMPILED_AUTHORIZATION_PAGE_ORIGIN
+        ));
+        for rejected in [
+            "http://yeschoy.com",
+            "https://yeschoy.com/desktop-authorize",
+            "https://yeschoy.com?next=https://attacker.invalid",
+            "https://ai.yeschoy.io:443",
+            "https://user@ai.yeschoy.io",
+            "https://ai.yeschoy.io.attacker.invalid",
+            "https://attacker.invalid",
+        ] {
+            assert!(!authorization_page_origin_is_allowed(rejected));
+        }
+    }
+
+    #[test]
+    fn branded_authorization_url_is_rebuilt_from_validated_user_code_only() {
+        assert_eq!(
+            browser_authorization_url_for_origin(CANONICAL_AUTHORIZATION_PAGE_ORIGIN, "ABCD-2345")
+                .as_deref(),
+            Some("https://yeschoy.com/desktop-authorize?user_code=ABCD-2345")
+        );
+        assert_eq!(
+            browser_authorization_url_for_origin(PARTNER_AUTHORIZATION_PAGE_ORIGIN, "ABCD-2345")
+                .as_deref(),
+            Some("https://ai.yeschoy.io/desktop-authorize?user_code=ABCD-2345")
+        );
+        assert!(browser_authorization_url_for_origin(
+            PARTNER_AUTHORIZATION_PAGE_ORIGIN,
+            "unsafe&next=https://attacker.invalid"
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn compiled_authorization_page_origin_drives_the_browser_target() {
+        assert_eq!(
+            browser_authorization_url("ABCD-2345"),
+            Some(format!(
+                "{COMPILED_AUTHORIZATION_PAGE_ORIGIN}/desktop-authorize?user_code=ABCD-2345"
+            ))
+        );
     }
 
     #[test]

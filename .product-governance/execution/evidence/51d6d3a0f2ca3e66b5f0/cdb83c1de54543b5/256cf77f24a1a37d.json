@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU069-AS-readonly-connection-ux",
+  "assertion": "Read-only source evidence confirms non-modal graceful restart, independent launch and update actions, retained state during background refresh, a bounded lost launch reply and truthful desktop, terminal and browser lifecycle copy.",
+  "testSelector": "tests/work_packages/ru068/test_acceptance.py::test_connection_ux_lifecycle_matrix",
+  "acceptanceCommandId": "ru069-lifecycle-matrix",
+  "runId": "RU-069/WP-RU069-READONLY-CONNECTION-UX-VERIFICATION@2026-09-07T07:50:36.346653+00:00",
+  "packageId": "WP-RU069-READONLY-CONNECTION-UX-VERIFICATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru068/test_acceptance.py::test_connection_ux_lifecycle_matrix",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:a59a0a70c4f7bff5dabfd6fa440db3de2280271f60c968ebe1120d236f42b7ea",
+    "machineReportSha256": "sha256:2db9bbb3227225f480c77469c76f92ccbef30903c3eace2e5775f9f4d26a4f0f",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:a0121e9e585a22a60c40d66e99c7a9a08e5ed27d5b47a6dd140371b124146185",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:f6e74f216eb6d848e19b943955cf19d55a0e31df2c794135850434f1a5dd9945",
+  "releaseUnitId": "RU-069",
+  "releaseUnitHash": "sha256:8d9759d2761c2d05470e5b0400df618ef4df1f644754cd4af520decc9227fc32"
+}

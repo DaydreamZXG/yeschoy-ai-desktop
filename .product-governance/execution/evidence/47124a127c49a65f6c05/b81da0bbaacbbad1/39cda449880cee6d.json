@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU072-AS-recovery",
+  "assertion": "When no friend-build override is supplied, compilation deterministically retains the existing Yeschoy authorization page and all non-page endpoints remain unchanged.",
+  "testSelector": "tests/work_packages/ru072/test_acceptance.py::test_default_build_recovers_to_the_existing_yeschoy_authorization_page",
+  "acceptanceCommandId": "ru072-recovery",
+  "runId": "RU-072/WP-RU072-BRANDED-AUTHORIZATION-ORIGIN@2026-09-07T10:27:51.287240+00:00",
+  "packageId": "WP-RU072-BRANDED-AUTHORIZATION-ORIGIN",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru072/test_acceptance.py::test_default_build_recovers_to_the_existing_yeschoy_authorization_page",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:6823fa018fffa8dbe4feea1f8da186df4239288de26d05766bab23bc15540f1a",
+    "machineReportSha256": "sha256:2a7dbb86ff5e772b70ab3a5de9e6aefa9d2b654b05f49d3e770c244c37feef28",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:3e6f3abb488fa85bc0d32206467d8a2277596c2c21102a27ce218d3f9c7feabd",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:ab08ba15edc96567b6bf3b59d1356b4e577e29fbca2288413c80299102466d78",
+  "releaseUnitId": "RU-072",
+  "releaseUnitHash": "sha256:b30f281f4544deff04bd573deb95a16abc423e8ab2da03e2891e7b918114c0cc"
+}

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU040-AS-02",
+  "assertion": "Both model surfaces neither render nor search raw upstream descriptions from stale fixtures, while IDs, selection, groups and current renderer regressions remain intact.",
+  "testSelector": "tests/work_packages/ru039/test_acceptance.py::test_renderer_model_metadata_privacy",
+  "acceptanceCommandId": "ru040-renderer",
+  "runId": "RU-040/WP-RU040-HOTFIX-RELEASE-IDENTITY@2026-09-05T09:48:57.778211+00:00",
+  "packageId": "WP-RU040-HOTFIX-RELEASE-IDENTITY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru039/test_acceptance.py::test_renderer_model_metadata_privacy",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:e81bd7c4f326e33d4ebd5ebf787680c45747218a9aa8c76f18c0242556cd30cc",
+    "machineReportSha256": "sha256:9b66ddd309e0608ba9676223a89bb912d5e29ff183c4d7823d10edf07f8cf28d",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:7510ddbf81c3420e2dab6e5524c2820a770569e823a887b0329d4dc92d48d366",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:632cccc03084469dd7aad1cc52e97f13cf1d1e885678599c0bb54f516802517f",
+  "releaseUnitId": "RU-040",
+  "releaseUnitHash": "sha256:7482da72be69adbbf6f42a1eb52513312d827d675e005dc435630f3961bc039c"
+}

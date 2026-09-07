@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU071-AS-happy",
+  "assertion": "An updater-aware client checks without blocking, exposes an available signed version, downloads with bounded progress, drains cooperatively, installs and relaunches as required.",
+  "testSelector": "tests/work_packages/ru071/test_acceptance.py::test_happy_path_is_signed_native_and_nonblocking",
+  "acceptanceCommandId": "ru071-happy",
+  "runId": "RU-071/WP-RU071-SELF-UPDATE-CLOSURE@2026-09-07T08:25:42.735975+00:00",
+  "packageId": "WP-RU071-SELF-UPDATE-CLOSURE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru071/test_acceptance.py::test_happy_path_is_signed_native_and_nonblocking",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:b830fe17b6481171221f1ab05199e8cf5a0eb4401d9e209bfbe68528a1c1df4e",
+    "machineReportSha256": "sha256:ed27bf6f9323b8bed4697891f385065d01c0e1a959188112a36a2cb82e0d9ea6",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:9b41554bd1311b6116c3dce77fd4a91bca7902505f1a1fc7cd9eb354225adbc7",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:b44488a37693ead0dc43591a38d44a85044ab24df943683ca1f612043adfd16c",
+  "releaseUnitId": "RU-071",
+  "releaseUnitHash": "sha256:0cab89775da79ef995e247b3b70aa4f79c94b05dc84c274dec90f245bf4dbabc"
+}

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU071-AS-stale",
+  "assertion": "A stale expected version, replayed manifest or downgrade fails before download and shutdown.",
+  "testSelector": "tests/work_packages/ru071/test_acceptance.py::test_stale_or_downgrade_manifest_is_not_installable",
+  "acceptanceCommandId": "ru071-stale",
+  "runId": "RU-071/WP-RU071-SELF-UPDATE-CLOSURE@2026-09-07T08:25:42.735975+00:00",
+  "packageId": "WP-RU071-SELF-UPDATE-CLOSURE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru071/test_acceptance.py::test_stale_or_downgrade_manifest_is_not_installable",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:7a20319b2d6c27d7f002c97786b2a535845985deabcfe9235301d57159e3ae35",
+    "machineReportSha256": "sha256:71336787a9917e858849cca7d8fdae03957b6a1c21875cc537743a4d10083e4e",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:db44e4041093500273d2279471606cbf732d5b2887e703eb6ea052c303d11e93",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:863ffd3e26478245f64c019e417a289c670f6ffe12cee24c2823b3e26b7c9331",
+  "releaseUnitId": "RU-071",
+  "releaseUnitHash": "sha256:0cab89775da79ef995e247b3b70aa4f79c94b05dc84c274dec90f245bf4dbabc"
+}

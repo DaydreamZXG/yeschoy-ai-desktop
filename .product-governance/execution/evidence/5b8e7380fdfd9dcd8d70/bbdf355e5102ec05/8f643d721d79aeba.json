@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU043-AS-renderer",
+  "assertion": "Renderer tests prove friendly labels and full-ID search/selection without exposing upstream names.",
+  "testSelector": "tests/work_packages/ru043/test_acceptance.py::test_renderer_model_capabilities",
+  "acceptanceCommandId": "ru043-renderer",
+  "runId": "RU-043/WP-RU043-MODEL-CAPABILITIES@2026-09-05T15:18:13.649805+00:00",
+  "packageId": "WP-RU043-MODEL-CAPABILITIES",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru043/test_acceptance.py::test_renderer_model_capabilities",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:936f45c49361bc4739cf7c7d55e13952f8f5fee9649caa109d959aea89483410",
+    "machineReportSha256": "sha256:1486c6d0db8870838ac637766f876e9189375c99314bfe50063693729cac0dca",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:0f5702267280a63cbfbe90a5e176d3a820a4721bceab44062c7fe16588287c37",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:7e73ad463efe4d5aded9ba815969e2bdb8fb45fc85560bb3d2ee38f4a62a5d71",
+  "releaseUnitId": "RU-043",
+  "releaseUnitHash": "sha256:4fc7b7807b60368a90aaf7943fa497c255153df6588f1e7dc1ba0bb8713cedf8"
+}

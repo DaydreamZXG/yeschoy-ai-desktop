@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU059-AS-macos",
+  "assertion": "The recorded macOS DMG hash matches and native tools verify image integrity, universal architecture, Developer ID signature, hardened runtime, notarization ticket and Gatekeeper acceptance.",
+  "testSelector": "tests/work_packages/ru058/test_acceptance.py::test_macos_artifact",
+  "acceptanceCommandId": "ru059-macos-artifact",
+  "runId": "RU-059/WP-RU059-STANDALONE-CROSS-PACKAGING@2026-09-06T16:59:51.578615+00:00",
+  "packageId": "WP-RU059-STANDALONE-CROSS-PACKAGING",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru058/test_acceptance.py::test_macos_artifact",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:03cc87e5e56ebc6035d3b0d0c38c5afe83ab02f94410566d34ece389f620fc56",
+    "machineReportSha256": "sha256:eb41f1c6af684fd257c4b3b416b7a9b55705341499d26bfa3d775797b47228da",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:694d539c7610101fdabf99dfd766e528deb166215d9282e2600e3f22c4530a94",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:8104a576fb4205b9fee8be6eb314fb71d3c26f279a72557d18ed821924a5cbc7",
+  "releaseUnitId": "RU-059",
+  "releaseUnitHash": "sha256:4647fb1b6aede83aec28b2ee6095aef7cc0400097f0c2d204aaf5c39b22c359f"
+}

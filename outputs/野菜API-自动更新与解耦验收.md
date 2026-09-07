@@ -195,3 +195,81 @@
 ## 12. 发布判断
 
 代码层可进入 0.4.14 候选包阶段；自动更新频道只能在完整签名构件与公网复核通过后启用。首个更新器版本发布后，仍不能把“更新框架存在”写成“跨版本升级已真机通过”；该结论必须由 0.4.14 → 0.4.15 的三平台证据关闭。
+
+## 13. OAuth 2.0 + PKCE v1.1 契约审计
+
+### 13.1 当前事实
+
+技术同事提供的《New API 客户端 OAuth 2.0 + PKCE 接口文档（Loopback 随机端口版）》是一份待实现的对接契约，不是现网能力证明。2026-09-07 的无凭证只读探测结果如下：
+
+- `https://yeschoy.com/api/desktop/v2/bootstrap` 与 `https://api.yeschoy.com/api/desktop/v2/bootstrap` 均返回 schema 2、`desktop-integration-v2`，并声明当前设备授权可用。
+- `POST https://yeschoy.com/api/oauth/token` 返回 404，说明新 Token Endpoint 尚未部署。
+- `/api/oauth/authorize` 与 `/api/oauth/userinfo` 当前进入 New API 原有 OAuth provider 路由并返回 `Unknown OAuth provider`，并非文档定义的桌面客户端接口。
+- 未携带凭证访问 `/v1/models` 返回 401，只能证明该资源受保护，不能证明它已经接受新 OAuth Access Token。
+
+因此 0.4.14 不能直接删除现有设备授权或强制切换到 PKCE，否则会把已部署的登录链路替换为不存在的接口。
+
+### 13.2 正确迁移方式
+
+账号认证采用兼容双栈，不通过试错请求猜测能力：
+
+1. 服务端 bootstrap 新增明确的认证能力和契约版本，例如 `oauth_loopback_pkce_available`、授权源、资源源与支持的账号数据能力。
+2. 客户端仅在服务端显式声明且契约校验通过时启用 loopback PKCE；否则继续使用当前 v2 设备授权。
+3. OAuth 的 Token 与业务 API 源固定复用野菜服务，不跟随“大陆优化/全球加速”切换；浏览器授权确认页允许按客户端品牌使用一个编译时白名单域名。野菜版使用 `yeschoy.com`，朋友定制版使用 `ai.yeschoy.io`。
+4. 服务端必须明确 OAuth Token 是否同时可用于 `yeschoy.com` 和 `api.yeschoy.com` 的 `/v1/*`，以及它们是否共享 audience、会话撤销和鉴权缓存。
+5. 客户端继续复用现有安全存储、刷新互斥、账号世代和退出协调，但新增独立的 loopback listener、PKCE 临时上下文与表单编码网络边界。
+6. 默认 scope 只申请 `profile api offline_access`；不申请工具密钥管理或后台管理权限。设备管理 `sessions` 属于可选高权限，只有真正提供设备管理界面时才单独申请。
+
+### 13.3 与应用接入的解耦要求
+
+OAuth Access Token 最长仅一小时，不能像长期 API Key 一样直接写入 Codex、Claude、Pi、DSH、Hermes 或 OpenClaw 配置。正确边界是：第三方应用只连接野菜本机桥；本机桥从账号会话模块取得短期 Access Token，并由账号模块串行刷新。退出登录只撤销账号会话并停止新的远端请求，不改写或删除用户原始应用配置。
+
+用户已确认新 OAuth 契约的目标就是缩小原桌面接口权限。新的 Access Token 不得继承当前 bootstrap 中的 `tool_keys_manage` 能力，也不得调用后台管理、用户列表、其他用户账单或上游密钥接口。迁移期间需明确以下其一：
+
+- 仅给仍使用 v2 设备授权的旧客户端保留工具密钥兼容层；或
+- 所有目标应用统一经本机桥转发，由桥使用 OAuth Token，且补齐用量、定价、余额和模型能力接口。
+
+文档目前只定义 `userinfo`、`/v1/models` 与模型调用，没有覆盖现有客户端使用的用量记录、价格、节省金额和工具密钥管理能力；这些缺口关闭前不能宣称账号功能已完整迁移。
+
+### 13.4 PKCE 实现门禁
+
+- 必须先绑定 `127.0.0.1:0` 并持续持有 listener，再打开系统浏览器；不接受 `localhost`、`0.0.0.0`、固定端口或自定义 URL Scheme。
+- `state` 与 verifier 每次独立生成；只接受 S256；完整 redirect URI（含实际端口）在授权和换码时完全一致。
+- callback 严格限制 GET、Host、路径、单值关键参数和一次原子领取；错误 state、favicon 或陌生请求不能毁掉合法等待流程。
+- Token Endpoint 固定 HTTPS、禁止跨地址重定向；回调页不回显任何敏感值，也不加载外部资源。
+- Refresh Token 使用安全存储并旋转；同一会话 singleflight；响应结果不确定时不盲目重放一次性 code 或 refresh token。
+- SSE 已开始、已产生工具调用或执行结果不确定时，不自动重放模型请求，避免重复计费和副作用。
+- 日志和错误上报过滤 Authorization、code、verifier、Token、完整 callback URL 以及 Token 请求/响应体。
+
+### 13.5 发布门禁调整
+
+PKCE 客户端可以先开发为未启用的兼容分支并完成单元测试，但在服务端提供可验证的能力声明、两个资源线路的 Token 语义和完整联调环境前，不得替换当前生产登录。正式启用还必须完成文档第 22 节全部联调场景，并增加“旧设备授权仍可回退”“切换网络线路不退出账号”“OAuth 退出不破坏应用恢复点”“定制授权页不能改变 Token/API 源”四项客户端集成验收。
+
+### 13.6 `ai.yeschoy.io` 定制边界
+
+用户确认 `ai.yeschoy.io` 只用于朋友定制客户端在系统浏览器中展示登录与授权确认页面；不是一套新的 API、账号、模型、计费、线路、本地桥或更新服务。其他能力继续复用野菜现有实现。
+
+实现上只增加受控的产品参数：
+
+```text
+authorization_page_origin = https://ai.yeschoy.io
+token_api_origin          = https://yeschoy.com
+resource_api_origins      = 继续使用野菜既有线路
+redirect_uri              = http://127.0.0.1:{动态端口}/oauth/callback
+```
+
+当前设备授权兼容期对应的构建变量为 `YESCHOY_AUTHORIZATION_PAGE_ORIGIN`。未设置时固定为 `https://yeschoy.com`；朋友定制构建只允许精确值 `https://ai.yeschoy.io`。客户端仍先验证服务端返回的野菜授权结果，再使用已验证的 `user_code` 在本地重建 `/desktop-authorize` 浏览器地址，服务端响应不能选择或覆盖该 Origin。
+
+该参数必须在构建时写入并按精确 HTTPS Origin 白名单校验，不能做成允许用户填写任意网址的设置，也不能让授权页返回的参数覆盖 Token Endpoint。授权码须由同一野菜 OAuth 服务签发并能在固定 Token Endpoint 兑换；定制域名只改变浏览器页面入口和品牌展示。
+
+因此无需复制整套客户端或分叉七个应用适配器。共享 PKCE、本机回调、安全存储、刷新、本地桥和更新代码；朋友版只覆盖授权页 Origin 及未来明确提供的名称、图标和文案资产。若将来需要独立账号体系、计费或更新源，再建立新的产品变体契约，不能从这次“只换授权页域名”推断出来。
+
+### 13.7 客户端先行准备结果
+
+客户端侧已经完成可编译、但默认休眠的 PKCE 预埋；不需要等待服务端部署才能完成客户端开发。当前实现已经覆盖随机端口 IPv4 loopback listener、独立 state/verifier、PKCE S256、两个授权页面 Origin 白名单、固定野菜 Token/UserInfo/Revoke Endpoint、严格且不误消费的 callback 校验、一次原子领取、表单编码、受限 Token 响应解析、取消与超时。凭证对象没有 `Debug` 派生，回调响应不包含 code、state 或 Token。
+
+该模块只被 Rust 编译器纳入构建，没有 Tauri command、前端入口或当前账号模块调用者，因此现有 `/api/desktop/v2/*` 设备授权、会话存储、工具密钥、计费分组以及 Codex、Claude、Pi、DSH、Hermes、OpenClaw 等应用接入逻辑均未改变。移除该模块即可回滚，不涉及数据迁移。
+
+仍需服务端上线后关闭的不是“客户端能不能写”，而是两项真实联调事实：一是 bootstrap 如何明确声明 PKCE 能力并让客户端安全切换；二是窄权限 OAuth Bearer 如何选择计费分组并供所有本机桥调用，同时覆盖账号、余额、用量、定价和模型能力。两项契约冻结并部署前，生产登录继续走现有设备授权；不得用当前未部署接口做试错切换，也不得宣称 OAuth 已经可供用户使用。
+
+本次只完成源码与测试准备，不打包、不发布、不改服务器、不修改任何真实用户配置。

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU045-AS-storage_and_concurrency",
+  "assertion": "Lock contention, symlinked paths and full quota fail without overlapping runs, following symlinks, deleting arbitrary files or writing a public directory.",
+  "testSelector": "tests/work_packages/ru045/test_acceptance.py::test_storage_and_concurrency",
+  "acceptanceCommandId": "ru045-storage_and_concurrency",
+  "runId": "RU-045/WP-RU045-VENDOR-SYNC@2026-09-06T05:32:39.968015+00:00",
+  "packageId": "WP-RU045-VENDOR-SYNC",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru045/test_acceptance.py::test_storage_and_concurrency",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:84c08685580b49dbcb875ede2375062f4d51f5fe7e1b3714e00471bd8e1e8e86",
+    "machineReportSha256": "sha256:d899b0b8fd18d826ee80ebc41359363f7cdd0e39c4e4c61eb3ea4fb6a9642bd6",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:789fc5735139cb8990e6c5c26d967af3cdf1e4056f5898edbad1ebb5e8f44803",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:a22bad52954464ad593f430c54c634e2bbf7d83a941c241c9acbd5a10ac1ad94",
+  "releaseUnitId": "RU-045",
+  "releaseUnitHash": "sha256:22aef0d114e2943ebe2bcc21a86ece3e4f0d9a2a5a7cae817f4ce9f1e91ce370"
+}

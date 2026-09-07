@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU044-AS-preserve-ingress",
+  "assertion": "Existing ingress exact prefix is preserved; repeated same addition is a no-op, partial/wrong/duplicate additions are rejected, stale hash blocks publication, and recovery restores only the deployment-owned current state.",
+  "testSelector": "tests/work_packages/ru044/test_acceptance.py::test_ingress_replay_conflict_and_recovery",
+  "acceptanceCommandId": "ru044-preserve-ingress",
+  "runId": "RU-044/WP-RU044-DOWNLOAD-ORIGIN@2026-09-06T04:43:22.627856+00:00",
+  "packageId": "WP-RU044-DOWNLOAD-ORIGIN",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru044/test_acceptance.py::test_ingress_replay_conflict_and_recovery",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:4b38bbc81cc042c86fb6bcc8ed2d80f9c95193bfd3f49f63dffb1cc08a5dd924",
+    "machineReportSha256": "sha256:de1bfb94d7d70d32a6cedd05756d0d41a3acbe50af7bc46185b1e6e672eb23a7",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:bb9470ff1b98e429407302e2ab4752a8aab622332c1f48dd84a1ba20361dce11",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:6066025b97487b9caef8814f60cf685d61dacb4f5ebcce14ce9aa223225f35c1",
+  "releaseUnitId": "RU-044",
+  "releaseUnitHash": "sha256:ce103477edb5976ae73e90d129b97b67127def60580f1b8e26ba729e41dd3e2f"
+}

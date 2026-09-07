@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU059-AS-windows",
+  "assertion": "The Windows hashes match, the payload is an x86_64 MSVC PE from the exact candidate, the pinned NSIS recipe is Simplified Chinese, and receipts preserve unsigned, cross-built, non-public and untested-on-Windows boundaries.",
+  "testSelector": "tests/work_packages/ru058/test_acceptance.py::test_windows_cross_artifact_and_release_boundary",
+  "acceptanceCommandId": "ru059-windows-cross-artifact",
+  "runId": "RU-059/WP-RU059-STANDALONE-CROSS-PACKAGING@2026-09-06T16:59:01.526798+00:00",
+  "packageId": "WP-RU059-STANDALONE-CROSS-PACKAGING",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-059",
+  "releaseUnitHash": "sha256:4647fb1b6aede83aec28b2ee6095aef7cc0400097f0c2d204aaf5c39b22c359f"
+}

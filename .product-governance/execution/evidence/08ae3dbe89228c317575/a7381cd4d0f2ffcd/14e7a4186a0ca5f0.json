@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU071-AS-replay",
+  "assertion": "Duplicate install attempts cannot download twice, install twice or request shutdown twice.",
+  "testSelector": "tests/work_packages/ru071/test_acceptance.py::test_duplicate_install_is_serialized_without_duplicate_shutdown",
+  "acceptanceCommandId": "ru071-replay",
+  "runId": "RU-071/WP-RU071-SELF-UPDATE-CLOSURE@2026-09-07T08:25:42.735975+00:00",
+  "packageId": "WP-RU071-SELF-UPDATE-CLOSURE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru071/test_acceptance.py::test_duplicate_install_is_serialized_without_duplicate_shutdown",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:7fe8a72a3e57bfcffb97bfbaf8a45a7a9556f7453918a74609c13f62e1da36b1",
+    "machineReportSha256": "sha256:e7d5f23a31a729e705ac2e3359000a2c1974d30031fcfc9d0a562fd1535ccd47",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:b4d287d86417886a764a2401bd6fd2a0e7892f6b25aef1008073f9c1d7b380dd",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:ac5a0dc8ce61815fa684af9e6f2e01160a8c10b4d6dd60f167852f0a1afb97ee",
+  "releaseUnitId": "RU-071",
+  "releaseUnitHash": "sha256:0cab89775da79ef995e247b3b70aa4f79c94b05dc84c274dec90f245bf4dbabc"
+}

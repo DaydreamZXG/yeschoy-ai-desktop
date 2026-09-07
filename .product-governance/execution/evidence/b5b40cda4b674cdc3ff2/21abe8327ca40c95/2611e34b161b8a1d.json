@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU040-AS-03",
+  "assertion": "Package, native manifests, lockfile and UI share the 0.4.7 release identity, while current typecheck and production build pass; historical 0.4.6 evidence remains immutable.",
+  "testSelector": "tests/work_packages/ru040/test_acceptance.py::test_hotfix_version_and_production_build",
+  "acceptanceCommandId": "ru040-build",
+  "runId": "RU-040/WP-RU040-HOTFIX-RELEASE-IDENTITY@2026-09-05T09:48:57.778211+00:00",
+  "packageId": "WP-RU040-HOTFIX-RELEASE-IDENTITY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru040/test_acceptance.py::test_hotfix_version_and_production_build",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:5262a82eb842227a5f83f065b554a2a2b536efc761ee13c9cc4f55dcce019197",
+    "machineReportSha256": "sha256:b12cd4f4a9245c6ffccd7a718e20c165086cbf6468e669cef78334ed397666c7",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:b59b8af81a2829df49d3174599373f03c56dab16ac40cabefad6205c18ac96b9",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:38eb2c7bac9a34af2914c7a3824c489fa5369f18b8090f839e1597857f516972",
+  "releaseUnitId": "RU-040",
+  "releaseUnitHash": "sha256:7482da72be69adbbf6f42a1eb52513312d827d675e005dc435630f3961bc039c"
+}

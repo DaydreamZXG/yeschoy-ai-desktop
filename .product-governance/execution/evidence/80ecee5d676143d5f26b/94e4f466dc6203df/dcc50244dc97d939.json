@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU073-AS-failure",
+  "assertion": "Non-loopback redirect shapes, unsupported methods, foreign hosts, wrong paths, duplicate or mixed result parameters and malformed token responses fail closed without exposing secrets.",
+  "testSelector": "tests/work_packages/ru073/test_acceptance.py::test_failure_paths_reject_non_loopback_or_ambiguous_callback_input",
+  "acceptanceCommandId": "ru073-failure",
+  "runId": "RU-073/WP-RU073-PKCE-CLIENT-PREFLIGHT@2026-09-07T10:51:00.258815+00:00",
+  "packageId": "WP-RU073-PKCE-CLIENT-PREFLIGHT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru073/test_acceptance.py::test_failure_paths_reject_non_loopback_or_ambiguous_callback_input",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:43a8ee2a466ae8ef9550874e98bc9875b5faa6ad41e163416cbf7be27eb45a5c",
+    "machineReportSha256": "sha256:0aeb213deec9d88e3a2a2a094e8e7c13f0a769263230cffd7b2d68d9b96163cd",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:da7693ecd216611a6d82c8147a5d51c26b7b716d552f616e299e7c39a3bd626a",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:4582b84450c775cd9f09fa38fee3d80c44d902f208cd6c493746d512fb5a2b16",
+  "releaseUnitId": "RU-073",
+  "releaseUnitHash": "sha256:1d24a66ba979b245e8cc271a4a9dc8deeb7380bb296e8e8b93c0193bd3446943"
+}

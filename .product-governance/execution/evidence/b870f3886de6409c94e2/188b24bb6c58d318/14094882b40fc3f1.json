@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU046-AS-native",
+  "assertion": "Native executable fixtures cover download/validator replay, cancellation, stage ordering, no-overwrite, malicious identity/source paths and cross-platform compilation. Include native one-use full-selection/account proof, exclusive destination race, quit-before-spawn, cancelled download, non-cancelled mutation drain, Windows handoff ownership and worker-error permit cleanup.",
+  "testSelector": "tests/work_packages/ru046/test_acceptance.py::test_native_installation",
+  "acceptanceCommandId": "ru046-native",
+  "runId": "RU-050/WP-RU050-INSTALLATION-INTEGRATION@2026-09-06T07:06:51.919914+00:00",
+  "packageId": "WP-RU050-INSTALLATION-INTEGRATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru046/test_acceptance.py::test_native_installation",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:a52cc18af8645cbfd97c175fd7927376488fd5f05e3abd30c004181dd6cfe1fb",
+    "machineReportSha256": "sha256:d2e7964623d1cb4be2c7db3808b258128eae5206dfa93e3460b04d9de15f1ef1",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:243b9116e0e99e598ef555f859e5d64835f9d7b92841142a923e52624bb0cf49",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:b990c4f24ae3484d635327d4eb0439e81bbc664b08a37af06512489e33543290",
+  "releaseUnitId": "RU-050",
+  "releaseUnitHash": "sha256:7bca99d8f4f618b6e5d99453092d70c20f0aa3c31517d3ff761c78c28ea91b79"
+}

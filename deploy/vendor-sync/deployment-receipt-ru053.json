@@ -1,0 +1,98 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-06T11:51:58Z",
+  "scope": "domestic-vendor-installer-catalog",
+  "authority": {
+    "releaseUnitId": "RU-053",
+    "releaseUnitHash": "sha256:305f3db2338290220d7d0171d83f24f55c819222bb1b37cbc6f6f87663022ab7",
+    "sourceCommit": "df10e7a0516c4125866daff5cf91b76178c89d02"
+  },
+  "host": "ergou.qzz.io",
+  "deployment": {
+    "publisherSha256": "9c2b0300da51eb5c327b9bd4e028fa9d49d22b1a5c8eae876a03fe8b36bd1432",
+    "originConfigSha256": "2782b9893ceda9c2196d577e9b0b3d9f007d7e7596bc2677a050467f1523c4c7",
+    "sharedIngressSha256": "aaa63d1459357d9cfa0c0e21dc86c13ed824fbf5fd178084b046975a9765e7e2",
+    "originContainerImage": "sha256:af32e97399febea808609119bb21544d0265c58a02836576e32a2d082c262c17",
+    "originContainerReadOnly": true,
+    "syncTimerEnabled": true,
+    "syncServiceActiveAfterRun": false
+  },
+  "catalog": {
+    "schemaVersion": 2,
+    "generatedAt": "2026-09-06T11:38:10.423117+00:00",
+    "artifactCount": 6,
+    "artifacts": [
+      {
+        "sourceId": "claude-macos-universal",
+        "version": "1.46388.4",
+        "verification": "native_verified",
+        "sha256": "494c3c6e791c5c0a5041371f8234a6dffa9c9426165d5ef4c7dbcf85ade58617",
+        "size": 355648442
+      },
+      {
+        "sourceId": "claude-windows-arm64",
+        "version": "1.46388.4.0",
+        "verification": "client_native_required",
+        "sha256": "26584e2b97e80df3e9ac3c745b806b9711aefb74b079af7c6687286734ebd327",
+        "size": 261219221
+      },
+      {
+        "sourceId": "claude-windows-x64",
+        "version": "1.46388.4.0",
+        "verification": "client_native_required",
+        "sha256": "f3925248cf40b46c59043878b4c4f1835e7687082b5a52217bd72b73bfbf0b12",
+        "size": 266539079
+      },
+      {
+        "sourceId": "codex-macos-arm64",
+        "version": "26.901.51231",
+        "verification": "native_verified",
+        "sha256": "b6ffed73d581047862e85de5b4d322ba431004949a5338736e7059182dff6082",
+        "size": 643007873
+      },
+      {
+        "sourceId": "codex-windows-arm64",
+        "version": "26.901.5280.0",
+        "verification": "client_native_required",
+        "sha256": "fe741375d93dd8e5a27c94608549b1e829534413d170d38f1d54db99b2eb0a44",
+        "size": 787507242
+      },
+      {
+        "sourceId": "codex-windows-x64",
+        "version": "26.901.5280.0",
+        "verification": "client_native_required",
+        "sha256": "55031fb3704200e4a36d7751db8a0b9fc69e92fcd8644bf39741d66d7ead9b3a",
+        "size": 796455116
+      }
+    ]
+  },
+  "killSwitchRehearsal": {
+    "previousArtifactCount": 6,
+    "disabledCatalogArtifactCount": 0,
+    "disabledHealthPublished": false,
+    "objectsDeleted": false,
+    "retainedObjectCount": 6,
+    "retainedObjectBytes": 3110376973,
+    "restoredCatalogArtifactCount": 6,
+    "restoredHealthPublished": true
+  },
+  "verification": {
+    "allPublicObjectSizesMatch": true,
+    "allPublicObjectSha256Match": true,
+    "allPublicObjectsSupportRange": true,
+    "rangeStatus": 206,
+    "rangeBytes": 1,
+    "mediaTypes": {
+      "zip": "application/zip",
+      "dmg": "application/x-apple-diskimage",
+      "msix": "application/vnd.ms-appx"
+    }
+  },
+  "notPerformed": [
+    "Yecai application package build, version bump, signing or release upload",
+    "Yecai automatic-update manifest or updater artifact publication",
+    "Clean-machine macOS or Windows installation acceptance",
+    "Third-party application login or paid model request",
+    "Database, NewAPI or shared-ingress modification"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU051-AS-full-renderer",
+  "assertion": "All repository Vitest suites pass, including current App integration journeys, logged-out Windows confirmation and cross-app terminal-state recovery. No skipped failure or pass-count-only readiness claims.",
+  "testSelector": "tests/work_packages/ru051/test_acceptance.py::test_all_repository_renderer",
+  "acceptanceCommandId": "ru051-full-renderer",
+  "runId": "RU-051/WP-RU051-INSTALLATION-RECOVERY@2026-09-06T08:00:47.676381+00:00",
+  "packageId": "WP-RU051-INSTALLATION-RECOVERY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:e920342d6e23853b344c2ac121c3c135d7ea05500feaaf42719e9f8057ada4ef",
+  "releaseUnitId": "RU-051",
+  "releaseUnitHash": "sha256:6fa6721fbc0cb99f7ee7ea1acf9dc0812c74ff2f7f398857e4f22b6fca90fe1d"
+}

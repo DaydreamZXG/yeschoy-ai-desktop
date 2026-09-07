@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU052-AS-native",
+  "assertion": "Run existing native installation regressions and new strict catalog/official feed/ZIP extraction fixtures, malicious sources, artifact-bound resume, fallback and no-overwrite tests.",
+  "testSelector": "tests/work_packages/ru052/test_acceptance.py::test_native_installation",
+  "acceptanceCommandId": "ru052-native",
+  "runId": "RU-052/WP-RU052-DOWNLOAD-COMPLETION@2026-09-06T09:11:04.179507+00:00",
+  "packageId": "WP-RU052-DOWNLOAD-COMPLETION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-052",
+  "releaseUnitHash": "sha256:d51f11bb6da28360782d5b6c772a0f81048ec0136b9d22a6eecf405bbefaaf05"
+}

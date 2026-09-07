@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU072-AS-stale",
+  "assertion": "A stale or malicious device-authorization response is rejected against the canonical Yeschoy service before the configured browser origin is consulted.",
+  "testSelector": "tests/work_packages/ru072/test_acceptance.py::test_stale_or_malicious_server_url_cannot_select_the_browser_origin",
+  "acceptanceCommandId": "ru072-stale",
+  "runId": "RU-072/WP-RU072-BRANDED-AUTHORIZATION-ORIGIN@2026-09-07T10:27:51.287240+00:00",
+  "packageId": "WP-RU072-BRANDED-AUTHORIZATION-ORIGIN",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru072/test_acceptance.py::test_stale_or_malicious_server_url_cannot_select_the_browser_origin",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:ae23293db2d82d65f031f52b29011df71869d2abe52762e15abcfed571aa6251",
+    "machineReportSha256": "sha256:1d08638e0414d673a274b2c7f680ff95996d1a4a12a6e5364f17ab3fdf13c0d6",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:b1c35ac3ffc4364bc1b2ead411e4c02321a67e61e9b3b1003b761a0aa5cae0e5",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:e186b652948e05f9cfdbf2f6945ef8b04ad371c8177157a579bccc24ec5c195f",
+  "releaseUnitId": "RU-072",
+  "releaseUnitHash": "sha256:b30f281f4544deff04bd573deb95a16abc423e8ab2da03e2891e7b918114c0cc"
+}

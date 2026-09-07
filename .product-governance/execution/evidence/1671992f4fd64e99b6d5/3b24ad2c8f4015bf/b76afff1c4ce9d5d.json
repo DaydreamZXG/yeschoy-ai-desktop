@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU045-AS-package_identity_and_verification",
+  "assertion": "MSIX identity/architecture/version and malicious archive cases are handled without execution/extraction; unsigned or merely signature-bearing content never claims trusted native verification.",
+  "testSelector": "tests/work_packages/ru045/test_acceptance.py::test_package_identity_and_verification",
+  "acceptanceCommandId": "ru045-package_identity_and_verification",
+  "runId": "RU-045/WP-RU045-VENDOR-SYNC@2026-09-06T05:32:39.968015+00:00",
+  "packageId": "WP-RU045-VENDOR-SYNC",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru045/test_acceptance.py::test_package_identity_and_verification",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:472116b1c4b1f59005cd4050c194504a6b6d99fe6c6f41d012c63ac9b2722aa5",
+    "machineReportSha256": "sha256:223f3c9fabfd3aa4c315ae44ddd5eb2d1b45a6f10577760d12ceaf2997460910",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:066d8c8e75d01b4e681727e54ec8b31595c60985b79b77d8b11381aa0f7ce446",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:b29c023362ace7138d18fbe3a98fb1f208d2113ffb035cfb02a7f7cbac74ab7f",
+  "releaseUnitId": "RU-045",
+  "releaseUnitHash": "sha256:22aef0d114e2943ebe2bcc21a86ece3e4f0d9a2a5a7cae817f4ce9f1e91ce370"
+}

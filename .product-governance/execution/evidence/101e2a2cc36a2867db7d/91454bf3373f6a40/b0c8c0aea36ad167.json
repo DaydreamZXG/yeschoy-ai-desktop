@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU063-AS-settings-ui",
+  "assertion": "The rendered Settings view contains no obsolete account-unavailable boundary.",
+  "testSelector": "src/settings/SettingsView.test.tsx",
+  "acceptanceCommandId": "ru063-settings-ui",
+  "runId": "RU-063/WP-RU063-SETTINGS-ACCOUNT-CLEANUP@2026-09-07T05:14:25.133721+00:00",
+  "packageId": "WP-RU063-SETTINGS-ACCOUNT-CLEANUP",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:41e67a2432ade2bb768cc8811dc3325661c001783323401c6be578c1263d3008",
+  "releaseUnitId": "RU-063",
+  "releaseUnitHash": "sha256:83e2348cd3bbf180b4111b065dfc914faf5da2bb9ae6ba3daecd8312f99c86e7"
+}

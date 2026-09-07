@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU072-AS-race",
+  "assertion": "Authorization-page origin is immutable within a compiled binary and cannot race with renderer, server or user-controlled runtime state.",
+  "testSelector": "tests/work_packages/ru072/test_acceptance.py::test_origin_is_compile_time_and_has_no_runtime_mutation_surface",
+  "acceptanceCommandId": "ru072-race",
+  "runId": "RU-072/WP-RU072-BRANDED-AUTHORIZATION-ORIGIN@2026-09-07T10:27:51.287240+00:00",
+  "packageId": "WP-RU072-BRANDED-AUTHORIZATION-ORIGIN",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru072/test_acceptance.py::test_origin_is_compile_time_and_has_no_runtime_mutation_surface",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:3dcf0f524c7cdde3995fbd0a84b331b4d52791d45c8ab3aa69e0d567efb1ed64",
+    "machineReportSha256": "sha256:c5576220e8cfe77c45ec94b704a7df9f0827ed543c46a159104feff3579695a6",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:9f1a22bc056423aba836784924ce16f1b30a6a27ad21cc56e99e249b952d778e",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:e3cebbfc7c254391b31d781cfa41264be25615dd89d22bc90b8d487e116accff",
+  "releaseUnitId": "RU-072",
+  "releaseUnitHash": "sha256:b30f281f4544deff04bd573deb95a16abc423e8ab2da03e2891e7b918114c0cc"
+}

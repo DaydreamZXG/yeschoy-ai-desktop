@@ -63,7 +63,9 @@ export function RestoreConnection({
         <button
           className="restore-action"
           type="button"
-          disabled={disabled || !!controller?.restoring || !!controller?.opening}
+          disabled={
+            disabled || !!controller?.restoring || !!controller?.opening
+          }
           onClick={() => {
             setMessage("");
             setOpen(true);
