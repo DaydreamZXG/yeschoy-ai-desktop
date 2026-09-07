@@ -9,20 +9,33 @@ use std::sync::OnceLock;
 /// bundled registry. The outbound model ID is always left unchanged.
 pub(crate) const CLAUDE_BEHAVES_AS: &str = "claude-sonnet-4-6";
 
+/// Return a Claude-native model family accepted by the desktop client's
+/// fail-all validator. New point releases in an already supported native role
+/// must not fall back to the opaque gateway alias: Claude Desktop rejects the
+/// whole configured model set before it sends a request in that case.
+fn native_claude_capability_family(id: &str) -> Option<&str> {
+    let candidate = id.strip_prefix("anthropic/").unwrap_or(id);
+    let tail = candidate.strip_prefix("claude-")?;
+    let supported_role = ["sonnet-", "opus-", "haiku-", "fable-", "mythos-"]
+        .iter()
+        .any(|role| {
+            tail.strip_prefix(role).is_some_and(|version| {
+                !version.is_empty()
+                    && version.bytes().all(|byte| {
+                        byte.is_ascii_lowercase()
+                            || byte.is_ascii_digit()
+                            || matches!(byte, b'-' | b'_' | b'.')
+                    })
+            })
+        });
+    supported_role.then_some(candidate)
+}
+
 /// Project a real gateway model onto the closest Claude client capability
 /// family. This affects only native client controls (effort/thinking); the
 /// loopback bridge still resolves and forwards the exact real model ID.
-pub(crate) fn claude_capability_family(id: &str) -> Option<&'static str> {
-    match id {
-        // Preserve the vendor-native capability family whenever Claude already
-        // knows the exact model.
-        "claude-sonnet-4-6" => Some("claude-sonnet-4-6"),
-        "claude-opus-4-6" => Some("claude-opus-4-6"),
-        "claude-opus-4-7" => Some("claude-opus-4-7"),
-        "claude-opus-4-8" => Some("claude-opus-4-8"),
-        "claude-opus-5" => Some("claude-opus-5"),
-        "claude-sonnet-5" => Some("claude-sonnet-5"),
-
+pub(crate) fn claude_capability_family(id: &str) -> Option<&str> {
+    native_claude_capability_family(id).or(match id {
         // Five effort levels, with thinking always enabled.
         "gpt-6-astra" => Some("claude-opus-5"),
 
@@ -37,10 +50,10 @@ pub(crate) fn claude_capability_family(id: &str) -> Option<&'static str> {
         // four-level UI; medium is translated to high by the bridge.
         "deepseek-v4-flash" | "deepseek-v4-pro" => Some("claude-sonnet-4-6"),
         _ => None,
-    }
+    })
 }
 
-pub(crate) fn claude_code_behaves_as(id: &str) -> &'static str {
+pub(crate) fn claude_code_behaves_as(id: &str) -> &str {
     claude_capability_family(id).unwrap_or(CLAUDE_BEHAVES_AS)
 }
 
@@ -388,6 +401,10 @@ mod tests {
             ("gpt-5.4-mini", "claude-opus-5"),
             ("deepseek-v4-flash", "claude-sonnet-4-6"),
             ("claude-opus-4-8", "claude-opus-4-8"),
+            ("claude-fable-5", "claude-fable-5"),
+            ("claude-fable-5-1", "claude-fable-5-1"),
+            ("claude-mythos-5", "claude-mythos-5"),
+            ("anthropic/claude-sonnet-5", "claude-sonnet-5"),
         ] {
             assert_eq!(claude_capability_family(model), Some(family));
             assert_eq!(claude_code_behaves_as(model), family);
@@ -400,6 +417,15 @@ mod tests {
             if !model.starts_with("claude-") {
                 assert!(!route.contains(model));
             }
+        }
+        for invalid in [
+            "claude-router-deadbeef",
+            "claude-fable-",
+            "claude-fable-5[1m]",
+            "claude-fable-5/other",
+            "CLAUDE-FABLE-5",
+        ] {
+            assert_eq!(claude_capability_family(invalid), None, "{invalid}");
         }
         assert_eq!(claude_capability_family("future-model"), None);
         assert_eq!(claude_code_behaves_as("future-model"), CLAUDE_BEHAVES_AS);
@@ -417,6 +443,14 @@ mod tests {
         assert!(!claude_gateway_route_matches(
             "deepseek-v4-pro",
             &claude_gateway_route_id("deepseek-v4-flash")
+        ));
+        let fable_route = claude_gateway_route_id("claude-fable-5");
+        assert!(fable_route.starts_with("claude-fable-5-v"));
+        assert!(!fable_route.starts_with("anthropic/claude-router-"));
+        assert!(claude_gateway_route_matches("claude-fable-5", &fable_route));
+        assert!(claude_gateway_route_matches(
+            "claude-fable-5",
+            &legacy_claude_gateway_route_id("claude-fable-5")
         ));
     }
 

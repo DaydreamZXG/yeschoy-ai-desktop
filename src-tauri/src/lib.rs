@@ -50,6 +50,7 @@ use shutdown_coordinator::{
     global as shutdown, DrainOutcome, ShutdownProgress, FINISHING_NOTICE_AFTER, RUNTIME_STOP_GRACE,
 };
 
+#[cfg(not(target_os = "windows"))]
 const CLOSE_CHOICE_EVENT: &str = "yeschoy://close-choice";
 const EXIT_PROGRESS_EVENT: &str = "yeschoy://exit-progress";
 
@@ -93,6 +94,8 @@ pub fn run() {
         .setup(move |app| {
             window_appearance::initialize(app)?;
             register_runtime_stops(app.handle())?;
+            #[cfg(target_os = "windows")]
+            register_installer_shutdown_listener(app.handle().clone())?;
             tauri::async_runtime::spawn(async move {
                 let Ok(permit) = shutdown().admit_operation() else {
                     return;
@@ -195,6 +198,62 @@ fn register_runtime_stops(app: &tauri::AppHandle) -> Result<(), std::io::Error> 
     Ok(())
 }
 
+#[cfg(target_os = "windows")]
+fn register_installer_shutdown_listener<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+) -> Result<(), std::io::Error> {
+    use std::ffi::c_void;
+    use windows::core::w;
+    use windows::Win32::{
+        Foundation::{CloseHandle, HANDLE, WAIT_OBJECT_0},
+        System::Threading::{CreateEventW, WaitForSingleObject, INFINITE},
+    };
+
+    // The installer opens this per-session event instead of sending WM_CLOSE.
+    // WM_CLOSE is intentionally interactive in the desktop app and therefore
+    // cannot mean "install an update now" without a separate trusted signal.
+    let event = unsafe {
+        CreateEventW(
+            None,
+            false,
+            false,
+            w!("Local\\YesChoyDesktopInstallerShutdown_v1"),
+        )
+    }
+    .map_err(|error| {
+        std::io::Error::other(format!(
+            "could not create the Windows installer shutdown event: {error}"
+        ))
+    })?;
+    // HANDLE wraps a raw pointer and is not Send. The operating-system handle
+    // value itself is process-wide, so move its integer representation into the
+    // dedicated waiter and reconstruct it there for the single close.
+    let event_value = event.0 as usize;
+    std::thread::Builder::new()
+        .name("yeschoy-installer-shutdown".into())
+        .spawn(move || {
+            let event = HANDLE(event_value as *mut c_void);
+            let signalled = unsafe { WaitForSingleObject(event, INFINITE) } == WAIT_OBJECT_0;
+            let _ = unsafe { CloseHandle(event) };
+            if !signalled {
+                log::warn!("desktop_shutdown stage=installer_event_wait_failed");
+                return;
+            }
+            log::info!("desktop_shutdown stage=installer_requested");
+            let shutdown_app = app.clone();
+            if app
+                .run_on_main_thread(move || {
+                    begin_desktop_shutdown(shutdown_app);
+                })
+                .is_err()
+            {
+                log::warn!("desktop_shutdown stage=installer_dispatch_failed");
+            }
+        })
+        .map(|_| ())
+}
+
+#[cfg(not(target_os = "windows"))]
 fn request_close_choice(app: &tauri::AppHandle) {
     // Persist the intent in memory until acknowledged. A click before the
     // renderer listener is ready is read back when the global host mounts.
@@ -330,7 +389,7 @@ enum NativeCloseChoice {
 fn windows_close_choice<R: tauri::Runtime>(window: &tauri::Window<R>) -> NativeCloseChoice {
     use windows::core::w;
     use windows::Win32::UI::WindowsAndMessaging::{
-        MessageBoxW, IDCANCEL, IDNO, IDYES, MB_ICONQUESTION, MB_SETFOREGROUND, MB_YESNOCANCEL,
+        MessageBoxW, IDNO, IDYES, MB_ICONQUESTION, MB_SETFOREGROUND, MB_YESNOCANCEL,
     };
 
     let owner = window.hwnd().ok();
@@ -348,8 +407,6 @@ fn windows_close_choice<R: tauri::Runtime>(window: &tauri::Window<R>) -> NativeC
         NativeCloseChoice::Exit
     } else if result == IDNO {
         NativeCloseChoice::Background
-    } else if result == IDCANCEL {
-        NativeCloseChoice::Cancel
     } else {
         NativeCloseChoice::Cancel
     }

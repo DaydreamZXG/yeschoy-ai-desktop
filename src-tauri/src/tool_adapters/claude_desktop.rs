@@ -412,6 +412,35 @@ pub(crate) async fn verify_and_launch(
     }
 }
 
+/// Refresh only the model catalog inside the profile owned by this adapter.
+/// This migrates aliases rejected by newer Claude Desktop validators without
+/// requiring users to restore and reconnect after updating the assistant.
+fn refreshed_managed_profile(
+    profile: &Value,
+    credential: &ToolCredential,
+    local_token: &str,
+) -> Result<Option<Vec<u8>>, AdapterFailure> {
+    let active = profile["inferenceGatewayBaseUrl"].as_str() == Some(PROXY_BASE)
+        && profile["inferenceGatewayApiKey"].as_str() == Some(local_token)
+        && profile["inferenceProvider"].as_str() == Some("gateway");
+    if !active {
+        return Ok(None);
+    }
+    let expected: Value = serde_json::from_slice(
+        &profile_catalog(&credential.model_id, local_token, &credential.model_ids())
+            .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?,
+    )
+    .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?;
+    if profile["inferenceModels"] == expected["inferenceModels"] {
+        return Ok(None);
+    }
+    let mut refreshed = profile.clone();
+    refreshed["inferenceModels"] = expected["inferenceModels"].clone();
+    pretty(&refreshed)
+        .map(Some)
+        .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))
+}
+
 pub(crate) async fn resume_if_configured(state: ClaudeDesktopRuntimeState) {
     let Ok(credential) = tool_credentials::load("claude_desktop") else {
         return;
@@ -425,15 +454,31 @@ pub(crate) async fn resume_if_configured(state: ClaudeDesktopRuntimeState) {
     let Ok((_, _, profile_path, _)) = current_paths(&home) else {
         return;
     };
-    let profile = common::snapshot(&profile_path)
-        .ok()
-        .flatten()
-        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok());
+    let Ok(Some(profile_before)) = common::snapshot(&profile_path) else {
+        return;
+    };
+    let profile = serde_json::from_slice::<Value>(&profile_before).ok();
     let active = profile.as_ref().is_some_and(|value| {
         value["inferenceGatewayBaseUrl"].as_str() == Some(PROXY_BASE)
             && value["inferenceGatewayApiKey"].as_str() == Some(local_token)
     });
     if active {
+        if let Some(after) = profile
+            .as_ref()
+            .and_then(|value| refreshed_managed_profile(value, &credential, local_token).ok())
+            .flatten()
+        {
+            match FileTransaction::stage_with_snapshot(profile_path, Some(profile_before), after) {
+                Ok(mut transaction) => {
+                    if transaction.commit().is_ok() {
+                        log::info!("claude_desktop_profile migration=model_catalog_refreshed");
+                    } else {
+                        log::warn!("claude_desktop_profile migration=commit_failed");
+                    }
+                }
+                Err(_) => log::warn!("claude_desktop_profile migration=stage_failed"),
+            }
+        }
         let _ = state.start(credential).await;
     }
 }
@@ -445,6 +490,27 @@ pub(crate) fn launch(path: &Path) -> Result<(), AdapterFailure> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tool_credentials::ToolModelRoute;
+
+    fn fable_credential(token: &str) -> ToolCredential {
+        let route = ToolModelRoute {
+            model_id: "claude-fable-5".into(),
+            billing_group: "default".into(),
+            api_key: "synthetic-upstream-key".into(),
+            origin: "https://yeschoy.com".into(),
+            claude_transport: Some("direct_anthropic".into()),
+            codex_transport: None,
+        };
+        ToolCredential {
+            api_key: route.api_key.clone(),
+            origin: route.origin.clone(),
+            model_id: route.model_id.clone(),
+            local_gateway_token: Some(token.into()),
+            codex_transport: None,
+            claude_transport: route.claude_transport.clone(),
+            models: vec![route],
+        }
+    }
 
     #[test]
     fn ru042_claude_desktop_profile_real_identity_and_default_order_are_verified() {
@@ -516,11 +582,16 @@ mod tests {
 
     #[test]
     fn ru056_claude_desktop_known_models_unlock_native_effort_without_fake_labels() {
-        let ids = vec!["deepseek-v4-flash".into(), "gpt-6-astra".into()];
+        let ids = vec![
+            "deepseek-v4-flash".into(),
+            "gpt-6-astra".into(),
+            "claude-fable-5".into(),
+        ];
         let bytes = profile_catalog("deepseek-v4-flash", "synthetic-token", &ids).unwrap();
         let profile: Value = serde_json::from_slice(&bytes).unwrap();
         let deepseek = &profile["inferenceModels"][0];
         let astra = &profile["inferenceModels"][1];
+        let fable = &profile["inferenceModels"][2];
         assert!(deepseek["name"]
             .as_str()
             .unwrap()
@@ -531,7 +602,53 @@ mod tests {
             .unwrap()
             .starts_with("claude-opus-5-v"));
         assert_eq!(astra["labelOverride"], "GPT-6 Astra");
+        assert!(fable["name"]
+            .as_str()
+            .unwrap()
+            .starts_with("claude-fable-5-v"));
+        assert_eq!(fable["labelOverride"], "Claude Fable 5");
         assert_ne!(deepseek["name"], astra["name"]);
+        assert_ne!(astra["name"], fable["name"]);
+    }
+
+    #[test]
+    fn ru074_startup_migrates_owned_fable_alias_without_rewriting_other_fields() {
+        let token = format!("ycg-{}", "a".repeat(64));
+        let credential = fable_credential(&token);
+        let legacy = json!({
+            "coworkEgressAllowedHosts":["*"],
+            "futureOwnedField":{"keep":true},
+            "inferenceGatewayApiKey":token,
+            "inferenceGatewayBaseUrl":PROXY_BASE,
+            "inferenceProvider":"gateway",
+            "inferenceModels":[{
+                "name":crate::tool_model_profile::legacy_claude_gateway_route_id("claude-fable-5"),
+                "labelOverride":"claude-fable-5",
+                "supports1m":false
+            }]
+        });
+        let bytes = refreshed_managed_profile(&legacy, &credential, &token)
+            .unwrap()
+            .expect("legacy route should be refreshed");
+        let refreshed: Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(refreshed["futureOwnedField"], json!({"keep":true}));
+        assert!(refreshed["inferenceModels"][0]["name"]
+            .as_str()
+            .unwrap()
+            .starts_with("claude-fable-5-v"));
+        assert_eq!(
+            refreshed["inferenceModels"][0]["labelOverride"],
+            "Claude Fable 5"
+        );
+        assert!(refreshed_managed_profile(&refreshed, &credential, &token)
+            .unwrap()
+            .is_none());
+
+        let mut unowned = legacy;
+        unowned["inferenceGatewayApiKey"] = "somebody-elses-token".into();
+        assert!(refreshed_managed_profile(&unowned, &credential, &token)
+            .unwrap()
+            .is_none());
     }
 
     #[test]

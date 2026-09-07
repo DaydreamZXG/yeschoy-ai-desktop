@@ -163,6 +163,7 @@ impl ShutdownCoordinator {
         self.inner.state().progress
     }
 
+    #[cfg(any(test, not(target_os = "windows")))]
     pub(crate) fn request_close_choice(&self) {
         self.inner.state().close_requested = true;
     }

@@ -357,7 +357,7 @@ pub(crate) const fn platform_name() -> &'static str {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
 
