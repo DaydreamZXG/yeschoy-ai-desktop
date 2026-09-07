@@ -23,7 +23,20 @@ import { createAppearanceSync } from "./nativeAppearance";
 import { useAppearance, APPEARANCE_KEY } from "./appearance";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+import { installationInspectionFixture } from "../installation/test-fixtures";
 const native = vi.mocked(invoke);
+function mockNativeByCommand(
+  handler: (command: string, args: unknown) => unknown,
+) {
+  native.mockImplementation(async (command, args) => {
+    if (command === "read_desktop_exit_state") {
+      return { closeRequested: false, shutdown: null };
+    }
+    if (command === "manage_app_installation_v2")
+      return installationInspectionFixture(args);
+    return handler(command, args);
+  });
+}
 function fixture(requestId = "scan-1"): ScanResponse {
   return {
     requestId,
@@ -70,7 +83,9 @@ beforeEach(async () => {
   await i18n.changeLanguage("zh");
   localStorage.removeItem(APPEARANCE_KEY);
   native.mockReset();
-  native.mockRejectedValue(new Error("unavailable"));
+  mockNativeByCommand(() => {
+    throw Error("unavailable");
+  });
   systemDark = false;
   listeners.clear();
   vi.stubGlobal("scrollTo", vi.fn());
@@ -86,6 +101,11 @@ beforeEach(async () => {
   );
 });
 afterEach(() => {
+  for (const [command, args] of native.mock.calls) {
+    if (command === "read_desktop_exit_state") expect(args).toBeUndefined();
+    if (command === "manage_app_installation_v2")
+      expect(() => installationInspectionFixture(args)).not.toThrow();
+  }
   cleanup();
   vi.unstubAllGlobals();
 });
@@ -195,7 +215,7 @@ async function openTools() {
   fireEvent.click(screen.getByRole("button", { name: "高级工具" }));
 }
 function scanWith(make: (id: string) => unknown) {
-  native.mockImplementation(async (command, args) => {
+  mockNativeByCommand(async (command, args) => {
     if (command !== "scan_tools_read_only_v2") throw Error("unavailable");
     return make((args as { request: { requestId: string } }).request.requestId);
   });
@@ -217,8 +237,10 @@ describe("beginner scan recovery", () => {
     expect(card.textContent).not.toMatch(/已接通|已连接/);
     expect(native.mock.calls.map(([cmd]) => cmd)).toEqual([
       "scan_activation_targets_v1",
+      "manage_app_installation_v2",
       "manage_tool_connections_v1",
       "account_inspect_v2",
+      "read_desktop_exit_state",
       "scan_tools_read_only_v2",
     ]);
   });
@@ -269,13 +291,18 @@ describe("beginner scan recovery", () => {
       native.mock.calls.every(([cmd]) =>
         [
           "scan_desktop_apps_read_only",
+          "manage_app_installation_v2",
           "manage_tool_connections_v1",
           "account_inspect_v2",
           "scan_tools_read_only_v2",
           "scan_activation_targets_v1",
+          "read_desktop_exit_state",
         ].includes(cmd),
       ),
     ).toBe(true);
+    expect(
+      native.mock.calls.filter(([cmd]) => cmd === "read_desktop_exit_state"),
+    ).toHaveLength(1);
   });
   it("rejects stale and malformed responses, and offers retry after failure", async () => {
     scanWith(() => found(fixture("old-request")));
@@ -347,7 +374,10 @@ describe("native appearance ordering", () => {
   });
   it("syncs fixed palette and follows real system changes after leaving manual mode", async () => {
     vi.stubGlobal("__TAURI_INTERNALS__", {});
-    native.mockResolvedValue({});
+    mockNativeByCommand((command) => {
+      if (command === "set_window_appearance") return {};
+      throw Error(`Unexpected native command: ${command}`);
+    });
     function Harness() {
       const { changeAppearance } = useAppearance();
       return (

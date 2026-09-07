@@ -1,7 +1,7 @@
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ArrowUpRight, Check, LoaderCircle, Terminal, X } from "lucide-react";
 import { useConnections, type ToolConnection } from "./connections";
-import { OPENABLE_TOOLS, type OpenStatus } from "./launchApi";
+import { TERMINAL_TOOLS, type OpenStatus } from "./launchApi";
 import type { ActivationToolId } from "./activation";
 
 const messages: Record<OpenStatus, string> = {
@@ -13,7 +13,8 @@ const messages: Record<OpenStatus, string> = {
   secure_storage_unavailable:
     "暂时无法读取系统保存的接入信息。请解锁系统钥匙串或凭据管理器后重试。",
   tool_not_found: "没有找到可以启动的应用，请检查安装后重试。",
-  launch_failed: "没能打开应用。请确认应用安装完整、未被系统阻止，再重试。",
+  launch_failed:
+    "没能打开应用或终端。请确认应用可以手动打开、未被系统阻止，再重新检查。",
   busy: "另一个应用操作还在进行，结束后可重试。",
 };
 export function OpenConnection({
@@ -28,11 +29,19 @@ export function OpenConnection({
   disabled?: boolean;
 }) {
   const controller = useConnections();
-  const [status, setStatus] = useState<OpenStatus | "error" | null>(null);
+  const [status, setStatus] = useState<
+    OpenStatus | "error" | "timed_out" | null
+  >(null);
   const inFlight = useRef(false);
+  const identity = `${connection.toolId}:${connection.modelId}:${connection.lineId}:${connection.billingGroup}:${connection.updatedAtEpochMs}`;
+  const latestIdentity = useRef(identity);
+  latestIdentity.current = identity;
+  useEffect(() => {
+    setStatus(null);
+  }, [identity]);
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
-  const openable = (OPENABLE_TOOLS as readonly string[]).includes(
+  const terminal = (TERMINAL_TOOLS as readonly string[]).includes(
     connection.toolId,
   );
   const busy = controller?.opening === connection.toolId;
@@ -56,17 +65,21 @@ export function OpenConnection({
           !controller
         }
         onClick={async () => {
-          if (!openable) {
-            dialog.current?.showModal();
-            return;
-          }
           if (inFlight.current || !controller) return;
+          const openingIdentity = identity;
           inFlight.current = true;
           setStatus(null);
           try {
-            setStatus(await controller.open(connection.toolId));
-          } catch {
-            setStatus("error");
+            const result = await controller.open(connection.toolId);
+            if (latestIdentity.current === openingIdentity) setStatus(result);
+          } catch (cause) {
+            if (latestIdentity.current === openingIdentity)
+              setStatus(
+                cause instanceof Error &&
+                  cause.message === "open_request_timed_out"
+                  ? "timed_out"
+                  : "error",
+              );
           } finally {
             inFlight.current = false;
           }
@@ -74,13 +87,22 @@ export function OpenConnection({
       >
         {busy ? (
           <LoaderCircle className="is-spinning" />
-        ) : openable ? (
-          <ArrowUpRight />
-        ) : (
+        ) : terminal ? (
           <Terminal />
+        ) : (
+          <ArrowUpRight />
         )}
-        {busy ? "正在打开…" : openable ? "打开使用" : "使用方式"}
+        {busy ? "正在打开…" : terminal ? "打开终端使用" : "打开使用"}
       </button>
+      {terminal && (
+        <button
+          type="button"
+          className="text-button"
+          onClick={() => dialog.current?.showModal()}
+        >
+          使用说明
+        </button>
+      )}
       {status && (
         <div
           className="open-feedback"
@@ -90,7 +112,11 @@ export function OpenConnection({
           <span>
             {status === "error"
               ? "打开结果暂时无法确认，可以重试；未重新配置应用。"
-              : messages[status]}
+              : status === "timed_out"
+                ? "等待应用响应超时，页面已经恢复操作。应用仍可能稍后打开；若没有，请重试。接入设置没有被修改。"
+                : status === "opened" && terminal
+                  ? "已请求打开终端，请在新窗口中使用。不会重新配置或发送测试消息。"
+                  : messages[status]}
           </span>
           {status !== "opened" && (
             <button className="text-button" onClick={onAdjust}>
@@ -99,7 +125,7 @@ export function OpenConnection({
           )}
         </div>
       )}
-      {!openable && (
+      {terminal && (
         <dialog
           ref={dialog}
           className="restore-dialog"
@@ -116,7 +142,7 @@ export function OpenConnection({
           </header>
           <p>
             {name}{" "}
-            在终端中运行，不会出现独立桌面窗口。打开电脑的终端，在你的项目文件夹中运行：
+            在终端中运行，不会出现独立桌面窗口。点击“打开终端使用”，助手会为你启动它；也可以在项目文件夹的终端中运行：
           </p>
           <code className="terminal-use-command">{terminalCommand}</code>
           <p>

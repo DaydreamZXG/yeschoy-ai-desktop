@@ -1,0 +1,3 @@
+YESCHOY-DOWNLOAD-ORIGIN-PROBE-V1
+0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
+This public fixture checks HTTPS, byte ranges and content integrity. It is not an installer.

@@ -1,6 +1,2791 @@
 {
   "schemaVersion": 1,
-  "contracts": [
+ "contracts": [
+    {
+      "id": "desktop-tool-activation@v10",
+      "kind": "command",
+      "owner": "tool-config",
+      "consumers": [
+        "desktop-platform",
+        "diagnostics"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-tool-activation@v10",
+      "authorization": "One explicit click in the bundled desktop shell while a valid first-party desktop session exists. Native code accepts only two compiled active line IDs, seven closed target IDs, exact current-account model/group bindings and an optional native installation handoff. restartRunningApp is accepted only for Claude Desktop or Codex Desktop after the renderer shows an explicit save-work confirmation; it authorizes a normal quit request and reopen, never force termination. Keys remain native.",
+      "idempotency": "Repeated activation reuses the target dedicated NewAPI token and replaces only receipt-owned fields. A same-tool pending encrypted transaction is recovered first; completed records are never auto-restored. A running desktop app returns application_running before account, key or file mutation unless the confirmed restart flag is present. Configuration ready is recomputed from atomic write/readback and local runtime readiness, not a paid model reply.",
+      "compatibility": "Wire schema remains version 4. The optional restartRunningApp boolean defaults false and application_running is a new closed outcome. Existing model catalogs, exact model/group routing, connection receipts and first-request diagnostics remain compatible. CLI tools keep current sessions untouched and take effect in a new session; Claude Desktop and Codex Desktop may be normally quit and reopened after explicit confirmation.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One bounded native activation request for an explicitly selected tool identity.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Opaque renderer correlation ID.",
+            "description": "Opaque renderer correlation ID.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "lineId": {
+            "type": "string",
+            "description": "Selected compiled first-party API origin.",
+            "enum": [
+              "mainland_optimized",
+              "global_accelerated"
+            ]
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Exact supported target identity.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "modelId": {
+            "type": "string",
+            "description": "Exact model ID selected from the current account model list.",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "installationId": {
+            "type": "string",
+            "description": "Opaque native discovery choice or empty for a unique installation.",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_-]*$"
+          },
+          "billingGroup": {
+            "type": "string",
+            "description": "Exact non-auto billing group returned for the selected account model.",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "models": {
+            "type": "array",
+            "description": "Unique models including default. Bound from vendor model catalog schema.",
+            "items": {
+              "type": "object",
+              "description": "Explicit model and fixed billing group, no key.",
+              "properties": {
+                "modelId": {
+                  "type": "string",
+                  "description": "Full model ID.",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "billingGroup": {
+                  "type": "string",
+                  "description": "Explicit account group.",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "modelId",
+                "billingGroup"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 200
+          },
+          "installationJobId": {
+            "type": "string",
+            "description": "Optional one-use native installer confirmation. Binds exact tool, installed target, model set/default, group, line and native account epoch.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "restartRunningApp": {
+            "type": "boolean",
+            "description": "Optional explicit consent to normally quit and reopen a running Claude Desktop or Codex Desktop instance after the user has saved work. False or absent never closes an app."
+          }
+        },
+        "required": [
+          "requestId",
+          "lineId",
+          "toolId",
+          "modelId",
+          "installationId",
+          "billingGroup"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Sanitized activation state. ready proves secure credential publication, atomic owned-field write/readback, required local gateway readiness and applicable open dispatch; it does not claim that an upstream model produced a reply.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Unchanged correlation ID.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Wire-compatible activation projection schema version.",
+            "enum": [
+              4
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Closed activation outcome.",
+            "enum": [
+              "ready",
+              "application_running",
+              "signed_out",
+              "tool_not_found",
+              "multiple_installations",
+              "missing_runtime",
+              "unsupported_group",
+              "unsupported_profile",
+              "unsupported_model",
+              "external_override",
+              "secure_storage_unavailable",
+              "configuration_failed",
+              "launch_failed",
+              "verification_failed",
+              "server_unavailable",
+              "invalid_request"
+            ]
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Validated target identity.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "modelId": {
+            "type": "string",
+            "description": "Validated exact model ID or empty string.",
+            "maxLength": 200
+          },
+          "billingGroup": {
+            "type": "string",
+            "description": "Validated exact account billing group or empty string only on an invalid request.",
+            "maxLength": 128
+          },
+          "observedAtEpochMs": {
+            "type": "integer",
+            "description": "Local completion timestamp.",
+            "minimum": 0
+          },
+          "reasonCode": {
+            "type": "string",
+            "description": "Closed safe recovery reason without raw response body, key or path.",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "models": {
+            "type": "array",
+            "description": "Unique models including default. Bound from vendor model catalog schema.",
+            "items": {
+              "type": "object",
+              "description": "Explicit model and fixed billing group, no key.",
+              "properties": {
+                "modelId": {
+                  "type": "string",
+                  "description": "Full model ID.",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "billingGroup": {
+                  "type": "string",
+                  "description": "Explicit account group.",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "modelId",
+                "billingGroup"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0,
+            "maxItems": 200
+          }
+        },
+        "required": [
+          "requestId",
+          "schemaVersion",
+          "status",
+          "toolId",
+          "modelId",
+          "billingGroup",
+          "observedAtEpochMs",
+          "reasonCode",
+          "models"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal",
+        "sensitive"
+      ],
+      "observability": {
+        "correlation": "Only request ID, closed target, model, billing group, status, reason and observation time cross IPC.",
+        "audit": "One encrypted baseline per tool; key in OS storage, erased after restore; no history or telemetry.",
+        "metrics": "No telemetry upload. Provider probe output is bounded and reduced to a closed status before IPC."
+      },
+      "errorSemantics": [
+        "Invalid target, active line, model, billing group, installation identity or restart flag fails before key acquisition or file access.",
+        "A synchronous ready result requires the target credential in native secure storage, atomic configuration commit with semantic readback, the required helper-owned loopback runtime listening, and an applicable desktop or DSH open dispatch. It never waits for or bills an upstream model request.",
+        "Claude Desktop and Codex Desktop are checked again under the activation lock. If running and restartRunningApp is absent, application_running returns before mutation. With explicit consent native code requests a normal quit, waits only for a bounded exit, never force-terminates, and reopens only the exact discovered target.",
+        "A refused or incomplete normal quit leaves settings untouched and returns application_running with graceful_restart_required. CLI tools never terminate an existing terminal or editor session; their new configuration applies to a new session. Only helper-owned runtimes may be restarted.",
+        "Configuration, secure-storage, local-runtime and launch failures remain distinct closed outcomes. A failing local transaction restores touched files and prior credentials and deletes only a newly created token whose ownership is proven; a desktop app normally closed for the attempt is reopened against restored settings.",
+        "After ready, the first real application request is observed by the existing local gateway and exposed through recent connection results. An upstream timeout, quota, model or provider error does not roll back a configuration that was already atomically installed.",
+        "Complete keys never cross renderer IPC, appear in ordinary configuration or enter diagnostic text. Loopback compatibility endpoints return only public model metadata and health state.",
+        "Duplicate or unregistered model/group is rejected; no implicit default/group substitution. Cancellation before local write is safe; after write must restore locally or retain recovery state.",
+        "An installer handoff atomically consumes its one-use intent before credential or configuration work, checks full selection and exact installed target, and uses the captured native epoch throughout existing session-guarded activation.",
+        "A same-tool pending recovery record is self-healed only on a new explicit activation under the cross-process lock; incomplete file, credential or receipt cleanup remains non-ready with manual restore fallback.",
+        "Claude Desktop aliases are accepted only when derived from the current credential model set and resolve to exactly one real model, group and key before dispatch; Claude Code behavesAs never replaces the transmitted model ID."
+      ],
+      "requirementRefs": [
+        "REQ-079"
+      ],
+      "evidenceRefs": [
+        "E-USER-080",
+        "E-CODE-075",
+        "E-EXT-059",
+        "E-PROP-028"
+      ],
+      "status": "specified"
+    },
+    {"id":"desktop-app-installation@v4","kind":"command","owner":"security-update","consumers":["desktop-platform"],"schemaLocator":"inline://contracts.json#/contracts/desktop-app-installation@v4","authorization":"Bundled desktop webview only. User explicitly starts or cancels an installation, or opens one compiled official guide. Inspect is read-only. No account credentials or caller-controlled URL/path/command. Native request IDs and native job IDs bind retries.","idempotency":"Single process-owned job serialized before spawning; duplicate start request returns same job and active competing jobs do not spawn. Re-detect before OS write, retain validator-bound package cache for replay, inspect state after lost response. No automatic connection replay across account/selection changes.","compatibility":"Bundled native and renderer keep installation wire schemaVersion 2 and the official/mirror/none source enum. Version 4 consumes vendor-download-catalog@v2: schema 1 remains native_verified-only; schema 2 may also declare client_native_required, but both paths retain identical local native trust checks.","inputSchema":{"type":"object","description":"Closed installer control request.","properties":{"requestId":{"type":"string","description":"Correlation only.","minLength":1,"maxLength":64,"pattern":"^[A-Za-z0-9_-]+$"},"toolId":{"type":"string","description":"Compiled client identity.","enum":["claude_code","claude_desktop","codex_desktop","pi","dsh_web","hermes","openclaw"]},"action":{"type":"string","description":"Explicit operation.","enum":["inspect","start","cancel","help","confirm","reopen"]},"jobId":{"type":"string","description":"Native job identity, empty before start.","maxLength":64,"pattern":"^[A-Za-z0-9_-]*$"},"intent":{"type":"object","description":"Optional explicit install-and-connect choice, never credentials.","properties":{"lineId":{"type":"string","description":"Selected compiled first-party API origin.","enum":["mainland_optimized","global_accelerated"]},"modelId":{"type":"string","description":"Exact model ID selected from the current account model list.","minLength":1,"maxLength":200},"billingGroup":{"type":"string","description":"Exact non-auto billing group returned for the selected account model.","minLength":1,"maxLength":128},"models":{"type":"array","description":"Unique models including default. Bound from vendor model catalog schema.","items":{"type":"object","description":"Explicit model and fixed billing group, no key.","properties":{"modelId":{"type":"string","description":"Full model ID.","minLength":1,"maxLength":200},"billingGroup":{"type":"string","description":"Explicit account group.","minLength":1,"maxLength":128}},"required":["modelId","billingGroup"],"additionalProperties":false},"minItems":1,"maxItems":200}},"required":["lineId","modelId","billingGroup","models"],"additionalProperties":false}},"required":["requestId","toolId","action","jobId"],"additionalProperties":false},"outputSchema":{"type":"object","description":"Process-owned progress; installed never means connected.","properties":{"schemaVersion":{"type":"integer","description":"Projection version.","enum":[2]},"requestId":{"type":"string","description":"Request correlation."},"toolId":{"type":"string","description":"Job or requested application.","enum":["claude_code","claude_desktop","codex_desktop","pi","dsh_web","hermes","openclaw"]},"jobId":{"type":"string","description":"Native generated ID or empty."},"mode":{"type":"string","description":"Installation strategy.","enum":["automatic","system_assisted","guided","unsupported"]},"phase":{"type":"string","description":"Exact stage/outcome.","enum":["idle","checking","downloading","verifying","installing","checking_install","awaiting_system_confirmation","installed","cancelled","failed"]},"downloadedBytes":{"type":"integer","description":"Observed bytes only.","minimum":0},"totalBytes":{"type":"integer","description":"Announced package length, zero means not announced.","minimum":0},"canCancel":{"type":"boolean","description":"Only safe cancellable stages."},"reasonCode":{"type":"string","description":"Closed redacted reason; no arbitrary command stderr."},"source":{"type":"string","description":"Actual byte source, not an unpublished mirror.","enum":["official","mirror","none"]},"platform":{"type":"string","description":"Native platform.","enum":["macos","windows","linux","unknown"]},"architecture":{"type":"string","description":"Native architecture.","enum":["arm64","x64","unknown"]},"disposition":{"type":"string","description":"Who established the installation; opening an installer is not completion.","enum":["none","created","existing","confirmed","unconfirmed"]},"installationId":{"type":"string","description":"Opaque exact native target; empty for missing or ambiguous targets.","maxLength":128,"pattern":"^[A-Za-z0-9_-]*$"}},"required":["schemaVersion","requestId","toolId","jobId","mode","phase","downloadedBytes","totalBytes","canCancel","reasonCode","source","platform","architecture","disposition","installationId"],"additionalProperties":false},"dataClasses":["public","internal"],"errorSemantics":["Existing native candidates plus independent destination/current-user package checks prevent silent replacement. macOS uses exclusive atomic publication. Windows never invokes silent deployment: open the hash-bound local MSIX with system App Installer, whose own signature trust and explicit Install confirmation remain required. If Windows offers Reinstall/Replace, tell user to cancel.","Windows manifest identity/publisher/architecture precheck is not signature proof. Keep awaiting_system_confirmation until explicit Check installation and continue performs fresh current-user package identity and unambiguous target confirmation. No automatic installer relaunch, policy change, downloaded script, trust bypass or dependency installation.","macOS mutation retains shutdown admission through copy, exclusive publication and owned mount cleanup. Download cancellation is safe; no cancellation wrapper drops OS mutation. Windows transfers ownership to system UI and releases its own permit after handoff; closing/cancelling Yecai does not cancel that system installer. Keep opened package bytes available.","Only created macOS or explicitly confirmed Windows targets can carry a one-use full-selection/native-epoch activation proof. Fresh discovery must resolve the exact job-associated target; existing, missing or ambiguous targets require manual confirmation.","Network/metadata/cancel failure retains only owned cache. Changed strong validators restart download; absent strong validators prohibit resume, not a fresh complete download. Exact content size/type/redirect checks and native package trust remain mandatory.","Installation success is not connection success. Changed account, model/group/default, line, tool or navigation monotonically invalidates renderer continuation; native activation independently enforces original account epoch and one-use intent. At most one native job and no duplicate start.","Deterministic tests must exercise quit before worker start, during download and during OS mutation, plus worker failure/permit release, destination races, Windows handoff ownership and stale/replayed native consent.","Reopen is an explicit user action for a pending Windows system installer only. Recheck cached hash/identity and existing packages; never reopen automatically after polling, restart or lost response.","Use the fixed public vendor-download-catalog@v2 only on explicit start; strict compiled artifact identity/path and expected SHA256/size precede unchanged native trust checks. On unavailable/invalid mirror catalog or download, retry the official source with source projection official and isolate resumable metadata by URL and expected artifact identity. No credential headers, silent third-party hosts, package execution or fabricated published status.","Claude Mac uses the official public universal ZIP feed. Validate entry paths/types/relative symlinks and bounded expanded size in owned extraction staging; vendor codesign and Gatekeeper checks precede exclusive publication. No Python requirement in the desktop client.","A schema-2 client_native_required row means only that exact official-origin bytes passed bounded server structure and identity inspection. It never bypasses local signature, publisher, Gatekeeper, App Installer or installed-package verification."],"observability":{"correlation":"Request and native job IDs; no full user paths or raw process output in renderer.","audit":"Bounded current operation and owned package validator/hash cache only; no user content, API keys or telemetry.","metrics":"Observed download byte counts and stage only; no fabricated percentage for installation."},"status":"specified","requirementRefs":["REQ-077"],"evidenceRefs":["E-USER-078","E-CODE-071","E-EXT-058","E-PROP-025"]},
+    {"id":"vendor-download-catalog@v2","kind":"query","owner":"security-update","consumers":["desktop-platform"],"schemaLocator":"inline://contracts.json#/contracts/vendor-download-catalog@v2","authorization":"Public GET/HEAD https://ergou.qzz.io/apps/catalog.json without account credentials, cookies or caller-controlled URL. Publication and disablement are explicit local operator commands; the private periodic synchronizer retains no public-root write access.","idempotency":"Content-addressed immutable package objects precede atomic schema-2 catalog replacement under an exclusive publisher lock. Replaying identical bytes reuses the object; failed candidate or interrupted copy never removes the last catalog. Disable atomically publishes an empty catalog and false health projection without deleting objects. No automatic downgrade.","compatibility":"Wire schemaVersion 2 adds client_native_required to the verification enum while retaining the existing fields and six compiled slots. New clients accept both states and always verify natively; schema-1 clients reject schema 2 and safely fall back to official sources.","inputSchema":{"type":"object","description":"Fixed unauthenticated read.","properties":{},"required":[],"additionalProperties":false},"outputSchema":{"type":"object","description":"Published exact official-origin artifacts; an empty list is the remote mirror kill switch.","properties":{"schemaVersion":{"type":"integer","description":"Catalog contract version.","enum":[2]},"generatedAt":{"type":"string","description":"Atomic catalog publication time."},"artifacts":{"type":"array","description":"Unique compiled source slots; absent slots use official fallback.","maxItems":6,"items":{"type":"object","description":"Exact official-origin bytes bound to immutable public URL, digest and compiled package identity.","properties":{"sourceId":{"type":"string","description":"Compiled source slot.","enum":["codex-macos-arm64","codex-windows-x64","codex-windows-arm64","claude-macos-universal","claude-windows-x64","claude-windows-arm64"]},"app":{"type":"string","description":"Application family.","enum":["codex","claude"]},"platform":{"type":"string","description":"Native package platform.","enum":["macos","windows"]},"architecture":{"type":"string","description":"Package architecture.","enum":["universal","arm64","x64"]},"format":{"type":"string","description":"Official original format.","enum":["dmg","zip","msix"]},"version":{"type":"string","description":"Verified package version.","pattern":"^[0-9]+(\\.[0-9]+){1,3}$"},"url":{"type":"string","description":"Exact HTTPS ergou.qzz.io/apps/sourceId/sha256.format immutable URL."},"sha256":{"type":"string","description":"Digest recomputed from the private candidate and copied public object.","pattern":"^[a-f0-9]{64}$"},"size":{"type":"integer","description":"Exact bytes.","minimum":1,"maximum":4294967296},"originUrl":{"type":"string","description":"Allowlisted official source URL for the exact bytes."},"identity":{"type":"string","description":"Compiled vendor package identity."},"publisher":{"type":"string","description":"Compiled Mac Team ID or exact Windows Publisher DN."},"verifiedAt":{"type":"string","description":"Time of the declared verification or bounded publisher inspection."},"verification":{"type":"string","description":"native_verified requires a matching operator-native receipt; client_native_required requires the unchanged client-native trust check before installation.","enum":["native_verified","client_native_required"]}},"required":["sourceId","app","platform","architecture","format","version","url","sha256","size","originUrl","identity","publisher","verifiedAt","verification"],"additionalProperties":false}}},"required":["schemaVersion","generatedAt","artifacts"],"additionalProperties":false},"dataClasses":["public"],"errorSemantics":["No separate distribution-approval file is interpreted by the technical publisher. An explicit operator command can publish only the exact current candidate from a compiled official origin; no arbitrary file, URL, source slot or public metadata is accepted.","Each object is rehashed and matched to size, structure, source identity, architecture, publisher and version before catalog update. native_verified requires a matching native receipt; otherwise only client_native_required may be emitted. No catalog field replaces client-native trust.","Only owned directories and files are modified, without symlink traversal or shared-service changes. Copy is create-exclusive, catalog swap is atomic, previous public objects remain, disablement publishes an empty catalog, and official fallback remains available.","The public manifest contains no account, credential, approval, legal-basis, operator identity or private-path data. Manifest JSON retains a 1 MiB bound and packages retain the 4 GiB installer bound."],"observability":{"correlation":"Compiled source ID, immutable SHA256, verification state and publication time only.","audit":"Explicit local operator command result and public minimal catalog; policy assessment stays outside the novice client and no secret or personal data is recorded.","metrics":"Observed file bytes and validation outcomes only; no simulated speed, installation, compatibility or vendor authorization claim."},"status":"specified","requirementRefs":["REQ-077"],"evidenceRefs":["E-USER-078","E-CODE-071","E-EXT-058","E-PROP-025"]},
+    {"id":"download-origin-status@v3","kind":"query","owner":"security-update","consumers":["security-update"],"schemaLocator":"inline://contracts.json#/contracts/download-origin-status@v3","authorization":"Unauthenticated GET/HEAD to https://ergou.qzz.io/health.json. No cookies, account bearer, credentials, model requests or write endpoint.","idempotency":"Read-only static health is deterministic within one deployed origin revision. GET/HEAD never publish an installer or mutate a channel.","compatibility":"Wire health schema remains 1. thirdPartyInstallersPublished is true only for a validated nonempty public catalog and false for the atomic empty-catalog kill switch. Updates remain unpublished. The value reports origin publication, not installation success.","inputSchema":{"type":"object","description":"Public health check carries no account, credential or caller-controlled server input.","properties":{},"required":[],"additionalProperties":false},"outputSchema":{"type":"object","description":"Public origin and mirror-enable projection, explicitly not a client or clean-machine readiness assertion.","properties":{"schemaVersion":{"type":"integer","description":"Exact origin health schema version.","enum":[1]},"service":{"type":"string","description":"Public fixed service identity.","enum":["yeschoy-download-origin"]},"status":{"type":"string","description":"Only static origin availability is declared.","enum":["origin_ready"]},"updatesPublished":{"type":"boolean","description":"No signed update release is published by this bootstrap.","enum":[false]},"thirdPartyInstallersPublished":{"type":"boolean","description":"Whether the current validated catalog has at least one mirrored installer; false is the server-side kill-switch state."}},"required":["schemaVersion","service","status","updatesPublished","thirdPartyInstallersPublished"],"additionalProperties":false},"dataClasses":["public"],"errorSemantics":["Unknown/hidden paths and directories return 404, unsafe methods return 405, unpublished update channels return 204 without a fabricated version.","TLS/DNS/reload failure is not health success; retain previous ingress and report the failed check.","Disablement atomically publishes an empty valid catalog before health becomes false; immutable objects remain non-authoritative and clients fall back to official sources."],"observability":{"correlation":"Deployment source hashes and public probe path only.","audit":"Root-only remote ingress backup and local redacted deployment receipt; no credential contents.","metrics":"No new telemetry, access log persistence, SLA or mainland speed guarantee."},"status":"specified","requirementRefs":["REQ-077"],"evidenceRefs":["E-USER-078","E-CODE-071","E-PROP-025"]},
+    {
+      "id": "desktop-app-installation@v3",
+      "kind": "command",
+      "owner": "security-update",
+      "consumers": [
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-app-installation@v3",
+      "authorization": "Bundled desktop webview only. User explicitly starts or cancels an installation, or opens one compiled official guide. Inspect is read-only. No account credentials or caller-controlled URL/path/command. Native request IDs and native job IDs bind retries.",
+      "idempotency": "Single process-owned job serialized before spawning; duplicate start request returns same job and active competing jobs do not spawn. Re-detect before OS write, retain validator-bound package cache for replay, inspect state after lost response. No automatic connection replay across account/selection changes.",
+      "compatibility": "Bundled native and renderer atomically extend schemaVersion 2 source enum with mirror; command manage_app_installation_v2 and all existing request/activation semantics remain unchanged. Not independently deployed IPC peers.",
+      "inputSchema": {
+        "type": "object",
+        "description": "Closed installer control request.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Correlation only.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Compiled client identity.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "description": "Closed updater operation.",
+            "description": "Explicit operation.",
+            "enum": [
+              "inspect",
+              "start",
+              "cancel",
+              "help",
+              "confirm",
+              "reopen"
+            ]
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Native job identity, empty before start.",
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]*$"
+          },
+          "intent": {
+            "type": "object",
+            "description": "Optional explicit install-and-connect choice, never credentials.",
+            "properties": {
+              "lineId": {
+                "type": "string",
+                "description": "Selected compiled first-party API origin.",
+                "enum": [
+                  "mainland_optimized",
+                  "global_accelerated"
+                ]
+              },
+              "modelId": {
+                "type": "string",
+                "description": "Exact model ID selected from the current account model list.",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "billingGroup": {
+                "type": "string",
+                "description": "Exact non-auto billing group returned for the selected account model.",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "models": {
+                "type": "array",
+                "description": "Unique models including default. Bound from vendor model catalog schema.",
+                "items": {
+                  "type": "object",
+                  "description": "Explicit model and fixed billing group, no key.",
+                  "properties": {
+                    "modelId": {
+                      "type": "string",
+                      "description": "Full model ID.",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "billingGroup": {
+                      "type": "string",
+                      "description": "Explicit account group.",
+                      "minLength": 1,
+                      "maxLength": 128
+                    }
+                  },
+                  "required": [
+                    "modelId",
+                    "billingGroup"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 1,
+                "maxItems": 200
+              }
+            },
+            "required": [
+              "lineId",
+              "modelId",
+              "billingGroup",
+              "models"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "requestId",
+          "toolId",
+          "action",
+          "jobId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Process-owned progress; installed never means connected.",
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Projection version.",
+            "enum": [
+              2
+            ]
+          },
+          "requestId": {
+            "type": "string",
+            "description": "Request correlation."
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Job or requested application.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Native generated ID or empty."
+          },
+          "mode": {
+            "type": "string",
+            "description": "Installation strategy.",
+            "enum": [
+              "automatic",
+              "system_assisted",
+              "guided",
+              "unsupported"
+            ]
+          },
+          "phase": {
+            "type": "string",
+            "description": "Exact stage/outcome.",
+            "enum": [
+              "idle",
+              "checking",
+              "downloading",
+              "verifying",
+              "installing",
+              "checking_install",
+              "awaiting_system_confirmation",
+              "installed",
+              "cancelled",
+              "failed"
+            ]
+          },
+          "downloadedBytes": {
+            "type": "integer",
+            "description": "Observed bytes only.",
+            "minimum": 0
+          },
+          "totalBytes": {
+            "type": "integer",
+            "description": "Announced package length, zero means not announced.",
+            "minimum": 0
+          },
+          "canCancel": {
+            "type": "boolean",
+            "description": "Only safe cancellable stages."
+          },
+          "reasonCode": {
+            "type": "string",
+            "description": "Closed redacted reason; no arbitrary command stderr."
+          },
+          "source": {
+            "type": "string",
+            "description": "Actual byte source, not an unpublished mirror.",
+            "enum": [
+              "official",
+              "mirror",
+              "none"
+            ]
+          },
+          "platform": {
+            "type": "string",
+            "description": "Native platform.",
+            "enum": [
+              "macos",
+              "windows",
+              "linux",
+              "unknown"
+            ]
+          },
+          "architecture": {
+            "type": "string",
+            "description": "Native architecture.",
+            "enum": [
+              "arm64",
+              "x64",
+              "unknown"
+            ]
+          },
+          "disposition": {
+            "type": "string",
+            "description": "Who established the installation; opening an installer is not completion.",
+            "enum": [
+              "none",
+              "created",
+              "existing",
+              "confirmed",
+              "unconfirmed"
+            ]
+          },
+          "installationId": {
+            "type": "string",
+            "description": "Opaque exact native target; empty for missing or ambiguous targets.",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_-]*$"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "requestId",
+          "toolId",
+          "jobId",
+          "mode",
+          "phase",
+          "downloadedBytes",
+          "totalBytes",
+          "canCancel",
+          "reasonCode",
+          "source",
+          "platform",
+          "architecture",
+          "disposition",
+          "installationId"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal"
+      ],
+      "errorSemantics": [
+        "Existing native candidates plus independent destination/current-user package checks prevent silent replacement. macOS uses exclusive atomic publication. Windows never invokes silent deployment: open the hash-bound local MSIX with system App Installer, whose own signature trust and explicit Install confirmation remain required. If Windows offers Reinstall/Replace, tell user to cancel.",
+        "Windows manifest identity/publisher/architecture precheck is not signature proof. Keep awaiting_system_confirmation until explicit Check installation and continue performs fresh current-user package identity and unambiguous target confirmation. No automatic installer relaunch, policy change, downloaded script, trust bypass or dependency installation.",
+        "macOS mutation retains shutdown admission through copy, exclusive publication and owned mount cleanup. Download cancellation is safe; no cancellation wrapper drops OS mutation. Windows transfers ownership to system UI and releases its own permit after handoff; closing/cancelling Yecai does not cancel that system installer. Keep opened package bytes available.",
+        "Only created macOS or explicitly confirmed Windows targets can carry a one-use full-selection/native-epoch activation proof. Fresh discovery must resolve the exact job-associated target; existing, missing or ambiguous targets require manual confirmation.",
+        "Network/metadata/cancel failure retains only owned cache. Changed strong validators restart download; absent strong validators prohibit resume, not a fresh complete download. Exact content size/type/redirect checks and native package trust remain mandatory.",
+        "Installation success is not connection success. Changed account, model/group/default, line, tool or navigation monotonically invalidates renderer continuation; native activation independently enforces original account epoch and one-use intent. At most one native job and no duplicate start.",
+        "Deterministic tests must exercise quit before worker start, during download and during OS mutation, plus worker failure/permit release, destination races, Windows handoff ownership and stale/replayed native consent.",
+        "Reopen is an explicit user action for a pending Windows system installer only. Recheck cached hash/identity and existing packages; never reopen automatically after polling, restart or lost response.",
+        "Use the fixed public vendor-download-catalog@v1 only on explicit start; strict compiled artifact identity/path and expected SHA256/size precede unchanged native trust checks. On unavailable/invalid mirror catalog or download, retry the official source with source projection official and isolate resumable metadata by URL and expected artifact identity. No credential headers, silent third-party hosts, package execution or fabricated published status.",
+        "Claude Mac uses the official public universal ZIP feed. Validate entry paths/types/relative symlinks and bounded expanded size in owned extraction staging; vendor codesign and Gatekeeper checks precede exclusive publication. No Python requirement in the desktop client."
+      ],
+      "observability": {
+        "correlation": "Request and native job IDs; no full user paths or raw process output in renderer.",
+        "audit": "Bounded current operation and owned package validator/hash cache only; no user content, API keys or telemetry.",
+        "metrics": "Observed download byte counts and stage only; no fabricated percentage for installation."
+      },
+      "status": "specified",
+      "requirementRefs": [
+        "REQ-076"
+      ],
+      "evidenceRefs": [
+        "E-USER-077",
+        "E-CODE-070",
+        "E-EXT-058"
+      ]
+    },
+    {
+      "id": "vendor-download-catalog@v1",
+      "kind": "query",
+      "owner": "security-update",
+      "consumers": [
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/vendor-download-catalog@v1",
+      "authorization": "Public GET/HEAD https://ergou.qzz.io/apps/catalog.json, no account credentials/cookies or caller URL. Operator-only filesystem publisher is not an HTTP endpoint; separate from private DynamicUser synchronizer.",
+      "idempotency": "Content-addressed immutable package objects precede atomic catalog replacement under an exclusive publisher lock. Duplicate approval/receipt reuses same bytes; failed candidate or interrupted copy never removes previous catalog entry. No automatic downgrade. Previous public objects retained for existing clients.",
+      "compatibility": "Schema 1 closed catalog with up to six unique compiled source slots. Claude Mac slot changes from private DMG candidate to ZIP; official package identity unchanged. Old clients continue official downloads.",
+      "inputSchema": {
+        "type": "object",
+        "description": "Fixed unauthenticated read.",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Published verified artifacts only; absent slots remain unavailable.",
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Catalog version.",
+            "enum": [
+              1
+            ]
+          },
+          "generatedAt": {
+            "type": "string",
+            "description": "Atomic catalog publication time."
+          },
+          "artifacts": {
+            "type": "array",
+            "description": "Unique source slots.",
+            "maxItems": 6,
+            "items": {
+              "type": "object",
+              "description": "Native verified official bytes approved for distribution.",
+              "properties": {
+                "sourceId": {
+                  "type": "string",
+                  "description": "Compiled source slot.",
+                  "enum": [
+                    "codex-macos-arm64",
+                    "codex-windows-x64",
+                    "codex-windows-arm64",
+                    "claude-macos-universal",
+                    "claude-windows-x64",
+                    "claude-windows-arm64"
+                  ]
+                },
+                "app": {
+                  "type": "string",
+                  "description": "Application family.",
+                  "enum": [
+                    "codex",
+                    "claude"
+                  ]
+                },
+                "platform": {
+                  "type": "string",
+                  "description": "Native package platform.",
+                  "enum": [
+                    "macos",
+                    "windows"
+                  ]
+                },
+                "architecture": {
+                  "type": "string",
+                  "description": "Package architecture.",
+                  "enum": [
+                    "universal",
+                    "arm64",
+                    "x64"
+                  ]
+                },
+                "format": {
+                  "type": "string",
+                  "description": "Official original format.",
+                  "enum": [
+                    "dmg",
+                    "zip",
+                    "msix"
+                  ]
+                },
+                "version": {
+                  "type": "string",
+                  "description": "Verified package version.",
+                  "pattern": "^[0-9]+(\\.[0-9]+){1,3}$"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "Exact HTTPS ergou.qzz.io/apps/sourceId/sha256.format immutable URL."
+                },
+                "sha256": {
+                  "type": "string",
+                  "description": "Native receipt bound package digest.",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "size": {
+                  "type": "integer",
+                  "description": "Exact bytes.",
+                  "minimum": 1,
+                  "maximum": 4294967296
+                },
+                "originUrl": {
+                  "type": "string",
+                  "description": "Allowlisted official source URL for the exact bytes."
+                },
+                "identity": {
+                  "type": "string",
+                  "description": "Compiled vendor package identity."
+                },
+                "publisher": {
+                  "type": "string",
+                  "description": "Compiled Mac Team ID or exact Windows Publisher DN."
+                },
+                "verifiedAt": {
+                  "type": "string",
+                  "description": "Native signature receipt timestamp."
+                },
+                "verification": {
+                  "type": "string",
+                  "description": "Cryptographic native check completed, not an installation claim.",
+                  "enum": [
+                    "native_verified"
+                  ]
+                }
+              },
+              "required": [
+                "sourceId",
+                "app",
+                "platform",
+                "architecture",
+                "format",
+                "version",
+                "url",
+                "sha256",
+                "size",
+                "originUrl",
+                "identity",
+                "publisher",
+                "verifiedAt",
+                "verification"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "generatedAt",
+          "artifacts"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public"
+      ],
+      "errorSemantics": [
+        "No publication without exact source-specific operator distribution approval and SHA-bound native verification receipt. Native receipt itself is operator-controlled evidence, not a remote untrusted authorization token. Approval is never manufactured from free download availability.",
+        "Each object is rehashed and size/identity/format matched before catalog update. Only owned directories/files are modified, no symlinks/traversal/other service config. Copy is create-exclusive and catalog swap is atomic; old catalog and files survive failures.",
+        "Client independently checks exact compiled identity/publisher/platform and native signature. A catalog field alone is not proof of executable trust. Manifest JSON uses 1 MiB parser guard and original 4 GiB installer bound; no mainland bandwidth SLA."
+      ],
+      "observability": {
+        "correlation": "Source ID and immutable SHA256 only.",
+        "audit": "Private operator approvals/native verification receipts and public minimal catalog; no passwords or account data.",
+        "metrics": "Observed file bytes and checks; no simulated speed, installation or redistribution permission."
+      },
+      "status": "specified",
+      "requirementRefs": [
+        "REQ-076"
+      ],
+      "evidenceRefs": [
+        "E-USER-077",
+        "E-CODE-070",
+        "E-EXT-058"
+      ]
+    },
+    {
+      "id": "download-origin-status@v2",
+      "kind": "query",
+      "owner": "security-update",
+      "consumers": [
+        "security-update"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/download-origin-status@v2",
+      "authorization": "Unauthenticated GET/HEAD to https://ergou.qzz.io/health.json. No cookies, account bearer, credentials, model requests or write endpoint.",
+      "idempotency": "Read-only static health is deterministic within one deployed origin revision. GET/HEAD never publish an installer or mutate a channel.",
+      "compatibility": "Schema 1 bootstrap remains compatible; thirdPartyInstallersPublished is derived from existence of a validated nonempty published catalog after operator publication. Update channels remain unpublished. A true value means files public, not clean-machine installation proven.",
+      "inputSchema": {
+        "type": "object",
+        "description": "Public health check carries no account, credential or caller-controlled server input.",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Public origin bootstrap observation, explicitly not a client or installer readiness assertion.",
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Exact origin health schema version.",
+            "enum": [
+              1
+            ]
+          },
+          "service": {
+            "type": "string",
+            "description": "Public fixed service identity.",
+            "enum": [
+              "yeschoy-download-origin"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Only static origin availability is declared.",
+            "enum": [
+              "origin_ready"
+            ]
+          },
+          "updatesPublished": {
+            "type": "boolean",
+            "description": "No signed update release is published by this bootstrap.",
+            "enum": [
+              false
+            ]
+          },
+          "thirdPartyInstallersPublished": {
+            "type": "boolean",
+            "description": "No third-party installer is published by this bootstrap."
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "service",
+          "status",
+          "updatesPublished",
+          "thirdPartyInstallersPublished"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public"
+      ],
+      "errorSemantics": [
+        "Unknown/hidden paths and directories return 404, unsafe methods return 405, unpublished update channels return 204 without a fabricated version.",
+        "TLS/DNS/reload failure is not health success; retain previous ingress and report the failed check."
+      ],
+      "observability": {
+        "correlation": "Deployment source hashes and public probe path only.",
+        "audit": "Root-only remote ingress backup and local redacted deployment receipt; no credential contents.",
+        "metrics": "No new telemetry, access log persistence, SLA or mainland speed guarantee."
+      },
+      "status": "specified",
+      "requirementRefs": [
+        "REQ-076"
+      ],
+      "evidenceRefs": [
+        "E-USER-077",
+        "E-CODE-070",
+        "E-EXT-058"
+      ]
+    },
+    {
+      "id": "desktop-app-installation@v2",
+      "kind": "command",
+      "owner": "security-update",
+      "consumers": [
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-app-installation@v2",
+      "authorization": "Bundled desktop webview only. User explicitly starts or cancels an installation, or opens one compiled official guide. Inspect is read-only. No account credentials or caller-controlled URL/path/command. Native request IDs and native job IDs bind retries.",
+      "idempotency": "Single process-owned job serialized before spawning; duplicate start request returns same job and active competing jobs do not spawn. Re-detect before OS write, retain validator-bound package cache for replay, inspect state after lost response. No automatic connection replay across account/selection changes.",
+      "compatibility": "Additive v2 native command and optional activation v8 handoff. macOS current-user exclusive installation; Windows system-assisted installation with explicit system confirmation. Existing connect/open/restore behavior remains unchanged.",
+      "inputSchema": {
+        "type": "object",
+        "description": "Closed installer control request.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Correlation only.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Compiled client identity.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "description": "Explicit operation.",
+            "enum": [
+              "inspect",
+              "start",
+              "cancel",
+              "help",
+              "confirm",
+              "reopen"
+            ]
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Native job identity, empty before start.",
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]*$"
+          },
+          "intent": {
+            "type": "object",
+            "description": "Optional explicit install-and-connect choice, never credentials.",
+            "properties": {
+              "lineId": {
+                "type": "string",
+                "description": "Selected compiled first-party API origin.",
+                "enum": [
+                  "mainland_optimized",
+                  "global_accelerated"
+                ]
+              },
+              "modelId": {
+                "type": "string",
+                "description": "Exact model ID selected from the current account model list.",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "billingGroup": {
+                "type": "string",
+                "description": "Exact non-auto billing group returned for the selected account model.",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "models": {
+                "type": "array",
+                "description": "Unique models including default. Bound from vendor model catalog schema.",
+                "items": {
+                  "type": "object",
+                  "description": "Explicit model and fixed billing group, no key.",
+                  "properties": {
+                    "modelId": {
+                      "type": "string",
+                      "description": "Full model ID.",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "billingGroup": {
+                      "type": "string",
+                      "description": "Explicit account group.",
+                      "minLength": 1,
+                      "maxLength": 128
+                    }
+                  },
+                  "required": [
+                    "modelId",
+                    "billingGroup"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 1,
+                "maxItems": 200
+              }
+            },
+            "required": [
+              "lineId",
+              "modelId",
+              "billingGroup",
+              "models"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "requestId",
+          "toolId",
+          "action",
+          "jobId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Process-owned progress; installed never means connected.",
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Projection version.",
+            "enum": [
+              2
+            ]
+          },
+          "requestId": {
+            "type": "string",
+            "description": "Request correlation."
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Job or requested application.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Native generated ID or empty."
+          },
+          "mode": {
+            "type": "string",
+            "description": "Installation strategy.",
+            "enum": [
+              "automatic",
+              "system_assisted",
+              "guided",
+              "unsupported"
+            ]
+          },
+          "phase": {
+            "type": "string",
+            "description": "Exact stage/outcome.",
+            "enum": [
+              "idle",
+              "checking",
+              "downloading",
+              "verifying",
+              "installing",
+              "checking_install",
+              "awaiting_system_confirmation",
+              "installed",
+              "cancelled",
+              "failed"
+            ]
+          },
+          "downloadedBytes": {
+            "type": "integer",
+            "description": "Observed bytes only.",
+            "minimum": 0
+          },
+          "totalBytes": {
+            "type": "integer",
+            "description": "Announced package length, zero means not announced.",
+            "minimum": 0
+          },
+          "canCancel": {
+            "type": "boolean",
+            "description": "Only safe cancellable stages."
+          },
+          "reasonCode": {
+            "type": "string",
+            "description": "Closed redacted reason; no arbitrary command stderr."
+          },
+          "source": {
+            "type": "string",
+            "description": "Actual byte source, not an unpublished mirror.",
+            "enum": [
+              "official",
+              "none"
+            ]
+          },
+          "platform": {
+            "type": "string",
+            "description": "Native platform.",
+            "enum": [
+              "macos",
+              "windows",
+              "linux",
+              "unknown"
+            ]
+          },
+          "architecture": {
+            "type": "string",
+            "description": "Native architecture.",
+            "enum": [
+              "arm64",
+              "x64",
+              "unknown"
+            ]
+          },
+          "disposition": {
+            "type": "string",
+            "description": "Who established the installation; opening an installer is not completion.",
+            "enum": [
+              "none",
+              "created",
+              "existing",
+              "confirmed",
+              "unconfirmed"
+            ]
+          },
+          "installationId": {
+            "type": "string",
+            "description": "Opaque exact native target; empty for missing or ambiguous targets.",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_-]*$"
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "requestId",
+          "toolId",
+          "jobId",
+          "mode",
+          "phase",
+          "downloadedBytes",
+          "totalBytes",
+          "canCancel",
+          "reasonCode",
+          "source",
+          "platform",
+          "architecture",
+          "disposition",
+          "installationId"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal"
+      ],
+      "errorSemantics": [
+        "Existing native candidates plus independent destination/current-user package checks prevent silent replacement. macOS uses exclusive atomic publication. Windows never invokes silent deployment: open the hash-bound local MSIX with system App Installer, whose own signature trust and explicit Install confirmation remain required. If Windows offers Reinstall/Replace, tell user to cancel.",
+        "Windows manifest identity/publisher/architecture precheck is not signature proof. Keep awaiting_system_confirmation until explicit Check installation and continue performs fresh current-user package identity and unambiguous target confirmation. No automatic installer relaunch, policy change, downloaded script, trust bypass or dependency installation.",
+        "macOS mutation retains shutdown admission through copy, exclusive publication and owned mount cleanup. Download cancellation is safe; no cancellation wrapper drops OS mutation. Windows transfers ownership to system UI and releases its own permit after handoff; closing/cancelling Yecai does not cancel that system installer. Keep opened package bytes available.",
+        "Only created macOS or explicitly confirmed Windows targets can carry a one-use full-selection/native-epoch activation proof. Fresh discovery must resolve the exact job-associated target; existing, missing or ambiguous targets require manual confirmation.",
+        "Network/metadata/cancel failure retains only owned cache. Changed strong validators restart download; absent strong validators prohibit resume, not a fresh complete download. Exact content size/type/redirect checks and native package trust remain mandatory.",
+        "Installation success is not connection success. Changed account, model/group/default, line, tool or navigation monotonically invalidates renderer continuation; native activation independently enforces original account epoch and one-use intent. At most one native job and no duplicate start.",
+        "Native worker owns cleanup and bounded original-package cache, never arbitrary paths. No public mirror or no-proxy guarantee follows from private server staging.",
+        "Deterministic tests must exercise quit before worker start, during download and during OS mutation, plus worker failure/permit release, destination races, Windows handoff ownership and stale/replayed native consent.",
+        "Reopen is an explicit user action for a pending Windows system installer only. Recheck cached hash/identity and existing packages; never reopen automatically after polling, restart or lost response."
+      ],
+      "observability": {
+        "correlation": "Request and native job IDs; no full user paths or raw process output in renderer.",
+        "audit": "Bounded current operation and owned package validator/hash cache only; no user content, API keys or telemetry.",
+        "metrics": "Observed download byte counts and stage only; no fabricated percentage for installation."
+      },
+      "status": "specified",
+      "requirementRefs": [
+        "REQ-073"
+      ],
+      "evidenceRefs": [
+        "E-USER-075",
+        "E-CODE-064",
+        "E-EXT-056",
+        "E-CODE-066",
+        "E-EXT-057"
+      ]
+    },
+    {
+      "id": "desktop-tool-activation@v8",
+      "kind": "command",
+      "owner": "tool-config",
+      "consumers": [
+        "desktop-platform",
+        "diagnostics"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-tool-activation@v8",
+      "authorization": "One explicit click in the bundled desktop shell while a valid first-party desktop session exists. Native code accepts only two compiled active line IDs, seven closed target IDs, one exact current-account model ID, one exact current-account billing group and an optional opaque installation ID previously returned by native discovery. Each listed model/group is validated against the signed-in account; keys remain native.",
+      "idempotency": "Repeated activation reuses the target's dedicated NewAPI token and replaces only receipt-owned configuration fields. Ready is recomputed from fresh readback, credential resolution, exact selected-provider response and target launch; stale success is never reused.",
+      "compatibility": "Optional models array upgrades legacy requests to an explicit multi-model set; full-ID routing replaces a single forced model. Legacy schema 3 replies remain readable; new schema 4 returns configured model bindings with default-only verification.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One bounded native activation request for an explicitly selected tool identity.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Opaque renderer correlation ID.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "lineId": {
+            "type": "string",
+            "description": "Selected compiled first-party API origin.",
+            "enum": [
+              "mainland_optimized",
+              "global_accelerated"
+            ]
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Exact supported target identity.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "modelId": {
+            "type": "string",
+            "description": "Exact model ID selected from the current account model list.",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "installationId": {
+            "type": "string",
+            "description": "Opaque native discovery choice or empty for a unique installation.",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_-]*$"
+          },
+          "billingGroup": {
+            "type": "string",
+            "description": "Exact non-auto billing group returned for the selected account model.",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "models": {
+            "type": "array",
+            "description": "Unique models including default. Bound from vendor model catalog schema.",
+            "items": {
+              "type": "object",
+              "description": "Explicit model and fixed billing group, no key.",
+              "properties": {
+                "modelId": {
+                  "type": "string",
+                  "description": "Full model ID.",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "billingGroup": {
+                  "type": "string",
+                  "description": "Explicit account group.",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "modelId",
+                "billingGroup"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 200
+          },
+          "installationJobId": {
+            "type": "string",
+            "description": "Optional one-use native installer confirmation. Binds exact tool, installed target, model set/default, group, line and native account epoch.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          }
+        },
+        "required": [
+          "requestId",
+          "lineId",
+          "toolId",
+          "modelId",
+          "installationId",
+          "billingGroup"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Sanitized activation state. The schema remains renderer-compatible with version 3; Codex ready proves deterministic config, credential, exact provider-path response and desktop launch.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Unchanged correlation ID.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Wire-compatible activation projection schema version.",
+            "enum": [
+              4
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Closed activation outcome.",
+            "enum": [
+              "ready",
+              "signed_out",
+              "tool_not_found",
+              "multiple_installations",
+              "missing_runtime",
+              "unsupported_group",
+              "unsupported_profile",
+              "unsupported_model",
+              "external_override",
+              "secure_storage_unavailable",
+              "configuration_failed",
+              "launch_failed",
+              "verification_failed",
+              "server_unavailable",
+              "invalid_request"
+            ]
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Validated target identity.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "modelId": {
+            "type": "string",
+            "description": "Validated exact model ID or empty string.",
+            "maxLength": 200
+          },
+          "billingGroup": {
+            "type": "string",
+            "description": "Validated exact account billing group or empty string only on an invalid request.",
+            "maxLength": 128
+          },
+          "observedAtEpochMs": {
+            "type": "integer",
+            "description": "Local completion timestamp.",
+            "minimum": 0
+          },
+          "reasonCode": {
+            "type": "string",
+            "description": "Closed safe recovery reason without raw response body, key or path.",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "models": {
+            "type": "array",
+            "description": "Unique models including default. Bound from vendor model catalog schema.",
+            "items": {
+              "type": "object",
+              "description": "Explicit model and fixed billing group, no key.",
+              "properties": {
+                "modelId": {
+                  "type": "string",
+                  "description": "Full model ID.",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "billingGroup": {
+                  "type": "string",
+                  "description": "Explicit account group.",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "modelId",
+                "billingGroup"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0,
+            "maxItems": 200
+          }
+        },
+        "required": [
+          "requestId",
+          "schemaVersion",
+          "status",
+          "toolId",
+          "modelId",
+          "billingGroup",
+          "observedAtEpochMs",
+          "reasonCode",
+          "models"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal",
+        "sensitive"
+      ],
+      "observability": {
+        "correlation": "Only request ID, closed target, model, billing group, status, reason and observation time cross IPC.",
+        "audit": "One encrypted baseline per tool; key in OS storage, erased after restore; no history or telemetry.",
+        "metrics": "No telemetry upload. Provider probe output is bounded and reduced to a closed status before IPC."
+      },
+      "errorSemantics": [
+        "Invalid target, active line, model, billing group or installation identity fails before key acquisition or file access.",
+        "Codex ready requires owned configuration readback, command-backed credential resolution, one bounded real response through the exact selected direct or loopback provider path and successful desktop launch.",
+        "Configuration, secure-storage, authentication, endpoint, model, invalid-response and launch failures are distinct closed outcomes. A failing transaction restores all touched files and prior credentials and deletes only a newly created token whose ownership is proven.",
+        "Complete keys never cross renderer IPC, appear in ordinary configuration or enter diagnostic text. Loopback compatibility endpoints return only public model metadata and health state.",
+        "Other supported targets retain the version-3 target-level verification and recovery behavior.",
+        "configuration_rollback_failed and credential_restore_failed are recovery-pending outcomes and must never claim originals restored or unchanged. Native logs may include stage and numeric OS error only, never keys or raw output.",
+        "CLI model verification rejects empty output and banner/help-only output; only the bounded expected model response proves success. Desktop open dispatch is distinct from tool response evidence.",
+        "Duplicate or unregistered model/group is rejected; no implicit default/group substitution. Cancellation before local write is safe; after write must restore locally or retain recovery state.",
+        "An installer handoff atomically consumes its one-use intent before credential or configuration work, checks full selection and exact installed target, and uses the captured native epoch throughout existing session-guarded activation. Stale, replayed or mismatched handoffs return installation_confirmation_required without local writes."
+      ],
+      "requirementRefs": [
+        "REQ-068",
+        "REQ-073"
+      ],
+      "evidenceRefs": [
+        "E-USER-071",
+        "E-CODE-060",
+        "E-EXT-052",
+        "E-CODE-066"
+      ],
+      "status": "specified"
+    },
+    {
+      "id": "desktop-app-installation@v1",
+      "kind": "command",
+      "owner": "security-update",
+      "consumers": [
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-app-installation@v1",
+      "authorization": "Bundled desktop webview only. User explicitly starts or cancels an installation, or opens one compiled official guide. Inspect is read-only. No account credentials or caller-controlled URL/path/command. Native request IDs and native job IDs bind retries.",
+      "idempotency": "Single process-owned job serialized before spawning; duplicate start request returns same job and active competing jobs do not spawn. Re-detect before OS write, retain validator-bound package cache for replay, inspect state after lost response. No automatic connection replay across account/selection changes.",
+      "compatibility": "Additive v1 native command; automatic current-user desktop installation only, guided other clients. App installation and existing activation contracts remain separate. Existing app/config/login/update ownership unchanged.",
+      "inputSchema": {
+        "type": "object",
+        "description": "Closed installer control request.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Correlation only.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Compiled client identity.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "action": {
+            "type": "string",
+            "description": "Explicit operation.",
+            "enum": [
+              "inspect",
+              "start",
+              "cancel",
+              "help"
+            ]
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Native job identity, empty before start.",
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]*$"
+          }
+        },
+        "required": [
+          "requestId",
+          "toolId",
+          "action",
+          "jobId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Process-owned progress; installed never means connected.",
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Projection version.",
+            "enum": [
+              1
+            ]
+          },
+          "requestId": {
+            "type": "string",
+            "description": "Request correlation."
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Job or requested application.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Native generated ID or empty."
+          },
+          "mode": {
+            "type": "string",
+            "description": "Installation strategy.",
+            "enum": [
+              "automatic",
+              "guided",
+              "unsupported"
+            ]
+          },
+          "phase": {
+            "type": "string",
+            "description": "Exact stage/outcome.",
+            "enum": [
+              "idle",
+              "checking",
+              "downloading",
+              "verifying",
+              "installing",
+              "checking_install",
+              "installed",
+              "cancelled",
+              "failed"
+            ]
+          },
+          "downloadedBytes": {
+            "type": "integer",
+            "description": "Observed bytes only.",
+            "minimum": 0
+          },
+          "totalBytes": {
+            "type": "integer",
+            "description": "Announced package length, zero means not announced.",
+            "minimum": 0
+          },
+          "canCancel": {
+            "type": "boolean",
+            "description": "Only safe cancellable stages."
+          },
+          "reasonCode": {
+            "type": "string",
+            "description": "Closed redacted reason; no arbitrary command stderr."
+          },
+          "source": {
+            "type": "string",
+            "description": "Actual byte source, not an unpublished mirror.",
+            "enum": [
+              "official",
+              "none"
+            ]
+          },
+          "platform": {
+            "type": "string",
+            "description": "Native platform.",
+            "enum": [
+              "macos",
+              "windows",
+              "linux",
+              "unknown"
+            ]
+          },
+          "architecture": {
+            "type": "string",
+            "description": "Native architecture.",
+            "enum": [
+              "arm64",
+              "x64",
+              "unknown"
+            ]
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "requestId",
+          "toolId",
+          "jobId",
+          "mode",
+          "phase",
+          "downloadedBytes",
+          "totalBytes",
+          "canCancel",
+          "reasonCode",
+          "source",
+          "platform",
+          "architecture"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal"
+      ],
+      "errorSemantics": [
+        "No app overwrite, vendor auto-update takeover, arbitrary path/URL execution, privilege bypass or downloaded-page execution.",
+        "Network/metadata/cancel failure preserves only owned package cache; bad signature/identity never enters OS install.",
+        "Installation holds a shutdown permit; OS mutation finishes before safe exit, while download cancellation remains immediate.",
+        "Existing app or changed model/account context re-enters fresh detection/confirmation; only activation ready may claim connected.",
+        "No installer mirror or no-proxy availability is implied by private RU-045 staging."
+      ],
+      "observability": {
+        "correlation": "Request and native job IDs; no full user paths or raw process output in renderer.",
+        "audit": "Bounded current operation and owned package validator/hash cache only; no user content, API keys or telemetry.",
+        "metrics": "Observed download byte counts and stage only; no fabricated percentage for installation."
+      },
+      "status": "specified",
+      "requirementRefs": [
+        "REQ-072"
+      ],
+      "evidenceRefs": [
+        "E-USER-075",
+        "E-CODE-064",
+        "E-EXT-056"
+      ]
+    },
+    {
+      "id": "vendor-sync-status@v1",
+      "kind": "query",
+      "owner": "security-update",
+      "consumers": [
+        "security-update"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/vendor-sync-status@v1",
+      "authorization": "Local operator reads private synchronizer state via status CLI; not a public endpoint. No NewAPI, account or vendor credentials.",
+      "idempotency": "Read-only status projection; scan/download operations are independently serialized and never publish a release.",
+      "compatibility": "Schema 1 private staging status. Version unknown and pending native signature trust remain explicit; no client or installation capability is implied.",
+      "inputSchema": {
+        "type": "object",
+        "description": "No caller-supplied URLs or credentials.",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Last private synchronization observation, not an install or signature guarantee.",
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Exact status version.",
+            "enum": [
+              1
+            ]
+          },
+          "service": {
+            "type": "string",
+            "description": "Fixed service identity.",
+            "enum": [
+              "yeschoy-vendor-sync"
+            ]
+          },
+          "checkedAt": {
+            "type": "string",
+            "description": "UTC time of last scan, or never."
+          },
+          "publicInstallersPublished": {
+            "type": "boolean",
+            "description": "No public installer publication in this unit.",
+            "enum": [
+              false
+            ]
+          },
+          "sources": {
+            "type": "array",
+            "description": "Every configured source including blocked and never checked slots.",
+            "items": {
+              "type": "object",
+              "description": "One configured desktop source and its latest private synchronization outcome.",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Fixed desktop/platform source ID."
+                },
+                "status": {
+                  "type": "string",
+                  "description": "Latest source outcome.",
+                  "enum": [
+                    "never_checked",
+                    "available",
+                    "downloaded_unverified",
+                    "failed"
+                  ]
+                },
+                "version": {
+                  "type": "string",
+                  "description": "Observed package version or unknown."
+                },
+                "error": {
+                  "type": "string",
+                  "description": "Redacted error code or empty string."
+                }
+              },
+              "required": [
+                "id",
+                "status",
+                "version",
+                "error"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "service",
+          "checkedAt",
+          "publicInstallersPublished",
+          "sources"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "internal"
+      ],
+      "errorSemantics": [
+        "Unreachable/challenged source is failed; previous cached candidate remains unchanged.",
+        "Unknown version, pending native signature verification and untested compatibility are not success or published.",
+        "Corrupt state or concurrent lock prevents overwrite; no fallback URL outside official source allowlist."
+      ],
+      "observability": {
+        "correlation": "Fixed source IDs, metadata fingerprints and SHA256; no session or account data.",
+        "audit": "Private atomic catalog and bounded latest-run event list; original sources and outcome codes only.",
+        "metrics": "Six-hour timer with local service failure status; no external notification recipient or delivery claim."
+      },
+      "status": "specified",
+      "requirementRefs": [
+        "REQ-071"
+      ],
+      "evidenceRefs": [
+        "E-USER-074",
+        "E-CODE-063",
+        "E-EXT-055"
+      ]
+    },
+    {
+      "id": "download-origin-status@v1",
+      "kind": "query",
+      "owner": "security-update",
+      "consumers": ["security-update"],
+      "schemaLocator": "inline://contracts.json#/contracts/download-origin-status@v1",
+      "authorization": "Unauthenticated GET/HEAD to https://ergou.qzz.io/health.json. No cookies, account bearer, credentials, model requests or write endpoint.",
+      "idempotency": "Read-only static health is deterministic within one deployed origin revision. GET/HEAD never publish an installer or mutate a channel.",
+      "compatibility": "Schema 1 origin bootstrap only. Stable/beta update endpoints return 204/no-store until a separate signed publication. No current client capability is inferred from this contract.",
+      "inputSchema": {"type": "object", "description": "Public health check carries no account, credential or caller-controlled server input.", "properties": {}, "required": [], "additionalProperties": false},
+      "outputSchema": {
+        "type": "object",
+        "description": "Public origin bootstrap observation, explicitly not a client or installer readiness assertion.",
+        "properties": {
+          "schemaVersion": {"type": "integer", "description": "Exact origin health schema version.", "enum": [1]},
+          "service": {"type": "string", "description": "Public fixed service identity.", "enum": ["yeschoy-download-origin"]},
+          "status": {"type": "string", "description": "Only static origin availability is declared.", "enum": ["origin_ready"]},
+          "updatesPublished": {"type": "boolean", "description": "No signed update release is published by this bootstrap.", "enum": [false]},
+          "thirdPartyInstallersPublished": {"type": "boolean", "description": "No third-party installer is published by this bootstrap.", "enum": [false]}
+        },
+        "required": ["schemaVersion", "service", "status", "updatesPublished", "thirdPartyInstallersPublished"],
+        "additionalProperties": false
+      },
+      "dataClasses": ["public"],
+      "errorSemantics": ["Unknown/hidden paths and directories return 404, unsafe methods return 405, unpublished update channels return 204 without a fabricated version.", "TLS/DNS/reload failure is not health success; retain previous ingress and report the failed check."],
+      "observability": {"correlation": "Deployment source hashes and public probe path only.", "audit": "Root-only remote ingress backup and local redacted deployment receipt; no credential contents.", "metrics": "No new telemetry, access log persistence, SLA or mainland speed guarantee."},
+      "status": "specified",
+      "requirementRefs": ["REQ-070"],
+      "evidenceRefs": ["E-USER-073", "E-CODE-062", "E-EXT-054"]
+    },
+    {
+      "id": "desktop-model-profile@v1",
+      "kind": "query",
+      "owner": "tool-config",
+      "consumers": [
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-model-profile@v1",
+      "authorization": "Pure bundled metadata lookup within desktop code; no network, credentials, mutable state or new IPC authority.",
+      "idempotency": "Exact ID lookup is deterministic for one bundled catalog revision.",
+      "compatibility": "Internal additive query consumed by renderer/native adapters; activation v7 and recovery v2 remain unchanged. Missing capabilities mean unknown, not unsupported upstream.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One exact account model ID, never normalized into another route.",
+        "properties": {
+          "modelId": {
+            "type": "string",
+            "description": "Exact model ID.",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "modelId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Internal reference profile projection; vendor-specific adapters may expose only their documented subset.",
+        "properties": {
+          "modelId": {
+            "type": "string",
+            "description": "Unchanged exact input model ID.",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Verified name or unchanged ID.",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "known": {
+            "type": "boolean",
+            "description": "Whether an exact bundled reference entry exists."
+          },
+          "reasoningLevels": {
+            "type": "array",
+            "description": "Verified wire effort values; omitted if unknown.",
+            "items": {
+              "type": "string",
+              "description": "Exact wire effort.",
+              "enum": [
+                "none",
+                "minimal",
+                "low",
+                "medium",
+                "high",
+                "xhigh",
+                "max"
+              ]
+            },
+            "uniqueItems": true,
+            "maxItems": 7
+          },
+          "defaultReasoning": {
+            "type": "string",
+            "description": "Known native default; omitted if unknown.",
+            "enum": [
+              "none",
+              "minimal",
+              "low",
+              "medium",
+              "high",
+              "xhigh",
+              "max"
+            ]
+          },
+          "input": {
+            "type": "array",
+            "description": "Verified reference input modalities; omitted if unknown.",
+            "items": {
+              "type": "string",
+              "description": "Input type.",
+              "enum": [
+                "text",
+                "image"
+              ]
+            },
+            "uniqueItems": true,
+            "maxItems": 2
+          },
+          "contextWindow": {
+            "type": "integer",
+            "description": "Verified reference context capacity; not a guaranteed route allowance.",
+            "minimum": 1
+          },
+          "maxOutputTokens": {
+            "type": "integer",
+            "description": "Verified upper bound only; never inject as request budget.",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "modelId",
+          "displayName",
+          "known"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public"
+      ],
+      "observability": {
+        "correlation": "Exact model ID only; no user prompts or provider credentials.",
+        "audit": "No persistent runtime events; catalog has primary source locators.",
+        "metrics": "No telemetry or paid capability detection."
+      },
+      "errorSemantics": [
+        "Unknown exact model IDs remain usable with native/provider defaults.",
+        "No case folding, substring family inference, enrollment or billing route changes from metadata.",
+        "Capability changes apply on explicit reconnection; current vendor UI behavior is not guaranteed by compilation."
+      ],
+      "requirementRefs": [
+        "REQ-069"
+      ],
+      "evidenceRefs": [
+        "E-USER-072",
+        "E-CODE-061",
+        "E-EXT-053"
+      ],
+      "status": "specified"
+    },
+    {
+      "id": "desktop-tool-activation@v7",
+      "kind": "command",
+      "owner": "tool-config",
+      "consumers": [
+        "desktop-platform",
+        "diagnostics"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-tool-activation@v7",
+      "authorization": "One explicit click in the bundled desktop shell while a valid first-party desktop session exists. Native code accepts only two compiled active line IDs, seven closed target IDs, one exact current-account model ID, one exact current-account billing group and an optional opaque installation ID previously returned by native discovery. Each listed model/group is validated against the signed-in account; keys remain native.",
+      "idempotency": "Repeated activation reuses the target's dedicated NewAPI token and replaces only receipt-owned configuration fields. Ready is recomputed from fresh readback, credential resolution, exact selected-provider response and target launch; stale success is never reused.",
+      "compatibility": "Optional models array upgrades legacy requests to an explicit multi-model set; full-ID routing replaces a single forced model. Legacy schema 3 replies remain readable; new schema 4 returns configured model bindings with default-only verification.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One bounded native activation request for an explicitly selected tool identity.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Opaque renderer correlation ID.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "lineId": {
+            "type": "string",
+            "description": "Selected compiled first-party API origin.",
+            "enum": [
+              "mainland_optimized",
+              "global_accelerated"
+            ]
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Exact supported target identity.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "modelId": {
+            "type": "string",
+            "description": "Exact model ID selected from the current account model list.",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "installationId": {
+            "type": "string",
+            "description": "Opaque native discovery choice or empty for a unique installation.",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_-]*$"
+          },
+          "billingGroup": {
+            "type": "string",
+            "description": "Exact non-auto billing group returned for the selected account model.",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "models": {
+            "type": "array",
+            "description": "Unique models including default. Bound from vendor model catalog schema.",
+            "items": {
+              "type": "object",
+              "description": "Explicit model and fixed billing group, no key.",
+              "properties": {
+                "modelId": {
+                  "type": "string",
+                  "description": "Full model ID.",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "billingGroup": {
+                  "type": "string",
+                  "description": "Explicit account group.",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "modelId",
+                "billingGroup"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 200
+          }
+        },
+        "required": [
+          "requestId",
+          "lineId",
+          "toolId",
+          "modelId",
+          "installationId",
+          "billingGroup"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Sanitized activation state. The schema remains renderer-compatible with version 3; Codex ready proves deterministic config, credential, exact provider-path response and desktop launch.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Unchanged correlation ID.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Wire-compatible activation projection schema version.",
+            "enum": [
+              4
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Closed activation outcome.",
+            "enum": [
+              "ready",
+              "signed_out",
+              "tool_not_found",
+              "multiple_installations",
+              "missing_runtime",
+              "unsupported_group",
+              "unsupported_profile",
+              "unsupported_model",
+              "external_override",
+              "secure_storage_unavailable",
+              "configuration_failed",
+              "launch_failed",
+              "verification_failed",
+              "server_unavailable",
+              "invalid_request"
+            ]
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Validated target identity.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "modelId": {
+            "type": "string",
+            "description": "Validated exact model ID or empty string.",
+            "maxLength": 200
+          },
+          "billingGroup": {
+            "type": "string",
+            "description": "Validated exact account billing group or empty string only on an invalid request.",
+            "maxLength": 128
+          },
+          "observedAtEpochMs": {
+            "type": "integer",
+            "description": "Local completion timestamp.",
+            "minimum": 0
+          },
+          "reasonCode": {
+            "type": "string",
+            "description": "Closed safe recovery reason without raw response body, key or path.",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "models": {
+            "type": "array",
+            "description": "Unique models including default. Bound from vendor model catalog schema.",
+            "items": {
+              "type": "object",
+              "description": "Explicit model and fixed billing group, no key.",
+              "properties": {
+                "modelId": {
+                  "type": "string",
+                  "description": "Full model ID.",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "billingGroup": {
+                  "type": "string",
+                  "description": "Explicit account group.",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "modelId",
+                "billingGroup"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0,
+            "maxItems": 200
+          }
+        },
+        "required": [
+          "requestId",
+          "schemaVersion",
+          "status",
+          "toolId",
+          "modelId",
+          "billingGroup",
+          "observedAtEpochMs",
+          "reasonCode",
+          "models"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal",
+        "sensitive"
+      ],
+      "observability": {
+        "correlation": "Only request ID, closed target, model, billing group, status, reason and observation time cross IPC.",
+        "audit": "One encrypted baseline per tool; key in OS storage, erased after restore; no history or telemetry.",
+        "metrics": "No telemetry upload. Provider probe output is bounded and reduced to a closed status before IPC."
+      },
+      "errorSemantics": [
+        "Invalid target, active line, model, billing group or installation identity fails before key acquisition or file access.",
+        "Codex ready requires owned configuration readback, command-backed credential resolution, one bounded real response through the exact selected direct or loopback provider path and successful desktop launch.",
+        "Configuration, secure-storage, authentication, endpoint, model, invalid-response and launch failures are distinct closed outcomes. A failing transaction restores all touched files and prior credentials and deletes only a newly created token whose ownership is proven.",
+        "Complete keys never cross renderer IPC, appear in ordinary configuration or enter diagnostic text. Loopback compatibility endpoints return only public model metadata and health state.",
+        "Other supported targets retain the version-3 target-level verification and recovery behavior.",
+        "configuration_rollback_failed and credential_restore_failed are recovery-pending outcomes and must never claim originals restored or unchanged. Native logs may include stage and numeric OS error only, never keys or raw output.",
+        "CLI model verification rejects empty output and banner/help-only output; only the bounded expected model response proves success. Desktop open dispatch is distinct from tool response evidence.",
+        "Duplicate or unregistered model/group is rejected; no implicit default/group substitution. Cancellation before local write is safe; after write must restore locally or retain recovery state."
+      ],
+      "requirementRefs": [
+        "REQ-068"
+      ],
+      "evidenceRefs": [
+        "E-USER-071",
+        "E-CODE-060",
+        "E-EXT-052"
+      ],
+      "status": "specified"
+    },
+    {
+      "id": "desktop-connection-management@v2",
+      "kind": "command",
+      "owner": "tool-config",
+      "consumers": [
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-connection-management@v2",
+      "authorization": "Bundled renderer; restore explicitly targets one allowlisted tool. No login or caller-selected paths/shell commands.",
+      "idempotency": "Serializes with activation, replay becomes not_connected. Three-way owned-field restore plus optimistic file check; retain encrypted journal until file and credential cleanup succeed.",
+      "compatibility": "Version 2 adds explicit configured models and an optional latest non-persistent sanitized request observation. Legacy v1 remains decodable. Default is not proof of every model response; native allowed selection is distinct from config integrity.",
+      "inputSchema": {
+        "type": "object",
+        "description": "Local management",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Opaque renderer correlation ID.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "operation": {
+            "type": "string",
+            "description": "Action",
+            "maxLength": 128,
+            "enum": [
+              "inspect",
+              "restore"
+            ]
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Target, empty for inspect",
+            "maxLength": 128,
+            "enum": [
+              "",
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          }
+        },
+        "required": [
+          "requestId",
+          "operation",
+          "toolId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Management result",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Unchanged correlation ID.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Schema",
+            "enum": [
+              2
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Outcome",
+            "maxLength": 128,
+            "enum": [
+              "ok",
+              "restored",
+              "restored_with_changes",
+              "recovery_failed"
+            ]
+          },
+          "connections": {
+            "type": "array",
+            "description": "Local states",
+            "items": {
+              "type": "object",
+              "description": "Sanitized local state, not fresh network health",
+              "properties": {
+                "toolId": {
+                  "type": "string",
+                  "description": "Tool",
+                  "maxLength": 128,
+                  "enum": [
+                    "claude_code",
+                    "claude_desktop",
+                    "codex_desktop",
+                    "pi",
+                    "dsh_web",
+                    "hermes",
+                    "openclaw"
+                  ]
+                },
+                "state": {
+                  "type": "string",
+                  "description": "State",
+                  "maxLength": 128,
+                  "enum": [
+                    "not_connected",
+                    "connected",
+                    "changed",
+                    "legacy",
+                    "recovery_pending",
+                    "unavailable"
+                  ]
+                },
+                "modelId": {
+                  "type": "string",
+                  "description": "Last model",
+                  "maxLength": 200
+                },
+                "lineId": {
+                  "type": "string",
+                  "description": "Compiled line or unknown",
+                  "maxLength": 128,
+                  "enum": [
+                    "",
+                    "mainland_optimized",
+                    "global_accelerated"
+                  ]
+                },
+                "billingGroup": {
+                  "type": "string",
+                  "description": "Last group",
+                  "maxLength": 128
+                },
+                "updatedAtEpochMs": {
+                  "type": "integer",
+                  "description": "Setup time or zero if unknown",
+                  "minimum": 0
+                },
+                "restoreMode": {
+                  "type": "string",
+                  "description": "Scope",
+                  "maxLength": 128,
+                  "enum": [
+                    "original",
+                    "remove_yeschoy",
+                    "none"
+                  ]
+                },
+                "requiresBackground": {
+                  "type": "boolean",
+                  "description": "Needs assistant runtime"
+                },
+                "reasonCode": {
+                  "type": "string",
+                  "description": "Safe reason",
+                  "maxLength": 80
+                },
+                "models": {
+                  "type": "array",
+                  "description": "Unique models including default. Bound from vendor model catalog schema.",
+                  "items": {
+                    "type": "object",
+                    "description": "Explicit model and fixed billing group, no key.",
+                    "properties": {
+                      "modelId": {
+                        "type": "string",
+                        "description": "Full model ID.",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "billingGroup": {
+                        "type": "string",
+                        "description": "Explicit account group.",
+                        "minLength": 1,
+                        "maxLength": 128
+                      }
+                    },
+                    "required": [
+                      "modelId",
+                      "billingGroup"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "minItems": 0,
+                  "maxItems": 200
+                },
+                "lastRequest": {
+                  "type": "object",
+                  "description": "Latest observation in native memory only; absence means no observed request.",
+                  "properties": {
+                    "modelId": {
+                      "type": "string",
+                      "description": "Requested model ID.",
+                      "maxLength": 200
+                    },
+                    "billingGroup": {
+                      "type": "string",
+                      "description": "Configured billing group.",
+                      "maxLength": 128
+                    },
+                    "lineId": {
+                      "type": "string",
+                      "description": "Compiled network line.",
+                      "enum": [
+                        "mainland_optimized",
+                        "global_accelerated"
+                      ]
+                    },
+                    "outcome": {
+                      "type": "string",
+                      "description": "Closed result.",
+                      "enum": [
+                        "ok",
+                        "timeout",
+                        "network_error",
+                        "upstream_error",
+                        "invalid_response",
+                        "stream_interrupted",
+                        "unknown_model"
+                      ]
+                    },
+                    "httpStatus": {
+                      "type": "integer",
+                      "description": "HTTP status or zero for pre-response failure.",
+                      "minimum": 0,
+                      "maximum": 599
+                    },
+                    "observedAtEpochMs": {
+                      "type": "integer",
+                      "description": "Observation time.",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "modelId",
+                    "billingGroup",
+                    "lineId",
+                    "outcome",
+                    "httpStatus",
+                    "observedAtEpochMs"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "toolId",
+                "state",
+                "modelId",
+                "lineId",
+                "billingGroup",
+                "updatedAtEpochMs",
+                "restoreMode",
+                "requiresBackground",
+                "reasonCode",
+                "models"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0,
+            "maxItems": 7
+          },
+          "reasonCode": {
+            "type": "string",
+            "description": "Safe reason",
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "requestId",
+          "schemaVersion",
+          "status",
+          "connections",
+          "reasonCode"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal",
+        "sensitive"
+      ],
+      "observability": {
+        "correlation": "Safe ID and closed outcomes",
+        "audit": "Single encrypted baseline; no history",
+        "metrics": "No upload"
+      },
+      "errorSemantics": [
+        "Preserve later changes and disclose restored_with_changes.",
+        "Invalid file or storage failure retains recovery for retry.",
+        "Do not revoke shared remote tokens."
+      ],
+      "requirementRefs": [
+        "REQ-068"
+      ],
+      "evidenceRefs": [
+        "E-USER-071",
+        "E-CODE-060",
+        "E-EXT-052"
+      ],
+      "status": "specified"
+    },
+    {
+      "id": "desktop-assistant-exit@v1",
+      "kind": "command",
+      "owner": "desktop-platform",
+      "consumers": [
+        "tool-config"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-assistant-exit@v1",
+      "authorization": "Only explicit confirm-exit in globally mounted desktop UI starts cooperative shutdown; X/background/cancel alone do not cancel work.",
+      "idempotency": "Repeated requests join one shutdown. New operation admission is rejected atomically after stop begins.",
+      "compatibility": "Preserves current explicit quit command; close now asks rather than unconditionally minimizing.",
+      "inputSchema": {
+        "type": "object",
+        "description": "No arbitrary process target.",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Recoverable shutdown progress; exiting is not claimed until native process exits.",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Closed shutdown progress.",
+            "enum": [
+              "exiting",
+              "finishing_operation",
+              "retryable_error"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "internal"
+      ],
+      "observability": {
+        "correlation": "Transient ID",
+        "audit": "No new history",
+        "metrics": "No upload"
+      },
+      "errorSemantics": [
+        "Do not drop account token mutation or local transactions; wait for safe completion and retain pending recovery on rollback failure.",
+        "Stop only registered owned runtime tasks; no unrelated process termination.",
+        "A finishing-operation state re-enables meaningful UI and completes exit when safe; do not stay indefinitely in a disabled modal."
+      ],
+      "requirementRefs": [
+        "REQ-068"
+      ],
+      "evidenceRefs": [
+        "E-USER-071",
+        "E-CODE-060",
+        "E-EXT-052"
+      ],
+      "status": "specified"
+    },
+    {
+      "id": "desktop-tool-activation@v6",
+      "kind": "command",
+      "owner": "tool-config",
+      "consumers": [
+        "desktop-platform",
+        "diagnostics"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-tool-activation@v6",
+      "authorization": "One explicit click in the bundled desktop shell while a valid first-party desktop session exists. Native code accepts only two compiled active line IDs, seven closed target IDs, one exact current-account model ID, one exact current-account billing group and an optional opaque installation ID previously returned by native discovery.",
+      "idempotency": "Repeated activation reuses the target's dedicated NewAPI token and replaces only receipt-owned configuration fields. Ready is recomputed from fresh readback, credential resolution, exact selected-provider response and target launch; stale success is never reused.",
+      "compatibility": "Schema 3 unchanged. Preserve encrypted recovery and ordinary activation rollback; classify startup, process, verification and restoration failures truthfully. Windows packaged apps use validated registered application identity rather than bare exe. Codex provider/helper verification is explicitly not proof of desktop reply.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One bounded native activation request for an explicitly selected tool identity.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Opaque renderer correlation ID.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "lineId": {
+            "type": "string",
+            "description": "Selected compiled first-party API origin.",
+            "enum": [
+              "mainland_optimized",
+              "global_accelerated"
+            ]
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Exact supported target identity.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "modelId": {
+            "type": "string",
+            "description": "Exact model ID selected from the current account model list.",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "installationId": {
+            "type": "string",
+            "description": "Opaque native discovery choice or empty for a unique installation.",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_-]*$"
+          },
+          "billingGroup": {
+            "type": "string",
+            "description": "Exact non-auto billing group returned for the selected account model.",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "requestId",
+          "lineId",
+          "toolId",
+          "modelId",
+          "installationId",
+          "billingGroup"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Sanitized activation state. The schema remains renderer-compatible with version 3; Codex ready proves deterministic config, credential, exact provider-path response and desktop launch.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Unchanged correlation ID.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Wire-compatible activation projection schema version.",
+            "enum": [
+              3
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Closed activation outcome.",
+            "enum": [
+              "ready",
+              "signed_out",
+              "tool_not_found",
+              "multiple_installations",
+              "missing_runtime",
+              "unsupported_group",
+              "unsupported_profile",
+              "unsupported_model",
+              "external_override",
+              "secure_storage_unavailable",
+              "configuration_failed",
+              "launch_failed",
+              "verification_failed",
+              "server_unavailable",
+              "invalid_request"
+            ]
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Validated target identity.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "modelId": {
+            "type": "string",
+            "description": "Validated exact model ID or empty string.",
+            "maxLength": 200
+          },
+          "billingGroup": {
+            "type": "string",
+            "description": "Validated exact account billing group or empty string only on an invalid request.",
+            "maxLength": 128
+          },
+          "observedAtEpochMs": {
+            "type": "integer",
+            "description": "Local completion timestamp.",
+            "minimum": 0
+          },
+          "reasonCode": {
+            "type": "string",
+            "description": "Closed safe recovery reason without raw response body, key or path.",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "requestId",
+          "schemaVersion",
+          "status",
+          "toolId",
+          "modelId",
+          "billingGroup",
+          "observedAtEpochMs",
+          "reasonCode"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal",
+        "sensitive"
+      ],
+      "observability": {
+        "correlation": "Only request ID, closed target, model, billing group, status, reason and observation time cross IPC.",
+        "audit": "One encrypted baseline per tool; key in OS storage, erased after restore; no history or telemetry.",
+        "metrics": "No telemetry upload. Provider probe output is bounded and reduced to a closed status before IPC."
+      },
+      "errorSemantics": [
+        "Invalid target, active line, model, billing group or installation identity fails before key acquisition or file access.",
+        "Codex ready requires owned configuration readback, command-backed credential resolution, one bounded real response through the exact selected direct or loopback provider path and successful desktop launch.",
+        "Configuration, secure-storage, authentication, endpoint, model, invalid-response and launch failures are distinct closed outcomes. A failing transaction restores all touched files and prior credentials and deletes only a newly created token whose ownership is proven.",
+        "Complete keys never cross renderer IPC, appear in ordinary configuration or enter diagnostic text. Loopback compatibility endpoints return only public model metadata and health state.",
+        "Other supported targets retain the version-3 target-level verification and recovery behavior.",
+        "configuration_rollback_failed and credential_restore_failed are recovery-pending outcomes and must never claim originals restored or unchanged. Native logs may include stage and numeric OS error only, never keys or raw output.",
+        "CLI model verification rejects empty output and banner/help-only output; only the bounded expected model response proves success. Desktop open dispatch is distinct from tool response evidence."
+      ],
+      "requirementRefs": [
+        "REQ-067"
+      ],
+      "evidenceRefs": [
+        "E-USER-070",
+        "E-CODE-059"
+      ],
+      "status": "specified"
+    },
+    {
+      "id": "desktop-open-connection@v2",
+      "kind": "command",
+      "owner": "tool-config",
+      "consumers": [
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-open-connection@v2",
+      "authorization": "Explicit bundled-renderer Open; native resolves compiled tool, installation and OS credential. No caller paths/URLs/commands or secrets. No login required.",
+      "idempotency": "Serialize with activation/restore and process lock; reuse live DSH. Never writes config, issues token or sends a paid probe.",
+      "compatibility": "Retain wire schema 1 and command name; accept all seven compiled tools. Four CLI targets open an OS terminal running only the native-resolved installed program, with no API key in arguments or script. Desktop targets use structured platform activation; DSH reuses its managed browser process.",
+      "inputSchema": {
+        "type": "object",
+        "description": "Open request",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Transient ID",
+            "maxLength": 100,
+            "minLength": 1
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Compiled tool",
+            "maxLength": 80,
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          }
+        },
+        "required": [
+          "requestId",
+          "toolId"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Launch result",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Transient ID",
+            "maxLength": 100
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Projection version",
+            "const": 1
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Compiled tool",
+            "maxLength": 80,
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Closed result",
+            "maxLength": 80,
+            "enum": [
+              "opened",
+              "not_connected",
+              "settings_changed",
+              "recovery_pending",
+              "secure_storage_unavailable",
+              "tool_not_found",
+              "launch_failed",
+              "busy"
+            ]
+          }
+        },
+        "required": [
+          "requestId",
+          "schemaVersion",
+          "toolId",
+          "status"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "internal"
+      ],
+      "observability": {
+        "correlation": "Transient ID",
+        "audit": "No new history",
+        "metrics": "No upload"
+      },
+      "errorSemantics": [
+        "Opened is dispatch of application opening, not proof of response.",
+        "Changed owned settings/pending recovery/missing secret return non-success without mutation.",
+        "Opening CLI terminal is an explicit user action, not a paid probe or proof of response. Validate owned settings and active credential read-only before launching; caller never supplies command, path or URL."
+      ],
+      "requirementRefs": [
+        "REQ-067"
+      ],
+      "evidenceRefs": [
+        "E-USER-070",
+        "E-CODE-059"
+      ],
+      "status": "specified"
+    },
     {
       "id": "desktop-account-session@v5",
       "kind": "command",
@@ -3953,6 +6738,634 @@
       ],
       "requirementRefs": ["REQ-053"],
       "evidenceRefs": ["E-USER-057", "E-CODE-045", "E-EXT-041", "E-PROP-020"],
+      "status": "specified"
+    },
+    {
+      "id": "desktop-tool-activation@v9",
+      "kind": "command",
+      "owner": "tool-config",
+      "consumers": [
+        "desktop-platform",
+        "diagnostics"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-tool-activation@v9",
+      "authorization": "One explicit click in the bundled desktop shell while a valid first-party desktop session exists. Native code accepts only two compiled active line IDs, seven closed target IDs, one exact current-account model ID, one exact current-account billing group and an optional opaque installation ID previously returned by native discovery. Each listed model/group is validated against the signed-in account; keys remain native.",
+      "idempotency": "Repeated activation reuses the target dedicated NewAPI token and replaces only receipt-owned fields. If the same tool has a pending encrypted transaction, explicit retry first performs bounded three-way recovery and clears only that tool credential before continuing. Completed records are never auto-restored. Ready is recomputed from fresh evidence.",
+      "compatibility": "Wire schema remains version 4. Claude Desktop catalogs use deterministic Anthropic-shaped loopback aliases resolved to enrolled exact IDs; Claude Code catalogs keep exact IDs and declare a known Claude behavesAs profile. Other targets and legacy readers retain existing behavior.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One bounded native activation request for an explicitly selected tool identity.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Opaque renderer correlation ID.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "lineId": {
+            "type": "string",
+            "description": "Selected compiled first-party API origin.",
+            "enum": [
+              "mainland_optimized",
+              "global_accelerated"
+            ]
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Exact supported target identity.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "modelId": {
+            "type": "string",
+            "description": "Exact model ID selected from the current account model list.",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "installationId": {
+            "type": "string",
+            "description": "Opaque native discovery choice or empty for a unique installation.",
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9_-]*$"
+          },
+          "billingGroup": {
+            "type": "string",
+            "description": "Exact non-auto billing group returned for the selected account model.",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "models": {
+            "type": "array",
+            "description": "Unique models including default. Bound from vendor model catalog schema.",
+            "items": {
+              "type": "object",
+              "description": "Explicit model and fixed billing group, no key.",
+              "properties": {
+                "modelId": {
+                  "type": "string",
+                  "description": "Full model ID.",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "billingGroup": {
+                  "type": "string",
+                  "description": "Explicit account group.",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "modelId",
+                "billingGroup"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 200
+          },
+          "installationJobId": {
+            "type": "string",
+            "description": "Optional one-use native installer confirmation. Binds exact tool, installed target, model set/default, group, line and native account epoch.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          }
+        },
+        "required": [
+          "requestId",
+          "lineId",
+          "toolId",
+          "modelId",
+          "installationId",
+          "billingGroup"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Sanitized activation state. The schema remains renderer-compatible with version 3; Codex ready proves deterministic config, credential, exact provider-path response and desktop launch.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Unchanged correlation ID.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Wire-compatible activation projection schema version.",
+            "enum": [
+              4
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Closed activation outcome.",
+            "enum": [
+              "ready",
+              "signed_out",
+              "tool_not_found",
+              "multiple_installations",
+              "missing_runtime",
+              "unsupported_group",
+              "unsupported_profile",
+              "unsupported_model",
+              "external_override",
+              "secure_storage_unavailable",
+              "configuration_failed",
+              "launch_failed",
+              "verification_failed",
+              "server_unavailable",
+              "invalid_request"
+            ]
+          },
+          "toolId": {
+            "type": "string",
+            "description": "Validated target identity.",
+            "enum": [
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+              "hermes",
+              "openclaw"
+            ]
+          },
+          "modelId": {
+            "type": "string",
+            "description": "Validated exact model ID or empty string.",
+            "maxLength": 200
+          },
+          "billingGroup": {
+            "type": "string",
+            "description": "Validated exact account billing group or empty string only on an invalid request.",
+            "maxLength": 128
+          },
+          "observedAtEpochMs": {
+            "type": "integer",
+            "description": "Local completion timestamp.",
+            "minimum": 0
+          },
+          "reasonCode": {
+            "type": "string",
+            "description": "Closed safe recovery reason without raw response body, key or path.",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "models": {
+            "type": "array",
+            "description": "Unique models including default. Bound from vendor model catalog schema.",
+            "items": {
+              "type": "object",
+              "description": "Explicit model and fixed billing group, no key.",
+              "properties": {
+                "modelId": {
+                  "type": "string",
+                  "description": "Full model ID.",
+                  "minLength": 1,
+                  "maxLength": 200
+                },
+                "billingGroup": {
+                  "type": "string",
+                  "description": "Explicit account group.",
+                  "minLength": 1,
+                  "maxLength": 128
+                }
+              },
+              "required": [
+                "modelId",
+                "billingGroup"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0,
+            "maxItems": 200
+          }
+        },
+        "required": [
+          "requestId",
+          "schemaVersion",
+          "status",
+          "toolId",
+          "modelId",
+          "billingGroup",
+          "observedAtEpochMs",
+          "reasonCode",
+          "models"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal",
+        "sensitive"
+      ],
+      "observability": {
+        "correlation": "Only request ID, closed target, model, billing group, status, reason and observation time cross IPC.",
+        "audit": "One encrypted baseline per tool; key in OS storage, erased after restore; no history or telemetry.",
+        "metrics": "No telemetry upload. Provider probe output is bounded and reduced to a closed status before IPC."
+      },
+      "errorSemantics": [
+        "Invalid target, active line, model, billing group or installation identity fails before key acquisition or file access.",
+        "Codex ready requires owned configuration readback, command-backed credential resolution, one bounded real response through the exact selected direct or loopback provider path and successful desktop launch.",
+        "Configuration, secure-storage, authentication, endpoint, model, invalid-response and launch failures are distinct closed outcomes. A failing transaction restores all touched files and prior credentials and deletes only a newly created token whose ownership is proven.",
+        "Complete keys never cross renderer IPC, appear in ordinary configuration or enter diagnostic text. Loopback compatibility endpoints return only public model metadata and health state.",
+        "Other supported targets retain the version-3 target-level verification and recovery behavior.",
+        "configuration_rollback_failed and credential_restore_failed are recovery-pending outcomes and must never claim originals restored or unchanged. Native logs may include stage and numeric OS error only, never keys or raw output.",
+        "CLI model verification rejects empty output and banner/help-only output; only the bounded expected model response proves success. Desktop open dispatch is distinct from tool response evidence.",
+        "Duplicate or unregistered model/group is rejected; no implicit default/group substitution. Cancellation before local write is safe; after write must restore locally or retain recovery state.",
+        "An installer handoff atomically consumes its one-use intent before credential or configuration work, checks full selection and exact installed target, and uses the captured native epoch throughout existing session-guarded activation. Stale, replayed or mismatched handoffs return installation_confirmation_required without local writes.",
+        "A same-tool pending recovery record is self-healed only on a new explicit activation under the cross-process lock; incomplete file, credential or receipt cleanup remains non-ready with manual restore fallback.",
+        "Claude Desktop aliases are accepted only when derived from the current credential model set and resolve to exactly one real model, group and key before dispatch; unknown aliases fail closed. Claude Code behavesAs never replaces the transmitted model ID."
+      ],
+      "requirementRefs": [
+        "REQ-078"
+      ],
+      "evidenceRefs": [
+        "E-USER-079",
+        "E-CODE-072",
+        "E-CODE-073",
+        "E-CODE-074",
+        "E-PROP-026"
+      ],
+      "status": "specified"
+    },
+    {
+      "id": "desktop-self-update@v1",
+      "kind": "command",
+      "owner": "security-update",
+      "consumers": [
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-self-update@v1",
+      "authorization": "Only the bundled local desktop webview may request a check. Installation additionally requires one explicit user click and the exact available version returned by the current native process. Native code owns the compiled endpoint and embedded public key; no caller URL, artifact path, signature or command is accepted.",
+      "idempotency": "Checks are coalesced by the updater-owned state and never mutate tool or account state. Duplicate install requests for the same observed version share one process-owned operation; stale, mismatched or concurrent versions fail before download or shutdown. Successful installation is terminal for the process.",
+      "compatibility": "Schema version 1 is used only by updater-aware Yeschoy clients. Older clients without this contract require one manual bootstrap install. Newer static manifests may add ignored top-level fields, but the native Tauri updater remains the signature and platform authority.",
+      "inputSchema": {
+        "type": "object",
+        "description": "Closed self-update request with no caller-controlled network or filesystem target.",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "Opaque renderer correlation ID.",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "action": {
+            "type": "string",
+            "description": "Closed updater operation.",
+            "enum": [
+              "check",
+              "install"
+            ]
+          },
+          "expectedVersion": {
+            "type": "string",
+            "description": "Exact native-observed version for install; empty for check.",
+            "maxLength": 40,
+            "pattern": "^[0-9A-Za-z.+-]*$"
+          }
+        },
+        "required": [
+          "requestId",
+          "action",
+          "expectedVersion"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Sanitized native updater projection; raw endpoints, paths, signatures and errors never cross IPC.",
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Exact updater projection schema.",
+            "enum": [
+              1
+            ]
+          },
+          "requestId": {
+            "type": "string",
+            "description": "Unchanged correlation ID.",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "phase": {
+            "type": "string",
+            "description": "Closed native updater stage or outcome.",
+            "enum": [
+              "idle",
+              "checking",
+              "current",
+              "available",
+              "downloading",
+              "restarting",
+              "unavailable",
+              "failed"
+            ]
+          },
+          "currentVersion": {
+            "type": "string",
+            "description": "Current bundled Yeschoy semantic version.",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "availableVersion": {
+            "type": "string",
+            "description": "Newer native-validated version, or empty when none is installable.",
+            "maxLength": 40
+          },
+          "notes": {
+            "type": "string",
+            "description": "Bounded public release notes.",
+            "maxLength": 600
+          },
+          "downloadedBytes": {
+            "type": "integer",
+            "description": "Observed verified-download progress.",
+            "minimum": 0
+          },
+          "totalBytes": {
+            "type": "integer",
+            "description": "Announced download length, zero when unknown.",
+            "minimum": 0
+          },
+          "reasonCode": {
+            "type": "string",
+            "description": "Closed redacted reason without raw endpoint errors or paths.",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "requestId",
+          "phase",
+          "currentVersion",
+          "availableVersion",
+          "notes",
+          "downloadedBytes",
+          "totalBytes",
+          "reasonCode"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal",
+        "sensitive"
+      ],
+      "observability": {
+        "correlation": "Opaque request ID, closed phase, public versions and byte counts only.",
+        "audit": "Build receipts bind source commit, artifact hash, signature and publication manifest. Private signing material never enters client IPC, artifacts or server public storage.",
+        "metrics": "No telemetry upload. UI progress is process-local and bounded to verified download byte counts."
+      },
+      "errorSemantics": [
+        "HTTP 204 and no newer semantic version return current; network, manifest or endpoint failures return unavailable without blocking startup, navigation, connection or third-party installation.",
+        "The native updater verifies the mandatory embedded public-key signature before shutdown. Invalid signatures, invalid platform entries and version mismatch fail closed.",
+        "Only the updater operation is serialized. It does not acquire tool activation, vendor installation, account, model or billing locks.",
+        "After verified download the updater drops its normal operation permit, requests cooperative shutdown, drains registered runtimes, installs, and relaunches where the platform requires it. If installation fails after shutdown starts, it attempts to relaunch the current application and never claims success.",
+        "Cancellation caused by app quit before verified download is safe; no renderer promise or global modal keeps the app alive."
+      ],
+      "requirementRefs": [
+        "REQ-092"
+      ],
+      "evidenceRefs": [
+        "E-USER-088",
+        "E-CODE-091",
+        "E-EXT-062",
+        "E-PROP-040"
+      ],
+      "status": "specified"
+    },
+    {
+      "id": "signed-update-channel@v1",
+      "kind": "query",
+      "owner": "security-update",
+      "consumers": [
+        "desktop-platform"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/signed-update-channel@v1",
+      "authorization": "Anonymous HTTPS GET/HEAD to one compiled first-party channel. No account bearer, cookie, API key, caller-selected host or write operation.",
+      "idempotency": "A published manifest is immutable for its version and atomically replaces the channel pointer only after all immutable artifacts and detached signatures are present. Removing the pointer disables updates without deleting versioned objects.",
+      "compatibility": "Uses the Tauri v2 static JSON shape: one semantic version, optional notes/date and a platforms map containing HTTPS URL plus mandatory signature for supported target triples. HTTP 204 means no update is published.",
+      "inputSchema": {
+        "type": "object",
+        "description": "Public fixed-channel read carries no caller data.",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Tauri static update manifest body when HTTP status is 200; HTTP 204 has no body.",
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "Strict newer semantic version.",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "notes": {
+            "type": "string",
+            "description": "Bounded public release notes.",
+            "maxLength": 600
+          },
+          "pub_date": {
+            "type": "string",
+            "description": "RFC 3339 publication time."
+          },
+          "platforms": {
+            "type": "object",
+            "description": "Supported target triples mapped to immutable HTTPS URL and detached signature.",
+            "properties": {
+              "darwin-aarch64": {
+                "type": "object",
+                "description": "Apple Silicon updater payload.",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "Immutable HTTPS artifact URL."
+                  },
+                  "signature": {
+                    "type": "string",
+                    "description": "Mandatory detached updater signature."
+                  }
+                },
+                "required": [
+                  "url",
+                  "signature"
+                ],
+                "additionalProperties": false
+              },
+              "darwin-x86_64": {
+                "type": "object",
+                "description": "Intel macOS updater payload.",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "Immutable HTTPS artifact URL."
+                  },
+                  "signature": {
+                    "type": "string",
+                    "description": "Mandatory detached updater signature."
+                  }
+                },
+                "required": [
+                  "url",
+                  "signature"
+                ],
+                "additionalProperties": false
+              },
+              "windows-x86_64": {
+                "type": "object",
+                "description": "Windows x64 updater payload.",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "Immutable HTTPS artifact URL."
+                  },
+                  "signature": {
+                    "type": "string",
+                    "description": "Mandatory detached updater signature."
+                  }
+                },
+                "required": [
+                  "url",
+                  "signature"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "darwin-aarch64",
+              "darwin-x86_64",
+              "windows-x86_64"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "version",
+          "platforms"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public"
+      ],
+      "observability": {
+        "correlation": "Version, target triple, immutable public URL, size and hash from build and publication receipts.",
+        "audit": "Atomic publication receipt records previous and next channel hashes without private key material.",
+        "metrics": "Public read-only endpoint only; no client or account telemetry."
+      },
+      "errorSemantics": [
+        "Unsafe methods return 405; hidden, directory and traversal paths fail closed.",
+        "Missing channel pointer returns empty 204 with no-store rather than a fabricated version.",
+        "A malformed manifest, unsupported target, non-HTTPS URL, missing signature, downgrade or replayed version is never installable.",
+        "Manifest publication is last; partial artifact upload cannot become authoritative."
+      ],
+      "requirementRefs": [
+        "REQ-092"
+      ],
+      "evidenceRefs": [
+        "E-CODE-091",
+        "E-EXT-062",
+        "E-PROP-040"
+      ],
+      "status": "specified"
+    },
+    {
+      "id": "download-origin-status@v4",
+      "kind": "query",
+      "owner": "security-update",
+      "consumers": [
+        "security-update"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/download-origin-status@v4",
+      "authorization": "Unauthenticated GET/HEAD to the compiled public health path. No cookies, credentials, model request or write endpoint.",
+      "idempotency": "Read-only static health is deterministic within one atomically deployed origin revision. It reports channel publication separately from third-party installer catalog publication.",
+      "compatibility": "Retains health schema version 1 and all download-origin-status@v3 fields, but updatesPublished may now be true only when a validated stable manifest is publicly authoritative.",
+      "inputSchema": {
+        "type": "object",
+        "description": "Public health read carries no caller data.",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Public origin publication truth, not a client-installation claim.",
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "description": "Exact health projection schema.",
+            "enum": [
+              1
+            ]
+          },
+          "service": {
+            "type": "string",
+            "description": "Fixed public service identity.",
+            "enum": [
+              "yeschoy-download-origin"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "description": "Static origin readiness only.",
+            "enum": [
+              "origin_ready"
+            ]
+          },
+          "updatesPublished": {
+            "type": "boolean",
+            "description": "Whether a validated stable update manifest is authoritative."
+          },
+          "thirdPartyInstallersPublished": {
+            "type": "boolean",
+            "description": "Independent vendor installer catalog publication state."
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "service",
+          "status",
+          "updatesPublished",
+          "thirdPartyInstallersPublished"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public"
+      ],
+      "observability": {
+        "correlation": "Public origin revision and channel hash only.",
+        "audit": "Root-only deployment receipt; no credentials or signing key.",
+        "metrics": "No access-log persistence, telemetry or availability claim."
+      },
+      "errorSemantics": [
+        "updatesPublished becomes true only after immutable signed artifacts and stable manifest pass public HTTPS probes.",
+        "Rollback removes channel authority first and then sets updatesPublished false; thirdPartyInstallersPublished is unchanged.",
+        "Origin readiness does not claim successful client download, signature verification or installation."
+      ],
+      "requirementRefs": [
+        "REQ-092"
+      ],
+      "evidenceRefs": [
+        "E-CODE-091",
+        "E-PROP-040"
+      ],
       "status": "specified"
     }
   ]

@@ -1,6 +1,262 @@
 {
   "schemaVersion": 1,
-  "requirements": [
+ "requirements": [
+    {
+      "id": "REQ-079",
+      "statement": "Make one-click activation fast and uniform for all seven supported agents by separating atomic local configuration from asynchronous real-model observation and by safely handling applications that must reload settings.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-080",
+        "E-CODE-075",
+        "E-EXT-059",
+        "E-PROP-028"
+      ],
+      "acceptance": [
+        "All seven targets share one completion rule: exact account model/group eligibility, native secure credential storage, atomic owned-field commit and semantic readback, required helper-owned loopback readiness, and applicable open dispatch. The activation button never sends or waits for a paid upstream model prompt.",
+        "If Claude Desktop or Codex Desktop is already running, the first request returns application_running without account, key or file mutation. After an explicit save-work confirmation, native code requests normal quit, never force termination, stops if the app remains open, and reopens the exact discovered installation after success.",
+        "Claude Code, Pi, Hermes and OpenClaw never terminate an existing terminal or editor session and plainly state that a new session uses the new settings. DSH may reuse or restart only its assistant-owned runtime.",
+        "A successfully read-back configuration remains connected when the first real model request later reports upstream timeout, quota, model or provider failure; that observation appears in the existing recent-connection result and can guide model or line switching.",
+        "Synthetic native and renderer tests cover every adapter, running/not-running/refused desktop lifecycle branches, no-force-kill behavior, rollback/reopen behavior, truthful copy, and macOS Apple-Silicon plus Windows compilation without packaging."
+      ]
+    },
+    {
+      "id": "REQ-077",
+      "statement": "Enable a remotely controllable domestic mirror for exact official Codex and Claude Desktop packages without weakening client-native trust checks or blocking publication on a separate legal-evidence file.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "security-update",
+      "evidenceRefs": [
+        "E-USER-078",
+        "E-CODE-071",
+        "E-EXT-058",
+        "E-PROP-025"
+      ],
+      "acceptance": [
+        "The operator publisher needs no vendor-permission or source-approval JSON. It accepts only an exact current private candidate fetched from one of six compiled official origins, rechecks source metadata, package structure, identity, architecture, publisher, size and SHA256, and never grants the periodic synchronizer public-root write access.",
+        "Catalog schema 2 distinguishes native_verified from client_native_required. A valid matching native receipt is the only way to emit native_verified; absent receipt emits client_native_required and never claims server-side signature verification. The public catalog contains no approval, legal-basis, operator identity, credential or private-path fields.",
+        "The client accepts only the fixed ergou.qzz.io catalog and immutable source-slot/hash URL. Both verification states still pass through the same local macOS codesign, Team ID, bundle identity and Gatekeeper checks or Windows manifest, App Installer and installed-package trust checks before completion. A catalog assertion alone is never executable trust.",
+        "An operator can atomically disable every mirrored installer by publishing a valid empty catalog and false health projection without deleting objects or requiring a client update. Re-publication re-enables individual current candidates, prevents downgrade, preserves unrelated slots and previous immutable objects, and recovers safely after catalog or health interruption.",
+        "Missing, empty, stale, malformed, unsupported, corrupt, unavailable or disabled mirror state falls back to the compiled official path with truthful source UI and no account credentials. Mirror download failure never reuses partial bytes across source, URL, version, size or digest.",
+        "The beginner UI describes the mirror as domestic acceleration and says the vendor signature is checked before installation; it does not show policy, implementation or legal-risk text and does not claim a mirrored object has already been installed or works on an untested clean machine.",
+        "Publish the verified server catalog and packages only after focused publisher, kill-switch, client parser, native trust, fallback, renderer and cross-platform compile scenarios pass. Keep Yecai packaging/version/updater channels, database, NewAPI, shared ingress, forced third-party updates and installed-app replacement outside this release unit."
+      ]
+    },
+    {
+      "id": "REQ-076",
+      "statement": "Complete the download-source plumbing and restore official Claude macOS package discovery without misrepresenting public publication or installation verification.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "security-update",
+      "evidenceRefs": [
+        "E-USER-077",
+        "E-CODE-070",
+        "E-EXT-058"
+      ],
+      "acceptance": [
+        "Resolve Claude macOS currentRelease through the official public universal RELEASES.json feed and download its exact versioned ZIP; reject malformed, ambiguous, nonofficial, oversized or downgraded candidates without replacing last-good bytes. Never bypass a challenge.",
+        "Safely inspect and extract the official Claude.app ZIP in an owned private directory; validate member paths, duplicates, symlink targets, expansion limits and native vendor signature before exclusive installation. No overwrite or privilege/trust changes.",
+        "Provide a separate operator publisher that requires a SHA-bound native signature receipt plus explicit source-specific distribution approval, rehashes exact staged bytes, publishes immutable objects and atomically replaces a closed catalog while preserving unaffected last-good entries. No routine sync job gets public-root write access.",
+        "Client reads the fixed unauthenticated catalog on explicit Start; allowlisted exact source identities, immutable URLs, sizes and hashes bind package selection. A missing/unusable mirror falls back to official sources with truthful source projection; bad bytes are not installed or resumed across different artifact identities.",
+        "Preserve existing desktop installation v2 wire request/shape and consent semantics; the bundled renderer/native pair atomically add the mirror source discriminant under reviewed successor contract. No account credentials sent to a download origin.",
+        "Deploy only the scoped private sync update and verify a downloaded official Mac ZIP with native tools on this Mac without launching or replacing the installed app. Public redistribution remains unexecuted until an affirmative basis is supplied; Windows native verification and clean-machine installs remain distinct evidence gaps.",
+        "Execute focused server publication/feed/ZIP tests, native download/ZIP/manifest regression tests, renderer source/fallback scenarios and production/cross-platform compile checks. No Yecai packaging, version change, automatic update publication or broad server modifications."
+      ]
+    },
+    {
+      "id": "REQ-075",
+      "statement": "Make novice installation recoverable across application changes and logged-out system confirmation; remove false existing-app detection and verify the current full workbench instead of obsolete legacy screens.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "security-update",
+      "evidenceRefs": [
+        "E-USER-076",
+        "E-CODE-069",
+        "E-USER-075"
+      ],
+      "acceptance": [
+        "An ordinary ChatGPT bundle must not suppress Codex installation. Reuse canonical application identity; an unrelated existing destination must produce an actionable conflict, never installed and never overwrite.",
+        "After a global installer job finishes for another selected app, load the selected app plan without repeating mutations or polling ping-pong. Explicit recheck refreshes installer state and discovery; navigation or account/model changes cannot resurrect auto-activation consent.",
+        "Windows users can confirm installation without logging in or selecting a model. Checking alone creates no connection intent and never writes credentials; signed-in automatic continuation retains the exact one-use native session and full-selection proof.",
+        "Replace seven obsolete legacy App screen assertions with current workbench integration journeys at the native boundary, preserving independent provider/hook/component regressions. Execute all repository Vitest tests and inherited native/cross-platform/build acceptance on the final source state, not merely src tests.",
+        "Exercise retry, unavailable progress, unfinished Windows installation, existing destination preservation, logged-out completion and changed selection. Use clear user actions instead of terminal instructions or false completion.",
+        "No packaging, release, public binary distribution, server modifications, admin policy changes or overwrite of an installed app. Existing download-origin checks and cross-compilation cannot establish mainland download usability or Windows/Apple-Silicon clean-machine acceptance; report the remaining evidence separately."
+      ]
+    },
+    {
+      "id": "REQ-074",
+      "statement": "Provide novice install-and-connect with native Mac installation, explicit Windows system installation confirmation, guided other clients, and exact one-use session-bound connection handoff.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "security-update",
+      "evidenceRefs": [
+        "E-USER-075",
+        "E-CODE-066",
+        "E-EXT-056",
+        "E-EXT-057",
+        "E-CODE-067"
+      ],
+      "acceptance": [
+        "Missing desktop apps offer installation without architecture/path/command choices; existing applications retain ordinary connect/open/restore. Other clients clearly offer official installation guidance.",
+        "Only compiled original HTTPS sources and package identities are accepted. Exact redirect, size/type, owned-file and cache validator checks precede native trust. No arbitrary URL/path/command, account credentials, public mirror publication or forced update.",
+        "Mac verifies codesign/Team/bundle/Gatekeeper, stages privately, and publishes exclusively without replacement. Windows checks manifest identity/publisher/architecture, opens the hash-bound local package in system App Installer, explicitly leaves trust pending, and never silently deploys. Tell users to cancel Reinstall/Replace; OS installation choices remain user-owned.",
+        "Single request-idempotent native job; safe download cancellation and validator-bound resume, same-package hash reuse and recoverable progress across navigation. Bad metadata, signatures, partial bodies, races, ambiguous targets and lost responses cannot claim completion.",
+        "Mac automatic continuation and explicitly confirmed Windows continuation use an exact job-associated native target and one-use full model/group/default/line intent bound to the native session epoch. Renderer selection/navigation revisions invalidate A-to-B-to-A continuations. Fresh native/account/model validation remains mandatory.",
+        "Mac mutation drains under existing shutdown admission, including worker errors and cleanup. Windows releases admission after safe system-UI handoff; Yecai cancellation/exit does not cancel Windows installation. A failed connection leaves the installed app in place and uses existing settings recovery.",
+        "Use accessible progress and actionable source/network/space/trust/dependency/permission recovery, not engineering jargon. Fixture/cross-compilation results are distinct from clean-machine native installation. No package/release/server mutation in this implementation unit.",
+        "Existing workbench/repair tests must explicitly accept only read-only installer inspection on passive navigation. Missing-app count tests now require two visible desktop installation choices. Retain all prior test selectors and forbid start/confirm/help calls without user action."
+      ]
+    },
+    {
+      "id": "REQ-073",
+      "statement": "Provide novice install-and-connect with native Mac installation, explicit Windows system installation confirmation, guided other clients, and exact one-use session-bound connection handoff.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "security-update",
+      "evidenceRefs": [
+        "E-USER-075",
+        "E-CODE-066",
+        "E-EXT-056",
+        "E-EXT-057"
+      ],
+      "acceptance": [
+        "Missing desktop apps offer installation without architecture/path/command choices; existing applications retain ordinary connect/open/restore. Other clients clearly offer official installation guidance.",
+        "Only compiled original HTTPS sources and package identities are accepted. Exact redirect, size/type, owned-file and cache validator checks precede native trust. No arbitrary URL/path/command, account credentials, public mirror publication or forced update.",
+        "Mac verifies codesign/Team/bundle/Gatekeeper, stages privately, and publishes exclusively without replacement. Windows checks manifest identity/publisher/architecture, opens the hash-bound local package in system App Installer, explicitly leaves trust pending, and never silently deploys. Tell users to cancel Reinstall/Replace; OS installation choices remain user-owned.",
+        "Single request-idempotent native job; safe download cancellation and validator-bound resume, same-package hash reuse and recoverable progress across navigation. Bad metadata, signatures, partial bodies, races, ambiguous targets and lost responses cannot claim completion.",
+        "Mac automatic continuation and explicitly confirmed Windows continuation use an exact job-associated native target and one-use full model/group/default/line intent bound to the native session epoch. Renderer selection/navigation revisions invalidate A-to-B-to-A continuations. Fresh native/account/model validation remains mandatory.",
+        "Mac mutation drains under existing shutdown admission, including worker errors and cleanup. Windows releases admission after safe system-UI handoff; Yecai cancellation/exit does not cancel Windows installation. A failed connection leaves the installed app in place and uses existing settings recovery.",
+        "Use accessible progress and actionable source/network/space/trust/dependency/permission recovery, not engineering jargon. Fixture/cross-compilation results are distinct from clean-machine native installation. No package/release/server mutation in this implementation unit."
+      ]
+    },
+    {
+      "id": "REQ-072",
+      "statement": "Allow novice users to install missing Codex/Claude desktop apps and continue selected connection from Yecai without choosing binary architecture or typing commands, while preserving installed applications and truthful recovery.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "security-update",
+      "evidenceRefs": [
+        "E-USER-075",
+        "E-CODE-064",
+        "E-EXT-056"
+      ],
+      "acceptance": [
+        "Missing desktop apps offer install and connect; non-automatic clients offer guided help with no false automatic claim. Existing apps use the current connect/open/restore path unchanged.",
+        "Native code selects compiled source/identity and OS architecture; renderer cannot provide URLs, paths, package identity, command text or elevation flags. Original packages are verified by macOS codesign/Gatekeeper or Windows signed Appx deployment and exact publisher/identity.",
+        "One native job serializes install attempts and is request-idempotent. Safe download stages support cancellation, validator-bound resume, exact size/type checking and same-package reuse; stale/malformed data and lost UI responses cannot claim completion or trigger duplicate installs.",
+        "Native re-detection before and after installation prevents overwrite/reinstall and distinguishes installed, missing runtime and external change. Installation is not account/model connection success. Failure never uninstalls user software or modifies account/model data.",
+        "Install-and-connect captures explicit account, app, model/group and line selection; auto continuation occurs at most once after fresh discovery and only if that same selection/session remains current. A changed context requires fresh confirmation.",
+        "Accessible inline progress and actionable errors survive navigation; unsigned/challenged/unsupported/permission/dependency/space/interruption cases are explicit. macOS and Windows fixture/compile results are reported separately from actual native install acceptance."
+      ]
+    },
+    {
+      "id": "REQ-071",
+      "statement": "Synchronize official desktop release metadata and original installer bytes privately every six hours, with recoverable bounded downloads and truthful verification status, without altering any end-user application or public release.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "security-update",
+      "evidenceRefs": [
+        "E-USER-074",
+        "E-CODE-063",
+        "E-EXT-055"
+      ],
+      "acceptance": [
+        "Six explicitly identified official desktop source slots are configured; unsupported/blocked sources stay visible as failures rather than fabricated current versions or substituted CLI packages.",
+        "Each redirect is HTTPS, exact-host allowlisted and public-address validated; content lengths, type and validators are checked. No auth/cookies, insecure TLS, arbitrary URL fetching or execution of downloaded bytes.",
+        "Changed-only downloads support validator-bound resume; changed validators, invalid content ranges, oversized bodies, incomplete/corrupt packages and interrupted state writes cannot yield a completed candidate. Valid private cached candidates are independently hash-checked before reuse.",
+        "One lock serializes timer/manual runs. Atomic receipts preserve prior good candidates across replay, failed source lookup, disk quota, stale data and interruption. No arbitrary or automatic recursive deletion, symlink following, downgrade publication or public output.",
+        "MSIX manifest identity, architecture and version are inspected without extraction; signature-file presence is not signature trust. Native verification helper reports actual platform verification separately. Pending signatures and untested installation/compatibility never become verified or published.",
+        "Provide a hardened independent systemd timer/service at six-hour cadence, bounded download capacity configuration and secret-free status/rollback instructions; verify real first/second runs and distinguish partial upstream failure from script errors."
+      ]
+    },
+    {
+      "id": "REQ-070",
+      "statement": "Bootstrap the owner-provided HTTPS download/update origin without exposing secrets, interrupting existing services or pretending unsigned/unpublished releases are available.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "security-update",
+      "evidenceRefs": ["E-USER-073", "E-CODE-062", "E-EXT-054"],
+      "acceptance": [
+        "Only the chosen ingress host and dedicated download paths/container are added; existing ingress source bytes are preserved as an exact prefix and backed up. Reapply is idempotent; conflicting or concurrent changes stop before replacement.",
+        "Origin container is non-root, read-only, no host ports, no inherited secrets and no newly persistent access logs. Only GET/HEAD public allowlisted routes exist; hidden files, traversal, directories and unsafe methods are rejected. Public root contains no symlinks or secrets.",
+        "Public and direct-origin HTTPS verifies normally. Range request returns 206 with exact bytes and hash matches the immutable probe fixture. Original routes are observed before/after without paid or private requests.",
+        "Both updater channel endpoints return HTTP 204 with no-store until separately approved signed release publication. Health and root explicitly distinguish origin readiness from unpublished installers and inactive client auto-updates.",
+        "No private signing key, SSH password, existing app data, internal installers or third-party binaries are published. DNS, certificate, live routing and real installation limitations remain explicit."
+      ]
+    },
+    {
+      "id": "REQ-069",
+      "statement": "Correct full friendly model names and verified per-model reasoning controls and forwarding across existing adapters, preserving unknown-model default use and transactional connection behavior.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-072",
+        "E-CODE-061",
+        "E-EXT-053"
+      ],
+      "acceptance": [
+        "Friendly labels never alter exact request, credential, or billing model IDs; picker search matches both label and ID.",
+        "Known model menus reflect verified capabilities through native schemas; unknown models expose default access without invented reasoning/image/context capabilities or new eligibility gates.",
+        "Explicit effort values reach conversion and passthrough requests correctly. GPT-6 max is not silently xhigh; DeepSeek off uses its documented toggle. Defaults do not impose maximum effort or new output budgets.",
+        "Reapplying configuration remains reversible and preserves other providers and user preferences. Existing model/group selection, in-flight route snapshots and synthetic failure/recovery tests remain passing.",
+        "Real renderer/native tests, production frontend compilation and Windows/Apple cross-compilation verify this bounded unit; no live account or installer success is claimed."
+      ]
+    },
+    {
+      "id": "REQ-068",
+      "statement": "Implement explicitly selected model sets with real identity and fixed per-model billing routes, honest request errors and cooperative bounded exit without packaging or server mutation.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-071",
+        "E-CODE-060",
+        "E-EXT-052"
+      ],
+      "acceptance": [
+        "Up to the documented 200-entry catalog bound, unique full model IDs bind explicit billing groups; default is a member. No silent cross-group fallback or enrollment of unselected models. Legacy records upgrade on explicit activation only.",
+        "All seven adapters publish native model menus/catalogs via authenticated loopback routing; legitimate native default changes are not configuration corruption. In-flight requests retain their route. Unsupported optional vendor menus do not block default use.",
+        "Credential sets remain inside OS credential storage, handle the Windows per-blob bound transactionally, and never expose full keys through renderer, files, errors or diagnostics.",
+        "Claude identity uses real IDs rather than Sonnet display masking; both bridges route requested model exactly and isolate continuation history. Curated HTTP/SSE errors and in-memory last-request observations never turn failed streams into success.",
+        "Window close offers background/cancel/exit globally. Confirmed exit rejects new operations, cancels safe work, preserves in-flight account mutations and local rollback, and stops owned runtimes with bounded grace and recoverable progress.",
+        "Synthetic transaction/route/stream/exit tests, actual renderer tests/typecheck/build and Windows compilation pass. No installer, signed release, server change or live-account success is inferred from these tests."
+      ]
+    },
+    {
+      "id": "REQ-067",
+      "statement": "Repair cross-application diagnosis, platform launching, usable CLI opening and truthful verification/recovery without modifying servers or real user settings during development.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-070",
+        "E-CODE-059"
+      ],
+      "acceptance": [
+        "Real Rust-serialized reachable/mixed/failure connectivity results are accepted by the renderer; stale, malformed, partial and invoke errors never invent network failures or lose valid per-line evidence.",
+        "Windows Store/MSIX discovery preserves validated package application identity; ordinary desktop executables remain supported and unsafe/unrelated launch targets are rejected. Initialization and daily opening share platform launcher.",
+        "CLI proof rejects banners/help/empty/failed output; typed process failures distinguish start, timeout, read/wait and nonzero execution; outputs/secrets never cross IPC.",
+        "All seven targets are offered launch-only opening after read-only validation; four CLI targets open a terminal using native-resolved paths without secrets or caller commands. Repeated open does not reconfigure or issue probes.",
+        "File or credential restoration failures are visible recovery-required states, never unchanged/restored success; account switch, stale reply and recovery journal boundaries remain intact.",
+        "All scoped regressions, renderer typecheck/production build and Windows compile are recorded separately from real platform/application acceptance. Internal 0.4.8 artifacts never imply complete live-user validation."
+      ]
+    },
+    {"id":"REQ-066","statement":"Complete the 0.4.7 client hotfix with consistent source/UI/artifact version identity and current production acceptance while preserving historical evidence.","scope":"target","impact":"medium","state":"confirmed","owner":"desktop-platform","evidenceRefs":["E-USER-069","E-CODE-058"],"acceptance":["The renderer version is derived from package.json rather than separately hardcoded. Package, Tauri, Cargo manifest and own lockfile package all equal 0.4.7.","A new version-aware production acceptance retains typechecking, hardened-runtime/updater-disabled assertions and real production asset checks; old frozen 0.4.6 acceptance files and failed RU-039 reports are not rewritten.","All current privacy/protocol native and renderer regression scenarios pass; no extra product, server, real-user or public-release scope is inferred."]},
+    {"id":"REQ-065","statement":"Remove internal upstream model descriptions from the client and preserve legitimate Claude nonstream responses without weakening activation evidence.","scope":"target","impact":"high","state":"confirmed","owner":"tool-config","evidenceRefs":["E-USER-069","E-CODE-057","E-EXT-048"],"acceptance":["Native model projection uses an empty optional-display description value; model IDs, billing groups, ratios and prices are unchanged. Raw upstream description is neither rendered nor searched on configuration and model-price pages, even from stale renderer fixtures.","Both direct Anthropic and Chat conversion paths return valid completed empty/whitespace/thinking-only messages rather than invalid-provider 502; these responses do not emit activation verification. Useful complete responses still emit exactly the existing evidence.","Real upstream HTTP errors remain errors; malformed JSON/message payloads and incomplete messages are not manufactured into success. Streaming behavior, pinned model, auth headers, bounded bodies/timeouts and no automatic extra requests remain intact.","Loopback-only synthetic proxy fixtures cover startup-shaped max_tokens:1, chat success, error and auth cases; current native/renderer regressions, typecheck and production build pass. No real secrets, configurations or paid model probes are used.","Internal 0.4.7 artifacts are distinct from retained 0.4.6, with actual signing/notarization/hash checks and explicit Windows/no-live-test limitations. No GitHub push/public release, updater or backend mutation. Explain separate public pricing-description exposure rather than claiming client redaction secures the endpoint."]},
     {"id":"REQ-064","statement":"Prepare and deliver the approved current source and internal installers without false legacy storage failures or public-release side effects.","scope":"target","impact":"high","state":"confirmed","owner":"desktop-platform","evidenceRefs":["E-USER-068","E-CODE-056"],"acceptance":["Missing recovery key plus absent or lock-only directory is absence, not corruption; real/unknown recovery material remains protected and never causes key replacement. Synthetic fixtures require no real Keychain or tool configuration.","Existing native, renderer and production build regression passes without changing account, billing, activation or recovery contracts.","Source staging excludes installers and credentials. Push only the existing product branch, never v tags, Release/R2 or update manifests.","Internal macOS build is universal, Developer-ID signed, hardened and submitted for notarization; report accepted/stapled/verified only on actual tool evidence. Windows cross-built executable is explicitly unsigned and not claimed real-device verified. If a platform cannot finish, state the concrete blocker.","Record exact source identity and artifact SHA256 with known real-account and old-entry integration-test limitations. No server or public release changes."]},
     {
       "id": "REQ-063",
@@ -1321,6 +1577,290 @@
         "Multiple installations, unsupported or unverified versions, external higher-precedence configuration, missing helper, secure-storage failure, launch failure, authentication failure, model mismatch, timeout and tool-request failure return distinct non-success states with a safe recovery action.",
         "macOS Apple Silicon and Intel plus Windows x64 fixtures cover spaces and Unicode paths, conflicting installations, damaged and read-only configuration, concurrent changes, helper failure and interruption recovery; an installable internal candidate is built only after native and renderer scenarios pass.",
         "No NewAPI source, server, database, Nginx, DNS, deployment, telemetry or updater behavior changes in RU-027, and passing this unit does not by itself claim public production readiness."
+      ]
+    },
+    {
+      "id": "REQ-078",
+      "statement": "Make activation retry self-healing for a same-tool pending transaction and make current Claude Desktop and Claude Code accept every enrolled exact account model without changing the model, group or credential actually forwarded.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-079",
+        "E-CODE-072",
+        "E-CODE-073",
+        "E-CODE-074",
+        "E-PROP-026"
+      ],
+      "acceptance": [
+        "A new explicit activation click automatically restores only a pending journal for the same tool under the existing operation lock, stops only its helper-owned runtime, clears its stored tool credential, removes the pending record and continues the same click.",
+        "Completed records and unrelated tools are never auto-restored; three-way restoration preserves later user edits, and any restore, secure-storage or receipt failure remains non-ready with manual recovery available.",
+        "Claude Desktop receives deterministic unique Anthropic-shaped local aliases with visible real-model labels; the bridge resolves only aliases derived from the current enrolled model set and forwards the exact real model, billing group and credential upstream. Unknown aliases fail closed.",
+        "Claude Code keeps exact real IDs in model, availableModels and picker options, and adds a fixed known Claude behavesAs capability profile plus an exact-ID description.",
+        "Synthetic tests cover recovery, alias mapping, unknown rejection, readback and beginner copy, and the full renderer plus macOS Apple-Silicon and Windows compile checks pass without packaging or real user configuration mutation."
+      ]
+    },
+    {
+      "id": "REQ-080",
+      "statement": "Package the RU-056 verified client as distinct 0.4.10 internal installers for universal macOS and Windows x64 without publishing an update or weakening platform trust checks.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-081",
+        "E-CODE-076"
+      ],
+      "acceptance": [
+        "package.json, Cargo.toml and tauri.conf.json identify the candidate as 0.4.10 so it cannot be confused with the already notarized older 0.4.9 artifact.",
+        "The macOS DMG contains a universal x86_64 and arm64 app, uses the installed Developer ID identity with hardened runtime, is accepted and stapled by Apple notarization, and passes codesign, Gatekeeper, stapler and disk-image verification.",
+        "The Windows x64 artifact is produced on the repository Windows runner only after locked dependency installation, TypeScript checks, the complete renderer suite and the complete native suite pass; the NSIS installer UI remains Simplified Chinese and the artifact is explicitly labelled unsigned internal test software.",
+        "Exact SHA-256 values, source identity, build-run identity and limitations are recorded. No tag, GitHub Release, public download, updater artifact, latest manifest, server or database change occurs.",
+        "The packaging unit changes no application behavior beyond synchronized version metadata and does not treat cross-platform compilation as real-device installation validation."
+      ]
+    },
+    {
+      "id": "REQ-081",
+      "statement": "Complete the requested 0.4.10 dual-platform internal package after the hosted Windows runner is blocked, using a reproducible local Windows cross-build without weakening artifact truthfulness.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-081",
+        "E-USER-068",
+        "E-CODE-076",
+        "E-CODE-077"
+      ],
+      "acceptance": [
+        "Preserve all REQ-080 macOS signature, notarization, version, hash and non-publication requirements.",
+        "Build the Windows x64 PE payload from exact commit ffcfe898f79ff5069d7c4651a1bf0a779aa1a753 with locked dependencies and cargo-xwin for x86_64-pc-windows-msvc after the same 453 renderer and 477 native tests pass locally.",
+        "Create the per-user NSIS installer from a checked-in closed recipe using the SHA-256 pinned official Homebrew makensis 3.12 bottle in temporary storage; include Simplified-Chinese pages, shortcuts, uninstall registration and no arbitrary command input.",
+        "Record the rejected hosted run as infrastructure evidence. Label the local Windows installer unsigned and cross-built, and do not claim Authenticode, SmartScreen reputation, real-device installation or WebView2 bootstrap coverage.",
+        "No tag, GitHub Release, updater artifact, update manifest, public download, server, database or runtime feature change occurs."
+      ]
+    },
+    {
+      "id": "REQ-082",
+      "statement": "Make Codex route ownership independently verifiable and make DSH plus the supported Node-backed command-line agents launch correctly from the restricted macOS and Windows desktop environment without weakening credential or recovery boundaries.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-082",
+        "E-CODE-079",
+        "E-CODE-080",
+        "E-EXT-062",
+        "E-PROP-029"
+      ],
+      "acceptance": [
+        "Codex continues to preserve the official auth.json identity and uses only the user-level model_provider=yeschoy configuration with mutually exclusive command-backed provider authentication. Synthetic current-version evidence proves that this exact shape reaches the selected loopback /responses route and token command instead of official model transport.",
+        "The setup and recent-request UI explicitly distinguishes an official Codex login identity from model traffic. Before a real application request arrives it says route use is not yet verified; after the local bridge records a completed request it says that Yeschoy relay use is confirmed and shows the exact forwarded model ID, group and line.",
+        "The product preserves exact model ID gpt-6-astra and explains that Codex may render its own shortened 6 Astra label. It does not alias or rewrite the upstream model merely to alter vendor UI text and never infers model identity from assistant self-description.",
+        "Native CLI discovery deduplicates by canonical identity but retains the executable wrapper selected from PATH or a closed common directory. Launch code constructs a child-only runtime search path from that wrapper and its bounded symlink chain, so a GUI process can resolve npm-provided node without changing global PATH or accepting renderer paths or commands.",
+        "DSH web starts through its canonical profile entry point, accepts only a validated loopback startup URL, reuses only the assistant-owned runtime, opens the system browser, and completes or fails within a bounded interval without a paid model probe. The same runtime-path rule is applied to the supported CLI verification and terminal launch paths.",
+        "Synthetic native and renderer tests cover restricted GUI PATH, symlinked Node launchers, invalid or hostile paths, DSH startup/reuse/failure, Codex route copy and exact recent-request evidence. Typecheck, production renderer build, strict Rust checks, Apple-Silicon compile and Windows x64 compile pass without packaging or changing server, NewAPI, billing, updater or vendor binaries."
+      ]
+    },
+    {
+      "id": "REQ-083",
+      "statement": "Re-verify the completed Codex route-evidence and DSH/CLI runtime repair under source-read-only execution after correcting only the acceptance harness, while retaining every earlier failed execution as historical evidence.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-082",
+        "E-CODE-081",
+        "E-PROP-030"
+      ],
+      "acceptance": [
+        "The successor is verification-only: its baseline-to-tested source diff is empty and it creates no application, installer, release, server, NewAPI, billing, credential or updater mutation.",
+        "The exact RU-060 native runtime and DSH selector passes in read-only source isolation, including wrapper retention, bounded child PATH inheritance, validated loopback startup, bounded failure and no paid model request.",
+        "The exact RU-060 Codex route UX selector passes in read-only source isolation using a temporary Vitest config and cache, proving configuration-ready is distinct from confirmed Yeschoy bridge traffic and preserving the exact gpt-6-astra identifier.",
+        "The exact RU-060 cross-platform selector passes in read-only source isolation, covering typecheck, production renderer build, strict native tests and lint, Apple-Silicon compile and Windows x64 compile without packaging.",
+        "Both failed RU-060 execution reports remain immutable and discoverable; the successful successor supplements rather than rewrites historical evidence."
+      ]
+    },
+    {
+      "id": "REQ-084",
+      "statement": "Package the RU-061 verified client as distinct 0.4.11 internal installers for universal macOS and Windows x64 with exact source provenance, without publishing an update or weakening platform trust claims.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-083",
+        "E-CODE-082",
+        "E-PROP-031"
+      ],
+      "acceptance": [
+        "package.json, Cargo.toml, Cargo.lock and tauri.conf.json identify this candidate as 0.4.11 so it cannot be confused with the existing 0.4.10 artifacts; no runtime behavior changes are introduced by the packaging unit.",
+        "The complete current renderer and native suites, TypeScript check, formatting, strict Rust lint, production renderer build, Apple-Silicon compilation and Windows x64 compilation pass before artifact acceptance.",
+        "The macOS DMG contains a universal x86_64 and arm64 app, uses the installed Developer ID identity with hardened runtime, receives accepted Apple notarization tickets for the app and DMG, is stapled, and passes codesign, Gatekeeper, stapler, architecture, bundle-version and disk-image verification.",
+        "The Windows payload is freshly cross-built for x86_64-pc-windows-msvc and packaged by the SHA-256 pinned makensis 3.12 bottle with a closed Simplified-Chinese current-user NSIS recipe, shortcuts and uninstall registration.",
+        "The Windows artifact is explicitly recorded as unsigned, cross-built and not installed on a real Windows device; it does not claim Authenticode, SmartScreen reputation or bundled WebView2 coverage.",
+        "A machine-readable receipt binds the RU-061 verification report, current source-state hash, test counts, tool hashes and artifact hashes. No tag, GitHub Release, upload, updater artifact, latest manifest, server, NewAPI, database or user configuration change occurs."
+      ]
+    },
+    {
+      "id": "REQ-085",
+      "statement": "Remove the obsolete Settings claim that account functionality is unavailable without removing or weakening the real account page, login and account-session capabilities, and report updater and third-party installer readiness truthfully.",
+      "scope": "target",
+      "impact": "medium",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-084",
+        "E-CODE-083",
+        "E-EXT-061",
+        "E-PROP-032"
+      ],
+      "acceptance": [
+        "Settings no longer renders the obsolete account-unavailable boundary or its duplicate account and diagnostics buttons.",
+        "The AccountView route and current desktop-account-session contract remain unchanged and reachable through the existing application navigation.",
+        "The automatic-update row remains truthful while no update endpoint is published; no updater, installer, package or remote service behavior is changed by this correction.",
+        "A focused renderer regression and a source-level acceptance scenario pass without packaging."
+      ]
+    },
+    {
+      "id": "REQ-086",
+      "statement": "Re-verify the completed Settings account-boundary cleanup under source-read-only execution using the repository-compatible acceptance adapter while retaining the earlier rejected adapter run as historical evidence.",
+      "scope": "target",
+      "impact": "medium",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-084",
+        "E-CODE-084",
+        "E-PROP-033"
+      ],
+      "acceptance": [
+        "The successor is verification-only and produces an empty baseline-to-tested source diff.",
+        "The source-level scenario confirms the stale Settings boundary and its copy calls are absent while the account route remains present.",
+        "The failed RU-063 report remains unchanged and discoverable; no dependency version, product, package or remote state changes occur."
+      ]
+    },
+    {
+      "id": "REQ-087",
+      "statement": "Package the RU-065 verified client, including the Settings account-boundary cleanup, as distinct 0.4.12 internal installers for universal macOS and Windows x64 without publishing or enabling automatic updates.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-085",
+        "E-CODE-086",
+        "E-PROP-035"
+      ],
+      "acceptance": [
+        "package.json, Cargo.toml, Cargo.lock and tauri.conf.json identify this candidate as 0.4.12, while the existing 0.4.11 artifacts remain unchanged and distinguishable.",
+        "The complete current renderer and native suites, TypeScript check, formatting, strict Rust lint, production renderer build, Apple-Silicon compilation and Windows x64 compilation pass before artifact acceptance.",
+        "The macOS DMG contains a universal x86_64 and arm64 app, uses the installed Developer ID identity with hardened runtime, receives accepted Apple notarization tickets for the app and DMG, is stapled, and passes codesign, Gatekeeper, stapler, architecture, bundle-version and disk-image verification.",
+        "The Windows payload is freshly cross-built for x86_64-pc-windows-msvc and packaged by the SHA-256 pinned makensis 3.12 bottle with a closed Simplified-Chinese current-user NSIS recipe, shortcuts, normal-close request and uninstall registration.",
+        "The Windows artifact is explicitly recorded as unsigned, cross-built and not installed on a real Windows device; it does not claim Authenticode, SmartScreen reputation or bundled WebView2 coverage.",
+        "A machine-readable receipt binds the current source-state hash, RU-061 cross-platform verification, RU-065 Settings verification, test counts, tool hashes and artifact hashes. No tag, GitHub Release, upload, updater artifact, update manifest, server, NewAPI, database or user configuration change occurs."
+      ]
+    },
+    {
+      "id": "REQ-088",
+      "statement": "Correct the broken 0.4.12 Windows package so a release build always embeds the renderer instead of loading the development server, and ensure a Windows user can safely exit even when the renderer is unavailable, then produce a distinct local 0.4.13 Windows x64 repair installer.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-086",
+        "E-CODE-087",
+        "E-PROP-036"
+      ],
+      "acceptance": [
+        "Cargo defines custom-protocol as the default production feature and a release-only compile guard rejects any build that omits the embedded frontend, while Tauri development continues to opt out through its observed --no-default-features command.",
+        "The Windows close button uses a native three-way choice that can completely exit, minimize to background or cancel without requiring renderer JavaScript; native exit requests start the same cooperative runtime shutdown path.",
+        "The corrected x86_64 Windows executable contains both current renderer asset paths and an embedded-custom-protocol runtime marker, contains no dev-server runtime marker, and is different from the rejected 0.4.12 payload.",
+        "The current renderer and native suites, typecheck, format, strict lint, production renderer build and Windows x64 compile pass before the distinct 0.4.13 Simplified-Chinese current-user NSIS installer is accepted.",
+        "The receipt explicitly supersedes only the 0.4.12 Windows artifact and retains unsigned, cross-built and not-yet-real-Windows-smoke-tested limits. No macOS rebuild, upload, updater publication, server, NewAPI, database or user configuration mutation occurs."
+      ]
+    },
+    {
+      "id": "REQ-089",
+      "statement": "Make the connection journey novice-safe and responsive across Windows and macOS by separating application launch, background inspection, configuration, recovery and desktop lifecycle states, while preserving user work and making configuration updates obvious.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-087",
+        "E-CODE-088",
+        "E-PROP-037"
+      ],
+      "acceptance": [
+        "When Codex Desktop or Claude Desktop is already running, the first connect attempt leads to a clear save-work confirmation; confirmation closes before asynchronous work, requests only a graceful normal exit, applies settings and reopens the app, and never force-terminates a process.",
+        "No open, refresh, restore or configure request leaves a modal layer covering the client while background work runs; inline status identifies the active operation and unrelated navigation remains interactive.",
+        "Opening an already connected app does not disable or visually erase the independent update-connection action, and the configured state presents one clear daily-use primary action plus an explicit settings-update secondary action.",
+        "Initial inspection may use a loading state, but later focus refreshes retain the last usable connection projection and do not lock model, route or connection actions merely because inspection is in progress.",
+        "Desktop-app lifecycle copy, terminal-agent new-session copy and DSH browser launch copy reflect their different behaviors without claiming that every agent is terminated or restarted.",
+        "Focused renderer regressions and a source-level lifecycle and action-state scenario pass on the current source without packaging, uploading, publishing or mutating remote or user state."
+      ]
+    },
+    {
+      "id": "REQ-090",
+      "statement": "Re-verify the completed cross-platform connection UX correction under source-read-only execution with the repository-compatible pytest adapter, retaining the Vitest-adapter rejection as immutable historical evidence.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-087",
+        "E-CODE-089",
+        "E-PROP-038"
+      ],
+      "acceptance": [
+        "The successor verification has an empty baseline-to-tested source diff and changes no product, test, dependency, package or remote state.",
+        "The isolated source scenario confirms modal dismissal precedes restart work, launch-only state does not disable the update action, background refresh retains usable state, lost native launch replies are bounded, and all three surface lifecycle classes remain explicit.",
+        "The failed RU-068 report and its passing pytest command remain unchanged and discoverable; the separately observed 459-test renderer suite, 59 focused tests, typecheck and renderer build supplement the governed source scenario."
+      ]
+    },
+    {
+      "id": "REQ-091",
+      "statement": "Ensure the configured-state Open and Update connection settings hierarchy remains visually clear after the complete production stylesheet cascade, including the sticky side-panel layout.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-087",
+        "E-CODE-090",
+        "E-PROP-039"
+      ],
+      "acceptance": [
+        "The configured action deck fills the available side-panel width instead of shrinking to a small fixed control group.",
+        "Open remains the filled primary action and Update connection settings remains an unmistakable accent-outline secondary action after workbench-v2.css loads; no later rule reduces it to muted disabled-looking gray.",
+        "A source-level final-cascade scenario, owned-file format check, production renderer build and computed-style visual inspection pass without changing runtime behavior or producing a package."
+      ]
+    },
+    {
+      "id": "REQ-092",
+      "statement": "Complete a signed, recoverable Yeschoy desktop self-update path for supported macOS and Windows builds while keeping update checks, downloads, installation and publication independent from application connection, third-party application installation and account/model traffic.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "security-update",
+      "evidenceRefs": [
+        "E-USER-088",
+        "E-CODE-091",
+        "E-EXT-062",
+        "E-PROP-040"
+      ],
+      "acceptance": [
+        "The bundled app checks one compiled HTTPS stable channel in the background without blocking startup or connection work, reports no-update and unavailable states truthfully, and exposes update availability globally plus in Settings without forcing a modal.",
+        "One explicit user action downloads a mandatory-signature-verified artifact, presents bounded progress, cooperatively drains unrelated native operations and runtimes, installs, and relaunches where required; a failed install never leaves the UI pretending an update completed and attempts to relaunch the current app after shutdown has begun.",
+        "The renderer receives only closed update status, version, notes and byte counts through dedicated IPC; it receives no signing key, artifact path, raw endpoint error or direct updater-plugin authority. Update serialization is independent of tool activation, application installation, account, model and vendor-download state.",
+        "The release configuration embeds only the updater public key, creates updater artifacts for candidate builds, keeps the private key outside the repository and public origin, and replaces the inherited CC Switch release identity with Yeschoy-specific manual publication inputs.",
+        "The download origin serves an atomically published stable manifest when present and empty HTTP 204 when absent. Immutable versioned artifacts are published before the manifest, rollback disables the manifest without deleting old objects, and health truthfully reflects channel publication.",
+        "Happy, failure, replay, stale-version, race and recovery scenarios pass together with renderer, native and publisher tests. A first updater-aware build is identified as the one-time manual bootstrap boundary rather than claiming older clients can discover an updater they do not contain."
       ]
     }
   ]

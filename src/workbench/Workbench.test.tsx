@@ -23,6 +23,7 @@ import { readFileSync } from "node:fs";
 import { connectionsFixture } from "../configuration/connection-test-fixtures";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+import { installationInspectionFixture } from "../installation/test-fixtures";
 const native = vi.mocked(invoke);
 const locales = { zh, "zh-TW": tw, en, ja };
 function discovery(requestId: string, version = "1.2.3") {
@@ -187,6 +188,40 @@ type Args = {
     lineId: "mainland_optimized" | "global_accelerated";
   };
 };
+type NativeHandler = (command: string, args: unknown) => unknown;
+function mockNativeByCommand(handler: NativeHandler) {
+  native.mockImplementation(async (command, args) => {
+    if (command === "read_desktop_exit_state") {
+      return { closeRequested: false, shutdown: null };
+    }
+    if (command === "manage_app_installation_v2")
+      return installationInspectionFixture(args);
+    return handler(command, args);
+  });
+}
+const defaultNativeHandler: NativeHandler = (command, args) => {
+  const request = (args as Args).request;
+  if (command === "manage_tool_connections_v1")
+    return connectionsFixture(request.requestId);
+  if (command === "scan_activation_targets_v1")
+    return activationTargetScan(request.requestId);
+  if (command === "scan_desktop_apps_read_only")
+    return discovery(request.requestId);
+  if (command === "read_public_service_catalog")
+    return catalogFixture(request.requestId, request.lineId);
+  if (command === "account_inspect_v2") return signedOut(request.requestId);
+  throw Error(`Unexpected native command: ${command}`);
+};
+function mockDiscoveryOnce(make: (requestId: string) => unknown) {
+  let pending = true;
+  mockNativeByCommand((command, args) => {
+    if (command === "scan_desktop_apps_read_only" && pending) {
+      pending = false;
+      return make((args as Args).request.requestId);
+    }
+    return defaultNativeHandler(command, args);
+  });
+}
 let systemDark = false;
 let appearanceListener: () => void = () => {};
 beforeEach(async () => {
@@ -197,23 +232,7 @@ beforeEach(async () => {
     this.removeAttribute("open");
   };
   native.mockReset();
-  native.mockImplementation(async (command, args) => {
-    const request = (args as Args).request;
-    if (command === "manage_tool_connections_v1")
-      return connectionsFixture(request.requestId);
-    if (command === "scan_activation_targets_v1")
-      return activationTargetScan(request.requestId);
-    if (command === "manage_tool_connections_v1")
-      return connectionsFixture(request.requestId);
-    if (command === "scan_desktop_apps_read_only")
-      return discovery(request.requestId);
-    if (command === "read_public_service_catalog")
-      return catalogFixture(request.requestId, request.lineId);
-    if (command === "account_inspect_v2") return signedOut(request.requestId);
-    if (command === "scan_activation_targets_v1")
-      return activationTargetScan(request.requestId);
-    throw Error("Not available in test");
-  });
+  mockNativeByCommand(defaultNativeHandler);
   for (const [language, resource] of Object.entries(locales))
     i18n.addResourceBundle(language, "translation", resource, true, true);
   await i18n.changeLanguage("zh");
@@ -234,14 +253,58 @@ beforeEach(async () => {
   vi.stubGlobal("scrollTo", vi.fn());
 });
 afterEach(() => {
+  for (const [command, args] of native.mock.calls) {
+    if (command === "read_desktop_exit_state") expect(args).toBeUndefined();
+    if (command === "manage_app_installation_v2")
+      expect(() => installationInspectionFixture(args)).not.toThrow();
+  }
   cleanup();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
 describe("official workbench", () => {
+  it("keeps raw model descriptions off both model surfaces while retaining group choices", async () => {
+    mockNativeByCommand(async (command, args) => {
+      const request = (args as Args).request;
+      if (command === "manage_tool_connections_v1")
+        return connectionsFixture(request.requestId);
+      if (command === "scan_activation_targets_v1")
+        return activationTargetScan(request.requestId);
+      if (command === "scan_desktop_apps_read_only")
+        return discovery(request.requestId);
+      if (command === "read_public_service_catalog")
+        return catalogFixture(request.requestId, request.lineId);
+      if (command === "account_inspect_v2") {
+        const projection = signedIn(request.requestId);
+        projection.models[0].description =
+          "Synthetic upstream via private connector";
+        return projection;
+      }
+      throw Error("Not available in test");
+    });
+    render(<App />);
+    await screen.findAllByText("野菜测试用户");
+    for (const page of ["应用接入", "模型与价格"]) {
+      fireEvent.click(screen.getByRole("button", { name: page }));
+      const picker = await screen.findByRole("combobox", {
+        name: /完整模型 ID/,
+      });
+      fireEvent.click(picker);
+      const option = within(screen.getByRole("listbox")).getByRole("option");
+      expect(option).toHaveTextContent("glm-5.3");
+      expect(screen.queryByText(/Synthetic upstream/)).not.toBeInTheDocument();
+      fireEvent.click(option);
+      expect(screen.queryByText(/Synthetic upstream/)).not.toBeInTheDocument();
+      const group = within(
+        screen.getByRole("group", { name: "选择计费分组" }),
+      ).getByRole("radio", { name: /国模特价分组/ });
+      fireEvent.click(group);
+      expect(group).toBeChecked();
+    }
+  });
   it("restores saved selections under effect replay and keeps them across navigation", async () => {
-    native.mockImplementation(async (command, args) => {
+    mockNativeByCommand(async (command, args) => {
       const request = (args as Args).request;
       if (command === "manage_tool_connections_v1") {
         const result = connectionsFixture(request.requestId);
@@ -283,6 +346,7 @@ describe("official workbench", () => {
       screen.getByRole("heading", { level: 1, name: "用量账单" }),
     ).toHaveFocus();
     fireEvent.click(screen.getByRole("button", { name: "应用接入" }));
+    await act(async () => {});
     expect(screen.getByRole("radio", { name: /国模特价分组/ })).toBeChecked();
     expect(screen.getByRole("button", { name: "恢复原设置" })).toBeEnabled();
   });
@@ -332,14 +396,19 @@ describe("official workbench", () => {
         commands.every((command) =>
           [
             "scan_desktop_apps_read_only",
+            "manage_app_installation_v2",
             "manage_tool_connections_v1",
             "account_inspect_v2",
             "scan_activation_targets_v1",
+            "read_desktop_exit_state",
           ].includes(command),
         ),
       ).toBe(true);
       expect(
         commands.filter((command) => command === "account_inspect_v2"),
+      ).toHaveLength(1);
+      expect(
+        commands.filter((command) => command === "read_desktop_exit_state"),
       ).toHaveLength(1);
     },
   );
@@ -381,8 +450,10 @@ describe("official workbench", () => {
     expect(screen.queryByText("¥128.60")).not.toBeInTheDocument();
     expect(native.mock.calls.map((call) => call[0])).toEqual([
       "scan_activation_targets_v1",
+      "manage_app_installation_v2",
       "manage_tool_connections_v1",
       "account_inspect_v2",
+      "read_desktop_exit_state",
     ]);
   });
   it("takes the application navigation to the working setup flow", async () => {
@@ -399,10 +470,19 @@ describe("official workbench", () => {
     expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
       "先去登录",
     );
-    expect(native).toHaveBeenCalledTimes(4);
+    await act(async () => {});
+    expect(native.mock.calls.map(([command]) => command)).toEqual([
+      "scan_activation_targets_v1",
+      "manage_app_installation_v2",
+      "manage_tool_connections_v1",
+      "account_inspect_v2",
+      "read_desktop_exit_state",
+      "manage_app_installation_v2",
+      "scan_activation_targets_v1",
+    ]);
   });
   it("rejects an incomplete or mismatched result, shows unknown not absent, and retries", async () => {
-    native.mockResolvedValueOnce(discovery("wrong-request"));
+    mockDiscoveryOnce(() => discovery("wrong-request"));
     render(<CandidateHomeView {...callbacks()} />);
     await screen.findByRole("alert");
     expect(screen.getAllByText("状态未知")).toHaveLength(2);
@@ -433,8 +513,8 @@ describe("official workbench", () => {
   ])(
     "keeps the summary honest for $status",
     async ({ status, count, note }) => {
-      native.mockImplementationOnce(async (_command, args) => {
-        const result = discovery((args as Args).request.requestId);
+      mockDiscoveryOnce((requestId) => {
+        const result = discovery(requestId);
         result.apps = result.apps.map((app) => ({
           ...app,
           status,
@@ -475,8 +555,8 @@ describe("official workbench", () => {
     },
   );
   it("does not present a partial discovery as a complete total", async () => {
-    native.mockImplementationOnce(async (_command, args) => {
-      const result = discovery((args as Args).request.requestId);
+    mockDiscoveryOnce((requestId) => {
+      const result = discovery(requestId);
       Object.assign(result.apps[1], {
         status: "unsupported_platform",
         locationHint: "unsupported",
@@ -493,8 +573,8 @@ describe("official workbench", () => {
   it("ignores an old completion after unmount and preserves the newest mount result", async () => {
     let resolveOld: (value: unknown) => void = () => {};
     let oldRequest = "";
-    native.mockImplementationOnce((_command, args) => {
-      oldRequest = (args as Args).request.requestId;
+    mockDiscoveryOnce((requestId) => {
+      oldRequest = requestId;
       return new Promise((resolve) => {
         resolveOld = resolve;
       });
@@ -525,7 +605,16 @@ describe("official workbench", () => {
     expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
       "先去登录",
     );
-    expect(native).toHaveBeenCalledTimes(4);
+    await act(async () => {});
+    expect(native.mock.calls.map(([command]) => command)).toEqual([
+      "scan_activation_targets_v1",
+      "manage_app_installation_v2",
+      "manage_tool_connections_v1",
+      "account_inspect_v2",
+      "read_desktop_exit_state",
+      "manage_app_installation_v2",
+      "scan_activation_targets_v1",
+    ]);
   });
   it("uses one shared signed-out account state across billing and pricing", async () => {
     render(<App />);
@@ -540,8 +629,10 @@ describe("official workbench", () => {
     ).toHaveLength(2);
     expect(native.mock.calls.map((call) => call[0])).toEqual([
       "scan_activation_targets_v1",
+      "manage_app_installation_v2",
       "manage_tool_connections_v1",
       "account_inspect_v2",
+      "read_desktop_exit_state",
     ]);
     fireEvent.change(screen.getByRole("combobox", { name: "使用线路" }), {
       target: { value: "global_accelerated" },
@@ -555,7 +646,7 @@ describe("official workbench", () => {
     ).toHaveLength(2);
   });
   it("renders signed-in account facts and the auditable price comparison", async () => {
-    native.mockImplementation(async (command, args) => {
+    mockNativeByCommand(async (command, args) => {
       const request = (args as Args).request;
       if (command === "manage_tool_connections_v1")
         return connectionsFixture(request.requestId);
@@ -617,7 +708,7 @@ describe("official workbench", () => {
   it("keeps the signed-in account visible while a new route is refreshing", async () => {
     let inspections = 0;
     let finishRouteRefresh: () => void = () => {};
-    native.mockImplementation(async (command, args) => {
+    mockNativeByCommand(async (command, args) => {
       const request = (args as Args).request;
       if (command === "manage_tool_connections_v1")
         return connectionsFixture(request.requestId);
@@ -660,7 +751,7 @@ describe("official workbench", () => {
   it.each(["default", "国模特价分组"])(
     "configures the selected desktop app using the displayed billing group: %s",
     async (billingGroup) => {
-      native.mockImplementation(async (command, args) => {
+      mockNativeByCommand(async (command, args) => {
         const request = (args as Args).request;
         if (command === "manage_tool_connections_v1")
           return connectionsFixture(request.requestId);
@@ -703,7 +794,7 @@ describe("official workbench", () => {
       expect(await screen.findByText("接入完成")).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Codex Desktop 的设置已保存，所选模型已通过连接测试。重新打开应用后即可试用。",
+          "Codex Desktop 的默认模型已通过连接测试。首次或新增模型后可能需要重新打开应用；之后可在应用内切换已配置的模型。",
         ),
       ).toBeInTheDocument();
       expect(native).toHaveBeenCalledWith("configure_desktop_tool_v2", {
@@ -714,12 +805,13 @@ describe("official workbench", () => {
           modelId: "glm-5.3",
           installationId: "i0000000000000003",
           billingGroup,
+          models: [{ modelId: "glm-5.3", billingGroup }],
         },
       });
     },
   );
   it("allows setup when the group is valid but its dynamic price cannot be converted", async () => {
-    native.mockImplementation(async (command, args) => {
+    mockNativeByCommand(async (command, args) => {
       const request = (args as Args).request;
       if (command === "manage_tool_connections_v1")
         return connectionsFixture(request.requestId);
@@ -790,7 +882,13 @@ describe("official workbench", () => {
     systemDark = true;
     act(() => appearanceListener());
     expect(document.documentElement.dataset.theme).toBe("dark");
-    expect(native).toHaveBeenCalledTimes(3);
+    expect(native.mock.calls.map(([command]) => command)).toEqual([
+      "scan_activation_targets_v1",
+      "manage_app_installation_v2",
+      "manage_tool_connections_v1",
+      "account_inspect_v2",
+      "read_desktop_exit_state",
+    ]);
   });
   it("keeps appearance usable when storage fails and rejects invalid preferences", async () => {
     localStorage.setItem(APPEARANCE_KEY, "unexpected-value");

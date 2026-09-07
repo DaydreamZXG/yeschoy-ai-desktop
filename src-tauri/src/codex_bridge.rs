@@ -1,7 +1,7 @@
-use std::{sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use axum::{
-    body::Body,
+    body::{to_bytes, Body},
     extract::{DefaultBodyLimit, State},
     http::{header, HeaderMap, StatusCode},
     response::{IntoResponse, Response},
@@ -16,6 +16,7 @@ use tokio::{
     task::JoinHandle,
 };
 
+use crate::request_diagnostics::{self, RequestContext, RequestOutcome, StreamProtocol};
 use crate::tool_credentials;
 
 pub(crate) const BASE_URL: &str = "http://127.0.0.1:15722/yeschoy/v1";
@@ -82,15 +83,7 @@ pub(crate) mod transform {
     }
 
     pub(crate) fn supports_reasoning_effort(model: &str) -> bool {
-        let normalized = model.to_lowercase();
-        is_openai_o_series(&normalized)
-            || normalized
-                .strip_prefix("gpt-")
-                .and_then(|rest| rest.chars().next())
-                .is_some_and(|character| character.is_ascii_digit() && character >= '5')
-            || normalized == "grok-4.5"
-            || normalized.starts_with("grok-4.5-")
-            || normalized.starts_with("grok-build-")
+        super::claude_transform::supports_reasoning_effort(model)
     }
 
     pub(crate) fn inject_openai_stream_include_usage(result: &mut Value) {
@@ -109,12 +102,51 @@ pub(crate) mod transform {
 #[derive(Clone)]
 struct BridgeAppState {
     client: reqwest::Client,
-    history: Arc<codex_chat_history::CodexChatHistoryStore>,
+    history: Arc<Mutex<RouteHistories>>,
+}
+
+#[derive(Default)]
+struct RouteHistories {
+    credential: Option<tool_credentials::ToolCredential>,
+    models: HashMap<String, Arc<codex_chat_history::CodexChatHistoryStore>>,
+}
+
+impl BridgeAppState {
+    async fn history_for(
+        &self,
+        credential: &tool_credentials::ToolCredential,
+        model: &str,
+    ) -> Arc<codex_chat_history::CodexChatHistoryStore> {
+        let mut histories = self.history.lock().await;
+        // Full logical credential equality includes origin/group/key/protocol.
+        // In-flight requests retain their old Arc; new generations cannot see it.
+        if histories.credential.as_ref() != Some(credential) {
+            histories.models.clear();
+            histories.credential = Some(credential.clone());
+        }
+        histories.models.entry(model.into()).or_default().clone()
+    }
+}
+
+fn upstream_client() -> Result<reqwest::Client, reqwest::Error> {
+    reqwest::Client::builder()
+        .no_proxy()
+        .redirect(reqwest::redirect::Policy::none())
+        .retry(reqwest::retry::never())
+        .connect_timeout(Duration::from_secs(15))
+        .read_timeout(Duration::from_secs(600))
+        .build()
 }
 
 struct RunningBridge {
     shutdown: Option<oneshot::Sender<()>>,
     task: JoinHandle<()>,
+}
+
+impl Drop for RunningBridge {
+    fn drop(&mut self) {
+        self.task.abort();
+    }
 }
 
 #[derive(Clone, Default)]
@@ -135,15 +167,10 @@ impl CodexBridgeRuntimeState {
         *running = None;
 
         let listener = TcpListener::bind(LISTEN_ADDRESS).await.map_err(|_| ())?;
-        let client = reqwest::Client::builder()
-            .redirect(reqwest::redirect::Policy::none())
-            .connect_timeout(Duration::from_secs(15))
-            .read_timeout(Duration::from_secs(60))
-            .build()
-            .map_err(|_| ())?;
+        let client = upstream_client().map_err(|_| ())?;
         let state = BridgeAppState {
             client,
-            history: Arc::new(codex_chat_history::CodexChatHistoryStore::default()),
+            history: Arc::new(Mutex::new(RouteHistories::default())),
         };
         let router = Router::new()
             .route("/yeschoy/health", get(health))
@@ -175,7 +202,12 @@ impl CodexBridgeRuntimeState {
             if let Some(shutdown) = bridge.shutdown.take() {
                 let _ = shutdown.send(());
             }
-            let _ = tokio::time::timeout(Duration::from_secs(2), bridge.task).await;
+            if tokio::time::timeout(Duration::from_secs(2), &mut bridge.task)
+                .await
+                .is_err()
+            {
+                bridge.task.abort();
+            }
         }
     }
 }
@@ -189,6 +221,9 @@ pub(crate) async fn resume_if_configured(runtime: CodexBridgeRuntimeState) {
         .as_ref()
         .and_then(|record| record.codex_transport.as_deref())
         == Some("chat_bridge")
+        || credential
+            .as_ref()
+            .is_some_and(|record| record.has_model_set())
     {
         let _ = runtime.ensure_started().await;
     }
@@ -202,7 +237,7 @@ async fn responses_head() -> StatusCode {
     StatusCode::OK
 }
 
-async fn models() -> Response {
+async fn models(headers: HeaderMap) -> Response {
     let credential =
         match tokio::task::spawn_blocking(|| tool_credentials::load("codex_desktop")).await {
             Ok(Ok(value)) => value,
@@ -213,13 +248,17 @@ async fn models() -> Response {
                 )
             }
         };
-    if credential.codex_transport.as_deref() != Some("chat_bridge") {
+    if credential.has_model_set() && !authorized(&headers, credential.client_token("codex_desktop"))
+    {
+        return response_error(StatusCode::UNAUTHORIZED, "Authentication failed");
+    }
+    if !credential.has_model_set() && credential.codex_transport.as_deref() != Some("chat_bridge") {
         return response_error(
             StatusCode::SERVICE_UNAVAILABLE,
             "Compatibility connection is inactive",
         );
     }
-    match crate::tool_adapters::codex_desktop::bridge_catalog(&credential.model_id) {
+    match crate::tool_adapters::codex_desktop::bridge_catalog_models(&credential.model_ids()) {
         Ok(value) => (StatusCode::OK, Json(value)).into_response(),
         Err(_) => response_error(
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -249,10 +288,52 @@ fn response_error(status: StatusCode, message: &'static str) -> Response {
         .into_response()
 }
 
+fn authorized(headers: &HeaderMap, token: &str) -> bool {
+    let bearer = headers
+        .get(header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.strip_prefix("Bearer "))
+        .unwrap_or("");
+    !token.is_empty() && secure_equal(bearer, token)
+}
+
+fn route_snapshot(
+    credential: &tool_credentials::ToolCredential,
+    body: &Value,
+) -> Result<(tool_credentials::ToolCredential, String), ()> {
+    if !credential.has_model_set() {
+        return Ok((credential.clone(), String::new()));
+    }
+    let model = body["model"]
+        .as_str()
+        .filter(|model| !model.is_empty())
+        .ok_or(())?;
+    let group = credential
+        .models
+        .iter()
+        .find(|route| route.model_id == model)
+        .ok_or(())?
+        .billing_group
+        .clone();
+    credential
+        .resolve_model(model)
+        .map(|route| (route, group))
+        .map_err(|_| ())
+}
+
+fn observed_error(
+    context: &RequestContext,
+    status: StatusCode,
+    outcome: RequestOutcome,
+) -> Response {
+    context.record(outcome, status.as_u16());
+    (status, Json(request_diagnostics::error_json(outcome))).into_response()
+}
+
 async fn responses(
     State(state): State<BridgeAppState>,
     headers: HeaderMap,
-    Json(mut body): Json<Value>,
+    Json(body): Json<Value>,
 ) -> Response {
     let credential =
         match tokio::task::spawn_blocking(|| tool_credentials::load("codex_desktop")).await {
@@ -264,46 +345,110 @@ async fn responses(
                 )
             }
         };
-    if credential.codex_transport.as_deref() != Some("chat_bridge") {
+    responses_with_credential(state, headers, body, credential).await
+}
+
+async fn responses_with_credential(
+    state: BridgeAppState,
+    headers: HeaderMap,
+    body: Value,
+    configured: tool_credentials::ToolCredential,
+) -> Response {
+    if !configured.has_model_set() && configured.codex_transport.as_deref() != Some("chat_bridge") {
         return response_error(
             StatusCode::SERVICE_UNAVAILABLE,
             "Compatibility connection is inactive",
         );
     }
-    let bearer = headers
-        .get(header::AUTHORIZATION)
-        .and_then(|value| value.to_str().ok())
-        .and_then(|value| value.strip_prefix("Bearer "))
-        .unwrap_or("");
-    if !secure_equal(bearer, &credential.api_key) {
+    if !authorized(&headers, configured.client_token("codex_desktop")) {
         return response_error(StatusCode::UNAUTHORIZED, "Authentication failed");
     }
+    let (credential, group) = match route_snapshot(&configured, &body) {
+        Ok(route) => route,
+        Err(_) => {
+            request_diagnostics::record(
+                "codex_desktop",
+                "",
+                "",
+                &configured.origin,
+                RequestOutcome::UnknownModel,
+                0,
+            );
+            return response_error(
+                StatusCode::BAD_REQUEST,
+                request_diagnostics::curated_message(RequestOutcome::UnknownModel),
+            );
+        }
+    };
+    let context = RequestContext {
+        tool: "codex_desktop".into(),
+        model: credential.model_id.clone(),
+        group,
+        origin: credential.origin.clone(),
+    };
     if !matches!(
         credential.origin.as_str(),
         "https://yeschoy.com" | "https://api.yeschoy.com"
     ) {
         return response_error(StatusCode::FORBIDDEN, "Upstream is not allowed");
     }
+    forward_resolved(state, body, configured, credential, context).await
+}
+
+async fn forward_resolved(
+    state: BridgeAppState,
+    mut body: Value,
+    configured: tool_credentials::ToolCredential,
+    credential: tool_credentials::ToolCredential,
+    context: RequestContext,
+) -> Response {
     let Some(object) = body.as_object_mut() else {
-        return response_error(StatusCode::BAD_REQUEST, "Invalid request body");
+        return observed_error(
+            &context,
+            StatusCode::BAD_REQUEST,
+            RequestOutcome::InvalidResponse,
+        );
     };
     object.insert("model".into(), Value::String(credential.model_id.clone()));
-    state.history.enrich_request(&mut body).await;
+    let direct = credential.codex_transport.as_deref() == Some("direct_responses");
+    if !direct && credential.codex_transport.as_deref() != Some("chat_bridge") {
+        return observed_error(
+            &context,
+            StatusCode::BAD_REQUEST,
+            RequestOutcome::InvalidResponse,
+        );
+    }
+    let history = state.history_for(&configured, &credential.model_id).await;
+    if !direct {
+        history.enrich_request(&mut body).await;
+    }
     let tool_context = transform_codex_chat::build_codex_tool_context_from_request(&body);
-    let chat = match transform_codex_chat::responses_to_chat_completions_with_reasoning(body, None)
-    {
+    let chat = match if direct {
+        Ok(body)
+    } else {
+        transform_codex_chat::responses_to_chat_completions_with_reasoning(body, None)
+    } {
         Ok(value) => value,
         Err(_) => {
-            return response_error(
+            return observed_error(
+                &context,
                 StatusCode::UNPROCESSABLE_ENTITY,
-                "Request conversion failed",
+                RequestOutcome::InvalidResponse,
             )
         }
     };
     let streaming = chat.get("stream").and_then(Value::as_bool) == Some(true);
     let upstream = match state
         .client
-        .post(format!("{}/v1/chat/completions", credential.origin))
+        .post(format!(
+            "{}/v1/{}",
+            credential.origin,
+            if direct {
+                "responses"
+            } else {
+                "chat/completions"
+            }
+        ))
         .bearer_auth(&credential.api_key)
         .header(
             header::ACCEPT,
@@ -318,26 +463,53 @@ async fn responses(
         .await
     {
         Ok(value) => value,
-        Err(_) => return response_error(StatusCode::BAD_GATEWAY, "Upstream request failed"),
+        Err(error) => {
+            let outcome = request_diagnostics::transport_outcome(&error);
+            context.record(outcome, 0);
+            return (
+                StatusCode::BAD_GATEWAY,
+                Json(request_diagnostics::error_json(outcome)),
+            )
+                .into_response();
+        }
     };
     let status =
         StatusCode::from_u16(upstream.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
     if !status.is_success() {
-        let value = if upstream.content_length().unwrap_or_default() <= MAX_RESPONSE_BYTES {
-            upstream.json::<Value>().await.ok()
-        } else {
-            None
-        };
-        let converted = transform_codex_chat::chat_error_to_response_error(value.as_ref());
-        return (status, Json(converted)).into_response();
+        return observed_error(
+            &context,
+            status,
+            request_diagnostics::outcome_for_status(status.as_u16()),
+        );
     }
     if streaming {
+        if direct {
+            let observed = request_diagnostics::observed_sse(
+                upstream.bytes_stream(),
+                StreamProtocol::Responses,
+                context,
+                status.as_u16(),
+            );
+            return (
+                [
+                    (header::CONTENT_TYPE, "text/event-stream"),
+                    (header::CACHE_CONTROL, "no-cache"),
+                ],
+                Body::from_stream(observed),
+            )
+                .into_response();
+        }
         let converted = streaming_codex_chat::create_responses_sse_stream_from_chat_with_context(
             upstream.bytes_stream(),
             tool_context,
         );
-        let recorded =
-            codex_chat_history::record_responses_sse_stream(converted, state.history.clone());
+        let observed = request_diagnostics::observed_sse(
+            converted,
+            StreamProtocol::Responses,
+            context,
+            status.as_u16(),
+        );
+        let recorded = codex_chat_history::record_responses_sse_stream(observed, history);
         return Response::builder()
             .status(StatusCode::OK)
             .header(header::CONTENT_TYPE, "text/event-stream")
@@ -351,31 +523,240 @@ async fn responses(
         .content_length()
         .is_some_and(|length| length > MAX_RESPONSE_BYTES)
     {
-        return response_error(StatusCode::BAD_GATEWAY, "Upstream response was too large");
+        return observed_error(
+            &context,
+            StatusCode::BAD_GATEWAY,
+            RequestOutcome::InvalidResponse,
+        );
     }
-    let chat_response = match upstream.bytes().await {
+    let chat_response = match to_bytes(
+        Body::from_stream(upstream.bytes_stream()),
+        MAX_RESPONSE_BYTES as usize,
+    )
+    .await
+    {
         Ok(bytes) if bytes.len() as u64 <= MAX_RESPONSE_BYTES => {
             serde_json::from_slice::<Value>(&bytes).ok()
+        }
+        Err(error) if request_diagnostics::transport_outcome(&error) == RequestOutcome::Timeout => {
+            return observed_error(&context, StatusCode::BAD_GATEWAY, RequestOutcome::Timeout);
         }
         _ => None,
     };
     let Some(chat_response) = chat_response else {
-        return response_error(StatusCode::BAD_GATEWAY, "Invalid upstream response");
+        return observed_error(
+            &context,
+            StatusCode::BAD_GATEWAY,
+            RequestOutcome::InvalidResponse,
+        );
     };
+    if direct {
+        if chat_response["object"] != "response"
+            || !matches!(
+                chat_response["status"].as_str(),
+                Some("completed" | "incomplete")
+            )
+            || !chat_response["output"].is_array()
+            || chat_response.get("error").is_some_and(|v| !v.is_null())
+        {
+            return observed_error(
+                &context,
+                StatusCode::BAD_GATEWAY,
+                RequestOutcome::InvalidResponse,
+            );
+        }
+        context.record(RequestOutcome::Ok, status.as_u16());
+        return (StatusCode::OK, Json(chat_response)).into_response();
+    }
+    if !chat_response["choices"][0]["message"].is_object()
+        || chat_response["choices"][0]["finish_reason"]
+            .as_str()
+            .is_none()
+    {
+        return observed_error(
+            &context,
+            StatusCode::BAD_GATEWAY,
+            RequestOutcome::InvalidResponse,
+        );
+    }
     let converted = match transform_codex_chat::chat_completion_to_response_with_context(
         chat_response,
         &tool_context,
     ) {
         Ok(value) => value,
-        Err(_) => return response_error(StatusCode::BAD_GATEWAY, "Response conversion failed"),
+        Err(_) => {
+            return observed_error(
+                &context,
+                StatusCode::BAD_GATEWAY,
+                RequestOutcome::InvalidResponse,
+            )
+        }
     };
-    state.history.record_response(&converted).await;
+    history.record_response(&converted).await;
+    context.record(RequestOutcome::Ok, status.as_u16());
     (StatusCode::OK, Json(converted)).into_response()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn synthetic_catalog(origin: &str) -> tool_credentials::ToolCredential {
+        use tool_credentials::{ToolCredential, ToolModelRoute};
+        let routes = vec![
+            ToolModelRoute {
+                model_id: "chat-a".into(),
+                billing_group: "group-a".into(),
+                api_key: "synthetic-key-a".into(),
+                origin: origin.into(),
+                claude_transport: None,
+                codex_transport: Some("chat_bridge".into()),
+            },
+            ToolModelRoute {
+                model_id: "responses-b".into(),
+                billing_group: "group-b".into(),
+                api_key: "synthetic-key-b".into(),
+                origin: origin.into(),
+                claude_transport: None,
+                codex_transport: Some("direct_responses".into()),
+            },
+        ];
+        ToolCredential {
+            api_key: routes[0].api_key.clone(),
+            origin: origin.into(),
+            model_id: routes[0].model_id.clone(),
+            local_gateway_token: Some(format!("ycg-{}", "d".repeat(64))),
+            codex_transport: routes[0].codex_transport.clone(),
+            claude_transport: None,
+            models: routes,
+        }
+    }
+
+    fn fixture_state() -> BridgeAppState {
+        BridgeAppState {
+            client: upstream_client().unwrap(),
+            history: Arc::new(Mutex::new(RouteHistories::default())),
+        }
+    }
+
+    #[tokio::test]
+    async fn ru042_codex_routes_chat_and_responses_to_exact_keys() {
+        use bytes::Bytes;
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let configured = synthetic_catalog(&format!("http://{}", listener.local_addr().unwrap()));
+        let requests = Arc::new(Mutex::new(Vec::new()));
+        let captured = requests.clone();
+        let server = tokio::spawn(async move {
+            axum::serve(listener, Router::new().fallback(axum::routing::any(move |uri: axum::http::Uri, headers: HeaderMap, bytes: Bytes| {
+                let captured = captured.clone();
+                async move {
+                    let body: Value = serde_json::from_slice(&bytes).unwrap();
+                    captured.lock().await.push(json!({"path":uri.path(),"auth":headers[header::AUTHORIZATION].to_str().unwrap(),"body":body}));
+                    Json(if uri.path() == "/v1/responses" {
+                        json!({"object":"response","id":"resp-b","model":body["model"],"status":"completed","output":[]})
+                    } else { json!({"id":"chat-a","model":body["model"],"choices":[{"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}]}) })
+                }
+            }))).await.unwrap();
+        });
+        let state = fixture_state();
+        for model in ["chat-a", "responses-b"] {
+            let body = json!({"model":model,"input":"unchanged prompt","stream":false});
+            let (credential, group) = route_snapshot(&configured, &body).unwrap();
+            let context = RequestContext {
+                tool: "codex_desktop".into(),
+                model: model.into(),
+                group,
+                origin: credential.origin.clone(),
+            };
+            // Only the private transport stage uses loopback. The public entry
+            // point still rejects every origin outside the two compiled lines.
+            let response =
+                forward_resolved(state.clone(), body, configured.clone(), credential, context)
+                    .await;
+            assert_eq!(response.status(), StatusCode::OK);
+        }
+        let captured = requests.lock().await;
+        assert_eq!(captured.len(), 2);
+        assert_eq!(captured[0]["path"], "/v1/chat/completions");
+        assert_eq!(captured[0]["auth"], "Bearer synthetic-key-a");
+        assert_eq!(captured[0]["body"]["model"], "chat-a");
+        assert_eq!(captured[1]["path"], "/v1/responses");
+        assert_eq!(captured[1]["auth"], "Bearer synthetic-key-b");
+        assert_eq!(captured[1]["body"]["model"], "responses-b");
+        assert_eq!(captured[1]["body"]["input"], "unchanged prompt");
+        assert!(captured[1]["body"].get("messages").is_none());
+        server.abort();
+    }
+
+    #[tokio::test]
+    async fn ru042_codex_unknown_models_and_upstream_keys_never_pass_local_auth() {
+        let configured = synthetic_catalog("https://yeschoy.com");
+        for (token, body, status) in [
+            (
+                configured.api_key.as_str(),
+                json!({"model":"chat-a"}),
+                StatusCode::UNAUTHORIZED,
+            ),
+            (
+                configured.client_token("codex_desktop"),
+                json!({"model":"unknown-synthetic-key"}),
+                StatusCode::BAD_REQUEST,
+            ),
+            (
+                configured.client_token("codex_desktop"),
+                json!({}),
+                StatusCode::BAD_REQUEST,
+            ),
+        ] {
+            let mut headers = HeaderMap::new();
+            headers.insert(
+                header::AUTHORIZATION,
+                format!("Bearer {token}").parse().unwrap(),
+            );
+            let response =
+                responses_with_credential(fixture_state(), headers, body, configured.clone()).await;
+            assert_eq!(response.status(), status);
+            let body = to_bytes(response.into_body(), 4096).await.unwrap();
+            assert!(!String::from_utf8_lossy(&body).contains("synthetic-key"));
+        }
+    }
+
+    #[tokio::test]
+    async fn ru042_codex_history_isolated_by_model_group_key_and_generation() {
+        let state = fixture_state();
+        let configured = synthetic_catalog("https://yeschoy.com");
+        let history_a = state.history_for(&configured, "chat-a").await;
+        let history_b = state.history_for(&configured, "responses-b").await;
+        assert!(!Arc::ptr_eq(&history_a, &history_b));
+        assert!(Arc::ptr_eq(
+            &history_a,
+            &state.history_for(&configured, "chat-a").await
+        ));
+        for change in ["key", "group", "origin"] {
+            let mut changed = configured.clone();
+            match change {
+                "key" => changed.models[0].api_key = "synthetic-new-key".into(),
+                "group" => changed.models[0].billing_group = "other-group".into(),
+                _ => changed.origin = "https://api.yeschoy.com".into(),
+            }
+            let new_history = state.history_for(&changed, "chat-a").await;
+            assert!(!Arc::ptr_eq(&history_a, &new_history));
+        }
+        // The old Arc is alive for in-flight recording, but is no longer visible
+        // to the next configured credential generation.
+        assert_eq!(Arc::strong_count(&history_a), 1);
+    }
+
+    #[test]
+    fn ru042_codex_legacy_model_pin_remains_usable() {
+        let mut configured = synthetic_catalog("https://yeschoy.com");
+        configured.models.clear();
+        let (route, group) =
+            route_snapshot(&configured, &json!({"model":"legacy-client-alias"})).unwrap();
+        assert_eq!(route.model_id, "chat-a");
+        assert!(group.is_empty());
+        assert_eq!(configured.client_token("codex_desktop"), "synthetic-key-a");
+    }
 
     #[test]
     fn secure_comparison_requires_exact_value() {

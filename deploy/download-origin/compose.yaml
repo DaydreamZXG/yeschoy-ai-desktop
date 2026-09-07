@@ -1,0 +1,26 @@
+name: yeschoy-download
+services:
+  origin:
+    # Existing image on the owner-provided host; no implicit pull or shared upgrade.
+    image: sha256:af32e97399febea808609119bb21544d0265c58a02836576e32a2d082c262c17
+    pull_policy: never
+    container_name: yeschoy-download-origin
+    restart: unless-stopped
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    # The pinned official binary carries cap_net_bind_service=ep. Its exec
+    # fails with EPERM when this capability is absent from the bounding set.
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: [no-new-privileges:true]
+    command: [caddy, run, --config, /etc/caddy/Caddyfile, --adapter, caddyfile]
+    volumes:
+      - /opt/yeschoy-download/Caddyfile.origin:/etc/caddy/Caddyfile:ro
+      - /srv/yeschoy-download/public:/srv/public:ro
+    networks:
+      ingress:
+        aliases: [yeschoy-download-origin]
+networks:
+  ingress:
+    external: true
+    name: web_default

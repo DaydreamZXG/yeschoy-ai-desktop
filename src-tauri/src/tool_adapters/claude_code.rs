@@ -1,6 +1,6 @@
 use std::{path::Path, time::Duration};
 
-use serde_json::{Map, Value};
+use serde_json::{json, Map, Value};
 use tokio::process::Command;
 
 use crate::{
@@ -33,8 +33,9 @@ pub(crate) struct Prepared {
     path: std::path::PathBuf,
     origin: String,
     model: String,
+    model_ids: Vec<String>,
+    modern: bool,
     helper: String,
-    local_token: Option<String>,
 }
 
 fn config_error(error: ConfigFailure) -> AdapterFailure {
@@ -84,6 +85,43 @@ fn render(existing: Option<&[u8]>, origin: &str, model: &str, helper: &str) -> R
     Ok(bytes)
 }
 
+fn render_catalog(
+    existing: Option<&[u8]>,
+    origin: &str,
+    model: &str,
+    helper: &str,
+    model_ids: &[String],
+) -> Result<Vec<u8>, ()> {
+    let mut value: Value =
+        serde_json::from_slice(&render(existing, origin, model, helper)?).map_err(|_| ())?;
+    let env = value["env"].as_object_mut().ok_or(())?;
+    // Persist the actual default in `model`, which native /model may update.
+    // Never label unrelated upstream models as Claude's built-in families.
+    for key in [
+        "ANTHROPIC_MODEL",
+        "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+        "ANTHROPIC_DEFAULT_SONNET_MODEL",
+        "ANTHROPIC_DEFAULT_OPUS_MODEL",
+    ] {
+        env.remove(key);
+    }
+    value["model"] = json!(model);
+    value["availableModels"] = json!(model_ids);
+    // `behavesAs` controls Claude Code's client-side prompt/capability handling;
+    // the exact model ID is still sent through the bridge. Known models receive
+    // the closest native effort family, while unregistered IDs use a conservative
+    // compatibility fallback so they remain selectable.
+    value["modelPicker"] = json!({"replaceBuiltInOptions":true,"options":model_ids.iter().map(|id| json!({
+        "model":id,
+        "label":crate::tool_model_profile::display_name(id),
+        "description":id,
+        "behavesAs":crate::tool_model_profile::claude_code_behaves_as(id)
+    })).collect::<Vec<_>>()});
+    let mut bytes = serde_json::to_vec_pretty(&value).map_err(|_| ())?;
+    bytes.push(b'\n');
+    Ok(bytes)
+}
+
 fn higher_precedence_override() -> bool {
     [
         "ANTHROPIC_AUTH_TOKEN",
@@ -94,24 +132,52 @@ fn higher_precedence_override() -> bool {
     .any(|key| std::env::var_os(key).is_some_and(|value| !value.is_empty()))
 }
 
-fn new_local_token() -> Result<String, AdapterFailure> {
-    let mut bytes = [0u8; 32];
-    getrandom::fill(&mut bytes).map_err(|_| AdapterFailure::SecureStorageUnavailable)?;
-    let mut value = String::with_capacity(68);
-    value.push_str("ycg-");
-    for byte in bytes {
-        use std::fmt::Write as _;
-        write!(&mut value, "{byte:02x}").map_err(|_| AdapterFailure::SecureStorageUnavailable)?;
-    }
-    Ok(value)
-}
-
 pub(crate) fn prepare(
     home: &Path,
     origin: &str,
     model: &str,
     transport: ClaudeTransport,
     existing_local_token: Option<&str>,
+) -> Result<Prepared, AdapterFailure> {
+    prepare_inner(
+        home,
+        origin,
+        model,
+        transport,
+        existing_local_token,
+        &[model.to_owned()],
+        false,
+    )
+}
+
+pub(crate) fn prepare_catalog(
+    home: &Path,
+    origin: &str,
+    model: &str,
+    transport: ClaudeTransport,
+    existing_local_token: Option<&str>,
+    model_ids: &[String],
+) -> Result<Prepared, AdapterFailure> {
+    crate::chat_gateway::validate_catalog(model, model_ids)?;
+    prepare_inner(
+        home,
+        origin,
+        model,
+        transport,
+        existing_local_token,
+        model_ids,
+        true,
+    )
+}
+
+fn prepare_inner(
+    home: &Path,
+    origin: &str,
+    model: &str,
+    transport: ClaudeTransport,
+    _existing_local_token: Option<&str>,
+    model_ids: &[String],
+    modern: bool,
 ) -> Result<Prepared, AdapterFailure> {
     if higher_precedence_override() {
         return Err(AdapterFailure::ExternalOverride);
@@ -121,24 +187,26 @@ pub(crate) fn prepare(
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_read_failed"))?;
     let helper = tool_credentials::shell_helper_command("claude_code")
         .map_err(|_| AdapterFailure::SecureStorageUnavailable)?;
-    let local_token = if transport == ClaudeTransport::ChatBridge {
-        Some(
-            existing_local_token
-                .filter(|value| value.starts_with("ycg-") && value.len() == 68)
-                .map(str::to_owned)
-                .map(Ok)
-                .unwrap_or_else(new_local_token)?,
-        )
-    } else {
-        None
-    };
-    let configured_origin = if transport == ClaudeTransport::ChatBridge {
+    // The canonical credential owner generates/stores the local token. Claude
+    // Code reads it through apiKeyHelper, so no token belongs in Prepared or
+    // the settings file. Keep the legacy argument shape for callers.
+    let configured_origin = if modern || transport == ClaudeTransport::ChatBridge {
         PROXY_BASE
     } else {
         origin
     };
-    let after = render(before.as_deref(), configured_origin, model, &helper)
-        .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?;
+    let after = if modern {
+        render_catalog(
+            before.as_deref(),
+            configured_origin,
+            model,
+            &helper,
+            model_ids,
+        )
+    } else {
+        render(before.as_deref(), configured_origin, model, &helper)
+    }
+    .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?;
     let transaction =
         FileTransaction::stage_with_snapshot(path.clone(), before, after).map_err(config_error)?;
     Ok(Prepared {
@@ -146,8 +214,9 @@ pub(crate) fn prepare(
         path,
         origin: configured_origin.to_owned(),
         model: model.to_owned(),
+        model_ids: model_ids.to_vec(),
+        modern,
         helper,
-        local_token,
     })
 }
 
@@ -156,12 +225,16 @@ impl Prepared {
         self.transaction.changes()
     }
 
-    pub(crate) fn local_token(&self) -> Option<&str> {
-        self.local_token.as_deref()
-    }
-
     pub(crate) fn commit(&mut self) -> Result<(), AdapterFailure> {
         self.transaction.commit().map_err(config_error)?;
+        self.validate_readback(true)
+    }
+
+    pub(crate) fn validate_existing(&self) -> Result<(), AdapterFailure> {
+        self.validate_readback(false)
+    }
+
+    fn validate_readback(&self, strict_default: bool) -> Result<(), AdapterFailure> {
         let bytes = common::snapshot(&self.path)
             .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_readback_failed"))?
             .ok_or(AdapterFailure::ConfigurationFailed(
@@ -175,13 +248,59 @@ impl Prepared {
                 .and_then(|env| env.get("ANTHROPIC_BASE_URL"))
                 .and_then(Value::as_str)
                 == Some(&self.origin)
-            && environment
-                .and_then(|env| env.get("ANTHROPIC_MODEL"))
-                .and_then(Value::as_str)
-                == Some(&self.model)
             && environment.is_some_and(|env| {
-                !env.contains_key("ANTHROPIC_AUTH_TOKEN") && !env.contains_key("ANTHROPIC_API_KEY")
-            });
+                !env.contains_key("ANTHROPIC_AUTH_TOKEN")
+                    && !env.contains_key("ANTHROPIC_API_KEY")
+                    && (self.modern
+                        || [
+                            "ANTHROPIC_MODEL",
+                            "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+                            "ANTHROPIC_DEFAULT_SONNET_MODEL",
+                            "ANTHROPIC_DEFAULT_OPUS_MODEL",
+                        ]
+                        .into_iter()
+                        .all(|key| env.get(key).and_then(Value::as_str) == Some(&self.model)))
+            })
+            && (!self.modern
+                || (crate::chat_gateway::default_matches(
+                    value["model"].as_str(),
+                    &self.model,
+                    &self.model_ids,
+                    strict_default,
+                ) && crate::chat_gateway::catalog_matches(
+                    &value["availableModels"],
+                    None,
+                    &self.model_ids,
+                ) && crate::chat_gateway::catalog_matches(
+                    &value["modelPicker"]["options"],
+                    Some("model"),
+                    &self.model_ids,
+                ) && value["modelPicker"]["options"]
+                    .as_array()
+                    .is_some_and(|models| {
+                        models.iter().all(|model| {
+                            model["model"].as_str().is_some_and(|id| {
+                                model["label"].as_str()
+                                    == Some(crate::tool_model_profile::display_name(id))
+                                    && model["description"].as_str() == Some(id)
+                                    && model["behavesAs"].as_str()
+                                        == Some(crate::tool_model_profile::claude_code_behaves_as(
+                                            id,
+                                        ))
+                            })
+                        })
+                    })
+                    && value["modelPicker"]["replaceBuiltInOptions"].as_bool() == Some(true)
+                    && environment.is_some_and(|env| {
+                        [
+                            "ANTHROPIC_MODEL",
+                            "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+                            "ANTHROPIC_DEFAULT_SONNET_MODEL",
+                            "ANTHROPIC_DEFAULT_OPUS_MODEL",
+                        ]
+                        .iter()
+                        .all(|key| !env.contains_key(*key))
+                    })));
         if correct {
             Ok(())
         } else {
@@ -202,7 +321,7 @@ pub(crate) async fn verify(
     model: &str,
     credential: &tool_credentials::ToolCredential,
 ) -> Result<(), AdapterFailure> {
-    if credential.claude_transport.as_deref() == Some("chat_bridge") {
+    if credential.has_model_set() || credential.claude_transport.as_deref() == Some("chat_bridge") {
         state.start(credential.clone()).await?;
     }
     let settings_path = super::user_home()
@@ -211,6 +330,14 @@ pub(crate) async fn verify(
         .ok_or(AdapterFailure::VerificationFailed(
             "verification_settings_missing",
         ))?;
+    verify_with_settings(installation, model, &settings_path).await
+}
+
+async fn verify_with_settings(
+    installation: &ResolvedInstallation,
+    model: &str,
+    settings_path: &Path,
+) -> Result<(), AdapterFailure> {
     let working = common::temporary_working_directory("claude-code-verify")
         .map_err(|_| AdapterFailure::VerificationFailed("verification_workspace_failed"))?;
     let mut command = Command::new(&installation.path);
@@ -230,10 +357,10 @@ pub(crate) async fn verify(
             "json",
             "仅回复 YESCHOY_OK，不要使用工具。",
         ]);
+    common::apply_cli_runtime_path(&mut command, &installation.path);
     let result = common::run_bounded(command, Duration::from_secs(120)).await;
     let _ = std::fs::remove_dir_all(&working);
-    let result =
-        result.map_err(|_| AdapterFailure::VerificationFailed("tool_request_timed_out"))?;
+    let result = result.map_err(|error| AdapterFailure::VerificationFailed(error.reason_code()))?;
     if !result.success {
         return Err(AdapterFailure::VerificationFailed("tool_request_failed"));
     }
@@ -242,11 +369,12 @@ pub(crate) async fn verify(
     let has_result = value
         .get("result")
         .and_then(Value::as_str)
-        .is_some_and(|value| !value.trim().is_empty());
+        .is_some_and(|value| common::verification_reply(value.as_bytes()))
+        && value.get("is_error").and_then(Value::as_bool) != Some(true);
     if has_result {
         Ok(())
     } else {
-        Err(AdapterFailure::VerificationFailed("tool_response_empty"))
+        Err(AdapterFailure::VerificationFailed("tool_response_invalid"))
     }
 }
 
@@ -267,7 +395,8 @@ pub(crate) async fn resume_if_configured(state: ClaudeCodeRuntimeState) {
     let Ok(credential) = tool_credentials::load("claude_code") else {
         return;
     };
-    if credential.claude_transport.as_deref() != Some("chat_bridge") {
+    if !credential.has_model_set() && credential.claude_transport.as_deref() != Some("chat_bridge")
+    {
         return;
     }
     let Some(home) = super::user_home() else {
@@ -293,6 +422,174 @@ mod tests {
     use super::*;
 
     #[test]
+    fn ru042_claude_code_catalog_uses_real_picker_ids_and_member_defaults() {
+        let home = common::temporary_working_directory("claude-code-model-set").unwrap();
+        let ids = vec!["model-a".into(), "org/model-b".into()];
+        let token = format!("ycg-{}", "a".repeat(64));
+        let mut prepared = prepare_catalog(
+            &home,
+            "https://yeschoy.com",
+            "model-a",
+            ClaudeTransport::DirectAnthropic,
+            Some(&token),
+            &ids,
+        )
+        .unwrap();
+        prepared.commit().unwrap();
+        assert!(!std::fs::read_to_string(&prepared.path)
+            .unwrap()
+            .contains(&token));
+        let mut settings: Value =
+            serde_json::from_slice(&std::fs::read(&prepared.path).unwrap()).unwrap();
+        assert_eq!(settings["env"]["ANTHROPIC_BASE_URL"], PROXY_BASE);
+        assert!(settings["env"]
+            .get("ANTHROPIC_DEFAULT_SONNET_MODEL")
+            .is_none());
+        assert_eq!(
+            settings["modelPicker"]["options"][1],
+            json!({
+                "model":"org/model-b",
+                "label":"org/model-b",
+                "description":"org/model-b",
+                "behavesAs":crate::tool_model_profile::CLAUDE_BEHAVES_AS
+            })
+        );
+        settings["model"] = "org/model-b".into();
+        std::fs::write(&prepared.path, serde_json::to_vec(&settings).unwrap()).unwrap();
+        assert!(prepared.validate_existing().is_ok());
+        assert!(prepared.validate_readback(true).is_err());
+        settings["modelPicker"]["options"][1]
+            .as_object_mut()
+            .unwrap()
+            .remove("behavesAs");
+        std::fs::write(&prepared.path, serde_json::to_vec(&settings).unwrap()).unwrap();
+        assert!(prepared.validate_existing().is_err());
+        settings["modelPicker"]["options"][1]["behavesAs"] =
+            crate::tool_model_profile::CLAUDE_BEHAVES_AS.into();
+        settings["model"] = "not-enrolled".into();
+        std::fs::write(&prepared.path, serde_json::to_vec(&settings).unwrap()).unwrap();
+        assert!(prepared.validate_existing().is_err());
+        std::fs::remove_dir_all(home).unwrap();
+    }
+
+    #[test]
+    fn ru054_claude_code_unknown_models_declare_behavior_without_changing_ids() {
+        ru042_claude_code_catalog_uses_real_picker_ids_and_member_defaults();
+    }
+
+    #[test]
+    fn ru056_claude_code_catalog_projects_each_models_native_effort_family() {
+        let bytes = render_catalog(
+            None,
+            PROXY_BASE,
+            "deepseek-v4-flash",
+            "synthetic-helper",
+            &[
+                "deepseek-v4-flash".into(),
+                "gpt-6-astra".into(),
+                "gpt-5.6-sol".into(),
+                "future-model".into(),
+            ],
+        )
+        .unwrap();
+        let settings: Value = serde_json::from_slice(&bytes).unwrap();
+        let options = settings["modelPicker"]["options"].as_array().unwrap();
+        let behaviors = options
+            .iter()
+            .map(|option| {
+                (
+                    option["model"].as_str().unwrap(),
+                    option["behavesAs"].as_str().unwrap(),
+                )
+            })
+            .collect::<std::collections::HashMap<_, _>>();
+        assert_eq!(behaviors["deepseek-v4-flash"], "claude-sonnet-4-6");
+        assert_eq!(behaviors["gpt-6-astra"], "claude-opus-5");
+        assert_eq!(behaviors["gpt-5.6-sol"], "claude-sonnet-5");
+        assert_eq!(
+            behaviors["future-model"],
+            crate::tool_model_profile::CLAUDE_BEHAVES_AS
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn claude_verification_executes_json_fixture_and_rejects_echo_error_and_failed_reply() {
+        use common::test_support::Script;
+        let valid = Script::new("[ \"$1\" = --settings ] || exit 11\n[ \"$3\" = --print ] || exit 12\nprintf '%s\\n' '{\"result\":\"YESCHOY_OK\",\"is_error\":false}'");
+        // The fixture never opens this path; no real HOME/config/credential lookup.
+        let settings = valid.path.with_file_name("synthetic-settings.json");
+        assert!(
+            verify_with_settings(&valid.installation(), "fixture-model", &settings)
+                .await
+                .is_ok()
+        );
+        for body in [
+            "printf 'Usage: claude [options]\\n'",
+            "printf '%s\\n' \"$*\"",
+            "printf '%s\\n' '{\"result\":\"reply YESCHOY_OK\",\"is_error\":false}'",
+            "printf '%s\\n' '{\"result\":\"YESCHOY_OK\",\"is_error\":true}'",
+            "printf '%s\\n' '{\"result\":\"YESCHOY_OK\",\"is_error\":false}'; exit 17",
+        ] {
+            let script = Script::new(body);
+            assert!(
+                verify_with_settings(&script.installation(), "fixture-model", &settings)
+                    .await
+                    .is_err(),
+                "{body}"
+            );
+        }
+    }
+
+    #[test]
+    fn claude_existing_validation_is_read_only_and_checks_all_owned_model_fields() {
+        let directory = common::temporary_working_directory("claude-readonly").unwrap();
+        let path = directory.join("settings.json");
+        let origin = "https://yeschoy.com";
+        let model = "fixture-model";
+        let helper = "synthetic-helper credential-helper claude_code";
+        let bytes = render(
+            Some(br#"{"permissions":{"allow":["Read"]}}"#),
+            origin,
+            model,
+            helper,
+        )
+        .unwrap();
+        std::fs::write(&path, &bytes).unwrap();
+        let prepared = Prepared {
+            transaction: FileTransaction::stage_with_snapshot(
+                path.clone(),
+                Some(bytes.clone()),
+                bytes.clone(),
+            )
+            .unwrap(),
+            path: path.clone(),
+            origin: origin.into(),
+            model: model.into(),
+            model_ids: vec![model.into()],
+            modern: false,
+            helper: helper.into(),
+        };
+        assert!(prepared.validate_existing().is_ok());
+        assert_eq!(std::fs::read(&path).unwrap(), bytes);
+        for key in [
+            "ANTHROPIC_MODEL",
+            "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+            "ANTHROPIC_DEFAULT_SONNET_MODEL",
+            "ANTHROPIC_DEFAULT_OPUS_MODEL",
+            "ANTHROPIC_API_KEY",
+        ] {
+            let mut value: Value = serde_json::from_slice(&bytes).unwrap();
+            value["env"][key] = "external-value".into();
+            let changed = serde_json::to_vec(&value).unwrap();
+            std::fs::write(&path, &changed).unwrap();
+            assert!(prepared.validate_existing().is_err(), "{key}");
+            assert_eq!(std::fs::read(&path).unwrap(), changed);
+        }
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
     fn render_uses_helper_and_preserves_unrelated_settings() {
         let before = br#"{"permissions":{"allow":["Read"]},"env":{"KEEP":"yes","ANTHROPIC_AUTH_TOKEN":"sk-old"}}"#;
         let bytes = render(
@@ -312,8 +609,21 @@ mod tests {
 
     #[test]
     fn chat_transport_uses_loopback_and_local_token() {
-        let token = new_local_token().unwrap();
         assert_eq!(PROXY_BASE, "http://127.0.0.1:15728/claude-code");
-        assert!(token.starts_with("ycg-") && token.len() == 68);
+        let settings: Value = serde_json::from_slice(
+            &render(
+                None,
+                PROXY_BASE,
+                "fixture-model",
+                "synthetic-helper credential-helper claude_code",
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            settings["apiKeyHelper"],
+            "synthetic-helper credential-helper claude_code"
+        );
+        assert!(settings["env"].get("ANTHROPIC_API_KEY").is_none());
     }
 }

@@ -1,0 +1,14 @@
+# BEGIN YESCHOY DOWNLOAD ORIGIN
+ergou.qzz.io {
+	reverse_proxy yeschoy-download-origin:8080 {
+		header_up -Authorization
+		header_up -Proxy-Authorization
+		header_up -Cookie
+	}
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+	}
+}
+# END YESCHOY DOWNLOAD ORIGIN

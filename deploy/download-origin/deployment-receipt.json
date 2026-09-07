@@ -1,0 +1,199 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-06 04:53:50 UTC",
+  "scope": "download-origin-bootstrap-only",
+  "authority": {
+    "releaseUnitId": "RU-044",
+    "releaseUnitHash": "sha256:ce103477edb5976ae73e90d129b97b67127def60580f1b8e26ba729e41dd3e2f",
+    "sourceCommit": "df10e7a0516c4125866daff5cf91b76178c89d02"
+  },
+  "host": "ergou.qzz.io",
+  "originIp": "43.134.77.210",
+  "os": "Ubuntu 24.04.4 LTS",
+  "ingress": {
+    "container": "web-caddy-1",
+    "startedAtBeforeAndAfter": "2026-08-15T03:28:26.377449982Z",
+    "beforeSha256": "300e920214bd373443785c7d541a45e363e376ea6f5e5b3f3f1f82b7af94c336",
+    "afterSha256": "aaa63d1459357d9cfa0c0e21dc86c13ed824fbf5fd178084b046975a9765e7e2",
+    "backupMode": "0600",
+    "backupDirectoryMode": "0700",
+    "certificateIssuer": "Let's Encrypt",
+    "reloadWithoutContainerRestart": true,
+    "priorRoutes": [
+      {
+        "host": "ergou.pro",
+        "route": "https://127.0.0.1/ with verified SNI",
+        "before": 200,
+        "after": 200
+      },
+      {
+        "host": "www.xhzg.fun",
+        "route": "http://127.0.0.1/ with Host",
+        "before": 200,
+        "after": 200
+      },
+      {
+        "host": "xhzg.fun",
+        "route": "http://127.0.0.1/ with Host",
+        "before": 301,
+        "after": 301
+      }
+    ]
+  },
+  "originContainer": {
+    "name": "yeschoy-download-origin",
+    "uid": 65532,
+    "gid": 65532,
+    "readonlyRoot": true,
+    "readonlyMounts": true,
+    "hostPortBindings": {},
+    "noNewPrivileges": true,
+    "capabilities": [
+      "NET_BIND_SERVICE"
+    ],
+    "imageId": "sha256:af32e97399febea808609119bb21544d0265c58a02836576e32a2d082c262c17"
+  },
+  "publicProbe": {
+    "host": "ergou.qzz.io",
+    "mode": "public-dns",
+    "tlsVerification": true,
+    "proxyEnvironmentIgnored": true,
+    "fixtureSha256": "aff684b2f45e557d88a8f4b7619ce5727612890b63170354f517c787c782474b",
+    "checks": [
+      {
+        "check": "health",
+        "status": 200,
+        "bytes": 164
+      },
+      {
+        "check": "stable-not-published",
+        "status": 204,
+        "bytes": 0
+      },
+      {
+        "check": "beta-not-published",
+        "status": 204,
+        "bytes": 0
+      },
+      {
+        "check": "download",
+        "status": 200,
+        "bytes": 189
+      },
+      {
+        "check": "resume",
+        "status": 206,
+        "bytes": 32
+      },
+      {
+        "check": "missing",
+        "status": 404,
+        "bytes": 9
+      },
+      {
+        "check": "hidden",
+        "status": 404,
+        "bytes": 9
+      },
+      {
+        "check": "traversal",
+        "status": 400,
+        "bytes": 155
+      },
+      {
+        "check": "encoded-traversal",
+        "status": 404,
+        "bytes": 9
+      },
+      {
+        "check": "directory",
+        "status": 404,
+        "bytes": 9
+      },
+      {
+        "check": "read-only",
+        "status": 405,
+        "bytes": 18
+      }
+    ]
+  },
+  "directOriginProbe": {
+    "host": "ergou.qzz.io",
+    "mode": "direct-origin",
+    "tlsVerification": true,
+    "proxyEnvironmentIgnored": true,
+    "fixtureSha256": "aff684b2f45e557d88a8f4b7619ce5727612890b63170354f517c787c782474b",
+    "checks": [
+      {
+        "check": "health",
+        "status": 200,
+        "bytes": 164
+      },
+      {
+        "check": "stable-not-published",
+        "status": 204,
+        "bytes": 0
+      },
+      {
+        "check": "beta-not-published",
+        "status": 204,
+        "bytes": 0
+      },
+      {
+        "check": "download",
+        "status": 200,
+        "bytes": 189
+      },
+      {
+        "check": "resume",
+        "status": 206,
+        "bytes": 32
+      },
+      {
+        "check": "missing",
+        "status": 404,
+        "bytes": 9
+      },
+      {
+        "check": "hidden",
+        "status": 404,
+        "bytes": 9
+      },
+      {
+        "check": "traversal",
+        "status": 404,
+        "bytes": 9
+      },
+      {
+        "check": "encoded-traversal",
+        "status": 404,
+        "bytes": 9
+      },
+      {
+        "check": "directory",
+        "status": 404,
+        "bytes": 9
+      },
+      {
+        "check": "read-only",
+        "status": 405,
+        "bytes": 18
+      }
+    ]
+  },
+  "configHashes": {
+    "compose.yaml": "3243b2b5f6587fba155c5dd80951d870d798b5ec1b395dafbf3281ee79a8b9fc",
+    "Caddyfile.origin": "285f10ab6116375cd9ed2e5edb447f9b1c95caf3c39a21111845b87427d1aeaf",
+    "Caddyfile.ingress": "ada2e745b9141e57f43e541a413f1da6b0491a437731d2a449c91713dc37aa3c",
+    "ingress.py": "45fe0fbc4b0c555f3aa6967c0c605223d6b9718dbdaf9341fad078f4c2d17fdc",
+    "public/health.json": "17d04da44148f6043ff258f522aa60709f98456cc3f393dcca03e3583169fd52"
+  },
+  "notPerformed": [
+    "DNS or Cloudflare control-panel changes",
+    "SSH password/key or firewall changes",
+    "NewAPI/database/account changes",
+    "client updater integration or installer publication",
+    "third-party installer redistribution",
+    "mainland multi-carrier no-proxy speed or real OS upgrade acceptance"
+  ]
+}

@@ -3,6 +3,7 @@ import {
   AlertCircle,
   ArrowRight,
   CheckCircle2,
+  Info,
   LoaderCircle,
   RefreshCw,
   ShieldCheck,
@@ -22,20 +23,32 @@ import { ModelPicker } from "./ModelPicker";
 import { connectionLabel, useConnections } from "./connections";
 import { RestoreConnection } from "./RestoreConnection";
 import { OpenConnection } from "./OpenConnection";
+import { RecentRequest } from "./RecentRequest";
+import { useInstallation } from "../installation/InstallationProvider";
+import { InstallationPanel } from "../installation/InstallationPanel";
+import {
+  installationActive,
+  SelectionRevision,
+  type InstallationIntent,
+} from "../installation/api";
 import { AppGlyph } from "../workbench/AppGlyph";
 import { useWorkbenchCopy } from "../workbench/copy";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import {
   activateDesktopTool,
+  sameModelBindings,
   scanActivationTargets,
   type ActivationTarget,
   type ActivationTargetScan,
   type ActivationToolId,
   type ToolActivationProjection,
+  type ModelBinding,
 } from "./activation";
 import { CONFIGURATION_LINES, createConfigurationPreview } from "./preview";
 import type { ConfigurationLineId, ConfigurationToolId } from "./preview";
 
 interface ConfigurationPreviewViewProps {
+  active?: boolean;
   initialDesktopAppId?: ActivationToolId;
   enableLocalActivation?: boolean;
   lineId: ConfigurationLineId;
@@ -106,11 +119,62 @@ const APPLICATIONS: readonly ApplicationChoice[] = [
   },
 ];
 
+export type ConnectionLifecycleMode =
+  | "graceful_desktop_restart"
+  | "new_terminal_session"
+  | "browser_launch";
+
+export function connectionLifecycleMode(
+  toolId: ActivationToolId,
+): ConnectionLifecycleMode {
+  if (toolId === "claude_desktop" || toolId === "codex_desktop")
+    return "graceful_desktop_restart";
+  if (toolId === "dsh_web") return "browser_launch";
+  return "new_terminal_session";
+}
+
+export function connectionLifecycleNote(
+  toolId: ActivationToolId,
+  name: string,
+) {
+  switch (connectionLifecycleMode(toolId)) {
+    case "graceful_desktop_restart":
+      return `若 ${name} 正在运行，更新接入时会先提醒你保存；确认后由助手请求应用正常退出，写入设置并重新打开。不会强制结束进程。`;
+    case "browser_launch":
+      return "更新接入会保存 DSH 配置；“打开使用”只会启动本地服务并在浏览器中打开，不会发送模型测试消息。";
+    case "new_terminal_session":
+      return "更新接入不会关闭正在使用的命令行会话；新设置从新开的终端会话生效。";
+  }
+}
+
+export function runningAppHandoff(
+  promptContext: string | null,
+  currentContext: string,
+) {
+  return {
+    nextPromptContext: null,
+    restart: promptContext !== null && promptContext === currentContext,
+  } as const;
+}
+
+export function recoveryRetryMessage(reasonCode: string): string | undefined {
+  switch (reasonCode) {
+    case "configuration_rollback_failed":
+      return "自动恢复上次未完成的设置时遇到问题，部分设置尚未恢复，本次没有继续写入。可点击“恢复原设置”后再试。";
+    case "credential_restore_failed":
+      return "自动恢复时无法清理旧的工具密钥，密钥设置尚未恢复，本次没有继续写入。请解锁系统钥匙串或凭据管理器；若仍失败，可点击“恢复原设置”。";
+    case "recovery_pending":
+      return "另一项接入或恢复操作正在进行。本次没有修改应用，请稍后直接重试；若一直出现，可使用“恢复原设置”。";
+    default:
+      return undefined;
+  }
+}
+
 const UX = {
   zh: {
     checking: "正在检查这台电脑…",
     checkAgain: "重新检查应用",
-    installed: "已找到 · 接入时验证",
+    installed: "已找到 · 可接入",
     installedShort: "已安装",
     chooseInstall: "选择要使用的安装位置",
     chooseInstallHint: "发现了多个安装。助手已优先选中可用版本，你也可以更换。",
@@ -120,15 +184,15 @@ const UX = {
     scanFailed: "暂时无法检查本机应用，请重新检查。",
     unavailable: "等待检查",
     version: "版本",
-    verifying: "正在写入设置，并用这个应用发送一条真实验证消息…",
+    verifying: "正在安全保存设置并启动本地连接，不会发送测试消息…",
     verifyingCodex:
-      "正在检查 Codex 设置、安全密钥和所选模型，成功后会自动打开应用…",
+      "正在安全保存 Codex 设置与密钥，并准备本地路由，完成后会自动打开应用…",
     verifyingDesktop:
-      "已打开 Claude Desktop。请在应用里发送一条消息，助手会确认真实连接，最多等待 90 秒。",
-    verifyingDsh: "正在启动 DSH，并通过它发送一条真实验证消息…",
+      "正在安全保存 Claude Desktop 设置并准备本地连接，不会等待模型回复。",
+    verifyingDsh: "正在保存 DSH 设置并启动本地工作台，不会发送测试消息…",
     readyTitle: "接入完成",
     readyBody:
-      "{{app}} 的设置已保存，所选模型已通过连接测试。重新打开应用后即可试用。",
+      "{{app}} 的设置已保存，本地连接已就绪。首次使用后的真实结果会显示在这里。",
     selectInstallFirst: "先选择安装位置",
     installFirst: "请先安装应用",
     updateFirst: "缺少运行组件",
@@ -151,7 +215,7 @@ const UX = {
     missingDuringSetup: "刚才选择的应用已找不到，请重新检查。",
     selectionRequired: "发现多个安装，请明确选择要使用的一个。",
     secureStoreFailed:
-      "系统安全存储不可用，因此没有保存密钥，也没有改动应用设置。",
+      "系统安全存储暂时不可用。请解锁钥匙串或凭据管理器，并检查本机接入状态后重试。",
     externalOverride:
       "系统里已有更高优先级的设置。移除该设置后再试，原配置没有改动。",
     unsupportedProfile: "这个应用的运行方式暂不能自动配置，原设置没有改动。",
@@ -172,7 +236,7 @@ const UX = {
     priceUnavailable: "这个模型暂时没有可核验的价格对比。",
     saveInputOutput: "输入省 {{input}} · 输出省 {{output}}",
     finishChoice: "完成接入",
-    finishHint: "写入应用并发送测试消息；验证失败会恢复原设置。",
+    finishHint: "安全写入并读回应用设置；不会发送收费的测试消息。",
     connectionDetails: "查看连接详情",
     directConnection: "直接连接",
     automaticCompatibility: "自动兼容",
@@ -180,7 +244,7 @@ const UX = {
   en: {
     checking: "Checking this computer…",
     checkAgain: "Check applications again",
-    installed: "Found",
+    installed: "Found · Ready to configure",
     installedShort: "Installed",
     chooseInstall: "Choose the installation to use",
     chooseInstallHint:
@@ -192,16 +256,16 @@ const UX = {
     unavailable: "Waiting for check",
     version: "Version",
     verifying:
-      "Updating settings and sending a real verification message through this application…",
+      "Saving settings securely and starting the local connection without sending a test prompt…",
     verifyingCodex:
-      "Checking Codex settings, secure credentials, and the selected model, then opening the app…",
+      "Checking Codex settings, secure credentials, and the local route, then opening the app…",
     verifyingDesktop:
-      "Claude Desktop is open. Send a message there so the assistant can confirm the real connection. This waits up to 90 seconds.",
+      "Saving Claude Desktop settings and preparing its local connection without waiting for a model reply.",
     verifyingDsh:
-      "Starting DSH and sending a real verification message through it…",
+      "Saving DSH settings and starting its local workspace without sending a test prompt…",
     readyTitle: "Connection complete",
     readyBody:
-      "{{app}} settings are saved and the selected model passed a connection check. Reopen the app to try it.",
+      "{{app}} settings are saved and the local connection is ready. The first real-use result will appear here.",
     selectInstallFirst: "Choose an installation first",
     installFirst: "Install the application first",
     updateFirst: "Runtime component missing",
@@ -238,7 +302,7 @@ const UX = {
     builderKicker: "Model and connection",
     builderTitle: "Choose it, then use it",
     builderIntro:
-      "Choose a model and network line. The assistant configures, verifies, and opens the app.",
+      "Choose a model and network line. The assistant saves the local configuration and opens the app.",
     modelChoice: "Choose a model",
     modelQuestion: "Which AI do you want to use?",
     lineChoice: "Choose a connection line",
@@ -253,7 +317,7 @@ const UX = {
     saveInputOutput: "Save {{input}} on input · {{output}} on output",
     finishChoice: "Finish setup",
     finishHint:
-      "Update the app and send a test message. Failed verification restores the previous settings.",
+      "Write and read back settings safely without sending a billable test message.",
     connectionDetails: "View connection details",
     directConnection: "Direct connection",
     automaticCompatibility: "Automatic compatibility",
@@ -278,6 +342,10 @@ function previewTool(toolId: ActivationToolId): ConfigurationToolId {
   return "claude";
 }
 
+function usesNewTerminalSession(toolId: ActivationToolId) {
+  return ["claude_code", "pi", "hermes", "openclaw"].includes(toolId);
+}
+
 function targetTone(target?: ActivationTarget) {
   if (!target) return "pending";
   if (target.status === "available") return "ready";
@@ -286,6 +354,7 @@ function targetTone(target?: ActivationTarget) {
 }
 
 export function ConfigurationPreviewView({
+  active = true,
   initialDesktopAppId,
   enableLocalActivation = false,
   lineId,
@@ -294,6 +363,8 @@ export function ConfigurationPreviewView({
   onOpenAccount,
   onOpenTools,
 }: ConfigurationPreviewViewProps) {
+  const installer = useInstallation();
+  const installerRun = installer?.run;
   const { t, i18n } = useTranslation();
   const c = useWorkbenchCopy();
   const ux = i18n.resolvedLanguage?.startsWith("en") ? UX.en : UX.zh;
@@ -303,6 +374,8 @@ export function ConfigurationPreviewView({
   );
   const [selectedModelId, setSelectedModelId] = useState("");
   const [billingGroup, setBillingGroup] = useState("");
+  const [modelSet, setModelSet] = useState<ModelBinding[]>([]);
+  const [defaultModelId, setDefaultModelId] = useState("");
   const restoredSelection = useRef<string | null>(null);
   const applyInFlight = useRef(false);
   const [showApplications, setShowApplications] = useState(false);
@@ -321,6 +394,9 @@ export function ConfigurationPreviewView({
   const [activation, setActivation] = useState<ToolActivationProjection | null>(
     null,
   );
+  const [restartPromptContext, setRestartPromptContext] = useState<
+    string | null
+  >(null);
   const [scanPhase, setScanPhase] = useState<ScanPhase>("loading");
   const [targetScan, setTargetScan] = useState<ActivationTargetScan | null>(
     null,
@@ -329,6 +405,52 @@ export function ConfigurationPreviewView({
     Partial<Record<ActivationToolId, string>>
   >({});
   const targetScanSequence = useRef(0);
+  const installationRevision = useRef(new SelectionRevision());
+  const installationConsent = useRef<{
+    jobId: string;
+    revision: number;
+  } | null>(null);
+  const installationObserved = useRef("");
+  const [handoff, setHandoff] = useState<{
+    jobId: string;
+    installationId: string;
+    revision: number;
+  } | null>(null);
+  const [installationChanged, setInstallationChanged] = useState(false);
+  const [installationAttempt, setInstallationAttempt] = useState(0);
+
+  const anotherInstallationActive =
+    !!installer?.progress &&
+    installer.progress.toolId !== activationToolId &&
+    installationActive(installer.progress);
+  const installationWorking = installer?.working;
+  const installationTool = installer?.progress?.toolId;
+  const inspectedInstallationContext = useRef("");
+
+  useEffect(() => {
+    if (!enableLocalActivation || !active || !installerRun) {
+      inspectedInstallationContext.current = "";
+      return;
+    }
+    if (installationWorking || anotherInstallationActive) return;
+    // One inspection per visit/selection, plus recovery when the global job
+    // belongs to another app. Do not inspect again just because our reply lands.
+    if (
+      inspectedInstallationContext.current === activationToolId &&
+      installationTool === activationToolId
+    )
+      return;
+    inspectedInstallationContext.current = activationToolId;
+    void installerRun(activationToolId, "inspect");
+  }, [
+    activationToolId,
+    enableLocalActivation,
+    active,
+    installerRun,
+    installationWorking,
+    anotherInstallationActive,
+    installationTool,
+  ]);
 
   const application =
     APPLICATIONS.find((candidate) => candidate.id === activationToolId) ??
@@ -336,6 +458,9 @@ export function ConfigurationPreviewView({
   const savedConnection = connections?.connections.find(
     (item) => item.toolId === activationToolId,
   );
+  const connectionStateUnavailable =
+    !!connections?.loading ||
+    (!!connections?.error && connections.connections.length === 0);
   const toolId = previewTool(activationToolId);
   const target = targetScan?.targets.find(
     (candidate) => candidate.toolId === activationToolId,
@@ -429,8 +554,7 @@ export function ConfigurationPreviewView({
       session.loading ||
       session.lastError ||
       applyInFlight.current ||
-      connections?.loading ||
-      connections?.error
+      connectionStateUnavailable
     )
       return;
     if (!models.length && !savedConnection?.modelId) return;
@@ -447,6 +571,8 @@ export function ConfigurationPreviewView({
         ? savedConnection.billingGroup
         : chooseBillingGroup(models[0], ""),
     );
+    setModelSet(existing ? (savedConnection.models ?? []) : []);
+    setDefaultModelId(existing ? savedConnection.modelId : "");
     if (existing && savedConnection.lineId)
       onLineChange(savedConnection.lineId);
   }, [
@@ -456,13 +582,44 @@ export function ConfigurationPreviewView({
     session.lastError,
     models,
     savedConnection,
-    connections?.loading,
-    connections?.error,
+    connectionStateUnavailable,
     onLineChange,
   ]);
   useEffect(() => {
     if (savedConnection?.state === "not_connected") setActivation(null);
   }, [savedConnection?.state]);
+
+  const submittedModels: ModelBinding[] = modelSet.length
+    ? modelSet
+    : selectedModelId && billingGroup
+      ? [{ modelId: selectedModelId, billingGroup }]
+      : [];
+  const defaultBinding =
+    submittedModels.find((m) => m.modelId === defaultModelId) ??
+    submittedModels[0];
+  const bindingsAvailable =
+    submittedModels.length > 0 &&
+    submittedModels.every((m) =>
+      models
+        .find((a) => a.id === m.modelId)
+        ?.billing?.groups.some((g) => g.id === m.billingGroup),
+    );
+  const pendingModelEdit =
+    modelSet.length > 0 &&
+    !!selectedModel &&
+    !!selectedBillingGroup &&
+    !modelSet.some(
+      (m) => m.modelId === selectedModelId && m.billingGroup === billingGroup,
+    );
+  const addCurrentModel = () => {
+    if (!selectedModel || !selectedBillingGroup) return;
+    setModelSet((current) => [
+      ...current.filter((m) => m.modelId !== selectedModelId),
+      { modelId: selectedModelId, billingGroup },
+    ]);
+    if (!modelSet.length) setDefaultModelId(selectedModelId);
+    resetResult();
+  };
 
   const contextKey = JSON.stringify([
     session.projection?.account.username ?? "",
@@ -471,13 +628,22 @@ export function ConfigurationPreviewView({
     billingGroup,
     lineId,
     selectedInstallationId,
+    submittedModels,
+    defaultBinding?.modelId,
   ]);
   const currentContext = useRef(contextKey);
   currentContext.current = contextKey;
 
+  useEffect(() => {
+    if (restartPromptContext && restartPromptContext !== contextKey) {
+      setRestartPromptContext(null);
+    }
+  }, [contextKey, restartPromptContext]);
+
   const resetResult = () => {
     setApplyPhase("idle");
     setActivation(null);
+    setRestartPromptContext(null);
   };
 
   const targetCanActivate =
@@ -486,21 +652,75 @@ export function ConfigurationPreviewView({
     ["available", "selection_required"].includes(target.status) &&
     !!selectedInstallation?.supported;
 
-  const apply = async () => {
+  const intentReady =
+    signedIn &&
+    !!defaultBinding &&
+    bindingsAvailable &&
+    !pendingModelEdit &&
+    restoredSelection.current === selectionKey &&
+    !session.loading &&
+    !session.lastError &&
+    !connectionStateUnavailable &&
+    !connections?.restoring;
+  const installSelectionRevision = installationRevision.current.observe(
+    JSON.stringify([
+      active,
+      session.projection?.status,
+      session.projection?.account.username,
+      activationToolId,
+      lineId,
+      selectedModelId,
+      billingGroup,
+      submittedModels,
+      defaultBinding?.modelId,
+      defaultBinding?.billingGroup,
+    ]),
+  );
+  const installIntent = (): InstallationIntent | undefined =>
+    intentReady && defaultBinding
+      ? {
+          lineId,
+          modelId: defaultBinding.modelId,
+          billingGroup: defaultBinding.billingGroup,
+          models: submittedModels,
+        }
+      : undefined;
+  const startInstallation = async (confirm = false) => {
+    if (!installer || installer.working) return;
+    const intent = installIntent();
+    const revision = installSelectionRevision;
+    installationConsent.current = null;
+    setInstallationChanged(false);
+    const progress = await installer.run(
+      activationToolId,
+      confirm ? "confirm" : "start",
+      intent,
+    );
+    if (intent && progress?.jobId && progress.toolId === activationToolId) {
+      installationConsent.current = { jobId: progress.jobId, revision };
+      setInstallationAttempt((value) => value + 1);
+    }
+  };
+
+  const apply = async (
+    installationJobId?: string,
+    restartRunningApp = false,
+  ) => {
     if (!signedIn) {
       onOpenAccount();
       return;
     }
     if (
-      !selectedModelId ||
-      !selectedBillingGroup ||
+      !defaultBinding ||
+      !bindingsAvailable ||
+      pendingModelEdit ||
+      restoredSelection.current !== selectionKey ||
       !targetCanActivate ||
       !selectedInstallationId ||
       applyInFlight.current ||
       session.loading ||
       session.lastError ||
-      connections?.loading ||
-      connections?.error
+      connectionStateUnavailable
     )
       return;
     const submittedContext = currentContext.current;
@@ -509,8 +729,8 @@ export function ConfigurationPreviewView({
       key: submittedContext,
       account: session.projection?.account.username ?? "",
       app: application.displayName,
-      model: selectedModelId,
-      group: billingGroup,
+      model: defaultBinding.modelId,
+      group: defaultBinding.billingGroup,
       line: lineId,
     });
     setApplyPhase("applying");
@@ -519,19 +739,26 @@ export function ConfigurationPreviewView({
       const result = await activateDesktopTool({
         lineId,
         toolId: activationToolId,
-        modelId: selectedModelId,
+        modelId: defaultBinding.modelId,
         installationId: selectedInstallationId,
-        billingGroup,
+        billingGroup: defaultBinding.billingGroup,
+        models: submittedModels,
+        ...(installationJobId ? { installationJobId } : {}),
+        ...(restartRunningApp ? { restartRunningApp: true } : {}),
       });
       setActivation(result);
+      setRestartPromptContext(
+        result.status === "application_running" ? submittedContext : null,
+      );
     } catch {
+      setRestartPromptContext(null);
       setActivation({
         requestId: "local",
         schemaVersion: 3,
         status: "configuration_failed",
         toolId: activationToolId,
-        modelId: selectedModelId,
-        billingGroup,
+        modelId: defaultBinding.modelId,
+        billingGroup: defaultBinding.billingGroup,
         observedAtEpochMs: Date.now(),
         reasonCode: "invalid_response",
       });
@@ -544,21 +771,49 @@ export function ConfigurationPreviewView({
 
   const resultIsCurrent = resultContext?.key === contextKey;
   const activationSucceeded = activation?.status === "ready";
+  const activationConfigured =
+    activationSucceeded ||
+    (activation?.status === "launch_failed" &&
+      activation.reasonCode !== "desktop_state_unavailable");
+  const activationAttention =
+    activation?.status === "application_running" ||
+    (activation?.status === "launch_failed" && activationConfigured);
   const configured =
     applyPhase !== "applying" &&
     (activation
-      ? activationSucceeded && resultIsCurrent
+      ? activationConfigured && resultIsCurrent
       : savedConnection?.state === "connected" &&
-        savedConnection.modelId === selectedModelId &&
+        savedConnection.modelId === defaultBinding?.modelId &&
         savedConnection.lineId === lineId &&
-        savedConnection.billingGroup === billingGroup);
+        savedConnection.billingGroup === defaultBinding?.billingGroup &&
+        sameModelBindings(
+          savedConnection.models ?? [
+            {
+              modelId: savedConnection.modelId,
+              billingGroup: savedConnection.billingGroup,
+            },
+          ],
+          submittedModels,
+        ));
   const activationResult = (() => {
     switch (activation?.status) {
       case "ready":
-        return ux.readyBody.replace(
-          "{{app}}",
-          resultContext?.app ?? application.displayName,
-        );
+        if (
+          activation.schemaVersion === 3 &&
+          activation.reasonCode === "tool_request_verified"
+        )
+          return i18n.resolvedLanguage?.startsWith("en")
+            ? `${resultContext?.app ?? application.displayName}'s default model passed the connection test. Reopen the app after first-time setup or adding a model; configured models can then be switched inside the app.`
+            : `${resultContext?.app ?? application.displayName} 的默认模型已通过连接测试。首次或新增模型后可能需要重新打开应用；之后可在应用内切换已配置的模型。`;
+        if (usesNewTerminalSession(activationToolId))
+          return `${resultContext?.app ?? application.displayName} 的设置和本地连接已经就绪。正在运行的命令行会话不会被中断；请新开一个会话，或点击“打开终端使用”。第一次真实请求的结果会显示在“最近连接结果”里。`;
+        if (activationToolId === "codex_desktop")
+          return `${resultContext?.app ?? application.displayName} 的设置和野菜本地路由已经就绪。${(activation.models?.length ?? 1) > 1 ? "常用模型已一起配置。" : ""}Codex 仍可显示你的官方登录账号，那只是登录身份，不代表模型请求走官方计费。第一次真实请求的结果会显示在“最近野菜中转记录”里；看到完整模型 ID，才表示这次请求确实经过野菜中转。`;
+        return `${resultContext?.app ?? application.displayName} 的设置和本地连接已经就绪。${(activation.models?.length ?? 1) > 1 ? "常用模型已一起配置。" : ""}请在应用中正常使用；第一次真实请求的结果会显示在“最近连接结果”里。`;
+      case "application_running":
+        return activation.reasonCode === "graceful_restart_required"
+          ? `${resultContext?.app ?? application.displayName} 还没有正常退出，本次没有修改设置。请先在应用里完成保存或退出确认，再继续。`
+          : `${resultContext?.app ?? application.displayName} 正在运行。请先保存未完成内容，再确认由助手正常退出并重新打开；不会强制结束进程。`;
       case "signed_out":
         return c.setupSignedOut;
       case "tool_not_found":
@@ -578,9 +833,34 @@ export function ConfigurationPreviewView({
       case "secure_storage_unavailable":
         return ux.secureStoreFailed;
       case "launch_failed":
-        return ux.launchFailed;
+        if (activation.reasonCode === "desktop_state_unavailable")
+          return "暂时无法安全确认应用是否正在运行，本次没有修改设置。请手动退出应用后再试。";
+        if (activation.reasonCode === "desktop_launch_access_denied")
+          return "设置已经保存，但系统阻止了自动打开。请从系统菜单手动打开应用。";
+        if (activation.reasonCode === "desktop_launch_target_changed")
+          return "设置已经保存，但应用安装位置刚刚发生变化。请重新检查应用后手动打开。";
+        if (
+          [
+            "desktop_launch_activation_unavailable",
+            "desktop_launch_identity_invalid",
+          ].includes(activation.reasonCode)
+        )
+          return "设置已经保存，但暂时无法自动打开这个商店应用。请先从开始菜单打开一次。";
+        return "设置已经保存，但没有自动打开应用。请手动打开；不需要重新接入。";
       case "verification_failed":
         switch (activation.reasonCode) {
+          case "tool_start_failed":
+            return "应用没有启动成功，接入设置已恢复。请确认应用安装完整且可以手动打开。";
+          case "tool_request_timed_out":
+            return "应用的连接测试超时，接入设置已恢复。请稍后重试。";
+          case "tool_wait_failed":
+          case "tool_output_read_failed":
+          case "tool_output_limit_exceeded":
+            return "未能读取应用的测试结果，接入设置已恢复。请重新打开助手后再试。";
+          case "tool_response_empty":
+          case "tool_response_invalid":
+          case "tool_request_failed":
+            return "应用没有完成有效的模型回复，接入设置已恢复。请检查所选模型与分组后再试。";
           case "waiting_for_desktop_request":
             return ux.desktopTimedOut;
           case "credential_helper_failed":
@@ -604,12 +884,18 @@ export function ConfigurationPreviewView({
       case "server_unavailable":
         return c.setupServerUnavailable;
       case "configuration_failed":
+        {
+          const recoveryMessage = recoveryRetryMessage(activation.reasonCode);
+          if (recoveryMessage) return recoveryMessage;
+        }
+        if (activation.reasonCode === "installation_confirmation_required")
+          return "安装已完成，但当前选择需要重新确认。请确认账户和模型后再点接入；这次没有改动应用设置。";
+        if (activation.reasonCode === "assistant_shutting_down")
+          return "正在退出助手，本次接入已停止；已写入的设置会先恢复。";
         if (activation.reasonCode === "account_changed")
           return "账户已切换，本次接入已停止。请确认当前账户后重新接入。";
         if (activation.reasonCode === "invalid_response")
           return "暂时无法确认接入结果。请先检查本机接入状态，避免连续重复提交。";
-        if (activation.reasonCode === "recovery_pending")
-          return "上次接入尚有待恢复的设置。先点击“恢复原设置”，再重新接入。";
         if (activation.reasonCode === "recovery_storage_unavailable")
           return "暂时无法安全保存原设置，这次没有修改应用。请确认系统钥匙串或凭据管理器可用后重试。";
         if (activation.reasonCode === "recovery_receipt_failed")
@@ -621,6 +907,83 @@ export function ConfigurationPreviewView({
         return "";
     }
   })();
+
+  const installProgress = installer?.progress;
+  useEffect(() => {
+    if (
+      !installProgress ||
+      installProgress.toolId !== activationToolId ||
+      installProgress.phase !== "installed"
+    )
+      return;
+    if (installationObserved.current !== installProgress.jobId) {
+      installationObserved.current = installProgress.jobId;
+      void refreshTargets();
+    }
+    const consent = installationConsent.current;
+    if (!consent || consent.jobId !== installProgress.jobId) return;
+    installationConsent.current = null;
+    if (consent.revision !== installSelectionRevision || !active) {
+      setInstallationChanged(true);
+      return;
+    }
+    if (
+      ["created", "confirmed"].includes(installProgress.disposition) &&
+      installProgress.installationId
+    ) {
+      setHandoff({
+        jobId: installProgress.jobId,
+        installationId: installProgress.installationId,
+        revision: consent.revision,
+      });
+    }
+  }, [
+    installProgress,
+    activationToolId,
+    installSelectionRevision,
+    active,
+    installationAttempt,
+    refreshTargets,
+  ]);
+  useEffect(() => {
+    if (!handoff) return;
+    if (handoff.revision !== installSelectionRevision || !active) {
+      setHandoff(null);
+      setInstallationChanged(true);
+      return;
+    }
+    if (!intentReady || scanPhase !== "ready") return;
+    if (
+      target?.installations.length !== 1 ||
+      selectedInstallationId !== handoff.installationId ||
+      !targetCanActivate
+    ) {
+      setHandoff(null);
+      setInstallationChanged(true);
+      return;
+    }
+    setHandoff(null);
+    void apply(handoff.jobId);
+  }, [
+    handoff,
+    installSelectionRevision,
+    active,
+    intentReady,
+    scanPhase,
+    selectedInstallationId,
+    targetCanActivate,
+    target?.installations.length,
+  ]);
+
+  const missingApplication = target?.status === "not_found";
+  const canBeginInstallation =
+    missingApplication &&
+    !!installer &&
+    intentReady &&
+    !installer.working &&
+    !installationActive(installProgress ?? null) &&
+    installProgress?.toolId === activationToolId &&
+    ["automatic", "system_assisted"].includes(installProgress.mode);
 
   const targetSummary = (() => {
     if (scanPhase === "loading") return ux.checking;
@@ -643,13 +1006,14 @@ export function ConfigurationPreviewView({
           : ux.verifying;
   const canApply =
     signedIn &&
-    selectedModelId !== "" &&
-    !!selectedBillingGroup &&
+    !!defaultBinding &&
+    bindingsAvailable &&
+    !pendingModelEdit &&
+    restoredSelection.current === selectionKey &&
     targetCanActivate &&
     !session.loading &&
     !session.lastError &&
-    !connections?.loading &&
-    !connections?.error;
+    !connectionStateUnavailable;
   const actionLabel = !signedIn
     ? c.signInFirst
     : applyPhase === "applying"
@@ -671,7 +1035,11 @@ export function ConfigurationPreviewView({
                     ? "先选择模型"
                     : !selectedBillingGroup
                       ? "先选择计费分组"
-                      : c.connectNow;
+                      : pendingModelEdit
+                        ? "先加入常用列表"
+                        : !bindingsAvailable
+                          ? "检查常用模型与分组"
+                          : c.connectNow;
 
   const missingModel =
     signedIn &&
@@ -850,6 +1218,8 @@ export function ConfigurationPreviewView({
                       setActivationToolId(candidate.id);
                       setSelectedModelId("");
                       setBillingGroup("");
+                      setModelSet([]);
+                      setDefaultModelId("");
                       restoredSelection.current = null;
                       setShowApplications(false);
                       appSwitchButton.current?.focus();
@@ -948,6 +1318,26 @@ export function ConfigurationPreviewView({
           </details>
         </div>
 
+        {(missingApplication ||
+          (installProgress?.toolId === activationToolId &&
+            !!installProgress.jobId &&
+            !configured)) && (
+          <InstallationPanel
+            tool={activationToolId}
+            name={application.displayName}
+            canConnect={!!intentReady}
+            onStart={() => void startInstallation()}
+            onConfirm={() => void startInstallation(true)}
+            onRefresh={() => void refreshTargets()}
+            selectionChanged={
+              installationChanged ||
+              (!!installationConsent.current &&
+                installationConsent.current.revision !==
+                  installSelectionRevision)
+            }
+          />
+        )}
+
         <section
           className="connection-builder"
           aria-labelledby="connection-builder-title"
@@ -1012,6 +1402,14 @@ export function ConfigurationPreviewView({
                     onChange={(id) => {
                       restoredSelection.current = selectionKey;
                       setSelectedModelId(id);
+                      const saved = modelSet.find((m) => m.modelId === id);
+                      setBillingGroup(
+                        saved?.billingGroup ??
+                          chooseBillingGroup(
+                            models.find((m) => m.id === id),
+                            "",
+                          ),
+                      );
                       resetResult();
                     }}
                     disabled={session.loading || applyPhase === "applying"}
@@ -1032,7 +1430,7 @@ export function ConfigurationPreviewView({
                           activationToolId,
                           selectedModel.supportedEndpointTypes ?? [],
                         ) === "direct"
-                          ? ux.directConnection
+                          ? "原生接口"
                           : ux.automaticCompatibility}
                       </span>
                     ) : null}
@@ -1107,6 +1505,99 @@ export function ConfigurationPreviewView({
             </section>
           </div>
 
+          {signedIn && (
+            <section className="model-set-editor" aria-label="常用模型">
+              <header>
+                <div>
+                  <h3>常用模型</h3>
+                  <p>加入你会用的模型，每个模型单独选择计费分组。</p>
+                </div>
+                <button
+                  type="button"
+                  className="subtle-button"
+                  onClick={addCurrentModel}
+                  disabled={
+                    !selectedModel ||
+                    !selectedBillingGroup ||
+                    applyPhase === "applying" ||
+                    session.loading ||
+                    !!session.lastError ||
+                    (modelSet.length >= 200 &&
+                      !modelSet.some((m) => m.modelId === selectedModelId))
+                  }
+                >
+                  {modelSet.some((m) => m.modelId === selectedModelId)
+                    ? "更新这个模型的分组"
+                    : "加入常用模型"}
+                </button>
+              </header>
+              {modelSet.length ? (
+                <ul>
+                  {modelSet.map((m) => {
+                    const available = models
+                      .find((a) => a.id === m.modelId)
+                      ?.billing?.groups.some((g) => g.id === m.billingGroup);
+                    return (
+                      <li key={m.modelId} data-unavailable={!available}>
+                        <label>
+                          <input
+                            type="radio"
+                            name="default-model"
+                            checked={defaultBinding?.modelId === m.modelId}
+                            disabled={applyPhase === "applying"}
+                            onChange={() => {
+                              setDefaultModelId(m.modelId);
+                              resetResult();
+                            }}
+                            aria-label={`默认模型 ${m.modelId}`}
+                          />
+                          <span>
+                            <code>{m.modelId}</code>
+                            <small>
+                              {groupLabel(m.billingGroup)}
+                              {!available && " · 当前不可用，请重新选择或移除"}
+                            </small>
+                          </span>
+                        </label>
+                        <span className="model-default-label">
+                          {defaultBinding?.modelId === m.modelId ? "默认" : ""}
+                        </span>
+                        <button
+                          type="button"
+                          className="text-button"
+                          disabled={applyPhase === "applying"}
+                          aria-label={`移除 ${m.modelId}`}
+                          onClick={() => {
+                            setModelSet((items) =>
+                              items.filter((x) => x.modelId !== m.modelId),
+                            );
+                            resetResult();
+                          }}
+                        >
+                          移除
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <p>也可以只接入上面选中的一个模型，之后再添加。</p>
+              )}
+              {pendingModelEdit && (
+                <p className="selection-warning" role="status">
+                  上方的选择尚未加入列表。点击“
+                  {modelSet.some((m) => m.modelId === selectedModelId)
+                    ? "更新这个模型的分组"
+                    : "加入常用模型"}
+                  ”后，再确认接入。
+                </p>
+              )}
+              <small>
+                同一模型保留一个计费分组。已有列表里的模型可在应用内切换；新增模型、修改默认模型或分组后，需要更新接入。
+              </small>
+            </section>
+          )}
+
           <details
             ref={networkDetails}
             className="connection-choice-card line-selector network-choice"
@@ -1179,7 +1670,7 @@ export function ConfigurationPreviewView({
               </h2>
               <p>
                 {configured
-                  ? "这些设置已经保存，可以直接打开使用。换模型或分组后，再确认接入。"
+                  ? "这些设置已经保存。日常换模型可在应用内选择；修改常用列表后，再更新接入。"
                   : ux.finishHint}
               </p>
             </div>
@@ -1194,16 +1685,22 @@ export function ConfigurationPreviewView({
             <span>
               <small>{t("yeschoyConfiguration.modelId")}</small>
               <strong className="selection-model-id">
-                {selectedModelId || c.chooseModel}
+                {defaultBinding?.modelId || c.chooseModel}
               </strong>
             </span>
             <ArrowRight aria-hidden="true" />
             <span>
               <small>计费分组</small>
               <strong>
-                {billingGroup ? groupLabel(billingGroup) : "请选择分组"}
-                {selectedBillingGroup?.ratio != null
-                  ? ` · ${selectedBillingGroup.ratio}×`
+                {defaultBinding
+                  ? groupLabel(defaultBinding.billingGroup)
+                  : "请选择分组"}
+                {models
+                  .find((m) => m.id === defaultBinding?.modelId)
+                  ?.billing?.groups.find(
+                    (g) => g.id === defaultBinding?.billingGroup,
+                  )?.ratio != null
+                  ? ` · ${models.find((m) => m.id === defaultBinding?.modelId)?.billing?.groups.find((g) => g.id === defaultBinding?.billingGroup)?.ratio}×`
                   : ""}
               </strong>
             </span>
@@ -1214,43 +1711,87 @@ export function ConfigurationPreviewView({
             </span>
           </div>
 
-          {configured && savedConnection && (
-            <OpenConnection
-              connection={savedConnection}
-              name={application.displayName}
-              onAdjust={() => {
-                void refreshTargets();
-                void connections?.refresh();
-                appSwitchButton.current?.scrollIntoView({ block: "center" });
-                appSwitchButton.current?.focus();
-              }}
-            />
+          {submittedModels.length > 1 && (
+            <div className="model-set-summary">
+              <strong>{submittedModels.length} 个常用模型</strong>
+              <ul>
+                {submittedModels.map((m) => (
+                  <li key={m.modelId}>
+                    <code>{m.modelId}</code>
+                    <small>
+                      {groupLabel(m.billingGroup)}
+                      {m.modelId === defaultBinding?.modelId ? " · 默认" : ""}
+                    </small>
+                  </li>
+                ))}
+              </ul>
+              <small>
+                接入时安全配置全部模型；每个模型的真实连接结果在首次使用后显示。
+              </small>
+            </div>
           )}
-          <button
-            className="primary-action setup-apply"
-            type="button"
-            onClick={() => void apply()}
-            disabled={
-              (signedIn && !canApply) ||
-              applyPhase === "applying" ||
-              !!connections?.restoring ||
-              !!connections?.opening
-            }
-            data-testid="configuration-apply-action"
+          <div
+            className={`connection-action-deck${configured ? " is-configured" : ""}`}
           >
-            {applyPhase === "applying" ? (
-              <LoaderCircle className="is-spinning" aria-hidden="true" />
-            ) : (
-              <ArrowRight aria-hidden="true" />
+            {configured && savedConnection && (
+              <OpenConnection
+                connection={savedConnection}
+                name={application.displayName}
+                disabled={!!connections?.restoring}
+                onAdjust={() => {
+                  appSwitchButton.current?.scrollIntoView({ block: "center" });
+                  appSwitchButton.current?.focus();
+                }}
+              />
             )}
-            {configured ? "重新接入" : actionLabel}
-          </button>
+            <button
+              className={`${configured ? "secondary-action" : "primary-action"} setup-apply`}
+              type="button"
+              onClick={() =>
+                canBeginInstallation ? void startInstallation() : void apply()
+              }
+              disabled={
+                (signedIn && !canApply && !canBeginInstallation) ||
+                applyPhase === "applying" ||
+                !!connections?.restoring
+              }
+              data-testid="configuration-apply-action"
+            >
+              {applyPhase === "applying" ? (
+                <LoaderCircle className="is-spinning" aria-hidden="true" />
+              ) : configured ? (
+                <RefreshCw aria-hidden="true" />
+              ) : (
+                <ArrowRight aria-hidden="true" />
+              )}
+              {configured
+                ? "更新接入设置"
+                : canBeginInstallation
+                  ? "安装并接入"
+                  : actionLabel}
+            </button>
+          </div>
+          {configured && (
+            <p
+              className="connection-lifecycle-note"
+              data-lifecycle={connectionLifecycleMode(activationToolId)}
+            >
+              <Info aria-hidden="true" />
+              <span>
+                <strong>打开使用不会改设置。</strong>
+                {connectionLifecycleNote(
+                  activationToolId,
+                  application.displayName,
+                )}
+              </span>
+            </p>
+          )}
         </div>
 
-        {savedConnection?.requiresBackground && (
+        {(signedIn || savedConnection?.requiresBackground) && (
           <p className="background-note">
             <ShieldCheck />
-            使用时请保持野菜助手运行。关闭窗口会最小化；完全退出会中断连接。
+            使用时请保持野菜助手运行。关闭窗口可选择继续后台运行；完全退出会中断模型连接，不会锁定你的应用，随时可以恢复原设置。
           </p>
         )}
         <details className="desktop-technical-details connection-details">
@@ -1259,7 +1800,7 @@ export function ConfigurationPreviewView({
             <div>
               <dt>{t("yeschoyConfiguration.modelId")}</dt>
               <dd>
-                <code>{selectedModelId || c.chooseModel}</code>
+                <code>{defaultBinding?.modelId || c.chooseModel}</code>
               </dd>
             </div>
             <div>
@@ -1282,11 +1823,14 @@ export function ConfigurationPreviewView({
         </details>
 
         {applyPhase === "applying" && (
-          <div className="setup-progress" role="status">
+          <div className="setup-progress" role="status" aria-live="polite">
             <LoaderCircle className="is-spinning" aria-hidden="true" />
             <p>
               <strong>{c.settingUp}</strong>
               <span>{verifyingText}</span>
+              <span>
+                进度会显示在这里；页面其他区域仍可使用，请不要重复点击接入按钮。
+              </span>
             </p>
           </div>
         )}
@@ -1296,12 +1840,18 @@ export function ConfigurationPreviewView({
             className={
               activationSucceeded
                 ? "setup-result is-success"
-                : "setup-result is-error"
+                : activationAttention
+                  ? "setup-result setup-progress"
+                  : "setup-result is-error"
             }
-            role={activationSucceeded ? "status" : "alert"}
+            role={
+              activationSucceeded || activationAttention ? "status" : "alert"
+            }
           >
             {activationSucceeded ? (
               <CheckCircle2 aria-hidden="true" />
+            ) : activationAttention ? (
+              <Info aria-hidden="true" />
             ) : (
               <AlertCircle aria-hidden="true" />
             )}
@@ -1311,7 +1861,11 @@ export function ConfigurationPreviewView({
                   ? resultIsCurrent
                     ? ux.readyTitle
                     : "刚才的接入已完成"
-                  : c.setupFailed}
+                  : activation?.status === "application_running"
+                    ? "需要重新打开应用"
+                    : activationConfigured
+                      ? "设置已保存"
+                      : c.setupFailed}
               </strong>
               <p>{activationResult}</p>
               {!resultIsCurrent && resultContext && (
@@ -1338,6 +1892,12 @@ export function ConfigurationPreviewView({
           </div>
         )}
 
+        <RecentRequest
+          value={savedConnection?.lastRequest}
+          toolId={activationToolId}
+          onRefresh={() => void connections?.refresh()}
+          loading={connections?.loading}
+        />
         <div className="configuration-actions configuration-secondary-actions">
           <RestoreConnection
             connection={savedConnection}
@@ -1354,6 +1914,27 @@ export function ConfigurationPreviewView({
           </div>
         </div>
       </section>
+      <ConfirmDialog
+        isOpen={restartPromptContext !== null}
+        title={`保存后自动重新打开 ${resultContext?.app ?? application.displayName}`}
+        message={`这个应用正在运行。请先保存正在编辑的内容。\n\n继续后，你不需要手动退出：野菜助手会请求它正常退出，设置完成后再重新打开；不会强制结束进程。若应用拒绝退出，本次不会修改设置。`}
+        confirmText="已保存，退出并继续"
+        cancelText="暂不接入"
+        variant="info"
+        pending={applyPhase === "applying"}
+        onConfirm={() => {
+          const handoff = runningAppHandoff(
+            restartPromptContext,
+            currentContext.current,
+          );
+          // Dismiss the modal before the long-running native operation. Keeping
+          // it open with `pending` made the entire assistant appear frozen.
+          setRestartPromptContext(handoff.nextPromptContext);
+          if (!handoff.restart) return;
+          void apply(undefined, true);
+        }}
+        onCancel={() => setRestartPromptContext(null)}
+      />
     </div>
   );
 }

@@ -1,6 +1,404 @@
 {
   "schemaVersion": 1,
-  "entries": [
+ "entries": [
+    {
+      "id": "E-USER-080",
+      "claim": "The product owner reports that one-click activation can remain on checking for a long time, asks whether running Codex or Claude should be safely closed before configuration, and rejects per-application fixes that leave Pi or another agent to fail next.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-06 screenshot version 0.4.9 prolonged Codex activation",
+      "observedAt": "2026-09-06T22:10:00+08:00",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-075",
+      "claim": "The shared native activation command performs secure publication and atomic semantic readback, then synchronously runs seven different real-model verification paths with observed waits of 90, 120, 150 or 600 seconds; provider slowness therefore blocks the button and rolls back otherwise valid local configuration.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/tool_activation.rs:841;src-tauri/src/tool_activation.rs:1305;src-tauri/src/tool_adapters/codex_desktop.rs:407;src-tauri/src/tool_adapters/claude_desktop.rs:389;src-tauri/src/tool_adapters/claude_code.rs:315;src-tauri/src/tool_adapters/pi.rs:231;src-tauri/src/tool_adapters/dsh_web.rs:493;src-tauri/src/tool_adapters/hermes.rs:253;src-tauri/src/tool_adapters/openclaw.rs:309",
+      "observedAt": "2026-09-06T22:20:00+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-080"
+      ]
+    },
+    {
+      "id": "E-EXT-059",
+      "claim": "Current CC Switch normal provider switching validates and writes configuration without force-killing user applications, while its user guidance distinguishes reload behavior: Codex and Claude Desktop need a restart, and Claude Code commonly applies subsequent changes to a new session.",
+      "class": "external_verified",
+      "locator": "https://github.com/farion1231/cc-switch/blob/38cfafdc199604b132be5eafe3f5384d85124a81/src-tauri/src/services/provider/mod.rs;https://github.com/farion1231/cc-switch/blob/38cfafdc199604b132be5eafe3f5384d85124a81/docs/user-manual/en/2-providers/2.2-switch.md;https://github.com/farion1231/cc-switch/blob/38cfafdc199604b132be5eafe3f5384d85124a81/docs/user-manual/en/2-providers/2.6-claude-desktop.md",
+      "observedAt": "2026-09-06T22:24:00+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-080"
+      ]
+    },
+    {
+      "id": "E-PROP-028",
+      "claim": "Replace seven adapter-specific blocking verification definitions with one activation state machine: validate eligibility, obtain native credentials, atomically commit and read back owned settings, start only helper-owned local runtimes, and handle desktop reload through explicit normal-quit consent. Observe the first real user request asynchronously instead of gating configuration on it.",
+      "class": "proposed",
+      "locator": "inline:ru056-unified-activation",
+      "observedAt": "2026-09-06T22:28:00+08:00",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-USER-080",
+        "E-CODE-075",
+        "E-EXT-059"
+      ]
+    },
+    {
+      "id": "E-USER-078",
+      "claim": "The product owner explicitly rejects a separate vendor-permission document as a hard technical gate and asks us to finish the domestic download source for novice users while keeping the safe controls that matter to installation.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-06 user 你觉得你这个阻塞不会很离谱吗 and 是啊你帮忙处理好",
+      "observedAt": "2026-09-06T10:59:07Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 1
+    },
+    {
+      "id": "E-CODE-071",
+      "claim": "The RU-052 publisher currently blocks every public object on both a source-specific approval file and an operator-native receipt, while the native client independently pins the source slot, URL, hash, size, package identity and publisher and performs macOS codesign/Gatekeeper or Windows App Installer trust verification before completion. The public origin currently serves health with thirdPartyInstallersPublished false and no catalog.",
+      "class": "code_observed",
+      "locator": "deploy/vendor-sync/publish.py; src-tauri/src/app_installation/origins.rs; src-tauri/src/app_installation/platform.rs; src-tauri/src/app_installation/windows.ps1; https://ergou.qzz.io/health.json; https://ergou.qzz.io/apps/catalog.json",
+      "observedAt": "2026-09-06T10:59:07Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-CODE-070"
+      ]
+    },
+    {
+      "id": "E-PROP-025",
+      "claim": "A bounded successor should treat publication as an explicit operator action rather than a legal-document validator: publish only exact bytes synchronized from compiled official origins, preserve immutable hash-bound objects, distinguish operator-native preverification from client-native-required artifacts, and require the client to perform its unchanged native trust check in both cases. An atomic empty catalog is the remote kill switch and every unusable mirror state falls back to the official source without credentials or a client update.",
+      "class": "proposed",
+      "locator": "inline:ru053-domestic-download-enablement",
+      "observedAt": "2026-09-06T10:59:07Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-USER-078",
+        "E-CODE-071",
+        "E-EXT-058"
+      ]
+    },
+    {
+      "id": "E-USER-077",
+      "claim": "User asks to solve remaining unpublished domestic download source and blocked Claude Mac automatic download, following authorization to improve novice installation and use their dedicated download server.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-06 user 国内下载源尚未发布，Claude Mac 自动下载仍受阻这些能不能解决啊",
+      "observedAt": "2026-09-06T09:08:50Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 1
+    },
+    {
+      "id": "E-CODE-070",
+      "claim": "Current producer stages only and has no publisher; native installer has only static official DMG/MSIX sources. Public health reports no third-party packages. Authenticated read-only server check observes active sync timer, Claude Mac source_challenge, and HTTP 200 for official versioned ZIP with 355648442 bytes.",
+      "class": "code_observed",
+      "locator": "deploy/vendor-sync/sync.py; deploy/vendor-sync/verify_native.py; src-tauri/src/app_installation/catalog.rs; conversation:2026-09-06 download_origin_audit and SSH session 67485",
+      "observedAt": "2026-09-06T09:08:50Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-CODE-069"
+      ]
+    },
+    {
+      "id": "E-EXT-058",
+      "claim": "Official Claude universal RELEASES.json names currentRelease 1.46388.4 and exact downloads.claude.ai ZIP. Official Mac enterprise docs support universal Mac packages; OpenAI Windows docs specify Store-signed MSIX and potential offline license requirements. Local redirect reaches app-unavailable-in-region but dedicated server official ZIP HEAD succeeds; this is not a redistribution grant or clean-machine install result.",
+      "class": "external_verified",
+      "locator": "https://downloads.claude.ai/releases/darwin/universal/RELEASES.json; https://support.claude.com/en/articles/12611117-deploy-claude-desktop-for-macos; https://learn.chatgpt.com/docs/enterprise/windows-deployment; https://formulae.brew.sh/api/cask/claude.json",
+      "observedAt": "2026-09-06T09:08:50Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1
+    },
+    {
+      "id": "E-USER-076",
+      "claim": "User asks to research further and fix the novice installation workflow after hearing that failures and verification gaps remain.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-06 user 好的，你再研究一下，搞好来",
+      "observedAt": "2026-09-06T07:59:12Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 1
+    },
+    {
+      "id": "E-CODE-069",
+      "claim": "Current source and read-only independent React reproduction show false ChatGPT path-based Codex presence, a disabled selected-app installer after another job terminates, and logged-out Windows confirmation blocked in two frontend locations. Paired App/Pi Vitest run reproduces seven obsolete App expectations and 46 passing Pi tests. Source health is origin_ready but no third-party packages are public; host is Intel Mac, not a Windows or ARM clean-machine test.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/app_installation/platform.rs; src/installation/InstallationProvider.tsx; src/installation/InstallationPanel.tsx; src/configuration/ConfigurationPreviewView.tsx; tests/integration/App.test.tsx; conversation:2026-09-06 independent installation_followup_audit and /tmp/yecai-install-followup.1icSZh/failing-baseline.json",
+      "observedAt": "2026-09-06T07:59:12Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-CODE-068"
+      ]
+    },
+    {
+      "id": "E-CODE-068",
+      "claim": "RU-049 dispatch refused the earlier verification-only WP-RU047 baseline because the installer implementation intentionally changed the source state bound by that whole-tree proof. Treat initial baseline as historical context; require complete fresh verification on the final integration instead of falsely asserting the old dependency is current.",
+      "class": "code_observed",
+      "locator": "conversation:2026-09-06 dispatch RU-049 refused stale WP-RU047 proof; .product-governance/execution/reports/96da3fa452f74b7a.b46f636e152fbe60ed39.json",
+      "observedAt": "2026-09-06T07:06:37Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-CODE-067"
+      ]
+    },
+    {
+      "id": "E-CODE-067",
+      "claim": "RU-048 development runs: 451 native tests pass; 11 new installer UI tests pass; the full renderer suite reports 12 old expected-IPC/empty-card-count failures (424 pass). Read-only independent review identified and code/tests fixed exact Windows package target association, retained-file mutation/crash recovery, job dismissal and cancellation consent. Integration requires changing three old test files not owned by RU-048; none are modified before this successor review.",
+      "class": "code_observed",
+      "locator": "conversation:2026-09-06 development sessions 19474,91481,52279 and installer_architecture_review;src/installation/installation.test.tsx;src-tauri/src/app_installation/tests.rs",
+      "observedAt": "2026-09-06T07:04:56Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-CODE-066"
+      ]
+    },
+    {
+      "id": "E-CODE-066",
+      "claim": "Independent read-only installer architecture review found discovery absence/races, ambiguous target choice, mutation shutdown boundaries and session/selection ABA gaps. The successor binds exact native target, full intent and account epoch, uses exclusive Mac publication and explicit Windows system-UI ownership. RU-047 baseline now completed with 439 Rust tests plus Mac/Windows/Apple-Silicon clippy, renderer and build proof. Earlier failed records remain intact; failures were missing developer resource-compiler dependencies, not waived tests.",
+      "class": "code_observed",
+      "locator": ".product-governance/execution/reports/62a073c57d8fd94a.5c686363704a62456230.json;conversation:installer_architecture_review 2026-09-06;src-tauri/src/tool_activation.rs:1001;src/configuration/ConfigurationPreviewView.tsx:506",
+      "observedAt": "2026-09-06T06:34:07Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-CODE-065"
+      ]
+    },
+    {
+      "id": "E-EXT-057",
+      "claim": "Windows App Installer uses the local signed MSIX and asks for user confirmation; opening the dialog is not successful signature verification or installation. It can offer Reinstall, so Yecai must never claim to prevent a user-authorized OS replacement. The ms-appinstaller web protocol is disabled by default; use the downloaded local package. Zig's real Windows resource compiler was used to provide missing developer RC compilation without skipping resources.",
+      "class": "external_verified",
+      "locator": "https://learn.microsoft.com/en-us/windows/msix/app-installer/app-installer-ui-dialog;https://learn.microsoft.com/en-us/windows/msix/package/signing-package-overview;https://learn.microsoft.com/en-us/windows/msix/app-installer/installing-windows10-apps-web;https://ziglang.org/download/0.12.0/release-notes.html",
+      "observedAt": "2026-09-06T06:34:07Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-065",
+      "claim": "RU-043 historical verification failed only its typecheck/build command due to an unused React import in preview.tsx; native and renderer commands passed but the package never completed. Current preview already uses only useState and a fresh node typescript/bin/tsc --noEmit exits 0. RU-046 dispatch correctly refused this incomplete dependency. Re-run all prior acceptance commands on the current read-only tree under a reviewed successor instead of treating partial evidence as complete.",
+      "class": "code_observed",
+      "locator": ".product-governance/execution/reports/bbdf355e5102ec05.5b8e7380fdfd9dcd8d70.json;tests/work_packages/ru043/preview.tsx:1;conversation:2026-09-06 TypeScript check exit 0 and refused RU-046 dispatch",
+      "observedAt": "2026-09-06T05:53:07Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-USER-075",
+      "claim": "Owner approves implementing the proposed novice-oriented install-and-connect workflow, prioritizing Codex and Claude desktop on macOS/Windows, with system permission confirmation, progress/recovery and preservation of existing apps; other clients require separate dependency adapters.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-06 user says 可以的 你帮忙处理一下 你要知道我们针对的是小白用户 following install-and-connect proposal",
+      "observedAt": "2026-09-06T05:58:00Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-064",
+      "claim": "Active AppLibraryView missing-app CTA only navigates to configuration; active native commands contain discovery/configuration but no installer. RU-045 receipts show private staging, not public downloads; official raw packages and current-user app discovery can support a separate client workflow without changing existing vendor apps or NewAPI.",
+      "class": "code_observed",
+      "locator": "src/workbench/AppLibraryView.tsx:294;src-tauri/src/lib.rs:94;deploy/vendor-sync/README.md:81;outputs/野菜API-版本同步器验收.md",
+      "observedAt": "2026-09-06T05:58:00Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-056",
+      "claim": "OpenAI publishes official Mac Apple Silicon DMG and Windows x64/ARM64 MSIX; Claude publishes Mac universal DMG and Windows MSIX. Add-AppxPackage installs signed packages per user and handles dependencies without AllowUnsigned. Claude Cowork may require separate administrator-managed services/reboot. Native installation and account/model connectivity are distinct. Original-app signatures and OS protections must be retained.",
+      "class": "external_verified",
+      "locator": "https://learn.chatgpt.com/docs/app;https://learn.chatgpt.com/docs/enterprise/windows-deployment;https://support.claude.com/en/articles/12622703-deploy-claude-desktop-for-windows;https://learn.microsoft.com/en-us/powershell/module/appx/add-appxpackage",
+      "observedAt": "2026-09-06T05:58:00Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-USER-074",
+      "claim": "Owner approved the proposed server-side desktop version synchronizer: six-hour official checks, changed-only resumable downloads, original-package integrity and signature review, retain existing downloads on failure, no forced app upgrade, and third-party public distribution subject to separate permission review.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-06 user says 好的 after version-synchronizer proposal",
+      "observedAt": "2026-09-06T05:11:45Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-063",
+      "claim": "Read-only server inventory finds Python 3.12.3, systemd 255, approximately 34.2 GB free on /var/lib, and no vendor-sync service or paths. Official Codex assets respond 200 with stable ETags and lengths (643007873, 796455116, 787507242 bytes); Windows headers advertise OpenAI.Codex version 26.901.5280.0. Official Claude Windows GET resolvers return 307 to downloads.claude.ai version 1.46388.4; HEAD is not supported. Claude macOS resolver returns HTTP 403 cf-mitigated challenge. No attempt to bypass it is authorized.",
+      "class": "code_observed",
+      "locator": "conversation:2026-09-06 read-only SSH df/systemctl/Python and official HTTP metadata probes;deploy/download-origin/README.md",
+      "observedAt": "2026-09-06T05:11:45Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-055",
+      "claim": "Official OpenAI docs link Codex.dmg and stable ChatGPT-x64.msix/ChatGPT-arm64.msix under persistent.oaistatic.com/codex-app-prod. Official Claude docs link macOS universal DMG and x64/arm64 Windows MSIX GET resolvers. Claude warns that competing update owners may create duplicate installs. These deployment links do not establish blanket public redistribution permission, nor does downloading establish native signature trust or runtime compatibility.",
+      "class": "external_verified",
+      "locator": "https://learn.chatgpt.com/docs/app;https://learn.chatgpt.com/docs/enterprise/windows-deployment;https://claude.com/download;https://support.claude.com/en/articles/12622703-deploy-claude-desktop-for-windows",
+      "observedAt": "2026-09-06T05:11:45Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-USER-073",
+      "claim": "Owner provides ergou.qzz.io and server 43.134.77.210 for a separate Yecai download and update origin after discussing a static HTTPS distribution service. Credentials are intentionally excluded from every repository artifact.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-06 owner supplies chosen distribution domain and SSH server following deployment proposal",
+      "observedAt": "2026-09-06T04:40:00Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-062",
+      "claim": "Read-only SSH inventory observes Ubuntu 24.04.4, existing web-caddy-1 Caddy 2.8.4 on ports 80/443 and web_default network, binding /opt/ganfu/web/Caddyfile. ergou.qzz.io is Cloudflare-proxied and returns 525. Requested domain is absent from existing 66-line Caddyfile with SHA256 300e920214bd373443785c7d541a45e363e376ea6f5e5b3f3f1f82b7af94c336. Dedicated /srv/yeschoy-download and /opt/yeschoy-download paths are unused. Current client still has updater artifacts disabled and no native updater dependency.",
+      "class": "code_observed",
+      "locator": "conversation:2026-09-06 read-only SSH/docker/dig/curl inventory;src-tauri/tauri.conf.json;src-tauri/Cargo.toml",
+      "observedAt": "2026-09-06T04:40:00Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-054",
+      "claim": "Caddy supports additive graceful reload, automatic HTTPS and static file range requests; Cloudflare 525 denotes origin TLS handshake failure. Tauri production updates require trusted signatures and HTTPS; origin availability is not proof of client upgrade readiness.",
+      "class": "external_verified",
+      "locator": "https://caddyserver.com/docs/command-line;https://caddyserver.com/docs/automatic-https;https://caddyserver.com/docs/caddyfile/directives/file_server;https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-525/;https://v2.tauri.app/plugin/updater/",
+      "observedAt": "2026-09-06T04:40:00Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-USER-072",
+      "claim": "Owner requests improvements beyond GPT-6 name and reasoning selector across applications after confirming broader repair; preceding HTTP 503 was confirmed upstream. Implement locally without packaging in this turn.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-05 latest requests 是的应该不仅仅这个 and 对的对的你看看怎么完善一下; assistant scoped no packaging and no server changes",
+      "observedAt": "2026-09-05T15:00:00Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-061",
+      "claim": "Codex native catalog uses raw model IDs, universal none/high efforts and 128k context; Claude conversion maps max to xhigh unconditionally. Pi, DSH and OpenClaw emit model id/name and text-only input without reasoning metadata. Existing seven-tool routing and transactional recovery must remain intact.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/tool_adapters/codex_desktop.rs:136;src-tauri/src/proxy/providers/transform.rs:137;src-tauri/src/tool_adapters/pi.rs:75;src-tauri/src/tool_adapters/dsh_web.rs:render_catalog;src-tauri/src/tool_adapters/openclaw.rs:render_catalog;src/configuration/ModelPicker.tsx",
+      "observedAt": "2026-09-05T15:00:00Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-053",
+      "claim": "Primary vendor references establish exact-name model reasoning capabilities, Codex nullable default and empty supported efforts for unknown models, and distinct Pi/DSH/OpenClaw metadata contracts. These establish reference capabilities only, not availability or protocol support of a particular NewAPI billing route.",
+      "class": "external_verified",
+      "locator": "https://developers.openai.com/api/docs/models/gpt-6-astra;https://developers.openai.com/api/docs/models;https://github.com/openai/codex/blob/main/codex-rs/protocol/src/openai_models.rs;https://api-docs.deepseek.com/quick_start/agent_integrations/codex/;https://api-docs.deepseek.com/quick_start/pricing/;https://platform.claude.com/docs/en/build-with-claude/effort;tests/work_packages/ru043/CONTRACT.md",
+      "observedAt": "2026-09-05T15:00:00Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-USER-071",
+      "claim": "User approves the diagnosed model identity, multi-model native switching and Windows exit improvements, and supplies a screenshot showing request retry after 1m3s. No packaging or server changes.",
+      "class": "user_confirmed",
+      "locator": "user:2026-09-05:这是失败时的错误详情，其他按你的想法完善一下；不要打包",
+      "observedAt": "2026-09-05T12:50:00Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-060",
+      "claim": "Current code fixes Claude internal model to Sonnet, overwrites request models in both bridges, persists one model per tool, drops some SSE errors, imposes 60-second read idle, and waits unbounded for activation lock on quit. Windows credential blob limit is 2560 bytes.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/tool_adapters/claude_desktop.rs:87;src-tauri/src/claude_bridge.rs:190;src-tauri/src/codex_bridge.rs:290;src-tauri/src/lib.rs:38;src-tauri/src/tool_credentials.rs:19;tests/work_packages/ru042/CONTRACT.md",
+      "observedAt": "2026-09-05T12:50:00Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-052",
+      "claim": "Claude supports full-ID inferenceModels with display-only labels; Codex loads a custom catalog at startup; OpenAI SDK uses a 600-second inference timeout default. These support bounded implementation choices, not live relay compatibility.",
+      "class": "external_verified",
+      "locator": "https://claude.com/docs/third-party/claude-desktop/configuration#models",
+      "observedAt": "2026-09-05T12:50:00Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-USER-070",
+      "claim": "The owner asks to resolve all findings in the preceding audit: diagnostics false error, Windows Codex launch, uneven application verification/daily opening, and incorrect restore-failure messages. Client-only work; preserve existing changes and do not mutate server or real account/tool settings during development.",
+      "class": "user_confirmed",
+      "locator": "user:2026-09-05:我觉得你应该把这些问题都解决",
+      "observedAt": "2026-09-05T11:30:00Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-059",
+      "claim": "Read-only audit reproduces native tcp443_reachable vs renderer tcp_443_reachable rejection. Desktop discovery discards Windows package launch identity. CLI open only shows instructions, Pi/Hermes success is stdout-nonempty, and restore errors fall through to misleading unchanged/restored copy.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/connectivity_core.rs:38;src/diagnostics/contract.ts:50;src-tauri/src/desktop_app_discovery.rs:494;src-tauri/src/tool_adapters/codex_desktop.rs:434;src/configuration/OpenConnection.tsx:39;src-tauri/src/tool_activation.rs:787",
+      "observedAt": "2026-09-05T11:30:00Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {"id":"E-CODE-058","claim":"RU-039 native scenario passed, but inherited RU-034 production acceptance hardcodes 0.4.6, incompatible with approved 0.4.7 internal candidate. UI CANDIDATE_VERSION and its unit test also independently hardcode 0.4.6, confirmed in local mock preview footer. Current renderer privacy fixture additionally needs scoped listbox assertions rather than selecting unrelated native option elements. Correct version plumbing and current acceptance authority; preserve failed historical report.","class":"code_observed","locator":"tests/work_packages/ru034/test_acceptance.py:91-92;src/candidate/readiness.ts:1;src/candidate/readiness.test.ts:25;src/workbench/WorkbenchChrome.tsx:166;.product-governance/execution/reports/3104152b846fe60e.7e1f4993a98216a94561.json","observedAt":"2026-09-05T09:27:00Z","scope":"current","status":"active","verificationLevel":1,"basisRefs":[]},
+    {"id":"E-USER-069","claim":"Owner reports internal upstream branding exposed in the model selector and Claude Desktop gateway self-check showing 502 while normal conversation succeeds; requests client-side correction. Existing no-server-mutation and internal-only delivery boundary remains.","class":"user_confirmed","locator":"user:2026-09-05:model description and Claude gateway screenshots da8a4e58 and 960b4636","observedAt":"2026-09-05T09:12:00Z","scope":"target","status":"active","verificationLevel":0,"basisRefs":[]},
+    {"id":"E-CODE-057","claim":"ModelPicker displays and searches raw AccountModel.description, ModelsView displays it, and native parse_models copies pricing description into renderer projection. Claude bridge rejects nonstream responses without visible text/tool use using the same predicate as activation verification; streaming passes status through and only observes evidence. Static installed Claude Desktop vjt self-check requests max_tokens:1 without stream and accepts HTTP success, so protocol-valid empty/thinking responses can produce a false gateway 502. Exact screenshot upstream body was not captured.","class":"code_observed","locator":"src/configuration/ModelPicker.tsx:25,155;src/workbench/ModelsView.tsx:166;src-tauri/src/account_v2.rs:1065;src-tauri/src/claude_bridge.rs:315-380;/Applications/Claude.app/Contents/Resources/app.asar:.vite/build/index.chunk-DOwq__DJ.js:vjt","observedAt":"2026-09-05T09:12:00Z","scope":"current","status":"active","verificationLevel":1,"basisRefs":[]},
+    {"id":"E-EXT-048","claim":"Unauthenticated first-party pricing endpoint currently returns 60 models and 32 descriptions containing the reported upstream label. Claude official stop-reason documentation explicitly describes valid empty-content end_turn responses; max_tokens bounds generation, not minimum visible text. Client suppression cannot remove data from the public server endpoint.","class":"external_verified","locator":"https://yeschoy.com/api/pricing;https://platform.claude.com/docs/en/build-with-claude/handling-stop-reasons#empty-responses-with-end_turn;https://platform.claude.com/docs/en/api/messages/create","observedAt":"2026-09-05T09:12:00Z","scope":"current","status":"active","verificationLevel":1,"basisRefs":[]},
     {"id":"E-USER-068","claim":"Owner authorizes uploading the current client source to the existing GitHub repository and building internal macOS universal and Windows installers. Public releases, tags, updater rollout and server changes remain excluded.","class":"user_confirmed","locator":"user:2026-09-05:可以，你动手吧; preceding internal packaging plan","observedAt":"2026-09-05T08:19:05Z","scope":"target","status":"active","verificationLevel":0,"basisRefs":[]},
     {"id":"E-CODE-056","claim":"Read-only pre-package audit reproduced the legacy-open control flow: operation_lock creates connection-recovery directory before Store::open(false); a missing recovery key plus this lock-only directory is treated as storage failure. Valid older tool credentials are never reached. Current repo source and RU-037 tests are uncommitted; source audit found old binary release-assets that must not be staged. Developer ID and notary profile are available; Windows clang sysroot/cache and older cross-built artifact exist, while compiler runner/NSIS are absent from PATH.","class":"code_observed","locator":"src-tauri/src/connection_recovery.rs:65-82,184-216;src-tauri/src/open_connection.rs:76-88,103-107;git status;security find-identity -v -p codesigning;xcrun notarytool history --keychain-profile yeschoy-notary","observedAt":"2026-09-05T08:19:05Z","scope":"current","status":"active","verificationLevel":1,"basisRefs":[]},
     {
@@ -2258,6 +2656,600 @@
         "E-USER-057",
         "E-CODE-045",
         "E-EXT-041"
+      ]
+    },
+    {
+      "id": "E-USER-079",
+      "claim": "The owner reports that the previous client requires manual restore before every retry and that Claude Code workspace rejects a configured DeepSeek model, and asks both problems to be corrected.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-06 screenshots recovery_pending and Claude Configuration may need attention",
+      "observedAt": "2026-09-06T13:00:00+08:00",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-072",
+      "claim": "Native activation currently refuses Store::begin whenever the same tool has a pending encrypted recovery record, projects recovery_pending, and the renderer instructs the user to run a separate manual restore although existing three-way restore code can preserve later user edits.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/connection_recovery.rs:273;src-tauri/src/tool_activation.rs:1037;src/configuration/ConfigurationPreviewView.tsx:802",
+      "observedAt": "2026-09-06T13:00:00+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-079"
+      ]
+    },
+    {
+      "id": "E-CODE-073",
+      "claim": "The installed Claude Desktop gateway validator removes inference model names that do not look Anthropic-shaped, while the current adapter writes real account model IDs directly to inferenceModels and its loopback catalog.",
+      "class": "code_observed",
+      "locator": "installed Claude.app validator;src-tauri/src/tool_adapters/claude_desktop.rs:105;src-tauri/src/claude_bridge.rs:204",
+      "observedAt": "2026-09-06T13:00:00+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-079"
+      ]
+    },
+    {
+      "id": "E-CODE-074",
+      "claim": "Installed Claude Code 2.1.259 supports modelPicker options with model, label, description and behavesAs; the current adapter omits behavesAs, so unknown exact model IDs can be excluded by the bundled model catalog.",
+      "class": "code_observed",
+      "locator": "installed Claude Code 2.1.259 schema;src-tauri/src/tool_adapters/claude_code.rs:112",
+      "observedAt": "2026-09-06T13:00:00+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-079"
+      ]
+    },
+    {
+      "id": "E-PROP-026",
+      "claim": "RU-054 should supersede overlapping RU-043 model-path and RU-051 retry-path authority with safe same-click pending recovery, deterministic Claude Desktop aliases resolved to exact real routes, and Claude Code behavesAs metadata without changing actual IDs.",
+      "class": "proposed",
+      "locator": "inline:ru054-retry-claude-routes",
+      "observedAt": "2026-09-06T13:00:00+08:00",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": [
+        "E-USER-079",
+        "E-CODE-072",
+        "E-CODE-073",
+        "E-CODE-074"
+      ]
+    },
+    {
+      "id": "E-PROP-027",
+      "claim": "RU-054 froze the correct behavioral contract, but dispatch is blocked because an old RU-043 work-package run is truthfully failed even though later frozen units carried its code forward. A successor execution package should depend on the frozen RU-054 contract and release closure, not rewrite or falsely complete historical evidence.",
+      "class": "proposed",
+      "locator": "governance:RU-054 dispatch dependency audit",
+      "observedAt": "2026-09-06T13:35:00+08:00",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-PROP-026"
+      ]
+    },
+    {
+      "id": "E-USER-081",
+      "claim": "The product owner explicitly requests that the corrected current client be packaged for both Windows and macOS.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-07:你打包好win版本和macos版本吧",
+      "observedAt": "2026-09-06T16:18:09Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-076",
+      "claim": "The current workspace is version 0.4.9, an older notarized 0.4.9 macOS artifact already exists, the local Keychain contains a Developer ID Application identity and accepted notary profile, and the repository contains a manually dispatched Windows x64 workflow that runs full renderer and native gates before producing a Chinese unsigned NSIS installer.",
+      "class": "code_observed",
+      "locator": "package.json:3;src-tauri/Cargo.toml:3;src-tauri/tauri.conf.json:4;.github/workflows/yeschoy-windows-internal.yml:1;release-assets/82f9560f/野菜API-0.4.9-全Agent思考强度-macOS-universal-测试版.dmg;command:security find-identity and xcrun notarytool history --keychain-profile yeschoy-notary at 2026-09-06T16:18:09Z",
+      "observedAt": "2026-09-06T16:18:09Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-081"
+      ]
+    },
+    {
+      "id": "E-CODE-077",
+      "claim": "GitHub Actions run 34045326082 for exact candidate commit ffcfe898f79ff5069d7c4651a1bf0a779aa1a753 was rejected before any job step because the repository account has failed payments or an insufficient Actions spending limit. Local cargo-xwin is available, the Windows MSVC target already compiles, and the SHA-256 pinned Homebrew makensis 3.12 bottle can run from isolated temporary storage with no system installation.",
+      "class": "code_observed",
+      "locator": "https://github.com/DaydreamZXG/yeschoy-ai-desktop/actions/runs/34045326082;command:gh api check-runs/101519255770/annotations;command:cargo-xwin and pinned makensis 3.12 bottle verification at 2026-09-06T16:35:00Z",
+      "observedAt": "2026-09-06T16:35:00Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-081",
+        "E-CODE-076"
+      ]
+    },
+    {
+      "id": "E-CODE-078",
+      "claim": "RU-058 froze successfully but dispatch correctly rejected its dependency on WP-RU056-UNIFIED-ACTIVATION because the completed historical run's current-output integrity was invalidated by the later synchronized 0.4.10 Cargo metadata change. The packaging fallback must therefore be executed as a standalone successor that repeats current renderer and native tests instead of claiming the stale dependency.",
+      "class": "code_observed",
+      "locator": "command:dispatch_work_package.py --release-unit RU-058 at 2026-09-06T16:39:52Z; .product-governance/execution/work-package-runs.json",
+      "observedAt": "2026-09-06T16:42:00Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-CODE-077",
+        "E-USER-081"
+      ]
+    },
+    {
+      "id": "E-USER-082",
+      "claim": "The owner reports that Codex can reply while still appearing to use the official account, its native UI abbreviates GPT-6 Astra as 6 Astra, and DSH web reports a saved connection but the explicit Open action does nothing. The owner asks both paths to be corrected and compared with CC Switch behavior.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-07:codex-route-and-dsh-open-report",
+      "observedAt": "2026-09-07T10:56:02+08:00",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-079",
+      "claim": "The installed DSH 0.1.2-rc.1 executable is a JavaScript launcher with #!/usr/bin/env node. The signed 0.4.10 assistant process has PATH=/usr/bin:/bin:/usr/sbin:/sbin, while DSH discovery canonicalizes its wrapper symlink to bin.js and the DSH adapter inherits the restricted GUI PATH and discards stderr. Running that same discovered target with the GUI PATH exits 127 because node is not found; running it from the terminal PATH returns a valid loopback web URL.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/tool_discovery.rs:111-173;src-tauri/src/tool_adapters/dsh_web.rs:348-437;command:ps PATH and dsh web loopback reproduction at 2026-09-07T10:56:02+08:00",
+      "observedAt": "2026-09-07T10:56:02+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-082"
+      ]
+    },
+    {
+      "id": "E-CODE-080",
+      "claim": "A no-network synthetic check using the installed Codex 0.153.4 binary, a loopback fixture and the same provider-scoped command-backed token shape reached /responses with the selected synthetic model and exact command token. Current source already preserves auth.json, writes model_provider=yeschoy and records only requests that enter the local bridge. Therefore the official account shown by Codex is not route evidence; the local bridge observation is the authoritative client-side receipt.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/tool_adapters/codex_desktop.rs:45-121;src-tauri/src/request_diagnostics.rs:1-104;command:Codex 0.153.4 loopback provider receipt at 2026-09-07T10:52:03+08:00",
+      "observedAt": "2026-09-07T10:56:02+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-082"
+      ]
+    },
+    {
+      "id": "E-EXT-060",
+      "claim": "Current official Codex configuration documentation supports a provider-scoped command-backed bearer token, requires provider configuration in the user-level config, and forbids combining command auth with env_key, a literal bearer token or requires_openai_auth. The current CC Switch preservation guide likewise keeps the official login in auth.json, routes model traffic through config.toml, requires a restart, and says account display must not be used to judge billing or route selection.",
+      "class": "external_verified",
+      "locator": "https://developers.openai.com/codex/config-reference/;https://github.com/SoftRent/cc-switch/blob/main/docs/guides/codex-official-auth-preservation-guide-en.md",
+      "observedAt": "2026-09-07T10:56:02+08:00",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-082",
+        "E-CODE-080"
+      ]
+    },
+    {
+      "id": "E-PROP-029",
+      "claim": "RU-060 should supersede the 0.4.10 packaging authority without repackaging. It should preserve Codex official identity while making the actual Yeschoy bridge receipt explicit, retain exact gpt-6-astra routing even if the vendor UI abbreviates its display label, preserve non-destructive desktop restart semantics, and launch discovered Node-backed CLI wrappers with a closed runtime search path derived from the native-discovered wrapper chain so DSH and other supported agents work from a GUI process.",
+      "class": "proposed",
+      "locator": "inline:ru060-codex-route-proof-and-cli-runtime",
+      "observedAt": "2026-09-07T10:56:02+08:00",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-082",
+        "E-CODE-079",
+        "E-CODE-080",
+        "E-EXT-060"
+      ]
+    },
+    {
+      "id": "E-CODE-081",
+      "claim": "The first audited RU-060 execution preserved the complete scoped source diff with no source-scope or integrity failures. Its native runtime/DSH scenario and cross-platform build scenario passed; the Codex route UX scenario failed only because Vitest attempted to create a timestamped bundled config beside the read-only source tree. The acceptance harness now supplies a temporary writable Vitest config and cache, and that exact route UX selector passes directly without changing product behavior.",
+      "class": "code_observed",
+      "locator": ".product-governance/execution/reports/a98853675cd4856c.c28ce9e832db30cb72d6.json;tests/work_packages/ru060/test_acceptance.py",
+      "observedAt": "2026-09-07T03:46:26Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-CODE-079",
+        "E-CODE-080",
+        "E-PROP-029"
+      ]
+    },
+    {
+      "id": "E-PROP-030",
+      "claim": "Create a verification-only successor to RU-060 that retains both historical failed reports, performs no product or package changes, and re-runs the same native, route UX and cross-platform selectors under the corrected read-only harness before the Codex and DSH fixes are reported complete.",
+      "class": "proposed",
+      "locator": "inline:ru061-readonly-codex-dsh-verification",
+      "observedAt": "2026-09-07T03:46:26Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-082",
+        "E-CODE-081"
+      ]
+    },
+    {
+      "id": "E-USER-083",
+      "claim": "After the Codex route-evidence and DSH/CLI runtime repair passed its final read-only verification, the owner explicitly requested packaging. Earlier explicit scope in the same product thread requires both macOS and Windows packages, while upload and update publication remain separate actions.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-07:package-after-ru061",
+      "observedAt": "2026-09-07T04:20:50Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-082",
+      "claim": "RU-061 passed all three source-read-only scenarios with an empty source diff and no scope, integrity or scenario-evidence failures. The current product metadata and an existing signed/notarized macOS plus unsigned Chinese Windows internal package are already versioned 0.4.10, so rebuilding different source under that same version would be ambiguous. A valid Developer ID Application identity, the yeschoy-notary keychain profile, cargo-xwin, the Windows sysroot cache and the hash-pinned makensis 3.12 bottle source are currently available; Windows remains a cross-built unsigned artifact without real-device validation.",
+      "class": "code_observed",
+      "locator": ".product-governance/execution/reports/d5bf9ce020ea3d93.c38b9d4cd5997e1cdcab.json;package.json;src-tauri/Cargo.toml;src-tauri/tauri.conf.json;release/internal/0.4.10/release-receipt.json;command:security find-identity and notarytool history at 2026-09-07T04:15:08Z",
+      "observedAt": "2026-09-07T04:20:50Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-CODE-081",
+        "E-USER-083"
+      ]
+    },
+    {
+      "id": "E-PROP-031",
+      "claim": "Package the current verified working source as distinct internal version 0.4.11: synchronize only version metadata, run the complete current tests, build a universal Developer-ID signed and Apple-notarized/stapled macOS DMG, and build a Simplified-Chinese unsigned Windows x64 NSIS installer from a fresh cargo-xwin payload using temporary hash-pinned tools. Record exact source state, artifact hashes and limitations; do not publish, upload or create updater artifacts.",
+      "class": "proposed",
+      "locator": "inline:ru062-0.4.11-dual-platform-internal-package",
+      "observedAt": "2026-09-07T04:20:50Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-083",
+        "E-CODE-082"
+      ]
+    },
+    {
+      "id": "E-USER-084",
+      "claim": "The owner asked whether assistant self-update and Codex or Claude downloads are implemented, identified the Settings message that says account functionality is unavailable as incorrect, and explicitly requested that the obsolete account-unavailable block be removed.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-07:settings-update-download-account-cleanup",
+      "observedAt": "2026-09-07T05:12:19Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-083",
+      "claim": "The current Settings renderer still displays an obsolete account-unavailable boundary even though App.tsx exposes an AccountView and the current native desktop-account-session contract is implemented. The repository contains updater UI scaffolding, but the current Tauri shell does not register the updater plugin or commands, create updater artifacts, or configure update endpoints. The installation subsystem supports downloadable Codex Desktop and Claude Desktop artifacts, while the other catalogued agents remain guided-install targets.",
+      "class": "code_observed",
+      "locator": "src/settings/SettingsView.tsx;src/App.tsx;src-tauri/src/lib.rs;src-tauri/tauri.conf.json;src-tauri/src/app_installation/catalog.rs;src/installation/InstallationPanel.tsx",
+      "observedAt": "2026-09-07T05:12:19Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-084"
+      ]
+    },
+    {
+      "id": "E-EXT-061",
+      "claim": "A live read of the configured domestic origin returned a six-artifact Codex and Claude Desktop catalog, all six artifact URLs accepted one-byte range requests with HTTP 206 and expected package MIME types, while the stable assistant update endpoint returned HTTP 204 and health metadata reported updatesPublished false.",
+      "class": "external_verified",
+      "locator": "https://ergou.qzz.io/apps/catalog.json;https://ergou.qzz.io/updates/stable.json;https://ergou.qzz.io/health.json;live-read:2026-09-07T05:07Z",
+      "observedAt": "2026-09-07T05:12:19Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-CODE-083"
+      ]
+    },
+    {
+      "id": "E-PROP-032",
+      "claim": "Remove only the obsolete account-unavailable boundary and its duplicate account and diagnostics actions from Settings. Preserve the working account route, native account contract, updater truth, installation flows and all runtime behavior; verify the UI regression without packaging or remote mutation.",
+      "class": "proposed",
+      "locator": "inline:ru063-settings-account-cleanup",
+      "observedAt": "2026-09-07T05:12:19Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-084",
+        "E-CODE-083",
+        "E-EXT-061"
+      ]
+    },
+    {
+      "id": "E-CODE-084",
+      "claim": "The first audited RU-063 execution had no scope or integrity failures and its source-level account-preservation scenario passed. Its renderer scenario was rejected before execution only because the governance vitest-json adapter requires an exact Vitest version while this repository intentionally declares a compatible range. Direct execution of the focused renderer test passed, and the complete renderer suite passed 455 of 455 tests. The failed audited report remains immutable evidence.",
+      "class": "code_observed",
+      "locator": ".product-governance/execution/reports/91454bf3373f6a40.101e2a2cc36a2867db7d.json;command:pnpm-test-unit:2026-09-07T05:15:59Z",
+      "observedAt": "2026-09-07T05:17:39Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-084",
+        "E-CODE-083",
+        "E-PROP-032"
+      ]
+    },
+    {
+      "id": "E-PROP-033",
+      "claim": "Create a source-read-only successor to RU-063 that preserves the rejected adapter report, changes no product or package file, and re-runs the already-passing source-level scenario through the compatible pytest-json adapter to bind the final Settings state and preserved account route.",
+      "class": "proposed",
+      "locator": "inline:ru064-readonly-settings-verification",
+      "observedAt": "2026-09-07T05:17:39Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-CODE-084"
+      ]
+    },
+    {
+      "id": "E-CODE-085",
+      "claim": "RU-064 froze successfully but dispatch was correctly refused because its verification package declared the failed RU-063 package as an execution dependency. The release-unit dependency already supplies the frozen source authority; a source-read-only successor must have no work-package execution dependency on the failed run.",
+      "class": "code_observed",
+      "locator": "command:dispatch-work-package:RU-064:2026-09-07T05:20:04Z;.product-governance/execution/reports/91454bf3373f6a40.101e2a2cc36a2867db7d.json",
+      "observedAt": "2026-09-07T05:20:26Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-CODE-084",
+        "E-PROP-033"
+      ]
+    },
+    {
+      "id": "E-PROP-034",
+      "claim": "Supersede the undispatched RU-064 with the same read-only acceptance authority but no work-package execution dependency, preserving every earlier freeze and failed report while making no source or package change.",
+      "class": "proposed",
+      "locator": "inline:ru065-readonly-settings-verification",
+      "observedAt": "2026-09-07T05:20:26Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-CODE-085"
+      ]
+    },
+    {
+      "id": "E-USER-085",
+      "claim": "The owner cancelled the handoff-document request and explicitly requested packaging. Earlier explicit scope in the same product thread requires both macOS and Windows packages; upload, release publication and automatic-update publication remain separate actions.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-07:package-after-settings-cleanup",
+      "observedAt": "2026-09-07T05:35:53Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-086",
+      "claim": "RU-065 passed its source-read-only Settings verification with an empty source diff, while the current 0.4.11 local package receipt predates that cleanup and is explicitly unpublished. Current metadata remains 0.4.11, the latest direct renderer suite passed 455 of 455 tests, and the prior package established available Developer ID, notary, cargo-xwin and hash-pinned NSIS tooling. Reusing 0.4.11 for new source would make two different candidates indistinguishable.",
+      "class": "code_observed",
+      "locator": ".product-governance/execution/reports/f46a5fcb0ab15d5b.82de8495c9996cbdd428.json;release/internal/0.4.11/release-receipt.json;package.json;src-tauri/Cargo.toml;src-tauri/tauri.conf.json;command:pnpm-test-unit:2026-09-07T05:15:59Z",
+      "observedAt": "2026-09-07T05:35:53Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-085",
+        "E-CODE-084",
+        "E-PROP-034"
+      ]
+    },
+    {
+      "id": "E-PROP-035",
+      "claim": "Package the exact current working source as distinct internal version 0.4.12: synchronize only version metadata, run the complete current tests and cross-platform compile gates, build a universal signed/notarized/stapled macOS DMG, and build a Simplified-Chinese unsigned Windows x64 NSIS installer from a fresh cargo-xwin payload. Record source and artifact hashes plus limitations; do not publish, upload or create updater artifacts.",
+      "class": "proposed",
+      "locator": "inline:ru066-0.4.12-dual-platform-internal-package",
+      "observedAt": "2026-09-07T05:35:53Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-085",
+        "E-CODE-086"
+      ]
+    },
+    {
+      "id": "E-USER-086",
+      "claim": "The owner installed the 0.4.12 Windows package and supplied a screenshot showing its webview loading 127.0.0.1 with ERR_CONNECTION_REFUSED, and reported that the background process cannot be exited normally.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-07:windows-0.4.12-dev-server-and-exit-failure",
+      "observedAt": "2026-09-07T06:47:35Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-087",
+      "claim": "The 0.4.12 receipt records a direct cargo-xwin build. Cargo.toml has no project custom-protocol feature, while local Tauri source defines custom-protocol as the production-mode switch and the verbose Tauri development command explicitly uses --no-default-features. The resulting 0.4.12 Windows payload lacks current renderer asset paths. Native CloseRequested always prevents close and depends on a renderer event, so the unavailable renderer also removes the only visible exit confirmation.",
+      "class": "code_observed",
+      "locator": "release/internal/0.4.12/release-receipt.json;src-tauri/Cargo.toml;src-tauri/src/lib.rs;local-cargo-registry:tauri-2.10.3/src/lib.rs;command:tauri-dev-verbose:2026-09-07T06:45Z;command:windows-payload-strings:2026-09-07T06:46Z",
+      "observedAt": "2026-09-07T06:47:35Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-086",
+        "E-CODE-086"
+      ]
+    },
+    {
+      "id": "E-PROP-036",
+      "claim": "Supersede the 0.4.12 Windows artifact with a distinct local 0.4.13 repair. Make custom-protocol the default Cargo feature, compile-fail release builds without it, add an embedded-mode marker, and route Windows close through a native three-way dialog plus the existing cooperative shutdown. Verify current renderer assets are embedded in the PE and package a Chinese current-user installer without publishing or changing remote state.",
+      "class": "proposed",
+      "locator": "inline:ru067-windows-renderer-and-native-exit-hotfix",
+      "observedAt": "2026-09-07T06:47:35Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-086",
+        "E-CODE-087"
+      ]
+    },
+    {
+      "id": "E-USER-087",
+      "claim": "The owner reports on both Windows and macOS that connecting Codex while it is already running does not present an effective novice-safe automatic restart flow, the assistant becomes completely unclickable after connection, and the reconnect action is visually inconspicuous; the owner requests a broader cross-agent UX audit and correction.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-07:cross-platform-connection-freeze-and-reconnect-ux",
+      "observedAt": "2026-09-07T07:33:40Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-088",
+      "claim": "The current connection screen keeps the running-application confirmation dialog open and modal while the full asynchronous restart-and-configuration operation runs, globally blocking pointer interaction. Its global opening/restoring flags also disable the separate reconnect action, background refresh replaces usable data with a loading lock, and the configured-state hierarchy presents Open and Reconnect as competing primary actions. Native lifecycle code already supports bounded graceful close and reopen for Codex Desktop and Claude Desktop without force termination, while terminal agents use new terminal sessions and do not require desktop-process shutdown.",
+      "class": "code_observed",
+      "locator": "src/configuration/ConfigurationPreviewView.tsx:660-735,1660-1740,1810-1860;src/components/ConfirmDialog.tsx;src/configuration/OpenConnection.tsx;src/configuration/connections.tsx;src-tauri/src/tool_activation.rs:1070-1420;src-tauri/src/tool_adapters/desktop_lifecycle.rs",
+      "observedAt": "2026-09-07T07:33:40Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-087"
+      ]
+    },
+    {
+      "id": "E-PROP-037",
+      "claim": "Create a source-only cross-platform connection UX correction: close the consent dialog before asynchronous work, keep progress inline and non-modal, separate initial loading, background refresh, open, restore and configuration states, make the update-connection action explicit and independently available, and explain lifecycle behavior by surface class. Preserve explicit save-work consent and graceful close for running desktop apps, never force terminate, and leave terminal agents to new-session launch semantics. Verify focused renderer scenarios plus a source-level lifecycle matrix without packaging or publishing.",
+      "class": "proposed",
+      "locator": "inline:ru068-cross-platform-connection-ux-recovery",
+      "observedAt": "2026-09-07T07:33:40Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-087",
+        "E-CODE-088"
+      ]
+    },
+    {
+      "id": "E-CODE-089",
+      "claim": "The RU-068 source correction passes TypeScript, 59 focused connection tests, all 459 renderer unit tests, its source lifecycle scenario and the production renderer build. The first governed RU-068 execution preserves a failure because the vitest-json adapter rejects the repository's ranged Vitest dependency before running either selected test; its separately isolated pytest lifecycle scenario passed. This adapter failure is not a product-test failure and package.json is forbidden from the UX correction scope.",
+      "class": "code_observed",
+      "locator": "command:pnpm-exec-tsc-and-focused-vitest-and-pytest:2026-09-07T07:46Z;command:pnpm-test-unit-and-build-renderer:2026-09-07T07:47Z;.product-governance/execution/reports/87806ab8ce03707a.2f7d5547993a7ef334e9.json",
+      "observedAt": "2026-09-07T07:49:13Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-CODE-088",
+        "E-PROP-037"
+      ]
+    },
+    {
+      "id": "E-PROP-038",
+      "claim": "Preserve the failed RU-068 execution and supersede its implementation authority with a source-read-only verification unit. Re-run the already-passing pytest lifecycle matrix under isolated governance execution, require an empty baseline-to-tested source diff, and rely on the recorded complete renderer suite, focused tests, typecheck and production build as supporting evidence without changing product, dependencies, tests or packages.",
+      "class": "proposed",
+      "locator": "inline:ru069-readonly-connection-ux-verification",
+      "observedAt": "2026-09-07T07:49:13Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-CODE-089"
+      ]
+    },
+    {
+      "id": "E-CODE-090",
+      "claim": "A production-CSS visual preview at 1280 by 720 confirms the new Open action is primary, but the Update connection settings action remains muted gray and only 210 pixels wide. Direct cascade inspection shows workbench-v2.css loads after index.css and contains a more specific :has(.open-connection-control) rule that intentionally resets setup-apply to subtle background, line border and muted text, overriding the new configured-state action hierarchy.",
+      "class": "code_observed",
+      "locator": "visual:http://127.0.0.1:4174/ru068-ux-preview.html:2026-09-07T07:54Z;computed-style:connection-action-deck-buttons:2026-09-07T07:54Z;src/workbench/workbench-v2.css:184-188;src/index.css:2268-2315",
+      "observedAt": "2026-09-07T07:55:21Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-087",
+        "E-CODE-089"
+      ]
+    },
+    {
+      "id": "E-PROP-039",
+      "claim": "Add a bounded CSS-cascade correction that makes the configured action deck full width in the sticky side panel and changes the final workbench override from muted gray to the established accent-outline secondary treatment. Verify the final source cascade and re-run the production build plus visual computed-style inspection without changing behavior, packaging or remote state.",
+      "class": "proposed",
+      "locator": "inline:ru070-configured-action-cascade-fix",
+      "observedAt": "2026-09-07T07:55:21Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-CODE-090"
+      ]
+    },
+    {
+      "id": "E-USER-088",
+      "claim": "The product owner explicitly requires the unfinished Yeschoy automatic-update capability to be completed and asks whether it must be decoupled, following repeated reports that unrelated desktop connection and installation work can block or freeze the novice client.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-07:auto-update-finish-and-decouple",
+      "observedAt": "2026-09-07T08:19:14Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-091",
+      "claim": "Current source declares JavaScript updater dependencies and retains unused CC Switch update UI, but the Yeschoy App does not mount an update provider, Rust does not initialize or register the updater plugin, both Tauri configurations disable updater artifacts, Settings states updates are unavailable, the inherited release workflow still publishes CC Switch identities, the independent third-party installer origin is live, and https://ergou.qzz.io/updates/stable.json returns an empty HTTP 204 channel.",
+      "class": "code_observed",
+      "locator": "package.json;src/App.tsx;src/settings/SettingsView.tsx;src/lib/updater.ts;src/contexts/UpdateContext.tsx;src-tauri/Cargo.toml;src-tauri/src/lib.rs;src-tauri/tauri.conf.json;src-tauri/tauri.candidate.conf.json;.github/workflows/release.yml;deploy/download-origin/Caddyfile.origin;https://ergou.qzz.io/health.json;https://ergou.qzz.io/updates/stable.json:2026-09-07",
+      "observedAt": "2026-09-07T08:19:14Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-088"
+      ]
+    },
+    {
+      "id": "E-EXT-062",
+      "claim": "Tauri v2 updater documentation requires native plugin initialization, an embedded public key, signed updater artifacts and an HTTPS endpoint; signatures are mandatory, static endpoints may return HTTP 204 when no update exists, and Windows installation exits the application while macOS and Linux require relaunch handling.",
+      "class": "external_verified",
+      "locator": "https://v2.tauri.app/plugin/updater/:accessed-2026-09-07",
+      "observedAt": "2026-09-07T08:19:14Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-040",
+      "claim": "Complete one bounded Yeschoy self-update closure: a native-only signed updater with background check and explicit one-click download/restart UX, cooperative shutdown and recovery, immutable artifact plus atomic manifest publication, a truthful unavailable state, and a Yeschoy-specific release workflow. Isolate its state, mutex, IPC contract, origin channel and signing authority from tool activation, third-party application downloads, account/model services and renderer updater permissions.",
+      "class": "proposed",
+      "locator": "inline:ru071-self-update-closure",
+      "observedAt": "2026-09-07T08:19:14Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-088",
+        "E-CODE-091",
+        "E-EXT-062"
       ]
     }
   ]

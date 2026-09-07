@@ -3725,5 +3725,72 @@
     "backendBody": "Sign-in, balance and recharge are not available yet. You can still browse models and check your connection.",
     "openAccount": "View account",
     "openDiagnostics": "Check connection"
+  },
+  "yeschoyUpdate": {
+    "title": "Yeschoy automatic updates",
+    "body": "Checks after startup and only alerts you when a release is ready. Model setup and app downloads stay independent.",
+    "state": {
+      "automatic": "Automatic checks on",
+      "current": "Up to date",
+      "available": "Update available",
+      "attention": "Not completed"
+    },
+    "progressLabel": "Update steps",
+    "stage": {
+      "check": "Check version",
+      "download": "Download & verify",
+      "restart": "Safe restart"
+    },
+    "phase": {
+      "idle": "Waiting for the first automatic check",
+      "checking": "Checking for a new version",
+      "current": "You have the latest version",
+      "available": "A new version is ready",
+      "downloading": "Downloading and verifying the update",
+      "restarting": "Finishing local work and restarting safely",
+      "unavailable": "Updates cannot be checked right now",
+      "failed": "This update did not finish"
+    },
+    "reason": {
+      "idle": "No action needed. Yeschoy will check in the background.",
+      "checking": "Only the Yeschoy update source is contacted; model and account settings are not read.",
+      "no_update": "Nothing needs to be downloaded.",
+      "update_available": "The package is verified before Yeschoy exits and restarts.",
+      "downloading": "You can keep browsing; the updater does not hold the app-setup lock.",
+      "preparing_restart": "Waiting for local work to finish safely.",
+      "channel_unavailable": "The update source is temporarily unavailable. Other features still work.",
+      "native_unavailable": "The local update service did not respond. Other features still work.",
+      "response_timeout": "The check took too long and stopped waiting. Other features remain available.",
+      "install_failed_restarted": "The previous install did not finish. The existing version was reopened and settings were preserved.",
+      "signature_invalid": "The package failed signature verification and was not installed.",
+      "download_failed": "The download did not finish. You can retry later.",
+      "artifact_invalid": "The update package was not valid and was not installed.",
+      "stale_version": "Release information changed. Check again before updating.",
+      "update_not_checked": "Check for an update before installing.",
+      "shutting_down": "Yeschoy is closing, so this update stopped.",
+      "shutdown_failed": "Local work could not finish safely. The existing version was reopened.",
+      "install_failed": "Installation did not finish. The existing version was reopened.",
+      "updater_not_configured": "This build has no configured update channel.",
+      "platform_unsupported": "Automatic updates are not supported on this system yet.",
+      "endpoint_invalid": "The update address failed its security check.",
+      "manifest_invalid": "The release manifest is incomplete or not for this computer.",
+      "check_failed": "The check could not finish. Other features are unaffected.",
+      "default": "Updates and model setup are independent; an update failure cannot lock the app."
+    },
+    "availableVersion": "Update to v{{version}}",
+    "currentVersion": "Current version v{{version}}",
+    "installAndRestart": "Update & restart",
+    "checkAgain": "Check again",
+    "checking": "Checking…",
+    "downloading": "Downloading…",
+    "restarting": "Restarting…",
+    "openSettings": "Update settings",
+    "safety": "Every package must pass signature verification. Yeschoy stays open until download completes and never changes Codex, Claude, or other app settings during an update.",
+    "notice": {
+      "available": "Yeschoy v{{version}} is ready",
+      "downloading": "Downloading the update safely",
+      "restarting": "Almost finished",
+      "failed": "Update not completed"
+    }
   }
 }

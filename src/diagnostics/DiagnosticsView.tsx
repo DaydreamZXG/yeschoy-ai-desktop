@@ -1,11 +1,13 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
-import {
-  CONNECTIVITY_LINES,
-  isCompleteConnectivityProjection,
+import { CONNECTIVITY_LINES, decodeConnectivityProjection } from "./contract";
+import type {
+  ConnectivityLineId,
+  ConnectivityLineResult,
+  ConnectivityResponse,
 } from "./contract";
-import type { ConnectivityLineId, ConnectivityResponse } from "./contract";
+import { diagnosticsCopy } from "./copy";
 
 interface DiagnosticsViewProps {
   onOpenSetup: () => void;
@@ -20,22 +22,33 @@ type DiagnosticsPhase =
   | "empty"
   | "error";
 
+interface LineObservation {
+  result: ConnectivityLineResult;
+  requestId: string;
+}
+
 export function DiagnosticsView({
   onOpenSetup,
   onOpenTools,
 }: DiagnosticsViewProps) {
   const { t, i18n } = useTranslation();
+  const copy = diagnosticsCopy(i18n.resolvedLanguage ?? i18n.language);
   const [phase, setPhase] = useState<DiagnosticsPhase>("idle");
   const [response, setResponse] = useState<ConnectivityResponse | null>(null);
+  const [issue, setIssue] = useState<"invoke" | "invalid" | "partial" | null>(
+    null,
+  );
+  const [observations, setObservations] = useState<
+    ReadonlyMap<ConnectivityLineId, LineObservation>
+  >(() => new Map());
   const latestRequestRef = useRef("");
   const requestSequenceRef = useRef(0);
 
-  const resultsByLine = useMemo(
-    () =>
-      new Map<ConnectivityLineId, ConnectivityResponse["lines"][number]>(
-        response?.lines.map((line) => [line.lineId, line]) ?? [],
-      ),
-    [response],
+  useEffect(
+    () => () => {
+      latestRequestRef.current = "";
+    },
+    [],
   );
 
   const completedAt = response
@@ -50,26 +63,40 @@ export function DiagnosticsView({
     requestSequenceRef.current += 1;
     const requestId = `line-${Date.now().toString(36)}-${requestSequenceRef.current}`;
     latestRequestRef.current = requestId;
-    setResponse(null);
+    setIssue(null);
     setPhase("checking");
 
     try {
-      const next = await invoke<ConnectivityResponse>(
-        "check_line_connectivity_read_only",
-        { request: { requestId } },
-      );
+      const next = await invoke<unknown>("check_line_connectivity_read_only", {
+        request: { requestId },
+      });
 
       if (latestRequestRef.current !== requestId) return;
-      if (!isCompleteConnectivityProjection(next, requestId)) {
-        throw new Error("invalid_projection");
+      const decoded = decodeConnectivityProjection(next, requestId);
+      if (!decoded) {
+        setIssue("invalid");
+        setPhase("error");
+        return;
       }
 
-      setResponse(next);
-      const reachableCount = next.lines.filter(
+      setResponse(decoded.response);
+      setObservations((previous) => {
+        const updated = new Map(previous);
+        for (const result of decoded.response.lines) {
+          updated.set(result.lineId, { result, requestId });
+        }
+        return updated;
+      });
+      if (!decoded.complete) {
+        setIssue(decoded.response.lines.length > 0 ? "partial" : "invalid");
+        setPhase(decoded.response.lines.length > 0 ? "partial" : "error");
+        return;
+      }
+      const reachableCount = decoded.response.lines.filter(
         (line) => line.status === "reachable",
       ).length;
       setPhase(
-        reachableCount === next.lines.length
+        reachableCount === decoded.response.lines.length
           ? "success"
           : reachableCount === 0
             ? "empty"
@@ -77,7 +104,7 @@ export function DiagnosticsView({
       );
     } catch {
       if (latestRequestRef.current !== requestId) return;
-      setResponse(null);
+      setIssue("invoke");
       setPhase("error");
     }
   };
@@ -147,26 +174,49 @@ export function DiagnosticsView({
           <span className="diagnostic-meta" aria-live="polite">
             {phase === "checking" && t("yeschoyDiagnostics.processing")}
             {completedAt &&
-              t("yeschoyDiagnostics.checkedAt", { time: completedAt })}
+              phase !== "checking" &&
+              (response?.requestId === latestRequestRef.current
+                ? t("yeschoyDiagnostics.checkedAt", { time: completedAt })
+                : t("yeschoyDiagnostics.previousCheckedAt", {
+                    time: completedAt,
+                    defaultValue: copy.previousCheckedAt,
+                  }))}
           </span>
         </div>
 
-        {phase === "error" && (
+        {issue && (
           <div className="error-banner" role="alert">
-            <strong>{t("yeschoyDiagnostics.invalidTitle")}</strong>
-            <span>{t("yeschoyDiagnostics.invalidBody")}</span>
+            <strong>
+              {t(`yeschoyDiagnostics.readError.${issue}.title`, {
+                defaultValue: copy[issue].title,
+              })}
+            </strong>
+            <span>
+              {t(`yeschoyDiagnostics.readError.${issue}.body`, {
+                defaultValue: copy[issue].body,
+              })}
+            </span>
           </div>
         )}
 
         <div className="line-result-grid" aria-busy={phase === "checking"}>
           {CONNECTIVITY_LINES.map((line) => {
-            const result = resultsByLine.get(line.lineId);
+            const observation = observations.get(line.lineId);
+            const result = observation?.result;
+            const stale =
+              observation && observation.requestId !== latestRequestRef.current;
             const status =
-              phase === "checking" ? "checking" : (result?.status ?? "waiting");
+              result?.status ??
+              (phase === "checking"
+                ? "checking"
+                : phase === "idle"
+                  ? "waiting"
+                  : "unavailable");
             return (
               <article
                 className="line-result-card"
                 data-status={status}
+                aria-labelledby={`diagnostic-line-${line.lineId}`}
                 key={line.lineId}
               >
                 <div className="line-result-top">
@@ -176,11 +226,24 @@ export function DiagnosticsView({
                     <i />
                   </span>
                   <span className="line-status-label">
-                    {t(`yeschoyDiagnostics.status.${status}`)}
+                    {status === "unavailable"
+                      ? t("yeschoyDiagnostics.status.unavailable", {
+                          defaultValue: copy.unavailable,
+                        })
+                      : t(`yeschoyDiagnostics.status.${status}`)}
                   </span>
                 </div>
-                <h3>{t(`yeschoyConfiguration.lines.${line.lineId}.name`)}</h3>
+                <h3 id={`diagnostic-line-${line.lineId}`}>
+                  {t(`yeschoyConfiguration.lines.${line.lineId}.name`)}
+                </h3>
                 <code>{line.rootUrl}</code>
+                {stale && (
+                  <p className="diagnostic-meta" role="status">
+                    {t("yeschoyDiagnostics.previousResult", {
+                      defaultValue: copy.previous,
+                    })}
+                  </p>
+                )}
                 {result ? (
                   <div className="line-result-evidence">
                     <span>
@@ -191,7 +254,11 @@ export function DiagnosticsView({
                   </div>
                 ) : (
                   <p className="line-waiting-copy">
-                    {t("yeschoyDiagnostics.noResult")}
+                    {phase === "idle" || phase === "checking"
+                      ? t("yeschoyDiagnostics.noResult")
+                      : t("yeschoyDiagnostics.noCurrentResult", {
+                          defaultValue: copy.noResult,
+                        })}
                   </p>
                 )}
               </article>

@@ -5,6 +5,7 @@ import { AppearancePicker } from "../workbench/WorkbenchChrome";
 import type { Appearance } from "../workbench/appearance";
 import { useWorkbenchCopy } from "../workbench/copy";
 import { QuitAssistant } from "./QuitAssistant";
+import { UpdateSettingsCard } from "../update/UpdateSettingsCard";
 
 type Language = "zh" | "zh-TW" | "en" | "ja";
 
@@ -24,11 +25,7 @@ interface SettingsViewProps {
 
 const SECURITY_ROWS = ["apiKeys", "configFiles", "telemetry"] as const;
 
-const RELEASE_ROWS = ["updater"] as const;
-
 export function SettingsView({
-  onOpenAccount,
-  onOpenDiagnostics,
   appearance = "system",
   onAppearanceChange,
 }: SettingsViewProps) {
@@ -136,30 +133,9 @@ export function SettingsView({
             </div>
           </div>
           <div className="release-row-list">
-            {RELEASE_ROWS.map((row) => (
-              <div key={row}>
-                <strong>{t(`yeschoySettings.release.${row}.title`)}</strong>
-                <p>{t(`yeschoySettings.release.${row}.body`)}</p>
-                <span>{t(`yeschoySettings.release.${row}.state`)}</span>
-              </div>
-            ))}
+            <UpdateSettingsCard />
           </div>
         </div>
-
-        <aside className="settings-boundary">
-          <div>
-            <strong>{t("yeschoySettings.backendTitle")}</strong>
-            <p>{t("yeschoySettings.backendBody")}</p>
-          </div>
-          <div className="settings-boundary-actions">
-            <button type="button" onClick={onOpenAccount}>
-              {t("yeschoySettings.openAccount")}
-            </button>
-            <button type="button" onClick={onOpenDiagnostics}>
-              {t("yeschoySettings.openDiagnostics")}
-            </button>
-          </div>
-        </aside>
       </section>
     </div>
   );

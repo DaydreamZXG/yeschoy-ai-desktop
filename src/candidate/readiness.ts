@@ -1,4 +1,6 @@
-export const CANDIDATE_VERSION = "0.4.6" as const;
+import { version } from "../../package.json";
+
+export const CANDIDATE_VERSION = version;
 
 export type CandidateCapabilityId =
   | "tool_discovery"

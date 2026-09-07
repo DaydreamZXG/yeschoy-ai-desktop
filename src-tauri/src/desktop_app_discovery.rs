@@ -1,6 +1,6 @@
 use crate::desktop_app_discovery_core::{
-    classify, DesktopAppObservation, DesktopAppResult, DesktopAppSpec, LocationHint,
-    DESKTOP_APP_SPECS,
+    classify, DesktopAppObservation, DesktopAppResult, DesktopAppSpec, DesktopLaunchTarget,
+    LocationHint, DESKTOP_APP_SPECS,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -17,6 +17,7 @@ use winreg::enums::{KEY_READ, KEY_WOW64_32KEY, KEY_WOW64_64KEY};
 #[cfg(target_os = "windows")]
 use winreg::{RegKey, HKCR, HKCU, HKLM};
 
+#[cfg(target_os = "macos")]
 const MAX_PLIST_BYTES: u64 = 256 * 1024;
 
 #[derive(Debug, Deserialize)]
@@ -71,6 +72,7 @@ struct Candidate {
     location_hint: LocationHint,
     bundle_identifier: String,
     version: String,
+    launch_target: DesktopLaunchTarget,
 }
 
 #[derive(Clone, Debug)]
@@ -101,6 +103,36 @@ pub(crate) fn activation_candidates(app_id: &str) -> Vec<DesktopActivationCandid
             version: candidate.version,
         })
         .collect()
+}
+
+/// Recheck the exact native-discovered installation when opening. In
+/// particular a failed/stale package lookup must not become an EXE fallback.
+pub(crate) fn resolve_launch_target(app_id: &str, path: &Path) -> Option<DesktopLaunchTarget> {
+    let spec = DESKTOP_APP_SPECS
+        .into_iter()
+        .find(|spec| spec.id == app_id)?;
+    if !path.is_absolute() {
+        return None;
+    }
+    let canonical = std::fs::canonicalize(path).ok()?;
+    #[cfg(target_os = "macos")]
+    let candidates = discover_macos_candidates(spec);
+    #[cfg(target_os = "windows")]
+    let candidates = discover_windows_candidates(spec);
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let candidates: Vec<Candidate> = {
+        let _ = spec;
+        Vec::new()
+    };
+    select_launch_target(candidates, &canonical)
+}
+
+fn select_launch_target(candidates: Vec<Candidate>, path: &Path) -> Option<DesktopLaunchTarget> {
+    let mut matches = candidates
+        .into_iter()
+        .filter(|candidate| candidate.path == path);
+    let first = matches.next()?;
+    matches.next().is_none().then_some(first.launch_target)
 }
 
 #[cfg(target_os = "macos")]
@@ -200,10 +232,11 @@ fn discover_macos_candidates(spec: DesktopAppSpec) -> Vec<Candidate> {
             }
             let canonical = std::fs::canonicalize(&path).unwrap_or(path);
             accepted.entry(canonical.clone()).or_insert(Candidate {
-                path: canonical,
+                path: canonical.clone(),
                 location_hint,
                 bundle_identifier,
                 version,
+                launch_target: DesktopLaunchTarget::MacBundle(canonical),
             });
         }
     }
@@ -250,6 +283,7 @@ fn discover_windows_candidates(spec: DesktopAppSpec) -> Vec<Candidate> {
     if let Some(root) = env::var_os("LOCALAPPDATA") {
         collect_windows_path_candidates(
             &mut accepted,
+            spec,
             PathBuf::from(root),
             LocationHint::LocalAppData,
             windows_relative_paths(spec.id, false),
@@ -259,6 +293,7 @@ fn discover_windows_candidates(spec: DesktopAppSpec) -> Vec<Candidate> {
         if let Some(root) = env::var_os(variable) {
             collect_windows_path_candidates(
                 &mut accepted,
+                spec,
                 PathBuf::from(root),
                 LocationHint::ProgramFiles,
                 windows_relative_paths(spec.id, true),
@@ -275,7 +310,7 @@ fn discover_windows_candidates(spec: DesktopAppSpec) -> Vec<Candidate> {
     discover_windows_protocol_candidate(spec)
 }
 
-#[cfg(target_os = "windows")]
+#[cfg(any(target_os = "windows", test))]
 fn windows_app_relative_executables(app_id: &str) -> &'static [&'static str] {
     match app_id {
         "claude_desktop" => &[
@@ -299,15 +334,106 @@ fn windows_app_relative_executables(app_id: &str) -> &'static [&'static str] {
 
 #[cfg(target_os = "windows")]
 fn executable_below(root: &Path, app_id: &str) -> Option<PathBuf> {
-    windows_app_relative_executables(app_id)
-        .iter()
-        .map(|relative| root.join(relative))
-        .find(|path| path.is_file())
-        .map(|path| std::fs::canonicalize(&path).unwrap_or(path))
+    windows_program_below(root, app_id, |path| {
+        windows_standalone_identity_matches(app_id, path)
+    })
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn windows_program_below(
+    root: &Path,
+    app_id: &str,
+    verify: impl Fn(&Path) -> bool,
+) -> Option<PathBuf> {
+    if !root.is_absolute() {
+        return None;
+    }
+    let canonical_root = std::fs::canonicalize(root).ok()?;
+    let resolve = |root: &Path| {
+        windows_app_relative_executables(app_id)
+            .iter()
+            .map(|relative| {
+                relative
+                    .split('\\')
+                    .fold(root.to_path_buf(), |path, part| path.join(part))
+            })
+            .filter(|path| path.is_file())
+            .filter_map(|path| std::fs::canonicalize(path).ok())
+            .find(|path| path.starts_with(&canonical_root) && verify(path))
+    };
+    if let Some(path) = resolve(&canonical_root) {
+        return Some(path);
+    }
+    // Squirrel installers keep the GUI in app-<version>. Inspect only a
+    // bounded, shallow product directory; never execute Update.exe arguments.
+    let entries = std::fs::read_dir(&canonical_root)
+        .ok()?
+        .take(257)
+        .collect::<Result<Vec<_>, _>>()
+        .ok()?;
+    if entries.len() > 256 {
+        return None;
+    }
+    let mut versioned = entries
+        .into_iter()
+        .filter_map(|entry| {
+            let name = entry.file_name();
+            let version = name.to_str()?.strip_prefix("app-")?;
+            let parts = version.split('.').collect::<Vec<_>>();
+            if !(2..=4).contains(&parts.len())
+                || !parts
+                    .iter()
+                    .all(|part| !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_digit()))
+            {
+                return None;
+            }
+            let path = std::fs::canonicalize(entry.path()).ok()?;
+            (path.is_dir() && path.starts_with(&canonical_root))
+                .then(|| (windows_version_key(version), path))
+        })
+        .collect::<Vec<_>>();
+    versioned.sort_by(|left, right| right.0.cmp(&left.0).then_with(|| left.1.cmp(&right.1)));
+    let mut versions = versioned.into_iter().peekable();
+    while let Some((version, directory)) = versions.next() {
+        let mut candidates = resolve(&directory).into_iter().collect::<Vec<_>>();
+        while versions.peek().is_some_and(|(other, _)| *other == version) {
+            if let Some((_, directory)) = versions.next() {
+                candidates.extend(resolve(&directory));
+            }
+        }
+        candidates.sort();
+        candidates.dedup();
+        match candidates.as_slice() {
+            [only] => return Some(only.clone()),
+            [] => (),
+            _ => return None,
+        }
+    }
+    None
 }
 
 #[cfg(target_os = "windows")]
 fn windows_file_version(path: &Path) -> Option<String> {
+    let buffer = windows_version_resource(path)?;
+    let bytes = windows_version_value(&buffer, "\\", false)?;
+    if bytes.len() < std::mem::size_of::<VS_FIXEDFILEINFO>() {
+        return None;
+    }
+    let info = unsafe { std::ptr::read_unaligned(bytes.as_ptr().cast::<VS_FIXEDFILEINFO>()) };
+    if info.dwSignature != 0xFEEF04BD {
+        return None;
+    }
+    Some(format!(
+        "{}.{}.{}.{}",
+        info.dwFileVersionMS >> 16,
+        info.dwFileVersionMS & 0xffff,
+        info.dwFileVersionLS >> 16,
+        info.dwFileVersionLS & 0xffff
+    ))
+}
+
+#[cfg(target_os = "windows")]
+fn windows_version_resource(path: &Path) -> Option<Vec<u32>> {
     use std::os::windows::ffi::OsStrExt;
 
     let wide = path
@@ -320,11 +446,19 @@ fn windows_file_version(path: &Path) -> Option<String> {
     if size == 0 || size > 16 * 1024 * 1024 {
         return None;
     }
-    let mut buffer = vec![0u8; size as usize];
+    let mut buffer = vec![0u32; (size as usize).div_ceil(4)];
     if unsafe { GetFileVersionInfoW(wide.as_ptr(), 0, size, buffer.as_mut_ptr().cast()) } == 0 {
         return None;
     }
-    let query = ['\\' as u16, 0];
+    Some(buffer)
+}
+
+#[cfg(target_os = "windows")]
+fn windows_version_value<'a>(buffer: &'a [u32], query: &str, is_string: bool) -> Option<&'a [u8]> {
+    let query = query
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
     let mut value = std::ptr::null_mut();
     let mut value_len = 0u32;
     if unsafe {
@@ -336,21 +470,213 @@ fn windows_file_version(path: &Path) -> Option<String> {
         )
     } == 0
         || value.is_null()
-        || value_len < std::mem::size_of::<VS_FIXEDFILEINFO>() as u32
+        || value_len == 0
     {
         return None;
     }
-    let info = unsafe { &*(value.cast::<VS_FIXEDFILEINFO>()) };
-    if info.dwSignature != 0xFEEF04BD {
+    let bytes = unsafe {
+        std::slice::from_raw_parts(buffer.as_ptr().cast::<u8>(), std::mem::size_of_val(buffer))
+    };
+    let start = (value as usize).checked_sub(bytes.as_ptr() as usize)?;
+    let length = (value_len as usize).checked_mul(if is_string { 2 } else { 1 })?;
+    bytes.get(start..start.checked_add(length)?)
+}
+
+#[cfg(target_os = "windows")]
+fn windows_version_string(
+    buffer: &[u32],
+    language: u16,
+    code_page: u16,
+    field: &str,
+) -> Option<String> {
+    let query = format!("\\StringFileInfo\\{language:04x}{code_page:04x}\\{field}");
+    let bytes = windows_version_value(buffer, &query, true)?;
+    if bytes.len() > 1024 || bytes.len() % 2 != 0 {
         return None;
     }
-    Some(format!(
-        "{}.{}.{}.{}",
-        info.dwFileVersionMS >> 16,
-        info.dwFileVersionMS & 0xffff,
-        info.dwFileVersionLS >> 16,
-        info.dwFileVersionLS & 0xffff
-    ))
+    let wide = bytes
+        .chunks_exact(2)
+        .map(|bytes| u16::from_le_bytes([bytes[0], bytes[1]]))
+        .take_while(|value| *value != 0)
+        .collect::<Vec<_>>();
+    String::from_utf16(&wide).ok()
+}
+
+#[cfg(target_os = "windows")]
+fn windows_standalone_identity_matches(app_id: &str, path: &Path) -> bool {
+    if is_windows_packaged_path(path) || !windows_gui_executable(path) {
+        return false;
+    }
+    let Some(buffer) = windows_version_resource(path) else {
+        return false;
+    };
+    let Some(translations) = windows_version_value(&buffer, "\\VarFileInfo\\Translation", false)
+    else {
+        return false;
+    };
+    translations.chunks_exact(4).take(16).any(|pair| {
+        let language = u16::from_le_bytes([pair[0], pair[1]]);
+        let code_page = u16::from_le_bytes([pair[2], pair[3]]);
+        let product =
+            windows_version_string(&buffer, language, code_page, "ProductName").unwrap_or_default();
+        let company =
+            windows_version_string(&buffer, language, code_page, "CompanyName").unwrap_or_default();
+        crate::desktop_app_discovery_core::windows_desktop_file_identity_matches(
+            app_id, path, &product, &company, true,
+        )
+    })
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn is_windows_packaged_path(path: &Path) -> bool {
+    path.to_string_lossy()
+        .split(['/', '\\'])
+        .any(|part| part.eq_ignore_ascii_case("WindowsApps"))
+        || path
+            .ancestors()
+            .skip(1)
+            .any(|parent| parent.join("AppxManifest.xml").is_file())
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn windows_gui_executable(path: &Path) -> bool {
+    use std::io::Read;
+    let Ok(file) = std::fs::File::open(path) else {
+        return false;
+    };
+    if !file.metadata().is_ok_and(|metadata| metadata.is_file()) {
+        return false;
+    }
+    let mut header = Vec::new();
+    file.take(64 * 1024).read_to_end(&mut header).is_ok()
+        && crate::desktop_app_discovery_core::is_windows_gui_pe(&header)
+}
+
+#[cfg(target_os = "windows")]
+fn read_bounded_file(path: &Path, maximum: u64) -> Option<Vec<u8>> {
+    use std::io::Read;
+    let file = std::fs::File::open(path).ok()?;
+    let metadata = file.metadata().ok()?;
+    if !metadata.is_file() || metadata.len() > maximum {
+        return None;
+    }
+    let mut bytes = Vec::new();
+    file.take(maximum + 1).read_to_end(&mut bytes).ok()?;
+    (bytes.len() as u64 <= maximum).then_some(bytes)
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn native_buffer_wide_string(buffer: &[u8], pointer: usize) -> Option<String> {
+    let start = pointer.checked_sub(buffer.as_ptr() as usize)?;
+    let tail = buffer.get(start..)?;
+    if start % 2 != 0 {
+        return None;
+    }
+    let mut wide = Vec::new();
+    for bytes in tail.chunks_exact(2).take(32768) {
+        let unit = u16::from_le_bytes([bytes[0], bytes[1]]);
+        if unit == 0 {
+            return String::from_utf16(&wide).ok();
+        }
+        wide.push(unit);
+    }
+    None
+}
+
+#[cfg(target_os = "windows")]
+fn installed_windows_package(full_name: &str) -> Option<(PathBuf, String, Vec<String>)> {
+    use windows_sys::Win32::{
+        Foundation::{ERROR_INSUFFICIENT_BUFFER, ERROR_SUCCESS},
+        Storage::Packaging::Appx::{
+            ClosePackageInfo, GetPackageApplicationIds, GetPackagePathByFullName,
+            OpenPackageInfoByFullName, PackageFamilyNameFromFullName, _PACKAGE_INFO_REFERENCE,
+        },
+    };
+    let full = full_name
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    let mut reference = std::ptr::null_mut();
+    let status = unsafe { OpenPackageInfoByFullName(full.as_ptr(), 0, &mut reference) };
+    if status != ERROR_SUCCESS || reference.is_null() {
+        log::debug!("desktop_launch stage=package_lookup os_code={status}");
+        return None;
+    }
+    struct PackageInfo(*mut _PACKAGE_INFO_REFERENCE);
+    impl Drop for PackageInfo {
+        fn drop(&mut self) {
+            unsafe {
+                ClosePackageInfo(self.0);
+            }
+        }
+    }
+    let reference = PackageInfo(reference);
+    fn wide_result(mut query: impl FnMut(*mut u32, *mut u16) -> u32) -> Option<String> {
+        let mut length = 0;
+        if query(&mut length, std::ptr::null_mut()) != ERROR_INSUFFICIENT_BUFFER
+            || !(2..=32768).contains(&length)
+        {
+            return None;
+        }
+        let mut buffer = vec![0u16; length as usize];
+        if query(&mut length, buffer.as_mut_ptr()) != ERROR_SUCCESS
+            || length as usize > buffer.len()
+        {
+            return None;
+        }
+        let end = buffer.iter().position(|unit| *unit == 0)?;
+        String::from_utf16(&buffer[..end]).ok()
+    }
+    let root = wide_result(|length, buffer| unsafe {
+        GetPackagePathByFullName(full.as_ptr(), length, buffer)
+    })?;
+    let root = std::fs::canonicalize(root)
+        .ok()
+        .filter(|path| path.is_absolute() && path.is_dir())?;
+    let family = wide_result(|length, buffer| unsafe {
+        PackageFamilyNameFromFullName(full.as_ptr(), length, buffer)
+    })?;
+    let mut length = 0u32;
+    let mut count = 0u32;
+    if unsafe {
+        GetPackageApplicationIds(reference.0, &mut length, std::ptr::null_mut(), &mut count)
+    } != ERROR_INSUFFICIENT_BUFFER
+        || length == 0
+        || length > 1024 * 1024
+        || count > 64
+    {
+        return None;
+    }
+    // The API returns a pointer table followed by UTF-16 strings. Use aligned
+    // storage and bounds-check every pointer before decoding its string.
+    let mut aligned = vec![0usize; (length as usize).div_ceil(std::mem::size_of::<usize>())];
+    if unsafe {
+        GetPackageApplicationIds(
+            reference.0,
+            &mut length,
+            aligned.as_mut_ptr().cast(),
+            &mut count,
+        )
+    } != ERROR_SUCCESS
+        || count == 0
+        || count > 64
+        || length as usize > std::mem::size_of_val(aligned.as_slice())
+    {
+        return None;
+    }
+    let bytes =
+        unsafe { std::slice::from_raw_parts(aligned.as_ptr().cast::<u8>(), length as usize) };
+    let table_length = (count as usize).checked_mul(std::mem::size_of::<usize>())?;
+    let table = bytes.get(..table_length)?;
+    let mut ids = Vec::new();
+    for pointer in table.chunks_exact(std::mem::size_of::<usize>()) {
+        let pointer = usize::from_ne_bytes(pointer.try_into().ok()?);
+        if pointer.checked_sub(bytes.as_ptr() as usize)? < table_length {
+            return None;
+        }
+        ids.push(native_buffer_wide_string(bytes, pointer)?);
+    }
+    Some((root, family, ids))
 }
 
 #[cfg(any(target_os = "windows", test))]
@@ -390,22 +716,33 @@ fn windows_relative_paths(app_id: &str, program_files: bool) -> &'static [&'stat
 #[cfg(target_os = "windows")]
 fn collect_windows_path_candidates(
     accepted: &mut HashMap<PathBuf, Candidate>,
+    spec: DesktopAppSpec,
     root: PathBuf,
     location_hint: LocationHint,
     relative_paths: &[&str],
 ) {
     for relative_path in relative_paths {
         let path = root.join(relative_path);
-        if !path.is_file() {
+        if !path.is_absolute() {
             continue;
         }
-        let canonical = std::fs::canonicalize(&path).unwrap_or(path);
+        let canonical = std::fs::canonicalize(&path)
+            .ok()
+            .filter(|path| windows_standalone_identity_matches(spec.id, path))
+            .or_else(|| {
+                path.parent()
+                    .and_then(|parent| executable_below(parent, spec.id))
+            });
+        let Some(canonical) = canonical else {
+            continue;
+        };
         let version = windows_file_version(&canonical).unwrap_or_default();
         accepted.entry(canonical.clone()).or_insert(Candidate {
-            path: canonical,
+            path: canonical.clone(),
             location_hint,
             bundle_identifier: String::new(),
             version,
+            launch_target: DesktopLaunchTarget::WindowsExecutable(canonical),
         });
     }
 }
@@ -421,22 +758,7 @@ fn compact_windows_name(raw: &str) -> String {
 
 #[cfg(any(target_os = "windows", test))]
 fn windows_package_identity_matches(app_id: &str, identity: &str) -> bool {
-    let compact = compact_windows_name(identity);
-    match app_id {
-        "claude_desktop" => {
-            compact == "claude"
-                || compact == "claudedesktop"
-                || compact == "anthropicclaude"
-                || compact == "anthropicclaudedesktop"
-        }
-        "codex_desktop" => {
-            compact == "codex"
-                || compact == "chatgpt"
-                || compact == "openaicodex"
-                || compact == "openaichatgpt"
-        }
-        _ => false,
-    }
+    crate::desktop_app_discovery_core::windows_package_name_matches(app_id, identity)
 }
 
 #[cfg(any(target_os = "windows", test))]
@@ -505,33 +827,93 @@ fn discover_windows_package_candidates(spec: DesktopAppSpec) -> Vec<Candidate> {
         if !windows_package_identity_matches(spec.id, &identity) {
             continue;
         }
-        let Ok(package) = packages.open_subkey_with_flags(&package_full_name, KEY_READ) else {
-            continue;
-        };
-        let root: String = package
-            .get_value("PackageRootFolder")
-            .or_else(|_| package.get_value("Path"))
-            .unwrap_or_default();
-        let Some(path) = (!root.is_empty())
-            .then(|| executable_below(Path::new(&root), spec.id))
-            .flatten()
+        // Registry names are enumeration hints only. Path, family and AUMIDs
+        // must come from Windows' current-user installed-package APIs.
+        let Some((root, family, application_ids)) = installed_windows_package(&package_full_name)
         else {
             continue;
         };
-        let version = windows_file_version(&path)
-            .filter(|value| !value.is_empty())
-            .unwrap_or(package_version);
-        accepted.entry(path.clone()).or_insert(Candidate {
-            path,
-            location_hint: LocationHint::LocalAppData,
-            bundle_identifier: String::new(),
-            version,
-        });
+        let Some(manifest) = read_bounded_file(&root.join("AppxManifest.xml"), 1024 * 1024) else {
+            continue;
+        };
+        let mapped = windows_package_launch_candidates(
+            spec.id,
+            &package_full_name,
+            &root,
+            &family,
+            &application_ids,
+            &manifest,
+        );
+        for (path, identity) in &mapped {
+            let version = windows_file_version(path)
+                .filter(|value| !value.is_empty())
+                .unwrap_or_else(|| package_version.clone());
+            accepted.entry(path.clone()).or_insert(Candidate {
+                path: path.clone(),
+                location_hint: LocationHint::LocalAppData,
+                bundle_identifier: String::new(),
+                version,
+                launch_target: DesktopLaunchTarget::WindowsPackage(identity.clone()),
+            });
+        }
     }
     let mut candidates: Vec<_> = accepted.into_values().collect();
     candidates.sort_by(|left, right| left.path.cmp(&right.path));
     candidates.truncate(8);
     candidates
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn windows_package_launch_candidates(
+    app_id: &str,
+    full_name: &str,
+    root: &Path,
+    family: &str,
+    application_ids: &[String],
+    manifest: &[u8],
+) -> Vec<(
+    PathBuf,
+    crate::desktop_app_discovery_core::WindowsPackageApplication,
+)> {
+    let Some(applications) =
+        crate::desktop_app_discovery_core::windows_manifest_applications(app_id, manifest)
+    else {
+        return Vec::new();
+    };
+    let Ok(root) = std::fs::canonicalize(root) else {
+        return Vec::new();
+    };
+    let mut mapped = Vec::new();
+    for (relative_id, executable) in applications {
+        let aumid = format!("{family}!{relative_id}");
+        if !application_ids.contains(&aumid) {
+            continue;
+        }
+        let Some(identity) =
+            crate::desktop_app_discovery_core::WindowsPackageApplication::from_installed_package(
+                app_id, full_name, family, &aumid,
+            )
+        else {
+            continue;
+        };
+        let path = executable
+            .split(['/', '\\'])
+            .fold(root.clone(), |path, part| path.join(part));
+        let Ok(path) = std::fs::canonicalize(path) else {
+            continue;
+        };
+        if path.starts_with(&root) && windows_gui_executable(&path) {
+            mapped.push((path, identity));
+        }
+    }
+    // A path-only selection cannot disambiguate two apps sharing one EXE.
+    let mut unique = Vec::new();
+    for (path, identity) in &mapped {
+        if mapped.iter().filter(|(other, _)| other == path).count() == 1 {
+            unique.push((path.clone(), identity.clone()));
+        }
+    }
+    unique
 }
 
 #[cfg(target_os = "windows")]
@@ -574,12 +956,13 @@ fn collect_windows_uninstall_candidates(
         let install_location: String = item.get_value("InstallLocation").unwrap_or_default();
         let icon_path = parse_windows_display_icon(&display_icon)
             .map(PathBuf::from)
-            .filter(|path| path.is_file())
-            .map(|path| std::fs::canonicalize(&path).unwrap_or(path));
+            .filter(|path| path.is_absolute() && path.is_file())
+            .and_then(|path| std::fs::canonicalize(&path).ok())
+            .filter(|path| windows_standalone_identity_matches(spec.id, path));
         let install_path = (!install_location.is_empty())
             .then(|| executable_below(Path::new(&install_location), spec.id))
             .flatten();
-        let Some(path) = icon_path.or(install_path) else {
+        let Some(path) = preferred_windows_program(install_path, icon_path) else {
             continue;
         };
         let candidate = Candidate {
@@ -593,6 +976,7 @@ fn collect_windows_uninstall_candidates(
             version: windows_file_version(&path)
                 .filter(|value| !value.is_empty())
                 .unwrap_or(version),
+            launch_target: DesktopLaunchTarget::WindowsExecutable(path.clone()),
         };
         let replace = accepted
             .get(&path)
@@ -609,31 +993,60 @@ fn collect_windows_uninstall_candidates(
 #[cfg(any(target_os = "windows", test))]
 fn parse_windows_display_icon(raw: &str) -> Option<String> {
     let value = raw.trim();
-    if value.is_empty() || value.len() > 32_768 || value.contains(['\r', '\n']) {
+    if value.is_empty() || value.len() > 32_768 || value.chars().any(char::is_control) {
         return None;
     }
     let path = if let Some(rest) = value.strip_prefix('"') {
-        rest.split_once('"')?.0
+        let (path, tail) = rest.split_once('"')?;
+        if !valid_icon_index(tail) {
+            return None;
+        }
+        path
     } else {
-        value.split_once(",-").map(|pair| pair.0).unwrap_or(value)
+        match value.rsplit_once(',') {
+            Some((path, index)) if index.trim().parse::<i32>().is_ok() => path,
+            _ => value,
+        }
     }
     .trim();
-    (!path.is_empty() && path.to_ascii_lowercase().ends_with(".exe")).then(|| path.to_owned())
+    (!path.is_empty() && !path.contains('"') && path.to_ascii_lowercase().ends_with(".exe"))
+        .then(|| path.to_owned())
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn valid_icon_index(tail: &str) -> bool {
+    tail.trim().is_empty()
+        || tail
+            .trim()
+            .strip_prefix(',')
+            .is_some_and(|index| index.trim().parse::<i32>().is_ok())
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn preferred_windows_program(
+    install_path: Option<PathBuf>,
+    verified_icon: Option<PathBuf>,
+) -> Option<PathBuf> {
+    install_path.or(verified_icon)
 }
 
 #[cfg(any(target_os = "windows", test))]
 fn parse_windows_protocol_command(raw: &str) -> Option<String> {
     let value = raw.trim();
-    if value.is_empty() || value.len() > 32_768 || value.contains(['\r', '\n']) {
+    if value.is_empty() || value.len() > 32_768 || value.chars().any(char::is_control) {
         return None;
     }
-    let path = if let Some(rest) = value.strip_prefix('"') {
-        rest.split_once('"')?.0
+    let (path, arguments) = if let Some(rest) = value.strip_prefix('"') {
+        rest.split_once('"')?
     } else {
-        let lower = value.to_ascii_lowercase();
-        let end = lower.find(".exe")? + 4;
-        &value[..end]
+        let end = value.find(char::is_whitespace).unwrap_or(value.len());
+        (&value[..end], &value[end..])
     };
+    // Generic Open can omit a URI placeholder. Other registered switches may
+    // be meaningful (e.g. Update.exe --processStart); never silently drop them.
+    if !matches!(arguments.trim(), "" | "%1" | "\"%1\"" | "%L" | "\"%L\"") {
+        return None;
+    }
     (!path.is_empty() && path.to_ascii_lowercase().ends_with(".exe")).then(|| path.to_owned())
 }
 
@@ -659,15 +1072,17 @@ fn discover_windows_protocol_candidate(spec: DesktopAppSpec) -> Vec<Candidate> {
             .as_deref()
             .and_then(parse_windows_protocol_command)
             .map(PathBuf::from)
-            .filter(|path| path.is_file())
-            .map(|path| std::fs::canonicalize(&path).unwrap_or(path));
+            .filter(|path| path.is_absolute() && path.is_file())
+            .and_then(|path| std::fs::canonicalize(&path).ok())
+            .filter(|path| windows_standalone_identity_matches(spec.id, path));
         if let Some(path) = path {
             let version = windows_file_version(&path).unwrap_or_default();
             return vec![Candidate {
-                path,
+                path: path.clone(),
                 location_hint: LocationHint::LocalAppData,
                 bundle_identifier: String::new(),
                 version,
+                launch_target: DesktopLaunchTarget::WindowsExecutable(path),
             }];
         }
     }
@@ -711,6 +1126,17 @@ const fn platform_name() -> &'static str {
 mod tests {
     use super::*;
 
+    fn write_pe_fixture(path: &Path, subsystem: u16) {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let mut header = vec![0u8; 256];
+        header[..2].copy_from_slice(b"MZ");
+        header[0x3c..0x40].copy_from_slice(&64u32.to_le_bytes());
+        header[64..68].copy_from_slice(b"PE\0\0");
+        header[88..90].copy_from_slice(&0x20bu16.to_le_bytes());
+        header[156..158].copy_from_slice(&subsystem.to_le_bytes());
+        std::fs::write(path, header).unwrap();
+    }
+
     #[test]
     fn request_identity_is_closed() {
         assert!(validate_request_id("desktop-123_ok").is_ok());
@@ -726,6 +1152,9 @@ mod tests {
             location_hint: LocationHint::UserApplications,
             bundle_identifier: "com.anthropic.claudefordesktop".into(),
             version: "1.2.3".into(),
+            launch_target: DesktopLaunchTarget::MacBundle(PathBuf::from(
+                "/private/Users/example/Applications/Claude.app",
+            )),
         }]);
         assert!(matches!(
             projection,
@@ -803,5 +1232,180 @@ mod tests {
             parse_windows_protocol_command("\"C:\\Apps\\Claude.exe\" \"%1\""),
             Some("C:\\Apps\\Claude.exe".into())
         );
+    }
+
+    #[test]
+    fn install_program_precedes_display_icon_and_meaningful_protocol_arguments_are_rejected() {
+        let program = PathBuf::from("C:\\Apps\\Claude.exe");
+        let icon = PathBuf::from("C:\\Other\\Claude.exe");
+        assert_eq!(
+            preferred_windows_program(Some(program.clone()), Some(icon.clone())),
+            Some(program)
+        );
+        assert_eq!(
+            preferred_windows_program(None, Some(icon.clone())),
+            Some(icon)
+        );
+        assert_eq!(
+            parse_windows_display_icon("C:\\Apps\\Claude.exe,0"),
+            Some("C:\\Apps\\Claude.exe".into())
+        );
+        for icon in [
+            "\"C:\\Apps\\Claude.exe\" --run",
+            "\"C:\\Apps\\Claude.exe\",bad",
+            "C:\\Apps\\Claude.exe\0,0",
+        ] {
+            assert!(parse_windows_display_icon(icon).is_none());
+        }
+        for command in [
+            "\"C:\\Apps\\Update.exe\" --processStart Claude.exe --process-start-args \"%1\"",
+            "\"C:\\Apps\\Claude.exe\" --unsafe",
+            "\"C:\\Apps\\Claude.exe\" \"%1\" & calc",
+            "C:\\Program Files\\Claude.exe \"%1\"",
+            "\"C:\\Apps\\Claude.exe\" \"%1\"\0extra",
+        ] {
+            assert!(parse_windows_protocol_command(command).is_none());
+        }
+    }
+
+    #[test]
+    fn launch_selection_requires_exact_unique_discovered_path() {
+        let path = PathBuf::from("C:\\Apps\\Codex.exe");
+        let candidate = Candidate {
+            path: path.clone(),
+            location_hint: LocationHint::LocalAppData,
+            bundle_identifier: String::new(),
+            version: String::new(),
+            launch_target: DesktopLaunchTarget::WindowsExecutable(path.clone()),
+        };
+        assert_eq!(
+            select_launch_target(vec![candidate.clone()], &path),
+            Some(candidate.launch_target.clone())
+        );
+        assert!(
+            select_launch_target(vec![candidate.clone()], Path::new("C:\\Other\\Codex.exe"))
+                .is_none()
+        );
+        assert!(select_launch_target(vec![candidate.clone(), candidate], &path).is_none());
+    }
+
+    #[test]
+    fn native_package_strings_are_bounds_checked() {
+        let bytes = vec![b'A', 0, b'p', 0, b'p', 0, 0, 0];
+        let base = bytes.as_ptr() as usize;
+        assert_eq!(native_buffer_wide_string(&bytes, base), Some("App".into()));
+        assert!(native_buffer_wide_string(&bytes, base - 2).is_none());
+        assert!(native_buffer_wide_string(&bytes, base + 1).is_none());
+        assert!(native_buffer_wide_string(&bytes, base + bytes.len()).is_none());
+        assert!(native_buffer_wide_string(&bytes[..6], base).is_none());
+    }
+
+    #[test]
+    fn executable_fixture_keeps_package_files_out_of_standalone_fallback() {
+        let root = crate::tool_adapters::common::temporary_working_directory("desktop-pe-identity")
+            .unwrap();
+        let executable = root.join("Codex.exe");
+        let mut header = vec![0u8; 256];
+        header[..2].copy_from_slice(b"MZ");
+        header[0x3c..0x40].copy_from_slice(&64u32.to_le_bytes());
+        header[64..68].copy_from_slice(b"PE\0\0");
+        header[88..90].copy_from_slice(&0x20bu16.to_le_bytes());
+        header[156..158].copy_from_slice(&2u16.to_le_bytes());
+        std::fs::write(&executable, &header).unwrap();
+        assert!(windows_gui_executable(&executable));
+        assert!(!is_windows_packaged_path(&executable));
+        std::fs::write(root.join("AppxManifest.xml"), b"<Package/>").unwrap();
+        assert!(is_windows_packaged_path(&executable));
+        assert!(is_windows_packaged_path(Path::new(
+            "C:\\Program Files\\WindowsApps\\Codex\\Codex.exe"
+        )));
+        header[156..158].copy_from_slice(&3u16.to_le_bytes());
+        std::fs::write(&executable, &header).unwrap();
+        assert!(!windows_gui_executable(&executable));
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn versioned_standalone_fixture_selects_latest_verified_gui() {
+        let root =
+            crate::tool_adapters::common::temporary_working_directory("desktop-versioned-program")
+                .unwrap();
+        let older = root.join("app-1.8.0/Codex.exe");
+        let latest = root.join("app-1.10.0/Codex.exe");
+        let cli = root.join("app-1.20.0/Codex.exe");
+        write_pe_fixture(&older, 2);
+        write_pe_fixture(&latest, 2);
+        write_pe_fixture(&cli, 3);
+        write_pe_fixture(&root.join("app-9.0.0/Update.exe"), 2);
+        assert_eq!(
+            windows_program_below(&root, "codex_desktop", windows_gui_executable),
+            Some(std::fs::canonicalize(&latest).unwrap())
+        );
+        std::fs::remove_file(&latest).unwrap();
+        assert_eq!(
+            windows_program_below(&root, "codex_desktop", windows_gui_executable),
+            Some(std::fs::canonicalize(&older).unwrap())
+        );
+        assert!(windows_program_below(&root, "claude_desktop", windows_gui_executable).is_none());
+        write_pe_fixture(&root.join("app-01.8.0/Codex.exe"), 2);
+        assert!(windows_program_below(&root, "codex_desktop", windows_gui_executable).is_none());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn installed_package_fixture_requires_native_application_membership_and_unambiguous_gui() {
+        let root =
+            crate::tool_adapters::common::temporary_working_directory("desktop-package-mapping")
+                .unwrap();
+        let path = root.join("app/Codex.exe");
+        write_pe_fixture(&path, 2);
+        let full = "OpenAI.Codex_1.2.3.4_x64__2p2nqsd0c76g0";
+        let family = "OpenAI.Codex_2p2nqsd0c76g0";
+        let ids = vec![format!("{family}!ActualCodex"), format!("{family}!Updater")];
+        let manifest = br#"<Package><Applications><Application Id="Updater" Executable="Update.exe"/><Application Id="ActualCodex" Executable="app\Codex.exe"/></Applications></Package>"#;
+        let mapped =
+            windows_package_launch_candidates("codex_desktop", full, &root, family, &ids, manifest);
+        assert_eq!(mapped.len(), 1);
+        assert_eq!(mapped[0].0, std::fs::canonicalize(&path).unwrap());
+        assert_eq!(mapped[0].1.app_user_model_id(), ids[0]);
+        assert!(windows_package_launch_candidates(
+            "codex_desktop",
+            full,
+            &root,
+            family,
+            &[],
+            manifest
+        )
+        .is_empty());
+        assert!(windows_package_launch_candidates(
+            "codex_desktop",
+            full,
+            &root,
+            "Other.Codex_2p2nqsd0c76g0",
+            &ids,
+            manifest
+        )
+        .is_empty());
+        let ambiguous = br#"<Package><Applications><Application Id="ActualCodex" Executable="app\Codex.exe"/><Application Id="Updater" Executable="app\Codex.exe"/></Applications></Package>"#;
+        assert!(windows_package_launch_candidates(
+            "codex_desktop",
+            full,
+            &root,
+            family,
+            &ids,
+            ambiguous
+        )
+        .is_empty());
+        write_pe_fixture(&path, 3);
+        assert!(windows_package_launch_candidates(
+            "codex_desktop",
+            full,
+            &root,
+            family,
+            &ids,
+            manifest
+        )
+        .is_empty());
+        std::fs::remove_dir_all(root).unwrap();
     }
 }

@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
 import type { AccountModel } from "../account/session";
+import { modelDisplayName, modelMatchesQuery } from "../model-profiles/profile";
 
 export function ModelPicker({
   models,
@@ -22,11 +23,7 @@ export function ModelPicker({
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const search = useRef<HTMLInputElement>(null);
-  const options = models.filter((m) =>
-    `${m.id} ${m.description}`
-      .toLowerCase()
-      .includes(query.toLowerCase().trim()),
-  );
+  const options = models.filter((m) => modelMatchesQuery(m.id, query));
   useEffect(() => {
     if (!open) return;
     search.current?.focus();
@@ -82,9 +79,14 @@ export function ModelPicker({
           }
         }}
       >
-        <code>
-          {value || (models.length ? "选择一个模型" : "暂无可用模型")}
-        </code>
+        <span className="model-picker-identity">
+          {value && modelDisplayName(value) !== value && (
+            <strong>{modelDisplayName(value)}</strong>
+          )}
+          <code>
+            {value || (models.length ? "选择一个模型" : "暂无可用模型")}
+          </code>
+        </span>
         <ChevronDown />
       </button>
       {open && (
@@ -151,8 +153,10 @@ export function ModelPicker({
                 onClick={() => choose(model.id)}
               >
                 <span>
+                  {modelDisplayName(model.id) !== model.id && (
+                    <strong>{modelDisplayName(model.id)}</strong>
+                  )}
                   <code>{model.id}</code>
-                  {model.description && <small>{model.description}</small>}
                 </span>
                 {model.id === value && <Check />}
               </button>

@@ -17,6 +17,7 @@ import {
 } from "./connections";
 import { connectionsFixture } from "./connection-test-fixtures";
 import { RestoreConnection } from "./RestoreConnection";
+import { OPEN_REQUEST_DEADLINE_MS } from "./launchApi";
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 const native = vi.mocked(invoke);
 beforeEach(() => {
@@ -35,6 +36,36 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 describe("reversible local connections", () => {
+  it("ru042 decodes only secret-free latest request and model bindings", () => {
+    const base = connectionsFixture("one");
+    const value = {
+      ...base,
+      schemaVersion: 2,
+      connections: base.connections.map((c) => ({ ...c, models: [] })),
+    };
+    const observation = {
+      modelId: "gpt-6-astra",
+      billingGroup: "special",
+      lineId: "global_accelerated",
+      outcome: "timeout",
+      httpStatus: 504,
+      observedAtEpochMs: 1000,
+    };
+    Object.assign(value.connections[0], {
+      models: [{ modelId: "gpt-6-astra", billingGroup: "special" }],
+      lastRequest: observation,
+    });
+    expect(decodeConnections(value, "one")).not.toBeNull();
+    for (const lastRequest of [
+      { ...observation, apiKey: "synthetic-secret" },
+      { ...observation, outcome: "raw provider message" },
+      { ...observation, httpStatus: 999 },
+      { ...observation, lineId: "untrusted" },
+    ]) {
+      Object.assign(value.connections[0], { lastRequest });
+      expect(decodeConnections(value, "one")).toBeNull();
+    }
+  });
   it("rejects secret fields, duplicate tools and mismatched replies", () => {
     const valid = connectionsFixture("one");
     expect(decodeConnections(valid, "one")).not.toBeNull();
@@ -79,6 +110,53 @@ describe("reversible local connections", () => {
     });
     expect(result.current.connections).toHaveLength(7);
     expect(result.current.error).toBe(true);
+    expect(result.current.loading).toBe(false);
+  });
+  it("keeps the last usable projection interactive during a background refresh", async () => {
+    const { result } = renderHook(() => useToolConnections());
+    await act(async () => {});
+    let finish!: (value: unknown) => void;
+    native.mockImplementationOnce(
+      async () =>
+        await new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    let refresh!: Promise<void>;
+    act(() => {
+      refresh = result.current.refresh();
+    });
+    expect(result.current.connections).toHaveLength(7);
+    expect(result.current.loading).toBe(false);
+    await act(async () => {
+      finish(connectionsFixture("wrong-stale-id"));
+      await refresh;
+    });
+    expect(result.current.loading).toBe(false);
+    expect(result.current.connections).toHaveLength(7);
+  });
+  it("releases the launch busy state when a native open reply is lost", async () => {
+    const { result } = renderHook(() => useToolConnections());
+    await act(async () => {});
+    native.mockImplementationOnce(async () => await new Promise(() => {}));
+    vi.useFakeTimers();
+    try {
+      let opening!: Promise<unknown>;
+      act(() => {
+        opening = result.current.open("codex_desktop").catch((cause) => cause);
+      });
+      expect(result.current.opening).toBe("codex_desktop");
+      let outcome: unknown;
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(OPEN_REQUEST_DEADLINE_MS);
+        outcome = await opening;
+      });
+      expect(outcome).toEqual(Error("open_request_timed_out"));
+      expect(result.current.opening).toBeNull();
+      expect(result.current.loading).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
   it.each([false, true])(
     "settles loading after restore (failure: %s) supersedes a pending refresh",
@@ -114,7 +192,7 @@ describe("reversible local connections", () => {
       act(() => {
         read = result.current.refresh();
       });
-      expect(result.current.loading).toBe(true);
+      expect(result.current.loading).toBe(false);
       act(() => {
         restoring = result.current.restore("pi").catch(() => undefined);
       });

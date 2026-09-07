@@ -1,6 +1,330 @@
 {
   "schemaVersion": 1,
-  "decisions": [
+ "decisions": [
+    {
+      "id": "DEC-100",
+      "question": "How should one-click activation establish completion consistently across desktop and command-line agents without hanging on upstream model generation or risking user work?",
+      "choice": "Adopt desktop-tool-activation@v10. Configuration completion is a local transactional fact, not a real-model response: validate exact account bindings, securely publish credentials, atomically write and semantically read back owned settings, start required helper-owned gateways, and dispatch the target. Record real traffic asynchronously in recent connection results. For Claude Desktop and Codex Desktop, return application_running before mutation and require explicit save-work consent before a bounded normal quit and reopen; never force terminate. Do not terminate CLI sessions, and apply their changes to a new session.",
+      "status": "accepted",
+      "decidedBy": "architecture authority applying current user evidence and cross-application lifecycle evidence",
+      "decidedAt": "2026-09-06T22:30:00+08:00",
+      "evidenceRefs": [
+        "E-USER-080",
+        "E-CODE-075",
+        "E-EXT-059",
+        "E-PROP-028"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-079"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE-PREVIEW"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform",
+          "diagnostics"
+        ]
+      }
+    },
+    {
+      "id": "DEC-097",
+      "question": "How should the product enable the domestic installer mirror after the owner rejects a separate redistribution-evidence file as a blocking product gate?",
+      "choice": "Create RU-053 as a bounded successor to RU-052. Remove the approval-file requirement from the operator publisher without interpreting that change as legal advice or a vendor grant. A publication remains an explicit root-operated action and can only copy the exact current candidate fetched from a compiled official origin into immutable SHA256-addressed storage. If a matching native receipt exists, expose native_verified; otherwise expose client_native_required only after structural identity, architecture, publisher and version checks. The client accepts the successor catalog but always performs its own compiled native signature, identity and operating-system trust checks before installation. Add an atomic empty-catalog kill switch, retain objects and official fallback, send no account credentials, publish no updater, change no Yecai version or package, and keep policy/risk notes out of the novice interface.",
+      "status": "accepted",
+      "decidedBy": "product owner",
+      "decidedAt": "2026-09-06T10:59:07Z",
+      "evidenceRefs": [
+        "E-USER-078",
+        "E-CODE-071",
+        "E-EXT-058",
+        "E-PROP-025"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-077"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "security-update",
+          "desktop-platform"
+        ]
+      }
+    },
+    {
+      "id": "DEC-096",
+      "question": "How can the missing download-source chain and Claude macOS download blocker be corrected without inventing publication authority?",
+      "choice": "Freeze RU-052 as a bounded successor to RU-051, RU-045 and RU-044. Use the verified official universal ZIP feed for Claude Mac, add deterministic safe archive handling, an operator-only native-receipt and source-approval-bound immutable publisher, and client mirror catalog consumption with verified official fallback. Keep installation wire schema 2 and command v2 for the bundled atomic renderer/native release, extending only its source enum in desktop-app-installation@v3. Preserve no-overwrite, Windows system confirmation, consent and account boundaries. Public release/redistribution permission is not inferred: implement and test publication on fixtures and deploy private synchronization only until a basis is supplied. No new Yecai package or updater channel is published. Root owns shared contracts, integration, client code and deployment; delegated server implementation has exclusive deploy/vendor-sync plus its named test file only.",
+      "status": "accepted",
+      "decidedBy": "primary engineer under product-owner request to resolve these blockers; bounded independent source audit",
+      "decidedAt": "2026-09-06T09:08:50Z",
+      "evidenceRefs": [
+        "E-USER-077",
+        "E-CODE-070",
+        "E-EXT-058"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-076"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "security-update",
+          "desktop-platform"
+        ]
+      }
+    },
+    {
+      "id": "DEC-095",
+      "question": "How should the approved novice installer follow-up resolve real workflow defects and obsolete tests without weakening installation or connection safety?",
+      "choice": "Create RU-051 as a bounded successor to completed RU-050, retaining desktop-app-installation v2 and desktop-tool-activation v8. Fix false macOS presence, selected-app recovery after a different native job terminates, and logged-out Windows confirmation while preserving no-overwrite and exact session/intent consent. Migrate only obsolete App integration expectations to the actual Yecai workbench, retaining provider/hook/component coverage. Require fresh whole-repository Vitest, native tests, Windows/Apple-Silicon compile checks and production build; prior scoped green evidence is not whole-product readiness. Public mirror authorization and clean-machine hardware remain external evidence gaps, not a reason to disable checking an installation. Do not package, publish or change the server in this unit.",
+      "status": "accepted",
+      "decidedBy": "primary engineer under product-owner follow-up approval, with independent read-only workflow audit",
+      "decidedAt": "2026-09-06T07:59:12Z",
+      "evidenceRefs": [
+        "E-USER-076",
+        "E-CODE-069"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-075"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "security-update",
+          "tool-config",
+          "desktop-platform"
+        ]
+      }
+    },
+    {
+      "id": "DEC-094",
+      "question": "Can an implementation successor depend on a verification-only baseline whose whole-tree proof predates the implementation?",
+      "choice": "No. Dispatch correctly rejected RU-049: RU-047 verified the pre-implementation source tree and is historical evidence, not a current-tree prerequisite after expected source changes. Preserve that proof and all failed/undispatched units. Supersede RU-049 with RU-050's single integration package, no stale work-package dependency, unchanged requirement REQ-074 and installation v2/activation v8 contracts. This is not a passed-baseline claim: 12 known old renderer expectations are pending their newly scoped update. RU-050 must execute every inherited native, Windows/Apple-Silicon cross-clippy, renderer and build acceptance plus new installer fixtures on its actual final source state. The initial 439-test baseline and subsequent 451-test native dev pass remain evidence of progress only. No packaging, source publication or server changes.",
+      "status": "accepted",
+      "decidedBy": "primary engineer after independent architecture review, under product owner install-and-connect approval",
+      "decidedAt": "2026-09-06T07:06:37Z",
+      "evidenceRefs": [
+        "E-USER-075",
+        "E-CODE-067",
+        "E-CODE-068"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-074"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "security-update",
+          "tool-config",
+          "desktop-platform"
+        ]
+      }
+    },
+    {
+      "id": "DEC-093",
+      "question": "How should the installer integrate with pre-existing read-only navigation and empty-library assertions?",
+      "choice": "Stop RU-048 before changing tests outside its ownership. Create RU-049 with the same installation v2/activation v8 contract, original verified RU-047 prerequisite and three narrowly added legacy test files. Development evidence shows 451 native tests and 11 new renderer tests pass, but 12 existing renderer assertions still require zero missing-app cards and exclude the new read-only installer inspection. Update those intended UX/IPC expectations, preserving all prior selectors and testing action=inspect; do not suppress the feature or remove regression tests. Primary governance change supersedes the unfinished RU-048 run, whose verifier must record non-completion, not a success claim. Full native, Windows/Apple-Silicon cross-clippy, renderer and build verification remains required for RU-049. No public source, server, packaging or version changes. Idle Windows guidance cancellation revokes consent, preserves the immutable handed-off file, and does not cancel Windows OS work.",
+      "status": "accepted",
+      "decidedBy": "primary engineer after independent architecture review, under product owner install-and-connect approval",
+      "decidedAt": "2026-09-06T07:04:56Z",
+      "evidenceRefs": [
+        "E-USER-075",
+        "E-CODE-067"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-074"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "security-update",
+          "tool-config",
+          "desktop-platform"
+        ]
+      }
+    },
+    {
+      "id": "DEC-092",
+      "question": "How does novice installation retain precise ownership and consent without silent Windows replacement or stale account/model continuation?",
+      "choice": "Supersede unimplemented RU-047 installer with RU-048 and new REQ-073/installation v2/activation v8, depending on the freshly completed RU-047 baseline. Mac owns a verified exclusive installation transaction; Windows hands the exact downloaded MSIX to system App Installer and requires explicit Check installation and continue, with fresh identity and session-bound intent. User-authorized Windows Reinstall remains outside Yecai control and is discouraged by clear guidance. Native one-use consent binds full model/group set, default, tool, line, target and account epoch; navigation/selection ABA invalidates renderer continuation. No installer relaunch without an explicit user action. Retain original downloads only, private cache, 30-second network read/connect bounds, 3 attempts and 1800-second download budget from the existing sync design, plus an engineering resource cap of 4 GiB per package. This cap is a chosen guard, not a measured vendor limit. No code/app install/source publication/packaging occurred during baseline checks. Historical failures and snapshots are retained.",
+      "status": "accepted",
+      "decidedBy": "primary engineer after independent architecture review, under product owner install-and-connect approval",
+      "decidedAt": "2026-09-06T06:34:07Z",
+      "evidenceRefs": [
+        "E-USER-075",
+        "E-CODE-066",
+        "E-EXT-057"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-073"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "security-update",
+          "tool-config",
+          "desktop-platform"
+        ]
+      }
+    },
+    {
+      "id": "DEC-091",
+      "question": "How to repair the blocked implementation sequence without waiving the failed prerequisite?",
+      "choice": "Supersede RU-046 with RU-047 without changing installation behavior or its v1 IPC contract. Its first package is strictly read-only and re-runs all three original RU-043 native/renderer/build semantic acceptance commands on current source. The installer package depends on this new completed proof, not on a historical failed package. Preserve all prior reports and frozen snapshots; no source implementation until baseline verification passes. This is an acceptance sequencing correction under the owner's implementation approval, not a waiver or fallback architecture. The E-USER-075/E-CODE-064/E-EXT-056 content was observed during 05:44-05:50 UTC; their recorded 05:58 timestamp was a clerical error and must not be used as an execution time.",
+      "status": "accepted",
+      "decidedBy": "primary engineer for prerequisite re-verification under product owner's install-and-connect authorization",
+      "decidedAt": "2026-09-06T05:53:07Z",
+      "evidenceRefs": [
+        "E-USER-075",
+        "E-CODE-065"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-072"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "security-update",
+          "tool-config",
+          "desktop-platform"
+        ]
+      }
+    },
+    {
+      "id": "DEC-090",
+      "question": "How should a novice install a missing application and continue to verified connection without configuring paths or commands?",
+      "choice": "Create RU-046 as successor to RU-043 for a local native installer and guided client UX. First automatic installers are Codex Desktop (Apple Silicon macOS, Windows x64/ARM64) and Claude Desktop (macOS, Windows x64/ARM64); other clients receive honest guided official installation help. Use compiled original official sources only in this unit: private mirrors are not public installer feeds. Detect platform and existing installations natively; never reinstall/overwrite existing apps or force vendor updates. One foreground confirmation starts a serialized resumable download, validates original publisher/identity and OS trust, installs per current user, re-detects the app, and only then continues the existing explicitly chosen account/model/group activation transaction. No success from download alone. Keep installer progress outside account/session secrets; pending download is cancellable; OS installation reaches a safe boundary before quitting. Preserve downloaded bytes for retry, and do not remove an installed application because connection fails. Reuse RU-045 bounded network/redirect/verification limits and current native discovery/activation. Official-source challenges, unsupported hardware, permissions, space and dependency failures have distinct plain-language recovery. No public redistribution, server/API/DB updates, arbitrary remote install scripts, trust bypass, active real-app replacement, packaging, signing, release or version bump. Native Windows installation and no-proxy networks still require real-device evidence separately from cross-compilation.",
+      "status": "accepted",
+      "decidedBy": "product owner approval; bounded client implementation",
+      "decidedAt": "2026-09-06T05:58:00Z",
+      "evidenceRefs": [
+        "E-USER-075",
+        "E-CODE-064",
+        "E-EXT-056"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-072"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "security-update",
+          "tool-config",
+          "desktop-platform"
+        ]
+      }
+    },
+    {
+      "id": "DEC-089",
+      "question": "What independent implementation may automate vendor desktop discovery and staging without silently publishing unverified binaries or taking over users' app updates?",
+      "choice": "Freeze independent RU-045 for a server-side six-hour vendor sync timer and deterministic CLI, owning only deploy/vendor-sync and its tests/report. Track six official macOS/Windows desktop sources (Codex macOS Apple Silicon, Windows x64/arm64; Claude macOS universal, Windows x64/arm64). Resolve only fixed HTTPS official endpoints with per-hop hostname and public-address validation, no cookies/auth or CAPTCHA bypass. Require bounded Content-Length and stable validators for resumable bytes; use a lock, atomic private state receipts, SHA256 and package identity checks. Download only into a non-public dedicated state directory under a sandboxed dynamic systemd user. Existing candidates survive source, network, stale-validator, disk or verification failures; unknown version/signature/compatibility remains explicit. No automatic cache deletion in this first unit; a deployment-specific quota based on measured free space bounds staging and pauses downloads before exhausting storage. Query status and native verification helpers do not mark installers published. No publication command, origin config/health changes, client changes, credentials, DB/API, installer execution, existing vendor-update policy changes, or release packaging. Public mirror permission, native Windows/macOS signature verification, real installs and client UX remain separately verified work.",
+      "status": "accepted",
+      "decidedBy": "product owner approval; bounded non-public staging implementation",
+      "decidedAt": "2026-09-06T05:11:45Z",
+      "evidenceRefs": [
+        "E-USER-074",
+        "E-CODE-063",
+        "E-EXT-055"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-071"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "security-update"
+        ]
+      }
+    },
+    {
+      "id": "DEC-088",
+      "question": "How should the owner-provided domain and shared server become a download origin without claiming client update readiness or disrupting existing sites?",
+      "choice": "Freeze independent RU-044 for origin bootstrap only. Add a read-only, non-root static Caddy container on the existing private Docker network, with no host ports, dedicated /opt/yeschoy-download configuration and /srv/yeschoy-download/public data. Reuse the locally present pinned Caddy image without pulling or upgrading existing services. Append only ergou.qzz.io to the existing ingress using hash-checked backup, configuration validation and graceful reload; preserve prior bytes and stop on concurrent change. Serve explicit origin-only health, a small public range-test fixture, and 204/no-store for stable/beta update checks until signed releases exist. Publish no current internal installer, third-party package, fake version or signature. Do not change DNS, account/API/database, SSH credentials/firewall, source client, existing services or update channels beyond this dedicated bootstrap. Validate public TLS and direct-origin identity, range/hash, read-only/error semantics and previous ingress routes separately from future install/upgrade acceptance. A DNS or certificate authority blocker must be reported, never bypassed through insecure TLS.",
+      "status": "accepted",
+      "decidedBy": "bounded deployment details within product owner authorization",
+      "decidedAt": "2026-09-06T04:40:00Z",
+      "evidenceRefs": ["E-USER-073", "E-CODE-062", "E-EXT-054"],
+      "affects": {
+        "requirementRefs": ["REQ-070"],
+        "pageRefs": [],
+        "domainRefs": ["security-update"]
+      }
+    },
+    {
+      "id": "DEC-087",
+      "question": "How should the approved cross-application model names and reasoning controls be corrected without inventing upstream capabilities?",
+      "choice": "Freeze RU-043 as successor to RU-042. Use one exact-ID bundled reference registry for names and verified optional capabilities; renderer and native adapters consume it. Unknown models retain exact IDs, default access and no fabricated reasoning menu. Use each application's documented model contract; preserve explicit semantic effort on conversion, with only documented model-specific aliases and off handling. Native applications may offer fewer controls; do not patch their binaries or promise unsupported UI. Preserve existing model/group bindings, recovery, user preferences, credential isolation and request routing. No server, paid probe, installation, packaging, signing, publishing or version bump. See tests/work_packages/ru043/CONTRACT.md.",
+      "status": "accepted",
+      "decidedBy": "implementation details within explicit product owner approval",
+      "decidedAt": "2026-09-05T15:00:00Z",
+      "evidenceRefs": [
+        "E-USER-072",
+        "E-CODE-061",
+        "E-EXT-053"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-069"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform"
+        ]
+      }
+    },
+    {
+      "id": "DEC-086",
+      "question": "How should the owner-approved model-set and exit improvements be implemented without hiding remaining live-route uncertainty?",
+      "choice": "Freeze RU-042 as successor to RU-041. Implement tests/work_packages/ru042/CONTRACT.md: real-model multi-catalog routing for all seven tools, per-model explicit group binding, OS-only secret storage with Windows-safe chunk publication, native menu switching, stable loopback tokens and in-flight snapshots, secret-free recent-request observations, safe stream and model-parameter errors, cooperative exit with global close-choice host. Preserve existing transactions and old single-model records. Default only is actively verified; other configured models are not labeled verified. Reuse established vendor 600s inference idle, current account 20s progress interval and current 2s shutdown grace rather than declaring an SLA. No packages, real user config/key access, paid probes, server mutation or public release.",
+      "status": "accepted",
+      "decidedBy": "implementation details within explicit product owner approval",
+      "decidedAt": "2026-09-05T12:50:00Z",
+      "evidenceRefs": [
+        "E-USER-071",
+        "E-CODE-060",
+        "E-EXT-052"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-068"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform",
+          "diagnostics",
+          "account"
+        ]
+      }
+    },
+    {
+      "id": "DEC-085",
+      "question": "How should the owner-approved cross-application reliability repair be implemented without server changes or false readiness?",
+      "choice": "Freeze RU-041 as successor to RU-040. Correct native connectivity serialization and renderer error isolation; support validated Windows packaged/native desktop launch targets with safe stage/reason errors; remove unused Codex runtime gating while preventing GUI/CLI identity confusion; strengthen bounded CLI verification and process failure classification; add explicit launch-only terminal opening for the four CLI tools with read-only config validation; preserve rollback semantics and render recovery failures honestly. One integration owner delegates disjoint source subsets. Use synthetic executable, local HTTP and contract regressions plus production/cross-platform compilation; do not claim Windows live-user or all-tool end-to-end acceptance without actual evidence. Produce 0.4.8 internal candidate if tests pass, preserve prior installers. No server/NewAPI/real-credential/config mutation, auto updates, telemetry or public publish.",
+      "status": "accepted",
+      "decidedBy": "implementation details within explicit product owner repair authorization",
+      "decidedAt": "2026-09-05T11:30:00Z",
+      "evidenceRefs": [
+        "E-USER-070",
+        "E-CODE-059"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-067"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "tool-config",
+          "diagnostics",
+          "desktop-platform"
+        ]
+      }
+    },
+    {"id":"DEC-084","question":"How can the approved 0.4.7 hotfix complete current acceptance without rewriting historical 0.4.6 evidence or leaving the UI on an old version?","choice":"Create RU-040 as the implementation successor to RU-039, with the already completed RU-038 as its explicit package prerequisite. Carry forward all unchanged privacy/protocol repair scope and constraints. Add only candidate readiness version source/tests and a new current-version production-build selector. Derive renderer candidate version from package.json, verify package/Tauri/Cargo/lock versions agree, preserve old RU-034/035/036 acceptance and RU-039 failed evidence, and rerun native, renderer and production checks. Correct any newly introduced fixture selector mistakes without weakening public-label assertions. Keep server, real credentials/configurations, public release, GitHub push and updater excluded.","status":"accepted","decidedBy":"implementation integration within owner-approved hotfix scope","decidedAt":"2026-09-05T09:27:00Z","evidenceRefs":["E-USER-069","E-CODE-058"],"affects":{"requirementRefs":["REQ-065","REQ-066"],"pageRefs":["PAGE-TOOLS"],"domainRefs":["desktop-platform"]}},
+    {"id":"DEC-083","question":"How should the reported upstream-description disclosure and false Claude gateway errors be corrected without changing server or billing behavior?","choice":"RU-039 succeeds RU-038 for a bounded client hotfix. Keep exact model IDs, selectable billing groups and prices; omit unreviewed raw pricing model descriptions at the native renderer boundary and remove description display/search in both model surfaces, including old fixtures. Separate protocol-valid completed Anthropic message validation from stronger useful-response activation evidence. Forward structurally valid empty, whitespace or thinking-only completed nonstream messages without fabricating a 502, but do not emit successful activation verification for them. Preserve malformed/error responses, authentication, selected model, stream flow, size/time bounds and no-retry/no-extra-cost behavior. Use synthetic loopback tests of the actual proxy path, retain all current native/renderer regressions, and prepare uniquely versioned 0.4.7 internal macOS/Windows installers if build checks pass. No app.asar edits, real tool/account configuration writes, public release/tag/updater, GitHub push or server modification. Document that publicly returned server description metadata must be separately cleaned by the owner's backend maintainer.","status":"accepted","decidedBy":"product owner scope with evidence-based client repair","decidedAt":"2026-09-05T09:12:00Z","evidenceRefs":["E-USER-069","E-CODE-057","E-EXT-048"],"affects":{"requirementRefs":["REQ-065"],"pageRefs":["PAGE-CONFIGURE-PREVIEW","PAGE-TOOLS"],"domainRefs":["account","tool-config","desktop-platform"]}},
     {"id":"DEC-082","question":"How may the approved current client be prepared and delivered as internal installers?","choice":"RU-038 succeeds RU-037 for internal packaging. Preserve all existing product contracts and source work. Correct the observed lock-only recovery-directory false error so legacy connections can open without inventing or replacing recovery keys; any encrypted or unknown recovery material with a missing key remains a storage error. Add isolated no-Keychain regression fixtures. Exclude release-assets and local build inputs from source staging, audit secrets, commit and push only the existing product/yeschoy-v1 branch with no tags or public release. Build macOS universal using an installed Developer ID, hardened runtime and Keychain notary profile; verify both architectures, signatures and notarization. Attempt unsigned Windows x64 NSIS using available Windows build infrastructure or documented local cross compilation, with an explicit result or concrete blocker. Keep automatic update artifacts disabled. Record exact source commit, artifact hashes and unverified real-device/account limitations; never substitute a UI preview or compilation for installation/account validation. No server, DB, API permission, billing or other feature changes.","status":"accepted","decidedBy":"product owner scope with evidence-based compatibility repair","decidedAt":"2026-09-05T08:19:05Z","evidenceRefs":["E-USER-068","E-CODE-056"],"affects":{"requirementRefs":["REQ-064"],"pageRefs":["PAGE-TOOLS"],"domainRefs":["tool-config","desktop-platform"]}},
     {
       "id": "DEC-081",
@@ -2191,6 +2515,425 @@
         "requirementRefs": ["REQ-053"],
         "pageRefs": ["PAGE-CONFIGURE-PREVIEW", "PAGE-TOOLS"],
         "domainRefs": ["tool-config", "desktop-platform", "account", "diagnostics"]
+      }
+    },
+    {
+      "id": "DEC-098",
+      "question": "How should retry recovery and Claude model compatibility be corrected without making users manually restore or misrouting models?",
+      "choice": "Create RU-054 as the bounded successor to RU-043 and RU-051. On explicit retry, automatically recover only the same tool pending encrypted transaction using the existing three-way merge, clear only that tool credential, remove the pending journal and continue; incomplete cleanup fails closed with manual restore fallback. Claude Desktop uses deterministic Anthropic-shaped loopback aliases whose bridge mapping derives only from current credential models before forwarding exact real IDs, groups and keys. Claude Code keeps exact IDs and adds behavesAs compatibility. No vendor binary patch, server, database, account, billing, installation, updater or packaging change.",
+      "status": "accepted",
+      "decidedBy": "product owner request; bounded client implementation",
+      "decidedAt": "2026-09-06T13:00:00+08:00",
+      "evidenceRefs": [
+        "E-USER-079",
+        "E-CODE-072",
+        "E-CODE-073",
+        "E-CODE-074",
+        "E-PROP-026"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-078"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE-PREVIEW"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform",
+          "diagnostics"
+        ]
+      }
+    },
+    {
+      "id": "DEC-099",
+      "question": "How should the approved RU-054 fix be dispatched when a historical work-package run is failed but its behavior is already present in the current frozen release closure?",
+      "choice": "Create RU-055 as an execution-only successor to RU-054. Preserve the failed historical run, do not claim it passed, remove direct work-package dependencies on retired historical execution, and instead consume the frozen desktop-tool-activation@v8 plus the RU-054-specified v9 contract through the release-unit dependency closure. Keep exactly the RU-054 implementation scope and acceptance commands.",
+      "status": "accepted",
+      "decidedBy": "architecture authority applying evidence-preservation rule",
+      "decidedAt": "2026-09-06T13:35:00+08:00",
+      "evidenceRefs": [
+        "E-PROP-026",
+        "E-PROP-027"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-078"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE-PREVIEW"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform",
+          "diagnostics"
+        ]
+      }
+    },
+    {
+      "id": "DEC-101",
+      "question": "How should the owner-requested macOS and Windows packages be produced after RU-056 without confusing them with the existing 0.4.9 build or silently publishing an update?",
+      "choice": "Create RU-057 as a release-only successor to RU-056. Synchronize package, Cargo and Tauri metadata to 0.4.10. Build a universal macOS DMG locally with the installed Developer ID identity, hardened runtime and yeschoy-notary profile, and require actual notarization acceptance, staple, codesign, Gatekeeper, architecture and image verification. Build Windows x64 through the existing manually dispatched GitHub Windows workflow from an exact temporary source branch; require all workflow gates and download its Simplified-Chinese unsigned NSIS artifact. Record hashes and source/run identity locally. Do not create a tag, GitHub Release, updater artifact or manifest, public download, server, NewAPI or database change.",
+      "status": "accepted",
+      "decidedBy": "product owner request with bounded release architecture",
+      "decidedAt": "2026-09-06T16:18:09Z",
+      "evidenceRefs": [
+        "E-USER-081",
+        "E-CODE-076"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-080"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "desktop-platform",
+          "tool-config"
+        ]
+      }
+    },
+    {
+      "id": "DEC-102",
+      "question": "How should the requested Windows 0.4.10 internal installer be completed when the exact hosted workflow is rejected before starting because of repository billing?",
+      "choice": "Supersede the failed RU-057 packaging execution with RU-058 while preserving its macOS path. Use the owner's previously authorized cross-compilation fallback: build the exact pushed candidate commit locally with locked cargo-xwin for x86_64-pc-windows-msvc, then package the resulting PE with a closed Simplified-Chinese per-user NSIS recipe and a SHA-256 pinned official Homebrew makensis 3.12 bottle extracted only in temporary storage. Repeat and record source tests, validate PE architecture and hashes, and explicitly label the output unsigned and not real-Windows tested. Preserve the failed GitHub run as evidence. Do not publish, tag, create updater assets, modify runtime behavior, install system build tools or change any server.",
+      "status": "accepted",
+      "decidedBy": "architecture authority applying the owner's current package request and previously accepted local cross-compilation authority",
+      "decidedAt": "2026-09-06T16:35:00Z",
+      "evidenceRefs": [
+        "E-USER-081",
+        "E-USER-068",
+        "E-CODE-077"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-081"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "desktop-platform",
+          "tool-config"
+        ]
+      }
+    },
+    {
+      "id": "DEC-103",
+      "question": "How should the packaging execution proceed after RU-058's historical implementation dependency fails current-output integrity?",
+      "choice": "Preserve frozen RU-058 as the rejected dependency-bound attempt and supersede it with standalone RU-059. RU-059 repeats the current 453 renderer and 477 native tests, then performs only the already-authorized exact-source macOS notarization and local Windows cross-packaging work. It does not inherit or assert completion from the stale RU-056 output hash, and it preserves all unsigned, non-public, no-updater and no-real-Windows-test boundaries.",
+      "status": "accepted",
+      "decidedBy": "architecture authority applying current execution-integrity evidence and the owner's package request",
+      "decidedAt": "2026-09-06T16:42:00Z",
+      "evidenceRefs": [
+        "E-USER-081",
+        "E-CODE-077",
+        "E-CODE-078"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-081"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "desktop-platform",
+          "tool-config"
+        ]
+      }
+    },
+    {
+      "id": "DEC-104",
+      "question": "How should the client prove Codex uses Yeschoy while retaining official-app identity, and how should GUI-launched DSH and other npm agents resolve their runtime without depending on a terminal PATH?",
+      "choice": "Keep Codex official identity and plugin state in auth.json, keep model routing exclusively in the user-level Yeschoy provider, and retain the officially supported provider-scoped command token rather than copying a literal key into config.toml. Treat only a request observed by the Yeschoy loopback bridge as route proof; label configuration-ready and route-confirmed as different states, show the exact forwarded model ID, and do not rewrite gpt-6-astra merely to defeat Codex UI abbreviation. For CLI tools, preserve the discovered wrapper while deduplicating by canonical identity, derive a bounded child-only PATH from its symlink chain, and apply it to DSH, terminal launch and isolated adapter checks. Keep existing normal-quit consent, atomic rollback, exact native target and no-paid-probe rules.",
+      "status": "accepted",
+      "decidedBy": "architecture authority applying the owner's current reproduction, local runtime evidence, official Codex documentation and CC Switch source guidance",
+      "decidedAt": "2026-09-07T10:56:02+08:00",
+      "evidenceRefs": [
+        "E-USER-082",
+        "E-CODE-079",
+        "E-CODE-080",
+        "E-EXT-062",
+        "E-PROP-029"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-082"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE-PREVIEW"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform",
+          "diagnostics"
+        ]
+      }
+    },
+    {
+      "id": "DEC-105",
+      "question": "How should the completed RU-060 Codex and DSH repair be accepted after its first audited run exposed a test-runner write incompatibility and a second implementation run correctly rejected an empty source diff?",
+      "choice": "Preserve both RU-060 reports unchanged and supersede RU-060 with a source-read-only verification unit. Reuse the exact three RU-060 selectors after correcting only their Vitest temporary-config harness. Require an empty baseline-to-tested source diff, all native, route UX and cross-platform scenarios to pass, and no packaging or remote mutation. Treat the successor report as additive proof, never as a rewrite of the earlier failures.",
+      "status": "accepted",
+      "decidedBy": "architecture authority applying immutable execution history and the corrected read-only acceptance harness",
+      "decidedAt": "2026-09-07T03:46:26Z",
+      "evidenceRefs": [
+        "E-USER-082",
+        "E-CODE-081",
+        "E-PROP-030"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-082",
+          "REQ-083"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE-PREVIEW"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform",
+          "diagnostics"
+        ]
+      }
+    },
+    {
+      "id": "DEC-106",
+      "question": "How should the owner-requested macOS and Windows packages be produced after RU-061 without replacing the existing 0.4.10 artifacts with different source under the same version?",
+      "choice": "Create a release-only successor and package the exact current verified working source as 0.4.11. Change only synchronized version metadata plus closed packaging tests, receipts and local artifacts. Require the complete current test and compile gates, a universal Developer-ID signed, hardened, notarized and stapled macOS DMG, and a fresh x86_64-pc-windows-msvc payload inside a Simplified-Chinese current-user NSIS installer produced with hash-pinned temporary tools. Record the dirty working source by deterministic state hash and bind RU-061's passing report. Keep Windows explicitly unsigned/cross-built/not-real-device-tested and do not upload, tag, publish updater metadata or mutate any remote service.",
+      "status": "accepted",
+      "decidedBy": "architecture authority applying the owner's explicit package request and current version/artifact evidence",
+      "decidedAt": "2026-09-07T04:20:50Z",
+      "evidenceRefs": [
+        "E-USER-083",
+        "E-CODE-082",
+        "E-PROP-031"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-084"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "desktop-platform",
+          "tool-config"
+        ]
+      }
+    },
+    {
+      "id": "DEC-107",
+      "question": "How should Settings represent account, updater and application-download readiness now that its account-unavailable boundary conflicts with current product capability?",
+      "choice": "Delete only the stale account-unavailable Settings boundary and its duplicate shortcuts. Keep the real account route and desktop-account-session behavior intact. Do not claim automatic updates until the signed updater channel is actually configured and published, and do not broaden the existing Codex and Claude installer support or imply guided-only agents are automatically downloadable. Verify this narrow correction without packaging or remote mutation.",
+      "status": "accepted",
+      "decidedBy": "architecture authority applying the owner's explicit deletion request and current repository plus live-origin evidence",
+      "decidedAt": "2026-09-07T05:12:19Z",
+      "evidenceRefs": [
+        "E-USER-084",
+        "E-CODE-083",
+        "E-EXT-061",
+        "E-PROP-032"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-085"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "desktop-platform",
+          "account"
+        ]
+      }
+    },
+    {
+      "id": "DEC-108",
+      "question": "How should RU-063 be accepted after its renderer adapter rejected the repository's ranged Vitest dependency before running the already-passing test?",
+      "choice": "Preserve the failed RU-063 report and supersede it with a verification-only release unit. Re-run the frozen source-level Settings and account-route scenario through pytest-json, require an empty source diff, and rely on the separately recorded 455-of-455 direct renderer suite as supporting evidence. Do not alter package.json merely to satisfy the adapter and do not change product, package or remote state.",
+      "status": "accepted",
+      "decidedBy": "architecture authority applying immutable execution history and current direct renderer evidence",
+      "decidedAt": "2026-09-07T05:17:39Z",
+      "evidenceRefs": [
+        "E-CODE-084",
+        "E-PROP-033"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-085",
+          "REQ-086"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "desktop-platform",
+          "account"
+        ]
+      }
+    },
+    {
+      "id": "DEC-109",
+      "question": "How should the read-only Settings verification proceed after RU-064 dispatch correctly rejected its dependency on the failed RU-063 execution?",
+      "choice": "Preserve frozen RU-064 and all earlier reports, then supersede it with the same source-read-only scenario and no work-package execution dependency. Rely on the release-unit dependency for frozen architecture context, require an empty source diff, and make no product, test, dependency, package or remote-state change.",
+      "status": "accepted",
+      "decidedBy": "architecture authority applying the dispatch dependency evidence",
+      "decidedAt": "2026-09-07T05:20:26Z",
+      "evidenceRefs": [
+        "E-USER-084",
+        "E-CODE-085",
+        "E-PROP-034"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-085",
+          "REQ-086"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "desktop-platform",
+          "account"
+        ]
+      }
+    },
+    {
+      "id": "DEC-110",
+      "question": "How should the owner-requested package be produced after the Settings cleanup without overwriting the earlier 0.4.11 artifacts or overstating Windows and updater readiness?",
+      "choice": "Create a release-only successor and package the exact current working source as 0.4.12. Change only synchronized version metadata plus closed packaging tests, receipts and local artifacts. Re-run complete current quality and compile gates, build a universal Developer-ID signed, hardened, Apple-notarized and stapled macOS DMG, and create a fresh x86_64-pc-windows-msvc payload inside a Simplified-Chinese current-user NSIS installer with hash-pinned temporary tools. Bind both RU-061 cross-platform proof and RU-065 Settings proof plus the exact current source hash. Keep Windows explicitly unsigned, cross-built and not real-device-tested; do not upload, publish updater metadata or mutate remote services.",
+      "status": "accepted",
+      "decidedBy": "architecture authority applying the owner's explicit current packaging request and the existing 0.4.11 receipt plus RU-065 verification evidence",
+      "decidedAt": "2026-09-07T05:35:53Z",
+      "evidenceRefs": [
+        "E-USER-085",
+        "E-CODE-086",
+        "E-PROP-035"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-087"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "desktop-platform",
+          "account",
+          "tool-config"
+        ]
+      }
+    },
+    {
+      "id": "DEC-111",
+      "question": "How should the broken 0.4.12 Windows development-server package and renderer-dependent uncloseable state be corrected without overwriting evidence or overstating Windows readiness?",
+      "choice": "Preserve the rejected 0.4.12 files and receipt, then create a bounded 0.4.13 Windows-only successor. Define project custom-protocol as Cargo's default production feature and enforce it with a release compile guard, while retaining Tauri dev's observed --no-default-features path. Use a native Windows Yes/No/Cancel close choice that invokes the existing cooperative shutdown or background action without depending on web content. Require renderer asset paths and the embedded runtime marker in the PE, rerun current quality gates and package a distinct Chinese current-user NSIS installer. Keep it unsigned, cross-built and pending a real Windows smoke test; do not upload, publish, rebuild macOS or mutate remote/user state.",
+      "status": "accepted",
+      "decidedBy": "architecture authority applying the owner's real-device failure report and direct build/runtime evidence",
+      "decidedAt": "2026-09-07T06:47:35Z",
+      "evidenceRefs": [
+        "E-USER-086",
+        "E-CODE-087",
+        "E-PROP-036"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-068",
+          "REQ-087",
+          "REQ-088"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "desktop-platform",
+          "tool-config"
+        ]
+      }
+    },
+    {
+      "id": "DEC-112",
+      "question": "How should the assistant make running-app reconnection automatic enough for novice users without risking unsaved work or freezing the whole client?",
+      "choice": "Treat desktop restart as an explicit, single-intent graceful handoff: if Codex Desktop or Claude Desktop is running, immediately explain that work must be saved and offer one affirmative action that asks the app to close normally, then dismiss the modal before starting the asynchronous configuration and reopen on success. Never force kill or silently terminate. Keep terminal agents on new-session semantics and DSH on browser semantics. Decouple launch, inspection, restore and configuration UI state; preserve last usable inspection data during background refresh; expose Open as the configured-state primary action and Update connection settings as a persistent outlined secondary action. This unit changes source and tests only and produces no package or publication.",
+      "status": "accepted",
+      "decidedBy": "architecture authority applying the owner's cross-platform report, the observed modal and global-operation coupling, and the existing graceful lifecycle boundary",
+      "decidedAt": "2026-09-07T07:33:40Z",
+      "evidenceRefs": [
+        "E-USER-087",
+        "E-CODE-088",
+        "E-PROP-037"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-089"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE-PREVIEW"
+        ],
+        "domainRefs": [
+          "desktop-platform",
+          "tool-config"
+        ]
+      }
+    },
+    {
+      "id": "DEC-113",
+      "question": "How should the completed connection UX correction be governed after the frozen Vitest adapter rejected the repository's ranged dependency before executing tests?",
+      "choice": "Keep the failed RU-068 execution and all its command evidence immutable. Supersede RU-068 with a verification-only unit that uses the already-declared pytest lifecycle scenario under read-only source isolation, requires an empty source diff, and references the direct 459-test renderer suite, 59 focused tests, typecheck and production build as supporting code evidence. Do not change package.json solely for the adapter, and do not alter product, test, package or remote state in the successor.",
+      "status": "accepted",
+      "decidedBy": "architecture authority applying immutable execution history and the current direct renderer and isolated pytest evidence",
+      "decidedAt": "2026-09-07T07:49:13Z",
+      "evidenceRefs": [
+        "E-CODE-089",
+        "E-PROP-038"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-089",
+          "REQ-090"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE-PREVIEW"
+        ],
+        "domainRefs": [
+          "desktop-platform",
+          "tool-config"
+        ]
+      }
+    },
+    {
+      "id": "DEC-114",
+      "question": "How should the visually muted Update connection settings action be corrected after the production CSS cascade was inspected?",
+      "choice": "Keep Open as the filled primary action and Update connection settings as a full-width accent-outline secondary action. Correct the final workbench-v2 :has override rather than adding escalating specificity, and let the action deck fill the sticky side panel. Preserve all interaction, lifecycle and disabled-state behavior from RU-068/RU-069. Verify the final cascade and production rendering only; do not package or publish.",
+      "status": "accepted",
+      "decidedBy": "architecture authority applying the owner's visibility complaint and direct production-CSS visual and computed-style evidence",
+      "decidedAt": "2026-09-07T07:55:21Z",
+      "evidenceRefs": [
+        "E-CODE-090",
+        "E-PROP-039"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-089",
+          "REQ-091"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE-PREVIEW"
+        ],
+        "domainRefs": [
+          "tool-config"
+        ]
+      }
+    },
+    {
+      "id": "DEC-115",
+      "question": "How should Yeschoy automatic updates be completed without repeating the coupled connection and installer failures seen in the novice workflow?",
+      "choice": "Create a dedicated native self-update boundary with its own IPC contract and serialization, initialize Tauri updater only in Rust, embed only the public verification key, and keep renderer updater permissions closed. Check silently after startup, show a nonmodal global notice and a full Settings state, require one explicit install-and-restart action, download and verify before entering shared cooperative shutdown, and relaunch the current build if installation fails after shutdown begins. Publish immutable versioned artifacts before an atomic stable manifest on ergou.qzz.io; absence remains HTTP 204. Replace inherited CC Switch release automation with Yeschoy-specific manual candidate automation. Do not share updater state, locks, keys, manifests or failure status with application connection, third-party app installation, vendor synchronization, account, model or billing domains.",
+      "status": "accepted",
+      "decidedBy": "architecture authority applying the product owner's explicit completion and decoupling direction, current-source evidence and Tauri's mandatory-signature updater contract",
+      "decidedAt": "2026-09-07T08:19:14Z",
+      "evidenceRefs": [
+        "E-USER-088",
+        "E-CODE-091",
+        "E-EXT-062",
+        "E-PROP-040"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-092"
+        ],
+        "pageRefs": [
+          "PAGE-SETTINGS"
+        ],
+        "domainRefs": [
+          "desktop-platform",
+          "security-update"
+        ]
       }
     }
   ]

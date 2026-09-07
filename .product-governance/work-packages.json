@@ -1,6 +1,1877 @@
 {
   "schemaVersion": 1,
-  "packages": [
+ "packages": [
+    {
+      "id": "WP-RU056-UNIFIED-ACTIVATION",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "critical",
+      "objective": "Replace adapter-specific blocking setup probes with one bounded transactional activation flow and safe reload behavior for every supported agent.",
+      "deliverables": [
+        "Shared configuration-ready completion semantics for all seven adapters without paid setup prompts",
+        "Explicit running desktop application consent with normal quit only and exact-target reopen",
+        "New-session guidance for CLI tools and helper-owned runtime handling for DSH",
+        "Native, renderer and cross-platform regression evidence without packaging"
+      ],
+      "requirementRefs": [
+        "REQ-079"
+      ],
+      "decisionRefs": [
+        "DEC-100"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server, NewAPI, database, billing, model entitlement, DNS or remote deployment changes",
+        "No package, version bump, signing, upload, release or updater changes",
+        "No force termination, unsaved-work bypass, vendor binary patch, user terminal termination or arbitrary process control",
+        "No claim that local configuration readiness proves upstream quota, model health, response correctness or future vendor-version compatibility"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src-tauri/src/tool_activation.rs",
+        "src-tauri/src/tool_adapters/mod.rs",
+        "src-tauri/src/tool_adapters/desktop_lifecycle.rs",
+        "src-tauri/src/tool_adapters/claude_code.rs",
+      "src-tauri/src/tool_adapters/claude_desktop.rs",
+      "src-tauri/src/tool_adapters/codex_desktop.rs",
+      "src-tauri/src/tool_adapters/dsh_web.rs",
+      "src-tauri/src/claude_bridge.rs",
+      "src-tauri/src/tool_model_profile.rs",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src/configuration/activation.ts",
+        "src/configuration/activation.test.ts",
+        "src/configuration/ConfigurationPreviewView.tsx",
+        "src/configuration/ConfigurationPreviewView.test.tsx",
+        "src/configuration/DailyUse.test.tsx",
+        "tests/work_packages/ru056/**",
+        "outputs/野菜API-统一快速接入.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release/**",
+        "release-assets/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/tauri.candidate.conf.json",
+        "src-tauri/src/account_v2.rs",
+        "src-tauri/src/app_installation/**",
+        "src-tauri/src/tool_credentials.rs"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No database or stored-state migration. Existing encrypted receipts and credentials remain readable; the next explicit activation uses v10 completion semantics.",
+        "rollback": "Use existing encrypted per-tool receipts and Restore original settings. Revert the client source if needed; no server or database rollback is involved."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Keep activation wire schemaVersion 4 and existing exact model/group catalogs. Add an optional restartRunningApp input and one application_running outcome. Existing callers that omit the flag remain non-destructive.",
+        "supportedVersions": "Current native-discovered Claude Desktop and Codex Desktop identities plus the existing discovered CLI targets on macOS and Windows. Compile evidence is not a clean-machine or future-version guarantee.",
+        "removalGate": "Never reintroduce a paid upstream prompt as a setup completion gate, force terminate a user application, kill user CLI sessions, weaken atomic readback, or discard first-request diagnostics."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v9",
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [
+        "desktop-tool-activation@v10"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru056-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_native",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru056-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_renderer",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        },
+        {
+          "id": "ru056-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_builds",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU056-AS-native",
+          "assertion": "Native fixtures prove all seven adapters complete from transactional readback without invoking real-model verification, desktop apps require explicit normal-quit consent and never force terminate, helper runtimes are bounded, and failure restores and reopens safely.",
+          "testSelector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_native",
+          "acceptanceCommandId": "ru056-native"
+        },
+        {
+          "id": "RU056-AS-renderer",
+          "assertion": "Renderer tests prove a running desktop app receives a save-work confirmation and confirmed retry, setup copy does not claim a model response, and CLI targets explain new-session activation.",
+          "testSelector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_renderer",
+          "acceptanceCommandId": "ru056-renderer"
+        },
+        {
+          "id": "RU056-AS-build",
+          "assertion": "Typecheck, production frontend build, macOS Apple-Silicon compile and Windows compile checks pass without packaging, signing, upload, version or server changes.",
+          "testSelector": "tests/work_packages/ru056/test_acceptance.py::test_unified_activation_builds",
+          "acceptanceCommandId": "ru056-build"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "A platform cannot bind running-process control to the exact native-discovered desktop identity without arbitrary process-name matching.",
+        "Normal quit would require force termination, automation permission, silent data loss or unbounded waiting.",
+        "Implementation would weaken atomic readback, secure credential ownership, exact model/group routing or three-way recovery.",
+        "The change requires a server, database, vendor binary, package, release or updater modification."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU053-DOMESTIC-DOWNLOAD-ENABLEMENT",
+      "wave": "release",
+      "owner": "security-update",
+      "riskClass": "critical",
+      "objective": "Enable and operationally control the domestic mirror for exact official Codex and Claude Desktop packages while preserving client-native trust and official fallback.",
+      "deliverables": [
+        "Approval-file-free explicit operator publication with truthful native_verified or client_native_required state",
+        "Atomic empty-catalog kill switch and replay-safe enablement that preserve immutable objects and official fallback",
+        "Client schema-2 parser and beginner source copy that never bypass native package trust",
+        "Executable publisher, parser, fallback, UI and cross-platform evidence plus redacted production-origin probes"
+      ],
+      "requirementRefs": [
+        "REQ-077"
+      ],
+      "decisionRefs": [
+        "DEC-097"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No Yecai package, version bump, updater artifact, GitHub release or forced third-party application update.",
+        "No database, NewAPI, shared ingress, user account, credential, installed-app overwrite or trust-policy change.",
+        "No claim that public reachability, cross-compilation or a mirrored object proves clean-machine installation or third-party service compatibility.",
+        "No legal or policy assessment in the novice interface and no technical claim that the operator command grants vendor permission."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "deploy/vendor-sync/**",
+        "deploy/download-origin/**",
+        "src-tauri/src/app_installation/**",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src/installation/**",
+        "tests/work_packages/ru052/**",
+        "tests/work_packages/ru053/**",
+        "outputs/野菜API-国内下载源上线.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "release/**",
+        "release-assets/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/tauri.candidate.conf.json",
+        "src-tauri/src/account_v2.rs",
+        "src-tauri/src/tool_activation.rs"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No database or user-state migration. An existing schema-1 public catalog is validated and atomically migrated to schema 2 on the next explicit publication or disable operation; immutable package objects are retained.",
+        "rollback": "Run the dedicated disable action to atomically publish an empty schema-2 catalog and false health state. Clients fall back to compiled official sources; do not delete objects, user apps or settings. Restore the backed-up publisher only if the dedicated deployment itself must be rolled back."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Schema-2 clients accept native_verified and client_native_required but always perform local native trust. Schema-1 clients reject the new catalog and use official fallback. Existing installation IPC remains schemaVersion 2.",
+        "supportedVersions": "The six compiled Codex/Claude package slots already defined by RU-052. Real end-device support remains conditional on native signature/trust and platform installation checks.",
+        "removalGate": "Never remove official fallback or weaken native trust. Disabling mirror authority uses an empty catalog; old immutable objects may be removed only by a separately reviewed retention operation."
+      },
+      "inputContracts": [
+        "desktop-app-installation@v3",
+        "vendor-download-catalog@v1",
+        "download-origin-status@v2"
+      ],
+      "outputContracts": [
+        "desktop-app-installation@v4",
+        "vendor-download-catalog@v2",
+        "download-origin-status@v3"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru053-server",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru053/test_acceptance.py::test_server_publication_and_kill_switch",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru053-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru053/test_acceptance.py::test_client_catalog_and_native_trust",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru053-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru053/test_acceptance.py::test_beginner_source_and_fallback_ui",
+          "cwd": ".",
+          "timeoutSeconds": 1200
+        },
+        {
+          "id": "ru053-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru053/test_acceptance.py::test_cross_platform_build_inputs",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU053-AS-server",
+          "assertion": "The explicit publisher needs no approval file, publishes only current official-origin immutable bytes, distinguishes optional native receipt from client-native-required state, prevents downgrade and concurrent or partial corruption, atomically disables to an empty catalog, and safely re-enables without deleting objects.",
+          "testSelector": "tests/work_packages/ru053/test_acceptance.py::test_server_publication_and_kill_switch",
+          "acceptanceCommandId": "ru053-server"
+        },
+        {
+          "id": "RU053-AS-native",
+          "assertion": "The native client accepts only schema-2 closed compiled artifacts and both verification states still traverse unchanged local hash, identity, publisher, signature and operating-system trust checks; malformed or unavailable mirror data falls back to official sources without credentials.",
+          "testSelector": "tests/work_packages/ru053/test_acceptance.py::test_client_catalog_and_native_trust",
+          "acceptanceCommandId": "ru053-native"
+        },
+        {
+          "id": "RU053-AS-renderer",
+          "assertion": "The beginner interface labels the mirror as domestic acceleration with pre-install vendor-signature checking, changes visibly on official fallback, and contains no implementation, approval or legal-risk language.",
+          "testSelector": "tests/work_packages/ru053/test_acceptance.py::test_beginner_source_and_fallback_ui",
+          "acceptanceCommandId": "ru053-renderer"
+        },
+        {
+          "id": "RU053-AS-build",
+          "assertion": "The final source passes production renderer checks plus macOS Apple-Silicon and Windows x64/ARM compile checks without building or publishing a Yecai package or updater artifact.",
+          "testSelector": "tests/work_packages/ru053/test_acceptance.py::test_cross_platform_build_inputs",
+          "acceptanceCommandId": "ru053-build"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "A package URL, source identity, digest, size, architecture, version or publisher cannot be bound to the compiled official source and current private candidate.",
+        "Publication or installation would require bypassing native signature, Gatekeeper, Windows App Installer, system trust, existing-app ownership or user confirmation.",
+        "Deployment requires modifying shared ingress, database, NewAPI, unrelated services or an updater/release channel.",
+        "Frozen contract or path ownership changes beyond this successor require another reviewed unit."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU052-DOWNLOAD-COMPLETION",
+      "wave": "integration",
+      "owner": "security-update",
+      "riskClass": "critical",
+      "objective": "Complete the download-source plumbing and restore official Claude macOS package discovery without misrepresenting public publication or installation verification.",
+      "deliverables": [
+        "Official Claude ZIP resolution and safe native extraction",
+        "Native receipt and approval bound immutable publisher",
+        "Client mirror catalog selection, integrity, official fallback and truthful source UI",
+        "Executable regression evidence and private server verification report"
+      ],
+      "requirementRefs": [
+        "REQ-076"
+      ],
+      "decisionRefs": [
+        "DEC-096"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No public third-party binary publication until operator distribution basis is supplied; fixture publisher acceptance is not that basis.",
+        "No Yecai packaging/version/updater/signing/release or GitHub push.",
+        "No installed-app overwrite, privilege or trust bypass, CAPTCHA workaround, payment/model/account/DB change.",
+        "No real Windows/Apple-Silicon clean-machine claim from fixture or cross compilation."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "deploy/vendor-sync/**",
+        "deploy/download-origin/**",
+        "src-tauri/src/app_installation/**",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src/installation/**",
+        "tests/work_packages/ru052/**",
+        "outputs/野菜API-下载链路修复.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "release/**",
+        "release-assets/**",
+        "src-tauri/target/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src-tauri/src/account_v2.rs",
+        "src-tauri/src/tool_activation.rs"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No database or installed application migration. Cache metadata adds defaulted artifact URL/hash/size bindings; old unbound caches are revalidated or redownloaded. Public objects are immutable, latest manifest atomic.",
+        "rollback": "Restore backed-up dedicated sync code/config; leave private staged candidates intact. Client can fall back to official downloads. Operator catalog rollback only to a previously verified catalog with intact objects, never delete existing user apps."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Retain installer IPC request schema 2 and command v2; bundled renderer extends source enum. Add optional public catalog independently; absent catalog leaves official path functional.",
+        "supportedVersions": "Official compiled six package slots. Universal Claude ZIP uses codesign/Gatekeeper. Windows MSIX still uses explicit App Installer and needs real OS acceptance.",
+        "removalGate": "No existing application or published good object deletion; preserve old public catalog on failure."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v8"
+      ],
+      "outputContracts": [
+        "desktop-app-installation@v3",
+        "vendor-download-catalog@v1",
+        "download-origin-status@v2"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru052-server",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru052/test_acceptance.py::test_server_download_pipeline",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru052-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru052/test_acceptance.py::test_native_installation",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru052-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru052/test_acceptance.py::test_renderer_installation",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru052-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru052/test_acceptance.py::test_installation_build",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU052-AS-server",
+          "assertion": "Run all existing private synchronizer tests plus executable official-feed ZIP, safe archive, approval/native receipt, atomic publisher, replay, downgrade, corrupt and last-good recovery cases.",
+          "testSelector": "tests/work_packages/ru052/test_acceptance.py::test_server_download_pipeline",
+          "acceptanceCommandId": "ru052-server"
+        },
+        {
+          "id": "RU052-AS-native",
+          "assertion": "Run existing native installation regressions and new strict catalog/official feed/ZIP extraction fixtures, malicious sources, artifact-bound resume, fallback and no-overwrite tests.",
+          "testSelector": "tests/work_packages/ru052/test_acceptance.py::test_native_installation",
+          "acceptanceCommandId": "ru052-native"
+        },
+        {
+          "id": "RU052-AS-renderer",
+          "assertion": "Run existing installer journeys and truthful official/mirror/unknown source presentation, fallback with no synthetic mirror claim, keeping full-selection consent.",
+          "testSelector": "tests/work_packages/ru052/test_acceptance.py::test_renderer_installation",
+          "acceptanceCommandId": "ru052-renderer"
+        },
+        {
+          "id": "RU052-AS-build",
+          "assertion": "Execute frontend production build/typecheck and macOS ARM plus Windows x64/ARM compilation without package/version/release changes.",
+          "testSelector": "tests/work_packages/ru052/test_acceptance.py::test_installation_build",
+          "acceptanceCommandId": "ru052-build"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Public redistribution premise or native signature receipt missing: do not invoke public publisher; private technical repair and fixture verification continue.",
+        "Requires overwrite, bypassing signature/captcha/OS trust or change to unrelated server/user application.",
+        "Frozen contract/ownership conflict requires successor review."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU051-INSTALLATION-RECOVERY",
+      "wave": "integration",
+      "owner": "security-update",
+      "riskClass": "critical",
+      "objective": "Make novice installation recoverable across application changes and logged-out system confirmation; remove false existing-app detection and verify the current full workbench instead of obsolete legacy screens.",
+      "deliverables": [
+        "Identity-aware no-overwrite presence checks",
+        "Recoverable selected-app and logged-out installation UX",
+        "Current App integration journeys and full repository test evidence",
+        "Scoped acceptance report with real-device and distribution gaps"
+      ],
+      "requirementRefs": [
+        "REQ-075"
+      ],
+      "decisionRefs": [
+        "DEC-095"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server/public installer mirror publication or license assumption",
+        "No automatic dependency installation for CLI/DSH/Hermes/OpenClaw yet; official guided help only",
+        "No overwrite of existing applications, trust bypass, new account/API/DB or vendor updater changes",
+        "No paid live probes, packaging, version bump, signing, release or GitHub push"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src/installation/**",
+        "src/configuration/ConfigurationPreviewView.tsx",
+        "src-tauri/src/app_installation/**",
+        "tests/integration/App.test.tsx",
+        "tests/work_packages/ru051/**",
+        "outputs/野菜API-安装流程复核.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release/**",
+        "release-assets/**",
+        "src-tauri/target/**",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "package.json",
+        "pnpm-lock.yaml"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No DB/config schema changes. New process-owned installer progress and private original-package retry cache only.",
+        "rollback": "Revert client feature without uninstalling applications. Existing connection restoration stays unchanged; remove only owned temporary files when safe."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Exclusive current-user Mac installation and explicit Windows App Installer handoff with exact native target/session proof; no silent deployment or existing app replacement.",
+        "supportedVersions": "Official currently documented desktop platforms; macOS Intel Codex has no supported package. Windows/macOS compilation and fixtures do not claim clean-machine acceptance.",
+        "removalGate": "No existing app/config/secret overwrite, public distribution or forced upgrade."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v7",
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [
+        "desktop-app-installation@v2",
+        "desktop-tool-activation@v8"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru051-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru051/test_acceptance.py::test_native_installation",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru051-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru051/test_acceptance.py::test_renderer_installation",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru051-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru051/test_acceptance.py::test_installation_build",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru051-full-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru051/test_acceptance.py::test_all_repository_renderer",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU051-AS-native",
+          "assertion": "Native executable fixtures cover download/validator replay, cancellation, stage ordering, no-overwrite, malicious identity/source paths and cross-platform compilation. Include native one-use full-selection/account proof, exclusive destination race, quit-before-spawn, cancelled download, non-cancelled mutation drain, Windows handoff ownership and worker-error permit cleanup. Include identity-aware Mac presence and unrelated destination conflict preservation.",
+          "testSelector": "tests/work_packages/ru051/test_acceptance.py::test_native_installation",
+          "acceptanceCommandId": "ru051-native"
+        },
+        {
+          "id": "RU051-AS-renderer",
+          "assertion": "Renderer scenarios prove missing/installed/guided UX, permission and failure recovery, double-click/lost response, cancellation, stale context and exactly-once activation handoff. Include selected-app refresh after another job finishes and logged-out Windows confirmation without auto-activation.",
+          "testSelector": "tests/work_packages/ru051/test_acceptance.py::test_renderer_installation",
+          "acceptanceCommandId": "ru051-renderer"
+        },
+        {
+          "id": "RU051-AS-build",
+          "assertion": "Renderer production build and typecheck plus unchanged release/version/server boundary.",
+          "testSelector": "tests/work_packages/ru051/test_acceptance.py::test_installation_build",
+          "acceptanceCommandId": "ru051-build"
+        },
+        {
+          "id": "RU051-AS-full-renderer",
+          "assertion": "All repository Vitest suites pass, including current App integration journeys, logged-out Windows confirmation and cross-app terminal-state recovery. No skipped failure or pass-count-only readiness claims.",
+          "testSelector": "tests/work_packages/ru051/test_acceptance.py::test_all_repository_renderer",
+          "acceptanceCommandId": "ru051-full-renderer"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Requires public redistribution permission, CAPTCHA bypass or server changes",
+        "Requires replacing existing user applications, admin trust policy changes, live account credentials or paid probes",
+        "Frozen IPC/ownership conflict; re-review before implementation"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU050-INSTALLATION-INTEGRATION",
+      "wave": "integration",
+      "owner": "security-update",
+      "riskClass": "critical",
+      "objective": "Implement the novice install-and-connect workflow for missing desktop apps with guided alternatives.",
+      "deliverables": [
+        "Native original-package installer and progress contract",
+        "Missing-app entry and accessible progress/recovery UX",
+        "At-most-once fresh-context activation handoff",
+        "Native/renderer/compile evidence and honest live-test limitations"
+      ],
+      "requirementRefs": [
+        "REQ-074"
+      ],
+      "decisionRefs": [
+        "DEC-094"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server/public installer mirror publication or license assumption",
+        "No automatic dependency installation for CLI/DSH/Hermes/OpenClaw yet; official guided help only",
+        "No overwrite of existing applications, trust bypass, new account/API/DB or vendor updater changes",
+        "No paid live probes, packaging, version bump, signing, release or GitHub push"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src/installation/**",
+        "src/App.tsx",
+        "src/workbench/AppLibraryView.tsx",
+        "src/configuration/ConfigurationPreviewView.tsx",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/app_installation/**",
+        "tests/work_packages/ru046/**",
+        "outputs/野菜API-一键安装验收.md",
+        "src-tauri/src/tool_activation.rs",
+        "src/configuration/activation.ts",
+        "src/workbench/Workbench.test.tsx",
+        "src/workbench/Repair.test.tsx",
+        "src/configuration/DailyUse.test.tsx"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release/**",
+        "release-assets/**",
+        "src-tauri/target/**",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "package.json",
+        "pnpm-lock.yaml"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No DB/config schema changes. New process-owned installer progress and private original-package retry cache only.",
+        "rollback": "Revert client feature without uninstalling applications. Existing connection restoration stays unchanged; remove only owned temporary files when safe."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Exclusive current-user Mac installation and explicit Windows App Installer handoff with exact native target/session proof; no silent deployment or existing app replacement.",
+        "supportedVersions": "Official currently documented desktop platforms; macOS Intel Codex has no supported package. Windows/macOS compilation and fixtures do not claim clean-machine acceptance.",
+        "removalGate": "No existing app/config/secret overwrite, public distribution or forced upgrade."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v7",
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [
+        "desktop-app-installation@v2",
+        "desktop-tool-activation@v8"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru046-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru046/test_acceptance.py::test_native_installation",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru046-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru046/test_acceptance.py::test_renderer_installation",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru046-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru046/test_acceptance.py::test_installation_build",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU046-AS-native",
+          "assertion": "Native executable fixtures cover download/validator replay, cancellation, stage ordering, no-overwrite, malicious identity/source paths and cross-platform compilation. Include native one-use full-selection/account proof, exclusive destination race, quit-before-spawn, cancelled download, non-cancelled mutation drain, Windows handoff ownership and worker-error permit cleanup.",
+          "testSelector": "tests/work_packages/ru046/test_acceptance.py::test_native_installation",
+          "acceptanceCommandId": "ru046-native"
+        },
+        {
+          "id": "RU046-AS-renderer",
+          "assertion": "Renderer scenarios prove missing/installed/guided UX, permission and failure recovery, double-click/lost response, cancellation, stale context and exactly-once activation handoff.",
+          "testSelector": "tests/work_packages/ru046/test_acceptance.py::test_renderer_installation",
+          "acceptanceCommandId": "ru046-renderer"
+        },
+        {
+          "id": "RU046-AS-build",
+          "assertion": "Renderer production build and typecheck plus unchanged release/version/server boundary.",
+          "testSelector": "tests/work_packages/ru046/test_acceptance.py::test_installation_build",
+          "acceptanceCommandId": "ru046-build"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Requires public redistribution permission, CAPTCHA bypass or server changes",
+        "Requires replacing existing user applications, admin trust policy changes, live account credentials or paid probes",
+        "Frozen IPC/ownership conflict; re-review before implementation"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU049-INSTALLATION-INTEGRATION",
+      "wave": "integration",
+      "owner": "security-update",
+      "riskClass": "critical",
+      "objective": "Implement the novice install-and-connect workflow for missing desktop apps with guided alternatives.",
+      "deliverables": [
+        "Native original-package installer and progress contract",
+        "Missing-app entry and accessible progress/recovery UX",
+        "At-most-once fresh-context activation handoff",
+        "Native/renderer/compile evidence and honest live-test limitations",
+        "Update legacy read-only IPC and empty-library test expectations without weakening assertions or skipping regressions"
+      ],
+      "requirementRefs": [
+        "REQ-074"
+      ],
+      "decisionRefs": [
+        "DEC-093"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server/public installer mirror publication or license assumption",
+        "No automatic dependency installation for CLI/DSH/Hermes/OpenClaw yet; official guided help only",
+        "No overwrite of existing applications, trust bypass, new account/API/DB or vendor updater changes",
+        "No paid live probes, packaging, version bump, signing, release or GitHub push"
+      ],
+      "dependsOn": [
+        "WP-RU047-BASELINE-VERIFICATION"
+      ],
+      "allowedPaths": [
+        "src/installation/**",
+        "src/App.tsx",
+        "src/workbench/AppLibraryView.tsx",
+        "src/configuration/ConfigurationPreviewView.tsx",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/app_installation/**",
+        "tests/work_packages/ru046/**",
+        "outputs/野菜API-一键安装验收.md",
+        "src-tauri/src/tool_activation.rs",
+        "src/configuration/activation.ts",
+        "src/workbench/Workbench.test.tsx",
+        "src/workbench/Repair.test.tsx",
+        "src/configuration/DailyUse.test.tsx"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release/**",
+        "release-assets/**",
+        "src-tauri/target/**",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "package.json",
+        "pnpm-lock.yaml"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No DB/config schema changes. New process-owned installer progress and private original-package retry cache only.",
+        "rollback": "Revert client feature without uninstalling applications. Existing connection restoration stays unchanged; remove only owned temporary files when safe."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Exclusive current-user Mac installation and explicit Windows App Installer handoff with exact native target/session proof; no silent deployment or existing app replacement.",
+        "supportedVersions": "Official currently documented desktop platforms; macOS Intel Codex has no supported package. Windows/macOS compilation and fixtures do not claim clean-machine acceptance.",
+        "removalGate": "No existing app/config/secret overwrite, public distribution or forced upgrade."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v7",
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [
+        "desktop-app-installation@v2",
+        "desktop-tool-activation@v8"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru046-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru046/test_acceptance.py::test_native_installation",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru046-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru046/test_acceptance.py::test_renderer_installation",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru046-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru046/test_acceptance.py::test_installation_build",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU046-AS-native",
+          "assertion": "Native executable fixtures cover download/validator replay, cancellation, stage ordering, no-overwrite, malicious identity/source paths and cross-platform compilation. Include native one-use full-selection/account proof, exclusive destination race, quit-before-spawn, cancelled download, non-cancelled mutation drain, Windows handoff ownership and worker-error permit cleanup.",
+          "testSelector": "tests/work_packages/ru046/test_acceptance.py::test_native_installation",
+          "acceptanceCommandId": "ru046-native"
+        },
+        {
+          "id": "RU046-AS-renderer",
+          "assertion": "Renderer scenarios prove missing/installed/guided UX, permission and failure recovery, double-click/lost response, cancellation, stale context and exactly-once activation handoff.",
+          "testSelector": "tests/work_packages/ru046/test_acceptance.py::test_renderer_installation",
+          "acceptanceCommandId": "ru046-renderer"
+        },
+        {
+          "id": "RU046-AS-build",
+          "assertion": "Renderer production build and typecheck plus unchanged release/version/server boundary.",
+          "testSelector": "tests/work_packages/ru046/test_acceptance.py::test_installation_build",
+          "acceptanceCommandId": "ru046-build"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Requires public redistribution permission, CAPTCHA bypass or server changes",
+        "Requires replacing existing user applications, admin trust policy changes, live account credentials or paid probes",
+        "Frozen IPC/ownership conflict; re-review before implementation"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU048-APP-INSTALLATION",
+      "wave": "integration",
+      "owner": "security-update",
+      "riskClass": "critical",
+      "objective": "Implement the novice install-and-connect workflow for missing desktop apps with guided alternatives.",
+      "deliverables": [
+        "Native original-package installer and progress contract",
+        "Missing-app entry and accessible progress/recovery UX",
+        "At-most-once fresh-context activation handoff",
+        "Native/renderer/compile evidence and honest live-test limitations"
+      ],
+      "requirementRefs": [
+        "REQ-073"
+      ],
+      "decisionRefs": [
+        "DEC-092"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server/public installer mirror publication or license assumption",
+        "No automatic dependency installation for CLI/DSH/Hermes/OpenClaw yet; official guided help only",
+        "No overwrite of existing applications, trust bypass, new account/API/DB or vendor updater changes",
+        "No paid live probes, packaging, version bump, signing, release or GitHub push"
+      ],
+      "dependsOn": [
+        "WP-RU047-BASELINE-VERIFICATION"
+      ],
+      "allowedPaths": [
+        "src/installation/**",
+        "src/App.tsx",
+        "src/workbench/AppLibraryView.tsx",
+        "src/configuration/ConfigurationPreviewView.tsx",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/app_installation/**",
+        "tests/work_packages/ru046/**",
+        "outputs/野菜API-一键安装验收.md",
+        "src-tauri/src/tool_activation.rs",
+        "src/configuration/activation.ts"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release/**",
+        "release-assets/**",
+        "src-tauri/target/**",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "package.json",
+        "pnpm-lock.yaml"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No DB/config schema changes. New process-owned installer progress and private original-package retry cache only.",
+        "rollback": "Revert client feature without uninstalling applications. Existing connection restoration stays unchanged; remove only owned temporary files when safe."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Exclusive current-user Mac installation and explicit Windows App Installer handoff with exact native target/session proof; no silent deployment or existing app replacement.",
+        "supportedVersions": "Official currently documented desktop platforms; macOS Intel Codex has no supported package. Windows/macOS compilation and fixtures do not claim clean-machine acceptance.",
+        "removalGate": "No existing app/config/secret overwrite, public distribution or forced upgrade."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v7",
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [
+        "desktop-app-installation@v2",
+        "desktop-tool-activation@v8"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru046-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru046/test_acceptance.py::test_native_installation",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru046-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru046/test_acceptance.py::test_renderer_installation",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru046-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru046/test_acceptance.py::test_installation_build",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU046-AS-native",
+          "assertion": "Native executable fixtures cover download/validator replay, cancellation, stage ordering, no-overwrite, malicious identity/source paths and cross-platform compilation. Include native one-use full-selection/account proof, exclusive destination race, quit-before-spawn, cancelled download, non-cancelled mutation drain, Windows handoff ownership and worker-error permit cleanup.",
+          "testSelector": "tests/work_packages/ru046/test_acceptance.py::test_native_installation",
+          "acceptanceCommandId": "ru046-native"
+        },
+        {
+          "id": "RU046-AS-renderer",
+          "assertion": "Renderer scenarios prove missing/installed/guided UX, permission and failure recovery, double-click/lost response, cancellation, stale context and exactly-once activation handoff.",
+          "testSelector": "tests/work_packages/ru046/test_acceptance.py::test_renderer_installation",
+          "acceptanceCommandId": "ru046-renderer"
+        },
+        {
+          "id": "RU046-AS-build",
+          "assertion": "Renderer production build and typecheck plus unchanged release/version/server boundary.",
+          "testSelector": "tests/work_packages/ru046/test_acceptance.py::test_installation_build",
+          "acceptanceCommandId": "ru046-build"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Requires public redistribution permission, CAPTCHA bypass or server changes",
+        "Requires replacing existing user applications, admin trust policy changes, live account credentials or paid probes",
+        "Frozen IPC/ownership conflict; re-review before implementation"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU047-BASELINE-VERIFICATION",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "critical",
+      "objective": "Re-verify the actual current client before installation work; retain the historical RU-043 failed report.",
+      "deliverables": [
+        "Fresh read-only native, renderer and production build proofs from existing RU-043 regression selectors"
+      ],
+      "requirementRefs": [
+        "REQ-072"
+      ],
+      "decisionRefs": [
+        "DEC-091"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No source edits, packaging, server changes or live app configuration; no rewriting earlier failed evidence"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src/model-profiles/**",
+        "src/configuration/**",
+        "src/index.css",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/tool_model_profile.rs",
+        "src-tauri/src/tool_adapters/**",
+        "src-tauri/src/claude_bridge.rs",
+        "src-tauri/src/codex_bridge.rs",
+        "src-tauri/src/chat_gateway.rs",
+        "src-tauri/src/proxy/providers/transform.rs",
+        "src-tauri/src/proxy/providers/transform_codex_chat.rs",
+        "tests/work_packages/ru043/**",
+        "outputs/野菜API-模型能力适配验收.md",
+        "src/App.tsx",
+        "src/workbench/AppLibraryView.tsx"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "work/**",
+        "release-assets/**",
+        "release/**",
+        "src-tauri/target/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No new persistence schema. Explicit reactivation regenerates owned model metadata through existing transactions.",
+        "rollback": "Existing activation snapshots and restore operations retain previous configuration and credentials."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Exact IDs and unknown default access; native schema-specific optional metadata, no new version gate.",
+        "supportedVersions": "Current documented vendor contracts with Mac and Windows compilation/fixtures, not blanket live verification.",
+        "removalGate": "No invented abilities, silent model/group change, loss of user preferences, secret exposure or package/server mutation."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v7",
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [
+        "desktop-model-profile@v1"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru043-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru043/test_acceptance.py::test_native_model_capabilities",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru043-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru043/test_acceptance.py::test_renderer_model_capabilities",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru043-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru043/test_acceptance.py::test_build_model_capabilities",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU043-AS-native",
+          "assertion": "Native fixtures prove exact IDs, per-model efforts, unknown defaults, routing and recovery regressions plus Windows/Apple compilation.",
+          "testSelector": "tests/work_packages/ru043/test_acceptance.py::test_native_model_capabilities",
+          "acceptanceCommandId": "ru043-native"
+        },
+        {
+          "id": "RU043-AS-renderer",
+          "assertion": "Renderer tests prove friendly labels and full-ID search/selection without exposing upstream names.",
+          "testSelector": "tests/work_packages/ru043/test_acceptance.py::test_renderer_model_capabilities",
+          "acceptanceCommandId": "ru043-renderer"
+        },
+        {
+          "id": "RU043-AS-build",
+          "assertion": "Typecheck and production frontend build pass without version change or installer.",
+          "testSelector": "tests/work_packages/ru043/test_acceptance.py::test_build_model_capabilities",
+          "acceptanceCommandId": "ru043-build"
+        }
+      ],
+      "verificationOnly": true,
+      "stopConditions": [
+        "Requires secrets, paid probes or server changes",
+        "Cannot preserve exact model/group identity or transactional restore",
+        "Vendor schema unverified: omit that optional metadata, preserve default use and report limitation"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU047-APP-INSTALLATION",
+      "wave": "integration",
+      "owner": "security-update",
+      "riskClass": "critical",
+      "objective": "Implement the novice install-and-connect workflow for missing desktop apps with guided alternatives.",
+      "deliverables": [
+        "Native original-package installer and progress contract",
+        "Missing-app entry and accessible progress/recovery UX",
+        "At-most-once fresh-context activation handoff",
+        "Native/renderer/compile evidence and honest live-test limitations"
+      ],
+      "requirementRefs": [
+        "REQ-072"
+      ],
+      "decisionRefs": [
+        "DEC-090",
+        "DEC-091"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server/public installer mirror publication or license assumption",
+        "No automatic dependency installation for CLI/DSH/Hermes/OpenClaw yet; official guided help only",
+        "No overwrite of existing applications, trust bypass, new account/API/DB or vendor updater changes",
+        "No paid live probes, packaging, version bump, signing, release or GitHub push"
+      ],
+      "dependsOn": [
+        "WP-RU047-BASELINE-VERIFICATION"
+      ],
+      "allowedPaths": [
+        "src/installation/**",
+        "src/App.tsx",
+        "src/workbench/AppLibraryView.tsx",
+        "src/configuration/ConfigurationPreviewView.tsx",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/app_installation/**",
+        "tests/work_packages/ru046/**",
+        "outputs/野菜API-一键安装验收.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release/**",
+        "release-assets/**",
+        "src-tauri/target/**",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "package.json",
+        "pnpm-lock.yaml"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No DB/config schema changes. New process-owned installer progress and private original-package retry cache only.",
+        "rollback": "Revert client feature without uninstalling applications. Existing connection restoration stays unchanged; remove only owned temporary files when safe."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Original vendor packaging, current-user OS installation and existing native discovery; no exact-version gate.",
+        "supportedVersions": "Official currently documented desktop platforms; macOS Intel Codex has no supported package. Windows/macOS compilation and fixtures do not claim clean-machine acceptance.",
+        "removalGate": "No existing app/config/secret overwrite, public distribution or forced upgrade."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v7",
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [
+        "desktop-app-installation@v1"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru046-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru046/test_acceptance.py::test_native_installation",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru046-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru046/test_acceptance.py::test_renderer_installation",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru046-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru046/test_acceptance.py::test_installation_build",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU046-AS-native",
+          "assertion": "Native executable fixtures cover download/validator replay, cancellation, stage ordering, no-overwrite, malicious identity/source paths and cross-platform compilation.",
+          "testSelector": "tests/work_packages/ru046/test_acceptance.py::test_native_installation",
+          "acceptanceCommandId": "ru046-native"
+        },
+        {
+          "id": "RU046-AS-renderer",
+          "assertion": "Renderer scenarios prove missing/installed/guided UX, permission and failure recovery, double-click/lost response, cancellation, stale context and exactly-once activation handoff.",
+          "testSelector": "tests/work_packages/ru046/test_acceptance.py::test_renderer_installation",
+          "acceptanceCommandId": "ru046-renderer"
+        },
+        {
+          "id": "RU046-AS-build",
+          "assertion": "Renderer production build and typecheck plus unchanged release/version/server boundary.",
+          "testSelector": "tests/work_packages/ru046/test_acceptance.py::test_installation_build",
+          "acceptanceCommandId": "ru046-build"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Requires public redistribution permission, CAPTCHA bypass or server changes",
+        "Requires replacing existing user applications, admin trust policy changes, live account credentials or paid probes",
+        "Frozen IPC/ownership conflict; re-review before implementation"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU046-APP-INSTALLATION",
+      "wave": "integration",
+      "owner": "security-update",
+      "riskClass": "critical",
+      "objective": "Implement the novice install-and-connect workflow for missing desktop apps with guided alternatives.",
+      "deliverables": [
+        "Native original-package installer and progress contract",
+        "Missing-app entry and accessible progress/recovery UX",
+        "At-most-once fresh-context activation handoff",
+        "Native/renderer/compile evidence and honest live-test limitations"
+      ],
+      "requirementRefs": [
+        "REQ-072"
+      ],
+      "decisionRefs": [
+        "DEC-090"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server/public installer mirror publication or license assumption",
+        "No automatic dependency installation for CLI/DSH/Hermes/OpenClaw yet; official guided help only",
+        "No overwrite of existing applications, trust bypass, new account/API/DB or vendor updater changes",
+        "No paid live probes, packaging, version bump, signing, release or GitHub push"
+      ],
+      "dependsOn": [
+        "WP-RU043-MODEL-CAPABILITIES"
+      ],
+      "allowedPaths": [
+        "src/installation/**",
+        "src/App.tsx",
+        "src/workbench/AppLibraryView.tsx",
+        "src/configuration/ConfigurationPreviewView.tsx",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/app_installation/**",
+        "tests/work_packages/ru046/**",
+        "outputs/野菜API-一键安装验收.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release/**",
+        "release-assets/**",
+        "src-tauri/target/**",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "package.json",
+        "pnpm-lock.yaml"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No DB/config schema changes. New process-owned installer progress and private original-package retry cache only.",
+        "rollback": "Revert client feature without uninstalling applications. Existing connection restoration stays unchanged; remove only owned temporary files when safe."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Original vendor packaging, current-user OS installation and existing native discovery; no exact-version gate.",
+        "supportedVersions": "Official currently documented desktop platforms; macOS Intel Codex has no supported package. Windows/macOS compilation and fixtures do not claim clean-machine acceptance.",
+        "removalGate": "No existing app/config/secret overwrite, public distribution or forced upgrade."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v7",
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [
+        "desktop-app-installation@v1"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru046-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru046/test_acceptance.py::test_native_installation",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru046-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru046/test_acceptance.py::test_renderer_installation",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru046-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru046/test_acceptance.py::test_installation_build",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU046-AS-native",
+          "assertion": "Native executable fixtures cover download/validator replay, cancellation, stage ordering, no-overwrite, malicious identity/source paths and cross-platform compilation.",
+          "testSelector": "tests/work_packages/ru046/test_acceptance.py::test_native_installation",
+          "acceptanceCommandId": "ru046-native"
+        },
+        {
+          "id": "RU046-AS-renderer",
+          "assertion": "Renderer scenarios prove missing/installed/guided UX, permission and failure recovery, double-click/lost response, cancellation, stale context and exactly-once activation handoff.",
+          "testSelector": "tests/work_packages/ru046/test_acceptance.py::test_renderer_installation",
+          "acceptanceCommandId": "ru046-renderer"
+        },
+        {
+          "id": "RU046-AS-build",
+          "assertion": "Renderer production build and typecheck plus unchanged release/version/server boundary.",
+          "testSelector": "tests/work_packages/ru046/test_acceptance.py::test_installation_build",
+          "acceptanceCommandId": "ru046-build"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Requires public redistribution permission, CAPTCHA bypass or server changes",
+        "Requires replacing existing user applications, admin trust policy changes, live account credentials or paid probes",
+        "Frozen IPC/ownership conflict; re-review before implementation"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU045-VENDOR-SYNC",
+      "wave": "release",
+      "owner": "security-update",
+      "riskClass": "high",
+      "objective": "Implement and deploy an independent private official desktop release synchronizer.",
+      "deliverables": [
+        "Official source configuration and deterministic private sync CLI",
+        "Recoverable download and integrity validation tests",
+        "Sandboxed six-hour service/timer",
+        "Separate native verification helpers and honest operational receipt"
+      ],
+      "requirementRefs": [
+        "REQ-071"
+      ],
+      "decisionRefs": [
+        "DEC-089"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No public installer/catalog/update channel publication or third-party redistribution",
+        "No client, account, NewAPI, DB, vendor configuration or signing secret changes",
+        "No new installed desktop applications, forced update, package build or GitHub push"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "deploy/vendor-sync/**",
+        "tests/work_packages/ru045/**",
+        "outputs/野菜API-版本同步器验收.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "deploy/download-origin/**",
+        ".github/**",
+        "src/**",
+        "src-tauri/**",
+        "release/**",
+        "release-assets/**",
+        "package.json",
+        "pnpm-lock.yaml"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No application/DB migration. New independent private server state and systemd units only.",
+        "rollback": "Disable/stop only yeschoy-vendor-sync.timer/service; preserve private candidates/receipts and existing origin."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Additive independent source catalog and private state v1; no changes to existing HTTP origin or end-user update ownership.",
+        "supportedVersions": "Observed Ubuntu 24.04.4 Python 3.12/systemd 255; macOS/Windows helpers are platform-specific and require actual native evidence.",
+        "removalGate": "No automatic source substitution, public publishing or prior-candidate deletion."
+      },
+      "inputContracts": [],
+      "outputContracts": [
+        "vendor-sync-status@v1"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru045-sources_and_contract",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru045/test_acceptance.py::test_sources_and_contract",
+          "cwd": ".",
+          "timeoutSeconds": 180
+        },
+        {
+          "id": "ru045-download_replay_resume",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru045/test_acceptance.py::test_download_replay_resume",
+          "cwd": ".",
+          "timeoutSeconds": 180
+        },
+        {
+          "id": "ru045-stale_and_failure_recovery",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru045/test_acceptance.py::test_stale_and_failure_recovery",
+          "cwd": ".",
+          "timeoutSeconds": 180
+        },
+        {
+          "id": "ru045-storage_and_concurrency",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru045/test_acceptance.py::test_storage_and_concurrency",
+          "cwd": ".",
+          "timeoutSeconds": 180
+        },
+        {
+          "id": "ru045-package_identity_and_verification",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru045/test_acceptance.py::test_package_identity_and_verification",
+          "cwd": ".",
+          "timeoutSeconds": 180
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU045-AS-sources_and_contract",
+          "assertion": "Source identity, HTTPS/host/private-address and configuration policy, hardened service and closed status contract.",
+          "testSelector": "tests/work_packages/ru045/test_acceptance.py::test_sources_and_contract",
+          "acceptanceCommandId": "ru045-sources_and_contract"
+        },
+        {
+          "id": "RU045-AS-download_replay_resume",
+          "assertion": "A valid interrupted download resumes with its validator, exact ranges and hash; repeated valid artifacts do not redownload.",
+          "testSelector": "tests/work_packages/ru045/test_acceptance.py::test_download_replay_resume",
+          "acceptanceCommandId": "ru045-download_replay_resume"
+        },
+        {
+          "id": "RU045-AS-stale_and_failure_recovery",
+          "assertion": "Stale metadata, invalid range/size/type, interrupted state receipt, corrupt cache and upstream failure cannot erase the prior candidate or claim success.",
+          "testSelector": "tests/work_packages/ru045/test_acceptance.py::test_stale_and_failure_recovery",
+          "acceptanceCommandId": "ru045-stale_and_failure_recovery"
+        },
+        {
+          "id": "RU045-AS-storage_and_concurrency",
+          "assertion": "Lock contention, symlinked paths and full quota fail without overlapping runs, following symlinks, deleting arbitrary files or writing a public directory.",
+          "testSelector": "tests/work_packages/ru045/test_acceptance.py::test_storage_and_concurrency",
+          "acceptanceCommandId": "ru045-storage_and_concurrency"
+        },
+        {
+          "id": "RU045-AS-package_identity_and_verification",
+          "assertion": "MSIX identity/architecture/version and malicious archive cases are handled without execution/extraction; unsigned or merely signature-bearing content never claims trusted native verification.",
+          "testSelector": "tests/work_packages/ru045/test_acceptance.py::test_package_identity_and_verification",
+          "acceptanceCommandId": "ru045-package_identity_and_verification"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Unexpected existing dedicated server paths or conflicting service ownership",
+        "Publishing or upstream challenge bypass would be required",
+        "Private signing keys/account/DB access or unrelated service change would be required"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU044-DOWNLOAD-ORIGIN",
+      "wave": "release",
+      "owner": "security-update",
+      "riskClass": "high",
+      "objective": "Bootstrap and verify an isolated HTTPS download/update origin on the owner-provided server.",
+      "deliverables": ["Pinned read-only origin configuration", "Hash-checked additive ingress preparation", "Public probe and channel-empty-state checks", "Secret-free deployment and rollback instructions/receipt"],
+      "requirementRefs": ["REQ-070"],
+      "decisionRefs": ["DEC-088"],
+      "blockingDecisionRefs": [],
+      "nonGoals": ["No client, API, account, DB, DNS or existing service/credential/firewall changes", "No installer publication, updater signing, third-party redistribution, GitHub push or packaging", "No claim of automatic-upgrade or mainland-network acceptance"],
+      "dependsOn": [],
+      "allowedPaths": ["deploy/download-origin/**", "tests/work_packages/ru044/**", "outputs/野菜API-下载源部署验收.md"],
+      "forbiddenPaths": [".product-governance/**", ".github/**", "src/**", "src-tauri/**", "release/**", "release-assets/**", "package.json", "pnpm-lock.yaml"],
+      "migrationPolicy": {"mode": "none", "ownedPaths": [], "dataBackfill": "No application/database migrations. Add only dedicated remote origin paths and one ingress site.", "rollback": "Restore exact backed-up ingress only if current hash matches this deployment; gracefully reload before stopping the added container. Keep backups and content recoverable."},
+      "compatibilityPolicy": {"strategy": "Additive host-only ingress plus a private stateless HTTP origin. Preserve existing bytes/routes and verify snapshots before mutation.", "supportedVersions": "Observed Ubuntu 24.04.4 with existing Docker/Caddy 2.8.4; no general fleet claim.", "removalGate": "Do not remove or recreate shared ingress. TLS failure or external drift pauses affected deployment."},
+      "inputContracts": [],
+      "outputContracts": ["download-origin-status@v1"],
+      "acceptanceCommands": [
+        {"id": "ru044-origin-contract", "kind": "scenario_test", "adapter": "pytest-json@1", "selector": "tests/work_packages/ru044/test_acceptance.py::test_origin_contract", "cwd": ".", "timeoutSeconds": 180},
+        {"id": "ru044-preserve-ingress", "kind": "scenario_test", "adapter": "pytest-json@1", "selector": "tests/work_packages/ru044/test_acceptance.py::test_ingress_replay_conflict_and_recovery", "cwd": ".", "timeoutSeconds": 180}
+      ],
+      "requiredAcceptanceScenarios": [
+        {"id": "RU044-AS-origin-contract", "assertion": "Closed health contract, 204 unpublished channels, public path/method restrictions and non-root read-only deployment contain no signing/SSH credential or published artifacts.", "testSelector": "tests/work_packages/ru044/test_acceptance.py::test_origin_contract", "acceptanceCommandId": "ru044-origin-contract"},
+        {"id": "RU044-AS-preserve-ingress", "assertion": "Existing ingress exact prefix is preserved; repeated same addition is a no-op, partial/wrong/duplicate additions are rejected, stale hash blocks publication, and recovery restores only the deployment-owned current state.", "testSelector": "tests/work_packages/ru044/test_acceptance.py::test_ingress_replay_conflict_and_recovery", "acceptanceCommandId": "ru044-preserve-ingress"}
+      ],
+      "verificationOnly": false,
+      "stopConditions": ["Existing live service must be stopped/recreated", "Concurrent ingress change or unexpected existing origin path", "DNS/certificate cannot be verified or distribution requires additional third-party authority"],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU043-MODEL-CAPABILITIES",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "critical",
+      "objective": "Correct model names and capability-aware native menus and reasoning forwarding without changing connection authority.",
+      "deliverables": [
+        "Bundled exact-ID reference profiles shared by native and renderer",
+        "Native adapter metadata and conversion fixes with fixture evidence",
+        "Searchable friendly labels retaining full IDs",
+        "Cross-platform compilation without packaging"
+      ],
+      "requirementRefs": [
+        "REQ-069"
+      ],
+      "decisionRefs": [
+        "DEC-087"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server, pricing, account permissions or credential schema changes",
+        "No real user configs, keys, paid probes or third-party app patching",
+        "No packaging, release, push, installation, signing or version bump"
+      ],
+      "dependsOn": [
+        "WP-RU042-MODEL-SETS-AND-EXIT"
+      ],
+      "allowedPaths": [
+        "src/model-profiles/**",
+        "src/configuration/**",
+        "src/index.css",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/tool_model_profile.rs",
+        "src-tauri/src/tool_adapters/**",
+        "src-tauri/src/claude_bridge.rs",
+        "src-tauri/src/codex_bridge.rs",
+        "src-tauri/src/chat_gateway.rs",
+        "src-tauri/src/proxy/providers/transform.rs",
+        "src-tauri/src/proxy/providers/transform_codex_chat.rs",
+        "tests/work_packages/ru043/**",
+        "outputs/野菜API-模型能力适配验收.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "work/**",
+        "release-assets/**",
+        "release/**",
+        "src-tauri/target/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No new persistence schema. Explicit reactivation regenerates owned model metadata through existing transactions.",
+        "rollback": "Existing activation snapshots and restore operations retain previous configuration and credentials."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Exact IDs and unknown default access; native schema-specific optional metadata, no new version gate.",
+        "supportedVersions": "Current documented vendor contracts with Mac and Windows compilation/fixtures, not blanket live verification.",
+        "removalGate": "No invented abilities, silent model/group change, loss of user preferences, secret exposure or package/server mutation."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v7",
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [
+        "desktop-model-profile@v1"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru043-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru043/test_acceptance.py::test_native_model_capabilities",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru043-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru043/test_acceptance.py::test_renderer_model_capabilities",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru043-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru043/test_acceptance.py::test_build_model_capabilities",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU043-AS-native",
+          "assertion": "Native fixtures prove exact IDs, per-model efforts, unknown defaults, routing and recovery regressions plus Windows/Apple compilation.",
+          "testSelector": "tests/work_packages/ru043/test_acceptance.py::test_native_model_capabilities",
+          "acceptanceCommandId": "ru043-native"
+        },
+        {
+          "id": "RU043-AS-renderer",
+          "assertion": "Renderer tests prove friendly labels and full-ID search/selection without exposing upstream names.",
+          "testSelector": "tests/work_packages/ru043/test_acceptance.py::test_renderer_model_capabilities",
+          "acceptanceCommandId": "ru043-renderer"
+        },
+        {
+          "id": "RU043-AS-build",
+          "assertion": "Typecheck and production frontend build pass without version change or installer.",
+          "testSelector": "tests/work_packages/ru043/test_acceptance.py::test_build_model_capabilities",
+          "acceptanceCommandId": "ru043-build"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Requires secrets, paid probes or server changes",
+        "Cannot preserve exact model/group identity or transactional restore",
+        "Vendor schema unverified: omit that optional metadata, preserve default use and report limitation"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU042-MODEL-SETS-AND-EXIT",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "critical",
+      "objective": "Implement the approved model-set, model identity, failure visibility and safe exit improvements as one integration-owned unit with disjoint module delegates.",
+      "deliverables": [
+        "Seven-tool model sets and per-model billing routes",
+        "Windows-safe OS secret storage and legacy migration",
+        "Exact model routing, safe stream errors and request observations",
+        "Globally available cooperative exit and executable evidence without installers"
+      ],
+      "requirementRefs": [
+        "REQ-068"
+      ],
+      "decisionRefs": [
+        "DEC-086"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server/NewAPI/billing rules/permissions changes",
+        "No real user secret/config reads or paid probes during development",
+        "No packaging/signing/push/release/updater or third-party app modification"
+      ],
+      "dependsOn": [
+        "WP-RU041-CROSS-APPLICATION-REPAIR"
+      ],
+      "allowedPaths": [
+        "src/App.tsx",
+        "src/settings/QuitAssistant.tsx",
+        "src/settings/QuitAssistant.test.tsx",
+        "src/configuration/**",
+        "src/workbench/**",
+        "src/index.css",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/shutdown_coordinator.rs",
+        "src-tauri/src/tool_credentials.rs",
+        "src-tauri/src/tool_activation.rs",
+        "src-tauri/src/account_v2.rs",
+        "src-tauri/src/connection_recovery.rs",
+        "src-tauri/src/open_connection.rs",
+        "src-tauri/src/tool_adapters/**",
+        "src-tauri/src/claude_bridge.rs",
+        "src-tauri/src/codex_bridge.rs",
+        "src-tauri/src/chat_gateway.rs",
+        "src-tauri/src/request_diagnostics.rs",
+        "src-tauri/src/proxy/providers/transform.rs",
+        "src-tauri/src/proxy/providers/streaming.rs",
+        "src-tauri/src/proxy/providers/transform_codex_chat.rs",
+        "src-tauri/src/proxy/providers/streaming_codex_chat.rs",
+        "src-tauri/src/proxy/providers/codex_chat_history.rs",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "tests/work_packages/ru042/**",
+        "outputs/野菜API-0.4.8-多模型与退出验收.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "work/**",
+        "release-assets/**",
+        "release/**",
+        "src-tauri/target/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No server/database backfill. Explicit activation upgrades one legacy credential to a registered model set in OS storage; pre-change logical credential snapshot remains available for rollback.",
+        "rollback": "Atomic keyring publication and file transactions restore the preceding logical record or retain explicit pending recovery. No plaintext backup history."
+      },
+      "compatibilityPolicy": {
+        "strategy": "True model IDs, capability-aware native model menus, stable local gateways, old scalar records/requests remain readable; no blanket version gates.",
+        "supportedVersions": "macOS Intel/ARM and Windows x64 compiled and fixture-tested separately from live vendor behavior.",
+        "removalGate": "No raw keys/errors, silent model/group fallbacks, fake response success, package or server mutation."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v6",
+        "desktop-connection-management@v1",
+        "desktop-open-connection@v2"
+      ],
+      "outputContracts": [
+        "desktop-tool-activation@v7",
+        "desktop-connection-management@v2",
+        "desktop-assistant-exit@v1"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru042-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru042/test_acceptance.py::test_native_model_sets_and_exit",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru042-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru042/test_acceptance.py::test_renderer_model_sets_and_exit",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru042-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru042/test_acceptance.py::test_build_model_sets_and_exit",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU042-AS-01",
+          "assertion": "Actual synthetic native tests exercise seven catalogs, exact A/B routing and group isolation, legacy migration, OS storage failure/rollback, in-flight state, stream errors, cooperative cancellation and Windows compilation. No real account or configuration access.",
+          "testSelector": "tests/work_packages/ru042/test_acceptance.py::test_native_model_sets_and_exit",
+          "acceptanceCommandId": "ru042-native"
+        },
+        {
+          "id": "RU042-AS-02",
+          "assertion": "Actual renderer tests cover selected model/group collection, default selection, state mismatch, latest-request errors, background disclosure and globally available recoverable exit.",
+          "testSelector": "tests/work_packages/ru042/test_acceptance.py::test_renderer_model_sets_and_exit",
+          "acceptanceCommandId": "ru042-renderer"
+        },
+        {
+          "id": "RU042-AS-03",
+          "assertion": "Typecheck and actual production renderer compilation pass while version remains 0.4.8 and no installer, sign, upload or external-state mutation occurs.",
+          "testSelector": "tests/work_packages/ru042/test_acceptance.py::test_build_model_sets_and_exit",
+          "acceptanceCommandId": "ru042-build"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Requires real secrets, server mutation or caller-controlled commands",
+        "Cannot preserve unrelated configuration or distinguish recovery failure",
+        "Would present fixture/compile as live application success"
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU041-CROSS-APPLICATION-REPAIR",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "critical",
+      "objective": "Implement the approved diagnostic, Windows and cross-tool reliability repair under one integration owner with disjoint module delegations.",
+      "deliverables": [
+        "Connectivity native/renderer repair with real serialized fixtures",
+        "Structured Windows launcher and seven-target daily opening",
+        "Bounded model-response validation and honest recovery states",
+        "Executable regression and 0.4.8 internal verification report"
+      ],
+      "requirementRefs": [
+        "REQ-067"
+      ],
+      "decisionRefs": [
+        "DEC-085"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server/NewAPI/API scope/billing mutation",
+        "No actual user key/config access or paid probes during development",
+        "No public GitHub push/release, telemetry, auto-update or third-party install"
+      ],
+      "dependsOn": [
+        "WP-RU040-HOTFIX-RELEASE-IDENTITY"
+      ],
+      "allowedPaths": [
+        "src/diagnostics/**",
+        "src-tauri/src/connectivity_core.rs",
+        "src-tauri/src/connectivity.rs",
+        "src-tauri/src/desktop_app_discovery.rs",
+        "src-tauri/src/desktop_app_discovery_core.rs",
+        "src-tauri/src/tool_adapters/**",
+        "src-tauri/src/tool_activation.rs",
+        "src-tauri/src/open_connection.rs",
+        "src/configuration/ConfigurationPreviewView.tsx",
+        "src/configuration/ConfigurationPreviewView.test.tsx",
+        "src/configuration/activation.ts",
+        "src/configuration/activation.test.ts",
+        "src/configuration/launchApi.ts",
+        "src/configuration/OpenConnection.tsx",
+        "src/configuration/DailyUse.test.tsx",
+        "src/workbench/copy.ts",
+        "src-tauri/src/lib.rs",
+        "package.json",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "tests/work_packages/ru041/**",
+        "outputs/野菜API-0.4.8-跨应用修复验收.md",
+        "release/internal/0.4.8/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "work/**",
+        "release-assets/**",
+        "src-tauri/target/**",
+        "src-tauri/src/tool_credentials.rs"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No user file or key migration. Existing recovery receipt preserved.",
+        "rollback": "Retain current transactional rollback and encrypted originals; show any failed restore as pending, never success."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Capability-based identity and current config parser, not version allowlists; native-resolved typed launch target; no raw commands accepted.",
+        "supportedVersions": "Current adapters on macOS Intel/ARM and Windows x64, fixture and compile evidence explicitly separated from live-app verification.",
+        "removalGate": "Server mutation, privacy expansion, public publish or fake model-response success is forbidden."
+      },
+      "inputContracts": [
+        "line-connectivity-check@v1",
+        "desktop-tool-activation@v5",
+        "desktop-open-connection@v1"
+      ],
+      "outputContracts": [
+        "line-connectivity-check@v1",
+        "desktop-tool-activation@v6",
+        "desktop-open-connection@v2"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru041-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru041/test_acceptance.py::test_native_cross_application_regressions",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru041-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru041/test_acceptance.py::test_renderer_diagnostics_opening_and_recovery",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru041-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru041/test_acceptance.py::test_repair_version_and_production_build",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU041-AS-01",
+          "assertion": "Actual native tests cover structured platform targets, CLI response/process negative cases, read-only launch validation, restoration and cross-platform compile; no keys/real config or paid network.",
+          "testSelector": "tests/work_packages/ru041/test_acceptance.py::test_native_cross_application_regressions",
+          "acceptanceCommandId": "ru041-native"
+        },
+        {
+          "id": "RU041-AS-02",
+          "assertion": "Native serialization fixture flows into renderer; success/partial/malformed/stale errors and all-seven opening/failed restoration UI are tested.",
+          "testSelector": "tests/work_packages/ru041/test_acceptance.py::test_renderer_diagnostics_opening_and_recovery",
+          "acceptanceCommandId": "ru041-renderer"
+        },
+        {
+          "id": "RU041-AS-03",
+          "assertion": "All version sources align at 0.4.8; typecheck and actual production bundle pass with prior privacy fixes retained.",
+          "testSelector": "tests/work_packages/ru041/test_acceptance.py::test_repair_version_and_production_build",
+          "acceptanceCommandId": "ru041-build"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Requires real secrets, server mutation or caller-controlled commands",
+        "Cannot preserve unrelated configuration or distinguish recovery failure",
+        "Would present fixture/compile as live application success"
+      ],
+      "status": "planned"
+    },
+{"id":"WP-RU040-HOTFIX-RELEASE-IDENTITY","wave":"integration","owner":"tool-config","riskClass":"high","objective":"Complete the existing client hotfix with a single renderer version source and current-version build acceptance.","deliverables":["Native and renderer model-description privacy boundary","Separate protocol forwarding from useful activation evidence with synthetic proxy tests","0.4.7 internal candidate and factual verification report","UI/package/Tauri/Cargo version alignment verified independently of historical 0.4.6 acceptance"],"requirementRefs":["REQ-065","REQ-066"],"decisionRefs":["DEC-083","DEC-084"],"blockingDecisionRefs":[],"nonGoals":["No server, NewAPI, public API permissions or billing changes","No real user credential/configuration access, paid probes or Claude application patching","No GitHub push, public release, tag or automatic update"],"dependsOn":["WP-RU038-INTERNAL-PACKAGING"],"allowedPaths":["src-tauri/src/account_v2.rs","src-tauri/src/claude_bridge.rs","src/configuration/ModelPicker.tsx","src/configuration/ModelPicker.test.tsx","src/workbench/ModelsView.tsx","src/workbench/Workbench.test.tsx","tests/work_packages/ru039/**","package.json","src-tauri/Cargo.toml","src-tauri/Cargo.lock","src-tauri/tauri.conf.json","outputs/野菜API-0.4.7-模型隐私与Claude检查修复.md","release/internal/0.4.7/**","src/candidate/readiness.ts","src/candidate/readiness.test.ts","tests/work_packages/ru040/**"],"forbiddenPaths":[".product-governance/**",".github/**","work/**","release-assets/**","src-tauri/target/**","src-tauri/src/tool_credentials.rs","src-tauri/src/tool_activation.rs","src-tauri/src/tool_adapters/**"],"migrationPolicy":{"mode":"none","ownedPaths":[],"dataBackfill":"No user data, key or configuration migration.","rollback":"Retain 0.4.6 installers; source hotfix rollback does not modify real account or tool settings."},"compatibilityPolicy":{"strategy":"Preserve schema5, full model IDs, public group choices, prices and activation proof; separate valid protocol payloads from evidence of useful output.","supportedVersions":"Existing current-client adapters; 0.4.7 internal macOS universal and Windows x64 candidate only.","removalGate":"Any server exposure cleanup or real-account probe requires separate owner action; screenshot root cause remains limited to reproduced compatible cases."},"inputContracts":["desktop-account-session@v5","desktop-tool-activation@v2"],"outputContracts":["desktop-account-session@v5","desktop-tool-activation@v2"],"acceptanceCommands":[{"id":"ru040-native","kind":"scenario_test","adapter":"pytest-json@1","selector":"tests/work_packages/ru039/test_acceptance.py::test_native_model_privacy_and_claude_probe","cwd":".","timeoutSeconds":1800},{"id":"ru040-renderer","kind":"scenario_test","adapter":"pytest-json@1","selector":"tests/work_packages/ru039/test_acceptance.py::test_renderer_model_metadata_privacy","cwd":".","timeoutSeconds":1800},{"id":"ru040-build","kind":"scenario_test","adapter":"pytest-json@1","selector":"tests/work_packages/ru040/test_acceptance.py::test_hotfix_version_and_production_build","cwd":".","timeoutSeconds":1800}],"requiredAcceptanceScenarios":[{"id":"RU040-AS-01","assertion":"Model projection suppresses raw descriptions without price/model/group drift; actual proxy returns valid empty/thinking startup responses without false activation evidence, preserves useful success, errors, auth and streaming; current native regressions pass.","testSelector":"tests/work_packages/ru039/test_acceptance.py::test_native_model_privacy_and_claude_probe","acceptanceCommandId":"ru040-native"},{"id":"RU040-AS-02","assertion":"Both model surfaces neither render nor search raw upstream descriptions from stale fixtures, while IDs, selection, groups and current renderer regressions remain intact.","testSelector":"tests/work_packages/ru039/test_acceptance.py::test_renderer_model_metadata_privacy","acceptanceCommandId":"ru040-renderer"},{"id":"RU040-AS-03","assertion":"Package, native manifests, lockfile and UI share the 0.4.7 release identity, while current typecheck and production build pass; historical 0.4.6 evidence remains immutable.","testSelector":"tests/work_packages/ru040/test_acceptance.py::test_hotfix_version_and_production_build","acceptanceCommandId":"ru040-build"}],"verificationOnly":false,"stopConditions":["Needs server changes or real secrets/configuration","Would invent a successful response or automatically spend on retries","Requires changing activation semantics, model identity or billing rules"],"status":"planned"},
+    {
+      "id":"WP-RU039-MODEL-PRIVACY-CLAUDE-PROBE","wave":"integration","owner":"tool-config","riskClass":"high",
+      "objective":"Correct model metadata disclosure and Claude startup-probe false errors within the client only.",
+      "deliverables":["Native and renderer model-description privacy boundary","Separate protocol forwarding from useful activation evidence with synthetic proxy tests","0.4.7 internal candidate and factual verification report"],
+      "requirementRefs":["REQ-065"],"decisionRefs":["DEC-083"],"blockingDecisionRefs":[],
+      "nonGoals":["No server, NewAPI, public API permissions or billing changes","No real user credential/configuration access, paid probes or Claude application patching","No GitHub push, public release, tag or automatic update"],
+      "dependsOn":["WP-RU038-INTERNAL-PACKAGING"],
+      "allowedPaths":["src-tauri/src/account_v2.rs","src-tauri/src/claude_bridge.rs","src/configuration/ModelPicker.tsx","src/configuration/ModelPicker.test.tsx","src/workbench/ModelsView.tsx","src/workbench/Workbench.test.tsx","tests/work_packages/ru039/**","package.json","src-tauri/Cargo.toml","src-tauri/Cargo.lock","src-tauri/tauri.conf.json","outputs/野菜API-0.4.7-模型隐私与Claude检查修复.md","release/internal/0.4.7/**"],
+      "forbiddenPaths":[".product-governance/**",".github/**","work/**","release-assets/**","src-tauri/target/**","src-tauri/src/tool_credentials.rs","src-tauri/src/tool_activation.rs","src-tauri/src/tool_adapters/**"],
+      "migrationPolicy":{"mode":"none","ownedPaths":[],"dataBackfill":"No user data, key or configuration migration.","rollback":"Retain 0.4.6 installers; source hotfix rollback does not modify real account or tool settings."},
+      "compatibilityPolicy":{"strategy":"Preserve schema5, full model IDs, public group choices, prices and activation proof; separate valid protocol payloads from evidence of useful output.","supportedVersions":"Existing current-client adapters; 0.4.7 internal macOS universal and Windows x64 candidate only.","removalGate":"Any server exposure cleanup or real-account probe requires separate owner action; screenshot root cause remains limited to reproduced compatible cases."},
+      "inputContracts":["desktop-account-session@v5","desktop-tool-activation@v2"],"outputContracts":["desktop-account-session@v5","desktop-tool-activation@v2"],
+      "acceptanceCommands":[
+        {"id":"ru039-native","kind":"scenario_test","adapter":"pytest-json@1","selector":"tests/work_packages/ru039/test_acceptance.py::test_native_model_privacy_and_claude_probe","cwd":".","timeoutSeconds":1800},
+        {"id":"ru039-renderer","kind":"scenario_test","adapter":"pytest-json@1","selector":"tests/work_packages/ru039/test_acceptance.py::test_renderer_model_metadata_privacy","cwd":".","timeoutSeconds":1800},
+        {"id":"ru039-build","kind":"scenario_test","adapter":"pytest-json@1","selector":"tests/work_packages/ru036/test_acceptance.py::test_build","cwd":".","timeoutSeconds":1800}
+      ],
+      "requiredAcceptanceScenarios":[
+        {"id":"RU039-AS-01","assertion":"Model projection suppresses raw descriptions without price/model/group drift; actual proxy returns valid empty/thinking startup responses without false activation evidence, preserves useful success, errors, auth and streaming; current native regressions pass.","testSelector":"tests/work_packages/ru039/test_acceptance.py::test_native_model_privacy_and_claude_probe","acceptanceCommandId":"ru039-native"},
+        {"id":"RU039-AS-02","assertion":"Both model surfaces neither render nor search raw upstream descriptions from stale fixtures, while IDs, selection, groups and current renderer regressions remain intact.","testSelector":"tests/work_packages/ru039/test_acceptance.py::test_renderer_model_metadata_privacy","acceptanceCommandId":"ru039-renderer"},
+        {"id":"RU039-AS-03","assertion":"Current 0.4.7 client typechecks and builds production frontend with no server or real-user writes under source-readonly acceptance.","testSelector":"tests/work_packages/ru036/test_acceptance.py::test_build","acceptanceCommandId":"ru039-build"}
+      ],
+      "verificationOnly":false,"stopConditions":["Needs server changes or real secrets/configuration","Would invent a successful response or automatically spend on retries","Requires changing activation semantics, model identity or billing rules"],"status":"planned"
+    },
     {
       "id":"WP-RU038-INTERNAL-PACKAGING","wave":"integration","owner":"desktop-platform","riskClass":"high",
       "objective":"Prepare current source and internal macOS/Windows installers with a bounded legacy-open compatibility correction.",
@@ -4762,6 +6633,1973 @@
         "The implementation requires NewAPI, server, database, deployment, telemetry or updater mutation."
       ],
       "status": "retired"
+    },
+    {
+      "id": "WP-RU054-RETRY-CLAUDE-ROUTES",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "critical",
+      "objective": "Remove the manual restore-before-retry loop and make current Claude Desktop and Claude Code accept enrolled exact account models without changing upstream routing identity.",
+      "deliverables": [
+        "Same-click pending-transaction self-healing with preserved manual fallback",
+        "Claude Desktop safe route aliases and exact bridge resolution",
+        "Claude Code exact-ID picker metadata with behavesAs compatibility",
+        "Synthetic renderer, native and cross-platform evidence without packaging"
+      ],
+      "requirementRefs": [
+        "REQ-078"
+      ],
+      "decisionRefs": [
+        "DEC-098"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server, NewAPI, database, account, billing, token-policy or remote deployment changes",
+        "No application installation, updater, package, version bump, signing or upload",
+        "No vendor binary patch, real user configuration mutation, credential readout or paid probe",
+        "No auto-restore of completed records or unrelated tools"
+      ],
+      "dependsOn": [
+        "WP-RU043-MODEL-CAPABILITIES",
+        "WP-RU051-INSTALLATION-RECOVERY"
+      ],
+      "allowedPaths": [
+        "src-tauri/src/connection_recovery.rs",
+        "src-tauri/src/tool_activation.rs",
+        "src-tauri/src/tool_model_profile.rs",
+        "src-tauri/src/tool_adapters/claude_desktop.rs",
+        "src-tauri/src/tool_adapters/claude_code.rs",
+        "src-tauri/src/claude_bridge.rs",
+        "src/configuration/ConfigurationPreviewView.tsx",
+        "src/configuration/ConfigurationPreviewView.test.tsx",
+        "src/configuration/connections.test.tsx",
+        "tests/work_packages/ru054/**",
+        "outputs/野菜API-接入重试与Claude路由修复.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release/**",
+        "release-assets/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/tauri.candidate.conf.json",
+        "src-tauri/src/account_v2.rs",
+        "src-tauri/src/app_installation/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No database or persistence migration. The next explicit activation regenerates owned Claude metadata; only a pending same-tool transaction is recovered first.",
+        "rollback": "Use the existing encrypted per-tool receipt and manual restore action. Reverting client source requires no server or database rollback."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Keep IPC schema version 4 and exact upstream IDs; add only client-local alias and capability metadata.",
+        "supportedVersions": "Current observed Claude Desktop validator and Claude Code 2.1.259, plus synthetic macOS and Windows compile evidence; not a blanket future-version guarantee.",
+        "removalGate": "Never relax exact model/group/key resolution, remove three-way recovery, auto-restore completed state, or claim success without existing verification."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v8",
+        "desktop-connection-management@v2",
+        "desktop-model-profile@v1"
+      ],
+      "outputContracts": [
+        "desktop-tool-activation@v9"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru054-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru054/test_acceptance.py::test_native_retry_and_claude_routes",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru054-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru054/test_acceptance.py::test_renderer_retry_copy",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru054-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru054/test_acceptance.py::test_build_without_packaging",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU054-AS-native",
+          "assertion": "Native fixtures prove one-click pending recovery, completed-record preservation, Claude Desktop alias/readback/exact route dispatch, Claude Code exact IDs with behavesAs, unknown rejection, and Apple-Silicon/Windows compilation.",
+          "testSelector": "tests/work_packages/ru054/test_acceptance.py::test_native_retry_and_claude_routes",
+          "acceptanceCommandId": "ru054-native"
+        },
+        {
+          "id": "RU054-AS-renderer",
+          "assertion": "Full renderer tests prove failed automatic recovery has truthful plain-language fallback instead of requiring restore as the normal retry path.",
+          "testSelector": "tests/work_packages/ru054/test_acceptance.py::test_renderer_retry_copy",
+          "acceptanceCommandId": "ru054-renderer"
+        },
+        {
+          "id": "RU054-AS-build",
+          "assertion": "Typecheck and production frontend build pass without version change, package, upload or deployment.",
+          "testSelector": "tests/work_packages/ru054/test_acceptance.py::test_build_without_packaging",
+          "acceptanceCommandId": "ru054-build"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Recovery cannot preserve later user edits or would affect another tool or a completed transaction.",
+        "Claude alias cannot be resolved exclusively from the currently enrolled model set to an exact model, group and key.",
+        "Implementation requires a real credential, user configuration, paid request, server, database, package, updater or vendor binary change."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU055-RETRY-CLAUDE-ROUTES",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "critical",
+      "objective": "Remove the manual restore-before-retry loop and make current Claude Desktop and Claude Code accept enrolled exact account models without changing upstream routing identity.",
+      "deliverables": [
+        "Same-click pending-transaction self-healing with preserved manual fallback",
+        "Claude Desktop safe route aliases and exact bridge resolution",
+        "Claude Code exact-ID picker metadata with behavesAs compatibility",
+        "Synthetic renderer, native and cross-platform evidence without packaging"
+      ],
+      "requirementRefs": [
+        "REQ-078"
+      ],
+      "decisionRefs": [
+        "DEC-099"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server, NewAPI, database, account, billing, token-policy or remote deployment changes",
+        "No application installation, updater, package, version bump, signing or upload",
+        "No vendor binary patch, real user configuration mutation, credential readout or paid probe",
+        "No auto-restore of completed records or unrelated tools"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src-tauri/src/connection_recovery.rs",
+        "src-tauri/src/tool_activation.rs",
+        "src-tauri/src/tool_model_profile.rs",
+        "src-tauri/src/tool_adapters/claude_desktop.rs",
+        "src-tauri/src/tool_adapters/claude_code.rs",
+        "src-tauri/src/claude_bridge.rs",
+        "src/configuration/ConfigurationPreviewView.tsx",
+        "src/configuration/ConfigurationPreviewView.test.tsx",
+        "src/configuration/connections.test.tsx",
+        "tests/work_packages/ru054/**",
+        "outputs/野菜API-接入重试与Claude路由修复.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release/**",
+        "release-assets/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/tauri.candidate.conf.json",
+        "src-tauri/src/account_v2.rs",
+        "src-tauri/src/app_installation/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No database or persistence migration. The next explicit activation regenerates owned Claude metadata; only a pending same-tool transaction is recovered first.",
+        "rollback": "Use the existing encrypted per-tool receipt and manual restore action. Reverting client source requires no server or database rollback."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Keep IPC schema version 4 and exact upstream IDs; add only client-local alias and capability metadata.",
+        "supportedVersions": "Current observed Claude Desktop validator and Claude Code 2.1.259, plus synthetic macOS and Windows compile evidence; not a blanket future-version guarantee.",
+        "removalGate": "Never relax exact model/group/key resolution, remove three-way recovery, auto-restore completed state, or claim success without existing verification."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v8",
+        "desktop-connection-management@v2",
+        "desktop-model-profile@v1"
+      ],
+      "outputContracts": [
+        "desktop-tool-activation@v9"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru054-native",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru054/test_acceptance.py::test_native_retry_and_claude_routes",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru054-renderer",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru054/test_acceptance.py::test_renderer_retry_copy",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru054-build",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru054/test_acceptance.py::test_build_without_packaging",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU054-AS-native",
+          "assertion": "Native fixtures prove one-click pending recovery, completed-record preservation, Claude Desktop alias/readback/exact route dispatch, Claude Code exact IDs with behavesAs, unknown rejection, and Apple-Silicon/Windows compilation.",
+          "testSelector": "tests/work_packages/ru054/test_acceptance.py::test_native_retry_and_claude_routes",
+          "acceptanceCommandId": "ru054-native"
+        },
+        {
+          "id": "RU054-AS-renderer",
+          "assertion": "Full renderer tests prove failed automatic recovery has truthful plain-language fallback instead of requiring restore as the normal retry path.",
+          "testSelector": "tests/work_packages/ru054/test_acceptance.py::test_renderer_retry_copy",
+          "acceptanceCommandId": "ru054-renderer"
+        },
+        {
+          "id": "RU054-AS-build",
+          "assertion": "Typecheck and production frontend build pass without version change, package, upload or deployment.",
+          "testSelector": "tests/work_packages/ru054/test_acceptance.py::test_build_without_packaging",
+          "acceptanceCommandId": "ru054-build"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Recovery cannot preserve later user edits or would affect another tool or a completed transaction.",
+        "Claude alias cannot be resolved exclusively from the currently enrolled model set to an exact model, group and key.",
+        "Implementation requires a real credential, user configuration, paid request, server, database, package, updater or vendor binary change."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU057-DUAL-PLATFORM-PACKAGING",
+      "wave": "release",
+      "owner": "desktop-platform",
+      "riskClass": "high",
+      "objective": "Package the unchanged RU-056 client as distinct, traceable 0.4.10 macOS universal and Windows x64 internal installers.",
+      "deliverables": [
+        "Synchronized 0.4.10 package, Cargo and Tauri metadata",
+        "Developer-ID signed and Apple-notarized universal macOS DMG",
+        "Simplified-Chinese unsigned Windows x64 NSIS internal installer",
+        "Source, CI run, signature state, SHA-256 and limitation receipt"
+      ],
+      "requirementRefs": [
+        "REQ-080"
+      ],
+      "decisionRefs": [
+        "DEC-101"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No runtime, account, billing, model, adapter, server, NewAPI or database behavior change",
+        "No tag, GitHub Release, public download, updater artifact, update manifest or automatic rollout",
+        "No Windows signing claim and no real-device installation or account-success claim",
+        "No export of Apple private keys, notary credentials, user secrets or application configuration"
+      ],
+      "dependsOn": [
+        "WP-RU056-UNIFIED-ACTIVATION"
+      ],
+      "allowedPaths": [
+        "package.json",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "tests/work_packages/ru057/**",
+        "outputs/野菜API-0.4.10-双平台打包.md",
+        "release/internal/0.4.10/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release-assets/**",
+        "src/**",
+        "src-tauri/src/**",
+        "src-tauri/tauri.candidate.conf.json"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No database, account, credential or configuration migration. Only release version metadata changes.",
+        "rollback": "Retain the existing 0.4.9 artifact; discard the unshipped 0.4.10 internal artifacts if any gate fails. Do not alter user data or publish rollback metadata."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve desktop-tool-activation@v10 and all RU-056 behavior byte-for-byte outside synchronized version metadata.",
+        "supportedVersions": "Internal candidate for macOS 13+ universal Intel/Apple Silicon and Windows 10 22H2/Windows 11 x64; real-device installation remains unverified until owner smoke testing.",
+        "removalGate": "Never replace an existing artifact under the same semantic version, publish an unsigned artifact as trusted, or enable automatic updates without a separately frozen release authority."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v10"
+      ],
+      "outputContracts": [
+        "desktop-tool-activation@v10"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru057-macos-artifact",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru057/test_acceptance.py::test_macos_artifact",
+          "cwd": ".",
+          "timeoutSeconds": 900
+        },
+        {
+          "id": "ru057-windows-and-boundary",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru057/test_acceptance.py::test_windows_artifact_and_release_boundary",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU057-AS-macos",
+          "assertion": "The recorded 0.4.10 macOS DMG hash matches, its contained app is universal x86_64 and arm64, and current native tools verify disk image integrity, Developer ID signature, hardened runtime, notarization ticket and Gatekeeper acceptance.",
+          "testSelector": "tests/work_packages/ru057/test_acceptance.py::test_macos_artifact",
+          "acceptanceCommandId": "ru057-macos-artifact"
+        },
+        {
+          "id": "RU057-AS-windows-boundary",
+          "assertion": "The Windows workflow receipt and downloaded 0.4.10 Simplified-Chinese NSIS hash match the exact CI source, all required Windows workflow jobs passed, and no updater or public-release artifact is enabled or claimed.",
+          "testSelector": "tests/work_packages/ru057/test_acceptance.py::test_windows_artifact_and_release_boundary",
+          "acceptanceCommandId": "ru057-windows-and-boundary"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "RU-056 current verification no longer passes or packaging requires a runtime source change.",
+        "macOS signing, notarization, staple, Gatekeeper, universal architecture or image verification fails.",
+        "Windows CI source differs from the recorded candidate, a required workflow gate fails, or NSIS output is missing.",
+        "A package would require public release, updater publication, Windows trust-signing claims, server mutation or secret export."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU058-LOCAL-CROSS-PACKAGING",
+      "wave": "release",
+      "owner": "desktop-platform",
+      "riskClass": "high",
+      "objective": "Finish the 0.4.10 macOS universal and Windows x64 internal artifacts with a reproducible local Windows cross-build after the hosted runner's billing rejection.",
+      "deliverables": [
+        "Developer-ID signed, notarized and stapled universal macOS DMG",
+        "Cross-built MSVC x64 payload and Simplified-Chinese unsigned NSIS installer",
+        "Closed NSIS recipe and SHA-256 pinned temporary packaging tool",
+        "Exact source, failed hosted run, test, signature, architecture, hash and limitation receipt"
+      ],
+      "requirementRefs": [
+        "REQ-081"
+      ],
+      "decisionRefs": [
+        "DEC-102"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No runtime source, account, billing, model, adapter, server, NewAPI or database behavior change",
+        "No public download, tag, GitHub Release, updater artifact, update manifest or automatic rollout",
+        "No Windows Authenticode, SmartScreen, real-device installation or bundled WebView2 claim",
+        "No system-wide build-tool installation, Apple private-key export, secret export or user configuration mutation"
+      ],
+      "dependsOn": [
+        "WP-RU056-UNIFIED-ACTIVATION"
+      ],
+      "allowedPaths": [
+        "package.json",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "tests/work_packages/ru058/**",
+        "outputs/野菜API-0.4.10-双平台打包.md",
+        "release/internal/0.4.10/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release-assets/**",
+        "src/**",
+        "src-tauri/src/**",
+        "src-tauri/tauri.candidate.conf.json"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No database, account, credential or configuration migration. Preserve the already synchronized 0.4.10 release metadata.",
+        "rollback": "Retain 0.4.9 and discard only unshipped 0.4.10 artifacts if validation fails. Never alter user data, runtime configuration or public update state."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve desktop-tool-activation@v10 and the exact candidate source. The alternative is build infrastructure only, not a runtime compatibility change.",
+        "supportedVersions": "Internal candidate for macOS 13+ universal Intel/Apple Silicon and Windows 10 22H2/Windows 11 x64; the Windows installer requires an existing WebView2 Runtime and remains unverified on a real Windows host.",
+        "removalGate": "Replace the cross-built Windows artifact only with an exact-source native Windows build that passes equal or stronger gates; never silently relabel it signed or production-ready."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v10"
+      ],
+      "outputContracts": [
+        "desktop-tool-activation@v10"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru058-macos-artifact",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru058/test_acceptance.py::test_macos_artifact",
+          "cwd": ".",
+          "timeoutSeconds": 900
+        },
+        {
+          "id": "ru058-windows-cross-artifact",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru058/test_acceptance.py::test_windows_cross_artifact_and_release_boundary",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU058-AS-macos",
+          "assertion": "The recorded 0.4.10 macOS DMG hash matches, its contained app is universal x86_64 and arm64, and native tools verify image integrity, Developer ID signature, hardened runtime, notarization ticket and Gatekeeper acceptance.",
+          "testSelector": "tests/work_packages/ru058/test_acceptance.py::test_macos_artifact",
+          "acceptanceCommandId": "ru058-macos-artifact"
+        },
+        {
+          "id": "RU058-AS-windows",
+          "assertion": "The recorded Windows installer and payload hashes match, the payload is an x86_64 MSVC PE from the exact candidate commit, the pinned temporary NSIS recipe is Simplified Chinese, and receipts preserve the failed hosted run plus unsigned, cross-built, non-public boundaries.",
+          "testSelector": "tests/work_packages/ru058/test_acceptance.py::test_windows_cross_artifact_and_release_boundary",
+          "acceptanceCommandId": "ru058-windows-cross-artifact"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Current 453 renderer or 477 native tests fail, the exact candidate commit differs, or Windows cross compilation fails.",
+        "macOS signature, notarization, staple, Gatekeeper, universal architecture or image verification fails.",
+        "The pinned NSIS tool hash, closed recipe, PE architecture or artifact hash cannot be verified.",
+        "Completion would require runtime source modification, public release, updater publication, Windows signing claims, system-wide installation, server mutation or secret export."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU059-STANDALONE-CROSS-PACKAGING",
+      "wave": "release",
+      "owner": "desktop-platform",
+      "riskClass": "high",
+      "objective": "Produce and verify the requested 0.4.10 internal installers without relying on an invalidated historical output hash.",
+      "deliverables": [
+        "Developer-ID signed, notarized and stapled universal macOS DMG",
+        "Exact-source MSVC x64 payload and Simplified-Chinese unsigned NSIS installer",
+        "Pinned packaging-tool, test, source, signature, architecture, hash and limitation receipt"
+      ],
+      "requirementRefs": [
+        "REQ-081"
+      ],
+      "decisionRefs": [
+        "DEC-103"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No runtime source, account, billing, model, adapter, server, NewAPI or database behavior change",
+        "No public download, tag, GitHub Release, updater artifact, update manifest or automatic rollout",
+        "No Windows Authenticode, SmartScreen, real-device installation or bundled WebView2 claim",
+        "No system-wide build-tool installation, secret export or user configuration mutation"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "package.json",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "tests/work_packages/ru058/**",
+        "outputs/野菜API-0.4.10-双平台打包.md",
+        "release/internal/0.4.10/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release-assets/**",
+        "src/**",
+        "src-tauri/src/**",
+        "src-tauri/tauri.candidate.conf.json"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No database, account, credential or configuration migration. Preserve the synchronized 0.4.10 metadata.",
+        "rollback": "Retain 0.4.9 and discard only unshipped 0.4.10 artifacts if validation fails. Never alter user data or public update state."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve desktop-tool-activation@v10 and exact candidate source; repeat current tests instead of relying on a stale historical output hash.",
+        "supportedVersions": "Internal candidate for macOS 13+ universal Intel/Apple Silicon and Windows 10 22H2/Windows 11 x64; Windows requires an existing WebView2 Runtime and remains unverified on a real Windows host.",
+        "removalGate": "Replace the cross-built Windows artifact only with an exact-source native Windows build that passes equal or stronger gates; never relabel it signed or production-ready."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v10"
+      ],
+      "outputContracts": [
+        "desktop-tool-activation@v10"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru059-macos-artifact",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru058/test_acceptance.py::test_macos_artifact",
+          "cwd": ".",
+          "timeoutSeconds": 900
+        },
+        {
+          "id": "ru059-windows-cross-artifact",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru058/test_acceptance.py::test_windows_cross_artifact_and_release_boundary",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU059-AS-macos",
+          "assertion": "The recorded macOS DMG hash matches and native tools verify image integrity, universal architecture, Developer ID signature, hardened runtime, notarization ticket and Gatekeeper acceptance.",
+          "testSelector": "tests/work_packages/ru058/test_acceptance.py::test_macos_artifact",
+          "acceptanceCommandId": "ru059-macos-artifact"
+        },
+        {
+          "id": "RU059-AS-windows",
+          "assertion": "The Windows hashes match, the payload is an x86_64 MSVC PE from the exact candidate, the pinned NSIS recipe is Simplified Chinese, and receipts preserve unsigned, cross-built, non-public and untested-on-Windows boundaries.",
+          "testSelector": "tests/work_packages/ru058/test_acceptance.py::test_windows_cross_artifact_and_release_boundary",
+          "acceptanceCommandId": "ru059-windows-cross-artifact"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Current renderer or native tests fail, exact candidate source differs, or Windows cross compilation fails.",
+        "macOS signature, notarization, staple, Gatekeeper, universal architecture or image verification fails.",
+        "Pinned NSIS hash, closed recipe, PE architecture or artifact hashes cannot be verified.",
+        "Completion would require runtime source modification, public release, updater publication, Windows signing claims, system-wide installation, server mutation or secret export."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU060-CODEX-ROUTE-AND-CLI-RUNTIME",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "critical",
+      "objective": "Make actual Codex relay use explicit and repair GUI-launched Node-backed tool execution, including DSH web Open, without changing remote services or packaging.",
+      "deliverables": [
+        "Codex identity-versus-route copy and exact local-bridge route receipt presentation",
+        "Wrapper-preserving CLI discovery and bounded child runtime PATH resolution",
+        "Working DSH web startup and browser Open from the signed app GUI environment",
+        "Generalized runtime inheritance for the supported CLI terminal and isolated verification paths",
+        "Native, renderer and cross-platform regression evidence without installers"
+      ],
+      "requirementRefs": [
+        "REQ-082"
+      ],
+      "decisionRefs": [
+        "DEC-104"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No server, NewAPI, account, billing, model entitlement, DNS, proxy-origin or remote deployment change",
+        "No package, version bump, signing, notarization, upload, release, updater artifact or update manifest",
+        "No auth.json overwrite, literal third-party token in Codex config, official-login removal or vendor binary patch",
+        "No force termination, user-session kill, global PATH mutation, shell command supplied by the renderer or claim that an AI self-description proves the route"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src-tauri/src/tool_discovery.rs",
+        "src-tauri/src/tool_adapters/common.rs",
+        "src-tauri/src/tool_adapters/claude_code.rs",
+        "src-tauri/src/tool_adapters/dsh_web.rs",
+        "src-tauri/src/tool_adapters/hermes.rs",
+        "src-tauri/src/tool_adapters/openclaw.rs",
+        "src-tauri/src/tool_adapters/pi.rs",
+        "src-tauri/src/tool_adapters/terminal_launch.rs",
+        "src/configuration/RecentRequest.tsx",
+        "src/configuration/ConfigurationPreviewView.tsx",
+        "src/configuration/ConfigurationPreviewView.test.tsx",
+        "src/configuration/DailyUse.test.tsx",
+        "src/workbench/AppLibraryView.tsx",
+        "src/workbench/Workbench.test.tsx",
+        "tests/work_packages/ru060/**",
+        "outputs/野菜API-Codex路由与CLI运行时修复.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release/**",
+        "release-assets/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/tauri.candidate.conf.json",
+        "src-tauri/src/account_v2.rs",
+        "src-tauri/src/tool_credentials.rs",
+        "src-tauri/src/codex_bridge.rs",
+        "src-tauri/src/proxy/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No database, credential or receipt migration. Existing Codex and DSH receipts remain readable; a fresh explicit activation or Open uses the repaired runtime path.",
+        "rollback": "Revert only this package's allowed source paths. Existing per-tool Restore original settings remains the user-facing configuration rollback; no server or data rollback exists."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Retain desktop-tool-activation@v10 and desktop-open-connection@v2 wire schemas. Strengthen runtime execution and user-facing evidence without changing request fields, token ownership, model IDs or receipt storage.",
+        "supportedVersions": "Current native-discovered Codex 0.153.4-compatible desktop configuration and DSH 0.1.2-rc.1, plus wrapper-based supported CLI installations on macOS and Windows. Synthetic compile evidence does not claim every future vendor release.",
+        "removalGate": "Do not return to canonical-script-only launch targets, inherited GUI PATH, account-display route inference, literal Codex keys, unbounded DSH startup or paid setup probes without a superseding decision and evidence."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v10",
+        "desktop-open-connection@v2",
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [
+        "desktop-tool-activation@v10",
+        "desktop-open-connection@v2",
+        "desktop-connection-management@v2"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru060-native-runtime",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru060/test_acceptance.py::test_native_runtime_and_dsh",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru060-route-ux",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru060/test_acceptance.py::test_codex_route_evidence_ui",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        },
+        {
+          "id": "ru060-builds",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru060/test_acceptance.py::test_cross_platform_builds_without_packaging",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU060-AS-native-runtime",
+          "assertion": "Native fixtures prove wrapper identity is retained, bounded symlink parents are added only to child PATH, restricted-GUI-PATH DSH starts and returns a validated loopback URL, helper reuse remains owned, and no paid model prompt runs.",
+          "testSelector": "tests/work_packages/ru060/test_acceptance.py::test_native_runtime_and_dsh",
+          "acceptanceCommandId": "ru060-native-runtime"
+        },
+        {
+          "id": "RU060-AS-route-ux",
+          "assertion": "Renderer tests distinguish Codex official login identity from actual relay traffic, treat no bridge observation as unverified, label a bridge completion as confirmed Yeschoy relay use and show the exact gpt-6-astra model ID even when Codex abbreviates its own status label.",
+          "testSelector": "tests/work_packages/ru060/test_acceptance.py::test_codex_route_evidence_ui",
+          "acceptanceCommandId": "ru060-route-ux"
+        },
+        {
+          "id": "RU060-AS-builds",
+          "assertion": "Typecheck, production renderer build, strict native tests/lint, Apple-Silicon compilation and Windows x64 compilation pass without creating or modifying an installer, release, server or updater artifact.",
+          "testSelector": "tests/work_packages/ru060/test_acceptance.py::test_cross_platform_builds_without_packaging",
+          "acceptanceCommandId": "ru060-builds"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Codex custom-provider routing cannot be proven with current official configuration or a local synthetic receipt.",
+        "CLI launch would require a global PATH change, arbitrary renderer command, unsafe shell parsing, credential exposure or vendor binary patch.",
+        "DSH cannot be started and opened from a restricted GUI environment without a paid request or an unbounded wait.",
+        "Implementation requires server, NewAPI, account, billing, package, release, updater or public-distribution mutation."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU061-READONLY-CODEX-DSH-VERIFICATION",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "critical",
+      "objective": "Re-run the complete Codex route-evidence and DSH/CLI runtime acceptance suite under source-read-only isolation after the test-harness correction, without changing product source or packaging.",
+      "deliverables": [
+        "Fresh source-read-only native runtime and real DSH loopback startup proof",
+        "Fresh source-read-only Codex identity-versus-route UX proof with exact forwarded model ID",
+        "Fresh source-read-only typecheck, production build, strict native and cross-platform compile proof",
+        "Additive execution report that retains both historical RU-060 failures"
+      ],
+      "requirementRefs": [
+        "REQ-082",
+        "REQ-083"
+      ],
+      "decisionRefs": [
+        "DEC-105"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No product source, test source, package metadata, version, installer, release, update manifest or public artifact change",
+        "No server, NewAPI, account, billing, credential, DNS, proxy-origin or remote deployment change",
+        "No rewriting, deleting or relabelling either historical RU-060 execution report"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src-tauri/src/tool_discovery.rs",
+        "src-tauri/src/tool_adapters/common.rs",
+        "src-tauri/src/tool_adapters/claude_code.rs",
+        "src-tauri/src/tool_adapters/dsh_web.rs",
+        "src-tauri/src/tool_adapters/hermes.rs",
+        "src-tauri/src/tool_adapters/openclaw.rs",
+        "src-tauri/src/tool_adapters/pi.rs",
+        "src-tauri/src/tool_adapters/terminal_launch.rs",
+        "src/configuration/RecentRequest.tsx",
+        "src/configuration/ConfigurationPreviewView.tsx",
+        "src/configuration/ConfigurationPreviewView.test.tsx",
+        "src/configuration/DailyUse.test.tsx",
+        "src/workbench/AppLibraryView.tsx",
+        "src/workbench/Workbench.test.tsx",
+        "tests/work_packages/ru060/**",
+        "outputs/野菜API-Codex路由与CLI运行时修复.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release/**",
+        "release-assets/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/tauri.candidate.conf.json",
+        "src-tauri/src/account_v2.rs",
+        "src-tauri/src/tool_credentials.rs",
+        "src-tauri/src/codex_bridge.rs",
+        "src-tauri/src/proxy/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "Verification-only execution performs no persistence, credential, configuration or receipt migration.",
+        "rollback": "No product rollback is created by this read-only package. Preserve existing per-tool Restore original settings and all historical execution reports."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Verify the exact desktop-tool-activation@v10, desktop-open-connection@v2 and desktop-connection-management@v2 implementation already produced by RU-060; do not alter schemas or behavior.",
+        "supportedVersions": "Current native-discovered Codex 0.153.4-compatible desktop configuration and DSH 0.1.2-rc.1, plus wrapper-based supported CLI installations on macOS and Windows. Cross-compilation remains compile evidence rather than every-version live certification.",
+        "removalGate": "A failed selector, non-empty source diff, missing historical report or verification-integrity failure blocks acceptance and requires a new governed successor rather than editing this frozen unit."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v10",
+        "desktop-open-connection@v2",
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [
+        "desktop-tool-activation@v10",
+        "desktop-open-connection@v2",
+        "desktop-connection-management@v2"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru061-native-runtime",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru060/test_acceptance.py::test_native_runtime_and_dsh",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        },
+        {
+          "id": "ru061-route-ux",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru060/test_acceptance.py::test_codex_route_evidence_ui",
+          "cwd": ".",
+          "timeoutSeconds": 1800
+        },
+        {
+          "id": "ru061-builds",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru060/test_acceptance.py::test_cross_platform_builds_without_packaging",
+          "cwd": ".",
+          "timeoutSeconds": 2400
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU061-AS-native-runtime",
+          "assertion": "Read-only native fixtures prove wrapper identity is retained, bounded symlink parents are added only to child PATH, restricted-GUI-PATH DSH starts and returns a validated loopback URL, helper reuse remains owned, and no paid model request runs.",
+          "testSelector": "tests/work_packages/ru060/test_acceptance.py::test_native_runtime_and_dsh",
+          "acceptanceCommandId": "ru061-native-runtime"
+        },
+        {
+          "id": "RU061-AS-route-ux",
+          "assertion": "Read-only renderer tests distinguish Codex official login identity from actual relay traffic, treat no bridge observation as unverified, label a bridge completion as confirmed Yeschoy relay use and show exact gpt-6-astra despite the native 6 Astra abbreviation.",
+          "testSelector": "tests/work_packages/ru060/test_acceptance.py::test_codex_route_evidence_ui",
+          "acceptanceCommandId": "ru061-route-ux"
+        },
+        {
+          "id": "RU061-AS-builds",
+          "assertion": "Read-only typecheck, production renderer build, strict native tests/lint, Apple-Silicon compilation and Windows x64 compilation pass without creating or modifying an installer, release, server or updater artifact.",
+          "testSelector": "tests/work_packages/ru060/test_acceptance.py::test_cross_platform_builds_without_packaging",
+          "acceptanceCommandId": "ru061-builds"
+        }
+      ],
+      "verificationOnly": true,
+      "stopConditions": [
+        "Any acceptance selector fails or the verifier observes a non-empty baseline-to-tested source diff.",
+        "Either historical RU-060 report is missing or modified.",
+        "Verification would require product, package, release, server, NewAPI, account, billing, credential, DNS or updater mutation."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU062-DUAL-PLATFORM-PACKAGING",
+      "wave": "release",
+      "owner": "desktop-platform",
+      "riskClass": "high",
+      "objective": "Produce and verify distinct 0.4.11 internal macOS universal and Windows x64 installers from the exact RU-061 verified client without publishing them.",
+      "deliverables": [
+        "Synchronized 0.4.11 package, Cargo, lockfile and Tauri metadata",
+        "Developer-ID signed, hardened, Apple-notarized and stapled universal macOS DMG",
+        "Fresh unsigned Windows x64 payload and Simplified-Chinese current-user NSIS installer",
+        "Machine-readable source, test, tool, signature, notarization, artifact-hash and limitation receipt",
+        "Human-readable internal installation and verification summary"
+      ],
+      "requirementRefs": [
+        "REQ-084"
+      ],
+      "decisionRefs": [
+        "DEC-106"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No runtime source, account, billing, model, adapter, server, NewAPI, database, DNS or user-configuration behavior change",
+        "No tag, GitHub Release, public download, upload, updater artifact, update manifest or automatic rollout",
+        "No Windows Authenticode, SmartScreen, bundled WebView2 or real-device installation claim",
+        "No system-wide build-tool installation, secret export or replacement of existing 0.4.10 artifacts"
+      ],
+      "dependsOn": [
+        "WP-RU061-READONLY-CODEX-DSH-VERIFICATION"
+      ],
+      "allowedPaths": [
+        "package.json",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "tests/work_packages/ru062/**",
+        "outputs/野菜API-0.4.11-双平台打包.md",
+        "release/internal/0.4.11/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release-assets/**",
+        "release/internal/0.4.10/**",
+        "src/**",
+        "src-tauri/src/**",
+        "src-tauri/tauri.candidate.conf.json",
+        "pnpm-lock.yaml"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No database, account, credential, receipt or application-configuration migration. Installing 0.4.11 uses the existing compatible local data format.",
+        "rollback": "Retain the existing 0.4.10 installers and discard only unshipped 0.4.11 artifacts if any gate fails. Never alter user data, remote services or public update state."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve desktop-tool-activation@v10, desktop-open-connection@v2 and desktop-connection-management@v2 exactly; this unit changes release identity and packaging outputs only.",
+        "supportedVersions": "Internal candidate for macOS 13+ universal Intel/Apple Silicon and Windows 10 22H2/Windows 11 x64. Windows requires an existing WebView2 Runtime and remains unverified on a real Windows host.",
+        "removalGate": "Do not publish or relabel the Windows artifact as signed/production-ready, and do not replace either artifact without equal source, test, signature, architecture and hash evidence."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v10",
+        "desktop-open-connection@v2",
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [
+        "desktop-tool-activation@v10",
+        "desktop-open-connection@v2",
+        "desktop-connection-management@v2"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru062-macos-artifact",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru062/test_acceptance.py::test_macos_artifact",
+          "cwd": ".",
+          "timeoutSeconds": 900
+        },
+        {
+          "id": "ru062-windows-artifact",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru062/test_acceptance.py::test_windows_cross_artifact_and_release_boundary",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU062-AS-macos",
+          "assertion": "The 0.4.11 macOS DMG hash matches and native tools verify image integrity, universal architecture, exact bundle version, Developer ID signature, hardened runtime, accepted app and DMG notarization tickets, stapling and Gatekeeper acceptance.",
+          "testSelector": "tests/work_packages/ru062/test_acceptance.py::test_macos_artifact",
+          "acceptanceCommandId": "ru062-macos-artifact"
+        },
+        {
+          "id": "RU062-AS-windows",
+          "assertion": "The 0.4.11 Windows hashes match, the payload is an x86_64 MSVC PE from the current source state, the hash-pinned NSIS 3.12 recipe is Simplified Chinese, and the receipt binds the passing RU-061 report while preserving unsigned, cross-built, non-public and untested-on-Windows boundaries.",
+          "testSelector": "tests/work_packages/ru062/test_acceptance.py::test_windows_cross_artifact_and_release_boundary",
+          "acceptanceCommandId": "ru062-windows-artifact"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "The complete current renderer or native suite, typecheck, format, strict lint, production build, Apple-Silicon compile or Windows x64 compile fails.",
+        "The current source state no longer matches the state used to produce either artifact.",
+        "macOS signing, hardened runtime, app/DMG notarization, staple, Gatekeeper, universal architecture or image verification fails.",
+        "The pinned makensis tool, closed recipe, Windows PE architecture or artifact hashes cannot be verified.",
+        "Completion would require public release, upload, updater publication, Windows signing claims, system-wide installation, server mutation, secret export or real user configuration."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU063-SETTINGS-ACCOUNT-CLEANUP",
+      "wave": "consumer",
+      "owner": "desktop-platform",
+      "riskClass": "low",
+      "objective": "Remove the obsolete account-unavailable boundary from Settings while preserving the working account route and all updater and installer behavior.",
+      "deliverables": [
+        "Settings renderer without the stale account-unavailable boundary or duplicate shortcuts",
+        "Focused renderer and governed source-level regression coverage",
+        "Truthful implementation-status note for account, updater and third-party downloads"
+      ],
+      "requirementRefs": [
+        "REQ-085"
+      ],
+      "decisionRefs": [
+        "DEC-107"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No removal or change to AccountView, login, balance, recharge or account-session behavior",
+        "No updater plugin, signing key, update artifact or publication change",
+        "No installer catalog, download, launch, adapter or vendor-binary change",
+        "No packaging, upload, release, server, NewAPI, database, DNS or user-configuration mutation"
+      ],
+      "dependsOn": [
+        "WP-RU062-DUAL-PLATFORM-PACKAGING"
+      ],
+      "allowedPaths": [
+        "src/settings/SettingsView.tsx",
+        "src/settings/SettingsView.test.tsx",
+        "tests/work_packages/ru063/**",
+        "outputs/野菜API-设置页账户遗留文案清理.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release-assets/**",
+        "release/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/App.tsx",
+        "src/account/**",
+        "src/i18n/**",
+        "src/installation/**",
+        "src-tauri/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No user, account, credential, configuration, package or update data migration.",
+        "rollback": "Restore only the Settings boundary rendering and its focused regression test; no account or remote state is changed."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve desktop-account-session@v5 exactly and change presentation only.",
+        "supportedVersions": "The current 0.4.11 desktop source on the existing macOS and Windows support matrix.",
+        "removalGate": "Do not remove the account route or re-label updater and installer readiness without a superseding decision and executable evidence."
+      },
+      "inputContracts": [
+        "desktop-account-session@v5"
+      ],
+      "outputContracts": [
+        "desktop-account-session@v5"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru063-settings-ui",
+          "kind": "scenario_test",
+          "adapter": "vitest-json@1",
+          "selector": "src/settings/SettingsView.test.tsx",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru063-settings-boundary",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru063/test_acceptance.py::test_settings_removes_stale_account_unavailable_boundary",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU063-AS-settings-ui",
+          "assertion": "The rendered Settings view contains no obsolete account-unavailable boundary.",
+          "testSelector": "src/settings/SettingsView.test.tsx",
+          "acceptanceCommandId": "ru063-settings-ui"
+        },
+        {
+          "id": "RU063-AS-account-preserved",
+          "assertion": "The stale Settings boundary and copy calls are absent while App still exposes its account route.",
+          "testSelector": "tests/work_packages/ru063/test_acceptance.py::test_settings_removes_stale_account_unavailable_boundary",
+          "acceptanceCommandId": "ru063-settings-boundary"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "The account route, account-session contract or any native capability would need to change.",
+        "The correction would require an updater, installer, package, server, NewAPI, database, DNS or user-configuration mutation.",
+        "A required edit falls outside the owned Settings and test paths."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU064-READONLY-SETTINGS-VERIFICATION",
+      "wave": "integration",
+      "owner": "desktop-platform",
+      "riskClass": "low",
+      "objective": "Verify the completed Settings account-boundary cleanup from a source-read-only baseline using the repository-compatible acceptance adapter.",
+      "deliverables": [
+        "Passing read-only Settings and account-route acceptance evidence",
+        "Empty baseline-to-tested source diff",
+        "Preserved failed RU-063 adapter report"
+      ],
+      "requirementRefs": [
+        "REQ-085",
+        "REQ-086"
+      ],
+      "decisionRefs": [
+        "DEC-107",
+        "DEC-108"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No product, test, dependency, package, release, updater, installer or remote-state change",
+        "No replacement or deletion of the failed RU-063 execution report",
+        "No new runtime or account authority"
+      ],
+      "dependsOn": [
+        "WP-RU063-SETTINGS-ACCOUNT-CLEANUP"
+      ],
+      "allowedPaths": [
+        "src/settings/SettingsView.tsx",
+        "src/settings/SettingsView.test.tsx",
+        "tests/work_packages/ru063/**",
+        "outputs/野菜API-设置页账户遗留文案清理.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release-assets/**",
+        "release/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/App.tsx",
+        "src/account/**",
+        "src/i18n/**",
+        "src/installation/**",
+        "src-tauri/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "Verification only; no schema, user, account, credential, configuration or artifact migration.",
+        "rollback": "No source mutation is permitted, so no rollback is needed."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Verify desktop-account-session@v5 remains unchanged.",
+        "supportedVersions": "The exact current 0.4.11 source state inherited from RU-063.",
+        "removalGate": "Any source change requires a new implementation release unit."
+      },
+      "inputContracts": [
+        "desktop-account-session@v5"
+      ],
+      "outputContracts": [
+        "desktop-account-session@v5"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru064-settings-boundary",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru063/test_acceptance.py::test_settings_removes_stale_account_unavailable_boundary",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU064-AS-settings-account-preserved",
+          "assertion": "Read-only source evidence confirms the stale Settings account boundary is absent and the application account route remains present.",
+          "testSelector": "tests/work_packages/ru063/test_acceptance.py::test_settings_removes_stale_account_unavailable_boundary",
+          "acceptanceCommandId": "ru064-settings-boundary"
+        }
+      ],
+      "verificationOnly": true,
+      "stopConditions": [
+        "The baseline-to-tested source diff is not empty.",
+        "The RU-063 failed report is missing or modified.",
+        "Verification would require any product, test, dependency, package, release or remote mutation."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU065-READONLY-SETTINGS-VERIFICATION",
+      "wave": "integration",
+      "owner": "desktop-platform",
+      "riskClass": "low",
+      "objective": "Verify the completed Settings account-boundary cleanup from a source-read-only baseline without depending on the failed implementation run.",
+      "deliverables": [
+        "Passing read-only Settings and account-route acceptance evidence",
+        "Empty baseline-to-tested source diff",
+        "Preserved RU-063 failure and RU-064 freeze history"
+      ],
+      "requirementRefs": [
+        "REQ-085",
+        "REQ-086"
+      ],
+      "decisionRefs": [
+        "DEC-107",
+        "DEC-108",
+        "DEC-109"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No product, test, dependency, package, release, updater, installer or remote-state change",
+        "No replacement or deletion of prior execution or freeze evidence",
+        "No new runtime or account authority"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src/settings/SettingsView.tsx",
+        "src/settings/SettingsView.test.tsx",
+        "tests/work_packages/ru063/**",
+        "outputs/野菜API-设置页账户遗留文案清理.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release-assets/**",
+        "release/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/App.tsx",
+        "src/account/**",
+        "src/i18n/**",
+        "src/installation/**",
+        "src-tauri/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "Verification only; no schema, user, account, credential, configuration or artifact migration.",
+        "rollback": "No source mutation is permitted, so no rollback is needed."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Verify desktop-account-session@v5 remains unchanged.",
+        "supportedVersions": "The exact current 0.4.11 source state inherited through RU-064.",
+        "removalGate": "Any source change requires a new implementation release unit."
+      },
+      "inputContracts": [
+        "desktop-account-session@v5"
+      ],
+      "outputContracts": [
+        "desktop-account-session@v5"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru065-settings-boundary",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru063/test_acceptance.py::test_settings_removes_stale_account_unavailable_boundary",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU065-AS-settings-account-preserved",
+          "assertion": "Read-only source evidence confirms the stale Settings account boundary is absent and the application account route remains present.",
+          "testSelector": "tests/work_packages/ru063/test_acceptance.py::test_settings_removes_stale_account_unavailable_boundary",
+          "acceptanceCommandId": "ru065-settings-boundary"
+        }
+      ],
+      "verificationOnly": true,
+      "stopConditions": [
+        "The baseline-to-tested source diff is not empty.",
+        "Any prior verification or freeze evidence is missing or modified.",
+        "Verification would require any product, test, dependency, package, release or remote mutation."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU066-DUAL-PLATFORM-PACKAGING",
+      "wave": "release",
+      "owner": "desktop-platform",
+      "riskClass": "high",
+      "objective": "Produce and verify distinct 0.4.12 internal macOS universal and Windows x64 installers from the exact RU-065 verified client without publishing them.",
+      "deliverables": [
+        "Synchronized 0.4.12 package, Cargo, lockfile and Tauri metadata",
+        "Developer-ID signed, hardened, Apple-notarized and stapled universal macOS DMG",
+        "Fresh unsigned Windows x64 payload and Simplified-Chinese current-user NSIS installer",
+        "Machine-readable source, test, tool, signature, notarization, artifact-hash and limitation receipt",
+        "Human-readable internal installation and verification summary"
+      ],
+      "requirementRefs": [
+        "REQ-087"
+      ],
+      "decisionRefs": [
+        "DEC-110"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No runtime source, account, billing, model, adapter, server, NewAPI, database, DNS or user-configuration behavior change",
+        "No tag, GitHub Release, public download, upload, updater artifact, update manifest or automatic rollout",
+        "No Windows Authenticode, SmartScreen, bundled WebView2 or real-device installation claim",
+        "No system-wide build-tool installation, secret export or replacement of existing 0.4.11 artifacts"
+      ],
+      "dependsOn": [
+        "WP-RU065-READONLY-SETTINGS-VERIFICATION"
+      ],
+      "allowedPaths": [
+        "package.json",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "tests/work_packages/ru066/**",
+        "outputs/野菜API-0.4.12-双平台打包.md",
+        "release/internal/0.4.12/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release-assets/**",
+        "release/internal/0.4.11/**",
+        "src/**",
+        "src-tauri/src/**",
+        "src-tauri/tauri.candidate.conf.json",
+        "pnpm-lock.yaml"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No database, account, credential, receipt or application-configuration migration. Installing 0.4.12 uses the existing compatible local data format.",
+        "rollback": "Retain the existing 0.4.11 installers and discard only unshipped 0.4.12 artifacts if any gate fails. Never alter user data, remote services or public update state."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve desktop-account-session@v5, desktop-tool-activation@v10, desktop-open-connection@v2 and desktop-connection-management@v2 exactly; this unit changes release identity and packaging outputs only.",
+        "supportedVersions": "Internal candidate for macOS 13+ universal Intel/Apple Silicon and Windows 10 22H2/Windows 11 x64. Windows requires an existing WebView2 Runtime and remains unverified on a real Windows host.",
+        "removalGate": "Do not publish or relabel the Windows artifact as signed or production-ready, and do not replace either artifact without equal source, test, signature, architecture and hash evidence."
+      },
+      "inputContracts": [
+        "desktop-account-session@v5",
+        "desktop-tool-activation@v10",
+        "desktop-open-connection@v2",
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [
+        "desktop-account-session@v5",
+        "desktop-tool-activation@v10",
+        "desktop-open-connection@v2",
+        "desktop-connection-management@v2"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru066-macos-artifact",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru066/test_acceptance.py::test_macos_artifact",
+          "cwd": ".",
+          "timeoutSeconds": 900
+        },
+        {
+          "id": "ru066-windows-artifact",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru066/test_acceptance.py::test_windows_cross_artifact_and_release_boundary",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU066-AS-macos",
+          "assertion": "The 0.4.12 macOS DMG hash matches and native tools verify image integrity, universal architecture, exact bundle version, Developer ID signature, hardened runtime, accepted app and DMG notarization tickets, stapling and Gatekeeper acceptance.",
+          "testSelector": "tests/work_packages/ru066/test_acceptance.py::test_macos_artifact",
+          "acceptanceCommandId": "ru066-macos-artifact"
+        },
+        {
+          "id": "RU066-AS-windows",
+          "assertion": "The 0.4.12 Windows hashes match, the payload is an x86_64 MSVC PE from the current source state, the hash-pinned NSIS 3.12 recipe is Simplified Chinese, and the receipt binds RU-061 plus RU-065 while preserving unsigned, cross-built, non-public and untested-on-Windows boundaries.",
+          "testSelector": "tests/work_packages/ru066/test_acceptance.py::test_windows_cross_artifact_and_release_boundary",
+          "acceptanceCommandId": "ru066-windows-artifact"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "The complete current renderer or native suite, typecheck, format, strict lint, production build, Apple-Silicon compile or Windows x64 compile fails.",
+        "The current source state no longer matches the state used to produce either artifact.",
+        "macOS signing, hardened runtime, app or DMG notarization, staple, Gatekeeper, universal architecture or image verification fails.",
+        "The pinned makensis tool, closed recipe, Windows PE architecture or artifact hashes cannot be verified.",
+        "Completion would require public release, upload, updater publication, Windows signing claims, system-wide installation, server mutation, secret export or real user configuration."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU067-WINDOWS-RUNTIME-HOTFIX",
+      "wave": "release",
+      "owner": "desktop-platform",
+      "riskClass": "high",
+      "objective": "Repair the Windows production-renderer mode and renderer-independent native exit path, then produce and verify a distinct local 0.4.13 Windows x64 installer.",
+      "deliverables": [
+        "Fail-safe Cargo production feature and release compile guard",
+        "Native Windows close choice using the existing cooperative shutdown and background actions",
+        "Fresh renderer-embedded Windows x64 payload and Simplified-Chinese current-user NSIS installer",
+        "Machine-readable regression, source, tool and artifact receipt",
+        "Human-readable 0.4.12 rejection and 0.4.13 Windows test handoff"
+      ],
+      "requirementRefs": [
+        "REQ-068",
+        "REQ-087",
+        "REQ-088"
+      ],
+      "decisionRefs": [
+        "DEC-111"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No macOS rebuild or replacement of either 0.4.12 artifact",
+        "No account, billing, model, application-adapter, server, NewAPI, database, DNS or user-configuration change",
+        "No tag, upload, public release, updater artifact, update manifest or automatic rollout",
+        "No Windows Authenticode, SmartScreen reputation, bundled WebView2 or real-device success claim"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "package.json",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/src/lib.rs",
+        "tests/work_packages/ru067/**",
+        "outputs/野菜API-0.4.13-Windows热修复.md",
+        "release/internal/0.4.13/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release-assets/**",
+        "release/internal/0.4.12/**",
+        "src/**",
+        "src-tauri/tauri.candidate.conf.json",
+        "pnpm-lock.yaml"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No local data, account, credential, configuration or database migration. Installing 0.4.13 replaces only the current-user executable through the existing installer identity.",
+        "rollback": "Retain 0.4.12 evidence but do not distribute its Windows executable. If a gate fails, discard only unshipped 0.4.13 files and make no user or remote mutation."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve desktop-account-session@v5, desktop-tool-activation@v10, desktop-open-connection@v2 and desktop-connection-management@v2. Change only shell production-mode selection, Windows close presentation and release identity.",
+        "supportedVersions": "Internal repair candidate for Windows 10 22H2 and Windows 11 x64 with an existing WebView2 Runtime. Real-device validation remains required before public distribution.",
+        "removalGate": "Do not use or publish the 0.4.12 Windows package. Do not call 0.4.13 Windows-ready until the owner confirms a real-device launch, visible bundled UI and complete exit."
+      },
+      "inputContracts": [
+        "desktop-account-session@v5",
+        "desktop-tool-activation@v10",
+        "desktop-open-connection@v2",
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [
+        "desktop-account-session@v5",
+        "desktop-tool-activation@v10",
+        "desktop-open-connection@v2",
+        "desktop-connection-management@v2"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru067-source-contract",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru067/test_acceptance.py::test_release_build_and_native_exit_are_fail_safe",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru067-windows-artifact",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru067/test_acceptance.py::test_corrected_windows_artifact_contains_renderer_and_is_distinct",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU067-AS-production-and-exit",
+          "assertion": "Source and cross-platform compilation prove release builds cannot omit custom-protocol and Windows close or native quit can reach cooperative shutdown without renderer JavaScript.",
+          "testSelector": "tests/work_packages/ru067/test_acceptance.py::test_release_build_and_native_exit_are_fail_safe",
+          "acceptanceCommandId": "ru067-source-contract"
+        },
+        {
+          "id": "RU067-AS-renderer-embedded-artifact",
+          "assertion": "The distinct 0.4.13 Windows x64 payload contains the current renderer asset paths and embedded runtime marker, excludes the dev-server marker, differs from 0.4.12 and is packaged by the closed Chinese NSIS recipe with truthful limits.",
+          "testSelector": "tests/work_packages/ru067/test_acceptance.py::test_corrected_windows_artifact_contains_renderer_and_is_distinct",
+          "acceptanceCommandId": "ru067-windows-artifact"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "The current renderer or native suite, typecheck, format, strict lint, production renderer build or Windows x64 compile fails.",
+        "The Windows PE lacks any current renderer asset path, lacks the embedded marker, contains the dev-server marker or matches the rejected 0.4.12 payload.",
+        "Windows native close cannot compile against the pinned target or bypasses the cooperative runtime shutdown path.",
+        "Completion would overwrite 0.4.12, require public release, upload, updater publication, Windows signing claims, macOS rebuilding, server mutation, secret export or real user configuration."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU068-CONNECTION-UX-RECOVERY",
+      "wave": "consumer",
+      "owner": "tool-config",
+      "riskClass": "high",
+      "objective": "Correct the cross-platform connection modal freeze, decouple background and launch states, and make the novice-safe graceful restart and update-connection journey explicit across supported surface classes.",
+      "deliverables": [
+        "Non-modal desktop restart and configuration progress flow",
+        "Independent initial loading, background refresh, launch, restore and configuration UI states",
+        "Configured-state action hierarchy with obvious update-connection control",
+        "Surface-specific desktop, terminal and browser lifecycle guidance",
+        "Cross-agent UX audit and focused executable regressions"
+      ],
+      "requirementRefs": [
+        "REQ-089"
+      ],
+      "decisionRefs": [
+        "DEC-112"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No force termination, silent desktop-app exit or interruption of active terminal sessions",
+        "No model, billing, account, credential, gateway, server, NewAPI, database or DNS behavior change",
+        "No installer, package, version bump, upload, tag, GitHub Release, updater manifest or public rollout",
+        "No claim that browser launch proves a model request succeeded"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src/configuration/ConfigurationPreviewView.tsx",
+        "src/configuration/ConfigurationPreviewView.test.tsx",
+        "src/configuration/OpenConnection.tsx",
+        "src/configuration/OpenConnection.test.tsx",
+        "src/configuration/connections.tsx",
+        "src/configuration/connections.test.tsx",
+        "src/configuration/launchApi.ts",
+        "src/index.css",
+        "tests/work_packages/ru068/**",
+        "outputs/野菜API-接入体验审计.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release-assets/**",
+        "release/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src-tauri/**",
+        "src/account/**",
+        "src/billing/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No account, credential, application configuration or database migration. Existing saved connections remain compatible.",
+        "rollback": "Revert only RU-068 renderer and test paths. Existing credentials, backups, connected application settings and local packages remain untouched."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve desktop-tool-activation@v10, desktop-open-connection@v2 and desktop-connection-management@v2 exactly; correct only renderer orchestration, action hierarchy and lifecycle explanation.",
+        "supportedVersions": "Current source behavior for supported Codex Desktop and Claude Desktop installations on macOS 13+ and Windows 10 22H2/Windows 11, plus existing Claude Code, Pi, Hermes, OpenClaw and DSH launch surfaces.",
+        "removalGate": "Do not remove explicit save-work consent or introduce force termination without a separately evidenced and accepted successor decision."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v10",
+        "desktop-open-connection@v2",
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [
+        "desktop-tool-activation@v10",
+        "desktop-open-connection@v2",
+        "desktop-connection-management@v2"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru068-configuration-ui",
+          "kind": "scenario_test",
+          "adapter": "vitest-json@1",
+          "selector": "src/configuration/ConfigurationPreviewView.test.tsx",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru068-connection-controller",
+          "kind": "scenario_test",
+          "adapter": "vitest-json@1",
+          "selector": "src/configuration/connections.test.tsx",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru068-lifecycle-matrix",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru068/test_acceptance.py::test_connection_ux_lifecycle_matrix",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU068-AS-nonmodal-restart",
+          "assertion": "Running desktop-app consent dismisses before async restart/configuration, preserves graceful-only shutdown semantics and leaves progress inline while the client remains navigable.",
+          "testSelector": "src/configuration/ConfigurationPreviewView.test.tsx",
+          "acceptanceCommandId": "ru068-configuration-ui"
+        },
+        {
+          "id": "RU068-AS-independent-operations",
+          "assertion": "Background refresh retains the last usable projection and application opening cannot globally erase or disable the independent connection-update journey.",
+          "testSelector": "src/configuration/connections.test.tsx",
+          "acceptanceCommandId": "ru068-connection-controller"
+        },
+        {
+          "id": "RU068-AS-lifecycle-matrix",
+          "assertion": "Source and UX audit distinguish graceful desktop restart, terminal new-session launch and DSH browser launch, and the release boundary contains no package or publication work.",
+          "testSelector": "tests/work_packages/ru068/test_acceptance.py::test_connection_ux_lifecycle_matrix",
+          "acceptanceCommandId": "ru068-lifecycle-matrix"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "The correction would require force termination, silent dismissal of unsaved-work risk or interruption of an active terminal session.",
+        "An existing activation, open-connection or connection-management wire contract must change.",
+        "Focused or complete renderer tests, typecheck or production build fails.",
+        "Completion would require packaging, publishing, upload, server mutation, secret export or real user configuration."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU069-READONLY-CONNECTION-UX-VERIFICATION",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "low",
+      "objective": "Verify the completed cross-platform connection UX correction from a source-read-only baseline without depending on the failed RU-068 execution.",
+      "deliverables": [
+        "Passing isolated connection lifecycle and action-state evidence",
+        "Empty baseline-to-tested source diff",
+        "Preserved RU-068 adapter failure and passing direct test evidence"
+      ],
+      "requirementRefs": [
+        "REQ-089",
+        "REQ-090"
+      ],
+      "decisionRefs": [
+        "DEC-112",
+        "DEC-113"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No product, test, dependency, package, release, updater, installer or remote-state change",
+        "No replacement or deletion of the RU-068 execution report",
+        "No new process-control, credential or gateway authority"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src/configuration/ConfigurationPreviewView.tsx",
+        "src/configuration/ConfigurationPreviewView.test.tsx",
+        "src/configuration/OpenConnection.tsx",
+        "src/configuration/connections.tsx",
+        "src/configuration/connections.test.tsx",
+        "src/configuration/launchApi.ts",
+        "src/index.css",
+        "tests/work_packages/ru068/**",
+        "outputs/野菜API-接入体验审计.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release-assets/**",
+        "release/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src-tauri/**",
+        "src/account/**",
+        "src/billing/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "Verification only; no schema, account, credential, application configuration or database migration.",
+        "rollback": "No source mutation is permitted, so no rollback is needed."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Verify desktop-tool-activation@v10, desktop-open-connection@v2 and desktop-connection-management@v2 remain unchanged.",
+        "supportedVersions": "The exact current source state inherited through RU-068.",
+        "removalGate": "Any source change requires a new implementation release unit."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v10",
+        "desktop-open-connection@v2",
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [
+        "desktop-tool-activation@v10",
+        "desktop-open-connection@v2",
+        "desktop-connection-management@v2"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru069-lifecycle-matrix",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru068/test_acceptance.py::test_connection_ux_lifecycle_matrix",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU069-AS-readonly-connection-ux",
+          "assertion": "Read-only source evidence confirms non-modal graceful restart, independent launch and update actions, retained state during background refresh, a bounded lost launch reply and truthful desktop, terminal and browser lifecycle copy.",
+          "testSelector": "tests/work_packages/ru068/test_acceptance.py::test_connection_ux_lifecycle_matrix",
+          "acceptanceCommandId": "ru069-lifecycle-matrix"
+        }
+      ],
+      "verificationOnly": true,
+      "stopConditions": [
+        "The baseline-to-tested source diff is not empty.",
+        "The RU-068 failure report or current source scenario is missing or modified after dispatch.",
+        "Verification would require any product, test, dependency, package, release or remote mutation."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU070-CONFIGURED-ACTION-CASCADE",
+      "wave": "consumer",
+      "owner": "tool-config",
+      "riskClass": "low",
+      "objective": "Correct the final production stylesheet cascade so the configured Update connection settings action remains an obvious full-width accent-outline secondary action.",
+      "deliverables": [
+        "Full-width configured action deck",
+        "Final workbench cascade with an accent-outline update action",
+        "Source-level cascade regression and updated visual audit"
+      ],
+      "requirementRefs": [
+        "REQ-089",
+        "REQ-091"
+      ],
+      "decisionRefs": [
+        "DEC-112",
+        "DEC-114"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No component, interaction, native, credential, gateway, account, billing or model behavior change",
+        "No package, installer, version bump, upload, release, updater publication or remote mutation",
+        "No unrelated global restyling"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src/index.css",
+        "src/workbench/workbench-v2.css",
+        "tests/work_packages/ru070/**",
+        "outputs/野菜API-接入体验审计.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release-assets/**",
+        "release/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/configuration/**",
+        "src-tauri/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "CSS-only correction; no data, configuration, credential or schema migration.",
+        "rollback": "Restore only the two configured-action CSS declarations and audit note."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve desktop-tool-activation@v10, desktop-open-connection@v2 and desktop-connection-management@v2; change presentation only.",
+        "supportedVersions": "Current renderer on supported macOS and Windows desktop sizes and existing responsive breakpoints.",
+        "removalGate": "Do not reduce the update action to disabled-looking muted styling while it is enabled."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v10",
+        "desktop-open-connection@v2",
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [
+        "desktop-tool-activation@v10",
+        "desktop-open-connection@v2",
+        "desktop-connection-management@v2"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru070-final-css-cascade",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru070/test_acceptance.py::test_configured_action_hierarchy_survives_the_final_css_cascade",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU070-AS-final-cascade",
+          "assertion": "The final production CSS cascade renders a full-width action deck with filled Open and enabled-looking accent-outline Update connection settings actions.",
+          "testSelector": "tests/work_packages/ru070/test_acceptance.py::test_configured_action_hierarchy_survives_the_final_css_cascade",
+          "acceptanceCommandId": "ru070-final-css-cascade"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "The correction requires component or runtime behavior changes.",
+        "The source cascade, owned-file formatting, production build or computed style fails.",
+        "Completion would require package, publication, upload or remote mutation."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU071-SELF-UPDATE-CLOSURE",
+      "wave": "producer",
+      "owner": "security-update",
+      "riskClass": "critical",
+      "objective": "Complete the signed Yeschoy desktop self-update path and isolate it from connection, third-party application installation, vendor synchronization, account and model state.",
+      "deliverables": [
+        "Native-only Tauri updater boundary with closed IPC and cooperative shutdown recovery",
+        "Nonblocking global update notice and complete Settings update state",
+        "Updater-aware candidate configuration and Yeschoy-specific release automation",
+        "Atomic signed stable-channel publisher, origin routing, health truth and rollback",
+        "Happy, failure, replay, stale-version, race and recovery evidence"
+      ],
+      "requirementRefs": [
+        "REQ-092"
+      ],
+      "decisionRefs": [
+        "DEC-115"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No change to tool activation, target adapters, model aliases, account, billing, NewAPI, API keys or user tool configuration",
+        "No reuse of the third-party Codex and Claude installer catalog as Yeschoy's own update channel",
+        "No renderer access to updater-plugin commands, private signing key, arbitrary URL, artifact path or raw endpoint errors",
+        "No claim that pre-updater clients can update without one manual bootstrap install",
+        "No forced silent replacement while the user may have active work"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        ".github/workflows/release.yml",
+        ".github/workflows/yeschoy-windows-internal.yml",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/App.tsx",
+        "src/index.css",
+        "src/update/**",
+        "src/settings/SettingsView.tsx",
+        "src/i18n/locales/zh.json",
+        "src/i18n/locales/zh-TW.json",
+        "src/i18n/locales/en.json",
+        "src/i18n/locales/ja.json",
+        "src/installation/InstallationPanel.tsx",
+        "src-tauri/Cargo.toml",
+        "src-tauri/Cargo.lock",
+        "src-tauri/tauri.conf.json",
+        "src-tauri/tauri.candidate.conf.json",
+        "src-tauri/capabilities/default.json",
+        "src-tauri/src/app_update.rs",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/shutdown_coordinator.rs",
+        "deploy/download-origin/Caddyfile.origin",
+        "deploy/download-origin/probe.py",
+        "deploy/download-origin/README.md",
+        "deploy/download-origin/public/health.json",
+        "deploy/self-update/**",
+        "tests/work_packages/ru071/**",
+        "outputs/野菜API-自动更新与解耦验收.md"
+      ],
+      "forbiddenPaths": [
+        "src/account/**",
+        "src/billing/**",
+        "src/configuration/**",
+        "src/model-profiles/**",
+        "src-tauri/src/account.rs",
+        "src-tauri/src/native_bridge.rs",
+        "src-tauri/src/native_bridge/**",
+        "src-tauri/src/provider_gateway.rs",
+        "src-tauri/src/provider_gateway/**",
+        "src-tauri/src/vendor_installer.rs",
+        "src-tauri/src/vendor_installer/**",
+        "deploy/vendor-sync/**",
+        "release-assets/**",
+        "release/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [
+          "src/update/**",
+          "src-tauri/src/app_update.rs",
+          "deploy/self-update/**"
+        ],
+        "dataBackfill": "No user-data migration. The first updater-aware release is a one-time manually installed bootstrap; subsequent compatible releases use the signed stable channel.",
+        "rollback": "Remove or rename the stable manifest atomically, set updatesPublished false, and leave immutable artifacts for audit. Clients continue working and manual downloads remain available. Revert only updater-owned source and workflow changes; never erase user configuration."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Add desktop-self-update@v1, signed-update-channel@v1 and download-origin-status@v4 without changing existing activation, vendor installation or account contracts.",
+        "supportedVersions": "Updater-aware Yeschoy desktop builds on currently packaged universal macOS and Windows x64 targets; 0.4.13 and older require manual bootstrap.",
+        "removalGate": "Do not publish a manifest until both target artifacts, detached signatures, exact hashes and native-platform build evidence exist. Disable the channel on any signature, install, relaunch or rollback regression."
+      },
+      "inputContracts": [
+        "signed-update-channel@v1",
+        "download-origin-status@v4"
+      ],
+      "outputContracts": [
+        "desktop-self-update@v1"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru071-happy",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru071/test_acceptance.py::test_happy_path_is_signed_native_and_nonblocking",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru071-failure",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru071/test_acceptance.py::test_failure_is_closed_and_does_not_block_other_domains",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru071-replay",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru071/test_acceptance.py::test_duplicate_install_is_serialized_without_duplicate_shutdown",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru071-stale",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru071/test_acceptance.py::test_stale_or_downgrade_manifest_is_not_installable",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru071-race",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru071/test_acceptance.py::test_channel_publication_is_atomic_and_artifacts_precede_manifest",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru071-recovery",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru071/test_acceptance.py::test_install_failure_relaunches_current_app_and_channel_can_be_disabled",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU071-AS-happy",
+          "assertion": "An updater-aware client checks without blocking, exposes an available signed version, downloads with bounded progress, drains cooperatively, installs and relaunches as required.",
+          "testSelector": "tests/work_packages/ru071/test_acceptance.py::test_happy_path_is_signed_native_and_nonblocking",
+          "acceptanceCommandId": "ru071-happy"
+        },
+        {
+          "id": "RU071-AS-failure",
+          "assertion": "No-update and check, manifest, signature or network failures remain truthful closed updater states and leave every unrelated domain interactive.",
+          "testSelector": "tests/work_packages/ru071/test_acceptance.py::test_failure_is_closed_and_does_not_block_other_domains",
+          "acceptanceCommandId": "ru071-failure"
+        },
+        {
+          "id": "RU071-AS-replay",
+          "assertion": "Duplicate install attempts cannot download twice, install twice or request shutdown twice.",
+          "testSelector": "tests/work_packages/ru071/test_acceptance.py::test_duplicate_install_is_serialized_without_duplicate_shutdown",
+          "acceptanceCommandId": "ru071-replay"
+        },
+        {
+          "id": "RU071-AS-stale",
+          "assertion": "A stale expected version, replayed manifest or downgrade fails before download and shutdown.",
+          "testSelector": "tests/work_packages/ru071/test_acceptance.py::test_stale_or_downgrade_manifest_is_not_installable",
+          "acceptanceCommandId": "ru071-stale"
+        },
+        {
+          "id": "RU071-AS-race",
+          "assertion": "Versioned files become immutable before an atomic stable manifest, so readers see either the old complete release, the new complete release or empty 204.",
+          "testSelector": "tests/work_packages/ru071/test_acceptance.py::test_channel_publication_is_atomic_and_artifacts_precede_manifest",
+          "acceptanceCommandId": "ru071-race"
+        },
+        {
+          "id": "RU071-AS-recovery",
+          "assertion": "Installation failure after drain attempts current-app relaunch, and operators can atomically disable channel authority without deleting immutable artifacts or touching third-party downloads.",
+          "testSelector": "tests/work_packages/ru071/test_acceptance.py::test_install_failure_relaunches_current_app_and_channel_can_be_disabled",
+          "acceptanceCommandId": "ru071-recovery"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "The implementation requires a caller-controlled endpoint, path, command, signing key or unsigned update acceptance.",
+        "Updater work must share an activation, installer, account, model or vendor-sync lock or makes any of those flows depend on update availability.",
+        "A release manifest would be published before complete signed macOS and Windows artifacts and receipts exist.",
+        "Native shutdown, install failure recovery, atomic publication or rollback cannot be evidenced.",
+        "Implementation would modify NewAPI, billing, account credentials, user tool configurations or third-party vendor binaries."
+      ],
+      "status": "planned"
     }
   ]
 }

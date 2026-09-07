@@ -1,10 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { ActivationToolId } from "./activation";
+import { ACTIVATION_TOOL_IDS, type ActivationToolId } from "./activation";
 
-export const OPENABLE_TOOLS = [
-  "claude_desktop",
-  "codex_desktop",
-  "dsh_web",
+export const OPENABLE_TOOLS = ACTIVATION_TOOL_IDS;
+export const TERMINAL_TOOLS = [
+  "claude_code",
+  "pi",
+  "hermes",
+  "openclaw",
 ] as const;
 export const OPEN_STATUSES = [
   "opened",
@@ -17,6 +19,10 @@ export const OPEN_STATUSES = [
   "busy",
 ] as const;
 export type OpenStatus = (typeof OPEN_STATUSES)[number];
+// Native macOS launch already has a 15-second cap. Five additional seconds
+// cover bridge startup and IPC delivery while still guaranteeing that a lost
+// native reply cannot leave the renderer in a permanent busy state.
+export const OPEN_REQUEST_DEADLINE_MS = 20_000;
 let sequence = 0;
 export async function openConnection(
   toolId: ActivationToolId,
@@ -24,8 +30,19 @@ export async function openConnection(
   if (!(OPENABLE_TOOLS as readonly string[]).includes(toolId))
     throw Error("invalid_open_target");
   const requestId = `open-${Date.now().toString(36)}-${++sequence}`;
-  const raw = await invoke<unknown>("open_tool_connection_v1", {
-    request: { requestId, toolId },
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+  const raw = await Promise.race([
+    invoke<unknown>("open_tool_connection_v1", {
+      request: { requestId, toolId },
+    }),
+    new Promise<never>((_resolve, reject) => {
+      deadline = setTimeout(
+        () => reject(Error("open_request_timed_out")),
+        OPEN_REQUEST_DEADLINE_MS,
+      );
+    }),
+  ]).finally(() => {
+    if (deadline !== undefined) clearTimeout(deadline);
   });
   if (!raw || typeof raw !== "object" || Array.isArray(raw))
     throw Error("invalid_open_reply");

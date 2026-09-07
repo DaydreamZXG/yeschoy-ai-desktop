@@ -182,9 +182,9 @@
   color: #e7ca85;
 }
 .configuration-preview-panel:has(.open-connection-control) .setup-apply {
-  background: var(--subtle);
-  border-color: var(--line);
-  color: var(--muted);
+  background: var(--surface);
+  border-color: var(--accent-line);
+  color: var(--accent);
 }
 .configuration-workspace .setup-result .subtle-button {
   margin-top: 12px;

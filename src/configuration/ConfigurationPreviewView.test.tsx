@@ -1,7 +1,65 @@
 import { describe, expect, it } from "vitest";
 import { modelConnectionMode, modelSupportsTool } from "./modelCompatibility";
+import {
+  connectionLifecycleMode,
+  connectionLifecycleNote,
+  recoveryRetryMessage,
+  runningAppHandoff,
+} from "./ConfigurationPreviewView";
 
 describe("desktop protocol compatibility", () => {
+  it("ru068 gives every supported surface an honest lifecycle instead of applying the desktop restart rule to every agent", () => {
+    expect(connectionLifecycleMode("codex_desktop")).toBe(
+      "graceful_desktop_restart",
+    );
+    expect(connectionLifecycleMode("claude_desktop")).toBe(
+      "graceful_desktop_restart",
+    );
+    for (const tool of ["claude_code", "pi", "hermes", "openclaw"] as const) {
+      expect(connectionLifecycleMode(tool)).toBe("new_terminal_session");
+      expect(connectionLifecycleNote(tool, tool)).toContain(
+        "不会关闭正在使用的命令行会话",
+      );
+    }
+    expect(connectionLifecycleMode("dsh_web")).toBe("browser_launch");
+    expect(connectionLifecycleNote("dsh_web", "DSH web")).toContain(
+      "在浏览器中打开",
+    );
+    const desktop = connectionLifecycleNote("codex_desktop", "Codex Desktop");
+    expect(desktop).toContain("提醒你保存");
+    expect(desktop).toContain("正常退出");
+    expect(desktop).toContain("不会强制结束进程");
+  });
+
+  it("ru068 dismisses running-app consent before continuing and rejects stale consent", () => {
+    expect(runningAppHandoff("same-selection", "same-selection")).toEqual({
+      nextPromptContext: null,
+      restart: true,
+    });
+    expect(runningAppHandoff("old-selection", "new-selection")).toEqual({
+      nextPromptContext: null,
+      restart: false,
+    });
+    expect(runningAppHandoff(null, "same-selection")).toEqual({
+      nextPromptContext: null,
+      restart: false,
+    });
+  });
+
+  it("ru054 retry recovery treats restore as fallback instead of a required first step", () => {
+    expect(recoveryRetryMessage("recovery_pending")).toContain("直接重试");
+    expect(recoveryRetryMessage("recovery_pending")).toContain(
+      "本次没有修改应用",
+    );
+    expect(recoveryRetryMessage("configuration_rollback_failed")).toContain(
+      "自动恢复",
+    );
+    expect(recoveryRetryMessage("credential_restore_failed")).toContain(
+      "系统钥匙串或凭据管理器",
+    );
+    expect(recoveryRetryMessage("other")).toBeUndefined();
+  });
+
   it("accepts both direct Responses and automatically bridged Chat models", () => {
     expect(modelSupportsTool("codex_desktop", ["openai-response"])).toBe(true);
     expect(modelSupportsTool("codex_desktop", ["openai"])).toBe(true);

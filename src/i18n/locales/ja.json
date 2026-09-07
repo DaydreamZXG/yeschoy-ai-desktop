@@ -3725,5 +3725,72 @@
     "backendBody": "ログイン、残高確認、チャージはまだ利用できません。モデルの確認と接続チェックは利用できます。",
     "openAccount": "アカウントを見る",
     "openDiagnostics": "接続を確認"
+  },
+  "yeschoyUpdate": {
+    "title": "野菜の自動更新",
+    "body": "起動後に自動確認し、新しい版がある時だけ通知します。モデル接続やアプリのダウンロードとは独立しています。",
+    "state": {
+      "automatic": "自動確認は有効",
+      "current": "最新版です",
+      "available": "更新があります",
+      "attention": "未完了"
+    },
+    "progressLabel": "更新の手順",
+    "stage": {
+      "check": "版を確認",
+      "download": "取得と署名確認",
+      "restart": "安全に再起動"
+    },
+    "phase": {
+      "idle": "最初の自動確認を待っています",
+      "checking": "新しい版を確認中",
+      "current": "現在の版が最新です",
+      "available": "新しい版を利用できます",
+      "downloading": "更新を取得して検証中",
+      "restarting": "ローカル処理を終えて安全に再起動中",
+      "unavailable": "現在は更新を確認できません",
+      "failed": "今回の更新は完了しませんでした"
+    },
+    "reason": {
+      "idle": "操作は不要です。野菜がバックグラウンドで確認します。",
+      "checking": "野菜の更新元だけに接続し、モデルやアカウント設定は読みません。",
+      "no_update": "ダウンロードは不要です。",
+      "update_available": "署名を確認してから野菜を終了・再起動します。",
+      "downloading": "画面は引き続き使えます。更新はアプリ接続ロックを使いません。",
+      "preparing_restart": "ローカル処理が安全に終わるのを待っています。",
+      "channel_unavailable": "更新元を一時的に利用できません。他の機能には影響しません。",
+      "native_unavailable": "ローカル更新サービスが応答しません。他の機能には影響しません。",
+      "response_timeout": "確認が長すぎたため待機を終了しました。他の機能は使用できます。",
+      "install_failed_restarted": "前回の導入は未完了でした。既存版を再度開き、設定は保持されています。",
+      "signature_invalid": "署名確認に失敗したため導入を停止しました。",
+      "download_failed": "取得が完了しませんでした。後で再試行できます。",
+      "artifact_invalid": "更新パッケージが正しくないため導入を停止しました。",
+      "stale_version": "版情報が変わりました。再確認してください。",
+      "update_not_checked": "先に更新を確認してください。",
+      "shutting_down": "野菜の終了中のため更新を停止しました。",
+      "shutdown_failed": "ローカル処理を安全に終了できず、既存版を再度開きました。",
+      "install_failed": "導入が完了せず、既存版を再度開きました。",
+      "updater_not_configured": "このビルドには更新チャンネルが設定されていません。",
+      "platform_unsupported": "このシステムの自動更新にはまだ対応していません。",
+      "endpoint_invalid": "更新先が安全性確認に失敗しました。",
+      "manifest_invalid": "更新一覧が不完全か、このPC向けではありません。",
+      "check_failed": "確認を完了できませんでした。他の機能には影響しません。",
+      "default": "更新とモデル接続は独立しており、更新失敗でアプリはロックされません。"
+    },
+    "availableVersion": "v{{version}} に更新できます",
+    "currentVersion": "現在の版 v{{version}}",
+    "installAndRestart": "更新して再起動",
+    "checkAgain": "もう一度確認",
+    "checking": "確認中…",
+    "downloading": "取得中…",
+    "restarting": "再起動中…",
+    "openSettings": "更新設定を見る",
+    "safety": "更新パッケージは必ず署名確認されます。取得完了までは野菜を閉じず、Codex、Claude、その他アプリの設定も変更しません。",
+    "notice": {
+      "available": "野菜 v{{version}} を利用できます",
+      "downloading": "更新を安全に取得中",
+      "restarting": "まもなく完了します",
+      "failed": "更新は未完了です"
+    }
   }
 }

@@ -3725,5 +3725,72 @@
     "backendBody": "此版本暂不支持登录、查询余额和充值。你仍可以查看模型和检查网络连接。",
     "openAccount": "查看账户",
     "openDiagnostics": "检查连接"
+  },
+  "yeschoyUpdate": {
+    "title": "野菜自动更新",
+    "body": "启动后自动检查；发现新版本时再提醒你，不影响模型接入和应用下载。",
+    "state": {
+      "automatic": "自动检查已开启",
+      "current": "已是最新版",
+      "available": "有新版本",
+      "attention": "暂时未完成"
+    },
+    "progressLabel": "更新步骤",
+    "stage": {
+      "check": "检查版本",
+      "download": "下载并校验",
+      "restart": "安全重启"
+    },
+    "phase": {
+      "idle": "等待首次自动检查",
+      "checking": "正在检查新版本",
+      "current": "当前已是最新版",
+      "available": "新版本已准备好",
+      "downloading": "正在下载并验证更新",
+      "restarting": "正在保存状态并安全重启",
+      "unavailable": "暂时无法检查更新",
+      "failed": "这次更新没有完成"
+    },
+    "reason": {
+      "idle": "无需操作，野菜会在后台完成检查。",
+      "checking": "只访问野菜更新源，不会读取你的模型或账户设置。",
+      "no_update": "无需下载任何内容。",
+      "update_available": "更新包会先通过安全校验，再退出并重启野菜。",
+      "downloading": "可以继续查看页面；更新器不会占用应用接入锁。",
+      "preparing_restart": "正在等待本机任务安全结束。",
+      "channel_unavailable": "更新源暂时不可用，不影响其他功能，稍后可重试。",
+      "native_unavailable": "本机更新服务暂时没有响应，不影响其他功能。",
+      "response_timeout": "检查时间过长，已经停止等待；其他功能仍可使用。",
+      "install_failed_restarted": "上次安装未完成，已重新打开原版本，没有损坏现有设置。",
+      "signature_invalid": "更新包未通过安全校验，已停止安装。",
+      "download_failed": "下载没有完成，可以稍后继续重试。",
+      "artifact_invalid": "更新包格式不正确，已停止安装。",
+      "stale_version": "版本信息已经变化，请重新检查后再更新。",
+      "update_not_checked": "请先检查版本，再开始更新。",
+      "shutting_down": "野菜正在退出，本次更新已停止。",
+      "shutdown_failed": "未能安全结束本机任务，已重新打开原版本。",
+      "install_failed": "安装没有完成，已重新打开原版本。",
+      "updater_not_configured": "这个安装包没有配置更新通道。",
+      "platform_unsupported": "当前系统暂不支持自动更新。",
+      "endpoint_invalid": "更新地址未通过安全检查。",
+      "manifest_invalid": "更新清单不完整或不适用于这台电脑。",
+      "check_failed": "暂时无法完成检查，不影响其他功能。",
+      "default": "自动更新与模型接入相互独立，失败不会锁住客户端。"
+    },
+    "availableVersion": "可更新到 v{{version}}",
+    "currentVersion": "当前版本 v{{version}}",
+    "installAndRestart": "更新并重启",
+    "checkAgain": "重新检查",
+    "checking": "正在检查…",
+    "downloading": "正在下载…",
+    "restarting": "正在重启…",
+    "openSettings": "查看更新设置",
+    "safety": "更新包必须通过安全校验；下载完成前不会关闭野菜，也不会改动 Codex、Claude 或其他应用的配置。",
+    "notice": {
+      "available": "野菜 v{{version}} 可以更新",
+      "downloading": "正在安全下载更新",
+      "restarting": "即将完成更新",
+      "failed": "更新没有完成"
+    }
   }
 }

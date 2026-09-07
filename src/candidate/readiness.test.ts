@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { version } from "../../package.json";
 import { createCandidateReadiness } from "./readiness";
 
 describe("client candidate readiness", () => {
@@ -22,7 +23,7 @@ describe("client candidate readiness", () => {
 
   it("marks the v2 account and price surfaces as integration candidates", () => {
     const readiness = createCandidateReadiness();
-    expect(readiness.version).toBe("0.4.6");
+    expect(readiness.version).toBe(version);
     expect(
       readiness.capabilities
         .filter((capability) => capability.status === "integration_candidate")

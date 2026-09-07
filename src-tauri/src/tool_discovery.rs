@@ -1,3 +1,4 @@
+use crate::tool_adapters::common;
 use crate::tool_discovery_core::{
     classify, normalize_version_output, DiscoveryResult, LocationHint, ProbeObservation, ToolSpec,
     TOOL_SPECS,
@@ -149,10 +150,12 @@ pub(crate) fn discover_candidates(executable_name: &str) -> Vec<Candidate> {
         .filter_map(|path| std::fs::canonicalize(path).ok())
         .collect();
     candidates.sort_by_key(|candidate| {
+        let canonical =
+            std::fs::canonicalize(&candidate.path).unwrap_or_else(|_| candidate.path.clone());
         (
             path_priority
                 .iter()
-                .position(|path| path == &candidate.path)
+                .position(|path| path == &canonical)
                 .unwrap_or(usize::MAX),
             candidate.path.clone(),
         )
@@ -172,9 +175,12 @@ fn add_candidates(
         if !is_executable_candidate(&path) {
             continue;
         }
-        let canonical = std::fs::canonicalize(&path).unwrap_or(path);
-        candidates.entry(canonical.clone()).or_insert(Candidate {
-            path: canonical,
+        let canonical = std::fs::canonicalize(&path).unwrap_or_else(|_| path.clone());
+        candidates.entry(canonical).or_insert(Candidate {
+            // Keep the executable wrapper selected by native discovery. npm
+            // symlinks often resolve to JavaScript source that cannot be
+            // launched directly from a restricted desktop PATH.
+            path,
             location_hint,
         });
         if candidates.len() >= MAX_CANDIDATES {
@@ -215,6 +221,7 @@ pub(crate) async fn probe_version(candidate: &Candidate) -> ProbeObservation {
             location_hint: candidate.location_hint,
         };
     };
+    common::apply_cli_runtime_path(&mut command, &candidate.path);
     command
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -347,5 +354,43 @@ pub(crate) const fn platform_name() -> &'static str {
         "linux"
     } else {
         "unknown"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn canonical_deduplication_keeps_the_first_native_wrapper() {
+        use std::os::unix::fs::{symlink, PermissionsExt};
+
+        let root =
+            crate::tool_adapters::common::temporary_working_directory("discovery-wrapper").unwrap();
+        let first = root.join("first");
+        let second = root.join("second");
+        let package = root.join("package");
+        std::fs::create_dir_all(&first).unwrap();
+        std::fs::create_dir_all(&second).unwrap();
+        std::fs::create_dir_all(&package).unwrap();
+        let target = package.join("dsh.js");
+        std::fs::write(&target, b"#!/usr/bin/env node\n").unwrap();
+        std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o700)).unwrap();
+        symlink(&target, first.join("dsh")).unwrap();
+        symlink(&target, second.join("dsh")).unwrap();
+        let mut candidates = HashMap::new();
+        add_candidates(&mut candidates, &first, "dsh", LocationHint::Path);
+        add_candidates(
+            &mut candidates,
+            &second,
+            "dsh",
+            LocationHint::CommonLocation,
+        );
+        assert_eq!(candidates.len(), 1);
+        let retained = candidates.into_values().next().unwrap();
+        assert_eq!(retained.path, first.join("dsh"));
+        assert_eq!(retained.location_hint, LocationHint::Path);
+        std::fs::remove_dir_all(root).unwrap();
     }
 }
