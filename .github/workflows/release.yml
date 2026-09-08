@@ -174,6 +174,16 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: pnpm exec tauri build --config "$env:YESCHOY_WINDOWS_RELEASE_CONFIG" --bundles nsis
+      - name: Smoke test upgrade while old and background copies are running
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Get-ChildItem -Path 'src-tauri/target/release/bundle/nsis' -Filter '*.exe' -File |
+            Select-Object -First 1
+          if ($null -eq $installer) {
+            throw 'No NSIS installer was produced for the running-upgrade smoke test.'
+          }
+          & './scripts/ci/smoke-windows-running-upgrade.ps1' -InstallerPath $installer.FullName
       - name: Collect immutable candidate files
         shell: pwsh
         env:

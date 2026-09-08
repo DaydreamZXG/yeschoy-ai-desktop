@@ -50,11 +50,10 @@ VIAddVersionKey /LANG=2052 "LegalCopyright" "Copyright (c) 野菜API"
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "SimpChinese"
 
-Function .onInit
-  Call YeschoyEnsureStopped
-FunctionEnd
-
 Section "安装野菜API" SEC_MAIN
+  ; This must remain the first runtime instruction: no file, shortcut or
+  ; registry mutation is allowed while an older executable is still mapped.
+  Call YeschoyEnsureStopped
   SetShellVarContext current
   SetRegView 64
   SetOutPath "$INSTDIR"

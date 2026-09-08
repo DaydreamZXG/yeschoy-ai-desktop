@@ -17,7 +17,7 @@ describe("Windows installer localization", () => {
     expect(config.bundle.windows.wix.language).toBe("zh-CN");
   });
 
-  it("lets installers close the exact running assistant without making beginners find a hidden process", () => {
+  it("stops every supported installed executable before an upgrade writes files", () => {
     const hook = readFileSync(
       resolve(process.cwd(), "src-tauri/windows/installer-hooks.nsh"),
       "utf8",
@@ -34,14 +34,30 @@ describe("Windows installer localization", () => {
     const eventName = "Local\\YesChoyDesktopInstallerShutdown_v1";
     expect(hook).toContain(eventName);
     expect(native).toContain(eventName.replace("\\", "\\\\"));
-    expect(hook).toContain("GetWindowThreadProcessId");
-    expect(hook).toContain("OpenProcess");
-    expect(hook).toContain("WaitForSingleObject");
-    expect(hook).toContain('taskkill.exe\" /PID $1 /T /F');
-    expect(hook).not.toMatch(/taskkill\.exe[^\r\n]*\/IM/i);
-    expect(hook).toContain("旧版本在任务管理器中可能显示为“CC Switch”");
-    expect(hook).toContain("只会结束该窗口对应的准确进程及其子进程");
+    expect(hook).toContain('!include "Win\\RestartManager.nsh"');
+    expect(hook).toContain("RestartManager_ShutdownFile");
+    expect(hook).toContain("CreateFileW");
+    expect(hook).toContain("$LOCALAPPDATA\\Programs\\野菜API");
+    expect(hook).toContain("$LOCALAPPDATA\\野菜API");
+    expect(hook).toContain("野菜API.exe");
+    expect(hook).toContain("yeschoy-desktop.exe");
+    expect(hook).toContain("CC Switch.exe");
+    expect(hook).toContain("cc-switch.exe");
+    expect(hook).toContain("hidden windows and multiple copies");
+    expect(hook).toContain("尚未修改任何程序文件");
+    expect(hook).toContain(
+      "!define MUI_CUSTOMFUNCTION_GUIINIT YeschoyInstallerGuiInit",
+    );
+    expect(hook).toContain("Tauri's reinstall page");
+    expect(hook).not.toContain("FindWindow");
+    expect(hook).not.toMatch(/taskkill\.exe/i);
     expect(standalone).toContain('!include "installer-hooks.nsh"');
-    expect(standalone).toContain("Call YeschoyEnsureStopped");
+    const guard = standalone.indexOf("Call YeschoyEnsureStopped");
+    const firstWrite = standalone.indexOf(
+      'File /oname=野菜API.exe "${APP_EXE}"',
+    );
+    expect(guard).toBeGreaterThan(-1);
+    expect(firstWrite).toBeGreaterThan(guard);
+    expect(standalone).not.toContain("Function .onInit");
   });
 });
