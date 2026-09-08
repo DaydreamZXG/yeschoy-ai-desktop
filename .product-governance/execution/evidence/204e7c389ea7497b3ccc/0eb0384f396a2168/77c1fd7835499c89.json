@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU074-AS-failure",
+  "assertion": "Oversized or competing request bodies, invalid credential scope, process output overflow, unsigned promotion and missing platform credentials all fail with bounded explicit outcomes.",
+  "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_failure_paths_are_bounded_and_fail_closed",
+  "acceptanceCommandId": "ru074-failure",
+  "runId": "RU-074/WP-RU074-PUBLIC-RELEASE-REMEDIATION@2026-09-07T15:52:24.881257+00:00",
+  "packageId": "WP-RU074-PUBLIC-RELEASE-REMEDIATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-074",
+  "releaseUnitHash": "sha256:f939aa12700c30f4269257fdaebc89075ccb47d4d4871790a9dc6af1a318488d"
+}

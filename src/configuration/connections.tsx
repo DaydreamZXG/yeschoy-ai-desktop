@@ -47,7 +47,9 @@ export interface RequestObservation {
     | "upstream_error"
     | "invalid_response"
     | "stream_interrupted"
-    | "unknown_model";
+    | "unknown_model"
+    | "payload_too_large"
+    | "local_busy";
   httpStatus: number;
   observedAtEpochMs: number;
 }
@@ -157,6 +159,8 @@ function validObservation(v: unknown): v is RequestObservation {
       "invalid_response",
       "stream_interrupted",
       "unknown_model",
+      "payload_too_large",
+      "local_busy",
     ].includes(String(v.outcome)) &&
     Number.isInteger(v.httpStatus) &&
     Number(v.httpStatus) >= 0 &&

@@ -1905,6 +1905,29 @@
         "The protocol engine is compiled but intentionally dormant: the existing device authorization, account projection, secure session, tool-key, billing-group and seven-application bridge behavior remains unchanged until a later server-backed integration unit.",
         "Native unit tests and governed happy, failure, replay, stale, race and recovery scenarios pass without packaging, publishing, server changes or user-state mutation."
       ]
+    },
+    {
+      "id": "REQ-095",
+      "statement": "Close the audited repository-owned public-release defects across all seven supported application integrations while preserving truthful release gates for external signing, notarization and stable-channel publication.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-091",
+        "E-CODE-094",
+        "E-EXT-064",
+        "E-PROP-043"
+      ],
+      "acceptance": [
+        "Every authenticated local AI gateway accepts the established large-request limit only after authorization and under a shared nonblocking admission guard; oversized or concurrent pressure fails with a bounded closed response rather than multiplying full request buffers.",
+        "Dedicated application credentials are restricted to the exact selected model set and billing group, are reused only when that scope still matches, never cross renderer IPC, and are revoked or explicitly reported during a restore-and-logout flow.",
+        "Activation remains transactional across all seven adapters, reports bounded stage progress, supports cooperative cancellation at safe transaction boundaries, handles already-running desktop clients through the existing consented normal-quit path, and never leaves the workbench indefinitely blocked.",
+        "Child-process output and startup parsing are bounded, Windows launch helpers use qualified system paths, installed application identity is verified beyond a filename where the platform exposes identity, and exit behavior is reachable without Task Manager.",
+        "Installation, discovery and localization copy describe only behavior actually implemented for each target; unsupported one-click installation or incomplete languages are not advertised as complete.",
+        "Yeschoy release and update automation contains no inherited CC Switch bucket, repository or public-origin identity, verifies signed updater artifacts before manifest promotion, and fails closed when platform signing, notarization or publication credentials are absent.",
+        "Focused governed scenarios, frontend tests, TypeScript, production build, native tests, format, lints, dependency audits and source-level release checks pass. No package, upload, deployment, version bump or real user-state mutation occurs in this unit; unavailable external credentials remain explicit blockers."
+      ]
     }
   ]
 }

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU075-AS-recovery",
+  "assertion": "The unchanged final tree proves recovery semantics while retaining signing, notarization and live publication as unpassed gates.",
+  "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_recovery_restores_user_state_and_keeps_release_gates_explicit",
+  "acceptanceCommandId": "ru075-recovery",
+  "runId": "RU-075/WP-RU075-PUBLIC-RELEASE-READONLY-VERIFICATION@2026-09-07T18:08:44.725788+00:00",
+  "packageId": "WP-RU075-PUBLIC-RELEASE-READONLY-VERIFICATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru074/test_acceptance.py::test_recovery_restores_user_state_and_keeps_release_gates_explicit",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:7a1e8d867e35c5b3285fc44cb26c6659b4cf176f009bf64830a377c2d9f58253",
+    "machineReportSha256": "sha256:da18ffadf4bc2b8876db917c3465b4fccfc5dc677ec2b06c971af644d6e94c30",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:06704d0008008af5ea0fdd0ebcbf13f84426b9b87a41e586c1ba497a8dbdad66",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:7095328f52113f83f0ea14785b29556393e6e5928e83ac67f3a47886619b5031",
+  "releaseUnitId": "RU-075",
+  "releaseUnitHash": "sha256:fee2153931e02156c1fd843859172d3578840ed20ff6610b2987d92a86acd6f3"
+}

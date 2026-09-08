@@ -17,6 +17,7 @@ import {
   updateBusy,
   type UpdateProjection,
 } from "./contract";
+import { canStartInstall, shouldCheckAfterReturning } from "./scheduling";
 
 const BACKGROUND_CHECK_DELAY_MS = 1_500;
 const CHECK_REPLY_DEADLINE_MS = 15_000;
@@ -50,6 +51,7 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
   const phase = useRef(projection.phase);
   const mounted = useRef(true);
   const deadline = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastCheckStartedAt = useRef(0);
 
   const clearDeadline = useCallback(() => {
     if (deadline.current) clearTimeout(deadline.current);
@@ -64,6 +66,7 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
     (next: UpdateProjection, source: "check" | "install" | "event") => {
       if (!mounted.current || next.requestId !== activeRequest.current) return;
       if (next.phase !== "checking") clearDeadline();
+      phase.current = next.phase;
       setProjection(next);
       if (next.phase === "available") setAttention(true);
       if (next.phase === "current" || next.phase === "unavailable") {
@@ -76,6 +79,10 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
 
   const check = useCallback(() => {
     if (updateBusy(phase.current)) return;
+    // Ref updates are synchronous, unlike React state. This closes the small
+    // double-click/focus-event window that could otherwise start two checks.
+    phase.current = "checking";
+    lastCheckStartedAt.current = Date.now();
     const requestId = nextRequestId("check");
     activeRequest.current = requestId;
     clearDeadline();
@@ -90,6 +97,7 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
     deadline.current = setTimeout(() => {
       if (!mounted.current || activeRequest.current !== requestId) return;
       activeRequest.current = "";
+      phase.current = "unavailable";
       setAttention(false);
       setProjection((current) => ({
         ...current,
@@ -103,6 +111,7 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
       .catch(() => {
         if (!mounted.current || activeRequest.current !== requestId) return;
         clearDeadline();
+        phase.current = "unavailable";
         setAttention(false);
         setProjection((current) => ({
           ...current,
@@ -113,12 +122,27 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
       });
   }, [apply, clearDeadline]);
 
-  const install = useCallback(() => {
-    if (projection.phase !== "available" || !projection.availableVersion)
+  const checkAfterReturning = useCallback(() => {
+    if (
+      !shouldCheckAfterReturning(
+        document.visibilityState,
+        Date.now(),
+        lastCheckStartedAt.current,
+      )
+    )
       return;
+    check();
+  }, [check]);
+
+  const install = useCallback(() => {
+    // `projection` changes on React's schedule. The ref is the synchronous
+    // admission authority, so two clicks in the same render cannot launch two
+    // native installers for the same release.
+    if (!canStartInstall(phase.current, projection.availableVersion)) return;
     const requestId = nextRequestId("install");
     const expectedVersion = projection.availableVersion;
     activeRequest.current = requestId;
+    phase.current = "downloading";
     clearDeadline();
     setAttention(true);
     setProjection((current) => ({
@@ -133,6 +157,7 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
       .then((next) => apply(next, "install"))
       .catch(() => {
         if (!mounted.current || activeRequest.current !== requestId) return;
+        phase.current = "failed";
         setProjection((current) => ({
           ...current,
           requestId,
@@ -140,7 +165,7 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
           reasonCode: "native_unavailable",
         }));
       });
-  }, [apply, clearDeadline, projection.availableVersion, projection.phase]);
+  }, [apply, clearDeadline, projection.availableVersion]);
 
   useEffect(() => {
     mounted.current = true;
@@ -155,13 +180,17 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => undefined);
     const timer = setTimeout(check, BACKGROUND_CHECK_DELAY_MS);
+    window.addEventListener("focus", checkAfterReturning);
+    document.addEventListener("visibilitychange", checkAfterReturning);
     return () => {
       mounted.current = false;
       clearTimeout(timer);
       clearDeadline();
       unlisten?.();
+      window.removeEventListener("focus", checkAfterReturning);
+      document.removeEventListener("visibilitychange", checkAfterReturning);
     };
-  }, [apply, check, clearDeadline]);
+  }, [apply, check, checkAfterReturning, clearDeadline]);
 
   const value = useMemo<UpdateContextValue>(
     () => ({

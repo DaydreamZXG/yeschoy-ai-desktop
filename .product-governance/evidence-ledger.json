@@ -3339,6 +3339,70 @@
         "E-CODE-093",
         "E-EXT-063"
       ]
+    },
+    {
+      "id": "E-USER-091",
+      "claim": "The product owner authorizes repairing the complete set of repository and UX audit findings before another package is produced, with the expectation that novice users receive truthful, recoverable and safe behavior across every supported integration.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-07:complete-audit-remediation",
+      "observedAt": "2026-09-07T15:44:35Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-094",
+      "claim": "The public-release audit found that the current uncommitted loopback body-limit repair is not in a distributable artifact; tool tokens are created with all-model authority; large loopback requests can be buffered concurrently; activation has weak progress and cancellation feedback; logout does not restore integrations or revoke dedicated keys; DSH drains unbounded lines; Windows discovery and launcher identity checks are incomplete; update publication still contains inherited CC Switch assumptions; third-party installation coverage and localization claims exceed verified behavior; and current Windows and macOS artifacts are not independently proven signed and notarized.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/loopback_http.rs;src-tauri/src/tool_activation.rs;src-tauri/src/account_v2.rs;src-tauri/src/tool_adapters/dsh_web.rs;src-tauri/src/desktop_app_discovery.rs;.github/workflows/release.yml;.github/workflows/sync-r2.yml;src/installation;src/settings;SECURITY.md;release-assets",
+      "observedAt": "2026-09-07T15:44:35Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-091"
+      ]
+    },
+    {
+      "id": "E-EXT-064",
+      "claim": "A release-readiness probe on 2026-09-07 found the Yeschoy download-origin health endpoint available but reporting updatesPublished=false, the stable update manifest absent with HTTP 204, and previously built macOS and Windows artifacts lacking independently verified notarization or Authenticode evidence.",
+      "class": "external_verified",
+      "locator": "https://ergou.qzz.io/health.json;https://ergou.qzz.io/updates/stable.json;release-assets:inspected-2026-09-07",
+      "observedAt": "2026-09-07T15:44:35Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-043",
+      "claim": "Create one bounded public-release remediation unit that closes repository-owned security, resource-control, recovery, installer, update-publication, platform-exit and UX truth gaps without packaging or remote mutation. Make release automation fail closed when signing, notarization or publication credentials are absent, and retain those external credentials plus live promotion as explicit release gates rather than claiming completion.",
+      "class": "proposed",
+      "locator": "inline:ru074-public-release-remediation",
+      "observedAt": "2026-09-07T15:44:35Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-091",
+        "E-CODE-094",
+        "E-EXT-064"
+      ]
+    },
+    {
+      "id": "E-CODE-095",
+      "claim": "The first RU-074 verifier run correctly failed before executing scenarios because three download-origin files were outside its frozen ownership. Those three files were restored byte-for-byte to the baseline, the same fail-closed public artifact reachability check was relocated under the authorized deploy/self-update publication boundary, and the six RU-074 scenarios plus the six directly inherited self-update scenarios pass in direct pytest execution. The failed report remains immutable and a source-readonly successor is required for final governed proof.",
+      "class": "code_observed",
+      "locator": ".product-governance/execution/reports/0eb0384f396a2168.204e7c389ea7497b3ccc.json;deploy/self-update/probe_public_release.py;tests/work_packages/ru074/test_acceptance.py",
+      "observedAt": "2026-09-07T18:07:08Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-091",
+        "E-CODE-094"
+      ]
     }
   ]
 }

@@ -14,11 +14,12 @@ describe("client candidate readiness", () => {
     expect(readiness.supportedToolCount).toBe(7);
   });
 
-  it("keeps backup history, telemetry, and automatic updates disabled", () => {
+  it("keeps local backup history and telemetry closed while exposing signed updates", () => {
     const readiness = createCandidateReadiness();
     expect(readiness.retainedBackupHistory).toBe(false);
     expect(readiness.telemetryUploadEnabled).toBe(false);
-    expect(readiness.automaticUpdateEnabled).toBe(false);
+    expect(readiness.automaticUpdateEnabled).toBe(true);
+    expect(readiness.productionReady).toBe(false);
   });
 
   it("marks the v2 account and price surfaces as integration candidates", () => {
@@ -28,7 +29,7 @@ describe("client candidate readiness", () => {
       readiness.capabilities
         .filter((capability) => capability.status === "integration_candidate")
         .map((capability) => capability.id),
-    ).toEqual(["account_and_billing", "model_and_pricing"]);
+    ).toEqual(["account_and_billing", "model_and_pricing", "automatic_update"]);
     expect(
       readiness.capabilities.find(
         (capability) => capability.id === "secure_tool_credentials",

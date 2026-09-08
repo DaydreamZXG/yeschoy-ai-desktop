@@ -9,12 +9,22 @@ import { UpdateSettingsCard } from "../update/UpdateSettingsCard";
 
 type Language = "zh" | "zh-TW" | "en" | "ja";
 
-const LANGUAGES: Array<{ id: Language; label: string }> = [
-  { id: "zh", label: "简体中文" },
-  { id: "zh-TW", label: "繁體中文" },
-  { id: "en", label: "English" },
-  { id: "ja", label: "日本語" },
+const LANGUAGES: Array<{
+  id: Language;
+  label: string;
+  coverage: string;
+}> = [
+  { id: "zh", label: "简体中文", coverage: "完整" },
+  { id: "zh-TW", label: "繁體中文", coverage: "部分翻譯" },
+  { id: "en", label: "English", coverage: "Partial" },
+  { id: "ja", label: "日本語", coverage: "一部翻訳" },
 ];
+
+const PARTIAL_LANGUAGE_NOTICE: Record<Exclude<Language, "zh">, string> = {
+  "zh-TW": "部分接入及安裝步驟目前仍會顯示簡體中文。",
+  en: "Some setup and installation steps are still shown in Simplified Chinese.",
+  ja: "一部の接続・インストール手順は簡体字中国語で表示されます。",
+};
 
 interface SettingsViewProps {
   onOpenAccount: () => void;
@@ -86,11 +96,17 @@ export function SettingsView({
                 aria-pressed={activeLanguage === language.id}
                 onClick={() => changeLanguage(language.id)}
               >
-                {language.label}
+                <span>{language.label}</span>
+                <small>{language.coverage}</small>
               </button>
             ))}
           </div>
           <p>{t("yeschoySettings.languageNote")}</p>
+          {activeLanguage !== "zh" && (
+            <p className="account-inline-warning" role="status">
+              {PARTIAL_LANGUAGE_NOTICE[activeLanguage]}
+            </p>
+          )}
         </div>
       </section>
 

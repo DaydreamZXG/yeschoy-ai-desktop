@@ -2992,6 +2992,81 @@
           "tool-config"
         ]
       }
+    },
+    {
+      "id": "DEC-118",
+      "question": "How should the audited public-release defects be repaired without repeating local fixes, hiding external release blockers or coupling all integrations to one application-specific path?",
+      "choice": "Implement a single dependency-closed remediation unit across the shared native bridge, account, activation, discovery, installation, update and workbench boundaries. Authenticate before buffering, apply one shared admission guard to large local requests, create model-scoped dedicated keys, expose bounded activation progress and cooperative cancellation, make logout recovery explicit, bound child-process output, validate Windows identities and use qualified launchers, and make installer and language claims match verified coverage. Remove inherited CC Switch publication assumptions, verify updater signatures before promotion, and make signing, notarization and live stable-channel publication fail-closed release gates. Do not package, upload, deploy, bump a version or claim public readiness in this unit.",
+      "status": "accepted",
+      "decidedBy": "product owner authorization constrained by the verified release audit and architecture authority",
+      "decidedAt": "2026-09-07T15:44:35Z",
+      "evidenceRefs": [
+        "E-USER-091",
+        "E-CODE-094",
+        "E-EXT-064",
+        "E-PROP-043"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-002",
+          "REQ-015",
+          "REQ-031",
+          "REQ-062",
+          "REQ-079",
+          "REQ-092",
+          "REQ-095"
+        ],
+        "pageRefs": [
+          "PAGE-ACCOUNT",
+          "PAGE-CONFIGURE-PREVIEW",
+          "PAGE-SETTINGS",
+          "PAGE-TOOLS"
+        ],
+        "domainRefs": [
+          "account",
+          "desktop-platform",
+          "diagnostics",
+          "security-update",
+          "tool-config"
+        ]
+      }
+    },
+    {
+      "id": "DEC-119",
+      "question": "How should the repaired public-release tree be governed after RU-074 was correctly rejected for touching three paths outside its frozen ownership?",
+      "choice": "Preserve the failed RU-074 run and report. Restore every out-of-scope download-origin file to its baseline and keep the equivalent public manifest and artifact reachability probe inside the already authorized deploy/self-update publication boundary. Create RU-075 as a source-readonly verification successor with no work-package dependency on the failed implementation run; execute the same six exact semantic scenarios against the final current tree under mandatory source isolation. Do not change product behavior, tests, packages, servers, DNS, credentials, signing state or release claims after dispatch. Packaging, native signatures, notarization, live promotion and clean-system smoke tests remain external unpassed gates.",
+      "status": "accepted",
+      "decidedBy": "primary architecture within the product owner's explicit complete-remediation authorization",
+      "decidedAt": "2026-09-07T18:07:08Z",
+      "evidenceRefs": [
+        "E-USER-091",
+        "E-CODE-094",
+        "E-CODE-095"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-002",
+          "REQ-015",
+          "REQ-031",
+          "REQ-062",
+          "REQ-079",
+          "REQ-092",
+          "REQ-095"
+        ],
+        "pageRefs": [
+          "PAGE-ACCOUNT",
+          "PAGE-CONFIGURE-PREVIEW",
+          "PAGE-SETTINGS",
+          "PAGE-TOOLS"
+        ],
+        "domainRefs": [
+          "account",
+          "desktop-platform",
+          "diagnostics",
+          "security-update",
+          "tool-config"
+        ]
+      }
     }
   ]
 }

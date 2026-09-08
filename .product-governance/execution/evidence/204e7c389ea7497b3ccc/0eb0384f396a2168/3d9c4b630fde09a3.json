@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU074-AS-stale",
+  "assertion": "Legacy broad credentials, inherited workflow identity, stale installation claims and incomplete localization are rejected, replaced or labelled without silently retaining false readiness.",
+  "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_stale_legacy_and_inherited_state_is_rejected_or_migrated_truthfully",
+  "acceptanceCommandId": "ru074-stale",
+  "runId": "RU-074/WP-RU074-PUBLIC-RELEASE-REMEDIATION@2026-09-07T15:52:24.881257+00:00",
+  "packageId": "WP-RU074-PUBLIC-RELEASE-REMEDIATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-074",
+  "releaseUnitHash": "sha256:f939aa12700c30f4269257fdaebc89075ccb47d4d4871790a9dc6af1a318488d"
+}

@@ -504,7 +504,10 @@ fn windows_version_string(
 
 #[cfg(target_os = "windows")]
 fn windows_standalone_identity_matches(app_id: &str, path: &Path) -> bool {
-    if is_windows_packaged_path(path) || !windows_gui_executable(path) {
+    if is_windows_packaged_path(path)
+        || !windows_gui_executable(path)
+        || !windows_authenticode_is_trusted(path)
+    {
         return false;
     }
     let Some(buffer) = windows_version_resource(path) else {
@@ -525,6 +528,42 @@ fn windows_standalone_identity_matches(app_id: &str, path: &Path) -> bool {
             app_id, path, &product, &company, true,
         )
     })
+}
+
+#[cfg(target_os = "windows")]
+fn windows_authenticode_is_trusted(path: &Path) -> bool {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Security::WinTrust::{
+        WinVerifyTrustEx, WINTRUST_ACTION_GENERIC_VERIFY_V2, WINTRUST_DATA, WINTRUST_DATA_0,
+        WINTRUST_FILE_INFO, WTD_CACHE_ONLY_URL_RETRIEVAL, WTD_CHOICE_FILE, WTD_DISABLE_MD2_MD4,
+        WTD_REVOKE_NONE, WTD_STATEACTION_IGNORE, WTD_UICONTEXT_EXECUTE, WTD_UI_NONE,
+    };
+
+    let wide = path
+        .as_os_str()
+        .encode_wide()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    let mut file = WINTRUST_FILE_INFO {
+        cbStruct: std::mem::size_of::<WINTRUST_FILE_INFO>() as u32,
+        pcwszFilePath: wide.as_ptr(),
+        ..Default::default()
+    };
+    let mut trust = WINTRUST_DATA {
+        cbStruct: std::mem::size_of::<WINTRUST_DATA>() as u32,
+        dwUIChoice: WTD_UI_NONE,
+        fdwRevocationChecks: WTD_REVOKE_NONE,
+        dwUnionChoice: WTD_CHOICE_FILE,
+        Anonymous: WINTRUST_DATA_0 { pFile: &mut file },
+        dwStateAction: WTD_STATEACTION_IGNORE,
+        // Keep discovery bounded and offline. Windows' cached trust chain plus
+        // the embedded signature still rejects unsigned or untrusted EXEs.
+        dwProvFlags: WTD_CACHE_ONLY_URL_RETRIEVAL | WTD_DISABLE_MD2_MD4,
+        dwUIContext: WTD_UICONTEXT_EXECUTE,
+        ..Default::default()
+    };
+    let mut action = WINTRUST_ACTION_GENERIC_VERIFY_V2;
+    (unsafe { WinVerifyTrustEx(std::ptr::null_mut(), &mut action, &mut trust) }) == 0
 }
 
 #[cfg(any(target_os = "windows", test))]

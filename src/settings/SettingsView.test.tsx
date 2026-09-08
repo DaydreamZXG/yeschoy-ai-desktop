@@ -1,5 +1,6 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import zh from "../i18n/locales/zh.json";
 import { SettingsView } from "./SettingsView";
 
 vi.mock("./QuitAssistant", () => ({
@@ -13,5 +14,8 @@ describe("SettingsView", () => {
     );
 
     expect(container.querySelector(".settings-boundary")).toBeNull();
+    expect(container).toHaveTextContent("yeschoySettings.candidateStage");
+    expect(zh.yeschoySettings.candidateStage).toBe("桌面版");
+    expect(zh.yeschoySettings.candidateStage).not.toContain("测试");
   });
 });

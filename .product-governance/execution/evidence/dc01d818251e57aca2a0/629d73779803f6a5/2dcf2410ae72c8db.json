@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU075-AS-replay",
+  "assertion": "The unchanged final tree proves exact-scope credential reuse and prevents implicit or downgraded stable publication.",
+  "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_replay_reuses_only_exact_scope_and_never_republishes_implicitly",
+  "acceptanceCommandId": "ru075-replay",
+  "runId": "RU-075/WP-RU075-PUBLIC-RELEASE-READONLY-VERIFICATION@2026-09-07T18:08:44.725788+00:00",
+  "packageId": "WP-RU075-PUBLIC-RELEASE-READONLY-VERIFICATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru074/test_acceptance.py::test_replay_reuses_only_exact_scope_and_never_republishes_implicitly",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:0b410eed4806480f887fe587ac015a25e23d542c1cbd49ef33e7dbc1da0a618c",
+    "machineReportSha256": "sha256:2c745848d4eaa4cbbb6a6beb0c7e10a6bbd274df456e6a49a18110390c10f9f9",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:d00eda84cf8ec302a02594097a2ba77c8d1ae8335037c7eff2024d16c49f9ca8",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:9998e0970f172e26a201ceb6d047c870c5b5649a756eaad9347c8e66ef752f4c",
+  "releaseUnitId": "RU-075",
+  "releaseUnitHash": "sha256:fee2153931e02156c1fd843859172d3578840ed20ff6610b2987d92a86acd6f3"
+}

@@ -3,11 +3,13 @@ import {
   AlertCircle,
   ArrowRight,
   CheckCircle2,
+  CircleStop,
   Info,
   LoaderCircle,
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
+import { listen } from "@tauri-apps/api/event";
 import { useTranslation } from "react-i18next";
 import {
   BillingGroupPicker,
@@ -35,11 +37,15 @@ import { AppGlyph } from "../workbench/AppGlyph";
 import { useWorkbenchCopy } from "../workbench/copy";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import {
+  ACTIVATION_PROGRESS_EVENT,
   activateDesktopTool,
+  cancelDesktopToolActivation,
+  decodeActivationProgress,
   sameModelBindings,
   scanActivationTargets,
   type ActivationTarget,
   type ActivationTargetScan,
+  type ActivationProgress,
   type ActivationToolId,
   type ToolActivationProjection,
   type ModelBinding,
@@ -394,6 +400,11 @@ export function ConfigurationPreviewView({
   const [activation, setActivation] = useState<ToolActivationProjection | null>(
     null,
   );
+  const activeActivationRequest = useRef("");
+  const [activationProgress, setActivationProgress] =
+    useState<ActivationProgress | null>(null);
+  const [activationCancelRequested, setActivationCancelRequested] =
+    useState(false);
   const [restartPromptContext, setRestartPromptContext] = useState<
     string | null
   >(null);
@@ -418,6 +429,30 @@ export function ConfigurationPreviewView({
   } | null>(null);
   const [installationChanged, setInstallationChanged] = useState(false);
   const [installationAttempt, setInstallationAttempt] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+    let unlisten: (() => void) | undefined;
+    void listen<unknown>(ACTIVATION_PROGRESS_EVENT, ({ payload }) => {
+      const progress = decodeActivationProgress(payload);
+      if (
+        mounted &&
+        progress &&
+        progress.requestId === activeActivationRequest.current
+      ) {
+        setActivationProgress(progress);
+      }
+    })
+      .then((stop) => {
+        if (mounted) unlisten = stop;
+        else stop();
+      })
+      .catch(() => undefined);
+    return () => {
+      mounted = false;
+      unlisten?.();
+    };
+  }, []);
 
   const anotherInstallationActive =
     !!installer?.progress &&
@@ -643,6 +678,9 @@ export function ConfigurationPreviewView({
   const resetResult = () => {
     setApplyPhase("idle");
     setActivation(null);
+    setActivationProgress(null);
+    setActivationCancelRequested(false);
+    activeActivationRequest.current = "";
     setRestartPromptContext(null);
   };
 
@@ -735,6 +773,8 @@ export function ConfigurationPreviewView({
     });
     setApplyPhase("applying");
     setActivation(null);
+    setActivationProgress(null);
+    setActivationCancelRequested(false);
     try {
       const result = await activateDesktopTool({
         lineId,
@@ -745,6 +785,9 @@ export function ConfigurationPreviewView({
         models: submittedModels,
         ...(installationJobId ? { installationJobId } : {}),
         ...(restartRunningApp ? { restartRunningApp: true } : {}),
+        onRequestId: (requestId) => {
+          activeActivationRequest.current = requestId;
+        },
       });
       setActivation(result);
       setRestartPromptContext(
@@ -764,8 +807,21 @@ export function ConfigurationPreviewView({
       });
     } finally {
       applyInFlight.current = false;
+      activeActivationRequest.current = "";
       setApplyPhase("finished");
       void connections?.refresh();
+    }
+  };
+
+  const cancelActivation = async () => {
+    const requestId = activeActivationRequest.current;
+    if (!requestId || activationCancelRequested) return;
+    setActivationCancelRequested(true);
+    try {
+      const status = await cancelDesktopToolActivation(requestId);
+      if (status === "not_found") setActivationCancelRequested(false);
+    } catch {
+      setActivationCancelRequested(false);
     }
   };
 
@@ -892,6 +948,8 @@ export function ConfigurationPreviewView({
           return "安装已完成，但当前选择需要重新确认。请确认账户和模型后再点接入；这次没有改动应用设置。";
         if (activation.reasonCode === "assistant_shutting_down")
           return "正在退出助手，本次接入已停止；已写入的设置会先恢复。";
+        if (activation.reasonCode === "activation_cancelled")
+          return "已取消本次接入；如果设置写入已经开始，助手已先恢复原设置。";
         if (activation.reasonCode === "account_changed")
           return "账户已切换，本次接入已停止。请确认当前账户后重新接入。";
         if (activation.reasonCode === "invalid_response")
@@ -1004,6 +1062,32 @@ export function ConfigurationPreviewView({
         : activationToolId === "dsh_web"
           ? ux.verifyingDsh
           : ux.verifying;
+  const activationProgressText = (() => {
+    switch (activationProgress?.stage) {
+      case "queued":
+        return "正在等待安全配置锁…";
+      case "checking_application":
+        return "正在检查应用状态和原设置…";
+      case "authenticating":
+        return "正在确认账户和线路…";
+      case "checking_models":
+        return "正在核对模型与计费分组…";
+      case "securing_access":
+        return "正在创建仅限所选模型的应用密钥…";
+      case "preparing_settings":
+        return "正在准备可恢复的配置…";
+      case "applying_settings":
+        return "正在安全写入并复核设置…";
+      case "restoring_settings":
+        return "操作未完成，正在恢复原设置…";
+      case "opening_application":
+        return "配置已完成，正在打开应用…";
+      case "complete":
+        return "接入完成。";
+      default:
+        return verifyingText;
+    }
+  })();
   const canApply =
     signedIn &&
     !!defaultBinding &&
@@ -1827,10 +1911,25 @@ export function ConfigurationPreviewView({
             <LoaderCircle className="is-spinning" aria-hidden="true" />
             <p>
               <strong>{c.settingUp}</strong>
-              <span>{verifyingText}</span>
+              <span>{activationProgressText}</span>
+              {activationProgress && (
+                <span>
+                  第 {activationProgress.completedSteps} /{" "}
+                  {activationProgress.totalSteps} 步
+                </span>
+              )}
               <span>
                 进度会显示在这里；页面其他区域仍可使用，请不要重复点击接入按钮。
               </span>
+              <button
+                type="button"
+                className="subtle-button"
+                onClick={() => void cancelActivation()}
+                disabled={activationCancelRequested}
+              >
+                <CircleStop aria-hidden="true" />
+                {activationCancelRequested ? "正在安全取消…" : "取消本次接入"}
+              </button>
             </p>
           </div>
         )}

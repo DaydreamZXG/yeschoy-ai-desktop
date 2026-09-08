@@ -25,6 +25,18 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
+      - name: Validate every GitHub Actions workflow
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/actionlint.tar.gz"
+          curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+            --output "$archive" \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          printf '%s  %s\n' \
+            '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8' \
+            "$archive" | sha256sum --check --strict
+          tar --extract --gzip --file "$archive" --directory "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -color .github/workflows/*.yml
       - name: Set up Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
@@ -33,6 +45,7 @@ jobs:
         uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c
         with:
           toolchain: "1.95"
+          components: clippy,rustfmt
       - name: Enable locked pnpm
         run: |
           set -euo pipefail
@@ -57,13 +70,26 @@ jobs:
           NODE
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
+      - name: Reject high-severity production dependency advisories
+        run: pnpm audit --prod --audit-level high
+      - name: Reject RustSec dependency vulnerabilities
+        run: |
+          set -euo pipefail
+          audit_root="$RUNNER_TEMP/cargo-audit"
+          advisory_db="$RUNNER_TEMP/rustsec-advisory-db"
+          cargo install cargo-audit --version 0.22.2 --locked --root "$audit_root"
+          git clone --depth 1 https://github.com/RustSec/advisory-db.git "$advisory_db"
+          "$audit_root/bin/cargo-audit" audit --no-fetch --db "$advisory_db" --file src-tauri/Cargo.lock
       - name: Verify renderer
         run: |
           pnpm typecheck
           pnpm test:unit
           pnpm build:renderer
       - name: Verify native core
-        run: cargo test --locked --manifest-path src-tauri/Cargo.toml
+        run: |
+          cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+          cargo clippy --locked --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+          cargo test --locked --manifest-path src-tauri/Cargo.toml
 
   windows-x64:
     name: Windows x64 updater payload
@@ -96,15 +122,58 @@ jobs:
         env:
           UPDATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           UPDATE_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          WINDOWS_TIMESTAMP_URL: ${{ secrets.WINDOWS_TIMESTAMP_URL }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:UPDATE_KEY) -or [string]::IsNullOrWhiteSpace($env:UPDATE_PASSWORD)) {
-            throw 'Tauri updater signing secrets are not configured.'
+          $required = @('UPDATE_KEY', 'UPDATE_PASSWORD', 'WINDOWS_CERTIFICATE', 'WINDOWS_CERTIFICATE_PASSWORD', 'WINDOWS_TIMESTAMP_URL')
+          foreach ($name in $required) {
+            if ([string]::IsNullOrWhiteSpace((Get-Item "env:$name").Value)) {
+              throw "Required release credential $name is not configured."
+            }
           }
+      - name: Import Windows publisher certificate and create release config
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          WINDOWS_TIMESTAMP_URL: ${{ secrets.WINDOWS_TIMESTAMP_URL }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $pfx = Join-Path $env:RUNNER_TEMP 'yeschoy-release.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
+          $password = ConvertTo-SecureString $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          $certificate = Import-PfxCertificate -FilePath $pfx -CertStoreLocation Cert:\CurrentUser\My -Password $password
+          if ($null -eq $certificate -or -not $certificate.HasPrivateKey -or $certificate.NotAfter -le (Get-Date)) {
+            throw 'Windows publisher certificate is missing a private key or is expired.'
+          }
+          $configPath = Join-Path (Resolve-Path 'src-tauri').Path 'tauri.windows-release.runtime.json'
+          $config = @{
+            '$schema' = 'https://schema.tauri.app/config/2'
+            bundle = @{
+              active = $true
+              createUpdaterArtifacts = $true
+              windows = @{
+                certificateThumbprint = $certificate.Thumbprint
+                digestAlgorithm = 'sha256'
+                timestampUrl = $env:WINDOWS_TIMESTAMP_URL
+                nsis = @{
+                  languages = @('SimpChinese')
+                  displayLanguageSelector = $false
+                  installerHooks = 'windows/installer-hooks.nsh'
+                }
+                wix = @{ language = 'zh-CN' }
+              }
+            }
+          }
+          [IO.File]::WriteAllText($configPath, ($config | ConvertTo-Json -Depth 8), [Text.UTF8Encoding]::new($false))
+          "YESCHOY_WINDOWS_RELEASE_CONFIG=$configPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "YESCHOY_WINDOWS_CERTIFICATE_THUMBPRINT=$($certificate.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Build installer and signed updater archive
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: pnpm exec tauri build --config src-tauri/tauri.candidate.conf.json --bundles nsis
+        run: pnpm exec tauri build --config "$env:YESCHOY_WINDOWS_RELEASE_CONFIG" --bundles nsis
       - name: Collect immutable candidate files
         shell: pwsh
         env:
@@ -117,15 +186,20 @@ jobs:
           if ($null -eq $installer -or $null -eq $updater -or -not (Test-Path "$($updater.FullName).sig")) {
             throw 'Complete Windows installer/updater/signature set was not produced.'
           }
+          $authenticode = Get-AuthenticodeSignature $installer.FullName
+          if ($authenticode.Status -ne 'Valid' -or $null -eq $authenticode.SignerCertificate -or $authenticode.SignerCertificate.Thumbprint -ne $env:YESCHOY_WINDOWS_CERTIFICATE_THUMBPRINT) {
+            throw "Windows installer Authenticode verification failed: $($authenticode.Status)"
+          }
           New-Item -ItemType Directory -Force release-assets | Out-Null
           Copy-Item $installer.FullName "release-assets/yeschoy-$env:RELEASE_VERSION-windows-x86_64-installer.exe"
           Copy-Item $updater.FullName "release-assets/yeschoy-$env:RELEASE_VERSION-windows-x86_64.nsis.zip"
           Copy-Item "$($updater.FullName).sig" "release-assets/yeschoy-$env:RELEASE_VERSION-windows-x86_64.nsis.zip.sig"
-          Get-ChildItem release-assets -File | ForEach-Object {
+          $hashes = Get-ChildItem release-assets -File | ForEach-Object {
             "$((Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLowerInvariant())  $($_.Name)"
-          } | Set-Content release-assets/SHA256SUMS-windows.txt -Encoding utf8
+          }
+          [IO.File]::WriteAllLines('release-assets/SHA256SUMS-windows.txt', $hashes, [Text.UTF8Encoding]::new($false))
       - name: Upload private Windows candidate
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: yeschoy-${{ inputs.version }}-windows-x86_64-update-candidate
           path: release-assets/*
@@ -193,22 +267,39 @@ jobs:
           test -n "$APPLE_ID"
           test -n "$APPLE_PASSWORD"
           test -n "$APPLE_TEAM_ID"
-          pnpm exec tauri build --config src-tauri/tauri.candidate.conf.json --target universal-apple-darwin --bundles app
+          pnpm exec tauri build --config src-tauri/tauri.candidate.conf.json --target universal-apple-darwin --bundles app,dmg
       - name: Collect immutable candidate files
         env:
           RELEASE_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
           root='src-tauri/target/universal-apple-darwin/release/bundle/macos'
+          dmg_root='src-tauri/target/universal-apple-darwin/release/bundle/dmg'
+          app="$(find "$root" -maxdepth 1 -type d -name '*.app' -print -quit)"
           updater="$(find "$root" -maxdepth 1 -type f -name '*.app.tar.gz' -print -quit)"
+          installer="$(find "$dmg_root" -maxdepth 1 -type f -name '*.dmg' -print -quit)"
+          test -n "$app"
           test -n "$updater"
+          test -n "$installer"
           test -f "$updater.sig"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          spctl --assess --type execute --verbose=2 "$app"
+          xcrun stapler validate "$app"
+          xcrun stapler validate "$installer"
           mkdir -p release-assets
+          cp "$installer" "release-assets/yeschoy-$RELEASE_VERSION-macos-universal-installer.dmg"
           cp "$updater" "release-assets/yeschoy-$RELEASE_VERSION-macos-universal.app.tar.gz"
           cp "$updater.sig" "release-assets/yeschoy-$RELEASE_VERSION-macos-universal.app.tar.gz.sig"
-          shasum -a 256 release-assets/* > release-assets/SHA256SUMS-macos.txt
+          (
+            cd release-assets
+            shasum -a 256 \
+              "yeschoy-$RELEASE_VERSION-macos-universal-installer.dmg" \
+              "yeschoy-$RELEASE_VERSION-macos-universal.app.tar.gz" \
+              "yeschoy-$RELEASE_VERSION-macos-universal.app.tar.gz.sig" \
+              > SHA256SUMS-macos.txt
+          )
       - name: Upload private macOS candidate
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: yeschoy-${{ inputs.version }}-macos-universal-update-candidate
           path: release-assets/*

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU075-AS-failure",
+  "assertion": "The unchanged final tree proves bounded local requests, exact credentials, bounded processes and fail-closed publication failures.",
+  "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_failure_paths_are_bounded_and_fail_closed",
+  "acceptanceCommandId": "ru075-failure",
+  "runId": "RU-075/WP-RU075-PUBLIC-RELEASE-READONLY-VERIFICATION@2026-09-07T18:08:44.725788+00:00",
+  "packageId": "WP-RU075-PUBLIC-RELEASE-READONLY-VERIFICATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru074/test_acceptance.py::test_failure_paths_are_bounded_and_fail_closed",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:6994f3c47ee8d5b7b586f8145f486dd8d9b0551beeb1163d76d2a2cd3f520cfd",
+    "machineReportSha256": "sha256:ce2efb6e08dadca719cde0e8262511a90f8d39d00a378ea1c9efc4bf24ecd07e",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:0bf4d62e5fd26bb1c1d4f2e50488bd6c8b00dc6f86e15c31431c91c9aba63a77",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:233cb3b70574bf279db3520cb36ab4e8fb213f3f1bfd69231dc2ef108f8a2be5",
+  "releaseUnitId": "RU-075",
+  "releaseUnitHash": "sha256:fee2153931e02156c1fd843859172d3578840ed20ff6610b2987d92a86acd6f3"
+}

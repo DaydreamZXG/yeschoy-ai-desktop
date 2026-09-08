@@ -134,6 +134,22 @@ describe("clear account currency and savings UX", () => {
     expect(within(details).getByText(/不是累计或本月节省/)).toBeInTheDocument();
     expect(within(details).getByText(/不是官网实际账单/)).toBeInTheDocument();
   });
+  it("explains that account logout does not silently rewrite connected apps", () => {
+    const session = controller();
+    render(
+      <AccountView
+        lineId="mainland_optimized"
+        onLineChange={vi.fn()}
+        session={session}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "退出登录" }));
+    expect(screen.getByText("仅退出野菜API账户？")).toBeInTheDocument();
+    expect(screen.getByText(/不会改动 Codex、Claude/)).toBeInTheDocument();
+    expect(session.logout).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "仅退出账户" }));
+    expect(session.logout).toHaveBeenCalledTimes(1);
+  });
   it("shows a higher-than-reference result truthfully instead of claiming savings", () => {
     render(
       <SavingsCard

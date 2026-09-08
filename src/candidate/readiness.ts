@@ -28,11 +28,11 @@ export interface CandidateCapability {
 export interface CandidateReadiness {
   schemaVersion: 1;
   version: typeof CANDIDATE_VERSION;
-  releaseStage: "client_candidate";
+  releaseStage: "release_candidate";
   productionReady: false;
   retainedBackupHistory: false;
   telemetryUploadEnabled: false;
-  automaticUpdateEnabled: false;
+  automaticUpdateEnabled: true;
   supportedToolCount: 7;
   supportedLineCount: 2;
   capabilities: CandidateCapability[];
@@ -50,18 +50,18 @@ const CAPABILITIES: CandidateCapability[] = [
   },
   { id: "configuration_apply", status: "security_evidence_required" },
   { id: "telemetry_upload", status: "disabled_in_candidate" },
-  { id: "automatic_update", status: "disabled_in_candidate" },
+  { id: "automatic_update", status: "integration_candidate" },
 ];
 
 export function createCandidateReadiness(): CandidateReadiness {
   return {
     schemaVersion: 1,
     version: CANDIDATE_VERSION,
-    releaseStage: "client_candidate",
+    releaseStage: "release_candidate",
     productionReady: false,
     retainedBackupHistory: false,
     telemetryUploadEnabled: false,
-    automaticUpdateEnabled: false,
+    automaticUpdateEnabled: true,
     supportedToolCount: 7,
     supportedLineCount: 2,
     capabilities: CAPABILITIES.map((capability) => ({ ...capability })),

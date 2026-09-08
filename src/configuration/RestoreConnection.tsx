@@ -45,11 +45,14 @@ export function RestoreConnection({
       setMessage(
         error
           ? "恢复没有完成，现有记录已保留。请关闭目标应用后重试；不会强行覆盖你的修改。"
-          : result.status === "restored_with_changes"
-            ? "已恢复可还原的设置，你之后修改的内容已保留。重新打开应用后生效。"
-            : original
-              ? "已恢复接入前的设置。重新打开应用后生效。"
-              : "已撤销野菜接入。旧版本没有保存原值，请在应用中选择你要用的账户或服务商。",
+          : result.reasonCode ===
+              "local_settings_restored_token_cleanup_pending"
+            ? "本机设置已恢复并可立即生效；远端专用密钥暂未清理。请联网并登录同一账户后再恢复一次。"
+            : result.status === "restored_with_changes"
+              ? "已恢复可还原的设置，你之后修改的内容已保留。重新打开应用后生效。"
+              : original
+                ? "已恢复接入前的设置。重新打开应用后生效。"
+                : "已撤销野菜接入。旧版本没有保存原值，请在应用中选择你要用的账户或服务商。",
       );
       if (!error) setOpen(false);
     } catch {

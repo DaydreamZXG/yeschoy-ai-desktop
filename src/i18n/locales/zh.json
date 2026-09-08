@@ -3670,10 +3670,10 @@
   },
   "yeschoySettings": {
     "eyebrow": "偏好设置",
-    "title": "哪些能做，哪些还没开放，一处说清。",
-    "description": "这里不藏高级开关。候选版只允许已经验证的本机能力，服务端、密钥、配置写入和正式发布条件都会保持显式。",
+    "title": "偏好、安全与更新，一处说清。",
+    "description": "在这里管理界面语言、退出方式和应用更新。应用接入与恢复设置仍需在“应用接入”中明确操作。",
     "versionLabel": "当前版本",
-    "candidateStage": "测试版",
+    "candidateStage": "桌面版",
     "languageTitle": "界面语言",
     "languageNote": "语言偏好只保存在这台电脑；不会同步到账号。",
     "securityEyebrow": "你的数据",

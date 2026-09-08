@@ -10,7 +10,7 @@ use serde_json::{json, Value as JsonValue};
 use serde_yaml::{Mapping, Value};
 use sha2::{Digest, Sha256};
 use tokio::{
-    io::{AsyncBufReadExt, BufReader},
+    io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt, BufReader},
     process::{Child, Command},
     sync::Mutex,
     task::JoinHandle,
@@ -23,6 +23,34 @@ use crate::tool_adapters::{
 };
 
 const STARTUP_OUTPUT_LIMIT: usize = 32 * 1024;
+
+async fn read_bounded_line<R: AsyncBufRead + Unpin>(
+    reader: &mut R,
+    maximum: usize,
+) -> std::io::Result<Vec<u8>> {
+    let mut line = Vec::new();
+    loop {
+        let available = reader.fill_buf().await?;
+        if available.is_empty() {
+            return Ok(line);
+        }
+        let take = available
+            .iter()
+            .position(|byte| *byte == b'\n')
+            .map_or(available.len(), |index| index + 1);
+        if line.len().saturating_add(take) > maximum {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "DSH startup line exceeded the bounded output budget",
+            ));
+        }
+        line.extend_from_slice(&available[..take]);
+        reader.consume(take);
+        if line.last() == Some(&b'\n') {
+            return Ok(line);
+        }
+    }
+}
 
 fn start_arguments() -> [&'static str; 7] {
     [
@@ -370,19 +398,16 @@ async fn start_process(
     let ready = timeout(Duration::from_secs(15), async {
         let mut observed = 0usize;
         loop {
-            let mut line = String::new();
-            let read = reader
-                .read_line(&mut line)
+            let remaining = STARTUP_OUTPUT_LIMIT.saturating_sub(observed);
+            let line = read_bounded_line(&mut reader, remaining)
                 .await
                 .map_err(|_| AdapterFailure::LaunchFailed)?;
-            if read == 0 {
+            if line.is_empty() {
                 return Err(AdapterFailure::LaunchFailed);
             }
-            observed = observed.saturating_add(read);
-            if observed > STARTUP_OUTPUT_LIMIT {
-                return Err(AdapterFailure::LaunchFailed);
-            }
-            if let Some(url) = validated_loopback_url(&line) {
+            observed = observed.saturating_add(line.len());
+            let line = std::str::from_utf8(&line).map_err(|_| AdapterFailure::LaunchFailed)?;
+            if let Some(url) = validated_loopback_url(line) {
                 return Ok(url);
             }
         }
@@ -397,10 +422,9 @@ async fn start_process(
     // pipe after reading the startup URL can otherwise terminate DSH with a
     // broken pipe while its browser UI is still in use.
     let stdout_task = tokio::spawn(async move {
-        let mut line = String::new();
+        let mut buffer = [0_u8; 8 * 1024];
         loop {
-            line.clear();
-            match reader.read_line(&mut line).await {
+            match reader.read(&mut buffer).await {
                 Ok(0) | Err(_) => break,
                 Ok(_) => {}
             }
@@ -489,7 +513,21 @@ fn open_browser(url: &str) -> Result<(), AdapterFailure> {
 
 #[cfg(target_os = "windows")]
 fn open_browser(url: &str) -> Result<(), AdapterFailure> {
-    std::process::Command::new("rundll32.exe")
+    use std::os::windows::ffi::OsStringExt;
+    use windows::Win32::System::SystemInformation::GetSystemDirectoryW;
+
+    let required = unsafe { GetSystemDirectoryW(None) } as usize;
+    if required == 0 {
+        return Err(AdapterFailure::LaunchFailed);
+    }
+    let mut system_directory = vec![0_u16; required.saturating_add(1)];
+    let written = unsafe { GetSystemDirectoryW(Some(&mut system_directory)) } as usize;
+    if written == 0 || written >= system_directory.len() {
+        return Err(AdapterFailure::LaunchFailed);
+    }
+    let rundll32 =
+        PathBuf::from(OsString::from_wide(&system_directory[..written])).join("rundll32.exe");
+    std::process::Command::new(rundll32)
         .arg("url.dll,FileProtocolHandler")
         .arg(url)
         .spawn()
@@ -760,6 +798,26 @@ llm-pi-ai:
         assert!(validated_loopback_url("dsh web: http://127.0.0.1:3018/?next=evil").is_none());
         assert!(
             validated_loopback_url("dsh web: http://127.0.0.1:3018/?token=ok&next=evil").is_none()
+        );
+    }
+
+    #[tokio::test]
+    async fn startup_output_without_a_newline_still_has_a_hard_bound() {
+        let bytes = vec![b'x'; STARTUP_OUTPUT_LIMIT + 1];
+        let mut reader = BufReader::new(bytes.as_slice());
+        let error = read_bounded_line(&mut reader, STARTUP_OUTPUT_LIMIT)
+            .await
+            .unwrap_err();
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+
+        let bytes = vec![b'x'; STARTUP_OUTPUT_LIMIT];
+        let mut reader = BufReader::new(bytes.as_slice());
+        assert_eq!(
+            read_bounded_line(&mut reader, STARTUP_OUTPUT_LIMIT)
+                .await
+                .unwrap()
+                .len(),
+            STARTUP_OUTPUT_LIMIT
         );
     }
 

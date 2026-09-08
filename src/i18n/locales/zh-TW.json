@@ -3671,10 +3671,10 @@
   },
   "yeschoySettings": {
     "eyebrow": "偏好設定",
-    "title": "哪些能做，哪些還沒開放，一處說清。",
-    "description": "這裡不藏進階開關。候選版只允許已驗證的本機能力，伺服器、密鑰、設定寫入和正式發佈條件都保持明確。",
+    "title": "偏好、安全與更新，一處說清。",
+    "description": "在這裡管理介面語言、退出方式和應用更新。應用接入與恢復設定仍需在「應用接入」中明確操作。",
     "versionLabel": "目前版本",
-    "candidateStage": "測試版",
+    "candidateStage": "桌面版",
     "languageTitle": "介面語言",
     "languageNote": "語言偏好只保存在這台電腦；不會同步到帳戶。",
     "securityEyebrow": "你的資料",

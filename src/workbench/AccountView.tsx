@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowUpRight,
@@ -16,6 +16,7 @@ import type { ConfigurationLineId } from "../configuration/preview";
 import { creditUnit, formatMoney } from "../account/finance";
 import { SavingsCard, SavingsDetails } from "./Savings";
 import type { AccountSessionController } from "../account/useAccountSession";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 import { WorkbenchFooter } from "./WorkbenchChrome";
 import { useWorkbenchCopy } from "./copy";
 
@@ -37,6 +38,7 @@ export function AccountView({
 }) {
   const c = useWorkbenchCopy();
   const { i18n } = useTranslation();
+  const [logoutPrompt, setLogoutPrompt] = useState(false);
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const {
     projection,
@@ -207,7 +209,7 @@ export function AccountView({
               <button
                 type="button"
                 className="secondary-action"
-                onClick={() => void logout()}
+                onClick={() => setLogoutPrompt(true)}
                 disabled={loading}
               >
                 <LogOut aria-hidden="true" />
@@ -325,6 +327,22 @@ export function AccountView({
         <summary>{c.accountDetails}</summary>
         <p>{c.accountDetailsBody}</p>
       </details>
+      <ConfirmDialog
+        isOpen={logoutPrompt}
+        title="仅退出野菜API账户？"
+        message={
+          "这里只清除本机的野菜API登录状态，不会改动 Codex、Claude 等应用当前的接入设置。\n\n如果还要移除应用接入，请先到“应用接入”恢复该应用的原设置。"
+        }
+        confirmText="仅退出账户"
+        cancelText="暂不退出"
+        variant="info"
+        pending={loading}
+        onConfirm={() => {
+          setLogoutPrompt(false);
+          void logout();
+        }}
+        onCancel={() => setLogoutPrompt(false)}
+      />
       <WorkbenchFooter />
     </div>
   );

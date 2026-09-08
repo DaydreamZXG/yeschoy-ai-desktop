@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU075-AS-race",
+  "assertion": "The unchanged final tree proves request admission, activation, cancellation and cooperative shutdown race controls.",
+  "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_race_controls_cover_large_requests_activation_and_shutdown",
+  "acceptanceCommandId": "ru075-race",
+  "runId": "RU-075/WP-RU075-PUBLIC-RELEASE-READONLY-VERIFICATION@2026-09-07T18:08:44.725788+00:00",
+  "packageId": "WP-RU075-PUBLIC-RELEASE-READONLY-VERIFICATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru074/test_acceptance.py::test_race_controls_cover_large_requests_activation_and_shutdown",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:858bdd641e4630cda6bf8c2d23e9587e0e12c40fd4376bf68bc2ae1292221c61",
+    "machineReportSha256": "sha256:3f0be46107670669a438a3a43dd14eacf6c290a69fe5fa279170dc27aaf73df6",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:ad24e73652c9e8513c3adea0dd18aa80ab6ab94d15bd9a289a6ba8f2ca79bca5",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:dc881967966a347c1d21241be30451f6da432b9548dc90b48c85616305ea49cb",
+  "releaseUnitId": "RU-075",
+  "releaseUnitHash": "sha256:fee2153931e02156c1fd843859172d3578840ed20ff6610b2987d92a86acd6f3"
+}

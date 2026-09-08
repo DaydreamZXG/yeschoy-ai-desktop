@@ -10,6 +10,8 @@ const outcomes: Record<RequestObservation["outcome"], string> = {
   invalid_response: "模型回复格式异常",
   stream_interrupted: "回复在完成前中断",
   unknown_model: "这个模型尚未加入常用列表",
+  payload_too_large: "请求内容超过本机安全上限",
+  local_busy: "本机正在处理另一条大请求",
 };
 export function RecentRequest({
   value,
@@ -53,13 +55,17 @@ export function RecentRequest({
           </small>
           {value.outcome !== "ok" && (
             <p>
-              {[401, 403].includes(value.httpStatus)
-                ? "请检查账户与这个模型的使用权限。"
-                : value.httpStatus === 429
-                  ? "请求较多或额度受限，请稍后重试并检查账户。"
-                  : value.outcome === "unknown_model"
-                    ? "请选用已配置的模型，或将新模型加入列表后更新接入。"
-                    : "请先重试；若持续失败，可手动更换线路。不会替你更换模型或计费分组。"}
+              {value.outcome === "payload_too_large"
+                ? "单次请求超过 200 MiB，未发送到上游。请减少一次附带的文件或图片后重试。"
+                : value.outcome === "local_busy"
+                  ? "为避免桌面助手卡死，本机一次只缓冲一条大请求。请等待当前请求完成后重试。"
+                  : [401, 403].includes(value.httpStatus)
+                    ? "请检查账户与这个模型的使用权限。"
+                    : value.httpStatus === 429
+                      ? "请求较多或额度受限，请稍后重试并检查账户。"
+                      : value.outcome === "unknown_model"
+                        ? "请选用已配置的模型，或将新模型加入列表后更新接入。"
+                        : "请先重试；若持续失败，可手动更换线路。不会替你更换模型或计费分组。"}
             </p>
           )}
         </>

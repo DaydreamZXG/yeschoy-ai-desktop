@@ -3670,10 +3670,10 @@
   },
   "yeschoySettings": {
     "eyebrow": "Preferences",
-    "title": "See what is available and what remains closed.",
-    "description": "There are no hidden advanced switches. The candidate allows only verified local capabilities and keeps server, credential, configuration-write, and public-release gates explicit.",
+    "title": "Preferences, safety, and updates in one place.",
+    "description": "Manage language, exit behavior, and app updates here. Connecting or restoring another app still requires an explicit action in App access.",
     "versionLabel": "Version",
-    "candidateStage": "Test version",
+    "candidateStage": "Desktop app",
     "languageTitle": "Interface language",
     "languageNote": "The preference stays on this computer and is not synchronized to an account.",
     "securityEyebrow": "Your data",

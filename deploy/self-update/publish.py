@@ -16,7 +16,9 @@ from urllib.parse import quote
 
 ORIGIN = "https://ergou.qzz.io"
 TARGETS = ("darwin-aarch64", "darwin-x86_64", "windows-x86_64")
+INSTALLER_TARGETS = ("macos-universal", "windows-x86_64")
 VERSION = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
+SHA256 = re.compile(r"^[0-9a-f]{64}$")
 FILE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,159}$")
 
 
@@ -81,6 +83,17 @@ def parse_platform(value: str) -> tuple[str, Path, Path]:
     if any(ord(character) < 32 and character not in "\r\n\t" for character in signature_text):
         raise PublishError("invalid_signature_text")
     return target, artifact, signature
+
+
+def parse_installer(value: str) -> tuple[str, Path]:
+    try:
+        target, artifact_value = value.split("=", 1)
+    except ValueError as error:
+        raise PublishError("installer_format_is_target_artifact") from error
+    if target not in INSTALLER_TARGETS:
+        raise PublishError("unsupported_installer_target")
+    expected = ".dmg" if target == "macos-universal" else "-installer.exe"
+    return target, regular_file(artifact_value, expected)
 
 
 def ensure_directory(path: Path) -> None:
@@ -186,6 +199,35 @@ def rollback_bytes(path: Path, previous: bytes | None) -> None:
     atomic_write(path, previous)
 
 
+def archive_manifest(path: Path, payload: bytes | None) -> str | None:
+    if payload is None:
+        return None
+    digest = hashlib.sha256(payload).hexdigest()
+    destination = path.parent / "history" / f"stable-{digest}.json"
+    if destination.exists():
+        if destination.is_symlink() or destination.read_bytes() != payload:
+            raise PublishError("manifest_history_conflict")
+    else:
+        atomic_write(destination, payload)
+    return digest
+
+
+def previous_manifest(path: Path) -> bytes | None:
+    payload = path.read_bytes() if path.is_file() and not path.is_symlink() else None
+    if path.exists() and payload is None:
+        raise PublishError("stable_manifest_conflict")
+    return payload
+
+
+def require_newer_version(payload: bytes | None, version: tuple[int, int, int]) -> None:
+    if payload is None:
+        return
+    current = json.loads(payload)
+    current_version = current.get("version") if isinstance(current, dict) else None
+    if not isinstance(current_version, str) or version <= semantic_version(current_version):
+        raise PublishError("version_must_increase")
+
+
 def publish(args: argparse.Namespace) -> dict[str, object]:
     root = guarded_root(args.root)
     version_tuple = semantic_version(args.version)
@@ -199,18 +241,27 @@ def publish(args: argparse.Namespace) -> dict[str, object]:
     if not notes or len(notes) > 600:
         raise PublishError("release_notes_must_be_1_to_600_characters")
 
+    installer_values = getattr(args, "installer", None)
+    installers: list[tuple[str, Path]] = []
+    if installer_values is not None:
+        if len(installer_values) != len(INSTALLER_TARGETS):
+            raise PublishError("all_supported_installers_are_required")
+        installers = [parse_installer(value) for value in installer_values]
+        if {target for target, _ in installers} != set(INSTALLER_TARGETS):
+            raise PublishError("each_supported_installer_is_required_once")
+
     updates = root / "updates"
     stable = updates / "stable.json"
+    download_manifest_path = root / "releases" / "yeschoy.json"
     health_path = root / "health.json"
     health = read_json(health_path)
-    previous_manifest = stable.read_bytes() if stable.is_file() and not stable.is_symlink() else None
-    if stable.exists() and previous_manifest is None:
-        raise PublishError("stable_manifest_conflict")
-    if previous_manifest:
-        current = json.loads(previous_manifest)
-        current_version = current.get("version") if isinstance(current, dict) else None
-        if not isinstance(current_version, str) or version_tuple <= semantic_version(current_version):
-            raise PublishError("version_must_increase")
+    previous_update = previous_manifest(stable)
+    previous_download = previous_manifest(download_manifest_path) if installers else None
+    # Emergency update-channel disablement intentionally keeps the website
+    # installer manifest online. Both mutable heads therefore enforce their
+    # own monotonic version even when either counterpart is absent.
+    require_newer_version(previous_update, version_tuple)
+    require_newer_version(previous_download, version_tuple)
 
     release_root = updates / "releases" / args.version
     platforms: dict[str, object] = {}
@@ -236,19 +287,118 @@ def publish(args: argparse.Namespace) -> dict[str, object]:
         "platforms": platforms,
     }
     manifest_bytes = (json.dumps(manifest, ensure_ascii=False, indent=2) + "\n").encode()
+    download_manifest_bytes: bytes | None = None
+    installer_receipts: dict[str, object] = {}
+    if installers:
+        download_platforms: dict[str, object] = {}
+        for target, artifact in installers:
+            destination = root / "releases" / "yeschoy" / args.version / artifact.name
+            receipt = immutable_copy(artifact, destination)
+            installer_receipts[target] = receipt
+            download_platforms[target] = {
+                "url": f"{ORIGIN}/{quote(destination.relative_to(root).as_posix(), safe='/._-')}",
+                "sha256": receipt["sha256"],
+                "size": receipt["size"],
+            }
+        download_manifest_bytes = (
+            json.dumps(
+                {
+                    "schemaVersion": 1,
+                    "version": args.version,
+                    "platforms": download_platforms,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n"
+        ).encode()
+    previous_update_hash = archive_manifest(stable, previous_update)
+    previous_download_hash = archive_manifest(download_manifest_path, previous_download)
     previous_health = health_path.read_bytes()
     try:
+        if download_manifest_bytes is not None:
+            atomic_write(download_manifest_path, download_manifest_bytes)
         atomic_write(stable, manifest_bytes)
         atomic_write(health_path, health_bytes(health, True))
     except BaseException:
-        rollback_bytes(stable, previous_manifest)
+        rollback_bytes(stable, previous_update)
+        if installers:
+            rollback_bytes(download_manifest_path, previous_download)
         atomic_write(health_path, previous_health)
         raise
     return {
         "status": "published",
         "version": args.version,
         "manifestSha256": hashlib.sha256(manifest_bytes).hexdigest(),
+        "previousManifestSha256": previous_update_hash,
+        "downloadManifestSha256": hashlib.sha256(download_manifest_bytes).hexdigest()
+        if download_manifest_bytes is not None
+        else None,
+        "previousDownloadManifestSha256": previous_download_hash,
         "platforms": receipts,
+        "installers": installer_receipts,
+    }
+
+
+def manifest_from_history(path: Path, digest: str) -> bytes:
+    if not SHA256.fullmatch(digest):
+        raise PublishError("invalid_restore_manifest_sha256")
+    source = path.parent / "history" / f"stable-{digest}.json"
+    payload = read_json(source)
+    encoded = (json.dumps(payload, ensure_ascii=False, indent=2) + "\n").encode()
+    # Preserve the exact archived bytes. Re-encoding is only a bounded JSON
+    # validity check; the digest applies to the original publication bytes.
+    del encoded
+    original = source.read_bytes()
+    if hashlib.sha256(original).hexdigest() != digest:
+        raise PublishError("restore_manifest_hash_mismatch")
+    return original
+
+
+def rollback(args: argparse.Namespace) -> dict[str, object]:
+    root = guarded_root(args.root)
+    stable = root / "updates" / "stable.json"
+    download = root / "releases" / "yeschoy.json"
+    health_path = root / "health.json"
+    health = read_json(health_path)
+    current = previous_manifest(stable)
+    current_download = previous_manifest(download)
+    if current is None or hashlib.sha256(current).hexdigest() != args.expected_sha256:
+        raise PublishError("published_manifest_changed")
+    if args.expected_download_sha256 == "none":
+        if current_download is not None:
+            raise PublishError("published_download_manifest_changed")
+    elif (
+        current_download is None
+        or hashlib.sha256(current_download).hexdigest() != args.expected_download_sha256
+    ):
+        raise PublishError("published_download_manifest_changed")
+    restore = (
+        None
+        if args.restore_sha256 == "none"
+        else manifest_from_history(stable, args.restore_sha256)
+    )
+    restore_download = (
+        None
+        if args.restore_download_sha256 == "none"
+        else manifest_from_history(download, args.restore_download_sha256)
+    )
+    archive_manifest(stable, current)
+    archive_manifest(download, current_download)
+    previous_health = health_path.read_bytes()
+    try:
+        rollback_bytes(download, restore_download)
+        rollback_bytes(stable, restore)
+        atomic_write(health_path, health_bytes(health, restore is not None))
+    except BaseException:
+        rollback_bytes(download, current_download)
+        rollback_bytes(stable, current)
+        atomic_write(health_path, previous_health)
+        raise
+    return {
+        "status": "rolled_back",
+        "restoredManifestSha256": args.restore_sha256,
+        "restoredDownloadManifestSha256": args.restore_download_sha256,
     }
 
 
@@ -301,7 +451,15 @@ def parser() -> argparse.ArgumentParser:
     publish_parser.add_argument("--version", required=True)
     publish_parser.add_argument("--notes", required=True)
     publish_parser.add_argument("--platform", action="append", required=True)
+    publish_parser.add_argument("--installer", action="append", required=True)
     publish_parser.set_defaults(handler=publish)
+    rollback_parser = commands.add_parser("rollback")
+    rollback_parser.add_argument("--root", required=True)
+    rollback_parser.add_argument("--expected-sha256", required=True)
+    rollback_parser.add_argument("--restore-sha256", required=True)
+    rollback_parser.add_argument("--expected-download-sha256", required=True)
+    rollback_parser.add_argument("--restore-download-sha256", required=True)
+    rollback_parser.set_defaults(handler=rollback)
     disable_parser = commands.add_parser("disable")
     disable_parser.add_argument("--root", required=True)
     disable_parser.set_defaults(handler=disable)

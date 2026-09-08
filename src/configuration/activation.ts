@@ -110,6 +110,55 @@ export interface ToolActivationProjection {
   models?: ModelBinding[];
 }
 
+export const ACTIVATION_PROGRESS_EVENT = "yeschoy://activation-progress";
+export const ACTIVATION_PROGRESS_STAGES = [
+  "queued",
+  "checking_application",
+  "authenticating",
+  "checking_models",
+  "securing_access",
+  "preparing_settings",
+  "applying_settings",
+  "restoring_settings",
+  "opening_application",
+  "complete",
+] as const;
+
+export interface ActivationProgress {
+  requestId: string;
+  toolId: ActivationToolId;
+  stage: (typeof ACTIVATION_PROGRESS_STAGES)[number];
+  completedSteps: number;
+  totalSteps: number;
+}
+
+export function decodeActivationProgress(
+  value: unknown,
+): ActivationProgress | null {
+  if (!object(value)) return null;
+  if (
+    !exactKeys(value, [
+      "requestId",
+      "toolId",
+      "stage",
+      "completedSteps",
+      "totalSteps",
+    ]) ||
+    !safeText(value.requestId, 120, false) ||
+    !ACTIVATION_TOOL_IDS.includes(value.toolId as ActivationToolId) ||
+    !ACTIVATION_PROGRESS_STAGES.includes(
+      value.stage as ActivationProgress["stage"],
+    ) ||
+    !Number.isSafeInteger(value.completedSteps) ||
+    !Number.isSafeInteger(value.totalSteps) ||
+    (value.completedSteps as number) < 0 ||
+    (value.totalSteps as number) < 1 ||
+    (value.completedSteps as number) > (value.totalSteps as number)
+  )
+    return null;
+  return value as unknown as ActivationProgress;
+}
+
 function object(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -273,6 +322,7 @@ export async function activateDesktopTool(input: {
   models?: ModelBinding[];
   installationJobId?: string;
   restartRunningApp?: boolean;
+  onRequestId?: (requestId: string) => void;
 }): Promise<ToolActivationProjection> {
   if (
     input.models &&
@@ -285,10 +335,19 @@ export async function activateDesktopTool(input: {
     throw new Error("invalid_model_set");
   activationSequence += 1;
   const requestId = `activate-${Date.now().toString(36)}-${activationSequence.toString(36)}`;
+  input.onRequestId?.(requestId);
   const raw = await invoke<unknown>("configure_desktop_tool_v2", {
     request: {
       requestId,
-      ...input,
+      lineId: input.lineId,
+      toolId: input.toolId,
+      modelId: input.modelId,
+      installationId: input.installationId,
+      billingGroup: input.billingGroup,
+      ...(input.models ? { models: input.models } : {}),
+      ...(input.installationJobId
+        ? { installationJobId: input.installationJobId }
+        : {}),
       ...(input.restartRunningApp ? { restartRunningApp: true } : {}),
     },
   });
@@ -309,4 +368,22 @@ export async function activateDesktopTool(input: {
   )
     throw new Error("invalid_tool_activation_projection");
   return result;
+}
+
+export async function cancelDesktopToolActivation(
+  requestId: string,
+): Promise<"cancel_requested" | "not_found"> {
+  if (!safeText(requestId, 120, false))
+    throw new Error("invalid_activation_cancel_request");
+  const raw = await invoke<unknown>("cancel_tool_activation_v1", {
+    request: { requestId },
+  });
+  if (
+    !object(raw) ||
+    !exactKeys(raw, ["requestId", "status"]) ||
+    raw.requestId !== requestId ||
+    !["cancel_requested", "not_found"].includes(String(raw.status))
+  )
+    throw new Error("invalid_activation_cancel_response");
+  return raw.status as "cancel_requested" | "not_found";
 }

@@ -8946,6 +8946,350 @@
         "Completion would require packaging, publishing, deployment or real user configuration mutation."
       ],
       "status": "planned"
+    },
+    {
+      "id": "WP-RU074-PUBLIC-RELEASE-REMEDIATION",
+      "wave": "producer",
+      "owner": "desktop-platform",
+      "riskClass": "critical",
+      "objective": "Repair the audited repository-owned security, resource-control, recovery, platform, installation, update-publication and UX-truth defects before another distributable package is considered.",
+      "deliverables": [
+        "Authenticated and admission-controlled large-request loopback gateways",
+        "Exact-model-scoped application credentials with safe reuse and logout cleanup",
+        "Transactional activation progress and cooperative cancellation across all adapters",
+        "Bounded DSH process IO plus hardened Windows identity, launch and exit behavior",
+        "Truthful installation and localization UX with no unsupported one-click claim",
+        "Yeschoy-only fail-closed signing, notarization and signed-update promotion automation",
+        "Focused scenarios, full regression evidence and refreshed public-release audit"
+      ],
+      "requirementRefs": [
+        "REQ-002",
+        "REQ-015",
+        "REQ-031",
+        "REQ-062",
+        "REQ-079",
+        "REQ-092",
+        "REQ-095"
+      ],
+      "decisionRefs": [
+        "DEC-115",
+        "DEC-118"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No package, installer execution, version bump, upload, GitHub Release, DNS, server deployment, stable-channel promotion or real user-configuration mutation",
+        "No claim that macOS notarization, Windows Authenticode or the live update feed passed without the required external credentials and live evidence",
+        "No activation of dormant OAuth PKCE or invention of an undeployed server contract",
+        "No redesign of provider protocol conversion or application-specific behavior outside the seven registered adapters"
+      ],
+      "dependsOn": [
+        "WP-RU073-PKCE-CLIENT-PREFLIGHT"
+      ],
+      "allowedPaths": [
+        ".github/workflows/**",
+        "SECURITY.md",
+        "deploy/self-update/**",
+        "docs/**",
+        "outputs/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/**",
+        "src-tauri/**",
+        "tests/work_packages/ru074/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "release/**",
+        "release-assets/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "Existing receipts and application settings remain readable. A reused legacy all-model dedicated key is rejected as out of scope and replaced transactionally on the next explicit connection. No automatic mutation runs at startup.",
+        "rollback": "Restore the prior application configuration from its receipt, revoke only newly owned dedicated keys, retain signed immutable release artifacts, and keep the stable manifest absent. Source rollback must not reintroduce inherited CC Switch publication identity or silently broaden key scope."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve existing renderer IPC wire shapes unless an additive closed progress or cleanup field is required. Keep all seven adapter IDs and current account/device-login behavior. Apply shared protections below the adapters instead of special-casing Claude Desktop.",
+        "supportedVersions": "Current supported macOS and Windows source targets; Linux remains source-checked where existing code compiles. Public binary readiness remains gated on platform signatures and live update-channel evidence.",
+        "removalGate": "Do not remove legacy receipt parsing until a signed public version has migrated it. Do not enable a stable manifest until both platform artifacts, updater signatures, notarization or Authenticode evidence and rollback rehearsal pass."
+      },
+      "inputContracts": [
+        "desktop-account-session@v5",
+        "desktop-app-installation@v4",
+        "desktop-assistant-exit@v1",
+        "desktop-self-update@v1",
+        "desktop-tool-activation@v10",
+        "signed-update-channel@v1",
+        "tool-discovery-scan@v2"
+      ],
+      "outputContracts": [
+        "desktop-account-session@v5",
+        "desktop-app-installation@v4",
+        "desktop-assistant-exit@v1",
+        "desktop-self-update@v1",
+        "desktop-tool-activation@v10",
+        "signed-update-channel@v1",
+        "tool-discovery-scan@v2"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru074-happy",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru074/test_acceptance.py::test_happy_path_closes_shared_runtime_and_release_controls",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru074-failure",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru074/test_acceptance.py::test_failure_paths_are_bounded_and_fail_closed",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru074-replay",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru074/test_acceptance.py::test_replay_reuses_only_exact_scope_and_never_republishes_implicitly",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru074-stale",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru074/test_acceptance.py::test_stale_legacy_and_inherited_state_is_rejected_or_migrated_truthfully",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru074-race",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru074/test_acceptance.py::test_race_controls_cover_large_requests_activation_and_shutdown",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru074-recovery",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru074/test_acceptance.py::test_recovery_restores_user_state_and_keeps_release_gates_explicit",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU074-AS-happy",
+          "assertion": "All seven adapters share hardened activation, credential, process and request boundaries, while the Yeschoy update pipeline verifies signed artifacts and contains no inherited release identity.",
+          "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_happy_path_closes_shared_runtime_and_release_controls",
+          "acceptanceCommandId": "ru074-happy"
+        },
+        {
+          "id": "RU074-AS-failure",
+          "assertion": "Oversized or competing request bodies, invalid credential scope, process output overflow, unsigned promotion and missing platform credentials all fail with bounded explicit outcomes.",
+          "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_failure_paths_are_bounded_and_fail_closed",
+          "acceptanceCommandId": "ru074-failure"
+        },
+        {
+          "id": "RU074-AS-replay",
+          "assertion": "Repeated activation reuses only an exact scoped key and repeated update checks or workflow runs cannot implicitly promote or mutate a stable channel.",
+          "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_replay_reuses_only_exact_scope_and_never_republishes_implicitly",
+          "acceptanceCommandId": "ru074-replay"
+        },
+        {
+          "id": "RU074-AS-stale",
+          "assertion": "Legacy broad credentials, inherited workflow identity, stale installation claims and incomplete localization are rejected, replaced or labelled without silently retaining false readiness.",
+          "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_stale_legacy_and_inherited_state_is_rejected_or_migrated_truthfully",
+          "acceptanceCommandId": "ru074-stale"
+        },
+        {
+          "id": "RU074-AS-race",
+          "assertion": "A shared request admission gate and serialized transactional activation, cancellation and cooperative shutdown prevent memory multiplication, partial configuration and UI deadlock races.",
+          "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_race_controls_cover_large_requests_activation_and_shutdown",
+          "acceptanceCommandId": "ru074-race"
+        },
+        {
+          "id": "RU074-AS-recovery",
+          "assertion": "Cancellation, logout, failed activation and failed update installation restore or preserve user state and leave signing, notarization and live publication as explicit unpassed gates.",
+          "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_recovery_restores_user_state_and_keeps_release_gates_explicit",
+          "acceptanceCommandId": "ru074-recovery"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "A requested fix requires inventing an undeployed server endpoint, OAuth scope, quota amount, certificate identity or third-party redistributable URL.",
+        "A repository-owned failure cannot be fixed without silently broadening privileges, force-killing user applications or exposing credentials to the renderer.",
+        "A workflow could publish an unsigned or unnotarized artifact, or could mutate a public stable channel without an explicit promotion action.",
+        "Full native or renderer regressions, governed scenarios, format, lint or source security checks fail.",
+        "Completion would require packaging, uploading, deploying, changing DNS or mutating a real user's application configuration."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU075-PUBLIC-RELEASE-READONLY-VERIFICATION",
+      "wave": "integration",
+      "owner": "desktop-platform",
+      "riskClass": "critical",
+      "objective": "Verify the unchanged final public-release remediation tree after preserving RU-074's scope-failure evidence and relocating its public artifact probe inside the authorized publication boundary.",
+      "deliverables": [
+        "Verifier-owned proof for the shared runtime and release happy path.",
+        "Verifier-owned proof for bounded fail-closed behavior.",
+        "Verifier-owned proof for replay and exact credential scope.",
+        "Verifier-owned proof for stale-state and inherited-identity rejection.",
+        "Verifier-owned proof for request, activation and shutdown races.",
+        "Verifier-owned proof for recovery and explicit external release gates."
+      ],
+      "requirementRefs": [
+        "REQ-095"
+      ],
+      "decisionRefs": [
+        "DEC-118",
+        "DEC-119"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No product source, test, workflow, package, contract or behavior change after dispatch.",
+        "No packaging, installer execution, upload, GitHub Release, DNS, server deployment, stable-channel promotion or real user-configuration mutation.",
+        "No production-readiness claim without native signing, notarization, live promotion and clean-system evidence."
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        ".github/workflows/**",
+        "SECURITY.md",
+        "deploy/self-update/**",
+        "docs/**",
+        "outputs/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/**",
+        "src-tauri/**",
+        "tests/work_packages/ru074/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "release/**",
+        "release-assets/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "Verification only; no migration, startup mutation or runtime action.",
+        "rollback": "No product change to roll back. Retain the immutable RU-074 failure report and RU-075 verifier evidence."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Verify the exact final RU-074 product state without copying the failed run's scope error into a success claim.",
+        "supportedVersions": "Current 0.4.15 source targets for macOS universal and Windows x86_64; live binary support remains gated by native platform evidence.",
+        "removalGate": "Any product, server, installer, updater-channel or contract change requires a later implementation authority."
+      },
+      "inputContracts": [
+        "desktop-account-session@v5",
+        "desktop-app-installation@v4",
+        "desktop-assistant-exit@v1",
+        "desktop-self-update@v1",
+        "desktop-tool-activation@v10",
+        "signed-update-channel@v1",
+        "tool-discovery-scan@v2"
+      ],
+      "outputContracts": [],
+      "acceptanceCommands": [
+        {
+          "id": "ru075-happy",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru074/test_acceptance.py::test_happy_path_closes_shared_runtime_and_release_controls",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru075-failure",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru074/test_acceptance.py::test_failure_paths_are_bounded_and_fail_closed",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru075-replay",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru074/test_acceptance.py::test_replay_reuses_only_exact_scope_and_never_republishes_implicitly",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru075-stale",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru074/test_acceptance.py::test_stale_legacy_and_inherited_state_is_rejected_or_migrated_truthfully",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru075-race",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru074/test_acceptance.py::test_race_controls_cover_large_requests_activation_and_shutdown",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru075-recovery",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru074/test_acceptance.py::test_recovery_restores_user_state_and_keeps_release_gates_explicit",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU075-AS-happy",
+          "assertion": "The unchanged final tree proves shared hardened integration behavior and Yeschoy-only signed release controls.",
+          "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_happy_path_closes_shared_runtime_and_release_controls",
+          "acceptanceCommandId": "ru075-happy"
+        },
+        {
+          "id": "RU075-AS-failure",
+          "assertion": "The unchanged final tree proves bounded local requests, exact credentials, bounded processes and fail-closed publication failures.",
+          "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_failure_paths_are_bounded_and_fail_closed",
+          "acceptanceCommandId": "ru075-failure"
+        },
+        {
+          "id": "RU075-AS-replay",
+          "assertion": "The unchanged final tree proves exact-scope credential reuse and prevents implicit or downgraded stable publication.",
+          "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_replay_reuses_only_exact_scope_and_never_republishes_implicitly",
+          "acceptanceCommandId": "ru075-replay"
+        },
+        {
+          "id": "RU075-AS-stale",
+          "assertion": "The unchanged final tree proves stale broad authority, inherited identity and unsupported UX claims are rejected or labelled truthfully.",
+          "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_stale_legacy_and_inherited_state_is_rejected_or_migrated_truthfully",
+          "acceptanceCommandId": "ru075-stale"
+        },
+        {
+          "id": "RU075-AS-race",
+          "assertion": "The unchanged final tree proves request admission, activation, cancellation and cooperative shutdown race controls.",
+          "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_race_controls_cover_large_requests_activation_and_shutdown",
+          "acceptanceCommandId": "ru075-race"
+        },
+        {
+          "id": "RU075-AS-recovery",
+          "assertion": "The unchanged final tree proves recovery semantics while retaining signing, notarization and live publication as unpassed gates.",
+          "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_recovery_restores_user_state_and_keeps_release_gates_explicit",
+          "acceptanceCommandId": "ru075-recovery"
+        }
+      ],
+      "verificationOnly": true,
+      "stopConditions": [
+        "Any source file changes after dispatch.",
+        "A selected scenario cannot produce exact machine proof under source-readonly isolation.",
+        "Verification would require packaging, external credentials, server mutation or a production-readiness claim."
+      ],
+      "status": "planned"
     }
   ]
 }

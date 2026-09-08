@@ -17,7 +17,7 @@ use super::{
     types::*,
     ProxyError,
 };
-use crate::database::Database;
+use crate::{database::Database, loopback_http::MAX_AI_REQUEST_BODY_BYTES};
 use axum::{
     extract::DefaultBodyLimit,
     routing::{any, get, post},
@@ -374,7 +374,7 @@ impl ProxyServer {
             // Gemini 的 GA 版本也叫 /v1，给原 SDK 留一条出口
             .route("/gemini/v1/*path", any(handlers::handle_gemini))
             // 提高默认请求体大小限制（避免 413 Payload Too Large）
-            .layer(DefaultBodyLimit::max(200 * 1024 * 1024))
+            .layer(DefaultBodyLimit::max(MAX_AI_REQUEST_BODY_BYTES))
             .with_state(self.state.clone())
     }
 

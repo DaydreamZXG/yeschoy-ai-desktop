@@ -2,8 +2,8 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use axum::{
     body::{to_bytes, Body},
-    extract::{DefaultBodyLimit, State},
-    http::{header, HeaderMap, StatusCode},
+    extract::State,
+    http::{header, HeaderMap, Request, StatusCode},
     response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
@@ -16,12 +16,12 @@ use tokio::{
     task::JoinHandle,
 };
 
+use crate::loopback_http::{admit_ai_request, read_ai_request_body, AiRequestAdmissionError};
 use crate::request_diagnostics::{self, RequestContext, RequestOutcome, StreamProtocol};
 use crate::tool_credentials;
 
 pub(crate) const BASE_URL: &str = "http://127.0.0.1:15722/yeschoy/v1";
 const LISTEN_ADDRESS: &str = "127.0.0.1:15722";
-const MAX_REQUEST_BYTES: usize = 2 * 1024 * 1024;
 const MAX_RESPONSE_BYTES: u64 = 16 * 1024 * 1024;
 
 #[path = "proxy/providers/streaming.rs"]
@@ -179,7 +179,6 @@ impl CodexBridgeRuntimeState {
                 "/yeschoy/v1/responses",
                 post(responses).head(responses_head),
             )
-            .layer(DefaultBodyLimit::max(MAX_REQUEST_BYTES))
             .with_state(state);
         let (shutdown, receive_shutdown) = oneshot::channel();
         let task = tokio::spawn(async move {
@@ -330,11 +329,41 @@ fn observed_error(
     (status, Json(request_diagnostics::error_json(outcome))).into_response()
 }
 
-async fn responses(
-    State(state): State<BridgeAppState>,
-    headers: HeaderMap,
-    Json(body): Json<Value>,
-) -> Response {
+async fn decode_request_body(body: Body) -> Result<Value, Response> {
+    let bytes = read_ai_request_body(body).await.map_err(|_| {
+        (
+            StatusCode::PAYLOAD_TOO_LARGE,
+            Json(request_diagnostics::error_json(
+                RequestOutcome::PayloadTooLarge,
+            )),
+        )
+            .into_response()
+    })?;
+    serde_json::from_slice(&bytes)
+        .map_err(|_| response_error(StatusCode::BAD_REQUEST, "Invalid request body"))
+}
+
+fn local_access_error(
+    headers: &HeaderMap,
+    credential: &tool_credentials::ToolCredential,
+) -> Option<Response> {
+    if !credential.has_model_set() && credential.codex_transport.as_deref() != Some("chat_bridge") {
+        return Some(response_error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "Compatibility connection is inactive",
+        ));
+    }
+    if !authorized(headers, credential.client_token("codex_desktop")) {
+        return Some(response_error(
+            StatusCode::UNAUTHORIZED,
+            "Authentication failed",
+        ));
+    }
+    None
+}
+
+async fn responses(State(state): State<BridgeAppState>, request: Request<Body>) -> Response {
+    let (parts, body) = request.into_parts();
     let credential =
         match tokio::task::spawn_blocking(|| tool_credentials::load("codex_desktop")).await {
             Ok(Ok(value)) => value,
@@ -345,24 +374,66 @@ async fn responses(
                 )
             }
         };
-    responses_with_credential(state, headers, body, credential).await
+    // Authenticate before buffering a potentially large attachment request.
+    if let Some(response) = local_access_error(&parts.headers, &credential) {
+        return response;
+    }
+    let local_context = RequestContext {
+        tool: "codex_desktop".into(),
+        model: String::new(),
+        group: String::new(),
+        origin: credential.origin.clone(),
+    };
+    let _admission = match admit_ai_request(&parts.headers).await {
+        Ok(permit) => permit,
+        Err(AiRequestAdmissionError::PayloadTooLarge) => {
+            return observed_error(
+                &local_context,
+                StatusCode::PAYLOAD_TOO_LARGE,
+                RequestOutcome::PayloadTooLarge,
+            )
+        }
+        Err(AiRequestAdmissionError::Busy) => {
+            return observed_error(
+                &local_context,
+                StatusCode::TOO_MANY_REQUESTS,
+                RequestOutcome::LocalBusy,
+            )
+        }
+    };
+    let body = match decode_request_body(body).await {
+        Ok(body) => body,
+        Err(response) => {
+            if response.status() == StatusCode::PAYLOAD_TOO_LARGE {
+                local_context.record(
+                    RequestOutcome::PayloadTooLarge,
+                    StatusCode::PAYLOAD_TOO_LARGE.as_u16(),
+                );
+            }
+            return response;
+        }
+    };
+    responses_with_authorized_credential(state, body, credential).await
 }
 
+#[cfg(test)]
 async fn responses_with_credential(
     state: BridgeAppState,
     headers: HeaderMap,
     body: Value,
     configured: tool_credentials::ToolCredential,
 ) -> Response {
-    if !configured.has_model_set() && configured.codex_transport.as_deref() != Some("chat_bridge") {
-        return response_error(
-            StatusCode::SERVICE_UNAVAILABLE,
-            "Compatibility connection is inactive",
-        );
+    if let Some(response) = local_access_error(&headers, &configured) {
+        return response;
     }
-    if !authorized(&headers, configured.client_token("codex_desktop")) {
-        return response_error(StatusCode::UNAUTHORIZED, "Authentication failed");
-    }
+    responses_with_authorized_credential(state, body, configured).await
+}
+
+async fn responses_with_authorized_credential(
+    state: BridgeAppState,
+    body: Value,
+    configured: tool_credentials::ToolCredential,
+) -> Response {
     let (credential, group) = match route_snapshot(&configured, &body) {
         Ok(route) => route,
         Err(_) => {
@@ -637,6 +708,17 @@ mod tests {
             client: upstream_client().unwrap(),
             history: Arc::new(Mutex::new(RouteHistories::default())),
         }
+    }
+
+    #[tokio::test]
+    async fn accepts_codex_json_above_the_legacy_two_megabyte_limit() {
+        let attachment = "a".repeat(2 * 1024 * 1024 + 1);
+        let body = Body::from(json!({"model":"chat-a","input":attachment}).to_string());
+        let parsed = decode_request_body(body).await.unwrap();
+        assert_eq!(
+            parsed["input"].as_str().map(str::len),
+            Some(2 * 1024 * 1024 + 1)
+        );
     }
 
     #[tokio::test]

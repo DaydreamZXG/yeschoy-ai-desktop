@@ -2,6 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   activateDesktopTool,
+  cancelDesktopToolActivation,
+  decodeActivationProgress,
   decodeActivationTargetScan,
   decodeToolActivation,
   scanActivationTargets,
@@ -234,5 +236,41 @@ describe("desktop tool activation boundary", () => {
         billingGroup: "国模特价分组",
       }),
     ).rejects.toThrow("invalid_tool_activation_projection");
+  });
+
+  it("accepts only bounded progress for the matching seven-adapter contract", () => {
+    const progress = {
+      requestId: "activate-safe",
+      toolId: "pi",
+      stage: "securing_access",
+      completedSteps: 4,
+      totalSteps: 7,
+    };
+    expect(decodeActivationProgress(progress)).toEqual(progress);
+    expect(
+      decodeActivationProgress({ ...progress, completedSteps: 8 }),
+    ).toBeNull();
+    expect(
+      decodeActivationProgress({ ...progress, stage: "reading_secrets" }),
+    ).toBeNull();
+    expect(
+      decodeActivationProgress({ ...progress, accessToken: "secret" }),
+    ).toBeNull();
+  });
+
+  it("cancels only an exact active request and validates the reply", async () => {
+    native.mockResolvedValue({
+      requestId: "activate-safe",
+      status: "cancel_requested",
+    });
+    await expect(cancelDesktopToolActivation("activate-safe")).resolves.toBe(
+      "cancel_requested",
+    );
+    expect(native).toHaveBeenCalledWith("cancel_tool_activation_v1", {
+      request: { requestId: "activate-safe" },
+    });
+    await expect(cancelDesktopToolActivation("bad\nrequest")).rejects.toThrow(
+      "invalid_activation_cancel_request",
+    );
   });
 });

@@ -22,6 +22,7 @@ mod connectivity;
 mod connectivity_core;
 mod desktop_app_discovery;
 mod desktop_app_discovery_core;
+mod loopback_http;
 mod open_connection;
 // Client-first OAuth preparation. Deliberately dormant until the server and
 // local-bridge bearer/billing contract are deployed and integration-tested.
@@ -70,6 +71,7 @@ pub fn run() {
         .manage(account_v2::AccountV2State::default())
         .manage(app_installation::AppInstallationState::default())
         .manage(app_update::AppUpdateState::default())
+        .manage(tool_activation::ActivationOperationState::default())
         .manage(claude_code_runtime)
         .manage(claude_runtime)
         .manage(codex_bridge)
@@ -136,6 +138,7 @@ pub fn run() {
             account_v2::account_open_wallet_v2,
             tool_activation::scan_activation_targets_v1,
             tool_activation::configure_desktop_tool_v2,
+            tool_activation::cancel_tool_activation_v1,
             tool_activation::manage_tool_connections_v1,
             open_connection::open_tool_connection_v1,
             quit_desktop_assistant,

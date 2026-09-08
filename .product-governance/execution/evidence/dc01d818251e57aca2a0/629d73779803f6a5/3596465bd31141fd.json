@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU075-AS-stale",
+  "assertion": "The unchanged final tree proves stale broad authority, inherited identity and unsupported UX claims are rejected or labelled truthfully.",
+  "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_stale_legacy_and_inherited_state_is_rejected_or_migrated_truthfully",
+  "acceptanceCommandId": "ru075-stale",
+  "runId": "RU-075/WP-RU075-PUBLIC-RELEASE-READONLY-VERIFICATION@2026-09-07T18:08:44.725788+00:00",
+  "packageId": "WP-RU075-PUBLIC-RELEASE-READONLY-VERIFICATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru074/test_acceptance.py::test_stale_legacy_and_inherited_state_is_rejected_or_migrated_truthfully",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:bfd52d24c5e0c71c503e770e4513a2622579a6f5824c544cce6ac780738dd7cf",
+    "machineReportSha256": "sha256:aa54198c9c739eb832d499febc516d615f5a6db9d7c6c810e438834ccdbe7d6e",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:01e2ba6c9bdbf22cfeb60721eb1883975ec4ad00955175e3a562e143684e5f53",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:7616fc403e2d98139e15072dfc681fdbb59de463815e09400f84b6daf20f9d16",
+  "releaseUnitId": "RU-075",
+  "releaseUnitHash": "sha256:fee2153931e02156c1fd843859172d3578840ed20ff6610b2987d92a86acd6f3"
+}

@@ -1,222 +1,261 @@
-# Mirror release assets to Cloudflare R2 so ccswitch.io/download can serve
-# them directly (dl.ccswitch.io), and mirror the Tauri updater manifest and
-# artifacts so in-app updates avoid GitHub too (the updater verifies minisign
-# signatures client-side, so the mirror is untrusted).
-#
-# Triggered on release promotion (`released` fires when a prerelease is
-# flipped to a full release, or a release is published as stable directly) —
-# NOT on tag push. This keeps the R2 root manifests behind the same gate as
-# GitHub's /releases/latest/: while a release sits as prerelease, neither the
-# download page nor the updater sees it. Additionally, a run only touches the
-# root manifests (and prunes old versions) when its tag IS releases/latest —
-# manual backfills of older tags restore versioned files only.
-#
-# Caveat (by design of tauri-plugin-updater): the updater stops at the first
-# endpoint whose response parses, so a stale-but-valid R2 manifest would mask
-# newer GitHub releases. That is why this sync hard-fails on the official
-# repo when the R2 secrets are missing, instead of silently skipping.
-#
-# Required secrets: R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY
-name: Sync release to R2
+name: Promote Yeschoy Stable Release
 
 on:
-  release:
-    types: [released]
-  # Manual recovery/backfill: re-sync any existing release tag.
   workflow_dispatch:
     inputs:
-      tag:
-        description: 'Release tag to sync (e.g. v3.18.0)'
+      version:
+        description: Exact candidate version, without v prefix
+        required: true
+        type: string
+      candidate_run_id:
+        description: Successful Yeschoy Signed Update Candidate workflow run ID
+        required: true
+        type: string
+      release_notes:
+        description: Public release notes, 1 to 600 characters
+        required: true
+        type: string
+      confirmation:
+        description: Type PUBLISH followed by the exact version
         required: true
         type: string
 
 permissions:
+  actions: read
   contents: read
 
-# latest.json / manifest.json are last-writer-wins — serialize runs and keep
-# every trigger queued instead of the default replace-the-pending behavior.
 concurrency:
-  group: sync-r2
+  group: yeschoy-stable-promotion
   cancel-in-progress: false
-  queue: max
 
 jobs:
-  sync-to-r2:
-    name: Sync release to R2
+  promote:
+    name: Verify and promote signed candidate
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    environment: yeschoy-production
     env:
-      R2_BUCKET: cc-switch-releases
-      R2_PUBLIC_BASE_URL: https://dl.ccswitch.io
-      KEEP_VERSIONS: "5"
-      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: auto
-      # aws-cli >= 2.23 defaults to CRC checksums that R2 rejects.
-      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
-      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
-      R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
-      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      RELEASE_VERSION: ${{ inputs.version }}
+      CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
+      RELEASE_NOTES: ${{ inputs.release_notes }}
+      DOWNLOAD_ORIGIN_HOST: 43.134.77.210
+      DOWNLOAD_ORIGIN_USER: ${{ secrets.DOWNLOAD_ORIGIN_USER }}
     steps:
-      - name: Check R2 secrets
-        id: r2
-        env:
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-        run: |
-          if [ -z "$TAG" ]; then
-            echo "::error::No release tag to sync."
-            exit 1
-          fi
-          if [ -n "$R2_ACCOUNT_ID" ] && [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          elif [ "$GITHUB_REPOSITORY" = "farion1231/cc-switch" ]; then
-            # A silently stale mirror strands updater users on old versions
-            # (the R2 endpoint wins as long as its manifest parses), so the
-            # official repo must never skip this sync.
-            echo "::error::R2 secrets (R2_ACCOUNT_ID / R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY) are missing on the official repo; refusing to skip the mirror sync."
-            exit 1
-          else
-            echo "configured=false" >> "$GITHUB_OUTPUT"
-            echo "R2 secrets not configured; skipping download mirror sync."
-          fi
-
-      # Only the tag that IS GitHub's releases/latest may touch the bucket-root
-      # manifests or prune old versions. This keeps manual backfills of old
-      # tags harmless (they only restore versioned files — otherwise the root
-      # manifests would point at a version the prune step deletes right after)
-      # and makes out-of-order runs self-correcting: whichever run executes,
-      # only the true latest publishes the manifests.
-      - name: Check whether tag is the latest stable release
-        id: latest
-        if: steps.r2.outputs.configured == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          # An API failure must fail the run — mapping it to "not latest"
-          # would skip the root manifests on a green run, silently leaving
-          # them stale (the exact failure mode this workflow exists to make
-          # loud). Retry transient errors, then give up loudly.
-          latest=""
-          for attempt in 1 2 3 4; do
-            latest=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name || true)
-            if [ -n "$latest" ]; then
-              break
-            fi
-            if [ "$attempt" -lt 4 ]; then
-              sleep $((attempt * 10))
-            fi
-          done
-          if [ -z "$latest" ]; then
-            echo "::error::Could not resolve the latest stable release from GitHub after 4 attempts; failing instead of guessing."
-            exit 1
-          fi
-          if [ "$TAG" = "$latest" ]; then
-            echo "is_latest=true" >> "$GITHUB_OUTPUT"
-            echo "$TAG is the latest stable release; full sync."
-          else
-            echo "is_latest=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::$TAG is not the latest stable release ($latest); syncing versioned files only — root manifests and pruning are skipped."
-          fi
-
-      - name: Checkout scripts
-        if: steps.r2.outputs.configured == 'true' && steps.latest.outputs.is_latest == 'true'
-        uses: actions/checkout@v6
+      - name: Check out exact promotion source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          sparse-checkout: scripts
+          persist-credentials: false
 
-      - name: Download release assets
-        if: steps.r2.outputs.configured == 'true'
+      - name: Require explicit production intent and exact source identity
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CONFIRMATION: ${{ inputs.confirmation }}
         run: |
           set -euo pipefail
-          mkdir -p r2-assets
-          gh release download "$TAG" --dir r2-assets --repo "$GITHUB_REPOSITORY"
-          ls -la r2-assets
+          test "$GITHUB_REPOSITORY" = 'DaydreamZXG/yeschoy-ai-desktop'
+          test "$CONFIRMATION" = "PUBLISH $RELEASE_VERSION"
+          [[ "$RELEASE_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          [[ "$CANDIDATE_RUN_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$DOWNLOAD_ORIGIN_USER" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]
+          node - <<'NODE'
+          const fs = require('fs');
+          const requested = process.env.RELEASE_VERSION;
+          const packageVersion = JSON.parse(fs.readFileSync('package.json')).version;
+          const tauriVersion = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json')).version;
+          const cargoVersion = fs.readFileSync('src-tauri/Cargo.toml', 'utf8').match(/^version = "([^"]+)"/m)?.[1];
+          if (![packageVersion, tauriVersion, cargoVersion].every((value) => value === requested)) {
+            throw new Error(`version mismatch: request=${requested} package=${packageVersion} tauri=${tauriVersion} cargo=${cargoVersion}`);
+          }
+          NODE
 
-      - name: Generate download manifest
-        if: steps.r2.outputs.configured == 'true' && steps.latest.outputs.is_latest == 'true'
+      - name: Verify candidate run belongs to this commit
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          pub_date=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json publishedAt --jq .publishedAt)
-          node scripts/generate-download-manifest.mjs r2-assets "$TAG" "$R2_PUBLIC_BASE_URL" manifest.json "$pub_date"
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CANDIDATE_RUN_ID" > candidate-run.json
+          python3 - <<'PY'
+          import json, os
+          run = json.load(open('candidate-run.json', encoding='utf-8'))
+          expected = {
+              'name': 'Yeschoy Signed Update Candidate',
+              'event': 'workflow_dispatch',
+              'conclusion': 'success',
+              'head_sha': os.environ['GITHUB_SHA'],
+              'head_repository': os.environ['GITHUB_REPOSITORY'],
+          }
+          actual = {
+              'name': run.get('name'),
+              'event': run.get('event'),
+              'conclusion': run.get('conclusion'),
+              'head_sha': run.get('head_sha'),
+              'head_repository': (run.get('head_repository') or {}).get('full_name'),
+          }
+          if actual != expected:
+              raise SystemExit(f'candidate run identity mismatch: {actual!r}')
+          PY
 
-      - name: Rewrite updater manifest for R2
-        if: steps.r2.outputs.configured == 'true' && steps.latest.outputs.is_latest == 'true'
-        run: |
-          set -euo pipefail
-          node scripts/rewrite-updater-manifest.mjs r2-assets/latest.json "$TAG" "$R2_PUBLIC_BASE_URL" latest-r2.json
+      - name: Download both private candidate artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.candidate_run_id }}
+          pattern: yeschoy-${{ inputs.version }}-*-update-candidate
+          merge-multiple: true
+          path: candidate
 
-      - name: Upload versioned assets to R2
-        if: steps.r2.outputs.configured == 'true'
+      - name: Verify exact files and SHA-256 receipts
         run: |
           set -euo pipefail
-          # Versioned asset paths never change — cache hard at the edge.
-          # .tar.gz is the macOS updater payload; .sig files are not needed
-          # (signatures are embedded in latest.json) and latest.json goes to
-          # the bucket root with a short TTL instead.
-          aws s3 cp r2-assets "s3://$R2_BUCKET/$TAG/" \
-            --recursive \
-            --exclude "*.sig" --exclude "latest.json" \
-            --cache-control "public, max-age=31536000, immutable" \
-            --endpoint-url "$R2_ENDPOINT"
+          python3 - <<'PY'
+          import hashlib, os
+          from pathlib import Path
 
-      - name: Publish root manifests to R2
-        if: steps.r2.outputs.configured == 'true' && steps.latest.outputs.is_latest == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          version = os.environ['RELEASE_VERSION']
+          root = Path('candidate')
+          assets = {
+              f'yeschoy-{version}-macos-universal-installer.dmg',
+              f'yeschoy-{version}-macos-universal.app.tar.gz',
+              f'yeschoy-{version}-macos-universal.app.tar.gz.sig',
+              f'yeschoy-{version}-windows-x86_64-installer.exe',
+              f'yeschoy-{version}-windows-x86_64.nsis.zip',
+              f'yeschoy-{version}-windows-x86_64.nsis.zip.sig',
+          }
+          receipts = {'SHA256SUMS-macos.txt', 'SHA256SUMS-windows.txt'}
+          found = {path.name for path in root.iterdir() if path.is_file() and not path.is_symlink()}
+          if found != assets | receipts:
+              raise SystemExit(f'candidate file set mismatch: {sorted(found)}')
+          for receipt_name in receipts:
+              lines = (root / receipt_name).read_text(encoding='utf-8-sig').splitlines()
+              covered = set()
+              for line in lines:
+                  digest, name = line.split(None, 1)
+                  name = name.lstrip('*')
+                  if name not in assets or name in covered or len(digest) != 64:
+                      raise SystemExit(f'invalid checksum entry in {receipt_name}: {line!r}')
+                  actual = hashlib.sha256((root / name).read_bytes()).hexdigest()
+                  if actual != digest.lower():
+                      raise SystemExit(f'checksum mismatch for {name}')
+                  covered.add(name)
+              expected = {name for name in assets if ('macos' in name) == ('macos' in receipt_name)}
+              if covered != expected:
+                  raise SystemExit(f'incomplete checksum coverage in {receipt_name}')
+          PY
+
+      - name: Verify both updater signatures with the embedded public key
         run: |
           set -euo pipefail
-          # Re-verify right before touching the root manifests: a newer
-          # release may have been promoted while assets were downloading.
-          # Skipping then is safe — the newer release's own queued run
-          # publishes the newer manifests. An unresolvable API is still a
-          # hard failure, never a guess.
-          latest=""
-          for attempt in 1 2 3 4; do
-            latest=$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name || true)
-            if [ -n "$latest" ]; then
-              break
-            fi
-            if [ "$attempt" -lt 4 ]; then
-              sleep $((attempt * 10))
-            fi
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends minisign
+          node - <<'NODE'
+          const fs = require('fs');
+          const config = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json'));
+          fs.writeFileSync('updater.pub', Buffer.from(config.plugins.updater.pubkey, 'base64'));
+          NODE
+          for artifact in \
+            "candidate/yeschoy-$RELEASE_VERSION-macos-universal.app.tar.gz" \
+            "candidate/yeschoy-$RELEASE_VERSION-windows-x86_64.nsis.zip"
+          do
+            base64 --decode "$artifact.sig" > "$artifact.minisig"
+            minisign -Vm "$artifact" -x "$artifact.minisig" -p updater.pub
           done
-          if [ -z "$latest" ]; then
-            echo "::error::Could not re-verify the latest stable release before publishing root manifests; failing instead of guessing."
-            exit 1
-          fi
-          if [ "$TAG" != "$latest" ]; then
-            echo "::warning::$TAG stopped being the latest stable release mid-run ($latest is); leaving root manifests untouched."
-            exit 0
-          fi
-          # Both manifests are replaced on every release — keep edge cache
-          # short. Uploaded after the assets they reference so an aborted run
-          # never leaves them pointing at missing files.
-          aws s3 cp manifest.json "s3://$R2_BUCKET/manifest.json" \
-            --content-type "application/json" \
-            --cache-control "public, max-age=300" \
-            --endpoint-url "$R2_ENDPOINT"
-          aws s3 cp latest-r2.json "s3://$R2_BUCKET/latest.json" \
-            --content-type "application/json" \
-            --cache-control "public, max-age=300" \
-            --endpoint-url "$R2_ENDPOINT"
 
-      - name: Prune old versions
-        if: steps.r2.outputs.configured == 'true' && steps.latest.outputs.is_latest == 'true'
+      - name: Prepare release notes and locked SSH trust
+        env:
+          DOWNLOAD_ORIGIN_SSH_KEY: ${{ secrets.DOWNLOAD_ORIGIN_SSH_KEY }}
+          DOWNLOAD_ORIGIN_HOST_KEY: ${{ secrets.DOWNLOAD_ORIGIN_HOST_KEY }}
         run: |
           set -euo pipefail
-          versions=$(aws s3 ls "s3://$R2_BUCKET/" --endpoint-url "$R2_ENDPOINT" \
-            | awk '$1 == "PRE" {print $2}' | tr -d '/' | grep -E '^v[0-9]' | sort -V || true)
-          count=$(printf '%s\n' "$versions" | grep -c . || true)
-          if [ "$count" -le "$KEEP_VERSIONS" ]; then
-            echo "Nothing to prune ($count versions, keeping up to $KEEP_VERSIONS)."
-            exit 0
-          fi
-          printf '%s\n' "$versions" | head -n "-$KEEP_VERSIONS" | while read -r old; do
-            [ -n "$old" ] || continue
-            echo "Pruning s3://$R2_BUCKET/$old/"
-            aws s3 rm "s3://$R2_BUCKET/$old/" --recursive --endpoint-url "$R2_ENDPOINT"
-          done
+          test -n "$DOWNLOAD_ORIGIN_SSH_KEY"
+          test -n "$DOWNLOAD_ORIGIN_HOST_KEY"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DOWNLOAD_ORIGIN_SSH_KEY" > "$HOME/.ssh/yeschoy_release"
+          chmod 600 "$HOME/.ssh/yeschoy_release"
+          printf '%s\n' "$DOWNLOAD_ORIGIN_HOST_KEY" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+          python3 - <<'PY'
+          import os
+          notes = os.environ['RELEASE_NOTES']
+          if not 1 <= len(notes.strip()) <= 600:
+              raise SystemExit('release notes must contain 1 to 600 characters')
+          open('release-notes.txt', 'w', encoding='utf-8').write(notes.strip() + '\n')
+          PY
+
+      - name: Stage only the verified candidate files
+        id: stage
+        run: |
+          set -euo pipefail
+          remote_stage="/opt/yeschoy-download/incoming/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          ssh -i "$HOME/.ssh/yeschoy_release" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" "$DOWNLOAD_ORIGIN_USER@$DOWNLOAD_ORIGIN_HOST" \
+            "install -d -m 700 '$remote_stage'"
+          scp -i "$HOME/.ssh/yeschoy_release" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            deploy/self-update/publish.py release-notes.txt candidate/* \
+            "$DOWNLOAD_ORIGIN_USER@$DOWNLOAD_ORIGIN_HOST:$remote_stage/"
+          echo "remote_stage=$remote_stage" >> "$GITHUB_OUTPUT"
+
+      - name: Atomically publish manifests after immutable assets
+        id: publish
+        env:
+          REMOTE_STAGE: ${{ steps.stage.outputs.remote_stage }}
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/yeschoy_release" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" "$DOWNLOAD_ORIGIN_USER@$DOWNLOAD_ORIGIN_HOST" \
+            "/usr/bin/flock --exclusive /opt/yeschoy-download/publish.lock /usr/bin/python3 '$REMOTE_STAGE/publish.py' publish \
+              --root /srv/yeschoy-download/public \
+              --version '$RELEASE_VERSION' \
+              --notes '$REMOTE_STAGE/release-notes.txt' \
+              --platform darwin-aarch64='$REMOTE_STAGE/yeschoy-$RELEASE_VERSION-macos-universal.app.tar.gz,$REMOTE_STAGE/yeschoy-$RELEASE_VERSION-macos-universal.app.tar.gz.sig' \
+              --platform darwin-x86_64='$REMOTE_STAGE/yeschoy-$RELEASE_VERSION-macos-universal.app.tar.gz,$REMOTE_STAGE/yeschoy-$RELEASE_VERSION-macos-universal.app.tar.gz.sig' \
+              --platform windows-x86_64='$REMOTE_STAGE/yeschoy-$RELEASE_VERSION-windows-x86_64.nsis.zip,$REMOTE_STAGE/yeschoy-$RELEASE_VERSION-windows-x86_64.nsis.zip.sig' \
+              --installer macos-universal='$REMOTE_STAGE/yeschoy-$RELEASE_VERSION-macos-universal-installer.dmg' \
+              --installer windows-x86_64='$REMOTE_STAGE/yeschoy-$RELEASE_VERSION-windows-x86_64-installer.exe'" \
+            | tee promotion-receipt.json
+          python3 - <<'PY'
+          import json, os
+          receipt = json.load(open('promotion-receipt.json', encoding='utf-8'))
+          if receipt.get('status') != 'published' or receipt.get('version') != os.environ['RELEASE_VERSION']:
+              raise SystemExit(f'invalid publication receipt: {receipt!r}')
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+              for key, field in (
+                  ('manifest_sha256', 'manifestSha256'),
+                  ('previous_manifest_sha256', 'previousManifestSha256'),
+                  ('download_manifest_sha256', 'downloadManifestSha256'),
+                  ('previous_download_manifest_sha256', 'previousDownloadManifestSha256'),
+              ):
+                  output.write(f"{key}={receipt.get(field) or 'none'}\n")
+          PY
+
+      - name: Verify the public TLS endpoint and both manifests
+        id: probe
+        run: python3 deploy/self-update/probe_public_release.py --expect-updates published
+
+      - name: Roll back only this exact failed promotion
+        if: failure() && steps.publish.outcome == 'success' && steps.probe.outcome == 'failure'
+        env:
+          REMOTE_STAGE: ${{ steps.stage.outputs.remote_stage }}
+          EXPECTED_MANIFEST: ${{ steps.publish.outputs.manifest_sha256 }}
+          RESTORE_MANIFEST: ${{ steps.publish.outputs.previous_manifest_sha256 }}
+          EXPECTED_DOWNLOAD_MANIFEST: ${{ steps.publish.outputs.download_manifest_sha256 }}
+          RESTORE_DOWNLOAD_MANIFEST: ${{ steps.publish.outputs.previous_download_manifest_sha256 }}
+        run: |
+          set -euo pipefail
+          ssh -i "$HOME/.ssh/yeschoy_release" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" "$DOWNLOAD_ORIGIN_USER@$DOWNLOAD_ORIGIN_HOST" \
+            "/usr/bin/flock --exclusive /opt/yeschoy-download/publish.lock /usr/bin/python3 '$REMOTE_STAGE/publish.py' rollback \
+              --root /srv/yeschoy-download/public \
+              --expected-sha256 '$EXPECTED_MANIFEST' \
+              --restore-sha256 '$RESTORE_MANIFEST' \
+              --expected-download-sha256 '$EXPECTED_DOWNLOAD_MANIFEST' \
+              --restore-download-sha256 '$RESTORE_DOWNLOAD_MANIFEST'"
+
+      - name: Preserve the non-secret publication receipt
+        if: always() && hashFiles('promotion-receipt.json') != ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: yeschoy-${{ inputs.version }}-promotion-receipt
+          path: promotion-receipt.json
+          if-no-files-found: error
+          retention-days: 90

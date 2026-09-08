@@ -1,11 +1,17 @@
 use std::{
+    collections::HashMap,
     path::PathBuf,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex as StdMutex,
+    },
     time::{SystemTime, UNIX_EPOCH},
 };
 
 use reqwest::{Method, Url};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use tauri::Emitter;
 
 use crate::{
     account_v2::{
@@ -27,6 +33,137 @@ use crate::{
 
 const TOKEN_PAGE_SIZE: &str = "100";
 pub(crate) static ACTIVATION_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+const ACTIVATION_PROGRESS_EVENT: &str = "yeschoy://activation-progress";
+const ACTIVATION_PROGRESS_TOTAL: u8 = 7;
+
+#[derive(Default)]
+pub(crate) struct ActivationOperationState {
+    active: StdMutex<HashMap<String, Arc<ActivationCancellation>>>,
+}
+
+#[derive(Default)]
+struct ActivationCancellation {
+    requested: AtomicBool,
+}
+
+impl ActivationCancellation {
+    fn request(&self) {
+        self.requested.store(true, Ordering::Release);
+    }
+
+    fn is_requested(&self) -> bool {
+        self.requested.load(Ordering::Acquire)
+    }
+}
+
+struct ActivationRegistration<'a> {
+    request_id: String,
+    cancellation: Arc<ActivationCancellation>,
+    state: &'a ActivationOperationState,
+}
+
+impl Drop for ActivationRegistration<'_> {
+    fn drop(&mut self) {
+        if let Ok(mut active) = self.state.active.lock() {
+            let current = active.get(&self.request_id);
+            if current.is_some_and(|value| Arc::ptr_eq(value, &self.cancellation)) {
+                active.remove(&self.request_id);
+            }
+        }
+    }
+}
+
+impl ActivationOperationState {
+    fn begin(&self, request_id: &str) -> Result<ActivationRegistration<'_>, ()> {
+        let cancellation = Arc::new(ActivationCancellation::default());
+        let mut active = self.active.lock().map_err(|_| ())?;
+        if active.contains_key(request_id) {
+            return Err(());
+        }
+        active.insert(request_id.to_owned(), cancellation.clone());
+        Ok(ActivationRegistration {
+            request_id: request_id.to_owned(),
+            cancellation,
+            state: self,
+        })
+    }
+
+    fn cancel(&self, request_id: &str) -> Result<bool, ()> {
+        let active = self.active.lock().map_err(|_| ())?;
+        Ok(active.get(request_id).is_some_and(|value| {
+            value.request();
+            true
+        }))
+    }
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ActivationProgress {
+    request_id: String,
+    tool_id: String,
+    stage: &'static str,
+    completed_steps: u8,
+    total_steps: u8,
+}
+
+fn emit_activation_progress(
+    app: &tauri::AppHandle,
+    request: &ToolActivationRequest,
+    stage: &'static str,
+    completed_steps: u8,
+) {
+    if app
+        .emit_to(
+            "main",
+            ACTIVATION_PROGRESS_EVENT,
+            ActivationProgress {
+                request_id: request.request_id.clone(),
+                tool_id: request.tool_id.clone(),
+                stage,
+                completed_steps,
+                total_steps: ACTIVATION_PROGRESS_TOTAL,
+            },
+        )
+        .is_err()
+    {
+        log::warn!("tool_activation stage=progress_emit_failed");
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ActivationCancelRequest {
+    request_id: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActivationCancelResponse {
+    request_id: String,
+    status: &'static str,
+}
+
+#[tauri::command]
+pub fn cancel_tool_activation_v1(
+    state: tauri::State<'_, ActivationOperationState>,
+    request: ActivationCancelRequest,
+) -> Result<ActivationCancelResponse, String> {
+    if !request_id_is_valid(&request.request_id) {
+        return Err("invalid_activation_cancel_request".into());
+    }
+    let found = state
+        .cancel(&request.request_id)
+        .map_err(|_| "activation_state_unavailable")?;
+    Ok(ActivationCancelResponse {
+        request_id: request.request_id,
+        status: if found {
+            "cancel_requested"
+        } else {
+            "not_found"
+        },
+    })
+}
 
 // These generated-response routines remain available only to their isolated
 // adapter fixture suites. Keeping the symbols linked here makes that boundary
@@ -189,6 +326,7 @@ struct TokenLease {
     id: u64,
     key: String,
     created: bool,
+    retire_after_commit: Vec<u64>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -256,6 +394,7 @@ fn valid_model_bindings(models: &[ModelBinding], default: &str, group: &str) -> 
         && models.len() <= 200
         && models.iter().all(|m| {
             bounded_plain_text(&m.model_id, 200)
+                && !m.model_id.contains(',')
                 && bounded_plain_text(&m.billing_group, 128)
                 && m.billing_group != "auto"
                 && ids.insert(m.model_id.as_str())
@@ -459,8 +598,9 @@ async fn find_token_id(
     origin: &str,
     name: &str,
     group: &str,
+    model_ids: &[String],
     exact: bool,
-) -> Result<Option<u64>, ActivationFailure> {
+) -> Result<(Option<u64>, Vec<u64>), ActivationFailure> {
     let url = token_search_url(origin, name)?;
     let (status, value) = api.request(Method::GET, &url, None).await?;
     if matches!(status, 401 | 403) {
@@ -469,17 +609,31 @@ async fn find_token_id(
     if !server_success(status, &value) {
         return Err(ActivationFailure::ServerUnavailable);
     }
-    let id = data(&value)
+    let mut owned = data(&value)
         .and_then(Value::as_object)
         .and_then(|page| page.get("items"))
         .and_then(Value::as_array)
         .into_iter()
         .flatten()
         .filter_map(Value::as_object)
-        .filter(|token| reusable_token(token, name, group, exact))
-        .filter_map(|token| token.get("id").and_then(Value::as_u64))
-        .max();
-    Ok(id)
+        .filter(|token| owned_token(token, name, group, exact))
+        .filter_map(|token| {
+            token
+                .get("id")
+                .and_then(Value::as_u64)
+                .map(|id| (id, reusable_token(token, name, group, model_ids, exact)))
+        })
+        .collect::<Vec<_>>();
+    owned.sort_unstable_by_key(|(id, _)| *id);
+    let selected = owned
+        .iter()
+        .rev()
+        .find_map(|(id, reusable)| reusable.then_some(*id));
+    let retire = owned
+        .into_iter()
+        .filter_map(|(id, _)| (Some(id) != selected).then_some(id))
+        .collect();
+    Ok((selected, retire))
 }
 
 fn token_prefix(tool_id: &str, group: &str) -> String {
@@ -500,7 +654,7 @@ fn token_prefix(tool_id: &str, group: &str) -> String {
     format!("野菜API {code}-{hash:016x}")
 }
 
-fn reusable_token(
+fn owned_token(
     token: &serde_json::Map<String, Value>,
     name: &str,
     group: &str,
@@ -516,24 +670,44 @@ fn reusable_token(
                 suffix.len() == 16 && suffix.bytes().all(|c| c.is_ascii_hexdigit())
             })
     };
+    name_matches && token.get("group").and_then(Value::as_str) == Some(group)
+}
+
+fn reusable_token(
+    token: &serde_json::Map<String, Value>,
+    name: &str,
+    group: &str,
+    model_ids: &[String],
+    exact: bool,
+) -> bool {
     let expiry = token
         .get("expired_time")
         .and_then(Value::as_i64)
         .unwrap_or(0);
-    name_matches
-        && token.get("group").and_then(Value::as_str) == Some(group)
+    owned_token(token, name, group, exact)
         && token.get("status").and_then(Value::as_i64) == Some(1)
         && (expiry == -1 || expiry > (now_epoch_ms() / 1000) as i64)
+        && token.get("model_limits_enabled").and_then(Value::as_bool) == Some(true)
+        && token
+            .get("model_limits")
+            .and_then(Value::as_str)
+            .is_some_and(|actual| {
+                let mut actual = actual.split(',').collect::<Vec<_>>();
+                let mut expected = model_ids.iter().map(String::as_str).collect::<Vec<_>>();
+                actual.sort_unstable();
+                expected.sort_unstable();
+                !actual.iter().any(|id| id.is_empty()) && actual == expected
+            })
 }
 
-fn token_request(name: &str, group: &str) -> Value {
+fn token_request(name: &str, group: &str, model_ids: &[String]) -> Value {
     json!({
         "name": name,
         "remain_quota": 0,
         "expired_time": -1,
         "unlimited_quota": true,
-        "model_limits_enabled": false,
-        "model_limits": "",
+        "model_limits_enabled": true,
+        "model_limits": model_ids.join(","),
         "allow_ips": "",
         "group": group,
         "auto_groups": [],
@@ -585,8 +759,16 @@ async fn acquire_token(
     access_token: &str,
     tool_id: &str,
     group: &str,
+    model_ids: &[String],
 ) -> Result<TokenLease, ActivationFailure> {
-    acquire_token_using(&NativeTokenApi { access_token }, origin, tool_id, group).await
+    acquire_token_using(
+        &NativeTokenApi { access_token },
+        origin,
+        tool_id,
+        group,
+        model_ids,
+    )
+    .await
 }
 
 trait TokenApi {
@@ -619,14 +801,19 @@ async fn acquire_token_using(
     origin: &str,
     tool_id: &str,
     group: &str,
+    model_ids: &[String],
 ) -> Result<TokenLease, ActivationFailure> {
     let prefix = token_prefix(tool_id, group);
-    if let Some(id) = find_token_id(api, origin, &prefix, group, false).await? {
-        // Never rewrite an existing token's group, quota, expiry or restrictions.
+    let (existing, retire_after_commit) =
+        find_token_id(api, origin, &prefix, group, model_ids, false).await?;
+    if let Some(id) = existing {
+        // Reuse only an exact group and model scope; broad legacy keys are
+        // retired after the new local transaction commits successfully.
         return Ok(TokenLease {
             id,
             key: fetch_token_key(api, origin, id).await?,
             created: false,
+            retire_after_commit,
         });
     }
 
@@ -643,7 +830,7 @@ async fn acquire_token_using(
         .request(
             Method::POST,
             &format!("{origin}/api/token/"),
-            Some(token_request(&name, group)),
+            Some(token_request(&name, group, model_ids)),
         )
         .await?;
     if matches!(status, 401 | 403) {
@@ -654,8 +841,9 @@ async fn acquire_token_using(
     }
     // Standard NewAPI returns success with no data/key. Read the exact newly
     // created name back, including its group, then use the dedicated key API.
-    let id = find_token_id(api, origin, &name, group, true)
+    let id = find_token_id(api, origin, &name, group, model_ids, true)
         .await?
+        .0
         .ok_or(ActivationFailure::ServerUnavailable)?;
     let key = match fetch_token_key(api, origin, id).await {
         Ok(key) => key,
@@ -670,6 +858,7 @@ async fn acquire_token_using(
         id,
         key,
         created: true,
+        retire_after_commit,
     })
 }
 
@@ -692,6 +881,71 @@ async fn delete_created_tokens(origin: &str, access_token: &str, leases: &[(Stri
             .map(|(_, lease)| delete_created_token(origin, access_token, lease)),
     )
     .await;
+}
+
+async fn retire_superseded_tokens(
+    origin: &str,
+    access_token: &str,
+    leases: &[(String, TokenLease)],
+) {
+    let ids = leases
+        .iter()
+        .flat_map(|(_, lease)| lease.retire_after_commit.iter().copied())
+        .collect::<std::collections::HashSet<_>>();
+    for id in ids {
+        let retired = native_account_json(
+            Method::DELETE,
+            &format!("{origin}/api/token/{id}"),
+            access_token,
+            None,
+        )
+        .await;
+        if !matches!(retired, Ok((status, ref value)) if server_success(status, value)) {
+            log::warn!("tool_token_cleanup stage=retire_failed");
+        }
+    }
+}
+
+async fn revoke_owned_tool_tokens(
+    origin: &str,
+    access_token: &str,
+    tool_id: &str,
+    credential: &ToolCredential,
+) -> bool {
+    if credential.models.is_empty() {
+        return true;
+    }
+    let api = NativeTokenApi { access_token };
+    let mut grouped = std::collections::BTreeMap::<String, Vec<String>>::new();
+    for model in &credential.models {
+        grouped
+            .entry(model.billing_group.clone())
+            .or_default()
+            .push(model.model_id.clone());
+    }
+    let mut complete = true;
+    for (group, mut model_ids) in grouped {
+        model_ids.sort_unstable();
+        model_ids.dedup();
+        let prefix = token_prefix(tool_id, &group);
+        let ids = match find_token_id(&api, origin, &prefix, &group, &model_ids, false).await {
+            Ok((selected, stale)) => selected.into_iter().chain(stale).collect::<Vec<_>>(),
+            Err(_) => {
+                complete = false;
+                continue;
+            }
+        };
+        for id in ids {
+            match api
+                .request(Method::DELETE, &format!("{origin}/api/token/{id}"), None)
+                .await
+            {
+                Ok((status, value)) if server_success(status, &value) => {}
+                _ => complete = false,
+            }
+        }
+    }
+    complete
 }
 
 fn credential_for_models(
@@ -1064,6 +1318,8 @@ pub async fn scan_activation_targets_v1(
 #[tauri::command]
 #[allow(clippy::too_many_arguments)] // Tauri injects the independently owned runtime states.
 pub async fn configure_desktop_tool_v2(
+    app: tauri::AppHandle,
+    activation_state: tauri::State<'_, ActivationOperationState>,
     account_state: tauri::State<'_, AccountV2State>,
     installation_state: tauri::State<'_, crate::app_installation::AppInstallationState>,
     claude_code_runtime: tauri::State<'_, claude_code::ClaudeCodeRuntimeState>,
@@ -1076,12 +1332,23 @@ pub async fn configure_desktop_tool_v2(
     if !request_is_valid(&request) {
         return Err("invalid_tool_activation_request".into());
     }
-    let cancelled =
-        || ActivationFailure::ConfigurationFailed("assistant_shutting_down").projection(&request);
+    let registration = activation_state
+        .begin(&request.request_id)
+        .map_err(|_| "activation_already_running")?;
+    let cancelled = || {
+        ActivationFailure::ConfigurationFailed(if registration.cancellation.is_requested() {
+            "activation_cancelled"
+        } else {
+            "assistant_shutting_down"
+        })
+        .projection(&request)
+    };
+    emit_activation_progress(&app, &request, "queued", 0);
     let permit = match shutdown_coordinator::global().admit_operation() {
         Ok(p) => p,
         Err(_) => return Ok(cancelled()),
     };
+    let is_cancelled = || permit.is_cancelled() || registration.cancellation.is_requested();
     let session_epoch = if let Some(id) = request.installation_job_id.as_deref() {
         let intent = crate::app_installation::Intent {
             line_id: request.line_id.clone(),
@@ -1111,6 +1378,10 @@ pub async fn configure_desktop_tool_v2(
         Ok(g) => g,
         Err(_) => return Ok(cancelled()),
     };
+    if is_cancelled() {
+        return Ok(cancelled());
+    }
+    emit_activation_progress(&app, &request, "checking_application", 1);
     let _process_guard = match connection_recovery::operation_lock() {
         Ok(g) => g,
         Err(_) => {
@@ -1239,9 +1510,10 @@ pub async fn configure_desktop_tool_v2(
     }
     // Session refresh and token issuance may mutate the account. Never drop
     // these futures on shutdown; finish the bounded request then clean up.
-    if permit.is_cancelled() {
+    if is_cancelled() {
         return Ok(cancelled());
     }
+    emit_activation_progress(&app, &request, "authenticating", 2);
     let (origin, access_token) =
         match native_session_access(&account_state, &request.line_id, session_epoch).await {
             Ok(v) => v,
@@ -1258,6 +1530,10 @@ pub async fn configure_desktop_tool_v2(
             }
         };
     let bindings = request.bindings();
+    if is_cancelled() {
+        return Ok(cancelled());
+    }
+    emit_activation_progress(&app, &request, "checking_models", 3);
     let transports = match permit
         .cancel_safe(validate_models(
             &origin,
@@ -1291,6 +1567,7 @@ pub async fn configure_desktop_tool_v2(
         }
     };
     let mut leases = Vec::new();
+    emit_activation_progress(&app, &request, "securing_access", 4);
     for binding in &bindings {
         if leases
             .iter()
@@ -1298,19 +1575,26 @@ pub async fn configure_desktop_tool_v2(
         {
             continue;
         }
-        if permit.is_cancelled() || ensure_session_epoch(&account_state, session_epoch).is_err() {
+        if is_cancelled() || ensure_session_epoch(&account_state, session_epoch).is_err() {
             delete_created_tokens(&origin, &access_token, &leases).await;
-            return Ok(if permit.is_cancelled() {
+            return Ok(if is_cancelled() {
                 cancelled()
             } else {
                 ActivationFailure::ConfigurationFailed("account_changed").projection(&request)
             });
         }
+        let mut group_model_ids = bindings
+            .iter()
+            .filter(|candidate| candidate.billing_group == binding.billing_group)
+            .map(|candidate| candidate.model_id.clone())
+            .collect::<Vec<_>>();
+        group_model_ids.sort_unstable();
         match acquire_token(
             &origin,
             &access_token,
             &request.tool_id,
             &binding.billing_group,
+            &group_model_ids,
         )
         .await
         {
@@ -1321,9 +1605,9 @@ pub async fn configure_desktop_tool_v2(
             }
         }
     }
-    if permit.is_cancelled() || ensure_session_epoch(&account_state, session_epoch).is_err() {
+    if is_cancelled() || ensure_session_epoch(&account_state, session_epoch).is_err() {
         delete_created_tokens(&origin, &access_token, &leases).await;
-        return Ok(if permit.is_cancelled() {
+        return Ok(if is_cancelled() {
             cancelled()
         } else {
             ActivationFailure::ConfigurationFailed("account_changed").projection(&request)
@@ -1346,6 +1630,7 @@ pub async fn configure_desktop_tool_v2(
         .iter()
         .position(|m| m.model_id == request.model_id)
         .and_then(|i| transports[i]);
+    emit_activation_progress(&app, &request, "preparing_settings", 5);
     let mut prepared = match prepare_adapter(&request, &credential, default_transport) {
         Ok(v) => v,
         Err(e) => {
@@ -1444,16 +1729,17 @@ pub async fn configure_desktop_tool_v2(
     } else {
         Ok(())
     };
-    if gateway_result.is_err() || permit.is_cancelled() {
+    if gateway_result.is_err() || is_cancelled() {
         let _ = recovery.abandon(&recovery_record);
         delete_created_tokens(&origin, &access_token, &leases).await;
-        return Ok(if permit.is_cancelled() {
+        return Ok(if is_cancelled() {
             cancelled()
         } else {
             ActivationFailure::ConfigurationFailed("local_bridge_unavailable").projection(&request)
         });
     }
     // No cancellation point between credential publication and local file commit.
+    emit_activation_progress(&app, &request, "applying_settings", 6);
     let local_result = tool_credentials::store(&request.tool_id, &credential)
         .map_err(|_| AdapterFailure::SecureStorageUnavailable)
         .and_then(|()| prepared.commit());
@@ -1475,9 +1761,13 @@ pub async fn configure_desktop_tool_v2(
         },
     };
     let result = configured.and_then(|()| {
-        if permit.is_cancelled() {
+        if is_cancelled() {
             return Err(AdapterFailure::ConfigurationFailed(
-                "assistant_shutting_down",
+                if registration.cancellation.is_requested() {
+                    "activation_cancelled"
+                } else {
+                    "assistant_shutting_down"
+                },
             ));
         }
         if ensure_session_epoch(&account_state, session_epoch).is_err() {
@@ -1488,6 +1778,7 @@ pub async fn configure_desktop_tool_v2(
             .map_err(|_| AdapterFailure::ConfigurationFailed("recovery_receipt_failed"))
     });
     if let Err(error) = result {
+        emit_activation_progress(&app, &request, "restoring_settings", 6);
         let cleanup = restore_after_failure(
             &request,
             &mut prepared,
@@ -1509,7 +1800,12 @@ pub async fn configure_desktop_tool_v2(
         }
         return Ok(ActivationFailure::Adapter(cleanup.unwrap_or(error)).projection(&request));
     }
+    // The committed configuration now references only scoped keys. Broad or
+    // stale helper-owned predecessors can be retired without risking rollback
+    // to a key that was deleted mid-transaction.
+    retire_superseded_tokens(&origin, &access_token, &leases).await;
     reload_guard.disarm();
+    emit_activation_progress(&app, &request, "opening_application", 7);
     if let Err(error) =
         open_configured_adapter(&request, &installation, &credential, &dsh_runtime).await
     {
@@ -1523,6 +1819,7 @@ pub async fn configure_desktop_tool_v2(
             reason,
         ));
     }
+    emit_activation_progress(&app, &request, "complete", 7);
     Ok(ToolActivationProjection::new(
         &request,
         "ready",
@@ -1760,6 +2057,7 @@ fn legacy_recovery(store: &Store, tool: &str) -> Result<Option<connection_recove
 
 #[tauri::command]
 pub async fn manage_tool_connections_v1(
+    account_state: tauri::State<'_, AccountV2State>,
     claude_code_runtime: tauri::State<'_, claude_code::ClaudeCodeRuntimeState>,
     claude_runtime: tauri::State<'_, claude_desktop::ClaudeDesktopRuntimeState>,
     dsh_runtime: tauri::State<'_, dsh_web::DshRuntimeState>,
@@ -1789,6 +2087,8 @@ pub async fn manage_tool_connections_v1(
     let mut status = "ok";
     let mut reason = "local_state";
     if request.operation == "restore" {
+        let credential_for_cleanup = tool_credentials::load(&request.tool_id).ok();
+        let session_epoch = native_session_epoch(&account_state).ok();
         let result = (|| -> Result<bool, ()> {
             let store = store.as_ref().map_err(|_| ())?.as_ref().ok_or(())?;
             let record = store.load(&request.tool_id).map_err(|_| ())?;
@@ -1828,12 +2128,43 @@ pub async fn manage_tool_connections_v1(
                 })
                 .await;
             if cleaned {
+                let token_cleanup_complete = match (credential_for_cleanup.as_ref(), session_epoch)
+                {
+                    (Some(credential), Some(epoch)) => {
+                        match native_session_access(
+                            &account_state,
+                            if credential.origin == "https://api.yeschoy.com" {
+                                "global_accelerated"
+                            } else {
+                                "mainland_optimized"
+                            },
+                            epoch,
+                        )
+                        .await
+                        {
+                            Ok((origin, access_token)) => {
+                                revoke_owned_tool_tokens(
+                                    &origin,
+                                    &access_token,
+                                    &request.tool_id,
+                                    credential,
+                                )
+                                .await
+                            }
+                            Err(_) => false,
+                        }
+                    }
+                    (None, _) => true,
+                    _ => false,
+                };
                 status = if kept {
                     "restored_with_changes"
                 } else {
                     "restored"
                 };
-                reason = if kept {
+                reason = if !token_cleanup_complete {
+                    "local_settings_restored_token_cleanup_pending"
+                } else if kept {
                     "later_changes_preserved"
                 } else {
                     "local_settings_restored"
@@ -1888,6 +2219,7 @@ mod tests {
                     id: 1,
                     key: "synthetic-key-cheap".into(),
                     created: false,
+                    retire_after_commit: vec![],
                 },
             ),
             (
@@ -1896,6 +2228,7 @@ mod tests {
                     id: 2,
                     key: "synthetic-key-standard".into(),
                     created: false,
+                    retire_after_commit: vec![],
                 },
             ),
         ];
@@ -2007,24 +2340,46 @@ mod tests {
     #[tokio::test]
     async fn token_creation_without_key_reuses_only_the_selected_group_on_replay() {
         let api = FakeTokens::default();
-        let first = acquire_token_using(&api, "https://mock.invalid", "pi", "default")
-            .await
-            .unwrap();
+        let default_models = vec!["model-a".to_string()];
+        let first = acquire_token_using(
+            &api,
+            "https://mock.invalid",
+            "pi",
+            "default",
+            &default_models,
+        )
+        .await
+        .unwrap();
         assert!(first.created);
-        let replay = acquire_token_using(&api, "https://mock.invalid", "pi", "default")
-            .await
-            .unwrap();
+        let replay = acquire_token_using(
+            &api,
+            "https://mock.invalid",
+            "pi",
+            "default",
+            &default_models,
+        )
+        .await
+        .unwrap();
         assert!(!replay.created);
         assert_eq!(first.id, replay.id);
         assert_eq!(first.key, replay.key);
-        let discounted = acquire_token_using(&api, "https://mock.invalid", "pi", "国模特价分组")
-            .await
-            .unwrap();
+        let discounted_models = vec!["deepseek-v4-flash".to_string()];
+        let discounted = acquire_token_using(
+            &api,
+            "https://mock.invalid",
+            "pi",
+            "国模特价分组",
+            &discounted_models,
+        )
+        .await
+        .unwrap();
         assert!(discounted.created);
         assert_ne!(first.id, discounted.id);
         let tokens = api.tokens.lock().unwrap();
         assert_eq!(tokens[0]["group"], "default");
         assert_eq!(tokens[1]["group"], "国模特价分组");
+        assert_eq!(tokens[0]["model_limits_enabled"], true);
+        assert_eq!(tokens[0]["model_limits"], "model-a");
         assert!(!api
             .requests
             .lock()
@@ -2036,35 +2391,95 @@ mod tests {
     #[tokio::test]
     async fn failed_key_read_removes_only_the_new_token_and_leaves_original_group_unchanged() {
         let api = FakeTokens::default();
-        acquire_token_using(&api, "https://mock.invalid", "pi", "default")
-            .await
-            .unwrap();
+        let default_models = vec!["model-a".to_string()];
+        acquire_token_using(
+            &api,
+            "https://mock.invalid",
+            "pi",
+            "default",
+            &default_models,
+        )
+        .await
+        .unwrap();
         let before = api.tokens.lock().unwrap().clone();
         api.fail_keys
             .store(true, std::sync::atomic::Ordering::Relaxed);
-        assert!(
-            acquire_token_using(&api, "https://mock.invalid", "pi", "discount")
-                .await
-                .is_err()
-        );
+        assert!(acquire_token_using(
+            &api,
+            "https://mock.invalid",
+            "pi",
+            "discount",
+            &["model-b".to_string()],
+        )
+        .await
+        .is_err());
         assert_eq!(*api.tokens.lock().unwrap(), before);
         // Failure while reading an existing key must not delete it.
-        assert!(
-            acquire_token_using(&api, "https://mock.invalid", "pi", "default")
-                .await
-                .is_err()
-        );
+        assert!(acquire_token_using(
+            &api,
+            "https://mock.invalid",
+            "pi",
+            "default",
+            &default_models,
+        )
+        .await
+        .is_err());
         assert_eq!(*api.tokens.lock().unwrap(), before);
+    }
+
+    #[tokio::test]
+    async fn changed_model_scope_rotates_without_deleting_the_old_key_before_commit() {
+        let api = FakeTokens::default();
+        let first = acquire_token_using(
+            &api,
+            "https://mock.invalid",
+            "codex_desktop",
+            "default",
+            &["model-b".to_string(), "model-a".to_string()],
+        )
+        .await
+        .unwrap();
+        assert!(first.created);
+
+        let replay = acquire_token_using(
+            &api,
+            "https://mock.invalid",
+            "codex_desktop",
+            "default",
+            &["model-a".to_string(), "model-b".to_string()],
+        )
+        .await
+        .unwrap();
+        assert!(!replay.created);
+        assert_eq!(replay.id, first.id);
+
+        let replacement = acquire_token_using(
+            &api,
+            "https://mock.invalid",
+            "codex_desktop",
+            "default",
+            &["model-c".to_string()],
+        )
+        .await
+        .unwrap();
+        assert!(replacement.created);
+        assert_ne!(replacement.id, first.id);
+        assert_eq!(replacement.retire_after_commit, vec![first.id]);
+        let tokens = api.tokens.lock().unwrap();
+        assert_eq!(tokens.len(), 2, "old key stays valid until local commit");
+        assert_eq!(tokens[1]["model_limits"], "model-c");
     }
 
     #[test]
     fn token_identity_checks_real_group_status_and_expiry_not_just_the_label() {
         let prefix = token_prefix("pi", "special");
-        let mut token = json!({"name":format!("{prefix}-0123456789abcdef"),"group":"special","status":1,"expired_time":-1});
+        let models = vec!["model-a".to_string()];
+        let mut token = json!({"name":format!("{prefix}-0123456789abcdef"),"group":"special","status":1,"expired_time":-1,"model_limits_enabled":true,"model_limits":"model-a"});
         assert!(reusable_token(
             token.as_object().unwrap(),
             &prefix,
             "special",
+            &models,
             false
         ));
         token["group"] = json!("default");
@@ -2072,6 +2487,7 @@ mod tests {
             token.as_object().unwrap(),
             &prefix,
             "special",
+            &models,
             false
         ));
         token["group"] = json!("special");
@@ -2080,6 +2496,7 @@ mod tests {
             token.as_object().unwrap(),
             &prefix,
             "special",
+            &models,
             false
         ));
         token["status"] = json!(1);
@@ -2088,6 +2505,16 @@ mod tests {
             token.as_object().unwrap(),
             &prefix,
             "special",
+            &models,
+            false
+        ));
+        token["expired_time"] = json!(-1);
+        token["model_limits_enabled"] = json!(false);
+        assert!(!reusable_token(
+            token.as_object().unwrap(),
+            &prefix,
+            "special",
+            &models,
             false
         ));
         assert_ne!(prefix, token_prefix("pi", "default"));
@@ -2113,6 +2540,22 @@ mod tests {
         let mut invalid = valid;
         invalid.tool_id = "opencode".into();
         assert!(!request_is_valid(&invalid));
+
+        let comma = json!({"requestId":"fixture", "lineId":"mainland_optimized", "toolId":"pi", "modelId":"model,a", "billingGroup":"default", "installationId":"i0123456789abcdef"});
+        let comma: ToolActivationRequest = serde_json::from_value(comma).unwrap();
+        assert!(!request_is_valid(&comma));
+    }
+
+    #[test]
+    fn activation_cancellation_is_scoped_to_one_live_request() {
+        let state = ActivationOperationState::default();
+        let registration = state.begin("activation-one").unwrap();
+        assert!(state.begin("activation-one").is_err());
+        assert!(!registration.cancellation.is_requested());
+        assert_eq!(state.cancel("activation-one"), Ok(true));
+        assert!(registration.cancellation.is_requested());
+        drop(registration);
+        assert_eq!(state.cancel("activation-one"), Ok(false));
     }
 
     #[test]

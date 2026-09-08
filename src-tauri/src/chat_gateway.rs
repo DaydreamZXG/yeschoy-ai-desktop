@@ -3,7 +3,7 @@
 use std::{collections::HashSet, sync::Arc, time::Duration};
 
 use axum::{
-    body::{to_bytes, Body},
+    body::Body,
     extract::State,
     http::{header, Method, Request, Response, StatusCode},
     routing::any,
@@ -19,6 +19,7 @@ use tokio::{
 
 use crate::{
     codex_bridge::secure_equal,
+    loopback_http::{admit_ai_request, read_ai_request_body, AiRequestAdmissionError},
     request_diagnostics::{self, RequestOutcome},
     tool_adapters::AdapterFailure,
     tool_credentials::{self, CredentialFailure, ToolCredential},
@@ -26,7 +27,7 @@ use crate::{
 
 const ADDRESS: &str = "127.0.0.1:15730";
 const TOOLS: [&str; 4] = ["pi", "hermes", "openclaw", "dsh_web"];
-const MAX_BODY: usize = 8 * 1024 * 1024;
+const MAX_RESPONSE_BODY_BYTES: usize = 8 * 1024 * 1024;
 type Loader = Arc<dyn Fn(&str) -> Result<ToolCredential, CredentialFailure> + Send + Sync>;
 
 pub(crate) fn base_url(tool: &str) -> Option<String> {
@@ -277,13 +278,43 @@ async fn request(State(state): State<GatewayState>, request: Request<Body>) -> R
             "object":"list", "data":snapshot.model_ids().into_iter().map(|id| json!({"id":id,"object":"model","owned_by":"yeschoy"})).collect::<Vec<_>>()
         }).to_string()));
     }
-    let bytes = match to_bytes(request.into_body(), MAX_BODY).await {
-        Ok(bytes) => bytes,
-        Err(_) => {
+    let local_context = request_diagnostics::RequestContext {
+        tool: tool.into(),
+        model: String::new(),
+        group: String::new(),
+        origin: snapshot.origin.clone(),
+    };
+    let _admission = match admit_ai_request(request.headers()).await {
+        Ok(permit) => permit,
+        Err(AiRequestAdmissionError::PayloadTooLarge) => {
+            local_context.record(
+                RequestOutcome::PayloadTooLarge,
+                StatusCode::PAYLOAD_TOO_LARGE.as_u16(),
+            );
             return safe_error(
                 StatusCode::PAYLOAD_TOO_LARGE,
-                RequestOutcome::InvalidResponse,
-            )
+                RequestOutcome::PayloadTooLarge,
+            );
+        }
+        Err(AiRequestAdmissionError::Busy) => {
+            local_context.record(
+                RequestOutcome::LocalBusy,
+                StatusCode::TOO_MANY_REQUESTS.as_u16(),
+            );
+            return safe_error(StatusCode::TOO_MANY_REQUESTS, RequestOutcome::LocalBusy);
+        }
+    };
+    let bytes = match read_ai_request_body(request.into_body()).await {
+        Ok(bytes) => bytes,
+        Err(_) => {
+            local_context.record(
+                RequestOutcome::PayloadTooLarge,
+                StatusCode::PAYLOAD_TOO_LARGE.as_u16(),
+            );
+            return safe_error(
+                StatusCode::PAYLOAD_TOO_LARGE,
+                RequestOutcome::PayloadTooLarge,
+            );
         }
     };
     let mut body: Value = match serde_json::from_slice(&bytes) {
@@ -378,7 +409,7 @@ async fn request(State(state): State<GatewayState>, request: Request<Body>) -> R
     let mut bytes = Vec::new();
     while let Some(chunk) = stream.next().await {
         match chunk {
-            Ok(chunk) if bytes.len().saturating_add(chunk.len()) <= MAX_BODY => {
+            Ok(chunk) if bytes.len().saturating_add(chunk.len()) <= MAX_RESPONSE_BODY_BYTES => {
                 bytes.extend_from_slice(&chunk)
             }
             Ok(_) => {
@@ -485,6 +516,46 @@ mod tests {
 
     fn completed(model: &str) -> Value {
         json!({"model":model,"choices":[{"index":0,"message":{"role":"assistant","content":"fixture reply"},"finish_reason":"stop"}]})
+    }
+
+    #[tokio::test]
+    async fn every_chat_gateway_client_forwards_requests_above_the_legacy_limit() {
+        let forwarded_sizes = Arc::new(StdMutex::new(Vec::new()));
+        let captured = forwarded_sizes.clone();
+        let upstream = serve(Router::new().route(
+            "/v1/chat/completions",
+            post(move |request: Request<Body>| {
+                let captured = captured.clone();
+                async move {
+                    let bytes = crate::loopback_http::read_ai_request_body(request.into_body())
+                        .await
+                        .unwrap();
+                    captured.lock().unwrap().push(bytes.len());
+                    let body: Value = serde_json::from_slice(&bytes).unwrap();
+                    Json(completed(body["model"].as_str().unwrap()))
+                }
+            }),
+        ))
+        .await;
+        let gateway = serve(router(state(Arc::new(StdMutex::new(fixture())), &upstream))).await;
+        let client = upstream_client().unwrap();
+        let attachment = "a".repeat(8 * 1024 * 1024 + 1);
+        for tool in TOOLS {
+            let response = client
+                .post(format!("{}/{tool}/v1/chat/completions", gateway.url))
+                .bearer_auth("synthetic-local-tool-token")
+                .json(&json!({
+                    "model":"model-a",
+                    "messages":[{"role":"user","content":attachment}]
+                }))
+                .send()
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::OK, "{tool}");
+        }
+        let sizes = forwarded_sizes.lock().unwrap();
+        assert_eq!(sizes.len(), TOOLS.len());
+        assert!(sizes.iter().all(|size| *size > 8 * 1024 * 1024));
     }
 
     #[tokio::test]

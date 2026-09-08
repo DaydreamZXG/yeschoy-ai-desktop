@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU075-AS-happy",
+  "assertion": "The unchanged final tree proves shared hardened integration behavior and Yeschoy-only signed release controls.",
+  "testSelector": "tests/work_packages/ru074/test_acceptance.py::test_happy_path_closes_shared_runtime_and_release_controls",
+  "acceptanceCommandId": "ru075-happy",
+  "runId": "RU-075/WP-RU075-PUBLIC-RELEASE-READONLY-VERIFICATION@2026-09-07T18:08:44.725788+00:00",
+  "packageId": "WP-RU075-PUBLIC-RELEASE-READONLY-VERIFICATION",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru074/test_acceptance.py::test_happy_path_closes_shared_runtime_and_release_controls",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:657069187481455f541958f82cbf4953e09386e73f51ff6f7638a42e7b9dc2b2",
+    "machineReportSha256": "sha256:2cf7dd05cb0d531ea37e49824e5ea8a17b251e92ffa25297ad49581603f57c91",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:210f921c998254a5f89664162de29a202770f999a377fe2a033fe803cf323323",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:8e115c30a9689f145ef60d9860a5136473606ed01806dab175bfe1eb29061922",
+  "releaseUnitId": "RU-075",
+  "releaseUnitHash": "sha256:fee2153931e02156c1fd843859172d3578840ed20ff6610b2987d92a86acd6f3"
+}

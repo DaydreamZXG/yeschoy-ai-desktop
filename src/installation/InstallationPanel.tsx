@@ -148,7 +148,12 @@ export function InstallationPanel({
           </p>
         </div>
         <span className="app-install-trust">
-          <ShieldCheck size={14} /> 官方原版
+          <ShieldCheck size={14} />
+          {current?.mode === "guided"
+            ? "官方安装指引"
+            : current?.mode === "unsupported"
+              ? "官方支持范围"
+              : "厂商原版 · 安装前验签"}
         </span>
       </header>
       {current && !guided && current.jobId && (

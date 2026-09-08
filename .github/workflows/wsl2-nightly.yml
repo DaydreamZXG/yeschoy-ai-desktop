@@ -1,7 +1,7 @@
 name: YesChoy Nightly
 
-# Keep the existing nightly entrypoint, but validate the active client rather
-# than inactive CC Switch WSL configuration writes. This is not WSL coverage.
+# Keep the existing nightly entrypoint, but validate the active Yeschoy client.
+# This is a source check and does not claim WSL runtime coverage.
 on:
   schedule:
     - cron: "23 18 * * *" # 02:23 Beijing time; GitHub may delay scheduled runs.

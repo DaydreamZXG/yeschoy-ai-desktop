@@ -31,6 +31,8 @@ pub(crate) enum RequestOutcome {
     InvalidResponse,
     StreamInterrupted,
     UnknownModel,
+    PayloadTooLarge,
+    LocalBusy,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -106,6 +108,8 @@ pub(crate) fn curated_message(outcome: RequestOutcome) -> &'static str {
         RequestOutcome::InvalidResponse => "The provider returned an unreadable response. Try again.",
         RequestOutcome::StreamInterrupted => "The response was interrupted before completion. Try again.",
         RequestOutcome::UnknownModel => "This model is not configured. Select a model from the configured list.",
+        RequestOutcome::PayloadTooLarge => "This request is too large for the local gateway. Reduce or split the attachments, then try again.",
+        RequestOutcome::LocalBusy => "The local gateway is already preparing another large request. Wait for it to finish, then try again.",
     }
 }
 
@@ -319,6 +323,16 @@ mod tests {
         assert!(latest("not-a-tool").is_none());
         clear("pi");
         assert!(latest("pi").is_none());
+    }
+
+    #[test]
+    fn payload_too_large_is_distinct_from_an_upstream_failure() {
+        let outcome = RequestOutcome::PayloadTooLarge;
+        assert_eq!(outcome, RequestOutcome::PayloadTooLarge);
+        assert_eq!(error_json(outcome)["error"]["code"], "payload_too_large");
+        assert!(curated_message(outcome).contains("attachments"));
+        assert_eq!(outcome_for_status(413), RequestOutcome::UpstreamError);
+        assert_eq!(outcome_for_status(429), RequestOutcome::UpstreamError);
     }
 
     #[tokio::test]

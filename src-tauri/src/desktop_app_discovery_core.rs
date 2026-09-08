@@ -221,13 +221,13 @@ pub(crate) fn windows_manifest_applications(
     app_id: &str,
     source: &[u8],
 ) -> Option<Vec<(String, String)>> {
-    use quick_xml::{events::Event, Reader};
+    use quick_xml::{events::Event, Reader, XmlVersion};
     if source.len() > 1024 * 1024 {
         return None;
     }
     let source = std::str::from_utf8(source).ok()?;
     let mut reader = Reader::from_str(source);
-    let mut elements = Vec::<Vec<u8>>::new();
+    let mut elements = Vec::<String>::new();
     let mut applications = Vec::new();
     loop {
         let event = reader.read_event().ok()?;
@@ -235,26 +235,26 @@ pub(crate) fn windows_manifest_applications(
             Event::DocType(_) => return None,
             Event::Start(ref element) | Event::Empty(ref element) => {
                 let name = element.local_name();
-                if name.as_ref() == b"Application"
-                    && elements == [b"Package".to_vec(), b"Applications".to_vec()]
+                if name.as_ref() == "Application"
+                    && elements.as_slice() == ["Package", "Applications"]
                 {
                     let mut id = None;
                     let mut executable = None;
                     for attribute in element.attributes() {
                         let attribute = attribute.ok()?;
                         match attribute.key.as_ref() {
-                            b"Id" => {
+                            "Id" => {
                                 id = Some(
                                     attribute
-                                        .decode_and_unescape_value(reader.decoder())
+                                        .normalized_value(XmlVersion::Implicit1_0)
                                         .ok()?
                                         .into_owned(),
                                 )
                             }
-                            b"Executable" => {
+                            "Executable" => {
                                 executable = Some(
                                     attribute
-                                        .decode_and_unescape_value(reader.decoder())
+                                        .normalized_value(XmlVersion::Implicit1_0)
                                         .ok()?
                                         .into_owned(),
                                 )
@@ -275,7 +275,7 @@ pub(crate) fn windows_manifest_applications(
                     }
                 }
                 if matches!(event, Event::Start(_)) {
-                    elements.push(name.as_ref().to_vec());
+                    elements.push(name.as_ref().to_owned());
                     if elements.len() > 64 {
                         return None;
                     }

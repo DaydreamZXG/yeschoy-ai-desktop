@@ -18,12 +18,13 @@ use tokio::{
 
 use crate::{
     codex_bridge::{claude_streaming as streaming, claude_transform as transform, secure_equal},
+    loopback_http::{admit_ai_request, read_ai_request_body, AiRequestAdmissionError},
     request_diagnostics::{self, RequestContext, RequestOutcome, StreamProtocol},
     tool_adapters::AdapterFailure,
     tool_credentials::ToolCredential,
 };
 
-const MAX_BODY_BYTES: usize = 8 * 1024 * 1024;
+const MAX_RESPONSE_BODY_BYTES: usize = 8 * 1024 * 1024;
 
 fn upstream_client() -> Result<reqwest::Client, reqwest::Error> {
     reqwest::Client::builder()
@@ -302,16 +303,19 @@ fn chat_request(bytes: &[u8], model: &str) -> Result<(Vec<u8>, bool), ()> {
 }
 
 async fn read_bounded(response: reqwest::Response) -> Result<Vec<u8>, RequestOutcome> {
-    to_bytes(Body::from_stream(response.bytes_stream()), MAX_BODY_BYTES)
-        .await
-        .map(|bytes| bytes.to_vec())
-        .map_err(|error| {
-            if request_diagnostics::transport_outcome(&error) == RequestOutcome::Timeout {
-                RequestOutcome::Timeout
-            } else {
-                RequestOutcome::InvalidResponse
-            }
-        })
+    to_bytes(
+        Body::from_stream(response.bytes_stream()),
+        MAX_RESPONSE_BODY_BYTES,
+    )
+    .await
+    .map(|bytes| bytes.to_vec())
+    .map_err(|error| {
+        if request_diagnostics::transport_outcome(&error) == RequestOutcome::Timeout {
+            RequestOutcome::Timeout
+        } else {
+            RequestOutcome::InvalidResponse
+        }
+    })
 }
 
 async fn proxy_request(
@@ -355,13 +359,42 @@ async fn proxy_request(
     if upstream_path != "/v1/messages" {
         return error_response(StatusCode::NOT_FOUND, "unsupported Claude endpoint");
     }
+    let local_context = RequestContext {
+        tool: tool_id(state.prefix).into(),
+        model: String::new(),
+        group: String::new(),
+        origin: state.credential.origin.clone(),
+    };
+    let _admission = match admit_ai_request(request.headers()).await {
+        Ok(permit) => permit,
+        Err(AiRequestAdmissionError::PayloadTooLarge) => {
+            return observed_error(
+                &local_context,
+                StatusCode::PAYLOAD_TOO_LARGE,
+                RequestOutcome::PayloadTooLarge,
+            )
+        }
+        Err(AiRequestAdmissionError::Busy) => {
+            return observed_error(
+                &local_context,
+                StatusCode::TOO_MANY_REQUESTS,
+                RequestOutcome::LocalBusy,
+            )
+        }
+    };
     let method = request.method().clone();
     let anthropic_version = request.headers().get("anthropic-version").cloned();
     let anthropic_beta = request.headers().get("anthropic-beta").cloned();
     let accept = request.headers().get(header::ACCEPT).cloned();
-    let body = match to_bytes(request.into_body(), MAX_BODY_BYTES).await {
+    let body = match read_ai_request_body(request.into_body()).await {
         Ok(bytes) => bytes,
-        Err(_) => return error_response(StatusCode::PAYLOAD_TOO_LARGE, "request too large"),
+        Err(_) => {
+            return observed_error(
+                &local_context,
+                StatusCode::PAYLOAD_TOO_LARGE,
+                RequestOutcome::PayloadTooLarge,
+            )
+        }
     };
 
     let (credential, group) = match route_snapshot(&state.credential, state.prefix, &body) {
@@ -621,7 +654,7 @@ struct CompletionObserver {
 impl CompletionObserver {
     fn push(&mut self, bytes: &[u8]) -> bool {
         self.buffer.extend_from_slice(bytes);
-        if self.buffer.len() > MAX_BODY_BYTES {
+        if self.buffer.len() > MAX_RESPONSE_BODY_BYTES {
             self.failed = true;
             self.buffer.clear();
             return false;
@@ -684,6 +717,81 @@ fn verified_stream<E: std::error::Error + Send + 'static>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn claude_code_and_desktop_forward_requests_above_the_legacy_limit() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let origin = format!("http://{}", listener.local_addr().unwrap());
+        let forwarded_sizes = Arc::new(Mutex::new(Vec::new()));
+        let captured = forwarded_sizes.clone();
+        let server = tokio::spawn(async move {
+            let router = Router::new().fallback(any(move |request: Request<Body>| {
+                let captured = captured.clone();
+                async move {
+                    let body = crate::loopback_http::read_ai_request_body(request.into_body())
+                        .await
+                        .unwrap();
+                    captured.lock().await.push(body.len());
+                    response(
+                        StatusCode::OK,
+                        "application/json",
+                        Body::from(
+                            json!({
+                                "type":"message",
+                                "role":"assistant",
+                                "model":"selected-model",
+                                "content":[{"type":"text","text":"ok"}],
+                                "stop_reason":"end_turn"
+                            })
+                            .to_string(),
+                        ),
+                    )
+                }
+            }));
+            axum::serve(listener, router).await.unwrap();
+        });
+        let token = format!("ycg-{}", "a".repeat(64));
+        let attachment = "a".repeat(8 * 1024 * 1024 + 1);
+        for prefix in ["/claude-code", "/claude-desktop"] {
+            let (events, _) = broadcast::channel(8);
+            let state = Arc::new(ProxyState {
+                credential: ToolCredential {
+                    api_key: "synthetic-upstream-key".into(),
+                    origin: origin.clone(),
+                    model_id: "selected-model".into(),
+                    local_gateway_token: Some(token.clone()),
+                    codex_transport: None,
+                    claude_transport: Some("direct_anthropic".into()),
+                    models: vec![],
+                },
+                local_token: token.clone(),
+                prefix,
+                client: upstream_client().unwrap(),
+                events,
+            });
+            let request = Request::builder()
+                .method("POST")
+                .uri(format!("{prefix}/v1/messages"))
+                .header("x-api-key", &token)
+                .body(Body::from(
+                    json!({
+                        "model":"selected-model",
+                        "max_tokens":1,
+                        "messages":[{"role":"user","content":attachment}]
+                    })
+                    .to_string(),
+                ))
+                .unwrap();
+            assert_eq!(
+                proxy_request(State(state), request).await.status(),
+                StatusCode::OK
+            );
+        }
+        let sizes = forwarded_sizes.lock().await;
+        assert_eq!(sizes.len(), 2);
+        assert!(sizes.iter().all(|size| *size > 8 * 1024 * 1024));
+        server.abort();
+    }
 
     #[tokio::test]
     async fn ru042_claude_exact_models_use_distinct_keys_and_protocols() {
@@ -992,7 +1100,7 @@ mod tests {
             .unwrap();
         let result = proxy_request(State(state), request).await;
         let status = result.status();
-        let body = to_bytes(result.into_body(), MAX_BODY_BYTES)
+        let body = to_bytes(result.into_body(), MAX_RESPONSE_BODY_BYTES)
             .await
             .unwrap()
             .to_vec();
