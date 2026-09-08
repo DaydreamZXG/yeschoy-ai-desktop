@@ -111,18 +111,16 @@ pub fn run() {
                 if permit.is_cancelled() {
                     return;
                 }
-                tool_adapters::claude_code::resume_if_configured(resume_claude_code_runtime).await;
-                if permit.is_cancelled() {
-                    return;
-                }
-                tool_adapters::claude_desktop::resume_if_configured(resume_claude_runtime).await;
-                if permit.is_cancelled() {
-                    return;
-                }
-                codex_bridge::resume_if_configured(resume_codex_bridge).await;
-                if !permit.is_cancelled() {
-                    chat_gateway::resume_if_configured(resume_chat_gateway).await;
-                }
+                // Each helper owns an independent listener. Starting them in
+                // sequence allowed one stale keychain/runtime lookup to keep
+                // Codex's already-configured loopback gateway offline and its
+                // UI stuck on the logo screen.
+                tokio::join!(
+                    codex_bridge::resume_if_configured(resume_codex_bridge),
+                    chat_gateway::resume_if_configured(resume_chat_gateway),
+                    tool_adapters::claude_code::resume_if_configured(resume_claude_code_runtime),
+                    tool_adapters::claude_desktop::resume_if_configured(resume_claude_runtime),
+                );
             });
             Ok(())
         })

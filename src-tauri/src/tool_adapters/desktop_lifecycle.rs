@@ -1,42 +1,87 @@
 //! Exact-installation lifecycle checks for desktop tools that reload settings
-//! only after a normal application restart. This module never force-terminates.
+//! only after a restart. A user-confirmed Windows handoff first asks the app to
+//! close normally, then terminates only residual processes whose executable
+//! path still matches the exact discovered installation.
 
 use std::{path::Path, time::Duration};
 
 use super::AdapterFailure;
 
 const EXIT_POLL: Duration = Duration::from_millis(100);
+#[cfg(target_os = "windows")]
+const NORMAL_QUIT_LIMIT: Duration = Duration::from_secs(4);
+#[cfg(not(target_os = "windows"))]
 const NORMAL_QUIT_LIMIT: Duration = Duration::from_secs(10);
+const FORCED_QUIT_LIMIT: Duration = Duration::from_secs(5);
 
 pub(crate) fn requires_reload(tool_id: &str) -> bool {
     matches!(tool_id, "claude_desktop" | "codex_desktop")
 }
 
-pub(crate) fn is_running(tool_id: &str, path: &Path) -> Result<bool, AdapterFailure> {
+pub(crate) async fn is_running(tool_id: &str, path: &Path) -> Result<bool, AdapterFailure> {
     if !requires_reload(tool_id) {
         return Ok(false);
     }
-    platform::is_running(tool_id, path)
+    let tool_id = tool_id.to_owned();
+    let path = path.to_owned();
+    tokio::task::spawn_blocking(move || platform::is_running(&tool_id, &path))
+        .await
+        .map_err(|_| AdapterFailure::LaunchError("desktop_state_unavailable"))?
 }
 
-/// Ask the exact discovered desktop installation to quit normally and wait
-/// for its top-level process to leave. `Ok(true)` means a live application was
-/// closed; `Ok(false)` means it was already stopped. A refusal/timeout is
-/// recoverable and must not be followed by configuration writes.
-pub(crate) async fn quit_normally(tool_id: &str, path: &Path) -> Result<bool, AdapterFailure> {
-    if !requires_reload(tool_id) {
-        return Ok(false);
-    }
-    let requested = platform::request_normal_quit(tool_id, path)?;
-    if !requested {
-        return Ok(false);
-    }
-    let deadline = tokio::time::Instant::now() + NORMAL_QUIT_LIMIT;
+async fn blocking_normal_quit(tool_id: &str, path: &Path) -> Result<bool, AdapterFailure> {
+    let tool_id = tool_id.to_owned();
+    let path = path.to_owned();
+    tokio::task::spawn_blocking(move || platform::request_normal_quit(&tool_id, &path))
+        .await
+        .map_err(|_| AdapterFailure::LaunchError("desktop_state_unavailable"))?
+}
+
+async fn blocking_force_quit(tool_id: &str, path: &Path) -> Result<bool, AdapterFailure> {
+    let tool_id = tool_id.to_owned();
+    let path = path.to_owned();
+    tokio::task::spawn_blocking(move || platform::force_quit(&tool_id, &path))
+        .await
+        .map_err(|_| AdapterFailure::LaunchError("desktop_state_unavailable"))?
+}
+
+async fn wait_until_stopped(
+    tool_id: &str,
+    path: &Path,
+    limit: Duration,
+) -> Result<bool, AdapterFailure> {
+    let deadline = tokio::time::Instant::now() + limit;
     while tokio::time::Instant::now() < deadline {
-        if !platform::is_running(tool_id, path)? {
+        if !is_running(tool_id, path).await? {
             return Ok(true);
         }
         tokio::time::sleep(EXIT_POLL).await;
+    }
+    Ok(false)
+}
+
+/// Close the exact discovered desktop installation after the user has
+/// confirmed that work is saved. `Ok(true)` means a live application was
+/// closed; `Ok(false)` means it was already stopped. Windows gets a controlled
+/// exact-path fallback for background processes left behind after WM_CLOSE.
+pub(crate) async fn quit_for_reconfigure(
+    tool_id: &str,
+    path: &Path,
+) -> Result<bool, AdapterFailure> {
+    if !requires_reload(tool_id) {
+        return Ok(false);
+    }
+    let requested = blocking_normal_quit(tool_id, path).await?;
+    if !requested {
+        return Ok(false);
+    }
+    if wait_until_stopped(tool_id, path, NORMAL_QUIT_LIMIT).await? {
+        return Ok(true);
+    }
+    if blocking_force_quit(tool_id, path).await?
+        && wait_until_stopped(tool_id, path, FORCED_QUIT_LIMIT).await?
+    {
+        return Ok(true);
     }
     Err(AdapterFailure::LaunchError("graceful_restart_required"))
 }
@@ -91,6 +136,10 @@ mod platform {
         }
         Ok(matched)
     }
+
+    pub(super) fn force_quit(_tool_id: &str, _path: &Path) -> Result<bool, AdapterFailure> {
+        Ok(false)
+    }
 }
 
 #[cfg(target_os = "windows")]
@@ -107,8 +156,8 @@ mod platform {
                     TH32CS_SNAPPROCESS,
                 },
                 Threading::{
-                    OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
-                    PROCESS_QUERY_LIMITED_INFORMATION,
+                    OpenProcess, QueryFullProcessImageNameW, TerminateProcess, PROCESS_NAME_WIN32,
+                    PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_TERMINATE,
                 },
             },
             UI::WindowsAndMessaging::{
@@ -132,6 +181,14 @@ mod platform {
         }
     }
 
+    struct Process(HANDLE);
+
+    impl Drop for Process {
+        fn drop(&mut self) {
+            let _ = unsafe { CloseHandle(self.0) };
+        }
+    }
+
     fn normalized(path: &Path) -> String {
         std::fs::canonicalize(path)
             .unwrap_or_else(|_| path.to_path_buf())
@@ -141,8 +198,7 @@ mod platform {
             .to_lowercase()
     }
 
-    fn process_path(pid: u32) -> Option<String> {
-        let process = unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid).ok()? };
+    fn process_path_from_handle(process: HANDLE) -> Option<String> {
         let mut buffer = vec![0u16; 32_768];
         let mut length = buffer.len() as u32;
         let queried = unsafe {
@@ -153,9 +209,14 @@ mod platform {
                 &mut length,
             )
         };
-        let _ = unsafe { CloseHandle(process) };
         queried.ok()?;
         String::from_utf16(buffer.get(..length as usize)?).ok()
+    }
+
+    fn process_path(pid: u32) -> Option<String> {
+        let process =
+            Process(unsafe { OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid).ok()? });
+        process_path_from_handle(process.0)
     }
 
     unsafe extern "system" fn collect_window(hwnd: HWND, lparam: LPARAM) -> BOOL {
@@ -224,14 +285,48 @@ mod platform {
             return Ok(false);
         }
         let windows = matching_windows(pids)?;
-        if windows.is_empty() {
-            return Err(AdapterFailure::LaunchError("graceful_restart_required"));
-        }
         for hwnd in &windows {
             unsafe { PostMessageW(Some(*hwnd), WM_CLOSE, WPARAM(0), LPARAM(0)) }
                 .map_err(|_| AdapterFailure::LaunchError("graceful_restart_required"))?;
         }
-        Ok(!windows.is_empty())
+        // A background-only process has no window to receive WM_CLOSE. It is
+        // still a live exact installation and is handled by the controlled
+        // fallback after the normal grace period.
+        Ok(true)
+    }
+
+    pub(super) fn force_quit(_tool_id: &str, path: &Path) -> Result<bool, AdapterFailure> {
+        let target = normalized(path);
+        let pids = matching_processes(path)?;
+        if pids.is_empty() {
+            return Ok(false);
+        }
+        let mut terminated = false;
+        for pid in pids {
+            let process = Process(
+                unsafe {
+                    OpenProcess(
+                        PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_TERMINATE,
+                        false,
+                        pid,
+                    )
+                }
+                .map_err(|_| AdapterFailure::LaunchError("graceful_restart_required"))?,
+            );
+            // Revalidate on the same process handle immediately before the
+            // destructive call; a recycled PID or different installation is
+            // never terminated.
+            let still_matches = process_path_from_handle(process.0)
+                .map(|candidate| normalized(Path::new(&candidate)) == target)
+                .unwrap_or(false);
+            if !still_matches {
+                continue;
+            }
+            unsafe { TerminateProcess(process.0, 0) }
+                .map_err(|_| AdapterFailure::LaunchError("graceful_restart_required"))?;
+            terminated = true;
+        }
+        Ok(terminated)
     }
 }
 
@@ -249,6 +344,10 @@ mod platform {
         _tool_id: &str,
         _path: &Path,
     ) -> Result<bool, AdapterFailure> {
+        Ok(false)
+    }
+
+    pub(super) fn force_quit(_tool_id: &str, _path: &Path) -> Result<bool, AdapterFailure> {
         Ok(false)
     }
 }

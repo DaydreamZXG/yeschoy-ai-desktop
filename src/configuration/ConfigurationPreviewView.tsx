@@ -145,7 +145,7 @@ export function connectionLifecycleNote(
 ) {
   switch (connectionLifecycleMode(toolId)) {
     case "graceful_desktop_restart":
-      return `若 ${name} 正在运行，更新接入时会先提醒你保存；确认后由助手请求应用正常退出，写入设置并重新打开。不会强制结束进程。`;
+      return `若 ${name} 正在运行，更新接入时会先提醒你保存；确认后由助手先请求应用正常退出，写入设置并重新打开。Windows 若只剩后台进程，会仅结束这个安装路径对应的进程。`;
     case "browser_launch":
       return "更新接入会保存 DSH 配置；“打开使用”只会启动本地服务并在浏览器中打开，不会发送模型测试消息。";
     case "new_terminal_session":
@@ -223,7 +223,7 @@ const UX = {
     secureStoreFailed:
       "系统安全存储暂时不可用。请解锁钥匙串或凭据管理器，并检查本机接入状态后重试。",
     externalOverride:
-      "系统里已有更高优先级的设置。移除该设置后再试，原配置没有改动。",
+      "检测到其他配置工具正在同时修改设置，或自定义配置目录无效。请先退出 CC Switch 等切换工具，再点“重新检查并接入”；原设置没有改动。",
     unsupportedProfile: "这个应用的运行方式暂不能自动配置，原设置没有改动。",
     launchFailed:
       "设置已经恢复，因为应用未能正常启动。请确认应用可以手动打开。",
@@ -793,7 +793,15 @@ export function ConfigurationPreviewView({
       setRestartPromptContext(
         result.status === "application_running" ? submittedContext : null,
       );
-    } catch {
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      const reasonCode =
+        errorMessage === "activation_request_timed_out"
+          ? "activation_request_timed_out"
+          : errorMessage.includes("activation_already_running")
+            ? "activation_already_running"
+            : "invalid_response";
       setRestartPromptContext(null);
       setActivation({
         requestId: "local",
@@ -803,7 +811,7 @@ export function ConfigurationPreviewView({
         modelId: defaultBinding.modelId,
         billingGroup: defaultBinding.billingGroup,
         observedAtEpochMs: Date.now(),
-        reasonCode: "invalid_response",
+        reasonCode,
       });
     } finally {
       applyInFlight.current = false;
@@ -868,8 +876,8 @@ export function ConfigurationPreviewView({
         return `${resultContext?.app ?? application.displayName} 的设置和本地连接已经就绪。${(activation.models?.length ?? 1) > 1 ? "常用模型已一起配置。" : ""}请在应用中正常使用；第一次真实请求的结果会显示在“最近连接结果”里。`;
       case "application_running":
         return activation.reasonCode === "graceful_restart_required"
-          ? `${resultContext?.app ?? application.displayName} 还没有正常退出，本次没有修改设置。请先在应用里完成保存或退出确认，再继续。`
-          : `${resultContext?.app ?? application.displayName} 正在运行。请先保存未完成内容，再确认由助手正常退出并重新打开；不会强制结束进程。`;
+          ? `系统未能关闭 ${resultContext?.app ?? application.displayName}，本次没有修改设置。请确认没有系统弹窗拦截，或手动退出后重试。`
+          : `${resultContext?.app ?? application.displayName} 正在运行。请先保存未完成内容，再确认由助手关闭并重新打开。Windows 若只剩后台进程，只会结束已识别安装路径对应的进程。`;
       case "signed_out":
         return c.setupSignedOut;
       case "tool_not_found":
@@ -921,6 +929,12 @@ export function ConfigurationPreviewView({
             return ux.desktopTimedOut;
           case "credential_helper_failed":
             return ux.credentialHelperFailed;
+          case "local_bridge_unavailable":
+            return "野菜本机网关没有在限定时间内就绪，接入设置已恢复。请重新打开野菜助手后再试。";
+          case "local_bridge_auth_failed":
+            return "野菜本机网关的安全令牌不一致，接入设置已恢复。请重新接入，助手会自动生成新令牌。";
+          case "local_bridge_catalog_invalid":
+            return "野菜本机网关没有加载完整模型列表，接入设置已恢复。请重新检查模型后再试。";
           case "authentication_failed":
             return ux.authenticationFailed;
           case "endpoint_unavailable":
@@ -950,6 +964,10 @@ export function ConfigurationPreviewView({
           return "正在退出助手，本次接入已停止；已写入的设置会先恢复。";
         if (activation.reasonCode === "activation_cancelled")
           return "已取消本次接入；如果设置写入已经开始，助手已先恢复原设置。";
+        if (activation.reasonCode === "activation_request_timed_out")
+          return "接入等待超过 90 秒，页面已恢复操作并通知后台安全取消。请先查看接入状态；若仍显示处理中，请等待片刻后再试，不要连续重复提交。";
+        if (activation.reasonCode === "activation_already_running")
+          return "已有一项接入正在安全收尾，请稍等片刻后再试；本次没有重复提交。";
         if (activation.reasonCode === "account_changed")
           return "账户已切换，本次接入已停止。请确认当前账户后重新接入。";
         if (activation.reasonCode === "invalid_response")
@@ -2016,7 +2034,7 @@ export function ConfigurationPreviewView({
       <ConfirmDialog
         isOpen={restartPromptContext !== null}
         title={`保存后自动重新打开 ${resultContext?.app ?? application.displayName}`}
-        message={`这个应用正在运行。请先保存正在编辑的内容。\n\n继续后，你不需要手动退出：野菜助手会请求它正常退出，设置完成后再重新打开；不会强制结束进程。若应用拒绝退出，本次不会修改设置。`}
+        message={`这个应用正在运行。请先保存正在编辑的内容。\n\n继续后，你不需要手动退出：野菜助手会先请求它正常退出，设置完成后再重新打开。Windows 若只剩后台进程，会仅结束这个已识别安装路径对应的进程；不会按名称结束其他程序。若系统仍阻止退出，本次不会修改设置。`}
         confirmText="已保存，退出并继续"
         cancelText="暂不接入"
         variant="info"

@@ -77,7 +77,10 @@ impl ActivationOperationState {
     fn begin(&self, request_id: &str) -> Result<ActivationRegistration<'_>, ()> {
         let cancellation = Arc::new(ActivationCancellation::default());
         let mut active = self.active.lock().map_err(|_| ())?;
-        if active.contains_key(request_id) {
+        // There is one shared activation/configuration transaction. Reject a
+        // second click immediately instead of queueing it behind the native
+        // lock and making the renderer look frozen.
+        if !active.is_empty() {
             return Err(());
         }
         active.insert(request_id.to_owned(), cancellation.clone());
@@ -883,27 +886,33 @@ async fn delete_created_tokens(origin: &str, access_token: &str, leases: &[(Stri
     .await;
 }
 
-async fn retire_superseded_tokens(
-    origin: &str,
-    access_token: &str,
-    leases: &[(String, TokenLease)],
-) {
+fn retire_superseded_tokens(origin: &str, access_token: &str, leases: &[(String, TokenLease)]) {
     let ids = leases
         .iter()
         .flat_map(|(_, lease)| lease.retire_after_commit.iter().copied())
         .collect::<std::collections::HashSet<_>>();
-    for id in ids {
-        let retired = native_account_json(
-            Method::DELETE,
-            &format!("{origin}/api/token/{id}"),
-            access_token,
-            None,
-        )
-        .await;
-        if !matches!(retired, Ok((status, ref value)) if server_success(status, value)) {
-            log::warn!("tool_token_cleanup stage=retire_failed");
-        }
+    if ids.is_empty() {
+        return;
     }
+    let origin = origin.to_owned();
+    let access_token = access_token.to_owned();
+    // Old scoped keys are no longer on the critical path once the new local
+    // transaction has committed. Retire them in the background so several
+    // bounded DELETE calls cannot hold the application restart for minutes.
+    tokio::spawn(async move {
+        for id in ids {
+            let retired = native_account_json(
+                Method::DELETE,
+                &format!("{origin}/api/token/{id}"),
+                &access_token,
+                None,
+            )
+            .await;
+            if !matches!(retired, Ok((status, ref value)) if server_success(status, value)) {
+                log::warn!("tool_token_cleanup stage=retire_failed");
+            }
+        }
+    });
 }
 
 async fn revoke_owned_tool_tokens(
@@ -1096,6 +1105,7 @@ fn prepare_adapter(
                 Some(ModelTransport::Codex(v)) => v,
                 _ => return Err(AdapterFailure::ConfigurationFailed("invalid_request")),
             },
+            local,
             &models,
         )
         .map(PreparedAdapter::CodexDesktop),
@@ -1117,11 +1127,12 @@ async fn start_local_adapter(
     credential: &ToolCredential,
     claude_code_runtime: &claude_code::ClaudeCodeRuntimeState,
     claude_runtime: &claude_desktop::ClaudeDesktopRuntimeState,
+    codex_runtime: &CodexBridgeRuntimeState,
 ) -> Result<(), AdapterFailure> {
     match request.tool_id.as_str() {
         "claude_code" => claude_code_runtime.start(credential.clone()).await,
         "claude_desktop" => claude_runtime.start(credential.clone()).await.map(|_| ()),
-        "codex_desktop" => codex_desktop::ensure_credential_ready(credential).await,
+        "codex_desktop" => codex_desktop::ensure_runtime_ready(codex_runtime, credential).await,
         "pi" | "dsh_web" | "hermes" | "openclaw" => Ok(()),
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
@@ -1402,7 +1413,7 @@ pub async fn configure_desktop_tool_v2(
         Err(_) => return Ok(cancelled()),
     };
     if desktop_lifecycle::requires_reload(&request.tool_id) {
-        match desktop_lifecycle::is_running(&request.tool_id, &installation.path) {
+        match desktop_lifecycle::is_running(&request.tool_id, &installation.path).await {
             Ok(true) if !request.restart_running_app => {
                 return Ok(ToolActivationProjection::new(
                     &request,
@@ -1442,7 +1453,7 @@ pub async fn configure_desktop_tool_v2(
             if desktop_lifecycle::requires_reload(&request.tool_id) {
                 if request.restart_running_app {
                     match permit
-                        .cancel_safe(desktop_lifecycle::quit_normally(
+                        .cancel_safe(desktop_lifecycle::quit_for_reconfigure(
                             &request.tool_id,
                             &installation.path,
                         ))
@@ -1462,7 +1473,8 @@ pub async fn configure_desktop_tool_v2(
                         Err(_) => return Ok(cancelled()),
                     }
                 } else {
-                    match desktop_lifecycle::is_running(&request.tool_id, &installation.path) {
+                    match desktop_lifecycle::is_running(&request.tool_id, &installation.path).await
+                    {
                         Ok(true) => {
                             return Ok(ToolActivationProjection::new(
                                 &request,
@@ -1630,14 +1642,6 @@ pub async fn configure_desktop_tool_v2(
         .iter()
         .position(|m| m.model_id == request.model_id)
         .and_then(|i| transports[i]);
-    emit_activation_progress(&app, &request, "preparing_settings", 5);
-    let mut prepared = match prepare_adapter(&request, &credential, default_transport) {
-        Ok(v) => v,
-        Err(e) => {
-            delete_created_tokens(&origin, &access_token, &leases).await;
-            return Ok(ActivationFailure::Adapter(e).projection(&request));
-        }
-    };
     let recovery = match recovery.take() {
         Some(store) => store,
         None => match Store::open(true) {
@@ -1654,7 +1658,7 @@ pub async fn configure_desktop_tool_v2(
     if desktop_lifecycle::requires_reload(&request.tool_id) {
         if request.restart_running_app {
             match permit
-                .cancel_safe(desktop_lifecycle::quit_normally(
+                .cancel_safe(desktop_lifecycle::quit_for_reconfigure(
                     &request.tool_id,
                     &installation.path,
                 ))
@@ -1679,7 +1683,7 @@ pub async fn configure_desktop_tool_v2(
                 }
             }
         } else {
-            match desktop_lifecycle::is_running(&request.tool_id, &installation.path) {
+            match desktop_lifecycle::is_running(&request.tool_id, &installation.path).await {
                 Ok(true) => {
                     delete_created_tokens(&origin, &access_token, &leases).await;
                     return Ok(ToolActivationProjection::new(
@@ -1696,6 +1700,18 @@ pub async fn configure_desktop_tool_v2(
             }
         }
     }
+    // Desktop apps can flush their own config while closing. Snapshot only
+    // after the graceful shutdown has completed; otherwise the transaction
+    // mistakes that legitimate final write for a competing configuration
+    // tool and sends the user into a false "higher precedence" failure.
+    emit_activation_progress(&app, &request, "preparing_settings", 5);
+    let mut prepared = match prepare_adapter(&request, &credential, default_transport) {
+        Ok(v) => v,
+        Err(e) => {
+            delete_created_tokens(&origin, &access_token, &leases).await;
+            return Ok(ActivationFailure::Adapter(e).projection(&request));
+        }
+    };
     let receipt = Receipt {
         tool_id: request.tool_id.clone(),
         model_id: request.model_id.clone(),
@@ -1751,6 +1767,7 @@ pub async fn configure_desktop_tool_v2(
                 &credential,
                 &claude_code_runtime,
                 &claude_runtime,
+                &codex_bridge,
             ))
             .await
         {
@@ -1800,15 +1817,16 @@ pub async fn configure_desktop_tool_v2(
         }
         return Ok(ActivationFailure::Adapter(cleanup.unwrap_or(error)).projection(&request));
     }
-    // The committed configuration now references only scoped keys. Broad or
-    // stale helper-owned predecessors can be retired without risking rollback
-    // to a key that was deleted mid-transaction.
-    retire_superseded_tokens(&origin, &access_token, &leases).await;
     reload_guard.disarm();
     emit_activation_progress(&app, &request, "opening_application", 7);
-    if let Err(error) =
-        open_configured_adapter(&request, &installation, &credential, &dsh_runtime).await
-    {
+    let open_result =
+        open_configured_adapter(&request, &installation, &credential, &dsh_runtime).await;
+    // The committed configuration now references only scoped keys. Broad or
+    // stale helper-owned predecessors can be retired without risking rollback
+    // to a key that was deleted mid-transaction. This cleanup is deliberately
+    // scheduled only after the user-facing application open has been tried.
+    retire_superseded_tokens(&origin, &access_token, &leases);
+    if let Err(error) = open_result {
         let reason = match error {
             AdapterFailure::LaunchError(reason) => reason,
             _ => "configuration_ready_open_failed",
@@ -1991,10 +2009,13 @@ fn legacy_paths(tool: &str) -> Result<Vec<std::path::PathBuf>, AdapterFailure> {
         .ok_or(AdapterFailure::ConfigurationFailed("home_unavailable"))?;
     Ok(match tool {
         "claude_code" => vec![home.join(".claude/settings.json")],
-        "codex_desktop" => vec![
-            home.join(".codex/config.toml"),
-            home.join(".codex/yeschoy-model-catalog.json"),
-        ],
+        "codex_desktop" => {
+            let config_dir = codex_desktop::config_dir(&home)?;
+            vec![
+                config_dir.join("config.toml"),
+                config_dir.join("yeschoy-model-catalog.json"),
+            ]
+        }
         "claude_desktop" => {
             let (a, b, c, d) = claude_desktop::current_paths(&home)?;
             vec![a, b, c, d]
@@ -2547,10 +2568,11 @@ mod tests {
     }
 
     #[test]
-    fn activation_cancellation_is_scoped_to_one_live_request() {
+    fn activation_cancellation_allows_only_one_live_transaction() {
         let state = ActivationOperationState::default();
         let registration = state.begin("activation-one").unwrap();
         assert!(state.begin("activation-one").is_err());
+        assert!(state.begin("activation-two").is_err());
         assert!(!registration.cancellation.is_requested());
         assert_eq!(state.cancel("activation-one"), Ok(true));
         assert!(registration.cancellation.is_requested());

@@ -28,7 +28,8 @@ describe("desktop protocol compatibility", () => {
     const desktop = connectionLifecycleNote("codex_desktop", "Codex Desktop");
     expect(desktop).toContain("提醒你保存");
     expect(desktop).toContain("正常退出");
-    expect(desktop).toContain("不会强制结束进程");
+    expect(desktop).toContain("只剩后台进程");
+    expect(desktop).toContain("安装路径对应的进程");
   });
 
   it("ru068 dismisses running-app consent before continuing and rejects stale consent", () => {

@@ -143,13 +143,17 @@ def test_unified_activation_native(tmp_path: Path) -> None:
     assert "process-free" in adapters
 
     assert 'matches!(tool_id, "claude_desktop" | "codex_desktop")' in lifecycle
+    assert "Duration::from_secs(4)" in lifecycle
     assert "Duration::from_secs(10)" in lifecycle
+    assert "Duration::from_secs(5)" in lifecycle
     assert "runningApplicationsWithBundleIdentifier" in lifecycle
     assert "bundleURL" in lifecycle
     assert "QueryFullProcessImageNameW" in lifecycle
     assert "EnumWindows" in lifecycle and "WM_CLOSE" in lifecycle
     assert ".terminate()" in lifecycle
-    for forbidden in ("forceTerminate(", "TerminateProcess(", "taskkill", "kill -9"):
+    assert "TerminateProcess(process.0, 0)" in lifecycle
+    assert "still_matches" in lifecycle
+    for forbidden in ("forceTerminate(", "taskkill", "kill -9"):
         assert forbidden not in lifecycle
 
 
@@ -211,7 +215,7 @@ def test_unified_activation_renderer(tmp_path: Path) -> None:
 
     view = source("src/configuration/ConfigurationPreviewView.tsx")
     assert "不会发送测试消息" in view
-    assert "不会强制结束进程" in view
+    assert "只剩后台进程" in view
     assert "正在运行的命令行会话不会被中断" in view
     assert "第一次真实请求的结果会显示" in view
 

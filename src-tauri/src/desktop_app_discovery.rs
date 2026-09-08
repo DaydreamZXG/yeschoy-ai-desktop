@@ -851,6 +851,18 @@ fn windows_version_key(raw: &str) -> [u64; 4] {
     key
 }
 
+#[cfg(any(target_os = "windows", test))]
+fn preferred_windows_package_version(
+    package_version: &str,
+    executable_version: Option<String>,
+) -> String {
+    if package_version.is_empty() {
+        executable_version.unwrap_or_default()
+    } else {
+        package_version.to_owned()
+    }
+}
+
 #[cfg(target_os = "windows")]
 fn discover_windows_package_candidates(spec: DesktopAppSpec) -> Vec<Candidate> {
     const REPOSITORY: &str = "Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\AppModel\\Repository\\Packages";
@@ -884,9 +896,13 @@ fn discover_windows_package_candidates(spec: DesktopAppSpec) -> Vec<Candidate> {
             &manifest,
         );
         for (path, identity) in &mapped {
-            let version = windows_file_version(path)
-                .filter(|value| !value.is_empty())
-                .unwrap_or_else(|| package_version.clone());
+            // Store/MSIX packages are versioned by their package identity.
+            // Their launcher executable can carry the bundled Chromium or
+            // WebView version instead, which is not the app version users see.
+            let version = preferred_windows_package_version(
+                &package_version,
+                windows_file_version(path).filter(|value| !value.is_empty()),
+            );
             accepted.entry(path.clone()).or_insert(Candidate {
                 path: path.clone(),
                 location_hint: LocationHint::LocalAppData,
@@ -1220,6 +1236,14 @@ mod tests {
         assert_eq!(chatgpt_version, "2026.901.1200.0");
         assert_eq!(codex_family, "OpenAI.Codex");
         assert!(family_version.is_empty());
+        assert_eq!(
+            preferred_windows_package_version("26.901.6511.0", Some("152.0.7977.83".into())),
+            "26.901.6511.0"
+        );
+        assert_eq!(
+            preferred_windows_package_version("", Some("1.2.3.4".into())),
+            "1.2.3.4"
+        );
         assert!(windows_package_identity_matches("claude_desktop", &claude));
         assert!(windows_package_identity_matches("codex_desktop", &chatgpt));
         assert!(windows_package_identity_matches(

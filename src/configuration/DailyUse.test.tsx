@@ -312,7 +312,8 @@ describe("daily-use UX", () => {
     });
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveTextContent("请先保存正在编辑的内容");
-    expect(dialog).toHaveTextContent("不会强制结束进程");
+    expect(dialog).toHaveTextContent("只剩后台进程");
+    expect(dialog).toHaveTextContent("不会按名称结束其他程序");
     fireEvent.click(
       within(dialog).getByRole("button", { name: "已保存，退出并继续" }),
     );
@@ -852,6 +853,7 @@ describe("daily-use UX", () => {
       "tool_output_read_failed",
       "未能读取应用的测试结果",
     ],
+    ["external_override", "higher_precedence_override", "CC Switch"],
   ])(
     "reports %s/%s without claiming an unproved restore",
     async (status, reasonCode, expected) => {

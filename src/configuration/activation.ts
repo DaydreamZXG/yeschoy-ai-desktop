@@ -111,6 +111,10 @@ export interface ToolActivationProjection {
 }
 
 export const ACTIVATION_PROGRESS_EVENT = "yeschoy://activation-progress";
+// Native activation includes bounded account calls and a desktop restart. The
+// renderer must still recover if the OS, keychain, installer, or network stack
+// never returns. Native cancellation then performs transaction cleanup.
+export const ACTIVATION_REQUEST_DEADLINE_MS = 90_000;
 export const ACTIVATION_PROGRESS_STAGES = [
   "queued",
   "checking_application",
@@ -336,7 +340,8 @@ export async function activateDesktopTool(input: {
   activationSequence += 1;
   const requestId = `activate-${Date.now().toString(36)}-${activationSequence.toString(36)}`;
   input.onRequestId?.(requestId);
-  const raw = await invoke<unknown>("configure_desktop_tool_v2", {
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+  const nativeRequest = invoke<unknown>("configure_desktop_tool_v2", {
     request: {
       requestId,
       lineId: input.lineId,
@@ -351,6 +356,18 @@ export async function activateDesktopTool(input: {
       ...(input.restartRunningApp ? { restartRunningApp: true } : {}),
     },
   });
+  const timedOut = new Promise<never>((_, reject) => {
+    deadline = setTimeout(() => {
+      void cancelDesktopToolActivation(requestId).catch(() => undefined);
+      reject(new Error("activation_request_timed_out"));
+    }, ACTIVATION_REQUEST_DEADLINE_MS);
+  });
+  let raw: unknown;
+  try {
+    raw = await Promise.race([nativeRequest, timedOut]);
+  } finally {
+    if (deadline !== undefined) clearTimeout(deadline);
+  }
   const result = decodeToolActivation(raw, requestId);
   if (
     !result ||

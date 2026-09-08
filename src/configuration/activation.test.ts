@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  ACTIVATION_REQUEST_DEADLINE_MS,
   activateDesktopTool,
   cancelDesktopToolActivation,
   decodeActivationProgress,
@@ -68,7 +69,10 @@ function targetScan(requestId = "target-scan-test") {
 }
 
 beforeEach(() => native.mockReset());
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
 describe("desktop tool activation boundary", () => {
   it("ru042 validates model-set responses and rejects silent extra enrollment", async () => {
@@ -189,6 +193,35 @@ describe("desktop tool activation boundary", () => {
     expect(result.status).toBe("application_running");
     expect(native).toHaveBeenCalledWith("configure_desktop_tool_v2", {
       request: expect.objectContaining({ restartRunningApp: true }),
+    });
+  });
+
+  it("recovers the renderer and requests native cancellation after a hard deadline", async () => {
+    vi.useFakeTimers();
+    native.mockImplementation((command, args) => {
+      if (command === "cancel_tool_activation_v1") {
+        return Promise.resolve({
+          requestId: (args as { request: { requestId: string } }).request
+            .requestId,
+          status: "cancel_requested",
+        });
+      }
+      return new Promise(() => undefined);
+    });
+    const activation = activateDesktopTool({
+      lineId: "mainland_optimized",
+      toolId: "codex_desktop",
+      modelId: "glm-5.3",
+      installationId: "i0123456789abcdef",
+      billingGroup: "国模特价分组",
+    });
+    const assertion = expect(activation).rejects.toThrow(
+      "activation_request_timed_out",
+    );
+    await vi.advanceTimersByTimeAsync(ACTIVATION_REQUEST_DEADLINE_MS);
+    await assertion;
+    expect(native).toHaveBeenCalledWith("cancel_tool_activation_v1", {
+      request: { requestId: expect.stringMatching(/^activate-/) },
     });
   });
 

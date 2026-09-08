@@ -82,10 +82,15 @@ pub(crate) fn validate_settings(
                 claude_desktop::prepare_catalog(home, &credential.model_id, local, &models)?
                     .validate_existing()
             }
-            "codex_desktop" => {
-                codex_desktop::prepare_catalog(home, &origin, &credential.model_id, xt, &models)?
-                    .validate_existing()
-            }
+            "codex_desktop" => codex_desktop::prepare_catalog(
+                home,
+                &origin,
+                &credential.model_id,
+                xt,
+                local,
+                &models,
+            )?
+            .validate_existing(),
             "pi" => pi::prepare_catalog(home, &origin, &credential.model_id, &models)?
                 .validate_existing(),
             "hermes" => hermes::prepare_catalog(home, &origin, &credential.model_id, &models)?
@@ -224,7 +229,9 @@ pub async fn open_tool_connection_v1(
                         if credential.has_model_set()
                             || credential.codex_transport.as_deref() == Some("chat_bridge")
                         {
-                            codex.ensure_started().await.map_err(|_| "launch_failed")?;
+                            codex_desktop::ensure_runtime_ready(&codex, &credential)
+                                .await
+                                .map_err(|_| "launch_failed")?;
                         }
                         if permit.is_cancelled() {
                             return Err("busy");

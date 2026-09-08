@@ -68,8 +68,11 @@ describe("Windows installer localization", () => {
     );
 
     expect(standalone).toContain("Function .onInstSuccess");
-    expect(standalone).toContain('Exec \'"$INSTDIR\\野菜API.exe"\'');
+    expect(standalone).toContain(
+      'ExecShell "open" "$INSTDIR\\野菜API.exe" "" SW_SHOWNORMAL',
+    );
     expect(standalone).toContain("This also covers silent/manual upgrades");
+    expect(standalone).not.toContain('Exec \'"$INSTDIR\\野菜API.exe"\'');
     expect(standalone).not.toContain("MUI_FINISHPAGE_RUN");
   });
 });

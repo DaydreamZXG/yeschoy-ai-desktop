@@ -77,7 +77,11 @@ SectionEnd
 ; optional finish-page checkbox. This also covers silent/manual upgrades.
 Function .onInstSuccess
   ClearErrors
-  Exec '"$INSTDIR\野菜API.exe"'
+  ; A silent installer itself runs hidden. `Exec` inherits that startup state,
+  ; which leaves the freshly restarted desktop assistant invisible after an
+  ; automatic or /S upgrade. Ask Explorer to launch it explicitly in the
+  ; normal shown state so the user gets an immediate, observable result.
+  ExecShell "open" "$INSTDIR\野菜API.exe" "" SW_SHOWNORMAL
   IfErrors 0 yeschoy_launch_done
   IfSilent yeschoy_launch_done
   MessageBox MB_ICONEXCLAMATION|MB_OK "野菜API 已安装完成，但未能自动启动。请从桌面或开始菜单打开野菜API，再继续使用 Codex、Claude 等已接入应用。"
