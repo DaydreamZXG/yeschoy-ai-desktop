@@ -39,9 +39,6 @@ VIAddVersionKey /LANG=2052 "LegalCopyright" "Copyright (c) 野菜API"
 !define MUI_ABORTWARNING
 !define MUI_ICON "${APP_ICON}"
 !define MUI_UNICON "${APP_ICON}"
-!define MUI_FINISHPAGE_RUN "$INSTDIR\野菜API.exe"
-!define MUI_FINISHPAGE_RUN_TEXT "启动野菜API"
-
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
@@ -73,6 +70,20 @@ Section "安装野菜API" SEC_MAIN
   CreateShortcut "$SMPROGRAMS\野菜API\卸载野菜API.lnk" "$INSTDIR\卸载野菜API.exe"
   CreateShortcut "$DESKTOP\野菜API.lnk" "$INSTDIR\野菜API.exe" "" "$INSTDIR\野菜API.exe" 0
 SectionEnd
+
+; Every managed connection points at a loopback gateway hosted by 野菜API.
+; Upgrades deliberately stop the old process before replacing its executable,
+; so a successful install must restore that gateway without relying on an
+; optional finish-page checkbox. This also covers silent/manual upgrades.
+Function .onInstSuccess
+  ClearErrors
+  Exec '"$INSTDIR\野菜API.exe"'
+  IfErrors 0 yeschoy_launch_done
+  IfSilent yeschoy_launch_done
+  MessageBox MB_ICONEXCLAMATION|MB_OK "野菜API 已安装完成，但未能自动启动。请从桌面或开始菜单打开野菜API，再继续使用 Codex、Claude 等已接入应用。"
+
+yeschoy_launch_done:
+FunctionEnd
 
 Section "Uninstall"
   SetShellVarContext current

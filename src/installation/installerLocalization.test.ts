@@ -60,4 +60,16 @@ describe("Windows installer localization", () => {
     expect(firstWrite).toBeGreaterThan(guard);
     expect(standalone).not.toContain("Function .onInit");
   });
+
+  it("always restarts the assistant after a successful standalone upgrade", () => {
+    const standalone = readFileSync(
+      resolve(process.cwd(), "src-tauri/windows/installer.nsi"),
+      "utf8",
+    );
+
+    expect(standalone).toContain("Function .onInstSuccess");
+    expect(standalone).toContain('Exec \'"$INSTDIR\\野菜API.exe"\'');
+    expect(standalone).toContain("This also covers silent/manual upgrades");
+    expect(standalone).not.toContain("MUI_FINISHPAGE_RUN");
+  });
 });
