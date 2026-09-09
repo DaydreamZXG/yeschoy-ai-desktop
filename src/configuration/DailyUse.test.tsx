@@ -237,7 +237,10 @@ describe("daily-use UX", () => {
     fireEvent.click(screen.getByRole("combobox", { name: /选择模型/ }));
     fireEvent.click(screen.getByRole("option", { name: "model-b" }));
     fireEvent.click(screen.getByRole("radio", { name: /标准分组/ }));
-    expect(screen.getByTestId("configuration-apply-action")).toBeDisabled();
+    expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
+      "先加入常用列表",
+    );
+    fireEvent.click(screen.getByTestId("configuration-apply-action"));
     expect(
       native.mock.calls.some(([c]) => c === "configure_desktop_tool_v2"),
     ).toBe(false);
@@ -380,7 +383,9 @@ describe("daily-use UX", () => {
     expect(screen.getByRole("region", { name: "常用模型" })).toHaveTextContent(
       "old-group · 当前不可用",
     );
-    expect(screen.getByTestId("configuration-apply-action")).toBeDisabled();
+    expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
+      "检查常用模型与分组",
+    );
     fireEvent.click(screen.getByRole("button", { name: "移除 model-b" }));
     expect(screen.getByTestId("configuration-apply-action")).toBeEnabled();
     expect(
@@ -451,12 +456,16 @@ describe("daily-use UX", () => {
         .getAllByRole("radio")
         .every((radio) => !(radio as HTMLInputElement).checked),
     ).toBe(true);
-    expect(screen.getByTestId("configuration-apply-action")).toBeDisabled();
+    expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
+      "先选择计费分组",
+    );
     fireEvent.click(screen.getByRole("radio", { name: /标准分组/ }));
     expect(
       screen.getByRole("region", { name: "所选分组价格" }),
     ).toHaveTextContent("1 亿 Token");
-    expect(screen.getByTestId("configuration-apply-action")).toBeEnabled();
+    expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
+      "一键接入",
+    );
     expect(
       native.mock.calls.some((c) => c[0] === "configure_desktop_tool_v2"),
     ).toBe(false);
@@ -468,7 +477,9 @@ describe("daily-use UX", () => {
       screen.getByRole("combobox", { name: /选择模型/ }),
     ).toHaveTextContent("removed-model");
     expect(screen.getByRole("alert")).toHaveTextContent("不会自动替换");
-    expect(screen.getByTestId("configuration-apply-action")).toBeDisabled();
+    expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
+      "先选择模型",
+    );
   });
   it("does not overwrite a user selection when saved state arrives late", async () => {
     const account = session();
@@ -643,7 +654,10 @@ describe("daily-use UX", () => {
     await tick();
     expect(screen.getByText("刚才的接入已完成")).toBeInTheDocument();
     expect(screen.getByText(/现在的选择尚未应用/)).toHaveTextContent("model-a");
-    expect(screen.getByTestId("configuration-apply-action")).toBeDisabled();
+    // 账号刷新后原选择已不可用：按钮保持可点，并直接说明下一步。
+    expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
+      "先选择模型",
+    );
   });
   it("discloses stale prices and keeps refresh available instead of silently submitting", async () => {
     const account = session();
@@ -651,9 +665,14 @@ describe("daily-use UX", () => {
     await tick();
     view.rerender(setupView({ ...account, lastError: "network_error" }));
     expect(screen.getByRole("alert")).toHaveTextContent("上次的模型与价格");
-    expect(screen.getByTestId("configuration-apply-action")).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "刷新账户数据" }));
+    expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
+      "重新获取账户数据",
+    );
+    fireEvent.click(screen.getByTestId("configuration-apply-action"));
     expect(account.refresh).toHaveBeenCalledOnce();
+    expect(
+      native.mock.calls.some((c) => c[0] === "configure_desktop_tool_v2"),
+    ).toBe(false);
   });
   it("does not attribute a previous account's in-flight setup success to the new login", async () => {
     let finish!: (value: unknown) => void;

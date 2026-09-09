@@ -3790,3 +3790,32 @@ details dl div {
     scroll-behavior: auto !important;
   }
 }
+
+/* 接入页：模型/分组/常用模型默认收进「高级设置」，小白只需要选应用再点接入。 */
+.setup-advanced {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 96%, var(--accent-soft));
+}
+.setup-advanced > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 14px 18px;
+}
+.setup-advanced > summary span {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+.setup-advanced > summary small {
+  color: var(--faint);
+}
+.setup-advanced[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+.setup-advanced .connection-choice-grid,
+.setup-advanced .model-set-editor {
+  padding: 0 18px;
+}

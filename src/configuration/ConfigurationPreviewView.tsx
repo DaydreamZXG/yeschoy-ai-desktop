@@ -180,6 +180,7 @@ const UX = {
   zh: {
     checking: "正在检查这台电脑…",
     checkAgain: "重新检查应用",
+    scanningHint: "正在读取这台电脑上已安装的应用，请稍候。",
     readingConnection: "正在读取接入状态…",
     retryConnectionRead: "重新读取接入状态",
     refreshingAccount: "正在刷新账户…",
@@ -264,6 +265,8 @@ const UX = {
   en: {
     checking: "Checking this computer…",
     checkAgain: "Check applications again",
+    scanningHint:
+      "Reading the applications installed on this computer. Please wait.",
     readingConnection: "Reading connection status…",
     retryConnectionRead: "Read connection status again",
     refreshingAccount: "Refreshing account…",
@@ -423,6 +426,10 @@ export function ConfigurationPreviewView({
   );
   const applyInFlight = useRef(false);
   const [showApplications, setShowApplications] = useState(false);
+  // 模型、分组、常用模型与线路默认收起：普通用户只需要「选应用 → 点接入」。
+  // 需要用户做选择时（下面 needsAdvanced）自动展开。
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const advancedDetails = useRef<HTMLDetailsElement>(null);
   const [showMissingApps, setShowMissingApps] = useState(false);
   const networkDetails = useRef<HTMLDetailsElement>(null);
   const appSwitchButton = useRef<HTMLButtonElement>(null);
@@ -1146,92 +1153,151 @@ export function ConfigurationPreviewView({
         return verifyingText;
     }
   })();
-  const canApply =
-    signedIn &&
-    !!defaultBinding &&
-    bindingsAvailable &&
-    !pendingModelEdit &&
-    selectionReadyKey === selectionKey &&
-    targetCanActivate &&
-    !session.loading &&
-    !session.lastError &&
-    !connectionStateUnavailable;
   const targetScanNeedsRetry =
     enableLocalActivation &&
     (scanPhase === "error" || (scanPhase === "ready" && !target));
   const connectionReadFailed =
     !!connections?.error && (connections?.connections.length ?? 0) === 0;
-  const canRetryTargetScan = signedIn && targetScanNeedsRetry;
-  const canRetryConnectionRead =
-    signedIn && !targetScanNeedsRetry && connectionReadFailed;
-  const actionLabel = !signedIn
-    ? c.signInFirst
-    : applyPhase === "applying"
-      ? c.settingUp
-      : scanPhase === "loading"
-        ? ux.checking
-        : targetScanNeedsRetry
-          ? ux.checkAgain
-          : connections?.loading && (connections?.connections.length ?? 0) === 0
-            ? ux.readingConnection
-            : connectionReadFailed
-              ? ux.retryConnectionRead
-              : session.loading
-                ? ux.refreshingAccount
-                : target?.status === "not_found"
-                  ? ux.installFirst
-                  : target?.status === "missing_runtime"
-                    ? ux.updateFirst
-                    : target?.status === "selection_required" &&
-                        !selectedInstallationId
-                      ? ux.selectInstallFirst
-                      : session.lastError
-                        ? "先刷新账户数据"
-                        : !selectedModel
-                          ? "先选择模型"
-                          : !selectedBillingGroup
-                            ? "先选择计费分组"
-                            : pendingModelEdit
-                              ? "先加入常用列表"
-                              : !bindingsAvailable
-                                ? "检查常用模型与分组"
-                                : selectionReadyKey !== selectionKey
-                                  ? ux.syncingSelection
-                                  : configured
-                                    ? ux.updateConnection
-                                    : c.connectNow;
-  const actionHint =
-    applyPhase === "applying"
-      ? ux.applyRunningHint
-      : targetScanNeedsRetry
-        ? ux.targetScanRetryHint
-        : connectionReadFailed
-          ? ux.connectionReadRetryHint
-          : connections?.loading && (connections?.connections.length ?? 0) === 0
-            ? ux.connectionReadingHint
-            : session.loading
-              ? ux.accountRefreshingHint
-              : selectionReadyKey !== selectionKey &&
-                  !!selectedModel &&
-                  !!selectedBillingGroup
-                ? ux.selectionSyncHint
-                : "";
-
-  const runApplyAction = () => {
-    if (canRetryTargetScan) {
-      void refreshTargets();
-      return;
-    }
-    if (canRetryConnectionRead) {
-      void connections?.refresh();
-      return;
-    }
-    if (canBeginInstallation) {
-      void startInstallation();
-      return;
-    }
-    void apply();
+  const openAdvanced = () => {
+    setAdvancedOpen(true);
+    advancedDetails.current?.scrollIntoView({ block: "center" });
   };
+
+  // 单一状态 → 单一动作。主按钮不再静默禁用：不能执行时点它会打开需要修改的
+  // 位置，并在按钮下方写明原因；可以执行时就是这一步该做的事。
+  const setupBlock = (() => {
+    const waiting = (kind: string, label: string, hint: string) => ({
+      kind,
+      label,
+      hint,
+      run: null as null | (() => void),
+    });
+    if (!signedIn)
+      return {
+        kind: "sign-in",
+        label: c.signInFirst,
+        hint: "登录后即可扫描本机应用并一键接入。",
+        run: onOpenAccount,
+      };
+    if (applyPhase === "applying")
+      return waiting("applying", c.settingUp, ux.applyRunningHint);
+    if (session.loading)
+      return waiting(
+        "refreshing",
+        ux.refreshingAccount,
+        ux.accountRefreshingHint,
+      );
+    if (scanPhase === "loading")
+      return waiting("scanning", ux.checking, ux.scanningHint);
+    if (targetScanNeedsRetry)
+      return {
+        kind: "retry-scan",
+        label: ux.checkAgain,
+        hint: ux.targetScanRetryHint,
+        run: () => void refreshTargets(),
+      };
+    if (connections?.loading && (connections?.connections.length ?? 0) === 0)
+      return waiting(
+        "reading-connections",
+        ux.readingConnection,
+        ux.connectionReadingHint,
+      );
+    if (connectionReadFailed)
+      return {
+        kind: "retry-connection-read",
+        label: ux.retryConnectionRead,
+        hint: ux.connectionReadRetryHint,
+        run: () => void connections?.refresh(),
+      };
+    if (session.lastError)
+      return {
+        kind: "refresh-account",
+        label: "重新获取账户数据",
+        hint: "账户数据没有更新成功，价格与分组可能过期。点这里重新获取。",
+        run: () => void session.refresh(),
+      };
+    if (target?.status === "not_found")
+      return canBeginInstallation
+        ? {
+            kind: "install",
+            label: ux.installAndConnect,
+            hint: "本机还没有这个应用，助手会先安装再接入。",
+            run: () => void startInstallation(),
+          }
+        : {
+            kind: "install-unavailable",
+            label: ux.installFirst,
+            hint: "本机没有检测到这个应用。安装后点这里重新检查，不会修改任何设置。",
+            run: () => void refreshTargets(),
+          };
+    if (target?.status === "missing_runtime")
+      return {
+        kind: "update-first",
+        label: ux.updateFirst,
+        hint: "检测到的版本暂不支持接入。更新应用后点这里重新检查。",
+        run: () => void refreshTargets(),
+      };
+    if (target?.status === "selection_required" && !selectedInstallationId)
+      return {
+        kind: "select-installation",
+        label: ux.selectInstallFirst,
+        hint: "这台电脑上有多个安装位置，请先在上面选择一个。",
+        run: () => appSwitchButton.current?.focus(),
+      };
+    if (!selectedModel)
+      return {
+        kind: "choose-model",
+        label: "先选择模型",
+        hint: "展开下面的「高级设置」，选一个要用的模型。",
+        run: openAdvanced,
+      };
+    if (!selectedBillingGroup)
+      return {
+        kind: "choose-group",
+        label: "先选择计费分组",
+        hint: "展开下面的「高级设置」，为这个模型选一个计费分组。",
+        run: openAdvanced,
+      };
+    if (pendingModelEdit)
+      return {
+        kind: "commit-model-set",
+        label: "先加入常用列表",
+        hint: "当前模型还没加入常用列表。展开「高级设置」点“加入常用模型”。",
+        run: openAdvanced,
+      };
+    if (!bindingsAvailable)
+      return {
+        kind: "resolve-model-set",
+        label: "检查常用模型与分组",
+        hint: "常用列表里有模型或分组已不可用，请在「高级设置」里移除或重新选择。",
+        run: openAdvanced,
+      };
+    if (selectionReadyKey !== selectionKey)
+      return waiting("syncing", ux.syncingSelection, ux.selectionSyncHint);
+    if (configured)
+      return {
+        kind: "reconfigure",
+        label: ux.updateConnection,
+        hint: "已经接入。需要换模型或分组时点这里重新写入设置。",
+        run: () => void apply(),
+      };
+    return {
+      kind: "apply",
+      label: c.connectNow,
+      hint: "",
+      run: () => void apply(),
+    };
+  })();
+
+  const needsAdvanced = [
+    "choose-model",
+    "choose-group",
+    "commit-model-set",
+    "resolve-model-set",
+  ].includes(setupBlock.kind);
+  useEffect(() => {
+    if (needsAdvanced) setAdvancedOpen(true);
+  }, [needsAdvanced]);
 
   const missingModel =
     signedIn &&
@@ -1572,223 +1638,239 @@ export function ConfigurationPreviewView({
             </span>
           </header>
 
-          <div className="connection-choice-grid">
-            <section
-              className="connection-choice-card model-choice-card"
-              aria-labelledby="setup-model-title"
-            >
-              <div className="choice-card-heading">
-                <span className="choice-number" aria-hidden="true">
-                  1
-                </span>
-                <div>
-                  <h3 id="setup-model-title">{ux.modelChoice}</h3>
-                  <p>{ux.modelQuestion}</p>
+          <details
+            ref={advancedDetails}
+            className="setup-advanced"
+            open={advancedOpen}
+            onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}
+          >
+            <summary>
+              <span>高级设置</span>
+              <small>换模型 · 换计费分组 · 常用模型 · 线路</small>
+            </summary>
+            <div className="connection-choice-grid">
+              <section
+                className="connection-choice-card model-choice-card"
+                aria-labelledby="setup-model-title"
+              >
+                <div className="choice-card-heading">
+                  <span className="choice-number" aria-hidden="true">
+                    1
+                  </span>
+                  <div>
+                    <h3 id="setup-model-title">{ux.modelChoice}</h3>
+                    <p>{ux.modelQuestion}</p>
+                  </div>
                 </div>
-              </div>
-              {signedIn ? (
-                <>
-                  <ModelPicker
-                    models={models}
-                    value={selectedModelId}
-                    onChange={(id) => {
-                      setSelectionReadyKey(selectionKey);
-                      setSelectedModelId(id);
-                      const saved = modelSet.find((m) => m.modelId === id);
-                      setBillingGroup(
-                        saved?.billingGroup ??
-                          chooseBillingGroup(
-                            models.find((m) => m.id === id),
-                            "",
-                          ),
-                      );
-                      resetResult();
-                    }}
-                    disabled={session.loading || applyPhase === "applying"}
-                  />
-                  <div className="model-choice-meta">
-                    <span>
-                      {c.availableModels.replace(
-                        "{{count}}",
-                        String(models.length),
-                      )}
-                    </span>
-                    {selectedModel &&
-                    ["claude_code", "claude_desktop", "codex_desktop"].includes(
-                      activationToolId,
-                    ) ? (
-                      <span className="connection-compatibility-label">
-                        {modelConnectionMode(
-                          activationToolId,
-                          selectedModel.supportedEndpointTypes ?? [],
-                        ) === "direct"
-                          ? "原生接口"
-                          : ux.automaticCompatibility}
+                {signedIn ? (
+                  <>
+                    <ModelPicker
+                      models={models}
+                      value={selectedModelId}
+                      onChange={(id) => {
+                        setSelectionReadyKey(selectionKey);
+                        setSelectedModelId(id);
+                        const saved = modelSet.find((m) => m.modelId === id);
+                        setBillingGroup(
+                          saved?.billingGroup ??
+                            chooseBillingGroup(
+                              models.find((m) => m.id === id),
+                              "",
+                            ),
+                        );
+                        resetResult();
+                      }}
+                      disabled={session.loading || applyPhase === "applying"}
+                    />
+                    <div className="model-choice-meta">
+                      <span>
+                        {c.availableModels.replace(
+                          "{{count}}",
+                          String(models.length),
+                        )}
                       </span>
-                    ) : null}
+                      {selectedModel &&
+                      [
+                        "claude_code",
+                        "claude_desktop",
+                        "codex_desktop",
+                      ].includes(activationToolId) ? (
+                        <span className="connection-compatibility-label">
+                          {modelConnectionMode(
+                            activationToolId,
+                            selectedModel.supportedEndpointTypes ?? [],
+                          ) === "direct"
+                            ? "原生接口"
+                            : ux.automaticCompatibility}
+                        </span>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="text-button"
+                        onClick={() => void session.refresh()}
+                        disabled={session.loading || applyPhase === "applying"}
+                      >
+                        <RefreshCw aria-hidden="true" />
+                        {c.refresh}
+                      </button>
+                    </div>
+                    {missingModel && (
+                      <p className="selection-warning" role="alert">
+                        之前选择的 <code>{selectedModelId}</code>{" "}
+                        当前不可用。请重新选择模型，不会自动替换。
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <div className="model-sign-in-callout">
+                    <p>{c.priceSignInRequired}</p>
                     <button
                       type="button"
-                      className="text-button"
-                      onClick={() => void session.refresh()}
-                      disabled={session.loading || applyPhase === "applying"}
+                      className="primary-action compact-primary"
+                      onClick={onOpenAccount}
                     >
-                      <RefreshCw aria-hidden="true" />
-                      {c.refresh}
+                      {c.signIn}
                     </button>
                   </div>
-                  {missingModel && (
-                    <p className="selection-warning" role="alert">
-                      之前选择的 <code>{selectedModelId}</code>{" "}
-                      当前不可用。请重新选择模型，不会自动替换。
+                )}
+              </section>
+
+              <section
+                className="connection-choice-card billing-choice-card"
+                aria-label="计费分组"
+              >
+                <div className="choice-card-heading">
+                  <span className="choice-number" aria-hidden="true">
+                    2
+                  </span>
+                  <div>
+                    <h3>选择计费分组</h3>
+                    <p>选择价格与来源，不改变网络线路</p>
+                  </div>
+                </div>
+                <BillingGroupPicker
+                  model={selectedModel}
+                  selected={billingGroup}
+                  disabled={applyPhase === "applying"}
+                  onChange={(id) => {
+                    setSelectionReadyKey(selectionKey);
+                    setBillingGroup(id);
+                    resetResult();
+                  }}
+                />
+                {missingGroup && (
+                  <div className="selection-warning" role="alert">
+                    <strong>之前的计费分组已不可用</strong>
+                    <p>
+                      <b>{groupLabel(billingGroup)}</b>{" "}
+                      不在这个模型当前可用的分组中。请在上方重新选择，价格可能不同；不会自动切换。
                     </p>
-                  )}
-                </>
-              ) : (
-                <div className="model-sign-in-callout">
-                  <p>{c.priceSignInRequired}</p>
+                  </div>
+                )}
+                <BillingPrices
+                  model={selectedModel}
+                  selected={billingGroup}
+                  fx={session.projection?.comparisonFx ?? ""}
+                />
+              </section>
+            </div>
+
+            {signedIn && (
+              <section className="model-set-editor" aria-label="常用模型">
+                <header>
+                  <div>
+                    <h3>常用模型</h3>
+                    <p>加入你会用的模型，每个模型单独选择计费分组。</p>
+                  </div>
                   <button
                     type="button"
-                    className="primary-action compact-primary"
-                    onClick={onOpenAccount}
+                    className="subtle-button"
+                    onClick={addCurrentModel}
+                    disabled={
+                      !selectedModel ||
+                      !selectedBillingGroup ||
+                      applyPhase === "applying" ||
+                      session.loading ||
+                      !!session.lastError ||
+                      (modelSet.length >= 200 &&
+                        !modelSet.some((m) => m.modelId === selectedModelId))
+                    }
                   >
-                    {c.signIn}
+                    {modelSet.some((m) => m.modelId === selectedModelId)
+                      ? "更新这个模型的分组"
+                      : "加入常用模型"}
                   </button>
-                </div>
-              )}
-            </section>
-
-            <section
-              className="connection-choice-card billing-choice-card"
-              aria-label="计费分组"
-            >
-              <div className="choice-card-heading">
-                <span className="choice-number" aria-hidden="true">
-                  2
-                </span>
-                <div>
-                  <h3>选择计费分组</h3>
-                  <p>选择价格与来源，不改变网络线路</p>
-                </div>
-              </div>
-              <BillingGroupPicker
-                model={selectedModel}
-                selected={billingGroup}
-                disabled={applyPhase === "applying"}
-                onChange={(id) => {
-                  setSelectionReadyKey(selectionKey);
-                  setBillingGroup(id);
-                  resetResult();
-                }}
-              />
-              {missingGroup && (
-                <div className="selection-warning" role="alert">
-                  <strong>之前的计费分组已不可用</strong>
-                  <p>
-                    <b>{groupLabel(billingGroup)}</b>{" "}
-                    不在这个模型当前可用的分组中。请在上方重新选择，价格可能不同；不会自动切换。
-                  </p>
-                </div>
-              )}
-              <BillingPrices
-                model={selectedModel}
-                selected={billingGroup}
-                fx={session.projection?.comparisonFx ?? ""}
-              />
-            </section>
-          </div>
-
-          {signedIn && (
-            <section className="model-set-editor" aria-label="常用模型">
-              <header>
-                <div>
-                  <h3>常用模型</h3>
-                  <p>加入你会用的模型，每个模型单独选择计费分组。</p>
-                </div>
-                <button
-                  type="button"
-                  className="subtle-button"
-                  onClick={addCurrentModel}
-                  disabled={
-                    !selectedModel ||
-                    !selectedBillingGroup ||
-                    applyPhase === "applying" ||
-                    session.loading ||
-                    !!session.lastError ||
-                    (modelSet.length >= 200 &&
-                      !modelSet.some((m) => m.modelId === selectedModelId))
-                  }
-                >
-                  {modelSet.some((m) => m.modelId === selectedModelId)
-                    ? "更新这个模型的分组"
-                    : "加入常用模型"}
-                </button>
-              </header>
-              {modelSet.length ? (
-                <ul>
-                  {modelSet.map((m) => {
-                    const available = models
-                      .find((a) => a.id === m.modelId)
-                      ?.billing?.groups.some((g) => g.id === m.billingGroup);
-                    return (
-                      <li key={m.modelId} data-unavailable={!available}>
-                        <label>
-                          <input
-                            type="radio"
-                            name="default-model"
-                            checked={defaultBinding?.modelId === m.modelId}
+                </header>
+                {modelSet.length ? (
+                  <ul>
+                    {modelSet.map((m) => {
+                      const available = models
+                        .find((a) => a.id === m.modelId)
+                        ?.billing?.groups.some((g) => g.id === m.billingGroup);
+                      return (
+                        <li key={m.modelId} data-unavailable={!available}>
+                          <label>
+                            <input
+                              type="radio"
+                              name="default-model"
+                              checked={defaultBinding?.modelId === m.modelId}
+                              disabled={applyPhase === "applying"}
+                              onChange={() => {
+                                setDefaultModelId(m.modelId);
+                                resetResult();
+                              }}
+                              aria-label={`默认模型 ${m.modelId}`}
+                            />
+                            <span>
+                              <code>{m.modelId}</code>
+                              <small>
+                                {groupLabel(m.billingGroup)}
+                                {!available &&
+                                  " · 当前不可用，请重新选择或移除"}
+                              </small>
+                            </span>
+                          </label>
+                          <span className="model-default-label">
+                            {defaultBinding?.modelId === m.modelId
+                              ? "默认"
+                              : ""}
+                          </span>
+                          <button
+                            type="button"
+                            className="text-button"
                             disabled={applyPhase === "applying"}
-                            onChange={() => {
-                              setDefaultModelId(m.modelId);
+                            aria-label={`移除 ${m.modelId}`}
+                            onClick={() => {
+                              setModelSet((items) =>
+                                items.filter((x) => x.modelId !== m.modelId),
+                              );
                               resetResult();
                             }}
-                            aria-label={`默认模型 ${m.modelId}`}
-                          />
-                          <span>
-                            <code>{m.modelId}</code>
-                            <small>
-                              {groupLabel(m.billingGroup)}
-                              {!available && " · 当前不可用，请重新选择或移除"}
-                            </small>
-                          </span>
-                        </label>
-                        <span className="model-default-label">
-                          {defaultBinding?.modelId === m.modelId ? "默认" : ""}
-                        </span>
-                        <button
-                          type="button"
-                          className="text-button"
-                          disabled={applyPhase === "applying"}
-                          aria-label={`移除 ${m.modelId}`}
-                          onClick={() => {
-                            setModelSet((items) =>
-                              items.filter((x) => x.modelId !== m.modelId),
-                            );
-                            resetResult();
-                          }}
-                        >
-                          移除
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <p>也可以只接入上面选中的一个模型，之后再添加。</p>
-              )}
-              {pendingModelEdit && (
-                <p className="selection-warning" role="status">
-                  上方的选择尚未加入列表。点击“
-                  {modelSet.some((m) => m.modelId === selectedModelId)
-                    ? "更新这个模型的分组"
-                    : "加入常用模型"}
-                  ”后，再确认接入。
-                </p>
-              )}
-              <small>
-                同一模型保留一个计费分组。已有列表里的模型可在应用内切换；新增模型、修改默认模型或分组后，需要更新接入。
-              </small>
-            </section>
-          )}
+                          >
+                            移除
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p>也可以只接入上面选中的一个模型，之后再添加。</p>
+                )}
+                {pendingModelEdit && (
+                  <p className="selection-warning" role="status">
+                    上方的选择尚未加入列表。点击“
+                    {modelSet.some((m) => m.modelId === selectedModelId)
+                      ? "更新这个模型的分组"
+                      : "加入常用模型"}
+                    ”后，再确认接入。
+                  </p>
+                )}
+                <small>
+                  同一模型保留一个计费分组。已有列表里的模型可在应用内切换；新增模型、修改默认模型或分组后，需要更新接入。
+                </small>
+              </section>
+            )}
+          </details>
 
           <details
             ref={networkDetails}
@@ -1939,16 +2021,8 @@ export function ConfigurationPreviewView({
             <button
               className={`${configured ? "secondary-action" : "primary-action"} setup-apply`}
               type="button"
-              onClick={runApplyAction}
-              disabled={
-                (signedIn &&
-                  !canApply &&
-                  !canBeginInstallation &&
-                  !canRetryTargetScan &&
-                  !canRetryConnectionRead) ||
-                applyPhase === "applying" ||
-                !!connections?.restoring
-              }
+              onClick={() => setupBlock.run?.()}
+              disabled={applyPhase === "applying" || !!connections?.restoring}
               data-testid="configuration-apply-action"
             >
               {applyPhase === "applying" ? (
@@ -1958,11 +2032,11 @@ export function ConfigurationPreviewView({
               ) : (
                 <ArrowRight aria-hidden="true" />
               )}
-              {canBeginInstallation ? ux.installAndConnect : actionLabel}
+              {setupBlock.label}
             </button>
-            {actionHint && (
+            {setupBlock.hint && (
               <small className="connection-action-hint" role="status">
-                {actionHint}
+                {setupBlock.hint}
               </small>
             )}
           </div>
