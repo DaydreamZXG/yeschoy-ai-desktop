@@ -21,7 +21,6 @@ mod connectivity;
 mod connectivity_core;
 mod desktop_app_discovery;
 mod desktop_app_discovery_core;
-mod loopback_http;
 mod open_connection;
 // Client-first OAuth preparation. Deliberately dormant until the server and
 // local-bridge bearer/billing contract are deployed and integration-tested.
@@ -62,11 +61,10 @@ pub fn run() {
     let mut builder = tauri::Builder::default();
     #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
     {
-        // The Codex bridge owns a fixed loopback port. Two assistant instances
-        // can otherwise split UI ownership from listener ownership: closing the
-        // first instance silently takes Codex offline while the second UI still
-        // appears healthy. Register this before every other plugin so the
-        // existing process remains the sole runtime owner.
+        // Claude Desktop's alias forwarder owns a fixed loopback port, and a
+        // second instance would only duplicate the UI. Register this before
+        // every other plugin so the existing process stays the sole runtime
+        // owner and a second launch just focuses the existing window.
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.unminimize();

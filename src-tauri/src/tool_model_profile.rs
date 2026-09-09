@@ -144,6 +144,7 @@ pub(crate) fn is_deepseek(id: &str) -> bool {
     profile(id).is_some_and(|p| p.reasoning_mode.as_deref() == Some("deepseek"))
 }
 
+#[allow(dead_code)] // 供 vendored 转换器使用；桌面直连路径不再需要。
 pub(crate) fn supports_reasoning_level(id: &str, effort: &str) -> bool {
     profile(id).is_some_and(|model| model.reasoning_levels.iter().any(|level| level == effort))
 }
