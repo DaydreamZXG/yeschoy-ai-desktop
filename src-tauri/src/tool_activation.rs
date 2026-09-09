@@ -1747,6 +1747,11 @@ pub async fn configure_desktop_tool_v2(
         .map_err(|_| AdapterFailure::SecureStorageUnavailable)
         .and_then(|()| prepared.commit());
     stage!("committed");
+    log::info!(
+        "activation stage=local_commit tool={} ok={}",
+        request.tool_id,
+        local_result.is_ok()
+    );
     let configured = match local_result {
         Err(e) => Err(e),
         Ok(()) => match permit
@@ -1777,6 +1782,11 @@ pub async fn configure_desktop_tool_v2(
             .map_err(|_| AdapterFailure::ConfigurationFailed("recovery_receipt_failed"))
     });
     if let Err(error) = result {
+        log::warn!(
+            "activation stage=rollback tool={} reason={:?}",
+            request.tool_id,
+            error
+        );
         emit_activation_progress(&app, &request, "restoring_settings", 6);
         let cleanup = restore_after_failure(
             &request,
@@ -1801,6 +1811,11 @@ pub async fn configure_desktop_tool_v2(
     let open_result =
         open_configured_adapter(&request, &installation, &credential, &dsh_runtime).await;
     stage!("opened");
+    log::info!(
+        "activation stage=open tool={} ok={}",
+        request.tool_id,
+        open_result.is_ok()
+    );
     // The committed configuration now references only scoped keys. Broad or
     // stale helper-owned predecessors can be retired without risking rollback
     // to a key that was deleted mid-transaction. This cleanup is deliberately
