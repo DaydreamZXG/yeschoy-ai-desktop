@@ -83,15 +83,22 @@ impl ToolCredential {
             models: Vec::new(),
         })
     }
+    /// The credential a tool presents to whatever serves its endpoint. Only
+    /// Claude Desktop still talks to a loopback gateway; every other surface
+    /// presents the scoped relay key straight to the relay origin.
     pub(crate) fn client_token(&self, tool: &str) -> &str {
-        if self.has_model_set()
-            || tool == "claude_desktop"
-            || (tool == "claude_code" && self.claude_transport.as_deref() == Some("chat_bridge"))
-        {
+        if tool == "claude_desktop" {
             self.local_gateway_token.as_deref().unwrap_or("")
         } else {
             &self.api_key
         }
+    }
+
+    /// The scoped per-tool key issued by the relay. Tools that talk to the
+    /// relay directly (every surface except the loopback-gateway one) present
+    /// this key, never the loopback capability token.
+    pub(crate) fn upstream_key(&self) -> &str {
+        &self.api_key
     }
 }
 
@@ -444,7 +451,10 @@ pub(crate) fn shell_helper_command(tool_id: &str) -> Result<String, CredentialFa
 fn bare_helper(tool_id: &str) -> i32 {
     match load(tool_id) {
         Ok(record) => {
-            let secret = record.client_token(tool_id);
+            // Helper consumers (Claude Code, Pi, Hermes) now present this key
+            // to the relay origin directly, so the helper must return the
+            // scoped relay key rather than the retired loopback token.
+            let secret = record.upstream_key();
             let mut output = io::stdout().lock();
             if output.write_all(secret.as_bytes()).is_ok()
                 && output.write_all(b"\n").is_ok()
@@ -496,7 +506,7 @@ fn openclaw_helper(tool_id: &str) -> i32 {
     };
     let response = serde_json::json!({
         "protocolVersion": 1,
-        "values": { ID: record.client_token(tool_id) }
+        "values": { ID: record.upstream_key() }
     });
     let mut output = io::stdout().lock();
     if serde_json::to_writer(&mut output, &response).is_ok()
@@ -631,7 +641,7 @@ mod tests {
         assert!(record_is_valid("pi", &c));
         assert_eq!(c.resolve_model("b").unwrap().api_key, "synthetic-key-for-b");
         assert!(c.resolve_model("not-enrolled").is_err());
-        assert!(c.client_token("pi").starts_with("ycg-"));
+        assert_eq!(c.client_token("pi"), c.api_key);
         assert!(!format!("{c:?}").contains("synthetic-key"));
         c.models.push(c.models[0].clone());
         assert!(!record_is_valid("pi", &c));

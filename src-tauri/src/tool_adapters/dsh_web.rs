@@ -251,17 +251,12 @@ pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared
 
 pub(crate) fn prepare_catalog(
     home: &Path,
-    _origin: &str,
+    origin: &str,
     model: &str,
     model_ids: &[String],
 ) -> Result<Prepared, AdapterFailure> {
-    crate::chat_gateway::validate_catalog(model, model_ids)?;
-    prepare_inner(
-        home,
-        &crate::chat_gateway::base_url("dsh_web").unwrap(),
-        model,
-        model_ids,
-    )
+    crate::tool_adapters::common::validate_catalog(model, model_ids)?;
+    prepare_inner(home, origin, model, model_ids)
 }
 
 fn prepare_inner(
@@ -312,7 +307,7 @@ impl Prepared {
             && provider["api"].as_str() == Some("openai-completions")
             && provider["baseURL"].as_str()
                 == Some(format!("{}/v1", self.origin.trim_end_matches('/')).as_str())
-            && crate::chat_gateway::catalog_matches(
+            && crate::tool_adapters::common::catalog_matches(
                 &provider["models"],
                 Some("id"),
                 &self.model_ids,
@@ -320,7 +315,7 @@ impl Prepared {
             && provider["compat"]["supportsDeveloperRole"].as_bool() == Some(false)
             && provider["compat"]["maxTokensField"].as_str() == Some("max_tokens")
             && value["agent-default-model"]["provider"].as_str() == Some("yeschoy")
-            && crate::chat_gateway::default_matches(
+            && crate::tool_adapters::common::default_matches(
                 value["agent-default-model"]["model"].as_str(),
                 &self.model,
                 &self.model_ids,
@@ -466,7 +461,7 @@ fn runtime_identity(
     let mut settings: JsonValue =
         serde_yaml::from_slice(bytes).map_err(|_| AdapterFailure::LaunchFailed)?;
     if settings["llm-pi-ai"]["providers"]["yeschoy"]["baseURL"].as_str()
-        == Some(format!("{}/v1", crate::chat_gateway::base_url("dsh_web").unwrap()).as_str())
+        == Some(format!("{}/v1", "https://yeschoy.com").as_str())
     {
         if let Some(provider) = settings["llm-pi-ai"]["providers"]["yeschoy"].as_object_mut() {
             provider.remove("models");
@@ -573,7 +568,7 @@ mod tests {
         let path = home.join("settings.yaml");
         let installation = home.join("synthetic-dsh");
         let ids = vec!["model-a".into(), "model-b".into()];
-        let origin = crate::chat_gateway::base_url("dsh_web").unwrap();
+        let origin = "https://yeschoy.com".to_string();
         let bytes = render_catalog(None, &origin, "model-a", &ids).unwrap();
         let before = runtime_identity(&installation, &path, "synthetic-local", &bytes).unwrap();
         let mut prepared = Prepared {
@@ -630,7 +625,7 @@ mod tests {
         let fixture = common::test_support::Script::new("[ \"$1\" = --profile ] || exit 11\n[ \"$2\" = web ] || exit 12\n[ \"$YESCHOY_DSH_API_KEY\" = synthetic-local ] || exit 13\nprintf 'dsh web: http://127.0.0.1:3018/?token=synthetic\\n'\nexec /bin/sleep 30");
         let installation = fixture.installation();
         let config = installation.path.with_extension("yaml");
-        let origin = crate::chat_gateway::base_url("dsh_web").unwrap();
+        let origin = "https://yeschoy.com".to_string();
         let a = render_catalog(None, &origin, "model-a", &["model-a".into()]).unwrap();
         let b = render_catalog(
             None,

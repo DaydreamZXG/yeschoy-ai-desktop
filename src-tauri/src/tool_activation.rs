@@ -18,9 +18,7 @@ use crate::{
         billing_groups, ensure_session_epoch, native_account_json, native_session_access,
         native_session_epoch, AccountV2State, NativeSessionFailure,
     },
-    chat_gateway::ChatGatewayRuntimeState,
     claude_bridge::ClaudeTransport,
-    codex_bridge::CodexBridgeRuntimeState,
     connection_recovery::{self, Receipt, Store},
     connectivity_core::request_id_is_valid,
     shutdown_coordinator,
@@ -541,16 +539,13 @@ fn model_endpoints<'a>(pricing: &'a Value, model_id: &str) -> Option<&'a Vec<Val
 
 fn claude_transport(pricing: &Value, model_id: &str) -> Option<ClaudeTransport> {
     let endpoints = model_endpoints(pricing, model_id)?;
-    if endpoints
-        .iter()
-        .any(|endpoint| endpoint.as_str() == Some("anthropic"))
-    {
+    // The relay serves the Anthropic protocol for every chat model, so an
+    // `anthropic` capability flag is no longer required to connect directly.
+    // It remains the preferred evidence when present.
+    if endpoints.iter().any(|endpoint| {
+        matches!(endpoint.as_str(), Some("anthropic") | Some("openai"))
+    }) {
         Some(ClaudeTransport::DirectAnthropic)
-    } else if endpoints
-        .iter()
-        .any(|endpoint| endpoint.as_str() == Some("openai"))
-    {
-        Some(ClaudeTransport::ChatBridge)
     } else {
         None
     }
@@ -558,16 +553,12 @@ fn claude_transport(pricing: &Value, model_id: &str) -> Option<ClaudeTransport> 
 
 fn codex_transport(pricing: &Value, model_id: &str) -> Option<codex_desktop::CodexTransport> {
     let endpoints = model_endpoints(pricing, model_id)?;
-    if endpoints
-        .iter()
-        .any(|endpoint| endpoint.as_str() == Some("openai-response"))
-    {
+    // Same reasoning as `claude_transport`: the relay converts the Responses
+    // protocol for every chat model, so `openai` alone is enough to go direct.
+    if endpoints.iter().any(|endpoint| {
+        matches!(endpoint.as_str(), Some("openai-response") | Some("openai"))
+    }) {
         Some(codex_desktop::CodexTransport::DirectResponses)
-    } else if endpoints
-        .iter()
-        .any(|endpoint| endpoint.as_str() == Some("openai"))
-    {
-        Some(codex_desktop::CodexTransport::ChatBridge)
     } else {
         None
     }
@@ -1079,8 +1070,11 @@ fn prepare_adapter(
         .ok_or(AdapterFailure::ConfigurationFailed("home_unavailable"))?;
     let models = credential.model_ids();
     let local = credential.local_gateway_token.as_deref();
-    let origin = crate::chat_gateway::base_url(&request.tool_id)
-        .unwrap_or_else(|| credential.origin.clone());
+    // Every surface points at the relay origin directly. Claude Desktop is the
+    // only remaining consumer of the loopback gateway, and its adapter takes no
+    // origin. The relay key is written into the tool's own configuration.
+    let origin = credential.origin.clone();
+    let provider_key = credential.upstream_key();
     match request.tool_id.as_str() {
         "claude_code" => claude_code::prepare_catalog(
             &home,
@@ -1106,7 +1100,7 @@ fn prepare_adapter(
                 Some(ModelTransport::Codex(v)) => v,
                 _ => return Err(AdapterFailure::ConfigurationFailed("invalid_request")),
             },
-            local,
+            Some(provider_key),
             &models,
         )
         .map(PreparedAdapter::CodexDesktop),
@@ -1126,15 +1120,14 @@ fn prepare_adapter(
 async fn start_local_adapter(
     request: &ToolActivationRequest,
     credential: &ToolCredential,
-    claude_code_runtime: &claude_code::ClaudeCodeRuntimeState,
     claude_runtime: &claude_desktop::ClaudeDesktopRuntimeState,
-    codex_runtime: &CodexBridgeRuntimeState,
 ) -> Result<(), AdapterFailure> {
     match request.tool_id.as_str() {
-        "claude_code" => claude_code_runtime.start(credential.clone()).await,
+        // Only Claude Desktop still needs a loopback gateway; every other
+        // surface connects straight to the relay origin.
         "claude_desktop" => claude_runtime.start(credential.clone()).await.map(|_| ()),
-        "codex_desktop" => codex_desktop::ensure_runtime_ready(codex_runtime, credential).await,
-        "pi" | "dsh_web" | "hermes" | "openclaw" => Ok(()),
+        "codex_desktop" => codex_desktop::ensure_credential_ready(credential).await,
+        "claude_code" | "pi" | "dsh_web" | "hermes" | "openclaw" => Ok(()),
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
 }
@@ -1152,7 +1145,7 @@ async fn open_configured_adapter(
             dsh_web::open_existing(
                 dsh_runtime,
                 installation,
-                credential.client_token("dsh_web"),
+                credential.upstream_key(),
             )
             .await
         }
@@ -1203,18 +1196,14 @@ impl Drop for DesktopReloadGuard {
 
 async fn stop_helper_runtime(
     tool: &str,
-    claude_code_runtime: &claude_code::ClaudeCodeRuntimeState,
     claude_runtime: &claude_desktop::ClaudeDesktopRuntimeState,
     dsh_runtime: &dsh_web::DshRuntimeState,
-    codex_bridge: &CodexBridgeRuntimeState,
 ) {
     match tool {
-        "claude_code" => claude_code_runtime.stop().await,
         "claude_desktop" => claude_runtime.stop().await,
-        "codex_desktop" => codex_bridge.stop().await,
         "dsh_web" => dsh_runtime.stop().await,
-        // Pi, Hermes and OpenClaw share a gateway. Stopping it for one tool
-        // would interrupt other active tools, and recovery does not require it.
+        // Claude Code, Codex, Pi, Hermes and OpenClaw own no helper runtime any
+        // more: they connect straight to the relay origin.
         _ => {}
     }
 }
@@ -1228,11 +1217,8 @@ async fn restore_after_failure(
     origin: &str,
     access_token: &str,
     leases: &[(String, TokenLease)],
-    claude_code_runtime: &claude_code::ClaudeCodeRuntimeState,
     claude_runtime: &claude_desktop::ClaudeDesktopRuntimeState,
-    codex_bridge: &CodexBridgeRuntimeState,
     dsh_runtime: &dsh_web::DshRuntimeState,
-    bridge_started: bool,
     permit: &shutdown_coordinator::OperationPermit,
 ) -> Option<AdapterFailure> {
     let rollback_failure = prepared.rollback().err();
@@ -1242,19 +1228,6 @@ async fn restore_after_failure(
             if request.tool_id == "dsh_web" {
                 dsh_runtime.stop().await;
             }
-            if request.tool_id == "claude_code" {
-                claude_code_runtime.stop().await;
-                if !shutdown_coordinator::global().is_shutting_down()
-                    && previous_record.as_ref().is_some_and(|record| {
-                        record.has_model_set()
-                            || record.claude_transport.as_deref() == Some("chat_bridge")
-                    })
-                {
-                    if let Some(previous) = previous_record.clone() {
-                        let _ = claude_code_runtime.start(previous).await;
-                    }
-                }
-            }
             if request.tool_id == "claude_desktop" {
                 claude_runtime.stop().await;
                 if let Some(previous) = previous_record
@@ -1262,17 +1235,6 @@ async fn restore_after_failure(
                     .filter(|_| !shutdown_coordinator::global().is_shutting_down())
                 {
                     let _ = claude_runtime.start(previous).await;
-                }
-            }
-            if request.tool_id == "codex_desktop" && bridge_started {
-                codex_bridge.stop().await;
-                if !shutdown_coordinator::global().is_shutting_down()
-                    && previous_record.as_ref().is_some_and(|record| {
-                        record.has_model_set()
-                            || record.codex_transport.as_deref() == Some("chat_bridge")
-                    })
-                {
-                    let _ = codex_bridge.ensure_started().await;
                 }
             }
         })
@@ -1334,11 +1296,8 @@ pub async fn configure_desktop_tool_v2(
     activation_state: tauri::State<'_, ActivationOperationState>,
     account_state: tauri::State<'_, AccountV2State>,
     installation_state: tauri::State<'_, crate::app_installation::AppInstallationState>,
-    claude_code_runtime: tauri::State<'_, claude_code::ClaudeCodeRuntimeState>,
     claude_runtime: tauri::State<'_, claude_desktop::ClaudeDesktopRuntimeState>,
     dsh_runtime: tauri::State<'_, dsh_web::DshRuntimeState>,
-    codex_bridge: tauri::State<'_, CodexBridgeRuntimeState>,
-    chat_gateway: tauri::State<'_, ChatGatewayRuntimeState>,
     request: ToolActivationRequest,
 ) -> Result<ToolActivationProjection, String> {
     if !request_is_valid(&request) {
@@ -1493,10 +1452,8 @@ pub async fn configure_desktop_tool_v2(
             if permit
                 .cancel_safe(stop_helper_runtime(
                     &request.tool_id,
-                    &claude_code_runtime,
                     &claude_runtime,
                     &dsh_runtime,
-                    &codex_bridge,
                 ))
                 .await
                 .is_err()
@@ -1736,24 +1693,13 @@ pub async fn configure_desktop_tool_v2(
                 .projection(&request));
             }
         };
-    let mut bridge_started = false;
-    let gateway_result = if request.tool_id == "codex_desktop" {
-        codex_bridge.ensure_started().await.map(|started| {
-            bridge_started = started;
-        })
-    } else if crate::chat_gateway::base_url(&request.tool_id).is_some() {
-        chat_gateway.ensure_started().await.map_err(|_| ())
-    } else {
-        Ok(())
-    };
-    if gateway_result.is_err() || is_cancelled() {
+    // No gateway has to be started here any more: every surface except Claude
+    // Desktop writes a direct relay origin, and Claude Desktop's loopback
+    // gateway is started by `start_local_adapter` after the settings commit.
+    if is_cancelled() {
         let _ = recovery.abandon(&recovery_record);
         delete_created_tokens(&origin, &access_token, &leases).await;
-        return Ok(if is_cancelled() {
-            cancelled()
-        } else {
-            ActivationFailure::ConfigurationFailed("local_bridge_unavailable").projection(&request)
-        });
+        return Ok(cancelled());
     }
     // No cancellation point between credential publication and local file commit.
     emit_activation_progress(&app, &request, "applying_settings", 6);
@@ -1763,13 +1709,7 @@ pub async fn configure_desktop_tool_v2(
     let configured = match local_result {
         Err(e) => Err(e),
         Ok(()) => match permit
-            .cancel_safe(start_local_adapter(
-                &request,
-                &credential,
-                &claude_code_runtime,
-                &claude_runtime,
-                &codex_bridge,
-            ))
+            .cancel_safe(start_local_adapter(&request, &credential, &claude_runtime))
             .await
         {
             Ok(result) => result,
@@ -1805,11 +1745,8 @@ pub async fn configure_desktop_tool_v2(
             &origin,
             &access_token,
             &leases,
-            &claude_code_runtime,
             &claude_runtime,
-            &codex_bridge,
             &dsh_runtime,
-            bridge_started,
             &permit,
         )
         .await;
@@ -1923,7 +1860,9 @@ fn inspect_connection(
         Ok(Some(record)) => {
             projection.state = if record.pending {
                 "recovery_pending"
-            } else if connection_recovery::configuration_matches(&record) {
+            } else if connection_recovery::configuration_matches(&record)
+                && !connection_recovery::requires_gateway_migration(tool, &record)
+            {
                 "connected"
             } else {
                 "changed"
@@ -2080,10 +2019,8 @@ fn legacy_recovery(store: &Store, tool: &str) -> Result<Option<connection_recove
 #[tauri::command]
 pub async fn manage_tool_connections_v1(
     account_state: tauri::State<'_, AccountV2State>,
-    claude_code_runtime: tauri::State<'_, claude_code::ClaudeCodeRuntimeState>,
     claude_runtime: tauri::State<'_, claude_desktop::ClaudeDesktopRuntimeState>,
     dsh_runtime: tauri::State<'_, dsh_web::DshRuntimeState>,
-    codex_bridge: tauri::State<'_, CodexBridgeRuntimeState>,
     request: ConnectionRequest,
 ) -> Result<ConnectionResponse, String> {
     if !request_id_is_valid(&request.request_id)
@@ -2144,10 +2081,8 @@ pub async fn manage_tool_connections_v1(
                 .cancel_safe(async {
                     stop_helper_runtime(
                         &request.tool_id,
-                        &claude_code_runtime,
                         &claude_runtime,
                         &dsh_runtime,
-                        &codex_bridge,
                     )
                     .await;
                 })
@@ -2611,7 +2546,7 @@ mod tests {
         );
         assert_eq!(
             codex_transport(&pricing, "chat"),
-            Some(codex_desktop::CodexTransport::ChatBridge)
+            Some(codex_desktop::CodexTransport::DirectResponses)
         );
         assert_eq!(
             claude_transport(&pricing, "messages"),
@@ -2619,7 +2554,7 @@ mod tests {
         );
         assert_eq!(
             claude_transport(&pricing, "chat"),
-            Some(ClaudeTransport::ChatBridge)
+            Some(ClaudeTransport::DirectAnthropic)
         );
         assert_eq!(
             claude_transport(&pricing, "both"),

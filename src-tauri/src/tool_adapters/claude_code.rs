@@ -4,29 +4,13 @@ use serde_json::{json, Map, Value};
 use tokio::process::Command;
 
 use crate::{
-    claude_bridge::{ClaudeBridgeRuntime, ClaudeTransport},
+    claude_bridge::ClaudeTransport,
     tool_adapters::{
         common::{self, ConfigFailure, FileTransaction},
         AdapterFailure, ResolvedInstallation,
     },
     tool_credentials,
 };
-
-const PROXY_ADDRESS: &str = "127.0.0.1:15728";
-const PROXY_BASE: &str = "http://127.0.0.1:15728/claude-code";
-
-#[derive(Clone)]
-pub(crate) struct ClaudeCodeRuntimeState {
-    runtime: ClaudeBridgeRuntime,
-}
-
-impl Default for ClaudeCodeRuntimeState {
-    fn default() -> Self {
-        Self {
-            runtime: ClaudeBridgeRuntime::new(PROXY_ADDRESS, "/claude-code"),
-        }
-    }
-}
 
 pub(crate) struct Prepared {
     transaction: FileTransaction,
@@ -158,7 +142,7 @@ pub(crate) fn prepare_catalog(
     existing_local_token: Option<&str>,
     model_ids: &[String],
 ) -> Result<Prepared, AdapterFailure> {
-    crate::chat_gateway::validate_catalog(model, model_ids)?;
+    crate::tool_adapters::common::validate_catalog(model, model_ids)?;
     prepare_inner(
         home,
         origin,
@@ -174,7 +158,7 @@ fn prepare_inner(
     home: &Path,
     origin: &str,
     model: &str,
-    transport: ClaudeTransport,
+    _transport: ClaudeTransport,
     _existing_local_token: Option<&str>,
     model_ids: &[String],
     modern: bool,
@@ -190,11 +174,10 @@ fn prepare_inner(
     // The canonical credential owner generates/stores the local token. Claude
     // Code reads it through apiKeyHelper, so no token belongs in Prepared or
     // the settings file. Keep the legacy argument shape for callers.
-    let configured_origin = if modern || transport == ClaudeTransport::ChatBridge {
-        PROXY_BASE
-    } else {
-        origin
-    };
+    // Claude Code reads the relay origin straight from its own settings file.
+    // The former loopback proxy added a listener, a capability token and a
+    // watchdog without changing the protocol.
+    let configured_origin = origin;
     let after = if modern {
         render_catalog(
             before.as_deref(),
@@ -262,16 +245,16 @@ impl Prepared {
                         .all(|key| env.get(key).and_then(Value::as_str) == Some(&self.model)))
             })
             && (!self.modern
-                || (crate::chat_gateway::default_matches(
+                || (crate::tool_adapters::common::default_matches(
                     value["model"].as_str(),
                     &self.model,
                     &self.model_ids,
                     strict_default,
-                ) && crate::chat_gateway::catalog_matches(
+                ) && crate::tool_adapters::common::catalog_matches(
                     &value["availableModels"],
                     None,
                     &self.model_ids,
-                ) && crate::chat_gateway::catalog_matches(
+                ) && crate::tool_adapters::common::catalog_matches(
                     &value["modelPicker"]["options"],
                     Some("model"),
                     &self.model_ids,
@@ -316,14 +299,10 @@ impl Prepared {
 }
 
 pub(crate) async fn verify(
-    state: &ClaudeCodeRuntimeState,
     installation: &ResolvedInstallation,
     model: &str,
-    credential: &tool_credentials::ToolCredential,
+    _credential: &tool_credentials::ToolCredential,
 ) -> Result<(), AdapterFailure> {
-    if credential.has_model_set() || credential.claude_transport.as_deref() == Some("chat_bridge") {
-        state.start(credential.clone()).await?;
-    }
     let settings_path = super::user_home()
         .map(|home| home.join(".claude").join("settings.json"))
         .filter(|path| path.is_file())
@@ -378,45 +357,6 @@ async fn verify_with_settings(
     }
 }
 
-impl ClaudeCodeRuntimeState {
-    pub(crate) async fn start(
-        &self,
-        credential: tool_credentials::ToolCredential,
-    ) -> Result<(), AdapterFailure> {
-        self.runtime.start(credential).await.map(|_| ())
-    }
-
-    pub(crate) async fn stop(&self) {
-        self.runtime.stop().await;
-    }
-}
-
-pub(crate) async fn resume_if_configured(state: ClaudeCodeRuntimeState) {
-    let Ok(credential) = tool_credentials::load("claude_code") else {
-        return;
-    };
-    if !credential.has_model_set() && credential.claude_transport.as_deref() != Some("chat_bridge")
-    {
-        return;
-    }
-    let Some(home) = super::user_home() else {
-        return;
-    };
-    let settings = common::snapshot(&home.join(".claude").join("settings.json"))
-        .ok()
-        .flatten()
-        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok());
-    let active = settings.as_ref().is_some_and(|value| {
-        value
-            .pointer("/env/ANTHROPIC_BASE_URL")
-            .and_then(Value::as_str)
-            == Some(PROXY_BASE)
-    });
-    if active {
-        let _ = state.start(credential).await;
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -441,7 +381,10 @@ mod tests {
             .contains(&token));
         let mut settings: Value =
             serde_json::from_slice(&std::fs::read(&prepared.path).unwrap()).unwrap();
-        assert_eq!(settings["env"]["ANTHROPIC_BASE_URL"], PROXY_BASE);
+        assert_eq!(
+            settings["env"]["ANTHROPIC_BASE_URL"],
+            "https://yeschoy.com"
+        );
         assert!(settings["env"]
             .get("ANTHROPIC_DEFAULT_SONNET_MODEL")
             .is_none());
@@ -481,7 +424,7 @@ mod tests {
     fn ru056_claude_code_catalog_projects_each_models_native_effort_family() {
         let bytes = render_catalog(
             None,
-            PROXY_BASE,
+            "https://yeschoy.com",
             "deepseek-v4-flash",
             "synthetic-helper",
             &[
@@ -608,18 +551,21 @@ mod tests {
     }
 
     #[test]
-    fn chat_transport_uses_loopback_and_local_token() {
-        assert_eq!(PROXY_BASE, "http://127.0.0.1:15728/claude-code");
+    fn direct_transport_writes_the_relay_origin_and_a_helper_command() {
         let settings: Value = serde_json::from_slice(
             &render(
                 None,
-                PROXY_BASE,
+                "https://yeschoy.com",
                 "fixture-model",
                 "synthetic-helper credential-helper claude_code",
             )
             .unwrap(),
         )
         .unwrap();
+        assert_eq!(
+            settings["env"]["ANTHROPIC_BASE_URL"],
+            "https://yeschoy.com"
+        );
         assert_eq!(
             settings["apiKeyHelper"],
             "synthetic-helper credential-helper claude_code"

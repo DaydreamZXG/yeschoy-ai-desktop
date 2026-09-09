@@ -163,6 +163,7 @@ impl RequestContext {
 }
 
 #[derive(Clone, Copy)]
+#[allow(dead_code)] // Responses/Chat remain part of the shared protocol vocabulary.
 pub(crate) enum StreamProtocol {
     Anthropic,
     Responses,

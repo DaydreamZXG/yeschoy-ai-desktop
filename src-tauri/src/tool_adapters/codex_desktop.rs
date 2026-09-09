@@ -49,13 +49,19 @@ pub(crate) struct Prepared {
 #[derive(Clone)]
 enum ProviderAuth {
     Command(String),
-    LoopbackToken(String),
+    /// The scoped per-tool key issued by the relay. It authenticates directly
+    /// against the relay's public origin, so no local gateway is involved.
+    ApiKey(String),
 }
 
-fn valid_loopback_token(token: &str) -> bool {
-    token.len() == 68
-        && token.starts_with("ycg-")
-        && token[4..].bytes().all(|byte| byte.is_ascii_hexdigit())
+/// Relay keys are opaque `sk-` tokens. The bound matches the credential record
+/// validator; control characters can never reach a TOML value.
+fn valid_provider_key(key: &str) -> bool {
+    (16..=256).contains(&key.len())
+        && key.starts_with("sk-")
+        && !key
+            .chars()
+            .any(|value| value.is_control() || value.is_whitespace())
 }
 
 fn config_error(error: ConfigFailure) -> AdapterFailure {
@@ -145,16 +151,13 @@ fn render(
             auth.insert("refresh_interval_ms", value(0));
             provider.insert("auth", Item::Table(auth));
         }
-        ProviderAuth::LoopbackToken(token) => {
-            // This is only a capability for the loopback listener, never the
-            // upstream NewAPI key. Avoiding a second launch of the full GUI
-            // executable also prevents Windows Defender/cold-start delays from
-            // timing out Codex's command-backed auth during startup.
-            // The bearer token wins for request authentication. Keeping this
-            // true preserves Codex's existing ChatGPT login UX without ever
-            // sending that official credential to the loopback provider.
-            provider.insert("requires_openai_auth", value(true));
-            provider.insert("experimental_bearer_token", value(token));
+        ProviderAuth::ApiKey(key) => {
+            // Direct connection to the relay origin. `requires_openai_auth` is
+            // deliberately absent: it exists to attach the user's official
+            // ChatGPT credential, and that credential must never be sent to a
+            // remote host. `experimental_bearer_token` alone authenticates the
+            // scoped per-tool key and is what the relay expects.
+            provider.insert("experimental_bearer_token", value(key));
         }
     }
     Ok(document.to_string().into_bytes())
@@ -255,10 +258,10 @@ pub(crate) fn prepare_catalog(
     origin: &str,
     model: &str,
     transport: CodexTransport,
-    local_gateway_token: Option<&str>,
+    provider_key: Option<&str>,
     model_ids: &[String],
 ) -> Result<Prepared, AdapterFailure> {
-    crate::chat_gateway::validate_catalog(model, model_ids)?;
+    crate::tool_adapters::common::validate_catalog(model, model_ids)?;
     prepare_inner(
         home,
         origin,
@@ -266,7 +269,7 @@ pub(crate) fn prepare_catalog(
         transport,
         model_ids,
         true,
-        local_gateway_token,
+        provider_key,
     )
 }
 
@@ -277,7 +280,7 @@ fn prepare_inner(
     transport: CodexTransport,
     model_ids: &[String],
     modern: bool,
-    local_gateway_token: Option<&str>,
+    provider_key: Option<&str>,
 ) -> Result<Prepared, AdapterFailure> {
     let config_dir = config_dir(home)?;
     let path = config_dir.join("config.toml");
@@ -285,24 +288,21 @@ fn prepare_inner(
     let before = common::snapshot(&path)
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_read_failed"))?;
     let provider_auth = if modern {
-        let token = local_gateway_token
-            .filter(|token| valid_loopback_token(token))
+        let key = provider_key
+            .filter(|key| valid_provider_key(key))
             .ok_or(AdapterFailure::SecureStorageUnavailable)?;
-        ProviderAuth::LoopbackToken(token.to_owned())
+        ProviderAuth::ApiKey(key.to_owned())
     } else {
         ProviderAuth::Command(
             tool_credentials::executable_path()
                 .map_err(|_| AdapterFailure::SecureStorageUnavailable)?,
         )
     };
-    let base_url = if modern {
-        codex_bridge::BASE_URL.to_owned()
-    } else {
-        match transport {
-            CodexTransport::DirectResponses => format!("{}/v1", origin.trim_end_matches('/')),
-            CodexTransport::ChatBridge => codex_bridge::BASE_URL.to_owned(),
-        }
-    };
+    // The relay serves the Responses protocol natively for every chat model,
+    // so both transports point straight at its origin. The former loopback
+    // gateway added a listener, a port, a capability token and a watchdog for
+    // no protocol benefit.
+    let base_url = format!("{}/v1", origin.trim_end_matches('/'));
     let after = render(before.as_deref(), &base_url, model, &provider_auth)?;
     let catalog = if modern {
         serde_json::to_vec_pretty(&bridge_catalog_models(model_ids)?)
@@ -391,15 +391,15 @@ impl Prepared {
                     && provider.get("env_key").is_none()
                     && provider.get("experimental_bearer_token").is_none()
             }
-            ProviderAuth::LoopbackToken(token) => {
-                provider["experimental_bearer_token"].as_str() == Some(token)
-                    && provider["requires_openai_auth"].as_bool() == Some(true)
+            ProviderAuth::ApiKey(key) => {
+                provider["experimental_bearer_token"].as_str() == Some(key)
+                    && provider.get("requires_openai_auth").is_none()
                     && provider.get("auth").is_none()
                     && provider.get("env_key").is_none()
             }
         };
         let correct = document["model_provider"].as_str() == Some("yeschoy")
-            && crate::chat_gateway::default_matches(
+            && crate::tool_adapters::common::default_matches(
                 document["model"].as_str(),
                 &self.model,
                 &self.model_ids,
@@ -440,7 +440,11 @@ pub(crate) async fn ensure_credential_ready(
     credential: &tool_credentials::ToolCredential,
 ) -> Result<(), AdapterFailure> {
     if credential.has_model_set() {
-        return ensure_local_gateway_ready(credential).await;
+        // Direct connection: the scoped per-tool key is already written into
+        // the Codex provider config, and the caller proves it with a real
+        // model request (verify_provider). There is no local listener to warm
+        // up, restart, or authenticate against.
+        return Ok(());
     }
     let helper = tool_credentials::executable_path()
         .map_err(|_| AdapterFailure::VerificationFailed("credential_helper_failed"))?;
@@ -463,111 +467,13 @@ pub(crate) async fn ensure_credential_ready(
     Ok(())
 }
 
-pub(crate) async fn ensure_runtime_ready(
-    runtime: &codex_bridge::CodexBridgeRuntimeState,
-    credential: &tool_credentials::ToolCredential,
-) -> Result<(), AdapterFailure> {
-    let started = runtime
-        .ensure_started()
-        .await
-        .map_err(|_| AdapterFailure::VerificationFailed("local_bridge_unavailable"))?;
-    match ensure_credential_ready(credential).await {
-        Ok(()) => Ok(()),
-        // An already-running task can be alive while its listener is stale.
-        // Restart our own listener once and prove the authenticated model
-        // catalog before Codex is opened.
-        Err(_) if credential.has_model_set() && !started => {
-            runtime.stop().await;
-            runtime
-                .ensure_started()
-                .await
-                .map_err(|_| AdapterFailure::VerificationFailed("local_bridge_unavailable"))?;
-            ensure_credential_ready(credential).await
-        }
-        Err(error) => Err(error),
-    }
-}
-
-async fn ensure_local_gateway_ready(
-    credential: &tool_credentials::ToolCredential,
-) -> Result<(), AdapterFailure> {
-    const MAX_CATALOG_BYTES: u64 = 2 * 1024 * 1024;
-    let token = credential
-        .local_gateway_token
-        .as_deref()
-        .filter(|token| valid_loopback_token(token))
-        .ok_or(AdapterFailure::VerificationFailed(
-            "local_bridge_auth_failed",
-        ))?;
-    let client = Client::builder()
-        .no_proxy()
-        .redirect(Policy::none())
-        .connect_timeout(Duration::from_secs(2))
-        .timeout(Duration::from_secs(4))
-        .build()
-        .map_err(|_| AdapterFailure::VerificationFailed("local_bridge_unavailable"))?;
-    let response = client
-        .get(format!("{}/models", codex_bridge::BASE_URL))
-        .bearer_auth(token)
-        .send()
-        .await
-        .map_err(|_| AdapterFailure::VerificationFailed("local_bridge_unavailable"))?;
-    if matches!(
-        response.status(),
-        StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN
-    ) {
-        return Err(AdapterFailure::VerificationFailed(
-            "local_bridge_auth_failed",
-        ));
-    }
-    if !response.status().is_success()
-        || response
-            .content_length()
-            .is_some_and(|length| length > MAX_CATALOG_BYTES)
-    {
-        return Err(AdapterFailure::VerificationFailed(
-            "local_bridge_unavailable",
-        ));
-    }
-    let bytes = response
-        .bytes()
-        .await
-        .map_err(|_| AdapterFailure::VerificationFailed("local_bridge_catalog_invalid"))?;
-    if bytes.len() as u64 > MAX_CATALOG_BYTES {
-        return Err(AdapterFailure::VerificationFailed(
-            "local_bridge_catalog_invalid",
-        ));
-    }
-    let catalog = serde_json::from_slice::<Value>(&bytes)
-        .map_err(|_| AdapterFailure::VerificationFailed("local_bridge_catalog_invalid"))?;
-    let available = catalog.get("models").and_then(Value::as_array).ok_or(
-        AdapterFailure::VerificationFailed("local_bridge_catalog_invalid"),
-    )?;
-    let expected = credential.model_ids();
-    let complete = expected.iter().all(|model_id| {
-        available
-            .iter()
-            .any(|model| model.get("slug").and_then(Value::as_str) == Some(model_id.as_str()))
-    });
-    complete
-        .then_some(())
-        .ok_or(AdapterFailure::VerificationFailed(
-            "local_bridge_catalog_invalid",
-        ))
-}
-
 fn provider_url(credential: &tool_credentials::ToolCredential) -> Result<String, AdapterFailure> {
-    if credential.has_model_set() {
-        return Ok(format!("{}/responses", codex_bridge::BASE_URL));
-    }
-    match credential.codex_transport.as_deref() {
-        Some("direct_responses") => Ok(format!(
-            "{}/v1/responses",
-            credential.origin.trim_end_matches('/')
-        )),
-        Some("chat_bridge") => Ok(format!("{}/responses", codex_bridge::BASE_URL)),
-        _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
-    }
+    // Every route now talks to the relay origin directly; the loopback gateway
+    // that used to sit in between is gone.
+    Ok(format!(
+        "{}/v1/responses",
+        credential.origin.trim_end_matches('/')
+    ))
 }
 
 fn status_failure(status: StatusCode) -> Option<&'static str> {
@@ -617,7 +523,7 @@ async fn verify_provider(
         .map_err(|_| AdapterFailure::VerificationFailed("provider_unavailable"))?;
     let response = client
         .post(provider_url(credential)?)
-        .bearer_auth(credential.client_token("codex_desktop"))
+        .bearer_auth(credential.upstream_key())
         .json(&json!({
             "model": credential.model_id,
             "input": [{
@@ -827,15 +733,15 @@ mod tests {
     }
 
     #[test]
-    fn modern_provider_uses_only_the_loopback_capability_token() {
-        let token = format!("ycg-{}", "a".repeat(64));
+    fn modern_provider_writes_only_the_scoped_relay_key() {
+        let key = format!("sk-{}", "a".repeat(48));
         let bytes = render(
             Some(
                 b"[model_providers.yeschoy]\nrequires_openai_auth = true\nenv_key = 'OPENAI_API_KEY'\n[model_providers.yeschoy.auth]\ncommand = 'old-helper'\n",
             ),
-            codex_bridge::BASE_URL,
+            "https://yeschoy.com/v1",
             "gpt-6-astra",
-            &ProviderAuth::LoopbackToken(token.clone()),
+            &ProviderAuth::ApiKey(key.clone()),
         )
         .unwrap();
         let text = String::from_utf8(bytes).unwrap();
@@ -843,9 +749,11 @@ mod tests {
         let provider = &document["model_providers"]["yeschoy"];
         assert_eq!(
             provider["experimental_bearer_token"].as_str(),
-            Some(token.as_str())
+            Some(key.as_str())
         );
-        assert_eq!(provider["requires_openai_auth"].as_bool(), Some(true));
+        // The official ChatGPT credential must never be attached to a remote
+        // provider, so `requires_openai_auth` stays absent.
+        assert!(provider.get("requires_openai_auth").is_none());
         assert!(provider.get("auth").is_none());
         assert!(provider.get("env_key").is_none());
         assert!(!text.contains("OPENAI_API_KEY"));
@@ -853,8 +761,8 @@ mod tests {
     }
 
     #[test]
-    fn modern_catalog_requires_and_commits_the_exact_loopback_token() {
-        let home = common::temporary_working_directory("codex-loopback-token").unwrap();
+    fn modern_catalog_requires_and_commits_the_scoped_relay_key() {
+        let home = common::temporary_working_directory("codex-relay-key").unwrap();
         let models = vec!["gpt-6-astra".to_string(), "gpt-5.6-sol".to_string()];
         assert!(matches!(
             prepare_catalog(
@@ -867,20 +775,21 @@ mod tests {
             ),
             Err(AdapterFailure::SecureStorageUnavailable)
         ));
-        let token = format!("ycg-{}", "b".repeat(64));
+        let key = format!("sk-{}", "b".repeat(48));
         let mut prepared = prepare_catalog(
             &home,
             "https://yeschoy.com",
             "gpt-6-astra",
             CodexTransport::DirectResponses,
-            Some(&token),
+            Some(&key),
             &models,
         )
         .unwrap();
         prepared.commit().unwrap();
         let config = std::fs::read_to_string(home.join(".codex/config.toml")).unwrap();
-        assert!(config.contains(&format!("experimental_bearer_token = \"{token}\"")));
-        assert!(config.contains("requires_openai_auth = true"));
+        assert!(config.contains(&format!("experimental_bearer_token = \"{key}\"")));
+        assert!(config.contains("base_url = \"https://yeschoy.com/v1\""));
+        assert!(!config.contains("requires_openai_auth"));
         assert!(!config.contains("credential-helper"));
         std::fs::remove_dir_all(home).unwrap();
     }

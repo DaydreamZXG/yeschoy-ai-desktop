@@ -197,7 +197,7 @@ pub(crate) fn prepare_catalog(
     existing_local_token: Option<&str>,
     model_ids: &[String],
 ) -> Result<Prepared, AdapterFailure> {
-    crate::chat_gateway::validate_catalog(model, model_ids)?;
+    crate::tool_adapters::common::validate_catalog(model, model_ids)?;
     prepare_inner(home, model, existing_local_token, model_ids, true)
 }
 
@@ -327,7 +327,7 @@ impl Prepared {
                     .iter()
                     .map(|id| crate::tool_model_profile::claude_gateway_route_id(id))
                     .collect::<Vec<_>>();
-                crate::chat_gateway::catalog_matches(
+                crate::tool_adapters::common::catalog_matches(
                     &profile["inferenceModels"],
                     Some("name"),
                     &route_ids,
@@ -345,7 +345,7 @@ impl Prepared {
                                 })
                         })
                     })
-                }) && crate::chat_gateway::default_matches(
+                }) && crate::tool_adapters::common::default_matches(
                     profile["inferenceModels"][0]["name"].as_str(),
                     &crate::tool_model_profile::claude_gateway_route_id(&self.model),
                     &route_ids,

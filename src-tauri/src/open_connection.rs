@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     claude_bridge::ClaudeTransport,
-    codex_bridge::CodexBridgeRuntimeState,
     connection_recovery::{self, Store},
     tool_activation::ACTIVATION_LOCK,
     tool_adapters::{
@@ -55,8 +54,10 @@ pub(crate) fn validate_settings(
 ) -> Result<(), AdapterFailure> {
     if credential.has_model_set() {
         let models = credential.model_ids();
-        let origin =
-            crate::chat_gateway::base_url(tool).unwrap_or_else(|| credential.origin.clone());
+        // Every surface except Claude Desktop is configured against the relay
+        // origin directly, so the settings readback must use the same origin
+        // and the same relay key that `prepare_adapter` writes.
+        let origin = credential.origin.clone();
         let local = credential.local_gateway_token.as_deref();
         let ct = if credential.claude_transport.as_deref() == Some("chat_bridge") {
             ClaudeTransport::ChatBridge
@@ -87,7 +88,7 @@ pub(crate) fn validate_settings(
                 &origin,
                 &credential.model_id,
                 xt,
-                local,
+                Some(credential.upstream_key()),
                 &models,
             )?
             .validate_existing(),
@@ -176,11 +177,8 @@ fn existing_credential(tool: &str) -> Result<ToolCredential, &'static str> {
 
 #[tauri::command]
 pub async fn open_tool_connection_v1(
-    claude_code: tauri::State<'_, claude_code::ClaudeCodeRuntimeState>,
     claude: tauri::State<'_, claude_desktop::ClaudeDesktopRuntimeState>,
-    codex: tauri::State<'_, CodexBridgeRuntimeState>,
     dsh: tauri::State<'_, dsh_web::DshRuntimeState>,
-    chat: tauri::State<'_, crate::chat_gateway::ChatGatewayRuntimeState>,
     request: OpenRequest,
 ) -> Result<OpenResponse, String> {
     if !valid_request(&request) {
@@ -205,13 +203,8 @@ pub async fn open_tool_connection_v1(
         if permit.is_cancelled() {
             return Err("busy");
         }
-        if credential.has_model_set() && crate::chat_gateway::base_url(&request.tool_id).is_some() {
-            permit
-                .cancel_safe(chat.ensure_started())
-                .await
-                .map_err(|_| "busy")?
-                .map_err(|_| "launch_failed")?;
-        }
+        // No helper runtime has to be started before opening: every surface
+        // except Claude Desktop talks to the relay origin directly.
         let launched = permit
             .cancel_safe(async {
                 match request.tool_id.as_str() {
@@ -226,13 +219,6 @@ pub async fn open_tool_connection_v1(
                         Ok(claude_desktop::launch(&installation.path))
                     }
                     "codex_desktop" => {
-                        if credential.has_model_set()
-                            || credential.codex_transport.as_deref() == Some("chat_bridge")
-                        {
-                            codex_desktop::ensure_runtime_ready(&codex, &credential)
-                                .await
-                                .map_err(|_| "launch_failed")?;
-                        }
                         if permit.is_cancelled() {
                             return Err("busy");
                         }
@@ -241,19 +227,10 @@ pub async fn open_tool_connection_v1(
                     "dsh_web" => Ok(dsh_web::open_existing(
                         &dsh,
                         &installation,
-                        credential.client_token("dsh_web"),
+                        credential.upstream_key(),
                     )
                     .await),
                     "claude_code" | "pi" | "hermes" | "openclaw" => {
-                        if request.tool_id == "claude_code"
-                            && (credential.has_model_set()
-                                || credential.claude_transport.as_deref() == Some("chat_bridge"))
-                        {
-                            claude_code
-                                .start(credential)
-                                .await
-                                .map_err(|_| "launch_failed")?;
-                        }
                         if permit.is_cancelled() {
                             return Err("busy");
                         }

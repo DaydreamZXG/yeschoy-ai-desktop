@@ -1,3 +1,4 @@
+#![allow(dead_code)] // Vendored helper set: only a subset is used by the desktop paths.
 use serde_json::{json, Map, Value};
 
 const THINK_OPEN_TAG: &str = "<think>";

@@ -116,17 +116,12 @@ pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared
 
 pub(crate) fn prepare_catalog(
     home: &Path,
-    _origin: &str,
+    origin: &str,
     model: &str,
     model_ids: &[String],
 ) -> Result<Prepared, AdapterFailure> {
-    crate::chat_gateway::validate_catalog(model, model_ids)?;
-    prepare_inner(
-        home,
-        &crate::chat_gateway::base_url("pi").unwrap(),
-        model,
-        model_ids,
-    )
+    crate::tool_adapters::common::validate_catalog(model, model_ids)?;
+    prepare_inner(home, origin, model, model_ids)
 }
 
 fn prepare_inner(
@@ -204,13 +199,13 @@ impl Prepared {
             && provider["api"].as_str() == Some("openai-completions")
             && provider["apiKey"].as_str() == Some(format!("!{}", self.helper).as_str())
             && provider["authHeader"].as_bool() == Some(true)
-            && crate::chat_gateway::catalog_matches(
+            && crate::tool_adapters::common::catalog_matches(
                 &provider["models"],
                 Some("id"),
                 &self.model_ids,
             )
             && settings["defaultProvider"].as_str() == Some("yeschoy")
-            && crate::chat_gateway::default_matches(
+            && crate::tool_adapters::common::default_matches(
                 settings["defaultModel"].as_str(),
                 &self.model,
                 &self.model_ids,
@@ -315,10 +310,7 @@ mod tests {
         prepared.commit().unwrap();
         let models: Value =
             serde_json::from_slice(&std::fs::read(&prepared.models_path).unwrap()).unwrap();
-        assert_eq!(
-            models["providers"]["yeschoy"]["baseUrl"],
-            format!("{}/v1", crate::chat_gateway::base_url("pi").unwrap())
-        );
+        assert_eq!(models["providers"]["yeschoy"]["baseUrl"], "https://yeschoy.com/v1");
         assert_eq!(
             models["providers"]["yeschoy"]["models"][1]["id"],
             "供应商/model-b"

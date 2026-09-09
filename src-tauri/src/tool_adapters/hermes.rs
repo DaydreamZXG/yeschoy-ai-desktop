@@ -155,17 +155,12 @@ pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared
 
 pub(crate) fn prepare_catalog(
     home: &Path,
-    _origin: &str,
+    origin: &str,
     model: &str,
     model_ids: &[String],
 ) -> Result<Prepared, AdapterFailure> {
-    crate::chat_gateway::validate_catalog(model, model_ids)?;
-    prepare_inner(
-        home,
-        &crate::chat_gateway::base_url("hermes").unwrap(),
-        model,
-        model_ids,
-    )
+    crate::tool_adapters::common::validate_catalog(model, model_ids)?;
+    prepare_inner(home, origin, model, model_ids)
 }
 
 fn prepare_inner(
@@ -221,18 +216,18 @@ impl Prepared {
             && provider["key_cmd"].as_str() == Some(&self.helper)
             && provider["api_key"].is_null()
             && provider["key_env"].is_null()
-            && crate::chat_gateway::default_matches(
+            && crate::tool_adapters::common::default_matches(
                 provider["default_model"].as_str(),
                 &self.model,
                 &self.model_ids,
                 strict_default,
             )
-            && crate::chat_gateway::catalog_matches(&provider["models"], None, &self.model_ids)
+            && crate::tool_adapters::common::catalog_matches(&provider["models"], None, &self.model_ids)
             && provider["discover_models"].as_bool() == Some(false)
             && value["model"]["provider"].as_str() == Some("custom:yeschoy")
             && value["model"]["api_key"].is_null()
             && value["model"]["base_url"].is_null()
-            && crate::chat_gateway::default_matches(
+            && crate::tool_adapters::common::default_matches(
                 value["model"]["default"].as_str(),
                 &self.model,
                 &self.model_ids,
@@ -292,7 +287,7 @@ mod tests {
         let home = common::temporary_working_directory("hermes-model-set").unwrap();
         let path = home.join("config.yaml");
         let ids = vec!["model-a".into(), "model-b".into()];
-        let origin = crate::chat_gateway::base_url("hermes").unwrap();
+        let origin = "https://yeschoy.com".to_string();
         let bytes = render_catalog(None, &origin, "model-a", "synthetic-helper", &ids).unwrap();
         let mut prepared = Prepared {
             transaction: FileTransaction::stage_with_snapshot(path.clone(), None, bytes).unwrap(),

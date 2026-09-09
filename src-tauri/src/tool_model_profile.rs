@@ -220,6 +220,7 @@ pub(crate) fn apply_chat_effort(body: &mut Value, id: &str, effort: &str) {
 
 /// Adapt documented nested custom-provider efforts (Hermes) and DeepSeek's
 /// off toggle. Unknown models and unrelated payload fields remain untouched.
+#[allow(dead_code)] // Used by the vendored converter set, not by the desktop paths.
 pub(crate) fn normalize_chat_reasoning(body: &mut Value) -> bool {
     let Some(id) = body["model"].as_str().map(str::to_owned) else {
         return false;

@@ -633,6 +633,22 @@ pub(crate) fn configuration_matches(record: &Record) -> bool {
     })
 }
 
+/// Detects a receipt written by a release that routed the tool through the
+/// local gateway. Those files still match their receipt byte for byte, but the
+/// gateway no longer exists, so the connection has to be re-applied against the
+/// relay origin. Claude Desktop keeps its loopback gateway and is exempt.
+pub(crate) fn requires_gateway_migration(tool: &str, record: &Record) -> bool {
+    let needle = match tool {
+        "codex_desktop" => "127.0.0.1:15722",
+        "claude_code" => "127.0.0.1:15728",
+        "pi" | "hermes" | "openclaw" | "dsh_web" => "127.0.0.1:15730",
+        _ => return false,
+    };
+    record.files.iter().any(|file| {
+        std::str::from_utf8(&file.after).is_ok_and(|text| text.contains(needle))
+    })
+}
+
 fn remove_at(root: &mut Value, path: &[&str]) {
     if let Some((last, parents)) = path.split_last() {
         let mut node = root;

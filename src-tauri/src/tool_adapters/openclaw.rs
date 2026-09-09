@@ -203,17 +203,12 @@ pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared
 
 pub(crate) fn prepare_catalog(
     home: &Path,
-    _origin: &str,
+    origin: &str,
     model: &str,
     model_ids: &[String],
 ) -> Result<Prepared, AdapterFailure> {
-    crate::chat_gateway::validate_catalog(model, model_ids)?;
-    prepare_inner(
-        home,
-        &crate::chat_gateway::base_url("openclaw").unwrap(),
-        model,
-        model_ids,
-    )
+    crate::tool_adapters::common::validate_catalog(model, model_ids)?;
+    prepare_inner(home, origin, model, model_ids)
 }
 
 fn prepare_inner(
@@ -277,12 +272,12 @@ impl Prepared {
             && provider["apiKey"]["source"].as_str() == Some("exec")
             && provider["apiKey"]["provider"].as_str() == Some(SECRET_PROVIDER)
             && provider["apiKey"]["id"].as_str() == Some(SECRET_ID)
-            && crate::chat_gateway::catalog_matches(
+            && crate::tool_adapters::common::catalog_matches(
                 &provider["models"],
                 Some("id"),
                 &self.model_ids,
             )
-            && crate::chat_gateway::default_matches(
+            && crate::tool_adapters::common::default_matches(
                 value["agents"]["defaults"]["model"]["primary"]
                     .as_str()
                     .and_then(|value| value.strip_prefix("yeschoy/")),
@@ -396,7 +391,7 @@ mod tests {
         let home = common::temporary_working_directory("openclaw-model-set").unwrap();
         let path = home.join("openclaw.json");
         let ids = vec!["model-a".into(), "org/model-b".into()];
-        let origin = crate::chat_gateway::base_url("openclaw").unwrap();
+        let origin = "https://yeschoy.com".to_string();
         let before = br#"{"agents":{"defaults":{"models":{"yeschoy/retired":{"alias":"old"},"other/keep":{"alias":"keep"}}}}}"#;
         let bytes =
             render_catalog(Some(before), &origin, "model-a", "/synthetic/helper", &ids).unwrap();

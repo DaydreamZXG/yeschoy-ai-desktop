@@ -14,7 +14,6 @@ mod account_finance;
 mod account_v2;
 mod app_installation;
 mod app_update;
-mod chat_gateway;
 mod claude_bridge;
 mod codex_bridge;
 mod connection_recovery;
@@ -58,14 +57,8 @@ const EXIT_PROGRESS_EVENT: &str = "yeschoy://exit-progress";
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     log::info!("{FRONTEND_MODE_MARKER} selected={FRONTEND_MODE}");
-    let claude_code_runtime = tool_adapters::claude_code::ClaudeCodeRuntimeState::default();
-    let resume_claude_code_runtime = claude_code_runtime.clone();
     let claude_runtime = tool_adapters::claude_desktop::ClaudeDesktopRuntimeState::default();
     let resume_claude_runtime = claude_runtime.clone();
-    let codex_bridge = codex_bridge::CodexBridgeRuntimeState::default();
-    let resume_codex_bridge = codex_bridge.clone();
-    let chat_gateway = chat_gateway::ChatGatewayRuntimeState::default();
-    let resume_chat_gateway = chat_gateway.clone();
     let mut builder = tauri::Builder::default();
     #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
     {
@@ -88,10 +81,7 @@ pub fn run() {
         .manage(app_installation::AppInstallationState::default())
         .manage(app_update::AppUpdateState::default())
         .manage(tool_activation::ActivationOperationState::default())
-        .manage(claude_code_runtime)
         .manage(claude_runtime)
-        .manage(codex_bridge)
-        .manage(chat_gateway)
         .manage(tool_adapters::dsh_web::DshRuntimeState::default())
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -127,16 +117,10 @@ pub fn run() {
                 if permit.is_cancelled() {
                     return;
                 }
-                // Each helper owns an independent listener. Starting them in
-                // sequence allowed one stale keychain/runtime lookup to keep
-                // Codex's already-configured loopback gateway offline and its
-                // UI stuck on the logo screen.
-                tokio::join!(
-                    codex_bridge::resume_if_configured(resume_codex_bridge),
-                    chat_gateway::resume_if_configured(resume_chat_gateway),
-                    tool_adapters::claude_code::resume_if_configured(resume_claude_code_runtime),
-                    tool_adapters::claude_desktop::resume_if_configured(resume_claude_runtime),
-                );
+                // Claude Desktop is the only surface that still needs a
+                // loopback gateway; every other tool reads the relay origin
+                // straight from its own configuration.
+                tool_adapters::claude_desktop::resume_if_configured(resume_claude_runtime).await;
             });
             Ok(())
         })
@@ -202,25 +186,10 @@ fn register_runtime_stops(app: &tauri::AppHandle) -> Result<(), std::io::Error> 
         }};
     }
     register!(
-        "claude_code",
-        tool_adapters::claude_code::ClaudeCodeRuntimeState
-    );
-    register!(
         "claude_desktop",
         tool_adapters::claude_desktop::ClaudeDesktopRuntimeState
     );
-    {
-        let app = app.clone();
-        shutdown()
-            .register_stop("codex_bridge", move || async move {
-                app.state::<codex_bridge::CodexBridgeRuntimeState>()
-                    .shutdown()
-                    .await;
-            })
-            .map_err(|_| std::io::Error::other("shutdown_registration_failed"))?;
-    }
     register!("dsh_web", tool_adapters::dsh_web::DshRuntimeState);
-    register!("chat_gateway", chat_gateway::ChatGatewayRuntimeState);
     Ok(())
 }
 

@@ -541,6 +541,57 @@ pub(crate) mod test_support {
     }
 }
 
+// Shared adapter predicates concern only public model IDs, never credentials.
+// They were hosted by the retired loopback Chat gateway.
+pub(crate) fn validate_catalog(default: &str, ids: &[String]) -> Result<(), super::AdapterFailure> {
+    let unique: HashSet<_> = ids.iter().collect();
+    if ids.is_empty()
+        || ids.len() > 200
+        || unique.len() != ids.len()
+        || !ids.iter().any(|id| id == default)
+        || ids
+            .iter()
+            .any(|id| id.is_empty() || id.chars().count() > 200 || id.chars().any(char::is_control))
+    {
+        return Err(super::AdapterFailure::ConfigurationFailed(
+            "configuration_parse_failed",
+        ));
+    }
+    Ok(())
+}
+
+pub(crate) fn catalog_matches(
+    value: &serde_json::Value,
+    field: Option<&str>,
+    ids: &[String],
+) -> bool {
+    value.as_array().is_some_and(|rows| {
+        let actual: Option<HashSet<&str>> = rows
+            .iter()
+            .map(|row| field.map_or(row, |key| &row[key]).as_str())
+            .collect();
+        rows.len() == ids.len()
+            && actual.is_some_and(|actual| {
+                actual.len() == ids.len() && ids.iter().all(|id| actual.contains(id.as_str()))
+            })
+    })
+}
+
+pub(crate) fn default_matches(
+    actual: Option<&str>,
+    default: &str,
+    ids: &[String],
+    strict: bool,
+) -> bool {
+    actual.is_some_and(|actual| {
+        if strict {
+            actual == default
+        } else {
+            ids.iter().any(|id| id == actual)
+        }
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
