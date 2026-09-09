@@ -578,6 +578,22 @@ fn token_name(tool_id: &str) -> &'static str {
     }
 }
 
+/// 服务端用量日志里的 token 名称反查工具。客户端为每个工具创建独立 token，
+/// 名称形如 `野菜API cx-<分组哈希>-<随机后缀>`，因此按工具代码前缀归因。
+pub(crate) fn tool_for_token_name(name: &str) -> Option<&'static str> {
+    [
+        "claude_code",
+        "claude_desktop",
+        "codex_desktop",
+        "pi",
+        "dsh_web",
+        "hermes",
+        "openclaw",
+    ]
+    .into_iter()
+    .find(|tool| name.starts_with(&format!("野菜API {}-", token_code(tool))))
+}
+
 fn token_search_url(origin: &str, name: &str) -> Result<String, ActivationFailure> {
     let mut url = Url::parse(&format!("{origin}/api/token/search"))
         .map_err(|_| ActivationFailure::ServerUnavailable)?;
@@ -631,8 +647,8 @@ async fn find_token_id(
     Ok((selected, retire))
 }
 
-fn token_prefix(tool_id: &str, group: &str) -> String {
-    let code = match tool_id {
+fn token_code(tool_id: &str) -> &'static str {
+    match tool_id {
         "claude_code" => "cc",
         "claude_desktop" => "cd",
         "codex_desktop" => "cx",
@@ -641,7 +657,11 @@ fn token_prefix(tool_id: &str, group: &str) -> String {
         "hermes" => "hm",
         "openclaw" => "oc",
         _ => "tool",
-    };
+    }
+}
+
+fn token_prefix(tool_id: &str, group: &str) -> String {
+    let code = token_code(tool_id);
     // A lookup label only. Always compare the complete group returned by NewAPI.
     let hash = group.bytes().fold(0xcbf29ce484222325u64, |h, b| {
         (h ^ u64::from(b)).wrapping_mul(0x100000001b3)

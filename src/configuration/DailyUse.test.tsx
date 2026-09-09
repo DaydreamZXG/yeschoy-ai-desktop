@@ -413,7 +413,7 @@ describe("daily-use UX", () => {
     expect(result).toHaveTextContent("回复在完成前中断");
     expect(result).toHaveTextContent("gpt-6-astra");
     expect(result).toHaveTextContent("官方账号是登录身份");
-    expect(result).toHaveTextContent("请求进入野菜本地桥后出现");
+    expect(result).toHaveTextContent("记录来自服务端用量日志");
     expect(result).toHaveTextContent("不依据应用缩写或 AI 的自我介绍判断");
     expect(result).not.toHaveTextContent("连接成功");
   });

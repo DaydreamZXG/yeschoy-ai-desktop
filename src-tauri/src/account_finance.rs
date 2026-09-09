@@ -5,6 +5,8 @@
 use serde::Serialize;
 use serde_json::{Map, Value};
 
+use crate::request_diagnostics::{RequestObservation, RequestOutcome};
+
 pub(crate) const RECENT_LOGS_PATH: &str = "/api/log/self?p=1&page_size=100&type=2";
 const RECORD_LIMIT: usize = 100;
 const MAX_METADATA_BYTES: usize = 64 * 1024;
@@ -261,6 +263,66 @@ pub(crate) fn recent_savings(status: Option<&Value>, logs: Option<&Value>) -> Re
     result
 }
 
+/// 每个工具最近一次经中转完成的请求。
+///
+/// 数据来自 `/api/log/self` 的消费记录（`type=2`），按客户端为该工具创建的
+/// token 名称归因，每个工具只保留最新一条。日志行不含线路，线路由本次读取
+/// 使用的 origin 决定。
+pub(crate) fn recent_requests(
+    logs: Option<&Value>,
+    line_id: &'static str,
+) -> Vec<(String, RequestObservation)> {
+    let Some(items) = logs
+        .and_then(|value| value.get("data"))
+        .and_then(|data| data.get("items"))
+        .and_then(Value::as_array)
+    else {
+        return Vec::new();
+    };
+    let mut latest: Vec<(String, RequestObservation)> = Vec::new();
+    for row in items.iter().take(RECORD_LIMIT) {
+        if row.get("type").and_then(Value::as_u64) != Some(2) {
+            continue;
+        }
+        let Some(tool) = row
+            .get("token_name")
+            .and_then(Value::as_str)
+            .and_then(crate::tool_activation::tool_for_token_name)
+        else {
+            continue;
+        };
+        let Some(model_id) = row.get("model_name").and_then(Value::as_str).filter(|value| {
+            !value.is_empty()
+                && value.chars().count() <= 200
+                && !value.chars().any(char::is_control)
+        }) else {
+            continue;
+        };
+        let Some(observed_at_epoch_ms) = row
+            .get("created_at")
+            .and_then(Value::as_u64)
+            .filter(|value| *value > 0 && *value <= 8_640_000_000_000)
+            .and_then(|value| value.checked_mul(1000))
+        else {
+            continue;
+        };
+        let observation = RequestObservation {
+            model_id: model_id.to_owned(),
+            billing_group: String::new(),
+            line_id: line_id.to_owned(),
+            outcome: RequestOutcome::Ok,
+            http_status: 0,
+            observed_at_epoch_ms,
+        };
+        match latest.iter_mut().find(|(id, _)| id == tool) {
+            Some((_, current)) if current.observed_at_epoch_ms >= observed_at_epoch_ms => {}
+            Some((_, current)) => *current = observation,
+            None => latest.push((tool.to_owned(), observation)),
+        }
+    }
+    latest
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -409,5 +471,27 @@ mod tests {
         );
         assert!(!RECENT_LOGS_PATH.contains("user_id"));
         assert!(!RECENT_LOGS_PATH.starts_with("/api/log/self/"));
+    }
+
+    #[test]
+    fn recent_requests_attribute_server_logs_to_tools() {
+        let logs = logs(vec![
+            json!({"type":2,"model_name":"gpt-5.6-sol","created_at":1788598800,"token_name":"野菜API cx-1a2b3c4d5e6f7890-0123456789abcdef"}),
+            json!({"type":2,"model_name":"gpt-5.5","created_at":1788599000,"token_name":"野菜API cx-1a2b3c4d5e6f7890-fedcba9876543210"}),
+            json!({"type":2,"model_name":"claude-sonnet-5","created_at":1788598900,"token_name":"野菜API cc-1a2b3c4d5e6f7890-0123456789abcdef"}),
+            json!({"type":1,"model_name":"ignored","created_at":1788599100,"token_name":"野菜API cx-1a2b3c4d5e6f7890-0123456789abcdef"}),
+            json!({"type":2,"model_name":"ignored","created_at":1788599200,"token_name":"别人的 token"}),
+        ]);
+        let found = recent_requests(Some(&logs), "mainland_optimized");
+        assert_eq!(found.len(), 2);
+        let codex = found
+            .iter()
+            .find(|(tool, _)| tool == "codex_desktop")
+            .expect("codex row");
+        assert_eq!(codex.1.model_id, "gpt-5.5");
+        assert_eq!(codex.1.line_id, "mainland_optimized");
+        assert_eq!(codex.1.outcome, RequestOutcome::Ok);
+        assert!(found.iter().any(|(tool, _)| tool == "claude_code"));
+        assert!(recent_requests(None, "mainland_optimized").is_empty());
     }
 }

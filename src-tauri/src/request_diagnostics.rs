@@ -49,3 +49,25 @@ pub(crate) fn clear(tool: &str) {
         values.remove(tool);
     }
 }
+
+/// 用服务端用量日志里该工具最新的一条消费记录刷新投影。
+pub(crate) fn publish(tool: &str, observation: RequestObservation) {
+    let Ok(mut values) = observations().lock() else {
+        return;
+    };
+    let newer = values
+        .get(tool)
+        .is_none_or(|current| observation.observed_at_epoch_ms >= current.observed_at_epoch_ms);
+    if newer {
+        values.insert(tool.to_owned(), observation);
+    }
+}
+
+/// 线路标识与账号 origin 一一对应，与激活时写入的线路保持一致。
+pub(crate) fn line_for_origin(origin: &str) -> Option<&'static str> {
+    match origin {
+        "https://yeschoy.com" => Some("mainland_optimized"),
+        "https://api.yeschoy.com" => Some("global_accelerated"),
+        _ => None,
+    }
+}

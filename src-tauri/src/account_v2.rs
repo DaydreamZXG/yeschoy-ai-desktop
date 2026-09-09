@@ -908,6 +908,16 @@ async fn account_data_read(
         status_value.as_ref().map(|v| &v.value),
         logs_value.as_ref().map(|v| &v.value),
     );
+    // 直连后本地不再观测请求，"最近中转记录"改由服务端消费日志提供，
+    // 按客户端为每个工具创建的 token 名称归因。
+    if let Some(line_id) = crate::request_diagnostics::line_for_origin(&bootstrap.origin) {
+        for (tool, observation) in crate::account_finance::recent_requests(
+            logs_value.as_ref().map(|v| &v.value),
+            line_id,
+        ) {
+            crate::request_diagnostics::publish(&tool, observation);
+        }
+    }
     let reason_code = if usage_summary.available
         && models_value.is_some()
         && pricing_value.is_some()
