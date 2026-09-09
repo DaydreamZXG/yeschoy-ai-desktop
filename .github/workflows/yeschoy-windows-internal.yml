@@ -2,6 +2,15 @@ name: Yeschoy Windows Internal
 
 on:
   workflow_dispatch:
+    inputs:
+      authorization_origin:
+        description: "Authorization page origin (yeschoy.com = 主版本, ai.yeschoy.io = 朋友版)"
+        required: true
+        default: yeschoy.com
+        type: choice
+        options:
+          - yeschoy.com
+          - ai.yeschoy.io
 
 permissions:
   contents: read
@@ -65,6 +74,7 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          YESCHOY_AUTHORIZATION_PAGE_ORIGIN: https://${{ inputs.authorization_origin }}
         run: pnpm exec tauri build --config src-tauri/tauri.candidate.conf.json --bundles nsis
 
       - name: Smoke test upgrade while old and background copies are running
@@ -98,8 +108,9 @@ jobs:
           }
 
           $version = (Get-Content -LiteralPath 'package.json' -Raw | ConvertFrom-Json).version
+          $variant = if ('${{ inputs.authorization_origin }}' -eq 'ai.yeschoy.io') { '-朋友版' } else { '' }
           New-Item -ItemType Directory -Force -Path 'release-assets' | Out-Null
-          $fileName = "野菜API-$version-Windows-x64-内测版.exe"
+          $fileName = "野菜API-$version-Windows-x64-内测版$variant.exe"
           $destination = "release-assets/$fileName"
           Copy-Item -LiteralPath $installer.FullName -Destination $destination
           $updaterName = "yeschoy-$version-windows-x86_64.nsis.zip"
@@ -120,6 +131,7 @@ jobs:
             architecture = 'x86_64'
             packageType = 'nsis'
             version = $version
+            authorizationOrigin = '${{ inputs.authorization_origin }}'
             codeSigned = $false
             updaterArtifact = $true
             updaterSigned = $true
@@ -131,7 +143,7 @@ jobs:
       - name: Upload internal artifact only
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: yeschoy-windows-x64-internal
+          name: yeschoy-windows-x64-internal-${{ inputs.authorization_origin }}
           path: release-assets/*
           if-no-files-found: error
           retention-days: 14
