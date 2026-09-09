@@ -28,7 +28,8 @@ const MAX_RESPONSE_BODY_BYTES: usize = 8 * 1024 * 1024;
 
 fn upstream_client() -> Result<reqwest::Client, reqwest::Error> {
     reqwest::Client::builder()
-        .no_proxy()
+        // Honor the user's standard outbound proxy environment. Loopback
+        // callers use separate no-proxy clients, so local traffic stays local.
         .redirect(reqwest::redirect::Policy::none())
         .retry(reqwest::retry::never())
         .connect_timeout(Duration::from_secs(15))

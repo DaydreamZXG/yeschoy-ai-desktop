@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ACTIVATION_REQUEST_DEADLINE_MS,
+  ACTIVATION_TARGET_SCAN_DEADLINE_MS,
   activateDesktopTool,
   cancelDesktopToolActivation,
   decodeActivationProgress,
@@ -241,6 +242,17 @@ describe("desktop tool activation boundary", () => {
     expect(native).toHaveBeenCalledWith("scan_activation_targets_v1", {
       request: { requestId: expect.stringMatching(/^target-scan-/) },
     });
+  });
+
+  it("releases a target scan when the native reply is lost", async () => {
+    vi.useFakeTimers();
+    native.mockImplementation(async () => await new Promise(() => {}));
+    const scan = scanActivationTargets();
+    const assertion = expect(scan).rejects.toThrow(
+      "activation_target_scan_timed_out",
+    );
+    await vi.advanceTimersByTimeAsync(ACTIVATION_TARGET_SCAN_DEADLINE_MS);
+    await assertion;
   });
 
   it("accepts future and unread versions as metadata, without a version whitelist", () => {

@@ -111,6 +111,10 @@ export interface ToolActivationProjection {
 }
 
 export const ACTIVATION_PROGRESS_EVENT = "yeschoy://activation-progress";
+// Discovery is read-only, but Windows package metadata and trust checks can be
+// delayed by a damaged install or security software. Never leave the setup
+// action in a permanent "checking" state when the native reply is lost.
+export const ACTIVATION_TARGET_SCAN_DEADLINE_MS = 15_000;
 // Native activation includes bounded account calls and a desktop restart. The
 // renderer must still recover if the OS, keychain, installer, or network stack
 // never returns. Native cancellation then performs transaction cleanup.
@@ -309,8 +313,19 @@ let activationSequence = 0;
 export async function scanActivationTargets(): Promise<ActivationTargetScan> {
   scanSequence += 1;
   const requestId = `target-scan-${Date.now().toString(36)}-${scanSequence.toString(36)}`;
-  const raw = await invoke<unknown>("scan_activation_targets_v1", {
-    request: { requestId },
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+  const raw = await Promise.race([
+    invoke<unknown>("scan_activation_targets_v1", {
+      request: { requestId },
+    }),
+    new Promise<never>((_resolve, reject) => {
+      deadline = setTimeout(
+        () => reject(new Error("activation_target_scan_timed_out")),
+        ACTIVATION_TARGET_SCAN_DEADLINE_MS,
+      );
+    }),
+  ]).finally(() => {
+    if (deadline !== undefined) clearTimeout(deadline);
   });
   const result = decodeActivationTargetScan(raw, requestId);
   if (!result) throw new Error("invalid_activation_target_scan");

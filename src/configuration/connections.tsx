@@ -17,6 +17,9 @@ import {
 import type { ConfigurationLineId } from "./preview";
 import { openConnection, type OpenStatus } from "./launchApi";
 
+export const CONNECTION_INSPECTION_DEADLINE_MS = 15_000;
+export const CONNECTION_RESTORE_DEADLINE_MS = 60_000;
+
 export interface ToolConnection {
   toolId: ActivationToolId;
   state:
@@ -175,9 +178,24 @@ async function manage(
   toolId: ActivationToolId | "" = "",
 ) {
   const requestId = `connections-${Date.now().toString(36)}-${++sequence}`;
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+  const deadlineMs =
+    operation === "inspect"
+      ? CONNECTION_INSPECTION_DEADLINE_MS
+      : CONNECTION_RESTORE_DEADLINE_MS;
   const result = decodeConnections(
-    await invoke("manage_tool_connections_v1", {
-      request: { requestId, operation, toolId },
+    await Promise.race([
+      invoke("manage_tool_connections_v1", {
+        request: { requestId, operation, toolId },
+      }),
+      new Promise<never>((_resolve, reject) => {
+        deadline = setTimeout(
+          () => reject(new Error(`connection_${operation}_timed_out`)),
+          deadlineMs,
+        );
+      }),
+    ]).finally(() => {
+      if (deadline !== undefined) clearTimeout(deadline);
     }),
     requestId,
   );

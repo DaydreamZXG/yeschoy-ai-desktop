@@ -2294,6 +2294,12 @@ details dl div {
   color: var(--accent-hover);
   background: var(--accent-soft);
 }
+.connection-action-hint {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
 .open-feedback {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);

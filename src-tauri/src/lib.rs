@@ -66,7 +66,23 @@ pub fn run() {
     let resume_codex_bridge = codex_bridge.clone();
     let chat_gateway = chat_gateway::ChatGatewayRuntimeState::default();
     let resume_chat_gateway = chat_gateway.clone();
-    let app = tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+    #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
+    {
+        // The Codex bridge owns a fixed loopback port. Two assistant instances
+        // can otherwise split UI ownership from listener ownership: closing the
+        // first instance silently takes Codex offline while the second UI still
+        // appears healthy. Register this before every other plugin so the
+        // existing process remains the sole runtime owner.
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }));
+    }
+    let app = builder
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(account_v2::AccountV2State::default())
         .manage(app_installation::AppInstallationState::default())
@@ -193,7 +209,16 @@ fn register_runtime_stops(app: &tauri::AppHandle) -> Result<(), std::io::Error> 
         "claude_desktop",
         tool_adapters::claude_desktop::ClaudeDesktopRuntimeState
     );
-    register!("codex_bridge", codex_bridge::CodexBridgeRuntimeState);
+    {
+        let app = app.clone();
+        shutdown()
+            .register_stop("codex_bridge", move || async move {
+                app.state::<codex_bridge::CodexBridgeRuntimeState>()
+                    .shutdown()
+                    .await;
+            })
+            .map_err(|_| std::io::Error::other("shutdown_registration_failed"))?;
+    }
     register!("dsh_web", tool_adapters::dsh_web::DshRuntimeState);
     register!("chat_gateway", chat_gateway::ChatGatewayRuntimeState);
     Ok(())

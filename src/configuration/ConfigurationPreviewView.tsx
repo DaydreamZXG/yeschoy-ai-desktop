@@ -180,6 +180,20 @@ const UX = {
   zh: {
     checking: "正在检查这台电脑…",
     checkAgain: "重新检查应用",
+    readingConnection: "正在读取接入状态…",
+    retryConnectionRead: "重新读取接入状态",
+    refreshingAccount: "正在刷新账户…",
+    syncingSelection: "正在同步选择…",
+    updateConnection: "更新接入设置",
+    installAndConnect: "安装并接入",
+    applyRunningHint: "接入正在进行，完成或安全取消后会自动恢复操作。",
+    targetScanRetryHint:
+      "这次没有完成本机应用检查。点击按钮重新检查，不会修改任何设置。",
+    connectionReadRetryHint:
+      "没有读到上次的接入状态。点击按钮重新读取，不会覆盖现有设置。",
+    connectionReadingHint: "正在读取这台电脑上的现有接入状态，请稍候。",
+    accountRefreshingHint: "正在刷新账户、模型和计费分组，请稍候。",
+    selectionSyncHint: "正在同步当前账户的模型选择，请稍候。",
     installed: "已找到 · 可接入",
     installedShort: "已安装",
     chooseInstall: "选择要使用的安装位置",
@@ -250,6 +264,24 @@ const UX = {
   en: {
     checking: "Checking this computer…",
     checkAgain: "Check applications again",
+    readingConnection: "Reading connection status…",
+    retryConnectionRead: "Read connection status again",
+    refreshingAccount: "Refreshing account…",
+    syncingSelection: "Syncing selection…",
+    updateConnection: "Update connection settings",
+    installAndConnect: "Install and connect",
+    applyRunningHint:
+      "Setup is in progress. Actions recover automatically after completion or safe cancellation.",
+    targetScanRetryHint:
+      "The application check did not finish. Check again without changing any settings.",
+    connectionReadRetryHint:
+      "Previous connection status could not be read. Read it again without overwriting settings.",
+    connectionReadingHint:
+      "Reading existing connection status on this computer. Please wait.",
+    accountRefreshingHint:
+      "Refreshing the account, models, and billing groups. Please wait.",
+    selectionSyncHint:
+      "Syncing the model selection for this account. Please wait.",
     installed: "Found · Ready to configure",
     installedShort: "Installed",
     chooseInstall: "Choose the installation to use",
@@ -382,7 +414,13 @@ export function ConfigurationPreviewView({
   const [billingGroup, setBillingGroup] = useState("");
   const [modelSet, setModelSet] = useState<ModelBinding[]>([]);
   const [defaultModelId, setDefaultModelId] = useState("");
-  const restoredSelection = useRef<string | null>(null);
+  // This value participates in render-time readiness. Keeping it in a ref can
+  // strand the action button when an account changes but the restored model
+  // and group happen to be identical: the ref changes, all state setters bail
+  // out as no-ops, and React has no reason to render the now-ready state.
+  const [selectionReadyKey, setSelectionReadyKey] = useState<string | null>(
+    null,
+  );
   const applyInFlight = useRef(false);
   const [showApplications, setShowApplications] = useState(false);
   const [showMissingApps, setShowMissingApps] = useState(false);
@@ -584,16 +622,16 @@ export function ConfigurationPreviewView({
   const selectionKey = `${session.projection?.account.username ?? ""}:${activationToolId}`;
   useEffect(() => {
     if (
-      restoredSelection.current === selectionKey ||
+      selectionReadyKey === selectionKey ||
       !signedIn ||
       session.loading ||
       session.lastError ||
-      applyInFlight.current ||
+      applyPhase === "applying" ||
       connectionStateUnavailable
     )
       return;
     if (!models.length && !savedConnection?.modelId) return;
-    restoredSelection.current = selectionKey;
+    setSelectionReadyKey(selectionKey);
     const existing =
       savedConnection && savedConnection.state !== "not_connected";
     // Retain missing IDs as visible, unselected choices. Never substitute a
@@ -612,9 +650,11 @@ export function ConfigurationPreviewView({
       onLineChange(savedConnection.lineId);
   }, [
     selectionKey,
+    selectionReadyKey,
     signedIn,
     session.loading,
     session.lastError,
+    applyPhase,
     models,
     savedConnection,
     connectionStateUnavailable,
@@ -695,7 +735,7 @@ export function ConfigurationPreviewView({
     !!defaultBinding &&
     bindingsAvailable &&
     !pendingModelEdit &&
-    restoredSelection.current === selectionKey &&
+    selectionReadyKey === selectionKey &&
     !session.loading &&
     !session.lastError &&
     !connectionStateUnavailable &&
@@ -752,7 +792,7 @@ export function ConfigurationPreviewView({
       !defaultBinding ||
       !bindingsAvailable ||
       pendingModelEdit ||
-      restoredSelection.current !== selectionKey ||
+      selectionReadyKey !== selectionKey ||
       !targetCanActivate ||
       !selectedInstallationId ||
       applyInFlight.current ||
@@ -1111,37 +1151,87 @@ export function ConfigurationPreviewView({
     !!defaultBinding &&
     bindingsAvailable &&
     !pendingModelEdit &&
-    restoredSelection.current === selectionKey &&
+    selectionReadyKey === selectionKey &&
     targetCanActivate &&
     !session.loading &&
     !session.lastError &&
     !connectionStateUnavailable;
+  const targetScanNeedsRetry =
+    enableLocalActivation &&
+    (scanPhase === "error" || (scanPhase === "ready" && !target));
+  const connectionReadFailed =
+    !!connections?.error && (connections?.connections.length ?? 0) === 0;
+  const canRetryTargetScan = signedIn && targetScanNeedsRetry;
+  const canRetryConnectionRead =
+    signedIn && !targetScanNeedsRetry && connectionReadFailed;
   const actionLabel = !signedIn
     ? c.signInFirst
     : applyPhase === "applying"
       ? c.settingUp
-      : configured
-        ? c.setupAgain
-        : scanPhase === "loading"
-          ? ux.checking
-          : target?.status === "not_found"
-            ? ux.installFirst
-            : target?.status === "missing_runtime"
-              ? ux.updateFirst
-              : target?.status === "selection_required" &&
-                  !selectedInstallationId
-                ? ux.selectInstallFirst
-                : session.lastError
-                  ? "先刷新账户数据"
-                  : !selectedModel
-                    ? "先选择模型"
-                    : !selectedBillingGroup
-                      ? "先选择计费分组"
-                      : pendingModelEdit
-                        ? "先加入常用列表"
-                        : !bindingsAvailable
-                          ? "检查常用模型与分组"
-                          : c.connectNow;
+      : scanPhase === "loading"
+        ? ux.checking
+        : targetScanNeedsRetry
+          ? ux.checkAgain
+          : connections?.loading && (connections?.connections.length ?? 0) === 0
+            ? ux.readingConnection
+            : connectionReadFailed
+              ? ux.retryConnectionRead
+              : session.loading
+                ? ux.refreshingAccount
+                : target?.status === "not_found"
+                  ? ux.installFirst
+                  : target?.status === "missing_runtime"
+                    ? ux.updateFirst
+                    : target?.status === "selection_required" &&
+                        !selectedInstallationId
+                      ? ux.selectInstallFirst
+                      : session.lastError
+                        ? "先刷新账户数据"
+                        : !selectedModel
+                          ? "先选择模型"
+                          : !selectedBillingGroup
+                            ? "先选择计费分组"
+                            : pendingModelEdit
+                              ? "先加入常用列表"
+                              : !bindingsAvailable
+                                ? "检查常用模型与分组"
+                                : selectionReadyKey !== selectionKey
+                                  ? ux.syncingSelection
+                                  : configured
+                                    ? ux.updateConnection
+                                    : c.connectNow;
+  const actionHint =
+    applyPhase === "applying"
+      ? ux.applyRunningHint
+      : targetScanNeedsRetry
+        ? ux.targetScanRetryHint
+        : connectionReadFailed
+          ? ux.connectionReadRetryHint
+          : connections?.loading && (connections?.connections.length ?? 0) === 0
+            ? ux.connectionReadingHint
+            : session.loading
+              ? ux.accountRefreshingHint
+              : selectionReadyKey !== selectionKey &&
+                  !!selectedModel &&
+                  !!selectedBillingGroup
+                ? ux.selectionSyncHint
+                : "";
+
+  const runApplyAction = () => {
+    if (canRetryTargetScan) {
+      void refreshTargets();
+      return;
+    }
+    if (canRetryConnectionRead) {
+      void connections?.refresh();
+      return;
+    }
+    if (canBeginInstallation) {
+      void startInstallation();
+      return;
+    }
+    void apply();
+  };
 
   const missingModel =
     signedIn &&
@@ -1322,7 +1412,7 @@ export function ConfigurationPreviewView({
                       setBillingGroup("");
                       setModelSet([]);
                       setDefaultModelId("");
-                      restoredSelection.current = null;
+                      setSelectionReadyKey(null);
                       setShowApplications(false);
                       appSwitchButton.current?.focus();
                       resetResult();
@@ -1502,7 +1592,7 @@ export function ConfigurationPreviewView({
                     models={models}
                     value={selectedModelId}
                     onChange={(id) => {
-                      restoredSelection.current = selectionKey;
+                      setSelectionReadyKey(selectionKey);
                       setSelectedModelId(id);
                       const saved = modelSet.find((m) => m.modelId === id);
                       setBillingGroup(
@@ -1585,7 +1675,7 @@ export function ConfigurationPreviewView({
                 selected={billingGroup}
                 disabled={applyPhase === "applying"}
                 onChange={(id) => {
-                  restoredSelection.current = selectionKey;
+                  setSelectionReadyKey(selectionKey);
                   setBillingGroup(id);
                   resetResult();
                 }}
@@ -1849,11 +1939,13 @@ export function ConfigurationPreviewView({
             <button
               className={`${configured ? "secondary-action" : "primary-action"} setup-apply`}
               type="button"
-              onClick={() =>
-                canBeginInstallation ? void startInstallation() : void apply()
-              }
+              onClick={runApplyAction}
               disabled={
-                (signedIn && !canApply && !canBeginInstallation) ||
+                (signedIn &&
+                  !canApply &&
+                  !canBeginInstallation &&
+                  !canRetryTargetScan &&
+                  !canRetryConnectionRead) ||
                 applyPhase === "applying" ||
                 !!connections?.restoring
               }
@@ -1866,12 +1958,13 @@ export function ConfigurationPreviewView({
               ) : (
                 <ArrowRight aria-hidden="true" />
               )}
-              {configured
-                ? "更新接入设置"
-                : canBeginInstallation
-                  ? "安装并接入"
-                  : actionLabel}
+              {canBeginInstallation ? ux.installAndConnect : actionLabel}
             </button>
+            {actionHint && (
+              <small className="connection-action-hint" role="status">
+                {actionHint}
+              </small>
+            )}
           </div>
           {configured && (
             <p

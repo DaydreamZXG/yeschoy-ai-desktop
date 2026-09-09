@@ -5,7 +5,7 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex as StdMutex,
     },
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use reqwest::{Method, Url};
@@ -35,6 +35,7 @@ const TOKEN_PAGE_SIZE: &str = "100";
 pub(crate) static ACTIVATION_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 const ACTIVATION_PROGRESS_EVENT: &str = "yeschoy://activation-progress";
 const ACTIVATION_PROGRESS_TOTAL: u8 = 7;
+const CONNECTION_LOCK_WAIT_TIMEOUT: Duration = Duration::from_secs(8);
 
 #[derive(Default)]
 pub(crate) struct ActivationOperationState {
@@ -2095,10 +2096,13 @@ pub async fn manage_tool_connections_v1(
     let permit = shutdown_coordinator::global()
         .admit_operation()
         .map_err(|_| "assistant_shutting_down")?;
-    let _guard = permit
-        .cancel_safe(ACTIVATION_LOCK.lock())
-        .await
-        .map_err(|_| "assistant_shutting_down")?;
+    let _guard = tokio::time::timeout(
+        CONNECTION_LOCK_WAIT_TIMEOUT,
+        permit.cancel_safe(ACTIVATION_LOCK.lock()),
+    )
+    .await
+    .map_err(|_| "connection_operation_busy")?
+    .map_err(|_| "assistant_shutting_down")?;
     let _process_guard = if request.operation == "restore" {
         Some(connection_recovery::operation_lock().map_err(|_| "connection_operation_busy")?)
     } else {

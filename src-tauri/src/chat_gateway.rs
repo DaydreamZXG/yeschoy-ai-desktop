@@ -92,7 +92,8 @@ struct GatewayState {
 
 fn upstream_client() -> Result<reqwest::Client, reqwest::Error> {
     reqwest::Client::builder()
-        .no_proxy()
+        // Honor the user's standard outbound proxy environment. Loopback
+        // callers use separate no-proxy clients, so local traffic stays local.
         .redirect(reqwest::redirect::Policy::none())
         .connect_timeout(Duration::from_secs(15))
         .read_timeout(Duration::from_secs(600))

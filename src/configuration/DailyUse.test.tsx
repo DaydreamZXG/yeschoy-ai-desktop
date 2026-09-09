@@ -493,6 +493,86 @@ describe("daily-use UX", () => {
     await tick();
     expect(screen.getByRole("radio", { name: /优惠组/ })).toBeChecked();
   });
+  it("keeps one-click setup enabled when the account changes but its choices stay identical", async () => {
+    const account = session();
+    const disconnected = local({
+      state: "not_connected",
+      modelId: "",
+      lineId: "",
+      billingGroup: "",
+      models: [],
+    });
+    const view = render(setupView(account, disconnected));
+    await tick();
+    expect(screen.getByTestId("configuration-apply-action")).toBeEnabled();
+
+    view.rerender(
+      setupView(
+        {
+          ...account,
+          projection: {
+            ...account.projection!,
+            account: {
+              ...account.projection!.account,
+              username: "another-user",
+            },
+          },
+        },
+        disconnected,
+      ),
+    );
+    await tick();
+    expect(screen.getByTestId("configuration-apply-action")).toBeEnabled();
+    expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
+      "一键接入",
+    );
+  });
+  it("turns a failed application scan into an explicit retry action", async () => {
+    let scans = 0;
+    native.mockImplementation(async (command) => {
+      if (command === "scan_activation_targets_v1") {
+        scans += 1;
+        throw new Error("scan failed");
+      }
+      throw new Error("unexpected request");
+    });
+    render(
+      setupView(
+        session(),
+        local({
+          state: "not_connected",
+          modelId: "",
+          lineId: "",
+          billingGroup: "",
+          models: [],
+        }),
+      ),
+    );
+    await tick();
+    const beforeRetry = scans;
+    const retry = screen.getByRole("button", { name: "重新检查应用" });
+    expect(retry).toBeEnabled();
+    expect(screen.getByText(/这次没有完成本机应用检查/)).toBeInTheDocument();
+    fireEvent.click(retry);
+    await tick();
+    expect(scans).toBeGreaterThan(beforeRetry);
+  });
+  it("turns a failed connection-state read into an explicit retry action", async () => {
+    const failed = {
+      ...local(),
+      connections: [],
+      error: true,
+    };
+    render(setupView(session(), failed));
+    await tick();
+    const retry = screen.getByRole("button", {
+      name: "重新读取接入状态",
+    });
+    expect(retry).toBeEnabled();
+    expect(screen.getByText(/没有读到上次的接入状态/)).toBeInTheDocument();
+    fireEvent.click(retry);
+    expect(failed.refresh).toHaveBeenCalledOnce();
+  });
   it("shows an attempted setup failure even if an old matching connection still exists", async () => {
     native.mockImplementation(async (command, args) => {
       const req = (args as { request: Record<string, string> }).request;
@@ -560,6 +640,7 @@ describe("daily-use UX", () => {
         observedAtEpochMs: 2000,
       }),
     );
+    await tick();
     expect(screen.getByText("刚才的接入已完成")).toBeInTheDocument();
     expect(screen.getByText(/现在的选择尚未应用/)).toHaveTextContent("model-a");
     expect(screen.getByTestId("configuration-apply-action")).toBeDisabled();
@@ -615,6 +696,7 @@ describe("daily-use UX", () => {
         observedAtEpochMs: 2000,
       }),
     );
+    await tick();
     expect(screen.getByText("刚才的接入已完成")).toBeInTheDocument();
     expect(screen.getByText(/现在的选择尚未应用/)).toHaveTextContent(
       "账户 user535",

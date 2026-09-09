@@ -130,7 +130,10 @@ impl BridgeAppState {
 
 fn upstream_client() -> Result<reqwest::Client, reqwest::Error> {
     reqwest::Client::builder()
-        .no_proxy()
+        // Outbound model traffic must honor the standard HTTP(S)_PROXY and
+        // NO_PROXY environment inherited by the desktop process. The local
+        // Codex health probe uses a separate no-proxy client, so loopback
+        // traffic can never be sent to an external proxy.
         .redirect(reqwest::redirect::Policy::none())
         .retry(reqwest::retry::never())
         .connect_timeout(Duration::from_secs(15))
@@ -149,83 +152,277 @@ impl Drop for RunningBridge {
     }
 }
 
-#[derive(Clone, Default)]
+struct RunningSupervisor {
+    shutdown: Option<oneshot::Sender<()>>,
+    task: JoinHandle<()>,
+}
+
+impl Drop for RunningSupervisor {
+    fn drop(&mut self) {
+        self.task.abort();
+    }
+}
+
+#[derive(Clone)]
 pub(crate) struct CodexBridgeRuntimeState {
     running: Arc<Mutex<Option<RunningBridge>>>,
+    supervisor: Arc<Mutex<Option<RunningSupervisor>>>,
+    listen_address: Arc<str>,
+}
+
+impl Default for CodexBridgeRuntimeState {
+    fn default() -> Self {
+        Self {
+            running: Arc::new(Mutex::new(None)),
+            supervisor: Arc::new(Mutex::new(None)),
+            listen_address: Arc::from(LISTEN_ADDRESS),
+        }
+    }
 }
 
 impl CodexBridgeRuntimeState {
     /// Returns true only when this call started a new listener.
     pub(crate) async fn ensure_started(&self) -> Result<bool, ()> {
-        let mut running = self.running.lock().await;
-        if running
-            .as_ref()
-            .is_some_and(|bridge| !bridge.task.is_finished())
-        {
-            return Ok(false);
-        }
-        *running = None;
+        ensure_listener(&self.running, &self.listen_address).await
+    }
 
-        let listener = TcpListener::bind(LISTEN_ADDRESS).await.map_err(|_| ())?;
-        let client = upstream_client().map_err(|_| ())?;
-        let state = BridgeAppState {
-            client,
-            history: Arc::new(Mutex::new(RouteHistories::default())),
-        };
-        let router = Router::new()
-            .route("/yeschoy/health", get(health))
-            .route("/yeschoy/v1/models", get(models))
-            .route(
-                "/yeschoy/v1/responses",
-                post(responses).head(responses_head),
-            )
-            .with_state(state);
-        let (shutdown, receive_shutdown) = oneshot::channel();
-        let task = tokio::spawn(async move {
-            let _ = axum::serve(listener, router)
-                .with_graceful_shutdown(async move {
-                    let _ = receive_shutdown.await;
-                })
-                .await;
-        });
-        *running = Some(RunningBridge {
+    /// Stop only the listener. This is used while a connection transaction is
+    /// being restored or replaced; the process-level supervisor remains alive
+    /// and will restart the listener only when a configured credential exists.
+    pub(crate) async fn stop(&self) {
+        stop_listener(&self.running).await;
+    }
+
+    /// Start one process-lifetime supervisor. A second desktop instance may
+    /// temporarily own the fixed port; retrying means this instance takes over
+    /// automatically if that owner exits instead of leaving Codex offline.
+    async fn start_supervisor(&self) {
+        self.start_supervisor_with(
+            Arc::new(configured_bridge_requirement),
+            Duration::from_secs(2),
+        )
+        .await;
+    }
+
+    async fn start_supervisor_with(&self, requirement: RequirementProbe, interval: Duration) {
+        let mut supervisor = self.supervisor.lock().await;
+        if supervisor
+            .as_ref()
+            .is_some_and(|runtime| !runtime.task.is_finished())
+        {
+            return;
+        }
+        *supervisor = None;
+        let (shutdown, shutdown_rx) = oneshot::channel();
+        let running = self.running.clone();
+        let listen_address = self.listen_address.clone();
+        let task = tokio::spawn(supervise_listener(
+            running,
+            listen_address,
+            shutdown_rx,
+            requirement,
+            interval,
+        ));
+        *supervisor = Some(RunningSupervisor {
             shutdown: Some(shutdown),
             task,
         });
-        Ok(true)
     }
 
-    pub(crate) async fn stop(&self) {
-        let bridge = self.running.lock().await.take();
-        if let Some(mut bridge) = bridge {
-            if let Some(shutdown) = bridge.shutdown.take() {
+    /// Process shutdown is intentionally distinct from a transactional stop:
+    /// cancel the watchdog first so it cannot race the final listener drain.
+    pub(crate) async fn shutdown(&self) {
+        if let Some(mut supervisor) = self.supervisor.lock().await.take() {
+            if let Some(shutdown) = supervisor.shutdown.take() {
                 let _ = shutdown.send(());
             }
-            if tokio::time::timeout(Duration::from_secs(2), &mut bridge.task)
+            if tokio::time::timeout(Duration::from_secs(2), &mut supervisor.task)
                 .await
                 .is_err()
             {
-                bridge.task.abort();
+                supervisor.task.abort();
+                let _ = (&mut supervisor.task).await;
             }
+        }
+        stop_listener(&self.running).await;
+    }
+
+    #[cfg(test)]
+    fn test_state(listen_address: String) -> Self {
+        Self {
+            running: Arc::new(Mutex::new(None)),
+            supervisor: Arc::new(Mutex::new(None)),
+            listen_address: Arc::from(listen_address),
+        }
+    }
+
+    #[cfg(test)]
+    async fn listener_is_running(&self) -> bool {
+        listener_is_running(&self.running).await
+    }
+
+    #[cfg(test)]
+    async fn abort_listener_for_test(&self) {
+        if let Some(bridge) = self.running.lock().await.as_ref() {
+            bridge.task.abort();
+        }
+    }
+}
+
+async fn ensure_listener(
+    running: &Arc<Mutex<Option<RunningBridge>>>,
+    listen_address: &str,
+) -> Result<bool, ()> {
+    let mut running = running.lock().await;
+    if running
+        .as_ref()
+        .is_some_and(|bridge| !bridge.task.is_finished())
+    {
+        return Ok(false);
+    }
+    *running = None;
+
+    let listener = TcpListener::bind(listen_address).await.map_err(|_| ())?;
+    let client = upstream_client().map_err(|_| ())?;
+    let state = BridgeAppState {
+        client,
+        history: Arc::new(Mutex::new(RouteHistories::default())),
+    };
+    let router = Router::new()
+        .route("/yeschoy/health", get(health))
+        .route("/yeschoy/v1/models", get(models))
+        .route(
+            "/yeschoy/v1/responses",
+            post(responses).head(responses_head),
+        )
+        .with_state(state);
+    let (shutdown, receive_shutdown) = oneshot::channel();
+    let task = tokio::spawn(async move {
+        if let Err(error) = axum::serve(listener, router)
+            .with_graceful_shutdown(async move {
+                let _ = receive_shutdown.await;
+            })
+            .await
+        {
+            // Do not log addresses, request data, or credentials. The
+            // supervisor will retry the listener on its next bounded tick.
+            log::warn!(
+                "codex_bridge stage=listener_exit result=error kind={:?}",
+                error.kind()
+            );
+        }
+    });
+    *running = Some(RunningBridge {
+        shutdown: Some(shutdown),
+        task,
+    });
+    Ok(true)
+}
+
+async fn stop_listener(running: &Arc<Mutex<Option<RunningBridge>>>) {
+    let bridge = running.lock().await.take();
+    if let Some(mut bridge) = bridge {
+        if let Some(shutdown) = bridge.shutdown.take() {
+            let _ = shutdown.send(());
+        }
+        if tokio::time::timeout(Duration::from_secs(2), &mut bridge.task)
+            .await
+            .is_err()
+        {
+            bridge.task.abort();
+            let _ = (&mut bridge.task).await;
+        }
+    }
+}
+
+async fn listener_is_running(running: &Arc<Mutex<Option<RunningBridge>>>) -> bool {
+    running
+        .lock()
+        .await
+        .as_ref()
+        .is_some_and(|bridge| !bridge.task.is_finished())
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum BridgeRequirement {
+    Required,
+    NotConfigured,
+    Unavailable,
+}
+
+type RequirementProbe = Arc<dyn Fn() -> BridgeRequirement + Send + Sync>;
+
+fn configured_bridge_requirement() -> BridgeRequirement {
+    match tool_credentials::load("codex_desktop") {
+        Ok(record)
+            if record.codex_transport.as_deref() == Some("chat_bridge")
+                || record.has_model_set() =>
+        {
+            BridgeRequirement::Required
+        }
+        Ok(_) | Err(tool_credentials::CredentialFailure::Missing) => {
+            BridgeRequirement::NotConfigured
+        }
+        Err(_) => BridgeRequirement::Unavailable,
+    }
+}
+
+async fn supervise_listener(
+    running: Arc<Mutex<Option<RunningBridge>>>,
+    listen_address: Arc<str>,
+    mut shutdown: oneshot::Receiver<()>,
+    requirement: RequirementProbe,
+    interval: Duration,
+) {
+    let mut ticker = tokio::time::interval(interval);
+    ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    let mut failure_reported = false;
+    loop {
+        tokio::select! {
+            biased;
+            _ = &mut shutdown => return,
+            _ = ticker.tick() => {}
+        }
+        if listener_is_running(&running).await {
+            failure_reported = false;
+            continue;
+        }
+        let probe = requirement.clone();
+        let requirement = match tokio::task::spawn_blocking(move || probe()).await {
+            Ok(value) => value,
+            Err(_) => BridgeRequirement::Unavailable,
+        };
+        match requirement {
+            BridgeRequirement::Required => match ensure_listener(&running, &listen_address).await {
+                Ok(true) => {
+                    log::info!("codex_bridge stage=supervisor_started result=ready");
+                    failure_reported = false;
+                }
+                Ok(false) => failure_reported = false,
+                Err(()) if !failure_reported => {
+                    log::warn!("codex_bridge stage=supervisor_start result=retrying");
+                    failure_reported = true;
+                }
+                Err(()) => {}
+            },
+            BridgeRequirement::Unavailable if !failure_reported => {
+                log::warn!("codex_bridge stage=credential_probe result=retrying");
+                failure_reported = true;
+            }
+            BridgeRequirement::Unavailable => {}
+            BridgeRequirement::NotConfigured => failure_reported = false,
         }
     }
 }
 
 pub(crate) async fn resume_if_configured(runtime: CodexBridgeRuntimeState) {
-    let credential = tokio::task::spawn_blocking(|| tool_credentials::load("codex_desktop"))
+    let requirement = tokio::task::spawn_blocking(configured_bridge_requirement)
         .await
-        .ok()
-        .and_then(Result::ok);
-    if credential
-        .as_ref()
-        .and_then(|record| record.codex_transport.as_deref())
-        == Some("chat_bridge")
-        || credential
-            .as_ref()
-            .is_some_and(|record| record.has_model_set())
-    {
-        let _ = runtime.ensure_started().await;
+        .unwrap_or(BridgeRequirement::Unavailable);
+    if requirement == BridgeRequirement::Required && runtime.ensure_started().await.is_err() {
+        log::warn!("codex_bridge stage=startup_resume result=retrying");
     }
+    runtime.start_supervisor().await;
 }
 
 async fn health() -> impl IntoResponse {
@@ -858,5 +1055,104 @@ mod tests {
     #[tokio::test]
     async fn responses_health_is_public_and_bounded() {
         assert_eq!(responses_head().await, StatusCode::OK);
+    }
+
+    async fn wait_for_listener(state: &CodexBridgeRuntimeState, expected: bool) {
+        tokio::time::timeout(Duration::from_secs(2), async {
+            loop {
+                if state.listener_is_running().await == expected {
+                    return;
+                }
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+        })
+        .await
+        .expect("listener state did not settle");
+    }
+
+    async fn wait_for_health(address: &str, expected: bool) {
+        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        tokio::time::timeout(Duration::from_secs(2), async {
+            loop {
+                let ready = client
+                    .get(format!("http://{address}/yeschoy/health"))
+                    .send()
+                    .await
+                    .is_ok_and(|response| response.status() == StatusCode::OK);
+                if ready == expected {
+                    return;
+                }
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+        })
+        .await
+        .expect("listener health did not settle");
+    }
+
+    #[tokio::test]
+    async fn configured_listener_is_restarted_but_process_shutdown_stays_stopped() {
+        let reservation = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = reservation.local_addr().unwrap().to_string();
+        drop(reservation);
+        let state = CodexBridgeRuntimeState::test_state(address.clone());
+        state
+            .start_supervisor_with(
+                Arc::new(|| BridgeRequirement::Required),
+                Duration::from_millis(10),
+            )
+            .await;
+
+        wait_for_listener(&state, true).await;
+        wait_for_health(&address, true).await;
+        state.stop().await;
+        wait_for_listener(&state, true).await;
+        wait_for_health(&address, true).await;
+
+        state.shutdown().await;
+        wait_for_health(&address, false).await;
+        assert!(!state.listener_is_running().await);
+    }
+
+    #[tokio::test]
+    async fn supervisor_recovers_after_another_process_releases_the_port() {
+        let reservation = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = reservation.local_addr().unwrap().to_string();
+        let state = CodexBridgeRuntimeState::test_state(address.clone());
+        state
+            .start_supervisor_with(
+                Arc::new(|| BridgeRequirement::Required),
+                Duration::from_millis(10),
+            )
+            .await;
+
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        assert!(!state.listener_is_running().await);
+        drop(reservation);
+        wait_for_listener(&state, true).await;
+        wait_for_health(&address, true).await;
+
+        state.shutdown().await;
+    }
+
+    #[tokio::test]
+    async fn supervisor_recovers_after_listener_task_exits_unexpectedly() {
+        let reservation = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = reservation.local_addr().unwrap().to_string();
+        drop(reservation);
+        let state = CodexBridgeRuntimeState::test_state(address.clone());
+        state
+            .start_supervisor_with(
+                Arc::new(|| BridgeRequirement::Required),
+                Duration::from_millis(50),
+            )
+            .await;
+
+        wait_for_health(&address, true).await;
+        state.abort_listener_for_test().await;
+        wait_for_listener(&state, false).await;
+        wait_for_listener(&state, true).await;
+        wait_for_health(&address, true).await;
+
+        state.shutdown().await;
     }
 }

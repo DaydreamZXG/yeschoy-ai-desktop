@@ -10,6 +10,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import {
+  CONNECTION_INSPECTION_DEADLINE_MS,
   ConnectionProvider,
   decodeConnections,
   useToolConnections,
@@ -34,7 +35,10 @@ beforeEach(() => {
     this.removeAttribute("open");
   };
 });
-afterEach(cleanup);
+afterEach(() => {
+  vi.useRealTimers();
+  cleanup();
+});
 describe("reversible local connections", () => {
   it("ru042 decodes only secret-free latest request and model bindings", () => {
     const base = connectionsFixture("one");
@@ -111,6 +115,17 @@ describe("reversible local connections", () => {
     expect(result.current.connections).toHaveLength(7);
     expect(result.current.error).toBe(true);
     expect(result.current.loading).toBe(false);
+  });
+  it("releases initial loading when the native inspection reply is lost", async () => {
+    vi.useFakeTimers();
+    native.mockImplementationOnce(async () => await new Promise(() => {}));
+    const { result } = renderHook(() => useToolConnections());
+    expect(result.current.loading).toBe(true);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(CONNECTION_INSPECTION_DEADLINE_MS);
+    });
+    expect(result.current.loading).toBe(false);
+    expect(result.current.error).toBe(true);
   });
   it("keeps the last usable projection interactive during a background refresh", async () => {
     const { result } = renderHook(() => useToolConnections());
