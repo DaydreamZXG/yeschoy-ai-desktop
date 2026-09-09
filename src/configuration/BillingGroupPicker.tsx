@@ -21,7 +21,9 @@ export function BillingGroupPicker({
   return (
     <fieldset className="billing-group-picker" disabled={disabled}>
       <legend>选择计费分组</legend>
-      <p>同一个模型，不同分组有不同价格。倍率来自你的账户。</p>
+      <p>
+        同一个模型，不同分组有不同价格。下面只列出这个模型已开放的分组；分组下方的说明是分组自身的介绍，不一定列全。
+      </p>
       {groups.length ? (
         <div className="billing-group-grid">
           {groups.map((group) => (

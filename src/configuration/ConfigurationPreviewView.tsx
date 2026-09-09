@@ -1274,6 +1274,17 @@ export function ConfigurationPreviewView({
       };
     if (selectionReadyKey !== selectionKey)
       return waiting("syncing", ux.syncingSelection, ux.selectionSyncHint);
+    if (
+      activation?.status === "application_running" &&
+      resultIsCurrent &&
+      activation.reasonCode === "save_work_before_restart"
+    )
+      return {
+        kind: "restart-app",
+        label: `关闭并重新打开 ${application.displayName}`,
+        hint: "设置还没有写入。这个应用正在运行，点这里确认已保存后由助手关闭并重新打开。",
+        run: () => setRestartPromptContext(currentContext.current),
+      };
     if (configured)
       return {
         kind: "reconfigure",

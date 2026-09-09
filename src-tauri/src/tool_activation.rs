@@ -1335,6 +1335,20 @@ pub async fn configure_desktop_tool_v2(
         .projection(&request)
     };
     emit_activation_progress(&app, &request, "queued", 0);
+    // 排障时间线：只记录阶段与耗时，不记录请求内容、密钥或路径。
+    let started = std::time::Instant::now();
+    macro_rules! stage {
+        ($name:literal) => {
+            log::info!(
+                "activation stage={} tool={} restart={} elapsed_ms={}",
+                $name,
+                request.tool_id,
+                request.restart_running_app,
+                started.elapsed().as_millis()
+            );
+        };
+    }
+    stage!("enter");
     let permit = match shutdown_coordinator::global().admit_operation() {
         Ok(p) => p,
         Err(_) => return Ok(cancelled()),
@@ -1369,6 +1383,7 @@ pub async fn configure_desktop_tool_v2(
         Ok(g) => g,
         Err(_) => return Ok(cancelled()),
     };
+    stage!("lock");
     if is_cancelled() {
         return Ok(cancelled());
     }
@@ -1556,6 +1571,7 @@ pub async fn configure_desktop_tool_v2(
             )
         }
     };
+    stage!("credentials");
     let mut leases = Vec::new();
     emit_activation_progress(&app, &request, "securing_access", 4);
     for binding in &bindings {
@@ -1603,6 +1619,7 @@ pub async fn configure_desktop_tool_v2(
             ActivationFailure::ConfigurationFailed("account_changed").projection(&request)
         });
     }
+    stage!("tokens_start");
     let credential = match credential_for_models(
         &request,
         &origin,
@@ -1616,6 +1633,7 @@ pub async fn configure_desktop_tool_v2(
             return Ok(e.projection(&request));
         }
     };
+    stage!("tokens_ready");
     let default_transport = bindings
         .iter()
         .position(|m| m.model_id == request.model_id)
@@ -1678,6 +1696,7 @@ pub async fn configure_desktop_tool_v2(
             }
         }
     }
+    stage!("lifecycle");
     // Desktop apps can flush their own config while closing. Snapshot only
     // after the graceful shutdown has completed; otherwise the transaction
     // mistakes that legitimate final write for a competing configuration
@@ -1690,6 +1709,7 @@ pub async fn configure_desktop_tool_v2(
             return Ok(ActivationFailure::Adapter(e).projection(&request));
         }
     };
+    stage!("prepared");
     let receipt = Receipt {
         tool_id: request.tool_id.clone(),
         model_id: request.model_id.clone(),
@@ -1726,6 +1746,7 @@ pub async fn configure_desktop_tool_v2(
     let local_result = tool_credentials::store(&request.tool_id, &credential)
         .map_err(|_| AdapterFailure::SecureStorageUnavailable)
         .and_then(|()| prepared.commit());
+    stage!("committed");
     let configured = match local_result {
         Err(e) => Err(e),
         Ok(()) => match permit
@@ -1779,6 +1800,7 @@ pub async fn configure_desktop_tool_v2(
     emit_activation_progress(&app, &request, "opening_application", 7);
     let open_result =
         open_configured_adapter(&request, &installation, &credential, &dsh_runtime).await;
+    stage!("opened");
     // The committed configuration now references only scoped keys. Broad or
     // stale helper-owned predecessors can be retired without risking rollback
     // to a key that was deleted mid-transaction. This cleanup is deliberately

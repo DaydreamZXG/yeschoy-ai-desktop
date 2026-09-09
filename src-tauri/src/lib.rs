@@ -21,6 +21,7 @@ mod connectivity;
 mod connectivity_core;
 mod desktop_app_discovery;
 mod desktop_app_discovery_core;
+mod logging;
 mod open_connection;
 // Client-first OAuth preparation. Deliberately dormant until the server and
 // local-bridge bearer/billing contract are deployed and integration-tested.
@@ -55,6 +56,7 @@ const EXIT_PROGRESS_EVENT: &str = "yeschoy://exit-progress";
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    logging::init();
     log::info!("{FRONTEND_MODE_MARKER} selected={FRONTEND_MODE}");
     let claude_runtime = tool_adapters::claude_desktop::ClaudeDesktopRuntimeState::default();
     let resume_claude_runtime = claude_runtime.clone();
