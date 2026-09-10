@@ -1,0 +1,1488 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-09-10T09:18:30.748854+00:00",
+  "projectRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+  "git": {
+    "available": true,
+    "head": "1c77a96b0ed5cc48ee053a66c8f4bd41c409f867",
+    "branch": "codex/yeschoy-0.4.14-updater",
+    "dirty": true,
+    "changedEntryCount": 26,
+    "entries": [
+      " M .product-governance/decisions.json",
+      " M .product-governance/evidence-ledger.json",
+      " M .product-governance/release-units.json",
+      " M .product-governance/requirements.json",
+      " M .product-governance/work-packages.json",
+      " M src-tauri/src/claude_bridge.rs",
+      " M src-tauri/src/tool_activation.rs",
+      " M src-tauri/src/tool_adapters/claude_desktop.rs",
+      " M src-tauri/src/tool_adapters/codex_desktop.rs",
+      " M src-tauri/src/tool_model_profile.rs",
+      " M src/configuration/ConfigurationPreviewView.tsx",
+      " M src/configuration/DailyUse.test.tsx",
+      " M src/configuration/connections.test.tsx",
+      " M src/configuration/connections.tsx",
+      " M src/model-profiles/catalog.json",
+      " M src/workbench/AppLibraryView.tsx",
+      " M src/workbench/Workbench.test.tsx",
+      " M tests/setupTests.ts",
+      "?? .product-governance/reports/RU-076.review.json",
+      "?? outputs/claude-context-audit-20260910.gNd9CO/",
+      "?? outputs/connection-inspection-audit-20260909.WcYVOt/",
+      "?? outputs/ru076/",
+      "?? \"outputs/\\351\\207\\216\\350\\217\\234API-\\345\\256\\230\\347\\275\\221\\344\\270\\213\\350\\275\\275\\351\\223\\276\\346\\216\\245-20260910.md\"",
+      "?? \"outputs/\\351\\207\\216\\350\\217\\234API-\\347\\212\\266\\346\\200\\201\\350\\257\\273\\345\\217\\226\\344\\277\\256\\345\\244\\215\\344\\270\\216CCSwitch\\345\\244\\215\\347\\224\\250.md\"",
+      "?? \"outputs/\\351\\207\\216\\350\\217\\234API-\\347\\212\\266\\346\\200\\201\\350\\257\\273\\345\\217\\226\\345\\244\\261\\350\\264\\245-\\346\\240\\271\\345\\233\\240\\344\\270\\216\\345\\233\\236\\345\\275\\222-20260909.md\"",
+      "?? src/configuration/ConnectionStatusNotice.tsx"
+    ]
+  },
+  "instructionFiles": [
+    "CONTRIBUTING.md"
+  ],
+  "applicationManifests": [
+    "package.json"
+  ],
+  "documentsWithClaims": [
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "ec2cd3d123d8287a5e5d540890f40a529f3ded4e61e5cc2a33be1295f30eabfd",
+      "authorityClaimCount": 5,
+      "completionClaimCount": 37
+    },
+    {
+      "path": "README.md",
+      "sha256": "be100551ced37809cf81fc0a3bc3f778571575779c3e99ced2eb76160124324a",
+      "authorityClaimCount": 1,
+      "completionClaimCount": 3
+    },
+    {
+      "path": "README_DE.md",
+      "sha256": "e4a4ffd696309df882a092663cc4908c6750c1c7b00f1eaf17967e40bc9687db",
+      "authorityClaimCount": 1,
+      "completionClaimCount": 0
+    },
+    {
+      "path": "README_JA.md",
+      "sha256": "ee8395e323734964a333604e90624767aadf30989178100b1e6ccb11d83f32b1",
+      "authorityClaimCount": 1,
+      "completionClaimCount": 0
+    },
+    {
+      "path": "deploy/vendor-sync/README.md",
+      "sha256": "e074934bc15cfb6f5ed71fcafacf501cf0e58f26b3e9499bd5e9d5f75adb89c1",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/guides/claude-codex-routing-guide-en.md",
+      "sha256": "92038633aab0d400b6f3eb8ca077a2afb30086861265e6925ccb712764760d98",
+      "authorityClaimCount": 2,
+      "completionClaimCount": 4
+    },
+    {
+      "path": "docs/guides/codex-claude-routing-guide-en.md",
+      "sha256": "871993c2eb23867cccc41c1ca57cf973675282362d0fa34c203716f0b7332a0c",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 6
+    },
+    {
+      "path": "docs/guides/codex-deepseek-routing-guide-en.md",
+      "sha256": "3c26bbfecc6a1d075412eb640c5e0ab2c9fc79489e1b139527c45f8be10a159a",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/guides/codex-kimi-routing-guide-en.md",
+      "sha256": "a7ee48dc7baa88a56b05cfcc8d54bd0d5ba7550d9736271c8cac1d82501a5476",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/guides/codex-official-auth-preservation-guide-en.md",
+      "sha256": "a66660be48cbb59f0f6c7f0c4cfd9b9cc46b03ef7f1ae39d39b5a73ea3e6c882",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 3
+    },
+    {
+      "path": "docs/guides/codex-unified-session-history-guide-en.md",
+      "sha256": "eb83e405b83345d7a44c9a246278b323c448d314894f8b6707b517130a49e010",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 6
+    },
+    {
+      "path": "docs/pi-live-provider-sync-requirements-zh.md",
+      "sha256": "6766513484a02136c53ee768e55e8de734ac6fc118e49bca66e481ede760aa7f",
+      "authorityClaimCount": 1,
+      "completionClaimCount": 0
+    },
+    {
+      "path": "docs/release-notes/v3.10.0-en.md",
+      "sha256": "b2c72699ec9b5d7d38c4961a268b3a885c49b8a384ec5f24c2e42aa42befe623",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/release-notes/v3.11.0-en.md",
+      "sha256": "3f5e082ea407bd062d50bd8d434ec6d9a7fbabe00a1d740bb7195e0533889b55",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/release-notes/v3.11.1-en.md",
+      "sha256": "0893f1c3ad2121454f79007eff148531fafc5893744d8f955051857c954cb00f",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/release-notes/v3.12.0-en.md",
+      "sha256": "3b8df93f5eb43fa370c2dce12a0cabca3dc43034b6240eef44e025b8c7f21ee0",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 2
+    },
+    {
+      "path": "docs/release-notes/v3.12.2-en.md",
+      "sha256": "a6eb9ff12498a3d1c28502d0f96ce4d64079764d16d6eacf3fb72f429606201f",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/release-notes/v3.13.0-en.md",
+      "sha256": "6b5c98b2ff47400b159e747a8ad3cf872c7387a967741d98676f55c4ef59721e",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 5
+    },
+    {
+      "path": "docs/release-notes/v3.14.0-en.md",
+      "sha256": "65256b36edea46954a5678dd3f184f3e83bc18dce7179ccae827e3a7f7e8b2b9",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/release-notes/v3.16.0-en.md",
+      "sha256": "a2cb22660d370e37f52baf4bf801586e77e8e27bba2b9847f0f2142dabb80bbf",
+      "authorityClaimCount": 2,
+      "completionClaimCount": 0
+    },
+    {
+      "path": "docs/release-notes/v3.16.1-en.md",
+      "sha256": "adcede9fc01ad5d0f1f8a1f2eba6f3be75a082d7f765e92caa74d5491a6e5252",
+      "authorityClaimCount": 3,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/release-notes/v3.16.2-en.md",
+      "sha256": "c42dc09833dac0dc0782ba02fb73d3e8b7847feff00acdcd76c2ed246e403471",
+      "authorityClaimCount": 1,
+      "completionClaimCount": 2
+    },
+    {
+      "path": "docs/release-notes/v3.16.2-ja.md",
+      "sha256": "94572dbaab509b91255535556e9ec810fccc32b1b6fa0d1e41e89d5da21ac540",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 2
+    },
+    {
+      "path": "docs/release-notes/v3.16.2-zh.md",
+      "sha256": "308841af61afacfccd9a4a9c7d61e2bc2a0b848f1614d7868b5a9f0900fbdeb9",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 2
+    },
+    {
+      "path": "docs/release-notes/v3.17.0-en.md",
+      "sha256": "1a26183385774dd0b0fc40bed5104de2d9842da0d6a5cb0eaca13953de51c049",
+      "authorityClaimCount": 2,
+      "completionClaimCount": 4
+    },
+    {
+      "path": "docs/release-notes/v3.18.0-en.md",
+      "sha256": "73c1ba082ed0b44c39736177e96302b4416cb516d3f7edd457c2bcd03503912e",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 5
+    },
+    {
+      "path": "docs/release-notes/v3.18.0-ja.md",
+      "sha256": "13128df3dc0f32702c90626f0c29680642b16a18dcb4de4534657c66951927be",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/release-notes/v3.18.0-zh.md",
+      "sha256": "0234cab8a9b6d17970baadd202e4ae263ae31044445c9c2627a6d92506c4eea8",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/release-notes/v3.19.0-en.md",
+      "sha256": "6fa963412780c3368c9ea49828c52bb619f2d15a2fb5c762d8b15565e0685f51",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 3
+    },
+    {
+      "path": "docs/release-notes/v3.19.0-ja.md",
+      "sha256": "eac2643fb936fe486ed03bda2970c7fa2dcaedbd19a790ea0a223de29c2274b6",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/release-notes/v3.19.0-zh.md",
+      "sha256": "77c449ada5236f9f8b596592544a832e7c8bd6854ecba56d19a48ab6c01703bb",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/release-notes/v3.19.1-en.md",
+      "sha256": "b47719b61ef4bf33c55a267d436e891b1cd1a16d7e4baefe3b53a9db3f5300be",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/release-notes/v3.19.2-en.md",
+      "sha256": "f1a3350f37cab57e16834764a56f6b1464f8aa77cddfb813db5dbc6d36ff45db",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 4
+    },
+    {
+      "path": "docs/release-notes/v3.19.2-ja.md",
+      "sha256": "093dc7705a6d416654ebd3a6e50edeffc20fe985ca9ab082938e17e3f60c8ba0",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 2
+    },
+    {
+      "path": "docs/release-notes/v3.19.2-zh.md",
+      "sha256": "401fb07a1e12b00b601f500ed21b08b2c8f7fb481175bba8d82f28b915134931",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 2
+    },
+    {
+      "path": "docs/release-notes/v3.20.0-en.md",
+      "sha256": "13d6ca76d196ae967b69907ee80d69e05f050a0d5616d9770515088247283574",
+      "authorityClaimCount": 1,
+      "completionClaimCount": 3
+    },
+    {
+      "path": "docs/release-notes/v3.20.1-en.md",
+      "sha256": "31c0209bfc30bc156e97a274e2762fcfe22a3d3c17590e0769ce3021b3396658",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 2
+    },
+    {
+      "path": "docs/release-notes/v3.6.0-en.md",
+      "sha256": "f53aeb710b15f75126514a5df40fea95c76f41d46ccc6b7c9aa0d8178b64d20c",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/release-notes/v3.6.1-en.md",
+      "sha256": "d9da329b0c2a2bee9324168a7304e9f0c19a1724daa325a8ba2d37e6d2bb403c",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 5
+    },
+    {
+      "path": "docs/release-notes/v3.7.0-en.md",
+      "sha256": "83c55e5ced8e8b1c26c2751e3601c36d05251f73f6c035d14a543e6c62f2f20f",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 6
+    },
+    {
+      "path": "docs/release-notes/v3.7.1-en.md",
+      "sha256": "c9e2184cf9206bf11d0fba894a1d11b6fd9e3c19d2cc5659d6fbc62f94ffd2a4",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 7
+    },
+    {
+      "path": "docs/release-notes/v3.8.0-en.md",
+      "sha256": "70f1915b6725058a1c198752026ada9db9501dc4ef4e19ee7e3c4ce8ed3a232d",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/release-notes/v3.9.0-en.md",
+      "sha256": "6bb30b818a6734bfe379c714fd513fd305933a6af684a8da97d0e466e00cf57b",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/user-manual/en/1-getting-started/1.2-installation.md",
+      "sha256": "ed3e2539a246f2f36c9d17ecf5918ebaa3bdf2b12e37e782112a4fd5b6152c3b",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/user-manual/en/1-getting-started/1.4-quickstart.md",
+      "sha256": "78f802be8e233ab06816f3aeb6d00829805255f08bbfe7b1730d0021659f2035",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 2
+    },
+    {
+      "path": "docs/user-manual/en/2-providers/2.1-add.md",
+      "sha256": "2aa1bc511455a8a9c4943aa82c575337bd5008b44f76006c2e53b2f33a2b82a2",
+      "authorityClaimCount": 2,
+      "completionClaimCount": 4
+    },
+    {
+      "path": "docs/user-manual/en/2-providers/2.2-switch.md",
+      "sha256": "245bd1907f5696191edacaa581e3c016f0bc607b51860a09156500f1b34d3d53",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/user-manual/en/2-providers/2.4-sort-duplicate.md",
+      "sha256": "abb119a031ed4c050f36b098e1978d12a67238beb21c1ed844f04e3f57440e34",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 2
+    },
+    {
+      "path": "docs/user-manual/en/3-extensions/3.3-skills.md",
+      "sha256": "b9170252990806efa9d9fe26610809c65e3ae140f3b477f0fa46bb4a653918d6",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/user-manual/en/4-proxy/4.4-usage.md",
+      "sha256": "35e110dee3373ee0672b6d3829e43dfade0c51b1c5dcd51ea771175df373002b",
+      "authorityClaimCount": 1,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/user-manual/en/4-proxy/4.5-model-test.md",
+      "sha256": "50efdfbab23f1730b9e48e952e25f64afb0f7722718ec1ba435697d1bbc8aa69",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/user-manual/en/5-faq/5.1-config-files.md",
+      "sha256": "788226c79819ecfdb7d903776ff476b29afa566f2d2311e829a5c4db3293b55c",
+      "authorityClaimCount": 1,
+      "completionClaimCount": 0
+    },
+    {
+      "path": "docs/user-manual/en/5-faq/5.2-questions.md",
+      "sha256": "6c34935aa339de89c2d377eaeeedee67293e462c522fda6c1ed72e5ce92904a8",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 4
+    },
+    {
+      "path": "docs/user-manual/en/5-faq/5.3-deeplink.md",
+      "sha256": "dd62bbf4919df3e45bac84d8fb8cd103d2ef7a1bd386038d3ac9c8c982f78ddd",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "docs/user-manual/zh/5-faq/5.2-questions.md",
+      "sha256": "0bd2e9e458b6780f1900e3015fcd58ccb7e4e0d2bb3674a00ea38c7d3fe9891c",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "outputs/claude-context-audit-20260910.gNd9CO/claude-settings-reference.md",
+      "sha256": "03ddc5f669f37a1c509b10a2d18d0f6b790f9d225d7847042a5f456ff86efdf1",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 15
+    },
+    {
+      "path": "outputs/野菜API-0.4.0真实一键接入验证记录.md",
+      "sha256": "cc48935f6a8f0e6fe8ef62ecf5546286ec4bb3b62fab4ddbdcab25160b162032",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "outputs/野菜API-0.4.10-双平台打包.md",
+      "sha256": "bcb0e79192300a0c3760da8a60fb20248ab230777354c1c1075ed2aa242143fa",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "outputs/野菜API-0.4.13-Windows热修复.md",
+      "sha256": "1cabfc7a5dfd2c5733d93974f4c5fc90dcb0f9e0baeb080f0c2eb0b338c37026",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "outputs/野菜API-0.4.5-项目体检-2026-09-05.md",
+      "sha256": "0f2cfc7a7238d9d708638573c28a84faf53b1c834a7d9bfe0793a6392405dcd3",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "outputs/野菜API-0.4.6-内测打包.md",
+      "sha256": "256191062934b1edbcbec6dec91cf58258b4adc8970868c54a04dd18c6533a0e",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "outputs/野菜API-0.4.x-候选发布验收.md",
+      "sha256": "2675bb2ff4ce91ad48f8d0b7a46dfb333967bef8232b7655cb1331d1bac25797",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "outputs/野菜API-NewAPI-未来改造清单.md",
+      "sha256": "993415d21118bf56f55b0a27d806d7b398d875169a6d92fd22dc623831a6803b",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "outputs/野菜API-V1-工具适配契约-OpenCode-Pi与DSH.md",
+      "sha256": "b50551b52853c95b577b17a9b7f26c1d5f8af67b24e21117d258778cef52b893",
+      "authorityClaimCount": 2,
+      "completionClaimCount": 0
+    },
+    {
+      "path": "outputs/野菜API-macOS-候选包构建记录.md",
+      "sha256": "acd6a89448d9658a44cd65d4b924affac8592d50aa616c88245b4d238101cd19",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "outputs/野菜API-下载源部署验收.md",
+      "sha256": "3d4bdcab8c0f100576fda0fcc19748b42a18a7e74fcd3f0be65ebddddf3d8d8b",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "outputs/野菜API-交接-直连改造与Windows构建.md",
+      "sha256": "4b8d5ce1856b7ab4f5ac5d8ed9ef1f690bc4fdef0d7a94893362597dab06849a",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 2
+    },
+    {
+      "path": "outputs/野菜API-内测构建交付记录.md",
+      "sha256": "4f9e995a738eb96eddd4d5c31b1dd835ed6e8c195b0497144a30384c1c4d470c",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 2
+    },
+    {
+      "path": "outputs/野菜API-国内下载源上线.md",
+      "sha256": "7893b59029ef465ce5466919d310c6dbde274171afa9ad145196d6e2ddfd72ff",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 2
+    },
+    {
+      "path": "outputs/野菜API-官网下载链接-20260910.md",
+      "sha256": "d780dc22b86c3cc70e6af8d9c7c23901d7210b2293d55c97b03ead4146fd7cf2",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "outputs/野菜API-接入体验审计.md",
+      "sha256": "477f82cd9bd9c52a6ac439d700d31e10ca27e0516e2a8b1f53f9b838d0b8970c",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "outputs/野菜API-接入重试与Claude路由修复.md",
+      "sha256": "ef7856d8e007eaff6f5b6ecb2b9d7ac6631ae46a5c15163277aa805d372dc5ad",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "outputs/野菜API-桌面客户端-V1-PRD.md",
+      "sha256": "a5cd428d7e1b986ea67a6adc773b9eb055b35b26f46956743f70969d5464b0f5",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "outputs/野菜API-桌面客户端-V1-候选版发布清单.md",
+      "sha256": "9cebea424c73fd349b643cc4e426b2bf902d7a117dafc5a19a6b70a273ccdac9",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "outputs/野菜API-桌面客户端-V1-架构方案.md",
+      "sha256": "dbdac3abe04754af95b57259be03bc18d47347b231837ad2ee7b5697bb073cf3",
+      "authorityClaimCount": 1,
+      "completionClaimCount": 0
+    },
+    {
+      "path": "release/internal/0.4.14-friend-ai-b3a09a15/朋友版说明.md",
+      "sha256": "7ee2bb2dfb00ea2bb6bd076459d31dec5caf50c33734c3f6f1c52790213c722f",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "release/internal/0.4.15-macos-statusfix-20260909.xNltOb/public/安装说明.md",
+      "sha256": "b3a6ca858dc6144726a8bd1aaa0cc17c5d6c1fbbb730f3d2d3ba196b3fd2c98d",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "release/internal/0.4.15-partner-ai-yeschoy-04382354/tooling/makensis/3.12/share/nsis/Docs/BgImage/BgImage.txt",
+      "sha256": "e97d5c8f019f6de7f07457847f98c43323c5801da6896140ffe73762fe21f2fe",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "release/internal/0.4.15-partner-ai-yeschoy-04382354/tooling/makensis/3.12/share/nsis/Docs/Modern UI/Changelog.txt",
+      "sha256": "714426e60941f08ddebc5269964a8d722ca49f4f1df1b8a0d8c5c4a0443847f4",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "release/internal/0.4.15-partner-ai-yeschoy-04382354/tooling/makensis/3.12/share/nsis/Docs/StrFunc/StrFunc.txt",
+      "sha256": "5da2f62a3d1924ed1489812c13b30b32bf68198b35112542c0339cc79aa42a74",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 2
+    },
+    {
+      "path": "release/internal/0.4.15-partner-ai-yeschoy-04382354/tooling/makensis/3.12/share/nsis/Docs/makensisw/Readme.txt",
+      "sha256": "9fad664d6c78a195ff1ce14951b1c96821e6e5ff861b2ef2f8aa7a22a630738a",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "release/internal/0.4.15-partner-ai-yeschoy-qa-20260909-0016/qa/windows-install-result.txt",
+      "sha256": "e4469c908ce8068d956003fecf767b9b21f5b3145cf5bd707838c0fc1171dccd",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "release/internal/0.4.15-windows-statefix2-20260909.BkW6A4/public/安装说明.md",
+      "sha256": "16e3deb210bedae912ea19517a68d92e01eb539292dd26e74d728a6c518f36e7",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "release/internal/0.4.7/安装包说明.md",
+      "sha256": "6c1ebdc1cdb21ee79c86d6578d1813d044adbab88699c6cac741a53c709614bc",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "tests/work_packages/ru042/CONTRACT.md",
+      "sha256": "8f6ba5b298ca9dee39fbe5789877d7ab1d61ad7c1ee75b8ac60b09f652928766",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 2
+    },
+    {
+      "path": "tests/work_packages/ru054/CONTRACT.md",
+      "sha256": "93ff54d9c0a3962e623ab639f6977961a463fbb21d69bf1d22e076dfcab4f052",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    },
+    {
+      "path": "tests/work_packages/ru057/CONTRACT.md",
+      "sha256": "2b3fefbd2b3675be9d1e26bd3a1601ead00054d9a45cb31f645fb2ad7ca8a5f3",
+      "authorityClaimCount": 0,
+      "completionClaimCount": 1
+    }
+  ],
+  "authorityClaims": [
+    {
+      "locator": "CHANGELOG.md:115",
+      "excerpt": "- **Restoring a Backup Now Rebuilds What Depends on the Database**: Restoring a `.db` backup changed only the database — every app's live config file kept its pre-restore content until the next manual provider switch, and the post-import routine after SQL imports and cloud downloads ran against a throwaway state object whose cache invalidations reached nothing. All restore paths now project the restored database outward — the live configs of every managed app except Pi (whose `models.json` stays"
+    },
+    {
+      "locator": "CHANGELOG.md:708",
+      "excerpt": "- **Codex Model Catalog Data Loss**: Fixed cases where Codex `modelCatalog` could be wiped by live-config backfill, active-provider edit dialogs, provider switches, or proxy takeover-off restore. Snapshot backups now keep existing `model_catalog_json` pointers, provider-rebuilt backups regenerate the catalog projection from the database source of truth, active edit dialogs prefer the DB catalog over lossy Live reconstruction, and provider switches always refresh the generated catalog JSON."
+    },
+    {
+      "locator": "CHANGELOG.md:736",
+      "excerpt": "- **Codex Model Mapping Table**: Codex provider forms now expose a model catalog (model + display name + context window per row) that is the single source of truth for the upstream model list, projected to `~/.codex/cc-switch-model-catalog.json`."
+    },
+    {
+      "locator": "CHANGELOG.md:752",
+      "excerpt": "- **Codex Provider Form Simplified**: Removed the API Format selector from the Codex form (`wire_api` is always `responses`, so the selector misleadingly implied a protocol change); the model mapping table is now the only source of truth with no hidden default entries, and the form notes that a Codex restart is required after catalog changes since `model_catalog_json` is loaded at startup. Only the \"Needs Local Routing\" toggle remains."
+    },
+    {
+      "locator": "CHANGELOG.md:2497",
+      "excerpt": "- Single source of truth for provider configs; no duplicate copy files"
+    },
+    {
+      "locator": "README.md:426",
+      "excerpt": "- **SSOT** (Single Source of Truth): All data stored in `~/.cc-switch/cc-switch.db` (SQLite)"
+    },
+    {
+      "locator": "README_DE.md:426",
+      "excerpt": "- **SSOT** (Single Source of Truth): Alle Daten werden in `~/.cc-switch/cc-switch.db` (SQLite) gespeichert"
+    },
+    {
+      "locator": "README_JA.md:426",
+      "excerpt": "- **SSOT** (Single Source of Truth): すべてのデータを `~/.cc-switch/cc-switch.db`（SQLite）に集約"
+    },
+    {
+      "locator": "docs/guides/claude-codex-routing-guide-en.md:84",
+      "excerpt": "- Open a new session and use `/model` to view the model menu: each tier shows the display name from the model mapping (by default, Method 2 shows `gpt-5.6` and `gpt-5.6-luna`). A few spots in the UI may still show Claude-family model names — those are the internal role aliases the routing takeover uses; this is normal, and the `/model` menu and usage dashboard are authoritative."
+    },
+    {
+      "locator": "docs/guides/claude-codex-routing-guide-en.md:97",
+      "excerpt": "- **Dashboard dollar amounts are for reference**: token counts are accurate, but the dollar figures are estimates converted at public API prices — Method 2's subscription traffic is estimated at GPT-5.6's public price, and Method 1's third-party gateways bill at their own rates, so both may differ from what you're actually charged and serve only for comparison. For Method 2, treat the window utilization on the provider card as authoritative for quota consumption."
+    },
+    {
+      "locator": "docs/pi-live-provider-sync-requirements-zh.md:9",
+      "excerpt": "## 目标架构"
+    },
+    {
+      "locator": "docs/release-notes/v3.16.0-en.md:78",
+      "excerpt": "Codex provider forms now expose a model catalog (model + display name + context window per row) that is the single source of truth for the upstream model list, projected to `~/.codex/cc-switch-model-catalog.json`."
+    },
+    {
+      "locator": "docs/release-notes/v3.16.0-en.md:134",
+      "excerpt": "Removed the API Format selector from the Codex form (`wire_api` is always `responses`, so the selector misleadingly implied a protocol change); the model mapping table is now the only source of truth with no hidden default entries, and the form notes that a Codex restart is required after catalog changes since `model_catalog_json` is loaded at startup. Only the \"Needs Local Routing\" toggle remains."
+    },
+    {
+      "locator": "docs/release-notes/v3.16.1-en.md:53",
+      "excerpt": "- **Codex model catalogs are no longer silently wiped**: `modelCatalog` now treats the database as the source of truth, avoiding overwrites from live configs with missing catalog projections during live backfill, provider switching, takeover shutdown restore, and provider editing."
+    },
+    {
+      "locator": "docs/release-notes/v3.16.1-en.md:106",
+      "excerpt": "Fixed cases where `modelCatalog` could be cleared during live backfill, active-provider editing, provider switching, and takeover shutdown restore. Snapshot backups preserve existing `model_catalog_json` pointers; backups rebuilt from providers regenerate catalog projections from the database source of truth; editing the active provider now prefers the database model catalog instead of trusting a live reverse-parse result that may have lost its projection."
+    },
+    {
+      "locator": "docs/release-notes/v3.16.1-en.md:152",
+      "excerpt": "When local routing takeover is enabled, live `auth.json` / `config.toml` temporarily point to the CC Switch proxy. The provider editor therefore shows the provider config saved in the database. This is expected; after takeover is disabled, CC Switch restores live config from backups or the database source of truth."
+    },
+    {
+      "locator": "docs/release-notes/v3.16.2-en.md:134",
+      "excerpt": "If a previous proxy stop failed to restore the original live config and left proxy placeholders in live, taking over again no longer overwrites the good backup with the proxy config, and restore no longer writes the placeholder back to live: both paths detect the placeholder state and rebuild live from the current provider as the source of truth, fixing cases where the proxy toggle became a no-op and the client was pinned to the local proxy address (#3689)."
+    },
+    {
+      "locator": "docs/release-notes/v3.17.0-en.md:189",
+      "excerpt": "The authoritative MCP-server data lives in the database, and the `[mcp_servers]` in the Codex live `config.toml` is only a projection re-synced after every write — but on switch-away this projection was baked into the provider snapshot, so a server you deleted in the app came back to life the next time you activated that provider, and per-entry reconciliation could never clear the orphan. On switch-away, `[mcp_servers]` (including the legacy `[mcp.servers]`) is now stripped from the stored snaps"
+    },
+    {
+      "locator": "docs/release-notes/v3.17.0-en.md:260",
+      "excerpt": "To root out \"deleted MCP servers coming back\", switching away from a Codex provider strips the `[mcp_servers]` section from the stored snapshot. If you have an MCP server hand-written directly in a Codex provider config, it will disappear from the snapshot on the first switch-away from that provider — please instead define Codex's MCP servers through the MCP manager (MCP tab), where the entries are authoritative and get projected into the live config automatically."
+    },
+    {
+      "locator": "docs/release-notes/v3.20.0-en.md:193",
+      "excerpt": "Restoring a `.db` backup changed only the database — every app's live config kept its pre-restore content until the next manual provider switch, and the post-import routine after SQL imports and cloud downloads ran against a throwaway state object whose cache invalidations reached nothing. All restore paths now project the restored database outward — the live configs of every managed app except Pi (whose `models.json` stays the source of truth and is re-imported on next launch), per-app prompt f"
+    },
+    {
+      "locator": "docs/user-manual/en/2-providers/2.1-add.md:107",
+      "excerpt": "> 💡 When you pick a Chat Completions preset, the **Needs Local Routing** toggle and the model mapping table are configured automatically; see the \"Codex Local Routing and Model Mapping\" section below. The preset list is updated continuously — refer to the in-app list for the authoritative version."
+    },
+    {
+      "locator": "docs/user-manual/en/2-providers/2.1-add.md:581",
+      "excerpt": "- Entries are saved exactly as listed and are the single source of truth for the model list"
+    },
+    {
+      "locator": "docs/user-manual/en/4-proxy/4.4-usage.md:345",
+      "excerpt": "CC Switch uses its own method to estimate token counts, which may slightly differ from the provider's calculation. Refer to the provider's invoice for authoritative numbers."
+    },
+    {
+      "locator": "docs/user-manual/en/5-faq/5.1-config-files.md:299",
+      "excerpt": "1. **CC Switch Database** - Single source of truth (SSOT)"
+    },
+    {
+      "locator": "outputs/野菜API-V1-工具适配契约-OpenCode-Pi与DSH.md:142",
+      "excerpt": "这是已确认的目标架构，但仍待实现和验证。冻结前必须证明 loader 在每个支持版本和安装方式中确实生效，且插件故障不会让 OpenCode退回其他同名凭据。"
+    },
+    {
+      "locator": "outputs/野菜API-V1-工具适配契约-OpenCode-Pi与DSH.md:268",
+      "excerpt": "这是已确认的目标架构，但完整 credential service、非野菜凭据兼容和跨版本行为仍待实现与验证。"
+    },
+    {
+      "locator": "outputs/野菜API-桌面客户端-V1-架构方案.md:101",
+      "excerpt": "| 事实 | 唯一权威 | 客户端允许缓存什么 |"
+    }
+  ],
+  "completionClaims": [
+    {
+      "locator": "CHANGELOG.md:22",
+      "excerpt": "- **Codex Third-Party Switching Is Config-Only**: Switching to a third-party Codex provider now writes the API key into the provider's own `[model_providers.*]` table in `config.toml` (as `experimental_bearer_token`, honored since Codex 0.48) and never writes the key into `auth.json`, which returns to being purely the official ChatGPT login file — Codex 0.149 stopped letting custom providers inherit ambient auth from `auth.json`, which had broken third-party switches made in the default mode (ke"
+    },
+    {
+      "locator": "CHANGELOG.md:34",
+      "excerpt": "- **Claude Session-Log Scanning Correctness**: Three data-accuracy fixes landed with the incremental Claude scanner. A log line caught mid-write was permanently skipped by the old line-number cursor (the unfinished tail advanced the cursor, so the completed message was never imported) — the byte cursor only commits past complete lines, so the message is picked up next round. An externally truncated or rewritten session file is never replayed: re-importing entries whose detail rows the 30-day rol"
+    },
+    {
+      "locator": "CHANGELOG.md:70",
+      "excerpt": "- **Multiple ChatGPT Accounts, Bound Per Codex Card**: The Auth Center holds any number of ChatGPT (Codex OAuth) sign-ins, and adding an OpenAI Official provider now lets you pick one of those authorized accounts right in the form — or keep the classic route: an unbound official card that follows whatever the Codex CLI is logged into, reading the local access token. Any number of official cards can coexist, and binding or unbinding keeps the card's identity, endpoints and health history (#6535 r"
+    },
+    {
+      "locator": "CHANGELOG.md:171",
+      "excerpt": "- **Dropped Chat Tool Calls Now Fail the Turn Instead of Faking Completion**: When a third-party Chat gateway returns tool calls without a function name, the Chat → Responses transform silently discarded them and still reported the turn as `completed` — Codex saw a successful turn with nothing left to do and ended its agent loop without any error, turning a diagnosable upstream failure into a silent stall. The transform now emits `response.failed` (streaming) or a transform error (non-streaming)"
+    },
+    {
+      "locator": "CHANGELOG.md:261",
+      "excerpt": "Development since v3.18.0 is headlined by a security-hardening wave and a proxy correctness fix with immediate field impact. On the security side (#5811 and follow-ups): skill installs from GitHub repositories are hardened against zip-slip and repository-coordinate path traversal with hard archive limits; a Gemini common-config credential leak is closed and a one-time startup cleanup scrubs keys that already leaked into other providers' configs; imported SQL backups now run under a SQLite author"
+    },
+    {
+      "locator": "CHANGELOG.md:268",
+      "excerpt": "- **Grok Build Usage Tracking in Official OAuth Mode**: Usage from Grok CLI's official OAuth mode — which cannot be routed through the local proxy, since Grok uses an empty config as the mode switch — is now recorded in the usage dashboard. Per-turn usage is imported from the `turn_completed` events in `~/.grok/sessions` (and archived sessions) `updates.jsonl` files as part of the regular session-log sync; costs prefer the exact figure the CLI reports and fall back to local pricing, with a `grok"
+    },
+    {
+      "locator": "CHANGELOG.md:295",
+      "excerpt": "- **Usage Scripts From Deep Links Arrive Disabled and Their Code Is Shown**: A usage-query script imported through a deep link is JavaScript that runs on every usage query, and it was previously possible to acquire one without ever seeing it: the backend treated the mere presence of code as a decision to enable it, and the dialog showed only an Enabled/Disabled badge. Scripts now default to disabled — a link must explicitly carry `usageEnabled=true` — and the confirmation displays the complete d"
+    },
+    {
+      "locator": "CHANGELOG.md:296",
+      "excerpt": "- **URL-Safe Base64 Payloads Could Blank the Confirmation Dialog Entirely**: The two entries above make the confirmation show more; this one is about the confirmation showing *nothing*. The backend accepts four Base64 variants including the URL-safe alphabet (RFC 4648 §5), while the frontend's `atob` accepts only the standard one and, on failure, returned its input unchanged instead of signalling an error — so for the same payload the backend decoded and imported successfully while the frontend "
+    },
+    {
+      "locator": "CHANGELOG.md:353",
+      "excerpt": "- **Proxy Usage Logging Is Now Idempotent With Stable Response-Scoped Keys**: When a terminal usage event carried no message id — the norm for Codex `/responses` traffic through the local proxy — the dedup key fell back to a random UUID, so every retry or replay of the same upstream response minted a fresh key and `INSERT OR REPLACE` stacked a new row each time; one reporter's database held the same usage combination 2,078 times. The parser now derives the key from the response envelope itself —"
+    },
+    {
+      "locator": "CHANGELOG.md:354",
+      "excerpt": "- **Usage Page No Longer Freezes During Large Session Imports**: Opening the usage page while a big import ran could lock up the UI: every inserted row fired a refresh notification, each notification made the frontend re-run all ~10 usage queries, and those queries contended with the importer for the single database connection while it parsed rollout files tens of megabytes large line by line — on duplicate-inflated databases the row storm compounded all three. Session sync now notifies the fron"
+    },
+    {
+      "locator": "CHANGELOG.md:404",
+      "excerpt": "- **Native Anthropic Messages Protocol as Codex Upstream**: Codex providers can now target a gateway that only exposes the native Anthropic Messages protocol (`/v1/messages`) via a new `anthropic` value on the upstream-format selector in the Codex form; the local proxy performs bidirectional Responses↔Anthropic request, response, and streaming conversion (new `transform_codex_anthropic` / `streaming_codex_anthropic` modules). The form adds an auth-field selector — `ANTHROPIC_AUTH_TOKEN` sends `A"
+    },
+    {
+      "locator": "CHANGELOG.md:409",
+      "excerpt": "- **Zhipu (智谱) Team Plan Quota Query Support**: Added quota-query support for Zhipu's team plan (团队套餐), which the personal-plan query could not reach: it hits the same `open.bigmodel.cn` quota endpoint with `?type=2` and requires two extra request headers, `bigmodel-organization` and `bigmodel-project`, so `detect_provider` cannot tell it apart from the personal plan by base URL alone. The usage-script modal gains a \"Zhipu GLM Team\" template with organization-ID and project-ID inputs (preserved "
+    },
+    {
+      "locator": "CHANGELOG.md:428",
+      "excerpt": "- **Align Codex OAuth Client Identity to Fix 404s on Newest ChatGPT Models**: The newest ChatGPT-gated subscription models (e.g. `gpt-5.6-luna`) now resolve correctly when routed through the local proxy takeover with an official Codex OAuth account, instead of returning a misleading `404 Model not found` even though the account had access. ChatGPT's Codex backend performs model cohort routing by the `originator`+`version` header pair, and cc-switch previously identified takeover requests as `ori"
+    },
+    {
+      "locator": "CHANGELOG.md:429",
+      "excerpt": "- **Fail Closed on Responses Upstream Failures Instead of Returning Empty Replies**: When the proxy bridges an Anthropic-format client (Claude Code / Claude Desktop pointed at a Responses gateway) to an OpenAI Responses upstream, a semantic upstream failure that arrives inside an HTTP 2xx body — a `{status:\"failed\"|\"cancelled\"}` object, an `error` envelope, or a `response.failed`/`error` SSE event before any output — is now surfaced as a real error so failover can select a different provider, in"
+    },
+    {
+      "locator": "CHANGELOG.md:430",
+      "excerpt": "- **Preserve Reasoning, Tool Results, and System Roles Across the Responses/Anthropic Bridge**: Content and token accounting that crosses the Responses↔Anthropic bridge in multi-turn tool loops is now preserved instead of being dropped or corrupted. Encrypted Responses `reasoning` items round-trip losslessly by being carried inside a versioned bridge-owned Anthropic thinking `signature` (or a `redacted_thinking` `data` field, prefixed `ccswitch-openai-reasoning-v1:`) and restored on replay, orph"
+    },
+    {
+      "locator": "CHANGELOG.md:444",
+      "excerpt": "- **Exclude Fable Tier Model Env Keys From the Shared Claude Common Config**: Fable is Claude's fourth model-mapping tier (added in v3.16.3), but its `ANTHROPIC_DEFAULT_FABLE_MODEL` / `ANTHROPIC_DEFAULT_FABLE_MODEL_NAME` env keys were missing from the provider-specific exclusion list, so a provider's Fable model pin could leak into the shared common-config snippet and then be injected into other providers on the next switch. Both keys are now stripped in `extract_claude_common_config` alongside "
+    },
+    {
+      "locator": "CHANGELOG.md:650",
+      "excerpt": "- **Codex Chat Truncated Stream Detection**: When a Chat Completions upstream ends a stream without a `finish_reason` or `[DONE]`, CC Switch no longer reports it as a normal completion — it finalizes normally only when the stream truly finished, emits an incomplete (`max_output_tokens`) response when partial output was produced, and emits a failed `stream_truncated` event when nothing was produced. Late-arriving reasoning is also attached to still-active streamed tool calls."
+    },
+    {
+      "locator": "CHANGELOG.md:674",
+      "excerpt": "- **macOS Input Auto-Capitalization**: Disabled autocomplete, autocorrect, autocapitalize, and spellcheck on the shared text Input component so macOS no longer auto-capitalizes or auto-corrects the first letter typed into configuration fields (#3626)."
+    },
+    {
+      "locator": "CHANGELOG.md:1068",
+      "excerpt": "- **Full URL Endpoint Mode**: Added a provider option that treats `base_url` as a complete upstream endpoint so proxy forwarding and stream checks can work with vendors that require nonstandard URL layouts."
+    },
+    {
+      "locator": "CHANGELOG.md:1100",
+      "excerpt": "- **UTF-8 Stream Chunk Boundaries**: Fixed intermittent garbled output (U+FFFD replacement characters) in Claude Code when multi-byte UTF-8 sequences such as Chinese characters or emoji were split across TCP stream chunks via the Copilot reverse proxy, by preserving incomplete trailing bytes across chunks in all four SSE streaming paths instead of lossy decoding."
+    },
+    {
+      "locator": "CHANGELOG.md:1202",
+      "excerpt": "- **Common Config Loss During Takeover**: Fixed cases where proxy takeover could drop Common Config changes, overwrite live configs during sync, or produce incomplete restore snapshots when switching providers"
+    },
+    {
+      "locator": "CHANGELOG.md:1376",
+      "excerpt": "- **User Manual i18n**: Restructured user manual for internationalization and added complete EN/JA translations alongside the existing ZH documentation"
+    },
+    {
+      "locator": "CHANGELOG.md:1377",
+      "excerpt": "- **User Manual OpenClaw**: Added OpenClaw coverage and completed settings documentation for the user manual"
+    },
+    {
+      "locator": "CHANGELOG.md:1427",
+      "excerpt": "- **OpenClaw Provider Presets**: 13+ built-in provider presets with brand icon and complete i18n (zh/en/ja)"
+    },
+    {
+      "locator": "CHANGELOG.md:1639",
+      "excerpt": "- **Error Display**: Use extractErrorMessage for complete error display in mutations"
+    },
+    {
+      "locator": "CHANGELOG.md:1864",
+      "excerpt": "- **i18n** - Complete internationalization for usage panel and settings"
+    },
+    {
+      "locator": "CHANGELOG.md:1984",
+      "excerpt": "- Proxy module contains 20+ Rust files with complete layered architecture"
+    },
+    {
+      "locator": "CHANGELOG.md:2067",
+      "excerpt": "- **Complete Gemini CLI support** - Third major application added alongside Claude Code and Codex"
+    },
+    {
+      "locator": "CHANGELOG.md:2112",
+      "excerpt": "- **Full i18n support** - Complete Chinese/English translations (47+ keys)"
+    },
+    {
+      "locator": "CHANGELOG.md:2134",
+      "excerpt": "- **Full i18n support** - Complete Chinese/English translations (41+ keys)"
+    },
+    {
+      "locator": "CHANGELOG.md:2231",
+      "excerpt": "- **Type safety** - Complete TypeScript type coverage across codebase"
+    },
+    {
+      "locator": "CHANGELOG.md:2312",
+      "excerpt": "- **Complete Internationalization Coverage**"
+    },
+    {
+      "locator": "CHANGELOG.md:2344",
+      "excerpt": "**Backend Refactoring (Rust)** - Completed 5-phase refactoring:"
+    },
+    {
+      "locator": "CHANGELOG.md:2352",
+      "excerpt": "**Frontend Refactoring (React + TypeScript)** - Completed 4-stage refactoring:"
+    },
+    {
+      "locator": "CHANGELOG.md:2399",
+      "excerpt": "- **MCP (Model Context Protocol) Management** - Complete MCP server configuration management system"
+    },
+    {
+      "locator": "CHANGELOG.md:2417",
+      "excerpt": "- Complete internationalization (i18n) coverage for all UI components"
+    },
+    {
+      "locator": "CHANGELOG.md:2566",
+      "excerpt": "- **Complete migration from Electron to Tauri 2.0** - The application has been completely rewritten using Tauri, resulting in:"
+    },
+    {
+      "locator": "README.md:32",
+      "excerpt": "**New user top-up bonus**: register via [this link](https://platform.kimi.ai?track_id=track-20d65732f0aa45dcb1df9691a15610af&aff=cc-switch) and complete your first top-up to receive 10% of the amount as bonus API credit, up to CNY ¥1,000."
+    },
+    {
+      "locator": "README.md:121",
+      "excerpt": "<td>Thanks to PPIO for sponsoring this project! PPIO is a leading independent Agentic Cloud provider in China, co-founded in 2018 by PPTV founder Yao Xin and former PPTV chief architect Wang Wenyu. A single API key gives you access to every flagship open-source model, including DeepSeek-V4-Flash, Kimi-K3, GLM-5.2, and MiniMax-M3; the enterprise Token Plan is available at up to 40% off and supports 200 seats, and the Fusion blended model matches Fable5 at one-tenth of the price. Register via <a h"
+    },
+    {
+      "locator": "README.md:141",
+      "excerpt": "<td>Thanks to SiliconFlow for sponsoring this project! SiliconFlow is a high-performance AI infrastructure and model API platform, providing fast and reliable access to language, speech, image, and video models in one place. With pay-as-you-go billing, broad multimodal model support, high-speed inference, and enterprise-grade stability, SiliconFlow helps developers and teams build and scale AI applications more efficiently. Register via <a href=\"https://cloud.siliconflow.cn/i/YflgU2Ve\">this link"
+    },
+    {
+      "locator": "deploy/vendor-sync/README.md:120",
+      "excerpt": "退出 0 输出来源、摘要、校验状态及是否复用；退出 2 输出脱敏错误及 `publication: incomplete, replayRequired: true`，不笼统声称没有发生过提交。复制/清单替换失败保留旧清单；已完成的新不可变对象可能保留供重放。清单是客户端权威，health 若在进程中断后短暂低报，可重放发布或停用命令修复。没有自动清理旧对象、自动降级或删除命令。"
+    },
+    {
+      "locator": "docs/guides/claude-codex-routing-guide-en.md:7",
+      "excerpt": "Claude Code targets the Anthropic Messages protocol — that is, `/v1/messages` — whereas the upstreams for Codex-family models, whether the OpenAI Responses API exposed by a third-party gateway or the Codex service behind a ChatGPT subscription, all speak the Responses protocol. The two protocols use completely different request bodies, streaming events, and response structures, so putting such an endpoint directly into Claude Code's config leaves the upstream receiving a `/v1/messages` request i"
+    },
+    {
+      "locator": "docs/guides/claude-codex-routing-guide-en.md:40",
+      "excerpt": "- **API Endpoint**: just the gateway's service root, e.g. `https://gpt-gateway.example.com`, without a trailing slash — the route sends requests to the gateway's Responses endpoint (`/v1/responses`) automatically. When the gateway path is unusual, turn on the `Full URL` toggle next to it and paste the complete endpoint verbatim."
+    },
+    {
+      "locator": "docs/guides/claude-codex-routing-guide-en.md:58",
+      "excerpt": "- Click **`Sign in with ChatGPT`**. This is a device-code flow: CC Switch opens the browser automatically and copies the verification code to the clipboard; paste the code on the browser page to complete authorization, while the app shows `Waiting for authorization...`."
+    },
+    {
+      "locator": "docs/guides/claude-codex-routing-guide-en.md:69",
+      "excerpt": "Go to the `Routing` page in Settings, expand `Local Routing`, and complete two toggles:"
+    },
+    {
+      "locator": "docs/guides/codex-claude-routing-guide-en.md:7",
+      "excerpt": "The newer Codex CLI targets the OpenAI Responses API, while the various Claude-family relay gateways and internal enterprise gateways expose the Anthropic Messages protocol — that is, `/v1/messages`. These two protocols use completely different request bodies, streaming events, and response structures, so putting such a gateway's endpoint directly into Codex configuration can only result in a request to `/responses` coming back 404."
+    },
+    {
+      "locator": "docs/guides/codex-claude-routing-guide-en.md:38",
+      "excerpt": "- **API Request URL**: just the gateway's service root, e.g. `https://claude-gateway.example.com`. It works with or without a trailing `/v1` — the route sends requests to `/v1/messages` automatically; don't assemble `/v1/messages` yourself (if your gateway documentation gives you a complete messages URL, you can turn on the `Full URL` toggle next to it and paste it verbatim). The yellow hint below the address bar, \"compatible with OpenAI Response format\", is generic copy written for the direct R"
+    },
+    {
+      "locator": "docs/guides/codex-claude-routing-guide-en.md:53",
+      "excerpt": "- **Max output tokens**: the Anthropic protocol's `max_tokens` is required, and when a Codex request carries no output ceiling the route falls back to a conservative 8192, which may truncate long answers or deep reasoning (showing up as an incomplete reply, `stop_reason=max_tokens`). If you hit truncation, raise this to the model's real ceiling here — but don't exceed it, or the upstream will 400 outright."
+    },
+    {
+      "locator": "docs/guides/codex-claude-routing-guide-en.md:61",
+      "excerpt": "Go to the `Routing` page in Settings, expand `Local Routing`, and complete two toggles:"
+    },
+    {
+      "locator": "docs/guides/codex-claude-routing-guide-en.md:88",
+      "excerpt": "- **Truncation is reported faithfully**: when the upstream stops at the output ceiling or the stream is cut off, Codex sees \"incomplete\" rather than a disguised success, making it easy to notice and raise the max output tokens."
+    },
+    {
+      "locator": "docs/guides/codex-claude-routing-guide-en.md:102",
+      "excerpt": "Check the API Request URL: it should be the gateway's service root, not an address carrying another protocol's path such as `/chat/completions`. When the gateway path is unusual, use the `Full URL` toggle to paste the complete messages endpoint directly."
+    },
+    {
+      "locator": "docs/guides/codex-deepseek-routing-guide-en.md:76",
+      "excerpt": "Go to the `Routing` page in Settings, expand `Local Routing`, and complete two toggles:"
+    },
+    {
+      "locator": "docs/guides/codex-kimi-routing-guide-en.md:52",
+      "excerpt": "Go to the `Routing` page in Settings, expand `Local Routing`, and complete two toggles:"
+    },
+    {
+      "locator": "docs/guides/codex-official-auth-preservation-guide-en.md:42",
+      "excerpt": "## Step 1: Switch back to OpenAI Official and complete official login"
+    },
+    {
+      "locator": "docs/guides/codex-official-auth-preservation-guide-en.md:92",
+      "excerpt": "Complete two actions:"
+    },
+    {
+      "locator": "docs/guides/codex-official-auth-preservation-guide-en.md:189",
+      "excerpt": "Switch back to `OpenAI Official`, restart Codex, and complete official login once. Then confirm `Settings -> General -> Codex App Enhancements -> Keep official login when switching third-party providers` is enabled in CC Switch before switching back to the third-party provider."
+    },
+    {
+      "locator": "docs/guides/codex-unified-session-history-guide-en.md:29",
+      "excerpt": "- **Authentication is completely unaffected**—your official subscription still uses your ChatGPT login and still goes through the official backend; only the session's classification tag changes."
+    },
+    {
+      "locator": "docs/guides/codex-unified-session-history-guide-en.md:152",
+      "excerpt": "- **What's deleted**: **nothing**. The backup is a \"copy,\" the rewrite is an \"atomic replacement of the same file,\" and at no point is any session or index deleted. The file is complete at every moment (either the old content or the new content, never empty or half-written)."
+    },
+    {
+      "locator": "docs/guides/codex-unified-session-history-guide-en.md:263",
+      "excerpt": "- If you'd rather not bother: just turn off the switch, the official sessions still display normally on the `openai` drawer, completely intact."
+    },
+    {
+      "locator": "docs/guides/codex-unified-session-history-guide-en.md:278",
+      "excerpt": "**Symptom**: you checked restore when turning off the switch, and got the toast \"No restorable migration backup for the current Codex directory.\" You panic: restore failed, is the data completely gone?"
+    },
+    {
+      "locator": "docs/guides/codex-unified-session-history-guide-en.md:351",
+      "excerpt": "> **Important note, don't let this step scare you**: **early versions of Codex did not write the `model_provider` field into the `.jsonl`**, so these old official sessions **can't be counted** by the grep above—but they're still classified as `openai` in the index database `state_5.sqlite` and still show up in the resume list. So **judge \"nothing lost\" by the total file count from step 1**—the per-drawer grep is only there to help you understand the classification, and counting fewer than the to"
+    },
+    {
+      "locator": "docs/guides/codex-unified-session-history-guide-en.md:450",
+      "excerpt": "- **Only move, never delete + atomic writes**: all jsonl rewrites go through \"temp file + whole-file replacement,\" and the state DB goes through a transactional `UPDATE`, with no deletion of any session or index at any point. The file is complete at every moment."
+    },
+    {
+      "locator": "docs/release-notes/v3.10.0-en.md:35",
+      "excerpt": "- Complete OpenCode provider management: add, edit, switch, delete"
+    },
+    {
+      "locator": "docs/release-notes/v3.11.0-en.md:47",
+      "excerpt": "- **Full Internationalization**: Complete Chinese/English/Japanese support"
+    },
+    {
+      "locator": "docs/release-notes/v3.11.1-en.md:40",
+      "excerpt": "- Full config snapshot write on provider switch (predictable, complete overwrite)"
+    },
+    {
+      "locator": "docs/release-notes/v3.12.0-en.md:166",
+      "excerpt": "- Restructured the user manual for i18n and added complete EN/JA coverage"
+    },
+    {
+      "locator": "docs/release-notes/v3.12.0-en.md:167",
+      "excerpt": "- Added OpenClaw usage documentation and completed settings documentation"
+    },
+    {
+      "locator": "docs/release-notes/v3.12.2-en.md:73",
+      "excerpt": "- Fixed multiple scenarios where Common Config could be dropped during proxy takeover: sync overwriting live files, hot-switches producing incomplete restore snapshots, and provider switches losing config changes"
+    },
+    {
+      "locator": "docs/release-notes/v3.13.0-en.md:29",
+      "excerpt": "- **Full URL Endpoint Mode**: Provider option that treats `base_url` as a complete upstream endpoint, unblocking vendors that require nonstandard URL layouts"
+    },
+    {
+      "locator": "docs/release-notes/v3.13.0-en.md:32",
+      "excerpt": "- **UTF-8 Stream Chunk Boundary Fix**: All four SSE streaming paths now preserve incomplete multi-byte UTF-8 sequences across TCP chunks, eliminating intermittent U+FFFD garbled output via the Copilot reverse proxy"
+    },
+    {
+      "locator": "docs/release-notes/v3.13.0-en.md:91",
+      "excerpt": "Upgraded the Skills management panel into a complete discovery plus maintenance workflow."
+    },
+    {
+      "locator": "docs/release-notes/v3.13.0-en.md:120",
+      "excerpt": "Added a provider option that treats `base_url` as a complete upstream endpoint instead of a base URL with path appending (#1561, thanks @yovinchen)."
+    },
+    {
+      "locator": "docs/release-notes/v3.13.0-en.md:236",
+      "excerpt": "- Preserves incomplete trailing bytes in a remainder buffer and merges them with the next chunk before decoding"
+    },
+    {
+      "locator": "docs/release-notes/v3.14.0-en.md:11",
+      "excerpt": "CC Switch v3.14.0 is a major release centered on onboarding **Hermes Agent as the 6th first-class managed app** and rolling out **Claude Opus 4.7** across the full aggregator and Bedrock preset matrix. Hermes support covers a database v9 → v10 migration, a complete Rust command surface, YAML-backed `~/.hermes/config.yaml` read/write with atomic backups, MCP sync, Skills sync, SQLite + JSONL session management, and dedicated frontend panels including a Memory editor. All four API protocols aligne"
+    },
+    {
+      "locator": "docs/release-notes/v3.16.1-en.md:13",
+      "excerpt": "- **[Keep Codex remote control and official plugins while using third-party APIs](../guides/codex-official-auth-preservation-guide-en.md)**: explains how to complete official login first, enable Codex App Enhancements, keep official login state in `auth.json`, and route model traffic to third-party APIs."
+    },
+    {
+      "locator": "docs/release-notes/v3.16.2-en.md:110",
+      "excerpt": "When a Chat Completions upstream ends a stream without a `finish_reason` or `[DONE]`, CC Switch no longer treats it as a normal completion: it finalizes normally only when the stream truly ended; emits an incomplete (`max_output_tokens`) response when partial output was produced; and emits a failed `stream_truncated` event when nothing was produced. Late-arriving reasoning is also backfilled onto still-active streaming tool calls."
+    },
+    {
+      "locator": "docs/release-notes/v3.16.2-en.md:206",
+      "excerpt": "Disabled autocomplete, autocorrect, autocapitalize, and spellcheck on the shared text Input component, so macOS no longer auto-capitalizes or auto-corrects the first letter typed into configuration fields (#3626)."
+    },
+    {
+      "locator": "docs/release-notes/v3.16.2-ja.md:110",
+      "excerpt": "Chat Completions 上流が `finish_reason` も `[DONE]` もなくストリームを終了した場合、CC Switch はこれを正常完了として扱わなくなりました: 本当に終了したときのみ正常に締め、部分的な出力があった場合は incomplete（`max_output_tokens`）レスポンスを、何も出力されなかった場合は失敗 `stream_truncated` イベントを発行します。遅れて届いた推論も、まだアクティブなストリーミングのツール呼び出しへバックフィルされます。"
+    },
+    {
+      "locator": "docs/release-notes/v3.16.2-ja.md:206",
+      "excerpt": "共有のテキスト Input コンポーネントで autocomplete、autocorrect、autocapitalize、spellcheck を無効化し、macOS が設定フィールドに入力された最初の文字を自動で大文字化・自動修正しないようにしました（#3626）。"
+    },
+    {
+      "locator": "docs/release-notes/v3.16.2-zh.md:66",
+      "excerpt": "新增 OpenCode 作为用量统计来源，从 OpenCode 本地 SQLite 数据库读取每条消息的 token、成本和模型数据并导入用量记录，并提供独立的「OpenCode」应用筛选页签和「OpenCode Session」数据来源标签。数据库路径会遵循 `OPENCODE_DB` 和 `XDG_DATA_HOME`（在所有平台默认 `~/.local/share/opencode`），只导入已完成的消息，并在判断新鲜度时把 WAL 文件一并计入，避免刚写入的会话被跳过（[#3215](https://github.com/farion1231/cc-switch/pull/3215)）。"
+    },
+    {
+      "locator": "docs/release-notes/v3.16.2-zh.md:110",
+      "excerpt": "当 Chat Completions 上游在没有 `finish_reason` 或 `[DONE]` 的情况下结束流时，CC Switch 不再把它当作正常完成：只有流真正结束才正常收尾；已产出部分内容时发出 incomplete（`max_output_tokens`）响应；完全没有产出时发出失败的 `stream_truncated` 事件。晚到的推理内容也会回填到仍在进行的流式工具调用上。"
+    },
+    {
+      "locator": "docs/release-notes/v3.17.0-en.md:68",
+      "excerpt": "Here's a typical scenario: you have one directory for coding and another for writing or drawing. Coding wants one provider, plus MCP like filesystem / GitHub, code-review Skills, and a memory file spelling out your engineering conventions; writing or drawing often wants a different provider, a different set of MCP, and completely different prompts. Bouncing between the two used to mean switching providers, toggling MCP and Skills one by one, and then editing the memory file; now you save the two"
+    },
+    {
+      "locator": "docs/release-notes/v3.17.0-en.md:97",
+      "excerpt": "This feature comes from a very real need: **plenty of companies ban the Claude Code client for compliance reasons, but do not ban the Claude API.** For those users the model itself is available; what's missing is a permitted client — and Codex can now fill that slot. Pick the new `anthropic` option in a Codex provider's upstream-format selector, and you can connect directly to the Claude API or any gateway offering the native Anthropic Messages protocol (`/v1/messages`); the local proxy handles "
+    },
+    {
+      "locator": "docs/release-notes/v3.17.0-en.md:117",
+      "excerpt": "Zhipu's team plan (team-edition Coding Plan) uses the same quota endpoint but requires `?type=2` and two extra request headers (`bigmodel-organization` / `bigmodel-project`), which the personal-edition query can't reach. The usage-script dialog gains a \"Zhipu GLM Team\" template; fill in the API key + organization ID + project ID to query team quota, and if any of the three is missing you get a clear prompt to complete it. Copy is in sync across all four locales. ([#5128](https://github.com/fario"
+    },
+    {
+      "locator": "docs/release-notes/v3.17.0-en.md:169",
+      "excerpt": "When the proxy bridges an Anthropic-format client (Claude Code / Claude Desktop) to an OpenAI Responses upstream, a semantic failure hidden inside an HTTP 2xx body (a `status:\"failed\"` object, an `error` envelope, or a `response.failed` SSE event before the first output) was previously converted into a silent empty turn. These failures are now recognized as real errors inside the retry loop, so failover can retry with a different provider; a stream that ends cleanly but with incomplete content i"
+    },
+    {
+      "locator": "docs/release-notes/v3.18.0-en.md:12",
+      "excerpt": "- **Connect Grok with your account or an API key — both paths work**: subscription users complete an xAI device-code sign-in under Settings → OAuth Auth Center (multiple accounts supported), and all three clients — Claude Code, Claude Desktop, Codex — run straight on your Grok subscription with no API key anywhere; pay-as-you-go users connect with an xAI API key instead — Codex has a ready-made \"xAI (Grok)\" preset connecting natively to `api.x.ai`, and Claude Code can connect through local routi"
+    },
+    {
+      "locator": "docs/release-notes/v3.18.0-en.md:144",
+      "excerpt": "When a terminal usage event carried no message id — the norm for Codex `/responses` traffic through the local proxy — the dedup key fell back to a random UUID, so every retry / replay of the same upstream response minted a fresh key and `INSERT OR REPLACE` stacked a new row each time; one reporter's database held the same usage combination 2,078 times. The parser now takes the key from the response envelope itself — the Codex `response.completed` event's `response.id` (ids from `response.created"
+    },
+    {
+      "locator": "docs/release-notes/v3.18.0-en.md:148",
+      "excerpt": "Opening the usage page while a big import ran could lock the whole UI up: every inserted row fired a refresh notification, each notification made the frontend re-run all ~10 usage queries, and those queries contended with the importer for the single database connection while it parsed rollout files tens of megabytes large, line by line — on duplicate-inflated databases the three compounded each other. Session sync now notifies the frontend once per completed pass; all session importers are seria"
+    },
+    {
+      "locator": "docs/release-notes/v3.18.0-en.md:205",
+      "excerpt": "Two new guides complete the pair — \"Claude models inside the Codex client\" and \"Responses providers inside the Claude Code client\":"
+    },
+    {
+      "locator": "docs/release-notes/v3.18.0-en.md:222",
+      "excerpt": "**Please note on first launch**: the history repair completes **progressively** — the rebuild proceeds in the background with the startup sync, and during that window the Codex history numbers on the usage dashboard first drop to zero and then fill back in step by step. This is expected behavior, not data loss. The post-rebuild total will usually be **smaller** than before the upgrade: the part inflated by double counting is squeezed out, and what remains is your real usage."
+    },
+    {
+      "locator": "docs/release-notes/v3.18.0-ja.md:144",
+      "excerpt": "終端の使用量イベントにメッセージ id がない場合（ローカルプロキシ経由の Codex `/responses` トラフィックでは通常）、重複排除キーはランダム UUID にフォールバックしていました——同じ上流レスポンスの再試行 / リプレイのたびに新しいキーが作られ、`INSERT OR REPLACE` が毎回新しい行を積み上げます。ある報告者のデータベースには同じ使用量の組み合わせが 2,078 回入っていました。パーサーはキーをレスポンスのエンベロープ自体から取るようになりました——Codex `response.completed` イベントの `response.id`（`response.created` の id は破棄）、Chat Completions の `chatcmpl` id、Gemini の `responseId`——スコープは `session:{app_type}:{provider_id}:{id}`。failover で同じレスポンスが別プロバイダーに再生された場合もプロバイダーごとに 1 回ずつ課金され、プロバイダー間で衝突しません（Clau"
+    },
+    {
+      "locator": "docs/release-notes/v3.18.0-zh.md:144",
+      "excerpt": "终态用量事件不带消息 id 时（经本地代理的 Codex `/responses` 流量是常态），去重键此前回退到随机 UUID——同一上游响应的每次重试 / 重放都造一个新键，`INSERT OR REPLACE` 每次都堆一行新的；有用户的数据库里同一用量组合出现了 2,078 次。解析器现在从响应信封本身取键——Codex `response.completed` 事件的 `response.id`（丢弃 `response.created` 的 id）、Chat Completions 的 `chatcmpl` id、Gemini 的 `responseId`——并按 `session:{app_type}:{provider_id}:{id}` 作用域化：failover 时同一响应打到不同供应商仍按供应商各记一次、互不碰撞（Claude 保持裸 `session:{id}` 形态，代理行继续与会话日志导入合流）。完全没有信封 id 时，兜底从响应的用量语义做确定性 SHA-256——相同重放必须撞进同一个键，去重才成立——最终写库也从无条件 REPLACE 改为去重窗口内的"
+    },
+    {
+      "locator": "docs/release-notes/v3.19.0-en.md:14",
+      "excerpt": "- **Open `ccswitch://` import links with more confidence**: the confirmation now shows the command, every argument, the URL, and the environment variables in full (credential-shaped values are shown masked), and highlights the values worth a second look — inline shell execution, environment variables that change loading behavior, intranet / metadata addresses; usage-query scripts show their complete code and are **imported disabled by default**."
+    },
+    {
+      "locator": "docs/release-notes/v3.19.0-en.md:72",
+      "excerpt": "When Grok CLI signs in with official OAuth it cannot be routed through the local proxy — Grok uses an empty config as the mode switch, so there is nowhere to point it at CC Switch — and that consumption was previously entirely invisible in the usage dashboard. CC Switch now imports per-turn usage alongside the regular session-log sync, reading `turn_completed` events from `updates.jsonl` under `~/.grok/sessions` (archived sessions included): cost prefers the exact figure the CLI reports itself, "
+    },
+    {
+      "locator": "docs/release-notes/v3.19.0-en.md:192",
+      "excerpt": "### \"Using GPT Models in Claude Code\" Guide Completed in English and Japanese"
+    },
+    {
+      "locator": "docs/release-notes/v3.19.0-ja.md:72",
+      "excerpt": "Grok CLI が公式 OAuth でログインしているときはローカルプロキシへルーティングできません——Grok は空の設定をモードスイッチとして使うため、CC Switch を指し示す場所がないのです——そのためこの分の消費は、これまで使用量ダッシュボードでまったく見えませんでした。現在は通常のセッションログ同期に合わせて、`~/.grok/sessions`（アーカイブ済みセッションを含む）の `updates.jsonl` から `turn_completed` イベント単位でターンごとの使用量をインポートします。コストは CLI 自身が報告する正確な数値を優先し、欠落時はローカル価格にフォールバックします（内蔵価格テーブルに `grok-4.5-build` を追加。100 万 token あたり入力 $2 / 出力 $6 / キャッシュ読み取り $0.30）。インポート行は上流のターンごとの ID をキーにするため、巻き戻したセッションで重複計上されることはありません。確定待ちウィンドウには直近のプロキシ活動チェックを加え、「ルーティング + 公式」を併用しても同じトラフィ"
+    },
+    {
+      "locator": "docs/release-notes/v3.19.0-zh.md:72",
+      "excerpt": "Grok CLI 用官方 OAuth 登录时无法经本地代理路由——Grok 以空配置作为模式开关，没有地方能把它指向 CC Switch——这部分消耗此前在用量看板里完全不可见。现在 CC Switch 会随常规会话日志同步，从 `~/.grok/sessions`（含归档会话）的 `updates.jsonl` 里按 `turn_completed` 事件导入逐轮用量：成本优先采用 CLI 自己上报的精确数字，缺失时回落本地定价（内置定价表新增 `grok-4.5-build`，$2 输入 / $6 输出 / $0.30 缓存读，每百万 token）。导入行以上游逐轮 ID 为键，回卷会话不会造成重复计数；沉淀窗口加近期代理活动检查，确保同一流量在「路由 + 官方」混用时也不会算两次。看板里新行以「Grok Build (Session)」供应商名呈现，应用筛选器新增 Grok Build 选项，数据来源分栏新增「Grok Build Session」条目与专属图标，四语齐全。"
+    },
+    {
+      "locator": "docs/release-notes/v3.19.1-en.md:179",
+      "excerpt": "With the interface language set to Traditional Chinese, the tool management section of the About page displayed English — the version rows, the install and update buttons, the result toasts, the install-conflict diagnosis, and the entire upgrade confirmation dialog. That panel was built out across three separate changes, each adding strings for Simplified Chinese, English, and Japanese only; and because i18next's strategy is to fall back to English rather than error, the 30 missing keys were com"
+    },
+    {
+      "locator": "docs/release-notes/v3.19.2-en.md:17",
+      "excerpt": "- **See the tool calls a gateway swallowed instead of being silently left hanging**: when a third-party Chat gateway returned tool calls with missing function names, the transform layer used to drop them and still report the turn complete, so Codex quietly ended its loop. That case now fails loudly, and every drop site carries structured logging — problems like [#4341](https://github.com/farion1231/cc-switch/issues/4341) can finally be diagnosed from real traffic."
+    },
+    {
+      "locator": "docs/release-notes/v3.19.2-en.md:104",
+      "excerpt": "### Dropped Tool Calls No Longer Masquerade as a Completed Turn"
+    },
+    {
+      "locator": "docs/release-notes/v3.19.2-en.md:106",
+      "excerpt": "Third-party Chat gateways occasionally return tool calls with **missing function names**; the Chat → Responses transform used to drop them silently and still report the turn `completed` — Codex saw a \"successful turn with nothing left to do\" and quietly ended its agent loop, turning a diagnosable upstream failure into a silent stall."
+    },
+    {
+      "locator": "docs/release-notes/v3.19.2-en.md:108",
+      "excerpt": "Now, when every tool call in a turn has been dropped and none remains usable, the streaming path emits `response.failed` and the non-streaming path reports a transform error; the check is gated on `status == \"completed\"`, so `finish_reason: length` truncation keeps its own `incomplete` semantics. All three drop sites log structured, content-free fields — call-id presence, argument byte counts, finish reason — so problems like [#4341](https://github.com/farion1231/cc-switch/issues/4341) can final"
+    },
+    {
+      "locator": "docs/release-notes/v3.19.2-ja.md:106",
+      "excerpt": "サードパーティの Chat ゲートウェイは、まれに**関数名のない**ツール呼び出しを返します。Chat → Responses の変換層はこれまでそれらを黙って破棄したうえ、そのターンを `completed` と報告していました——Codex には「成功したが何もすることがないターン」が見え、静かにエージェントループを終えていました。診断可能なはずの上流の障害が、無音の停止に変わっていたのです。"
+    },
+    {
+      "locator": "docs/release-notes/v3.19.2-ja.md:108",
+      "excerpt": "現在は、あるターンのツール呼び出しがすべて破棄され使えるものが 1 つも残らなかった場合、ストリーミング経路は `response.failed` を発行し、非ストリーミング経路は変換エラーを報告します。判定は `status == \"completed\"` に限定されるため、`finish_reason: length` の切り詰めは自身の `incomplete` の意味を保ちます。3 つの破棄箇所はいずれも、内容を含まない構造化フィールドを記録します——call id の有無、引数のバイト数、終了理由です——[#4341](https://github.com/farion1231/cc-switch/issues/4341) のような問題をようやく実トラフィックから診断できます。有効なツール呼び出しを含むターン、テキストのみのターン、切り詰められたターンの動作は変わりません。"
+    },
+    {
+      "locator": "docs/release-notes/v3.19.2-zh.md:106",
+      "excerpt": "第三方 Chat 网关偶尔会返回**缺函数名**的工具调用，Chat → Responses 转换层此前把它们静默丢弃、还照样报告本轮 `completed`——Codex 看到一个「成功但无事可做」的回合，就安静地结束了智能体循环，一个本可诊断的上游故障变成了无声停摆。"
+    },
+    {
+      "locator": "docs/release-notes/v3.19.2-zh.md:108",
+      "excerpt": "现在，当一轮里的工具调用全部被丢弃、没有任何可用项时，流式路径发出 `response.failed`，非流式路径报转换错误；判定挂在 `status == \"completed\"` 上，`finish_reason: length` 的截断保持自己的 `incomplete` 语义不受影响。三个丢弃点都会记录结构化、不含内容的日志字段——是否有 call id、参数字节数、结束原因——[#4341](https://github.com/farion1231/cc-switch/issues/4341) 这类问题终于可以从真实流量里诊断。含有效工具调用的回合、纯文本回合与截断回合行为不变。"
+    },
+    {
+      "locator": "docs/release-notes/v3.20.0-en.md:13",
+      "excerpt": "- **Pick an authorized ChatGPT account right when adding a Codex official provider**: sign in to any number of accounts in the Auth Center, then bind a new official card to one of them from a dropdown; or keep the classic route — an unbound official card that follows the Codex CLI's own login, reading the local access token. Switching to a bound card writes that account's complete token bundle — the bare `codex` CLI runs as that account too, and can self-refresh ([#3879](https://github.com/fario"
+    },
+    {
+      "locator": "docs/release-notes/v3.20.0-en.md:78",
+      "excerpt": "The Auth Center holds any number of ChatGPT (Codex OAuth) sign-ins. **When adding a Codex official provider, pick one of those authorized accounts right in the form** — no need to create the card first and come back to configure it; or keep the classic route: an unbound official card that follows the Codex CLI's own login, reading the local access token. Any number of official cards can coexist, cards of both kinds side by side, and binding or unbinding keeps the card's identity, endpoints and h"
+    },
+    {
+      "locator": "docs/release-notes/v3.20.0-en.md:80",
+      "excerpt": "The account picker is a labelled dropdown with a direct jump into the Auth Center; a transient **failure to load** account status now shows an alert with Retry instead of reading as \"not signed in\", and no longer silently unbinds the account on the next save. Sign-out and account removal are serialized against provider switching; OAuth request timeouts tighten from ten minutes to 30 seconds; and signing out also cancels a device login whose network round-trip is still in flight — an abandoned fl"
+    },
+    {
+      "locator": "docs/release-notes/v3.20.1-en.md:82",
+      "excerpt": "The \"Keep official login for direct switches\" toggle now has exactly one meaning: ON leaves the official ChatGPT login completely untouched across third-party switches; OFF **deletes** `auth.json` instead of overwriting it with the API key (a failed deletion surfaces a warning that the official login is still on disk in the Codex config directory). Two safety gates now run on **every third-party switch**, not just in preservation mode: a key with no provider table to hold it, and a keyless confi"
+    },
+    {
+      "locator": "docs/release-notes/v3.20.1-en.md:122",
+      "excerpt": "Three data-accuracy fixes land with the incremental scanner, all on the Claude session-log path. A log line caught mid-write used to be permanently skipped by the old line-number cursor (the unfinished tail advanced the cursor, so the completed message was never imported) — the byte cursor only commits past complete lines, so the message is picked up next round. An externally truncated or rewritten session file is **never replayed**: re-importing entries whose detail rows the 30-day rollup has a"
+    },
+    {
+      "locator": "docs/release-notes/v3.6.0-en.md:104",
+      "excerpt": "### Complete Internationalization"
+    },
+    {
+      "locator": "docs/release-notes/v3.6.1-en.md:78",
+      "excerpt": "- Automatically calls updateTrayMenu after sorting completes"
+    },
+    {
+      "locator": "docs/release-notes/v3.6.1-en.md:169",
+      "excerpt": "## 📜 v3.6.0 Complete Feature Review"
+    },
+    {
+      "locator": "docs/release-notes/v3.6.1-en.md:171",
+      "excerpt": "> Content below is from v3.6.0 (2025-11-07), helping you understand the complete feature set"
+    },
+    {
+      "locator": "docs/release-notes/v3.6.1-en.md:273",
+      "excerpt": "### Complete Internationalization"
+    },
+    {
+      "locator": "docs/release-notes/v3.6.1-en.md:384",
+      "excerpt": "- 🎨 Modern UI with complete Chinese/English internationalization"
+    },
+    {
+      "locator": "docs/release-notes/v3.7.0-en.md:23",
+      "excerpt": "Complete support for Google Gemini CLI, becoming the third supported application (Claude Code, Codex, Gemini)."
+    },
+    {
+      "locator": "docs/release-notes/v3.7.0-en.md:29",
+      "excerpt": "- **Full MCP support** - Complete MCP server management for Gemini"
+    },
+    {
+      "locator": "docs/release-notes/v3.7.0-en.md:49",
+      "excerpt": "Complete refactoring of MCP management system for cross-application unification."
+    },
+    {
+      "locator": "docs/release-notes/v3.7.0-en.md:76",
+      "excerpt": "**Approximately 2,000 lines of code** - A complete skill ecosystem platform."
+    },
+    {
+      "locator": "docs/release-notes/v3.7.0-en.md:107",
+      "excerpt": "**Approximately 1,300 lines of code** - Complete system prompt management."
+    },
+    {
+      "locator": "docs/release-notes/v3.7.0-en.md:278",
+      "excerpt": "- Complete TypeScript coverage"
+    },
+    {
+      "locator": "docs/release-notes/v3.7.1-en.md:47",
+      "excerpt": "## v3.7.0 Complete Release Notes"
+    },
+    {
+      "locator": "docs/release-notes/v3.7.1-en.md:61",
+      "excerpt": "Complete support for Google Gemini CLI, becoming the third supported application (Claude Code, Codex, Gemini)."
+    },
+    {
+      "locator": "docs/release-notes/v3.7.1-en.md:67",
+      "excerpt": "- **Full MCP support** - Complete MCP server management for Gemini"
+    },
+    {
+      "locator": "docs/release-notes/v3.7.1-en.md:87",
+      "excerpt": "Complete refactoring of MCP management system for cross-application unification."
+    },
+    {
+      "locator": "docs/release-notes/v3.7.1-en.md:114",
+      "excerpt": "**Approximately 2,000 lines of code** - A complete skill ecosystem platform."
+    },
+    {
+      "locator": "docs/release-notes/v3.7.1-en.md:145",
+      "excerpt": "**Approximately 1,300 lines of code** - Complete system prompt management."
+    },
+    {
+      "locator": "docs/release-notes/v3.7.1-en.md:316",
+      "excerpt": "- Complete TypeScript coverage"
+    },
+    {
+      "locator": "docs/release-notes/v3.8.0-en.md:79",
+      "excerpt": "Completely redesigned UI providing a more modern visual experience."
+    },
+    {
+      "locator": "docs/release-notes/v3.9.0-en.md:3",
+      "excerpt": "> Local API Proxy, Auto Failover, Universal Provider, and a more complete multi-app workflow"
+    },
+    {
+      "locator": "docs/user-manual/en/1-getting-started/1.2-installation.md:112",
+      "excerpt": "4. Follow the prompts to complete installation"
+    },
+    {
+      "locator": "docs/user-manual/en/1-getting-started/1.4-quickstart.md:3",
+      "excerpt": "This section helps you complete the initial setup in 5 minutes."
+    },
+    {
+      "locator": "docs/user-manual/en/1-getting-started/1.4-quickstart.md:83",
+      "excerpt": "Congratulations! You have completed the basic configuration. Next, you can:"
+    },
+    {
+      "locator": "docs/user-manual/en/2-providers/2.1-add.md:397",
+      "excerpt": "3. Complete the login flow (see below)"
+    },
+    {
+      "locator": "docs/user-manual/en/2-providers/2.1-add.md:484",
+      "excerpt": "| Not logged in before adding | \"Please log in to ChatGPT first\" | Complete login in OAuth Auth Center first   |"
+    },
+    {
+      "locator": "docs/user-manual/en/2-providers/2.1-add.md:524",
+      "excerpt": "3. Fill in the **complete upstream endpoint** (not a prefix) as `base_url`"
+    },
+    {
+      "locator": "docs/user-manual/en/2-providers/2.1-add.md:588",
+      "excerpt": "- **Aggregator / hosting platforms first**: OpenRouter, SiliconFlow, etc. are handled by platform rules (the same model can expose a completely different reasoning interface on different platforms)"
+    },
+    {
+      "locator": "docs/user-manual/en/2-providers/2.2-switch.md:31",
+      "excerpt": "4. Switching completes with a brief tray notification"
+    },
+    {
+      "locator": "docs/user-manual/en/2-providers/2.4-sort-duplicate.md:12",
+      "excerpt": "4. Release the mouse to complete reordering"
+    },
+    {
+      "locator": "docs/user-manual/en/2-providers/2.4-sort-duplicate.md:38",
+      "excerpt": "Duplication creates a complete copy, including:"
+    },
+    {
+      "locator": "docs/user-manual/en/3-extensions/3.3-skills.md:86",
+      "excerpt": "3. Wait for installation to complete"
+    },
+    {
+      "locator": "docs/user-manual/en/4-proxy/4.4-usage.md:141",
+      "excerpt": "- Complete request parameters"
+    },
+    {
+      "locator": "docs/user-manual/en/4-proxy/4.5-model-test.md:97",
+      "excerpt": "After testing completes, displays:"
+    },
+    {
+      "locator": "docs/user-manual/en/5-faq/5.2-questions.md:34",
+      "excerpt": "**Problem**: The web content area is completely unclickable (the title-bar minimize/maximize/close buttons still work), and the window black-screens on resize or maximize-restore. Common on Wayland sessions with an NVIDIA GPU."
+    },
+    {
+      "locator": "docs/user-manual/en/5-faq/5.2-questions.md:164",
+      "excerpt": "2. Check if the file content is complete"
+    },
+    {
+      "locator": "docs/user-manual/en/5-faq/5.2-questions.md:205",
+      "excerpt": "See the complete Device Code login flow (verification code + browser authorization), both entry points (Add Provider panel / OAuth Auth Center), multi-account management, and common failure scenarios in [2.1 Add Provider → Codex OAuth Reverse Proxy (Claude Provider)](../2-providers/2.1-add.md#codex-oauth-reverse-proxy-claude-provider)."
+    },
+    {
+      "locator": "docs/user-manual/en/5-faq/5.2-questions.md:216",
+      "excerpt": "1. Confirm the OAuth login flow is completed in **OAuth Auth Center** (Settings → OAuth Auth Center, with the Beta label)"
+    },
+    {
+      "locator": "docs/user-manual/en/5-faq/5.3-deeplink.md:220",
+      "excerpt": "- Whether required fields are complete"
+    },
+    {
+      "locator": "docs/user-manual/zh/5-faq/5.2-questions.md:216",
+      "excerpt": "1. 确认在 **OAuth 认证中心**（设置 → OAuth 认证中心，带 Beta 标记）中已完成 OAuth 登录流程"
+    },
+    {
+      "locator": "outputs/claude-context-audit-20260910.gNd9CO/claude-settings-reference.md:2",
+      "excerpt": "> Fetch the complete documentation index at: https://code.claude.com/docs/llms.txt"
+    },
+    {
+      "locator": "outputs/claude-context-audit-20260910.gNd9CO/claude-settings-reference.md:7",
+      "excerpt": "> Complete reference for every Claude Code settings.json key: where each one goes, its type and default, and a paste-ready example, with an index of every key."
+    },
+    {
+      "locator": "outputs/claude-context-audit-20260910.gNd9CO/claude-settings-reference.md:673",
+      "excerpt": "| [`fileSuggestion`](#filesuggestion)                                                                   | Supply [`@` file autocomplete](/docs/en/interactive-mode#quick-commands) from your own command                                                                                                                                   | Interface and terminal             | Any file                |"
+    },
+    {
+      "locator": "outputs/claude-context-audit-20260910.gNd9CO/claude-settings-reference.md:1459",
+      "excerpt": "For the complete rule syntax, including wildcard behavior, tool-specific patterns for Read, Edit, WebFetch, MCP, and Agent rules, and the security limitations of Bash patterns, see [Permission rule syntax](/docs/en/permissions#permission-rule-syntax)."
+    },
+    {
+      "locator": "outputs/claude-context-audit-20260910.gNd9CO/claude-settings-reference.md:1747",
+      "excerpt": "Let Claude retry a command outside the sandbox with the `dangerouslyDisableSandbox` parameter after the sandbox blocks it. Set it to `false` so Claude Code ignores that parameter completely and every command Claude runs must be sandboxed or appear in [`excludedCommands`](#sandbox-excludedcommands). The `/sandbox` **Overrides** tab shows that state as **Strict sandbox mode**. Use `false` in managed settings for policies that require strict sandboxing."
+    },
+    {
+      "locator": "outputs/claude-context-audit-20260910.gNd9CO/claude-settings-reference.md:3009",
+      "excerpt": "Show emoji suggestions when you type `:` plus a shortcode in the prompt input, and replace a completed shortcode such as `:heart:` with its emoji. Set it to `false` to turn off both."
+    },
+    {
+      "locator": "outputs/claude-context-audit-20260910.gNd9CO/claude-settings-reference.md:3013",
+      "excerpt": "* `true`: Claude Code shows emoji suggestions after `:` and replaces a completed shortcode with its emoji"
+    },
+    {
+      "locator": "outputs/claude-context-audit-20260910.gNd9CO/claude-settings-reference.md:3029",
+      "excerpt": "Run your own command to supply `@` file path autocomplete instead of the built-in file suggestion. The built-in suggestion uses fast filesystem traversal; a large monorepo may do better with project-specific indexing such as a pre-built file index."
+    },
+    {
+      "locator": "outputs/claude-context-audit-20260910.gNd9CO/claude-settings-reference.md:3110",
+      "excerpt": "When a turn completes, Claude Code matches each entry's `pattern` regex against the turn output on the main thread, so a slow regex blocks the UI until it finishes. Nested quantifiers such as `(a+)+$` can take exponentially long against certain inputs and freeze the session, so keep each `pattern` linear and avoid nesting `+` or `*`."
+    },
+    {
+      "locator": "outputs/claude-context-audit-20260910.gNd9CO/claude-settings-reference.md:3869",
+      "excerpt": "Under narrowing, Claude Code runs a managed value if one is deployed. Otherwise it skips your value without warning: the status line is disabled, and `@` autocomplete falls back to the built-in file suggestion."
+    },
+    {
+      "locator": "outputs/claude-context-audit-20260910.gNd9CO/claude-settings-reference.md:4039",
+      "excerpt": "Hide or collapse a [skill](/docs/en/skills#override-skill-visibility-from-settings) without editing its `SKILL.md`. Claude Code applies the value under each skill's name to the skill list Claude sees and to your `/` autocomplete."
+    },
+    {
+      "locator": "outputs/claude-context-audit-20260910.gNd9CO/claude-settings-reference.md:4046",
+      "excerpt": "* `\"off\"`: Claude doesn't see the skill and `/name` is hidden from autocomplete"
+    },
+    {
+      "locator": "outputs/claude-context-audit-20260910.gNd9CO/claude-settings-reference.md:4049",
+      "excerpt": "This example lists `legacy-context` to Claude by name only and hides `deploy` from Claude and from `/` autocomplete:"
+    },
+    {
+      "locator": "outputs/claude-context-audit-20260910.gNd9CO/claude-settings-reference.md:4195",
+      "excerpt": "* **Default**: unset, so users can add any marketplace. An empty array is a complete lockdown that blocks every marketplace source, including the official Anthropic marketplace"
+    },
+    {
+      "locator": "outputs/claude-context-audit-20260910.gNd9CO/claude-settings-reference.md:5106",
+      "excerpt": "Choose how Claude Code notifies you when a task completes or a permission prompt is waiting. Appears in `/config` as **Local notifications**."
+    },
+    {
+      "locator": "outputs/野菜API-0.4.0真实一键接入验证记录.md:50",
+      "excerpt": "## 尚未冒充为已完成的事项"
+    },
+    {
+      "locator": "outputs/野菜API-0.4.10-双平台打包.md:17",
+      "excerpt": "- 已完成公证票据装订、Gatekeeper、代码签名、镜像完整性和挂载后应用校验。"
+    },
+    {
+      "locator": "outputs/野菜API-0.4.13-Windows热修复.md:28",
+      "excerpt": "本候选批次只用于验证本次 Windows 启动与退出回归；不代表公开发布、自动更新或真实机器验收已完成。"
+    },
+    {
+      "locator": "outputs/野菜API-0.4.5-项目体检-2026-09-05.md:45",
+      "excerpt": "`src-tauri/src/claude_bridge.rs:289` 在收到上游成功 HTTP 状态后立即发出验证成功事件，此时尚未读取完整正文、完成格式转换或确认流式回复结束。`src-tauri/src/tool_adapters/claude_desktop.rs:306` 收到该事件就返回成功；界面 `src/configuration/ConfigurationPreviewView.tsx:126` 却宣称应用已完成真实回复。"
+    },
+    {
+      "locator": "outputs/野菜API-0.4.6-内测打包.md:15",
+      "excerpt": "- Windows：计划构建 x64 NSIS 内测安装程序；没有 Windows 代码签名证书，不能宣称已签名或已完成真机安装测试。"
+    },
+    {
+      "locator": "outputs/野菜API-0.4.x-候选发布验收.md:7",
+      "excerpt": "0.4.1 客户端已具备两条当前线路、账户登录与余额用量、服务端汇率和计费分组价格、七种工具识别与安全接入事务，以及 macOS 通用安装包和 Windows x64 内测安装包。当前结论是“可进入受控发布与三平台实机验收”，不是“所有工具和平台已完成真实账户验证”。"
+    },
+    {
+      "locator": "outputs/野菜API-NewAPI-未来改造清单.md:69",
+      "excerpt": "- `verification_uri`和可选`verification_uri_complete`。"
+    },
+    {
+      "locator": "outputs/野菜API-macOS-候选包构建记录.md:49",
+      "excerpt": "## 已完成验证"
+    },
+    {
+      "locator": "outputs/野菜API-下载源部署验收.md:31",
+      "excerpt": "本次使用 govern-product-build 将基础设施部署与客户端更新/第三方分发分开验收，保留此前产品工作的状态，不以源站上线代表整个发布链已完成。"
+    },
+    {
+      "locator": "outputs/野菜API-交接-直连改造与Windows构建.md:7",
+      "excerpt": "## 1. 已完成并真机验证"
+    },
+    {
+      "locator": "outputs/野菜API-交接-直连改造与Windows构建.md:30",
+      "excerpt": "## 2. macOS 产物（已完成，可直接用）"
+    },
+    {
+      "locator": "outputs/野菜API-内测构建交付记录.md:15",
+      "excerpt": "## 已完成的构建及检查"
+    },
+    {
+      "locator": "outputs/野菜API-内测构建交付记录.md:41",
+      "excerpt": "因此本包不能用作“已完成 DSH 接入”或“已显示真实省钱金额”的验收结果。尚未确认是否接受这些限制作为本次最终交付范围；产物先供本机检查。"
+    },
+    {
+      "locator": "outputs/野菜API-国内下载源上线.md:9",
+      "excerpt": "| Claude Desktop | macOS Universal | 1.46388.4 | 服务器已完成原生签名校验 |"
+    },
+    {
+      "locator": "outputs/野菜API-国内下载源上线.md:12",
+      "excerpt": "| Codex | macOS Apple Silicon | 26.901.51231 | 服务器已完成原生签名校验 |"
+    },
+    {
+      "locator": "outputs/野菜API-官网下载链接-20260910.md:35",
+      "excerpt": "- Mac 安装包已完成 Developer ID 签名、Apple 公证和票据装订，为双架构通用包。"
+    },
+    {
+      "locator": "outputs/野菜API-接入体验审计.md:68",
+      "excerpt": "- macOS Intel 此前的代码快照已完成生产模式 `.app` 构建；用户明确要求后已停止并不再进行本机 GUI/接入验证，未触发关闭 Codex 或写入本机配置。最新源码仅做编译和自动化检查，未生成可发布 Mac 包。"
+    },
+    {
+      "locator": "outputs/野菜API-接入重试与Claude路由修复.md:6",
+      "excerpt": "- 只有明确标记为 `pending` 的同一应用事务会自动恢复。已完成的接入记录、其他应用以及用户后来修改的字段不会被自动回滚。"
+    },
+    {
+      "locator": "outputs/野菜API-桌面客户端-V1-PRD.md:434",
+      "excerpt": "5. 在不修改线上环境的前提下，为未来 NewAPI 改造形成独立接口规格和迁移顺序，确保客户端不会把尚不存在的能力伪装成已完成。"
+    },
+    {
+      "locator": "outputs/野菜API-桌面客户端-V1-候选版发布清单.md:13",
+      "excerpt": "仓库提供 `pnpm build:candidate` 作为候选安装包构建入口。该入口启用 Tauri bundle，但明确保持 `createUpdaterArtifacts: false`。它不会生成或启用自动更新包，也不会证明任何产物已完成代码签名、公证、恶意软件扫描、真机兼容或公开分发审核。"
+    },
+    {
+      "locator": "release/internal/0.4.14-friend-ai-b3a09a15/朋友版说明.md:11",
+      "excerpt": "Mac 包已完成 Developer ID 签名、App 与 DMG 两次 Apple 公证、票据装订及 Gatekeeper 验收。Windows 包为简体中文 x64 安装程序，尚无 Authenticode 签名和真实 Windows 最终冒烟测试。"
+    },
+    {
+      "locator": "release/internal/0.4.15-macos-statusfix-20260909.xNltOb/public/安装说明.md:3",
+      "excerpt": "本目录是本轮状态读取修复后的本地安装包；不是官网或自动更新发布。两个安装包都支持 Apple Silicon 和 Intel Mac，并已完成 Developer ID 签名、Apple 公证和公证票据装订。"
+    },
+    {
+      "locator": "release/internal/0.4.15-partner-ai-yeschoy-04382354/tooling/makensis/3.12/share/nsis/Docs/BgImage/BgImage.txt:17",
+      "excerpt": "call Clear and repeat steps 1-3 for a completely new background."
+    },
+    {
+      "locator": "release/internal/0.4.15-partner-ai-yeschoy-04382354/tooling/makensis/3.12/share/nsis/Docs/Modern UI/Changelog.txt:112",
+      "excerpt": "* Language preference stored when installation has completed, no problems anymore when the users selects the wrong language"
+    },
+    {
+      "locator": "release/internal/0.4.15-partner-ai-yeschoy-04382354/tooling/makensis/3.12/share/nsis/Docs/StrFunc/StrFunc.txt:116",
+      "excerpt": "A complete example with both Install and Uninstall Commands:"
+    },
+    {
+      "locator": "release/internal/0.4.15-partner-ai-yeschoy-04382354/tooling/makensis/3.12/share/nsis/Docs/StrFunc/StrFunc.txt:668",
+      "excerpt": "- Completed StrFunc.nsh file. Need some tests and the readme."
+    },
+    {
+      "locator": "release/internal/0.4.15-partner-ai-yeschoy-04382354/tooling/makensis/3.12/share/nsis/Docs/makensisw/Readme.txt:210",
+      "excerpt": "- Basic AppEvents custom sound support for BuildComplete, BuildWarning and BuildError"
+    },
+    {
+      "locator": "release/internal/0.4.15-partner-ai-yeschoy-qa-20260909-0016/qa/windows-install-result.txt:4",
+      "excerpt": "completedAt=2026/09/09 ����  0:19:10.68"
+    },
+    {
+      "locator": "release/internal/0.4.15-windows-statefix2-20260909.BkW6A4/public/安装说明.md:34",
+      "excerpt": "两版仍共用 https://ergou.qzz.io/updates/stable.json；朋友版尚无独立更新通道，未来经该共享通道更新可能换回主版登录页。不能把本次两份手动安装包交付视作独立更新通道已完成。"
+    },
+    {
+      "locator": "release/internal/0.4.7/安装包说明.md:18",
+      "excerpt": "Mac 包已完成 Developer ID 签名、苹果公证、票据附加和 Gatekeeper 验证；包含苹果芯片与 Intel 两种架构。没有自动安装到你的电脑。"
+    },
+    {
+      "locator": "tests/work_packages/ru042/CONTRACT.md:13",
+      "excerpt": "Root owns `tool_credentials.rs`: add optional/default-empty `models: Vec<ToolModelRoute>` to `ToolCredential`. Route fields: `model_id`, `billing_group`, `api_key`, `origin`, `claude_transport: Option<String>`, `codex_transport: Option<String>`. Default top-level fields remain for backward compatibility. Modern records contain the default route and a stable `local_gateway_token`. Methods: `model_ids() -> Vec<String>`, `resolve_model(&str) -> Result<ToolCredential, CredentialFailure>` (exact allo"
+    },
+    {
+      "locator": "tests/work_packages/ru042/CONTRACT.md:25",
+      "excerpt": "Permit covers each operation through local safe cleanup. Cancel only lock wait, discovery, read-only model queries, and verification; never drop a token-create/refresh POST or local file/key transaction. Finish already-issued bounded account mutations, then rollback locally and release permit; skip restarting old gateways during shutdown. Account HTTP already has a 20-second per-call bound; use that same interval for a recoverable “finishing operation” status, not forced transaction abort. Once "
+    },
+    {
+      "locator": "tests/work_packages/ru054/CONTRACT.md:7",
+      "excerpt": "An explicit activation click may self-heal only an encrypted recovery record for the same selected tool whose state is `pending`. Under the existing cross-process operation lock, the native layer stops only that tool's helper-owned runtime, plans and applies the existing three-way file restoration, clears the tool credential from operating-system secure storage, removes the journal, and then continues the same click as a fresh activation. Completed or merely changed records are never auto-restor"
+    },
+    {
+      "locator": "tests/work_packages/ru057/CONTRACT.md:3",
+      "excerpt": "Package the already verified RU-056 client as version 0.4.10. Only version metadata, release receipts and ignored local artifacts may change. The macOS DMG must be universal, Developer-ID signed, notarized, stapled and Gatekeeper accepted. The Windows x64 artifact must come from the existing Windows runner after its complete gates and remain explicitly unsigned internal software with Simplified-Chinese NSIS UI."
+    }
+  ],
+  "findings": {
+    "multipleAuthorityClaimsObserved": true,
+    "authorityClaimCount": 27,
+    "completionClaimCount": 200
+  },
+  "interpretation": "Observed strings are evidence candidates, not proof of authority or completion."
+}

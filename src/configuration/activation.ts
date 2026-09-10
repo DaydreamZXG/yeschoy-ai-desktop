@@ -129,6 +129,7 @@ export const ACTIVATION_PROGRESS_STAGES = [
   "applying_settings",
   "restoring_settings",
   "opening_application",
+  "checking_application_started",
   "complete",
 ] as const;
 

@@ -1,0 +1,78 @@
+Exit code: 0
+
+    Checking yeschoy-desktop v0.4.15 (/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/src-tauri)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 6.69s
+   Compiling yeschoy-desktop v0.4.15 (/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 13.52s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/yeschoy_desktop_lib-05149b9ef3b104d0)
+
+running 21 tests
+test connection_recovery::tests::desktop_checkpoint_keeps_credentials_encrypted_until_recovery_finishes ... ok
+test connection_recovery::tests::desktop_failed_switch_recovers_previous_connection_not_factory_settings ... ok
+test connection_recovery::tests::desktop_partial_commit_recovers_previous_model_and_retains_original_baseline ... ok
+test connection_recovery::tests::desktop_rollback_does_not_block_on_unrelated_claude_profile_entries ... ok
+test connection_recovery::tests::desktop_rollback_preserves_unrelated_edits_but_stops_on_owned_conflicts ... ok
+test connection_recovery::tests::encrypted_baseline_authenticates_tool_key_and_bytes ... ok
+test connection_recovery::tests::handles_toml_comments_and_yaml_and_rejects_invalid_document_before_any_write ... ok
+test connection_recovery::tests::legacy_cleanup_never_removes_other_claude_mode_or_later_model_endpoint ... ok
+test connection_recovery::tests::legacy_lock_only_store_does_not_require_recovery_key ... ok
+test connection_recovery::tests::missing_recovery_key_never_discards_existing_or_unknown_material ... ok
+test connection_recovery::tests::missing_recovery_key_rejects_symlinked_store_and_lock ... ok
+test connection_recovery::tests::missing_recovery_key_requires_a_bounded_regular_operation_lock ... ok
+test connection_recovery::tests::newly_created_file_removed_only_when_no_user_content_remains ... ok
+test connection_recovery::tests::old_desktop_pending_journals_remain_readable_without_a_checkpoint ... ok
+test connection_recovery::tests::pending_switch_recovers_files_written_before_or_after_crash ... ok
+test connection_recovery::tests::preserves_owned_conflicts_unrelated_changes_and_profile_order ... ok
+test connection_recovery::tests::process_lock_is_exclusive_and_released_on_drop ... ok
+test connection_recovery::tests::read_only_snapshot_never_creates_parent_and_rejects_symlink_ancestors ... ok
+test connection_recovery::tests::restores_exact_original_bytes_for_all_seven_tools ... ok
+test connection_recovery::tests::ru054_pending_retry_recovers_once_and_preserves_completed_records ... ok
+test connection_recovery::tests::switch_keeps_first_baseline_and_rebases_later_unrelated_changes ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 237 filtered out; finished in 0.43s
+
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.60s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/yeschoy_desktop_lib-05149b9ef3b104d0)
+
+running 16 tests
+test tool_activation::tests::activation_cancellation_allows_only_one_live_transaction ... ok
+test tool_activation::tests::changed_model_scope_rotates_without_deleting_the_old_key_before_commit ... ok
+test tool_activation::tests::desktop_receipt_cannot_complete_before_startup_observation ... ok
+test tool_activation::tests::failed_key_read_removes_only_the_new_token_and_leaves_original_group_unchanged ... ok
+test tool_activation::tests::inspection_regression_one_adapter_panic_keeps_six_other_results ... ok
+test tool_activation::tests::protocol_support_is_target_specific ... ok
+test tool_activation::tests::refused_stop_does_not_restore_files_or_keys_or_delete_live_tokens ... ok
+test tool_activation::tests::request_requires_one_of_seven_exact_targets_and_selection_shape ... ok
+test tool_activation::tests::restoration_errors_never_masquerade_as_initial_storage_failure ... ok
+test tool_activation::tests::ru042_activation_models_require_explicit_unique_binding_and_default_member ... ok
+test tool_activation::tests::ru076_inspection_worker_keeps_runtime_responsive_and_write_lock_until_read_finishes ... ok
+test tool_activation::tests::ru076_panicking_reader_has_a_safe_failure_and_releases_the_lock ... ok
+test tool_activation::tests::ru076_timed_out_reader_does_not_release_write_lock_or_queue_another_os_read ... ok
+test tool_activation::tests::token_creation_without_key_reuses_only_the_selected_group_on_replay ... ok
+test tool_activation::tests::token_identity_checks_real_group_status_and_expiry_not_just_the_label ... ok
+test tool_activation::tests::token_names_are_distinct_per_target ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 242 filtered out; finished in 0.11s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.48s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/yeschoy_desktop_lib-05149b9ef3b104d0)
+
+running 3 tests
+test tool_adapters::desktop_lifecycle::tests::delayed_start_is_observed_without_launching_a_real_application ... ok
+test tool_adapters::desktop_lifecycle::tests::dispatch_without_startup_evidence_is_not_success ... ok
+test tool_adapters::desktop_lifecycle::tests::only_desktop_targets_are_eligible_for_reload_control ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 255 filtered out; finished in 0.11s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.46s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/yeschoy_desktop_lib-05149b9ef3b104d0)
+
+running 4 tests
+test tool_adapters::desktop_launch::tests::dispatch_failure_is_preserved_without_executable_fallback ... ok
+test tool_adapters::desktop_launch::tests::errors_are_closed_and_do_not_contain_native_error_text ... ok
+test tool_adapters::desktop_launch::tests::executable_fixture_requires_successful_open_exit_and_reports_start_and_timeout ... ok
+test tool_adapters::desktop_launch::tests::package_dispatch_never_spawns_its_executable_or_guesses_application_id ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 254 filtered out; finished in 0.32s

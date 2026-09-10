@@ -1,0 +1,10 @@
+/windows-check-target/
+/renderer-dist/
+
+# Retain the exact, reviewed verification logs cited by RESULTS.md.
+!/apple-silicon-final.log
+!/frontend-and-build-final.log
+!/mac-checks.log
+!/native-adapters-final.log
+!/native-core-final.log
+!/windows-check-final.log

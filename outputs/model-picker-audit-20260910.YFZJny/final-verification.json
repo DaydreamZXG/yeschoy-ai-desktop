@@ -1,0 +1,79 @@
+{
+  "checkedAt": "2026-09-10T10:13:41.802Z",
+  "sourceSha256": {
+    "src/configuration/ModelPicker.tsx": "63a517e38874df6c270fecb47a1ce2aec701ffa193cfc072834476730391878f",
+    "src/configuration/ModelPicker.test.tsx": "4c2dbe120b90854eabea4137221cdf36f04592a90d4fa497e0b543719a7ba3a8",
+    "src/model-profiles/profile.ts": "1c5ef6586e7e77f4d815081753797f2997d89f0cfd13c12401dafa15b855ece7",
+    "src/model-profiles/profile.test.ts": "7802de74c1a4f9be576fe16fe7f902bed20ccd5534126c898ee0a8d8f7329dcf",
+    "src/workbench/workbench-v2.css": "a4305c53e0112c7ee34751631ecc7471ea8ca1850287aac301f4d359175eb784"
+  },
+  "rendererAssetsSha256": {
+    "renderer-dist/assets/index-D0HLpD-S.js": "409f95d3e0e556a12e83a5dfee95625ac064542dc121f68c22d2e2bfc302d139",
+    "renderer-dist/assets/index-ChtSDtPz.css": "dbac238adda39e2b84a783583470a7bf0935d7dda42d72e6913f8c8f4c54e378"
+  },
+  "productionCSS": {
+    ".yeschoy-dialog-content": {
+      "--yeschoy-dialog-layer": "40",
+      "position": "fixed",
+      "z-index": "var(--yeschoy-dialog-layer)",
+      "box-sizing": "border-box",
+      "top": "50%",
+      "left": "50%",
+      "transform": "translate(-50%,-50%)",
+      "display": "flex",
+      "flex-direction": "column",
+      "width": "calc(100vw - 32px)",
+      "max-width": "512px",
+      "max-height": "calc(100dvh - 32px)",
+      "overflow-y": "auto",
+      "overscroll-behavior": "contain",
+      "border": "1px solid var(--line, #dce6df)",
+      "border-radius": "var(--radius, 14px)",
+      "background": "var(--surface, #fff)",
+      "color": "var(--ink, #24352f)",
+      "box-shadow": "0 16px 48px #0000003d",
+      "overflow-wrap": "anywhere"
+    },
+    ".model-picker-popover": {
+      "z-index": "20",
+      "display": "flex",
+      "flex-direction": "column",
+      "width": "var(--radix-popover-trigger-width)",
+      "max-width": "calc(100vw - 32px)",
+      "max-height": "var(--radix-popover-content-available-height)",
+      "overflow": "hidden",
+      "background": "var(--surface)",
+      "border": "1px solid var(--accent-line)",
+      "border-radius": "11px",
+      "padding": "7px",
+      "box-shadow": "0 14px 36px #152b2826"
+    },
+    ".model-options": {
+      "flex": "1 1 auto",
+      "min-height": "0",
+      "max-height": "265px",
+      "overflow-y": "auto",
+      "scrollbar-gutter": "stable",
+      "overflow-anchor": "none",
+      "padding": "5px 0",
+      "overscroll-behavior": "contain"
+    }
+  },
+  "priorChangesPreserved": {
+    "src-tauri/src/claude_bridge.rs": true,
+    "src-tauri/src/tool_activation.rs": true,
+    "src-tauri/src/tool_adapters/claude_desktop.rs": true,
+    "src-tauri/src/tool_adapters/codex_desktop.rs": true,
+    "src-tauri/src/tool_model_profile.rs": true,
+    "src/model-profiles/catalog.json": true,
+    "src/configuration/connections.tsx": true,
+    "src/configuration/connections.test.tsx": true
+  },
+  "regression": {
+    "success": true,
+    "total": 240,
+    "passed": 240,
+    "failed": 0,
+    "pending": 0
+  }
+}

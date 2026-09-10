@@ -8,6 +8,8 @@ import {
   type ReactNode,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "../lib/query/queryClient";
 import {
   ACTIVATION_TOOL_IDS,
   decodeModelBindings,
@@ -19,6 +21,43 @@ import { openConnection, type OpenStatus } from "./launchApi";
 
 export const CONNECTION_INSPECTION_DEADLINE_MS = 15_000;
 export const CONNECTION_RESTORE_DEADLINE_MS = 60_000;
+const CONNECTION_QUERY_KEY = ["local-tool-connections", 2] as const;
+
+const CONNECTION_ERRORS = {
+  connection_partial_unavailable:
+    "部分应用的接入设置暂时无法读取，其余结果仍可查看。请重试；若持续出现，请反馈下方诊断编号。",
+  connection_inspect_timed_out:
+    "读取接入状态超时。系统凭据或本机设置可能仍在读取，请稍后重试。",
+  connection_restore_timed_out:
+    "恢复操作尚未返回结果，请重新读取状态确认，不要重复恢复。",
+  connection_operation_busy: "正在处理另一项接入或恢复操作，请完成后重试。",
+  assistant_shutting_down: "助手正在退出，请重新打开后检查。",
+  invalid_connection_response:
+    "接入状态返回格式异常，请重试；若持续出现，请将下方诊断编号反馈给我们。",
+  connection_inspection_failed: "本机状态读取未能完成，请重试。",
+  connection_call_failed: "暂时无法读取接入状态，请重试。",
+} as const;
+export interface ConnectionIssue {
+  code: keyof typeof CONNECTION_ERRORS;
+  message: string;
+  requestId: string;
+}
+class ConnectionReadError extends Error implements ConnectionIssue {
+  readonly code: ConnectionIssue["code"];
+  constructor(
+    cause: unknown,
+    readonly requestId: string,
+  ) {
+    const rawCode = cause instanceof Error ? cause.message : cause;
+    const code =
+      typeof rawCode === "string" &&
+      Object.prototype.hasOwnProperty.call(CONNECTION_ERRORS, rawCode)
+        ? (rawCode as ConnectionIssue["code"])
+        : "connection_call_failed";
+    super(CONNECTION_ERRORS[code]);
+    this.code = code;
+  }
+}
 
 export interface ToolConnection {
   toolId: ActivationToolId;
@@ -183,81 +222,80 @@ async function manage(
     operation === "inspect"
       ? CONNECTION_INSPECTION_DEADLINE_MS
       : CONNECTION_RESTORE_DEADLINE_MS;
-  const result = decodeConnections(
-    await Promise.race([
-      invoke("manage_tool_connections_v1", {
-        request: { requestId, operation, toolId },
-      }),
-      new Promise<never>((_resolve, reject) => {
-        deadline = setTimeout(
-          () => reject(new Error(`connection_${operation}_timed_out`)),
-          deadlineMs,
-        );
-      }),
-    ]).finally(() => {
-      if (deadline !== undefined) clearTimeout(deadline);
-    }),
-    requestId,
-  );
-  if (!result) throw new Error("invalid_connection_response");
-  return result;
+  try {
+    const result = decodeConnections(
+      await Promise.race([
+        invoke("manage_tool_connections_v1", {
+          request: { requestId, operation, toolId },
+        }),
+        new Promise<never>((_resolve, reject) => {
+          deadline = setTimeout(
+            () => reject(new Error(`connection_${operation}_timed_out`)),
+            deadlineMs,
+          );
+        }),
+      ]),
+      requestId,
+    );
+    if (!result) throw new Error("invalid_connection_response");
+    return result;
+  } catch (cause) {
+    // Only fixed codes and our own correlation ID may cross into the UI.
+    throw new ConnectionReadError(cause, requestId);
+  } finally {
+    if (deadline !== undefined) clearTimeout(deadline);
+  }
 }
 export function useToolConnections() {
-  const [connections, setConnections] = useState<ToolConnection[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  // Reuse CC Switch's QueryClient: one in-flight read and one last-successful
+  // snapshot. This is local state, so browser offline status must not block it.
+  const query = useQuery(
+    {
+      queryKey: CONNECTION_QUERY_KEY,
+      queryFn: () => manage("inspect"),
+      enabled: false,
+      retry: false,
+      networkMode: "always",
+    },
+    queryClient,
+  );
+  const [restoreError, setRestoreError] = useState<ConnectionReadError | null>(
+    null,
+  );
   const [restoring, setRestoring] = useState<ActivationToolId | null>(null);
   const [opening, setOpening] = useState<ActivationToolId | null>(null);
   const operation = useRef(false);
   const openingOperation = useRef(false);
-  const initialInspectionSettled = useRef(false);
-  const revision = useRef(0);
   const mounted = useRef(true);
+  const refetch = query.refetch;
   const refresh = useCallback(async () => {
     // A focus event must not supersede the result of an active restore. Once an
     // initial projection exists, keep it interactive while a later focus refresh
     // runs instead of turning the whole connection screen back into loading.
     if (operation.current) return;
-    const current = ++revision.current;
-    if (!initialInspectionSettled.current) setLoading(true);
-    try {
-      const result = await manage("inspect");
-      if (mounted.current && current === revision.current) {
-        setConnections(result.connections);
-        setError(false);
-      }
-    } catch {
-      if (mounted.current && current === revision.current) setError(true);
-    } finally {
-      if (mounted.current && current === revision.current) {
-        initialInspectionSettled.current = true;
-        setLoading(false);
-      }
-    }
-  }, []);
+    const result = await refetch({ cancelRefetch: false });
+    if (mounted.current && !operation.current && result.isSuccess)
+      setRestoreError(null);
+  }, [refetch]);
   const restore = useCallback(async (tool: ActivationToolId) => {
     if (operation.current || openingOperation.current)
       throw Error("connection_operation_busy");
     operation.current = true;
-    const current = ++revision.current;
     setRestoring(tool);
     try {
+      // Cancel the query's ownership of its result, not the native write. A
+      // late read can no longer overwrite the post-restore projection.
+      await queryClient.cancelQueries({ queryKey: CONNECTION_QUERY_KEY });
       const result = await manage("restore", tool);
-      if (mounted.current && current === revision.current) {
-        setConnections(result.connections);
-        setError(false);
-      }
+      queryClient.setQueryData(CONNECTION_QUERY_KEY, result);
+      if (mounted.current) setRestoreError(null);
       return result;
     } catch (cause) {
-      if (mounted.current && current === revision.current) setError(true);
+      if (mounted.current) setRestoreError(cause as ConnectionReadError);
       throw cause;
     } finally {
       operation.current = false;
       if (mounted.current) setRestoring(null);
-      if (mounted.current && current === revision.current) {
-        initialInspectionSettled.current = true;
-        setLoading(false);
-      }
     }
   }, []);
   const open = useCallback(
@@ -280,14 +318,25 @@ export function useToolConnections() {
     window.addEventListener("focus", refresh);
     return () => {
       mounted.current = false;
-      ++revision.current;
       window.removeEventListener("focus", refresh);
     };
   }, [refresh]);
+  const issue = restoreError ?? query.error;
+  const errorInfo =
+    issue instanceof ConnectionReadError
+      ? issue
+      : query.data?.connections.some((c) => c.state === "unavailable")
+        ? new ConnectionReadError(
+            "connection_partial_unavailable",
+            query.data.requestId,
+          )
+        : undefined;
   return {
-    connections,
-    loading,
-    error,
+    connections: query.data?.connections ?? [],
+    loading: !query.data && !issue && query.isPending,
+    refreshing: query.isFetching,
+    error: !!issue,
+    errorInfo,
     restoring,
     opening,
     refresh,
@@ -295,7 +344,13 @@ export function useToolConnections() {
     open,
   };
 }
-type Controller = ReturnType<typeof useToolConnections>;
+type Controller = Omit<
+  ReturnType<typeof useToolConnections>,
+  "refreshing" | "errorInfo"
+> & {
+  refreshing?: boolean;
+  errorInfo?: ConnectionIssue;
+};
 const Context = createContext<Controller | null>(null);
 export function ConnectionProvider({
   value,

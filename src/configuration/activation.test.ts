@@ -292,6 +292,15 @@ describe("desktop tool activation boundary", () => {
       totalSteps: 7,
     };
     expect(decodeActivationProgress(progress)).toEqual(progress);
+    for (const toolId of ["codex_desktop", "claude_desktop"]) {
+      const startup = {
+        ...progress,
+        toolId,
+        stage: "checking_application_started",
+        completedSteps: 7,
+      };
+      expect(decodeActivationProgress(startup)).toEqual(startup);
+    }
     expect(
       decodeActivationProgress({ ...progress, completedSteps: 8 }),
     ).toBeNull();

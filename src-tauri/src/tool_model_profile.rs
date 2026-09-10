@@ -102,8 +102,23 @@ pub(crate) fn legacy_claude_gateway_route_id(model_id: &str) -> String {
 /// transition so installing a fixed assistant never breaks an active Claude
 /// Desktop connection before the user next reapplies the managed profile.
 pub(crate) fn claude_gateway_route_matches(model_id: &str, requested: &str) -> bool {
+    // Claude's picker may append a context marker. It is not part of the
+    // upstream ID; normalize only for an exact, already-enrolled route lookup.
+    let requested = strip_one_m_context_marker(requested);
     claude_gateway_route_id(model_id) == requested
         || legacy_claude_gateway_route_id(model_id) == requested
+}
+
+fn strip_one_m_context_marker(model: &str) -> &str {
+    let trimmed = model.trim();
+    let marker = b"[1m]";
+    let bytes = trimmed.as_bytes();
+    if bytes.len() >= marker.len()
+        && bytes[bytes.len() - marker.len()..].eq_ignore_ascii_case(marker)
+    {
+        return trimmed[..trimmed.len() - marker.len()].trim_end();
+    }
+    trimmed
 }
 
 #[derive(Deserialize)]
@@ -138,6 +153,20 @@ pub(crate) fn profile(id: &str) -> Option<&'static ModelProfile> {
 
 pub(crate) fn display_name(id: &str) -> &str {
     profile(id).map_or(id, |p| p.display_name.as_str())
+}
+
+/// Advertise long context from the real model's exact metadata, never the
+/// Claude family used to expose effort controls. Unknown models stay unknown.
+/// An explicit Anthropic namespace is the same native model, not a new family.
+pub(crate) fn supports_one_m_context(id: &str) -> bool {
+    profile(id)
+        .or_else(|| {
+            id.strip_prefix("anthropic/")
+                .filter(|native| native.starts_with("claude-"))
+                .and_then(profile)
+        })
+        .and_then(|model| model.context_window)
+        .is_some_and(|tokens| tokens >= 1_000_000)
 }
 
 pub(crate) fn is_deepseek(id: &str) -> bool {
@@ -377,6 +406,114 @@ pub(crate) fn native_chat_catalog(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn context_regression_capabilities_come_from_real_model_metadata() {
+        for id in [
+            "claude-sonnet-4-6",
+            "claude-opus-4-6",
+            "claude-opus-4-7",
+            "claude-opus-4-8",
+            "claude-opus-5",
+            "claude-sonnet-5",
+            "claude-fable-5",
+            "claude-fable-5-1",
+            "claude-mythos-5",
+            "claude-mythos-5-1",
+        ] {
+            assert_eq!(profile(id).unwrap().context_window, Some(1_000_000), "{id}");
+            assert!(supports_one_m_context(id), "{id}");
+            assert!(supports_one_m_context(&format!("anthropic/{id}")), "{id}");
+        }
+        for id in [
+            "gpt-6-astra",
+            "gpt-5.6",
+            "gpt-5.6-sol",
+            "gpt-5.6-terra",
+            "gpt-5.6-luna",
+            "deepseek-v4-flash",
+            "deepseek-v4-pro",
+        ] {
+            assert!(supports_one_m_context(id), "{id}");
+        }
+        // A known effort family does not establish the real context capacity.
+        assert_eq!(
+            claude_capability_family("gpt-5.4-mini"),
+            Some("claude-opus-5")
+        );
+        for id in [
+            "gpt-5.4-mini",
+            "gpt-5.3-codex",
+            "claude-haiku-4-5",
+            "claude-sonnet-4-5",
+            "claude-opus-future",
+            "future-model",
+            "claude-fable-5[1m]",
+            "anthropic/gpt-6-astra",
+            "other/claude-fable-5",
+            "CLAUDE-FABLE-5",
+        ] {
+            assert!(!supports_one_m_context(id), "{id}");
+        }
+    }
+
+    #[test]
+    fn context_regression_native_consumers_share_capacity_without_raising_user_caps() {
+        for consumer in [
+            ModelConsumer::Pi,
+            ModelConsumer::Dsh,
+            ModelConsumer::OpenClaw,
+        ] {
+            let ids = vec![
+                "claude-fable-5".into(),
+                "deepseek-v4-flash".into(),
+                "future-model".into(),
+            ];
+            let generated = native_chat_catalog(None, &ids, consumer);
+            assert_eq!(generated[0]["contextWindow"], 1_000_000);
+            assert_eq!(generated[1]["contextWindow"], 1_048_576);
+            assert!(generated[2].get("contextWindow").is_none());
+            assert!(generated[0].get("maxTokens").is_none());
+            let existing = json!([{
+                "id":"claude-fable-5", "contextWindow":200000, "maxTokens":4096,
+                "customUserOption":"keep"
+            }]);
+            let merged = native_chat_catalog(Some(&existing), &ids, consumer);
+            assert_eq!(merged[0]["contextWindow"], 200000);
+            assert_eq!(merged[0]["maxTokens"], 4096);
+            assert_eq!(merged[0]["customUserOption"], "keep");
+        }
+    }
+
+    #[test]
+    fn context_regression_marker_parsing_is_terminal_and_exact_route_only() {
+        let id = "claude-fable-5";
+        let route = claude_gateway_route_id(id);
+        for suffix in ["[1m]", " [1M] ", "\t[1m]\n"] {
+            assert!(claude_gateway_route_matches(
+                id,
+                &format!("{route}{suffix}")
+            ));
+        }
+        for requested in [
+            format!("{route}[1m][1m]"),
+            format!("{route}[1m]/extra"),
+            format!("{route}[2m]"),
+            format!("{route}[1m]suffix"),
+            format!("{route}x[1m]"),
+            "unknown[1m]".into(),
+            "模型[1m]".into(),
+            "[1m]".into(),
+            "💭".into(),
+            String::new(),
+        ] {
+            assert!(!claude_gateway_route_matches(id, &requested), "{requested}");
+        }
+        assert!(!claude_gateway_route_matches(
+            "gpt-6-astra",
+            &format!("{route}[1m]")
+        ));
+    }
 
     fn desktop_normalized_family(route: &str) -> &str {
         let route = route

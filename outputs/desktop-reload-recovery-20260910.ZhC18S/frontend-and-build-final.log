@@ -1,0 +1,109 @@
+Exit code: 0
+
+src/configuration/DailyUse.test.tsx 207ms
+src/configuration/ConfigurationPreviewView.tsx 153ms (unchanged)
+src/i18n/locales/zh.json 99ms (unchanged)
+src/i18n/locales/zh-TW.json 65ms (unchanged)
+src/i18n/locales/en.json 50ms (unchanged)
+src/i18n/locales/ja.json 65ms (unchanged)
+
+> yeschoy-desktop@0.4.15 typecheck /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop
+> tsc --noEmit
+
+
+ RUN  v2.1.9 /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+ ✓ src/configuration/DailyUse.test.tsx (58 tests) 3601ms
+   ✓ daily-use UX > reconnect regression: codex_desktop can change models repeatedly after success without a stranded modal 400ms
+   ✓ daily-use UX > reconnect regression: claude_desktop can change models repeatedly after success without a stranded modal 358ms
+ ✓ src/workbench/Workbench.test.tsx (29 tests) 4532ms
+   ✓ official workbench > keeps raw model descriptions off both model surfaces while retaining group choices 326ms
+   ✓ official workbench > restores saved selections under effect replay and keeps them across navigation 489ms
+   ✓ official workbench > uses user-facing copy without engineering or release checklists in zh 385ms
+   ✓ official workbench > uses user-facing copy without engineering or release checklists in zh-TW 363ms
+   ✓ official workbench > uses user-facing copy without engineering or release checklists in en 326ms
+   ✓ official workbench > uses user-facing copy without engineering or release checklists in ja 336ms
+ ✓ src/installation/installation.test.tsx (20 tests) 1307ms
+ ✓ src/configuration/connections.test.tsx (20 tests) 946ms
+ ✓ src/configuration/ModelPicker.test.tsx (21 tests) 1160ms
+ ✓ src/workbench/Repair.test.tsx (30 tests) 810ms
+ ✓ src/utils/providerCapabilities.test.ts (23 tests) 16ms
+ ✓ src/billing/comparison.test.ts (44 tests) 60ms
+ ✓ src/configuration/activation.test.ts (13 tests) 22ms
+ ✓ src/service-catalog/ServiceCatalogPanel.test.tsx (6 tests) 423ms
+ ✓ src/utils/providerConfigUtils.test.ts (21 tests) 17ms
+ ✓ src/diagnostics/DiagnosticsView.test.tsx (9 tests) 408ms
+ ✓ src/settings/QuitAssistant.test.tsx (13 tests) 312ms
+ ✓ src/workbench/Savings.test.tsx (9 tests) 344ms
+ ✓ src/billing/CostComparison.test.tsx (13 tests) 448ms
+ ✓ src/utils/deeplinkRisk.test.ts (16 tests) 53ms
+ ✓ src/config/jiekouProviderPresets.test.ts (13 tests) 16ms
+ ✓ src/config/ppioProviderPresets.test.ts (13 tests) 14ms
+ ✓ src/configuration/billing.test.ts (19 tests) 15ms
+ ✓ src/account/finance.test.ts (8 tests) 32ms
+ ✓ src/account/session.test.ts (10 tests) 13ms
+ ✓ src/account/useAccountSession.test.tsx (5 tests) 38ms
+ ✓ src/diagnostics/contract.test.ts (17 tests) 15ms
+ ✓ src/components/ConfirmDialog.test.tsx (7 tests) 541ms
+ ✓ src/config/codingPlanProviders.test.ts (10 tests) 12ms
+ ✓ src/service-catalog/handoff.test.ts (4 tests) 21ms
+ ✓ src/utils/grokBuildConfig.test.ts (5 tests) 13ms
+stderr | src/lib/utils/base64.test.ts > decodeBase64Utf8 > returns the input unchanged when it is not Base64 at all
+Base64 decode error: DOMException [InvalidCharacterError]: Invalid character
+    at atob (node:buffer:1387:13)
+    at Module.decodeBase64Utf8 (/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/src/lib/utils/base64.ts:50:25)
+    at /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/src/lib/utils/base64.test.ts:100:12
+    at file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:146:14
+    at file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:533:11
+    at runWithTimeout (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:39:7)
+    at runTest (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1056:17)
+    at processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at runSuite (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15)
+    at runSuite (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/@vitest+runner@2.1.9/node_modules/@vitest/runner/dist/index.js:1205:15) Input: !!!not base64!!!
+
+ ✓ src/lib/utils/base64.test.ts (8 tests) 13ms
+ ✓ src/service-catalog/contract.test.ts (5 tests) 10ms
+ ✓ src/service-catalog/access-plan.test.ts (4 tests) 12ms
+ ✓ src/configuration/ConfigurationPreviewView.test.tsx (6 tests) 9ms
+ ✓ src/installation/installerLocalization.test.ts (3 tests) 9ms
+ ✓ src/config/grokBuildProviderPresets.test.ts (6 tests) 29ms
+ ✓ src/configuration/preview.test.ts (10 tests) 12ms
+ ✓ src/lib/version.test.ts (8 tests) 10ms
+ ✓ src/model-profiles/profile.test.ts (12 tests) 10ms
+ ✓ src/candidate/readiness.test.ts (3 tests) 8ms
+ ✓ src/configuration/BillingPrices.test.tsx (2 tests) 61ms
+ ✓ src/update/contract.test.ts (3 tests) 8ms
+ ✓ src/update/UpdateProvider.test.ts (2 tests) 7ms
+ ✓ src/utils/providerIcon.test.ts (4 tests) 7ms
+ ✓ src/settings/SettingsView.test.tsx (1 test) 44ms
+
+ Test Files  42 passed (42)
+      Tests  533 passed (533)
+   Start at  19:11:28
+   Duration  36.10s (transform 1.52s, setup 12.40s, collect 5.11s, tests 15.44s, environment 16.82s, prepare 2.75s)
+
+JSON report written to /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/outputs/desktop-reload-recovery-20260910.ZhC18S/frontend-full-final.json
+vite v7.3.0 building client environment for production...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+transforming...
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+✓ 1866 modules transformed.
+rendering chunks...
+computing gzip size...
+../outputs/desktop-reload-recovery-20260910.ZhC18S/renderer-dist/index.html                          0.79 kB │ gzip:   0.48 kB
+../outputs/desktop-reload-recovery-20260910.ZhC18S/renderer-dist/assets/chatgpt-BHL3OHQM.svg         5.99 kB │ gzip:   2.53 kB
+../outputs/desktop-reload-recovery-20260910.ZhC18S/renderer-dist/assets/yecai-logo-Cc7dEdXz.png    339.98 kB
+../outputs/desktop-reload-recovery-20260910.ZhC18S/renderer-dist/assets/index-ChtSDtPz.css          93.46 kB │ gzip:  17.38 kB
+../outputs/desktop-reload-recovery-20260910.ZhC18S/renderer-dist/assets/index-C4jVmBdm.js        1,271.22 kB │ gzip: 406.66 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 3.07s

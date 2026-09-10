@@ -1,0 +1,45 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "bundle": "renderer-dist",
+      "verified": [
+        ".yeschoy-dialog-content / position: fixed",
+        ".yeschoy-dialog-overlay / position: fixed",
+        ".yeschoy-dialog-content / top: 50%",
+        ".yeschoy-dialog-content / left: 50%",
+        ".yeschoy-dialog-content / overflow-y: auto",
+        ".yeschoy-dialog-content / max-height: calc(100dvh - 32px)",
+        ".yeschoy-dialog-content[data-dialog-layer=alert] / --yeschoy-dialog-layer: 60",
+        ".yeschoy-dialog-content[data-dialog-variant=fullscreen] / transform: none",
+        ".yeschoy-dialog-content.confirm-dialog / max-width: 420px"
+      ],
+      "stylesheets": [
+        {
+          "name": "index-Cm9jrIep.css",
+          "sha256": "acd37c814f1f14b6abec5054181c268aa7f5f7156f8bb15faad9ae106be08a15"
+        }
+      ]
+    },
+    {
+      "bundle": "browser-dist",
+      "verified": [
+        ".yeschoy-dialog-content / position: fixed",
+        ".yeschoy-dialog-overlay / position: fixed",
+        ".yeschoy-dialog-content / top: 50%",
+        ".yeschoy-dialog-content / left: 50%",
+        ".yeschoy-dialog-content / overflow-y: auto",
+        ".yeschoy-dialog-content / max-height: calc(100dvh - 32px)",
+        ".yeschoy-dialog-content[data-dialog-layer=alert] / --yeschoy-dialog-layer: 60",
+        ".yeschoy-dialog-content[data-dialog-variant=fullscreen] / transform: none",
+        ".yeschoy-dialog-content.confirm-dialog / max-width: 420px"
+      ],
+      "stylesheets": [
+        {
+          "name": "index-BTan1pTu.css",
+          "sha256": "207a784ff0f8b7eddea8c53b09dccbf443de2388ebe5b0c66fd2985f1ab1bbc9"
+        }
+      ]
+    }
+  ]
+}

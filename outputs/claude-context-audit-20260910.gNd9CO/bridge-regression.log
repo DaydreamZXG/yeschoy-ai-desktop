@@ -1,0 +1,13 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.50s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/yeschoy_desktop_lib-a37288403df02f03)
+
+running 6 tests
+test claude_bridge::tests::context_regression_discovery_uses_each_real_models_capacity ... ok
+test claude_bridge::tests::context_regression_one_m_picker_route_keeps_real_model_identity ... ok
+test claude_bridge::tests::context_regression_one_m_requests_preserve_payload_and_streaming ... ok
+test claude_bridge::tests::models_endpoint_lists_routes_with_real_labels ... ok
+test claude_bridge::tests::real_and_unknown_model_ids_pass_through ... ok
+test claude_bridge::tests::route_aliases_resolve_to_the_account_model ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 241 filtered out; finished in 0.01s
+

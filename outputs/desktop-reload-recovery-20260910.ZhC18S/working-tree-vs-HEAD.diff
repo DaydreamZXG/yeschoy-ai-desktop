@@ -1,0 +1,1955 @@
+diff --git a/src-tauri/src/connection_recovery.rs b/src-tauri/src/connection_recovery.rs
+index 475e0cee..a584fea4 100644
+--- a/src-tauri/src/connection_recovery.rs
++++ b/src-tauri/src/connection_recovery.rs
+@@ -45,6 +45,25 @@ pub(crate) struct Record {
+     // Only present while a configuration command is in flight. Discarded when
+     // it commits; used to preserve the preceding baseline on failed switching.
+     previous: Option<Box<Record>>,
++    #[serde(default, skip_serializing_if = "Option::is_none")]
++    rollback_checkpoint: Option<RollbackCheckpoint>,
++}
++
++// Encrypted with the journal and present only during a desktop transaction.
++// `files` retains the immediate predecessor, unlike the original-use baseline.
++#[derive(Clone, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++struct RollbackCheckpoint {
++    files: Vec<FileChange>,
++    credential: Option<ToolCredential>,
++}
++
++impl Record {
++    pub(crate) fn rollback_credential(&self) -> Option<&ToolCredential> {
++        self.rollback_checkpoint
++            .as_ref()
++            .and_then(|checkpoint| checkpoint.credential.as_ref())
++    }
+ }
+ 
+ #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+@@ -185,6 +204,25 @@ fn validate_record(tool: &str, record: &Record) -> Result<()> {
+     if let Some(previous) = &record.previous {
+         validate_record(tool, previous)?;
+     }
++    if let Some(checkpoint) = &record.rollback_checkpoint {
++        if !record.pending
++            || !matches!(tool, "claude_desktop" | "codex_desktop")
++            || checkpoint
++                .files
++                .iter()
++                .map(|file| &file.path)
++                .collect::<BTreeSet<_>>()
++                != paths
++            || checkpoint.files.len() != record.files.len()
++        {
++            return Err(Failure::Invalid);
++        }
++        let mut attempt = record.clone();
++        attempt.files = checkpoint.files.clone();
++        attempt.previous = None;
++        attempt.rollback_checkpoint = None;
++        validate_record(tool, &attempt)?;
++    }
+     Ok(())
+ }
+ 
+@@ -280,11 +318,12 @@ impl Store {
+ 
+     /// Complete only an interrupted transaction for this exact tool. A
+     /// completed baseline remains available for explicit restore and switching.
+-    /// The record is removed last so every partial failure stays recoverable.
++    /// The pending receipt is removed/replaced last so partial file or
++    /// credential failures stay recoverable.
+     pub(crate) fn recover_pending(
+         &self,
+         tool: &str,
+-        clear_credential: impl FnOnce() -> bool,
++        restore_credential: impl FnOnce() -> bool,
+     ) -> std::result::Result<bool, PendingRecoveryFailure> {
+         let Some(record) = self.load(tool).map_err(|_| PendingRecoveryFailure::Load)? else {
+             return Ok(false);
+@@ -292,12 +331,21 @@ impl Store {
+         if !record.pending {
+             return Ok(false);
+         }
+-        restore_files(&record).map_err(|_| PendingRecoveryFailure::Files)?;
+-        if !clear_credential() {
++        if record.rollback_checkpoint.is_some() {
++            restore_attempt(&record).map_err(|_| PendingRecoveryFailure::Files)?;
++        } else {
++            restore_files(&record).map_err(|_| PendingRecoveryFailure::Files)?;
++        }
++        if !restore_credential() {
+             return Err(PendingRecoveryFailure::Credential);
+         }
+-        self.remove(tool)
+-            .map_err(|_| PendingRecoveryFailure::Receipt)?;
++        if record.rollback_checkpoint.is_some() {
++            self.abandon(&record)
++                .map_err(|_| PendingRecoveryFailure::Receipt)?;
++        } else {
++            self.remove(tool)
++                .map_err(|_| PendingRecoveryFailure::Receipt)?;
++        }
+         Ok(true)
+     }
+ 
+@@ -351,6 +399,14 @@ impl Store {
+         }
+         let record = Record {
+             version: 1,
++            rollback_checkpoint: matches!(
++                receipt.tool_id.as_str(),
++                "claude_desktop" | "codex_desktop"
++            )
++            .then(|| RollbackCheckpoint {
++                files: changes.to_vec(),
++                credential: legacy.cloned(),
++            }),
+             receipt,
+             original_known: previous
+                 .as_ref()
+@@ -367,6 +423,7 @@ impl Store {
+         let mut completed = record.clone();
+         completed.pending = false;
+         completed.previous = None;
++        completed.rollback_checkpoint = None;
+         self.save(&completed)?;
+         *record = completed;
+         Ok(())
+@@ -592,6 +649,82 @@ pub(crate) fn restore_bytes(
+ }
+ 
+ pub(crate) fn restore_files(record: &Record) -> Result<bool> {
++    restore_files_inner(record, false)
++}
++
++// Restoring an interrupted switch is not the user's explicit "disconnect and
++// restore original settings" action. Never remove the preceding good setup.
++pub(crate) fn restore_attempt(record: &Record) -> Result<bool> {
++    let checkpoint = record
++        .rollback_checkpoint
++        .as_ref()
++        .ok_or(Failure::Invalid)?;
++    let mut attempt = record.clone();
++    attempt.files = checkpoint.files.clone();
++    attempt.previous = None;
++    attempt.rollback_checkpoint = None;
++    attempt.pending = false;
++    restore_files_inner(&attempt, true)
++}
++
++fn owned_values_restored(
++    before: Option<&Value>,
++    after: Option<&Value>,
++    restored: Option<&Value>,
++) -> bool {
++    if before == after || before == restored {
++        return true;
++    }
++    let empty = Map::new();
++    fn object(value: Option<&Value>) -> Option<&Map<String, Value>> {
++        value.and_then(Value::as_object)
++    }
++    if let (Some(before), Some(after), Some(restored)) = (
++        object(before).or_else(|| before.is_none().then_some(&empty)),
++        object(after).or_else(|| after.is_none().then_some(&empty)),
++        object(restored).or_else(|| restored.is_none().then_some(&empty)),
++    ) {
++        return before
++            .keys()
++            .chain(after.keys())
++            .all(|key| owned_values_restored(before.get(key), after.get(key), restored.get(key)));
++    }
++    // Match the keyed-array merge used by `undo`: a third-party Claude
++    // profile added during startup is not an owned-field recovery conflict.
++    let empty_array = Vec::new();
++    fn array(value: Option<&Value>) -> Option<&Vec<Value>> {
++        value.and_then(Value::as_array)
++    }
++    if let (Some(before), Some(after), Some(restored)) = (
++        array(before).or_else(|| before.is_none().then_some(&empty_array)),
++        array(after).or_else(|| after.is_none().then_some(&empty_array)),
++        array(restored).or_else(|| restored.is_none().then_some(&empty_array)),
++    ) {
++        let unique_ids = |values: &[Value]| {
++            let ids = values
++                .iter()
++                .filter_map(|v| v.get("id").and_then(Value::as_str))
++                .collect::<BTreeSet<_>>();
++            ids.len() == values.len()
++        };
++        if [before, after, restored]
++            .iter()
++            .all(|values| unique_ids(values))
++        {
++            return before.iter().chain(after).all(|entry| {
++                let id = &entry["id"];
++                owned_values_restored(
++                    before.iter().find(|value| &value["id"] == id),
++                    after.iter().find(|value| &value["id"] == id),
++                    restored.iter().find(|value| &value["id"] == id),
++                )
++            });
++        }
++    }
++    false
++}
++
++fn restore_files_inner(record: &Record, require_owned_restored: bool) -> Result<bool> {
+     // Plan every file before changing any. An invalid document must not cause
+     // half of an otherwise valid restoration to be applied.
+     let mut plan = Vec::new();
+@@ -613,6 +746,15 @@ pub(crate) fn restore_files(record: &Record) -> Result<bool> {
+                 preserved |= kept;
+             }
+         }
++        if require_owned_restored
++            && !owned_values_restored(
++                Some(&document(&file.path, file.before.as_deref())?),
++                Some(&document(&file.path, Some(&file.after))?),
++                Some(&document(&file.path, desired.as_deref())?),
++            )
++        {
++            return Err(Failure::Changed);
++        }
+         plan.push((file.path.clone(), current, desired));
+     }
+     for (path, current, desired) in plan {
+@@ -644,9 +786,10 @@ pub(crate) fn requires_gateway_migration(tool: &str, record: &Record) -> bool {
+         "pi" | "hermes" | "openclaw" | "dsh_web" => "127.0.0.1:15730",
+         _ => return false,
+     };
+-    record.files.iter().any(|file| {
+-        std::str::from_utf8(&file.after).is_ok_and(|text| text.contains(needle))
+-    })
++    record
++        .files
++        .iter()
++        .any(|file| std::str::from_utf8(&file.after).is_ok_and(|text| text.contains(needle)))
+ }
+ 
+ fn remove_at(root: &mut Value, path: &[&str]) {
+@@ -999,6 +1142,201 @@ mod tests {
+         }
+     }
+     #[test]
++    fn desktop_failed_switch_recovers_previous_connection_not_factory_settings() {
++        for tool in ["codex_desktop", "claude_desktop"] {
++            let f = Fixture::new();
++            let first = f.change(
++                "desktop.json",
++                Some(br#"{"model":"factory"}"#),
++                br#"{"model":"a"}"#,
++            );
++            let mut ready =
++                f.0.begin(receipt(tool), std::slice::from_ref(&first), None)
++                    .unwrap();
++            common::atomic_write(&first.path, &first.after).unwrap();
++            f.0.finish(&mut ready).unwrap();
++            let second = f.change("desktop.json", Some(&first.after), br#"{"model":"b"}"#);
++            f.0.begin(receipt(tool), std::slice::from_ref(&second), None)
++                .unwrap();
++            common::atomic_write(&second.path, &second.after).unwrap();
++            assert_eq!(f.0.recover_pending(tool, || true), Ok(true));
++            assert_eq!(common::snapshot(&second.path).unwrap(), Some(first.after));
++            assert!(!f.0.load(tool).unwrap().unwrap().pending);
++            assert_eq!(
++                f.0.recover_pending(tool, || panic!("must not replay completed recovery")),
++                Ok(false)
++            );
++        }
++    }
++    #[test]
++    fn desktop_checkpoint_keeps_credentials_encrypted_until_recovery_finishes() {
++        let f = Fixture::new();
++        let previous = credential();
++        let file = f.change(
++            "desktop.json",
++            Some(br#"{"model":"a"}"#),
++            br#"{"model":"b"}"#,
++        );
++        let mut pending =
++            f.0.begin(
++                receipt("codex_desktop"),
++                std::slice::from_ref(&file),
++                Some(&previous),
++            )
++            .unwrap();
++        let bytes = std::fs::read(f.0.path("codex_desktop").unwrap()).unwrap();
++        assert!(!String::from_utf8_lossy(&bytes).contains(&previous.api_key));
++        assert_eq!(
++            f.0.load("codex_desktop")
++                .unwrap()
++                .unwrap()
++                .rollback_credential(),
++            Some(&previous)
++        );
++        common::atomic_write(&file.path, &file.after).unwrap();
++        assert_eq!(
++            f.0.recover_pending("codex_desktop", || false),
++            Err(PendingRecoveryFailure::Credential)
++        );
++        assert!(f.0.load("codex_desktop").unwrap().unwrap().pending);
++        assert_eq!(common::snapshot(&file.path).unwrap(), file.before);
++        assert_eq!(f.0.recover_pending("codex_desktop", || true), Ok(true));
++        assert!(f.0.load("codex_desktop").unwrap().is_none());
++
++        f.0.finish(&mut pending).unwrap();
++        assert!(f
++            .0
++            .load("codex_desktop")
++            .unwrap()
++            .unwrap()
++            .rollback_checkpoint
++            .is_none());
++    }
++
++    #[test]
++    fn desktop_rollback_preserves_unrelated_edits_but_stops_on_owned_conflicts() {
++        let f = Fixture::new();
++        let file = f.change(
++            "desktop.json",
++            Some(br#"{"model":"a","theme":"dark"}"#),
++            br#"{"model":"b","theme":"dark"}"#,
++        );
++        f.0.begin(receipt("claude_desktop"), std::slice::from_ref(&file), None)
++            .unwrap();
++        common::atomic_write(&file.path, br#"{"model":"user-choice","theme":"light"}"#).unwrap();
++        assert_eq!(
++            f.0.recover_pending("claude_desktop", || panic!(
++                "must not replace credential before files recover"
++            )),
++            Err(PendingRecoveryFailure::Files)
++        );
++        assert!(f.0.load("claude_desktop").unwrap().unwrap().pending);
++        common::atomic_write(&file.path, br#"{"model":"b","theme":"light"}"#).unwrap();
++        assert_eq!(f.0.recover_pending("claude_desktop", || true), Ok(true));
++        assert_eq!(
++            document(&file.path, common::snapshot(&file.path).unwrap().as_deref()).unwrap(),
++            json!({"model":"a","theme":"light"})
++        );
++    }
++
++    #[test]
++    fn old_desktop_pending_journals_remain_readable_without_a_checkpoint() {
++        let f = Fixture::new();
++        let file = f.change(
++            "desktop.json",
++            Some(br#"{"model":"factory"}"#),
++            br#"{"model":"b"}"#,
++        );
++        let mut legacy =
++            f.0.begin(receipt("claude_desktop"), std::slice::from_ref(&file), None)
++                .unwrap();
++        legacy.rollback_checkpoint = None;
++        f.0.save(&legacy).unwrap();
++        common::atomic_write(&file.path, &file.after).unwrap();
++        assert!(f
++            .0
++            .load("claude_desktop")
++            .unwrap()
++            .unwrap()
++            .rollback_credential()
++            .is_none());
++        assert_eq!(f.0.recover_pending("claude_desktop", || true), Ok(true));
++        assert_eq!(common::snapshot(&file.path).unwrap(), file.before);
++    }
++
++    #[test]
++    fn desktop_partial_commit_recovers_previous_model_and_retains_original_baseline() {
++        for tool in ["codex_desktop", "claude_desktop"] {
++            for written_count in 0..=2 {
++                let f = Fixture::new();
++                let first = [
++                    f.change(
++                        "a.json",
++                        Some(br#"{"model":"factory"}"#),
++                        br#"{"model":"a"}"#,
++                    ),
++                    f.change("b.json", Some(b"{}"), br#"{"model":"a"}"#),
++                ];
++                let mut original = f.0.begin(receipt(tool), &first, None).unwrap();
++                for file in &first {
++                    common::atomic_write(&file.path, &file.after).unwrap();
++                }
++                f.0.finish(&mut original).unwrap();
++                let next = [
++                    f.change("a.json", Some(&first[0].after), br#"{"model":"b"}"#),
++                    f.change("b.json", Some(&first[1].after), br#"{"model":"b"}"#),
++                ];
++                f.0.begin(receipt(tool), &next, Some(&credential()))
++                    .unwrap();
++                for file in next.iter().take(written_count) {
++                    common::atomic_write(&file.path, &file.after).unwrap();
++                }
++                assert_eq!(f.0.recover_pending(tool, || true), Ok(true));
++                for file in &first {
++                    assert_eq!(
++                        common::snapshot(&file.path).unwrap(),
++                        Some(file.after.clone())
++                    );
++                }
++                let previous = f.0.load(tool).unwrap().unwrap();
++                assert!(!previous.pending);
++                restore_files(&previous).unwrap();
++                for file in &first {
++                    assert_eq!(common::snapshot(&file.path).unwrap(), file.before);
++                }
++            }
++        }
++    }
++
++    #[test]
++    fn desktop_rollback_does_not_block_on_unrelated_claude_profile_entries() {
++        let f = Fixture::new();
++        let file = f.change(
++            "meta.json",
++            Some(br#"{"entries":[{"id":"ours","model":"a"}]}"#),
++            br#"{"entries":[{"id":"ours","model":"b"}]}"#,
++        );
++        let pending =
++            f.0.begin(receipt("claude_desktop"), std::slice::from_ref(&file), None)
++                .unwrap();
++        common::atomic_write(
++            &file.path,
++            br#"{"entries":[{"id":"foreign"},{"id":"ours","model":"b"}]}"#,
++        )
++        .unwrap();
++        assert!(restore_attempt(&pending).is_ok());
++        assert_eq!(
++            document(&file.path, common::snapshot(&file.path).unwrap().as_deref()).unwrap(),
++            json!({"entries":[{"id":"foreign"},{"id":"ours","model":"a"}]})
++        );
++        common::atomic_write(
++            &file.path,
++            br#"{"entries":[{"id":"foreign"},{"id":"ours","model":"user-choice"}]}"#,
++        )
++        .unwrap();
++        assert_eq!(restore_attempt(&pending), Err(Failure::Changed));
++    }
++    #[test]
+     fn switch_keeps_first_baseline_and_rebases_later_unrelated_changes() {
+         let f = Fixture::new();
+         let first = f.change(
+diff --git a/src-tauri/src/tool_activation.rs b/src-tauri/src/tool_activation.rs
+index 813a0cfb..9e9b3549 100644
+--- a/src-tauri/src/tool_activation.rs
++++ b/src-tauri/src/tool_activation.rs
+@@ -34,6 +34,8 @@ pub(crate) static ACTIVATION_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::
+ const ACTIVATION_PROGRESS_EVENT: &str = "yeschoy://activation-progress";
+ const ACTIVATION_PROGRESS_TOTAL: u8 = 7;
+ const CONNECTION_LOCK_WAIT_TIMEOUT: Duration = Duration::from_secs(8);
++// Match the renderer's existing inspection budget, including lock wait and I/O.
++const CONNECTION_INSPECTION_TIMEOUT: Duration = Duration::from_secs(15);
+ 
+ #[derive(Default)]
+ pub(crate) struct ActivationOperationState {
+@@ -542,9 +544,10 @@ fn claude_transport(pricing: &Value, model_id: &str) -> Option<ClaudeTransport>
+     // The relay serves the Anthropic protocol for every chat model, so an
+     // `anthropic` capability flag is no longer required to connect directly.
+     // It remains the preferred evidence when present.
+-    if endpoints.iter().any(|endpoint| {
+-        matches!(endpoint.as_str(), Some("anthropic") | Some("openai"))
+-    }) {
++    if endpoints
++        .iter()
++        .any(|endpoint| matches!(endpoint.as_str(), Some("anthropic") | Some("openai")))
++    {
+         Some(ClaudeTransport::DirectAnthropic)
+     } else {
+         None
+@@ -555,9 +558,10 @@ fn codex_transport(pricing: &Value, model_id: &str) -> Option<codex_desktop::Cod
+     let endpoints = model_endpoints(pricing, model_id)?;
+     // Same reasoning as `claude_transport`: the relay converts the Responses
+     // protocol for every chat model, so `openai` alone is enough to go direct.
+-    if endpoints.iter().any(|endpoint| {
+-        matches!(endpoint.as_str(), Some("openai-response") | Some("openai"))
+-    }) {
++    if endpoints
++        .iter()
++        .any(|endpoint| matches!(endpoint.as_str(), Some("openai-response") | Some("openai")))
++    {
+         Some(codex_desktop::CodexTransport::DirectResponses)
+     } else {
+         None
+@@ -1162,12 +1166,7 @@ async fn open_configured_adapter(
+         "claude_desktop" => claude_desktop::launch(&installation.path),
+         "codex_desktop" => codex_desktop::launch(&installation.path),
+         "dsh_web" => {
+-            dsh_web::open_existing(
+-                dsh_runtime,
+-                installation,
+-                credential.upstream_key(),
+-            )
+-            .await
++            dsh_web::open_existing(dsh_runtime, installation, credential.upstream_key()).await
+         }
+         "claude_code" | "pi" | "hermes" | "openclaw" => Ok(()),
+         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
+@@ -1232,6 +1231,7 @@ async fn stop_helper_runtime(
+ async fn restore_after_failure(
+     request: &ToolActivationRequest,
+     prepared: &mut PreparedAdapter,
++    recovery_record: &connection_recovery::Record,
+     credential_before: Option<&str>,
+     previous_record: Option<ToolCredential>,
+     origin: &str,
+@@ -1241,9 +1241,21 @@ async fn restore_after_failure(
+     dsh_runtime: &dsh_web::DshRuntimeState,
+     permit: &shutdown_coordinator::OperationPermit,
+ ) -> Option<AdapterFailure> {
+-    let rollback_failure = prepared.rollback().err();
++    let rollback_failed = if desktop_lifecycle::requires_reload(&request.tool_id) {
++        connection_recovery::restore_attempt(recovery_record).is_err()
++    } else {
++        prepared.rollback().is_err()
++    };
++    if rollback_failed {
++        // The live files may still reference the new key. Keep both keys and
++        // the encrypted pending checkpoint until recovery really succeeds.
++        return restoration_failure(true, false);
++    }
+     let credential_failure = tool_credentials::restore(&request.tool_id, credential_before).err();
+-    let _ = permit
++    if credential_failure.is_some() {
++        return restoration_failure(false, true);
++    }
++    let runtime_result = permit
+         .cancel_safe(async {
+             if request.tool_id == "dsh_web" {
+                 dsh_runtime.stop().await;
+@@ -1254,13 +1266,53 @@ async fn restore_after_failure(
+                     .clone()
+                     .filter(|_| !shutdown_coordinator::global().is_shutting_down())
+                 {
+-                    let _ = claude_runtime.start(previous).await;
++                    claude_runtime.start(previous).await?;
+                 }
+             }
++            Ok::<(), AdapterFailure>(())
+         })
+         .await;
++    if matches!(runtime_result, Ok(Err(_))) {
++        return Some(AdapterFailure::ConfigurationFailed(
++            "previous_connection_runtime_failed",
++        ));
++    }
+     delete_created_tokens(origin, access_token, leases).await;
+-    restoration_failure(rollback_failure.is_some(), credential_failure.is_some())
++    None
++}
++
++// The durable receipt and old-key retirement must follow startup observation.
++// Kept separate so real file fixtures can exercise every completion ordering.
++async fn finalize_after_start<Fut>(
++    configured: Result<(), AdapterFailure>,
++    start: Fut,
++    finish: impl FnOnce() -> Result<(), AdapterFailure>,
++) -> Result<(), AdapterFailure>
++where
++    Fut: std::future::Future<Output = Result<(), AdapterFailure>>,
++{
++    configured?;
++    start.await?;
++    finish()
++}
++
++// Never restore files or revoke credentials while an attempted launch might
++// still be using them. A refused/unknown stop leaves the checkpoint intact.
++async fn recover_after_stop<Stop, Restore, RestoreFuture>(
++    stopped: Stop,
++    restore: Restore,
++) -> Option<AdapterFailure>
++where
++    Stop: std::future::Future<Output = Result<(), AdapterFailure>>,
++    Restore: FnOnce() -> RestoreFuture,
++    RestoreFuture: std::future::Future<Output = Option<AdapterFailure>>,
++{
++    if stopped.await.is_err() {
++        return Some(AdapterFailure::ConfigurationFailed(
++            "desktop_recovery_waiting_for_exit",
++        ));
++    }
++    restore().await
+ }
+ 
+ // A failed restoration happens after writes. Keep it distinct from an initial
+@@ -1432,8 +1484,7 @@ pub async fn configure_desktop_tool_v2(
+     };
+     if let Some(store) = recovery.as_ref() {
+         let pending = match store.load(&request.tool_id) {
+-            Ok(Some(record)) => record.pending,
+-            Ok(None) => false,
++            Ok(record) => record.filter(|record| record.pending),
+             Err(_) => {
+                 return Ok(
+                     ActivationFailure::ConfigurationFailed("recovery_storage_unavailable")
+@@ -1441,7 +1492,7 @@ pub async fn configure_desktop_tool_v2(
+                 )
+             }
+         };
+-        if pending {
++        if let Some(pending) = pending {
+             // A pending record may restore application files. Desktop apps
+             // must be stopped before that local mutation, using the same
+             // explicit save-work consent as a normal update.
+@@ -1484,6 +1535,8 @@ pub async fn configure_desktop_tool_v2(
+                     }
+                 }
+             }
++            let reopen_after_recovery = reload_guard.closed;
++            reload_guard.disarm();
+             if permit
+                 .cancel_safe(stop_helper_runtime(
+                     &request.tool_id,
+@@ -1495,10 +1548,26 @@ pub async fn configure_desktop_tool_v2(
+             {
+                 return Ok(cancelled());
+             }
+-            match store.recover_pending(&request.tool_id, || {
+-                tool_credentials::restore(&request.tool_id, None).is_ok()
++            let previous = pending.rollback_credential().cloned();
++            match store.recover_pending(&request.tool_id, || match previous.as_ref() {
++                Some(credential) => tool_credentials::store(&request.tool_id, credential).is_ok(),
++                None => tool_credentials::restore(&request.tool_id, None).is_ok(),
+             }) {
+-                Ok(true) => crate::request_diagnostics::clear(&request.tool_id),
++                Ok(true) => {
++                    crate::request_diagnostics::clear(&request.tool_id);
++                    if request.tool_id == "claude_desktop" {
++                        if let Some(previous) = previous {
++                            if claude_runtime.start(previous).await.is_err() {
++                                reload_guard.disarm();
++                                return Ok(ActivationFailure::ConfigurationFailed(
++                                    "previous_connection_runtime_failed",
++                                )
++                                .projection(&request));
++                            }
++                        }
++                    }
++                    reload_guard.record_normal_quit(reopen_after_recovery);
++                }
+                 Ok(false) => {}
+                 Err(failure) => {
+                     use connection_recovery::PendingRecoveryFailure as RecoveryFailure;
+@@ -1742,6 +1811,10 @@ pub async fn configure_desktop_tool_v2(
+         return Ok(cancelled());
+     }
+     // No cancellation point between credential publication and local file commit.
++    let reopen_previous = reload_guard.closed;
++    // From here failures require an explicit successful rollback, not a Drop
++    // that could reopen a partially-written or unrecoverable configuration.
++    reload_guard.disarm();
+     emit_activation_progress(&app, &request, "applying_settings", 6);
+     let local_result = tool_credentials::store(&request.tool_id, &credential)
+         .map_err(|_| AdapterFailure::SecureStorageUnavailable)
+@@ -1764,23 +1837,40 @@ pub async fn configure_desktop_tool_v2(
+             )),
+         },
+     };
+-    let result = configured.and_then(|()| {
+-        if is_cancelled() {
+-            return Err(AdapterFailure::ConfigurationFailed(
+-                if registration.cancellation.is_requested() {
+-                    "activation_cancelled"
+-                } else {
+-                    "assistant_shutting_down"
+-                },
+-            ));
+-        }
+-        if ensure_session_epoch(&account_state, session_epoch).is_err() {
+-            return Err(AdapterFailure::ConfigurationFailed("account_changed"));
+-        }
+-        recovery
+-            .finish(&mut recovery_record)
+-            .map_err(|_| AdapterFailure::ConfigurationFailed("recovery_receipt_failed"))
+-    });
++    let mut desktop_open_attempted = false;
++    let result = finalize_after_start(
++        configured,
++        async {
++            if desktop_lifecycle::requires_reload(&request.tool_id) {
++                if is_cancelled() {
++                    return Err(AdapterFailure::ConfigurationFailed("activation_cancelled"));
++                }
++                desktop_open_attempted = true;
++                emit_activation_progress(&app, &request, "opening_application", 7);
++                emit_activation_progress(&app, &request, "checking_application_started", 7);
++                desktop_lifecycle::open_and_wait(&request.tool_id, &installation.path).await?;
++            }
++            Ok(())
++        },
++        || {
++            if is_cancelled() {
++                return Err(AdapterFailure::ConfigurationFailed(
++                    if registration.cancellation.is_requested() {
++                        "activation_cancelled"
++                    } else {
++                        "assistant_shutting_down"
++                    },
++                ));
++            }
++            if ensure_session_epoch(&account_state, session_epoch).is_err() {
++                return Err(AdapterFailure::ConfigurationFailed("account_changed"));
++            }
++            recovery
++                .finish(&mut recovery_record)
++                .map_err(|_| AdapterFailure::ConfigurationFailed("recovery_receipt_failed"))
++        },
++    )
++    .await;
+     if let Err(error) = result {
+         log::warn!(
+             "activation stage=rollback tool={} reason={:?}",
+@@ -1788,28 +1878,68 @@ pub async fn configure_desktop_tool_v2(
+             error
+         );
+         emit_activation_progress(&app, &request, "restoring_settings", 6);
+-        let cleanup = restore_after_failure(
+-            &request,
+-            &mut prepared,
+-            credential_before.as_deref(),
+-            previous_record,
+-            &origin,
+-            &access_token,
+-            &leases,
+-            &claude_runtime,
+-            &dsh_runtime,
+-            &permit,
++        let cleanup = recover_after_stop(
++            async {
++                if desktop_open_attempted {
++                    desktop_lifecycle::quit_for_reconfigure(&request.tool_id, &installation.path)
++                        .await?;
++                }
++                Ok(())
++            },
++            || {
++                restore_after_failure(
++                    &request,
++                    &mut prepared,
++                    &recovery_record,
++                    credential_before.as_deref(),
++                    previous_record,
++                    &origin,
++                    &access_token,
++                    &leases,
++                    &claude_runtime,
++                    &dsh_runtime,
++                    &permit,
++                )
++            },
+         )
+         .await;
+-        if cleanup.is_none() {
+-            let _ = recovery.abandon(&recovery_record);
++        if let Some(failure) = cleanup {
++            return Ok(ActivationFailure::Adapter(failure).projection(&request));
++        }
++        if recovery.abandon(&recovery_record).is_err() {
++            return Ok(
++                ActivationFailure::ConfigurationFailed("recovery_receipt_failed")
++                    .projection(&request),
++            );
+         }
+-        return Ok(ActivationFailure::Adapter(cleanup.unwrap_or(error)).projection(&request));
++        if (reopen_previous || desktop_open_attempted)
++            && !shutdown_coordinator::global().is_shutting_down()
++            && desktop_lifecycle::open_and_wait(&request.tool_id, &installation.path)
++                .await
++                .is_err()
++        {
++            return Ok(
++                ActivationFailure::ConfigurationFailed("previous_app_reopen_failed")
++                    .projection(&request),
++            );
++        }
++        return Ok(if desktop_open_attempted {
++            let reason = if matches!(error, AdapterFailure::LaunchError(_)) {
++                "desktop_start_failed_restored"
++            } else {
++                "desktop_change_failed_restored"
++            };
++            ActivationFailure::ConfigurationFailed(reason).projection(&request)
++        } else {
++            ActivationFailure::Adapter(error).projection(&request)
++        });
+     }
+-    reload_guard.disarm();
+-    emit_activation_progress(&app, &request, "opening_application", 7);
+-    let open_result =
+-        open_configured_adapter(&request, &installation, &credential, &dsh_runtime).await;
++    let open_result = if desktop_lifecycle::requires_reload(&request.tool_id) {
++        Ok(()) // Already opened and observed before the transaction finished.
++    } else {
++        emit_activation_progress(&app, &request, "opening_application", 7);
++        open_configured_adapter(&request, &installation, &credential, &dsh_runtime).await
++    };
+     stage!("opened");
+     log::info!(
+         "activation stage=open tool={} ok={}",
+@@ -1836,7 +1966,11 @@ pub async fn configure_desktop_tool_v2(
+     Ok(ToolActivationProjection::new(
+         &request,
+         "ready",
+-        "configuration_ready",
++        if desktop_lifecycle::requires_reload(&request.tool_id) {
++            "desktop_start_observed"
++        } else {
++            "configuration_ready"
++        },
+     ))
+ }
+ 
+@@ -1907,6 +2041,9 @@ fn inspect_connection(
+     tool: &str,
+     store: std::result::Result<Option<&Store>, ()>,
+ ) -> ConnectionProjection {
++    // Keychain/Credential Manager reads can block. Reuse one read per tool for
++    // both legacy detection and the model projection.
++    let credential = tool_credentials::load(tool);
+     let mut projection = ConnectionProjection::empty(tool);
+     let stored = match store {
+         Ok(Some(store)) => store.load(tool),
+@@ -1940,7 +2077,7 @@ fn inspect_connection(
+             projection.state = "unavailable";
+             projection.reason_code = "recovery_storage_unavailable";
+         }
+-        Ok(None) => match tool_credentials::load(tool) {
++        Ok(None) => match &credential {
+             Ok(credential) => {
+                 projection.state = "legacy";
+                 projection.restore_mode = "remove_yeschoy";
+@@ -1951,7 +2088,7 @@ fn inspect_connection(
+                     "mainland_optimized"
+                 }
+                 .into();
+-                projection.requires_background = needs_background(tool, &credential);
++                projection.requires_background = needs_background(tool, credential);
+                 projection.reason_code = "original_settings_unavailable";
+             }
+             Err(CredentialFailure::Missing) => {}
+@@ -1961,7 +2098,7 @@ fn inspect_connection(
+             }
+         },
+     }
+-    if let Ok(credential) = tool_credentials::load(tool) {
++    if let Ok(credential) = &credential {
+         projection.models = credential
+             .models
+             .iter()
+@@ -1982,18 +2119,66 @@ fn inspect_connection(
+         if projection.state == "changed"
+             && credential.has_model_set()
+             && tool_adapters::user_home().is_some_and(|home| {
+-                crate::open_connection::validate_settings(&home, tool, &credential).is_ok()
++                crate::open_connection::validate_settings(&home, tool, credential).is_ok()
+             })
+         {
+             projection.state = "connected";
+             projection.reason_code = "connected";
+         }
+-        projection.requires_background = needs_background(tool, &credential);
++        projection.requires_background = needs_background(tool, credential);
+     }
+     projection.last_request = crate::request_diagnostics::latest(tool);
+     projection
+ }
+ 
++pub(crate) async fn inspect_on_worker<T: Send + 'static>(
++    lock: &'static tokio::sync::Mutex<()>,
++    deadline: Duration,
++    inspect: impl FnOnce() -> T + Send + 'static,
++) -> Result<T, &'static str> {
++    tokio::time::timeout(deadline, async move {
++        let guard = tokio::time::timeout(CONNECTION_LOCK_WAIT_TIMEOUT, lock.lock())
++            .await
++            .map_err(|_| "connection_operation_busy")?;
++        // Same blocking-worker boundary as CC Switch's provider commands. Keep
++        // the write lock in the worker even if the caller times out: an OS read
++        // cannot be cancelled safely, and must not overlap configuration writes.
++        tauri::async_runtime::spawn_blocking(move || {
++            let _guard = guard;
++            inspect()
++        })
++        .await
++        .map_err(|_| "connection_inspection_failed")
++    })
++    .await
++    .map_err(|_| "connection_inspect_timed_out")?
++}
++
++fn inspect_connections(store: Result<Option<&Store>, ()>) -> Vec<ConnectionProjection> {
++    inspect_connections_with(|tool| inspect_connection(tool, store))
++}
++
++fn inspect_connections_with(
++    mut inspect: impl FnMut(&str) -> ConnectionProjection,
++) -> Vec<ConnectionProjection> {
++    CONNECTION_TOOLS
++        .iter()
++        .map(|tool| {
++            // A single adapter must not discard the other six local results.
++            // No writes/recovery take place here; preserve an unknown state
++            // for the failed tool and never expose the raw panic payload.
++            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| inspect(tool))).unwrap_or_else(
++                |_| {
++                    let mut projection = ConnectionProjection::empty(tool);
++                    projection.state = "unavailable";
++                    projection.reason_code = "connection_inspection_failed";
++                    projection
++                },
++            )
++        })
++        .collect()
++}
++
+ pub(crate) fn needs_background(tool: &str, credential: &ToolCredential) -> bool {
+     credential.has_model_set()
+         || matches!(tool, "claude_desktop" | "dsh_web")
+@@ -2090,6 +2275,48 @@ pub async fn manage_tool_connections_v1(
+     let permit = shutdown_coordinator::global()
+         .admit_operation()
+         .map_err(|_| "assistant_shutting_down")?;
++    if request.operation == "inspect" {
++        let started = std::time::Instant::now();
++        let result = permit
++            .cancel_safe(inspect_on_worker(
++                &ACTIVATION_LOCK,
++                CONNECTION_INSPECTION_TIMEOUT,
++                || {
++                    let store = Store::open(false);
++                    inspect_connections(match &store {
++                        Ok(store) => Ok(store.as_ref()),
++                        Err(_) => Err(()),
++                    })
++                },
++            ))
++            .await
++            .unwrap_or(Err("assistant_shutting_down"));
++        let connections = result.map_err(|code| {
++            // Never log raw storage errors, paths, account data or credentials.
++            log::warn!(
++                "connection_inspection request_id={} code={} elapsed_ms={}",
++                request.request_id,
++                code,
++                started.elapsed().as_millis()
++            );
++            code.to_string()
++        })?;
++        for connection in connections.iter().filter(|c| c.state == "unavailable") {
++            log::warn!(
++                "connection_inspection request_id={} code=connection_partial_unavailable tool_id={} reason={}",
++                request.request_id,
++                connection.tool_id,
++                connection.reason_code
++            );
++        }
++        return Ok(ConnectionResponse {
++            request_id: request.request_id,
++            schema_version: 2,
++            status: "ok",
++            connections,
++            reason_code: "local_state",
++        });
++    }
+     let _guard = tokio::time::timeout(
+         CONNECTION_LOCK_WAIT_TIMEOUT,
+         permit.cancel_safe(ACTIVATION_LOCK.lock()),
+@@ -2136,12 +2363,7 @@ pub async fn manage_tool_connections_v1(
+             // another provider. A running app may need to reopen its settings.
+             let _ = permit
+                 .cancel_safe(async {
+-                    stop_helper_runtime(
+-                        &request.tool_id,
+-                        &claude_runtime,
+-                        &dsh_runtime,
+-                    )
+-                    .await;
++                    stop_helper_runtime(&request.tool_id, &claude_runtime, &dsh_runtime).await;
+                 })
+                 .await;
+             if cleaned {
+@@ -2195,18 +2417,10 @@ pub async fn manage_tool_connections_v1(
+             reason = "recovery_not_completed";
+         }
+     }
+-    let connections = CONNECTION_TOOLS
+-        .iter()
+-        .map(|tool| {
+-            inspect_connection(
+-                tool,
+-                match &store {
+-                    Ok(store) => Ok(store.as_ref()),
+-                    Err(_) => Err(()),
+-                },
+-            )
+-        })
+-        .collect();
++    let connections = inspect_connections(match &store {
++        Ok(store) => Ok(store.as_ref()),
++        Err(_) => Err(()),
++    });
+     Ok(ConnectionResponse {
+         request_id: request.request_id,
+         schema_version: 2,
+@@ -2220,6 +2434,186 @@ pub async fn manage_tool_connections_v1(
+ mod tests {
+     use super::*;
+ 
++    #[tokio::test]
++    async fn refused_stop_does_not_restore_files_or_keys_or_delete_live_tokens() {
++        assert!(matches!(
++            recover_after_stop(
++                async { Err(AdapterFailure::LaunchError("graceful_restart_required")) },
++                || async { panic!("must not change live files or revoke live keys") }
++            )
++            .await,
++            Some(AdapterFailure::ConfigurationFailed(
++                "desktop_recovery_waiting_for_exit"
++            ))
++        ));
++        assert!(matches!(
++            recover_after_stop(async { Ok(()) }, || async {
++                Some(AdapterFailure::ConfigurationFailed(
++                    "credential_restore_failed",
++                ))
++            })
++            .await,
++            Some(AdapterFailure::ConfigurationFailed(
++                "credential_restore_failed"
++            ))
++        ));
++        assert!(recover_after_stop(async { Ok(()) }, || async { None })
++            .await
++            .is_none());
++    }
++
++    #[tokio::test]
++    async fn desktop_receipt_cannot_complete_before_startup_observation() {
++        use std::cell::RefCell;
++        for startup_ok in [false, true] {
++            let events = RefCell::new(Vec::new());
++            let result = finalize_after_start(
++                Ok(()),
++                async {
++                    events.borrow_mut().push("start-observed");
++                    if startup_ok {
++                        Ok(())
++                    } else {
++                        Err(AdapterFailure::LaunchError("desktop_start_unconfirmed"))
++                    }
++                },
++                || {
++                    events.borrow_mut().push("finish-receipt");
++                    Ok(())
++                },
++            )
++            .await;
++            assert_eq!(result.is_ok(), startup_ok);
++            assert_eq!(
++                *events.borrow(),
++                if startup_ok {
++                    vec!["start-observed", "finish-receipt"]
++                } else {
++                    vec!["start-observed"]
++                }
++            );
++        }
++        assert!(finalize_after_start(
++            Err(AdapterFailure::ConfigurationFailed(
++                "synthetic-write-failed"
++            )),
++            async { panic!("must not launch after a failed configuration") },
++            || panic!("must not finish after a failed configuration")
++        )
++        .await
++        .is_err());
++        assert!(finalize_after_start(Ok(()), async { Ok(()) }, || Err(
++            AdapterFailure::ConfigurationFailed("activation_cancelled")
++        ))
++        .await
++        .is_err());
++    }
++
++    #[tokio::test]
++    async fn inspection_regression_one_adapter_panic_keeps_six_other_results() {
++        static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
++        let result = inspect_on_worker(&LOCK, Duration::from_secs(2), || {
++            inspect_connections_with(|tool| {
++                if tool == "codex_desktop" {
++                    panic!("synthetic-private-value-must-not-be-in-response");
++                }
++                let mut projection = ConnectionProjection::empty(tool);
++                if tool == "claude_desktop" {
++                    projection.state = "connected";
++                    projection.reason_code = "connected";
++                }
++                projection
++            })
++        })
++        .await
++        .unwrap();
++        assert_eq!(result.len(), 7);
++        assert_eq!(result[1].state, "connected");
++        assert_eq!(result[2].state, "unavailable");
++        assert_eq!(result[2].reason_code, "connection_inspection_failed");
++        assert_eq!(
++            result.iter().filter(|c| c.state == "not_connected").count(),
++            5
++        );
++        assert!(!serde_json::to_string(&result)
++            .unwrap()
++            .contains("synthetic-private"));
++        assert!(LOCK.try_lock().is_ok());
++        let next = inspect_on_worker(&LOCK, Duration::from_secs(2), || {
++            inspect_connections_with(ConnectionProjection::empty)
++        })
++        .await
++        .unwrap();
++        assert!(next.iter().all(|c| c.state == "not_connected"));
++    }
++
++    #[tokio::test(flavor = "current_thread")]
++    async fn ru076_inspection_worker_keeps_runtime_responsive_and_write_lock_until_read_finishes() {
++        static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
++        let (started_tx, started_rx) = tokio::sync::oneshot::channel();
++        let (finish_tx, finish_rx) = std::sync::mpsc::channel();
++        let task = tokio::spawn(inspect_on_worker(
++            &LOCK,
++            Duration::from_secs(2),
++            move || {
++                started_tx.send(()).unwrap();
++                finish_rx.recv_timeout(Duration::from_secs(2)).unwrap();
++                7
++            },
++        ));
++        started_rx.await.unwrap();
++        // If the synchronous reader ran on this current-thread executor, we
++        // could not reach this assertion or send its completion signal.
++        assert!(LOCK.try_lock().is_err());
++        tokio::task::yield_now().await;
++        finish_tx.send(()).unwrap();
++        assert_eq!(task.await.unwrap(), Ok(7));
++        assert!(LOCK.try_lock().is_ok());
++    }
++
++    #[tokio::test(flavor = "current_thread")]
++    async fn ru076_timed_out_reader_does_not_release_write_lock_or_queue_another_os_read() {
++        static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
++        let (started_tx, started_rx) = tokio::sync::oneshot::channel();
++        let (finish_tx, finish_rx) = std::sync::mpsc::channel();
++        let task = tokio::spawn(inspect_on_worker(
++            &LOCK,
++            Duration::from_millis(80),
++            move || {
++                started_tx.send(()).unwrap();
++                finish_rx.recv_timeout(Duration::from_secs(2)).unwrap();
++            },
++        ));
++        started_rx.await.unwrap();
++        assert_eq!(task.await.unwrap(), Err("connection_inspect_timed_out"));
++        assert!(LOCK.try_lock().is_err());
++        let invoked = Arc::new(AtomicBool::new(false));
++        let worker_invoked = invoked.clone();
++        assert_eq!(
++            inspect_on_worker(&LOCK, Duration::from_millis(20), move || {
++                worker_invoked.store(true, Ordering::SeqCst);
++            })
++            .await,
++            Err("connection_inspect_timed_out")
++        );
++        assert!(!invoked.load(Ordering::SeqCst));
++        finish_tx.send(()).unwrap();
++        let _guard = tokio::time::timeout(Duration::from_secs(2), LOCK.lock())
++            .await
++            .unwrap();
++    }
++
++    #[tokio::test]
++    async fn ru076_panicking_reader_has_a_safe_failure_and_releases_the_lock() {
++        static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
++        let result = inspect_on_worker(&LOCK, Duration::from_secs(2), || {
++            panic!("synthetic private storage detail")
++        })
++        .await;
++        assert_eq!(result, Err("connection_inspection_failed"));
++        assert!(LOCK.try_lock().is_ok());
++    }
++
+     #[test]
+     fn ru042_activation_models_require_explicit_unique_binding_and_default_member() {
+         let json = json!({"requestId":"fixture", "lineId":"mainland_optimized", "toolId":"pi", "modelId":"a", "billingGroup":"cheap", "installationId":"i0123456789abcdef"});
+diff --git a/src-tauri/src/tool_adapters/desktop_lifecycle.rs b/src-tauri/src/tool_adapters/desktop_lifecycle.rs
+index 31fce19a..c7c56c3f 100644
+--- a/src-tauri/src/tool_adapters/desktop_lifecycle.rs
++++ b/src-tauri/src/tool_adapters/desktop_lifecycle.rs
+@@ -13,6 +13,53 @@ const NORMAL_QUIT_LIMIT: Duration = Duration::from_secs(4);
+ #[cfg(not(target_os = "windows"))]
+ const NORMAL_QUIT_LIMIT: Duration = Duration::from_secs(10);
+ const FORCED_QUIT_LIMIT: Duration = Duration::from_secs(5);
++// Reuse the existing desktop launch deadline, not an unbounded model probe.
++const START_LIMIT: Duration = Duration::from_secs(15);
++
++/// A bounded OS observation, not proof that the app left its splash screen,
++/// authenticated, or completed a model request. Do not cancel/drop a dispatched
++/// launch: finish it before deciding whether it is safe to roll back files.
++pub(crate) async fn open_and_wait(tool_id: &str, path: &Path) -> Result<(), AdapterFailure> {
++    let tool = tool_id.to_owned();
++    let target = path.to_owned();
++    tokio::task::spawn_blocking(move || super::desktop_launch::launch(&tool, &target))
++        .await
++        .map_err(|_| AdapterFailure::LaunchError("desktop_launch_start_failed"))??;
++    wait_for_start(
++        || async {
++            let tool = tool_id.to_owned();
++            let target = path.to_owned();
++            tokio::task::spawn_blocking(move || platform::startup_observed(&tool, &target))
++                .await
++                .map_err(|_| AdapterFailure::LaunchError("desktop_state_unavailable"))?
++        },
++        START_LIMIT,
++    )
++    .await
++}
++
++async fn wait_for_start<F, Fut>(mut observe: F, limit: Duration) -> Result<(), AdapterFailure>
++where
++    F: FnMut() -> Fut,
++    Fut: std::future::Future<Output = Result<bool, AdapterFailure>>,
++{
++    let deadline = tokio::time::Instant::now() + limit;
++    loop {
++        if tokio::time::timeout_at(deadline, observe())
++            .await
++            .map_err(|_| AdapterFailure::LaunchError("desktop_start_unconfirmed"))??
++        {
++            return Ok(());
++        }
++        if tokio::time::Instant::now() >= deadline {
++            return Err(AdapterFailure::LaunchError("desktop_start_unconfirmed"));
++        }
++        tokio::time::sleep(
++            EXIT_POLL.min(deadline.saturating_duration_since(tokio::time::Instant::now())),
++        )
++        .await;
++    }
++}
+ 
+ pub(crate) fn requires_reload(tool_id: &str) -> bool {
+     matches!(tool_id, "claude_desktop" | "codex_desktop")
+@@ -24,9 +71,15 @@ pub(crate) async fn is_running(tool_id: &str, path: &Path) -> Result<bool, Adapt
+     }
+     let tool_id = tool_id.to_owned();
+     let path = path.to_owned();
+-    tokio::task::spawn_blocking(move || platform::is_running(&tool_id, &path))
+-        .await
+-        .map_err(|_| AdapterFailure::LaunchError("desktop_state_unavailable"))?
++    // A read-only OS query may outlive its caller, but it cannot later close
++    // an app or mutate configuration. Bound it so state checks release the UI.
++    tokio::time::timeout(
++        START_LIMIT,
++        tokio::task::spawn_blocking(move || platform::is_running(&tool_id, &path)),
++    )
++    .await
++    .map_err(|_| AdapterFailure::LaunchError("desktop_state_unavailable"))?
++    .map_err(|_| AdapterFailure::LaunchError("desktop_state_unavailable"))?
+ }
+ 
+ async fn blocking_normal_quit(tool_id: &str, path: &Path) -> Result<bool, AdapterFailure> {
+@@ -52,7 +105,10 @@ async fn wait_until_stopped(
+ ) -> Result<bool, AdapterFailure> {
+     let deadline = tokio::time::Instant::now() + limit;
+     while tokio::time::Instant::now() < deadline {
+-        if !is_running(tool_id, path).await? {
++        if !tokio::time::timeout_at(deadline, is_running(tool_id, path))
++            .await
++            .map_err(|_| AdapterFailure::LaunchError("desktop_state_unavailable"))??
++        {
+             return Ok(true);
+         }
+         tokio::time::sleep(EXIT_POLL).await;
+@@ -137,6 +193,16 @@ mod platform {
+         Ok(matched)
+     }
+ 
++    pub(super) fn startup_observed(tool_id: &str, path: &Path) -> Result<bool, AdapterFailure> {
++        let identifier = bundle_identifier(tool_id).ok_or(AdapterFailure::UnsupportedProfile)?;
++        let applications = NSRunningApplication::runningApplicationsWithBundleIdentifier(
++            &NSString::from_str(identifier),
++        );
++        Ok(applications.iter().any(|app| {
++            matches_path(&app, path) && !app.isTerminated() && app.isFinishedLaunching()
++        }))
++    }
++
+     pub(super) fn force_quit(_tool_id: &str, _path: &Path) -> Result<bool, AdapterFailure> {
+         Ok(false)
+     }
+@@ -161,7 +227,8 @@ mod platform {
+                 },
+             },
+             UI::WindowsAndMessaging::{
+-                EnumWindows, GetWindowThreadProcessId, PostMessageW, WM_CLOSE,
++                EnumWindows, GetWindowThreadProcessId, IsHungAppWindow, IsWindowVisible,
++                PostMessageW, WM_CLOSE,
+             },
+         },
+     };
+@@ -279,6 +346,13 @@ mod platform {
+         Ok(!matching_processes(path)?.is_empty())
+     }
+ 
++    pub(super) fn startup_observed(_tool_id: &str, path: &Path) -> Result<bool, AdapterFailure> {
++        let windows = matching_windows(matching_processes(path)?)?;
++        Ok(windows.into_iter().any(|hwnd| unsafe {
++            IsWindowVisible(hwnd).as_bool() && !IsHungAppWindow(hwnd).as_bool()
++        }))
++    }
++
+     pub(super) fn request_normal_quit(_tool_id: &str, path: &Path) -> Result<bool, AdapterFailure> {
+         let pids = matching_processes(path)?;
+         if pids.is_empty() {
+@@ -301,6 +375,14 @@ mod platform {
+         if pids.is_empty() {
+             return Ok(false);
+         }
++        // Consent promises a fallback for background remnants, not killing a
++        // still-visible editor or its save dialog after the grace period.
++        if matching_windows(pids.clone())?
++            .into_iter()
++            .any(|hwnd| unsafe { IsWindowVisible(hwnd).as_bool() })
++        {
++            return Err(AdapterFailure::LaunchError("graceful_restart_required"));
++        }
+         let mut terminated = false;
+         for pid in pids {
+             let process = Process(
+@@ -340,6 +422,10 @@ mod platform {
+         Ok(false)
+     }
+ 
++    pub(super) fn startup_observed(_tool_id: &str, _path: &Path) -> Result<bool, AdapterFailure> {
++        Err(AdapterFailure::UnsupportedProfile)
++    }
++
+     pub(super) fn request_normal_quit(
+         _tool_id: &str,
+         _path: &Path,
+@@ -356,6 +442,44 @@ mod platform {
+ mod tests {
+     use super::*;
+ 
++    #[tokio::test]
++    async fn dispatch_without_startup_evidence_is_not_success() {
++        assert!(matches!(
++            wait_for_start(|| async { Ok(false) }, Duration::ZERO).await,
++            Err(AdapterFailure::LaunchError("desktop_start_unconfirmed"))
++        ));
++        assert!(wait_for_start(|| async { Ok(true) }, Duration::ZERO)
++            .await
++            .is_ok());
++        assert!(matches!(
++            wait_for_start(
++                || async { Err(AdapterFailure::LaunchError("desktop_state_unavailable")) },
++                Duration::ZERO
++            )
++            .await,
++            Err(AdapterFailure::LaunchError("desktop_state_unavailable"))
++        ));
++        assert!(matches!(
++            wait_for_start(
++                std::future::pending::<Result<bool, AdapterFailure>>,
++                Duration::from_millis(1),
++            )
++            .await,
++            Err(AdapterFailure::LaunchError("desktop_start_unconfirmed"))
++        ));
++    }
++
++    #[tokio::test]
++    async fn delayed_start_is_observed_without_launching_a_real_application() {
++        let mut observations = [false, true].into_iter();
++        assert!(wait_for_start(
++            || std::future::ready(Ok(observations.next().unwrap_or(false))),
++            Duration::from_secs(1)
++        )
++        .await
++        .is_ok());
++    }
++
+     #[test]
+     fn only_desktop_targets_are_eligible_for_reload_control() {
+         assert!(requires_reload("claude_desktop"));
+diff --git a/src/configuration/ConfigurationPreviewView.tsx b/src/configuration/ConfigurationPreviewView.tsx
+index b7395a53..083b90ba 100644
+--- a/src/configuration/ConfigurationPreviewView.tsx
++++ b/src/configuration/ConfigurationPreviewView.tsx
+@@ -26,6 +26,7 @@ import { connectionLabel, useConnections } from "./connections";
+ import { RestoreConnection } from "./RestoreConnection";
+ import { OpenConnection } from "./OpenConnection";
+ import { RecentRequest } from "./RecentRequest";
++import { ConnectionStatusNotice } from "./ConnectionStatusNotice";
+ import { useInstallation } from "../installation/InstallationProvider";
+ import { InstallationPanel } from "../installation/InstallationPanel";
+ import {
+@@ -166,9 +167,9 @@ export function runningAppHandoff(
+ export function recoveryRetryMessage(reasonCode: string): string | undefined {
+   switch (reasonCode) {
+     case "configuration_rollback_failed":
+-      return "自动恢复上次未完成的设置时遇到问题，部分设置尚未恢复，本次没有继续写入。可点击“恢复原设置”后再试。";
++      return "自动恢复上次未完成的设置时遇到问题，部分设置尚未恢复。可直接点击“自动修复并重试”，无需手动修改配置。";
+     case "credential_restore_failed":
+-      return "自动恢复时无法清理旧的工具密钥，密钥设置尚未恢复，本次没有继续写入。请解锁系统钥匙串或凭据管理器；若仍失败，可点击“恢复原设置”。";
++      return "自动恢复时密钥设置尚未恢复。请解锁系统钥匙串或凭据管理器，再点击“自动修复并重试”，无需手动修改配置。";
+     case "recovery_pending":
+       return "另一项接入或恢复操作正在进行。本次没有修改应用，请稍后直接重试；若一直出现，可使用“恢复原设置”。";
+     default:
+@@ -176,6 +177,17 @@ export function recoveryRetryMessage(reasonCode: string): string | undefined {
+   }
+ }
+ 
++const AUTO_RECOVERY_REASONS = new Set([
++  "desktop_start_failed_restored",
++  "desktop_change_failed_restored",
++  "previous_app_reopen_failed",
++  "desktop_recovery_waiting_for_exit",
++  "previous_connection_runtime_failed",
++  "configuration_rollback_failed",
++  "credential_restore_failed",
++  "recovery_receipt_failed",
++]);
++
+ const UX = {
+   zh: {
+     checking: "正在检查这台电脑…",
+@@ -540,7 +552,8 @@ export function ConfigurationPreviewView({
+   );
+   const connectionStateUnavailable =
+     !!connections?.loading ||
+-    (!!connections?.error && connections.connections.length === 0);
++    (!!connections?.error && connections.connections.length === 0) ||
++    savedConnection?.state === "unavailable";
+   const toolId = previewTool(activationToolId);
+   const target = targetScan?.targets.find(
+     (candidate) => candidate.toolId === activationToolId,
+@@ -909,6 +922,8 @@ export function ConfigurationPreviewView({
+   const activationResult = (() => {
+     switch (activation?.status) {
+       case "ready":
++        if (activation.reasonCode === "desktop_start_observed")
++          return t("yeschoyDesktopRecovery.startObserved");
+         if (
+           activation.schemaVersion === 3 &&
+           activation.reasonCode === "tool_request_verified"
+@@ -1001,6 +1016,8 @@ export function ConfigurationPreviewView({
+       case "server_unavailable":
+         return c.setupServerUnavailable;
+       case "configuration_failed":
++        if (AUTO_RECOVERY_REASONS.has(activation.reasonCode))
++          return t(`yeschoyDesktopRecovery.${activation.reasonCode}`);
+         {
+           const recoveryMessage = recoveryRetryMessage(activation.reasonCode);
+           if (recoveryMessage) return recoveryMessage;
+@@ -1146,7 +1163,9 @@ export function ConfigurationPreviewView({
+       case "restoring_settings":
+         return "操作未完成，正在恢复原设置…";
+       case "opening_application":
+-        return "配置已完成，正在打开应用…";
++        return t("yeschoyDesktopRecovery.opening");
++      case "checking_application_started":
++        return t("yeschoyDesktopRecovery.checkingStart");
+       case "complete":
+         return "接入完成。";
+       default:
+@@ -1157,7 +1176,8 @@ export function ConfigurationPreviewView({
+     enableLocalActivation &&
+     (scanPhase === "error" || (scanPhase === "ready" && !target));
+   const connectionReadFailed =
+-    !!connections?.error && (connections?.connections.length ?? 0) === 0;
++    (!!connections?.error && (connections?.connections.length ?? 0) === 0) ||
++    savedConnection?.state === "unavailable";
+   const openAdvanced = () => {
+     setAdvancedOpen(true);
+     advancedDetails.current?.scrollIntoView({ block: "center" });
+@@ -1292,6 +1312,17 @@ export function ConfigurationPreviewView({
+         hint: "已经接入。需要换模型或分组时点这里重新写入设置。",
+         run: () => void apply(),
+       };
++    if (
++      resultIsCurrent &&
++      activation &&
++      AUTO_RECOVERY_REASONS.has(activation.reasonCode)
++    )
++      return {
++        kind: "repair-and-retry",
++        label: t("yeschoyDesktopRecovery.retry"),
++        hint: t("yeschoyDesktopRecovery.retryHint"),
++        run: () => void apply(),
++      };
+     return {
+       kind: "apply",
+       label: c.connectNow,
+@@ -1335,6 +1366,11 @@ export function ConfigurationPreviewView({
+   );
+   const recoveryAction = (() => {
+     if (!activation || activation.status === "ready") return null;
++    if (resultIsCurrent && AUTO_RECOVERY_REASONS.has(activation.reasonCode))
++      return {
++        label: t("yeschoyDesktopRecovery.retry"),
++        run: () => void apply(),
++      };
+     if (
+       activation.status === "signed_out" ||
+       activation.reasonCode === "authentication_failed"
+@@ -1626,17 +1662,15 @@ export function ConfigurationPreviewView({
+               </button>
+             </div>
+           )}
+-          {connections?.error && (
+-            <div className="selection-warning" role="alert">
+-              <p>暂时无法读取上次的接入设置，请重试；不会用默认选择覆盖。</p>
+-              <button
+-                className="subtle-button"
+-                onClick={() => void connections.refresh()}
+-              >
+-                读取接入状态
+-              </button>
+-            </div>
+-          )}
++          {connections &&
++            (connections.error || savedConnection?.state === "unavailable") && (
++              <ConnectionStatusNotice
++                issue={connections.errorInfo}
++                stale={connections.error && connections.connections.length > 0}
++                refreshing={connections.refreshing}
++                onRetry={() => void connections.refresh()}
++              />
++            )}
+           <header className="connection-builder-heading">
+             <div>
+               <p className="eyebrow">{ux.builderKicker}</p>
+@@ -2154,7 +2188,9 @@ export function ConfigurationPreviewView({
+               <strong>
+                 {activationSucceeded
+                   ? resultIsCurrent
+-                    ? ux.readyTitle
++                    ? activation.reasonCode === "desktop_start_observed"
++                      ? t("yeschoyDesktopRecovery.configuredTitle")
++                      : ux.readyTitle
+                     : "刚才的接入已完成"
+                   : activation?.status === "application_running"
+                     ? "需要重新打开应用"
+diff --git a/src/configuration/DailyUse.test.tsx b/src/configuration/DailyUse.test.tsx
+index 2a055304..e9d88f40 100644
+--- a/src/configuration/DailyUse.test.tsx
++++ b/src/configuration/DailyUse.test.tsx
+@@ -212,6 +212,192 @@ beforeEach(async () => {
+ afterEach(cleanup);
+ 
+ describe("daily-use UX", () => {
++  it("routes an interrupted open to automatic setup recovery without disconnecting", async () => {
++    const controller = {
++      ...local(),
++      open: vi.fn(async () => "recovery_pending" as const),
++    };
++    render(
++      <ConnectionProvider value={controller}>
++        <OpenConnection
++          connection={
++            controller.connections.find((c) => c.toolId === "codex_desktop")!
++          }
++          name="Codex Desktop"
++          onAdjust={callback}
++        />
++      </ConnectionProvider>,
++    );
++    fireEvent.click(screen.getByRole("button", { name: "打开使用" }));
++    await tick();
++    expect(screen.getByRole("alert")).toHaveTextContent(
++      "先自动恢复未完成的操作",
++    );
++    expect(screen.getByRole("alert")).not.toHaveTextContent("先恢复原设置");
++    fireEvent.click(screen.getByRole("button", { name: "前往接入修复" }));
++    expect(callback).toHaveBeenCalledOnce();
++    expect(controller.restore).not.toHaveBeenCalled();
++  });
++
++  it.each(["codex_desktop", "claude_desktop"] as const)(
++    "repairs %s through save/quit confirmation without a manual restore step",
++    async (toolId) => {
++      let configureCount = 0;
++      native.mockImplementation(async (command, args) => {
++        const req = (args as { request: Record<string, unknown> }).request;
++        if (command === "scan_activation_targets_v1")
++          return scan(String(req.requestId));
++        if (command !== "configure_desktop_tool_v2")
++          throw Error("Unexpected fixture request");
++        configureCount++;
++        return {
++          requestId: req.requestId,
++          schemaVersion: 4,
++          toolId: req.toolId,
++          modelId: req.modelId,
++          billingGroup: req.billingGroup,
++          models: req.models,
++          observedAtEpochMs: 2000,
++          status:
++            configureCount === 1
++              ? "configuration_failed"
++              : req.restartRunningApp
++                ? "ready"
++                : "application_running",
++          reasonCode:
++            configureCount === 1
++              ? "desktop_recovery_waiting_for_exit"
++              : req.restartRunningApp
++                ? "desktop_start_observed"
++                : "save_work_before_restart",
++        };
++      });
++      const controller = local();
++      render(setupView(session(), controller, "mainland_optimized", toolId));
++      await tick();
++      const primary = () => screen.getByTestId("configuration-apply-action");
++      fireEvent.click(primary());
++      await tick();
++      expect(primary()).toHaveTextContent("自动修复并重试");
++      expect(screen.getByRole("alert")).toHaveTextContent("尚未恢复设置");
++      fireEvent.click(primary());
++      await tick();
++      const dialog = screen.getByRole("dialog");
++      expect(dialog).toHaveTextContent("请先保存");
++      const configureCalls = () =>
++        native.mock.calls.filter(
++          ([command]) => command === "configure_desktop_tool_v2",
++        );
++      expect(configureCalls().at(-1)?.[1]).not.toMatchObject({
++        request: { restartRunningApp: true },
++      });
++      fireEvent.click(
++        within(dialog).getByRole("button", { name: "已保存，退出并继续" }),
++      );
++      await tick();
++      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
++      expect(screen.getByText("配置已保存，已检查启动")).toBeInTheDocument();
++      expect(screen.getByText(/尚未验证应用是否完成加载/)).toBeInTheDocument();
++      expect(controller.restore).not.toHaveBeenCalled();
++      expect(configureCalls()).toHaveLength(3);
++      expect(configureCalls().at(-1)?.[1]).toMatchObject({
++        request: { restartRunningApp: true },
++      });
++    },
++  );
++
++  it.each(["codex_desktop", "claude_desktop"] as const)(
++    "reconnect regression: %s can change models repeatedly after success without a stranded modal",
++    async (toolId) => {
++      let configured = false;
++      let finish: (() => void) | undefined;
++      native.mockImplementation(async (command, args) => {
++        const req = (args as { request: Record<string, unknown> }).request;
++        if (command === "scan_activation_targets_v1")
++          return scan(String(req.requestId));
++        if (command !== "configure_desktop_tool_v2")
++          throw Error("Unexpected fixture request");
++        const result = {
++          requestId: req.requestId,
++          schemaVersion: 4,
++          status: "ready",
++          toolId: req.toolId,
++          modelId: req.modelId,
++          billingGroup: req.billingGroup,
++          models: req.models,
++          observedAtEpochMs: 2000,
++          reasonCode: "configuration_ready",
++        };
++        if (configured && !req.restartRunningApp)
++          return {
++            ...result,
++            status: "application_running",
++            reasonCode: "save_work_before_restart",
++          };
++        if (configured)
++          await new Promise<void>((resolve) => {
++            finish = resolve;
++          });
++        configured = true;
++        return result;
++      });
++      render(setupView(session(), local(), "mainland_optimized", toolId));
++      await tick();
++      const applyButton = () =>
++        screen.getByTestId("configuration-apply-action");
++      const configureCalls = () =>
++        native.mock.calls.filter(
++          ([command]) => command === "configure_desktop_tool_v2",
++        );
++      fireEvent.click(applyButton());
++      await tick();
++      expect(configureCalls()).toHaveLength(1);
++      for (const [index, modelId] of ["model-b", "model-a"].entries()) {
++        fireEvent.click(screen.getByRole("combobox", { name: /选择模型/ }));
++        fireEvent.click(screen.getByRole("option", { name: modelId }));
++        fireEvent.click(applyButton());
++        await tick();
++        expect(screen.getByRole("dialog")).toHaveTextContent("请先保存");
++        expect(configureCalls().at(-1)?.[1]).not.toMatchObject({
++          request: { restartRunningApp: true },
++        });
++        const beforeCancel = configureCalls().length;
++        fireEvent.click(
++          within(screen.getByRole("dialog")).getByRole("button", {
++            name: "暂不接入",
++          }),
++        );
++        await tick();
++        expect(configureCalls()).toHaveLength(beforeCancel);
++        expect(getComputedStyle(document.body).pointerEvents).not.toBe("none");
++        fireEvent.click(applyButton());
++        await tick();
++        fireEvent.click(
++          within(screen.getByRole("dialog")).getByRole("button", {
++            name: "已保存，退出并继续",
++          }),
++        );
++        await tick();
++        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
++        expect(document.querySelector(".yeschoy-dialog-overlay")).toBeNull();
++        expect(getComputedStyle(document.body).pointerEvents).not.toBe("none");
++        expect(applyButton()).toBeDisabled();
++        expect(configureCalls().at(-1)?.[1]).toMatchObject({
++          request: { restartRunningApp: true, modelId },
++        });
++        fireEvent.click(screen.getByRole("button", { name: "查看其他工具" }));
++        expect(callback).toHaveBeenCalled();
++        expect(finish).toBeTypeOf("function");
++        await act(async () => finish!());
++        expect(applyButton()).toBeEnabled();
++        expect(screen.getByText("接入完成")).toBeInTheDocument();
++        // A cancelled prompt may be reopened from the already-known running
++        // state; only the first preflight and consented apply invoke native.
++        expect(configureCalls()).toHaveLength(1 + (index + 1) * 2);
++      }
++    },
++  );
++
+   it("ru056 enrolls explicit model group pairs without blocking on paid model probes", async () => {
+     native.mockImplementation(async (command, args) => {
+       const req = (args as { request: Record<string, unknown> }).request;
+@@ -851,12 +1037,19 @@ describe("daily-use UX", () => {
+         return result;
+       });
+       render(
+-        <AppLibraryView
+-          accountSession={{ ...session(), projection: null }}
+-          onOpenAccount={callback}
+-          onOpenSetup={callback}
+-          onOpenDiagnostics={callback}
+-        />,
++        <ConnectionProvider
++          value={{
++            ...local(),
++            connections: connectionsFixture("known-empty").connections,
++          }}
++        >
++          <AppLibraryView
++            accountSession={{ ...session(), projection: null }}
++            onOpenAccount={callback}
++            onOpenSetup={callback}
++            onOpenDiagnostics={callback}
++          />
++        </ConnectionProvider>,
+       );
+       await tick();
+       expect(screen.queryAllByRole("article")).toHaveLength(count || 2);
+@@ -940,6 +1133,32 @@ describe("daily-use UX", () => {
+       "部分设置尚未恢复",
+     ],
+     ["configuration_failed", "credential_restore_failed", "密钥设置尚未恢复"],
++    [
++      "configuration_failed",
++      "desktop_start_failed_restored",
++      "已自动恢复上一次配置",
++    ],
++    [
++      "configuration_failed",
++      "desktop_change_failed_restored",
++      "本次更新已取消或未能完成",
++    ],
++    [
++      "configuration_failed",
++      "previous_app_reopen_failed",
++      "系统仍未能确认应用启动",
++    ],
++    [
++      "configuration_failed",
++      "desktop_recovery_waiting_for_exit",
++      "尚未恢复设置",
++    ],
++    [
++      "configuration_failed",
++      "previous_connection_runtime_failed",
++      "上一次本地连接尚未重新启动",
++    ],
++    ["configuration_failed", "recovery_receipt_failed", "不能确认操作已完成"],
+     [
+       "secure_storage_unavailable",
+       "secure_storage_unavailable",
+diff --git a/src/configuration/OpenConnection.tsx b/src/configuration/OpenConnection.tsx
+index 748bbcd9..6c5f980b 100644
+--- a/src/configuration/OpenConnection.tsx
++++ b/src/configuration/OpenConnection.tsx
+@@ -9,7 +9,8 @@ const messages: Record<OpenStatus, string> = {
+   not_connected: "接入信息已移除，请重新接入。",
+   settings_changed:
+     "应用的连接设置已变化，没有覆盖你的修改。可调整接入，或恢复原设置。",
+-  recovery_pending: "上次操作尚未结束，请先恢复原设置。",
++  recovery_pending:
++    "上次接入尚未完成。请进入接入设置重新接入，助手会先自动恢复未完成的操作，无需手动修改配置。",
+   secure_storage_unavailable:
+     "暂时无法读取系统保存的接入信息。请解锁系统钥匙串或凭据管理器后重试。",
+   tool_not_found: "没有找到可以启动的应用，请检查安装后重试。",
+@@ -120,7 +121,7 @@ export function OpenConnection({
+           </span>
+           {status !== "opened" && (
+             <button className="text-button" onClick={onAdjust}>
+-              查看接入设置
++              {status === "recovery_pending" ? "前往接入修复" : "查看接入设置"}
+             </button>
+           )}
+         </div>
+diff --git a/src/configuration/activation.test.ts b/src/configuration/activation.test.ts
+index 02c561ca..83819d09 100644
+--- a/src/configuration/activation.test.ts
++++ b/src/configuration/activation.test.ts
+@@ -292,6 +292,15 @@ describe("desktop tool activation boundary", () => {
+       totalSteps: 7,
+     };
+     expect(decodeActivationProgress(progress)).toEqual(progress);
++    for (const toolId of ["codex_desktop", "claude_desktop"]) {
++      const startup = {
++        ...progress,
++        toolId,
++        stage: "checking_application_started",
++        completedSteps: 7,
++      };
++      expect(decodeActivationProgress(startup)).toEqual(startup);
++    }
+     expect(
+       decodeActivationProgress({ ...progress, completedSteps: 8 }),
+     ).toBeNull();
+diff --git a/src/configuration/activation.ts b/src/configuration/activation.ts
+index 580f954c..ef6284fb 100644
+--- a/src/configuration/activation.ts
++++ b/src/configuration/activation.ts
+@@ -129,6 +129,7 @@ export const ACTIVATION_PROGRESS_STAGES = [
+   "applying_settings",
+   "restoring_settings",
+   "opening_application",
++  "checking_application_started",
+   "complete",
+ ] as const;
+ 
+diff --git a/src/i18n/locales/en.json b/src/i18n/locales/en.json
+index b8b64a92..420c8e7c 100644
+--- a/src/i18n/locales/en.json
++++ b/src/i18n/locales/en.json
+@@ -1,4 +1,20 @@
+ {
++  "yeschoyDesktopRecovery": {
++    "configuredTitle": "Settings saved; startup checked",
++    "startObserved": "Settings are saved and the operating system has observed the app starting. This does not verify that loading, sign-in, or model connectivity has completed. Check actual use inside the app.",
++    "opening": "Opening the app; startup is not confirmed yet…",
++    "checkingStart": "Checking startup; keeping the previous settings until this finishes…",
++    "retry": "Repair and retry",
++    "retryHint": "The assistant recovers unfinished changes first and asks you to save before restarting. You do not need to edit configuration files or find processes.",
++    "desktop_start_failed_restored": "Startup could not be confirmed with the new settings. The previous settings were restored and the app reopened. This model change did not take effect; you can retry.",
++    "desktop_change_failed_restored": "The update was cancelled or could not complete. The previous settings were restored and the app reopened. This model change did not take effect; you can retry.",
++    "previous_app_reopen_failed": "The previous settings and key were restored, but startup still could not be confirmed. Handle any operating-system permission prompt, then select Repair and retry. No manual configuration editing is needed.",
++    "desktop_recovery_waiting_for_exit": "The operating system has not allowed the app to close, so settings have not been restored. The recovery record is retained to avoid overwriting configuration still in use. Save your work, handle any system prompt, then select Repair and retry.",
++    "previous_connection_runtime_failed": "Settings and the key were restored, but the previous local connection could not restart. Select Repair and retry. No manual configuration editing is needed.",
++    "configuration_rollback_failed": "Recovery found changed or unwritable settings. Some settings remain unrestored; other changes were not forcibly overwritten. Select Repair and retry instead of editing configuration files.",
++    "credential_restore_failed": "The key has not been restored. Unlock the system keychain or credential manager, then select Repair and retry.",
++    "recovery_receipt_failed": "The recovery record could not be saved safely, so completion is unconfirmed. Select Repair and retry to recover the unfinished operation first."
++  },
+   "yeschoyCatalog": {
+     "eyebrow": "野菜API models",
+     "title": "Choose a model",
+diff --git a/src/i18n/locales/ja.json b/src/i18n/locales/ja.json
+index 793c6e4a..56230043 100644
+--- a/src/i18n/locales/ja.json
++++ b/src/i18n/locales/ja.json
+@@ -1,4 +1,20 @@
+ {
++  "yeschoyDesktopRecovery": {
++    "configuredTitle": "設定を保存し、起動状態を確認しました",
++    "startObserved": "設定は保存され、OS がアプリの起動を確認しました。読み込み、ログイン、モデル接続の完了を保証するものではありません。アプリ内で実際の動作を確認してください。",
++    "opening": "アプリを開いています。起動結果はまだ未確認です…",
++    "checkingStart": "起動状態を確認中です。完了するまで前回の設定を保持します…",
++    "retry": "自動修復して再試行",
++    "retryHint": "未完了の操作を先に復旧します。再起動が必要な場合は保存を確認します。設定ファイルの編集やプロセスの検索は不要です。",
++    "desktop_start_failed_restored": "新しい設定で起動を確認できなかったため、前回の設定を復元してアプリを開き直しました。今回のモデル変更は反映されていません。再試行できます。",
++    "desktop_change_failed_restored": "更新がキャンセルされたか完了できなかったため、前回の設定を復元してアプリを開き直しました。今回のモデル変更は反映されていません。再試行できます。",
++    "previous_app_reopen_failed": "前回の設定とキーは復元しましたが、起動を確認できませんでした。OS の権限確認に対応してから「自動修復して再試行」を選んでください。設定の手動編集は不要です。",
++    "desktop_recovery_waiting_for_exit": "OS がアプリの終了を許可していないため、設定はまだ復元されていません。使用中の設定を上書きしないよう復旧記録を保持しています。作業を保存し、OS の確認に対応してから再試行してください。",
++    "previous_connection_runtime_failed": "設定とキーは復元しましたが、以前のローカル接続を再起動できませんでした。「自動修復して再試行」を選んでください。設定の手動編集は不要です。",
++    "configuration_rollback_failed": "設定の変更または書き込みの制限が見つかり、一部を復元できませんでした。他の変更は強制的に上書きしていません。手動編集せず「自動修復して再試行」を選んでください。",
++    "credential_restore_failed": "キーをまだ復元できていません。OS のキーチェーンまたは資格情報マネージャーを解除してから再試行してください。",
++    "recovery_receipt_failed": "復旧記録を安全に保存できなかったため、完了を確認できません。「自動修復して再試行」で未完了の操作を先に復旧してください。"
++  },
+   "yeschoyCatalog": {
+     "eyebrow": "野菜API のモデル",
+     "title": "モデルを選ぶ",
+diff --git a/src/i18n/locales/zh-TW.json b/src/i18n/locales/zh-TW.json
+index fdae7c83..cba393f0 100644
+--- a/src/i18n/locales/zh-TW.json
++++ b/src/i18n/locales/zh-TW.json
+@@ -1,4 +1,20 @@
+ {
++  "yeschoyDesktopRecovery": {
++    "configuredTitle": "設定已儲存，已檢查啟動",
++    "startObserved": "設定已儲存，系統已確認應用程式啟動。尚未驗證是否完成載入、登入或模型連線，請以應用程式內的實際使用結果為準。",
++    "opening": "正在開啟應用程式，尚未確認啟動結果…",
++    "checkingStart": "正在檢查啟動狀態；完成前保留上一次設定…",
++    "retry": "自動修復並重試",
++    "retryHint": "助手會先恢復未完成的操作；需要重新啟動時會提醒儲存，無需手動修改設定或尋找程序。",
++    "desktop_start_failed_restored": "新設定下未能確認應用程式啟動，已自動恢復上一次設定並重新開啟原應用程式。本次模型切換未生效，可以重試。",
++    "desktop_change_failed_restored": "本次更新已取消或未能完成，已自動恢復上一次設定並重新開啟原應用程式。本次模型切換未生效，可以重試。",
++    "previous_app_reopen_failed": "上一次設定和金鑰已恢復，但系統仍未能確認啟動。請處理系統權限提示後點選「自動修復並重試」，無需手動修改設定。",
++    "desktop_recovery_waiting_for_exit": "系統暫未允許應用程式結束，尚未恢復設定。為避免覆蓋仍在使用的設定，已保留恢復記錄。儲存內容並處理系統提示後，點選「自動修復並重試」。",
++    "previous_connection_runtime_failed": "設定和金鑰已恢復，但上一次本機連線尚未重新啟動。可點選「自動修復並重試」，無需手動修改設定。",
++    "configuration_rollback_failed": "自動恢復時發現設定被修改或寫入受阻，部分設定尚未恢復，沒有強行覆蓋其他修改。請點選「自動修復並重試」，無需手動編輯設定檔。",
++    "credential_restore_failed": "自動恢復時金鑰設定尚未恢復。請解鎖系統鑰匙圈或認證管理員，再點選「自動修復並重試」。",
++    "recovery_receipt_failed": "恢復記錄尚未安全儲存，不能確認操作已完成。請點選「自動修復並重試」，助手會先處理未完成的操作。"
++  },
+   "yeschoyCatalog": {
+     "eyebrow": "野菜API 模型",
+     "title": "選擇模型",
+diff --git a/src/i18n/locales/zh.json b/src/i18n/locales/zh.json
+index be03e6f7..1326346e 100644
+--- a/src/i18n/locales/zh.json
++++ b/src/i18n/locales/zh.json
+@@ -1,4 +1,20 @@
+ {
++  "yeschoyDesktopRecovery": {
++    "configuredTitle": "配置已保存，已检查启动",
++    "startObserved": "配置已保存，系统已确认应用启动。尚未验证应用是否完成加载、登录或模型连接，请以应用内实际使用结果为准。",
++    "opening": "正在打开应用，尚未确认启动结果…",
++    "checkingStart": "正在检查应用启动状态；未完成前保留上一次配置…",
++    "retry": "自动修复并重试",
++    "retryHint": "助手会先恢复未完成的操作；需要重启时会提醒保存，无需手动改配置或查找进程。",
++    "desktop_start_failed_restored": "新配置下未能确认应用启动，已自动恢复上一次配置并重新打开原应用。本次模型切换没有生效，可以重试。",
++    "desktop_change_failed_restored": "本次更新已取消或未能完成，已自动恢复上一次配置并重新打开原应用。本次模型切换没有生效，可以重试。",
++    "previous_app_reopen_failed": "上一次配置和密钥已恢复，但系统仍未能确认应用启动。请处理系统的权限提示后点击“自动修复并重试”，无需手动修改配置。",
++    "desktop_recovery_waiting_for_exit": "系统暂未允许应用退出，尚未恢复设置。为避免覆盖仍在使用的配置，已保留恢复记录。保存内容并处理系统提示后，点击“自动修复并重试”。",
++    "previous_connection_runtime_failed": "配置和密钥已恢复，但上一次本地连接尚未重新启动。可点击“自动修复并重试”，无需手动修改配置。",
++    "configuration_rollback_failed": "自动恢复时发现配置被修改或写入受阻，部分设置尚未恢复；没有强行覆盖其他修改。请点击“自动修复并重试”，无需手动编辑配置文件。",
++    "credential_restore_failed": "自动恢复时密钥设置尚未恢复。请解锁系统钥匙串或凭据管理器，再点击“自动修复并重试”。",
++    "recovery_receipt_failed": "恢复记录尚未安全保存，不能确认操作已完成。请点击“自动修复并重试”，助手会先处理未完成的操作。"
++  },
+   "yeschoyCatalog": {
+     "eyebrow": "野菜API 模型",
+     "title": "选择模型",

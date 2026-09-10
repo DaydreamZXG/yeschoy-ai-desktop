@@ -21,6 +21,7 @@ import { RestoreConnection } from "../configuration/RestoreConnection";
 import { OpenConnection } from "../configuration/OpenConnection";
 import { groupLabel } from "../configuration/BillingGroupPicker";
 import { RecentRequest } from "../configuration/RecentRequest";
+import { ConnectionStatusNotice } from "../configuration/ConnectionStatusNotice";
 
 interface Props {
   onOpenAccount: () => void;
@@ -66,6 +67,12 @@ export function AppLibraryView({
     connections?.connections.filter((v) =>
       ["connected", "legacy", "changed"].includes(v.state),
     ).length ?? 0;
+  const hasConnectionSnapshot = !!connections?.connections.length;
+  const partialConnections = connections?.connections.some(
+    (c) => c.state === "unavailable",
+  );
+  const staleConnections = !!connections?.error && hasConnectionSnapshot;
+  const checking = scanning || connections?.loading || connections?.refreshing;
   const detected = scan?.targets.filter((v) => v.status !== "not_found").length;
   const apps = [...WORKBENCH_APPS].sort((a, b) => {
     const rank = (id: ActivationToolId) => {
@@ -107,22 +114,24 @@ export function AppLibraryView({
           <p className="eyebrow">野菜 API · 你的 AI 工作台</p>
           <h1>我的应用</h1>
           <p>
-            {configured
-              ? "从这里打开应用，接着上次的工作。"
-              : "选一个应用，安装并连接你想用的模型。"}
+            {!hasConnectionSnapshot
+              ? "先确认本机应用的接入状态，再继续使用或调整设置。"
+              : configured
+                ? "从这里打开应用，接着上次的工作。"
+                : "选一个应用，安装并连接你想用的模型。"}
           </p>
         </div>
         <button
           className="subtle-button"
           type="button"
-          disabled={scanning}
+          disabled={checking}
           onClick={() => {
             void refresh();
             void connections?.refresh();
           }}
         >
-          <RefreshCw className={scanning ? "is-spinning" : ""} />
-          {scanning ? "正在检查" : "检查应用"}
+          <RefreshCw className={checking ? "is-spinning" : ""} />
+          {checking ? "正在检查" : "检查应用"}
         </button>
       </header>
       {signedIn && (
@@ -161,7 +170,24 @@ export function AppLibraryView({
       ) : (
         <div className="library-heading">
           <span>
-            <b>{configured}</b> 个应用已接入{" "}
+            {!hasConnectionSnapshot ||
+            (partialConnections && configured === 0) ? (
+              connections?.loading ? (
+                "正在读取接入状态"
+              ) : (
+                "接入状态待确认"
+              )
+            ) : (
+              <>
+                {staleConnections
+                  ? "上次确认 "
+                  : partialConnections
+                    ? "已确认 "
+                    : ""}
+                <b>{configured}</b> 个应用已接入
+                {partialConnections ? "，部分状态待确认" : ""}
+              </>
+            )}{" "}
             <span className="quiet-separator">/</span> {detected ?? "—"}{" "}
             个已发现
           </span>
@@ -171,11 +197,19 @@ export function AppLibraryView({
           </button>
         </div>
       )}
-      {(scanError || connections?.error) && (
+      {scanError && (
         <p className="workbench-notice" role="alert">
           <CircleAlert />
-          暂时无法确认本机应用状态，请点击“检查应用”重试。
+          暂时无法确认已安装的应用，请点击“检查应用”重试。接入设置不会因此删除。
         </p>
+      )}
+      {connections && (connections.error || partialConnections) && (
+        <ConnectionStatusNotice
+          issue={connections.errorInfo}
+          stale={staleConnections}
+          refreshing={connections.refreshing}
+          onRetry={() => void connections.refresh()}
+        />
       )}
       {!scanning && !scanError && visibleApps.length === 0 && (
         <section className="library-empty">
@@ -205,15 +239,23 @@ export function AppLibraryView({
             connection &&
             !["not_connected", "unavailable"].includes(connection.state);
           const installed = target && target.status !== "not_found";
+          const unknownConnection =
+            !connection || connection.state === "unavailable";
           const label = active
-            ? connectionLabel(connection.state)
-            : scanning
-              ? "正在查找"
-              : installed
-                ? "待接入"
-                : scanError
-                  ? "待检查"
-                  : "未发现应用";
+            ? `${staleConnections ? "上次确认 · " : ""}${connectionLabel(connection.state)}`
+            : unknownConnection
+              ? connections?.loading
+                ? "正在读取状态"
+                : "状态待确认"
+              : staleConnections
+                ? "上次确认 · 未接入"
+                : scanning
+                  ? "正在查找"
+                  : installed
+                    ? "待接入"
+                    : scanError
+                      ? "待检查"
+                      : "未发现应用";
           return (
             <article
               key={app.id}
@@ -234,7 +276,9 @@ export function AppLibraryView({
                 </div>
                 <span
                   className="connection-state"
-                  data-state={connection?.state}
+                  data-state={
+                    unknownConnection ? "unavailable" : connection?.state
+                  }
                 >
                   {label}
                 </span>
@@ -296,11 +340,13 @@ export function AppLibraryView({
                 ) : (
                   <div className="connection-empty">
                     <p>
-                      {installed
-                        ? "选择模型与分组，助手帮你完成配置。"
-                        : ["claude_desktop", "codex_desktop"].includes(app.id)
-                          ? "野菜帮你选择安装包，装好后继续接入模型。"
-                          : "查看官方安装步骤，安装后由野菜完成模型接入。"}
+                      {unknownConnection
+                        ? "尚未确认接入设置，检查成功后再调整；已有设置不会因此删除。"
+                        : installed
+                          ? "选择模型与分组，助手帮你完成配置。"
+                          : ["claude_desktop", "codex_desktop"].includes(app.id)
+                            ? "野菜帮你选择安装包，装好后继续接入模型。"
+                            : "查看官方安装步骤，安装后由野菜完成模型接入。"}
                     </p>
                     <span>
                       {target?.installations[0]?.version
@@ -333,7 +379,7 @@ export function AppLibraryView({
                     className={active ? "subtle-button" : "connect-app-button"}
                     onClick={() => onOpenSetup(app.id)}
                   >
-                    {active
+                    {active || unknownConnection
                       ? "检查接入"
                       : installed
                         ? "开始接入"

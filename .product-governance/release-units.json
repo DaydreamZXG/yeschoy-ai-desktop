@@ -44980,6 +44980,41 @@
         "releaseUnitHash": "sha256:fee2153931e02156c1fd843859172d3578840ed20ff6610b2987d92a86acd6f3",
         "snapshotPath": "execution/release-unit-snapshots/fee2153931e02156c1fd843859172d3578840ed20ff6610b2987d92a86acd6f3/release-unit.json"
       }
+    },
+    {
+      "id": "RU-076",
+      "status": "review",
+      "objective": "Repair connection inspection and UX truth without another provider store, gateway redesign, user-state migration or host-application test.",
+      "decisionRef": "DEC-120",
+      "dependsOnReleaseUnits": [
+        "RU-075"
+      ],
+      "supersedesReleaseUnits": [
+        "RU-075"
+      ],
+      "roots": {
+        "workPackages": [
+          "WP-RU076-CONNECTION-INSPECTION"
+        ],
+        "requirements": [
+          "REQ-096"
+        ],
+        "nonFunctionalRequirements": [],
+        "domains": [],
+        "contracts": [
+          "desktop-connection-management@v2"
+        ],
+        "stateMachines": [],
+        "pages": [],
+        "journeys": [],
+        "dataLifecycleResources": [],
+        "aiScenarios": [],
+        "entitlements": [],
+        "trackCoverage": []
+      },
+      "closure": null,
+      "deferredSnapshot": null,
+      "freeze": null
     }
   ]
 }

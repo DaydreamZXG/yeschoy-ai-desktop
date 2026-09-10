@@ -1,7 +1,28 @@
-import { useEffect, useId, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
+import { Content as PopoverContent } from "@radix-ui/react-popover";
 import type { AccountModel } from "../account/session";
 import { modelDisplayName, modelMatchesQuery } from "../model-profiles/profile";
+import { Popover, PopoverTrigger } from "../components/ui/popover";
+
+function revealOption(list: HTMLDivElement | null, index: number) {
+  const option = list?.querySelectorAll<HTMLElement>('[role="option"]')[index];
+  if (!list || !option) return;
+  // scrollIntoView also scrolls the workbench page. Only move this list.
+  const viewportTop = list.getBoundingClientRect().top + list.clientTop;
+  const bounds = option.getBoundingClientRect();
+  if (bounds.top < viewportTop) list.scrollTop += bounds.top - viewportTop;
+  else if (bounds.bottom > viewportTop + list.clientHeight)
+    list.scrollTop += bounds.bottom - viewportTop - list.clientHeight;
+}
 
 export function ModelPicker({
   models,
@@ -19,85 +40,133 @@ export function ModelPicker({
   const id = useId();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [active, setActive] = useState(0);
-  const root = useRef<HTMLDivElement>(null);
+  const [filterQuery, setFilterQuery] = useState("");
+  const [activeId, setActiveId] = useState("");
   const button = useRef<HTMLButtonElement>(null);
   const search = useRef<HTMLInputElement>(null);
-  const options = models.filter((m) => modelMatchesQuery(m.id, query));
+  const list = useRef<HTMLDivElement | null>(null);
+  const listObserver = useRef<ResizeObserver | null>(null);
+  const composing = useRef(false);
+  const tabbingAway = useRef(false);
+  const options = useMemo(
+    () => models.filter((model) => modelMatchesQuery(model.id, filterQuery)),
+    [models, filterQuery],
+  );
+  const active = Math.max(
+    0,
+    options.findIndex((model) => model.id === activeId),
+  );
+  const activeOption = useRef(active);
+  useLayoutEffect(() => {
+    activeOption.current = active;
+  }, [active]);
+  const observeList = useCallback((element: HTMLDivElement | null) => {
+    listObserver.current?.disconnect();
+    listObserver.current = null;
+    list.current = element;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    // Collision placement can shrink the list after autofocus. Reveal the
+    // current keyboard option once its real viewport size is known. Scrolling
+    // alone does not resize the list, so dragging remains under user control.
+    listObserver.current = new ResizeObserver(() =>
+      revealOption(element, activeOption.current),
+    );
+    listObserver.current.observe(element);
+  }, []);
+  const changeOpen = (next: boolean) => {
+    if (next) {
+      if (disabled || !models.length) return;
+      composing.current = false;
+      tabbingAway.current = false;
+      setQuery("");
+      setFilterQuery("");
+      setActiveId(value);
+    }
+    setOpen(next);
+  };
+  const filter = (text: string) => {
+    setFilterQuery(text);
+    setActiveId("");
+  };
+  useLayoutEffect(() => {
+    if (list.current) list.current.scrollTop = 0;
+  }, [filterQuery]);
   useEffect(() => {
-    if (!open) return;
-    search.current?.focus();
-    const outside = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener("pointerdown", outside);
-    return () => document.removeEventListener("pointerdown", outside);
-  }, [open]);
-  useEffect(() => {
-    if (disabled) setOpen(false);
-  }, [disabled]);
+    if (disabled || !models.length) setOpen(false);
+  }, [disabled, models.length]);
   const choose = (model: string) => {
+    if (disabled) return;
     onChange(model);
     setOpen(false);
-    button.current?.focus();
+    button.current?.focus({ preventScroll: true });
   };
   return (
-    <div
-      className="search-model-picker"
-      ref={root}
-      onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false);
-      }}
-    >
+    <div className="search-model-picker">
       <span className="field-caption" id={`${id}-label`}>
         {label} <small>完整模型 ID</small>
       </span>
-      <button
-        ref={button}
-        type="button"
-        className="model-picker-trigger"
-        role="combobox"
-        aria-labelledby={`${id}-label`}
-        aria-expanded={open}
-        aria-controls={`${id}-options`}
-        aria-haspopup="listbox"
-        disabled={disabled || !models.length}
-        onClick={() => {
-          setOpen(!open);
-          setQuery("");
-          setActive(
-            Math.max(
-              0,
-              models.findIndex((m) => m.id === value),
-            ),
-          );
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-            e.preventDefault();
-            setOpen(true);
-          }
-        }}
-      >
-        <span className="model-picker-identity">
-          {value && modelDisplayName(value) !== value && (
-            <strong>{modelDisplayName(value)}</strong>
-          )}
-          <code>
-            {value || (models.length ? "选择一个模型" : "暂无可用模型")}
-          </code>
-        </span>
-        <ChevronDown />
-      </button>
-      {open && (
-        <div className="model-picker-popover">
+      <Popover open={open} onOpenChange={changeOpen} modal={false}>
+        <PopoverTrigger asChild>
+          <button
+            ref={button}
+            type="button"
+            className="model-picker-trigger"
+            role="combobox"
+            aria-labelledby={`${id}-label`}
+            aria-expanded={open}
+            aria-controls={`${id}-options`}
+            aria-haspopup="listbox"
+            disabled={disabled || !models.length}
+            tabIndex={open ? -1 : 0}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                e.preventDefault();
+                changeOpen(true);
+              }
+            }}
+          >
+            <span className="model-picker-identity">
+              {value && modelDisplayName(value) !== value && (
+                <strong>{modelDisplayName(value)}</strong>
+              )}
+              <code>
+                {value || (models.length ? "选择一个模型" : "暂无可用模型")}
+              </code>
+            </span>
+            <ChevronDown />
+          </button>
+        </PopoverTrigger>
+        {/* Keep search in document tab order. Radix still owns positioning and
+            outside interaction; a body portal would separate it from the field. */}
+        <PopoverContent
+          className="model-picker-popover"
+          aria-label={label}
+          sideOffset={7}
+          collisionPadding={16}
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            search.current?.focus({ preventScroll: true });
+            revealOption(list.current, active);
+          }}
+          onCloseAutoFocus={(event) => {
+            if (tabbingAway.current) event.preventDefault();
+          }}
+          onEscapeKeyDown={(event) => {
+            // Radix handles Escape at document capture, before the input.
+            if (composing.current || event.isComposing || event.keyCode === 229)
+              event.preventDefault();
+          }}
+        >
           <label className="model-search">
             <Search />
             <input
               ref={search}
               type="search"
               value={query}
-              placeholder="搜索模型名称…"
+              placeholder="搜索名称或 ID，例如 GPT 6"
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
               aria-label="搜索模型"
               aria-controls={`${id}-options`}
               aria-activedescendant={
@@ -105,13 +174,41 @@ export function ModelPicker({
               }
               onChange={(e) => {
                 setQuery(e.target.value);
-                setActive(0);
+                if (!composing.current) filter(e.target.value);
+              }}
+              onCompositionStart={() => {
+                composing.current = true;
+              }}
+              onCompositionEnd={(e) => {
+                composing.current = false;
+                setQuery(e.currentTarget.value);
+                filter(e.currentTarget.value);
+              }}
+              onBlur={() => {
+                // Only an explicit Tab intent may dismiss on blur. A scrollbar
+                // can blur with relatedTarget=null and must remain draggable.
+                if (tabbingAway.current) setOpen(false);
               }}
               onKeyDown={(e) => {
+                if (
+                  composing.current ||
+                  e.nativeEvent.isComposing ||
+                  e.keyCode === 229
+                ) {
+                  e.stopPropagation();
+                  return;
+                }
+                if (e.key === "Tab") {
+                  // Let native Tab advance before closing. Do not unmount the
+                  // focused input during keydown or loop Radix's focus scope.
+                  e.stopPropagation();
+                  tabbingAway.current = true;
+                  return;
+                }
                 if (e.key === "Escape") {
                   e.preventDefault();
                   setOpen(false);
-                  button.current?.focus();
+                  button.current?.focus({ preventScroll: true });
                 }
                 if (e.key === "ArrowDown" || e.key === "ArrowUp") {
                   e.preventDefault();
@@ -122,23 +219,29 @@ export function ModelPicker({
                       active + (e.key === "ArrowDown" ? 1 : -1),
                     ),
                   );
-                  setActive(next);
-                  document
-                    .getElementById(`${id}-option-${next}`)
-                    ?.scrollIntoView({ block: "nearest" });
+                  setActiveId(options[next]?.id ?? "");
+                  revealOption(list.current, next);
                 }
-                if (e.key === "Enter" && options[active]) {
+                if (e.key === "Enter") {
                   e.preventDefault();
-                  choose(options[active].id);
+                  if (options[active]) choose(options[active].id);
                 }
               }}
             />
           </label>
           <div
+            ref={observeList}
             role="listbox"
+            tabIndex={-1}
             id={`${id}-options`}
             aria-label={label}
             className="model-options"
+            onPointerUp={(event) => {
+              // A native scrollbar may take focus without focusing another
+              // input. Restore typing after a mouse drag, not a touch scroll.
+              if (event.pointerType === "mouse" && event.button === 0)
+                search.current?.focus({ preventScroll: true });
+            }}
           >
             {options.map((model, index) => (
               <button
@@ -149,7 +252,10 @@ export function ModelPicker({
                 aria-selected={model.id === value}
                 className={index === active ? "is-active" : ""}
                 key={model.id}
-                onPointerMove={() => setActive(index)}
+                onPointerMove={(event) => {
+                  if (event.pointerType === "mouse" && !event.buttons)
+                    setActiveId(model.id);
+                }}
                 onClick={() => choose(model.id)}
               >
                 <span>
@@ -167,9 +273,11 @@ export function ModelPicker({
               </p>
             )}
           </div>
-          <footer>{options.length} 个模型 · 价格和分组在选择后显示</footer>
-        </div>
-      )}
+          <footer role="status">
+            {options.length} 个模型 · 价格和分组在选择后显示
+          </footer>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

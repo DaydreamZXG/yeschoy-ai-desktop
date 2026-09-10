@@ -66,9 +66,13 @@ export function ConfirmDialog({
         }
       }}
     >
-      <DialogContent className="max-w-sm" zIndex={zIndex}>
+      <DialogContent
+        className="confirm-dialog max-w-sm"
+        data-tone={variant}
+        zIndex={zIndex}
+      >
         <DialogHeader className="space-y-3 border-b-0 bg-transparent pb-0">
-          <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
+          <DialogTitle className="confirm-dialog-title flex items-center gap-2 text-lg font-semibold">
             <IconComponent className={iconClass} />
             {title}
           </DialogTitle>
@@ -77,7 +81,7 @@ export function ConfirmDialog({
           </DialogDescription>
         </DialogHeader>
         {checkboxLabel ? (
-          <label className="flex cursor-pointer select-none items-start gap-2 px-6 pt-3">
+          <label className="confirm-dialog-checkbox flex cursor-pointer select-none items-start gap-2 px-6 pt-3">
             <Checkbox
               checked={checkboxChecked}
               disabled={pending}
@@ -92,6 +96,7 @@ export function ConfirmDialog({
             {cancelText || t("common.cancel")}
           </Button>
           <Button
+            className="confirm-dialog-confirm"
             variant={variant === "info" ? "default" : "destructive"}
             disabled={pending}
             onClick={() =>

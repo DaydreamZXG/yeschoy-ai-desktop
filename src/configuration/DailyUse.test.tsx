@@ -212,6 +212,192 @@ beforeEach(async () => {
 afterEach(cleanup);
 
 describe("daily-use UX", () => {
+  it("routes an interrupted open to automatic setup recovery without disconnecting", async () => {
+    const controller = {
+      ...local(),
+      open: vi.fn(async () => "recovery_pending" as const),
+    };
+    render(
+      <ConnectionProvider value={controller}>
+        <OpenConnection
+          connection={
+            controller.connections.find((c) => c.toolId === "codex_desktop")!
+          }
+          name="Codex Desktop"
+          onAdjust={callback}
+        />
+      </ConnectionProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "打开使用" }));
+    await tick();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "先自动恢复未完成的操作",
+    );
+    expect(screen.getByRole("alert")).not.toHaveTextContent("先恢复原设置");
+    fireEvent.click(screen.getByRole("button", { name: "前往接入修复" }));
+    expect(callback).toHaveBeenCalledOnce();
+    expect(controller.restore).not.toHaveBeenCalled();
+  });
+
+  it.each(["codex_desktop", "claude_desktop"] as const)(
+    "repairs %s through save/quit confirmation without a manual restore step",
+    async (toolId) => {
+      let configureCount = 0;
+      native.mockImplementation(async (command, args) => {
+        const req = (args as { request: Record<string, unknown> }).request;
+        if (command === "scan_activation_targets_v1")
+          return scan(String(req.requestId));
+        if (command !== "configure_desktop_tool_v2")
+          throw Error("Unexpected fixture request");
+        configureCount++;
+        return {
+          requestId: req.requestId,
+          schemaVersion: 4,
+          toolId: req.toolId,
+          modelId: req.modelId,
+          billingGroup: req.billingGroup,
+          models: req.models,
+          observedAtEpochMs: 2000,
+          status:
+            configureCount === 1
+              ? "configuration_failed"
+              : req.restartRunningApp
+                ? "ready"
+                : "application_running",
+          reasonCode:
+            configureCount === 1
+              ? "desktop_recovery_waiting_for_exit"
+              : req.restartRunningApp
+                ? "desktop_start_observed"
+                : "save_work_before_restart",
+        };
+      });
+      const controller = local();
+      render(setupView(session(), controller, "mainland_optimized", toolId));
+      await tick();
+      const primary = () => screen.getByTestId("configuration-apply-action");
+      fireEvent.click(primary());
+      await tick();
+      expect(primary()).toHaveTextContent("自动修复并重试");
+      expect(screen.getByRole("alert")).toHaveTextContent("尚未恢复设置");
+      fireEvent.click(primary());
+      await tick();
+      const dialog = screen.getByRole("dialog");
+      expect(dialog).toHaveTextContent("请先保存");
+      const configureCalls = () =>
+        native.mock.calls.filter(
+          ([command]) => command === "configure_desktop_tool_v2",
+        );
+      expect(configureCalls().at(-1)?.[1]).not.toMatchObject({
+        request: { restartRunningApp: true },
+      });
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "已保存，退出并继续" }),
+      );
+      await tick();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.getByText("配置已保存，已检查启动")).toBeInTheDocument();
+      expect(screen.getByText(/尚未验证应用是否完成加载/)).toBeInTheDocument();
+      expect(controller.restore).not.toHaveBeenCalled();
+      expect(configureCalls()).toHaveLength(3);
+      expect(configureCalls().at(-1)?.[1]).toMatchObject({
+        request: { restartRunningApp: true },
+      });
+    },
+  );
+
+  it.each(["codex_desktop", "claude_desktop"] as const)(
+    "reconnect regression: %s can change models repeatedly after success without a stranded modal",
+    async (toolId) => {
+      let configured = false;
+      let finish: (() => void) | undefined;
+      native.mockImplementation(async (command, args) => {
+        const req = (args as { request: Record<string, unknown> }).request;
+        if (command === "scan_activation_targets_v1")
+          return scan(String(req.requestId));
+        if (command !== "configure_desktop_tool_v2")
+          throw Error("Unexpected fixture request");
+        const result = {
+          requestId: req.requestId,
+          schemaVersion: 4,
+          status: "ready",
+          toolId: req.toolId,
+          modelId: req.modelId,
+          billingGroup: req.billingGroup,
+          models: req.models,
+          observedAtEpochMs: 2000,
+          reasonCode: "configuration_ready",
+        };
+        if (configured && !req.restartRunningApp)
+          return {
+            ...result,
+            status: "application_running",
+            reasonCode: "save_work_before_restart",
+          };
+        if (configured)
+          await new Promise<void>((resolve) => {
+            finish = resolve;
+          });
+        configured = true;
+        return result;
+      });
+      render(setupView(session(), local(), "mainland_optimized", toolId));
+      await tick();
+      const applyButton = () =>
+        screen.getByTestId("configuration-apply-action");
+      const configureCalls = () =>
+        native.mock.calls.filter(
+          ([command]) => command === "configure_desktop_tool_v2",
+        );
+      fireEvent.click(applyButton());
+      await tick();
+      expect(configureCalls()).toHaveLength(1);
+      for (const [index, modelId] of ["model-b", "model-a"].entries()) {
+        fireEvent.click(screen.getByRole("combobox", { name: /选择模型/ }));
+        fireEvent.click(screen.getByRole("option", { name: modelId }));
+        fireEvent.click(applyButton());
+        await tick();
+        expect(screen.getByRole("dialog")).toHaveTextContent("请先保存");
+        expect(configureCalls().at(-1)?.[1]).not.toMatchObject({
+          request: { restartRunningApp: true },
+        });
+        const beforeCancel = configureCalls().length;
+        fireEvent.click(
+          within(screen.getByRole("dialog")).getByRole("button", {
+            name: "暂不接入",
+          }),
+        );
+        await tick();
+        expect(configureCalls()).toHaveLength(beforeCancel);
+        expect(getComputedStyle(document.body).pointerEvents).not.toBe("none");
+        fireEvent.click(applyButton());
+        await tick();
+        fireEvent.click(
+          within(screen.getByRole("dialog")).getByRole("button", {
+            name: "已保存，退出并继续",
+          }),
+        );
+        await tick();
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+        expect(document.querySelector(".yeschoy-dialog-overlay")).toBeNull();
+        expect(getComputedStyle(document.body).pointerEvents).not.toBe("none");
+        expect(applyButton()).toBeDisabled();
+        expect(configureCalls().at(-1)?.[1]).toMatchObject({
+          request: { restartRunningApp: true, modelId },
+        });
+        fireEvent.click(screen.getByRole("button", { name: "查看其他工具" }));
+        expect(callback).toHaveBeenCalled();
+        expect(finish).toBeTypeOf("function");
+        await act(async () => finish!());
+        expect(applyButton()).toBeEnabled();
+        expect(screen.getByText("接入完成")).toBeInTheDocument();
+        // A cancelled prompt may be reopened from the already-known running
+        // state; only the first preflight and consented apply invoke native.
+        expect(configureCalls()).toHaveLength(1 + (index + 1) * 2);
+      }
+    },
+  );
+
   it("ru056 enrolls explicit model group pairs without blocking on paid model probes", async () => {
     native.mockImplementation(async (command, args) => {
       const req = (args as { request: Record<string, unknown> }).request;
@@ -851,12 +1037,19 @@ describe("daily-use UX", () => {
         return result;
       });
       render(
-        <AppLibraryView
-          accountSession={{ ...session(), projection: null }}
-          onOpenAccount={callback}
-          onOpenSetup={callback}
-          onOpenDiagnostics={callback}
-        />,
+        <ConnectionProvider
+          value={{
+            ...local(),
+            connections: connectionsFixture("known-empty").connections,
+          }}
+        >
+          <AppLibraryView
+            accountSession={{ ...session(), projection: null }}
+            onOpenAccount={callback}
+            onOpenSetup={callback}
+            onOpenDiagnostics={callback}
+          />
+        </ConnectionProvider>,
       );
       await tick();
       expect(screen.queryAllByRole("article")).toHaveLength(count || 2);
@@ -940,6 +1133,32 @@ describe("daily-use UX", () => {
       "部分设置尚未恢复",
     ],
     ["configuration_failed", "credential_restore_failed", "密钥设置尚未恢复"],
+    [
+      "configuration_failed",
+      "desktop_start_failed_restored",
+      "已自动恢复上一次配置",
+    ],
+    [
+      "configuration_failed",
+      "desktop_change_failed_restored",
+      "本次更新已取消或未能完成",
+    ],
+    [
+      "configuration_failed",
+      "previous_app_reopen_failed",
+      "系统仍未能确认应用启动",
+    ],
+    [
+      "configuration_failed",
+      "desktop_recovery_waiting_for_exit",
+      "尚未恢复设置",
+    ],
+    [
+      "configuration_failed",
+      "previous_connection_runtime_failed",
+      "上一次本地连接尚未重新启动",
+    ],
+    ["configuration_failed", "recovery_receipt_failed", "不能确认操作已完成"],
     [
       "secure_storage_unavailable",
       "secure_storage_unavailable",

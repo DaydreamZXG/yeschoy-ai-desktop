@@ -3403,6 +3403,53 @@
         "E-USER-091",
         "E-CODE-094"
       ]
+    },
+    {
+      "id": "E-USER-096",
+      "claim": "The owner asks to repair the failed local connection-state view, inspect the code and reuse existing CC Switch mechanisms. Do not launch or reconfigure the owner's local Codex or Claude; packaging is deferred during the repair.",
+      "class": "user_confirmed",
+      "locator": "inline:2026-09-09-user-connection-status-repair-and-cc-switch-reuse",
+      "observedAt": "2026-09-09T14:13:22Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-096",
+      "claim": "AppLibraryView maps absent connection results to zero and pending setup, while useToolConnections discards the caught cause and dispatches overlapping focus inspections. Native inspection serializes on ACTIVATION_LOCK, then synchronously accesses OS credentials twice per tool. CC Switch's inherited QueryClient and blocking-worker pattern remain present but are not used by this path.",
+      "class": "code_observed",
+      "locator": "src/workbench/AppLibraryView.tsx:65;src/configuration/connections.tsx:205;src-tauri/src/tool_activation.rs:2077;src/lib/query/queryClient.ts:1;src-tauri/src/commands/provider.rs:47",
+      "observedAt": "2026-09-09T14:13:22Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-PROP-044",
+      "claim": "Reuse the inherited TanStack Query client for deduplicated inspection and retained successful state; retain the existing Yeschoy encrypted recovery store and direct-connect adapters as authoritative. Distinguish unknown, stale and confirmed-not-connected UI states, emit only safe correlated failure codes, and move read-only credential inspection off the async executor under existing serialization. The exact user-machine trigger remains unknown without correlated evidence.",
+      "class": "proposed",
+      "locator": "inline:ru076-connection-inspection-repair",
+      "observedAt": "2026-09-09T14:13:22Z",
+      "scope": "proposal",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-096",
+        "E-CODE-096"
+      ]
+    },
+    {
+      "id": "E-USER-097",
+      "claim": "After the agent disclosed stale historical verification and asked whether to use the current committed code as the new baseline while preserving direct connections and reusing existing components, the owner explicitly replied 对的. No permission was given to rewrite historical proofs, operate real local apps or publish a new build.",
+      "class": "user_confirmed",
+      "locator": "inline:2026-09-09-user-current-baseline-confirmation",
+      "observedAt": "2026-09-09T14:30:13Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": ["E-USER-096"]
     }
   ]
 }

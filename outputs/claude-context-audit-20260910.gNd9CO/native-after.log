@@ -1,0 +1,19 @@
+   Compiling yeschoy-desktop v0.4.15 (/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 10.54s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/yeschoy_desktop_lib-a37288403df02f03)
+
+running 11 tests
+test claude_bridge::tests::context_regression_discovery_uses_each_real_models_capacity ... ok
+test claude_bridge::tests::context_regression_one_m_picker_route_keeps_real_model_identity ... ok
+test claude_bridge::tests::context_regression_one_m_requests_preserve_payload_and_streaming ... ok
+test tool_adapters::claude_desktop::tests::context_regression_desktop_catalog_declares_each_real_models_capacity ... ok
+test tool_adapters::claude_desktop::tests::context_regression_invalid_catalog_cannot_preserve_unregistered_rows ... ok
+test tool_adapters::claude_desktop::tests::context_regression_migration_is_owned_idempotent_and_fully_reversible ... ok
+test tool_adapters::claude_desktop::tests::context_regression_new_readback_checks_context_but_old_connections_stay_readable ... ok
+test tool_adapters::claude_desktop::tests::context_regression_single_model_profiles_use_the_same_capability_source ... ok
+test tool_model_profile::tests::context_regression_capabilities_come_from_real_model_metadata ... ok
+test tool_model_profile::tests::context_regression_marker_parsing_is_terminal_and_exact_route_only ... ok
+test tool_model_profile::tests::context_regression_native_consumers_share_capacity_without_raising_user_caps ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 237 filtered out; finished in 0.05s
+

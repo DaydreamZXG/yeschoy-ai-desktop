@@ -1,0 +1,15 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.48s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/yeschoy_desktop_lib-a37288403df02f03)
+
+running 8 tests
+test tool_adapters::codex_desktop::tests::ru043_codex_catalog_efforts_and_unknown_defaults ... ok
+test tool_adapters::dsh_web::tests::ru043_dsh_catalog_efforts_preserve_existing_budget ... ok
+test tool_adapters::openclaw::tests::ru043_openclaw_reapply_keeps_user_params_and_supported_off ... ok
+test tool_adapters::pi::tests::ru043_pi_reapply_preserves_caps_and_restores_original_bytes ... ok
+test tool_model_profile::tests::ru043_native_model_metadata_uses_vendor_contracts ... ok
+test tool_model_profile::tests::ru043_reapply_clears_model_route_overrides_without_losing_budgets ... ok
+test tool_model_profile::tests::ru043_registry_exact_ids_and_capabilities ... ok
+test tool_model_profile::tests::ru043_unknown_chat_fields_and_reasoning_defaults_are_untouched ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 239 filtered out; finished in 0.02s
+

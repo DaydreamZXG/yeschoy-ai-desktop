@@ -1,0 +1,4 @@
+warning: yeschoy-desktop@0.4.15: clang: warning: argument unused during compilation: '-L/Users/zxg/Library/Caches/cargo-xwin/windows-msvc-sysroot/windows-msvc-sysroot/lib/x86_64-unknown-windows-msvc' [-Wunused-command-line-argument]
+   Compiling yeschoy-desktop v0.4.15 (/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/src-tauri)
+    Finished `release` profile [optimized] target(s) in 1m 48s
+  Executable unittests src/lib.rs (src-tauri/target/x86_64-pc-windows-msvc/release/deps/yeschoy_desktop_lib-0abb391e6173a3b3.exe)

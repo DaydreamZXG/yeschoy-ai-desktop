@@ -1,0 +1,10 @@
+
+running 5 tests
+test tool_activation::tests::inspection_regression_one_adapter_panic_keeps_six_other_results ... ok
+test tool_adapters::codex_desktop::tests::inspection_regression_legacy_helper_profile_requires_reconnect_without_panicking ... ok
+test tool_adapters::codex_desktop::tests::inspection_regression_legacy_readback_does_not_abort_the_worker ... ok
+test tool_adapters::codex_desktop::tests::inspection_regression_missing_and_wrong_type_fields_are_read_only_failures ... ok
+test tool_adapters::codex_desktop::tests::inspection_regression_registered_model_switch_stays_connected ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 203 filtered out; finished in 1.50s
+

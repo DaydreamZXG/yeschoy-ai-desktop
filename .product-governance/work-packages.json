@@ -9290,6 +9290,108 @@
         "Verification would require packaging, external credentials, server mutation or a production-readiness claim."
       ],
       "status": "planned"
+    },
+    {
+      "id": "WP-RU076-CONNECTION-INSPECTION",
+      "wave": "producer",
+      "owner": "tool-config",
+      "riskClass": "high",
+      "objective": "Repair connection inspection and UX truth without another provider store, gateway redesign, user-state migration or host-application test.",
+      "deliverables": [
+        "Deduplicated query-cache-backed connection inspection",
+        "Explicit unknown and stale homepage states with safe diagnostics",
+        "Nonblocking native inspection and isolated regression evidence"
+      ],
+      "requirementRefs": [
+        "REQ-096"
+      ],
+      "decisionRefs": [
+        "DEC-120"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No changes to relay routing, authentication, billing, model capabilities or provider persistence",
+        "No package, signing, server mutation, push or real user configuration access",
+        "No activation of inherited CC Switch SQLite services or a second source of truth"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src/configuration/connections.tsx",
+        "src/configuration/connections.test.tsx",
+        "src/configuration/ConfigurationPreviewView.tsx",
+        "src/configuration/ConnectionStatusNotice.tsx",
+        "src/configuration/DailyUse.test.tsx",
+        "src/workbench/AppLibraryView.tsx",
+        "src/workbench/Workbench.test.tsx",
+        "src/lib/query/queryClient.ts",
+        "tests/setupTests.ts",
+        "tests/setupGlobals.ts",
+        "src-tauri/src/tool_activation.rs",
+        "tests/work_packages/ru076/**",
+        "outputs/野菜API-状态读取修复与CCSwitch复用.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "release/**",
+        "release-assets/**",
+        "src-tauri/src/services/**",
+        "src-tauri/src/commands/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No persisted state changes. The existing encrypted Yeschoy recovery store remains canonical; do not read the owner's actual secrets during validation.",
+        "rollback": "Source-only rollback. No user configuration, server credential or provider database is changed by this repair workflow."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve manage_tool_connections_v1 wire response schemas 1 and 2 and every registered tool. Only clarify renderer state and failure handling and offload existing read-only inspection.",
+        "supportedVersions": "Current committed macOS and Windows code paths; no binary runtime compatibility claim.",
+        "removalGate": "No existing credential, receipt or adapter format may be removed in this unit."
+      },
+      "inputContracts": [
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [
+        "desktop-connection-management@v2"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru076-state",
+          "kind": "scenario_test",
+          "adapter": "vitest-json@1",
+          "selector": "src/configuration/connections.test.tsx",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "ru076-ui",
+          "kind": "scenario_test",
+          "adapter": "vitest-json@1",
+          "selector": "src/workbench/Workbench.test.tsx",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU076-AS-state",
+          "assertion": "Happy reads, bounded failures, replayed refreshes, stale replies, focus/restore races and recovery preserve the canonical local connection projection without secret exposure.",
+          "testSelector": "src/configuration/connections.test.tsx",
+          "acceptanceCommandId": "ru076-state"
+        },
+        {
+          "id": "RU076-AS-ui",
+          "assertion": "The workbench distinguishes unknown and stale connection state from confirmed not-connected across initial failure, partial storage failure and successful retry.",
+          "testSelector": "src/workbench/Workbench.test.tsx",
+          "acceptanceCommandId": "ru076-ui"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "A change requires a new provider persistence authority, relay contract, credential disclosure or actual user-application execution.",
+        "A read-only source-isolated regression cannot be executed or the selected unit fails review."
+      ],
+      "status": "planned"
     }
   ]
 }

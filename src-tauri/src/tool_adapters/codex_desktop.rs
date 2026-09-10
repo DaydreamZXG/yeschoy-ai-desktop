@@ -374,40 +374,61 @@ impl Prepared {
         let document = source
             .parse::<DocumentMut>()
             .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_readback_failed"))?;
-        let provider = &document["model_providers"]["yeschoy"];
+        // Live settings can still use the old helper/gateway auth, or have
+        // been edited by Codex/another switcher. toml_edit's [] accessor
+        // panics on a missing key (unlike serde_json); a changed profile must
+        // fail readback normally, not abort the entire connection inspection.
+        let provider = document
+            .get("model_providers")
+            .and_then(|providers| providers.get("yeschoy"))
+            .and_then(Item::as_table_like)
+            .ok_or(AdapterFailure::ConfigurationFailed(
+                "configuration_readback_failed",
+            ))?;
         let catalog = common::snapshot(&self.catalog_path)
             .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_readback_failed"))?;
         let auth_correct = match &self.provider_auth {
             ProviderAuth::Command(helper_executable) => {
-                provider["auth"]["command"].as_str() == Some(helper_executable)
-                    && provider["auth"]["args"].as_array().is_some_and(|args| {
-                        args.len() == 2
-                            && args.get(0).and_then(toml_edit::Value::as_str)
-                                == Some("credential-helper")
-                            && args.get(1).and_then(toml_edit::Value::as_str)
-                                == Some("codex_desktop")
+                provider
+                    .get("auth")
+                    .and_then(Item::as_table_like)
+                    .is_some_and(|auth| {
+                        auth.get("command").and_then(Item::as_str) == Some(helper_executable)
+                            && auth
+                                .get("args")
+                                .and_then(Item::as_array)
+                                .is_some_and(|args| {
+                                    args.len() == 2
+                                        && args.get(0).and_then(toml_edit::Value::as_str)
+                                            == Some("credential-helper")
+                                        && args.get(1).and_then(toml_edit::Value::as_str)
+                                            == Some("codex_desktop")
+                                })
                     })
                     && provider.get("requires_openai_auth").is_none()
                     && provider.get("env_key").is_none()
                     && provider.get("experimental_bearer_token").is_none()
             }
             ProviderAuth::ApiKey(key) => {
-                provider["experimental_bearer_token"].as_str() == Some(key)
+                provider
+                    .get("experimental_bearer_token")
+                    .and_then(Item::as_str)
+                    == Some(key)
                     && provider.get("requires_openai_auth").is_none()
                     && provider.get("auth").is_none()
                     && provider.get("env_key").is_none()
             }
         };
-        let correct = document["model_provider"].as_str() == Some("yeschoy")
+        let correct = document.get("model_provider").and_then(Item::as_str) == Some("yeschoy")
             && crate::tool_adapters::common::default_matches(
-                document["model"].as_str(),
+                document.get("model").and_then(Item::as_str),
                 &self.model,
                 &self.model_ids,
                 strict_default,
             )
-            && document["model_catalog_json"].as_str() == Some(OWNED_CATALOG)
-            && provider["base_url"].as_str() == Some(self.base_url.as_str())
-            && provider["wire_api"].as_str() == Some("responses")
+            && document.get("model_catalog_json").and_then(Item::as_str) == Some(OWNED_CATALOG)
+            && provider.get("base_url").and_then(Item::as_str) == Some(self.base_url.as_str())
+            && provider.get("wire_api").and_then(Item::as_str) == Some("responses")
             && auth_correct
             && catalog.as_deref() == Some(self.catalog.as_slice())
             && !self.catalog.windows(3).any(|window| window == b"sk-");
@@ -911,6 +932,152 @@ mod tests {
             assert!(prepared.validate_existing().is_err());
             assert_eq!(std::fs::read_to_string(&prepared.path).unwrap(), changed);
         }
+        std::fs::remove_dir_all(home).unwrap();
+    }
+
+    // Explicit fixture paths: never consult CODEX_HOME, the user's settings,
+    // Credential Manager, or a running Codex process in these regressions.
+    fn inspection_fixture(provider_auth: ProviderAuth) -> (PathBuf, Prepared, String) {
+        let home = common::temporary_working_directory("codex-inspection-fixture").unwrap();
+        let path = home.join("config.toml");
+        let catalog_path = home.join(OWNED_CATALOG);
+        let model_ids = vec!["model-a".into(), "model-b".into()];
+        let catalog =
+            serde_json::to_vec_pretty(&bridge_catalog_models(&model_ids).unwrap()).unwrap();
+        let base_url = "https://yeschoy.com/v1";
+        let source = render(None, base_url, "model-a", &provider_auth).unwrap();
+        std::fs::write(&path, &source).unwrap();
+        std::fs::write(&catalog_path, &catalog).unwrap();
+        let prepared = Prepared {
+            transaction: FileTransaction::default(),
+            path,
+            catalog_path,
+            catalog,
+            base_url: base_url.into(),
+            model: "model-a".into(),
+            model_ids,
+            provider_auth,
+        };
+        assert!(prepared.validate_existing().is_ok());
+        (home, prepared, String::from_utf8(source).unwrap())
+    }
+
+    #[test]
+    fn inspection_regression_legacy_helper_profile_requires_reconnect_without_panicking() {
+        let (home, mut prepared, original) =
+            inspection_fixture(ProviderAuth::Command("synthetic-helper".into()));
+        // An old receipt/credential can survive the direct-connect upgrade.
+        // Readback expects the new scoped-key field, which the old file lacks.
+        prepared.provider_auth = ProviderAuth::ApiKey("sk-synthetic-inspection-key".into());
+        let result = prepared.validate_existing();
+        assert!(result.is_err());
+        assert_eq!(std::fs::read_to_string(&prepared.path).unwrap(), original);
+        std::fs::remove_dir_all(home).unwrap();
+    }
+
+    #[test]
+    fn inspection_regression_missing_and_wrong_type_fields_are_read_only_failures() {
+        for provider_auth in [
+            ProviderAuth::Command("synthetic-helper".into()),
+            ProviderAuth::ApiKey("sk-synthetic-inspection-key".into()),
+        ] {
+            let (home, prepared, original) = inspection_fixture(provider_auth);
+            let mut paths = vec![
+                vec!["model_provider"],
+                vec!["model"],
+                vec!["model_catalog_json"],
+                vec!["model_providers"],
+                vec!["model_providers", "yeschoy"],
+                vec!["model_providers", "yeschoy", "base_url"],
+                vec!["model_providers", "yeschoy", "wire_api"],
+            ];
+            match &prepared.provider_auth {
+                ProviderAuth::Command(_) => paths.extend([
+                    vec!["model_providers", "yeschoy", "auth"],
+                    vec!["model_providers", "yeschoy", "auth", "command"],
+                    vec!["model_providers", "yeschoy", "auth", "args"],
+                ]),
+                ProviderAuth::ApiKey(_) => paths.push(vec![
+                    "model_providers",
+                    "yeschoy",
+                    "experimental_bearer_token",
+                ]),
+            }
+            for path in paths {
+                for replacement in [
+                    None,
+                    Some(value(false)),
+                    Some(value(123)),
+                    Some(value(Array::new())),
+                    Some(Item::Table(Table::new())),
+                ] {
+                    let mut document = original.parse::<DocumentMut>().unwrap();
+                    let (key, parents) = path.split_last().unwrap();
+                    let mut parent: &mut dyn toml_edit::TableLike = document.as_table_mut();
+                    for name in parents {
+                        parent = parent.get_mut(name).unwrap().as_table_like_mut().unwrap();
+                    }
+                    if let Some(replacement) = replacement {
+                        parent.insert(key, replacement);
+                    } else {
+                        parent.remove(key);
+                    }
+                    let changed = document.to_string();
+                    std::fs::write(&prepared.path, &changed).unwrap();
+                    assert!(prepared.validate_existing().is_err(), "path={path:?}");
+                    assert_eq!(std::fs::read_to_string(&prepared.path).unwrap(), changed);
+                    assert_eq!(
+                        std::fs::read(&prepared.catalog_path).unwrap(),
+                        prepared.catalog
+                    );
+                }
+            }
+            for changed in ["", "[invalid", "model_provider = 'other'\n"] {
+                std::fs::write(&prepared.path, changed).unwrap();
+                assert!(prepared.validate_existing().is_err());
+                assert_eq!(std::fs::read_to_string(&prepared.path).unwrap(), changed);
+            }
+            std::fs::remove_file(&prepared.path).unwrap();
+            assert!(prepared.validate_existing().is_err());
+            assert!(!prepared.path.exists());
+            std::fs::remove_dir_all(home).unwrap();
+        }
+    }
+
+    #[test]
+    fn inspection_regression_registered_model_switch_stays_connected() {
+        let (home, prepared, original) =
+            inspection_fixture(ProviderAuth::ApiKey("sk-synthetic-inspection-key".into()));
+        let mut document = original.parse::<DocumentMut>().unwrap();
+        document["model"] = value("model-b");
+        let changed = document.to_string();
+        std::fs::write(&prepared.path, &changed).unwrap();
+        assert!(prepared.validate_existing().is_ok());
+        assert!(prepared.validate_readback(true).is_err());
+        assert_eq!(std::fs::read_to_string(&prepared.path).unwrap(), changed);
+        std::fs::remove_dir_all(home).unwrap();
+    }
+
+    #[tokio::test]
+    async fn inspection_regression_legacy_readback_does_not_abort_the_worker() {
+        static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+        let (home, mut prepared, original) =
+            inspection_fixture(ProviderAuth::Command("synthetic-helper".into()));
+        prepared.provider_auth = ProviderAuth::ApiKey("sk-synthetic-inspection-key".into());
+        let path = prepared.path.clone();
+        let result =
+            crate::tool_activation::inspect_on_worker(&LOCK, Duration::from_secs(2), move || {
+                prepared.validate_existing()
+            })
+            .await;
+        assert!(matches!(
+            result,
+            Ok(Err(AdapterFailure::ConfigurationFailed(
+                "configuration_readback_failed"
+            )))
+        ));
+        assert!(LOCK.try_lock().is_ok());
+        assert_eq!(std::fs::read_to_string(path).unwrap(), original);
         std::fs::remove_dir_all(home).unwrap();
     }
 }

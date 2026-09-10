@@ -1,4 +1,20 @@
 {
+  "yeschoyDesktopRecovery": {
+    "configuredTitle": "配置已保存，已检查启动",
+    "startObserved": "配置已保存，系统已确认应用启动。尚未验证应用是否完成加载、登录或模型连接，请以应用内实际使用结果为准。",
+    "opening": "正在打开应用，尚未确认启动结果…",
+    "checkingStart": "正在检查应用启动状态；未完成前保留上一次配置…",
+    "retry": "自动修复并重试",
+    "retryHint": "助手会先恢复未完成的操作；需要重启时会提醒保存，无需手动改配置或查找进程。",
+    "desktop_start_failed_restored": "新配置下未能确认应用启动，已自动恢复上一次配置并重新打开原应用。本次模型切换没有生效，可以重试。",
+    "desktop_change_failed_restored": "本次更新已取消或未能完成，已自动恢复上一次配置并重新打开原应用。本次模型切换没有生效，可以重试。",
+    "previous_app_reopen_failed": "上一次配置和密钥已恢复，但系统仍未能确认应用启动。请处理系统的权限提示后点击“自动修复并重试”，无需手动修改配置。",
+    "desktop_recovery_waiting_for_exit": "系统暂未允许应用退出，尚未恢复设置。为避免覆盖仍在使用的配置，已保留恢复记录。保存内容并处理系统提示后，点击“自动修复并重试”。",
+    "previous_connection_runtime_failed": "配置和密钥已恢复，但上一次本地连接尚未重新启动。可点击“自动修复并重试”，无需手动修改配置。",
+    "configuration_rollback_failed": "自动恢复时发现配置被修改或写入受阻，部分设置尚未恢复；没有强行覆盖其他修改。请点击“自动修复并重试”，无需手动编辑配置文件。",
+    "credential_restore_failed": "自动恢复时密钥设置尚未恢复。请解锁系统钥匙串或凭据管理器，再点击“自动修复并重试”。",
+    "recovery_receipt_failed": "恢复记录尚未安全保存，不能确认操作已完成。请点击“自动修复并重试”，助手会先处理未完成的操作。"
+  },
   "yeschoyCatalog": {
     "eyebrow": "野菜API 模型",
     "title": "选择模型",

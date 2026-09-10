@@ -1,0 +1,11 @@
+
+running 1 test
+test tool_adapters::codex_desktop::tests::inspection_regression_legacy_helper_profile_requires_reconnect_without_panicking ... FAILED
+
+failures:
+
+failures:
+    tool_adapters::codex_desktop::tests::inspection_regression_legacy_helper_profile_requires_reconnect_without_panicking
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 203 filtered out; finished in 0.10s
+

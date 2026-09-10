@@ -1,0 +1,44 @@
+Exit code: 0
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.64s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/yeschoy_desktop_lib-05149b9ef3b104d0)
+
+running 11 tests
+test tool_adapters::claude_desktop::tests::context_regression_desktop_catalog_declares_each_real_models_capacity ... ok
+test tool_adapters::claude_desktop::tests::context_regression_invalid_catalog_cannot_preserve_unregistered_rows ... ok
+test tool_adapters::claude_desktop::tests::context_regression_migration_is_owned_idempotent_and_fully_reversible ... ok
+test tool_adapters::claude_desktop::tests::context_regression_new_readback_checks_context_but_old_connections_stay_readable ... ok
+test tool_adapters::claude_desktop::tests::context_regression_single_model_profiles_use_the_same_capability_source ... ok
+test tool_adapters::claude_desktop::tests::meta_merge_keeps_other_profiles ... ok
+test tool_adapters::claude_desktop::tests::profile_uses_local_token_and_safe_route_not_upstream_key ... ok
+test tool_adapters::claude_desktop::tests::ru042_claude_desktop_profile_real_identity_and_default_order_are_verified ... ok
+test tool_adapters::claude_desktop::tests::ru054_claude_desktop_catalog_uses_safe_routes_with_real_labels ... ok
+test tool_adapters::claude_desktop::tests::ru056_claude_desktop_known_models_unlock_native_effort_without_fake_labels ... ok
+test tool_adapters::claude_desktop::tests::ru074_startup_migrates_owned_fable_alias_without_rewriting_other_fields ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 247 filtered out; finished in 0.06s
+
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.67s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/yeschoy_desktop_lib-05149b9ef3b104d0)
+
+running 16 tests
+test tool_adapters::codex_desktop::tests::catalog_is_exact_and_profile_specific ... ok
+test tool_adapters::codex_desktop::tests::codex_home_override_selects_the_directory_codex_really_reads ... ok
+test tool_adapters::codex_desktop::tests::configuration_and_owned_catalog_commit_and_rollback_together ... ok
+test tool_adapters::codex_desktop::tests::daily_open_rejects_changed_helper_target_without_writing ... ok
+test tool_adapters::codex_desktop::tests::inspection_regression_legacy_helper_profile_requires_reconnect_without_panicking ... ok
+test tool_adapters::codex_desktop::tests::inspection_regression_legacy_readback_does_not_abort_the_worker ... ok
+test tool_adapters::codex_desktop::tests::inspection_regression_missing_and_wrong_type_fields_are_read_only_failures ... ok
+test tool_adapters::codex_desktop::tests::inspection_regression_registered_model_switch_stays_connected ... ok
+test tool_adapters::codex_desktop::tests::modern_catalog_requires_and_commits_the_scoped_relay_key ... ok
+test tool_adapters::codex_desktop::tests::modern_provider_writes_only_the_scoped_relay_key ... ok
+test tool_adapters::codex_desktop::tests::provider_response_requires_completed_assistant_text ... ok
+test tool_adapters::codex_desktop::tests::provider_statuses_have_closed_recovery_reasons ... ok
+test tool_adapters::codex_desktop::tests::render_preserves_official_auth_and_uses_command_auth ... ok
+test tool_adapters::codex_desktop::tests::ru042_codex_catalog_is_conservative_and_accepts_registered_native_default ... ok
+test tool_adapters::codex_desktop::tests::ru043_codex_catalog_efforts_and_unknown_defaults ... ok
+test tool_adapters::codex_desktop::tests::user_owned_catalog_is_temporarily_shadowed_without_touching_its_file ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 242 filtered out; finished in 0.11s

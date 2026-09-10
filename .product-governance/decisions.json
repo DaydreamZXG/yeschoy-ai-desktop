@@ -3067,6 +3067,43 @@
           "tool-config"
         ]
       }
+    },
+    {
+      "id": "DEC-120",
+      "question": "How should the reported unknown connection state be repaired without duplicating CC Switch infrastructure or migrating user provider state?",
+      "choice": "Authorize RU-076 as a narrow successor to RU-075, retaining current committed direct-connect behavior. Reuse the inherited QueryClient and blocking-worker pattern, retain the existing Yeschoy store, and fix unknown/stale rendering plus sanitized failure correlation. Keep the current 8-second lock wait and 15-second inspection deadline as observed compatibility bounds, not new performance promises. Do not test or mutate actual user applications, package, publish or migrate the CC Switch database in this unit.",
+      "status": "accepted",
+      "decidedBy": "primary architecture within the owner's explicit repair and reuse request",
+      "decidedAt": "2026-09-09T14:13:22Z",
+      "evidenceRefs": [
+        "E-USER-096",
+        "E-CODE-096",
+        "E-PROP-044"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-096"
+        ],
+        "pageRefs": [],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform"
+        ]
+      }
+    },
+    {
+      "id": "DEC-121",
+      "question": "Which baseline should the connection-state repair preserve after the historical RU-075 proof no longer matches committed direct-connect changes?",
+      "choice": "The owner explicitly confirms current HEAD 1c77a96b0ed5cc48ee053a66c8f4bd41c409f867 as the repair baseline, retaining direct connections and reusing existing components. Preserve all historical evidence without rewriting it. The governance tool cannot seal this successor while its draft review enforces RU-075 current-tree equality; record that limitation, not a fictitious passed or frozen result. Continue the approved bounded source repair and synthetic regression under the skill fallback, with no packaging, deployment or real user application testing. This decision does not certify the whole current product or an installer.",
+      "status": "accepted",
+      "decidedBy": "product owner confirmation: 对的, following the explicit current-baseline repair proposal",
+      "decidedAt": "2026-09-09T14:30:13Z",
+      "evidenceRefs": ["E-USER-097", "E-CODE-096"],
+      "affects": {
+        "requirementRefs": ["REQ-096"],
+        "pageRefs": [],
+        "domainRefs": ["tool-config", "desktop-platform"]
+      }
     }
   ]
 }

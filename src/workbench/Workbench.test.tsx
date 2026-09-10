@@ -5,6 +5,7 @@ import {
   screen,
   within,
   cleanup,
+  waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { StrictMode } from "react";
@@ -264,6 +265,100 @@ afterEach(() => {
 });
 
 describe("official workbench", () => {
+  it("ru076 never reports zero connections or ready-to-connect when the initial read fails", async () => {
+    mockNativeByCommand((command, args) => {
+      const request = (args as Args).request;
+      if (command === "account_inspect_v2") return signedIn(request.requestId);
+      if (command === "manage_tool_connections_v1")
+        throw Error("connection_operation_busy");
+      return defaultNativeHandler(command, args);
+    });
+    render(<App />);
+    await screen.findByText(/正在处理另一项接入或恢复操作/);
+    const home = screen.getByTestId("candidate-home-view");
+    expect(home).toHaveTextContent("接入状态待确认");
+    expect(home).not.toHaveTextContent("0 个应用已接入");
+    const codex = within(home)
+      .getByRole("heading", { name: "Codex Desktop" })
+      .closest("article")!;
+    expect(codex).toHaveTextContent("状态待确认");
+    expect(codex).not.toHaveTextContent("待接入");
+    expect(
+      within(codex).getByRole("button", { name: "检查接入" }),
+    ).toBeEnabled();
+    expect(home).toHaveTextContent(/诊断编号：connections-/);
+    mockNativeByCommand((command, args) =>
+      command === "account_inspect_v2"
+        ? signedIn((args as Args).request.requestId)
+        : defaultNativeHandler(command, args),
+    );
+    fireEvent.click(within(home).getByRole("button", { name: "读取接入状态" }));
+    await waitFor(() => expect(codex).toHaveTextContent("待接入"));
+    expect(home).toHaveTextContent("0 个应用已接入");
+  });
+  it("ru076 retains a labelled last-successful snapshot after a refresh fails", async () => {
+    let fail = false;
+    mockNativeByCommand((command, args) => {
+      const request = (args as Args).request;
+      if (command === "account_inspect_v2") return signedIn(request.requestId);
+      if (command === "manage_tool_connections_v1") {
+        if (fail) throw Error("synthetic-secret-must-not-appear");
+        const result = connectionsFixture(request.requestId);
+        Object.assign(
+          result.connections.find((c) => c.toolId === "codex_desktop")!,
+          {
+            state: "connected",
+            modelId: "gpt-6-astra",
+            lineId: "mainland_optimized",
+            billingGroup: "default",
+            restoreMode: "original",
+          },
+        );
+        return result;
+      }
+      return defaultNativeHandler(command, args);
+    });
+    render(<App />);
+    await screen.findByText("gpt-6-astra");
+    fail = true;
+    fireEvent.click(screen.getByRole("button", { name: "检查应用" }));
+    await screen.findByText(/下方保留上次确认的结果/);
+    const home = screen.getByTestId("candidate-home-view");
+    expect(home).toHaveTextContent("上次确认 1 个应用已接入");
+    expect(home).toHaveTextContent("上次确认 · 已接入");
+    expect(home).toHaveTextContent("gpt-6-astra");
+    expect(home).not.toHaveTextContent("synthetic-secret");
+  });
+  it("ru076 keeps an individual unavailable result unknown and blocks setup until reread", async () => {
+    mockNativeByCommand((command, args) => {
+      const request = (args as Args).request;
+      if (command === "account_inspect_v2") return signedIn(request.requestId);
+      if (command === "manage_tool_connections_v1") {
+        const result = connectionsFixture(request.requestId);
+        Object.assign(
+          result.connections.find((c) => c.toolId === "codex_desktop")!,
+          {
+            state: "unavailable",
+            reasonCode: "secure_storage_unavailable",
+          },
+        );
+        return result;
+      }
+      return defaultNativeHandler(command, args);
+    });
+    render(<App />);
+    await screen.findByText(/部分应用的接入设置暂时无法读取/);
+    const codex = screen
+      .getByRole("heading", { name: "Codex Desktop" })
+      .closest("article")!;
+    expect(codex).toHaveTextContent("状态待确认");
+    expect(codex).not.toHaveTextContent("待接入");
+    fireEvent.click(within(codex).getByRole("button", { name: "检查接入" }));
+    await screen.findByText(/不会用默认选择覆盖/);
+    expect(
+      native.mock.calls.some(([cmd]) => cmd === "activate_desktop_tool_v1"),
+    ).toBe(false);
+  });
   it("keeps raw model descriptions off both model surfaces while retaining group choices", async () => {
     mockNativeByCommand(async (command, args) => {
       const request = (args as Args).request;

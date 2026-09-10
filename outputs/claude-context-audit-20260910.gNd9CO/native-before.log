@@ -1,0 +1,28 @@
+   Compiling yeschoy-desktop v0.4.15 (/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 15.53s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/yeschoy_desktop_lib-a37288403df02f03)
+
+running 2 tests
+test claude_bridge::tests::context_regression_one_m_picker_route_keeps_real_model_identity ... 
+thread 'claude_bridge::tests::context_regression_one_m_picker_route_keeps_real_model_identity' (93538) panicked at src/claude_bridge.rs:386:21:
+assertion `left == right` failed
+  left: "claude-sonnet-5-v042130106143098063240121036183025012078055057143143224145186203233049197181001122215174046229023[1m]"
+ right: "claude-sonnet-5"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+test tool_adapters::claude_desktop::tests::context_regression_desktop_catalog_declares_each_real_models_capacity ... 
+thread 'tool_adapters::claude_desktop::tests::context_regression_desktop_catalog_declares_each_real_models_capacity' (93539) panicked at src/tool_adapters/claude_desktop.rs:534:13:
+assertion `left == right` failed: claude-fable-5
+  left: Bool(false)
+ right: true
+FAILED
+
+failures:
+
+failures:
+    claude_bridge::tests::context_regression_one_m_picker_route_keeps_real_model_identity
+    tool_adapters::claude_desktop::tests::context_regression_desktop_catalog_declares_each_real_models_capacity
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 237 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--lib`

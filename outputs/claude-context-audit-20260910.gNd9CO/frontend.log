@@ -1,0 +1,16 @@
+
+ RUN  v2.1.9 /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+ ✓ src/configuration/BillingPrices.test.tsx (2 tests) 117ms
+ ✓ src/configuration/ModelPicker.test.tsx (6 tests) 299ms
+ ✓ src/configuration/ConfigurationPreviewView.test.tsx (6 tests) 15ms
+
+ Test Files  3 passed (3)
+      Tests  14 passed (14)
+   Start at  11:58:42
+   Duration  6.10s (transform 667ms, setup 4.02s, collect 1.43s, tests 431ms, environment 4.07s, prepare 463ms)
+

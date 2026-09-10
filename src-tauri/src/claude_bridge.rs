@@ -25,7 +25,9 @@ use tokio::{
     task::JoinHandle,
 };
 
-use crate::{codex_bridge::secure_equal, tool_adapters::AdapterFailure, tool_credentials::ToolCredential};
+use crate::{
+    codex_bridge::secure_equal, tool_adapters::AdapterFailure, tool_credentials::ToolCredential,
+};
 
 /// Claude Desktop 单次请求的上限。超过时拒绝，而不是截断。
 const MAX_REQUEST_BODY_BYTES: usize = 32 * 1024 * 1024;
@@ -212,6 +214,7 @@ fn models(state: &BridgeState) -> Response {
                 "id": route,
                 "type": "model",
                 "display_name": crate::tool_model_profile::display_name(model),
+                "supports1m": crate::tool_model_profile::supports_one_m_context(model),
             })
         })
         .collect();
@@ -269,7 +272,10 @@ async fn messages(state: &BridgeState, request: Request<Body>) -> Response {
         model: model.clone(),
     });
 
-    let url = format!("{}/v1/messages", state.credential.origin.trim_end_matches('/'));
+    let url = format!(
+        "{}/v1/messages",
+        state.credential.origin.trim_end_matches('/')
+    );
     let mut outbound = state
         .client
         .post(url)
@@ -375,10 +381,33 @@ mod tests {
     }
 
     #[test]
+    fn context_regression_one_m_picker_route_keeps_real_model_identity() {
+        let state = state();
+        for model in ["claude-sonnet-5", "gpt-6-astra"] {
+            for alias in [
+                crate::tool_model_profile::claude_gateway_route_id(model),
+                crate::tool_model_profile::legacy_claude_gateway_route_id(model),
+            ] {
+                for suffix in ["[1m]", " [1M] "] {
+                    assert_eq!(resolve_model(&state, &format!("{alias}{suffix}")), model);
+                }
+            }
+        }
+    }
+
+    #[test]
     fn real_and_unknown_model_ids_pass_through() {
         let state = state();
         assert_eq!(resolve_model(&state, "claude-sonnet-5"), "claude-sonnet-5");
         assert_eq!(resolve_model(&state, "future-model"), "future-model");
+        for requested in ["future-model[1m]", "unknown/route [1M] ", "模型[1m]"] {
+            assert_eq!(resolve_model(&state, requested), requested);
+        }
+        // A similar Claude role, or an alias enrolled in another profile,
+        // cannot silently select one of this profile's models.
+        let unregistered = crate::tool_model_profile::claude_gateway_route_id("claude-fable-5");
+        let requested = format!("{unregistered}[1m]");
+        assert_eq!(resolve_model(&state, &requested), requested);
     }
 
     #[tokio::test]
@@ -394,5 +423,106 @@ mod tests {
         );
         assert_eq!(value["data"][0]["type"].as_str(), Some("model"));
         assert!(value["data"][0]["display_name"].as_str().is_some());
+    }
+
+    #[tokio::test]
+    async fn context_regression_discovery_uses_each_real_models_capacity() {
+        let mut state = state();
+        for id in ["deepseek-v4-flash", "claude-haiku-4-5", "future-model"] {
+            let mut route = state.credential.models[0].clone();
+            route.model_id = id.into();
+            state.credential.models.push(route);
+        }
+        let response = models(&state);
+        let bytes = to_bytes(response.into_body(), 64 * 1024).await.unwrap();
+        let value: Value = serde_json::from_slice(&bytes).unwrap();
+        for (row, expected) in value["data"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip([true, true, true, false, false])
+        {
+            assert_eq!(row["supports1m"], expected, "{}", row["display_name"]);
+        }
+        assert_eq!(value["data"].as_array().unwrap().len(), 5);
+    }
+
+    #[tokio::test]
+    async fn context_regression_one_m_requests_preserve_payload_and_streaming() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let origin = format!("http://{}", listener.local_addr().unwrap());
+        let (sent, mut received) = tokio::sync::mpsc::unbounded_channel();
+        let router = Router::new().route(
+            "/v1/messages",
+            axum::routing::post(
+                move |headers: axum::http::HeaderMap, axum::Json(body): axum::Json<Value>| {
+                    let sent = sent.clone();
+                    async move {
+                        sent.send((headers, body)).unwrap();
+                        (
+                            [(header::CONTENT_TYPE, "text/event-stream")],
+                            "event: message_stop\ndata: {}\n\n",
+                        )
+                    }
+                },
+            ),
+        );
+        let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+        let mut state = state();
+        state.credential.origin = origin.clone();
+        for route in &mut state.credential.models {
+            route.origin = origin.clone();
+        }
+        state.client = reqwest::Client::builder()
+            .no_proxy()
+            .timeout(Duration::from_secs(3))
+            .build()
+            .unwrap();
+        for model in ["claude-sonnet-5", "gpt-6-astra"] {
+            for alias in [
+                crate::tool_model_profile::claude_gateway_route_id(model),
+                crate::tool_model_profile::legacy_claude_gateway_route_id(model),
+            ] {
+                let mut expected = json!({
+                    "model":format!("{alias}[1m]"), "stream":true, "max_tokens":128,
+                    "thinking":{"type":"adaptive"}, "output_config":{"effort":"high"},
+                    "messages":[{"role":"user", "content":"synthetic context probe"}]
+                });
+                let request = Request::builder()
+                    .method("POST")
+                    .uri("/claude-desktop/v1/messages")
+                    .header(
+                        header::AUTHORIZATION,
+                        format!("Bearer {}", state.local_token),
+                    )
+                    .header("anthropic-version", "2023-06-01")
+                    .header("anthropic-beta", "context-1m-2025-08-07")
+                    .body(Body::from(expected.to_string()))
+                    .unwrap();
+                let response = messages(&state, request).await;
+                assert_eq!(response.status(), StatusCode::OK);
+                assert_eq!(
+                    response.headers()[header::CONTENT_TYPE],
+                    "text/event-stream"
+                );
+                let body = to_bytes(response.into_body(), 64 * 1024).await.unwrap();
+                assert_eq!(body.as_ref(), b"event: message_stop\ndata: {}\n\n");
+                let (headers, forwarded) =
+                    tokio::time::timeout(Duration::from_secs(3), received.recv())
+                        .await
+                        .unwrap()
+                        .unwrap();
+                expected["model"] = model.into();
+                assert_eq!(
+                    forwarded, expected,
+                    "only the local model alias should change"
+                );
+                assert_eq!(headers["anthropic-beta"], "context-1m-2025-08-07");
+                assert_eq!(headers["anthropic-version"], "2023-06-01");
+                assert_eq!(headers[header::AUTHORIZATION], "Bearer sk-synthetic-a");
+            }
+        }
+        server.abort();
+        let _ = server.await;
     }
 }

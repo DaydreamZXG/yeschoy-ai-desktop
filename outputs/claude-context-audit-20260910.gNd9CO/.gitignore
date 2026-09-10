@@ -1,0 +1,18 @@
+# Downloaded reference cache; source attribution is retained in RESULTS.md.
+/claude-settings-reference.md
+
+# Reviewed synthetic-test evidence referenced by RESULTS.md.
+!/bridge-regression.log
+!/catalog-format.log
+!/desktop-regression.log
+!/effort-regression.log
+!/frontend.log
+!/governance-review.log
+!/migration-before.log
+!/model-profile-regression.log
+!/native-after.log
+!/native-before.log
+!/native-consumer-regression.log
+!/rustfmt.log
+!/status-regression.log
+!/typecheck.log

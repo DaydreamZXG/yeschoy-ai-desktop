@@ -97,7 +97,7 @@ fn profile_config(model: &str, local_token: &str) -> Result<Vec<u8>, ()> {
         "inferenceModels": [{
             "name": SAFE_ROUTE_MODEL,
             "labelOverride": model,
-            "supports1m": false
+            "supports1m": crate::tool_model_profile::supports_one_m_context(model)
         }]
     }))
 }
@@ -115,7 +115,11 @@ fn profile_catalog(model: &str, local_token: &str, model_ids: &[String]) -> Resu
             .filter(|id| *id != model),
     );
     profile["inferenceModels"] = json!(ordered
-        .map(|id| json!({"name":crate::tool_model_profile::claude_gateway_route_id(id),"labelOverride":crate::tool_model_profile::display_name(id),"supports1m":false}))
+        .map(|id| json!({
+            "name": crate::tool_model_profile::claude_gateway_route_id(id),
+            "labelOverride": crate::tool_model_profile::display_name(id),
+            "supports1m": crate::tool_model_profile::supports_one_m_context(id)
+        }))
         .collect::<Vec<_>>());
     pretty(&profile)
 }
@@ -342,6 +346,9 @@ impl Prepared {
                                 .is_some_and(|id| {
                                     model["labelOverride"].as_str()
                                         == Some(crate::tool_model_profile::display_name(id))
+                                        && (!strict_default
+                                            || model["supports1m"].as_bool()
+                                                == Some(crate::tool_model_profile::supports_one_m_context(id)))
                                 })
                         })
                     })
@@ -354,6 +361,11 @@ impl Prepared {
             } else {
                 profile["inferenceModels"][0]["name"].as_str() == Some(SAFE_ROUTE_MODEL)
                     && profile["inferenceModels"][0]["labelOverride"].as_str() == Some(&self.model)
+                    && (!strict_default
+                        || profile["inferenceModels"][0]["supports1m"].as_bool()
+                            == Some(crate::tool_model_profile::supports_one_m_context(
+                                &self.model,
+                            )))
             })
             && meta["appliedId"].as_str() == Some(PROFILE_ID);
         if correct {
@@ -415,6 +427,7 @@ pub(crate) async fn verify_and_launch(
 /// Refresh only the model catalog inside the profile owned by this adapter.
 /// This migrates aliases rejected by newer Claude Desktop validators without
 /// requiring users to restore and reconnect after updating the assistant.
+/// It also refreshes per-model context capabilities from the shared catalog.
 fn refreshed_managed_profile(
     profile: &Value,
     credential: &ToolCredential,
@@ -426,16 +439,55 @@ fn refreshed_managed_profile(
     if !active {
         return Ok(None);
     }
+    let model_ids = credential.model_ids();
     let expected: Value = serde_json::from_slice(
-        &profile_catalog(&credential.model_id, local_token, &credential.model_ids())
+        &profile_catalog(&credential.model_id, local_token, &model_ids)
             .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?,
     )
     .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?;
-    if profile["inferenceModels"] == expected["inferenceModels"] {
+    let expected_models =
+        expected["inferenceModels"]
+            .as_array()
+            .ok_or(AdapterFailure::ConfigurationFailed(
+                "configuration_parse_failed",
+            ))?;
+    // Updating capabilities is not reapplying the activation default. Preserve
+    // a valid model order and vendor/user picker options, including old aliases.
+    // Invalid or incomplete catalogs still use the existing canonical repair.
+    let models = profile["inferenceModels"]
+        .as_array()
+        .filter(|models| models.len() == expected_models.len())
+        .and_then(|models| {
+            let mut seen = std::collections::HashSet::new();
+            models
+                .iter()
+                .map(|model| {
+                    let route = model["name"].as_str()?;
+                    let id = model_ids.iter().find(|id| {
+                        crate::tool_model_profile::claude_gateway_route_matches(id, route)
+                    })?;
+                    if !seen.insert(id) {
+                        return None;
+                    }
+                    let canonical_route = crate::tool_model_profile::claude_gateway_route_id(id);
+                    let canonical = expected_models
+                        .iter()
+                        .find(|entry| entry["name"] == canonical_route)?;
+                    let mut row = model.as_object()?.clone();
+                    for key in ["name", "labelOverride", "supports1m"] {
+                        row.insert(key.into(), canonical[key].clone());
+                    }
+                    Some(Value::Object(row))
+                })
+                .collect::<Option<Vec<_>>>()
+        })
+        .map(Value::Array)
+        .unwrap_or_else(|| expected["inferenceModels"].clone());
+    if profile["inferenceModels"] == models {
         return Ok(None);
     }
     let mut refreshed = profile.clone();
-    refreshed["inferenceModels"] = expected["inferenceModels"].clone();
+    refreshed["inferenceModels"] = models;
     pretty(&refreshed)
         .map(Some)
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))
@@ -509,6 +561,203 @@ mod tests {
             codex_transport: None,
             claude_transport: route.claude_transport.clone(),
             models: vec![route],
+        }
+    }
+
+    #[test]
+    fn context_regression_desktop_catalog_declares_each_real_models_capacity() {
+        let ids = vec![
+            "claude-fable-5".into(),
+            "gpt-6-astra".into(),
+            "deepseek-v4-flash".into(),
+            "claude-haiku-4-5".into(),
+            "future-model".into(),
+        ];
+        let bytes = profile_catalog("claude-fable-5", "synthetic-token", &ids).unwrap();
+        let value: Value = serde_json::from_slice(&bytes).unwrap();
+        for (model, expected) in ids.iter().zip([true, true, true, false, false]) {
+            let route = crate::tool_model_profile::claude_gateway_route_id(model);
+            let entry = value["inferenceModels"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|row| row["name"] == route)
+                .unwrap();
+            assert_eq!(entry["supports1m"], expected, "{model}");
+        }
+    }
+
+    #[test]
+    fn context_regression_single_model_profiles_use_the_same_capability_source() {
+        for (id, expected) in [
+            ("claude-fable-5", true),
+            ("anthropic/claude-sonnet-5", true),
+            ("deepseek-v4-flash", true),
+            ("gpt-5.4-mini", false),
+            ("future-model", false),
+        ] {
+            let value: Value =
+                serde_json::from_slice(&profile_config(id, "synthetic-token").unwrap()).unwrap();
+            assert_eq!(value["inferenceModels"][0]["supports1m"], expected, "{id}");
+            assert_eq!(value["inferenceModels"][0]["labelOverride"], id);
+        }
+    }
+
+    #[test]
+    fn context_regression_new_readback_checks_context_but_old_connections_stay_readable() {
+        // Construct every path ourselves: never consult real desktop config directories.
+        for modern in [false, true] {
+            let home = common::temporary_working_directory("claude-context-readback").unwrap();
+            let normal_config_path = home.join("normal.json");
+            let threep_config_path = home.join("threep.json");
+            let profile_path = home.join("profile.json");
+            let meta_path = home.join("meta.json");
+            let model = "claude-fable-5";
+            let ids = vec![model.into()];
+            let token = "synthetic-token";
+            let mut transaction = FileTransaction::stage_with_snapshot(
+                normal_config_path.clone(),
+                None,
+                deployment_config(None).unwrap(),
+            )
+            .unwrap();
+            transaction
+                .push(threep_config_path.clone(), deployment_config(None).unwrap())
+                .unwrap();
+            transaction
+                .push(
+                    profile_path.clone(),
+                    if modern {
+                        profile_catalog(model, token, &ids).unwrap()
+                    } else {
+                        profile_config(model, token).unwrap()
+                    },
+                )
+                .unwrap();
+            transaction
+                .push(meta_path.clone(), meta_config(None).unwrap())
+                .unwrap();
+            let mut prepared = Prepared {
+                transaction,
+                normal_config_path,
+                threep_config_path,
+                profile_path: profile_path.clone(),
+                meta_path,
+                model: model.into(),
+                model_ids: ids,
+                modern,
+                local_token: token.into(),
+            };
+            prepared.commit().unwrap();
+            let mut value: Value =
+                serde_json::from_slice(&std::fs::read(&profile_path).unwrap()).unwrap();
+            assert_eq!(value["inferenceModels"][0]["supports1m"], true);
+            value["inferenceModels"][0]["supports1m"] = false.into();
+            let old_bytes = pretty(&value).unwrap();
+            std::fs::write(&profile_path, &old_bytes).unwrap();
+            assert!(prepared.validate_readback(true).is_err());
+            assert!(prepared.validate_existing().is_ok());
+            assert_eq!(
+                std::fs::read(&profile_path).unwrap(),
+                old_bytes,
+                "inspection must be read-only"
+            );
+            value["inferenceModels"][0]
+                .as_object_mut()
+                .unwrap()
+                .remove("supports1m");
+            std::fs::write(&profile_path, pretty(&value).unwrap()).unwrap();
+            assert!(prepared.validate_readback(true).is_err());
+            std::fs::remove_dir_all(home).unwrap();
+        }
+    }
+
+    #[test]
+    fn context_regression_migration_is_owned_idempotent_and_fully_reversible() {
+        let token = "synthetic-token";
+        let mut credential = fable_credential(token);
+        let mut small_model = credential.models[0].clone();
+        small_model.model_id = "claude-haiku-4-5".into();
+        credential.models.push(small_model);
+        let mut expected: Value = serde_json::from_slice(
+            &profile_catalog(&credential.model_id, token, &credential.model_ids()).unwrap(),
+        )
+        .unwrap();
+        expected["futureOwnedField"] = json!({"keep":true});
+        // Claude may put the user's newly selected model first. Refreshing
+        // context metadata must not reset it to the original activation default.
+        expected["inferenceModels"]
+            .as_array_mut()
+            .unwrap()
+            .swap(0, 1);
+        expected["inferenceModels"][0]["futurePickerOption"] = "keep".into();
+        let mut old = expected.clone();
+        old["inferenceModels"][1]["supports1m"] = false.into();
+        let before = pretty(&old).unwrap();
+        let after = refreshed_managed_profile(&old, &credential, token)
+            .unwrap()
+            .unwrap();
+        let refreshed: Value = serde_json::from_slice(&after).unwrap();
+        assert_eq!(
+            refreshed, expected,
+            "only the stale context flag should change"
+        );
+        assert_eq!(refreshed["inferenceModels"][0]["supports1m"], false);
+        assert_eq!(refreshed["inferenceModels"][1]["supports1m"], true);
+        assert!(refreshed_managed_profile(&refreshed, &credential, token)
+            .unwrap()
+            .is_none());
+        for (field, value) in [
+            ("inferenceGatewayApiKey", "other-token"),
+            ("inferenceGatewayBaseUrl", "https://other.invalid"),
+            ("inferenceProvider", "other-provider"),
+        ] {
+            let mut unowned = old.clone();
+            unowned[field] = value.into();
+            assert!(refreshed_managed_profile(&unowned, &credential, token)
+                .unwrap()
+                .is_none());
+        }
+        let home = common::temporary_working_directory("claude-context-migration").unwrap();
+        let path = home.join("profile.json");
+        std::fs::write(&path, &before).unwrap();
+        let mut transaction =
+            FileTransaction::stage_with_snapshot(path.clone(), Some(before.clone()), after.clone())
+                .unwrap();
+        transaction.commit().unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), after);
+        transaction.rollback().unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), before);
+        std::fs::remove_dir_all(home).unwrap();
+    }
+
+    #[test]
+    fn context_regression_invalid_catalog_cannot_preserve_unregistered_rows() {
+        let token = "synthetic-token";
+        let mut credential = fable_credential(token);
+        let mut second = credential.models[0].clone();
+        second.model_id = "deepseek-v4-flash".into();
+        credential.models.push(second);
+        let expected: Value = serde_json::from_slice(
+            &profile_catalog(&credential.model_id, token, &credential.model_ids()).unwrap(),
+        )
+        .unwrap();
+        for rows in [
+            json!([
+                expected["inferenceModels"][0],
+                expected["inferenceModels"][0]
+            ]),
+            json!([expected["inferenceModels"][0], {"name":"not-enrolled", "supports1m":true}]),
+            json!([expected["inferenceModels"][0]]),
+            json!([null, 17]),
+        ] {
+            let mut old = expected.clone();
+            old["inferenceModels"] = rows;
+            let bytes = refreshed_managed_profile(&old, &credential, token)
+                .unwrap()
+                .unwrap();
+            let refreshed: Value = serde_json::from_slice(&bytes).unwrap();
+            assert_eq!(refreshed, expected);
         }
     }
 

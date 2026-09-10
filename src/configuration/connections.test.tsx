@@ -6,7 +6,10 @@ import {
   renderHook,
   screen,
   within,
+  waitFor,
 } from "@testing-library/react";
+import { StrictMode } from "react";
+import { onlineManager } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import {
@@ -40,6 +43,137 @@ afterEach(() => {
   cleanup();
 });
 describe("reversible local connections", () => {
+  it("ru076 deduplicates repeated focus and manual reads including effect replay", async () => {
+    let finish!: (value: unknown) => void;
+    let requestId = "";
+    native.mockImplementationOnce(async (_command, args) => {
+      requestId = (args as { request: { requestId: string } }).request
+        .requestId;
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    });
+    const { result } = renderHook(() => useToolConnections(), {
+      wrapper: StrictMode,
+    });
+    let first!: Promise<void>;
+    let second!: Promise<void>;
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+      window.dispatchEvent(new Event("focus"));
+      first = result.current.refresh();
+      second = result.current.refresh();
+    });
+    expect(native).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      finish(connectionsFixture(requestId));
+      await Promise.all([first, second]);
+    });
+    await waitFor(() => expect(result.current.connections).toHaveLength(7));
+    expect(result.current.loading).toBe(false);
+  });
+  it.each([
+    ["connection_operation_busy", "connection_operation_busy"],
+    [Error("assistant_shutting_down"), "assistant_shutting_down"],
+    [
+      Error("/Users/private/secret-key-do-not-display"),
+      "connection_call_failed",
+    ],
+  ])(
+    "ru076 exposes only safe error codes and our request ID: %s",
+    async (cause, expected) => {
+      native.mockRejectedValueOnce(cause);
+      const { result } = renderHook(() => useToolConnections());
+      await waitFor(() => expect(result.current.error).toBe(true));
+      expect(result.current.errorInfo?.code).toBe(expected);
+      expect(result.current.errorInfo?.requestId).toMatch(
+        /^connections-[a-z0-9]+-\d+$/,
+      );
+      expect(result.current.errorInfo?.message).not.toMatch(
+        /private|secret-key/,
+      );
+      expect(result.current.connections).toEqual([]);
+      expect(result.current.loading).toBe(false);
+      await act(async () => {
+        await result.current.refresh();
+      });
+      await waitFor(() => expect(result.current.connections).toHaveLength(7));
+      expect(result.current.error).toBe(false);
+      expect(result.current.errorInfo).toBeUndefined();
+    },
+  );
+  it("ru076 still inspects local settings when the browser reports offline", async () => {
+    onlineManager.setOnline(false);
+    try {
+      const { result } = renderHook(() => useToolConnections());
+      await waitFor(() => expect(result.current.connections).toHaveLength(7));
+      expect(native).toHaveBeenCalledTimes(1);
+    } finally {
+      onlineManager.setOnline(true);
+    }
+  });
+  it("ru076 shares an in-flight background refresh without dropping the successful snapshot", async () => {
+    const { result } = renderHook(() => useToolConnections());
+    await waitFor(() => expect(result.current.connections).toHaveLength(7));
+    let finish!: (value: unknown) => void;
+    let requestId = "";
+    native.mockClear();
+    native.mockImplementationOnce(async (_command, args) => {
+      requestId = (args as { request: { requestId: string } }).request
+        .requestId;
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    });
+    let refresh!: Promise<void>;
+    act(() => {
+      refresh = result.current.refresh();
+      window.dispatchEvent(new Event("focus"));
+      void result.current.refresh();
+    });
+    expect(native).toHaveBeenCalledTimes(1);
+    expect(result.current.connections).toHaveLength(7);
+    expect(result.current.loading).toBe(false);
+    await act(async () => {
+      finish(connectionsFixture(requestId));
+      await refresh;
+    });
+    await waitFor(() => expect(result.current.refreshing).toBe(false));
+  });
+  it("ru076 treats an invalid response as unknown, not an empty successful snapshot", async () => {
+    native.mockResolvedValueOnce({ requestId: "incorrect", connections: [] });
+    const { result } = renderHook(() => useToolConnections());
+    await waitFor(() =>
+      expect(result.current.errorInfo?.code).toBe(
+        "invalid_connection_response",
+      ),
+    );
+    expect(result.current.connections).toEqual([]);
+    expect(result.current.loading).toBe(false);
+  });
+  it.each(["secure_storage_unavailable", "connection_inspection_failed"])(
+    "ru076 correlates partial failures while retaining the other six results: %s",
+    async (reason) => {
+      native.mockImplementationOnce(async (_command, args) => {
+        const response = connectionsFixture(
+          (args as { request: { requestId: string } }).request.requestId,
+        );
+        response.connections[0].state = "unavailable";
+        response.connections[0].reasonCode = reason;
+        return response;
+      });
+      const { result } = renderHook(() => useToolConnections());
+      await waitFor(() => expect(result.current.connections).toHaveLength(7));
+      expect(result.current.error).toBe(false);
+      expect(result.current.errorInfo?.code).toBe(
+        "connection_partial_unavailable",
+      );
+      expect(result.current.errorInfo?.requestId).toMatch(/^connections-/);
+      expect(
+        result.current.connections.filter((c) => c.state === "not_connected"),
+      ).toHaveLength(6);
+    },
+  );
   it("ru042 decodes only secret-free latest request and model bindings", () => {
     const base = connectionsFixture("one");
     const value = {
@@ -86,7 +220,7 @@ describe("reversible local connections", () => {
   });
   it("loads local state without requiring login and restores only the requested tool", async () => {
     const { result } = renderHook(() => useToolConnections());
-    await act(async () => {});
+    await waitFor(() => expect(result.current.connections).toHaveLength(7));
     expect(result.current.connections).toHaveLength(7);
     expect(result.current.error).toBe(false);
     await act(async () => {
@@ -107,11 +241,12 @@ describe("reversible local connections", () => {
   });
   it("retains the last local state when reading it fails", async () => {
     const { result } = renderHook(() => useToolConnections());
-    await act(async () => {});
+    await waitFor(() => expect(result.current.connections).toHaveLength(7));
     native.mockRejectedValueOnce(Error("unavailable"));
     await act(async () => {
       await result.current.refresh();
     });
+    await waitFor(() => expect(result.current.error).toBe(true));
     expect(result.current.connections).toHaveLength(7);
     expect(result.current.error).toBe(true);
     expect(result.current.loading).toBe(false);
@@ -129,7 +264,7 @@ describe("reversible local connections", () => {
   });
   it("keeps the last usable projection interactive during a background refresh", async () => {
     const { result } = renderHook(() => useToolConnections());
-    await act(async () => {});
+    await waitFor(() => expect(result.current.connections).toHaveLength(7));
     let finish!: (value: unknown) => void;
     native.mockImplementationOnce(
       async () =>
@@ -177,7 +312,7 @@ describe("reversible local connections", () => {
     "settles loading after restore (failure: %s) supersedes a pending refresh",
     async (failRestore) => {
       const { result } = renderHook(() => useToolConnections());
-      await act(async () => {});
+      await waitFor(() => expect(result.current.connections).toHaveLength(7));
       let finishRead!: (value: unknown) => void;
       let finishRestore!: (value: unknown) => void;
       let rejectRestore!: (cause: Error) => void;

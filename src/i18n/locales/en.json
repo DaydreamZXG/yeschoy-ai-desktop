@@ -1,4 +1,20 @@
 {
+  "yeschoyDesktopRecovery": {
+    "configuredTitle": "Settings saved; startup checked",
+    "startObserved": "Settings are saved and the operating system has observed the app starting. This does not verify that loading, sign-in, or model connectivity has completed. Check actual use inside the app.",
+    "opening": "Opening the app; startup is not confirmed yet…",
+    "checkingStart": "Checking startup; keeping the previous settings until this finishes…",
+    "retry": "Repair and retry",
+    "retryHint": "The assistant recovers unfinished changes first and asks you to save before restarting. You do not need to edit configuration files or find processes.",
+    "desktop_start_failed_restored": "Startup could not be confirmed with the new settings. The previous settings were restored and the app reopened. This model change did not take effect; you can retry.",
+    "desktop_change_failed_restored": "The update was cancelled or could not complete. The previous settings were restored and the app reopened. This model change did not take effect; you can retry.",
+    "previous_app_reopen_failed": "The previous settings and key were restored, but startup still could not be confirmed. Handle any operating-system permission prompt, then select Repair and retry. No manual configuration editing is needed.",
+    "desktop_recovery_waiting_for_exit": "The operating system has not allowed the app to close, so settings have not been restored. The recovery record is retained to avoid overwriting configuration still in use. Save your work, handle any system prompt, then select Repair and retry.",
+    "previous_connection_runtime_failed": "Settings and the key were restored, but the previous local connection could not restart. Select Repair and retry. No manual configuration editing is needed.",
+    "configuration_rollback_failed": "Recovery found changed or unwritable settings. Some settings remain unrestored; other changes were not forcibly overwritten. Select Repair and retry instead of editing configuration files.",
+    "credential_restore_failed": "The key has not been restored. Unlock the system keychain or credential manager, then select Repair and retry.",
+    "recovery_receipt_failed": "The recovery record could not be saved safely, so completion is unconfirmed. Select Repair and retry to recover the unfinished operation first."
+  },
   "yeschoyCatalog": {
     "eyebrow": "野菜API models",
     "title": "Choose a model",

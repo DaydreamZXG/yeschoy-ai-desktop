@@ -13,6 +13,53 @@ const NORMAL_QUIT_LIMIT: Duration = Duration::from_secs(4);
 #[cfg(not(target_os = "windows"))]
 const NORMAL_QUIT_LIMIT: Duration = Duration::from_secs(10);
 const FORCED_QUIT_LIMIT: Duration = Duration::from_secs(5);
+// Reuse the existing desktop launch deadline, not an unbounded model probe.
+const START_LIMIT: Duration = Duration::from_secs(15);
+
+/// A bounded OS observation, not proof that the app left its splash screen,
+/// authenticated, or completed a model request. Do not cancel/drop a dispatched
+/// launch: finish it before deciding whether it is safe to roll back files.
+pub(crate) async fn open_and_wait(tool_id: &str, path: &Path) -> Result<(), AdapterFailure> {
+    let tool = tool_id.to_owned();
+    let target = path.to_owned();
+    tokio::task::spawn_blocking(move || super::desktop_launch::launch(&tool, &target))
+        .await
+        .map_err(|_| AdapterFailure::LaunchError("desktop_launch_start_failed"))??;
+    wait_for_start(
+        || async {
+            let tool = tool_id.to_owned();
+            let target = path.to_owned();
+            tokio::task::spawn_blocking(move || platform::startup_observed(&tool, &target))
+                .await
+                .map_err(|_| AdapterFailure::LaunchError("desktop_state_unavailable"))?
+        },
+        START_LIMIT,
+    )
+    .await
+}
+
+async fn wait_for_start<F, Fut>(mut observe: F, limit: Duration) -> Result<(), AdapterFailure>
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = Result<bool, AdapterFailure>>,
+{
+    let deadline = tokio::time::Instant::now() + limit;
+    loop {
+        if tokio::time::timeout_at(deadline, observe())
+            .await
+            .map_err(|_| AdapterFailure::LaunchError("desktop_start_unconfirmed"))??
+        {
+            return Ok(());
+        }
+        if tokio::time::Instant::now() >= deadline {
+            return Err(AdapterFailure::LaunchError("desktop_start_unconfirmed"));
+        }
+        tokio::time::sleep(
+            EXIT_POLL.min(deadline.saturating_duration_since(tokio::time::Instant::now())),
+        )
+        .await;
+    }
+}
 
 pub(crate) fn requires_reload(tool_id: &str) -> bool {
     matches!(tool_id, "claude_desktop" | "codex_desktop")
@@ -24,9 +71,15 @@ pub(crate) async fn is_running(tool_id: &str, path: &Path) -> Result<bool, Adapt
     }
     let tool_id = tool_id.to_owned();
     let path = path.to_owned();
-    tokio::task::spawn_blocking(move || platform::is_running(&tool_id, &path))
-        .await
-        .map_err(|_| AdapterFailure::LaunchError("desktop_state_unavailable"))?
+    // A read-only OS query may outlive its caller, but it cannot later close
+    // an app or mutate configuration. Bound it so state checks release the UI.
+    tokio::time::timeout(
+        START_LIMIT,
+        tokio::task::spawn_blocking(move || platform::is_running(&tool_id, &path)),
+    )
+    .await
+    .map_err(|_| AdapterFailure::LaunchError("desktop_state_unavailable"))?
+    .map_err(|_| AdapterFailure::LaunchError("desktop_state_unavailable"))?
 }
 
 async fn blocking_normal_quit(tool_id: &str, path: &Path) -> Result<bool, AdapterFailure> {
@@ -52,7 +105,10 @@ async fn wait_until_stopped(
 ) -> Result<bool, AdapterFailure> {
     let deadline = tokio::time::Instant::now() + limit;
     while tokio::time::Instant::now() < deadline {
-        if !is_running(tool_id, path).await? {
+        if !tokio::time::timeout_at(deadline, is_running(tool_id, path))
+            .await
+            .map_err(|_| AdapterFailure::LaunchError("desktop_state_unavailable"))??
+        {
             return Ok(true);
         }
         tokio::time::sleep(EXIT_POLL).await;
@@ -137,6 +193,16 @@ mod platform {
         Ok(matched)
     }
 
+    pub(super) fn startup_observed(tool_id: &str, path: &Path) -> Result<bool, AdapterFailure> {
+        let identifier = bundle_identifier(tool_id).ok_or(AdapterFailure::UnsupportedProfile)?;
+        let applications = NSRunningApplication::runningApplicationsWithBundleIdentifier(
+            &NSString::from_str(identifier),
+        );
+        Ok(applications.iter().any(|app| {
+            matches_path(&app, path) && !app.isTerminated() && app.isFinishedLaunching()
+        }))
+    }
+
     pub(super) fn force_quit(_tool_id: &str, _path: &Path) -> Result<bool, AdapterFailure> {
         Ok(false)
     }
@@ -161,7 +227,8 @@ mod platform {
                 },
             },
             UI::WindowsAndMessaging::{
-                EnumWindows, GetWindowThreadProcessId, PostMessageW, WM_CLOSE,
+                EnumWindows, GetWindowThreadProcessId, IsHungAppWindow, IsWindowVisible,
+                PostMessageW, WM_CLOSE,
             },
         },
     };
@@ -279,6 +346,13 @@ mod platform {
         Ok(!matching_processes(path)?.is_empty())
     }
 
+    pub(super) fn startup_observed(_tool_id: &str, path: &Path) -> Result<bool, AdapterFailure> {
+        let windows = matching_windows(matching_processes(path)?)?;
+        Ok(windows.into_iter().any(|hwnd| unsafe {
+            IsWindowVisible(hwnd).as_bool() && !IsHungAppWindow(hwnd).as_bool()
+        }))
+    }
+
     pub(super) fn request_normal_quit(_tool_id: &str, path: &Path) -> Result<bool, AdapterFailure> {
         let pids = matching_processes(path)?;
         if pids.is_empty() {
@@ -300,6 +374,14 @@ mod platform {
         let pids = matching_processes(path)?;
         if pids.is_empty() {
             return Ok(false);
+        }
+        // Consent promises a fallback for background remnants, not killing a
+        // still-visible editor or its save dialog after the grace period.
+        if matching_windows(pids.clone())?
+            .into_iter()
+            .any(|hwnd| unsafe { IsWindowVisible(hwnd).as_bool() })
+        {
+            return Err(AdapterFailure::LaunchError("graceful_restart_required"));
         }
         let mut terminated = false;
         for pid in pids {
@@ -340,6 +422,10 @@ mod platform {
         Ok(false)
     }
 
+    pub(super) fn startup_observed(_tool_id: &str, _path: &Path) -> Result<bool, AdapterFailure> {
+        Err(AdapterFailure::UnsupportedProfile)
+    }
+
     pub(super) fn request_normal_quit(
         _tool_id: &str,
         _path: &Path,
@@ -355,6 +441,44 @@ mod platform {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn dispatch_without_startup_evidence_is_not_success() {
+        assert!(matches!(
+            wait_for_start(|| async { Ok(false) }, Duration::ZERO).await,
+            Err(AdapterFailure::LaunchError("desktop_start_unconfirmed"))
+        ));
+        assert!(wait_for_start(|| async { Ok(true) }, Duration::ZERO)
+            .await
+            .is_ok());
+        assert!(matches!(
+            wait_for_start(
+                || async { Err(AdapterFailure::LaunchError("desktop_state_unavailable")) },
+                Duration::ZERO
+            )
+            .await,
+            Err(AdapterFailure::LaunchError("desktop_state_unavailable"))
+        ));
+        assert!(matches!(
+            wait_for_start(
+                std::future::pending::<Result<bool, AdapterFailure>>,
+                Duration::from_millis(1),
+            )
+            .await,
+            Err(AdapterFailure::LaunchError("desktop_start_unconfirmed"))
+        ));
+    }
+
+    #[tokio::test]
+    async fn delayed_start_is_observed_without_launching_a_real_application() {
+        let mut observations = [false, true].into_iter();
+        assert!(wait_for_start(
+            || std::future::ready(Ok(observations.next().unwrap_or(false))),
+            Duration::from_secs(1)
+        )
+        .await
+        .is_ok());
+    }
 
     #[test]
     fn only_desktop_targets_are_eligible_for_reload_control() {

@@ -1,0 +1,10 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.69s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/yeschoy_desktop_lib-a37288403df02f03)
+
+running 3 tests
+test tool_activation::tests::ru076_inspection_worker_keeps_runtime_responsive_and_write_lock_until_read_finishes ... ok
+test tool_activation::tests::ru076_panicking_reader_has_a_safe_failure_and_releases_the_lock ... ok
+test tool_activation::tests::ru076_timed_out_reader_does_not_release_write_lock_or_queue_another_os_read ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 234 filtered out; finished in 0.14s
+

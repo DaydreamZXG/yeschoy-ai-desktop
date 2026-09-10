@@ -1,0 +1,11 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.52s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/yeschoy_desktop_lib-a37288403df02f03)
+
+running 4 tests
+test tool_adapters::claude_code::tests::ru056_claude_code_catalog_projects_each_models_native_effort_family ... ok
+test tool_adapters::claude_desktop::tests::ru056_claude_desktop_known_models_unlock_native_effort_without_fake_labels ... ok
+test tool_model_profile::tests::ru056_claude_clients_receive_per_model_capability_families ... ok
+test tool_model_profile::tests::ru056_effort_projection_never_forwards_an_unsupported_known_level ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 243 filtered out; finished in 0.00s
+

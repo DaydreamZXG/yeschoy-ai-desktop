@@ -1,0 +1,21 @@
+   Compiling yeschoy-desktop v0.4.15 (/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.06s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/yeschoy_desktop_lib-a37288403df02f03)
+
+running 1 test
+test tool_adapters::claude_desktop::tests::context_regression_migration_is_owned_idempotent_and_fully_reversible ... 
+thread 'tool_adapters::claude_desktop::tests::context_regression_migration_is_owned_idempotent_and_fully_reversible' (99544) panicked at src/tool_adapters/claude_desktop.rs:659:9:
+assertion `left == right` failed: only the stale context flag should change
+  left: Object {"coworkEgressAllowedHosts": Array [String("*")], "disableDeploymentModeChooser": Bool(true), "futureOwnedField": Object {"keep": Bool(true)}, "inferenceGatewayApiKey": String("synthetic-token"), "inferenceGatewayAuthScheme": String("bearer"), "inferenceGatewayBaseUrl": String("http://127.0.0.1:15729/claude-desktop"), "inferenceModels": Array [Object {"labelOverride": String("Claude Fable 5"), "name": String("claude-fable-5-v009092252247160031201160081240237175098226095098033230078035071116081085103073151131131082227215"), "supports1m": Bool(true)}, Object {"labelOverride": String("claude-haiku-4-5"), "name": String("claude-haiku-4-5-v138095017177057237090058020133159188164000091124030253003022123183172102136052017200070119106038"), "supports1m": Bool(false)}], "inferenceProvider": String("gateway")}
+ right: Object {"coworkEgressAllowedHosts": Array [String("*")], "disableDeploymentModeChooser": Bool(true), "futureOwnedField": Object {"keep": Bool(true)}, "inferenceGatewayApiKey": String("synthetic-token"), "inferenceGatewayAuthScheme": String("bearer"), "inferenceGatewayBaseUrl": String("http://127.0.0.1:15729/claude-desktop"), "inferenceModels": Array [Object {"futurePickerOption": String("keep"), "labelOverride": String("claude-haiku-4-5"), "name": String("claude-haiku-4-5-v138095017177057237090058020133159188164000091124030253003022123183172102136052017200070119106038"), "supports1m": Bool(false)}, Object {"labelOverride": String("Claude Fable 5"), "name": String("claude-fable-5-v009092252247160031201160081240237175098226095098033230078035071116081085103073151131131082227215"), "supports1m": Bool(true)}], "inferenceProvider": String("gateway")}
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+
+failures:
+
+failures:
+    tool_adapters::claude_desktop::tests::context_regression_migration_is_owned_idempotent_and_fully_reversible
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 246 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--lib`

@@ -1,0 +1,19 @@
+   Compiling yeschoy-desktop v0.4.15 (/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 13.81s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/yeschoy_desktop_lib-a37288403df02f03)
+
+running 1 test
+
+thread 'tool_adapters::codex_desktop::tests::inspection_regression_legacy_helper_profile_requires_reconnect_without_panicking' (507660) panicked at src/tool_adapters/codex_desktop.rs:395:25:
+index not found
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test tool_adapters::codex_desktop::tests::inspection_regression_legacy_helper_profile_requires_reconnect_without_panicking ... FAILED
+
+failures:
+
+failures:
+    tool_adapters::codex_desktop::tests::inspection_regression_legacy_helper_profile_requires_reconnect_without_panicking
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 232 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--lib`

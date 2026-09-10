@@ -1,0 +1,7 @@
+.picker-fixture { width: min(680px, calc(100% - 32px)); margin: 28px auto; }
+.picker-fixture > section { margin-top: 28px; }
+.picker-fixture .fixture-price-picker { margin-top: 420px; }
+.picker-fixture pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+:root[data-classic-scrollbar="true"] .model-options::-webkit-scrollbar { width: 16px; }
+:root[data-classic-scrollbar="true"] .model-options::-webkit-scrollbar-track { background: var(--subtle); }
+:root[data-classic-scrollbar="true"] .model-options::-webkit-scrollbar-thumb { background: var(--muted); border: 3px solid var(--subtle); border-radius: 10px; }

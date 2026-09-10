@@ -1928,6 +1928,26 @@
         "Yeschoy release and update automation contains no inherited CC Switch bucket, repository or public-origin identity, verifies signed updater artifacts before manifest promotion, and fails closed when platform signing, notarization or publication credentials are absent.",
         "Focused governed scenarios, frontend tests, TypeScript, production build, native tests, format, lints, dependency audits and source-level release checks pass. No package, upload, deployment, version bump or real user-state mutation occurs in this unit; unavailable external credentials remain explicit blockers."
       ]
+    },
+    {
+      "id": "REQ-096",
+      "statement": "Repair connection inspection and UX truth without another provider store, gateway redesign, user-state migration or host-application test.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-096",
+        "E-CODE-096",
+        "E-PROP-044"
+      ],
+      "acceptance": [
+        "A first failed inspection remains unknown, never zero connected or confirmed not connected; stale data is labelled as last-known.",
+        "Use inherited TanStack Query for deduplication and data retention. Focus/retry races and late inspection replies cannot overwrite a restore.",
+        "Surface a closed safe error code and correlation ID; raw IPC errors, OS secrets and filesystem paths never enter user-visible diagnostics.",
+        "Run read-only credential work on a blocking worker, serialize with activation, bound the command using the existing inspection deadline, and avoid duplicate per-tool credential reads.",
+        "Preserve the existing wire schema, encrypted receipts, direct relay endpoints, explicit restore writes and model selection. Cover happy, failure, replay, stale, race and recovery using isolated fixtures; no third-party app launch or real credential access."
+      ]
     }
   ]
 }

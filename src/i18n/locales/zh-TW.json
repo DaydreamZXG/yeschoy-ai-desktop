@@ -1,4 +1,20 @@
 {
+  "yeschoyDesktopRecovery": {
+    "configuredTitle": "設定已儲存，已檢查啟動",
+    "startObserved": "設定已儲存，系統已確認應用程式啟動。尚未驗證是否完成載入、登入或模型連線，請以應用程式內的實際使用結果為準。",
+    "opening": "正在開啟應用程式，尚未確認啟動結果…",
+    "checkingStart": "正在檢查啟動狀態；完成前保留上一次設定…",
+    "retry": "自動修復並重試",
+    "retryHint": "助手會先恢復未完成的操作；需要重新啟動時會提醒儲存，無需手動修改設定或尋找程序。",
+    "desktop_start_failed_restored": "新設定下未能確認應用程式啟動，已自動恢復上一次設定並重新開啟原應用程式。本次模型切換未生效，可以重試。",
+    "desktop_change_failed_restored": "本次更新已取消或未能完成，已自動恢復上一次設定並重新開啟原應用程式。本次模型切換未生效，可以重試。",
+    "previous_app_reopen_failed": "上一次設定和金鑰已恢復，但系統仍未能確認啟動。請處理系統權限提示後點選「自動修復並重試」，無需手動修改設定。",
+    "desktop_recovery_waiting_for_exit": "系統暫未允許應用程式結束，尚未恢復設定。為避免覆蓋仍在使用的設定，已保留恢復記錄。儲存內容並處理系統提示後，點選「自動修復並重試」。",
+    "previous_connection_runtime_failed": "設定和金鑰已恢復，但上一次本機連線尚未重新啟動。可點選「自動修復並重試」，無需手動修改設定。",
+    "configuration_rollback_failed": "自動恢復時發現設定被修改或寫入受阻，部分設定尚未恢復，沒有強行覆蓋其他修改。請點選「自動修復並重試」，無需手動編輯設定檔。",
+    "credential_restore_failed": "自動恢復時金鑰設定尚未恢復。請解鎖系統鑰匙圈或認證管理員，再點選「自動修復並重試」。",
+    "recovery_receipt_failed": "恢復記錄尚未安全儲存，不能確認操作已完成。請點選「自動修復並重試」，助手會先處理未完成的操作。"
+  },
   "yeschoyCatalog": {
     "eyebrow": "野菜API 模型",
     "title": "選擇模型",

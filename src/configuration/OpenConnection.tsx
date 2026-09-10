@@ -9,7 +9,8 @@ const messages: Record<OpenStatus, string> = {
   not_connected: "接入信息已移除，请重新接入。",
   settings_changed:
     "应用的连接设置已变化，没有覆盖你的修改。可调整接入，或恢复原设置。",
-  recovery_pending: "上次操作尚未结束，请先恢复原设置。",
+  recovery_pending:
+    "上次接入尚未完成。请进入接入设置重新接入，助手会先自动恢复未完成的操作，无需手动修改配置。",
   secure_storage_unavailable:
     "暂时无法读取系统保存的接入信息。请解锁系统钥匙串或凭据管理器后重试。",
   tool_not_found: "没有找到可以启动的应用，请检查安装后重试。",
@@ -120,7 +121,7 @@ export function OpenConnection({
           </span>
           {status !== "opened" && (
             <button className="text-button" onClick={onAdjust}>
-              查看接入设置
+              {status === "recovery_pending" ? "前往接入修复" : "查看接入设置"}
             </button>
           )}
         </div>

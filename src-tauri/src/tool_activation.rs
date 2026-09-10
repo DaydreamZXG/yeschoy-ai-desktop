@@ -34,6 +34,8 @@ pub(crate) static ACTIVATION_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::
 const ACTIVATION_PROGRESS_EVENT: &str = "yeschoy://activation-progress";
 const ACTIVATION_PROGRESS_TOTAL: u8 = 7;
 const CONNECTION_LOCK_WAIT_TIMEOUT: Duration = Duration::from_secs(8);
+// Match the renderer's existing inspection budget, including lock wait and I/O.
+const CONNECTION_INSPECTION_TIMEOUT: Duration = Duration::from_secs(15);
 
 #[derive(Default)]
 pub(crate) struct ActivationOperationState {
@@ -542,9 +544,10 @@ fn claude_transport(pricing: &Value, model_id: &str) -> Option<ClaudeTransport> 
     // The relay serves the Anthropic protocol for every chat model, so an
     // `anthropic` capability flag is no longer required to connect directly.
     // It remains the preferred evidence when present.
-    if endpoints.iter().any(|endpoint| {
-        matches!(endpoint.as_str(), Some("anthropic") | Some("openai"))
-    }) {
+    if endpoints
+        .iter()
+        .any(|endpoint| matches!(endpoint.as_str(), Some("anthropic") | Some("openai")))
+    {
         Some(ClaudeTransport::DirectAnthropic)
     } else {
         None
@@ -555,9 +558,10 @@ fn codex_transport(pricing: &Value, model_id: &str) -> Option<codex_desktop::Cod
     let endpoints = model_endpoints(pricing, model_id)?;
     // Same reasoning as `claude_transport`: the relay converts the Responses
     // protocol for every chat model, so `openai` alone is enough to go direct.
-    if endpoints.iter().any(|endpoint| {
-        matches!(endpoint.as_str(), Some("openai-response") | Some("openai"))
-    }) {
+    if endpoints
+        .iter()
+        .any(|endpoint| matches!(endpoint.as_str(), Some("openai-response") | Some("openai")))
+    {
         Some(codex_desktop::CodexTransport::DirectResponses)
     } else {
         None
@@ -1162,12 +1166,7 @@ async fn open_configured_adapter(
         "claude_desktop" => claude_desktop::launch(&installation.path),
         "codex_desktop" => codex_desktop::launch(&installation.path),
         "dsh_web" => {
-            dsh_web::open_existing(
-                dsh_runtime,
-                installation,
-                credential.upstream_key(),
-            )
-            .await
+            dsh_web::open_existing(dsh_runtime, installation, credential.upstream_key()).await
         }
         "claude_code" | "pi" | "hermes" | "openclaw" => Ok(()),
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
@@ -1232,6 +1231,7 @@ async fn stop_helper_runtime(
 async fn restore_after_failure(
     request: &ToolActivationRequest,
     prepared: &mut PreparedAdapter,
+    recovery_record: &connection_recovery::Record,
     credential_before: Option<&str>,
     previous_record: Option<ToolCredential>,
     origin: &str,
@@ -1241,9 +1241,21 @@ async fn restore_after_failure(
     dsh_runtime: &dsh_web::DshRuntimeState,
     permit: &shutdown_coordinator::OperationPermit,
 ) -> Option<AdapterFailure> {
-    let rollback_failure = prepared.rollback().err();
+    let rollback_failed = if desktop_lifecycle::requires_reload(&request.tool_id) {
+        connection_recovery::restore_attempt(recovery_record).is_err()
+    } else {
+        prepared.rollback().is_err()
+    };
+    if rollback_failed {
+        // The live files may still reference the new key. Keep both keys and
+        // the encrypted pending checkpoint until recovery really succeeds.
+        return restoration_failure(true, false);
+    }
     let credential_failure = tool_credentials::restore(&request.tool_id, credential_before).err();
-    let _ = permit
+    if credential_failure.is_some() {
+        return restoration_failure(false, true);
+    }
+    let runtime_result = permit
         .cancel_safe(async {
             if request.tool_id == "dsh_web" {
                 dsh_runtime.stop().await;
@@ -1254,13 +1266,53 @@ async fn restore_after_failure(
                     .clone()
                     .filter(|_| !shutdown_coordinator::global().is_shutting_down())
                 {
-                    let _ = claude_runtime.start(previous).await;
+                    claude_runtime.start(previous).await?;
                 }
             }
+            Ok::<(), AdapterFailure>(())
         })
         .await;
+    if matches!(runtime_result, Ok(Err(_))) {
+        return Some(AdapterFailure::ConfigurationFailed(
+            "previous_connection_runtime_failed",
+        ));
+    }
     delete_created_tokens(origin, access_token, leases).await;
-    restoration_failure(rollback_failure.is_some(), credential_failure.is_some())
+    None
+}
+
+// The durable receipt and old-key retirement must follow startup observation.
+// Kept separate so real file fixtures can exercise every completion ordering.
+async fn finalize_after_start<Fut>(
+    configured: Result<(), AdapterFailure>,
+    start: Fut,
+    finish: impl FnOnce() -> Result<(), AdapterFailure>,
+) -> Result<(), AdapterFailure>
+where
+    Fut: std::future::Future<Output = Result<(), AdapterFailure>>,
+{
+    configured?;
+    start.await?;
+    finish()
+}
+
+// Never restore files or revoke credentials while an attempted launch might
+// still be using them. A refused/unknown stop leaves the checkpoint intact.
+async fn recover_after_stop<Stop, Restore, RestoreFuture>(
+    stopped: Stop,
+    restore: Restore,
+) -> Option<AdapterFailure>
+where
+    Stop: std::future::Future<Output = Result<(), AdapterFailure>>,
+    Restore: FnOnce() -> RestoreFuture,
+    RestoreFuture: std::future::Future<Output = Option<AdapterFailure>>,
+{
+    if stopped.await.is_err() {
+        return Some(AdapterFailure::ConfigurationFailed(
+            "desktop_recovery_waiting_for_exit",
+        ));
+    }
+    restore().await
 }
 
 // A failed restoration happens after writes. Keep it distinct from an initial
@@ -1432,8 +1484,7 @@ pub async fn configure_desktop_tool_v2(
     };
     if let Some(store) = recovery.as_ref() {
         let pending = match store.load(&request.tool_id) {
-            Ok(Some(record)) => record.pending,
-            Ok(None) => false,
+            Ok(record) => record.filter(|record| record.pending),
             Err(_) => {
                 return Ok(
                     ActivationFailure::ConfigurationFailed("recovery_storage_unavailable")
@@ -1441,7 +1492,7 @@ pub async fn configure_desktop_tool_v2(
                 )
             }
         };
-        if pending {
+        if let Some(pending) = pending {
             // A pending record may restore application files. Desktop apps
             // must be stopped before that local mutation, using the same
             // explicit save-work consent as a normal update.
@@ -1484,6 +1535,8 @@ pub async fn configure_desktop_tool_v2(
                     }
                 }
             }
+            let reopen_after_recovery = reload_guard.closed;
+            reload_guard.disarm();
             if permit
                 .cancel_safe(stop_helper_runtime(
                     &request.tool_id,
@@ -1495,10 +1548,26 @@ pub async fn configure_desktop_tool_v2(
             {
                 return Ok(cancelled());
             }
-            match store.recover_pending(&request.tool_id, || {
-                tool_credentials::restore(&request.tool_id, None).is_ok()
+            let previous = pending.rollback_credential().cloned();
+            match store.recover_pending(&request.tool_id, || match previous.as_ref() {
+                Some(credential) => tool_credentials::store(&request.tool_id, credential).is_ok(),
+                None => tool_credentials::restore(&request.tool_id, None).is_ok(),
             }) {
-                Ok(true) => crate::request_diagnostics::clear(&request.tool_id),
+                Ok(true) => {
+                    crate::request_diagnostics::clear(&request.tool_id);
+                    if request.tool_id == "claude_desktop" {
+                        if let Some(previous) = previous {
+                            if claude_runtime.start(previous).await.is_err() {
+                                reload_guard.disarm();
+                                return Ok(ActivationFailure::ConfigurationFailed(
+                                    "previous_connection_runtime_failed",
+                                )
+                                .projection(&request));
+                            }
+                        }
+                    }
+                    reload_guard.record_normal_quit(reopen_after_recovery);
+                }
                 Ok(false) => {}
                 Err(failure) => {
                     use connection_recovery::PendingRecoveryFailure as RecoveryFailure;
@@ -1742,6 +1811,10 @@ pub async fn configure_desktop_tool_v2(
         return Ok(cancelled());
     }
     // No cancellation point between credential publication and local file commit.
+    let reopen_previous = reload_guard.closed;
+    // From here failures require an explicit successful rollback, not a Drop
+    // that could reopen a partially-written or unrecoverable configuration.
+    reload_guard.disarm();
     emit_activation_progress(&app, &request, "applying_settings", 6);
     let local_result = tool_credentials::store(&request.tool_id, &credential)
         .map_err(|_| AdapterFailure::SecureStorageUnavailable)
@@ -1764,23 +1837,40 @@ pub async fn configure_desktop_tool_v2(
             )),
         },
     };
-    let result = configured.and_then(|()| {
-        if is_cancelled() {
-            return Err(AdapterFailure::ConfigurationFailed(
-                if registration.cancellation.is_requested() {
-                    "activation_cancelled"
-                } else {
-                    "assistant_shutting_down"
-                },
-            ));
-        }
-        if ensure_session_epoch(&account_state, session_epoch).is_err() {
-            return Err(AdapterFailure::ConfigurationFailed("account_changed"));
-        }
-        recovery
-            .finish(&mut recovery_record)
-            .map_err(|_| AdapterFailure::ConfigurationFailed("recovery_receipt_failed"))
-    });
+    let mut desktop_open_attempted = false;
+    let result = finalize_after_start(
+        configured,
+        async {
+            if desktop_lifecycle::requires_reload(&request.tool_id) {
+                if is_cancelled() {
+                    return Err(AdapterFailure::ConfigurationFailed("activation_cancelled"));
+                }
+                desktop_open_attempted = true;
+                emit_activation_progress(&app, &request, "opening_application", 7);
+                emit_activation_progress(&app, &request, "checking_application_started", 7);
+                desktop_lifecycle::open_and_wait(&request.tool_id, &installation.path).await?;
+            }
+            Ok(())
+        },
+        || {
+            if is_cancelled() {
+                return Err(AdapterFailure::ConfigurationFailed(
+                    if registration.cancellation.is_requested() {
+                        "activation_cancelled"
+                    } else {
+                        "assistant_shutting_down"
+                    },
+                ));
+            }
+            if ensure_session_epoch(&account_state, session_epoch).is_err() {
+                return Err(AdapterFailure::ConfigurationFailed("account_changed"));
+            }
+            recovery
+                .finish(&mut recovery_record)
+                .map_err(|_| AdapterFailure::ConfigurationFailed("recovery_receipt_failed"))
+        },
+    )
+    .await;
     if let Err(error) = result {
         log::warn!(
             "activation stage=rollback tool={} reason={:?}",
@@ -1788,28 +1878,68 @@ pub async fn configure_desktop_tool_v2(
             error
         );
         emit_activation_progress(&app, &request, "restoring_settings", 6);
-        let cleanup = restore_after_failure(
-            &request,
-            &mut prepared,
-            credential_before.as_deref(),
-            previous_record,
-            &origin,
-            &access_token,
-            &leases,
-            &claude_runtime,
-            &dsh_runtime,
-            &permit,
+        let cleanup = recover_after_stop(
+            async {
+                if desktop_open_attempted {
+                    desktop_lifecycle::quit_for_reconfigure(&request.tool_id, &installation.path)
+                        .await?;
+                }
+                Ok(())
+            },
+            || {
+                restore_after_failure(
+                    &request,
+                    &mut prepared,
+                    &recovery_record,
+                    credential_before.as_deref(),
+                    previous_record,
+                    &origin,
+                    &access_token,
+                    &leases,
+                    &claude_runtime,
+                    &dsh_runtime,
+                    &permit,
+                )
+            },
         )
         .await;
-        if cleanup.is_none() {
-            let _ = recovery.abandon(&recovery_record);
+        if let Some(failure) = cleanup {
+            return Ok(ActivationFailure::Adapter(failure).projection(&request));
         }
-        return Ok(ActivationFailure::Adapter(cleanup.unwrap_or(error)).projection(&request));
+        if recovery.abandon(&recovery_record).is_err() {
+            return Ok(
+                ActivationFailure::ConfigurationFailed("recovery_receipt_failed")
+                    .projection(&request),
+            );
+        }
+        if (reopen_previous || desktop_open_attempted)
+            && !shutdown_coordinator::global().is_shutting_down()
+            && desktop_lifecycle::open_and_wait(&request.tool_id, &installation.path)
+                .await
+                .is_err()
+        {
+            return Ok(
+                ActivationFailure::ConfigurationFailed("previous_app_reopen_failed")
+                    .projection(&request),
+            );
+        }
+        return Ok(if desktop_open_attempted {
+            let reason = if matches!(error, AdapterFailure::LaunchError(_)) {
+                "desktop_start_failed_restored"
+            } else {
+                "desktop_change_failed_restored"
+            };
+            ActivationFailure::ConfigurationFailed(reason).projection(&request)
+        } else {
+            ActivationFailure::Adapter(error).projection(&request)
+        });
     }
-    reload_guard.disarm();
-    emit_activation_progress(&app, &request, "opening_application", 7);
-    let open_result =
-        open_configured_adapter(&request, &installation, &credential, &dsh_runtime).await;
+    let open_result = if desktop_lifecycle::requires_reload(&request.tool_id) {
+        Ok(()) // Already opened and observed before the transaction finished.
+    } else {
+        emit_activation_progress(&app, &request, "opening_application", 7);
+        open_configured_adapter(&request, &installation, &credential, &dsh_runtime).await
+    };
     stage!("opened");
     log::info!(
         "activation stage=open tool={} ok={}",
@@ -1836,7 +1966,11 @@ pub async fn configure_desktop_tool_v2(
     Ok(ToolActivationProjection::new(
         &request,
         "ready",
-        "configuration_ready",
+        if desktop_lifecycle::requires_reload(&request.tool_id) {
+            "desktop_start_observed"
+        } else {
+            "configuration_ready"
+        },
     ))
 }
 
@@ -1907,6 +2041,9 @@ fn inspect_connection(
     tool: &str,
     store: std::result::Result<Option<&Store>, ()>,
 ) -> ConnectionProjection {
+    // Keychain/Credential Manager reads can block. Reuse one read per tool for
+    // both legacy detection and the model projection.
+    let credential = tool_credentials::load(tool);
     let mut projection = ConnectionProjection::empty(tool);
     let stored = match store {
         Ok(Some(store)) => store.load(tool),
@@ -1940,7 +2077,7 @@ fn inspect_connection(
             projection.state = "unavailable";
             projection.reason_code = "recovery_storage_unavailable";
         }
-        Ok(None) => match tool_credentials::load(tool) {
+        Ok(None) => match &credential {
             Ok(credential) => {
                 projection.state = "legacy";
                 projection.restore_mode = "remove_yeschoy";
@@ -1951,7 +2088,7 @@ fn inspect_connection(
                     "mainland_optimized"
                 }
                 .into();
-                projection.requires_background = needs_background(tool, &credential);
+                projection.requires_background = needs_background(tool, credential);
                 projection.reason_code = "original_settings_unavailable";
             }
             Err(CredentialFailure::Missing) => {}
@@ -1961,7 +2098,7 @@ fn inspect_connection(
             }
         },
     }
-    if let Ok(credential) = tool_credentials::load(tool) {
+    if let Ok(credential) = &credential {
         projection.models = credential
             .models
             .iter()
@@ -1982,16 +2119,64 @@ fn inspect_connection(
         if projection.state == "changed"
             && credential.has_model_set()
             && tool_adapters::user_home().is_some_and(|home| {
-                crate::open_connection::validate_settings(&home, tool, &credential).is_ok()
+                crate::open_connection::validate_settings(&home, tool, credential).is_ok()
             })
         {
             projection.state = "connected";
             projection.reason_code = "connected";
         }
-        projection.requires_background = needs_background(tool, &credential);
+        projection.requires_background = needs_background(tool, credential);
     }
     projection.last_request = crate::request_diagnostics::latest(tool);
     projection
+}
+
+pub(crate) async fn inspect_on_worker<T: Send + 'static>(
+    lock: &'static tokio::sync::Mutex<()>,
+    deadline: Duration,
+    inspect: impl FnOnce() -> T + Send + 'static,
+) -> Result<T, &'static str> {
+    tokio::time::timeout(deadline, async move {
+        let guard = tokio::time::timeout(CONNECTION_LOCK_WAIT_TIMEOUT, lock.lock())
+            .await
+            .map_err(|_| "connection_operation_busy")?;
+        // Same blocking-worker boundary as CC Switch's provider commands. Keep
+        // the write lock in the worker even if the caller times out: an OS read
+        // cannot be cancelled safely, and must not overlap configuration writes.
+        tauri::async_runtime::spawn_blocking(move || {
+            let _guard = guard;
+            inspect()
+        })
+        .await
+        .map_err(|_| "connection_inspection_failed")
+    })
+    .await
+    .map_err(|_| "connection_inspect_timed_out")?
+}
+
+fn inspect_connections(store: Result<Option<&Store>, ()>) -> Vec<ConnectionProjection> {
+    inspect_connections_with(|tool| inspect_connection(tool, store))
+}
+
+fn inspect_connections_with(
+    mut inspect: impl FnMut(&str) -> ConnectionProjection,
+) -> Vec<ConnectionProjection> {
+    CONNECTION_TOOLS
+        .iter()
+        .map(|tool| {
+            // A single adapter must not discard the other six local results.
+            // No writes/recovery take place here; preserve an unknown state
+            // for the failed tool and never expose the raw panic payload.
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| inspect(tool))).unwrap_or_else(
+                |_| {
+                    let mut projection = ConnectionProjection::empty(tool);
+                    projection.state = "unavailable";
+                    projection.reason_code = "connection_inspection_failed";
+                    projection
+                },
+            )
+        })
+        .collect()
 }
 
 pub(crate) fn needs_background(tool: &str, credential: &ToolCredential) -> bool {
@@ -2090,6 +2275,48 @@ pub async fn manage_tool_connections_v1(
     let permit = shutdown_coordinator::global()
         .admit_operation()
         .map_err(|_| "assistant_shutting_down")?;
+    if request.operation == "inspect" {
+        let started = std::time::Instant::now();
+        let result = permit
+            .cancel_safe(inspect_on_worker(
+                &ACTIVATION_LOCK,
+                CONNECTION_INSPECTION_TIMEOUT,
+                || {
+                    let store = Store::open(false);
+                    inspect_connections(match &store {
+                        Ok(store) => Ok(store.as_ref()),
+                        Err(_) => Err(()),
+                    })
+                },
+            ))
+            .await
+            .unwrap_or(Err("assistant_shutting_down"));
+        let connections = result.map_err(|code| {
+            // Never log raw storage errors, paths, account data or credentials.
+            log::warn!(
+                "connection_inspection request_id={} code={} elapsed_ms={}",
+                request.request_id,
+                code,
+                started.elapsed().as_millis()
+            );
+            code.to_string()
+        })?;
+        for connection in connections.iter().filter(|c| c.state == "unavailable") {
+            log::warn!(
+                "connection_inspection request_id={} code=connection_partial_unavailable tool_id={} reason={}",
+                request.request_id,
+                connection.tool_id,
+                connection.reason_code
+            );
+        }
+        return Ok(ConnectionResponse {
+            request_id: request.request_id,
+            schema_version: 2,
+            status: "ok",
+            connections,
+            reason_code: "local_state",
+        });
+    }
     let _guard = tokio::time::timeout(
         CONNECTION_LOCK_WAIT_TIMEOUT,
         permit.cancel_safe(ACTIVATION_LOCK.lock()),
@@ -2136,12 +2363,7 @@ pub async fn manage_tool_connections_v1(
             // another provider. A running app may need to reopen its settings.
             let _ = permit
                 .cancel_safe(async {
-                    stop_helper_runtime(
-                        &request.tool_id,
-                        &claude_runtime,
-                        &dsh_runtime,
-                    )
-                    .await;
+                    stop_helper_runtime(&request.tool_id, &claude_runtime, &dsh_runtime).await;
                 })
                 .await;
             if cleaned {
@@ -2195,18 +2417,10 @@ pub async fn manage_tool_connections_v1(
             reason = "recovery_not_completed";
         }
     }
-    let connections = CONNECTION_TOOLS
-        .iter()
-        .map(|tool| {
-            inspect_connection(
-                tool,
-                match &store {
-                    Ok(store) => Ok(store.as_ref()),
-                    Err(_) => Err(()),
-                },
-            )
-        })
-        .collect();
+    let connections = inspect_connections(match &store {
+        Ok(store) => Ok(store.as_ref()),
+        Err(_) => Err(()),
+    });
     Ok(ConnectionResponse {
         request_id: request.request_id,
         schema_version: 2,
@@ -2219,6 +2433,186 @@ pub async fn manage_tool_connections_v1(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn refused_stop_does_not_restore_files_or_keys_or_delete_live_tokens() {
+        assert!(matches!(
+            recover_after_stop(
+                async { Err(AdapterFailure::LaunchError("graceful_restart_required")) },
+                || async { panic!("must not change live files or revoke live keys") }
+            )
+            .await,
+            Some(AdapterFailure::ConfigurationFailed(
+                "desktop_recovery_waiting_for_exit"
+            ))
+        ));
+        assert!(matches!(
+            recover_after_stop(async { Ok(()) }, || async {
+                Some(AdapterFailure::ConfigurationFailed(
+                    "credential_restore_failed",
+                ))
+            })
+            .await,
+            Some(AdapterFailure::ConfigurationFailed(
+                "credential_restore_failed"
+            ))
+        ));
+        assert!(recover_after_stop(async { Ok(()) }, || async { None })
+            .await
+            .is_none());
+    }
+
+    #[tokio::test]
+    async fn desktop_receipt_cannot_complete_before_startup_observation() {
+        use std::cell::RefCell;
+        for startup_ok in [false, true] {
+            let events = RefCell::new(Vec::new());
+            let result = finalize_after_start(
+                Ok(()),
+                async {
+                    events.borrow_mut().push("start-observed");
+                    if startup_ok {
+                        Ok(())
+                    } else {
+                        Err(AdapterFailure::LaunchError("desktop_start_unconfirmed"))
+                    }
+                },
+                || {
+                    events.borrow_mut().push("finish-receipt");
+                    Ok(())
+                },
+            )
+            .await;
+            assert_eq!(result.is_ok(), startup_ok);
+            assert_eq!(
+                *events.borrow(),
+                if startup_ok {
+                    vec!["start-observed", "finish-receipt"]
+                } else {
+                    vec!["start-observed"]
+                }
+            );
+        }
+        assert!(finalize_after_start(
+            Err(AdapterFailure::ConfigurationFailed(
+                "synthetic-write-failed"
+            )),
+            async { panic!("must not launch after a failed configuration") },
+            || panic!("must not finish after a failed configuration")
+        )
+        .await
+        .is_err());
+        assert!(finalize_after_start(Ok(()), async { Ok(()) }, || Err(
+            AdapterFailure::ConfigurationFailed("activation_cancelled")
+        ))
+        .await
+        .is_err());
+    }
+
+    #[tokio::test]
+    async fn inspection_regression_one_adapter_panic_keeps_six_other_results() {
+        static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+        let result = inspect_on_worker(&LOCK, Duration::from_secs(2), || {
+            inspect_connections_with(|tool| {
+                if tool == "codex_desktop" {
+                    panic!("synthetic-private-value-must-not-be-in-response");
+                }
+                let mut projection = ConnectionProjection::empty(tool);
+                if tool == "claude_desktop" {
+                    projection.state = "connected";
+                    projection.reason_code = "connected";
+                }
+                projection
+            })
+        })
+        .await
+        .unwrap();
+        assert_eq!(result.len(), 7);
+        assert_eq!(result[1].state, "connected");
+        assert_eq!(result[2].state, "unavailable");
+        assert_eq!(result[2].reason_code, "connection_inspection_failed");
+        assert_eq!(
+            result.iter().filter(|c| c.state == "not_connected").count(),
+            5
+        );
+        assert!(!serde_json::to_string(&result)
+            .unwrap()
+            .contains("synthetic-private"));
+        assert!(LOCK.try_lock().is_ok());
+        let next = inspect_on_worker(&LOCK, Duration::from_secs(2), || {
+            inspect_connections_with(ConnectionProjection::empty)
+        })
+        .await
+        .unwrap();
+        assert!(next.iter().all(|c| c.state == "not_connected"));
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn ru076_inspection_worker_keeps_runtime_responsive_and_write_lock_until_read_finishes() {
+        static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+        let (started_tx, started_rx) = tokio::sync::oneshot::channel();
+        let (finish_tx, finish_rx) = std::sync::mpsc::channel();
+        let task = tokio::spawn(inspect_on_worker(
+            &LOCK,
+            Duration::from_secs(2),
+            move || {
+                started_tx.send(()).unwrap();
+                finish_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+                7
+            },
+        ));
+        started_rx.await.unwrap();
+        // If the synchronous reader ran on this current-thread executor, we
+        // could not reach this assertion or send its completion signal.
+        assert!(LOCK.try_lock().is_err());
+        tokio::task::yield_now().await;
+        finish_tx.send(()).unwrap();
+        assert_eq!(task.await.unwrap(), Ok(7));
+        assert!(LOCK.try_lock().is_ok());
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn ru076_timed_out_reader_does_not_release_write_lock_or_queue_another_os_read() {
+        static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+        let (started_tx, started_rx) = tokio::sync::oneshot::channel();
+        let (finish_tx, finish_rx) = std::sync::mpsc::channel();
+        let task = tokio::spawn(inspect_on_worker(
+            &LOCK,
+            Duration::from_millis(80),
+            move || {
+                started_tx.send(()).unwrap();
+                finish_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+            },
+        ));
+        started_rx.await.unwrap();
+        assert_eq!(task.await.unwrap(), Err("connection_inspect_timed_out"));
+        assert!(LOCK.try_lock().is_err());
+        let invoked = Arc::new(AtomicBool::new(false));
+        let worker_invoked = invoked.clone();
+        assert_eq!(
+            inspect_on_worker(&LOCK, Duration::from_millis(20), move || {
+                worker_invoked.store(true, Ordering::SeqCst);
+            })
+            .await,
+            Err("connection_inspect_timed_out")
+        );
+        assert!(!invoked.load(Ordering::SeqCst));
+        finish_tx.send(()).unwrap();
+        let _guard = tokio::time::timeout(Duration::from_secs(2), LOCK.lock())
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn ru076_panicking_reader_has_a_safe_failure_and_releases_the_lock() {
+        static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+        let result = inspect_on_worker(&LOCK, Duration::from_secs(2), || {
+            panic!("synthetic private storage detail")
+        })
+        .await;
+        assert_eq!(result, Err("connection_inspection_failed"));
+        assert!(LOCK.try_lock().is_ok());
+    }
 
     #[test]
     fn ru042_activation_models_require_explicit_unique_binding_and_default_member() {

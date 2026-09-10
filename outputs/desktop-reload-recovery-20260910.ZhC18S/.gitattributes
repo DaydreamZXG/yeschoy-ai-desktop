@@ -1,0 +1,3 @@
+# Unified diff context lines require their leading space; this is evidence,
+# not source formatting. Source files still use the normal whitespace checks.
+working-tree-vs-HEAD.diff -whitespace

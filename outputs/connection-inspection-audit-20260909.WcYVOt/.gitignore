@@ -1,0 +1,7 @@
+# Reviewed synthetic-test and cross-build evidence.
+!/fixture-after.log
+!/fixture-before.log
+!/frontend-after.log
+!/windows-after-build.log
+!/windows-before-build.log
+!/worker-deadline-after.log

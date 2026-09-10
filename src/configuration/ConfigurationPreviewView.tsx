@@ -26,6 +26,7 @@ import { connectionLabel, useConnections } from "./connections";
 import { RestoreConnection } from "./RestoreConnection";
 import { OpenConnection } from "./OpenConnection";
 import { RecentRequest } from "./RecentRequest";
+import { ConnectionStatusNotice } from "./ConnectionStatusNotice";
 import { useInstallation } from "../installation/InstallationProvider";
 import { InstallationPanel } from "../installation/InstallationPanel";
 import {
@@ -166,15 +167,26 @@ export function runningAppHandoff(
 export function recoveryRetryMessage(reasonCode: string): string | undefined {
   switch (reasonCode) {
     case "configuration_rollback_failed":
-      return "自动恢复上次未完成的设置时遇到问题，部分设置尚未恢复，本次没有继续写入。可点击“恢复原设置”后再试。";
+      return "自动恢复上次未完成的设置时遇到问题，部分设置尚未恢复。可直接点击“自动修复并重试”，无需手动修改配置。";
     case "credential_restore_failed":
-      return "自动恢复时无法清理旧的工具密钥，密钥设置尚未恢复，本次没有继续写入。请解锁系统钥匙串或凭据管理器；若仍失败，可点击“恢复原设置”。";
+      return "自动恢复时密钥设置尚未恢复。请解锁系统钥匙串或凭据管理器，再点击“自动修复并重试”，无需手动修改配置。";
     case "recovery_pending":
       return "另一项接入或恢复操作正在进行。本次没有修改应用，请稍后直接重试；若一直出现，可使用“恢复原设置”。";
     default:
       return undefined;
   }
 }
+
+const AUTO_RECOVERY_REASONS = new Set([
+  "desktop_start_failed_restored",
+  "desktop_change_failed_restored",
+  "previous_app_reopen_failed",
+  "desktop_recovery_waiting_for_exit",
+  "previous_connection_runtime_failed",
+  "configuration_rollback_failed",
+  "credential_restore_failed",
+  "recovery_receipt_failed",
+]);
 
 const UX = {
   zh: {
@@ -540,7 +552,8 @@ export function ConfigurationPreviewView({
   );
   const connectionStateUnavailable =
     !!connections?.loading ||
-    (!!connections?.error && connections.connections.length === 0);
+    (!!connections?.error && connections.connections.length === 0) ||
+    savedConnection?.state === "unavailable";
   const toolId = previewTool(activationToolId);
   const target = targetScan?.targets.find(
     (candidate) => candidate.toolId === activationToolId,
@@ -909,6 +922,8 @@ export function ConfigurationPreviewView({
   const activationResult = (() => {
     switch (activation?.status) {
       case "ready":
+        if (activation.reasonCode === "desktop_start_observed")
+          return t("yeschoyDesktopRecovery.startObserved");
         if (
           activation.schemaVersion === 3 &&
           activation.reasonCode === "tool_request_verified"
@@ -1001,6 +1016,8 @@ export function ConfigurationPreviewView({
       case "server_unavailable":
         return c.setupServerUnavailable;
       case "configuration_failed":
+        if (AUTO_RECOVERY_REASONS.has(activation.reasonCode))
+          return t(`yeschoyDesktopRecovery.${activation.reasonCode}`);
         {
           const recoveryMessage = recoveryRetryMessage(activation.reasonCode);
           if (recoveryMessage) return recoveryMessage;
@@ -1146,7 +1163,9 @@ export function ConfigurationPreviewView({
       case "restoring_settings":
         return "操作未完成，正在恢复原设置…";
       case "opening_application":
-        return "配置已完成，正在打开应用…";
+        return t("yeschoyDesktopRecovery.opening");
+      case "checking_application_started":
+        return t("yeschoyDesktopRecovery.checkingStart");
       case "complete":
         return "接入完成。";
       default:
@@ -1157,7 +1176,8 @@ export function ConfigurationPreviewView({
     enableLocalActivation &&
     (scanPhase === "error" || (scanPhase === "ready" && !target));
   const connectionReadFailed =
-    !!connections?.error && (connections?.connections.length ?? 0) === 0;
+    (!!connections?.error && (connections?.connections.length ?? 0) === 0) ||
+    savedConnection?.state === "unavailable";
   const openAdvanced = () => {
     setAdvancedOpen(true);
     advancedDetails.current?.scrollIntoView({ block: "center" });
@@ -1292,6 +1312,17 @@ export function ConfigurationPreviewView({
         hint: "已经接入。需要换模型或分组时点这里重新写入设置。",
         run: () => void apply(),
       };
+    if (
+      resultIsCurrent &&
+      activation &&
+      AUTO_RECOVERY_REASONS.has(activation.reasonCode)
+    )
+      return {
+        kind: "repair-and-retry",
+        label: t("yeschoyDesktopRecovery.retry"),
+        hint: t("yeschoyDesktopRecovery.retryHint"),
+        run: () => void apply(),
+      };
     return {
       kind: "apply",
       label: c.connectNow,
@@ -1335,6 +1366,11 @@ export function ConfigurationPreviewView({
   );
   const recoveryAction = (() => {
     if (!activation || activation.status === "ready") return null;
+    if (resultIsCurrent && AUTO_RECOVERY_REASONS.has(activation.reasonCode))
+      return {
+        label: t("yeschoyDesktopRecovery.retry"),
+        run: () => void apply(),
+      };
     if (
       activation.status === "signed_out" ||
       activation.reasonCode === "authentication_failed"
@@ -1626,17 +1662,15 @@ export function ConfigurationPreviewView({
               </button>
             </div>
           )}
-          {connections?.error && (
-            <div className="selection-warning" role="alert">
-              <p>暂时无法读取上次的接入设置，请重试；不会用默认选择覆盖。</p>
-              <button
-                className="subtle-button"
-                onClick={() => void connections.refresh()}
-              >
-                读取接入状态
-              </button>
-            </div>
-          )}
+          {connections &&
+            (connections.error || savedConnection?.state === "unavailable") && (
+              <ConnectionStatusNotice
+                issue={connections.errorInfo}
+                stale={connections.error && connections.connections.length > 0}
+                refreshing={connections.refreshing}
+                onRetry={() => void connections.refresh()}
+              />
+            )}
           <header className="connection-builder-heading">
             <div>
               <p className="eyebrow">{ux.builderKicker}</p>
@@ -2154,7 +2188,9 @@ export function ConfigurationPreviewView({
               <strong>
                 {activationSucceeded
                   ? resultIsCurrent
-                    ? ux.readyTitle
+                    ? activation.reasonCode === "desktop_start_observed"
+                      ? t("yeschoyDesktopRecovery.configuredTitle")
+                      : ux.readyTitle
                     : "刚才的接入已完成"
                   : activation?.status === "application_running"
                     ? "需要重新打开应用"

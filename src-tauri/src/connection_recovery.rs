@@ -45,6 +45,25 @@ pub(crate) struct Record {
     // Only present while a configuration command is in flight. Discarded when
     // it commits; used to preserve the preceding baseline on failed switching.
     previous: Option<Box<Record>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    rollback_checkpoint: Option<RollbackCheckpoint>,
+}
+
+// Encrypted with the journal and present only during a desktop transaction.
+// `files` retains the immediate predecessor, unlike the original-use baseline.
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RollbackCheckpoint {
+    files: Vec<FileChange>,
+    credential: Option<ToolCredential>,
+}
+
+impl Record {
+    pub(crate) fn rollback_credential(&self) -> Option<&ToolCredential> {
+        self.rollback_checkpoint
+            .as_ref()
+            .and_then(|checkpoint| checkpoint.credential.as_ref())
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -185,6 +204,25 @@ fn validate_record(tool: &str, record: &Record) -> Result<()> {
     if let Some(previous) = &record.previous {
         validate_record(tool, previous)?;
     }
+    if let Some(checkpoint) = &record.rollback_checkpoint {
+        if !record.pending
+            || !matches!(tool, "claude_desktop" | "codex_desktop")
+            || checkpoint
+                .files
+                .iter()
+                .map(|file| &file.path)
+                .collect::<BTreeSet<_>>()
+                != paths
+            || checkpoint.files.len() != record.files.len()
+        {
+            return Err(Failure::Invalid);
+        }
+        let mut attempt = record.clone();
+        attempt.files = checkpoint.files.clone();
+        attempt.previous = None;
+        attempt.rollback_checkpoint = None;
+        validate_record(tool, &attempt)?;
+    }
     Ok(())
 }
 
@@ -280,11 +318,12 @@ impl Store {
 
     /// Complete only an interrupted transaction for this exact tool. A
     /// completed baseline remains available for explicit restore and switching.
-    /// The record is removed last so every partial failure stays recoverable.
+    /// The pending receipt is removed/replaced last so partial file or
+    /// credential failures stay recoverable.
     pub(crate) fn recover_pending(
         &self,
         tool: &str,
-        clear_credential: impl FnOnce() -> bool,
+        restore_credential: impl FnOnce() -> bool,
     ) -> std::result::Result<bool, PendingRecoveryFailure> {
         let Some(record) = self.load(tool).map_err(|_| PendingRecoveryFailure::Load)? else {
             return Ok(false);
@@ -292,12 +331,21 @@ impl Store {
         if !record.pending {
             return Ok(false);
         }
-        restore_files(&record).map_err(|_| PendingRecoveryFailure::Files)?;
-        if !clear_credential() {
+        if record.rollback_checkpoint.is_some() {
+            restore_attempt(&record).map_err(|_| PendingRecoveryFailure::Files)?;
+        } else {
+            restore_files(&record).map_err(|_| PendingRecoveryFailure::Files)?;
+        }
+        if !restore_credential() {
             return Err(PendingRecoveryFailure::Credential);
         }
-        self.remove(tool)
-            .map_err(|_| PendingRecoveryFailure::Receipt)?;
+        if record.rollback_checkpoint.is_some() {
+            self.abandon(&record)
+                .map_err(|_| PendingRecoveryFailure::Receipt)?;
+        } else {
+            self.remove(tool)
+                .map_err(|_| PendingRecoveryFailure::Receipt)?;
+        }
         Ok(true)
     }
 
@@ -351,6 +399,14 @@ impl Store {
         }
         let record = Record {
             version: 1,
+            rollback_checkpoint: matches!(
+                receipt.tool_id.as_str(),
+                "claude_desktop" | "codex_desktop"
+            )
+            .then(|| RollbackCheckpoint {
+                files: changes.to_vec(),
+                credential: legacy.cloned(),
+            }),
             receipt,
             original_known: previous
                 .as_ref()
@@ -367,6 +423,7 @@ impl Store {
         let mut completed = record.clone();
         completed.pending = false;
         completed.previous = None;
+        completed.rollback_checkpoint = None;
         self.save(&completed)?;
         *record = completed;
         Ok(())
@@ -592,6 +649,82 @@ pub(crate) fn restore_bytes(
 }
 
 pub(crate) fn restore_files(record: &Record) -> Result<bool> {
+    restore_files_inner(record, false)
+}
+
+// Restoring an interrupted switch is not the user's explicit "disconnect and
+// restore original settings" action. Never remove the preceding good setup.
+pub(crate) fn restore_attempt(record: &Record) -> Result<bool> {
+    let checkpoint = record
+        .rollback_checkpoint
+        .as_ref()
+        .ok_or(Failure::Invalid)?;
+    let mut attempt = record.clone();
+    attempt.files = checkpoint.files.clone();
+    attempt.previous = None;
+    attempt.rollback_checkpoint = None;
+    attempt.pending = false;
+    restore_files_inner(&attempt, true)
+}
+
+fn owned_values_restored(
+    before: Option<&Value>,
+    after: Option<&Value>,
+    restored: Option<&Value>,
+) -> bool {
+    if before == after || before == restored {
+        return true;
+    }
+    let empty = Map::new();
+    fn object(value: Option<&Value>) -> Option<&Map<String, Value>> {
+        value.and_then(Value::as_object)
+    }
+    if let (Some(before), Some(after), Some(restored)) = (
+        object(before).or_else(|| before.is_none().then_some(&empty)),
+        object(after).or_else(|| after.is_none().then_some(&empty)),
+        object(restored).or_else(|| restored.is_none().then_some(&empty)),
+    ) {
+        return before
+            .keys()
+            .chain(after.keys())
+            .all(|key| owned_values_restored(before.get(key), after.get(key), restored.get(key)));
+    }
+    // Match the keyed-array merge used by `undo`: a third-party Claude
+    // profile added during startup is not an owned-field recovery conflict.
+    let empty_array = Vec::new();
+    fn array(value: Option<&Value>) -> Option<&Vec<Value>> {
+        value.and_then(Value::as_array)
+    }
+    if let (Some(before), Some(after), Some(restored)) = (
+        array(before).or_else(|| before.is_none().then_some(&empty_array)),
+        array(after).or_else(|| after.is_none().then_some(&empty_array)),
+        array(restored).or_else(|| restored.is_none().then_some(&empty_array)),
+    ) {
+        let unique_ids = |values: &[Value]| {
+            let ids = values
+                .iter()
+                .filter_map(|v| v.get("id").and_then(Value::as_str))
+                .collect::<BTreeSet<_>>();
+            ids.len() == values.len()
+        };
+        if [before, after, restored]
+            .iter()
+            .all(|values| unique_ids(values))
+        {
+            return before.iter().chain(after).all(|entry| {
+                let id = &entry["id"];
+                owned_values_restored(
+                    before.iter().find(|value| &value["id"] == id),
+                    after.iter().find(|value| &value["id"] == id),
+                    restored.iter().find(|value| &value["id"] == id),
+                )
+            });
+        }
+    }
+    false
+}
+
+fn restore_files_inner(record: &Record, require_owned_restored: bool) -> Result<bool> {
     // Plan every file before changing any. An invalid document must not cause
     // half of an otherwise valid restoration to be applied.
     let mut plan = Vec::new();
@@ -612,6 +745,15 @@ pub(crate) fn restore_files(record: &Record) -> Result<bool> {
                 desired = previous_desired;
                 preserved |= kept;
             }
+        }
+        if require_owned_restored
+            && !owned_values_restored(
+                Some(&document(&file.path, file.before.as_deref())?),
+                Some(&document(&file.path, Some(&file.after))?),
+                Some(&document(&file.path, desired.as_deref())?),
+            )
+        {
+            return Err(Failure::Changed);
         }
         plan.push((file.path.clone(), current, desired));
     }
@@ -644,9 +786,10 @@ pub(crate) fn requires_gateway_migration(tool: &str, record: &Record) -> bool {
         "pi" | "hermes" | "openclaw" | "dsh_web" => "127.0.0.1:15730",
         _ => return false,
     };
-    record.files.iter().any(|file| {
-        std::str::from_utf8(&file.after).is_ok_and(|text| text.contains(needle))
-    })
+    record
+        .files
+        .iter()
+        .any(|file| std::str::from_utf8(&file.after).is_ok_and(|text| text.contains(needle)))
 }
 
 fn remove_at(root: &mut Value, path: &[&str]) {
@@ -997,6 +1140,201 @@ mod tests {
             assert_eq!(std::fs::read(&file.path).unwrap(), before);
             assert!(!restore_files(&record).unwrap()); // retry is harmless
         }
+    }
+    #[test]
+    fn desktop_failed_switch_recovers_previous_connection_not_factory_settings() {
+        for tool in ["codex_desktop", "claude_desktop"] {
+            let f = Fixture::new();
+            let first = f.change(
+                "desktop.json",
+                Some(br#"{"model":"factory"}"#),
+                br#"{"model":"a"}"#,
+            );
+            let mut ready =
+                f.0.begin(receipt(tool), std::slice::from_ref(&first), None)
+                    .unwrap();
+            common::atomic_write(&first.path, &first.after).unwrap();
+            f.0.finish(&mut ready).unwrap();
+            let second = f.change("desktop.json", Some(&first.after), br#"{"model":"b"}"#);
+            f.0.begin(receipt(tool), std::slice::from_ref(&second), None)
+                .unwrap();
+            common::atomic_write(&second.path, &second.after).unwrap();
+            assert_eq!(f.0.recover_pending(tool, || true), Ok(true));
+            assert_eq!(common::snapshot(&second.path).unwrap(), Some(first.after));
+            assert!(!f.0.load(tool).unwrap().unwrap().pending);
+            assert_eq!(
+                f.0.recover_pending(tool, || panic!("must not replay completed recovery")),
+                Ok(false)
+            );
+        }
+    }
+    #[test]
+    fn desktop_checkpoint_keeps_credentials_encrypted_until_recovery_finishes() {
+        let f = Fixture::new();
+        let previous = credential();
+        let file = f.change(
+            "desktop.json",
+            Some(br#"{"model":"a"}"#),
+            br#"{"model":"b"}"#,
+        );
+        let mut pending =
+            f.0.begin(
+                receipt("codex_desktop"),
+                std::slice::from_ref(&file),
+                Some(&previous),
+            )
+            .unwrap();
+        let bytes = std::fs::read(f.0.path("codex_desktop").unwrap()).unwrap();
+        assert!(!String::from_utf8_lossy(&bytes).contains(&previous.api_key));
+        assert_eq!(
+            f.0.load("codex_desktop")
+                .unwrap()
+                .unwrap()
+                .rollback_credential(),
+            Some(&previous)
+        );
+        common::atomic_write(&file.path, &file.after).unwrap();
+        assert_eq!(
+            f.0.recover_pending("codex_desktop", || false),
+            Err(PendingRecoveryFailure::Credential)
+        );
+        assert!(f.0.load("codex_desktop").unwrap().unwrap().pending);
+        assert_eq!(common::snapshot(&file.path).unwrap(), file.before);
+        assert_eq!(f.0.recover_pending("codex_desktop", || true), Ok(true));
+        assert!(f.0.load("codex_desktop").unwrap().is_none());
+
+        f.0.finish(&mut pending).unwrap();
+        assert!(f
+            .0
+            .load("codex_desktop")
+            .unwrap()
+            .unwrap()
+            .rollback_checkpoint
+            .is_none());
+    }
+
+    #[test]
+    fn desktop_rollback_preserves_unrelated_edits_but_stops_on_owned_conflicts() {
+        let f = Fixture::new();
+        let file = f.change(
+            "desktop.json",
+            Some(br#"{"model":"a","theme":"dark"}"#),
+            br#"{"model":"b","theme":"dark"}"#,
+        );
+        f.0.begin(receipt("claude_desktop"), std::slice::from_ref(&file), None)
+            .unwrap();
+        common::atomic_write(&file.path, br#"{"model":"user-choice","theme":"light"}"#).unwrap();
+        assert_eq!(
+            f.0.recover_pending("claude_desktop", || panic!(
+                "must not replace credential before files recover"
+            )),
+            Err(PendingRecoveryFailure::Files)
+        );
+        assert!(f.0.load("claude_desktop").unwrap().unwrap().pending);
+        common::atomic_write(&file.path, br#"{"model":"b","theme":"light"}"#).unwrap();
+        assert_eq!(f.0.recover_pending("claude_desktop", || true), Ok(true));
+        assert_eq!(
+            document(&file.path, common::snapshot(&file.path).unwrap().as_deref()).unwrap(),
+            json!({"model":"a","theme":"light"})
+        );
+    }
+
+    #[test]
+    fn old_desktop_pending_journals_remain_readable_without_a_checkpoint() {
+        let f = Fixture::new();
+        let file = f.change(
+            "desktop.json",
+            Some(br#"{"model":"factory"}"#),
+            br#"{"model":"b"}"#,
+        );
+        let mut legacy =
+            f.0.begin(receipt("claude_desktop"), std::slice::from_ref(&file), None)
+                .unwrap();
+        legacy.rollback_checkpoint = None;
+        f.0.save(&legacy).unwrap();
+        common::atomic_write(&file.path, &file.after).unwrap();
+        assert!(f
+            .0
+            .load("claude_desktop")
+            .unwrap()
+            .unwrap()
+            .rollback_credential()
+            .is_none());
+        assert_eq!(f.0.recover_pending("claude_desktop", || true), Ok(true));
+        assert_eq!(common::snapshot(&file.path).unwrap(), file.before);
+    }
+
+    #[test]
+    fn desktop_partial_commit_recovers_previous_model_and_retains_original_baseline() {
+        for tool in ["codex_desktop", "claude_desktop"] {
+            for written_count in 0..=2 {
+                let f = Fixture::new();
+                let first = [
+                    f.change(
+                        "a.json",
+                        Some(br#"{"model":"factory"}"#),
+                        br#"{"model":"a"}"#,
+                    ),
+                    f.change("b.json", Some(b"{}"), br#"{"model":"a"}"#),
+                ];
+                let mut original = f.0.begin(receipt(tool), &first, None).unwrap();
+                for file in &first {
+                    common::atomic_write(&file.path, &file.after).unwrap();
+                }
+                f.0.finish(&mut original).unwrap();
+                let next = [
+                    f.change("a.json", Some(&first[0].after), br#"{"model":"b"}"#),
+                    f.change("b.json", Some(&first[1].after), br#"{"model":"b"}"#),
+                ];
+                f.0.begin(receipt(tool), &next, Some(&credential()))
+                    .unwrap();
+                for file in next.iter().take(written_count) {
+                    common::atomic_write(&file.path, &file.after).unwrap();
+                }
+                assert_eq!(f.0.recover_pending(tool, || true), Ok(true));
+                for file in &first {
+                    assert_eq!(
+                        common::snapshot(&file.path).unwrap(),
+                        Some(file.after.clone())
+                    );
+                }
+                let previous = f.0.load(tool).unwrap().unwrap();
+                assert!(!previous.pending);
+                restore_files(&previous).unwrap();
+                for file in &first {
+                    assert_eq!(common::snapshot(&file.path).unwrap(), file.before);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn desktop_rollback_does_not_block_on_unrelated_claude_profile_entries() {
+        let f = Fixture::new();
+        let file = f.change(
+            "meta.json",
+            Some(br#"{"entries":[{"id":"ours","model":"a"}]}"#),
+            br#"{"entries":[{"id":"ours","model":"b"}]}"#,
+        );
+        let pending =
+            f.0.begin(receipt("claude_desktop"), std::slice::from_ref(&file), None)
+                .unwrap();
+        common::atomic_write(
+            &file.path,
+            br#"{"entries":[{"id":"foreign"},{"id":"ours","model":"b"}]}"#,
+        )
+        .unwrap();
+        assert!(restore_attempt(&pending).is_ok());
+        assert_eq!(
+            document(&file.path, common::snapshot(&file.path).unwrap().as_deref()).unwrap(),
+            json!({"entries":[{"id":"foreign"},{"id":"ours","model":"a"}]})
+        );
+        common::atomic_write(
+            &file.path,
+            br#"{"entries":[{"id":"foreign"},{"id":"ours","model":"user-choice"}]}"#,
+        )
+        .unwrap();
+        assert_eq!(restore_attempt(&pending), Err(Failure::Changed));
     }
     #[test]
     fn switch_keeps_first_baseline_and_rebases_later_unrelated_changes() {

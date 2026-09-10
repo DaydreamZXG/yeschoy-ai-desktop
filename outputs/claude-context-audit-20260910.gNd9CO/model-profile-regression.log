@@ -1,0 +1,16 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.48s
+     Running unittests src/lib.rs (src-tauri/target/debug/deps/yeschoy_desktop_lib-a37288403df02f03)
+
+running 9 tests
+test tool_model_profile::tests::context_regression_capabilities_come_from_real_model_metadata ... ok
+test tool_model_profile::tests::context_regression_marker_parsing_is_terminal_and_exact_route_only ... ok
+test tool_model_profile::tests::context_regression_native_consumers_share_capacity_without_raising_user_caps ... ok
+test tool_model_profile::tests::ru043_native_model_metadata_uses_vendor_contracts ... ok
+test tool_model_profile::tests::ru043_reapply_clears_model_route_overrides_without_losing_budgets ... ok
+test tool_model_profile::tests::ru043_registry_exact_ids_and_capabilities ... ok
+test tool_model_profile::tests::ru043_unknown_chat_fields_and_reasoning_defaults_are_untouched ... ok
+test tool_model_profile::tests::ru056_claude_clients_receive_per_model_capability_families ... ok
+test tool_model_profile::tests::ru056_effort_projection_never_forwards_an_unsupported_known_level ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 238 filtered out; finished in 0.00s
+

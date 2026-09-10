@@ -1,0 +1,5 @@
+
+thread 'tokio-rt-worker' (3556) panicked at src/tool_activation.rs:2308:21:
+synthetic-private-value-must-not-be-in-response
+stack backtrace:
+note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.

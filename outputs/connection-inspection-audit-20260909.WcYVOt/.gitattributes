@@ -1,0 +1,6 @@
+# Preserve captured test output, including the test runner's final blank line.
+windows-before-stdout.txt whitespace=-blank-at-eof
+windows-after-stdout.txt whitespace=-blank-at-eof
+
+# Test-runner output is retained verbatim, including spaces before panic text.
+*.log -whitespace
