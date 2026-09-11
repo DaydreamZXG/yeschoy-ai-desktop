@@ -73,7 +73,7 @@ fn data(value: Option<&Value>) -> Option<&Map<String, Value>> {
         .flatten()
 }
 
-fn number(value: Option<&Value>) -> Option<f64> {
+fn signed_number(value: Option<&Value>) -> Option<f64> {
     let value = value?;
     let number = value.as_f64().or_else(|| {
         let text = value.as_str()?.trim();
@@ -81,7 +81,12 @@ fn number(value: Option<&Value>) -> Option<f64> {
             .then(|| text.parse::<f64>().ok())
             .flatten()
     })?;
-    (number.is_finite() && (0.0..=MAX_SAFE_INTEGER).contains(&number)).then_some(number)
+    (number.is_finite() && (-MAX_SAFE_INTEGER..=MAX_SAFE_INTEGER).contains(&number))
+        .then_some(number)
+}
+
+fn number(value: Option<&Value>) -> Option<f64> {
+    signed_number(value).filter(|number| *number >= 0.0)
 }
 
 fn positive(value: Option<&Value>) -> Option<f64> {
@@ -115,7 +120,9 @@ pub(crate) fn account_money(status: Option<&Value>, balance: &str, consumed: &st
         };
         Some(AccountMoney {
             currency,
-            balance_amount: amount(number(Some(&Value::String(balance.into())))? / unit * rate)?,
+            balance_amount: amount(
+                signed_number(Some(&Value::String(balance.into())))? / unit * rate,
+            )?,
             consumed_amount: amount(number(Some(&Value::String(consumed.into())))? / unit * rate)?,
             display_rate: amount(rate)?,
         })
@@ -362,6 +369,14 @@ mod tests {
             account_money(Some(&settings()), "9007199254740992", "0").currency,
             ""
         );
+    }
+
+    #[test]
+    fn money_preserves_a_negative_account_balance() {
+        let money = account_money(Some(&settings()), "-125000", "120000");
+        assert_eq!(money.currency, "CNY");
+        assert_eq!(money.balance_amount, "-1.75");
+        assert_eq!(money.consumed_amount, "1.68");
     }
 
     #[test]

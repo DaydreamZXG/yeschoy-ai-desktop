@@ -60,7 +60,7 @@ export function isAccountMoney(value: unknown): value is AccountMoney {
       "displayRate",
     ]) ||
     !["", "CNY", "USD"].includes(value.currency as string) ||
-    !decimal(value.balanceAmount) ||
+    !decimal(value.balanceAmount, true) ||
     !decimal(value.consumedAmount) ||
     !decimal(value.displayRate)
   )

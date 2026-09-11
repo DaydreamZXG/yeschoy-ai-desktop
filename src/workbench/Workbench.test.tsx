@@ -800,6 +800,60 @@ describe("official workbench", () => {
     expect(screen.getByText("参考换算值 1")).toBeInTheDocument();
     expect(screen.getByText(/50%/)).toBeInTheDocument();
   });
+  it("renders a legitimate negative account balance instead of rejecting the session", async () => {
+    mockNativeByCommand(async (command, args) => {
+      const request = (args as Args).request;
+      if (command === "manage_tool_connections_v1")
+        return connectionsFixture(request.requestId);
+      if (command === "scan_activation_targets_v1")
+        return activationTargetScan(request.requestId);
+      if (command === "scan_desktop_apps_read_only")
+        return discovery(request.requestId);
+      if (command === "account_inspect_v2") {
+        const account = signedIn(request.requestId);
+        return {
+          ...account,
+          schemaVersion: 5,
+          account: { ...account.account, balanceQuota: "-125000" },
+          models: [],
+          money: {
+            currency: "CNY",
+            balanceAmount: "-1.75",
+            consumedAmount: "1.68",
+            displayRate: "1",
+          },
+          savings: {
+            status: "empty",
+            reasonCode: "no_history",
+            officialAmount: "",
+            siteAmount: "",
+            savedAmount: "",
+            referenceRate: "",
+            priceRate: "",
+            recordLimit: 100,
+            scannedCount: 0,
+            includedCount: 0,
+            excludedCount: 0,
+            oldestAtEpochMs: 0,
+            newestAtEpochMs: 0,
+          },
+        };
+      }
+      if (command === "read_public_service_catalog")
+        return catalogFixture(request.requestId, request.lineId);
+      throw Error("Not available in test");
+    });
+
+    render(<App />);
+    await screen.findByText("版本 1.40609.1");
+    fireEvent.click(screen.getByRole("button", { name: "用量账单" }));
+
+    expect(await screen.findAllByText("野菜测试用户")).toHaveLength(2);
+    expect(screen.getByText("-¥1.75")).toBeInTheDocument();
+    expect(
+      screen.queryByText("账户数据格式不正确，已停止显示。"),
+    ).not.toBeInTheDocument();
+  });
   it("keeps the signed-in account visible while a new route is refreshing", async () => {
     let inspections = 0;
     let finishRouteRefresh: () => void = () => {};

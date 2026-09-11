@@ -126,6 +126,13 @@ function integerText(value: unknown, empty = true): value is string {
   );
 }
 
+function signedIntegerText(value: unknown, empty = true): value is string {
+  return (
+    safeText(value, 40, empty) &&
+    (value === "" || /^(?:0|-?[1-9][0-9]*)$/.test(value))
+  );
+}
+
 function decimalText(value: unknown, empty = true): value is string {
   return (
     safeText(value, 40, empty) &&
@@ -148,7 +155,7 @@ function account(value: unknown): value is AccountSummary {
     typeof value.available === "boolean" &&
     safeText(value.displayName, 160) &&
     safeText(value.username, 160) &&
-    integerText(value.balanceQuota) &&
+    signedIntegerText(value.balanceQuota) &&
     integerText(value.usedQuota) &&
     integerText(value.requestCount) &&
     decimalText(value.quotaPerUnit) &&
@@ -440,7 +447,7 @@ export async function openAccountWallet(
 export function quotaToUsd(quota: string, quotaPerUnit: string): number | null {
   const raw = Number(quota);
   const unit = Number(quotaPerUnit);
-  return Number.isFinite(raw) && raw >= 0 && Number.isFinite(unit) && unit > 0
+  return Number.isFinite(raw) && Number.isFinite(unit) && unit > 0
     ? raw / unit
     : null;
 }

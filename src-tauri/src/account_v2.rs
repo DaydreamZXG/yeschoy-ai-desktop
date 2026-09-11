@@ -970,6 +970,10 @@ fn non_negative_integer(value: Option<&Value>) -> Option<String> {
         .map(|number| number.to_string())
 }
 
+fn signed_integer(value: Option<&Value>) -> Option<String> {
+    value?.as_i64().map(|number| number.to_string())
+}
+
 fn positive_number(value: Option<&Value>) -> Option<f64> {
     value?
         .as_f64()
@@ -995,7 +999,7 @@ fn parse_account(account: Option<&Value>, status: Option<&Value>) -> AccountSumm
     let Some(data) = data_object(account) else {
         return AccountSummary::default();
     };
-    let Some(quota) = non_negative_integer(data.get("quota")) else {
+    let Some(quota) = signed_integer(data.get("quota")) else {
         return AccountSummary::default();
     };
     let Some(used_quota) = non_negative_integer(data.get("used_quota")) else {
@@ -1886,6 +1890,35 @@ mod tests {
             "https://attacker.invalid",
         ] {
             assert!(!authorization_page_origin_is_allowed(rejected));
+        }
+    }
+
+    #[test]
+    fn account_projection_preserves_negative_balance_and_rejects_negative_counters() {
+        let status = json!({
+            "success": true,
+            "data": {"quota_per_unit": 500000}
+        });
+        let account = json!({
+            "success": true,
+            "data": {
+                "display_name": "欠费账户",
+                "username": "member@example.com",
+                "quota": -125000,
+                "used_quota": 120000,
+                "request_count": 42
+            }
+        });
+
+        let projected = parse_account(Some(&account), Some(&status));
+        assert!(projected.available);
+        assert_eq!(projected.balance_quota, "-125000");
+        assert_eq!(projected.quota_per_unit, "500000");
+
+        for field in ["used_quota", "request_count"] {
+            let mut invalid = account.clone();
+            invalid["data"][field] = json!(-1);
+            assert!(!parse_account(Some(&invalid), Some(&status)).available);
         }
     }
 
