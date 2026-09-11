@@ -119,6 +119,20 @@ describe("website-aligned monetary projection", () => {
     expect(formatMoney("0", "CNY")).toBe("¥0.00");
     expect(formatMoney("", "USD")).toBe("—");
   });
+  it("accepts and displays a signed account balance without signing the counters", () => {
+    const negativeMoney = { ...money, balanceAmount: "-1.75" };
+    const negativeBalance = {
+      ...raw(),
+      account: { ...raw().account, balanceQuota: "-125000" },
+      money: negativeMoney,
+    };
+
+    expect(isAccountMoney(negativeMoney)).toBe(true);
+    expect(
+      decodeAccountProjection(negativeBalance, "finance-test")?.money,
+    ).toEqual(negativeMoney);
+    expect(formatMoney("-1.75", "CNY")).toBe("-¥1.75");
+  });
   it("rejects impossible totals, ranges, missing factors and excessive windows", () => {
     expect(isRecentSavings(savings)).toBe(true);
     for (const invalid of [

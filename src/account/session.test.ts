@@ -157,6 +157,18 @@ describe("account v2 renderer boundary", () => {
     ).toBeNull();
   });
 
+  it("accepts a negative balance without accepting negative usage counters", () => {
+    const payload = signedIn();
+    payload.account.balanceQuota = "-125000";
+    expect(decodeAccountProjection(payload, "account-test-1")).toEqual(payload);
+
+    for (const field of ["usedQuota", "requestCount"] as const) {
+      const invalid = signedIn();
+      invalid.account[field] = "-1";
+      expect(decodeAccountProjection(invalid, "account-test-1")).toBeNull();
+    }
+  });
+
   it.each(["accessToken", "refreshToken", "deviceCode", "authorizationUrl"])(
     "rejects an unexpected secret-capable field: %s",
     (field) => {
@@ -196,7 +208,7 @@ describe("account v2 renderer boundary", () => {
 
   it("converts NewAPI quota units only when the inputs are valid", () => {
     expect(quotaToUsd("350000", "500000")).toBe(0.7);
-    expect(quotaToUsd("-1", "500000")).toBeNull();
+    expect(quotaToUsd("-125000", "500000")).toBe(-0.25);
     expect(quotaToUsd("1", "0")).toBeNull();
   });
 });
