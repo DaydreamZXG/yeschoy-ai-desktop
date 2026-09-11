@@ -58,7 +58,35 @@ describe("Windows installer localization", () => {
     );
     expect(guard).toBeGreaterThan(-1);
     expect(firstWrite).toBeGreaterThan(guard);
-    expect(standalone).not.toContain("Function .onInit");
+    const initialization = standalone.match(
+      /^Function \.onInit\n([\s\S]*?)^FunctionEnd/m,
+    )?.[1];
+    expect(initialization).toBeDefined();
+    // Reading the install directory and updater flags is safe before the
+    // running-app guard. Initialization must not replace files or launch apps.
+    expect(initialization).not.toMatch(
+      /^\s*(?:File|WriteReg\w*|Delete\w*|RMDir|SetOutPath|CreateDirectory|CreateShortcut|Exec\w*)\b/m,
+    );
+  });
+
+  it("handles Tauri updater launches without an unattended directory wizard", () => {
+    const standalone = readFileSync(
+      resolve(process.cwd(), "src-tauri/windows/installer.nsi"),
+      "utf8",
+    );
+    const initialization =
+      standalone.match(/^Function \.onInit\n([\s\S]*?)^FunctionEnd/m)?.[1] ??
+      "";
+    expect(initialization.indexOf("SetRegView 64")).toBeLessThan(
+      initialization.indexOf("ReadRegStr"),
+    );
+    expect(initialization).toContain(
+      'ReadRegStr $R0 HKCU "Software\\野菜API" "InstallDir"',
+    );
+    expect(initialization).toContain('${GetOptions} $R0 "/UPDATE" $R1');
+    expect(initialization).toContain(
+      "IfErrors yeschoy_manual_install\n  SetSilent silent",
+    );
   });
 
   it("always restarts the assistant after a successful standalone upgrade", () => {
@@ -72,7 +100,7 @@ describe("Windows installer localization", () => {
       'ExecShell "open" "$INSTDIR\\野菜API.exe" "" SW_SHOWNORMAL',
     );
     expect(standalone).toContain("This also covers silent/manual upgrades");
-    expect(standalone).not.toContain('Exec \'"$INSTDIR\\野菜API.exe"\'');
+    expect(standalone).not.toContain("Exec '\"$INSTDIR\\野菜API.exe\"'");
     expect(standalone).not.toContain("MUI_FINISHPAGE_RUN");
   });
 });

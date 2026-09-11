@@ -23,6 +23,7 @@ mod desktop_app_discovery;
 mod desktop_app_discovery_core;
 mod logging;
 mod open_connection;
+mod update_channel;
 // Client-first OAuth preparation. Deliberately dormant until the server and
 // local-bridge bearer/billing contract are deployed and integration-tested.
 #[allow(dead_code)]

@@ -12,11 +12,12 @@
 	header @dmg Content-Type application/x-apple-diskimage
 	@updateArtifact path /updates/releases/*
 	header @updateArtifact Cache-Control "public, max-age=31536000, immutable"
+	@mutableResponse not path /updates/releases/*
+	header @mutableResponse Cache-Control no-store
 	header {
 		-Server
 		X-Content-Type-Options nosniff
 		Referrer-Policy no-referrer
-		Cache-Control no-store
 	}
 	# route preserves guard ordering ahead of terminal handle blocks.
 	route {
@@ -35,24 +36,23 @@
 		handle /health.json {
 			file_server
 		}
-		@stableManifest {
-			path /updates/stable.json
-			file /updates/stable.json
-		}
-		handle @stableManifest {
-			file_server
-		}
+		# Legacy builds cannot identify their distribution. Never offer an
+		# official or partner payload here, even if an old JSON file remains.
 		handle /updates/stable.json {
 			respond "" 204
 		}
-		@betaManifest {
-			path /updates/beta.json
-			file /updates/beta.json
+		handle /updates/beta.json {
+			respond "" 204
 		}
-		handle @betaManifest {
+		@variantManifest {
+			path /updates/official/stable.json /updates/partner/stable.json
+			file {path}
+		}
+		handle @variantManifest {
 			file_server
 		}
-		handle /updates/beta.json {
+		@missingVariantManifest path /updates/official/stable.json /updates/partner/stable.json
+		handle @missingVariantManifest {
 			respond "" 204
 		}
 		handle /checks/download-test.txt {

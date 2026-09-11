@@ -1948,6 +1948,23 @@
         "Run read-only credential work on a blocking worker, serialize with activation, bound the command using the existing inspection deadline, and avoid duplicate per-tool credential reads.",
         "Preserve the existing wire schema, encrypted receipts, direct relay endpoints, explicit restore writes and model selection. Cover happy, failure, replay, stale, race and recovery using isolated fixtures; no third-party app launch or real credential access."
       ]
+    },
+    {
+      "id": "REQ-097",
+      "statement": "Migrate official and partner desktop builds to independent signed self-update channels after one owner-approved manual upgrade, without distributing the wrong variant to legacy installations.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "security-update",
+      "evidenceRefs": ["E-USER-098", "E-CODE-097", "E-EXT-065"],
+      "acceptance": [
+        "Legacy shared update endpoints remain no-update responses after migration, including if an obsolete shared manifest is present; neither official nor partner builds are offered through the shared endpoint.",
+        "New builds have fixed, tested variant identity for their update feeds, signed payloads and separately labelled website downloads. A publication for one variant cannot install or overwrite the other variant's release.",
+        "The manual migration and later self-updates preserve login-origin selection and existing account and application-integration behavior. No host application is launched, quit or reconfigured for verification.",
+        "Both Windows x64 and universal macOS deliverables have exact source/version/variant receipts, compatible updater formats and verified detached signatures before promotion; platform-signing policy remains an explicit release gate.",
+        "Publication, concurrent promotion, replay/downgrade rejection, per-variant disablement and recovery have executable evidence. Existing shared-channel proofs are retained as historical evidence, not represented as successful dual-channel verification.",
+        "No automatic update is advertised as published until the matching public manifests and artifacts are verified. Remaining signing access, independent trust-root policy and implementation-authority reconciliation are resolved before implementation or live promotion."
+      ]
     }
   ]
 }

@@ -179,7 +179,29 @@ async fn check_update(
     );
     emit_progress(app, &checking);
 
-    let updater = match app.updater_builder().timeout(CHECK_TIMEOUT).build() {
+    let channel = match crate::update_channel::compiled_channel() {
+        Ok(channel) => channel,
+        Err(_) => {
+            *state.available() = None;
+            return AppUpdateResponse::new(
+                request_id,
+                UpdatePhase::Unavailable,
+                &current_version,
+                "manifest_invalid",
+            );
+        }
+    };
+    let updater = match channel
+        .endpoint
+        .parse()
+        .map_err(UpdaterError::from)
+        .and_then(|endpoint| {
+            app.updater_builder()
+                .timeout(CHECK_TIMEOUT)
+                .pubkey(channel.public_key.clone())
+                .endpoints(vec![endpoint])?
+                .build()
+        }) {
         Ok(updater) => updater,
         Err(error) => {
             *state.available() = None;
@@ -212,7 +234,12 @@ async fn check_update(
             )
         }
         Ok(Ok(Some(update))) => {
-            if update.download_url.scheme() != "https" || update.signature.trim().is_empty() {
+            if !channel.accepts(
+                &update.raw_json,
+                update.download_url.as_str(),
+                &update.version,
+            ) || update.signature.trim().is_empty()
+            {
                 *state.available() = None;
                 AppUpdateResponse::new(
                     request_id,

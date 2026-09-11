@@ -3450,6 +3450,50 @@
       "status": "active",
       "verificationLevel": 0,
       "basisRefs": ["E-USER-096"]
+    },
+    {
+      "id": "E-USER-098",
+      "claim": "The owner confirms publishing end-user updates for the official and partner builds separately, and explicitly accepts one first manual upgrade because legacy builds make indistinguishable shared-feed update requests. This confirms a migration policy, not approval to bypass signature verification, rewrite historical proofs, or operate the owner's installed applications.",
+      "class": "user_confirmed",
+      "locator": "inline:2026-09-10-user-accepts-first-manual-upgrade-call_Y90ZAYzN5zOqFcA5WdxGRlix",
+      "observedAt": "2026-09-10T12:19:37Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-097",
+      "claim": "At commit 399cf0c8c9bc549fefc70a3067377ca743030c10 both build variants inherit one updater endpoint and public key. The updater builder adds no variant identity. The publisher, rollback, health projection and public probe implement only a shared stable feed. Windows workflows set createUpdaterArtifacts=true while requiring legacy nsis.zip output. A fresh RU-076 review failed with 169 historical owned-state drift findings, not 169 demonstrated runtime bugs.",
+      "class": "code_observed",
+      "locator": "src-tauri/tauri.conf.json:33;src-tauri/src/app_update.rs:185;deploy/self-update/publish.py:253;.github/workflows/release.yml:155;.github/workflows/release.yml:195;outputs/update-channel-migration-20260910.wYf5yh/governance-review.current.json",
+      "observedAt": "2026-09-10T12:19:37Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-065",
+      "claim": "Read-only checks on 2026-09-10 returned HTTP 204 from the shared stable endpoint and HTTP 200 with updatesPublished=false from health.json. Repository secret names list only the existing updater key and password; no values were read. The latest inspected Windows workflow failure annotation says the job never started because account payments failed or the spending limit needs increasing. This is evidence about that run, not proof of all future runner availability.",
+      "class": "external_verified",
+      "locator": "https://ergou.qzz.io/updates/stable.json;https://ergou.qzz.io/health.json;https://github.com/DaydreamZXG/yeschoy-ai-desktop/actions/runs/34195302521;https://api.github.com/repos/DaydreamZXG/yeschoy-ai-desktop/check-runs/101961600027/annotations;outputs/update-channel-migration-20260910.wYf5yh/STATUS.md",
+      "observedAt": "2026-09-10T12:19:37Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-USER-099",
+      "claim": "After the agent disclosed historical governance drift and a GitHub billing failure, the owner reiterates local packaging and explicitly asks the agent to act. Together with the preceding upload/update request and accepted manual migration, this confirms the scoped local dual-variant build and publication workflow. It does not authorize changing the user's installed applications or rewriting previous proof records.",
+      "class": "user_confirmed",
+      "locator": "inline:2026-09-10-user-local-packaging-and-proceed",
+      "observedAt": "2026-09-10T12:54:56Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": ["E-USER-098"]
     }
   ]
 }

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "official": {
+    "authorizationOrigin": "https://yeschoy.com",
+    "endpoint": "https://ergou.qzz.io/updates/official/stable.json",
+    "publicKey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFGODM4MUUyODM1NzVBRDEKUldUUldsZUQ0b0dESHdmNVpYbUw3UWl0algvSTNSbWwwRWp5dUt1aHlndlJTUFpPUlhVMW5TSVMK"
+  },
+  "partner": {
+    "authorizationOrigin": "https://ai.yeschoy.io",
+    "endpoint": "https://ergou.qzz.io/updates/partner/stable.json",
+    "publicKey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDgzODNDMDgyMTBDMjc3NjkKUldScGQ4SVFnc0NEZ3llcWFPQzhtM1BVbTc0RDRUYkVucEJ3ZVFDVjBqMllmeElYN2R6ZUtUdk4K"
+  }
+}

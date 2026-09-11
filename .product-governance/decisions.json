@@ -3104,6 +3104,34 @@
         "pageRefs": [],
         "domainRefs": ["tool-config", "desktop-platform"]
       }
+    },
+    {
+      "id": "DEC-122",
+      "question": "How should indistinguishable legacy official and partner installations migrate to separate self-update channels?",
+      "choice": "The owner accepts one manual installation of the matching new build before independent self-updates. Retire the legacy shared feed without offering either variant there; new official and partner builds must use their own fixed update and website download identities. This replaces the earlier no-independent-updater scope for the partner variant only. Preserve the existing login-origin distinction, account/API behavior, application integration behavior and historical evidence. This decision records migration intent only: no release unit is sealed, no signing requirement is waived, no signing key is rotated, and no production publication is certified by it.",
+      "status": "accepted",
+      "decidedBy": "product owner: 接受首次手动升级（推荐）",
+      "decidedAt": "2026-09-10T12:19:37Z",
+      "evidenceRefs": ["E-USER-098", "E-CODE-097"],
+      "affects": {
+        "requirementRefs": ["REQ-092", "REQ-093", "REQ-097"],
+        "pageRefs": ["PAGE-SETTINGS"],
+        "domainRefs": ["security-update", "desktop-platform"]
+      }
+    },
+    {
+      "id": "DEC-123",
+      "question": "Which executable release path did the owner select after the legacy governance drift and GitHub billing issue were disclosed?",
+      "choice": "The owner explicitly reiterates the established local packaging path and instructs the agent to proceed. Continue the bounded dual-channel migration and publication from HEAD 399cf0c8 plus recorded release changes, using local cargo-xwin/Chinese NSIS and Developer ID universal Mac builds. Generate separate local update signing keys with restricted filesystem permissions and a separate same-host backup; independently verify every exact artifact before promotion. Windows retains the existing unsigned Authenticode status, which must be disclosed and not confused with the mandatory verified updater signature. Preserve legacy governance reports, do not mark any release unit frozen or claim whole-product/native end-to-end acceptance, and do not operate the owner's installed apps. This is the owner's scoped release continuation after disclosure, not a falsified governance pass or authority to modify account/model behavior.",
+      "status": "accepted",
+      "decidedBy": "product owner: 废话，不一直用本地打包吗; 那请您动手吧",
+      "decidedAt": "2026-09-10T12:54:56Z",
+      "evidenceRefs": ["E-USER-098", "E-USER-099", "E-CODE-097"],
+      "affects": {
+        "requirementRefs": ["REQ-097"],
+        "pageRefs": ["PAGE-SETTINGS"],
+        "domainRefs": ["security-update", "desktop-platform"]
+      }
     }
   ]
 }

@@ -472,6 +472,13 @@ def parser() -> argparse.ArgumentParser:
 def main() -> int:
     try:
         args = parser().parse_args()
+        root = guarded_root(args.root)
+        if args.command != "status" and (
+            (root.parent / "self-update-state").exists()
+            or any((root / "updates" / variant / "stable.json").exists() for variant in ("official", "partner"))
+            or (args.command == "publish" and semantic_version(args.version) >= (0, 4, 16))
+        ):
+            raise PublishError("legacy_channel_retired_use_publish_variant")
         print(json.dumps(args.handler(args), ensure_ascii=False, indent=2))
         return 0
     except (PublishError, OSError, UnicodeError, json.JSONDecodeError) as error:

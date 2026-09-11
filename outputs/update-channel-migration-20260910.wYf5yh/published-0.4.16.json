@@ -1,0 +1,148 @@
+{
+  "version": "0.4.16",
+  "sourceBaseCommit": "399cf0c8c9bc549fefc70a3067377ca743030c10",
+  "sourceIncludesRecordedReleaseChanges": true,
+  "releaseDate": "2026-09-10",
+  "official": {
+    "status": "published",
+    "variant": "official",
+    "version": "0.4.16",
+    "manifestSha256": "65a435c4a6ba15b6653ae1a18b2250bf6f89ecfbeee21011b15e14c9dd14eb68",
+    "downloadManifestSha256": "39747ab8e9bbcd6d830d34e8a7d24b89e003bde8edfd97903856a7172b87a5c2",
+    "updateUrl": "https://ergou.qzz.io/updates/official/stable.json",
+    "downloadManifestUrl": "https://ergou.qzz.io/releases/yeschoy-official.json"
+  },
+  "partner": {
+    "status": "published",
+    "variant": "partner",
+    "version": "0.4.16",
+    "manifestSha256": "b73d72e2fe0efdfe4baa0f59ece8352797445fcee032dda70501dec012b9a447",
+    "downloadManifestSha256": "7064eb61a89cd0b7f0e6bd8aff8d4409879cc2621b4e0df678984df3f3b1d1c2",
+    "updateUrl": "https://ergou.qzz.io/updates/partner/stable.json",
+    "downloadManifestUrl": "https://ergou.qzz.io/releases/yeschoy-partner.json"
+  },
+  "publicFullByteVerification": {
+    "status": "verified",
+    "version": "0.4.16",
+    "tlsVerified": true,
+    "mode": "existing-local-proxy",
+    "checks": [
+      {
+        "path": "/updates/stable.json",
+        "status": 204
+      },
+      {
+        "path": "/updates/beta.json",
+        "status": 204
+      },
+      {
+        "variant": "official",
+        "file": "yeschoy-0.4.16-official-windows-x86_64-installer.exe",
+        "sha256": "6feb3b746840149c83616df9ea1a8a9f8ea4b6e8f4c411d3f69f1affc74a3382",
+        "signatureVerified": true,
+        "rangeVerified": true
+      },
+      {
+        "variant": "official",
+        "file": "yeschoy-0.4.16-official-macos-universal.app.tar.gz",
+        "sha256": "65caae73ec96d506661e531bed5080fd7d4b8b038097d6ab3bcc6b3e9a98bce1",
+        "signatureVerified": true,
+        "rangeVerified": true
+      },
+      {
+        "variant": "official",
+        "file": "yeschoy-0.4.16-official-macos-universal-installer.dmg",
+        "sha256": "cca60cf764be1add709033115b1e4c681142a4242f796f4c5d1c680737efec6c",
+        "signatureVerified": true,
+        "rangeVerified": true
+      },
+      {
+        "variant": "partner",
+        "file": "yeschoy-0.4.16-partner-windows-x86_64-installer.exe",
+        "sha256": "e6bb7703816a86287478aae376ff3554151a2e881ea68785307ed60f820fb40d",
+        "signatureVerified": true,
+        "rangeVerified": true
+      },
+      {
+        "variant": "partner",
+        "file": "yeschoy-0.4.16-partner-macos-universal.app.tar.gz",
+        "sha256": "bdcb75e75cb5b86332f0950acecbf727b6db86198b3cece8dc896f229f1b2500",
+        "signatureVerified": true,
+        "rangeVerified": true
+      },
+      {
+        "variant": "partner",
+        "file": "yeschoy-0.4.16-partner-macos-universal-installer.dmg",
+        "sha256": "61b9614c188dd492b601d1d92f06456dbb59ade9261542fd4aa400945fb0f8de",
+        "signatureVerified": true,
+        "rangeVerified": true
+      },
+      {
+        "path": "/releases/.env",
+        "status": 404
+      },
+      {
+        "path": "/apps/",
+        "status": 404
+      },
+      {
+        "path": "/health.json",
+        "status": 405
+      }
+    ]
+  },
+  "directHttpsRangeChecks": [
+    {
+      "file": "yeschoy-0.4.16-official-windows-x86_64-installer.exe",
+      "exitCode": 0,
+      "status": "HTTP/2 206",
+      "contentRange": "bytes 0-0/3635830"
+    },
+    {
+      "file": "yeschoy-0.4.16-official-macos-universal.app.tar.gz",
+      "exitCode": 0,
+      "status": "HTTP/2 206",
+      "contentRange": "bytes 0-0/10865884"
+    },
+    {
+      "file": "yeschoy-0.4.16-official-macos-universal-installer.dmg",
+      "exitCode": 0,
+      "status": "HTTP/2 206",
+      "contentRange": "bytes 0-0/12729428"
+    },
+    {
+      "file": "yeschoy-0.4.16-partner-windows-x86_64-installer.exe",
+      "exitCode": 0,
+      "status": "HTTP/2 206",
+      "contentRange": "bytes 0-0/3635562"
+    },
+    {
+      "file": "yeschoy-0.4.16-partner-macos-universal.app.tar.gz",
+      "exitCode": 0,
+      "status": "HTTP/2 206",
+      "contentRange": "bytes 0-0/10865960"
+    },
+    {
+      "file": "yeschoy-0.4.16-partner-macos-universal-installer.dmg",
+      "exitCode": 0,
+      "status": "HTTP/2 206",
+      "contentRange": "bytes 0-0/12729654"
+    }
+  ],
+  "thirdPartyCatalogSha256BeforeAndAfter": "f54b58e958240935c3647d6091ea346cda28b45fb99159141fa252490fef3236",
+  "originConfigSha256": "f814f6f0d791bbdc79f590194133e5d5c3657c064d017aa43e25c8838b42e27a",
+  "validation": {
+    "typescript": "passed",
+    "rendererProductionBuild": "passed",
+    "frontendUnitTests": 534,
+    "nativeUpdaterTests": 3,
+    "nativeChannelTests": 2,
+    "publisherRegressionTests": 9,
+    "macosBothArchitecturesSignedNotarizedStapled": true,
+    "windowsAuthenticodeSigned": false,
+    "installedUserApplicationsOperated": false,
+    "realDeviceUpdateSmokePerformed": false,
+    "directFullDownloads": "Official Windows completed; slow Mac transfer deliberately interrupted after independent full-byte proxy verification; all six direct Range requests passed."
+  },
+  "historicalGovernanceReview": "Not resealed; retained failed historical drift evidence, no whole-product certification."
+}

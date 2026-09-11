@@ -18,6 +18,7 @@ SetCompressorDictSize 32
 !endif
 
 !include "MUI2.nsh"
+!include "FileFunc.nsh"
 !include "installer-hooks.nsh"
 
 Name "野菜API"
@@ -46,6 +47,21 @@ VIAddVersionKey /LANG=2052 "LegalCopyright" "Copyright (c) 野菜API"
 !insertmacro MUI_UNPAGE_CONFIRM
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "SimpChinese"
+
+; Tauri v2 passes /UPDATE for updater launches. Reuse the actual 64-bit
+; registration and run without an unattended welcome/directory wizard.
+Function .onInit
+  SetRegView 64
+  ReadRegStr $R0 HKCU "Software\野菜API" "InstallDir"
+  StrCmp $R0 "" +2
+  StrCpy $INSTDIR $R0
+  ${GetParameters} $R0
+  ClearErrors
+  ${GetOptions} $R0 "/UPDATE" $R1
+  IfErrors yeschoy_manual_install
+  SetSilent silent
+yeschoy_manual_install:
+FunctionEnd
 
 Section "安装野菜API" SEC_MAIN
   ; This must remain the first runtime instruction: no file, shortcut or

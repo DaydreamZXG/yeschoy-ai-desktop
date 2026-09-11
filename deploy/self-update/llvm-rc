@@ -1,0 +1,16 @@
+#!/bin/bash
+# An argument adapter, not a prebuilt-resource bridge: Zig compiles every RC.
+set -eu
+: "${YESCHOY_ZIG:?Set YESCHOY_ZIG to the installed Zig compiler}"
+if [[ "$*" == '-V /?' ]]; then
+  printf '%s\n' 'OVERVIEW: LLVM Resource Converter argument adapter (Zig RC, no-preprocess)'
+  exit 0
+fi
+rc_args=()
+for arg in "$@"; do
+  case "$arg" in
+    /no-preprocess) rc_args+=(/:no-preprocess) ;;
+    *) rc_args+=("$arg") ;;
+  esac
+done
+exec "$YESCHOY_ZIG" rc "${rc_args[@]}"

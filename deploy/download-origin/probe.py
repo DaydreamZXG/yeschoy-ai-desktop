@@ -25,7 +25,9 @@ def main() -> None:
     fixture = (ROOT / "public/checks/download-test.txt").read_bytes()
     tests = [
         ("health", "/health.json", "GET", 200, None),
-        ("stable-channel", "/updates/stable.json", "GET", None, None),
+        ("legacy-stable-retired", "/updates/stable.json", "GET", 204, None),
+        ("official-channel", "/updates/official/stable.json", "GET", None, None),
+        ("partner-channel", "/updates/partner/stable.json", "GET", None, None),
         ("beta-not-published", "/updates/beta.json", "GET", 204, None),
         ("download", "/checks/download-test.txt", "GET", 200, None),
         ("resume", "/checks/download-test.txt", "GET", 206, "bytes=8-39"),
@@ -66,9 +68,10 @@ def main() -> None:
                 not args.origin_ip and name in ("traversal", "encoded-traversal")
                 and actual == 400 and "server: cloudflare" in header_text
             )
-            if name == "stable-channel":
+            if name in ("official-channel", "partner-channel"):
                 assert remote_health is not None, "health must be checked before stable channel"
-                expected = 200 if remote_health["updatesPublished"] else 204
+                variant = name.split("-")[0]
+                expected = 200 if remote_health.get("updateChannels", {}).get(variant, False) else 204
             assert actual == expected or edge_rejected, f"{name}: HTTP {actual}, expected {expected}"
             if name == "health":
                 remote_health = json.loads(body)
@@ -79,8 +82,10 @@ def main() -> None:
                 assert isinstance(remote_health.get("thirdPartyInstallersPublished"), bool)
                 if args.expect_updates != "auto":
                     assert remote_health["updatesPublished"] is (args.expect_updates == "published")
-            if name == "stable-channel" and actual == 200:
+            if name in ("official-channel", "partner-channel") and actual == 200:
                 manifest = json.loads(body)
+                assert manifest.get("schemaVersion") == 2
+                assert manifest.get("variant") == name.split("-")[0]
                 assert isinstance(manifest.get("version"), str)
                 platforms = manifest.get("platforms")
                 assert isinstance(platforms, dict)
