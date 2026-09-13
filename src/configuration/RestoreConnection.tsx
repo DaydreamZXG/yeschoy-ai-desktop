@@ -6,6 +6,7 @@ import {
   RotateCcw,
   X,
 } from "lucide-react";
+import { useConfigurationCopy } from "./copy";
 import { useConnections, type ToolConnection } from "./connections";
 
 export function RestoreConnection({
@@ -18,11 +19,14 @@ export function RestoreConnection({
   disabled?: boolean;
 }) {
   const controller = useConnections();
+  const c = useConfigurationCopy();
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [failed, setFailed] = useState(false);
+  const [revokeKey, setRevokeKey] = useState(true);
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
+  const revokeId = useId();
   const cancel = useRef<HTMLButtonElement>(null);
   const busy = controller?.restoring === connection?.toolId;
   const original = connection?.restoreMode === "original";
@@ -34,30 +38,32 @@ export function RestoreConnection({
     } else dialog.current?.close();
   }, [open]);
   if (!available && !message) return null;
-  const action = original ? "恢复原设置" : "撤销野菜设置";
+  const action = original ? c.restoreAction : c.revokeAction;
   const restore = async () => {
     if (!controller || !connection || busy) return;
     setFailed(false);
     try {
-      const result = await controller.restore(connection.toolId);
+      const result = await controller.restore(connection.toolId, revokeKey);
       const error = result.status === "recovery_failed";
       setFailed(error);
       setMessage(
         error
-          ? "恢复没有完成，现有记录已保留。请关闭目标应用后重试；不会强行覆盖你的修改。"
+          ? c.restoreFailed
           : result.reasonCode ===
               "local_settings_restored_token_cleanup_pending"
-            ? "本机设置已恢复并可立即生效；远端专用密钥暂未清理。请联网并登录同一账户后再恢复一次。"
-            : result.status === "restored_with_changes"
-              ? "已恢复可还原的设置，你之后修改的内容已保留。重新打开应用后生效。"
-              : original
-                ? "已恢复接入前的设置。重新打开应用后生效。"
-                : "已撤销野菜接入。旧版本没有保存原值，请在应用中选择你要用的账户或服务商。",
+            ? c.tokenCleanupPending.replace("{{action}}", action)
+            : result.reasonCode === "local_settings_restored_token_kept"
+              ? c.tokenKept
+              : result.status === "restored_with_changes"
+                ? c.restoredWithChanges
+                : original
+                  ? c.restoredOriginal
+                  : c.revokedLegacy,
       );
       if (!error) setOpen(false);
     } catch {
       setFailed(true);
-      setMessage("暂时无法恢复，请重试。恢复记录仍保留在这台电脑上。");
+      setMessage(c.restoreError);
     }
   };
   return (
@@ -71,6 +77,7 @@ export function RestoreConnection({
           }
           onClick={() => {
             setMessage("");
+            setRevokeKey(true);
             setOpen(true);
           }}
         >
@@ -103,7 +110,7 @@ export function RestoreConnection({
           </span>
           <button
             type="button"
-            aria-label="关闭"
+            aria-label={c.closeLabel}
             disabled={busy}
             onClick={() => setOpen(false)}
           >
@@ -113,16 +120,27 @@ export function RestoreConnection({
         <h2 id={titleId}>
           {action} · {name}
         </h2>
-        <p>
-          {original
-            ? "恢复这个应用接入野菜前的模型、服务商和相关连接设置。你后来修改过的内容会保留。"
-            : "这个接入来自旧版本，没有保存接入前的设置。只能撤销仍属于野菜的连接项，无法找回原来的值。"}
-        </p>
+        <p>{original ? c.introOriginal : c.introLegacy}</p>
         <ul>
-          <li>不会卸载应用，也不会删除聊天记录。</li>
-          <li>不影响其他应用、网站账户或余额。</li>
-          <li>恢复后请重新打开 {name}。</li>
+          <li>{c.noteNoUninstall}</li>
+          <li>{c.noteIsolated}</li>
+          <li>{c.noteReopen.replace("{{app}}", name)}</li>
         </ul>
+        <label className="restore-revoke-option" htmlFor={revokeId}>
+          <input
+            id={revokeId}
+            type="checkbox"
+            checked={revokeKey}
+            disabled={busy}
+            onChange={(event) => setRevokeKey(event.target.checked)}
+          />
+          <span>
+            {c.revokeOptionTitle}
+            <small>
+              {revokeKey ? c.revokeOnHint : c.revokeOffHint}
+            </small>
+          </span>
+        </label>
         {message && (
           <p className="restore-feedback is-error" role="alert">
             {message}
@@ -135,7 +153,7 @@ export function RestoreConnection({
             disabled={busy}
             onClick={() => setOpen(false)}
           >
-            先不恢复
+            {c.cancelRestore}
           </button>
           <button
             className="primary-action"
@@ -144,7 +162,7 @@ export function RestoreConnection({
             onClick={() => void restore()}
           >
             {busy ? <LoaderCircle className="is-spinning" /> : <RotateCcw />}
-            {busy ? "正在恢复…" : action}
+            {busy ? c.restoring : action}
           </button>
         </footer>
       </dialog>

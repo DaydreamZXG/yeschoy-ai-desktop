@@ -1,0 +1,25 @@
+{
+  "id": "RU-000",
+  "status": "review",
+  "objective": "Replace with one bounded implementation authority unit",
+  "decisionRef": "DEC-replace-with-accepted-release-unit-decision",
+  "dependsOnReleaseUnits": [],
+  "supersedesReleaseUnits": [],
+  "roots": {
+    "workPackages": ["WP-000"],
+    "requirements": [],
+    "nonFunctionalRequirements": [],
+    "domains": [],
+    "contracts": [],
+    "stateMachines": [],
+    "pages": [],
+    "journeys": [],
+    "dataLifecycleResources": [],
+    "aiScenarios": [],
+    "entitlements": [],
+    "trackCoverage": []
+  },
+  "closure": null,
+  "deferredSnapshot": null,
+  "freeze": null
+}

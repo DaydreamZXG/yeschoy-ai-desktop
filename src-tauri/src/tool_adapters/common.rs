@@ -342,18 +342,6 @@ pub(crate) enum ProcessFailure {
     OutputLimit,
 }
 
-impl ProcessFailure {
-    pub(crate) fn reason_code(self) -> &'static str {
-        match self {
-            Self::Start => "tool_start_failed",
-            Self::TimedOut => "tool_request_timed_out",
-            Self::Wait => "tool_wait_failed",
-            Self::OutputRead => "tool_output_read_failed",
-            Self::OutputLimit => "tool_output_limit_exceeded",
-        }
-    }
-}
-
 async fn read_process_output(reader: impl AsyncRead + Unpin) -> Result<Vec<u8>, ProcessFailure> {
     let mut bytes = Vec::new();
     reader
@@ -365,12 +353,6 @@ async fn read_process_output(reader: impl AsyncRead + Unpin) -> Result<Vec<u8>, 
         return Err(ProcessFailure::OutputLimit);
     }
     Ok(bytes)
-}
-
-// Pi print mode, Hermes -z and DSH headless document stdout as final assistant
-// text only. Accept the independent reply, never a banner, help or prompt echo.
-pub(crate) fn verification_reply(stdout: &[u8]) -> bool {
-    std::str::from_utf8(stdout).is_ok_and(|text| text.trim() == "YESCHOY_OK")
 }
 
 /// Returns a closed, bounded set of directories needed to execute a
@@ -485,6 +467,7 @@ pub(crate) async fn run_bounded(
     }
 }
 
+#[cfg(test)]
 pub(crate) fn temporary_working_directory(label: &str) -> io::Result<PathBuf> {
     for attempt in 0..16u8 {
         let path = std::env::temp_dir().join(format!(
@@ -604,7 +587,7 @@ mod tests {
         let result = run_bounded(success.command(), Duration::from_secs(2))
             .await
             .unwrap();
-        assert!(result.success && verification_reply(&result.stdout));
+        assert!(result.success && result.stdout == b"YESCHOY_OK\n");
         assert_eq!(result.stderr, b"synthetic diagnostic\n");
 
         let failure = Script::new("printf 'YESCHOY_OK\\n'; exit 17");
@@ -669,7 +652,7 @@ mod tests {
         let mut command = Command::new(&discovered_wrapper);
         apply_cli_runtime_path(&mut command, &discovered_wrapper);
         let result = run_bounded(command, Duration::from_secs(2)).await.unwrap();
-        assert!(result.success && verification_reply(&result.stdout));
+        assert!(result.success && result.stdout == b"YESCHOY_OK\n");
         assert_eq!(env::var_os("PATH"), original_path);
         fs::remove_dir_all(root).unwrap();
     }

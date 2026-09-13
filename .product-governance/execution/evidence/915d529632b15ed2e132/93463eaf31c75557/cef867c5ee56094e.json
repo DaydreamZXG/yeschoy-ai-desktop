@@ -1,0 +1,28 @@
+{
+  "scenarioId": "DAILY-home",
+  "assertion": "Home hierarchy, unknown state and recovery stay truthful.",
+  "testSelector": "tests/work_packages/ru077/test_renderer.py::test_home",
+  "acceptanceCommandId": "ux-home",
+  "runId": "RU-077/WP-RU077-DAILY-USE@2026-09-12T05:11:44.899411+00:00",
+  "packageId": "WP-RU077-DAILY-USE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru077/test_renderer.py::test_home",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:dbcf38522f68847be3cb21989df49aa57a42db5c1b8ac2a8deeee546df4b1db6",
+    "machineReportSha256": "sha256:3253652f70f60961cd7e08aa1cbe186668e88ea8e0e34ee5cbd4fedcce990d35",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:8f5b82077e21b7ce5b3b8d33387510d915b582a04dd4797055acc07056ebaa11",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:a4563fc9996978547db732dc53cccda284c32b61748a9a39ed17b3077e154ac2",
+  "releaseUnitId": "RU-077",
+  "releaseUnitHash": "sha256:8140a03adaf7efb247eacd3b7fb4baf3fabaeb0305abc4eca33f02bc37849271"
+}

@@ -3,9 +3,11 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
 import i18n from "i18next";
 import zh from "../i18n/locales/zh.json";
 import type { RecentSavings } from "../account/finance";
@@ -16,6 +18,9 @@ import { AccountView } from "./AccountView";
 import { AccountSummary } from "./WorkbenchChrome";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+vi.mock("sonner", () => ({
+  toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }),
+}));
 beforeAll(async () => {
   await i18n.init({
     lng: "zh",
@@ -267,5 +272,46 @@ describe("clear account currency and savings UX", () => {
     });
     expect(change).toHaveBeenCalledWith("global_accelerated");
     expect(session.beginAuthorization).not.toHaveBeenCalled();
+  });
+  it("surfaces a retryable toast when the wallet fails to open (PRD 6.2)", async () => {
+    const session = { ...controller(), openWallet: vi.fn(async () => false) };
+    render(
+      <AccountView
+        lineId="mainland_optimized"
+        onLineChange={vi.fn()}
+        session={session}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "去充值" }));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "没有打开充值页面，请检查网络后重试。",
+        expect.objectContaining({
+          closeButton: true,
+          action: expect.objectContaining({ label: "重试" }),
+        }),
+      ),
+    );
+    const options = vi.mocked(toast.error).mock.calls[0][1];
+    const action = options?.action as unknown as { onClick: () => void };
+    action.onClick();
+    await waitFor(() => expect(session.openWallet).toHaveBeenCalledTimes(2));
+  });
+  it("guides both revoked and expired sessions through re-authorization with one copy", () => {
+    render(
+      <AccountView
+        lineId="mainland_optimized"
+        onLineChange={vi.fn()}
+        session={{
+          ...controller(),
+          projection: { ...projection(), status: "session_expired" },
+        }}
+      />,
+    );
+    expect(
+      screen.getByText(
+        /登录已失效。若你刚在网站撤销过此设备，请检查设备安全；否则重新授权即可。/,
+      ),
+    ).toBeInTheDocument();
   });
 });

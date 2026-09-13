@@ -10,6 +10,7 @@ import {
 import { Check, ChevronDown, Search } from "lucide-react";
 import { Content as PopoverContent } from "@radix-ui/react-popover";
 import type { AccountModel } from "../account/session";
+import { ModelCapabilityBadges } from "../model-profiles/ModelCapabilityBadges";
 import { modelDisplayName, modelMatchesQuery } from "../model-profiles/profile";
 import { Popover, PopoverTrigger } from "../components/ui/popover";
 
@@ -30,12 +31,15 @@ export function ModelPicker({
   onChange,
   disabled = false,
   label = "选择模型",
+  disabledReason,
 }: {
   models: AccountModel[];
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
   label?: string;
+  // #13 「查看全部模型」：返回文案的模型不可选（置灰+原因），返回 undefined 可选。
+  disabledReason?: (model: AccountModel) => string | undefined;
 }) {
   const id = useId();
   const [open, setOpen] = useState(false);
@@ -94,9 +98,9 @@ export function ModelPicker({
   useEffect(() => {
     if (disabled || !models.length) setOpen(false);
   }, [disabled, models.length]);
-  const choose = (model: string) => {
-    if (disabled) return;
-    onChange(model);
+  const choose = (model: AccountModel) => {
+    if (disabled || disabledReason?.(model)) return;
+    onChange(model.id);
     setOpen(false);
     button.current?.focus({ preventScroll: true });
   };
@@ -224,7 +228,7 @@ export function ModelPicker({
                 }
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  if (options[active]) choose(options[active].id);
+                  if (options[active]) choose(options[active]);
                 }
               }}
             />
@@ -243,30 +247,40 @@ export function ModelPicker({
                 search.current?.focus({ preventScroll: true });
             }}
           >
-            {options.map((model, index) => (
-              <button
-                type="button"
-                role="option"
-                tabIndex={-1}
-                id={`${id}-option-${index}`}
-                aria-selected={model.id === value}
-                className={index === active ? "is-active" : ""}
-                key={model.id}
-                onPointerMove={(event) => {
-                  if (event.pointerType === "mouse" && !event.buttons)
-                    setActiveId(model.id);
-                }}
-                onClick={() => choose(model.id)}
-              >
-                <span>
-                  {modelDisplayName(model.id) !== model.id && (
-                    <strong>{modelDisplayName(model.id)}</strong>
-                  )}
-                  <code>{model.id}</code>
-                </span>
-                {model.id === value && <Check />}
-              </button>
-            ))}
+            {options.map((model, index) => {
+              const reason = disabledReason?.(model);
+              return (
+                <button
+                  type="button"
+                  role="option"
+                  tabIndex={-1}
+                  id={`${id}-option-${index}`}
+                  aria-selected={model.id === value}
+                  aria-disabled={reason ? true : undefined}
+                  className={
+                    (index === active ? "is-active " : "") +
+                    (reason ? "is-incompatible" : "")
+                  }
+                  key={model.id}
+                  disabled={!!reason}
+                  onPointerMove={(event) => {
+                    if (event.pointerType === "mouse" && !event.buttons)
+                      setActiveId(model.id);
+                  }}
+                  onClick={() => choose(model)}
+                >
+                  <span>
+                    {modelDisplayName(model.id) !== model.id && (
+                      <strong>{modelDisplayName(model.id)}</strong>
+                    )}
+                    <code>{model.id}</code>
+                    <ModelCapabilityBadges id={model.id} />
+                    {reason && <small className="option-disabled-note">{reason}</small>}
+                  </span>
+                  {model.id === value && <Check />}
+                </button>
+              );
+            })}
             {!options.length && (
               <p className="model-search-empty">
                 没有匹配的模型，试试其他关键词。

@@ -75,14 +75,12 @@ pub async fn scan_tools_read_only(request: ScanRequest) -> Result<ScanResponse, 
     validate_request_id(&request.request_id)?;
     let started_at_epoch_ms = unix_epoch_ms();
 
-    let (claude, codex, opencode, pi, dsh, hermes, openclaw) = tokio::join!(
+    let (claude, codex, opencode, pi, dsh) = tokio::join!(
         scan_tool(TOOL_SPECS[0]),
         scan_tool(TOOL_SPECS[1]),
         scan_tool(TOOL_SPECS[2]),
         scan_tool(TOOL_SPECS[3]),
         scan_tool(TOOL_SPECS[4]),
-        scan_tool(TOOL_SPECS[5]),
-        scan_tool(TOOL_SPECS[6]),
     );
 
     Ok(ScanResponse {
@@ -90,7 +88,7 @@ pub async fn scan_tools_read_only(request: ScanRequest) -> Result<ScanResponse, 
         platform: platform_name(),
         started_at_epoch_ms,
         completed_at_epoch_ms: unix_epoch_ms().max(started_at_epoch_ms),
-        tools: vec![claude, codex, opencode, pi, dsh, hermes, openclaw]
+        tools: vec![claude, codex, opencode, pi, dsh]
             .into_iter()
             .map(ToolProjection::from)
             .collect(),

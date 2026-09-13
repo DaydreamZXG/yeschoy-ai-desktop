@@ -23,9 +23,7 @@ tauri-build = { version = "2.4.0", features = [] }
 [dependencies]
 aes-gcm = "0.10.3"
 axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio"] }
-async-stream = "0.3"
 base64 = "0.22"
-bytes = "1"
 caseless = "=0.2.2"
 futures = "0.3"
 getrandom = "0.3"
@@ -43,7 +41,6 @@ tauri = { version = "2.8.2", default-features = false, features = ["wry"] }
 tauri-plugin-updater = { version = "=2.9.0", default-features = false, features = ["native-tls", "zip"] }
 tokio = { version = "1", features = ["io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }
 toml_edit = { version = "0.24", features = ["serde"] }
-thiserror = "2"
 unicode-normalization = "=0.1.25"
 zip = { version = "=8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 

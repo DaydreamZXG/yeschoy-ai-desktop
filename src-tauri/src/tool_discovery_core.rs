@@ -11,7 +11,7 @@ pub struct ToolSpec {
     pub executable_name: &'static str,
 }
 
-pub const TOOL_SPECS: [ToolSpec; 7] = [
+pub const TOOL_SPECS: [ToolSpec; 5] = [
     ToolSpec {
         id: "claude",
         display_name: "Claude Code",
@@ -36,16 +36,6 @@ pub const TOOL_SPECS: [ToolSpec; 7] = [
         id: "dsh",
         display_name: "DSH",
         executable_name: "dsh",
-    },
-    ToolSpec {
-        id: "hermes",
-        display_name: "Hermes",
-        executable_name: "hermes",
-    },
-    ToolSpec {
-        id: "openclaw",
-        display_name: "OpenClaw",
-        executable_name: "openclaw",
     },
 ];
 
@@ -258,7 +248,7 @@ mod tests {
     fn fixed_catalog_and_empty_state() {
         assert_eq!(
             TOOL_SPECS.map(|spec| spec.id),
-            ["claude", "codex", "opencode", "pi", "dsh", "hermes", "openclaw"]
+            ["claude", "codex", "opencode", "pi", "dsh"]
         );
         let results = TOOL_SPECS.map(|spec| classify(spec, ProbeObservation::NotFound));
         assert!(results.iter().all(|result| {
@@ -316,10 +306,8 @@ mod tests {
             classify(TOOL_SPECS[2], ProbeObservation::NotFound),
             classify(TOOL_SPECS[3], ProbeObservation::NotFound),
             classify(TOOL_SPECS[4], ProbeObservation::NotFound),
-            classify(TOOL_SPECS[5], ProbeObservation::NotFound),
-            classify(TOOL_SPECS[6], ProbeObservation::NotFound),
         ];
-        assert_eq!(results.len(), 7);
+        assert_eq!(results.len(), 5);
         assert_eq!(results[0].status, DiscoveryStatus::ProbeFailed);
         assert_eq!(results[1].status, DiscoveryStatus::ProbeTimedOut);
         assert!(results[0].version.is_empty() && results[1].version.is_empty());

@@ -11,8 +11,9 @@ ROOT = Path(__file__).resolve().parents[2]
 LIBRARY = "yeschoy_desktop_lib"
 REQUIRED_TESTS = frozenset(
     {
-        "connectivity_core::tests::catalog_is_exact_and_fixed_to_tls_port",
-        "connectivity_core::tests::request_id_rejects_network_or_path_input",
+        "connectivity_core::tests::diagnostics_contract_catalog_is_exact_and_fixed_to_tls_port",
+        "connectivity_core::tests::diagnostics_contract_layer_catalog_is_fixed_and_ordered",
+        "connectivity_core::tests::diagnostics_contract_request_id_rejects_network_or_path_input",
         "tool_discovery_core::tests::detected_version_is_exact_and_read_only",
         "tool_discovery_core::tests::fixed_catalog_and_empty_state",
         "tool_discovery_core::tests::multiple_installations_fail_closed",

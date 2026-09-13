@@ -6,6 +6,7 @@ import type { Appearance } from "../workbench/appearance";
 import { useWorkbenchCopy } from "../workbench/copy";
 import { QuitAssistant } from "./QuitAssistant";
 import { UpdateSettingsCard } from "../update/UpdateSettingsCard";
+import { AdvancedConnectionDetails } from "./AdvancedConnectionDetails";
 
 type Language = "zh" | "zh-TW" | "en" | "ja";
 
@@ -151,6 +152,10 @@ export function SettingsView({
           <div className="release-row-list">
             <UpdateSettingsCard />
           </div>
+        </div>
+
+        <div className="advanced-connection-wrap">
+          <AdvancedConnectionDetails />
         </div>
       </section>
     </div>

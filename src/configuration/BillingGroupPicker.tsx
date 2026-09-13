@@ -1,9 +1,23 @@
 import { useId } from "react";
 import type { AccountModel } from "../account/session";
 import { CheckCircle2, Landmark, Sprout } from "lucide-react";
+import { useConfigurationCopy } from "./copy";
 import { hundredMillionTokenEstimate } from "./billing";
 
-export const groupLabel = (id: string) => (id === "default" ? "标准分组" : id);
+export const groupLabel = (id: string, defaultLabel = "标准分组") =>
+  id === "default" ? defaultLabel : id;
+
+// #19 分组显示名走目录映射：服务端 usable_group 已把显示名存进 description，
+// 展示优先用目录显示名；default 分组仍用本地化的「标准分组」，查不到时回退 id。
+export function groupDisplayName(
+  id: string,
+  groups: ReadonlyArray<{ id: string; description: string }> | undefined,
+  defaultLabel: string,
+): string {
+  if (id === "default") return defaultLabel;
+  const description = groups?.find((g) => g.id === id)?.description.trim();
+  return description || id;
+}
 
 export function BillingGroupPicker({
   model,
@@ -16,14 +30,13 @@ export function BillingGroupPicker({
   onChange: (id: string) => void;
   disabled?: boolean;
 }) {
+  const c = useConfigurationCopy();
   const groups = model?.billing?.groups ?? [];
   const radioName = useId();
   return (
     <fieldset className="billing-group-picker" disabled={disabled}>
-      <legend>选择计费分组</legend>
-      <p>
-        同一个模型，不同分组有不同价格。下面只列出这个模型已开放的分组；分组下方的说明是分组自身的介绍，不一定列全。
-      </p>
+      <legend>{c.chooseGroupLegend}</legend>
+      <p>{c.groupIntro}</p>
       {groups.length ? (
         <div className="billing-group-grid">
           {groups.map((group) => (
@@ -43,11 +56,21 @@ export function BillingGroupPicker({
                 onChange={() => onChange(group.id)}
               />
               <span className="billing-group-info">
-                <strong>{groupLabel(group.id)}</strong>
-                {group.description && <small>{group.description}</small>}
+                <strong>
+                  {groupDisplayName(group.id, groups, c.defaultGroup)}
+                </strong>
+                {group.id === "default" ? (
+                  group.description ? (
+                    <small>{group.description}</small>
+                  ) : null
+                ) : group.description ? (
+                  <small>
+                    <code>{group.id}</code>
+                  </small>
+                ) : null}
               </span>
               <span className="billing-group-ratio">
-                {group.ratio === null ? "倍率待查询" : `${group.ratio}×`}
+                {group.ratio === null ? c.ratioPending : `${group.ratio}×`}
               </span>
               {selected === group.id && <CheckCircle2 aria-hidden="true" />}
             </label>
@@ -55,9 +78,7 @@ export function BillingGroupPicker({
         </div>
       ) : (
         <p className="account-inline-warning">
-          {model
-            ? "暂未读到这个模型的可用分组，请刷新账户数据。"
-            : "选择模型后，可查看对应计费分组。"}
+          {model ? c.groupsMissing : c.groupsEmptyHint}
         </p>
       )}
     </fieldset>
@@ -79,6 +100,12 @@ function priceRange(range: { minimum: number; maximum: number }) {
   return `${price(range.minimum)} – ${price(range.maximum)}`;
 }
 
+function perMillionPrice(text: string) {
+  if (text === "") return "—";
+  const value = Number(text);
+  return Number.isFinite(value) ? price(value) : "—";
+}
+
 export function BillingPrices({
   model,
   selected,
@@ -88,66 +115,105 @@ export function BillingPrices({
   selected: string;
   fx: string;
 }) {
+  const c = useConfigurationCopy();
   const group = model?.billing?.groups.find((g) => g.id === selected);
   if (!model || !group) return null;
   const estimate = hundredMillionTokenEstimate(model, group, fx);
+  // #12 价格口径：perMillion 字段（元/百万 tokens）直显为第一层级，
+  // 「1 亿 Token 费用参考」降级为折叠示例。
+  const hasPerMillion = model.pricingAvailable;
   return (
     <section
       className="billing-prices"
-      aria-label="所选分组价格"
+      aria-label={c.pricesLabel}
       aria-live="polite"
     >
-      <header>
-        <div>
-          <strong>1 亿 Token 费用参考</strong>
-          <p>缓存型示例，不是账单预测</p>
-        </div>
+      {hasPerMillion ? (
+        <table className="per-million-prices">
+          <caption>{c.perMillionTokens}</caption>
+          <thead>
+            <tr>
+              <th scope="col" />
+              <th scope="col">{c.officialPrice}</th>
+              <th scope="col">{c.actualPrice}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">{c.inputPrice}</th>
+              <td>{perMillionPrice(model.officialInputCnyPerMillion)}</td>
+              <td>{perMillionPrice(model.actualInputCnyPerMillion)}</td>
+            </tr>
+            <tr>
+              <th scope="row">{c.outputPrice}</th>
+              <td>{perMillionPrice(model.officialOutputCnyPerMillion)}</td>
+              <td>{perMillionPrice(model.actualOutputCnyPerMillion)}</td>
+            </tr>
+          </tbody>
+        </table>
+      ) : (
+        <p className="billing-price-note">{c.priceUnavailable}</p>
+      )}
+      <details className="billing-estimate">
+        <summary>{c.estimateSummary}</summary>
+        <p className="billing-example-note">{c.estimateExampleNote}</p>
         {estimate?.savingPercent !== null &&
           estimate?.savingPercent !== undefined && (
             <span className="billing-saving-badge">
-              约省{" "}
-              {estimate.savingPercent >= 99 && estimate.savingPercent < 100
-                ? Math.floor(estimate.savingPercent * 10) / 10
-                : Math.round(estimate.savingPercent)}
-              %
+              {c.estimateSaving.replace(
+                "{{percent}}",
+                String(
+                  estimate.savingPercent >= 99 && estimate.savingPercent < 100
+                    ? Math.floor(estimate.savingPercent * 10) / 10
+                    : Math.round(estimate.savingPercent),
+                ),
+              )}
             </span>
           )}
-      </header>
-      {estimate ? (
-        <>
-          <p className="billing-example-formula">
-            1,000 万新输入 + 8,000 万缓存读取 + 1,000 万输出
-          </p>
-          <div className="billing-comparison-grid">
-            <div className="billing-comparison-card is-official">
-              <Landmark aria-hidden="true" />
-              <span>使用官网预计</span>
-              <strong>{priceRange(estimate.official)}</strong>
+        {estimate ? (
+          <>
+            <p className="billing-example-formula">{c.estimateFormula}</p>
+            <div className="billing-comparison-grid">
+              <div className="billing-comparison-card is-official">
+                <Landmark aria-hidden="true" />
+                <span>{c.estimateOfficialLabel}</span>
+                <strong>{priceRange(estimate.official)}</strong>
+              </div>
+              <div className="billing-comparison-card is-yeschoy">
+                <Sprout aria-hidden="true" />
+                <span>{c.estimateYeschoyLabel}</span>
+                <strong>{priceRange(estimate.yeschoy)}</strong>
+              </div>
             </div>
-            <div className="billing-comparison-card is-yeschoy">
-              <Sprout aria-hidden="true" />
-              <span>使用野菜预计</span>
-              <strong>{priceRange(estimate.yeschoy)}</strong>
+            <div className="billing-price-details">
+              <p className="billing-price-note">
+                {c.estimateNote
+                  .replace(
+                    "{{group}}",
+                    groupDisplayName(
+                      group.id,
+                      model.billing?.groups,
+                      c.defaultGroup,
+                    ),
+                  )
+                  .replace("{{fx}}", fx)
+                  .replace(
+                    "{{tiered}}",
+                    estimate.tiered ? c.estimateTieredNote : "",
+                  )
+                  .replace(
+                    "{{cacheNote}}",
+                    estimate.cacheFallback
+                      ? c.estimateCacheFallbackNote
+                      : c.estimateCacheExcludedNote,
+                  )}
+              </p>
             </div>
-          </div>
-          <details className="billing-price-details">
-            <summary>这个价格怎么算？</summary>
-            <p className="billing-price-note">
-              按 {groupLabel(group.id)} 当前倍率和网站参考换算值 {fx} 估算
-              {estimate.tiered ? "；不同请求档位会形成以上区间" : ""}。
-              该换算值不是市场汇率。
-              {estimate.cacheFallback
-                ? "该模型没有单独的缓存读取价，缓存部分按输入价保守估算。"
-                : "不含另行发生的缓存写入，实际费用以请求命中的计费档位为准。"}
-            </p>
-          </details>
-        </>
-      ) : (
-        <p className="billing-price-note">
-          当前规则无法可靠换算为 Token
-          费用，暂不展示估算；实际费用以网站账单为准。
-        </p>
-      )}
+          </>
+        ) : (
+          <p className="billing-price-note">{c.estimateUnavailable}</p>
+        )}
+      </details>
     </section>
   );
 }

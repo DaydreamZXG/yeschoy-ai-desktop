@@ -5,6 +5,31 @@ export interface AccountMoney {
   displayRate: string;
 }
 
+/**
+ * PRD 6.2 low-balance guidance threshold (single source of truth).
+ * Balances at or below this CNY amount surface recharge guidance on the
+ * home and setup pages; balances at or below zero additionally warn next
+ * to the setup action without blocking it (writing settings is free).
+ */
+export const LOW_BALANCE_THRESHOLD_CNY = 5;
+
+export type BalanceAlert = {
+  level: "low" | "depleted";
+  /** Raw CNY amount, suitable for formatMoney. */
+  amount: string;
+} | null;
+
+export function balanceAlert(money: AccountMoney | undefined): BalanceAlert {
+  if (money?.currency !== "CNY") return null;
+  const balance = Number(money.balanceAmount);
+  if (!Number.isFinite(balance) || balance > LOW_BALANCE_THRESHOLD_CNY)
+    return null;
+  return {
+    level: balance <= 0 ? "depleted" : "low",
+    amount: money.balanceAmount,
+  };
+}
+
 export interface RecentSavings {
   status: "available" | "empty" | "no_comparable_records" | "unavailable";
   reasonCode:

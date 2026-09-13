@@ -1,0 +1,14 @@
+{
+  "scenarioId": "BASELINE-home",
+  "assertion": "Happy, empty, partial, failure and recovery home navigation preserve truthful state.",
+  "testSelector": "src/workbench/Workbench.test.tsx",
+  "acceptanceCommandId": "baseline-home",
+  "runId": "RU-076/WP-RU076-CURRENT-BASELINE@2026-09-12T05:01:08.995345+00:00",
+  "packageId": "WP-RU076-CURRENT-BASELINE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:b6ac431a124ba9dd168c1489571ee331b7ba46d7c88f53fa0c8279cd90a02d24",
+  "releaseUnitId": "RU-076",
+  "releaseUnitHash": "sha256:aac08bad312b6c5cf4902864f066842c9e026ebcfa29d7331a37c1d49a92818c"
+}

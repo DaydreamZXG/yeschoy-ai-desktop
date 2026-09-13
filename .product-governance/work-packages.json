@@ -9391,6 +9391,372 @@
         "A change requires a new provider persistence authority, relay contract, credential disclosure or actual user-application execution.",
         "A read-only source-isolated regression cannot be executed or the selected unit fails review."
       ],
+      "status": "retired"
+    },
+    {
+      "id": "WP-RU076-CURRENT-BASELINE",
+      "wave": "integration",
+      "owner": "desktop-platform",
+      "riskClass": "high",
+      "objective": "Read-only verification of the current renderer and pinned governance workflow after explicit historical source-baseline reconciliation.",
+      "deliverables": [
+        "Separately hashed current source baseline with inherited RU-075 source boundaries.",
+        "Source-isolated renderer, type-check and governance-tool regression evidence.",
+        "Explicit native/device/release exclusions; historical proof remains intact."
+      ],
+      "requirementRefs": [
+        "REQ-098"
+      ],
+      "decisionRefs": [
+        "DEC-124"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No changes to relay routing, authentication, billing, model capabilities or provider persistence",
+        "No package, signing, server mutation, push or real user configuration access",
+        "No activation of inherited CC Switch SQLite services or a second source of truth"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        ".github/workflows/**",
+        "SECURITY.md",
+        "deploy/self-update/**",
+        "docs/**",
+        "outputs/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "src/**",
+        "src-tauri/**",
+        "tests/work_packages/ru074/**",
+        "scripts/governance/**",
+        "tests/setupTests.ts",
+        "tests/setupGlobals.ts",
+        "vitest.config.ts",
+        "tsconfig.json"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "release/**",
+        "release-assets/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No persisted state changes. The existing encrypted Yeschoy recovery store remains canonical; do not read the owner's actual secrets during validation.",
+        "rollback": "Source-only rollback. No user configuration, server credential or provider database is changed by this repair workflow."
+      },
+      "compatibilityPolicy": {
+        "strategy": "No runtime, protocol or data change; full inherited source ownership is retained for drift checks, not full functional test coverage.",
+        "supportedVersions": "Current 0.4.17 repository state with native IPC mocked; no Windows/macOS device acceptance claim.",
+        "removalGate": "No historical record, native integration or user state is removed."
+      },
+      "inputContracts": [
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [],
+      "acceptanceCommands": [
+        {
+          "id": "baseline-home",
+          "kind": "scenario_test",
+          "adapter": "vitest-json@1",
+          "selector": "src/workbench/Workbench.test.tsx",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "baseline-connections",
+          "kind": "scenario_test",
+          "adapter": "vitest-json@1",
+          "selector": "src/configuration/connections.test.tsx",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "baseline-activation",
+          "kind": "scenario_test",
+          "adapter": "vitest-json@1",
+          "selector": "src/configuration/ConfigurationPreviewView.test.tsx",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "baseline-daily",
+          "kind": "scenario_test",
+          "adapter": "vitest-json@1",
+          "selector": "src/configuration/DailyUse.test.tsx",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "baseline-picker",
+          "kind": "scenario_test",
+          "adapter": "vitest-json@1",
+          "selector": "src/configuration/ModelPicker.test.tsx",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "baseline-shutdown",
+          "kind": "scenario_test",
+          "adapter": "vitest-json@1",
+          "selector": "src/settings/QuitAssistant.test.tsx",
+          "cwd": ".",
+          "timeoutSeconds": 300
+        },
+        {
+          "id": "baseline-types",
+          "kind": "check",
+          "argv": [
+            "pnpm",
+            "typecheck"
+          ],
+          "cwd": ".",
+          "timeoutSeconds": 600,
+          "expectedExitCode": 0
+        },
+        {
+          "id": "baseline-renderer",
+          "kind": "check",
+          "argv": [
+            "pnpm",
+            "test:unit"
+          ],
+          "cwd": ".",
+          "timeoutSeconds": 600,
+          "expectedExitCode": 0
+        },
+        {
+          "id": "baseline-governance",
+          "kind": "check",
+          "argv": [
+            "python3",
+            "scripts/governance/runtime/scripts/self_test.py"
+          ],
+          "cwd": ".",
+          "timeoutSeconds": 600,
+          "expectedExitCode": 0
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "BASELINE-home",
+          "assertion": "Happy, empty, partial, failure and recovery home navigation preserve truthful state.",
+          "testSelector": "src/workbench/Workbench.test.tsx",
+          "acceptanceCommandId": "baseline-home"
+        },
+        {
+          "id": "BASELINE-connections",
+          "assertion": "Refresh replay, timeout, stale responses, partial failure and restore races preserve canonical state.",
+          "testSelector": "src/configuration/connections.test.tsx",
+          "acceptanceCommandId": "baseline-connections"
+        },
+        {
+          "id": "BASELINE-activation",
+          "assertion": "Apply, duplicate click, cancellation, running-app handoff and recovery preserve selected context.",
+          "testSelector": "src/configuration/ConfigurationPreviewView.test.tsx",
+          "acceptanceCommandId": "baseline-activation"
+        },
+        {
+          "id": "BASELINE-daily",
+          "assertion": "Opening, reconfiguration, persisted selections and terminal variants use existing contracts.",
+          "testSelector": "src/configuration/DailyUse.test.tsx",
+          "acceptanceCommandId": "baseline-daily"
+        },
+        {
+          "id": "BASELINE-picker",
+          "assertion": "Search, composition, scrolling and selection remain usable.",
+          "testSelector": "src/configuration/ModelPicker.test.tsx",
+          "acceptanceCommandId": "baseline-picker"
+        },
+        {
+          "id": "BASELINE-shutdown",
+          "assertion": "Exit/background confirmation remains bounded, truthful and recoverable.",
+          "testSelector": "src/settings/QuitAssistant.test.tsx",
+          "acceptanceCommandId": "baseline-shutdown"
+        }
+      ],
+      "verificationOnly": true,
+      "stopConditions": [
+        "Any source change after dispatch, integrity failure or missing read-only source isolation.",
+        "Any need for real installed applications, credentials, billing request, packaging or publication."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU077-DAILY-USE",
+      "wave": "integration",
+      "owner": "desktop-platform",
+      "riskClass": "high",
+      "objective": "Implement daily-use UX and pnpm-compatible isolated renderer acceptance.",
+      "deliverables": [
+        "Application-first home and direct model-change entry.",
+        "Request-correlated controller and actionable recovery.",
+        "Fresh renderer/type/browser evidence, failed baseline retained."
+      ],
+      "requirementRefs": [
+        "REQ-098",
+        "REQ-099"
+      ],
+      "decisionRefs": [
+        "DEC-125"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No changes to relay routing, authentication, billing, model capabilities or provider persistence",
+        "No package, signing, server mutation, push or real user configuration access",
+        "No activation of inherited CC Switch SQLite services or a second source of truth"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src/App.tsx",
+        "src/workbench/**",
+        "src/configuration/**",
+        "src/i18n/locales/**",
+        "tests/work_packages/ru077/**",
+        "scripts/qa/daily-use/**",
+        "docs/daily-use-ux.md",
+        "outputs/daily-use-ux-20260912.oRBnCY/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "release/**",
+        "release-assets/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No persisted state changes. The existing encrypted Yeschoy recovery store remains canonical; do not read the owner's actual secrets during validation.",
+        "rollback": "Source-only rollback. No user configuration, server credential or provider database is changed by this repair workflow."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Native protocols and persistence unchanged; UI and isolated test harness only.",
+        "supportedVersions": "Current 0.4.17 repository state with native IPC mocked; no Windows/macOS device acceptance claim.",
+        "removalGate": "No historical record, native integration or user state is removed."
+      },
+      "inputContracts": [
+        "desktop-connection-management@v2",
+        "desktop-tool-activation@v10",
+        "desktop-open-connection@v1"
+      ],
+      "outputContracts": [],
+      "acceptanceCommands": [
+        {
+          "id": "ux-home",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru077/test_renderer.py::test_home",
+          "cwd": ".",
+          "timeoutSeconds": 600
+        },
+        {
+          "id": "ux-connections",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru077/test_renderer.py::test_connections",
+          "cwd": ".",
+          "timeoutSeconds": 600
+        },
+        {
+          "id": "ux-activation",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru077/test_renderer.py::test_activation",
+          "cwd": ".",
+          "timeoutSeconds": 600
+        },
+        {
+          "id": "ux-daily",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru077/test_renderer.py::test_daily",
+          "cwd": ".",
+          "timeoutSeconds": 600
+        },
+        {
+          "id": "ux-picker",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru077/test_renderer.py::test_picker",
+          "cwd": ".",
+          "timeoutSeconds": 600
+        },
+        {
+          "id": "ux-shutdown",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru077/test_renderer.py::test_shutdown",
+          "cwd": ".",
+          "timeoutSeconds": 600
+        },
+        {
+          "id": "ux-complete",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru077/test_renderer.py::test_complete",
+          "cwd": ".",
+          "timeoutSeconds": 600
+        },
+        {
+          "id": "ux-types",
+          "kind": "check",
+          "argv": [
+            "pnpm",
+            "typecheck"
+          ],
+          "cwd": ".",
+          "timeoutSeconds": 600,
+          "expectedExitCode": 0
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "DAILY-home",
+          "assertion": "Home hierarchy, unknown state and recovery stay truthful.",
+          "testSelector": "tests/work_packages/ru077/test_renderer.py::test_home",
+          "acceptanceCommandId": "ux-home"
+        },
+        {
+          "id": "DAILY-connections",
+          "assertion": "Replay, stale result, partial failure and restore race preserve state.",
+          "testSelector": "tests/work_packages/ru077/test_renderer.py::test_connections",
+          "acceptanceCommandId": "ux-connections"
+        },
+        {
+          "id": "DAILY-activation",
+          "assertion": "Restart confirmation, cancellation, duplicate and stale context remain safe.",
+          "testSelector": "tests/work_packages/ru077/test_renderer.py::test_activation",
+          "acceptanceCommandId": "ux-activation"
+        },
+        {
+          "id": "DAILY-daily",
+          "assertion": "Model changes preserve bindings and open does not reconfigure.",
+          "testSelector": "tests/work_packages/ru077/test_renderer.py::test_daily",
+          "acceptanceCommandId": "ux-daily"
+        },
+        {
+          "id": "DAILY-picker",
+          "assertion": "IME, search, scrolling and focus stay usable.",
+          "testSelector": "tests/work_packages/ru077/test_renderer.py::test_picker",
+          "acceptanceCommandId": "ux-picker"
+        },
+        {
+          "id": "DAILY-shutdown",
+          "assertion": "Exit/background confirmation stays bounded.",
+          "testSelector": "tests/work_packages/ru077/test_renderer.py::test_shutdown",
+          "acceptanceCommandId": "ux-shutdown"
+        },
+        {
+          "id": "DAILY-complete",
+          "assertion": "Full renderer suite passes with no failed, skipped or pending tests.",
+          "testSelector": "tests/work_packages/ru077/test_renderer.py::test_complete",
+          "acceptanceCommandId": "ux-complete"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Out-of-scope source edits, invalid historical proof or missing readonly isolation.",
+        "Need for native contract changes, installed app/config operations, real billing, packaging or production."
+      ],
       "status": "planned"
     }
   ]

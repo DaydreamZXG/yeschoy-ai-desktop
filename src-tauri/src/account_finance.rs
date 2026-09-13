@@ -13,6 +13,12 @@ const MAX_METADATA_BYTES: usize = 64 * 1024;
 const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
 const MAX_AMOUNT: f64 = 1_000_000_000_000.0;
 
+/// PRD 6.6 用量账单：分页拉取的页大小与页数上限（≥5 页）。
+pub(crate) const USAGE_LOG_PAGE_SIZE: usize = 100;
+pub(crate) const USAGE_MAX_PAGES: usize = 5;
+/// 聚合窗口：30 天（PRD 6.6）。
+pub(crate) const USAGE_WINDOW_MS: u64 = 30 * 24 * 60 * 60 * 1000;
+
 #[derive(Debug, Clone, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct AccountMoney {
@@ -66,6 +72,179 @@ impl RecentSavings {
     }
 }
 
+/// PRD 6.6 用量明细的单条消费记录（`type=2`）。
+/// `tool_id` 为空表示该记录不能归因到客户端管理的任何工具（如网页直用）。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct UsageRecord {
+    pub tool_id: String,
+    pub model_id: String,
+    pub observed_at_epoch_ms: u64,
+    pub prompt_tokens: u64,
+    pub completion_tokens: u64,
+    pub cache_tokens: u64,
+    /// 展示货币金额（quota 经 quota_per_unit 与汇率换算）；换算参数缺失时为空串。
+    pub amount: String,
+}
+
+/// PRD 6.6 用量账单投影：30 天窗口内逐条明细（供前端做工具×模型聚合）。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct UsageLogReport {
+    pub status: &'static str,
+    pub reason_code: &'static str,
+    pub record_count: usize,
+    pub scanned_count: usize,
+    pub window_days: u32,
+    /// 达到分页上限仍未覆盖完整窗口（数据被截断）。
+    pub truncated: bool,
+    pub oldest_at_epoch_ms: u64,
+    pub newest_at_epoch_ms: u64,
+    pub records: Vec<UsageRecord>,
+}
+
+impl Default for UsageLogReport {
+    fn default() -> Self {
+        Self::unavailable("logs_unavailable")
+    }
+}
+
+impl UsageLogReport {
+    fn unavailable(reason_code: &'static str) -> Self {
+        Self {
+            status: "unavailable",
+            reason_code,
+            record_count: 0,
+            scanned_count: 0,
+            window_days: (USAGE_WINDOW_MS / (24 * 60 * 60 * 1000)) as u32,
+            truncated: false,
+            oldest_at_epoch_ms: 0,
+            newest_at_epoch_ms: 0,
+            records: Vec::new(),
+        }
+    }
+}
+
+fn usage_cache_tokens(row: &Value) -> u64 {
+    let Some(metadata) = row
+        .get("other")
+        .and_then(Value::as_str)
+        .filter(|text| !text.is_empty() && text.len() <= MAX_METADATA_BYTES)
+    else {
+        return 0;
+    };
+    let Ok(parsed) = serde_json::from_str::<Value>(metadata) else {
+        return 0;
+    };
+    parsed
+        .get("cache_tokens")
+        .and_then(Value::as_u64)
+        .unwrap_or(0)
+}
+
+/// 汇总多页 `/api/log/self` 消费日志为 30 天窗口内的明细报告。
+/// `now_epoch_ms` 用于窗口裁剪；换算参数缺失时金额置空但明细仍返回。
+pub(crate) fn usage_log_report(
+    status: Option<&Value>,
+    log_pages: &[Value],
+    now_epoch_ms: u64,
+) -> UsageLogReport {
+    let rates = display_rates(status);
+    let mut result = UsageLogReport {
+        status: "available",
+        reason_code: "none",
+        ..UsageLogReport::unavailable("logs_unavailable")
+    };
+    let cutoff = now_epoch_ms.saturating_sub(USAGE_WINDOW_MS);
+    let mut oldest: Option<u64> = None;
+    let mut newest: Option<u64> = None;
+    let mut last_page_full = false;
+    for page in log_pages {
+        let Some(items) = page
+            .get("data")
+            .and_then(|data| data.get("items"))
+            .and_then(Value::as_array)
+        else {
+            continue;
+        };
+        last_page_full = items.len() >= USAGE_LOG_PAGE_SIZE;
+        for row in items {
+            if row.get("type").and_then(Value::as_u64) != Some(2) {
+                continue;
+            }
+            result.scanned_count += 1;
+            let Some(created_at) = row
+                .get("created_at")
+                .and_then(Value::as_u64)
+                .filter(|value| *value > 0 && *value <= 8_640_000_000_000)
+                .and_then(|value| value.checked_mul(1000))
+            else {
+                continue;
+            };
+            if created_at < cutoff {
+                continue;
+            }
+            let model_id = row
+                .get("model_name")
+                .and_then(Value::as_str)
+                .filter(|value| {
+                    !value.is_empty()
+                        && value.chars().count() <= 200
+                        && !value.chars().any(char::is_control)
+                });
+            let Some(model_id) = model_id else {
+                continue;
+            };
+            let tool_id = row
+                .get("token_name")
+                .and_then(Value::as_str)
+                .and_then(crate::tool_activation::tool_for_token_name)
+                .unwrap_or("");
+            let prompt_tokens = row.get("prompt_tokens").and_then(Value::as_u64).unwrap_or(0);
+            let completion_tokens = row
+                .get("completion_tokens")
+                .and_then(Value::as_u64)
+                .unwrap_or(0);
+            let quota = row.get("quota").and_then(Value::as_i64).unwrap_or(0);
+            let amount_text = rates
+                .and_then(|(_, unit, rate)| amount(quota as f64 / unit * rate))
+                .unwrap_or_default();
+            result.records.push(UsageRecord {
+                tool_id: tool_id.to_owned(),
+                model_id: model_id.to_owned(),
+                observed_at_epoch_ms: created_at,
+                prompt_tokens,
+                completion_tokens,
+                cache_tokens: usage_cache_tokens(row),
+                amount: amount_text,
+            });
+            oldest = Some(oldest.map_or(created_at, |value| value.min(created_at)));
+            newest = Some(newest.map_or(created_at, |value| value.max(created_at)));
+        }
+    }
+    result.record_count = result.records.len();
+    result.oldest_at_epoch_ms = oldest.unwrap_or(0);
+    result.newest_at_epoch_ms = newest.unwrap_or(0);
+    result.truncated = last_page_full && log_pages.len() >= USAGE_MAX_PAGES;
+    if result.records.is_empty() {
+        // 有合法 items 结构（可为空数组）但窗口内无记录 → 空历史；
+        // 连 items 结构都没有 → 日志不可用。
+        if log_pages.is_empty() || !log_pages.iter().any(page_has_items) {
+            return UsageLogReport::unavailable("logs_unavailable");
+        }
+        result.status = "empty";
+        result.reason_code = "no_history";
+    }
+    result
+}
+
+fn page_has_items(page: &Value) -> bool {
+    page.get("data")
+        .and_then(|data| data.get("items"))
+        .and_then(Value::as_array)
+        .is_some()
+}
+
 fn data(value: Option<&Value>) -> Option<&Map<String, Value>> {
     let value = value?;
     (value.get("success")?.as_bool()? && value.get("data")?.is_object())
@@ -108,16 +287,24 @@ fn amount(value: f64) -> Option<String> {
     )
 }
 
+/// 余额/金额展示所需的换算参数（PRD：价格以 NewAPI 为准，客户端只换算展示）。
+/// 返回 (currency, quota_per_unit, rate)；TOKENS 与自定义货币不冒充美元，返回 None。
+fn display_rates(status: Option<&Value>) -> Option<(&'static str, f64, f64)> {
+    let settings = data(status)?;
+    let unit = positive(settings.get("quota_per_unit"))?;
+    match settings.get("quota_display_type")?.as_str()? {
+        "CNY" => {
+            let rate = positive(settings.get("usd_exchange_rate"))?;
+            Some(("CNY", unit, rate))
+        }
+        "USD" => Some(("USD", unit, 1.0)),
+        _ => None,
+    }
+}
+
 pub(crate) fn account_money(status: Option<&Value>, balance: &str, consumed: &str) -> AccountMoney {
     let calculate = || {
-        let settings = data(status)?;
-        let unit = positive(settings.get("quota_per_unit"))?;
-        let (currency, rate) = match settings.get("quota_display_type")?.as_str()? {
-            "CNY" => ("CNY", positive(settings.get("usd_exchange_rate"))?),
-            "USD" => ("USD", 1.0),
-            // TOKENS and custom currencies must not be mislabeled as dollars.
-            _ => return None,
-        };
+        let (currency, unit, rate) = display_rates(status)?;
         Some(AccountMoney {
             currency,
             balance_amount: amount(
@@ -274,57 +461,63 @@ pub(crate) fn recent_savings(status: Option<&Value>, logs: Option<&Value>) -> Re
 ///
 /// 数据来自 `/api/log/self` 的消费记录（`type=2`），按客户端为该工具创建的
 /// token 名称归因，每个工具只保留最新一条。日志行不含线路，线路由本次读取
-/// 使用的 origin 决定。
-pub(crate) fn recent_requests(
-    logs: Option<&Value>,
+/// 使用的 origin 决定。支持多页合并（分页拉取后覆盖更长历史）。
+pub(crate) fn recent_requests_from_pages(
+    pages: &[Value],
     line_id: &'static str,
 ) -> Vec<(String, RequestObservation)> {
-    let Some(items) = logs
-        .and_then(|value| value.get("data"))
-        .and_then(|data| data.get("items"))
-        .and_then(Value::as_array)
-    else {
-        return Vec::new();
-    };
     let mut latest: Vec<(String, RequestObservation)> = Vec::new();
-    for row in items.iter().take(RECORD_LIMIT) {
-        if row.get("type").and_then(Value::as_u64) != Some(2) {
-            continue;
-        }
-        let Some(tool) = row
-            .get("token_name")
-            .and_then(Value::as_str)
-            .and_then(crate::tool_activation::tool_for_token_name)
+    for page in pages {
+        let Some(items) = page
+            .get("data")
+            .and_then(|data| data.get("items"))
+            .and_then(Value::as_array)
         else {
             continue;
         };
-        let Some(model_id) = row.get("model_name").and_then(Value::as_str).filter(|value| {
-            !value.is_empty()
-                && value.chars().count() <= 200
-                && !value.chars().any(char::is_control)
-        }) else {
-            continue;
-        };
-        let Some(observed_at_epoch_ms) = row
-            .get("created_at")
-            .and_then(Value::as_u64)
-            .filter(|value| *value > 0 && *value <= 8_640_000_000_000)
-            .and_then(|value| value.checked_mul(1000))
-        else {
-            continue;
-        };
-        let observation = RequestObservation {
-            model_id: model_id.to_owned(),
-            billing_group: String::new(),
-            line_id: line_id.to_owned(),
-            outcome: RequestOutcome::Ok,
-            http_status: 0,
-            observed_at_epoch_ms,
-        };
-        match latest.iter_mut().find(|(id, _)| id == tool) {
-            Some((_, current)) if current.observed_at_epoch_ms >= observed_at_epoch_ms => {}
-            Some((_, current)) => *current = observation,
-            None => latest.push((tool.to_owned(), observation)),
+        for row in items.iter().take(RECORD_LIMIT) {
+            if row.get("type").and_then(Value::as_u64) != Some(2) {
+                continue;
+            }
+            let Some(tool) = row
+                .get("token_name")
+                .and_then(Value::as_str)
+                .and_then(crate::tool_activation::tool_for_token_name)
+            else {
+                continue;
+            };
+            let Some(model_id) =
+                row.get("model_name")
+                    .and_then(Value::as_str)
+                    .filter(|value| {
+                        !value.is_empty()
+                            && value.chars().count() <= 200
+                            && !value.chars().any(char::is_control)
+                    })
+            else {
+                continue;
+            };
+            let Some(observed_at_epoch_ms) = row
+                .get("created_at")
+                .and_then(Value::as_u64)
+                .filter(|value| *value > 0 && *value <= 8_640_000_000_000)
+                .and_then(|value| value.checked_mul(1000))
+            else {
+                continue;
+            };
+            let observation = RequestObservation {
+                model_id: model_id.to_owned(),
+                billing_group: String::new(),
+                line_id: line_id.to_owned(),
+                outcome: RequestOutcome::Ok,
+                http_status: 0,
+                observed_at_epoch_ms,
+            };
+            match latest.iter_mut().find(|(id, _)| id == tool) {
+                Some((_, current)) if current.observed_at_epoch_ms >= observed_at_epoch_ms => {}
+                Some((_, current)) => *current = observation,
+                None => latest.push((tool.to_owned(), observation)),
+            }
         }
     }
     latest
@@ -497,7 +690,7 @@ mod tests {
             json!({"type":1,"model_name":"ignored","created_at":1788599100,"token_name":"野菜API cx-1a2b3c4d5e6f7890-0123456789abcdef"}),
             json!({"type":2,"model_name":"ignored","created_at":1788599200,"token_name":"别人的 token"}),
         ]);
-        let found = recent_requests(Some(&logs), "mainland_optimized");
+        let found = recent_requests_from_pages(&[logs], "mainland_optimized");
         assert_eq!(found.len(), 2);
         let codex = found
             .iter()
@@ -507,6 +700,87 @@ mod tests {
         assert_eq!(codex.1.line_id, "mainland_optimized");
         assert_eq!(codex.1.outcome, RequestOutcome::Ok);
         assert!(found.iter().any(|(tool, _)| tool == "claude_code"));
-        assert!(recent_requests(None, "mainland_optimized").is_empty());
+        assert!(recent_requests_from_pages(&[], "mainland_optimized").is_empty());
+    }
+
+    #[test]
+    fn usage_log_report_aggregates_pages_within_window() {
+        let now_ms = 1_789_300_000_000u64; // 2026-09-13 附近
+        let fresh = (now_ms / 1000) - 60;
+        let stale = (now_ms / 1000) - (31 * 24 * 60 * 60);
+        let pages = vec![
+            json!({"success":true,"data":{"page":1,"page_size":100,"items":[
+                {"type":2,"quota":500000,"prompt_tokens":1200,"completion_tokens":300,"created_at":fresh,"model_name":"gpt-6-astra","token_name":"野菜API cx-1a2b3c4d5e6f7890-0123456789abcdef","other":"{\"group_ratio\":0.5,\"cache_tokens\":400}"},
+                {"type":2,"quota":250000,"prompt_tokens":100,"completion_tokens":50,"created_at":fresh - 10,"model_name":"claude-sonnet-4-6","token_name":"野菜API cc-1a2b3c4d5e6f7890-0123456789abcdef"},
+                {"type":1,"quota":999,"created_at":fresh,"model_name":"ignored","token_name":"野菜API cx-1a2b3c4d5e6f7890-0123456789abcdef"},
+                {"type":2,"quota":100,"created_at":stale,"model_name":"too-old","token_name":"野菜API cx-1a2b3c4d5e6f7890-0123456789abcdef"}
+            ]}}),
+            json!({"success":true,"data":{"page":2,"page_size":100,"items":[
+                {"type":2,"quota":500000,"prompt_tokens":10,"completion_tokens":5,"created_at":fresh - 20,"model_name":"gpt-6-astra","token_name":"web-token"}
+            ]}}),
+        ];
+        let report = usage_log_report(Some(&settings()), &pages, now_ms);
+        assert_eq!(report.status, "available");
+        assert_eq!(report.record_count, 3);
+        assert_eq!(report.scanned_count, 4);
+        assert!(!report.truncated);
+        assert_eq!(report.window_days, 30);
+        let astra = report
+            .records
+            .iter()
+            .find(|r| r.tool_id == "codex_desktop" && r.model_id == "gpt-6-astra")
+            .expect("attributed astra row");
+        assert_eq!(astra.prompt_tokens, 1200);
+        assert_eq!(astra.completion_tokens, 300);
+        assert_eq!(astra.cache_tokens, 400);
+        assert_eq!(astra.amount, "7"); // 500000/500000*7
+        let web = report
+            .records
+            .iter()
+            .find(|r| r.tool_id.is_empty())
+            .expect("unattributed web row");
+        assert_eq!(web.amount, "7");
+        let serialized = serde_json::to_string(&report).unwrap();
+        assert!(!serialized.contains("web-token"));
+        assert!(!serialized.contains("group_ratio"));
+    }
+
+    #[test]
+    fn usage_log_report_marks_truncation_and_empty_states() {
+        let now_ms = 1_789_300_000_000u64;
+        let fresh = (now_ms / 1000) - 60;
+        let full_page = |n: usize| {
+            json!({"success":true,"data":{"page":n,"page_size":100,"items":
+                vec![json!({"type":2,"quota":1,"created_at":fresh,"model_name":"m","token_name":"野菜API cx-1a2b3c4d5e6f7890-0123456789abcdef"}); 100]}})
+        };
+        let mut pages: Vec<Value> = (1..=USAGE_MAX_PAGES).map(full_page).collect();
+        let truncated = usage_log_report(Some(&settings()), &pages, now_ms);
+        assert!(truncated.truncated);
+        assert_eq!(truncated.record_count, 500);
+
+        // 最后一页不满 → 未截断
+        pages.pop();
+        pages.push(json!({"success":true,"data":{"page":USAGE_MAX_PAGES,"page_size":100,"items":[
+            json!({"type":2,"quota":1,"created_at":fresh,"model_name":"m","token_name":"野菜API cx-1a2b3c4d5e6f7890-0123456789abcdef"})
+        ]}}));
+        let complete = usage_log_report(Some(&settings()), &pages, now_ms);
+        assert!(!complete.truncated);
+
+        let empty = usage_log_report(Some(&settings()), &[logs(vec![])], now_ms);
+        assert_eq!((empty.status, empty.reason_code), ("empty", "no_history"));
+
+        let unavailable = usage_log_report(Some(&settings()), &[], now_ms);
+        assert_eq!(
+            (unavailable.status, unavailable.reason_code),
+            ("unavailable", "logs_unavailable")
+        );
+
+        // 换算参数缺失：明细仍在、金额置空（不猜能力口径的金额）
+        let no_rates = usage_log_report(None, &[logs(vec![json!({
+            "type":2,"quota":500000,"prompt_tokens":1,"completion_tokens":2,
+            "created_at":fresh,"model_name":"m","token_name":"野菜API cx-1a2b3c4d5e6f7890-0123456789abcdef"
+        })])], now_ms);
+        assert_eq!(no_rates.status, "available");
+        assert_eq!(no_rates.records[0].amount, "");
     }
 }

@@ -4,13 +4,20 @@ import {
   CONNECTIVITY_LINES,
   decodeConnectivityProjection,
   isCompleteConnectivityProjection,
+  lineNetworkHealthy,
+  lineOutcome,
 } from "./contract";
+import type { ConnectivityLineResult } from "./contract";
+
+// JSON module types stay wide (string fields); narrow at the assertions.
+const asLine = (value: unknown): ConnectivityLineResult =>
+  value as ConnectivityLineResult;
 
 function response() {
   return structuredClone(nativeFixtures.reachable);
 }
 
-describe("line connectivity projection from native serialization", () => {
+describe("layered connectivity projection from native serialization", () => {
   it.each(Object.entries(nativeFixtures))(
     "accepts the Rust-validated %s fixture",
     (_name, fixture) => {
@@ -32,12 +39,14 @@ describe("line connectivity projection from native serialization", () => {
     },
   );
 
-  it("rejects stale IDs, unknown envelope fields and invalid clocks", () => {
+  it("rejects stale IDs, unknown envelope fields, wrong schema and invalid clocks", () => {
     const fixture = response();
     expect(decodeConnectivityProjection(fixture, "diag-new")).toBeNull();
     for (const update of [
       { requestId: "" },
       { accessToken: "synthetic-private" },
+      { schemaVersion: 1 },
+      { schemaVersion: 3 },
       { startedAtEpochMs: -1 },
       { startedAtEpochMs: 1.5 },
       { completedAtEpochMs: fixture.startedAtEpochMs - 1 },
@@ -63,47 +72,6 @@ describe("line connectivity projection from native serialization", () => {
       expect(
         decodeConnectivityProjection({ ...fixture, requestId }, requestId),
       ).toBeNull();
-    }
-  });
-
-  it("isolates the old tcp443 spelling while retaining the other valid line", () => {
-    const fixture = response();
-    fixture.lines[0].reasonCode = "tcp443_reachable";
-    const decoded = decodeConnectivityProjection(fixture, fixture.requestId);
-    expect(decoded?.complete).toBe(false);
-    expect(decoded?.response.lines).toEqual([
-      nativeFixtures.reachable.lines[1],
-    ]);
-    expect(isCompleteConnectivityProjection(fixture, fixture.requestId)).toBe(
-      false,
-    );
-  });
-
-  it("rejects invalid identity, extra fields, unknown outcomes and impossible latency per line", () => {
-    const fixture = response();
-    for (const update of [
-      { displayName: "other" },
-      { rootUrl: "https://example.com" },
-      { host: "example.com" },
-      { port: 80 },
-      { latencyMs: -1 },
-      { latencyMs: 60_001 },
-      { latencyMs: 1.5 },
-      { latencyMs: Number.NaN },
-      { status: "unknown", reasonCode: undefined },
-      { status: "constructor", reasonCode: undefined },
-      { reasonCode: "tcp_connection_failed" },
-      { resolvedAddress: "127.0.0.1" },
-      { error: "synthetic-private" },
-    ]) {
-      const payload = {
-        ...fixture,
-        lines: [{ ...fixture.lines[0], ...update }, fixture.lines[1]],
-      };
-      const decoded = decodeConnectivityProjection(payload, fixture.requestId);
-      expect(decoded?.complete).toBe(false);
-      expect(decoded?.response.lines).toEqual([fixture.lines[1]]);
-      expect(JSON.stringify(decoded)).not.toContain("synthetic-private");
     }
   });
 
@@ -169,5 +137,140 @@ describe("line connectivity projection from native serialization", () => {
       })),
     );
     expect(JSON.stringify(decoded)).not.toContain("example.com");
+  });
+
+  it("rejects invalid line identity and injected fields per line", () => {
+    const fixture = response();
+    for (const update of [
+      { displayName: "other" },
+      { rootUrl: "https://example.com" },
+      { host: "example.com" },
+      { port: 80 },
+      { resolvedAddress: "127.0.0.1" },
+      { error: "synthetic-private" },
+    ]) {
+      const payload = {
+        ...fixture,
+        lines: [{ ...fixture.lines[0], ...update }, fixture.lines[1]],
+      };
+      const decoded = decodeConnectivityProjection(payload, fixture.requestId);
+      expect(decoded?.complete).toBe(false);
+      expect(decoded?.response.lines).toEqual([fixture.lines[1]]);
+      expect(JSON.stringify(decoded)).not.toContain("synthetic-private");
+    }
+  });
+
+  it("rejects a line whose layer catalog is reordered, incomplete or extended", () => {
+    const fixture = response();
+    const line = fixture.lines[0];
+    for (const mutate of [
+      (layers: unknown[]) => [layers[1], layers[0], layers[2], layers[3]],
+      (layers: unknown[]) => layers.slice(0, 3),
+      (layers: unknown[]) => [...layers, layers[3]],
+      (layers: unknown[]) => layers.map(() => ({})),
+    ]) {
+      const payload = {
+        ...fixture,
+        lines: [
+          { ...line, layers: mutate(line.layers) },
+          fixture.lines[1],
+        ],
+      };
+      const decoded = decodeConnectivityProjection(payload, fixture.requestId);
+      expect(decoded?.complete).toBe(false);
+      expect(decoded?.response.lines).toEqual([fixture.lines[1]]);
+    }
+  });
+
+  it("rejects layer evidence whose status, reason or latency contradicts the contract", () => {
+    const fixture = response();
+    const line = fixture.lines[0];
+    for (const mutate of [
+      // status inconsistent with the reason code
+      (layer: Record<string, unknown>) => ({ ...layer, status: "skipped" }),
+      (layer: Record<string, unknown>) => ({ ...layer, status: "failed" }),
+      // reason code from a different layer
+      (layer: Record<string, unknown>) => ({
+        ...layer,
+        reasonCode: "tls_handshake_verified",
+      }),
+      // unknown reason code
+      (layer: Record<string, unknown>) => ({
+        ...layer,
+        reasonCode: "tcp_443_reachable",
+      }),
+      // injected secret-looking field
+      (layer: Record<string, unknown>) => ({
+        ...layer,
+        accessToken: "synthetic-private",
+      }),
+    ]) {
+      const layers = line.layers.map((layer, index) =>
+        index === 0 ? mutate({ ...layer }) : layer,
+      );
+      const payload = {
+        ...fixture,
+        lines: [{ ...line, layers }, fixture.lines[1]],
+      };
+      const decoded = decodeConnectivityProjection(payload, fixture.requestId);
+      expect(decoded?.complete).toBe(false);
+      expect(decoded?.response.lines).toEqual([fixture.lines[1]]);
+      expect(JSON.stringify(decoded)).not.toContain("synthetic-private");
+    }
+    // A skipped layer must not carry latency (reachable fixture has none
+    // skipped, so start from the mixed fixture).
+    const mixed = structuredClone(nativeFixtures.mixed);
+    const skipped = mixed.lines[1].layers.find(
+      (layer) => layer.status === "skipped",
+    ) as Record<string, unknown>;
+    skipped.latencyMs = 5;
+    const decoded = decodeConnectivityProjection(mixed, mixed.requestId);
+    expect(decoded?.complete).toBe(false);
+    expect(decoded?.response.lines).toEqual([mixed.lines[0]]);
+  });
+
+  it("rejects impossible layer latency values", () => {
+    const fixture = response();
+    const line = fixture.lines[0];
+    for (const latencyMs of [-1, 60_001, 1.5, Number.NaN]) {
+      const layers = line.layers.map((layer, index) =>
+        index === 0 ? { ...layer, latencyMs } : layer,
+      );
+      const payload = {
+        ...fixture,
+        lines: [{ ...line, layers }, fixture.lines[1]],
+      };
+      const decoded = decodeConnectivityProjection(payload, fixture.requestId);
+      expect(decoded?.complete).toBe(false);
+      expect(decoded?.response.lines).toEqual([fixture.lines[1]]);
+    }
+  });
+
+  it("derives the headline outcome from the first failed layer", () => {
+    const reachable = asLine(nativeFixtures.reachable.lines[0]);
+    expect(lineOutcome(reachable)).toBe("reachable");
+    expect(lineNetworkHealthy(reachable)).toBe(true);
+
+    const dnsFailure = asLine(nativeFixtures.mixed.lines[1]);
+    expect(lineOutcome(dnsFailure)).toBe("dns_failed");
+    expect(lineNetworkHealthy(dnsFailure)).toBe(false);
+
+    const tcpFailure = asLine(nativeFixtures.failed.lines[0]);
+    expect(lineOutcome(tcpFailure)).toBe("connect_failed");
+
+    const dnsTimeout = asLine(nativeFixtures.failed.lines[1]);
+    expect(lineOutcome(dnsTimeout)).toBe("timed_out");
+  });
+
+  it("keeps api_key failures out of the network reachability verdict", () => {
+    const line = structuredClone(nativeFixtures.reachable.lines[0]);
+    const layers = line.layers.map((layer) =>
+      layer.layer === "api_key"
+        ? { ...layer, status: "failed", reasonCode: "session_token_rejected" }
+        : layer,
+    );
+    const rejected = { ...line, layers };
+    expect(lineOutcome(asLine(rejected))).toBe("api_key_failed");
+    expect(lineNetworkHealthy(asLine(rejected))).toBe(true);
   });
 });

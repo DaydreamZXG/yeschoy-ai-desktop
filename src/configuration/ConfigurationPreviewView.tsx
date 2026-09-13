@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { toast } from "sonner";
 import {
-  AlertCircle,
   ArrowRight,
   CheckCircle2,
   CircleStop,
@@ -9,16 +10,19 @@ import {
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
-import { listen } from "@tauri-apps/api/event";
 import { useTranslation } from "react-i18next";
 import {
   BillingGroupPicker,
   BillingPrices,
+  groupDisplayName,
   groupLabel,
 } from "./BillingGroupPicker";
 import { chooseBillingGroup } from "./billing";
 import { modelConnectionMode, modelSupportsTool } from "./modelCompatibility";
 import type { AccountSessionController } from "../account/useAccountSession";
+import { balanceAlert } from "../account/finance";
+import { LowBalanceBanner } from "../workbench/LowBalanceBanner";
+import { useWalletRecharge } from "../workbench/useWalletRecharge";
 import claudeIcon from "../assets/icons/claude.svg";
 import codexIcon from "../assets/icons/chatgpt.svg";
 import { ModelPicker } from "./ModelPicker";
@@ -27,6 +31,17 @@ import { RestoreConnection } from "./RestoreConnection";
 import { OpenConnection } from "./OpenConnection";
 import { RecentRequest } from "./RecentRequest";
 import { ConnectionStatusNotice } from "./ConnectionStatusNotice";
+import { ActivationFeedback } from "./ActivationFeedback";
+import {
+  CelebrationConfetti,
+  TickerText,
+} from "./FirstActivationCelebration";
+import {
+  markFirstActivationCelebrated,
+  shouldCelebrateFirstActivation,
+} from "./firstActivationMilestone";
+import { useActivationTask } from "./useActivationTask";
+import type { SetupIntent } from "./setupIntent";
 import { useInstallation } from "../installation/InstallationProvider";
 import { InstallationPanel } from "../installation/InstallationPanel";
 import {
@@ -36,26 +51,31 @@ import {
 } from "../installation/api";
 import { AppGlyph } from "../workbench/AppGlyph";
 import { useWorkbenchCopy } from "../workbench/copy";
+import {
+  configurationCopies,
+  useConfigurationCopy,
+  type ConfigurationCopy,
+} from "./copy";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import {
-  ACTIVATION_PROGRESS_EVENT,
-  activateDesktopTool,
-  cancelDesktopToolActivation,
-  decodeActivationProgress,
   sameModelBindings,
   scanActivationTargets,
   type ActivationTarget,
   type ActivationTargetScan,
-  type ActivationProgress,
   type ActivationToolId,
-  type ToolActivationProjection,
   type ModelBinding,
 } from "./activation";
 import { CONFIGURATION_LINES, createConfigurationPreview } from "./preview";
 import type { ConfigurationLineId, ConfigurationToolId } from "./preview";
+import {
+  decodeConnectivityProjection,
+  lineNetworkHealthy,
+  type ConnectivityLineResult,
+} from "../diagnostics/contract";
 
 interface ConfigurationPreviewViewProps {
   active?: boolean;
+  setupIntent?: SetupIntent;
   initialDesktopAppId?: ActivationToolId;
   enableLocalActivation?: boolean;
   lineId: ConfigurationLineId;
@@ -65,11 +85,18 @@ interface ConfigurationPreviewViewProps {
   onOpenTools: () => void;
 }
 
+type ApplicationSurfaceKey =
+  | "surfaceClaudeCode"
+  | "surfaceClaudeDesktop"
+  | "surfaceCodexDesktop"
+  | "surfacePi"
+  | "surfaceDsh";
+
 interface ApplicationChoice {
   id: ActivationToolId;
   toolId: ConfigurationToolId;
   displayName: string;
-  surface: string;
+  surface: ApplicationSurfaceKey;
   icon?: string;
   mark?: string;
 }
@@ -79,50 +106,36 @@ const APPLICATIONS: readonly ApplicationChoice[] = [
     id: "claude_code",
     toolId: "claude",
     displayName: "Claude Code",
-    surface: "命令行与编辑器工作区",
+    surface: "surfaceClaudeCode",
     icon: claudeIcon,
   },
   {
     id: "claude_desktop",
     toolId: "claude",
     displayName: "Claude Desktop",
-    surface: "Claude 桌面应用",
+    surface: "surfaceClaudeDesktop",
     icon: claudeIcon,
   },
   {
     id: "codex_desktop",
     toolId: "codex",
     displayName: "Codex Desktop",
-    surface: "ChatGPT 桌面应用中的 Codex",
+    surface: "surfaceCodexDesktop",
     icon: codexIcon,
   },
   {
     id: "pi",
     toolId: "pi",
     displayName: "Pi",
-    surface: "Pi 编程助手",
+    surface: "surfacePi",
     mark: "π",
   },
   {
     id: "dsh_web",
     toolId: "dsh",
     displayName: "DSH web",
-    surface: "DeepSeek Harness 浏览器工作台",
+    surface: "surfaceDsh",
     mark: "D",
-  },
-  {
-    id: "hermes",
-    toolId: "hermes",
-    displayName: "Hermes",
-    surface: "Hermes 桌面与命令行助手",
-    mark: "H",
-  },
-  {
-    id: "openclaw",
-    toolId: "openclaw",
-    displayName: "OpenClaw",
-    surface: "小龙虾智能助手",
-    mark: "O",
   },
 ];
 
@@ -143,14 +156,20 @@ export function connectionLifecycleMode(
 export function connectionLifecycleNote(
   toolId: ActivationToolId,
   name: string,
+  copy: Pick<
+    ConfigurationCopy,
+    | "lifecycleDesktopRestart"
+    | "lifecycleBrowserLaunch"
+    | "lifecycleTerminalSession"
+  > = configurationCopies.zh,
 ) {
   switch (connectionLifecycleMode(toolId)) {
     case "graceful_desktop_restart":
-      return `若 ${name} 正在运行，更新接入时会先提醒你保存；确认后由助手先请求应用正常退出，写入设置并重新打开。Windows 若只剩后台进程，会仅结束这个安装路径对应的进程。`;
+      return copy.lifecycleDesktopRestart.replace("{{name}}", name);
     case "browser_launch":
-      return "更新接入会保存 DSH 配置；“打开使用”只会启动本地服务并在浏览器中打开，不会发送模型测试消息。";
+      return copy.lifecycleBrowserLaunch;
     case "new_terminal_session":
-      return "更新接入不会关闭正在使用的命令行会话；新设置从新开的终端会话生效。";
+      return copy.lifecycleTerminalSession;
   }
 }
 
@@ -164,14 +183,20 @@ export function runningAppHandoff(
   } as const;
 }
 
-export function recoveryRetryMessage(reasonCode: string): string | undefined {
+export function recoveryRetryMessage(
+  reasonCode: string,
+  copy: Pick<
+    ConfigurationCopy,
+    "retryRollbackFailed" | "retryCredentialRestore" | "retryRecoveryPending"
+  > = configurationCopies.zh,
+): string | undefined {
   switch (reasonCode) {
     case "configuration_rollback_failed":
-      return "自动恢复上次未完成的设置时遇到问题，部分设置尚未恢复。可直接点击“自动修复并重试”，无需手动修改配置。";
+      return copy.retryRollbackFailed;
     case "credential_restore_failed":
-      return "自动恢复时密钥设置尚未恢复。请解锁系统钥匙串或凭据管理器，再点击“自动修复并重试”，无需手动修改配置。";
+      return copy.retryCredentialRestore;
     case "recovery_pending":
-      return "另一项接入或恢复操作正在进行。本次没有修改应用，请稍后直接重试；若一直出现，可使用“恢复原设置”。";
+      return copy.retryRecoveryPending;
     default:
       return undefined;
   }
@@ -188,197 +213,35 @@ const AUTO_RECOVERY_REASONS = new Set([
   "recovery_receipt_failed",
 ]);
 
-const UX = {
-  zh: {
-    checking: "正在检查这台电脑…",
-    checkAgain: "重新检查应用",
-    scanningHint: "正在读取这台电脑上已安装的应用，请稍候。",
-    readingConnection: "正在读取接入状态…",
-    retryConnectionRead: "重新读取接入状态",
-    refreshingAccount: "正在刷新账户…",
-    syncingSelection: "正在同步选择…",
-    updateConnection: "更新接入设置",
-    installAndConnect: "安装并接入",
-    applyRunningHint: "接入正在进行，完成或安全取消后会自动恢复操作。",
-    targetScanRetryHint:
-      "这次没有完成本机应用检查。点击按钮重新检查，不会修改任何设置。",
-    connectionReadRetryHint:
-      "没有读到上次的接入状态。点击按钮重新读取，不会覆盖现有设置。",
-    connectionReadingHint: "正在读取这台电脑上的现有接入状态，请稍候。",
-    accountRefreshingHint: "正在刷新账户、模型和计费分组，请稍候。",
-    selectionSyncHint: "正在同步当前账户的模型选择，请稍候。",
-    installed: "已找到 · 可接入",
-    installedShort: "已安装",
-    chooseInstall: "选择要使用的安装位置",
-    chooseInstallHint: "发现了多个安装。助手已优先选中可用版本，你也可以更换。",
-    missing: "未在这台电脑找到该应用，请先安装后重新检查。",
-    unsupported:
-      "找到了应用，但缺少启动所需的组件。请确认应用安装完整后重新检查。",
-    scanFailed: "暂时无法检查本机应用，请重新检查。",
-    unavailable: "等待检查",
-    version: "版本",
-    verifying: "正在安全保存设置并启动本地连接，不会发送测试消息…",
-    verifyingCodex:
-      "正在安全保存 Codex 设置与密钥，并准备本地路由，完成后会自动打开应用…",
-    verifyingDesktop:
-      "正在安全保存 Claude Desktop 设置并准备本地连接，不会等待模型回复。",
-    verifyingDsh: "正在保存 DSH 设置并启动本地工作台，不会发送测试消息…",
-    readyTitle: "接入完成",
-    readyBody:
-      "{{app}} 的设置已保存，本地连接已就绪。首次使用后的真实结果会显示在这里。",
-    selectInstallFirst: "先选择安装位置",
-    installFirst: "请先安装应用",
-    updateFirst: "缺少运行组件",
-    connectionFailed: "没有完成接入，所有本机改动已恢复。请重新检查后再试。",
-    credentialHelperFailed:
-      "Codex 无法从系统安全存储读取工具密钥，设置已恢复。请退出后重新打开野菜 API 再试。",
-    authenticationFailed:
-      "所选线路没有接受工具密钥，设置已恢复。请刷新账户后重试。",
-    endpointUnavailable:
-      "所选线路暂时无法使用这个模型接口，设置已恢复。可以换一条线路或稍后重试。",
-    providerTimedOut:
-      "所选线路响应超时，设置已恢复。可以换一条线路或稍后重试。",
-    providerBusy: "当前模型请求较多，设置已恢复。请稍后重试或选择其他模型。",
-    modelRequestRejected:
-      "所选模型没有接受测试请求，设置已恢复。请刷新模型列表后重新选择。",
-    invalidProviderResponse:
-      "线路返回了无法识别的模型回复，设置已恢复。请稍后重试。",
-    desktopTimedOut:
-      "没有收到 Claude Desktop 的测试消息，接入未确认，本机改动已恢复。",
-    missingDuringSetup: "刚才选择的应用已找不到，请重新检查。",
-    selectionRequired: "发现多个安装，请明确选择要使用的一个。",
-    secureStoreFailed:
-      "系统安全存储暂时不可用。请解锁钥匙串或凭据管理器，并检查本机接入状态后重试。",
-    externalOverride:
-      "检测到其他配置工具正在同时修改设置，或自定义配置目录无效。请先退出 CC Switch 等切换工具，再点“重新检查并接入”；原设置没有改动。",
-    unsupportedProfile: "这个应用的运行方式暂不能自动配置，原设置没有改动。",
-    launchFailed:
-      "设置已经恢复，因为应用未能正常启动。请确认应用可以手动打开。",
-    builderKicker: "模型与计费分组",
-    builderTitle: "选好，就能用",
-    builderIntro: "选模型、比较分组价格，再一键完成接入。网络线路单独选择。",
-    modelChoice: "选择模型",
-    modelQuestion: "想用哪个 AI？",
-    lineChoice: "选择连接线路",
-    lineQuestion: "按你所在的位置选择，价格不会因此改变",
-    officialPrice: "官网参考价",
-    yeschoyPrice: "野菜 API 价",
-    inputPrice: "输入",
-    outputPrice: "输出",
-    perMillion: "每百万 tokens",
-    priceUnavailable: "这个模型暂时没有可核验的价格对比。",
-    saveInputOutput: "输入省 {{input}} · 输出省 {{output}}",
-    finishChoice: "完成接入",
-    finishHint: "安全写入并读回应用设置；不会发送收费的测试消息。",
-    connectionDetails: "查看连接详情",
-    directConnection: "直接连接",
-    automaticCompatibility: "自动兼容",
-  },
-  en: {
-    checking: "Checking this computer…",
-    checkAgain: "Check applications again",
-    scanningHint:
-      "Reading the applications installed on this computer. Please wait.",
-    readingConnection: "Reading connection status…",
-    retryConnectionRead: "Read connection status again",
-    refreshingAccount: "Refreshing account…",
-    syncingSelection: "Syncing selection…",
-    updateConnection: "Update connection settings",
-    installAndConnect: "Install and connect",
-    applyRunningHint:
-      "Setup is in progress. Actions recover automatically after completion or safe cancellation.",
-    targetScanRetryHint:
-      "The application check did not finish. Check again without changing any settings.",
-    connectionReadRetryHint:
-      "Previous connection status could not be read. Read it again without overwriting settings.",
-    connectionReadingHint:
-      "Reading existing connection status on this computer. Please wait.",
-    accountRefreshingHint:
-      "Refreshing the account, models, and billing groups. Please wait.",
-    selectionSyncHint:
-      "Syncing the model selection for this account. Please wait.",
-    installed: "Found · Ready to configure",
-    installedShort: "Installed",
-    chooseInstall: "Choose the installation to use",
-    chooseInstallHint:
-      "More than one installation was found. A supported one is selected when possible.",
-    missing: "This application was not found. Install it, then check again.",
-    unsupported:
-      "The application was found, but a required runtime component is missing.",
-    scanFailed: "Applications could not be checked. Try again.",
-    unavailable: "Waiting for check",
-    version: "Version",
-    verifying:
-      "Saving settings securely and starting the local connection without sending a test prompt…",
-    verifyingCodex:
-      "Checking Codex settings, secure credentials, and the local route, then opening the app…",
-    verifyingDesktop:
-      "Saving Claude Desktop settings and preparing its local connection without waiting for a model reply.",
-    verifyingDsh:
-      "Saving DSH settings and starting its local workspace without sending a test prompt…",
-    readyTitle: "Connection complete",
-    readyBody:
-      "{{app}} settings are saved and the local connection is ready. The first real-use result will appear here.",
-    selectInstallFirst: "Choose an installation first",
-    installFirst: "Install the application first",
-    updateFirst: "Runtime component missing",
-    connectionFailed:
-      "Setup did not complete. Local changes were restored. Check again and retry.",
-    credentialHelperFailed:
-      "Codex could not read the tool key from secure system storage. Settings were restored. Reopen Yeschoy API and retry.",
-    authenticationFailed:
-      "The selected line did not accept the tool key. Settings were restored. Refresh the account and retry.",
-    endpointUnavailable:
-      "This model endpoint is unavailable on the selected line. Settings were restored. Try the other line or retry later.",
-    providerTimedOut:
-      "The selected line timed out. Settings were restored. Try the other line or retry later.",
-    providerBusy:
-      "The selected model is busy. Settings were restored. Retry later or choose another model.",
-    modelRequestRejected:
-      "The selected model rejected the verification request. Settings were restored. Refresh models and choose again.",
-    invalidProviderResponse:
-      "The line returned an unrecognized model response. Settings were restored. Retry later.",
-    desktopTimedOut:
-      "No test message arrived from Claude Desktop. The connection was not confirmed and local changes were restored.",
-    missingDuringSetup:
-      "The selected application is no longer available. Check again.",
-    selectionRequired:
-      "More than one installation was found. Choose exactly one.",
-    secureStoreFailed:
-      "Secure system storage is unavailable. No key was saved and application settings were not changed.",
-    externalOverride:
-      "A higher-priority system setting is active. Remove it and retry; existing settings were not changed.",
-    unsupportedProfile:
-      "A required runtime is missing. Repair or reinstall the application, then try again. Existing settings were not changed.",
-    launchFailed:
-      "Settings were restored because the application could not start. Make sure it opens normally.",
-    builderKicker: "Model and connection",
-    builderTitle: "Choose it, then use it",
-    builderIntro:
-      "Choose a model and network line. The assistant saves the local configuration and opens the app.",
-    modelChoice: "Choose a model",
-    modelQuestion: "Which AI do you want to use?",
-    lineChoice: "Choose a connection line",
-    lineQuestion: "Choose for your location. Pricing stays the same.",
-    officialPrice: "Official reference",
-    yeschoyPrice: "Yeschoy API",
-    inputPrice: "Input",
-    outputPrice: "Output",
-    perMillion: "per million tokens",
-    priceUnavailable:
-      "Verified price comparison is unavailable for this model.",
-    saveInputOutput: "Save {{input}} on input · {{output}} on output",
-    finishChoice: "Finish setup",
-    finishHint:
-      "Write and read back settings safely without sending a billable test message.",
-    connectionDetails: "View connection details",
-    directConnection: "Direct connection",
-    automaticCompatibility: "Automatic compatibility",
-  },
-} as const;
-
-type ApplyPhase = "idle" | "applying" | "finished";
 type ScanPhase = "loading" | "ready" | "error";
+
+type LineSpeedtestPhase = "idle" | "running" | "done" | "error";
+
+// #17 线路测速推荐：以 TLS 握手延迟为准（回落 tcp → dns），只比较网络可达的
+// 线路；不可达或无延迟数据不参与推荐。导出供测试直接断言。
+export function lineLatencyMs(
+  line: ConnectivityLineResult,
+): number | undefined {
+  const tls = line.layers.find((layer) => layer.layer === "tls")?.latencyMs;
+  if (tls !== undefined) return tls;
+  const tcp = line.layers.find((layer) => layer.layer === "tcp")?.latencyMs;
+  if (tcp !== undefined) return tcp;
+  return line.layers.find((layer) => layer.layer === "dns")?.latencyMs;
+}
+
+export function recommendedLineId(
+  lines: readonly ConnectivityLineResult[],
+): ConfigurationLineId | null {
+  const candidates = lines
+    .filter(lineNetworkHealthy)
+    .map((line) => ({ id: line.lineId, latency: lineLatencyMs(line) }))
+    .filter(
+      (line): line is { id: ConfigurationLineId; latency: number } =>
+        line.latency !== undefined,
+    );
+  if (!candidates.length) return null;
+  return candidates.sort((a, b) => a.latency - b.latency)[0].id;
+}
 
 function initialToolId(
   initialDesktopAppId?: ActivationToolId,
@@ -408,6 +271,7 @@ function targetTone(target?: ActivationTarget) {
 
 export function ConfigurationPreviewView({
   active = true,
+  setupIntent,
   initialDesktopAppId,
   enableLocalActivation = false,
   lineId,
@@ -418,13 +282,15 @@ export function ConfigurationPreviewView({
 }: ConfigurationPreviewViewProps) {
   const installer = useInstallation();
   const installerRun = installer?.run;
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const c = useWorkbenchCopy();
-  const ux = i18n.resolvedLanguage?.startsWith("en") ? UX.en : UX.zh;
+  const g = useConfigurationCopy();
   const connections = useConnections();
   const [activationToolId, setActivationToolId] = useState<ActivationToolId>(
     initialToolId(initialDesktopAppId),
   );
+  const appliedInitialTool = useRef(initialDesktopAppId);
+  const appliedIntentRevision = useRef<number>();
   const [selectedModelId, setSelectedModelId] = useState("");
   const [billingGroup, setBillingGroup] = useState("");
   const [modelSet, setModelSet] = useState<ModelBinding[]>([]);
@@ -436,32 +302,37 @@ export function ConfigurationPreviewView({
   const [selectionReadyKey, setSelectionReadyKey] = useState<string | null>(
     null,
   );
-  const applyInFlight = useRef(false);
+  const task = useActivationTask(() => {
+    void connections?.refresh();
+  });
+  const {
+    phase: applyPhase,
+    result: activation,
+    context: resultContext,
+    progress: activationProgress,
+    cancelRequested: activationCancelRequested,
+    reset: resetActivation,
+    cancel: cancelActivation,
+    inFlight: applyInFlight,
+  } = task;
   const [showApplications, setShowApplications] = useState(false);
   // 模型、分组、常用模型与线路默认收起：普通用户只需要「选应用 → 点接入」。
   // 需要用户做选择时（下面 needsAdvanced）自动展开。
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const advancedDetails = useRef<HTMLDetailsElement>(null);
+  const [editorRequest, setEditorRequest] = useState(0);
+  const focusModelPending = useRef(false);
+  const consumedIntent = useRef<number>();
   const [showMissingApps, setShowMissingApps] = useState(false);
   const networkDetails = useRef<HTMLDetailsElement>(null);
   const appSwitchButton = useRef<HTMLButtonElement>(null);
-  const [resultContext, setResultContext] = useState<{
-    key: string;
-    account: string;
-    app: string;
-    model: string;
-    group: string;
-    line: ConfigurationLineId;
-  } | null>(null);
-  const [applyPhase, setApplyPhase] = useState<ApplyPhase>("idle");
-  const [activation, setActivation] = useState<ToolActivationProjection | null>(
-    null,
+  // #17 线路测速推荐：仅在用户点按测速后展示，不自动发起网络探测。
+  const [lineTestPhase, setLineTestPhase] =
+    useState<LineSpeedtestPhase>("idle");
+  const [lineTestLines, setLineTestLines] = useState<ConnectivityLineResult[]>(
+    [],
   );
-  const activeActivationRequest = useRef("");
-  const [activationProgress, setActivationProgress] =
-    useState<ActivationProgress | null>(null);
-  const [activationCancelRequested, setActivationCancelRequested] =
-    useState(false);
+  const lineTestSequence = useRef(0);
   const [restartPromptContext, setRestartPromptContext] = useState<
     string | null
   >(null);
@@ -486,30 +357,6 @@ export function ConfigurationPreviewView({
   } | null>(null);
   const [installationChanged, setInstallationChanged] = useState(false);
   const [installationAttempt, setInstallationAttempt] = useState(0);
-
-  useEffect(() => {
-    let mounted = true;
-    let unlisten: (() => void) | undefined;
-    void listen<unknown>(ACTIVATION_PROGRESS_EVENT, ({ payload }) => {
-      const progress = decodeActivationProgress(payload);
-      if (
-        mounted &&
-        progress &&
-        progress.requestId === activeActivationRequest.current
-      ) {
-        setActivationProgress(progress);
-      }
-    })
-      .then((stop) => {
-        if (mounted) unlisten = stop;
-        else stop();
-      })
-      .catch(() => undefined);
-    return () => {
-      mounted = false;
-      unlisten?.();
-    };
-  }, []);
 
   const anotherInstallationActive =
     !!installer?.progress &&
@@ -610,9 +457,39 @@ export function ConfigurationPreviewView({
   }, [enableLocalActivation, refreshTargets]);
 
   useEffect(() => {
-    const next = initialToolId(initialDesktopAppId);
+    const newIntent =
+      setupIntent && setupIntent.revision !== appliedIntentRevision.current;
+    if (
+      applyPhase === "applying" ||
+      (appliedInitialTool.current === initialDesktopAppId && !newIntent)
+    )
+      return;
+    appliedInitialTool.current = initialDesktopAppId;
+    if (newIntent) appliedIntentRevision.current = setupIntent.revision;
+    const next = initialToolId(
+      newIntent ? setupIntent.appId : initialDesktopAppId,
+    );
+    if (next !== activationToolId) {
+      // Home-page intents follow the same isolation as the in-page app picker.
+      // A finished result belongs to its original app, not the next app's
+      // already-saved connection. Active tasks reach here only after finishing.
+      resetActivation();
+      setRestartPromptContext(null);
+      setSelectedModelId("");
+      setBillingGroup("");
+      setModelSet([]);
+      setDefaultModelId("");
+      setSelectionReadyKey(null);
+      setShowApplications(false);
+    }
     setActivationToolId(next);
-  }, [initialDesktopAppId]);
+  }, [
+    initialDesktopAppId,
+    setupIntent,
+    applyPhase,
+    activationToolId,
+    resetActivation,
+  ]);
 
   const preview = useMemo(
     () =>
@@ -624,6 +501,10 @@ export function ConfigurationPreviewView({
     [lineId, toolId],
   );
   const signedIn = session.projection?.status === "signed_in";
+  const balanceIssue = signedIn
+    ? balanceAlert(session.projection?.money)
+    : null;
+  const recharge = useWalletRecharge(session.openWallet);
   const accountModels =
     signedIn && session.projection ? session.projection.models : [];
   const models = useMemo(() => {
@@ -666,8 +547,12 @@ export function ConfigurationPreviewView({
     );
     setModelSet(existing ? (savedConnection.models ?? []) : []);
     setDefaultModelId(existing ? savedConnection.modelId : "");
-    if (existing && savedConnection.lineId)
+    if (existing && savedConnection.lineId) {
+      // The global line picker visibly follows the app's last-used line;
+      // announce the linkage instead of changing it silently (PRD 6.2).
+      if (savedConnection.lineId !== lineId) toast(c.lineFollowedToast);
       onLineChange(savedConnection.lineId);
+    }
   }, [
     selectionKey,
     selectionReadyKey,
@@ -678,11 +563,13 @@ export function ConfigurationPreviewView({
     models,
     savedConnection,
     connectionStateUnavailable,
+    lineId,
+    c,
     onLineChange,
   ]);
   useEffect(() => {
-    if (savedConnection?.state === "not_connected") setActivation(null);
-  }, [savedConnection?.state]);
+    if (savedConnection?.state === "not_connected") resetActivation();
+  }, [savedConnection?.state, resetActivation]);
 
   const submittedModels: ModelBinding[] = modelSet.length
     ? modelSet
@@ -692,6 +579,12 @@ export function ConfigurationPreviewView({
   const defaultBinding =
     submittedModels.find((m) => m.modelId === defaultModelId) ??
     submittedModels[0];
+  const defaultBindingModel = models.find(
+    (m) => m.id === defaultBinding?.modelId,
+  );
+  const defaultBindingGroup = defaultBindingModel?.billing?.groups.find(
+    (g) => g.id === defaultBinding?.billingGroup,
+  );
   const bindingsAvailable =
     submittedModels.length > 0 &&
     submittedModels.every((m) =>
@@ -706,6 +599,11 @@ export function ConfigurationPreviewView({
     !modelSet.some(
       (m) => m.modelId === selectedModelId && m.billingGroup === billingGroup,
     );
+  const pendingDefaultChange =
+    modelSet.length > 0 &&
+    !!selectedModel &&
+    !!selectedBillingGroup &&
+    defaultBinding?.modelId !== selectedModelId;
   const addCurrentModel = () => {
     if (!selectedModel || !selectedBillingGroup) return;
     setModelSet((current) => [
@@ -713,6 +611,32 @@ export function ConfigurationPreviewView({
       { modelId: selectedModelId, billingGroup },
     ]);
     if (!modelSet.length) setDefaultModelId(selectedModelId);
+    else if (defaultBinding && defaultBinding.modelId !== selectedModelId) {
+      // Adding a favorite is not the same action as changing the default.
+      setSelectedModelId(defaultBinding.modelId);
+      setBillingGroup(defaultBinding.billingGroup);
+    }
+    resetResult();
+  };
+  const useSelectedModel = () => {
+    if (
+      !selectedModel ||
+      !selectedBillingGroup ||
+      applyInFlight.current ||
+      session.loading ||
+      session.lastError
+    )
+      return;
+    if (
+      modelSet.length >= 200 &&
+      !modelSet.some((m) => m.modelId === selectedModelId)
+    )
+      return;
+    setModelSet((current) => [
+      ...current.filter((m) => m.modelId !== selectedModelId),
+      { modelId: selectedModelId, billingGroup },
+    ]);
+    setDefaultModelId(selectedModelId);
     resetResult();
   };
 
@@ -736,13 +660,46 @@ export function ConfigurationPreviewView({
   }, [contextKey, restartPromptContext]);
 
   const resetResult = () => {
-    setApplyPhase("idle");
-    setActivation(null);
-    setActivationProgress(null);
-    setActivationCancelRequested(false);
-    activeActivationRequest.current = "";
+    resetActivation();
     setRestartPromptContext(null);
   };
+
+  // #17 测速只做只读连通性探测（不写设置、不消费额度），失败仅提示、不阻断手动选线。
+  const runLineSpeedtest = async () => {
+    lineTestSequence.current += 1;
+    const current = lineTestSequence.current;
+    const requestId = `line-${Date.now().toString(36)}-${current}`;
+    setLineTestPhase("running");
+    try {
+      const next = await invoke<unknown>("check_line_connectivity_read_only", {
+        request: { requestId },
+      });
+      if (lineTestSequence.current !== current) return;
+      const decoded = decodeConnectivityProjection(next, requestId);
+      if (!decoded) {
+        setLineTestPhase("error");
+        return;
+      }
+      setLineTestLines(decoded.response.lines);
+      setLineTestPhase("done");
+    } catch {
+      if (lineTestSequence.current !== current) return;
+      setLineTestPhase("error");
+    }
+  };
+  const recommendedLine =
+    lineTestPhase === "done" ? recommendedLineId(lineTestLines) : null;
+  const lineLatencies: Partial<Record<ConfigurationLineId, number>> =
+    lineTestPhase === "done"
+      ? Object.fromEntries(
+          lineTestLines
+            .map((line) => [line.lineId, lineLatencyMs(line)] as const)
+            .filter(
+              (entry): entry is [ConfigurationLineId, number] =>
+                entry[1] !== undefined,
+            ),
+        )
+      : {};
 
   const targetCanActivate =
     scanPhase === "ready" &&
@@ -755,6 +712,7 @@ export function ConfigurationPreviewView({
     !!defaultBinding &&
     bindingsAvailable &&
     !pendingModelEdit &&
+    !pendingDefaultChange &&
     selectionReadyKey === selectionKey &&
     !session.loading &&
     !session.lastError &&
@@ -812,6 +770,7 @@ export function ConfigurationPreviewView({
       !defaultBinding ||
       !bindingsAvailable ||
       pendingModelEdit ||
+      pendingDefaultChange ||
       selectionReadyKey !== selectionKey ||
       !targetCanActivate ||
       !selectedInstallationId ||
@@ -822,21 +781,8 @@ export function ConfigurationPreviewView({
     )
       return;
     const submittedContext = currentContext.current;
-    applyInFlight.current = true;
-    setResultContext({
-      key: submittedContext,
-      account: session.projection?.account.username ?? "",
-      app: application.displayName,
-      model: defaultBinding.modelId,
-      group: defaultBinding.billingGroup,
-      line: lineId,
-    });
-    setApplyPhase("applying");
-    setActivation(null);
-    setActivationProgress(null);
-    setActivationCancelRequested(false);
-    try {
-      const result = await activateDesktopTool({
+    const result = await task.run(
+      {
         lineId,
         toolId: activationToolId,
         modelId: defaultBinding.modelId,
@@ -845,56 +791,55 @@ export function ConfigurationPreviewView({
         models: submittedModels,
         ...(installationJobId ? { installationJobId } : {}),
         ...(restartRunningApp ? { restartRunningApp: true } : {}),
-        onRequestId: (requestId) => {
-          activeActivationRequest.current = requestId;
-        },
-      });
-      setActivation(result);
+      },
+      {
+        key: submittedContext,
+        account: session.projection?.account.username ?? "",
+        app: application.displayName,
+        model: defaultBinding.modelId,
+        group: defaultBinding.billingGroup,
+        line: lineId,
+      },
+    );
+    if (currentContext.current === submittedContext)
       setRestartPromptContext(
-        result.status === "application_running" ? submittedContext : null,
+        result?.status === "application_running" ? submittedContext : null,
       );
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      const reasonCode =
-        errorMessage === "activation_request_timed_out"
-          ? "activation_request_timed_out"
-          : errorMessage.includes("activation_already_running")
-            ? "activation_already_running"
-            : "invalid_response";
-      setRestartPromptContext(null);
-      setActivation({
-        requestId: "local",
-        schemaVersion: 3,
-        status: "configuration_failed",
-        toolId: activationToolId,
-        modelId: defaultBinding.modelId,
-        billingGroup: defaultBinding.billingGroup,
-        observedAtEpochMs: Date.now(),
-        reasonCode,
-      });
-    } finally {
-      applyInFlight.current = false;
-      activeActivationRequest.current = "";
-      setApplyPhase("finished");
-      void connections?.refresh();
-    }
-  };
-
-  const cancelActivation = async () => {
-    const requestId = activeActivationRequest.current;
-    if (!requestId || activationCancelRequested) return;
-    setActivationCancelRequested(true);
-    try {
-      const status = await cancelDesktopToolActivation(requestId);
-      if (status === "not_found") setActivationCancelRequested(false);
-    } catch {
-      setActivationCancelRequested(false);
-    }
   };
 
   const resultIsCurrent = resultContext?.key === contextKey;
   const activationSucceeded = activation?.status === "ready";
+
+  // 仪式感动效：接入成功后按钮短暂保持成功态，随后回归常态。
+  // 条件失效（如外部切换使结果过期）时必须立即结束成功态，
+  // 否则 cleanup 只清了定时器，按钮会永远停留在「接入成功」。
+  const [applyFlash, setApplyFlash] = useState(false);
+  useEffect(() => {
+    if (!(applyPhase === "finished" && activationSucceeded && resultIsCurrent)) {
+      setApplyFlash(false);
+      return;
+    }
+    setApplyFlash(true);
+    const timer = window.setTimeout(() => setApplyFlash(false), 1500);
+    return () => window.clearTimeout(timer);
+  }, [applyPhase, activationSucceeded, resultIsCurrent]);
+
+  // 首次接入庆祝（动效优化）：只有第一次接入成功触发彩带/ticker，
+  // 之后的配置成功仍走克制反馈。旗标消费在成功时刻。
+  const [firstActivationCelebration, setFirstActivationCelebration] =
+    useState(false);
+  useEffect(() => {
+    if (!(applyPhase === "finished" && activationSucceeded && resultIsCurrent))
+      return;
+    if (!shouldCelebrateFirstActivation()) return;
+    markFirstActivationCelebrated();
+    setFirstActivationCelebration(true);
+    const timer = window.setTimeout(
+      () => setFirstActivationCelebration(false),
+      1600,
+    );
+    return () => window.clearTimeout(timer);
+  }, [applyPhase, activationSucceeded, resultIsCurrent]);
   const activationConfigured =
     activationSucceeded ||
     (activation?.status === "launch_failed" &&
@@ -904,6 +849,8 @@ export function ConfigurationPreviewView({
     (activation?.status === "launch_failed" && activationConfigured);
   const configured =
     applyPhase !== "applying" &&
+    !pendingModelEdit &&
+    !pendingDefaultChange &&
     (activation
       ? activationConfigured && resultIsCurrent
       : savedConnection?.state === "connected" &&
@@ -919,99 +866,123 @@ export function ConfigurationPreviewView({
           ],
           submittedModels,
         ));
+  // #20 状态分层：区分「已接入（选择有变化）」与「未接入」，前者弱化为次级
+  // 提示。connected/changed/legacy 视为已接入；recovery_pending 走恢复强提示，
+  // unavailable/not_connected 才按「未接入」呈现。
+  // 守卫与 configured 同源：接入中不展示连接卡；存在操作结果时，仅当结果
+  // 属于当前上下文（账户/选择未漂移）才承认已接入，防止跨账户冒用。
+  const connectionEstablished =
+    applyPhase !== "applying" &&
+    !!savedConnection &&
+    ["connected", "changed", "legacy"].includes(savedConnection.state) &&
+    (activation ? resultIsCurrent : true);
   const activationResult = (() => {
     switch (activation?.status) {
       case "ready":
         if (activation.reasonCode === "desktop_start_observed")
           return t("yeschoyDesktopRecovery.startObserved");
-        if (
-          activation.schemaVersion === 3 &&
-          activation.reasonCode === "tool_request_verified"
-        )
-          return i18n.resolvedLanguage?.startsWith("en")
-            ? `${resultContext?.app ?? application.displayName}'s default model passed the connection test. Reopen the app after first-time setup or adding a model; configured models can then be switched inside the app.`
-            : `${resultContext?.app ?? application.displayName} 的默认模型已通过连接测试。首次或新增模型后可能需要重新打开应用；之后可在应用内切换已配置的模型。`;
         if (usesNewTerminalSession(activationToolId))
-          return `${resultContext?.app ?? application.displayName} 的设置和本地连接已经就绪。正在运行的命令行会话不会被中断；请新开一个会话，或点击“打开终端使用”。第一次真实请求的结果会显示在“最近连接结果”里。`;
+          return g.readyTerminal.replace(
+            "{{app}}",
+            resultContext?.app ?? application.displayName,
+          );
         if (activationToolId === "codex_desktop")
-          return `${resultContext?.app ?? application.displayName} 的设置和野菜本地路由已经就绪。${(activation.models?.length ?? 1) > 1 ? "常用模型已一起配置。" : ""}Codex 仍可显示你的官方登录账号，那只是登录身份，不代表模型请求走官方计费。第一次真实请求的结果会显示在“最近野菜中转记录”里；看到完整模型 ID，才表示这次请求确实经过野菜中转。`;
-        return `${resultContext?.app ?? application.displayName} 的设置和本地连接已经就绪。${(activation.models?.length ?? 1) > 1 ? "常用模型已一起配置。" : ""}请在应用中正常使用；第一次真实请求的结果会显示在“最近连接结果”里。`;
+          return g.readyCodex
+            .replace("{{app}}", resultContext?.app ?? application.displayName)
+            .replace(
+              "{{favorites}}",
+              (activation.models?.length ?? 1) > 1
+                ? g.favoritesConfigured
+                : "",
+            );
+        return g.readyDefault
+          .replace("{{app}}", resultContext?.app ?? application.displayName)
+          .replace(
+            "{{favorites}}",
+            (activation.models?.length ?? 1) > 1 ? g.favoritesConfigured : "",
+          );
       case "application_running":
         return activation.reasonCode === "graceful_restart_required"
-          ? `系统未能关闭 ${resultContext?.app ?? application.displayName}，本次没有修改设置。请确认没有系统弹窗拦截，或手动退出后重试。`
-          : `${resultContext?.app ?? application.displayName} 正在运行。请先保存未完成内容，再确认由助手关闭并重新打开。Windows 若只剩后台进程，只会结束已识别安装路径对应的进程。`;
+          ? g.restartBlocked.replace(
+              "{{app}}",
+              resultContext?.app ?? application.displayName,
+            )
+          : g.appRunning.replace(
+              "{{app}}",
+              resultContext?.app ?? application.displayName,
+            );
       case "signed_out":
         return c.setupSignedOut;
       case "tool_not_found":
-        return ux.missingDuringSetup;
+        return g.missingDuringSetup;
       case "multiple_installations":
-        return ux.selectionRequired;
+        return g.selectionRequired;
       case "unsupported_group":
-        return "所选分组已不可用，请刷新账户数据后重新选择。";
+        return g.unsupportedGroup;
       case "missing_runtime":
-        return ux.unsupported;
+        return g.unsupported;
       case "unsupported_profile":
-        return ux.unsupportedProfile;
+        return g.unsupportedProfile;
       case "unsupported_model":
         return c.setupModelUnavailable;
       case "external_override":
-        return ux.externalOverride;
+        return g.externalOverride;
       case "secure_storage_unavailable":
-        return ux.secureStoreFailed;
+        return g.secureStoreFailed;
       case "launch_failed":
         if (activation.reasonCode === "desktop_state_unavailable")
-          return "暂时无法安全确认应用是否正在运行，本次没有修改设置。请手动退出应用后再试。";
+          return g.launchStateUnavailable;
         if (activation.reasonCode === "desktop_launch_access_denied")
-          return "设置已经保存，但系统阻止了自动打开。请从系统菜单手动打开应用。";
+          return g.launchAccessDenied;
         if (activation.reasonCode === "desktop_launch_target_changed")
-          return "设置已经保存，但应用安装位置刚刚发生变化。请重新检查应用后手动打开。";
+          return g.launchTargetChanged;
         if (
           [
             "desktop_launch_activation_unavailable",
             "desktop_launch_identity_invalid",
           ].includes(activation.reasonCode)
         )
-          return "设置已经保存，但暂时无法自动打开这个商店应用。请先从开始菜单打开一次。";
-        return "设置已经保存，但没有自动打开应用。请手动打开；不需要重新接入。";
+          return g.launchStoreApp;
+        return g.launchNotOpened;
       case "verification_failed":
         switch (activation.reasonCode) {
           case "tool_start_failed":
-            return "应用没有启动成功，接入设置已恢复。请确认应用安装完整且可以手动打开。";
+            return g.verifyStartFailed;
           case "tool_request_timed_out":
-            return "应用的连接测试超时，接入设置已恢复。请稍后重试。";
+            return g.verifyTimedOut;
           case "tool_wait_failed":
           case "tool_output_read_failed":
           case "tool_output_limit_exceeded":
-            return "未能读取应用的测试结果，接入设置已恢复。请重新打开助手后再试。";
+            return g.verifyReadFailed;
           case "tool_response_empty":
           case "tool_response_invalid":
           case "tool_request_failed":
-            return "应用没有完成有效的模型回复，接入设置已恢复。请检查所选模型与分组后再试。";
+            return g.verifyInvalidReply;
           case "waiting_for_desktop_request":
-            return ux.desktopTimedOut;
+            return g.desktopTimedOut;
           case "credential_helper_failed":
-            return ux.credentialHelperFailed;
+            return g.credentialHelperFailed;
           case "local_bridge_unavailable":
-            return "野菜本机网关没有在限定时间内就绪，接入设置已恢复。请重新打开野菜助手后再试。";
+            return g.bridgeUnavailable;
           case "local_bridge_auth_failed":
-            return "野菜本机网关的安全令牌不一致，接入设置已恢复。请重新接入，助手会自动生成新令牌。";
+            return g.bridgeAuthFailed;
           case "local_bridge_catalog_invalid":
-            return "野菜本机网关没有加载完整模型列表，接入设置已恢复。请重新检查模型后再试。";
+            return g.bridgeCatalogInvalid;
           case "authentication_failed":
-            return ux.authenticationFailed;
+            return g.authenticationFailed;
           case "endpoint_unavailable":
-            return ux.endpointUnavailable;
+            return g.endpointUnavailable;
           case "provider_timed_out":
           case "provider_unavailable":
-            return ux.providerTimedOut;
+            return g.providerTimedOut;
           case "provider_busy":
-            return ux.providerBusy;
+            return g.providerBusy;
           case "model_request_rejected":
-            return ux.modelRequestRejected;
+            return g.modelRequestRejected;
           case "invalid_provider_response":
-            return ux.invalidProviderResponse;
+            return g.invalidProviderResponse;
           default:
-            return ux.connectionFailed;
+            return g.connectionFailed;
         }
       case "server_unavailable":
         return c.setupServerUnavailable;
@@ -1019,27 +990,27 @@ export function ConfigurationPreviewView({
         if (AUTO_RECOVERY_REASONS.has(activation.reasonCode))
           return t(`yeschoyDesktopRecovery.${activation.reasonCode}`);
         {
-          const recoveryMessage = recoveryRetryMessage(activation.reasonCode);
+          const recoveryMessage = recoveryRetryMessage(activation.reasonCode, g);
           if (recoveryMessage) return recoveryMessage;
         }
         if (activation.reasonCode === "installation_confirmation_required")
-          return "安装已完成，但当前选择需要重新确认。请确认账户和模型后再点接入；这次没有改动应用设置。";
+          return g.installConfirmRequired;
         if (activation.reasonCode === "assistant_shutting_down")
-          return "正在退出助手，本次接入已停止；已写入的设置会先恢复。";
+          return g.assistantShuttingDown;
         if (activation.reasonCode === "activation_cancelled")
-          return "已取消本次接入；如果设置写入已经开始，助手已先恢复原设置。";
+          return g.activationCancelled;
         if (activation.reasonCode === "activation_request_timed_out")
-          return "接入等待超过 90 秒，页面已恢复操作并通知后台安全取消。请先查看接入状态；若仍显示处理中，请等待片刻后再试，不要连续重复提交。";
+          return g.activationTimedOut;
         if (activation.reasonCode === "activation_already_running")
-          return "已有一项接入正在安全收尾，请稍等片刻后再试；本次没有重复提交。";
+          return g.activationAlreadyRunning;
         if (activation.reasonCode === "account_changed")
-          return "账户已切换，本次接入已停止。请确认当前账户后重新接入。";
+          return g.accountChanged;
         if (activation.reasonCode === "invalid_response")
-          return "暂时无法确认接入结果。请先检查本机接入状态，避免连续重复提交。";
+          return g.invalidResponseResult;
         if (activation.reasonCode === "recovery_storage_unavailable")
-          return "暂时无法安全保存原设置，这次没有修改应用。请确认系统钥匙串或凭据管理器可用后重试。";
+          return g.recoveryStorageUnavailable;
         if (activation.reasonCode === "recovery_receipt_failed")
-          return "接入记录保存未完成，请检查本地状态并恢复后重试。";
+          return g.recoveryReceiptFailed;
         return c.setupWriteFailed;
       case "invalid_request":
         return c.setupWriteFailed;
@@ -1126,48 +1097,48 @@ export function ConfigurationPreviewView({
     ["automatic", "system_assisted"].includes(installProgress.mode);
 
   const targetSummary = (() => {
-    if (scanPhase === "loading") return ux.checking;
-    if (scanPhase === "error") return ux.scanFailed;
-    if (!target) return ux.unavailable;
-    if (target.status === "not_found") return ux.missing;
-    if (target.status === "missing_runtime") return ux.unsupported;
+    if (scanPhase === "loading") return g.checking;
+    if (scanPhase === "error") return g.scanFailed;
+    if (!target) return g.unavailable;
+    if (target.status === "not_found") return g.missing;
+    if (target.status === "missing_runtime") return g.unsupported;
     if (target.status === "selection_required")
-      return `${target.installations.length} · ${ux.chooseInstall}`;
-    return `${ux.installed}${selectedInstallation?.version ? ` · ${ux.version} ${selectedInstallation.version}` : " · 版本未读取，不影响尝试接入"}`;
+      return `${target.installations.length} · ${g.chooseInstall}`;
+    return `${g.installed}${selectedInstallation?.version ? ` · ${g.version} ${selectedInstallation.version}` : ` · ${g.versionUnreadNote}`}`;
   })();
 
   const verifyingText =
     activationToolId === "claude_desktop"
-      ? ux.verifyingDesktop
+      ? g.verifyingDesktop
       : activationToolId === "codex_desktop"
-        ? ux.verifyingCodex
+        ? g.verifyingCodex
         : activationToolId === "dsh_web"
-          ? ux.verifyingDsh
-          : ux.verifying;
+          ? g.verifyingDsh
+          : g.verifying;
   const activationProgressText = (() => {
     switch (activationProgress?.stage) {
       case "queued":
-        return "正在等待安全配置锁…";
+        return g.progressQueued;
       case "checking_application":
-        return "正在检查应用状态和原设置…";
+        return g.progressCheckingApp;
       case "authenticating":
-        return "正在确认账户和线路…";
+        return g.progressAuthenticating;
       case "checking_models":
-        return "正在核对模型与计费分组…";
+        return g.progressCheckingModels;
       case "securing_access":
-        return "正在创建仅限所选模型的应用密钥…";
+        return g.progressSecuringAccess;
       case "preparing_settings":
-        return "正在准备可恢复的配置…";
+        return g.progressPreparingSettings;
       case "applying_settings":
-        return "正在安全写入并复核设置…";
+        return g.progressApplyingSettings;
       case "restoring_settings":
-        return "操作未完成，正在恢复原设置…";
+        return g.progressRestoring;
       case "opening_application":
         return t("yeschoyDesktopRecovery.opening");
       case "checking_application_started":
         return t("yeschoyDesktopRecovery.checkingStart");
       case "complete":
-        return "接入完成。";
+        return g.progressComplete;
       default:
         return verifyingText;
     }
@@ -1178,10 +1149,55 @@ export function ConfigurationPreviewView({
   const connectionReadFailed =
     (!!connections?.error && (connections?.connections.length ?? 0) === 0) ||
     savedConnection?.state === "unavailable";
-  const openAdvanced = () => {
+  const openAdvanced = useCallback(() => {
     setAdvancedOpen(true);
-    advancedDetails.current?.scrollIntoView({ block: "center" });
-  };
+    focusModelPending.current = true;
+    setEditorRequest((revision) => revision + 1);
+  }, []);
+  useEffect(() => {
+    if (
+      !active ||
+      applyPhase === "applying" ||
+      !setupIntent ||
+      setupIntent.appId !== activationToolId ||
+      consumedIntent.current === setupIntent.revision
+    )
+      return;
+    consumedIntent.current = setupIntent.revision;
+    if (setupIntent.action === "change-model") openAdvanced();
+    if (setupIntent.action === "repair") void connections?.refresh();
+  }, [
+    active,
+    applyPhase,
+    setupIntent,
+    activationToolId,
+    openAdvanced,
+    connections?.refresh,
+  ]);
+  useEffect(() => {
+    if (
+      !active ||
+      !advancedOpen ||
+      applyPhase === "applying" ||
+      !focusModelPending.current
+    )
+      return;
+    const picker =
+      advancedDetails.current?.querySelector<HTMLButtonElement>(
+        '[role="combobox"]',
+      );
+    if (!picker || picker.disabled) return;
+    picker.focus({ preventScroll: true });
+    picker.scrollIntoView?.({ block: "center" });
+    focusModelPending.current = false;
+  }, [
+    active,
+    advancedOpen,
+    editorRequest,
+    applyPhase,
+    session.loading,
+    signedIn,
+  ]);
 
   // 单一状态 → 单一动作。主按钮不再静默禁用：不能执行时点它会打开需要修改的
   // 位置，并在按钮下方写明原因；可以执行时就是这一步该做的事。
@@ -1196,104 +1212,115 @@ export function ConfigurationPreviewView({
       return {
         kind: "sign-in",
         label: c.signInFirst,
-        hint: "登录后即可扫描本机应用并一键接入。",
+        hint: g.signInHint,
         run: onOpenAccount,
       };
     if (applyPhase === "applying")
-      return waiting("applying", c.settingUp, ux.applyRunningHint);
+      return waiting("applying", c.settingUp, g.applyRunningHint);
     if (session.loading)
       return waiting(
         "refreshing",
-        ux.refreshingAccount,
-        ux.accountRefreshingHint,
+        g.refreshingAccount,
+        g.accountRefreshingHint,
       );
     if (scanPhase === "loading")
-      return waiting("scanning", ux.checking, ux.scanningHint);
+      return waiting("scanning", g.checking, g.scanningHint);
     if (targetScanNeedsRetry)
       return {
         kind: "retry-scan",
-        label: ux.checkAgain,
-        hint: ux.targetScanRetryHint,
+        label: g.checkAgain,
+        hint: g.targetScanRetryHint,
         run: () => void refreshTargets(),
       };
     if (connections?.loading && (connections?.connections.length ?? 0) === 0)
       return waiting(
         "reading-connections",
-        ux.readingConnection,
-        ux.connectionReadingHint,
+        g.readingConnection,
+        g.connectionReadingHint,
       );
     if (connectionReadFailed)
       return {
         kind: "retry-connection-read",
-        label: ux.retryConnectionRead,
-        hint: ux.connectionReadRetryHint,
+        label: g.retryConnectionRead,
+        hint: g.connectionReadRetryHint,
         run: () => void connections?.refresh(),
       };
     if (session.lastError)
       return {
         kind: "refresh-account",
-        label: "重新获取账户数据",
-        hint: "账户数据没有更新成功，价格与分组可能过期。点这里重新获取。",
+        label: g.refreshAccountLabel,
+        hint: g.refreshAccountHint,
         run: () => void session.refresh(),
       };
     if (target?.status === "not_found")
       return canBeginInstallation
         ? {
             kind: "install",
-            label: ux.installAndConnect,
-            hint: "本机还没有这个应用，助手会先安装再接入。",
+            label: g.installAndConnect,
+            hint: g.installHint,
             run: () => void startInstallation(),
           }
         : {
             kind: "install-unavailable",
-            label: ux.installFirst,
-            hint: "本机没有检测到这个应用。安装后点这里重新检查，不会修改任何设置。",
+            label: g.installFirst,
+            hint: g.installUnavailableHint,
             run: () => void refreshTargets(),
           };
     if (target?.status === "missing_runtime")
       return {
         kind: "update-first",
-        label: ux.updateFirst,
-        hint: "检测到的版本暂不支持接入。更新应用后点这里重新检查。",
+        label: g.updateFirst,
+        hint: g.updateFirstHint,
         run: () => void refreshTargets(),
       };
     if (target?.status === "selection_required" && !selectedInstallationId)
       return {
         kind: "select-installation",
-        label: ux.selectInstallFirst,
-        hint: "这台电脑上有多个安装位置，请先在上面选择一个。",
+        label: g.selectInstallFirst,
+        hint: g.selectInstallationHint,
         run: () => appSwitchButton.current?.focus(),
       };
     if (!selectedModel)
       return {
         kind: "choose-model",
-        label: "先选择模型",
-        hint: "展开下面的「高级设置」，选一个要用的模型。",
+        label: g.chooseModelFirst,
+        hint: t("yeschoyDaily.chooseModelHint"),
         run: openAdvanced,
       };
     if (!selectedBillingGroup)
       return {
         kind: "choose-group",
-        label: "先选择计费分组",
-        hint: "展开下面的「高级设置」，为这个模型选一个计费分组。",
+        label: g.chooseGroupFirst,
+        hint: t("yeschoyDaily.chooseGroupHint"),
         run: openAdvanced,
       };
-    if (pendingModelEdit)
+    if (
+      pendingModelEdit &&
+      modelSet.length >= 200 &&
+      !modelSet.some((m) => m.modelId === selectedModelId)
+    )
+      return {
+        kind: "resolve-model-set",
+        label: t("yeschoyDaily.manageModels"),
+        hint: t("yeschoyDaily.modelLimit"),
+        run: openAdvanced,
+      };
+    if (pendingModelEdit || pendingDefaultChange)
       return {
         kind: "commit-model-set",
-        label: "先加入常用列表",
-        hint: "当前模型还没加入常用列表。展开「高级设置」点“加入常用模型”。",
-        run: openAdvanced,
+        label: t("yeschoyDaily.useSelectedModel"),
+        hint: t("yeschoyDaily.useSelectedModelHint"),
+        run: useSelectedModel,
       };
     if (!bindingsAvailable)
       return {
         kind: "resolve-model-set",
-        label: "检查常用模型与分组",
-        hint: "常用列表里有模型或分组已不可用，请在「高级设置」里移除或重新选择。",
+        label: g.checkModelsLabel,
+        hint: t("yeschoyDaily.unavailableBindingHint"),
         run: openAdvanced,
       };
     if (selectionReadyKey !== selectionKey)
-      return waiting("syncing", ux.syncingSelection, ux.selectionSyncHint);
+      return waiting("syncing", g.syncingSelection, g.selectionSyncHint);
     if (
       activation?.status === "application_running" &&
       resultIsCurrent &&
@@ -1301,16 +1328,16 @@ export function ConfigurationPreviewView({
     )
       return {
         kind: "restart-app",
-        label: `关闭并重新打开 ${application.displayName}`,
-        hint: "设置还没有写入。这个应用正在运行，点这里确认已保存后由助手关闭并重新打开。",
+        label: g.restartAppLabel.replace("{{app}}", application.displayName),
+        hint: g.restartAppHint,
         run: () => setRestartPromptContext(currentContext.current),
       };
     if (configured)
       return {
         kind: "reconfigure",
-        label: ux.updateConnection,
-        hint: "已经接入。需要换模型或分组时点这里重新写入设置。",
-        run: () => void apply(),
+        label: t("yeschoyDaily.changeModel"),
+        hint: t("yeschoyDaily.changeModelHint"),
+        run: openAdvanced,
       };
     if (
       resultIsCurrent &&
@@ -1324,9 +1351,19 @@ export function ConfigurationPreviewView({
         run: () => void apply(),
       };
     return {
-      kind: "apply",
-      label: c.connectNow,
-      hint: "",
+      // #20：已接入但当前选择与保存的不一致 → 次级提示（secondary 按钮 +
+      // hint），与「未接入」的 primary「一键接入」区分。
+      kind: connectionEstablished ? "apply-changed" : "apply",
+      label:
+        savedConnection &&
+        !["not_connected", "unavailable"].includes(savedConnection.state)
+          ? t("yeschoyDaily.saveAndApply")
+          : c.connectNow,
+      hint: connectionEstablished
+        ? t("yeschoyDaily.selectionChangedHint", {
+            model: savedConnection?.modelId ?? "",
+          })
+        : "",
       run: () => void apply(),
     };
   })();
@@ -1375,14 +1412,17 @@ export function ConfigurationPreviewView({
       activation.status === "signed_out" ||
       activation.reasonCode === "authentication_failed"
     )
-      return { label: "查看账户并重新登录", run: onOpenAccount };
+      return { label: g.viewAccountRelogin, run: onOpenAccount };
     if (
       activation.status === "unsupported_group" ||
       activation.status === "unsupported_model" ||
       activation.reasonCode === "model_request_rejected" ||
       activation.reasonCode === "provider_busy"
     )
-      return { label: "刷新模型与分组", run: () => void session.refresh() };
+      return {
+        label: g.refreshModelsGroups,
+        run: () => void session.refresh(),
+      };
     if (
       [
         "endpoint_unavailable",
@@ -1393,7 +1433,7 @@ export function ConfigurationPreviewView({
       activation.status === "server_unavailable"
     )
       return {
-        label: "查看其他线路",
+        label: g.viewOtherLines,
         run: () => {
           if (networkDetails.current) {
             networkDetails.current.open = true;
@@ -1403,7 +1443,7 @@ export function ConfigurationPreviewView({
         },
       };
     return {
-      label: "重新检查应用和接入状态",
+      label: g.recheckApp,
       run: () => {
         void refreshTargets();
         void connections?.refresh();
@@ -1416,6 +1456,12 @@ export function ConfigurationPreviewView({
       className="configuration-workspace"
       data-testid="configuration-preview-view"
     >
+      {balanceIssue && (
+        <LowBalanceBanner
+          alert={balanceIssue}
+          onRecharge={() => void recharge()}
+        />
+      )}
       <section
         className="configuration-guide"
         aria-labelledby="configuration-title"
@@ -1444,7 +1490,7 @@ export function ConfigurationPreviewView({
               )}
             </span>
             <div>
-              <span className="field-caption">正在为这个应用设置</span>
+              <span className="field-caption">{g.settingUpFor}</span>
               <strong>{application.displayName}</strong>
               <p>{targetSummary}</p>
             </div>
@@ -1456,7 +1502,7 @@ export function ConfigurationPreviewView({
               disabled={applyPhase === "applying"}
               onClick={() => setShowApplications((v) => !v)}
             >
-              {showApplications ? "收起应用" : "更换应用"}
+              {showApplications ? g.collapseApps : g.switchApp}
             </button>
           </div>
           <fieldset
@@ -1478,7 +1524,7 @@ export function ConfigurationPreviewView({
                   }
                   aria-hidden="true"
                 />
-                {ux.checkAgain}
+                {g.checkAgain}
               </button>
             </div>
             <div className="configuration-tool-grid">
@@ -1490,24 +1536,22 @@ export function ConfigurationPreviewView({
                   scanPhase === "error" ? "muted" : targetTone(candidateTarget);
                 const status =
                   scanPhase === "loading"
-                    ? ux.checking
+                    ? g.checking
                     : scanPhase === "error"
-                      ? ux.scanFailed
+                      ? g.scanFailed
                       : candidateTarget?.status === "not_found"
-                        ? ux.installFirst
+                        ? g.installFirst
                         : candidateTarget?.status === "missing_runtime"
-                          ? ux.updateFirst
+                          ? g.updateFirst
                           : candidateTarget?.status === "selection_required"
-                            ? `${candidateTarget.installations.length} · ${ux.chooseInstall}`
+                            ? `${candidateTarget.installations.length} · ${g.chooseInstall}`
                             : connections?.connections.some(
                                   (item) =>
                                     item.toolId === candidate.id &&
                                     item.state === "connected",
                                 )
-                              ? i18n.resolvedLanguage?.startsWith("en")
-                                ? "Connected"
-                                : "已接入"
-                              : ux.installedShort;
+                              ? c.setupDone
+                              : g.installedShort;
                 return (
                   <button
                     type="button"
@@ -1544,7 +1588,7 @@ export function ConfigurationPreviewView({
                     </span>
                     <span className="configuration-app-copy">
                       <strong>{candidate.displayName}</strong>
-                      <small>{candidate.surface}</small>
+                      <small>{g[candidate.surface]}</small>
                     </span>
                     <span
                       className="configuration-target-status"
@@ -1562,15 +1606,17 @@ export function ConfigurationPreviewView({
                 className="text-button"
                 onClick={() => setShowMissingApps(true)}
               >
-                查看全部支持的应用
+                {g.showAllApps}
               </button>
             )}
           </fieldset>
 
           <details className="installation-details">
             <summary>
-              安装与接入信息
-              {target && target.installations.length > 1 ? " · 已自动选择" : ""}
+              {g.installationSummary}
+              {target && target.installations.length > 1
+                ? g.autoSelectedSuffix
+                : ""}
             </summary>
             <div
               className="installation-choice"
@@ -1586,7 +1632,7 @@ export function ConfigurationPreviewView({
               )}
               {target && target.installations.length > 1 ? (
                 <label>
-                  <span>{ux.chooseInstall}</span>
+                  <span>{g.chooseInstall}</span>
                   <select
                     value={selectedInstallationId}
                     disabled={applyPhase === "applying"}
@@ -1598,7 +1644,7 @@ export function ConfigurationPreviewView({
                       resetResult();
                     }}
                   >
-                    <option value="">{ux.selectInstallFirst}</option>
+                    <option value="">{g.selectInstallFirst}</option>
                     {target.installations.map((installation) => (
                       <option
                         key={installation.installationId}
@@ -1606,17 +1652,17 @@ export function ConfigurationPreviewView({
                         disabled={!installation.supported}
                       >
                         {installation.label} ·{" "}
-                        {installation.version || "版本未读取"}
-                        {installation.supported ? "" : ` · ${ux.updateFirst}`}
+                        {installation.version || g.versionNotRead}
+                        {installation.supported ? "" : ` · ${g.updateFirst}`}
                       </option>
                     ))}
                   </select>
-                  <small>{ux.chooseInstallHint}</small>
+                  <small>{g.chooseInstallHint}</small>
                 </label>
               ) : selectedInstallation ? (
                 <span className="installation-chip">
                   {selectedInstallation.label} ·{" "}
-                  {selectedInstallation.version || "版本未读取"}
+                  {selectedInstallation.version || g.versionNotRead}
                 </span>
               ) : null}
             </div>
@@ -1649,16 +1695,14 @@ export function ConfigurationPreviewView({
         >
           {session.lastError && (
             <div className="selection-warning" role="alert">
-              <strong>账户数据暂未更新</strong>
-              <p>
-                这里保留的是上次的模型与价格。刷新成功后再接入；已接入的应用仍可从“我的应用”打开。
-              </p>
+              <strong>{g.accountStaleTitle}</strong>
+              <p>{g.accountStaleBody}</p>
               <button
                 className="subtle-button"
                 disabled={session.loading || applyPhase === "applying"}
                 onClick={() => void session.refresh()}
               >
-                刷新账户数据
+                {g.refreshAccountData}
               </button>
             </div>
           )}
@@ -1673,9 +1717,9 @@ export function ConfigurationPreviewView({
             )}
           <header className="connection-builder-heading">
             <div>
-              <p className="eyebrow">{ux.builderKicker}</p>
-              <h2 id="connection-builder-title">{ux.builderTitle}</h2>
-              <p>{ux.builderIntro}</p>
+              <p className="eyebrow">{g.builderKicker}</p>
+              <h2 id="connection-builder-title">{g.builderTitle}</h2>
+              <p>{g.builderIntro}</p>
             </div>
             <span className="connection-builder-status">
               <ShieldCheck aria-hidden="true" />
@@ -1690,8 +1734,8 @@ export function ConfigurationPreviewView({
             onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}
           >
             <summary>
-              <span>高级设置</span>
-              <small>换模型 · 换计费分组 · 常用模型 · 线路</small>
+              <span>{t("yeschoyDaily.modelSettings")}</span>
+              <small>{t("yeschoyDaily.modelSettingsHint")}</small>
             </summary>
             <div className="connection-choice-grid">
               <section
@@ -1703,8 +1747,8 @@ export function ConfigurationPreviewView({
                     1
                   </span>
                   <div>
-                    <h3 id="setup-model-title">{ux.modelChoice}</h3>
-                    <p>{ux.modelQuestion}</p>
+                    <h3 id="setup-model-title">{g.modelChoice}</h3>
+                    <p>{g.modelQuestion}</p>
                   </div>
                 </div>
                 {signedIn ? (
@@ -1745,8 +1789,8 @@ export function ConfigurationPreviewView({
                             activationToolId,
                             selectedModel.supportedEndpointTypes ?? [],
                           ) === "direct"
-                            ? "原生接口"
-                            : ux.automaticCompatibility}
+                            ? g.nativeInterface
+                            : g.automaticCompatibility}
                         </span>
                       ) : null}
                       <button
@@ -1761,8 +1805,8 @@ export function ConfigurationPreviewView({
                     </div>
                     {missingModel && (
                       <p className="selection-warning" role="alert">
-                        之前选择的 <code>{selectedModelId}</code>{" "}
-                        当前不可用。请重新选择模型，不会自动替换。
+                        {g.missingModelPrefix} <code>{selectedModelId}</code>{" "}
+                        {g.missingModelSuffix}
                       </p>
                     )}
                   </>
@@ -1782,15 +1826,15 @@ export function ConfigurationPreviewView({
 
               <section
                 className="connection-choice-card billing-choice-card"
-                aria-label="计费分组"
+                aria-label={g.billingGroupLabel}
               >
                 <div className="choice-card-heading">
                   <span className="choice-number" aria-hidden="true">
                     2
                   </span>
                   <div>
-                    <h3>选择计费分组</h3>
-                    <p>选择价格与来源，不改变网络线路</p>
+                    <h3>{g.chooseGroupLegend}</h3>
+                    <p>{g.billingCardHint}</p>
                   </div>
                 </div>
                 <BillingGroupPicker
@@ -1805,10 +1849,10 @@ export function ConfigurationPreviewView({
                 />
                 {missingGroup && (
                   <div className="selection-warning" role="alert">
-                    <strong>之前的计费分组已不可用</strong>
+                    <strong>{g.missingGroupTitle}</strong>
                     <p>
                       <b>{groupLabel(billingGroup)}</b>{" "}
-                      不在这个模型当前可用的分组中。请在上方重新选择，价格可能不同；不会自动切换。
+                      {g.missingGroupBody}
                     </p>
                   </div>
                 )}
@@ -1821,11 +1865,11 @@ export function ConfigurationPreviewView({
             </div>
 
             {signedIn && (
-              <section className="model-set-editor" aria-label="常用模型">
+              <section className="model-set-editor" aria-label={g.favoriteModels}>
                 <header>
                   <div>
-                    <h3>常用模型</h3>
-                    <p>加入你会用的模型，每个模型单独选择计费分组。</p>
+                    <h3>{g.favoriteModels}</h3>
+                    <p>{g.favoriteModelsIntro}</p>
                   </div>
                   <button
                     type="button"
@@ -1842,16 +1886,19 @@ export function ConfigurationPreviewView({
                     }
                   >
                     {modelSet.some((m) => m.modelId === selectedModelId)
-                      ? "更新这个模型的分组"
-                      : "加入常用模型"}
+                      ? g.updateModelGroup
+                      : g.addFavoriteModel}
                   </button>
                 </header>
                 {modelSet.length ? (
                   <ul>
                     {modelSet.map((m) => {
-                      const available = models
-                        .find((a) => a.id === m.modelId)
-                        ?.billing?.groups.some((g) => g.id === m.billingGroup);
+                      const bindingModel = models.find(
+                        (a) => a.id === m.modelId,
+                      );
+                      const available = bindingModel?.billing?.groups.some(
+                        (g) => g.id === m.billingGroup,
+                      );
                       return (
                         <li key={m.modelId} data-unavailable={!available}>
                           <label>
@@ -1862,29 +1909,40 @@ export function ConfigurationPreviewView({
                               disabled={applyPhase === "applying"}
                               onChange={() => {
                                 setDefaultModelId(m.modelId);
+                                setSelectedModelId(m.modelId);
+                                setBillingGroup(m.billingGroup);
                                 resetResult();
                               }}
-                              aria-label={`默认模型 ${m.modelId}`}
+                              aria-label={g.defaultModelAria.replace(
+                                "{{model}}",
+                                m.modelId,
+                              )}
                             />
                             <span>
                               <code>{m.modelId}</code>
                               <small>
-                                {groupLabel(m.billingGroup)}
-                                {!available &&
-                                  " · 当前不可用，请重新选择或移除"}
+                                {groupDisplayName(
+                                  m.billingGroup,
+                                  bindingModel?.billing?.groups,
+                                  g.defaultGroup,
+                                )}
+                                {!available && ` · ${g.bindingUnavailable}`}
                               </small>
                             </span>
                           </label>
                           <span className="model-default-label">
                             {defaultBinding?.modelId === m.modelId
-                              ? "默认"
+                              ? g.defaultBadge
                               : ""}
                           </span>
                           <button
                             type="button"
                             className="text-button"
                             disabled={applyPhase === "applying"}
-                            aria-label={`移除 ${m.modelId}`}
+                            aria-label={g.removeModelAria.replace(
+                              "{{model}}",
+                              m.modelId,
+                            )}
                             onClick={() => {
                               setModelSet((items) =>
                                 items.filter((x) => x.modelId !== m.modelId),
@@ -1892,27 +1950,26 @@ export function ConfigurationPreviewView({
                               resetResult();
                             }}
                           >
-                            移除
+                            {g.removeAction}
                           </button>
                         </li>
                       );
                     })}
                   </ul>
                 ) : (
-                  <p>也可以只接入上面选中的一个模型，之后再添加。</p>
+                  <p>{g.favoriteModelsEmpty}</p>
                 )}
                 {pendingModelEdit && (
                   <p className="selection-warning" role="status">
-                    上方的选择尚未加入列表。点击“
-                    {modelSet.some((m) => m.modelId === selectedModelId)
-                      ? "更新这个模型的分组"
-                      : "加入常用模型"}
-                    ”后，再确认接入。
+                    {g.pendingModelEditNote.replace(
+                      "{{action}}",
+                      modelSet.some((m) => m.modelId === selectedModelId)
+                        ? g.updateModelGroup
+                        : g.addFavoriteModel,
+                    )}
                   </p>
                 )}
-                <small>
-                  同一模型保留一个计费分组。已有列表里的模型可在应用内切换；新增模型、修改默认模型或分组后，需要更新接入。
-                </small>
+                <small>{g.favoriteModelsNote}</small>
               </section>
             )}
           </details>
@@ -1924,17 +1981,15 @@ export function ConfigurationPreviewView({
           >
             <summary>
               <span id="setup-line-title">
-                网络线路 · {t(`yeschoyConfiguration.lines.${lineId}.name`)}
+                {g.networkLinePrefix} ·{" "}
+                {t(`yeschoyConfiguration.lines.${lineId}.name`)}
               </span>
-              <span>更换线路</span>
+              <span>{g.changeLine}</span>
             </summary>
             <div className="choice-card-heading">
               <div>
-                <p>{ux.lineQuestion}</p>
-                <p>
-                  大陆优化优先适合中国大陆网络；全球加速使用
-                  Cloudflare，海外可优先尝试。线路只影响连接，不改变计费分组与倍率。
-                </p>
+                <p>{g.lineQuestion}</p>
+                <p>{g.lineIntro}</p>
               </div>
             </div>
             <div className="line-selector-grid">
@@ -1959,6 +2014,16 @@ export function ConfigurationPreviewView({
                     <small>
                       {t(`yeschoyConfiguration.lines.${line.id}.note`)}
                     </small>
+                    {lineLatencies[line.id] !== undefined && (
+                      <small className="line-latency">
+                        {lineLatencies[line.id]} ms
+                      </small>
+                    )}
+                    {recommendedLine === line.id && (
+                      <span className="line-recommend-badge">
+                        {t("yeschoyConfiguration.recommendedBadge")}
+                      </span>
+                    )}
                   </span>
                   {lineId === line.id && (
                     <CheckCircle2
@@ -1968,6 +2033,31 @@ export function ConfigurationPreviewView({
                   )}
                 </button>
               ))}
+            </div>
+            <div className="line-speedtest">
+              <button
+                type="button"
+                className="subtle-button"
+                disabled={
+                  applyPhase === "applying" || lineTestPhase === "running"
+                }
+                onClick={() => void runLineSpeedtest()}
+              >
+                {lineTestPhase === "running" && (
+                  <LoaderCircle className="is-spinning" aria-hidden="true" />
+                )}
+                {t("yeschoyConfiguration.speedtestAction")}
+              </button>
+              {lineTestPhase === "error" && (
+                <p className="line-speedtest-note" role="status">
+                  {t("yeschoyConfiguration.speedtestFailed")}
+                </p>
+              )}
+              {lineTestPhase === "done" && recommendedLine && (
+                <p className="line-speedtest-note">
+                  {t("yeschoyConfiguration.speedtestNote")}
+                </p>
+              )}
             </div>
           </details>
         </section>
@@ -1985,12 +2075,10 @@ export function ConfigurationPreviewView({
             <div>
               <p className="eyebrow">{c.yourSelection}</p>
               <h2 id="configuration-preview-title">
-                {configured ? "当前接入" : ux.finishChoice}
+                {configured ? g.currentConnection : g.finishChoice}
               </h2>
               <p>
-                {configured
-                  ? "这些设置已经保存。日常换模型可在应用内选择；修改常用列表后，再更新接入。"
-                  : ux.finishHint}
+                {configured ? g.configuredSummary : g.finishHint}
               </p>
             </div>
           </div>
@@ -2009,18 +2097,27 @@ export function ConfigurationPreviewView({
             </span>
             <ArrowRight aria-hidden="true" />
             <span>
-              <small>计费分组</small>
+              <small>{g.billingGroupLabel}</small>
               <strong>
                 {defaultBinding
-                  ? groupLabel(defaultBinding.billingGroup)
-                  : "请选择分组"}
-                {models
-                  .find((m) => m.id === defaultBinding?.modelId)
-                  ?.billing?.groups.find(
-                    (g) => g.id === defaultBinding?.billingGroup,
-                  )?.ratio != null
-                  ? ` · ${models.find((m) => m.id === defaultBinding?.modelId)?.billing?.groups.find((g) => g.id === defaultBinding?.billingGroup)?.ratio}×`
-                  : ""}
+                  ? defaultBinding.billingGroup === "default"
+                    ? // #19 默认分组在摘要行明示计费口径，避免误以为有更优分组。
+                      defaultBindingGroup?.ratio != null
+                      ? g.defaultGroupBillingNote.replace(
+                          "{{ratio}}",
+                          String(defaultBindingGroup.ratio),
+                        )
+                      : g.defaultGroup
+                    : `${groupDisplayName(
+                        defaultBinding.billingGroup,
+                        defaultBindingModel?.billing?.groups,
+                        g.defaultGroup,
+                      )}${
+                        defaultBindingGroup?.ratio != null
+                          ? ` · ${defaultBindingGroup.ratio}×`
+                          : ""
+                      }`
+                  : g.selectGroupFirst}
               </strong>
             </span>
             <ArrowRight aria-hidden="true" />
@@ -2032,27 +2129,37 @@ export function ConfigurationPreviewView({
 
           {submittedModels.length > 1 && (
             <div className="model-set-summary">
-              <strong>{submittedModels.length} 个常用模型</strong>
+              <strong>
+                {g.favoriteModelsCount.replace(
+                  "{{count}}",
+                  String(submittedModels.length),
+                )}
+              </strong>
               <ul>
                 {submittedModels.map((m) => (
                   <li key={m.modelId}>
                     <code>{m.modelId}</code>
                     <small>
-                      {groupLabel(m.billingGroup)}
-                      {m.modelId === defaultBinding?.modelId ? " · 默认" : ""}
+                      {groupDisplayName(
+                        m.billingGroup,
+                        models.find((a) => a.id === m.modelId)?.billing
+                          ?.groups,
+                        g.defaultGroup,
+                      )}
+                      {m.modelId === defaultBinding?.modelId
+                        ? ` · ${g.defaultBadge}`
+                        : ""}
                     </small>
                   </li>
                 ))}
               </ul>
-              <small>
-                接入时安全配置全部模型；每个模型的真实连接结果在首次使用后显示。
-              </small>
+              <small>{g.modelSetNote}</small>
             </div>
           )}
           <div
-            className={`connection-action-deck${configured ? " is-configured" : ""}`}
+            className={`connection-action-deck${configured || connectionEstablished ? " is-configured" : ""}`}
           >
-            {configured && savedConnection && (
+            {(configured || connectionEstablished) && savedConnection && (
               <OpenConnection
                 connection={savedConnection}
                 name={application.displayName}
@@ -2064,7 +2171,7 @@ export function ConfigurationPreviewView({
               />
             )}
             <button
-              className={`${configured ? "secondary-action" : "primary-action"} setup-apply`}
+              className={`${configured || connectionEstablished ? "secondary-action" : "primary-action"} setup-apply${applyPhase === "applying" ? " is-applying" : ""}${applyFlash ? " is-success" : ""}`}
               type="button"
               onClick={() => setupBlock.run?.()}
               disabled={applyPhase === "applying" || !!connections?.restoring}
@@ -2072,17 +2179,42 @@ export function ConfigurationPreviewView({
             >
               {applyPhase === "applying" ? (
                 <LoaderCircle className="is-spinning" aria-hidden="true" />
+              ) : applyFlash ? (
+                <CheckCircle2 aria-hidden="true" />
               ) : configured ? (
                 <RefreshCw aria-hidden="true" />
               ) : (
                 <ArrowRight aria-hidden="true" />
               )}
-              {setupBlock.label}
+              {applyFlash ? g.applySucceeded : setupBlock.label}
             </button>
             {setupBlock.hint && (
               <small className="connection-action-hint" role="status">
                 {setupBlock.hint}
               </small>
+            )}
+            {balanceIssue?.level === "depleted" && (
+              <small
+                className="connection-action-hint balance-depleted-hint"
+                role="status"
+              >
+                {c.balanceDepletedHint}
+              </small>
+            )}
+            {configured && (
+              <button
+                type="button"
+                className="text-button reapply-current"
+                disabled={
+                  !!connections?.restoring ||
+                  session.loading ||
+                  !!session.lastError ||
+                  connectionStateUnavailable
+                }
+                onClick={() => void apply()}
+              >
+                {t("yeschoyDaily.reapplyCurrent")}
+              </button>
             )}
           </div>
           {configured && (
@@ -2092,24 +2224,25 @@ export function ConfigurationPreviewView({
             >
               <Info aria-hidden="true" />
               <span>
-                <strong>打开使用不会改设置。</strong>
+                <strong>{g.lifecycleNotePrefix}</strong>
                 {connectionLifecycleNote(
                   activationToolId,
                   application.displayName,
+                  g,
                 )}
               </span>
             </p>
           )}
         </div>
 
-        {(signedIn || savedConnection?.requiresBackground) && (
+        {savedConnection?.requiresBackground && (
           <p className="background-note">
             <ShieldCheck />
-            使用时请保持野菜助手运行。关闭窗口可选择继续后台运行；完全退出会中断模型连接，不会锁定你的应用，随时可以恢复原设置。
+            {g.backgroundNote}
           </p>
         )}
         <details className="desktop-technical-details connection-details">
-          <summary>{ux.connectionDetails}</summary>
+          <summary>{g.connectionDetails}</summary>
           <dl>
             <div>
               <dt>{t("yeschoyConfiguration.modelId")}</dt>
@@ -2131,6 +2264,9 @@ export function ConfigurationPreviewView({
                     ? `${preview.rootUrl}/v1`
                     : preview.protocolEndpoint}
                 </code>
+                <small className="endpoint-reference-note">
+                  {g.endpointReferenceNote}
+                </small>
               </dd>
             </div>
           </dl>
@@ -2144,13 +2280,21 @@ export function ConfigurationPreviewView({
               <span>{activationProgressText}</span>
               {activationProgress && (
                 <span>
-                  第 {activationProgress.completedSteps} /{" "}
-                  {activationProgress.totalSteps} 步
+                  {g.progressStep
+                    .replace(
+                      "{{done}}",
+                      String(activationProgress.completedSteps),
+                    )
+                    .replace(
+                      "{{total}}",
+                      String(activationProgress.totalSteps),
+                    )}
                 </span>
               )}
-              <span>
-                进度会显示在这里；页面其他区域仍可使用，请不要重复点击接入按钮。
-              </span>
+              {task.cancelFailed && (
+                <span role="alert">{t("yeschoyDaily.cancelFailed")}</span>
+              )}
+              <span>{g.progressNote}</span>
               <button
                 type="button"
                 className="subtle-button"
@@ -2158,69 +2302,68 @@ export function ConfigurationPreviewView({
                 disabled={activationCancelRequested}
               >
                 <CircleStop aria-hidden="true" />
-                {activationCancelRequested ? "正在安全取消…" : "取消本次接入"}
+                {activationCancelRequested
+                  ? g.cancelInProgress
+                  : g.cancelSetup}
               </button>
             </p>
           </div>
         )}
 
         {activation && (
-          <div
-            className={
+          <ActivationFeedback
+            kind={
               activationSucceeded
-                ? "setup-result is-success"
+                ? "success"
                 : activationAttention
-                  ? "setup-result setup-progress"
-                  : "setup-result is-error"
+                  ? "attention"
+                  : "error"
             }
-            role={
-              activationSucceeded || activationAttention ? "status" : "alert"
+            title={
+              activationSucceeded
+                ? resultIsCurrent
+                  ? activation.reasonCode === "desktop_start_observed"
+                    ? t("yeschoyDesktopRecovery.configuredTitle")
+                    : firstActivationCelebration
+                      ? g.firstActivationTitle
+                      : g.readyTitle
+                  : g.feedbackStaleTitle
+                : activation?.status === "application_running"
+                  ? g.feedbackReopenTitle
+                  : activationConfigured
+                    ? g.feedbackSavedTitle
+                    : c.setupFailed
             }
           >
-            {activationSucceeded ? (
-              <CheckCircle2 aria-hidden="true" />
-            ) : activationAttention ? (
-              <Info aria-hidden="true" />
-            ) : (
-              <AlertCircle aria-hidden="true" />
+            {firstActivationCelebration && <CelebrationConfetti />}
+            <p>{activationResult}</p>
+            {firstActivationCelebration && (
+              <p className="celebration-ticker">
+                <TickerText text={g.readyTitle} />
+              </p>
             )}
-            <div>
-              <strong>
-                {activationSucceeded
-                  ? resultIsCurrent
-                    ? activation.reasonCode === "desktop_start_observed"
-                      ? t("yeschoyDesktopRecovery.configuredTitle")
-                      : ux.readyTitle
-                    : "刚才的接入已完成"
-                  : activation?.status === "application_running"
-                    ? "需要重新打开应用"
-                    : activationConfigured
-                      ? "设置已保存"
-                      : c.setupFailed}
-              </strong>
-              <p>{activationResult}</p>
-              {!resultIsCurrent && resultContext && (
-                <p>
-                  刚才处理的是账户 {resultContext.account} · {resultContext.app}{" "}
-                  · <code>{resultContext.model}</code> ·{" "}
-                  {groupLabel(resultContext.group)} ·{" "}
-                  {resultContext.line === "global_accelerated"
-                    ? "全球加速"
-                    : "大陆优化"}
-                  。现在的选择尚未应用。
-                </p>
-              )}
-              {recoveryAction && (
-                <button
-                  type="button"
-                  className="subtle-button"
-                  onClick={recoveryAction.run}
-                >
-                  {recoveryAction.label}
-                </button>
-              )}
-            </div>
-          </div>
+            {!resultIsCurrent && resultContext && (
+              <p>
+                {g.staleContextPrefix} {resultContext.account} ·{" "}
+                {resultContext.app} ·{" "}
+                <code>{resultContext.model}</code> ·{" "}
+                {groupLabel(resultContext.group)} ·{" "}
+                {t(
+                  `yeschoyConfiguration.lines.${resultContext.line}.name`,
+                )}
+                {g.staleContextSuffix}
+              </p>
+            )}
+            {recoveryAction && (
+              <button
+                type="button"
+                className="subtle-button"
+                onClick={recoveryAction.run}
+              >
+                {recoveryAction.label}
+              </button>
+            )}
+          </ActivationFeedback>
         )}
 
         <RecentRequest
@@ -2247,10 +2390,13 @@ export function ConfigurationPreviewView({
       </section>
       <ConfirmDialog
         isOpen={restartPromptContext !== null}
-        title={`保存后自动重新打开 ${resultContext?.app ?? application.displayName}`}
-        message={`这个应用正在运行。请先保存正在编辑的内容。\n\n继续后，你不需要手动退出：野菜助手会先请求它正常退出，设置完成后再重新打开。Windows 若只剩后台进程，会仅结束这个已识别安装路径对应的进程；不会按名称结束其他程序。若系统仍阻止退出，本次不会修改设置。`}
-        confirmText="已保存，退出并继续"
-        cancelText="暂不接入"
+        title={g.restartDialogTitle.replace(
+          "{{app}}",
+          resultContext?.app ?? application.displayName,
+        )}
+        message={g.restartDialogMessage}
+        confirmText={g.restartDialogConfirm}
+        cancelText={g.restartDialogCancel}
         variant="info"
         pending={applyPhase === "applying"}
         onConfirm={() => {

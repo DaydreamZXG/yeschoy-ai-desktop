@@ -297,33 +297,3 @@ export function WorkbenchFooter() {
     </footer>
   );
 }
-export function EmptyBilling({
-  onOpenAccount,
-}: {
-  onOpenAccount?: () => void;
-}) {
-  const c = useWorkbenchCopy();
-  return (
-    <section className="billing-section">
-      <div className="workbench-section-heading">
-        <h2>{c.recent}</h2>
-        {onOpenAccount && (
-          <button className="text-button" type="button" onClick={onOpenAccount}>
-            {c.allBills}
-            <ChevronRight aria-hidden="true" />
-          </button>
-        )}
-      </div>
-      <div className="empty-billing">
-        <span className="empty-icon">
-          <ReceiptText aria-hidden="true" />
-        </span>
-        <div>
-          <h3>{c.emptyBills}</h3>
-          <p>{c.emptyBillsBody}</p>
-        </div>
-        <span className="status-badge">{c.guest}</span>
-      </div>
-    </section>
-  );
-}

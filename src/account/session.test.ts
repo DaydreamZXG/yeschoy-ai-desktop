@@ -30,6 +30,8 @@ function signedIn(requestId = "account-test-1") {
         id: "glm-5.3",
         description: "",
         billingMode: "ratio",
+        // Rust v5/v6 投影恒带该字段（空数组也带），v4 归一化依赖它。
+        supportedEndpointTypes: [],
         pricingAvailable: true,
         officialInputCnyPerMillion: "14",
         officialOutputCnyPerMillion: "56",
@@ -39,6 +41,39 @@ function signedIn(requestId = "account-test-1") {
     ],
     comparisonFx: "7",
     reasonCode: "none",
+  };
+}
+
+function usageLogPayload() {
+  return {
+    status: "available",
+    reasonCode: "none",
+    recordCount: 2,
+    scannedCount: 3,
+    windowDays: 30,
+    truncated: false,
+    oldestAtEpochMs: 1_788_195_000_000,
+    newestAtEpochMs: 1_788_195_600_000,
+    records: [
+      {
+        toolId: "codex_desktop",
+        modelId: "gpt-6-astra",
+        observedAtEpochMs: 1_788_195_600_000,
+        promptTokens: 1200,
+        completionTokens: 300,
+        cacheTokens: 400,
+        amount: "7",
+      },
+      {
+        toolId: "",
+        modelId: "claude-sonnet-4-6",
+        observedAtEpochMs: 1_788_195_000_000,
+        promptTokens: 100,
+        completionTokens: 50,
+        cacheTokens: 0,
+        amount: "3.5",
+      },
+    ],
   };
 }
 
@@ -112,6 +147,135 @@ describe("account v2 renderer boundary", () => {
     expect(decodeAccountProjection(signedIn(), "account-test-1")).toEqual(
       signedIn(),
     );
+  });
+
+  it("decodes a v6 projection with the usage log report attached", () => {
+    const usageLog = usageLogPayload();
+    const raw = { ...signedIn(), schemaVersion: 5, usageLog };
+    // 升级到 v6：原生侧新增 usageLog；v5 的 money/savings 语义不变。
+    const payload = {
+      ...raw,
+      money: {
+        currency: "CNY",
+        balanceAmount: "0.7",
+        consumedAmount: "1.68",
+        displayRate: "7",
+      },
+      savings: {
+        status: "unavailable",
+        // Rust 侧 unavailable 的 reasonCode 只会是这三个值（默认 logs_unavailable）。
+        reasonCode: "logs_unavailable",
+        officialAmount: "",
+        siteAmount: "",
+        savedAmount: "",
+        referenceRate: "",
+        priceRate: "",
+        recordLimit: 100,
+        scannedCount: 0,
+        includedCount: 0,
+        excludedCount: 0,
+        oldestAtEpochMs: 0,
+        newestAtEpochMs: 0,
+      },
+    };
+    const parsed = decodeAccountProjection(
+      { ...payload, schemaVersion: 6 },
+      payload.requestId,
+    )!;
+    expect(parsed.usageLog).toEqual(usageLog);
+    expect(parsed.money?.currency).toBe("CNY");
+    expect(parsed.models[0].id).toBe("glm-5.3");
+  });
+
+  it("rejects v6 usage logs that leak into non-signed-in states or miscount", () => {
+    const usageLog = usageLogPayload();
+    const signedOut = {
+      ...signedIn(),
+      status: "signed_out" as const,
+      schemaVersion: 6,
+      // 非登录态守卫：account/usage 不可用时字段必须全空。
+      account: {
+        available: false,
+        displayName: "",
+        username: "",
+        balanceQuota: "",
+        usedQuota: "",
+        requestCount: "",
+        quotaPerUnit: "",
+      },
+      usage: {
+        available: false,
+        consumedQuota: "",
+        requestRate: "",
+        tokenCount: "",
+      },
+      models: [],
+      comparisonFx: "",
+      reasonCode: "signed_out",
+      money: {
+        currency: "",
+        balanceAmount: "",
+        consumedAmount: "",
+        displayRate: "",
+      },
+      savings: {
+        status: "unavailable",
+        // Rust 侧 unavailable 的 reasonCode 只会是这三个值（默认 logs_unavailable）。
+        reasonCode: "logs_unavailable",
+        officialAmount: "",
+        siteAmount: "",
+        savedAmount: "",
+        referenceRate: "",
+        priceRate: "",
+        recordLimit: 100,
+        scannedCount: 0,
+        includedCount: 0,
+        excludedCount: 0,
+        oldestAtEpochMs: 0,
+        newestAtEpochMs: 0,
+      },
+      usageLog,
+    };
+    // 非登录态携带可用用量报告 → 拒绝。
+    expect(
+      decodeAccountProjection(signedOut, signedOut.requestId),
+    ).toBeNull();
+    // 未登录但报告为 unavailable → 通过（报告以 unavailable 状态随投影下发）。
+    const unavailable = {
+      ...signedOut,
+      usageLog: { ...usageLog, status: "unavailable" as const, records: [], recordCount: 0 },
+    };
+    expect(
+      decodeAccountProjection(unavailable, unavailable.requestId),
+    ).not.toBeNull();
+    // 记录数不一致 → 拒绝。
+    const mismatched = {
+      ...signedIn(),
+      schemaVersion: 6,
+      money: signedOut.money,
+      savings: signedOut.savings,
+      usageLog: { ...usageLog, recordCount: 3 },
+    };
+    expect(
+      decodeAccountProjection(mismatched, mismatched.requestId),
+    ).toBeNull();
+    // 金额非法文本 → 拒绝。
+    const badAmount = {
+      ...signedIn(),
+      schemaVersion: 6,
+      money: signedOut.money,
+      savings: signedOut.savings,
+      usageLog: {
+        ...usageLog,
+        records: [
+          { ...usageLog.records[0], amount: "not-a-number" },
+          usageLog.records[1],
+        ],
+      },
+    };
+    expect(
+      decodeAccountProjection(badAmount, badAmount.requestId),
+    ).toBeNull();
   });
 
   it("normalizes closed schema4 optional prices without turning missing values into zero", () => {

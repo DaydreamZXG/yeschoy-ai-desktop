@@ -16,7 +16,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use crate::account_finance::{
-    account_money, recent_savings, AccountMoney, RecentSavings, RECENT_LOGS_PATH,
+    account_money, recent_savings, recent_requests_from_pages, usage_log_report, AccountMoney,
+    RecentSavings, UsageLogReport, RECENT_LOGS_PATH, USAGE_LOG_PAGE_SIZE, USAGE_WINDOW_MS,
 };
 use crate::connectivity_core::{request_id_is_valid, CONNECTIVITY_LINES};
 
@@ -167,6 +168,7 @@ pub struct AccountProjection {
     comparison_fx: String,
     money: AccountMoney,
     savings: RecentSavings,
+    usage_log: UsageLogReport,
     reason_code: &'static str,
 }
 
@@ -174,7 +176,7 @@ impl AccountProjection {
     fn empty(request_id: String, status: &'static str, reason_code: &'static str) -> Self {
         Self {
             request_id,
-            schema_version: 5,
+            schema_version: 6,
             status,
             user_code: String::new(),
             poll_after_seconds: 0,
@@ -186,6 +188,7 @@ impl AccountProjection {
             comparison_fx: String::new(),
             money: AccountMoney::default(),
             savings: RecentSavings::default(),
+            usage_log: UsageLogReport::default(),
             reason_code,
         }
     }
@@ -700,6 +703,55 @@ pub(crate) async fn native_account_json(
     Ok((response.status.as_u16(), response.value))
 }
 
+/// 诊断层（PRD 6.7，批次 3 #2）复用的只读 HTTPS 客户端：
+/// https-only、无重定向、无代理，与账户请求同一套约束。
+pub(crate) fn shared_http_client() -> Result<&'static Client, ()> {
+    client()
+}
+
+pub(crate) fn has_stored_session() -> bool {
+    matches!(load_stored_session(), Ok(Some(_)))
+}
+
+pub(crate) enum ProbeSessionFailure {
+    SignedOut,
+    SecureStorage,
+    ServerUnavailable,
+}
+
+/// 为诊断的 API Key 有效性层取一个可用的短期访问令牌。
+/// 与账户读取共用刷新互斥与缓存；不落任何新状态。
+pub(crate) async fn native_probe_access(
+    state: &AccountV2State,
+) -> Result<String, ProbeSessionFailure> {
+    if let Ok(runtime) = state.runtime.lock() {
+        if let Some(access) = runtime.access.clone() {
+            if access.access_expires_at > now_epoch_seconds() + 30 {
+                return Ok(access.access_token);
+            }
+        }
+    }
+    let stored = load_stored_session().map_err(|_| ProbeSessionFailure::SecureStorage)?;
+    let Some(stored) = stored else {
+        return Err(ProbeSessionFailure::SignedOut);
+    };
+    let line_id = if line_origin(&stored.line_id).is_some() {
+        stored.line_id
+    } else {
+        CONNECTIVITY_LINES[0].line_id.to_owned()
+    };
+    let bootstrap = fetch_bootstrap(&line_id)
+        .await
+        .map_err(|_| ProbeSessionFailure::ServerUnavailable)?;
+    refresh_access(state, &bootstrap, &line_id)
+        .await
+        .map_err(|failure| match failure {
+            AccountProjectionFailure::SessionExpired => ProbeSessionFailure::SignedOut,
+            AccountProjectionFailure::SecureStorage => ProbeSessionFailure::SecureStorage,
+            _ => ProbeSessionFailure::ServerUnavailable,
+        })
+}
+
 fn failure_projection(request_id: String, failure: AccountProjectionFailure) -> AccountProjection {
     match failure {
         AccountProjectionFailure::InvalidRequest => {
@@ -883,6 +935,9 @@ async fn account_data_read(
     let pricing_value = pricing.ok().filter(|value| value.status.is_success());
     let status_value = status.ok().filter(|value| value.status.is_success());
     let logs_value = logs.ok().filter(|value| value.status.is_success());
+    // PRD 6.6：首页日志满页且尚未覆盖 30 天窗口时补拉后续页（最多 5 页）。
+    let observed_now = now_epoch_ms();
+    let log_pages = usage_log_pages(bootstrap, access_token, logs_value.as_ref(), observed_now).await;
     let account_summary = parse_account(
         account_value.as_ref().map(|value| &value.value),
         status_value.as_ref().map(|value| &value.value),
@@ -908,13 +963,15 @@ async fn account_data_read(
         status_value.as_ref().map(|v| &v.value),
         logs_value.as_ref().map(|v| &v.value),
     );
+    let usage_log = usage_log_report(
+        status_value.as_ref().map(|v| &v.value),
+        &log_pages,
+        observed_now,
+    );
     // 直连后本地不再观测请求，"最近中转记录"改由服务端消费日志提供，
     // 按客户端为每个工具创建的 token 名称归因。
     if let Some(line_id) = crate::request_diagnostics::line_for_origin(&bootstrap.origin) {
-        for (tool, observation) in crate::account_finance::recent_requests(
-            logs_value.as_ref().map(|v| &v.value),
-            line_id,
-        ) {
+        for (tool, observation) in recent_requests_from_pages(&log_pages, line_id) {
             crate::request_diagnostics::publish(&tool, observation);
         }
     }
@@ -924,6 +981,7 @@ async fn account_data_read(
         && comparison_fx.is_some()
         && !money.currency.is_empty()
         && savings.status != "unavailable"
+        && usage_log.status != "unavailable"
     {
         "none"
     } else {
@@ -931,20 +989,81 @@ async fn account_data_read(
     };
     Ok(AccountProjection {
         request_id,
-        schema_version: 5,
+        schema_version: 6,
         status: "signed_in",
         user_code: String::new(),
         poll_after_seconds: 0,
         expires_at_epoch_ms: 0,
-        observed_at_epoch_ms: now_epoch_ms(),
+        observed_at_epoch_ms: observed_now,
         account: account_summary,
         usage: usage_summary,
         models,
         comparison_fx: comparison_fx.map(decimal).unwrap_or_default(),
         money,
         savings,
+        usage_log,
         reason_code,
     })
+}
+
+/// 分页拉取 `/api/log/self`：第 1 页来自六路并发；仅当首页满 100 条且
+/// 尚未覆盖 30 天窗口时，并发补拉第 2..=5 页。任何一页失败即停止追加
+/// （已有前缀足够，报告侧按截断口径呈现）。
+async fn usage_log_pages(
+    bootstrap: &DesktopBootstrap,
+    access_token: &str,
+    first_page: Option<&JsonResponse>,
+    now_epoch_ms: u64,
+) -> Vec<Value> {
+    let Some(first) = first_page else {
+        return Vec::new();
+    };
+    let mut pages = vec![first.value.clone()];
+    let Some(items) = first
+        .value
+        .get("data")
+        .and_then(|data| data.get("items"))
+        .and_then(Value::as_array)
+    else {
+        return pages;
+    };
+    if items.len() < USAGE_LOG_PAGE_SIZE {
+        return pages;
+    }
+    let cutoff = now_epoch_ms.saturating_sub(USAGE_WINDOW_MS);
+    let oldest_ms = items
+        .iter()
+        .filter_map(|row| row.get("created_at").and_then(Value::as_u64))
+        .filter(|seconds| *seconds > 0)
+        .map(|seconds| seconds * 1000)
+        .min()
+        .unwrap_or(0);
+    if oldest_ms <= cutoff {
+        return pages;
+    }
+    let base = format!("{}{}", bootstrap.origin, "/api/log/self");
+    let page_url = |page: usize| {
+        format!("{base}?p={page}&page_size={USAGE_LOG_PAGE_SIZE}&type=2")
+    };
+    let (url_2, url_3, url_4, url_5) = (
+        page_url(2),
+        page_url(3),
+        page_url(4),
+        page_url(5),
+    );
+    let (second, third, fourth, fifth) = tokio::join!(
+        send_json(Method::GET, &url_2, Some(access_token), None),
+        send_json(Method::GET, &url_3, Some(access_token), None),
+        send_json(Method::GET, &url_4, Some(access_token), None),
+        send_json(Method::GET, &url_5, Some(access_token), None),
+    );
+    for response in [second, third, fourth, fifth] {
+        match response {
+            Ok(value) if value.status.is_success() => pages.push(value.value),
+            _ => break,
+        }
+    }
+    pages
 }
 
 fn data_value(value: Option<&Value>) -> Option<&Value> {
@@ -1321,6 +1440,35 @@ pub async fn account_inspect_v2(
     })
 }
 
+/// Sanitize a raw hostname into a server-safe `device_name` value.
+/// Returns None when the result would be empty; caps length at 64 chars.
+fn sanitize_device_name(raw: &str) -> Option<String> {
+    let cleaned: String = raw
+        .chars()
+        .filter(|c| !c.is_control())
+        .collect::<String>()
+        .trim()
+        .to_owned();
+    if cleaned.is_empty() {
+        return None;
+    }
+    Some(cleaned.chars().take(64).collect())
+}
+
+/// Best-effort local device name (client autonomy #23): Windows exposes
+/// COMPUTERNAME; other platforms fall back to the `hostname` command.
+/// Failure is non-fatal — the begin request simply omits the field.
+fn device_name() -> Option<String> {
+    let raw = std::env::var("COMPUTERNAME").ok().or_else(|| {
+        Command::new("hostname")
+            .output()
+            .ok()
+            .filter(|output| output.status.success())
+            .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_owned())
+    })?;
+    sanitize_device_name(&raw)
+}
+
 #[tauri::command]
 pub async fn account_begin_authorization_v2(
     state: tauri::State<'_, AccountV2State>,
@@ -1355,11 +1503,17 @@ pub async fn account_begin_authorization_v2(
     if _permit.is_cancelled() {
         return Err("assistant_shutting_down".into());
     }
+    // 客户端自治（#23）：附 device_name 供授权页展示。线上已验证服务端
+    // 容忍未知字段（2026-09-13 probe 200）；获取失败时省略该字段。
+    let mut body = json!({"client_name": "野菜API Desktop"});
+    if let Some(name) = device_name() {
+        body["device_name"] = Value::String(name);
+    }
     let response = match send_json(
         Method::POST,
         &format!("{}{}", bootstrap.origin, AUTHORIZATION_PATH),
         None,
-        Some(json!({"client_name": "野菜API Desktop"})),
+        Some(body),
     )
     .await
     {
@@ -1686,8 +1840,6 @@ pub async fn account_logout_v2(
         "codex_desktop",
         "pi",
         "dsh_web",
-        "hermes",
-        "openclaw",
     ] {
         crate::request_diagnostics::clear(tool);
     }
@@ -1746,12 +1898,29 @@ mod tests {
     use super::*;
 
     #[test]
+    fn device_name_sanitizer_strips_control_chars_and_caps_length() {
+        assert_eq!(sanitize_device_name("MacBook-Pro.local"), Some("MacBook-Pro.local".into()));
+        assert_eq!(
+            sanitize_device_name("  spaced \n host \n"),
+            Some("spaced  host".into())
+        );
+        assert_eq!(sanitize_device_name("\u{1}\u{2}\u{7f}"), None);
+        assert_eq!(sanitize_device_name("   "), None);
+        assert_eq!(sanitize_device_name(""), None);
+        let long = "a".repeat(100);
+        assert_eq!(
+            sanitize_device_name(&long).map(|v| v.chars().count()),
+            Some(64)
+        );
+    }
+
+    #[test]
     fn account_schema_four_omits_unknown_prices_but_keeps_zero() {
         let projection =
             AccountProjection::empty("account-test".into(), "signed_out", "signed_out");
         assert_eq!(
             serde_json::to_value(projection).unwrap()["schemaVersion"],
-            5
+            6
         );
         let billing = ModelBilling {
             groups: vec![BillingGroup {

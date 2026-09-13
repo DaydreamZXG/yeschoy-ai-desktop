@@ -132,6 +132,9 @@ pub(crate) struct ModelProfile {
     pub reasoning_mode: Option<String>,
     pub input: Option<Vec<String>>,
     pub context_window: Option<u64>,
+    /// 工具调用（function calling）声明。None = 目录未声明（不猜，PRD 6.5）；
+    /// 路由别名（如 ark-code-latest）能力随背后模型变化，保持不填。
+    pub tool_use: Option<bool>,
 }
 
 pub(crate) fn profile(id: &str) -> Option<&'static ModelProfile> {
@@ -248,7 +251,7 @@ pub(crate) fn apply_chat_effort(body: &mut Value, id: &str, effort: &str) {
     }
 }
 
-/// Adapt documented nested custom-provider efforts (Hermes) and DeepSeek's
+/// Adapt documented nested custom-provider efforts and DeepSeek's
 /// off toggle. Unknown models and unrelated payload fields remain untouched.
 #[allow(dead_code)] // Used by the vendored converter set, not by the desktop paths.
 pub(crate) fn normalize_chat_reasoning(body: &mut Value) -> bool {
@@ -298,7 +301,6 @@ pub(crate) fn normalize_chat_reasoning(body: &mut Value) -> bool {
 pub(crate) enum ModelConsumer {
     Pi,
     Dsh,
-    OpenClaw,
 }
 
 pub(crate) fn native_chat_model(id: &str, consumer: ModelConsumer) -> Value {
@@ -317,7 +319,6 @@ pub(crate) fn native_chat_model(id: &str, consumer: ModelConsumer) -> Value {
         return model;
     }
     let dsh = matches!(consumer, ModelConsumer::Dsh);
-    let claw = matches!(consumer, ModelConsumer::OpenClaw);
     let mut levels = serde_json::Map::new();
     for (level, wire) in [
         ("off", "none"),
@@ -328,9 +329,7 @@ pub(crate) fn native_chat_model(id: &str, consumer: ModelConsumer) -> Value {
         ("xhigh", "xhigh"),
         ("max", "max"),
     ] {
-        // OpenClaw's SimpleStream aliases max to xhigh before the map runs.
-        // Its full builder does apply off's map; only max must remain hidden.
-        let supported = p.reasoning_levels.iter().any(|v| v == wire) && !(claw && level == "max");
+        let supported = p.reasoning_levels.iter().any(|v| v == wire);
         if supported {
             levels.insert(level.into(), json!(wire));
         } else if !dsh {
@@ -365,7 +364,7 @@ pub(crate) fn native_chat_catalog(
                 .unwrap_or_default();
             // These model-level fields override the provider's loopback route.
             // They belong to the connection being replaced, not user preferences.
-            if matches!(consumer, ModelConsumer::Pi | ModelConsumer::OpenClaw) {
+            if matches!(consumer, ModelConsumer::Pi) {
                 for key in ["api", "baseUrl", "headers"] {
                     previous.remove(key);
                 }
@@ -459,11 +458,7 @@ mod tests {
 
     #[test]
     fn context_regression_native_consumers_share_capacity_without_raising_user_caps() {
-        for consumer in [
-            ModelConsumer::Pi,
-            ModelConsumer::Dsh,
-            ModelConsumer::OpenClaw,
-        ] {
+        for consumer in [ModelConsumer::Pi, ModelConsumer::Dsh] {
             let ids = vec![
                 "claude-fable-5".into(),
                 "deepseek-v4-flash".into(),
@@ -626,7 +621,7 @@ mod tests {
 
     #[test]
     fn ru043_reapply_clears_model_route_overrides_without_losing_budgets() {
-        for consumer in [ModelConsumer::Pi, ModelConsumer::OpenClaw] {
+        for consumer in [ModelConsumer::Pi] {
             for id in ["gpt-6-astra", "deepseek-v4-flash", "future-model"] {
                 let old = json!([{
                     "id":id, "api":"old-protocol", "baseUrl":"https://old.invalid/v1",
@@ -693,6 +688,9 @@ mod tests {
             p.reasoning_levels,
             ["low", "medium", "high", "xhigh", "max"]
         );
+        // 工具调用声明：核实过的模型为 Some(true)，路由别名不猜保持 None。
+        assert_eq!(p.tool_use, Some(true));
+        assert!(profile("ark-code-latest").unwrap().tool_use.is_none());
         assert!(profile("org/gpt-6-astra").is_none());
         assert!(profile("gpt-6-astra-custom").is_none());
         assert_eq!(display_name("unknown/model"), "unknown/model");
@@ -703,6 +701,9 @@ mod tests {
             let id = model["id"].as_str().unwrap();
             assert!(ids.insert(id));
             assert!(!model["sources"].as_array().unwrap().is_empty());
+            if let Some(tool_use) = model["toolUse"].as_bool() {
+                assert!(tool_use, "{id}: toolUse 只允许 true（核实）或缺失（不猜）");
+            }
             let p = profile(id).unwrap();
             if let Some(default) = &p.default_reasoning {
                 assert!(p.reasoning_levels.contains(default));
@@ -723,18 +724,11 @@ mod tests {
             json!({"off":"none","low":"low","high":"high","max":"max"})
         );
         assert!(dsh.get("thinkingLevelMap").is_none());
-        let claw = native_chat_model("gpt-6-astra", ModelConsumer::OpenClaw);
-        assert!(claw["thinkingLevelMap"]["max"].is_null());
-        assert_eq!(claw["thinkingLevelMap"]["xhigh"], "xhigh");
         assert_eq!(
             native_chat_model("future-model", ModelConsumer::Pi),
             json!({"id":"future-model","name":"future-model"})
         );
-        for consumer in [
-            ModelConsumer::Pi,
-            ModelConsumer::Dsh,
-            ModelConsumer::OpenClaw,
-        ] {
+        for consumer in [ModelConsumer::Pi, ModelConsumer::Dsh] {
             let previous = json!([{"id":"gpt-6-astra","name":"old","maxTokens":4096,"contextWindow":65536,"compat":{"custom":true},"futureField":42}]);
             let merged = native_chat_catalog(Some(&previous), &["gpt-6-astra".into()], consumer);
             assert_eq!(merged[0]["name"], "GPT-6 Astra");

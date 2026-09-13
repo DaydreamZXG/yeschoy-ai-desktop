@@ -484,7 +484,7 @@ mod tests {
     fn only_desktop_targets_are_eligible_for_reload_control() {
         assert!(requires_reload("claude_desktop"));
         assert!(requires_reload("codex_desktop"));
-        for tool in ["claude_code", "pi", "dsh_web", "hermes", "openclaw"] {
+        for tool in ["claude_code", "pi", "dsh_web"] {
             assert!(!requires_reload(tool), "{tool}");
         }
     }

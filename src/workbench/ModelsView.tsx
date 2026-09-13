@@ -14,6 +14,7 @@ import {
 import { type ActivationToolId } from "../configuration/activation";
 import { modelSupportsTool } from "../configuration/modelCompatibility";
 import { ModelPicker } from "../configuration/ModelPicker";
+import { ModelCapabilityBadges } from "../model-profiles/ModelCapabilityBadges";
 import { WORKBENCH_APPS } from "./appCatalog";
 import { useWorkbenchCopy } from "./copy";
 import { WorkbenchFooter } from "./WorkbenchChrome";
@@ -36,21 +37,32 @@ export function ModelsView({
   const [tool, setTool] = useState<ActivationToolId>("claude_desktop");
   const [selectedModelId, setSelectedModelId] = useState("");
   const [billingGroup, setBillingGroup] = useState("");
+  // #13 「查看全部模型」：默认只列兼容模型；打开后不兼容项置灰并标注原因。
+  const [showAll, setShowAll] = useState(false);
   const { projection, loading, refresh } = session;
+  const allModels = useMemo(
+    () =>
+      projection?.status === "signed_in" ? projection.models : EMPTY_MODELS,
+    [projection],
+  );
   const accountModels = useMemo(
     () =>
-      projection?.status === "signed_in"
-        ? projection.models.filter((model) =>
+      showAll
+        ? allModels
+        : allModels.filter((model) =>
             modelSupportsTool(tool, model.supportedEndpointTypes ?? []),
-          )
-        : EMPTY_MODELS,
-    [projection, tool],
+          ),
+    [allModels, showAll, tool],
   );
 
+  // 选择始终落在兼容模型上：开关只影响可见范围，不允默认选不兼容项。
+  const firstCompatibleId = accountModels.find((model) =>
+    modelSupportsTool(tool, model.supportedEndpointTypes ?? []),
+  )?.id;
   useEffect(() => {
     if (!accountModels.some((model) => model.id === selectedModelId))
-      setSelectedModelId(accountModels[0]?.id ?? "");
-  }, [accountModels, selectedModelId]);
+      setSelectedModelId(firstCompatibleId ?? "");
+  }, [accountModels, selectedModelId, firstCompatibleId]);
 
   const selected = accountModels.find((model) => model.id === selectedModelId);
   useEffect(
@@ -115,6 +127,16 @@ export function ModelsView({
             </strong>
             <small>{c.fullId}</small>
           </div>
+          {projection?.status === "signed_in" && allModels.length > 0 && (
+            <label className="show-all-models-toggle">
+              <input
+                type="checkbox"
+                checked={showAll}
+                onChange={(event) => setShowAll(event.target.checked)}
+              />
+              {showAll ? c.showCompatibleOnly : c.showAllModels}
+            </label>
+          )}
           <button
             type="button"
             className="secondary-action"
@@ -150,8 +172,21 @@ export function ModelsView({
               {c.signIn}
             </button>
           </div>
-        ) : accountModels.length === 0 ? (
+        ) : allModels.length === 0 ? (
+          // #13 空态区分：账户有数据但一个模型都没返回 → 数据未返回，
+          // 与「无兼容模型」（见下方分支）不同口径。
           <p>{c.partialData}</p>
+        ) : accountModels.length === 0 ? (
+          <div className="price-account-empty">
+            <p>{c.noCompatibleModels}</p>
+            <button
+              type="button"
+              className="secondary-action"
+              onClick={() => setShowAll(true)}
+            >
+              {c.showAllModels}
+            </button>
+          </div>
         ) : (
           <>
             <ModelPicker
@@ -159,10 +194,22 @@ export function ModelsView({
               value={selectedModelId}
               onChange={setSelectedModelId}
               label={c.fullId}
+              disabledReason={
+                showAll
+                  ? (model) =>
+                      modelSupportsTool(
+                        tool,
+                        model.supportedEndpointTypes ?? [],
+                      )
+                        ? undefined
+                        : c.incompatibleReason
+                  : undefined
+              }
             />
             {selected && (
               <>
                 <code className="selected-price-model">{selected.id}</code>
+                <ModelCapabilityBadges id={selected.id} />
                 <BillingGroupPicker
                   model={selected}
                   selected={billingGroup}

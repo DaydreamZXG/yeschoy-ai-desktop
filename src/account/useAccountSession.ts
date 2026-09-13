@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ConfigurationLineId } from "../configuration/preview";
 import {
+  clearSessionAgeRecord,
+  noteSessionActivity,
+} from "./sessionAge";
+import {
   openAccountWallet,
   runAccountCommand,
   type AccountCommand,
@@ -40,6 +44,13 @@ export function useAccountSession(lineId: ConfigurationLineId) {
             "invalid_response",
           ].includes(result.status);
           setLastError(transient ? result.reasonCode : null);
+          // 本地记账（#23）：signed_in 滚动最近使用时间；会话确认消失则清除。
+          if (result.status === "signed_in") noteSessionActivity();
+          else if (
+            result.status === "signed_out" ||
+            result.status === "session_expired"
+          )
+            clearSessionAgeRecord();
           setProjection((previous) =>
             transient &&
             (previous?.status === "signed_in" ||

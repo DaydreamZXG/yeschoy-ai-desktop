@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+import { useTranslation } from "react-i18next";
 import {
   ArrowRight,
   CircleAlert,
@@ -9,8 +16,11 @@ import {
 } from "lucide-react";
 import { AccountSummary } from "./WorkbenchChrome";
 import { AppGlyph } from "./AppGlyph";
-import { WORKBENCH_APPS } from "./appCatalog";
+import { WORKBENCH_APPS, COMING_SOON_APPS } from "./appCatalog";
 import type { AccountSessionController } from "../account/useAccountSession";
+import { balanceAlert } from "../account/finance";
+import { LowBalanceBanner } from "./LowBalanceBanner";
+import { useWalletRecharge } from "./useWalletRecharge";
 import {
   scanActivationTargets,
   type ActivationTargetScan,
@@ -22,10 +32,14 @@ import { OpenConnection } from "../configuration/OpenConnection";
 import { groupLabel } from "../configuration/BillingGroupPicker";
 import { RecentRequest } from "../configuration/RecentRequest";
 import { ConnectionStatusNotice } from "../configuration/ConnectionStatusNotice";
+import type { SetupAction } from "../configuration/setupIntent";
+import { useWorkbenchCopy } from "./copy";
+import { QQGroupDialog } from "./QQGroupDialog";
+import { Users } from "lucide-react";
 
 interface Props {
   onOpenAccount: () => void;
-  onOpenSetup: (appId: ActivationToolId) => void;
+  onOpenSetup: (appId: ActivationToolId, action?: SetupAction) => void;
   onOpenDiagnostics: () => void;
   accountSession: AccountSessionController;
 }
@@ -35,11 +49,14 @@ export function AppLibraryView({
   onOpenDiagnostics,
   accountSession,
 }: Props) {
+  const { t, i18n } = useTranslation();
+  const c = useWorkbenchCopy();
   const connections = useConnections();
   const [scan, setScan] = useState<ActivationTargetScan | null>(null);
   const [scanning, setScanning] = useState(true);
   const [scanError, setScanError] = useState(false);
   const [showAllApps, setShowAllApps] = useState(false);
+  const [qqGroupOpen, setQqGroupOpen] = useState(false);
   const sequence = useRef(0);
   const refresh = useCallback(async () => {
     const current = ++sequence.current;
@@ -63,6 +80,10 @@ export function AppLibraryView({
     };
   }, [refresh]);
   const signedIn = accountSession.projection?.status === "signed_in";
+  const balanceIssue = signedIn
+    ? balanceAlert(accountSession.projection?.money)
+    : null;
+  const recharge = useWalletRecharge(accountSession.openWallet);
   const configured =
     connections?.connections.filter((v) =>
       ["connected", "legacy", "changed"].includes(v.state),
@@ -72,6 +93,36 @@ export function AppLibraryView({
     (c) => c.state === "unavailable",
   );
   const staleConnections = !!connections?.error && hasConnectionSnapshot;
+  // #22 断电恢复横幅：启动读取到 recovery_pending 时，首页顶部引导进入恢复。
+  const pendingRecovery = (() => {
+    const pending = connections?.connections.find(
+      (c) => c.state === "recovery_pending",
+    );
+    if (!pending) return null;
+    const app = WORKBENCH_APPS.find((v) => v.id === pending.toolId);
+    return {
+      id: pending.toolId,
+      name: app?.name ?? pending.toolId,
+    };
+  })();
+  // #18 模型下线检测：账户模型目录就绪时，校验已接入工具的模型仍可用。
+  // 目录为空（数据未返回）不校验，避免把加载失败误报成下线。
+  const offlineModels = (() => {
+    if (!signedIn) return null;
+    const catalog = accountSession.projection?.models ?? [];
+    if (!catalog.length) return null;
+    const offline = (connections?.connections ?? []).filter(
+      (c) =>
+        ["connected", "legacy", "changed"].includes(c.state) &&
+        !!c.modelId &&
+        !catalog.some((m) => m.id === c.modelId),
+    );
+    if (!offline.length) return null;
+    return offline.map((c) => ({
+      id: c.toolId,
+      name: WORKBENCH_APPS.find((v) => v.id === c.toolId)?.name ?? c.toolId,
+    }));
+  })();
   const checking = scanning || connections?.loading || connections?.refreshing;
   const detected = scan?.targets.filter((v) => v.status !== "not_found").length;
   const apps = [...WORKBENCH_APPS].sort((a, b) => {
@@ -134,15 +185,31 @@ export function AppLibraryView({
           {checking ? "正在检查" : "检查应用"}
         </button>
       </header>
-      {signedIn && (
-        <AccountSummary
-          detected={detected}
-          scanning={scanning}
-          onOpenAccount={onOpenAccount}
-          onOpenApps={() => onOpenSetup("claude_desktop")}
-          accountProjection={accountSession.projection}
-          accountLoading={accountSession.loading}
-        />
+      {pendingRecovery && (
+        <p className="workbench-notice" role="alert" data-testid="recovery-banner">
+          <CircleAlert />
+          上次退出时有接入操作没有完成，{pendingRecovery.name} 的原设置需要先恢复，再继续使用。
+          <button onClick={() => onOpenSetup(pendingRecovery.id, "repair")}>
+            前往恢复
+          </button>
+        </p>
+      )}
+      {offlineModels && (
+        <p
+          className="workbench-notice"
+          role="alert"
+          data-testid="offline-model-banner"
+        >
+          <CircleAlert />
+          {t("yeschoyHome.offlineModelBanner", {
+            apps: (i18n.resolvedLanguage ?? "zh").startsWith("en")
+              ? offlineModels.map((app) => app.name).join(", ")
+              : offlineModels.map((app) => app.name).join("、"),
+          })}
+          <button onClick={() => onOpenSetup(offlineModels[0].id)}>
+            {t("yeschoyHome.offlineModelAction")}
+          </button>
+        </p>
       )}
       {accountSession.lastError && (
         <p className="workbench-notice" role="status">
@@ -152,6 +219,9 @@ export function AppLibraryView({
             : "暂时无法获取账户状态，请重试。"}
           <button onClick={() => void accountSession.refresh()}>重试</button>
         </p>
+      )}
+      {balanceIssue && (
+        <LowBalanceBanner alert={balanceIssue} onRecharge={() => void recharge()} />
       )}
       {!signedIn ? (
         <section className="welcome-strip">
@@ -230,7 +300,7 @@ export function AppLibraryView({
         aria-label="本机应用"
         aria-busy={scanning}
       >
-        {visibleApps.map((app) => {
+        {visibleApps.map((app, index) => {
           const target = scan?.targets.find((v) => v.toolId === app.id);
           const connection = connections?.connections.find(
             (v) => v.toolId === app.id,
@@ -259,7 +329,8 @@ export function AppLibraryView({
           return (
             <article
               key={app.id}
-              className="connection-card"
+              className="connection-card stagger-enter"
+              style={{ "--rail-index": index } as CSSProperties}
               data-connected={!!active}
             >
               <header>
@@ -310,7 +381,7 @@ export function AppLibraryView({
                     </div>
                     <p className="connection-footnote">
                       {connection.state === "recovery_pending"
-                        ? "上次操作未完成，可恢复后重新接入。"
+                        ? t("yeschoyDaily.recoveryHint")
                         : connection.state === "changed"
                           ? "检测到设置有变化，保留你的修改。"
                           : connection.requiresBackground
@@ -358,29 +429,35 @@ export function AppLibraryView({
               </div>
               <footer>
                 <div className="connection-manage-actions">
-                  <RestoreConnection connection={connection} name={app.name} />
                   {active && (
                     <button
-                      className="text-button"
-                      onClick={() => onOpenSetup(app.id)}
+                      className="subtle-button change-model-action"
+                      onClick={() => onOpenSetup(app.id, "change-model")}
                     >
-                      调整接入
+                      {t("yeschoyDaily.changeModel")}
                     </button>
                   )}
+                  <RestoreConnection connection={connection} name={app.name} />
                 </div>
-                {active && connection.state !== "recovery_pending" ? (
+                {active &&
+                !["recovery_pending", "changed"].includes(connection.state) ? (
                   <OpenConnection
                     connection={connection}
                     name={app.name}
-                    onAdjust={() => onOpenSetup(app.id)}
+                    onAdjust={() => onOpenSetup(app.id, "repair")}
                   />
                 ) : (
                   <button
                     className={active ? "subtle-button" : "connect-app-button"}
-                    onClick={() => onOpenSetup(app.id)}
+                    onClick={() =>
+                      onOpenSetup(
+                        app.id,
+                        active || unknownConnection ? "repair" : "configure",
+                      )
+                    }
                   >
                     {active || unknownConnection
-                      ? "检查接入"
+                      ? t("yeschoyDaily.checkAndRepair")
                       : installed
                         ? "开始接入"
                         : ["claude_desktop", "codex_desktop"].includes(app.id)
@@ -393,6 +470,35 @@ export function AppLibraryView({
             </article>
           );
         })}
+        {COMING_SOON_APPS.map((app, index) => (
+          <article
+            key={app.id}
+            className="connection-card stagger-enter"
+            style={{
+              "--rail-index": visibleApps.length + index,
+            } as CSSProperties}
+            data-coming-soon="true"
+          >
+            <header>
+              <span className="configuration-app-icon">
+                <b>{app.mark}</b>
+              </span>
+              <div>
+                <h2>{app.name}</h2>
+                <p>{app.description}</p>
+              </div>
+              <span className="connection-state" data-state="coming_soon">
+                即将支持
+              </span>
+            </header>
+            <div className="connection-card-body">
+              <div className="connection-empty">
+                <p>这一应用的接入正在后续版本排期中，暂时无需配置。</p>
+                <span>不需要了解配置文件</span>
+              </div>
+            </div>
+          </article>
+        ))}
       </section>
       {scan &&
         !scanError &&
@@ -415,17 +521,60 @@ export function AppLibraryView({
           只看本机应用
         </button>
       )}
+      {signedIn && (
+        <details className="account-overview">
+          <summary>
+            <span>{t("yeschoyDaily.accountOverview")}</span>
+            <small>{t("yeschoyDaily.accountOverviewHint")}</small>
+          </summary>
+          <AccountSummary
+            detected={detected}
+            scanning={scanning}
+            onOpenAccount={onOpenAccount}
+            onOpenApps={() =>
+              document
+                .querySelector<HTMLElement>(".connection-library")
+                ?.scrollIntoView({ block: "start" })
+            }
+            accountProjection={accountSession.projection}
+            accountLoading={accountSession.loading}
+          />
+        </details>
+      )}
       <footer className="library-footer">
         <ShieldCheck />
-        <span>只改你选择的应用，随时可以恢复。不会删除聊天记录。</span>
-        <button
-          className="text-button"
-          onClick={() => onOpenSetup("claude_desktop")}
-        >
-          <Plus />
-          接入应用
-        </button>
+        <span>{c.libraryFooterTrust}</span>
+        <span className="library-footer-actions">
+          <button
+            type="button"
+            className="text-button join-group-link"
+            onClick={() => setQqGroupOpen(true)}
+          >
+            <Users aria-hidden="true" />
+            {c.joinGroup}
+          </button>
+          <button
+            className="text-button"
+            onClick={() => onOpenSetup("claude_desktop")}
+          >
+            <Plus />
+            {c.libraryFooterConnect}
+          </button>
+        </span>
       </footer>
+      <QQGroupDialog
+        open={qqGroupOpen}
+        onOpenChange={setQqGroupOpen}
+        copy={{
+          title: c.qqGroupTitle,
+          body: c.qqGroupBody,
+          groupIdLabel: c.qqGroupIdLabel,
+          scanHint: c.qqGroupScanHint,
+          copyGroupId: c.copyGroupId,
+          groupIdCopied: c.groupIdCopied,
+          close: c.close,
+        }}
+      />
     </div>
   );
 }

@@ -1824,6 +1824,38 @@
       "reportSha256": "sha256:af7e0df0047c9a5922bf0fbd4dcdabb5cbcd79cfb87e362736ea59f6c0eef25d",
       "releaseUnitId": "RU-075",
       "releaseUnitHash": "sha256:fee2153931e02156c1fd843859172d3578840ed20ff6610b2987d92a86acd6f3"
+    },
+    {
+      "id": "RU-076/WP-RU076-CURRENT-BASELINE@2026-09-12T05:01:08.995345+00:00",
+      "packageId": "WP-RU076-CURRENT-BASELINE",
+      "baselineCommit": "f01861464553137760955b614d6fb757df40d0f6",
+      "baselineTreeHash": "sha256:84ecab2be932cd1e97a293ecc5b2f9a87531fad1518a094f163919d0c0e760f4",
+      "baselineSnapshotPath": "execution/baselines/126dea733de82281.a95636667cd5dd131d53.json",
+      "baselineSnapshotSha256": "sha256:095fd447d3194d821f0da223a61dcfc4128254b8bfa11bad12cd4afc57404d0d",
+      "assignedTo": "root",
+      "status": "failed",
+      "startedAt": "2026-09-12T05:01:08.995345+00:00",
+      "finishedAt": "2026-09-12T05:02:02.315834+00:00",
+      "reportPath": "execution/reports/126dea733de82281.a95636667cd5dd131d53.json",
+      "reportSha256": "sha256:a32c54d44d88183538f7c01dccd36cdd09c02bb854d6366e12ba987d0f116a59",
+      "releaseUnitId": "RU-076",
+      "releaseUnitHash": "sha256:aac08bad312b6c5cf4902864f066842c9e026ebcfa29d7331a37c1d49a92818c"
+    },
+    {
+      "id": "RU-077/WP-RU077-DAILY-USE@2026-09-12T05:11:44.899411+00:00",
+      "packageId": "WP-RU077-DAILY-USE",
+      "baselineCommit": "f01861464553137760955b614d6fb757df40d0f6",
+      "baselineTreeHash": "sha256:72810d5702771c8237ab2360715782375a85840e09e4d058641b21903cd2acb0",
+      "baselineSnapshotPath": "execution/baselines/93463eaf31c75557.915d529632b15ed2e132.json",
+      "baselineSnapshotSha256": "sha256:ce79240a1bd7d42a44bcd0ce8246e4748c8fff5a42490807e192beb2b89ed843",
+      "assignedTo": "root",
+      "status": "completed",
+      "startedAt": "2026-09-12T05:11:44.899411+00:00",
+      "finishedAt": "2026-09-12T05:43:01.377906+00:00",
+      "reportPath": "execution/reports/93463eaf31c75557.915d529632b15ed2e132.json",
+      "reportSha256": "sha256:3cd8572232e79e618a786b0c30138b4b5d11dac2ae83421d2e4f9f4f3a8e466a",
+      "releaseUnitId": "RU-077",
+      "releaseUnitHash": "sha256:8140a03adaf7efb247eacd3b7fb4baf3fabaeb0305abc4eca33f02bc37849271"
     }
   ]
 }

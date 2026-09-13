@@ -9,6 +9,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
+import { toast } from "sonner";
 import i18n from "i18next";
 import zh from "../i18n/locales/zh.json";
 import { ConfigurationPreviewView } from "./ConfigurationPreviewView";
@@ -25,8 +26,12 @@ import { connectionsFixture } from "./connection-test-fixtures";
 import type { AccountSessionController } from "../account/useAccountSession";
 import type { AccountModel, AccountProjection } from "../account/session";
 import { openConnection } from "./launchApi";
+import type { SetupIntent } from "./setupIntent";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+vi.mock("sonner", () => ({
+  toast: Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() }),
+}));
 const native = vi.mocked(invoke);
 const tick = async () => {
   await act(async () => {});
@@ -115,6 +120,19 @@ function local(saved: Partial<ToolConnection> = {}) {
     open: vi.fn(async () => "opened" as const),
   };
 }
+function sessionWithMoney(balanceAmount: string): AccountSessionController {
+  const account = session();
+  account.projection = {
+    ...account.projection!,
+    money: {
+      currency: "CNY",
+      balanceAmount,
+      consumedAmount: "13.50",
+      displayRate: "6.75",
+    },
+  };
+  return account;
+}
 function scan(requestId: string): ActivationTargetScan {
   return {
     requestId,
@@ -137,18 +155,32 @@ function scan(requestId: string): ActivationTargetScan {
     })),
   };
 }
+// Existing lifecycle tests explicitly reapply saved settings. The primary
+// "change model" action now opens the editor and must never submit by itself.
+function applySavedOrSelected() {
+  const primary = screen.getByTestId("configuration-apply-action");
+  fireEvent.click(
+    primary.textContent?.trim() === "换模型与分组"
+      ? screen.getByRole("button", { name: "重新应用当前设置" })
+      : primary,
+  );
+}
 const callback = vi.fn();
 function setupView(
   account = session(),
   connections = local(),
   line: "mainland_optimized" | "global_accelerated" = "mainland_optimized",
   toolId: (typeof ACTIVATION_TOOL_IDS)[number] = "codex_desktop",
+  intent?: SetupIntent,
+  active = true,
 ) {
   return (
     <StrictMode>
       <ConnectionProvider value={connections}>
         <ConfigurationPreviewView
           initialDesktopAppId={toolId}
+          setupIntent={intent}
+          active={active}
           enableLocalActivation
           lineId={line}
           onLineChange={callback}
@@ -164,6 +196,8 @@ beforeEach(async () => {
   i18n.addResourceBundle("zh", "translation", zh, true, true);
   await i18n.changeLanguage("zh");
   callback.mockReset();
+  vi.mocked(toast).mockReset();
+  vi.mocked(toast.error).mockReset();
   native.mockReset();
   native.mockImplementation(async (command, args) => {
     const req = (
@@ -212,6 +246,422 @@ beforeEach(async () => {
 afterEach(cleanup);
 
 describe("daily-use UX", () => {
+  it("guides recharge on the home page when the balance runs low (PRD 6.2)", async () => {
+    const account = sessionWithMoney("3.20");
+    render(
+      <ConnectionProvider value={local()}>
+        <AppLibraryView
+          accountSession={account}
+          onOpenAccount={callback}
+          onOpenDiagnostics={callback}
+          onOpenSetup={callback}
+        />
+      </ConnectionProvider>,
+    );
+    await tick();
+    expect(
+      screen.getByText("当前余额 ¥3.20，为避免请求中断，请先充值。"),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /去充值/ }));
+    await tick();
+    expect(account.openWallet).toHaveBeenCalled();
+  });
+
+  it("#22 shows a recovery banner on the home page when a transaction is pending", async () => {
+    render(
+      <ConnectionProvider value={local({ state: "recovery_pending" })}>
+        <AppLibraryView
+          accountSession={session()}
+          onOpenAccount={callback}
+          onOpenDiagnostics={callback}
+          onOpenSetup={callback}
+        />
+      </ConnectionProvider>,
+    );
+    await tick();
+    const banner = screen.getByTestId("recovery-banner");
+    expect(banner).toHaveTextContent(
+      "上次退出时有接入操作没有完成，Codex Desktop 的原设置需要先恢复",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "前往恢复" }));
+    expect(callback).toHaveBeenCalledWith("codex_desktop", "repair");
+  });
+
+  it("#18 flags retired models on the home page and routes to re-selection", async () => {
+    render(
+      <ConnectionProvider value={local({ modelId: "model-retired" })}>
+        <AppLibraryView
+          accountSession={session()}
+          onOpenAccount={callback}
+          onOpenDiagnostics={callback}
+          onOpenSetup={callback}
+        />
+      </ConnectionProvider>,
+    );
+    await tick();
+    const banner = screen.getByTestId("offline-model-banner");
+    expect(banner).toHaveTextContent(
+      "Codex Desktop 正在使用的模型已下线，需要重新选择模型后再继续使用。",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "重新选择模型" }));
+    expect(callback).toHaveBeenCalledWith("codex_desktop");
+  });
+
+  it("#18 keeps the home page quiet while every connected model is still listed", async () => {
+    render(
+      <ConnectionProvider value={local()}>
+        <AppLibraryView
+          accountSession={session()}
+          onOpenAccount={callback}
+          onOpenDiagnostics={callback}
+          onOpenSetup={callback}
+        />
+      </ConnectionProvider>,
+    );
+    await tick();
+    expect(screen.queryByTestId("offline-model-banner")).toBeNull();
+  });
+
+  it("guides recharge without blocking setup when the balance is depleted (PRD 6.2)", async () => {
+    render(setupView(sessionWithMoney("-0.50")));
+    await tick();
+    expect(
+      screen.getByText("余额已用尽，请求将无法完成，请先充值。"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/余额已用尽：写入设置本身免费，但调用会失败/),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("configuration-apply-action")).toBeEnabled();
+  });
+
+  it("shows the low-balance banner on the setup page without the depleted warning", async () => {
+    render(setupView(sessionWithMoney("3.20")));
+    await tick();
+    expect(
+      screen.getByText("当前余额 ¥3.20，为避免请求中断，请先充值。"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/写入设置本身免费/)).toBeNull();
+  });
+
+  it("announces when the line picker follows the app's last-used line", async () => {
+    render(setupView(session(), local(), "global_accelerated"));
+    await tick();
+    expect(callback).toHaveBeenCalledWith("mainland_optimized");
+    expect(toast).toHaveBeenCalledWith("已切换到此应用上次使用的线路");
+  });
+
+  it("opens the model editor without rewriting an unchanged connection", async () => {
+    render(setupView());
+    await tick();
+    fireEvent.click(screen.getByTestId("configuration-apply-action"));
+    await tick();
+    expect(screen.getByRole("combobox", { name: /选择模型/ })).toHaveFocus();
+    expect(document.querySelector(".setup-advanced")).toHaveAttribute("open");
+    expect(
+      native.mock.calls.filter(([c]) => c === "configure_desktop_tool_v2"),
+    ).toHaveLength(0);
+    expect(
+      screen.getByRole("button", { name: "重新应用当前设置" }),
+    ).toBeEnabled();
+  });
+
+  it("downgrades an unsaved selection on an established connection to a secondary prompt (PRD 6.3 #20)", async () => {
+    const controller = local({
+      models: [
+        { modelId: "model-a", billingGroup: "优惠组" },
+        { modelId: "model-b", billingGroup: "default" },
+      ],
+    });
+    const view = render(
+      setupView(session(), controller, "mainland_optimized", "codex_desktop", {
+        appId: "codex_desktop",
+        action: "change-model",
+        revision: 1,
+      }),
+    );
+    await tick();
+    // 已接入且选择一致：换模型与分组（次级）。
+    const steady = screen.getByTestId("configuration-apply-action");
+    expect(steady).toHaveTextContent("换模型与分组");
+    expect(steady.className).toContain("secondary-action");
+    fireEvent.click(screen.getByRole("combobox", { name: /选择模型/ }));
+    fireEvent.click(screen.getByRole("option", { name: "model-b" }));
+    fireEvent.click(screen.getByRole("button", { name: "使用所选模型" }));
+    await tick();
+    // 选择变化后仍按「已接入」呈现：次级按钮 + 模型提示 + 可用连接卡，
+    // 不回退成「未接入」的 primary「一键接入」。
+    const action = screen.getByTestId("configuration-apply-action");
+    expect(action).toHaveTextContent("保存并应用");
+    expect(action.className).toContain("secondary-action");
+    expect(action.className).not.toContain("primary-action");
+    expect(
+      screen.getAllByRole("status").some((node) =>
+        node.textContent?.includes("已接入 model-a；当前选择尚未保存。"),
+      ),
+    ).toBe(true);
+    expect(screen.getByRole("button", { name: "打开使用" })).toBeEnabled();
+    // 对照：从未接入的应用仍走 primary「一键接入」。
+    view.rerender(setupView(session(), local({
+      state: "not_connected",
+      modelId: "",
+      lineId: "",
+      billingGroup: "",
+      models: [],
+    })));
+    await tick();
+    const fresh = screen.getByTestId("configuration-apply-action");
+    expect(fresh).toHaveTextContent("一键接入");
+    expect(fresh.className).toContain("primary-action");
+    expect(fresh.className).not.toContain("secondary-action");
+  });
+
+  it("changes the default explicitly while retaining each other model and its price group", async () => {
+    const controller = local({
+      models: [
+        { modelId: "model-a", billingGroup: "优惠组" },
+        { modelId: "model-b", billingGroup: "default" },
+      ],
+    });
+    render(
+      setupView(session(), controller, "mainland_optimized", "codex_desktop", {
+        appId: "codex_desktop",
+        action: "change-model",
+        revision: 1,
+      }),
+    );
+    await tick();
+    fireEvent.click(screen.getByRole("combobox", { name: /选择模型/ }));
+    fireEvent.click(screen.getByRole("option", { name: "model-b" }));
+    expect(
+      screen.getByRole("radio", { name: "默认模型 model-a" }),
+    ).toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "使用所选模型" }));
+    expect(
+      screen.getByRole("radio", { name: "默认模型 model-b" }),
+    ).toBeChecked();
+    expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
+      "保存并应用",
+    );
+    expect(
+      native.mock.calls.filter(([c]) => c === "configure_desktop_tool_v2"),
+    ).toHaveLength(0);
+    fireEvent.click(screen.getByTestId("configuration-apply-action"));
+    await tick();
+    expect(
+      native.mock.calls.find(([c]) => c === "configure_desktop_tool_v2")?.[1],
+    ).toMatchObject({
+      request: {
+        modelId: "model-b",
+        billingGroup: "default",
+        models: [
+          { modelId: "model-a", billingGroup: "优惠组" },
+          { modelId: "model-b", billingGroup: "default" },
+        ],
+      },
+    });
+    expect(controller.restore).not.toHaveBeenCalled();
+  });
+
+  it("honors repeat model-change visits and does not focus the hidden setup page", async () => {
+    const account = session(),
+      controller = local();
+    const intent = {
+      appId: "codex_desktop" as const,
+      action: "change-model" as const,
+      revision: 1,
+    };
+    const view = render(
+      setupView(
+        account,
+        controller,
+        "mainland_optimized",
+        "codex_desktop",
+        intent,
+        false,
+      ),
+    );
+    await tick();
+    expect(
+      screen.getByRole("combobox", { name: /选择模型/ }),
+    ).not.toHaveFocus();
+    view.rerender(
+      setupView(
+        account,
+        controller,
+        "mainland_optimized",
+        "codex_desktop",
+        intent,
+      ),
+    );
+    await tick();
+    expect(screen.getByRole("combobox", { name: /选择模型/ })).toHaveFocus();
+    screen.getByRole("button", { name: "重新应用当前设置" }).focus();
+    view.rerender(
+      setupView(account, controller, "mainland_optimized", "codex_desktop", {
+        ...intent,
+        revision: 2,
+      }),
+    );
+    await tick();
+    expect(screen.getByRole("combobox", { name: /选择模型/ })).toHaveFocus();
+    expect(
+      native.mock.calls.filter(([c]) => c === "configure_desktop_tool_v2"),
+    ).toHaveLength(0);
+  });
+
+  it("puts app actions before account details and routes changed settings to inspection without restoring", async () => {
+    const controller = local({ state: "changed" });
+    const open = vi.fn();
+    const { container } = render(
+      <ConnectionProvider value={controller}>
+        <AppLibraryView
+          accountSession={session()}
+          onOpenAccount={callback}
+          onOpenDiagnostics={callback}
+          onOpenSetup={open}
+        />
+      </ConnectionProvider>,
+    );
+    await tick();
+    const card = screen
+      .getByRole("heading", { name: "Codex Desktop" })
+      .closest("article")!;
+    const overview = container.querySelector(".account-overview")!;
+    expect(
+      card.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(overview).not.toHaveAttribute("open");
+    fireEvent.click(within(card).getByRole("button", { name: "检查并修复" }));
+    expect(open).toHaveBeenLastCalledWith("codex_desktop", "repair");
+    expect(controller.open).not.toHaveBeenCalled();
+    expect(controller.restore).not.toHaveBeenCalled();
+    fireEvent.click(within(card).getByRole("button", { name: "换模型与分组" }));
+    expect(open).toHaveBeenLastCalledWith("codex_desktop", "change-model");
+  });
+
+  it("returns to the home-selected app even when its parent value did not change after an internal app switch", async () => {
+    const account = session(),
+      controller = local();
+    const intent: SetupIntent = {
+      appId: "claude_desktop",
+      action: "change-model",
+      revision: 1,
+    };
+    const view = render(
+      setupView(
+        account,
+        controller,
+        "mainland_optimized",
+        "claude_desktop",
+        intent,
+      ),
+    );
+    await tick();
+    fireEvent.click(screen.getByRole("button", { name: "更换应用" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Codex Desktop.*已接入/ }),
+    );
+    await tick();
+    expect(
+      document.querySelector(".selected-app-bar strong"),
+    ).toHaveTextContent("Codex Desktop");
+    view.rerender(
+      setupView(account, controller, "mainland_optimized", "claude_desktop", {
+        ...intent,
+        revision: 2,
+      }),
+    );
+    await tick();
+    expect(
+      document.querySelector(".selected-app-bar strong"),
+    ).toHaveTextContent("Claude Desktop");
+    expect(screen.getByRole("combobox", { name: /选择模型/ })).toHaveFocus();
+    expect(
+      native.mock.calls.filter(([c]) => c === "configure_desktop_tool_v2"),
+    ).toHaveLength(0);
+  });
+
+  it.each([false, true])(
+    "keeps another app's saved connection usable after an external switch (queued: %s)",
+    async (queued) => {
+      const account = session(),
+        controller = local();
+      Object.assign(
+        controller.connections.find((c) => c.toolId === "claude_desktop")!,
+        {
+          ...controller.connections.find((c) => c.toolId === "codex_desktop")!,
+          toolId: "claude_desktop",
+        },
+      );
+      let finish!: () => void;
+      const original = native.getMockImplementation()!;
+      native.mockImplementation(async (command, args) => {
+        if (command !== "configure_desktop_tool_v2")
+          return original(command, args);
+        const req = (args as { request: Record<string, unknown> }).request;
+        if (queued)
+          await new Promise<void>((resolve) => {
+            finish = resolve;
+          });
+        return {
+          requestId: req.requestId,
+          schemaVersion: 4,
+          toolId: req.toolId,
+          modelId: req.modelId,
+          billingGroup: req.billingGroup,
+          models: req.models,
+          observedAtEpochMs: 2000,
+          status: "ready",
+          reasonCode: "desktop_start_observed",
+        };
+      });
+      const view = render(setupView(account, controller));
+      await tick();
+      applySavedOrSelected();
+      await tick();
+      view.rerender(
+        setupView(account, controller, "mainland_optimized", "claude_desktop", {
+          appId: "claude_desktop",
+          action: "change-model",
+          revision: 1,
+        }),
+      );
+      await tick();
+      if (queued) {
+        expect(
+          document.querySelector(".selected-app-bar strong"),
+        ).toHaveTextContent("Codex Desktop");
+        expect(screen.getByTestId("configuration-apply-action")).toBeDisabled();
+        await act(async () => finish());
+      }
+      await tick();
+      expect(
+        document.querySelector(".selected-app-bar strong"),
+      ).toHaveTextContent("Claude Desktop");
+      expect(screen.getByRole("button", { name: "打开使用" })).toBeEnabled();
+      expect(
+        screen.getByTestId("configuration-apply-action"),
+      ).toHaveTextContent("换模型与分组");
+      expect(
+        screen.queryByText("配置已保存，已检查启动"),
+      ).not.toBeInTheDocument();
+      const calls = native.mock.calls.filter(
+        ([c]) => c === "configure_desktop_tool_v2",
+      );
+      expect(calls).toHaveLength(1);
+      expect(calls[0][1]).toMatchObject({
+        request: { toolId: "codex_desktop" },
+      });
+      expect(controller.restore).not.toHaveBeenCalled();
+    },
+  );
+
+  it("does not claim a direct connection needs the assistant running", async () => {
+    render(setupView(session(), local({ requiresBackground: false })));
+    await tick();
+    expect(document.querySelector(".background-note")).toBeNull();
+    expect(screen.queryByText(/已确认经野菜中转完成/)).toBeNull();
+  });
   it("routes an interrupted open to automatic setup recovery without disconnecting", async () => {
     const controller = {
       ...local(),
@@ -276,11 +726,11 @@ describe("daily-use UX", () => {
       render(setupView(session(), controller, "mainland_optimized", toolId));
       await tick();
       const primary = () => screen.getByTestId("configuration-apply-action");
-      fireEvent.click(primary());
+      applySavedOrSelected();
       await tick();
       expect(primary()).toHaveTextContent("自动修复并重试");
       expect(screen.getByRole("alert")).toHaveTextContent("尚未恢复设置");
-      fireEvent.click(primary());
+      applySavedOrSelected();
       await tick();
       const dialog = screen.getByRole("dialog");
       expect(dialog).toHaveTextContent("请先保存");
@@ -349,13 +799,13 @@ describe("daily-use UX", () => {
         native.mock.calls.filter(
           ([command]) => command === "configure_desktop_tool_v2",
         );
-      fireEvent.click(applyButton());
+      applySavedOrSelected();
       await tick();
       expect(configureCalls()).toHaveLength(1);
       for (const [index, modelId] of ["model-b", "model-a"].entries()) {
         fireEvent.click(screen.getByRole("combobox", { name: /选择模型/ }));
         fireEvent.click(screen.getByRole("option", { name: modelId }));
-        fireEvent.click(applyButton());
+        applySavedOrSelected();
         await tick();
         expect(screen.getByRole("dialog")).toHaveTextContent("请先保存");
         expect(configureCalls().at(-1)?.[1]).not.toMatchObject({
@@ -370,7 +820,7 @@ describe("daily-use UX", () => {
         await tick();
         expect(configureCalls()).toHaveLength(beforeCancel);
         expect(getComputedStyle(document.body).pointerEvents).not.toBe("none");
-        fireEvent.click(applyButton());
+        applySavedOrSelected();
         await tick();
         fireEvent.click(
           within(screen.getByRole("dialog")).getByRole("button", {
@@ -424,15 +874,16 @@ describe("daily-use UX", () => {
     fireEvent.click(screen.getByRole("option", { name: "model-b" }));
     fireEvent.click(screen.getByRole("radio", { name: /标准分组/ }));
     expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
-      "先加入常用列表",
+      "使用所选模型",
     );
-    fireEvent.click(screen.getByTestId("configuration-apply-action"));
+    applySavedOrSelected();
     expect(
       native.mock.calls.some(([c]) => c === "configure_desktop_tool_v2"),
     ).toBe(false);
-    fireEvent.click(screen.getByRole("button", { name: "加入常用模型" }));
-    fireEvent.click(screen.getByRole("radio", { name: "默认模型 model-b" }));
-    fireEvent.click(screen.getByTestId("configuration-apply-action"));
+    expect(
+      screen.getByRole("radio", { name: "默认模型 model-b" }),
+    ).toBeChecked();
+    applySavedOrSelected();
     await tick();
     const call = native.mock.calls.find(
       ([c]) => c === "configure_desktop_tool_v2",
@@ -489,7 +940,7 @@ describe("daily-use UX", () => {
     });
     render(setupView());
     await tick();
-    fireEvent.click(screen.getByTestId("configuration-apply-action"));
+    applySavedOrSelected();
     await tick();
     const configureCalls = () =>
       native.mock.calls.filter(
@@ -542,7 +993,7 @@ describe("daily-use UX", () => {
       });
       render(setupView(session(), local(), "mainland_optimized", toolId));
       await tick();
-      fireEvent.click(screen.getByTestId("configuration-apply-action"));
+      applySavedOrSelected();
       await tick();
       const statuses = screen
         .getAllByRole("status")
@@ -650,7 +1101,7 @@ describe("daily-use UX", () => {
       screen.getByRole("region", { name: "所选分组价格" }),
     ).toHaveTextContent("1 亿 Token");
     expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
-      "一键接入",
+      "保存并应用",
     );
     expect(
       native.mock.calls.some((c) => c[0] === "configure_desktop_tool_v2"),
@@ -787,7 +1238,7 @@ describe("daily-use UX", () => {
     });
     render(setupView());
     await tick();
-    fireEvent.click(screen.getByTestId("configuration-apply-action"));
+    applySavedOrSelected();
     await tick();
     expect(screen.getByRole("alert")).toHaveTextContent("暂时没有完成");
     expect(screen.queryByText("接入完成")).not.toBeInTheDocument();
@@ -809,9 +1260,9 @@ describe("daily-use UX", () => {
     const connections = local();
     const view = render(setupView(account, connections));
     await tick();
-    fireEvent.click(screen.getByTestId("configuration-apply-action"));
+    applySavedOrSelected();
     await tick();
-    fireEvent.click(screen.getByTestId("configuration-apply-action"));
+    applySavedOrSelected();
     expect(
       native.mock.calls.filter((c) => c[0] === "configure_desktop_tool_v2"),
     ).toHaveLength(1);
@@ -854,7 +1305,7 @@ describe("daily-use UX", () => {
     expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
       "重新获取账户数据",
     );
-    fireEvent.click(screen.getByTestId("configuration-apply-action"));
+    applySavedOrSelected();
     expect(account.refresh).toHaveBeenCalledOnce();
     expect(
       native.mock.calls.some((c) => c[0] === "configure_desktop_tool_v2"),
@@ -875,7 +1326,7 @@ describe("daily-use UX", () => {
     const connections = local();
     const view = render(setupView(accountA, connections));
     await tick();
-    fireEvent.click(screen.getByTestId("configuration-apply-action"));
+    applySavedOrSelected();
     await tick();
     const accountB = {
       ...accountA,
@@ -908,7 +1359,7 @@ describe("daily-use UX", () => {
     );
     expect(screen.queryByRole("button", { name: "打开使用" })).toBeNull();
     expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
-      "一键接入",
+      "保存并应用",
     );
   });
   it("opens locally without login or reconfiguration and rejects duplicate clicks", async () => {
@@ -1052,7 +1503,11 @@ describe("daily-use UX", () => {
         </ConnectionProvider>,
       );
       await tick();
-      expect(screen.queryAllByRole("article")).toHaveLength(count || 2);
+      // V1 卡片（count=0 时仅 claude/codex desktop 特例可见）+ 恒显的
+      // 「即将支持」卡（OpenCode，PRD §3.2）。
+      expect(screen.queryAllByRole("article")).toHaveLength(
+        (count || 2) + 1,
+      );
       if (count === 0)
         expect(
           screen.getAllByRole("button", { name: /安装并接入/ }),
@@ -1062,7 +1517,7 @@ describe("daily-use UX", () => {
           name: /查看其他/,
         }),
       );
-      expect(screen.getAllByRole("article")).toHaveLength(7);
+      expect(screen.getAllByRole("article")).toHaveLength(6);
       expect(
         screen.queryByRole("region", { name: "用量账单" }),
       ).not.toBeInTheDocument();
@@ -1173,7 +1628,7 @@ describe("daily-use UX", () => {
       "tool_output_read_failed",
       "未能读取应用的测试结果",
     ],
-    ["external_override", "higher_precedence_override", "CC Switch"],
+    ["external_override", "higher_precedence_override", "环境变量"],
   ])(
     "reports %s/%s without claiming an unproved restore",
     async (status, reasonCode, expected) => {
@@ -1196,7 +1651,7 @@ describe("daily-use UX", () => {
       });
       render(setupView());
       await tick();
-      fireEvent.click(screen.getByTestId("configuration-apply-action"));
+      applySavedOrSelected();
       await tick();
       const alerts = [
         ...screen.queryAllByRole("alert"),

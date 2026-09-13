@@ -1,0 +1,57 @@
+{
+  "id": "WP-000",
+  "wave": "producer",
+  "owner": "replace-with-accountable-owner",
+  "riskClass": "high",
+  "objective": "Replace with one bounded objective",
+  "deliverables": ["Replace with observable deliverable"],
+  "requirementRefs": ["REQ-replace"],
+  "decisionRefs": ["DEC-replace-with-accepted"],
+  "blockingDecisionRefs": [],
+  "nonGoals": [],
+  "dependsOn": [],
+  "allowedPaths": [],
+  "forbiddenPaths": [
+    ".product-governance/**",
+    "shared-contracts/**",
+    "migrations/**"
+  ],
+  "migrationPolicy": {
+    "mode": "none",
+    "ownedPaths": [],
+    "dataBackfill": "No schema or data migration belongs to this package.",
+    "rollback": "Revert only files in allowedPaths; architecture changes require a new freeze."
+  },
+  "compatibilityPolicy": {
+    "strategy": "Consume frozen contracts without changing their semantics.",
+    "supportedVersions": "Only versions listed in inputContracts and outputContracts.",
+    "removalGate": "Removal requires a superseding decision, migration evidence, and a new freeze."
+  },
+  "inputContracts": [],
+  "outputContracts": [],
+  "acceptanceCommands": [
+    {
+      "id": "wp-000-as-01-execute",
+      "kind": "scenario_test",
+      "adapter": "pytest-json@1",
+      "selector": "tests/work_packages/wp-000/test_acceptance.py::test_wp_000_as_01",
+      "cwd": ".",
+      "timeoutSeconds": 300
+    }
+  ],
+  "requiredAcceptanceScenarios": [
+    {
+      "id": "WP-000-AS-01",
+      "assertion": "Replace with one observable happy, failure, replay, race or recovery assertion",
+      "testSelector": "tests/work_packages/wp-000/test_acceptance.py::test_wp_000_as_01",
+      "acceptanceCommandId": "wp-000-as-01-execute"
+    }
+  ],
+  "verificationOnly": false,
+  "stopConditions": [
+    "A frozen contract is missing or contradictory",
+    "A required change falls outside allowedPaths",
+    "A destructive or production-impacting action needs new authority"
+  ],
+  "status": "planned"
+}

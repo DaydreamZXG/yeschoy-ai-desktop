@@ -231,6 +231,7 @@ describe("reversible local connections", () => {
         requestId: expect.any(String),
         operation: "restore",
         toolId: "pi",
+        revokeTokens: true,
       },
     });
     expect(
@@ -424,10 +425,99 @@ describe("reversible local connections", () => {
           }),
         );
       });
-      expect(restore).toHaveBeenCalledWith("claude_code");
+      expect(restore).toHaveBeenCalledWith("claude_code", true);
       expect(screen.getByRole("status")).toHaveTextContent(
         "你之后修改的内容已保留",
       );
     },
   );
+  it("asks about key revocation separately and keeps the key when unchecked", async () => {
+    const connection: ToolConnection = {
+      ...connectionsFixture("one").connections[0],
+      state: "connected",
+      restoreMode: "original",
+      modelId: "glm-5.3",
+    };
+    const restore = vi.fn().mockResolvedValue({
+      ...connectionsFixture("one"),
+      status: "restored",
+      reasonCode: "local_settings_restored_token_kept",
+    });
+    render(
+      <ConnectionProvider
+        value={{
+          connections: [connection],
+          loading: false,
+          error: false,
+          restoring: null,
+          opening: null,
+          open: vi.fn(),
+          refresh: vi.fn(),
+          restore,
+        }}
+      >
+        <RestoreConnection connection={connection} name="Claude Code" />
+      </ConnectionProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "恢复原设置" }));
+    const dialog = screen.getByRole("dialog");
+    const revoke = within(dialog).getByRole("checkbox", {
+      name: /同时撤销此应用的专用 Key/,
+    });
+    expect(revoke).toBeChecked();
+    expect(dialog).toHaveTextContent("立即失效，不再产生任何计费");
+    fireEvent.click(revoke);
+    expect(revoke).not.toBeChecked();
+    expect(dialog).toHaveTextContent("仍然有效且可能继续计费");
+    await act(async () => {
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "恢复原设置" }),
+      );
+    });
+    expect(restore).toHaveBeenCalledWith("claude_code", false);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "已按你的选择保留",
+    );
+  });
+  it("offers the restore action as the retry entry when revocation fails", async () => {
+    const connection: ToolConnection = {
+      ...connectionsFixture("one").connections[0],
+      state: "connected",
+      restoreMode: "original",
+      modelId: "glm-5.3",
+    };
+    const restore = vi.fn().mockResolvedValue({
+      ...connectionsFixture("one"),
+      status: "restored",
+      reasonCode: "local_settings_restored_token_cleanup_pending",
+    });
+    render(
+      <ConnectionProvider
+        value={{
+          connections: [connection],
+          loading: false,
+          error: false,
+          restoring: null,
+          opening: null,
+          open: vi.fn(),
+          refresh: vi.fn(),
+          restore,
+        }}
+      >
+        <RestoreConnection connection={connection} name="Claude Code" />
+      </ConnectionProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "恢复原设置" }));
+    await act(async () => {
+      fireEvent.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "恢复原设置",
+        }),
+      );
+    });
+    expect(restore).toHaveBeenCalledWith("claude_code", true);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "再次点击「恢复原设置」即可重试撤销",
+    );
+  });
 });

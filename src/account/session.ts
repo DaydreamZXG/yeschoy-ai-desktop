@@ -6,6 +6,7 @@ import {
   type AccountMoney,
   type RecentSavings,
 } from "./finance";
+import { isUsageLogReport, type UsageLogReport } from "./usage";
 
 export const ACCOUNT_STATUSES = [
   "signed_out",
@@ -91,6 +92,7 @@ export interface AccountProjection {
   reasonCode: string;
   money?: AccountMoney;
   savings?: RecentSavings;
+  usageLog?: UsageLogReport;
 }
 
 type RecordValue = Record<string, unknown>;
@@ -283,6 +285,20 @@ export function decodeAccountProjection(
   requestId: string,
 ): AccountProjection | null {
   let finance: { money: AccountMoney; savings: RecentSavings } | undefined;
+  let usageLog: UsageLogReport | undefined;
+  if (object(value) && value.schemaVersion === 6) {
+    // v6：新增用量账单投影（PRD 6.6，批次 3 #1）。校验后剥离，降级走 v5 链。
+    if (!isUsageLogReport(value.usageLog)) return null;
+    if (
+      value.status !== "signed_in" &&
+      value.usageLog.status !== "unavailable"
+    )
+      return null;
+    usageLog = value.usageLog;
+    const legacy = { ...value };
+    delete legacy.usageLog;
+    value = { ...legacy, schemaVersion: 5 };
+  }
   if (object(value) && value.schemaVersion === 5) {
     if (!isAccountMoney(value.money) || !isRecentSavings(value.savings))
       return null;
@@ -360,7 +376,11 @@ export function decodeAccountProjection(
     value.models.length > 0
   )
     return null;
-  return { ...value, ...finance } as unknown as AccountProjection;
+  return {
+    ...value,
+    ...finance,
+    ...(usageLog === undefined ? {} : { usageLog }),
+  } as unknown as AccountProjection;
 }
 
 function normalizeModelV4(value: unknown): unknown | null {

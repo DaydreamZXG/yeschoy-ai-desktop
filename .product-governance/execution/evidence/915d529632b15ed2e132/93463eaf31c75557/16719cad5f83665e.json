@@ -1,0 +1,28 @@
+{
+  "scenarioId": "DAILY-shutdown",
+  "assertion": "Exit/background confirmation stays bounded.",
+  "testSelector": "tests/work_packages/ru077/test_renderer.py::test_shutdown",
+  "acceptanceCommandId": "ux-shutdown",
+  "runId": "RU-077/WP-RU077-DAILY-USE@2026-09-12T05:11:44.899411+00:00",
+  "packageId": "WP-RU077-DAILY-USE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru077/test_renderer.py::test_shutdown",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:116f02cc5599c8b85ec5f9547dd8ae06947ff2b89cfc805c0d874359a9cac27b",
+    "machineReportSha256": "sha256:026134651bc49320fc5dd583d4dda540cae5e63060a3b55721ae73388c974a73",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:dd02472016e5d653d8a9d831d1261fe91a7a64153ba561260426cf55036293d9",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:604c25289edd87cfa678468b11068c2afdd55e2d3876bb4e5c47708cb8cdc1c1",
+  "releaseUnitId": "RU-077",
+  "releaseUnitHash": "sha256:8140a03adaf7efb247eacd3b7fb4baf3fabaeb0305abc4eca33f02bc37849271"
+}

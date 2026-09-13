@@ -111,7 +111,7 @@ fn build_plan(
     home: &Path,
     windows_root: Option<&Path>,
 ) -> Result<LaunchPlan, AdapterFailure> {
-    if !matches!(tool_id, "claude_code" | "pi" | "hermes" | "openclaw") {
+    if !matches!(tool_id, "claude_code" | "pi") {
         return Err(failure("invalid_launch_target"));
     }
     let executable = path_text(&installation.path, platform)?;

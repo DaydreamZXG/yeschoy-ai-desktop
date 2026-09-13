@@ -1,10 +1,59 @@
 import catalog from "./catalog.json";
 
 // Reference metadata is not a model allowlist or a billing-route guarantee.
-const profiles = new Map(catalog.models.map((model) => [model.id, model]));
+let profiles = new Map(catalog.models.map((model) => [model.id, model]));
+
+/**
+ * Swap the lookup table for a validated remote catalog revision (M5).
+ * Passing null restores the bundled catalog. Only remoteCatalog.ts calls
+ * this, after its sha256 + schema + freshness checks passed.
+ */
+export function applyModelCatalogOverride(
+  models: typeof catalog.models | null,
+): void {
+  profiles = new Map(
+    (models ?? catalog.models).map((model) => [model.id, model]),
+  );
+}
 
 export function modelDisplayName(id: string): string {
   return profiles.get(id)?.displayName ?? id;
+}
+
+export interface ModelCapabilities {
+  contextWindow?: number;
+  maxOutputTokens?: number;
+  input?: readonly string[];
+  reasoningLevels?: readonly string[];
+  defaultReasoning?: string;
+  toolUse?: boolean;
+}
+
+/**
+ * Read-only capability lookup against the reviewed reference catalog.
+ * The catalog is metadata, not an allowlist: unknown models return an empty
+ * object — capabilities are never guessed (PRD 6.5), and missing fields are
+ * simply omitted so callers render no badge instead of "unsupported".
+ */
+export function modelCapabilities(id: string): ModelCapabilities {
+  const model = profiles.get(id);
+  if (!model) return {};
+  return {
+    ...(model.contextWindow !== undefined
+      ? { contextWindow: model.contextWindow }
+      : {}),
+    ...(model.maxOutputTokens !== undefined
+      ? { maxOutputTokens: model.maxOutputTokens }
+      : {}),
+    ...(model.input !== undefined ? { input: model.input } : {}),
+    ...(model.reasoningLevels !== undefined
+      ? { reasoningLevels: model.reasoningLevels }
+      : {}),
+    ...(model.defaultReasoning !== undefined
+      ? { defaultReasoning: model.defaultReasoning }
+      : {}),
+    ...(model.toolUse !== undefined ? { toolUse: model.toolUse } : {}),
+  };
 }
 
 export function modelMatchesQuery(id: string, query: string): boolean {

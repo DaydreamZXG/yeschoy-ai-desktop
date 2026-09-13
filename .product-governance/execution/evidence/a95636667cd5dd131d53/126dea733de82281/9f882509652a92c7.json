@@ -1,0 +1,14 @@
+{
+  "scenarioId": "BASELINE-picker",
+  "assertion": "Search, composition, scrolling and selection remain usable.",
+  "testSelector": "src/configuration/ModelPicker.test.tsx",
+  "acceptanceCommandId": "baseline-picker",
+  "runId": "RU-076/WP-RU076-CURRENT-BASELINE@2026-09-12T05:01:08.995345+00:00",
+  "packageId": "WP-RU076-CURRENT-BASELINE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:1d2fc00d022907b108a0092a2f12c78980b64afd26ed9768f5fb840a44eb7b86",
+  "releaseUnitId": "RU-076",
+  "releaseUnitHash": "sha256:aac08bad312b6c5cf4902864f066842c9e026ebcfa29d7331a37c1d49a92818c"
+}

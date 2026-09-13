@@ -3,6 +3,8 @@ import { ArrowUpRight, Check, LoaderCircle, Terminal, X } from "lucide-react";
 import { useConnections, type ToolConnection } from "./connections";
 import { TERMINAL_TOOLS, type OpenStatus } from "./launchApi";
 import type { ActivationToolId } from "./activation";
+import { useTranslation } from "react-i18next";
+import { RecoveryNotice } from "./RecoveryNotice";
 
 const messages: Record<OpenStatus, string> = {
   opened: "已发送打开请求，不会重新配置或发送测试消息。",
@@ -29,6 +31,7 @@ export function OpenConnection({
   onAdjust: () => void;
   disabled?: boolean;
 }) {
+  const { t } = useTranslation();
   const controller = useConnections();
   const [status, setStatus] = useState<
     OpenStatus | "error" | "timed_out" | null
@@ -104,27 +107,35 @@ export function OpenConnection({
           使用说明
         </button>
       )}
-      {status && (
-        <div
-          className="open-feedback"
-          role={status === "opened" ? "status" : "alert"}
-        >
-          {status === "opened" && <Check />}
+      {status === "opened" ? (
+        <div className="open-feedback" role="status">
+          <Check aria-hidden="true" />
           <span>
-            {status === "error"
-              ? "打开结果暂时无法确认，可以重试；未重新配置应用。"
-              : status === "timed_out"
-                ? "等待应用响应超时，页面已经恢复操作。应用仍可能稍后打开；若没有，请重试。接入设置没有被修改。"
-                : status === "opened" && terminal
-                  ? "已请求打开终端，请在新窗口中使用。不会重新配置或发送测试消息。"
-                  : messages[status]}
+            {terminal
+              ? "已请求打开终端，请在新窗口中使用。不会重新配置或发送测试消息。"
+              : messages.opened}
           </span>
-          {status !== "opened" && (
-            <button className="text-button" onClick={onAdjust}>
-              {status === "recovery_pending" ? "前往接入修复" : "查看接入设置"}
-            </button>
-          )}
         </div>
+      ) : (
+        status && (
+          <RecoveryNotice
+            className="open-feedback"
+            title={t("yeschoyDaily.openUnconfirmed")}
+            action={{
+              label:
+                status === "recovery_pending" ? "前往接入修复" : "查看接入设置",
+              run: onAdjust,
+            }}
+          >
+            <p>
+              {status === "error"
+                ? "打开结果暂时无法确认，可以重试；未重新配置应用。"
+                : status === "timed_out"
+                  ? "等待应用响应超时，页面已经恢复操作。应用仍可能稍后打开；若没有，请重试。接入设置没有被修改。"
+                  : messages[status]}
+            </p>
+          </RecoveryNotice>
+        )
       )}
       {terminal && (
         <dialog

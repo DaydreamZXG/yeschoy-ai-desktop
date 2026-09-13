@@ -1,0 +1,14 @@
+{
+  "scenarioId": "BASELINE-shutdown",
+  "assertion": "Exit/background confirmation remains bounded, truthful and recoverable.",
+  "testSelector": "src/settings/QuitAssistant.test.tsx",
+  "acceptanceCommandId": "baseline-shutdown",
+  "runId": "RU-076/WP-RU076-CURRENT-BASELINE@2026-09-12T05:01:08.995345+00:00",
+  "packageId": "WP-RU076-CURRENT-BASELINE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:8adc7caf876fa9346a0248f5988671d5b45d55a8d780da327de1d7478eecf6fc",
+  "releaseUnitId": "RU-076",
+  "releaseUnitHash": "sha256:aac08bad312b6c5cf4902864f066842c9e026ebcfa29d7331a37c1d49a92818c"
+}

@@ -1,0 +1,11 @@
+{
+  "mode": "review",
+  "valid": false,
+  "errorCount": 1,
+  "warningCount": 0,
+  "errors": [
+    "Work package WP-RU077-DAILY-USE.wave is invalid"
+  ],
+  "warnings": [],
+  "releaseUnitId": "RU-077"
+}

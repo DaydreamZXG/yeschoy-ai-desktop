@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ArrowUpRight,
@@ -6,7 +6,6 @@ import {
   CircleUserRound,
   Clock3,
   Globe2,
-  LoaderCircle,
   LogOut,
   RefreshCw,
   ShieldCheck,
@@ -14,11 +13,18 @@ import {
 } from "lucide-react";
 import type { ConfigurationLineId } from "../configuration/preview";
 import { creditUnit, formatMoney } from "../account/finance";
+import { aggregateUsage, type UsageRecord } from "../account/usage";
+import {
+  readSessionAgeRecord,
+  sessionAgeLevel,
+} from "../account/sessionAge";
 import { SavingsCard, SavingsDetails } from "./Savings";
+import { WORKBENCH_APPS } from "./appCatalog";
 import type { AccountSessionController } from "../account/useAccountSession";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { WorkbenchFooter } from "./WorkbenchChrome";
 import { useWorkbenchCopy } from "./copy";
+import { useWalletRecharge } from "./useWalletRecharge";
 
 function compact(value: string, locale: string): string {
   const number = Number(value);
@@ -53,7 +59,61 @@ export function AccountView({
   const pending = projection?.status === "authorization_pending";
   const account = projection?.account;
   const money = signedIn ? projection.money : undefined;
+  const recharge = useWalletRecharge(openWallet);
+  const usageLog =
+    projection?.status === "signed_in" ? projection.usageLog : undefined;
+  const usageAggregates = useMemo(
+    () =>
+      usageLog?.status === "available" ? aggregateUsage(usageLog.records) : [],
+    [usageLog],
+  );
+  const usageDetails = useMemo(
+    () =>
+      [...(usageLog?.records ?? [])]
+        .sort((a, b) => b.observedAtEpochMs - a.observedAtEpochMs)
+        .slice(0, 100),
+    [usageLog],
+  );
+  const latestPerTool = useMemo(() => {
+    const latest = new Map<string, UsageRecord>();
+    for (const record of usageLog?.records ?? []) {
+      const current = latest.get(record.toolId);
+      if (!current || record.observedAtEpochMs > current.observedAtEpochMs)
+        latest.set(record.toolId, record);
+    }
+    return [...latest.values()].sort(
+      (a, b) => b.observedAtEpochMs - a.observedAtEpochMs,
+    );
+  }, [usageLog]);
+  // 数据过期标注（#21）：超过 10 分钟即提示「可能不是最新」。
+  const staleData =
+    !!projection?.observedAtEpochMs &&
+    Date.now() - projection.observedAtEpochMs > 10 * 60 * 1000;
+  const toolName = (toolId: string): string =>
+    toolId === ""
+      ? c.usageUnattributed
+      : (WORKBENCH_APPS.find((app) => app.id === toolId)?.name ?? toolId);
+  const formatRecordTime = (ms: number) =>
+    new Intl.DateTimeFormat(locale, {
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(ms);
   const displayName = account?.displayName || account?.username || c.signedInAs;
+  // 登录成功过渡（动效优化）：刚完成授权的首轮 signed_in 依次浮现身份信息。
+  const [justSignedIn, setJustSignedIn] = useState(false);
+  const prevPendingRef = useRef(false);
+  useEffect(() => {
+    const pendingNow = projection?.status === "authorization_pending";
+    if (prevPendingRef.current && signedIn) setJustSignedIn(true);
+    prevPendingRef.current = pendingNow;
+  }, [projection?.status, signedIn]);
+  useEffect(() => {
+    if (!justSignedIn) return;
+    const timer = window.setTimeout(() => setJustSignedIn(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [justSignedIn]);
   const observed = useMemo(
     () =>
       projection?.observedAtEpochMs
@@ -90,6 +150,10 @@ export function AccountView({
   })();
   const signInDisabled =
     loading || projection?.reasonCode === "authorization_unavailable";
+  // 会话时效感知（#23，本地记账）：仅提示，不阻断主流程。
+  const sessionAge = signedIn
+    ? sessionAgeLevel(readSessionAgeRecord(), Date.now())
+    : null;
 
   return (
     <div className="workbench-page account-workspace">
@@ -115,28 +179,26 @@ export function AccountView({
           </label>
           <small>
             {lineId === "mainland_optimized"
-              ? "中国大陆网络优先"
-              : "Cloudflare 全球线路，海外可优先尝试"}
+              ? c.mainlandLineNote
+              : c.globalLineNote}
           </small>
         </div>
       </header>
-      <p className="account-route-note">
-        线路只影响连接体验，不改变计费分组和倍率，也无需重新登录。
-      </p>
+      <p className="account-route-note">{c.routeNote}</p>
       {session.lastError && (
         <p className="workbench-notice" role="status">
           <Clock3 />
           {pending
-            ? "连接暂时中断，正在继续等待网页授权，无需重新登录。"
+            ? c.connectionNoticePending
             : signedIn
-              ? "暂时无法更新账户，以下是上次读取的数据。"
-              : "暂时无法连接账户，请重试。"}
+              ? c.connectionNoticeSignedIn
+              : c.connectionNoticeSignedOut}
           <button
             type="button"
             onClick={() => void refresh()}
             disabled={loading}
           >
-            重试
+            {c.retry}
           </button>
         </p>
       )}
@@ -148,10 +210,13 @@ export function AccountView({
           aria-live="polite"
           aria-atomic="true"
         >
-          <LoaderCircle aria-hidden="true" />
-          <div>
-            <h2>{c.checking}</h2>
-            <p>{c.accountBody}</p>
+          <span className="sr-only">
+            {c.checking} {c.accountBody}
+          </span>
+          <div className="account-loading-skeleton" aria-hidden="true">
+            <span className="skeleton skeleton-heading" />
+            <span className="skeleton skeleton-line" />
+            <span className="skeleton skeleton-line is-short" />
           </div>
         </section>
       ) : pending && projection ? (
@@ -184,19 +249,37 @@ export function AccountView({
       ) : signedIn && account ? (
         <>
           <section className="account-identity-card">
-            <div className="account-avatar-large" aria-hidden="true">
+            <div
+              className={
+                justSignedIn
+                  ? "account-avatar-large is-entering"
+                  : "account-avatar-large"
+              }
+              aria-hidden="true"
+            >
               <CircleUserRound />
             </div>
-            <div>
+            <div
+              className={
+                justSignedIn ? "account-identity-name is-entering" : undefined
+              }
+            >
               <span>{c.signedInAs}</span>
               <h2>{displayName}</h2>
               {observed && (
                 <p>
                   {c.observedAt} {observed}
+                  {staleData ? ` · ${c.usageStale}` : ""}
                 </p>
               )}
             </div>
-            <div className="account-identity-actions">
+            <div
+              className={
+                justSignedIn
+                  ? "account-identity-actions is-entering"
+                  : "account-identity-actions"
+              }
+            >
               <button
                 type="button"
                 className="secondary-action"
@@ -217,6 +300,35 @@ export function AccountView({
               </button>
             </div>
           </section>
+
+          {sessionAge && sessionAge !== "fresh" && (
+            <div
+              className={
+                sessionAge === "reauth"
+                  ? "account-session-age-notice is-reauth"
+                  : "account-session-age-notice"
+              }
+              role="status"
+              data-testid="session-age-notice"
+            >
+              <Clock3 aria-hidden="true" />
+              <p>
+                {sessionAge === "reauth"
+                  ? c.sessionAgeReauthBody
+                  : c.sessionAgeExpiringBody}
+              </p>
+              {sessionAge === "reauth" && (
+                <button
+                  type="button"
+                  className="secondary-action"
+                  onClick={() => void beginAuthorization()}
+                  disabled={loading}
+                >
+                  {c.sessionAgeReauthAction}
+                </button>
+              )}
+            </div>
+          )}
 
           {projection.reasonCode === "partial_data" && (
             <div className="account-inline-warning" role="status">
@@ -258,10 +370,151 @@ export function AccountView({
             <article className="summary-card">
               <span className="summary-label">{c.requestCount}</span>
               <strong>{compact(account.requestCount, locale)}</strong>
-              <div className="summary-bottom">次请求</div>
+              <div className="summary-bottom">{c.requestUnit}</div>
             </article>
           </section>
           <SavingsDetails savings={projection.savings} />
+
+          <section className="usage-section" aria-label={c.usageByToolModel}>
+            <div className="workbench-section-heading">
+              <h2>
+                {c.usageByToolModel}
+                <small>
+                  {c.usageWindowNote.replace(
+                    "{{days}}",
+                    String(usageLog?.windowDays ?? 30),
+                  )}
+                </small>
+              </h2>
+            </div>
+            {usageLog?.status === "available" ? (
+              usageAggregates.length > 0 ? (
+                <div className="usage-table-scroll">
+                  <table className="usage-table">
+                    <thead>
+                      <tr>
+                        <th>{c.usageColTool}</th>
+                        <th>{c.usageColModel}</th>
+                        <th>{c.usageColRequests}</th>
+                        <th>{c.usageColPrompt}</th>
+                        <th>{c.usageColCompletion}</th>
+                        <th>{c.usageColCache}</th>
+                        <th>{c.usageColAmount}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {usageAggregates.map((row) => (
+                        <tr key={`${row.toolId}\u0000${row.modelId}`}>
+                          <td>{toolName(row.toolId)}</td>
+                          <td className="usage-model-cell">
+                            <code>{row.modelId}</code>
+                          </td>
+                          <td>{row.requests}</td>
+                          <td>{compact(String(row.promptTokens), locale)}</td>
+                          <td>
+                            {compact(String(row.completionTokens), locale)}
+                          </td>
+                          <td>{compact(String(row.cacheTokens), locale)}</td>
+                          <td>
+                            {row.amount === null ? (
+                              <span className="usage-amount-missing">—</span>
+                            ) : (
+                              formatMoney(
+                                String(row.amount),
+                                money?.currency,
+                                locale,
+                              )
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="usage-note">
+                  {c.usageEmpty.replace(
+                    "{{days}}",
+                    String(usageLog.windowDays),
+                  )}
+                </p>
+              )
+            ) : (
+              <p className="usage-note">{c.usageUnavailableBody}</p>
+            )}
+            {usageLog?.truncated && <p className="usage-note">{c.usageTruncated}</p>}
+          </section>
+
+          {latestPerTool.length > 0 && (
+            <section
+              className="usage-latest"
+              aria-label={c.usageLatestPerTool}
+            >
+              <h2>{c.usageLatestPerTool}</h2>
+              <ul>
+                {latestPerTool.map((record) => (
+                  <li key={record.toolId || "unattributed"}>
+                    <span className="usage-latest-tool">
+                      {toolName(record.toolId)}
+                    </span>
+                    <code>{record.modelId}</code>
+                    <small>{formatRecordTime(record.observedAtEpochMs)}</small>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {usageDetails.length > 0 && (
+            <details className="server-details usage-details">
+              <summary>
+                {c.usageDetailsSummary.replace(
+                  "{{count}}",
+                  String(usageDetails.length),
+                )}
+              </summary>
+              <div className="usage-table-scroll">
+                <table className="usage-table">
+                  <thead>
+                    <tr>
+                      <th>{c.usageColTime}</th>
+                      <th>{c.usageColTool}</th>
+                      <th>{c.usageColModel}</th>
+                      <th>{c.usageColPrompt}</th>
+                      <th>{c.usageColCompletion}</th>
+                      <th>{c.usageColCache}</th>
+                      <th>{c.usageColAmount}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {usageDetails.map((record, index) => (
+                      <tr
+                        key={`${record.observedAtEpochMs}-${record.modelId}-${index}`}
+                      >
+                        <td>{formatRecordTime(record.observedAtEpochMs)}</td>
+                        <td>{toolName(record.toolId)}</td>
+                        <td className="usage-model-cell">
+                          <code>{record.modelId}</code>
+                        </td>
+                        <td>{compact(String(record.promptTokens), locale)}</td>
+                        <td>
+                          {compact(String(record.completionTokens), locale)}
+                        </td>
+                        <td>{compact(String(record.cacheTokens), locale)}</td>
+                        <td>
+                          {record.amount === "" ? (
+                            <span className="usage-amount-missing">—</span>
+                          ) : (
+                            formatMoney(record.amount, money?.currency, locale)
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          )}
 
           <section className="account-wallet-card">
             <div className="wallet-icon">
@@ -274,7 +527,7 @@ export function AccountView({
             <button
               type="button"
               className="primary-action compact-primary"
-              onClick={() => void openWallet()}
+              onClick={() => void recharge()}
             >
               {c.rechargeNow}
               <ArrowUpRight aria-hidden="true" />
@@ -295,7 +548,7 @@ export function AccountView({
             </span>
           </div>
           <div className="sign-in-copy">
-            <span className="eyebrow">野菜API</span>
+            <span className="eyebrow">{c.signInBrand}</span>
             <h2>{c.signIn}</h2>
             <p>{reason || c.signInBody}</p>
             <div className="sign-in-actions">
@@ -329,12 +582,10 @@ export function AccountView({
       </details>
       <ConfirmDialog
         isOpen={logoutPrompt}
-        title="仅退出野菜API账户？"
-        message={
-          "这里只清除本机的野菜API登录状态，不会改动 Codex、Claude 等应用当前的接入设置。\n\n如果还要移除应用接入，请先到“应用接入”恢复该应用的原设置。"
-        }
-        confirmText="仅退出账户"
-        cancelText="暂不退出"
+        title={c.logoutPromptTitle}
+        message={c.logoutPromptMessage}
+        confirmText={c.logoutPromptConfirm}
+        cancelText={c.logoutPromptCancel}
         variant="info"
         pending={loading}
         onConfirm={() => {

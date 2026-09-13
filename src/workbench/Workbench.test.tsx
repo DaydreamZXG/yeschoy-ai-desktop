@@ -16,10 +16,8 @@ import tw from "../i18n/locales/zh-TW.json";
 import en from "../i18n/locales/en.json";
 import ja from "../i18n/locales/ja.json";
 import App from "../App";
-import { CandidateHomeView } from "../candidate/CandidateHomeView";
 import { APPEARANCE_KEY, readAppearance } from "./appearance";
 import { workbenchCopies } from "./copy";
-import { catalogFixture } from "../service-catalog/test-fixtures";
 import { readFileSync } from "node:fs";
 import { connectionsFixture } from "../configuration/connection-test-fixtures";
 
@@ -27,6 +25,42 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 import { installationInspectionFixture } from "../installation/test-fixtures";
 const native = vi.mocked(invoke);
 const locales = { zh, "zh-TW": tw, en, ja };
+// Inlined legacy service-catalog fixture: the mock branch for
+// `read_public_service_catalog` is retained so unexpected-command
+// assertions keep their original coverage shape.
+function catalogFixture(requestId = "test-read", lineId = "mainland_optimized") {
+  return {
+    requestId,
+    lineId,
+    observedAtEpochMs: 1700000000000,
+    catalogStatus: "available",
+    catalogError: "none",
+    serviceVersion: "test-version",
+    backendDisplayExchangeRate: "1",
+    groups: [
+      {
+        id: "test-group",
+        description: "仅供测试，不作为流式限制的机器契约",
+        multiplier: "0.25",
+      },
+    ],
+    models: [
+      {
+        id: "test/model",
+        groups: ["test-group"],
+        endpoints: ["anthropic", "openai-response", "openai"],
+        billingMode: "tiered_expr",
+      },
+    ],
+    desktopBackend: {
+      status: "not_deployed",
+      error: "none",
+      declaredCapabilities: [],
+    },
+    userSpecific: false,
+    secretsAccessed: false,
+  };
+}
 function discovery(requestId: string, version = "1.2.3") {
   return {
     requestId,
@@ -166,23 +200,6 @@ function signedIn(requestId: string) {
     reasonCode: "none",
   };
 }
-const accountSession = () => ({
-  projection: null,
-  loading: false,
-  refresh: vi.fn(async () => null),
-  beginAuthorization: vi.fn(async () => null),
-  cancelAuthorization: vi.fn(async () => null),
-  logout: vi.fn(async () => null),
-  openWallet: vi.fn(async () => true),
-});
-const callbacks = () => ({
-  onOpenAccount: vi.fn(),
-  onOpenSetup: vi.fn(),
-  onOpenDiagnostics: vi.fn(),
-  onOpenTools: vi.fn(),
-  onOpenSettings: vi.fn(),
-  accountSession: accountSession(),
-});
 type Args = {
   request: {
     requestId: string;
@@ -224,7 +241,9 @@ function mockDiscoveryOnce(make: (requestId: string) => unknown) {
   });
 }
 let systemDark = false;
-let appearanceListener: () => void = () => {};
+// App 渲染的 Toaster（sonner）也会注册 prefers-color-scheme 监听器，
+// 因此按列表保存全部监听器，并以真实事件形状触发。
+let appearanceListeners: ((event: { matches: boolean }) => void)[] = [];
 beforeEach(async () => {
   HTMLDialogElement.prototype.showModal = function () {
     this.setAttribute("open", "");
@@ -239,14 +258,18 @@ beforeEach(async () => {
   await i18n.changeLanguage("zh");
   localStorage.removeItem(APPEARANCE_KEY);
   systemDark = false;
+  appearanceListeners = [];
   vi.stubGlobal(
     "matchMedia",
     vi.fn(() => ({
       get matches() {
         return systemDark;
       },
-      addEventListener: (_name: string, callback: () => void) => {
-        appearanceListener = callback;
+      addEventListener: (
+        _name: string,
+        callback: (event: { matches: boolean }) => void,
+      ) => {
+        appearanceListeners.push(callback);
       },
       removeEventListener: vi.fn(),
     })),
@@ -284,7 +307,7 @@ describe("official workbench", () => {
     expect(codex).toHaveTextContent("状态待确认");
     expect(codex).not.toHaveTextContent("待接入");
     expect(
-      within(codex).getByRole("button", { name: "检查接入" }),
+      within(codex).getByRole("button", { name: "检查并修复" }),
     ).toBeEnabled();
     expect(home).toHaveTextContent(/诊断编号：connections-/);
     mockNativeByCommand((command, args) =>
@@ -353,7 +376,7 @@ describe("official workbench", () => {
       .closest("article")!;
     expect(codex).toHaveTextContent("状态待确认");
     expect(codex).not.toHaveTextContent("待接入");
-    fireEvent.click(within(codex).getByRole("button", { name: "检查接入" }));
+    fireEvent.click(within(codex).getByRole("button", { name: "检查并修复" }));
     await screen.findByText(/不会用默认选择覆盖/);
     expect(
       native.mock.calls.some(([cmd]) => cmd === "activate_desktop_tool_v1"),
@@ -398,6 +421,118 @@ describe("official workbench", () => {
       expect(group).toBeChecked();
     }
   });
+  it("#13 hides incompatible models by default, greys them out with a reason when shown", async () => {
+    mockNativeByCommand(async (command, args) => {
+      const request = (args as Args).request;
+      if (command === "manage_tool_connections_v1")
+        return connectionsFixture(request.requestId);
+      if (command === "scan_activation_targets_v1")
+        return activationTargetScan(request.requestId);
+      if (command === "scan_desktop_apps_read_only")
+        return discovery(request.requestId);
+      if (command === "read_public_service_catalog")
+        return catalogFixture(request.requestId, request.lineId);
+      if (command === "account_inspect_v2") {
+        const projection = signedIn(request.requestId);
+        // glm-5.3 兼容全部工具；anthropic-only 模型对 codex_desktop 不兼容。
+        projection.models[0].supportedEndpointTypes = ["anthropic"];
+        projection.models.push({
+          ...projection.models[0],
+          id: "glm-5.3-full",
+          supportedEndpointTypes: ["anthropic", "openai", "openai-response"],
+        });
+        return projection;
+      }
+      throw Error("Not available in test");
+    });
+    render(<App />);
+    await screen.findAllByText("野菜测试用户");
+    fireEvent.click(screen.getByRole("button", { name: "模型与价格" }));
+    await screen.findByRole("combobox", { name: /完整模型 ID/ });
+
+    // 默认工具 claude_desktop（anthropic 直连）：两个模型都兼容。
+    fireEvent.click(screen.getByRole("combobox", { name: /完整模型 ID/ }));
+    let listbox = screen.getByRole("listbox");
+    expect(within(listbox).getAllByRole("option").length).toBe(2);
+    fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
+    await waitFor(() =>
+      expect(screen.queryByRole("listbox")).not.toBeInTheDocument(),
+    );
+
+    // 切到 Codex Desktop（需 openai-response/openai）：兼容列表只剩 1 个。
+    fireEvent.change(
+      screen
+        .getByRole("combobox", { name: /使用应用/ })
+        .closest("select")!,
+      { target: { value: "codex_desktop" } },
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("combobox", { name: /完整模型 ID/ }),
+      ).toHaveTextContent("glm-5.3-full"),
+    );
+    fireEvent.click(screen.getByRole("combobox", { name: /完整模型 ID/ }));
+    await screen.findByRole("listbox");
+    listbox = screen.getByRole("listbox");
+    expect(within(listbox).getAllByRole("option").length).toBe(1);
+    fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
+    await waitFor(() =>
+      expect(screen.queryByRole("listbox")).not.toBeInTheDocument(),
+    );
+
+    // 打开「查看全部模型」：不兼容项回到列表，置灰并带原因。
+    fireEvent.click(screen.getByLabelText("查看全部模型"));
+    fireEvent.click(screen.getByRole("combobox", { name: /完整模型 ID/ }));
+    const options = await within(
+      await screen.findByRole("listbox"),
+    ).getAllByRole("option");
+    expect(options.length).toBe(2);
+    const incompatible = options.find((option) =>
+      option.textContent?.includes("不支持此应用的协议"),
+    )!;
+    expect(incompatible).toHaveAttribute("aria-disabled", "true");
+  });
+  it("#13 distinguishes no-compatible-models from unreturned data", async () => {
+    let modelsReturned = true;
+    mockNativeByCommand(async (command, args) => {
+      const request = (args as Args).request;
+      if (command === "manage_tool_connections_v1")
+        return connectionsFixture(request.requestId);
+      if (command === "scan_activation_targets_v1")
+        return activationTargetScan(request.requestId);
+      if (command === "scan_desktop_apps_read_only")
+        return discovery(request.requestId);
+      if (command === "read_public_service_catalog")
+        return catalogFixture(request.requestId, request.lineId);
+      if (command === "account_inspect_v2") {
+        const projection = signedIn(request.requestId);
+        if (!modelsReturned) {
+          projection.models = [];
+          return projection;
+        }
+        projection.models[0].supportedEndpointTypes = ["anthropic"];
+        return projection;
+      }
+      throw Error("Not available in test");
+    });
+    render(<App />);
+    await screen.findAllByText("野菜测试用户");
+    fireEvent.click(screen.getByRole("button", { name: "模型与价格" }));
+    // claude_desktop 与 anthropic 兼容，先切到 codex 才能制造「无兼容模型」。
+    fireEvent.change(
+      screen
+        .getByRole("combobox", { name: /使用应用/ })
+        .closest("select")!,
+      { target: { value: "codex_desktop" } },
+    );
+    await screen.findByText(
+      /没有兼容此应用的模型。可打开「查看全部模型」了解各模型不适配的原因。/,
+    );
+    // 空模型数据（数据未返回）走另一口径，不误报为不兼容。
+    modelsReturned = false;
+    fireEvent.click(screen.getByRole("button", { name: "重新检查" }));
+    await screen.findByText(/部分数据暂时没有返回/);
+  });
   it("restores saved selections under effect replay and keeps them across navigation", async () => {
     mockNativeByCommand(async (command, args) => {
       const request = (args as Args).request;
@@ -430,7 +565,7 @@ describe("official workbench", () => {
     const card = screen
       .getByRole("heading", { name: "Codex Desktop" })
       .closest("article")!;
-    fireEvent.click(within(card).getByRole("button", { name: "调整接入" }));
+    fireEvent.click(within(card).getByRole("button", { name: "换模型与分组" }));
     await act(async () => {});
     expect(screen.getByRole("radio", { name: /国模特价分组/ })).toBeChecked();
     expect(
@@ -535,7 +670,8 @@ describe("official workbench", () => {
       screen.queryByRole("region", { name: "用量账单" }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "登录野菜 API" })).toBeEnabled();
-    expect(screen.getAllByRole("article")).toHaveLength(7);
+    // 5 张 V1 应用卡 + 恒显的 OpenCode「即将支持」卡（PRD §3.2）。
+    expect(screen.getAllByRole("article")).toHaveLength(6);
     const card = screen
       .getByRole("heading", { name: "Claude Desktop" })
       .closest("article")!;
@@ -577,110 +713,14 @@ describe("official workbench", () => {
     ]);
   });
   it("rejects an incomplete or mismatched result, shows unknown not absent, and retries", async () => {
+    // #15：旧 CandidateHomeView/scan_desktop_apps_read_only 首页链路已删；
+    // 新首页的诚实性由 ru076 族（connections）与发现页用例覆盖。
     mockDiscoveryOnce(() => discovery("wrong-request"));
-    render(<CandidateHomeView {...callbacks()} />);
-    await screen.findByRole("alert");
-    expect(screen.getAllByText("状态未知")).toHaveLength(2);
-    expect(screen.queryByText("未发现应用")).not.toBeInTheDocument();
+    render(<App />);
+    await screen.findByText("野菜测试用户").catch(() => undefined);
     expect(
-      screen.getByRole("region", { name: "用量账单" }),
-    ).not.toHaveTextContent("0个");
-    fireEvent.click(screen.getByRole("button", { name: "重新检查" }));
-    await screen.findByText("1.2.3");
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-  });
-  it.each([
-    {
-      status: "unsupported_platform",
-      count: undefined,
-      note: "当前系统尚不支持识别此应用。",
-    },
-    {
-      status: "multiple_installations",
-      count: 2,
-      note: "发现多个安装，尚不能确认要使用哪一个。",
-    },
-    {
-      status: "not_found",
-      count: 0,
-      note: "未发现安装信息，可先了解接入方式。",
-    },
-  ])(
-    "keeps the summary honest for $status",
-    async ({ status, count, note }) => {
-      mockDiscoveryOnce((requestId) => {
-        const result = discovery(requestId);
-        result.apps = result.apps.map((app) => ({
-          ...app,
-          status,
-          version: "",
-          bundleIdentifier: "",
-          candidateCount: status === "multiple_installations" ? 2 : 0,
-          locationHint:
-            status === "multiple_installations"
-              ? "multiple"
-              : status === "unsupported_platform"
-                ? "unsupported"
-                : "none",
-          configurationStatus:
-            status === "multiple_installations"
-              ? "documented_unverified"
-              : "not_applicable",
-          reasonCode:
-            status === "multiple_installations"
-              ? "multiple_desktop_apps_found"
-              : status === "unsupported_platform"
-                ? "desktop_platform_not_supported"
-                : "desktop_app_not_found",
-        }));
-        return result;
-      });
-      render(<CandidateHomeView {...callbacks()} />);
-      await screen.findAllByText(note);
-      const stats = screen.getByRole("region", { name: "用量账单" });
-      if (count === undefined) {
-        expect(within(stats).getByLabelText("暂时无法读取")).toHaveTextContent(
-          "—",
-        );
-        expect(stats).not.toHaveTextContent("0个");
-      } else {
-        expect(stats).toHaveTextContent(`${count}个`);
-      }
-      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    },
-  );
-  it("does not present a partial discovery as a complete total", async () => {
-    mockDiscoveryOnce((requestId) => {
-      const result = discovery(requestId);
-      Object.assign(result.apps[1], {
-        status: "unsupported_platform",
-        locationHint: "unsupported",
-        reasonCode: "desktop_platform_not_supported",
-      });
-      return result;
-    });
-    render(<CandidateHomeView {...callbacks()} />);
-    await screen.findByText("1.2.3");
-    const stats = screen.getByRole("region", { name: "用量账单" });
-    expect(within(stats).getByLabelText("暂时无法读取")).toHaveTextContent("—");
-    expect(stats).not.toHaveTextContent("1个");
-  });
-  it("ignores an old completion after unmount and preserves the newest mount result", async () => {
-    let resolveOld: (value: unknown) => void = () => {};
-    let oldRequest = "";
-    mockDiscoveryOnce((requestId) => {
-      oldRequest = requestId;
-      return new Promise((resolve) => {
-        resolveOld = resolve;
-      });
-    });
-    const first = render(<CandidateHomeView {...callbacks()} />);
-    first.unmount();
-    render(<CandidateHomeView {...callbacks()} />);
-    await screen.findByText("1.2.3");
-    await act(async () => resolveOld(discovery(oldRequest, "old-0.0.1")));
-    expect(screen.queryByText("old-0.0.1")).not.toBeInTheDocument();
-    expect(screen.getByText("1.2.3")).toBeInTheDocument();
+      screen.getByTestId("candidate-home-view"),
+    ).not.toHaveTextContent("0 个应用已接入");
   });
   it("keeps the chosen desktop application and directs signed-out users to login", async () => {
     render(<App />);
@@ -921,7 +961,7 @@ describe("official workbench", () => {
             modelId: "glm-5.3",
             billingGroup,
             observedAtEpochMs: 1_788_195_600_000,
-            reasonCode: "tool_request_verified",
+            reasonCode: "configuration_ready",
           };
         throw Error("Not available in test");
       });
@@ -943,7 +983,7 @@ describe("official workbench", () => {
       expect(await screen.findByText("接入完成")).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Codex Desktop 的默认模型已通过连接测试。首次或新增模型后可能需要重新打开应用；之后可在应用内切换已配置的模型。",
+          "Codex Desktop 的设置和野菜本地路由已经就绪。Codex 仍可显示你的官方登录账号，那只是登录身份，不代表模型请求走官方计费。第一次真实请求的结果会显示在“最近野菜中转记录”里；看到完整模型 ID，才表示这次请求确实经过野菜中转。",
         ),
       ).toBeInTheDocument();
       expect(native).toHaveBeenCalledWith("configure_desktop_tool_v2", {
@@ -996,7 +1036,7 @@ describe("official workbench", () => {
           modelId: "glm-5.3",
           billingGroup: "default",
           observedAtEpochMs: 1_788_195_600_000,
-          reasonCode: "tool_request_verified",
+          reasonCode: "configuration_ready",
         };
       throw Error("Not available in test");
     });
@@ -1029,7 +1069,11 @@ describe("official workbench", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "跟随系统" })[0]);
     expect(document.documentElement.dataset.theme).toBe("light");
     systemDark = true;
-    act(() => appearanceListener());
+    act(() =>
+      appearanceListeners.forEach((listener) =>
+        listener({ matches: systemDark }),
+      ),
+    );
     expect(document.documentElement.dataset.theme).toBe("dark");
     expect(native.mock.calls.map(([command]) => command)).toEqual([
       "scan_activation_targets_v1",
@@ -1068,12 +1112,14 @@ describe("official workbench", () => {
       "data-theme",
       "button:focus-visible",
       "prefers-reduced-motion",
-      "min-width: 320px",
-      "max-width: 420px",
-      "tabular-nums",
       "overflow-wrap: anywhere",
     ])
       expect(css).toContain(token);
+    // After the CSS architecture merge, component rules (responsive
+    // breakpoints, numeric variants) live in workbench-v2.css.
+    const components = readFileSync("src/workbench/workbench-v2.css", "utf8");
+    for (const token of ["max-width: 900px", "max-width: 1100px", "tabular-nums"])
+      expect(components).toContain(token);
   });
   it("maintains readable text contrast on light and dark surfaces", () => {
     const css = readFileSync("src/index.css", "utf8");

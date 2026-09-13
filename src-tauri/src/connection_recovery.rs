@@ -115,13 +115,7 @@ pub(crate) fn operation_lock() -> Result<std::fs::File> {
 fn allowed(tool: &str) -> bool {
     matches!(
         tool,
-        "claude_code"
-            | "claude_desktop"
-            | "codex_desktop"
-            | "pi"
-            | "dsh_web"
-            | "hermes"
-            | "openclaw"
+        "claude_code" | "claude_desktop" | "codex_desktop" | "pi" | "dsh_web"
     )
 }
 
@@ -783,7 +777,7 @@ pub(crate) fn requires_gateway_migration(tool: &str, record: &Record) -> bool {
     let needle = match tool {
         "codex_desktop" => "127.0.0.1:15722",
         "claude_code" => "127.0.0.1:15728",
-        "pi" | "hermes" | "openclaw" | "dsh_web" => "127.0.0.1:15730",
+        "pi" | "dsh_web" => "127.0.0.1:15730",
         _ => return false,
     };
     record
@@ -918,43 +912,6 @@ pub(crate) fn legacy_clean(
                 if value["agent-default-model"]["model"] == credential.model_id {
                     remove_at(&mut value, &["agent-default-model", "model"]);
                 }
-            }
-        }
-        "hermes" => {
-            let provider = &value["providers"]["yeschoy"];
-            if provider["api"] == origin_v1 && helper_matches(&provider["key_cmd"]) {
-                remove_at(&mut value, &["providers", "yeschoy"]);
-            }
-            if value["model"]["provider"] == "custom:yeschoy" {
-                remove_at(&mut value, &["model", "provider"]);
-                if value["model"]["default"] == credential.model_id {
-                    remove_at(&mut value, &["model", "default"]);
-                }
-            }
-        }
-        "openclaw" => {
-            let provider = &value["models"]["providers"]["yeschoy"];
-            if provider["baseUrl"] == origin_v1
-                && provider["apiKey"]["provider"] == "yeschoy-keychain"
-            {
-                remove_at(&mut value, &["models", "providers", "yeschoy"]);
-            }
-            if value["secrets"]["providers"]["yeschoy-keychain"]["args"]
-                == serde_json::json!(["credential-helper-openclaw", "openclaw"])
-            {
-                remove_at(&mut value, &["secrets", "providers", "yeschoy-keychain"]);
-            }
-            if value["agents"]["defaults"]["model"]["primary"]
-                .as_str()
-                .is_some_and(|s| s.starts_with("yeschoy/"))
-            {
-                remove_at(&mut value, &["agents", "defaults", "model", "primary"]);
-            }
-            if let Some(catalog) = value
-                .pointer_mut("/agents/defaults/models")
-                .and_then(Value::as_object_mut)
-            {
-                catalog.retain(|key, _| !key.starts_with("yeschoy/"));
             }
         }
         _ => return Err(Failure::Invalid),
@@ -1104,7 +1061,7 @@ mod tests {
         let bytes = std::fs::read(f.0.path("pi").unwrap()).unwrap();
         assert!(!String::from_utf8_lossy(&bytes).contains("synthetic-original-secret"));
         assert!(decode(&[41; 32], "pi", &bytes).is_err());
-        assert!(decode(&f.0.key, "hermes", &bytes).is_err());
+        assert!(decode(&f.0.key, "dsh_web", &bytes).is_err());
         let mut changed = bytes;
         *changed.last_mut().unwrap() ^= 1;
         assert!(decode(&f.0.key, "pi", &changed).is_err());
@@ -1113,15 +1070,13 @@ mod tests {
         assert!(f.0.load("pi").unwrap().is_none());
     }
     #[test]
-    fn restores_exact_original_bytes_for_all_seven_tools() {
+    fn restores_exact_original_bytes_for_all_five_tools() {
         for tool in [
             "claude_code",
             "claude_desktop",
             "codex_desktop",
             "pi",
             "dsh_web",
-            "hermes",
-            "openclaw",
         ] {
             let f = Fixture::new();
             let before = b"{\n  \"old\": true\n}\n";
@@ -1524,14 +1479,14 @@ mod tests {
             Some(br#"{"model":"before"}"#),
             br#"{"model":"during"}"#,
         );
-        f.0.begin(receipt("hermes"), std::slice::from_ref(&failed_file), None)
+        f.0.begin(receipt("pi"), std::slice::from_ref(&failed_file), None)
             .unwrap();
         common::atomic_write(&failed_file.path, &failed_file.after).unwrap();
         assert_eq!(
-            f.0.recover_pending("hermes", || false),
+            f.0.recover_pending("pi", || false),
             Err(PendingRecoveryFailure::Credential)
         );
-        assert!(f.0.load("hermes").unwrap().unwrap().pending);
+        assert!(f.0.load("pi").unwrap().unwrap().pending);
     }
     #[test]
     fn legacy_cleanup_never_removes_other_claude_mode_or_later_model_endpoint() {

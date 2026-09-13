@@ -1,0 +1,203 @@
+/* Explicit styles for the ui/* primitives.
+   The workbench does not run a Tailwind pipeline (no config / no @tailwind
+   directives), so utility strings in these components never generated CSS.
+   Same ownership pattern as dialog.css: keep each primitive's essential
+   layout next to its owner and map everything to the semantic tokens. */
+
+/* ---------- Button ---------- */
+.ui-btn {
+  border-radius: var(--radius-md);
+  font-weight: 500;
+}
+.ui-btn:disabled {
+  opacity: 0.55;
+}
+.ui-btn--sm {
+  min-height: 32px;
+  padding: 5px var(--space-12);
+  font-size: 12px;
+}
+.ui-btn--lg {
+  min-height: 40px;
+  padding: 9px var(--space-24);
+}
+.ui-btn--icon {
+  min-height: 36px;
+  width: 36px;
+  padding: 0;
+}
+
+/* default / mcp：品牌主操作（accent 单轨，取代原硬编码蓝/绿） */
+.ui-btn.ui-btn--default,
+.ui-btn.ui-btn--mcp {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--on-accent);
+}
+.ui-btn.ui-btn--default:hover:not(:disabled),
+.ui-btn.ui-btn--mcp:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: transparent;
+  color: var(--on-accent);
+}
+
+.ui-btn.ui-btn--destructive {
+  background: var(--danger);
+  border-color: transparent;
+  color: var(--on-danger);
+}
+.ui-btn.ui-btn--destructive:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 88%, #000);
+  border-color: transparent;
+  color: var(--on-danger);
+}
+
+.ui-btn.ui-btn--outline {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
+}
+.ui-btn.ui-btn--secondary {
+  background: var(--subtle);
+  border-color: transparent;
+  color: var(--ink);
+}
+.ui-btn.ui-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+.ui-btn.ui-btn--link {
+  min-height: 0;
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border-color: transparent;
+  color: var(--accent);
+}
+.ui-btn.ui-btn--link:hover:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--accent-hover);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* ---------- Switch ---------- */
+.ui-switch {
+  flex: none;
+  min-height: 0;
+  width: 40px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: var(--radius-full);
+  background: var(--line-strong, var(--line));
+  transition: background 160ms ease;
+}
+.ui-switch.ui-switch:hover:not(:disabled) {
+  background: var(--line-strong, var(--line));
+  border-color: transparent;
+  color: inherit;
+}
+.ui-switch[data-state="checked"],
+.ui-switch[data-state="checked"]:hover:not(:disabled) {
+  background: var(--accent);
+}
+.ui-switch-thumb {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--shadow-thumb);
+  transition: transform 160ms ease;
+  transform: translateX(0);
+}
+.ui-switch[data-state="checked"] .ui-switch-thumb {
+  transform: translateX(18px);
+}
+
+/* ---------- Tooltip ---------- */
+.ui-tooltip-content {
+  z-index: var(--z-tooltip);
+  overflow: hidden;
+  max-width: 280px;
+  padding: 5px var(--space-10);
+  border-radius: var(--radius-md);
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 12px;
+  line-height: 1.6;
+  box-shadow: var(--shadow);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Badge ---------- */
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  padding: 1px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.7;
+  white-space: nowrap;
+}
+.ui-badge--default {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+/* 浅色 accent-soft 底上 #c93e22 仅 4.29，用 accent-hover 提到 5.71 */
+:root:not([data-theme="dark"]) .ui-badge--default {
+  color: var(--accent-hover);
+}
+.ui-badge--secondary {
+  background: var(--subtle);
+  color: var(--muted);
+}
+.ui-badge--destructive {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.ui-badge--outline {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+/* ---------- Card ---------- */
+.ui-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius, 12px);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+.ui-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-20) 22px 0;
+}
+.ui-card-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+.ui-card-description {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+.ui-card-content {
+  padding: var(--space-16) 22px var(--space-20);
+}
+.ui-card-footer {
+  display: flex;
+  align-items: center;
+  padding: 0 22px var(--space-20);
+}

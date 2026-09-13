@@ -1,6 +1,7 @@
 {
   "reachable": {
     "requestId": "diag-fixture-reachable",
+    "schemaVersion": 2,
     "startedAtEpochMs": 1788607800000,
     "completedAtEpochMs": 1788607800030,
     "lines": [
@@ -10,9 +11,32 @@
         "rootUrl": "https://yeschoy.com",
         "host": "yeschoy.com",
         "port": 443,
-        "status": "reachable",
-        "latencyMs": 10,
-        "reasonCode": "tcp_443_reachable"
+        "layers": [
+          {
+            "layer": "dns",
+            "status": "passed",
+            "latencyMs": 11,
+            "reasonCode": "dns_resolved"
+          },
+          {
+            "layer": "tcp",
+            "status": "passed",
+            "latencyMs": 12,
+            "reasonCode": "tcp443_reachable"
+          },
+          {
+            "layer": "tls",
+            "status": "passed",
+            "latencyMs": 13,
+            "reasonCode": "tls_handshake_verified"
+          },
+          {
+            "layer": "api_key",
+            "status": "passed",
+            "latencyMs": 14,
+            "reasonCode": "session_token_valid"
+          }
+        ]
       },
       {
         "lineId": "global_accelerated",
@@ -20,14 +44,38 @@
         "rootUrl": "https://api.yeschoy.com",
         "host": "api.yeschoy.com",
         "port": 443,
-        "status": "reachable",
-        "latencyMs": 20,
-        "reasonCode": "tcp_443_reachable"
+        "layers": [
+          {
+            "layer": "dns",
+            "status": "passed",
+            "latencyMs": 21,
+            "reasonCode": "dns_resolved"
+          },
+          {
+            "layer": "tcp",
+            "status": "passed",
+            "latencyMs": 22,
+            "reasonCode": "tcp443_reachable"
+          },
+          {
+            "layer": "tls",
+            "status": "passed",
+            "latencyMs": 23,
+            "reasonCode": "tls_handshake_verified"
+          },
+          {
+            "layer": "api_key",
+            "status": "passed",
+            "latencyMs": 24,
+            "reasonCode": "session_token_valid"
+          }
+        ]
       }
     ]
   },
   "mixed": {
     "requestId": "diag-fixture-mixed",
+    "schemaVersion": 2,
     "startedAtEpochMs": 1788607800000,
     "completedAtEpochMs": 1788607800030,
     "lines": [
@@ -37,9 +85,31 @@
         "rootUrl": "https://yeschoy.com",
         "host": "yeschoy.com",
         "port": 443,
-        "status": "reachable",
-        "latencyMs": 10,
-        "reasonCode": "tcp_443_reachable"
+        "layers": [
+          {
+            "layer": "dns",
+            "status": "passed",
+            "latencyMs": 11,
+            "reasonCode": "dns_resolved"
+          },
+          {
+            "layer": "tcp",
+            "status": "passed",
+            "latencyMs": 12,
+            "reasonCode": "tcp443_reachable"
+          },
+          {
+            "layer": "tls",
+            "status": "passed",
+            "latencyMs": 13,
+            "reasonCode": "tls_handshake_verified"
+          },
+          {
+            "layer": "api_key",
+            "status": "skipped",
+            "reasonCode": "skipped_no_saved_session"
+          }
+        ]
       },
       {
         "lineId": "global_accelerated",
@@ -47,14 +117,35 @@
         "rootUrl": "https://api.yeschoy.com",
         "host": "api.yeschoy.com",
         "port": 443,
-        "status": "dns_failed",
-        "latencyMs": 20,
-        "reasonCode": "dns_resolution_failed"
+        "layers": [
+          {
+            "layer": "dns",
+            "status": "failed",
+            "latencyMs": 11,
+            "reasonCode": "dns_resolution_failed"
+          },
+          {
+            "layer": "tcp",
+            "status": "skipped",
+            "reasonCode": "skipped_upstream_failed"
+          },
+          {
+            "layer": "tls",
+            "status": "skipped",
+            "reasonCode": "skipped_upstream_failed"
+          },
+          {
+            "layer": "api_key",
+            "status": "skipped",
+            "reasonCode": "skipped_upstream_failed"
+          }
+        ]
       }
     ]
   },
   "failed": {
     "requestId": "diag-fixture-failed",
+    "schemaVersion": 2,
     "startedAtEpochMs": 1788607800000,
     "completedAtEpochMs": 1788607800030,
     "lines": [
@@ -64,9 +155,30 @@
         "rootUrl": "https://yeschoy.com",
         "host": "yeschoy.com",
         "port": 443,
-        "status": "connect_failed",
-        "latencyMs": 10,
-        "reasonCode": "tcp_connection_failed"
+        "layers": [
+          {
+            "layer": "dns",
+            "status": "passed",
+            "latencyMs": 10,
+            "reasonCode": "dns_resolved"
+          },
+          {
+            "layer": "tcp",
+            "status": "failed",
+            "latencyMs": 11,
+            "reasonCode": "tcp_connection_failed"
+          },
+          {
+            "layer": "tls",
+            "status": "skipped",
+            "reasonCode": "skipped_upstream_failed"
+          },
+          {
+            "layer": "api_key",
+            "status": "skipped",
+            "reasonCode": "skipped_upstream_failed"
+          }
+        ]
       },
       {
         "lineId": "global_accelerated",
@@ -74,9 +186,29 @@
         "rootUrl": "https://api.yeschoy.com",
         "host": "api.yeschoy.com",
         "port": 443,
-        "status": "timed_out",
-        "latencyMs": 20,
-        "reasonCode": "connectivity_check_timed_out"
+        "layers": [
+          {
+            "layer": "dns",
+            "status": "failed",
+            "latencyMs": 20,
+            "reasonCode": "dns_lookup_timed_out"
+          },
+          {
+            "layer": "tcp",
+            "status": "skipped",
+            "reasonCode": "skipped_upstream_failed"
+          },
+          {
+            "layer": "tls",
+            "status": "skipped",
+            "reasonCode": "skipped_upstream_failed"
+          },
+          {
+            "layer": "api_key",
+            "status": "skipped",
+            "reasonCode": "skipped_upstream_failed"
+          }
+        ]
       }
     ]
   }

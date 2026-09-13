@@ -18,6 +18,7 @@ export function SavingsCard({
 }) {
   const { value, note, negative } = savingsPresentation(savings);
   const available = savings?.status === "available";
+  const skeleton = loading && !savings;
   return (
     <article
       className={`summary-card savings-card${negative ? " savings-negative" : ""}`}
@@ -31,19 +32,21 @@ export function SavingsCard({
           <dt>
             官网应收 <small>估算</small>
           </dt>
-          <dd>
+          <dd className={skeleton ? "skeleton skeleton-value" : undefined}>
             {formatMoney(available ? savings.officialAmount : undefined, "CNY")}
           </dd>
         </div>
         <div>
           <dt>野菜收取</dt>
-          <dd>
+          <dd className={skeleton ? "skeleton skeleton-value" : undefined}>
             {formatMoney(available ? savings.siteAmount : undefined, "CNY")}
           </dd>
         </div>
         <div className="savings-total">
           <dt>{negative ? "高于参考估算" : "预计省下"}</dt>
-          <dd>{value}</dd>
+          <dd className={skeleton ? "skeleton skeleton-value" : undefined}>
+            {value}
+          </dd>
         </div>
       </dl>
       <div className="summary-bottom">

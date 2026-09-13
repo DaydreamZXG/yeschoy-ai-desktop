@@ -1,16 +1,12 @@
-use std::{
-    path::{Path, PathBuf},
-    time::Duration,
-};
+use std::path::{Path, PathBuf};
 
 use serde_json::{json, Map, Value};
-use tokio::time::timeout;
 
 use crate::{
     claude_bridge::ClaudeBridgeRuntime,
     tool_adapters::{
         common::{self, ConfigFailure, FileTransaction},
-        AdapterFailure, ResolvedInstallation,
+        AdapterFailure,
     },
     tool_credentials::{self, ToolCredential},
 };
@@ -395,32 +391,6 @@ impl ClaudeDesktopRuntimeState {
 
     pub(crate) async fn stop(&self) {
         self.runtime.stop().await;
-    }
-}
-
-pub(crate) async fn verify_and_launch(
-    state: &ClaudeDesktopRuntimeState,
-    installation: &ResolvedInstallation,
-    credential: ToolCredential,
-) -> Result<(), AdapterFailure> {
-    let expected_model = credential.model_id.clone();
-    let mut events = state.start(credential).await?;
-    launch(&installation.path)?;
-    let observed = timeout(Duration::from_secs(90), async {
-        loop {
-            match events.recv().await {
-                Ok(event) if event.model == expected_model => return Ok(()),
-                Ok(_) | Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
-                Err(_) => return Err(()),
-            }
-        }
-    })
-    .await;
-    match observed {
-        Ok(Ok(())) => Ok(()),
-        _ => Err(AdapterFailure::VerificationFailed(
-            "waiting_for_desktop_request",
-        )),
     }
 }
 

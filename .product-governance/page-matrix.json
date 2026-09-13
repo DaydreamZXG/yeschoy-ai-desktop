@@ -807,6 +807,191 @@
           "correlation": "Only the newest requestId and selected line may populate the panel."
         }
       }
+    },
+    {
+      "id": "PROFILE-DAILY-USE-V1",
+      "states": {
+        "default": {
+          "behavior": "Application actions first; model change opens editor without writing.",
+          "visibleTruth": "Saved settings, requested launch and last real request are distinct; unknown is not zero or disconnected.",
+          "prohibitedClaims": [
+            "No successful launch, billing route or full-product readiness inferred from another stage or mocked tests."
+          ],
+          "allowedActions": [
+            "open_application",
+            "change_model",
+            "check_connection",
+            "apply_selected_configuration",
+            "cancel_active_task",
+            "confirm_normal_restart",
+            "view_account",
+            "view_diagnostics"
+          ],
+          "freshness": "Existing query owner and account/app/selection identity; last request remains historical.",
+          "recovery": "Exact safe next action with existing restore/normal-restart confirmations.",
+          "correlation": "Only active requestId owns progress; navigation cannot erase an active task."
+        },
+        "loading": {
+          "behavior": "Bounded readonly refresh; known stale state is not disconnected.",
+          "visibleTruth": "Saved settings, requested launch and last real request are distinct; unknown is not zero or disconnected.",
+          "prohibitedClaims": [
+            "No successful launch, billing route or full-product readiness inferred from another stage or mocked tests."
+          ],
+          "allowedActions": [
+            "open_application",
+            "change_model",
+            "check_connection",
+            "apply_selected_configuration",
+            "cancel_active_task",
+            "confirm_normal_restart",
+            "view_account",
+            "view_diagnostics"
+          ],
+          "freshness": "Existing query owner and account/app/selection identity; last request remains historical.",
+          "recovery": "Exact safe next action with existing restore/normal-restart confirmations.",
+          "correlation": "Only active requestId owns progress; navigation cannot erase an active task."
+        },
+        "empty": {
+          "behavior": "Setup only confirmed unconfigured apps, no fabricated account values.",
+          "visibleTruth": "Saved settings, requested launch and last real request are distinct; unknown is not zero or disconnected.",
+          "prohibitedClaims": [
+            "No successful launch, billing route or full-product readiness inferred from another stage or mocked tests."
+          ],
+          "allowedActions": [
+            "open_application",
+            "change_model",
+            "check_connection",
+            "apply_selected_configuration",
+            "cancel_active_task",
+            "confirm_normal_restart",
+            "view_account",
+            "view_diagnostics"
+          ],
+          "freshness": "Existing query owner and account/app/selection identity; last request remains historical.",
+          "recovery": "Exact safe next action with existing restore/normal-restart confirmations.",
+          "correlation": "Only active requestId owns progress; navigation cannot erase an active task."
+        },
+        "partial": {
+          "behavior": "Independent per-app results with targeted recovery.",
+          "visibleTruth": "Saved settings, requested launch and last real request are distinct; unknown is not zero or disconnected.",
+          "prohibitedClaims": [
+            "No successful launch, billing route or full-product readiness inferred from another stage or mocked tests."
+          ],
+          "allowedActions": [
+            "open_application",
+            "change_model",
+            "check_connection",
+            "apply_selected_configuration",
+            "cancel_active_task",
+            "confirm_normal_restart",
+            "view_account",
+            "view_diagnostics"
+          ],
+          "freshness": "Existing query owner and account/app/selection identity; last request remains historical.",
+          "recovery": "Exact safe next action with existing restore/normal-restart confirmations.",
+          "correlation": "Only active requestId owns progress; navigation cannot erase an active task."
+        },
+        "error": {
+          "behavior": "Safe category, exact next action, diagnostic code; no inferred gateway outage.",
+          "visibleTruth": "Saved settings, requested launch and last real request are distinct; unknown is not zero or disconnected.",
+          "prohibitedClaims": [
+            "No successful launch, billing route or full-product readiness inferred from another stage or mocked tests."
+          ],
+          "allowedActions": [
+            "open_application",
+            "change_model",
+            "check_connection",
+            "apply_selected_configuration",
+            "cancel_active_task",
+            "confirm_normal_restart",
+            "view_account",
+            "view_diagnostics"
+          ],
+          "freshness": "Existing query owner and account/app/selection identity; last request remains historical.",
+          "recovery": "Exact safe next action with existing restore/normal-restart confirmations.",
+          "correlation": "Only active requestId owns progress; navigation cannot erase an active task."
+        },
+        "expired": {
+          "behavior": "Reject old account/app/selection completions.",
+          "visibleTruth": "Saved settings, requested launch and last real request are distinct; unknown is not zero or disconnected.",
+          "prohibitedClaims": [
+            "No successful launch, billing route or full-product readiness inferred from another stage or mocked tests."
+          ],
+          "allowedActions": [
+            "open_application",
+            "change_model",
+            "check_connection",
+            "apply_selected_configuration",
+            "cancel_active_task",
+            "confirm_normal_restart",
+            "view_account",
+            "view_diagnostics"
+          ],
+          "freshness": "Existing query owner and account/app/selection identity; last request remains historical.",
+          "recovery": "Exact safe next action with existing restore/normal-restart confirmations.",
+          "correlation": "Only active requestId owns progress; navigation cannot erase an active task."
+        },
+        "conflict": {
+          "behavior": "Preserve external edits and existing native confirmation policies.",
+          "visibleTruth": "Saved settings, requested launch and last real request are distinct; unknown is not zero or disconnected.",
+          "prohibitedClaims": [
+            "No successful launch, billing route or full-product readiness inferred from another stage or mocked tests."
+          ],
+          "allowedActions": [
+            "open_application",
+            "change_model",
+            "check_connection",
+            "apply_selected_configuration",
+            "cancel_active_task",
+            "confirm_normal_restart",
+            "view_account",
+            "view_diagnostics"
+          ],
+          "freshness": "Existing query owner and account/app/selection identity; last request remains historical.",
+          "recovery": "Exact safe next action with existing restore/normal-restart confirmations.",
+          "correlation": "Only active requestId owns progress; navigation cannot erase an active task."
+        },
+        "recovery": {
+          "behavior": "Readonly check or explicit repair; keep restore and restart confirmation.",
+          "visibleTruth": "Saved settings, requested launch and last real request are distinct; unknown is not zero or disconnected.",
+          "prohibitedClaims": [
+            "No successful launch, billing route or full-product readiness inferred from another stage or mocked tests."
+          ],
+          "allowedActions": [
+            "open_application",
+            "change_model",
+            "check_connection",
+            "apply_selected_configuration",
+            "cancel_active_task",
+            "confirm_normal_restart",
+            "view_account",
+            "view_diagnostics"
+          ],
+          "freshness": "Existing query owner and account/app/selection identity; last request remains historical.",
+          "recovery": "Exact safe next action with existing restore/normal-restart confirmations.",
+          "correlation": "Only active requestId owns progress; navigation cannot erase an active task."
+        },
+        "processing": {
+          "behavior": "Request-bound progress survives navigation; reject duplicates and allow cancellation.",
+          "visibleTruth": "Saved settings, requested launch and last real request are distinct; unknown is not zero or disconnected.",
+          "prohibitedClaims": [
+            "No successful launch, billing route or full-product readiness inferred from another stage or mocked tests."
+          ],
+          "allowedActions": [
+            "open_application",
+            "change_model",
+            "check_connection",
+            "apply_selected_configuration",
+            "cancel_active_task",
+            "confirm_normal_restart",
+            "view_account",
+            "view_diagnostics"
+          ],
+          "freshness": "Existing query owner and account/app/selection identity; last request remains historical.",
+          "recovery": "Exact safe next action with existing restore/normal-restart confirmations.",
+          "correlation": "Only active requestId owns progress; navigation cannot erase an active task."
+        }
+      }
     }
   ],
   "pages": [
@@ -829,7 +1014,7 @@
     {
       "id": "PAGE-HOME",
       "route": "/",
-      "purpose": "Give a beginner a desktop-application-first starting point with honest account, connection and next-action state.",
+      "purpose": "Daily application opening, model switching and recovery before account overview.",
       "trackScope": [
         "account",
         "billing",
@@ -844,12 +1029,14 @@
       ],
       "entryConditions": [],
       "actions": [
-        "scan_primary_desktop_apps",
-        "choose_primary_desktop_app",
-        "begin_desktop_setup_preview",
-        "switch_destination",
-        "change_language",
-        "view_security_boundary"
+        "open_application",
+        "change_model",
+        "check_connection",
+        "apply_selected_configuration",
+        "cancel_active_task",
+        "confirm_normal_restart",
+        "view_account",
+        "view_diagnostics"
       ],
       "exitRoutes": [
         "/account",
@@ -859,10 +1046,9 @@
         "/settings"
       ],
       "permissions": [
-        "local deterministic candidate-readiness projection only",
-        "desktop-app-discovery@v1 bounded read-only local query"
+        "Existing versioned account, discovery, connection-management and activation contracts only."
       ],
-      "stateProfileRef": "PROFILE-CLIENT-CANDIDATE-STATIC",
+      "stateProfileRef": "PROFILE-DAILY-USE-V1",
       "states": {}
     },
     {
@@ -1034,7 +1220,7 @@
     {
       "id": "PAGE-CONFIGURE-PREVIEW",
       "route": "/configure-preview",
-      "purpose": "Select a tool and line, optionally read the public service catalog, select a group and real model ID, and inspect an unverified access preview without a credential or configuration write.",
+      "purpose": "Explicit model/group selection and safe existing native activation with truthful recovery.",
       "trackScope": [
         "tool-config",
         "desktop-platform"
@@ -1045,26 +1231,23 @@
       ],
       "entryConditions": [],
       "actions": [
-        "select_preview_tool",
-        "select_preview_line",
-        "reset_preview_selection",
-        "view_current_preview",
-        "switch_to_local_tools",
-        "switch_to_account",
-        "read_public_service_catalog",
-        "select_public_group",
-        "select_public_model",
-        "refresh_public_catalog"
+        "open_application",
+        "change_model",
+        "check_connection",
+        "apply_selected_configuration",
+        "cancel_active_task",
+        "confirm_normal_restart",
+        "view_account",
+        "view_diagnostics"
       ],
       "exitRoutes": [
         "/tools",
         "/account"
       ],
       "permissions": [
-        "pure local deterministic preview projection only",
-        "public-service-catalog@v1 anonymous fixed-origin GET query after explicit user action"
+        "Existing versioned account, discovery, connection-management and activation contracts only."
       ],
-      "stateProfileRef": "PROFILE-PUBLIC-CATALOG-PREVIEW",
+      "stateProfileRef": "PROFILE-DAILY-USE-V1",
       "states": {}
     },
     {

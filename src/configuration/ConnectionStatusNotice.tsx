@@ -1,4 +1,6 @@
 import type { ConnectionIssue } from "./connections";
+import { useTranslation } from "react-i18next";
+import { RecoveryNotice } from "./RecoveryNotice";
 
 /** Shared, secret-free explanation for home and setup. Never render raw IPC errors. */
 export function ConnectionStatusNotice({
@@ -12,8 +14,17 @@ export function ConnectionStatusNotice({
   refreshing?: boolean;
   onRetry: () => void;
 }) {
+  const { t } = useTranslation();
   return (
-    <div className="selection-warning" role="alert">
+    <RecoveryNotice
+      title={t("yeschoyDaily.stateUnconfirmed")}
+      className="selection-warning"
+      action={{
+        label: refreshing ? "正在读取接入状态" : "读取接入状态",
+        run: onRetry,
+        disabled: refreshing,
+      }}
+    >
       <p>{issue?.message ?? "暂时无法读取接入状态，请重试。"}</p>
       <p>
         {stale
@@ -31,9 +42,6 @@ export function ConnectionStatusNotice({
           </p>
         </details>
       )}
-      <button className="subtle-button" disabled={refreshing} onClick={onRetry}>
-        {refreshing ? "正在读取接入状态" : "读取接入状态"}
-      </button>
-    </div>
+    </RecoveryNotice>
   );
 }

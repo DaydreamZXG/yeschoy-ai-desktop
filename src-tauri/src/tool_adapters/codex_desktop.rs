@@ -4,7 +4,6 @@ use std::{
     time::Duration,
 };
 
-use reqwest::{redirect::Policy, Client, StatusCode};
 use serde_json::{json, Value};
 use tokio::process::Command;
 use toml_edit::{value, Array, DocumentMut, Item, Table};
@@ -13,7 +12,7 @@ use crate::{
     codex_bridge,
     tool_adapters::{
         common::{self, ConfigFailure, FileTransaction},
-        AdapterFailure, ResolvedInstallation,
+        AdapterFailure,
     },
     tool_credentials,
 };
@@ -446,34 +445,22 @@ impl Prepared {
     }
 }
 
-pub(crate) async fn verify_and_launch(
-    installation: &ResolvedInstallation,
-    credential: &tool_credentials::ToolCredential,
-) -> Result<(), AdapterFailure> {
-    ensure_credential_ready(credential).await?;
-    // This is a provider connection check issued by this assistant. It does
-    // not prove that the desktop application itself sent a successful request.
-    verify_provider(credential).await?;
-    launch(&installation.path)
-}
-
 pub(crate) async fn ensure_credential_ready(
     credential: &tool_credentials::ToolCredential,
 ) -> Result<(), AdapterFailure> {
     if credential.has_model_set() {
         // Direct connection: the scoped per-tool key is already written into
-        // the Codex provider config, and the caller proves it with a real
-        // model request (verify_provider). There is no local listener to warm
-        // up, restart, or authenticate against.
+        // the Codex provider config. There is no local listener to warm up,
+        // restart, or authenticate against.
         return Ok(());
     }
     let helper = tool_credentials::executable_path()
-        .map_err(|_| AdapterFailure::VerificationFailed("credential_helper_failed"))?;
+        .map_err(|_| AdapterFailure::ConfigurationFailed("credential_helper_failed"))?;
     let mut command = Command::new(helper);
     command.args(["credential-helper", "codex_desktop"]);
     let result = common::run_bounded(command, Duration::from_secs(6))
         .await
-        .map_err(|_| AdapterFailure::VerificationFailed("credential_helper_failed"))?;
+        .map_err(|_| AdapterFailure::ConfigurationFailed("credential_helper_failed"))?;
     let resolved = std::str::from_utf8(&result.stdout)
         .ok()
         .map(str::trim)
@@ -481,117 +468,11 @@ pub(crate) async fn ensure_credential_ready(
     if !result.success
         || !codex_bridge::secure_equal(resolved, credential.client_token("codex_desktop"))
     {
-        return Err(AdapterFailure::VerificationFailed(
+        return Err(AdapterFailure::ConfigurationFailed(
             "credential_helper_failed",
         ));
     }
     Ok(())
-}
-
-fn provider_url(credential: &tool_credentials::ToolCredential) -> Result<String, AdapterFailure> {
-    // Every route now talks to the relay origin directly; the loopback gateway
-    // that used to sit in between is gone.
-    Ok(format!(
-        "{}/v1/responses",
-        credential.origin.trim_end_matches('/')
-    ))
-}
-
-fn status_failure(status: StatusCode) -> Option<&'static str> {
-    match status.as_u16() {
-        200..=299 => None,
-        401 | 403 => Some("authentication_failed"),
-        404 | 405 => Some("endpoint_unavailable"),
-        408 => Some("provider_timed_out"),
-        429 => Some("provider_busy"),
-        400 | 409 | 422 => Some("model_request_rejected"),
-        500..=599 => Some("provider_unavailable"),
-        _ => Some("provider_request_failed"),
-    }
-}
-
-fn completed_provider_response(value: &Value) -> bool {
-    let completed = value
-        .get("status")
-        .and_then(Value::as_str)
-        .is_none_or(|status| status == "completed");
-    let output_text = value
-        .get("output_text")
-        .and_then(Value::as_str)
-        .is_some_and(|text| !text.trim().is_empty());
-    let output_item = value
-        .get("output")
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-        .filter_map(|item| item.get("content").and_then(Value::as_array))
-        .flatten()
-        .filter_map(|part| part.get("text").and_then(Value::as_str))
-        .any(|text| !text.trim().is_empty());
-    completed && (output_text || output_item)
-}
-
-async fn verify_provider(
-    credential: &tool_credentials::ToolCredential,
-) -> Result<(), AdapterFailure> {
-    const MAX_RESPONSE_BYTES: u64 = 2 * 1024 * 1024;
-    let client = Client::builder()
-        .no_proxy()
-        .redirect(Policy::none())
-        .connect_timeout(Duration::from_secs(15))
-        .read_timeout(Duration::from_secs(600))
-        .build()
-        .map_err(|_| AdapterFailure::VerificationFailed("provider_unavailable"))?;
-    let response = client
-        .post(provider_url(credential)?)
-        .bearer_auth(credential.upstream_key())
-        .json(&json!({
-            "model": credential.model_id,
-            "input": [{
-                "role": "user",
-                "content": [{
-                    "type": "input_text",
-                    "text": "仅回复 YESCHOY_OK，不要使用工具。"
-                }]
-            }],
-            "stream": false
-        }))
-        .send()
-        .await
-        .map_err(|error| {
-            AdapterFailure::VerificationFailed(if error.is_timeout() {
-                "provider_timed_out"
-            } else {
-                "provider_unavailable"
-            })
-        })?;
-    if let Some(reason) = status_failure(response.status()) {
-        return Err(AdapterFailure::VerificationFailed(reason));
-    }
-    if response
-        .content_length()
-        .is_some_and(|length| length > MAX_RESPONSE_BYTES)
-    {
-        return Err(AdapterFailure::VerificationFailed(
-            "invalid_provider_response",
-        ));
-    }
-    let bytes = response
-        .bytes()
-        .await
-        .map_err(|_| AdapterFailure::VerificationFailed("invalid_provider_response"))?;
-    if bytes.len() as u64 > MAX_RESPONSE_BYTES {
-        return Err(AdapterFailure::VerificationFailed(
-            "invalid_provider_response",
-        ));
-    }
-    let value = serde_json::from_slice::<Value>(&bytes)
-        .map_err(|_| AdapterFailure::VerificationFailed("invalid_provider_response"))?;
-    completed_provider_response(&value)
-        .then_some(())
-        .ok_or(AdapterFailure::VerificationFailed(
-            "invalid_provider_response",
-        ))
 }
 
 pub(crate) fn launch(path: &Path) -> Result<(), AdapterFailure> {
@@ -690,42 +571,6 @@ mod tests {
         std::fs::write(&path, source.to_string()).unwrap();
         assert!(prepared.validate_existing().is_err());
         std::fs::remove_dir_all(home).unwrap();
-    }
-
-    #[test]
-    fn provider_response_requires_completed_assistant_text() {
-        assert!(completed_provider_response(&json!({
-            "status": "completed",
-            "output": [{
-                "type": "message",
-                "content": [{"type": "output_text", "text": "YESCHOY_OK"}]
-            }]
-        })));
-        assert!(!completed_provider_response(&json!({
-            "status": "failed",
-            "output_text": "YESCHOY_OK"
-        })));
-        assert!(!completed_provider_response(&json!({
-            "status": "completed",
-            "output": []
-        })));
-    }
-
-    #[test]
-    fn provider_statuses_have_closed_recovery_reasons() {
-        assert_eq!(
-            status_failure(StatusCode::UNAUTHORIZED),
-            Some("authentication_failed")
-        );
-        assert_eq!(
-            status_failure(StatusCode::TOO_MANY_REQUESTS),
-            Some("provider_busy")
-        );
-        assert_eq!(
-            status_failure(StatusCode::UNPROCESSABLE_ENTITY),
-            Some("model_request_rejected")
-        );
-        assert_eq!(status_failure(StatusCode::OK), None);
     }
 
     #[test]
@@ -889,12 +734,18 @@ mod tests {
             std::fs::read(&external_catalog_path).unwrap(),
             external_catalog
         );
+        // Counting raw `gpt-5.5` occurrences couples this test to the
+        // display_name fallback (an unrelated catalog.json entry changes the
+        // count). Assert the fields explicitly instead.
+        let owned: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&prepared.catalog_path).unwrap())
+                .unwrap();
+        let entry = &owned["models"][0];
+        assert_eq!(entry["slug"], "gpt-5.5");
+        assert_eq!(entry["description"], "gpt-5.5");
         assert_eq!(
-            std::fs::read_to_string(&prepared.catalog_path)
-                .unwrap()
-                .matches("gpt-5.5")
-                .count(),
-            3
+            entry["display_name"],
+            serde_json::json!(crate::tool_model_profile::display_name("gpt-5.5"))
         );
         prepared.rollback().unwrap();
         assert_eq!(std::fs::read(&config_path).unwrap(), original);

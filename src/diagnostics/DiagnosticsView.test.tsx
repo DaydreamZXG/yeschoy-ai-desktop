@@ -9,6 +9,8 @@ import { DiagnosticsView } from "./DiagnosticsView";
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 const invokeMock = vi.mocked(invoke);
 
+const clipboardWrite = vi.fn();
+
 beforeAll(() => {
   i18n.addResourceBundle(
     "zh",
@@ -20,9 +22,14 @@ beforeAll(() => {
     true,
     true,
   );
+  Object.assign(navigator, {
+    clipboard: { writeText: clipboardWrite },
+  });
 });
 beforeEach(() => {
   invokeMock.mockReset();
+  clipboardWrite.mockReset();
+  clipboardWrite.mockResolvedValue(undefined);
 });
 
 function showView() {
@@ -63,7 +70,7 @@ function deferred<T>() {
 }
 
 describe("diagnostics native-to-renderer outcomes", () => {
-  it("requires an explicit action and displays both serialized successes", async () => {
+  it("requires an explicit action and displays every layer of both successes", async () => {
     replyWith(nativeFixtures.reachable);
     showView();
     expect(invokeMock).not.toHaveBeenCalled();
@@ -73,8 +80,13 @@ describe("diagnostics native-to-renderer outcomes", () => {
       "data-phase",
       "success",
     );
-    expect(within(line("大陆优化")).getByText("10 ms")).toBeInTheDocument();
-    expect(within(line("全球加速")).getByText("20 ms")).toBeInTheDocument();
+    const mainland = line("大陆优化");
+    expect(within(mainland).getAllByText("通过")).toHaveLength(4);
+    expect(within(mainland).getByText("DNS 解析")).toBeInTheDocument();
+    expect(within(mainland).getByText("TLS 证书校验")).toBeInTheDocument();
+    expect(within(mainland).getByText("API Key 有效性")).toBeInTheDocument();
+    expect(within(mainland).getByText("11 ms")).toBeInTheDocument();
+    expect(within(mainland).getByText("14 ms")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(invokeMock).toHaveBeenCalledTimes(1);
     expect(invokeMock).toHaveBeenCalledWith(
@@ -96,6 +108,13 @@ describe("diagnostics native-to-renderer outcomes", () => {
     expect(
       within(line("大陆优化")).getByText("基础连接正常"),
     ).toBeInTheDocument();
+    // API key layer is skipped without a saved session, not shown as failed.
+    expect(
+      within(line("大陆优化")).getByText("未保存登录会话，本层跳过。"),
+    ).toBeInTheDocument();
+    expect(
+      within(line("全球加速")).getAllByText("跳过"),
+    ).toHaveLength(3);
     expect(screen.getByTestId("diagnostics-view")).toHaveAttribute(
       "data-phase",
       "partial",
@@ -253,4 +272,50 @@ describe("diagnostics native-to-renderer outcomes", () => {
       );
     },
   );
+
+  it("copies a sanitized report without hosts, tokens or account data", async () => {
+    replyWith(nativeFixtures.reachable);
+    showView();
+    fireEvent.click(screen.getByRole("button", { name: "检查两条线路" }));
+    await screen.findAllByText("基础连接正常");
+    fireEvent.click(screen.getByTestId("copy-diagnostic-report"));
+    await screen.findByText("已复制");
+    expect(clipboardWrite).toHaveBeenCalledTimes(1);
+    const report = clipboardWrite.mock.calls[0][0] as string;
+    expect(report).toContain("request-id: ");
+    expect(report).toContain("dns: passed (11 ms) [dns_resolved]");
+    expect(report).toContain("api_key: passed (14 ms) [session_token_valid]");
+    expect(report).toContain("[大陆优化]");
+    expect(report).not.toContain("yeschoy.com");
+    expect(report).not.toContain("https://");
+    expect(report).not.toContain("Bearer");
+    expect(report).not.toContain("accessToken");
+  });
+
+  it("surfaces a repair action when the saved session was rejected", async () => {
+    const rejected = structuredClone(nativeFixtures.reachable);
+    for (const line_ of rejected.lines) {
+      const index = line_.layers.findIndex(
+        (layer) => layer.layer === "api_key",
+      );
+      line_.layers[index] = {
+        layer: "api_key",
+        status: "failed",
+        reasonCode: "session_token_rejected",
+      } as typeof line_.layers[number];
+    }
+    replyWith(rejected);
+    showView();
+    fireEvent.click(screen.getByRole("button", { name: "检查两条线路" }));
+    // api_key failure is not a network failure: lines stay reachable.
+    expect(await screen.findAllByText("登录状态已失效")).toHaveLength(2);
+    expect(screen.getAllByText("基础连接正常")).toHaveLength(2);
+    expect(screen.getByTestId("diagnostics-view")).toHaveAttribute(
+      "data-phase",
+      "success",
+    );
+    expect(
+      screen.getAllByRole("button", { name: "重新登录" }),
+    ).toHaveLength(2);
+  });
 });

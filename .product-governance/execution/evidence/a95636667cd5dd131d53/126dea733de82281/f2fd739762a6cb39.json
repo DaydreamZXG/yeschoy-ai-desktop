@@ -1,0 +1,14 @@
+{
+  "scenarioId": "BASELINE-activation",
+  "assertion": "Apply, duplicate click, cancellation, running-app handoff and recovery preserve selected context.",
+  "testSelector": "src/configuration/ConfigurationPreviewView.test.tsx",
+  "acceptanceCommandId": "baseline-activation",
+  "runId": "RU-076/WP-RU076-CURRENT-BASELINE@2026-09-12T05:01:08.995345+00:00",
+  "packageId": "WP-RU076-CURRENT-BASELINE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:30a4c90852b6874e3f3295388207673df30e437ced78a7616c782b68f984420c",
+  "releaseUnitId": "RU-076",
+  "releaseUnitHash": "sha256:aac08bad312b6c5cf4902864f066842c9e026ebcfa29d7331a37c1d49a92818c"
+}

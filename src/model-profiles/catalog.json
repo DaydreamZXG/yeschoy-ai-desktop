@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "verifiedAt": "2026-09-07",
+  "verifiedAt": "2026-09-13",
   "models": [
     {
       "id": "gpt-6-astra",
@@ -9,7 +9,8 @@
       "input": ["text", "image"],
       "contextWindow": 1050000,
       "maxOutputTokens": 128000,
-      "sources": ["https://developers.openai.com/api/docs/models/gpt-6-astra"]
+      "sources": ["https://developers.openai.com/api/docs/models/gpt-6-astra"],
+      "toolUse": true
     },
     {
       "id": "gpt-5.6-sol",
@@ -18,7 +19,8 @@
       "input": ["text", "image"],
       "contextWindow": 1050000,
       "maxOutputTokens": 128000,
-      "sources": ["https://developers.openai.com/api/docs/models"]
+      "sources": ["https://developers.openai.com/api/docs/models"],
+      "toolUse": true
     },
     {
       "id": "gpt-5.6-terra",
@@ -27,7 +29,8 @@
       "input": ["text", "image"],
       "contextWindow": 1050000,
       "maxOutputTokens": 128000,
-      "sources": ["https://developers.openai.com/api/docs/models"]
+      "sources": ["https://developers.openai.com/api/docs/models"],
+      "toolUse": true
     },
     {
       "id": "gpt-5.6-luna",
@@ -36,7 +39,8 @@
       "input": ["text", "image"],
       "contextWindow": 1050000,
       "maxOutputTokens": 128000,
-      "sources": ["https://developers.openai.com/api/docs/models"]
+      "sources": ["https://developers.openai.com/api/docs/models"],
+      "toolUse": true
     },
     {
       "id": "gpt-5.6",
@@ -45,34 +49,153 @@
       "input": ["text", "image"],
       "contextWindow": 1050000,
       "maxOutputTokens": 128000,
-      "sources": ["https://developers.openai.com/api/docs/models"]
+      "sources": ["https://developers.openai.com/api/docs/models"],
+      "toolUse": true
+    },
+    {
+      "id": "gpt-5.5",
+      "displayName": "GPT-5.5",
+      "reasoningLevels": ["none", "low", "medium", "high", "xhigh"],
+      "input": ["text", "image"],
+      "contextWindow": 1050000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://developers.openai.com/api/docs/models/gpt-5.5"],
+      "toolUse": true
+    },
+    {
+      "id": "gpt-5.5-openai-compact",
+      "displayName": "GPT-5.5 (OpenAI Compact)",
+      "reasoningLevels": ["none", "low", "medium", "high", "xhigh"],
+      "input": ["text", "image"],
+      "contextWindow": 1050000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://developers.openai.com/api/docs/models/gpt-5.5"],
+      "toolUse": true
     },
     {
       "id": "gpt-5.4-mini",
       "displayName": "GPT-5.4 Mini",
       "reasoningLevels": ["low", "medium", "high", "xhigh"],
       "defaultReasoning": "medium",
+      "input": ["text", "image"],
+      "contextWindow": 400000,
+      "maxOutputTokens": 128000,
       "sources": [
-        "https://github.com/openai/codex/blob/main/codex-rs/core/models.json"
-      ]
+        "https://github.com/openai/codex/blob/main/codex-rs/core/models.json",
+        "https://models.dev/openai/gpt-5.4-mini"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "gpt-5.4",
+      "displayName": "GPT-5.4",
+      "reasoningLevels": ["none", "low", "medium", "high", "xhigh"],
+      "input": ["text", "image"],
+      "contextWindow": 272000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://models.dev/openai/gpt-5.4"],
+      "toolUse": true
     },
     {
       "id": "gpt-5.3-codex",
       "displayName": "GPT-5.3 Codex",
       "reasoningLevels": ["low", "medium", "high", "xhigh"],
       "defaultReasoning": "medium",
+      "input": ["text", "image"],
+      "contextWindow": 400000,
+      "maxOutputTokens": 128000,
       "sources": [
-        "https://github.com/openai/codex/blob/main/codex-rs/core/models.json"
-      ]
+        "https://github.com/openai/codex/blob/main/codex-rs/core/models.json",
+        "https://models.dev/openai/gpt-5.3-codex"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "gpt-5.3-codex-spark",
+      "displayName": "GPT-5.3 Codex Spark",
+      "reasoningLevels": ["low", "medium", "high", "xhigh"],
+      "input": ["text", "image"],
+      "contextWindow": 128000,
+      "maxOutputTokens": 32000,
+      "sources": [
+        "https://github.com/openai/codex/blob/main/codex-rs/core/models.json",
+        "https://models.dev/openai/gpt-5.3-codex-spark"
+      ],
+      "toolUse": true
     },
     {
       "id": "gpt-5.2",
       "displayName": "GPT-5.2",
       "reasoningLevels": ["low", "medium", "high", "xhigh"],
       "defaultReasoning": "medium",
+      "input": ["text", "image"],
+      "contextWindow": 400000,
+      "maxOutputTokens": 128000,
       "sources": [
-        "https://github.com/openai/codex/blob/main/codex-rs/core/models.json"
-      ]
+        "https://github.com/openai/codex/blob/main/codex-rs/core/models.json",
+        "https://models.dev/openai/gpt-5.2"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "gpt-5.2-codex",
+      "displayName": "GPT-5.2 Codex",
+      "reasoningLevels": ["none", "low", "medium", "high", "xhigh"],
+      "input": ["text", "image"],
+      "contextWindow": 400000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://models.dev/openai/gpt-5.2-codex"],
+      "toolUse": true
+    },
+    {
+      "id": "gpt-5.1",
+      "displayName": "GPT-5.1",
+      "reasoningLevels": ["none", "low", "medium", "high"],
+      "input": ["text", "image"],
+      "contextWindow": 400000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://models.dev/openai/gpt-5.1"],
+      "toolUse": true
+    },
+    {
+      "id": "gpt-5",
+      "displayName": "GPT-5",
+      "reasoningLevels": ["minimal", "low", "medium", "high"],
+      "input": ["text", "image"],
+      "contextWindow": 400000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://models.dev/openai/gpt-5"],
+      "toolUse": true
+    },
+    {
+      "id": "gpt-5-mini",
+      "displayName": "GPT-5 Mini",
+      "reasoningLevels": ["minimal", "low", "medium", "high"],
+      "input": ["text", "image"],
+      "contextWindow": 400000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://models.dev/openai/gpt-5-mini"],
+      "toolUse": true
+    },
+    {
+      "id": "o3",
+      "displayName": "o3",
+      "reasoningLevels": ["low", "medium", "high"],
+      "input": ["text", "image"],
+      "contextWindow": 200000,
+      "maxOutputTokens": 100000,
+      "sources": ["https://models.dev/openai/o3"],
+      "toolUse": true
+    },
+    {
+      "id": "o4-mini",
+      "displayName": "o4-mini",
+      "reasoningLevels": ["low", "medium", "high"],
+      "input": ["text", "image"],
+      "contextWindow": 200000,
+      "maxOutputTokens": 100000,
+      "sources": ["https://models.dev/openai/o4-mini"],
+      "toolUse": true
     },
     {
       "id": "deepseek-v4-flash",
@@ -87,7 +210,38 @@
         "https://api-docs.deepseek.com/quick_start/agent_integrations/codex/",
         "https://api-docs.deepseek.com/quick_start/pricing/",
         "https://api-docs.deepseek.com/guides/thinking_mode/"
-      ]
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "deepseek-v4-flash-0731",
+      "displayName": "DeepSeek V4 Flash (0731)",
+      "reasoningLevels": ["none", "low", "high", "max"],
+      "defaultReasoning": "high",
+      "reasoningMode": "deepseek",
+      "input": ["text"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 384000,
+      "sources": [
+        "https://api-docs.deepseek.com/quick_start/agent_integrations/codex/",
+        "https://api-docs.deepseek.com/guides/thinking_mode/"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "deepseek-v4-flash-vision-exp",
+      "displayName": "DeepSeek V4 Flash Vision Exp",
+      "reasoningLevels": ["none", "low", "high", "max"],
+      "defaultReasoning": "high",
+      "reasoningMode": "deepseek",
+      "input": ["text", "image"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 384000,
+      "sources": [
+        "https://cloud.tencent.cn/developer/article/2730373",
+        "https://api-docs.deepseek.com/guides/thinking_mode/"
+      ],
+      "toolUse": true
     },
     {
       "id": "deepseek-v4-pro",
@@ -102,119 +256,601 @@
         "https://api-docs.deepseek.com/quick_start/agent_integrations/codex/",
         "https://api-docs.deepseek.com/quick_start/pricing/",
         "https://api-docs.deepseek.com/guides/thinking_mode/"
-      ]
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "deepseek-v4-pro-0813",
+      "displayName": "DeepSeek V4 Pro (0813)",
+      "reasoningLevels": ["none", "low", "high", "max"],
+      "defaultReasoning": "high",
+      "reasoningMode": "deepseek",
+      "input": ["text"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 384000,
+      "sources": [
+        "https://api-docs.deepseek.com/quick_start/agent_integrations/codex/",
+        "https://api-docs.deepseek.com/guides/thinking_mode/"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "deepseek-v4.1-flash",
+      "displayName": "DeepSeek V4.1 Flash",
+      "reasoningLevels": ["none", "low", "high", "max"],
+      "defaultReasoning": "high",
+      "reasoningMode": "deepseek",
+      "input": ["text", "image"],
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "sources": [
+        "https://models.dev/deepseek/deepseek-v4.1-flash",
+        "https://api-docs.deepseek.com/guides/thinking_mode/"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "deepseek-r1",
+      "displayName": "DeepSeek R1",
+      "reasoningLevels": ["none", "low", "high", "max"],
+      "input": ["text"],
+      "contextWindow": 128000,
+      "maxOutputTokens": 32768,
+      "sources": [
+        "https://models.dev/deepseek/deepseek-r1",
+        "https://api-docs.deepseek.com/"
+      ],
+      "toolUse": true
     },
     {
       "id": "claude-sonnet-4-6",
       "displayName": "Claude Sonnet 4.6",
       "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "input": ["text", "image"],
       "reasoningLevels": ["low", "medium", "high", "max"],
       "defaultReasoning": "high",
       "sources": [
         "https://platform.claude.com/docs/en/build-with-claude/effort",
         "https://platform.claude.com/docs/en/build-with-claude/context-windows"
-      ]
+      ],
+      "toolUse": true
     },
     {
       "id": "claude-opus-4-6",
       "displayName": "Claude Opus 4.6",
       "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "input": ["text", "image"],
       "reasoningLevels": ["low", "medium", "high", "max"],
       "defaultReasoning": "high",
       "sources": [
         "https://platform.claude.com/docs/en/build-with-claude/effort",
         "https://platform.claude.com/docs/en/build-with-claude/context-windows"
-      ]
+      ],
+      "toolUse": true
     },
     {
       "id": "claude-opus-4-7",
       "displayName": "Claude Opus 4.7",
       "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "input": ["text", "image"],
       "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
       "defaultReasoning": "high",
       "sources": [
         "https://platform.claude.com/docs/en/build-with-claude/effort",
         "https://platform.claude.com/docs/en/build-with-claude/context-windows"
-      ]
+      ],
+      "toolUse": true
     },
     {
       "id": "claude-opus-4-8",
       "displayName": "Claude Opus 4.8",
       "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "input": ["text", "image"],
       "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
       "defaultReasoning": "high",
       "sources": [
         "https://platform.claude.com/docs/en/build-with-claude/effort",
         "https://platform.claude.com/docs/en/build-with-claude/context-windows"
-      ]
+      ],
+      "toolUse": true
     },
     {
       "id": "claude-opus-5",
       "displayName": "Claude Opus 5",
       "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "input": ["text", "image"],
       "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
       "defaultReasoning": "high",
       "sources": [
         "https://platform.claude.com/docs/en/build-with-claude/effort",
         "https://platform.claude.com/docs/en/build-with-claude/context-windows"
-      ]
+      ],
+      "toolUse": true
     },
     {
       "id": "claude-sonnet-5",
       "displayName": "Claude Sonnet 5",
       "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "input": ["text", "image"],
       "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
       "defaultReasoning": "high",
       "sources": [
         "https://platform.claude.com/docs/en/build-with-claude/effort",
         "https://platform.claude.com/docs/en/build-with-claude/context-windows"
-      ]
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "claude-haiku-4-5",
+      "displayName": "Claude Haiku 4.5",
+      "contextWindow": 200000,
+      "maxOutputTokens": 64000,
+      "input": ["text", "image"],
+      "reasoningLevels": ["low", "medium", "high", "max"],
+      "defaultReasoning": "high",
+      "sources": [
+        "https://platform.claude.com/docs/en/build-with-claude/effort",
+        "https://platform.claude.com/docs/en/build-with-claude/context-windows"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "claude-haiku-4-5-20251001",
+      "displayName": "Claude Haiku 4.5 (20251001)",
+      "contextWindow": 200000,
+      "maxOutputTokens": 64000,
+      "input": ["text", "image"],
+      "reasoningLevels": ["low", "medium", "high", "max"],
+      "defaultReasoning": "high",
+      "sources": [
+        "https://platform.claude.com/docs/en/build-with-claude/effort",
+        "https://platform.claude.com/docs/en/build-with-claude/context-windows"
+      ],
+      "toolUse": true
     },
     {
       "id": "claude-fable-5",
       "displayName": "Claude Fable 5",
       "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "input": ["text", "image"],
       "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
       "defaultReasoning": "high",
       "sources": [
         "https://platform.claude.com/docs/en/build-with-claude/effort",
         "https://platform.claude.com/docs/en/models/fable-5/introducing-claude-fable-5-and-claude-mythos-5",
         "https://platform.claude.com/docs/en/build-with-claude/context-windows"
-      ]
+      ],
+      "toolUse": true
     },
     {
       "id": "claude-fable-5-1",
       "displayName": "Claude Fable 5.1",
       "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "input": ["text", "image"],
       "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
       "defaultReasoning": "high",
       "sources": [
         "https://platform.claude.com/docs/en/build-with-claude/effort",
         "https://platform.claude.com/docs/en/build-with-claude/context-windows"
-      ]
+      ],
+      "toolUse": true
     },
     {
       "id": "claude-mythos-5",
       "displayName": "Claude Mythos 5",
       "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "input": ["text", "image"],
       "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
       "defaultReasoning": "high",
       "sources": [
         "https://platform.claude.com/docs/en/build-with-claude/effort",
         "https://platform.claude.com/docs/en/models/fable-5/introducing-claude-fable-5-and-claude-mythos-5",
         "https://platform.claude.com/docs/en/build-with-claude/context-windows"
-      ]
+      ],
+      "toolUse": true
     },
     {
       "id": "claude-mythos-5-1",
       "displayName": "Claude Mythos 5.1",
       "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "input": ["text", "image"],
       "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
       "defaultReasoning": "high",
       "sources": [
         "https://platform.claude.com/docs/en/build-with-claude/effort",
         "https://platform.claude.com/docs/en/build-with-claude/context-windows"
-      ]
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "gemini-2.5-flash",
+      "displayName": "Gemini 2.5 Flash",
+      "reasoningLevels": ["low", "high"],
+      "input": ["text", "image"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 65536,
+      "sources": ["https://models.dev/google/gemini-2.5-flash"],
+      "toolUse": true
+    },
+    {
+      "id": "gemini-2.5-pro",
+      "displayName": "Gemini 2.5 Pro",
+      "reasoningLevels": ["low", "high"],
+      "input": ["text", "image"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 65536,
+      "sources": ["https://models.dev/google/gemini-2.5-pro"],
+      "toolUse": true
+    },
+    {
+      "id": "gemini-3.1-pro-preview",
+      "displayName": "Gemini 3.1 Pro Preview",
+      "reasoningLevels": ["low", "high"],
+      "input": ["text", "image"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 65536,
+      "sources": ["https://models.dev/google/gemini-3.1-pro-preview"],
+      "toolUse": true
+    },
+    {
+      "id": "gemini-3.5-flash",
+      "displayName": "Gemini 3.5 Flash",
+      "reasoningLevels": ["low", "high"],
+      "input": ["text", "image"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 65536,
+      "sources": ["https://models.dev/google/gemini-3.5-flash"],
+      "toolUse": true
+    },
+    {
+      "id": "gemini-3.6-flash",
+      "displayName": "Gemini 3.6 Flash",
+      "reasoningLevels": ["low", "high"],
+      "input": ["text", "image"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 65536,
+      "sources": ["https://models.dev/google/gemini-3.6-flash"],
+      "toolUse": true
+    },
+    {
+      "id": "glm-5.1",
+      "displayName": "GLM-5.1",
+      "reasoningLevels": ["none", "low", "high", "max"],
+      "input": ["text"],
+      "contextWindow": 200000,
+      "maxOutputTokens": 131072,
+      "sources": ["https://models.dev/zai/glm-5.1"],
+      "toolUse": true
+    },
+    {
+      "id": "glm-5.2",
+      "displayName": "GLM-5.2",
+      "reasoningLevels": ["none", "low", "high", "max"],
+      "input": ["text"],
+      "contextWindow": 1000000,
+      "maxOutputTokens": 131072,
+      "sources": ["https://models.dev/zai/glm-5.2"],
+      "toolUse": true
+    },
+    {
+      "id": "glm-5.3",
+      "displayName": "GLM-5.3",
+      "reasoningLevels": ["none", "low", "high", "max"],
+      "input": ["text"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 131072,
+      "sources": [
+        "https://models.dev/zai/glm-5.3",
+        "https://apidog.com/jp/blog/glm-5-2-vs-glm-5-1/"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "glm-5.3-flash",
+      "displayName": "GLM-5.3 Flash",
+      "reasoningLevels": ["none", "low", "high", "max"],
+      "input": ["text", "image"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 131072,
+      "sources": ["https://models.dev/zai/glm-5.3-flash"],
+      "toolUse": true
+    },
+    {
+      "id": "kimi-k2.5",
+      "displayName": "Kimi K2.5",
+      "reasoningLevels": ["low", "high", "max"],
+      "input": ["text", "image"],
+      "contextWindow": 262144,
+      "maxOutputTokens": 262144,
+      "sources": ["https://models.dev/moonshotai/kimi-k2.5"],
+      "toolUse": true
+    },
+    {
+      "id": "kimi-k2.6",
+      "displayName": "Kimi K2.6",
+      "reasoningLevels": ["low", "high", "max"],
+      "input": ["text", "image"],
+      "contextWindow": 262144,
+      "maxOutputTokens": 262144,
+      "sources": ["https://models.dev/moonshotai/kimi-k2.6"],
+      "toolUse": true
+    },
+    {
+      "id": "kimi-k2.7-code",
+      "displayName": "Kimi K2.7 Code",
+      "reasoningLevels": ["low", "high", "max"],
+      "input": ["text", "image"],
+      "contextWindow": 262144,
+      "maxOutputTokens": 262144,
+      "sources": ["https://models.dev/moonshotai/kimi-k2.7-code"],
+      "toolUse": true
+    },
+    {
+      "id": "kimi-k3",
+      "displayName": "Kimi K3",
+      "reasoningLevels": ["low", "high", "max"],
+      "input": ["text", "image"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 1048576,
+      "sources": [
+        "https://models.dev/moonshotai/kimi-k3",
+        "https://help.aliyun.com/zh/model-studio/kimi-api-by-moonshot-ai"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "qwen3-coder-plus",
+      "displayName": "Qwen3 Coder Plus",
+      "reasoningLevels": [],
+      "input": ["text"],
+      "contextWindow": 1000000,
+      "maxOutputTokens": 65536,
+      "sources": ["https://models.dev/qwen/qwen3-coder-plus"],
+      "toolUse": true
+    },
+    {
+      "id": "qwen3-coder-480b",
+      "displayName": "Qwen3 Coder 480B",
+      "reasoningLevels": [],
+      "input": ["text"],
+      "contextWindow": 262144,
+      "maxOutputTokens": 65536,
+      "sources": ["https://models.dev/qwen/qwen3-coder-480b"],
+      "toolUse": true
+    },
+    {
+      "id": "qwen3.6-plus",
+      "displayName": "Qwen3.6 Plus",
+      "reasoningLevels": ["low", "medium", "xhigh"],
+      "input": ["text", "image"],
+      "contextWindow": 1000000,
+      "maxOutputTokens": 65536,
+      "sources": ["https://models.dev/qwen/qwen3.6-plus"],
+      "toolUse": true
+    },
+    {
+      "id": "qwen3.7-max",
+      "displayName": "Qwen3.7 Max",
+      "reasoningLevels": ["low", "medium", "xhigh"],
+      "input": ["text"],
+      "contextWindow": 1000000,
+      "maxOutputTokens": 131072,
+      "sources": ["https://models.dev/qwen/qwen3.7-max"],
+      "toolUse": true
+    },
+    {
+      "id": "qwen3.8-max-preview",
+      "displayName": "Qwen3.8 Max Preview",
+      "reasoningLevels": ["low", "medium", "xhigh"],
+      "input": ["text", "image"],
+      "contextWindow": 1000000,
+      "maxOutputTokens": 131072,
+      "sources": ["https://models.dev/qwen/qwen3.8-max-preview"],
+      "toolUse": true
+    },
+    {
+      "id": "qwen3.8-flash",
+      "displayName": "Qwen3.8 Flash",
+      "reasoningLevels": ["low", "medium", "xhigh"],
+      "input": ["text", "image"],
+      "contextWindow": 1000000,
+      "maxOutputTokens": 131072,
+      "sources": [
+        "https://models.dev/qwen/qwen3.8-flash",
+        "https://www.alibabacloud.com/help/ja/model-studio/opencode"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "qwen3.8-max",
+      "displayName": "Qwen3.8 Max",
+      "reasoningLevels": ["low", "medium", "xhigh"],
+      "input": ["text", "image"],
+      "contextWindow": 1000000,
+      "maxOutputTokens": 131072,
+      "sources": [
+        "https://models.dev/qwen/qwen3.8-max",
+        "https://www.alibabacloud.com/help/ja/model-studio/opencode"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "minimax-m2.7",
+      "displayName": "MiniMax-M2.7",
+      "reasoningLevels": ["low", "medium", "high"],
+      "input": ["text"],
+      "contextWindow": 204800,
+      "maxOutputTokens": 131072,
+      "sources": ["https://models.dev/minimax/minimax-m2.7"],
+      "toolUse": true
+    },
+    {
+      "id": "minimax-m3",
+      "displayName": "MiniMax-M3",
+      "reasoningLevels": ["none", "adaptive"],
+      "input": ["text", "image"],
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://models.dev/minimax/minimax-m3"],
+      "toolUse": true
+    },
+    {
+      "id": "mimo-v2.5",
+      "displayName": "MiMo-V2.5",
+      "reasoningLevels": [
+        "none",
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "input": ["text", "image"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 131072,
+      "sources": ["https://models.dev/xiaomi/mimo-v2.5"],
+      "toolUse": true
+    },
+    {
+      "id": "mimo-v2.5-pro",
+      "displayName": "MiMo-V2.5-Pro",
+      "reasoningLevels": [
+        "none",
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
+      "input": ["text"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 131072,
+      "sources": ["https://models.dev/xiaomi/mimo-v2.5-pro"],
+      "toolUse": true
+    },
+    {
+      "id": "grok-4.3",
+      "displayName": "Grok 4.3",
+      "reasoningLevels": ["low", "medium", "high"],
+      "input": ["text", "image"],
+      "contextWindow": 1000000,
+      "maxOutputTokens": 30000,
+      "sources": ["https://models.dev/xai/grok-4.3"],
+      "toolUse": true
+    },
+    {
+      "id": "grok-4.5",
+      "displayName": "Grok 4.5",
+      "reasoningLevels": ["low", "medium", "high"],
+      "input": ["text", "image"],
+      "contextWindow": 500000,
+      "maxOutputTokens": 500000,
+      "sources": ["https://models.dev/xai/grok-4.5"],
+      "toolUse": true
+    },
+    {
+      "id": "ark-code-latest",
+      "displayName": "Ark Code Latest",
+      "reasoningLevels": [],
+      "input": ["text"],
+      "contextWindow": 128000,
+      "maxOutputTokens": 16384,
+      "sources": ["https://models.dev/volcengine/ark-code-latest"]
+    },
+    {
+      "id": "doubao-seed-2.1-pro",
+      "displayName": "Doubao Seed 2.1 Pro",
+      "reasoningLevels": ["low", "medium", "high"],
+      "input": ["text", "image"],
+      "contextWindow": 128000,
+      "maxOutputTokens": 16384,
+      "sources": ["https://models.dev/volcengine/doubao-seed-2.1-pro"],
+      "toolUse": true
+    },
+    {
+      "id": "nova-pro",
+      "displayName": "Amazon Nova Pro",
+      "reasoningLevels": [],
+      "input": ["text", "image"],
+      "contextWindow": 300000,
+      "maxOutputTokens": 8192,
+      "sources": ["https://models.dev/amazon/nova-pro"],
+      "toolUse": true
+    },
+    {
+      "id": "ling-2.5-1t",
+      "displayName": "Ling 2.5-1T",
+      "reasoningLevels": [],
+      "input": ["text"],
+      "contextWindow": 1000000,
+      "maxOutputTokens": 16384,
+      "sources": ["https://models.dev/inclusionai/ling-2.5-1t"],
+      "toolUse": true
+    },
+    {
+      "id": "longcat-2.0",
+      "displayName": "LongCat 2.0",
+      "reasoningLevels": ["low", "medium", "high"],
+      "input": ["text"],
+      "contextWindow": 1000000,
+      "maxOutputTokens": 131072,
+      "sources": ["https://models.dev/longcat/longcat-2.0"],
+      "toolUse": true
+    },
+    {
+      "id": "llama-4-maverick",
+      "displayName": "Meta Llama 4 Maverick",
+      "reasoningLevels": [],
+      "input": ["text", "image"],
+      "contextWindow": 1000000,
+      "maxOutputTokens": 16384,
+      "sources": ["https://models.dev/meta/llama-4-maverick"],
+      "toolUse": true
+    },
+    {
+      "id": "step-3.5-flash",
+      "displayName": "Step 3.5 Flash",
+      "reasoningLevels": ["low", "medium", "high"],
+      "input": ["text"],
+      "contextWindow": 256000,
+      "maxOutputTokens": 256000,
+      "sources": ["https://models.dev/stepfun/step-3.5-flash"],
+      "toolUse": true
+    },
+    {
+      "id": "kat-coder-pro",
+      "displayName": "KAT-Coder Pro",
+      "reasoningLevels": ["low", "medium", "high"],
+      "input": ["text"],
+      "contextWindow": 256000,
+      "maxOutputTokens": 32000,
+      "sources": ["https://models.dev/streamlake/kat-coder-pro"],
+      "toolUse": true
+    },
+    {
+      "id": "hy4-preview",
+      "displayName": "Hunyuan HY4 Preview",
+      "reasoningLevels": ["none", "high"],
+      "input": ["text"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 131072,
+      "sources": [
+        "https://ai-tldr.dev/models/hunyuan-hy4-preview/",
+        "https://models.dev/tencent/hy4-preview"
+      ],
+      "toolUse": true
     }
   ]
 }

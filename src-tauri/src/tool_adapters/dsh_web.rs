@@ -484,19 +484,6 @@ fn runtime_identity(
     Ok(fingerprint.finalize().into())
 }
 
-pub(crate) async fn verify_launch_and_keep(
-    state: &DshRuntimeState,
-    installation: &ResolvedInstallation,
-    key: &str,
-    _model: &str,
-) -> Result<(), AdapterFailure> {
-    // Setup must not spend the user's quota or make a model claim. Starting the
-    // local web profile and accepting only its bounded loopback receipt proves
-    // that the installed client can launch; the first real request is shown by
-    // the shared request-diagnostics receipt.
-    open_existing(state, installation, key).await
-}
-
 #[cfg(target_os = "macos")]
 fn open_browser(url: &str) -> Result<(), AdapterFailure> {
     std::process::Command::new("/usr/bin/open")

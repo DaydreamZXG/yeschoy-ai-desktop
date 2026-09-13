@@ -1,13 +1,12 @@
-use std::{path::Path, time::Duration};
+use std::path::Path;
 
 use serde_json::{json, Map, Value};
-use tokio::process::Command;
 
 use crate::{
     claude_bridge::ClaudeTransport,
     tool_adapters::{
         common::{self, ConfigFailure, FileTransaction},
-        AdapterFailure, ResolvedInstallation,
+        AdapterFailure,
     },
     tool_credentials,
 };
@@ -298,65 +297,6 @@ impl Prepared {
     }
 }
 
-pub(crate) async fn verify(
-    installation: &ResolvedInstallation,
-    model: &str,
-    _credential: &tool_credentials::ToolCredential,
-) -> Result<(), AdapterFailure> {
-    let settings_path = super::user_home()
-        .map(|home| home.join(".claude").join("settings.json"))
-        .filter(|path| path.is_file())
-        .ok_or(AdapterFailure::VerificationFailed(
-            "verification_settings_missing",
-        ))?;
-    verify_with_settings(installation, model, &settings_path).await
-}
-
-async fn verify_with_settings(
-    installation: &ResolvedInstallation,
-    model: &str,
-    settings_path: &Path,
-) -> Result<(), AdapterFailure> {
-    let working = common::temporary_working_directory("claude-code-verify")
-        .map_err(|_| AdapterFailure::VerificationFailed("verification_workspace_failed"))?;
-    let mut command = Command::new(&installation.path);
-    command
-        .current_dir(&working)
-        .arg("--settings")
-        .arg(settings_path)
-        .args([
-            "--print",
-            "--bare",
-            "--no-session-persistence",
-            "--tools",
-            "",
-            "--model",
-            model,
-            "--output-format",
-            "json",
-            "仅回复 YESCHOY_OK，不要使用工具。",
-        ]);
-    common::apply_cli_runtime_path(&mut command, &installation.path);
-    let result = common::run_bounded(command, Duration::from_secs(120)).await;
-    let _ = std::fs::remove_dir_all(&working);
-    let result = result.map_err(|error| AdapterFailure::VerificationFailed(error.reason_code()))?;
-    if !result.success {
-        return Err(AdapterFailure::VerificationFailed("tool_request_failed"));
-    }
-    let value: Value = serde_json::from_slice(&result.stdout)
-        .map_err(|_| AdapterFailure::VerificationFailed("tool_response_invalid"))?;
-    let has_result = value
-        .get("result")
-        .and_then(Value::as_str)
-        .is_some_and(|value| common::verification_reply(value.as_bytes()))
-        && value.get("is_error").and_then(Value::as_bool) != Some(true);
-    if has_result {
-        Ok(())
-    } else {
-        Err(AdapterFailure::VerificationFailed("tool_response_invalid"))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -453,35 +393,6 @@ mod tests {
             behaviors["future-model"],
             crate::tool_model_profile::CLAUDE_BEHAVES_AS
         );
-    }
-
-    #[cfg(unix)]
-    #[tokio::test]
-    async fn claude_verification_executes_json_fixture_and_rejects_echo_error_and_failed_reply() {
-        use common::test_support::Script;
-        let valid = Script::new("[ \"$1\" = --settings ] || exit 11\n[ \"$3\" = --print ] || exit 12\nprintf '%s\\n' '{\"result\":\"YESCHOY_OK\",\"is_error\":false}'");
-        // The fixture never opens this path; no real HOME/config/credential lookup.
-        let settings = valid.path.with_file_name("synthetic-settings.json");
-        assert!(
-            verify_with_settings(&valid.installation(), "fixture-model", &settings)
-                .await
-                .is_ok()
-        );
-        for body in [
-            "printf 'Usage: claude [options]\\n'",
-            "printf '%s\\n' \"$*\"",
-            "printf '%s\\n' '{\"result\":\"reply YESCHOY_OK\",\"is_error\":false}'",
-            "printf '%s\\n' '{\"result\":\"YESCHOY_OK\",\"is_error\":true}'",
-            "printf '%s\\n' '{\"result\":\"YESCHOY_OK\",\"is_error\":false}'; exit 17",
-        ] {
-            let script = Script::new(body);
-            assert!(
-                verify_with_settings(&script.installation(), "fixture-model", &settings)
-                    .await
-                    .is_err(),
-                "{body}"
-            );
-        }
     }
 
     #[test]

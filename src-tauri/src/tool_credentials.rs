@@ -1,18 +1,16 @@
-use std::io::{self, Read, Write};
+use std::io::{self, Write};
 
 use keyring::v1::{Entry, Error as KeyringError};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 const SERVICE: &str = "com.yeschoy.desktop.tool-credential.v2";
-const ALLOWED_TOOLS: [&str; 7] = [
+const ALLOWED_TOOLS: [&str; 5] = [
     "claude_code",
     "claude_desktop",
     "codex_desktop",
     "pi",
     "dsh_web",
-    "hermes",
-    "openclaw",
 ];
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -451,7 +449,7 @@ pub(crate) fn shell_helper_command(tool_id: &str) -> Result<String, CredentialFa
 fn bare_helper(tool_id: &str) -> i32 {
     match load(tool_id) {
         Ok(record) => {
-            // Helper consumers (Claude Code, Pi, Hermes) now present this key
+            // Helper consumers (Claude Code, Pi) now present this key
             // to the relay origin directly, so the helper must return the
             // scoped relay key rather than the retired loopback token.
             let secret = record.upstream_key();
@@ -471,66 +469,13 @@ fn bare_helper(tool_id: &str) -> i32 {
     }
 }
 
-fn openclaw_helper(tool_id: &str) -> i32 {
-    const ID: &str = "providers/yeschoy/apiKey";
-    let mut request = Vec::new();
-    if io::stdin()
-        .lock()
-        .take(16 * 1024 + 1)
-        .read_to_end(&mut request)
-        .is_err()
-        || request.len() > 16 * 1024
-    {
-        return 65;
-    }
-    let valid_request = serde_json::from_slice::<serde_json::Value>(&request)
-        .ok()
-        .and_then(|value| {
-            let object = value.as_object()?;
-            let ids = object.get("ids")?.as_array()?;
-            (object.get("protocolVersion")?.as_u64()? == 1
-                && object.get("provider")?.as_str()? == "yeschoy-keychain"
-                && ids.len() == 1
-                && ids[0].as_str()? == ID)
-                .then_some(())
-        })
-        .is_some();
-    if !valid_request {
-        return 65;
-    }
-    let record = match load(tool_id) {
-        Ok(value) => value,
-        Err(CredentialFailure::Missing) => return 69,
-        Err(CredentialFailure::Unavailable) => return 70,
-        Err(CredentialFailure::Invalid) => return 65,
-    };
-    let response = serde_json::json!({
-        "protocolVersion": 1,
-        "values": { ID: record.upstream_key() }
-    });
-    let mut output = io::stdout().lock();
-    if serde_json::to_writer(&mut output, &response).is_ok()
-        && output.write_all(b"\n").is_ok()
-        && output.flush().is_ok()
-    {
-        0
-    } else {
-        71
-    }
-}
-
 /// Intercepts signed helper modes before Tauri is initialized. Bare-token
-/// consumers use `credential-helper`; OpenClaw uses its bounded protocol-v1
-/// exec SecretRef exchange.
+/// consumers use `credential-helper`.
 pub fn credential_helper_exit_code() -> Option<i32> {
     let arguments = std::env::args().collect::<Vec<_>>();
     let code = match arguments.get(1).map(String::as_str) {
         Some("credential-helper") => match arguments.as_slice() {
             [_, _, tool_id] if allowed_tool(tool_id) => bare_helper(tool_id),
-            _ => 64,
-        },
-        Some("credential-helper-openclaw") => match arguments.as_slice() {
-            [_, _, tool_id] if tool_id == "openclaw" => openclaw_helper("openclaw"),
             _ => 64,
         },
         _ => return None,
@@ -774,14 +719,6 @@ mod tests {
             shell_helper_command("opencode"),
             Err(CredentialFailure::Invalid)
         ));
-    }
-
-    #[test]
-    fn openclaw_is_allowlisted_but_uses_a_separate_protocol_mode() {
-        assert!(allowed_tool("openclaw"));
-        assert!(shell_helper_command("openclaw")
-            .expect("command")
-            .contains("credential-helper openclaw"));
     }
 
     #[test]

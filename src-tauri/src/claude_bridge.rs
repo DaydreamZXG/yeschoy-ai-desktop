@@ -65,9 +65,7 @@ impl ClaudeTransport {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct VerificationEvent {
-    pub(crate) model: String,
-}
+pub(crate) struct VerificationEvent;
 
 struct BridgeState {
     credential: ToolCredential,
@@ -268,9 +266,7 @@ async fn messages(state: &BridgeState, request: Request<Body>) -> Response {
         .to_owned();
     let model = resolve_model(state, &requested);
     value["model"] = json!(model);
-    let _ = state.events.send(VerificationEvent {
-        model: model.clone(),
-    });
+    let _ = state.events.send(VerificationEvent);
 
     let url = format!(
         "{}/v1/messages",

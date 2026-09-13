@@ -5,8 +5,6 @@ pub(crate) mod common;
 pub(crate) mod desktop_launch;
 pub(crate) mod desktop_lifecycle;
 pub(crate) mod dsh_web;
-pub(crate) mod hermes;
-pub(crate) mod openclaw;
 pub(crate) mod pi;
 pub(crate) mod terminal_launch;
 
@@ -28,7 +26,6 @@ pub(crate) enum AdapterFailure {
     ConfigurationFailed(&'static str),
     LaunchFailed,
     LaunchError(&'static str),
-    VerificationFailed(&'static str),
 }
 
 #[derive(Clone, Debug)]
@@ -63,7 +60,7 @@ struct ObservedInstallation {
     location: &'static str,
 }
 
-const TARGETS: [(&str, &str, &str); 7] = [
+const TARGETS: [(&str, &str, &str); 5] = [
     ("claude_code", "Claude Code", "命令行与编辑器工作区"),
     ("claude_desktop", "Claude Desktop", "Claude 桌面应用"),
     (
@@ -73,8 +70,6 @@ const TARGETS: [(&str, &str, &str); 7] = [
     ),
     ("pi", "Pi", "Pi 编程助手"),
     ("dsh_web", "DSH web", "DeepSeek Harness 浏览器工作台"),
-    ("hermes", "Hermes", "Hermes 桌面与命令行助手"),
-    ("openclaw", "OpenClaw", "OpenClaw 智能助手"),
 ];
 
 pub(crate) fn user_home() -> Option<PathBuf> {
@@ -101,8 +96,6 @@ fn executable_for(tool_id: &str) -> Option<&'static str> {
         "claude_code" => Some("claude"),
         "pi" => Some("pi"),
         "dsh_web" => Some("dsh"),
-        "hermes" => Some("hermes"),
-        "openclaw" => Some("openclaw"),
         _ => None,
     }
 }
@@ -132,7 +125,7 @@ fn can_attempt(tool_id: &str, installation: &ObservedInstallation) -> bool {
     // parses/readbacks owned fields and the tool request proves usability.
     match tool_id {
         "codex_desktop" | "claude_desktop" => installation.path.exists(),
-        "claude_code" | "pi" | "dsh_web" | "hermes" | "openclaw" => installation.path.is_file(),
+        "claude_code" | "pi" | "dsh_web" => installation.path.is_file(),
         _ => false,
     }
 }

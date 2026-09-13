@@ -215,6 +215,7 @@ let sequence = 0;
 async function manage(
   operation: "inspect" | "restore",
   toolId: ActivationToolId | "" = "",
+  revokeTokens?: boolean,
 ) {
   const requestId = `connections-${Date.now().toString(36)}-${++sequence}`;
   let deadline: ReturnType<typeof setTimeout> | undefined;
@@ -226,7 +227,12 @@ async function manage(
     const result = decodeConnections(
       await Promise.race([
         invoke("manage_tool_connections_v1", {
-          request: { requestId, operation, toolId },
+          request: {
+            requestId,
+            operation,
+            toolId,
+            ...(revokeTokens === undefined ? {} : { revokeTokens }),
+          },
         }),
         new Promise<never>((_resolve, reject) => {
           deadline = setTimeout(
@@ -277,7 +283,7 @@ export function useToolConnections() {
     if (mounted.current && !operation.current && result.isSuccess)
       setRestoreError(null);
   }, [refetch]);
-  const restore = useCallback(async (tool: ActivationToolId) => {
+  const restore = useCallback(async (tool: ActivationToolId, revokeTokens = true) => {
     if (operation.current || openingOperation.current)
       throw Error("connection_operation_busy");
     operation.current = true;
@@ -286,7 +292,7 @@ export function useToolConnections() {
       // Cancel the query's ownership of its result, not the native write. A
       // late read can no longer overwrite the post-restore projection.
       await queryClient.cancelQueries({ queryKey: CONNECTION_QUERY_KEY });
-      const result = await manage("restore", tool);
+      const result = await manage("restore", tool, revokeTokens);
       queryClient.setQueryData(CONNECTION_QUERY_KEY, result);
       if (mounted.current) setRestoreError(null);
       return result;
@@ -333,6 +339,8 @@ export function useToolConnections() {
         : undefined;
   return {
     connections: query.data?.connections ?? [],
+    // #11 高级模式：暴露最近一次成功读取的编号，供诊断复制使用。
+    requestId: query.data?.requestId,
     loading: !query.data && !issue && query.isPending,
     refreshing: query.isFetching,
     error: !!issue,
@@ -346,10 +354,12 @@ export function useToolConnections() {
 }
 type Controller = Omit<
   ReturnType<typeof useToolConnections>,
-  "refreshing" | "errorInfo"
+  "refreshing" | "errorInfo" | "requestId"
 > & {
   refreshing?: boolean;
   errorInfo?: ConnectionIssue;
+  // #11 高级模式：测试替身与旧注入点可不提供读取编号。
+  requestId?: string;
 };
 const Context = createContext<Controller | null>(null);
 export function ConnectionProvider({

@@ -1,0 +1,28 @@
+{
+  "scenarioId": "DAILY-activation",
+  "assertion": "Restart confirmation, cancellation, duplicate and stale context remain safe.",
+  "testSelector": "tests/work_packages/ru077/test_renderer.py::test_activation",
+  "acceptanceCommandId": "ux-activation",
+  "runId": "RU-077/WP-RU077-DAILY-USE@2026-09-12T05:11:44.899411+00:00",
+  "packageId": "WP-RU077-DAILY-USE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru077/test_renderer.py::test_activation",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:28980bc68d09bd37ca03279be471496135b2a13824eb57f3fc73ed111f5ecbd9",
+    "machineReportSha256": "sha256:bdf8607e50bb6de46716afb5dbf1616cdb4d1cc10b1e732bf50662b8e737fad1",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:481b7033276478159e590276bfb720d41926c5bdbc5c9bbe6398d6a8ff5a7ccd",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:6025d2d4467ea16a4320357b0932995b8d8abd457872d3970e3858099efed75d",
+  "releaseUnitId": "RU-077",
+  "releaseUnitHash": "sha256:8140a03adaf7efb247eacd3b7fb4baf3fabaeb0305abc4eca33f02bc37849271"
+}

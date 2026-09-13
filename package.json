@@ -14,8 +14,8 @@
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
     "test:unit": "vitest run --dir src --exclude 'release/**' --exclude 'work/**' --exclude 'tests/**'",
-    "test:candidate": "vitest run src/candidate/readiness.test.ts src/diagnostics/contract.test.ts src/configuration/preview.test.ts src/service-catalog/contract.test.ts src/service-catalog/access-plan.test.ts src/service-catalog/ServiceCatalogPanel.test.tsx src/service-catalog/handoff.test.ts --exclude 'release/**' --exclude 'work/**' --exclude 'tests/**'",
-    "test:unit:watch": "vitest watch"
+    "test:unit:watch": "vitest watch",
+    "verify:catalog": "node scripts/qa/verify-model-catalog.mjs"
   },
   "keywords": [],
   "author": "Jason Young",

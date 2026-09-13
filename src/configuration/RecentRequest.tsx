@@ -1,18 +1,9 @@
 import type { RequestObservation } from "./connections";
 import { groupLabel } from "./BillingGroupPicker";
+import { useConfigurationCopy } from "./copy";
+import { useWorkbenchCopy } from "../workbench/copy";
 import type { ActivationToolId } from "./activation";
 
-const outcomes: Record<RequestObservation["outcome"], string> = {
-  ok: "已确认经野菜中转完成",
-  timeout: "等待模型回复超时",
-  network_error: "未能连接模型服务",
-  upstream_error: "模型服务未完成请求",
-  invalid_response: "模型回复格式异常",
-  stream_interrupted: "回复在完成前中断",
-  unknown_model: "这个模型尚未加入常用列表",
-  payload_too_large: "请求内容超过本机安全上限",
-  local_busy: "本机正在处理另一条大请求",
-};
 export function RecentRequest({
   value,
   toolId,
@@ -24,10 +15,23 @@ export function RecentRequest({
   onRefresh?: () => void;
   loading?: boolean;
 }) {
+  const c = useConfigurationCopy();
+  const w = useWorkbenchCopy();
+  const outcomes: Record<RequestObservation["outcome"], string> = {
+    ok: c.outcomeOk,
+    timeout: c.outcomeTimeout,
+    network_error: c.outcomeNetworkError,
+    upstream_error: c.outcomeUpstreamError,
+    invalid_response: c.outcomeInvalidResponse,
+    stream_interrupted: c.outcomeStreamInterrupted,
+    unknown_model: c.outcomeUnknownModel,
+    payload_too_large: c.outcomePayloadTooLarge,
+    local_busy: c.outcomeLocalBusy,
+  };
   return (
-    <section className="recent-request" aria-label="最近连接结果">
+    <section className="recent-request" aria-label={c.sectionLabel}>
       <header>
-        <strong>最近野菜中转记录</strong>
+        <strong>{c.recentTitle}</strong>
         {onRefresh && (
           <button
             type="button"
@@ -35,7 +39,7 @@ export function RecentRequest({
             disabled={loading}
             onClick={onRefresh}
           >
-            刷新结果
+            {c.refreshResult}
           </button>
         )}
       </header>
@@ -45,46 +49,37 @@ export function RecentRequest({
             {outcomes[value.outcome]}
             {value.httpStatus > 0 ? ` · HTTP ${value.httpStatus}` : ""}
           </p>
-          <code>{value.modelId || "未指定模型"}</code>
+          <code>{value.modelId || c.noModelSpecified}</code>
           <small>
-            {value.billingGroup ? `${groupLabel(value.billingGroup)} · ` : ""}
+            {value.billingGroup
+              ? `${groupLabel(value.billingGroup, c.defaultGroup)} · `
+              : ""}
             {value.lineId === "global_accelerated"
-              ? "全球加速"
-              : "大陆优化"} ·{" "}
-            {new Date(value.observedAtEpochMs).toLocaleTimeString()}
+              ? w.globalLine
+              : w.mainlandLine}{" "}
+            · {new Date(value.observedAtEpochMs).toLocaleTimeString()}
           </small>
           {value.outcome !== "ok" && (
             <p>
               {value.outcome === "payload_too_large"
-                ? "单次请求超过 200 MiB，未发送到上游。请减少一次附带的文件或图片后重试。"
+                ? c.advicePayloadTooLarge
                 : value.outcome === "local_busy"
-                  ? "为避免桌面助手卡死，本机一次只缓冲一条大请求。请等待当前请求完成后重试。"
+                  ? c.adviceLocalBusy
                   : [401, 403].includes(value.httpStatus)
-                    ? "请检查账户与这个模型的使用权限。"
+                    ? c.adviceUnauthorized
                     : value.httpStatus === 429
-                      ? "请求较多或额度受限，请稍后重试并检查账户。"
+                      ? c.adviceRateLimited
                       : value.outcome === "unknown_model"
-                        ? "请选用已配置的模型，或将新模型加入列表后更新接入。"
-                        : "请先重试；若持续失败，可手动更换线路。不会替你更换模型或计费分组。"}
+                        ? c.adviceUnknownModel
+                        : c.adviceRetry}
             </p>
           )}
         </>
       ) : (
-        <p>
-          尚未收到该应用经野菜中转的请求。发送一条消息后，可在这里刷新确认。
-        </p>
+        <p>{c.emptyRequestState}</p>
       )}
-      {toolId === "codex_desktop" && (
-        <p>
-          Codex
-          显示的官方账号是登录身份，不是本次模型请求线路或计费方的证明；这里出现中转记录后，才说明请求确实经过了野菜中转。
-        </p>
-      )}
-      <small>
-        记录来自服务端用量日志，按该工具自己的密钥归因，显示实际转发的完整模型
-        ID；不依据应用缩写或 AI
-        的自我介绍判断。发送消息后稍等几秒再刷新即可看到。
-      </small>
+      {toolId === "codex_desktop" && <p>{c.codexAccountNote}</p>}
+      <small>{c.attributionNote}</small>
     </section>
   );
 }

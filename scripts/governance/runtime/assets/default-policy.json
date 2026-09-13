@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "evidenceClasses": [
+    "user_confirmed",
+    "code_observed",
+    "external_verified",
+    "inferred",
+    "proposed"
+  ],
+  "requirementStates": [
+    "confirmed",
+    "proposed",
+    "unknown",
+    "conflict",
+    "not_applicable",
+    "retired"
+  ],
+  "impactLevels": ["low", "medium", "high", "critical"],
+  "requiredPageStates": [
+    "default",
+    "loading",
+    "empty",
+    "partial",
+    "error",
+    "expired",
+    "conflict",
+    "recovery",
+    "processing"
+  ],
+  "defaultTrackCapabilities": [
+    "evidence",
+    "attempt",
+    "reflection",
+    "mastery",
+    "ability_estimate",
+    "planning",
+    "report",
+    "global_ask"
+  ],
+  "requiredNfrCategories": [
+    "security",
+    "privacy",
+    "reliability",
+    "observability",
+    "performance",
+    "capacity",
+    "accessibility",
+    "ai_quality",
+    "ai_cost",
+    "commerce",
+    "migration",
+    "backup_restore",
+    "operations"
+  ],
+  "nfrMinimumEvidenceLevels": {
+    "security": 5,
+    "privacy": 5,
+    "reliability": 4,
+    "observability": 4,
+    "performance": 5,
+    "capacity": 5,
+    "accessibility": 5,
+    "ai_quality": 5,
+    "ai_cost": 4,
+    "commerce": 4,
+    "migration": 3,
+    "backup_restore": 6,
+    "operations": 6
+  }
+}

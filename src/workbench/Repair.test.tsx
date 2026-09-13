@@ -212,7 +212,7 @@ describe("v2 projection boundary", () => {
 async function openTools() {
   render(<App />);
   await tick();
-  fireEvent.click(screen.getByRole("button", { name: "高级工具" }));
+  fireEvent.click(screen.getByRole("button", { name: "已安装的工具" }));
 }
 function scanWith(make: (id: string) => unknown) {
   mockNativeByCommand(async (command, args) => {

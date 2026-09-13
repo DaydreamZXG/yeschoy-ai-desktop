@@ -1,11 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
-import { CONNECTIVITY_LINES, decodeConnectivityProjection } from "./contract";
+import {
+  CONNECTIVITY_LINES,
+  decodeConnectivityProjection,
+  lineNetworkHealthy,
+  lineOutcome,
+} from "./contract";
 import type {
   ConnectivityLineId,
   ConnectivityLineResult,
   ConnectivityResponse,
+  LineOutcome,
 } from "./contract";
 import { diagnosticsCopy } from "./copy";
 
@@ -22,9 +28,37 @@ type DiagnosticsPhase =
   | "empty"
   | "error";
 
+type CopyState = "idle" | "copied" | "failed";
+
 interface LineObservation {
   result: ConnectivityLineResult;
   requestId: string;
+}
+
+// Sanitized plain-text report: line display names, per-layer status/latency
+// and machine-readable reason codes only. Never includes hosts, tokens,
+// file paths or any account data.
+function buildSanitizedReport(
+  response: ConnectivityResponse,
+  completedAtIso: string | null,
+): string {
+  const rows = response.lines.map((line) => {
+    const layers = line.layers
+      .map((layer) => {
+        const latency =
+          layer.latencyMs !== undefined ? ` (${layer.latencyMs} ms)` : "";
+        return `  ${layer.layer}: ${layer.status}${latency} [${layer.reasonCode}]`;
+      })
+      .join("\n");
+    return `[${line.displayName}]\n${layers}`;
+  });
+  return [
+    "Yeschoy diagnostics report (schema v2)",
+    `request-id: ${response.requestId}`,
+    `completed-at: ${completedAtIso ?? "unknown"}`,
+    "",
+    rows.join("\n"),
+  ].join("\n");
 }
 
 export function DiagnosticsView({
@@ -38,15 +72,19 @@ export function DiagnosticsView({
   const [issue, setIssue] = useState<"invoke" | "invalid" | "partial" | null>(
     null,
   );
+  const [copyState, setCopyState] = useState<CopyState>("idle");
   const [observations, setObservations] = useState<
     ReadonlyMap<ConnectivityLineId, LineObservation>
   >(() => new Map());
   const latestRequestRef = useRef("");
   const requestSequenceRef = useRef(0);
+  const copyResetRef = useRef<number | null>(null);
 
   useEffect(
     () => () => {
       latestRequestRef.current = "";
+      if (copyResetRef.current !== null)
+        window.clearTimeout(copyResetRef.current);
     },
     [],
   );
@@ -92,13 +130,13 @@ export function DiagnosticsView({
         setPhase(decoded.response.lines.length > 0 ? "partial" : "error");
         return;
       }
-      const reachableCount = decoded.response.lines.filter(
-        (line) => line.status === "reachable",
+      const healthyCount = decoded.response.lines.filter(
+        lineNetworkHealthy,
       ).length;
       setPhase(
-        reachableCount === decoded.response.lines.length
+        healthyCount === decoded.response.lines.length
           ? "success"
-          : reachableCount === 0
+          : healthyCount === 0
             ? "empty"
             : "partial",
       );
@@ -107,6 +145,23 @@ export function DiagnosticsView({
       setIssue("invoke");
       setPhase("error");
     }
+  };
+
+  const copyReportToClipboard = async () => {
+    if (!response) return;
+    const report = buildSanitizedReport(
+      response,
+      new Date(response.completedAtEpochMs).toISOString(),
+    );
+    try {
+      await navigator.clipboard.writeText(report);
+      setCopyState("copied");
+    } catch {
+      setCopyState("failed");
+    }
+    if (copyResetRef.current !== null)
+      window.clearTimeout(copyResetRef.current);
+    copyResetRef.current = window.setTimeout(() => setCopyState("idle"), 2500);
   };
 
   return (
@@ -130,6 +185,8 @@ export function DiagnosticsView({
           <ul>
             <li>{t("yeschoyDiagnostics.scopeDns")}</li>
             <li>{t("yeschoyDiagnostics.scopeTcp")}</li>
+            <li>{t("yeschoyDiagnostics.scopeTls")}</li>
+            <li>{t("yeschoyDiagnostics.scopeApiKey")}</li>
             <li>{t("yeschoyDiagnostics.scopeNoApi")}</li>
           </ul>
         </div>
@@ -184,6 +241,24 @@ export function DiagnosticsView({
           </span>
         </div>
 
+        {response && (
+          <div className="diagnostics-report-actions">
+            <button
+              type="button"
+              className="diagnostic-copy-button"
+              onClick={copyReportToClipboard}
+              data-testid="copy-diagnostic-report"
+              data-copy-state={copyState}
+            >
+              {copyState === "copied"
+                ? t("yeschoyDiagnostics.copied")
+                : copyState === "failed"
+                  ? t("yeschoyDiagnostics.copyFailed")
+                  : t("yeschoyDiagnostics.copyReport")}
+            </button>
+          </div>
+        )}
+
         {issue && (
           <div className="error-banner" role="alert">
             <strong>
@@ -205,13 +280,19 @@ export function DiagnosticsView({
             const result = observation?.result;
             const stale =
               observation && observation.requestId !== latestRequestRef.current;
-            const status =
-              result?.status ??
-              (phase === "checking"
-                ? "checking"
-                : phase === "idle"
-                  ? "waiting"
-                  : "unavailable");
+            const outcome = result ? lineOutcome(result) : null;
+            const status: LineOutcome | "checking" | "waiting" | "unavailable" =
+              outcome === null
+                ? phase === "checking"
+                  ? "checking"
+                  : phase === "idle"
+                    ? "waiting"
+                    : "unavailable"
+                : // API Key 失败不改判线路可达：网络层全部通过时标题保持
+                  // 「基础连接正常」，会话失效在层行内呈现并挂接修复动作。
+                  outcome === "api_key_failed"
+                  ? "reachable"
+                  : outcome;
             return (
               <article
                 className="line-result-card"
@@ -245,13 +326,47 @@ export function DiagnosticsView({
                   </p>
                 )}
                 {result ? (
-                  <div className="line-result-evidence">
-                    <span>
-                      {t("yeschoyDiagnostics.elapsed")}
-                      <strong>{result.latencyMs} ms</strong>
-                    </span>
-                    <p>{t(`yeschoyDiagnostics.reason.${result.reasonCode}`)}</p>
-                  </div>
+                  <ul className="layer-list">
+                    {result.layers.map((layer) => (
+                      <li
+                        className="layer-row"
+                        data-layer-status={layer.status}
+                        key={layer.layer}
+                      >
+                        <div className="layer-row-top">
+                          <span className="layer-name">
+                            {t(`yeschoyDiagnostics.layers.${layer.layer}`)}
+                          </span>
+                          <span className="layer-status-label">
+                            {layer.layer === "api_key" &&
+                            layer.status === "failed"
+                              ? t("yeschoyDiagnostics.status.api_key_failed")
+                              : t(
+                                  `yeschoyDiagnostics.layerStatus.${layer.status}`,
+                                )}
+                          </span>
+                          {layer.latencyMs !== undefined && (
+                            <span className="layer-latency">
+                              {layer.latencyMs} ms
+                            </span>
+                          )}
+                        </div>
+                        <p className="layer-reason">
+                          {t(`yeschoyDiagnostics.reason.${layer.reasonCode}`)}
+                        </p>
+                        {layer.layer === "api_key" &&
+                          layer.status === "failed" && (
+                            <button
+                              type="button"
+                              className="layer-action"
+                              onClick={onOpenSetup}
+                            >
+                              {t("yeschoyDiagnostics.relogin")}
+                            </button>
+                          )}
+                      </li>
+                    ))}
+                  </ul>
                 ) : (
                   <p className="line-waiting-copy">
                     {phase === "idle" || phase === "checking"

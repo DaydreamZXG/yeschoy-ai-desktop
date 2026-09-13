@@ -4,7 +4,6 @@ import { cleanup } from "@testing-library/react";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { server } from "./msw/server";
-import { resetProviderState } from "./msw/state";
 import "./msw/tauriMocks";
 import { queryClient } from "../src/lib/query/queryClient";
 
@@ -26,7 +25,6 @@ beforeAll(async () => {
 afterEach(() => {
   cleanup();
   queryClient.clear();
-  resetProviderState();
   server.resetHandlers();
   vi.clearAllMocks();
 });

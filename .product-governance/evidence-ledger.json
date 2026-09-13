@@ -3494,6 +3494,41 @@
       "status": "active",
       "verificationLevel": 0,
       "basisRefs": ["E-USER-098"]
+    },
+    {
+      "id": "E-USER-100",
+      "claim": "The owner approved the proposed daily-use UX work, then explicitly approved repairing the acceptance workflow and rebuilding the current baseline while preserving historical proof before that work proceeds. No installed user application, packaging or publication is in this iteration.",
+      "class": "user_confirmed",
+      "locator": "inline:2026-09-12-user-approved-baseline-repair-and-daily-use-ux",
+      "observedAt": "2026-09-12T04:51:37Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-098",
+      "claim": "At HEAD f01861464553137760955b614d6fb757df40d0f6 the RU-076 review failed with 194 historical RU-075 current-owned-state mismatches. This is evidence of baseline drift, not 194 reproduced product defects or current native acceptance. The original runtime checks the predecessor current state before the proposed successor can freeze.",
+      "class": "code_observed",
+      "locator": "outputs/daily-use-ux-20260912.oRBnCY/governance-review.json;scripts/governance/README.md",
+      "observedAt": "2026-09-12T04:51:37Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-099",
+      "claim": "RU-076 source diff empty and typecheck passed; semantic runner rejects pnpm manifest, Vite source temp write denied, nested sandbox prevents supplementary selftest. Failed acceptance is preserved. Standalone governance selftests are separate evidence.",
+      "class": "code_observed",
+      "locator": ".product-governance/execution/reports/126dea733de82281.a95636667cd5dd131d53.json;vitest.config.ts;package.json;scripts/governance/runtime/scripts/runner_adapters.py",
+      "observedAt": "2026-09-12T05:10:54.161Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-100"
+      ]
     }
   ]
 }

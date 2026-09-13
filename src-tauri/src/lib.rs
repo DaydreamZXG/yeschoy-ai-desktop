@@ -19,6 +19,7 @@ mod codex_bridge;
 mod connection_recovery;
 mod connectivity;
 mod connectivity_core;
+mod config_reveal;
 mod desktop_app_discovery;
 mod desktop_app_discovery_core;
 mod logging;
@@ -148,7 +149,8 @@ pub fn run() {
             tool_discovery_v2::scan_tools_read_only_v2,
             window_appearance::set_window_appearance,
             connectivity::check_line_connectivity_read_only,
-            service_catalog::read_public_service_catalog
+            service_catalog::read_public_service_catalog,
+            config_reveal::open_config_folder
         ])
         .build(tauri::generate_context!())
         .expect("failed to run the 野菜API desktop shell");

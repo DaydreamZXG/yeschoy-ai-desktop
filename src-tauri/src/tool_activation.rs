@@ -23,8 +23,8 @@ use crate::{
     connectivity_core::request_id_is_valid,
     shutdown_coordinator,
     tool_adapters::{
-        self, claude_code, claude_desktop, codex_desktop, desktop_lifecycle, dsh_web, hermes,
-        openclaw, pi, AdapterFailure, ResolvedInstallation,
+        self, claude_code, claude_desktop, codex_desktop, desktop_lifecycle, dsh_web, pi,
+        AdapterFailure, ResolvedInstallation,
     },
     tool_credentials::{self, CredentialFailure, ToolCredential, ToolModelRoute},
 };
@@ -169,20 +169,6 @@ pub fn cancel_tool_activation_v1(
     })
 }
 
-// These generated-response routines remain available only to their isolated
-// adapter fixture suites. Keeping the symbols linked here makes that boundary
-// explicit without ever invoking them from the activation transaction.
-#[allow(dead_code)]
-fn isolated_adapter_diagnostic_contracts() {
-    let _claude_code = claude_code::verify;
-    let _claude_desktop = claude_desktop::verify_and_launch;
-    let _codex_desktop = codex_desktop::verify_and_launch;
-    let _pi = pi::verify;
-    let _dsh_web = dsh_web::verify_launch_and_keep;
-    let _hermes = hermes::verify;
-    let _openclaw = openclaw::verify;
-}
-
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ToolActivationRequest {
@@ -315,9 +301,6 @@ impl ActivationFailure {
                 AdapterFailure::LaunchError(reason) => {
                     ToolActivationProjection::new(request, "launch_failed", reason)
                 }
-                AdapterFailure::VerificationFailed(reason) => {
-                    ToolActivationProjection::new(request, "verification_failed", reason)
-                }
             },
             Self::ConfigurationFailed(reason) => {
                 ToolActivationProjection::new(request, "configuration_failed", reason)
@@ -369,8 +352,6 @@ fn request_is_valid(request: &ToolActivationRequest) -> bool {
                 | "codex_desktop"
                 | "pi"
                 | "dsh_web"
-                | "hermes"
-                | "openclaw"
         )
         && bounded_plain_text(&request.model_id, 200)
         && bounded_plain_text(&request.billing_group, 128)
@@ -510,7 +491,7 @@ fn model_supports_tool(pricing: &Value, model_id: &str, tool_id: &str) -> bool {
         "codex_desktop" => {
             return codex_transport(pricing, model_id).is_some();
         }
-        "pi" | "dsh_web" | "hermes" | "openclaw" => "openai",
+        "pi" | "dsh_web" => "openai",
         _ => return false,
     };
     data(pricing)
@@ -576,8 +557,6 @@ fn token_name(tool_id: &str) -> &'static str {
         "codex_desktop" => "野菜API Codex Desktop",
         "pi" => "野菜API Pi",
         "dsh_web" => "野菜API DSH web",
-        "hermes" => "野菜API Hermes",
-        "openclaw" => "野菜API OpenClaw",
         _ => "野菜API Desktop",
     }
 }
@@ -591,8 +570,6 @@ pub(crate) fn tool_for_token_name(name: &str) -> Option<&'static str> {
         "codex_desktop",
         "pi",
         "dsh_web",
-        "hermes",
-        "openclaw",
     ]
     .into_iter()
     .find(|tool| name.starts_with(&format!("野菜API {}-", token_code(tool))))
@@ -658,8 +635,6 @@ fn token_code(tool_id: &str) -> &'static str {
         "codex_desktop" => "cx",
         "pi" => "pi",
         "dsh_web" => "ds",
-        "hermes" => "hm",
-        "openclaw" => "oc",
         _ => "tool",
     }
 }
@@ -1042,8 +1017,6 @@ enum PreparedAdapter {
     CodexDesktop(codex_desktop::Prepared),
     Pi(pi::Prepared),
     DshWeb(dsh_web::Prepared),
-    Hermes(hermes::Prepared),
-    OpenClaw(openclaw::Prepared),
 }
 
 impl PreparedAdapter {
@@ -1054,8 +1027,6 @@ impl PreparedAdapter {
             Self::CodexDesktop(v) => v.changes(),
             Self::Pi(v) => v.changes(),
             Self::DshWeb(v) => v.changes(),
-            Self::Hermes(v) => v.changes(),
-            Self::OpenClaw(v) => v.changes(),
         }
     }
 
@@ -1066,8 +1037,6 @@ impl PreparedAdapter {
             Self::CodexDesktop(value) => value.commit(),
             Self::Pi(value) => value.commit(),
             Self::DshWeb(value) => value.commit(),
-            Self::Hermes(value) => value.commit(),
-            Self::OpenClaw(value) => value.commit(),
         }
     }
 
@@ -1078,8 +1047,6 @@ impl PreparedAdapter {
             Self::CodexDesktop(value) => value.rollback(),
             Self::Pi(value) => value.rollback(),
             Self::DshWeb(value) => value.rollback(),
-            Self::Hermes(value) => value.rollback(),
-            Self::OpenClaw(value) => value.rollback(),
         }
     }
 }
@@ -1133,10 +1100,6 @@ fn prepare_adapter(
         }
         "dsh_web" => dsh_web::prepare_catalog(&home, &origin, &request.model_id, &models)
             .map(PreparedAdapter::DshWeb),
-        "hermes" => hermes::prepare_catalog(&home, &origin, &request.model_id, &models)
-            .map(PreparedAdapter::Hermes),
-        "openclaw" => openclaw::prepare_catalog(&home, &origin, &request.model_id, &models)
-            .map(PreparedAdapter::OpenClaw),
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
 }
@@ -1151,7 +1114,7 @@ async fn start_local_adapter(
         // surface connects straight to the relay origin.
         "claude_desktop" => claude_runtime.start(credential.clone()).await.map(|_| ()),
         "codex_desktop" => codex_desktop::ensure_credential_ready(credential).await,
-        "claude_code" | "pi" | "dsh_web" | "hermes" | "openclaw" => Ok(()),
+        "claude_code" | "pi" | "dsh_web" => Ok(()),
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
 }
@@ -1168,7 +1131,7 @@ async fn open_configured_adapter(
         "dsh_web" => {
             dsh_web::open_existing(dsh_runtime, installation, credential.upstream_key()).await
         }
-        "claude_code" | "pi" | "hermes" | "openclaw" => Ok(()),
+        "claude_code" | "pi" => Ok(()),
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
 }
@@ -1221,8 +1184,8 @@ async fn stop_helper_runtime(
     match tool {
         "claude_desktop" => claude_runtime.stop().await,
         "dsh_web" => dsh_runtime.stop().await,
-        // Claude Code, Codex, Pi, Hermes and OpenClaw own no helper runtime any
-        // more: they connect straight to the relay origin.
+        // Claude Code, Codex and Pi own no helper runtime any more: they
+        // connect straight to the relay origin.
         _ => {}
     }
 }
@@ -1974,14 +1937,12 @@ pub async fn configure_desktop_tool_v2(
     ))
 }
 
-const CONNECTION_TOOLS: [&str; 7] = [
+const CONNECTION_TOOLS: [&str; 5] = [
     "claude_code",
     "claude_desktop",
     "codex_desktop",
     "pi",
     "dsh_web",
-    "hermes",
-    "openclaw",
 ];
 
 #[derive(Deserialize)]
@@ -1990,6 +1951,10 @@ pub struct ConnectionRequest {
     request_id: String,
     operation: String,
     tool_id: String,
+    /// PRD 9.1: deleting a tool's local configuration must separately ask
+    /// whether its dedicated keys are revoked too. Older frontends omit the
+    /// field and keep the historical revoke-by-default behavior.
+    revoke_tokens: Option<bool>,
 }
 
 #[derive(Serialize)]
@@ -2209,10 +2174,6 @@ fn legacy_paths(tool: &str) -> Result<Vec<std::path::PathBuf>, AdapterFailure> {
         "dsh_web" => {
             vec![dsh_web::dsh_home(&home, std::env::var_os("DSH_HOME"))?.join("settings.yaml")]
         }
-        "hermes" => {
-            vec![hermes::hermes_home(&home, std::env::var_os("HERMES_HOME"))?.join("config.yaml")]
-        }
-        "openclaw" => vec![openclaw::config_path(&home)?],
         _ => return Err(AdapterFailure::UnsupportedProfile),
     })
 }
@@ -2351,14 +2312,6 @@ pub async fn manage_tool_connections_v1(
             Ok(kept)
         })();
         if let Ok(kept) = result {
-            // Complete the local file/key transaction before any async stop.
-            let cleaned = tool_credentials::restore(&request.tool_id, None).is_ok()
-                && store
-                    .as_ref()
-                    .ok()
-                    .and_then(|s| s.as_ref())
-                    .is_some_and(|s| s.remove(&request.tool_id).is_ok());
-            crate::request_diagnostics::clear(&request.tool_id);
             // Stop only this helper-owned runtime, never the third-party app or
             // another provider. A running app may need to reopen its settings.
             let _ = permit
@@ -2366,9 +2319,15 @@ pub async fn manage_tool_connections_v1(
                     stop_helper_runtime(&request.tool_id, &claude_runtime, &dsh_runtime).await;
                 })
                 .await;
-            if cleaned {
-                let token_cleanup_complete = match (credential_for_cleanup.as_ref(), session_epoch)
-                {
+            // Remote key handling comes before the local credential cleanup:
+            // when revocation is requested but cannot complete, the credential
+            // and the pending receipt (already saved above) stay in place so
+            // the restore action remains available as the retry entry.
+            let revoke_tokens = request.revoke_tokens.unwrap_or(true);
+            let token_cleanup_complete = if !revoke_tokens {
+                true
+            } else {
+                match (credential_for_cleanup.as_ref(), session_epoch) {
                     (Some(credential), Some(epoch)) => {
                         match native_session_access(
                             &account_state,
@@ -2395,22 +2354,41 @@ pub async fn manage_tool_connections_v1(
                     }
                     (None, _) => true,
                     _ => false,
-                };
+                }
+            };
+            if revoke_tokens && !token_cleanup_complete {
                 status = if kept {
                     "restored_with_changes"
                 } else {
                     "restored"
                 };
-                reason = if !token_cleanup_complete {
-                    "local_settings_restored_token_cleanup_pending"
-                } else if kept {
-                    "later_changes_preserved"
-                } else {
-                    "local_settings_restored"
-                };
+                reason = "local_settings_restored_token_cleanup_pending";
             } else {
-                status = "recovery_failed";
-                reason = "recovery_cleanup_failed";
+                // Complete the local file/key transaction.
+                let cleaned = tool_credentials::restore(&request.tool_id, None).is_ok()
+                    && store
+                        .as_ref()
+                        .ok()
+                        .and_then(|s| s.as_ref())
+                        .is_some_and(|s| s.remove(&request.tool_id).is_ok());
+                crate::request_diagnostics::clear(&request.tool_id);
+                if cleaned {
+                    status = if kept {
+                        "restored_with_changes"
+                    } else {
+                        "restored"
+                    };
+                    reason = if !revoke_tokens {
+                        "local_settings_restored_token_kept"
+                    } else if kept {
+                        "later_changes_preserved"
+                    } else {
+                        "local_settings_restored"
+                    };
+                } else {
+                    status = "recovery_failed";
+                    reason = "recovery_cleanup_failed";
+                }
             }
         } else {
             status = "recovery_failed";
@@ -2510,7 +2488,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn inspection_regression_one_adapter_panic_keeps_six_other_results() {
+    async fn inspection_regression_one_adapter_panic_keeps_four_other_results() {
         static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
         let result = inspect_on_worker(&LOCK, Duration::from_secs(2), || {
             inspect_connections_with(|tool| {
@@ -2527,13 +2505,13 @@ mod tests {
         })
         .await
         .unwrap();
-        assert_eq!(result.len(), 7);
+        assert_eq!(result.len(), 5);
         assert_eq!(result[1].state, "connected");
         assert_eq!(result[2].state, "unavailable");
         assert_eq!(result[2].reason_code, "connection_inspection_failed");
         assert_eq!(
             result.iter().filter(|c| c.state == "not_connected").count(),
-            5
+            3
         );
         assert!(!serde_json::to_string(&result)
             .unwrap()
@@ -2983,8 +2961,6 @@ mod tests {
         });
         assert!(model_supports_tool(&pricing, "chat", "pi"));
         assert!(model_supports_tool(&pricing, "chat", "dsh_web"));
-        assert!(model_supports_tool(&pricing, "chat", "hermes"));
-        assert!(model_supports_tool(&pricing, "chat", "openclaw"));
         assert!(model_supports_tool(&pricing, "responses", "codex_desktop"));
         assert!(model_supports_tool(&pricing, "messages", "claude_code"));
         assert!(model_supports_tool(&pricing, "messages", "claude_desktop"));
@@ -3021,8 +2997,6 @@ mod tests {
             token_name("codex_desktop"),
             token_name("pi"),
             token_name("dsh_web"),
-            token_name("hermes"),
-            token_name("openclaw"),
         ];
         for (index, left) in names.iter().enumerate() {
             assert!(!names[index + 1..].contains(left));

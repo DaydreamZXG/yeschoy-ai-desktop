@@ -2,8 +2,16 @@
 
 All notable changes to CC Switch will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0.html),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+
+- **Model capability catalog: tool-use declaration + richer badges**: The reviewed model catalog (`src/model-profiles/catalog.json`) gains an optional `toolUse` capability field. 71 of 72 bundled models are verified as tool-use-capable against vendor documentation (Anthropic/OpenAI/Google/DeepSeek/Qwen/GLM/Kimi/Grok/MiniMax/MiMo/Llama/Nova/Ling/LongCat/Step/KAT/Hunyuan/Doubao all support function calling); `ark-code-latest` stays undeclared — it is a Volcengine Ark console routing alias whose capabilities follow whichever model it currently routes to, so per PRD 6.5 nothing is guessed. Schema validation in both the remote-catalog parser (`remoteCatalog.ts`) and the QA script (`scripts/qa/verify-model-catalog.mjs`, now wired as `pnpm verify:catalog`) accepts the new field along with previously unvalidated `defaultReasoning`/`reasoningMode`; the Rust `ModelProfile` struct parses `toolUse` and a regression test pins the true/absent contract. The capability badge row now shows a "Tool use" badge, renders reasoning levels as actual values (contiguous ladders as "low–max", otherwise an explicit list, plus "Default thinking X" when declared), and displays scaled context badges (e.g. "400K context") for non-1M models instead of nothing — all in four languages, with missing fields still rendering no badge rather than "unsupported".
+- **Motion polish (ceremonial tier)**: First-ever activation success now triggers a one-shot celebration (confetti layer plus typewriter ticker, persisted via a local first-activation milestone flag — later setups keep the restrained feedback), the account view stages its identity reveal after a completed sign-in, the home library cards enter with a per-card stagger, dialogs gain overlay fade + spring enter animations, and card hover/press micro-interactions are tokenized — all degraded cleanly under `prefers-reduced-motion`.
+- **Device authorization UX**: Device authorization requests now send a sanitized device name (hostname on macOS/Linux, `COMPUTERNAME`/`hostname` on Windows, control characters filtered, 64-char cap), and long-lived sessions surface non-blocking 30/90-day notices with a re-authorize shortcut (client-side session-age bookkeeping, no server change).
 
 ## [3.20.1] - 2026-08-28
 

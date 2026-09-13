@@ -1,0 +1,28 @@
+{
+  "scenarioId": "DAILY-complete",
+  "assertion": "Full renderer suite passes with no failed, skipped or pending tests.",
+  "testSelector": "tests/work_packages/ru077/test_renderer.py::test_complete",
+  "acceptanceCommandId": "ux-complete",
+  "runId": "RU-077/WP-RU077-DAILY-USE@2026-09-12T05:11:44.899411+00:00",
+  "packageId": "WP-RU077-DAILY-USE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru077/test_renderer.py::test_complete",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:294f09d6b746aadf178878b75636b619434a41be33230ceba9e3e256c559ef00",
+    "machineReportSha256": "sha256:38b0e7fd07e298b7b9bb6c4136240d6a2934ee156697feb3d5893db0faa0e6ec",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:c323425b2d40c19e916c8f82839b0d591ac70d25b3146f46e36a2a3b8cb50555",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:8bd22d93fbc5f3635b0af185d7c67c8fa9447d92deb9afe7bd233b36e88bf856",
+  "releaseUnitId": "RU-077",
+  "releaseUnitHash": "sha256:8140a03adaf7efb247eacd3b7fb4baf3fabaeb0305abc4eca33f02bc37849271"
+}

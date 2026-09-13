@@ -320,7 +320,7 @@ export function InstallationPanel({
       {!active && !installed && !guided && (
         <p className="app-install-copy">
           {canConnect
-            ? "安装完成后连接当前选择的模型，并发送一条测试消息，按所选分组计费。"
+            ? "安装完成后接入当前选择的模型，不会发送收费的测试消息。"
             : "可以先安装应用，再登录野菜、选择模型并接入。"}{" "}
           {!current?.jobId && installationSource("none")}
         </p>

@@ -1,17 +1,13 @@
-use std::{
-    path::{Path, PathBuf},
-    time::Duration,
-};
+use std::path::{Path, PathBuf};
 
 #[cfg(test)]
 use serde_json::json;
 use serde_json::{Map, Value};
-use tokio::process::Command;
 
 use crate::{
     tool_adapters::{
         common::{self, ConfigFailure, FileTransaction},
-        AdapterFailure, ResolvedInstallation,
+        AdapterFailure,
     },
     tool_credentials,
 };
@@ -225,39 +221,6 @@ impl Prepared {
     }
 }
 
-pub(crate) async fn verify(
-    installation: &ResolvedInstallation,
-    model: &str,
-) -> Result<(), AdapterFailure> {
-    let working = common::temporary_working_directory("pi-verify")
-        .map_err(|_| AdapterFailure::VerificationFailed("verification_workspace_failed"))?;
-    let mut command = Command::new(&installation.path);
-    command.current_dir(&working).args([
-        "--print",
-        "--no-session",
-        "--no-tools",
-        "--provider",
-        "yeschoy",
-        "--model",
-        model,
-        "仅回复 YESCHOY_OK，不要使用工具。",
-    ]);
-    common::apply_cli_runtime_path(&mut command, &installation.path);
-    let result = common::run_bounded(command, Duration::from_secs(120)).await;
-    let _ = std::fs::remove_dir_all(&working);
-    let result = result.map_err(|error| AdapterFailure::VerificationFailed(error.reason_code()))?;
-    if !result.success {
-        return Err(AdapterFailure::VerificationFailed("tool_request_failed"));
-    }
-    // Official print mode writes only the final assistant text to stdout:
-    // github.com/earendil-works/pi/.../src/modes/print-mode.ts
-    if common::verification_reply(&result.stdout) {
-        Ok(())
-    } else {
-        Err(AdapterFailure::VerificationFailed("tool_response_invalid"))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -333,29 +296,6 @@ mod tests {
         .unwrap();
         assert!(prepared.validate_existing().is_err());
         std::fs::remove_dir_all(home).unwrap();
-    }
-
-    #[cfg(unix)]
-    #[tokio::test]
-    async fn pi_verification_executes_fixture_and_rejects_banner_echo_and_failed_reply() {
-        use common::test_support::Script;
-        let valid = Script::new("[ \"$1\" = --print ] || exit 11\n[ \"$4\" = --provider ] || exit 12\n[ \"$5\" = yeschoy ] || exit 13\nprintf 'YESCHOY_OK\\n'");
-        assert!(verify(&valid.installation(), "fixture-model").await.is_ok());
-        for body in [
-            "printf 'Pi ready\\n'",
-            "printf 'Usage: pi [options]\\n'",
-            "printf '%s\\n' \"$*\"",
-            "printf '  \\n'",
-            "printf 'YESCHOY_OK\\n'; exit 17",
-        ] {
-            let script = Script::new(body);
-            assert!(
-                verify(&script.installation(), "fixture-model")
-                    .await
-                    .is_err(),
-                "{body}"
-            );
-        }
     }
 
     #[test]

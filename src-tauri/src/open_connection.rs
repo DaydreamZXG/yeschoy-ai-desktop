@@ -6,8 +6,8 @@ use crate::{
     connection_recovery::{self, Store},
     tool_activation::ACTIVATION_LOCK,
     tool_adapters::{
-        self, claude_code, claude_desktop, codex_desktop, dsh_web, hermes, openclaw, pi,
-        terminal_launch, AdapterFailure,
+        self, claude_code, claude_desktop, codex_desktop, dsh_web, pi, terminal_launch,
+        AdapterFailure,
     },
     tool_credentials::{self, CredentialFailure, ToolCredential},
 };
@@ -42,8 +42,6 @@ fn valid_request(request: &OpenRequest) -> bool {
                 | "codex_desktop"
                 | "pi"
                 | "dsh_web"
-                | "hermes"
-                | "openclaw"
         )
 }
 
@@ -94,10 +92,6 @@ pub(crate) fn validate_settings(
             .validate_existing(),
             "pi" => pi::prepare_catalog(home, &origin, &credential.model_id, &models)?
                 .validate_existing(),
-            "hermes" => hermes::prepare_catalog(home, &origin, &credential.model_id, &models)?
-                .validate_existing(),
-            "openclaw" => openclaw::prepare_catalog(home, &origin, &credential.model_id, &models)?
-                .validate_existing(),
             "dsh_web" => dsh_web::prepare_catalog(home, &origin, &credential.model_id, &models)?
                 .validate_existing(),
             _ => Err(AdapterFailure::UnsupportedProfile),
@@ -125,12 +119,6 @@ pub(crate) fn validate_settings(
             .validate_existing()
         }
         "pi" => pi::prepare(home, &credential.origin, &credential.model_id)?.validate_existing(),
-        "hermes" => {
-            hermes::prepare(home, &credential.origin, &credential.model_id)?.validate_existing()
-        }
-        "openclaw" => {
-            openclaw::prepare(home, &credential.origin, &credential.model_id)?.validate_existing()
-        }
         "claude_desktop" => {
             if credential.local_gateway_token.is_none() {
                 return Err(AdapterFailure::SecureStorageUnavailable);
@@ -230,7 +218,7 @@ pub async fn open_tool_connection_v1(
                         credential.upstream_key(),
                     )
                     .await),
-                    "claude_code" | "pi" | "hermes" | "openclaw" => {
+                    "claude_code" | "pi" => {
                         if permit.is_cancelled() {
                             return Err("busy");
                         }
@@ -292,15 +280,13 @@ mod tests {
     }
 
     #[test]
-    fn all_seven_open_targets_use_only_the_closed_native_request() {
+    fn all_five_open_targets_use_only_the_closed_native_request() {
         for tool in [
             "claude_code",
             "claude_desktop",
             "codex_desktop",
             "pi",
             "dsh_web",
-            "hermes",
-            "openclaw",
         ] {
             assert!(valid_request(&OpenRequest {
                 request_id: "open-fixture".into(),

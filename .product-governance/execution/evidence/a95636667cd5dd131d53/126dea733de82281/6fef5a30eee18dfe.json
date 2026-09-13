@@ -1,0 +1,14 @@
+{
+  "scenarioId": "BASELINE-connections",
+  "assertion": "Refresh replay, timeout, stale responses, partial failure and restore races preserve canonical state.",
+  "testSelector": "src/configuration/connections.test.tsx",
+  "acceptanceCommandId": "baseline-connections",
+  "runId": "RU-076/WP-RU076-CURRENT-BASELINE@2026-09-12T05:01:08.995345+00:00",
+  "packageId": "WP-RU076-CURRENT-BASELINE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:e293d5888348865ea6432085fab863c3f9d3f3382d84b556327d72ea2acbab2c",
+  "releaseUnitId": "RU-076",
+  "releaseUnitHash": "sha256:aac08bad312b6c5cf4902864f066842c9e026ebcfa29d7331a37c1d49a92818c"
+}

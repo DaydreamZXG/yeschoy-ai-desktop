@@ -16,7 +16,7 @@
 
 ## 2. 预设模型
 
-`src/config/piModelCatalog.ts` 只用于复用 Pi 供应商预设中的模型知识，不作为自定义模型的全局识别器。
+模型能力知识现在由 `src/model-profiles/catalog.json` 单源提供（旧的 `src/config/piModelCatalog.ts` 已随批次 6 死代码摘除删除），不作为自定义模型的全局识别器。
 
 每个预设模型必须离线包含完整的 Pi 原生字段：
 

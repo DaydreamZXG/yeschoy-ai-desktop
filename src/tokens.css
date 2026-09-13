@@ -1,0 +1,85 @@
+/* Semantic extension tokens layered on the base palette in index.css.
+   Consumed by workbench-v2.css and feature components. */
+:root {
+  --line-soft: #efede8;
+  --line-strong: #d9d6cf;
+  --on-accent: #ffffff;
+  --on-danger: #ffffff;
+  --on-success: #ffffff;
+  --font-display:
+    "SF Pro Display", "PingFang SC", "Microsoft YaHei UI", var(--font-ui);
+
+  /* Motion */
+  --dur-instant: 80ms;
+  --dur-fast: 140ms;
+  --dur-base: 200ms;
+  --dur-slow: 300ms;
+  --dur-ritual: 640ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.64, 0, 0.78, 0);
+  --ease-in-out: cubic-bezier(0.45, 0, 0.15, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --ease-press: cubic-bezier(0.3, 0, 0.5, 1);
+  --tr-color:
+    color var(--dur-fast) ease, background var(--dur-fast) ease,
+    border-color var(--dur-fast) ease;
+  --tr-fade: opacity var(--dur-base) var(--ease-out);
+  --tr-pop:
+    transform var(--dur-base) var(--ease-spring),
+    opacity var(--dur-base) var(--ease-out);
+
+  /* Space ladder — token name equals px; odd legacy values stay literal
+     until the normalization pass snaps them to a step. */
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-10: 10px;
+  --space-12: 12px;
+  --space-14: 14px;
+  --space-16: 16px;
+  --space-18: 18px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+
+  /* Radius ladder — legacy values snap to the nearest step
+     (≤1px; only 14→12 and 18→16 move by 2). */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 9px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 22px;
+  --radius-full: 999px;
+
+  /* Elevation & purpose shadows (single source for the two notice cards) */
+  --shadow-pressed: 0 1px 4px #13233c12;
+  --shadow-tile: 0 3px 10px #00000012;
+  --shadow-thumb: 0 1px 3px rgb(0 0 0 / 25%);
+  --shadow-notice: 0 8px 30px #12332615;
+  --shadow-pop: 0 14px 36px #00000026;
+  --shadow-dialog: 0 16px 48px rgb(0 0 0 / 24%);
+  --shadow-deep: 0 24px 100px #0004;
+  --shadow-glow-sm: 0 2px 4px color-mix(in srgb, var(--accent) 12%, transparent);
+  --shadow-glow-md: 0 6px 14px color-mix(in srgb, var(--accent) 22%, transparent);
+  --shadow-glow-lg: 0 14px 34px color-mix(in srgb, var(--accent) 17%, transparent);
+
+  /* Stacking ladder — popover intentionally sits under dialog surfaces. */
+  --z-base: 1;
+  --z-notice: 12;
+  --z-popover: 20;
+  --z-dialog: 40;
+  --z-dialog-nested: 50;
+  --z-dialog-alert: 60;
+  --z-tooltip: 100;
+  --z-dialog-top: 110;
+}
+:root[data-theme="dark"] {
+  --line-soft: #1f2226;
+  --line-strong: #31363d;
+  --on-accent: #20170a;
+  --on-danger: #3b1614;
+  --on-success: #10251b;
+}

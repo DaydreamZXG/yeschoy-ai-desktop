@@ -1965,6 +1965,44 @@
         "Publication, concurrent promotion, replay/downgrade rejection, per-variant disablement and recovery have executable evidence. Existing shared-channel proofs are retained as historical evidence, not represented as successful dual-channel verification.",
         "No automatic update is advertised as published until the matching public manifests and artifacts are verified. Remaining signing access, independent trust-root policy and implementation-authority reconciliation are resolved before implementation or live promotion."
       ]
+    },
+    {
+      "id": "REQ-098",
+      "statement": "Establish a new content-bound, source-readonly renderer/tooling acceptance baseline without rewriting historical proof or claiming full-product/native readiness.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-100",
+        "E-CODE-098"
+      ],
+      "acceptance": [
+        "Default drift rejection remains in place; accepted reconciliation must bind exact predecessor proofs and source hashes and inherit every acknowledged changed path.",
+        "Tampered reports, stale receipts, unrelated drift, unowned paths and in-progress runs fail closed.",
+        "RU-075 proofs and the first 114 registry entries remain unchanged; new tests produce independently hashed records.",
+        "Type checking and the complete renderer suite execute against current source with native IPC mocked; no real credentials or installed desktop apps are used.",
+        "Renderer/tooling evidence is reported separately from untested native launches, Windows devices, installer upgrades and production release acceptance."
+      ]
+    },
+    {
+      "id": "REQ-099",
+      "statement": "Application-first daily use, explicit model change and actionable recovery without changing native contracts.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-100",
+        "E-CODE-099"
+      ],
+      "acceptance": [
+        "Application actions precede account details; unknown is not disconnected and does not authorize overwrite.",
+        "Model-change focuses the chooser without writing; explicit selected default preserves other bindings.",
+        "Extract request-correlated activation state with duplicate, navigation, cancellation, stale-result and normal-restart safety.",
+        "Saved settings, launch-request receipt and last actual traffic remain distinct with actionable safe recovery.",
+        "Complete renderer regressions, types and keyboard/responsive fixture-only browser QA; no installed apps operated."
+      ]
     }
   ]
 }

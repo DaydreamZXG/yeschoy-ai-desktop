@@ -2,13 +2,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
+import { Toaster } from "sonner";
 import { WorkbenchSidebar, type AppView } from "./workbench/WorkbenchChrome";
+import { refreshModelCatalog } from "./model-profiles/remoteCatalog";
 import { useAppearance } from "./workbench/appearance";
 import { AccountView } from "./workbench/AccountView";
 import { ModelsView } from "./workbench/ModelsView";
 import { AppLibraryView } from "./workbench/AppLibraryView";
 import { ConfigurationPreviewView } from "./configuration/ConfigurationPreviewView";
 import type { ActivationToolId } from "./configuration/activation";
+import type { SetupIntent } from "./configuration/setupIntent";
 import {
   ConnectionProvider,
   useToolConnections,
@@ -28,6 +31,13 @@ import {
   type ScanResponse,
 } from "./tool-discovery/contract";
 
+// #9 工具范围定案（PRD §3.2）：hermes/openclaw 移出 V1，discovery 页不再
+// 展示；协议层 TOOL_CATALOG 保持与 Rust 契约一致，仅在此做展示过滤。
+// opencode 属于「即将支持」（保留只读发现，无接入适配器）。
+const V1_DISCOVERY_TOOLS = TOOL_CATALOG.filter(
+  (tool) => !["hermes", "openclaw"].includes(tool.id),
+);
+
 type ViewPhase =
   | "default"
   | "loading"
@@ -41,11 +51,17 @@ function App() {
   const [view, setView] = useState<AppView>("home");
   const [selectedDesktopApp, setSelectedDesktopApp] =
     useState<ActivationToolId>("claude_desktop");
+  const [setupIntent, setSetupIntent] = useState<SetupIntent>();
   const connections = useToolConnections();
   const [setupVisited, setSetupVisited] = useState(false);
   useEffect(() => {
     if (view === "setup") setSetupVisited(true);
   }, [view]);
+  // M5: try a remote model-catalog revision in the background; any failure
+  // silently keeps the bundled catalog and never blocks startup.
+  useEffect(() => {
+    void refreshModelCatalog().catch(() => undefined);
+  }, []);
   const [phase, setPhase] = useState<ViewPhase>("default");
   const [accountLineId, setAccountLineId] =
     useState<ConfigurationLineId>("mainland_optimized");
@@ -147,6 +163,7 @@ function App() {
                 <div className="persistent-setup" hidden={view !== "setup"}>
                   <ConfigurationPreviewView
                     initialDesktopAppId={selectedDesktopApp}
+                    setupIntent={setupIntent}
                     enableLocalActivation
                     active={view === "setup"}
                     lineId={accountLineId}
@@ -160,8 +177,13 @@ function App() {
               {view === "home" ? (
                 <AppLibraryView
                   onOpenAccount={() => setView("account")}
-                  onOpenSetup={(appId) => {
+                  onOpenSetup={(appId, action = "configure") => {
                     setSelectedDesktopApp(appId);
+                    setSetupIntent((previous) => ({
+                      appId,
+                      action,
+                      revision: (previous?.revision ?? 0) + 1,
+                    }));
                     setView("setup");
                   }}
                   onOpenDiagnostics={() => setView("diagnostics")}
@@ -268,7 +290,7 @@ function App() {
 
                     <div className="tool-rail" aria-busy={phase === "loading"}>
                       <span className="rail-line" aria-hidden="true" />
-                      {TOOL_CATALOG.map((tool, index) => {
+                      {V1_DISCOVERY_TOOLS.map((tool, index) => {
                         const result = resultsById.get(tool.id);
                         const status =
                           phase === "loading"
@@ -278,6 +300,7 @@ function App() {
                           <article
                             className="tool-card"
                             data-status={status}
+                            data-coming-soon={tool.id === "opencode"}
                             key={tool.id}
                             style={{ "--rail-index": index } as CSSProperties}
                           >
@@ -291,6 +314,11 @@ function App() {
                                     ? t("yeschoyDiscovery.codexCli")
                                     : tool.displayName}
                                 </h3>
+                                {tool.id === "opencode" && (
+                                  <span className="coming-soon-label">
+                                    {t("yeschoyDiscovery.comingSoon")}
+                                  </span>
+                                )}
                                 <span className="status-label">
                                   {result?.selection === "bundled_only" &&
                                   phase !== "loading"
@@ -414,6 +442,7 @@ function App() {
                 />
               )}
             </div>
+            <Toaster position="top-center" richColors theme={appearance} />
           </ShutdownProvider>
         </ConnectionProvider>
       </InstallationProvider>

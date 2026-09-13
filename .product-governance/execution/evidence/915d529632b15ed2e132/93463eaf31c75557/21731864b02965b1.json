@@ -1,0 +1,28 @@
+{
+  "scenarioId": "DAILY-connections",
+  "assertion": "Replay, stale result, partial failure and restore race preserve state.",
+  "testSelector": "tests/work_packages/ru077/test_renderer.py::test_connections",
+  "acceptanceCommandId": "ux-connections",
+  "runId": "RU-077/WP-RU077-DAILY-USE@2026-09-12T05:11:44.899411+00:00",
+  "packageId": "WP-RU077-DAILY-USE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru077/test_renderer.py::test_connections",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:9f5718c5830862a11d0fa3f9d545d47d33d0546f82f95feaf82c8c0ca7f08abe",
+    "machineReportSha256": "sha256:0552e6897b1203c262302b919545fd14cf243acb893e00a90ca46268a8b2e5a5",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:16da05cd59090e5b68d6b38cb3f101623adaea3a3db701502e542c3273fdb32d",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:9ffa90e9c65d69e867bfde5eee3c406e895f650fd8705d2b1bb28c4ef90ea027",
+  "releaseUnitId": "RU-077",
+  "releaseUnitHash": "sha256:8140a03adaf7efb247eacd3b7fb4baf3fabaeb0305abc4eca33f02bc37849271"
+}

@@ -3132,6 +3132,58 @@
         "pageRefs": ["PAGE-SETTINGS"],
         "domainRefs": ["security-update", "desktop-platform"]
       }
+    },
+    {
+      "id": "DEC-124",
+      "question": "May the existing acceptance baseline be reconciled before the approved daily-use UX work?",
+      "choice": "The owner explicitly approves repairing the acceptance workflow and rebuilding the current baseline after being told the historical RU-075 proof no longer matches current source. Preserve all historical reports, frozen snapshots and execution entries. Pin the runtime in the repository and use an accepted, content-addressed reconciliation of the exact inherited current state; this acknowledges drift but is not test evidence. Re-scope only the unfrozen RU-076 catalog entry to a read-only current-baseline unit with inherited source ownership. Retain its old planned package as retired and DEC-120 as history. Execute new isolated renderer/tooling checks, then freeze a separate successor for the already approved homepage, model-change and recovery UX. Do not change native routing/account/billing contracts, operate installed apps, package, push or deploy. Native end-to-end, Windows device and full-product release acceptance remain deferred.",
+      "status": "accepted",
+      "decidedBy": "product owner: 可以 (after explicit acceptance-baseline blocker and request to repair it)",
+      "decidedAt": "2026-09-12T04:51:37Z",
+      "approvesBaselineReconciliation": true,
+      "evidenceRefs": [
+        "E-USER-100",
+        "E-CODE-098"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-098"
+        ],
+        "domainRefs": [
+          "desktop-platform",
+          "tool-config"
+        ],
+        "pageRefs": [
+          "PAGE-HOME",
+          "PAGE-CONFIGURE-PREVIEW"
+        ]
+      }
+    },
+    {
+      "id": "DEC-125",
+      "question": "How does approved UX work continue after baseline runner incompatibility?",
+      "choice": "Implement approved application-first home, explicit model change and recovery using existing contracts. Supersede failed RU-076, preserve all proof. Use registered pytest scenarios to assert real Vitest JSON results through an inline-config harness under readonly source isolation: generic Vitest adapter supports npm rather than this pnpm installation, and bundled config writes violate readonly source. No waived tests. Leave the governance runtime unchanged in this successor. No native app/config operations, packaging, commit, push, deployment or full-product readiness claim.",
+      "status": "accepted",
+      "decidedBy": "product owner: 好，按照你的意见修改吧; 可以 (baseline repair approved)",
+      "decidedAt": "2026-09-12T05:10:54.161Z",
+      "evidenceRefs": [
+        "E-USER-100",
+        "E-CODE-099"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-098",
+          "REQ-099"
+        ],
+        "domainRefs": [
+          "desktop-platform",
+          "tool-config"
+        ],
+        "pageRefs": [
+          "PAGE-HOME",
+          "PAGE-CONFIGURE-PREVIEW"
+        ]
+      }
     }
   ]
 }
