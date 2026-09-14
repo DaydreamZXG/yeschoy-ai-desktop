@@ -258,17 +258,60 @@ const NEW_INPUT_MILLIONS = 10;
 const CACHE_READ_MILLIONS = 80;
 const OUTPUT_MILLIONS = 10;
 
+// 服务端未提供 USD 基准价时，用 CNY 每百万价套用同一工作负载公式。
+// 缓存命中价无独立口径，按输入价计（cacheFallback=true 会在 UI 标注）。
+function perMillionCnyEstimate(
+  model: AccountModel,
+): HundredMillionTokenEstimate | null {
+  if (!model.pricingAvailable) return null;
+  // 空串是「未提供价格」的惯例表示；Number("") === 0 会被误判为免费价。
+  const inputRaw = model.officialInputCnyPerMillion.trim();
+  const outputRaw = model.officialOutputCnyPerMillion.trim();
+  if (!inputRaw || !outputRaw) return null;
+  const input = Number(inputRaw);
+  const output = Number(outputRaw);
+  if (!Number.isFinite(input) || input < 0) return null;
+  if (!Number.isFinite(output) || output < 0) return null;
+  const official =
+    NEW_INPUT_MILLIONS * input +
+    CACHE_READ_MILLIONS * input +
+    OUTPUT_MILLIONS * output;
+  return {
+    currency: "CNY",
+    official: { minimum: official, maximum: official },
+    yeschoy: { minimum: official, maximum: official },
+    cacheFallback: true,
+    tiered: false,
+    // 无分组倍率上下文，savingPercent 由调用处按 group.ratio 覆盖。
+    savingPercent: null,
+  };
+}
+
 export function hundredMillionTokenEstimate(
   model: AccountModel,
   group: BillingGroup,
   fx: string,
 ): HundredMillionTokenEstimate | null {
-  const exchange = Number(fx);
-  if (!Number.isFinite(exchange) || exchange <= 0) return null;
   if (group.ratio === null || !Number.isFinite(group.ratio) || group.ratio < 0)
     return null;
   const { rows, unit } = groupPrice(model, group, fx);
-  if (unit !== "tokens" || rows.length === 0) return null;
+  if (unit !== "tokens") return null;
+  // 服务端只给 CNY 每百万价（无 USD 基准）时，用同一工作负载公式估算，
+  // 避免「费用参考」整块降级为不可用。
+  if (rows.length === 0) {
+    const estimate = perMillionCnyEstimate(model);
+    if (estimate) {
+      estimate.yeschoy = {
+        minimum: estimate.official.minimum * group.ratio,
+        maximum: estimate.official.maximum * group.ratio,
+      };
+      estimate.savingPercent =
+        group.ratio < 1 ? Math.max(0, (1 - group.ratio) * 100) : null;
+    }
+    return estimate;
+  }
+  const exchange = Number(fx);
+  if (!Number.isFinite(exchange) || exchange <= 0) return null;
 
   let cacheFallback = false;
   const official = rows.flatMap((row) => {

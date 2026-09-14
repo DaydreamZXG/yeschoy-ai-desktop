@@ -51,6 +51,30 @@ pub(crate) fn claude_capability_family(id: &str) -> Option<&str> {
         "deepseek-v4-flash" | "deepseek-v4-pro" => Some("claude-sonnet-4-6"),
         _ => None,
     })
+    .or_else(|| catalog_capability_family(id))
+}
+
+/// Catalog-driven fallback for models absent from the hardcoded table above
+/// (new point releases like deepseek-v4.1-* or qwen3.8-*). The closest native
+/// family is derived from the declared reasoning-level shape, so the desktop
+/// client's effort control keeps working without a code change per release.
+/// Models without a reasoning declaration stay unknown (PRD 6.5: never guess).
+fn catalog_capability_family(id: &str) -> Option<&'static str> {
+    let model = profile(id).or_else(|| id.strip_prefix("anthropic/").and_then(profile))?;
+    if model.reasoning_levels.is_empty() {
+        return None;
+    }
+    if model.reasoning_mode.as_deref() == Some("deepseek") {
+        // off/low/high/max four-level UI; the bridge translates medium to high.
+        return Some("claude-sonnet-4-6");
+    }
+    if model.reasoning_levels.iter().any(|level| level == "none") {
+        // Five effort levels plus an explicit off state.
+        return Some("claude-sonnet-5");
+    }
+    // Five effort levels, thinking always enabled; unsupported levels (e.g.
+    // max for a low..xhigh model) are clamped back by the bridge.
+    Some("claude-opus-5")
 }
 
 pub(crate) fn claude_code_behaves_as(id: &str) -> &str {
@@ -709,6 +733,28 @@ mod tests {
                 assert!(p.reasoning_levels.contains(default));
             }
         }
+    }
+
+    #[test]
+    fn ru044_catalog_driven_capability_family_covers_new_releases() {
+        // 硬编码表未收录的新点版本，由目录声明的 levels 形状推导最近原生族。
+        assert_eq!(
+            claude_capability_family("deepseek-v4.1-flash"),
+            Some("claude-sonnet-4-6")
+        );
+        // 未收录进目录的点版本不猜能力（PRD 6.5），保持未知。
+        assert_eq!(claude_capability_family("deepseek-v4.1-pro"), None);
+        assert_eq!(
+            claude_capability_family("qwen3.8-max"),
+            Some("claude-opus-5")
+        );
+        // 未声明思考能力的模型仍保持未知（不猜，PRD 6.5）。
+        assert_eq!(claude_capability_family("ark-code-latest"), None);
+        // 硬编码表优先于目录回退。
+        assert_eq!(
+            claude_capability_family("deepseek-v4-flash"),
+            Some("claude-sonnet-4-6")
+        );
     }
 
     #[test]
