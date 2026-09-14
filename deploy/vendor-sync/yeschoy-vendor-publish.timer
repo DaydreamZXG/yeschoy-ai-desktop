@@ -1,0 +1,10 @@
+[Unit]
+Description=Publish downloaded vendor installers every six hours
+
+[Timer]
+OnCalendar=*-*-* 00,06,12,18:30:00 UTC
+Persistent=yes
+Unit=yeschoy-vendor-publish.service
+
+[Install]
+WantedBy=timers.target

@@ -323,6 +323,20 @@ fn execute(plan: &LaunchPlan) -> Result<(), AdapterFailure> {
     }
 }
 
+/// Run bounded native terminal handoff away from the async command executor.
+pub(crate) async fn launch_async(
+    installation: &ResolvedInstallation,
+    tool_id: &str,
+    home: &Path,
+) -> Result<(), AdapterFailure> {
+    let installation = installation.clone();
+    let tool_id = tool_id.to_owned();
+    let home = home.to_owned();
+    tauri::async_runtime::spawn_blocking(move || launch(&installation, &tool_id, &home))
+        .await
+        .map_err(|_| failure("terminal_launch_failed"))?
+}
+
 pub(crate) fn launch(
     installation: &ResolvedInstallation,
     tool_id: &str,
@@ -358,6 +372,34 @@ pub(crate) fn launch(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn terminal_async_handoff_preserves_validation_failure_without_launching() {
+        let result = launch_async(
+            &ResolvedInstallation {
+                path: "/synthetic/nonexistent/pi".into(),
+            },
+            "not-a-supported-tool",
+            Path::new("/synthetic"),
+        )
+        .await;
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn activation_and_open_button_share_terminal_handoff() {
+        let activation = include_str!("../tool_activation.rs");
+        let opener = activation
+            .split("async fn open_configured_adapter(")
+            .nth(1)
+            .unwrap()
+            .split("struct DesktopReloadGuard")
+            .next()
+            .unwrap();
+        assert!(opener.contains("terminal_launch::launch_async("));
+        assert!(!opener.contains("\"claude_code\" | \"pi\" => Ok(())"));
+        assert!(include_str!("../open_connection.rs").contains("terminal_launch::launch_async("));
+    }
 
     #[test]
     fn terminal_plans_are_closed_and_propagate_injected_launcher_failure() {

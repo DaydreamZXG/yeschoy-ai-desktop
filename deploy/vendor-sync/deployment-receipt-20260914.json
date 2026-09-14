@@ -1,0 +1,17 @@
+{
+  "observedAt": "2026-09-14T08:29:45.829015+00:00",
+  "host": "43.134.77.210",
+  "scope": "vendor-installer-auto-publication",
+  "timer": "yeschoy-vendor-publish.timer",
+  "timerEnabled": true,
+  "scheduleUtc": "00:30,06:30,12:30,18:30",
+  "firstRunExitStatus": 0,
+  "sourcesSucceeded": 6,
+  "existingArtifactsReused": 6,
+  "clientUpdateManifestsChanged": false,
+  "codexMacNewArtifactsRequireMatchingNativeReceipt": true,
+  "otherPlatformsRequireClientNativeVerification": true,
+  "runtimeInstallationTestPerformed": false,
+  "statusPath": "/var/lib/yeschoy-vendor-publish/last-run.json",
+  "rollback": "systemctl disable --now yeschoy-vendor-publish.timer; existing published files remain available"
+}

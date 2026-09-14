@@ -1131,7 +1131,11 @@ async fn open_configured_adapter(
         "dsh_web" => {
             dsh_web::open_existing(dsh_runtime, installation, credential.upstream_key()).await
         }
-        "claude_code" | "pi" => Ok(()),
+        "claude_code" | "pi" => {
+            let home = tool_adapters::user_home()
+                .ok_or(AdapterFailure::ConfigurationFailed("home_unavailable"))?;
+            tool_adapters::terminal_launch::launch_async(installation, &request.tool_id, &home).await
+        }
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
 }

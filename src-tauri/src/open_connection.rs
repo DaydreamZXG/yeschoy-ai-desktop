@@ -222,11 +222,10 @@ pub async fn open_tool_connection_v1(
                         if permit.is_cancelled() {
                             return Err("busy");
                         }
-                        Ok(terminal_launch::launch(
-                            &installation,
-                            &request.tool_id,
-                            &home,
-                        ))
+                        Ok(
+                            terminal_launch::launch_async(&installation, &request.tool_id, &home)
+                                .await,
+                        )
                     }
                     _ => unreachable!(),
                 }

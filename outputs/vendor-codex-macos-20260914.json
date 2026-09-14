@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "source": "codex-macos-arm64",
+  "sha256": "54173f633ce424c19c6925fe6d19c8fcd43d2c226e0ab78ab8ee146f947513cd",
+  "checkedAt": "2026-09-14T08:14:40.596922+00:00",
+  "package": {
+    "version": "26.908.40834",
+    "identity": "com.openai.codex",
+    "signature": "native_verified",
+    "compatibility": "not_tested",
+    "publisher": "2DC432GLL2"
+  },
+  "verifier": "macos_codesign_gatekeeper",
+  "installation": "not_tested",
+  "published": false
+}

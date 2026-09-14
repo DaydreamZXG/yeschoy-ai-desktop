@@ -88,9 +88,13 @@ def public_root(path: Path) -> Path:
         raise SyncError("unsafe_public_root")
     owned(path, directory=True)
     health = load(child(path, "health.json"), operator=True)
-    exact(health, set(HEALTH), "invalid_origin_health")
-    if type(health["schemaVersion"]) is not int or health["schemaVersion"] != 1 or health["service"] != HEALTH["service"] or health["status"] != "origin_ready" or health["updatesPublished"] is not False or type(health["thirdPartyInstallersPublished"]) is not bool:
+    exact(health, set(HEALTH) | ({"updateChannels"} if "updateChannels" in health else set()), "invalid_origin_health")
+    if type(health["schemaVersion"]) is not int or health["schemaVersion"] != 1 or health["service"] != HEALTH["service"] or health["status"] != "origin_ready" or type(health["updatesPublished"]) is not bool or type(health["thirdPartyInstallersPublished"]) is not bool:
         raise SyncError("invalid_origin_health")
+    if "updateChannels" in health:
+        channels = health["updateChannels"]
+        if not isinstance(channels, dict) or set(channels) != {"official", "partner"} or any(type(v) is not bool for v in channels.values()) or health["updatesPublished"] != any(channels.values()):
+            raise SyncError("invalid_origin_health")
     return path
 
 
@@ -251,8 +255,10 @@ def copy_immutable(source: Path, destination: Path, sha256: str, size: int) -> N
 
 
 def reconcile_health(root: Path, value: dict) -> None:
-    health = {**HEALTH, "thirdPartyInstallersPublished": bool(value["artifacts"])}
-    if load(child(root, "health.json"), operator=True) != health:
+    public_root(root)
+    existing = load(child(root, "health.json"), operator=True)
+    health = {**existing, "thirdPartyInstallersPublished": bool(value["artifacts"])}
+    if existing != health:
         atomic_public_json(child(root, "health.json"), health)
 
 
