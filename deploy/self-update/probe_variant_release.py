@@ -84,6 +84,16 @@ def main():
                 assert status == 206 and body.stat().st_size == 1 and f"content-range: bytes 0-0/{entry['size']}" in headers
                 results.append({"variant": variant, "file": filename, "sha256": entry["sha256"], "signatureVerified": True, "rangeVerified": True})
                 print(json.dumps({"verified": filename}), flush=True)
+            permanent_urls = {
+                "windows-x86_64": f"{ORIGIN}/releases/{variant}/yeschoy-windows-x86_64-installer.exe",
+                "macos-universal": f"{ORIGIN}/releases/{variant}/yeschoy-macos-universal-installer.dmg",
+            }
+            for target, url in permanent_urls.items():
+                expected = download["platforms"][target]
+                status, body, headers = fetch(url, directory, args.origin_ip)
+                assert status == 200 and body.stat().st_size == expected["size"] and sha256(body) == expected["sha256"]
+                assert "cache-control: no-store" in headers
+                results.append({"variant": variant, "permanentDownload": url, "sha256": expected["sha256"]})
         for path, method, expected in (("/releases/.env", "GET", 404), ("/apps/", "GET", 404), ("/health.json", "POST", 405)):
             status, _, _ = fetch(ORIGIN + path, directory, args.origin_ip, method=method)
             assert status == expected

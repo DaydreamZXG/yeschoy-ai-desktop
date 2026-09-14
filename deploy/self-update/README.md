@@ -7,6 +7,13 @@
 | official 主版 | `https://yeschoy.com` | `https://ergou.qzz.io/updates/official/stable.json` | `https://ergou.qzz.io/releases/yeschoy-official.json` |
 | partner 朋友版 | `https://ai.yeschoy.io` | `https://ergou.qzz.io/updates/partner/stable.json` | `https://ergou.qzz.io/releases/yeschoy-partner.json` |
 
+官网按钮应使用以下永久地址；后续版本发布会在服务器原子切换实际文件，网页无需再修改版本号：
+
+- 主版 Windows：`https://ergou.qzz.io/releases/official/yeschoy-windows-x86_64-installer.exe`
+- 主版 macOS：`https://ergou.qzz.io/releases/official/yeschoy-macos-universal-installer.dmg`
+- 朋友版 Windows：`https://ergou.qzz.io/releases/partner/yeschoy-windows-x86_64-installer.exe`
+- 朋友版 macOS：`https://ergou.qzz.io/releases/partner/yeschoy-macos-universal-installer.dmg`
+
 版别由构建时登录确认页配置决定，不读取用户会话、IPC 或网址参数。账户/API/线路配置没有因为分通道而更换。两版各有独立的 Tauri 公钥；注册表见 `src-tauri/update-channels.json`。这是更新通道隔离，不是同时安装两个独立应用：两版仍使用同一应用标识和安装目录。
 
 ## 当前本地流程
@@ -27,7 +34,7 @@ python3 publish_variant.py publish --root /srv/yeschoy-download/public \
   --channel-config /opt/yeschoy-download/incoming/本次目录/update-channels.json
 ```
 
-构件固定存放于 `/updates/releases/{variant}/{version}/`，同一路径不可换字节。清单依次原子替换，健康状态最后更新；两份清单不是跨文件数据库事务。私有发布水位阻止重复发布/降级，包括撤回后重放。
+构件固定存放于 `/updates/releases/{variant}/{version}/`，同一路径不可换字节。发布器同时把上述永久下载名原子指向已验签的对应安装包；受保护回滚会恢复上一版永久下载。清单依次原子替换，健康状态最后更新；两份清单不是跨文件数据库事务。私有发布水位阻止重复发布/降级，包括撤回后重放。
 
 8. `probe_variant_release.py --version 0.4.16 --channel-config src-tauri/update-channels.json --candidate /本次候选目录 --minisign /minisign路径` 验证两版公网清单、完整构件 SHA-256、真实签名、Range、健康状态和旧通道 204。探针没有安装或启动用户应用，不能代替真实设备端到端更新验收。
 

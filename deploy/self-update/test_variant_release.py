@@ -62,6 +62,15 @@ def test_signed_variants_are_isolated_and_legacy_is_not_written(release):
         assert manifest["variant"] == variant and manifest["version"] == "0.4.16"
         for platform in manifest["platforms"].values():
             assert f"/updates/releases/{variant}/" in platform["url"]
+        downloads = json.loads((root / f"releases/yeschoy-{variant}.json").read_bytes())
+        permanent = {
+            "windows-x86_64": root / f"releases/{variant}/yeschoy-windows-x86_64-installer.exe",
+            "macos-universal": root / f"releases/{variant}/yeschoy-macos-universal-installer.dmg",
+        }
+        for target, path in permanent.items():
+            versioned = root / downloads["platforms"][target]["url"].removeprefix("https://ergou.qzz.io/")
+            assert path.read_bytes() == versioned.read_bytes()
+            assert path.stat().st_ino == versioned.stat().st_ino
     assert not (root / "updates/stable.json").exists()
     health = json.loads((root / "health.json").read_bytes())
     assert health["updateChannels"] == {"official": True, "partner": True}
@@ -112,9 +121,27 @@ def test_concurrent_channels_and_compare_swap_recovery(release):
     assert invoke("official", action="rollback", expected="0" * 64).returncode != 0
     assert invoke("official", action="rollback", expected=receipt["manifestSha256"]).returncode == 0
     assert not (root / "updates/official/stable.json").exists()
+    assert not (root / "releases/official/yeschoy-windows-x86_64-installer.exe").exists()
+    assert not (root / "releases/official/yeschoy-macos-universal-installer.dmg").exists()
     assert (root / "updates/partner/stable.json").read_bytes() == partner
     assert json.loads((root / "health.json").read_bytes())["updateChannels"] == {"official": False, "partner": True}
     assert invoke("official").returncode != 0
+
+
+def test_rollback_restores_previous_permanent_downloads(release):
+    root, stage, invoke = release
+    stage("official")
+    assert invoke("official").returncode == 0
+    windows = root / "releases/official/yeschoy-windows-x86_64-installer.exe"
+    macos = root / "releases/official/yeschoy-macos-universal-installer.dmg"
+    original = windows.read_bytes(), macos.read_bytes()
+    stage("official", "0.4.17")
+    published = invoke("official", "0.4.17")
+    assert published.returncode == 0
+    assert (windows.read_bytes(), macos.read_bytes()) != original
+    receipt = json.loads(published.stdout)
+    assert invoke("official", action="rollback", expected=receipt["manifestSha256"]).returncode == 0
+    assert (windows.read_bytes(), macos.read_bytes()) == original
 
 
 def test_old_routes_are_retired_even_when_old_files_exist():

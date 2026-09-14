@@ -12,13 +12,18 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+from urllib.parse import urlparse
 
-from publish import (PublishError, atomic_write, guarded_root, health_bytes,
+from publish import (PublishError, atomic_write, ensure_directory, guarded_root, health_bytes,
                      immutable_copy, previous_manifest, read_json, regular_file,
                      require_newer_version, rollback_bytes, semantic_version, sha256)
 
 ORIGIN = "https://ergou.qzz.io"
 VARIANTS = ("official", "partner")
+PERMANENT_DOWNLOAD_NAMES = {
+    "windows-x86_64": "yeschoy-windows-x86_64-installer.exe",
+    "macos-universal": "yeschoy-macos-universal-installer.dmg",
+}
 
 
 def encoded(value: object) -> bytes:
@@ -63,6 +68,13 @@ def heads(root: Path, variant: str) -> tuple[Path, Path]:
     return root / "updates" / variant / "stable.json", root / "releases" / f"yeschoy-{variant}.json"
 
 
+def permanent_downloads(root: Path, variant: str) -> dict[str, Path]:
+    return {
+        target: root / "releases" / variant / name
+        for target, name in PERMANENT_DOWNLOAD_NAMES.items()
+    }
+
+
 def safe_descendant(path: Path, anchor: Path) -> None:
     path.relative_to(anchor)
     for entry in (path, *path.parents):
@@ -71,6 +83,61 @@ def safe_descendant(path: Path, anchor: Path) -> None:
         if entry == anchor:
             return
     raise PublishError("publication_path_escaped")
+
+
+def atomic_link(root: Path, source: Path, destination: Path) -> None:
+    """Atomically repoint a stable download name without duplicating installer bytes."""
+    ensure_source = regular_file(str(source))
+    safe_descendant(destination, root)
+    ensure_directory(destination.parent)
+    if destination.is_symlink():
+        raise PublishError("permanent_download_is_symlink")
+    temporary = destination.with_name(f".{destination.name}.tmp-{os.getpid()}")
+    try:
+        os.link(ensure_source, temporary)
+        os.replace(temporary, destination)
+        descriptor = os.open(destination.parent, os.O_RDONLY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def download_sources(root: Path, variant: str, payload: bytes | None) -> dict[str, Path] | None:
+    if payload is None:
+        return None
+    manifest = json.loads(payload)
+    if manifest.get("variant") != variant or not isinstance(manifest.get("platforms"), dict):
+        raise PublishError("download_manifest_identity_mismatch")
+    sources = {}
+    for target in PERMANENT_DOWNLOAD_NAMES:
+        entry = manifest["platforms"].get(target)
+        url = entry.get("url") if isinstance(entry, dict) else None
+        parsed = urlparse(url) if isinstance(url, str) else None
+        if not parsed or f"{parsed.scheme}://{parsed.netloc}" != ORIGIN or parsed.query or parsed.fragment:
+            raise PublishError("invalid_download_manifest_url")
+        relative = Path(parsed.path.removeprefix("/"))
+        source = root / relative
+        safe_descendant(source, root)
+        sources[target] = regular_file(str(source))
+    return sources
+
+
+def switch_permanent_downloads(root: Path, variant: str, sources: dict[str, Path] | None) -> None:
+    destinations = permanent_downloads(root, variant)
+    for destination in destinations.values():
+        safe_descendant(destination, root)
+        if destination.exists() and (destination.is_symlink() or not destination.is_file()):
+            raise PublishError("permanent_download_conflict")
+    if sources is None:
+        for destination in destinations.values():
+            if destination.exists():
+                destination.unlink()
+        return
+    for target, destination in destinations.items():
+        atomic_link(root, sources[target], destination)
 
 
 def refreshed_health(root: Path) -> bytes:
@@ -96,7 +163,8 @@ def promote(args, root: Path) -> dict:
     variant = args.variant
     config = channel_config(Path(args.channel_config), variant)
     update_head, download_head = heads(root, variant)
-    for path in (*heads(root, "official"), *heads(root, "partner"), root / "health.json"):
+    for path in (*heads(root, "official"), *heads(root, "partner"),
+                 *permanent_downloads(root, variant).values(), root / "health.json"):
         safe_descendant(path, root)
     old_update, old_download = previous_manifest(update_head), previous_manifest(download_head)
     old_health = (root / "health.json").read_bytes()
@@ -121,6 +189,7 @@ def promote(args, root: Path) -> dict:
         "dmg": f"{prefix}-macos-universal-installer.dmg",
     }
     staged: dict[str, tuple[Path, str]] = {}
+    published_sources: dict[str, Path] = {}
     # Verify snapshots, then copy those exact verified bytes; source edits
     # cannot race signature verification and public promotion.
     with tempfile.TemporaryDirectory(prefix="yeschoy-candidate-") as temporary:
@@ -135,6 +204,7 @@ def promote(args, root: Path) -> dict:
             destination = root / "updates" / "releases" / variant / args.version / snapshot.name
             safe_descendant(destination, root)
             receipt = immutable_copy(snapshot, destination)
+            published_sources[kind] = destination
             entries[kind] = {"url": f"{ORIGIN}/{destination.relative_to(root).as_posix()}",
                              "signature": signature, "sha256": receipt["sha256"], "size": receipt["size"]}
     manifest = {"schemaVersion": 2, "variant": variant, "version": args.version, "notes": notes,
@@ -151,17 +221,28 @@ def promote(args, root: Path) -> dict:
     # Even after withdrawal, previously published versions cannot be replayed.
     atomic_write(watermark, encoded({"version": args.version}), 0o600)
     try:
+        switch_permanent_downloads(
+            root,
+            variant,
+            {"windows-x86_64": published_sources["windows"], "macos-universal": published_sources["dmg"]},
+        )
         atomic_write(download_head, download_bytes)
         atomic_write(update_head, update_bytes)
         atomic_write(root / "health.json", refreshed_health(root))
     except BaseException:
+        switch_permanent_downloads(root, variant, download_sources(root, variant, old_download))
         rollback_bytes(update_head, old_update)
         rollback_bytes(download_head, old_download)
         atomic_write(root / "health.json", old_health)
         raise
+    stable_urls = {
+        target: f"{ORIGIN}/{path.relative_to(root).as_posix()}"
+        for target, path in permanent_downloads(root, variant).items()
+    }
     return {"status": "published", "variant": variant, "version": args.version,
             "manifestSha256": digest, "downloadManifestSha256": download_digest,
-            "updateUrl": config["endpoint"], "downloadManifestUrl": f"{ORIGIN}/releases/yeschoy-{variant}.json"}
+            "updateUrl": config["endpoint"], "downloadManifestUrl": f"{ORIGIN}/releases/yeschoy-{variant}.json",
+            "permanentDownloadUrls": stable_urls}
 
 
 def rollback(args, root: Path) -> dict:
@@ -178,10 +259,13 @@ def rollback(args, root: Path) -> dict:
     previous_update, previous_download = update.read_bytes(), download.read_bytes()
     previous_health = (root / "health.json").read_bytes()
     try:
+        restored_download = base64.b64decode(recovery["download"]) if recovery["download"] else None
+        switch_permanent_downloads(root, args.variant, download_sources(root, args.variant, restored_download))
         rollback_bytes(update, base64.b64decode(recovery["update"]) if recovery["update"] else None)
-        rollback_bytes(download, base64.b64decode(recovery["download"]) if recovery["download"] else None)
+        rollback_bytes(download, restored_download)
         atomic_write(root / "health.json", refreshed_health(root))
     except BaseException:
+        switch_permanent_downloads(root, args.variant, download_sources(root, args.variant, previous_download))
         atomic_write(update, previous_update)
         atomic_write(download, previous_download)
         atomic_write(root / "health.json", previous_health)
