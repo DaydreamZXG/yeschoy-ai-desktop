@@ -1,11 +1,11 @@
+// 与 Rust 侧 tool_discovery_core::TOOL_SPECS 保持完全一致（顺序敏感，
+// decodeScan 按下标逐一校验 id/displayName）。增删工具须同步两端。
 export const TOOL_CATALOG = [
   { id: "claude", displayName: "Claude Code", mark: "C" },
   { id: "codex", displayName: "Codex", mark: "X" },
   { id: "opencode", displayName: "OpenCode", mark: "O" },
   { id: "pi", displayName: "Pi", mark: "π" },
   { id: "dsh", displayName: "DSH", mark: "D" },
-  { id: "hermes", displayName: "Hermes", mark: "H" },
-  { id: "openclaw", displayName: "OpenClaw", mark: "O" },
 ] as const;
 export interface ToolResult {
   toolId: (typeof TOOL_CATALOG)[number]["id"];

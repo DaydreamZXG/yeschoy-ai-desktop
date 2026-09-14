@@ -253,13 +253,11 @@ function previewTool(toolId: ActivationToolId): ConfigurationToolId {
   if (toolId === "codex_desktop") return "codex";
   if (toolId === "pi") return "pi";
   if (toolId === "dsh_web") return "dsh";
-  if (toolId === "hermes") return "hermes";
-  if (toolId === "openclaw") return "openclaw";
   return "claude";
 }
 
 function usesNewTerminalSession(toolId: ActivationToolId) {
-  return ["claude_code", "pi", "hermes", "openclaw"].includes(toolId);
+  return ["claude_code", "pi"].includes(toolId);
 }
 
 function targetTone(target?: ActivationTarget) {

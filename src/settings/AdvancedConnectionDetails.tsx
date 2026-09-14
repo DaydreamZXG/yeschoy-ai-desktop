@@ -29,18 +29,12 @@ const TOOL_INFO: Record<
   dsh_web: { previewId: "dsh" },
   pi: { previewId: "pi", appType: "pi" },
   claude_code: { previewId: "claude", appType: "claude" },
-  // hermes/openclaw 移出 V1：无 appType 即不显示「在 Finder 中查看」按钮。
-  hermes: { previewId: "hermes" },
-  openclaw: { previewId: "openclaw" },
 };
 
 const CONNECTED_STATES = ["connected", "changed", "legacy"] as const;
 
 function toolName(toolId: ActivationToolId) {
-  return (
-    WORKBENCH_APPS.find((app) => app.id === toolId)?.name ??
-    (toolId === "hermes" ? "Hermes" : toolId === "openclaw" ? "OpenClaw" : toolId)
-  );
+  return WORKBENCH_APPS.find((app) => app.id === toolId)?.name ?? toolId;
 }
 
 function baseUrlOf(connection: ToolConnection) {

@@ -970,7 +970,7 @@ describe("daily-use UX", () => {
     expect(statuses).toContain("第一次真实请求的结果会显示");
   });
 
-  it.each(["claude_code", "pi", "hermes", "openclaw"] as const)(
+  it.each(["claude_code", "pi"] as const)(
     "ru056 keeps the current %s session alive and tells the user to start a new one",
     async (toolId) => {
       native.mockImplementation(async (command, args) => {
@@ -1542,7 +1542,7 @@ describe("daily-use UX", () => {
     );
     expect(native).not.toHaveBeenCalled();
   });
-  it.each(["claude_code", "pi", "hermes", "openclaw"] as const)(
+  it.each(["claude_code", "pi"] as const)(
     "opens %s in a terminal without reconfiguration or a paid probe",
     async (toolId) => {
       const state = local();

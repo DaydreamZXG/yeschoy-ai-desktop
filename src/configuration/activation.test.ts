@@ -29,14 +29,7 @@ function projection(requestId = "activate-test") {
 
 function targetScan(requestId = "target-scan-test") {
   const target = (
-    toolId:
-      | "claude_code"
-      | "claude_desktop"
-      | "codex_desktop"
-      | "pi"
-      | "dsh_web"
-      | "hermes"
-      | "openclaw",
+    toolId: "claude_code" | "claude_desktop" | "codex_desktop" | "pi" | "dsh_web",
     displayName: string,
   ) => ({
     toolId,
@@ -63,8 +56,6 @@ function targetScan(requestId = "target-scan-test") {
       target("codex_desktop", "Codex Desktop"),
       target("pi", "Pi"),
       target("dsh_web", "DSH web"),
-      target("hermes", "Hermes"),
-      target("openclaw", "OpenClaw"),
     ],
   };
 }
@@ -135,13 +126,13 @@ describe("desktop tool activation boundary", () => {
     ).toBeNull();
   });
 
-  it("accepts only a complete seven-target installation scan", () => {
+  it("accepts only a complete five-target installation scan", () => {
     expect(
       decodeActivationTargetScan(targetScan(), "target-scan-test"),
     ).toEqual(targetScan());
     expect(
       decodeActivationTargetScan(
-        { ...targetScan(), targets: targetScan().targets.slice(0, 6) },
+        { ...targetScan(), targets: targetScan().targets.slice(0, 4) },
         "target-scan-test",
       ),
     ).toBeNull();
@@ -236,8 +227,6 @@ describe("desktop tool activation boundary", () => {
       "codex_desktop",
       "pi",
       "dsh_web",
-      "hermes",
-      "openclaw",
     ]);
     expect(native).toHaveBeenCalledWith("scan_activation_targets_v1", {
       request: { requestId: expect.stringMatching(/^target-scan-/) },

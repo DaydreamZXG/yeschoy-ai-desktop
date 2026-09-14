@@ -31,12 +31,10 @@ import {
   type ScanResponse,
 } from "./tool-discovery/contract";
 
-// #9 工具范围定案（PRD §3.2）：hermes/openclaw 移出 V1，discovery 页不再
-// 展示；协议层 TOOL_CATALOG 保持与 Rust 契约一致，仅在此做展示过滤。
+// #9 工具范围定案（PRD §3.2）：协议层 TOOL_CATALOG 已与 Rust 契约一致
+// （遗留 hermes/openclaw 于 2026-09-14 移除），展示层无需再过滤。
 // opencode 属于「即将支持」（保留只读发现，无接入适配器）。
-const V1_DISCOVERY_TOOLS = TOOL_CATALOG.filter(
-  (tool) => !["hermes", "openclaw"].includes(tool.id),
-);
+const V1_DISCOVERY_TOOLS = TOOL_CATALOG;
 
 type ViewPhase =
   | "default"

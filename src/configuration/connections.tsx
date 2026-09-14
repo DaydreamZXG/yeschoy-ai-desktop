@@ -131,7 +131,7 @@ export function decodeConnections(
     ) ||
     !text(value.reasonCode, 80) ||
     !Array.isArray(value.connections) ||
-    value.connections.length !== 7
+    value.connections.length !== ACTIVATION_TOOL_IDS.length
   )
     return null;
   for (const c of value.connections) {
@@ -176,7 +176,11 @@ export function decodeConnections(
     )
       return null;
   }
-  if (new Set(value.connections.map((c) => c.toolId)).size !== 7) return null;
+  if (
+    new Set(value.connections.map((c) => c.toolId)).size !==
+    ACTIVATION_TOOL_IDS.length
+  )
+    return null;
   return value as unknown as ConnectionResponse;
 }
 function validObservation(v: unknown): v is RequestObservation {

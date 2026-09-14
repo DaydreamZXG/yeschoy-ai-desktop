@@ -100,8 +100,6 @@ function activationTargetScan(requestId: string) {
     ["codex_desktop", "Codex Desktop", "26.825.51511"],
     ["pi", "Pi", "0.84.4"],
     ["dsh_web", "DSH web", "0.1.0-rc.6"],
-    ["hermes", "Hermes", "0.21.0"],
-    ["openclaw", "OpenClaw", "2026.9.1"],
   ] as const;
   return {
     requestId,

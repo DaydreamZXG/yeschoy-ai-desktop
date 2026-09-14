@@ -36,23 +36,24 @@ describe("tool catalog single source of truth (#9)", () => {
       expect(ACTIVATION_TOOL_IDS).not.toContain(app.id);
   });
 
-  it("reserves activation protocol ids outside V1 for legacy tools only", () => {
-    // 协议层比展示层多出的 id 只能是遗留工具。新增工具必须先进
-    // appCatalog（展示源），再同步协议；反之则会被此断言拦截。
+  it("keeps the activation protocol aligned with the V1 display list", () => {
+    // 2026-09-14：Rust 侧适配器已清理遗留工具，协议层与展示层必须完全
+    // 一致（5 个）。新增工具必须先进 appCatalog（展示源），再同步协议
+    // 与 Rust；任何一处漂移都会被此断言拦截。
     const outsideV1 = ACTIVATION_TOOL_IDS.filter(
       (id) => !WORKBENCH_APPS.some((app) => app.id === id),
     );
-    expect([...outsideV1].sort()).toEqual([...LEGACY_TOOL_IDS]);
+    expect(outsideV1).toEqual([]);
   });
 
   it("keeps read-only discovery able to see coming-soon apps", () => {
-    const discoveryIds = TOOL_CATALOG.map((tool) => tool.id);
+    const discoveryIds: string[] = TOOL_CATALOG.map((tool) => tool.id);
     for (const app of COMING_SOON_APPS)
       expect(discoveryIds).toContain(app.id);
-    // 展示过滤（App.tsx V1_DISCOVERY_TOOLS）摘除的只是遗留工具。
+    // 2026-09-14：Rust 侧只读发现已清理遗留工具，协议层不再含它们。
     const legacyInDiscovery = LEGACY_TOOL_IDS.filter((id) =>
       discoveryIds.includes(id),
     );
-    expect(legacyInDiscovery).toEqual([...LEGACY_TOOL_IDS]);
+    expect(legacyInDiscovery).toEqual([]);
   });
 });

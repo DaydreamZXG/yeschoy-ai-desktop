@@ -15,7 +15,7 @@ describe("desktop protocol compatibility", () => {
     expect(connectionLifecycleMode("claude_desktop")).toBe(
       "graceful_desktop_restart",
     );
-    for (const tool of ["claude_code", "pi", "hermes", "openclaw"] as const) {
+    for (const tool of ["claude_code", "pi"] as const) {
       expect(connectionLifecycleMode(tool)).toBe("new_terminal_session");
       expect(connectionLifecycleNote(tool, tool)).toContain(
         "不会关闭正在使用的命令行会话",

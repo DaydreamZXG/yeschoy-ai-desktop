@@ -1847,18 +1847,6 @@
   font-size: 13px;
 }
 
-.configuration-app-icon[data-app="hermes"] {
-  background: #f4ecff;
-  color: #7450a8;
-  font-family: ui-rounded, "SF Pro Rounded", var(--font-ui);
-}
-
-.configuration-app-icon[data-app="openclaw"] {
-  background: #fff0e9;
-  color: #c64c2f;
-  font-family: ui-rounded, "SF Pro Rounded", var(--font-ui);
-}
-
 [data-theme="dark"] .configuration-app-icon[data-app="pi"] {
   background: color-mix(in srgb, #207753 26%, var(--surface));
   color: #63d6a4;
@@ -1867,16 +1855,6 @@
 [data-theme="dark"] .configuration-app-icon[data-app="dsh_web"] {
   background: color-mix(in srgb, #315c9f 30%, var(--surface));
   color: #8fb4ef;
-}
-
-[data-theme="dark"] .configuration-app-icon[data-app="hermes"] {
-  background: color-mix(in srgb, #7450a8 28%, var(--surface));
-  color: #c0a3ec;
-}
-
-[data-theme="dark"] .configuration-app-icon[data-app="openclaw"] {
-  background: color-mix(in srgb, #c64c2f 26%, var(--surface));
-  color: #f08a6c;
 }
 
 .installation-choice {

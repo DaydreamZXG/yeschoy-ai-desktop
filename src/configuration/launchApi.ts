@@ -2,12 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { ACTIVATION_TOOL_IDS, type ActivationToolId } from "./activation";
 
 export const OPENABLE_TOOLS = ACTIVATION_TOOL_IDS;
-export const TERMINAL_TOOLS = [
-  "claude_code",
-  "pi",
-  "hermes",
-  "openclaw",
-] as const;
+export const TERMINAL_TOOLS = ["claude_code", "pi"] as const;
 export const OPEN_STATUSES = [
   "opened",
   "not_connected",

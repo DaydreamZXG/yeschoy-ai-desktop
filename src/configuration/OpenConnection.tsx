@@ -53,8 +53,6 @@ export function OpenConnection({
     {
       claude_code: "claude",
       pi: "pi",
-      hermes: "hermes",
-      openclaw: "openclaw",
     } as Partial<Record<ActivationToolId, string>>
   )[connection.toolId];
   return (
