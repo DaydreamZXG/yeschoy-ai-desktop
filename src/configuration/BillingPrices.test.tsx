@@ -16,6 +16,45 @@ beforeEach(async () => {
   await i18n.changeLanguage("zh");
 });
 afterEach(cleanup);
+
+describe("cache unit prices", () => {
+  it("uses the official FX and selected plan ratio for cache reads and writes", () => {
+    const value = model(0.4, true);
+    value.id = "gpt-6-astra";
+    value.billing!.cacheReadUsd = 1;
+    value.billing!.cacheWriteUsd = 2;
+    render(<BillingPrices model={value} selected="example" fx="1" />);
+    const read = screen.getByRole("row", { name: /缓存读取/ });
+    expect(within(read).getAllByRole("cell").map(x => x.textContent)).toEqual(["¥6.75", "¥0.40"]);
+    const write = screen.getByRole("row", { name: /缓存写入/ });
+    expect(within(write).getAllByRole("cell").map(x => x.textContent)).toEqual(["¥13.50", "¥0.80"]);
+  });
+  it("shows unknown reads and omits writes when no independent quotes exist", () => {
+    const value = model(0.7, true);
+    value.billing!.cacheReadUsd = null;
+    render(<BillingPrices model={value} selected="example" fx="1" />);
+    expect(within(screen.getByRole("row", { name: /缓存读取/ })).getAllByText("暂无报价")).toHaveLength(2);
+    expect(screen.queryByRole("row", { name: /缓存写入/ })).toBeNull();
+  });
+  it("preserves time-tier cache ranges and explicitly free cache prices", () => {
+    const value = model(0.7);
+    value.billingMode = "tiered_expr";
+    value.billing!.expression = 'len < 100 ? tier("a", p * 1 + c * 4 + cr * 0.02 + cc * 0) : tier("b", p * 2 + c * 8 + cr * 0.04 + cc * 0)';
+    render(<BillingPrices model={value} selected="example" fx="1" />);
+    expect(within(screen.getByRole("row", { name: /缓存读取/ })).getAllByRole("cell").map(x => x.textContent)).toEqual(["¥0.02 – ¥0.04", "¥0.01 – ¥0.03"]);
+    expect(within(screen.getByRole("row", { name: /缓存写入/ })).getAllByText("¥0.00")).toHaveLength(2);
+  });
+  it("does not drop an unquoted tier to advertise a partial cache price", () => {
+    const value = model(0.7);
+    value.billingMode = "tiered_expr";
+    value.billing!.expression = 'len < 100 ? tier("a", p * 1 + c * 4 + cr * 0.02 + cc * 1) : tier("b", p * 2 + c * 8)';
+    render(<BillingPrices model={value} selected="example" fx="1" />);
+    for (const name of [/缓存读取/, /缓存写入/]) {
+      expect(within(screen.getByRole("row", { name })).getAllByText("暂无报价")).toHaveLength(2);
+    }
+  });
+});
+
 const model = (ratio: number, priced = false): AccountModel => ({
   id: "example-model",
   description: "",
@@ -56,16 +95,16 @@ describe("pricing plan choices", () => {
         }}
       />,
     );
-    const standard = screen.getByRole("radio", { name: /标准分组/ });
+    const standard = screen.getByRole("radio", { name: /标准方案/ });
     expect(standard).toBeChecked();
     expect(chosen).toBe("default");
     const cheapest = screen.getByRole("radio", { name: /DeepSeek Flash/ });
     expect(cheapest).toHaveAccessibleName(/价格最低/);
     expect(cheapest).not.toHaveAccessibleName(/其他模型|3.5折/);
     const card = cheapest.closest(".billing-plan-card")!;
-    expect(within(card as HTMLElement).getByText("¥0.82")).toBeInTheDocument();
+    expect(within(card as HTMLElement).getByText("约 ¥0.82")).toBeInTheDocument();
     expect(card.querySelector("details")).not.toHaveAttribute("open");
-    fireEvent.click(within(card as HTMLElement).getByText("详情"));
+    fireEvent.click(within(card as HTMLElement).getByText("计费详情"));
     expect(chosen).toBe("default");
     fireEvent.click(cheapest);
     expect(chosen).toBe("DeepSeek Flash");
@@ -97,15 +136,15 @@ describe("rounded price comparisons remain honest", () => {
     expect(
       document.querySelector(".billing-comparison-card.is-yeschoy strong"),
     ).toHaveTextContent("< ¥0.01");
-    expect(screen.getByText("约省 99.9%")).toBeInTheDocument();
-    expect(screen.queryByText("约省 100%")).not.toBeInTheDocument();
+    expect(screen.getByText("预计节省约 99.9%")).toBeInTheDocument();
+    expect(screen.queryByText("预计节省约 100%")).not.toBeInTheDocument();
   });
   it("keeps an explicitly zero price distinguishable from missing or rounded data", () => {
     render(<BillingPrices model={model(0)} selected="example" fx="1" />);
     expect(
       document.querySelector(".billing-comparison-card.is-yeschoy strong"),
-    ).toHaveTextContent(/^¥0$/);
-    expect(screen.getByText("约省 100%")).toBeInTheDocument();
+    ).toHaveTextContent(/^约 ¥0.00$/);
+    expect(screen.getByText("预计节省约 100%")).toBeInTheDocument();
   });
 });
 describe("#12 per-million prices are shown directly (PRD 6.4)", () => {
@@ -141,16 +180,16 @@ describe("#12 per-million prices are shown directly (PRD 6.4)", () => {
     value.billing!.expression =
       'len <= 272000 ? tier("standard", p * 10 + c * 50 + cr * 1) : tier("long", p * 20 + c * 75 + cr * 2)';
     render(<BillingPrices model={value} selected="example" fx="1" />);
-    expect(screen.getByText("¥772.84 – ¥1,517.3")).toBeInTheDocument();
-    expect(screen.getByText("¥45.8 – ¥89.91")).toBeInTheDocument();
+    expect(screen.getByText("约 ¥772.84")).toBeInTheDocument();
+    expect(screen.getByText("约 ¥45.80")).toBeInTheDocument();
     expect(
       screen.getByText("费用参考，实际费用随使用情况变化"),
     ).toBeInTheDocument();
     expect(
       screen.getByText("约 0.69% 新输入 + 99.14% 缓存读取 + 0.17% 输出"),
     ).toBeInTheDocument();
-    expect(screen.getByText("约省 94.1%")).toBeInTheDocument();
-    expect(screen.queryByText("约省 60%")).not.toBeInTheDocument();
+    expect(screen.getByText("预计节省约 94.1%")).toBeInTheDocument();
+    expect(screen.queryByText("预计节省约 60%")).not.toBeInTheDocument();
     expect(screen.queryByText("暂不可用")).not.toBeInTheDocument();
   });
   it("marks empty per-million values as unknown instead of inventing zero", () => {
@@ -160,6 +199,6 @@ describe("#12 per-million prices are shown directly (PRD 6.4)", () => {
       document.querySelectorAll("table.per-million-prices td"),
     ).map((td) => td.textContent);
     expect(cells).toContain("—");
-    expect(cells).toContain("¥2");
+    expect(cells).toContain("¥2.00");
   });
 });

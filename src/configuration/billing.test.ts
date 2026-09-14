@@ -72,6 +72,22 @@ describe("billing display follows the selected NewAPI group", () => {
     },
   );
 
+  it("selects a named standard tier rather than the cheapest or first tier", () => {
+    const value = fixture();
+    value.id = "gpt-6-astra";
+    value.billing!.expression = 'len > 1 ? tier("promo", p * 1 + c * 1 + cr * 0.1) : tier("standard", p * 10 + c * 50 + cr * 1)';
+    const estimate = hundredMillionTokenEstimate(value, { id: "test", ratio: 0.4, description: "" }, "1", "reference")!;
+    expect(estimate.official.minimum).toBeCloseTo(772.84293411);
+    expect(estimate.official.maximum).toBe(estimate.official.minimum);
+    expect(estimate.yeschoy.minimum).toBeCloseTo(45.79809980);
+  });
+  it("does not choose a cheap off-peak tier when no standard tier is declared", () => {
+    const value = fixture();
+    const estimate = hundredMillionTokenEstimate(value, value.billing!.groups[1], "1", "reference")!;
+    const range = hundredMillionTokenEstimate(value, value.billing!.groups[1], "1")!;
+    expect(estimate.official.minimum).toBe(range.official.maximum);
+    expect(estimate.official.maximum).toBe(estimate.official.minimum);
+  });
   it("uses site cache rates in the 100M-token comparison instead of charging cached input as new input", () => {
     const model = fixture("ratio");
     model.billing = {

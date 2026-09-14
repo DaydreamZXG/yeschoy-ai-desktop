@@ -304,10 +304,20 @@ export function hundredMillionTokenEstimate(
   model: AccountModel,
   group: BillingGroup,
   fx: string,
+  mode: "range" | "reference" = "range",
 ): HundredMillionTokenEstimate | null {
   if (group.ratio === null || !Number.isFinite(group.ratio) || group.ratio < 0)
     return null;
-  const { rows, unit } = groupPrice(model, group, fx);
+  const { rows: allRows, unit } = groupPrice(model, group, fx);
+  // Compare the same declared tier on both sides, never independently pick
+  // cheap/expensive endpoints. Prefer an explicitly named standard tier;
+  // otherwise use the first server-declared tier (not the cheapest tier).
+  const standard = allRows.find((row) =>
+    /^(standard|base|default|普通(?:用量)?|标准)$/i.test(row.name.trim()),
+  );
+  const rows = mode === "reference" && allRows.length
+    ? [standard ?? allRows[0]]
+    : allRows;
   if (unit !== "tokens") return null;
   // 服务端只给 CNY 每百万价（无 USD 基准）时，用同一工作负载公式估算，
   // 避免「费用参考」整块降级为不可用。
@@ -392,7 +402,7 @@ export function hundredMillionTokenEstimate(
       maximum: Math.max(...actual),
     },
     cacheFallback,
-    tiered: rows.length > 1,
+    tiered: allRows.length > 1,
     savingPercent: official.some((amount) => amount > 0)
       ? Math.max(
           0,

@@ -1,16 +1,16 @@
 import { useTranslation } from "react-i18next";
 
 const zh = {
-  defaultGroup: "标准分组",
+  defaultGroup: "标准方案",
   defaultGroupBillingNote: "已按标准分组计费（{{ratio}}×）",
   chooseGroupLegend: "选择价格方案",
   planPriceUnavailable: "价格待确认",
   planPriceUnit: "每 1 亿 Token 预计费用",
   planSelected: "当前选择",
   planLowest: "价格最低",
-  planDetails: "详情",
+  planDetails: "计费详情",
   planRatio: "计费倍率",
-  planDescription: "后台方案说明",
+  planDescription: "方案说明",
   groupIntro:
     "同一个模型有不同价格方案，选好后按该方案计费。以下费用使用相同的 Token 占比估算。",
   ratioPending: "倍率待查询",
@@ -19,13 +19,14 @@ const zh = {
   pricesLabel: "所选分组价格",
   estimateSummary: "1 亿 Token 费用参考",
   estimateExampleNote: "费用参考，实际费用随使用情况变化",
-  estimateSaving: "约省 {{percent}}%",
+  estimateSaving: "预计节省约 {{percent}}%",
+  estimateAmount: "约 {{amount}}",
   estimateFormula: "约 0.69% 新输入 + 99.14% 缓存读取 + 0.17% 输出",
   estimateOfficialLabel: "使用官网预计",
   estimateYeschoyLabel: "使用野菜预计",
   estimateNote:
-    "官网按 {{referenceFx}}、野菜按 {{siteFx}} 换算为人民币，再应用 {{group}} 的倍率{{tiered}}。固定参考汇率，非实时汇率。{{cacheNote}}",
-  estimateTieredNote: "；不同请求档位会形成以上区间",
+    "两边采用相同模型、计费档位和使用量比较。官网按 {{referenceFx}}、野菜按 {{siteFx}} 换算为人民币，野菜费用已包含所选方案优惠。{{tiered}}固定参考汇率，实际费用以账单为准。{{cacheNote}}",
+  estimateTieredNote: "优先采用标准档；没有明确标准档时采用服务端首档。其他档位的费用范围见上方。",
   estimateCacheFallbackNote:
     "该模型没有单独的缓存读取价，缓存部分按输入价保守估算。",
   estimateCacheExcludedNote:
@@ -37,6 +38,9 @@ const zh = {
   actualPrice: "野菜API实际价",
   inputPrice: "输入",
   outputPrice: "输出",
+  cacheReadPrice: "缓存读取",
+  cacheWritePrice: "缓存写入",
+  cachePriceUnavailable: "暂无报价",
   priceUnavailable: "暂不可用",
   restoreAction: "恢复原设置",
   revokeAction: "撤销野菜设置",
@@ -356,13 +360,14 @@ const en: Copy = {
   pricesLabel: "Prices for the selected group",
   estimateSummary: "Cost reference for 100M tokens",
   estimateExampleNote: "Cost reference; actual costs vary with usage",
-  estimateSaving: "Save about {{percent}}%",
+  estimateSaving: "Estimated savings: about {{percent}}%",
+  estimateAmount: "≈ {{amount}}",
   estimateFormula: "Approx. 0.69% new input + 99.14% cache reads + 0.17% output",
   estimateOfficialLabel: "Official estimate",
   estimateYeschoyLabel: "野菜API estimate",
   estimateNote:
     "Converted to CNY at {{referenceFx}} for the official price and {{siteFx}} for 野菜API, then applying {{group}}'s ratio{{tiered}}. Fixed reference rates, not live FX. {{cacheNote}}",
-  estimateTieredNote: "; different request tiers form the range above",
+  estimateTieredNote: "; reference uses the standard tier, or the first declared tier if none is named; other tiers are shown above",
   estimateCacheFallbackNote:
     "This model has no separate cache-read price, so the cache portion is conservatively estimated at the input price.",
   estimateCacheExcludedNote:
@@ -374,6 +379,9 @@ const en: Copy = {
   actualPrice: "Your 野菜API price",
   inputPrice: "Input",
   outputPrice: "Output",
+  cacheReadPrice: "Cache read",
+  cacheWritePrice: "Cache write",
+  cachePriceUnavailable: "No quote available",
   priceUnavailable: "Unavailable",
   restoreAction: "Restore original settings",
   revokeAction: "Undo 野菜 settings",
@@ -727,13 +735,14 @@ const tw: Copy = {
   pricesLabel: "所選分組價格",
   estimateSummary: "1 億 Token 費用參考",
   estimateExampleNote: "費用參考，實際費用隨使用情況變化",
-  estimateSaving: "約省 {{percent}}%",
+  estimateSaving: "預計節省約 {{percent}}%",
+  estimateAmount: "約 {{amount}}",
   estimateFormula: "約 0.69% 新輸入 + 99.14% 快取讀取 + 0.17% 輸出",
   estimateOfficialLabel: "使用官網預計",
   estimateYeschoyLabel: "使用野菜預計",
   estimateNote:
     "官網按 {{referenceFx}}、野菜按 {{siteFx}} 換算為人民幣，再套用 {{group}} 的倍率{{tiered}}。固定參考匯率，非即時匯率。{{cacheNote}}",
-  estimateTieredNote: "；不同請求檔位會形成以上區間",
+  estimateTieredNote: "；採用標準檔，沒有明確標準檔時採用服務端首檔；其他檔位範圍見上方",
   estimateCacheFallbackNote:
     "該模型沒有單獨的快取讀取價，快取部分按輸入價保守估算。",
   estimateCacheExcludedNote:
@@ -745,6 +754,9 @@ const tw: Copy = {
   actualPrice: "野菜API實際價",
   inputPrice: "輸入",
   outputPrice: "輸出",
+  cacheReadPrice: "快取讀取",
+  cacheWritePrice: "快取寫入",
+  cachePriceUnavailable: "暫無報價",
   priceUnavailable: "暫不可用",
   restoreAction: "還原原設定",
   revokeAction: "撤銷野菜設定",
@@ -1064,14 +1076,15 @@ const ja: Copy = {
   pricesLabel: "選択したグループの料金",
   estimateSummary: "1億トークンの費用目安",
   estimateExampleNote: "費用の目安です。実際の費用は利用状況により変わります",
-  estimateSaving: "約{{percent}}%お得",
+  estimateSaving: "推定約{{percent}}%節約",
+  estimateAmount: "約 {{amount}}",
   estimateFormula:
     "約0.69%新規入力 + 99.14%キャッシュ読み取り + 0.17%出力",
   estimateOfficialLabel: "公式サイトでの概算",
   estimateYeschoyLabel: "野菜APIでの概算",
   estimateNote:
     "公式価格は {{referenceFx}}、野菜API は {{siteFx}} で人民元に換算し、{{group}}の倍率を適用します{{tiered}}。固定参考レートであり、リアルタイム為替ではありません。{{cacheNote}}",
-  estimateTieredNote: "。リクエストの課金階層により、上記の範囲が生じます",
+  estimateTieredNote: "。標準階層、未定義の場合はサーバーの最初の階層を使用。他の階層の範囲は上記に表示",
   estimateCacheFallbackNote:
     "このモデルにはキャッシュ読み取り専用の価格がないため、キャッシュ部分は入力単価で保守的に概算しています。",
   estimateCacheExcludedNote:
@@ -1083,6 +1096,9 @@ const ja: Copy = {
   actualPrice: "野菜API実際の料金",
   inputPrice: "入力",
   outputPrice: "出力",
+  cacheReadPrice: "キャッシュ読み取り",
+  cacheWritePrice: "キャッシュ書き込み",
+  cachePriceUnavailable: "料金未確認",
   priceUnavailable: "現在利用できません",
   restoreAction: "元の設定に戻す",
   revokeAction: "野菜の設定を取り消す",

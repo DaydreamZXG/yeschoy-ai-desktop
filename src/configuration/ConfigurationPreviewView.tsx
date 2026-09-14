@@ -24,7 +24,7 @@ import type { AccountSessionController } from "../account/useAccountSession";
 import { balanceAlert } from "../account/finance";
 import { LowBalanceBanner } from "../workbench/LowBalanceBanner";
 import { useWalletRecharge } from "../workbench/useWalletRecharge";
-import claudeIcon from "../assets/icons/official-claude.svg";
+import claudeIcon from "../assets/icons/official-claude.png";
 import codexIcon from "../assets/icons/official-codex.png";
 import piIcon from "../assets/icons/official-pi.svg";
 import dshIcon from "../assets/icons/official-dsh.svg";

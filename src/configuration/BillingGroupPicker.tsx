@@ -41,7 +41,7 @@ export function BillingGroupPicker({
   const radioName = useId();
   const plans = groups.map((group) => ({
     group,
-    estimate: model ? hundredMillionTokenEstimate(model, group, fx) : null,
+    estimate: model ? hundredMillionTokenEstimate(model, group, fx, "reference") : null,
   }));
   const allPriced =
     plans.length > 1 &&
@@ -77,7 +77,7 @@ export function BillingGroupPicker({
                   <strong>{groupLabel(group.id, c.defaultGroup)}</strong>
                   <span className="billing-plan-price">
                     {estimate
-                      ? priceRange(estimate.yeschoy)
+                      ? c.estimateAmount.replace("{{amount}}", price(estimate.yeschoy.minimum))
                       : c.planPriceUnavailable}
                   </span>
                   <small>{c.planPriceUnit}</small>
@@ -123,7 +123,7 @@ function price(amount: number) {
   if (!Number.isFinite(amount)) return "—";
   if (amount > 0 && amount < 0.01) return "< ¥0.01";
   return `¥${new Intl.NumberFormat("zh-CN", {
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount)}`;
 }
@@ -152,7 +152,8 @@ export function BillingPrices({
   const c = useConfigurationCopy();
   const group = model?.billing?.groups.find((g) => g.id === selected);
   if (!model || !group) return null;
-  const estimate = hundredMillionTokenEstimate(model, group, fx);
+  const estimate = hundredMillionTokenEstimate(model, group, fx, "reference");
+  const range = hundredMillionTokenEstimate(model, group, fx);
   const conversion = billingConversion(model, fx);
   const quoted = groupPrice(model, group, fx);
   const useRates =
@@ -170,7 +171,7 @@ export function BillingPrices({
     quoted.rows.every(({ rates }) =>
       [rates.p, rates.c].every((n) => Number.isFinite(n) && n >= 0),
     );
-  const quotedPrice = (field: "p" | "c", actual: boolean) => {
+  const quotedPrice = (field: "p" | "c" | "cr" | "cc", actual: boolean) => {
     const amounts = quoted.rows.map(
       ({ rates }) =>
         rates[field] *
@@ -181,6 +182,24 @@ export function BillingPrices({
       maximum: Math.max(...amounts),
     });
   };
+  const cachePrice = (field: "cr" | "cc", actual: boolean) => {
+    // Cache quotes come from the billing rule, even when input/output prices
+    // are supplied directly in CNY. Missing tiers must not become zero.
+    const rate = actual
+      ? conversion.site * (group.ratio ?? NaN)
+      : conversion.reference;
+    if (
+      quoted.unit !== "tokens" ||
+      !quoted.rows.length ||
+      !Number.isFinite(rate) ||
+      rate < 0 ||
+      ![conversion.reference, conversion.site].every(n => Number.isFinite(n) && n > 0) ||
+      !quoted.rows.every(({ rates }) => Number.isFinite(rates[field]) && rates[field] >= 0)
+    ) return c.cachePriceUnavailable;
+    return quotedPrice(field, actual);
+  };
+  const hasCacheWrite = quoted.unit === "tokens" &&
+    quoted.rows.some(({ rates }) => rates.cc !== undefined);
   // #12 价格口径：perMillion 字段（元/百万 tokens）直显为第一层级，
   // 「1 亿 Token 费用参考」降级为折叠示例。
   const hasPerMillion = model.pricingAvailable || canQuote;
@@ -227,6 +246,18 @@ export function BillingPrices({
                   : perMillionPrice(model.actualOutputCnyPerMillion)}
               </td>
             </tr>
+            <tr>
+              <th scope="row">{c.cacheReadPrice}</th>
+              <td>{cachePrice("cr", false)}</td>
+              <td>{cachePrice("cr", true)}</td>
+            </tr>
+            {hasCacheWrite && (
+              <tr>
+                <th scope="row">{c.cacheWritePrice}</th>
+                <td>{cachePrice("cc", false)}</td>
+                <td>{cachePrice("cc", true)}</td>
+              </tr>
+            )}
           </tbody>
         </table>
       ) : (
@@ -250,20 +281,25 @@ export function BillingPrices({
           )}
         {estimate ? (
           <>
-            <p className="billing-example-formula">{c.estimateFormula}</p>
             <div className="billing-comparison-grid">
               <div className="billing-comparison-card is-official">
                 <Landmark aria-hidden="true" />
                 <span>{c.estimateOfficialLabel}</span>
-                <strong>{priceRange(estimate.official)}</strong>
+                <strong>{c.estimateAmount.replace("{{amount}}", price(estimate.official.minimum))}</strong>
               </div>
               <div className="billing-comparison-card is-yeschoy">
                 <Sprout aria-hidden="true" />
                 <span>{c.estimateYeschoyLabel}</span>
-                <strong>{priceRange(estimate.yeschoy)}</strong>
+                <strong>{c.estimateAmount.replace("{{amount}}", price(estimate.yeschoy.minimum))}</strong>
               </div>
             </div>
-            <div className="billing-price-details">
+            <details className="billing-price-details">
+              <summary>{c.planDetails}</summary>
+              <p className="billing-example-formula">{c.estimateFormula}</p>
+              {range?.tiered && <p className="billing-price-note">
+                {c.estimateOfficialLabel}: {priceRange(range.official)}；
+                {c.estimateYeschoyLabel}: {priceRange(range.yeschoy)}
+              </p>}
               <p className="billing-price-note">
                 {c.estimateNote
                   .replace(
@@ -287,7 +323,7 @@ export function BillingPrices({
                       : c.estimateCacheExcludedNote,
                   )}
               </p>
-            </div>
+            </details>
           </>
         ) : (
           <p className="billing-price-note">{c.estimateUnavailable}</p>

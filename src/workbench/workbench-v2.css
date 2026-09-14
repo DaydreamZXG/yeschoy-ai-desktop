@@ -659,8 +659,8 @@
 }
 
 .configuration-app-icon .application-glyph {
-  width: 20px;
-  height: 20px;
+  width: 32px;
+  height: 32px;
   color: var(--accent);
 }
 
@@ -5638,11 +5638,12 @@
 .billing-plan-card .billing-plan-price {
   font: 650 18px var(--font-mono);
   color: var(--ink);
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 
 .billing-plan-badges {
   display: flex;
+  min-height: 20px;
   gap: 8px;
   flex-wrap: wrap;
 }
@@ -5656,6 +5657,17 @@
   color: var(--muted);
   font-size: 12px;
   overflow-wrap: anywhere;
+}
+
+.billing-plan-card .billing-group-option {
+  flex: none;
+  min-height: 110px;
+}
+
+.billing-comparison-card > strong {
+  white-space: nowrap;
+  font-size: clamp(18px, 2.2vw, 24px);
+  letter-spacing: -0.04em;
 }
 
 .billing-plan-details summary {
@@ -5835,7 +5847,7 @@
 }
 
 .billing-comparison-card > strong {
-  font-size: 24px;
+  font-size: clamp(18px, 2.2vw, 24px);
   letter-spacing: -0.04em;
   margin-top: var(--space-4);
   font-variant-numeric: tabular-nums;
