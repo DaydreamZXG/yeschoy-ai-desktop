@@ -42,6 +42,7 @@ pub(crate) struct Prepared {
     base_url: String,
     model: String,
     model_ids: Vec<String>,
+    provider_id: String,
     provider_auth: ProviderAuth,
 }
 
@@ -78,12 +79,71 @@ fn config_error(error: ConfigFailure) -> AdapterFailure {
     }
 }
 
+#[cfg(test)]
 fn render(
     existing: Option<&[u8]>,
     base_url: &str,
     model: &str,
     provider_auth: &ProviderAuth,
 ) -> Result<Vec<u8>, AdapterFailure> {
+    render_with_provider(existing, base_url, model, provider_auth, None).map(|(bytes, _)| bytes)
+}
+
+fn valid_provider_id(value: &str) -> bool {
+    (1..=64).contains(&value.len())
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-'))
+}
+
+fn custom_provider_id(document: &DocumentMut) -> Option<&str> {
+    let Some(current) = document.get("model_provider").and_then(Item::as_str) else {
+        return None;
+    };
+    if current == "yeschoy" {
+        return Some(current);
+    }
+    // Never shadow Codex's built-in OpenAI identity. Third-party switchers use
+    // named custom providers; retaining that identifier lets existing threads
+    // resolve their pinned provider while their traffic is temporarily routed
+    // through YesChoy.
+    if current == "openai" || !valid_provider_id(current) {
+        return None;
+    }
+    let declared = document
+        .get("model_providers")
+        .and_then(Item::as_table_like)
+        .is_some_and(|providers| providers.get(current).is_some());
+    if declared || current == "custom" {
+        Some(current)
+    } else {
+        None
+    }
+}
+
+pub(crate) fn provider_id_from_snapshot(bytes: Option<&[u8]>) -> Option<String> {
+    let source = std::str::from_utf8(bytes?).ok()?;
+    let document = source.parse::<DocumentMut>().ok()?;
+    custom_provider_id(&document)
+        .filter(|provider| *provider != "yeschoy")
+        .map(str::to_owned)
+}
+
+fn takeover_provider_id(document: &DocumentMut, preferred: Option<&str>) -> String {
+    preferred
+        .filter(|provider| *provider != "openai" && valid_provider_id(provider))
+        .map(str::to_owned)
+        .or_else(|| custom_provider_id(document).map(str::to_owned))
+        .unwrap_or_else(|| "yeschoy".into())
+}
+
+fn render_with_provider(
+    existing: Option<&[u8]>,
+    base_url: &str,
+    model: &str,
+    provider_auth: &ProviderAuth,
+    preferred_provider: Option<&str>,
+) -> Result<(Vec<u8>, String), AdapterFailure> {
     let source = existing
         .map(std::str::from_utf8)
         .transpose()
@@ -96,11 +156,12 @@ fn render(
             .parse::<DocumentMut>()
             .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?
     };
-    // Codex and older switchers may already point at another model catalog.
-    // Temporarily selecting ours is safe because the activation transaction
-    // snapshots the complete config and restores that exact value later. The
-    // referenced external catalog itself is never opened, changed, or removed.
-    document["model_provider"] = value("yeschoy");
+    let provider_id = takeover_provider_id(&document, preferred_provider);
+    // Existing Codex threads pin the provider identifier. Reusing a switcher's
+    // active custom identifier allows those threads to continue under YesChoy
+    // without rewriting chat history. The activation transaction snapshots the
+    // complete original table and restores it later.
+    document["model_provider"] = value(&provider_id);
     document["model"] = value(model);
     document["model_catalog_json"] = value(OWNED_CATALOG);
 
@@ -115,11 +176,11 @@ fn render(
         .ok_or(AdapterFailure::ConfigurationFailed(
             "configuration_parse_failed",
         ))?;
-    if providers.get("yeschoy").is_none() {
-        providers.insert("yeschoy", Item::Table(Table::new()));
-    }
+    // Replace the temporarily owned provider table instead of retaining old
+    // headers, environment keys or authentication fields from another service.
+    providers.insert(&provider_id, Item::Table(Table::new()));
     let provider = providers
-        .get_mut("yeschoy")
+        .get_mut(&provider_id)
         .and_then(Item::as_table_like_mut)
         .ok_or(AdapterFailure::ConfigurationFailed(
             "configuration_parse_failed",
@@ -159,7 +220,7 @@ fn render(
             provider.insert("experimental_bearer_token", value(key));
         }
     }
-    Ok(document.to_string().into_bytes())
+    Ok((document.to_string().into_bytes(), provider_id))
 }
 
 fn catalog_value(model: &str, transport: CodexTransport) -> Result<Value, AdapterFailure> {
@@ -249,6 +310,7 @@ pub(crate) fn prepare(
         &[model.to_owned()],
         false,
         None,
+        None,
     )
 }
 
@@ -260,6 +322,26 @@ pub(crate) fn prepare_catalog(
     provider_key: Option<&str>,
     model_ids: &[String],
 ) -> Result<Prepared, AdapterFailure> {
+    prepare_catalog_with_provider_hint(
+        home,
+        origin,
+        model,
+        transport,
+        provider_key,
+        model_ids,
+        None,
+    )
+}
+
+pub(crate) fn prepare_catalog_with_provider_hint(
+    home: &Path,
+    origin: &str,
+    model: &str,
+    transport: CodexTransport,
+    provider_key: Option<&str>,
+    model_ids: &[String],
+    provider_hint: Option<&str>,
+) -> Result<Prepared, AdapterFailure> {
     crate::tool_adapters::common::validate_catalog(model, model_ids)?;
     prepare_inner(
         home,
@@ -269,6 +351,7 @@ pub(crate) fn prepare_catalog(
         model_ids,
         true,
         provider_key,
+        provider_hint,
     )
 }
 
@@ -280,6 +363,7 @@ fn prepare_inner(
     model_ids: &[String],
     modern: bool,
     provider_key: Option<&str>,
+    provider_hint: Option<&str>,
 ) -> Result<Prepared, AdapterFailure> {
     let config_dir = config_dir(home)?;
     let path = config_dir.join("config.toml");
@@ -302,7 +386,13 @@ fn prepare_inner(
     // gateway added a listener, a port, a capability token and a watchdog for
     // no protocol benefit.
     let base_url = format!("{}/v1", origin.trim_end_matches('/'));
-    let after = render(before.as_deref(), &base_url, model, &provider_auth)?;
+    let (after, provider_id) = render_with_provider(
+        before.as_deref(),
+        &base_url,
+        model,
+        &provider_auth,
+        provider_hint,
+    )?;
     let catalog = if modern {
         serde_json::to_vec_pretty(&bridge_catalog_models(model_ids)?)
             .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_write_failed"))?
@@ -322,6 +412,7 @@ fn prepare_inner(
         base_url,
         model: model.to_owned(),
         model_ids: model_ids.to_vec(),
+        provider_id,
         provider_auth,
     })
 }
@@ -379,7 +470,7 @@ impl Prepared {
         // fail readback normally, not abort the entire connection inspection.
         let provider = document
             .get("model_providers")
-            .and_then(|providers| providers.get("yeschoy"))
+            .and_then(|providers| providers.get(&self.provider_id))
             .and_then(Item::as_table_like)
             .ok_or(AdapterFailure::ConfigurationFailed(
                 "configuration_readback_failed",
@@ -418,7 +509,8 @@ impl Prepared {
                     && provider.get("env_key").is_none()
             }
         };
-        let correct = document.get("model_provider").and_then(Item::as_str) == Some("yeschoy")
+        let correct = document.get("model_provider").and_then(Item::as_str)
+            == Some(self.provider_id.as_str())
             && crate::tool_adapters::common::default_matches(
                 document.get("model").and_then(Item::as_str),
                 &self.model,
@@ -549,6 +641,7 @@ mod tests {
             base_url: codex_bridge::BASE_URL.into(),
             model: "model-a".into(),
             model_ids: ids,
+            provider_id: "yeschoy".into(),
             provider_auth,
         };
         prepared.commit().unwrap();
@@ -624,6 +717,127 @@ mod tests {
         assert!(provider.get("env_key").is_none());
         assert!(!text.contains("OPENAI_API_KEY"));
         assert!(!text.contains("old-helper"));
+    }
+
+    #[test]
+    fn custom_switcher_provider_is_temporarily_taken_over_for_existing_threads() {
+        let key = format!("sk-{}", "c".repeat(48));
+        let original = br#"model_provider = "custom"
+model = "deepseek-chat"
+model_catalog_json = "cc-switch-models.json"
+
+[model_providers.custom]
+name = "DeepSeek"
+base_url = "https://api.deepseek.com"
+wire_api = "responses"
+env_key = "DEEPSEEK_API_KEY"
+
+[model_providers.other]
+name = "Keep me"
+base_url = "https://example.invalid/v1"
+"#;
+        let (bytes, provider_id) = render_with_provider(
+            Some(original),
+            "https://yeschoy.com/v1",
+            "gpt-6-astra",
+            &ProviderAuth::ApiKey(key.clone()),
+            None,
+        )
+        .unwrap();
+        let text = String::from_utf8(bytes).unwrap();
+        let document = text.parse::<DocumentMut>().unwrap();
+        assert_eq!(provider_id, "custom");
+        assert_eq!(document["model_provider"].as_str(), Some("custom"));
+        assert_eq!(document["model"].as_str(), Some("gpt-6-astra"));
+        assert_eq!(
+            document["model_providers"]["custom"]["base_url"].as_str(),
+            Some("https://yeschoy.com/v1")
+        );
+        assert_eq!(
+            document["model_providers"]["custom"]["experimental_bearer_token"].as_str(),
+            Some(key.as_str())
+        );
+        assert!(document["model_providers"]["custom"]
+            .get("env_key")
+            .is_none());
+        assert_eq!(
+            document["model_providers"]["other"]["base_url"].as_str(),
+            Some("https://example.invalid/v1")
+        );
+    }
+
+    #[test]
+    fn built_in_or_unresolved_provider_is_not_shadowed() {
+        for source in [
+            "model_provider = 'openai'\n",
+            "model_provider = 'missing'\n",
+            "model_provider = 'bad/provider'\n",
+        ] {
+            let (bytes, provider_id) = render_with_provider(
+                Some(source.as_bytes()),
+                "https://yeschoy.com/v1",
+                "gpt-6-astra",
+                &ProviderAuth::Command("/synthetic/helper".into()),
+                None,
+            )
+            .unwrap();
+            let document = String::from_utf8(bytes)
+                .unwrap()
+                .parse::<DocumentMut>()
+                .unwrap();
+            assert_eq!(provider_id, "yeschoy");
+            assert_eq!(document["model_provider"].as_str(), Some("yeschoy"));
+        }
+    }
+
+    #[test]
+    fn completed_legacy_receipt_hint_migrates_to_the_original_custom_provider() {
+        let home = common::temporary_working_directory("codex-provider-hint").unwrap();
+        let config_path = home.join(".codex/config.toml");
+        let original = br#"model_provider = "custom"
+[model_providers.custom]
+base_url = "https://api.deepseek.com"
+wire_api = "responses"
+"#;
+        assert_eq!(
+            provider_id_from_snapshot(Some(original)).as_deref(),
+            Some("custom")
+        );
+        let current = br#"model_provider = "yeschoy"
+model = "gpt-old"
+[model_providers.yeschoy]
+base_url = "https://yeschoy.com/v1"
+wire_api = "responses"
+experimental_bearer_token = "sk-old-old-old-old"
+"#;
+        common::atomic_write(&config_path, current).unwrap();
+        let key = format!("sk-{}", "d".repeat(48));
+        let models = vec!["gpt-6-astra".to_owned()];
+        let mut prepared = prepare_catalog_with_provider_hint(
+            &home,
+            "https://yeschoy.com",
+            "gpt-6-astra",
+            CodexTransport::DirectResponses,
+            Some(&key),
+            &models,
+            Some("custom"),
+        )
+        .unwrap();
+        prepared.commit().unwrap();
+        assert_eq!(prepared.provider_id, "custom");
+        assert!(prepared.validate_existing().is_ok());
+        let active = std::fs::read_to_string(&config_path)
+            .unwrap()
+            .parse::<DocumentMut>()
+            .unwrap();
+        assert_eq!(active["model_provider"].as_str(), Some("custom"));
+        assert_eq!(
+            active["model_providers"]["custom"]["base_url"].as_str(),
+            Some("https://yeschoy.com/v1")
+        );
+        prepared.rollback().unwrap();
+        assert_eq!(std::fs::read(&config_path).unwrap(), current);
+        std::fs::remove_dir_all(home).unwrap();
     }
 
     #[test]
@@ -807,6 +1021,7 @@ mod tests {
             base_url: base_url.into(),
             model: "model-a".into(),
             model_ids,
+            provider_id: "yeschoy".into(),
             provider_auth,
         };
         assert!(prepared.validate_existing().is_ok());

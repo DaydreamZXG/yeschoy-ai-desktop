@@ -1055,6 +1055,7 @@ fn prepare_adapter(
     request: &ToolActivationRequest,
     credential: &ToolCredential,
     model_transport: Option<ModelTransport>,
+    codex_provider_hint: Option<&str>,
 ) -> Result<PreparedAdapter, AdapterFailure> {
     let home = tool_adapters::user_home()
         .filter(|path| path.is_absolute() && path.is_dir())
@@ -1083,7 +1084,7 @@ fn prepare_adapter(
             claude_desktop::prepare_catalog(&home, &request.model_id, local, &models)
                 .map(PreparedAdapter::ClaudeDesktop)
         }
-        "codex_desktop" => codex_desktop::prepare_catalog(
+        "codex_desktop" => codex_desktop::prepare_catalog_with_provider_hint(
             &home,
             &origin,
             &request.model_id,
@@ -1093,6 +1094,7 @@ fn prepare_adapter(
             },
             Some(provider_key),
             &models,
+            codex_provider_hint,
         )
         .map(PreparedAdapter::CodexDesktop),
         "pi" => {
@@ -1738,7 +1740,39 @@ pub async fn configure_desktop_tool_v2(
     // mistakes that legitimate final write for a competing configuration
     // tool and sends the user into a false "higher precedence" failure.
     emit_activation_progress(&app, &request, "preparing_settings", 5);
-    let mut prepared = match prepare_adapter(&request, &credential, default_transport) {
+    // A pre-0.4.19 receipt may currently show `yeschoy`, while its encrypted
+    // original snapshot still records CC Switch's provider identifier. Reuse
+    // that identifier so upgrading users get the compatibility fix without
+    // first restoring or touching config.toml themselves.
+    let codex_provider_hint = if request.tool_id == "codex_desktop" {
+        match recovery.load(&request.tool_id) {
+            Ok(Some(record)) if record.original_known && !record.pending => record
+                .files
+                .iter()
+                .find(|file| {
+                    file.path
+                        .file_name()
+                        .is_some_and(|name| name == "config.toml")
+                })
+                .and_then(|file| codex_desktop::provider_id_from_snapshot(file.before.as_deref())),
+            Ok(_) => None,
+            Err(_) => {
+                delete_created_tokens(&origin, &access_token, &leases).await;
+                return Ok(
+                    ActivationFailure::ConfigurationFailed("recovery_storage_unavailable")
+                        .projection(&request),
+                );
+            }
+        }
+    } else {
+        None
+    };
+    let mut prepared = match prepare_adapter(
+        &request,
+        &credential,
+        default_transport,
+        codex_provider_hint.as_deref(),
+    ) {
         Ok(v) => v,
         Err(e) => {
             delete_created_tokens(&origin, &access_token, &leases).await;

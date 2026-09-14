@@ -833,8 +833,12 @@ describe("official workbench", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "模型与价格" }));
     expect((await screen.findAllByText("glm-5.3")).length).toBeGreaterThan(1);
-    expect(screen.getByText("¥201.01")).toBeInTheDocument();
-    expect(document.querySelector(".billing-comparison-card.is-yeschoy strong")).toHaveTextContent("¥100.5");
+    expect(
+      document.querySelector(".billing-comparison-card.is-official strong"),
+    ).toHaveTextContent("约 ¥201.01");
+    expect(
+      document.querySelector(".billing-comparison-card.is-yeschoy strong"),
+    ).toHaveTextContent("约 ¥100.50");
     expect(screen.getByText("参考换算值 1")).toBeInTheDocument();
     expect(screen.getByText(/50%/)).toBeInTheDocument();
   });
@@ -1118,6 +1122,18 @@ describe("official workbench", () => {
     const components = readFileSync("src/workbench/workbench-v2.css", "utf8");
     for (const token of ["max-width: 900px", "max-width: 1100px", "tabular-nums"])
       expect(components).toContain(token);
+  });
+  it("keeps the wide setup summary aligned with the guide grid row", () => {
+    const css = readFileSync("src/workbench/workbench-v2.css", "utf8");
+    expect(css).toMatch(
+      /\.configuration-preview-panel\s*\{\s*grid-column:\s*2;\s*grid-row:\s*1;/,
+    );
+    expect(css).toMatch(
+      /\.configuration-workspace:has\(> \.low-balance-banner\) \.configuration-guide\s*\{\s*grid-row:\s*2;/,
+    );
+    expect(css).toMatch(
+      /\.configuration-workspace:has\(> \.low-balance-banner\)\s*\.configuration-preview-panel\s*\{\s*grid-row:\s*2;/,
+    );
   });
   it("maintains readable text contrast on light and dark surfaces", () => {
     const css = readFileSync("src/index.css", "utf8");
