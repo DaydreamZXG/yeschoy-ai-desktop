@@ -1945,6 +1945,47 @@ const CONNECTION_TOOLS: [&str; 5] = [
     "dsh_web",
 ];
 
+/// Called only by the exit owner after admission closes and active operations
+/// drain. Blocking storage work stays off the UI/async executor. No remote keys
+/// are revoked, and missing originals fail visibly instead of inventing them.
+pub(crate) async fn restore_connection_for_exit(tool: &'static str) -> Result<(), ()> {
+    let _guard = tokio::time::timeout(CONNECTION_LOCK_WAIT_TIMEOUT, ACTIVATION_LOCK.lock())
+        .await.map_err(|_| ())?;
+    let needs_restore = tokio::time::timeout(CONNECTION_INSPECTION_TIMEOUT, tokio::task::spawn_blocking(move || {
+        let store = Store::open(false).map_err(|_| ())?;
+        let projection = inspect_connection(tool, Ok(store.as_ref()));
+        match projection.state {
+            "not_connected" => Ok(false),
+            "unavailable" | "legacy" => Err(()),
+            _ if projection.restore_mode != "original" => Err(()),
+            _ => Ok(true),
+        }
+    })).await.map_err(|_| ())?.map_err(|_| ())??;
+    if !needs_restore { return Ok(()); }
+    crate::exit_restore::after_normal_close(async {
+        if desktop_lifecycle::requires_reload(tool) {
+            // Multiple installations are ambiguous: never guess which to close.
+            let installation = tool_adapters::resolve_installation(tool, "").await.map_err(|_| ())?;
+            desktop_lifecycle::quit_for_exit_restore(tool, &installation.path).await.map_err(|_| ())?;
+        }
+        Ok(())
+    }, || async {
+        tokio::task::spawn_blocking(move || {
+            let _process_guard = connection_recovery::operation_lock().map_err(|_| ())?;
+            let store = Store::open(false).map_err(|_| ())?.ok_or(())?;
+            let Some(mut record) = store.load(tool).map_err(|_| ())? else { return Ok(()); };
+            if !record.original_known { return Err(()); }
+            record.pending = true;
+            store.save(&record).map_err(|_| ())?;
+            connection_recovery::restore_files(&record).map_err(|_| ())?;
+            tool_credentials::restore(tool, None).map_err(|_| ())?;
+            store.remove(tool).map_err(|_| ())?;
+            crate::request_diagnostics::clear(tool);
+            Ok(())
+        }).await.map_err(|_| ())?
+    }).await
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ConnectionRequest {

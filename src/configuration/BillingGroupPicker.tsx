@@ -1,8 +1,12 @@
 import { useId } from "react";
 import type { AccountModel } from "../account/session";
-import { CheckCircle2, Landmark, Sprout } from "lucide-react";
+import { Landmark, Sprout } from "lucide-react";
 import { useConfigurationCopy } from "./copy";
-import { hundredMillionTokenEstimate } from "./billing";
+import {
+  billingConversion,
+  groupPrice,
+  hundredMillionTokenEstimate,
+} from "./billing";
 
 export const groupLabel = (id: string, defaultLabel = "标准分组") =>
   id === "default" ? defaultLabel : id;
@@ -24,56 +28,86 @@ export function BillingGroupPicker({
   selected,
   onChange,
   disabled = false,
+  fx = "",
 }: {
   model?: AccountModel;
   selected: string;
   onChange: (id: string) => void;
   disabled?: boolean;
+  fx?: string;
 }) {
   const c = useConfigurationCopy();
   const groups = model?.billing?.groups ?? [];
   const radioName = useId();
+  const plans = groups.map((group) => ({
+    group,
+    estimate: model ? hundredMillionTokenEstimate(model, group, fx) : null,
+  }));
+  const allPriced =
+    plans.length > 1 &&
+    plans.every(
+      ({ estimate }) =>
+        estimate &&
+        Number.isFinite(estimate.yeschoy.minimum) &&
+        Number.isFinite(estimate.yeschoy.maximum),
+    );
   return (
     <fieldset className="billing-group-picker" disabled={disabled}>
       <legend>{c.chooseGroupLegend}</legend>
       <p>{c.groupIntro}</p>
       {groups.length ? (
         <div className="billing-group-grid">
-          {groups.map((group) => (
-            <label
-              key={group.id}
-              className={
-                selected === group.id
-                  ? "billing-group-option is-selected"
-                  : "billing-group-option"
-              }
-            >
-              <input
-                type="radio"
-                name={radioName}
-                value={group.id}
-                checked={selected === group.id}
-                onChange={() => onChange(group.id)}
-              />
-              <span className="billing-group-info">
-                <strong>
-                  {groupDisplayName(group.id, groups, c.defaultGroup)}
-                </strong>
-                {group.id === "default" ? (
-                  group.description ? (
-                    <small>{group.description}</small>
-                  ) : null
-                ) : group.description ? (
-                  <small>
-                    <code>{group.id}</code>
-                  </small>
-                ) : null}
-              </span>
-              <span className="billing-group-ratio">
-                {group.ratio === null ? c.ratioPending : `${group.ratio}×`}
-              </span>
-              {selected === group.id && <CheckCircle2 aria-hidden="true" />}
-            </label>
+          {plans.map(({ group, estimate }) => (
+            <div key={group.id} className="billing-plan-card">
+              <label
+                className={
+                  selected === group.id
+                    ? "billing-group-option is-selected"
+                    : "billing-group-option"
+                }
+              >
+                <input
+                  type="radio"
+                  name={radioName}
+                  value={group.id}
+                  checked={selected === group.id}
+                  onChange={() => onChange(group.id)}
+                />
+                <span className="billing-group-info">
+                  <strong>{groupLabel(group.id, c.defaultGroup)}</strong>
+                  <span className="billing-plan-price">
+                    {estimate
+                      ? priceRange(estimate.yeschoy)
+                      : c.planPriceUnavailable}
+                  </span>
+                  <small>{c.planPriceUnit}</small>
+                  <span className="billing-plan-badges">
+                    {selected === group.id && <small>{c.planSelected}</small>}
+                    {allPriced &&
+                      estimate &&
+                      plans.every(
+                        (plan) =>
+                          estimate.yeschoy.minimum <=
+                            plan.estimate!.yeschoy.minimum &&
+                          estimate.yeschoy.maximum <=
+                            plan.estimate!.yeschoy.maximum,
+                      ) && <small>{c.planLowest}</small>}
+                  </span>
+                </span>
+              </label>
+              <details className="billing-plan-details">
+                <summary>{c.planDetails}</summary>
+                <p>
+                  {c.planRatio}:{" "}
+                  {group.ratio === null ? c.ratioPending : `${group.ratio}×`}
+                </p>
+                {group.description && (
+                  <p>
+                    {c.planDescription}: {group.description}
+                  </p>
+                )}
+              </details>
+            </div>
           ))}
         </div>
       ) : (
@@ -90,7 +124,7 @@ function price(amount: number) {
   if (amount > 0 && amount < 0.01) return "< ¥0.01";
   return `¥${new Intl.NumberFormat("zh-CN", {
     minimumFractionDigits: 0,
-    maximumFractionDigits: Math.abs(amount) < 10 ? 2 : 0,
+    maximumFractionDigits: 2,
   }).format(amount)}`;
 }
 
@@ -119,9 +153,37 @@ export function BillingPrices({
   const group = model?.billing?.groups.find((g) => g.id === selected);
   if (!model || !group) return null;
   const estimate = hundredMillionTokenEstimate(model, group, fx);
+  const conversion = billingConversion(model, fx);
+  const quoted = groupPrice(model, group, fx);
+  const useRates =
+    !model.pricingAvailable || conversion.reference !== conversion.site;
+  const canQuote =
+    useRates &&
+    quoted.unit === "tokens" &&
+    quoted.rows.length > 0 &&
+    group.ratio !== null &&
+    Number.isFinite(group.ratio) &&
+    group.ratio >= 0 &&
+    [conversion.reference, conversion.site].every(
+      (n) => Number.isFinite(n) && n > 0,
+    ) &&
+    quoted.rows.every(({ rates }) =>
+      [rates.p, rates.c].every((n) => Number.isFinite(n) && n >= 0),
+    );
+  const quotedPrice = (field: "p" | "c", actual: boolean) => {
+    const amounts = quoted.rows.map(
+      ({ rates }) =>
+        rates[field] *
+        (actual ? conversion.site * group.ratio! : conversion.reference),
+    );
+    return priceRange({
+      minimum: Math.min(...amounts),
+      maximum: Math.max(...amounts),
+    });
+  };
   // #12 价格口径：perMillion 字段（元/百万 tokens）直显为第一层级，
   // 「1 亿 Token 费用参考」降级为折叠示例。
-  const hasPerMillion = model.pricingAvailable;
+  const hasPerMillion = model.pricingAvailable || canQuote;
   return (
     <section
       className="billing-prices"
@@ -141,13 +203,29 @@ export function BillingPrices({
           <tbody>
             <tr>
               <th scope="row">{c.inputPrice}</th>
-              <td>{perMillionPrice(model.officialInputCnyPerMillion)}</td>
-              <td>{perMillionPrice(model.actualInputCnyPerMillion)}</td>
+              <td>
+                {canQuote
+                  ? quotedPrice("p", false)
+                  : perMillionPrice(model.officialInputCnyPerMillion)}
+              </td>
+              <td>
+                {canQuote
+                  ? quotedPrice("p", true)
+                  : perMillionPrice(model.actualInputCnyPerMillion)}
+              </td>
             </tr>
             <tr>
               <th scope="row">{c.outputPrice}</th>
-              <td>{perMillionPrice(model.officialOutputCnyPerMillion)}</td>
-              <td>{perMillionPrice(model.actualOutputCnyPerMillion)}</td>
+              <td>
+                {canQuote
+                  ? quotedPrice("c", false)
+                  : perMillionPrice(model.officialOutputCnyPerMillion)}
+              </td>
+              <td>
+                {canQuote
+                  ? quotedPrice("c", true)
+                  : perMillionPrice(model.actualOutputCnyPerMillion)}
+              </td>
             </tr>
           </tbody>
         </table>
@@ -165,7 +243,7 @@ export function BillingPrices({
                 String(
                   estimate.savingPercent >= 99 && estimate.savingPercent < 100
                     ? Math.floor(estimate.savingPercent * 10) / 10
-                    : Math.round(estimate.savingPercent),
+                    : Math.round(estimate.savingPercent * 10) / 10,
                 ),
               )}
             </span>
@@ -196,7 +274,8 @@ export function BillingPrices({
                       c.defaultGroup,
                     ),
                   )
-                  .replace("{{fx}}", fx)
+                  .replace("{{referenceFx}}", String(conversion.reference))
+                  .replace("{{siteFx}}", String(conversion.site))
                   .replace(
                     "{{tiered}}",
                     estimate.tiered ? c.estimateTieredNote : "",

@@ -86,6 +86,73 @@ afterEach(() => {
 });
 
 describe("global desktop close choice and cooperative exit", () => {
+  it("defaults to restoring and preserving remote keys through the native owner", async () => {
+    await openSettingsChoice();
+    expect(screen.getByRole("dialog")).toHaveTextContent("请先保存任务");
+    fireEvent.click(screen.getByRole("button", { name: "恢复原设置并退出" }));
+    await flush();
+    expect(native).toHaveBeenCalledWith("quit_desktop_assistant", {
+      restoreSettings: true,
+    });
+    expect(
+      native.mock.calls.some(
+        ([command]) => command === "manage_tool_connections_v1",
+      ),
+    ).toBe(false);
+  });
+  it("explicit preserve exit never requests restoration", async () => {
+    await openSettingsChoice();
+    fireEvent.click(screen.getByRole("button", { name: "保留接入并退出" }));
+    await flush();
+    expect(native).toHaveBeenCalledWith("quit_desktop_assistant", {
+      restoreSettings: false,
+    });
+  });
+  it("names failed tools and offers retry or preserve exit without hiding successes", async () => {
+    await openSettingsChoice();
+    fireEvent.click(screen.getByRole("button", { name: "恢复原设置并退出" }));
+    await flush();
+    emit("yeschoy://exit-progress", {
+      status: "restore_failed",
+      failedTools: ["codex_desktop"],
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent("Codex Desktop");
+    expect(
+      screen.getByRole("button", { name: "重试恢复并退出" }),
+    ).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "重试恢复并退出" }));
+    await flush();
+    expect(quitCalls().at(-1)?.[1]).toEqual({ restoreSettings: true });
+    emit("yeschoy://exit-progress", {
+      status: "restore_failed",
+      failedTools: ["codex_desktop"],
+    });
+    fireEvent.click(screen.getByRole("button", { name: "保留剩余设置并退出" }));
+    await flush();
+    expect(quitCalls().at(-1)?.[1]).toEqual({ restoreSettings: false });
+  });
+  it("reads back a lost restoration result and keeps unsafe tool names off screen", async () => {
+    await openSettingsChoice();
+    fireEvent.click(screen.getByRole("button", { name: "恢复原设置并退出" }));
+    await flush();
+    emit("yeschoy://exit-progress", { status: "restoring_settings" });
+    emit("yeschoy://exit-progress", {
+      status: "restore_failed",
+      failedTools: ["private/path"],
+    });
+    expect(document.body).not.toHaveTextContent("private/path");
+    shutdown = {
+      status: "restore_failed",
+      failedTools: ["pi"],
+    } as typeof shutdown;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(20_000);
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent("Pi");
+    expect(
+      screen.getByRole("button", { name: "保留剩余设置并退出" }),
+    ).toBeEnabled();
+  });
   it("opens from native X without visiting Settings and does not request shutdown", async () => {
     render(<ShutdownHost />);
     await flush();
@@ -93,7 +160,9 @@ describe("global desktop close choice and cooperative exit", () => {
     emit("yeschoy://close-choice");
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "后台运行" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "确认退出" })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "恢复原设置并退出" }),
+    ).toBeEnabled();
     expect(quitCalls()).toHaveLength(0);
   });
 
@@ -171,7 +240,7 @@ describe("global desktop close choice and cooperative exit", () => {
         });
     });
     await openSettingsChoice();
-    fireEvent.click(screen.getByRole("button", { name: "确认退出" }));
+    fireEvent.click(screen.getByRole("button", { name: "恢复原设置并退出" }));
     await act(async () => {
       await vi.advanceTimersByTimeAsync(20_000);
     });
@@ -190,7 +259,7 @@ describe("global desktop close choice and cooperative exit", () => {
 
   it("accepts native finishing progress and allows idempotent repeat requests", async () => {
     await openSettingsChoice();
-    fireEvent.click(screen.getByRole("button", { name: "确认退出" }));
+    fireEvent.click(screen.getByRole("button", { name: "恢复原设置并退出" }));
     await flush();
     emit("yeschoy://exit-progress", { status: "finishing_operation" });
     fireEvent.click(screen.getByRole("button", { name: "重试退出" }));
@@ -201,7 +270,7 @@ describe("global desktop close choice and cooperative exit", () => {
 
   it("can dismiss progress with Escape without undoing the confirmed exit", async () => {
     await openSettingsChoice();
-    fireEvent.click(screen.getByRole("button", { name: "确认退出" }));
+    fireEvent.click(screen.getByRole("button", { name: "恢复原设置并退出" }));
     await flush();
     fireEvent(
       screen.getByRole("dialog"),
@@ -219,9 +288,11 @@ describe("global desktop close choice and cooperative exit", () => {
   it("presents IPC failures as a retry without exposing raw details", async () => {
     await openSettingsChoice();
     native.mockRejectedValueOnce(new Error("secret-fixture-path-and-key"));
-    fireEvent.click(screen.getByRole("button", { name: "确认退出" }));
+    fireEvent.click(screen.getByRole("button", { name: "恢复原设置并退出" }));
     await flush();
-    expect(screen.getByRole("alert")).toHaveTextContent("暂时无法确认退出状态");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "暂时无法确认退出状态",
+    );
     expect(screen.getByRole("button", { name: "重试退出" })).toBeEnabled();
     expect(document.body).not.toHaveTextContent("secret-fixture-path-and-key");
   });
@@ -229,7 +300,7 @@ describe("global desktop close choice and cooperative exit", () => {
   it("rejects invalid success payloads instead of claiming the host exited", async () => {
     await openSettingsChoice();
     native.mockResolvedValueOnce({ status: "finished", raw: "private-error" });
-    fireEvent.click(screen.getByRole("button", { name: "确认退出" }));
+    fireEvent.click(screen.getByRole("button", { name: "恢复原设置并退出" }));
     await flush();
     expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(document.body).not.toHaveTextContent("private-error");
@@ -241,7 +312,9 @@ describe("global desktop close choice and cooperative exit", () => {
     fireEvent.click(screen.getByRole("button", { name: "后台运行" }));
     await flush();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "确认退出" })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "恢复原设置并退出" }),
+    ).toBeEnabled();
     expect(quitCalls()).toHaveLength(0);
   });
 

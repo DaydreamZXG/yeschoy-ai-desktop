@@ -481,7 +481,7 @@ export function AppLibraryView({
           >
             <header>
               <span className="configuration-app-icon">
-                <b>{app.mark}</b>
+                {app.icon ? <AppGlyph source={app.icon} /> : <b>{app.mark}</b>}
               </span>
               <div>
                 <h2>{app.name}</h2>

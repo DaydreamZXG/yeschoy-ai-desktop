@@ -1114,6 +1114,35 @@ fn bounded_text(value: Option<&Value>, maximum: usize) -> String {
     value.to_owned()
 }
 
+// Pricing rules may be formatted across lines. Normalize whitespace outside
+// quoted strings only; keep the existing bounds/control-character checks.
+fn billing_expression(value: Option<&Value>) -> String {
+    let Some(raw) = value.and_then(Value::as_str) else {
+        return String::new();
+    };
+    if raw.chars().count() > 8192 {
+        return String::new();
+    }
+    let mut quoted = false;
+    let mut escaped = false;
+    let normalized: String = raw
+        .chars()
+        .map(|c| {
+            let in_string = quoted;
+            if c == '"' && !escaped {
+                quoted = !quoted;
+            }
+            escaped = in_string && !escaped && c == '\\';
+            if !in_string && matches!(c, '\n' | '\r' | '\t') {
+                ' '
+            } else {
+                c
+            }
+        })
+        .collect();
+    bounded_text(Some(&Value::String(normalized)), 8192)
+}
+
 fn parse_account(account: Option<&Value>, status: Option<&Value>) -> AccountSummary {
     let Some(data) = data_object(account) else {
         return AccountSummary::default();
@@ -1342,7 +1371,7 @@ fn parse_models(
                         .map(|(input, ratio)| input * ratio)
                         .filter(|n| n.is_finite()),
                     request_usd: nonnegative_number(row.get("model_price")),
-                    expression: bounded_text(row.get("billing_expr"), 8192),
+                    expression: billing_expression(row.get("billing_expr")),
                 }),
             }
         })
@@ -2118,6 +2147,37 @@ mod tests {
                 "{COMPILED_AUTHORIZATION_PAGE_ORIGIN}/desktop-authorize?user_code=ABCD-2345"
             ))
         );
+    }
+
+    #[test]
+    fn multiline_billing_rules_survive_model_projection() {
+        let ids = ["deepseek-v4-flash", "deepseek-v4.1-flash"];
+        let models = json!({"success":true,"data":ids});
+        let account = json!({"success":true,"data":{"group":"default"}});
+        let rule = "weekday(\"Asia/Shanghai\") >= 1\n\t? tier(\"高峰期\", p * 2 + cr * 0.04 + c * 8)\r\n: tier(\"非高峰期\", p + cr * 0.02 + c * 4)";
+        let pricing = json!({"success":true,"group_ratio":{"default":0.35},
+            "usable_group":{"default":"标准分组"},
+            "data":ids.map(|id| json!({"model_name":id,"billing_mode":"tiered_expr",
+                "billing_expr":rule,"enable_groups":["default"]}))});
+        let projected = parse_models(Some(&models), Some(&pricing), Some(&account), Some(1.0));
+        assert_eq!(projected.len(), 2);
+        for model in projected {
+            assert_eq!(
+                model.billing.unwrap().expression,
+                rule.replace(['\n', '\r', '\t'], " ")
+            );
+        }
+        assert!(bounded_text(Some(&json!(rule)), 8192).is_empty());
+    }
+
+    #[test]
+    fn billing_rule_normalization_keeps_text_security_checks() {
+        for text in ["p + c\u{001b}", "p + c\u{202e}", "tier(\"a\nb\", p + c)"] {
+            assert!(billing_expression(Some(&json!(text))).is_empty());
+        }
+        assert!(billing_expression(Some(&json!(" ".repeat(8193)))).is_empty());
+        let quoted = r#"tier("escaped \" quote", p + c)"#;
+        assert_eq!(billing_expression(Some(&json!(quoted))), quoted);
     }
 
     #[test]

@@ -18,22 +18,49 @@ const EXIT_PROGRESS_EVENT = "yeschoy://exit-progress";
 // never a renderer instruction to interrupt a native transaction.
 const FINISHING_NOTICE_MS = 20_000;
 
-type ExitStatus = "exiting" | "finishing_operation" | "retryable_error";
+type ExitStatus =
+  | "exiting"
+  | "finishing_operation"
+  | "restoring_settings"
+  | "restore_failed"
+  | "retryable_error";
 type ExitPhase = "choice" | ExitStatus;
-type ExitResponse = { status: ExitStatus };
+type ExitResponse = { status: ExitStatus; failedTools?: string[] };
 type ExitState = { closeRequested: boolean; shutdown: ExitResponse | null };
 
 function exitResponse(raw: unknown): ExitResponse | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const value = raw as Record<string, unknown>;
   if (
-    Object.keys(value).length !== 1 ||
-    !["exiting", "finishing_operation", "retryable_error"].includes(
-      String(value.status),
-    )
+    Object.keys(value).some(
+      (key) => !["status", "failedTools"].includes(key),
+    ) ||
+    ("failedTools" in value &&
+      (!Array.isArray(value.failedTools) ||
+        value.failedTools.length > 5 ||
+        value.failedTools.some(
+          (tool) =>
+            ![
+              "claude_code",
+              "claude_desktop",
+              "codex_desktop",
+              "pi",
+              "dsh_web",
+            ].includes(String(tool)),
+        ))) ||
+    ![
+      "exiting",
+      "finishing_operation",
+      "restoring_settings",
+      "restore_failed",
+      "retryable_error",
+    ].includes(String(value.status))
   )
     return null;
-  return { status: value.status as ExitStatus };
+  return {
+    status: value.status as ExitStatus,
+    failedTools: value.failedTools as string[] | undefined,
+  };
 }
 
 function exitState(raw: unknown): ExitState | null {
@@ -53,7 +80,7 @@ export function QuitAssistant() {
       <div>
         <strong>后台运行</strong>
         <p>
-          关闭窗口时可选择后台运行或完全退出。完全退出会暂停需要助手的连接。
+          关闭时可选择后台运行，或恢复原设置并退出；也可以保留接入设置退出。
         </p>
       </div>
       <button
@@ -95,30 +122,36 @@ export function ShutdownHost() {
   const [visible, setVisible] = useState(false);
   const [phase, setPhase] = useState<ExitPhase>("choice");
   const [error, setError] = useState(false);
+  const [failedTools, setFailedTools] = useState<string[]>([]);
+  const restoreChoice = useRef(true);
+  const submitting = useRef(false);
 
   const applyProgress = useCallback((raw: unknown) => {
     const response = exitResponse(raw);
     if (!mounted.current || !response) return false;
     setPhase(response.status);
+    setFailedTools(response.failedTools ?? []);
     setError(response.status === "retryable_error");
     return true;
   }, []);
 
-  const refreshState = useCallback(async (openIfRequested = false) => {
-    try {
-      const raw = await invoke<unknown>("read_desktop_exit_state");
-      const state = exitState(raw);
-      if (!mounted.current || !state) return;
-      if (state.shutdown) {
-        setPhase(state.shutdown.status);
-        setError(state.shutdown.status === "retryable_error");
+  const refreshState = useCallback(
+    async (openIfRequested = false) => {
+      try {
+        const raw = await invoke<unknown>("read_desktop_exit_state");
+        const state = exitState(raw);
+        if (!mounted.current || !state) return;
+        if (state.shutdown) {
+          applyProgress(state.shutdown);
+        }
+        if (openIfRequested && state.closeRequested) setVisible(true);
+      } catch {
+        // A renderer-only preview has no native bridge. Explicit actions below
+        // still report failure instead of pretending to exit.
       }
-      if (openIfRequested && state.closeRequested) setVisible(true);
-    } catch {
-      // A renderer-only preview has no native bridge. Explicit actions below
-      // still report failure instead of pretending to exit.
-    }
-  }, []);
+    },
+    [applyProgress],
+  );
 
   useEffect(() => {
     mounted.current = true;
@@ -167,15 +200,22 @@ export function ShutdownHost() {
   }, [visible]);
 
   useEffect(() => {
-    if (phase !== "exiting") return;
+    if (
+      phase !== "exiting" &&
+      phase !== "restoring_settings" &&
+      phase !== "finishing_operation"
+    )
+      return;
     // Native events are primary. This fallback keeps a missing IPC response
     // from leaving a permanently disabled or inescapable progress dialog.
-    const timer = setTimeout(
-      () => setPhase("finishing_operation"),
-      FINISHING_NOTICE_MS,
-    );
-    return () => clearTimeout(timer);
-  }, [phase]);
+    const timer = setInterval(() => {
+      setPhase((current) =>
+        current === "exiting" ? "finishing_operation" : current,
+      );
+      void refreshState();
+    }, FINISHING_NOTICE_MS);
+    return () => clearInterval(timer);
+  }, [phase, refreshState]);
 
   const dismiss = () => {
     setVisible(false);
@@ -193,12 +233,17 @@ export function ShutdownHost() {
     }
   };
 
-  const confirmExit = async () => {
+  const confirmExit = async (restoreSettings = restoreChoice.current) => {
+    if (submitting.current) return;
+    submitting.current = true;
+    restoreChoice.current = restoreSettings;
     const sequence = ++requestSequence.current;
     setError(false);
     setPhase("exiting");
     try {
-      const response = await invoke<unknown>("quit_desktop_assistant");
+      const response = await invoke<unknown>("quit_desktop_assistant", {
+        restoreSettings,
+      });
       if (!mounted.current || sequence !== requestSequence.current) return;
       if (!applyProgress(response)) {
         setPhase("retryable_error");
@@ -209,6 +254,8 @@ export function ShutdownHost() {
         setPhase("retryable_error");
         setError(true);
       }
+    } finally {
+      submitting.current = false;
     }
   };
 
@@ -228,6 +275,13 @@ export function ShutdownHost() {
       {phase === "choice" ? (
         <>
           <p>后台运行会最小化窗口并保持连接；完全退出会停止助手的后台连接。</p>
+          <p>
+            默认恢复接入前的设置并退出。请先保存任务：助手会请求 Codex、Claude
+            正常关闭，不会强制结束或自动重新打开。命令行应用的设置下次启动生效。
+          </p>
+          <p>
+            保留你后来修改过的设置和聊天记录，不撤销远端密钥。恢复后再次打开应用，可能使用原来的官方账号或其他服务。
+          </p>
           {unknown ? (
             <p>
               暂时无法确认哪些应用需要助手运行。完全退出可能中断正在使用的连接，设置不会被删除。
@@ -253,6 +307,24 @@ export function ShutdownHost() {
             </p>
           )}
         </>
+      ) : phase === "restore_failed" ? (
+        <div role="alert">
+          <p>以下应用未能完成恢复，助手尚未退出：</p>
+          <ul>
+            {failedTools.map((tool) => (
+              <li key={tool}>
+                {WORKBENCH_APPS.find((app) => app.id === tool)?.name ?? tool}
+              </li>
+            ))}
+          </ul>
+          <p>
+            请先保存并关闭相关应用，确认系统安全存储可用后重试。旧版缺少原设置时无法自动恢复。已完成的恢复不会回退；也可保留剩余设置继续退出。
+          </p>
+        </div>
+      ) : phase === "restoring_settings" ? (
+        <p role="status">
+          正在正常关闭相关桌面应用并恢复设置；不会强制结束任务。若有保存提示，请先处理。完成后退出助手。
+        </p>
       ) : phase === "finishing_operation" ? (
         <p role="status">
           正在完成当前接入或账号操作，避免设置损坏。安全收尾后会自动退出；你可以收起提示或在后台等待。
@@ -276,11 +348,33 @@ export function ShutdownHost() {
         <button type="button" onClick={background}>
           {phase === "choice" ? "后台运行" : "在后台等待"}
         </button>
+        {(phase === "choice" || phase === "restore_failed") && (
+          <button
+            type="button"
+            onClick={() => {
+              void confirmExit(false);
+            }}
+          >
+            {phase === "choice" ? "保留接入并退出" : "保留剩余设置并退出"}
+          </button>
+        )}
         {phase === "choice" ||
+        phase === "restore_failed" ||
         phase === "retryable_error" ||
         phase === "finishing_operation" ? (
-          <button type="button" onClick={confirmExit}>
-            {phase === "choice" ? "确认退出" : "重试退出"}
+          <button
+            type="button"
+            onClick={() => {
+              void confirmExit(
+                phase === "restore_failed" ? true : restoreChoice.current,
+              );
+            }}
+          >
+            {phase === "choice"
+              ? "恢复原设置并退出"
+              : phase === "restore_failed"
+                ? "重试恢复并退出"
+                : "重试退出"}
           </button>
         ) : (
           <button

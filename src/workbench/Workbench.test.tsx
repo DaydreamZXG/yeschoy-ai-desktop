@@ -413,7 +413,7 @@ describe("official workbench", () => {
       fireEvent.click(option);
       expect(screen.queryByText(/Synthetic upstream/)).not.toBeInTheDocument();
       const group = within(
-        screen.getByRole("group", { name: "选择计费分组" }),
+        screen.getByRole("group", { name: "选择价格方案" }),
       ).getByRole("radio", { name: /国模特价分组/ });
       fireEvent.click(group);
       expect(group).toBeChecked();
@@ -833,8 +833,8 @@ describe("official workbench", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "模型与价格" }));
     expect((await screen.findAllByText("glm-5.3")).length).toBeGreaterThan(1);
-    expect(screen.getByText("¥260")).toBeInTheDocument();
-    expect(screen.getByText("¥130")).toBeInTheDocument();
+    expect(screen.getByText("¥201.01")).toBeInTheDocument();
+    expect(document.querySelector(".billing-comparison-card.is-yeschoy strong")).toHaveTextContent("¥100.5");
     expect(screen.getByText("参考换算值 1")).toBeInTheDocument();
     expect(screen.getByText(/50%/)).toBeInTheDocument();
   });
@@ -972,7 +972,7 @@ describe("official workbench", () => {
       await screen.findByRole("button", { name: "一键接入" });
       if (billingGroup === "国模特价分组") {
         fireEvent.click(screen.getByRole("radio", { name: /国模特价分组/ }));
-        expect(screen.getByText("¥91")).toBeInTheDocument();
+        expect(document.querySelector(".billing-comparison-card.is-yeschoy strong")).toHaveTextContent("¥70.35");
         expect(
           screen.getByRole("radio", { name: /国模特价分组/ }),
         ).toBeChecked();

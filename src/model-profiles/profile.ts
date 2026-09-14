@@ -20,6 +20,13 @@ export function modelDisplayName(id: string): string {
   return profiles.get(id)?.displayName ?? id;
 }
 
+// Image generation is not a chat/agent model. Do not hide vision-capable chat.
+export function isImageGenerationModel(id: string): boolean {
+  return /^(?:gpt-image(?:-|$)|dall-e(?:-|$))/.test(
+    id.toLowerCase().split("/").at(-1) ?? "",
+  );
+}
+
 export interface ModelCapabilities {
   contextWindow?: number;
   maxOutputTokens?: number;

@@ -1,5 +1,8 @@
-import claudeIcon from "../assets/icons/claude.svg";
-import codexIcon from "../assets/icons/chatgpt.svg";
+import claudeIcon from "../assets/icons/official-claude.svg";
+import codexIcon from "../assets/icons/official-codex.png";
+import piIcon from "../assets/icons/official-pi.svg";
+import dshIcon from "../assets/icons/official-dsh.svg";
+import opencodeIcon from "../assets/icons/official-opencode.svg";
 import type { ActivationToolId } from "../configuration/activation";
 
 /**
@@ -36,9 +39,9 @@ export const WORKBENCH_APPS: {
     id: "dsh_web",
     name: "DSH web",
     description: "DeepSeek 浏览器工作台",
-    mark: "D",
+    icon: dshIcon,
   },
-  { id: "pi", name: "Pi", description: "轻巧的编程助手", mark: "π" },
+  { id: "pi", name: "Pi", description: "轻巧的编程助手", icon: piIcon },
   {
     id: "claude_code",
     name: "Claude Code",
@@ -52,7 +55,8 @@ export const COMING_SOON_APPS: {
   id: string;
   name: string;
   description: string;
+  icon?: string;
   mark?: string;
 }[] = [
-  { id: "opencode", name: "OpenCode", description: "开源终端编程助手", mark: "O" },
+  { id: "opencode", name: "OpenCode", description: "开源终端编程助手", icon: opencodeIcon },
 ];

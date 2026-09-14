@@ -252,11 +252,24 @@ export interface HundredMillionTokenEstimate {
   savingPercent: number | null;
 }
 
-// A transparent, deliberately simple comparison for a cache-heavy workload:
-// 10M new input + 80M cache reads + 10M output = 100M tokens.
-const NEW_INPUT_MILLIONS = 10;
-const CACHE_READ_MILLIONS = 80;
-const OUTPUT_MILLIONS = 10;
+// Product's fixed comparison policy, not a live exchange-rate service.
+// Domestic models keep their existing CNY pricing basis.
+export function billingConversion(model: AccountModel, fx: string) {
+  const id = model.id.toLowerCase().split("/").at(-1) ?? "";
+  const foreign = /^(?:gpt-|chatgpt-|o[134](?:-|$)|claude-|gemini-)/.test(id);
+  return foreign
+    ? { reference: 6.75, site: 1 }
+    : { reference: Number(fx), site: Number(fx) };
+}
+
+// Token-weighted average of the four user-supplied billing samples (2026-09-14).
+// Input includes cache: 650,414 input - 645,888 cached = 4,526 new input;
+// 1,096 output. Normalize the 651,510 total tokens to 100M, without rounding.
+// This is the supplied sample average, not a server-wide measured average.
+const SAMPLE_TOTAL_TOKENS = 650_414 + 1_096;
+const NEW_INPUT_MILLIONS = (4_526 / SAMPLE_TOTAL_TOKENS) * 100;
+const CACHE_READ_MILLIONS = (645_888 / SAMPLE_TOTAL_TOKENS) * 100;
+const OUTPUT_MILLIONS = (1_096 / SAMPLE_TOTAL_TOKENS) * 100;
 
 // 服务端未提供 USD 基准价时，用 CNY 每百万价套用同一工作负载公式。
 // 缓存命中价无独立口径，按输入价计（cacheFallback=true 会在 UI 标注）。
@@ -301,6 +314,29 @@ export function hundredMillionTokenEstimate(
   if (rows.length === 0) {
     const estimate = perMillionCnyEstimate(model);
     if (estimate) {
+      const conversion = billingConversion(model, fx);
+      if (conversion.reference !== conversion.site) {
+        const originalRate = Number(fx);
+        if (!Number.isFinite(originalRate) || originalRate <= 0) return null;
+        const base = estimate.official.minimum / originalRate;
+        estimate.official = {
+          minimum: base * conversion.reference,
+          maximum: base * conversion.reference,
+        };
+        estimate.yeschoy = {
+          minimum: base * conversion.site * group.ratio,
+          maximum: base * conversion.site * group.ratio,
+        };
+        estimate.savingPercent =
+          estimate.official.minimum > 0
+            ? Math.max(
+                0,
+                (1 - estimate.yeschoy.minimum / estimate.official.minimum) *
+                  100,
+              )
+            : null;
+        return estimate;
+      }
       estimate.yeschoy = {
         minimum: estimate.official.minimum * group.ratio,
         maximum: estimate.official.maximum * group.ratio,
@@ -310,8 +346,13 @@ export function hundredMillionTokenEstimate(
     }
     return estimate;
   }
-  const exchange = Number(fx);
-  if (!Number.isFinite(exchange) || exchange <= 0) return null;
+  const conversion = billingConversion(model, fx);
+  if (
+    ![conversion.reference, conversion.site].every(
+      (n) => Number.isFinite(n) && n > 0,
+    )
+  )
+    return null;
 
   let cacheFallback = false;
   const official = rows.flatMap((row) => {
@@ -329,14 +370,17 @@ export function hundredMillionTokenEstimate(
       Number.isFinite(cacheRead) && cacheRead >= 0 ? cacheRead : input;
     if (cache === input && cacheRead === undefined) cacheFallback = true;
     return [
-      exchange *
+      conversion.reference *
         (NEW_INPUT_MILLIONS * input +
           CACHE_READ_MILLIONS * cache +
           OUTPUT_MILLIONS * output),
     ];
   });
   if (official.length !== rows.length || official.length === 0) return null;
-  const actual = official.map((amount) => amount * group.ratio!);
+  const actual = official.map(
+    (amount) =>
+      (amount / conversion.reference) * conversion.site * group.ratio!,
+  );
   return {
     currency: "CNY",
     official: {
@@ -349,7 +393,11 @@ export function hundredMillionTokenEstimate(
     },
     cacheFallback,
     tiered: rows.length > 1,
-    savingPercent:
-      group.ratio < 1 ? Math.max(0, (1 - group.ratio) * 100) : null,
+    savingPercent: official.some((amount) => amount > 0)
+      ? Math.max(
+          0,
+          (1 - (conversion.site * group.ratio) / conversion.reference) * 100,
+        )
+      : null,
   };
 }

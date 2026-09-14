@@ -651,13 +651,7 @@
   display: block;
   width: 23px;
   height: 23px;
-  background: currentColor;
-  mask-size: contain;
-  mask-position: center;
-  mask-repeat: no-repeat;
-  -webkit-mask-size: contain;
-  -webkit-mask-position: center;
-  -webkit-mask-repeat: no-repeat;
+  object-fit: contain;
 }
 
 [data-accent="clay"] .app-card-icon {
@@ -5628,6 +5622,49 @@
 .billing-group-picker > p {
   font-size: 12px;
   margin: 0 0 9px;
+}
+
+.billing-plan-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.billing-plan-card .billing-group-option {
+  flex: 1;
+  align-items: flex-start;
+}
+
+.billing-plan-card .billing-plan-price {
+  font: 650 18px var(--font-mono);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.billing-plan-badges {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.billing-plan-badges small {
+  color: var(--accent);
+}
+
+.billing-plan-details {
+  padding: 6px 11px;
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.billing-plan-details summary {
+  cursor: pointer;
+  width: fit-content;
+}
+
+.billing-plan-details p {
+  margin: 6px 0;
 }
 
 .billing-group-grid {

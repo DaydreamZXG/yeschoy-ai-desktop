@@ -3184,6 +3184,28 @@
           "PAGE-CONFIGURE-PREVIEW"
         ]
       }
+    },
+    {
+      "id": "DEC-126",
+      "question": "May current inherited changes be reconciled and explicit restore-before-exit be implemented?",
+      "choice": "Owner allows current baseline including Trae and pricing/plan changes. Preserve historical proof and existing source. Implement explicit user exit default restore, preserve-exit alternative, normal desktop quit after save confirmation, no forced termination, no automatic reopen/official billing, no token revocation, conflict-preserving file rollback, partial failure retry/continue with named tools, and updates/installer shutdown preserve settings. Validate on fixture-only native and renderer tests; no installed apps, secrets, server mutation, commit, package or push. CLI settings restore for next session, no terminal process termination. No full-product or real-device acceptance claim.",
+      "status": "accepted",
+      "decidedBy": "product owner: 可以; 允许",
+      "decidedAt": "2026-09-14T07:00:00Z",
+      "approvesBaselineReconciliation": true,
+      "evidenceRefs": [
+        "E-USER-101"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-100"
+        ],
+        "domainRefs": [
+          "desktop-platform",
+          "tool-config"
+        ],
+        "pageRefs": []
+      }
     }
   ]
 }

@@ -18,13 +18,16 @@ import {
   groupLabel,
 } from "./BillingGroupPicker";
 import { chooseBillingGroup } from "./billing";
+import { isImageGenerationModel } from "../model-profiles/profile";
 import { modelConnectionMode, modelSupportsTool } from "./modelCompatibility";
 import type { AccountSessionController } from "../account/useAccountSession";
 import { balanceAlert } from "../account/finance";
 import { LowBalanceBanner } from "../workbench/LowBalanceBanner";
 import { useWalletRecharge } from "../workbench/useWalletRecharge";
-import claudeIcon from "../assets/icons/claude.svg";
-import codexIcon from "../assets/icons/chatgpt.svg";
+import claudeIcon from "../assets/icons/official-claude.svg";
+import codexIcon from "../assets/icons/official-codex.png";
+import piIcon from "../assets/icons/official-pi.svg";
+import dshIcon from "../assets/icons/official-dsh.svg";
 import { ModelPicker } from "./ModelPicker";
 import { connectionLabel, useConnections } from "./connections";
 import { RestoreConnection } from "./RestoreConnection";
@@ -128,14 +131,14 @@ const APPLICATIONS: readonly ApplicationChoice[] = [
     toolId: "pi",
     displayName: "Pi",
     surface: "surfacePi",
-    mark: "π",
+    icon: piIcon,
   },
   {
     id: "dsh_web",
     toolId: "dsh",
     displayName: "DSH web",
     surface: "surfaceDsh",
-    mark: "D",
+    icon: dshIcon,
   },
 ];
 
@@ -504,7 +507,11 @@ export function ConfigurationPreviewView({
     : null;
   const recharge = useWalletRecharge(session.openWallet);
   const accountModels =
-    signedIn && session.projection ? session.projection.models : [];
+    signedIn && session.projection
+      ? session.projection.models.filter(
+          (model) => !isImageGenerationModel(model.id),
+        )
+      : [];
   const models = useMemo(() => {
     const hasCompatibilityEvidence = accountModels.some(
       (model) => model.supportedEndpointTypes !== undefined,
@@ -1837,6 +1844,7 @@ export function ConfigurationPreviewView({
                 </div>
                 <BillingGroupPicker
                   model={selectedModel}
+                  fx={session.projection?.comparisonFx ?? ""}
                   selected={billingGroup}
                   disabled={applyPhase === "applying"}
                   onChange={(id) => {

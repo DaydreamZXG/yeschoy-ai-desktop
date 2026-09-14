@@ -33,6 +33,45 @@ const fixture = (
 });
 
 describe("billing display follows the selected NewAPI group", () => {
+  it.each(["deepseek-v4-flash", "deepseek-v4.1-flash"])(
+    "estimates the published multiline DeepSeek rule: %s",
+    (id) => {
+      const model = fixture();
+      model.id = id;
+      model.billing!.expression =
+        '(((weekday("Asia/Shanghai") >= 1 && weekday("Asia/Shanghai") <= 5) &&\n  ((hour("Asia/Shanghai") >= 9 && hour("Asia/Shanghai") < 12) ||\n   (hour("Asia/Shanghai") >= 14 && hour("Asia/Shanghai") < 18)))\n ? tier("高峰期", p * 2 + cr * 0.04 + c * 8)\n : tier("非高峰期", p * 1 + cr * 0.02 + c * 4))';
+      const estimate = hundredMillionTokenEstimate(
+        model,
+        model.billing!.groups[1],
+        "1",
+      )!;
+      expect(estimate.official.minimum).toBeCloseTo(3.35033384);
+      expect(estimate.official.maximum).toBeCloseTo(6.70066768);
+      expect(estimate.yeschoy.minimum).toBeCloseTo(3.35033384 * 0.35);
+      expect(estimate.yeschoy.maximum).toBeCloseTo(6.70066768 * 0.35);
+    },
+  );
+
+  it.each(["1", "7", ""])(
+    "uses 6.75 official FX and 1:1 site pricing, independent of %s",
+    (fx) => {
+      const model = fixture();
+      model.id = "gpt-6-astra";
+      model.billing!.expression =
+        'len <= 272000 ? tier("standard", p * 10 + c * 50 + cr * 1) : tier("long_context", p * 20 + c * 75 + cr * 2)';
+      const estimate = hundredMillionTokenEstimate(
+        model,
+        { id: "special", ratio: 0.4, description: "" },
+        fx,
+      )!;
+      expect(estimate.official.minimum).toBeCloseTo(772.84293411);
+      expect(estimate.official.maximum).toBeCloseTo(1517.29796933);
+      expect(estimate.yeschoy.minimum).toBeCloseTo(45.79809980);
+      expect(estimate.yeschoy.maximum).toBeCloseTo(89.91395374);
+      expect(estimate.savingPercent).toBeCloseTo(94.074074);
+    },
+  );
+
   it("uses site cache rates in the 100M-token comparison instead of charging cached input as new input", () => {
     const model = fixture("ratio");
     model.billing = {
@@ -46,8 +85,8 @@ describe("billing display follows the selected NewAPI group", () => {
     const group = { id: "special", description: "", ratio: 0.16 };
     const result = hundredMillionTokenEstimate(model, group, "1")!;
     expect(result.cacheFallback).toBe(false);
-    expect(result.official.minimum).toBeCloseTo(16.1);
-    expect(result.yeschoy.minimum).toBeCloseTo(2.576);
+    expect(result.official.minimum).toBeCloseTo(2.33196114);
+    expect(result.yeschoy.minimum).toBeCloseTo(2.33196114 * 0.16);
     expect(result.savingPercent).toBeCloseTo(84);
   });
   it("reads both time tiers without treating the model ratio as the dynamic price", () => {
@@ -103,13 +142,14 @@ describe("billing display follows the selected NewAPI group", () => {
     );
     expect(result).toMatchObject({
       currency: "CNY",
-      official: { minimum: 448, maximum: 896 },
       cacheFallback: false,
       tiered: true,
       savingPercent: 65,
     });
-    expect(result?.yeschoy.minimum).toBeCloseTo(156.8);
-    expect(result?.yeschoy.maximum).toBeCloseTo(313.6);
+    expect(result?.official.minimum).toBeCloseTo(47.29133858);
+    expect(result?.official.maximum).toBeCloseTo(94.58267717);
+    expect(result?.yeschoy.minimum).toBeCloseTo(47.29133858 * 0.35);
+    expect(result?.yeschoy.maximum).toBeCloseTo(94.58267717 * 0.35);
   });
 
   it("uses the input rate as a disclosed conservative cache fallback", () => {
@@ -120,11 +160,13 @@ describe("billing display follows the selected NewAPI group", () => {
       "7",
     );
     expect(result).toMatchObject({
-      official: { minimum: 2520, maximum: 2520 },
-      yeschoy: { minimum: 882, maximum: 882 },
       cacheFallback: true,
       tiered: false,
     });
+    expect(result?.official.minimum).toBeCloseTo(2107.06543261);
+    expect(result?.official.maximum).toBeCloseTo(2107.06543261);
+    expect(result?.yeschoy.minimum).toBeCloseTo(2107.06543261 * 0.35);
+    expect(result?.yeschoy.maximum).toBeCloseTo(2107.06543261 * 0.35);
   });
 
   it("does not invent a token estimate without FX, group ratio or token rates", () => {

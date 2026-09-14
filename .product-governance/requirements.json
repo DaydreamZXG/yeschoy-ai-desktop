@@ -2003,6 +2003,26 @@
         "Saved settings, launch-request receipt and last actual traffic remain distinct with actionable safe recovery.",
         "Complete renderer regressions, types and keyboard/responsive fixture-only browser QA; no installed apps operated."
       ]
+    },
+    {
+      "id": "REQ-100",
+      "statement": "Explicit exit restores owned settings by default with recoverable partial failure; background, updates and installer replacement preserve bindings.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "desktop-platform",
+      "evidenceRefs": [
+        "E-USER-101"
+      ],
+      "acceptance": [
+        "Restore after active transactions drain, before stopping helper runtimes; no premature app exit.",
+        "Normal close exact desktop installation with save confirmation; refused close does not mutate that tool.",
+        "Restore only unchanged owned fields and local credential state; preserve later changes, no remote token revocation or chat deletion.",
+        "Retry failed tools idempotently; explicit continue-exit stays available; duplicates join current work.",
+        "Windows native close offers restore/preserve/background without requiring WebView; macOS choice uses same native coordinator.",
+        "Update/installer shutdown bypass restoration; no automatic third-party reopen. CLI config applies on next session.",
+        "Fixture-only Rust/renderer tests and types; real-device testing deferred."
+      ]
     }
   ]
 }

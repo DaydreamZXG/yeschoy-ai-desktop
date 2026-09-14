@@ -212,6 +212,7 @@ export function ModelsView({
                 <ModelCapabilityBadges id={selected.id} />
                 <BillingGroupPicker
                   model={selected}
+                  fx={projection?.comparisonFx ?? ""}
                   selected={billingGroup}
                   onChange={setBillingGroup}
                 />

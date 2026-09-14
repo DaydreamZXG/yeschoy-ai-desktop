@@ -9758,6 +9758,107 @@
         "Need for native contract changes, installed app/config operations, real billing, packaging or production."
       ],
       "status": "planned"
+    },
+    {
+      "id": "WP-RU078-EXIT-RESTORE",
+      "wave": "integration",
+      "owner": "desktop-platform",
+      "riskClass": "high",
+      "objective": "Reconcile inherited source then implement process-owned restore-before-exit and cross-platform exit choices.",
+      "deliverables": [
+        "Native restore exit coordinator and fixture tests",
+        "Renderer default restore/preserve options and failure recovery",
+        "Fresh acceptance with inherited changes preserved"
+      ],
+      "requirementRefs": [
+        "REQ-100"
+      ],
+      "decisionRefs": [
+        "DEC-126"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No installed app operations in tests",
+        "No package/commit/push/deployment",
+        "No arbitrary processes or server credentials"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        "src/App.tsx",
+        "src/workbench/**",
+        "src/configuration/**",
+        "src/i18n/locales/**",
+        "tests/work_packages/ru077/**",
+        "scripts/qa/daily-use/**",
+        "docs/daily-use-ux.md",
+        "outputs/daily-use-ux-20260912.oRBnCY/**",
+        "src/settings/QuitAssistant.tsx",
+        "src/settings/QuitAssistant.test.tsx",
+        "src-tauri/src/lib.rs",
+        "src-tauri/src/exit_restore.rs",
+        "src-tauri/src/tool_activation.rs",
+        "src-tauri/src/tool_adapters/desktop_lifecycle.rs",
+        "tests/work_packages/ru078/**",
+        "docs/exit-restore.md"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "release/**",
+        "release-assets/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "Reuse encrypted recovery store without schema change.",
+        "rollback": "Source-only rollback, no user data touched by verification."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Existing quit callers preserve; new optional flag opts into restore.",
+        "supportedVersions": "exit@v1 and exit@v2; fixture-only Windows/macOS behavior",
+        "removalGate": "Retain old explicit preserve exit and updater drain."
+      },
+      "inputContracts": [
+        "desktop-connection-management@v2",
+        "desktop-assistant-exit@v1"
+      ],
+      "outputContracts": [
+        "desktop-assistant-exit@v2"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "exit-fixtures",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru078/test_exit.py::test_exit_fixtures",
+          "cwd": ".",
+          "timeoutSeconds": 600
+        },
+        {
+          "id": "exit-types",
+          "kind": "check",
+          "argv": [
+            "pnpm",
+            "typecheck"
+          ],
+          "cwd": ".",
+          "timeoutSeconds": 600,
+          "expectedExitCode": 0
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "EXIT-FIXTURES",
+          "assertion": "Native fixture restore/preserve, stop refusal, partial error/retry, duplicate and progress readback; UI default/preserve/update boundaries and missing event recovery; source isolation without native apps.",
+          "testSelector": "tests/work_packages/ru078/test_exit.py::test_exit_fixtures",
+          "acceptanceCommandId": "exit-fixtures"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Out-of-scope mutation or invalid baseline",
+        "Real device/production authority required"
+      ],
+      "status": "planned"
     }
   ]
 }

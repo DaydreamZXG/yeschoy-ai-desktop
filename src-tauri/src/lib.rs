@@ -33,6 +33,7 @@ mod request_diagnostics;
 mod service_catalog;
 mod service_catalog_core;
 mod shutdown_coordinator;
+mod exit_restore;
 mod tool_activation;
 mod tool_adapters;
 mod tool_credentials;
@@ -46,6 +47,7 @@ mod window_appearance;
 pub use tool_credentials::credential_helper_exit_code;
 
 use serde::Serialize;
+use exit_restore::{ExitResponse, ExitStatus};
 use tauri::{Emitter, Manager};
 
 use shutdown_coordinator::{
@@ -88,7 +90,8 @@ pub fn run() {
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
-                if shutdown().is_shutting_down() {
+                if shutdown().is_shutting_down()
+                    && !matches!(exit_response().status, ExitStatus::RestoreFailed | ExitStatus::RetryableError) {
                     return;
                 }
                 #[cfg(target_os = "windows")]
@@ -162,7 +165,11 @@ pub fn run() {
                 {
                     // Windows system-level quit must remain usable even when
                     // WebView2 could not render the application UI.
-                    begin_desktop_shutdown(app.clone());
+                    if let Some(window) = app.get_webview_window("main") {
+                        handle_windows_close(&window.as_ref().window());
+                    } else {
+                        begin_desktop_shutdown(app.clone());
+                    }
                 }
                 #[cfg(not(target_os = "windows"))]
                 {
@@ -266,19 +273,6 @@ fn request_close_choice(app: &tauri::AppHandle) {
     }
 }
 
-#[derive(Clone, Copy, Serialize)]
-#[serde(rename_all = "snake_case")]
-enum ExitStatus {
-    Exiting,
-    FinishingOperation,
-    RetryableError,
-}
-
-#[derive(Clone, Copy, Serialize)]
-struct ExitResponse {
-    status: ExitStatus,
-}
-
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ExitState {
@@ -287,13 +281,16 @@ struct ExitState {
 }
 
 fn exit_response() -> ExitResponse {
-    ExitResponse {
-        status: if shutdown().progress() == ShutdownProgress::FinishingOperation {
+    if let Some(response) = exit_restore::attempt().lock().unwrap_or_else(|e| e.into_inner()).response() {
+        return response;
+    }
+    ExitResponse::new(
+        if shutdown().progress() == ShutdownProgress::FinishingOperation {
             ExitStatus::FinishingOperation
         } else {
             ExitStatus::Exiting
-        },
-    }
+        }
+    )
 }
 
 #[tauri::command]
@@ -322,22 +319,70 @@ fn background_desktop_assistant(app: tauri::AppHandle) -> Result<(), String> {
 }
 
 fn emit_exit_progress<R: tauri::Runtime>(app: &tauri::AppHandle<R>, status: ExitStatus) {
+    let response = ExitResponse::new(status);
+    exit_restore::attempt().lock().unwrap_or_else(|e| e.into_inner()).update(response.clone());
     if app
-        .emit_to("main", EXIT_PROGRESS_EVENT, ExitResponse { status })
+        .emit_to("main", EXIT_PROGRESS_EVENT, response)
         .is_err()
     {
         log::warn!("desktop_shutdown stage=progress_emit_failed");
     }
 }
 
+#[cfg(target_os = "windows")]
 fn begin_desktop_shutdown<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> ExitResponse {
-    if shutdown().request_shutdown() {
+    // Installer/legacy exit callers retain settings. User restore is explicit.
+    begin_user_shutdown(app, false)
+}
+
+fn begin_user_shutdown<R: tauri::Runtime>(app: tauri::AppHandle<R>, restore_settings: bool) -> ExitResponse {
+    // A concurrent updater owns its existing drain/restart, and an active user
+    // attempt owns its writes. Only a settled failure may start another pass.
+    let retrying = shutdown().is_shutting_down();
+    if retrying
+        && !matches!(exit_response().status, ExitStatus::RestoreFailed | ExitStatus::RetryableError) {
+        return exit_response();
+    }
+    let started = exit_restore::attempt().lock().unwrap_or_else(|e| e.into_inner()).begin();
+    if started {
+        if !shutdown().request_shutdown() && !retrying {
+            // The updater won the admission race. Join its preservation path.
+            exit_restore::attempt().lock().unwrap_or_else(|e| e.into_inner()).finish(ExitResponse::new(ExitStatus::Exiting));
+            return exit_response();
+        }
         tauri::async_runtime::spawn(async move {
+            wait_desktop_operations(&app).await;
+            if restore_settings {
+                emit_exit_progress(&app, ExitStatus::RestoringSettings);
+                let failed_tools = exit_restore::restore_all(tool_activation::restore_connection_for_exit).await;
+                if !failed_tools.is_empty() {
+                    let response = ExitResponse { status: ExitStatus::RestoreFailed, failed_tools };
+                    exit_restore::attempt().lock().unwrap_or_else(|e| e.into_inner()).finish(response.clone());
+                    let _ = app.emit_to("main", EXIT_PROGRESS_EVENT, response.clone());
+                    // Native Windows close remains available even if WebView
+                    // cannot render: close again to retry or preserve-exit.
+                    #[cfg(target_os = "windows")]
+                    {
+                        let _ = tauri::async_runtime::spawn_blocking(move || {
+                            use windows::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_OK, MB_ICONWARNING};
+                            use windows::core::{w, HSTRING};
+                            let names = response.failed_tools.iter().map(|tool| match tool.as_str() {
+                                "codex_desktop" => "Codex Desktop", "claude_desktop" => "Claude Desktop",
+                                "claude_code" => "Claude Code", "pi" => "Pi", _ => "DSH web",
+                            }).collect::<Vec<_>>().join("、");
+                            let message = HSTRING::from(format!("未完成恢复：{names}。助手尚未退出。\n请保存并关闭相关应用后重试。若界面不可用，再点窗口关闭按钮，可选择重试恢复或保留设置退出。"));
+                            unsafe { MessageBoxW(None, &message, w!("恢复未完成"), MB_OK | MB_ICONWARNING); }
+                        }).await;
+                    }
+                    return;
+                }
+            }
             if drain_desktop_runtimes(&app).await {
                 log::info!("desktop_shutdown stage=exit_requested");
                 app.exit(0);
             } else {
                 emit_exit_progress(&app, ExitStatus::RetryableError);
+                exit_restore::attempt().lock().unwrap_or_else(|e| e.into_inner()).finish(ExitResponse::new(ExitStatus::RetryableError));
             }
         });
     }
@@ -345,18 +390,8 @@ fn begin_desktop_shutdown<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> ExitRe
 }
 
 pub(crate) async fn drain_desktop_runtimes<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> bool {
-    let mut finishing_notified = false;
-    while shutdown()
-        .wait_quiescent(tokio::time::Instant::now() + FINISHING_NOTICE_AFTER)
-        .await
-        == DrainOutcome::FinishingOperation
-    {
-        if !finishing_notified {
-            emit_exit_progress(app, ExitStatus::FinishingOperation);
-            log::info!("desktop_shutdown stage=finishing_operation");
-            finishing_notified = true;
-        }
-    }
+    // Updater calls this directly: never restore user settings on restart.
+    wait_desktop_operations(app).await;
     emit_exit_progress(app, ExitStatus::Exiting);
     let report = shutdown()
         .stop_registered(tokio::time::Instant::now() + RUNTIME_STOP_GRACE)
@@ -370,14 +405,30 @@ pub(crate) async fn drain_desktop_runtimes<R: tauri::Runtime>(app: &tauri::AppHa
     report.ready_to_exit
 }
 
+async fn wait_desktop_operations<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    let mut finishing_notified = false;
+    while shutdown()
+        .wait_quiescent(tokio::time::Instant::now() + FINISHING_NOTICE_AFTER)
+        .await
+        == DrainOutcome::FinishingOperation
+    {
+        if !finishing_notified {
+            emit_exit_progress(app, ExitStatus::FinishingOperation);
+            log::info!("desktop_shutdown stage=finishing_operation");
+            finishing_notified = true;
+        }
+    }
+}
+
 #[tauri::command]
-async fn quit_desktop_assistant(app: tauri::AppHandle) -> ExitResponse {
-    begin_desktop_shutdown(app)
+async fn quit_desktop_assistant(app: tauri::AppHandle, restore_settings: Option<bool>) -> ExitResponse {
+    begin_user_shutdown(app, restore_settings.unwrap_or(false))
 }
 
 #[cfg(target_os = "windows")]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum NativeCloseChoice {
+    RestoreAndExit,
     Exit,
     Background,
     Cancel,
@@ -396,15 +447,23 @@ fn windows_close_choice<R: tauri::Runtime>(window: &tauri::Window<R>) -> NativeC
     let result = unsafe {
         MessageBoxW(
             owner,
-            w!("选择“是”完全退出；选择“否”最小化到后台；选择“取消”继续使用。"),
+            w!("选择“是”：恢复原设置并退出。请先保存任务；助手会请求 Codex/Claude 正常关闭，恢复后不自动打开应用。其他命令行应用下次启动生效。\n选择“否”：选择后台运行或保留设置退出。\n选择“取消”：返回。"),
             w!("关闭野菜API？"),
             MB_YESNOCANCEL | MB_ICONQUESTION | MB_SETFOREGROUND,
         )
     };
     if result == IDYES {
-        NativeCloseChoice::Exit
+        NativeCloseChoice::RestoreAndExit
     } else if result == IDNO {
-        NativeCloseChoice::Background
+        let preserve = unsafe {
+            MessageBoxW(owner,
+                w!("选择“是”：保留接入设置并退出，依赖助手的连接会中断。\n选择“否”：后台运行，保持连接。\n选择“取消”：返回。"),
+                w!("保留接入设置？"),
+                MB_YESNOCANCEL | MB_ICONQUESTION | MB_SETFOREGROUND)
+        };
+        if preserve == IDYES { NativeCloseChoice::Exit }
+        else if preserve == IDNO { NativeCloseChoice::Background }
+        else { NativeCloseChoice::Cancel }
     } else {
         NativeCloseChoice::Cancel
     }
@@ -413,6 +472,9 @@ fn windows_close_choice<R: tauri::Runtime>(window: &tauri::Window<R>) -> NativeC
 #[cfg(target_os = "windows")]
 fn handle_windows_close<R: tauri::Runtime>(window: &tauri::Window<R>) {
     match windows_close_choice(window) {
+        NativeCloseChoice::RestoreAndExit => {
+            begin_user_shutdown(window.app_handle().clone(), true);
+        }
         NativeCloseChoice::Exit => {
             begin_desktop_shutdown(window.app_handle().clone());
         }

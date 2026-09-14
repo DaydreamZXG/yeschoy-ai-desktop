@@ -1,13 +1,11 @@
-/** Reuse bundled logo silhouettes with readable, theme-aware app colors. */
+/** Bundled brand artwork: never recolor it with the application's accent. */
 export function AppGlyph({ source }: { source: string }) {
   return (
-    <span
+    <img
       className="application-glyph"
+      src={source}
+      alt=""
       aria-hidden="true"
-      style={{
-        maskImage: `url("${source}")`,
-        WebkitMaskImage: `url("${source}")`,
-      }}
     />
   );
 }

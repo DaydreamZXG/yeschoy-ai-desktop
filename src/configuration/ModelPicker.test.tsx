@@ -14,6 +14,27 @@ const models = ["deepseek-v4-flash", "glm-5.3", "gpt-5.6-sol"].map(
   (id) => ({ id, description: "编程与对话" }) as AccountModel,
 );
 describe("searchable complete model IDs", () => {
+  it("hides image generators without hiding vision-capable chat models", async () => {
+    const user = userEvent.setup();
+    const choices = [
+      "gpt-image-1.5",
+      "gpt-image-2",
+      "openai/gpt-image-2",
+      "gpt-6-astra",
+      "deepseek-v4.1-flash",
+    ].map((id) => ({ id, description: "" }) as AccountModel);
+    render(
+      <ModelPicker models={choices} value="gpt-6-astra" onChange={vi.fn()} />,
+    );
+    await user.click(screen.getByRole("combobox"));
+    expect(screen.getAllByRole("option")).toHaveLength(2);
+    expect(
+      screen.queryByRole("option", { name: /gpt-image/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: /deepseek-v4.1-flash/ }),
+    ).toBeInTheDocument();
+  });
   it("keeps the list open when scrollbar interaction blurs the search without a new focus target", async () => {
     const user = userEvent.setup();
     const select = vi.fn();

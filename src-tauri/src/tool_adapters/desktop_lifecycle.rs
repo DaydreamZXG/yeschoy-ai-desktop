@@ -116,6 +116,21 @@ async fn wait_until_stopped(
     Ok(false)
 }
 
+/// Exit restoration must not use the reconfiguration force-quit fallback.
+/// Unsaved-work dialogs remain authoritative; never reopen on the user's behalf.
+pub(crate) async fn quit_for_exit_restore(
+    tool_id: &str,
+    path: &Path,
+) -> Result<(), AdapterFailure> {
+    if !requires_reload(tool_id) { return Ok(()); }
+    blocking_normal_quit(tool_id, path).await?;
+    if wait_until_stopped(tool_id, path, NORMAL_QUIT_LIMIT).await? {
+        Ok(())
+    } else {
+        Err(AdapterFailure::LaunchError("graceful_restart_required"))
+    }
+}
+
 /// Close the exact discovered desktop installation after the user has
 /// confirmed that work is saved. `Ok(true)` means a live application was
 /// closed; `Ok(false)` means it was already stopped. Windows gets a controlled

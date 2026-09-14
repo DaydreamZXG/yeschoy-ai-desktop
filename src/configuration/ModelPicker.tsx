@@ -11,7 +11,11 @@ import { Check, ChevronDown, Search } from "lucide-react";
 import { Content as PopoverContent } from "@radix-ui/react-popover";
 import type { AccountModel } from "../account/session";
 import { ModelCapabilityBadges } from "../model-profiles/ModelCapabilityBadges";
-import { modelDisplayName, modelMatchesQuery } from "../model-profiles/profile";
+import {
+  isImageGenerationModel,
+  modelDisplayName,
+  modelMatchesQuery,
+} from "../model-profiles/profile";
 import { Popover, PopoverTrigger } from "../components/ui/popover";
 
 function revealOption(list: HTMLDivElement | null, index: number) {
@@ -26,7 +30,7 @@ function revealOption(list: HTMLDivElement | null, index: number) {
 }
 
 export function ModelPicker({
-  models,
+  models: suppliedModels,
   value,
   onChange,
   disabled = false,
@@ -41,6 +45,10 @@ export function ModelPicker({
   // #13 「查看全部模型」：返回文案的模型不可选（置灰+原因），返回 undefined 可选。
   disabledReason?: (model: AccountModel) => string | undefined;
 }) {
+  const models = useMemo(
+    () => suppliedModels.filter((model) => !isImageGenerationModel(model.id)),
+    [suppliedModels],
+  );
   const id = useId();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");

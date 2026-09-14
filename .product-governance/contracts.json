@@ -7367,6 +7367,87 @@
         "E-PROP-040"
       ],
       "status": "specified"
+    },
+    {
+      "id": "desktop-assistant-exit@v2",
+      "kind": "command",
+      "owner": "desktop-platform",
+      "consumers": [
+        "tool-config"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-assistant-exit@v2",
+      "authorization": "Explicit user confirmation that work is saved before restore=true. Windows native chooser is equivalent. No process path/PID from renderer.",
+      "idempotency": "One process-owned exit attempt; duplicate joins, failure can retry or preserve-exit after active restore finishes. No cancellation of file transactions.",
+      "compatibility": "Optional restoreSettings defaults false for old callers/installer; new UI default choice explicitly sends true. Readback and event use same response, optional failedTools supports older responses.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "restoreSettings": {
+            "type": "boolean",
+            "description": "Explicit restore or preserve exit choice restoreSettings"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "description": "Explicit restore or preserve exit choice"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "exiting",
+              "finishing_operation",
+              "restoring_settings",
+              "restore_failed",
+              "retryable_error"
+            ],
+            "description": "Process-owned restore and exit progress status"
+          },
+          "failedTools": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "claude_code",
+                "claude_desktop",
+                "codex_desktop",
+                "pi",
+                "dsh_web"
+              ],
+              "description": "Process-owned restore and exit progress failedTools item"
+            },
+            "maxItems": 5,
+            "description": "Process-owned restore and exit progress failedTools"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "additionalProperties": false,
+        "description": "Process-owned restore and exit progress"
+      },
+      "dataClasses": [
+        "internal"
+      ],
+      "observability": {
+        "correlation": "Process-local progress; only fixed tool IDs and reason codes",
+        "audit": "No new durable history",
+        "metrics": "No upload"
+      },
+      "errorSemantics": [
+        "Restore is per tool, not atomic across all apps; preserve successful outcomes and retain recovery receipts for failures.",
+        "Existing operation admission closes before restore; no forced process kill, remote revocation, or automatic reopening.",
+        "Updates retain existing settings and use old runtime drain path."
+      ],
+      "requirementRefs": [
+        "REQ-100"
+      ],
+      "evidenceRefs": [
+        "E-USER-101"
+      ],
+      "status": "specified"
     }
   ]
 }

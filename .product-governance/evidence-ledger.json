@@ -3529,6 +3529,17 @@
       "basisRefs": [
         "E-USER-100"
       ]
+    },
+    {
+      "id": "E-USER-101",
+      "claim": "Owner approved default restore-before-exit, preserve option, normal close of running desktop apps after save confirmation, failure retry/continue-exit, update restart preservation; explicitly allowed reconciliation of current inherited source baseline.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-14:退出恢复方案/可以/允许",
+      "observedAt": "2026-09-14T07:00:00Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
     }
   ]
 }
