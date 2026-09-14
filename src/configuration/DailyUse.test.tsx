@@ -872,7 +872,7 @@ describe("daily-use UX", () => {
     fireEvent.click(screen.getByRole("button", { name: "加入常用模型" }));
     fireEvent.click(screen.getByRole("combobox", { name: /选择模型/ }));
     fireEvent.click(screen.getByRole("option", { name: "model-b" }));
-    fireEvent.click(screen.getByRole("radio", { name: /标准分组/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /标准方案/ }));
     expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
       "使用所选模型",
     );
@@ -1096,7 +1096,7 @@ describe("daily-use UX", () => {
     expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
       "先选择计费分组",
     );
-    fireEvent.click(screen.getByRole("radio", { name: /标准分组/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /标准方案/ }));
     expect(
       screen.getByRole("region", { name: "所选分组价格" }),
     ).toHaveTextContent("1 亿 Token");
@@ -1125,13 +1125,13 @@ describe("daily-use UX", () => {
     await tick();
     fireEvent.click(screen.getByRole("combobox", { name: /选择模型/ }));
     fireEvent.click(screen.getByRole("option", { name: "model-b" }));
-    fireEvent.click(screen.getByRole("radio", { name: /标准分组/ }));
+    fireEvent.click(screen.getByRole("radio", { name: /标准方案/ }));
     view.rerender(setupView(account, local()));
     await tick();
     expect(
       screen.getByRole("combobox", { name: /选择模型/ }),
     ).toHaveTextContent("model-b");
-    expect(screen.getByRole("radio", { name: /标准分组/ })).toBeChecked();
+    expect(screen.getByRole("radio", { name: /标准方案/ })).toBeChecked();
   });
   it("restores saved choices after the first local-state read failed", async () => {
     const account = session();
