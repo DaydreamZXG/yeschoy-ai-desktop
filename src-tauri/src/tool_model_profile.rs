@@ -128,21 +128,21 @@ pub(crate) fn legacy_claude_gateway_route_id(model_id: &str) -> String {
 pub(crate) fn claude_gateway_route_matches(model_id: &str, requested: &str) -> bool {
     // Claude's picker may append a context marker. It is not part of the
     // upstream ID; normalize only for an exact, already-enrolled route lookup.
-    let requested = strip_one_m_context_marker(requested);
+    let (requested, _) = split_one_m_context_marker(requested);
     claude_gateway_route_id(model_id) == requested
         || legacy_claude_gateway_route_id(model_id) == requested
 }
 
-fn strip_one_m_context_marker(model: &str) -> &str {
+pub(crate) fn split_one_m_context_marker(model: &str) -> (&str, bool) {
     let trimmed = model.trim();
     let marker = b"[1m]";
     let bytes = trimmed.as_bytes();
     if bytes.len() >= marker.len()
         && bytes[bytes.len() - marker.len()..].eq_ignore_ascii_case(marker)
     {
-        return trimmed[..trimmed.len() - marker.len()].trim_end();
+        return (trimmed[..trimmed.len() - marker.len()].trim_end(), true);
     }
-    trimmed
+    (trimmed, false)
 }
 
 #[derive(Deserialize)]

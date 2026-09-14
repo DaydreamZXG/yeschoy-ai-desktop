@@ -769,14 +769,26 @@ pub(crate) fn configuration_matches(record: &Record) -> bool {
     })
 }
 
-/// Detects a receipt written by a release that routed the tool through the
-/// local gateway. Those files still match their receipt byte for byte, but the
-/// gateway no longer exists, so the connection has to be re-applied against the
-/// relay origin. Claude Desktop keeps its loopback gateway and is exempt.
+/// Detects receipts whose endpoint architecture changed across releases.
+/// Retired Codex/Pi/DSH loopbacks move to direct relay access; previous direct
+/// Claude Code receipts move to the compatibility pass-through that normalizes
+/// native picker markers. Byte-identical stale settings must still be re-applied.
 pub(crate) fn requires_gateway_migration(tool: &str, record: &Record) -> bool {
+    if tool == "claude_code" {
+        return record.files.iter().any(|file| {
+            serde_json::from_slice::<Value>(&file.after)
+                .ok()
+                .and_then(|value| value["env"]["ANTHROPIC_BASE_URL"].as_str().map(str::to_owned))
+                .is_some_and(|origin| {
+                    matches!(
+                        origin.as_str(),
+                        "https://yeschoy.com" | "https://api.yeschoy.com"
+                    )
+                })
+        });
+    }
     let needle = match tool {
         "codex_desktop" => "127.0.0.1:15722",
-        "claude_code" => "127.0.0.1:15728",
         "pi" | "dsh_web" => "127.0.0.1:15730",
         _ => return false,
     };
@@ -817,9 +829,11 @@ pub(crate) fn legacy_clean(
     let original = value.clone();
     let origin_v1 = format!("{}/v1", credential.origin);
     let helper_matches = |value: &Value| {
-        value
-            .as_str()
-            .is_some_and(|s| s.ends_with(&format!("credential-helper {tool}")))
+        value.as_str().is_some_and(|s| {
+            s.ends_with(&format!("credential-helper {tool}"))
+                || (tool == "claude_code"
+                    && s.ends_with("gateway-credential-helper claude_code"))
+        })
     };
     match tool {
         "codex_desktop" => {
@@ -1047,6 +1061,31 @@ mod tests {
             Err(Failure::Storage)
         );
         assert_eq!(std::fs::read(f.path("target")).unwrap(), bytes);
+    }
+
+    #[test]
+    fn claude_code_direct_receipts_require_the_new_compatibility_endpoint() {
+        for (origin, expected) in [
+            ("https://yeschoy.com", true),
+            ("https://api.yeschoy.com", true),
+            ("http://127.0.0.1:15728/claude-code", false),
+        ] {
+            let fixture = Fixture::new();
+            let after = serde_json::to_vec(&json!({
+                "env":{"ANTHROPIC_BASE_URL":origin}
+            }))
+            .unwrap();
+            let file = fixture.change("settings.json", None, &after);
+            let record = fixture
+                .0
+                .begin(receipt("claude_code"), &[file], None)
+                .unwrap();
+            assert_eq!(
+                requires_gateway_migration("claude_code", &record),
+                expected,
+                "{origin}"
+            );
+        }
     }
 
     #[test]

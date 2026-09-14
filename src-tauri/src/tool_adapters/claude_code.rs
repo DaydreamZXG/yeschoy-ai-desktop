@@ -3,13 +3,29 @@ use std::path::Path;
 use serde_json::{json, Map, Value};
 
 use crate::{
-    claude_bridge::ClaudeTransport,
+    claude_bridge::{ClaudeBridgeRuntime, ClaudeTransport},
     tool_adapters::{
         common::{self, ConfigFailure, FileTransaction},
         AdapterFailure,
     },
-    tool_credentials,
+    tool_credentials::{self, ToolCredential},
 };
+
+const PROXY_ADDRESS: &str = "127.0.0.1:15728";
+const PROXY_BASE: &str = "http://127.0.0.1:15728/claude-code";
+
+#[derive(Clone)]
+pub(crate) struct ClaudeCodeRuntimeState {
+    runtime: ClaudeBridgeRuntime,
+}
+
+impl Default for ClaudeCodeRuntimeState {
+    fn default() -> Self {
+        Self {
+            runtime: ClaudeBridgeRuntime::new(PROXY_ADDRESS, "/claude-code"),
+        }
+    }
+}
 
 pub(crate) struct Prepared {
     transaction: FileTransaction,
@@ -168,15 +184,18 @@ fn prepare_inner(
     let path = home.join(".claude").join("settings.json");
     let before = common::snapshot(&path)
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_read_failed"))?;
-    let helper = tool_credentials::shell_helper_command("claude_code")
-        .map_err(|_| AdapterFailure::SecureStorageUnavailable)?;
+    let helper = if modern {
+        tool_credentials::shell_gateway_helper_command("claude_code")
+    } else {
+        tool_credentials::shell_helper_command("claude_code")
+    }
+    .map_err(|_| AdapterFailure::SecureStorageUnavailable)?;
     // The canonical credential owner generates/stores the local token. Claude
     // Code reads it through apiKeyHelper, so no token belongs in Prepared or
-    // the settings file. Keep the legacy argument shape for callers.
-    // Claude Code reads the relay origin straight from its own settings file.
-    // The former loopback proxy added a listener, a capability token and a
-    // watchdog without changing the protocol.
-    let configured_origin = origin;
+    // the settings file. Catalog connections use a small local pass-through to
+    // normalize Claude Code's `[1m]` picker marker before it reaches the relay.
+    // Legacy single-model preparation remains direct for recovery compatibility.
+    let configured_origin = if modern { PROXY_BASE } else { origin };
     let after = if modern {
         render_catalog(
             before.as_deref(),
@@ -297,6 +316,44 @@ impl Prepared {
     }
 }
 
+impl ClaudeCodeRuntimeState {
+    pub(crate) async fn start(&self, credential: ToolCredential) -> Result<(), AdapterFailure> {
+        self.runtime.start(credential).await.map(|_| ())
+    }
+
+    pub(crate) async fn stop(&self) {
+        self.runtime.stop().await;
+    }
+}
+
+pub(crate) async fn resume_if_configured(state: ClaudeCodeRuntimeState) {
+    let Ok(credential) = tool_credentials::load("claude_code") else {
+        return;
+    };
+    // Only current catalog credentials carry the local capability token and
+    // are written to the pass-through endpoint.
+    if !credential.has_model_set() {
+        return;
+    }
+    let Some(home) = super::user_home() else {
+        return;
+    };
+    let path = home.join(".claude").join("settings.json");
+    let active = common::snapshot(&path)
+        .ok()
+        .flatten()
+        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+        .and_then(|value| {
+            value["env"]["ANTHROPIC_BASE_URL"]
+                .as_str()
+                .map(|origin| origin == PROXY_BASE)
+        })
+        .unwrap_or(false);
+    if active {
+        let _ = state.start(credential).await;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -321,10 +378,10 @@ mod tests {
             .contains(&token));
         let mut settings: Value =
             serde_json::from_slice(&std::fs::read(&prepared.path).unwrap()).unwrap();
-        assert_eq!(
-            settings["env"]["ANTHROPIC_BASE_URL"],
-            "https://yeschoy.com"
-        );
+        assert_eq!(settings["env"]["ANTHROPIC_BASE_URL"], PROXY_BASE);
+        assert!(settings["apiKeyHelper"]
+            .as_str()
+            .is_some_and(|helper| helper.contains("gateway-credential-helper claude_code")));
         assert!(settings["env"]
             .get("ANTHROPIC_DEFAULT_SONNET_MODEL")
             .is_none());
@@ -473,10 +530,7 @@ mod tests {
             .unwrap(),
         )
         .unwrap();
-        assert_eq!(
-            settings["env"]["ANTHROPIC_BASE_URL"],
-            "https://yeschoy.com"
-        );
+        assert_eq!(settings["env"]["ANTHROPIC_BASE_URL"], "https://yeschoy.com");
         assert_eq!(
             settings["apiKeyHelper"],
             "synthetic-helper credential-helper claude_code"

@@ -62,6 +62,8 @@ const EXIT_PROGRESS_EVENT: &str = "yeschoy://exit-progress";
 pub fn run() {
     logging::init();
     log::info!("{FRONTEND_MODE_MARKER} selected={FRONTEND_MODE}");
+    let claude_code_runtime = tool_adapters::claude_code::ClaudeCodeRuntimeState::default();
+    let resume_claude_code_runtime = claude_code_runtime.clone();
     let claude_runtime = tool_adapters::claude_desktop::ClaudeDesktopRuntimeState::default();
     let resume_claude_runtime = claude_runtime.clone();
     let mut builder = tauri::Builder::default();
@@ -85,6 +87,7 @@ pub fn run() {
         .manage(app_installation::AppInstallationState::default())
         .manage(app_update::AppUpdateState::default())
         .manage(tool_activation::ActivationOperationState::default())
+        .manage(claude_code_runtime)
         .manage(claude_runtime)
         .manage(tool_adapters::dsh_web::DshRuntimeState::default())
         .on_window_event(|window, event| {
@@ -122,10 +125,13 @@ pub fn run() {
                 if permit.is_cancelled() {
                     return;
                 }
-                // Claude Desktop is the only surface that still needs a
-                // loopback gateway; every other tool reads the relay origin
-                // straight from its own configuration.
-                tool_adapters::claude_desktop::resume_if_configured(resume_claude_runtime).await;
+                // Claude clients use small local pass-throughs for native
+                // model-ID compatibility. Resume only when their managed
+                // settings still point to the corresponding loopback endpoint.
+                tokio::join!(
+                    tool_adapters::claude_code::resume_if_configured(resume_claude_code_runtime),
+                    tool_adapters::claude_desktop::resume_if_configured(resume_claude_runtime)
+                );
             });
             Ok(())
         })
@@ -195,6 +201,10 @@ fn register_runtime_stops(app: &tauri::AppHandle) -> Result<(), std::io::Error> 
                 .map_err(|_| std::io::Error::other("shutdown_registration_failed"))?;
         }};
     }
+    register!(
+        "claude_code",
+        tool_adapters::claude_code::ClaudeCodeRuntimeState
+    );
     register!(
         "claude_desktop",
         tool_adapters::claude_desktop::ClaudeDesktopRuntimeState

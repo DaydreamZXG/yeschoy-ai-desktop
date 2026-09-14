@@ -1062,9 +1062,9 @@ fn prepare_adapter(
         .ok_or(AdapterFailure::ConfigurationFailed("home_unavailable"))?;
     let models = credential.model_ids();
     let local = credential.local_gateway_token.as_deref();
-    // Every surface points at the relay origin directly. Claude Desktop is the
-    // only remaining consumer of the loopback gateway, and its adapter takes no
-    // origin. The relay key is written into the tool's own configuration.
+    // Each adapter owns its endpoint choice. Claude Code's catalog adapter and
+    // Claude Desktop use local pass-throughs; the remaining surfaces point at
+    // the relay directly.
     let origin = credential.origin.clone();
     let provider_key = credential.upstream_key();
     match request.tool_id.as_str() {
@@ -1109,14 +1109,14 @@ fn prepare_adapter(
 async fn start_local_adapter(
     request: &ToolActivationRequest,
     credential: &ToolCredential,
+    claude_code_runtime: &claude_code::ClaudeCodeRuntimeState,
     claude_runtime: &claude_desktop::ClaudeDesktopRuntimeState,
 ) -> Result<(), AdapterFailure> {
     match request.tool_id.as_str() {
-        // Only Claude Desktop still needs a loopback gateway; every other
-        // surface connects straight to the relay origin.
+        "claude_code" => claude_code_runtime.start(credential.clone()).await,
         "claude_desktop" => claude_runtime.start(credential.clone()).await.map(|_| ()),
         "codex_desktop" => codex_desktop::ensure_credential_ready(credential).await,
-        "claude_code" | "pi" | "dsh_web" => Ok(()),
+        "pi" | "dsh_web" => Ok(()),
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
 }
@@ -1184,14 +1184,15 @@ impl Drop for DesktopReloadGuard {
 
 async fn stop_helper_runtime(
     tool: &str,
+    claude_code_runtime: &claude_code::ClaudeCodeRuntimeState,
     claude_runtime: &claude_desktop::ClaudeDesktopRuntimeState,
     dsh_runtime: &dsh_web::DshRuntimeState,
 ) {
     match tool {
+        "claude_code" => claude_code_runtime.stop().await,
         "claude_desktop" => claude_runtime.stop().await,
         "dsh_web" => dsh_runtime.stop().await,
-        // Claude Code, Codex and Pi own no helper runtime any more: they
-        // connect straight to the relay origin.
+        // Codex and Pi connect straight to the relay origin.
         _ => {}
     }
 }
@@ -1206,6 +1207,7 @@ async fn restore_after_failure(
     origin: &str,
     access_token: &str,
     leases: &[(String, TokenLease)],
+    claude_code_runtime: &claude_code::ClaudeCodeRuntimeState,
     claude_runtime: &claude_desktop::ClaudeDesktopRuntimeState,
     dsh_runtime: &dsh_web::DshRuntimeState,
     permit: &shutdown_coordinator::OperationPermit,
@@ -1228,6 +1230,14 @@ async fn restore_after_failure(
         .cancel_safe(async {
             if request.tool_id == "dsh_web" {
                 dsh_runtime.stop().await;
+            }
+            if request.tool_id == "claude_code" {
+                claude_code_runtime.stop().await;
+                if let Some(previous) = previous_record.clone().filter(|credential| {
+                    credential.has_model_set() && !shutdown_coordinator::global().is_shutting_down()
+                }) {
+                    claude_code_runtime.start(previous).await?;
+                }
             }
             if request.tool_id == "claude_desktop" {
                 claude_runtime.stop().await;
@@ -1337,6 +1347,7 @@ pub async fn configure_desktop_tool_v2(
     activation_state: tauri::State<'_, ActivationOperationState>,
     account_state: tauri::State<'_, AccountV2State>,
     installation_state: tauri::State<'_, crate::app_installation::AppInstallationState>,
+    claude_code_runtime: tauri::State<'_, claude_code::ClaudeCodeRuntimeState>,
     claude_runtime: tauri::State<'_, claude_desktop::ClaudeDesktopRuntimeState>,
     dsh_runtime: tauri::State<'_, dsh_web::DshRuntimeState>,
     request: ToolActivationRequest,
@@ -1509,6 +1520,7 @@ pub async fn configure_desktop_tool_v2(
             if permit
                 .cancel_safe(stop_helper_runtime(
                     &request.tool_id,
+                    &claude_code_runtime,
                     &claude_runtime,
                     &dsh_runtime,
                 ))
@@ -1524,7 +1536,19 @@ pub async fn configure_desktop_tool_v2(
             }) {
                 Ok(true) => {
                     crate::request_diagnostics::clear(&request.tool_id);
-                    if request.tool_id == "claude_desktop" {
+                    if request.tool_id == "claude_code" {
+                        if let Some(previous) =
+                            previous.clone().filter(ToolCredential::has_model_set)
+                        {
+                            if claude_code_runtime.start(previous).await.is_err() {
+                                reload_guard.disarm();
+                                return Ok(ActivationFailure::ConfigurationFailed(
+                                    "previous_connection_runtime_failed",
+                                )
+                                .projection(&request));
+                            }
+                        }
+                    } else if request.tool_id == "claude_desktop" {
                         if let Some(previous) = previous {
                             if claude_runtime.start(previous).await.is_err() {
                                 reload_guard.disarm();
@@ -1803,9 +1827,8 @@ pub async fn configure_desktop_tool_v2(
                 .projection(&request));
             }
         };
-    // No gateway has to be started here any more: every surface except Claude
-    // Desktop writes a direct relay origin, and Claude Desktop's loopback
-    // gateway is started by `start_local_adapter` after the settings commit.
+    // Helper-owned runtimes are started by `start_local_adapter` only after
+    // both the credential and settings commits have succeeded.
     if is_cancelled() {
         let _ = recovery.abandon(&recovery_record);
         delete_created_tokens(&origin, &access_token, &leases).await;
@@ -1829,7 +1852,12 @@ pub async fn configure_desktop_tool_v2(
     let configured = match local_result {
         Err(e) => Err(e),
         Ok(()) => match permit
-            .cancel_safe(start_local_adapter(&request, &credential, &claude_runtime))
+            .cancel_safe(start_local_adapter(
+                &request,
+                &credential,
+                &claude_code_runtime,
+                &claude_runtime,
+            ))
             .await
         {
             Ok(result) => result,
@@ -1897,6 +1925,7 @@ pub async fn configure_desktop_tool_v2(
                     &origin,
                     &access_token,
                     &leases,
+                    &claude_code_runtime,
                     &claude_runtime,
                     &dsh_runtime,
                     &permit,
@@ -2301,6 +2330,7 @@ fn legacy_recovery(store: &Store, tool: &str) -> Result<Option<connection_recove
 #[tauri::command]
 pub async fn manage_tool_connections_v1(
     account_state: tauri::State<'_, AccountV2State>,
+    claude_code_runtime: tauri::State<'_, claude_code::ClaudeCodeRuntimeState>,
     claude_runtime: tauri::State<'_, claude_desktop::ClaudeDesktopRuntimeState>,
     dsh_runtime: tauri::State<'_, dsh_web::DshRuntimeState>,
     request: ConnectionRequest,
@@ -2395,7 +2425,13 @@ pub async fn manage_tool_connections_v1(
             // another provider. A running app may need to reopen its settings.
             let _ = permit
                 .cancel_safe(async {
-                    stop_helper_runtime(&request.tool_id, &claude_runtime, &dsh_runtime).await;
+                    stop_helper_runtime(
+                        &request.tool_id,
+                        &claude_code_runtime,
+                        &claude_runtime,
+                        &dsh_runtime,
+                    )
+                    .await;
                 })
                 .await;
             // Remote key handling comes before the local credential cleanup:

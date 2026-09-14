@@ -52,9 +52,8 @@ pub(crate) fn validate_settings(
 ) -> Result<(), AdapterFailure> {
     if credential.has_model_set() {
         let models = credential.model_ids();
-        // Every surface except Claude Desktop is configured against the relay
-        // origin directly, so the settings readback must use the same origin
-        // and the same relay key that `prepare_adapter` writes.
+        // Each adapter owns its endpoint choice. Claude Code's catalog path
+        // resolves to its local compatibility pass-through inside prepare.
         let origin = credential.origin.clone();
         let local = credential.local_gateway_token.as_deref();
         let ct = if credential.claude_transport.as_deref() == Some("chat_bridge") {
@@ -165,6 +164,7 @@ fn existing_credential(tool: &str) -> Result<ToolCredential, &'static str> {
 
 #[tauri::command]
 pub async fn open_tool_connection_v1(
+    claude_code: tauri::State<'_, claude_code::ClaudeCodeRuntimeState>,
     claude: tauri::State<'_, claude_desktop::ClaudeDesktopRuntimeState>,
     dsh: tauri::State<'_, dsh_web::DshRuntimeState>,
     request: OpenRequest,
@@ -191,8 +191,8 @@ pub async fn open_tool_connection_v1(
         if permit.is_cancelled() {
             return Err("busy");
         }
-        // No helper runtime has to be started before opening: every surface
-        // except Claude Desktop talks to the relay origin directly.
+        // Start helper-owned runtimes before launching their clients so a
+        // first request cannot race the loopback listener.
         let launched = permit
             .cancel_safe(async {
                 match request.tool_id.as_str() {
@@ -218,7 +218,20 @@ pub async fn open_tool_connection_v1(
                         credential.upstream_key(),
                     )
                     .await),
-                    "claude_code" | "pi" => {
+                    "claude_code" => {
+                        claude_code
+                            .start(credential)
+                            .await
+                            .map_err(|_| "launch_failed")?;
+                        if permit.is_cancelled() {
+                            return Err("busy");
+                        }
+                        Ok(
+                            terminal_launch::launch_async(&installation, &request.tool_id, &home)
+                                .await,
+                        )
+                    }
+                    "pi" => {
                         if permit.is_cancelled() {
                             return Err("busy");
                         }

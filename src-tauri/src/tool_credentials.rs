@@ -81,9 +81,10 @@ impl ToolCredential {
             models: Vec::new(),
         })
     }
-    /// The credential a tool presents to whatever serves its endpoint. Only
-    /// Claude Desktop still talks to a loopback gateway; every other surface
-    /// presents the scoped relay key straight to the relay origin.
+    /// The default credential a tool presents to its configured endpoint.
+    /// Claude Desktop uses a dedicated local capability token; other tools use
+    /// their scoped relay key. Claude Code's new gateway helper is separate so
+    /// old direct receipts retain this contract.
     pub(crate) fn client_token(&self, tool: &str) -> &str {
         if tool == "claude_desktop" {
             self.local_gateway_token.as_deref().unwrap_or("")
@@ -92,9 +93,7 @@ impl ToolCredential {
         }
     }
 
-    /// The scoped per-tool key issued by the relay. Tools that talk to the
-    /// relay directly (every surface except the loopback-gateway one) present
-    /// this key, never the loopback capability token.
+    /// The scoped per-tool key issued by the relay.
     pub(crate) fn upstream_key(&self) -> &str {
         &self.api_key
     }
@@ -446,13 +445,52 @@ pub(crate) fn shell_helper_command(tool_id: &str) -> Result<String, CredentialFa
     Ok(format!("{executable} credential-helper {tool_id}"))
 }
 
+pub(crate) fn shell_gateway_helper_command(tool_id: &str) -> Result<String, CredentialFailure> {
+    if tool_id != "claude_code" {
+        return Err(CredentialFailure::Invalid);
+    }
+    let executable = shell_quote(&executable_path()?);
+    if executable.is_empty() {
+        return Err(CredentialFailure::Unavailable);
+    }
+    Ok(format!(
+        "{executable} gateway-credential-helper {tool_id}"
+    ))
+}
+
 fn bare_helper(tool_id: &str) -> i32 {
     match load(tool_id) {
         Ok(record) => {
-            // Helper consumers (Claude Code, Pi) now present this key
-            // to the relay origin directly, so the helper must return the
-            // scoped relay key rather than the retired loopback token.
+            // Claude Code and Pi keep the scoped relay key helper contract.
+            // This also lets old direct Claude Code receipts keep working until
+            // the user re-applies the new compatibility endpoint.
             let secret = record.upstream_key();
+            let mut output = io::stdout().lock();
+            if output.write_all(secret.as_bytes()).is_ok()
+                && output.write_all(b"\n").is_ok()
+                && output.flush().is_ok()
+            {
+                0
+            } else {
+                71
+            }
+        }
+        Err(CredentialFailure::Missing) => 69,
+        Err(CredentialFailure::Unavailable) => 70,
+        Err(CredentialFailure::Invalid) => 65,
+    }
+}
+
+fn gateway_helper(tool_id: &str) -> i32 {
+    match load(tool_id) {
+        Ok(record) => {
+            let Some(secret) = record
+                .local_gateway_token
+                .as_deref()
+                .filter(|value| value.starts_with("ycg-") && value.len() == 68)
+            else {
+                return 65;
+            };
             let mut output = io::stdout().lock();
             if output.write_all(secret.as_bytes()).is_ok()
                 && output.write_all(b"\n").is_ok()
@@ -476,6 +514,10 @@ pub fn credential_helper_exit_code() -> Option<i32> {
     let code = match arguments.get(1).map(String::as_str) {
         Some("credential-helper") => match arguments.as_slice() {
             [_, _, tool_id] if allowed_tool(tool_id) => bare_helper(tool_id),
+            _ => 64,
+        },
+        Some("gateway-credential-helper") => match arguments.as_slice() {
+            [_, _, tool_id] if tool_id == "claude_code" => gateway_helper(tool_id),
             _ => 64,
         },
         _ => return None,
@@ -711,12 +753,19 @@ mod tests {
         assert!(command.contains("credential-helper pi"));
         assert!(!command.contains("sk-"));
         assert!(command.starts_with(['\'', '"']));
+        let gateway = shell_gateway_helper_command("claude_code").expect("gateway helper");
+        assert!(gateway.contains("gateway-credential-helper claude_code"));
+        assert!(!gateway.contains("ycg-"));
     }
 
     #[test]
     fn rejects_unknown_helper_targets() {
         assert!(matches!(
             shell_helper_command("opencode"),
+            Err(CredentialFailure::Invalid)
+        ));
+        assert!(matches!(
+            shell_gateway_helper_command("pi"),
             Err(CredentialFailure::Invalid)
         ));
     }
