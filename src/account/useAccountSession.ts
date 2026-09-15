@@ -109,6 +109,7 @@ export function useAccountSession(lineId: ConfigurationLineId) {
     lastError,
     refresh: () => execute("account_inspect_v2"),
     beginAuthorization: () => execute("account_begin_authorization_v2"),
+    openAuthorization: () => execute("account_open_authorization_v2"),
     cancelAuthorization: () => execute("account_cancel_authorization_v2"),
     logout: () => execute("account_logout_v2"),
     openWallet: async () => {

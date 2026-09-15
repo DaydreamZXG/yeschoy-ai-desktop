@@ -441,6 +441,10 @@ pub(crate) fn config_dir(home: &Path) -> Result<PathBuf, AdapterFailure> {
 }
 
 impl Prepared {
+    pub(crate) fn provider_id(&self) -> &str {
+        &self.provider_id
+    }
+
     pub(crate) fn changes(&self) -> &[common::FileChange] {
         self.transaction.changes()
     }

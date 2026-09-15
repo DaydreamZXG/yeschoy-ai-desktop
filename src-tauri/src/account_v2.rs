@@ -538,12 +538,34 @@ fn open_system_browser(url: &str) -> Result<(), ()> {
 
 #[cfg(target_os = "windows")]
 fn open_system_browser(url: &str) -> Result<(), ()> {
-    Command::new("rundll32.exe")
-        .arg("url.dll,FileProtocolHandler")
-        .arg(url)
-        .spawn()
-        .map(|_| ())
-        .map_err(|_| ())
+    use windows::{
+        core::PCWSTR,
+        Win32::UI::{Shell::ShellExecuteW, WindowsAndMessaging::SW_SHOWNORMAL},
+    };
+
+    let operation = "open\0".encode_utf16().collect::<Vec<_>>();
+    let target = url
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect::<Vec<_>>();
+    // ShellExecuteW delegates the URL to the user's registered HTTPS handler.
+    // Unlike rundll32, its return value tells us whether Windows accepted the
+    // launch request, and it works for packaged as well as unpackaged builds.
+    let result = unsafe {
+        ShellExecuteW(
+            None,
+            PCWSTR(operation.as_ptr()),
+            PCWSTR(target.as_ptr()),
+            PCWSTR::null(),
+            PCWSTR::null(),
+            SW_SHOWNORMAL,
+        )
+    };
+    if result.0 as isize > 32 {
+        Ok(())
+    } else {
+        Err(())
+    }
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
@@ -1622,6 +1644,61 @@ pub async fn account_begin_authorization_v2(
     if _permit.is_cancelled() {
         return Err("assistant_shutting_down".into());
     }
+    let reason = if open_system_browser(&browser_url).is_ok() {
+        "authorization_pending"
+    } else {
+        "browser_open_failed"
+    };
+    Ok(AccountProjection::pending(
+        request.request_id,
+        &pending,
+        reason,
+    ))
+}
+
+#[tauri::command]
+pub fn account_open_authorization_v2(
+    state: tauri::State<'_, AccountV2State>,
+    request: AccountRequest,
+) -> Result<AccountProjection, String> {
+    if !request_is_valid(&request) {
+        return Err("invalid_account_request".into());
+    }
+    let pending = {
+        let mut runtime = state
+            .runtime
+            .lock()
+            .map_err(|_| "account_state_unavailable")?;
+        let Some(pending) = runtime
+            .pending
+            .as_ref()
+            .filter(|pending| pending.line_id == request.line_id)
+            .cloned()
+        else {
+            return Ok(AccountProjection::empty(
+                request.request_id,
+                "signed_out",
+                "authorization_not_pending",
+            ));
+        };
+        if pending.expires_at_epoch_ms <= now_epoch_ms() {
+            runtime.authorization_epoch = runtime.authorization_epoch.saturating_add(1);
+            runtime.pending = None;
+            return Ok(AccountProjection::empty(
+                request.request_id,
+                "expired",
+                "authorization_expired",
+            ));
+        }
+        pending
+    };
+    let Some(browser_url) = browser_authorization_url(&pending.user_code) else {
+        return Ok(AccountProjection::empty(
+            request.request_id,
+            "invalid_response",
+            "invalid_response",
+        ));
+    };
     let reason = if open_system_browser(&browser_url).is_ok() {
         "authorization_pending"
     } else {

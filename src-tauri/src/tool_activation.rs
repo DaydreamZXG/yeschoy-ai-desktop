@@ -1030,6 +1030,13 @@ impl PreparedAdapter {
         }
     }
 
+    fn codex_provider_id(&self) -> Option<&str> {
+        match self {
+            Self::CodexDesktop(value) => Some(value.provider_id()),
+            _ => None,
+        }
+    }
+
     fn commit(&mut self) -> Result<(), AdapterFailure> {
         match self {
             Self::ClaudeCode(value) => value.commit(),
@@ -1211,6 +1218,7 @@ async fn restore_after_failure(
     claude_runtime: &claude_desktop::ClaudeDesktopRuntimeState,
     dsh_runtime: &dsh_web::DshRuntimeState,
     permit: &shutdown_coordinator::OperationPermit,
+    codex_history: &mut Option<crate::codex_history_takeover::Takeover>,
 ) -> Option<AdapterFailure> {
     let rollback_failed = if desktop_lifecycle::requires_reload(&request.tool_id) {
         connection_recovery::restore_attempt(recovery_record).is_err()
@@ -1221,6 +1229,11 @@ async fn restore_after_failure(
         // The live files may still reference the new key. Keep both keys and
         // the encrypted pending checkpoint until recovery really succeeds.
         return restoration_failure(true, false);
+    }
+    if let Some(history) = codex_history.as_mut() {
+        if history.rollback().is_err() {
+            return restoration_failure(true, false);
+        }
     }
     let credential_failure = tool_credentials::restore(&request.tool_id, credential_before).err();
     if credential_failure.is_some() {
@@ -1535,6 +1548,20 @@ pub async fn configure_desktop_tool_v2(
                 None => tool_credentials::restore(&request.tool_id, None).is_ok(),
             }) {
                 Ok(true) => {
+                    if request.tool_id == "codex_desktop" {
+                        let Some(home) = tool_adapters::user_home() else {
+                            return Ok(ActivationFailure::ConfigurationFailed(
+                                "codex_history_takeover_recovery_failed",
+                            )
+                            .projection(&request));
+                        };
+                        if crate::codex_history_takeover::restore(&home).is_err() {
+                            return Ok(ActivationFailure::ConfigurationFailed(
+                                "codex_history_takeover_recovery_failed",
+                            )
+                            .projection(&request));
+                        }
+                    }
                     crate::request_diagnostics::clear(&request.tool_id);
                     if request.tool_id == "claude_code" {
                         if let Some(previous) =
@@ -1827,9 +1854,39 @@ pub async fn configure_desktop_tool_v2(
                 .projection(&request));
             }
         };
+    let mut codex_history = if request.tool_id == "codex_desktop" {
+        let Some(home) = tool_adapters::user_home() else {
+            let _ = recovery.abandon(&recovery_record);
+            delete_created_tokens(&origin, &access_token, &leases).await;
+            return Ok(
+                ActivationFailure::ConfigurationFailed("home_unavailable").projection(&request)
+            );
+        };
+        let Some(provider_id) = prepared.codex_provider_id() else {
+            let _ = recovery.abandon(&recovery_record);
+            delete_created_tokens(&origin, &access_token, &leases).await;
+            return Ok(
+                ActivationFailure::ConfigurationFailed("codex_history_takeover_failed")
+                    .projection(&request),
+            );
+        };
+        match crate::codex_history_takeover::Takeover::begin(&home, provider_id) {
+            Ok(history) => Some(history),
+            Err(error) => {
+                let _ = recovery.abandon(&recovery_record);
+                delete_created_tokens(&origin, &access_token, &leases).await;
+                return Ok(ActivationFailure::Adapter(error).projection(&request));
+            }
+        }
+    } else {
+        None
+    };
     // Helper-owned runtimes are started by `start_local_adapter` only after
     // both the credential and settings commits have succeeded.
     if is_cancelled() {
+        if let Some(history) = codex_history.as_mut() {
+            let _ = history.rollback();
+        }
         let _ = recovery.abandon(&recovery_record);
         delete_created_tokens(&origin, &access_token, &leases).await;
         return Ok(cancelled());
@@ -1894,9 +1951,16 @@ pub async fn configure_desktop_tool_v2(
             if ensure_session_epoch(&account_state, session_epoch).is_err() {
                 return Err(AdapterFailure::ConfigurationFailed("account_changed"));
             }
+            if let Some(history) = codex_history.as_mut() {
+                history.commit()?;
+            }
             recovery
                 .finish(&mut recovery_record)
-                .map_err(|_| AdapterFailure::ConfigurationFailed("recovery_receipt_failed"))
+                .map_err(|_| AdapterFailure::ConfigurationFailed("recovery_receipt_failed"))?;
+            if let Some(history) = codex_history.as_mut() {
+                history.disarm();
+            }
+            Ok(())
         },
     )
     .await;
@@ -1929,6 +1993,7 @@ pub async fn configure_desktop_tool_v2(
                     &claude_runtime,
                     &dsh_runtime,
                     &permit,
+                    &mut codex_history,
                 )
             },
         )
@@ -2045,6 +2110,10 @@ pub(crate) async fn restore_connection_for_exit(tool: &'static str) -> Result<()
             record.pending = true;
             store.save(&record).map_err(|_| ())?;
             connection_recovery::restore_files(&record).map_err(|_| ())?;
+            if tool == "codex_desktop" {
+                let home = tool_adapters::user_home().ok_or(())?;
+                crate::codex_history_takeover::restore(&home).map_err(|_| ())?;
+            }
             tool_credentials::restore(tool, None).map_err(|_| ())?;
             store.remove(tool).map_err(|_| ())?;
             crate::request_diagnostics::clear(tool);
@@ -2417,6 +2486,10 @@ pub async fn manage_tool_connections_v1(
                 record.pending = true;
                 store.save(record).map_err(|_| ())?;
                 kept = connection_recovery::restore_files(record).map_err(|_| ())?;
+                if request.tool_id == "codex_desktop" {
+                    let home = tool_adapters::user_home().ok_or(())?;
+                    crate::codex_history_takeover::restore(&home).map_err(|_| ())?;
+                }
             }
             Ok(kept)
         })();

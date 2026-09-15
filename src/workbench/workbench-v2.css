@@ -1101,6 +1101,24 @@
   flex: 1;
 }
 
+.authorization-actions {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-8);
+}
+
+.authorization-actions .secondary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+}
+
+.authorization-actions svg {
+  width: 15px;
+  height: 15px;
+}
+
 .authorization-main > strong {
   display: block;
   width: fit-content;

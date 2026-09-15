@@ -27,6 +27,7 @@ export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
 export type AccountCommand =
   | "account_inspect_v2"
   | "account_begin_authorization_v2"
+  | "account_open_authorization_v2"
   | "account_poll_authorization_v2"
   | "account_cancel_authorization_v2"
   | "account_logout_v2";

@@ -16,6 +16,7 @@ mod app_installation;
 mod app_update;
 mod claude_bridge;
 mod codex_bridge;
+mod codex_history_takeover;
 mod connection_recovery;
 mod connectivity;
 mod connectivity_core;
@@ -141,6 +142,7 @@ pub fn run() {
             desktop_app_discovery::scan_desktop_apps_read_only,
             account_v2::account_inspect_v2,
             account_v2::account_begin_authorization_v2,
+            account_v2::account_open_authorization_v2,
             account_v2::account_poll_authorization_v2,
             account_v2::account_cancel_authorization_v2,
             account_v2::account_logout_v2,

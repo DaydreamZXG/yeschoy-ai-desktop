@@ -63,6 +63,7 @@ function controller(): AccountSessionController {
     lastError: null,
     refresh: vi.fn(),
     beginAuthorization: vi.fn(),
+    openAuthorization: vi.fn(),
     cancelAuthorization: vi.fn(),
     logout: vi.fn(),
     openWallet: vi.fn(),

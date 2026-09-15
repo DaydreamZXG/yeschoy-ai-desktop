@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   CircleUserRound,
   Clock3,
+  ExternalLink,
   Globe2,
   LogOut,
   RefreshCw,
@@ -51,6 +52,7 @@ export function AccountView({
     loading,
     refresh,
     beginAuthorization,
+    openAuthorization,
     cancelAuthorization,
     logout,
     openWallet,
@@ -238,13 +240,25 @@ export function AccountView({
             <p>{c.authorizationWaitingBody}</p>
             {reason && <p className="account-inline-warning">{reason}</p>}
           </div>
-          <button
-            type="button"
-            className="secondary-action"
-            onClick={() => void cancelAuthorization()}
-          >
-            {c.cancel}
-          </button>
+          <div className="authorization-actions">
+            <button
+              type="button"
+              className="secondary-action"
+              onClick={() => void openAuthorization()}
+              disabled={loading}
+            >
+              <ExternalLink aria-hidden="true" />
+              {c.openAuthorizationPage}
+            </button>
+            <button
+              type="button"
+              className="secondary-action"
+              onClick={() => void cancelAuthorization()}
+              disabled={loading}
+            >
+              {c.cancel}
+            </button>
+          </div>
         </section>
       ) : signedIn && account ? (
         <>

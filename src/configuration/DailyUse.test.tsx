@@ -91,6 +91,7 @@ function session(): AccountSessionController {
     loading: false,
     refresh: vi.fn(async () => projection),
     beginAuthorization: vi.fn(async () => null),
+    openAuthorization: vi.fn(async () => null),
     cancelAuthorization: vi.fn(async () => null),
     logout: vi.fn(async () => null),
     openWallet: vi.fn(async () => true),

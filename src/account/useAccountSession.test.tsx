@@ -146,6 +146,25 @@ describe("resilient account authorization", () => {
     );
     expect(result.current.projection?.status).toBe("authorization_pending");
   });
+  it("reopens the same pending authorization on its issuing route", async () => {
+    const { result } = renderHook(() =>
+      useAccountSession("mainland_optimized"),
+    );
+    await flush();
+    command.mockResolvedValueOnce(projection("authorization_pending"));
+    await act(async () => {
+      await result.current.beginAuthorization();
+    });
+    command.mockResolvedValueOnce(projection("authorization_pending"));
+    await act(async () => {
+      await result.current.openAuthorization();
+    });
+    expect(command).toHaveBeenLastCalledWith(
+      "account_open_authorization_v2",
+      "mainland_optimized",
+    );
+    expect(result.current.projection?.userCode).toBe("ABCD-EFGH");
+  });
   it("does not erase signed-in account data after a refresh exception", async () => {
     command.mockResolvedValueOnce(projection("signed_in"));
     const { result } = renderHook(() =>

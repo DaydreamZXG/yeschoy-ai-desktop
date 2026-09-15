@@ -96,6 +96,7 @@ const zh = {
   authorizationCode: "请核对验证码",
   authorizationWaiting: "等待你在浏览器确认",
   authorizationWaitingBody: "验证码只用于这次登录，请确认网页显示完全一致。",
+  openAuthorizationPage: "重新打开登录页",
   cancel: "取消",
   retry: "重试",
   refreshAccount: "刷新数据",
@@ -125,7 +126,7 @@ const zh = {
   accountAuthorizationDenied: "你已在网页拒绝这次登录。",
   accountAuthorizationExpired: "验证码已过期，请重新发起登录。",
   accountInvalidResponse: "账户数据格式不正确，已停止显示。",
-  browserOpenFailed: "浏览器没有自动打开，请重新发起登录。",
+  browserOpenFailed: "浏览器没有自动打开，请点击“重新打开登录页”。",
   priceSignInRequired: "登录后可查看当前账号可用模型和实际价格。",
   inputPrice: "输入",
   outputPrice: "输出",
@@ -310,6 +311,7 @@ const en: Copy = {
   authorizationWaiting: "Waiting for browser approval",
   authorizationWaitingBody:
     "This code is only for this sign-in. Make sure the website shows the same code.",
+  openAuthorizationPage: "Open sign-in page again",
   cancel: "Cancel",
   retry: "Retry",
   refreshAccount: "Refresh",
@@ -346,7 +348,7 @@ const en: Copy = {
   accountAuthorizationDenied: "You declined this sign-in on the website.",
   accountAuthorizationExpired: "The code expired. Start sign-in again.",
   accountInvalidResponse: "Account data was invalid and is not shown.",
-  browserOpenFailed: "The browser did not open. Start sign-in again.",
+  browserOpenFailed: "The browser did not open. Open the sign-in page again.",
   priceSignInRequired:
     "Sign in to see available models and your account prices.",
   inputPrice: "Input",
@@ -534,6 +536,7 @@ const tw: Copy = {
   authorizationCode: "請核對驗證碼",
   authorizationWaiting: "等待你在瀏覽器確認",
   authorizationWaitingBody: "驗證碼只用於這次登入，請確認網頁顯示完全一致。",
+  openAuthorizationPage: "重新開啟登入頁",
   cancel: "取消",
   retry: "重試",
   refreshAccount: "重新整理資料",
@@ -563,7 +566,7 @@ const tw: Copy = {
   accountAuthorizationDenied: "你已在網頁拒絕這次登入。",
   accountAuthorizationExpired: "驗證碼已過期，請重新發起登入。",
   accountInvalidResponse: "帳戶資料格式不正確，已停止顯示。",
-  browserOpenFailed: "瀏覽器沒有自動開啟，請重新發起登入。",
+  browserOpenFailed: "瀏覽器沒有自動開啟，請點擊「重新開啟登入頁」。",
   priceSignInRequired: "登入後可查看目前帳戶可用模型和實際價格。",
   inputPrice: "輸入",
   outputPrice: "輸出",
@@ -744,6 +747,7 @@ const ja: Copy = {
   authorizationWaiting: "ブラウザでの承認待ち",
   authorizationWaitingBody:
     "このコードは今回のログイン専用です。Webサイトと一致することを確認してください。",
+  openAuthorizationPage: "ログインページを再度開く",
   cancel: "キャンセル",
   retry: "再試行",
   refreshAccount: "更新",
@@ -783,7 +787,7 @@ const ja: Copy = {
     "コードの有効期限が切れました。もう一度ログインしてください。",
   accountInvalidResponse: "アカウントデータが不正なため表示を停止しました。",
   browserOpenFailed:
-    "ブラウザを開けませんでした。もう一度ログインしてください。",
+    "ブラウザを開けませんでした。ログインページを再度開いてください。",
   priceSignInRequired:
     "ログインすると利用可能なモデルとアカウント料金を確認できます。",
   inputPrice: "入力",
