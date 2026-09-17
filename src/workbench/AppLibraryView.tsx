@@ -143,7 +143,7 @@ export function AppLibraryView({
       !scan ||
       scanError ||
       (detected === 0 &&
-        ["claude_desktop", "codex_desktop", "workbuddy"].includes(app.id)) ||
+        ["claude_desktop", "codex_desktop"].includes(app.id)) ||
       scan.targets.find((target) => target.toolId === app.id)?.status !==
         "not_found" ||
       connections?.connections.some(
@@ -406,7 +406,7 @@ export function AppLibraryView({
                         ? "尚未确认接入设置，检查成功后再调整；已有设置不会因此删除。"
                         : installed
                           ? "选择模型与分组，助手帮你完成配置。"
-                          : ["claude_desktop", "codex_desktop", "workbuddy"].includes(app.id)
+                          : ["claude_desktop", "codex_desktop"].includes(app.id)
                             ? "野菜帮你选择安装包，装好后继续接入模型。"
                             : "查看官方安装步骤，安装后由野菜完成模型接入。"}
                     </p>
@@ -451,7 +451,7 @@ export function AppLibraryView({
                       ? t("yeschoyDaily.checkAndRepair")
                       : installed
                         ? "开始接入"
-                        : ["claude_desktop", "codex_desktop", "workbuddy"].includes(app.id)
+                        : ["claude_desktop", "codex_desktop"].includes(app.id)
                           ? "安装并接入"
                           : "查看安装方式"}
                     <ArrowRight />

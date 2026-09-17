@@ -1498,12 +1498,12 @@ describe("daily-use UX", () => {
         </ConnectionProvider>,
       );
       await tick();
-      // count=0 时展示可代装的桌面应用：Claude、Codex、WorkBuddy。
-      expect(screen.queryAllByRole("article")).toHaveLength(count || 3);
+      // count=0 时仅 Claude Desktop / Codex Desktop 可见。
+      expect(screen.queryAllByRole("article")).toHaveLength(count || 2);
       if (count === 0)
         expect(
           screen.getAllByRole("button", { name: /安装并接入/ }),
-        ).toHaveLength(3);
+        ).toHaveLength(2);
       fireEvent.click(
         screen.getByRole("button", {
           name: /查看其他/,

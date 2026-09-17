@@ -73,28 +73,6 @@ fn installer_catalog_is_closed_and_architecture_specific() {
         }
     }
     assert!(catalog::source("codex_desktop", "macos", "x64").is_none());
-    let workbuddy = catalog::source("workbuddy", "macos", "arm64").unwrap();
-    assert_eq!(catalog::mode("workbuddy", "macos", "arm64"), "automatic");
-    assert_eq!(catalog::mode("workbuddy", "windows", "x64"), "system_assisted");
-    assert_eq!(catalog::source_id(workbuddy), "workbuddy-macos-arm64");
-    assert!(!catalog::allowed_url(
-        workbuddy,
-        &Url::parse(workbuddy.url).unwrap()
-    ));
-    assert!(catalog::allowed_url(
-        workbuddy,
-        &Url::parse(
-            "https://download.codebuddy.cn/workbuddy/saas/darwin-arm64/WorkBuddy-darwin-arm64-5.5.6.1-abc.dmg"
-        )
-        .unwrap()
-    ));
-    assert!(!catalog::allowed_url(
-        workbuddy,
-        &Url::parse(
-            "https://download.codebuddy.cn/workbuddy/saas/darwin-arm64/WorkBuddy-darwin-x64-5.5.6.1-abc.dmg"
-        )
-        .unwrap()
-    ));
     assert_eq!(catalog::mode("pi", "macos", "x64"), "guided");
     assert!(catalog::guide("arbitrary").is_none());
     assert!(serde_json::from_value::<InstallRequest>(serde_json::json!({"requestId":"x","toolId":"pi","action":"start","jobId":"","url":"https://evil.example"})).is_err());

@@ -28,7 +28,6 @@ ORIGIN = "https://ergou.qzz.io"
 WINDOWS_PUBLISHERS = {
     "codex": "CN=50BDFD77-8903-4850-9FFE-6E8522F64D5B",
     "claude": 'CN="Anthropic, PBC", O="Anthropic, PBC", L=San Francisco, S=California, C=US, SERIALNUMBER=4860621, OID.2.5.4.15=Private Organization, OID.1.3.6.1.4.1.311.60.2.1.2=Delaware, OID.1.3.6.1.4.1.311.60.2.1.3=US',
-    "workbuddy": "Tencent",
 }
 CATALOG_KEYS = {"schemaVersion", "generatedAt", "artifacts"}
 ARTIFACT_KEYS = {"sourceId", "app", "platform", "architecture", "format", "version", "url", "sha256", "size", "originUrl", "identity", "publisher", "verifiedAt", "verification"}
