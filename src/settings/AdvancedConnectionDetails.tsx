@@ -29,6 +29,7 @@ const TOOL_INFO: Record<
   dsh_web: { previewId: "dsh" },
   pi: { previewId: "pi", appType: "pi" },
   claude_code: { previewId: "claude", appType: "claude" },
+  workbuddy: { previewId: "workbuddy" },
 };
 
 const CONNECTED_STATES = ["connected", "changed", "legacy"] as const;
@@ -48,8 +49,8 @@ function baseUrlOf(connection: ToolConnection) {
 function diagnosticsText(connection: ToolConnection, requestId?: string) {
   const info = TOOL_INFO[connection.toolId];
   const targetFile = info?.previewId
-    ? CONFIGURATION_TOOLS.find((t) => t.id === info.previewId)?.targetFile ??
-      "未记录"
+    ? (CONFIGURATION_TOOLS.find((t) => t.id === info.previewId)?.targetFile ??
+      "未记录")
     : "（目录方式打开，无固定文件）";
   const last = connection.lastRequest;
   return [
@@ -194,7 +195,10 @@ export function AdvancedConnectionDetails() {
                     {t("yeschoySettings.advanced.revealFailed")}
                   </p>
                 )}
-                <RecentRequest value={connection.lastRequest} toolId={connection.toolId} />
+                <RecentRequest
+                  value={connection.lastRequest}
+                  toolId={connection.toolId}
+                />
               </article>
             );
           })}

@@ -25,6 +25,10 @@ describe("desktop protocol compatibility", () => {
     expect(connectionLifecycleNote("dsh_web", "DSH web")).toContain(
       "在浏览器中打开",
     );
+    expect(connectionLifecycleMode("workbuddy")).toBe("hot_reload_desktop");
+    expect(connectionLifecycleNote("workbuddy", "WorkBuddy")).toContain(
+      "不需要关闭或重启",
+    );
     const desktop = connectionLifecycleNote("codex_desktop", "Codex Desktop");
     expect(desktop).toContain("提醒你保存");
     expect(desktop).toContain("正常退出");
@@ -86,5 +90,7 @@ describe("desktop protocol compatibility", () => {
   it("keeps the non-Claude tool protocol boundaries unchanged", () => {
     expect(modelSupportsTool("pi", ["openai"])).toBe(true);
     expect(modelSupportsTool("pi", ["openai-response"])).toBe(false);
+    expect(modelSupportsTool("workbuddy", ["openai"])).toBe(true);
+    expect(modelSupportsTool("workbuddy", ["anthropic"])).toBe(false);
   });
 });

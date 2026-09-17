@@ -35,10 +35,7 @@ import { OpenConnection } from "./OpenConnection";
 import { RecentRequest } from "./RecentRequest";
 import { ConnectionStatusNotice } from "./ConnectionStatusNotice";
 import { ActivationFeedback } from "./ActivationFeedback";
-import {
-  CelebrationConfetti,
-  TickerText,
-} from "./FirstActivationCelebration";
+import { CelebrationConfetti, TickerText } from "./FirstActivationCelebration";
 import {
   markFirstActivationCelebrated,
   shouldCelebrateFirstActivation,
@@ -93,7 +90,8 @@ type ApplicationSurfaceKey =
   | "surfaceClaudeDesktop"
   | "surfaceCodexDesktop"
   | "surfacePi"
-  | "surfaceDsh";
+  | "surfaceDsh"
+  | "surfaceWorkBuddy";
 
 interface ApplicationChoice {
   id: ActivationToolId;
@@ -127,6 +125,13 @@ const APPLICATIONS: readonly ApplicationChoice[] = [
     icon: codexIcon,
   },
   {
+    id: "workbuddy",
+    toolId: "workbuddy",
+    displayName: "WorkBuddy",
+    surface: "surfaceWorkBuddy",
+    mark: "W",
+  },
+  {
     id: "pi",
     toolId: "pi",
     displayName: "Pi",
@@ -145,7 +150,8 @@ const APPLICATIONS: readonly ApplicationChoice[] = [
 export type ConnectionLifecycleMode =
   | "graceful_desktop_restart"
   | "new_terminal_session"
-  | "browser_launch";
+  | "browser_launch"
+  | "hot_reload_desktop";
 
 export function connectionLifecycleMode(
   toolId: ActivationToolId,
@@ -153,6 +159,7 @@ export function connectionLifecycleMode(
   if (toolId === "claude_desktop" || toolId === "codex_desktop")
     return "graceful_desktop_restart";
   if (toolId === "dsh_web") return "browser_launch";
+  if (toolId === "workbuddy") return "hot_reload_desktop";
   return "new_terminal_session";
 }
 
@@ -164,6 +171,7 @@ export function connectionLifecycleNote(
     | "lifecycleDesktopRestart"
     | "lifecycleBrowserLaunch"
     | "lifecycleTerminalSession"
+    | "lifecycleHotReload"
   > = configurationCopies.zh,
 ) {
   switch (connectionLifecycleMode(toolId)) {
@@ -173,6 +181,8 @@ export function connectionLifecycleNote(
       return copy.lifecycleBrowserLaunch;
     case "new_terminal_session":
       return copy.lifecycleTerminalSession;
+    case "hot_reload_desktop":
+      return copy.lifecycleHotReload;
   }
 }
 
@@ -256,6 +266,7 @@ function previewTool(toolId: ActivationToolId): ConfigurationToolId {
   if (toolId === "codex_desktop") return "codex";
   if (toolId === "pi") return "pi";
   if (toolId === "dsh_web") return "dsh";
+  if (toolId === "workbuddy") return "workbuddy";
   return "claude";
 }
 
@@ -820,7 +831,9 @@ export function ConfigurationPreviewView({
   // 否则 cleanup 只清了定时器，按钮会永远停留在「接入成功」。
   const [applyFlash, setApplyFlash] = useState(false);
   useEffect(() => {
-    if (!(applyPhase === "finished" && activationSucceeded && resultIsCurrent)) {
+    if (
+      !(applyPhase === "finished" && activationSucceeded && resultIsCurrent)
+    ) {
       setApplyFlash(false);
       return;
     }
@@ -896,10 +909,13 @@ export function ConfigurationPreviewView({
             .replace("{{app}}", resultContext?.app ?? application.displayName)
             .replace(
               "{{favorites}}",
-              (activation.models?.length ?? 1) > 1
-                ? g.favoritesConfigured
-                : "",
+              (activation.models?.length ?? 1) > 1 ? g.favoritesConfigured : "",
             );
+        if (activationToolId === "workbuddy")
+          return g.readyWorkBuddy.replace(
+            "{{favorites}}",
+            (activation.models?.length ?? 1) > 1 ? g.favoritesConfigured : "",
+          );
         return g.readyDefault
           .replace("{{app}}", resultContext?.app ?? application.displayName)
           .replace(
@@ -995,7 +1011,10 @@ export function ConfigurationPreviewView({
         if (AUTO_RECOVERY_REASONS.has(activation.reasonCode))
           return t(`yeschoyDesktopRecovery.${activation.reasonCode}`);
         {
-          const recoveryMessage = recoveryRetryMessage(activation.reasonCode, g);
+          const recoveryMessage = recoveryRetryMessage(
+            activation.reasonCode,
+            g,
+          );
           if (recoveryMessage) return recoveryMessage;
         }
         if (activation.reasonCode === "installation_confirmation_required")
@@ -1119,7 +1138,9 @@ export function ConfigurationPreviewView({
         ? g.verifyingCodex
         : activationToolId === "dsh_web"
           ? g.verifyingDsh
-          : g.verifying;
+          : activationToolId === "workbuddy"
+            ? g.verifyingWorkBuddy
+            : g.verifying;
   const activationProgressText = (() => {
     switch (activationProgress?.stage) {
       case "queued":
@@ -1857,8 +1878,7 @@ export function ConfigurationPreviewView({
                   <div className="selection-warning" role="alert">
                     <strong>{g.missingGroupTitle}</strong>
                     <p>
-                      <b>{groupLabel(billingGroup)}</b>{" "}
-                      {g.missingGroupBody}
+                      <b>{groupLabel(billingGroup)}</b> {g.missingGroupBody}
                     </p>
                   </div>
                 )}
@@ -1871,7 +1891,10 @@ export function ConfigurationPreviewView({
             </div>
 
             {signedIn && (
-              <section className="model-set-editor" aria-label={g.favoriteModels}>
+              <section
+                className="model-set-editor"
+                aria-label={g.favoriteModels}
+              >
                 <header>
                   <div>
                     <h3>{g.favoriteModels}</h3>
@@ -2083,9 +2106,7 @@ export function ConfigurationPreviewView({
               <h2 id="configuration-preview-title">
                 {configured ? g.currentConnection : g.finishChoice}
               </h2>
-              <p>
-                {configured ? g.configuredSummary : g.finishHint}
-              </p>
+              <p>{configured ? g.configuredSummary : g.finishHint}</p>
             </div>
           </div>
 
@@ -2148,8 +2169,7 @@ export function ConfigurationPreviewView({
                     <small>
                       {groupDisplayName(
                         m.billingGroup,
-                        models.find((a) => a.id === m.modelId)?.billing
-                          ?.groups,
+                        models.find((a) => a.id === m.modelId)?.billing?.groups,
                         g.defaultGroup,
                       )}
                       {m.modelId === defaultBinding?.modelId
@@ -2308,9 +2328,7 @@ export function ConfigurationPreviewView({
                 disabled={activationCancelRequested}
               >
                 <CircleStop aria-hidden="true" />
-                {activationCancelRequested
-                  ? g.cancelInProgress
-                  : g.cancelSetup}
+                {activationCancelRequested ? g.cancelInProgress : g.cancelSetup}
               </button>
             </p>
           </div>
@@ -2351,12 +2369,9 @@ export function ConfigurationPreviewView({
             {!resultIsCurrent && resultContext && (
               <p>
                 {g.staleContextPrefix} {resultContext.account} ·{" "}
-                {resultContext.app} ·{" "}
-                <code>{resultContext.model}</code> ·{" "}
+                {resultContext.app} · <code>{resultContext.model}</code> ·{" "}
                 {groupLabel(resultContext.group)} ·{" "}
-                {t(
-                  `yeschoyConfiguration.lines.${resultContext.line}.name`,
-                )}
+                {t(`yeschoyConfiguration.lines.${resultContext.line}.name`)}
                 {g.staleContextSuffix}
               </p>
             )}

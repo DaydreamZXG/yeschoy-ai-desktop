@@ -3,6 +3,7 @@ import codexIcon from "../assets/icons/official-codex.png";
 import piIcon from "../assets/icons/official-pi.svg";
 import dshIcon from "../assets/icons/official-dsh.svg";
 import opencodeIcon from "../assets/icons/official-opencode.svg";
+import workbuddyIcon from "../assets/icons/official-workbuddy.svg";
 import type { ActivationToolId } from "../configuration/activation";
 
 /**
@@ -14,7 +15,7 @@ import type { ActivationToolId } from "../configuration/activation";
  * 遗留工具（hermes/openclaw）不属于 V1 范围，禁止回到这两个清单
  * （一致性由 appCatalog.test.ts 强校验）。`ACTIVATION_TOOL_IDS`
  * （activation.ts）是 Rust 扫描/接入协议契约，2026-09-14 起与展示层
- * 完全一致（5 个）；增删工具必须先改这里并通过强校验，再同步协议与 Rust。
+ * 完全一致（6 个）；增删工具必须先改这里并通过强校验，再同步协议与 Rust。
  */
 export const WORKBENCH_APPS: {
   id: ActivationToolId;
@@ -34,6 +35,12 @@ export const WORKBENCH_APPS: {
     name: "Codex Desktop",
     description: "Codex 桌面应用",
     icon: codexIcon,
+  },
+  {
+    id: "workbuddy",
+    name: "WorkBuddy",
+    description: "腾讯 AI 办公与开发助手",
+    icon: workbuddyIcon,
   },
   {
     id: "dsh_web",
@@ -58,5 +65,10 @@ export const COMING_SOON_APPS: {
   icon?: string;
   mark?: string;
 }[] = [
-  { id: "opencode", name: "OpenCode", description: "开源终端编程助手", icon: opencodeIcon },
+  {
+    id: "opencode",
+    name: "OpenCode",
+    description: "开源终端编程助手",
+    icon: opencodeIcon,
+  },
 ];

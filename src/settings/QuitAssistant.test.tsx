@@ -131,6 +131,14 @@ describe("global desktop close choice and cooperative exit", () => {
     await flush();
     expect(quitCalls().at(-1)?.[1]).toEqual({ restoreSettings: false });
   });
+  it("accepts and names WorkBuddy restoration failures", async () => {
+    await openSettingsChoice();
+    emit("yeschoy://exit-progress", {
+      status: "restore_failed",
+      failedTools: ["workbuddy"],
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent("WorkBuddy");
+  });
   it("reads back a lost restoration result and keeps unsafe tool names off screen", async () => {
     await openSettingsChoice();
     fireEvent.click(screen.getByRole("button", { name: "恢复原设置并退出" }));

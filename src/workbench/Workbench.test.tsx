@@ -100,6 +100,7 @@ function activationTargetScan(requestId: string) {
     ["codex_desktop", "Codex Desktop", "26.825.51511"],
     ["pi", "Pi", "0.84.4"],
     ["dsh_web", "DSH web", "0.1.0-rc.6"],
+    ["workbuddy", "WorkBuddy", "5.5.6"],
   ] as const;
   return {
     requestId,
@@ -669,7 +670,7 @@ describe("official workbench", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "登录野菜 API" })).toBeEnabled();
     // 5 张 V1 应用卡 + 恒显的 OpenCode「即将支持」卡（PRD §3.2）。
-    expect(screen.getAllByRole("article")).toHaveLength(6);
+    expect(screen.getAllByRole("article")).toHaveLength(7);
     const card = screen
       .getByRole("heading", { name: "Claude Desktop" })
       .closest("article")!;

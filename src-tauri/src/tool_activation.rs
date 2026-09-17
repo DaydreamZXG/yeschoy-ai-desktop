@@ -24,7 +24,7 @@ use crate::{
     shutdown_coordinator,
     tool_adapters::{
         self, claude_code, claude_desktop, codex_desktop, desktop_lifecycle, dsh_web, pi,
-        AdapterFailure, ResolvedInstallation,
+        workbuddy, AdapterFailure, ResolvedInstallation,
     },
     tool_credentials::{self, CredentialFailure, ToolCredential, ToolModelRoute},
 };
@@ -347,11 +347,7 @@ fn request_is_valid(request: &ToolActivationRequest) -> bool {
         )
         && matches!(
             request.tool_id.as_str(),
-            "claude_code"
-                | "claude_desktop"
-                | "codex_desktop"
-                | "pi"
-                | "dsh_web"
+            "claude_code" | "claude_desktop" | "codex_desktop" | "pi" | "dsh_web" | "workbuddy"
         )
         && bounded_plain_text(&request.model_id, 200)
         && bounded_plain_text(&request.billing_group, 128)
@@ -491,7 +487,7 @@ fn model_supports_tool(pricing: &Value, model_id: &str, tool_id: &str) -> bool {
         "codex_desktop" => {
             return codex_transport(pricing, model_id).is_some();
         }
-        "pi" | "dsh_web" => "openai",
+        "pi" | "dsh_web" | "workbuddy" => "openai",
         _ => return false,
     };
     data(pricing)
@@ -557,6 +553,7 @@ fn token_name(tool_id: &str) -> &'static str {
         "codex_desktop" => "野菜API Codex Desktop",
         "pi" => "野菜API Pi",
         "dsh_web" => "野菜API DSH web",
+        "workbuddy" => "野菜API WorkBuddy",
         _ => "野菜API Desktop",
     }
 }
@@ -570,6 +567,7 @@ pub(crate) fn tool_for_token_name(name: &str) -> Option<&'static str> {
         "codex_desktop",
         "pi",
         "dsh_web",
+        "workbuddy",
     ]
     .into_iter()
     .find(|tool| name.starts_with(&format!("野菜API {}-", token_code(tool))))
@@ -635,6 +633,7 @@ fn token_code(tool_id: &str) -> &'static str {
         "codex_desktop" => "cx",
         "pi" => "pi",
         "dsh_web" => "ds",
+        "workbuddy" => "wb",
         _ => "tool",
     }
 }
@@ -1017,6 +1016,7 @@ enum PreparedAdapter {
     CodexDesktop(codex_desktop::Prepared),
     Pi(pi::Prepared),
     DshWeb(dsh_web::Prepared),
+    WorkBuddy(workbuddy::Prepared),
 }
 
 impl PreparedAdapter {
@@ -1027,6 +1027,7 @@ impl PreparedAdapter {
             Self::CodexDesktop(v) => v.changes(),
             Self::Pi(v) => v.changes(),
             Self::DshWeb(v) => v.changes(),
+            Self::WorkBuddy(v) => v.changes(),
         }
     }
 
@@ -1044,6 +1045,7 @@ impl PreparedAdapter {
             Self::CodexDesktop(value) => value.commit(),
             Self::Pi(value) => value.commit(),
             Self::DshWeb(value) => value.commit(),
+            Self::WorkBuddy(value) => value.commit(),
         }
     }
 
@@ -1054,6 +1056,7 @@ impl PreparedAdapter {
             Self::CodexDesktop(value) => value.rollback(),
             Self::Pi(value) => value.rollback(),
             Self::DshWeb(value) => value.rollback(),
+            Self::WorkBuddy(value) => value.rollback(),
         }
     }
 }
@@ -1109,6 +1112,9 @@ fn prepare_adapter(
         }
         "dsh_web" => dsh_web::prepare_catalog(&home, &origin, &request.model_id, &models)
             .map(PreparedAdapter::DshWeb),
+        "workbuddy" => {
+            workbuddy::prepare_catalog(&home, credential).map(PreparedAdapter::WorkBuddy)
+        }
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
 }
@@ -1123,7 +1129,7 @@ async fn start_local_adapter(
         "claude_code" => claude_code_runtime.start(credential.clone()).await,
         "claude_desktop" => claude_runtime.start(credential.clone()).await.map(|_| ()),
         "codex_desktop" => codex_desktop::ensure_credential_ready(credential).await,
-        "pi" | "dsh_web" => Ok(()),
+        "pi" | "dsh_web" | "workbuddy" => Ok(()),
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
 }
@@ -1140,10 +1146,12 @@ async fn open_configured_adapter(
         "dsh_web" => {
             dsh_web::open_existing(dsh_runtime, installation, credential.upstream_key()).await
         }
+        "workbuddy" => tool_adapters::desktop_launch::launch("workbuddy", &installation.path),
         "claude_code" | "pi" => {
             let home = tool_adapters::user_home()
                 .ok_or(AdapterFailure::ConfigurationFailed("home_unavailable"))?;
-            tool_adapters::terminal_launch::launch_async(installation, &request.tool_id, &home).await
+            tool_adapters::terminal_launch::launch_async(installation, &request.tool_id, &home)
+                .await
         }
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
@@ -1845,7 +1853,7 @@ pub async fn configure_desktop_tool_v2(
         line_id: request.line_id.clone(),
         billing_group: request.billing_group.clone(),
         updated_at_epoch_ms: now_epoch_ms(),
-        requires_background: true,
+        requires_background: needs_background(&request.tool_id, &credential),
     };
     let mut recovery_record =
         match recovery.begin(receipt, prepared.changes(), previous_record.as_ref()) {
@@ -2082,12 +2090,13 @@ pub async fn configure_desktop_tool_v2(
     ))
 }
 
-const CONNECTION_TOOLS: [&str; 5] = [
+const CONNECTION_TOOLS: [&str; 6] = [
     "claude_code",
     "claude_desktop",
     "codex_desktop",
     "pi",
     "dsh_web",
+    "workbuddy",
 ];
 
 /// Called only by the exit owner after admission closes and active operations
@@ -2095,44 +2104,67 @@ const CONNECTION_TOOLS: [&str; 5] = [
 /// are revoked, and missing originals fail visibly instead of inventing them.
 pub(crate) async fn restore_connection_for_exit(tool: &'static str) -> Result<(), ()> {
     let _guard = tokio::time::timeout(CONNECTION_LOCK_WAIT_TIMEOUT, ACTIVATION_LOCK.lock())
-        .await.map_err(|_| ())?;
-    let needs_restore = tokio::time::timeout(CONNECTION_INSPECTION_TIMEOUT, tokio::task::spawn_blocking(move || {
-        let store = Store::open(false).map_err(|_| ())?;
-        let projection = inspect_connection(tool, Ok(store.as_ref()));
-        match projection.state {
-            "not_connected" => Ok(false),
-            "unavailable" | "legacy" => Err(()),
-            _ if projection.restore_mode != "original" => Err(()),
-            _ => Ok(true),
-        }
-    })).await.map_err(|_| ())?.map_err(|_| ())??;
-    if !needs_restore { return Ok(()); }
-    crate::exit_restore::after_normal_close(async {
-        if desktop_lifecycle::requires_reload(tool) {
-            // Multiple installations are ambiguous: never guess which to close.
-            let installation = tool_adapters::resolve_installation(tool, "").await.map_err(|_| ())?;
-            desktop_lifecycle::quit_for_exit_restore(tool, &installation.path).await.map_err(|_| ())?;
-        }
-        Ok(())
-    }, || async {
+        .await
+        .map_err(|_| ())?;
+    let needs_restore = tokio::time::timeout(
+        CONNECTION_INSPECTION_TIMEOUT,
         tokio::task::spawn_blocking(move || {
-            let _process_guard = connection_recovery::operation_lock().map_err(|_| ())?;
-            let store = Store::open(false).map_err(|_| ())?.ok_or(())?;
-            let Some(mut record) = store.load(tool).map_err(|_| ())? else { return Ok(()); };
-            if !record.original_known { return Err(()); }
-            record.pending = true;
-            store.save(&record).map_err(|_| ())?;
-            connection_recovery::restore_files(&record).map_err(|_| ())?;
-            if tool == "codex_desktop" {
-                let home = tool_adapters::user_home().ok_or(())?;
-                crate::codex_history_takeover::restore(&home).map_err(|_| ())?;
+            let store = Store::open(false).map_err(|_| ())?;
+            let projection = inspect_connection(tool, Ok(store.as_ref()));
+            match projection.state {
+                "not_connected" => Ok(false),
+                "unavailable" | "legacy" => Err(()),
+                _ if projection.restore_mode != "original" => Err(()),
+                _ => Ok(true),
             }
-            tool_credentials::restore(tool, None).map_err(|_| ())?;
-            store.remove(tool).map_err(|_| ())?;
-            crate::request_diagnostics::clear(tool);
+        }),
+    )
+    .await
+    .map_err(|_| ())?
+    .map_err(|_| ())??;
+    if !needs_restore {
+        return Ok(());
+    }
+    crate::exit_restore::after_normal_close(
+        async {
+            if desktop_lifecycle::requires_reload(tool) {
+                // Multiple installations are ambiguous: never guess which to close.
+                let installation = tool_adapters::resolve_installation(tool, "")
+                    .await
+                    .map_err(|_| ())?;
+                desktop_lifecycle::quit_for_exit_restore(tool, &installation.path)
+                    .await
+                    .map_err(|_| ())?;
+            }
             Ok(())
-        }).await.map_err(|_| ())?
-    }).await
+        },
+        || async {
+            tokio::task::spawn_blocking(move || {
+                let _process_guard = connection_recovery::operation_lock().map_err(|_| ())?;
+                let store = Store::open(false).map_err(|_| ())?.ok_or(())?;
+                let Some(mut record) = store.load(tool).map_err(|_| ())? else {
+                    return Ok(());
+                };
+                if !record.original_known {
+                    return Err(());
+                }
+                record.pending = true;
+                store.save(&record).map_err(|_| ())?;
+                connection_recovery::restore_files(&record).map_err(|_| ())?;
+                if tool == "codex_desktop" {
+                    let home = tool_adapters::user_home().ok_or(())?;
+                    crate::codex_history_takeover::restore(&home).map_err(|_| ())?;
+                }
+                tool_credentials::restore(tool, None).map_err(|_| ())?;
+                store.remove(tool).map_err(|_| ())?;
+                crate::request_diagnostics::clear(tool);
+                Ok(())
+            })
+            .await
+            .map_err(|_| ())?
+        },
+    )
+    .await
 }
 
 #[derive(Deserialize)]
@@ -2335,6 +2367,9 @@ fn inspect_connections_with(
 }
 
 pub(crate) fn needs_background(tool: &str, credential: &ToolCredential) -> bool {
+    if tool == "workbuddy" {
+        return false;
+    }
     credential.has_model_set()
         || matches!(tool, "claude_desktop" | "dsh_web")
         || credential.claude_transport.as_deref() == Some("chat_bridge")
@@ -2364,6 +2399,7 @@ fn legacy_paths(tool: &str) -> Result<Vec<std::path::PathBuf>, AdapterFailure> {
         "dsh_web" => {
             vec![dsh_web::dsh_home(&home, std::env::var_os("DSH_HOME"))?.join("settings.yaml")]
         }
+        "workbuddy" => vec![home.join(".workbuddy/models.json")],
         _ => return Err(AdapterFailure::UnsupportedProfile),
     })
 }
@@ -2689,7 +2725,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn inspection_regression_one_adapter_panic_keeps_four_other_results() {
+    async fn inspection_regression_one_adapter_panic_keeps_five_other_results() {
         static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
         let result = inspect_on_worker(&LOCK, Duration::from_secs(2), || {
             inspect_connections_with(|tool| {
@@ -2706,13 +2742,13 @@ mod tests {
         })
         .await
         .unwrap();
-        assert_eq!(result.len(), 5);
+        assert_eq!(result.len(), 6);
         assert_eq!(result[1].state, "connected");
         assert_eq!(result[2].state, "unavailable");
         assert_eq!(result[2].reason_code, "connection_inspection_failed");
         assert_eq!(
             result.iter().filter(|c| c.state == "not_connected").count(),
-            3
+            4
         );
         assert!(!serde_json::to_string(&result)
             .unwrap()
@@ -3128,7 +3164,7 @@ mod tests {
     }
 
     #[test]
-    fn request_requires_one_of_seven_exact_targets_and_selection_shape() {
+    fn request_requires_one_of_six_exact_targets_and_selection_shape() {
         let valid = ToolActivationRequest {
             request_id: "activation-1".into(),
             line_id: "mainland_optimized".into(),
@@ -3179,6 +3215,7 @@ mod tests {
         });
         assert!(model_supports_tool(&pricing, "chat", "pi"));
         assert!(model_supports_tool(&pricing, "chat", "dsh_web"));
+        assert!(model_supports_tool(&pricing, "chat", "workbuddy"));
         assert!(model_supports_tool(&pricing, "responses", "codex_desktop"));
         assert!(model_supports_tool(&pricing, "messages", "claude_code"));
         assert!(model_supports_tool(&pricing, "messages", "claude_desktop"));
@@ -3215,6 +3252,7 @@ mod tests {
             token_name("codex_desktop"),
             token_name("pi"),
             token_name("dsh_web"),
+            token_name("workbuddy"),
         ];
         for (index, left) in names.iter().enumerate() {
             assert!(!names[index + 1..].contains(left));

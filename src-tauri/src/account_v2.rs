@@ -1946,6 +1946,7 @@ pub async fn account_logout_v2(
         "codex_desktop",
         "pi",
         "dsh_web",
+        "workbuddy",
     ] {
         crate::request_diagnostics::clear(tool);
     }

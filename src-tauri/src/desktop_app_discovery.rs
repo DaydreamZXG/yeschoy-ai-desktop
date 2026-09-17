@@ -1,6 +1,6 @@
 use crate::desktop_app_discovery_core::{
     classify, DesktopAppObservation, DesktopAppResult, DesktopAppSpec, DesktopLaunchTarget,
-    LocationHint, DESKTOP_APP_SPECS,
+    LocationHint, DESKTOP_APP_SPECS, PRIMARY_DESKTOP_APP_SPECS,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -157,7 +157,7 @@ pub fn scan_desktop_apps_read_only(
 ) -> Result<DesktopAppScanResponse, String> {
     validate_request_id(&request.request_id)?;
     let started_at_epoch_ms = unix_epoch_ms();
-    let apps = DESKTOP_APP_SPECS
+    let apps = PRIMARY_DESKTOP_APP_SPECS
         .into_iter()
         .map(|spec| DesktopAppProjection::from(classify(spec, observe_app(spec))))
         .collect();
@@ -210,6 +210,7 @@ fn discover_macos_candidates(spec: DesktopAppSpec) -> Vec<Candidate> {
     let app_names: &[&str] = match spec.id {
         "claude_desktop" => &["Claude.app"],
         "codex_desktop" => &["ChatGPT.app", "Codex.app"],
+        "workbuddy" => &["WorkBuddy.app"],
         _ => &[],
     };
     let mut roots = vec![(PathBuf::from("/Applications"), LocationHint::Applications)];
@@ -327,6 +328,11 @@ fn windows_app_relative_executables(app_id: &str) -> &'static [&'static str] {
             "OpenAI\\Codex\\Codex.exe",
             "OpenAI\\ChatGPT\\ChatGPT.exe",
             "VFS\\ProgramFilesX64\\OpenAI\\ChatGPT\\ChatGPT.exe",
+        ],
+        "workbuddy" => &[
+            "WorkBuddy.exe",
+            "app\\WorkBuddy.exe",
+            "WorkBuddy\\WorkBuddy.exe",
         ],
         _ => &[],
     }
@@ -748,6 +754,11 @@ fn windows_relative_paths(app_id: &str, program_files: bool) -> &'static [&'stat
             "ChatGPT\\ChatGPT.exe",
             "OpenAI\\ChatGPT\\ChatGPT.exe",
         ],
+        ("workbuddy", false) => &[
+            "Programs\\WorkBuddy\\WorkBuddy.exe",
+            "WorkBuddy\\WorkBuddy.exe",
+        ],
+        ("workbuddy", true) => &["WorkBuddy\\WorkBuddy.exe"],
         _ => &[],
     }
 }
@@ -816,6 +827,10 @@ fn windows_registered_name_matches(app_id: &str, name: &str, publisher: &str) ->
                 || name == "codexdesktop"
                 || ((name == "chatgpt" || name == "chatgptdesktop")
                     && (publisher.is_empty() || publisher.contains("openai")))
+        }
+        "workbuddy" => {
+            (name == "workbuddy" || name == "tencentworkbuddy")
+                && (publisher.is_empty() || publisher.contains("tencent"))
         }
         _ => false,
     }
@@ -1262,7 +1277,7 @@ mod tests {
     }
 
     #[test]
-    fn windows_registered_and_path_fallbacks_cover_both_installers() {
+    fn windows_registered_and_path_fallbacks_cover_supported_installers() {
         assert!(windows_registered_name_matches(
             "claude_desktop",
             "Claude Desktop",
@@ -1278,6 +1293,11 @@ mod tests {
             "ChatGPT Helper",
             "Unknown"
         ));
+        assert!(windows_registered_name_matches(
+            "workbuddy",
+            "WorkBuddy",
+            "Tencent"
+        ));
 
         assert!(windows_relative_paths("claude_desktop", false)
             .contains(&"Programs\\Claude Desktop\\Claude.exe"));
@@ -1287,6 +1307,8 @@ mod tests {
         assert!(
             windows_relative_paths("codex_desktop", true).contains(&"OpenAI\\ChatGPT\\ChatGPT.exe")
         );
+        assert!(windows_relative_paths("workbuddy", false)
+            .contains(&"Programs\\WorkBuddy\\WorkBuddy.exe"));
         assert_eq!(
             parse_windows_display_icon("\"C:\\Program Files\\OpenAI\\ChatGPT.exe\",0"),
             Some("C:\\Program Files\\OpenAI\\ChatGPT.exe".into())

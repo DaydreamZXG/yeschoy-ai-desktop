@@ -140,6 +140,10 @@ pub(crate) fn windows_package_name_matches(app_id: &str, name: &str) -> bool {
                 | "openai.chatgpt"
                 | "openaichatgpt"
         ),
+        "workbuddy" => matches!(
+            name.as_str(),
+            "workbuddy" | "tencent.workbuddy" | "tencentworkbuddy"
+        ),
         _ => false,
     }
 }
@@ -154,6 +158,7 @@ pub(crate) fn windows_desktop_filename_matches(app_id: &str, path: &Path) -> boo
         "codex_desktop" => {
             name.eq_ignore_ascii_case("Codex.exe") || name.eq_ignore_ascii_case("ChatGPT.exe")
         }
+        "workbuddy" => name.eq_ignore_ascii_case("WorkBuddy.exe"),
         _ => false,
     }
 }
@@ -185,6 +190,10 @@ pub(crate) fn windows_desktop_file_identity_matches(
                 product.as_str(),
                 "codex" | "codexdesktop" | "chatgpt" | "chatgptdesktop"
             ) && matches!(company.as_str(), "openai" | "openaillc" | "openaiopcollc")
+        }
+        "workbuddy" => {
+            matches!(product.as_str(), "workbuddy" | "tencentworkbuddy")
+                && company.contains("tencent")
         }
         _ => false,
     };
@@ -309,7 +318,7 @@ pub struct DesktopAppSpec {
     pub expected_bundle_id: &'static str,
 }
 
-pub const DESKTOP_APP_SPECS: [DesktopAppSpec; 2] = [
+pub const PRIMARY_DESKTOP_APP_SPECS: [DesktopAppSpec; 2] = [
     DesktopAppSpec {
         id: "claude_desktop",
         display_name: "Claude Desktop",
@@ -319,6 +328,16 @@ pub const DESKTOP_APP_SPECS: [DesktopAppSpec; 2] = [
         id: "codex_desktop",
         display_name: "Codex",
         expected_bundle_id: "com.openai.codex",
+    },
+];
+
+pub const DESKTOP_APP_SPECS: [DesktopAppSpec; 3] = [
+    PRIMARY_DESKTOP_APP_SPECS[0],
+    PRIMARY_DESKTOP_APP_SPECS[1],
+    DesktopAppSpec {
+        id: "workbuddy",
+        display_name: "WorkBuddy",
+        expected_bundle_id: "com.tencent.workbuddy.mac",
     },
 ];
 
@@ -577,11 +596,16 @@ mod tests {
     #[test]
     fn catalog_is_desktop_only_and_stable() {
         assert_eq!(
-            DESKTOP_APP_SPECS.map(|spec| spec.id),
+            PRIMARY_DESKTOP_APP_SPECS.map(|spec| spec.id),
             ["claude_desktop", "codex_desktop"]
         );
+        assert_eq!(DESKTOP_APP_SPECS[2].id, "workbuddy");
         assert_eq!(
-            DESKTOP_APP_SPECS.map(|spec| spec.expected_bundle_id),
+            DESKTOP_APP_SPECS[2].expected_bundle_id,
+            "com.tencent.workbuddy.mac"
+        );
+        assert_eq!(
+            PRIMARY_DESKTOP_APP_SPECS.map(|spec| spec.expected_bundle_id),
             ["com.anthropic.claudefordesktop", "com.openai.codex"]
         );
     }
@@ -616,5 +640,27 @@ mod tests {
         let unsupported = classify(DESKTOP_APP_SPECS[1], DesktopAppObservation::Unsupported);
         assert_eq!(unsupported.status, "unsupported_platform");
         assert_eq!(unsupported.configuration_status, "not_applicable");
+    }
+
+    #[test]
+    fn workbuddy_windows_identity_is_exact_and_gui_only() {
+        assert!(windows_package_name_matches(
+            "workbuddy",
+            "Tencent.WorkBuddy"
+        ));
+        assert!(windows_desktop_file_identity_matches(
+            "workbuddy",
+            Path::new("C:\\Apps\\WorkBuddy.exe"),
+            "WorkBuddy",
+            "Tencent Technology",
+            true
+        ));
+        assert!(!windows_desktop_file_identity_matches(
+            "workbuddy",
+            Path::new("C:\\Apps\\WorkBuddy.exe"),
+            "WorkBuddy Helper",
+            "Tencent Technology",
+            true
+        ));
     }
 }

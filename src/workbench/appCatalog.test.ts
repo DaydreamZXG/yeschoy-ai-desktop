@@ -20,14 +20,12 @@ describe("tool catalog single source of truth (#9)", () => {
   it("lists every V1 app with a unique, activation-compatible id", () => {
     const ids = WORKBENCH_APPS.map((app) => app.id);
     expect(new Set(ids).size).toBe(ids.length);
-    for (const id of ids)
-      expect(ACTIVATION_TOOL_IDS).toContain(id);
+    for (const id of ids) expect(ACTIVATION_TOOL_IDS).toContain(id);
   });
 
   it("keeps V1 scope aligned with PRD 3.2 (no hermes/openclaw)", () => {
     const ids = WORKBENCH_APPS.map((app) => app.id);
-    for (const legacy of LEGACY_TOOL_IDS)
-      expect(ids).not.toContain(legacy);
+    for (const legacy of LEGACY_TOOL_IDS) expect(ids).not.toContain(legacy);
   });
 
   it("exposes coming-soon apps without an activation adapter", () => {
@@ -38,7 +36,7 @@ describe("tool catalog single source of truth (#9)", () => {
 
   it("keeps the activation protocol aligned with the V1 display list", () => {
     // 2026-09-14：Rust 侧适配器已清理遗留工具，协议层与展示层必须完全
-    // 一致（5 个）。新增工具必须先进 appCatalog（展示源），再同步协议
+    // 一致（6 个）。新增工具必须先进 appCatalog（展示源），再同步协议
     // 与 Rust；任何一处漂移都会被此断言拦截。
     const outsideV1 = ACTIVATION_TOOL_IDS.filter(
       (id) => !WORKBENCH_APPS.some((app) => app.id === id),
@@ -48,8 +46,7 @@ describe("tool catalog single source of truth (#9)", () => {
 
   it("keeps read-only discovery able to see coming-soon apps", () => {
     const discoveryIds: string[] = TOOL_CATALOG.map((tool) => tool.id);
-    for (const app of COMING_SOON_APPS)
-      expect(discoveryIds).toContain(app.id);
+    for (const app of COMING_SOON_APPS) expect(discoveryIds).toContain(app.id);
     // 2026-09-14：Rust 侧只读发现已清理遗留工具，协议层不再含它们。
     const legacyInDiscovery = LEGACY_TOOL_IDS.filter((id) =>
       discoveryIds.includes(id),

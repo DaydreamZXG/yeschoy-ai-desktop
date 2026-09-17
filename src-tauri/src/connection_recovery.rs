@@ -115,7 +115,7 @@ pub(crate) fn operation_lock() -> Result<std::fs::File> {
 fn allowed(tool: &str) -> bool {
     matches!(
         tool,
-        "claude_code" | "claude_desktop" | "codex_desktop" | "pi" | "dsh_web"
+        "claude_code" | "claude_desktop" | "codex_desktop" | "pi" | "dsh_web" | "workbuddy"
     )
 }
 
@@ -442,7 +442,12 @@ fn document(path: &Path, bytes: Option<&[u8]>) -> Result<Value> {
         Some("yaml" | "yml") => serde_yaml::from_str(source).map_err(|_| Failure::Invalid)?,
         _ => json5::from_str(source).map_err(|_| Failure::Invalid)?,
     };
-    if !value.is_object() {
+    let workbuddy_catalog = path.file_name().is_some_and(|name| name == "models.json")
+        && path
+            .parent()
+            .and_then(Path::file_name)
+            .is_some_and(|name| name == ".workbuddy");
+    if !value.is_object() && !(workbuddy_catalog && value.is_array()) {
         return Err(Failure::Invalid);
     }
     Ok(value)
@@ -778,7 +783,11 @@ pub(crate) fn requires_gateway_migration(tool: &str, record: &Record) -> bool {
         return record.files.iter().any(|file| {
             serde_json::from_slice::<Value>(&file.after)
                 .ok()
-                .and_then(|value| value["env"]["ANTHROPIC_BASE_URL"].as_str().map(str::to_owned))
+                .and_then(|value| {
+                    value["env"]["ANTHROPIC_BASE_URL"]
+                        .as_str()
+                        .map(str::to_owned)
+                })
                 .is_some_and(|origin| {
                     matches!(
                         origin.as_str(),
@@ -831,8 +840,7 @@ pub(crate) fn legacy_clean(
     let helper_matches = |value: &Value| {
         value.as_str().is_some_and(|s| {
             s.ends_with(&format!("credential-helper {tool}"))
-                || (tool == "claude_code"
-                    && s.ends_with("gateway-credential-helper claude_code"))
+                || (tool == "claude_code" && s.ends_with("gateway-credential-helper claude_code"))
         })
     };
     match tool {
@@ -926,6 +934,31 @@ pub(crate) fn legacy_clean(
                 if value["agent-default-model"]["model"] == credential.model_id {
                     remove_at(&mut value, &["agent-default-model", "model"]);
                 }
+            }
+        }
+        "workbuddy" => {
+            let expected_url = format!("{}/v1/chat/completions", credential.origin);
+            let owned = |model: &Value| {
+                let Some(id) = model.get("id").and_then(Value::as_str) else {
+                    return false;
+                };
+                let Ok(route) = credential.resolve_model(id) else {
+                    return false;
+                };
+                model.get("vendor").and_then(Value::as_str) == Some("野菜API")
+                    && model.get("url").and_then(Value::as_str) == Some(expected_url.as_str())
+                    && model.get("apiKey").and_then(Value::as_str) == Some(route.upstream_key())
+            };
+            match &mut value {
+                Value::Array(models) => models.retain(|model| !owned(model)),
+                Value::Object(object) => {
+                    let Some(models) = object.get_mut("models").and_then(Value::as_array_mut)
+                    else {
+                        return Err(Failure::Invalid);
+                    };
+                    models.retain(|model| !owned(model));
+                }
+                _ => return Err(Failure::Invalid),
             }
         }
         _ => return Err(Failure::Invalid),
@@ -1109,13 +1142,14 @@ mod tests {
         assert!(f.0.load("pi").unwrap().is_none());
     }
     #[test]
-    fn restores_exact_original_bytes_for_all_five_tools() {
+    fn restores_exact_original_bytes_for_all_six_tools() {
         for tool in [
             "claude_code",
             "claude_desktop",
             "codex_desktop",
             "pi",
             "dsh_web",
+            "workbuddy",
         ] {
             let f = Fixture::new();
             let before = b"{\n  \"old\": true\n}\n";

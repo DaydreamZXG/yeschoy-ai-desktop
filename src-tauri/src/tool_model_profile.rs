@@ -35,23 +35,24 @@ fn native_claude_capability_family(id: &str) -> Option<&str> {
 /// family. This affects only native client controls (effort/thinking); the
 /// loopback bridge still resolves and forwards the exact real model ID.
 pub(crate) fn claude_capability_family(id: &str) -> Option<&str> {
-    native_claude_capability_family(id).or(match id {
-        // Five effort levels, with thinking always enabled.
-        "gpt-6-astra" => Some("claude-opus-5"),
+    native_claude_capability_family(id)
+        .or(match id {
+            // Five effort levels, with thinking always enabled.
+            "gpt-6-astra" => Some("claude-opus-5"),
 
-        // Five effort levels plus an explicit off state.
-        "gpt-5.6-sol" | "gpt-5.6-terra" | "gpt-5.6-luna" | "gpt-5.6" => Some("claude-sonnet-5"),
+            // Five effort levels plus an explicit off state.
+            "gpt-5.6-sol" | "gpt-5.6-terra" | "gpt-5.6-luna" | "gpt-5.6" => Some("claude-sonnet-5"),
 
-        // These models have low..xhigh but no max. Claude's UI may expose max
-        // for this closest family; the bridge clamps it back to xhigh.
-        "gpt-5.4-mini" | "gpt-5.3-codex" | "gpt-5.2" => Some("claude-opus-5"),
+            // These models have low..xhigh but no max. Claude's UI may expose max
+            // for this closest family; the bridge clamps it back to xhigh.
+            "gpt-5.4-mini" | "gpt-5.3-codex" | "gpt-5.2" => Some("claude-opus-5"),
 
-        // DeepSeek supports off/low/high/max. Sonnet 4.6 is the closest native
-        // four-level UI; medium is translated to high by the bridge.
-        "deepseek-v4-flash" | "deepseek-v4-pro" => Some("claude-sonnet-4-6"),
-        _ => None,
-    })
-    .or_else(|| catalog_capability_family(id))
+            // DeepSeek supports off/low/high/max. Sonnet 4.6 is the closest native
+            // four-level UI; medium is translated to high by the bridge.
+            "deepseek-v4-flash" | "deepseek-v4-pro" => Some("claude-sonnet-4-6"),
+            _ => None,
+        })
+        .or_else(|| catalog_capability_family(id))
 }
 
 /// Catalog-driven fallback for models absent from the hardcoded table above
@@ -156,6 +157,7 @@ pub(crate) struct ModelProfile {
     pub reasoning_mode: Option<String>,
     pub input: Option<Vec<String>>,
     pub context_window: Option<u64>,
+    pub max_output_tokens: Option<u64>,
     /// 工具调用（function calling）声明。None = 目录未声明（不猜，PRD 6.5）；
     /// 路由别名（如 ark-code-latest）能力随背后模型变化，保持不填。
     pub tool_use: Option<bool>,

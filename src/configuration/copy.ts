@@ -26,7 +26,8 @@ const zh = {
   estimateYeschoyLabel: "使用野菜预计",
   estimateNote:
     "两边采用相同模型、计费档位和使用量比较。官网按 {{referenceFx}}、野菜按 {{siteFx}} 换算为人民币，野菜费用已包含所选方案优惠。{{tiered}}固定参考汇率，实际费用以账单为准。{{cacheNote}}",
-  estimateTieredNote: "优先采用标准档；没有明确标准档时采用服务端首档。其他档位的费用范围见上方。",
+  estimateTieredNote:
+    "优先采用标准档；没有明确标准档时采用服务端首档。其他档位的费用范围见上方。",
   estimateCacheFallbackNote:
     "该模型没有单独的缓存读取价，缓存部分按输入价保守估算。",
   estimateCacheExcludedNote:
@@ -131,6 +132,8 @@ const zh = {
   verifyingDesktop:
     "正在安全保存 Claude Desktop 设置并准备本地连接，不会等待模型回复。",
   verifyingDsh: "正在保存 DSH 设置并启动本地工作台，不会发送测试消息…",
+  verifyingWorkBuddy:
+    "正在把模型安全写入 WorkBuddy，并读回确认；不会发送收费测试消息，也不会关闭 WorkBuddy…",
   readyTitle: "接入完成",
   firstActivationTitle: "第一次接入成功",
   applySucceeded: "接入成功",
@@ -146,8 +149,7 @@ const zh = {
     "所选线路没有接受工具密钥，设置已恢复。请刷新账户后重试。",
   endpointUnavailable:
     "所选线路暂时无法使用这个模型接口，设置已恢复。可以换一条线路或稍后重试。",
-  providerTimedOut:
-    "所选线路响应超时，设置已恢复。可以换一条线路或稍后重试。",
+  providerTimedOut: "所选线路响应超时，设置已恢复。可以换一条线路或稍后重试。",
   providerBusy: "当前模型请求较多，设置已恢复。请稍后重试或选择其他模型。",
   modelRequestRejected:
     "所选模型没有接受测试请求，设置已恢复。请刷新模型列表后重新选择。",
@@ -162,8 +164,7 @@ const zh = {
   externalOverride:
     "检测到系统环境变量（如 ANTHROPIC_BASE_URL 等）的优先级高于助手写入的设置，本次未改动原设置。请检查并移除相关环境变量后重试。",
   unsupportedProfile: "这个应用的运行方式暂不能自动配置，原设置没有改动。",
-  launchFailed:
-    "设置已经恢复，因为应用未能正常启动。请确认应用可以手动打开。",
+  launchFailed: "设置已经恢复，因为应用未能正常启动。请确认应用可以手动打开。",
   builderKicker: "模型与计费分组",
   builderTitle: "选好，就能用",
   builderIntro: "选模型、比较分组价格，再一键完成接入。网络线路单独选择。",
@@ -184,12 +185,15 @@ const zh = {
   surfaceCodexDesktop: "ChatGPT 桌面应用中的 Codex",
   surfacePi: "Pi 编程助手",
   surfaceDsh: "DeepSeek Harness 浏览器工作台",
+  surfaceWorkBuddy: "腾讯 AI 办公与开发助手",
   lifecycleDesktopRestart:
     "若 {{name}} 正在运行，更新接入时会先提醒你保存；确认后由助手先请求应用正常退出，写入设置并重新打开。Windows 若只剩后台进程，会仅结束这个安装路径对应的进程。",
   lifecycleBrowserLaunch:
     "更新接入会保存 DSH 配置；“打开使用”只会启动本地服务并在浏览器中打开，不会发送模型测试消息。",
   lifecycleTerminalSession:
     "更新接入不会关闭正在使用的命令行会话；新设置从新开的终端会话生效。",
+  lifecycleHotReload:
+    "WorkBuddy 会自动读取更新后的模型列表，不需要关闭或重启。已打开的对话可能继续使用原模型；请新建对话并在模型选择器中选择野菜模型。",
   retryRollbackFailed:
     "自动恢复上次未完成的设置时遇到问题，部分设置尚未恢复。可直接点击“自动修复并重试”，无需手动修改配置。",
   retryCredentialRestore:
@@ -203,6 +207,8 @@ const zh = {
   favoritesConfigured: "常用模型已一起配置。",
   readyDefault:
     "{{app}} 的设置和本地连接已经就绪。{{favorites}}请在应用中正常使用；第一次真实请求的结果会显示在“最近连接结果”里。",
+  readyWorkBuddy:
+    "模型已加入 WorkBuddy。{{favorites}}无需重启，请新建对话并在模型选择器中选择野菜模型；已有对话不会被强行切换。",
   restartBlocked:
     "系统未能关闭 {{app}}，本次没有修改设置。请确认没有系统弹窗拦截，或手动退出后重试。",
   appRunning:
@@ -233,8 +239,7 @@ const zh = {
     "野菜本机网关没有加载完整模型列表，接入设置已恢复。请重新检查模型后再试。",
   installConfirmRequired:
     "安装已完成，但当前选择需要重新确认。请确认账户和模型后再点接入；这次没有改动应用设置。",
-  assistantShuttingDown:
-    "正在退出助手，本次接入已停止；已写入的设置会先恢复。",
+  assistantShuttingDown: "正在退出助手，本次接入已停止；已写入的设置会先恢复。",
   activationCancelled:
     "已取消本次接入；如果设置写入已经开始，助手已先恢复原设置。",
   activationTimedOut:
@@ -246,8 +251,7 @@ const zh = {
     "暂时无法确认接入结果。请先检查本机接入状态，避免连续重复提交。",
   recoveryStorageUnavailable:
     "暂时无法安全保存原设置，这次没有修改应用。请确认系统钥匙串或凭据管理器可用后重试。",
-  recoveryReceiptFailed:
-    "接入记录保存未完成，请检查本地状态并恢复后重试。",
+  recoveryReceiptFailed: "接入记录保存未完成，请检查本地状态并恢复后重试。",
   progressQueued: "正在等待安全配置锁…",
   progressCheckingApp: "正在检查应用状态和原设置…",
   progressAuthenticating: "正在确认账户和线路…",
@@ -305,7 +309,8 @@ const zh = {
   defaultBadge: "默认",
   removeAction: "移除",
   favoriteModelsEmpty: "也可以只接入上面选中的一个模型，之后再添加。",
-  pendingModelEditNote: "上方的选择尚未加入列表。点击“{{action}}”后，再确认接入。",
+  pendingModelEditNote:
+    "上方的选择尚未加入列表。点击“{{action}}”后，再确认接入。",
   favoriteModelsNote:
     "同一模型保留一个计费分组。已有列表里的模型可在应用内切换；新增模型、修改默认模型或分组后，需要更新接入。",
   networkLinePrefix: "网络线路",
@@ -362,12 +367,14 @@ const en: Copy = {
   estimateExampleNote: "Cost reference; actual costs vary with usage",
   estimateSaving: "Estimated savings: about {{percent}}%",
   estimateAmount: "≈ {{amount}}",
-  estimateFormula: "Approx. 0.69% new input + 99.14% cache reads + 0.17% output",
+  estimateFormula:
+    "Approx. 0.69% new input + 99.14% cache reads + 0.17% output",
   estimateOfficialLabel: "Official estimate",
   estimateYeschoyLabel: "野菜API estimate",
   estimateNote:
     "Converted to CNY at {{referenceFx}} for the official price and {{siteFx}} for 野菜API, then applying {{group}}'s ratio{{tiered}}. Fixed reference rates, not live FX. {{cacheNote}}",
-  estimateTieredNote: "; reference uses the standard tier, or the first declared tier if none is named; other tiers are shown above",
+  estimateTieredNote:
+    "; reference uses the standard tier, or the first declared tier if none is named; other tiers are shown above",
   estimateCacheFallbackNote:
     "This model has no separate cache-read price, so the cache portion is conservatively estimated at the input price.",
   estimateCacheExcludedNote:
@@ -425,7 +432,8 @@ const en: Copy = {
   outcomeUpstreamError: "The model service did not complete the request",
   outcomeInvalidResponse: "The model's reply was malformed",
   outcomeStreamInterrupted: "The reply was interrupted before it finished",
-  outcomeUnknownModel: "This model has not been added to the frequently used list yet",
+  outcomeUnknownModel:
+    "This model has not been added to the frequently used list yet",
   outcomePayloadTooLarge: "The request exceeds this computer's safety limit",
   outcomeLocalBusy: "This computer is processing another large request",
   noModelSpecified: "No model specified",
@@ -487,6 +495,8 @@ const en: Copy = {
     "Saving Claude Desktop settings and preparing its local connection without waiting for a model reply.",
   verifyingDsh:
     "Saving DSH settings and starting its local workspace without sending a test prompt…",
+  verifyingWorkBuddy:
+    "Writing models to WorkBuddy and reading them back safely without sending a billable test message or closing WorkBuddy…",
   readyTitle: "Connection complete",
   firstActivationTitle: "First connection complete",
   applySucceeded: "Connected",
@@ -548,12 +558,15 @@ const en: Copy = {
   surfaceCodexDesktop: "Codex in the ChatGPT desktop app",
   surfacePi: "Pi coding assistant",
   surfaceDsh: "DeepSeek Harness browser workbench",
+  surfaceWorkBuddy: "Tencent AI work and coding assistant",
   lifecycleDesktopRestart:
     "If {{name}} is running, you will be reminded to save before the connection update. After confirmation, the assistant asks the app to quit normally, writes the settings, and reopens it. On Windows, if only background processes remain, only the processes belonging to this installation path are terminated.",
   lifecycleBrowserLaunch:
     "Updating the connection saves the DSH configuration; “Open” only starts the local service and opens it in the browser without sending any model test messages.",
   lifecycleTerminalSession:
     "Updating the connection does not close command-line sessions in use; new settings take effect in newly opened terminal sessions.",
+  lifecycleHotReload:
+    "WorkBuddy reloads the updated model list automatically, so it does not need to quit or restart. An open conversation may keep its prior model; start a new conversation and choose the 野菜 model from the model picker.",
   retryRollbackFailed:
     "A problem occurred while automatically restoring the last unfinished settings; some settings have not been restored yet. Click “Repair automatically and retry” directly — no manual configuration edits are needed.",
   retryCredentialRestore:
@@ -567,6 +580,8 @@ const en: Copy = {
   favoritesConfigured: "Frequently used models were configured together.",
   readyDefault:
     "{{app}} settings and the local connection are ready. {{favorites}}Use the app as usual; the first real request's result will appear under “Latest connection result”.",
+  readyWorkBuddy:
+    "The models were added to WorkBuddy. {{favorites}}No restart is needed; start a new conversation and choose a 野菜 model from the model picker. Existing conversations are not switched automatically.",
   restartBlocked:
     "The system could not close {{app}}; no settings were changed this time. Make sure no system dialog is blocking it, or quit it manually and retry.",
   appRunning:
@@ -627,8 +642,7 @@ const en: Copy = {
     "The operation did not finish; restoring the original settings…",
   progressComplete: "Setup complete.",
   versionUnreadNote: "version not read; setup can still proceed",
-  signInHint:
-    "Sign in to scan this computer's apps and connect in one click.",
+  signInHint: "Sign in to scan this computer's apps and connect in one click.",
   refreshAccountLabel: "Fetch account data again",
   refreshAccountHint:
     "Account data did not update; prices and groups may be stale. Click to fetch it again.",
@@ -742,7 +756,8 @@ const tw: Copy = {
   estimateYeschoyLabel: "使用野菜預計",
   estimateNote:
     "官網按 {{referenceFx}}、野菜按 {{siteFx}} 換算為人民幣，再套用 {{group}} 的倍率{{tiered}}。固定參考匯率，非即時匯率。{{cacheNote}}",
-  estimateTieredNote: "；採用標準檔，沒有明確標準檔時採用服務端首檔；其他檔位範圍見上方",
+  estimateTieredNote:
+    "；採用標準檔，沒有明確標準檔時採用服務端首檔；其他檔位範圍見上方",
   estimateCacheFallbackNote:
     "該模型沒有單獨的快取讀取價，快取部分按輸入價保守估算。",
   estimateCacheExcludedNote:
@@ -847,6 +862,8 @@ const tw: Copy = {
   verifyingDesktop:
     "正在安全儲存 Claude Desktop 設定並準備本機連線，不會等待模型回覆。",
   verifyingDsh: "正在儲存 DSH 設定並啟動本機工作台，不會傳送測試訊息…",
+  verifyingWorkBuddy:
+    "正在把模型安全寫入 WorkBuddy 並讀回確認；不會傳送收費測試訊息，也不會關閉 WorkBuddy…",
   readyTitle: "接入完成",
   firstActivationTitle: "第一次接入成功",
   applySucceeded: "接入成功",
@@ -862,8 +879,7 @@ const tw: Copy = {
     "所選線路沒有接受工具金鑰，設定已恢復。請重新整理帳戶後重試。",
   endpointUnavailable:
     "所選線路暫時無法使用這個模型介面，設定已恢復。可以換一條線路或稍後重試。",
-  providerTimedOut:
-    "所選線路回應逾時，設定已恢復。可以換一條線路或稍後重試。",
+  providerTimedOut: "所選線路回應逾時，設定已恢復。可以換一條線路或稍後重試。",
   providerBusy: "目前模型請求較多，設定已恢復。請稍後重試或選擇其他模型。",
   modelRequestRejected:
     "所選模型沒有接受測試請求，設定已恢復。請重新整理模型清單後重新選擇。",
@@ -878,8 +894,7 @@ const tw: Copy = {
   externalOverride:
     "偵測到系統環境變數（如 ANTHROPIC_BASE_URL 等）的優先順序高於助手寫入的設定，本次未改動原設定。請檢查並移除相關環境變數後重試。",
   unsupportedProfile: "這個應用的執行方式暫不能自動設定，原設定沒有改動。",
-  launchFailed:
-    "設定已經恢復，因為應用未能正常啟動。請確認應用可以手動開啟。",
+  launchFailed: "設定已經恢復，因為應用未能正常啟動。請確認應用可以手動開啟。",
   builderKicker: "模型與計費分組",
   builderTitle: "選好，就能用",
   builderIntro: "選模型、比較分組價格，再一鍵完成接入。網路線路單獨選擇。",
@@ -900,12 +915,15 @@ const tw: Copy = {
   surfaceCodexDesktop: "ChatGPT 桌面應用中的 Codex",
   surfacePi: "Pi 程式設計助手",
   surfaceDsh: "DeepSeek Harness 瀏覽器工作台",
+  surfaceWorkBuddy: "騰訊 AI 辦公與開發助手",
   lifecycleDesktopRestart:
     "若 {{name}} 正在執行，更新接入時會先提醒你儲存；確認後由助手先請求應用正常結束，寫入設定並重新開啟。Windows 若只剩背景程序，會僅結束這個安裝路徑對應的程序。",
   lifecycleBrowserLaunch:
     "更新接入會儲存 DSH 設定；「開啟使用」只會啟動本機服務並在瀏覽器中開啟，不會傳送模型測試訊息。",
   lifecycleTerminalSession:
     "更新接入不會關閉正在使用的命令列工作階段；新設定從新開的終端機工作階段生效。",
+  lifecycleHotReload:
+    "WorkBuddy 會自動讀取更新後的模型清單，不需要關閉或重新啟動。已開啟的對話可能繼續使用原模型；請新增對話並在模型選擇器中選擇野菜模型。",
   retryRollbackFailed:
     "自動恢復上次未完成的設定時遇到問題，部分設定尚未恢復。可直接點擊「自動修復並重試」，無需手動修改設定。",
   retryCredentialRestore:
@@ -919,6 +937,8 @@ const tw: Copy = {
   favoritesConfigured: "常用模型已一起設定。",
   readyDefault:
     "{{app}} 的設定和本機連線已經就緒。{{favorites}}請在應用中正常使用；第一次真實請求的結果會顯示在「最近連線結果」裡。",
+  readyWorkBuddy:
+    "模型已加入 WorkBuddy。{{favorites}}無需重新啟動，請新增對話並在模型選擇器中選擇野菜模型；既有對話不會被強制切換。",
   restartBlocked:
     "系統未能關閉 {{app}}，本次沒有修改設定。請確認沒有系統彈窗攔截，或手動結束後重試。",
   appRunning:
@@ -949,8 +969,7 @@ const tw: Copy = {
     "野菜本機閘道沒有載入完整模型清單，接入設定已恢復。請重新檢查模型後再試。",
   installConfirmRequired:
     "安裝已完成，但目前選擇需要重新確認。請確認帳戶和模型後再點接入；這次沒有改動應用設定。",
-  assistantShuttingDown:
-    "正在結束助手，本次接入已停止；已寫入的設定會先恢復。",
+  assistantShuttingDown: "正在結束助手，本次接入已停止；已寫入的設定會先恢復。",
   activationCancelled:
     "已取消本次接入；如果設定寫入已經開始，助手已先恢復原設定。",
   activationTimedOut:
@@ -962,8 +981,7 @@ const tw: Copy = {
     "暫時無法確認接入結果。請先檢查本機接入狀態，避免連續重複提交。",
   recoveryStorageUnavailable:
     "暫時無法安全儲存原設定，這次沒有修改應用。請確認系統鑰匙圈或憑證管理員可用後重試。",
-  recoveryReceiptFailed:
-    "接入記錄儲存未完成，請檢查本機狀態並恢復後重試。",
+  recoveryReceiptFailed: "接入記錄儲存未完成，請檢查本機狀態並恢復後重試。",
   progressQueued: "正在等待安全設定鎖…",
   progressCheckingApp: "正在檢查應用狀態和原設定…",
   progressAuthenticating: "正在確認帳戶和線路…",
@@ -1078,13 +1096,13 @@ const ja: Copy = {
   estimateExampleNote: "費用の目安です。実際の費用は利用状況により変わります",
   estimateSaving: "推定約{{percent}}%節約",
   estimateAmount: "約 {{amount}}",
-  estimateFormula:
-    "約0.69%新規入力 + 99.14%キャッシュ読み取り + 0.17%出力",
+  estimateFormula: "約0.69%新規入力 + 99.14%キャッシュ読み取り + 0.17%出力",
   estimateOfficialLabel: "公式サイトでの概算",
   estimateYeschoyLabel: "野菜APIでの概算",
   estimateNote:
     "公式価格は {{referenceFx}}、野菜API は {{siteFx}} で人民元に換算し、{{group}}の倍率を適用します{{tiered}}。固定参考レートであり、リアルタイム為替ではありません。{{cacheNote}}",
-  estimateTieredNote: "。標準階層、未定義の場合はサーバーの最初の階層を使用。他の階層の範囲は上記に表示",
+  estimateTieredNote:
+    "。標準階層、未定義の場合はサーバーの最初の階層を使用。他の階層の範囲は上記に表示",
   estimateCacheFallbackNote:
     "このモデルにはキャッシュ読み取り専用の価格がないため、キャッシュ部分は入力単価で保守的に概算しています。",
   estimateCacheExcludedNote:
@@ -1121,10 +1139,8 @@ const ja: Copy = {
     "このアプリを野菜に接続する前のモデル、プロバイダー、関連する接続設定に戻します。後から変更した内容は保持されます。",
   introLegacy:
     "この接続は旧バージョンによるもので、接続前の設定が保存されていません。野菜に属する接続項目だけを取り消せます。元の値を復元することはできません。",
-  noteNoUninstall:
-    "アプリのアンインストールやチャット履歴の削除は行いません。",
-  noteIsolated:
-    "他のアプリ、サイトのアカウント、残高には影響しません。",
+  noteNoUninstall: "アプリのアンインストールやチャット履歴の削除は行いません。",
+  noteIsolated: "他のアプリ、サイトのアカウント、残高には影響しません。",
   noteReopen: "復元後は {{app}} を開き直してください。",
   revokeOptionTitle: "このアプリの専用キーも取り消す",
   revokeOnHint:
@@ -1150,8 +1166,7 @@ const ja: Copy = {
     "1回のリクエストが 200 MiB を超えたため、上流には送信されませんでした。一度に添付するファイルや画像を減らしてから、もう一度お試しください。",
   adviceLocalBusy:
     "デスクトップアシスタントのフリーズを防ぐため、この端末では大きなリクエストを一度に1件しかバッファしません。現在のリクエストが完了してから、もう一度お試しください。",
-  adviceUnauthorized:
-    "アカウントと、このモデルの利用権限を確認してください。",
+  adviceUnauthorized: "アカウントと、このモデルの利用権限を確認してください。",
   adviceRateLimited:
     "リクエストが多いか、利用枠が制限されています。しばらくしてから再試行し、アカウントをご確認ください。",
   adviceUnknownModel:
@@ -1195,7 +1210,8 @@ const ja: Copy = {
     "このコンピュータでこのアプリは見つかりませんでした。先にインストールしてから再確認してください。",
   unsupported:
     "アプリは見つかりましたが、起動に必要なコンポーネントがありません。アプリのインストールが完全であることを確認してから再確認してください。",
-  scanFailed: "現在、このコンピュータのアプリを確認できません。再確認してください。",
+  scanFailed:
+    "現在、このコンピュータのアプリを確認できません。再確認してください。",
   unavailable: "確認待ち",
   version: "バージョン",
   verifying:
@@ -1206,6 +1222,8 @@ const ja: Copy = {
     "Claude Desktop の設定を安全に保存し、ローカル接続を準備しています。モデルの応答は待ちません。",
   verifyingDsh:
     "DSH の設定を保存し、ローカルワークスペースを起動しています。テストメッセージは送信しません…",
+  verifyingWorkBuddy:
+    "課金されるテストメッセージを送信せず、WorkBuddy を閉じずにモデルを書き込み、読み込み直して確認しています…",
   readyTitle: "接続完了",
   firstActivationTitle: "初回接続完了",
   applySucceeded: "接続しました",
@@ -1232,7 +1250,8 @@ const ja: Copy = {
     "回線から認識できないモデル応答が返されました。設定は復元済みです。しばらくしてから再試行してください。",
   desktopTimedOut:
     "Claude Desktop からのテストメッセージが届かず、接続は確認されませんでした。このコンピュータ上の変更は復元済みです。",
-  missingDuringSetup: "先ほど選択したアプリが見つかりません。再確認してください。",
+  missingDuringSetup:
+    "先ほど選択したアプリが見つかりません。再確認してください。",
   selectionRequired:
     "複数のインストールが見つかりました。使用するものを1つだけ選んでください。",
   secureStoreFailed:
@@ -1266,12 +1285,15 @@ const ja: Copy = {
   surfaceCodexDesktop: "ChatGPT デスクトップアプリの Codex",
   surfacePi: "Pi プログラミングアシスタント",
   surfaceDsh: "DeepSeek Harness ブラウザワークスペース",
+  surfaceWorkBuddy: "Tencent AI ワーク・開発アシスタント",
   lifecycleDesktopRestart:
     "{{name}} が実行中の場合、接続の更新前に保存を促します。確認後、アシスタントがアプリの正常終了を要求し、設定を書き込んで開き直します。Windows でバックグラウンドプロセスだけが残っている場合は、このインストール先に対応するプロセスのみ終了します。",
   lifecycleBrowserLaunch:
     "接続の更新で DSH 設定を保存します。「開いて使用」はローカルサービスを起動してブラウザで開くだけで、モデルのテストメッセージは送信しません。",
   lifecycleTerminalSession:
     "接続の更新で、使用中のコマンドラインセッションを閉じることはありません。新しい設定は、新しく開いたターミナルセッションから有効になります。",
+  lifecycleHotReload:
+    "WorkBuddy は更新されたモデル一覧を自動で読み込むため、終了や再起動は不要です。開いている会話は以前のモデルを使い続ける場合があります。新しい会話を開き、モデル選択から野菜モデルを選んでください。",
   retryRollbackFailed:
     "前回未完了の設定を自動復元する際に問題が発生し、一部の設定がまだ復元されていません。「自動修復して再試行」を直接クリックしてください。設定を手動で編集する必要はありません。",
   retryCredentialRestore:
@@ -1285,6 +1307,8 @@ const ja: Copy = {
   favoritesConfigured: "よく使うモデルも一緒に設定されました。",
   readyDefault:
     "{{app}} の設定とローカル接続の準備が整いました。{{favorites}}アプリを普段どおりご利用ください。最初の実際のリクエストの結果は「直近の接続結果」に表示されます。",
+  readyWorkBuddy:
+    "モデルを WorkBuddy に追加しました。{{favorites}}再起動は不要です。新しい会話を開き、モデル選択から野菜モデルを選んでください。既存の会話は自動で切り替わりません。",
   restartBlocked:
     "システムが {{app}} を終了できず、今回は設定を変更していません。システムのダイアログに遮られていないか確認するか、手動で終了してから再試行してください。",
   appRunning:
@@ -1337,8 +1361,7 @@ const ja: Copy = {
   progressCheckingApp: "アプリの状態と元の設定を確認中…",
   progressAuthenticating: "アカウントと回線を確認中…",
   progressCheckingModels: "モデルと課金グループを照合中…",
-  progressSecuringAccess:
-    "選択したモデル限定のアプリキーを作成中…",
+  progressSecuringAccess: "選択したモデル限定のアプリキーを作成中…",
   progressPreparingSettings: "復元可能な設定を準備中…",
   progressApplyingSettings: "設定を安全に書き込み、検証中…",
   progressRestoring: "操作が完了せず、元の設定を復元中…",
@@ -1382,8 +1405,7 @@ const ja: Copy = {
   missingModelPrefix: "先ほど選択した",
   missingModelSuffix:
     "は現在利用できません。モデルを選び直してください。自動的に置き換えられることはありません。",
-  billingCardHint:
-    "価格と提供元を選択。ネットワーク回線は変更されません",
+  billingCardHint: "価格と提供元を選択。ネットワーク回線は変更されません",
   missingGroupTitle: "以前の課金グループは利用できなくなりました",
   missingGroupBody:
     "このモデルが現在利用できるグループに含まれていません。上で選び直してください。価格が異なる場合があります。自動的に切り替えることはありません。",

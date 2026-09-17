@@ -69,7 +69,7 @@ describe("reversible local connections", () => {
       finish(connectionsFixture(requestId));
       await Promise.all([first, second]);
     });
-    await waitFor(() => expect(result.current.connections).toHaveLength(5));
+    await waitFor(() => expect(result.current.connections).toHaveLength(6));
     expect(result.current.loading).toBe(false);
   });
   it.each([
@@ -97,7 +97,7 @@ describe("reversible local connections", () => {
       await act(async () => {
         await result.current.refresh();
       });
-      await waitFor(() => expect(result.current.connections).toHaveLength(5));
+    await waitFor(() => expect(result.current.connections).toHaveLength(6));
       expect(result.current.error).toBe(false);
       expect(result.current.errorInfo).toBeUndefined();
     },
@@ -106,7 +106,7 @@ describe("reversible local connections", () => {
     onlineManager.setOnline(false);
     try {
       const { result } = renderHook(() => useToolConnections());
-      await waitFor(() => expect(result.current.connections).toHaveLength(5));
+      await waitFor(() => expect(result.current.connections).toHaveLength(6));
       expect(native).toHaveBeenCalledTimes(1);
     } finally {
       onlineManager.setOnline(true);
@@ -114,7 +114,7 @@ describe("reversible local connections", () => {
   });
   it("ru076 shares an in-flight background refresh without dropping the successful snapshot", async () => {
     const { result } = renderHook(() => useToolConnections());
-    await waitFor(() => expect(result.current.connections).toHaveLength(5));
+    await waitFor(() => expect(result.current.connections).toHaveLength(6));
     let finish!: (value: unknown) => void;
     let requestId = "";
     native.mockClear();
@@ -132,7 +132,7 @@ describe("reversible local connections", () => {
       void result.current.refresh();
     });
     expect(native).toHaveBeenCalledTimes(1);
-    expect(result.current.connections).toHaveLength(5);
+    expect(result.current.connections).toHaveLength(6);
     expect(result.current.loading).toBe(false);
     await act(async () => {
       finish(connectionsFixture(requestId));
@@ -152,7 +152,7 @@ describe("reversible local connections", () => {
     expect(result.current.loading).toBe(false);
   });
   it.each(["secure_storage_unavailable", "connection_inspection_failed"])(
-    "ru076 correlates partial failures while retaining the other four results: %s",
+    "ru076 correlates partial failures while retaining the other five results: %s",
     async (reason) => {
       native.mockImplementationOnce(async (_command, args) => {
         const response = connectionsFixture(
@@ -163,7 +163,7 @@ describe("reversible local connections", () => {
         return response;
       });
       const { result } = renderHook(() => useToolConnections());
-      await waitFor(() => expect(result.current.connections).toHaveLength(5));
+      await waitFor(() => expect(result.current.connections).toHaveLength(6));
       expect(result.current.error).toBe(false);
       expect(result.current.errorInfo?.code).toBe(
         "connection_partial_unavailable",
@@ -171,7 +171,7 @@ describe("reversible local connections", () => {
       expect(result.current.errorInfo?.requestId).toMatch(/^connections-/);
       expect(
         result.current.connections.filter((c) => c.state === "not_connected"),
-      ).toHaveLength(4);
+      ).toHaveLength(5);
     },
   );
   it("ru042 decodes only secret-free latest request and model bindings", () => {
@@ -220,8 +220,8 @@ describe("reversible local connections", () => {
   });
   it("loads local state without requiring login and restores only the requested tool", async () => {
     const { result } = renderHook(() => useToolConnections());
-    await waitFor(() => expect(result.current.connections).toHaveLength(5));
-    expect(result.current.connections).toHaveLength(5);
+    await waitFor(() => expect(result.current.connections).toHaveLength(6));
+    expect(result.current.connections).toHaveLength(6);
     expect(result.current.error).toBe(false);
     await act(async () => {
       await result.current.restore("pi");
@@ -242,13 +242,13 @@ describe("reversible local connections", () => {
   });
   it("retains the last local state when reading it fails", async () => {
     const { result } = renderHook(() => useToolConnections());
-    await waitFor(() => expect(result.current.connections).toHaveLength(5));
+    await waitFor(() => expect(result.current.connections).toHaveLength(6));
     native.mockRejectedValueOnce(Error("unavailable"));
     await act(async () => {
       await result.current.refresh();
     });
     await waitFor(() => expect(result.current.error).toBe(true));
-    expect(result.current.connections).toHaveLength(5);
+    expect(result.current.connections).toHaveLength(6);
     expect(result.current.error).toBe(true);
     expect(result.current.loading).toBe(false);
   });
@@ -265,7 +265,7 @@ describe("reversible local connections", () => {
   });
   it("keeps the last usable projection interactive during a background refresh", async () => {
     const { result } = renderHook(() => useToolConnections());
-    await waitFor(() => expect(result.current.connections).toHaveLength(5));
+    await waitFor(() => expect(result.current.connections).toHaveLength(6));
     let finish!: (value: unknown) => void;
     native.mockImplementationOnce(
       async () =>
@@ -277,14 +277,14 @@ describe("reversible local connections", () => {
     act(() => {
       refresh = result.current.refresh();
     });
-    expect(result.current.connections).toHaveLength(5);
+    expect(result.current.connections).toHaveLength(6);
     expect(result.current.loading).toBe(false);
     await act(async () => {
       finish(connectionsFixture("wrong-stale-id"));
       await refresh;
     });
     expect(result.current.loading).toBe(false);
-    expect(result.current.connections).toHaveLength(5);
+    expect(result.current.connections).toHaveLength(6);
   });
   it("releases the launch busy state when a native open reply is lost", async () => {
     const { result } = renderHook(() => useToolConnections());
@@ -313,7 +313,7 @@ describe("reversible local connections", () => {
     "settles loading after restore (failure: %s) supersedes a pending refresh",
     async (failRestore) => {
       const { result } = renderHook(() => useToolConnections());
-      await waitFor(() => expect(result.current.connections).toHaveLength(5));
+      await waitFor(() => expect(result.current.connections).toHaveLength(6));
       let finishRead!: (value: unknown) => void;
       let finishRestore!: (value: unknown) => void;
       let rejectRestore!: (cause: Error) => void;

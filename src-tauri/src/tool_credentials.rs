@@ -5,12 +5,13 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 const SERVICE: &str = "com.yeschoy.desktop.tool-credential.v2";
-const ALLOWED_TOOLS: [&str; 5] = [
+const ALLOWED_TOOLS: [&str; 6] = [
     "claude_code",
     "claude_desktop",
     "codex_desktop",
     "pi",
     "dsh_web",
+    "workbuddy",
 ];
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -453,9 +454,7 @@ pub(crate) fn shell_gateway_helper_command(tool_id: &str) -> Result<String, Cred
     if executable.is_empty() {
         return Err(CredentialFailure::Unavailable);
     }
-    Ok(format!(
-        "{executable} gateway-credential-helper {tool_id}"
-    ))
+    Ok(format!("{executable} gateway-credential-helper {tool_id}"))
 }
 
 fn bare_helper(tool_id: &str) -> i32 {

@@ -13,6 +13,7 @@ describe("guided configuration preview", () => {
       "opencode",
       "pi",
       "dsh",
+      "workbuddy",
       "hermes",
       "openclaw",
     ]);
@@ -28,6 +29,7 @@ describe("guided configuration preview", () => {
     ["opencode", "https://yeschoy.com/v1"],
     ["pi", "https://yeschoy.com/v1"],
     ["dsh", "https://yeschoy.com/v1"],
+    ["workbuddy", "https://yeschoy.com/v1/chat/completions"],
     ["hermes", "https://yeschoy.com/v1"],
     ["openclaw", "https://yeschoy.com/v1"],
   ] as const)("projects the documented %s endpoint", (toolId, endpoint) => {

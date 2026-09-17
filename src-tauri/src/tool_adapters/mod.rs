@@ -7,6 +7,7 @@ pub(crate) mod desktop_lifecycle;
 pub(crate) mod dsh_web;
 pub(crate) mod pi;
 pub(crate) mod terminal_launch;
+pub(crate) mod workbuddy;
 
 use std::path::{Path, PathBuf};
 
@@ -60,7 +61,7 @@ struct ObservedInstallation {
     location: &'static str,
 }
 
-const TARGETS: [(&str, &str, &str); 5] = [
+const TARGETS: [(&str, &str, &str); 6] = [
     ("claude_code", "Claude Code", "命令行与编辑器工作区"),
     ("claude_desktop", "Claude Desktop", "Claude 桌面应用"),
     (
@@ -70,6 +71,7 @@ const TARGETS: [(&str, &str, &str); 5] = [
     ),
     ("pi", "Pi", "Pi 编程助手"),
     ("dsh_web", "DSH web", "DeepSeek Harness 浏览器工作台"),
+    ("workbuddy", "WorkBuddy", "腾讯 AI 办公与开发助手"),
 ];
 
 pub(crate) fn user_home() -> Option<PathBuf> {
@@ -104,6 +106,7 @@ fn desktop_id_for(tool_id: &str) -> Option<&'static str> {
     match tool_id {
         "claude_desktop" => Some("claude_desktop"),
         "codex_desktop" => Some("codex_desktop"),
+        "workbuddy" => Some("workbuddy"),
         _ => None,
     }
 }
@@ -124,7 +127,7 @@ fn can_attempt(tool_id: &str, installation: &ObservedInstallation) -> bool {
     // not evidence that a configuration contract has changed. The transaction
     // parses/readbacks owned fields and the tool request proves usability.
     match tool_id {
-        "codex_desktop" | "claude_desktop" => installation.path.exists(),
+        "codex_desktop" | "claude_desktop" | "workbuddy" => installation.path.exists(),
         "claude_code" | "pi" | "dsh_web" => installation.path.is_file(),
         _ => false,
     }

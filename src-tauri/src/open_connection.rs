@@ -6,7 +6,7 @@ use crate::{
     connection_recovery::{self, Store},
     tool_activation::ACTIVATION_LOCK,
     tool_adapters::{
-        self, claude_code, claude_desktop, codex_desktop, dsh_web, pi, terminal_launch,
+        self, claude_code, claude_desktop, codex_desktop, dsh_web, pi, terminal_launch, workbuddy,
         AdapterFailure,
     },
     tool_credentials::{self, CredentialFailure, ToolCredential},
@@ -37,11 +37,7 @@ fn valid_request(request: &OpenRequest) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_'))
         && matches!(
             request.tool_id.as_str(),
-            "claude_code"
-                | "claude_desktop"
-                | "codex_desktop"
-                | "pi"
-                | "dsh_web"
+            "claude_code" | "claude_desktop" | "codex_desktop" | "pi" | "dsh_web" | "workbuddy"
         )
 }
 
@@ -93,6 +89,7 @@ pub(crate) fn validate_settings(
                 .validate_existing(),
             "dsh_web" => dsh_web::prepare_catalog(home, &origin, &credential.model_id, &models)?
                 .validate_existing(),
+            "workbuddy" => workbuddy::prepare_catalog(home, credential)?.validate_existing(),
             _ => Err(AdapterFailure::UnsupportedProfile),
         };
     }
@@ -141,6 +138,7 @@ pub(crate) fn validate_settings(
         "dsh_web" => {
             dsh_web::prepare(home, &credential.origin, &credential.model_id)?.validate_existing()
         }
+        "workbuddy" => workbuddy::prepare_catalog(home, credential)?.validate_existing(),
         _ => Err(AdapterFailure::UnsupportedProfile),
     }
 }
@@ -212,12 +210,12 @@ pub async fn open_tool_connection_v1(
                         }
                         Ok(codex_desktop::launch(&installation.path))
                     }
-                    "dsh_web" => Ok(dsh_web::open_existing(
-                        &dsh,
-                        &installation,
-                        credential.upstream_key(),
-                    )
-                    .await),
+                    "dsh_web" => {
+                        Ok(
+                            dsh_web::open_existing(&dsh, &installation, credential.upstream_key())
+                                .await,
+                        )
+                    }
                     "claude_code" => {
                         claude_code
                             .start(credential)
@@ -240,6 +238,10 @@ pub async fn open_tool_connection_v1(
                                 .await,
                         )
                     }
+                    "workbuddy" => Ok(tool_adapters::desktop_launch::launch(
+                        "workbuddy",
+                        &installation.path,
+                    )),
                     _ => unreachable!(),
                 }
             })
@@ -292,13 +294,14 @@ mod tests {
     }
 
     #[test]
-    fn all_five_open_targets_use_only_the_closed_native_request() {
+    fn all_six_open_targets_use_only_the_closed_native_request() {
         for tool in [
             "claude_code",
             "claude_desktop",
             "codex_desktop",
             "pi",
             "dsh_web",
+            "workbuddy",
         ] {
             assert!(valid_request(&OpenRequest {
                 request_id: "open-fixture".into(),

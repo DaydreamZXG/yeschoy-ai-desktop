@@ -4,6 +4,7 @@ export type ConfigurationToolId =
   | "opencode"
   | "pi"
   | "dsh"
+  | "workbuddy"
   | "hermes"
   | "openclaw";
 
@@ -15,7 +16,7 @@ export interface ConfigurationToolDefinition {
   mark: string;
   targetFile: string;
   ownedFields: readonly string[];
-  protocolSuffix: "" | "/v1";
+  protocolSuffix: "" | "/v1" | "/v1/chat/completions";
   endpointStatus: "documented_preview";
 }
 
@@ -133,6 +134,27 @@ export const CONFIGURATION_TOOLS: readonly ConfigurationToolDefinition[] =
         "agent-default-model.model",
       ]),
       protocolSuffix: "/v1" as const,
+      endpointStatus: "documented_preview" as const,
+    }),
+    Object.freeze({
+      id: "workbuddy" as const,
+      displayName: "WorkBuddy",
+      mark: "W",
+      targetFile: "~/.workbuddy/models.json",
+      ownedFields: Object.freeze([
+        "models[].id",
+        "models[].name",
+        "models[].vendor",
+        "models[].url",
+        "models[].apiKey",
+        "models[].useCustomProtocol",
+        "models[].supportsToolCall",
+        "models[].supportsImages",
+        "models[].supportsReasoning",
+        "models[].maxInputTokens",
+        "models[].maxOutputTokens",
+      ]),
+      protocolSuffix: "/v1/chat/completions" as const,
       endpointStatus: "documented_preview" as const,
     }),
     Object.freeze({

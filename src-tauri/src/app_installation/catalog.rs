@@ -131,6 +131,7 @@ pub(super) fn guide(tool: &str) -> Option<&'static str> {
         "claude_code" => "https://code.claude.com/docs/en/setup",
         "pi" => "https://github.com/earendil-works/pi/tree/main/packages/coding-agent",
         "dsh_web" => "https://github.com/deepseek-ai/deepseek-harness",
+        "workbuddy" => "https://www.workbuddy.cn/",
         _ => return None,
     })
 }
