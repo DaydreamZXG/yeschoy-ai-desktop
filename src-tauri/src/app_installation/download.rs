@@ -91,9 +91,7 @@ pub(super) async fn fetch(
     folder: &Path,
 ) -> Result<(PathBuf, String)> {
     let public = build_client(None)?;
-    // The fallback still requests https://ergou.qzz.io and therefore retains
-    // normal SNI and certificate verification. Only DNS resolution and proxy
-    // inheritance differ; no plaintext IP URL is ever accepted.
+    // Direct client is no_proxy plus compiled resolve of MIRROR_HOST only.
     let direct = build_client(Some(origins::MIRROR_ORIGIN))?;
     let mirror = origins::mirror_from_routes(&public, &direct, source)
         .await

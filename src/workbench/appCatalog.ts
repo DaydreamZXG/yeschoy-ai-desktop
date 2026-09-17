@@ -9,7 +9,7 @@ import type { ActivationToolId } from "../configuration/activation";
 /**
  * 工具清单唯一展示源（PRD §3.2 定案）。
  *
- * - `WORKBENCH_APPS`：V1 可接入应用。Claude Code / Codex / Pi / DSH web。
+ * - `WORKBENCH_APPS`：已支持接入的应用。Claude Code / Claude Desktop / Codex / WorkBuddy / Pi / DSH web。
  * - `COMING_SOON_APPS`：标注「即将支持」的应用，只展示、不提供接入入口。
  *
  * 遗留工具（hermes/openclaw）不属于 V1 范围，禁止回到这两个清单

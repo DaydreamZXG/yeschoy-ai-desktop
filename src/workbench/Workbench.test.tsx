@@ -669,7 +669,7 @@ describe("official workbench", () => {
       screen.queryByRole("region", { name: "用量账单" }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "登录野菜 API" })).toBeEnabled();
-    // 5 张 V1 应用卡 + 恒显的 OpenCode「即将支持」卡（PRD §3.2）。
+    // 6 张已支持应用卡 + 恒显的 OpenCode「即将支持」卡。
     expect(screen.getAllByRole("article")).toHaveLength(7);
     const card = screen
       .getByRole("heading", { name: "Claude Desktop" })
