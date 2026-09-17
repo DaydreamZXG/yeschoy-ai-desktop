@@ -566,7 +566,6 @@ describe("ru048 novice installer", () => {
           accountSession={account}
           onOpenAccount={noop}
           onOpenSetup={noop}
-          onOpenDiagnostics={noop}
         />
       </ConnectionProvider>,
     );

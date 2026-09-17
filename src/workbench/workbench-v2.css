@@ -3614,6 +3614,24 @@
   flex-wrap: wrap;
 }
 
+.settings-troubleshooting {
+  margin-top: var(--space-24);
+}
+.settings-troubleshooting h2 {
+  font-size: 13px;
+}
+.settings-troubleshooting p {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.settings-troubleshooting-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin-top: var(--space-10);
+}
+
 .settings-ledger {
   padding: 22px;
   border: 1px solid var(--line);

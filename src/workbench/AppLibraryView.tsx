@@ -9,14 +9,13 @@ import { useTranslation } from "react-i18next";
 import {
   ArrowRight,
   CircleAlert,
-  Globe2,
   Plus,
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
 import { AccountSummary } from "./WorkbenchChrome";
 import { AppGlyph } from "./AppGlyph";
-import { WORKBENCH_APPS, COMING_SOON_APPS } from "./appCatalog";
+import { WORKBENCH_APPS } from "./appCatalog";
 import type { AccountSessionController } from "../account/useAccountSession";
 import { balanceAlert } from "../account/finance";
 import { LowBalanceBanner } from "./LowBalanceBanner";
@@ -40,13 +39,11 @@ import { Users } from "lucide-react";
 interface Props {
   onOpenAccount: () => void;
   onOpenSetup: (appId: ActivationToolId, action?: SetupAction) => void;
-  onOpenDiagnostics: () => void;
   accountSession: AccountSessionController;
 }
 export function AppLibraryView({
   onOpenAccount,
   onOpenSetup,
-  onOpenDiagnostics,
   accountSession,
 }: Props) {
   const { t } = useTranslation();
@@ -259,10 +256,6 @@ export function AppLibraryView({
             <span className="quiet-separator">/</span> {detected ?? "—"}{" "}
             个已发现
           </span>
-          <button className="text-button" onClick={onOpenDiagnostics}>
-            <Globe2 />
-            连接诊断
-          </button>
         </div>
       )}
       {scanError && (
@@ -468,35 +461,6 @@ export function AppLibraryView({
             </article>
           );
         })}
-        {COMING_SOON_APPS.map((app, index) => (
-          <article
-            key={app.id}
-            className="connection-card stagger-enter"
-            style={{
-              "--rail-index": visibleApps.length + index,
-            } as CSSProperties}
-            data-coming-soon="true"
-          >
-            <header>
-              <span className="configuration-app-icon">
-                {app.icon ? <AppGlyph source={app.icon} /> : <b>{app.mark}</b>}
-              </span>
-              <div>
-                <h2>{app.name}</h2>
-                <p>{app.description}</p>
-              </div>
-              <span className="connection-state" data-state="coming_soon">
-                即将支持
-              </span>
-            </header>
-            <div className="connection-card-body">
-              <div className="connection-empty">
-                <p>这一应用的接入正在后续版本排期中，暂时无需配置。</p>
-                <span>不需要了解配置文件</span>
-              </div>
-            </div>
-          </article>
-        ))}
       </section>
       {scan &&
         !scanError &&

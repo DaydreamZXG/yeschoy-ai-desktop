@@ -21,6 +21,29 @@ import { connectionsFixture } from "../configuration/connection-test-fixtures";
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 import { installationInspectionFixture } from "../installation/test-fixtures";
 const native = vi.mocked(invoke);
+
+function openWorkbenchPage(name: string) {
+  if (name === "应用接入") {
+    const home = screen.queryByRole("button", { name: "我的应用" });
+    if (home) fireEvent.click(home);
+    const resume = screen.queryByRole("button", { name: "换模型与分组" });
+    if (resume) {
+      fireEvent.click(resume);
+      return;
+    }
+    const start = screen.queryAllByRole("button", { name: "开始接入" });
+    fireEvent.click(
+      start[0] ?? screen.getAllByRole("button", { name: "安装并接入" })[0],
+    );
+    return;
+  }
+  if (name === "模型与价格" || name === "连接诊断" || name === "已安装的工具") {
+    fireEvent.click(screen.getByRole("button", { name: "设置" }));
+    fireEvent.click(screen.getByRole("button", { name }));
+    return;
+  }
+  fireEvent.click(screen.getByRole("button", { name }));
+}
 // Inlined legacy service-catalog fixture: the mock branch for
 // `read_public_service_catalog` is retained so unexpected-command
 // assertions keep their original coverage shape.
@@ -398,7 +421,7 @@ describe("official workbench", () => {
     render(<App />);
     await screen.findAllByText("野菜测试用户");
     for (const page of ["应用接入", "模型与价格"]) {
-      fireEvent.click(screen.getByRole("button", { name: page }));
+      openWorkbenchPage(page);
       const picker = await screen.findByRole("combobox", {
         name: /完整模型 ID/,
       });
@@ -441,7 +464,7 @@ describe("official workbench", () => {
     });
     render(<App />);
     await screen.findAllByText("野菜测试用户");
-    fireEvent.click(screen.getByRole("button", { name: "模型与价格" }));
+    openWorkbenchPage("模型与价格");
     await screen.findByRole("combobox", { name: /完整模型 ID/ });
 
     // 默认工具 claude_desktop（anthropic 直连）：两个模型都兼容。
@@ -511,7 +534,7 @@ describe("official workbench", () => {
     });
     render(<App />);
     await screen.findAllByText("野菜测试用户");
-    fireEvent.click(screen.getByRole("button", { name: "模型与价格" }));
+    openWorkbenchPage("模型与价格");
     // claude_desktop 与 anthropic 兼容，先切到 codex 才能制造「无兼容模型」。
     fireEvent.change(
       screen
@@ -569,7 +592,7 @@ describe("official workbench", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "用量账单" }),
     ).toHaveFocus();
-    fireEvent.click(screen.getByRole("button", { name: "应用接入" }));
+    openWorkbenchPage("应用接入");
     await act(async () => {});
     expect(screen.getByRole("radio", { name: /国模特价分组/ })).toBeChecked();
     expect(screen.getByRole("button", { name: "恢复原设置" })).toBeEnabled();
@@ -584,26 +607,13 @@ describe("official workbench", () => {
         );
       };
       checkCopy();
-      for (const label of [
-        c.apps,
-        c.models,
-        c.usage,
-        c.help,
-        c.advanced,
-        c.settings,
-      ]) {
+      for (const label of [c.home, c.usage, c.settings]) {
         fireEvent.click(screen.getAllByRole("button", { name: label })[0]);
         checkCopy();
-        if (label === c.apps) {
-          expect(
-            screen.getByTestId("configuration-apply-action"),
-          ).toBeEnabled();
-          expect(
-            screen.getByTestId("configuration-apply-action"),
-          ).toHaveTextContent(c.signInFirst);
-          expect(
-            container.querySelector(".desktop-technical-details"),
-          ).not.toHaveAttribute("open");
+        if (label === c.settings) {
+          expect(screen.getByRole("button", { name: c.models })).toBeEnabled();
+          expect(screen.getByRole("button", { name: c.help })).toBeEnabled();
+          expect(screen.getByRole("button", { name: c.advanced })).toBeEnabled();
         }
         if (label === c.usage) {
           expect(
@@ -639,8 +649,7 @@ describe("official workbench", () => {
       screen.queryByRole("region", { name: "用量账单" }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "登录野菜 API" })).toBeEnabled();
-    // 6 张已支持应用卡 + 恒显的 OpenCode「即将支持」卡。
-    expect(screen.getAllByRole("article")).toHaveLength(7);
+    expect(screen.getAllByRole("article")).toHaveLength(6);
     const card = screen
       .getByRole("heading", { name: "Claude Desktop" })
       .closest("article")!;
@@ -659,7 +668,7 @@ describe("official workbench", () => {
   it("takes the application navigation to the working setup flow", async () => {
     render(<App />);
     await screen.findByText("版本 1.40609.1");
-    fireEvent.click(screen.getByRole("button", { name: "应用接入" }));
+    openWorkbenchPage("应用接入");
     expect(
       screen.getByTestId("configuration-preview-view"),
     ).toBeInTheDocument();
@@ -727,7 +736,7 @@ describe("official workbench", () => {
     expect(
       await screen.findByRole("button", { name: "网页登录" }),
     ).toBeEnabled();
-    fireEvent.click(screen.getByRole("button", { name: "模型与价格" }));
+    openWorkbenchPage("模型与价格");
     expect(
       await screen.findAllByText("登录后可查看当前账号可用模型和实际价格。"),
     ).toHaveLength(2);
@@ -802,7 +811,7 @@ describe("official workbench", () => {
     expect(screen.getAllByText("人民币额度")).toHaveLength(2);
     expect(screen.getByRole("button", { name: /去充值/ })).toBeEnabled();
 
-    fireEvent.click(screen.getByRole("button", { name: "模型与价格" }));
+    openWorkbenchPage("模型与价格");
     expect((await screen.findAllByText("glm-5.3")).length).toBeGreaterThan(1);
     expect(
       document.querySelector(".billing-comparison-card.is-official strong"),
@@ -895,7 +904,7 @@ describe("official workbench", () => {
     });
     render(<App />);
     await screen.findAllByText("野菜测试用户");
-    fireEvent.click(screen.getByRole("button", { name: "模型与价格" }));
+    openWorkbenchPage("模型与价格");
     expect((await screen.findAllByText("glm-5.3")).length).toBeGreaterThan(1);
     fireEvent.change(screen.getByRole("combobox", { name: "使用线路" }), {
       target: { value: "global_accelerated" },
@@ -1015,7 +1024,7 @@ describe("official workbench", () => {
     });
     render(<App />);
     await screen.findByText("版本 1.40609.1");
-    fireEvent.click(screen.getByRole("button", { name: "应用接入" }));
+    openWorkbenchPage("应用接入");
     expect(
       await screen.findByText(
         /当前规则无法可靠换算为 Token 费用，暂不展示估算/,

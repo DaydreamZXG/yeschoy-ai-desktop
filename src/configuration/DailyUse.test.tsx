@@ -254,7 +254,6 @@ describe("daily-use UX", () => {
         <AppLibraryView
           accountSession={account}
           onOpenAccount={callback}
-          onOpenDiagnostics={callback}
           onOpenSetup={callback}
         />
       </ConnectionProvider>,
@@ -274,7 +273,6 @@ describe("daily-use UX", () => {
         <AppLibraryView
           accountSession={session()}
           onOpenAccount={callback}
-          onOpenDiagnostics={callback}
           onOpenSetup={callback}
         />
       </ConnectionProvider>,
@@ -294,7 +292,6 @@ describe("daily-use UX", () => {
         <AppLibraryView
           accountSession={session()}
           onOpenAccount={callback}
-          onOpenDiagnostics={callback}
           onOpenSetup={callback}
         />
       </ConnectionProvider>,
@@ -314,7 +311,6 @@ describe("daily-use UX", () => {
         <AppLibraryView
           accountSession={session()}
           onOpenAccount={callback}
-          onOpenDiagnostics={callback}
           onOpenSetup={callback}
         />
       </ConnectionProvider>,
@@ -518,7 +514,6 @@ describe("daily-use UX", () => {
         <AppLibraryView
           accountSession={session()}
           onOpenAccount={callback}
-          onOpenDiagnostics={callback}
           onOpenSetup={open}
         />
       </ConnectionProvider>,
@@ -1499,16 +1494,12 @@ describe("daily-use UX", () => {
             accountSession={{ ...session(), projection: null }}
             onOpenAccount={callback}
             onOpenSetup={callback}
-            onOpenDiagnostics={callback}
           />
         </ConnectionProvider>,
       );
       await tick();
-      // V1 卡片（count=0 时仅 claude/codex desktop 特例可见）+ 恒显的
-      // 「即将支持」卡（OpenCode，PRD §3.2）。
-      expect(screen.queryAllByRole("article")).toHaveLength(
-        (count || 2) + 1,
-      );
+      // count=0 时仅 Claude Desktop / Codex Desktop 可见。
+      expect(screen.queryAllByRole("article")).toHaveLength(count || 2);
       if (count === 0)
         expect(
           screen.getAllByRole("button", { name: /安装并接入/ }),
@@ -1518,7 +1509,7 @@ describe("daily-use UX", () => {
           name: /查看其他/,
         }),
       );
-      expect(screen.getAllByRole("article")).toHaveLength(7);
+      expect(screen.getAllByRole("article")).toHaveLength(6);
       expect(
         screen.queryByRole("region", { name: "用量账单" }),
       ).not.toBeInTheDocument();

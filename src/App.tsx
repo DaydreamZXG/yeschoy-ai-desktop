@@ -177,14 +177,17 @@ function App() {
                   onOpenAccount={() => setView("account")}
                   onOpenSetup={(appId, action = "configure") => {
                     setSelectedDesktopApp(appId);
-                    setSetupIntent((previous) => ({
-                      appId,
-                      action,
-                      revision: (previous?.revision ?? 0) + 1,
-                    }));
+                    setSetupIntent((previous) =>
+                      previous?.appId === appId && previous.action === action
+                        ? previous
+                        : {
+                            appId,
+                            action,
+                            revision: (previous?.revision ?? 0) + 1,
+                          },
+                    );
                     setView("setup");
                   }}
-                  onOpenDiagnostics={() => setView("diagnostics")}
                   accountSession={accountSession}
                 />
               ) : view === "account" ? (
@@ -211,6 +214,8 @@ function App() {
                   onAppearanceChange={changeAppearance}
                   onOpenAccount={() => setView("account")}
                   onOpenDiagnostics={() => setView("diagnostics")}
+                  onOpenTools={() => setView("tools")}
+                  onOpenModels={() => setView("models")}
                 />
               ) : (
                 <div className="workspace" id="top">

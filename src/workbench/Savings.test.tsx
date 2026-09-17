@@ -104,17 +104,7 @@ describe("clear account currency and savings UX", () => {
       />,
     );
     expect(screen.getByText("¥26.59")).toBeInTheDocument();
-    const card = screen.getByText("近期费用对比").closest("article")!;
-    for (const [label, amount] of [
-      ["官网应收", "¥140.00"],
-      ["野菜收取", "¥20.00"],
-      ["预计省下", "¥120.00"],
-    ]) {
-      const row = within(card).getByText(label).closest("div")!;
-      expect(within(row).getByText(amount)).toBeVisible();
-    }
-    expect(within(card).getByText("估算")).toBeInTheDocument();
-    expect(within(card).getByText("基于 80 笔可比较记录")).toBeInTheDocument();
+    expect(screen.queryByText("近期费用对比")).not.toBeInTheDocument();
     expect(screen.getByText("人民币额度")).toBeInTheDocument();
     expect(screen.getByText("累计请求")).toBeInTheDocument();
     expect(screen.queryByText("累计用量")).not.toBeInTheDocument();

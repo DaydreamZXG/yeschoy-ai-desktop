@@ -188,7 +188,7 @@ const zh = {
   signInBrand: "野菜API",
   logoutPromptTitle: "仅退出野菜API账户？",
   logoutPromptMessage:
-    "这里只清除本机的野菜API登录状态，不会改动 Codex、Claude 等应用当前的接入设置。\n\n如果还要移除应用接入，请先到“应用接入”恢复该应用的原设置。",
+    "这里只清除本机的野菜API登录状态，不会改动 Codex、Claude 等应用当前的接入设置。\n\n如果还要移除应用接入，请先到“我的应用”恢复该应用的原设置。",
   logoutPromptConfirm: "仅退出账户",
   logoutPromptCancel: "暂不退出",
   libraryFooterTrust: "只改你选择的应用，随时可以恢复。不会删除聊天记录。",

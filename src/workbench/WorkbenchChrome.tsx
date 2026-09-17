@@ -1,10 +1,8 @@
 import {
-  Activity,
   ArrowUpRight,
   Blocks,
   ChevronRight,
   CircleUserRound,
-  Layers3,
   LayoutDashboard,
   Monitor,
   Moon,
@@ -12,7 +10,6 @@ import {
   Settings2,
   ShieldCheck,
   Sun,
-  Terminal,
   Wallet,
   ChartNoAxesCombined,
 } from "lucide-react";
@@ -20,7 +17,6 @@ import brandIcon from "../assets/brand/yecai-logo.png";
 import { Fragment } from "react";
 import type { AccountProjection } from "../account/session";
 import { creditUnit, formatMoney } from "../account/finance";
-import { SavingsCard } from "./Savings";
 import { CANDIDATE_VERSION } from "../candidate/readiness";
 import type { Appearance } from "./appearance";
 import { useWorkbenchCopy } from "./copy";
@@ -88,26 +84,26 @@ export function WorkbenchSidebar({
     : c.guest;
   const nav = [
     { id: "home", label: c.home, icon: LayoutDashboard },
-    { id: "setup", label: c.apps, icon: Blocks },
-    { id: "models", label: c.models, icon: Layers3 },
     { id: "account", label: c.usage, icon: ReceiptText },
-  ] as const;
-  const secondary = [
-    { id: "diagnostics", label: c.help, icon: Activity },
-    { id: "tools", label: c.advanced, icon: Terminal },
     { id: "settings", label: c.settings, icon: Settings2 },
   ] as const;
+  const current =
+    view === "setup" || view === "models" || view === "diagnostics" || view === "tools"
+      ? view === "setup"
+        ? "home"
+        : "settings"
+      : view;
   const navButton = ({
     id,
     label,
     icon: Icon,
-  }: (typeof nav)[number] | (typeof secondary)[number]) => (
+  }: (typeof nav)[number]) => (
     <button
       type="button"
       key={id}
       aria-label={label}
       title={label}
-      aria-current={view === id ? "page" : undefined}
+      aria-current={current === id ? "page" : undefined}
       onClick={() => onNavigate(id)}
     >
       <Icon aria-hidden="true" />
@@ -134,9 +130,6 @@ export function WorkbenchSidebar({
         {nav.map(navButton)}
       </nav>
       <div className="sidebar-bottom">
-        <nav className="workbench-nav secondary-nav" aria-label={c.advanced}>
-          {secondary.map(navButton)}
-        </nav>
         <AppearancePicker value={appearance} onChange={onAppearance} />
         <button
           type="button"
@@ -239,14 +232,6 @@ export function AccountSummary({
               )}
             </div>
           </article>
-          {i === 0 && (
-            <SavingsCard
-              savings={signedIn ? accountProjection.savings : undefined}
-              loading={accountLoading}
-              onDetails={onOpenAccount}
-              detailsLabel="查看账单"
-            />
-          )}
         </Fragment>
       ))}
       <article className="summary-card">

@@ -25,7 +25,12 @@ beforeEach(async () => {
 describe("SettingsView", () => {
   it("does not render the obsolete account-unavailable boundary", () => {
     const { container } = render(
-      <SettingsView onOpenAccount={vi.fn()} onOpenDiagnostics={vi.fn()} />,
+      <SettingsView
+        onOpenAccount={vi.fn()}
+        onOpenDiagnostics={vi.fn()}
+        onOpenTools={vi.fn()}
+        onOpenModels={vi.fn()}
+      />,
     );
 
     expect(container.querySelector(".settings-boundary")).toBeNull();
@@ -62,7 +67,12 @@ describe("SettingsView", () => {
 
     render(
       <ConnectionProvider value={connections}>
-        <SettingsView onOpenAccount={vi.fn()} onOpenDiagnostics={vi.fn()} />
+        <SettingsView
+          onOpenAccount={vi.fn()}
+          onOpenDiagnostics={vi.fn()}
+          onOpenTools={vi.fn()}
+          onOpenModels={vi.fn()}
+        />
       </ConnectionProvider>,
     );
 
@@ -119,7 +129,12 @@ describe("SettingsView", () => {
     };
     render(
       <ConnectionProvider value={connections}>
-        <SettingsView onOpenAccount={vi.fn()} onOpenDiagnostics={vi.fn()} />
+        <SettingsView
+          onOpenAccount={vi.fn()}
+          onOpenDiagnostics={vi.fn()}
+          onOpenTools={vi.fn()}
+          onOpenModels={vi.fn()}
+        />
       </ConnectionProvider>,
     );
     fireEvent.click(

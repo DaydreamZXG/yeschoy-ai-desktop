@@ -11,6 +11,8 @@ import { AdvancedConnectionDetails } from "./AdvancedConnectionDetails";
 interface SettingsViewProps {
   onOpenAccount: () => void;
   onOpenDiagnostics: () => void;
+  onOpenTools: () => void;
+  onOpenModels: () => void;
   appearance?: Appearance;
   onAppearanceChange?: (appearance: Appearance) => void;
 }
@@ -20,6 +22,9 @@ const SECURITY_ROWS = ["apiKeys", "configFiles", "telemetry"] as const;
 export function SettingsView({
   appearance = "system",
   onAppearanceChange,
+  onOpenDiagnostics,
+  onOpenTools,
+  onOpenModels,
 }: SettingsViewProps) {
   const { t } = useTranslation();
   const c = useWorkbenchCopy();
@@ -98,6 +103,22 @@ export function SettingsView({
         <div className="advanced-connection-wrap">
           <AdvancedConnectionDetails />
         </div>
+
+        <section className="settings-troubleshooting" aria-label="排查与高级">
+          <h2>排查与高级</h2>
+          <p>安装或接入出问题时再用，日常使用可以不管这里。</p>
+          <div className="settings-troubleshooting-actions">
+            <button type="button" onClick={onOpenModels}>
+              {c.models}
+            </button>
+            <button type="button" onClick={onOpenDiagnostics}>
+              {c.help}
+            </button>
+            <button type="button" onClick={onOpenTools}>
+              {c.advanced}
+            </button>
+          </div>
+        </section>
       </section>
     </div>
   );
