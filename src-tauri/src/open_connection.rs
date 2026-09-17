@@ -6,8 +6,8 @@ use crate::{
     connection_recovery::{self, Store},
     tool_activation::ACTIVATION_LOCK,
     tool_adapters::{
-        self, claude_code, claude_desktop, codex_desktop, dsh_web, pi, terminal_launch, workbuddy,
-        AdapterFailure,
+        self, claude_code, claude_desktop, codex_desktop, desktop_lifecycle, dsh_web, pi,
+        terminal_launch, workbuddy, AdapterFailure,
     },
     tool_credentials::{self, CredentialFailure, ToolCredential},
 };
@@ -238,10 +238,11 @@ pub async fn open_tool_connection_v1(
                                 .await,
                         )
                     }
-                    "workbuddy" => Ok(tool_adapters::desktop_launch::launch(
+                    "workbuddy" => Ok(desktop_lifecycle::open_unless_running(
                         "workbuddy",
                         &installation.path,
-                    )),
+                    )
+                    .await),
                     _ => unreachable!(),
                 }
             })

@@ -65,8 +65,23 @@ pub(crate) fn requires_reload(tool_id: &str) -> bool {
     matches!(tool_id, "claude_desktop" | "codex_desktop")
 }
 
+pub(crate) fn observes_running(tool_id: &str) -> bool {
+    requires_reload(tool_id) || tool_id == "workbuddy"
+}
+
+pub(crate) async fn open_unless_running(tool_id: &str, path: &Path) -> Result<(), AdapterFailure> {
+    if is_running(tool_id, path).await.unwrap_or(false) {
+        return Ok(());
+    }
+    let tool = tool_id.to_owned();
+    let target = path.to_owned();
+    tokio::task::spawn_blocking(move || super::desktop_launch::launch(&tool, &target))
+        .await
+        .map_err(|_| AdapterFailure::LaunchError("desktop_launch_start_failed"))?
+}
+
 pub(crate) async fn is_running(tool_id: &str, path: &Path) -> Result<bool, AdapterFailure> {
-    if !requires_reload(tool_id) {
+    if !observes_running(tool_id) {
         return Ok(false);
     }
     let tool_id = tool_id.to_owned();
@@ -170,6 +185,7 @@ mod platform {
         match tool_id {
             "claude_desktop" => Some("com.anthropic.claudefordesktop"),
             "codex_desktop" => Some("com.openai.codex"),
+            "workbuddy" => Some("com.tencent.workbuddy.mac"),
             _ => None,
         }
     }
@@ -499,8 +515,10 @@ mod tests {
     fn only_desktop_targets_are_eligible_for_reload_control() {
         assert!(requires_reload("claude_desktop"));
         assert!(requires_reload("codex_desktop"));
-        for tool in ["claude_code", "pi", "dsh_web"] {
+        for tool in ["claude_code", "pi", "dsh_web", "workbuddy"] {
             assert!(!requires_reload(tool), "{tool}");
         }
+        assert!(observes_running("workbuddy"));
+        assert!(!observes_running("pi"));
     }
 }

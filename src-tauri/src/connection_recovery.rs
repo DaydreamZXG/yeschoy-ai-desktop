@@ -442,12 +442,7 @@ fn document(path: &Path, bytes: Option<&[u8]>) -> Result<Value> {
         Some("yaml" | "yml") => serde_yaml::from_str(source).map_err(|_| Failure::Invalid)?,
         _ => json5::from_str(source).map_err(|_| Failure::Invalid)?,
     };
-    let workbuddy_catalog = path.file_name().is_some_and(|name| name == "models.json")
-        && path
-            .parent()
-            .and_then(Path::file_name)
-            .is_some_and(|name| name == ".workbuddy");
-    if !value.is_object() && !(workbuddy_catalog && value.is_array()) {
+    if !value.is_object() && !(workbuddy_catalog(path) && value.is_array()) {
         return Err(Failure::Invalid);
     }
     Ok(value)
@@ -476,6 +471,13 @@ fn undo(
         && current.is_some_and(Value::is_object)
         && before.is_none_or(Value::is_object)
     {
+        if let (None, Some(after_value), Some(current_value)) = (before, after, current) {
+            if object_contains(current_value, after_value) {
+                return None;
+            }
+            *preserved = true;
+            return current.cloned();
+        }
         let empty = Map::new();
         let base = before.and_then(Value::as_object).unwrap_or(&empty);
         let ours = after.and_then(Value::as_object).unwrap_or(&empty);
@@ -543,6 +545,57 @@ fn undo(
     }
     *preserved = true;
     current.cloned()
+}
+
+fn object_contains(current: &Value, required: &Value) -> bool {
+    match (current, required) {
+        (Value::Object(now), Value::Object(need)) => need
+            .iter()
+            .all(|(key, value)| now.get(key).is_some_and(|have| object_contains(have, value))),
+        (now, need) => now == need,
+    }
+}
+
+fn workbuddy_catalog(path: &Path) -> bool {
+    path.file_name().is_some_and(|name| name == "models.json")
+        && path
+            .parent()
+            .and_then(Path::file_name)
+            .is_some_and(|name| name == ".workbuddy")
+}
+
+fn json_string_set(value: Option<&Value>) -> BTreeSet<String> {
+    value
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .map(str::to_owned)
+        .collect()
+}
+
+fn remove_inserted_available_models(before: &Value, after: &Value, mut restored: Value) -> Value {
+    let Some(available) = restored
+        .as_object_mut()
+        .and_then(|object| object.get_mut("availableModels"))
+        .and_then(Value::as_array_mut)
+    else {
+        return restored;
+    };
+    let inserted = json_string_set(after.get("availableModels"))
+        .difference(&json_string_set(before.get("availableModels")))
+        .cloned()
+        .collect::<BTreeSet<_>>();
+    if inserted.is_empty() {
+        return restored;
+    }
+    available.retain(|value| {
+        value
+            .as_str()
+            .map(|id| !inserted.contains(id))
+            .unwrap_or(true)
+    });
+    restored
 }
 
 fn toml_patch(
@@ -636,8 +689,11 @@ pub(crate) fn restore_bytes(
     let after = document(&file.path, Some(&file.after))?;
     let now = document(&file.path, current)?;
     let mut preserved = false;
-    let restored =
+    let mut restored =
         undo(Some(&before), Some(&after), Some(&now), &mut preserved).ok_or(Failure::Invalid)?;
+    if workbuddy_catalog(&file.path) {
+        restored = remove_inserted_available_models(&before, &after, restored);
+    }
     if restored == now {
         return Ok((current.map(Vec::from), preserved));
     }
@@ -957,6 +1013,17 @@ pub(crate) fn legacy_clean(
                         return Err(Failure::Invalid);
                     };
                     models.retain(|model| !owned(model));
+                    if let Some(available) = object
+                        .get_mut("availableModels")
+                        .and_then(Value::as_array_mut)
+                    {
+                        available.retain(|value| {
+                            value
+                                .as_str()
+                                .map(|id| credential.resolve_model(id).is_err())
+                                .unwrap_or(true)
+                        });
+                    }
                 }
                 _ => return Err(Failure::Invalid),
             }
@@ -1141,6 +1208,101 @@ mod tests {
         f.0.abandon(&record).unwrap();
         assert!(f.0.load("pi").unwrap().is_none());
     }
+    #[test]
+    fn workbuddy_restore_removes_hot_reloaded_owned_models_and_available_ids() {
+        let f = Fixture::new();
+        std::fs::create_dir_all(f.path(".workbuddy")).unwrap();
+        let before = json!({
+            "models": [{"id": "other", "vendor": "Other"}],
+            "availableModels": ["other"],
+            "future": {"keep": true}
+        });
+        let after = json!({
+            "models": [
+                {"id": "other", "vendor": "Other"},
+                {
+                    "id": "gpt-6-astra",
+                    "name": "Astra",
+                    "vendor": "野菜API",
+                    "url": "https://yeschoy.com/v1/chat/completions",
+                    "apiKey": "synthetic-workbuddy-key",
+                    "useCustomProtocol": false
+                }
+            ],
+            "availableModels": ["other", "gpt-6-astra"],
+            "future": {"keep": true}
+        });
+        let file = f.change(
+            ".workbuddy/models.json",
+            Some(serde_json::to_vec(&before).unwrap().as_slice()),
+            &serde_json::to_vec(&after).unwrap(),
+        );
+        let now = json!({
+            "models": [
+                {"id": "other", "vendor": "Other"},
+                {
+                    "id": "gpt-6-astra",
+                    "name": "Astra",
+                    "vendor": "野菜API",
+                    "url": "https://yeschoy.com/v1/chat/completions",
+                    "apiKey": "synthetic-workbuddy-key",
+                    "useCustomProtocol": false,
+                    "temperature": 0.2
+                }
+            ],
+            "availableModels": ["other", "gpt-6-astra", "wb-extra"],
+            "future": {"keep": true}
+        });
+        let (restored, _) = merged(&file, now);
+        assert_eq!(restored["models"], json!([{"id": "other", "vendor": "Other"}]));
+        assert_eq!(restored["availableModels"], json!(["other", "wb-extra"]));
+        assert_eq!(restored["future"]["keep"], true);
+        assert!(restored["models"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|model| model.get("apiKey").is_none()));
+    }
+
+    #[test]
+    fn workbuddy_legacy_clean_removes_owned_models_and_available_ids() {
+        let f = Fixture::new();
+        let credential = ToolCredential {
+            api_key: "synthetic-workbuddy-key".into(),
+            origin: "https://yeschoy.com".into(),
+            model_id: "gpt-6-astra".into(),
+            local_gateway_token: None,
+            claude_transport: None,
+            codex_transport: None,
+            models: vec![],
+        };
+        let bytes = serde_json::to_vec(&json!({
+            "models": [
+                {"id": "other", "vendor": "Other"},
+                {
+                    "id": "gpt-6-astra",
+                    "vendor": "野菜API",
+                    "url": "https://yeschoy.com/v1/chat/completions",
+                    "apiKey": "synthetic-workbuddy-key"
+                }
+            ],
+            "availableModels": ["other", "gpt-6-astra", "wb-extra"]
+        }))
+        .unwrap();
+        let cleaned = legacy_clean(
+            "workbuddy",
+            &f.path(".workbuddy/models.json"),
+            Some(&bytes),
+            &credential,
+            false,
+        )
+        .unwrap()
+        .unwrap();
+        let value: Value = serde_json::from_slice(&cleaned).unwrap();
+        assert_eq!(value["models"], json!([{"id": "other", "vendor": "Other"}]));
+        assert_eq!(value["availableModels"], json!(["other", "wb-extra"]));
+    }
+
     #[test]
     fn restores_exact_original_bytes_for_all_six_tools() {
         for tool in [

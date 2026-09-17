@@ -63,6 +63,7 @@ struct Manifest {
 pub(crate) struct Takeover {
     home: PathBuf,
     created: bool,
+    apply_on_commit: bool,
 }
 
 fn failure(code: &'static str) -> AdapterFailure {
@@ -478,10 +479,10 @@ impl Takeover {
         }
         if let Some(existing) = load_manifest(home)? {
             if existing.phase == Phase::Active && existing.target_provider == target {
-                apply_manifest(&existing)?;
                 return Ok(Self {
                     home: home.to_owned(),
                     created: false,
+                    apply_on_commit: true,
                 });
             }
             if existing.phase == Phase::Pending {
@@ -495,33 +496,41 @@ impl Takeover {
             return Ok(Self {
                 home: home.to_owned(),
                 created: false,
+                apply_on_commit: false,
             });
         }
         save_manifest(home, &manifest)?;
-        if let Err(error) = apply_manifest(&manifest) {
-            let _ = restore_manifest(home, &manifest);
-            return Err(error);
-        }
         Ok(Self {
             home: home.to_owned(),
             created: true,
+            apply_on_commit: true,
         })
     }
 
     pub(crate) fn commit(&mut self) -> Result<(), AdapterFailure> {
-        if !self.created {
+        if !self.apply_on_commit {
             return Ok(());
         }
         let Some(mut manifest) = load_manifest(&self.home)? else {
             return Err(failure("codex_history_takeover_failed"));
         };
-        manifest.phase = Phase::Active;
-        save_manifest(&self.home, &manifest)?;
+        if let Err(error) = apply_manifest(&manifest) {
+            if self.created {
+                restore_manifest(&self.home, &manifest)?;
+            }
+            return Err(error);
+        }
+        if self.created {
+            manifest.phase = Phase::Active;
+            save_manifest(&self.home, &manifest)?;
+        }
+        self.apply_on_commit = false;
         Ok(())
     }
 
     pub(crate) fn disarm(&mut self) {
         self.created = false;
+        self.apply_on_commit = false;
     }
 
     pub(crate) fn rollback(&mut self) -> Result<(), AdapterFailure> {
@@ -533,6 +542,7 @@ impl Takeover {
         };
         restore_manifest(&self.home, &manifest)?;
         self.created = false;
+        self.apply_on_commit = false;
         Ok(())
     }
 }
@@ -651,6 +661,28 @@ mod tests {
         assert_eq!(provider("b"), "custom");
         assert_eq!(provider("c"), "openai");
         drop(connection);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn begin_inventories_without_rewriting_sessions_until_commit() {
+        let root = temp("codex-history-deferred-apply");
+        let session = root.join(".codex/sessions/2026/example.jsonl");
+        fs::create_dir_all(session.parent().unwrap()).unwrap();
+        let original = b"{\"type\":\"session_meta\",\"payload\":{\"id\":\"thread-1\",\"model_provider\":\"openai\"}}\n";
+        common::atomic_write_bounded(&session, original, MAX_SESSION_BYTES).unwrap();
+        let mut takeover = Takeover::begin(&root, "yeschoy").unwrap();
+        assert_eq!(fs::read(&session).unwrap(), original);
+        takeover.commit().unwrap();
+        assert_eq!(
+            session_identity(&fs::read(&session).unwrap(), "yeschoy").as_deref(),
+            Some("thread-1")
+        );
+        takeover.rollback().unwrap();
+        assert_eq!(
+            session_identity(&fs::read(&session).unwrap(), "openai").as_deref(),
+            Some("thread-1")
+        );
         fs::remove_dir_all(root).unwrap();
     }
 }

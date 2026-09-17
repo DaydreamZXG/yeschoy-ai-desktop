@@ -1146,7 +1146,9 @@ async fn open_configured_adapter(
         "dsh_web" => {
             dsh_web::open_existing(dsh_runtime, installation, credential.upstream_key()).await
         }
-        "workbuddy" => tool_adapters::desktop_launch::launch("workbuddy", &installation.path),
+        "workbuddy" => {
+            desktop_lifecycle::open_unless_running("workbuddy", &installation.path).await
+        }
         "claude_code" | "pi" => {
             let home = tool_adapters::user_home()
                 .ok_or(AdapterFailure::ConfigurationFailed("home_unavailable"))?;
