@@ -140,7 +140,10 @@ pub(crate) fn windows_package_name_matches(app_id: &str, name: &str) -> bool {
                 | "openai.chatgpt"
                 | "openaichatgpt"
         ),
-        "workbuddy" => matches!(name.as_str(), "tencent.workbuddy" | "tencentworkbuddy"),
+        "workbuddy" => matches!(
+            name.as_str(),
+            "workbuddy" | "tencent.workbuddy" | "tencentworkbuddy"
+        ),
         _ => false,
     }
 }
@@ -190,7 +193,7 @@ pub(crate) fn windows_desktop_file_identity_matches(
         }
         "workbuddy" => {
             matches!(product.as_str(), "workbuddy" | "tencentworkbuddy")
-                && company.contains("tencent")
+                && (company.contains("tencent") || company_name.contains("腾讯"))
         }
         _ => false,
     };
@@ -645,12 +648,19 @@ mod tests {
             "workbuddy",
             "Tencent.WorkBuddy"
         ));
-        assert!(!windows_package_name_matches("workbuddy", "WorkBuddy"));
+        assert!(windows_package_name_matches("workbuddy", "WorkBuddy"));
         assert!(windows_desktop_file_identity_matches(
             "workbuddy",
             Path::new("C:\\Apps\\WorkBuddy.exe"),
             "WorkBuddy",
             "Tencent Technology",
+            true
+        ));
+        assert!(windows_desktop_file_identity_matches(
+            "workbuddy",
+            Path::new("C:\\Apps\\WorkBuddy.exe"),
+            "WorkBuddy",
+            "腾讯科技（深圳）有限公司",
             true
         ));
         assert!(!windows_desktop_file_identity_matches(

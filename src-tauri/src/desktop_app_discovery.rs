@@ -814,22 +814,25 @@ fn windows_package_identity_matches(app_id: &str, identity: &str) -> bool {
 #[cfg(any(target_os = "windows", test))]
 fn windows_registered_name_matches(app_id: &str, name: &str, publisher: &str) -> bool {
     let name = compact_windows_name(name);
-    let publisher = compact_windows_name(publisher);
+    let compact_publisher = compact_windows_name(publisher);
     match app_id {
         "claude_desktop" => {
             name == "claude"
                 || name == "claudedesktop"
                 || ((name == "anthropicclaude" || name == "anthropicclaudedesktop")
-                    && publisher.contains("anthropic"))
+                    && compact_publisher.contains("anthropic"))
         }
         "codex_desktop" => {
             name == "codex"
                 || name == "codexdesktop"
                 || ((name == "chatgpt" || name == "chatgptdesktop")
-                    && (publisher.is_empty() || publisher.contains("openai")))
+                    && (compact_publisher.is_empty() || compact_publisher.contains("openai")))
         }
         "workbuddy" => {
-            (name == "workbuddy" || name == "tencentworkbuddy") && publisher.contains("tencent")
+            (name == "workbuddy" || name == "tencentworkbuddy")
+                && (compact_publisher.is_empty()
+                    || compact_publisher.contains("tencent")
+                    || publisher.contains("腾讯"))
         }
         _ => false,
     }
@@ -1297,15 +1300,25 @@ mod tests {
             "WorkBuddy",
             "Tencent"
         ));
-        assert!(!windows_registered_name_matches(
+        assert!(windows_registered_name_matches(
             "workbuddy",
             "WorkBuddy",
             ""
+        ));
+        assert!(windows_registered_name_matches(
+            "workbuddy",
+            "WorkBuddy",
+            "腾讯科技（深圳）有限公司"
         ));
         assert!(!windows_registered_name_matches(
             "workbuddy",
             "WorkBuddy",
             "Contoso"
+        ));
+        assert!(!windows_registered_name_matches(
+            "workbuddy",
+            "WorkBuddy Helper",
+            "Tencent"
         ));
 
         assert!(windows_relative_paths("claude_desktop", false)
