@@ -8,25 +8,6 @@ import { QuitAssistant } from "./QuitAssistant";
 import { UpdateSettingsCard } from "../update/UpdateSettingsCard";
 import { AdvancedConnectionDetails } from "./AdvancedConnectionDetails";
 
-type Language = "zh" | "zh-TW" | "en" | "ja";
-
-const LANGUAGES: Array<{
-  id: Language;
-  label: string;
-  coverage: string;
-}> = [
-  { id: "zh", label: "简体中文", coverage: "完整" },
-  { id: "zh-TW", label: "繁體中文", coverage: "部分翻譯" },
-  { id: "en", label: "English", coverage: "Partial" },
-  { id: "ja", label: "日本語", coverage: "一部翻訳" },
-];
-
-const PARTIAL_LANGUAGE_NOTICE: Record<Exclude<Language, "zh">, string> = {
-  "zh-TW": "部分接入及安裝步驟目前仍會顯示簡體中文。",
-  en: "Some setup and installation steps are still shown in Simplified Chinese.",
-  ja: "一部の接続・インストール手順は簡体字中国語で表示されます。",
-};
-
 interface SettingsViewProps {
   onOpenAccount: () => void;
   onOpenDiagnostics: () => void;
@@ -40,20 +21,9 @@ export function SettingsView({
   appearance = "system",
   onAppearanceChange,
 }: SettingsViewProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const c = useWorkbenchCopy();
   const readiness = useMemo(() => createCandidateReadiness(), []);
-  const activeLanguage = (i18n.resolvedLanguage ?? i18n.language) as Language;
-
-  const changeLanguage = async (language: Language) => {
-    await i18n.changeLanguage(language);
-    document.documentElement.lang = language;
-    try {
-      window.localStorage.setItem("language", language);
-    } catch {
-      // The preference remains active for this session when storage is unavailable.
-    }
-  };
 
   return (
     <div className="settings-workspace" data-testid="settings-view">
@@ -80,35 +50,6 @@ export function SettingsView({
             <p>{c.themeNote}</p>
           </section>
         )}
-        <div className="settings-language">
-          <p className="section-kicker">{t("yeschoySettings.languageTitle")}</p>
-          <div
-            className="language-grid"
-            role="group"
-            aria-label={t("yeschoySettings.languageTitle")}
-          >
-            {LANGUAGES.map((language) => (
-              <button
-                type="button"
-                key={language.id}
-                className={
-                  activeLanguage === language.id ? "is-active" : undefined
-                }
-                aria-pressed={activeLanguage === language.id}
-                onClick={() => changeLanguage(language.id)}
-              >
-                <span>{language.label}</span>
-                <small>{language.coverage}</small>
-              </button>
-            ))}
-          </div>
-          <p>{t("yeschoySettings.languageNote")}</p>
-          {activeLanguage !== "zh" && (
-            <p className="account-inline-warning" role="status">
-              {PARTIAL_LANGUAGE_NOTICE[activeLanguage]}
-            </p>
-          )}
-        </div>
       </section>
 
       <section className="settings-ledger" aria-labelledby="security-title">

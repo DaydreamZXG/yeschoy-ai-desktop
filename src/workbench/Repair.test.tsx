@@ -11,9 +11,6 @@ import { invoke } from "@tauri-apps/api/core";
 import i18n from "i18next";
 import App from "../App";
 import zh from "../i18n/locales/zh.json";
-import tw from "../i18n/locales/zh-TW.json";
-import en from "../i18n/locales/en.json";
-import ja from "../i18n/locales/ja.json";
 import {
   TOOL_CATALOG,
   decodeScan,
@@ -78,8 +75,7 @@ const tick = async () => {
 let systemDark = false;
 const listeners = new Set<() => void>();
 beforeEach(async () => {
-  for (const [locale, resource] of Object.entries({ zh, "zh-TW": tw, en, ja }))
-    i18n.addResourceBundle(locale, "translation", resource, true, true);
+  i18n.addResourceBundle("zh", "translation", zh, true, true);
   await i18n.changeLanguage("zh");
   localStorage.removeItem(APPEARANCE_KEY);
   native.mockReset();
@@ -320,22 +316,20 @@ describe("beginner scan recovery", () => {
     await tick();
     expect(screen.queryByRole("alert")).toBeNull();
   });
-  it("keeps all four localized recovery actions and explanations nonempty", () => {
-    for (const locale of [zh, tw, en, ja]) {
-      for (const key of [
-        "codexCli",
-        "bundledStatus",
-        "componentDetails",
-        "componentsIgnored",
-        "desktopAction",
-      ] as const)
-        expect(locale.yeschoyDiscovery[key].length).toBeGreaterThan(2);
-      expect(Object.keys(locale.yeschoyDiscovery.selection).sort()).toEqual([
-        "bundled_only",
-        "path_precedence",
-        "single_installation",
-      ]);
-    }
+  it("keeps recovery actions and explanations nonempty", () => {
+    for (const key of [
+      "codexCli",
+      "bundledStatus",
+      "componentDetails",
+      "componentsIgnored",
+      "desktopAction",
+    ] as const)
+      expect(zh.yeschoyDiscovery[key].length).toBeGreaterThan(2);
+    expect(Object.keys(zh.yeschoyDiscovery.selection).sort()).toEqual([
+      "bundled_only",
+      "path_precedence",
+      "single_installation",
+    ]);
   });
 });
 

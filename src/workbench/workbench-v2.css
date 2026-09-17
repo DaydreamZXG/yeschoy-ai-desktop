@@ -3591,7 +3591,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.settings-language,
 .settings-appearance {
   margin-top: var(--space-24);
 }
@@ -3601,8 +3600,7 @@
   margin-bottom: var(--space-10);
 }
 
-.settings-appearance p,
-.settings-language > p:last-child {
+.settings-appearance p {
   font-size: 11px;
   color: var(--muted);
   margin-top: 9px;
@@ -3614,19 +3612,6 @@
 
 .settings-appearance .appearance-picker button {
   flex-wrap: wrap;
-}
-
-.language-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-8);
-  margin-top: var(--space-10);
-}
-
-.language-grid button.is-active {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--accent);
 }
 
 .settings-ledger {
@@ -4156,9 +4141,6 @@
   }
   .settings-appearance .appearance-picker {
     max-width: 400px;
-  }
-  .language-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 

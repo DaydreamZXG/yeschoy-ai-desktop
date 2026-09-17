@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import { ArrowUpRight, CircleAlert } from "lucide-react";
 import { formatMoney, type BalanceAlert } from "../account/finance";
 import { useWorkbenchCopy } from "./copy";
@@ -16,8 +15,7 @@ export function LowBalanceBanner({
   onRecharge: () => void;
 }) {
   const c = useWorkbenchCopy();
-  const { i18n } = useTranslation();
-  const locale = i18n.resolvedLanguage ?? i18n.language;
+  const locale = "zh-CN";
   const depleted = alert.level === "depleted";
   return (
     <p className="workbench-notice low-balance-banner" data-level={alert.level} role="status">

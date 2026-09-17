@@ -1,5 +1,4 @@
 import { useMemo, useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import {
   ArrowUpRight,
   CheckCircle2,
@@ -44,9 +43,8 @@ export function AccountView({
   session: AccountSessionController;
 }) {
   const c = useWorkbenchCopy();
-  const { i18n } = useTranslation();
   const [logoutPrompt, setLogoutPrompt] = useState(false);
-  const locale = i18n.resolvedLanguage ?? i18n.language;
+  const locale = "zh-CN";
   const {
     projection,
     loading,

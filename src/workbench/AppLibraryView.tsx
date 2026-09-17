@@ -49,7 +49,7 @@ export function AppLibraryView({
   onOpenDiagnostics,
   accountSession,
 }: Props) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const c = useWorkbenchCopy();
   const connections = useConnections();
   const [scan, setScan] = useState<ActivationTargetScan | null>(null);
@@ -202,9 +202,7 @@ export function AppLibraryView({
         >
           <CircleAlert />
           {t("yeschoyHome.offlineModelBanner", {
-            apps: (i18n.resolvedLanguage ?? "zh").startsWith("en")
-              ? offlineModels.map((app) => app.name).join(", ")
-              : offlineModels.map((app) => app.name).join("、"),
+            apps: offlineModels.map((app) => app.name).join("、"),
           })}
           <button onClick={() => onOpenSetup(offlineModels[0].id)}>
             {t("yeschoyHome.offlineModelAction")}

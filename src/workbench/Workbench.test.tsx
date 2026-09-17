@@ -12,9 +12,6 @@ import { StrictMode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import i18n from "i18next";
 import zh from "../i18n/locales/zh.json";
-import tw from "../i18n/locales/zh-TW.json";
-import en from "../i18n/locales/en.json";
-import ja from "../i18n/locales/ja.json";
 import App from "../App";
 import { APPEARANCE_KEY, readAppearance } from "./appearance";
 import { workbenchCopies } from "./copy";
@@ -24,7 +21,6 @@ import { connectionsFixture } from "../configuration/connection-test-fixtures";
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 import { installationInspectionFixture } from "../installation/test-fixtures";
 const native = vi.mocked(invoke);
-const locales = { zh, "zh-TW": tw, en, ja };
 // Inlined legacy service-catalog fixture: the mock branch for
 // `read_public_service_catalog` is retained so unexpected-command
 // assertions keep their original coverage shape.
@@ -252,8 +248,7 @@ beforeEach(async () => {
   };
   native.mockReset();
   mockNativeByCommand(defaultNativeHandler);
-  for (const [language, resource] of Object.entries(locales))
-    i18n.addResourceBundle(language, "translation", resource, true, true);
+  i18n.addResourceBundle("zh", "translation", zh, true, true);
   await i18n.changeLanguage("zh");
   localStorage.removeItem(APPEARANCE_KEY);
   systemDark = false;
@@ -579,13 +574,10 @@ describe("official workbench", () => {
     expect(screen.getByRole("radio", { name: /国模特价分组/ })).toBeChecked();
     expect(screen.getByRole("button", { name: "恢复原设置" })).toBeEnabled();
   });
-  it.each(["zh", "zh-TW", "en", "ja"] as const)(
-    "uses user-facing copy without engineering or release checklists in %s",
-    async (language) => {
-      await i18n.changeLanguage(language);
+  it("uses user-facing copy without engineering or release checklists", async () => {
       const { container } = render(<App />);
       await screen.findByText("版本 1.40609.1");
-      const c = workbenchCopies[language];
+      const c = workbenchCopies.zh;
       const checkCopy = () => {
         expect(container.textContent).not.toMatch(
           /NewAPI|\/api\/desktop|Developer ID|\bHTTP\b|\bTCP\b|\bTLS\b|CRUD|web profile|原生桥|安全执行层|安全執行層|契约|契約|投影|适配器|適配器|白名单|白名單|候选版|候選版|发布门槛|發佈門檻|签名|公证|小白用户|小白用戶|backend|contract|adapter|allowlist|hardened runtime|native bridge|notariz|release gate|バックエンド|契約|アダプター|公証/i,
@@ -639,28 +631,6 @@ describe("official workbench", () => {
       expect(
         commands.filter((command) => command === "read_desktop_exit_state"),
       ).toHaveLength(1);
-    },
-  );
-  it("keeps user-interface translation keys aligned in all four languages", () => {
-    const keys = (value: unknown, prefix = ""): string[] =>
-      typeof value === "object" && value !== null
-        ? Object.entries(value).flatMap(([key, child]) =>
-            keys(child, `${prefix}.${key}`),
-          )
-        : [prefix];
-    const namespaces = [
-      "yeschoyCatalog",
-      "yeschoyConfiguration",
-      "yeschoyDesktop",
-      "yeschoyDiscovery",
-      "yeschoyDiagnostics",
-      "yeschoySettings",
-    ] as const;
-    for (const resource of Object.values(locales))
-      for (const namespace of namespaces)
-        expect(keys(resource[namespace]).sort()).toEqual(
-          keys(zh[namespace]).sort(),
-        );
   });
   it("prioritizes login over empty account statistics and preserves discovery truth", async () => {
     render(<App />);

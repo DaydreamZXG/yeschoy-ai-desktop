@@ -45,7 +45,7 @@ type ViewPhase =
   | "error";
 
 function App() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [view, setView] = useState<AppView>("home");
   const [selectedDesktopApp, setSelectedDesktopApp] =
     useState<ActivationToolId>("claude_desktop");
@@ -130,7 +130,7 @@ function App() {
   };
 
   const completedAt = scan
-    ? new Intl.DateTimeFormat(i18n.resolvedLanguage, {
+    ? new Intl.DateTimeFormat("zh-CN", {
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
