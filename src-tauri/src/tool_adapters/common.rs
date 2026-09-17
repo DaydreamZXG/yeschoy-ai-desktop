@@ -3,7 +3,7 @@ use std::{
     env,
     ffi::OsString,
     fs::{self, File, OpenOptions},
-    io::{self, Write},
+    io::{self, BufRead, BufReader, Read, Write},
     path::{Path, PathBuf},
     process::Stdio,
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -217,6 +217,32 @@ pub(crate) fn snapshot_bounded(path: &Path, maximum: u64) -> io::Result<Option<V
     }
 }
 
+/// Read one bounded JSONL-style record without allocating the rest of a large
+/// append-only file. The returned prefix includes its newline when present.
+pub(crate) fn first_line_bounded(
+    path: &Path,
+    maximum_file: u64,
+    maximum_line: u64,
+) -> io::Result<Option<Vec<u8>>> {
+    ensure_safe_target(path, maximum_file)?;
+    if !path.exists() {
+        return Ok(None);
+    }
+    let file_size = fs::metadata(path)?.len();
+    let file = File::open(path)?;
+    let mut reader = BufReader::new(file).take(maximum_line.saturating_add(1));
+    let mut line = Vec::new();
+    reader.read_until(b'\n', &mut line)?;
+    if line.len() as u64 > maximum_line || (!line.ends_with(b"\n") && file_size > line.len() as u64)
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "oversized first line",
+        ));
+    }
+    Ok(Some(line))
+}
+
 fn temporary_file(path: &Path) -> io::Result<(PathBuf, File)> {
     let parent = path
         .parent()
@@ -308,6 +334,54 @@ pub(crate) fn atomic_write_bounded(path: &Path, bytes: &[u8], maximum: u64) -> i
         if let Some(permissions) = permissions {
             fs::set_permissions(&temp, permissions)?;
         }
+        replace(&temp, path)
+    })();
+    if result.is_err() {
+        let _ = fs::remove_file(&temp);
+    }
+    result
+}
+
+/// Atomically replace a verified prefix while streaming the untouched tail.
+/// This is used for large append-only records whose metadata is the first line;
+/// callers never need to hold the complete file in memory.
+pub(crate) fn atomic_replace_prefix_bounded(
+    path: &Path,
+    expected_prefix: &[u8],
+    replacement: &[u8],
+    maximum: u64,
+) -> io::Result<()> {
+    ensure_safe_target(path, maximum)?;
+    if expected_prefix.is_empty() || replacement.len() as u64 > maximum {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "invalid prefix replacement",
+        ));
+    }
+    let permissions = fs::metadata(path)?.permissions();
+    let mut input = File::open(path)?;
+    let mut observed = vec![0; expected_prefix.len()];
+    input.read_exact(&mut observed)?;
+    if observed != expected_prefix {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "source prefix changed",
+        ));
+    }
+    let (temp, mut output) = temporary_file(path)?;
+    let result = (|| {
+        output.write_all(replacement)?;
+        let remaining = maximum.saturating_sub(replacement.len() as u64);
+        let copied = io::copy(&mut input.take(remaining.saturating_add(1)), &mut output)?;
+        if copied > remaining {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "oversized content",
+            ));
+        }
+        output.sync_all()?;
+        drop(output);
+        fs::set_permissions(&temp, permissions)?;
         replace(&temp, path)
     })();
     if result.is_err() {

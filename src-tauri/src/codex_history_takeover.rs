@@ -25,6 +25,7 @@ const MANIFEST_VERSION: u8 = 1;
 const MANIFEST_NAME: &str = "codex-history-takeover-v1.json";
 const MAX_MANIFEST_BYTES: u64 = 32 * 1024 * 1024;
 const MAX_SESSION_BYTES: u64 = 512 * 1024 * 1024;
+const MAX_SESSION_META_BYTES: u64 = 2 * 1024 * 1024;
 const MAX_SESSION_FILES: usize = 50_000;
 
 #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
@@ -235,12 +236,13 @@ fn session_identity(bytes: &[u8], provider: &str) -> Option<String> {
 }
 
 fn rewrite_session(entry: &SessionEntry, from: &str, to: &str) -> Result<(), AdapterFailure> {
-    let bytes = match common::snapshot_bounded(&entry.path, MAX_SESSION_BYTES) {
-        Ok(Some(bytes)) => bytes,
-        Ok(None) => return Ok(()),
-        Err(_) => return Err(failure("codex_history_takeover_recovery_failed")),
-    };
-    let Some((mut value, line_end, newline)) = session_meta(&bytes) else {
+    let prefix =
+        match common::first_line_bounded(&entry.path, MAX_SESSION_BYTES, MAX_SESSION_META_BYTES) {
+            Ok(Some(bytes)) => bytes,
+            Ok(None) => return Ok(()),
+            Err(_) => return Err(failure("codex_history_takeover_recovery_failed")),
+        };
+    let Some((mut value, _, newline)) = session_meta(&prefix) else {
         return Ok(());
     };
     let Some(payload) = value.get_mut("payload").and_then(Value::as_object_mut) else {
@@ -256,14 +258,14 @@ fn rewrite_session(entry: &SessionEntry, from: &str, to: &str) -> Result<(), Ada
         .map_err(|_| failure("codex_history_takeover_recovery_failed"))?;
     if newline {
         rewritten.push(b'\n');
-        rewritten.extend_from_slice(&bytes[line_end + 1..]);
     }
-    common::atomic_write_bounded(&entry.path, &rewritten, MAX_SESSION_BYTES)
+    common::atomic_replace_prefix_bounded(&entry.path, &prefix, &rewritten, MAX_SESSION_BYTES)
         .map_err(|_| failure("codex_history_takeover_recovery_failed"))?;
-    let confirmed = common::snapshot_bounded(&entry.path, MAX_SESSION_BYTES)
-        .ok()
-        .flatten()
-        .and_then(|bytes| session_identity(&bytes, to));
+    let confirmed =
+        common::first_line_bounded(&entry.path, MAX_SESSION_BYTES, MAX_SESSION_META_BYTES)
+            .ok()
+            .flatten()
+            .and_then(|bytes| session_identity(&bytes, to));
     if confirmed.as_deref() == Some(entry.session_id.as_str()) {
         Ok(())
     } else {
@@ -409,7 +411,7 @@ fn build_manifest(home: &Path, target: &str) -> Result<Manifest, AdapterFailure>
     collect_session_files(&codex_dir.join("archived_sessions"), 0, &mut paths);
     let mut sessions = Vec::new();
     for path in paths {
-        let bytes = common::snapshot_bounded(&path, MAX_SESSION_BYTES)
+        let bytes = common::first_line_bounded(&path, MAX_SESSION_BYTES, MAX_SESSION_META_BYTES)
             .map_err(|_| failure("codex_history_takeover_failed"))?;
         if let Some(session_id) = bytes
             .as_deref()
@@ -574,6 +576,40 @@ mod tests {
         assert_eq!(
             session_identity(&fs::read(&path).unwrap(), "openai").as_deref(),
             Some("thread-1")
+        );
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn streams_large_session_tail_and_rejects_oversized_metadata() {
+        let root = temp("codex-history-streamed-session");
+        let path = root.join("sessions/2026/large.jsonl");
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let first = b"{\"type\":\"session_meta\",\"payload\":{\"id\":\"thread-large\",\"model_provider\":\"openai\"}}\n";
+        let tail = vec![b'x'; 4 * 1024 * 1024];
+        let mut original = first.to_vec();
+        original.extend_from_slice(&tail);
+        common::atomic_write_bounded(&path, &original, MAX_SESSION_BYTES).unwrap();
+        let entry = SessionEntry {
+            path: path.clone(),
+            session_id: "thread-large".into(),
+        };
+        rewrite_session(&entry, "openai", "yeschoy").unwrap();
+        let changed = fs::read(&path).unwrap();
+        assert!(changed.ends_with(&tail));
+        assert_eq!(
+            common::first_line_bounded(&path, MAX_SESSION_BYTES, MAX_SESSION_META_BYTES)
+                .unwrap()
+                .and_then(|line| session_identity(&line, "yeschoy"))
+                .as_deref(),
+            Some("thread-large")
+        );
+
+        let oversized = root.join("sessions/2026/oversized.jsonl");
+        fs::write(&oversized, vec![b'x'; MAX_SESSION_META_BYTES as usize + 1]).unwrap();
+        assert!(
+            common::first_line_bounded(&oversized, MAX_SESSION_BYTES, MAX_SESSION_META_BYTES,)
+                .is_err()
         );
         fs::remove_dir_all(root).unwrap();
     }

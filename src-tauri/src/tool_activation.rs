@@ -1204,6 +1204,14 @@ async fn stop_helper_runtime(
     }
 }
 
+async fn codex_history_on_worker<T: Send + 'static>(
+    operation: impl FnOnce() -> Result<T, AdapterFailure> + Send + 'static,
+) -> Result<T, AdapterFailure> {
+    tokio::task::spawn_blocking(operation)
+        .await
+        .map_err(|_| AdapterFailure::ConfigurationFailed("codex_history_takeover_failed"))?
+}
+
 #[allow(clippy::too_many_arguments)] // Explicit transaction/runtime inputs; no hidden mutable global rollback context.
 async fn restore_after_failure(
     request: &ToolActivationRequest,
@@ -1870,7 +1878,12 @@ pub async fn configure_desktop_tool_v2(
                     .projection(&request),
             );
         };
-        match crate::codex_history_takeover::Takeover::begin(&home, provider_id) {
+        let provider_id = provider_id.to_owned();
+        match codex_history_on_worker(move || {
+            crate::codex_history_takeover::Takeover::begin(&home, &provider_id)
+        })
+        .await
+        {
             Ok(history) => Some(history),
             Err(error) => {
                 let _ = recovery.abandon(&recovery_record);
@@ -2735,6 +2748,23 @@ mod tests {
         finish_tx.send(()).unwrap();
         assert_eq!(task.await.unwrap(), Ok(7));
         assert!(LOCK.try_lock().is_ok());
+    }
+
+    #[tokio::test]
+    async fn codex_history_worker_does_not_block_async_runtime() {
+        let (started_tx, started_rx) = tokio::sync::oneshot::channel();
+        let (finish_tx, finish_rx) = std::sync::mpsc::channel();
+        let task = tokio::spawn(codex_history_on_worker(move || {
+            started_tx.send(()).unwrap();
+            finish_rx.recv_timeout(Duration::from_secs(2)).unwrap();
+            Ok::<_, AdapterFailure>(7)
+        }));
+        started_rx.await.unwrap();
+        tokio::time::timeout(Duration::from_millis(100), tokio::task::yield_now())
+            .await
+            .unwrap();
+        finish_tx.send(()).unwrap();
+        assert_eq!(task.await.unwrap().unwrap(), 7);
     }
 
     #[tokio::test(flavor = "current_thread")]
