@@ -829,8 +829,7 @@ fn windows_registered_name_matches(app_id: &str, name: &str, publisher: &str) ->
                     && (publisher.is_empty() || publisher.contains("openai")))
         }
         "workbuddy" => {
-            (name == "workbuddy" || name == "tencentworkbuddy")
-                && (publisher.is_empty() || publisher.contains("tencent"))
+            (name == "workbuddy" || name == "tencentworkbuddy") && publisher.contains("tencent")
         }
         _ => false,
     }
@@ -1297,6 +1296,16 @@ mod tests {
             "workbuddy",
             "WorkBuddy",
             "Tencent"
+        ));
+        assert!(!windows_registered_name_matches(
+            "workbuddy",
+            "WorkBuddy",
+            ""
+        ));
+        assert!(!windows_registered_name_matches(
+            "workbuddy",
+            "WorkBuddy",
+            "Contoso"
         ));
 
         assert!(windows_relative_paths("claude_desktop", false)
