@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "policyId": "yeschoy-dsh-preview-0.1.6-alpha.1-01",
+  "upstreamRepository": "https://github.com/deepseek-ai/deepseek-harness.git",
+  "upstreamCommit": "0d1f50007f9bca3f52b06e1c3074fa14d5fb0720",
+  "upstreamTree": "80b651cca20f29d587518cf07a978f2bc58bc2c1",
+  "rootVersion": "0.1.6-alpha.1",
+  "desktopVersion": "0.1.6-alpha.1",
+  "appId": "io.yeschoy.deepseek-harness-preview",
+  "license": {
+    "spdx": "MIT",
+    "sha256": "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be"
+  },
+  "targets": {
+    "win-x64": {
+      "command": [
+        "pnpm",
+        "run",
+        "package:desktop:win:x64"
+      ],
+      "artifactExtension": ".exe",
+      "signatureKind": "windows-authenticode",
+      "verificationTool": "signtool",
+      "requiresNotarization": false
+    },
+    "mac-arm64": {
+      "command": [
+        "pnpm",
+        "run",
+        "package:desktop:mac:arm64"
+      ],
+      "artifactExtension": ".dmg",
+      "signatureKind": "apple-developer-id-notarized",
+      "verificationTool": "codesign-notarytool",
+      "requiresNotarization": true
+    },
+    "mac-x64": {
+      "command": [
+        "pnpm",
+        "run",
+        "package:desktop:mac:x64"
+      ],
+      "artifactExtension": ".dmg",
+      "signatureKind": "apple-developer-id-notarized",
+      "verificationTool": "codesign-notarytool",
+      "requiresNotarization": true
+    }
+  },
+  "signingPolicy": {
+    "win-x64": {
+      "publisherId": null
+    },
+    "mac-arm64": {
+      "publisherId": null
+    },
+    "mac-x64": {
+      "publisherId": null
+    }
+  }
+}
