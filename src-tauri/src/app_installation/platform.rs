@@ -52,6 +52,15 @@ pub(super) async fn present(source: Source) -> Result<bool> {
 }
 
 #[cfg(any(target_os = "macos", test))]
+#[cfg(any(target_os = "macos", test))]
+fn mac_app_name(tool: &str) -> &'static str {
+    match tool {
+        "codex_desktop" => "Codex.app",
+        "workbuddy" => "WorkBuddy.app",
+        _ => "Claude.app",
+    }
+}
+
 pub(super) fn mac_destination_presence(
     source: Source,
     applications: &Path,
@@ -62,11 +71,7 @@ pub(super) fn mac_destination_presence(
     if identity_found {
         return Ok(true);
     }
-    let name = if source.tool == "codex_desktop" {
-        "Codex.app"
-    } else {
-        "Claude.app"
-    };
+    let name = mac_app_name(source.tool);
     match std::fs::symlink_metadata(applications.join(name)) {
         Ok(_) => Err("installation_location_conflict"),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(false),
@@ -301,11 +306,7 @@ async fn install_mac_app(worker: &Worker, source: Source, app: &Path) -> Result<
         .join("Applications");
     cache::directory(&root)?;
     let staging = cache::unique_dir(&root)?;
-    let name = if source.tool == "codex_desktop" {
-        "Codex.app"
-    } else {
-        "Claude.app"
-    };
+    let name = mac_app_name(source.tool);
     let staged = staging.join(name);
     worker.phase("installing", false);
     // Never cancel/drop this mutation future. The worker retains admission

@@ -571,10 +571,11 @@ describe("ru048 novice installer", () => {
     );
     await tick();
     expect(screen.getAllByRole("button", { name: /安装并接入/ })).toHaveLength(
-      2,
+      3,
     );
     expect(screen.getByText("Claude Desktop")).toBeInTheDocument();
     expect(screen.getByText("Codex Desktop")).toBeInTheDocument();
+    expect(screen.getByText("WorkBuddy")).toBeInTheDocument();
   });
   it("automatically continues once only for the exact newly installed target", async () => {
     const view = render(setup(progress()));

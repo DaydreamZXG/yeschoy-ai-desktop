@@ -20,7 +20,8 @@ Codex Mac 新 DMG 必须先在 macOS 完成原生验证，再将匹配摘要的�
 ## 当前范围
 
 - Codex：macOS Apple Silicon DMG、Windows x64 / ARM64 MSIX。
-- Claude Desktop：macOS 通用 ZIP、Windows x64 / ARM64 MSIX。Mac 使用 [官方 RELEASES.json](https://downloads.claude.ai/releases/darwin/universal/RELEASES.json) 的 `currentRelease` 和该版本唯一 `updateTo.url`，不再依赖会要求浏览器确认的 DMG redirect。没有把 Claude Code CLI、Codex CLI 或 Claude Science 当成桌面安装包。
+- Claude Desktop：macOS 通用 ZIP、Windows x64 / ARM64 MSIX。
+- WorkBuddy：macOS Apple Silicon / Intel DMG、Windows x64 NSIS（ARM64 使用同一 x64 包）。从官网历史版本页解析当前官方直链，客户端仍先验签再安装。Mac 使用 [官方 RELEASES.json](https://downloads.claude.ai/releases/darwin/universal/RELEASES.json) 的 `currentRelease` 和该版本唯一 `updateTo.url`，不再依赖会要求浏览器确认的 DMG redirect。没有把 Claude Code CLI、Codex CLI 或 Claude Science 当成桌面安装包。
 - 来源见 `sources.json`，证据为 [OpenAI 桌面文档](https://learn.chatgpt.com/docs/app)、[Windows 部署文档](https://learn.chatgpt.com/docs/enterprise/windows-deployment)、[Claude 下载页](https://claude.com/download)和 [Claude Windows 部署文档](https://support.claude.com/en/articles/12622703-deploy-claude-desktop-for-windows)。
 - Codex 的 macOS 官方文件仍命名为 `Codex.dmg`；Windows 文件叫 `ChatGPT-*.msix`，观察到的包身份是 `OpenAI.Codex`。名称不能用来替代包身份校验。
 - MSIX 是应用主体安装包，不是“完全离线安装已验证”的承诺。离线许可证（需要时）、系统框架依赖、用户权限及 Cowork 组件还需在后续真实安装流程中逐项核对。

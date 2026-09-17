@@ -71,6 +71,7 @@ fn compiled(artifact: &Artifact, schema_version: u8) -> Option<Source> {
     let tool = match artifact.app.as_str() {
         "codex" => "codex_desktop",
         "claude" => "claude_desktop",
+        "workbuddy" => "workbuddy",
         _ => return None,
     };
     let arch = if artifact.architecture == "universal" {
@@ -122,7 +123,7 @@ pub(super) fn parse_catalog(bytes: &[u8], source: Source) -> Result<Option<Resol
     let catalog: Catalog = serde_json::from_slice(bytes).map_err(|_| "invalid_source")?;
     if !matches!(catalog.schema_version, 1 | 2)
         || !timestamp(&catalog.generated_at)
-        || catalog.artifacts.len() > 6
+        || catalog.artifacts.len() > 12
     {
         return Err("invalid_source");
     }
@@ -197,10 +198,53 @@ pub(super) fn parse_claude_feed(bytes: &[u8], source: Source) -> Result<Resolved
     Ok(Resolved::official(url_text))
 }
 
+pub(super) fn parse_workbuddy_history(bytes: &[u8], source: Source) -> Result<Resolved> {
+    if source.tool != "workbuddy" || bytes.len() > JSON_LIMIT {
+        return Err("invalid_source");
+    }
+    let Some(channel) = catalog::workbuddy_channel(source) else {
+        return Err("invalid_source");
+    };
+    let html = std::str::from_utf8(bytes).map_err(|_| "invalid_source")?;
+    let needle = format!("https://download.codebuddy.cn/workbuddy/saas/{channel}/WorkBuddy-{channel}-");
+    let suffix = format!(".{}", source.extension);
+    let mut found = None;
+    let mut rest = html;
+    while let Some(start) = rest.find(&needle) {
+        let slice = &rest[start..];
+        let Some(end) = slice.find(&suffix) else {
+            break;
+        };
+        let candidate = &slice[..end + suffix.len()];
+        if let Ok(url) = Url::parse(candidate) {
+            if catalog::allowed_url(source, &url) {
+                if found.is_some() && found.as_deref() != Some(candidate) {
+                    // The history page lists versions newest-first; take the first valid URL.
+                    break;
+                }
+                found = Some(candidate);
+                break;
+            }
+        }
+        rest = &slice[needle.len()..];
+    }
+    found
+        .map(Resolved::official)
+        .ok_or("invalid_source")
+}
+
+async fn html(client: &Client, url: &str) -> Result<Vec<u8>> {
+    fetch(client, url, "text/html").await
+}
+
 async fn json(client: &Client, url: &str) -> Result<Vec<u8>> {
+    fetch(client, url, "application/json").await
+}
+
+async fn fetch(client: &Client, url: &str, accept: &str) -> Result<Vec<u8>> {
     let mut response = client
         .get(url)
-        .header("accept", "application/json")
+        .header("accept", accept)
         .header("accept-encoding", "identity")
         .timeout(std::time::Duration::from_secs(30))
         .send()
@@ -245,7 +289,9 @@ async fn mirror_from_routes_at(
     }
 }
 pub(super) async fn official(client: &Client, source: Source) -> Result<Resolved> {
-    if source.extension == "zip" {
+    if source.tool == "workbuddy" {
+        parse_workbuddy_history(&html(client, source.url).await?, source)
+    } else if source.extension == "zip" {
         parse_claude_feed(&json(client, source.url).await?, source)
     } else {
         Ok(Resolved::official(source.url))
@@ -412,6 +458,33 @@ mod tests {
         assert!(parse_claude_feed(&vec![b' '; JSON_LIMIT + 1], source).is_err());
         assert!(parse_claude_feed(
             br#"{"currentRelease":"1.0","currentRelease":"2.0","releases":[]}"#,
+            source
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn installer_workbuddy_history_uses_the_first_official_channel_url() {
+        let source = catalog::source("workbuddy", "macos", "arm64").unwrap();
+        let html = concat!(
+            "<a href=\"https://download.codebuddy.cn/workbuddy/saas/darwin-arm64/WorkBuddy-darwin-arm64-5.5.6.1-deadbeef.dmg\">new</a>",
+            "<a href=\"https://download.codebuddy.cn/workbuddy/saas/darwin-arm64/WorkBuddy-darwin-arm64-5.1.0.1-old.dmg\">old</a>",
+            "<a href=\"https://download.codebuddy.cn/workbuddy/saas/darwin-x64/WorkBuddy-darwin-x64-5.5.6.1-deadbeef.dmg\">intel</a>",
+        );
+        let resolved = parse_workbuddy_history(html.as_bytes(), source).unwrap();
+        assert!(resolved.url.ends_with("WorkBuddy-darwin-arm64-5.5.6.1-deadbeef.dmg"));
+        assert!(!resolved.mirror);
+        let windows = catalog::source("workbuddy", "windows", "x64").unwrap();
+        assert!(parse_workbuddy_history(html.as_bytes(), windows).is_err());
+        let exe = format!(
+            "{html}<a href=\"https://download.codebuddy.cn/workbuddy/saas/win32-x64-user/WorkBuddy-win32-x64-user-5.5.6.1-deadbeef.exe\">win</a>"
+        );
+        assert!(parse_workbuddy_history(exe.as_bytes(), windows)
+            .unwrap()
+            .url
+            .ends_with(".exe"));
+        assert!(parse_workbuddy_history(
+            b"<a href=\"https://evil.example/WorkBuddy-darwin-arm64-1.dmg\">x</a>",
             source
         )
         .is_err());

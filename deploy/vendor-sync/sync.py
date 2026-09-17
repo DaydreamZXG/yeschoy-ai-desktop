@@ -32,8 +32,12 @@ MAX_ZIP_ENTRIES = 65534  # Classic ZIP; 65535 is the ZIP64 sentinel.
 MAX_PATH_BYTES = 1024  # Darwin PATH_MAX, including the terminating NUL.
 MAX_DIRECTORY_BYTES = MAX_ZIP_ENTRIES * (MAX_PATH_BYTES + 46)
 MAX_SYMLINKS = 32  # Darwin MAXSYMLINKS.
-HOSTS = {"codex": {"persistent.oaistatic.com"}, "claude": {"claude.ai", "downloads.claude.ai"}}
-CONTENT_TYPES = {"application/octet-stream", "application/x-apple-diskimage", "application/vnd.ms-appx", "application/msix", "application/zip"}
+HOSTS = {
+    "codex": {"persistent.oaistatic.com"},
+    "claude": {"claude.ai", "downloads.claude.ai"},
+    "workbuddy": {"www.workbuddy.cn", "download.codebuddy.cn"},
+}
+CONTENT_TYPES = {"application/octet-stream", "application/x-apple-diskimage", "application/vnd.ms-appx", "application/msix", "application/zip", "application/x-msdownload", "application/x-dosexec"}
 SOURCE_FILE = Path(__file__).with_name("sources.json")
 
 
@@ -156,6 +160,12 @@ def validate_url(source: dict, url: str):
         valid = path.startswith("/codex-app-prod/")
     elif parsed.hostname == "claude.ai":
         valid = url == source["url"]
+    elif parsed.hostname == "www.workbuddy.cn":
+        valid = url == source["url"]
+    elif parsed.hostname == "download.codebuddy.cn":
+        channel = {"arm64": "darwin-arm64", "x64": "darwin-x64"}.get(source["architecture"]) if source["platform"] == "macos" else "win32-x64-user"
+        prefix = f"/workbuddy/saas/{channel}/WorkBuddy-{channel}-"
+        valid = path.startswith(prefix) and path.endswith("." + source["format"])
     else:
         platform = "darwin" if source["platform"] == "macos" else "win32"
         if source.get("resolver") == "release_feed":
@@ -287,12 +297,44 @@ def release_feed(source: dict, transport: Transport) -> tuple[str, str]:
     return url, version
 
 
+def workbuddy_history(source: dict, transport: Transport) -> tuple[str, str]:
+    with transport.request(source, "GET", source["url"]) as response:
+        headers = headers_of(response)
+        if response.status != 200 or headers.get("cf-mitigated"):
+            raise SyncError("source_challenge" if headers.get("cf-mitigated") else f"http_{response.status}")
+        length = headers.get("content-length")
+        if length is not None and (not re.fullmatch(r"[0-9]{1,10}", length) or not 0 < int(length) <= MAX_JSON_BYTES):
+            raise SyncError("feed_too_large")
+        body = response.read(MAX_JSON_BYTES + 1)
+        if len(body) > MAX_JSON_BYTES:
+            raise SyncError("feed_too_large")
+    html = body.decode("utf-8", "replace")
+    channel = {"arm64": "darwin-arm64", "x64": "darwin-x64"}.get(source["architecture"]) if source["platform"] == "macos" else "win32-x64-user"
+    needle = f"https://download.codebuddy.cn/workbuddy/saas/{channel}/WorkBuddy-{channel}-"
+    suffix = "." + source["format"]
+    start = html.find(needle)
+    if start < 0:
+        raise SyncError("workbuddy_history_missing")
+    end = html.find(suffix, start)
+    if end < 0:
+        raise SyncError("workbuddy_history_missing")
+    url = html[start:end + len(suffix)]
+    parsed = validate_url(source, url)
+    match = re.search(r"WorkBuddy-(?:darwin-arm64|darwin-x64|win32-x64-user)-([0-9]+(?:\.[0-9]+){1,3})", parsed.path)
+    if match is None:
+        raise SyncError("invalid_version_metadata")
+    return url, match.group(1)
+
+
 def discover(source: dict, transport: Transport) -> dict:
     feed_version = None
     url = source["url"]
     method = "GET" if source["resolver"] else "HEAD"
     if source.get("resolver") == "release_feed":
         url, feed_version = release_feed(source, transport)
+        method = "HEAD"
+    elif source.get("resolver") == "workbuddy_history":
+        url, feed_version = workbuddy_history(source, transport)
         method = "HEAD"
     for _ in range(6):
         validate_url(source, url)
@@ -562,6 +604,11 @@ def inspect_package(path: Path, source: dict) -> dict:
             if stream.read(4) != b"koly":
                 raise SyncError("invalid_dmg")
         return {"version": "unknown", "identity": "pending_native_inspection", "signature": "pending_native_verification", "compatibility": "not_tested"}
+    if source["format"] == "exe":
+        with path.open("rb") as stream:
+            if stream.read(2) != b"MZ":
+                raise SyncError("invalid_exe")
+        return {"version": "unknown", "identity": source["identity"], "signature": "pending_native_verification", "compatibility": "not_tested"}
     try:
         with zipfile.ZipFile(path) as package:
             infos = package.infolist()
@@ -613,7 +660,7 @@ def used_bytes(root: Path) -> int:
 
 def candidate_path(root: Path, entry: dict) -> Path:
     relative = entry.get("path", "")
-    if not re.fullmatch(r"artifacts/[a-f0-9]{64}\.(msix|dmg|zip)", relative):
+    if not re.fullmatch(r"artifacts/[a-f0-9]{64}\.(msix|dmg|zip|exe)", relative):
         raise SyncError("invalid_candidate_path")
     return child(root, relative)
 
@@ -707,7 +754,11 @@ def download(root: Path, source: dict, metadata: dict, transport: Transport, bud
     if partial.stat().st_size != metadata["size"]:
         raise SyncError("download_length_mismatch")
     package = inspect_package(partial, source)
-    if metadata["versionHint"] != "unknown" and package["version"] != metadata["versionHint"]:
+    if (
+        metadata["versionHint"] != "unknown"
+        and package["version"] != "unknown"
+        and package["version"] != metadata["versionHint"]
+    ):
         raise SyncError("version_metadata_mismatch")
     sha256 = digest(partial)
     relative = f"artifacts/{sha256}.{source['format']}"
@@ -732,11 +783,20 @@ def sources(path: Path = SOURCE_FILE) -> list[dict]:
         raise SyncError("invalid_sources_config")
     values = config["sources"]
     ids = [source.get("id", "") for source in values]
-    expected = {"codex-macos-arm64", "codex-windows-x64", "codex-windows-arm64", "claude-macos-universal", "claude-windows-x64", "claude-windows-arm64"}
-    if len(ids) != 6 or set(ids) != expected:
+    expected = {
+        "codex-macos-arm64", "codex-windows-x64", "codex-windows-arm64",
+        "claude-macos-universal", "claude-windows-x64", "claude-windows-arm64",
+        "workbuddy-macos-arm64", "workbuddy-macos-x64", "workbuddy-windows-x64",
+    }
+    if len(ids) != 9 or set(ids) != expected:
         raise SyncError("invalid_source_inventory")
     for source in values:
-        expected_format = "zip" if source["id"] == "claude-macos-universal" else "dmg" if source["platform"] == "macos" else "msix"
+        expected_format = (
+            "zip" if source["id"] == "claude-macos-universal"
+            else "dmg" if source["platform"] == "macos"
+            else "exe" if source["app"] == "workbuddy"
+            else "msix"
+        )
         if source["id"] != f"{source['app']}-{source['platform']}-{source['architecture']}" or source["format"] != expected_format:
             raise SyncError("invalid_source_identity")
         validate_url(source, source["url"])
