@@ -7448,6 +7448,389 @@
         "E-USER-101"
       ],
       "status": "specified"
+    },
+    {
+      "id": "dsh-source-build-candidate@v1",
+      "kind": "file",
+      "owner": "security-update",
+      "consumers": [
+        "security-update"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/dsh-source-build-candidate@v1",
+      "authorization": "Only a private release operator may prepare this metadata after the pinned source verifier and the platform-native signature verifier both succeed. The desktop client and end users cannot invoke this boundary.",
+      "idempotency": "The identity is target plus upstream commit plus artifact SHA-256. Repeating the same verified inputs yields the same security-relevant fields; an existing identity with different bytes, size, source receipt or native receipt fails closed.",
+      "compatibility": "Version 1 is closed and supports only the pinned DeepSeek Harness source and declared native targets. A changed upstream commit, application ID, signer, target or receipt schema requires a new reviewed contract version or release unit.",
+      "inputSchema": {
+        "type": "object",
+        "description": "No public input envelope exists; private operator tools validate explicit source and native receipts before writing the candidate file.",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Closed public-safe metadata for one Yeschoy build from pinned official DeepSeek source. It contains no local path, credential or signing material.",
+        "properties": {
+          "schemaVersion": {
+            "type": "integer",
+            "enum": [
+              1
+            ],
+            "description": "Exact candidate receipt schema."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "prepared"
+            ],
+            "description": "The source and native verification gates completed."
+          },
+          "publishable": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "True only after the target-specific signing gate succeeds."
+          },
+          "label": {
+            "type": "string",
+            "enum": [
+              "Yeschoy-built from official DeepSeek source"
+            ],
+            "description": "Truthful distribution label; never presented as an official DeepSeek release."
+          },
+          "target": {
+            "type": "string",
+            "enum": [
+              "win-x64",
+              "mac-arm64",
+              "mac-x64"
+            ],
+            "description": "Declared native packaging target."
+          },
+          "upstreamRepository": {
+            "type": "string",
+            "enum": [
+              "https://github.com/deepseek-ai/deepseek-harness.git"
+            ],
+            "description": "Pinned official source repository."
+          },
+          "upstreamCommit": {
+            "type": "string",
+            "enum": [
+              "0d1f50007f9bca3f52b06e1c3074fa14d5fb0720"
+            ],
+            "description": "Pinned source commit."
+          },
+          "upstreamTree": {
+            "type": "string",
+            "enum": [
+              "80b651cca20f29d587518cf07a978f2bc58bc2c1"
+            ],
+            "description": "Pinned source tree."
+          },
+          "version": {
+            "type": "string",
+            "enum": [
+              "0.1.6-alpha.1"
+            ],
+            "description": "Exact root and Desktop package version."
+          },
+          "appId": {
+            "type": "string",
+            "enum": [
+              "io.yeschoy.deepseek-harness-preview"
+            ],
+            "description": "Yeschoy preview application identity."
+          },
+          "artifactFileName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 180,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._+-]*$",
+            "description": "Base file name only, with no path component."
+          },
+          "artifactSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "Verified artifact digest."
+          },
+          "artifactSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4294967296,
+            "description": "Verified artifact byte length."
+          },
+          "sourceReceiptSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "Digest of the closed source provenance receipt."
+          },
+          "nativeReceiptSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "Digest of the closed platform-native signature verification receipt."
+          },
+          "licenseSpdx": {
+            "type": "string",
+            "enum": [
+              "MIT"
+            ],
+            "description": "Retained upstream license identifier."
+          },
+          "licenseSha256": {
+            "type": "string",
+            "enum": [
+              "ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be"
+            ],
+            "description": "Pinned upstream license digest."
+          },
+          "signatureKind": {
+            "type": "string",
+            "enum": [
+              "windows-authenticode",
+              "apple-developer-id-notarized"
+            ],
+            "description": "Target-native verified signature class."
+          },
+          "publisherId": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 240,
+            "description": "Exact reviewed publisher identity from the private build policy."
+          },
+          "verifiedAt": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 40,
+            "description": "UTC timestamp copied from the native verification receipt."
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "status",
+          "publishable",
+          "label",
+          "target",
+          "upstreamRepository",
+          "upstreamCommit",
+          "upstreamTree",
+          "version",
+          "appId",
+          "artifactFileName",
+          "artifactSha256",
+          "artifactSize",
+          "sourceReceiptSha256",
+          "nativeReceiptSha256",
+          "licenseSpdx",
+          "licenseSha256",
+          "signatureKind",
+          "publisherId",
+          "verifiedAt"
+        ],
+        "additionalProperties": false
+      },
+      "dataClasses": [
+        "public",
+        "internal"
+      ],
+      "observability": {
+        "correlation": "Target, pinned commit and artifact digest only; no source path or operator identity.",
+        "audit": "Candidate metadata binds exact source provenance, license, artifact bytes and native signature verification receipts.",
+        "metrics": "No telemetry upload. Private release automation may count closed reason codes and candidate outcomes."
+      },
+      "errorSemantics": [
+        "Any changed remote, commit, tree, package version, license, dirty checkout, missing submodule or symlinked source boundary rejects provenance.",
+        "Unset or placeholder publisher policy, unsigned Windows output, unnotarized macOS output, wrong application identity, receipt replay, target mismatch, digest mismatch, size mismatch or unrecognized field rejects candidate preparation.",
+        "Preparation writes private metadata only. It does not publish, upload, mutate the official-byte mirror or claim clean-device installation."
+      ],
+      "requirementRefs": [
+        "REQ-103"
+      ],
+      "evidenceRefs": [
+        "E-USER-103",
+        "E-EXT-066",
+        "E-CODE-102"
+      ],
+      "status": "specified"
+    },
+    {
+      "id": "desktop-tool-activation@v11",
+      "kind": "command",
+      "owner": "tool-config",
+      "consumers": [
+        "desktop-platform",
+        "diagnostics"
+      ],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-tool-activation@v11",
+      "authorization": "One explicit click in the bundled desktop shell while a valid first-party session exists. Native code accepts two compiled line IDs, six closed target IDs and exact current-account model/group bindings. WorkBuddy receives only its dedicated scoped credential through its documented local model catalog; keys remain native and never cross renderer IPC.",
+      "idempotency": "Repeated activation reuses the dedicated target token and replaces only receipt-owned fields. WorkBuddy entries are keyed by exact model ID; unrelated entries and user preference fields remain untouched. A same-tool pending encrypted transaction is recovered before a new write.",
+      "compatibility": "Wire schema stays version 4. The target enum adds workbuddy. Existing five targets keep desktop-tool-activation@v10 behavior. WorkBuddy accepts both the installed top-level array and documented object wrapper, hot reloads configuration, and requires no helper runtime or forced restart.",
+      "inputSchema": {
+        "type": "object",
+        "description": "One bounded native activation request for an explicitly selected supported tool.",
+        "properties": {
+          "requestId": {"type": "string", "description": "Opaque renderer correlation ID.", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9_-]+$"},
+          "lineId": {"type": "string", "description": "Selected compiled first-party origin.", "enum": ["mainland_optimized", "global_accelerated"]},
+          "toolId": {"type": "string", "description": "Exact supported target.", "enum": ["claude_code", "claude_desktop", "codex_desktop", "pi", "dsh_web", "workbuddy"]},
+          "modelId": {"type": "string", "description": "Selected exact model.", "minLength": 1, "maxLength": 200},
+          "installationId": {"type": "string", "description": "Opaque native discovery choice or empty.", "maxLength": 128, "pattern": "^[A-Za-z0-9_-]*$"},
+          "billingGroup": {"type": "string", "description": "Selected exact billing group.", "minLength": 1, "maxLength": 128},
+          "models": {
+            "type": "array",
+            "description": "Unique configured account models.",
+            "items": {
+              "type": "object",
+              "description": "One exact model and billing group binding.",
+              "properties": {
+                "modelId": {"type": "string", "description": "Full model ID.", "minLength": 1, "maxLength": 200},
+                "billingGroup": {"type": "string", "description": "Explicit account group.", "minLength": 1, "maxLength": 128}
+              },
+              "required": ["modelId", "billingGroup"],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 200
+          },
+          "installationJobId": {"type": "string", "description": "Optional one-use installer confirmation.", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9_-]+$"},
+          "restartRunningApp": {"type": "boolean", "description": "Optional explicit normal-restart consent for targets that require it; ignored for WorkBuddy."}
+        },
+        "required": ["requestId", "lineId", "toolId", "modelId", "installationId", "billingGroup"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Sanitized local activation result; ready proves atomic configuration and readback, not an upstream model reply.",
+        "properties": {
+          "requestId": {"type": "string", "description": "Unchanged correlation ID.", "minLength": 1, "maxLength": 64},
+          "schemaVersion": {"type": "integer", "description": "Wire projection version.", "enum": [4]},
+          "status": {"type": "string", "description": "Closed activation outcome.", "enum": ["ready", "application_running", "signed_out", "tool_not_found", "multiple_installations", "missing_runtime", "unsupported_group", "unsupported_profile", "unsupported_model", "external_override", "secure_storage_unavailable", "configuration_failed", "launch_failed", "verification_failed", "server_unavailable", "invalid_request"]},
+          "toolId": {"type": "string", "description": "Validated target.", "enum": ["claude_code", "claude_desktop", "codex_desktop", "pi", "dsh_web", "workbuddy"]},
+          "modelId": {"type": "string", "description": "Validated model or empty on invalid request.", "maxLength": 200},
+          "billingGroup": {"type": "string", "description": "Validated billing group or empty on invalid request.", "maxLength": 128},
+          "observedAtEpochMs": {"type": "integer", "description": "Local completion time.", "minimum": 0},
+          "reasonCode": {"type": "string", "description": "Closed safe reason.", "minLength": 1, "maxLength": 80},
+          "models": {
+            "type": "array",
+            "description": "Sanitized configured model bindings.",
+            "items": {
+              "type": "object",
+              "description": "One exact model and billing group binding.",
+              "properties": {
+                "modelId": {"type": "string", "description": "Full model ID.", "minLength": 1, "maxLength": 200},
+                "billingGroup": {"type": "string", "description": "Explicit account group.", "minLength": 1, "maxLength": 128}
+              },
+              "required": ["modelId", "billingGroup"],
+              "additionalProperties": false
+            },
+            "minItems": 0,
+            "maxItems": 200
+          }
+        },
+        "required": ["requestId", "schemaVersion", "status", "toolId", "modelId", "billingGroup", "observedAtEpochMs", "reasonCode", "models"],
+        "additionalProperties": false
+      },
+      "dataClasses": ["public", "internal", "sensitive"],
+      "observability": {
+        "correlation": "Only request ID and closed tool/model/group/status/reason values cross IPC.",
+        "audit": "One encrypted baseline per tool; WorkBuddy plaintext receives only the dedicated scoped key required by its documented provider configuration.",
+        "metrics": "No telemetry upload and no paid model request during configuration."
+      },
+      "errorSemantics": [
+        "Invalid tool, line, model, billing group or installation fails before credential or file access.",
+        "WorkBuddy malformed or unsupported catalog shapes fail before mutation; atomic write or semantic readback failure restores the prior bytes and credential state.",
+        "WorkBuddy configuration never introduces a loopback URL, helper runtime or forced application restart, and never claims to change an already-open conversation.",
+        "Restore preserves later third-party changes and removes only exact receipt-owned WorkBuddy model entries."
+      ],
+      "requirementRefs": ["REQ-104"],
+      "evidenceRefs": ["E-USER-104", "E-EXT-067", "E-CODE-103"],
+      "status": "specified"
+    },
+    {
+      "id": "desktop-connection-management@v3",
+      "kind": "command",
+      "owner": "tool-config",
+      "consumers": ["desktop-platform"],
+      "schemaLocator": "inline://contracts.json#/contracts/desktop-connection-management@v3",
+      "authorization": "Bundled renderer; restore explicitly targets one of six allowlisted tools. No caller path or shell command is accepted.",
+      "idempotency": "Serializes with activation. Three-way owned-field restore retains the encrypted journal until file and credential cleanup succeed. Repeated restore becomes not_connected.",
+      "compatibility": "Wire schema stays version 2 and adds workbuddy to the closed target enum. Existing connection records remain decodable. WorkBuddy reports requiresBackground false.",
+      "inputSchema": {
+        "type": "object",
+        "description": "Local inspect or restore request.",
+        "properties": {
+          "requestId": {"type": "string", "description": "Opaque renderer correlation ID.", "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9_-]+$"},
+          "operation": {"type": "string", "description": "Requested management action.", "enum": ["inspect", "restore"]},
+          "toolId": {"type": "string", "description": "Exact target or empty for inspect.", "enum": ["", "claude_code", "claude_desktop", "codex_desktop", "pi", "dsh_web", "workbuddy"]}
+        },
+        "required": ["requestId", "operation", "toolId"],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "description": "Sanitized local connection-management result.",
+        "properties": {
+          "requestId": {"type": "string", "description": "Unchanged correlation ID.", "minLength": 1, "maxLength": 64},
+          "schemaVersion": {"type": "integer", "description": "Wire projection version.", "enum": [2]},
+          "status": {"type": "string", "description": "Closed management outcome.", "enum": ["ok", "restored", "restored_with_changes", "recovery_failed"]},
+          "connections": {
+            "type": "array",
+            "description": "Sanitized local connection states.",
+            "items": {
+              "type": "object",
+              "description": "One local connection state.",
+              "properties": {
+                "toolId": {"type": "string", "description": "Exact tool ID.", "enum": ["claude_code", "claude_desktop", "codex_desktop", "pi", "dsh_web", "workbuddy"]},
+                "state": {"type": "string", "description": "Closed local state.", "enum": ["not_connected", "connected", "changed", "legacy", "recovery_pending", "unavailable"]},
+                "modelId": {"type": "string", "description": "Last selected model.", "maxLength": 200},
+                "lineId": {"type": "string", "description": "Compiled line or empty.", "enum": ["", "mainland_optimized", "global_accelerated"]},
+                "billingGroup": {"type": "string", "description": "Last selected group.", "maxLength": 128},
+                "updatedAtEpochMs": {"type": "integer", "description": "Setup time or zero.", "minimum": 0},
+                "restoreMode": {"type": "string", "description": "Available restore scope.", "enum": ["original", "remove_yeschoy", "none"]},
+                "requiresBackground": {"type": "boolean", "description": "Whether Yeschoy must remain running."},
+                "reasonCode": {"type": "string", "description": "Closed safe reason.", "maxLength": 80},
+                "models": {
+                  "type": "array",
+                  "description": "Configured model bindings.",
+                  "items": {
+                    "type": "object",
+                    "description": "One exact model and group binding.",
+                    "properties": {
+                      "modelId": {"type": "string", "description": "Full model ID.", "minLength": 1, "maxLength": 200},
+                      "billingGroup": {"type": "string", "description": "Explicit account group.", "minLength": 1, "maxLength": 128}
+                    },
+                    "required": ["modelId", "billingGroup"],
+                    "additionalProperties": false
+                  },
+                  "minItems": 0,
+                  "maxItems": 200
+                }
+              },
+              "required": ["toolId", "state", "modelId", "lineId", "billingGroup", "updatedAtEpochMs", "restoreMode", "requiresBackground", "reasonCode", "models"],
+              "additionalProperties": false
+            },
+            "minItems": 0,
+            "maxItems": 6
+          },
+          "reasonCode": {"type": "string", "description": "Closed safe result reason.", "maxLength": 80}
+        },
+        "required": ["requestId", "schemaVersion", "status", "connections", "reasonCode"],
+        "additionalProperties": false
+      },
+      "dataClasses": ["public", "internal", "sensitive"],
+      "observability": {
+        "correlation": "Safe request ID and closed connection states only.",
+        "audit": "Encrypted local recovery journal; no chat or model history.",
+        "metrics": "No telemetry upload."
+      },
+      "errorSemantics": [
+        "Preserve later changes and disclose restored_with_changes.",
+        "Invalid file or secure-storage failure retains recovery for retry.",
+        "Never revoke remote shared tokens during local restore."
+      ],
+      "requirementRefs": ["REQ-104"],
+      "evidenceRefs": ["E-USER-104", "E-EXT-067", "E-CODE-103"],
+      "status": "specified"
     }
   ]
 }

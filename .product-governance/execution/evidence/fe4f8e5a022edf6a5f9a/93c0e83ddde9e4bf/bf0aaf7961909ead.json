@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU085-WORKBUDDY-REGRESSION-PARITY",
+  "assertion": "The native six-target panic-isolation test and the renderer connection, daily-use, artwork and workbench suites all pass with exactly one WorkBuddy target and bundled local artwork.",
+  "testSelector": "tests/work_packages/ru085/test_workbuddy_regression.py::test_workbuddy_regression_parity",
+  "acceptanceCommandId": "ru085-workbuddy-regression-parity",
+  "runId": "RU-085/WP-RU085-WORKBUDDY-REGRESSION-PARITY@2026-09-16T16:54:13.193246+00:00",
+  "packageId": "WP-RU085-WORKBUDDY-REGRESSION-PARITY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru085/test_workbuddy_regression.py::test_workbuddy_regression_parity",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:bc65f4ca9fee8b289074e4ed639698769379bb21eab898385ffa9dbe0d99c7a5",
+    "machineReportSha256": "sha256:a7b860febdb698b554694f7337d80b9ba1d307d1c46814af53b35fa428ccd51a",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:2b3956d471af305f9b584e5e7a4d1f7b021fa1ede37e07e240263f1d29877736",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:6dbb47d1dbfc87393f0053d872a4d310a191fa76de6b51d7585848f03cc9cbbd",
+  "releaseUnitId": "RU-085",
+  "releaseUnitHash": "sha256:dc02c4dfc91757f9f81a16b6306cb7456ee83a951a06b0b9c4a7d9a8db5ca9f2"
+}

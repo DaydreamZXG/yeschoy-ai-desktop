@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU083-WORKBUDDY-DIRECT",
+  "assertion": "Array and object WorkBuddy catalogs receive exact direct account models and distinct scoped credentials while preserving unrelated data; malformed, tampered and restore scenarios fail safely, lifecycle projection requires no gateway or restart, and macOS/Windows discovery remains closed and fixture verified.",
+  "testSelector": "tests/work_packages/ru083/test_workbuddy.py::test_workbuddy_direct_support",
+  "acceptanceCommandId": "ru083-workbuddy-direct",
+  "runId": "RU-083/WP-RU083-WORKBUDDY-DIRECT@2026-09-16T15:52:56.391205+00:00",
+  "packageId": "WP-RU083-WORKBUDDY-DIRECT",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+  "releaseUnitId": "RU-083",
+  "releaseUnitHash": "sha256:4938d75e9924ee18d0c0c82fe25275b7662ae8e18a08097078b4e9d88d430ae2"
+}

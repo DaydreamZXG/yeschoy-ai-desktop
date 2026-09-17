@@ -1,0 +1,233 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-083/WP-RU083-WORKBUDDY-DIRECT@2026-09-16T16:22:22.305225+00:00",
+  "packageId": "WP-RU083-WORKBUDDY-DIRECT",
+  "baselineCommit": "1da460e9b2dc62883f8f1e829e2210ac91bed69e",
+  "baselineTreeHash": "sha256:1aefb0a3cc2b0c5922c04e5103547d12ced9d8f93107f038471b1dcde16576cc",
+  "testedTreeHash": "sha256:df54aa3753f09d8653cfeeac67e336f72473fea81fd5b6c796a460174e1f4e21",
+  "testedSnapshotPath": "execution/tested-snapshots/0e5709cdcaef56f9.3344cb76d61e82282e05.json",
+  "testedSnapshotSha256": "sha256:2f064c6833016d0d2a22df9efa9897e225bd7f030f3a7c67f231f2817b4e0eff",
+  "sourceDiff": {
+    "src-tauri/src/tool_adapters/workbuddy.rs": "sha256:d08a25e7605d7c70fbe4956c6d54e75a5fe3581fd01b78402248f97d018b599d"
+  },
+  "ownedResultHashes": {
+    "src-tauri/src/tool_adapters/workbuddy.rs": "sha256:d08a25e7605d7c70fbe4956c6d54e75a5fe3581fd01b78402248f97d018b599d"
+  },
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      "src/assets/icons/official-workbuddy.png",
+      "src/configuration/**",
+      "src/installation/**",
+      "src/settings/AdvancedConnectionDetails.tsx",
+      "src/workbench/appCatalog.ts",
+      "src/workbench/appCatalog.test.ts",
+      "src-tauri/src/app_installation/catalog.rs",
+      "src-tauri/src/connection_recovery.rs",
+      "src-tauri/src/desktop_app_discovery.rs",
+      "src-tauri/src/desktop_app_discovery_core.rs",
+      "src-tauri/src/open_connection.rs",
+      "src-tauri/src/tool_activation.rs",
+      "src-tauri/src/tool_adapters/mod.rs",
+      "src-tauri/src/tool_adapters/workbuddy.rs",
+      "src-tauri/src/tool_credentials.rs",
+      "src-tauri/src/tool_model_profile.rs",
+      "tests/work_packages/ru083/**"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      "src-tauri/src/app_installation/catalog.rs": "sha256:9f12ae204eb30952a09f4c884027334f69139aaa5f3980afb912854f52b1bf1e",
+      "src-tauri/src/connection_recovery.rs": "sha256:0a8ce8bb9a3a37a92b42f49dcbae82ab42363a2dcb3f20c5a3c719075d273239",
+      "src-tauri/src/desktop_app_discovery.rs": "sha256:816f7323bda5254b53878f61385bcc231d4e7cbb59c439c084d233df9174d299",
+      "src-tauri/src/desktop_app_discovery_core.rs": "sha256:aba1eba5f3e502a4a14b47cd47c0f4e2ad087cb23a209fe2a9a7bc7b48976b6c",
+      "src-tauri/src/open_connection.rs": "sha256:4490ff20f1a09d53676aa67095a1ba4ea9d209ef9fce8413d124eb82c7e6bb02",
+      "src-tauri/src/tool_activation.rs": "sha256:c4d7a9b5ad577aebac7a235c0b6a5e6594f9a57efb4cfb45708702055fc1af00",
+      "src-tauri/src/tool_adapters/mod.rs": "sha256:a74fd548ad568c71e96552763f44aa6839157773f549008b414e4019df6d3840",
+      "src-tauri/src/tool_adapters/workbuddy.rs": "sha256:d08a25e7605d7c70fbe4956c6d54e75a5fe3581fd01b78402248f97d018b599d",
+      "src-tauri/src/tool_credentials.rs": "sha256:4b888b4e414bc04b75772d7c91a91c86ef60bb16c220d7522f08da1efef64e4b",
+      "src-tauri/src/tool_model_profile.rs": "sha256:755e2995746154edcf122692b1cce3f10b5213d8285414d667bd50d9020e2deb",
+      "src/configuration/ActivationFeedback.tsx": "sha256:a91f6497818516deccd4dbec7385d6851dc80a1a9b9bb7d69e69fbaf6590a020",
+      "src/configuration/BillingGroupPicker.tsx": "sha256:ac37687dd0fbb93c7421c0eb00f400c080ab77ea5d257194fa7bfc6b883236bf",
+      "src/configuration/BillingPrices.test.tsx": "sha256:088ce90ea75e35861c4618476f488515265d009d29c289da407611e791f372ba",
+      "src/configuration/ConfigurationPreviewView.test.tsx": "sha256:3ff4c51260ffbbb596050276eab478bf8f5337aebeb3bb5a12adf1e27edaee68",
+      "src/configuration/ConfigurationPreviewView.tsx": "sha256:c440f2f7a829c7b23e50d2a77dd96afa9a606e53b606a12d0e88ab3b51d99a24",
+      "src/configuration/ConnectionStatusNotice.tsx": "sha256:3635f596e8ed913e79ddcf87dd74f2898a35b0d9a0260cb067b3dbc4fa5297da",
+      "src/configuration/DailyUse.test.tsx": "sha256:067ea1a3b02ac5a397fa143ef79aeeda5bcd11ce7f049b3d05020d59b73fabc3",
+      "src/configuration/FirstActivationCelebration.test.tsx": "sha256:9a5a6b90f8bc5c544c34c3faade8c03ee5f3ed86deb961ca5248fdef35fdbb09",
+      "src/configuration/FirstActivationCelebration.tsx": "sha256:e89bec937de5cdf40f5be5d1c8a18f852bee443149041fcf40480bf22b8e5557",
+      "src/configuration/LineSpeedtest.test.ts": "sha256:a6db383fc4f6d912ab6e381e6afe87d3d7d4117b25bbaa7a03fa43a1a1c48898",
+      "src/configuration/ModelPicker.test.tsx": "sha256:bb3ef9e7d679371f129bf763daf9d133bbdfe8ea068b594bd052fb9a33deb74d",
+      "src/configuration/ModelPicker.tsx": "sha256:c8a39c52e91cc5551b36e997c1b297a6f663310521b2cb17edaf80d979754198",
+      "src/configuration/OpenConnection.tsx": "sha256:3f8fc7557f5b31efa3533911489c0c23d4e66fa214dbc2e3b7ef79e1e34f7293",
+      "src/configuration/RecentRequest.tsx": "sha256:35f538c9ebd11bf082aa94e87ce22324d6d4419b0d3abf81198a4f20645511cd",
+      "src/configuration/RecoveryNotice.tsx": "sha256:7c49114fc2252fbd3d6dbb7765cddeca379b48c39f42eb641729c439d2d0dde9",
+      "src/configuration/RestoreConnection.tsx": "sha256:5e9c402080b572cc6018fbc3433ad2829c8ea0fa99d2f3af2320abc24da0a853",
+      "src/configuration/activation.test.ts": "sha256:de9ed596309a228598e637e31c2d2083e51709939a12098bdfd58b537506f9f7",
+      "src/configuration/activation.ts": "sha256:63d92d16f67f7ee715dde7b9e43a41a0ce59e2897c74d7d701eae8ba4d1f236d",
+      "src/configuration/billing.test.ts": "sha256:0370c6b90b04bc5198e6fc4c71216dc52e3b7b99d261ccf1a5791d39bc133040",
+      "src/configuration/billing.ts": "sha256:444bd506072336c44a043d03828f9e43e01d1fc39c3d8c8f589fbf447e434f28",
+      "src/configuration/connection-test-fixtures.ts": "sha256:d94b3bf510a8abe7a5a9884a86e77515a252c2c07b8d328ae74931acfbd5dfea",
+      "src/configuration/connections.test.tsx": "sha256:d75463e866436e49e7dcd657e64cb7977331497ac1d340e073a1abc699c98dca",
+      "src/configuration/connections.tsx": "sha256:9f1637577b836d137ff440f5c64a06837f191b37556a0dbfcc1f223d04c5af79",
+      "src/configuration/copy.ts": "sha256:35f93611e81c10a3453f14f7ac9274c6b62dea18cd78efe51f132dbd6070f22c",
+      "src/configuration/firstActivationMilestone.test.ts": "sha256:93f4c469179c00de132d436a7681fb8fa0eb366bfa3c769f596ee0c5bda4bb0e",
+      "src/configuration/firstActivationMilestone.ts": "sha256:bc66a630eb0e8c065f42ca79facd8459796a434c146ef63573b4b420d2337524",
+      "src/configuration/launchApi.ts": "sha256:92a777f2a0902a967c5c95dc469ed898035b2eb6311d0829986660ab0fb4bc83",
+      "src/configuration/modelCompatibility.ts": "sha256:662873bf09abbcef87d41500c2d4ffafa754f2836f14d2b6fb574cc97fbfa028",
+      "src/configuration/preview.test.ts": "sha256:bb7dda99b7eb175dcdc937da333e4acf9c6386148b26174b4bf0685eedf68d81",
+      "src/configuration/preview.ts": "sha256:6fb77e0ad453362e596dfcc4bb0115ee63ceb2b3bfad78f52670531829f3d531",
+      "src/configuration/setupIntent.ts": "sha256:9d1e685bc35e15d20b4b84cf479fff5f04a87e60a07a0effb67a350165bdbf66",
+      "src/configuration/useActivationTask.test.tsx": "sha256:fe91c5b0386f50d13ade4ba34c2ebcae0ca9743fcbbd8b7227cb61c280fc9054",
+      "src/configuration/useActivationTask.ts": "sha256:46e9c41f800bbf020a54d367505e644a5912d4e4635817b2099cdf9ab79e73ec",
+      "src/installation/InstallationPanel.tsx": "sha256:5b12a381d9fbe6680733a720a5b183c485334f4e7d0c69f309409e097d7fbc1f",
+      "src/installation/InstallationProvider.tsx": "sha256:51bd75c8375c63be8ce5bed9cf40dbf99e5e8524a69154f2bf8a859caf4e53da",
+      "src/installation/api.ts": "sha256:42dd576cc931af13592d9a85f3a26cd807da0397f8eeb4033c386b02bd1f2fd8",
+      "src/installation/installation.css": "sha256:08771123605545d86614342a3142142e8d286038578bf24d700874ffc5d51391",
+      "src/installation/installation.test.tsx": "sha256:d63a57cc21cccd865a8bd0fb98035fea655dedbfe3f10b88377c56e45608a658",
+      "src/installation/installerLocalization.test.ts": "sha256:0c69e1ad8630f1825d15f466a1541dceed6f3fded841a314f49005e7f3483e06",
+      "src/installation/test-fixtures.ts": "sha256:3372fb15a397af6157176637aa36940e7fb262a538abf00e90a1d091ac93e35d",
+      "src/settings/AdvancedConnectionDetails.tsx": "sha256:0746bf047f2303f2bde99c02aefef341cdce1600cfe789656c201da32e3bd25f",
+      "src/workbench/appCatalog.test.ts": "sha256:33849c4db4d40717a14d485829cae35305627f294209a30cdba9635215171749",
+      "src/workbench/appCatalog.ts": "sha256:5a363c75991b3c7746fded967f22c386f9d5919e0f80c3b8f0eca317539f205e",
+      "tests/work_packages/ru083/test_workbuddy.py": "sha256:ea4300cda1b214a89373d19972e1b944b9211a770af2d55e957674318189f9e1"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:e78627c2201e093ae9fdc399f915a159142ff8da935e4fb31e5ff933118e5cee",
+  "sourceScopeFailures": [],
+  "integrityFailures": [],
+  "assignedTo": "root",
+  "startedAt": "2026-09-16T16:22:22.305225+00:00",
+  "finishedAt": "2026-09-16T16:25:28.954292+00:00",
+  "passed": false,
+  "commands": [
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru083-workbuddy-direct",
+        "kind": "scenario_test",
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru083/test_workbuddy.py::test_workbuddy_direct_support",
+        "cwd": ".",
+        "timeoutSeconds": 1200
+      },
+      "runnerMetadata": {
+        "adapter": "pytest-json@1",
+        "declaredCwd": ".",
+        "cwd": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "selector": "tests/work_packages/ru083/test_workbuddy.py::test_workbuddy_direct_support",
+        "selectorRealpath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/tests/work_packages/ru083/test_workbuddy.py",
+        "runnerArgv": [
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru083/test_workbuddy.py::test_workbuddy_direct_support",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-supot6yr/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-supot6yr/pytest-basetemp"
+        ],
+        "sandboxedArgv": [
+          "/usr/bin/sandbox-exec",
+          "-p",
+          "(version 1)\n(allow default)\n(deny file-write*\n  (require-not\n    (require-any\n      (subpath \"/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-supot6yr\")\n      (literal \"/dev/null\"))))\n",
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru083/test_workbuddy.py::test_workbuddy_direct_support",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-supot6yr/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-supot6yr/pytest-basetemp"
+        ],
+        "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "pythonRealpath": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+        "pythonExecutableSha256": "sha256:6b24be8ba00c4abc8b3e7e2620bd710e2cf7a4312d00c147f8f05fbb6f3d297a",
+        "pytestVersion": "8.4.2",
+        "pytestDistributionVersion": "8.4.2",
+        "pytestModulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+        "pytestModuleSha256": "sha256:66993a5e3905005e0981159b4794d10b1adacf341a58a44d696ad2c4442dcdc6",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "executable": "/usr/bin/sandbox-exec",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea",
+          "policySha256": "sha256:985ecc836d3225b6ade02f88ce1a5614c3bc24e69625f30541f4cc4cc1bf168d",
+          "projectRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+          "writableRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-supot6yr",
+          "policyVersion": 1
+        }
+      },
+      "machineReport": {
+        "adapter": "pytest-json@1",
+        "collectedNodeIds": [
+          "tests/work_packages/ru083/test_workbuddy.py::test_workbuddy_direct_support"
+        ],
+        "collectionErrors": [],
+        "deselectedNodeIds": [],
+        "pytestExitCode": 1,
+        "pytestRootPath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "runner": {
+          "distributionVersion": "8.4.2",
+          "modulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+          "moduleVersion": "8.4.2",
+          "name": "pytest",
+          "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "pythonVersion": "3.9.6"
+        },
+        "schemaVersion": 1,
+        "selector": "tests/work_packages/ru083/test_workbuddy.py::test_workbuddy_direct_support",
+        "tests": [
+          {
+            "nodeId": "tests/work_packages/ru083/test_workbuddy.py::test_workbuddy_direct_support",
+            "phases": {
+              "call": {
+                "outcome": "failed"
+              },
+              "setup": {
+                "outcome": "passed"
+              },
+              "teardown": {
+                "outcome": "passed"
+              }
+            }
+          }
+        ]
+      },
+      "process": {
+        "actualExitCode": 1,
+        "timedOut": false,
+        "stdout": "============================= test session starts ==============================\nplatform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0\nrootdir: /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop\nplugins: anyio-4.12.1\ncollected 1 item\n\ntests/work_packages/ru083/test_workbuddy.py F                            [100%]\n\n=================================== FAILURES ===================================\n________________________ test_workbuddy_direct_support _________________________\n\ntmp_path = PosixPath('/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-supot6yr/pytest-basetemp/test_workbuddy_direct_support0')\n\n    def test_workbuddy_direct_support(tmp_path):\n        environment = os.environ.copy()\n        environment[\"CARGO_TARGET_DIR\"] = str(tmp_path / \"cargo-target\")\n        environment[\"CARGO_NET_OFFLINE\"] = \"true\"\n        environment[\"RUSTUP_TOOLCHAIN\"] = \"1.94.0-x86_64-apple-darwin\"\n    \n        selectors = [\n            \"tool_adapters::workbuddy::tests\",\n            \"desktop_app_discovery_core::tests::workbuddy_windows_identity_is_exact_and_gui_only\",\n            \"desktop_app_discovery::tests::windows_registered_and_path_fallbacks_cover_supported_installers\",\n            \"open_connection::tests::all_six_open_targets_use_only_the_closed_native_request\",\n            \"connection_recovery::tests::restores_exact_original_bytes_for_all_six_tools\",\n            \"tool_activation::tests::protocol_support_is_target_specific\",\n        ]\n        for index, selector in enumerate(selectors):\n            output = run(\n                [\n                    \"cargo\",\n                    \"test\",\n                    \"--manifest-path\",\n                    \"src-tauri/Cargo.toml\",\n                    \"--lib\",\n                    selector,\n                    \"--\",\n                    \"--test-threads=1\",\n                ],\n                environment,\n            )\n            assert \"test result: ok.\" in output\n            assert \"0 failed\" in output\n            (tmp_path / f\"cargo-{index}.log\").write_text(output)\n    \n>       renderer = run(\n            [\n                \"pnpm\",\n                \"exec\",\n                \"vitest\",\n                \"run\",\n                \"--dir\",\n                \"src\",\n                \"src/configuration/activation.test.ts\",\n                \"src/configuration/preview.test.ts\",\n                \"src/configuration/ConfigurationPreviewView.test.tsx\",\n                \"src/workbench/appCatalog.test.ts\",\n            ],\n            environment,\n        )\n\ntests/work_packages/ru083/test_workbuddy.py:57: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\ncommand = ['pnpm', 'exec', 'vitest', 'run', '--dir', 'src', ...]\nenvironment = {'CARGO_NET_OFFLINE': 'true', 'CARGO_TARGET_DIR': '/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-govern...rget', 'CI': '1', 'CODEX_APP_TOOLS_PIPE_PATH': '/tmp/codex-browser-use/a40eac03-d85a-4a3d-9b59-0888684aa803.sock', ...}\ntimeout = 900\n\n    def run(command, environment, timeout=900):\n        result = subprocess.run(\n            command,\n            cwd=ROOT,\n            env=environment,\n            text=True,\n            capture_output=True,\n            timeout=timeout,\n        )\n        output = result.stdout + result.stderr\n>       assert result.returncode == 0, output\nE       AssertionError: ! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-10.12.3.tgz\nE         failed to load config from /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/vitest.config.ts\nE         \nE         ⎯⎯⎯⎯⎯⎯⎯ Startup Error ⎯⎯⎯⎯⎯⎯⎯⎯\nE         Error: EPERM: operation not permitted, open '/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/vitest.config.ts.timestamp-1789575927461-4a162c92c1a3b8.mjs'\nE             at async open (node:internal/fs/promises:640:25)\nE             at async Object.writeFile (node:internal/fs/promises:1257:14)\nE             at async loadConfigFromBundledFile (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@5.4.19_@types+node@20.19.9_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:66956:5)\nE             at async loadConfigFromFile (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@5.4.19_@types+node@20.19.9_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:66799:24)\nE             at async resolveConfig (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@5.4.19_@types+node@20.19.9_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:66399:24)\nE             at async _createServer (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@5.4.19_@types+node@20.19.9_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:62999:18)\nE             at async createViteServer (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vitest@2.1.9_@types+node@20.19.9_jsdom@25.0.1_lightningcss@1.30.1_msw@2.11.6_@types+node@20.19.9_typescript@5.9.2_/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:9842:18)\nE             at async createVitest (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vitest@2.1.9_@types+node@20.19.9_jsdom@25.0.1_lightningcss@1.30.1_msw@2.11.6_@types+node@20.19.9_typescript@5.9.2_/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:11461:18)\nE             at async prepareVitest (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vitest@2.1.9_@types+node@20.19.9_jsdom@25.0.1_lightningcss@1.30.1_msw@2.11.6_@types+node@20.19.9_typescript@5.9.2_/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:11884:15)\nE             at async startVitest (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vitest@2.1.9_@types+node@20.19.9_jsdom@25.0.1_lightningcss@1.30.1_msw@2.11.6_@types+node@20.19.9_typescript@5.9.2_/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:11813:15) {\nE           errno: -1,\nE           code: 'EPERM',\nE           syscall: 'open',\nE           path: '/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/vitest.config.ts.timestamp-1789575927461-4a162c92c1a3b8.mjs'\nE         }\nE         \nE         \nE         \nE         \nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['pnpm', 'exec', 'vitest', 'run', '--dir', 'src', 'src/configuration/activation.test.ts', 'src/c.../zxg/.codex/worktrees/c485/xiaobai-ai-desktop/vitest.config.ts.timestamp-1789575927461-4a162c92c1a3b8.mjs'\\n}\\n\\n\\n\\n\").returncode\n\ntests/work_packages/ru083/test_workbuddy.py:21: AssertionError\n=========================== short test summary info ============================\nFAILED tests/work_packages/ru083/test_workbuddy.py::test_workbuddy_direct_support - AssertionError: ! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-10.12.3.tgz\n  failed to load config from /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/vitest.config.ts\n  \n  ⎯⎯⎯⎯⎯⎯⎯ Startup Error ⎯⎯⎯⎯⎯⎯⎯⎯\n  Error: EPERM: operation not permitted, open '/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/vitest.config.ts.timestamp-1789575927461-4a162c92c1a3b8.mjs'\n      at async open (node:internal/fs/promises:640:25)\n      at async Object.writeFile (node:internal/fs/promises:1257:14)\n      at async loadConfigFromBundledFile (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@5.4.19_@types+node@20.19.9_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:66956:5)\n      at async loadConfigFromFile (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@5.4.19_@types+node@20.19.9_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:66799:24)\n      at async resolveConfig (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@5.4.19_@types+node@20.19.9_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:66399:24)\n      at async _createServer (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vite@5.4.19_@types+node@20.19.9_lightningcss@1.30.1/node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js:62999:18)\n      at async createViteServer (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vitest@2.1.9_@types+node@20.19.9_jsdom@25.0.1_lightningcss@1.30.1_msw@2.11.6_@types+node@20.19.9_typescript@5.9.2_/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:9842:18)\n      at async createVitest (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vitest@2.1.9_@types+node@20.19.9_jsdom@25.0.1_lightningcss@1.30.1_msw@2.11.6_@types+node@20.19.9_typescript@5.9.2_/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:11461:18)\n      at async prepareVitest (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vitest@2.1.9_@types+node@20.19.9_jsdom@25.0.1_lightningcss@1.30.1_msw@2.11.6_@types+node@20.19.9_typescript@5.9.2_/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:11884:15)\n      at async startVitest (file:///Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/node_modules/.pnpm/vitest@2.1.9_@types+node@20.19.9_jsdom@25.0.1_lightningcss@1.30.1_msw@2.11.6_@types+node@20.19.9_typescript@5.9.2_/node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:11813:15) {\n    errno: -1,\n    code: 'EPERM',\n    syscall: 'open',\n    path: '/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/vitest.config.ts.timestamp-1789575927461-4a162c92c1a3b8.mjs'\n  }\n  \n  \n  \n  \nassert 1 == 0\n +  where 1 = CompletedProcess(args=['pnpm', 'exec', 'vitest', 'run', '--dir', 'src', 'src/configuration/activation.test.ts', 'src/c.../zxg/.codex/worktrees/c485/xiaobai-ai-desktop/vitest.config.ts.timestamp-1789575927461-4a162c92c1a3b8.mjs'\\n}\\n\\n\\n\\n\").returncode\n======================== 1 failed in 165.78s (0:02:45) =========================\n",
+        "stderr": ""
+      },
+      "validationErrors": [],
+      "runnerProof": null,
+      "passed": false,
+      "id": "ru083-workbuddy-direct",
+      "kind": "scenario_test",
+      "actualExitCode": 1,
+      "timedOut": false,
+      "scenarioId": "RU083-WORKBUDDY-DIRECT"
+    }
+  ],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU083-WORKBUDDY-DIRECT",
+      "path": "execution/evidence/3344cb76d61e82282e05/0e5709cdcaef56f9/75b3f1690343014b.json",
+      "sha256": "sha256:9156dc60f388fe56d7d412b190cad106b5f7201644629ef4c6a278fc6fbf90aa"
+    }
+  ],
+  "scenarioEvidenceFailures": [
+    "RU083-WORKBUDDY-DIRECT: registered runner proof is invalid"
+  ],
+  "releaseUnitId": "RU-083",
+  "releaseUnitHash": "sha256:4938d75e9924ee18d0c0c82fe25275b7662ae8e18a08097078b4e9d88d430ae2"
+}

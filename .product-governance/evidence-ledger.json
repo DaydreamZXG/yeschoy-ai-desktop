@@ -3540,6 +3540,112 @@
       "status": "active",
       "verificationLevel": 0,
       "basisRefs": []
+    },
+    {
+      "id": "E-USER-102",
+      "claim": "The owner asks to continue from the current released tool, explain the Windows signing application path, optimize the identified reliability issue, and inspect the other integrations for defects. This authorizes a bounded current-baseline reconciliation and fixture-only Codex history performance repair; it does not authorize operating installed user applications, packaging, publishing, purchasing a certificate, or silently changing other tool contracts.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-16:继续开发/签名怎么申请/你优化一下/其他工具找问题",
+      "observedAt": "2026-09-16T07:28:00Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-100",
+      "claim": "At clean HEAD 1da460e9b2dc62883f8f1e829e2210ac91bed69e, Codex history takeover scans up to 50000 JSONL files and reads each matching file into memory with a 512 MiB bound while begin executes directly on the async activation path. The other registered CLI integrations accept discovered executable paths without a compatibility version gate, and Claude Desktop writes a wildcard egress allow-list. These are inspected risk findings, not reproduced customer failures or device acceptance.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/codex_history_takeover.rs:20;src-tauri/src/codex_history_takeover.rs:171;src-tauri/src/codex_history_takeover.rs:408;src-tauri/src/tool_activation.rs:1873;src-tauri/src/tool_adapters/mod.rs:122;src-tauri/src/tool_adapters/claude_desktop.rs:54",
+      "observedAt": "2026-09-16T07:28:00Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-USER-103",
+      "claim": "The owner requires the planned DeepSeek Harness source-build distribution to remain usable when end-user GitHub access is unavailable and explicitly accepted a controlled builder, Yeschoy-hosted immutable artifacts, and a domestic download fallback rather than sending novice users to GitHub.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-16:dsh-source-build-domestic-download-approved",
+      "observedAt": "2026-09-16T08:31:00Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-101",
+      "claim": "The current application installer already binds mirror artifacts to a closed catalog, expected SHA-256 and size, resumable validators and unchanged native trust, but it uses only ordinary public DNS for ergou.qzz.io. A 2026-09-16 public probe intermittently timed out while the same HTTPS hostname resolved directly to the compiled origin 43.134.77.210 passed health, range, method and path-isolation checks with certificate validation enabled.",
+      "class": "code_observed",
+      "locator": "src-tauri/src/app_installation/origins.rs:1-231;src-tauri/src/app_installation/download.rs:65-346;deploy/download-origin/probe.py;command:2026-09-16-public-timeout-and-direct-origin-probe",
+      "observedAt": "2026-09-16T08:31:00Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-USER-103"
+      ]
+    },
+    {
+      "id": "E-EXT-066",
+      "claim": "DeepSeek Harness documents Desktop as a bundled Electron shell whose exact dsh version, upstream Node runtime and package set form one release unit. Every package target requires DSH_DESKTOP_APP_ID; macOS release targets require Developer ID signing and notarization; Windows release targets require the configured signing certificate and SignTool, while the unsigned Windows command is explicitly for local installation testing. The repository license is MIT and requires retaining the copyright and license notice.",
+      "class": "external_verified",
+      "locator": "https://github.com/deepseek-ai/deepseek-harness/blob/master/apps/desktop/README.zh.md;https://github.com/deepseek-ai/deepseek-harness/blob/master/LICENSE",
+      "observedAt": "2026-09-16T08:48:00Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-102",
+      "claim": "The inspected upstream checkout is deepseek-ai/deepseek-harness commit 0d1f50007f9bca3f52b06e1c3074fa14d5fb0720 with tree 80b651cca20f29d587518cf07a978f2bc58bc2c1, root and Desktop version 0.1.6-alpha.1, and MIT LICENSE SHA-256 ebb4f09972aee8608be255debaf78451a68e95c290f55c240dec2ecfa16ea6be. No Yeschoy source-build verifier or publication authority currently exists in the product repository.",
+      "class": "code_observed",
+      "locator": "command:2026-09-16-upstream-dsh-checkout-audit;deploy/dsh-source-build:not-present-before-RU-082",
+      "observedAt": "2026-09-16T08:48:00Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-EXT-066",
+        "E-USER-103"
+      ]
+    },
+    {
+      "id": "E-USER-104",
+      "claim": "The owner explicitly rejects a local gateway for WorkBuddy and authorizes direct management of WorkBuddy's documented models.json so novice users can connect their account models without manually editing provider URL, API keys or model capabilities.",
+      "class": "user_confirmed",
+      "locator": "conversation:2026-09-16:workbuddy-direct-config-approved",
+      "observedAt": "2026-09-16T10:00:00Z",
+      "scope": "target",
+      "status": "active",
+      "verificationLevel": 0,
+      "basisRefs": []
+    },
+    {
+      "id": "E-EXT-067",
+      "claim": "Official WorkBuddy documentation defines local custom-model configuration in workbuddy/models.json, OpenAI-compatible chat/completions endpoints, API-key and capability fields, and models.json hot update without restarting WorkBuddy. Official Windows guidance identifies WorkBuddy desktop installers and the common per-user installation directory.",
+      "class": "external_verified",
+      "locator": "https://www.workbuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/Function-Description/Model;https://www.workbuddy.cn/docs/cli/models;https://www.workbuddy.cn/docs/workbuddy/Changelog;https://www.workbuddy.cn/docs/workbuddy/From-Beginner-to-Expert-Guide/FAQ",
+      "observedAt": "2026-09-16T10:00:00Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": []
+    },
+    {
+      "id": "E-CODE-103",
+      "claim": "The current client allowlists five connection tools and has no WorkBuddy adapter. Local inspection of installed WorkBuddy 5.5.6 confirms bundle identity com.tencent.workbuddy.mac and a top-level model array at ~/.workbuddy/models.json with id, name, vendor, url, apiKey, capability and token-limit fields. The packaged application watches that file and accepts either the array form or the documented models wrapper.",
+      "class": "code_observed",
+      "locator": "src/configuration/activation.ts;src-tauri/src/tool_adapters/mod.rs;src-tauri/src/tool_activation.rs;local-inspection:WorkBuddy-5.5.6",
+      "observedAt": "2026-09-16T10:00:00Z",
+      "scope": "current",
+      "status": "active",
+      "verificationLevel": 1,
+      "basisRefs": [
+        "E-EXT-067"
+      ]
     }
   ]
 }

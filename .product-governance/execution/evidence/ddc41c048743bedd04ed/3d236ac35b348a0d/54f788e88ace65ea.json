@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU079-CURRENT-BASELINE",
+  "assertion": "Current Codex history fixture tests compile and pass under verifier-owned read-only source isolation without accessing installed profiles.",
+  "testSelector": "tests/work_packages/ru079/test_baseline.py::test_current_codex_history_baseline",
+  "acceptanceCommandId": "ru079-current-baseline",
+  "runId": "RU-079/WP-RU079-CURRENT-BASELINE@2026-09-16T07:39:59.211839+00:00",
+  "packageId": "WP-RU079-CURRENT-BASELINE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru079/test_baseline.py::test_current_codex_history_baseline",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:ac343f614cf7b04fcf6176141659c54881ea7a10fc6a2731a12aec00e9361301",
+    "machineReportSha256": "sha256:03d196aeac936bc8eb55bb16c8308282ab1abe5aaf49542805db58e27e940875",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:fd5d18d792cc97e5d92460037a60706a67175b57d1dcc41dc5e2513b90127f66",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:61d294d5a76fb4d4f31a4052f22385a043c03e4f3c9cf7823e255b63b15f5776",
+  "releaseUnitId": "RU-079",
+  "releaseUnitHash": "sha256:54bc5c3baca4c1a4e22b34dfa09ba9f42e8c9b1bb50769e31a7ea0226e2b2b15"
+}

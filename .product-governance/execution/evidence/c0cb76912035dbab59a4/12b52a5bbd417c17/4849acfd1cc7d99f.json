@@ -1,0 +1,28 @@
+{
+  "scenarioId": "CODEX-HISTORY-FIXTURES",
+  "assertion": "Happy, oversized metadata, replay, rollback and worker responsiveness preserve exact session bodies and scoped provider rows while avoiding whole-session inspection on the async runtime.",
+  "testSelector": "tests/work_packages/ru080/test_codex_history.py::test_codex_history_fixtures",
+  "acceptanceCommandId": "codex-history-fixtures",
+  "runId": "RU-080/WP-RU080-CODEX-HISTORY@2026-09-16T07:44:34.329065+00:00",
+  "packageId": "WP-RU080-CODEX-HISTORY",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru080/test_codex_history.py::test_codex_history_fixtures",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:0e7d6905dde82d328373823a24a4fb2da41a6f536e76bff83815142e026460b3",
+    "machineReportSha256": "sha256:2adfd54fb1bbe089ea34e071e51460fbd0d189403a92020861fcfb3adb629864",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:5568cb12cdb18b0dbf7f78e679ad99a4bbb57304a1a1cb8a7a77dc175356a154",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:60c952011974665b26587f17925b34a7d8950e3cbcab6358a5e70517f9a03c17",
+  "releaseUnitId": "RU-080",
+  "releaseUnitHash": "sha256:069f3a9e05707822863c794a2bafe8ce615d72216d1f3651933bf8ed580b2195"
+}

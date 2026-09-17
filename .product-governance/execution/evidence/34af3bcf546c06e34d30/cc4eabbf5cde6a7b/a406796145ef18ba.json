@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU084-WORKBUDDY-LIFECYCLE",
+  "assertion": "Exit restoration attempts WorkBuddy exactly once without skipping peers, sign-out clears its diagnostics, and renderer decoding accepts the exact WorkBuddy identifier while rejecting unsafe names.",
+  "testSelector": "tests/work_packages/ru084/test_workbuddy_lifecycle.py::test_workbuddy_lifecycle_support",
+  "acceptanceCommandId": "ru084-workbuddy-lifecycle",
+  "runId": "RU-084/WP-RU084-WORKBUDDY-LIFECYCLE@2026-09-16T16:39:00.739482+00:00",
+  "packageId": "WP-RU084-WORKBUDDY-LIFECYCLE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru084/test_workbuddy_lifecycle.py::test_workbuddy_lifecycle_support",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:423af6c40e34644a86c4610f465b3965146ce8f82c7c05d3ba94f37f852a5c1e",
+    "machineReportSha256": "sha256:013758d82b92c6a9e2f6a676ba0172b459bfecc5ad23956fa242a4cec98dabc9",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:654214cfbc2edf3bcdf68ca14dbf0998b62e9db24b117c28eb01b5f5e62b8241",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:a9e6edee75fb40ad74a8bdd2b1580615ab0b7e7b235da7f22a46c9661a6b8dcf",
+  "releaseUnitId": "RU-084",
+  "releaseUnitHash": "sha256:6a78bfb77b267db41e10cb7c007cc7255626a5e3b090da77ed15c12a913c8397"
+}

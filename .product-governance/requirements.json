@@ -2023,6 +2023,86 @@
         "Update/installer shutdown bypass restoration; no automatic third-party reopen. CLI config applies on next session.",
         "Fixture-only Rust/renderer tests and types; real-device testing deferred."
       ]
+    },
+    {
+      "id": "REQ-101",
+      "statement": "Keep Codex history takeover off the async runtime and avoid whole-file reads when only session metadata is inspected or rewritten, without changing messages, provider ownership, credentials or restore semantics.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-102",
+        "E-CODE-100"
+      ],
+      "acceptance": [
+        "Activation runs the blocking history takeover on a blocking worker and propagates worker or adapter failure through the existing closed error code.",
+        "Discovery and confirmation read only a bounded first JSONL record; rewriting streams the untouched tail through a same-directory atomic replacement instead of allocating the complete session file.",
+        "Session bodies, encrypted reasoning, IDs, timestamps, official auth state, model catalog and SQLite rows outside the manifest remain byte-for-byte or row-for-row untouched.",
+        "Existing manifest validation, pending recovery, rollback and active restore behavior remain compatible and idempotent.",
+        "Fixture-only native scenarios cover happy, oversized metadata, failure, rollback, replay and async-runtime responsiveness without reading installed Codex data or launching an application."
+      ]
+    },
+    {
+      "id": "REQ-102",
+      "statement": "Yeschoy-hosted third-party application downloads survive a failed public edge without sending novice users to GitHub or weakening artifact and platform trust.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "security-update",
+      "evidenceRefs": [
+        "E-USER-103",
+        "E-CODE-101"
+      ],
+      "acceptance": [
+        "Public ergou.qzz.io remains the first mirror route; direct-origin retry is limited to that exact hostname and compiled 43.134.77.210 endpoint.",
+        "The direct route bypasses environment proxies but preserves HTTPS certificate and hostname verification, redirect rejection, content type, size, SHA-256 and native package trust.",
+        "Catalog and artifact transport both retry through the direct origin before an existing official vendor fallback; local cancellation, disk, permission and cache failures never trigger another network route.",
+        "Resume metadata remains bound to the exact artifact URL, expected digest and size across both network routes, with no credential or cookie headers.",
+        "Fixture-only native tests prove public-route failure, direct-route success, no official contact, source projection mirror and unchanged digest validation."
+      ]
+    },
+    {
+      "id": "REQ-103",
+      "statement": "Prepare a fail-closed, reproducible DeepSeek Harness Desktop source-build candidate pipeline that removes GitHub from the end-user path and cannot publish unsigned or misattributed artifacts.",
+      "scope": "target",
+      "impact": "critical",
+      "state": "confirmed",
+      "owner": "security-update",
+      "evidenceRefs": [
+        "E-USER-103",
+        "E-EXT-066",
+        "E-CODE-102"
+      ],
+      "acceptance": [
+        "A closed build specification pins the official repository, commit, tree, exact root/Desktop version, Yeschoy preview application ID, license digest and supported native target commands.",
+        "Source verification rejects a changed remote, commit, tree, version, license, dirty tracked checkout, missing submodules or symlinked checkout boundary and emits no secret or arbitrary source path in public provenance.",
+        "Candidate preparation accepts only declared target extensions and bounded files whose SHA-256 and size exactly match a platform-native verification receipt.",
+        "Unset/placeholder publisher identity, unsigned Windows, unnotarized macOS, wrong app identity, wrong source receipt, mismatched artifact or unrecognized fields fail closed.",
+        "Prepared metadata truthfully labels the artifact as Yeschoy-built from official source and retains the MIT notice; it is not written into the official-byte mirror catalog and no public publication occurs in this unit.",
+        "Fixture-only tests exercise valid provenance plus dirty, wrong-commit, wrong-license, unsigned, wrong-publisher, mismatched-hash and replay cases without downloading source or running an installer."
+      ]
+    },
+    {
+      "id": "REQ-104",
+      "statement": "Provide recoverable one-click WorkBuddy model setup by directly managing only Yeschoy-owned entries in WorkBuddy's documented local model catalog, without a local gateway or application restart.",
+      "scope": "target",
+      "impact": "high",
+      "state": "confirmed",
+      "owner": "tool-config",
+      "evidenceRefs": [
+        "E-USER-104",
+        "E-EXT-067",
+        "E-CODE-103"
+      ],
+      "acceptance": [
+        "WorkBuddy is discoverable on supported macOS and Windows installations and appears as an explicit connection target.",
+        "Activation writes every selected account model to ~/.workbuddy/models.json using the compiled Yeschoy origin, the model's dedicated scoped credential and catalog-derived capability and token limits.",
+        "Top-level array and documented object-wrapper formats remain valid; unknown root data, unrelated models and user preference fields are preserved.",
+        "Activation performs atomic write and semantic readback, launches or focuses WorkBuddy when possible, requires no Yeschoy background runtime, and explains that the configured model is selected from WorkBuddy's model picker.",
+        "Restore uses the existing encrypted transaction and three-way owned-field merge; fallback cleanup removes only exact Yeschoy entries whose origin, vendor, model and scoped credential all match.",
+        "Fixture-only native and renderer tests cover write, hot-reload lifecycle projection, per-model credentials, malformed input, tamper detection, preservation and exact rollback without reading or launching the installed WorkBuddy application."
+      ]
     }
   ]
 }

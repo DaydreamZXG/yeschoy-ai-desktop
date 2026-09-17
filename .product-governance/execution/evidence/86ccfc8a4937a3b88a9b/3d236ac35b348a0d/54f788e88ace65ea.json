@@ -1,0 +1,14 @@
+{
+  "scenarioId": "RU079-CURRENT-BASELINE",
+  "assertion": "Current Codex history fixture tests compile and pass under verifier-owned read-only source isolation without accessing installed profiles.",
+  "testSelector": "tests/work_packages/ru079/test_baseline.py::test_current_codex_history_baseline",
+  "acceptanceCommandId": "ru079-current-baseline",
+  "runId": "RU-079/WP-RU079-CURRENT-BASELINE@2026-09-16T07:38:25.221154+00:00",
+  "packageId": "WP-RU079-CURRENT-BASELINE",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": false,
+  "runnerProof": null,
+  "commandResultHash": "sha256:534a4c0cd1464f009b5bc0ee818fa81cb0d782dc984ee7eb2c979adc3e5d22d6",
+  "releaseUnitId": "RU-079",
+  "releaseUnitHash": "sha256:54bc5c3baca4c1a4e22b34dfa09ba9f42e8c9b1bb50769e31a7ea0226e2b2b15"
+}

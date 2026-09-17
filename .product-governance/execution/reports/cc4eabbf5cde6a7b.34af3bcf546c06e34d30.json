@@ -1,0 +1,192 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-084/WP-RU084-WORKBUDDY-LIFECYCLE@2026-09-16T16:39:00.739482+00:00",
+  "packageId": "WP-RU084-WORKBUDDY-LIFECYCLE",
+  "baselineCommit": "1da460e9b2dc62883f8f1e829e2210ac91bed69e",
+  "baselineTreeHash": "sha256:deb9b93be04acb075e772222e279b49ee45914fefb0d772ff749a01c38ea7cb7",
+  "testedTreeHash": "sha256:8ac6a1ae74530a71ba1ea7746c4c64e2c695f3c4cacecb5366025d5e20ca657c",
+  "testedSnapshotPath": "execution/tested-snapshots/cc4eabbf5cde6a7b.34af3bcf546c06e34d30.json",
+  "testedSnapshotSha256": "sha256:6f238e70f468e54956b6c332d6af84c69e7011acb47838c816e76c7b25ba2af9",
+  "sourceDiff": {
+    "src-tauri/src/account_v2.rs": "sha256:149a8a973dc972aecc0196f296b8d62cba598b5e7d71458f9e20376d9d622a95",
+    "src-tauri/src/exit_restore.rs": "sha256:7a7e68a2fb99d6a67e20f13f78ab53cae4a6a0249396101dbf368cfc0f493839",
+    "src/settings/QuitAssistant.test.tsx": "sha256:ddc2ffdaeedb1fc1c86f79acba84817841940b683baa6c8b644aeab958157516",
+    "src/settings/QuitAssistant.tsx": "sha256:15e73ecdf0e23a6f10b139ed5b0c49f0036ad69844b476875a217b81683f5e9f",
+    "tests/work_packages/ru084/test_workbuddy_lifecycle.py": "sha256:26ff0d65850d6dd3995ba99e56cfe94dfae558f02c4547448d0e6cecef919045"
+  },
+  "ownedResultHashes": {
+    "src-tauri/src/account_v2.rs": "sha256:149a8a973dc972aecc0196f296b8d62cba598b5e7d71458f9e20376d9d622a95",
+    "src-tauri/src/exit_restore.rs": "sha256:7a7e68a2fb99d6a67e20f13f78ab53cae4a6a0249396101dbf368cfc0f493839",
+    "src/settings/QuitAssistant.test.tsx": "sha256:ddc2ffdaeedb1fc1c86f79acba84817841940b683baa6c8b644aeab958157516",
+    "src/settings/QuitAssistant.tsx": "sha256:15e73ecdf0e23a6f10b139ed5b0c49f0036ad69844b476875a217b81683f5e9f",
+    "tests/work_packages/ru084/test_workbuddy_lifecycle.py": "sha256:26ff0d65850d6dd3995ba99e56cfe94dfae558f02c4547448d0e6cecef919045"
+  },
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      "src-tauri/src/exit_restore.rs",
+      "src-tauri/src/account_v2.rs",
+      "src/settings/QuitAssistant.tsx",
+      "src/settings/QuitAssistant.test.tsx",
+      "tests/work_packages/ru084/**"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      "src-tauri/src/account_v2.rs": "sha256:149a8a973dc972aecc0196f296b8d62cba598b5e7d71458f9e20376d9d622a95",
+      "src-tauri/src/exit_restore.rs": "sha256:7a7e68a2fb99d6a67e20f13f78ab53cae4a6a0249396101dbf368cfc0f493839",
+      "src/settings/QuitAssistant.test.tsx": "sha256:ddc2ffdaeedb1fc1c86f79acba84817841940b683baa6c8b644aeab958157516",
+      "src/settings/QuitAssistant.tsx": "sha256:15e73ecdf0e23a6f10b139ed5b0c49f0036ad69844b476875a217b81683f5e9f",
+      "tests/work_packages/ru084/test_workbuddy_lifecycle.py": "sha256:26ff0d65850d6dd3995ba99e56cfe94dfae558f02c4547448d0e6cecef919045"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:4a2a4e769237c888f5850e2cd9a9b0e17bc57bdc73ec05d91b0dfb337c0ef2bb",
+  "sourceScopeFailures": [],
+  "integrityFailures": [],
+  "assignedTo": "root",
+  "startedAt": "2026-09-16T16:39:00.739482+00:00",
+  "finishedAt": "2026-09-16T16:50:43.358957+00:00",
+  "passed": true,
+  "commands": [
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru084-workbuddy-lifecycle",
+        "kind": "scenario_test",
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru084/test_workbuddy_lifecycle.py::test_workbuddy_lifecycle_support",
+        "cwd": ".",
+        "timeoutSeconds": 1200
+      },
+      "runnerMetadata": {
+        "adapter": "pytest-json@1",
+        "declaredCwd": ".",
+        "cwd": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "selector": "tests/work_packages/ru084/test_workbuddy_lifecycle.py::test_workbuddy_lifecycle_support",
+        "selectorRealpath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/tests/work_packages/ru084/test_workbuddy_lifecycle.py",
+        "runnerArgv": [
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru084/test_workbuddy_lifecycle.py::test_workbuddy_lifecycle_support",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-khu0qvut/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-khu0qvut/pytest-basetemp"
+        ],
+        "sandboxedArgv": [
+          "/usr/bin/sandbox-exec",
+          "-p",
+          "(version 1)\n(allow default)\n(deny file-write*\n  (require-not\n    (require-any\n      (subpath \"/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-khu0qvut\")\n      (literal \"/dev/null\"))))\n",
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru084/test_workbuddy_lifecycle.py::test_workbuddy_lifecycle_support",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-khu0qvut/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-khu0qvut/pytest-basetemp"
+        ],
+        "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "pythonRealpath": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+        "pythonExecutableSha256": "sha256:6b24be8ba00c4abc8b3e7e2620bd710e2cf7a4312d00c147f8f05fbb6f3d297a",
+        "pytestVersion": "8.4.2",
+        "pytestDistributionVersion": "8.4.2",
+        "pytestModulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+        "pytestModuleSha256": "sha256:66993a5e3905005e0981159b4794d10b1adacf341a58a44d696ad2c4442dcdc6",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "executable": "/usr/bin/sandbox-exec",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea",
+          "policySha256": "sha256:654214cfbc2edf3bcdf68ca14dbf0998b62e9db24b117c28eb01b5f5e62b8241",
+          "projectRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+          "writableRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-khu0qvut",
+          "policyVersion": 1
+        }
+      },
+      "machineReport": {
+        "adapter": "pytest-json@1",
+        "collectedNodeIds": [
+          "tests/work_packages/ru084/test_workbuddy_lifecycle.py::test_workbuddy_lifecycle_support"
+        ],
+        "collectionErrors": [],
+        "deselectedNodeIds": [],
+        "pytestExitCode": 0,
+        "pytestRootPath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "runner": {
+          "distributionVersion": "8.4.2",
+          "modulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+          "moduleVersion": "8.4.2",
+          "name": "pytest",
+          "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "pythonVersion": "3.9.6"
+        },
+        "schemaVersion": 1,
+        "selector": "tests/work_packages/ru084/test_workbuddy_lifecycle.py::test_workbuddy_lifecycle_support",
+        "tests": [
+          {
+            "nodeId": "tests/work_packages/ru084/test_workbuddy_lifecycle.py::test_workbuddy_lifecycle_support",
+            "phases": {
+              "call": {
+                "outcome": "passed"
+              },
+              "setup": {
+                "outcome": "passed"
+              },
+              "teardown": {
+                "outcome": "passed"
+              }
+            }
+          }
+        ]
+      },
+      "process": {
+        "actualExitCode": 0,
+        "timedOut": false,
+        "stdout": "============================= test session starts ==============================\nplatform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0\nrootdir: /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop\nplugins: anyio-4.12.1\ncollected 1 item\n\ntests/work_packages/ru084/test_workbuddy_lifecycle.py .                  [100%]\n\n======================== 1 passed in 163.69s (0:02:43) =========================\n",
+        "stderr": ""
+      },
+      "validationErrors": [],
+      "runnerProof": {
+        "schemaVersion": 1,
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru084/test_workbuddy_lifecycle.py::test_workbuddy_lifecycle_support",
+        "cwd": ".",
+        "executedPassingTests": 1,
+        "actualExitCode": 0,
+        "runnerMetadataSha256": "sha256:423af6c40e34644a86c4610f465b3965146ce8f82c7c05d3ba94f37f852a5c1e",
+        "machineReportSha256": "sha256:013758d82b92c6a9e2f6a676ba0172b459bfecc5ad23956fa242a4cec98dabc9",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "policySha256": "sha256:654214cfbc2edf3bcdf68ca14dbf0998b62e9db24b117c28eb01b5f5e62b8241",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+        }
+      },
+      "passed": true,
+      "id": "ru084-workbuddy-lifecycle",
+      "kind": "scenario_test",
+      "actualExitCode": 0,
+      "timedOut": false,
+      "scenarioId": "RU084-WORKBUDDY-LIFECYCLE"
+    }
+  ],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU084-WORKBUDDY-LIFECYCLE",
+      "path": "execution/evidence/34af3bcf546c06e34d30/cc4eabbf5cde6a7b/a406796145ef18ba.json",
+      "sha256": "sha256:33fd0a4208212281fb5a78b84d81c4670d1d656d9ae820c53f0f257d7a93b493"
+    }
+  ],
+  "scenarioEvidenceFailures": [],
+  "releaseUnitId": "RU-084",
+  "releaseUnitHash": "sha256:6a78bfb77b267db41e10cb7c007cc7255626a5e3b090da77ed15c12a913c8397"
+}

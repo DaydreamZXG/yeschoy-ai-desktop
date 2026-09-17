@@ -1,0 +1,28 @@
+{
+  "scenarioId": "RU081-DIRECT-ORIGIN-FALLBACK",
+  "assertion": "A failed public mirror transport retries the same hash-bound artifact through the direct mirror client, succeeds without contacting the official source, remains projected as mirror and sends no credential headers.",
+  "testSelector": "tests/work_packages/ru081/test_download_routes.py::test_mirror_direct_origin_fallback",
+  "acceptanceCommandId": "ru081-direct-origin",
+  "runId": "RU-081/WP-RU081-DOMESTIC-DIRECT-ORIGIN@2026-09-16T08:43:30.469316+00:00",
+  "packageId": "WP-RU081-DOMESTIC-DIRECT-ORIGIN",
+  "evidenceOwner": "govern-product-build/verifier",
+  "passed": true,
+  "runnerProof": {
+    "schemaVersion": 1,
+    "adapter": "pytest-json@1",
+    "selector": "tests/work_packages/ru081/test_download_routes.py::test_mirror_direct_origin_fallback",
+    "cwd": ".",
+    "executedPassingTests": 1,
+    "actualExitCode": 0,
+    "runnerMetadataSha256": "sha256:bb2e4c1dd44a55add22f6c78cfe9eff151c73d4433124cab27ec6c30e94befc8",
+    "machineReportSha256": "sha256:660270c78b9ce044012fc26ba7f07aae4c33ba9f4cb37cf8a935a944b89a2a15",
+    "isolation": {
+      "adapter": "darwin-sandbox-exec-readonly-source@1",
+      "policySha256": "sha256:eb34f6341f18a8ee21853bbb43e894b7651648c601e0a45e2e6c9c768945f2d9",
+      "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+    }
+  },
+  "commandResultHash": "sha256:f621f39077a0d400af813d3164fc18ec74860743f8bbc1b1a1546b7262ca6fd3",
+  "releaseUnitId": "RU-081",
+  "releaseUnitHash": "sha256:20cc7def5c79d1ad87b0f78d49ed41db946a51d166cf7922b2380d0660175051"
+}

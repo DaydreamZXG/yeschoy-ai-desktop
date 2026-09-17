@@ -9859,6 +9859,605 @@
         "Real device/production authority required"
       ],
       "status": "planned"
+    },
+    {
+      "id": "WP-RU079-CURRENT-BASELINE",
+      "wave": "integration",
+      "owner": "desktop-platform",
+      "riskClass": "high",
+      "objective": "Establish a source-readonly content-bound baseline for the current released tree before the Codex history repair.",
+      "deliverables": [
+        "Content-addressed acknowledgement of inherited source drift",
+        "Fixture-only native baseline evidence",
+        "Explicit exclusion of real devices, packaging and production readiness"
+      ],
+      "requirementRefs": [
+        "REQ-098"
+      ],
+      "decisionRefs": [
+        "DEC-127"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No source changes during verification",
+        "No installed app operations, package, push, deployment or certificate purchase",
+        "No claim that inherited code is fully compatible or production-ready"
+      ],
+      "dependsOn": [],
+      "allowedPaths": [
+        ".github/workflows/**",
+        ".trellis/**",
+        "CHANGELOG.md",
+        "CONTRIBUTING.md",
+        "README.md",
+        "README_DE.md",
+        "README_ES.md",
+        "README_JA.md",
+        "README_KO.md",
+        "README_RU.md",
+        "README_ZH.md",
+        "SECURITY.md",
+        "deploy/**",
+        "docs/**",
+        "outputs/**",
+        "package.json",
+        "pnpm-lock.yaml",
+        "scripts/**",
+        "src/**",
+        "src-tauri/**",
+        "tests/**",
+        "tsconfig.json",
+        "vitest.config.ts"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".git/**",
+        "node_modules/**",
+        "release/**",
+        "release-assets/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No runtime or persisted data changes; reconciliation only binds the exact inherited source tree.",
+        "rollback": "No source writes are permitted in this verification-only package."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Acknowledge the current published source without changing any runtime contract.",
+        "supportedVersions": "Current repository state with fixture-only native evidence; real-device behavior remains unverified.",
+        "removalGate": "Preserve all historical reports, snapshots and release records."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v10",
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [],
+      "acceptanceCommands": [
+        {
+          "id": "ru079-current-baseline",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru079/test_baseline.py::test_current_codex_history_baseline",
+          "cwd": ".",
+          "timeoutSeconds": 900
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU079-CURRENT-BASELINE",
+          "assertion": "Current Codex history fixture tests compile and pass under verifier-owned read-only source isolation without accessing installed profiles.",
+          "testSelector": "tests/work_packages/ru079/test_baseline.py::test_current_codex_history_baseline",
+          "acceptanceCommandId": "ru079-current-baseline"
+        }
+      ],
+      "verificationOnly": true,
+      "stopConditions": [
+        "Any source write, historical-proof mismatch, stale reconciliation or real installed-profile access.",
+        "The current native fixture suite cannot compile and pass in isolated output storage."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU080-CODEX-HISTORY",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "high",
+      "objective": "Bound Codex history takeover memory and keep its initial scan off the async runtime without changing provider or restore semantics.",
+      "deliverables": [
+        "Bounded first-record JSONL inspection",
+        "Streamed atomic session metadata rewrite",
+        "Blocking-worker activation handoff and fixture-only regression evidence"
+      ],
+      "requirementRefs": [
+        "REQ-101"
+      ],
+      "decisionRefs": [
+        "DEC-127"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No new-session provider policy, encrypted-reasoning conversion or model fallback",
+        "No changes to Claude, Pi, DSH or OpenCode behavior in this unit",
+        "No installed app operations, package, push, deployment or certificate purchase"
+      ],
+      "dependsOn": [
+        "WP-RU079-CURRENT-BASELINE"
+      ],
+      "allowedPaths": [
+        "src-tauri/src/codex_history_takeover.rs",
+        "src-tauri/src/tool_activation.rs",
+        "src-tauri/src/tool_adapters/common.rs",
+        "tests/work_packages/ru080/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "release/**",
+        "release-assets/**",
+        "src-tauri/src/tool_adapters/claude_code.rs",
+        "src-tauri/src/tool_adapters/claude_desktop.rs",
+        "src-tauri/src/tool_adapters/pi.rs",
+        "src-tauri/src/tool_adapters/dsh_web.rs"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "Retain manifest v1 and the existing scoped provider metadata migration; no persisted schema or user-message migration.",
+        "rollback": "Source-only rollback. Fixture verification uses temporary homes and never reads the installed Codex profile."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve desktop-tool-activation@v10 and desktop-connection-management@v2 wire and recovery behavior; change only native I/O execution and memory shape.",
+        "supportedVersions": "Current committed macOS and Windows native code paths with fixture-only JSONL and SQLite coverage.",
+        "removalGate": "Do not remove manifest recovery, official-provider rebucketing, atomic replacement or exact-provider guards."
+      },
+      "inputContracts": [
+        "desktop-tool-activation@v10",
+        "desktop-connection-management@v2"
+      ],
+      "outputContracts": [
+        "desktop-tool-activation@v10",
+        "desktop-connection-management@v2"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "codex-history-fixtures",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru080/test_codex_history.py::test_codex_history_fixtures",
+          "cwd": ".",
+          "timeoutSeconds": 900
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "CODEX-HISTORY-FIXTURES",
+          "assertion": "Happy, oversized metadata, replay, rollback and worker responsiveness preserve exact session bodies and scoped provider rows while avoiding whole-session inspection on the async runtime.",
+          "testSelector": "tests/work_packages/ru080/test_codex_history.py::test_codex_history_fixtures",
+          "acceptanceCommandId": "codex-history-fixtures"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "A change requires new-session ownership semantics, message conversion or a host-application launch.",
+        "Historical proof, predecessor baseline or read-only fixture acceptance cannot be validated."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU081-DOMESTIC-DIRECT-ORIGIN",
+      "wave": "integration",
+      "owner": "security-update",
+      "riskClass": "critical",
+      "objective": "Add a certificate-valid direct-origin fallback for the existing Yeschoy mirror without changing catalog, package identity, trust or official-source behavior.",
+      "deliverables": [
+        "Closed public and direct mirror HTTP clients",
+        "Catalog and artifact route fallback with unchanged digest and native trust",
+        "Fixture-only routing, resume and credential-absence evidence"
+      ],
+      "requirementRefs": [
+        "REQ-102"
+      ],
+      "decisionRefs": [
+        "DEC-128"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No DSH source build, package signing, publication, application identity or installed-app operation in this unit",
+        "No server, DNS, Caddy, GitHub, updater, account, credential or renderer change",
+        "No plaintext-IP URL, caller-selected host, disabled TLS or claim of mainland-operator acceptance"
+      ],
+      "dependsOn": [
+        "WP-RU080-CODEX-HISTORY"
+      ],
+      "allowedPaths": [
+        "src-tauri/src/app_installation/download.rs",
+        "src-tauri/src/app_installation/origins.rs",
+        "src-tauri/src/app_installation/tests.rs",
+        "tests/work_packages/ru081/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        "deploy/**",
+        "release/**",
+        "release-assets/**",
+        ".github/**",
+        "src/installation/**",
+        "src-tauri/src/app_installation/catalog.rs",
+        "src-tauri/src/app_installation/platform.rs",
+        "src-tauri/src/tool_activation.rs",
+        "src-tauri/src/tool_adapters/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No persisted schema or user-state migration. Existing cache metadata remains URL, expected digest and expected size bound.",
+        "rollback": "Source-only rollback returns to public mirror then official vendor fallback; cached partial bytes remain subject to the same validators."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Preserve desktop-app-installation@v4 wire schema, source enum and native package validation; only add an internal network route for the same mirror hostname.",
+        "supportedVersions": "Current compiled macOS and Windows installer sources with fixture-only native routing coverage.",
+        "removalGate": "Never remove public-first routing, official fallback for existing vendor packages, exact digest/size binding, TLS verification or native signature checks."
+      },
+      "inputContracts": [
+        "desktop-app-installation@v4",
+        "vendor-download-catalog@v2"
+      ],
+      "outputContracts": [
+        "desktop-app-installation@v4",
+        "vendor-download-catalog@v2"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru081-direct-origin",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru081/test_download_routes.py::test_mirror_direct_origin_fallback",
+          "cwd": ".",
+          "timeoutSeconds": 1200
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU081-DIRECT-ORIGIN-FALLBACK",
+          "assertion": "A failed public mirror transport retries the same hash-bound artifact through the direct mirror client, succeeds without contacting the official source, remains projected as mirror and sends no credential headers.",
+          "testSelector": "tests/work_packages/ru081/test_download_routes.py::test_mirror_direct_origin_fallback",
+          "acceptanceCommandId": "ru081-direct-origin"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "The route requires a different hostname, certificate bypass, plaintext address, credentials or caller-controlled resolver.",
+        "The change alters package identity, digest, size, native trust, renderer wire behavior or installed application state."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU082-DSH-SOURCE-BUILD",
+      "wave": "release",
+      "owner": "security-update",
+      "riskClass": "critical",
+      "objective": "Create the pinned DeepSeek Harness source verifier and fail-closed signed candidate preparation boundary without publishing or modifying the desktop client.",
+      "deliverables": [
+        "Immutable official-source build specification and retained MIT notice",
+        "Checkout provenance verifier with closed receipts",
+        "Platform-native receipt-bound candidate preparer that refuses placeholder identities and unsigned output"
+      ],
+      "requirementRefs": [
+        "REQ-103"
+      ],
+      "decisionRefs": [
+        "DEC-129"
+      ],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No package build, signing, notarization, upload, DNS, Caddy, catalog or client UI mutation",
+        "No GitHub download on an end-user machine and no automatic update authority for the preview build",
+        "No claim that a fixture receipt proves a real platform signature or clean-device installation"
+      ],
+      "dependsOn": [
+        "WP-RU081-DOMESTIC-DIRECT-ORIGIN"
+      ],
+      "allowedPaths": [
+        "deploy/dsh-source-build/**",
+        "tests/work_packages/ru082/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/download-origin/**",
+        "deploy/vendor-sync/**",
+        "release/**",
+        "release-assets/**",
+        "src/**",
+        "src-tauri/**"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No public or user state exists. Candidate files are private operator artifacts outside the repository.",
+        "rollback": "Remove or stop using the source-build preparation tools; no public catalog or client points to their output."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Use the upstream documented target commands without modifying upstream source and keep Yeschoy provenance separate from the vendor mirror contract.",
+        "supportedVersions": "Only upstream commit 0d1f50007f9bca3f52b06e1c3074fa14d5fb0720 / tree 80b651cca20f29d587518cf07a978f2bc58bc2c1 / version 0.1.6-alpha.1.",
+        "removalGate": "A new upstream commit, signer, application ID or target requires a new reviewed build specification and cannot mutate an existing candidate identity."
+      },
+      "inputContracts": [],
+      "outputContracts": [
+        "dsh-source-build-candidate@v1"
+      ],
+      "acceptanceCommands": [
+        {
+          "id": "ru082-source-build-boundary",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru082/test_dsh_source_build.py::test_source_build_boundary",
+          "cwd": ".",
+          "timeoutSeconds": 600
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU082-SOURCE-BUILD-BOUNDARY",
+          "assertion": "Pinned clean official source produces closed provenance, while dirty or changed source and unsigned, unnotarized, placeholder, mismatched or replayed artifact receipts cannot produce a publishable candidate.",
+          "testSelector": "tests/work_packages/ru082/test_dsh_source_build.py::test_source_build_boundary",
+          "acceptanceCommandId": "ru082-source-build-boundary"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Upstream source, version, license or build requirements cannot be pinned to immutable evidence.",
+        "Candidate preparation would accept an unsigned package, placeholder identity, mutable source or unverified native receipt.",
+        "Work requires operating a real signing key, native installer, public server or end-user application."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU083-WORKBUDDY-DIRECT",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "high",
+      "objective": "Add recoverable one-click WorkBuddy support through its documented direct local model catalog without a local gateway or forced application restart.",
+      "deliverables": [
+        "Cross-platform WorkBuddy discovery and official guided installation link",
+        "Atomic shape-preserving WorkBuddy model catalog adapter with exact per-model scoped credentials",
+        "Renderer application card, configuration preview, hot-reload lifecycle guidance and connection recovery"
+      ],
+      "requirementRefs": ["REQ-104"],
+      "decisionRefs": ["DEC-130"],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No local gateway, undocumented default-model mutation, application termination, chat migration or paid model request",
+        "No modification of the user's real WorkBuddy profile during implementation or tests",
+        "No WorkBuddy installer mirroring, automatic vendor package installation, package signing or publication in this unit"
+      ],
+      "dependsOn": ["WP-RU082-DSH-SOURCE-BUILD"],
+      "allowedPaths": [
+        "src/assets/icons/official-workbuddy.png",
+        "src/configuration/**",
+        "src/installation/**",
+        "src/settings/AdvancedConnectionDetails.tsx",
+        "src/workbench/appCatalog.ts",
+        "src/workbench/appCatalog.test.ts",
+        "src-tauri/src/app_installation/catalog.rs",
+        "src-tauri/src/connection_recovery.rs",
+        "src-tauri/src/desktop_app_discovery.rs",
+        "src-tauri/src/desktop_app_discovery_core.rs",
+        "src-tauri/src/open_connection.rs",
+        "src-tauri/src/tool_activation.rs",
+        "src-tauri/src/tool_adapters/mod.rs",
+        "src-tauri/src/tool_adapters/workbuddy.rs",
+        "src-tauri/src/tool_credentials.rs",
+        "src-tauri/src/tool_model_profile.rs",
+        "tests/work_packages/ru083/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release/**",
+        "release-assets/**",
+        "src-tauri/src/tool_adapters/claude_code.rs",
+        "src-tauri/src/tool_adapters/claude_desktop.rs",
+        "src-tauri/src/tool_adapters/codex_desktop.rs",
+        "src-tauri/src/tool_adapters/dsh_web.rs",
+        "src-tauri/src/tool_adapters/pi.rs",
+        "src-tauri/src/tool_adapters/common.rs"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No eager migration. The first explicit activation preserves the existing array or object-wrapper shape and adds only exact Yeschoy model entries.",
+        "rollback": "Encrypted three-way recovery restores original entries and preserves unrelated or later user changes; legacy fallback removes only exact Yeschoy-owned entries."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Extend the closed target set from five to six while retaining activation wire schema 4 and connection-management wire schema 2. Existing target behavior remains unchanged.",
+        "supportedVersions": "WorkBuddy versions that implement the documented models.json OpenAI-compatible provider format; local evidence covers macOS 5.5.6 and Windows discovery is fixture-verified.",
+        "removalGate": "Do not remove support or change owned fields until official WorkBuddy documentation and a migration path are reviewed; never replace direct configuration with a gateway implicitly."
+      },
+      "inputContracts": ["desktop-tool-activation@v11", "desktop-connection-management@v3"],
+      "outputContracts": ["desktop-tool-activation@v11", "desktop-connection-management@v3"],
+      "acceptanceCommands": [
+        {
+          "id": "ru083-workbuddy-direct",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru083/test_workbuddy.py::test_workbuddy_direct_support",
+          "cwd": ".",
+          "timeoutSeconds": 1200
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU083-WORKBUDDY-DIRECT",
+          "assertion": "Array and object WorkBuddy catalogs receive exact direct account models and distinct scoped credentials while preserving unrelated data; malformed, tampered and restore scenarios fail safely, lifecycle projection requires no gateway or restart, and macOS/Windows discovery remains closed and fixture verified.",
+          "testSelector": "tests/work_packages/ru083/test_workbuddy.py::test_workbuddy_direct_support",
+          "acceptanceCommandId": "ru083-workbuddy-direct"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "Official WorkBuddy configuration no longer supports a local OpenAI-compatible model catalog or requires an undocumented credential flow.",
+        "Implementation would need to read or mutate the installed user's real profile, terminate WorkBuddy, introduce a local gateway or publish an installer.",
+        "Exact model/group credentials, atomic restore or shape preservation cannot be demonstrated with fixture-only tests."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU084-WORKBUDDY-LIFECYCLE",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "high",
+      "objective": "Complete WorkBuddy lifecycle parity so explicit exit restoration, account sign-out cleanup and renderer failure decoding include the sixth supported tool.",
+      "deliverables": [
+        "WorkBuddy participation in ordered best-effort exit restoration",
+        "WorkBuddy diagnostic cleanup during account sign-out",
+        "Closed renderer decoding and human-readable retry UI for WorkBuddy restoration failures"
+      ],
+      "requirementRefs": ["REQ-104"],
+      "decisionRefs": ["DEC-130"],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No change to WorkBuddy catalog fields, credentials, discovery, installation or launch behavior",
+        "No real application quit, account logout, profile mutation or paid model request during tests",
+        "No lifecycle change for the five previously supported tools"
+      ],
+      "dependsOn": ["WP-RU083-WORKBUDDY-DIRECT"],
+      "allowedPaths": [
+        "src-tauri/src/exit_restore.rs",
+        "src-tauri/src/account_v2.rs",
+        "src/settings/QuitAssistant.tsx",
+        "src/settings/QuitAssistant.test.tsx",
+        "tests/work_packages/ru084/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release/**",
+        "release-assets/**",
+        "src-tauri/src/tool_adapters/**",
+        "src-tauri/src/connection_recovery.rs",
+        "src-tauri/src/tool_activation.rs",
+        "src-tauri/src/tool_credentials.rs"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No state migration. Existing recovery records are already keyed by tool and WorkBuddy records participate on the next explicit restore or logout.",
+        "rollback": "Source rollback removes WorkBuddy only from lifecycle enumeration; it does not mutate any persisted recovery record or user profile."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Extend only closed six-tool enumerations and keep existing exit/account wire shapes unchanged.",
+        "supportedVersions": "Current desktop exit coordinator, account v2 sign-out and WorkBuddy direct recovery records.",
+        "removalGate": "Do not remove WorkBuddy from restoration while activation can create a WorkBuddy recovery record."
+      },
+      "inputContracts": ["desktop-tool-activation@v11", "desktop-connection-management@v3"],
+      "outputContracts": ["desktop-tool-activation@v11", "desktop-connection-management@v3"],
+      "acceptanceCommands": [
+        {
+          "id": "ru084-workbuddy-lifecycle",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru084/test_workbuddy_lifecycle.py::test_workbuddy_lifecycle_support",
+          "cwd": ".",
+          "timeoutSeconds": 1200
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU084-WORKBUDDY-LIFECYCLE",
+          "assertion": "Exit restoration attempts WorkBuddy exactly once without skipping peers, sign-out clears its diagnostics, and renderer decoding accepts the exact WorkBuddy identifier while rejecting unsafe names.",
+          "testSelector": "tests/work_packages/ru084/test_workbuddy_lifecycle.py::test_workbuddy_lifecycle_support",
+          "acceptanceCommandId": "ru084-workbuddy-lifecycle"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "The change requires a new wire field, destructive cleanup or direct access to a real user profile.",
+        "WorkBuddy cannot reuse the existing exact restore and diagnostics-clear contracts.",
+        "A failure would prevent the other five tools from being restored."
+      ],
+      "status": "planned"
+    },
+    {
+      "id": "WP-RU085-WORKBUDDY-REGRESSION-PARITY",
+      "wave": "integration",
+      "owner": "tool-config",
+      "riskClass": "medium",
+      "objective": "Align closed-set regression fixtures and visible artwork with WorkBuddy as the sixth supported activation target.",
+      "deliverables": [
+        "Six-target native and renderer regression expectations",
+        "Workbench activation-scan fixture and expanded-card counts including WorkBuddy",
+        "Bundled official WorkBuddy artwork from the installed vendor application"
+      ],
+      "requirementRefs": ["REQ-104"],
+      "decisionRefs": ["DEC-130"],
+      "blockingDecisionRefs": [],
+      "nonGoals": [
+        "No change to activation, recovery, credential, discovery or lifecycle behavior",
+        "No network fetch, package mutation, real profile access or application launch",
+        "No redesign of existing application cards or other vendor artwork"
+      ],
+      "dependsOn": ["WP-RU084-WORKBUDDY-LIFECYCLE"],
+      "allowedPaths": [
+        "src-tauri/src/tool_activation.rs",
+        "src/assets/icons/official-workbuddy.svg",
+        "src/configuration/connections.test.tsx",
+        "src/configuration/DailyUse.test.tsx",
+        "src/workbench/AppGlyph.test.tsx",
+        "src/workbench/Workbench.test.tsx",
+        "src/workbench/appCatalog.ts",
+        "tests/work_packages/ru085/**"
+      ],
+      "forbiddenPaths": [
+        ".product-governance/**",
+        ".github/**",
+        "deploy/**",
+        "release/**",
+        "release-assets/**",
+        "src-tauri/src/tool_adapters/**",
+        "src-tauri/src/connection_recovery.rs",
+        "src-tauri/src/tool_credentials.rs",
+        "src/configuration/activation.ts"
+      ],
+      "migrationPolicy": {
+        "mode": "none",
+        "ownedPaths": [],
+        "dataBackfill": "No persisted state or schema change; this unit aligns fixtures and bundled presentation assets only.",
+        "rollback": "Revert fixture counts and artwork import together; no user state is changed."
+      },
+      "compatibilityPolicy": {
+        "strategy": "Keep the six-target contract established by RU-083 and update only stale five-target expectations.",
+        "supportedVersions": "Current renderer and Rust regression suites under desktop-tool-activation@v11.",
+        "removalGate": "Tests must continue to derive closed target behavior from the six-target catalog and reject omissions or duplicates."
+      },
+      "inputContracts": ["desktop-tool-activation@v11", "desktop-connection-management@v3"],
+      "outputContracts": ["desktop-tool-activation@v11", "desktop-connection-management@v3"],
+      "acceptanceCommands": [
+        {
+          "id": "ru085-workbuddy-regression-parity",
+          "kind": "scenario_test",
+          "adapter": "pytest-json@1",
+          "selector": "tests/work_packages/ru085/test_workbuddy_regression.py::test_workbuddy_regression_parity",
+          "cwd": ".",
+          "timeoutSeconds": 1200
+        }
+      ],
+      "requiredAcceptanceScenarios": [
+        {
+          "id": "RU085-WORKBUDDY-REGRESSION-PARITY",
+          "assertion": "The native six-target panic-isolation test and the renderer connection, daily-use, artwork and workbench suites all pass with exactly one WorkBuddy target and bundled local artwork.",
+          "testSelector": "tests/work_packages/ru085/test_workbuddy_regression.py::test_workbuddy_regression_parity",
+          "acceptanceCommandId": "ru085-workbuddy-regression-parity"
+        }
+      ],
+      "verificationOnly": false,
+      "stopConditions": [
+        "A passing suite would require weakening closed-set decoding or removing another supported target.",
+        "Artwork cannot be sourced from the installed official WorkBuddy bundle without network access.",
+        "Any change would alter production activation or recovery behavior rather than stale regression expectations."
+      ],
+      "status": "planned"
     }
   ]
 }

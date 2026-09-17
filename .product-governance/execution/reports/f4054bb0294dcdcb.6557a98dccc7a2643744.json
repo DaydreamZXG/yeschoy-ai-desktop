@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-081/WP-RU081-DOMESTIC-DIRECT-ORIGIN@2026-09-16T08:43:30.469316+00:00",
+  "packageId": "WP-RU081-DOMESTIC-DIRECT-ORIGIN",
+  "baselineCommit": "1da460e9b2dc62883f8f1e829e2210ac91bed69e",
+  "baselineTreeHash": "sha256:77ef645521b58a13f3ad1d63bd614848c28072a1644acba9eb9441f3b5046e89",
+  "testedTreeHash": "sha256:6435e4c327c295a7d560128304d187b64b7245886b1047f8cf7adc00a0c3345b",
+  "testedSnapshotPath": "execution/tested-snapshots/f4054bb0294dcdcb.6557a98dccc7a2643744.json",
+  "testedSnapshotSha256": "sha256:87127451185f9a435105f8e0d99a126a68c3e8a5b959a6ec9d386e2f00e4f661",
+  "sourceDiff": {
+    "src-tauri/src/app_installation/download.rs": "sha256:94fead9e330b27165e9b870e45c0b27cdc0aac2f5032dc9f12f9c295d01cb10f",
+    "src-tauri/src/app_installation/origins.rs": "sha256:80e19e21d4f517d71cca2811367d779ceb2aafc08769e7420820a3054c0f8a55",
+    "src-tauri/src/app_installation/tests.rs": "sha256:43389c8b80677f5f848a695f60b70f9e919815fd9a3f0069c8b9b463658bb058",
+    "tests/work_packages/ru081/test_download_routes.py": "sha256:50e0947ab11bba26146d90795e3f20ae73f55dca3b84788d0089fd81828b6e19"
+  },
+  "ownedResultHashes": {
+    "src-tauri/src/app_installation/download.rs": "sha256:94fead9e330b27165e9b870e45c0b27cdc0aac2f5032dc9f12f9c295d01cb10f",
+    "src-tauri/src/app_installation/origins.rs": "sha256:80e19e21d4f517d71cca2811367d779ceb2aafc08769e7420820a3054c0f8a55",
+    "src-tauri/src/app_installation/tests.rs": "sha256:43389c8b80677f5f848a695f60b70f9e919815fd9a3f0069c8b9b463658bb058",
+    "tests/work_packages/ru081/test_download_routes.py": "sha256:50e0947ab11bba26146d90795e3f20ae73f55dca3b84788d0089fd81828b6e19"
+  },
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      "src-tauri/src/app_installation/download.rs",
+      "src-tauri/src/app_installation/origins.rs",
+      "src-tauri/src/app_installation/tests.rs",
+      "tests/work_packages/ru081/**"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      "src-tauri/src/app_installation/download.rs": "sha256:94fead9e330b27165e9b870e45c0b27cdc0aac2f5032dc9f12f9c295d01cb10f",
+      "src-tauri/src/app_installation/origins.rs": "sha256:80e19e21d4f517d71cca2811367d779ceb2aafc08769e7420820a3054c0f8a55",
+      "src-tauri/src/app_installation/tests.rs": "sha256:43389c8b80677f5f848a695f60b70f9e919815fd9a3f0069c8b9b463658bb058",
+      "tests/work_packages/ru081/test_download_routes.py": "sha256:50e0947ab11bba26146d90795e3f20ae73f55dca3b84788d0089fd81828b6e19"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:036741dc16755ccf8d91e4ecf9e37edbb19a6e4c50346593903b098c0e973bb9",
+  "sourceScopeFailures": [],
+  "integrityFailures": [],
+  "assignedTo": "/root",
+  "startedAt": "2026-09-16T08:43:30.469316+00:00",
+  "finishedAt": "2026-09-16T08:52:18.552434+00:00",
+  "passed": true,
+  "commands": [
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru081-direct-origin",
+        "kind": "scenario_test",
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru081/test_download_routes.py::test_mirror_direct_origin_fallback",
+        "cwd": ".",
+        "timeoutSeconds": 1200
+      },
+      "runnerMetadata": {
+        "adapter": "pytest-json@1",
+        "declaredCwd": ".",
+        "cwd": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "selector": "tests/work_packages/ru081/test_download_routes.py::test_mirror_direct_origin_fallback",
+        "selectorRealpath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/tests/work_packages/ru081/test_download_routes.py",
+        "runnerArgv": [
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/scripts/governance/runtime/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru081/test_download_routes.py::test_mirror_direct_origin_fallback",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-tqqp2p78/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-tqqp2p78/pytest-basetemp"
+        ],
+        "sandboxedArgv": [
+          "/usr/bin/sandbox-exec",
+          "-p",
+          "(version 1)\n(allow default)\n(deny file-write*\n  (require-not\n    (require-any\n      (subpath \"/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-tqqp2p78\")\n      (literal \"/dev/null\"))))\n",
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/scripts/governance/runtime/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru081/test_download_routes.py::test_mirror_direct_origin_fallback",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-tqqp2p78/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-tqqp2p78/pytest-basetemp"
+        ],
+        "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "pythonRealpath": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+        "pythonExecutableSha256": "sha256:6b24be8ba00c4abc8b3e7e2620bd710e2cf7a4312d00c147f8f05fbb6f3d297a",
+        "pytestVersion": "8.4.2",
+        "pytestDistributionVersion": "8.4.2",
+        "pytestModulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+        "pytestModuleSha256": "sha256:66993a5e3905005e0981159b4794d10b1adacf341a58a44d696ad2c4442dcdc6",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "executable": "/usr/bin/sandbox-exec",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea",
+          "policySha256": "sha256:eb34f6341f18a8ee21853bbb43e894b7651648c601e0a45e2e6c9c768945f2d9",
+          "projectRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+          "writableRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-tqqp2p78",
+          "policyVersion": 1
+        }
+      },
+      "machineReport": {
+        "adapter": "pytest-json@1",
+        "collectedNodeIds": [
+          "tests/work_packages/ru081/test_download_routes.py::test_mirror_direct_origin_fallback"
+        ],
+        "collectionErrors": [],
+        "deselectedNodeIds": [],
+        "pytestExitCode": 0,
+        "pytestRootPath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "runner": {
+          "distributionVersion": "8.4.2",
+          "modulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+          "moduleVersion": "8.4.2",
+          "name": "pytest",
+          "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "pythonVersion": "3.9.6"
+        },
+        "schemaVersion": 1,
+        "selector": "tests/work_packages/ru081/test_download_routes.py::test_mirror_direct_origin_fallback",
+        "tests": [
+          {
+            "nodeId": "tests/work_packages/ru081/test_download_routes.py::test_mirror_direct_origin_fallback",
+            "phases": {
+              "call": {
+                "outcome": "passed"
+              },
+              "setup": {
+                "outcome": "passed"
+              },
+              "teardown": {
+                "outcome": "passed"
+              }
+            }
+          }
+        ]
+      },
+      "process": {
+        "actualExitCode": 0,
+        "timedOut": false,
+        "stdout": "============================= test session starts ==============================\nplatform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0\nrootdir: /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop\nplugins: anyio-4.12.1\ncollected 1 item\n\ntests/work_packages/ru081/test_download_routes.py .                      [100%]\n\n======================== 1 passed in 125.43s (0:02:05) =========================\n",
+        "stderr": ""
+      },
+      "validationErrors": [],
+      "runnerProof": {
+        "schemaVersion": 1,
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru081/test_download_routes.py::test_mirror_direct_origin_fallback",
+        "cwd": ".",
+        "executedPassingTests": 1,
+        "actualExitCode": 0,
+        "runnerMetadataSha256": "sha256:bb2e4c1dd44a55add22f6c78cfe9eff151c73d4433124cab27ec6c30e94befc8",
+        "machineReportSha256": "sha256:660270c78b9ce044012fc26ba7f07aae4c33ba9f4cb37cf8a935a944b89a2a15",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "policySha256": "sha256:eb34f6341f18a8ee21853bbb43e894b7651648c601e0a45e2e6c9c768945f2d9",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+        }
+      },
+      "passed": true,
+      "id": "ru081-direct-origin",
+      "kind": "scenario_test",
+      "actualExitCode": 0,
+      "timedOut": false,
+      "scenarioId": "RU081-DIRECT-ORIGIN-FALLBACK"
+    }
+  ],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU081-DIRECT-ORIGIN-FALLBACK",
+      "path": "execution/evidence/6557a98dccc7a2643744/f4054bb0294dcdcb/b5d73572d1bd58cd.json",
+      "sha256": "sha256:79f64176fecd7dd4bbfb443de19d9b20389b8322618f52dc902a3966150bfd7d"
+    }
+  ],
+  "scenarioEvidenceFailures": [],
+  "releaseUnitId": "RU-081",
+  "releaseUnitHash": "sha256:20cc7def5c79d1ad87b0f78d49ed41db946a51d166cf7922b2380d0660175051"
+}

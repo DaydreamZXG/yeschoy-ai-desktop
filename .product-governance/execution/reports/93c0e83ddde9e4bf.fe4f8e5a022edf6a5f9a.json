@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 3,
+  "runId": "RU-085/WP-RU085-WORKBUDDY-REGRESSION-PARITY@2026-09-16T16:54:13.193246+00:00",
+  "packageId": "WP-RU085-WORKBUDDY-REGRESSION-PARITY",
+  "baselineCommit": "1da460e9b2dc62883f8f1e829e2210ac91bed69e",
+  "baselineTreeHash": "sha256:63f607f46beee462a653974fad5a2a2f381663a04c47c153e000627c6ae8740c",
+  "testedTreeHash": "sha256:60bde12fab6bbb37a51790636ad69f6544335f7fcbd3a844bf7d591376914607",
+  "testedSnapshotPath": "execution/tested-snapshots/93c0e83ddde9e4bf.fe4f8e5a022edf6a5f9a.json",
+  "testedSnapshotSha256": "sha256:684c51925529e9de02940ab4cd525f0b1425cc92930ea30697fc93573a168165",
+  "sourceDiff": {
+    "src-tauri/src/tool_activation.rs": "sha256:129c5beaeb71399fb8513205b22cf35976431c401a22846b89f197dc77bd7182",
+    "src/assets/icons/official-workbuddy.svg": "sha256:91a2594f570887bc9e03448585eb87dd280d22bbd878dd4d33908edf485973f1",
+    "src/configuration/DailyUse.test.tsx": "sha256:63d7c21bc15c869d2d27f7f232f1ada68d9043d4661a842ab2f08a4eda069e5c",
+    "src/configuration/connections.test.tsx": "sha256:183ec3242c3fdf010657e892778bcd50d4e25054eab31c4da7aa0bf693e7b221",
+    "src/workbench/Workbench.test.tsx": "sha256:d07147afb4cb4d127ab8cafcff79f854269d87d78cfd396a33fc02d0e9eafb88",
+    "src/workbench/appCatalog.ts": "sha256:c41b3e10b96d07bffdaf140fbca99557bd7dfbfe00f09af9bfda895b58bec22a",
+    "tests/work_packages/ru085/test_workbuddy_regression.py": "sha256:717059d86e07ecf154718d3a96cb6342cbf06d9a75e91263cddae01eb9bbaa5e"
+  },
+  "ownedResultHashes": {
+    "src-tauri/src/tool_activation.rs": "sha256:129c5beaeb71399fb8513205b22cf35976431c401a22846b89f197dc77bd7182",
+    "src/assets/icons/official-workbuddy.svg": "sha256:91a2594f570887bc9e03448585eb87dd280d22bbd878dd4d33908edf485973f1",
+    "src/configuration/DailyUse.test.tsx": "sha256:63d7c21bc15c869d2d27f7f232f1ada68d9043d4661a842ab2f08a4eda069e5c",
+    "src/configuration/connections.test.tsx": "sha256:183ec3242c3fdf010657e892778bcd50d4e25054eab31c4da7aa0bf693e7b221",
+    "src/workbench/Workbench.test.tsx": "sha256:d07147afb4cb4d127ab8cafcff79f854269d87d78cfd396a33fc02d0e9eafb88",
+    "src/workbench/appCatalog.ts": "sha256:c41b3e10b96d07bffdaf140fbca99557bd7dfbfe00f09af9bfda895b58bec22a",
+    "tests/work_packages/ru085/test_workbuddy_regression.py": "sha256:717059d86e07ecf154718d3a96cb6342cbf06d9a75e91263cddae01eb9bbaa5e"
+  },
+  "testedOwnedState": {
+    "schemaVersion": 1,
+    "selectionPolicy": "allowed-source-files-and-symlinks@1",
+    "allowedPaths": [
+      "src-tauri/src/tool_activation.rs",
+      "src/assets/icons/official-workbuddy.svg",
+      "src/configuration/connections.test.tsx",
+      "src/configuration/DailyUse.test.tsx",
+      "src/workbench/AppGlyph.test.tsx",
+      "src/workbench/Workbench.test.tsx",
+      "src/workbench/appCatalog.ts",
+      "tests/work_packages/ru085/**"
+    ],
+    "excludedClasses": [
+      "governance_execution_runtime",
+      "directories_and_git_submodules",
+      "devices_sockets_and_fifos",
+      "transient_missing_entries"
+    ],
+    "pathHashes": {
+      "src-tauri/src/tool_activation.rs": "sha256:129c5beaeb71399fb8513205b22cf35976431c401a22846b89f197dc77bd7182",
+      "src/assets/icons/official-workbuddy.svg": "sha256:91a2594f570887bc9e03448585eb87dd280d22bbd878dd4d33908edf485973f1",
+      "src/configuration/DailyUse.test.tsx": "sha256:63d7c21bc15c869d2d27f7f232f1ada68d9043d4661a842ab2f08a4eda069e5c",
+      "src/configuration/connections.test.tsx": "sha256:183ec3242c3fdf010657e892778bcd50d4e25054eab31c4da7aa0bf693e7b221",
+      "src/workbench/AppGlyph.test.tsx": "sha256:0bee40c9946ab41fcd41ac81b97a5f8525c27b0776ee2d0d9efbf6f449e55adb",
+      "src/workbench/Workbench.test.tsx": "sha256:d07147afb4cb4d127ab8cafcff79f854269d87d78cfd396a33fc02d0e9eafb88",
+      "src/workbench/appCatalog.ts": "sha256:c41b3e10b96d07bffdaf140fbca99557bd7dfbfe00f09af9bfda895b58bec22a",
+      "tests/work_packages/ru085/test_workbuddy_regression.py": "sha256:717059d86e07ecf154718d3a96cb6342cbf06d9a75e91263cddae01eb9bbaa5e"
+    }
+  },
+  "testedOwnedStateSha256": "sha256:31d76e05a74b91e3b93c592e5bfe51c51fc3e49fa10dc383c763afad0fc3760a",
+  "sourceScopeFailures": [],
+  "integrityFailures": [],
+  "assignedTo": "root",
+  "startedAt": "2026-09-16T16:54:13.193246+00:00",
+  "finishedAt": "2026-09-16T16:59:39.168335+00:00",
+  "passed": true,
+  "commands": [
+    {
+      "schemaVersion": 1,
+      "declaredCommand": {
+        "id": "ru085-workbuddy-regression-parity",
+        "kind": "scenario_test",
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru085/test_workbuddy_regression.py::test_workbuddy_regression_parity",
+        "cwd": ".",
+        "timeoutSeconds": 1200
+      },
+      "runnerMetadata": {
+        "adapter": "pytest-json@1",
+        "declaredCwd": ".",
+        "cwd": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "selector": "tests/work_packages/ru085/test_workbuddy_regression.py::test_workbuddy_regression_parity",
+        "selectorRealpath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/tests/work_packages/ru085/test_workbuddy_regression.py",
+        "runnerArgv": [
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru085/test_workbuddy_regression.py::test_workbuddy_regression_parity",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-9gg3_pmy/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-9gg3_pmy/pytest-basetemp"
+        ],
+        "sandboxedArgv": [
+          "/usr/bin/sandbox-exec",
+          "-p",
+          "(version 1)\n(allow default)\n(deny file-write*\n  (require-not\n    (require-any\n      (subpath \"/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-9gg3_pmy\")\n      (literal \"/dev/null\"))))\n",
+          "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "-B",
+          "/Users/zxg/.codex/skills/govern-product-build/scripts/runner_adapters.py",
+          "__pytest_child",
+          "--selector",
+          "tests/work_packages/ru085/test_workbuddy_regression.py::test_workbuddy_regression_parity",
+          "--report",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-9gg3_pmy/pytest-machine-report.json",
+          "--basetemp",
+          "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-9gg3_pmy/pytest-basetemp"
+        ],
+        "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+        "pythonRealpath": "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/bin/python3.9",
+        "pythonExecutableSha256": "sha256:6b24be8ba00c4abc8b3e7e2620bd710e2cf7a4312d00c147f8f05fbb6f3d297a",
+        "pytestVersion": "8.4.2",
+        "pytestDistributionVersion": "8.4.2",
+        "pytestModulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+        "pytestModuleSha256": "sha256:66993a5e3905005e0981159b4794d10b1adacf341a58a44d696ad2c4442dcdc6",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "executable": "/usr/bin/sandbox-exec",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea",
+          "policySha256": "sha256:2b3956d471af305f9b584e5e7a4d1f7b021fa1ede37e07e240263f1d29877736",
+          "projectRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+          "writableRoot": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop/.product-governance/execution/tmp/scenario-9gg3_pmy",
+          "policyVersion": 1
+        }
+      },
+      "machineReport": {
+        "adapter": "pytest-json@1",
+        "collectedNodeIds": [
+          "tests/work_packages/ru085/test_workbuddy_regression.py::test_workbuddy_regression_parity"
+        ],
+        "collectionErrors": [],
+        "deselectedNodeIds": [],
+        "pytestExitCode": 0,
+        "pytestRootPath": "/Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop",
+        "runner": {
+          "distributionVersion": "8.4.2",
+          "modulePath": "/Users/zxg/Library/Python/3.9/lib/python/site-packages/pytest/__init__.py",
+          "moduleVersion": "8.4.2",
+          "name": "pytest",
+          "pythonExecutable": "/Applications/Xcode.app/Contents/Developer/usr/bin/python3",
+          "pythonVersion": "3.9.6"
+        },
+        "schemaVersion": 1,
+        "selector": "tests/work_packages/ru085/test_workbuddy_regression.py::test_workbuddy_regression_parity",
+        "tests": [
+          {
+            "nodeId": "tests/work_packages/ru085/test_workbuddy_regression.py::test_workbuddy_regression_parity",
+            "phases": {
+              "call": {
+                "outcome": "passed"
+              },
+              "setup": {
+                "outcome": "passed"
+              },
+              "teardown": {
+                "outcome": "passed"
+              }
+            }
+          }
+        ]
+      },
+      "process": {
+        "actualExitCode": 0,
+        "timedOut": false,
+        "stdout": "============================= test session starts ==============================\nplatform darwin -- Python 3.9.6, pytest-8.4.2, pluggy-1.6.0\nrootdir: /Users/zxg/.codex/worktrees/c485/xiaobai-ai-desktop\nplugins: anyio-4.12.1\ncollected 1 item\n\ntests/work_packages/ru085/test_workbuddy_regression.py .                 [100%]\n\n======================== 1 passed in 158.48s (0:02:38) =========================\n",
+        "stderr": ""
+      },
+      "validationErrors": [],
+      "runnerProof": {
+        "schemaVersion": 1,
+        "adapter": "pytest-json@1",
+        "selector": "tests/work_packages/ru085/test_workbuddy_regression.py::test_workbuddy_regression_parity",
+        "cwd": ".",
+        "executedPassingTests": 1,
+        "actualExitCode": 0,
+        "runnerMetadataSha256": "sha256:bc65f4ca9fee8b289074e4ed639698769379bb21eab898385ffa9dbe0d99c7a5",
+        "machineReportSha256": "sha256:a7b860febdb698b554694f7337d80b9ba1d307d1c46814af53b35fa428ccd51a",
+        "isolation": {
+          "adapter": "darwin-sandbox-exec-readonly-source@1",
+          "policySha256": "sha256:2b3956d471af305f9b584e5e7a4d1f7b021fa1ede37e07e240263f1d29877736",
+          "executableSha256": "sha256:2ff75194b3e5689debee061c69f27f873ca21ff8fc54b7d49cbf5f2fb673f6ea"
+        }
+      },
+      "passed": true,
+      "id": "ru085-workbuddy-regression-parity",
+      "kind": "scenario_test",
+      "actualExitCode": 0,
+      "timedOut": false,
+      "scenarioId": "RU085-WORKBUDDY-REGRESSION-PARITY"
+    }
+  ],
+  "scenarioEvidence": [
+    {
+      "scenarioId": "RU085-WORKBUDDY-REGRESSION-PARITY",
+      "path": "execution/evidence/fe4f8e5a022edf6a5f9a/93c0e83ddde9e4bf/bf0aaf7961909ead.json",
+      "sha256": "sha256:255e37ddd145b126364f4d17506aad5727f92e198a6a136c50c7e1b23c28c051"
+    }
+  ],
+  "scenarioEvidenceFailures": [],
+  "releaseUnitId": "RU-085",
+  "releaseUnitHash": "sha256:dc02c4dfc91757f9f81a16b6306cb7456ee83a951a06b0b9c4a7d9a8db5ca9f2"
+}

@@ -3206,6 +3206,102 @@
         ],
         "pageRefs": []
       }
+    },
+    {
+      "id": "DEC-127",
+      "question": "May the current released source be reconciled for a bounded Codex history performance repair while the other integration findings remain audit-only?",
+      "choice": "Use clean HEAD 1da460e9b2dc62883f8f1e829e2210ac91bed69e as the inherited source baseline, preserve all historical proof, and supersede RU-078 only for the paths needed by Codex history takeover. Replace whole-session inspection/rewrite with bounded first-record reading and streamed atomic tail copying, and run takeover begin on a blocking worker. Preserve current provider migration and restore semantics. Record CLI version eligibility and Claude Desktop wildcard egress as follow-up findings only; do not change them in this unit. Use fixture-only tests, no installed apps, credentials, packaging, push, deployment or certificate purchase, and make no real-device or production-readiness claim.",
+      "status": "accepted",
+      "decidedBy": "product owner: 来吧兄弟，我们继续快乐的开发这个工具; 你优化一下吧，然后其他的工具应该还是要找找问题",
+      "decidedAt": "2026-09-16T07:28:00Z",
+      "approvesBaselineReconciliation": true,
+      "evidenceRefs": [
+        "E-USER-102",
+        "E-CODE-100"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-098",
+          "REQ-101"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform"
+        ],
+        "pageRefs": []
+      }
+    },
+    {
+      "id": "DEC-128",
+      "question": "How should the desktop installer reach Yeschoy-hosted application artifacts when GitHub or the public download edge is unavailable?",
+      "choice": "Keep the public ergou.qzz.io route first. On mirror catalog or artifact transport failure, retry the exact same HTTPS hostname through the compiled direct origin 43.134.77.210 with proxy bypass while retaining normal certificate and hostname validation, the exact catalog URL, expected size, SHA-256, resumable validator isolation and local native package trust. Only after both Yeschoy routes fail may an existing official vendor source be used; a future Yeschoy-built DSH preview has no GitHub end-user fallback. Do not accept caller URLs, plaintext IP URLs, credentials, disabled TLS, package execution or a source label other than mirror. This unit changes only client routing and fixture tests; DSH build, signing, publication and installed-app behavior remain a separate release unit.",
+      "status": "accepted",
+      "decidedBy": "product owner: 用户可能因为网络问题下载不了GitHub，所以这个问题也要解决; 好，你就这样来做吧",
+      "decidedAt": "2026-09-16T08:31:00Z",
+      "evidenceRefs": [
+        "E-USER-103",
+        "E-CODE-101"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-077",
+          "REQ-102"
+        ],
+        "domainRefs": [
+          "security-update",
+          "desktop-platform"
+        ],
+        "pageRefs": []
+      }
+    },
+    {
+      "id": "DEC-129",
+      "question": "What source and trust boundary should govern a temporary Yeschoy-provided DeepSeek Harness Desktop build before DeepSeek publishes official installers?",
+      "choice": "Pin one immutable upstream repository, commit, tree, exact root/Desktop version, application ID and MIT license digest. Builders may access GitHub, but end users never compile or download from GitHub. A repository verifier produces provenance before native packaging. Public candidate preparation must fail closed unless the target has an explicit non-placeholder signing policy and a platform-native verification receipt bound to the exact artifact digest, size, application identity and publisher; unsigned Windows output remains internal test-only and macOS requires signing plus notarization. Keep this source-build authority separate from the exact-official-byte vendor mirror and label any later client exposure as an official-source Yeschoy build, not an official DeepSeek release. This unit prepares and tests the fail-closed provenance/candidate pipeline only; it does not publish an artifact, alter the client catalog, or claim one-click availability before signing identities and native build hosts exist.",
+      "status": "accepted",
+      "decidedBy": "product owner: 现在只是没有打包不过也快了我们只是快一步; 为啥我们不帮帮客户呢; 用户可能因为网络问题下载不了GitHub; 好你就这样来做吧",
+      "decidedAt": "2026-09-16T08:48:00Z",
+      "evidenceRefs": [
+        "E-USER-103",
+        "E-EXT-066",
+        "E-CODE-102"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-103"
+        ],
+        "domainRefs": [
+          "security-update",
+          "desktop-platform"
+        ],
+        "pageRefs": []
+      }
+    },
+    {
+      "id": "DEC-130",
+      "question": "How should Yeschoy provide one-click WorkBuddy support without introducing another local gateway?",
+      "choice": "Treat WorkBuddy as a direct OpenAI-compatible configuration target. Write only Yeschoy-owned entries in the documented ~/.workbuddy/models.json catalog, using one dedicated WorkBuddy token whose per-model routes retain the selected billing groups. Preserve the existing array or object-wrapper shape, unrelated models, unknown fields and user preferences; use atomic write/readback and the existing encrypted three-way recovery record. WorkBuddy hot reloads the catalog, so do not quit it and do not require the Yeschoy process to remain running. Open or focus the exact discovered installation after setup, but do not invent or mutate an undocumented default-model field: the user selects the added model in WorkBuddy. Use fixture-only tests and never inspect or mutate the real installed WorkBuddy profile during implementation.",
+      "status": "accepted",
+      "decidedBy": "product owner: 不建议连接本地网关，建议帮他修改好配置; 可以，咱们就这样做，加入这个支持吧",
+      "decidedAt": "2026-09-16T10:00:00Z",
+      "evidenceRefs": [
+        "E-USER-104",
+        "E-EXT-067",
+        "E-CODE-103"
+      ],
+      "affects": {
+        "requirementRefs": [
+          "REQ-104"
+        ],
+        "domainRefs": [
+          "tool-config",
+          "desktop-platform"
+        ],
+        "pageRefs": [
+          "PAGE-CONFIGURE-PREVIEW",
+          "PAGE-HOME"
+        ]
+      }
     }
   ]
 }
