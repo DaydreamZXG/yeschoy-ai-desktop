@@ -7,6 +7,8 @@ use super::{
 use reqwest::{Client, Url};
 use serde::Deserialize;
 
+pub(super) const MIRROR_HOST: &str = "ergou.qzz.io";
+pub(super) const MIRROR_ORIGIN: &str = "43.134.77.210:443";
 pub(super) const CATALOG_URL: &str = "https://ergou.qzz.io/apps/catalog.json";
 const JSON_LIMIT: usize = 1024 * 1024;
 
@@ -221,8 +223,26 @@ async fn json(client: &Client, url: &str) -> Result<Vec<u8>> {
     }
     Ok(bytes)
 }
-pub(super) async fn mirror(client: &Client, source: Source) -> Result<Option<Resolved>> {
-    parse_catalog(&json(client, CATALOG_URL).await?, source)
+async fn mirror_at(client: &Client, source: Source, url: &str) -> Result<Option<Resolved>> {
+    parse_catalog(&json(client, url).await?, source)
+}
+pub(super) async fn mirror_from_routes(
+    public: &Client,
+    direct: &Client,
+    source: Source,
+) -> Result<Option<Resolved>> {
+    mirror_from_routes_at(public, direct, source, CATALOG_URL).await
+}
+async fn mirror_from_routes_at(
+    public: &Client,
+    direct: &Client,
+    source: Source,
+    url: &str,
+) -> Result<Option<Resolved>> {
+    match mirror_at(public, source, url).await {
+        Ok(value) => Ok(value),
+        Err(_) => mirror_at(direct, source, url).await,
+    }
 }
 pub(super) async fn official(client: &Client, source: Source) -> Result<Resolved> {
     if source.extension == "zip" {
@@ -238,6 +258,64 @@ mod tests {
     use serde_json::json;
     fn artifact() -> serde_json::Value {
         json!({"sourceId":"claude-macos-universal","app":"claude","platform":"macos","architecture":"universal","format":"zip","version":"1.46388.4","url":format!("https://ergou.qzz.io/apps/claude-macos-universal/{}.zip", "a".repeat(64)),"sha256":"a".repeat(64),"size":355648442,"originUrl":"https://downloads.claude.ai/releases/darwin/universal/1.46388.4/Claude-example.zip","identity":"com.anthropic.claudefordesktop","publisher":"Q6L2SF6YDW","verifiedAt":"2026-09-06T09:00:00Z","verification":"native_verified"})
+    }
+
+    #[tokio::test]
+    async fn mirror_catalog_uses_direct_route_only_after_public_transport_failure() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut request = Vec::new();
+            while !request.ends_with(b"\r\n\r\n") {
+                let mut byte = [0];
+                socket.read_exact(&mut byte).await.unwrap();
+                request.push(byte[0]);
+            }
+            let body = serde_json::to_vec(&json!({
+                "schemaVersion": 1,
+                "generatedAt": "2026-09-16T08:31:00Z",
+                "artifacts": [artifact()]
+            }))
+            .unwrap();
+            socket
+                .write_all(
+                    format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                        body.len()
+                    )
+                    .as_bytes(),
+                )
+                .await
+                .unwrap();
+            socket.write_all(&body).await.unwrap();
+            String::from_utf8(request).unwrap()
+        });
+        let public = Client::builder()
+            .resolve("catalog.test", "127.0.0.1:1".parse().unwrap())
+            .build()
+            .unwrap();
+        let direct = Client::builder()
+            .resolve("catalog.test", address)
+            .build()
+            .unwrap();
+        let source = catalog::source("claude_desktop", "macos", "x64").unwrap();
+        let selected = mirror_from_routes_at(
+            &public,
+            &direct,
+            source,
+            "http://catalog.test/apps/catalog.json",
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        assert!(selected.mirror);
+        let request = server.await.unwrap();
+        assert!(request.starts_with("GET /apps/catalog.json"));
+        assert!(!request.to_ascii_lowercase().contains("authorization:"));
+        assert!(!request.to_ascii_lowercase().contains("cookie:"));
     }
     #[test]
     fn installer_manifest_is_closed_and_exact_vendor_bound() {

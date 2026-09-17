@@ -641,6 +641,7 @@ async fn installer_mirror_hash_failure_falls_back_to_official_without_credential
         source,
         &root,
         &client,
+        None,
         Some(target),
         async { Ok(official) },
         |_, u| u.host_str() == Some("127.0.0.1"),
@@ -683,6 +684,7 @@ async fn installer_good_mirror_never_contacts_blocked_official_feed() {
         source,
         &root,
         &client,
+        None,
         Some(target),
         async { panic!("usable mirror must not resolve the official feed") },
         |_, _| false,
@@ -692,6 +694,56 @@ async fn installer_good_mirror_never_contacts_blocked_official_feed() {
     assert_eq!(result.1, hash);
     assert_eq!(state.read(&request()).source, "mirror");
     assert_eq!(server.await.unwrap().len(), 1);
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
+async fn installer_public_mirror_failure_uses_direct_route_before_official() {
+    let body = vec![b'd'; 100];
+    let (base, server) = installer_http_fixture(vec![body.clone()]).await;
+    let address: std::net::SocketAddr = base.trim_start_matches("http://").parse().unwrap();
+    let source = catalog::source("codex_desktop", "windows", "x64").unwrap();
+    let root = cache::unique_dir(&std::env::temp_dir()).unwrap();
+    cache::write(&root.join("hash-fixture"), &body).unwrap();
+    let hash = cache::digest(&root.join("hash-fixture")).unwrap();
+    let (state, worker, _) = fixture();
+    let public = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .resolve("mirror.test", "127.0.0.1:1".parse().unwrap())
+        .build()
+        .unwrap();
+    let direct = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .resolve("mirror.test", address)
+        .build()
+        .unwrap();
+    let target = origins::Resolved {
+        url: "http://mirror.test/package.msix".into(),
+        sha256: hash.clone(),
+        size: 100,
+        mirror: true,
+    };
+    let result = download::fetch_from_sources(
+        &worker,
+        source,
+        &root,
+        &public,
+        Some(&direct),
+        Some(target),
+        async { panic!("the direct mirror succeeded; official must stay lazy") },
+        |_, _| false,
+    )
+    .await
+    .unwrap();
+    assert_eq!(result.1, hash);
+    assert_eq!(state.read(&request()).source, "mirror");
+    let requests = server.await.unwrap();
+    assert_eq!(requests.len(), 1);
+    assert!(requests[0].starts_with("GET /package.msix"));
+    assert!(requests
+        .iter()
+        .all(|r| !r.to_ascii_lowercase().contains("authorization:")
+            && !r.to_ascii_lowercase().contains("cookie:")));
     std::fs::remove_dir_all(root).unwrap();
 }
 

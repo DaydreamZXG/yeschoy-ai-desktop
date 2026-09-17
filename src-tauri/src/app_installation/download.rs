@@ -90,25 +90,42 @@ pub(super) async fn fetch(
     source: Source,
     folder: &Path,
 ) -> Result<(PathBuf, String)> {
-    let client = reqwest::Client::builder()
-        .redirect(reqwest::redirect::Policy::none())
-        .https_only(true)
-        .connect_timeout(Duration::from_secs(30))
-        .read_timeout(Duration::from_secs(30))
-        .user_agent(concat!("Yecai-Desktop/", env!("CARGO_PKG_VERSION")))
-        .build()
-        .map_err(|_| "network_unavailable")?;
-    let mirror = origins::mirror(&client, source).await.ok().flatten();
+    let public = build_client(None)?;
+    // The fallback still requests https://ergou.qzz.io and therefore retains
+    // normal SNI and certificate verification. Only DNS resolution and proxy
+    // inheritance differ; no plaintext IP URL is ever accepted.
+    let direct = build_client(Some(origins::MIRROR_ORIGIN))?;
+    let mirror = origins::mirror_from_routes(&public, &direct, source)
+        .await
+        .ok()
+        .flatten();
     fetch_from_sources(
         worker,
         source,
         folder,
-        &client,
+        &public,
+        Some(&direct),
         mirror,
-        origins::official(&client, source),
+        origins::official(&public, source),
         allowed_url,
     )
     .await
+}
+
+fn build_client(direct_origin: Option<&str>) -> Result<reqwest::Client> {
+    let mut builder = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .https_only(true)
+        .connect_timeout(Duration::from_secs(30))
+        .read_timeout(Duration::from_secs(30))
+        .user_agent(concat!("Yecai-Desktop/", env!("CARGO_PKG_VERSION")));
+    if let Some(address) = direct_origin {
+        builder = builder.no_proxy().resolve(
+            origins::MIRROR_HOST,
+            address.parse().map_err(|_| "invalid_source")?,
+        );
+    }
+    builder.build().map_err(|_| "network_unavailable")
 }
 
 // Resolve the official feed lazily: a usable mirror never needs to contact the
@@ -118,28 +135,22 @@ pub(super) async fn fetch_from_sources(
     source: Source,
     folder: &Path,
     client: &reqwest::Client,
+    direct_mirror_client: Option<&reqwest::Client>,
     mirror: Option<Resolved>,
     official: impl std::future::Future<Output = Result<Resolved>>,
     url_policy: fn(Source, &Url) -> bool,
 ) -> Result<(PathBuf, String)> {
     if let Some(target) = mirror {
         worker.update(|j| j.progress.source = "mirror");
-        match fetch_resolved(worker, source, folder, client, url_policy, &target).await {
-            Ok(file) => return Ok(file),
-            Err(reason)
-                if matches!(
-                    reason,
-                    "cancelled"
-                        | "disk_full"
-                        | "permission_denied"
-                        | "unsafe_cache"
-                        | "cache_unavailable"
-                ) =>
-            {
-                return Err(reason)
-            }
-            Err(_) => {
-                worker.bytes(0, 0);
+        let mut routes = vec![client];
+        if let Some(direct) = direct_mirror_client {
+            routes.push(direct);
+        }
+        for route in routes {
+            match fetch_resolved(worker, source, folder, route, url_policy, &target).await {
+                Ok(file) => return Ok(file),
+                Err(reason) if local_failure(reason) => return Err(reason),
+                Err(_) => worker.bytes(0, 0),
             }
         }
     }
@@ -147,6 +158,13 @@ pub(super) async fn fetch_from_sources(
     worker.update(|j| j.progress.source = "official");
     let target = official.await?;
     fetch_resolved(worker, source, folder, client, url_policy, &target).await
+}
+
+fn local_failure(reason: &str) -> bool {
+    matches!(
+        reason,
+        "cancelled" | "disk_full" | "permission_denied" | "unsafe_cache" | "cache_unavailable"
+    )
 }
 
 // The public/native command never accepts this policy or client. Tests exercise
