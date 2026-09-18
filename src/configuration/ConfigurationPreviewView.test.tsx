@@ -65,9 +65,9 @@ describe("desktop protocol compatibility", () => {
     expect(recoveryRetryMessage("other")).toBeUndefined();
   });
 
-  it("accepts both direct Responses and automatically bridged Chat models", () => {
+  it("accepts only verified Responses models for Codex", () => {
     expect(modelSupportsTool("codex_desktop", ["openai-response"])).toBe(true);
-    expect(modelSupportsTool("codex_desktop", ["openai"])).toBe(true);
+    expect(modelSupportsTool("codex_desktop", ["openai"])).toBe(false);
     expect(
       modelSupportsTool("codex_desktop", ["openai", "openai-response"]),
     ).toBe(true);

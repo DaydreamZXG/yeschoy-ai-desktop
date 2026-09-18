@@ -477,7 +477,7 @@ describe("official workbench", () => {
       expect(screen.queryByRole("listbox")).not.toBeInTheDocument(),
     );
 
-    // 切到 Codex Desktop（需 openai-response/openai）：兼容列表只剩 1 个。
+    // 切到 Codex Desktop（需 openai-response）：兼容列表只剩 1 个。
     fireEvent.change(
       screen
         .getByRole("combobox", { name: /使用应用/ })

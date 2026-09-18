@@ -533,11 +533,11 @@ fn claude_transport(pricing: &Value, model_id: &str) -> Option<ClaudeTransport> 
 
 fn codex_transport(pricing: &Value, model_id: &str) -> Option<codex_desktop::CodexTransport> {
     let endpoints = model_endpoints(pricing, model_id)?;
-    // Same reasoning as `claude_transport`: the relay converts the Responses
-    // protocol for every chat model, so `openai` alone is enough to go direct.
+    // Chat Completions (`openai`) is not a complete Responses implementation.
+    // Only models that advertise `openai-response` may be wired into Codex.
     if endpoints
         .iter()
-        .any(|endpoint| matches!(endpoint.as_str(), Some("openai-response") | Some("openai")))
+        .any(|endpoint| endpoint.as_str() == Some("openai-response"))
     {
         Some(codex_desktop::CodexTransport::DirectResponses)
     } else {
@@ -3409,15 +3409,12 @@ mod tests {
         assert!(model_supports_tool(&pricing, "messages", "claude_desktop"));
         assert!(model_supports_tool(&pricing, "chat", "claude_code"));
         assert!(model_supports_tool(&pricing, "chat", "claude_desktop"));
-        assert!(model_supports_tool(&pricing, "chat", "codex_desktop"));
+        assert!(!model_supports_tool(&pricing, "chat", "codex_desktop"));
         assert_eq!(
             codex_transport(&pricing, "responses"),
             Some(codex_desktop::CodexTransport::DirectResponses)
         );
-        assert_eq!(
-            codex_transport(&pricing, "chat"),
-            Some(codex_desktop::CodexTransport::DirectResponses)
-        );
+        assert_eq!(codex_transport(&pricing, "chat"), None);
         assert_eq!(
             claude_transport(&pricing, "messages"),
             Some(ClaudeTransport::DirectAnthropic)
