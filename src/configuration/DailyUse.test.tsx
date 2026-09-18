@@ -1631,7 +1631,7 @@ describe("daily-use UX", () => {
       "tool_output_read_failed",
       "未能读取应用的测试结果",
     ],
-    ["external_override", "higher_precedence_override", "环境变量"],
+    ["external_override", "higher_precedence_override", "配置目录被其他设置占用"],
   ])(
     "reports %s/%s without claiming an unproved restore",
     async (status, reasonCode, expected) => {

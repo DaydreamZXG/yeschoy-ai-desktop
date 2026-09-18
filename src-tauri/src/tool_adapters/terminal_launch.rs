@@ -98,7 +98,7 @@ fn mac_shell_command(executable: &str, home: &str, runtime_directories: &[String
         format!("{prefix}:\"${{PATH:-/usr/bin:/bin:/usr/sbin:/sbin}}\"")
     };
     format!(
-        "cd -- {} || exit 1\nPATH={path}\nexport PATH\nexec {}",
+        "cd -- {} || exit 1\nunset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY\nPATH={path}\nexport PATH\nexec {}",
         quoted_shell(home),
         quoted_shell(executable)
     )
@@ -155,7 +155,7 @@ fn build_plan(
                 _ => return Err(failure("invalid_launch_target")),
             };
             let script = format!(
-                "$ErrorActionPreference = 'Stop'; Set-Location -LiteralPath {}; {invocation}",
+                "$ErrorActionPreference = 'Stop'; Remove-Item Env:ANTHROPIC_BASE_URL,Env:ANTHROPIC_AUTH_TOKEN,Env:ANTHROPIC_API_KEY -ErrorAction SilentlyContinue; Set-Location -LiteralPath {}; {invocation}",
                 powershell_literal(&home)
             );
             let utf16 = script
@@ -500,6 +500,9 @@ mod tests {
         assert!(text.contains(&powershell_literal(target)));
         assert!(!text.contains(target));
         assert!(text.contains("/D /V:OFF /S /C \"\"%YESCHOY_CLI_TARGET%\"\""));
+        assert!(text.contains(
+            "Remove-Item Env:ANTHROPIC_BASE_URL,Env:ANTHROPIC_AUTH_TOKEN,Env:ANTHROPIC_API_KEY"
+        ));
         assert!(text.contains(&format!(
             "Set-Location -LiteralPath {}",
             powershell_literal(r"C:\Users\用户 O'Brian")
@@ -584,6 +587,7 @@ mod tests {
         );
         let script = std::fs::read_to_string(&command_file).unwrap();
         assert!(script.contains("export PATH"));
+        assert!(script.contains("unset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY"));
         assert!(script.contains(&quoted_shell(home.to_str().unwrap())));
         for forbidden in ["osascript", "credential-helper", "https://", "apiKey"] {
             assert!(!script.contains(forbidden));

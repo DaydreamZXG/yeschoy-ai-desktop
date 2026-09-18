@@ -121,26 +121,6 @@ fn render_catalog(
     Ok(bytes)
 }
 
-/// These variables outrank `settings.json`, so an export left over from another
-/// relay silently wins and Claude Code keeps billing somebody else — with this
-/// app reporting success, because the file it wrote reads back correctly.
-///
-/// The check used to read `std::env`, which on macOS is launchd's environment
-/// for an app opened from the Dock and never contains the user's `.zshrc`
-/// exports. `terminal_launch` then handed the command to Terminal.app, whose
-/// login shell does read them. The guard could therefore only ever fire in a
-/// development build started from a terminal — precisely the case where it does
-/// not matter.
-fn higher_precedence_override() -> bool {
-    [
-        "ANTHROPIC_AUTH_TOKEN",
-        "ANTHROPIC_API_KEY",
-        "ANTHROPIC_BASE_URL",
-    ]
-    .into_iter()
-    .any(crate::shell_environment::is_set_anywhere)
-}
-
 pub(crate) fn prepare(
     home: &Path,
     origin: &str,
@@ -188,9 +168,6 @@ fn prepare_inner(
     model_ids: &[String],
     modern: bool,
 ) -> Result<Prepared, AdapterFailure> {
-    if higher_precedence_override() {
-        return Err(AdapterFailure::ExternalOverride);
-    }
     let path = home.join(".claude").join("settings.json");
     let before = common::snapshot(&path)
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_read_failed"))?;
