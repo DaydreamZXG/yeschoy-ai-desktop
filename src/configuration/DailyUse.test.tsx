@@ -1140,7 +1140,9 @@ describe("daily-use UX", () => {
     await tick();
     view.rerender(setupView(account, local()));
     await tick();
-    expect(screen.getByRole("radio", { name: /优惠组/ })).toBeChecked();
+    const savedGroup = screen.getByRole("radio", { name: /账户价格/ });
+    expect(savedGroup).toHaveAttribute("value", "优惠组");
+    expect(savedGroup).toBeChecked();
   });
   it("keeps one-click setup enabled when the account changes but its choices stay identical", async () => {
     const account = session();

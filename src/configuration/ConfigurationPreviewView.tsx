@@ -1671,7 +1671,7 @@ export function ConfigurationPreviewView({
                   {connectionLabel(savedConnection.state)}
                 </span>
               )}
-              {usableInstallations > 1 ? (
+              {target && usableInstallations > 1 ? (
                 <label>
                   <span>{g.chooseInstall}</span>
                   <select

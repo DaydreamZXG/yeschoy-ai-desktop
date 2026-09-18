@@ -74,7 +74,7 @@ const model = (ratio: number, priced = false): AccountModel => ({
   },
 });
 describe("pricing plan choices", () => {
-  it("shows comparable costs, keeps descriptions in details, and does not auto-select", () => {
+  it("shows comparable costs, uses catalog display names, and does not auto-select", () => {
     const value = model(0.4);
     value.billing!.groups = [
       { id: "default", ratio: 0.7, description: "标准入口" },
@@ -98,9 +98,11 @@ describe("pricing plan choices", () => {
     const standard = screen.getByRole("radio", { name: /标准方案/ });
     expect(standard).toBeChecked();
     expect(chosen).toBe("default");
-    const cheapest = screen.getByRole("radio", { name: /DeepSeek Flash/ });
+    const cheapest = screen.getByRole("radio", {
+      name: /模型：其他模型；3.5折/,
+    });
+    expect(cheapest).toHaveAttribute("value", "DeepSeek Flash");
     expect(cheapest).toHaveAccessibleName(/价格最低/);
-    expect(cheapest).not.toHaveAccessibleName(/其他模型|3.5折/);
     const card = cheapest.closest(".billing-plan-card")!;
     expect(within(card as HTMLElement).getByText("约 ¥0.82")).toBeInTheDocument();
     expect(card.querySelector("details")).not.toHaveAttribute("open");

@@ -925,7 +925,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn claude_code_proxy_strips_one_m_suffix_and_adds_missing_beta() {
+    async fn claude_code_proxy_strips_one_m_suffix_without_adding_beta_for_non_claude() {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let origin = format!("http://{}", listener.local_addr().unwrap());
         let (sent, mut received) = tokio::sync::mpsc::unbounded_channel();
@@ -982,7 +982,7 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(forwarded["model"], "deepseek-v4.1-flash");
-        assert_eq!(headers["anthropic-beta"], ONE_M_CONTEXT_BETA);
+        assert!(headers.get("anthropic-beta").is_none());
         assert_eq!(headers["x-api-key"], "sk-synthetic-c");
         assert!(headers.get(header::AUTHORIZATION).is_none());
         server.abort();
