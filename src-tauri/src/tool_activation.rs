@@ -1291,19 +1291,38 @@ async fn restore_after_failure(
     None
 }
 
-// The durable receipt and old-key retirement must follow startup observation.
-// Kept separate so real file fixtures can exercise every completion ordering.
-async fn finalize_after_start<Fut>(
+// Codex history must be committed after its provider config but before Codex
+// starts and reads the old provider bucket. The durable receipt still follows
+// startup observation. Kept separate so fixtures exercise the exact ordering.
+async fn finalize_after_start<BeforeStart, Start>(
     configured: Result<(), AdapterFailure>,
-    start: Fut,
+    before_start: BeforeStart,
+    start: Start,
     finish: impl FnOnce() -> Result<(), AdapterFailure>,
 ) -> Result<(), AdapterFailure>
 where
-    Fut: std::future::Future<Output = Result<(), AdapterFailure>>,
+    BeforeStart: std::future::Future<Output = Result<(), AdapterFailure>>,
+    Start: std::future::Future<Output = Result<(), AdapterFailure>>,
 {
     configured?;
+    before_start.await?;
     start.await?;
     finish()
+}
+
+async fn commit_codex_history_on_worker(
+    history: &mut Option<crate::codex_history_takeover::Takeover>,
+) -> Result<(), AdapterFailure> {
+    let Some(mut takeover) = history.take() else {
+        return Ok(());
+    };
+    let (takeover, result) = codex_history_on_worker(move || {
+        let result = takeover.commit();
+        Ok((takeover, result))
+    })
+    .await?;
+    *history = Some(takeover);
+    result
 }
 
 // Never restore files or revoke credentials while an attempted launch might
@@ -1949,6 +1968,7 @@ pub async fn configure_desktop_tool_v2(
     let mut desktop_open_attempted = false;
     let result = finalize_after_start(
         configured,
+        commit_codex_history_on_worker(&mut codex_history),
         async {
             if desktop_lifecycle::requires_reload(&request.tool_id) {
                 if is_cancelled() {
@@ -1974,19 +1994,18 @@ pub async fn configure_desktop_tool_v2(
             if ensure_session_epoch(&account_state, session_epoch).is_err() {
                 return Err(AdapterFailure::ConfigurationFailed("account_changed"));
             }
-            if let Some(history) = codex_history.as_mut() {
-                history.commit()?;
-            }
             recovery
                 .finish(&mut recovery_record)
                 .map_err(|_| AdapterFailure::ConfigurationFailed("recovery_receipt_failed"))?;
-            if let Some(history) = codex_history.as_mut() {
-                history.disarm();
-            }
             Ok(())
         },
     )
     .await;
+    if result.is_ok() {
+        if let Some(history) = codex_history.as_mut() {
+            history.disarm();
+        }
+    }
     if let Err(error) = result {
         log::warn!(
             "activation stage=rollback tool={} reason={:?}",
@@ -2687,6 +2706,10 @@ mod tests {
             let result = finalize_after_start(
                 Ok(()),
                 async {
+                    events.borrow_mut().push("history-commit");
+                    Ok(())
+                },
+                async {
                     events.borrow_mut().push("start-observed");
                     if startup_ok {
                         Ok(())
@@ -2704,9 +2727,9 @@ mod tests {
             assert_eq!(
                 *events.borrow(),
                 if startup_ok {
-                    vec!["start-observed", "finish-receipt"]
+                    vec!["history-commit", "start-observed", "finish-receipt"]
                 } else {
-                    vec!["start-observed"]
+                    vec!["history-commit", "start-observed"]
                 }
             );
         }
@@ -2714,16 +2737,19 @@ mod tests {
             Err(AdapterFailure::ConfigurationFailed(
                 "synthetic-write-failed"
             )),
+            async { panic!("must not commit history after a failed configuration") },
             async { panic!("must not launch after a failed configuration") },
             || panic!("must not finish after a failed configuration")
         )
         .await
         .is_err());
-        assert!(finalize_after_start(Ok(()), async { Ok(()) }, || Err(
-            AdapterFailure::ConfigurationFailed("activation_cancelled")
-        ))
-        .await
-        .is_err());
+        assert!(
+            finalize_after_start(Ok(()), async { Ok(()) }, async { Ok(()) }, || Err(
+                AdapterFailure::ConfigurationFailed("activation_cancelled")
+            ))
+            .await
+            .is_err()
+        );
     }
 
     #[tokio::test]

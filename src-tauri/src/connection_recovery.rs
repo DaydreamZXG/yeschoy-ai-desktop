@@ -689,15 +689,28 @@ pub(crate) fn restore_bytes(
     let after = document(&file.path, Some(&file.after))?;
     let now = document(&file.path, current)?;
     let mut preserved = false;
+    // A first-time WorkBuddy catalog is written as a top-level array. Treat
+    // the missing file as an empty keyed array during a later hot-reload
+    // merge; coercing it to `{}` makes `undo` preserve the entire current
+    // array and leaves our scoped API keys behind on disconnect.
+    let semantic_before =
+        if file.before.is_none() && workbuddy_catalog(&file.path) && after.is_array() {
+            None
+        } else {
+            Some(&before)
+        };
     let mut restored =
-        undo(Some(&before), Some(&after), Some(&now), &mut preserved).ok_or(Failure::Invalid)?;
+        undo(semantic_before, Some(&after), Some(&now), &mut preserved).ok_or(Failure::Invalid)?;
     if workbuddy_catalog(&file.path) {
         restored = remove_inserted_available_models(&before, &after, restored);
     }
     if restored == now {
         return Ok((current.map(Vec::from), preserved));
     }
-    if file.before.is_none() && restored.as_object().is_some_and(Map::is_empty) {
+    if file.before.is_none()
+        && (restored.as_object().is_some_and(Map::is_empty)
+            || (workbuddy_catalog(&file.path) && restored.as_array().is_some_and(Vec::is_empty)))
+    {
         return Ok((None, preserved));
     }
     Ok((Some(serialize(&file.path, current, &restored)?), preserved))
@@ -803,9 +816,17 @@ fn restore_files_inner(record: &Record, require_owned_restored: bool) -> Result<
         }
         if require_owned_restored
             && !owned_values_restored(
-                Some(&document(&file.path, file.before.as_deref())?),
+                file.before
+                    .as_deref()
+                    .map(|bytes| document(&file.path, Some(bytes)))
+                    .transpose()?
+                    .as_ref(),
                 Some(&document(&file.path, Some(&file.after))?),
-                Some(&document(&file.path, desired.as_deref())?),
+                desired
+                    .as_deref()
+                    .map(|bytes| document(&file.path, Some(bytes)))
+                    .transpose()?
+                    .as_ref(),
             )
         {
             return Err(Failure::Changed);
@@ -1262,6 +1283,59 @@ mod tests {
             .unwrap()
             .iter()
             .all(|model| model.get("apiKey").is_none()));
+    }
+
+    #[test]
+    fn workbuddy_first_array_restore_removes_owned_keys_and_preserves_user_models() {
+        let f = Fixture::new();
+        std::fs::create_dir_all(f.path(".workbuddy")).unwrap();
+        let owned = json!({
+            "id": "gpt-6-astra",
+            "name": "Astra",
+            "vendor": "野菜API",
+            "url": "https://yeschoy.com/v1/chat/completions",
+            "apiKey": "synthetic-workbuddy-key",
+            "useCustomProtocol": false
+        });
+        let after = serde_json::to_vec(&json!([owned])).unwrap();
+        let file = f.change(".workbuddy/models.json", None, &after);
+
+        let current_with_user_model = json!([
+            {
+                "id": "gpt-6-astra",
+                "name": "Astra",
+                "vendor": "野菜API",
+                "url": "https://yeschoy.com/v1/chat/completions",
+                "apiKey": "synthetic-workbuddy-key",
+                "useCustomProtocol": false,
+                "temperature": 0.2
+            },
+            {"id": "user-model", "vendor": "Other", "apiKey": "user-owned"}
+        ]);
+        let (restored, preserved) = merged(&file, current_with_user_model);
+        assert!(preserved);
+        assert_eq!(
+            restored,
+            json!([{"id": "user-model", "vendor": "Other", "apiKey": "user-owned"}])
+        );
+
+        let current_with_only_hot_reload = serde_json::to_vec(&json!([{
+            "id": "gpt-6-astra",
+            "name": "Astra",
+            "vendor": "野菜API",
+            "url": "https://yeschoy.com/v1/chat/completions",
+            "apiKey": "synthetic-workbuddy-key",
+            "useCustomProtocol": false,
+            "temperature": 0.2
+        }]))
+        .unwrap();
+        let (restored, preserved) =
+            restore_bytes(&file, Some(&current_with_only_hot_reload)).unwrap();
+        assert!(
+            restored.is_none(),
+            "the first-use catalog should be removed"
+        );
+        assert!(!preserved);
     }
 
     #[test]

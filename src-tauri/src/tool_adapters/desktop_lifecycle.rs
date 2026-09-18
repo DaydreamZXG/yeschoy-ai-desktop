@@ -70,14 +70,29 @@ pub(crate) fn observes_running(tool_id: &str) -> bool {
 }
 
 pub(crate) async fn open_unless_running(tool_id: &str, path: &Path) -> Result<(), AdapterFailure> {
-    if is_running(tool_id, path).await.unwrap_or(false) {
-        return Ok(());
-    }
     let tool = tool_id.to_owned();
     let target = path.to_owned();
-    tokio::task::spawn_blocking(move || super::desktop_launch::launch(&tool, &target))
-        .await
-        .map_err(|_| AdapterFailure::LaunchError("desktop_launch_start_failed"))?
+    open_unless_running_after(is_running(tool_id, path).await, || async move {
+        tokio::task::spawn_blocking(move || super::desktop_launch::launch(&tool, &target))
+            .await
+            .map_err(|_| AdapterFailure::LaunchError("desktop_launch_start_failed"))?
+    })
+    .await
+}
+
+async fn open_unless_running_after<Launch, LaunchFuture>(
+    running: Result<bool, AdapterFailure>,
+    launch: Launch,
+) -> Result<(), AdapterFailure>
+where
+    Launch: FnOnce() -> LaunchFuture,
+    LaunchFuture: std::future::Future<Output = Result<(), AdapterFailure>>,
+{
+    if running? {
+        Ok(())
+    } else {
+        launch().await
+    }
 }
 
 pub(crate) async fn is_running(tool_id: &str, path: &Path) -> Result<bool, AdapterFailure> {
@@ -509,6 +524,42 @@ mod tests {
         )
         .await
         .is_ok());
+    }
+
+    #[tokio::test]
+    async fn open_unless_running_never_launches_when_state_is_running_or_unavailable() {
+        use std::cell::Cell;
+
+        let launched = Cell::new(false);
+        let result = open_unless_running_after(
+            Err(AdapterFailure::LaunchError("desktop_state_unavailable")),
+            || async {
+                launched.set(true);
+                Ok(())
+            },
+        )
+        .await;
+        assert!(matches!(
+            result,
+            Err(AdapterFailure::LaunchError("desktop_state_unavailable"))
+        ));
+        assert!(!launched.get());
+
+        open_unless_running_after(Ok(true), || async {
+            launched.set(true);
+            Ok(())
+        })
+        .await
+        .unwrap();
+        assert!(!launched.get());
+
+        open_unless_running_after(Ok(false), || async {
+            launched.set(true);
+            Ok(())
+        })
+        .await
+        .unwrap();
+        assert!(launched.get());
     }
 
     #[test]
