@@ -275,17 +275,13 @@ export function ShutdownHost() {
       </h2>
       {phase === "choice" ? (
         <>
-          <p>后台运行会最小化窗口并保持连接；完全退出会停止助手的后台连接。</p>
-          <p>
-            默认恢复接入前的设置并退出。请先保存任务：助手会请求 Codex、Claude
-            正常关闭，不会强制结束或自动重新打开。命令行应用的设置下次启动生效。
-          </p>
-          <p>
-            保留你后来修改过的设置和聊天记录，不撤销远端密钥。恢复后再次打开应用，可能使用原来的官方账号或其他服务。
-          </p>
+          {/* 这个对话框积了两层东西：自动恢复本身，和当年「退不掉客户端」
+              时期加的防御性说明。结果是八句话四个按钮，而其中大半在「没有
+              连接需要助手运行」时根本不适用 —— 界面自己就那么写着。
+              现在先说这次会发生什么，细则收进折叠里。 */}
           {unknown ? (
             <p>
-              暂时无法确认哪些应用需要助手运行。完全退出可能中断正在使用的连接，设置不会被删除。
+              暂时无法确认哪些应用需要助手运行。退出可能中断正在使用的连接，设置不会被删除。
             </p>
           ) : affected.length ? (
             <>
@@ -299,14 +295,25 @@ export function ShutdownHost() {
                 ))}
               </ul>
               <p>
-                再次使用时，打开野菜助手，从应用卡片继续使用。不用重新接入。
+                想继续用就选「后台运行」。退出后再打开助手，从应用卡片继续，不用重新接入。
               </p>
             </>
           ) : (
             <p>
-              当前没有发现需要助手运行的连接。退出不会删除应用设置和聊天记录。
+              退出会把接入前的设置恢复回去。应用设置和聊天记录都不会删除，随时可以再接入。
             </p>
           )}
+          <details className="quit-detail">
+            <summary>退出时具体会做什么</summary>
+            <p>
+              助手会请求 Codex、Claude 正常关闭，不会强制结束，也不会自动重新打开 ——
+              请先保存任务。命令行应用的设置下次启动生效。
+            </p>
+            <p>
+              你后来自己改过的设置和聊天记录都会保留，远端密钥不撤销。恢复之后再打开那些应用，会用回你原来的官方账号或其他服务。
+            </p>
+            <p>「后台运行」只是最小化窗口并保持连接，不退出助手。</p>
+          </details>
         </>
       ) : phase === "restore_failed" ? (
         <div role="alert">
@@ -342,16 +349,22 @@ export function ShutdownHost() {
             : "暂时无法确认退出状态，请重试。不会强制中断正在保存的设置。"}
         </p>
       )}
+      {/* 四个同等重量的按钮里，用户真正要选的只有两个：走还是留。
+          「保留接入并退出」是给知道自己在做什么的人的出口，降成文字按钮 ——
+          但它必须还在：这个客户端有过退不掉的历史，任何一条退出路径都不删。 */}
       <footer>
-        <button type="button" autoFocus onClick={dismiss}>
+        <button
+          type="button"
+          className="subtle-button"
+          autoFocus
+          onClick={dismiss}
+        >
           {phase === "choice" ? "取消" : "收起提示"}
-        </button>
-        <button type="button" onClick={background}>
-          {phase === "choice" ? "后台运行" : "在后台等待"}
         </button>
         {(phase === "choice" || phase === "restore_failed") && (
           <button
             type="button"
+            className="text-button quit-keep-connected"
             onClick={() => {
               void confirmExit(false);
             }}
@@ -359,12 +372,16 @@ export function ShutdownHost() {
             {phase === "choice" ? "保留接入并退出" : "保留剩余设置并退出"}
           </button>
         )}
+        <button type="button" className="subtle-button" onClick={background}>
+          {phase === "choice" ? "后台运行" : "在后台等待"}
+        </button>
         {phase === "choice" ||
         phase === "restore_failed" ||
         phase === "retryable_error" ||
         phase === "finishing_operation" ? (
           <button
             type="button"
+            className="primary-action"
             onClick={() => {
               void confirmExit(
                 phase === "restore_failed" ? true : restoreChoice.current,

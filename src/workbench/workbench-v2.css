@@ -2518,6 +2518,27 @@
   background: var(--accent-soft);
 }
 
+/* 选择变了还没保存时，「打开使用」会用旧配置打开应用 —— 它不能再是视觉
+   上最重的那个。主次交给 .has-unsaved-selection 翻转，DOM 顺序不动，
+   免得读屏顺序跟着变。 */
+.connection-action-deck.has-unsaved-selection .open-connection-control > button:first-child {
+  order: 2;
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--muted);
+  box-shadow: none;
+}
+
+.connection-action-deck.has-unsaved-selection .open-connection-control > button:first-child:hover:not(:disabled) {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.connection-action-deck.has-unsaved-selection .setup-apply {
+  order: 1;
+}
+
 .connection-action-hint {
   display: block;
   color: var(--muted);
@@ -5048,6 +5069,12 @@
   border-color: var(--accent-line);
 }
 
+/* 未接入的卡只有一句说明和一个按钮，被等高栅格撑开后中间是一大片空白。
+   让它按自身内容高度收住，已接入的卡才需要等高。 */
+.connection-library {
+  align-items: start;
+}
+
 .connection-card:not([data-connected="true"]) {
   background: color-mix(in srgb, var(--subtle) 55%, var(--surface));
   box-shadow: none;
@@ -5155,6 +5182,56 @@
   line-height: 1.5;
   overflow-wrap: anywhere;
   letter-spacing: -0.03em;
+}
+
+/* 接入之后最常做的事是换模型，而用户会盯着显示出来的模型名找入口。
+   所以整行可点，不是让他去发现页脚那个最轻的按钮。 */
+.connection-model-switch {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 0 var(--space-10);
+  width: 100%;
+  min-height: 0;
+  padding: var(--space-10) var(--space-12);
+  margin: 0 0 var(--space-10);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--subtle);
+  text-align: left;
+  transition: var(--tr-color);
+}
+
+.connection-model-switch .field-caption {
+  grid-column: 1;
+}
+
+.connection-model-switch .connection-model {
+  grid-column: 1;
+  overflow-wrap: anywhere;
+}
+
+.connection-model-switch-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  grid-column: 2;
+  grid-row: 1 / -1;
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.connection-model-switch-hint svg {
+  width: 16px;
+  height: 16px;
+}
+
+.connection-model-switch:hover:not(:disabled) {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
 }
 
 .connection-tags {
@@ -5335,10 +5412,38 @@
 
 .restore-dialog footer {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: var(--space-10);
   border-top: 1px solid var(--line);
   padding-top: var(--space-18);
+  flex-wrap: wrap;
+}
+
+/* 「保留接入并退出」是内行的出口，不该跟主动作抢重量；推到左边，跟右侧那组
+   「取消 / 后台运行 / 恢复原设置并退出」分开，让右边成为一串真正的选择。 */
+.restore-dialog footer .quit-keep-connected {
+  margin-right: auto;
+}
+
+/* 细则收进折叠：默认只看到一句「这次会发生什么」，想知道再展开。 */
+.restore-dialog .quit-detail {
+  margin: var(--space-12) 0 var(--space-4);
+  color: var(--muted);
+}
+
+.restore-dialog .quit-detail > summary {
+  cursor: pointer;
+  width: fit-content;
+  padding: var(--space-6) 0;
+  color: var(--accent);
+  font-size: var(--text-sm);
+}
+
+.restore-dialog .quit-detail p {
+  margin: var(--space-8) 0 0;
+  font-size: var(--text-sm);
+  line-height: 1.75;
 }
 
 .library-footer {

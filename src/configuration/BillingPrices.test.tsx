@@ -98,9 +98,9 @@ describe("pricing plan choices", () => {
     const standard = screen.getByRole("radio", { name: /标准方案/ });
     expect(standard).toBeChecked();
     expect(chosen).toBe("default");
-    const cheapest = screen.getByRole("radio", {
-      name: /模型：其他模型；3.5折/,
-    });
+    // 卡片标题显示分组的键，描述留在「计费详情」里 —— 线上 usable_group
+    // 的键才是给人看的名字，值是一句话。
+    const cheapest = screen.getByRole("radio", { name: /DeepSeek Flash/ });
     expect(cheapest).toHaveAttribute("value", "DeepSeek Flash");
     expect(cheapest).toHaveAccessibleName(/价格最低/);
     const card = cheapest.closest(".billing-plan-card")!;

@@ -347,7 +347,10 @@ pub(crate) fn native_chat_model(id: &str, consumer: ModelConsumer) -> Value {
     if let Some(context) = p.context_window {
         model["contextWindow"] = json!(context);
     }
-    // maxTokens is also the default request budget in several apps: never raise it here.
+    // maxTokens is also the per-request budget in Pi and DSH, so it is never
+    // written from the catalog: doing so would change what the user's next
+    // request is allowed to spend. `native_chat_catalog` carries the user's own
+    // value across instead, with one narrow floor — see MIN_OUTPUT_BUDGET.
     if p.reasoning_levels.is_empty() {
         return model;
     }
@@ -379,8 +382,28 @@ pub(crate) fn native_chat_model(id: &str, consumer: ModelConsumer) -> Value {
     model
 }
 
+/// A budget too small for a tool call to finish.
+///
+/// Pi documents `maxTokens` as a real output ceiling, not display metadata, and
+/// DSH uses the same key. Under a few hundred tokens a function call cannot emit
+/// its arguments JSON, so the model is cut off mid-object, the app rejects the
+/// malformed call, and the user is billed for the truncated attempt regardless.
+/// That is not a budget, it is a broken config — almost always a small value
+/// carried in from whichever provider the user had set up before us.
+///
+/// 1024 is chosen to be large enough for an arguments payload plus a short
+/// answer, and small enough that it cannot meaningfully change anyone's spend:
+/// `maxTokens` is a cap, not a target, so a model that was already finishing
+/// well inside its old ceiling generates exactly as much as before.
+const MIN_OUTPUT_BUDGET: u64 = 1024;
+
 /// Regenerating a catalog must not erase a user's per-model token caps or
 /// compatibility settings and thereby raise their next request's budget.
+///
+/// The one exception is [`MIN_OUTPUT_BUDGET`]. Preserving a cap is protecting
+/// the user's money; preserving a cap that truncates every tool call is just
+/// carrying someone else's mistake forward, and the user has no way to know
+/// that is why their agent keeps failing.
 pub(crate) fn native_chat_catalog(
     existing: Option<&Value>,
     ids: &[String],
@@ -429,6 +452,17 @@ pub(crate) fn native_chat_catalog(
                     previous.insert(key.clone(), value.clone());
                 }
             }
+            // Only an existing, numeric, sub-floor cap is touched. An absent
+            // key stays absent so the app applies its own default (Pi's is
+            // 16384), and a value we cannot parse is left exactly as the user
+            // wrote it.
+            if previous
+                .get("maxTokens")
+                .and_then(Value::as_u64)
+                .is_some_and(|budget| budget < MIN_OUTPUT_BUDGET)
+            {
+                previous.insert("maxTokens".into(), json!(MIN_OUTPUT_BUDGET));
+            }
             Value::Object(previous)
         })
         .collect();
@@ -438,6 +472,68 @@ pub(crate) fn native_chat_catalog(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_budget_too_small_for_a_tool_call_is_lifted_to_the_floor() {
+        // A stale cap carried in from whatever provider the user had before us.
+        // Pi and DSH both treat maxTokens as a real output ceiling, so at 8 every
+        // function call is cut off inside its arguments JSON — and billed anyway.
+        for consumer in [ModelConsumer::Pi, ModelConsumer::Dsh] {
+            let stale = json!([{"id":"deepseek-v4.1-flash","maxTokens":8}]);
+            let merged =
+                native_chat_catalog(Some(&stale), &["deepseek-v4.1-flash".into()], consumer);
+            assert_eq!(merged[0]["maxTokens"], MIN_OUTPUT_BUDGET);
+        }
+    }
+
+    #[test]
+    fn a_workable_budget_is_still_never_raised() {
+        // The rule this floor is an exception to: maxTokens is the per-request
+        // budget, so carrying the user's own value across is what keeps a catalog
+        // rewrite from spending their money.
+        for consumer in [ModelConsumer::Pi, ModelConsumer::Dsh] {
+            for budget in [MIN_OUTPUT_BUDGET, 4096, 128_000] {
+                let existing = json!([{"id":"deepseek-v4.1-flash","maxTokens":budget}]);
+                let merged =
+                    native_chat_catalog(Some(&existing), &["deepseek-v4.1-flash".into()], consumer);
+                assert_eq!(merged[0]["maxTokens"], budget, "{budget}");
+            }
+            // Absent stays absent: the app's own default applies (Pi's is 16384),
+            // and inventing a number here would be guessing at the user's budget.
+            let merged = native_chat_catalog(None, &["deepseek-v4.1-flash".into()], consumer);
+            assert!(merged[0].get("maxTokens").is_none());
+            // Unparsable is left exactly as the user wrote it.
+            let odd = json!([{"id":"deepseek-v4.1-flash","maxTokens":"8"}]);
+            let merged =
+                native_chat_catalog(Some(&odd), &["deepseek-v4.1-flash".into()], consumer);
+            assert_eq!(merged[0]["maxTokens"], "8");
+        }
+    }
+
+    #[test]
+    fn every_catalog_model_declares_a_usable_output_budget() {
+        // WorkBuddy is the one adapter that writes this value straight from the
+        // catalog (`maxOutputTokens`), so the catalog itself is where a too-small
+        // budget would have to be caught. Guarding it here covers that adapter
+        // and any future one without either needing its own test.
+        #[derive(Deserialize)]
+        struct Catalog {
+            models: Vec<ModelProfile>,
+        }
+        let catalog: Catalog =
+            serde_json::from_str(include_str!("../../src/model-profiles/catalog.json")).unwrap();
+        assert!(!catalog.models.is_empty());
+        for model in &catalog.models {
+            let declared = model.max_output_tokens.unwrap_or_else(|| {
+                panic!("{} declares no maxOutputTokens", model.id);
+            });
+            assert!(
+                declared >= MIN_OUTPUT_BUDGET,
+                "{} declares {declared}, below the tool-call floor",
+                model.id
+            );
+        }
+    }
 
     #[test]
     fn context_regression_capabilities_come_from_real_model_metadata() {

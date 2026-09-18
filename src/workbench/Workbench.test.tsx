@@ -433,7 +433,7 @@ describe("official workbench", () => {
       expect(screen.queryByText(/Synthetic upstream/)).not.toBeInTheDocument();
       const group = within(
         screen.getByRole("group", { name: "选择价格方案" }),
-      ).getByRole("radio", { name: /按所选分组计费/ });
+      ).getByRole("radio", { name: /国模特价分组/ });
       expect(group).toHaveAttribute("value", "国模特价分组");
       fireEvent.click(group);
       expect(group).toBeChecked();
@@ -505,10 +505,15 @@ describe("official workbench", () => {
       await screen.findByRole("listbox"),
     ).getAllByRole("option");
     expect(options.length).toBe(2);
+    // 原因要点名去哪个应用用，不解释协议：这个模型只有 anthropic 端点，
+    // Codex 用不了，但两个 Claude 客户端都能用。
     const incompatible = options.find((option) =>
-      option.textContent?.includes("不支持此应用的协议"),
+      option.textContent?.includes("Codex Desktop 用不了"),
     )!;
     expect(incompatible).toHaveAttribute("aria-disabled", "true");
+    expect(incompatible.textContent).toContain(
+      "可在 Claude Code、Claude Desktop 里使用",
+    );
   });
   it("#13 distinguishes no-compatible-models from unreturned data", async () => {
     let modelsReturned = true;
@@ -586,7 +591,7 @@ describe("official workbench", () => {
     fireEvent.click(within(card).getByRole("button", { name: "换模型与分组" }));
     await act(async () => {});
     expect(
-      screen.getByRole("radio", { name: /按所选分组计费/ }),
+      screen.getByRole("radio", { name: /国模特价分组/ }),
     ).toBeChecked();
     expect(
       screen.getByRole("button", { name: /全球加速 Cloudflare/ }),
@@ -598,7 +603,7 @@ describe("official workbench", () => {
     openWorkbenchPage("应用接入");
     await act(async () => {});
     expect(
-      screen.getByRole("radio", { name: /按所选分组计费/ }),
+      screen.getByRole("radio", { name: /国模特价分组/ }),
     ).toBeChecked();
     expect(screen.getByRole("button", { name: "恢复原设置" })).toBeEnabled();
   });
@@ -961,7 +966,7 @@ describe("official workbench", () => {
       await screen.findByRole("button", { name: "一键接入" });
       if (billingGroup === "国模特价分组") {
         const group = screen.getByRole("radio", {
-          name: /按所选分组计费/,
+          name: /国模特价分组/,
         });
         expect(group).toHaveAttribute("value", billingGroup);
         fireEvent.click(group);

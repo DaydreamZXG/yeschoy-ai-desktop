@@ -366,7 +366,7 @@ describe("daily-use UX", () => {
     ).toBeEnabled();
   });
 
-  it("downgrades an unsaved selection on an established connection to a secondary prompt (PRD 6.3 #20)", async () => {
+  it("makes save-and-apply the primary action when an established connection has unsaved model changes", async () => {
     const controller = local({
       models: [
         { modelId: "model-a", billingGroup: "优惠组" },
@@ -389,12 +389,15 @@ describe("daily-use UX", () => {
     fireEvent.click(screen.getByRole("option", { name: "model-b" }));
     fireEvent.click(screen.getByRole("button", { name: "使用所选模型" }));
     await tick();
-    // 选择变化后仍按「已接入」呈现：次级按钮 + 模型提示 + 可用连接卡，
-    // 不回退成「未接入」的 primary「一键接入」。
+    // 选择变化后仍按「已接入」呈现，但主按钮必须是保存——否则最显眼的
+    // 「打开使用」会带着旧配置启动。不回退成「未接入」的「一键接入」。
     const action = screen.getByTestId("configuration-apply-action");
     expect(action).toHaveTextContent("保存并应用");
-    expect(action.className).toContain("secondary-action");
-    expect(action.className).not.toContain("primary-action");
+    expect(action.className).toContain("primary-action");
+    expect(action.className).not.toContain("secondary-action");
+    expect(
+      screen.getByRole("button", { name: "打开使用" }).closest(".has-unsaved-selection"),
+    ).not.toBeNull();
     expect(
       screen.getAllByRole("status").some((node) =>
         node.textContent?.includes("已接入 model-a；当前选择尚未保存。"),
@@ -1140,7 +1143,7 @@ describe("daily-use UX", () => {
     await tick();
     view.rerender(setupView(account, local()));
     await tick();
-    const savedGroup = screen.getByRole("radio", { name: /账户价格/ });
+    const savedGroup = screen.getByRole("radio", { name: /优惠组/ });
     expect(savedGroup).toHaveAttribute("value", "优惠组");
     expect(savedGroup).toBeChecked();
   });
