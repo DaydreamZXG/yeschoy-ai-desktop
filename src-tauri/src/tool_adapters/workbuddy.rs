@@ -52,7 +52,10 @@ fn configured_model(id: &str, key: &str, endpoint: &str, previous: Option<&Value
         .cloned()
         .unwrap_or_else(Map::new);
     model.insert("id".into(), id.into());
-    model.insert("name".into(), tool_model_profile::display_name(id).into());
+    model.insert(
+        "name".into(),
+        format!("野菜 {}", tool_model_profile::display_name(id)).into(),
+    );
     model.insert("vendor".into(), VENDOR.into());
     model.insert("url".into(), endpoint.into());
     model.insert("apiKey".into(), key.into());
@@ -310,6 +313,8 @@ mod tests {
         );
         assert_eq!(astra["url"], "https://yeschoy.com/v1/chat/completions");
         assert_eq!(astra["useCustomProtocol"], true);
+        assert_eq!(astra["name"], "野菜 GPT-6 Astra");
+        assert_eq!(deepseek["name"], "野菜 DeepSeek V4.1 Flash");
         assert_ne!(astra["apiKey"], deepseek["apiKey"]);
         assert!(!String::from_utf8_lossy(&std::fs::read(&path).unwrap()).contains("127.0.0.1"));
         prepared.rollback().unwrap();
