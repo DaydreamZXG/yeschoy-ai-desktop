@@ -552,7 +552,7 @@ mod windows_acl {
     use std::{ffi::c_void, io, os::windows::ffi::OsStrExt, path::Path, ptr};
 
     use windows_sys::Win32::{
-        Foundation::{CloseHandle, HANDLE},
+        Foundation::{CloseHandle, LocalFree, HANDLE},
         Security::{
             Authorization::{
                 ConvertSidToStringSidW, ConvertStringSecurityDescriptorToSecurityDescriptorW,
@@ -562,10 +562,7 @@ mod windows_acl {
             DACL_SECURITY_INFORMATION, PROTECTED_DACL_SECURITY_INFORMATION, PSECURITY_DESCRIPTOR,
             TOKEN_QUERY, TOKEN_USER,
         },
-        System::{
-            Memory::LocalFree,
-            Threading::{GetCurrentProcess, OpenProcessToken},
-        },
+        System::Threading::{GetCurrentProcess, OpenProcessToken},
     };
 
     fn refused(context: &'static str) -> io::Error {
