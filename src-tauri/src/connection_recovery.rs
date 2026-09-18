@@ -1434,7 +1434,7 @@ mod tests {
                     "vendor": "野菜API",
                     "url": "https://yeschoy.com/v1/chat/completions",
                     "apiKey": "synthetic-workbuddy-key",
-                    "useCustomProtocol": false
+                    "useCustomProtocol": true
                 }
             ],
             "availableModels": ["other", "gpt-6-astra"],
@@ -1454,7 +1454,7 @@ mod tests {
                     "vendor": "野菜API",
                     "url": "https://yeschoy.com/v1/chat/completions",
                     "apiKey": "synthetic-workbuddy-key",
-                    "useCustomProtocol": false,
+                    "useCustomProtocol": true,
                     "temperature": 0.2
                 }
             ],
@@ -1482,7 +1482,7 @@ mod tests {
             "vendor": "野菜API",
             "url": "https://yeschoy.com/v1/chat/completions",
             "apiKey": "synthetic-workbuddy-key",
-            "useCustomProtocol": false
+            "useCustomProtocol": true
         });
         let after = serde_json::to_vec(&json!([owned])).unwrap();
         let file = f.change(".workbuddy/models.json", None, &after);
@@ -1494,7 +1494,7 @@ mod tests {
                 "vendor": "野菜API",
                 "url": "https://yeschoy.com/v1/chat/completions",
                 "apiKey": "synthetic-workbuddy-key",
-                "useCustomProtocol": false,
+                "useCustomProtocol": true,
                 "temperature": 0.2
             },
             {"id": "user-model", "vendor": "Other", "apiKey": "user-owned"}
@@ -1512,7 +1512,7 @@ mod tests {
             "vendor": "野菜API",
             "url": "https://yeschoy.com/v1/chat/completions",
             "apiKey": "synthetic-workbuddy-key",
-            "useCustomProtocol": false,
+            "useCustomProtocol": true,
             "temperature": 0.2
         }]))
         .unwrap();

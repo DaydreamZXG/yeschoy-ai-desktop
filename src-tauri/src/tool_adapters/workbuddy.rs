@@ -56,7 +56,8 @@ fn configured_model(id: &str, key: &str, endpoint: &str, previous: Option<&Value
     model.insert("vendor".into(), VENDOR.into());
     model.insert("url".into(), endpoint.into());
     model.insert("apiKey".into(), key.into());
-    model.insert("useCustomProtocol".into(), false.into());
+    // Full /v1/chat/completions URL. WorkBuddy otherwise appends that path again.
+    model.insert("useCustomProtocol".into(), true.into());
 
     for owned in [
         "supportsToolCall",
@@ -236,7 +237,7 @@ impl Prepared {
                 && matching[0]
                     .get("useCustomProtocol")
                     .and_then(Value::as_bool)
-                    == Some(false)
+                    == Some(true)
         });
         valid
             .then_some(())
@@ -308,6 +309,7 @@ mod tests {
             "synthetic-workbuddy-key-deepseek-v4.1-flash"
         );
         assert_eq!(astra["url"], "https://yeschoy.com/v1/chat/completions");
+        assert_eq!(astra["useCustomProtocol"], true);
         assert_ne!(astra["apiKey"], deepseek["apiKey"]);
         assert!(!String::from_utf8_lossy(&std::fs::read(&path).unwrap()).contains("127.0.0.1"));
         prepared.rollback().unwrap();
