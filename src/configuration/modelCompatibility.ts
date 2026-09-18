@@ -12,10 +12,20 @@ export function modelConnectionMode(
   }
   if (toolId === "claude_code" || toolId === "claude_desktop") {
     if (endpoints.includes("anthropic")) return "direct";
-    if (endpoints.includes("openai")) return "bridge";
+    if (endpoints.includes("openai") || endpoints.includes("openai-response"))
+      return "bridge";
     return null;
   }
-  return endpoints.includes("openai") ? "direct" : null;
+  // WorkBuddy / Pi / DSH speak Chat Completions. Pricing may list only
+  // openai-response when the model sits on a Codex-type channel; the same
+  // origin still accepts /v1/chat/completions for that id.
+  if (
+    endpoints.includes("openai") ||
+    endpoints.includes("openai-response")
+  ) {
+    return "direct";
+  }
+  return null;
 }
 
 export function modelSupportsTool(

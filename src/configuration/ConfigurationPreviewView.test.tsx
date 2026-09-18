@@ -87,12 +87,13 @@ describe("desktop protocol compatibility", () => {
     // A model nothing can run yields an empty list, so the copy falls back to
     // saying only that this app cannot use it rather than naming nowhere.
     expect(toolsSupportingModel([], "codex_desktop")).toEqual([]);
-    // A Responses-only model has nowhere else to go either — no other app reads
-    // that endpoint. Harmless, because the reason is only ever rendered for a
-    // model the current app rejects, and Codex accepts this one.
-    expect(toolsSupportingModel(["openai-response"], "codex_desktop")).toEqual(
-      [],
-    );
+    expect(toolsSupportingModel(["openai-response"], "codex_desktop")).toEqual([
+      "claude_code",
+      "claude_desktop",
+      "pi",
+      "dsh_web",
+      "workbuddy",
+    ]);
   });
 
   it("accepts only verified Responses models for Codex", () => {
@@ -114,13 +115,15 @@ describe("desktop protocol compatibility", () => {
       "direct",
     );
     expect(modelConnectionMode("claude_code", ["openai"])).toBe("bridge");
-    expect(modelSupportsTool("claude_code", ["openai-response"])).toBe(false);
+    expect(modelSupportsTool("claude_code", ["openai-response"])).toBe(true);
   });
 
-  it("keeps the non-Claude tool protocol boundaries unchanged", () => {
+  it("lets Chat Completions apps use models that only advertise Responses", () => {
     expect(modelSupportsTool("pi", ["openai"])).toBe(true);
-    expect(modelSupportsTool("pi", ["openai-response"])).toBe(false);
+    expect(modelSupportsTool("pi", ["openai-response"])).toBe(true);
     expect(modelSupportsTool("workbuddy", ["openai"])).toBe(true);
+    expect(modelSupportsTool("workbuddy", ["openai-response"])).toBe(true);
+    expect(modelSupportsTool("dsh_web", ["openai-response"])).toBe(true);
     expect(modelSupportsTool("workbuddy", ["anthropic"])).toBe(false);
   });
 });

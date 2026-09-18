@@ -480,29 +480,24 @@ async fn validate_models(
 }
 
 fn model_supports_tool(pricing: &Value, model_id: &str, tool_id: &str) -> bool {
-    let required_endpoint = match tool_id {
-        "claude_code" | "claude_desktop" => {
-            return claude_transport(pricing, model_id).is_some();
-        }
-        "codex_desktop" => {
-            return codex_transport(pricing, model_id).is_some();
-        }
-        "pi" | "dsh_web" | "workbuddy" => "openai",
-        _ => return false,
+    match tool_id {
+        "claude_code" | "claude_desktop" => claude_transport(pricing, model_id).is_some(),
+        "codex_desktop" => codex_transport(pricing, model_id).is_some(),
+        "pi" | "dsh_web" | "workbuddy" => chat_compatible(pricing, model_id),
+        _ => false,
+    }
+}
+
+fn chat_compatible(pricing: &Value, model_id: &str) -> bool {
+    let Some(endpoints) = model_endpoints(pricing, model_id) else {
+        return false;
     };
-    data(pricing)
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-        .filter_map(Value::as_object)
-        .find(|row| row.get("model_name").and_then(Value::as_str) == Some(model_id))
-        .and_then(|row| row.get("supported_endpoint_types"))
-        .and_then(Value::as_array)
-        .is_some_and(|endpoints| {
-            endpoints
-                .iter()
-                .any(|endpoint| endpoint.as_str() == Some(required_endpoint))
-        })
+    endpoints.iter().any(|endpoint| {
+        matches!(
+            endpoint.as_str(),
+            Some("openai") | Some("openai-response")
+        )
+    })
 }
 
 fn model_endpoints<'a>(pricing: &'a Value, model_id: &str) -> Option<&'a Vec<Value>> {
@@ -3404,6 +3399,10 @@ mod tests {
         assert!(model_supports_tool(&pricing, "chat", "pi"));
         assert!(model_supports_tool(&pricing, "chat", "dsh_web"));
         assert!(model_supports_tool(&pricing, "chat", "workbuddy"));
+        assert!(model_supports_tool(&pricing, "responses", "pi"));
+        assert!(model_supports_tool(&pricing, "responses", "workbuddy"));
+        assert!(model_supports_tool(&pricing, "responses", "dsh_web"));
+        assert!(!model_supports_tool(&pricing, "messages", "workbuddy"));
         assert!(model_supports_tool(&pricing, "responses", "codex_desktop"));
         assert!(model_supports_tool(&pricing, "messages", "claude_code"));
         assert!(model_supports_tool(&pricing, "messages", "claude_desktop"));
