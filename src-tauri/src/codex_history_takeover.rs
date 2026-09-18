@@ -2,9 +2,23 @@
 //!
 //! Codex pins `model_provider` in both a session JSONL's `session_meta` record
 //! and the `threads` table in `state_5.sqlite`. Changing config.toml alone does
-//! not update an already-created thread. This sidecar transaction moves only
-//! the built-in `openai` bucket to the custom provider selected by our adapter.
-//! It never reads or changes message bodies, encrypted reasoning or auth.json.
+//! not update an already-created thread, so a user who switches provider finds
+//! their old conversations gone from the resume list — the data is intact, it
+//! is just filed in a drawer Codex no longer opens.
+//!
+//! This sidecar transaction moves those drawers into the provider our adapter
+//! selected, and remembers where each one came from so the move is exactly
+//! reversible. It never reads or changes message bodies, encrypted reasoning
+//! or auth.json.
+//!
+//! It used to move only the built-in `openai` drawer, which left anyone
+//! arriving from another switcher (their sessions are filed under that tool's
+//! own provider id) still staring at an empty list.
+//!
+//! Visible is not the same as resumable: a conversation's encrypted reasoning
+//! was sealed by whichever backend produced it, so continuing an imported
+//! thread against a different one can still fail. Reading, searching and
+//! copying out of it all work, which is what the drawer was hiding.
 
 use std::{
     collections::BTreeSet,
@@ -20,8 +34,12 @@ use toml_edit::{DocumentMut, Item};
 
 use crate::tool_adapters::{codex_desktop, common, AdapterFailure};
 
-const SOURCE_PROVIDER: &str = "openai";
-const MANIFEST_VERSION: u8 = 1;
+/// Where a v1 manifest's entries came from, since v1 only ever moved this one.
+const LEGACY_SOURCE_PROVIDER: &str = "openai";
+/// v1 recorded no per-entry origin. Both are accepted so a manifest written by
+/// an older build mid-transaction can still be rolled back.
+const MANIFEST_VERSION: u8 = 2;
+const MIN_MANIFEST_VERSION: u8 = 1;
 const MANIFEST_NAME: &str = "codex-history-takeover-v1.json";
 const MAX_MANIFEST_BYTES: u64 = 32 * 1024 * 1024;
 const MAX_SESSION_BYTES: u64 = 512 * 1024 * 1024;
@@ -40,6 +58,11 @@ enum Phase {
 struct SessionEntry {
     path: PathBuf,
     session_id: String,
+    /// The provider this session was filed under before we moved it, and the
+    /// one a restore must put it back to. Absent in a v1 manifest, which only
+    /// ever moved `openai`.
+    #[serde(default = "legacy_source_provider")]
+    origin_provider: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -47,6 +70,11 @@ struct SessionEntry {
 struct StateEntry {
     path: PathBuf,
     thread_ids: Vec<String>,
+    /// Parallel to `thread_ids`. Empty means a v1 manifest, where every thread
+    /// came from `openai`. Kept as a second list rather than a richer element
+    /// type so a v1 manifest still deserializes unchanged.
+    #[serde(default)]
+    thread_origins: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -66,13 +94,36 @@ pub(crate) struct Takeover {
     apply_on_commit: bool,
 }
 
+fn legacy_source_provider() -> String {
+    LEGACY_SOURCE_PROVIDER.to_owned()
+}
+
+/// The origin recorded for `thread_ids[index]`, tolerating a v1 manifest.
+fn thread_origin(entry: &StateEntry, index: usize) -> &str {
+    entry
+        .thread_origins
+        .get(index)
+        .map_or(LEGACY_SOURCE_PROVIDER, String::as_str)
+}
+
+/// A provider we may move history *into*.
+///
+/// Never the built-in `openai`: that bucket belongs to the user's official
+/// subscription, and filing our sessions there would both mislead Codex and
+/// leave a restore with nowhere distinct to put them back. `valid_provider`
+/// used to carry this rule, but it now has to accept `openai` as a source.
+fn valid_target_provider(value: &str) -> bool {
+    value != LEGACY_SOURCE_PROVIDER && valid_provider(value)
+}
+
 fn failure(code: &'static str) -> AdapterFailure {
     AdapterFailure::ConfigurationFailed(code)
 }
 
+/// Any provider id Codex could have filed a drawer under, including the
+/// built-in `openai` — that one is now a legitimate *source*.
 fn valid_provider(value: &str) -> bool {
-    value != SOURCE_PROVIDER
-        && (1..=64).contains(&value.len())
+    (1..=64).contains(&value.len())
         && value
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-'))
@@ -141,12 +192,20 @@ fn validate_manifest(home: &Path, manifest: &Manifest) -> Result<(), AdapterFail
         .and_then(|bytes| String::from_utf8(bytes).ok())
         .unwrap_or_default();
     let allowed_state = state_db_paths(home, &expected_dir, &config_text);
-    let valid = manifest.version == MANIFEST_VERSION
+    // This manifest is the only record of where each conversation came from.
+    // If it is wrong, a restore files history under a provider it never
+    // belonged to, so every field it carries is checked before it is trusted.
+    let valid = (MIN_MANIFEST_VERSION..=MANIFEST_VERSION).contains(&manifest.version)
         && manifest.codex_dir == expected_dir
-        && valid_provider(&manifest.target_provider)
+        && valid_target_provider(&manifest.target_provider)
         && manifest.sessions.len() <= MAX_SESSION_FILES
         && manifest.sessions.iter().all(|entry| {
-            session_path_allowed(&manifest.codex_dir, &entry.path) && valid_id(&entry.session_id)
+            session_path_allowed(&manifest.codex_dir, &entry.path)
+                && valid_id(&entry.session_id)
+                && valid_provider(&entry.origin_provider)
+                // A session recorded as coming from the target has nowhere to
+                // be restored to; it should never have been collected.
+                && entry.origin_provider != manifest.target_provider
         })
         && manifest.state.len() <= 2
         && manifest.state.iter().all(|entry| {
@@ -154,6 +213,13 @@ fn validate_manifest(home: &Path, manifest: &Manifest) -> Result<(), AdapterFail
                 && allowed_state.contains(&entry.path)
                 && entry.thread_ids.len() <= MAX_SESSION_FILES
                 && entry.thread_ids.iter().all(|id| valid_id(id))
+                // Empty is the v1 shape (all `openai`). Anything else has to
+                // line up positionally, or the origins address the wrong rows.
+                && (entry.thread_origins.is_empty()
+                    || entry.thread_origins.len() == entry.thread_ids.len())
+                && entry.thread_origins.iter().all(|origin| {
+                    valid_provider(origin) && *origin != manifest.target_provider
+                })
         });
     if valid {
         Ok(())
@@ -220,6 +286,19 @@ fn session_meta(bytes: &[u8]) -> Option<(Value, usize, bool)> {
         end,
         bytes.get(end) == Some(&b'\n'),
     ))
+}
+
+/// The session's id and the provider it is currently filed under.
+///
+/// The single-provider `session_identity` stays for verifying a rewrite landed;
+/// discovery needs to accept whatever drawer a session happens to be in.
+fn session_origin(bytes: &[u8]) -> Option<(String, String)> {
+    let (value, _, _) = session_meta(bytes)?;
+    let payload = value.get("payload")?;
+    let provider = payload.get("model_provider").and_then(Value::as_str)?;
+    let id = payload.get("id").and_then(Value::as_str)?;
+    (valid_id(id) && valid_provider(provider))
+        .then(|| (id.to_owned(), provider.to_owned()))
 }
 
 fn session_identity(bytes: &[u8], provider: &str) -> Option<String> {
@@ -338,7 +417,7 @@ fn has_provider_column(connection: &Connection) -> Result<bool, AdapterFailure> 
     Ok(false)
 }
 
-fn collect_state_entry(path: &Path) -> Result<Option<StateEntry>, AdapterFailure> {
+fn collect_state_entry(path: &Path, target: &str) -> Result<Option<StateEntry>, AdapterFailure> {
     if !path.is_file() {
         return Ok(None);
     }
@@ -353,31 +432,47 @@ fn collect_state_entry(path: &Path) -> Result<Option<StateEntry>, AdapterFailure
         return Ok(None);
     }
     let mut statement = connection
-        .prepare("SELECT id FROM threads WHERE model_provider = ?1")
+        .prepare("SELECT id, model_provider FROM threads WHERE model_provider <> ?1")
         .map_err(|_| failure("codex_history_takeover_failed"))?;
     let rows = statement
-        .query_map([SOURCE_PROVIDER], |row| row.get::<_, String>(0))
+        .query_map([target], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        })
         .map_err(|_| failure("codex_history_takeover_failed"))?;
-    let mut ids = BTreeSet::new();
-    for id in rows {
-        let id = id.map_err(|_| failure("codex_history_takeover_failed"))?;
-        if valid_id(&id) {
-            ids.insert(id);
+    // BTreeSet keeps the pairing between the two lists deterministic, which is
+    // what lets `thread_origins` be positional.
+    let mut found = BTreeSet::new();
+    for row in rows {
+        let (id, origin) = row.map_err(|_| failure("codex_history_takeover_failed"))?;
+        if valid_id(&id) && valid_provider(&origin) {
+            found.insert((id, origin));
         }
-        if ids.len() > MAX_SESSION_FILES {
+        if found.len() > MAX_SESSION_FILES {
             return Err(failure("codex_history_takeover_failed"));
         }
     }
-    Ok((!ids.is_empty()).then(|| StateEntry {
+    if found.is_empty() {
+        return Ok(None);
+    }
+    let (thread_ids, thread_origins) = found.into_iter().unzip();
+    Ok(Some(StateEntry {
         path: path.to_owned(),
-        thread_ids: ids.into_iter().collect(),
+        thread_ids,
+        thread_origins,
     }))
+}
+
+/// Which way a state rewrite runs. Each thread has its own origin, so only the
+/// target side is a single value; the other end is read per row.
+#[derive(Clone, Copy)]
+enum Direction<'a> {
+    Into(&'a str),
+    OutOf(&'a str),
 }
 
 fn rewrite_state(
     entry: &StateEntry,
-    from: &str,
-    to: &str,
+    direction: Direction<'_>,
     error_code: &'static str,
 ) -> Result<(), AdapterFailure> {
     if !entry.path.is_file() {
@@ -396,7 +491,12 @@ fn rewrite_state(
         let mut statement = transaction
             .prepare("UPDATE threads SET model_provider = ?1 WHERE id = ?2 AND model_provider = ?3")
             .map_err(|_| failure(error_code))?;
-        for id in &entry.thread_ids {
+        for (index, id) in entry.thread_ids.iter().enumerate() {
+            let origin = thread_origin(entry, index);
+            let (to, from) = match direction {
+                Direction::Into(target) => (target, origin),
+                Direction::OutOf(target) => (origin, target),
+            };
             statement
                 .execute(params![to, id, from])
                 .map_err(|_| failure(error_code))?;
@@ -414,11 +514,19 @@ fn build_manifest(home: &Path, target: &str) -> Result<Manifest, AdapterFailure>
     for path in paths {
         let bytes = common::first_line_bounded(&path, MAX_SESSION_BYTES, MAX_SESSION_META_BYTES)
             .map_err(|_| failure("codex_history_takeover_failed"))?;
-        if let Some(session_id) = bytes
-            .as_deref()
-            .and_then(|bytes| session_identity(bytes, SOURCE_PROVIDER))
+        // Any drawer but the one we are moving into. A session already filed
+        // under the target needs no move, and moving it would make the restore
+        // put it somewhere it never was.
+        if let Some((session_id, origin_provider)) =
+            bytes.as_deref().and_then(session_origin)
         {
-            sessions.push(SessionEntry { path, session_id });
+            if origin_provider != target {
+                sessions.push(SessionEntry {
+                    path,
+                    session_id,
+                    origin_provider,
+                });
+            }
         }
     }
     let config_text = common::snapshot_bounded(&codex_dir.join("config.toml"), 2 * 1024 * 1024)
@@ -428,7 +536,7 @@ fn build_manifest(home: &Path, target: &str) -> Result<Manifest, AdapterFailure>
         .unwrap_or_default();
     let mut state = Vec::new();
     for path in state_db_paths(home, &codex_dir, &config_text) {
-        if let Some(entry) = collect_state_entry(&path)? {
+        if let Some(entry) = collect_state_entry(&path, target)? {
             state.push(entry);
         }
     }
@@ -444,13 +552,12 @@ fn build_manifest(home: &Path, target: &str) -> Result<Manifest, AdapterFailure>
 
 fn apply_manifest(manifest: &Manifest) -> Result<(), AdapterFailure> {
     for entry in &manifest.sessions {
-        rewrite_session(entry, SOURCE_PROVIDER, &manifest.target_provider)?;
+        rewrite_session(entry, &entry.origin_provider, &manifest.target_provider)?;
     }
     for entry in &manifest.state {
         rewrite_state(
             entry,
-            SOURCE_PROVIDER,
-            &manifest.target_provider,
+            Direction::Into(&manifest.target_provider),
             "codex_history_takeover_failed",
         )?;
     }
@@ -459,13 +566,12 @@ fn apply_manifest(manifest: &Manifest) -> Result<(), AdapterFailure> {
 
 fn restore_manifest(home: &Path, manifest: &Manifest) -> Result<(), AdapterFailure> {
     for entry in &manifest.sessions {
-        rewrite_session(entry, &manifest.target_provider, SOURCE_PROVIDER)?;
+        rewrite_session(entry, &manifest.target_provider, &entry.origin_provider)?;
     }
     for entry in &manifest.state {
         rewrite_state(
             entry,
-            &manifest.target_provider,
-            SOURCE_PROVIDER,
+            Direction::OutOf(&manifest.target_provider),
             "codex_history_takeover_recovery_failed",
         )?;
     }
@@ -474,7 +580,7 @@ fn restore_manifest(home: &Path, manifest: &Manifest) -> Result<(), AdapterFailu
 
 impl Takeover {
     pub(crate) fn begin(home: &Path, target: &str) -> Result<Self, AdapterFailure> {
-        if !valid_provider(target) {
+        if !valid_target_provider(target) {
             return Err(failure("codex_history_takeover_failed"));
         }
         if let Some(existing) = load_manifest(home)? {
@@ -572,6 +678,7 @@ mod tests {
         let entry = SessionEntry {
             path: path.clone(),
             session_id: "thread-1".into(),
+            origin_provider: "openai".into(),
         };
         rewrite_session(&entry, "openai", "yeschoy").unwrap();
         let changed = fs::read(&path).unwrap();
@@ -603,6 +710,7 @@ mod tests {
         let entry = SessionEntry {
             path: path.clone(),
             session_id: "thread-large".into(),
+            origin_provider: "openai".into(),
         };
         rewrite_session(&entry, "openai", "yeschoy").unwrap();
         let changed = fs::read(&path).unwrap();
@@ -622,6 +730,135 @@ mod tests {
                 .is_err()
         );
         fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn a_drawer_from_another_switcher_moves_and_goes_back_where_it_came_from() {
+        // Someone arriving from another switcher has their conversations filed
+        // under that tool's provider id, not the built-in `openai`. Moving only
+        // `openai` left them staring at an empty resume list, which is the whole
+        // complaint this feature exists to answer.
+        let root = temp("codex-history-foreign-origin");
+        let path = root.join("sessions/2026/foreign.jsonl");
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let original = b"{\"type\":\"session_meta\",\"payload\":{\"id\":\"thread-9\",\"model_provider\":\"packycode\"}}\n{\"type\":\"response_item\",\"payload\":{\"encrypted_content\":\"untouched\"}}\n";
+        common::atomic_write_bounded(&path, original, MAX_SESSION_BYTES).unwrap();
+
+        let (id, origin) = session_origin(&fs::read(&path).unwrap()).unwrap();
+        assert_eq!((id.as_str(), origin.as_str()), ("thread-9", "packycode"));
+
+        let entry = SessionEntry {
+            path: path.clone(),
+            session_id: id,
+            origin_provider: origin,
+        };
+        rewrite_session(&entry, &entry.origin_provider, "yeschoy").unwrap();
+        assert_eq!(
+            session_identity(&fs::read(&path).unwrap(), "yeschoy").as_deref(),
+            Some("thread-9")
+        );
+        // Restoring must return it to `packycode`, not to `openai` — that is
+        // what the recorded origin is for.
+        rewrite_session(&entry, "yeschoy", &entry.origin_provider).unwrap();
+        assert_eq!(
+            session_identity(&fs::read(&path).unwrap(), "packycode").as_deref(),
+            Some("thread-9")
+        );
+        assert!(String::from_utf8(fs::read(&path).unwrap())
+            .unwrap()
+            .contains("encrypted_content\":\"untouched"));
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn threads_return_to_their_own_providers_not_a_single_default() {
+        let root = temp("codex-history-mixed-origins");
+        let path = root.join("state_5.sqlite");
+        let connection = Connection::open(&path).unwrap();
+        connection
+            .execute(
+                "CREATE TABLE threads (id TEXT PRIMARY KEY, model_provider TEXT)",
+                [],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "INSERT INTO threads VALUES ('a', 'openai'), ('b', 'packycode'), ('c', 'yeschoy')",
+                [],
+            )
+            .unwrap();
+        drop(connection);
+
+        // Discovery takes every drawer but the one being moved into.
+        let entry = collect_state_entry(&path, "yeschoy").unwrap().unwrap();
+        assert_eq!(entry.thread_ids, vec!["a".to_string(), "b".to_string()]);
+        assert_eq!(
+            entry.thread_origins,
+            vec!["openai".to_string(), "packycode".to_string()]
+        );
+
+        rewrite_state(&entry, Direction::Into("yeschoy"), "test").unwrap();
+        let connection = Connection::open(&path).unwrap();
+        let provider = |id: &str| {
+            connection
+                .query_row(
+                    "SELECT model_provider FROM threads WHERE id = ?1",
+                    [id],
+                    |row| row.get::<_, String>(0),
+                )
+                .unwrap()
+        };
+        assert_eq!(provider("a"), "yeschoy");
+        assert_eq!(provider("b"), "yeschoy");
+        assert_eq!(provider("c"), "yeschoy");
+        drop(connection);
+
+        rewrite_state(&entry, Direction::OutOf("yeschoy"), "test").unwrap();
+        let connection = Connection::open(&path).unwrap();
+        let provider = |id: &str| {
+            connection
+                .query_row(
+                    "SELECT model_provider FROM threads WHERE id = ?1",
+                    [id],
+                    |row| row.get::<_, String>(0),
+                )
+                .unwrap()
+        };
+        assert_eq!(provider("a"), "openai");
+        assert_eq!(provider("b"), "packycode");
+        // Never collected, never touched in either direction.
+        assert_eq!(provider("c"), "yeschoy");
+        drop(connection);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn a_v1_manifest_still_restores_to_openai() {
+        // An older build could have written a manifest and then crashed. Its
+        // entries carry no origin, and v1 only ever moved `openai`.
+        let entry: SessionEntry = serde_json::from_str(
+            r#"{"path":"/tmp/x.jsonl","session_id":"thread-1"}"#,
+        )
+        .unwrap();
+        assert_eq!(entry.origin_provider, LEGACY_SOURCE_PROVIDER);
+        let state: StateEntry = serde_json::from_str(
+            r#"{"path":"/tmp/state_5.sqlite","thread_ids":["a","b"]}"#,
+        )
+        .unwrap();
+        assert!(state.thread_origins.is_empty());
+        assert_eq!(thread_origin(&state, 0), LEGACY_SOURCE_PROVIDER);
+        assert_eq!(thread_origin(&state, 7), LEGACY_SOURCE_PROVIDER);
+    }
+
+    #[test]
+    fn the_official_bucket_is_never_a_takeover_target() {
+        // `openai` is now a legitimate source, so the rule that it must never
+        // be a destination needs its own guard.
+        assert!(!valid_target_provider("openai"));
+        assert!(valid_provider("openai"));
+        assert!(valid_target_provider("yeschoy"));
+        assert!(!valid_target_provider(""));
+        assert!(!valid_target_provider("has space"));
     }
 
     #[test]
@@ -645,8 +882,9 @@ mod tests {
         let entry = StateEntry {
             path: path.clone(),
             thread_ids: vec!["a".into()],
+            thread_origins: vec!["openai".into()],
         };
-        rewrite_state(&entry, "openai", "yeschoy", "test").unwrap();
+        rewrite_state(&entry, Direction::Into("yeschoy"), "test").unwrap();
         let connection = Connection::open(&path).unwrap();
         let provider = |id: &str| {
             connection
