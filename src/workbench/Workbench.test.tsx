@@ -433,7 +433,8 @@ describe("official workbench", () => {
       expect(screen.queryByText(/Synthetic upstream/)).not.toBeInTheDocument();
       const group = within(
         screen.getByRole("group", { name: "选择价格方案" }),
-      ).getByRole("radio", { name: /国模特价分组/ });
+      ).getByRole("radio", { name: /按所选分组计费/ });
+      expect(group).toHaveAttribute("value", "国模特价分组");
       fireEvent.click(group);
       expect(group).toBeChecked();
     }
@@ -476,7 +477,7 @@ describe("official workbench", () => {
       expect(screen.queryByRole("listbox")).not.toBeInTheDocument(),
     );
 
-    // 切到 Codex Desktop（需 openai-response/openai）：兼容列表只剩 1 个。
+    // 切到 Codex Desktop（需 openai-response）：兼容列表只剩 1 个。
     fireEvent.change(
       screen
         .getByRole("combobox", { name: /使用应用/ })
@@ -584,7 +585,9 @@ describe("official workbench", () => {
       .closest("article")!;
     fireEvent.click(within(card).getByRole("button", { name: "换模型与分组" }));
     await act(async () => {});
-    expect(screen.getByRole("radio", { name: /国模特价分组/ })).toBeChecked();
+    expect(
+      screen.getByRole("radio", { name: /按所选分组计费/ }),
+    ).toBeChecked();
     expect(
       screen.getByRole("button", { name: /全球加速 Cloudflare/ }),
     ).toHaveAttribute("aria-pressed", "true");
@@ -594,7 +597,9 @@ describe("official workbench", () => {
     ).toHaveFocus();
     openWorkbenchPage("应用接入");
     await act(async () => {});
-    expect(screen.getByRole("radio", { name: /国模特价分组/ })).toBeChecked();
+    expect(
+      screen.getByRole("radio", { name: /按所选分组计费/ }),
+    ).toBeChecked();
     expect(screen.getByRole("button", { name: "恢复原设置" })).toBeEnabled();
   });
   it("uses user-facing copy without engineering or release checklists", async () => {
@@ -955,11 +960,13 @@ describe("official workbench", () => {
       fireEvent.click(within(codex).getByRole("button", { name: "开始接入" }));
       await screen.findByRole("button", { name: "一键接入" });
       if (billingGroup === "国模特价分组") {
-        fireEvent.click(screen.getByRole("radio", { name: /国模特价分组/ }));
+        const group = screen.getByRole("radio", {
+          name: /按所选分组计费/,
+        });
+        expect(group).toHaveAttribute("value", billingGroup);
+        fireEvent.click(group);
         expect(document.querySelector(".billing-comparison-card.is-yeschoy strong")).toHaveTextContent("¥70.35");
-        expect(
-          screen.getByRole("radio", { name: /国模特价分组/ }),
-        ).toBeChecked();
+        expect(group).toBeChecked();
       }
       fireEvent.click(screen.getByTestId("configuration-apply-action"));
       expect(await screen.findByText("接入完成")).toBeInTheDocument();

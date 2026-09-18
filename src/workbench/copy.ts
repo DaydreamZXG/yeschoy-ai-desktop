@@ -1,6 +1,15 @@
 const zh = {
   home: "我的应用",
+  // 侧边栏的接入入口。这个键一直定义着但从没被用过 —— 接入之前只能从
+  // 首页的应用卡片点进去，而它是整个产品唯一的目的。
   apps: "应用接入",
+  announcements: "公告",
+  announcementsTitle: "公告",
+  announcementsIntro: "野菜API 的最新通知：价格调整、线路变化、维护安排。",
+  announcementsEmpty: "暂时没有新公告。",
+  announcementsFailed: "暂时读不到公告，不影响你正常使用。稍后再看看。",
+  announcementsRetry: "重新读取",
+  announcementsUnread: "未读",
   models: "模型与价格",
   usage: "用量账单",
   help: "连接诊断",

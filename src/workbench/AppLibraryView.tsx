@@ -33,17 +33,20 @@ import { RecentRequest } from "../configuration/RecentRequest";
 import { ConnectionStatusNotice } from "../configuration/ConnectionStatusNotice";
 import type { SetupAction } from "../configuration/setupIntent";
 import { useWorkbenchCopy } from "./copy";
-import { QQGroupDialog } from "./QQGroupDialog";
 import { Users } from "lucide-react";
 
 interface Props {
   onOpenAccount: () => void;
   onOpenSetup: (appId: ActivationToolId, action?: SetupAction) => void;
+  // 交流群对话框的状态提到了 App：侧边栏和这里的页脚都要能打开它，
+  // 两份各自的 useState 会变成两个互不知情的对话框。
+  onOpenCommunity: () => void;
   accountSession: AccountSessionController;
 }
 export function AppLibraryView({
   onOpenAccount,
   onOpenSetup,
+  onOpenCommunity,
   accountSession,
 }: Props) {
   const { t } = useTranslation();
@@ -53,7 +56,6 @@ export function AppLibraryView({
   const [scanning, setScanning] = useState(true);
   const [scanError, setScanError] = useState(false);
   const [showAllApps, setShowAllApps] = useState(false);
-  const [qqGroupOpen, setQqGroupOpen] = useState(false);
   const sequence = useRef(0);
   const refresh = useCallback(async () => {
     const current = ++sequence.current;
@@ -510,7 +512,7 @@ export function AppLibraryView({
           <button
             type="button"
             className="text-button join-group-link"
-            onClick={() => setQqGroupOpen(true)}
+            onClick={onOpenCommunity}
           >
             <Users aria-hidden="true" />
             {c.joinGroup}
@@ -524,19 +526,6 @@ export function AppLibraryView({
           </button>
         </span>
       </footer>
-      <QQGroupDialog
-        open={qqGroupOpen}
-        onOpenChange={setQqGroupOpen}
-        copy={{
-          title: c.qqGroupTitle,
-          body: c.qqGroupBody,
-          groupIdLabel: c.qqGroupIdLabel,
-          scanHint: c.qqGroupScanHint,
-          copyGroupId: c.copyGroupId,
-          groupIdCopied: c.groupIdCopied,
-          close: c.close,
-        }}
-      />
     </div>
   );
 }

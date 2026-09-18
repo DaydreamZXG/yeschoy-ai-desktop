@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-// 首次接入庆祝（动效优化）：彩带只播一次、约 1.2s，ticker 打字机常驻。
-// reduced-motion 由全局拍平兜底（confetti 静止瞬间消失），无需逐类处理。
+// 首次接入庆祝（动效优化）：彩带只播一次，ticker 打字机常驻。
 const PARTICLE_COLORS = [
   "var(--accent)",
   "var(--success)",
@@ -13,28 +12,56 @@ function randomIn(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
+/** 用户在系统里要求减少动效。装饰性动画应该整个不做，而不是拍平成静止的 DOM。 */
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
 /** 彩带层：一次性、装饰性（aria-hidden），结束后自动卸载。 */
 export function CelebrationConfetti() {
   const [alive, setAlive] = useState(true);
+  const reducedMotion = useMemo(prefersReducedMotion, []);
   const particles = useMemo(
     () =>
-      Array.from({ length: 40 }, (_, index) => ({
-        id: index,
-        left: randomIn(0, 100),
-        drift: randomIn(-60, 60),
-        delay: randomIn(0, 140),
-        duration: randomIn(900, 1300),
-        size: randomIn(5, 9),
-        color: PARTICLE_COLORS[index % PARTICLE_COLORS.length],
-        rotate: randomIn(-180, 180),
-      })),
-    [],
+      reducedMotion
+        ? []
+        : Array.from({ length: 40 }, (_, index) => ({
+            id: index,
+            left: randomIn(0, 100),
+            drift: randomIn(-60, 60),
+            delay: randomIn(0, 140),
+            duration: randomIn(900, 1300),
+            size: randomIn(5, 9),
+            color: PARTICLE_COLORS[index % PARTICLE_COLORS.length],
+            rotate: randomIn(-180, 180),
+          })),
+    [reducedMotion],
+  );
+  // 卸载时间从粒子本身算出来，而不是写死。原来是固定 1500ms，而最慢的一片
+  // 是 140ms 延迟 + 1300ms 时长 = 1440ms —— 只剩 60ms 余量，而且两个计时的
+  // 起点还不一样（动画从首帧开始，定时器从 effect 开始）。首帧一慢，彩带就
+  // 在半空中被整层删掉，而不是落到底淡出。
+  const lifetimeMs = useMemo(
+    () =>
+      particles.reduce(
+        (longest, p) => Math.max(longest, p.delay + p.duration),
+        0,
+      ) + 120,
+    [particles],
   );
   useEffect(() => {
-    const timer = window.setTimeout(() => setAlive(false), 1500);
+    if (!particles.length) {
+      setAlive(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setAlive(false), lifetimeMs);
     return () => window.clearTimeout(timer);
-  }, []);
-  if (!alive) return null;
+  }, [particles.length, lifetimeMs]);
+  if (!alive || !particles.length) return null;
   return (
     <div className="celebration-confetti" aria-hidden="true">
       {particles.map((p) => (
@@ -48,9 +75,11 @@ export function CelebrationConfetti() {
             background: p.color,
             animationDelay: `${p.delay}ms`,
             animationDuration: `${p.duration}ms`,
-            transform: `rotate(${p.rotate}deg)`,
-            // CSS 变量传漂移量，keyframes 里 var(--drift) 消费
+            // 漂移和初始旋转都通过 CSS 变量交给 keyframes。
+            // 不能在这里写 transform：动画期间 transform 归动画所有，
+            // 内联的 rotate() 会被整条覆盖，随机角度等于白写。
             ["--drift" as string]: `${p.drift}px`,
+            ["--rotate" as string]: `${p.rotate}deg`,
           }}
         />
       ))}

@@ -11,6 +11,13 @@ import {
   type AccountProjection,
 } from "./session";
 
+/// Masking a transient failure keeps a brief route hiccup from looking like a
+/// logout. Masking it indefinitely is worse: an authorization the user already
+/// approved in the browser keeps rendering as "waiting", with the real reason
+/// never shown, until the device code expires ten minutes later. Tolerate a
+/// short run of failures, then let the real status through.
+const TRANSIENT_TOLERANCE = 3;
+
 export function useAccountSession(lineId: ConfigurationLineId) {
   const [projection, setProjection] = useState<AccountProjection | null>(null);
   const [loading, setLoading] = useState(true);
@@ -19,6 +26,7 @@ export function useAccountSession(lineId: ConfigurationLineId) {
   const projectionRef = useRef<AccountProjection | null>(null);
   const authorizationLine = useRef(lineId);
   const latest = useRef(0);
+  const transientStreak = useRef(0);
   projectionRef.current = projection;
 
   const execute = useCallback(
@@ -26,8 +34,10 @@ export function useAccountSession(lineId: ConfigurationLineId) {
       latest.current += 1;
       const current = latest.current;
       setLoading(true);
-      if (command === "account_begin_authorization_v2")
+      if (command === "account_begin_authorization_v2") {
         authorizationLine.current = lineId;
+        transientStreak.current = 0;
+      }
       try {
         const result = await runAccountCommand(
           command,
@@ -43,6 +53,7 @@ export function useAccountSession(lineId: ConfigurationLineId) {
             "network_error",
             "invalid_response",
           ].includes(result.status);
+          transientStreak.current = transient ? transientStreak.current + 1 : 0;
           setLastError(transient ? result.reasonCode : null);
           // 本地记账（#23）：signed_in 滚动最近使用时间；会话确认消失则清除。
           if (result.status === "signed_in") noteSessionActivity();
@@ -53,6 +64,7 @@ export function useAccountSession(lineId: ConfigurationLineId) {
             clearSessionAgeRecord();
           setProjection((previous) =>
             transient &&
+            transientStreak.current <= TRANSIENT_TOLERANCE &&
             (previous?.status === "signed_in" ||
               previous?.status === "authorization_pending")
               ? previous
@@ -61,7 +73,10 @@ export function useAccountSession(lineId: ConfigurationLineId) {
         }
         return result;
       } catch {
-        if (latest.current === current) setLastError("network_error");
+        if (latest.current === current) {
+          transientStreak.current += 1;
+          setLastError("network_error");
+        }
         return null;
       } finally {
         if (latest.current === current) {

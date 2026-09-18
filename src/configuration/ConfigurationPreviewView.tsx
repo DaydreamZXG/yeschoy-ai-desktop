@@ -421,6 +421,8 @@ export function ConfigurationPreviewView({
   const selectedInstallation = target?.installations.find(
     (candidate) => candidate.installationId === selectedInstallationId,
   );
+  const usableInstallations =
+    target?.installations.filter((candidate) => candidate.supported).length ?? 0;
 
   const refreshTargets = useCallback(async () => {
     targetScanSequence.current += 1;
@@ -964,6 +966,10 @@ export function ConfigurationPreviewView({
           ].includes(activation.reasonCode)
         )
           return g.launchStoreApp;
+        if (activation.reasonCode === "desktop_launch_start_failed")
+          return g.launchStartFailed;
+        if (activation.reasonCode === "desktop_start_unconfirmed")
+          return g.launchUnconfirmed;
         return g.launchNotOpened;
       case "verification_failed":
         switch (activation.reasonCode) {
@@ -1035,6 +1041,14 @@ export function ConfigurationPreviewView({
           return g.recoveryStorageUnavailable;
         if (activation.reasonCode === "recovery_receipt_failed")
           return g.recoveryReceiptFailed;
+        if (activation.reasonCode === "configuration_parse_failed")
+          return g.configurationParseFailed;
+        if (activation.reasonCode === "configuration_read_failed")
+          return g.configurationReadFailed;
+        if (activation.reasonCode === "configuration_write_failed")
+          return g.configurationWriteFailed;
+        if (activation.reasonCode === "configuration_readback_failed")
+          return g.configurationReadbackFailed;
         return c.setupWriteFailed;
       case "invalid_request":
         return c.setupWriteFailed;
@@ -1637,12 +1651,13 @@ export function ConfigurationPreviewView({
             )}
           </fieldset>
 
+          {/* 只数「能用」的副本。发现范围扩大之后（nvm / bun / volta / fnm），
+              一个陈旧目录残留常常让总数变成 2，把一个本来没得选的情况
+              渲染成下拉框。 */}
           <details className="installation-details">
             <summary>
               {g.installationSummary}
-              {target && target.installations.length > 1
-                ? g.autoSelectedSuffix
-                : ""}
+              {usableInstallations > 1 ? g.autoSelectedSuffix : ""}
             </summary>
             <div
               className="installation-choice"
@@ -1656,7 +1671,7 @@ export function ConfigurationPreviewView({
                   {connectionLabel(savedConnection.state)}
                 </span>
               )}
-              {target && target.installations.length > 1 ? (
+              {target && usableInstallations > 1 ? (
                 <label>
                   <span>{g.chooseInstall}</span>
                   <select

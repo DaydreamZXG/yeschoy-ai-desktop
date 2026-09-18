@@ -33,6 +33,7 @@ mod oauth_pkce;
 mod request_diagnostics;
 mod service_catalog;
 mod service_catalog_core;
+mod shell_environment;
 mod shutdown_coordinator;
 mod exit_restore;
 mod tool_activation;
@@ -126,10 +127,22 @@ pub fn run() {
                 if permit.is_cancelled() {
                     return;
                 }
-                // Claude clients use small local pass-throughs for native
-                // model-ID compatibility. Resume only when their managed
-                // settings still point to the corresponding loopback endpoint.
+                // Resolve the user's login-shell environment (a macOS app
+                // launched from the Dock cannot see the exports a Terminal
+                // window would; see shell_environment for what that broke).
+                //
+                // Concurrently, not before: sourcing an interactive rc can take
+                // seconds, and neither resume reads that environment. Awaiting
+                // it first would have delayed the loopback bridges by exactly
+                // as long as the user's shell takes to start — so someone who
+                // opened the app and went straight to their terminal would find
+                // Claude Code pointing at a port nothing was listening on yet.
                 tokio::join!(
+                    shell_environment::initialize(),
+                    // Claude clients use small local pass-throughs for native
+                    // model-ID compatibility. Resume only when their managed
+                    // settings still point to the corresponding loopback
+                    // endpoint.
                     tool_adapters::claude_code::resume_if_configured(resume_claude_code_runtime),
                     tool_adapters::claude_desktop::resume_if_configured(resume_claude_runtime)
                 );
@@ -147,6 +160,7 @@ pub fn run() {
             account_v2::account_cancel_authorization_v2,
             account_v2::account_logout_v2,
             account_v2::account_open_wallet_v2,
+            account_v2::account_announcements_read_v2,
             tool_activation::scan_activation_targets_v1,
             tool_activation::configure_desktop_tool_v2,
             tool_activation::cancel_tool_activation_v1,

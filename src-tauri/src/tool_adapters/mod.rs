@@ -111,9 +111,74 @@ fn desktop_id_for(tool_id: &str) -> Option<&'static str> {
     }
 }
 
+/// Whether picking an installation is a question worth asking the user.
+///
+/// It never changes what gets configured: every adapter's `prepare_catalog`
+/// takes `home`, so the files written are user-level and identical whichever
+/// copy is selected. The choice only decides which binary or bundle the
+/// assistant launches and lifecycle-checks.
+///
+/// That makes it the wrong question for a CLI. What `claude` runs in a terminal
+/// is decided by the login shell's `PATH`, and `discover_candidates` already
+/// orders candidates by that. Asking the user would let them pick a second copy
+/// the "打开终端使用" button then launches while their own terminal keeps
+/// running the first one — two different binaries, no way to tell from the two
+/// identical labels they were offered.
+///
+/// Desktop bundles have no `PATH` to arbitrate, and discovery reads a real
+/// version out of them, so there the question is both necessary and answerable.
+fn asks_which_installation(tool_id: &str) -> bool {
+    desktop_id_for(tool_id).is_some()
+}
+
+/// A path the user can recognise, with the parts they should not have to see
+/// stripped out.
+///
+/// The home prefix collapses to `~`, which removes the account name — the only
+/// genuinely sensitive part of a local path — while still telling a person
+/// apart `~/Applications/Claude.app` from `/Applications/Claude.app`. A long
+/// path keeps its last two components, because the tail is what differs.
+/// Control and bidi characters are dropped: the renderer rejects them, and a
+/// user with an oddly named folder should not silently lose the entry.
+fn display_path(path: &Path, home: Option<&Path>) -> String {
+    let shortened = home
+        .and_then(|home| path.strip_prefix(home).ok())
+        .map(|rest| format!("~/{}", rest.to_string_lossy()))
+        .unwrap_or_else(|| path.to_string_lossy().into_owned());
+    let chosen = if shortened.chars().count() <= 64 {
+        shortened
+    } else {
+        let tail = path
+            .components()
+            .rev()
+            .take(2)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .map(|part| part.as_os_str().to_string_lossy().into_owned())
+            .collect::<Vec<_>>()
+            .join("/");
+        format!("…/{tail}")
+    };
+    // Filtering last, so a hostile name reached through the eliding branch is
+    // cleaned too, and truncation cannot leave a half-written escape sequence.
+    chosen
+        .chars()
+        .filter(|c| {
+            !c.is_control() && !matches!(*c, '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
+        })
+        .take(64)
+        .collect()
+}
+
 fn opaque_installation_id(path: &Path) -> String {
-    // FNV-1a is used only as an opaque, local selection handle. The canonical
-    // path never crosses IPC and collisions are rejected during resolution.
+    // FNV-1a is used only as an opaque, local selection handle.
+    //
+    // What this protects is the *inbound* direction: the renderer hands back an
+    // id, never a path, so it cannot steer the backend at an arbitrary file,
+    // and collisions are rejected during resolution. Putting a readable path in
+    // the outbound `label` does not weaken that — it is a caption for a choice
+    // the user is already making about their own machine.
     let mut hash = 0xcbf29ce484222325u64;
     for byte in path.to_string_lossy().as_bytes() {
         hash ^= u64::from(*byte);
@@ -172,15 +237,20 @@ fn projections(tool_id: &str, observed: &[ObservedInstallation]) -> Vec<Installa
     let preferred = observed
         .iter()
         .position(|installation| can_attempt(tool_id, installation));
+    let home = user_home();
     observed
         .iter()
         .enumerate()
         .map(|(index, installation)| InstallationProjection {
             installation_id: opaque_installation_id(&installation.path),
+            // "安装 1 · 系统 PATH" told the user nothing: CLI discovery leaves
+            // `version` empty on purpose, so two entries could be completely
+            // indistinguishable. The location stays as context; the path is
+            // what actually answers the question.
             label: format!(
-                "安装 {} · {}",
-                index + 1,
-                location_label(installation.location)
+                "{} · {}",
+                location_label(installation.location),
+                display_path(&installation.path, home.as_deref())
             ),
             version: installation.version.clone(),
             supported: can_attempt(tool_id, installation),
@@ -216,16 +286,18 @@ async fn scan_target(index: usize) -> TargetProjection {
         .iter()
         .filter(|item| can_attempt(tool_id, item))
         .count();
+    // Only ask when there is a real choice, and only for the tools where the
+    // choice is real at all (see `asks_which_installation`). `observed` also
+    // carries entries that cannot be activated, so a single usable copy beside
+    // a stale one is an answer, not a question.
     let status = if observed.is_empty() {
         "not_found"
     } else if supported_count == 0 {
         "missing_runtime"
+    } else if supported_count > 1 && asks_which_installation(tool_id) {
+        "selection_required"
     } else {
-        if observed.len() == 1 {
-            "available"
-        } else {
-            "selection_required"
-        }
+        "available"
     };
     TargetProjection {
         tool_id,
@@ -245,8 +317,17 @@ pub(crate) async fn resolve_installation(
         return Err(AdapterFailure::ToolNotFound);
     }
     let selected = if installation_id.is_empty() {
-        match observed.as_slice() {
-            [only] => only,
+        // Mirrors the `available` rule in `scan_target`, so the two can never
+        // disagree: whenever the scan did not ask, resolution must not refuse.
+        // `observed` is already ordered by login-shell PATH position, so the
+        // first usable candidate is the one the user's own terminal resolves.
+        let mut usable = observed
+            .iter()
+            .filter(|candidate| can_attempt(tool_id, candidate));
+        match (usable.next(), usable.next()) {
+            (Some(only), None) => only,
+            (None, _) => return Err(AdapterFailure::MissingRuntime),
+            (Some(first), Some(_)) if !asks_which_installation(tool_id) => first,
             _ => return Err(AdapterFailure::MultipleInstallations),
         }
     } else {
@@ -321,6 +402,129 @@ mod tests {
         };
         assert!(!can_attempt("pi", &disappeared));
         let _ = std::fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn one_usable_copy_is_an_answer_even_when_discovery_found_others() {
+        // Discovery keeps unusable entries (a stale directory where the binary
+        // used to be, a bundle that no longer exists). With CLI versions left
+        // empty on purpose, offering those alongside the real installation gave
+        // the user two indistinguishable labels to choose between.
+        let directory = common::temporary_working_directory("single-usable").unwrap();
+        let real = directory.join("claude");
+        std::fs::write(&real, b"fixture").unwrap();
+        let observed = vec![
+            ObservedInstallation {
+                path: directory.join("gone"),
+                version: String::new(),
+                location: "common_location",
+            },
+            ObservedInstallation {
+                path: real.clone(),
+                version: String::new(),
+                location: "path",
+            },
+        ];
+        let supported = observed
+            .iter()
+            .filter(|item| can_attempt("claude_code", item))
+            .count();
+        assert_eq!(supported, 1);
+        let projected = projections("claude_code", &observed);
+        assert!(!projected[0].supported);
+        assert!(projected[1].supported);
+        assert!(projected[1].recommended);
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn only_desktop_bundles_ask_which_installation() {
+        // The choice never changes what gets written — every adapter's
+        // prepare_catalog takes `home`. For a CLI it would only decide which
+        // binary the assistant launches, and the login shell already decides
+        // that; offering a second one invites the "打开使用" button to run a
+        // different copy than the user's own terminal does.
+        for cli in ["claude_code", "pi", "dsh_web"] {
+            assert!(!asks_which_installation(cli), "{cli}");
+        }
+        for desktop in ["claude_desktop", "codex_desktop", "workbuddy"] {
+            assert!(asks_which_installation(desktop), "{desktop}");
+        }
+    }
+
+    #[test]
+    fn two_usable_bundles_still_require_a_choice() {
+        let directory = common::temporary_working_directory("two-usable").unwrap();
+        let first = directory.join("Claude.app");
+        let second = directory.join("Claude-2.app");
+        std::fs::create_dir(&first).unwrap();
+        std::fs::create_dir(&second).unwrap();
+        let observed = vec![
+            ObservedInstallation {
+                path: first,
+                version: "1.0".into(),
+                location: "applications",
+            },
+            ObservedInstallation {
+                path: second,
+                version: "0.9".into(),
+                location: "user_applications",
+            },
+        ];
+        assert_eq!(
+            observed
+                .iter()
+                .filter(|item| can_attempt("claude_desktop", item))
+                .count(),
+            2
+        );
+        // Exactly one is recommended, so the picker has a default to land on.
+        let projected = projections("claude_desktop", &observed);
+        assert_eq!(
+            projected
+                .iter()
+                .filter(|installation| installation.recommended)
+                .count(),
+            1
+        );
+        // And the two options are now told apart by something real.
+        assert_ne!(projected[0].label, projected[1].label);
+        assert!(projected[0].label.contains("Claude.app"));
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn labels_show_a_path_without_the_account_name() {
+        let home = Path::new("/Users/zxg");
+        assert_eq!(
+            display_path(Path::new("/Users/zxg/Applications/Claude.app"), Some(home)),
+            "~/Applications/Claude.app"
+        );
+        // Outside the home directory there is no account name to hide.
+        assert_eq!(
+            display_path(Path::new("/Applications/Claude.app"), Some(home)),
+            "/Applications/Claude.app"
+        );
+        // A long path keeps the tail, which is the part that differs.
+        let deep = Path::new(
+            "/Users/zxg/Library/Application Support/some/very/deeply/nested/vendor/tree/claude",
+        );
+        let shown = display_path(deep, Some(home));
+        assert!(shown.chars().count() <= 64, "{shown}");
+        assert!(shown.ends_with("tree/claude"), "{shown}");
+        // The renderer rejects control and bidi characters; dropping them here
+        // keeps one oddly named folder from discarding the whole entry.
+        let hostile = Path::new("/Applications/Cl\u{202e}aude.app");
+        assert_eq!(
+            display_path(hostile, Some(home)),
+            "/Applications/Claude.app"
+        );
+        // The frontend bounds `label` at 100 code points; the location prefix
+        // plus a 64-character path has to stay under that.
+        assert!(
+            location_label("user_applications").chars().count() + 3 + 64 <= 100,
+            "label must fit the IPC contract"
+        );
     }
 
     #[test]

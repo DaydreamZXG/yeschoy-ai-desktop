@@ -1,5 +1,12 @@
 //! A single encrypted recovery baseline per tool, never a backup history.
 //! Nothing in this module exposes file contents or paths to the renderer.
+//!
+//! The baseline is sealed with a key held in the OS keyring. Because the
+//! originals live nowhere else once activation has rewritten the real config
+//! files, losing that keyring entry would otherwise make them unrecoverable, so
+//! `save` also drops an owner-only plain copy under `original/<tool>/` with a
+//! note explaining how to put the files back by hand. The sealed journal stays
+//! the only path the application itself ever reads.
 use std::{
     collections::BTreeSet,
     path::{Path, PathBuf},
@@ -22,6 +29,27 @@ const SERVICE: &str = "com.yeschoy.desktop.connection-recovery.v1";
 // encoding overhead. This is a bounded journal, not an unbounded history.
 const MAX_JOURNAL: u64 = 128 * 1024 * 1024;
 const MAGIC: &[u8] = b"YC-RECOVERY-1\0";
+const MAX_BREAK_GLASS_FILE: u64 = 2 * 1024 * 1024;
+// A UTF-8 BOM and CRLF line endings, because the person most likely to open
+// this file is on Windows, in Notepad, after something already went wrong.
+const BREAK_GLASS_README: &str = "\u{feff}这个文件夹里是野菜助手改动你的配置之前，那些文件的原始内容。\r\n\
+\r\n\
+正常情况下你用不到它：在助手里点「恢复原设置」就行。\r\n\
+只有当助手说恢复失败（通常是系统钥匙串里的密钥没了，比如重置过登录\r\n\
+钥匙串、换过开机密码、清过 Windows 凭据管理器），才需要手动来。\r\n\
+\r\n\
+怎么做：\r\n\
+1. 先完全退出对应的应用（Claude Desktop / Codex 等）。\r\n\
+2. 打开 manifest.json，里面每一项是一个文件：\r\n\
+   - copy                    这个文件夹里的副本文件名（0、1、2……）\r\n\
+   - restoreTo               要还原到的完整路径\r\n\
+   - existedBeforeActivation 接入之前这个文件是否存在\r\n\
+3. existedBeforeActivation 是 true：把 copy 覆盖回 restoreTo。\r\n\
+   existedBeforeActivation 是 false：直接删掉 restoreTo 那个文件。\r\n\
+4. 重新打开应用。\r\n\
+\r\n\
+这些副本可能包含你自己的密钥，权限已设为仅本人可读，别放进网盘或\r\n\
+同步目录，也别直接发给客服。\r\n";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -296,7 +324,81 @@ impl Store {
         if common::snapshot_bounded(&path, MAX_JOURNAL).map_err(|_| Failure::Io)? != Some(bytes) {
             return Err(Failure::Io);
         }
+        // Best effort, and deliberately not fatal: the sealed journal above is
+        // the real recovery path. This is only the break-glass copy.
+        let _ = self.write_break_glass_copy(record);
         Ok(())
+    }
+
+    /// An unencrypted, owner-only copy of the files as they were before we
+    /// touched them, plus a note telling the user how to put them back.
+    ///
+    /// The sealed journal is encrypted with a key kept in the OS keyring, and
+    /// the originals exist nowhere else — the config files on disk already hold
+    /// our values. So losing that keyring entry (a reset macOS login keychain, a
+    /// cleared Windows credential store, a Linux box with no secret service)
+    /// used to mean the user's original Claude Desktop or Codex configuration
+    /// was gone for good, with the UI able to say nothing better than "恢复失败".
+    ///
+    /// This copy holds the user's own configuration, which may well contain
+    /// their own credentials, so the directory is 0700 and every file 0600 —
+    /// no more exposed than the originals, and usually less.
+    fn write_break_glass_copy(&self, record: &Record) -> Result<()> {
+        let directory = self.break_glass_directory(&record.receipt.tool_id)?;
+        // Fail closed. This copy is readable by anyone who can read the file,
+        // so it is only worth having when it is provably owner-only — on
+        // Windows that means an ACL this build machine cannot test. Anything
+        // that goes wrong leaves no copy at all, which is exactly the behaviour
+        // that existed before it, rather than a half-written readable one.
+        match self.fill_break_glass_copy(record, &directory) {
+            Ok(()) => Ok(()),
+            Err(failure) => {
+                let _ = std::fs::remove_dir_all(&directory);
+                Err(failure)
+            }
+        }
+    }
+
+    fn fill_break_glass_copy(&self, record: &Record, directory: &Path) -> Result<()> {
+        let tool = &record.receipt.tool_id;
+        std::fs::create_dir_all(directory).map_err(|_| Failure::Io)?;
+        common::restrict_directory(directory).map_err(|_| Failure::Io)?;
+        let mut manifest = Vec::with_capacity(record.files.len());
+        for (index, file) in record.files.iter().enumerate() {
+            let entry = directory.join(index.to_string());
+            match &file.before {
+                Some(bytes) => write_protected(&entry, bytes)?,
+                // The file did not exist before activation. Recording that is
+                // the whole instruction: delete it to get back to the original.
+                None if entry.exists() => {
+                    std::fs::remove_file(&entry).map_err(|_| Failure::Io)?;
+                }
+                None => {}
+            }
+            manifest.push(serde_json::json!({
+                "copy": index.to_string(),
+                "restoreTo": file.path.to_string_lossy(),
+                "existedBeforeActivation": file.before.is_some(),
+            }));
+        }
+        let manifest_bytes = serde_json::to_vec_pretty(&serde_json::json!({
+            "tool": tool,
+            "updatedAtEpochMs": record.receipt.updated_at_epoch_ms,
+            "files": manifest,
+        }))
+        .map_err(|_| Failure::Io)?;
+        write_protected(&directory.join("manifest.json"), &manifest_bytes)?;
+        write_protected(
+            &directory.join("如何手动恢复.txt"),
+            BREAK_GLASS_README.as_bytes(),
+        )
+    }
+
+    fn break_glass_directory(&self, tool: &str) -> Result<PathBuf> {
+        if !allowed(tool) {
+            return Err(Failure::Invalid);
+        }
+        Ok(self.root.join("original").join(tool))
     }
 
     pub(crate) fn remove(&self, tool: &str) -> Result<()> {
@@ -306,6 +408,10 @@ impl Store {
             .is_some()
         {
             std::fs::remove_file(path).map_err(|_| Failure::Io)?;
+        }
+        // The baseline is gone, so the break-glass copy would only mislead.
+        if let Ok(directory) = self.break_glass_directory(tool) {
+            let _ = std::fs::remove_dir_all(directory);
         }
         Ok(())
     }
@@ -430,6 +536,17 @@ impl Store {
             self.remove(&record.receipt.tool_id)
         }
     }
+}
+
+/// Write a break-glass file and narrow it, in that order.
+///
+/// The narrowing has to come *after*. On unix `atomic_write` copies the
+/// target's mode onto the replacement, so tightening first would also work; on
+/// Windows the renamed temporary brings its own security descriptor, inherited
+/// from the directory, and anything set on the old target is simply gone.
+fn write_protected(path: &Path, bytes: &[u8]) -> Result<()> {
+    common::atomic_write_bounded(path, bytes, MAX_BREAK_GLASS_FILE).map_err(|_| Failure::Io)?;
+    common::restrict_to_owner(path).map_err(|_| Failure::Io)
 }
 
 fn document(path: &Path, bytes: Option<&[u8]>) -> Result<Value> {
@@ -1113,6 +1230,76 @@ mod tests {
     fn merged(file: &FileChange, now: Value) -> (Value, bool) {
         let (bytes, kept) = restore_bytes(file, Some(&serde_json::to_vec(&now).unwrap())).unwrap();
         (document(&file.path, bytes.as_deref()).unwrap(), kept)
+    }
+
+    #[test]
+    fn a_lost_keyring_still_leaves_the_originals_on_disk() {
+        // The sealed journal is the only copy of the user's original config —
+        // the real files already hold our values by the time it is written. If
+        // the keyring entry disappears (reset login keychain, cleared Windows
+        // credential store) nothing can decrypt it, so there is also a plain,
+        // owner-only copy and a note telling the user what to do with it.
+        let fixture = Fixture::new();
+        let existing = fixture.change("settings.json", Some(b"original-content"), b"ours");
+        let created = fixture.change("added.json", None, b"ours-too");
+        fixture
+            .0
+            .begin(
+                receipt("claude_code"),
+                &[existing.clone(), created.clone()],
+                None,
+            )
+            .unwrap();
+
+        let plain = fixture.0.root.join("original").join("claude_code");
+        assert_eq!(std::fs::read(plain.join("0")).unwrap(), b"original-content");
+        assert!(
+            !plain.join("1").exists(),
+            "a file that did not exist before activation has no copy to keep"
+        );
+        assert!(plain.join("如何手动恢复.txt").exists());
+
+        let manifest: Value =
+            serde_json::from_slice(&std::fs::read(plain.join("manifest.json")).unwrap()).unwrap();
+        assert_eq!(manifest["tool"], "claude_code");
+        assert_eq!(manifest["files"][0]["copy"], "0");
+        assert_eq!(
+            manifest["files"][0]["restoreTo"],
+            existing.path.to_string_lossy().as_ref()
+        );
+        assert_eq!(manifest["files"][0]["existedBeforeActivation"], true);
+        // The instruction for the second file is "delete it", not "restore it".
+        assert_eq!(manifest["files"][1]["existedBeforeActivation"], false);
+        assert_eq!(
+            manifest["files"][1]["restoreTo"],
+            created.path.to_string_lossy().as_ref()
+        );
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            // These hold the user's own configuration, which may carry their own
+            // credentials. Nobody else on the machine gets to read them.
+            assert_eq!(
+                std::fs::metadata(&plain).unwrap().permissions().mode() & 0o777,
+                0o700
+            );
+            for name in ["0", "manifest.json", "如何手动恢复.txt"] {
+                assert_eq!(
+                    std::fs::metadata(plain.join(name))
+                        .unwrap()
+                        .permissions()
+                        .mode()
+                        & 0o777,
+                    0o600,
+                    "{name}"
+                );
+            }
+        }
+
+        // Once the baseline is discarded the copy would only mislead.
+        fixture.0.remove("claude_code").unwrap();
+        assert!(!plain.exists());
     }
     #[test]
     fn legacy_lock_only_store_does_not_require_recovery_key() {

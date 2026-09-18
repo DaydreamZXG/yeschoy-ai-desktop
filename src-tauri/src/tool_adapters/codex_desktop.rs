@@ -436,7 +436,11 @@ fn config_dir_from_override(
 }
 
 pub(crate) fn config_dir(home: &Path) -> Result<PathBuf, AdapterFailure> {
-    let override_dir = std::env::var_os("CODEX_HOME");
+    // Read through the login shell: `CODEX_HOME` is normally exported from a
+    // shell rc, which a Dock-launched app never sources. Reading `std::env`
+    // here wrote a perfectly valid config into `~/.codex` while the `codex`
+    // CLI kept loading a different directory.
+    let override_dir = crate::shell_environment::var_os("CODEX_HOME");
     config_dir_from_override(home, override_dir.as_deref())
 }
 

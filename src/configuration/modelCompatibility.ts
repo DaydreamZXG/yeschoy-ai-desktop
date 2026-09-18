@@ -8,7 +8,6 @@ export function modelConnectionMode(
 ): ModelConnectionMode | null {
   if (toolId === "codex_desktop") {
     if (endpoints.includes("openai-response")) return "direct";
-    if (endpoints.includes("openai")) return "bridge";
     return null;
   }
   if (toolId === "claude_code" || toolId === "claude_desktop") {

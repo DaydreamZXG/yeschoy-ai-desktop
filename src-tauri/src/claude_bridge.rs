@@ -270,15 +270,19 @@ async fn messages(state: &BridgeState, request: Request<Body>) -> Response {
         .to_owned();
     let (model, one_m_context) = match resolve_model(state, &requested) {
         Ok(model) => model,
+        // Claude offers the 1M option from the capability family it was given,
+        // which can be 1M-capable while the real model behind it is not.
         Err(()) => {
-            return error(
-                StatusCode::BAD_REQUEST,
-                "1M context is unavailable for this model",
+            return invalid_request_error(
+                "1M context is unavailable for this model. Select the model without the [1m] option.",
             )
         }
     };
     value["model"] = json!(model);
-    if one_m_context {
+    // `context-1m-2025-08-07` is an Anthropic beta. Forwarding it on a
+    // GPT/DeepSeek/Kimi route is meaningless at best, and strict relays reject
+    // an unknown beta outright. The marker still selects the 1M-capable model.
+    if one_m_context && crate::tool_model_profile::is_native_claude(&model) {
         ensure_one_m_beta(&mut forwarded);
     }
     let _ = state.events.send(VerificationEvent);
@@ -320,8 +324,26 @@ async fn messages(state: &BridgeState, request: Request<Body>) -> Response {
         }
     };
     let Some(overflow) = parse_context_overflow(&original.body) else {
-        return original.into_response();
+        // Only the OpenAI-shaped message carries authoritative counts. Every
+        // other overflow wording — Anthropic's own, a relay's paraphrase, a
+        // localized message — still has to reach Claude as an overflow, or the
+        // client reads it as an outage and never compacts the thread.
+        return if is_context_overflow(&original.body) {
+            log::info!("claude_bridge stage=context_overflow counts=unparsed one_m={one_m_context}");
+            context_too_long_error()
+        } else {
+            original.into_response()
+        };
     };
+    // The relay, not the vendor spec, decides the real ceiling. A declared-1M
+    // model whose relay serves less shows up here, and is the reason a 1M
+    // conversation can still hit a wall.
+    if one_m_context && overflow.maximum < 1_000_000 {
+        log::warn!(
+            "claude_bridge stage=one_m_declared_above_relay relay_maximum={}",
+            overflow.maximum
+        );
+    }
 
     // The relay is the authority on tokenization. If the messages still fit
     // and only the requested completion crosses the boundary, preserve every
@@ -495,6 +517,33 @@ fn parse_context_overflow(body: &[u8]) -> Option<ContextOverflow> {
     })
 }
 
+/// Recognize an upstream context-limit rejection whose wording carries no
+/// usable counts. Claude only compacts when the failure arrives as an
+/// `invalid_request_error`; an unrecognized body is reported to the user as a
+/// provider outage, which is why a 1M declaration that the relay does not
+/// honor currently ends the conversation instead of shortening it.
+fn is_context_overflow(body: &[u8]) -> bool {
+    let text = String::from_utf8_lossy(body).to_lowercase();
+    // Anthropic's own wording, OpenAI's error code, and the paraphrases relays
+    // put in front of both. Each marker names the context limit explicitly so a
+    // transient upstream failure is never rewritten into a prompt-size error.
+    [
+        "prompt is too long",
+        "maximum context length",
+        "context_length_exceeded",
+        "context length exceeded",
+        "context window exceeded",
+        "exceeds the context window",
+        "reduce the length of the messages",
+        "上下文过长",
+        "上下文长度",
+        "超出最大上下文",
+        "超过最大上下文",
+    ]
+    .iter()
+    .any(|marker| text.contains(marker))
+}
+
 fn locally_authorized(headers: &axum::http::HeaderMap, local_token: &str) -> bool {
     let bearer = headers
         .get(header::AUTHORIZATION)
@@ -557,6 +606,19 @@ fn error(status: StatusCode, message: &'static str) -> Response {
     (
         status,
         axum::Json(json!({"type": "error", "error": {"type": "api_error", "message": message}})),
+    )
+        .into_response()
+}
+
+/// A rejected request, as opposed to a failing provider. Claude retries and
+/// reports an `api_error` as an outage; a bad selection has to arrive as an
+/// invalid request so the user is told to change it instead of waiting.
+fn invalid_request_error(message: &'static str) -> Response {
+    (
+        StatusCode::BAD_REQUEST,
+        axum::Json(
+            json!({"type": "error", "error": {"type": "invalid_request_error", "message": message}}),
+        ),
     )
         .into_response()
 }
@@ -646,6 +708,53 @@ mod tests {
             "inconsistent provider counts must never drive a retry"
         );
         assert_eq!(parse_context_overflow(br#"temporary upstream error"#), None);
+    }
+
+    #[test]
+    fn context_regression_countless_overflow_wordings_still_reach_claude() {
+        for body in [
+            br#"{"error":{"message":"prompt is too long: 250000 tokens > 200000 maximum"}}"#
+                .as_slice(),
+            br#"{"error":{"code":"context_length_exceeded"}}"#.as_slice(),
+            "{\"error\":{\"message\":\"上下文过长，请压缩会话后重试\"}}".as_bytes(),
+        ] {
+            assert_eq!(
+                parse_context_overflow(body),
+                None,
+                "no authoritative counts to retry with"
+            );
+            assert!(
+                is_context_overflow(body),
+                "{}",
+                String::from_utf8_lossy(body)
+            );
+        }
+        // A transient failure must never be rewritten into a prompt-size error:
+        // Claude would compact a thread that was never too long.
+        for body in [
+            br#"{"error":{"message":"host_call_failed"}}"#.as_slice(),
+            br#"{"error":{"message":"rate limit exceeded"}}"#.as_slice(),
+            br#"{"error":{"message":"upstream temporarily unavailable"}}"#.as_slice(),
+        ] {
+            assert!(
+                !is_context_overflow(body),
+                "{}",
+                String::from_utf8_lossy(body)
+            );
+        }
+    }
+
+    #[test]
+    fn context_regression_one_m_beta_is_reserved_for_anthropic_native_models() {
+        for id in ["claude-sonnet-5", "anthropic/claude-opus-5"] {
+            assert!(crate::tool_model_profile::is_native_claude(id), "{id}");
+        }
+        // These are 1M-capable, but the Anthropic beta header means nothing to
+        // their upstreams and strict relays reject an unknown beta value.
+        for id in ["gpt-6-astra", "gpt-5.6-sol", "deepseek-v4-pro"] {
+            assert!(!crate::tool_model_profile::is_native_claude(id), "{id}");
+            assert!(crate::tool_model_profile::supports_one_m_context(id), "{id}");
+        }
     }
 
     #[test]
@@ -816,7 +925,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn claude_code_proxy_strips_one_m_suffix_and_adds_missing_beta() {
+    async fn claude_code_proxy_strips_one_m_suffix_without_adding_beta_for_non_claude() {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let origin = format!("http://{}", listener.local_addr().unwrap());
         let (sent, mut received) = tokio::sync::mpsc::unbounded_channel();
@@ -873,7 +982,7 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(forwarded["model"], "deepseek-v4.1-flash");
-        assert_eq!(headers["anthropic-beta"], ONE_M_CONTEXT_BETA);
+        assert!(headers.get("anthropic-beta").is_none());
         assert_eq!(headers["x-api-key"], "sk-synthetic-c");
         assert!(headers.get(header::AUTHORIZATION).is_none());
         server.abort();

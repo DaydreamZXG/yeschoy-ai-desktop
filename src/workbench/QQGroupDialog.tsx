@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useWorkbenchCopy } from "./copy";
 // 官方签发的群分享卡片（含二维码 + 群名 + 群号），直接展示，扫码即可加群。
 import qqGroupCard from "../assets/brand/qq-group-card.png";
 
@@ -95,5 +96,32 @@ export function QQGroupDialog({
         </DialogClose>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** 交流群入口现在有两个（侧边栏和首页页脚），所以文案在这里取，
+    调用方只管开关，不用各自搬一份 copy 过来。 */
+export function CommunityGroupDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const c = useWorkbenchCopy();
+  return (
+    <QQGroupDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      copy={{
+        title: c.qqGroupTitle,
+        body: c.qqGroupBody,
+        groupIdLabel: c.qqGroupIdLabel,
+        scanHint: c.qqGroupScanHint,
+        copyGroupId: c.copyGroupId,
+        groupIdCopied: c.groupIdCopied,
+        close: c.close,
+      }}
+    />
   );
 }

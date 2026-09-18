@@ -14,12 +14,12 @@
 }
 .ui-btn--sm {
   min-height: 32px;
-  padding: 5px var(--space-12);
-  font-size: 12px;
+  padding: var(--space-6) var(--space-12);
+  font-size: var(--text-xs);
 }
 .ui-btn--lg {
   min-height: 40px;
-  padding: 9px var(--space-24);
+  padding: var(--space-10) var(--space-24);
 }
 .ui-btn--icon {
   min-height: 36px;
@@ -86,13 +86,13 @@
 .ui-switch {
   flex: none;
   min-height: 0;
-  width: 40px;
-  height: 22px;
+  width: 44px;
+  height: 24px;
   padding: 0;
   border: 2px solid transparent;
   border-radius: var(--radius-full);
   background: var(--line-strong, var(--line));
-  transition: background 160ms ease;
+  transition: var(--tr-color);
 }
 .ui-switch.ui-switch:hover:not(:disabled) {
   background: var(--line-strong, var(--line));
@@ -103,18 +103,20 @@
 .ui-switch[data-state="checked"]:hover:not(:disabled) {
   background: var(--accent);
 }
+/* 轨道 44×24、2px 内边框 ⇒ 内容盒 40×20，滑块 20 正好，行程 40−20=20。
+   这三个数字互相咬合，改一个必须改另外两个。 */
 .ui-switch-thumb {
   display: block;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: #fff;
   box-shadow: var(--shadow-thumb);
-  transition: transform 160ms ease;
+  transition: transform var(--dur-fast) var(--ease-out);
   transform: translateX(0);
 }
 .ui-switch[data-state="checked"] .ui-switch-thumb {
-  transform: translateX(18px);
+  transform: translateX(20px);
 }
 
 /* ---------- Tooltip ---------- */
@@ -122,11 +124,11 @@
   z-index: var(--z-tooltip);
   overflow: hidden;
   max-width: 280px;
-  padding: 5px var(--space-10);
+  padding: var(--space-6) var(--space-10);
   border-radius: var(--radius-md);
   background: var(--ink);
   color: var(--bg);
-  font-size: 12px;
+  font-size: var(--text-xs);
   line-height: 1.6;
   box-shadow: var(--shadow);
   overflow-wrap: anywhere;
@@ -139,8 +141,8 @@
   gap: var(--space-4);
   border: 1px solid transparent;
   border-radius: var(--radius-full);
-  padding: 1px 9px;
-  font-size: 11px;
+  padding: 1px var(--space-10);
+  font-size: var(--text-xs);
   font-weight: 600;
   line-height: 1.7;
   white-space: nowrap;
@@ -149,7 +151,8 @@
   background: var(--accent-soft);
   color: var(--accent);
 }
-/* 浅色 accent-soft 底上 #c93e22 仅 4.29，用 accent-hover 提到 5.71 */
+/* 绿色 accent 之后这条不再是达标要求：accent 在浅色 accent-soft 底上已有
+   5.69，accent-hover 提到 8.05。保留只是因为深色文字在浅色块上更易读。 */
 :root:not([data-theme="dark"]) .ui-badge--default {
   color: var(--accent-hover);
 }
@@ -179,25 +182,25 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-  padding: var(--space-20) 22px 0;
+  padding: var(--space-20) var(--space-24) 0;
 }
 .ui-card-title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--text-lg);
   font-weight: 650;
   line-height: 1.4;
 }
 .ui-card-description {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--muted);
   line-height: 1.7;
 }
 .ui-card-content {
-  padding: var(--space-16) 22px var(--space-20);
+  padding: var(--space-16) var(--space-24) var(--space-20);
 }
 .ui-card-footer {
   display: flex;
   align-items: center;
-  padding: 0 22px var(--space-20);
+  padding: 0 var(--space-24) var(--space-20);
 }

@@ -31,6 +31,13 @@ fn native_claude_capability_family(id: &str) -> Option<&str> {
     supported_role.then_some(candidate)
 }
 
+/// Whether the exact model is an Anthropic-native Claude model, as opposed to
+/// a third-party model merely projected onto a Claude capability family.
+/// Anthropic-only request features must be gated on this, never on the family.
+pub(crate) fn is_native_claude(id: &str) -> bool {
+    native_claude_capability_family(id).is_some()
+}
+
 /// Project a real gateway model onto the closest Claude client capability
 /// family. This affects only native client controls (effort/thinking); the
 /// loopback bridge still resolves and forwards the exact real model ID.

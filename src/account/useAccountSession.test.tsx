@@ -73,6 +73,28 @@ describe("resilient account authorization", () => {
     expect(result.current.projection?.status).toBe("signed_in");
     expect(result.current.lastError).toBeNull();
   });
+  it("surfaces the real failure once a pending authorization stops recovering", async () => {
+    const { result } = renderHook(() =>
+      useAccountSession("mainland_optimized"),
+    );
+    await flush();
+    command.mockResolvedValueOnce(projection("authorization_pending"));
+    await act(async () => {
+      await result.current.beginAuthorization();
+    });
+    // A failure run long enough to outlast a route hiccup must stop rendering
+    // as "waiting for authorization": the user already approved the page, and
+    // masking this until the device code expires is what makes a finished
+    // sign-in look broken with no reason shown.
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      command.mockResolvedValueOnce(projection("invalid_response"));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1000);
+      });
+    }
+    expect(result.current.projection?.status).toBe("invalid_response");
+    expect(result.current.lastError).toBe("invalid_response");
+  });
   it("retries IPC exceptions instead of silently stopping authorization", async () => {
     const { result } = renderHook(() =>
       useAccountSession("mainland_optimized"),
