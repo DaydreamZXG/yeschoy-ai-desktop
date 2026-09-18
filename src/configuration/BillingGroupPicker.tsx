@@ -11,8 +11,13 @@ import {
 export const groupLabel = (id: string, defaultLabel = "标准分组") =>
   id === "default" ? defaultLabel : id;
 
-// #19 分组显示名走目录映射：服务端 usable_group 已把显示名存进 description，
-// 展示优先用目录显示名；default 分组仍用本地化的「标准分组」，查不到时回退 id。
+// 线上 usable_group 的形状是「键 → 一句话」，不是「id → 显示名」：
+//   "Qwen / GLM"        → "模型：qwen3.8-max、glm-5.3； 6.5折"
+//   "限时国模特价渠道"   → "限时特价"
+// 所以键本身就是给人看的名字，description 是补充说明。价格方案卡按这个
+// 事实显示键（见 BillingGroupPicker），description 留在「计费详情」里。
+//
+// 这个函数只用在句子里（例如计费说明），那里一句话比一个名字更合适。
 export function groupDisplayName(
   id: string,
   groups: ReadonlyArray<{ id: string; description: string }> | undefined,
@@ -74,13 +79,18 @@ export function BillingGroupPicker({
                   onChange={() => onChange(group.id)}
                 />
                 <span className="billing-group-info">
-                  {/* 分组名是后台自由文本（最长 500 字），不可信也不可控，
-                      所以它在这张卡里最弱：单行截断，全名放 title。
-                      真正决定用户花多少钱的是价格，价格才是主角。 */}
-                  <strong
-                    title={groupDisplayName(group.id, groups, c.defaultGroup)}
-                  >
-                    {groupDisplayName(group.id, groups, c.defaultGroup)}
+                  {/* 显示分组的 **键**，不是它的 description。
+                      线上数据里 usable_group 是「键 → 一句话」：键是
+                      `Qwen / GLM`、`限时国模特价渠道` 这种可读名字，值是
+                      「模型：qwen3.8-max、glm-5.3； 6.5折」这种句子。
+                      之前按代码注释以为 description 存的是显示名，结果卡片
+                      标题变成截断的「模型：qwen3.8-m...」，在配 glm-5.3 的
+                      页面上看起来像是别的模型的方案。句子留在「计费详情」里。
+
+                      名字仍然最弱、单行截断：它是后台自由文本，长度不受控，
+                      而价格是算出来的、可信，价格才是主角。 */}
+                  <strong title={groupLabel(group.id, c.defaultGroup)}>
+                    {groupLabel(group.id, c.defaultGroup)}
                   </strong>
                   <span className="billing-plan-price">
                     {estimate

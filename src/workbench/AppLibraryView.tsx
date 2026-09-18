@@ -8,6 +8,7 @@ import {
 import { useTranslation } from "react-i18next";
 import {
   ArrowRight,
+  ChevronRight,
   CircleAlert,
   Plus,
   RefreshCw,
@@ -350,14 +351,28 @@ export function AppLibraryView({
               <div className="connection-card-body">
                 {active ? (
                   <>
-                    <span className="field-caption">
-                      {connection.models?.length
-                        ? "接入时默认模型"
-                        : "当前模型"}
-                    </span>
-                    <code className="connection-model">
-                      {connection.modelId || "待确认"}
-                    </code>
+                    {/* 用户想换模型时，第一眼看的就是这里显示的模型名 —— 所以
+                        让它本身可点，而不是指望他去注意页脚那个最轻的按钮。
+                        换模型是接入之后最常见的需求，之前整张卡上最弱的元素
+                        才是入口。 */}
+                    <button
+                      type="button"
+                      className="connection-model-switch"
+                      onClick={() => onOpenSetup(app.id, "change-model")}
+                    >
+                      <span className="field-caption">
+                        {connection.models?.length
+                          ? "接入时默认模型"
+                          : "当前模型"}
+                      </span>
+                      <code className="connection-model">
+                        {connection.modelId || "待确认"}
+                      </code>
+                      <span className="connection-model-switch-hint">
+                        {t("yeschoyDaily.changeModel")}
+                        <ChevronRight aria-hidden="true" />
+                      </span>
+                    </button>
                     <div className="connection-tags">
                       <span>
                         {connection.lineId === "global_accelerated"
@@ -424,7 +439,7 @@ export function AppLibraryView({
                 <div className="connection-manage-actions">
                   {active && (
                     <button
-                      className="subtle-button change-model-action"
+                      className="text-button change-model-action"
                       onClick={() => onOpenSetup(app.id, "change-model")}
                     >
                       {t("yeschoyDaily.changeModel")}

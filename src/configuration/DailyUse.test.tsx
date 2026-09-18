@@ -1140,7 +1140,7 @@ describe("daily-use UX", () => {
     await tick();
     view.rerender(setupView(account, local()));
     await tick();
-    const savedGroup = screen.getByRole("radio", { name: /账户价格/ });
+    const savedGroup = screen.getByRole("radio", { name: /优惠组/ });
     expect(savedGroup).toHaveAttribute("value", "优惠组");
     expect(savedGroup).toBeChecked();
   });

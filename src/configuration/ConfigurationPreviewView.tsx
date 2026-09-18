@@ -2232,8 +2232,15 @@ export function ConfigurationPreviewView({
               <small>{g.modelSetNote}</small>
             </div>
           )}
+          {/* #20 让已接入状态下的「保存并应用」退成次要，避免催促一个已经配好的
+              用户。那在「选择没变」时是对的，但在「选择变了还没保存」时主次就
+              反了：视觉最重的「打开使用」会用**旧**配置打开应用，用户以为换好了。
+              这正是换模型这条路径的终点，所以按未保存与否分开判断。 */}
+          {(() => {
+            const hasUnsavedSelection = setupBlock.kind === "apply-changed";
+            return (
           <div
-            className={`connection-action-deck${configured || connectionEstablished ? " is-configured" : ""}`}
+            className={`connection-action-deck${configured || connectionEstablished ? " is-configured" : ""}${hasUnsavedSelection ? " has-unsaved-selection" : ""}`}
           >
             {(configured || connectionEstablished) && savedConnection && (
               <OpenConnection
@@ -2247,7 +2254,7 @@ export function ConfigurationPreviewView({
               />
             )}
             <button
-              className={`${configured || connectionEstablished ? "secondary-action" : "primary-action"} setup-apply${applyPhase === "applying" ? " is-applying" : ""}${applyFlash ? " is-success" : ""}`}
+              className={`${(configured || connectionEstablished) && !hasUnsavedSelection ? "secondary-action" : "primary-action"} setup-apply${applyPhase === "applying" ? " is-applying" : ""}${applyFlash ? " is-success" : ""}`}
               type="button"
               onClick={() => setupBlock.run?.()}
               disabled={applyPhase === "applying" || !!connections?.restoring}
@@ -2293,6 +2300,8 @@ export function ConfigurationPreviewView({
               </button>
             )}
           </div>
+            );
+          })()}
           {configured && (
             <p
               className="connection-lifecycle-note"
