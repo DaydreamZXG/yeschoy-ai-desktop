@@ -1,7 +1,7 @@
 //! Explicit launch-only terminal opening. Inputs are native discovery paths;
 //! renderer commands, model requests and credentials are never accepted here.
 use std::{
-    path::Path,
+    path::{Path, PathBuf},
     process::Command,
     time::{Duration, Instant},
 };
@@ -86,7 +86,7 @@ fn path_text(path: &Path, platform: Platform) -> Result<String, AdapterFailure> 
     Ok(value)
 }
 
-fn mac_shell_command(executable: &str, home: &str, runtime_directories: &[String]) -> String {
+fn mac_shell_command(executable: &str, workspace: &str, runtime_directories: &[String]) -> String {
     let prefix = runtime_directories
         .iter()
         .map(|directory| quoted_shell(directory))
@@ -99,23 +99,103 @@ fn mac_shell_command(executable: &str, home: &str, runtime_directories: &[String
     };
     format!(
         "cd -- {} || exit 1\nunset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY\nPATH={path}\nexport PATH\nexec {}",
-        quoted_shell(home),
+        quoted_shell(workspace),
         quoted_shell(executable)
     )
+}
+
+fn acceptable_workspace(path: &Path, home: &Path) -> bool {
+    path.is_absolute()
+        && path.is_dir()
+        && path != home
+        && !home.starts_with(path)
+}
+
+fn default_cli_workspace(home: &Path) -> Result<PathBuf, AdapterFailure> {
+    let path = home.join("Documents").join("野菜工作区");
+    std::fs::create_dir_all(&path).map_err(|_| failure("workspace_unavailable"))?;
+    Ok(path)
+}
+
+fn remember_workspace(home: &Path, workspace: &Path) {
+    let path = home.join(".yeschoy").join("cli-workspace");
+    if std::fs::create_dir_all(path.parent().unwrap_or(home)).is_ok() {
+        let _ = std::fs::write(path, workspace.to_string_lossy().as_bytes());
+    }
+}
+
+fn pick_cli_folder() -> Option<PathBuf> {
+    #[cfg(test)]
+    {
+        return None;
+    }
+    #[cfg(all(not(test), target_os = "macos"))]
+    {
+        let output = Command::new("/usr/bin/osascript")
+            .args([
+                "-e",
+                "POSIX path of (choose folder with prompt \"选择要打开的项目文件夹\")",
+            ])
+            .output()
+            .ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        let text = String::from_utf8_lossy(&output.stdout);
+        let path = PathBuf::from(text.trim());
+        path.is_absolute().then_some(path)
+    }
+    #[cfg(all(not(test), target_os = "windows"))]
+    {
+        let script = "Add-Type -AssemblyName System.Windows.Forms; $d = New-Object System.Windows.Forms.FolderBrowserDialog; $d.Description = '选择要打开的项目文件夹'; $d.ShowNewFolderButton = $true; if ($d.ShowDialog() -eq 'OK') { [Console]::Out.Write($d.SelectedPath) }";
+        let output = Command::new("powershell")
+            .args(["-NoLogo", "-NoProfile", "-Command", script])
+            .output()
+            .ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        let text = String::from_utf8_lossy(&output.stdout);
+        let path = PathBuf::from(text.trim());
+        path.is_absolute().then_some(path)
+    }
+    #[cfg(not(any(test, target_os = "macos", target_os = "windows")))]
+    {
+        None
+    }
+}
+
+pub(crate) fn select_cli_workspace(home: &Path) -> Result<PathBuf, AdapterFailure> {
+    let remembered = home.join(".yeschoy").join("cli-workspace");
+    if let Ok(text) = std::fs::read_to_string(&remembered) {
+        let path = PathBuf::from(text.trim());
+        if acceptable_workspace(&path, home) {
+            return Ok(path);
+        }
+    }
+    if let Some(picked) = pick_cli_folder() {
+        if acceptable_workspace(&picked, home) {
+            remember_workspace(home, &picked);
+            return Ok(picked);
+        }
+    }
+    let fallback = default_cli_workspace(home)?;
+    remember_workspace(home, &fallback);
+    Ok(fallback)
 }
 
 fn build_plan(
     platform: Platform,
     installation: &ResolvedInstallation,
     tool_id: &str,
-    home: &Path,
+    workspace: &Path,
     windows_root: Option<&Path>,
 ) -> Result<LaunchPlan, AdapterFailure> {
     if !matches!(tool_id, "claude_code" | "pi") {
         return Err(failure("invalid_launch_target"));
     }
     let executable = path_text(&installation.path, platform)?;
-    let home = path_text(home, platform)?;
+    let workspace = path_text(workspace, platform)?;
     match platform {
         Platform::MacOs => {
             let runtime_directories = common::cli_runtime_directories(&installation.path)
@@ -128,8 +208,12 @@ fn build_plan(
                 program: "/usr/bin/open".into(),
                 args: vec!["-b".into(), "com.apple.Terminal".into()],
                 new_console: false,
-                mac_command: Some(mac_shell_command(&executable, &home, &runtime_directories)),
-                working_directory: home,
+                mac_command: Some(mac_shell_command(
+                    &executable,
+                    &workspace,
+                    &runtime_directories,
+                )),
+                working_directory: workspace,
             })
         }
         Platform::Windows => {
@@ -150,13 +234,13 @@ fn build_plan(
                     // once. Literal %...% inside a path is not recursively
                     // expanded; /V:OFF also keeps ! literal. ProcessStartInfo
                     // avoids PowerShell's native argument re-quoting of /C.
-                    format!("$p = New-Object System.Diagnostics.ProcessStartInfo; $p.FileName = {}; $p.Arguments = '/D /V:OFF /S /C \"\"%YESCHOY_CLI_TARGET%\"\"'; $p.UseShellExecute = $false; $p.WorkingDirectory = {}; $p.EnvironmentVariables['YESCHOY_CLI_TARGET'] = {}; $c = [System.Diagnostics.Process]::Start($p); $c.WaitForExit()", powershell_literal(&format!("{root}\\System32\\cmd.exe")), powershell_literal(&home), powershell_literal(&executable))
+                    format!("$p = New-Object System.Diagnostics.ProcessStartInfo; $p.FileName = {}; $p.Arguments = '/D /V:OFF /S /C \"\"%YESCHOY_CLI_TARGET%\"\"'; $p.UseShellExecute = $false; $p.WorkingDirectory = {}; $p.EnvironmentVariables['YESCHOY_CLI_TARGET'] = {}; $c = [System.Diagnostics.Process]::Start($p); $c.WaitForExit()", powershell_literal(&format!("{root}\\System32\\cmd.exe")), powershell_literal(&workspace), powershell_literal(&executable))
                 }
                 _ => return Err(failure("invalid_launch_target")),
             };
             let script = format!(
                 "$ErrorActionPreference = 'Stop'; Remove-Item Env:ANTHROPIC_BASE_URL,Env:ANTHROPIC_AUTH_TOKEN,Env:ANTHROPIC_API_KEY -ErrorAction SilentlyContinue; Set-Location -LiteralPath {}; {invocation}",
-                powershell_literal(&home)
+                powershell_literal(&workspace)
             );
             let utf16 = script
                 .encode_utf16()
@@ -172,7 +256,7 @@ fn build_plan(
                     STANDARD.encode(utf16),
                 ],
                 new_console: true,
-                working_directory: home,
+                working_directory: workspace,
                 mac_command: None,
             })
         }
@@ -355,14 +439,18 @@ pub(crate) fn launch(
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     {
         let system_root = std::env::var_os("SystemRoot").map(std::path::PathBuf::from);
+        let workspace = select_cli_workspace(home)?;
+        if !workspace.is_dir() {
+            return Err(failure("workspace_unavailable"));
+        }
         let plan = build_plan(
             platform,
             installation,
             tool_id,
-            home,
+            &workspace,
             system_root.as_deref(),
         )?;
-        if !installation.path.is_file() || !home.is_dir() {
+        if !installation.path.is_file() || !workspace.is_dir() {
             return Err(failure("launch_target_missing"));
         }
         launch_with(&plan, execute)
@@ -640,5 +728,27 @@ mod tests {
         let staged = staged.unwrap();
         assert!(!staged.exists());
         assert!(!staged.parent().unwrap().exists());
+    }
+
+    #[test]
+    fn cli_workspace_never_uses_the_user_home_directory() {
+        let home = super::super::common::temporary_working_directory("cli-workspace").unwrap();
+        std::fs::create_dir_all(home.join("Documents")).unwrap();
+        let chosen = select_cli_workspace(&home).unwrap();
+        assert_ne!(chosen, home);
+        assert!(chosen.ends_with("野菜工作区"));
+        assert!(chosen.is_dir());
+        std::fs::write(home.join(".yeschoy").join("cli-workspace"), home.as_os_str().as_encoded_bytes()).ok();
+        let again = select_cli_workspace(&home).unwrap();
+        assert_ne!(again, home);
+        let project = home.join("Documents").join("my-app");
+        std::fs::create_dir_all(&project).unwrap();
+        std::fs::write(
+            home.join(".yeschoy").join("cli-workspace"),
+            project.to_string_lossy().as_bytes(),
+        )
+        .unwrap();
+        assert_eq!(select_cli_workspace(&home).unwrap(), project);
+        std::fs::remove_dir_all(home).unwrap();
     }
 }
