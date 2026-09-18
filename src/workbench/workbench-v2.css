@@ -5412,10 +5412,38 @@
 
 .restore-dialog footer {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: var(--space-10);
   border-top: 1px solid var(--line);
   padding-top: var(--space-18);
+  flex-wrap: wrap;
+}
+
+/* 「保留接入并退出」是内行的出口，不该跟主动作抢重量；推到左边，跟右侧那组
+   「取消 / 后台运行 / 恢复原设置并退出」分开，让右边成为一串真正的选择。 */
+.restore-dialog footer .quit-keep-connected {
+  margin-right: auto;
+}
+
+/* 细则收进折叠：默认只看到一句「这次会发生什么」，想知道再展开。 */
+.restore-dialog .quit-detail {
+  margin: var(--space-12) 0 var(--space-4);
+  color: var(--muted);
+}
+
+.restore-dialog .quit-detail > summary {
+  cursor: pointer;
+  width: fit-content;
+  padding: var(--space-6) 0;
+  color: var(--accent);
+  font-size: var(--text-sm);
+}
+
+.restore-dialog .quit-detail p {
+  margin: var(--space-8) 0 0;
+  font-size: var(--text-sm);
+  line-height: 1.75;
 }
 
 .library-footer {
