@@ -505,10 +505,15 @@ describe("official workbench", () => {
       await screen.findByRole("listbox"),
     ).getAllByRole("option");
     expect(options.length).toBe(2);
+    // 原因要点名去哪个应用用，不解释协议：这个模型只有 anthropic 端点，
+    // Codex 用不了，但两个 Claude 客户端都能用。
     const incompatible = options.find((option) =>
-      option.textContent?.includes("不支持此应用的协议"),
+      option.textContent?.includes("Codex Desktop 用不了"),
     )!;
     expect(incompatible).toHaveAttribute("aria-disabled", "true");
+    expect(incompatible.textContent).toContain(
+      "可在 Claude Code、Claude Desktop 里使用",
+    );
   });
   it("#13 distinguishes no-compatible-models from unreturned data", async () => {
     let modelsReturned = true;

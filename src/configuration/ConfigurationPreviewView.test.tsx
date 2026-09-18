@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { modelConnectionMode, modelSupportsTool } from "./modelCompatibility";
+import {
+  modelConnectionMode,
+  modelSupportsTool,
+  toolsSupportingModel,
+} from "./modelCompatibility";
 import {
   connectionLifecycleMode,
   connectionLifecycleNote,
@@ -63,6 +67,32 @@ describe("desktop protocol compatibility", () => {
       "系统钥匙串或凭据管理器",
     );
     expect(recoveryRetryMessage("other")).toBeUndefined();
+  });
+
+  it("names the apps a Codex-incompatible model can still be used in", () => {
+    // The relay's own pricing declares Chat-only channels, so DeepSeek-class
+    // models cannot go into Codex. Dropping them from the picker told the user
+    // nothing; this is what replaces the silence. A beginner does not know what
+    // a protocol is, but does know what "用 Claude Code" means.
+    const chatOnly = ["openai", "anthropic"];
+    expect(toolsSupportingModel(chatOnly, "codex_desktop")).toEqual([
+      "claude_code",
+      "claude_desktop",
+      "pi",
+      "dsh_web",
+      "workbuddy",
+    ]);
+    // The app being configured is never offered as somewhere else to go.
+    expect(toolsSupportingModel(chatOnly, "pi")).not.toContain("pi");
+    // A model nothing can run yields an empty list, so the copy falls back to
+    // saying only that this app cannot use it rather than naming nowhere.
+    expect(toolsSupportingModel([], "codex_desktop")).toEqual([]);
+    // A Responses-only model has nowhere else to go either — no other app reads
+    // that endpoint. Harmless, because the reason is only ever rendered for a
+    // model the current app rejects, and Codex accepts this one.
+    expect(toolsSupportingModel(["openai-response"], "codex_desktop")).toEqual(
+      [],
+    );
   });
 
   it("accepts only verified Responses models for Codex", () => {

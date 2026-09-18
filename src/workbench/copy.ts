@@ -144,7 +144,11 @@ const zh = {
   accountModels: "账户可用模型",
   showAllModels: "查看全部模型",
   showCompatibleOnly: "只看兼容模型",
-  incompatibleReason: "不支持此应用的协议",
+  // 「不支持此应用的协议」对不会配置的人等于没说。跟接入页用同一套说法：
+  // 不解释协议，直接告诉他去哪个应用用。
+  incompatibleReason: "{{app}} 用不了 · 可在 {{apps}} 里使用",
+  incompatibleNowhere: "{{app}} 用不了这个模型",
+  appListSeparator: "、",
   noCompatibleModels:
     "没有兼容此应用的模型。可打开「查看全部模型」了解各模型不适配的原因。",
   setupIntro: "选好应用、线路和模型，助手会为你自动完成配置。",
