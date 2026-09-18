@@ -255,6 +255,7 @@ describe("daily-use UX", () => {
           accountSession={account}
           onOpenAccount={callback}
           onOpenSetup={callback}
+          onOpenCommunity={callback}
         />
       </ConnectionProvider>,
     );
@@ -274,6 +275,7 @@ describe("daily-use UX", () => {
           accountSession={session()}
           onOpenAccount={callback}
           onOpenSetup={callback}
+          onOpenCommunity={callback}
         />
       </ConnectionProvider>,
     );
@@ -293,6 +295,7 @@ describe("daily-use UX", () => {
           accountSession={session()}
           onOpenAccount={callback}
           onOpenSetup={callback}
+          onOpenCommunity={callback}
         />
       </ConnectionProvider>,
     );
@@ -312,6 +315,7 @@ describe("daily-use UX", () => {
           accountSession={session()}
           onOpenAccount={callback}
           onOpenSetup={callback}
+          onOpenCommunity={callback}
         />
       </ConnectionProvider>,
     );
@@ -515,6 +519,7 @@ describe("daily-use UX", () => {
           accountSession={session()}
           onOpenAccount={callback}
           onOpenSetup={open}
+          onOpenCommunity={open}
         />
       </ConnectionProvider>,
     );
@@ -1494,6 +1499,7 @@ describe("daily-use UX", () => {
             accountSession={{ ...session(), projection: null }}
             onOpenAccount={callback}
             onOpenSetup={callback}
+            onOpenCommunity={callback}
           />
         </ConnectionProvider>,
       );

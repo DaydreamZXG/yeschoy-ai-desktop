@@ -36,6 +36,68 @@ describe("CelebrationConfetti", () => {
     expect(container.querySelector(".celebration-confetti")).toBeNull();
     vi.useRealTimers();
   });
+
+  it("初始旋转角通过 CSS 变量传递，而不是内联 transform", () => {
+    // 动画运行期间 transform 完全归 keyframes 所有。以前这里写的是
+    // style={{ transform: rotate(...) }}，被 confetti-fall 整条覆盖，
+    // 40 片彩带全部同步旋转 —— 随机角度等于没写。
+    const { container } = render(<CelebrationConfetti />);
+    for (const particle of container.querySelectorAll<HTMLElement>(
+      ".celebration-particle",
+    )) {
+      expect(particle.style.getPropertyValue("--rotate")).toMatch(/^-?[\d.]+deg$/);
+      expect(particle.style.transform).toBe("");
+    }
+  });
+
+  it("卸载时机覆盖最慢的一片，而不是写死 1500ms", () => {
+    // 最慢的一片是 140ms 延迟 + 1300ms 时长；固定 1500ms 只剩 60ms 余量，
+    // 而且动画从首帧计时、定时器从 effect 计时，起点并不相同。
+    vi.useFakeTimers();
+    const { container } = render(<CelebrationConfetti />);
+    const slowest = Math.max(
+      ...[...container.querySelectorAll<HTMLElement>(".celebration-particle")].map(
+        (particle) =>
+          Number.parseFloat(particle.style.animationDelay) +
+          Number.parseFloat(particle.style.animationDuration),
+      ),
+    );
+    act(() => {
+      vi.advanceTimersByTime(Math.floor(slowest));
+    });
+    expect(
+      container.querySelector(".celebration-confetti"),
+      "最后一片还在下落时不能把整层删掉",
+    ).not.toBeNull();
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+    expect(container.querySelector(".celebration-confetti")).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it("用户要求减少动效时，整层不渲染", () => {
+    // 装饰性动画应该整个不做，而不是拍平成 40 个静止的 DOM 节点。
+    const matchMedia = vi
+      .spyOn(window, "matchMedia")
+      .mockImplementation(
+        (query: string) =>
+          ({
+            matches: query.includes("prefers-reduced-motion"),
+            media: query,
+            onchange: null,
+            addListener: () => {},
+            removeListener: () => {},
+            addEventListener: () => {},
+            removeEventListener: () => {},
+            dispatchEvent: () => false,
+          }) as MediaQueryList,
+      );
+    const { container } = render(<CelebrationConfetti />);
+    expect(container.querySelector(".celebration-confetti")).toBeNull();
+    expect(container.querySelectorAll(".celebration-particle").length).toBe(0);
+    matchMedia.mockRestore();
+  });
 });
 
 describe("TickerText", () => {

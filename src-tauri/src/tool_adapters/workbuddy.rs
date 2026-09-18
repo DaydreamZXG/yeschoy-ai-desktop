@@ -196,6 +196,19 @@ impl Prepared {
     }
 
     pub(crate) fn commit(&mut self) -> Result<(), AdapterFailure> {
+        // WorkBuddy has no credential-helper indirection, so unlike every other
+        // adapter this file holds the live relay key in clear text.
+        //
+        // Narrowed before the write, because `atomic_write` copies the target's
+        // mode onto the replacement — tightening here covers the new content
+        // too. See `narrow_third_party_file` for why this deliberately stops at
+        // the POSIX mode and does not touch a Windows DACL.
+        //
+        // Best effort, unlike the break-glass copy. That file is optional and
+        // fails closed; this one *is* the activation — refusing to write it
+        // would just mean WorkBuddy cannot be connected at all. The user is told
+        // in `readyWorkBuddy` that this app keeps its key on disk.
+        let _ = common::narrow_third_party_file(&self.path);
         self.transaction.commit().map_err(config_error)?;
         self.validate_existing()
     }

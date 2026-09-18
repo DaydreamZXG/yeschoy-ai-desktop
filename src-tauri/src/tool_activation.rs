@@ -3,7 +3,7 @@ use std::{
     path::PathBuf,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, Mutex as StdMutex,
+        Arc, Mutex as StdMutex, OnceLock,
     },
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -607,6 +607,9 @@ async fn find_token_id(
         .flatten()
         .filter_map(Value::as_object)
         .filter(|token| owned_token(token, name, group, exact))
+        // An exact lookup addresses one known name, so it is already scoped.
+        // A prefix sweep is the dangerous one: it sees every computer's keys.
+        .filter(|token| exact || token_is_ours(token, name))
         .filter_map(|token| {
             token
                 .get("id")
@@ -645,6 +648,89 @@ fn token_prefix(tool_id: &str, group: &str) -> String {
         (h ^ u64::from(b)).wrapping_mul(0x100000001b3)
     });
     format!("野菜API {code}-{hash:016x}")
+}
+
+const DEVICE_SCOPE_LEN: usize = 8;
+const UNIDENTIFIED_DEVICE: &str = "00000000";
+static DEVICE_SCOPE: OnceLock<String> = OnceLock::new();
+
+/// Eight hex characters identifying this installation, stable across restarts.
+///
+/// Token names carry it so one computer can tell its own keys from another's.
+/// Without it every machine claimed every key matching `野菜API <tool>-<group>-`
+/// and deleted the ones it did not recognise — so signing in on a second
+/// computer and choosing a slightly different model set silently revoked the
+/// first computer's key, and that machine started failing with no message.
+///
+/// It lives in a plain file rather than the keyring on purpose: losing it would
+/// orphan this machine's keys, and the keyring is the one store we already know
+/// can disappear (see `connection_recovery`). Hostname is the fallback, and a
+/// fixed placeholder the last resort — two unidentified machines then behave the
+/// way every machine used to, which is the bug, but only for a machine with
+/// neither a writable home directory nor a hostname.
+fn device_scope() -> &'static str {
+    DEVICE_SCOPE.get_or_init(|| {
+        if let Some(home) = crate::tool_adapters::user_home() {
+            let path = home.join(".yeschoy").join("device-id");
+            if let Some(existing) = std::fs::read_to_string(&path)
+                .ok()
+                .map(|text| text.trim().to_owned())
+                .filter(|text| {
+                    text.len() == DEVICE_SCOPE_LEN
+                        && text.bytes().all(|byte| byte.is_ascii_hexdigit())
+                })
+            {
+                return existing;
+            }
+            let mut bytes = [0u8; 4];
+            if getrandom::fill(&mut bytes).is_ok() {
+                let minted = bytes.iter().map(|byte| format!("{byte:02x}")).collect::<String>();
+                if std::fs::create_dir_all(path.parent().unwrap_or(&home)).is_ok()
+                    && crate::tool_adapters::common::atomic_write_bounded(
+                        &path,
+                        minted.as_bytes(),
+                        64,
+                    )
+                    .is_ok()
+                {
+                    return minted;
+                }
+            }
+        }
+        hostname_scope().unwrap_or_else(|| UNIDENTIFIED_DEVICE.to_owned())
+    })
+}
+
+fn hostname_scope() -> Option<String> {
+    let raw = std::env::var("COMPUTERNAME")
+        .ok()
+        .or_else(|| std::env::var("HOSTNAME").ok())?;
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let hash = trimmed.bytes().fold(0xcbf29ce484222325u64, |h, b| {
+        (h ^ u64::from(b)).wrapping_mul(0x100000001b3)
+    });
+    Some(format!("{:08x}", hash as u32))
+}
+
+/// True when this token's name carries *this* machine's scope.
+///
+/// The suffix stays sixteen hex characters, so a client that predates this
+/// change still parses the new names; the first eight are now the device and the
+/// last eight the nonce. A name without our scope belongs to another computer —
+/// or to this one before it had an identity — and is never reused and never
+/// retired. That leaves one inert key per tool and group behind at upgrade,
+/// which the user can delete in the web console; deleting it here would risk
+/// deleting the key another computer is using right now, which is the whole
+/// problem being fixed.
+fn token_is_ours(token: &serde_json::Map<String, Value>, prefix: &str) -> bool {
+    token
+        .get("name")
+        .and_then(Value::as_str)
+        .and_then(|name| name.strip_prefix(&format!("{prefix}-")))
+        .is_some_and(|suffix| suffix.starts_with(device_scope()))
 }
 
 fn owned_token(
@@ -810,9 +896,16 @@ async fn acquire_token_using(
         });
     }
 
-    let mut nonce = [0u8; 8];
+    // Sixteen hex characters as before, now split: this machine's scope, then a
+    // nonce. Same shape, so older clients still recognise the name; new clients
+    // can tell whose key it is.
+    let mut nonce = [0u8; 4];
     getrandom::fill(&mut nonce).map_err(|_| ActivationFailure::ServerUnavailable)?;
-    let name = format!("{prefix}-{:016x}", u64::from_be_bytes(nonce));
+    let name = format!(
+        "{prefix}-{}{:08x}",
+        device_scope(),
+        u32::from_be_bytes(nonce)
+    );
 
     if shutdown_coordinator::global().is_shutting_down() {
         return Err(ActivationFailure::ConfigurationFailed(
@@ -3189,6 +3282,73 @@ mod tests {
             false
         ));
         assert_ne!(prefix, token_prefix("pi", "default"));
+    }
+
+    #[test]
+    fn a_second_computer_never_claims_the_first_computers_key() {
+        // Signing in on a second machine and choosing any different model set
+        // used to delete the first machine's key: the prefix sweep saw every
+        // computer's tokens as its own, and everything it did not reuse went
+        // into `retire_after_commit` and then into DELETE /api/token/{id}.
+        // The first machine then failed on its next request with no message.
+        let prefix = token_prefix("claude_code", "default");
+        let ours = json!({
+            "id": 1,
+            "name": format!("{prefix}-{}{:08x}", device_scope(), 0xabcd1234u32),
+            "group": "default", "status": 1, "expired_time": -1,
+            "model_limits_enabled": true, "model_limits": "model-a",
+        });
+        // Same shape, different machine. The scope is derived from ours by
+        // flipping every digit, so the fixture cannot collide with whatever
+        // identity this machine happens to have minted.
+        let other_scope = device_scope()
+            .chars()
+            .map(|digit| {
+                char::from_digit(15 - digit.to_digit(16).unwrap_or(0), 16).unwrap_or('f')
+            })
+            .collect::<String>();
+        assert_ne!(other_scope, device_scope());
+        let theirs = json!({
+            "id": 2,
+            "name": format!("{prefix}-{other_scope}{:08x}", 0x99887766u32),
+            "group": "default", "status": 1, "expired_time": -1,
+            "model_limits_enabled": true, "model_limits": "model-a",
+        });
+        assert!(token_is_ours(ours.as_object().unwrap(), &prefix));
+        assert!(!token_is_ours(theirs.as_object().unwrap(), &prefix));
+
+        // A key minted before this change has a random sixteen-hex suffix and is
+        // therefore indistinguishable from another computer's — deliberately so.
+        // Both are left alone, because guessing wrong in the other direction is
+        // the failure this is fixing.
+        let legacy = json!({
+            "id": 3,
+            "name": format!("{prefix}-{other_scope}0123abcd"),
+            "group": "default", "status": 1, "expired_time": -1,
+            "model_limits_enabled": true, "model_limits": "model-a",
+        });
+        assert!(!token_is_ours(legacy.as_object().unwrap(), &prefix));
+
+        // Both still satisfy the old ownership and reuse predicates, which is
+        // what keeps already-installed clients able to read the new names.
+        for token in [&ours, &theirs, &legacy] {
+            assert!(owned_token(token.as_object().unwrap(), &prefix, "default", false));
+        }
+    }
+
+    #[test]
+    fn a_minted_name_keeps_the_sixteen_hex_suffix_older_clients_expect() {
+        let prefix = token_prefix("codex_desktop", "default");
+        let name = format!("{prefix}-{}{:08x}", device_scope(), 0u32);
+        let suffix = name.strip_prefix(&format!("{prefix}-")).unwrap();
+        assert_eq!(suffix.len(), 16);
+        assert!(suffix.bytes().all(|byte| byte.is_ascii_hexdigit()));
+        assert_eq!(device_scope().len(), DEVICE_SCOPE_LEN);
+        assert!(device_scope().bytes().all(|byte| byte.is_ascii_hexdigit()));
+        // Stable within a run, which is what makes the scope usable as identity.
+        assert_eq!(device_scope(), device_scope());
+        // Usage attribution reads the tool out of the name and must not care.
+        assert_eq!(tool_for_token_name(&name), Some("codex_desktop"));
     }
 
     #[test]

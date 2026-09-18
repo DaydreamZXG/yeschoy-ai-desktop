@@ -2,6 +2,9 @@ import {
   ArrowUpRight,
   Blocks,
   ChevronRight,
+  Megaphone,
+  Plug,
+  Users,
   CircleUserRound,
   LayoutDashboard,
   Monitor,
@@ -28,6 +31,7 @@ export type AppView =
   | "models"
   | "diagnostics"
   | "tools"
+  | "announcements"
   | "settings";
 export function AppearancePicker({
   value,
@@ -63,6 +67,8 @@ export function AppearancePicker({
 export function WorkbenchSidebar({
   view,
   onNavigate,
+  onOpenCommunity,
+  announcementsAvailable = false,
   appearance,
   onAppearance,
   accountProjection,
@@ -70,6 +76,8 @@ export function WorkbenchSidebar({
 }: {
   view: AppView;
   onNavigate: (view: AppView) => void;
+  onOpenCommunity: () => void;
+  announcementsAvailable?: boolean;
   appearance: Appearance;
   onAppearance: (value: Appearance) => void;
   accountProjection: AccountProjection | null;
@@ -82,16 +90,22 @@ export function WorkbenchSidebar({
       accountProjection.account.username ||
       c.signedInAs
     : c.guest;
+  // 接入是这个产品唯一的目的，之前却只能从首页里点进去，侧边栏没有入口。
+  // 公告只在服务端宣告了它的地址时才出现 —— 客户端和服务端谁先发布都不会出错。
   const nav = [
     { id: "home", label: c.home, icon: LayoutDashboard },
+    { id: "setup", label: c.apps, icon: Plug },
     { id: "account", label: c.usage, icon: ReceiptText },
+    ...(announcementsAvailable
+      ? ([{ id: "announcements", label: c.announcements, icon: Megaphone }] as const)
+      : []),
     { id: "settings", label: c.settings, icon: Settings2 },
   ] as const;
+  // 连接诊断和已安装的工具是设置页的子页面，不是顶级目的地：一个是出问题时
+  // 客服让你点的检查，一个跟「我的应用」显示的内容基本重复。它们高亮到设置上。
   const current =
-    view === "setup" || view === "models" || view === "diagnostics" || view === "tools"
-      ? view === "setup"
-        ? "home"
-        : "settings"
+    view === "models" || view === "diagnostics" || view === "tools"
+      ? "settings"
       : view;
   const navButton = ({
     id,
@@ -130,6 +144,16 @@ export function WorkbenchSidebar({
         {nav.map(navButton)}
       </nav>
       <div className="sidebar-bottom">
+        {/* 交流群本来埋在首页页脚的一个文字按钮里。对一个靠群做客服的生意，
+            用户最需要它的时刻是「哪里都点不通」的时候，而那时他多半不在首页。 */}
+        <button
+          type="button"
+          className="sidebar-community"
+          onClick={onOpenCommunity}
+        >
+          <Users aria-hidden="true" />
+          <span>{c.joinGroup}</span>
+        </button>
         <AppearancePicker value={appearance} onChange={onAppearance} />
         <button
           type="button"

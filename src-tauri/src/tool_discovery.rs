@@ -110,17 +110,20 @@ async fn scan_tool(spec: ToolSpec) -> DiscoveryResult {
 pub(crate) fn discover_candidates(executable_name: &str) -> Vec<Candidate> {
     let mut canonical_candidates: HashMap<PathBuf, Candidate> = HashMap::new();
 
-    if let Some(path_value) = env::var_os("PATH") {
-        for directory in env::split_paths(&path_value) {
-            add_candidates(
-                &mut canonical_candidates,
-                &directory,
-                executable_name,
-                LocationHint::Path,
-            );
-            if canonical_candidates.len() >= MAX_CANDIDATES {
-                break;
-            }
+    // The login shell's PATH first, then this process's. An app opened from the
+    // Dock inherits launchd's short list, which is why a CLI installed under
+    // nvm, bun, volta or fnm used to be reported as not installed even though
+    // it runs fine in the user's terminal.
+    let search_directories = crate::shell_environment::search_directories();
+    for directory in &search_directories {
+        add_candidates(
+            &mut canonical_candidates,
+            directory,
+            executable_name,
+            LocationHint::Path,
+        );
+        if canonical_candidates.len() >= MAX_CANDIDATES {
+            break;
         }
     }
 
@@ -137,9 +140,8 @@ pub(crate) fn discover_candidates(executable_name: &str) -> Vec<Candidate> {
     }
 
     let mut candidates: Vec<Candidate> = canonical_candidates.into_values().collect();
-    let path_priority: Vec<PathBuf> = env::var_os("PATH")
+    let path_priority: Vec<PathBuf> = search_directories
         .into_iter()
-        .flat_map(|value| env::split_paths(&value).collect::<Vec<_>>())
         .flat_map(|dir| {
             executable_filenames(executable_name)
                 .into_iter()
@@ -291,16 +293,65 @@ fn version_command(path: &Path) -> Option<Command> {
     Some(command)
 }
 
+/// How many version directories a single manager may contribute. Someone who
+/// has collected thirty Node releases should not turn a scan into a directory
+/// crawl; the newest names come first, and `PATH` still wins the ordering.
+const MAX_VERSIONS_PER_MANAGER: usize = 12;
+
+/// Expand one `<root>/<version>/<suffix>` layout.
+///
+/// Version managers install each runtime under its own directory, so they
+/// cannot be listed as fixed paths the way `/usr/local/bin` can. Names are
+/// sorted descending so newer releases are examined first; this is a string
+/// sort, which orders `v8` above `v20`, but every match is a real executable
+/// either way and `PATH` priority decides what is actually recommended.
+fn versioned_directories(root: &Path, suffix: &str) -> Vec<PathBuf> {
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return Vec::new();
+    };
+    let mut names: Vec<PathBuf> = entries
+        .flatten()
+        .filter(|entry| entry.file_type().is_ok_and(|kind| kind.is_dir()))
+        .map(|entry| entry.path())
+        .collect();
+    names.sort_unstable();
+    names.reverse();
+    names.truncate(MAX_VERSIONS_PER_MANAGER);
+    names
+        .into_iter()
+        .map(|path| if suffix.is_empty() { path } else { path.join(suffix) })
+        .collect()
+}
+
+/// Where these CLIs land when they are not on the inherited `PATH`.
+///
+/// This exists because a desktop process's `PATH` is not the user's. Even with
+/// the login shell resolved it stays worth checking: a user who installed a
+/// tool without restarting their terminal has it on disk and nowhere on any
+/// `PATH` yet, and telling them it is not installed is the worst answer.
 pub(crate) fn common_binary_directories() -> Vec<PathBuf> {
     let mut directories = Vec::new();
 
     #[cfg(target_os = "windows")]
     {
         if let Some(app_data) = env::var_os("APPDATA") {
-            directories.push(PathBuf::from(app_data).join("npm"));
+            let app_data = PathBuf::from(app_data);
+            directories.push(app_data.join("npm"));
+            // fnm keeps the executables directly in the installation directory.
+            directories.extend(versioned_directories(
+                &app_data.join("fnm").join("node-versions"),
+                "installation",
+            ));
         }
         if let Some(local_app_data) = env::var_os("LOCALAPPDATA") {
-            directories.push(PathBuf::from(local_app_data).join("pnpm"));
+            let local_app_data = PathBuf::from(local_app_data);
+            directories.push(local_app_data.join("pnpm"));
+            directories.push(local_app_data.join("Volta").join("bin"));
+            directories.push(local_app_data.join("Yarn").join("bin"));
+        }
+        if let Some(profile) = crate::tool_adapters::user_home() {
+            directories.push(profile.join(".bun").join("bin"));
+            directories.push(profile.join("scoop").join("shims"));
         }
     }
 
@@ -313,6 +364,27 @@ pub(crate) fn common_binary_directories() -> Vec<PathBuf> {
             directories.push(home.join(".local/share/pnpm"));
             #[cfg(target_os = "macos")]
             directories.push(home.join("Library/pnpm"));
+            // Version managers, in rough order of how often they show up on a
+            // machine that has Node at all.
+            directories.extend(versioned_directories(
+                &home.join(".nvm").join("versions").join("node"),
+                "bin",
+            ));
+            directories.push(home.join(".volta/bin"));
+            directories.push(home.join(".bun/bin"));
+            directories.push(home.join(".asdf/shims"));
+            directories.push(home.join(".yarn/bin"));
+            directories.push(home.join(".config/yarn/global/node_modules/.bin"));
+            #[cfg(target_os = "macos")]
+            directories.extend(versioned_directories(
+                &home.join("Library/Application Support/fnm/node-versions"),
+                "installation/bin",
+            ));
+            #[cfg(not(target_os = "macos"))]
+            directories.extend(versioned_directories(
+                &home.join(".local/share/fnm/node-versions"),
+                "installation/bin",
+            ));
         }
         directories.push(PathBuf::from("/usr/local/bin"));
         #[cfg(target_os = "macos")]
@@ -389,6 +461,48 @@ mod tests {
         let retained = candidates.into_values().next().unwrap();
         assert_eq!(retained.path, first.join("dsh"));
         assert_eq!(retained.location_hint, LocationHint::Path);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn version_manager_layouts_are_expanded_newest_first_and_bounded() {
+        // nvm and fnm install every runtime under its own directory, so they
+        // cannot be listed as fixed paths. A `claude` installed this way used to
+        // be invisible: it is not in a Dock-launched app's PATH and it was not
+        // in the fallback list either, so the app said "not installed" about a
+        // CLI that runs fine in the user's terminal.
+        let root =
+            crate::tool_adapters::common::temporary_working_directory("nvm-layout").unwrap();
+        let versions = root.join("versions").join("node");
+        for name in ["v18.20.4", "v20.11.1", "v22.14.0"] {
+            std::fs::create_dir_all(versions.join(name).join("bin")).unwrap();
+        }
+        // A stray file beside the version directories must not become a path.
+        std::fs::write(versions.join("alias"), b"default").unwrap();
+
+        let expanded = versioned_directories(&versions, "bin");
+        assert_eq!(
+            expanded,
+            vec![
+                versions.join("v22.14.0").join("bin"),
+                versions.join("v20.11.1").join("bin"),
+                versions.join("v18.20.4").join("bin"),
+            ]
+        );
+
+        // Someone who has collected many runtimes does not turn a scan into a
+        // directory crawl.
+        let many = root.join("many");
+        for index in 0..MAX_VERSIONS_PER_MANAGER + 5 {
+            std::fs::create_dir_all(many.join(format!("v{index:02}"))).unwrap();
+        }
+        assert_eq!(
+            versioned_directories(&many, "").len(),
+            MAX_VERSIONS_PER_MANAGER
+        );
+
+        // A directory that is not there at all is not an error.
+        assert!(versioned_directories(&root.join("absent"), "bin").is_empty());
         std::fs::remove_dir_all(root).unwrap();
     }
 }

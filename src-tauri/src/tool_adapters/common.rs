@@ -110,19 +110,37 @@ impl FileTransaction {
 
     pub(crate) fn commit(&mut self) -> Result<(), ConfigFailure> {
         for index in 0..self.changes.len() {
-            let change = &self.changes[index];
-            let current = snapshot(&change.path).map_err(|_| ConfigFailure::Read)?;
-            if current != change.before {
+            // Every exit from this loop rolls back what it already wrote.
+            // A bare `?` on either snapshot used to leave the earlier files of
+            // a multi-file transaction written, stranding the user half
+            // configured with no error that says so. Each snapshot is bound to
+            // a local first: a borrow of `self` held across the match arms
+            // would block the rollback call inside them.
+            let existing = snapshot(&self.changes[index].path);
+            let current = match existing {
+                Ok(value) => value,
+                Err(_) => {
+                    self.rollback_written()?;
+                    return Err(ConfigFailure::Read);
+                }
+            };
+            if current != self.changes[index].before {
                 self.rollback_written()?;
                 return Err(ConfigFailure::ExternalChange);
             }
-            if atomic_write(&change.path, &change.after).is_err() {
+            if atomic_write(&self.changes[index].path, &self.changes[index].after).is_err() {
                 self.rollback_written()?;
                 return Err(ConfigFailure::Write);
             }
             self.changes[index].written = true;
-            let readback =
-                snapshot(&self.changes[index].path).map_err(|_| ConfigFailure::Readback)?;
+            let verified = snapshot(&self.changes[index].path);
+            let readback = match verified {
+                Ok(value) => value,
+                Err(_) => {
+                    self.rollback_written()?;
+                    return Err(ConfigFailure::Readback);
+                }
+            };
             if readback.as_deref() != Some(self.changes[index].after.as_slice()) {
                 self.rollback_written()?;
                 return Err(ConfigFailure::Readback);
@@ -135,21 +153,48 @@ impl FileTransaction {
         self.rollback_written()
     }
 
+    /// Undo every file this transaction wrote, newest first.
+    ///
+    /// One file being unrestorable must not strand the others. Leaving a file
+    /// that somebody else has since edited is correct — we will not clobber
+    /// their work — but it used to `return` on the spot, so in a multi-file
+    /// transaction (Claude Desktop writes four, Pi two) the files not yet
+    /// reached stayed rewritten with no error naming them. The loop now runs to
+    /// the end and reports the worst thing that happened.
+    ///
+    /// `Rollback` outranks `ExternalChange`: the first means a file is stuck in
+    /// our state and could not be put back, the second means we deliberately
+    /// left an externally owned file alone.
     fn rollback_written(&mut self) -> Result<(), ConfigFailure> {
+        let mut stuck = false;
+        let mut externally_owned = false;
         for change in self
             .changes
             .iter_mut()
             .rev()
             .filter(|change| change.written)
         {
-            let current = snapshot(&change.path).map_err(|_| ConfigFailure::Rollback)?;
+            let Ok(current) = snapshot(&change.path) else {
+                stuck = true;
+                continue;
+            };
             if current.as_deref() != Some(change.after.as_slice()) {
-                return Err(ConfigFailure::ExternalChange);
+                externally_owned = true;
+                continue;
             }
-            restore(&change.path, change.before.as_deref()).map_err(|_| ConfigFailure::Rollback)?;
+            if restore(&change.path, change.before.as_deref()).is_err() {
+                stuck = true;
+                continue;
+            }
             change.written = false;
         }
-        Ok(())
+        if stuck {
+            Err(ConfigFailure::Rollback)
+        } else if externally_owned {
+            Err(ConfigFailure::ExternalChange)
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -388,6 +433,237 @@ pub(crate) fn atomic_replace_prefix_bounded(
         let _ = fs::remove_file(&temp);
     }
     result
+}
+
+/// Narrow an existing file to owner-only before it is rewritten.
+///
+/// `atomic_write` copies the target's current permissions onto the replacement,
+/// so tightening here also tightens everything written afterwards. A file that
+/// does not exist yet needs nothing: `temporary_file` already creates at 0600.
+///
+/// For files **this application creates**: the break-glass copies of the user's
+/// original configuration, which sit in our own directory.
+///
+/// Callers must treat an `Err` as "do not write the readable copy". On Windows
+/// the ACL work below is unverifiable from a build machine, so failing closed is
+/// what keeps a bug here from turning into a leak: the worst outcome is the same
+/// behaviour as before the copy existed.
+///
+/// Use [`narrow_third_party_file`] for a file another application owns.
+pub(crate) fn restrict_to_owner(path: &Path) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        match fs::symlink_metadata(path) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                return Err(io::Error::new(io::ErrorKind::InvalidData, "unsafe target"));
+            }
+            Ok(metadata) if metadata.permissions().mode() & 0o077 != 0 => {
+                fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error),
+        }
+    }
+    #[cfg(windows)]
+    {
+        match fs::symlink_metadata(path) {
+            Ok(_) => windows_acl::restrict_to_current_user(path)?,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error),
+        }
+    }
+    #[cfg(not(any(unix, windows)))]
+    let _ = path;
+    Ok(())
+}
+
+/// Narrow a file that belongs to another application.
+///
+/// Only the POSIX mode is touched. `chmod 600` on a config file is ordinary and
+/// expected; replacing a third-party file's Windows DACL with a *protected* one
+/// is not — it would strip the inherited SYSTEM and Administrators entries and
+/// can surprise a backup or endpoint agent, on a file this application did not
+/// create and does not own.
+///
+/// It would also buy almost nothing. The entries it removes belong to accounts
+/// that can already read the whole user profile. What actually threatens the
+/// WorkBuddy key is another *user* on the machine, which the profile ACL already
+/// covers, and a cloud-sync folder, which no ACL can help with — that one is
+/// covered by telling the user, in `readyWorkBuddy`.
+pub(crate) fn narrow_third_party_file(path: &Path) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        match fs::symlink_metadata(path) {
+            Ok(metadata) if metadata.file_type().is_symlink() => {
+                return Err(io::Error::new(io::ErrorKind::InvalidData, "unsafe target"));
+            }
+            Ok(metadata) if metadata.permissions().mode() & 0o077 != 0 => {
+                fs::set_permissions(path, fs::Permissions::from_mode(0o600))?;
+            }
+            Ok(_) => {}
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error),
+        }
+    }
+    #[cfg(not(unix))]
+    let _ = path;
+    Ok(())
+}
+
+/// Narrow a directory we own to owner-only. Same reasoning and the same
+/// fail-closed contract as [`restrict_to_owner`].
+pub(crate) fn restrict_directory(path: &Path) -> io::Result<()> {
+    let metadata = fs::symlink_metadata(path)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if metadata.file_type().is_symlink() || !metadata.is_dir() {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "unsafe target"));
+        }
+        if metadata.permissions().mode() & 0o077 != 0 {
+            fs::set_permissions(path, fs::Permissions::from_mode(0o700))?;
+        }
+    }
+    #[cfg(windows)]
+    {
+        if !metadata.is_dir() {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "unsafe target"));
+        }
+        windows_acl::restrict_to_current_user(path)?;
+    }
+    #[cfg(not(any(unix, windows)))]
+    let _ = metadata;
+    Ok(())
+}
+
+/// Replace a path's DACL with a single entry granting the current user full
+/// access, and stop it inheriting anything else.
+///
+/// A file under the user profile is not private by default: the profile's ACL
+/// typically also grants SYSTEM and Administrators, and a machine with several
+/// accounts, a managed endpoint agent, or a roaming profile can widen it
+/// further. `PROTECTED_DACL_SECURITY_INFORMATION` is the part that matters —
+/// without it the inherited entries come straight back.
+#[cfg(windows)]
+mod windows_acl {
+    use std::{ffi::c_void, io, os::windows::ffi::OsStrExt, path::Path, ptr};
+
+    use windows_sys::Win32::{
+        Foundation::{CloseHandle, HANDLE},
+        Security::{
+            Authorization::{
+                ConvertSidToStringSidW, ConvertStringSecurityDescriptorToSecurityDescriptorW,
+                SetNamedSecurityInfoW, SE_FILE_OBJECT,
+            },
+            GetSecurityDescriptorDacl, GetTokenInformation, TokenUser, ACL,
+            DACL_SECURITY_INFORMATION, PROTECTED_DACL_SECURITY_INFORMATION, PSECURITY_DESCRIPTOR,
+            TOKEN_QUERY, TOKEN_USER,
+        },
+        System::{
+            Memory::LocalFree,
+            Threading::{GetCurrentProcess, OpenProcessToken},
+        },
+    };
+
+    fn refused(context: &'static str) -> io::Error {
+        io::Error::new(io::ErrorKind::PermissionDenied, context)
+    }
+
+    /// The current process token's user SID, formatted as `S-1-5-21-...`.
+    fn current_user_sid() -> io::Result<Vec<u16>> {
+        unsafe {
+            let mut token: HANDLE = ptr::null_mut();
+            if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) == 0 {
+                return Err(refused("open process token"));
+            }
+            let mut needed: u32 = 0;
+            // The first call only sizes the buffer, so it is expected to fail.
+            let _ = GetTokenInformation(token, TokenUser, ptr::null_mut(), 0, &mut needed);
+            if needed == 0 {
+                let _ = CloseHandle(token);
+                return Err(refused("token user size"));
+            }
+            let mut buffer = vec![0u8; needed as usize];
+            let read = GetTokenInformation(
+                token,
+                TokenUser,
+                buffer.as_mut_ptr().cast::<c_void>(),
+                needed,
+                &mut needed,
+            );
+            let _ = CloseHandle(token);
+            if read == 0 {
+                return Err(refused("token user"));
+            }
+            let user = buffer.as_ptr().cast::<TOKEN_USER>();
+            let mut raw: *mut u16 = ptr::null_mut();
+            if ConvertSidToStringSidW((*user).User.Sid, &mut raw) == 0 || raw.is_null() {
+                return Err(refused("sid to string"));
+            }
+            let mut text = Vec::new();
+            let mut cursor = raw;
+            while *cursor != 0 {
+                text.push(*cursor);
+                cursor = cursor.add(1);
+            }
+            LocalFree(raw.cast::<c_void>());
+            Ok(text)
+        }
+    }
+
+    pub(super) fn restrict_to_current_user(path: &Path) -> io::Result<()> {
+        let sid = current_user_sid()?;
+        // D: a DACL follows. P: protected, i.e. stop inheriting — this is the
+        // load-bearing flag. Without it the entries the user profile hands down
+        // (often SYSTEM and Administrators, more on a managed or roaming
+        // machine) come straight back and the file is not private at all.
+        // OICI propagates the entry into a directory's future contents and is
+        // ignored on a file. FA is full access, for that one SID and nobody.
+        let mut sddl: Vec<u16> = "D:P(A;OICI;FA;;;".encode_utf16().collect();
+        sddl.extend_from_slice(&sid);
+        sddl.extend(")\0".encode_utf16());
+        let mut wide: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+        unsafe {
+            let mut descriptor: PSECURITY_DESCRIPTOR = ptr::null_mut();
+            if ConvertStringSecurityDescriptorToSecurityDescriptorW(
+                sddl.as_ptr(),
+                // SDDL_REVISION_1. Written out so the module depends on one
+                // fewer name from the bindings; the revision is fixed at 1.
+                1,
+                &mut descriptor,
+                ptr::null_mut(),
+            ) == 0
+            {
+                return Err(refused("parse sddl"));
+            }
+            let mut present: i32 = 0;
+            let mut defaulted: i32 = 0;
+            let mut dacl: *mut ACL = ptr::null_mut();
+            let read =
+                GetSecurityDescriptorDacl(descriptor, &mut present, &mut dacl, &mut defaulted);
+            let applied = read != 0
+                && present != 0
+                && !dacl.is_null()
+                && SetNamedSecurityInfoW(
+                    wide.as_mut_ptr(),
+                    SE_FILE_OBJECT,
+                    DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION,
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    dacl,
+                    ptr::null_mut(),
+                ) == 0;
+            LocalFree(descriptor.cast::<c_void>());
+            if applied {
+                Ok(())
+            } else {
+                Err(refused("apply dacl"))
+            }
+        }
+    }
 }
 
 pub(crate) fn restore(path: &Path, before: Option<&[u8]>) -> io::Result<()> {
@@ -801,6 +1077,121 @@ mod tests {
         assert_eq!(fs::read(&path).unwrap(), b"after\n");
         transaction.rollback().unwrap();
         assert_eq!(fs::read(&path).unwrap(), b"before\n");
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn transaction_rolls_back_earlier_files_when_a_later_snapshot_fails() {
+        // A multi-file commit that cannot read its second target must not leave
+        // the first one written. Otherwise the user ends up half configured —
+        // one tool already pointing at 野菜API — while the assistant reports
+        // the activation as failed and the recovery record covers neither.
+        let directory = temporary_working_directory("transaction-read-failure").unwrap();
+        let first = directory.join("first.json");
+        let second = directory.join("second.json");
+        atomic_write(&first, b"before-first").unwrap();
+        atomic_write(&second, b"before-second").unwrap();
+
+        let mut transaction =
+            FileTransaction::stage(first.clone(), b"after-first".to_vec()).unwrap();
+        transaction
+            .push(second.clone(), b"after-second".to_vec())
+            .unwrap();
+
+        // Make the second target unreadable in a way every platform agrees on:
+        // the path still exists, but it cannot be read as a file.
+        fs::remove_file(&second).unwrap();
+        fs::create_dir(&second).unwrap();
+
+        assert_eq!(transaction.commit(), Err(ConfigFailure::Read));
+        assert_eq!(
+            fs::read(&first).unwrap(),
+            b"before-first",
+            "the first file must be restored when a later one cannot be read"
+        );
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[test]
+    fn rollback_restores_every_other_file_when_one_is_externally_owned() {
+        // Rolling back used to stop at the first file somebody else had edited,
+        // leaving the files it had not reached yet still carrying our values.
+        // Claude Desktop writes four files, so the untouched remainder could be
+        // most of the transaction — with no error naming them.
+        let directory = temporary_working_directory("rollback-partial").unwrap();
+        let first = directory.join("first.json");
+        let second = directory.join("second.json");
+        let third = directory.join("third.json");
+        atomic_write(&first, b"before-first").unwrap();
+        atomic_write(&second, b"before-second").unwrap();
+        atomic_write(&third, b"before-third").unwrap();
+
+        let mut transaction =
+            FileTransaction::stage(first.clone(), b"after-first".to_vec()).unwrap();
+        transaction
+            .push(second.clone(), b"after-second".to_vec())
+            .unwrap();
+        transaction
+            .push(third.clone(), b"after-third".to_vec())
+            .unwrap();
+        transaction.commit().unwrap();
+
+        // Rollback walks newest first, so an outside edit to the middle file is
+        // reached before the first file is restored.
+        atomic_write(&second, b"edited-by-someone-else").unwrap();
+        assert_eq!(transaction.rollback(), Err(ConfigFailure::ExternalChange));
+
+        assert_eq!(
+            fs::read(&second).unwrap(),
+            b"edited-by-someone-else",
+            "a file somebody else changed is left alone"
+        );
+        assert_eq!(
+            fs::read(&third).unwrap(),
+            b"before-third",
+            "the file reached before the conflict is restored"
+        );
+        assert_eq!(
+            fs::read(&first).unwrap(),
+            b"before-first",
+            "the file after the conflict must be restored too"
+        );
+        let _ = fs::remove_dir_all(directory);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_world_readable_secret_file_is_narrowed_before_it_is_rewritten() {
+        use std::os::unix::fs::PermissionsExt;
+        // WorkBuddy is the one adapter with no credential-helper indirection,
+        // so its config file holds a live relay key. A user who already had
+        // that file at 0644 kept a world-readable billable credential.
+        let directory = temporary_working_directory("restrict-owner").unwrap();
+        let path = directory.join("models.json");
+        atomic_write(&path, b"{}").unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
+
+        narrow_third_party_file(&path).unwrap();
+        assert_eq!(
+            fs::metadata(&path).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+
+        // Rewriting keeps it narrow: atomic_write copies the target's mode.
+        atomic_write(&path, b"{\"models\":[]}").unwrap();
+        assert_eq!(
+            fs::metadata(&path).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+        // A path that does not exist is not an error; new files are born 0600.
+        narrow_third_party_file(&directory.join("absent.json")).unwrap();
+        // Files we create ourselves go through the stricter path, which on
+        // Windows also replaces the DACL.
+        let ours = directory.join("break-glass");
+        atomic_write(&ours, b"original").unwrap();
+        fs::set_permissions(&ours, fs::Permissions::from_mode(0o644)).unwrap();
+        restrict_to_owner(&ours).unwrap();
+        assert_eq!(fs::metadata(&ours).unwrap().permissions().mode() & 0o777, 0o600);
         let _ = fs::remove_dir_all(directory);
     }
 

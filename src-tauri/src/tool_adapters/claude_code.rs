@@ -121,6 +121,16 @@ fn render_catalog(
     Ok(bytes)
 }
 
+/// These variables outrank `settings.json`, so an export left over from another
+/// relay silently wins and Claude Code keeps billing somebody else — with this
+/// app reporting success, because the file it wrote reads back correctly.
+///
+/// The check used to read `std::env`, which on macOS is launchd's environment
+/// for an app opened from the Dock and never contains the user's `.zshrc`
+/// exports. `terminal_launch` then handed the command to Terminal.app, whose
+/// login shell does read them. The guard could therefore only ever fire in a
+/// development build started from a terminal — precisely the case where it does
+/// not matter.
 fn higher_precedence_override() -> bool {
     [
         "ANTHROPIC_AUTH_TOKEN",
@@ -128,7 +138,7 @@ fn higher_precedence_override() -> bool {
         "ANTHROPIC_BASE_URL",
     ]
     .into_iter()
-    .any(|key| std::env::var_os(key).is_some_and(|value| !value.is_empty()))
+    .any(crate::shell_environment::is_set_anywhere)
 }
 
 pub(crate) fn prepare(

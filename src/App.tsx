@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
@@ -18,6 +18,9 @@ import {
 } from "./configuration/connections";
 import { DiagnosticsView } from "./diagnostics/DiagnosticsView";
 import { SettingsView } from "./settings/SettingsView";
+import { AnnouncementsView } from "./workbench/AnnouncementsView";
+import { CommunityGroupDialog } from "./workbench/QQGroupDialog";
+import { readAnnouncements, type Notice } from "./workbench/announcements";
 import { ShutdownProvider } from "./settings/QuitAssistant";
 import { InstallationProvider } from "./installation/InstallationProvider";
 import { InstallationNotice } from "./installation/InstallationPanel";
@@ -63,6 +66,13 @@ function App() {
   const [phase, setPhase] = useState<ViewPhase>("default");
   const [accountLineId, setAccountLineId] =
     useState<ConfigurationLineId>("mainland_optimized");
+  const [communityOpen, setCommunityOpen] = useState(false);
+  const [announcements, setAnnouncements] = useState<{
+    available: boolean;
+    notices: Notice[];
+    loading: boolean;
+    failed: boolean;
+  }>({ available: false, notices: [], loading: false, failed: false });
   const accountSession = useAccountSession(accountLineId);
   const [scan, setScan] = useState<ScanResponse | null>(null);
   const latestRequestRef = useRef("");
@@ -88,6 +98,34 @@ function App() {
       heading.focus({ preventScroll: true });
     }
   }, [view]);
+
+  // 公告只在登录之后读一次，失败不重试 —— 它读不到只是没有公告，
+  // 绝不能因为它让主界面转圈或报错。入口本身也只在服务端宣告了地址时才出现。
+  const signedIn = accountSession.projection?.status === "signed_in";
+  const loadAnnouncements = useCallback(async () => {
+    setAnnouncements((current) => ({ ...current, loading: true, failed: false }));
+    const result = await readAnnouncements(accountLineId);
+    setAnnouncements((current) => ({
+      // 一旦确认服务端支持公告，入口就不再消失。否则一次网络抖动会让
+      // 侧边栏少一项，用户会以为自己点错了地方。读失败改成显示重试。
+      available: result.available || current.available,
+      notices: result.available ? result.notices : current.notices,
+      loading: false,
+      failed: !result.available && current.available,
+    }));
+  }, [accountLineId]);
+  useEffect(() => {
+    if (!signedIn) {
+      setAnnouncements({
+        available: false,
+        notices: [],
+        loading: false,
+        failed: false,
+      });
+      return;
+    }
+    void loadAnnouncements();
+  }, [signedIn, loadAnnouncements]);
 
   const resultsById = useMemo(
     () => new Map(scan?.tools.map((tool) => [tool.toolId, tool]) ?? []),
@@ -151,6 +189,8 @@ function App() {
               <WorkbenchSidebar
                 view={view}
                 onNavigate={setView}
+                onOpenCommunity={() => setCommunityOpen(true)}
+                announcementsAvailable={announcements.available}
                 appearance={appearance}
                 onAppearance={changeAppearance}
                 accountProjection={accountSession.projection}
@@ -174,6 +214,7 @@ function App() {
               )}
               {view === "home" ? (
                 <AppLibraryView
+                  onOpenCommunity={() => setCommunityOpen(true)}
                   onOpenAccount={() => setView("account")}
                   onOpenSetup={(appId, action = "configure") => {
                     setSelectedDesktopApp(appId);
@@ -207,6 +248,13 @@ function App() {
                 <DiagnosticsView
                   onOpenSetup={() => setView("setup")}
                   onOpenTools={() => setView("tools")}
+                />
+              ) : view === "announcements" ? (
+                <AnnouncementsView
+                  notices={announcements.notices}
+                  loading={announcements.loading}
+                  failed={announcements.failed}
+                  onRetry={() => void loadAnnouncements()}
                 />
               ) : view === "settings" ? (
                 <SettingsView
@@ -445,6 +493,10 @@ function App() {
                 />
               )}
             </div>
+            <CommunityGroupDialog
+              open={communityOpen}
+              onOpenChange={setCommunityOpen}
+            />
             <Toaster position="top-center" richColors theme={appearance} />
           </ShutdownProvider>
         </ConnectionProvider>

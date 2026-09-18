@@ -28,7 +28,9 @@ import { useWalletRecharge } from "./useWalletRecharge";
 
 function compact(value: string, locale: string): string {
   const number = Number(value);
-  return Number.isFinite(number)
+  // An absent counter is unknown, not zero: Number("") is 0 and would render a
+  // confident "0 requests" for a field the backend never sent.
+  return value !== "" && Number.isFinite(number)
     ? new Intl.NumberFormat(locale, { notation: "compact" }).format(number)
     : "—";
 }
@@ -148,6 +150,27 @@ export function AccountView({
         return "";
     }
   })();
+  // While the projection is held at "waiting for authorization", the generic
+  // notice cannot distinguish "the page has not been approved yet" from "the
+  // sign-in finished and the account call keeps failing". Naming the cause is
+  // what makes a stuck sign-in reportable instead of an unexplained spinner.
+  const lastErrorDetail = (() => {
+    switch (session.lastError) {
+      case "server_not_ready":
+      case "incompatible_server":
+        return ` ${c.accountServerUnavailable}`;
+      case "network_error":
+      case "request_timed_out":
+        return ` ${c.accountNetworkError}`;
+      case "secure_storage_unavailable":
+        return ` ${c.accountSecureStoreError}`;
+      case "invalid_response":
+      case "response_too_large":
+        return ` ${c.accountInvalidResponse}`;
+      default:
+        return "";
+    }
+  })();
   const signInDisabled =
     loading || projection?.reasonCode === "authorization_unavailable";
   // 会话时效感知（#23，本地记账）：仅提示，不阻断主流程。
@@ -189,7 +212,7 @@ export function AccountView({
         <p className="workbench-notice" role="status">
           <Clock3 />
           {pending
-            ? c.connectionNoticePending
+            ? `${c.connectionNoticePending}${lastErrorDetail}`
             : signedIn
               ? c.connectionNoticeSignedIn
               : c.connectionNoticeSignedOut}

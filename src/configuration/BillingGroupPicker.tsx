@@ -74,7 +74,14 @@ export function BillingGroupPicker({
                   onChange={() => onChange(group.id)}
                 />
                 <span className="billing-group-info">
-                  <strong>{groupLabel(group.id, c.defaultGroup)}</strong>
+                  {/* 分组名是后台自由文本（最长 500 字），不可信也不可控，
+                      所以它在这张卡里最弱：单行截断，全名放 title。
+                      真正决定用户花多少钱的是价格，价格才是主角。 */}
+                  <strong
+                    title={groupDisplayName(group.id, groups, c.defaultGroup)}
+                  >
+                    {groupDisplayName(group.id, groups, c.defaultGroup)}
+                  </strong>
                   <span className="billing-plan-price">
                     {estimate
                       ? c.estimateAmount.replace("{{amount}}", price(estimate.yeschoy.minimum))

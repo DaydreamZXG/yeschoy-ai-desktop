@@ -17,11 +17,16 @@
   --muted: #5f5e58;
   --faint: #6b6a64;
   --line: #e8e6e1;
-  --accent: #c93e22;
-  --accent-hover: #a93218;
-  --accent-soft: #fbeae6;
-  --accent-line: #eac2b8;
-  --success: #1e7e4f;
+  /* The accent used to be #c93e22, a red within a hair of --danger (#b3413d).
+     Every primary action therefore read as an alarm, and a healthy balance
+     rendered in a pink card looked like an error. Red now means danger only. */
+  --accent: #1c6b4a;
+  --accent-hover: #155239;
+  --accent-soft: #e9f3ed;
+  --accent-line: #c3ddcd;
+  /* #1e7e4f 在 --success-soft 上只有 4.37，而它正是「已接入」「最便宜」
+     这些小号粗体标签的用色，全都不达标。压深到 4.99。 */
+  --success: #1b7449;
   --success-soft: #e3f2ea;
   --warning: #986225;
   --warning-soft: #fff6e9;
@@ -36,7 +41,7 @@
   --clay: var(--warning);
   --sage: var(--accent-soft);
   font-family: var(--font-ui);
-  font-size: 14px;
+  font-size: var(--text-base);
   line-height: 1.6;
   color: var(--ink);
   background: var(--bg);
@@ -56,10 +61,10 @@
   --muted: #a3a8ae;
   --faint: #8b929b;
   --line: #26292e;
-  --accent: #e8a33d;
-  --accent-hover: #f0b45c;
-  --accent-soft: #292116;
-  --accent-line: #54421f;
+  --accent: #5cc08d;
+  --accent-hover: #7ad0a5;
+  --accent-soft: #16241d;
+  --accent-line: #2d4a3a;
   --success: #4cc38a;
   --success-soft: #163026;
   --warning: #ebbd80;
@@ -95,14 +100,14 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: var(--space-8);
   min-height: 35px;
-  padding: 7px var(--space-12);
+  padding: var(--space-8) var(--space-12);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   color: var(--ink);
   background: var(--surface);
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 500;
   line-height: 1.5;
   cursor: pointer;
@@ -161,33 +166,33 @@ p {
 }
 
 h1 {
-  font-size: 23px;
+  font-size: var(--text-2xl);
   font-weight: 650;
   letter-spacing: -0.5px;
   line-height: 1.4;
 }
 
 h2 {
-  font-size: 16px;
+  font-size: var(--text-lg);
   font-weight: 600;
   line-height: 1.5;
   letter-spacing: -0.2px;
 }
 
 h3 {
-  font-size: 14px;
+  font-size: var(--text-base);
   font-weight: 600;
 }
 
 code {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--text-xs);
   overflow-wrap: anywhere;
   font-variant-ligatures: none;
 }
 
 small {
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 fieldset {
@@ -199,9 +204,9 @@ fieldset {
 
 legend {
   padding: 0;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 600;
-  margin-bottom: 11px;
+  margin-bottom: var(--space-12);
 }
 
 dl,
@@ -214,12 +219,12 @@ input {
   min-width: 0;
   width: 100%;
   min-height: 40px;
-  padding: var(--space-8) 11px;
+  padding: var(--space-8) var(--space-12);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   color: var(--ink);
   background: var(--surface);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 
 select:disabled,
@@ -233,7 +238,7 @@ input::placeholder {
 }
 
 details {
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 
@@ -260,7 +265,7 @@ details dl {
 details dl div {
   display: grid;
   grid-template-columns: minmax(90px, 0.7fr) minmax(0, 1fr);
-  gap: 15px;
+  gap: var(--space-16);
 }
 
 @keyframes icon-pop {
@@ -350,17 +355,21 @@ details dl div {
 
 /* ———— 动效优化（仪式档）新增 keyframes ———— */
 
-/* 彩带：从顶部落下，横向漂移 + 旋转，末段淡出。--drift 由组件内联变量供给。 */
+/* 彩带：从顶部落下，横向漂移 + 旋转，末段淡出。
+   --drift 和 --rotate 都由组件内联变量供给。--rotate 必须在这里消费：
+   动画运行期间 transform 属性完全归动画所有，组件在 style 里写的
+   rotate() 会被整条覆盖掉，结果是 40 片彩带同步旋转，随机角度等于没写。 */
 @keyframes confetti-fall {
   0% {
-    transform: translate3d(0, 0, 0) rotate(0deg);
+    transform: translate3d(0, 0, 0) rotate(var(--rotate, 0deg));
     opacity: 1;
   }
   80% {
     opacity: 1;
   }
   100% {
-    transform: translate3d(var(--drift, 0), 110vh, 0) rotate(540deg);
+    transform: translate3d(var(--drift, 0), 110vh, 0)
+      rotate(calc(var(--rotate, 0deg) + 540deg));
     opacity: 0;
   }
 }

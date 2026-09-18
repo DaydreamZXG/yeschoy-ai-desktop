@@ -265,7 +265,11 @@ fn prepare_inner(
     model: &str,
     model_ids: &[String],
 ) -> Result<Prepared, AdapterFailure> {
-    let path = dsh_home(home, std::env::var_os("DSH_HOME"))?.join("settings.yaml");
+    // `DSH_HOME` is exported from a shell rc, which a Dock-launched app never
+    // sources. Reading it from this process wrote settings.yaml into ~/.dsh
+    // while `dsh` itself loaded a different directory.
+    let path =
+        dsh_home(home, crate::shell_environment::var_os("DSH_HOME"))?.join("settings.yaml");
     let before = common::snapshot(&path)
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_read_failed"))?;
     let after = render_catalog(before.as_deref(), origin, model, model_ids)
@@ -439,7 +443,7 @@ pub(crate) async fn open_existing(
     key: &str,
 ) -> Result<(), AdapterFailure> {
     let home = super::user_home().ok_or(AdapterFailure::LaunchFailed)?;
-    let path = dsh_home(&home, std::env::var_os("DSH_HOME"))?.join("settings.yaml");
+    let path = dsh_home(&home, crate::shell_environment::var_os("DSH_HOME"))?.join("settings.yaml");
     let bytes = common::snapshot(&path)
         .map_err(|_| AdapterFailure::LaunchFailed)?
         .ok_or(AdapterFailure::LaunchFailed)?;

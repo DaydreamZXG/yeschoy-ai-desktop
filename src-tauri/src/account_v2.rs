@@ -211,17 +211,29 @@ struct DesktopBootstrap {
     device_authorization_available: bool,
     origin: String,
     wallet_url: String,
+    /// Empty until the server advertises it. The announcements view is the
+    /// first feature to ride the now-tolerant bootstrap contract: a client that
+    /// predates the server field simply never shows the entry, and a server that
+    /// predates the client does the same. Neither side has to ship first.
+    announcements_path: String,
 }
 
+// Server responses are read tolerantly, the way `DataEnvelope`,
+// `DeviceAuthorization` and `AuthBundle` below already are. These two were the
+// only strict ones, and being strict here meant the contract could never grow:
+// the day the server added any field, every client already installed would fail
+// to parse bootstrap and therefore fail to sign in at all. A rollout that
+// bricks the previous version is not a rollout.
+//
+// Strictness still belongs on renderer input (`AccountRequest`) and on local
+// records (`StoredSession`), where an unrecognised field really is a fault.
 #[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
 struct BootstrapEnvelope {
     success: bool,
     data: BootstrapData,
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields)]
 struct BootstrapData {
     schema_version: u8,
     service: String,
@@ -245,6 +257,9 @@ struct BootstrapData {
     pricing_path: String,
     tool_keys_path: String,
     wallet_url: String,
+    /// Optional. `#[serde(default)]` is what lets an older server omit it.
+    #[serde(default)]
+    announcements_path: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -430,28 +445,71 @@ async fn fetch_bootstrap_read(line_id: &str) -> Result<DesktopBootstrap, Account
         && data.models_path == MODELS_PATH
         && data.pricing_path == PRICING_PATH
         && data.tool_keys_path == TOOL_KEYS_PATH;
-    if !envelope.success
-        || data.schema_version != 2
-        || data.service != "yeschoy-desktop"
-        || data.contract_id != "desktop-integration-v2"
-        || minimum > current
-        || !data.account_read
-        || !data.usage_read
-        || !data.models_read
-        || !data.pricing_read
-        || !data.tool_keys_manage
-        || !data.official_usd_cny_rate.is_finite()
-        || data.official_usd_cny_rate <= 0.0
-        || !paths_match
-        || !wallet_url_is_allowed(&data.wallet_url)
+    // Every one of these rejections reaches the user as the same
+    // "incompatible server" banner. Naming the failed clause in the log is the
+    // difference between a one-line server fix and an unreproducible report.
+    let rejection = if !envelope.success {
+        Some("envelope")
+    } else if data.schema_version != 2 {
+        Some("schema_version")
+    } else if data.service != "yeschoy-desktop" {
+        Some("service")
+    } else if data.contract_id != "desktop-integration-v2" {
+        Some("contract_id")
+    } else if minimum > current {
+        Some("client_too_old")
+    } else if !(data.account_read
+        && data.usage_read
+        && data.models_read
+        && data.pricing_read
+        && data.tool_keys_manage)
     {
+        Some("capabilities")
+    } else if !data.official_usd_cny_rate.is_finite() || data.official_usd_cny_rate <= 0.0 {
+        Some("fx_rate")
+    } else if !paths_match {
+        Some("paths")
+    } else if !wallet_url_is_allowed(&data.wallet_url) {
+        Some("wallet_url")
+    } else {
+        None
+    };
+    if let Some(reason) = rejection {
+        log::warn!("account stage=bootstrap_rejected reason={reason}");
         return Err(AccountProjectionFailure::IncompatibleServer);
     }
     Ok(DesktopBootstrap {
         device_authorization_available: data.device_authorization_available,
         origin: origin.to_owned(),
         wallet_url: data.wallet_url,
+        // A path we would fetch from the relay origin, so it has to be a
+        // relative path and nothing else. Anything absolute or scheme-bearing
+        // is dropped rather than rejected: a malformed optional field must not
+        // cost the user their sign-in.
+        announcements_path: relative_api_path(&data.announcements_path)
+            .unwrap_or_default(),
     })
+}
+
+/// Accept only a same-origin relative API path such as `/api/desktop/v2/notices`.
+///
+/// The value decides where the client fetches from with the session token
+/// attached, so a server that returned `https://elsewhere.example/...` — or was
+/// made to — must not be able to redirect that fetch off-origin.
+fn relative_api_path(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty()
+        || !trimmed.starts_with('/')
+        || trimmed.starts_with("//")
+        || trimmed.len() > 256
+        || trimmed.contains("..")
+        || trimmed
+            .bytes()
+            .any(|byte| !matches!(byte, b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'/' | b'-' | b'_' | b'.'))
+    {
+        return None;
+    }
+    Some(trimmed.to_owned())
 }
 
 fn wallet_url_is_allowed(raw: &str) -> bool {
@@ -577,6 +635,16 @@ fn keyring_entry() -> Result<Entry, ()> {
     Entry::new(KEYRING_SERVICE, KEYRING_USER).map_err(|_| ())
 }
 
+/// Serialized size of the session payload. The Windows credential store caps a
+/// single blob at 2560 bytes, so a long refresh token fails the write for some
+/// accounts and not others. The length alone separates that from a locked
+/// keychain; no field content is ever logged.
+fn payload_len(session: &StoredSession) -> usize {
+    serde_json::to_string(session)
+        .map(|value| value.len())
+        .unwrap_or_default()
+}
+
 fn save_stored_session(session: &StoredSession) -> Result<(), ()> {
     let payload = serde_json::to_string(session).map_err(|_| ())?;
     keyring_entry()?.set_password(&payload).map_err(|_| ())
@@ -599,20 +667,33 @@ fn delete_stored_session() -> Result<(), ()> {
     }
 }
 
+/// Why a freshly issued bundle could not be installed. A server-contract
+/// violation and a credential-store fault used to collapse into one error,
+/// which pointed every "cannot sign in" report at the OS keychain even when
+/// the keychain was healthy and the bundle itself was malformed.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+enum InstallFailure {
+    Contract,
+    Storage,
+}
+
 fn install_auth_bundle(
     state: &AccountV2State,
     line_id: &str,
     bundle: AuthBundle,
     epoch: u64,
     device_code: Option<&str>,
-) -> Result<(), ()> {
-    let mut runtime = state.runtime.lock().map_err(|_| ())?;
+) -> Result<(), InstallFailure> {
+    let mut runtime = state
+        .runtime
+        .lock()
+        .map_err(|_| InstallFailure::Storage)?;
     if runtime.authorization_epoch != epoch
         || device_code.is_some_and(|code| {
             runtime.pending.as_ref().map(|p| p.device_code.as_str()) != Some(code)
         })
     {
-        return Err(());
+        return Err(InstallFailure::Contract);
     }
     if bundle.token_type != "Bearer"
         || bundle.access_token.len() < 32
@@ -621,7 +702,8 @@ fn install_auth_bundle(
         || bundle.access_expires_at <= now_epoch_seconds()
         || bundle.refresh_expires_at <= bundle.access_expires_at
     {
-        return Err(());
+        log::warn!("account stage=auth_bundle_rejected reason=contract");
+        return Err(InstallFailure::Contract);
     }
     let stored = StoredSession {
         line_id: line_id.to_owned(),
@@ -629,13 +711,26 @@ fn install_auth_bundle(
         session_id: bundle.session_id,
         refresh_expires_at: bundle.refresh_expires_at,
     };
-    save_stored_session(&stored)?;
+    // A credential store that refuses the write (locked keychain, no secret
+    // service, an oversized blob on Windows) fails the sign-in at the very
+    // last step, after the user already approved it in the browser.
+    save_stored_session(&stored).map_err(|_| {
+        log::warn!("account stage=session_store_failed bytes={}", payload_len(&stored));
+        InstallFailure::Storage
+    })?;
     runtime.access = Some(AccessSession {
         access_token: bundle.access_token,
         access_expires_at: bundle.access_expires_at,
     });
     runtime.pending = None;
     Ok(())
+}
+
+fn install_failure(failure: InstallFailure) -> AccountProjectionFailure {
+    match failure {
+        InstallFailure::Contract => AccountProjectionFailure::InvalidResponse,
+        InstallFailure::Storage => AccountProjectionFailure::SecureStorage,
+    }
 }
 
 #[derive(Debug)]
@@ -902,7 +997,7 @@ async fn refresh_access(
     }
     let access_token = envelope.data.access_token.clone();
     install_auth_bundle(state, &refresh_line_id, envelope.data, epoch, None)
-        .map_err(|_| AccountProjectionFailure::SecureStorage)?;
+        .map_err(install_failure)?;
     Ok(access_token)
 }
 
@@ -974,6 +1069,14 @@ async fn account_data_read(
         comparison_fx,
     );
     if !account_summary.available {
+        // The single most common "approved on the website but the app keeps
+        // waiting" path: authorization already succeeded and only this
+        // projection failed. Record whether the call itself failed or its
+        // payload did not parse, so the two are never confused again.
+        log::warn!(
+            "account stage=account_projection_unavailable http_ok={}",
+            account_value.is_some()
+        );
         return Err(AccountProjectionFailure::InvalidResponse);
     }
     let money = account_money(
@@ -1169,15 +1272,16 @@ fn parse_account(account: Option<&Value>, status: Option<&Value>) -> AccountSumm
     let Some(data) = data_object(account) else {
         return AccountSummary::default();
     };
+    // The balance is the only load-bearing field: without it there is no
+    // account to render. The two counters below are display-only, and a
+    // backend that omits either (a brand-new account has made no requests)
+    // must not cost the user the entire sign-in. Missing stays missing —
+    // the renderer shows "—" rather than inventing a zero.
     let Some(quota) = signed_integer(data.get("quota")) else {
         return AccountSummary::default();
     };
-    let Some(used_quota) = non_negative_integer(data.get("used_quota")) else {
-        return AccountSummary::default();
-    };
-    let Some(request_count) = non_negative_integer(data.get("request_count")) else {
-        return AccountSummary::default();
-    };
+    let used_quota = non_negative_integer(data.get("used_quota")).unwrap_or_default();
+    let request_count = non_negative_integer(data.get("request_count")).unwrap_or_default();
     let quota_per_unit = data_object(status)
         .and_then(|value| positive_number(value.get("quota_per_unit")))
         .map(decimal)
@@ -1868,19 +1972,22 @@ pub async fn account_poll_authorization_v2(
             "authorization_cancelled",
         ));
     }
-    if !envelope.success
-        || install_auth_bundle(
-            &state,
-            &request.line_id,
-            envelope.data,
-            epoch,
-            Some(&pending.device_code),
-        )
-        .is_err()
-    {
+    if !envelope.success {
         return Ok(failure_projection(
             request.request_id,
-            AccountProjectionFailure::SecureStorage,
+            AccountProjectionFailure::InvalidResponse,
+        ));
+    }
+    if let Err(failure) = install_auth_bundle(
+        &state,
+        &request.line_id,
+        envelope.data,
+        epoch,
+        Some(&pending.device_code),
+    ) {
+        return Ok(failure_projection(
+            request.request_id,
+            install_failure(failure),
         ));
     }
     match inspect_inner(&state, &request).await {
@@ -1966,6 +2073,138 @@ pub async fn account_logout_v2(
         "signed_out",
         "logged_out",
     ))
+}
+
+/// 公告投影。`available` 为 false 时侧边栏不显示入口。
+#[derive(Debug, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AnnouncementsProjection {
+    request_id: String,
+    available: bool,
+    notices: Vec<Notice>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Notice {
+    id: String,
+    title: String,
+    body: String,
+    severity: &'static str,
+    published_at_epoch_ms: u64,
+}
+
+const MAX_NOTICES: usize = 30;
+const MAX_NOTICE_TITLE: usize = 120;
+const MAX_NOTICE_BODY: usize = 2000;
+
+/// 只保留可显示的纯文本。公告是服务端自由文本，直接渲染到界面上，
+/// 所以在这里就把控制字符和 bidi 覆盖字符去掉，并限长。
+fn notice_text(raw: Option<&str>, maximum: usize) -> String {
+    raw.unwrap_or_default()
+        .chars()
+        .filter(|c| {
+            (*c == '\n' || !c.is_control())
+                && !matches!(*c, '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
+        })
+        .take(maximum)
+        .collect::<String>()
+        .trim()
+        .to_owned()
+}
+
+fn parse_notices(value: &Value) -> Vec<Notice> {
+    value
+        .get("data")
+        .and_then(|data| data.get("notices"))
+        .and_then(Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or_default()
+        .iter()
+        .filter_map(Value::as_object)
+        .filter_map(|notice| {
+            let title = notice_text(
+                notice.get("title").and_then(Value::as_str),
+                MAX_NOTICE_TITLE,
+            );
+            // 没有标题的公告没有任何展示价值，丢掉而不是显示一个空条目。
+            if title.is_empty() {
+                return None;
+            }
+            Some(Notice {
+                id: notice_text(notice.get("id").and_then(Value::as_str), 64),
+                title,
+                body: notice_text(notice.get("body").and_then(Value::as_str), MAX_NOTICE_BODY),
+                severity: match notice.get("severity").and_then(Value::as_str) {
+                    Some("warning") => "warning",
+                    _ => "info",
+                },
+                published_at_epoch_ms: notice
+                    .get("publishedAtEpochMs")
+                    .and_then(Value::as_u64)
+                    .unwrap_or_default(),
+            })
+        })
+        .take(MAX_NOTICES)
+        .collect()
+}
+
+/// 读取服务端公告。
+///
+/// 契约（服务端待实现）：bootstrap 增加可选字段 `announcements_path`，
+/// 形如 `/api/desktop/v2/notices`；该路径带会话令牌 GET，返回
+/// `{"success":true,"data":{"notices":[
+///   {"id":"...","title":"...","body":"...","severity":"info|warning",
+///    "publishedAtEpochMs":1758000000000}]}}`
+///
+/// 服务端没宣告这个字段时返回 `available: false`，界面不显示入口 ——
+/// 客户端和服务端谁先发布都不会出错。读取失败同样只是没有公告，
+/// 绝不影响登录或接入。
+#[tauri::command]
+pub async fn account_announcements_read_v2(
+    state: tauri::State<'_, AccountV2State>,
+    request: AccountRequest,
+) -> Result<AnnouncementsProjection, String> {
+    let _permit = crate::shutdown_coordinator::global()
+        .admit_operation()
+        .map_err(|_| "assistant_shutting_down")?;
+    if !request_is_valid(&request) {
+        return Err("invalid_account_request".into());
+    }
+    let unavailable = AnnouncementsProjection {
+        request_id: request.request_id.clone(),
+        ..Default::default()
+    };
+    let Ok(bootstrap) = fetch_bootstrap(&request.line_id).await else {
+        return Ok(unavailable);
+    };
+    if bootstrap.announcements_path.is_empty() {
+        return Ok(unavailable);
+    }
+    let Ok(epoch) = native_session_epoch(&state) else {
+        return Ok(unavailable);
+    };
+    let Ok((origin, access_token)) =
+        native_session_access(&state, &request.line_id, epoch).await
+    else {
+        return Ok(unavailable);
+    };
+    let url = format!("{origin}{}", bootstrap.announcements_path);
+    let Ok(response) = send_json(Method::GET, &url, Some(&access_token), None).await else {
+        return Ok(unavailable);
+    };
+    if !response.status.is_success() {
+        log::info!(
+            "account stage=announcements_unavailable http={}",
+            response.status.as_u16()
+        );
+        return Ok(unavailable);
+    }
+    Ok(AnnouncementsProjection {
+        request_id: request.request_id,
+        available: true,
+        notices: parse_notices(&response.value),
+    })
 }
 
 #[tauri::command]
@@ -2191,11 +2430,56 @@ mod tests {
         assert_eq!(projected.balance_quota, "-125000");
         assert_eq!(projected.quota_per_unit, "500000");
 
+        // A malformed counter is display-only. It must never reach the
+        // renderer, but it must not cost the user the whole sign-in either:
+        // that is how an approved authorization still reads as "waiting".
         for field in ["used_quota", "request_count"] {
-            let mut invalid = account.clone();
-            invalid["data"][field] = json!(-1);
-            assert!(!parse_account(Some(&invalid), Some(&status)).available);
+            for malformed in [json!(-1), Value::Null, json!("42")] {
+                let mut invalid = account.clone();
+                invalid["data"][field] = malformed.clone();
+                let projected = parse_account(Some(&invalid), Some(&status));
+                assert!(projected.available, "{field} {malformed}");
+                let rendered = if field == "used_quota" {
+                    &projected.used_quota
+                } else {
+                    &projected.request_count
+                };
+                assert_eq!(rendered, "", "{field} renders as unknown, never {malformed}");
+            }
         }
+
+        // The balance is the one load-bearing field: without it there is no
+        // account to show, so this one still fails closed.
+        let mut no_balance = account.clone();
+        no_balance["data"]["quota"] = Value::Null;
+        assert!(!parse_account(Some(&no_balance), Some(&status)).available);
+    }
+
+    #[test]
+    fn account_projection_survives_a_brand_new_account_without_counters() {
+        let account = json!({"success": true, "data": {"quota": 1000}});
+        let projected = parse_account(Some(&account), None);
+        assert!(
+            projected.available,
+            "an account that has made no requests can still sign in"
+        );
+        assert_eq!(projected.balance_quota, "1000");
+        assert_eq!(projected.request_count, "");
+        assert_eq!(projected.used_quota, "");
+    }
+
+    #[test]
+    fn install_failures_separate_contract_from_credential_storage() {
+        // These two used to collapse into one projection, which sent every
+        // "cannot sign in" report at the OS keychain regardless of cause.
+        assert!(matches!(
+            install_failure(InstallFailure::Contract),
+            AccountProjectionFailure::InvalidResponse
+        ));
+        assert!(matches!(
+            install_failure(InstallFailure::Storage),
+            AccountProjectionFailure::SecureStorage
+        ));
     }
 
     #[test]

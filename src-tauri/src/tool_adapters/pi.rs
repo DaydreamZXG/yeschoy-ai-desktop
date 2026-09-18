@@ -126,7 +126,10 @@ fn prepare_inner(
     model: &str,
     model_ids: &[String],
 ) -> Result<Prepared, AdapterFailure> {
-    if std::env::var_os("PI_CODING_AGENT_DIR").is_some_and(|value| !value.is_empty()) {
+    // Read through the login shell: an export in `.zshrc` is invisible to a
+    // Dock-launched app, so this guard used to pass and the adapter wrote
+    // ~/.pi/agent while Pi itself read the overridden directory.
+    if crate::shell_environment::is_set_anywhere("PI_CODING_AGENT_DIR") {
         return Err(AdapterFailure::ExternalOverride);
     }
     let directory = home.join(".pi").join("agent");
