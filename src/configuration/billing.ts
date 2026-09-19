@@ -1,4 +1,5 @@
 import type { AccountModel, BillingGroup } from "../account/session";
+import type { ActivationToolId } from "./activation";
 
 type Node =
   | { kind: "number"; value: number }
@@ -180,15 +181,32 @@ export function billingTiers(expression: string): BillingTier[] {
   }
 }
 
+export function groupSupportsTool(
+  _model: AccountModel | undefined,
+  group: BillingGroup,
+  toolId: ActivationToolId,
+): boolean {
+  const endpoints = group.supportedEndpointTypes ?? [];
+  if (!endpoints.length || toolId !== "codex_desktop") return true;
+  return (
+    endpoints.includes("openai-response") || endpoints.includes("gemini")
+  );
+}
+
 export function chooseBillingGroup(
   model: AccountModel | undefined,
   previous: string,
+  toolId?: ActivationToolId,
 ): string {
   const groups = model?.billing?.groups ?? [];
+  const usable = toolId
+    ? groups.filter((group) => groupSupportsTool(model, group, toolId))
+    : groups;
+  const pool = usable.length ? usable : groups;
   return (
-    groups.find((g) => g.id === previous)?.id ??
-    groups.find((g) => g.id === "default")?.id ??
-    groups[0]?.id ??
+    pool.find((g) => g.id === previous)?.id ??
+    pool.find((g) => g.id === "default")?.id ??
+    pool[0]?.id ??
     ""
   );
 }

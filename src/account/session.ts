@@ -53,6 +53,7 @@ export interface BillingGroup {
   id: string;
   description: string;
   ratio: number | null;
+  supportedEndpointTypes?: string[];
 }
 
 export interface ModelBilling {
@@ -247,11 +248,22 @@ function model(value: unknown): value is AccountModel {
       !billing.groups.every(
         (g) =>
           object(g) &&
-          exactKeys(g, ["id", "description", "ratio"]) &&
+          (exactKeys(g, ["id", "description", "ratio"]) ||
+            exactKeys(g, [
+              "id",
+              "description",
+              "ratio",
+              "supportedEndpointTypes",
+            ])) &&
           safeText(g.id, 128, false) &&
           g.id !== "auto" &&
           safeText(g.description, 500) &&
-          amount(g.ratio),
+          amount(g.ratio) &&
+          (g.supportedEndpointTypes === undefined ||
+            (Array.isArray(g.supportedEndpointTypes) &&
+              g.supportedEndpointTypes.every((endpoint) =>
+                safeText(endpoint, 80, false),
+              ))),
       ) ||
       new Set(billing.groups.map((g) => g.id)).size !== billing.groups.length
     )

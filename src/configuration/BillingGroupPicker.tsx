@@ -1,10 +1,12 @@
 import { useId } from "react";
 import type { AccountModel } from "../account/session";
+import type { ActivationToolId } from "./activation";
 import { Landmark, Sprout } from "lucide-react";
 import { useConfigurationCopy } from "./copy";
 import {
   billingConversion,
   groupPrice,
+  groupSupportsTool,
   hundredMillionTokenEstimate,
 } from "./billing";
 
@@ -34,12 +36,16 @@ export function BillingGroupPicker({
   onChange,
   disabled = false,
   fx = "",
+  toolId,
+  toolName,
 }: {
   model?: AccountModel;
   selected: string;
   onChange: (id: string) => void;
   disabled?: boolean;
   fx?: string;
+  toolId?: ActivationToolId;
+  toolName?: string;
 }) {
   const c = useConfigurationCopy();
   const groups = model?.billing?.groups ?? [];
@@ -64,23 +70,36 @@ export function BillingGroupPicker({
       <p>{c.groupIntro}</p>
       {groups.length ? (
         <div className="billing-group-grid">
-          {plans.map(({ group, estimate }) => (
-            <div key={group.id} className="billing-plan-card">
-              <label
+          {plans.map(({ group, estimate }) => {
+            const unusable =
+              !!toolId &&
+              !!group.supportedEndpointTypes?.length &&
+              !groupSupportsTool(model, group, toolId);
+            return (
+              <div
+                key={group.id}
                 className={
-                  selected === group.id
-                    ? "billing-group-option is-selected"
-                    : "billing-group-option"
+                  unusable
+                    ? "billing-plan-card is-incompatible"
+                    : "billing-plan-card"
                 }
               >
-                <input
-                  type="radio"
-                  name={radioName}
-                  value={group.id}
-                  checked={selected === group.id}
-                  onChange={() => onChange(group.id)}
-                />
-                <span className="billing-group-info">
+                <label
+                  className={
+                    selected === group.id
+                      ? "billing-group-option is-selected"
+                      : "billing-group-option"
+                  }
+                >
+                  <input
+                    type="radio"
+                    name={radioName}
+                    value={group.id}
+                    checked={selected === group.id}
+                    disabled={unusable}
+                    onChange={() => !unusable && onChange(group.id)}
+                  />
+                  <span className="billing-group-info">
                   {/* 显示分组的 **键**，不是它的 description。
                       线上数据里 usable_group 是「键 → 一句话」：键是
                       `Qwen / GLM`、`限时国模特价渠道` 这种可读名字，值是
@@ -103,6 +122,11 @@ export function BillingGroupPicker({
                       : c.planPriceUnavailable}
                   </span>
                   <small>{c.planPriceUnit}</small>
+                  {unusable && toolName ? (
+                    <small className="billing-plan-unusable">
+                      {c.groupNotForThisApp.replace("{{app}}", toolName)}
+                    </small>
+                  ) : null}
                   <span className="billing-plan-badges">
                     {selected === group.id && <small>{c.planSelected}</small>}
                     {allPriced &&
@@ -115,22 +139,23 @@ export function BillingGroupPicker({
                             plan.estimate!.yeschoy.maximum,
                       ) && <small>{c.planLowest}</small>}
                   </span>
-                </span>
-              </label>
-              <details className="billing-plan-details">
-                <summary>{c.planDetails}</summary>
-                <p>
-                  {c.planRatio}:{" "}
-                  {group.ratio === null ? c.ratioPending : `${group.ratio}×`}
-                </p>
-                {group.description && (
+                  </span>
+                </label>
+                <details className="billing-plan-details">
+                  <summary>{c.planDetails}</summary>
                   <p>
-                    {c.planDescription}: {group.description}
+                    {c.planRatio}:{" "}
+                    {group.ratio === null ? c.ratioPending : `${group.ratio}×`}
                   </p>
-                )}
-              </details>
-            </div>
-          ))}
+                  {group.description && (
+                    <p>
+                      {c.planDescription}: {group.description}
+                    </p>
+                  )}
+                </details>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <p className="account-inline-warning">

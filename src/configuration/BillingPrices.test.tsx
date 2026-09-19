@@ -156,6 +156,44 @@ describe("pricing plan choices", () => {
     for (const radio of screen.getAllByRole("radio"))
       expect(radio).toBeDisabled();
   });
+
+  it("disables a price group that cannot serve the selected application", () => {
+    const value = model(0.4);
+    value.supportedEndpointTypes = ["openai", "openai-response"];
+    value.billing!.groups = [
+      {
+        id: "chat-only",
+        ratio: 0.35,
+        description: "Chat",
+        supportedEndpointTypes: ["openai"],
+      },
+      {
+        id: "responses",
+        ratio: 0.7,
+        description: "Responses",
+        supportedEndpointTypes: ["openai-response"],
+      },
+    ];
+    render(
+      <BillingGroupPicker
+        model={value}
+        selected="responses"
+        fx="1"
+        toolId="codex_desktop"
+        toolName="Codex Desktop"
+        onChange={() => undefined}
+      />,
+    );
+
+    const chatOnly = screen.getByRole("radio", { name: /chat-only/ });
+    expect(chatOnly).toBeDisabled();
+    expect(
+      within(chatOnly.closest(".billing-plan-card") as HTMLElement).getByText(
+        "这个价格方案在Codex Desktop里用不了",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /responses/ })).toBeEnabled();
+  });
 });
 
 describe("rounded price comparisons remain honest", () => {
