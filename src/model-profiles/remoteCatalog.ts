@@ -19,8 +19,20 @@ export interface ModelCatalogFile {
   models: BundledCatalogModel[];
 }
 
+/**
+ * 挂在下载源的 `/apps/` 下面，不在主站。
+ *
+ * 原来指向 `https://yeschoy.com/desktop/model-catalog.json`，那个路径从来没
+ * 部署过 —— 主站是个 SPA，任何未知路径都回 200 + HTML，所以这里每次启动都
+ * 悄无声息地走 `invalid_payload` 兜底，等于整个功能从没生效过。
+ *
+ * 下载源（ergou.qzz.io）的 Caddy 是白名单式的，只放行 /apps、/releases、
+ * /updates/releases 等几条路径，其余一律 404。`/apps/` 已经在名单里且已经在
+ * 服务 catalog.json，所以挂这里不需要改服务器配置 —— 放个文件就行，中转那边
+ * 一个字都不用动。
+ */
 export const REMOTE_MODEL_CATALOG_URL =
-  "https://yeschoy.com/desktop/model-catalog.json";
+  "https://ergou.qzz.io/apps/model-catalog.json";
 const REMOTE_CATALOG_SHA256_URL = `${REMOTE_MODEL_CATALOG_URL}.sha256`;
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_CATALOG_BYTES = 2 * 1024 * 1024;
@@ -125,10 +137,7 @@ export function parseRemoteCatalog(payload: unknown): ModelCatalogFile | null {
     ) {
       return null;
     }
-    if (
-      entry.toolUse !== undefined &&
-      typeof entry.toolUse !== "boolean"
-    ) {
+    if (entry.toolUse !== undefined && typeof entry.toolUse !== "boolean") {
       return null;
     }
     if (
