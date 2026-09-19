@@ -215,6 +215,33 @@ describe("billing display follows the selected NewAPI group", () => {
     expect(chooseBillingGroup(undefined, "特价")).toBe("");
   });
 
+  it("chooses a billing group that supports the selected application protocol", () => {
+    const value = fixture();
+    value.supportedEndpointTypes = ["openai", "openai-response"];
+    value.billing!.groups = [
+      {
+        id: "chat-only",
+        description: "",
+        ratio: 0.35,
+        supportedEndpointTypes: ["openai"],
+      },
+      {
+        id: "responses",
+        description: "",
+        ratio: 0.7,
+        supportedEndpointTypes: ["openai-response"],
+      },
+    ];
+
+    expect(chooseBillingGroup(value, "chat-only", "codex_desktop")).toBe(
+      "responses",
+    );
+    expect(chooseBillingGroup(value, "responses", "codex_desktop")).toBe(
+      "responses",
+    );
+    expect(chooseBillingGroup(value, "chat-only", "pi")).toBe("chat-only");
+  });
+
   it.each([
     'tier("base", p * 3) * 5', // never silently omit a request multiplier
     'tier("base", p * c)',

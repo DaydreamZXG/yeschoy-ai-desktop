@@ -88,8 +88,11 @@ export function ModelsView({
 
   const selected = accountModels.find((model) => model.id === selectedModelId);
   useEffect(
-    () => setBillingGroup((previous) => chooseBillingGroup(selected, previous)),
-    [selected],
+    () =>
+      setBillingGroup((previous) =>
+        chooseBillingGroup(selected, previous, tool),
+      ),
+    [selected, tool],
   );
 
   return (
@@ -226,6 +229,10 @@ export function ModelsView({
                   model={selected}
                   fx={projection?.comparisonFx ?? ""}
                   selected={billingGroup}
+                  toolId={tool}
+                  toolName={
+                    WORKBENCH_APPS.find((app) => app.id === tool)?.name ?? tool
+                  }
                   onChange={setBillingGroup}
                 />
                 <BillingPrices

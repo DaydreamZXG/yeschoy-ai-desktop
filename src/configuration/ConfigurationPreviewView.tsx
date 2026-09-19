@@ -595,7 +595,7 @@ export function ConfigurationPreviewView({
     setBillingGroup(
       existing
         ? savedConnection.billingGroup
-        : chooseBillingGroup(models[0], ""),
+        : chooseBillingGroup(models[0], "", activationToolId),
     );
     setModelSet(existing ? (savedConnection.models ?? []) : []);
     setDefaultModelId(existing ? savedConnection.modelId : "");
@@ -1840,6 +1840,7 @@ export function ConfigurationPreviewView({
                             chooseBillingGroup(
                               models.find((m) => m.id === id),
                               "",
+                              activationToolId,
                             ),
                         );
                         resetResult();
@@ -1918,6 +1919,8 @@ export function ConfigurationPreviewView({
                   fx={session.projection?.comparisonFx ?? ""}
                   selected={billingGroup}
                   disabled={applyPhase === "applying"}
+                  toolId={activationToolId}
+                  toolName={activationToolName}
                   onChange={(id) => {
                     setSelectionReadyKey(selectionKey);
                     setBillingGroup(id);
