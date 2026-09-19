@@ -204,6 +204,25 @@ async fn dispatch(
 fn models(state: &BridgeState) -> Response {
     let models = state.credential.model_ids();
     let desktop = state.prefix.contains("desktop");
+    // Claude Desktop 的 profile schema 里没有上下文窗口字段，所以窗口只能在这个
+    // 端点上说 —— 前提是它真的来做模型发现。它的 schema 写着会
+    // （"the first model your endpoint returns under discovery"），但没有人验证过，
+    // 而验证不了的话，「桌面版会不会自动压缩」就永远只能是推测。
+    //
+    // 所以记一行。只记：面向哪个客户端、供了几个模型、其中几个带得出窗口。
+    // 不记模型 ID，不记请求里的任何东西 —— 这行日志是用来回答「它来过吗」，
+    // 不是用来看内容的。
+    log::info!(
+        "claude_bridge model_discovery surface={} models={} with_window={}",
+        if desktop { "desktop" } else { "code" },
+        models.len(),
+        models
+            .iter()
+            .filter(|id| crate::tool_model_profile::capability_profile(id)
+                .and_then(|profile| profile.context_window)
+                .is_some())
+            .count(),
+    );
     let ids: Vec<_> = models
         .iter()
         .map(|id| {

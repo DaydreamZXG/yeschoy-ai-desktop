@@ -165,7 +165,7 @@ fn render_catalog(
     let windows: serde_json::Map<String, Value> = model_ids
         .iter()
         .filter_map(|id| {
-            let window = crate::tool_model_profile::profile(id)?.context_window?;
+            let window = crate::tool_model_profile::capability_profile(id)?.context_window?;
             Some((id.clone(), json!(window)))
         })
         .collect();
