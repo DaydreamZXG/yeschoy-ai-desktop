@@ -117,6 +117,8 @@ pub struct BillingGroup {
     description: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     ratio: Option<f64>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    supported_endpoint_types: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -1322,6 +1324,32 @@ fn nonnegative_number(value: Option<&Value>) -> Option<f64> {
         .filter(|n| n.is_finite() && *n >= 0.0)
 }
 
+fn pricing_endpoint_types(row: &Value) -> BTreeSet<String> {
+    row.get("supported_endpoint_types")
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .filter(|value| {
+            !value.is_empty()
+                && value.chars().count() <= 80
+                && !value.chars().any(char::is_control)
+        })
+        .take(32)
+        .map(str::to_owned)
+        .collect()
+}
+
+fn row_covers_group(row: &Value, group_id: &str) -> bool {
+    row.get("enable_groups")
+        .and_then(Value::as_array)
+        .is_some_and(|groups| {
+            groups
+                .iter()
+                .any(|group| group.as_str() == Some(group_id) || group.as_str() == Some("all"))
+        })
+}
+
 pub(crate) fn billing_groups(pricing: &Value, model_id: &str) -> Vec<BillingGroup> {
     if pricing.get("success").and_then(Value::as_bool) != Some(true) {
         return Vec::new();
@@ -1342,21 +1370,25 @@ pub(crate) fn billing_groups(pricing: &Value, model_id: &str) -> Vec<BillingGrou
             {
                 return None;
             }
-            let enabled = rows
+            let matching = rows
                 .into_iter()
                 .flatten()
-                .filter(|row| row["model_name"].as_str() == Some(model_id))
-                .any(|row| {
-                    row["enable_groups"].as_array().is_some_and(|groups| {
-                        groups
-                            .iter()
-                            .any(|g| g.as_str() == Some(id) || g.as_str() == Some("all"))
-                    })
-                });
-            enabled.then(|| BillingGroup {
+                .filter(|row| {
+                    row["model_name"].as_str() == Some(model_id) && row_covers_group(row, id)
+                })
+                .collect::<Vec<_>>();
+            if matching.is_empty() {
+                return None;
+            }
+            let mut endpoints = BTreeSet::new();
+            for row in &matching {
+                endpoints.extend(pricing_endpoint_types(row));
+            }
+            Some(BillingGroup {
                 id: id.clone(),
                 description: bounded_text(Some(description), 500),
                 ratio: nonnegative_number(pricing.get("group_ratio").and_then(|v| v.get(id))),
+                supported_endpoint_types: endpoints.into_iter().collect(),
             })
         })
         .take(128)
@@ -1402,7 +1434,7 @@ fn parse_models(
                 .get("default")
                 .and_then(|value| positive_number(Some(value)))
         });
-    let mut by_name = BTreeMap::new();
+    let mut by_name: BTreeMap<String, Vec<Value>> = BTreeMap::new();
     if let Some(rows) = pricing_root.get("data").and_then(Value::as_array) {
         for row in rows.iter().take(4096) {
             let Some(object) = row.as_object() else {
@@ -1410,16 +1442,20 @@ fn parse_models(
             };
             let name = bounded_text(object.get("model_name"), 200);
             if !name.is_empty() && available.contains(&name) {
-                by_name.entry(name).or_insert_with(|| object.clone());
+                by_name
+                    .entry(name)
+                    .or_default()
+                    .push(Value::Object(object.clone()));
             }
         }
     }
     available
         .into_iter()
         .map(|id| {
-            let Some(row) = by_name.get(&id) else {
+            let Some(rows) = by_name.get(&id) else {
                 return unpriced_model(id);
             };
+            let row = &rows[0];
             // Pricing descriptions may contain internal upstream routing labels.
             // They are not reviewed customer-facing model metadata. Keep the
             // schema field empty instead of forwarding them across renderer IPC.
@@ -1432,19 +1468,9 @@ fn parse_models(
                 _ if quota_type == Some(1) => "per_request",
                 _ => "unknown",
             };
-            let supported_endpoint_types = row
-                .get("supported_endpoint_types")
-                .and_then(Value::as_array)
-                .into_iter()
-                .flatten()
-                .filter_map(Value::as_str)
-                .filter(|value| {
-                    !value.is_empty()
-                        && value.chars().count() <= 80
-                        && !value.chars().any(char::is_control)
-                })
-                .take(32)
-                .map(str::to_owned)
+            let supported_endpoint_types = rows
+                .iter()
+                .flat_map(pricing_endpoint_types)
                 .collect::<BTreeSet<_>>()
                 .into_iter()
                 .collect();
@@ -2273,6 +2299,7 @@ mod tests {
                 id: "default".into(),
                 description: String::new(),
                 ratio: None,
+                supported_endpoint_types: Vec::new(),
             }],
             base_input_usd: Some(0.0),
             base_output_usd: Some(2.0),
@@ -2622,6 +2649,44 @@ mod tests {
         );
         assert!(billing_groups(&pricing, "missing-model").is_empty());
         assert!(billing_groups(&json!({"success": false}), "m").is_empty());
+    }
+
+    #[test]
+    fn endpoint_types_union_across_channel_rows_and_split_per_billing_group() {
+        let models = json!({"success":true,"data":["deepseek-v4.1-flash"]});
+        let pricing = json!({
+            "success": true,
+            "usable_group": {"标准方案": "chat", "gptpro": "responses"},
+            "group_ratio": {"标准方案": 1, "gptpro": 0.7},
+            "data": [
+                {
+                    "model_name": "deepseek-v4.1-flash",
+                    "enable_groups": ["标准方案"],
+                    "supported_endpoint_types": ["openai"],
+                    "quota_type": 0,
+                    "model_ratio": 1.0,
+                    "completion_ratio": 1.0
+                },
+                {
+                    "model_name": "deepseek-v4.1-flash",
+                    "enable_groups": ["gptpro"],
+                    "supported_endpoint_types": ["openai-response"]
+                }
+            ]
+        });
+        let projected = parse_models(Some(&models), Some(&pricing), None, Some(1.0));
+        assert_eq!(
+            projected[0].supported_endpoint_types,
+            vec!["openai".to_string(), "openai-response".to_string()]
+        );
+        let groups = &projected[0].billing.as_ref().unwrap().groups;
+        let chat = groups.iter().find(|g| g.id == "标准方案").unwrap();
+        let responses = groups.iter().find(|g| g.id == "gptpro").unwrap();
+        assert_eq!(chat.supported_endpoint_types, vec!["openai".to_string()]);
+        assert_eq!(
+            responses.supported_endpoint_types,
+            vec!["openai-response".to_string()]
+        );
     }
 
     #[test]

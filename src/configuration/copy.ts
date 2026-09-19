@@ -127,6 +127,7 @@ const zh = {
   // 所以灰着显示，并且直接告诉他去哪个应用用 —— 不解释协议。
   modelNotForThisApp: "{{app}} 用不了 · 可在 {{apps}} 里使用",
   modelNotForAnyApp: "{{app}} 用不了这个模型",
+  groupNotForThisApp: "这个价格方案在{{app}}里用不了",
   modelListSeparator: "、",
   missing: "未在这台电脑找到该应用，请先安装后重新检查。",
   unsupported:

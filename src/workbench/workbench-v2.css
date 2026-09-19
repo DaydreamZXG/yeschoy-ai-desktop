@@ -5915,6 +5915,14 @@
   flex-direction: column;
 }
 
+.billing-plan-card.is-incompatible {
+  opacity: 0.55;
+}
+
+.billing-plan-unusable {
+  color: var(--danger, #b42318);
+}
+
 .billing-plan-card .billing-group-option {
   flex: 1;
   align-items: flex-start;
