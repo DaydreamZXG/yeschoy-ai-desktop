@@ -272,17 +272,15 @@ async fn messages(state: &BridgeState, request: Request<Body>) -> Response {
         Ok(model) => model,
         // Claude offers the 1M option from the capability family it was given,
         // which can be 1M-capable while the real model behind it is not.
-        Err(ResolveFailure::OneMUnavailable) => {
-            return invalid_request_error(
-                "1M context is unavailable for this model. Select the model without the [1m] option.",
-            )
-        }
+        Err(ResolveFailure::OneMUnavailable) => return invalid_request_error(
+            "1M context is unavailable for this model. Select the model without the [1m] option.",
+        ),
         Err(ResolveFailure::StaleRoute) => {
             log::warn!("claude_bridge stage=stale_route_alias");
             return invalid_request_error(
                 "This profile points at a model your 野菜API account no longer provides. \
                  Open 野菜API and apply the connection again to refresh it.",
-            )
+            );
         }
     };
     value["model"] = json!(model);
@@ -301,14 +299,7 @@ async fn messages(state: &BridgeState, request: Request<Body>) -> Response {
         .credential
         .resolve_model(&model)
         .unwrap_or_else(|_| state.credential.clone());
-    let upstream = match send_upstream(
-        state,
-        &upstream_credential,
-        &forwarded,
-        &value,
-    )
-    .await
-    {
+    let upstream = match send_upstream(state, &upstream_credential, &forwarded, &value).await {
         Ok(response) => response,
         Err(_) => {
             return error(
@@ -336,7 +327,9 @@ async fn messages(state: &BridgeState, request: Request<Body>) -> Response {
         // localized message — still has to reach Claude as an overflow, or the
         // client reads it as an outage and never compacts the thread.
         return if is_context_overflow(&original.body) {
-            log::info!("claude_bridge stage=context_overflow counts=unparsed one_m={one_m_context}");
+            log::info!(
+                "claude_bridge stage=context_overflow counts=unparsed one_m={one_m_context}"
+            );
             context_too_long_error()
         } else {
             original.into_response()
@@ -356,20 +349,11 @@ async fn messages(state: &BridgeState, request: Request<Body>) -> Response {
     // and only the requested completion crosses the boundary, preserve every
     // message and retry once with exactly the reported remaining capacity.
     let requested_max_tokens = value.get("max_tokens").and_then(Value::as_u64);
-    if overflow.messages < overflow.maximum
-        && requested_max_tokens == Some(overflow.completion)
-    {
+    if overflow.messages < overflow.maximum && requested_max_tokens == Some(overflow.completion) {
         let available = overflow.maximum - overflow.messages;
         if available > 0 && available < overflow.completion {
             value["max_tokens"] = json!(available);
-            let retry = match send_upstream(
-                state,
-                &upstream_credential,
-                &forwarded,
-                &value,
-            )
-            .await
-            {
+            let retry = match send_upstream(state, &upstream_credential, &forwarded, &value).await {
                 Ok(response) => response,
                 // A transient retry failure must not hide the useful original
                 // provider error.
@@ -405,10 +389,7 @@ async fn send_upstream(
     forwarded: &[(header::HeaderName, String)],
     value: &Value,
 ) -> Result<reqwest::Response, reqwest::Error> {
-    let url = format!(
-        "{}/v1/messages",
-        credential.origin.trim_end_matches('/')
-    );
+    let url = format!("{}/v1/messages", credential.origin.trim_end_matches('/'));
     let mut outbound = state.client.post(url).json(value);
     if state.prefix.contains("desktop") {
         outbound = outbound.bearer_auth(credential.upstream_key());
@@ -600,10 +581,7 @@ enum ResolveFailure {
     StaleRoute,
 }
 
-fn resolve_model(
-    state: &BridgeState,
-    requested: &str,
-) -> Result<(String, bool), ResolveFailure> {
+fn resolve_model(state: &BridgeState, requested: &str) -> Result<(String, bool), ResolveFailure> {
     let (base, one_m_context) = crate::tool_model_profile::split_one_m_context_marker(requested);
     let model = state.credential.model_ids().into_iter().find(|id| {
         id == base || crate::tool_model_profile::claude_gateway_route_matches(id, requested)
@@ -786,7 +764,10 @@ mod tests {
         // their upstreams and strict relays reject an unknown beta value.
         for id in ["gpt-6-astra", "gpt-5.6-sol", "deepseek-v4-pro"] {
             assert!(!crate::tool_model_profile::is_native_claude(id), "{id}");
-            assert!(crate::tool_model_profile::supports_one_m_context(id), "{id}");
+            assert!(
+                crate::tool_model_profile::supports_one_m_context(id),
+                "{id}"
+            );
         }
     }
 
@@ -849,10 +830,12 @@ mod tests {
         // no family mints the opaque `anthropic/claude-router-<64 hex>`, which
         // is the form that actually reached a user as a relay 400.
         let stale = crate::tool_model_profile::claude_gateway_route_id("claude-fable-5");
-        assert!(stale.contains("-v"), "expected the family alias shape: {stale}");
+        assert!(
+            stale.contains("-v"),
+            "expected the family alias shape: {stale}"
+        );
         assert!(crate::tool_model_profile::is_claude_gateway_route(&stale));
-        let opaque =
-            crate::tool_model_profile::legacy_claude_gateway_route_id("claude-fable-5");
+        let opaque = crate::tool_model_profile::legacy_claude_gateway_route_id("claude-fable-5");
         assert!(opaque.starts_with("anthropic/claude-router-"));
         assert!(crate::tool_model_profile::is_claude_gateway_route(&opaque));
         assert_eq!(
@@ -1127,7 +1110,10 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
         assert_eq!(received.recv().await.unwrap()["max_tokens"], 32_000);
         assert_eq!(received.recv().await.unwrap()["max_tokens"], 31_832);
-        assert!(received.try_recv().is_err(), "the bridge must retry only once");
+        assert!(
+            received.try_recv().is_err(),
+            "the bridge must retry only once"
+        );
         server.abort();
         let _ = server.await;
     }
@@ -1190,7 +1176,10 @@ mod tests {
             .unwrap()
             .contains("Compact"));
         assert!(received.recv().await.is_some());
-        assert!(received.try_recv().is_err(), "input overflow must not retry");
+        assert!(
+            received.try_recv().is_err(),
+            "input overflow must not retry"
+        );
         server.abort();
         let _ = server.await;
     }

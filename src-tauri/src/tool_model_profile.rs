@@ -534,8 +534,7 @@ mod tests {
             assert!(merged[0].get("maxTokens").is_none());
             // Unparsable is left exactly as the user wrote it.
             let odd = json!([{"id":"deepseek-v4.1-flash","maxTokens":"8"}]);
-            let merged =
-                native_chat_catalog(Some(&odd), &["deepseek-v4.1-flash".into()], consumer);
+            let merged = native_chat_catalog(Some(&odd), &["deepseek-v4.1-flash".into()], consumer);
             assert_eq!(merged[0]["maxTokens"], "8");
         }
     }

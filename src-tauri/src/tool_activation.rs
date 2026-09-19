@@ -557,9 +557,7 @@ fn codex_transport(pricing: &Value, model_id: &str) -> Option<codex_desktop::Cod
     // on the path can carry Responses", not "the protocol does not match".
     endpoints
         .iter()
-        .any(|endpoint| {
-            matches!(endpoint.as_str(), Some("openai-response") | Some("gemini"))
-        })
+        .any(|endpoint| matches!(endpoint.as_str(), Some("openai-response") | Some("gemini")))
         .then_some(codex_desktop::CodexTransport::DirectResponses)
 }
 
@@ -702,7 +700,10 @@ fn device_scope() -> &'static str {
             }
             let mut bytes = [0u8; 4];
             if getrandom::fill(&mut bytes).is_ok() {
-                let minted = bytes.iter().map(|byte| format!("{byte:02x}")).collect::<String>();
+                let minted = bytes
+                    .iter()
+                    .map(|byte| format!("{byte:02x}"))
+                    .collect::<String>();
                 if std::fs::create_dir_all(path.parent().unwrap_or(&home)).is_ok()
                     && crate::tool_adapters::common::atomic_write_bounded(
                         &path,
@@ -3321,9 +3322,7 @@ mod tests {
         // identity this machine happens to have minted.
         let other_scope = device_scope()
             .chars()
-            .map(|digit| {
-                char::from_digit(15 - digit.to_digit(16).unwrap_or(0), 16).unwrap_or('f')
-            })
+            .map(|digit| char::from_digit(15 - digit.to_digit(16).unwrap_or(0), 16).unwrap_or('f'))
             .collect::<String>();
         assert_ne!(other_scope, device_scope());
         let theirs = json!({
@@ -3350,7 +3349,12 @@ mod tests {
         // Both still satisfy the old ownership and reuse predicates, which is
         // what keeps already-installed clients able to read the new names.
         for token in [&ours, &theirs, &legacy] {
-            assert!(owned_token(token.as_object().unwrap(), &prefix, "default", false));
+            assert!(owned_token(
+                token.as_object().unwrap(),
+                &prefix,
+                "default",
+                false
+            ));
         }
     }
 
