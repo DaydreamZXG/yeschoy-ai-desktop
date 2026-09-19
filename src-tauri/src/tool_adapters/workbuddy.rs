@@ -133,11 +133,15 @@ fn update_models(
     Ok(expected)
 }
 
+/// Rendered catalog bytes, plus the (model id, display name) pairs written
+/// into it so the caller can read them back without re-parsing.
+type RenderedCatalog = (Vec<u8>, Vec<(String, String)>);
+
 fn render(
     existing: Option<&[u8]>,
     endpoint: &str,
     credential: &ToolCredential,
-) -> Result<(Vec<u8>, Vec<(String, String)>), ()> {
+) -> Result<RenderedCatalog, ()> {
     let mut root = parse(existing)?;
     let expected = match &mut root {
         Value::Array(models) => update_models(models, endpoint, credential)?,

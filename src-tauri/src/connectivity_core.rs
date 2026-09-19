@@ -59,29 +59,6 @@ pub enum LayerReasonCode {
     SessionProbeUnavailable,
 }
 
-impl LayerReasonCode {
-    pub const fn layer(self) -> &'static str {
-        match self {
-            LayerReasonCode::DnsResolved
-            | LayerReasonCode::DnsResolutionFailed
-            | LayerReasonCode::DnsLookupTimedOut => "dns",
-            LayerReasonCode::Tcp443Reachable
-            | LayerReasonCode::TcpConnectionFailed
-            | LayerReasonCode::TcpConnectTimedOut => "tcp",
-            LayerReasonCode::TlsHandshakeVerified
-            | LayerReasonCode::TlsCertificateInvalid
-            | LayerReasonCode::TlsHandshakeFailed
-            | LayerReasonCode::TlsHandshakeTimedOut => "tls",
-            LayerReasonCode::SessionTokenValid
-            | LayerReasonCode::SessionTokenRejected
-            | LayerReasonCode::ApiProbeError
-            | LayerReasonCode::SkippedNoSavedSession
-            | LayerReasonCode::SessionProbeUnavailable => "api_key",
-            LayerReasonCode::SkippedUpstreamFailed => "skipped",
-        }
-    }
-}
-
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ConnectivityLayerResult {

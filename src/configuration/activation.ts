@@ -86,7 +86,6 @@ export const TOOL_ACTIVATION_STATUSES = [
   "tool_not_found",
   "multiple_installations",
   "missing_runtime",
-  "unsupported_group",
   "unsupported_profile",
   "unsupported_model",
   "external_override",

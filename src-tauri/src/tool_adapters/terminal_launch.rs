@@ -124,7 +124,7 @@ fn remember_workspace(home: &Path, workspace: &Path) {
 fn pick_cli_folder() -> Option<PathBuf> {
     #[cfg(test)]
     {
-        return None;
+        None
     }
     #[cfg(all(not(test), target_os = "macos"))]
     {

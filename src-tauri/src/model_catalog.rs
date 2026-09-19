@@ -77,7 +77,7 @@ pub(crate) fn validate(payload: &Value, bundled_schema_version: u32) -> Option<(
         }
         for key in ["contextWindow", "maxOutputTokens"] {
             if let Some(value) = entry.get(key) {
-                if !value.as_u64().is_some_and(|n| n > 0) {
+                if value.as_u64().is_none_or(|n| n == 0) {
                     return None;
                 }
             }
@@ -105,7 +105,7 @@ pub(crate) fn validate(payload: &Value, bundled_schema_version: u32) -> Option<(
         }
         for key in ["defaultReasoning", "reasoningMode"] {
             if let Some(value) = entry.get(key) {
-                if !value.as_str().is_some_and(|text| !text.is_empty()) {
+                if value.as_str().is_none_or(str::is_empty) {
                     return None;
                 }
             }

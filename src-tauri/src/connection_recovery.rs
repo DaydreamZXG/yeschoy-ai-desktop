@@ -560,7 +560,9 @@ fn document(path: &Path, bytes: Option<&[u8]>) -> Result<Value> {
         Some("yaml" | "yml") => serde_yaml::from_str(source).map_err(|_| Failure::Invalid)?,
         _ => json5::from_str(source).map_err(|_| Failure::Invalid)?,
     };
-    if !value.is_object() && !(workbuddy_catalog(path) && value.is_array()) {
+    // An object always; a bare array only for WorkBuddy's catalog file.
+    let shape_is_expected = value.is_object() || (workbuddy_catalog(path) && value.is_array());
+    if !shape_is_expected {
         return Err(Failure::Invalid);
     }
     Ok(value)

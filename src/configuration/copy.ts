@@ -236,7 +236,6 @@ const zh = {
     "系统未能关闭 {{app}}，本次没有修改设置。请确认没有系统弹窗拦截，或手动退出后重试。",
   appRunning:
     "{{app}} 正在运行。请先保存未完成内容，再确认由助手关闭并重新打开。Windows 若只剩后台进程，只会结束已识别安装路径对应的进程。",
-  unsupportedGroup: "所选分组已不可用，请刷新账户数据后重新选择。",
   launchStateUnavailable:
     "暂时无法安全确认应用是否正在运行，本次没有修改设置。请手动退出应用后再试。",
   launchAccessDenied:

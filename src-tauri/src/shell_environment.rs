@@ -299,6 +299,6 @@ mod tests {
         assert!(!path.is_empty(), "a login shell always sets PATH");
         // The probe strips these before spawning, so anything that comes back
         // was set by the user's rc files rather than inherited from this test.
-        assert!(values.get("ANTHROPIC_BASE_URL").is_some());
+        assert!(values.contains_key("ANTHROPIC_BASE_URL"));
     }
 }

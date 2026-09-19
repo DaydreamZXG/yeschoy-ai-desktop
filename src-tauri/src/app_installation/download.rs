@@ -128,6 +128,15 @@ fn build_client(direct_origin: Option<&str>) -> Result<reqwest::Client> {
 
 // Resolve the official feed lazily: a usable mirror never needs to contact the
 // blocked vendor host. Mirror failure never changes the selected application.
+// Every argument here is an independent decision the caller has already made:
+// which worker reports progress, which of two clients to use, whether a mirror
+// was resolved, how to reach the official source, and what counts as an
+// acceptable URL. Bundling them into one struct would hide that they are
+// independent without removing a single one.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "independent caller decisions; a params struct would obscure, not simplify"
+)]
 pub(super) async fn fetch_from_sources(
     worker: &Worker,
     source: Source,

@@ -97,9 +97,7 @@ fn valid_provider_id(value: &str) -> bool {
 }
 
 fn custom_provider_id(document: &DocumentMut) -> Option<&str> {
-    let Some(current) = document.get("model_provider").and_then(Item::as_str) else {
-        return None;
-    };
+    let current = document.get("model_provider").and_then(Item::as_str)?;
     if current == "yeschoy" {
         return Some(current);
     }
@@ -355,6 +353,13 @@ pub(crate) fn prepare_catalog_with_provider_hint(
     )
 }
 
+// This is the Codex config-write path. Grouping these into a struct is a
+// refactor of the riskiest module in the app for no behavioural gain; the
+// arguments are already each named at every call site.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "config-write path; regrouping carries risk without removing an argument"
+)]
 fn prepare_inner(
     home: &Path,
     origin: &str,

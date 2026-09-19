@@ -248,7 +248,6 @@ enum ActivationFailure {
     /// native binary; do not reach for them to add a gate back without a
     /// signal you can trust. See src/configuration/modelCompatibility.ts.
     UnsupportedModel,
-    UnsupportedGroup,
     ServerUnavailable,
     Adapter(AdapterFailure),
     ConfigurationFailed(&'static str),
@@ -261,11 +260,6 @@ impl ActivationFailure {
             Self::UnsupportedModel => {
                 ToolActivationProjection::new(request, "unsupported_model", "model_not_available")
             }
-            Self::UnsupportedGroup => ToolActivationProjection::new(
-                request,
-                "unsupported_group",
-                "group_not_available_for_model",
-            ),
             Self::ServerUnavailable => {
                 ToolActivationProjection::new(request, "server_unavailable", "server_unavailable")
             }

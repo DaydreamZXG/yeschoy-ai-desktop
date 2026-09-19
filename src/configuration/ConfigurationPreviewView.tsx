@@ -938,8 +938,6 @@ export function ConfigurationPreviewView({
         return g.missingDuringSetup;
       case "multiple_installations":
         return g.selectionRequired;
-      case "unsupported_group":
-        return g.unsupportedGroup;
       case "missing_runtime":
         return g.unsupported;
       case "unsupported_profile":
@@ -1463,7 +1461,6 @@ export function ConfigurationPreviewView({
     )
       return { label: g.viewAccountRelogin, run: onOpenAccount };
     if (
-      activation.status === "unsupported_group" ||
       activation.status === "unsupported_model" ||
       activation.reasonCode === "model_request_rejected" ||
       activation.reasonCode === "provider_busy"

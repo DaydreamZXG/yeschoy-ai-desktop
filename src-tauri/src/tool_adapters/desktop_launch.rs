@@ -33,17 +33,6 @@ fn dispatch(
     }
 }
 
-fn dispatch_unless_running(
-    target: &DesktopLaunchTarget,
-    already_running: bool,
-    launcher: &mut impl Launcher,
-) -> Result<(), AdapterFailure> {
-    if already_running {
-        return Ok(());
-    }
-    dispatch(target, launcher)
-}
-
 fn launch_error(stage: &'static str, reason: &'static str, code: Option<i32>) -> AdapterFailure {
     // Never format std::io::Error / windows::Error, command lines, or targets.
     log::warn!("desktop_launch stage={stage} os_code={code:?}");
@@ -249,25 +238,6 @@ mod tests {
         ) -> Result<(), AdapterFailure> {
             self.record("package")
         }
-    }
-
-    #[test]
-    fn already_running_hot_reload_does_not_spawn_executable() {
-        let mut runner = RecordingLauncher::default();
-        dispatch_unless_running(
-            &DesktopLaunchTarget::WindowsExecutable(PathBuf::from("C:\\Apps\\WorkBuddy.exe")),
-            true,
-            &mut runner,
-        )
-        .unwrap();
-        assert!(runner.actions.is_empty());
-        dispatch_unless_running(
-            &DesktopLaunchTarget::WindowsExecutable(PathBuf::from("C:\\Apps\\WorkBuddy.exe")),
-            false,
-            &mut runner,
-        )
-        .unwrap();
-        assert_eq!(runner.actions, ["exe"]);
     }
 
     #[test]
