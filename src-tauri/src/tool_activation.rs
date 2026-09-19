@@ -538,10 +538,15 @@ fn codex_transport(pricing: &Value, model_id: &str) -> Option<codex_desktop::Cod
     // relay does not always have a conversion to fall back on:
     //
     //   `openai-response`  the upstream speaks Responses natively.
-    //   `anthropic`        the Claude adaptor converts Responses to Messages
-    //                      and its `GetRequestURL` always targets
-    //                      `/v1/messages`, so the conversion is actually used.
-    //   `gemini`           the Gemini adaptor does the same for generateContent.
+    //   `gemini`           the Gemini adaptor really does convert Responses
+    //                      into generateContent.
+    //   `anthropic`        no. On the fork 野菜 actually runs
+    //                      (github.com/yeschoy/new-api), the Claude adaptor's
+    //                      `ConvertOpenAIResponsesRequest` is
+    //                      `return nil, errors.New("not implemented")`.
+    //                      Upstream main has since implemented it; we judge by
+    //                      what is deployed, and recheck this on a relay
+    //                      upgrade.
     //   `openai` alone     `ConvertOpenAIResponsesRequest` passes the request
     //                      through unchanged and still targets the upstream's
     //                      `/v1/responses`. Whether that OpenAI-compatible
@@ -549,14 +554,11 @@ fn codex_transport(pricing: &Value, model_id: &str) -> Option<codex_desktop::Cod
     //                      knows, and neither do we.
     //
     // So this is the one place a model is refused, and the reason is "nothing
-    // in the path can carry Responses", not "the protocol does not match".
+    // on the path can carry Responses", not "the protocol does not match".
     endpoints
         .iter()
         .any(|endpoint| {
-            matches!(
-                endpoint.as_str(),
-                Some("openai-response") | Some("anthropic") | Some("gemini")
-            )
+            matches!(endpoint.as_str(), Some("openai-response") | Some("gemini"))
         })
         .then_some(codex_desktop::CodexTransport::DirectResponses)
 }
@@ -3442,9 +3444,11 @@ mod tests {
         // Codex is the only target that still refuses anything, and only
         // where no conversion can carry Responses at all.
         assert!(model_supports_tool(&pricing, "responses", "codex_desktop"));
-        assert!(model_supports_tool(&pricing, "messages", "codex_desktop"));
-        assert!(model_supports_tool(&pricing, "both", "codex_desktop"));
         assert!(model_supports_tool(&pricing, "gemini", "codex_desktop"));
+        // The deployed relay's Claude adaptor cannot accept a Responses
+        // request, so an Anthropic-channel model is genuinely unusable here.
+        assert!(!model_supports_tool(&pricing, "messages", "codex_desktop"));
+        assert!(!model_supports_tool(&pricing, "both", "codex_desktop"));
         assert!(!model_supports_tool(&pricing, "chat", "codex_desktop"));
         assert!(!model_supports_tool(&pricing, "image", "codex_desktop"));
         assert!(!model_supports_tool(&pricing, "silent", "codex_desktop"));
@@ -3452,10 +3456,7 @@ mod tests {
             codex_transport(&pricing, "responses"),
             Some(codex_desktop::CodexTransport::DirectResponses)
         );
-        assert_eq!(
-            codex_transport(&pricing, "messages"),
-            Some(codex_desktop::CodexTransport::DirectResponses)
-        );
+        assert_eq!(codex_transport(&pricing, "messages"), None);
         assert_eq!(codex_transport(&pricing, "chat"), None);
         assert_eq!(codex_transport(&pricing, "image"), None);
         assert_eq!(

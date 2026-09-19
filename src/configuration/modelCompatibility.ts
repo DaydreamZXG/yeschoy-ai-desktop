@@ -13,8 +13,9 @@ export type ModelConnectionMode = "direct" | "bridge";
 /**
  * 能不能用，取决于**中转会不会转**，不取决于模型声明了哪个端点。
  *
- * 这条规则以前是猜的，现在是查过 new-api 源码的（QuantumNous/new-api@main，
- * 就是野菜在跑的那套）：
+ * 这条规则以前是猜的，现在是查过中转源码的 —— 而且查的是**野菜实际部署的那个
+ * fork**（github.com/yeschoy/new-api），不是上游 main。两者在这件事上不一样，
+ * 见下面 Codex 那段。共同成立的部分：
  *
  * 1. `supported_endpoint_types` 是 `common/endpoint_type.go` 的
  *    `GetEndpointTypesByChannelType` 按**渠道类型**算出来的，描述的是上游渠道
@@ -51,23 +52,24 @@ export function modelConnectionMode(
   if (!canConverse(endpoints)) return null;
 
   // Codex 只发 Responses（官方 config 文档写明 `wire_api` 只接受 "responses"，
-  // 配置层面没有退路），而 Responses 是四个入口里唯一有**真空档**的：
+  // 配置层面没有退路）。四个入口里只有 Responses 会真的走不通，因为**野菜在跑
+  // 的那个版本**并不是每个 adaptor 都实现了它：
   //
   //   - `openai-response`：上游原生就说 Responses，直通。
-  //   - `anthropic`：claude adaptor 把 Responses 转成 Messages，并且
-  //     `GetRequestURL` 恒定打 `/v1/messages`，转换是落地的。
-  //   - `gemini`：gemini adaptor 同理，转成 generateContent。
-  //   - 光一个 `openai`：openai adaptor 的 `ConvertOpenAIResponsesRequest`
-  //     是**原样透传**，`GetRequestURL` 照样打上游的 `/v1/responses`
-  //     —— 上游那个 OpenAI 兼容网关有没有这条路，中转不知道，我们也不知道。
+  //   - `gemini`：gemini adaptor 的 `ConvertOpenAIResponsesRequest` 有真实现，
+  //     转成 generateContent。
+  //   - `anthropic`：**不行。** 部署的这版 claude adaptor 那个方法是
+  //     `return nil, errors.New("not implemented")`。上游 main 分支后来补上了，
+  //     但野菜跑的不是 main，所以按部署的版本判。
+  //   - 光一个 `openai`：`ConvertOpenAIResponsesRequest` 是**原样透传**，
+  //     `GetRequestURL` 照样打上游的 `/v1/responses` —— 上游那个 OpenAI 兼容
+  //     网关有没有这条路，中转不知道，我们也不知道。
   //
-  // 所以 Codex 这里灰掉的不是「协议不匹配」，是「没有任何一段转换能兜底」。
+  // 所以 Codex 这里灰掉的不是「协议不匹配」，是「这条路上没有一段能转」。
+  // 这一条要跟着中转升级复查，不是一劳永逸的。
   if (toolId === "codex_desktop") {
     if (endpoints.includes("openai-response")) return "direct";
-    if (endpoints.includes("anthropic") || endpoints.includes("gemini")) {
-      return "bridge";
-    }
-    return null;
+    return endpoints.includes("gemini") ? "bridge" : null;
   }
 
   // Claude 两端说 Anthropic 协议。上游原生说 Anthropic 的是直连；其余的照样

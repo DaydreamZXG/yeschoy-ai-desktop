@@ -96,7 +96,7 @@ describe("desktop protocol compatibility", () => {
     // 接入页以前是把不兼容的模型直接过滤掉的，用户只会以为野菜没这个模型。
     // 现在灰着显示并点名去哪用。一个不懂协议的人不知道什么是 Responses，
     // 但知道「用 Claude Code」是什么意思。
-    const responsesUnreachable = ["openai"];
+    const responsesUnreachable = ["openai", "anthropic"];
     expect(toolsSupportingModel(responsesUnreachable, "codex_desktop")).toEqual([
       "claude_code",
       "claude_desktop",
@@ -117,14 +117,16 @@ describe("desktop protocol compatibility", () => {
     expect(
       modelSupportsTool("codex_desktop", ["openai", "openai-response"]),
     ).toBe(true);
-    // Anthropic / Gemini 渠道的 adaptor 会把 Responses 转成上游原生格式，
-    // 而且 GetRequestURL 恒定打上游的原生路径，转换是落地的。线上
-    // qwen3.8-max、mimo-v2.5 这类 [anthropic, openai] 模型以前被灰掉，是错的。
-    expect(modelSupportsTool("codex_desktop", ["anthropic"])).toBe(true);
-    expect(modelSupportsTool("codex_desktop", ["openai", "anthropic"])).toBe(
-      true,
-    );
+    // Gemini 渠道的 adaptor 把 Responses 转成 generateContent，有真实现。
     expect(modelSupportsTool("codex_desktop", ["gemini", "openai"])).toBe(true);
+    // Anthropic 渠道不行：野菜部署的那版 claude adaptor 的
+    // ConvertOpenAIResponsesRequest 是 `not implemented`。上游 main 后来补上
+    // 了，但按部署的版本判 —— 线上 qwen3.8-max、mimo-v2.5 这类
+    // [anthropic, openai] 模型在 Codex 里确实用不了。
+    expect(modelSupportsTool("codex_desktop", ["anthropic"])).toBe(false);
+    expect(modelSupportsTool("codex_desktop", ["openai", "anthropic"])).toBe(
+      false,
+    );
     // 光一个 openai 是唯一没有兜底的：openai adaptor 对 Responses 是原样透传，
     // 上游那个兼容网关有没有 /v1/responses 我们不知道。线上的三个 gemini-3.x
     // 就在这一格。
