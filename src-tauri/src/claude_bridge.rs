@@ -238,7 +238,7 @@ fn models(state: &BridgeState) -> Response {
             //                       {max_input_tokens, max_output_tokens}）
             // 输出上限写两种拼法，是因为这两边确实不一样，而多一个键对读不懂
             // 它的客户端没有任何影响。
-            if let Some(profile) = crate::tool_model_profile::profile(model) {
+            if let Some(profile) = crate::tool_model_profile::capability_profile(model) {
                 if let Some(context) = profile.context_window {
                     object.insert("max_input_tokens".into(), json!(context));
                 }
@@ -901,7 +901,7 @@ mod tests {
         let model = state().credential.model_ids()[0].clone();
         assert_eq!(
             Some(window),
-            crate::tool_model_profile::profile(&model).and_then(|p| p.context_window)
+            crate::tool_model_profile::capability_profile(&model).and_then(|p| p.context_window)
         );
     }
 

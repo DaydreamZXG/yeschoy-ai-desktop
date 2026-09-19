@@ -71,7 +71,7 @@ fn auto_compact_window(model: &str) -> Option<u64> {
     const MIN: u64 = 100_000;
     const MAX: u64 = 1_000_000;
     let (bare, _) = crate::tool_model_profile::split_one_m_context_marker(model);
-    let window = crate::tool_model_profile::profile(bare)?.context_window?;
+    let window = crate::tool_model_profile::capability_profile(bare)?.context_window?;
     (window >= MIN).then(|| window.min(MAX))
 }
 
@@ -404,6 +404,39 @@ pub(crate) async fn resume_if_configured(state: ClaudeCodeRuntimeState) {
 
 #[cfg(test)]
 mod tests {
+    /// 线上模型把推理档位钉进 id（`gemini-3.7-flash-high`），目录里存的是基础
+    /// 型号（`gemini-3.7-flash`）。渲染层早就会拆这个后缀，Rust 侧一直没有，
+    /// 所以这类模型拿不到 `autoCompactWindow` —— Claude Code 永不压缩，对话
+    /// 一路涨到中转报上下文超限，用户看到的是报错而不是一次压缩。
+    #[test]
+    fn an_effort_pinned_id_still_gets_its_context_window() {
+        // 基础型号本来就有窗口。
+        assert_eq!(auto_compact_window("gemini-3.7-flash"), Some(1_000_000));
+        // 钉死档位之后必须还是同一个窗口。
+        for id in [
+            "gemini-3.7-flash-high",
+            "gemini-3.8-flash-high",
+            "gemini-3.1-pro-low",
+        ] {
+            assert_eq!(
+                auto_compact_window(id),
+                Some(1_000_000),
+                "{id} 应当拿到和基础型号一样的窗口"
+            );
+        }
+    }
+
+    /// 后缀顺序有讲究，且只有声明过档位的那几族才拆 —— 否则任何以 `-low`
+    /// 结尾的模型名都会被砍掉一截，配到别的型号上去。
+    #[test]
+    fn only_effort_suffixed_families_are_split() {
+        // `-xhigh` 不能被 `-high` 先吃掉。
+        assert_eq!(auto_compact_window("gpt-6-astra-xhigh"), Some(1_000_000));
+        // 不在那几族里的名字原样查，查不到就是查不到，不做截断。
+        assert_eq!(auto_compact_window("qwen3.8-max"), Some(1_000_000));
+        assert_eq!(auto_compact_window("mystery-model-low"), None);
+    }
+
     use super::*;
 
     #[test]

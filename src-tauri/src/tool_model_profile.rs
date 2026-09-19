@@ -262,6 +262,57 @@ pub(crate) fn profile(id: &str) -> Option<&'static ModelProfile> {
     catalog.models.iter().find(|p| p.id == id)
 }
 
+/// 档位后缀，长的排在前面，否则 `-xhigh` 会被 `-high` 先吃掉。
+/// 与 `src/model-profiles/profile.ts` 的 `EFFORT_SUFFIXES` 逐项对应。
+const EFFORT_SUFFIXES: [&str; 7] = [
+    "-max", "-xhigh", "-high", "-medium", "-low", "-minimal", "-none",
+];
+
+/// 只有这几族会在 id 里钉死档位。命名空间前缀保持不透明，只看最后一段
+/// —— 与中转的 `lastModelPathSegment` 以及 TS 侧的同名正则一致。
+fn effort_suffixed_family(bare: &str) -> bool {
+    if bare.starts_with("claude-") || bare.starts_with("gemini-") {
+        return true;
+    }
+    if let Some(rest) = bare.strip_prefix("gpt-") {
+        return rest
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_alphanumeric());
+    }
+    if let Some(rest) = bare.strip_prefix('o') {
+        return rest
+            .chars()
+            .next()
+            .is_some_and(|c| ('1'..='9').contains(&c));
+    }
+    false
+}
+
+/// 拆出「基础型号 + 被钉死的档位」。查不出来就返回 None。
+fn split_effort_suffix(id: &str) -> Option<(&str, &'static str)> {
+    let suffix = EFFORT_SUFFIXES.iter().find(|s| id.ends_with(**s))?;
+    let base = &id[..id.len() - suffix.len()];
+    let bare = base.rsplit('/').next().unwrap_or(base).to_ascii_lowercase();
+    effort_suffixed_family(&bare).then_some((base, &suffix[1..]))
+}
+
+/// 查能力时用这个，而不是 `profile`。
+///
+/// 线上跑的是 `gemini-3.7-flash-high` 这种把档位钉进 id 的名字，目录里存的却是
+/// 基础型号 `gemini-3.7-flash`。渲染层早就会拆后缀了（`profile.ts` 的
+/// `resolveProfile`），Rust 侧一直没有 —— 于是同一个模型，选择器上能力徽章齐全，
+/// 到了 `auto_compact_window` 却查不到窗口，`autoCompactWindow` 不写，Claude Code
+/// 永不压缩，对话一路涨到中转报上下文超限。又是 IPC 两边只修了一边。
+///
+/// 只用于**档位改变不了答案**的那些字段：上下文窗口、工具调用、1M 支持。
+/// 推理档位本身不能走这里 —— 基础型号的整条阶梯对一个钉死档位的 id 是错的，
+/// 所以 `profile` 保持精确匹配语义不变。
+pub(crate) fn capability_profile(id: &str) -> Option<&'static ModelProfile> {
+    // 精确命中优先：将来目录直接收了带后缀的完整型号名，它说了算。
+    profile(id).or_else(|| split_effort_suffix(id).and_then(|(base, _)| profile(base)))
+}
+
 pub(crate) fn display_name(id: &str) -> &str {
     profile(id).map_or(id, |p| p.display_name.as_str())
 }
@@ -270,11 +321,11 @@ pub(crate) fn display_name(id: &str) -> &str {
 /// Claude family used to expose effort controls. Unknown models stay unknown.
 /// An explicit Anthropic namespace is the same native model, not a new family.
 pub(crate) fn supports_one_m_context(id: &str) -> bool {
-    profile(id)
+    capability_profile(id)
         .or_else(|| {
             id.strip_prefix("anthropic/")
                 .filter(|native| native.starts_with("claude-"))
-                .and_then(profile)
+                .and_then(capability_profile)
         })
         .and_then(|model| model.context_window)
         .is_some_and(|tokens| tokens >= 1_000_000)
