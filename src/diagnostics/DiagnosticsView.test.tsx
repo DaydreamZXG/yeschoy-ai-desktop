@@ -32,9 +32,22 @@ beforeEach(() => {
   clipboardWrite.mockResolvedValue(undefined);
 });
 
+const routes = {
+  setup: vi.fn(),
+  account: vi.fn(),
+  home: vi.fn(),
+  tools: vi.fn(),
+};
+
 function showView() {
+  for (const spy of Object.values(routes)) spy.mockReset();
   return render(
-    <DiagnosticsView onOpenSetup={vi.fn()} onOpenTools={vi.fn()} />,
+    <DiagnosticsView
+      onOpenSetup={routes.setup}
+      onOpenAccount={routes.account}
+      onOpenHome={routes.home}
+      onOpenTools={routes.tools}
+    />,
   );
 }
 
@@ -112,9 +125,7 @@ describe("diagnostics native-to-renderer outcomes", () => {
     expect(
       within(line("大陆优化")).getByText("未保存登录会话，本层跳过。"),
     ).toBeInTheDocument();
-    expect(
-      within(line("全球加速")).getAllByText("跳过"),
-    ).toHaveLength(3);
+    expect(within(line("全球加速")).getAllByText("跳过")).toHaveLength(3);
     expect(screen.getByTestId("diagnostics-view")).toHaveAttribute(
       "data-phase",
       "partial",
@@ -302,7 +313,7 @@ describe("diagnostics native-to-renderer outcomes", () => {
         layer: "api_key",
         status: "failed",
         reasonCode: "session_token_rejected",
-      } as typeof line_.layers[number];
+      } as (typeof line_.layers)[number];
     }
     replyWith(rejected);
     showView();
@@ -314,8 +325,19 @@ describe("diagnostics native-to-renderer outcomes", () => {
       "data-phase",
       "success",
     );
-    expect(
-      screen.getAllByRole("button", { name: "重新登录" }),
-    ).toHaveLength(2);
+    const relogin = screen.getAllByRole("button", { name: "重新登录" });
+    expect(relogin).toHaveLength(2);
+    // What failed here is an account credential. This button used to open the
+    // setup page, which has no way to log in — telling the user to re-login
+    // and then sending them somewhere they cannot.
+    fireEvent.click(relogin[0]);
+    expect(routes.account).toHaveBeenCalledOnce();
+    expect(routes.setup).not.toHaveBeenCalled();
+  });
+
+  it("offers a way back to the home view, not only sideways", async () => {
+    showView();
+    fireEvent.click(screen.getByRole("button", { name: "返回我的应用" }));
+    expect(routes.home).toHaveBeenCalledOnce();
   });
 });

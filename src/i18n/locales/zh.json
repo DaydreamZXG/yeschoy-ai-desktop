@@ -215,7 +215,8 @@
     "advancedDetails": "查看检查详情",
     "requestId": "检查编号",
     "retention": "结果保存",
-    "notRetained": "离开页面后不保留"
+    "notRetained": "离开页面后不保留",
+    "openHome": "返回我的应用"
   },
   "yeschoySettings": {
     "eyebrow": "偏好设置",

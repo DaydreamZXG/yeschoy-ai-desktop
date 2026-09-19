@@ -44,6 +44,23 @@ interface Props {
   onOpenCommunity: () => void;
   accountSession: AccountSessionController;
 }
+/**
+ * 后端整个够不着的时候，账户、本机扫描、接入状态会同时失败，页面就叠出三条
+ * 措辞不同的说明和三个重试入口，底下每张应用卡片再各给一个「检查并修复」。
+ * 一个根因，九个入口，而且三条文案都在暗示这是三件不同的事。
+ *
+ * 但只有三者**同时**失败才合并。单独一条失败时，它自己的说明是真有用的
+ * —— 「读不到账户」和「读不到本机应用」要做的事完全不同 —— 那时候合并成
+ * 一句笼统的「连不上」反而把信息丢掉了。
+ */
+export function outageIsTotal(
+  account: boolean,
+  scan: boolean,
+  connections: boolean,
+): boolean {
+  return account && scan && connections;
+}
+
 export function AppLibraryView({
   onOpenAccount,
   onOpenSetup,
@@ -135,6 +152,16 @@ export function AppLibraryView({
     }));
   })();
   const checking = scanning || connections?.loading || connections?.refreshing;
+  const everythingUnavailable = outageIsTotal(
+    !!accountSession.lastError,
+    scanError,
+    !!connections?.error,
+  );
+  const retryEverything = () => {
+    void accountSession.refresh();
+    void refresh();
+    void connections?.refresh();
+  };
   const detected = scan?.targets.filter((v) => v.status !== "not_found").length;
   const apps = [...WORKBENCH_APPS].sort((a, b) => {
     const rank = (id: ActivationToolId) => {
@@ -197,9 +224,14 @@ export function AppLibraryView({
         </button>
       </header>
       {pendingRecovery && (
-        <p className="workbench-notice" role="alert" data-testid="recovery-banner">
+        <p
+          className="workbench-notice"
+          role="alert"
+          data-testid="recovery-banner"
+        >
           <CircleAlert />
-          上次退出时有接入操作没有完成，{pendingRecovery.name} 的原设置需要先恢复，再继续使用。
+          上次退出时有接入操作没有完成，{pendingRecovery.name}{" "}
+          的原设置需要先恢复，再继续使用。
           <button onClick={() => onOpenSetup(pendingRecovery.id, "repair")}>
             前往恢复
           </button>
@@ -220,7 +252,16 @@ export function AppLibraryView({
           </button>
         </p>
       )}
-      {accountSession.lastError && (
+      {everythingUnavailable && (
+        <p className="workbench-notice" role="alert">
+          <CircleAlert />
+          暂时连不上野菜服务，账户、本机应用和接入状态都没读到。这不会改动或删除任何已有设置。
+          <button disabled={checking} onClick={retryEverything}>
+            {checking ? "正在重试" : "重试"}
+          </button>
+        </p>
+      )}
+      {!everythingUnavailable && accountSession.lastError && (
         <p className="workbench-notice" role="status">
           <CircleAlert />
           {signedIn
@@ -230,7 +271,10 @@ export function AppLibraryView({
         </p>
       )}
       {balanceIssue && (
-        <LowBalanceBanner alert={balanceIssue} onRecharge={() => void recharge()} />
+        <LowBalanceBanner
+          alert={balanceIssue}
+          onRecharge={() => void recharge()}
+        />
       )}
       {loginRequired ? (
         <section className="welcome-strip">
@@ -272,20 +316,22 @@ export function AppLibraryView({
           </span>
         </div>
       ) : null}
-      {scanError && (
+      {!everythingUnavailable && scanError && (
         <p className="workbench-notice" role="alert">
           <CircleAlert />
           暂时无法确认已安装的应用，请点击“检查应用”重试。接入设置不会因此删除。
         </p>
       )}
-      {connections && (connections.error || partialConnections) && (
-        <ConnectionStatusNotice
-          issue={connections.errorInfo}
-          stale={staleConnections}
-          refreshing={connections.refreshing}
-          onRetry={() => void connections.refresh()}
-        />
-      )}
+      {!everythingUnavailable &&
+        connections &&
+        (connections.error || partialConnections) && (
+          <ConnectionStatusNotice
+            issue={connections.errorInfo}
+            stale={staleConnections}
+            refreshing={connections.refreshing}
+            onRetry={() => void connections.refresh()}
+          />
+        )}
       {!scanning && !scanError && visibleApps.length === 0 && (
         <section className="library-empty">
           <h2>还没有找到 AI 应用</h2>
@@ -468,6 +514,10 @@ export function AppLibraryView({
                 ) : (
                   <button
                     className={active ? "subtle-button" : "connect-app-button"}
+                    // 后端整个够不着时，这个按钮点了也只会在接入页再失败一次。
+                    // 六张卡片给出六个一模一样的假入口，真正的重试反而被淹没；
+                    // 上面那条唯一的说明已经说清楚了怎么办。
+                    disabled={everythingUnavailable}
                     onClick={() =>
                       onOpenSetup(
                         app.id,

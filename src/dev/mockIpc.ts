@@ -177,6 +177,10 @@ const handlers: Record<string, (a: Args) => unknown> = {
 const internals = {
   invoke: async (cmd: string, args: Args = {}) => {
     if (cmd.startsWith("plugin:event|")) return 0;
+    // `?s=offline` 让每个读取命令都失败，用来看「后端整个够不着」那一屏。
+    if (scenario === "offline" && cmd !== "read_desktop_exit_state") {
+      throw new Error("offline");
+    }
     const handler = handlers[cmd];
     if (!handler) {
       console.warn("[uxaudit] unstubbed command:", cmd, args);

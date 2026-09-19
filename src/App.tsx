@@ -103,7 +103,11 @@ function App() {
   // 绝不能因为它让主界面转圈或报错。入口本身也只在服务端宣告了地址时才出现。
   const signedIn = accountSession.projection?.status === "signed_in";
   const loadAnnouncements = useCallback(async () => {
-    setAnnouncements((current) => ({ ...current, loading: true, failed: false }));
+    setAnnouncements((current) => ({
+      ...current,
+      loading: true,
+      failed: false,
+    }));
     const result = await readAnnouncements(accountLineId);
     setAnnouncements((current) => ({
       // 一旦确认服务端支持公告，入口就不再消失。否则一次网络抖动会让
@@ -247,6 +251,8 @@ function App() {
               ) : view === "setup" ? null : view === "diagnostics" ? (
                 <DiagnosticsView
                   onOpenSetup={() => setView("setup")}
+                  onOpenAccount={() => setView("account")}
+                  onOpenHome={() => setView("home")}
                   onOpenTools={() => setView("tools")}
                 />
               ) : view === "announcements" ? (

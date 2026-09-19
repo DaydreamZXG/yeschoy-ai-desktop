@@ -17,6 +17,8 @@ import { diagnosticsCopy } from "./copy";
 
 interface DiagnosticsViewProps {
   onOpenSetup: () => void;
+  onOpenAccount: () => void;
+  onOpenHome: () => void;
   onOpenTools: () => void;
 }
 
@@ -63,6 +65,8 @@ function buildSanitizedReport(
 
 export function DiagnosticsView({
   onOpenSetup,
+  onOpenAccount,
+  onOpenHome,
   onOpenTools,
 }: DiagnosticsViewProps) {
   const { t } = useTranslation();
@@ -130,9 +134,8 @@ export function DiagnosticsView({
         setPhase(decoded.response.lines.length > 0 ? "partial" : "error");
         return;
       }
-      const healthyCount = decoded.response.lines.filter(
-        lineNetworkHealthy,
-      ).length;
+      const healthyCount =
+        decoded.response.lines.filter(lineNetworkHealthy).length;
       setPhase(
         healthyCount === decoded.response.lines.length
           ? "success"
@@ -208,6 +211,10 @@ export function DiagnosticsView({
         <p className="diagnostic-consent">{t("yeschoyDiagnostics.consent")}</p>
 
         <div className="diagnostic-links">
+          {/* 这个页面此前只能横向走到别的子页面，回不了首页。 */}
+          <button type="button" onClick={onOpenHome}>
+            {t("yeschoyDiagnostics.openHome")}
+          </button>
           <button type="button" onClick={onOpenTools}>
             {t("yeschoyDiagnostics.openTools")}
           </button>
@@ -359,7 +366,10 @@ export function DiagnosticsView({
                             <button
                               type="button"
                               className="layer-action"
-                              onClick={onOpenSetup}
+                              // 这一步失败的是账户凭据。以前这个按钮跳到接入页，
+                              // 那里没有登录入口 —— 让用户去重新登录，却把他送到
+                              // 一个登录不了的页面。
+                              onClick={onOpenAccount}
                             >
                               {t("yeschoyDiagnostics.relogin")}
                             </button>
