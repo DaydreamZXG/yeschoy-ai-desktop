@@ -69,6 +69,32 @@ describe("desktop protocol compatibility", () => {
     expect(recoveryRetryMessage("other")).toBeUndefined();
   });
 
+  it("greys a model only when it genuinely cannot hold a conversation", () => {
+    // 线上 /api/pricing 里 supported_endpoint_types 是按**模型**汇总的，
+    // 是所有渠道能力的并集，不分渠道。所以 openai 与 openai-response 的差别
+    // 不代表能不能用 —— 按它置灰，灰掉的是能用的模型（WorkBuddy 上就发生过：
+    // deepseek-v4-flash 明明能跑却是灰的）。
+    for (const tool of ["workbuddy", "pi", "dsh_web"] as const) {
+      expect(modelSupportsTool(tool, ["openai", "anthropic"])).toBe(true);
+      expect(modelSupportsTool(tool, ["openai-response"])).toBe(true);
+      // anthropic-only 不放行：今天没有这种模型，而中转会不会为它提供
+      // chat 端点我们没有证据。按知道的事实判，不按猜测判。
+      expect(modelSupportsTool(tool, ["anthropic"])).toBe(false);
+      // 真不能用的：只会出图，和什么都没声明的。
+      expect(modelSupportsTool(tool, ["image-generation"])).toBe(false);
+      expect(modelSupportsTool(tool, [])).toBe(false);
+    }
+    // Claude 两端同样只在无法对话时置灰，但会区分直连和走本机桥。
+    expect(modelConnectionMode("claude_code", ["anthropic"])).toBe("direct");
+    expect(modelConnectionMode("claude_code", ["openai"])).toBe("bridge");
+    expect(modelConnectionMode("claude_code", ["openai-response"])).toBe("bridge");
+    expect(modelConnectionMode("claude_desktop", ["image-generation"])).toBeNull();
+    // Codex 是唯一的例外：wire_api 只接受 responses，配置层面无解，
+    // 所以这里必须看具体端点，能对话也不够。
+    expect(modelSupportsTool("codex_desktop", ["openai", "anthropic"])).toBe(false);
+    expect(modelSupportsTool("codex_desktop", ["openai-response"])).toBe(true);
+  });
+
   it("names the apps a Codex-incompatible model can still be used in", () => {
     // The relay's own pricing declares Chat-only channels, so DeepSeek-class
     // models cannot go into Codex. Dropping them from the picker told the user
