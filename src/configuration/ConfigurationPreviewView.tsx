@@ -1891,8 +1891,14 @@ export function ConfigurationPreviewView({
               >
                 <div className="choice-card-heading">
                   <div>
-                    <h3>{g.chooseGroupLegend}</h3>
-                    <p>{g.billingCardHint}</p>
+                    <h3>
+                      {selectedModel?.billing?.groups.length
+                        ? g.chooseGroupLegend
+                        : g.billingNoChoiceLegend}
+                    </h3>
+                    {!!selectedModel?.billing?.groups.length && (
+                      <p>{g.billingCardHint}</p>
+                    )}
                   </div>
                 </div>
                 <BillingGroupPicker

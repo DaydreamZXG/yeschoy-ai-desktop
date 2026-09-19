@@ -60,8 +60,12 @@ export function BillingGroupPicker({
     );
   return (
     <fieldset className="billing-group-picker" disabled={disabled}>
-      <legend>{c.chooseGroupLegend}</legend>
-      <p>{c.groupIntro}</p>
+      <legend>
+        {groups.length ? c.chooseGroupLegend : c.billingNoChoiceLegend}
+      </legend>
+      {/* 「同一个模型有不同价格方案」以前无条件渲染，于是在没有分组的模型上，
+          它和下面那句「这个模型暂无分组价格」隔着两行互相打脸。 */}
+      {groups.length > 0 && <p>{c.groupIntro}</p>}
       {groups.length ? (
         <div className="billing-group-grid">
           {plans.map(({ group, estimate }) => {

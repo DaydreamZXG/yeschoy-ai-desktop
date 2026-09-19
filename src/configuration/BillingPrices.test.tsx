@@ -271,3 +271,43 @@ describe("#12 per-million prices are shown directly (PRD 6.4)", () => {
     expect(cells).toContain("¥2.00");
   });
 });
+
+describe("a model with no billing groups", () => {
+  /**
+   * Compare two models side by side and the defect is obvious: one shows four
+   * priced plans, the other shows a heading telling you to 选择价格方案, a
+   * sentence asserting 同一个模型有不同价格方案, and then — two lines later —
+   * 这个模型暂无分组价格. The page asked the user to choose from a set it had
+   * just finished saying was empty.
+   */
+  it("does not offer a choice it cannot provide", () => {
+    render(
+      <BillingGroupPicker
+        model={{
+          ...model(1, true),
+          billing: { ...model(1, true).billing!, groups: [] },
+        }}
+        fx="1"
+        selected=""
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.getByText(/暂无分组价格/)).toBeInTheDocument();
+    // The sentence promising several plans must not appear alongside it.
+    expect(screen.queryByText(/同一个模型有不同价格方案/)).toBeNull();
+    // Nor an instruction to pick one.
+    expect(screen.queryByText("选择价格方案")).toBeNull();
+  });
+
+  it("still names the plans when there are plans", () => {
+    render(
+      <BillingGroupPicker
+        model={model(1, true)}
+        fx="1"
+        selected=""
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.getByText(/同一个模型有不同价格方案/)).toBeInTheDocument();
+  });
+});
