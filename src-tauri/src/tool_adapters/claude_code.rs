@@ -149,6 +149,34 @@ fn render_catalog(
         "description":id,
         "behavesAs":crate::tool_model_profile::claude_code_behaves_as(id)
     })).collect::<Vec<_>>()});
+    // `autoCompactWindow` is one number, and `/model` can move off the model it
+    // was written for. This map is per model, so switching keeps the right
+    // window. Read out of the installed Claude Desktop bundle, which parses
+    // `~/.claude/settings.json` with
+    //
+    //     autoCompactWindow: O().optional(),
+    //     contextWindowByModel: Kn(D(), O()).optional(),
+    //
+    // and looks a model up as `t[name] ?? t[name.replace(/\[.*\]$/, "")]` --
+    // the fallback strips a trailing `[1m]`, so one entry per bare id covers
+    // both spellings. Claude Code's own schema does not list the key but
+    // accepts unknown ones (`additionalProperties: {}`), so writing it is inert
+    // there and useful to the surfaces that do read it.
+    let windows: serde_json::Map<String, Value> = model_ids
+        .iter()
+        .filter_map(|id| {
+            let window = crate::tool_model_profile::profile(id)?.context_window?;
+            Some((id.clone(), json!(window)))
+        })
+        .collect();
+    let root = value.as_object_mut().ok_or(())?;
+    if windows.is_empty() {
+        // Same rule as `autoCompactWindow`: an entry left over from a previous
+        // model set is worse than none.
+        root.remove("contextWindowByModel");
+    } else {
+        root.insert("contextWindowByModel".into(), Value::Object(windows));
+    }
     let mut bytes = serde_json::to_vec_pretty(&value).map_err(|_| ())?;
     bytes.push(b'\n');
     Ok(bytes)
@@ -596,5 +624,38 @@ mod tests {
         assert_eq!(value["permissions"]["allow"][0], "Read");
         // 开关是用户的选择，我们只给窗口大小，不替他打开或关掉。
         assert_eq!(value["autoCompactEnabled"], Value::Bool(false));
+    }
+
+    #[test]
+    fn the_catalog_carries_a_window_for_every_model_the_user_can_switch_to() {
+        let ids: Vec<String> = ["glm-5.3", "deepseek-v4.1-flash", "not-in-catalog"]
+            .iter()
+            .map(|s| (*s).to_string())
+            .collect();
+        let bytes = render_catalog(None, "https://yeschoy.com", "glm-5.3", "helper", &ids).unwrap();
+        let value: Value = serde_json::from_slice(&bytes).unwrap();
+        let map = value["contextWindowByModel"].as_object().unwrap();
+        // 每个能被 /model 切到的模型都要有自己的窗口 —— 单个
+        // autoCompactWindow 在切走之后就不对了。
+        assert_eq!(map["glm-5.3"], 1_048_576);
+        assert_eq!(map["deepseek-v4.1-flash"], 1_000_000);
+        // 目录里没有的不猜。
+        assert!(!map.contains_key("not-in-catalog"));
+        // 这里不夹到 100000..1000000：那是 autoCompactWindow 的 schema 约束，
+        // 这张表写的是模型真实的窗口。
+        assert_eq!(value["autoCompactWindow"], 1_000_000);
+
+        // 一个模型都查不到时，不要留下上一轮的表。
+        let stale = br#"{"contextWindowByModel":{"old-model":123}}"#;
+        let bytes = render_catalog(
+            Some(stale),
+            "https://yeschoy.com",
+            "not-in-catalog",
+            "helper",
+            &["not-in-catalog".to_string()],
+        )
+        .unwrap();
+        let value: Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(value.get("contextWindowByModel").is_none());
     }
 }
