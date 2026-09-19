@@ -46,7 +46,9 @@ export function BillingGroupPicker({
   const radioName = useId();
   const plans = groups.map((group) => ({
     group,
-    estimate: model ? hundredMillionTokenEstimate(model, group, fx, "reference") : null,
+    estimate: model
+      ? hundredMillionTokenEstimate(model, group, fx, "reference")
+      : null,
   }));
   const allPriced =
     plans.length > 1 &&
@@ -94,7 +96,10 @@ export function BillingGroupPicker({
                   </strong>
                   <span className="billing-plan-price">
                     {estimate
-                      ? c.estimateAmount.replace("{{amount}}", price(estimate.yeschoy.minimum))
+                      ? c.estimateAmount.replace(
+                          "{{amount}}",
+                          price(estimate.yeschoy.minimum),
+                        )
                       : c.planPriceUnavailable}
                   </span>
                   <small>{c.planPriceUnit}</small>
@@ -210,12 +215,18 @@ export function BillingPrices({
       !quoted.rows.length ||
       !Number.isFinite(rate) ||
       rate < 0 ||
-      ![conversion.reference, conversion.site].every(n => Number.isFinite(n) && n > 0) ||
-      !quoted.rows.every(({ rates }) => Number.isFinite(rates[field]) && rates[field] >= 0)
-    ) return c.cachePriceUnavailable;
+      ![conversion.reference, conversion.site].every(
+        (n) => Number.isFinite(n) && n > 0,
+      ) ||
+      !quoted.rows.every(
+        ({ rates }) => Number.isFinite(rates[field]) && rates[field] >= 0,
+      )
+    )
+      return c.cachePriceUnavailable;
     return quotedPrice(field, actual);
   };
-  const hasCacheWrite = quoted.unit === "tokens" &&
+  const hasCacheWrite =
+    quoted.unit === "tokens" &&
     quoted.rows.some(({ rates }) => rates.cc !== undefined);
   // #12 价格口径：perMillion 字段（元/百万 tokens）直显为第一层级，
   // 「1 亿 Token 费用参考」降级为折叠示例。
@@ -227,56 +238,60 @@ export function BillingPrices({
       aria-live="polite"
     >
       {hasPerMillion ? (
-        <table className="per-million-prices">
-          <caption>{c.perMillionTokens}</caption>
-          <thead>
-            <tr>
-              <th scope="col" />
-              <th scope="col">{c.officialPrice}</th>
-              <th scope="col">{c.actualPrice}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <th scope="row">{c.inputPrice}</th>
-              <td>
-                {canQuote
-                  ? quotedPrice("p", false)
-                  : perMillionPrice(model.officialInputCnyPerMillion)}
-              </td>
-              <td>
-                {canQuote
-                  ? quotedPrice("p", true)
-                  : perMillionPrice(model.actualInputCnyPerMillion)}
-              </td>
-            </tr>
-            <tr>
-              <th scope="row">{c.outputPrice}</th>
-              <td>
-                {canQuote
-                  ? quotedPrice("c", false)
-                  : perMillionPrice(model.officialOutputCnyPerMillion)}
-              </td>
-              <td>
-                {canQuote
-                  ? quotedPrice("c", true)
-                  : perMillionPrice(model.actualOutputCnyPerMillion)}
-              </td>
-            </tr>
-            <tr>
-              <th scope="row">{c.cacheReadPrice}</th>
-              <td>{cachePrice("cr", false)}</td>
-              <td>{cachePrice("cr", true)}</td>
-            </tr>
-            {hasCacheWrite && (
+        // 每个方案卡片上已经写了「每 1 亿 Token 预计费用」，这张单价表是再往下
+        // 一层的依据，不是选择时要读的东西。一直摊开会把这一屏压满，所以收起来。
+        <details className="per-million-disclosure">
+          <summary>{c.perMillionTokens}</summary>
+          <table className="per-million-prices">
+            <thead>
               <tr>
-                <th scope="row">{c.cacheWritePrice}</th>
-                <td>{cachePrice("cc", false)}</td>
-                <td>{cachePrice("cc", true)}</td>
+                <th scope="col" />
+                <th scope="col">{c.officialPrice}</th>
+                <th scope="col">{c.actualPrice}</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">{c.inputPrice}</th>
+                <td>
+                  {canQuote
+                    ? quotedPrice("p", false)
+                    : perMillionPrice(model.officialInputCnyPerMillion)}
+                </td>
+                <td>
+                  {canQuote
+                    ? quotedPrice("p", true)
+                    : perMillionPrice(model.actualInputCnyPerMillion)}
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">{c.outputPrice}</th>
+                <td>
+                  {canQuote
+                    ? quotedPrice("c", false)
+                    : perMillionPrice(model.officialOutputCnyPerMillion)}
+                </td>
+                <td>
+                  {canQuote
+                    ? quotedPrice("c", true)
+                    : perMillionPrice(model.actualOutputCnyPerMillion)}
+                </td>
+              </tr>
+              <tr>
+                <th scope="row">{c.cacheReadPrice}</th>
+                <td>{cachePrice("cr", false)}</td>
+                <td>{cachePrice("cr", true)}</td>
+              </tr>
+              {hasCacheWrite && (
+                <tr>
+                  <th scope="row">{c.cacheWritePrice}</th>
+                  <td>{cachePrice("cc", false)}</td>
+                  <td>{cachePrice("cc", true)}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </details>
       ) : (
         <p className="billing-price-note">{c.priceUnavailable}</p>
       )}
@@ -302,21 +317,33 @@ export function BillingPrices({
               <div className="billing-comparison-card is-official">
                 <Landmark aria-hidden="true" />
                 <span>{c.estimateOfficialLabel}</span>
-                <strong>{c.estimateAmount.replace("{{amount}}", price(estimate.official.minimum))}</strong>
+                <strong>
+                  {c.estimateAmount.replace(
+                    "{{amount}}",
+                    price(estimate.official.minimum),
+                  )}
+                </strong>
               </div>
               <div className="billing-comparison-card is-yeschoy">
                 <Sprout aria-hidden="true" />
                 <span>{c.estimateYeschoyLabel}</span>
-                <strong>{c.estimateAmount.replace("{{amount}}", price(estimate.yeschoy.minimum))}</strong>
+                <strong>
+                  {c.estimateAmount.replace(
+                    "{{amount}}",
+                    price(estimate.yeschoy.minimum),
+                  )}
+                </strong>
               </div>
             </div>
             <details className="billing-price-details">
               <summary>{c.planDetails}</summary>
               <p className="billing-example-formula">{c.estimateFormula}</p>
-              {range?.tiered && <p className="billing-price-note">
-                {c.estimateOfficialLabel}: {priceRange(range.official)}；
-                {c.estimateYeschoyLabel}: {priceRange(range.yeschoy)}
-              </p>}
+              {range?.tiered && (
+                <p className="billing-price-note">
+                  {c.estimateOfficialLabel}: {priceRange(range.official)}；
+                  {c.estimateYeschoyLabel}: {priceRange(range.yeschoy)}
+                </p>
+              )}
               <p className="billing-price-note">
                 {c.estimateNote
                   .replace(

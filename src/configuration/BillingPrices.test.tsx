@@ -25,32 +25,56 @@ describe("cache unit prices", () => {
     value.billing!.cacheWriteUsd = 2;
     render(<BillingPrices model={value} selected="example" fx="1" />);
     const read = screen.getByRole("row", { name: /缓存读取/ });
-    expect(within(read).getAllByRole("cell").map(x => x.textContent)).toEqual(["¥6.75", "¥0.40"]);
+    expect(
+      within(read)
+        .getAllByRole("cell")
+        .map((x) => x.textContent),
+    ).toEqual(["¥6.75", "¥0.40"]);
     const write = screen.getByRole("row", { name: /缓存写入/ });
-    expect(within(write).getAllByRole("cell").map(x => x.textContent)).toEqual(["¥13.50", "¥0.80"]);
+    expect(
+      within(write)
+        .getAllByRole("cell")
+        .map((x) => x.textContent),
+    ).toEqual(["¥13.50", "¥0.80"]);
   });
   it("shows unknown reads and omits writes when no independent quotes exist", () => {
     const value = model(0.7, true);
     value.billing!.cacheReadUsd = null;
     render(<BillingPrices model={value} selected="example" fx="1" />);
-    expect(within(screen.getByRole("row", { name: /缓存读取/ })).getAllByText("暂无报价")).toHaveLength(2);
+    expect(
+      within(screen.getByRole("row", { name: /缓存读取/ })).getAllByText(
+        "暂无报价",
+      ),
+    ).toHaveLength(2);
     expect(screen.queryByRole("row", { name: /缓存写入/ })).toBeNull();
   });
   it("preserves time-tier cache ranges and explicitly free cache prices", () => {
     const value = model(0.7);
     value.billingMode = "tiered_expr";
-    value.billing!.expression = 'len < 100 ? tier("a", p * 1 + c * 4 + cr * 0.02 + cc * 0) : tier("b", p * 2 + c * 8 + cr * 0.04 + cc * 0)';
+    value.billing!.expression =
+      'len < 100 ? tier("a", p * 1 + c * 4 + cr * 0.02 + cc * 0) : tier("b", p * 2 + c * 8 + cr * 0.04 + cc * 0)';
     render(<BillingPrices model={value} selected="example" fx="1" />);
-    expect(within(screen.getByRole("row", { name: /缓存读取/ })).getAllByRole("cell").map(x => x.textContent)).toEqual(["¥0.02 – ¥0.04", "¥0.01 – ¥0.03"]);
-    expect(within(screen.getByRole("row", { name: /缓存写入/ })).getAllByText("¥0.00")).toHaveLength(2);
+    expect(
+      within(screen.getByRole("row", { name: /缓存读取/ }))
+        .getAllByRole("cell")
+        .map((x) => x.textContent),
+    ).toEqual(["¥0.02 – ¥0.04", "¥0.01 – ¥0.03"]);
+    expect(
+      within(screen.getByRole("row", { name: /缓存写入/ })).getAllByText(
+        "¥0.00",
+      ),
+    ).toHaveLength(2);
   });
   it("does not drop an unquoted tier to advertise a partial cache price", () => {
     const value = model(0.7);
     value.billingMode = "tiered_expr";
-    value.billing!.expression = 'len < 100 ? tier("a", p * 1 + c * 4 + cr * 0.02 + cc * 1) : tier("b", p * 2 + c * 8)';
+    value.billing!.expression =
+      'len < 100 ? tier("a", p * 1 + c * 4 + cr * 0.02 + cc * 1) : tier("b", p * 2 + c * 8)';
     render(<BillingPrices model={value} selected="example" fx="1" />);
     for (const name of [/缓存读取/, /缓存写入/]) {
-      expect(within(screen.getByRole("row", { name })).getAllByText("暂无报价")).toHaveLength(2);
+      expect(
+        within(screen.getByRole("row", { name })).getAllByText("暂无报价"),
+      ).toHaveLength(2);
     }
   });
 });
@@ -104,7 +128,9 @@ describe("pricing plan choices", () => {
     expect(cheapest).toHaveAttribute("value", "DeepSeek Flash");
     expect(cheapest).toHaveAccessibleName(/价格最低/);
     const card = cheapest.closest(".billing-plan-card")!;
-    expect(within(card as HTMLElement).getByText("约 ¥0.82")).toBeInTheDocument();
+    expect(
+      within(card as HTMLElement).getByText("约 ¥0.82"),
+    ).toBeInTheDocument();
     expect(card.querySelector("details")).not.toHaveAttribute("open");
     fireEvent.click(within(card as HTMLElement).getByText("计费详情"));
     expect(chosen).toBe("default");
@@ -152,8 +178,14 @@ describe("rounded price comparisons remain honest", () => {
 describe("#12 per-million prices are shown directly (PRD 6.4)", () => {
   it("renders the official and actual input/output rows per million tokens", () => {
     render(<BillingPrices model={model(1, true)} selected="example" fx="1" />);
+    // 单价表收进折叠里：选方案时看卡片上的「每 1 亿 Token 预计费用」就够了，
+    // 这张表是再下一层的依据。标题变成折叠的标签，内容照旧。
+    const disclosure = document.querySelector(
+      "details.per-million-disclosure",
+    )!;
+    expect(disclosure).not.toHaveAttribute("open");
+    expect(disclosure).toHaveTextContent("每百万 tokens");
     const table = document.querySelector("table.per-million-prices")!;
-    expect(table).toHaveTextContent("每百万 tokens");
     expect(table).toHaveTextContent("官网参考价");
     expect(table).toHaveTextContent("野菜API实际价");
     expect(table).toHaveTextContent("输入");
