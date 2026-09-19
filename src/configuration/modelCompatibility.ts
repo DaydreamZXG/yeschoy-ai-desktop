@@ -70,9 +70,9 @@ export function modelConnectionMode(
     return null;
   }
 
-  // Claude 两端说 Anthropic 协议。原生声明的直连；其余的仍然发
-  // `/v1/messages`，由中转转成上游格式 —— 本机桥不做协议转换，只做模型改写，
-  // 所以这里的 "bridge" 是「经本机桥」，不是「本机转协议」。
+  // Claude 两端说 Anthropic 协议。上游原生说 Anthropic 的是直连；其余的照样
+  // 发 `/v1/messages`，由中转转成上游格式，所以算一层转换。两种情况都会经过
+  // 本机桥（桥要改写模型名和 1M 上下文），本机桥本身不碰协议。
   if (toolId === "claude_code" || toolId === "claude_desktop") {
     return endpoints.includes("anthropic") ? "direct" : "bridge";
   }
