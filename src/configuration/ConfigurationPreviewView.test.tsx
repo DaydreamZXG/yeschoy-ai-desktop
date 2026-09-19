@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ACTIVATION_TOOL_IDS } from "./activation";
 import {
   modelConnectionMode,
   modelSupportsTool,
@@ -109,6 +110,28 @@ describe("desktop protocol compatibility", () => {
     // 哪都跑不了的模型给出空列表，文案退回到只说这个应用用不了。
     expect(toolsSupportingModel([], "codex_desktop")).toEqual([]);
     expect(toolsSupportingModel(["image-generation"], "workbuddy")).toEqual([]);
+  });
+
+  it("treats an undeclared model as unknown, not as unusable", () => {
+    // 线上真实情况：/api/pricing 只覆盖它定过价的模型，账号的可用模型列表里
+    // 还有别的。WorkBuddy 的截图里 deepseek-v4-flash 就是这样被灰掉的，文案
+    // 还是最重的那句「哪个应用都用不了」—— 对一个能跑的模型。
+    for (const tool of ACTIVATION_TOOL_IDS) {
+      expect(modelSupportsTool(tool, undefined)).toBe(true);
+      // 空数组不一样：那是中转在某一行里明确说了没有可用端点（codexpro/）。
+      expect(modelSupportsTool(tool, [])).toBe(false);
+    }
+    // 不知道协议时不假装知道是哪一种，走默认直连。
+    expect(modelConnectionMode("claude_code", undefined)).toBe("direct");
+    expect(modelConnectionMode("codex_desktop", undefined)).toBe("direct");
+    // 「去别处用」的列表对未知模型没有意义：哪都能用，不该说哪里不能用。
+    expect(toolsSupportingModel(undefined, "codex_desktop")).toEqual([
+      "claude_code",
+      "claude_desktop",
+      "pi",
+      "dsh_web",
+      "workbuddy",
+    ]);
   });
 
   it("greys a model for Codex only when no conversion can carry Responses", () => {

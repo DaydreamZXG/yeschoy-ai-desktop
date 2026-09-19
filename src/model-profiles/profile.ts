@@ -119,6 +119,22 @@ export function modelCapabilities(id: string): ModelCapabilities {
   };
 }
 
+/**
+ * 目录里有没有这个模型的能力资料。
+ *
+ * 用来挑默认项：账号的模型列表是按字母排的，`models[0]` 就成了默认值，于是
+ * WorkBuddy 一打开默认选中 `codex-auto-review` —— 一个服务端的路由别名
+ * （QA 脚本里早就这么归类了），目录里没有它的任何资料，所以卡片上连一个标注
+ * 都没有。对一个专门服务「不会配置的人」的产品，第一眼看到的就是一个说不出
+ * 是什么的模型。
+ *
+ * 这里不排优劣、不内定偏好，只回答一个事实问题：我们能不能向用户描述它。
+ * 描述不了的不当默认值，但照样能选。
+ */
+export function hasReviewedCapabilities(id: string): boolean {
+  return resolveProfile(id) !== undefined;
+}
+
 export function modelMatchesQuery(id: string, query: string): boolean {
   const normalized = query.normalize("NFKC").trim().toLowerCase();
   if (!normalized) return true;

@@ -48,7 +48,7 @@ export function ModelsView({
     WORKBENCH_APPS.find((app) => app.id === tool)?.name ?? tool;
   const incompatibleReason = useCallback(
     (model: AccountModel) => {
-      const endpoints = model.supportedEndpointTypes ?? [];
+      const endpoints = model.supportedEndpointTypes;
       if (modelSupportsTool(tool, endpoints)) return undefined;
       const elsewhere = toolsSupportingModel(endpoints, tool).map(
         (toolId) => WORKBENCH_APPS.find((app) => app.id === toolId)?.name ?? toolId,
@@ -72,14 +72,14 @@ export function ModelsView({
       showAll
         ? allModels
         : allModels.filter((model) =>
-            modelSupportsTool(tool, model.supportedEndpointTypes ?? []),
+            modelSupportsTool(tool, model.supportedEndpointTypes),
           ),
     [allModels, showAll, tool],
   );
 
   // 选择始终落在兼容模型上：开关只影响可见范围，不允默认选不兼容项。
   const firstCompatibleId = accountModels.find((model) =>
-    modelSupportsTool(tool, model.supportedEndpointTypes ?? []),
+    modelSupportsTool(tool, model.supportedEndpointTypes),
   )?.id;
   useEffect(() => {
     if (!accountModels.some((model) => model.id === selectedModelId))

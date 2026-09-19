@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use crate::account_finance::{
-    account_money, recent_savings, recent_requests_from_pages, usage_log_report, AccountMoney,
+    account_money, recent_requests_from_pages, recent_savings, usage_log_report, AccountMoney,
     RecentSavings, UsageLogReport, RECENT_LOGS_PATH, USAGE_LOG_PAGE_SIZE, USAGE_WINDOW_MS,
 };
 use crate::connectivity_core::{request_id_is_valid, CONNECTIVITY_LINES};
@@ -142,7 +142,14 @@ pub struct AccountModel {
     id: String,
     description: String,
     billing_mode: &'static str,
-    supported_endpoint_types: Vec<String>,
+    /// `None` means the relay told us nothing, not that the model speaks
+    /// nothing. `/api/pricing` only covers models it has priced; the account's
+    /// own model list carries others (deepseek-v4-flash is one today). Sending
+    /// `[]` for those made the renderer read "declares no endpoint" and grey
+    /// them everywhere with "哪个应用都用不了" -- the worst possible answer
+    /// about a model that works. Absent field, absent knowledge.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    supported_endpoint_types: Option<Vec<String>>,
     pricing_available: bool,
     official_input_cny_per_million: String,
     official_output_cny_per_million: String,
@@ -486,8 +493,7 @@ async fn fetch_bootstrap_read(line_id: &str) -> Result<DesktopBootstrap, Account
         // relative path and nothing else. Anything absolute or scheme-bearing
         // is dropped rather than rejected: a malformed optional field must not
         // cost the user their sign-in.
-        announcements_path: relative_api_path(&data.announcements_path)
-            .unwrap_or_default(),
+        announcements_path: relative_api_path(&data.announcements_path).unwrap_or_default(),
     })
 }
 
@@ -684,10 +690,7 @@ fn install_auth_bundle(
     epoch: u64,
     device_code: Option<&str>,
 ) -> Result<(), InstallFailure> {
-    let mut runtime = state
-        .runtime
-        .lock()
-        .map_err(|_| InstallFailure::Storage)?;
+    let mut runtime = state.runtime.lock().map_err(|_| InstallFailure::Storage)?;
     if runtime.authorization_epoch != epoch
         || device_code.is_some_and(|code| {
             runtime.pending.as_ref().map(|p| p.device_code.as_str()) != Some(code)
@@ -715,7 +718,10 @@ fn install_auth_bundle(
     // service, an oversized blob on Windows) fails the sign-in at the very
     // last step, after the user already approved it in the browser.
     save_stored_session(&stored).map_err(|_| {
-        log::warn!("account stage=session_store_failed bytes={}", payload_len(&stored));
+        log::warn!(
+            "account stage=session_store_failed bytes={}",
+            payload_len(&stored)
+        );
         InstallFailure::Storage
     })?;
     runtime.access = Some(AccessSession {
@@ -1054,7 +1060,8 @@ async fn account_data_read(
     let logs_value = logs.ok().filter(|value| value.status.is_success());
     // PRD 6.6：首页日志满页且尚未覆盖 30 天窗口时补拉后续页（最多 5 页）。
     let observed_now = now_epoch_ms();
-    let log_pages = usage_log_pages(bootstrap, access_token, logs_value.as_ref(), observed_now).await;
+    let log_pages =
+        usage_log_pages(bootstrap, access_token, logs_value.as_ref(), observed_now).await;
     let account_summary = parse_account(
         account_value.as_ref().map(|value| &value.value),
         status_value.as_ref().map(|value| &value.value),
@@ -1167,15 +1174,8 @@ async fn usage_log_pages(
         return pages;
     }
     let base = format!("{}{}", bootstrap.origin, "/api/log/self");
-    let page_url = |page: usize| {
-        format!("{base}?p={page}&page_size={USAGE_LOG_PAGE_SIZE}&type=2")
-    };
-    let (url_2, url_3, url_4, url_5) = (
-        page_url(2),
-        page_url(3),
-        page_url(4),
-        page_url(5),
-    );
+    let page_url = |page: usize| format!("{base}?p={page}&page_size={USAGE_LOG_PAGE_SIZE}&type=2");
+    let (url_2, url_3, url_4, url_5) = (page_url(2), page_url(3), page_url(4), page_url(5));
     let (second, third, fourth, fifth) = tokio::join!(
         send_json(Method::GET, &url_2, Some(access_token), None),
         send_json(Method::GET, &url_3, Some(access_token), None),
@@ -1447,7 +1447,7 @@ fn parse_models(
                 .map(str::to_owned)
                 .collect::<BTreeSet<_>>()
                 .into_iter()
-                .collect();
+                .collect::<Vec<_>>();
             let ratio = positive_number(row.get("model_ratio"));
             let completion = positive_number(row.get("completion_ratio"));
             let comparable = billing_mode == "ratio"
@@ -1478,7 +1478,10 @@ fn parse_models(
                 id: id.clone(),
                 description: String::new(),
                 billing_mode,
-                supported_endpoint_types,
+                // A priced row speaks for itself, empty list included: the
+                // relay really is saying this model has no usable endpoint
+                // (codexpro/ is exactly that today).
+                supported_endpoint_types: Some(supported_endpoint_types),
                 pricing_available: comparable,
                 official_input_cny_per_million: official_input,
                 official_output_cny_per_million: official_output,
@@ -1509,7 +1512,7 @@ fn unpriced_model(id: String) -> AccountModel {
         id,
         description: String::new(),
         billing_mode: "unknown",
-        supported_endpoint_types: Vec::new(),
+        supported_endpoint_types: None,
         pricing_available: false,
         official_input_cny_per_million: String::new(),
         official_output_cny_per_million: String::new(),
@@ -2184,8 +2187,7 @@ pub async fn account_announcements_read_v2(
     let Ok(epoch) = native_session_epoch(&state) else {
         return Ok(unavailable);
     };
-    let Ok((origin, access_token)) =
-        native_session_access(&state, &request.line_id, epoch).await
+    let Ok((origin, access_token)) = native_session_access(&state, &request.line_id, epoch).await
     else {
         return Ok(unavailable);
     };
@@ -2245,7 +2247,10 @@ mod tests {
 
     #[test]
     fn device_name_sanitizer_strips_control_chars_and_caps_length() {
-        assert_eq!(sanitize_device_name("MacBook-Pro.local"), Some("MacBook-Pro.local".into()));
+        assert_eq!(
+            sanitize_device_name("MacBook-Pro.local"),
+            Some("MacBook-Pro.local".into())
+        );
         assert_eq!(
             sanitize_device_name("  spaced \n host \n"),
             Some("spaced  host".into())
@@ -2444,7 +2449,10 @@ mod tests {
                 } else {
                     &projected.request_count
                 };
-                assert_eq!(rendered, "", "{field} renders as unknown, never {malformed}");
+                assert_eq!(
+                    rendered, "",
+                    "{field} renders as unknown, never {malformed}"
+                );
             }
         }
 

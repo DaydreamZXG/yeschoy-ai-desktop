@@ -47,8 +47,17 @@ function canConverse(endpoints: string[]): boolean {
 
 export function modelConnectionMode(
   toolId: ActivationToolId,
-  endpoints: string[],
+  endpoints: string[] | undefined,
 ): ModelConnectionMode | null {
+  // 没有这个字段 ≠ 声明了什么都不支持。`/api/pricing` 只覆盖它定过价的模型，
+  // 账号的可用模型列表里还有别的（今天线上就有 deepseek-v4-flash），那些模型
+  // 中转什么都没告诉我们。把「不知道」当成「不能用」，灰掉的是能用的模型，
+  // 而且给的是最糟的那句「哪个应用都用不了」—— 用户在 WorkBuddy 上看到的
+  // 就是这个。不知道就放行。
+  //
+  // 空数组是另一回事：那是中转在某一行里明确说了「这个模型没有可用端点」，
+  // 线上的 codexpro/ 就是，那种照灰。
+  if (endpoints === undefined) return "direct";
   if (!canConverse(endpoints)) return null;
 
   // Codex 只发 Responses（官方 config 文档写明 `wire_api` 只接受 "responses"，
@@ -86,7 +95,7 @@ export function modelConnectionMode(
 
 export function modelSupportsTool(
   toolId: ActivationToolId,
-  endpoints: string[],
+  endpoints: string[] | undefined,
 ): boolean {
   return modelConnectionMode(toolId, endpoints) !== null;
 }
@@ -101,7 +110,7 @@ export function modelSupportsTool(
  * 所以改成灰着显示 + 告诉他去哪用。这个函数算出「哪去」。
  */
 export function toolsSupportingModel(
-  endpoints: string[],
+  endpoints: string[] | undefined,
   except: ActivationToolId,
 ): ActivationToolId[] {
   return ACTIVATION_TOOL_IDS.filter(

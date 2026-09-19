@@ -18,7 +18,10 @@ import {
   groupLabel,
 } from "./BillingGroupPicker";
 import { chooseBillingGroup } from "./billing";
-import { isImageGenerationModel } from "../model-profiles/profile";
+import {
+  hasReviewedCapabilities,
+  isImageGenerationModel,
+} from "../model-profiles/profile";
 import {
   modelConnectionMode,
   modelSupportsTool,
@@ -427,7 +430,8 @@ export function ConfigurationPreviewView({
     (candidate) => candidate.installationId === selectedInstallationId,
   );
   const usableInstallations =
-    target?.installations.filter((candidate) => candidate.supported).length ?? 0;
+    target?.installations.filter((candidate) => candidate.supported).length ??
+    0;
 
   const refreshTargets = useCallback(async () => {
     targetScanSequence.current += 1;
@@ -530,20 +534,23 @@ export function ConfigurationPreviewView({
           (model) => !isImageGenerationModel(model.id),
         )
       : [];
-  const hasCompatibilityEvidence = useMemo(
-    () => accountModels.some((model) => model.supportedEndpointTypes !== undefined),
-    [accountModels],
-  );
   // `models` stays the usable set: it drives the count, the default selection
   // and everything that validates a choice. The picker gets the full list
   // instead, so an unusable model is greyed out with a reason rather than
   // silently absent — see `pickerDisabledReason`.
-  const models = useMemo(() => {
-    if (!hasCompatibilityEvidence) return accountModels;
-    return accountModels.filter((model) =>
-      modelSupportsTool(activationToolId, model.supportedEndpointTypes ?? []),
-    );
-  }, [accountModels, activationToolId, hasCompatibilityEvidence]);
+  //
+  // There used to be a `hasCompatibilityEvidence` switch here that turned the
+  // whole gate off when no model declared endpoints. It is gone because
+  // `modelSupportsTool` now answers that per model: a model with no
+  // declaration is usable. One rule in one place — the previous arrangement
+  // stated it twice and the two copies were free to drift.
+  const models = useMemo(
+    () =>
+      accountModels.filter((model) =>
+        modelSupportsTool(activationToolId, model.supportedEndpointTypes),
+      ),
+    [accountModels, activationToolId],
+  );
   const activationToolName =
     APPLICATIONS.find((app) => app.id === activationToolId)?.displayName ??
     activationToolId;
@@ -552,21 +559,19 @@ export function ConfigurationPreviewView({
   // nothing they can act on.
   const pickerDisabledReason = useCallback(
     (model: AccountModel) => {
-      if (!hasCompatibilityEvidence) return undefined;
-      const endpoints = model.supportedEndpointTypes ?? [];
+      const endpoints = model.supportedEndpointTypes;
       if (modelSupportsTool(activationToolId, endpoints)) return undefined;
-      const elsewhere = toolsSupportingModel(endpoints, activationToolId)
-        .map(
-          (toolId) =>
-            APPLICATIONS.find((app) => app.id === toolId)?.displayName ?? toolId,
-        );
+      const elsewhere = toolsSupportingModel(endpoints, activationToolId).map(
+        (toolId) =>
+          APPLICATIONS.find((app) => app.id === toolId)?.displayName ?? toolId,
+      );
       return elsewhere.length
         ? g.modelNotForThisApp
             .replace("{{app}}", activationToolName)
             .replace("{{apps}}", elsewhere.join(g.modelListSeparator))
         : g.modelNotForAnyApp.replace("{{app}}", activationToolName);
     },
-    [activationToolId, activationToolName, g, hasCompatibilityEvidence],
+    [activationToolId, activationToolName, g],
   );
   const selectedModel = models.find((model) => model.id === selectedModelId);
   const selectedBillingGroup = selectedModel?.billing?.groups.find(
@@ -589,13 +594,17 @@ export function ConfigurationPreviewView({
       savedConnection && savedConnection.state !== "not_connected";
     // Retain missing IDs as visible, unselected choices. Never substitute a
     // different price for a saved choice, including after a transient refresh.
+    // 默认项优先落在目录里有资料的模型上，见 `hasReviewedCapabilities`。
+    // 一个已保存的连接永远说了算，这里只影响第一次配置。
+    const fallback =
+      models.find((model) => hasReviewedCapabilities(model.id)) ?? models[0];
     setSelectedModelId(
-      existing ? savedConnection.modelId : (models[0]?.id ?? ""),
+      existing ? savedConnection.modelId : (fallback?.id ?? ""),
     );
     setBillingGroup(
       existing
         ? savedConnection.billingGroup
-        : chooseBillingGroup(models[0], ""),
+        : chooseBillingGroup(fallback, ""),
     );
     setModelSet(existing ? (savedConnection.models ?? []) : []);
     setDefaultModelId(existing ? savedConnection.modelId : "");
@@ -867,9 +876,11 @@ export function ConfigurationPreviewView({
   // 否则 cleanup 只清了定时器，按钮会永远停留在「接入成功」。
   const [applyFlash, setApplyFlash] = useState(false);
   useEffect(() => {
-    if (
-      !(applyPhase === "finished" && activationSucceeded && resultIsCurrent)
-    ) {
+    if (!(
+      applyPhase === "finished" &&
+      activationSucceeded &&
+      resultIsCurrent
+    )) {
       setApplyFlash(false);
       return;
     }
@@ -1863,7 +1874,7 @@ export function ConfigurationPreviewView({
                         <span className="connection-compatibility-label">
                           {modelConnectionMode(
                             activationToolId,
-                            selectedModel.supportedEndpointTypes ?? [],
+                            selectedModel.supportedEndpointTypes,
                           ) === "direct"
                             ? g.nativeInterface
                             : g.automaticCompatibility}
@@ -2239,67 +2250,71 @@ export function ConfigurationPreviewView({
           {(() => {
             const hasUnsavedSelection = setupBlock.kind === "apply-changed";
             return (
-          <div
-            className={`connection-action-deck${configured || connectionEstablished ? " is-configured" : ""}${hasUnsavedSelection ? " has-unsaved-selection" : ""}`}
-          >
-            {(configured || connectionEstablished) && savedConnection && (
-              <OpenConnection
-                connection={savedConnection}
-                name={application.displayName}
-                disabled={!!connections?.restoring}
-                onAdjust={() => {
-                  appSwitchButton.current?.scrollIntoView({ block: "center" });
-                  appSwitchButton.current?.focus();
-                }}
-              />
-            )}
-            <button
-              className={`${(configured || connectionEstablished) && !hasUnsavedSelection ? "secondary-action" : "primary-action"} setup-apply${applyPhase === "applying" ? " is-applying" : ""}${applyFlash ? " is-success" : ""}`}
-              type="button"
-              onClick={() => setupBlock.run?.()}
-              disabled={applyPhase === "applying" || !!connections?.restoring}
-              data-testid="configuration-apply-action"
-            >
-              {applyPhase === "applying" ? (
-                <LoaderCircle className="is-spinning" aria-hidden="true" />
-              ) : applyFlash ? (
-                <CheckCircle2 aria-hidden="true" />
-              ) : configured ? (
-                <RefreshCw aria-hidden="true" />
-              ) : (
-                <ArrowRight aria-hidden="true" />
-              )}
-              {applyFlash ? g.applySucceeded : setupBlock.label}
-            </button>
-            {setupBlock.hint && (
-              <small className="connection-action-hint" role="status">
-                {setupBlock.hint}
-              </small>
-            )}
-            {balanceIssue?.level === "depleted" && (
-              <small
-                className="connection-action-hint balance-depleted-hint"
-                role="status"
+              <div
+                className={`connection-action-deck${configured || connectionEstablished ? " is-configured" : ""}${hasUnsavedSelection ? " has-unsaved-selection" : ""}`}
               >
-                {c.balanceDepletedHint}
-              </small>
-            )}
-            {configured && (
-              <button
-                type="button"
-                className="text-button reapply-current"
-                disabled={
-                  !!connections?.restoring ||
-                  session.loading ||
-                  !!session.lastError ||
-                  connectionStateUnavailable
-                }
-                onClick={() => void apply()}
-              >
-                {t("yeschoyDaily.reapplyCurrent")}
-              </button>
-            )}
-          </div>
+                {(configured || connectionEstablished) && savedConnection && (
+                  <OpenConnection
+                    connection={savedConnection}
+                    name={application.displayName}
+                    disabled={!!connections?.restoring}
+                    onAdjust={() => {
+                      appSwitchButton.current?.scrollIntoView({
+                        block: "center",
+                      });
+                      appSwitchButton.current?.focus();
+                    }}
+                  />
+                )}
+                <button
+                  className={`${(configured || connectionEstablished) && !hasUnsavedSelection ? "secondary-action" : "primary-action"} setup-apply${applyPhase === "applying" ? " is-applying" : ""}${applyFlash ? " is-success" : ""}`}
+                  type="button"
+                  onClick={() => setupBlock.run?.()}
+                  disabled={
+                    applyPhase === "applying" || !!connections?.restoring
+                  }
+                  data-testid="configuration-apply-action"
+                >
+                  {applyPhase === "applying" ? (
+                    <LoaderCircle className="is-spinning" aria-hidden="true" />
+                  ) : applyFlash ? (
+                    <CheckCircle2 aria-hidden="true" />
+                  ) : configured ? (
+                    <RefreshCw aria-hidden="true" />
+                  ) : (
+                    <ArrowRight aria-hidden="true" />
+                  )}
+                  {applyFlash ? g.applySucceeded : setupBlock.label}
+                </button>
+                {setupBlock.hint && (
+                  <small className="connection-action-hint" role="status">
+                    {setupBlock.hint}
+                  </small>
+                )}
+                {balanceIssue?.level === "depleted" && (
+                  <small
+                    className="connection-action-hint balance-depleted-hint"
+                    role="status"
+                  >
+                    {c.balanceDepletedHint}
+                  </small>
+                )}
+                {configured && (
+                  <button
+                    type="button"
+                    className="text-button reapply-current"
+                    disabled={
+                      !!connections?.restoring ||
+                      session.loading ||
+                      !!session.lastError ||
+                      connectionStateUnavailable
+                    }
+                    onClick={() => void apply()}
+                  >
+                    {t("yeschoyDaily.reapplyCurrent")}
+                  </button>
+                )}
+              </div>
             );
           })()}
           {configured && (

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  hasReviewedCapabilities,
   modelCapabilities,
   modelDisplayName,
   modelMatchesQuery,
@@ -158,5 +159,18 @@ describe("a reasoning effort baked into the model id resolves to its base model"
     expect(modelDisplayName("gemini-9.9-nonexistent-high")).toBe(
       "gemini-9.9-nonexistent-high",
     );
+  });
+});
+
+describe("the default pick avoids a model we cannot describe", () => {
+  it("separates catalogued models from server-side routing aliases", () => {
+    // WorkBuddy 的截图里默认选中的就是 codex-auto-review：字母序第一，
+    // 目录里没有任何资料，卡片上一个标注都没有。
+    expect(hasReviewedCapabilities("codex-auto-review")).toBe(false);
+    expect(hasReviewedCapabilities("codexpro/")).toBe(false);
+    expect(hasReviewedCapabilities("glm-5.3")).toBe(true);
+    expect(hasReviewedCapabilities("gpt-6-astra")).toBe(true);
+    // 带档位后缀的也算有资料 —— 解析后能查到基础型号。
+    expect(hasReviewedCapabilities("gemini-3.7-flash-high")).toBe(true);
   });
 });

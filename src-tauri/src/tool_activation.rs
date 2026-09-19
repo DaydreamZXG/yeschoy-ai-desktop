@@ -500,7 +500,11 @@ fn model_supports_tool(pricing: &Value, model_id: &str, tool_id: &str) -> bool {
 /// protocol: image generators, and rows that declare nothing.
 fn chat_compatible(pricing: &Value, model_id: &str) -> bool {
     let Some(endpoints) = model_endpoints(pricing, model_id) else {
-        return false;
+        // No pricing row at all. `/api/pricing` only lists models it has
+        // priced, while the account's model list carries more, so this is
+        // "we were told nothing" and not "it speaks nothing". Refusing here
+        // blocks activation for a model the picker has already offered.
+        return true;
     };
     endpoints.iter().any(|endpoint| {
         matches!(
@@ -531,7 +535,12 @@ fn claude_transport(pricing: &Value, model_id: &str) -> Option<ClaudeTransport> 
 }
 
 fn codex_transport(pricing: &Value, model_id: &str) -> Option<codex_desktop::CodexTransport> {
-    let endpoints = model_endpoints(pricing, model_id)?;
+    // Same reasoning as `chat_compatible`: an unlisted model is unknown, not
+    // refused. Codex is the strict target, but strictness has to be applied to
+    // evidence, and there is none here.
+    let Some(endpoints) = model_endpoints(pricing, model_id) else {
+        return Some(codex_desktop::CodexTransport::DirectResponses);
+    };
     // Codex only ever speaks Responses -- the official config reference says
     // `wire_api` accepts nothing but "responses", so there is no way out at the
     // configuration layer. Responses is also the one entry format where the
@@ -3463,6 +3472,31 @@ mod tests {
         assert_eq!(codex_transport(&pricing, "messages"), None);
         assert_eq!(codex_transport(&pricing, "chat"), None);
         assert_eq!(codex_transport(&pricing, "image"), None);
+        // A model the account can use but `/api/pricing` never listed. The
+        // relay told us nothing about it, which is not the same as telling us
+        // it speaks nothing, and the picker has already offered it -- refusing
+        // at activation would strand the user on a model they just chose.
+        for tool in [
+            "claude_code",
+            "claude_desktop",
+            "codex_desktop",
+            "pi",
+            "dsh_web",
+            "workbuddy",
+        ] {
+            assert!(
+                model_supports_tool(&pricing, "absent-from-pricing", tool),
+                "{tool} refused a model pricing does not describe"
+            );
+        }
+        assert_eq!(
+            codex_transport(&pricing, "absent-from-pricing"),
+            Some(codex_desktop::CodexTransport::DirectResponses)
+        );
+        assert_eq!(
+            claude_transport(&pricing, "absent-from-pricing"),
+            Some(ClaudeTransport::DirectAnthropic)
+        );
         assert_eq!(
             claude_transport(&pricing, "messages"),
             Some(ClaudeTransport::DirectAnthropic)
