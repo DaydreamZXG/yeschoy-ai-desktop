@@ -844,8 +844,21 @@ mod tests {
         // they have never seen, about a model they did not pick, with nothing
         // to do about it.
         let state = state();
+        // Both alias shapes have to be caught. `claude-fable-5` maps to a
+        // capability family, so it mints `<family>-v<96 digits>`; a model with
+        // no family mints the opaque `anthropic/claude-router-<64 hex>`, which
+        // is the form that actually reached a user as a relay 400.
         let stale = crate::tool_model_profile::claude_gateway_route_id("claude-fable-5");
+        assert!(stale.contains("-v"), "expected the family alias shape: {stale}");
         assert!(crate::tool_model_profile::is_claude_gateway_route(&stale));
+        let opaque =
+            crate::tool_model_profile::legacy_claude_gateway_route_id("claude-fable-5");
+        assert!(opaque.starts_with("anthropic/claude-router-"));
+        assert!(crate::tool_model_profile::is_claude_gateway_route(&opaque));
+        assert_eq!(
+            resolve_model(&state, &opaque),
+            Err(ResolveFailure::StaleRoute)
+        );
         assert_eq!(
             resolve_model(&state, &stale),
             Err(ResolveFailure::StaleRoute)

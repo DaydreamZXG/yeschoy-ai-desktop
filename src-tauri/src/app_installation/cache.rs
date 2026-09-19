@@ -181,7 +181,13 @@ pub(super) fn unique_dir(parent: &Path) -> Result<PathBuf> {
     Ok(path)
 }
 
-#[cfg(any(windows, test))]
+// `test` alone was wider than the two things this function needs: its
+// `publish_handoff` exists only under `windows` or `test + macos`, and its only
+// test is macOS-gated. Under `cargo test` on Linux it therefore compiled a call
+// to a function that was not there (E0425). CI runs the native suite on Windows
+// and both macOS runners, so nothing caught it; it only shows up building the
+// test target on Linux.
+#[cfg(any(windows, all(test, target_os = "macos")))]
 pub(super) fn handoff_package(folder: &Path, file: &Path, hash: &str) -> Result<PathBuf> {
     if hash.len() != 64 || !hash.bytes().all(|b| b.is_ascii_hexdigit()) {
         return Err("invalid_download");

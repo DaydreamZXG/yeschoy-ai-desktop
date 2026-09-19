@@ -133,7 +133,8 @@ pub(crate) fn legacy_claude_gateway_route_id(model_id: &str) -> String {
 /// Existing 0.4.8 profiles used an opaque alias. Accept it during the update
 /// transition so installing a fixed assistant never breaks an active Claude
 /// Desktop connection before the user next reapplies the managed profile.
-/// The prefix every route alias we mint carries.
+/// The prefix carried by the opaque alias form only -- see
+/// `is_claude_gateway_route`, which must also recognise the other one.
 pub(crate) const CLAUDE_GATEWAY_ROUTE_PREFIX: &str = "anthropic/claude-router-";
 
 /// Whether a requested id is one of our own Claude Desktop route aliases.
@@ -141,10 +142,25 @@ pub(crate) const CLAUDE_GATEWAY_ROUTE_PREFIX: &str = "anthropic/claude-router-";
 /// The alias is a hash we invent so Claude Desktop's profile can name a model
 /// without carrying the real id. It means nothing upstream, so a request still
 /// wearing one has failed to resolve here and must not be forwarded.
+///
+/// `claude_gateway_route_id` mints two shapes and this has to know both:
+///
+///   `<family>-v<96 decimal digits>`        when the model maps to a Claude
+///                                          capability family (32 digest bytes
+///                                          written as three digits each)
+///   `anthropic/claude-router-<64 hex>`     the opaque fallback, when it does not
+///
+/// Matching on structure rather than a name list keeps this correct when the
+/// family table grows. Neither shape can collide with a real upstream id: no
+/// model carries a 96-digit tail.
 pub(crate) fn is_claude_gateway_route(requested: &str) -> bool {
-    split_one_m_context_marker(requested)
-        .0
-        .starts_with(CLAUDE_GATEWAY_ROUTE_PREFIX)
+    let (requested, _) = split_one_m_context_marker(requested);
+    if let Some(hex) = requested.strip_prefix(CLAUDE_GATEWAY_ROUTE_PREFIX) {
+        return hex.len() == 64 && hex.bytes().all(|byte| byte.is_ascii_hexdigit());
+    }
+    requested.rsplit_once("-v").is_some_and(|(_, digits)| {
+        digits.len() == 96 && digits.bytes().all(|byte| byte.is_ascii_digit())
+    })
 }
 
 pub(crate) fn claude_gateway_route_matches(model_id: &str, requested: &str) -> bool {
