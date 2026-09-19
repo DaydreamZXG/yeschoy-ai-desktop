@@ -16,8 +16,64 @@ export function applyModelCatalogOverride(
   );
 }
 
+/**
+ * 中转把推理档位烧进了模型 ID 里：`gemini-3.7-flash-high` 就是
+ * `gemini-3.7-flash` 跑在 `high` 档。目录里收的是基础型号，所以精确查不到的
+ * 时候要把后缀摘掉再查一次，否则这些型号在界面上什么标注都没有。
+ *
+ * 后缀表和适用范围都照抄中转的 `ParseOpenAIReasoningEffortFromModelSuffix`
+ * （`relaykit/relayconvert/reasoning/suffix.go`）：它只对 `gpt-*`、`o<n>*`、
+ * `claude-*`、`gemini-*` 这几族拆后缀。这一条限制不是可有可无的 —— 目录里
+ * `qwen3.8-max` 是一个完整型号名，不在这几族里，所以它的 `-max` 不会被误拆。
+ */
+const EFFORT_SUFFIXES = [
+  "-max",
+  "-xhigh",
+  "-high",
+  "-medium",
+  "-low",
+  "-minimal",
+  "-none",
+] as const;
+
+const EFFORT_SUFFIXED_FAMILIES = /^(?:gpt-[a-z0-9]|o[1-9]|claude-|gemini-)/;
+
+function splitEffortSuffix(
+  id: string,
+): { base: string; effort: string } | null {
+  const suffix = EFFORT_SUFFIXES.find((candidate) => id.endsWith(candidate));
+  if (!suffix) return null;
+  const base = id.slice(0, -suffix.length);
+  // 命名空间前缀保持不透明，只看最后一段是不是这几族 —— 跟中转的
+  // `lastModelPathSegment` 一致。
+  const bare = base.toLowerCase().split("/").at(-1) ?? "";
+  if (!EFFORT_SUFFIXED_FAMILIES.test(bare)) return null;
+  return { base, effort: suffix.slice(1) };
+}
+
+/**
+ * 精确命中优先。只有查不到时才退一步拆后缀，这样将来目录里直接收了某个带
+ * 后缀的完整型号名，它仍然说了算。
+ */
+function resolveProfile(id: string) {
+  const exact = profiles.get(id);
+  if (exact) return exact;
+  const split = splitEffortSuffix(id);
+  if (!split) return undefined;
+  const base = profiles.get(split.base);
+  if (!base) return undefined;
+  // ID 已经把档位钉死了，所以这个型号的档位阶梯只有一级，也没有「默认档」
+  // 可言 —— 照搬基础型号的整条阶梯会让人以为还能选。
+  return {
+    ...base,
+    displayName: `${base.displayName} (${split.effort})`,
+    reasoningLevels: [split.effort],
+    defaultReasoning: undefined,
+  };
+}
+
 export function modelDisplayName(id: string): string {
-  return profiles.get(id)?.displayName ?? id;
+  return resolveProfile(id)?.displayName ?? id;
 }
 
 // Image generation is not a chat/agent model. Do not hide vision-capable chat.
@@ -43,7 +99,7 @@ export interface ModelCapabilities {
  * simply omitted so callers render no badge instead of "unsupported".
  */
 export function modelCapabilities(id: string): ModelCapabilities {
-  const model = profiles.get(id);
+  const model = resolveProfile(id);
   if (!model) return {};
   return {
     ...(model.contextWindow !== undefined

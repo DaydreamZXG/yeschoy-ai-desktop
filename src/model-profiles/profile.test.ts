@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { modelCapabilities, modelMatchesQuery } from "./profile";
+import {
+  modelCapabilities,
+  modelDisplayName,
+  modelMatchesQuery,
+} from "./profile";
 
 describe("model search normalization does not change model identity", () => {
   it.each(["gpt6", "gpt 6", "GPT-6 Astra", "ＧＰＴ　６", "gpt—6", "astra gpt"])(
@@ -93,6 +97,66 @@ describe("modelCapabilities is a read-only catalog lookup that never guesses", (
     }
     // Input modalities are passed through verbatim, not inferred.
     expect(modelCapabilities("glm-5.3").input).toEqual(["text"]);
-    expect(modelCapabilities("claude-sonnet-5").input).toEqual(["text", "image"]);
+    expect(modelCapabilities("claude-sonnet-5").input).toEqual([
+      "text",
+      "image",
+    ]);
+  });
+});
+
+describe("a reasoning effort baked into the model id resolves to its base model", () => {
+  // 中转卖的是 `gemini-3.7-flash-high`，目录里收的是 `gemini-3.7-flash`。
+  // 不拆后缀的话这几个型号在界面上一条标注都没有 —— 线上三个 gemini 就是
+  // 这么变成裸 ID 的。
+  it("reads the base model's reviewed capabilities", () => {
+    const base = modelCapabilities("gemini-3.7-flash");
+    const pinned = modelCapabilities("gemini-3.7-flash-high");
+    expect(base.contextWindow).toBe(1048576);
+    expect(pinned.contextWindow).toBe(base.contextWindow);
+    expect(pinned.maxOutputTokens).toBe(base.maxOutputTokens);
+    expect(pinned.input).toEqual(base.input);
+    expect(pinned.toolUse).toBe(true);
+  });
+
+  it("reports the one pinned level, not the base model's whole ladder", () => {
+    // ID 已经把档位钉死了。照搬 ["low","high"] 会让人以为还能选。
+    expect(modelCapabilities("gemini-3.7-flash").reasoningLevels).toEqual([
+      "low",
+      "high",
+    ]);
+    expect(modelCapabilities("gemini-3.7-flash-high").reasoningLevels).toEqual([
+      "high",
+    ]);
+    expect(modelCapabilities("gemini-3.1-pro-low").reasoningLevels).toEqual([
+      "low",
+    ]);
+    expect(
+      modelCapabilities("gemini-3.7-flash-high").defaultReasoning,
+    ).toBeUndefined();
+  });
+
+  it("names the level so two variants of one model stay distinguishable", () => {
+    expect(modelDisplayName("gemini-3.8-flash-high")).toBe(
+      "Gemini 3.8 Flash (high)",
+    );
+    expect(modelDisplayName("gemini-3.8-flash")).toBe("Gemini 3.8 Flash");
+    expect(modelMatchesQuery("gemini-3.7-flash-high", "gemini 3.7")).toBe(true);
+  });
+
+  it("only splits the families the relay splits, and exact hits always win", () => {
+    // qwen3.8-max 是一个完整型号名，不是 qwen3.8 跑在 max 档。中转的
+    // ParseOpenAIReasoningEffortFromModelSuffix 只认 gpt-/o<n>/claude-/gemini-，
+    // 这里跟它一致，否则这个型号会被拆坏。
+    expect(modelCapabilities("qwen3.8-max").reasoningLevels).toEqual([
+      "low",
+      "medium",
+      "xhigh",
+    ]);
+    expect(modelDisplayName("qwen3.8-max")).toBe("Qwen3.8 Max");
+    // 基础型号不在目录里的，照旧什么都不猜。
+    expect(modelCapabilities("gemini-9.9-nonexistent-high")).toEqual({});
+    expect(modelDisplayName("gemini-9.9-nonexistent-high")).toBe(
+      "gemini-9.9-nonexistent-high",
+    );
   });
 });

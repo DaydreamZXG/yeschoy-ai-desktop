@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "verifiedAt": "2026-09-13",
+  "verifiedAt": "2026-09-19",
   "models": [
     {
       "id": "gpt-6-astra",
@@ -520,6 +520,39 @@
       "contextWindow": 1048576,
       "maxOutputTokens": 65536,
       "sources": ["https://models.dev/google/gemini-3.6-flash"],
+      "toolUse": true
+    },
+    {
+      "id": "gemini-3.7-flash",
+      "displayName": "Gemini 3.7 Flash",
+      "reasoningLevels": ["low", "high"],
+      "input": ["text", "image"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 65536,
+      "sources": ["https://models.dev/google/gemini-3.7-flash"],
+      "toolUse": true
+    },
+    {
+      "id": "gemini-3.8-flash",
+      "displayName": "Gemini 3.8 Flash",
+      "reasoningLevels": ["low", "high"],
+      "input": ["text", "image"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 65536,
+      "sources": ["https://models.dev/google/gemini-3.8-flash"],
+      "toolUse": true
+    },
+    {
+      "id": "gemini-3.1-pro",
+      "displayName": "Gemini 3.1 Pro",
+      "reasoningLevels": ["low", "high"],
+      "input": ["text", "image"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 65536,
+      "sources": [
+        "https://models.dev/google/gemini-3.1-pro-preview",
+        "https://models.dev/opencode/gemini-3.1-pro"
+      ],
       "toolUse": true
     },
     {

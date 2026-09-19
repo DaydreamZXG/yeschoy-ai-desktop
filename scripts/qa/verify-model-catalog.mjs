@@ -68,7 +68,10 @@ try {
 if (catalog.schemaVersion !== 1) {
   problems.push(`schemaVersion must be 1, found ${catalog.schemaVersion}`);
 }
-if (typeof catalog.verifiedAt !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(catalog.verifiedAt)) {
+if (
+  typeof catalog.verifiedAt !== "string" ||
+  !/^\d{4}-\d{2}-\d{2}$/.test(catalog.verifiedAt)
+) {
   problems.push(`verifiedAt must be an ISO date, found ${catalog.verifiedAt}`);
 }
 if (!Array.isArray(catalog.models) || catalog.models.length === 0) {
@@ -123,7 +126,10 @@ for (const [index, model] of (catalog.models ?? []).entries()) {
       `${at} (${model.id}): reasoningLevels must be an array of non-empty strings (may be empty)`,
     );
   }
-  if ("defaultReasoning" in model && typeof model.defaultReasoning !== "string") {
+  if (
+    "defaultReasoning" in model &&
+    typeof model.defaultReasoning !== "string"
+  ) {
     problems.push(`${at} (${model.id}): defaultReasoning must be a string`);
   }
   if ("reasoningMode" in model && typeof model.reasoningMode !== "string") {
@@ -174,7 +180,7 @@ async function loadPricingIds() {
     .map((entry) =>
       typeof entry === "string"
         ? entry
-        : entry?.model_name ?? entry?.model ?? entry?.id,
+        : (entry?.model_name ?? entry?.model ?? entry?.id),
     )
     .filter((id) => typeof id === "string" && id);
 }
@@ -187,7 +193,31 @@ if (pricingUrl || pricingFile) {
     console.error(`✗ pricing reconciliation failed: ${error.message}`);
     process.exit(1);
   }
-  const gaps = onlineIds.filter((id) => !seen.has(id));
+  // Resolve ids the same way the app does (src/model-profiles/profile.ts):
+  // the relay sells some models with the reasoning effort baked into the id,
+  // so `gemini-3.7-flash-high` is covered by the catalog's `gemini-3.7-flash`.
+  // Suffix list and family restriction mirror the relay's
+  // ParseOpenAIReasoningEffortFromModelSuffix. Without this the script reports
+  // gaps the app does not actually have.
+  const effortSuffixes = [
+    "-max",
+    "-xhigh",
+    "-high",
+    "-medium",
+    "-low",
+    "-minimal",
+    "-none",
+  ];
+  const effortFamilies = /^(?:gpt-[a-z0-9]|o[1-9]|claude-|gemini-)/;
+  const covered = (id) => {
+    if (seen.has(id)) return true;
+    const suffix = effortSuffixes.find((candidate) => id.endsWith(candidate));
+    if (!suffix) return false;
+    const base = id.slice(0, -suffix.length);
+    const bare = base.toLowerCase().split("/").at(-1) ?? "";
+    return effortFamilies.test(bare) && seen.has(base);
+  };
+  const gaps = onlineIds.filter((id) => !covered(id));
   const expected = gaps.filter((id) => !knownRoutingCompat.has(id));
   const suppressed = gaps.filter((id) => knownRoutingCompat.has(id));
   console.log(
@@ -211,7 +241,9 @@ if (pricingUrl || pricingFile) {
     console.log("pricing reconciliation: no capability gaps");
   }
 } else {
-  console.log("pricing reconciliation: skipped (pass --pricing or --pricing-file)");
+  console.log(
+    "pricing reconciliation: skipped (pass --pricing or --pricing-file)",
+  );
 }
 
 if (problems.length) {
@@ -219,4 +251,6 @@ if (problems.length) {
   for (const problem of problems) console.error(`  - ${problem}`);
   process.exit(1);
 }
-console.log("schema: OK (four capability fields, ids unique, sources parseable)");
+console.log(
+  "schema: OK (four capability fields, ids unique, sources parseable)",
+);
