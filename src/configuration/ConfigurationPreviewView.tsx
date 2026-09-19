@@ -1716,10 +1716,7 @@ export function ConfigurationPreviewView({
           />
         )}
 
-        <section
-          className="connection-builder"
-          aria-labelledby="connection-builder-title"
-        >
+        <section className="connection-builder" aria-label={g.builderTitle}>
           {session.lastError && (
             <div className="selection-warning" role="alert">
               <strong>{g.accountStaleTitle}</strong>
@@ -1742,17 +1739,10 @@ export function ConfigurationPreviewView({
                 onRetry={() => void connections.refresh()}
               />
             )}
-          <header className="connection-builder-heading">
-            <div>
-              <p className="eyebrow">{g.builderKicker}</p>
-              <h2 id="connection-builder-title">{g.builderTitle}</h2>
-              <p>{g.builderIntro}</p>
-            </div>
-            <span className="connection-builder-status">
-              <ShieldCheck aria-hidden="true" />
-              {c.setupSafety}
-            </span>
-          </header>
+          {/* 这里原来有一整块标题：「模型与计费分组 / 选好，就能用 / 选模型、
+              比较分组价格，再一键完成接入。」—— 页头刚说过同一件事，而下面两步
+              自己就叫「选择模型」「选择价格方案」，不需要有人再介绍一遍。
+              安全那句也删了重复的一份，页头那份放出来了。 */}
 
           {/* 第二步以前藏在「模型设置」这个折叠里，默认收起，需要时才自动展开。
               一个三步流程不该把第二步藏起来 —— 用户要换模型时得先找到这个
@@ -2124,20 +2114,26 @@ export function ConfigurationPreviewView({
             );
           })()}
           {configured && (
-            <p
+            // 已经接好之后这段是四行常驻文字（「打开使用不会改设置。会自动
+            // 读取更新后的模型列表，不需要关闭或重启…」）。它回答的是「我点
+            // 打开会不会把设置搞乱」—— 是个会想起来才问的问题，不是每次都要
+            // 读一遍的话。标题留在外面，正文收起来。
+            <details
               className="connection-lifecycle-note"
               data-lifecycle={connectionLifecycleMode(activationToolId)}
             >
-              <Info aria-hidden="true" />
-              <span>
-                <strong>{g.lifecycleNotePrefix}</strong>
+              <summary>
+                <Info aria-hidden="true" />
+                {g.lifecycleNotePrefix}
+              </summary>
+              <p>
                 {connectionLifecycleNote(
                   activationToolId,
                   application.displayName,
                   g,
                 )}
-              </span>
-            </p>
+              </p>
+            </details>
           )}
         </div>
 

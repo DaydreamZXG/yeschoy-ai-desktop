@@ -5544,8 +5544,10 @@
   color: var(--muted);
 }
 
+/* 整个流程只说一次「会写入什么、不会做什么」，位置就在页头这句话下面。
+   原来它在这里被藏掉、在下面的 builder 标题里又说了一遍。 */
 .configuration-hero-copy > .preview-boundary {
-  display: none;
+  margin-top: var(--space-10);
 }
 
 .configuration-selectors {
@@ -6527,4 +6529,47 @@ select {
 
 .configuration-workspace > .network-choice[open] > summary {
   margin-bottom: var(--space-14);
+}
+
+/* ———— 接入页：拆掉套娃 ———— */
+
+/* 三层卡片套在一起（connection-builder → setup-advanced → 步骤卡），每层
+   都有自己的边框、底色、内边距，两层还带阴影。改单栏之后每层都铺满整行，
+   套娃变得更刺眼。外面两层退成纯粹的容器，只剩步骤卡自己是卡片 —— 和设计
+   稿一样，①②③ 平级。 */
+.configuration-guide > .connection-builder,
+.connection-builder > .setup-advanced {
+  border: 0;
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+.connection-builder > .setup-advanced {
+  margin-top: 0;
+}
+
+.configuration-guide > .connection-builder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.setup-advanced .connection-choice-grid,
+.setup-advanced .model-set-editor {
+  padding: 0;
+}
+
+/* 生命周期说明改成折叠：标题一行，正文点开才看。 */
+.connection-lifecycle-note > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  cursor: pointer;
+}
+
+.connection-lifecycle-note > p {
+  margin: var(--space-8) 0 0;
+  padding-left: var(--space-24);
 }
