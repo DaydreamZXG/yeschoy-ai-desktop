@@ -133,6 +133,20 @@ pub(crate) fn legacy_claude_gateway_route_id(model_id: &str) -> String {
 /// Existing 0.4.8 profiles used an opaque alias. Accept it during the update
 /// transition so installing a fixed assistant never breaks an active Claude
 /// Desktop connection before the user next reapplies the managed profile.
+/// The prefix every route alias we mint carries.
+pub(crate) const CLAUDE_GATEWAY_ROUTE_PREFIX: &str = "anthropic/claude-router-";
+
+/// Whether a requested id is one of our own Claude Desktop route aliases.
+///
+/// The alias is a hash we invent so Claude Desktop's profile can name a model
+/// without carrying the real id. It means nothing upstream, so a request still
+/// wearing one has failed to resolve here and must not be forwarded.
+pub(crate) fn is_claude_gateway_route(requested: &str) -> bool {
+    split_one_m_context_marker(requested)
+        .0
+        .starts_with(CLAUDE_GATEWAY_ROUTE_PREFIX)
+}
+
 pub(crate) fn claude_gateway_route_matches(model_id: &str, requested: &str) -> bool {
     // Claude's picker may append a context marker. It is not part of the
     // upstream ID; normalize only for an exact, already-enrolled route lookup.

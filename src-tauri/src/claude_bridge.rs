@@ -272,9 +272,16 @@ async fn messages(state: &BridgeState, request: Request<Body>) -> Response {
         Ok(model) => model,
         // Claude offers the 1M option from the capability family it was given,
         // which can be 1M-capable while the real model behind it is not.
-        Err(()) => {
+        Err(ResolveFailure::OneMUnavailable) => {
             return invalid_request_error(
                 "1M context is unavailable for this model. Select the model without the [1m] option.",
+            )
+        }
+        Err(ResolveFailure::StaleRoute) => {
+            log::warn!("claude_bridge stage=stale_route_alias");
+            return invalid_request_error(
+                "This profile points at a model your 野菜API account no longer provides. \
+                 Open 野菜API and apply the connection again to refresh it.",
             )
         }
     };
@@ -584,7 +591,19 @@ fn ensure_one_m_beta(headers: &mut Vec<(header::HeaderName, String)>) {
 /// Normalize only an exact model enrolled in this tool credential. This keeps
 /// arbitrary user spellings pass-through compatible while preventing a raw
 /// `[1m]` marker from reaching the relay as if it were part of the model ID.
-fn resolve_model(state: &BridgeState, requested: &str) -> Result<(String, bool), ()> {
+/// Why a requested model could not be resolved. The two reasons need
+/// different words: one is a bad choice the user can change in the picker,
+/// the other is a stale profile that only re-applying the connection fixes.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ResolveFailure {
+    OneMUnavailable,
+    StaleRoute,
+}
+
+fn resolve_model(
+    state: &BridgeState,
+    requested: &str,
+) -> Result<(String, bool), ResolveFailure> {
     let (base, one_m_context) = crate::tool_model_profile::split_one_m_context_marker(requested);
     let model = state.credential.model_ids().into_iter().find(|id| {
         id == base || crate::tool_model_profile::claude_gateway_route_matches(id, requested)
@@ -592,12 +611,26 @@ fn resolve_model(state: &BridgeState, requested: &str) -> Result<(String, bool),
     match model {
         Some(model) => {
             if one_m_context && !crate::tool_model_profile::supports_one_m_context(&model) {
-                Err(())
+                Err(ResolveFailure::OneMUnavailable)
             } else {
                 Ok((model, one_m_context))
             }
         }
-        None if one_m_context => Err(()),
+        None if one_m_context => Err(ResolveFailure::OneMUnavailable),
+        // An unknown plain id is forwarded: the relay adds models faster than
+        // this client ships, and refusing one we simply have not heard of
+        // would make every new model unusable until the next release.
+        //
+        // A route alias is the opposite case. We mint it ourselves so Claude
+        // Desktop's profile can name a model without carrying the real id, and
+        // it means nothing upstream — forwarding one is a guaranteed 400 that
+        // reaches the user as "Gateway rejected model anthropic/claude-router-
+        // …", naming a string they have never seen and cannot act on. It only
+        // gets here when the profile still points at a model the current
+        // credential no longer enrolls, which re-applying the connection fixes.
+        None if crate::tool_model_profile::is_claude_gateway_route(requested) => {
+            Err(ResolveFailure::StaleRoute)
+        }
         None => Ok((requested.to_owned(), false)),
     }
 }
@@ -787,13 +820,46 @@ mod tests {
             Ok(("future-model".into(), false))
         );
         for requested in ["future-model[1m]", "unknown/route [1M] ", "模型[1m]"] {
-            assert_eq!(resolve_model(&state, requested), Err(()));
+            assert_eq!(
+                resolve_model(&state, requested),
+                Err(ResolveFailure::OneMUnavailable)
+            );
         }
         // A similar Claude role, or an alias enrolled in another profile,
         // cannot silently select one of this profile's models.
         let unregistered = crate::tool_model_profile::claude_gateway_route_id("claude-fable-5");
         let requested = format!("{unregistered}[1m]");
-        assert_eq!(resolve_model(&state, &requested), Err(()));
+        assert_eq!(
+            resolve_model(&state, &requested),
+            Err(ResolveFailure::OneMUnavailable)
+        );
+    }
+
+    #[test]
+    fn a_stale_route_alias_is_refused_here_rather_than_sent_upstream() {
+        // Claude Desktop's profile names models by an alias we mint. When it
+        // still holds one for a model the current credential no longer
+        // enrolls, forwarding it produced a relay 400 that reached the user as
+        // `Gateway rejected model anthropic/claude-router-a983fd…` — a string
+        // they have never seen, about a model they did not pick, with nothing
+        // to do about it.
+        let state = state();
+        let stale = crate::tool_model_profile::claude_gateway_route_id("claude-fable-5");
+        assert!(crate::tool_model_profile::is_claude_gateway_route(&stale));
+        assert_eq!(
+            resolve_model(&state, &stale),
+            Err(ResolveFailure::StaleRoute)
+        );
+        // An unknown *plain* id still passes through: the relay adds models
+        // faster than this client ships, and refusing those would make every
+        // new model unusable until the next release.
+        assert_eq!(
+            resolve_model(&state, "gemini-3.7-flash-high"),
+            Ok(("gemini-3.7-flash-high".into(), false))
+        );
+        assert!(!crate::tool_model_profile::is_claude_gateway_route(
+            "gemini-3.7-flash-high"
+        ));
     }
 
     #[tokio::test]
