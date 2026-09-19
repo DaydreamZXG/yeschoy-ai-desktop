@@ -47,7 +47,10 @@ function openWorkbenchPage(name: string) {
 // Inlined legacy service-catalog fixture: the mock branch for
 // `read_public_service_catalog` is retained so unexpected-command
 // assertions keep their original coverage shape.
-function catalogFixture(requestId = "test-read", lineId = "mainland_optimized") {
+function catalogFixture(
+  requestId = "test-read",
+  lineId = "mainland_optimized",
+) {
   return {
     requestId,
     lineId,
@@ -439,7 +442,7 @@ describe("official workbench", () => {
       expect(group).toBeChecked();
     }
   });
-  it("#13 hides incompatible models by default, greys them out with a reason when shown", async () => {
+  it("lists every model for every app and greys none of them", async () => {
     mockNativeByCommand(async (command, args) => {
       const request = (args as Args).request;
       if (command === "manage_tool_connections_v1")
@@ -452,13 +455,28 @@ describe("official workbench", () => {
         return catalogFixture(request.requestId, request.lineId);
       if (command === "account_inspect_v2") {
         const projection = signedIn(request.requestId);
-        // glm-5.3 兼容全部工具；anthropic-only 模型对 codex_desktop 不兼容。
+        // 三种曾经会被判死的声明：只有 anthropic、空的、以及压根没这个字段。
         projection.models[0].supportedEndpointTypes = ["anthropic"];
         projection.models.push({
           ...projection.models[0],
-          id: "glm-5.3-full",
-          supportedEndpointTypes: ["anthropic", "openai", "openai-response"],
+          id: "glm-5.3-empty",
+          supportedEndpointTypes: [],
         });
+        // 原生侧 `unpriced_model` 产出的就是这个形状：既没有端点声明，也没有
+        // billing。必填字段要写全 —— 解码器要求键集完全匹配，少一个 billing
+        // 又留着端点键的组合它是不认的。
+        projection.models.push({
+          id: "glm-5.3-undeclared",
+          description: "",
+          billingMode: "unknown",
+          pricingAvailable: false,
+          officialInputCnyPerMillion: "",
+          officialOutputCnyPerMillion: "",
+          actualInputCnyPerMillion: "",
+          actualOutputCnyPerMillion: "",
+          // fixture 的元素类型是从第一个模型推出来的，比线上的形状严。这里
+          // 故意造的就是「少两个可选字段」的那种 payload。
+        } as (typeof projection.models)[number]);
         return projection;
       }
       throw Error("Not available in test");
@@ -468,56 +486,31 @@ describe("official workbench", () => {
     openWorkbenchPage("模型与价格");
     await screen.findByRole("combobox", { name: /完整模型 ID/ });
 
-    // 默认工具 claude_desktop（anthropic 直连）：两个模型都兼容。
-    fireEvent.click(screen.getByRole("combobox", { name: /完整模型 ID/ }));
-    let listbox = screen.getByRole("listbox");
-    expect(within(listbox).getAllByRole("option").length).toBe(2);
-    fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
-    await waitFor(() =>
-      expect(screen.queryByRole("listbox")).not.toBeInTheDocument(),
-    );
+    // 闸门撤掉了：换哪个应用，列表都是这三个，一个不藏、一个不灰。
+    for (const app of ["claude_desktop", "codex_desktop", "workbuddy"]) {
+      fireEvent.change(
+        screen.getByRole("combobox", { name: /使用应用/ }).closest("select")!,
+        { target: { value: app } },
+      );
+      fireEvent.click(screen.getByRole("combobox", { name: /完整模型 ID/ }));
+      const options = within(await screen.findByRole("listbox")).getAllByRole(
+        "option",
+      );
+      expect(options.length).toBe(3);
+      for (const option of options) {
+        expect(option).not.toHaveAttribute("aria-disabled", "true");
+        expect(option.textContent).not.toContain("用不了");
+      }
+      fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
+      await waitFor(() =>
+        expect(screen.queryByRole("listbox")).not.toBeInTheDocument(),
+      );
+    }
 
-    // 切到 Codex Desktop（需 openai-response）：兼容列表只剩 1 个。
-    fireEvent.change(
-      screen
-        .getByRole("combobox", { name: /使用应用/ })
-        .closest("select")!,
-      { target: { value: "codex_desktop" } },
-    );
-    await waitFor(() =>
-      expect(
-        screen.getByRole("combobox", { name: /完整模型 ID/ }),
-      ).toHaveTextContent("glm-5.3-full"),
-    );
-    fireEvent.click(screen.getByRole("combobox", { name: /完整模型 ID/ }));
-    await screen.findByRole("listbox");
-    listbox = screen.getByRole("listbox");
-    expect(within(listbox).getAllByRole("option").length).toBe(1);
-    fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
-    await waitFor(() =>
-      expect(screen.queryByRole("listbox")).not.toBeInTheDocument(),
-    );
-
-    // 打开「查看全部模型」：不兼容项回到列表，置灰并带原因。
-    fireEvent.click(screen.getByLabelText("查看全部模型"));
-    fireEvent.click(screen.getByRole("combobox", { name: /完整模型 ID/ }));
-    const options = await within(
-      await screen.findByRole("listbox"),
-    ).getAllByRole("option");
-    expect(options.length).toBe(2);
-    // 原因要点名去哪个应用用，不解释协议：这个模型只有 anthropic 端点，
-    // Codex 用不了（部署的那版中转不能把 Responses 转成 Messages），
-    // 但其余五个都能用 —— Chat 客户端也行，claude adaptor 的
-    // ConvertOpenAIRequest 会把 chat/completions 转成 Messages。
-    const incompatible = options.find((option) =>
-      option.textContent?.includes("Codex Desktop 用不了"),
-    )!;
-    expect(incompatible).toHaveAttribute("aria-disabled", "true");
-    expect(incompatible.textContent).toContain(
-      "可在 Claude Code、Claude Desktop、Pi、DSH web、WorkBuddy 里使用",
-    );
+    // 「查看全部模型」那个开关也没了：已经不存在「看到的不全」这种状态。
+    expect(screen.queryByLabelText("查看全部模型")).not.toBeInTheDocument();
   });
-  it("#13 distinguishes no-compatible-models from unreturned data", async () => {
+  it("still separates unreturned model data from an empty account", async () => {
     let modelsReturned = true;
     mockNativeByCommand(async (command, args) => {
       const request = (args as Args).request;
@@ -531,11 +524,7 @@ describe("official workbench", () => {
         return catalogFixture(request.requestId, request.lineId);
       if (command === "account_inspect_v2") {
         const projection = signedIn(request.requestId);
-        if (!modelsReturned) {
-          projection.models = [];
-          return projection;
-        }
-        projection.models[0].supportedEndpointTypes = ["anthropic"];
+        if (!modelsReturned) projection.models = [];
         return projection;
       }
       throw Error("Not available in test");
@@ -543,17 +532,9 @@ describe("official workbench", () => {
     render(<App />);
     await screen.findAllByText("野菜测试用户");
     openWorkbenchPage("模型与价格");
-    // claude_desktop 与 anthropic 兼容，先切到 codex 才能制造「无兼容模型」。
-    fireEvent.change(
-      screen
-        .getByRole("combobox", { name: /使用应用/ })
-        .closest("select")!,
-      { target: { value: "codex_desktop" } },
-    );
-    await screen.findByText(
-      /没有兼容此应用的模型。可打开「查看全部模型」了解各模型不适配的原因。/,
-    );
-    // 空模型数据（数据未返回）走另一口径，不误报为不兼容。
+    await screen.findByRole("combobox", { name: /完整模型 ID/ });
+
+    // 一个模型都没返回，仍然要说「数据没回来」，不能说成「没有能用的模型」。
     modelsReturned = false;
     fireEvent.click(screen.getByRole("button", { name: "重新检查" }));
     await screen.findByText(/部分数据暂时没有返回/);
@@ -592,9 +573,7 @@ describe("official workbench", () => {
       .closest("article")!;
     fireEvent.click(within(card).getByRole("button", { name: "换模型与分组" }));
     await act(async () => {});
-    expect(
-      screen.getByRole("radio", { name: /国模特价分组/ }),
-    ).toBeChecked();
+    expect(screen.getByRole("radio", { name: /国模特价分组/ })).toBeChecked();
     expect(
       screen.getByRole("button", { name: /全球加速 Cloudflare/ }),
     ).toHaveAttribute("aria-pressed", "true");
@@ -604,55 +583,53 @@ describe("official workbench", () => {
     ).toHaveFocus();
     openWorkbenchPage("应用接入");
     await act(async () => {});
-    expect(
-      screen.getByRole("radio", { name: /国模特价分组/ }),
-    ).toBeChecked();
+    expect(screen.getByRole("radio", { name: /国模特价分组/ })).toBeChecked();
     expect(screen.getByRole("button", { name: "恢复原设置" })).toBeEnabled();
   });
   it("uses user-facing copy without engineering or release checklists", async () => {
-      const { container } = render(<App />);
-      await screen.findByText("版本 1.40609.1");
-      const c = workbenchCopies.zh;
-      const checkCopy = () => {
-        expect(container.textContent).not.toMatch(
-          /NewAPI|\/api\/desktop|Developer ID|\bHTTP\b|\bTCP\b|\bTLS\b|CRUD|web profile|原生桥|安全执行层|安全執行層|契约|契約|投影|适配器|適配器|白名单|白名單|候选版|候選版|发布门槛|發佈門檻|签名|公证|小白用户|小白用戶|backend|contract|adapter|allowlist|hardened runtime|native bridge|notariz|release gate|バックエンド|契約|アダプター|公証/i,
-        );
-      };
+    const { container } = render(<App />);
+    await screen.findByText("版本 1.40609.1");
+    const c = workbenchCopies.zh;
+    const checkCopy = () => {
+      expect(container.textContent).not.toMatch(
+        /NewAPI|\/api\/desktop|Developer ID|\bHTTP\b|\bTCP\b|\bTLS\b|CRUD|web profile|原生桥|安全执行层|安全執行層|契约|契約|投影|适配器|適配器|白名单|白名單|候选版|候選版|发布门槛|發佈門檻|签名|公证|小白用户|小白用戶|backend|contract|adapter|allowlist|hardened runtime|native bridge|notariz|release gate|バックエンド|契約|アダプター|公証/i,
+      );
+    };
+    checkCopy();
+    for (const label of [c.home, c.usage, c.settings]) {
+      fireEvent.click(screen.getAllByRole("button", { name: label })[0]);
       checkCopy();
-      for (const label of [c.home, c.usage, c.settings]) {
-        fireEvent.click(screen.getAllByRole("button", { name: label })[0]);
-        checkCopy();
-        if (label === c.settings) {
-          expect(screen.getByRole("button", { name: c.models })).toBeEnabled();
-          expect(screen.getByRole("button", { name: c.help })).toBeEnabled();
-          expect(screen.getByRole("button", { name: c.advanced })).toBeEnabled();
-        }
-        if (label === c.usage) {
-          expect(
-            await screen.findByRole("button", { name: c.signIn }),
-          ).toBeEnabled();
-          expect(screen.getByText(c.signInBody)).toBeInTheDocument();
-        }
+      if (label === c.settings) {
+        expect(screen.getByRole("button", { name: c.models })).toBeEnabled();
+        expect(screen.getByRole("button", { name: c.help })).toBeEnabled();
+        expect(screen.getByRole("button", { name: c.advanced })).toBeEnabled();
       }
-      const commands = native.mock.calls.map((call) => call[0]);
-      expect(
-        commands.every((command) =>
-          [
-            "scan_desktop_apps_read_only",
-            "manage_app_installation_v2",
-            "manage_tool_connections_v1",
-            "account_inspect_v2",
-            "scan_activation_targets_v1",
-            "read_desktop_exit_state",
-          ].includes(command),
-        ),
-      ).toBe(true);
-      expect(
-        commands.filter((command) => command === "account_inspect_v2"),
-      ).toHaveLength(1);
-      expect(
-        commands.filter((command) => command === "read_desktop_exit_state"),
-      ).toHaveLength(1);
+      if (label === c.usage) {
+        expect(
+          await screen.findByRole("button", { name: c.signIn }),
+        ).toBeEnabled();
+        expect(screen.getByText(c.signInBody)).toBeInTheDocument();
+      }
+    }
+    const commands = native.mock.calls.map((call) => call[0]);
+    expect(
+      commands.every((command) =>
+        [
+          "scan_desktop_apps_read_only",
+          "manage_app_installation_v2",
+          "manage_tool_connections_v1",
+          "account_inspect_v2",
+          "scan_activation_targets_v1",
+          "read_desktop_exit_state",
+        ].includes(command),
+      ),
+    ).toBe(true);
+    expect(
+      commands.filter((command) => command === "account_inspect_v2"),
+    ).toHaveLength(1);
+    expect(
+      commands.filter((command) => command === "read_desktop_exit_state"),
+    ).toHaveLength(1);
   });
   it("prioritizes login over empty account statistics and preserves discovery truth", async () => {
     render(<App />);
@@ -708,9 +685,9 @@ describe("official workbench", () => {
     mockDiscoveryOnce(() => discovery("wrong-request"));
     render(<App />);
     await screen.findByText("野菜测试用户").catch(() => undefined);
-    expect(
-      screen.getByTestId("candidate-home-view"),
-    ).not.toHaveTextContent("0 个应用已接入");
+    expect(screen.getByTestId("candidate-home-view")).not.toHaveTextContent(
+      "0 个应用已接入",
+    );
   });
   it("keeps the chosen desktop application and directs signed-out users to login", async () => {
     render(<App />);
@@ -972,7 +949,9 @@ describe("official workbench", () => {
         });
         expect(group).toHaveAttribute("value", billingGroup);
         fireEvent.click(group);
-        expect(document.querySelector(".billing-comparison-card.is-yeschoy strong")).toHaveTextContent("¥70.35");
+        expect(
+          document.querySelector(".billing-comparison-card.is-yeschoy strong"),
+        ).toHaveTextContent("¥70.35");
         expect(group).toBeChecked();
       }
       fireEvent.click(screen.getByTestId("configuration-apply-action"));
@@ -1114,7 +1093,11 @@ describe("official workbench", () => {
     // After the CSS architecture merge, component rules (responsive
     // breakpoints, numeric variants) live in workbench-v2.css.
     const components = readFileSync("src/workbench/workbench-v2.css", "utf8");
-    for (const token of ["max-width: 900px", "max-width: 1100px", "tabular-nums"])
+    for (const token of [
+      "max-width: 900px",
+      "max-width: 1100px",
+      "tabular-nums",
+    ])
       expect(components).toContain(token);
   });
   it("keeps the wide setup summary aligned with the guide grid row", () => {

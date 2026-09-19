@@ -142,15 +142,8 @@ const zh = {
   priceMethodNote: "相同模型、相同输入输出单位；仅完整的倍率计费模型参与比较。",
   availableModels: "你的账户当前可用 {{count}} 个模型",
   accountModels: "账户可用模型",
-  showAllModels: "查看全部模型",
-  showCompatibleOnly: "只看兼容模型",
   // 「不支持此应用的协议」对不会配置的人等于没说。跟接入页用同一套说法：
   // 不解释协议，直接告诉他去哪个应用用。
-  incompatibleReason: "{{app}} 用不了 · 可在 {{apps}} 里使用",
-  incompatibleNowhere: "{{app}} 用不了这个模型",
-  appListSeparator: "、",
-  noCompatibleModels:
-    "没有兼容此应用的模型。可打开「查看全部模型」了解各模型不适配的原因。",
   setupIntro: "选好应用、线路和模型，助手会为你自动完成配置。",
   setupSafety: "确认前不会修改任何设置",
   setupDone: "已接入",
@@ -208,7 +201,8 @@ const zh = {
   libraryFooterConnect: "接入应用",
   joinGroup: "加入交流群",
   qqGroupTitle: "野菜API QQ 交流群",
-  qqGroupBody: "扫码或复制群号，在 QQ 里粘贴搜索即可加入。遇到问题、提建议都欢迎来聊聊。",
+  qqGroupBody:
+    "扫码或复制群号，在 QQ 里粘贴搜索即可加入。遇到问题、提建议都欢迎来聊聊。",
   qqGroupIdLabel: "群号",
   qqGroupScanHint: "用 QQ 扫这里加群",
   copyGroupId: "复制群号",

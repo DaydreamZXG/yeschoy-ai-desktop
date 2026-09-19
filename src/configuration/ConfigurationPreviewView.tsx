@@ -22,12 +22,7 @@ import {
   hasReviewedCapabilities,
   isImageGenerationModel,
 } from "../model-profiles/profile";
-import {
-  modelConnectionMode,
-  modelSupportsTool,
-  toolsSupportingModel,
-} from "./modelCompatibility";
-import type { AccountModel } from "../account/session";
+import { modelConnectionMode } from "./modelCompatibility";
 import type { AccountSessionController } from "../account/useAccountSession";
 import { balanceAlert } from "../account/finance";
 import { LowBalanceBanner } from "../workbench/LowBalanceBanner";
@@ -534,45 +529,8 @@ export function ConfigurationPreviewView({
           (model) => !isImageGenerationModel(model.id),
         )
       : [];
-  // `models` stays the usable set: it drives the count, the default selection
-  // and everything that validates a choice. The picker gets the full list
-  // instead, so an unusable model is greyed out with a reason rather than
-  // silently absent — see `pickerDisabledReason`.
-  //
-  // There used to be a `hasCompatibilityEvidence` switch here that turned the
-  // whole gate off when no model declared endpoints. It is gone because
-  // `modelSupportsTool` now answers that per model: a model with no
-  // declaration is usable. One rule in one place — the previous arrangement
-  // stated it twice and the two copies were free to drift.
-  const models = useMemo(
-    () =>
-      accountModels.filter((model) =>
-        modelSupportsTool(activationToolId, model.supportedEndpointTypes),
-      ),
-    [accountModels, activationToolId],
-  );
-  const activationToolName =
-    APPLICATIONS.find((app) => app.id === activationToolId)?.displayName ??
-    activationToolId;
-  // Naming the apps that *can* run the model is the whole point. "不支持此应用的
-  // 协议" tells someone who was blocked by configuration in the first place
-  // nothing they can act on.
-  const pickerDisabledReason = useCallback(
-    (model: AccountModel) => {
-      const endpoints = model.supportedEndpointTypes;
-      if (modelSupportsTool(activationToolId, endpoints)) return undefined;
-      const elsewhere = toolsSupportingModel(endpoints, activationToolId).map(
-        (toolId) =>
-          APPLICATIONS.find((app) => app.id === toolId)?.displayName ?? toolId,
-      );
-      return elsewhere.length
-        ? g.modelNotForThisApp
-            .replace("{{app}}", activationToolName)
-            .replace("{{apps}}", elsewhere.join(g.modelListSeparator))
-        : g.modelNotForAnyApp.replace("{{app}}", activationToolName);
-    },
-    [activationToolId, activationToolName, g],
-  );
+  // 不再按协议筛选。每个模型都能选，理由见 modelCompatibility.ts 顶部。
+  const models = accountModels;
   const selectedModel = models.find((model) => model.id === selectedModelId);
   const selectedBillingGroup = selectedModel?.billing?.groups.find(
     (g) => g.id === billingGroup,
@@ -1856,8 +1814,7 @@ export function ConfigurationPreviewView({
                         resetResult();
                       }}
                       disabled={session.loading || applyPhase === "applying"}
-                      disabledReason={pickerDisabledReason}
-                    />
+                              />
                     <div className="model-choice-meta">
                       <span>
                         {c.availableModels.replace(

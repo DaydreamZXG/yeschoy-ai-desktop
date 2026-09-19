@@ -479,111 +479,40 @@ async fn validate_models(
         .collect()
 }
 
-fn model_supports_tool(pricing: &Value, model_id: &str, tool_id: &str) -> bool {
-    match tool_id {
-        "claude_code" | "claude_desktop" => claude_transport(pricing, model_id).is_some(),
-        "codex_desktop" => codex_transport(pricing, model_id).is_some(),
-        "pi" | "dsh_web" | "workbuddy" => chat_compatible(pricing, model_id),
-        _ => false,
-    }
-}
-
-/// Whether the relay can carry a conversation for this model at all.
+/// Every model the account lists can be activated for every target.
 ///
-/// `supported_endpoint_types` describes the *upstream channel's* native
-/// protocol, computed by the relay from the channel type
-/// (`common/endpoint_type.go`). It is never consulted on the relay's request
-/// path -- only by the two controllers that render it for display. Every
-/// channel adaptor implements all four entry conversions, so the protocol a
-/// model declares is not a reason it cannot be used. The only genuinely
-/// unusable models are the ones that cannot hold a conversation in any
-/// protocol: image generators, and rows that declare nothing.
-fn chat_compatible(pricing: &Value, model_id: &str) -> bool {
-    let Some(endpoints) = model_endpoints(pricing, model_id) else {
-        // No pricing row at all. `/api/pricing` only lists models it has
-        // priced, while the account's model list carries more, so this is
-        // "we were told nothing" and not "it speaks nothing". Refusing here
-        // blocks activation for a model the picker has already offered.
-        return true;
-    };
-    endpoints_unknown(endpoints)
-        || endpoints.iter().any(|endpoint| {
-            matches!(
-                endpoint.as_str(),
-                Some("openai") | Some("openai-response") | Some("anthropic") | Some("gemini")
-            )
-        })
-}
-
-/// An endpoint list the relay never filled in.
+/// There used to be a protocol gate here, mirrored in
+/// `src/configuration/modelCompatibility.ts`. It was withdrawn: it never got
+/// a verdict right, and every error ran the same way -- treating what we did
+/// not know as something that does not work. The relay does not gate on
+/// `supported_endpoint_types` either (zero references under `relay/`; only
+/// two display controllers read it), every channel adaptor converts between
+/// the four entry formats, and the relay adds models faster than it describes
+/// them, so any rule built on that field greys more working models over time.
 ///
-/// `GetModelSupportEndpointTypes` returns an empty slice for a model it cannot
-/// find, which is the same value a genuinely endpoint-less model would carry,
-/// so from out here the two are indistinguishable. Meanwhile any model with an
-/// ability gets at least one endpoint, because the fallback arm of
-/// `GetEndpointTypesByChannelType` returns `[openai]`. An empty list can
-/// therefore only mean "not found", and reading it as "cannot be used" greys
-/// models that work -- steadily more of them, since the relay adds models
-/// faster than it describes them.
-fn endpoints_unknown(endpoints: &[Value]) -> bool {
-    endpoints.is_empty()
+/// A model that genuinely cannot serve a request now fails at the relay with
+/// a message saying so, which is more honest than us pre-emptying it on a
+/// field that was never meant to answer this question. See the TypeScript
+/// file for the findings, in case this is ever reopened.
+fn model_supports_tool(_pricing: &Value, _model_id: &str, tool_id: &str) -> bool {
+    matches!(
+        tool_id,
+        "claude_code" | "claude_desktop" | "codex_desktop" | "pi" | "dsh_web" | "workbuddy"
+    )
 }
 
-fn model_endpoints<'a>(pricing: &'a Value, model_id: &str) -> Option<&'a Vec<Value>> {
-    data(pricing)
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-        .filter_map(Value::as_object)
-        .find(|row| row.get("model_name").and_then(Value::as_str) == Some(model_id))?
-        .get("supported_endpoint_types")?
-        .as_array()
-}
-
+/// The transport is still chosen per model, because it decides what gets
+/// written into the app's configuration. It is no longer a veto: both arms
+/// are usable, and the choice only records which wire format the app will
+/// speak to the relay.
 fn claude_transport(pricing: &Value, model_id: &str) -> Option<ClaudeTransport> {
-    // The relay serves `/v1/messages` for every channel type: each adaptor
-    // implements `ConvertClaudeRequest`, and the OpenAI adaptor's old
-    // "claude models only" guard is commented out
-    // (`relay/channel/openai/adaptor.go`). So any model that can converse can
-    // be reached over the Anthropic protocol.
-    chat_compatible(pricing, model_id).then_some(ClaudeTransport::DirectAnthropic)
+    let _ = (pricing, model_id);
+    Some(ClaudeTransport::DirectAnthropic)
 }
 
 fn codex_transport(pricing: &Value, model_id: &str) -> Option<codex_desktop::CodexTransport> {
-    // Same reasoning as `chat_compatible`: an unlisted model is unknown, not
-    // refused. Codex is the strict target, but strictness has to be applied to
-    // evidence, and there is none here.
-    let Some(endpoints) = model_endpoints(pricing, model_id) else {
-        return Some(codex_desktop::CodexTransport::DirectResponses);
-    };
-    // Codex only ever speaks Responses -- the official config reference says
-    // `wire_api` accepts nothing but "responses", so there is no way out at the
-    // configuration layer. Responses is also the one entry format where the
-    // relay does not always have a conversion to fall back on:
-    //
-    //   `openai-response`  the upstream speaks Responses natively.
-    //   `gemini`           the Gemini adaptor really does convert Responses
-    //                      into generateContent.
-    //   `anthropic`        no. On the fork 野菜 actually runs
-    //                      (github.com/yeschoy/new-api), the Claude adaptor's
-    //                      `ConvertOpenAIResponsesRequest` is
-    //                      `return nil, errors.New("not implemented")`.
-    //                      Upstream main has since implemented it; we judge by
-    //                      what is deployed, and recheck this on a relay
-    //                      upgrade.
-    //   `openai` alone     `ConvertOpenAIResponsesRequest` passes the request
-    //                      through unchanged and still targets the upstream's
-    //                      `/v1/responses`. Whether that OpenAI-compatible
-    //                      gateway implements it is not something the relay
-    //                      knows, and neither do we.
-    //
-    // So this is the one place a model is refused, and the reason is "nothing
-    // on the path can carry Responses", not "the protocol does not match".
-    (endpoints_unknown(endpoints)
-        || endpoints
-            .iter()
-            .any(|endpoint| matches!(endpoint.as_str(), Some("openai-response") | Some("gemini"))))
-    .then_some(codex_desktop::CodexTransport::DirectResponses)
+    let _ = (pricing, model_id);
+    Some(codex_desktop::CodexTransport::DirectResponses)
 }
 
 #[cfg(test)]
@@ -3438,67 +3367,20 @@ mod tests {
     }
 
     #[test]
-    fn protocol_support_is_target_specific() {
+    fn every_listed_model_can_be_activated_for_every_target() {
+        // 闸门撤掉了。这里钉住的是「撤掉」这个决定本身：无论模型声明了什么、
+        // 声明了空的、还是压根不在价目表里，六个目标都不拒绝。理由和查证过的
+        // 中转事实写在 src/configuration/modelCompatibility.ts 顶部。
         let pricing = json!({
             "success": true,
             "data": [
                 {"model_name": "chat", "supported_endpoint_types": ["openai"]},
                 {"model_name": "responses", "supported_endpoint_types": ["openai-response"]},
                 {"model_name": "messages", "supported_endpoint_types": ["anthropic"]},
-                {"model_name": "both", "supported_endpoint_types": ["openai", "anthropic"]},
-                {"model_name": "gemini", "supported_endpoint_types": ["gemini", "openai"]},
                 {"model_name": "image", "supported_endpoint_types": ["image-generation"]},
-                // Empty means the relay could not find the model, not that it
-                // has no endpoints -- see `endpoints_unknown`. codexpro/ is
-                // this case today, and it must not be judged unusable.
                 {"model_name": "silent", "supported_endpoint_types": []}
             ]
         });
-        // Chat clients reach every channel type: each adaptor implements
-        // `ConvertOpenAIRequest`, including Claude's, which converts to
-        // Messages. `messages` used to be refused here on the grounds that we
-        // had no evidence -- the relay source is that evidence.
-        for tool in ["pi", "dsh_web", "workbuddy"] {
-            assert!(model_supports_tool(&pricing, "chat", tool));
-            assert!(model_supports_tool(&pricing, "responses", tool));
-            assert!(model_supports_tool(&pricing, "messages", tool));
-            assert!(model_supports_tool(&pricing, "gemini", tool));
-            assert!(!model_supports_tool(&pricing, "image", tool));
-            assert!(model_supports_tool(&pricing, "silent", tool));
-        }
-        for tool in ["claude_code", "claude_desktop"] {
-            assert!(model_supports_tool(&pricing, "messages", tool));
-            assert!(model_supports_tool(&pricing, "chat", tool));
-            assert!(model_supports_tool(&pricing, "responses", tool));
-            assert!(!model_supports_tool(&pricing, "image", tool));
-            assert!(model_supports_tool(&pricing, "silent", tool));
-        }
-        // Codex is the only target that still refuses anything, and only
-        // where a declaration exists and no conversion can carry Responses.
-        assert!(model_supports_tool(&pricing, "responses", "codex_desktop"));
-        assert!(model_supports_tool(&pricing, "gemini", "codex_desktop"));
-        // The deployed relay's Claude adaptor cannot accept a Responses
-        // request, so an Anthropic-channel model is genuinely unusable here.
-        assert!(!model_supports_tool(&pricing, "messages", "codex_desktop"));
-        assert!(!model_supports_tool(&pricing, "both", "codex_desktop"));
-        assert!(!model_supports_tool(&pricing, "chat", "codex_desktop"));
-        assert!(!model_supports_tool(&pricing, "image", "codex_desktop"));
-        assert!(model_supports_tool(&pricing, "silent", "codex_desktop"));
-        assert_eq!(
-            codex_transport(&pricing, "responses"),
-            Some(codex_desktop::CodexTransport::DirectResponses)
-        );
-        assert_eq!(codex_transport(&pricing, "messages"), None);
-        assert_eq!(codex_transport(&pricing, "chat"), None);
-        assert_eq!(codex_transport(&pricing, "image"), None);
-        assert_eq!(
-            codex_transport(&pricing, "silent"),
-            Some(codex_desktop::CodexTransport::DirectResponses)
-        );
-        // A model the account can use but `/api/pricing` never listed. The
-        // relay told us nothing about it, which is not the same as telling us
-        // it speaks nothing, and the picker has already offered it -- refusing
-        // at activation would strand the user on a model they just chose.
         for tool in [
             "claude_code",
             "claude_desktop",
@@ -3507,35 +3389,22 @@ mod tests {
             "dsh_web",
             "workbuddy",
         ] {
-            assert!(
-                model_supports_tool(&pricing, "absent-from-pricing", tool),
-                "{tool} refused a model pricing does not describe"
-            );
+            for model in ["chat", "responses", "messages", "image", "silent", "absent"] {
+                assert!(
+                    model_supports_tool(&pricing, model, tool),
+                    "{tool} refused {model}"
+                );
+            }
         }
+        assert!(!model_supports_tool(&pricing, "chat", "opencode"));
+        // 传输方式仍然按目标定，因为它决定往应用配置里写什么，不再是否决权。
         assert_eq!(
-            codex_transport(&pricing, "absent-from-pricing"),
+            claude_transport(&pricing, "image"),
+            Some(ClaudeTransport::DirectAnthropic)
+        );
+        assert_eq!(
+            codex_transport(&pricing, "messages"),
             Some(codex_desktop::CodexTransport::DirectResponses)
-        );
-        assert_eq!(
-            claude_transport(&pricing, "absent-from-pricing"),
-            Some(ClaudeTransport::DirectAnthropic)
-        );
-        assert_eq!(
-            claude_transport(&pricing, "messages"),
-            Some(ClaudeTransport::DirectAnthropic)
-        );
-        assert_eq!(
-            claude_transport(&pricing, "chat"),
-            Some(ClaudeTransport::DirectAnthropic)
-        );
-        assert_eq!(
-            claude_transport(&pricing, "both"),
-            Some(ClaudeTransport::DirectAnthropic)
-        );
-        assert_eq!(claude_transport(&pricing, "image"), None);
-        assert_eq!(
-            claude_transport(&pricing, "silent"),
-            Some(ClaudeTransport::DirectAnthropic)
         );
     }
 

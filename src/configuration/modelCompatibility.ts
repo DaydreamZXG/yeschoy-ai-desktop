@@ -1,129 +1,64 @@
-import { ACTIVATION_TOOL_IDS, type ActivationToolId } from "./activation";
-
 /**
- * `direct` = 应用说的协议就是这个模型上游原生说的协议，界面上叫「原生接口」。
- * `bridge` = 路上有一层转换，界面上叫「自动兼容」。
+ * 每个模型都能选。这里**不再**判断能不能用。
  *
- * 注意 `bridge` **不等于**「走本机回环桥」：本机桥只改写模型名和 1M 上下文，
- * 不做协议转换，协议转换一律在中转侧。Codex 从不经本机桥，但它用
- * Anthropic 渠道的模型时中转要转，所以那也是 `bridge`。
+ * 曾经这里是一道闸门，按 `supported_endpoint_types` 把「不兼容」的模型置灰。
+ * 它被撤掉了，因为它一次也没判对过，而且每次判错都是同一个方向 —— 把我们
+ * 不知道的事情当成不行：
+ *
+ *   1. 先是按 `openai` / `openai-response` 的差别置灰。这两个的区别根本
+ *      不是能不能用，WorkBuddy 上明明能跑的模型被灰掉了。
+ *   2. 改成「没有价目行就不能用」。`/api/pricing` 只覆盖它定过价的模型，
+ *      账号可用列表里还有别的（deepseek-v4-flash），于是能跑的模型被挂上
+ *      「哪个应用都用不了」这句最重的话。
+ *   3. 再改成「端点列表为空就不能用」。中转查不到模型时返回的也是空切片，
+ *      和「真的零端点」是同一个值，分不开。
+ *
+ * 根子上的问题是：**我们没有可靠的信号。** 中转不按这个字段拦请求（它在
+ * `relay/` 全路径下零引用，只被两个展示用的 controller 读），每个渠道
+ * adaptor 都实现了四种入口格式的互转，而中转上新模型永远比它补元数据快。
+ * 在这种情况下继续猜，只会随着时间推移灰掉越来越多能用的模型。
+ *
+ * 所以现在：选择器列出账户的全部模型，一个不藏、一个不灰。真的不能用的
+ * 模型，用户会从中转那边收到一条明确的报错 —— 那比我们凭一个不可靠的字段
+ * 提前替他判死要诚实。
+ *
+ * ── 要重新开闸的话，下面是查证过的事实（针对 github.com/yeschoy/new-api，
+ *    也就是野菜实际部署的那个 fork，不是上游 main，两者不一样）：
+ *
+ *    · `supported_endpoint_types` 由 `common/endpoint_type.go` 按**渠道类型**
+ *      算出，描述上游原生说哪种协议，不是准入白名单。
+ *    · `/v1/messages` 打到任何渠道都行：每个 adaptor 都实现了
+ *      `ConvertClaudeRequest`，openai adaptor 里那句「只有 claude 模型才让转」
+ *      的守卫是被注释掉的。
+ *    · `/v1/chat/completions` 打到 Anthropic 渠道也行，claude adaptor 的
+ *      `ConvertOpenAIRequest` 有真实现。
+ *    · `/v1/responses`（Codex 唯一会发的格式）是唯一有真空档的：部署版
+ *      claude adaptor 的 `ConvertOpenAIResponsesRequest` 是
+ *      `return nil, errors.New("not implemented")`，gemini 的有真实现，
+ *      openai 的是原样透传到上游的 `/v1/responses`。
+ *
+ *    也就是说，唯一有证据支撑的限制是「Codex + 纯 Anthropic 渠道的模型」，
+ *    而且这条会随中转升级失效。真要做，得先有一个可靠的信号，或者干脆
+ *    在接入时探一次。
  */
+
+import type { ActivationToolId } from "./activation";
+
 export type ModelConnectionMode = "direct" | "bridge";
 
 /**
- * 能不能用，取决于**中转会不会转**，不取决于模型声明了哪个端点。
- *
- * 这条规则以前是猜的，现在是查过中转源码的 —— 而且查的是**野菜实际部署的那个
- * fork**（github.com/yeschoy/new-api），不是上游 main。两者在这件事上不一样，
- * 见下面 Codex 那段。共同成立的部分：
- *
- * 1. `supported_endpoint_types` 是 `common/endpoint_type.go` 的
- *    `GetEndpointTypesByChannelType` 按**渠道类型**算出来的，描述的是上游渠道
- *    原生说哪种协议。Anthropic 渠道得到 `[anthropic, openai]`，Gemini 渠道得到
- *    `[gemini, openai]`，其余普通渠道一律 `[openai]`。
- * 2. 它在 `relay/` 整条请求路径下**一次都没被引用**，只有 `controller/model.go`
- *    和 `controller/model_meta.go` 拿去展示。中转不拿它拦请求。
- * 3. `relay/channel/adapter.go` 的 Adaptor 接口强制每个渠道都实现四个入口转换
- *    （`ConvertOpenAIRequest` / `ConvertClaudeRequest` / `ConvertGeminiRequest` /
- *    `ConvertOpenAIResponsesRequest`），而且都是真实现。OpenAI 渠道上那句
- *    「只有 claude 模型才让转」的守卫是被注释掉的
- *    （`relay/channel/openai/adaptor.go:63`）。
- *
- * 所以：**协议不是能不能用的理由**，中转会替我们转。真不能用的只有一种 ——
- * 非空的端点列表里一个对话端点都没有，也就是纯出图模型。空列表和缺字段都
- * 只是「不知道」，见 `modelConnectionMode` 里的说明。
+ * 界面上那句「原生接口 / 自动兼容」的来源。这是**说明**，不是闸门：两个取值
+ * 都代表能用，区别只是路上有没有一层协议转换，而转换发生在中转侧，不在本机桥。
  */
-const CONVERSATIONAL_ENDPOINTS = [
-  "openai",
-  "openai-response",
-  "anthropic",
-  "gemini",
-];
-
-function canConverse(endpoints: string[]): boolean {
-  return endpoints.some((endpoint) =>
-    CONVERSATIONAL_ENDPOINTS.includes(endpoint),
-  );
-}
-
 export function modelConnectionMode(
   toolId: ActivationToolId,
   endpoints: string[] | undefined,
-): ModelConnectionMode | null {
-  // **空的和没有的，都只是「没告诉我们」，不是「告诉我们不能用」。**
-  //
-  // 这一条查过中转源码。`GetModelSupportEndpointTypes` 在模型不在表里时返回的
-  // 就是一个空切片，和「真的零端点」用的是同一个值，从外面分不开：
-  //
-  //     if endpoints, ok := modelSupportEndpointTypes[model]; ok { return endpoints }
-  //     return make([]constant.EndpointType, 0)
-  //
-  // 而只要一个模型有 ability，`GetEndpointTypesByChannelType` 至少会给一个端点
-  // （兜底分支就是 `[openai]`）。所以空列表只能是「没查到」。
-  //
-  // 按「没声明就是不能用」来判，会随着中转上新模型的速度越灰越多 —— 中转加
-  // 模型永远比它补元数据快。WorkBuddy 上 deepseek-v4-flash 被灰掉、还配上
-  // 「哪个应用都用不了」这句最重的话，就是这么来的。
-  if (endpoints === undefined || endpoints.length === 0) return "direct";
-
-  // 到这里列表非空，才有资格谈「说了不能用」：里面一个对话端点都没有。
-  // 今天只有纯出图模型会这样。
-  if (!canConverse(endpoints)) return null;
-
-  // Codex 只发 Responses（官方 config 文档写明 `wire_api` 只接受 "responses"，
-  // 配置层面没有退路）。四个入口里只有 Responses 会真的走不通，因为**野菜在跑
-  // 的那个版本**并不是每个 adaptor 都实现了它：
-  //
-  //   - `openai-response`：上游原生就说 Responses，直通。
-  //   - `gemini`：gemini adaptor 的 `ConvertOpenAIResponsesRequest` 有真实现，
-  //     转成 generateContent。
-  //   - `anthropic`：**不行。** 部署的这版 claude adaptor 那个方法是
-  //     `return nil, errors.New("not implemented")`。上游 main 分支后来补上了，
-  //     但野菜跑的不是 main，所以按部署的版本判。
-  //   - 光一个 `openai`：`ConvertOpenAIResponsesRequest` 是**原样透传**，
-  //     `GetRequestURL` 照样打上游的 `/v1/responses` —— 上游那个 OpenAI 兼容
-  //     网关有没有这条路，中转不知道，我们也不知道。
-  //
-  // 所以 Codex 这里灰掉的不是「协议不匹配」，是「这条路上没有一段能转」。
-  // 这一条要跟着中转升级复查，不是一劳永逸的。
-  if (toolId === "codex_desktop") {
-    if (endpoints.includes("openai-response")) return "direct";
-    return endpoints.includes("gemini") ? "bridge" : null;
-  }
-
-  // Claude 两端说 Anthropic 协议。上游原生说 Anthropic 的是直连；其余的照样
-  // 发 `/v1/messages`，由中转转成上游格式，所以算一层转换。两种情况都会经过
-  // 本机桥（桥要改写模型名和 1M 上下文），本机桥本身不碰协议。
+): ModelConnectionMode {
   if (toolId === "claude_code" || toolId === "claude_desktop") {
-    return endpoints.includes("anthropic") ? "direct" : "bridge";
+    return endpoints?.includes("anthropic") ? "direct" : "bridge";
   }
-
-  // WorkBuddy / Pi / DSH 说 Chat Completions，直连中转。任何渠道类型的
-  // adaptor 都实现了 `ConvertOpenAIRequest`，所以没有需要拦的情况。
-  return "direct";
-}
-
-export function modelSupportsTool(
-  toolId: ActivationToolId,
-  endpoints: string[] | undefined,
-): boolean {
-  return modelConnectionMode(toolId, endpoints) !== null;
-}
-
-/**
- * 能用这个模型的其他应用。
- *
- * 之前接入页是把不兼容的模型**直接过滤掉**的：用户选了 Codex，DeepSeek 就
- * 从列表里消失，没有任何解释。对一个专门服务「不会配置的人」的产品，这是
- * 最糟的表现 —— 他不会想到是协议不匹配，只会以为野菜没有这个模型。
- *
- * 所以改成灰着显示 + 告诉他去哪用。这个函数算出「哪去」。
- */
-export function toolsSupportingModel(
-  endpoints: string[] | undefined,
-  except: ActivationToolId,
-): ActivationToolId[] {
-  return ACTIVATION_TOOL_IDS.filter(
-    (toolId) => toolId !== except && modelSupportsTool(toolId, endpoints),
-  );
+  if (toolId === "codex_desktop") {
+    return endpoints?.includes("openai-response") ? "direct" : "bridge";
+  }
+  return endpoints?.includes("openai") ? "direct" : "bridge";
 }

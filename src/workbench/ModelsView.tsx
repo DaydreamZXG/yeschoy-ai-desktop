@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowDownUp, Layers3 } from "lucide-react";
 import {
@@ -6,17 +6,12 @@ import {
   BillingPrices,
 } from "../configuration/BillingGroupPicker";
 import { chooseBillingGroup } from "../configuration/billing";
-import type { AccountModel } from "../account/session";
 import type { AccountSessionController } from "../account/useAccountSession";
 import {
   CONFIGURATION_LINES,
   type ConfigurationLineId,
 } from "../configuration/preview";
 import { type ActivationToolId } from "../configuration/activation";
-import {
-  modelSupportsTool,
-  toolsSupportingModel,
-} from "../configuration/modelCompatibility";
 import { ModelPicker } from "../configuration/ModelPicker";
 import { ModelCapabilityBadges } from "../model-profiles/ModelCapabilityBadges";
 import { WORKBENCH_APPS } from "./appCatalog";
@@ -41,50 +36,19 @@ export function ModelsView({
   const [tool, setTool] = useState<ActivationToolId>("claude_desktop");
   const [selectedModelId, setSelectedModelId] = useState("");
   const [billingGroup, setBillingGroup] = useState("");
-  // #13 「查看全部模型」：默认只列兼容模型；打开后不兼容项置灰并标注原因。
-  const [showAll, setShowAll] = useState(false);
-  // 跟接入页说同一句话：不解释协议，直接点名哪个应用能用。
-  const toolName =
-    WORKBENCH_APPS.find((app) => app.id === tool)?.name ?? tool;
-  const incompatibleReason = useCallback(
-    (model: AccountModel) => {
-      const endpoints = model.supportedEndpointTypes;
-      if (modelSupportsTool(tool, endpoints)) return undefined;
-      const elsewhere = toolsSupportingModel(endpoints, tool).map(
-        (toolId) => WORKBENCH_APPS.find((app) => app.id === toolId)?.name ?? toolId,
-      );
-      return elsewhere.length
-        ? c.incompatibleReason
-            .replace("{{app}}", toolName)
-            .replace("{{apps}}", elsewhere.join(c.appListSeparator))
-        : c.incompatibleNowhere.replace("{{app}}", toolName);
-    },
-    [c, tool, toolName],
-  );
   const { projection, loading, refresh } = session;
   const allModels = useMemo(
     () =>
       projection?.status === "signed_in" ? projection.models : EMPTY_MODELS,
     [projection],
   );
-  const accountModels = useMemo(
-    () =>
-      showAll
-        ? allModels
-        : allModels.filter((model) =>
-            modelSupportsTool(tool, model.supportedEndpointTypes),
-          ),
-    [allModels, showAll, tool],
-  );
-
-  // 选择始终落在兼容模型上：开关只影响可见范围，不允默认选不兼容项。
-  const firstCompatibleId = accountModels.find((model) =>
-    modelSupportsTool(tool, model.supportedEndpointTypes),
-  )?.id;
+  // 不再按协议过滤或置灰，见 modelCompatibility.ts 顶部。列表就是账户的
+  // 全部模型，「查看全部模型」那个开关也跟着没了 —— 已经没有「不全」的状态。
+  const accountModels = allModels;
   useEffect(() => {
     if (!accountModels.some((model) => model.id === selectedModelId))
-      setSelectedModelId(firstCompatibleId ?? "");
-  }, [accountModels, selectedModelId, firstCompatibleId]);
+      setSelectedModelId(accountModels[0]?.id ?? "");
+  }, [accountModels, selectedModelId]);
 
   const selected = accountModels.find((model) => model.id === selectedModelId);
   useEffect(
@@ -149,16 +113,6 @@ export function ModelsView({
             </strong>
             <small>{c.fullId}</small>
           </div>
-          {projection?.status === "signed_in" && allModels.length > 0 && (
-            <label className="show-all-models-toggle">
-              <input
-                type="checkbox"
-                checked={showAll}
-                onChange={(event) => setShowAll(event.target.checked)}
-              />
-              {showAll ? c.showCompatibleOnly : c.showAllModels}
-            </label>
-          )}
           <button
             type="button"
             className="secondary-action"
@@ -198,17 +152,6 @@ export function ModelsView({
           // #13 空态区分：账户有数据但一个模型都没返回 → 数据未返回，
           // 与「无兼容模型」（见下方分支）不同口径。
           <p>{c.partialData}</p>
-        ) : accountModels.length === 0 ? (
-          <div className="price-account-empty">
-            <p>{c.noCompatibleModels}</p>
-            <button
-              type="button"
-              className="secondary-action"
-              onClick={() => setShowAll(true)}
-            >
-              {c.showAllModels}
-            </button>
-          </div>
         ) : (
           <>
             <ModelPicker
@@ -216,7 +159,6 @@ export function ModelsView({
               value={selectedModelId}
               onChange={setSelectedModelId}
               label={c.fullId}
-              disabledReason={showAll ? incompatibleReason : undefined}
             />
             {selected && (
               <>
