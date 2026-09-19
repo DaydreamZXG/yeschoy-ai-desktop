@@ -118,7 +118,10 @@ function local(saved: Partial<ToolConnection> = {}) {
     opening: null,
     refresh: vi.fn(async () => {}),
     restore: vi.fn(async () => connectionsFixture("restore")),
-    open: vi.fn(async () => ({ status: "opened" as const, reasonCode: "opened" })),
+    open: vi.fn(async () => ({
+      status: "opened" as const,
+      reasonCode: "opened",
+    })),
   };
 }
 function sessionWithMoney(balanceAmount: string): AccountSessionController {
@@ -689,9 +692,9 @@ describe("daily-use UX", () => {
     render(
       <ConnectionProvider value={controller}>
         <OpenConnection
-          connection={controller.connections.find(
-            (c) => c.toolId === "codex_desktop",
-          )!}
+          connection={
+            controller.connections.find((c) => c.toolId === "codex_desktop")!
+          }
           name="Codex Desktop"
           onAdjust={callback}
         />
@@ -716,9 +719,19 @@ describe("daily-use UX", () => {
    */
   it.each([
     ["claude_code", "打开终端使用", "terminal_launch_failed", "自己打开终端"],
-    ["claude_code", "打开终端使用", "workspace_unavailable", "重新选择工作目录"],
+    [
+      "claude_code",
+      "打开终端使用",
+      "workspace_unavailable",
+      "重新选择工作目录",
+    ],
     ["codex_desktop", "打开使用", "launch_target_missing", "已被移动或卸载"],
-    ["codex_desktop", "打开使用", "desktop_launch_access_denied", "隐私与安全性"],
+    [
+      "codex_desktop",
+      "打开使用",
+      "desktop_launch_access_denied",
+      "隐私与安全性",
+    ],
   ] as const)(
     "tells a %s user what actually failed when the open reports %s",
     async (toolId, label, reasonCode, expected) => {
@@ -732,7 +745,9 @@ describe("daily-use UX", () => {
       render(
         <ConnectionProvider value={controller}>
           <OpenConnection
-            connection={controller.connections.find((c) => c.toolId === toolId)!}
+            connection={
+              controller.connections.find((c) => c.toolId === toolId)!
+            }
             name={toolId}
             onAdjust={callback}
           />
@@ -744,7 +759,9 @@ describe("daily-use UX", () => {
       expect(alert).toHaveTextContent(expected);
       // The generic sentence still exists as a fallback, but a failure that
       // named its cause must never land on it.
-      expect(alert).not.toHaveTextContent("请确认应用可以手动打开、未被系统阻止");
+      expect(alert).not.toHaveTextContent(
+        "请确认应用可以手动打开、未被系统阻止",
+      );
     },
   );
 
@@ -925,7 +942,7 @@ describe("daily-use UX", () => {
         expect(finish).toBeTypeOf("function");
         await act(async () => finish!());
         expect(applyButton()).toBeEnabled();
-        expect(screen.getByText("接入完成")).toBeInTheDocument();
+        expect(screen.getByText("设置已完成")).toBeInTheDocument();
         // A cancelled prompt may be reopened from the already-known running
         // state; only the first preflight and consented apply invoke native.
         expect(configureCalls()).toHaveLength(1 + (index + 1) * 2);
@@ -1051,8 +1068,86 @@ describe("daily-use UX", () => {
       .getAllByRole("status")
       .map((status) => status.textContent)
       .join(" ");
-    expect(statuses).toContain("接入完成");
+    expect(statuses).toContain("设置已完成");
     expect(statuses).toContain("第一次真实请求的结果会显示");
+  });
+
+  /**
+   * Writing a config file is not evidence that the model works. The screen
+   * used to say 接入完成 and throw confetti the moment the write returned, so a
+   * beginner closed the assistant believing they were done and met the first
+   * real failure inside the target app, with nothing connecting it back here.
+   *
+   * Success is therefore two states: the write, and a real request the
+   * assistant actually observed.
+   */
+  async function applyAndRead(connections: ReturnType<typeof local>) {
+    native.mockImplementation(async (command, args) => {
+      const req = (args as { request: Record<string, unknown> }).request;
+      if (command === "scan_activation_targets_v1")
+        return scan(String(req.requestId));
+      if (command === "configure_desktop_tool_v2")
+        return {
+          requestId: req.requestId,
+          schemaVersion: 4,
+          status: "ready",
+          toolId: req.toolId,
+          modelId: req.modelId,
+          billingGroup: req.billingGroup,
+          models: req.models,
+          observedAtEpochMs: 2000,
+          reasonCode: "configuration_ready",
+        };
+      throw Error("Unexpected fixture request");
+    });
+    render(setupView(session(), connections));
+    await tick();
+    applySavedOrSelected();
+    await tick();
+    return screen
+      .getAllByRole("status")
+      .map((status) => status.textContent)
+      .join(" ");
+  }
+
+  const observation = (over: Record<string, unknown> = {}) => ({
+    modelId: "model-a",
+    billingGroup: "优惠组",
+    lineId: "mainland_optimized" as const,
+    outcome: "ok" as const,
+    httpStatus: 200,
+    observedAtEpochMs: 2000,
+    ...over,
+  });
+
+  it("a config write alone claims only the write, and asks for a first message", async () => {
+    const statuses = await applyAndRead(local());
+    expect(statuses).toContain("设置已完成");
+    expect(statuses).toContain("随便发一句话");
+    expect(statuses).not.toContain("首次使用已验证");
+    expect(document.querySelector(".celebration-confetti")).toBeNull();
+  });
+
+  it("an observed successful request promotes it to verified", async () => {
+    const statuses = await applyAndRead(local({ lastRequest: observation() }));
+    expect(statuses).toContain("完成了一次真实请求");
+    expect(statuses).not.toContain("随便发一句话");
+  });
+
+  // The evidence has to belong to the selection on screen. Crediting a new
+  // model with the previous one's success is exactly the false confidence
+  // this split exists to remove.
+  it.each([
+    ["a different model", { modelId: "model-b" }],
+    ["a different billing group", { billingGroup: "标准组" }],
+    ["a different line", { lineId: "global_accelerated" as const }],
+    ["a request that did not succeed", { outcome: "upstream_error" as const }],
+  ])("does not treat %s as first-use evidence", async (_name, over) => {
+    const statuses = await applyAndRead(
+      local({ lastRequest: observation(over) }),
+    );
+    expect(statuses).toContain("随便发一句话");
+    expect(statuses).not.toContain("首次使用已验证");
   });
 
   it.each(["claude_code", "pi"] as const)(
@@ -1328,7 +1423,7 @@ describe("daily-use UX", () => {
     applySavedOrSelected();
     await tick();
     expect(screen.getByRole("alert")).toHaveTextContent("暂时没有完成");
-    expect(screen.queryByText("接入完成")).not.toBeInTheDocument();
+    expect(screen.queryByText("设置已完成")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "查看其他线路" }));
     expect(screen.getByRole("button", { name: /全球加速/ })).toBeVisible();
   });
@@ -1468,9 +1563,9 @@ describe("daily-use UX", () => {
       return (
         <ConnectionProvider value={state}>
           <OpenConnection
-            connection={local().connections.find(
-              (c) => c.toolId === "codex_desktop",
-            )!}
+            connection={
+              local().connections.find((c) => c.toolId === "codex_desktop")!
+            }
             name="Codex Desktop"
             onAdjust={callback}
           />
@@ -1760,7 +1855,7 @@ describe("daily-use UX", () => {
           /原有设置已保留|没有改动应用设置|所有本机改动已恢复/,
         );
       }
-      expect(screen.queryByText("接入完成")).not.toBeInTheDocument();
+      expect(screen.queryByText("设置已完成")).not.toBeInTheDocument();
     },
   );
   it("names only connections affected by quitting", () => {

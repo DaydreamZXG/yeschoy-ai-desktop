@@ -142,8 +142,17 @@ const zh = {
   verifyingDsh: "正在保存 DSH 设置并启动本地工作台，不会发送测试消息…",
   verifyingWorkBuddy:
     "正在把模型安全写入 WorkBuddy，并读回确认；不会发送收费测试消息，也不会关闭 WorkBuddy…",
-  readyTitle: "接入完成",
-  firstActivationTitle: "第一次接入成功",
+  // 这两条以前叫「接入完成」和「第一次接入成功」。写完配置文件并不等于模型能用，
+  // 而「成功」是用户唯一会读的那个词 —— 他据此关掉助手去干活，然后在目标应用里
+  // 撞上第一个报错。现在标题只说已经发生的事：设置写完了。能不能用，等真实请求
+  // 的证据（见 verifiedTitle）。
+  readyTitle: "设置已完成",
+  firstActivationTitle: "第一次跑通了",
+  // 第二级：助手在服务端用量日志里看到了这条接入的一次真实成功请求。
+  awaitingFirstUseBody:
+    "打开 {{app}} 随便发一句话。助手看到这次真实请求之后，才会说接入可用 —— 在那之前它只知道设置写对了。",
+  verifiedTitle: "首次使用已验证",
+  verifiedBody: "{{app}} 已经用 {{model}} 通过野菜完成了一次真实请求。",
   applySucceeded: "接入成功",
   readyBody:
     "{{app}} 的设置已保存，本地连接已就绪。首次使用后的真实结果会显示在这里。",

@@ -824,16 +824,33 @@ export function ConfigurationPreviewView({
   const resultIsCurrent = resultContext?.key === contextKey;
   const activationSucceeded = activation?.status === "ready";
 
+  /**
+   * 第二级成功：助手真的看见这条接入完成了一次请求。
+   *
+   * 配置写成功只证明文件写对了。以前界面到此为止就说「接入成功」并放彩带，
+   * 用户据此认为可以用了；真正的失败要等他在目标应用里发第一条消息才暴露，
+   * 那时他已经离开助手，也不会把报错和这里联系起来。
+   *
+   * 证据必须属于**当前这套选择**：换了模型、分组或线路之后，上一条观测就不能
+   * 再算数，否则就是拿旧成绩给新配置背书。
+   */
+  const firstUseObservation = savedConnection?.lastRequest;
+  const firstUseVerified =
+    !!firstUseObservation &&
+    firstUseObservation.outcome === "ok" &&
+    !!savedConnection &&
+    firstUseObservation.modelId === savedConnection.modelId &&
+    firstUseObservation.billingGroup === savedConnection.billingGroup &&
+    firstUseObservation.lineId === savedConnection.lineId;
+
   // 仪式感动效：接入成功后按钮短暂保持成功态，随后回归常态。
   // 条件失效（如外部切换使结果过期）时必须立即结束成功态，
   // 否则 cleanup 只清了定时器，按钮会永远停留在「接入成功」。
   const [applyFlash, setApplyFlash] = useState(false);
   useEffect(() => {
-    if (!(
-      applyPhase === "finished" &&
-      activationSucceeded &&
-      resultIsCurrent
-    )) {
+    if (
+      !(applyPhase === "finished" && activationSucceeded && resultIsCurrent)
+    ) {
       setApplyFlash(false);
       return;
     }
@@ -846,9 +863,10 @@ export function ConfigurationPreviewView({
   // 之后的配置成功仍走克制反馈。旗标消费在成功时刻。
   const [firstActivationCelebration, setFirstActivationCelebration] =
     useState(false);
+  // 彩带庆祝的是「这东西真的能用」，不是「文件写完了」。所以它等第二级证据，
+  // 而不是等 applyPhase。一次性旗标也在这一刻才消费。
   useEffect(() => {
-    if (!(applyPhase === "finished" && activationSucceeded && resultIsCurrent))
-      return;
+    if (!firstUseVerified) return;
     if (!shouldCelebrateFirstActivation()) return;
     markFirstActivationCelebrated();
     setFirstActivationCelebration(true);
@@ -857,7 +875,7 @@ export function ConfigurationPreviewView({
       1600,
     );
     return () => window.clearTimeout(timer);
-  }, [applyPhase, activationSucceeded, resultIsCurrent]);
+  }, [firstUseVerified]);
   const activationConfigured =
     activationSucceeded ||
     (activation?.status === "launch_failed" &&
@@ -2244,8 +2262,12 @@ export function ConfigurationPreviewView({
                 ? resultIsCurrent
                   ? activation.reasonCode === "desktop_start_observed"
                     ? t("yeschoyDesktopRecovery.configuredTitle")
-                    : firstActivationCelebration
-                      ? g.firstActivationTitle
+                    : // 两级：写完配置只说「设置已完成」；只有看到这条接入的
+                      // 一次真实成功请求，才敢说它能用。
+                      firstUseVerified
+                      ? firstActivationCelebration
+                        ? g.firstActivationTitle
+                        : g.verifiedTitle
                       : g.readyTitle
                   : g.feedbackStaleTitle
                 : activation?.status === "application_running"
@@ -2257,9 +2279,22 @@ export function ConfigurationPreviewView({
           >
             {firstActivationCelebration && <CelebrationConfetti />}
             <p>{activationResult}</p>
+            {activationSucceeded && resultIsCurrent && (
+              <p className="first-use-state">
+                {firstUseVerified
+                  ? g.verifiedBody
+                      .replace("{{app}}", application.displayName)
+                      .replace("{{model}}", firstUseObservation.modelId)
+                  : g.awaitingFirstUseBody.replace(
+                      "{{app}}",
+                      application.displayName,
+                    )}
+              </p>
+            )}
             {firstActivationCelebration && (
               <p className="celebration-ticker">
-                <TickerText text={g.readyTitle} />
+                {/* 庆祝的是「跑通了」，不是「文件写完了」。 */}
+                <TickerText text={g.verifiedTitle} />
               </p>
             )}
             {!resultIsCurrent && resultContext && (

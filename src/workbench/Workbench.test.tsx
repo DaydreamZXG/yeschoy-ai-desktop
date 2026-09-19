@@ -996,7 +996,7 @@ describe("official workbench", () => {
         expect(group).toBeChecked();
       }
       fireEvent.click(screen.getByTestId("configuration-apply-action"));
-      expect(await screen.findByText("接入完成")).toBeInTheDocument();
+      expect(await screen.findByText("设置已完成")).toBeInTheDocument();
       expect(
         screen.getByText(
           "Codex Desktop 的设置和野菜本地路由已经就绪。Codex 仍可显示你的官方登录账号，那只是登录身份，不代表模型请求走官方计费。第一次真实请求的结果会显示在“最近野菜中转记录”里；看到完整模型 ID，才表示这次请求确实经过野菜中转。",
@@ -1066,7 +1066,7 @@ describe("official workbench", () => {
     ).toBeInTheDocument();
     expect(screen.getByTestId("configuration-apply-action")).toBeEnabled();
     fireEvent.click(screen.getByTestId("configuration-apply-action"));
-    expect(await screen.findByText("接入完成")).toBeInTheDocument();
+    expect(await screen.findByText("设置已完成")).toBeInTheDocument();
   });
 
   it("syncs appearance controls, follows system changes and persists only an enum", async () => {
