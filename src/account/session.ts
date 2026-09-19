@@ -210,6 +210,7 @@ function model(value: unknown): value is AccountModel {
     !(
       exactKeys(value, baseKeys) ||
       exactKeys(value, [...baseKeys, "supportedEndpointTypes"]) ||
+      exactKeys(value, [...baseKeys, "billing"]) ||
       exactKeys(value, [...baseKeys, "supportedEndpointTypes", "billing"])
     ) ||
     !safeText(value.id, 200, false) ||
@@ -385,7 +386,11 @@ export function decodeAccountProjection(
 }
 
 function normalizeModelV4(value: unknown): unknown | null {
-  if (!object(value) || !Array.isArray(value.supportedEndpointTypes))
+  if (
+    !object(value) ||
+    (value.supportedEndpointTypes !== undefined &&
+      !Array.isArray(value.supportedEndpointTypes))
+  )
     return null;
   if (value.billing === undefined) return { ...value, billing: null };
   if (!object(value.billing) || !Array.isArray(value.billing.groups))

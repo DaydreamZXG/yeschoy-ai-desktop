@@ -30,7 +30,7 @@ function signedIn(requestId = "account-test-1") {
         id: "glm-5.3",
         description: "",
         billingMode: "ratio",
-        // Rust v5/v6 投影恒带该字段（空数组也带），v4 归一化依赖它。
+        // 已定价行会携带该字段；未定价行可能合法省略，表示上游没有声明。
         supportedEndpointTypes: [],
         pricingAvailable: true,
         officialInputCnyPerMillion: "14",
@@ -151,7 +151,26 @@ describe("account v2 renderer boundary", () => {
 
   it("decodes a v6 projection with the usage log report attached", () => {
     const usageLog = usageLogPayload();
-    const raw = { ...signedIn(), schemaVersion: 5, usageLog };
+    const account = signedIn();
+    const { supportedEndpointTypes: _unknown, ...unpriced } = account.models[0];
+    const raw = {
+      ...account,
+      schemaVersion: 5,
+      usageLog,
+      models: [
+        account.models[0],
+        {
+          ...unpriced,
+          id: "deepseek-v4.1-flash",
+          billingMode: "unknown",
+          pricingAvailable: false,
+          officialInputCnyPerMillion: "",
+          officialOutputCnyPerMillion: "",
+          actualInputCnyPerMillion: "",
+          actualOutputCnyPerMillion: "",
+        },
+      ],
+    };
     // 升级到 v6：原生侧新增 usageLog；v5 的 money/savings 语义不变。
     const payload = {
       ...raw,
@@ -185,6 +204,11 @@ describe("account v2 renderer boundary", () => {
     expect(parsed.usageLog).toEqual(usageLog);
     expect(parsed.money?.currency).toBe("CNY");
     expect(parsed.models[0].id).toBe("glm-5.3");
+    expect(parsed.models[1]).toMatchObject({
+      id: "deepseek-v4.1-flash",
+      billing: null,
+    });
+    expect(parsed.models[1].supportedEndpointTypes).toBeUndefined();
   });
 
   it("rejects v6 usage logs that leak into non-signed-in states or miscount", () => {

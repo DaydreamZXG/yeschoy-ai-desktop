@@ -502,7 +502,17 @@ describe("official workbench", () => {
           // fixture 的元素类型是从第一个模型推出来的，比线上的形状严。这里
           // 故意造的就是「少两个可选字段」的那种 payload。
         } as (typeof projection.models)[number]);
-        return projection;
+        // Exercise the native v4+ decoder instead of bypassing it with the
+        // renderer's normalized v3 fixture. Rust omits absent Option values;
+        // mirror that wire shape before the v4 normalizer fills null defaults.
+        const models = projection.models.map((model) => {
+          if (!("billing" in model) || model.billing == null) return model;
+          const billing = Object.fromEntries(
+            Object.entries(model.billing).filter(([, value]) => value !== null),
+          );
+          return { ...model, billing };
+        });
+        return { ...projection, schemaVersion: 4, models };
       }
       throw Error("Not available in test");
     });
