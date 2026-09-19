@@ -35,10 +35,9 @@ fn reveal_command(path: &Path) -> Command {
 
 #[tauri::command]
 pub async fn open_config_folder(_handle: AppHandle, app: String) -> Result<bool, String> {
-    let home = tool_adapters::user_home()
-        .ok_or_else(|| "user home unavailable".to_string())?;
-    let config_dir = config_dir_for(&app, &home)
-        .ok_or_else(|| format!("unsupported app: {app}"))?;
+    let home = tool_adapters::user_home().ok_or_else(|| "user home unavailable".to_string())?;
+    let config_dir =
+        config_dir_for(&app, &home).ok_or_else(|| format!("unsupported app: {app}"))?;
     std::fs::create_dir_all(&config_dir)
         .map_err(|error| format!("create config dir failed: {error}"))?;
     let mut command = reveal_command(&config_dir);
@@ -75,10 +74,8 @@ mod tests {
         assert_eq!(
             config_dir_for("claude-desktop", home),
             Some(
-                Path::new(
-                    "/home/tester/Library/Application Support/Claude-3p/configLibrary"
-                )
-                .to_path_buf()
+                Path::new("/home/tester/Library/Application Support/Claude-3p/configLibrary")
+                    .to_path_buf()
             )
         );
     }

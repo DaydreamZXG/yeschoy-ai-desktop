@@ -105,10 +105,7 @@ fn mac_shell_command(executable: &str, workspace: &str, runtime_directories: &[S
 }
 
 fn acceptable_workspace(path: &Path, home: &Path) -> bool {
-    path.is_absolute()
-        && path.is_dir()
-        && path != home
-        && !home.starts_with(path)
+    path.is_absolute() && path.is_dir() && path != home && !home.starts_with(path)
 }
 
 fn default_cli_workspace(home: &Path) -> Result<PathBuf, AdapterFailure> {
@@ -738,7 +735,11 @@ mod tests {
         assert_ne!(chosen, home);
         assert!(chosen.ends_with("野菜工作区"));
         assert!(chosen.is_dir());
-        std::fs::write(home.join(".yeschoy").join("cli-workspace"), home.as_os_str().as_encoded_bytes()).ok();
+        std::fs::write(
+            home.join(".yeschoy").join("cli-workspace"),
+            home.as_os_str().as_encoded_bytes(),
+        )
+        .ok();
         let again = select_cli_workspace(&home).unwrap();
         assert_ne!(again, home);
         let project = home.join("Documents").join("my-app");

@@ -125,7 +125,10 @@ async fn tls_probe(line: LineSpec) -> TlsProbeOutcome {
 
 // API Key 有效性层（PRD 6.7 层⑤）：GET /api/user/models，401/403 视为失效；
 // 该请求只读模型清单，不消费额度。
-async fn api_key_probe(line: LineSpec, access_token: &str) -> (LayerStatus, Option<u64>, LayerReasonCode) {
+async fn api_key_probe(
+    line: LineSpec,
+    access_token: &str,
+) -> (LayerStatus, Option<u64>, LayerReasonCode) {
     let started = Instant::now();
     let url = format!("{}{}", line.root_url, MODELS_PROBE_PATH);
     let Ok(client) = account_v2::shared_http_client() else {
@@ -159,11 +162,23 @@ async fn api_key_probe(line: LineSpec, access_token: &str) -> (LayerStatus, Opti
             if status == reqwest::StatusCode::UNAUTHORIZED
                 || status == reqwest::StatusCode::FORBIDDEN
             {
-                (LayerStatus::Failed, Some(elapsed), LayerReasonCode::SessionTokenRejected)
+                (
+                    LayerStatus::Failed,
+                    Some(elapsed),
+                    LayerReasonCode::SessionTokenRejected,
+                )
             } else if status.is_success() {
-                (LayerStatus::Passed, Some(elapsed), LayerReasonCode::SessionTokenValid)
+                (
+                    LayerStatus::Passed,
+                    Some(elapsed),
+                    LayerReasonCode::SessionTokenValid,
+                )
             } else {
-                (LayerStatus::Failed, Some(elapsed), LayerReasonCode::ApiProbeError)
+                (
+                    LayerStatus::Failed,
+                    Some(elapsed),
+                    LayerReasonCode::ApiProbeError,
+                )
             }
         }
     }
@@ -203,7 +218,8 @@ async fn check_line(line: LineSpec, session: &SessionProbe) -> ConnectivityLineR
             latency_ms: Some(bounded_ms(dns_started.elapsed())),
             reason_code: LayerReasonCode::DnsResolved,
         });
-    } else if matches!(layers.last(), Some(result) if result.reason_code == LayerReasonCode::DnsResolved) {
+    } else if matches!(layers.last(), Some(result) if result.reason_code == LayerReasonCode::DnsResolved)
+    {
         // 不可达分支：空地址列表时上面的失败分支已记录。
     } else if layers.last().is_none() {
         layers.push(ConnectivityLayerResult {
@@ -361,8 +377,9 @@ pub async fn check_line_connectivity_read_only(
                 SessionProbe::NoSession
             }
         }
-        Err(ProbeSessionFailure::SecureStorage)
-        | Err(ProbeSessionFailure::ServerUnavailable) => SessionProbe::Unavailable,
+        Err(ProbeSessionFailure::SecureStorage) | Err(ProbeSessionFailure::ServerUnavailable) => {
+            SessionProbe::Unavailable
+        }
     };
 
     let started_at_epoch_ms = unix_epoch_ms();
@@ -433,18 +450,58 @@ mod tests {
 
         let all_passed = |offset: u64| {
             vec![
-                layer("dns", LayerStatus::Passed, Some(offset + 1), LayerReasonCode::DnsResolved),
-                layer("tcp", LayerStatus::Passed, Some(offset + 2), LayerReasonCode::Tcp443Reachable),
-                layer("tls", LayerStatus::Passed, Some(offset + 3), LayerReasonCode::TlsHandshakeVerified),
-                layer("api_key", LayerStatus::Passed, Some(offset + 4), LayerReasonCode::SessionTokenValid),
+                layer(
+                    "dns",
+                    LayerStatus::Passed,
+                    Some(offset + 1),
+                    LayerReasonCode::DnsResolved,
+                ),
+                layer(
+                    "tcp",
+                    LayerStatus::Passed,
+                    Some(offset + 2),
+                    LayerReasonCode::Tcp443Reachable,
+                ),
+                layer(
+                    "tls",
+                    LayerStatus::Passed,
+                    Some(offset + 3),
+                    LayerReasonCode::TlsHandshakeVerified,
+                ),
+                layer(
+                    "api_key",
+                    LayerStatus::Passed,
+                    Some(offset + 4),
+                    LayerReasonCode::SessionTokenValid,
+                ),
             ]
         };
         let skipped_after_dns_failure = || {
             vec![
-                layer("dns", LayerStatus::Failed, Some(11), LayerReasonCode::DnsResolutionFailed),
-                layer("tcp", LayerStatus::Skipped, None, LayerReasonCode::SkippedUpstreamFailed),
-                layer("tls", LayerStatus::Skipped, None, LayerReasonCode::SkippedUpstreamFailed),
-                layer("api_key", LayerStatus::Skipped, None, LayerReasonCode::SkippedUpstreamFailed),
+                layer(
+                    "dns",
+                    LayerStatus::Failed,
+                    Some(11),
+                    LayerReasonCode::DnsResolutionFailed,
+                ),
+                layer(
+                    "tcp",
+                    LayerStatus::Skipped,
+                    None,
+                    LayerReasonCode::SkippedUpstreamFailed,
+                ),
+                layer(
+                    "tls",
+                    LayerStatus::Skipped,
+                    None,
+                    LayerReasonCode::SkippedUpstreamFailed,
+                ),
+                layer(
+                    "api_key",
+                    LayerStatus::Skipped,
+                    None,
+                    LayerReasonCode::SkippedUpstreamFailed,
+                ),
             ]
         };
 
@@ -474,18 +531,64 @@ mod tests {
         let failed = fixture_response(
             "diag-fixture-failed",
             vec![
-                line_result(CONNECTIVITY_LINES[0], vec![
-                    layer("dns", LayerStatus::Passed, Some(10), LayerReasonCode::DnsResolved),
-                    layer("tcp", LayerStatus::Failed, Some(11), LayerReasonCode::TcpConnectionFailed),
-                    layer("tls", LayerStatus::Skipped, None, LayerReasonCode::SkippedUpstreamFailed),
-                    layer("api_key", LayerStatus::Skipped, None, LayerReasonCode::SkippedUpstreamFailed),
-                ]),
-                line_result(CONNECTIVITY_LINES[1], vec![
-                    layer("dns", LayerStatus::Failed, Some(20), LayerReasonCode::DnsLookupTimedOut),
-                    layer("tcp", LayerStatus::Skipped, None, LayerReasonCode::SkippedUpstreamFailed),
-                    layer("tls", LayerStatus::Skipped, None, LayerReasonCode::SkippedUpstreamFailed),
-                    layer("api_key", LayerStatus::Skipped, None, LayerReasonCode::SkippedUpstreamFailed),
-                ]),
+                line_result(
+                    CONNECTIVITY_LINES[0],
+                    vec![
+                        layer(
+                            "dns",
+                            LayerStatus::Passed,
+                            Some(10),
+                            LayerReasonCode::DnsResolved,
+                        ),
+                        layer(
+                            "tcp",
+                            LayerStatus::Failed,
+                            Some(11),
+                            LayerReasonCode::TcpConnectionFailed,
+                        ),
+                        layer(
+                            "tls",
+                            LayerStatus::Skipped,
+                            None,
+                            LayerReasonCode::SkippedUpstreamFailed,
+                        ),
+                        layer(
+                            "api_key",
+                            LayerStatus::Skipped,
+                            None,
+                            LayerReasonCode::SkippedUpstreamFailed,
+                        ),
+                    ],
+                ),
+                line_result(
+                    CONNECTIVITY_LINES[1],
+                    vec![
+                        layer(
+                            "dns",
+                            LayerStatus::Failed,
+                            Some(20),
+                            LayerReasonCode::DnsLookupTimedOut,
+                        ),
+                        layer(
+                            "tcp",
+                            LayerStatus::Skipped,
+                            None,
+                            LayerReasonCode::SkippedUpstreamFailed,
+                        ),
+                        layer(
+                            "tls",
+                            LayerStatus::Skipped,
+                            None,
+                            LayerReasonCode::SkippedUpstreamFailed,
+                        ),
+                        layer(
+                            "api_key",
+                            LayerStatus::Skipped,
+                            None,
+                            LayerReasonCode::SkippedUpstreamFailed,
+                        ),
+                    ],
+                ),
             ],
         );
 

@@ -268,8 +268,7 @@ fn prepare_inner(
     // `DSH_HOME` is exported from a shell rc, which a Dock-launched app never
     // sources. Reading it from this process wrote settings.yaml into ~/.dsh
     // while `dsh` itself loaded a different directory.
-    let path =
-        dsh_home(home, crate::shell_environment::var_os("DSH_HOME"))?.join("settings.yaml");
+    let path = dsh_home(home, crate::shell_environment::var_os("DSH_HOME"))?.join("settings.yaml");
     let before = common::snapshot(&path)
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_read_failed"))?;
     let after = render_catalog(before.as_deref(), origin, model, model_ids)

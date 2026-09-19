@@ -200,7 +200,10 @@ pub(crate) fn usage_log_report(
                 .and_then(Value::as_str)
                 .and_then(crate::tool_activation::tool_for_token_name)
                 .unwrap_or("");
-            let prompt_tokens = row.get("prompt_tokens").and_then(Value::as_u64).unwrap_or(0);
+            let prompt_tokens = row
+                .get("prompt_tokens")
+                .and_then(Value::as_u64)
+                .unwrap_or(0);
             let completion_tokens = row
                 .get("completion_tokens")
                 .and_then(Value::as_u64)
@@ -486,14 +489,14 @@ pub(crate) fn recent_requests_from_pages(
             else {
                 continue;
             };
-            let Some(model_id) =
-                row.get("model_name")
-                    .and_then(Value::as_str)
-                    .filter(|value| {
-                        !value.is_empty()
-                            && value.chars().count() <= 200
-                            && !value.chars().any(char::is_control)
-                    })
+            let Some(model_id) = row
+                .get("model_name")
+                .and_then(Value::as_str)
+                .filter(|value| {
+                    !value.is_empty()
+                        && value.chars().count() <= 200
+                        && !value.chars().any(char::is_control)
+                })
             else {
                 continue;
             };
@@ -776,10 +779,14 @@ mod tests {
         );
 
         // 换算参数缺失：明细仍在、金额置空（不猜能力口径的金额）
-        let no_rates = usage_log_report(None, &[logs(vec![json!({
-            "type":2,"quota":500000,"prompt_tokens":1,"completion_tokens":2,
-            "created_at":fresh,"model_name":"m","token_name":"野菜API cx-1a2b3c4d5e6f7890-0123456789abcdef"
-        })])], now_ms);
+        let no_rates = usage_log_report(
+            None,
+            &[logs(vec![json!({
+                "type":2,"quota":500000,"prompt_tokens":1,"completion_tokens":2,
+                "created_at":fresh,"model_name":"m","token_name":"野菜API cx-1a2b3c4d5e6f7890-0123456789abcdef"
+            })])],
+            now_ms,
+        );
         assert_eq!(no_rates.status, "available");
         assert_eq!(no_rates.records[0].amount, "");
     }

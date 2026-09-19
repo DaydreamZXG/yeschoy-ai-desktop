@@ -152,7 +152,9 @@ pub(crate) async fn quit_for_exit_restore(
     tool_id: &str,
     path: &Path,
 ) -> Result<(), AdapterFailure> {
-    if !requires_reload(tool_id) { return Ok(()); }
+    if !requires_reload(tool_id) {
+        return Ok(());
+    }
     blocking_normal_quit(tool_id, path).await?;
     if wait_until_stopped(tool_id, path, NORMAL_QUIT_LIMIT).await? {
         Ok(())

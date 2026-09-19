@@ -547,7 +547,12 @@ pub(crate) fn tool_for_token_name(name: &str) -> Option<&'static str> {
         "workbuddy",
     ]
     .into_iter()
-    .find(|tool| name.starts_with(&format!("野菜API {}-", token_code(tool))))
+    // 新名字写应用名，旧名字写两字母代码。两种都要认：用量日志里它们会长期
+    // 并存，认不出就归不了因。
+    .find(|tool| {
+        name.starts_with(&format!("野菜API {}-", token_label(tool)))
+            || name.starts_with(&format!("野菜API {}-", token_code(tool)))
+    })
 }
 
 fn token_search_url(origin: &str, name: &str) -> Result<String, ActivationFailure> {
@@ -618,13 +623,52 @@ fn token_code(tool_id: &str) -> &'static str {
     }
 }
 
-fn token_prefix(tool_id: &str, group: &str) -> String {
-    let code = token_code(tool_id);
-    // A lookup label only. Always compare the complete group returned by NewAPI.
+/// 密钥名里看得见的那一截。
+///
+/// 中转对 token 名字有 50 **字节**的硬上限（`controller/token.go`，Go 的
+/// `len()` 是字节数，一个汉字 3 字节），所以这里不带空格：最长的
+/// `ClaudeDesktop` 配上其余部分正好 49 字节，一个字节的余量都别再占。
+fn token_label(tool_id: &str) -> &'static str {
+    match tool_id {
+        "claude_code" => "ClaudeCode",
+        "claude_desktop" => "ClaudeDesktop",
+        "codex_desktop" => "Codex",
+        "pi" => "Pi",
+        "dsh_web" => "DSH",
+        "workbuddy" => "WorkBuddy",
+        _ => "Desktop",
+    }
+}
+
+/// 分组哈希。只是个查找标签，真正比对的永远是中转返回的完整分组名。
+///
+/// 从 16 位十六进制缩到 8 位，腾出的 8 个字节给了前面的应用名。账户上的分组
+/// 是个位数，32 位空间碰撞概率可以忽略；真撞上了也只是两个分组共用一个查找
+/// 前缀，而 `owned_token` 随后还会逐个核对完整分组名，不会串。
+fn group_hash(group: &str) -> u32 {
     let hash = group.bytes().fold(0xcbf29ce484222325u64, |h, b| {
         (h ^ u64::from(b)).wrapping_mul(0x100000001b3)
     });
-    format!("野菜API {code}-{hash:016x}")
+    (hash >> 32) as u32 ^ hash as u32
+}
+
+/// 0.4.22 及更早铸的名字：`野菜API cx-<16位哈希>`。仍然要认得，否则升级一次
+/// 就在账户上留一把没人认领的旧密钥，旁边再铸一把新的。
+fn legacy_token_prefix(tool_id: &str, group: &str) -> String {
+    let hash = group.bytes().fold(0xcbf29ce484222325u64, |h, b| {
+        (h ^ u64::from(b)).wrapping_mul(0x100000001b3)
+    });
+    format!("野菜API {}-{hash:016x}", token_code(tool_id))
+}
+
+/// 密钥名的前半截。后半截恒定是 `-<设备8位><随机8位>`，那是身份，不能动。
+///
+/// 旧名字 `野菜API cx-e8039bc07a1b2c3d-…` 在后台里看得见的只有
+/// `野菜API cx-…`，一列密钥长得一模一样，认不出哪把给哪个应用。现在写应用名：
+///
+///     野菜API Codex-e8039bc0-1a2b3c4d5e6f7a8b
+fn token_prefix(tool_id: &str, group: &str) -> String {
+    format!("野菜API {}-{:08x}", token_label(tool_id), group_hash(group))
 }
 
 const DEVICE_SCOPE_LEN: usize = 8;
@@ -863,8 +907,20 @@ async fn acquire_token_using(
     model_ids: &[String],
 ) -> Result<TokenLease, ActivationFailure> {
     let prefix = token_prefix(tool_id, group);
-    let (existing, retire_after_commit) =
+    let (mut existing, mut retire_after_commit) =
         find_token_id(api, origin, &prefix, group, model_ids, false).await?;
+    if existing.is_none() && retire_after_commit.is_empty() {
+        // Nothing under the current name. Before minting, look under the one
+        // 0.4.22 and earlier used: the key is still good, and the name is only
+        // a label. Adopting it costs nothing, while skipping this would leave
+        // an orphaned key on the account at every upgrade and mint a duplicate
+        // beside it. Keys keep their old name until something else replaces
+        // them -- renaming is not worth a second round trip.
+        let legacy = legacy_token_prefix(tool_id, group);
+        let (found, retire) = find_token_id(api, origin, &legacy, group, model_ids, false).await?;
+        existing = found;
+        retire_after_commit = retire;
+    }
     if let Some(id) = existing {
         // Reuse only an exact group and model scope; broad legacy keys are
         // retired after the new local transaction commits successfully.
@@ -3317,6 +3373,73 @@ mod tests {
                 false
             ));
         }
+    }
+
+    #[test]
+    fn every_minted_name_fits_the_relay_fifty_byte_limit() {
+        // 中转 `controller/token.go` 硬限制 50 字节，超了直接拒绝创建密钥。
+        // Go 的 len() 数的是字节，`野菜API` 就占 9 个 —— 这一条是用来在加任何
+        // 东西进名字之前先撞墙的，比等中转报错便宜得多。
+        for tool in [
+            "claude_code",
+            "claude_desktop",
+            "codex_desktop",
+            "pi",
+            "dsh_web",
+            "workbuddy",
+            "unknown-tool",
+        ] {
+            for group in ["default", "限时国模特价渠道", "DeepSeek / Kimi / MiMo"] {
+                let name = format!(
+                    "{}-{}{:08x}",
+                    token_prefix(tool, group),
+                    device_scope(),
+                    u32::MAX
+                );
+                assert!(
+                    name.len() <= 50,
+                    "{name} is {} bytes, relay rejects over 50",
+                    name.len()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn a_name_says_which_application_it_belongs_to() {
+        let name = token_prefix("codex_desktop", "default");
+        // 后台列表里截断后看得见的就是这一截，它得说明白是哪个应用。
+        assert!(name.starts_with("野菜API Codex-"), "{name}");
+        // 新旧两种形状都要能归因，用量日志里会长期并存。
+        let minted = format!("{name}-{}{:08x}", device_scope(), 0u32);
+        assert_eq!(tool_for_token_name(&minted), Some("codex_desktop"));
+        let legacy = format!(
+            "{}-{}{:08x}",
+            legacy_token_prefix("codex_desktop", "default"),
+            device_scope(),
+            0u32
+        );
+        assert!(legacy.starts_with("野菜API cx-"), "{legacy}");
+        assert_eq!(tool_for_token_name(&legacy), Some("codex_desktop"));
+        // ClaudeCode 和 ClaudeDesktop 不能互相认错。
+        for (tool, label) in [
+            ("claude_code", "ClaudeCode"),
+            ("claude_desktop", "ClaudeDesktop"),
+        ] {
+            let n = format!(
+                "{}-{}{:08x}",
+                token_prefix(tool, "default"),
+                device_scope(),
+                1u32
+            );
+            assert!(n.starts_with(&format!("野菜API {label}-")), "{n}");
+            assert_eq!(tool_for_token_name(&n), Some(tool));
+        }
+        // 不同分组仍然是不同的前缀 —— 缩短哈希不能把它们并成一个。
+        assert_ne!(
+            token_prefix("codex_desktop", "default"),
+            token_prefix("codex_desktop", "限时国模特价渠道")
+        );
     }
 
     #[test]

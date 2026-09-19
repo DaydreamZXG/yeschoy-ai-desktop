@@ -319,7 +319,13 @@ fn versioned_directories(root: &Path, suffix: &str) -> Vec<PathBuf> {
     names.truncate(MAX_VERSIONS_PER_MANAGER);
     names
         .into_iter()
-        .map(|path| if suffix.is_empty() { path } else { path.join(suffix) })
+        .map(|path| {
+            if suffix.is_empty() {
+                path
+            } else {
+                path.join(suffix)
+            }
+        })
         .collect()
 }
 
@@ -471,8 +477,7 @@ mod tests {
         // be invisible: it is not in a Dock-launched app's PATH and it was not
         // in the fallback list either, so the app said "not installed" about a
         // CLI that runs fine in the user's terminal.
-        let root =
-            crate::tool_adapters::common::temporary_working_directory("nvm-layout").unwrap();
+        let root = crate::tool_adapters::common::temporary_working_directory("nvm-layout").unwrap();
         let versions = root.join("versions").join("node");
         for name in ["v18.20.4", "v20.11.1", "v22.14.0"] {
             std::fs::create_dir_all(versions.join(name).join("bin")).unwrap();

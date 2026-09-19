@@ -32,7 +32,8 @@ const MAGIC: &[u8] = b"YC-RECOVERY-1\0";
 const MAX_BREAK_GLASS_FILE: u64 = 2 * 1024 * 1024;
 // A UTF-8 BOM and CRLF line endings, because the person most likely to open
 // this file is on Windows, in Notepad, after something already went wrong.
-const BREAK_GLASS_README: &str = "\u{feff}这个文件夹里是野菜助手改动你的配置之前，那些文件的原始内容。\r\n\
+const BREAK_GLASS_README: &str =
+    "\u{feff}这个文件夹里是野菜助手改动你的配置之前，那些文件的原始内容。\r\n\
 \r\n\
 正常情况下你用不到它：在助手里点「恢复原设置」就行。\r\n\
 只有当助手说恢复失败（通常是系统钥匙串里的密钥没了，比如重置过登录\r\n\
@@ -666,9 +667,10 @@ fn undo(
 
 fn object_contains(current: &Value, required: &Value) -> bool {
     match (current, required) {
-        (Value::Object(now), Value::Object(need)) => need
-            .iter()
-            .all(|(key, value)| now.get(key).is_some_and(|have| object_contains(have, value))),
+        (Value::Object(now), Value::Object(need)) => need.iter().all(|(key, value)| {
+            now.get(key)
+                .is_some_and(|have| object_contains(have, value))
+        }),
         (now, need) => now == need,
     }
 }
@@ -1462,7 +1464,10 @@ mod tests {
             "future": {"keep": true}
         });
         let (restored, _) = merged(&file, now);
-        assert_eq!(restored["models"], json!([{"id": "other", "vendor": "Other"}]));
+        assert_eq!(
+            restored["models"],
+            json!([{"id": "other", "vendor": "Other"}])
+        );
         assert_eq!(restored["availableModels"], json!(["other", "wb-extra"]));
         assert_eq!(restored["future"]["keep"], true);
         assert!(restored["models"]

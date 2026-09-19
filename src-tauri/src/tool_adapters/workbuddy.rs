@@ -298,9 +298,16 @@ mod tests {
         prepared.commit().unwrap();
         let root: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
         let models = root.as_array().unwrap();
-        assert_eq!(models.len(), 3, "selected models must be replaced, not duplicated");
         assert_eq!(
-            models.iter().filter(|model| model["id"] == "gpt-6-astra").count(),
+            models.len(),
+            3,
+            "selected models must be replaced, not duplicated"
+        );
+        assert_eq!(
+            models
+                .iter()
+                .filter(|model| model["id"] == "gpt-6-astra")
+                .count(),
             1
         );
         assert_eq!(models[0]["apiKey"], "keep");

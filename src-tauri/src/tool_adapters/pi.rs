@@ -276,7 +276,10 @@ mod tests {
         prepared.commit().unwrap();
         let models: Value =
             serde_json::from_slice(&std::fs::read(&prepared.models_path).unwrap()).unwrap();
-        assert_eq!(models["providers"]["yeschoy"]["baseUrl"], "https://yeschoy.com/v1");
+        assert_eq!(
+            models["providers"]["yeschoy"]["baseUrl"],
+            "https://yeschoy.com/v1"
+        );
         assert_eq!(
             models["providers"]["yeschoy"]["models"][1]["id"],
             "供应商/model-b"

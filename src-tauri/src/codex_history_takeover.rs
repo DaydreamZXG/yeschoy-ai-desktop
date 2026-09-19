@@ -297,8 +297,7 @@ fn session_origin(bytes: &[u8]) -> Option<(String, String)> {
     let payload = value.get("payload")?;
     let provider = payload.get("model_provider").and_then(Value::as_str)?;
     let id = payload.get("id").and_then(Value::as_str)?;
-    (valid_id(id) && valid_provider(provider))
-        .then(|| (id.to_owned(), provider.to_owned()))
+    (valid_id(id) && valid_provider(provider)).then(|| (id.to_owned(), provider.to_owned()))
 }
 
 fn session_identity(bytes: &[u8], provider: &str) -> Option<String> {
@@ -517,9 +516,7 @@ fn build_manifest(home: &Path, target: &str) -> Result<Manifest, AdapterFailure>
         // Any drawer but the one we are moving into. A session already filed
         // under the target needs no move, and moving it would make the restore
         // put it somewhere it never was.
-        if let Some((session_id, origin_provider)) =
-            bytes.as_deref().and_then(session_origin)
-        {
+        if let Some((session_id, origin_provider)) = bytes.as_deref().and_then(session_origin) {
             if origin_provider != target {
                 sessions.push(SessionEntry {
                     path,
@@ -836,15 +833,12 @@ mod tests {
     fn a_v1_manifest_still_restores_to_openai() {
         // An older build could have written a manifest and then crashed. Its
         // entries carry no origin, and v1 only ever moved `openai`.
-        let entry: SessionEntry = serde_json::from_str(
-            r#"{"path":"/tmp/x.jsonl","session_id":"thread-1"}"#,
-        )
-        .unwrap();
+        let entry: SessionEntry =
+            serde_json::from_str(r#"{"path":"/tmp/x.jsonl","session_id":"thread-1"}"#).unwrap();
         assert_eq!(entry.origin_provider, LEGACY_SOURCE_PROVIDER);
-        let state: StateEntry = serde_json::from_str(
-            r#"{"path":"/tmp/state_5.sqlite","thread_ids":["a","b"]}"#,
-        )
-        .unwrap();
+        let state: StateEntry =
+            serde_json::from_str(r#"{"path":"/tmp/state_5.sqlite","thread_ids":["a","b"]}"#)
+                .unwrap();
         assert!(state.thread_origins.is_empty());
         assert_eq!(thread_origin(&state, 0), LEGACY_SOURCE_PROVIDER);
         assert_eq!(thread_origin(&state, 7), LEGACY_SOURCE_PROVIDER);

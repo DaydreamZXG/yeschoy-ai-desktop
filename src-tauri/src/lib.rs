@@ -17,10 +17,10 @@ mod app_update;
 mod claude_bridge;
 mod codex_bridge;
 mod codex_history_takeover;
+mod config_reveal;
 mod connection_recovery;
 mod connectivity;
 mod connectivity_core;
-mod config_reveal;
 mod desktop_app_discovery;
 mod desktop_app_discovery_core;
 mod logging;
@@ -28,6 +28,7 @@ mod open_connection;
 mod update_channel;
 // Client-first OAuth preparation. Deliberately dormant until the server and
 // local-bridge bearer/billing contract are deployed and integration-tested.
+mod exit_restore;
 #[allow(dead_code)]
 mod oauth_pkce;
 mod request_diagnostics;
@@ -35,7 +36,6 @@ mod service_catalog;
 mod service_catalog_core;
 mod shell_environment;
 mod shutdown_coordinator;
-mod exit_restore;
 mod tool_activation;
 mod tool_adapters;
 mod tool_credentials;
@@ -48,8 +48,8 @@ mod window_appearance;
 
 pub use tool_credentials::credential_helper_exit_code;
 
-use serde::Serialize;
 use exit_restore::{ExitResponse, ExitStatus};
+use serde::Serialize;
 use tauri::{Emitter, Manager};
 
 use shutdown_coordinator::{
@@ -96,7 +96,11 @@ pub fn run() {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
                 if shutdown().is_shutting_down()
-                    && !matches!(exit_response().status, ExitStatus::RestoreFailed | ExitStatus::RetryableError) {
+                    && !matches!(
+                        exit_response().status,
+                        ExitStatus::RestoreFailed | ExitStatus::RetryableError
+                    )
+                {
                     return;
                 }
                 #[cfg(target_os = "windows")]
@@ -307,7 +311,11 @@ struct ExitState {
 }
 
 fn exit_response() -> ExitResponse {
-    if let Some(response) = exit_restore::attempt().lock().unwrap_or_else(|e| e.into_inner()).response() {
+    if let Some(response) = exit_restore::attempt()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .response()
+    {
         return response;
     }
     ExitResponse::new(
@@ -315,7 +323,7 @@ fn exit_response() -> ExitResponse {
             ExitStatus::FinishingOperation
         } else {
             ExitStatus::Exiting
-        }
+        },
     )
 }
 
@@ -346,11 +354,11 @@ fn background_desktop_assistant(app: tauri::AppHandle) -> Result<(), String> {
 
 fn emit_exit_progress<R: tauri::Runtime>(app: &tauri::AppHandle<R>, status: ExitStatus) {
     let response = ExitResponse::new(status);
-    exit_restore::attempt().lock().unwrap_or_else(|e| e.into_inner()).update(response.clone());
-    if app
-        .emit_to("main", EXIT_PROGRESS_EVENT, response)
-        .is_err()
-    {
+    exit_restore::attempt()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .update(response.clone());
+    if app.emit_to("main", EXIT_PROGRESS_EVENT, response).is_err() {
         log::warn!("desktop_shutdown stage=progress_emit_failed");
     }
 }
@@ -361,29 +369,49 @@ fn begin_desktop_shutdown<R: tauri::Runtime>(app: tauri::AppHandle<R>) -> ExitRe
     begin_user_shutdown(app, false)
 }
 
-fn begin_user_shutdown<R: tauri::Runtime>(app: tauri::AppHandle<R>, restore_settings: bool) -> ExitResponse {
+fn begin_user_shutdown<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    restore_settings: bool,
+) -> ExitResponse {
     // A concurrent updater owns its existing drain/restart, and an active user
     // attempt owns its writes. Only a settled failure may start another pass.
     let retrying = shutdown().is_shutting_down();
     if retrying
-        && !matches!(exit_response().status, ExitStatus::RestoreFailed | ExitStatus::RetryableError) {
+        && !matches!(
+            exit_response().status,
+            ExitStatus::RestoreFailed | ExitStatus::RetryableError
+        )
+    {
         return exit_response();
     }
-    let started = exit_restore::attempt().lock().unwrap_or_else(|e| e.into_inner()).begin();
+    let started = exit_restore::attempt()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .begin();
     if started {
         if !shutdown().request_shutdown() && !retrying {
             // The updater won the admission race. Join its preservation path.
-            exit_restore::attempt().lock().unwrap_or_else(|e| e.into_inner()).finish(ExitResponse::new(ExitStatus::Exiting));
+            exit_restore::attempt()
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .finish(ExitResponse::new(ExitStatus::Exiting));
             return exit_response();
         }
         tauri::async_runtime::spawn(async move {
             wait_desktop_operations(&app).await;
             if restore_settings {
                 emit_exit_progress(&app, ExitStatus::RestoringSettings);
-                let failed_tools = exit_restore::restore_all(tool_activation::restore_connection_for_exit).await;
+                let failed_tools =
+                    exit_restore::restore_all(tool_activation::restore_connection_for_exit).await;
                 if !failed_tools.is_empty() {
-                    let response = ExitResponse { status: ExitStatus::RestoreFailed, failed_tools };
-                    exit_restore::attempt().lock().unwrap_or_else(|e| e.into_inner()).finish(response.clone());
+                    let response = ExitResponse {
+                        status: ExitStatus::RestoreFailed,
+                        failed_tools,
+                    };
+                    exit_restore::attempt()
+                        .lock()
+                        .unwrap_or_else(|e| e.into_inner())
+                        .finish(response.clone());
                     let _ = app.emit_to("main", EXIT_PROGRESS_EVENT, response.clone());
                     // Native Windows close remains available even if WebView
                     // cannot render: close again to retry or preserve-exit.
@@ -408,7 +436,10 @@ fn begin_user_shutdown<R: tauri::Runtime>(app: tauri::AppHandle<R>, restore_sett
                 app.exit(0);
             } else {
                 emit_exit_progress(&app, ExitStatus::RetryableError);
-                exit_restore::attempt().lock().unwrap_or_else(|e| e.into_inner()).finish(ExitResponse::new(ExitStatus::RetryableError));
+                exit_restore::attempt()
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .finish(ExitResponse::new(ExitStatus::RetryableError));
             }
         });
     }
@@ -447,7 +478,10 @@ async fn wait_desktop_operations<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
 }
 
 #[tauri::command]
-async fn quit_desktop_assistant(app: tauri::AppHandle, restore_settings: Option<bool>) -> ExitResponse {
+async fn quit_desktop_assistant(
+    app: tauri::AppHandle,
+    restore_settings: Option<bool>,
+) -> ExitResponse {
     begin_user_shutdown(app, restore_settings.unwrap_or(false))
 }
 
@@ -487,9 +521,13 @@ fn windows_close_choice<R: tauri::Runtime>(window: &tauri::Window<R>) -> NativeC
                 w!("保留接入设置？"),
                 MB_YESNOCANCEL | MB_ICONQUESTION | MB_SETFOREGROUND)
         };
-        if preserve == IDYES { NativeCloseChoice::Exit }
-        else if preserve == IDNO { NativeCloseChoice::Background }
-        else { NativeCloseChoice::Cancel }
+        if preserve == IDYES {
+            NativeCloseChoice::Exit
+        } else if preserve == IDNO {
+            NativeCloseChoice::Background
+        } else {
+            NativeCloseChoice::Cancel
+        }
     } else {
         NativeCloseChoice::Cancel
     }

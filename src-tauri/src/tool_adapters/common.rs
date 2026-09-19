@@ -1188,7 +1188,10 @@ mod tests {
         atomic_write(&ours, b"original").unwrap();
         fs::set_permissions(&ours, fs::Permissions::from_mode(0o644)).unwrap();
         restrict_to_owner(&ours).unwrap();
-        assert_eq!(fs::metadata(&ours).unwrap().permissions().mode() & 0o777, 0o600);
+        assert_eq!(
+            fs::metadata(&ours).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
         let _ = fs::remove_dir_all(directory);
     }
 
