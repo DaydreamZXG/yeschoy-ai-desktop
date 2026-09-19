@@ -15,8 +15,8 @@ use tauri::Emitter;
 
 use crate::{
     account_v2::{
-        billing_groups, ensure_session_epoch, native_account_json, native_session_access,
-        native_session_epoch, AccountV2State, NativeSessionFailure,
+        ensure_session_epoch, native_account_json, native_session_access, native_session_epoch,
+        AccountV2State, NativeSessionFailure,
     },
     claude_bridge::ClaudeTransport,
     connection_recovery::{self, Receipt, Store},
@@ -241,6 +241,12 @@ impl ToolActivationProjection {
 #[derive(Clone, Copy, Debug)]
 enum ActivationFailure {
     SignedOut,
+    /// Nothing produces these two any more. Both gates were withdrawn -- the
+    /// model one in `1b3fb135`, the billing group one here -- because both
+    /// judged a model unusable from an absent or unreliable declaration. The
+    /// variants stay only so the renderer keeps its recovery copy for an older
+    /// native binary; do not reach for them to add a gate back without a
+    /// signal you can trust. See src/configuration/modelCompatibility.ts.
     UnsupportedModel,
     UnsupportedGroup,
     ServerUnavailable,
@@ -453,13 +459,14 @@ async fn validate_models(
         .iter()
         .map(|binding| {
             let model_id = binding.model_id.as_str();
-            let billing_group = binding.billing_group.as_str();
-            if !billing_groups(&pricing, model_id)
-                .iter()
-                .any(|g| g.id == billing_group)
-            {
-                return Err(ActivationFailure::UnsupportedGroup);
-            }
+            // The billing group is no longer checked against the catalogue.
+            // `/api/pricing` only lists models it has priced, so a model the
+            // account can use may have no groups here at all -- and refusing
+            // then means refusing at apply what the picker already offered,
+            // with nothing the user could have done differently. The relay
+            // decides whether a group is valid, and says so plainly when it
+            // is not. Same reasoning as the model gate; see
+            // src/configuration/modelCompatibility.ts.
             if tool_id == "codex_desktop" {
                 codex_transport(&pricing, model_id)
                     .map(ModelTransport::Codex)

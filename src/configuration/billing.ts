@@ -1,5 +1,4 @@
 import type { AccountModel, BillingGroup } from "../account/session";
-import type { ActivationToolId } from "./activation";
 
 type Node =
   | { kind: "number"; value: number }
@@ -181,33 +180,31 @@ export function billingTiers(expression: string): BillingTier[] {
   }
 }
 
-export function groupSupportsTool(
-  _model: AccountModel | undefined,
-  group: BillingGroup,
-  toolId: ActivationToolId,
-): boolean {
-  const endpoints = group.supportedEndpointTypes ?? [];
-  if (!endpoints.length || toolId !== "codex_desktop") return true;
-  return (
-    endpoints.includes("openai-response") || endpoints.includes("gemini")
-  );
-}
+/** 账户默认分组。`/api/pricing` 的 `usable_group` 里一定有它。 */
+export const DEFAULT_BILLING_GROUP = "default";
 
+/**
+ * 选一个计费分组。
+ *
+ * 不再按应用协议过滤分组 —— 那是又一道按 `supportedEndpointTypes` 判死的闸门，
+ * 和模型级那道是同一个错误：拿一个不可靠的声明替用户决定他不能用什么。理由见
+ * `modelCompatibility.ts` 顶部。
+ *
+ * 读不到任何分组时（模型不在 `/api/pricing` 里，`billing` 就是 null）兜底到
+ * `default` 而不是空串。空串会让接入流程卡在「请选择分组」上，而用户根本没有
+ * 可选的东西 —— 那是个死胡同。送 `default` 至少能走完，真不对的话中转会明确
+ * 报错，那比我们在这儿拦住他强。
+ */
 export function chooseBillingGroup(
   model: AccountModel | undefined,
   previous: string,
-  toolId?: ActivationToolId,
 ): string {
   const groups = model?.billing?.groups ?? [];
-  const usable = toolId
-    ? groups.filter((group) => groupSupportsTool(model, group, toolId))
-    : groups;
-  const pool = usable.length ? usable : groups;
   return (
-    pool.find((g) => g.id === previous)?.id ??
-    pool.find((g) => g.id === "default")?.id ??
-    pool[0]?.id ??
-    ""
+    groups.find((g) => g.id === previous)?.id ??
+    groups.find((g) => g.id === DEFAULT_BILLING_GROUP)?.id ??
+    groups[0]?.id ??
+    DEFAULT_BILLING_GROUP
   );
 }
 
@@ -333,9 +330,8 @@ export function hundredMillionTokenEstimate(
   const standard = allRows.find((row) =>
     /^(standard|base|default|普通(?:用量)?|标准)$/i.test(row.name.trim()),
   );
-  const rows = mode === "reference" && allRows.length
-    ? [standard ?? allRows[0]]
-    : allRows;
+  const rows =
+    mode === "reference" && allRows.length ? [standard ?? allRows[0]] : allRows;
   if (unit !== "tokens") return null;
   // 服务端只给 CNY 每百万价（无 USD 基准）时，用同一工作负载公式估算，
   // 避免「费用参考」整块降级为不可用。

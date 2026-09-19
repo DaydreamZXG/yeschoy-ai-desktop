@@ -561,7 +561,7 @@ export function ConfigurationPreviewView({
     setBillingGroup(
       existing
         ? savedConnection.billingGroup
-        : chooseBillingGroup(fallback, "", activationToolId),
+        : chooseBillingGroup(fallback, ""),
     );
     setModelSet(existing ? (savedConnection.models ?? []) : []);
     setDefaultModelId(existing ? savedConnection.modelId : "");
@@ -597,13 +597,15 @@ export function ConfigurationPreviewView({
   const defaultBinding =
     submittedModels.find((m) => m.modelId === defaultModelId) ??
     submittedModels[0];
+  // 一条常用模型「不可用」，指的是那个模型确实列出了分组、而它绑的那个不在
+  // 里面 —— 那是用户的旧选择失效了，要他重选。模型压根没有分组数据（不在
+  // /api/pricing 里）不算，那只是我们不知道。
   const bindingsAvailable =
     submittedModels.length > 0 &&
-    submittedModels.every((m) =>
-      models
-        .find((a) => a.id === m.modelId)
-        ?.billing?.groups.some((g) => g.id === m.billingGroup),
-    );
+    submittedModels.every((m) => {
+      const groups = models.find((a) => a.id === m.modelId)?.billing?.groups;
+      return !groups?.length || groups.some((g) => g.id === m.billingGroup);
+    });
   const pendingModelEdit =
     modelSet.length > 0 &&
     !!selectedModel &&
@@ -1310,7 +1312,13 @@ export function ConfigurationPreviewView({
         hint: t("yeschoyDaily.chooseModelHint"),
         run: openAdvanced,
       };
-    if (!selectedBillingGroup)
+    // 这一条留着，但收窄了。它不是协议门禁，是钱的保护：用户之前选的便宜
+    // 分组没了，不能悄悄按标准价替他配上，必须他自己重选一次。
+    //
+    // 收窄的是另一种情况 —— 一个分组都读不到（模型不在 /api/pricing 里）。
+    // 那是我们不知道，不是用户选错了，而他面前根本没有可选的东西，卡在这儿
+    // 就是死胡同。那种情况 chooseBillingGroup 兜底到 default 直接放行。
+    if (!selectedBillingGroup && !!selectedModel?.billing?.groups.length)
       return {
         kind: "choose-group",
         label: g.chooseGroupFirst,
@@ -1335,6 +1343,7 @@ export function ConfigurationPreviewView({
         hint: t("yeschoyDaily.useSelectedModelHint"),
         run: useSelectedModel,
       };
+    // 同上：只在「那个模型确实列出了分组、而这一条绑的不在里面」时拦。
     if (!bindingsAvailable)
       return {
         kind: "resolve-model-set",
@@ -1397,12 +1406,16 @@ export function ConfigurationPreviewView({
     !session.lastError &&
     selectedModelId &&
     !selectedModel;
+  // 只有「这个模型确实列出了分组，而选中的那个不在里面」才算真的不可用。
+  // 一个分组都读不到（模型不在价目表里）是不知道，不是不可用 —— 对那种情况
+  // 弹红色警告，等于把"我们没数据"说成"你选错了"。
   const missingGroup =
     signedIn &&
     !session.loading &&
     !session.lastError &&
     selectedModel &&
     billingGroup &&
+    !!selectedModel.billing?.groups.length &&
     !selectedBillingGroup;
   const visibleApplications = APPLICATIONS.filter(
     (candidate) =>
@@ -1773,7 +1786,6 @@ export function ConfigurationPreviewView({
                             chooseBillingGroup(
                               models.find((m) => m.id === id),
                               "",
-                              activationToolId,
                             ),
                         );
                         resetResult();
@@ -1851,8 +1863,6 @@ export function ConfigurationPreviewView({
                   fx={session.projection?.comparisonFx ?? ""}
                   selected={billingGroup}
                   disabled={applyPhase === "applying"}
-                  toolId={activationToolId}
-                  toolName={application.displayName}
                   onChange={(id) => {
                     setSelectionReadyKey(selectionKey);
                     setBillingGroup(id);

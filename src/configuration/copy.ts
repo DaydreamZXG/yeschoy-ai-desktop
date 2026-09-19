@@ -12,7 +12,9 @@ const zh = {
   groupIntro:
     "同一个模型有不同价格方案，选好后按该方案计费。以下费用使用相同的 Token 占比估算。",
   ratioPending: "倍率待查询",
-  groupsMissing: "暂未读到这个模型的可用分组，请刷新账户数据。",
+  // 读不到分组只说明这个模型不在价目表里，不是出了错。以前这句话让人以为
+  // 卡住了、得去刷新，其实照常接入就行 —— 按账户默认分组计费。
+  groupsMissing: "这个模型暂无分组价格，按账户默认分组计费，可以正常接入。",
   groupsEmptyHint: "选择模型后，可查看对应计费分组。",
   pricesLabel: "所选分组价格",
   estimateSummary: "1 亿 Token 费用参考",

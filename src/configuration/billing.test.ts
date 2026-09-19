@@ -66,7 +66,7 @@ describe("billing display follows the selected NewAPI group", () => {
       )!;
       expect(estimate.official.minimum).toBeCloseTo(772.84293411);
       expect(estimate.official.maximum).toBeCloseTo(1517.29796933);
-      expect(estimate.yeschoy.minimum).toBeCloseTo(45.79809980);
+      expect(estimate.yeschoy.minimum).toBeCloseTo(45.7980998);
       expect(estimate.yeschoy.maximum).toBeCloseTo(89.91395374);
       expect(estimate.savingPercent).toBeCloseTo(94.074074);
     },
@@ -75,16 +75,31 @@ describe("billing display follows the selected NewAPI group", () => {
   it("selects a named standard tier rather than the cheapest or first tier", () => {
     const value = fixture();
     value.id = "gpt-6-astra";
-    value.billing!.expression = 'len > 1 ? tier("promo", p * 1 + c * 1 + cr * 0.1) : tier("standard", p * 10 + c * 50 + cr * 1)';
-    const estimate = hundredMillionTokenEstimate(value, { id: "test", ratio: 0.4, description: "" }, "1", "reference")!;
+    value.billing!.expression =
+      'len > 1 ? tier("promo", p * 1 + c * 1 + cr * 0.1) : tier("standard", p * 10 + c * 50 + cr * 1)';
+    const estimate = hundredMillionTokenEstimate(
+      value,
+      { id: "test", ratio: 0.4, description: "" },
+      "1",
+      "reference",
+    )!;
     expect(estimate.official.minimum).toBeCloseTo(772.84293411);
     expect(estimate.official.maximum).toBe(estimate.official.minimum);
-    expect(estimate.yeschoy.minimum).toBeCloseTo(45.79809980);
+    expect(estimate.yeschoy.minimum).toBeCloseTo(45.7980998);
   });
   it("does not choose a cheap off-peak tier when no standard tier is declared", () => {
     const value = fixture();
-    const estimate = hundredMillionTokenEstimate(value, value.billing!.groups[1], "1", "reference")!;
-    const range = hundredMillionTokenEstimate(value, value.billing!.groups[1], "1")!;
+    const estimate = hundredMillionTokenEstimate(
+      value,
+      value.billing!.groups[1],
+      "1",
+      "reference",
+    )!;
+    const range = hundredMillionTokenEstimate(
+      value,
+      value.billing!.groups[1],
+      "1",
+    )!;
     expect(estimate.official.minimum).toBe(range.official.maximum);
     expect(estimate.official.maximum).toBe(estimate.official.minimum);
   });
@@ -212,10 +227,13 @@ describe("billing display follows the selected NewAPI group", () => {
     const other = fixture();
     other.billing!.groups = [{ id: "另一个分组", description: "", ratio: 0.8 }];
     expect(chooseBillingGroup(other, "特价")).toBe("另一个分组");
-    expect(chooseBillingGroup(undefined, "特价")).toBe("");
+    expect(chooseBillingGroup(undefined, "特价")).toBe("default");
   });
 
-  it("chooses a billing group that supports the selected application protocol", () => {
+  it("never filters a billing group by the application's protocol", () => {
+    // 这条以前钉的是反面：Codex 只能选声明了 responses 的分组。那道闸门和
+    // 模型级那道是同一个错误换了层级 —— 拿 supportedEndpointTypes 替用户判他
+    // 不能用什么。整个撤掉了，见 modelCompatibility.ts 顶部。
     const value = fixture();
     value.supportedEndpointTypes = ["openai", "openai-response"];
     value.billing!.groups = [
@@ -232,14 +250,17 @@ describe("billing display follows the selected NewAPI group", () => {
         supportedEndpointTypes: ["openai-response"],
       },
     ];
+    // 用户选的就是用户选的，不管哪个应用。
+    expect(chooseBillingGroup(value, "chat-only")).toBe("chat-only");
+    expect(chooseBillingGroup(value, "responses")).toBe("responses");
+  });
 
-    expect(chooseBillingGroup(value, "chat-only", "codex_desktop")).toBe(
-      "responses",
-    );
-    expect(chooseBillingGroup(value, "responses", "codex_desktop")).toBe(
-      "responses",
-    );
-    expect(chooseBillingGroup(value, "chat-only", "pi")).toBe("chat-only");
+  it("falls back to the default group when nothing is known", () => {
+    // 模型不在 /api/pricing 里时 billing 是 null，一个分组都读不到。以前返回
+    // 空串，接入流程就卡在「请选择分组」上 —— 而用户根本没有可选的东西。
+    // 送 default 至少能走完；真不对的话中转会明确报错。
+    expect(chooseBillingGroup(undefined, "")).toBe("default");
+    expect(chooseBillingGroup(undefined, "随便")).toBe("default");
   });
 
   it.each([

@@ -157,7 +157,10 @@ describe("pricing plan choices", () => {
       expect(radio).toBeDisabled();
   });
 
-  it("disables a price group that cannot serve the selected application", () => {
+  it("never disables a price group because of the application's protocol", () => {
+    // 这条以前钉的是反面：Codex 下只声明 openai 的分组被禁用。那道闸门撤了 ——
+    // 它和模型级那道是同一个错误换了层级，拿 supportedEndpointTypes 替用户判
+    // 他不能用什么。见 modelCompatibility.ts 顶部。
     const value = model(0.4);
     value.supportedEndpointTypes = ["openai", "openai-response"];
     value.billing!.groups = [
@@ -179,20 +182,14 @@ describe("pricing plan choices", () => {
         model={value}
         selected="responses"
         fx="1"
-        toolId="codex_desktop"
-        toolName="Codex Desktop"
         onChange={() => undefined}
       />,
     );
 
-    const chatOnly = screen.getByRole("radio", { name: /chat-only/ });
-    expect(chatOnly).toBeDisabled();
-    expect(
-      within(chatOnly.closest(".billing-plan-card") as HTMLElement).getByText(
-        "这个价格方案在Codex Desktop里用不了",
-      ),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: /responses/ })).toBeEnabled();
+    for (const name of [/chat-only/, /responses/]) {
+      expect(screen.getByRole("radio", { name })).toBeEnabled();
+    }
+    expect(screen.queryByText(/这个价格方案在.*里用不了/)).toBeNull();
   });
 });
 

@@ -1,12 +1,10 @@
 import { useId } from "react";
 import type { AccountModel } from "../account/session";
-import type { ActivationToolId } from "./activation";
 import { Landmark, Sprout } from "lucide-react";
 import { useConfigurationCopy } from "./copy";
 import {
   billingConversion,
   groupPrice,
-  groupSupportsTool,
   hundredMillionTokenEstimate,
 } from "./billing";
 
@@ -36,16 +34,12 @@ export function BillingGroupPicker({
   onChange,
   disabled = false,
   fx = "",
-  toolId,
-  toolName,
 }: {
   model?: AccountModel;
   selected: string;
   onChange: (id: string) => void;
   disabled?: boolean;
   fx?: string;
-  toolId?: ActivationToolId;
-  toolName?: string;
 }) {
   const c = useConfigurationCopy();
   const groups = model?.billing?.groups ?? [];
@@ -71,19 +65,11 @@ export function BillingGroupPicker({
       {groups.length ? (
         <div className="billing-group-grid">
           {plans.map(({ group, estimate }) => {
-            const unusable =
-              !!toolId &&
-              !!group.supportedEndpointTypes?.length &&
-              !groupSupportsTool(model, group, toolId);
+            // 分组不再按应用协议禁用。那是模型级闸门的同一个错误换了个层级：
+            // 拿 supportedEndpointTypes 替用户判他不能用什么。见
+            // modelCompatibility.ts 顶部。
             return (
-              <div
-                key={group.id}
-                className={
-                  unusable
-                    ? "billing-plan-card is-incompatible"
-                    : "billing-plan-card"
-                }
-              >
+              <div key={group.id} className="billing-plan-card">
                 <label
                   className={
                     selected === group.id
@@ -96,11 +82,10 @@ export function BillingGroupPicker({
                     name={radioName}
                     value={group.id}
                     checked={selected === group.id}
-                    disabled={unusable}
-                    onChange={() => !unusable && onChange(group.id)}
+                    onChange={() => onChange(group.id)}
                   />
                   <span className="billing-group-info">
-                  {/* 显示分组的 **键**，不是它的 description。
+                    {/* 显示分组的 **键**，不是它的 description。
                       线上数据里 usable_group 是「键 → 一句话」：键是
                       `Qwen / GLM`、`限时国模特价渠道` 这种可读名字，值是
                       「模型：qwen3.8-max、glm-5.3； 6.5折」这种句子。
@@ -110,35 +95,30 @@ export function BillingGroupPicker({
 
                       名字仍然最弱、单行截断：它是后台自由文本，长度不受控，
                       而价格是算出来的、可信，价格才是主角。 */}
-                  <strong title={groupLabel(group.id, c.defaultGroup)}>
-                    {groupLabel(group.id, c.defaultGroup)}
-                  </strong>
-                  <span className="billing-plan-price">
-                    {estimate
-                      ? c.estimateAmount.replace(
-                          "{{amount}}",
-                          price(estimate.yeschoy.minimum),
-                        )
-                      : c.planPriceUnavailable}
-                  </span>
-                  <small>{c.planPriceUnit}</small>
-                  {unusable && toolName ? (
-                    <small className="billing-plan-unusable">
-                      {c.groupNotForThisApp.replace("{{app}}", toolName)}
-                    </small>
-                  ) : null}
-                  <span className="billing-plan-badges">
-                    {selected === group.id && <small>{c.planSelected}</small>}
-                    {allPriced &&
-                      estimate &&
-                      plans.every(
-                        (plan) =>
-                          estimate.yeschoy.minimum <=
-                            plan.estimate!.yeschoy.minimum &&
-                          estimate.yeschoy.maximum <=
-                            plan.estimate!.yeschoy.maximum,
-                      ) && <small>{c.planLowest}</small>}
-                  </span>
+                    <strong title={groupLabel(group.id, c.defaultGroup)}>
+                      {groupLabel(group.id, c.defaultGroup)}
+                    </strong>
+                    <span className="billing-plan-price">
+                      {estimate
+                        ? c.estimateAmount.replace(
+                            "{{amount}}",
+                            price(estimate.yeschoy.minimum),
+                          )
+                        : c.planPriceUnavailable}
+                    </span>
+                    <small>{c.planPriceUnit}</small>
+                    <span className="billing-plan-badges">
+                      {selected === group.id && <small>{c.planSelected}</small>}
+                      {allPriced &&
+                        estimate &&
+                        plans.every(
+                          (plan) =>
+                            estimate.yeschoy.minimum <=
+                              plan.estimate!.yeschoy.minimum &&
+                            estimate.yeschoy.maximum <=
+                              plan.estimate!.yeschoy.maximum,
+                        ) && <small>{c.planLowest}</small>}
+                    </span>
                   </span>
                 </label>
                 <details className="billing-plan-details">
@@ -158,7 +138,7 @@ export function BillingGroupPicker({
           })}
         </div>
       ) : (
-        <p className="account-inline-warning">
+        <p className={model ? "billing-price-note" : "account-inline-warning"}>
           {model ? c.groupsMissing : c.groupsEmptyHint}
         </p>
       )}

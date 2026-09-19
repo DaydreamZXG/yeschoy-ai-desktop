@@ -1331,9 +1331,7 @@ fn pricing_endpoint_types(row: &Value) -> BTreeSet<String> {
         .flatten()
         .filter_map(Value::as_str)
         .filter(|value| {
-            !value.is_empty()
-                && value.chars().count() <= 80
-                && !value.chars().any(char::is_control)
+            !value.is_empty() && value.chars().count() <= 80 && !value.chars().any(char::is_control)
         })
         .take(32)
         .map(str::to_owned)
@@ -2683,9 +2681,12 @@ mod tests {
             ]
         });
         let projected = parse_models(Some(&models), Some(&pricing), None, Some(1.0));
+        // 这个字段是 Option：None 表示中转什么都没说（模型不在价目表里），
+        // 和「声明了空列表」不是一回事。合并时这条断言还是旧的 Vec 类型，
+        // 导致合并点的 cargo test 编不过。
         assert_eq!(
             projected[0].supported_endpoint_types,
-            vec!["openai".to_string(), "openai-response".to_string()]
+            Some(vec!["openai".to_string(), "openai-response".to_string()])
         );
         let groups = &projected[0].billing.as_ref().unwrap().groups;
         let chat = groups.iter().find(|g| g.id == "标准方案").unwrap();
