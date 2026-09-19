@@ -197,6 +197,9 @@ const zh = {
   builderKicker: "模型与计费分组",
   builderTitle: "选好，就能用",
   builderIntro: "选模型、比较分组价格，再一键完成接入。网络线路单独选择。",
+  // 三个圆圈数字是纯装饰（aria-hidden），读屏用户过去完全拿不到步骤结构。
+  stepOf: "第 {{n}} 步，共 3 步",
+  modelAndPriceStep: "选择模型与价格",
   modelChoice: "选择模型",
   modelQuestion: "想用哪个 AI？",
   lineChoice: "选择连接线路",

@@ -1542,6 +1542,12 @@ export function ConfigurationPreviewView({
 
         <div className="configuration-selectors">
           <div className="selected-app-bar">
+            {/* 选应用是用户做的第一件事，以前却没有编号：页面从「1 选择模型」
+                开始数，于是第一步是第二件事。 */}
+            <span className="sr-only">{g.stepOf.replace("{{n}}", "1")}</span>
+            <span className="choice-number" aria-hidden="true">
+              1
+            </span>
             <span
               className="configuration-app-icon"
               data-app={application.id}
@@ -1786,15 +1792,21 @@ export function ConfigurationPreviewView({
               一个三步流程不该把第二步藏起来 —— 用户要换模型时得先找到这个
               折叠。现在它就是第二步，一直在那儿。 */}
           <div ref={advancedDetails} className="setup-advanced">
+            {/* 模型和价格是同一个决定的两面（选了模型才谈得上分组），所以它们
+                共用第二步，而不是各占一个编号 —— 那会让三步流程看起来有四步。 */}
+            <div className="setup-step-heading">
+              <span className="sr-only">{g.stepOf.replace("{{n}}", "2")}</span>
+              <span className="choice-number" aria-hidden="true">
+                2
+              </span>
+              <h3>{g.modelAndPriceStep}</h3>
+            </div>
             <div className="connection-choice-grid">
               <section
                 className="connection-choice-card model-choice-card"
                 aria-labelledby="setup-model-title"
               >
                 <div className="choice-card-heading">
-                  <span className="choice-number" aria-hidden="true">
-                    1
-                  </span>
                   <div>
                     <h3 id="setup-model-title">{g.modelChoice}</h3>
                     <p>{g.modelQuestion}</p>
@@ -1878,9 +1890,6 @@ export function ConfigurationPreviewView({
                 aria-label={g.billingGroupLabel}
               >
                 <div className="choice-card-heading">
-                  <span className="choice-number" aria-hidden="true">
-                    2
-                  </span>
                   <div>
                     <h3>{g.chooseGroupLegend}</h3>
                     <p>{g.billingCardHint}</p>
@@ -2034,6 +2043,7 @@ export function ConfigurationPreviewView({
       >
         <div className="connection-summary-row">
           <div className="connection-summary-intro">
+            <span className="sr-only">{g.stepOf.replace("{{n}}", "3")}</span>
             <span className="choice-number" aria-hidden="true">
               3
             </span>

@@ -196,6 +196,14 @@ const internals = {
 (window as unknown as { __TAURI_INTERNALS__: unknown }).__TAURI_INTERNALS__ =
   internals;
 
+// `@tauri-apps/api/event` unregisters through a separate global; without it
+// every listener teardown throws and the view unmounts mid-render.
+(
+  window as unknown as { __TAURI_EVENT_PLUGIN_INTERNALS__: unknown }
+).__TAURI_EVENT_PLUGIN_INTERNALS__ = {
+  unregisterListener: () => {},
+};
+
 console.info(
   `[uxaudit] IPC 桩已装载 · 场景=${scenario} · 工具数=${ACTIVATION_TOOL_IDS.length}`,
 );

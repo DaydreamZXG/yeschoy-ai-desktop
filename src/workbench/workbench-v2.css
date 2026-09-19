@@ -6272,8 +6272,23 @@
   gap: var(--space-20);
 }
 
-.connection-summary-intro .choice-number {
-  display: none;
+/* 这条以前是 display: none —— JSX 照常渲染「3」，CSS 把它抹掉，于是页面数到
+   2 就停了，断在承载主操作的那一步上。三步流程要么三步都有编号，要么一个都
+   不要；不能只在最后一步消失。 */
+.setup-step-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 0.75rem);
+  margin-bottom: var(--space-3, 0.75rem);
+}
+
+.setup-step-heading h3 {
+  margin: 0;
+  font-size: var(--text-base);
+}
+
+.selected-app-bar > .choice-number {
+  flex: none;
 }
 
 .connection-summary-intro h2 {

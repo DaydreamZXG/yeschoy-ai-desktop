@@ -1120,6 +1120,42 @@ describe("daily-use UX", () => {
     ...over,
   });
 
+  /**
+   * The page numbered its steps 1, 2, 3 and then hid the 3 with a CSS rule
+   * (`.connection-summary-intro .choice-number { display: none }`), so the
+   * sequence visibly stopped at 2 — on the step that carries the primary
+   * action. The 1 was also on 选择模型, while the first thing a user actually
+   * does is pick an application, which had no number at all.
+   *
+   * jsdom does not apply stylesheets, so this pins the markup: three steps,
+   * numbered in the order they are performed, each announcing its position to
+   * a screen reader. The rendered visibility is checked in the browser.
+   */
+  it("numbers the three steps in the order they are actually performed", async () => {
+    render(setupView());
+    await tick();
+    const numbers = [...document.querySelectorAll(".choice-number")].map(
+      (node) => node.textContent?.trim(),
+    );
+    expect(numbers).toEqual(["1", "2", "3"]);
+
+    // Step 1 is the application, not the model.
+    const first = document.querySelector(".selected-app-bar .choice-number");
+    expect(first).not.toBeNull();
+    expect(first?.closest(".selected-app-bar")).toHaveTextContent(
+      "正在为这个应用设置",
+    );
+    // Step 3 exists in the markup and belongs to the finishing block.
+    expect(
+      document.querySelector(".connection-summary-intro .choice-number"),
+    ).not.toBeNull();
+
+    // The glyphs are decorative; the ordinal has to reach a screen reader.
+    for (const n of ["1", "2", "3"]) {
+      expect(screen.getByText(`第 ${n} 步，共 3 步`)).toBeInTheDocument();
+    }
+  });
+
   it("a config write alone claims only the write, and asks for a first message", async () => {
     const statuses = await applyAndRead(local());
     expect(statuses).toContain("设置已完成");
