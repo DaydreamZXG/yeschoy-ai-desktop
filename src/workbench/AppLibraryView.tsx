@@ -79,7 +79,18 @@ export function AppLibraryView({
       ++sequence.current;
     };
   }, [refresh]);
-  const signedIn = accountSession.projection?.status === "signed_in";
+  const accountStatus = accountSession.projection?.status;
+  const signedIn = accountStatus === "signed_in";
+  // A failed/unfinished inspection is not evidence that the user signed out.
+  // Only explicit terminal authentication states may offer the login action;
+  // otherwise a route hiccup produces the contradictory error + login UI.
+  const loginRequired = [
+    "signed_out",
+    "session_expired",
+    "cancelled",
+    "denied",
+    "expired",
+  ].includes(accountStatus ?? "");
   const balanceIssue = signedIn
     ? balanceAlert(accountSession.projection?.money)
     : null;
@@ -221,7 +232,7 @@ export function AppLibraryView({
       {balanceIssue && (
         <LowBalanceBanner alert={balanceIssue} onRecharge={() => void recharge()} />
       )}
-      {!signedIn ? (
+      {loginRequired ? (
         <section className="welcome-strip">
           <span className="welcome-symbol">
             <ShieldCheck />
@@ -235,7 +246,7 @@ export function AppLibraryView({
             <ArrowRight />
           </button>
         </section>
-      ) : (
+      ) : signedIn ? (
         <div className="library-heading">
           <span>
             {!hasConnectionSnapshot ||
@@ -260,7 +271,7 @@ export function AppLibraryView({
             个已发现
           </span>
         </div>
-      )}
+      ) : null}
       {scanError && (
         <p className="workbench-notice" role="alert">
           <CircleAlert />

@@ -221,6 +221,13 @@ function signedIn(requestId: string) {
     reasonCode: "none",
   };
 }
+function unavailableAccount(requestId: string) {
+  return {
+    ...signedOut(requestId),
+    status: "incompatible_server",
+    reasonCode: "incompatible_server",
+  };
+}
 type Args = {
   request: {
     requestId: string;
@@ -308,6 +315,24 @@ afterEach(() => {
 });
 
 describe("official workbench", () => {
+  it("does not turn an unavailable account inspection into a login prompt", async () => {
+    mockNativeByCommand((command, args) => {
+      const request = (args as Args).request;
+      if (command === "account_inspect_v2")
+        return unavailableAccount(request.requestId);
+      return defaultNativeHandler(command, args);
+    });
+    render(<App />);
+    expect(
+      await screen.findByText("暂时无法获取账户状态，请重试。"),
+    ).toBeInTheDocument();
+    const home = screen.getByTestId("candidate-home-view");
+    expect(home).not.toHaveTextContent("登录一次，接入你的 AI 应用");
+    expect(
+      within(home).queryByRole("button", { name: "登录野菜 API" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("ru076 never reports zero connections or ready-to-connect when the initial read fails", async () => {
     mockNativeByCommand((command, args) => {
       const request = (args as Args).request;

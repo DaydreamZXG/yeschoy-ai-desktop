@@ -213,6 +213,37 @@ async function openTools() {
 }
 function scanWith(make: (id: string) => unknown) {
   mockNativeByCommand(async (command, args) => {
+    if (command === "account_inspect_v2") {
+      const requestId = (args as { request: { requestId: string } }).request
+        .requestId;
+      return {
+        requestId,
+        schemaVersion: 3,
+        status: "signed_out",
+        userCode: "",
+        pollAfterSeconds: 0,
+        expiresAtEpochMs: 0,
+        observedAtEpochMs: 1,
+        account: {
+          available: false,
+          displayName: "",
+          username: "",
+          balanceQuota: "",
+          usedQuota: "",
+          requestCount: "",
+          quotaPerUnit: "",
+        },
+        usage: {
+          available: false,
+          consumedQuota: "",
+          requestRate: "",
+          tokenCount: "",
+        },
+        models: [],
+        comparisonFx: "",
+        reasonCode: "signed_out",
+      };
+    }
     if (command !== "scan_tools_read_only_v2") throw Error("unavailable");
     return make((args as { request: { requestId: string } }).request.requestId);
   });

@@ -50,6 +50,57 @@ async function flush() {
   await act(async () => {});
 }
 describe("resilient account authorization", () => {
+  it("retries a transient cold-start inspection before treating it as unavailable", async () => {
+    command
+      .mockResolvedValueOnce(projection("network_error"))
+      .mockResolvedValueOnce(projection("signed_out"));
+    const { result } = renderHook(() =>
+      useAccountSession("mainland_optimized"),
+    );
+    await flush();
+    expect(command).toHaveBeenCalledTimes(1);
+    expect(result.current.loading).toBe(true);
+    expect(result.current.lastError).toBeNull();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+    expect(command).toHaveBeenCalledTimes(2);
+    expect(result.current.projection?.status).toBe("signed_out");
+    expect(result.current.loading).toBe(false);
+    expect(result.current.lastError).toBeNull();
+  });
+
+  it("shows a cold-start error only after the bounded retries are exhausted", async () => {
+    command.mockResolvedValue(projection("network_error"));
+    const { result } = renderHook(() =>
+      useAccountSession("mainland_optimized"),
+    );
+    await flush();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2_500);
+    });
+    expect(command).toHaveBeenCalledTimes(4);
+    expect(result.current.projection?.status).toBe("network_error");
+    expect(result.current.loading).toBe(false);
+    expect(result.current.lastError).toBe("network_error");
+  });
+
+  it("also retries cold-start transport exceptions", async () => {
+    command
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce(projection("signed_in"));
+    const { result } = renderHook(() =>
+      useAccountSession("mainland_optimized"),
+    );
+    await flush();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+    });
+    expect(command).toHaveBeenCalledTimes(2);
+    expect(result.current.projection?.status).toBe("signed_in");
+    expect(result.current.lastError).toBeNull();
+  });
+
   it("keeps polling after a temporary response error and then signs in", async () => {
     const { result } = renderHook(() =>
       useAccountSession("mainland_optimized"),
