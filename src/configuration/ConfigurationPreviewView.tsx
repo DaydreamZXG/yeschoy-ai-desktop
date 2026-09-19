@@ -968,6 +968,21 @@ export function ConfigurationPreviewView({
           return g.launchStartFailed;
         if (activation.reasonCode === "desktop_start_unconfirmed")
           return g.launchUnconfirmed;
+        if (activation.reasonCode === "desktop_launch_exit_failed")
+          return g.launchExitFailed;
+        if (activation.reasonCode === "desktop_launch_wait_failed")
+          return g.launchWaitFailed;
+        // Claude Code 和 Pi 走终端启动，失败时通用的「请手动打开应用」是错的。
+        if (activation.reasonCode === "terminal_launch_failed")
+          return g.launchTerminalFailed;
+        if (activation.reasonCode === "terminal_unavailable")
+          return g.launchTerminalUnavailable;
+        if (activation.reasonCode === "workspace_unavailable")
+          return g.launchWorkspaceUnavailable;
+        if (activation.reasonCode === "invalid_launch_target")
+          return g.launchTargetInvalid;
+        if (activation.reasonCode === "launch_target_missing")
+          return g.launchTargetMissing;
         return g.launchNotOpened;
       case "verification_failed":
         switch (activation.reasonCode) {
@@ -1047,6 +1062,14 @@ export function ConfigurationPreviewView({
           return g.configurationWriteFailed;
         if (activation.reasonCode === "configuration_readback_failed")
           return g.configurationReadbackFailed;
+        if (activation.reasonCode === "home_unavailable")
+          return g.homeUnavailable;
+        if (activation.reasonCode === "codex_history_takeover_conflict")
+          return g.codexHistoryConflict;
+        if (activation.reasonCode === "codex_history_takeover_failed")
+          return g.codexHistoryFailed;
+        if (activation.reasonCode === "codex_history_takeover_recovery_failed")
+          return g.codexHistoryRecoveryFailed;
         return c.setupWriteFailed;
       case "invalid_request":
         return c.setupWriteFailed;

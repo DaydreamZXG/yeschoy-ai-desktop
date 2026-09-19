@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>野菜API 桌面助手 · UX 审计</title>
+    <script>
+      (function () {
+        try {
+          var q = new URLSearchParams(location.search);
+          var t = q.get("theme") || localStorage.getItem("cc-switch-theme") || "system";
+          var d =
+            t === "dark" ||
+            (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.classList.toggle("dark", d);
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module">
+      import "./mockIpc.ts";
+      import "../main.tsx";
+    </script>
+  </body>
+</html>

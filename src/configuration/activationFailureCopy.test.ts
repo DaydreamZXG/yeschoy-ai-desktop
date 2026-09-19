@@ -14,14 +14,35 @@ function sources(directory: string, extensions: string[]): string[] {
   });
 }
 
-/** Reason codes the activation pipeline can hand the renderer, tests excluded. */
+/**
+ * Reason codes the activation pipeline can hand the renderer, tests excluded.
+ *
+ * Two things this scanner has to get right, because getting either wrong makes
+ * the whole test pass while saying nothing:
+ *
+ * 1. `#[cfg(test)]` also appears as an attribute *inside* production code
+ *    (`terminal_launch.rs:125`). Splitting on its first occurrence threw away
+ *    600 lines of live code and every reason code raised in them. Only a real
+ *    trailing `#[cfg(test)] mod tests` marks the end of production source.
+ * 2. Codes rarely reach `AdapterFailure` through a literal constructor call.
+ *    Four helpers wrap it — `failure` in two modules, plus `launch_error` and
+ *    `io_error`, which carry the code in their *second* argument after a stage
+ *    label. Matching only `LaunchError("…")` saw 10 of the 26 live codes.
+ */
 function pipelineReasonCodes(): string[] {
   const codes = new Set<string>();
   for (const file of sources(resolve(root, "src-tauri/src"), [".rs"])) {
-    const body = readFileSync(file, "utf8").split("#[cfg(test)]")[0];
+    const text = readFileSync(file, "utf8");
+    const testModule = text.search(/^#\[cfg\(test\)\]\s*\r?\nmod tests/m);
+    const body = (testModule === -1 ? text : text.slice(0, testModule))
+      // Calls wrap across lines; collapse so one regex can span them.
+      .replace(/\s+/g, " ");
     for (const pattern of [
-      /ConfigurationFailed\("([a-z_]+)"\)/g,
-      /LaunchError\("([a-z_]+)"\)/g,
+      /\bConfigurationFailed\(\s*"([a-z_]+)"/g,
+      /\bLaunchError\(\s*"([a-z_]+)"/g,
+      /\bfailure\(\s*"([a-z_]+)"/g,
+      // `launch_error(stage, reason, code)` / `io_error(stage, reason, error)`
+      /\b(?:launch_error|io_error)\(\s*"[a-z_]+"\s*,\s*"([a-z_]+)"/g,
     ]) {
       for (const match of body.matchAll(pattern)) codes.add(match[1]);
     }

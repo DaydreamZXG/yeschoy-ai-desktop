@@ -26,6 +26,27 @@ pub struct OpenResponse {
     schema_version: u8,
     tool_id: String,
     status: &'static str,
+    /// Why `status` came out the way it did. For `launch_failed` this is the
+    /// adapter's own `LaunchError` code, which used to be discarded by
+    /// `map_err(|_| "launch_failed")` — leaving every launch failure, from a
+    /// missing workspace to a terminal that will not spawn, sharing one
+    /// sentence. For every other status it repeats the status.
+    reason_code: &'static str,
+}
+
+/// `(status, reason_code)`. Statuses that carry no finer cause use `st`.
+type OpenFailure = (&'static str, &'static str);
+
+fn st(status: &'static str) -> OpenFailure {
+    (status, status)
+}
+
+/// Keep the adapter's launch reason; fall back to the status when it has none.
+fn launch_failure(error: AdapterFailure) -> OpenFailure {
+    match error {
+        AdapterFailure::LaunchError(reason) => ("launch_failed", reason),
+        _ => st("launch_failed"),
+    }
 }
 
 fn valid_request(request: &OpenRequest) -> bool {
@@ -173,21 +194,22 @@ pub async fn open_tool_connection_v1(
     let result = async {
         let permit = crate::shutdown_coordinator::global()
             .admit_operation()
-            .map_err(|_| "busy")?;
-        let _guard = ACTIVATION_LOCK.try_lock().map_err(|_| "busy")?;
-        let _process_guard = connection_recovery::operation_lock().map_err(|_| "busy")?;
-        let credential = existing_credential(&request.tool_id)?;
-        let home = tool_adapters::user_home().ok_or("settings_changed")?;
+            .map_err(|_| st("busy"))?;
+        let _guard = ACTIVATION_LOCK.try_lock().map_err(|_| st("busy"))?;
+        let _process_guard = connection_recovery::operation_lock().map_err(|_| st("busy"))?;
+        let credential = existing_credential(&request.tool_id).map_err(st)?;
+        let home = tool_adapters::user_home().ok_or(st("settings_changed"))?;
         let installation = permit
             .cancel_safe(tool_adapters::resolve_preferred_installation(
                 &request.tool_id,
             ))
             .await
-            .map_err(|_| "busy")?
-            .map_err(|_| "tool_not_found")?;
-        validate_settings(&home, &request.tool_id, &credential).map_err(|_| "settings_changed")?;
+            .map_err(|_| st("busy"))?
+            .map_err(|_| st("tool_not_found"))?;
+        validate_settings(&home, &request.tool_id, &credential)
+            .map_err(|_| st("settings_changed"))?;
         if permit.is_cancelled() {
-            return Err("busy");
+            return Err(st("busy"));
         }
         // Start helper-owned runtimes before launching their clients so a
         // first request cannot race the loopback listener.
@@ -195,18 +217,15 @@ pub async fn open_tool_connection_v1(
             .cancel_safe(async {
                 match request.tool_id.as_str() {
                     "claude_desktop" => {
-                        claude
-                            .start(credential)
-                            .await
-                            .map_err(|_| "launch_failed")?;
+                        claude.start(credential).await.map_err(launch_failure)?;
                         if permit.is_cancelled() {
-                            return Err("busy");
+                            return Err(st("busy"));
                         }
                         Ok(claude_desktop::launch(&installation.path))
                     }
                     "codex_desktop" => {
                         if permit.is_cancelled() {
-                            return Err("busy");
+                            return Err(st("busy"));
                         }
                         Ok(codex_desktop::launch(&installation.path))
                     }
@@ -220,9 +239,9 @@ pub async fn open_tool_connection_v1(
                         claude_code
                             .start(credential)
                             .await
-                            .map_err(|_| "launch_failed")?;
+                            .map_err(launch_failure)?;
                         if permit.is_cancelled() {
-                            return Err("busy");
+                            return Err(st("busy"));
                         }
                         Ok(
                             terminal_launch::launch_async(&installation, &request.tool_id, &home)
@@ -231,7 +250,7 @@ pub async fn open_tool_connection_v1(
                     }
                     "pi" => {
                         if permit.is_cancelled() {
-                            return Err("busy");
+                            return Err(st("busy"));
                         }
                         Ok(
                             terminal_launch::launch_async(&installation, &request.tool_id, &home)
@@ -247,16 +266,21 @@ pub async fn open_tool_connection_v1(
                 }
             })
             .await
-            .map_err(|_| "busy")??;
-        launched.map_err(|_| "launch_failed")?;
-        Ok::<_, &'static str>("opened")
+            .map_err(|_| st("busy"))??;
+        launched.map_err(launch_failure)?;
+        Ok::<_, OpenFailure>("opened")
     }
     .await;
+    let (status, reason_code) = match result {
+        Ok(status) => (status, status),
+        Err(failure) => failure,
+    };
     Ok(OpenResponse {
         request_id: request.request_id,
-        schema_version: 1,
+        schema_version: 2,
         tool_id: request.tool_id,
-        status: result.unwrap_or_else(|status| status),
+        status,
+        reason_code,
     })
 }
 
@@ -286,12 +310,51 @@ mod tests {
         .is_err());
         let response = serde_json::to_value(OpenResponse {
             request_id: "open-1".into(),
-            schema_version: 1,
+            schema_version: 2,
             tool_id: "dsh_web".into(),
             status: "opened",
+            reason_code: "opened",
         })
         .unwrap();
-        assert_eq!(response.as_object().unwrap().len(), 4);
+        // Still a closed shape: exactly the five declared fields, nothing the
+        // credential or the installation path could ride out on.
+        let object = response.as_object().unwrap();
+        assert_eq!(object.len(), 5);
+        assert_eq!(object["reasonCode"], "opened");
+    }
+
+    /// Every launch failure used to arrive as the bare status `launch_failed`,
+    /// because `map_err(|_| "launch_failed")` dropped the adapter's own code.
+    /// The renderer could then only ever say one sentence — "请确认应用可以手动
+    /// 打开" — whether the workspace directory had gone missing, the terminal
+    /// refused to spawn, or the app would not exit. These are the codes that
+    /// have to survive the trip.
+    #[test]
+    fn launch_failures_keep_the_adapter_reason() {
+        for reason in [
+            "terminal_launch_failed",
+            "terminal_unavailable",
+            "workspace_unavailable",
+            "invalid_launch_target",
+            "launch_target_missing",
+            "desktop_launch_exit_failed",
+            "desktop_launch_wait_failed",
+        ] {
+            assert_eq!(
+                launch_failure(AdapterFailure::LaunchError(reason)),
+                ("launch_failed", reason),
+            );
+        }
+        // An adapter failure with no reason of its own still reports honestly
+        // rather than inventing one.
+        assert_eq!(
+            launch_failure(AdapterFailure::LaunchFailed),
+            ("launch_failed", "launch_failed"),
+        );
+        // Statuses that genuinely have no finer cause repeat themselves, so the
+        // renderer never has to treat `reasonCode` as optional.
+        assert_eq!(st("busy"), ("busy", "busy"));
+        assert_eq!(st("not_connected"), ("not_connected", "not_connected"));
     }
 
     #[test]

@@ -118,7 +118,7 @@ function local(saved: Partial<ToolConnection> = {}) {
     opening: null,
     refresh: vi.fn(async () => {}),
     restore: vi.fn(async () => connectionsFixture("restore")),
-    open: vi.fn(async () => "opened" as const),
+    open: vi.fn(async () => ({ status: "opened" as const, reasonCode: "opened" })),
   };
 }
 function sessionWithMoney(balanceAmount: string): AccountSessionController {
@@ -221,8 +221,9 @@ beforeEach(async () => {
       return {
         requestId: req.requestId,
         toolId: req.toolId,
-        schemaVersion: 1,
+        schemaVersion: 2,
         status: "opened",
+        reasonCode: "opened",
       };
     if (command === "configure_desktop_tool_v2")
       return {
@@ -680,7 +681,10 @@ describe("daily-use UX", () => {
   it("routes an interrupted open to automatic setup recovery without disconnecting", async () => {
     const controller = {
       ...local(),
-      open: vi.fn(async () => "recovery_pending" as const),
+      open: vi.fn(async () => ({
+        status: "recovery_pending" as const,
+        reasonCode: "recovery_pending",
+      })),
     };
     render(
       <ConnectionProvider value={controller}>
@@ -702,6 +706,72 @@ describe("daily-use UX", () => {
     fireEvent.click(screen.getByRole("button", { name: "前往接入修复" }));
     expect(callback).toHaveBeenCalledOnce();
     expect(controller.restore).not.toHaveBeenCalled();
+  });
+
+  /**
+   * 原生侧过去用 `map_err(|_| "launch_failed")` 把所有启动失败压成一个状态，
+   * 于是「工作目录没了」和「终端起不来」对用户是同一句话。对 Claude Code 和
+   * Pi 这类终端工具，那句话给的下一步（「请确认应用可以手动打开」）本身就是
+   * 错的 —— 它们没有可以手动打开的窗口。
+   */
+  it.each([
+    ["claude_code", "打开终端使用", "terminal_launch_failed", "自己打开终端"],
+    ["claude_code", "打开终端使用", "workspace_unavailable", "重新选择工作目录"],
+    ["codex_desktop", "打开使用", "launch_target_missing", "已被移动或卸载"],
+    ["codex_desktop", "打开使用", "desktop_launch_access_denied", "隐私与安全性"],
+  ] as const)(
+    "tells a %s user what actually failed when the open reports %s",
+    async (toolId, label, reasonCode, expected) => {
+      const controller = {
+        ...local(),
+        open: vi.fn(async () => ({
+          status: "launch_failed" as const,
+          reasonCode,
+        })),
+      };
+      render(
+        <ConnectionProvider value={controller}>
+          <OpenConnection
+            connection={controller.connections.find((c) => c.toolId === toolId)!}
+            name={toolId}
+            onAdjust={callback}
+          />
+        </ConnectionProvider>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: label }));
+      await tick();
+      const alert = screen.getByRole("alert");
+      expect(alert).toHaveTextContent(expected);
+      // The generic sentence still exists as a fallback, but a failure that
+      // named its cause must never land on it.
+      expect(alert).not.toHaveTextContent("请确认应用可以手动打开、未被系统阻止");
+    },
+  );
+
+  it("still falls back to the generic sentence for an unnamed launch failure", async () => {
+    const controller = {
+      ...local(),
+      open: vi.fn(async () => ({
+        status: "launch_failed" as const,
+        reasonCode: "launch_failed",
+      })),
+    };
+    render(
+      <ConnectionProvider value={controller}>
+        <OpenConnection
+          connection={
+            controller.connections.find((c) => c.toolId === "codex_desktop")!
+          }
+          name="Codex Desktop"
+          onAdjust={callback}
+        />
+      </ConnectionProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "打开使用" }));
+    await tick();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "请确认应用可以手动打开、未被系统阻止",
+    );
   });
 
   it.each(["codex_desktop", "claude_desktop"] as const)(
@@ -1420,8 +1490,9 @@ describe("daily-use UX", () => {
       finish({
         requestId: req.requestId,
         toolId: req.toolId,
-        schemaVersion: 1,
+        schemaVersion: 2,
         status: "opened",
+        reasonCode: "opened",
       }),
     );
     expect(screen.getByRole("status")).toHaveTextContent(
@@ -1431,8 +1502,9 @@ describe("daily-use UX", () => {
   it("rejects extra secret-capable launch reply fields", async () => {
     native.mockImplementation(async (_cmd, args) => ({
       ...(args as { request: object }).request,
-      schemaVersion: 1,
+      schemaVersion: 2,
       status: "opened",
+      reasonCode: "opened",
       apiKey: "must-not-render",
     }));
     await expect(openConnection("dsh_web")).rejects.toThrow(
@@ -1445,7 +1517,7 @@ describe("daily-use UX", () => {
   });
   it("does not show an old opening result on a changed app or connection", async () => {
     const state = local();
-    let finish!: (status: "opened") => void;
+    let finish!: (result: { status: "opened"; reasonCode: string }) => void;
     state.open.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
@@ -1472,7 +1544,7 @@ describe("daily-use UX", () => {
         <OpenConnection connection={pi} name="Pi" onAdjust={callback} />
       </ConnectionProvider>,
     );
-    await act(async () => finish("opened"));
+    await act(async () => finish({ status: "opened", reasonCode: "opened" }));
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "打开终端使用" }));
     await tick();
@@ -1588,7 +1660,10 @@ describe("daily-use UX", () => {
   it.each(ACTIVATION_TOOL_IDS)(
     "launch IPC permits only the closed target %s",
     async (toolId) => {
-      await expect(openConnection(toolId)).resolves.toBe("opened");
+      await expect(openConnection(toolId)).resolves.toEqual({
+        status: "opened",
+        reasonCode: "opened",
+      });
       expect(native).toHaveBeenCalledOnce();
       expect(native.mock.calls[0][0]).toBe("open_tool_connection_v1");
       const args = native.mock.calls[0][1] as { request: object };

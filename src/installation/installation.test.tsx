@@ -168,7 +168,10 @@ const connections = {
   opening: null,
   refresh: vi.fn(async () => {}),
   restore: vi.fn(async () => connectionsFixture("test")),
-  open: vi.fn(async () => "opened" as const),
+  open: vi.fn(async () => ({
+    status: "opened" as const,
+    reasonCode: "opened",
+  })),
 };
 
 describe("ru052 truthful download source", () => {

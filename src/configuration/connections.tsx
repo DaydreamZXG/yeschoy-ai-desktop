@@ -17,7 +17,7 @@ import {
   type ActivationToolId,
 } from "./activation";
 import type { ConfigurationLineId } from "./preview";
-import { openConnection, type OpenStatus } from "./launchApi";
+import { openConnection, type OpenResult } from "./launchApi";
 
 export const CONNECTION_INSPECTION_DEADLINE_MS = 15_000;
 export const CONNECTION_RESTORE_DEADLINE_MS = 60_000;
@@ -309,8 +309,9 @@ export function useToolConnections() {
     }
   }, []);
   const open = useCallback(
-    async (tool: ActivationToolId): Promise<OpenStatus> => {
-      if (operation.current || openingOperation.current) return "busy";
+    async (tool: ActivationToolId): Promise<OpenResult> => {
+      if (operation.current || openingOperation.current)
+        return { status: "busy", reasonCode: "busy" };
       openingOperation.current = true;
       setOpening(tool);
       try {

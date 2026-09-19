@@ -50,7 +50,7 @@ describe("SettingsView", () => {
       requestId: "settings-1",
       refresh: vi.fn(async () => {}),
       restore: vi.fn(async () => connectionsFixture("restore")),
-      open: vi.fn(async () => "opened" as const),
+      open: vi.fn(async () => ({ status: "opened" as const, reasonCode: "opened" })),
     };
     Object.assign(
       connections.connections.find((c) => c.toolId === "claude_code")!,
@@ -125,7 +125,7 @@ describe("SettingsView", () => {
       requestId: "settings-2",
       refresh: vi.fn(async () => {}),
       restore: vi.fn(async () => connectionsFixture("restore")),
-      open: vi.fn(async () => "opened" as const),
+      open: vi.fn(async () => ({ status: "opened" as const, reasonCode: "opened" })),
     };
     render(
       <ConnectionProvider value={connections}>
