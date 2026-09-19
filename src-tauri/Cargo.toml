@@ -1,6 +1,6 @@
 [package]
 name = "yeschoy-desktop"
-version = "0.4.22"
+version = "0.4.23"
 description = "Official beginner-friendly desktop assistant for 野菜API"
 authors = ["YesChoy"]
 license = "MIT"
