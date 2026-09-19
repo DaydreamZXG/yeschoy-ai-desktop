@@ -6,7 +6,17 @@ on:
   pull_request:
     branches: [main, "product/**"]
   workflow_dispatch:
+    inputs:
+      include_macos_intel:
+        description: Also run the native suite on Intel macOS (costs ~35 billed minutes)
+        type: boolean
+        default: false
   workflow_call:
+    inputs:
+      include_macos_intel:
+        description: Also run the native suite on Intel macOS (costs ~35 billed minutes)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -56,17 +66,21 @@ jobs:
   native:
     name: Native tests (${{ matrix.platform }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 45
+    # These jobs finish in 2-6 wall minutes. The timeout is not a schedule, it
+    # is a blast radius: a hung macOS job bills at 10x, so 45 minutes was 450
+    # billed minutes -- a fifth of the monthly allowance from one stuck run.
+    timeout-minutes: 25
     strategy:
       fail-fast: false
+      # Intel macOS is opt-in. It ran on every push and pull request and cost
+      # 770 of September's 2,000 included minutes on its own: 22 runs, 3.5 wall
+      # minutes each, billed at 10x. It is also twice as slow as the Apple
+      # Silicon runner for the same suite, so it cost twice as much to learn
+      # the same thing. release.yml still compiles universal-apple-darwin, so
+      # x86_64 build breakage is caught there; what this leg adds is *running*
+      # the tests on x86_64. Turn it on by hand before a release.
       matrix:
-        include:
-          - os: windows-2025
-            platform: Windows x64
-          - os: macos-15-intel
-            platform: macOS Intel
-          - os: macos-15
-            platform: macOS Apple Silicon
+        include: ${{ fromJSON(inputs.include_macos_intel && '[{"os":"windows-2025","platform":"Windows x64"},{"os":"macos-15","platform":"macOS Apple Silicon"},{"os":"macos-15-intel","platform":"macOS Intel"}]' || '[{"os":"windows-2025","platform":"Windows x64"},{"os":"macos-15","platform":"macOS Apple Silicon"}]') }}
     env:
       CARGO_INCREMENTAL: "0"
     steps:

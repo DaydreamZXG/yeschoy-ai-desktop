@@ -2,10 +2,18 @@ name: YesChoy Nightly
 
 # Keep the existing nightly entrypoint, but validate the active Yeschoy client.
 # This is a source check and does not claim WSL runtime coverage.
+# The nightly schedule is off. It re-ran the identical push/pull-request suite
+# against code that had not changed since the last push, and in September it
+# spent 176 billed minutes doing so. Everything it checks is already checked
+# when something is actually pushed. Run it by hand if you want a fresh
+# baseline, and tick include_macos_intel before a release.
 on:
-  schedule:
-    - cron: "23 18 * * *" # 02:23 Beijing time; GitHub may delay scheduled runs.
   workflow_dispatch:
+    inputs:
+      include_macos_intel:
+        description: Also run the native suite on Intel macOS (costs ~35 billed minutes)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -14,3 +22,5 @@ jobs:
   candidate:
     name: Current candidate checks
     uses: ./.github/workflows/ci.yml
+    with:
+      include_macos_intel: ${{ inputs.include_macos_intel }}
