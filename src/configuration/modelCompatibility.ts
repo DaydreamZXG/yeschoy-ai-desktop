@@ -29,8 +29,9 @@ export type ModelConnectionMode = "direct" | "bridge";
  *    「只有 claude 模型才让转」的守卫是被注释掉的
  *    （`relay/channel/openai/adaptor.go:63`）。
  *
- * 所以：**协议不是能不能用的理由**，中转会替我们转。真不能用的只有两种——
- * 只会出图的（`image-generation`）和什么都没声明的（`codexpro/`）。
+ * 所以：**协议不是能不能用的理由**，中转会替我们转。真不能用的只有一种 ——
+ * 非空的端点列表里一个对话端点都没有，也就是纯出图模型。空列表和缺字段都
+ * 只是「不知道」，见 `modelConnectionMode` 里的说明。
  */
 const CONVERSATIONAL_ENDPOINTS = [
   "openai",
@@ -49,15 +50,24 @@ export function modelConnectionMode(
   toolId: ActivationToolId,
   endpoints: string[] | undefined,
 ): ModelConnectionMode | null {
-  // 没有这个字段 ≠ 声明了什么都不支持。`/api/pricing` 只覆盖它定过价的模型，
-  // 账号的可用模型列表里还有别的（今天线上就有 deepseek-v4-flash），那些模型
-  // 中转什么都没告诉我们。把「不知道」当成「不能用」，灰掉的是能用的模型，
-  // 而且给的是最糟的那句「哪个应用都用不了」—— 用户在 WorkBuddy 上看到的
-  // 就是这个。不知道就放行。
+  // **空的和没有的，都只是「没告诉我们」，不是「告诉我们不能用」。**
   //
-  // 空数组是另一回事：那是中转在某一行里明确说了「这个模型没有可用端点」，
-  // 线上的 codexpro/ 就是，那种照灰。
-  if (endpoints === undefined) return "direct";
+  // 这一条查过中转源码。`GetModelSupportEndpointTypes` 在模型不在表里时返回的
+  // 就是一个空切片，和「真的零端点」用的是同一个值，从外面分不开：
+  //
+  //     if endpoints, ok := modelSupportEndpointTypes[model]; ok { return endpoints }
+  //     return make([]constant.EndpointType, 0)
+  //
+  // 而只要一个模型有 ability，`GetEndpointTypesByChannelType` 至少会给一个端点
+  // （兜底分支就是 `[openai]`）。所以空列表只能是「没查到」。
+  //
+  // 按「没声明就是不能用」来判，会随着中转上新模型的速度越灰越多 —— 中转加
+  // 模型永远比它补元数据快。WorkBuddy 上 deepseek-v4-flash 被灰掉、还配上
+  // 「哪个应用都用不了」这句最重的话，就是这么来的。
+  if (endpoints === undefined || endpoints.length === 0) return "direct";
+
+  // 到这里列表非空，才有资格谈「说了不能用」：里面一个对话端点都没有。
+  // 今天只有纯出图模型会这样。
   if (!canConverse(endpoints)) return null;
 
   // Codex 只发 Responses（官方 config 文档写明 `wire_api` 只接受 "responses"，

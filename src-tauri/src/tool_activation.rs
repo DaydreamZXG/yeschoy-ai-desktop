@@ -506,12 +506,27 @@ fn chat_compatible(pricing: &Value, model_id: &str) -> bool {
         // blocks activation for a model the picker has already offered.
         return true;
     };
-    endpoints.iter().any(|endpoint| {
-        matches!(
-            endpoint.as_str(),
-            Some("openai") | Some("openai-response") | Some("anthropic") | Some("gemini")
-        )
-    })
+    endpoints_unknown(endpoints)
+        || endpoints.iter().any(|endpoint| {
+            matches!(
+                endpoint.as_str(),
+                Some("openai") | Some("openai-response") | Some("anthropic") | Some("gemini")
+            )
+        })
+}
+
+/// An endpoint list the relay never filled in.
+///
+/// `GetModelSupportEndpointTypes` returns an empty slice for a model it cannot
+/// find, which is the same value a genuinely endpoint-less model would carry,
+/// so from out here the two are indistinguishable. Meanwhile any model with an
+/// ability gets at least one endpoint, because the fallback arm of
+/// `GetEndpointTypesByChannelType` returns `[openai]`. An empty list can
+/// therefore only mean "not found", and reading it as "cannot be used" greys
+/// models that work -- steadily more of them, since the relay adds models
+/// faster than it describes them.
+fn endpoints_unknown(endpoints: &[Value]) -> bool {
+    endpoints.is_empty()
 }
 
 fn model_endpoints<'a>(pricing: &'a Value, model_id: &str) -> Option<&'a Vec<Value>> {
@@ -564,10 +579,11 @@ fn codex_transport(pricing: &Value, model_id: &str) -> Option<codex_desktop::Cod
     //
     // So this is the one place a model is refused, and the reason is "nothing
     // on the path can carry Responses", not "the protocol does not match".
-    endpoints
-        .iter()
-        .any(|endpoint| matches!(endpoint.as_str(), Some("openai-response") | Some("gemini")))
-        .then_some(codex_desktop::CodexTransport::DirectResponses)
+    (endpoints_unknown(endpoints)
+        || endpoints
+            .iter()
+            .any(|endpoint| matches!(endpoint.as_str(), Some("openai-response") | Some("gemini"))))
+    .then_some(codex_desktop::CodexTransport::DirectResponses)
 }
 
 #[cfg(test)]
@@ -3432,6 +3448,9 @@ mod tests {
                 {"model_name": "both", "supported_endpoint_types": ["openai", "anthropic"]},
                 {"model_name": "gemini", "supported_endpoint_types": ["gemini", "openai"]},
                 {"model_name": "image", "supported_endpoint_types": ["image-generation"]},
+                // Empty means the relay could not find the model, not that it
+                // has no endpoints -- see `endpoints_unknown`. codexpro/ is
+                // this case today, and it must not be judged unusable.
                 {"model_name": "silent", "supported_endpoint_types": []}
             ]
         });
@@ -3445,17 +3464,17 @@ mod tests {
             assert!(model_supports_tool(&pricing, "messages", tool));
             assert!(model_supports_tool(&pricing, "gemini", tool));
             assert!(!model_supports_tool(&pricing, "image", tool));
-            assert!(!model_supports_tool(&pricing, "silent", tool));
+            assert!(model_supports_tool(&pricing, "silent", tool));
         }
         for tool in ["claude_code", "claude_desktop"] {
             assert!(model_supports_tool(&pricing, "messages", tool));
             assert!(model_supports_tool(&pricing, "chat", tool));
             assert!(model_supports_tool(&pricing, "responses", tool));
             assert!(!model_supports_tool(&pricing, "image", tool));
-            assert!(!model_supports_tool(&pricing, "silent", tool));
+            assert!(model_supports_tool(&pricing, "silent", tool));
         }
         // Codex is the only target that still refuses anything, and only
-        // where no conversion can carry Responses at all.
+        // where a declaration exists and no conversion can carry Responses.
         assert!(model_supports_tool(&pricing, "responses", "codex_desktop"));
         assert!(model_supports_tool(&pricing, "gemini", "codex_desktop"));
         // The deployed relay's Claude adaptor cannot accept a Responses
@@ -3464,7 +3483,7 @@ mod tests {
         assert!(!model_supports_tool(&pricing, "both", "codex_desktop"));
         assert!(!model_supports_tool(&pricing, "chat", "codex_desktop"));
         assert!(!model_supports_tool(&pricing, "image", "codex_desktop"));
-        assert!(!model_supports_tool(&pricing, "silent", "codex_desktop"));
+        assert!(model_supports_tool(&pricing, "silent", "codex_desktop"));
         assert_eq!(
             codex_transport(&pricing, "responses"),
             Some(codex_desktop::CodexTransport::DirectResponses)
@@ -3472,6 +3491,10 @@ mod tests {
         assert_eq!(codex_transport(&pricing, "messages"), None);
         assert_eq!(codex_transport(&pricing, "chat"), None);
         assert_eq!(codex_transport(&pricing, "image"), None);
+        assert_eq!(
+            codex_transport(&pricing, "silent"),
+            Some(codex_desktop::CodexTransport::DirectResponses)
+        );
         // A model the account can use but `/api/pricing` never listed. The
         // relay told us nothing about it, which is not the same as telling us
         // it speaks nothing, and the picker has already offered it -- refusing
@@ -3510,7 +3533,10 @@ mod tests {
             Some(ClaudeTransport::DirectAnthropic)
         );
         assert_eq!(claude_transport(&pricing, "image"), None);
-        assert_eq!(claude_transport(&pricing, "silent"), None);
+        assert_eq!(
+            claude_transport(&pricing, "silent"),
+            Some(ClaudeTransport::DirectAnthropic)
+        );
     }
 
     #[test]

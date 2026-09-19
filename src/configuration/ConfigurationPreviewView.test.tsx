@@ -82,9 +82,8 @@ describe("desktop protocol compatibility", () => {
       // 转成 Messages。以前这里判 false，是没证据时的保守猜测，现在有证据了。
       expect(modelSupportsTool(tool, ["anthropic"])).toBe(true);
       expect(modelSupportsTool(tool, ["gemini"])).toBe(true);
-      // 真不能用的：只会出图的，和什么都没声明的（线上是 codexpro/）。
+      // 真不能用的只有一种：非空列表里一个对话端点都没有。
       expect(modelSupportsTool(tool, ["image-generation"])).toBe(false);
-      expect(modelSupportsTool(tool, [])).toBe(false);
     }
     // Claude 两端同样只在无法对话时置灰，但会区分直连和走本机桥。
     expect(modelConnectionMode("claude_code", ["anthropic"])).toBe("direct");
@@ -108,7 +107,6 @@ describe("desktop protocol compatibility", () => {
     // 正在配置的这个应用，永远不会被列进「去别处用」。
     expect(toolsSupportingModel(responsesUnreachable, "pi")).not.toContain("pi");
     // 哪都跑不了的模型给出空列表，文案退回到只说这个应用用不了。
-    expect(toolsSupportingModel([], "codex_desktop")).toEqual([]);
     expect(toolsSupportingModel(["image-generation"], "workbuddy")).toEqual([]);
   });
 
@@ -118,8 +116,10 @@ describe("desktop protocol compatibility", () => {
     // 还是最重的那句「哪个应用都用不了」—— 对一个能跑的模型。
     for (const tool of ACTIVATION_TOOL_IDS) {
       expect(modelSupportsTool(tool, undefined)).toBe(true);
-      // 空数组不一样：那是中转在某一行里明确说了没有可用端点（codexpro/）。
-      expect(modelSupportsTool(tool, [])).toBe(false);
+      // 空数组同理。中转查不到这个模型时返回的就是空切片，和「真的零端点」
+      // 是同一个值，分不开；而有 ability 的模型至少会有一个端点。所以空列表
+      // 只能读成「没查到」。线上的 codexpro/ 就是这种，它不该被判死。
+      expect(modelSupportsTool(tool, [])).toBe(true);
     }
     // 不知道协议时不假装知道是哪一种，走默认直连。
     expect(modelConnectionMode("claude_code", undefined)).toBe("direct");
@@ -154,9 +154,9 @@ describe("desktop protocol compatibility", () => {
     // 上游那个兼容网关有没有 /v1/responses 我们不知道。线上的三个 gemini-3.x
     // 就在这一格。
     expect(modelSupportsTool("codex_desktop", ["openai"])).toBe(false);
-    // 不能对话的，Codex 一样灰。
+    // 不能对话的，Codex 一样灰；不知道的一样放行。
     expect(modelSupportsTool("codex_desktop", ["image-generation"])).toBe(false);
-    expect(modelSupportsTool("codex_desktop", [])).toBe(false);
+    expect(modelSupportsTool("codex_desktop", [])).toBe(true);
   });
 
   it("accepts native Anthropic and automatically bridged Chat for both Claude targets", () => {
