@@ -52,6 +52,29 @@ fn config_error(error: ConfigFailure) -> AdapterFailure {
     }
 }
 
+/// Claude Code 的自动压缩窗口，从目录里那个模型的真实上下文窗口来。
+///
+/// 不写这一项的话，Claude Code 不知道它连的是哪个模型的窗口 —— `ANTHROPIC_MODEL`
+/// 是 `glm-5.3`、`gemini-3.7-flash` 这种它内置表里没有的名字。结果就是对话涨过
+/// 窗口也不会自动压缩，一直涨到中转那边报上下文超限，用户看到的是一条报错而不是
+/// 一次压缩。
+///
+/// `autoCompactWindow` 是 Claude Code settings.json 的顶层项，schema 写明
+/// 最小 100000、最大 1000000，所以：
+///
+///   · 超过 1000000 的（目录里多数 1M 模型其实是 1048576）夹到上限 —— 早压一点
+///     是安全的，晚压不是。
+///   · 小于 100000 的不写。schema 表达不了，硬夹到 100000 会让它压得太晚，
+///     那比不写更糟。
+///   · 目录里没有这个模型的，也不写 —— 不猜。
+fn auto_compact_window(model: &str) -> Option<u64> {
+    const MIN: u64 = 100_000;
+    const MAX: u64 = 1_000_000;
+    let (bare, _) = crate::tool_model_profile::split_one_m_context_marker(model);
+    let window = crate::tool_model_profile::profile(bare)?.context_window?;
+    (window >= MIN).then(|| window.min(MAX))
+}
+
 fn render(existing: Option<&[u8]>, origin: &str, model: &str, helper: &str) -> Result<Vec<u8>, ()> {
     let mut root = match existing {
         Some(bytes) if !bytes.is_empty() => {
@@ -61,6 +84,16 @@ fn render(existing: Option<&[u8]>, origin: &str, model: &str, helper: &str) -> R
     };
     let object = root.as_object_mut().ok_or(())?;
     object.insert("apiKeyHelper".into(), helper.into());
+    match auto_compact_window(model) {
+        Some(window) => {
+            object.insert("autoCompactWindow".into(), window.into());
+        }
+        // 目录没说的就不留一个过期的数在那儿：上一个模型的窗口套在新模型上，
+        // 比没有更糟。
+        None => {
+            object.remove("autoCompactWindow");
+        }
+    }
     let environment = object
         .entry("env")
         .or_insert_with(|| Value::Object(Map::new()))
@@ -523,5 +556,45 @@ mod tests {
             "synthetic-helper credential-helper claude_code"
         );
         assert!(settings["env"].get("ANTHROPIC_API_KEY").is_none());
+    }
+
+    #[test]
+    fn the_auto_compact_window_follows_the_model_and_stays_inside_the_schema() {
+        let window = |model: &str| {
+            let bytes = render(None, "https://yeschoy.com", model, "helper").unwrap();
+            let value: Value = serde_json::from_slice(&bytes).unwrap();
+            value.get("autoCompactWindow").and_then(Value::as_u64)
+        };
+        // 目录里 1048576 的模型夹到 schema 上限 1000000：早压一点是安全的。
+        assert_eq!(window("glm-5.3"), Some(1_000_000));
+        assert_eq!(window("kimi-k3"), Some(1_000_000));
+        assert_eq!(window("gemini-3.7-flash"), Some(1_000_000));
+        // 正好 1000000 的原样写。
+        assert_eq!(window("deepseek-v4.1-flash"), Some(1_000_000));
+        // 目录里没有的模型不猜，也不写。
+        assert_eq!(window("something-not-in-the-catalog"), None);
+        // 上一个模型留下的值不能套在新模型上。
+        let stale = br#"{"autoCompactWindow":1000000}"#;
+        let bytes = render(
+            Some(stale),
+            "https://yeschoy.com",
+            "something-not-in-the-catalog",
+            "helper",
+        )
+        .unwrap();
+        let value: Value = serde_json::from_slice(&bytes).unwrap();
+        assert!(value.get("autoCompactWindow").is_none());
+        // 用户原有的其他设置不受影响。
+        let bytes = render(
+            Some(br#"{"permissions":{"allow":["Read"]},"autoCompactEnabled":false}"#),
+            "https://yeschoy.com",
+            "glm-5.3",
+            "helper",
+        )
+        .unwrap();
+        let value: Value = serde_json::from_slice(&bytes).unwrap();
+        assert_eq!(value["permissions"]["allow"][0], "Read");
+        // 开关是用户的选择，我们只给窗口大小，不替他打开或关掉。
+        assert_eq!(value["autoCompactEnabled"], Value::Bool(false));
     }
 }
