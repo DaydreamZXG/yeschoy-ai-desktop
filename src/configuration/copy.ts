@@ -270,6 +270,22 @@ const zh = {
   // 下面这些 reason code 此前全部落到通用的 launchNotOpened / setupWriteFailed。
   // 其中 terminal_* 是 Claude Code 和 Pi 的启动路径：对终端工具说「请手动打开
   // 应用」是错的建议 —— 助手的价值恰恰是替用户把带参数的终端拉起来。
+  // claude.ai 的登录态在钥匙串里，写配置文件碰不到它；两份凭据同时在，
+  // Claude Code 用 claude.ai 那份，中转从头到尾没被用上。挪走它会触发一个
+  // macOS 系统授权框 —— 那个框绕不过去，所以必须先把它是什么讲清楚，
+  // 否则用户面对一个没头没尾的对话框，多数人会点拒绝。
+  claudeLoginBlockLabel: "先处理 claude.ai 登录",
+  claudeLoginBlockHint:
+    "Claude Code 里还登录着 claude.ai，它会盖过野菜的接入。",
+  claudeLoginDialogTitle: "Claude Code 里还登录着 claude.ai",
+  claudeLoginDialogMessage:
+    "两个登录同时存在时，Claude Code 会用 claude.ai 那个，野菜的接入不会生效。助手可以把 claude.ai 的登录先收起来，日后在「恢复原设置」里原样还给你，不会丢。接下来系统会问一次「是否允许野菜API使用钥匙串中的信息」，那一步就是为了这个，点允许即可。",
+  claudeLoginDialogConfirm: "收起 claude.ai 登录并接入",
+  claudeLoginDialogCancel: "暂不接入",
+  claudeLoginNotReleased:
+    "系统没有允许访问钥匙串，claude.ai 的登录没有收起来，本次没有接入，设置也没有改动。请重试，并在系统提示时选择「允许」。",
+  claudeLoginTakeoverFailed:
+    "没能收起 claude.ai 的登录，本次没有接入，设置没有改动。可以重试；如果一直失败，在 Claude Code 里执行 claude /logout 之后再接入也可以。",
   launchTerminalFailed:
     "设置已经保存，但没能打开终端窗口。你可以自己打开终端再启动它；不需要重新接入。",
   launchTerminalUnavailable:

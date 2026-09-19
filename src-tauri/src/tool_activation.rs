@@ -184,6 +184,13 @@ pub struct ToolActivationRequest {
     installation_job_id: Option<String>,
     #[serde(default)]
     restart_running_app: bool,
+    /// 单独一个标志，不复用 `restart_running_app`。
+    ///
+    /// 同意「重启应用」和同意「挪走我的 claude.ai 登录态」是两件事。合成一个
+    /// 的话，用户为了换模型点了重启，就顺带默许了动他的账号凭据 —— 这个仓库
+    /// 里有专门的测试防止这种隐式同意（ru056），不能在这里破例。
+    #[serde(default)]
+    displace_claude_login: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -1613,6 +1620,23 @@ pub async fn configure_desktop_tool_v2(
         Err(_) => return Ok(cancelled()),
     };
     if desktop_lifecycle::requires_reload(&request.tool_id) {
+        // claude.ai 的登录态存在钥匙串里，写配置文件碰不到它。两份凭据并存时
+        // Claude Code 用 claude.ai 那份，中转从头到尾没被用上 —— 野菜显示
+        // 「设置已完成」，用户在 Claude Code 里看到的却是账号被限制。
+        //
+        // 探测不弹窗（只查属性不查数据），所以没登录 claude.ai 的人不会平白
+        // 收到任何东西。真要挪它才会弹系统授权框，而那个框必须先有解释，
+        // 所以这里先回一个待确认状态，由界面把话说清楚。
+        if request.tool_id == "claude_code"
+            && !request.displace_claude_login
+            && crate::claude_login_takeover::present()
+        {
+            return Ok(ToolActivationProjection::new(
+                &request,
+                "application_running",
+                "claude_login_conflict",
+            ));
+        }
         match desktop_lifecycle::is_running(&request.tool_id, &installation.path).await {
             Ok(true) if !request.restart_running_app => {
                 return Ok(ToolActivationProjection::new(
@@ -2014,6 +2038,33 @@ pub async fn configure_desktop_tool_v2(
                 .projection(&request));
             }
         };
+    // 同意已经拿到了（`displace_claude_login`），这里才真的动钥匙串 —— 系统
+    // 会弹一次授权框。挪走而不是删掉，`manage_tool_connections_v1` 的 restore
+    // 分支会把它搬回去。
+    if request.tool_id == "claude_code" && request.displace_claude_login {
+        match tokio::task::spawn_blocking(crate::claude_login_takeover::take_over).await {
+            Ok(Ok(_)) => {}
+            // 用户在系统框上点了拒绝。不能当成成功继续 —— 那样会写完配置宣布
+            // 「设置已完成」，而 Claude Code 依旧走 claude.ai，正是这次要修的
+            // 那个不报错的错误。
+            Ok(Err(crate::claude_login_takeover::Failure::NotPermitted)) => {
+                let _ = recovery.abandon(&recovery_record);
+                delete_created_tokens(&origin, &access_token, &leases).await;
+                return Ok(
+                    ActivationFailure::ConfigurationFailed("claude_login_not_released")
+                        .projection(&request),
+                );
+            }
+            Ok(Err(_)) | Err(_) => {
+                let _ = recovery.abandon(&recovery_record);
+                delete_created_tokens(&origin, &access_token, &leases).await;
+                return Ok(
+                    ActivationFailure::ConfigurationFailed("claude_login_takeover_failed")
+                        .projection(&request),
+                );
+            }
+        }
+    }
     let mut codex_history = if request.tool_id == "codex_desktop" {
         let Some(home) = tool_adapters::user_home() else {
             let _ = recovery.abandon(&recovery_record);
@@ -2682,6 +2733,10 @@ pub async fn manage_tool_connections_v1(
                 if request.tool_id == "codex_desktop" {
                     let home = tool_adapters::user_home().ok_or(())?;
                     crate::codex_history_takeover::restore(&home).map_err(|_| ())?;
+                }
+                // 接入时挪走的 claude.ai 登录态搬回来。没接管过就什么都不做。
+                if request.tool_id == "claude_code" {
+                    crate::claude_login_takeover::restore().map_err(|_| ())?;
                 }
             }
             Ok(kept)
@@ -3463,6 +3518,7 @@ mod tests {
             models: None,
             installation_job_id: None,
             restart_running_app: false,
+            displace_claude_login: false,
         };
         assert!(request_is_valid(&valid));
         let mut invalid = valid.clone();

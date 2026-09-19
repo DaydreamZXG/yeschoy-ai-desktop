@@ -347,6 +347,7 @@ export function ConfigurationPreviewView({
     [],
   );
   const lineTestSequence = useRef(0);
+  const [claudeLoginPromptOpen, setClaudeLoginPromptOpen] = useState(false);
   const [restartPromptContext, setRestartPromptContext] = useState<
     string | null
   >(null);
@@ -775,6 +776,7 @@ export function ConfigurationPreviewView({
   const apply = async (
     installationJobId?: string,
     restartRunningApp = false,
+    displaceClaudeLogin = false,
   ) => {
     if (!signedIn) {
       onOpenAccount();
@@ -805,6 +807,7 @@ export function ConfigurationPreviewView({
         models: submittedModels,
         ...(installationJobId ? { installationJobId } : {}),
         ...(restartRunningApp ? { restartRunningApp: true } : {}),
+        ...(displaceClaudeLogin ? { displaceClaudeLogin: true } : {}),
       },
       {
         key: submittedContext,
@@ -815,10 +818,21 @@ export function ConfigurationPreviewView({
         line: lineId,
       },
     );
-    if (currentContext.current === submittedContext)
+    if (currentContext.current === submittedContext) {
+      // `application_running` 现在有两种原因，问的不是同一件事：一种是要不要
+      // 重启应用，一种是要不要挪走 claude.ai 的登录态。按状态一刀切会把登录
+      // 冲突弹成「重启应用」的框 —— 文案对不上，而且用户点的「同意」也不是
+      // 我们真正需要的那个同意。
+      const conflict =
+        result?.status === "application_running" &&
+        result.reasonCode === "claude_login_conflict";
+      setClaudeLoginPromptOpen(conflict);
       setRestartPromptContext(
-        result?.status === "application_running" ? submittedContext : null,
+        result?.status === "application_running" && !conflict
+          ? submittedContext
+          : null,
       );
+    }
   };
 
   const resultIsCurrent = resultContext?.key === contextKey;
@@ -1080,6 +1094,10 @@ export function ConfigurationPreviewView({
           return g.configurationReadbackFailed;
         if (activation.reasonCode === "home_unavailable")
           return g.homeUnavailable;
+        if (activation.reasonCode === "claude_login_not_released")
+          return g.claudeLoginNotReleased;
+        if (activation.reasonCode === "claude_login_takeover_failed")
+          return g.claudeLoginTakeoverFailed;
         if (activation.reasonCode === "codex_history_takeover_conflict")
           return g.codexHistoryConflict;
         if (activation.reasonCode === "codex_history_takeover_failed")
@@ -1392,6 +1410,17 @@ export function ConfigurationPreviewView({
       };
     if (selectionReadyKey !== selectionKey)
       return waiting("syncing", g.syncingSelection, g.selectionSyncHint);
+    if (
+      activation?.status === "application_running" &&
+      resultIsCurrent &&
+      activation.reasonCode === "claude_login_conflict"
+    )
+      return {
+        kind: "release-claude-login",
+        label: g.claudeLoginBlockLabel,
+        hint: g.claudeLoginBlockHint,
+        run: () => setClaudeLoginPromptOpen(true),
+      };
     if (
       activation?.status === "application_running" &&
       resultIsCurrent &&
@@ -2442,6 +2471,22 @@ export function ConfigurationPreviewView({
           )}
         </div>
       </details>
+      <ConfirmDialog
+        isOpen={claudeLoginPromptOpen}
+        title={g.claudeLoginDialogTitle}
+        message={g.claudeLoginDialogMessage}
+        confirmText={g.claudeLoginDialogConfirm}
+        cancelText={g.claudeLoginDialogCancel}
+        variant="info"
+        pending={applyPhase === "applying"}
+        onConfirm={() => {
+          // 先关掉模态再发起原生操作：它会触发 macOS 的钥匙串授权框，
+          // 模态压在上面会让整个助手看起来卡死。
+          setClaudeLoginPromptOpen(false);
+          void apply(undefined, false, true);
+        }}
+        onCancel={() => setClaudeLoginPromptOpen(false)}
+      />
       <ConfirmDialog
         isOpen={restartPromptContext !== null}
         title={g.restartDialogTitle.replace(

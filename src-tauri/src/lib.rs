@@ -15,6 +15,7 @@ mod account_v2;
 mod app_installation;
 mod app_update;
 mod claude_bridge;
+mod claude_login_takeover;
 mod codex_bridge;
 mod codex_history_takeover;
 mod config_reveal;

@@ -508,7 +508,19 @@ fn build_manifest(home: &Path, target: &str) -> Result<Manifest, AdapterFailure>
     let codex_dir = codex_desktop::config_dir(home)?;
     let mut paths = Vec::new();
     collect_session_files(&codex_dir.join("sessions"), 0, &mut paths);
-    collect_session_files(&codex_dir.join("archived_sessions"), 0, &mut paths);
+    // 归档会话不再接管。
+    //
+    // 改一个会话的 `model_provider` 要走 `atomic_replace_prefix_bounded`，而它
+    // 为了原子性会把整个文件复制一遍 —— 改第一行的一个字段，代价是重写整个
+    // JSONL。在一台真实机器上实测：sessions 7.0G / 140 个，archived_sessions
+    // 3.9G / 396 个，一次接管要复制约 11G，耗时 87 秒，撞穿前端 90 秒的激活
+    // 超时，于是整个接入被取消回滚 —— 用户看到的是「Codex 打不开」。
+    //
+    // 归档是用户主动归档的：它们不该出现在 Codex 的恢复列表里，所以搬不搬它们
+    // 本来也不影响「切换供应商后还能接着聊」这个目标。少搬 3.9G / 396 个文件。
+    //
+    // `session_path_allowed` 仍然放行 archived_sessions —— 老版本已经搬过它们
+    // 的用户，manifest 里记着那些路径，恢复必须还能把它们搬回去。
     let mut sessions = Vec::new();
     for path in paths {
         let bytes = common::first_line_bounded(&path, MAX_SESSION_BYTES, MAX_SESSION_META_BYTES)
@@ -916,5 +928,66 @@ mod tests {
             Some("thread-1")
         );
         fs::remove_dir_all(root).unwrap();
+    }
+
+    /// 接管要改的只是「这条对话属于哪个供应商」，但改法是整文件重写：
+    /// `atomic_replace_prefix_bounded` 为了原子性会把剩下的内容全部拷一遍。
+    /// 真机上 archived_sessions 有 3.9G / 396 个文件，连同 sessions 一共要复制
+    /// 约 11G，87 秒，直接撞穿前端 90 秒的激活超时 —— 表现为「Codex 打不开」。
+    ///
+    /// 归档是用户自己归档的，本来就不该出现在恢复列表里，所以不搬它们不影响
+    /// 「换了供应商还能接着聊」。
+    #[test]
+    fn archived_sessions_are_left_alone() {
+        let root = temp("codex-history-archived-untouched");
+        let live = root.join(".codex/sessions/2026/live.jsonl");
+        let archived = root.join(".codex/archived_sessions/2026/old.jsonl");
+        for path in [&live, &archived] {
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+        }
+        let meta = |id: &str| {
+            format!(
+                "{{\"type\":\"session_meta\",\"payload\":{{\"id\":\"{id}\",\"model_provider\":\"openai\"}}}}\n"
+            )
+            .into_bytes()
+        };
+        common::atomic_write_bounded(&live, &meta("thread-live"), MAX_SESSION_BYTES).unwrap();
+        let archived_before = meta("thread-archived");
+        common::atomic_write_bounded(&archived, &archived_before, MAX_SESSION_BYTES).unwrap();
+
+        let mut takeover = Takeover::begin(&root, "yeschoy").unwrap();
+        takeover.commit().unwrap();
+
+        assert_eq!(
+            session_identity(&fs::read(&live).unwrap(), "yeschoy").as_deref(),
+            Some("thread-live"),
+            "live sessions still move"
+        );
+        assert_eq!(
+            fs::read(&archived).unwrap(),
+            archived_before,
+            "an archived session must not be rewritten at all"
+        );
+        takeover.rollback().unwrap();
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    /// 白名单仍然放行 archived_sessions：老版本搬过它们的用户，manifest 里记着
+    /// 那些路径，恢复必须还能把它们搬回去。收窄白名单会把那些人锁在新状态里。
+    #[test]
+    fn restoring_an_older_manifest_can_still_reach_archived_paths() {
+        let codex = Path::new("/home/u/.codex");
+        assert!(session_path_allowed(
+            codex,
+            &codex.join("archived_sessions/2026/old.jsonl")
+        ));
+        assert!(session_path_allowed(
+            codex,
+            &codex.join("sessions/2026/live.jsonl")
+        ));
+        assert!(!session_path_allowed(
+            codex,
+            &codex.join("somewhere_else/old.jsonl")
+        ));
     }
 }

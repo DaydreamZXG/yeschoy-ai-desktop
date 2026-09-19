@@ -1131,6 +1131,121 @@ describe("daily-use UX", () => {
    * numbered in the order they are performed, each announcing its position to
    * a screen reader. The rendered visibility is checked in the browser.
    */
+  /**
+   * claude.ai 的登录态在钥匙串里，写配置文件碰不到它。两份凭据同时在时
+   * Claude Code 用 claude.ai 那份，于是野菜宣布「设置已完成」而中转从头到尾
+   * 没被用上 —— 一个不会报错的错误。
+   *
+   * 挪走它要动用户的账号凭据，所以必须单独拿一次同意。这里钉住的是：同意
+   * 「重启应用」不等于同意「动我的登录态」。把两者合成一个标志，用户为了换
+   * 模型点一次重启就默许了后者。
+   */
+  it("asks for its own consent before displacing a claude.ai login", async () => {
+    const requests: Record<string, unknown>[] = [];
+    let conflict = true;
+    native.mockImplementation(async (command, args) => {
+      const req = (args as { request: Record<string, unknown> }).request;
+      if (command === "scan_activation_targets_v1")
+        return scan(String(req.requestId));
+      if (command === "configure_desktop_tool_v2") {
+        requests.push(req);
+        if (conflict) {
+          conflict = false;
+          return {
+            requestId: req.requestId,
+            schemaVersion: 4,
+            status: "application_running",
+            toolId: req.toolId,
+            modelId: req.modelId,
+            billingGroup: req.billingGroup,
+            models: req.models,
+            observedAtEpochMs: 2000,
+            reasonCode: "claude_login_conflict",
+          };
+        }
+        return {
+          requestId: req.requestId,
+          schemaVersion: 4,
+          status: "ready",
+          toolId: req.toolId,
+          modelId: req.modelId,
+          billingGroup: req.billingGroup,
+          models: req.models,
+          observedAtEpochMs: 2000,
+          reasonCode: "configuration_ready",
+        };
+      }
+      throw Error("Unexpected fixture request");
+    });
+    render(setupView());
+    await tick();
+    applySavedOrSelected();
+    await tick();
+
+    // 第一次尝试不能带着同意去 —— 同意还没拿到。
+    expect(requests).toHaveLength(1);
+    expect(requests[0].displaceClaudeLogin).toBeUndefined();
+
+    // 用户已经点过一次接入了，解释应当直接出现，不该再让他点一次。
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveTextContent("会用 claude.ai 那个");
+    // 那个系统授权框绕不过去，所以对话框必须先说它会来。
+    expect(dialog).toHaveTextContent("钥匙串");
+    expect(dialog).toHaveTextContent("恢复原设置");
+
+    fireEvent.click(
+      within(dialog).getByRole("button", { name: "收起 claude.ai 登录并接入" }),
+    );
+    await tick();
+
+    expect(requests).toHaveLength(2);
+    expect(requests[1].displaceClaudeLogin).toBe(true);
+    // 这一次同意的是登录态，不是重启。
+    expect(requests[1].restartRunningApp).toBeUndefined();
+  });
+
+  it("a restart confirmation never carries consent to touch credentials", async () => {
+    const requests: Record<string, unknown>[] = [];
+    let first = true;
+    native.mockImplementation(async (command, args) => {
+      const req = (args as { request: Record<string, unknown> }).request;
+      if (command === "scan_activation_targets_v1")
+        return scan(String(req.requestId));
+      if (command === "configure_desktop_tool_v2") {
+        requests.push(req);
+        const running = first;
+        first = false;
+        return {
+          requestId: req.requestId,
+          schemaVersion: 4,
+          status: running ? "application_running" : "ready",
+          toolId: req.toolId,
+          modelId: req.modelId,
+          billingGroup: req.billingGroup,
+          models: req.models,
+          observedAtEpochMs: 2000,
+          reasonCode: running
+            ? "save_work_before_restart"
+            : "configuration_ready",
+        };
+      }
+      throw Error("Unexpected fixture request");
+    });
+    render(setupView());
+    await tick();
+    applySavedOrSelected();
+    await tick();
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "已保存，退出并继续",
+      }),
+    );
+    await tick();
+    expect(requests).toHaveLength(2);
+    expect(requests[1].restartRunningApp).toBe(true);
+    expect(requests[1].displaceClaudeLogin).toBeUndefined();
+  });
+
   it("numbers the three steps in the order they are actually performed", async () => {
     render(setupView());
     await tick();

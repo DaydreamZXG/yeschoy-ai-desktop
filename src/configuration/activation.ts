@@ -343,6 +343,7 @@ export async function activateDesktopTool(input: {
   models?: ModelBinding[];
   installationJobId?: string;
   restartRunningApp?: boolean;
+  displaceClaudeLogin?: boolean;
   onRequestId?: (requestId: string) => void;
 }): Promise<ToolActivationProjection> {
   if (
@@ -371,6 +372,7 @@ export async function activateDesktopTool(input: {
         ? { installationJobId: input.installationJobId }
         : {}),
       ...(input.restartRunningApp ? { restartRunningApp: true } : {}),
+      ...(input.displaceClaudeLogin ? { displaceClaudeLogin: true } : {}),
     },
   });
   const timedOut = new Promise<never>((_, reject) => {
