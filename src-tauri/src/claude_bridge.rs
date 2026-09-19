@@ -218,12 +218,37 @@ fn models(state: &BridgeState) -> Response {
         .iter()
         .zip(ids.iter())
         .map(|(model, route)| {
-            json!({
+            let mut entry = json!({
                 "id": route,
                 "type": "model",
                 "display_name": crate::tool_model_profile::display_name(model),
                 "supports1m": crate::tool_model_profile::supports_one_m_context(model),
-            })
+            });
+            let object = entry.as_object_mut().expect("json! built an object");
+            // 我们就是那个网关，客户端从这里发现模型，所以窗口该在这里说清楚。
+            // 不说的话，客户端只能拿它自己那张内置表去查 —— 而我们铸的路由 ID
+            // 不在任何人的内置表里，于是它没有可对照的数，也就不知道什么时候
+            // 该压缩对话。
+            //
+            // 三个键的出处，都不是猜的：
+            //   max_input_tokens   Models API 表示上下文窗口的标准字段
+            //   max_tokens         Models API 表示输出上限的标准字段
+            //   max_output_tokens  Claude Desktop 自己的内置目录用的拼法
+            //                      （它的 runtime 条目就是
+            //                       {max_input_tokens, max_output_tokens}）
+            // 输出上限写两种拼法，是因为这两边确实不一样，而多一个键对读不懂
+            // 它的客户端没有任何影响。
+            if let Some(profile) = crate::tool_model_profile::profile(model) {
+                if let Some(context) = profile.context_window {
+                    object.insert("max_input_tokens".into(), json!(context));
+                }
+                if let Some(output) = profile.max_output_tokens {
+                    object.insert("max_tokens".into(), json!(output));
+                    object.insert("max_output_tokens".into(), json!(output));
+                }
+            }
+            // 目录里没有的模型什么都不加 —— 报一个错的窗口，比不报更糟。
+            entry
         })
         .collect();
     let body = json!({
@@ -856,6 +881,28 @@ mod tests {
         assert!(!crate::tool_model_profile::is_claude_gateway_route(
             "gemini-3.7-flash-high"
         ));
+    }
+
+    #[tokio::test]
+    async fn models_endpoint_reports_the_context_window_it_knows() {
+        // 客户端从这个端点发现模型。不把窗口说出来，它就只能拿自己的内置表去
+        // 查我们铸的路由 ID —— 查不到，于是不知道何时该压缩。
+        let response = models(&state());
+        let bytes = to_bytes(response.into_body(), 64 * 1024).await.unwrap();
+        let value: Value = serde_json::from_slice(&bytes).unwrap();
+        let entry = &value["data"][0];
+        let window = entry["max_input_tokens"].as_u64().unwrap();
+        assert!(window > 0);
+        // 输出上限两种拼法都给：Models API 用 max_tokens，Claude Desktop 自己
+        // 的内置目录用 max_output_tokens。
+        assert_eq!(entry["max_tokens"], entry["max_output_tokens"]);
+        assert!(entry["max_tokens"].as_u64().unwrap() > 0);
+        // 报出去的必须是目录里那个数，不能是别处拍的。
+        let model = state().credential.model_ids()[0].clone();
+        assert_eq!(
+            Some(window),
+            crate::tool_model_profile::profile(&model).and_then(|p| p.context_window)
+        );
     }
 
     #[tokio::test]
