@@ -1,12 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import catalog from "./catalog.json";
 import { applyModelCatalogOverride } from "./profile";
+import { invoke } from "@tauri-apps/api/core";
 import {
   parseRemoteCatalog,
   refreshModelCatalog,
-  REMOTE_MODEL_CATALOG_URL,
   type BundledCatalogModel,
 } from "./remoteCatalog";
+
+vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+const native = vi.mocked(invoke);
 
 function validRemoteCatalog(overrides: Partial<unknown> = {}) {
   return {
@@ -27,32 +30,23 @@ function validRemoteCatalog(overrides: Partial<unknown> = {}) {
   };
 }
 
-function mockFetch(responses: Record<string, { ok?: boolean; text?: string }>) {
-  return vi.stubGlobal(
-    "fetch",
-    vi.fn(async (url: string | URL) => {
-      const response = responses[String(url)];
-      if (!response) throw new Error("network");
-      return {
-        ok: response.ok !== false,
-        text: async () => response.text ?? "",
-      } as Response;
-    }),
-  );
-}
-
-async function sha256(text: string): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(text),
-  );
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
+/** The native reply shape of `refresh_model_catalog_v1`. */
+function nativeReply(over: Record<string, unknown> = {}) {
+  return {
+    requestId: "catalog-test",
+    schemaVersion: 1,
+    status: "updated",
+    reasonCode: "updated",
+    verifiedAt: "2099-01-01",
+    modelCount: 1,
+    catalog: validRemoteCatalog(),
+    ...over,
+  };
 }
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  native.mockReset();
   applyModelCatalogOverride(null);
 });
 
@@ -62,7 +56,9 @@ describe("parseRemoteCatalog validates untrusted payloads", () => {
   });
 
   it("rejects unknown schema versions, bad dates, and empty models", () => {
-    expect(parseRemoteCatalog(validRemoteCatalog({ schemaVersion: 2 }))).toBeNull();
+    expect(
+      parseRemoteCatalog(validRemoteCatalog({ schemaVersion: 2 })),
+    ).toBeNull();
     expect(
       parseRemoteCatalog(validRemoteCatalog({ verifiedAt: "not-a-date" })),
     ).toBeNull();
@@ -122,82 +118,76 @@ describe("parseRemoteCatalog validates untrusted payloads", () => {
   });
 });
 
-describe("refreshModelCatalog falls back to the bundled catalog", () => {
-  it("applies a newer, hash-verified revision", async () => {
-    const body = JSON.stringify(validRemoteCatalog());
-    mockFetch({
-      [REMOTE_MODEL_CATALOG_URL]: { text: body },
-      [`${REMOTE_MODEL_CATALOG_URL}.sha256`]: { text: await sha256(body) },
-    });
-    const outcome = await refreshModelCatalog();
-    expect(outcome).toEqual({
+describe("refreshModelCatalog adopts what the native side adopted", () => {
+  it("applies a newer, verified revision and makes its capabilities visible", async () => {
+    native.mockResolvedValue(nativeReply());
+    expect(await refreshModelCatalog()).toEqual({
       status: "updated",
       verifiedAt: "2099-01-01",
       modelCount: 1,
     });
-    expect(await import("./profile")).toMatchObject({
-      modelCapabilities: expect.any(Function),
-    });
-    expect((await import("./profile")).modelCapabilities("future-model"))
-      .toMatchObject({ contextWindow: 1000000 });
+    expect(native).toHaveBeenCalledWith(
+      "refresh_model_catalog_v1",
+      expect.objectContaining({ requestId: expect.any(String) }),
+    );
+    expect(
+      (await import("./profile")).modelCapabilities("future-model"),
+    ).toMatchObject({ contextWindow: 1000000 });
   });
 
-  it("keeps the bundled catalog when the network fails", async () => {
-    mockFetch({});
+  // The native side decides each of these; this asserts the renderer reports
+  // the cause it was given rather than flattening them all into one fallback.
+  it.each([
+    "fetch_failed",
+    "hash_unavailable",
+    "hash_mismatch",
+    "invalid_payload",
+    "not_newer",
+  ] as const)("reports %s as the native side classified it", async (reason) => {
+    native.mockResolvedValue(
+      nativeReply({ status: "bundled", reasonCode: reason, catalog: null }),
+    );
+    expect(await refreshModelCatalog()).toEqual({
+      status: "bundled",
+      reason,
+    });
+  });
+
+  it("keeps the bundled catalog when the IPC call itself fails", async () => {
+    native.mockRejectedValue(new Error("unavailable"));
     expect(await refreshModelCatalog()).toEqual({
       status: "bundled",
       reason: "fetch_failed",
     });
   });
 
-  it("keeps the bundled catalog when the hash sidecar is missing", async () => {
-    const body = JSON.stringify(validRemoteCatalog());
-    mockFetch({
-      [REMOTE_MODEL_CATALOG_URL]: { text: body },
-    });
-    expect(await refreshModelCatalog()).toEqual({
-      status: "bundled",
-      reason: "hash_unavailable",
-    });
-  });
-
-  it("keeps the bundled catalog when the sha256 does not match", async () => {
-    const body = JSON.stringify(validRemoteCatalog());
-    mockFetch({
-      [REMOTE_MODEL_CATALOG_URL]: { text: body },
-      [`${REMOTE_MODEL_CATALOG_URL}.sha256`]: {
-        text: "deadbeef".repeat(8),
-      },
-    });
-    expect(await refreshModelCatalog()).toEqual({
-      status: "bundled",
-      reason: "hash_mismatch",
-    });
-  });
-
-  it("keeps the bundled catalog when the payload is malformed", async () => {
-    const body = "not json at all";
-    mockFetch({
-      [REMOTE_MODEL_CATALOG_URL]: { text: body },
-      [`${REMOTE_MODEL_CATALOG_URL}.sha256`]: { text: await sha256(body) },
-    });
+  it("refuses a reply that claims success but carries no usable catalog", async () => {
+    native.mockResolvedValue(nativeReply({ catalog: { nonsense: true } }));
     expect(await refreshModelCatalog()).toEqual({
       status: "bundled",
       reason: "invalid_payload",
     });
   });
 
-  it("keeps the bundled catalog when the revision is not newer", async () => {
-    const body = JSON.stringify(
-      validRemoteCatalog({ verifiedAt: catalog.verifiedAt }),
+  // Defence in depth: the native side already refuses a revision that is not
+  // newer, but this side must not adopt one either if that check ever slips.
+  it("refuses a payload that is not newer even when the reply says updated", async () => {
+    native.mockResolvedValue(
+      nativeReply({
+        catalog: validRemoteCatalog({ verifiedAt: catalog.verifiedAt }),
+      }),
     );
-    mockFetch({
-      [REMOTE_MODEL_CATALOG_URL]: { text: body },
-      [`${REMOTE_MODEL_CATALOG_URL}.sha256`]: { text: await sha256(body) },
-    });
     expect(await refreshModelCatalog()).toEqual({
       status: "bundled",
-      reason: "not_newer",
+      reason: "invalid_payload",
+    });
+  });
+
+  it("refuses an unrecognised reply shape", async () => {
+    native.mockResolvedValue({ schemaVersion: 99, status: "updated" });
+    expect(await refreshModelCatalog()).toEqual({
+      status: "bundled",
+      reason: "invalid_payload",
     });
   });
 });

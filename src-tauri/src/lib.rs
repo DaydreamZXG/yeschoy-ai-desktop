@@ -24,6 +24,7 @@ mod connectivity_core;
 mod desktop_app_discovery;
 mod desktop_app_discovery_core;
 mod logging;
+mod model_catalog;
 mod open_connection;
 mod update_channel;
 // Client-first OAuth preparation. Deliberately dormant until the server and
@@ -176,6 +177,7 @@ pub fn run() {
             background_desktop_assistant,
             tool_discovery::scan_tools_read_only,
             tool_discovery_v2::scan_tools_read_only_v2,
+            model_catalog::refresh_model_catalog_v1,
             window_appearance::set_window_appearance,
             connectivity::check_line_connectivity_read_only,
             service_catalog::read_public_service_catalog,

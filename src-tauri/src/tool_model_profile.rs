@@ -3,7 +3,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::fmt::Write as _;
-use std::sync::OnceLock;
+use std::sync::{OnceLock, RwLock};
 
 /// Safe fallback for Claude Code model IDs whose capabilities are not in the
 /// bundled registry. The outbound model ID is always left unchanged.
@@ -200,21 +200,66 @@ pub(crate) struct ModelProfile {
     pub tool_use: Option<bool>,
 }
 
-pub(crate) fn profile(id: &str) -> Option<&'static ModelProfile> {
-    #[derive(Deserialize)]
-    struct Catalog {
-        models: Vec<ModelProfile>,
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct Catalog {
+    pub schema_version: u32,
+    pub verified_at: String,
+    pub models: Vec<ModelProfile>,
+}
+
+/// The reviewed catalog compiled into the binary. Always valid: malformed
+/// bundled metadata is a build/test defect, never user input.
+pub(crate) fn bundled() -> &'static Catalog {
+    static BUNDLED: OnceLock<Catalog> = OnceLock::new();
+    BUNDLED.get_or_init(|| {
+        serde_json::from_str(include_str!("../../src/model-profiles/catalog.json"))
+            .expect("validated bundled model profiles")
+    })
+}
+
+/// The catalog every lookup reads.
+///
+/// This used to be the bundled copy and nothing else, which quietly decided a
+/// lot: `auto_compact_window` asks this table for a model's context window, and
+/// a model it has never heard of gets no `autoCompactWindow` at all — so Claude
+/// Code never compacts and the conversation grows until the relay rejects it.
+/// A model added after the release could therefore only be fixed by another
+/// release, because the renderer's remote-catalog refresh swapped a map that
+/// lives on the other side of the IPC boundary and never reached here.
+///
+/// So the active catalog is swappable. A refresh that passed integrity, schema
+/// and freshness checks is leaked once and installed; at most one leak per
+/// refresh, and a refresh happens once per launch.
+static ACTIVE: OnceLock<RwLock<&'static Catalog>> = OnceLock::new();
+
+fn active() -> &'static RwLock<&'static Catalog> {
+    ACTIVE.get_or_init(|| RwLock::new(crate::model_catalog::initial()))
+}
+
+/// Adopt a catalog that has already been verified. Callers must not pass
+/// unvalidated remote data — `model_catalog` owns that check.
+pub(crate) fn install(catalog: Catalog) {
+    let leaked: &'static Catalog = Box::leak(Box::new(catalog));
+    if let Ok(mut guard) = active().write() {
+        *guard = leaked;
     }
-    static CATALOG: OnceLock<Catalog> = OnceLock::new();
-    // Malformed bundled metadata is a build/test defect, never user input.
-    CATALOG
-        .get_or_init(|| {
-            serde_json::from_str(include_str!("../../src/model-profiles/catalog.json"))
-                .expect("validated bundled model profiles")
-        })
-        .models
-        .iter()
-        .find(|p| p.id == id)
+}
+
+/// The `verifiedAt` of whatever is currently active, which may already be
+/// ahead of the bundled copy when a cached revision was adopted at startup.
+pub(crate) fn profile_catalog_verified_at() -> String {
+    active()
+        .read()
+        .map(|catalog| catalog.verified_at.clone())
+        .unwrap_or_else(|_| bundled().verified_at.clone())
+}
+
+pub(crate) fn profile(id: &str) -> Option<&'static ModelProfile> {
+    // Copy the &'static out before releasing the guard so the search itself
+    // holds no lock.
+    let catalog: &'static Catalog = *active().read().ok()?;
+    catalog.models.iter().find(|p| p.id == id)
 }
 
 pub(crate) fn display_name(id: &str) -> &str {

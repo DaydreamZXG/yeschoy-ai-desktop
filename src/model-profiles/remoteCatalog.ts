@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import catalog from "./catalog.json";
 import { applyModelCatalogOverride } from "./profile";
 
@@ -18,24 +19,6 @@ export interface ModelCatalogFile {
   verifiedAt: string;
   models: BundledCatalogModel[];
 }
-
-/**
- * 挂在下载源的 `/apps/` 下面，不在主站。
- *
- * 原来指向 `https://yeschoy.com/desktop/model-catalog.json`，那个路径从来没
- * 部署过 —— 主站是个 SPA，任何未知路径都回 200 + HTML，所以这里每次启动都
- * 悄无声息地走 `invalid_payload` 兜底，等于整个功能从没生效过。
- *
- * 下载源（ergou.qzz.io）的 Caddy 是白名单式的，只放行 /apps、/releases、
- * /updates/releases 等几条路径，其余一律 404。`/apps/` 已经在名单里且已经在
- * 服务 catalog.json，所以挂这里不需要改服务器配置 —— 放个文件就行，中转那边
- * 一个字都不用动。
- */
-export const REMOTE_MODEL_CATALOG_URL =
-  "https://ergou.qzz.io/apps/model-catalog.json";
-const REMOTE_CATALOG_SHA256_URL = `${REMOTE_MODEL_CATALOG_URL}.sha256`;
-const FETCH_TIMEOUT_MS = 10_000;
-const MAX_CATALOG_BYTES = 2 * 1024 * 1024;
 
 export type RemoteCatalogOutcome =
   | { status: "updated"; verifiedAt: string; modelCount: number }
@@ -155,64 +138,66 @@ export function parseRemoteCatalog(payload: unknown): ModelCatalogFile | null {
   };
 }
 
-async function fetchText(url: string): Promise<string | null> {
-  try {
-    const response = await fetch(url, {
-      headers: { accept: "application/json, text/plain" },
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
-    if (!response.ok) return null;
-    const text = await response.text();
-    if (!text || text.length > MAX_CATALOG_BYTES) return null;
-    return text;
-  } catch {
-    return null;
-  }
-}
-
-async function sha256Hex(text: string): Promise<string | null> {
-  try {
-    const digest = await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(text),
-    );
-    return Array.from(new Uint8Array(digest))
-      .map((byte) => byte.toString(16).padStart(2, "0"))
-      .join("");
-  } catch {
-    return null;
-  }
-}
+const FALLBACK_REASONS = new Set([
+  "fetch_failed",
+  "hash_unavailable",
+  "hash_mismatch",
+  "invalid_payload",
+  "not_newer",
+]);
 
 /**
- * Pull the remote catalog and, only if integrity + schema + freshness all
- * pass, hand it to `applyModelCatalogOverride`. Every failure path is a
- * silent fallback to the bundled catalog — this never blocks startup.
+ * Ask the native side to refresh the catalog, and adopt what it adopted.
+ *
+ * The fetch used to happen here, with the webview's own `fetch`. It could
+ * never succeed: the app's CSP allows `connect-src 'self' ipc:
+ * http://ipc.localhost` and nothing else, so the request to the download host
+ * was blocked before it left the process and this function always reported
+ * `fetch_failed`. Pointing it at a URL that was actually deployed — an earlier
+ * round did exactly that — changed nothing, because the URL was never the only
+ * thing in the way.
+ *
+ * It also would not have been enough. `applyModelCatalogOverride` swaps a map
+ * that lives on this side of the IPC boundary, while Claude Code's
+ * `autoCompactWindow` is written from the native catalog. A refresh that only
+ * landed here left auto-compact on whatever shipped in the binary.
+ *
+ * So the native side fetches, verifies (sha256, schema, strictly newer
+ * `verifiedAt`) and caches, and hands back the payload it accepted. Re-parsing
+ * it here is deliberate: it is cheap, it keeps this module's validator the
+ * single description of the schema the picker relies on, and the two sides
+ * cannot silently disagree about what they adopted.
  */
 export async function refreshModelCatalog(): Promise<RemoteCatalogOutcome> {
-  const text = await fetchText(REMOTE_MODEL_CATALOG_URL);
-  if (!text) {
+  let raw: unknown;
+  try {
+    raw = await invoke("refresh_model_catalog_v1", {
+      requestId: `catalog-${Date.now().toString(36)}`,
+    });
+  } catch {
     return { status: "bundled", reason: "fetch_failed" };
   }
-  const expectedHash = await fetchText(REMOTE_CATALOG_SHA256_URL);
-  if (!expectedHash) {
-    return { status: "bundled", reason: "hash_unavailable" };
-  }
-  const digest = await sha256Hex(text);
-  if (!digest || !expectedHash.trim().toLowerCase().startsWith(digest)) {
-    return { status: "bundled", reason: "hash_mismatch" };
-  }
-  let parsed: ModelCatalogFile | null;
-  try {
-    parsed = parseRemoteCatalog(JSON.parse(text));
-  } catch {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return { status: "bundled", reason: "invalid_payload" };
   }
-  if (!parsed) {
+  const value = raw as Record<string, unknown>;
+  if (value.schemaVersion !== 1 || typeof value.reasonCode !== "string") {
     return { status: "bundled", reason: "invalid_payload" };
   }
-  if (parsed.verifiedAt <= catalog.verifiedAt) {
-    return { status: "bundled", reason: "not_newer" };
+  if (value.status !== "updated") {
+    return {
+      status: "bundled",
+      reason: FALLBACK_REASONS.has(value.reasonCode)
+        ? (value.reasonCode as Exclude<
+            RemoteCatalogOutcome,
+            { status: "updated" }
+          >["reason"])
+        : "invalid_payload",
+    };
+  }
+  const parsed = parseRemoteCatalog(value.catalog);
+  if (!parsed || parsed.verifiedAt <= catalog.verifiedAt) {
+    return { status: "bundled", reason: "invalid_payload" };
   }
   applyModelCatalogOverride(parsed.models);
   return {

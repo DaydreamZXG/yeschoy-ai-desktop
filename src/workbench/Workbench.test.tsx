@@ -653,9 +653,11 @@ describe("official workbench", () => {
           "scan_desktop_apps_read_only",
           "manage_app_installation_v2",
           "manage_tool_connections_v1",
+          "refresh_model_catalog_v1",
           "account_inspect_v2",
           "scan_activation_targets_v1",
           "read_desktop_exit_state",
+          "refresh_model_catalog_v1",
         ].includes(command),
       ),
     ).toBe(true);
@@ -685,6 +687,7 @@ describe("official workbench", () => {
       "scan_activation_targets_v1",
       "manage_app_installation_v2",
       "manage_tool_connections_v1",
+      "refresh_model_catalog_v1",
       "account_inspect_v2",
       "read_desktop_exit_state",
     ]);
@@ -708,6 +711,7 @@ describe("official workbench", () => {
       "scan_activation_targets_v1",
       "manage_app_installation_v2",
       "manage_tool_connections_v1",
+      "refresh_model_catalog_v1",
       "account_inspect_v2",
       "read_desktop_exit_state",
       "manage_app_installation_v2",
@@ -747,6 +751,7 @@ describe("official workbench", () => {
       "scan_activation_targets_v1",
       "manage_app_installation_v2",
       "manage_tool_connections_v1",
+      "refresh_model_catalog_v1",
       "account_inspect_v2",
       "read_desktop_exit_state",
       "manage_app_installation_v2",
@@ -768,6 +773,7 @@ describe("official workbench", () => {
       "scan_activation_targets_v1",
       "manage_app_installation_v2",
       "manage_tool_connections_v1",
+      "refresh_model_catalog_v1",
       "account_inspect_v2",
       "read_desktop_exit_state",
     ]);
@@ -1089,6 +1095,7 @@ describe("official workbench", () => {
       "scan_activation_targets_v1",
       "manage_app_installation_v2",
       "manage_tool_connections_v1",
+      "refresh_model_catalog_v1",
       "account_inspect_v2",
       "read_desktop_exit_state",
     ]);
