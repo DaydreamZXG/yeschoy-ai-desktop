@@ -331,10 +331,9 @@ export function ConfigurationPreviewView({
     inFlight: applyInFlight,
   } = task;
   const [showApplications, setShowApplications] = useState(false);
-  // 模型、分组、常用模型与线路默认收起：普通用户只需要「选应用 → 点接入」。
-  // 需要用户做选择时（下面 needsAdvanced）自动展开。
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-  const advancedDetails = useRef<HTMLDetailsElement>(null);
+  // 第二步一直在页面上，不再是个要展开的折叠，所以没有「开/关」状态了。
+  // 「换模型」这个动作现在只做一件事：把焦点送到模型选择器上。
+  const advancedDetails = useRef<HTMLDivElement>(null);
   const [editorRequest, setEditorRequest] = useState(0);
   const focusModelPending = useRef(false);
   const consumedIntent = useRef<number>();
@@ -598,12 +597,6 @@ export function ConfigurationPreviewView({
   const defaultBinding =
     submittedModels.find((m) => m.modelId === defaultModelId) ??
     submittedModels[0];
-  const defaultBindingModel = models.find(
-    (m) => m.id === defaultBinding?.modelId,
-  );
-  const defaultBindingGroup = defaultBindingModel?.billing?.groups.find(
-    (g) => g.id === defaultBinding?.billingGroup,
-  );
   const bindingsAvailable =
     submittedModels.length > 0 &&
     submittedModels.every((m) =>
@@ -1193,7 +1186,6 @@ export function ConfigurationPreviewView({
     (!!connections?.error && (connections?.connections.length ?? 0) === 0) ||
     savedConnection?.state === "unavailable";
   const openAdvanced = useCallback(() => {
-    setAdvancedOpen(true);
     focusModelPending.current = true;
     setEditorRequest((revision) => revision + 1);
   }, []);
@@ -1218,12 +1210,7 @@ export function ConfigurationPreviewView({
     connections?.refresh,
   ]);
   useEffect(() => {
-    if (
-      !active ||
-      !advancedOpen ||
-      applyPhase === "applying" ||
-      !focusModelPending.current
-    )
+    if (!active || applyPhase === "applying" || !focusModelPending.current)
       return;
     const picker =
       advancedDetails.current?.querySelector<HTMLButtonElement>(
@@ -1233,14 +1220,7 @@ export function ConfigurationPreviewView({
     picker.focus({ preventScroll: true });
     picker.scrollIntoView?.({ block: "center" });
     focusModelPending.current = false;
-  }, [
-    active,
-    advancedOpen,
-    editorRequest,
-    applyPhase,
-    session.loading,
-    signedIn,
-  ]);
+  }, [active, editorRequest, applyPhase, session.loading, signedIn]);
 
   // 单一状态 → 单一动作。主按钮不再静默禁用：不能执行时点它会打开需要修改的
   // 位置，并在按钮下方写明原因；可以执行时就是这一步该做的事。
@@ -1410,16 +1390,6 @@ export function ConfigurationPreviewView({
       run: () => void apply(),
     };
   })();
-
-  const needsAdvanced = [
-    "choose-model",
-    "choose-group",
-    "commit-model-set",
-    "resolve-model-set",
-  ].includes(setupBlock.kind);
-  useEffect(() => {
-    if (needsAdvanced) setAdvancedOpen(true);
-  }, [needsAdvanced]);
 
   const missingModel =
     signedIn &&
@@ -1771,16 +1741,10 @@ export function ConfigurationPreviewView({
             </span>
           </header>
 
-          <details
-            ref={advancedDetails}
-            className="setup-advanced"
-            open={advancedOpen}
-            onToggle={(event) => setAdvancedOpen(event.currentTarget.open)}
-          >
-            <summary>
-              <span>{t("yeschoyDaily.modelSettings")}</span>
-              <small>{t("yeschoyDaily.modelSettingsHint")}</small>
-            </summary>
+          {/* 第二步以前藏在「模型设置」这个折叠里，默认收起，需要时才自动展开。
+              一个三步流程不该把第二步藏起来 —— 用户要换模型时得先找到这个
+              折叠。现在它就是第二步，一直在那儿。 */}
+          <div ref={advancedDetails} className="setup-advanced">
             <div className="connection-choice-grid">
               <section
                 className="connection-choice-card model-choice-card"
@@ -1814,7 +1778,7 @@ export function ConfigurationPreviewView({
                         resetResult();
                       }}
                       disabled={session.loading || applyPhase === "applying"}
-                              />
+                    />
                     <div className="model-choice-meta">
                       <span>
                         {c.availableModels.replace(
@@ -2019,94 +1983,7 @@ export function ConfigurationPreviewView({
                 <small>{g.favoriteModelsNote}</small>
               </section>
             )}
-          </details>
-
-          <details
-            ref={networkDetails}
-            className="connection-choice-card line-selector network-choice"
-            aria-labelledby="setup-line-title"
-          >
-            <summary>
-              <span id="setup-line-title">
-                {g.networkLinePrefix} ·{" "}
-                {t(`yeschoyConfiguration.lines.${lineId}.name`)}
-              </span>
-              <span>{g.changeLine}</span>
-            </summary>
-            <div className="choice-card-heading">
-              <div>
-                <p>{g.lineQuestion}</p>
-                <p>{g.lineIntro}</p>
-              </div>
-            </div>
-            <div className="line-selector-grid">
-              {CONFIGURATION_LINES.map((line) => (
-                <button
-                  type="button"
-                  key={line.id}
-                  className={lineId === line.id ? "is-selected" : undefined}
-                  aria-pressed={lineId === line.id}
-                  disabled={applyPhase === "applying"}
-                  onClick={() => {
-                    if (lineId === line.id) return;
-                    onLineChange(line.id);
-                    resetResult();
-                  }}
-                >
-                  <span className="line-selection-dot" aria-hidden="true" />
-                  <span>
-                    <strong>
-                      {t(`yeschoyConfiguration.lines.${line.id}.name`)}
-                    </strong>
-                    <small>
-                      {t(`yeschoyConfiguration.lines.${line.id}.note`)}
-                    </small>
-                    {lineLatencies[line.id] !== undefined && (
-                      <small className="line-latency">
-                        {lineLatencies[line.id]} ms
-                      </small>
-                    )}
-                    {recommendedLine === line.id && (
-                      <span className="line-recommend-badge">
-                        {t("yeschoyConfiguration.recommendedBadge")}
-                      </span>
-                    )}
-                  </span>
-                  {lineId === line.id && (
-                    <CheckCircle2
-                      className="line-selected-check"
-                      aria-hidden="true"
-                    />
-                  )}
-                </button>
-              ))}
-            </div>
-            <div className="line-speedtest">
-              <button
-                type="button"
-                className="subtle-button"
-                disabled={
-                  applyPhase === "applying" || lineTestPhase === "running"
-                }
-                onClick={() => void runLineSpeedtest()}
-              >
-                {lineTestPhase === "running" && (
-                  <LoaderCircle className="is-spinning" aria-hidden="true" />
-                )}
-                {t("yeschoyConfiguration.speedtestAction")}
-              </button>
-              {lineTestPhase === "error" && (
-                <p className="line-speedtest-note" role="status">
-                  {t("yeschoyConfiguration.speedtestFailed")}
-                </p>
-              )}
-              {lineTestPhase === "done" && recommendedLine && (
-                <p className="line-speedtest-note">
-                  {t("yeschoyConfiguration.speedtestNote")}
-                </p>
-              )}
-            </div>
-          </details>
+          </div>
         </section>
       </section>
 
@@ -2128,50 +2005,9 @@ export function ConfigurationPreviewView({
             </div>
           </div>
 
-          <div className="connection-selection-flow">
-            <span>
-              <small>{t("yeschoyConfiguration.selectedTool")}</small>
-              <strong>{application.displayName}</strong>
-            </span>
-            <ArrowRight aria-hidden="true" />
-            <span>
-              <small>{t("yeschoyConfiguration.modelId")}</small>
-              <strong className="selection-model-id">
-                {defaultBinding?.modelId || c.chooseModel}
-              </strong>
-            </span>
-            <ArrowRight aria-hidden="true" />
-            <span>
-              <small>{g.billingGroupLabel}</small>
-              <strong>
-                {defaultBinding
-                  ? defaultBinding.billingGroup === "default"
-                    ? // #19 默认分组在摘要行明示计费口径，避免误以为有更优分组。
-                      defaultBindingGroup?.ratio != null
-                      ? g.defaultGroupBillingNote.replace(
-                          "{{ratio}}",
-                          String(defaultBindingGroup.ratio),
-                        )
-                      : g.defaultGroup
-                    : `${groupDisplayName(
-                        defaultBinding.billingGroup,
-                        defaultBindingModel?.billing?.groups,
-                        g.defaultGroup,
-                      )}${
-                        defaultBindingGroup?.ratio != null
-                          ? ` · ${defaultBindingGroup.ratio}×`
-                          : ""
-                      }`
-                  : g.selectGroupFirst}
-              </strong>
-            </span>
-            <ArrowRight aria-hidden="true" />
-            <span>
-              <small>{t("yeschoyConfiguration.selectedLine")}</small>
-              <strong>{t(`yeschoyConfiguration.lines.${lineId}.name`)}</strong>
-            </span>
-          </div>
-
+          {/* 「应用 → 模型 ID → 计费分组 → 线路」这一行摘要拿掉了：单栏之后
+              第二步就在正上方，线路在页脚，同一屏把四件事说两遍，两边还各占
+              一份视觉重量。这是这一页信息密度最直接的来源。 */}
           {submittedModels.length > 1 && (
             <div className="model-set-summary">
               <strong>
@@ -2440,6 +2276,92 @@ export function ConfigurationPreviewView({
           </div>
         </div>
       </section>
+
+      {/* 网络线路：一条页脚。它不是三步里的一步 —— 绝大多数人一次都不会
+          动它，摘要行「网络线路 · 大陆优化 / 更换线路」已经说完了它的全部
+          状态。原来它夹在第二步和第三步中间，把流程截成两半。 */}
+      <details
+        ref={networkDetails}
+        className="connection-choice-card line-selector network-choice"
+        aria-labelledby="setup-line-title"
+      >
+        <summary>
+          <span id="setup-line-title">
+            {g.networkLinePrefix} ·{" "}
+            {t(`yeschoyConfiguration.lines.${lineId}.name`)}
+          </span>
+          <span>{g.changeLine}</span>
+        </summary>
+        <div className="choice-card-heading">
+          <div>
+            <p>{g.lineQuestion}</p>
+            <p>{g.lineIntro}</p>
+          </div>
+        </div>
+        <div className="line-selector-grid">
+          {CONFIGURATION_LINES.map((line) => (
+            <button
+              type="button"
+              key={line.id}
+              className={lineId === line.id ? "is-selected" : undefined}
+              aria-pressed={lineId === line.id}
+              disabled={applyPhase === "applying"}
+              onClick={() => {
+                if (lineId === line.id) return;
+                onLineChange(line.id);
+                resetResult();
+              }}
+            >
+              <span className="line-selection-dot" aria-hidden="true" />
+              <span>
+                <strong>
+                  {t(`yeschoyConfiguration.lines.${line.id}.name`)}
+                </strong>
+                <small>{t(`yeschoyConfiguration.lines.${line.id}.note`)}</small>
+                {lineLatencies[line.id] !== undefined && (
+                  <small className="line-latency">
+                    {lineLatencies[line.id]} ms
+                  </small>
+                )}
+                {recommendedLine === line.id && (
+                  <span className="line-recommend-badge">
+                    {t("yeschoyConfiguration.recommendedBadge")}
+                  </span>
+                )}
+              </span>
+              {lineId === line.id && (
+                <CheckCircle2
+                  className="line-selected-check"
+                  aria-hidden="true"
+                />
+              )}
+            </button>
+          ))}
+        </div>
+        <div className="line-speedtest">
+          <button
+            type="button"
+            className="subtle-button"
+            disabled={applyPhase === "applying" || lineTestPhase === "running"}
+            onClick={() => void runLineSpeedtest()}
+          >
+            {lineTestPhase === "running" && (
+              <LoaderCircle className="is-spinning" aria-hidden="true" />
+            )}
+            {t("yeschoyConfiguration.speedtestAction")}
+          </button>
+          {lineTestPhase === "error" && (
+            <p className="line-speedtest-note" role="status">
+              {t("yeschoyConfiguration.speedtestFailed")}
+            </p>
+          )}
+          {lineTestPhase === "done" && recommendedLine && (
+            <p className="line-speedtest-note">
+              {t("yeschoyConfiguration.speedtestNote")}
+            </p>
+          )}
+        </div>
+      </details>
       <ConfirmDialog
         isOpen={restartPromptContext !== null}
         title={g.restartDialogTitle.replace(

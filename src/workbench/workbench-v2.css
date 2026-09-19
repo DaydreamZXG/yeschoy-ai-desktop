@@ -4353,6 +4353,8 @@
 }
 
 /* 接入页：模型/分组/常用模型默认收进「高级设置」，小白只需要选应用再点接入。 */
+/* 第二步。以前是个 <details>，标题行和 [open] 的分隔线都跟着摘要走；现在
+   它一直在页面上，没有摘要，卡片自己就是那道边界。 */
 .setup-advanced {
   margin-top: var(--space-16);
   border: 1px solid var(--line);
@@ -4360,30 +4362,9 @@
   background: color-mix(in srgb, var(--surface) 96%, var(--accent-soft));
 }
 
-.setup-advanced > summary {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-10);
-  padding: var(--space-14) var(--space-18);
-}
-
-.setup-advanced > summary span {
-  color: var(--ink);
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-.setup-advanced > summary small {
-  color: var(--faint);
-}
-
-.setup-advanced[open] > summary {
-  border-bottom: 1px solid var(--line);
-}
-
 .setup-advanced .connection-choice-grid,
 .setup-advanced .model-set-editor {
-  padding: 0 var(--space-18);
+  padding: var(--space-18);
 }
 
 /* Everyday use: the app is the entry point, configuration is secondary. */
@@ -4710,7 +4691,6 @@
 
 .workbench-page,
 .configuration-workspace {
-  max-width: 1480px;
   padding: var(--space-32) var(--space-32) var(--space-24);
 }
 
@@ -5522,11 +5502,15 @@
   display: none;
 }
 
+/* 单栏。右边那条 282px 的侧栏拿掉了：它重复了左边已经写过的模型、计费分组
+   和线路，等于把同样的事实说两遍，两边还得各占一份视觉重量。现在三步从上到
+   下排，第三步（完成接入）就是原来的侧栏内容，铺满整行。 */
 .configuration-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 282px;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-20);
   align-items: start;
+  max-width: 940px;
 }
 
 /* 左列作为真实容器参与网格（不再 display: contents 打散子项），
@@ -6253,11 +6237,10 @@
   font-size: var(--text-xs);
 }
 
+/* 第三步：完成接入。不再吸顶、不再是侧栏，就是最后一张卡片。 */
 .configuration-preview-panel {
-  grid-column: 2;
-  grid-row: 1;
-  position: sticky;
-  top: var(--space-24);
+  grid-column: 1;
+  position: static;
   margin: 0;
   padding: var(--space-20);
   border: 1px solid var(--accent-line);
@@ -6266,26 +6249,17 @@
   box-shadow: var(--shadow);
 }
 
-/* 低余额横幅占据第 1 行时，左列与右栏整体下移一行，保持对齐。 */
-.configuration-workspace:has(> .low-balance-banner) .configuration-guide {
-  grid-row: 2;
-}
-
-.configuration-workspace:has(> .low-balance-banner)
-  .configuration-preview-panel {
-  grid-row: 2;
-}
-
 .configuration-preview-panel::before,
 .configuration-preview-panel::after {
   display: none;
 }
 
+/* 一整行：左边说这一步会做什么，右边就是那个按钮。 */
 .connection-summary-row {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-18);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-20);
 }
 
 .connection-summary-intro .choice-number {
@@ -6513,3 +6487,36 @@ select {
    副本，但它缺了那边配套的组件修正（.ticker-char 必须强制 opacity: 1，
    否则动画被拍平后字符停在 0，成功文案整句看不见）。两份规则、只有一份是
    完整的，是下一个人踩坑的现成陷阱。 */
+
+/* ———— 接入页：单栏三步 ———— */
+
+/* 网络线路这条页脚比三步卡片轻一级：它不是流程的一部分，只是页面底下
+   一行状态。收起时就是「网络线路 · 大陆优化 ／ 更换线路」一行。 */
+.configuration-workspace > .network-choice {
+  grid-column: 1;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+  padding: var(--space-12) var(--space-4) 0;
+}
+
+.configuration-workspace > .network-choice > summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.configuration-workspace > .network-choice > summary > span:last-child {
+  color: var(--accent);
+}
+
+.configuration-workspace > .network-choice[open] > summary {
+  margin-bottom: var(--space-14);
+}

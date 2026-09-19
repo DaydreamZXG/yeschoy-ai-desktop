@@ -357,7 +357,9 @@ describe("daily-use UX", () => {
     fireEvent.click(screen.getByTestId("configuration-apply-action"));
     await tick();
     expect(screen.getByRole("combobox", { name: /选择模型/ })).toHaveFocus();
-    expect(document.querySelector(".setup-advanced")).toHaveAttribute("open");
+    // 第二步不再是折叠，所以没有「展开」可断言了 —— 上一行的「焦点落在模型
+    // 选择器上」就是这个动作现在的全部效果。这里只确认它确实一直在页面上。
+    expect(document.querySelector(".setup-advanced")).toBeInTheDocument();
     expect(
       native.mock.calls.filter(([c]) => c === "configure_desktop_tool_v2"),
     ).toHaveLength(0);
@@ -396,22 +398,31 @@ describe("daily-use UX", () => {
     expect(action.className).toContain("primary-action");
     expect(action.className).not.toContain("secondary-action");
     expect(
-      screen.getByRole("button", { name: "打开使用" }).closest(".has-unsaved-selection"),
+      screen
+        .getByRole("button", { name: "打开使用" })
+        .closest(".has-unsaved-selection"),
     ).not.toBeNull();
     expect(
-      screen.getAllByRole("status").some((node) =>
-        node.textContent?.includes("已接入 model-a；当前选择尚未保存。"),
-      ),
+      screen
+        .getAllByRole("status")
+        .some((node) =>
+          node.textContent?.includes("已接入 model-a；当前选择尚未保存。"),
+        ),
     ).toBe(true);
     expect(screen.getByRole("button", { name: "打开使用" })).toBeEnabled();
     // 对照：从未接入的应用仍走 primary「一键接入」。
-    view.rerender(setupView(session(), local({
-      state: "not_connected",
-      modelId: "",
-      lineId: "",
-      billingGroup: "",
-      models: [],
-    })));
+    view.rerender(
+      setupView(
+        session(),
+        local({
+          state: "not_connected",
+          modelId: "",
+          lineId: "",
+          billingGroup: "",
+          models: [],
+        }),
+      ),
+    );
     await tick();
     const fresh = screen.getByTestId("configuration-apply-action");
     expect(fresh).toHaveTextContent("一键接入");
@@ -674,9 +685,9 @@ describe("daily-use UX", () => {
     render(
       <ConnectionProvider value={controller}>
         <OpenConnection
-          connection={
-            controller.connections.find((c) => c.toolId === "codex_desktop")!
-          }
+          connection={controller.connections.find(
+            (c) => c.toolId === "codex_desktop",
+          )!}
           name="Codex Desktop"
           onAdjust={callback}
         />
@@ -1387,9 +1398,9 @@ describe("daily-use UX", () => {
       return (
         <ConnectionProvider value={state}>
           <OpenConnection
-            connection={
-              local().connections.find((c) => c.toolId === "codex_desktop")!
-            }
+            connection={local().connections.find(
+              (c) => c.toolId === "codex_desktop",
+            )!}
             name="Codex Desktop"
             onAdjust={callback}
           />
@@ -1631,7 +1642,11 @@ describe("daily-use UX", () => {
       "tool_output_read_failed",
       "未能读取应用的测试结果",
     ],
-    ["external_override", "higher_precedence_override", "配置目录被其他设置占用"],
+    [
+      "external_override",
+      "higher_precedence_override",
+      "配置目录被其他设置占用",
+    ],
   ])(
     "reports %s/%s without claiming an unproved restore",
     async (status, reasonCode, expected) => {

@@ -1100,16 +1100,19 @@ describe("official workbench", () => {
     ])
       expect(components).toContain(token);
   });
-  it("keeps the wide setup summary aligned with the guide grid row", () => {
+  it("lays the setup page out as one column of steps", () => {
     const css = readFileSync("src/workbench/workbench-v2.css", "utf8");
+    // 单栏。右边那条 282px 侧栏拿掉了：它把左边已经写过的模型、计费分组和
+    // 线路又说了一遍，同一屏两份视觉重量。
     expect(css).toMatch(
-      /\.configuration-preview-panel\s*\{\s*grid-column:\s*2;\s*grid-row:\s*1;/,
+      /\.configuration-workspace\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/,
     );
-    expect(css).toMatch(
-      /\.configuration-workspace:has\(> \.low-balance-banner\) \.configuration-guide\s*\{\s*grid-row:\s*2;/,
+    expect(css).not.toMatch(
+      /grid-template-columns:\s*minmax\(0,\s*1fr\)\s+282px/,
     );
+    // 完成接入变成最后一张卡片，不再吸顶、不再占第二列。
     expect(css).toMatch(
-      /\.configuration-workspace:has\(> \.low-balance-banner\)\s*\.configuration-preview-panel\s*\{\s*grid-row:\s*2;/,
+      /\.configuration-preview-panel\s*\{[^}]*grid-column:\s*1;[^}]*position:\s*static;/,
     );
   });
   it("maintains readable text contrast on light and dark surfaces", () => {
