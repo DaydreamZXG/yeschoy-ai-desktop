@@ -32,11 +32,26 @@ def run(state=STATE, public=PUBLIC, receipts=RECEIPTS):
                 # Keep other platforms moving; never emit arbitrary exception data.
                 code = str(error) if isinstance(error, sync.SyncError) else "publisher_local_error"
                 events.append({"sourceId": source_id, "published": False, "error": code})
-    return {"checkedAt": sync.utc(), "events": events}
+        try:
+            private_retention = sync.prune_private_cache(state, snapshot)
+        except Exception as error:
+            code = str(error) if isinstance(error, sync.SyncError) else "retention_local_error"
+            private_retention = {"status": "failed", "error": code}
+    try:
+        public_retention = publish.prune_history(public)
+    except Exception as error:
+        code = str(error) if isinstance(error, sync.SyncError) else "retention_local_error"
+        public_retention = {"status": "failed", "error": code}
+    return {
+        "checkedAt": sync.utc(),
+        "events": events,
+        "retention": {"private": private_retention, "public": public_retention},
+    }
 
 
 if __name__ == "__main__":
     result = run()
     publish.atomic_public_json(RESULT, result)
     print(json.dumps(result), flush=True)
-    sys.exit(0 if all(e["published"] for e in result["events"]) else 2)
+    retention_ok = all(value.get("status") == "pruned" for value in result["retention"].values())
+    sys.exit(0 if all(e["published"] for e in result["events"]) and retention_ok else 2)

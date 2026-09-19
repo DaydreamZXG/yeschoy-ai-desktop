@@ -123,6 +123,66 @@ def read_json(path: Path, default: dict) -> dict:
         raise SyncError("corrupt_state") from exc
 
 
+ARTIFACT_OBJECT = re.compile(r"(?P<sha256>[a-f0-9]{64})\.(?P<format>msix|dmg|zip)")
+ARTIFACT_RECEIPT = re.compile(r"[a-f0-9]{64}\.json")
+
+
+def retained_candidate_names(catalog: dict) -> set[str]:
+    rows = catalog.get("sources", {})
+    if catalog.get("schemaVersion") != 1 or not isinstance(rows, dict):
+        raise SyncError("corrupt_catalog")
+    retained = set()
+    for row in rows.values():
+        if not isinstance(row, dict):
+            raise SyncError("corrupt_catalog")
+        for key in ("candidate", "previousCandidate"):
+            entry = row.get(key)
+            if not entry:
+                continue
+            if not isinstance(entry, dict):
+                raise SyncError("corrupt_catalog")
+            relative = entry.get("path", "")
+            match = re.fullmatch(r"artifacts/([a-f0-9]{64})\.(msix|dmg|zip)", relative)
+            if match is None or entry.get("sha256") != match.group(1):
+                raise SyncError("invalid_candidate_path")
+            retained.add(Path(relative).name)
+            retained.add(f"{match.group(1)}.json")
+    return retained
+
+
+def prune_private_cache(root: Path, catalog: dict) -> dict:
+    """Keep each source's current candidate and one previous candidate."""
+    directory = child(root, "artifacts")
+    if not directory.exists():
+        return {"status": "pruned", "filesDeleted": 0, "bytesDeleted": 0}
+    if not directory.is_dir():
+        raise SyncError("unsafe_file")
+    retained = retained_candidate_names(catalog)
+    obsolete_receipts = []
+    obsolete_objects = []
+    for path in sorted(directory.iterdir()):
+        regular(path)
+        if path.name in retained:
+            continue
+        if ARTIFACT_RECEIPT.fullmatch(path.name):
+            obsolete_receipts.append(path)
+        elif ARTIFACT_OBJECT.fullmatch(path.name):
+            obsolete_objects.append(path)
+    deleted = 0
+    deleted_bytes = 0
+    for path in (*obsolete_receipts, *obsolete_objects):
+        deleted_bytes += path.stat().st_size
+        path.unlink()
+        deleted += 1
+    if deleted:
+        descriptor = os.open(directory, os.O_RDONLY)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+    return {"status": "pruned", "filesDeleted": deleted, "bytesDeleted": deleted_bytes}
+
+
 @contextlib.contextmanager
 def locked(root: Path):
     import fcntl  # Server lock; native verification helper also runs on Windows.
@@ -657,7 +717,8 @@ def download(root: Path, source: dict, metadata: dict, transport: Transport, bud
     if offset > metadata["size"]:
         raise SyncError("oversized_partial")
     remaining = metadata["size"] - offset
-    # Budget includes partials, previous versions and receipts. No automatic pruning.
+    # The scan prunes everything except the current and immediately previous
+    # candidate before reaching this bound.
     if used_bytes(root) + remaining + CHUNK > budget or shutil.disk_usage(root).free < remaining + CHUNK:
         raise SyncError("cache_quota_or_disk_full")
     atomic_json(receipt, metadata)
@@ -758,6 +819,9 @@ def scan(root: Path, configured: list[dict], transport: Transport, fetch: bool, 
     catalog = read_json(catalog_path, {"schemaVersion": 1, "sources": {}})
     if catalog.get("schemaVersion") != 1 or not isinstance(catalog.get("sources"), dict):
         raise SyncError("corrupt_catalog")
+    retention = prune_private_cache(root, catalog)
+    if retention["filesDeleted"]:
+        print(json.dumps({"action": "pruned", **retention}), flush=True)
     events = []
     for source in configured:
         prior = catalog["sources"].get(source["id"], {})
@@ -775,6 +839,13 @@ def scan(root: Path, configured: list[dict], transport: Transport, fetch: bool, 
             elif fetch:
                 candidate = reconciled_candidate(root, metadata)
                 if candidate is None:
+                    # Make room for the incoming generation without exceeding
+                    # the two-generation policy. The current candidate remains;
+                    # after a successful download it becomes the new previous.
+                    if row.pop("previousCandidate", None):
+                        catalog["sources"][source["id"]] = row
+                        atomic_json(catalog_path, catalog)
+                        prune_private_cache(root, catalog)
                     for attempt in range(3):
                         try:
                             candidate = download(root, source, metadata, transport, budget)
@@ -804,13 +875,16 @@ def scan(root: Path, configured: list[dict], transport: Transport, fetch: bool, 
         event = {"source": source["id"], "action": action, "error": row["error"]}
         events.append(event)
         print(json.dumps(event), flush=True)
+    retention = prune_private_cache(root, catalog)
+    if retention["filesDeleted"]:
+        print(json.dumps({"action": "pruned", **retention}), flush=True)
     atomic_json(child(root, "last-run.json"), {"checkedAt": catalog["checkedAt"], "events": events})
     return status(catalog, configured), events
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("scan", "status"))
+    parser.add_argument("command", choices=("scan", "status", "prune"))
     parser.add_argument("--state-dir", type=Path, required=True)
     parser.add_argument("--download", action="store_true")
     parser.add_argument("--budget-bytes", type=int, default=0)
@@ -822,6 +896,12 @@ def main() -> int:
         if args.command == "status":
             # Atomic catalog replacement makes reads safe during an active scan.
             result = status(read_json(child(root, "catalog.json"), {}), configured)
+        elif args.command == "prune":
+            with locked(root):
+                result = prune_private_cache(
+                    root,
+                    read_json(child(root, "catalog.json"), {"schemaVersion": 1, "sources": {}}),
+                )
         else:
             with locked(root):
                 if args.download and args.budget_bytes <= CHUNK:

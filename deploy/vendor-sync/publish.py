@@ -207,6 +207,43 @@ def catalog(root: Path, configured: dict) -> dict:
     return value
 
 
+def prune_public_history_locked(root: Path, configured: dict, value: dict) -> dict:
+    """Keep the catalog target and one immediately previous object per source."""
+    current = {row["sourceId"]: row["sha256"] for row in value["artifacts"]}
+    deleted = 0
+    deleted_bytes = 0
+    for source_id, source in configured.items():
+        folder = child(root, f"apps/{source_id}")
+        if not folder.exists():
+            continue
+        no_links(folder)
+        owned(folder, directory=True)
+        pattern = re.compile(rf"([a-f0-9]{{64}})\.{re.escape(source['format'])}")
+        history = []
+        for path in folder.iterdir():
+            match = pattern.fullmatch(path.name)
+            if match is None:
+                continue
+            owned(path)
+            if match.group(1) != current.get(source_id):
+                history.append(path)
+        history.sort(key=lambda path: (path.stat().st_mtime_ns, path.name), reverse=True)
+        for path in history[1:]:
+            deleted_bytes += path.stat().st_size
+            path.unlink()
+            deleted += 1
+        if len(history) > 1:
+            sync_directory(folder)
+    return {"status": "pruned", "filesDeleted": deleted, "bytesDeleted": deleted_bytes}
+
+
+def prune_history(output_dir: Path) -> dict:
+    configured = {source["id"]: source for source in sources()}
+    root = public_root(output_dir)
+    with locked(root):
+        return prune_public_history_locked(root, configured, catalog(root, configured))
+
+
 def verified_for(receipt: dict, source: dict, sha256: str, package: dict) -> dict:
     exact(receipt, {"schemaVersion", "source", "sha256", "checkedAt", "package", "verifier", "installation", "published"}, "invalid_native_receipt")
     native = receipt["package"]
@@ -382,10 +419,16 @@ def main() -> int:
     publish_parser.add_argument("--verification", type=Path)
     disable_parser = actions.add_parser("disable", help="atomically disable every mirror slot")
     disable_parser.add_argument("--public-root", type=Path, required=True)
+    prune_parser = actions.add_parser("prune", help="keep the current and one previous public object per source")
+    prune_parser.add_argument("--public-root", type=Path, required=True)
     args = parser.parse_args()
     try:
-        result = (publish(args.state_dir, args.public_root, args.source, args.verification)
-                  if args.action == "publish" else disable(args.public_root))
+        if args.action == "publish":
+            result = publish(args.state_dir, args.public_root, args.source, args.verification)
+        elif args.action == "prune":
+            result = prune_history(args.public_root)
+        else:
+            result = disable(args.public_root)
         print(json.dumps(result))
         return 0
     except (SyncError, OSError, ValueError, KeyError, TypeError) as exc:
