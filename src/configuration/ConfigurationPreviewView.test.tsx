@@ -70,17 +70,18 @@ describe("desktop protocol compatibility", () => {
   });
 
   it("greys a model only when it genuinely cannot hold a conversation", () => {
-    // 线上 /api/pricing 里 supported_endpoint_types 是按**模型**汇总的，
-    // 是所有渠道能力的并集，不分渠道。所以 openai 与 openai-response 的差别
-    // 不代表能不能用 —— 按它置灰，灰掉的是能用的模型（WorkBuddy 上就发生过：
-    // deepseek-v4-flash 明明能跑却是灰的）。
+    // 这条规则来自 new-api 源码，不是从 supported_endpoint_types 推的：
+    // 那个字段由 common/endpoint_type.go 按**渠道类型**算出，描述上游原生说
+    // 哪种协议，而且在 relay/ 整条请求路径下一次都没被引用 —— 中转不拿它拦
+    // 请求，每个 adaptor 都实现了四个入口格式的真转换。
     for (const tool of ["workbuddy", "pi", "dsh_web"] as const) {
       expect(modelSupportsTool(tool, ["openai", "anthropic"])).toBe(true);
       expect(modelSupportsTool(tool, ["openai-response"])).toBe(true);
-      // anthropic-only 不放行：今天没有这种模型，而中转会不会为它提供
-      // chat 端点我们没有证据。按知道的事实判，不按猜测判。
-      expect(modelSupportsTool(tool, ["anthropic"])).toBe(false);
-      // 真不能用的：只会出图，和什么都没声明的。
+      // Chat 打到 Anthropic 渠道，claude adaptor 的 ConvertOpenAIRequest 会
+      // 转成 Messages。以前这里判 false，是没证据时的保守猜测，现在有证据了。
+      expect(modelSupportsTool(tool, ["anthropic"])).toBe(true);
+      expect(modelSupportsTool(tool, ["gemini"])).toBe(true);
+      // 真不能用的：只会出图的，和什么都没声明的（线上是 codexpro/）。
       expect(modelSupportsTool(tool, ["image-generation"])).toBe(false);
       expect(modelSupportsTool(tool, [])).toBe(false);
     }
@@ -89,46 +90,48 @@ describe("desktop protocol compatibility", () => {
     expect(modelConnectionMode("claude_code", ["openai"])).toBe("bridge");
     expect(modelConnectionMode("claude_code", ["openai-response"])).toBe("bridge");
     expect(modelConnectionMode("claude_desktop", ["image-generation"])).toBeNull();
-    // Codex 是唯一的例外：wire_api 只接受 responses，配置层面无解，
-    // 所以这里必须看具体端点，能对话也不够。
-    expect(modelSupportsTool("codex_desktop", ["openai", "anthropic"])).toBe(false);
-    expect(modelSupportsTool("codex_desktop", ["openai-response"])).toBe(true);
   });
 
   it("names the apps a Codex-incompatible model can still be used in", () => {
-    // The relay's own pricing declares Chat-only channels, so DeepSeek-class
-    // models cannot go into Codex. Dropping them from the picker told the user
-    // nothing; this is what replaces the silence. A beginner does not know what
-    // a protocol is, but does know what "用 Claude Code" means.
-    const chatOnly = ["openai", "anthropic"];
-    expect(toolsSupportingModel(chatOnly, "codex_desktop")).toEqual([
+    // 接入页以前是把不兼容的模型直接过滤掉的，用户只会以为野菜没这个模型。
+    // 现在灰着显示并点名去哪用。一个不懂协议的人不知道什么是 Responses，
+    // 但知道「用 Claude Code」是什么意思。
+    const responsesUnreachable = ["openai"];
+    expect(toolsSupportingModel(responsesUnreachable, "codex_desktop")).toEqual([
       "claude_code",
       "claude_desktop",
       "pi",
       "dsh_web",
       "workbuddy",
     ]);
-    // The app being configured is never offered as somewhere else to go.
-    expect(toolsSupportingModel(chatOnly, "pi")).not.toContain("pi");
-    // A model nothing can run yields an empty list, so the copy falls back to
-    // saying only that this app cannot use it rather than naming nowhere.
+    // 正在配置的这个应用，永远不会被列进「去别处用」。
+    expect(toolsSupportingModel(responsesUnreachable, "pi")).not.toContain("pi");
+    // 哪都跑不了的模型给出空列表，文案退回到只说这个应用用不了。
     expect(toolsSupportingModel([], "codex_desktop")).toEqual([]);
-    expect(toolsSupportingModel(["openai-response"], "codex_desktop")).toEqual([
-      "claude_code",
-      "claude_desktop",
-      "pi",
-      "dsh_web",
-      "workbuddy",
-    ]);
+    expect(toolsSupportingModel(["image-generation"], "workbuddy")).toEqual([]);
   });
 
-  it("accepts only verified Responses models for Codex", () => {
+  it("greys a model for Codex only when no conversion can carry Responses", () => {
+    // 原生说 Responses 的，直通。
     expect(modelSupportsTool("codex_desktop", ["openai-response"])).toBe(true);
-    expect(modelSupportsTool("codex_desktop", ["openai"])).toBe(false);
     expect(
       modelSupportsTool("codex_desktop", ["openai", "openai-response"]),
     ).toBe(true);
-    expect(modelSupportsTool("codex_desktop", ["anthropic"])).toBe(false);
+    // Anthropic / Gemini 渠道的 adaptor 会把 Responses 转成上游原生格式，
+    // 而且 GetRequestURL 恒定打上游的原生路径，转换是落地的。线上
+    // qwen3.8-max、mimo-v2.5 这类 [anthropic, openai] 模型以前被灰掉，是错的。
+    expect(modelSupportsTool("codex_desktop", ["anthropic"])).toBe(true);
+    expect(modelSupportsTool("codex_desktop", ["openai", "anthropic"])).toBe(
+      true,
+    );
+    expect(modelSupportsTool("codex_desktop", ["gemini", "openai"])).toBe(true);
+    // 光一个 openai 是唯一没有兜底的：openai adaptor 对 Responses 是原样透传，
+    // 上游那个兼容网关有没有 /v1/responses 我们不知道。线上的三个 gemini-3.x
+    // 就在这一格。
+    expect(modelSupportsTool("codex_desktop", ["openai"])).toBe(false);
+    // 不能对话的，Codex 一样灰。
+    expect(modelSupportsTool("codex_desktop", ["image-generation"])).toBe(false);
+    expect(modelSupportsTool("codex_desktop", [])).toBe(false);
   });
 
   it("accepts native Anthropic and automatically bridged Chat for both Claude targets", () => {
@@ -150,6 +153,5 @@ describe("desktop protocol compatibility", () => {
     expect(modelSupportsTool("workbuddy", ["openai"])).toBe(true);
     expect(modelSupportsTool("workbuddy", ["openai-response"])).toBe(true);
     expect(modelSupportsTool("dsh_web", ["openai-response"])).toBe(true);
-    expect(modelSupportsTool("workbuddy", ["anthropic"])).toBe(false);
   });
 });

@@ -488,6 +488,16 @@ fn model_supports_tool(pricing: &Value, model_id: &str, tool_id: &str) -> bool {
     }
 }
 
+/// Whether the relay can carry a conversation for this model at all.
+///
+/// `supported_endpoint_types` describes the *upstream channel's* native
+/// protocol, computed by the relay from the channel type
+/// (`common/endpoint_type.go`). It is never consulted on the relay's request
+/// path -- only by the two controllers that render it for display. Every
+/// channel adaptor implements all four entry conversions, so the protocol a
+/// model declares is not a reason it cannot be used. The only genuinely
+/// unusable models are the ones that cannot hold a conversation in any
+/// protocol: image generators, and rows that declare nothing.
 fn chat_compatible(pricing: &Value, model_id: &str) -> bool {
     let Some(endpoints) = model_endpoints(pricing, model_id) else {
         return false;
@@ -495,7 +505,7 @@ fn chat_compatible(pricing: &Value, model_id: &str) -> bool {
     endpoints.iter().any(|endpoint| {
         matches!(
             endpoint.as_str(),
-            Some("openai") | Some("openai-response")
+            Some("openai") | Some("openai-response") | Some("anthropic") | Some("gemini")
         )
     })
 }
@@ -512,32 +522,43 @@ fn model_endpoints<'a>(pricing: &'a Value, model_id: &str) -> Option<&'a Vec<Val
 }
 
 fn claude_transport(pricing: &Value, model_id: &str) -> Option<ClaudeTransport> {
-    let endpoints = model_endpoints(pricing, model_id)?;
-    // The relay serves the Anthropic protocol for every chat model, so an
-    // `anthropic` capability flag is no longer required to connect directly.
-    // It remains the preferred evidence when present.
-    if endpoints
-        .iter()
-        .any(|endpoint| matches!(endpoint.as_str(), Some("anthropic") | Some("openai")))
-    {
-        Some(ClaudeTransport::DirectAnthropic)
-    } else {
-        None
-    }
+    // The relay serves `/v1/messages` for every channel type: each adaptor
+    // implements `ConvertClaudeRequest`, and the OpenAI adaptor's old
+    // "claude models only" guard is commented out
+    // (`relay/channel/openai/adaptor.go`). So any model that can converse can
+    // be reached over the Anthropic protocol.
+    chat_compatible(pricing, model_id).then_some(ClaudeTransport::DirectAnthropic)
 }
 
 fn codex_transport(pricing: &Value, model_id: &str) -> Option<codex_desktop::CodexTransport> {
     let endpoints = model_endpoints(pricing, model_id)?;
-    // Chat Completions (`openai`) is not a complete Responses implementation.
-    // Only models that advertise `openai-response` may be wired into Codex.
-    if endpoints
+    // Codex only ever speaks Responses -- the official config reference says
+    // `wire_api` accepts nothing but "responses", so there is no way out at the
+    // configuration layer. Responses is also the one entry format where the
+    // relay does not always have a conversion to fall back on:
+    //
+    //   `openai-response`  the upstream speaks Responses natively.
+    //   `anthropic`        the Claude adaptor converts Responses to Messages
+    //                      and its `GetRequestURL` always targets
+    //                      `/v1/messages`, so the conversion is actually used.
+    //   `gemini`           the Gemini adaptor does the same for generateContent.
+    //   `openai` alone     `ConvertOpenAIResponsesRequest` passes the request
+    //                      through unchanged and still targets the upstream's
+    //                      `/v1/responses`. Whether that OpenAI-compatible
+    //                      gateway implements it is not something the relay
+    //                      knows, and neither do we.
+    //
+    // So this is the one place a model is refused, and the reason is "nothing
+    // in the path can carry Responses", not "the protocol does not match".
+    endpoints
         .iter()
-        .any(|endpoint| endpoint.as_str() == Some("openai-response"))
-    {
-        Some(codex_desktop::CodexTransport::DirectResponses)
-    } else {
-        None
-    }
+        .any(|endpoint| {
+            matches!(
+                endpoint.as_str(),
+                Some("openai-response") | Some("anthropic") | Some("gemini")
+            )
+        })
+        .then_some(codex_desktop::CodexTransport::DirectResponses)
 }
 
 #[cfg(test)]
@@ -3393,27 +3414,50 @@ mod tests {
                 {"model_name": "chat", "supported_endpoint_types": ["openai"]},
                 {"model_name": "responses", "supported_endpoint_types": ["openai-response"]},
                 {"model_name": "messages", "supported_endpoint_types": ["anthropic"]},
-                {"model_name": "both", "supported_endpoint_types": ["openai", "anthropic"]}
+                {"model_name": "both", "supported_endpoint_types": ["openai", "anthropic"]},
+                {"model_name": "gemini", "supported_endpoint_types": ["gemini", "openai"]},
+                {"model_name": "image", "supported_endpoint_types": ["image-generation"]},
+                {"model_name": "silent", "supported_endpoint_types": []}
             ]
         });
-        assert!(model_supports_tool(&pricing, "chat", "pi"));
-        assert!(model_supports_tool(&pricing, "chat", "dsh_web"));
-        assert!(model_supports_tool(&pricing, "chat", "workbuddy"));
-        assert!(model_supports_tool(&pricing, "responses", "pi"));
-        assert!(model_supports_tool(&pricing, "responses", "workbuddy"));
-        assert!(model_supports_tool(&pricing, "responses", "dsh_web"));
-        assert!(!model_supports_tool(&pricing, "messages", "workbuddy"));
+        // Chat clients reach every channel type: each adaptor implements
+        // `ConvertOpenAIRequest`, including Claude's, which converts to
+        // Messages. `messages` used to be refused here on the grounds that we
+        // had no evidence -- the relay source is that evidence.
+        for tool in ["pi", "dsh_web", "workbuddy"] {
+            assert!(model_supports_tool(&pricing, "chat", tool));
+            assert!(model_supports_tool(&pricing, "responses", tool));
+            assert!(model_supports_tool(&pricing, "messages", tool));
+            assert!(model_supports_tool(&pricing, "gemini", tool));
+            assert!(!model_supports_tool(&pricing, "image", tool));
+            assert!(!model_supports_tool(&pricing, "silent", tool));
+        }
+        for tool in ["claude_code", "claude_desktop"] {
+            assert!(model_supports_tool(&pricing, "messages", tool));
+            assert!(model_supports_tool(&pricing, "chat", tool));
+            assert!(model_supports_tool(&pricing, "responses", tool));
+            assert!(!model_supports_tool(&pricing, "image", tool));
+            assert!(!model_supports_tool(&pricing, "silent", tool));
+        }
+        // Codex is the only target that still refuses anything, and only
+        // where no conversion can carry Responses at all.
         assert!(model_supports_tool(&pricing, "responses", "codex_desktop"));
-        assert!(model_supports_tool(&pricing, "messages", "claude_code"));
-        assert!(model_supports_tool(&pricing, "messages", "claude_desktop"));
-        assert!(model_supports_tool(&pricing, "chat", "claude_code"));
-        assert!(model_supports_tool(&pricing, "chat", "claude_desktop"));
+        assert!(model_supports_tool(&pricing, "messages", "codex_desktop"));
+        assert!(model_supports_tool(&pricing, "both", "codex_desktop"));
+        assert!(model_supports_tool(&pricing, "gemini", "codex_desktop"));
         assert!(!model_supports_tool(&pricing, "chat", "codex_desktop"));
+        assert!(!model_supports_tool(&pricing, "image", "codex_desktop"));
+        assert!(!model_supports_tool(&pricing, "silent", "codex_desktop"));
         assert_eq!(
             codex_transport(&pricing, "responses"),
             Some(codex_desktop::CodexTransport::DirectResponses)
         );
+        assert_eq!(
+            codex_transport(&pricing, "messages"),
+            Some(codex_desktop::CodexTransport::DirectResponses)
+        );
         assert_eq!(codex_transport(&pricing, "chat"), None);
+        assert_eq!(codex_transport(&pricing, "image"), None);
         assert_eq!(
             claude_transport(&pricing, "messages"),
             Some(ClaudeTransport::DirectAnthropic)
@@ -3426,6 +3470,8 @@ mod tests {
             claude_transport(&pricing, "both"),
             Some(ClaudeTransport::DirectAnthropic)
         );
+        assert_eq!(claude_transport(&pricing, "image"), None);
+        assert_eq!(claude_transport(&pricing, "silent"), None);
     }
 
     #[test]
