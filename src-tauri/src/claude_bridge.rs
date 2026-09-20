@@ -192,6 +192,29 @@ async fn dispatch(
     let Some(path) = request.uri().path().strip_prefix(state.prefix) else {
         return error(StatusCode::NOT_FOUND, "unsupported Claude endpoint");
     };
+    // 记一行「谁来过」。
+    //
+    // 之前只有 `/v1/models` 有日志，于是它零行时分不清两件完全不同的事：
+    // Claude Desktop 不做模型发现，还是它压根没走这座桥。前者说明在
+    // `/v1/models` 上报上下文窗口这条路走不通，得另想办法；后者是个大得多的
+    // 问题。没有这一行，两者都只能猜。
+    //
+    // 只记方法和**已知**路径。未知路径来自请求 URL，是外部可控的，不能原样
+    // 写进日志；请求头和请求体一个字节都不记。
+    let known = matches!(
+        (request.method().as_str(), path),
+        ("GET", "/v1/models") | ("POST", "/v1/messages")
+    );
+    log::info!(
+        "claude_bridge request surface={} method={} path={}",
+        if state.prefix.contains("desktop") {
+            "desktop"
+        } else {
+            "code"
+        },
+        request.method().as_str(),
+        if known { path } else { "<other>" },
+    );
     match (request.method().as_str(), path) {
         ("GET", "/v1/models") => models(&state),
         ("POST", "/v1/messages") => messages(&state, request).await,

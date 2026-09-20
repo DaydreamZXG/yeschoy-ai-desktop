@@ -1264,6 +1264,24 @@ async fn start_local_adapter(
     }
 }
 
+/// 是否要先向用户要一次「挪走 claude.ai 登录态」的同意。
+///
+/// 抽成函数是因为它曾经被写死在 `if desktop_lifecycle::requires_reload(..)`
+/// 里面：那个条件只对 `claude_desktop` / `codex_desktop` 为真，里面再判
+/// `claude_code` 是两个互斥条件相与 —— 整段代码一次都没执行过，而当时的测试
+/// 直接 mock 了 `configure_desktop_tool_v2` 的返回，走的是界面契约，根本没到
+/// 这里。判定独立出来才有东西可测。
+///
+/// `present` 是惰性的：探测要 shell 出去查钥匙串，只有 claude_code 且尚未
+/// 同意时才值得付这个代价。
+fn needs_claude_login_consent(
+    tool_id: &str,
+    already_consented: bool,
+    present: impl FnOnce() -> bool,
+) -> bool {
+    tool_id == "claude_code" && !already_consented && present()
+}
+
 async fn open_configured_adapter(
     request: &ToolActivationRequest,
     installation: &ResolvedInstallation,
@@ -1619,24 +1637,25 @@ pub async fn configure_desktop_tool_v2(
         Ok(Err(e)) => return Ok(ActivationFailure::Adapter(e).projection(&request)),
         Err(_) => return Ok(cancelled()),
     };
+    // claude.ai 的登录态存在钥匙串里，写配置文件碰不到它。两份凭据并存时
+    // Claude Code 用 claude.ai 那份，中转从头到尾没被用上 —— 野菜显示
+    // 「设置已完成」，用户在 Claude Code 里看到的却是账号被限制。
+    //
+    // 探测不弹窗（只查属性不查数据），所以没登录 claude.ai 的人不会平白
+    // 收到任何东西。真要挪它才会弹系统授权框，而那个框必须先有解释，
+    // 所以这里先回一个待确认状态，由界面把话说清楚。
+    if needs_claude_login_consent(
+        &request.tool_id,
+        request.displace_claude_login,
+        crate::claude_login_takeover::present,
+    ) {
+        return Ok(ToolActivationProjection::new(
+            &request,
+            "application_running",
+            "claude_login_conflict",
+        ));
+    }
     if desktop_lifecycle::requires_reload(&request.tool_id) {
-        // claude.ai 的登录态存在钥匙串里，写配置文件碰不到它。两份凭据并存时
-        // Claude Code 用 claude.ai 那份，中转从头到尾没被用上 —— 野菜显示
-        // 「设置已完成」，用户在 Claude Code 里看到的却是账号被限制。
-        //
-        // 探测不弹窗（只查属性不查数据），所以没登录 claude.ai 的人不会平白
-        // 收到任何东西。真要挪它才会弹系统授权框，而那个框必须先有解释，
-        // 所以这里先回一个待确认状态，由界面把话说清楚。
-        if request.tool_id == "claude_code"
-            && !request.displace_claude_login
-            && crate::claude_login_takeover::present()
-        {
-            return Ok(ToolActivationProjection::new(
-                &request,
-                "application_running",
-                "claude_login_conflict",
-            ));
-        }
         match desktop_lifecycle::is_running(&request.tool_id, &installation.path).await {
             Ok(true) if !request.restart_running_app => {
                 return Ok(ToolActivationProjection::new(
@@ -3504,6 +3523,63 @@ mod tests {
         assert_eq!(device_scope(), device_scope());
         // Usage attribution reads the tool out of the name and must not care.
         assert_eq!(tool_for_token_name(&name), Some("codex_desktop"));
+    }
+
+    /// 这条测试的存在本身就是那个 bug 的纪念碑。
+    ///
+    /// 判定原先写在 `if desktop_lifecycle::requires_reload(..)` 里面，而
+    /// `requires_reload` 只对 `claude_desktop` / `codex_desktop` 为真 ——
+    /// 里面再判 `claude_code`，两个互斥条件相与，永远为假。那段代码一次都没
+    /// 跑过，用户接入 Claude Code 后照旧看到
+    /// `Both claude.ai and apiKeyHelper set`，中转从头到尾没被用上。
+    ///
+    /// 当时的测试直接 mock 了 `configure_desktop_tool_v2` 的返回，测的是界面
+    /// 契约，完全没经过这里 —— 绿着，而功能是死的。
+    #[test]
+    fn only_claude_code_without_consent_and_with_a_login_asks() {
+        let present = || true;
+        let absent = || false;
+
+        assert!(needs_claude_login_consent("claude_code", false, present));
+
+        // 已经同意过就不再问，否则每次接入都弹一次系统授权框。
+        assert!(!needs_claude_login_consent("claude_code", true, present));
+        // 没有 claude.ai 登录态的人不该平白收到任何东西。
+        assert!(!needs_claude_login_consent("claude_code", false, absent));
+        // 只有 Claude Code 会读 `~/.claude` 的凭据；别的工具不受影响。
+        for tool in [
+            "claude_desktop",
+            "codex_desktop",
+            "pi",
+            "dsh_web",
+            "workbuddy",
+        ] {
+            assert!(
+                !needs_claude_login_consent(tool, false, present),
+                "{tool} 不该被问"
+            );
+        }
+    }
+
+    /// 探测要 shell 出去查钥匙串。除了 claude_code 且尚未同意，谁都不该付这个
+    /// 代价 —— 每次接入都多跑一个进程是白花的。
+    #[test]
+    fn the_keychain_is_not_probed_when_the_answer_is_already_no() {
+        let mut probed = false;
+        let mut probe = || {
+            probed = true;
+            true
+        };
+        assert!(!needs_claude_login_consent("workbuddy", false, &mut probe));
+        assert!(!probed, "别的工具不该触发探测");
+
+        let mut probed = false;
+        let mut probe = || {
+            probed = true;
+            true
+        };
+        assert!(!needs_claude_login_consent("claude_code", true, &mut probe));
+        assert!(!probed, "已经同意过就不必再探测");
     }
 
     #[test]
