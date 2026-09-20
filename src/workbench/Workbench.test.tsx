@@ -680,7 +680,13 @@ describe("official workbench", () => {
       .getByRole("heading", { name: "Claude Desktop" })
       .closest("article")!;
     expect(card).toHaveTextContent("待接入");
-    expect(card).toHaveTextContent("选择模型与分组");
+    // 这里守的是「卡片告诉用户下一步能做什么」。原来靠一句
+    // 「选择模型与分组，助手帮你完成配置。」——但那句话六张卡一模一样，
+    // 等于没说，已在信息设计重做里删掉。现在承担这件事的是按钮本身，
+    // 断言它比断言一句文案更强：它检查的是真有一个入口，而不是有一段描述。
+    expect(
+      within(card).getByRole("button", { name: "开始接入" }),
+    ).toBeInTheDocument();
     expect(card).not.toHaveTextContent("已接入");
     expect(screen.queryByText("¥128.60")).not.toBeInTheDocument();
     expect(native.mock.calls.map((call) => call[0])).toEqual([

@@ -200,6 +200,13 @@ const zh = {
     "这里只清除本机的野菜API登录状态，不会改动 Codex、Claude 等应用当前的接入设置。\n\n如果还要移除应用接入，请先到“我的应用”恢复该应用的原设置。",
   logoutPromptConfirm: "仅退出账户",
   logoutPromptCancel: "暂不退出",
+  // 首页按状态分组的三个标题。状态是用户真正在问的问题
+  // （「哪些接上了」），所以让它成为结构，而不是每张卡里一行灰字。
+  libraryGroupActive: "已接入",
+  libraryGroupReady: "可以接入",
+  libraryGroupMissing: "这台电脑上没装",
+  libraryInstalled: "已安装",
+  libraryMoreModels: "另有 {{count}} 个模型可在应用内切换",
   libraryFooterTrust: "只改你选择的应用，随时可以恢复。不会删除聊天记录。",
   libraryFooterConnect: "接入应用",
   joinGroup: "加入交流群",

@@ -29,8 +29,6 @@ import {
 import { connectionLabel, useConnections } from "../configuration/connections";
 import { RestoreConnection } from "../configuration/RestoreConnection";
 import { OpenConnection } from "../configuration/OpenConnection";
-import { groupLabel } from "../configuration/BillingGroupPicker";
-import { RecentRequest } from "../configuration/RecentRequest";
 import { ConnectionStatusNotice } from "../configuration/ConnectionStatusNotice";
 import type { SetupAction } from "../configuration/setupIntent";
 import { useWorkbenchCopy } from "./copy";
@@ -193,6 +191,56 @@ export function AppLibraryView({
           !["not_connected", "unavailable"].includes(c.state),
       ),
   );
+
+  // 每个应用的状态算一次，列表渲染直接用。
+  const rows = visibleApps.map((app) => {
+    const target = scan?.targets.find((v) => v.toolId === app.id);
+    const connection = connections?.connections.find((v) => v.toolId === app.id);
+    const active =
+      connection &&
+      !["not_connected", "unavailable"].includes(connection.state);
+    const installed = target && target.status !== "not_found";
+    const unknownConnection = !connection || connection.state === "unavailable";
+    const label = active
+      ? `${staleConnections ? "上次确认 · " : ""}${connectionLabel(connection.state)}`
+      : unknownConnection
+        ? connections?.loading
+          ? "正在读取状态"
+          : "状态待确认"
+        : staleConnections
+          ? "上次确认 · 未接入"
+          : scanning
+            ? "正在查找"
+            : installed
+              ? "待接入"
+              : scanError
+                ? "待检查"
+                : "未发现应用";
+    return { app, target, connection, active, installed, unknownConnection, label };
+  });
+
+  // **状态读不到的时候不分组。** 按一个我们并不知道的状态给应用归类，
+  // 是在假装知道：连接状态读不到（`unknownConnection`）或还在扫描
+  // （`scanning`，装没装都还不知道）时，平铺回今天的样子才是诚实的。
+  // 那个「六张卡全是状态待确认」的降级态不是设计没想清楚，
+  // 那就是「读不到」应该有的样子。
+  const canGroup = !scanning && rows.every((row) => !row.unknownConnection);
+  const groups = canGroup
+    ? [
+        { key: "active", title: c.libraryGroupActive, apps: rows.filter((r) => r.active) },
+        {
+          key: "ready",
+          title: c.libraryGroupReady,
+          apps: rows.filter((r) => !r.active && r.installed),
+        },
+        {
+          key: "missing",
+          title: c.libraryGroupMissing,
+          apps: rows.filter((r) => !r.active && !r.installed),
+        },
+      ].filter((group) => group.apps.length > 0)
+    : [{ key: "all", title: "", apps: rows }];
+
   return (
     <div
       className="workbench-page desktop-home"
@@ -346,55 +394,103 @@ export function AppLibraryView({
           </button>
         </section>
       )}
+      {/* 用户在这一页问的是「哪些接上了、我要去哪个」。所以：
+          状态决定分组，而不是每张卡里一行灰字；每行只放这个状态下有用的
+          那一个事实，而不是六行重复的同一段话。
+          详情（线路、计费分组、最近一次请求）归「管理」——
+          列表负责导航，详情归详情页。 */}
+      {/* **一个 section，标题行与 `<article>` 做兄弟**，而不是每组一个 section。
+          分组只是视觉上的，DOM 上仍是一条列表：状态从「不知道」变成「知道」时
+          应用会换组，若换了父节点，React 会卸载重建那个 `<article>`——
+          而多处测试（含 ru076 那条回归守卫）先抓住 article 再断言后续状态，
+          节点一被重建它们拿到的就是已脱离文档的旧节点。
+          同一个父节点下带 key 的兄弟，React 只移动不重建。 */}
       <section
         className="connection-library"
         aria-label="本机应用"
         aria-busy={scanning}
       >
-        {visibleApps.map((app, index) => {
-          const target = scan?.targets.find((v) => v.toolId === app.id);
-          const connection = connections?.connections.find(
-            (v) => v.toolId === app.id,
-          );
-          const active =
-            connection &&
-            !["not_connected", "unavailable"].includes(connection.state);
-          const installed = target && target.status !== "not_found";
-          const unknownConnection =
-            !connection || connection.state === "unavailable";
-          const label = active
-            ? `${staleConnections ? "上次确认 · " : ""}${connectionLabel(connection.state)}`
-            : unknownConnection
-              ? connections?.loading
-                ? "正在读取状态"
-                : "状态待确认"
-              : staleConnections
-                ? "上次确认 · 未接入"
-                : scanning
-                  ? "正在查找"
-                  : installed
-                    ? "待接入"
-                    : scanError
-                      ? "待检查"
-                      : "未发现应用";
-          return (
-            <article
-              key={app.id}
-              className="connection-card stagger-enter"
-              style={{ "--rail-index": index } as CSSProperties}
-              data-connected={!!active}
-            >
-              <header>
+        {groups.flatMap((group, groupIndex) => [
+          ...(group.title
+            ? [
+                <h2
+                  key={`heading-${group.key}`}
+                  className="connection-group-heading"
+                >
+                  {group.title}
+                  <span>{group.apps.length}</span>
+                </h2>,
+              ]
+            : []),
+          ...group.apps.map(
+            (
+              { app, target, connection, active, unknownConnection, label },
+              index,
+            ) => (
+              <article
+                key={app.id}
+                className="connection-row stagger-enter"
+                style={
+                  { "--rail-index": groupIndex * 10 + index } as CSSProperties
+                }
+                data-connected={!!active}
+              >
                 <span className="configuration-app-icon" data-app={app.id}>
-                  {app.icon ? (
-                    <AppGlyph source={app.icon} />
-                  ) : (
-                    <b>{app.mark}</b>
-                  )}
+                  {app.icon ? <AppGlyph source={app.icon} /> : <b>{app.mark}</b>}
                 </span>
-                <div>
-                  <h2>{app.name}</h2>
-                  <p>{app.description}</p>
+                <div className="connection-row-main">
+                  <h3>{app.name}</h3>
+                  {active && connection ? (
+                    <p className="connection-row-fact">
+                      {/* 模型名本身可点 = 换模型。这是上一轮特意修的：
+                          换模型是接入之后最常见的需求，而当时整张卡上最弱的
+                          元素才是入口。压成一行时不许把它压没。 */}
+                      <button
+                        type="button"
+                        className="connection-model-switch"
+                        // 按钮的可访问名是它**做什么**，而不是它显示什么。
+                        // 模型名 + 提示合成一个按钮之后，默认可访问名会变成
+                        // 「GLM-5.3 换模型与分组」，而多处导航靠
+                        // `getByRole("button", { name: "换模型与分组" })` 找它。
+                        aria-label={t("yeschoyDaily.changeModel")}
+                        onClick={() => onOpenSetup(app.id, "change-model")}
+                      >
+                        <code className="connection-model">
+                          {connection.modelId || "待确认"}
+                        </code>
+                        <span className="connection-model-switch-hint">
+                          {t("yeschoyDaily.changeModel")}
+                          <ChevronRight aria-hidden="true" />
+                        </span>
+                      </button>
+                      {(connection.models?.length ?? 0) > 1 && (
+                        <span className="connection-row-extra">
+                          {c.libraryMoreModels.replace(
+                            "{{count}}",
+                            String(connection.models!.length - 1),
+                          )}
+                        </span>
+                      )}
+                    </p>
+                  ) : (
+                    <p className="connection-row-fact">
+                      {target?.installations[0]?.version ? (
+                        <>
+                          <span>{c.libraryInstalled}</span>
+                          {/* 版本号必须独占一个元素、并保留「版本」前缀：
+                              15 个测试用 `getByText("版本 1.40609.1")` 找它，
+                              而 testing-library 的 getByText 比的是元素的
+                              完整文本。把它并进「已安装 · 1.40609.1」
+                              一行里，那 15 条会一起红。 */}
+                          <span className="connection-row-version">
+                            版本 {target.installations[0].version}
+                          </span>
+                        </>
+                      ) : (
+                        <span>{app.description}</span>
+                      )}
+                    </p>
+                  )}
                 </div>
                 <span
                   className="connection-state"
@@ -404,141 +500,49 @@ export function AppLibraryView({
                 >
                   {label}
                 </span>
-              </header>
-              <div className="connection-card-body">
-                {active ? (
-                  <>
-                    {/* 用户想换模型时，第一眼看的就是这里显示的模型名 —— 所以
-                        让它本身可点，而不是指望他去注意页脚那个最轻的按钮。
-                        换模型是接入之后最常见的需求，之前整张卡上最弱的元素
-                        才是入口。 */}
+                <div className="connection-row-actions">
+                  <RestoreConnection connection={connection} name={app.name} />
+                  {active &&
+                  connection &&
+                  !["recovery_pending", "changed"].includes(
+                    connection.state,
+                  ) ? (
+                    <OpenConnection
+                      connection={connection}
+                      name={app.name}
+                      onAdjust={() => onOpenSetup(app.id, "repair")}
+                    />
+                  ) : (
                     <button
-                      type="button"
-                      className="connection-model-switch"
-                      onClick={() => onOpenSetup(app.id, "change-model")}
+                      className={
+                        active ? "subtle-button" : "connect-app-button"
+                      }
+                      // 后端整个够不着时，这个按钮点了也只会在接入页再失败一次。
+                      // 六行给出六个一模一样的假入口，真正的重试反而被淹没；
+                      // 上面那条唯一的说明已经说清楚了怎么办。
+                      disabled={everythingUnavailable}
+                      onClick={() =>
+                        onOpenSetup(
+                          app.id,
+                          active || unknownConnection ? "repair" : "configure",
+                        )
+                      }
                     >
-                      <span className="field-caption">
-                        {connection.models?.length
-                          ? "接入时默认模型"
-                          : "当前模型"}
-                      </span>
-                      <code className="connection-model">
-                        {connection.modelId || "待确认"}
-                      </code>
-                      <span className="connection-model-switch-hint">
-                        {t("yeschoyDaily.changeModel")}
-                        <ChevronRight aria-hidden="true" />
-                      </span>
-                    </button>
-                    <div className="connection-tags">
-                      <span>
-                        {connection.lineId === "global_accelerated"
-                          ? "全球加速"
-                          : connection.lineId
-                            ? "大陆优化"
-                            : "线路待确认"}
-                      </span>
-                      <span>
-                        {connection.billingGroup
-                          ? groupLabel(connection.billingGroup)
-                          : "分组待确认"}
-                      </span>
-                    </div>
-                    <p className="connection-footnote">
-                      {connection.state === "recovery_pending"
-                        ? t("yeschoyDaily.recoveryHint")
-                        : connection.state === "changed"
-                          ? "检测到设置有变化，保留你的修改。"
-                          : connection.requiresBackground
-                            ? "使用时请保持野菜助手运行。"
-                            : "设置已保存；可随时换回原来的服务。"}
-                    </p>
-                    {(connection.models?.length ?? 0) > 1 && (
-                      <p className="connection-footnote">
-                        已配置 {connection.models!.length}{" "}
-                        个常用模型，可在应用内切换。
-                      </p>
-                    )}
-                    {connection.lastRequest && (
-                      <details className="connection-last-result">
-                        <summary>
-                          {connection.lastRequest.outcome === "ok"
-                            ? "最近一次已确认经野菜中转完成"
-                            : "最近一次请求未完成 · 查看原因"}
-                        </summary>
-                        <RecentRequest
-                          value={connection.lastRequest}
-                          toolId={app.id}
-                        />
-                      </details>
-                    )}
-                  </>
-                ) : (
-                  <div className="connection-empty">
-                    <p>
-                      {unknownConnection
-                        ? "尚未确认接入设置，检查成功后再调整；已有设置不会因此删除。"
-                        : installed
-                          ? "选择模型与分组，助手帮你完成配置。"
+                      {active || unknownConnection
+                        ? t("yeschoyDaily.checkAndRepair")
+                        : target && target.status !== "not_found"
+                          ? "开始接入"
                           : ["claude_desktop", "codex_desktop"].includes(app.id)
-                            ? "野菜帮你选择安装包，装好后继续接入模型。"
-                            : "查看官方安装步骤，安装后由野菜完成模型接入。"}
-                    </p>
-                    <span>
-                      {target?.installations[0]?.version
-                        ? `版本 ${target.installations[0].version}`
-                        : "不需要了解配置文件"}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <footer>
-                <div className="connection-manage-actions">
-                  {active && (
-                    <button
-                      className="text-button change-model-action"
-                      onClick={() => onOpenSetup(app.id, "change-model")}
-                    >
-                      {t("yeschoyDaily.changeModel")}
+                            ? "安装并接入"
+                            : "查看安装方式"}
+                      <ArrowRight />
                     </button>
                   )}
-                  <RestoreConnection connection={connection} name={app.name} />
                 </div>
-                {active &&
-                !["recovery_pending", "changed"].includes(connection.state) ? (
-                  <OpenConnection
-                    connection={connection}
-                    name={app.name}
-                    onAdjust={() => onOpenSetup(app.id, "repair")}
-                  />
-                ) : (
-                  <button
-                    className={active ? "subtle-button" : "connect-app-button"}
-                    // 后端整个够不着时，这个按钮点了也只会在接入页再失败一次。
-                    // 六张卡片给出六个一模一样的假入口，真正的重试反而被淹没；
-                    // 上面那条唯一的说明已经说清楚了怎么办。
-                    disabled={everythingUnavailable}
-                    onClick={() =>
-                      onOpenSetup(
-                        app.id,
-                        active || unknownConnection ? "repair" : "configure",
-                      )
-                    }
-                  >
-                    {active || unknownConnection
-                      ? t("yeschoyDaily.checkAndRepair")
-                      : installed
-                        ? "开始接入"
-                        : ["claude_desktop", "codex_desktop"].includes(app.id)
-                          ? "安装并接入"
-                          : "查看安装方式"}
-                    <ArrowRight />
-                  </button>
-                )}
-              </footer>
-            </article>
-          );
-        })}
+              </article>
+            ),
+          ),
+        ])}
       </section>
       {scan &&
         !scanError &&
