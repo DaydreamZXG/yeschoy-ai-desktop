@@ -481,22 +481,38 @@ pub(crate) async fn resume_if_configured(state: CodexRuntimeState) {
     let Ok(text) = std::fs::read_to_string(dir.join("config.toml")) else {
         return;
     };
+    if config_points_at_our_bridge(&text) {
+        let _ = state.start(credential).await;
+    }
+}
+
+/// 这份 `config.toml` 现在还指着我们这座桥吗。
+///
+/// 抽成纯函数是因为 `resume_if_configured` 剩下的部分全是 I/O（钥匙串、
+/// home、绑端口），测不了；而会出错的恰恰是这里。
+///
+/// **只看当前生效的那个 provider**（`model_provider` 指向谁），不扫全表。
+/// 用户配置里同时留着好几个 provider 是常态 —— 他们切去 OpenAI 官方之后，
+/// 我们那条记录还在。扫全表就会在用户已经不用我们的时候照样占住端口。
+///
+/// 按 `base_url` 认，不按 provider 名字认：接入时可以写进用户自己命名的
+/// provider（`provider_hint`），名字不固定，地址才是。
+fn config_points_at_our_bridge(text: &str) -> bool {
     let Ok(document) = text.parse::<DocumentMut>() else {
-        return;
+        return false;
     };
     let Some(active) = document.get("model_provider").and_then(Item::as_str) else {
-        return;
+        return false;
     };
-    let points_here = document
+    document
         .get("model_providers")
-        .and_then(Item::as_table)
+        // 不先 `as_table()`：内联表（`model_providers = { … }`）不是
+        // `Item::Table`，转换会返回 None，于是桥静默地不恢复。
+        // `validate_readback` 本来就是直接 `get`，这里跟它一致。
         .and_then(|providers| providers.get(active))
         .and_then(|provider| provider.get("base_url"))
         .and_then(Item::as_str)
-        == Some(PROXY_BASE);
-    if points_here {
-        let _ = state.start(credential).await;
-    }
+        == Some(PROXY_BASE)
 }
 
 fn config_dir_from_override(
@@ -1237,5 +1253,108 @@ experimental_bearer_token = "sk-old-old-old-old"
         assert!(LOCK.try_lock().is_ok());
         assert_eq!(std::fs::read_to_string(path).unwrap(), original);
         std::fs::remove_dir_all(home).unwrap();
+    }
+
+    /// 我们自己写出去的配置，必须被自己认出来。
+    ///
+    /// 夹具用真正的写入函数造，不手写 TOML —— 手写的夹具只能证明「读的这半
+    /// 边自洽」，写的那半边一改（provider 名、键名、嵌套方式）它照样绿，
+    /// 而线上的症状是重启应用后 Codex 连不上，用户什么都没改过。
+    #[test]
+    fn what_we_write_is_what_we_recognise_on_restart() {
+        for auth in [
+            ProviderAuth::ApiKey(format!("sk-{}", "a".repeat(48))),
+            ProviderAuth::Command("/opt/yeschoy/helper".into()),
+        ] {
+            let written = render(None, PROXY_BASE, "kimi-k3", &auth).unwrap();
+            let text = String::from_utf8(written).unwrap();
+            assert!(
+                config_points_at_our_bridge(&text),
+                "没认出自己写的配置：\n{text}"
+            );
+        }
+        // 写进用户自己命名的 provider 也一样 —— 按地址认，不按名字认。
+        let (written, provider_id) = render_with_provider(
+            None,
+            PROXY_BASE,
+            "kimi-k3",
+            &ProviderAuth::ApiKey("sk-x".into()),
+            Some("my-own-name"),
+        )
+        .unwrap();
+        assert_eq!(provider_id, "my-own-name");
+        assert!(config_points_at_our_bridge(
+            &String::from_utf8(written).unwrap()
+        ));
+    }
+
+    /// 用户已经不用我们了的时候，**不许**把桥拉起来占住端口。
+    ///
+    /// 最要紧的是第二条：用户切去别的 provider 之后，我们那条记录通常还
+    /// 留在配置里。只要扫全表而不是只看当前生效的那个，就会在用户明确
+    /// 切走之后照样绑端口——而他们并没有要我们这么做。
+    #[test]
+    fn a_config_that_no_longer_points_here_does_not_bring_the_bridge_back() {
+        let ours = format!("base_url = \"{PROXY_BASE}\"");
+        for (name, text) in [
+            (
+                "用户改回了直连中转",
+                "model_provider = \"yeschoy\"\n\
+                 [model_providers.yeschoy]\n\
+                 base_url = \"https://yeschoy.com/v1\"\n"
+                    .to_owned(),
+            ),
+            (
+                "用户切去了别的 provider，我们那条还留着",
+                format!(
+                    "model_provider = \"openai\"\n\
+                     [model_providers.openai]\n\
+                     base_url = \"https://api.openai.com/v1\"\n\
+                     [model_providers.yeschoy]\n\
+                     {ours}\n"
+                ),
+            ),
+            (
+                "没有 model_provider",
+                format!("[model_providers.yeschoy]\n{ours}\n"),
+            ),
+            (
+                "生效的 provider 根本不存在",
+                format!("model_provider = \"ghost\"\n[model_providers.yeschoy]\n{ours}\n"),
+            ),
+            (
+                "provider 里没有 base_url",
+                "model_provider = \"yeschoy\"\n[model_providers.yeschoy]\nwire_api = \"responses\"\n"
+                    .to_owned(),
+            ),
+            ("TOML 坏了", "model_provider = \"yeschoy\"\n[[[".to_owned()),
+            ("空文件", String::new()),
+            (
+                "端口对但路径不对",
+                "model_provider = \"yeschoy\"\n\
+                 [model_providers.yeschoy]\n\
+                 base_url = \"http://127.0.0.1:15731/claude-desktop/v1\"\n"
+                    .to_owned(),
+            ),
+        ] {
+            assert!(
+                !config_points_at_our_bridge(&text),
+                "{name}：不该恢复却恢复了\n{text}"
+            );
+        }
+    }
+
+    /// 内联表写法也要认。
+    ///
+    /// Codex 自己不这么写，但用户手改过的配置可能是。这里原本先调
+    /// `Item::as_table()`，内联表不是 `Item::Table`，于是返回 None ——
+    /// 桥**静默地**不恢复，用户只看到「重启之后 Codex 连不上了」。
+    #[test]
+    fn an_inline_table_config_is_still_recognised() {
+        let text = format!(
+            "model_provider = \"yeschoy\"\n\
+             model_providers = {{ yeschoy = {{ base_url = \"{PROXY_BASE}\", wire_api = \"responses\" }} }}\n"
+        );
+        assert!(config_points_at_our_bridge(&text), "{text}");
     }
 }
