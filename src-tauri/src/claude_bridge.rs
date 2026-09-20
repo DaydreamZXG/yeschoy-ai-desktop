@@ -259,6 +259,10 @@ async fn dispatch(
     match (request.method().as_str(), path) {
         ("GET", "/v1/models") => models(&state),
         ("POST", "/v1/messages") => messages(&state, request).await,
+        // 查询串不在 `path` 里，所以 SDK 的 beta 变体
+        // （`/v1/messages/count_tokens?beta=true`，另带
+        // `anthropic-beta: token-counting-2024-11-01`）命中的也是这一条。
+        ("POST", "/v1/messages/count_tokens") => count_tokens(&state, request).await,
         _ => error(StatusCode::NOT_FOUND, "unsupported Claude endpoint"),
     }
 }
@@ -489,6 +493,54 @@ async fn messages(state: &BridgeState, request: Request<Body>) -> Response {
     // Anthropic invalid-request response lets the client compact the thread or
     // ask the user to do so instead of treating this as a transient outage.
     context_too_long_error()
+}
+
+/// 量一段对话有多大。
+///
+/// Claude Desktop 每轮都打这个端点 —— 实测一次对话之后连打二十个，十八毫秒内
+/// 打完。之前桥不认它，二十个全 404，于是 Desktop 量不到尺寸，也就无从判断
+/// 何时该自动压缩。「Claude 没办法自动压缩」就是这么来的。
+///
+/// 转发给中转站是死路：不带凭据探过，它对这个路径和对一个随手编的假路径返回
+/// 逐字相同的 `404 Invalid URL`。所以数是本地估的，见 [`crate::token_estimate`]。
+///
+/// **故意不解析模型。** 估算与模型无关，而一次对话要打二十个请求 —— 让它们
+/// 因为「档位过期」之类的原因一起报错，风险远大于给个数。模型解析失败该在
+/// [`messages`] 里大声说，那里已经说了。
+async fn count_tokens(state: &BridgeState, request: Request<Body>) -> Response {
+    if !locally_authorized(request.headers(), &state.local_token) {
+        return error(StatusCode::UNAUTHORIZED, "invalid local gateway token");
+    }
+    let body = match to_bytes(request.into_body(), MAX_REQUEST_BODY_BYTES).await {
+        Ok(bytes) => bytes,
+        Err(_) => return error(StatusCode::PAYLOAD_TOO_LARGE, "request body too large"),
+    };
+    let value: Value = match serde_json::from_slice(&body) {
+        Ok(value) => value,
+        Err(_) => return error(StatusCode::BAD_REQUEST, "invalid request"),
+    };
+    let estimate = crate::token_estimate::estimate_request(&value);
+    // 只记数字。`messages` 和 `tools` 是用来回答「这二十个请求到底在数什么」的，
+    // `tokens` 是用来跟上游报回的权威计数对照、校准余量系数的。
+    // 请求体一个字节都不记。
+    log::info!(
+        "claude_bridge count_tokens surface={} messages={} tools={} system={} tokens={}",
+        if state.prefix.contains("desktop") {
+            "desktop"
+        } else {
+            "code"
+        },
+        estimate.messages,
+        estimate.tools,
+        estimate.has_system,
+        estimate.tokens,
+    );
+    (
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/json")],
+        Body::from(json!({ "input_tokens": estimate.tokens }).to_string()),
+    )
+        .into_response()
 }
 
 async fn send_upstream(
@@ -829,6 +881,61 @@ mod tests {
             client: upstream_client().unwrap(),
             events: broadcast::channel(1).0,
         }
+    }
+
+    /// 路由这一层必须**单独**测，而且必须过 `dispatch`。
+    ///
+    /// 这个仓库刚犯过一次相反的错（`36607b6b`）：处理逻辑写对了，却因为外层分支
+    /// 条件互斥而一次都没被调到 —— 当时的测试之所以没挡住，正是因为它绕过路由
+    /// 直接调了处理函数。本文件里 `/v1/messages` 的那几条端到端测试同样是直接调
+    /// `messages()` 的，所以它们证明不了「这条路由接得上」。这条能。
+    #[tokio::test]
+    async fn the_count_tokens_route_is_reachable_through_dispatch() {
+        let shared = Arc::new(RwLock::new(Arc::new(state())));
+        let token = shared.read().await.local_token.clone();
+        for uri in [
+            "/claude-desktop/v1/messages/count_tokens",
+            // SDK 的 beta 变体带查询串。`uri().path()` 不含查询串，所以它命中的
+            // 必须是同一条路由 —— 这正是「不必为 beta 单开一条」的那个前提。
+            "/claude-desktop/v1/messages/count_tokens?beta=true",
+        ] {
+            let request = Request::builder()
+                .method("POST")
+                .uri(uri)
+                .header(header::AUTHORIZATION, format!("Bearer {token}"))
+                .body(Body::from(
+                    json!({
+                        "model": "claude-sonnet-5",
+                        "messages": [{"role": "user", "content": "你好，数一下这段有多长"}],
+                    })
+                    .to_string(),
+                ))
+                .unwrap();
+            let response = dispatch(State(shared.clone()), request).await;
+            assert_eq!(response.status(), StatusCode::OK, "{uri}");
+            let body = to_bytes(response.into_body(), 64 * 1024).await.unwrap();
+            let value: Value = serde_json::from_slice(&body).unwrap();
+            // Anthropic 的响应就这一个字段，Desktop 读的也是它。
+            assert!(
+                value["input_tokens"]
+                    .as_u64()
+                    .is_some_and(|count| count > 0),
+                "{uri}: {value}"
+            );
+        }
+    }
+
+    /// 新端点照样是本地边界的一部分。它收请求体，没有本地令牌就不该收。
+    #[tokio::test]
+    async fn count_tokens_still_demands_the_local_token() {
+        let shared = Arc::new(RwLock::new(Arc::new(state())));
+        let request = Request::builder()
+            .method("POST")
+            .uri("/claude-desktop/v1/messages/count_tokens")
+            .body(Body::from(r#"{"messages":[]}"#))
+            .unwrap();
+        let response = dispatch(State(shared), request).await;
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
 
     #[test]
