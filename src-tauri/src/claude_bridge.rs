@@ -184,6 +184,51 @@ impl ClaudeBridgeRuntime {
     }
 }
 
+/// 请求路径写进日志时用的标签。
+///
+/// 返回 `&'static str` 是这个函数存在的理由：请求路径是外部可控的，绝不能原样
+/// 落进日志，而借用不到请求里的字节，类型就替我们保证了这一点 —— 能返回的只有
+/// 下面这张表里的常量。
+///
+/// 需要认得它们，是因为桥只服务 `/v1/models` 和 `/v1/messages`，其余一律 404。
+/// 实测 Claude Desktop 会在一秒内打来 9 个我们不认识的 POST；不知道那是什么，
+/// 就分不清 404 掉的是无关紧要的东西，还是它用来做决定的东西
+/// —— `count_tokens` 就是后者：量不到对话多大，也就无从判断何时该压缩。
+fn log_label(method: &str, path: &str) -> &'static str {
+    // 顺序有讲究：`find` 取第一个前缀命中，所以 `/v1/messages/count_tokens`
+    // 和 `/v1/messages/batches` 必须排在 `/v1/messages` 前面，否则最想认出的
+    // 那个会被它自己的前缀吃掉。
+    const RECOGNISED: [&str; 9] = [
+        "/v1/messages/count_tokens",
+        "/v1/messages/batches",
+        "/v1/messages",
+        "/v1/complete",
+        "/v1/files",
+        "/v1/models",
+        "/v1/organizations",
+        "/v1/skills",
+        "/v1/agents",
+    ];
+    match (method, path) {
+        ("GET", "/v1/models") => "/v1/models",
+        ("POST", "/v1/messages") => "/v1/messages",
+        // 要么完全相等，要么后面紧跟 `/`。纯前缀匹配会把
+        // `/v1/messages<垃圾>` 标成 `/v1/messages` —— 安全性不受影响（记下的
+        // 仍是我们自己的常量），但标签会骗人，而这张日志的全部用处就是看清
+        // 对方到底在要什么。
+        _ => RECOGNISED
+            .iter()
+            .find(|candidate| {
+                path == **candidate
+                    || path
+                        .strip_prefix(**candidate)
+                        .is_some_and(|rest| rest.starts_with('/'))
+            })
+            .copied()
+            .unwrap_or("<other>"),
+    }
+}
+
 async fn dispatch(
     State(state): State<Arc<RwLock<Arc<BridgeState>>>>,
     request: Request<Body>,
@@ -201,10 +246,6 @@ async fn dispatch(
     //
     // 只记方法和**已知**路径。未知路径来自请求 URL，是外部可控的，不能原样
     // 写进日志；请求头和请求体一个字节都不记。
-    let known = matches!(
-        (request.method().as_str(), path),
-        ("GET", "/v1/models") | ("POST", "/v1/messages")
-    );
     log::info!(
         "claude_bridge request surface={} method={} path={}",
         if state.prefix.contains("desktop") {
@@ -213,7 +254,7 @@ async fn dispatch(
             "code"
         },
         request.method().as_str(),
-        if known { path } else { "<other>" },
+        log_label(request.method().as_str(), path),
     );
     match (request.method().as_str(), path) {
         ("GET", "/v1/models") => models(&state),
@@ -717,6 +758,39 @@ fn context_too_long_error() -> Response {
 
 #[cfg(test)]
 mod tests {
+    /// 日志里绝不能出现请求里的字节。返回类型已经保证了这一点，这条测试守的是
+    /// 它不被改成 `&str` —— 那样借用请求路径就会编译通过，而路径是外部可控的。
+    #[test]
+    fn an_unrecognised_path_never_reaches_the_log() {
+        for hostile in [
+            "/v1/../../etc/passwd",
+            "/v1/messages\u{0000}injected",
+            "/v1/x?token=sk-secret",
+            "/完全不认识的路径",
+            "",
+        ] {
+            assert_eq!(
+                super::log_label("POST", hostile),
+                "<other>",
+                "{hostile:?} 不该被原样记下来"
+            );
+        }
+    }
+
+    /// `/v1/messages/count_tokens` 不能被 `/v1/messages` 的前缀先吃掉 —— 那正是
+    /// 我们最想认出来的那一个，混进 messages 里就白记了。
+    #[test]
+    fn the_longer_path_wins_over_its_own_prefix() {
+        assert_eq!(
+            super::log_label("POST", "/v1/messages/count_tokens"),
+            "/v1/messages/count_tokens"
+        );
+        assert_eq!(super::log_label("POST", "/v1/messages"), "/v1/messages");
+        assert_eq!(super::log_label("GET", "/v1/models"), "/v1/models");
+        // 方法不对就不算服务得了的那两个，但仍要认出路径。
+        assert_eq!(super::log_label("GET", "/v1/messages"), "/v1/messages");
+    }
+
     use super::*;
     use crate::tool_credentials::{ToolCredential, ToolModelRoute};
 
