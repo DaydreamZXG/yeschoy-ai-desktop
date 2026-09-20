@@ -6057,11 +6057,14 @@
   align-content: start;
 }
 
-/* 后台自由文本：一行，超出打点，鼠标悬停看全名。 */
+/* 方案名是**决策对象**，价格只是它的一个属性——原来正好反着：
+   名字 13px 灰色，价格 22px 全对比，于是页面上最响的是一个数字，
+   而不是用户要在两者之间做的那个选择。（后台自由文本：一行，
+   超出打点，鼠标悬停看全名。） */
 .billing-plan-card .billing-group-info > strong {
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   font-weight: 600;
-  color: var(--muted);
+  color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -6072,8 +6075,10 @@
   color: var(--ink);
 }
 
+/* 价格仍要好读、好比——这就是一次价格比较——但不该盖过「一键接入」。
+   从 22px 降到 16px，等宽字体保证两个金额还能上下对齐着比。 */
 .billing-plan-card .billing-plan-price {
-  font: 670 var(--text-2xl) / 1.2 var(--font-mono);
+  font: 670 var(--text-lg) / 1.2 var(--font-mono);
   letter-spacing: -0.02em;
   color: var(--ink);
   white-space: nowrap;

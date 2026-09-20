@@ -1957,14 +1957,14 @@ export function ConfigurationPreviewView({
             <div className="connection-choice-grid">
               <section
                 className="connection-choice-card model-choice-card"
-                aria-labelledby="setup-model-title"
+                aria-label={g.modelChoice}
               >
-                <div className="choice-card-heading">
-                  <div>
-                    <h3 id="setup-model-title">{g.modelChoice}</h3>
-                    <p>{g.modelQuestion}</p>
-                  </div>
-                </div>
+                {/* 卡片标题整条去掉。原来这里是
+                    「选择模型」（h3）+「想用哪个 AI?」（副标题），
+                    而 `ModelPicker` 自己的字段标签又是「选择模型」——
+                    同一句话在 40px 内说了三遍，读者会以为它们是三件事。
+                    列表成为主体之后这张卡的职责已经很清楚（加哪个模型），
+                    让字段自己的标签说话就够了。 */}
                 {signedIn ? (
                   <>
                     <ModelPicker
@@ -2375,12 +2375,18 @@ export function ConfigurationPreviewView({
           </ActivationFeedback>
         )}
 
-        <RecentRequest
-          value={savedConnection?.lastRequest}
-          toolId={activationToolId}
-          onRefresh={() => void connections?.refresh()}
-          loading={connections?.loading}
-        />
+        {/* 只在这个应用已经接入之后才显示。还没接入时它会写
+            「尚未收到该应用经野菜中转的请求」——那是在报告一件还没发生的事，
+            而用户此刻要做的是接入，不是确认一个不存在的记录。
+            它属于接入成功之后那一级（「首次使用已验证」）。 */}
+        {savedConnection && (
+          <RecentRequest
+            value={savedConnection.lastRequest}
+            toolId={activationToolId}
+            onRefresh={() => void connections?.refresh()}
+            loading={connections?.loading}
+          />
+        )}
         <div className="configuration-actions configuration-secondary-actions">
           <RestoreConnection
             connection={savedConnection}
