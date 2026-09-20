@@ -195,28 +195,38 @@ export function AppLibraryView({
   // 每个应用的状态算一次，列表渲染直接用。
   const rows = visibleApps.map((app) => {
     const target = scan?.targets.find((v) => v.toolId === app.id);
-    const connection = connections?.connections.find((v) => v.toolId === app.id);
+    const connection = connections?.connections.find(
+      (v) => v.toolId === app.id,
+    );
     const active =
       connection &&
       !["not_connected", "unavailable"].includes(connection.state);
     const installed = target && target.status !== "not_found";
     const unknownConnection = !connection || connection.state === "unavailable";
     const label = active
-      ? `${staleConnections ? "上次确认 · " : ""}${connectionLabel(connection.state)}`
+      ? `${staleConnections ? c.libraryStalePrefix : ""}${connectionLabel(connection.state)}`
       : unknownConnection
         ? connections?.loading
-          ? "正在读取状态"
-          : "状态待确认"
+          ? c.libraryStateLoading
+          : c.libraryStateUnknown
         : staleConnections
-          ? "上次确认 · 未接入"
+          ? c.libraryStaleNotConnected
           : scanning
-            ? "正在查找"
+            ? c.libraryScanning
             : installed
-              ? "待接入"
+              ? c.libraryPending
               : scanError
-                ? "待检查"
-                : "未发现应用";
-    return { app, target, connection, active, installed, unknownConnection, label };
+                ? c.libraryNeedsCheck
+                : c.libraryNotFound;
+    return {
+      app,
+      target,
+      connection,
+      active,
+      installed,
+      unknownConnection,
+      label,
+    };
   });
 
   // **状态读不到的时候不分组。** 按一个我们并不知道的状态给应用归类，
@@ -227,7 +237,11 @@ export function AppLibraryView({
   const canGroup = !scanning && rows.every((row) => !row.unknownConnection);
   const groups = canGroup
     ? [
-        { key: "active", title: c.libraryGroupActive, apps: rows.filter((r) => r.active) },
+        {
+          key: "active",
+          title: c.libraryGroupActive,
+          apps: rows.filter((r) => r.active),
+        },
         {
           key: "ready",
           title: c.libraryGroupReady,
@@ -248,14 +262,14 @@ export function AppLibraryView({
     >
       <header className="workbench-page-heading">
         <div>
-          <p className="eyebrow">野菜 API · 你的 AI 工作台</p>
-          <h1>我的应用</h1>
+          <p className="eyebrow">{c.libraryEyebrow}</p>
+          <h1>{c.libraryTitle}</h1>
           <p>
             {!hasConnectionSnapshot
-              ? "先确认本机应用的接入状态，再继续使用或调整设置。"
+              ? c.librarySubtitleUnknown
               : configured
-                ? "从这里打开应用，接着上次的工作。"
-                : "选一个应用，安装并连接你想用的模型。"}
+                ? c.librarySubtitleConfigured
+                : c.librarySubtitleEmpty}
           </p>
         </div>
         <button
@@ -268,7 +282,7 @@ export function AppLibraryView({
           }}
         >
           <RefreshCw className={checking ? "is-spinning" : ""} />
-          {checking ? "正在检查" : "检查应用"}
+          {checking ? c.libraryCheckingAction : c.libraryCheckAction}
         </button>
       </header>
       {pendingRecovery && (
@@ -278,10 +292,9 @@ export function AppLibraryView({
           data-testid="recovery-banner"
         >
           <CircleAlert />
-          上次退出时有接入操作没有完成，{pendingRecovery.name}{" "}
-          的原设置需要先恢复，再继续使用。
+          {t("workbench.libraryRecoveryBanner", { app: pendingRecovery.name })}
           <button onClick={() => onOpenSetup(pendingRecovery.id, "repair")}>
-            前往恢复
+            {c.libraryRecoveryAction}
           </button>
         </p>
       )}
@@ -303,19 +316,19 @@ export function AppLibraryView({
       {everythingUnavailable && (
         <p className="workbench-notice" role="alert">
           <CircleAlert />
-          暂时连不上野菜服务，账户、本机应用和接入状态都没读到。这不会改动或删除任何已有设置。
+          {c.libraryOfflineNotice}
           <button disabled={checking} onClick={retryEverything}>
-            {checking ? "正在重试" : "重试"}
+            {checking ? c.libraryRetrying : c.libraryRetry}
           </button>
         </p>
       )}
       {!everythingUnavailable && accountSession.lastError && (
         <p className="workbench-notice" role="status">
           <CircleAlert />
-          {signedIn
-            ? "账户数据暂未更新，保留上次结果。"
-            : "暂时无法获取账户状态，请重试。"}
-          <button onClick={() => void accountSession.refresh()}>重试</button>
+          {signedIn ? c.libraryAccountStale : c.libraryAccountUnavailable}
+          <button onClick={() => void accountSession.refresh()}>
+            {c.libraryRetry}
+          </button>
         </p>
       )}
       {balanceIssue && (
@@ -330,11 +343,11 @@ export function AppLibraryView({
             <ShieldCheck />
           </span>
           <div>
-            <h2>登录一次，接入你的 AI 应用</h2>
-            <p>自动获取可用模型和账户价格，不用复制密钥。恢复设置无需登录。</p>
+            <h2>{c.librarySignInTitle}</h2>
+            <p>{c.librarySignInBody}</p>
           </div>
           <button className="primary-action" onClick={onOpenAccount}>
-            登录野菜 API
+            {c.librarySignInAction}
             <ArrowRight />
           </button>
         </section>
@@ -344,30 +357,31 @@ export function AppLibraryView({
             {!hasConnectionSnapshot ||
             (partialConnections && configured === 0) ? (
               connections?.loading ? (
-                "正在读取接入状态"
+                c.libraryConnectionLoading
               ) : (
-                "接入状态待确认"
+                c.libraryConnectionUnknown
               )
             ) : (
               <>
                 {staleConnections
-                  ? "上次确认 "
+                  ? c.libraryCountStalePrefix
                   : partialConnections
-                    ? "已确认 "
+                    ? c.libraryCountConfirmedPrefix
                     : ""}
-                <b>{configured}</b> 个应用已接入
-                {partialConnections ? "，部分状态待确认" : ""}
+                <b>{configured}</b>
+                {c.libraryCountConnected}
+                {partialConnections ? c.libraryCountPartial : ""}
               </>
             )}{" "}
-            <span className="quiet-separator">/</span> {detected ?? "—"}{" "}
-            个已发现
+            <span className="quiet-separator">/</span> {detected ?? "—"}
+            {c.libraryDetected}
           </span>
         </div>
       ) : null}
       {!everythingUnavailable && scanError && (
         <p className="workbench-notice" role="alert">
           <CircleAlert />
-          暂时无法确认已安装的应用，请点击“检查应用”重试。接入设置不会因此删除。
+          {c.libraryScanError}
         </p>
       )}
       {!everythingUnavailable &&
@@ -382,15 +396,13 @@ export function AppLibraryView({
         )}
       {!scanning && !scanError && visibleApps.length === 0 && (
         <section className="library-empty">
-          <h2>还没有找到 AI 应用</h2>
-          <p>
-            先安装一个想用的应用，再点“检查应用”。已有接入的设置和恢复记录不会因此删除。
-          </p>
+          <h2>{c.libraryEmptyTitle}</h2>
+          <p>{c.libraryEmptyBody}</p>
           <button
             className="subtle-button"
             onClick={() => setShowAllApps(true)}
           >
-            查看支持的应用
+            {c.libraryEmptyAction}
           </button>
         </section>
       )}
@@ -407,7 +419,7 @@ export function AppLibraryView({
           同一个父节点下带 key 的兄弟，React 只移动不重建。 */}
       <section
         className="connection-library"
-        aria-label="本机应用"
+        aria-label={c.libraryRegionLabel}
         aria-busy={scanning}
       >
         {groups.flatMap((group, groupIndex) => [
@@ -436,7 +448,11 @@ export function AppLibraryView({
                 data-connected={!!active}
               >
                 <span className="configuration-app-icon" data-app={app.id}>
-                  {app.icon ? <AppGlyph source={app.icon} /> : <b>{app.mark}</b>}
+                  {app.icon ? (
+                    <AppGlyph source={app.icon} />
+                  ) : (
+                    <b>{app.mark}</b>
+                  )}
                 </span>
                 <div className="connection-row-main">
                   <h3>{app.name}</h3>
@@ -456,7 +472,7 @@ export function AppLibraryView({
                         onClick={() => onOpenSetup(app.id, "change-model")}
                       >
                         <code className="connection-model">
-                          {connection.modelId || "待确认"}
+                          {connection.modelId || c.libraryModelPending}
                         </code>
                         <span className="connection-model-switch-hint">
                           {t("yeschoyDaily.changeModel")}
@@ -465,10 +481,9 @@ export function AppLibraryView({
                       </button>
                       {(connection.models?.length ?? 0) > 1 && (
                         <span className="connection-row-extra">
-                          {c.libraryMoreModels.replace(
-                            "{{count}}",
-                            String(connection.models!.length - 1),
-                          )}
+                          {t("workbench.libraryMoreModels", {
+                            count: connection.models!.length - 1,
+                          })}
                         </span>
                       )}
                     </p>
@@ -483,11 +498,15 @@ export function AppLibraryView({
                               完整文本。把它并进「已安装 · 1.40609.1」
                               一行里，那 15 条会一起红。 */}
                           <span className="connection-row-version">
-                            版本 {target.installations[0].version}
+                            {t("workbench.libraryVersion", {
+                              version: target.installations[0].version,
+                            })}
                           </span>
                         </>
                       ) : (
-                        <span>{app.description}</span>
+                        <span>
+                          {t(`yeschoyCatalog.appDescription.${app.id}`)}
+                        </span>
                       )}
                     </p>
                   )}
@@ -531,10 +550,10 @@ export function AppLibraryView({
                       {active || unknownConnection
                         ? t("yeschoyDaily.checkAndRepair")
                         : target && target.status !== "not_found"
-                          ? "开始接入"
+                          ? c.libraryConnectAction
                           : ["claude_desktop", "codex_desktop"].includes(app.id)
-                            ? "安装并接入"
-                            : "查看安装方式"}
+                            ? c.libraryInstallAndConnect
+                            : c.libraryHowToInstall}
                       <ArrowRight />
                     </button>
                   )}
@@ -553,7 +572,10 @@ export function AppLibraryView({
             aria-expanded="false"
             onClick={() => setShowAllApps(true)}
           >
-            <Plus /> 查看其他 {apps.length - visibleApps.length} 个应用
+            <Plus />{" "}
+            {t("workbench.libraryShowMore", {
+              count: apps.length - visibleApps.length,
+            })}
           </button>
         )}
       {showAllApps && (
@@ -562,7 +584,7 @@ export function AppLibraryView({
           aria-expanded="true"
           onClick={() => setShowAllApps(false)}
         >
-          只看本机应用
+          {c.libraryShowLocalOnly}
         </button>
       )}
       {signedIn && (

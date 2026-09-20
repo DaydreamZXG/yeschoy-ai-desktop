@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import i18n from "i18next";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "../lib/query/queryClient";
 import {
@@ -287,27 +288,30 @@ export function useToolConnections() {
     if (mounted.current && !operation.current && result.isSuccess)
       setRestoreError(null);
   }, [refetch]);
-  const restore = useCallback(async (tool: ActivationToolId, revokeTokens = true) => {
-    if (operation.current || openingOperation.current)
-      throw Error("connection_operation_busy");
-    operation.current = true;
-    setRestoring(tool);
-    try {
-      // Cancel the query's ownership of its result, not the native write. A
-      // late read can no longer overwrite the post-restore projection.
-      await queryClient.cancelQueries({ queryKey: CONNECTION_QUERY_KEY });
-      const result = await manage("restore", tool, revokeTokens);
-      queryClient.setQueryData(CONNECTION_QUERY_KEY, result);
-      if (mounted.current) setRestoreError(null);
-      return result;
-    } catch (cause) {
-      if (mounted.current) setRestoreError(cause as ConnectionReadError);
-      throw cause;
-    } finally {
-      operation.current = false;
-      if (mounted.current) setRestoring(null);
-    }
-  }, []);
+  const restore = useCallback(
+    async (tool: ActivationToolId, revokeTokens = true) => {
+      if (operation.current || openingOperation.current)
+        throw Error("connection_operation_busy");
+      operation.current = true;
+      setRestoring(tool);
+      try {
+        // Cancel the query's ownership of its result, not the native write. A
+        // late read can no longer overwrite the post-restore projection.
+        await queryClient.cancelQueries({ queryKey: CONNECTION_QUERY_KEY });
+        const result = await manage("restore", tool, revokeTokens);
+        queryClient.setQueryData(CONNECTION_QUERY_KEY, result);
+        if (mounted.current) setRestoreError(null);
+        return result;
+      } catch (cause) {
+        if (mounted.current) setRestoreError(cause as ConnectionReadError);
+        throw cause;
+      } finally {
+        operation.current = false;
+        if (mounted.current) setRestoring(null);
+      }
+    },
+    [],
+  );
   const open = useCallback(
     async (tool: ActivationToolId): Promise<OpenResult> => {
       if (operation.current || openingOperation.current)
@@ -377,12 +381,13 @@ export function ConnectionProvider({
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 export const useConnections = () => useContext(Context);
+/**
+ * 状态标签在语言文件里（`yeschoyConfiguration.connectionState`），三个视图共用。
+ *
+ * 这里走 i18next 的单例 `t` 而不是 `useTranslation()`：调用方之一
+ * （`AdvancedConnectionDetails` 的 `diagnosticsText`）是模块级函数，不是组件，
+ * 拿不到 hook。单例的代价是它自己不随语言变化重渲染——但真正渲染它的两个
+ * 组件都调了 `useTranslation()`，语言一变它们重渲染、这个函数被重新调用。
+ */
 export const connectionLabel = (state?: ToolConnection["state"]) =>
-  ({
-    connected: "已接入",
-    changed: "设置已变更",
-    legacy: "已有野菜接入",
-    recovery_pending: "需要恢复",
-    unavailable: "状态待确认",
-    not_connected: "未接入",
-  })[state ?? "not_connected"];
+  i18n.t(`yeschoyConfiguration.connectionState.${state ?? "not_connected"}`);

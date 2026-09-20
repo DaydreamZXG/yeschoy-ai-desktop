@@ -51,6 +51,15 @@
       "defaultReasoning": "Default thinking {{level}}",
       "toolUse": "Tool use",
       "maxOutput": "Max output {{value}}"
+    },
+    "appDescription": {
+      "claude_desktop": "The Claude desktop app",
+      "codex_desktop": "The Codex desktop app",
+      "workbuddy": "Tencent's AI assistant for work and development",
+      "dsh_web": "The DeepSeek browser workbench",
+      "pi": "A light coding assistant",
+      "claude_code": "For the terminal and your editor",
+      "opencode": "An open-source terminal coding assistant"
     }
   },
   "common": {
@@ -136,7 +145,15 @@
     "speedtestAction": "Test lines",
     "speedtestFailed": "The line test did not finish. You can retry later; manual selection is unaffected.",
     "speedtestNote": "Based on the test, the line with lower latency is marked \"Recommended\". Results reflect your current network only and do not affect billing.",
-    "recommendedBadge": "Recommended"
+    "recommendedBadge": "Recommended",
+    "connectionState": {
+      "connected": "Connected",
+      "changed": "Settings changed",
+      "legacy": "Yeschoy already connected",
+      "recovery_pending": "Needs restoring",
+      "unavailable": "Status unconfirmed",
+      "not_connected": "Not connected"
+    }
   },
   "yeschoyDesktop": {
     "setup": {
@@ -554,7 +571,51 @@
     "qqGroupScanHint": "Scan here with QQ to join",
     "copyGroupId": "Copy group number",
     "groupIdCopied": "Group number copied — paste it into QQ to search",
-    "close": "Close"
+    "close": "Close",
+    "libraryEyebrow": "Yeschoy · your AI workbench",
+    "libraryTitle": "My apps",
+    "librarySubtitleUnknown": "Confirm where each app stands first, then carry on or adjust the settings.",
+    "librarySubtitleConfigured": "Open an app from here and pick up where you left off.",
+    "librarySubtitleEmpty": "Pick an app, install it, and connect the model you want.",
+    "libraryCheckAction": "Check apps",
+    "libraryCheckingAction": "Checking",
+    "libraryRecoveryBanner": "A connection was left unfinished when you last quit. {{app}}'s original settings need restoring before you carry on.",
+    "libraryRecoveryAction": "Restore now",
+    "libraryOfflineNotice": "Can't reach Yeschoy right now, so your account, this computer's apps and their connection status all came back empty. Nothing existing is changed or deleted.",
+    "libraryRetry": "Retry",
+    "libraryRetrying": "Retrying",
+    "libraryAccountStale": "Account data didn't update. Showing last time's.",
+    "libraryAccountUnavailable": "Can't read your account status right now. Try again.",
+    "librarySignInTitle": "Sign in once, connect your AI apps",
+    "librarySignInBody": "Models and your account's prices are fetched for you — no keys to copy. Restoring settings doesn't need a sign-in.",
+    "librarySignInAction": "Sign in to Yeschoy",
+    "libraryConnectionLoading": "Reading connection status",
+    "libraryConnectionUnknown": "Connection status unconfirmed",
+    "libraryCountStalePrefix": "Last confirmed ",
+    "libraryCountConfirmedPrefix": "Confirmed ",
+    "libraryCountConnected": " connected",
+    "libraryCountPartial": ", some statuses unconfirmed",
+    "libraryDetected": " found",
+    "libraryScanError": "Can't confirm which apps are installed. Click “Check apps” to try again — no connection settings are deleted by this.",
+    "libraryEmptyTitle": "No AI apps found yet",
+    "libraryEmptyBody": "Install one you want to use, then click “Check apps”. Existing connections and restore records aren't deleted by this.",
+    "libraryEmptyAction": "See supported apps",
+    "libraryRegionLabel": "Apps on this computer",
+    "libraryStalePrefix": "Last confirmed · ",
+    "libraryStateLoading": "Reading status",
+    "libraryStateUnknown": "Status unconfirmed",
+    "libraryStaleNotConnected": "Last confirmed · not connected",
+    "libraryScanning": "Looking",
+    "libraryPending": "Ready",
+    "libraryNeedsCheck": "Needs a check",
+    "libraryNotFound": "Not found",
+    "libraryModelPending": "Not confirmed",
+    "libraryVersion": "Version {{version}}",
+    "libraryConnectAction": "Connect",
+    "libraryInstallAndConnect": "Install and connect",
+    "libraryHowToInstall": "How to install",
+    "libraryShowMore": "See {{count}} more apps",
+    "libraryShowLocalOnly": "Only apps on this computer"
   },
   "configuration": {
     "defaultGroup": "Standard plan",

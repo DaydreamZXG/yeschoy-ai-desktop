@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { COMING_SOON_APPS, WORKBENCH_APPS } from "./appCatalog";
 import { ACTIVATION_TOOL_IDS } from "../configuration/activation";
 import { TOOL_CATALOG } from "../tool-discovery/contract";
+import en from "../i18n/locales/en.json";
+import zh from "../i18n/locales/zh.json";
 
 /**
  * #9 工具清单单源强校验（PRD §3.2 定案，2026-09-13）。
@@ -42,6 +44,16 @@ describe("tool catalog single source of truth (#9)", () => {
       (id) => !WORKBENCH_APPS.some((app) => app.id === id),
     );
     expect(outsideV1).toEqual([]);
+  });
+
+  // 应用说明从 `appCatalog.ts` 搬进了语言文件（同一段文字要中英两份，
+  // 留在数据文件里就只能有一份）。这个文件本来就是防清单漂移的，
+  // 说明与清单的漂移也归它管：新增应用忘了补说明，这里当场红。
+  it("gives every listed app a description in both languages", () => {
+    for (const app of [...WORKBENCH_APPS, ...COMING_SOON_APPS]) {
+      expect(zh.yeschoyCatalog.appDescription).toHaveProperty(app.id);
+      expect(en.yeschoyCatalog.appDescription).toHaveProperty(app.id);
+    }
   });
 
   it("keeps read-only discovery able to see coming-soon apps", () => {

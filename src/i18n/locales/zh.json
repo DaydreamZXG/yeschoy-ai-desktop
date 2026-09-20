@@ -51,6 +51,15 @@
       "defaultReasoning": "默认思考 {{level}}",
       "toolUse": "工具调用",
       "maxOutput": "最大输出 {{value}}"
+    },
+    "appDescription": {
+      "claude_desktop": "Claude 桌面应用",
+      "codex_desktop": "Codex 桌面应用",
+      "workbuddy": "腾讯 AI 办公与开发助手",
+      "dsh_web": "DeepSeek 浏览器工作台",
+      "pi": "轻巧的编程助手",
+      "claude_code": "终端与编辑器助手",
+      "opencode": "开源终端编程助手"
     }
   },
   "common": {
@@ -136,7 +145,15 @@
     "speedtestAction": "测速并推荐",
     "speedtestFailed": "测速没有完成，可稍后重试；不影响手动选择线路。",
     "speedtestNote": "按测速结果，延迟较低的线路已标注「推荐」。结果只反映本机当前网络，不影响计费。",
-    "recommendedBadge": "推荐"
+    "recommendedBadge": "推荐",
+    "connectionState": {
+      "connected": "已接入",
+      "changed": "设置已变更",
+      "legacy": "已有野菜接入",
+      "recovery_pending": "需要恢复",
+      "unavailable": "状态待确认",
+      "not_connected": "未接入"
+    }
   },
   "yeschoyDesktop": {
     "setup": {
@@ -554,7 +571,51 @@
     "qqGroupScanHint": "用 QQ 扫这里加群",
     "copyGroupId": "复制群号",
     "groupIdCopied": "群号已复制，去 QQ 粘贴搜索即可",
-    "close": "关闭"
+    "close": "关闭",
+    "libraryEyebrow": "野菜 API · 你的 AI 工作台",
+    "libraryTitle": "我的应用",
+    "librarySubtitleUnknown": "先确认本机应用的接入状态，再继续使用或调整设置。",
+    "librarySubtitleConfigured": "从这里打开应用，接着上次的工作。",
+    "librarySubtitleEmpty": "选一个应用，安装并连接你想用的模型。",
+    "libraryCheckAction": "检查应用",
+    "libraryCheckingAction": "正在检查",
+    "libraryRecoveryBanner": "上次退出时有接入操作没有完成，{{app}} 的原设置需要先恢复，再继续使用。",
+    "libraryRecoveryAction": "前往恢复",
+    "libraryOfflineNotice": "暂时连不上野菜服务，账户、本机应用和接入状态都没读到。这不会改动或删除任何已有设置。",
+    "libraryRetry": "重试",
+    "libraryRetrying": "正在重试",
+    "libraryAccountStale": "账户数据暂未更新，保留上次结果。",
+    "libraryAccountUnavailable": "暂时无法获取账户状态，请重试。",
+    "librarySignInTitle": "登录一次，接入你的 AI 应用",
+    "librarySignInBody": "自动获取可用模型和账户价格，不用复制密钥。恢复设置无需登录。",
+    "librarySignInAction": "登录野菜 API",
+    "libraryConnectionLoading": "正在读取接入状态",
+    "libraryConnectionUnknown": "接入状态待确认",
+    "libraryCountStalePrefix": "上次确认 ",
+    "libraryCountConfirmedPrefix": "已确认 ",
+    "libraryCountConnected": " 个应用已接入",
+    "libraryCountPartial": "，部分状态待确认",
+    "libraryDetected": " 个已发现",
+    "libraryScanError": "暂时无法确认已安装的应用，请点击“检查应用”重试。接入设置不会因此删除。",
+    "libraryEmptyTitle": "还没有找到 AI 应用",
+    "libraryEmptyBody": "先安装一个想用的应用，再点“检查应用”。已有接入的设置和恢复记录不会因此删除。",
+    "libraryEmptyAction": "查看支持的应用",
+    "libraryRegionLabel": "本机应用",
+    "libraryStalePrefix": "上次确认 · ",
+    "libraryStateLoading": "正在读取状态",
+    "libraryStateUnknown": "状态待确认",
+    "libraryStaleNotConnected": "上次确认 · 未接入",
+    "libraryScanning": "正在查找",
+    "libraryPending": "待接入",
+    "libraryNeedsCheck": "待检查",
+    "libraryNotFound": "未发现应用",
+    "libraryModelPending": "待确认",
+    "libraryVersion": "版本 {{version}}",
+    "libraryConnectAction": "开始接入",
+    "libraryInstallAndConnect": "安装并接入",
+    "libraryHowToInstall": "查看安装方式",
+    "libraryShowMore": "查看其他 {{count}} 个应用",
+    "libraryShowLocalOnly": "只看本机应用"
   },
   "configuration": {
     "defaultGroup": "标准方案",
