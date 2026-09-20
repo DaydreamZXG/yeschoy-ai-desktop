@@ -104,9 +104,12 @@ export function SettingsView({
           <AdvancedConnectionDetails />
         </div>
 
-        <section className="settings-troubleshooting" aria-label="排查与高级">
-          <h2>排查与高级</h2>
-          <p>安装或接入出问题时再用，日常使用可以不管这里。</p>
+        <section
+          className="settings-troubleshooting"
+          aria-label={t("yeschoySettings.troubleshootingTitle")}
+        >
+          <h2>{t("yeschoySettings.troubleshootingTitle")}</h2>
+          <p>{t("yeschoySettings.troubleshootingBody")}</p>
           <div className="settings-troubleshooting-actions">
             <button type="button" onClick={onOpenModels}>
               {c.models}

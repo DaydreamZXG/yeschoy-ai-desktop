@@ -1,3 +1,4 @@
+import i18n from "i18next";
 export interface AccountMoney {
   currency: "" | "CNY" | "USD";
   balanceAmount: string;
@@ -224,35 +225,36 @@ export function formatMoney(
 }
 
 export function creditUnit(currency: string | undefined): string {
-  return currency === "CNY"
-    ? "人民币额度"
-    : currency === "USD"
-      ? "美元额度"
-      : "金额暂不可用";
+  return i18n.t(
+    currency === "CNY"
+      ? "workbench.creditCny"
+      : currency === "USD"
+        ? "workbench.creditUsd"
+        : "workbench.creditUnavailable",
+  );
 }
 
 export function savingsPresentation(savings?: RecentSavings) {
   if (savings?.status === "available") {
     const saved = Number(savings.savedAmount);
     return {
-      label: saved < 0 ? "高于参考估算" : "近期预计节省",
       value: formatMoney(savings.savedAmount.replace(/^-/, ""), "CNY"),
       note:
         saved === 0
-          ? "与参考估算持平"
-          : `基于 ${savings.includedCount} 笔可比较记录`,
+          ? i18n.t("savings.noteEven")
+          : i18n.t("savings.noteBasis", { count: savings.includedCount }),
       negative: saved < 0,
     };
   }
   return {
-    label: "近期预计节省",
     value: "—",
     negative: false,
-    note:
+    note: i18n.t(
       savings?.status === "empty"
-        ? "有消费记录后显示"
+        ? "savings.noteEmpty"
         : savings?.status === "no_comparable_records"
-          ? "暂无可比较记录"
-          : "暂时无法估算",
+          ? "savings.noteNoComparable"
+          : "savings.noteUnavailable",
+    ),
   };
 }

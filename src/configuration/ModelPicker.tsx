@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { Content as PopoverContent } from "@radix-ui/react-popover";
 import type { AccountModel } from "../account/session";
@@ -34,7 +35,7 @@ export function ModelPicker({
   value,
   onChange,
   disabled = false,
-  label = "选择模型",
+  label,
   disabledReason,
 }: {
   models: AccountModel[];
@@ -45,6 +46,7 @@ export function ModelPicker({
   // #13 「查看全部模型」：返回文案的模型不可选（置灰+原因），返回 undefined 可选。
   disabledReason?: (model: AccountModel) => string | undefined;
 }) {
+  const { t } = useTranslation();
   const models = useMemo(
     () => suppliedModels.filter((model) => !isImageGenerationModel(model.id)),
     [suppliedModels],
@@ -115,7 +117,8 @@ export function ModelPicker({
   return (
     <div className="search-model-picker">
       <span className="field-caption" id={`${id}-label`}>
-        {label} <small>完整模型 ID</small>
+        {label ?? t("modelPicker.label")}{" "}
+        <small>{t("modelPicker.fullId")}</small>
       </span>
       <Popover open={open} onOpenChange={changeOpen} modal={false}>
         <PopoverTrigger asChild>
@@ -142,7 +145,12 @@ export function ModelPicker({
                 <strong>{modelDisplayName(value)}</strong>
               )}
               <code>
-                {value || (models.length ? "选择一个模型" : "暂无可用模型")}
+                {value ||
+                  t(
+                    models.length
+                      ? "modelPicker.choose"
+                      : "modelPicker.noModels",
+                  )}
               </code>
             </span>
             <ChevronDown />
@@ -175,11 +183,11 @@ export function ModelPicker({
               ref={search}
               type="search"
               value={query}
-              placeholder="搜索名称或 ID，例如 GPT 6"
+              placeholder={t("modelPicker.searchPlaceholder")}
               autoComplete="off"
               autoCapitalize="none"
               spellCheck={false}
-              aria-label="搜索模型"
+              aria-label={t("modelPicker.searchLabel")}
               aria-controls={`${id}-options`}
               aria-activedescendant={
                 options[active] ? `${id}-option-${active}` : undefined
@@ -283,20 +291,20 @@ export function ModelPicker({
                     )}
                     <code>{model.id}</code>
                     <ModelCapabilityBadges id={model.id} />
-                    {reason && <small className="option-disabled-note">{reason}</small>}
+                    {reason && (
+                      <small className="option-disabled-note">{reason}</small>
+                    )}
                   </span>
                   {model.id === value && <Check />}
                 </button>
               );
             })}
             {!options.length && (
-              <p className="model-search-empty">
-                没有匹配的模型，试试其他关键词。
-              </p>
+              <p className="model-search-empty">{t("modelPicker.noMatch")}</p>
             )}
           </div>
           <footer role="status">
-            {options.length} 个模型 · 价格和分组在选择后显示
+            {t("modelPicker.footer", { count: options.length })}
           </footer>
         </PopoverContent>
       </Popover>

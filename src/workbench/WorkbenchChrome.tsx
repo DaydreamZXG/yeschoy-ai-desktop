@@ -97,7 +97,9 @@ export function WorkbenchSidebar({
     { id: "setup", label: c.apps, icon: Plug },
     { id: "account", label: c.usage, icon: ReceiptText },
     ...(announcementsAvailable
-      ? ([{ id: "announcements", label: c.announcements, icon: Megaphone }] as const)
+      ? ([
+          { id: "announcements", label: c.announcements, icon: Megaphone },
+        ] as const)
       : []),
     { id: "settings", label: c.settings, icon: Settings2 },
   ] as const;
@@ -107,11 +109,7 @@ export function WorkbenchSidebar({
     view === "models" || view === "diagnostics" || view === "tools"
       ? "settings"
       : view;
-  const navButton = ({
-    id,
-    label,
-    icon: Icon,
-  }: (typeof nav)[number]) => (
+  const navButton = ({ id, label, icon: Icon }: (typeof nav)[number]) => (
     <button
       type="button"
       key={id}
@@ -130,13 +128,13 @@ export function WorkbenchSidebar({
         type="button"
         className="workbench-brand"
         onClick={() => onNavigate("home")}
-        aria-label="野菜API"
+        aria-label={c.brand}
       >
         <span className="workbench-brand-mark" aria-hidden="true">
           <img src={brandIcon} alt="" />
         </span>
         <span>
-          <strong>野菜API</strong>
+          <strong>{c.brand}</strong>
           <small>{c.subtitle}</small>
         </span>
       </button>
@@ -178,7 +176,7 @@ export function WorkbenchSidebar({
           <ChevronRight aria-hidden="true" />
         </button>
         <small className="sidebar-edition">
-          野菜API{" "}
+          {c.brand}{" "}
           <span>
             {CANDIDATE_VERSION} · {c.edition}
           </span>
@@ -225,7 +223,7 @@ export function AccountSummary({
       label: c.requestCount,
       icon: ChartNoAxesCombined,
       value: account?.available ? compact(account.requestCount) : null,
-      unit: "次请求",
+      unit: c.requestsUnit,
     },
   ];
   return (

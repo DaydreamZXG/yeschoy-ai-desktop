@@ -24,22 +24,23 @@ export const CONNECTION_INSPECTION_DEADLINE_MS = 15_000;
 export const CONNECTION_RESTORE_DEADLINE_MS = 60_000;
 const CONNECTION_QUERY_KEY = ["local-tool-connections", 2] as const;
 
-const CONNECTION_ERRORS = {
-  connection_partial_unavailable:
-    "部分应用的接入设置暂时无法读取，其余结果仍可查看。请重试；若持续出现，请反馈下方诊断编号。",
-  connection_inspect_timed_out:
-    "读取接入状态超时。系统凭据或本机设置可能仍在读取，请稍后重试。",
-  connection_restore_timed_out:
-    "恢复操作尚未返回结果，请重新读取状态确认，不要重复恢复。",
-  connection_operation_busy: "正在处理另一项接入或恢复操作，请完成后重试。",
-  assistant_shutting_down: "助手正在退出，请重新打开后检查。",
-  invalid_connection_response:
-    "接入状态返回格式异常，请重试；若持续出现，请将下方诊断编号反馈给我们。",
-  connection_inspection_failed: "本机状态读取未能完成，请重试。",
-  connection_call_failed: "暂时无法读取接入状态，请重试。",
-} as const;
+/**
+ * 原生侧会送回来的读取失败原因码。文案在语言文件的 `connectionError` 里 ——
+ * 这里只留清单，因为 `ConnectionIssue["code"]` 这个联合类型别处在用，
+ * 而清单和文案的漂移由 `activationFailureCopy.test.ts` 的守卫盯着。
+ */
+export const CONNECTION_ERROR_CODES = [
+  "connection_partial_unavailable",
+  "connection_inspect_timed_out",
+  "connection_restore_timed_out",
+  "connection_operation_busy",
+  "assistant_shutting_down",
+  "invalid_connection_response",
+  "connection_inspection_failed",
+  "connection_call_failed",
+] as const;
 export interface ConnectionIssue {
-  code: keyof typeof CONNECTION_ERRORS;
+  code: (typeof CONNECTION_ERROR_CODES)[number];
   message: string;
   requestId: string;
 }
@@ -50,12 +51,14 @@ class ConnectionReadError extends Error implements ConnectionIssue {
     readonly requestId: string,
   ) {
     const rawCode = cause instanceof Error ? cause.message : cause;
-    const code =
-      typeof rawCode === "string" &&
-      Object.prototype.hasOwnProperty.call(CONNECTION_ERRORS, rawCode)
-        ? (rawCode as ConnectionIssue["code"])
-        : "connection_call_failed";
-    super(CONNECTION_ERRORS[code]);
+    const code = (CONNECTION_ERROR_CODES as readonly string[]).includes(
+      String(rawCode),
+    )
+      ? (rawCode as ConnectionIssue["code"])
+      : "connection_call_failed";
+    // `message` 是给日志和 `Error` 语义用的快照。界面由 `ConnectionStatusNotice`
+    // 按 `code` 在渲染时翻译，这样切语言之后显示的也跟着变。
+    super(i18n.t(`connectionError.${code}`));
     this.code = code;
   }
 }

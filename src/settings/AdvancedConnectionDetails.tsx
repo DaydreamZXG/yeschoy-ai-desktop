@@ -1,4 +1,5 @@
 import { useState } from "react";
+import i18n from "i18next";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import {
@@ -47,31 +48,33 @@ function baseUrlOf(connection: ToolConnection) {
 }
 
 function diagnosticsText(connection: ToolConnection, requestId?: string) {
+  // 这份报告是给客服看的，所以跟着界面语言走：用英文界面的人复制出来的是英文。
+  const d = (key: string) => i18n.t(`advancedDetails.${key}`);
   const info = TOOL_INFO[connection.toolId];
   const targetFile = info?.previewId
     ? (CONFIGURATION_TOOLS.find((t) => t.id === info.previewId)?.targetFile ??
-      "未记录")
-    : "（目录方式打开，无固定文件）";
+      d("notRecorded"))
+    : d("folderLaunch");
   const last = connection.lastRequest;
   return [
-    "野菜API 桌面助手 · 高级诊断",
-    `工具: ${toolName(connection.toolId)} (${connection.toolId})`,
-    `状态: ${connectionLabel(connection.state)} (${connection.state})`,
-    `Base URL: ${baseUrlOf(connection) ?? "未写入线路"}`,
-    `模型 ID: ${connection.modelId || "未指定"}`,
-    `计费分组: ${connection.billingGroup || "默认"}`,
-    `配置文件: ${targetFile}`,
-    `最近写入: ${
+    d("reportTitle"),
+    `${d("tool")}: ${toolName(connection.toolId)} (${connection.toolId})`,
+    `${d("state")}: ${connectionLabel(connection.state)} (${connection.state})`,
+    `Base URL: ${baseUrlOf(connection) ?? d("noLine")}`,
+    `${d("model")}: ${connection.modelId || d("noModel")}`,
+    `${d("billingGroup")}: ${connection.billingGroup || d("defaultGroup")}`,
+    `${d("configFile")}: ${targetFile}`,
+    `${d("lastWrite")}: ${
       connection.updatedAtEpochMs
         ? new Date(connection.updatedAtEpochMs).toISOString()
-        : "无"
+        : d("none")
     }`,
     last
-      ? `最近请求: ${last.outcome} · HTTP ${last.httpStatus} · ${new Date(
+      ? `${d("lastRequest")}: ${last.outcome} · HTTP ${last.httpStatus} · ${new Date(
           last.observedAtEpochMs,
         ).toISOString()}`
-      : "最近请求: 无",
-    `读取编号: ${requestId ?? "无"}`,
+      : `${d("lastRequest")}: ${d("none")}`,
+    `${d("readId")}: ${requestId ?? d("none")}`,
   ].join("\n");
 }
 

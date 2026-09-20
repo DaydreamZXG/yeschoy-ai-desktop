@@ -1,4 +1,5 @@
 import { useId } from "react";
+import i18n from "i18next";
 import type { AccountModel } from "../account/session";
 import { Landmark, Sprout } from "lucide-react";
 import { useConfigurationCopy } from "./copy";
@@ -8,8 +9,10 @@ import {
   hundredMillionTokenEstimate,
 } from "./billing";
 
-export const groupLabel = (id: string, defaultLabel = "标准分组") =>
-  id === "default" ? defaultLabel : id;
+export const groupLabel = (
+  id: string,
+  defaultLabel = i18n.t("configuration.defaultGroupLabel"),
+) => (id === "default" ? defaultLabel : id);
 
 // 线上 usable_group 的形状是「键 → 一句话」，不是「id → 显示名」：
 //   "Qwen / GLM"        → "模型：qwen3.8-max、glm-5.3； 6.5折"

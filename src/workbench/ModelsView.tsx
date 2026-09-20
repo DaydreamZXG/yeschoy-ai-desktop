@@ -184,7 +184,7 @@ export function ModelsView({
           <span>{c.fx}</span>
           <strong>
             {projection?.comparisonFx
-              ? `参考换算值 ${projection.comparisonFx}`
+              ? t("workbench.referenceFx", { value: projection.comparisonFx })
               : "—"}
           </strong>
           <small>{c.serverFxNote}</small>

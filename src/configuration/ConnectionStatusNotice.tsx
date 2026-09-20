@@ -20,25 +20,29 @@ export function ConnectionStatusNotice({
       title={t("yeschoyDaily.stateUnconfirmed")}
       className="selection-warning"
       action={{
-        label: refreshing ? "正在读取接入状态" : "读取接入状态",
+        label: t(
+          refreshing ? "connectionNotice.reading" : "connectionNotice.read",
+        ),
         run: onRetry,
         disabled: refreshing,
       }}
     >
-      <p>{issue?.message ?? "暂时无法读取接入状态，请重试。"}</p>
+      <p>{t(`connectionError.${issue?.code ?? "connection_call_failed"}`)}</p>
       <p>
         {stale
-          ? "下方保留上次确认的结果，本次尚未确认；不会用默认选择覆盖。"
-          : "接入状态待确认，不代表应用未接入；不会用默认选择覆盖。"}
+          ? t("connectionNotice.stale")
+          : t("connectionNotice.unconfirmed")}
       </p>
       {issue && (
         <details>
-          <summary>查看诊断信息</summary>
+          <summary>{t("connectionNotice.detailsSummary")}</summary>
           <p>
-            错误码：<code>{issue.code}</code>
+            {t("connectionNotice.errorCode")}
+            <code>{issue.code}</code>
           </p>
           <p>
-            诊断编号：<code>{issue.requestId}</code>
+            {t("connectionNotice.requestId")}
+            <code>{issue.requestId}</code>
           </p>
         </details>
       )}

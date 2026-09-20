@@ -302,7 +302,9 @@
       "never": "No record yet",
       "copy": "Copy diagnostics",
       "copied": "Copied"
-    }
+    },
+    "troubleshootingTitle": "Troubleshooting and advanced",
+    "troubleshootingBody": "For when an install or a connection goes wrong. Day to day you can ignore it."
   },
   "yeschoyUpdate": {
     "title": "Yeschoy automatic updates",
@@ -615,7 +617,14 @@
     "libraryInstallAndConnect": "Install and connect",
     "libraryHowToInstall": "How to install",
     "libraryShowMore": "See {{count}} more apps",
-    "libraryShowLocalOnly": "Only apps on this computer"
+    "libraryShowLocalOnly": "Only apps on this computer",
+    "brand": "Yeschoy",
+    "appTitle": "Yeschoy desktop assistant",
+    "requestsUnit": "requests",
+    "creditCny": "CNY credit",
+    "creditUsd": "USD credit",
+    "creditUnavailable": "Amount unavailable",
+    "referenceFx": "Reference rate {{value}}"
   },
   "configuration": {
     "defaultGroup": "Standard plan",
@@ -912,7 +921,8 @@
     "restartDialogTitle": "Reopen {{app}} automatically after saving",
     "restartDialogMessage": "This app is running. Save whatever you're editing first.\n\nAfter you continue you don't need to quit it yourself: the Yeschoy assistant asks it to quit normally, writes the settings, then reopens it. On Windows, if only a background process is left, only the process at the recognized install path is ended — nothing is killed by name. If the system still blocks the quit, no settings are changed.",
     "restartDialogConfirm": "Saved — quit and continue",
-    "restartDialogCancel": "Not now"
+    "restartDialogCancel": "Not now",
+    "defaultGroupLabel": "Standard group"
   },
   "installation": {
     "stage": {
@@ -1066,5 +1076,83 @@
     "retryRestoreAndExit": "Retry restore and quit",
     "retryExit": "Retry quit",
     "viewProgress": "View quit progress"
+  },
+  "savings": {
+    "cardTitle": "Recent cost comparison",
+    "comparisonLabel": "Cost comparison over the same records",
+    "officialDue": "List price would be",
+    "estimateTag": "estimate",
+    "siteCharged": "Yeschoy charged",
+    "aboveReference": "Above the reference estimate",
+    "expectedSaving": "Estimated saving",
+    "loadingBill": "Reading your bill…",
+    "detailsLabel": "How this is worked out",
+    "receiptSummary": "How is the saving worked out?",
+    "scope": "Last 100 records at most",
+    "officialReference": "List-price reference",
+    "siteBilled": "Billed by Yeschoy",
+    "differenceAbove": "Difference (above reference)",
+    "savingEstimate": "Estimated saving",
+    "counts": "Of the last {{scanned}} charges, {{included}} were compared and {{excluded}} were left out. This is not a running total or a monthly figure.",
+    "range": "Comparable records: {{from}} — {{to}}.",
+    "formulaOfficial": "Each record's billed units ÷ that record's multiplier × the current reference rate {{rate}}, summed",
+    "formulaSite": "The same billed units × the current site price factor {{rate}}, summed",
+    "emptyRecords": "No charges yet. Use a model and they'll show up here.",
+    "noComparable": "The last {{count}} records don't have complete billing data to compare against yet.",
+    "unavailable": "Couldn't get the full bill or price settings. Refresh your account and try again.",
+    "neverZero": "Missing data is never counted as a saving of zero.",
+    "basisNote": "Billed units come from the actual charge divided by the site's credit unit. A record's own multiplier is used where there is one, otherwise the group's. Cache is already part of the actual charge — no fixed cache ratio is assumed.",
+    "excludedNote": "Records with no basis, plan-based usage and special surcharges are left out. Figures are estimated from the list prices the site maintains and its current price settings. They are not an actual list-price bill, and not the same as a top-up cash discount. The conversion rate is not a market exchange rate.",
+    "noteEven": "Level with the reference estimate",
+    "noteBasis": "Based on {{count}} comparable records",
+    "noteEmpty": "Shows up once you have charges",
+    "noteNoComparable": "No comparable records",
+    "noteUnavailable": "Can't estimate right now"
+  },
+  "connectionError": {
+    "connection_partial_unavailable": "Some apps' connection settings couldn't be read. The rest are still shown. Try again — if it keeps happening, send us the diagnostic id below.",
+    "connection_inspect_timed_out": "Timed out reading the connection status. System credentials or local settings may still be loading. Try again shortly.",
+    "connection_restore_timed_out": "The restore hasn't reported back yet. Read the status again to check rather than restoring twice.",
+    "connection_operation_busy": "Another connect or restore is running. Try again once it's done.",
+    "assistant_shutting_down": "The assistant is quitting. Reopen it and check again.",
+    "invalid_connection_response": "The connection status came back in a shape we can't read. Try again — if it keeps happening, send us the diagnostic id below.",
+    "connection_inspection_failed": "Reading this computer's state didn't finish. Try again.",
+    "connection_call_failed": "Can't read the connection status right now. Try again."
+  },
+  "connectionNotice": {
+    "reading": "Reading connection status",
+    "read": "Read connection status",
+    "stale": "What's below is the last confirmed result, not this one. Nothing is overwritten with a default.",
+    "unconfirmed": "The connection status isn't confirmed. That doesn't mean the app isn't connected, and nothing is overwritten with a default.",
+    "detailsSummary": "Diagnostic details",
+    "errorCode": "Error code: ",
+    "requestId": "Diagnostic id: "
+  },
+  "advancedDetails": {
+    "reportTitle": "Yeschoy desktop assistant · advanced diagnostics",
+    "tool": "Tool",
+    "state": "State",
+    "model": "Model ID",
+    "billingGroup": "Billing group",
+    "configFile": "Config file",
+    "lastWrite": "Last written",
+    "lastRequest": "Last request",
+    "readId": "Read id",
+    "notRecorded": "not recorded",
+    "folderLaunch": "(opened as a folder, no fixed file)",
+    "noLine": "no route written",
+    "noModel": "not specified",
+    "defaultGroup": "default",
+    "none": "none"
+  },
+  "modelPicker": {
+    "label": "Choose a model",
+    "fullId": "full model ID",
+    "choose": "Pick a model",
+    "noModels": "No models available",
+    "searchPlaceholder": "Search by name or ID, e.g. GPT 6",
+    "searchLabel": "Search models",
+    "noMatch": "No model matches that. Try another keyword.",
+    "footer": "{{count}} models · price and group show once you pick one"
   }
 }
