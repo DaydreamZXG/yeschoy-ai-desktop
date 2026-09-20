@@ -1,231 +1,31 @@
-const zh = {
-  home: "我的应用",
-  // 侧边栏的接入入口。这个键一直定义着但从没被用过 —— 接入之前只能从
-  // 首页的应用卡片点进去，而它是整个产品唯一的目的。
-  apps: "应用接入",
-  announcements: "公告",
-  announcementsTitle: "公告",
-  announcementsIntro: "野菜API 的最新通知：价格调整、线路变化、维护安排。",
-  announcementsEmpty: "暂时没有新公告。",
-  announcementsFailed: "暂时读不到公告，不影响你正常使用。稍后再看看。",
-  announcementsRetry: "重新读取",
-  announcementsUnread: "未读",
-  models: "模型与价格",
-  usage: "用量账单",
-  help: "连接诊断",
-  settings: "设置",
-  advanced: "已安装的工具",
-  subtitle: "桌面助手",
-  guest: "账户中心",
-  accountNote: "查看登录与余额",
-  signedInStatus: "已登录野菜API",
-  edition: "桌面版",
-  theme: "外观",
-  light: "浅色",
-  dark: "深色",
-  system: "跟随系统",
-  themeNote: "仅在这台电脑上保存外观偏好。",
-  balance: "可用额度",
-  spent: "累计消费",
-  tokens: "累计用量",
-  installed: "已发现应用",
-  unit: "个",
-  unavailable: "暂不可用",
-  localApps: "这台电脑",
-  pendingScan: "等待识别",
-  failedScan: "暂时无法读取",
-  manage: "查看",
-  accountAction: "查看账户",
-  firstTitle: "选择你想使用的 AI 应用",
-  firstBody: "选择应用、线路和模型，确认后助手会自动完成接入。",
-  signInFirstTitle: "先登录你的野菜API账户",
-  signInFirstBody: "登录后会自动读取余额和可用模型，然后就能一键接入。",
-  stepAccount: "登录账户",
-  stepApp: "选择应用",
-  stepConnect: "完成接入",
-  accountPending: "请先登录",
-  accountReady: "账户已连接",
-  appSection: "我的应用",
-  appHint: "本机桌面应用",
-  refresh: "重新检查",
-  checking: "正在识别",
-  version: "应用版本",
-  model: "当前模型",
-  line: "使用线路",
-  notConfigured: "尚未读取",
-  notConnected: "连接状态未确认",
-  appNotFound: "未发现应用",
-  appUnknown: "状态未知",
-  viewSetup: "查看接入",
-  chooseModel: "选择线路与模型",
-  detectedNote: "应用已安装，是否已连接野菜API还需确认。",
-  multipleNote: "发现多个安装，尚不能确认要使用哪一个。",
-  unsupportedNote: "当前系统尚不支持识别此应用。",
-  absentNote: "未发现安装信息，可先了解接入方式。",
-  uncertainNote: "暂时不能确认应用状态，请重新检查。",
-  loadingNote: "正在查找已安装的应用…",
-  moreApps: "使用 Pi、DSH 或 Claude Code？",
-  advancedAction: "查看已安装的工具",
-  privacy: "只修改你确认的应用设置",
-  configurationBoundary: "随时可以恢复原设置",
-  // 余额读不到时顶替那个破折号。破折号加一句「金额暂不可用」占掉几百像素，
-  // 传达的信息只有「不知道」；这句话至少告诉用户下一步做什么。
-  balanceUnknown: "余额暂时读不到，点上面的「刷新」再试一次。",
-  accountTitle: "账户充值",
-  accountBody: "查看余额、用量和消费记录。",
-  accountStatus: "账户功能暂未开放",
-  accountStatusBody:
-    "此版本暂不支持登录、查询余额和充值。你可以先查看应用和模型，或检查网络连接。",
-  noAccountData: "暂无账户数据",
-  recharge: "充值暂未开放",
-  accountDetails: "登录与密钥安全",
-  accountDetailsBody:
-    "登录只在野菜API官网完成；桌面端不会读取网站密码，登录状态保存在系统安全存储中。",
-  priceTitle: "找到适合你的模型",
-  priceBody: "按应用和线路查找模型，查看完整模型 ID。",
-  pricePending: "价格暂不可用",
-  pricePendingBody:
-    "此版本暂不支持价格查询，无法展示官网参考价和你的实际价格。",
-  officialPrice: "官网参考价",
-  actualPrice: "野菜API实际价",
-  priceUnavailable: "暂不可用",
-  fx: "参考换算",
-  fxNote: "由野菜API当前设置提供，不参与实际计费。",
-  serverFxNote: "来自网站价格设置，不是市场汇率；实际扣费以账单为准。",
-  selectApp: "使用应用",
-  selectLine: "使用线路",
-  readinessTitle: "接入准备",
-  readinessBody: "选择仅供查看，不会修改应用设置。",
-  fullId: "始终显示完整模型 ID",
-  lastChecked: "上次检查",
-  settingsTitle: "让助手更顺手",
-  settingsDescription: "调整外观与语言，查看隐私和版本信息。",
-  signIn: "网页登录",
-  signInBody:
-    "将在浏览器打开野菜API。登录并确认验证码后，桌面端会自动完成登录。",
-  authorizationCode: "请核对验证码",
-  authorizationWaiting: "等待你在浏览器确认",
-  authorizationWaitingBody: "验证码只用于这次登录，请确认网页显示完全一致。",
-  openAuthorizationPage: "重新打开登录页",
-  cancel: "取消",
-  retry: "重试",
-  refreshAccount: "刷新数据",
-  logout: "退出登录",
-  rechargeNow: "去充值",
-  signedInAs: "当前账户",
-  requestCount: "累计请求",
-  observedAt: "更新于",
-  mainlandLine: "大陆优化",
-  globalLine: "全球加速",
-  partialData: "部分数据暂时没有返回，可稍后刷新。",
-  balanceLowBody: "当前余额 {{amount}}，为避免请求中断，请先充值。",
-  balanceDepletedBody: "余额已用尽，请求将无法完成，请先充值。",
-  balanceDepletedHint: "余额已用尽：写入设置本身免费，但调用会失败，请先充值。",
-  walletOpenFailed: "没有打开充值页面，请检查网络后重试。",
-  lineFollowedToast: "已切换到此应用上次使用的线路",
-  accountServerUnavailable: "账户服务尚未上线或当前线路暂不可用。",
-  accountNetworkError: "暂时连不上账户服务，请检查网络后重试。",
-  accountSessionExpired:
-    "登录已失效。若你刚在网站撤销过此设备，请检查设备安全；否则重新授权即可。",
-  sessionAgeExpiringBody:
-    "距上次使用已超过 25 天，会话可能即将过期；近期使用一次即可自动续期。",
-  sessionAgeReauthBody:
-    "本次授权已超过 80 天，接近 90 天强制重新授权的期限，建议现在重新授权。",
-  sessionAgeReauthAction: "重新授权",
-  accountSecureStoreError: "系统安全存储暂不可用，无法保存登录状态。",
-  accountAuthorizationDenied: "你已在网页拒绝这次登录。",
-  accountAuthorizationExpired: "验证码已过期，请重新发起登录。",
-  accountInvalidResponse: "账户数据格式不正确，已停止显示。",
-  browserOpenFailed: "浏览器没有自动打开，请点击“重新打开登录页”。",
-  priceSignInRequired: "登录后可查看当前账号可用模型和实际价格。",
-  inputPrice: "输入",
-  outputPrice: "输出",
-  perMillionTokens: "每百万 tokens",
-  saveCompared: "比官网参考价低约",
-  priceMethodNote: "相同模型、相同输入输出单位；仅完整的倍率计费模型参与比较。",
-  availableModels: "你的账户当前可用 {{count}} 个模型",
-  accountModels: "账户可用模型",
-  // 「不支持此应用的协议」对不会配置的人等于没说。跟接入页用同一套说法：
-  // 不解释协议，直接告诉他去哪个应用用。
-  // 原来写的是「选好应用、线路和模型」，但流程里只有 应用 → 模型+价格 → 接入
-  // 三步，线路在页脚（上一轮特意移出去的：绝大多数人一次都不会动它，
-  // 塞进流程会让三步看起来像四步）。副标题承诺了一个页面并不呈现的选择，
-  // 该改的是这句话，不是把控件搬回流程。
-  setupIntro: "选好应用和模型，助手会把配置写进去。",
-  setupSafety: "确认前不会修改任何设置",
-  setupDone: "已接入",
-  readyToConnect: "可以接入",
-  yourSelection: "你的选择",
-  confirmSetup: "确认接入信息",
-  setupSafetyTitle: "密钥会被安全处理",
-  setupSafetyBody:
-    "密钥只保存在系统安全存储中，应用设置里仅保存安全引用；界面和操作记录都不会显示密钥。",
-  setupSuccess: "接入完成",
-  setupSuccessBody: "{{app}} 已使用所选模型完成真实回复，现在可以直接使用。",
-  setupFailed: "暂时没有完成",
-  setupSignedOut: "登录状态已失效，请重新登录后再试。",
-  setupModelUnavailable: "这个模型当前不在你的账户可用列表中，请刷新后重选。",
-  setupServerUnavailable: "暂时无法从野菜API获取接入信息，请稍后重试。",
-  setupWriteFailed:
-    "设置未能完整更新。请检查接入状态，如有待恢复设置，请先恢复原设置。",
-  signInFirst: "先去登录",
-  settingUp: "正在接入…",
-  setupAgain: "重新写入",
-  connectNow: "一键接入",
-  viewOtherTools: "查看其他工具",
-  openAccount: "查看账户",
-  usageByToolModel: "按工具与模型汇总",
-  usageWindowNote: "统计最近 {{days}} 天的用量与消费",
-  usageLatestPerTool: "各工具最近一次请求",
-  usageColTool: "工具",
-  usageColModel: "模型",
-  usageColRequests: "请求数",
-  usageColPrompt: "输入",
-  usageColCompletion: "输出",
-  usageColCache: "缓存",
-  usageColAmount: "金额",
-  usageColTime: "时间",
-  usageDetailsSummary: "查看逐条明细（最近 {{count}} 条）",
-  usageTruncated: "记录较多，仅统计最近 500 条。",
-  usageStale: "可能不是最新",
-  usageEmpty: "最近 {{days}} 天暂无用量记录，使用模型后即可在这里查看。",
-  usageUnavailableBody: "用量明细暂时没有返回，刷新账户后可重试。",
-  usageUnattributed: "未识别来源",
-  mainlandLineNote: "中国大陆网络优先",
-  globalLineNote: "Cloudflare 全球线路，海外可优先尝试",
-  routeNote: "线路只影响连接体验，不改变计费分组和倍率，也无需重新登录。",
-  connectionNoticePending: "连接暂时中断，正在继续等待网页授权，无需重新登录。",
-  connectionNoticeSignedIn: "暂时无法更新账户，以下是上次读取的数据。",
-  connectionNoticeSignedOut: "暂时无法连接账户，请重试。",
-  requestUnit: "次请求",
-  signInBrand: "野菜API",
-  logoutPromptTitle: "仅退出野菜API账户？",
-  logoutPromptMessage:
-    "这里只清除本机的野菜API登录状态，不会改动 Codex、Claude 等应用当前的接入设置。\n\n如果还要移除应用接入，请先到“我的应用”恢复该应用的原设置。",
-  logoutPromptConfirm: "仅退出账户",
-  logoutPromptCancel: "暂不退出",
-  // 首页按状态分组的三个标题。状态是用户真正在问的问题
-  // （「哪些接上了」），所以让它成为结构，而不是每张卡里一行灰字。
-  libraryGroupActive: "已接入",
-  libraryGroupReady: "可以接入",
-  libraryGroupMissing: "这台电脑上没装",
-  libraryInstalled: "已安装",
-  libraryMoreModels: "另有 {{count}} 个模型可在应用内切换",
-  libraryFooterTrust: "只改你选择的应用，随时可以恢复。不会删除聊天记录。",
-  libraryFooterConnect: "接入应用",
-  joinGroup: "加入交流群",
-  qqGroupTitle: "野菜API QQ 交流群",
-  qqGroupBody:
-    "扫码或复制群号，在 QQ 里粘贴搜索即可加入。遇到问题、提建议都欢迎来聊聊。",
-  qqGroupIdLabel: "群号",
-  qqGroupScanHint: "用 QQ 扫这里加群",
-  copyGroupId: "复制群号",
-  groupIdCopied: "群号已复制，去 QQ 粘贴搜索即可",
-  close: "关闭",
-};
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+
+import zhLocale from "../i18n/locales/zh.json";
+
+/**
+ * 界面文案已经搬进 `i18n/locales/{zh,en}.json` 的 `workbench` 命名空间。
+ *
+ * 这里保留同样的形状（`const c = useWorkbenchCopy(); c.home`），所以九个调用方
+ * 一行都不用改——迁移的风险集中在这一个文件里，而不是摊到九处。
+ *
+ * 中文仍以 `zh.json` 为准：`workbenchCopies.zh` 直接引它，
+ * 不再另存一份，否则两处必然漂移。
+ */
+const zh = zhLocale.workbench;
 type Copy = { [K in keyof typeof zh]: string };
 
 export const workbenchCopies = { zh };
+
 export function useWorkbenchCopy(): Copy {
-  return zh;
+  const { t, i18n } = useTranslation();
+  // 依赖里带上 `i18n.language`：切换语言时 `t` 的身份不一定变，
+  // 只靠它做依赖的话文案不会跟着切。
+  return useMemo(
+    () =>
+      Object.fromEntries(
+        Object.keys(zh).map((key) => [key, t(`workbench.${key}`)]),
+      ) as Copy,
+    [t, i18n.language],
+  );
 }
