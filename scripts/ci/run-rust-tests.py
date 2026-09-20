@@ -7,6 +7,15 @@ import subprocess
 import sys
 
 
+# Windows 上 stdout 默认是 cp1252，而测试输出里有中文（`#[ignore]` 的理由就是
+# 一句中文），转码失败会让整个步骤以 UnicodeEncodeError 收场 —— 测试全过了，
+# 打印的时候挂掉。转码不是这个脚本要守的东西，写不出来就替换。
+for stream in (sys.stdout, sys.stderr):
+    reconfigure = getattr(stream, "reconfigure", None)
+    if reconfigure is not None:
+        reconfigure(encoding="utf-8", errors="replace")
+
+
 ROOT = Path(__file__).resolve().parents[2]
 LIBRARY = "yeschoy_desktop_lib"
 REQUIRED_TESTS = frozenset(
@@ -18,6 +27,19 @@ REQUIRED_TESTS = frozenset(
         "tool_discovery_core::tests::fixed_catalog_and_empty_state",
         "tool_discovery_core::tests::multiple_installations_fail_closed",
         "tool_discovery_core::tests::probe_failure_and_timeout_are_isolated",
+    }
+)
+
+
+# 允许被跳过的测试，**逐个点名**。
+#
+# 这条守卫的用意是「不许出现空的绿」，而不是「不许有 `#[ignore]`」—— 真机夹具
+# 要本机装着 codex CLI、还要 15731 空闲，CI 里跑不了，但它留在仓库里是有价值的
+# （见它自己的文档）。点名而不是放行任意数量，是为了让**新加的** `#[ignore]`
+# 照样把 CI 弄红：那种才是「悄悄不跑了」。
+ALLOWED_IGNORED = frozenset(
+    {
+        "codex_responses_bridge::tests::real_codex_cli_drives_the_bridge_end_to_end",
     }
 )
 
@@ -88,7 +110,7 @@ def listed_tests(output: str) -> set[str]:
     return set(names)
 
 
-def verify_test_summary(output: str, expected_count: int) -> None:
+def verify_test_summary(output: str, expected_count: int, ignored_count: int) -> None:
     summaries = re.findall(
         r"^test result: ok\. (\d+) passed; (\d+) failed; (\d+) ignored; "
         r"(\d+) measured; (\d+) filtered out;",
@@ -98,7 +120,7 @@ def verify_test_summary(output: str, expected_count: int) -> None:
     if len(summaries) != 1 or tuple(map(int, summaries[0])) != (
         expected_count,
         0,
-        0,
+        ignored_count,
         0,
         0,
     ):
@@ -125,11 +147,28 @@ def verify(root: Path = ROOT) -> int:
     names = listed_tests(
         run_command([binary, "--list", "--format=terse"], root, timeout=120)
     )
+    ignored = set(
+        re.findall(
+            r"^([^\s]+): test$",
+            run_command(
+                [binary, "--ignored", "--list", "--format=terse"], root, timeout=120
+            ),
+            flags=re.MULTILINE,
+        )
+    )
+    if ignored != ALLOWED_IGNORED:
+        raise VerificationError(
+            f"Ignored tests changed; expected {sorted(ALLOWED_IGNORED)}, "
+            f"found {sorted(ignored)}"
+        )
     output = run_command(
         [binary, "--test-threads=1", "--color=never"], root, timeout=300
     )
-    verify_test_summary(output, len(names))
-    print(f"Verified {len(names)} current native tests: no failures, skips or filters.")
+    verify_test_summary(output, len(names) - len(ignored), len(ignored))
+    print(
+        f"Verified {len(names) - len(ignored)} current native tests: no failures "
+        f"or filters, and only the {len(ignored)} declared ignored."
+    )
     return len(names)
 
 
