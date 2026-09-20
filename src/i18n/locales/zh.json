@@ -922,7 +922,11 @@
     "restartDialogMessage": "这个应用正在运行。请先保存正在编辑的内容。\n\n继续后，你不需要手动退出：野菜助手会先请求它正常退出，设置完成后再重新打开。Windows 若只剩后台进程，会仅结束这个已识别安装路径对应的进程；不会按名称结束其他程序。若系统仍阻止退出，本次不会修改设置。",
     "restartDialogConfirm": "已保存，退出并继续",
     "restartDialogCancel": "暂不接入",
-    "defaultGroupLabel": "标准分组"
+    "defaultGroupLabel": "标准分组",
+    "modelBlocked": "野菜没能为「{{model}}」取到访问权限，这次接入没有完成。它用的是「{{group}}」这个价格方案 —— 方案可能已经调整，或者对你的账户不适用。移除这个模型就能继续，其余模型不受影响。",
+    "removeBlockedModel": "移除「{{model}}」",
+    "skippedTitle": "有模型没能配上",
+    "skippedBody": "其余模型都已经写进 {{app}}，可以正常使用。下面这些没能取到访问权限，已跳过 —— 移除它们之后再更新一次接入，这条提示就不再出现。"
   },
   "installation": {
     "stage": {

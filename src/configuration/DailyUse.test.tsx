@@ -1578,6 +1578,47 @@ describe("daily-use UX", () => {
     fireEvent.click(screen.getByRole("button", { name: "查看其他线路" }));
     expect(screen.getByRole("button", { name: /全球加速/ })).toBeVisible();
   });
+  it("names the model whose billing group blocked the setup, and offers to remove it", async () => {
+    // 线上实测的那一屏：五个模型、一句「暂时无法从野菜API获取接入信息」，
+    // 唯一的出路是「查看其他线路」—— 而换线路对一个配不出来的计费分组毫无作用。
+    // 原生现在会说清是哪个模型，这条钉住「说出名字 + 给出真正能解决的那一步」。
+    native.mockImplementation(async (command, args) => {
+      const req = (args as { request: Record<string, string> }).request;
+      if (command === "scan_activation_targets_v1") return scan(req.requestId);
+      return {
+        requestId: req.requestId,
+        schemaVersion: 5,
+        status: "server_unavailable",
+        toolId: req.toolId,
+        modelId: req.modelId,
+        billingGroup: req.billingGroup,
+        reasonCode: "server_unavailable",
+        observedAtEpochMs: 2000,
+        models: [{ modelId: req.modelId, billingGroup: req.billingGroup }],
+        skipped: [
+          {
+            modelId: "glm-5.3-flash",
+            billingGroup: "【特价】glm5.3 flash",
+            reasonCode: "server_unavailable",
+          },
+        ],
+      };
+    });
+    render(setupView());
+    await tick();
+    applySavedOrSelected();
+    await tick();
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("glm-5.3-flash");
+    // 换线路那条在这里没有意义，不该再出现。
+    expect(
+      screen.queryByRole("button", { name: "查看其他线路" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "移除「glm-5.3-flash」" }),
+    ).toBeEnabled();
+  });
   it("keeps in-flight results bound to their submitted choice after external refresh and line change", async () => {
     let finish!: (value: unknown) => void;
     let request!: Record<string, string>;

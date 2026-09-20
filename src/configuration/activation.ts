@@ -35,6 +35,27 @@ export function decodeModelBindings(value: unknown): ModelBinding[] | null {
   if (new Set(value.map((v) => v.modelId)).size !== value.length) return null;
   return value as ModelBinding[];
 }
+/**
+ * 和 `decodeModelBindings` 同一套规矩，多一个 `reasonCode`。
+ *
+ * 单独写而不是复用，是因为键集是精确比对的：拿绑定的校验器去过一个多带字段的
+ * 对象，只会整个拒掉，而不是「宽松一点」。
+ */
+export function decodeSkippedBindings(value: unknown): SkippedBinding[] | null {
+  if (!Array.isArray(value) || value.length > 200) return null;
+  if (
+    value.some(
+      (v) =>
+        !object(v) ||
+        !exactKeys(v, ["modelId", "billingGroup", "reasonCode"]) ||
+        !safeText(v.modelId, 200, false) ||
+        !safeText(v.billingGroup, 128, false) ||
+        !safeText(v.reasonCode, 80, false),
+    )
+  )
+    return null;
+  return value as SkippedBinding[];
+}
 export function sameModelBindings(a: ModelBinding[], b: ModelBinding[]) {
   return (
     a.length === b.length &&
@@ -99,9 +120,19 @@ export const TOOL_ACTIVATION_STATUSES = [
 
 export type ToolActivationStatus = (typeof TOOL_ACTIVATION_STATUSES)[number];
 
+/**
+ * 这次没写进应用的绑定，以及每个是因为什么。
+ *
+ * 一个计费分组铸不出密钥时，接入不再整单失败 —— 其余照常写入，这里列出少了谁。
+ * 没有它的话，界面只会说「接入完成」，而列表里那个模型其实不能用。
+ */
+export interface SkippedBinding extends ModelBinding {
+  reasonCode: string;
+}
+
 export interface ToolActivationProjection {
   requestId: string;
-  schemaVersion: 3 | 4;
+  schemaVersion: 3 | 4 | 5;
   status: ToolActivationStatus;
   toolId: ActivationToolId;
   modelId: string;
@@ -109,6 +140,7 @@ export interface ToolActivationProjection {
   observedAtEpochMs: number;
   reasonCode: string;
   models?: ModelBinding[];
+  skipped?: SkippedBinding[];
 }
 
 export const ACTIVATION_PROGRESS_EVENT = "yeschoy://activation-progress";
@@ -277,6 +309,8 @@ export function decodeToolActivation(
 ): ToolActivationProjection | null {
   if (!object(value)) return null;
   if (
+    // 4 起带 `models`，5 起多带一个 `skipped`。`exactKeys` 是键集精确比对，
+    // 所以每加一个字段都必须升版本 —— 不能在旧版本号上悄悄多带一个键。
     !exactKeys(value, [
       "requestId",
       "schemaVersion",
@@ -286,17 +320,20 @@ export function decodeToolActivation(
       "billingGroup",
       "observedAtEpochMs",
       "reasonCode",
-      ...(value.schemaVersion === 4 ? ["models"] : []),
+      ...(Number(value.schemaVersion) >= 4 ? ["models"] : []),
+      ...(Number(value.schemaVersion) >= 5 ? ["skipped"] : []),
     ]) ||
     value.requestId !== requestId ||
-    ![3, 4].includes(Number(value.schemaVersion)) ||
-    (value.schemaVersion === 4 &&
+    ![3, 4, 5].includes(Number(value.schemaVersion)) ||
+    (Number(value.schemaVersion) >= 4 &&
       (!decodeModelBindings(value.models) ||
         !(value.models as ModelBinding[]).some(
           (m) =>
             m.modelId === value.modelId &&
             m.billingGroup === value.billingGroup,
         ))) ||
+    (Number(value.schemaVersion) >= 5 &&
+      !decodeSkippedBindings(value.skipped)) ||
     !TOOL_ACTIVATION_STATUSES.includes(value.status as ToolActivationStatus) ||
     !ACTIVATION_TOOL_IDS.includes(value.toolId as ActivationToolId) ||
     !safeText(value.modelId, 200, false) ||
@@ -393,14 +430,16 @@ export async function activateDesktopTool(input: {
     result.toolId !== input.toolId ||
     result.modelId !== input.modelId ||
     result.billingGroup !== input.billingGroup ||
-    (result.schemaVersion === 4 &&
+    // `>= 4` 而不是 `=== 4`：写死版本号的话，下一次升 schema 就会把这条
+    // 「不许偷偷多报模型」的检查整个跳过 —— 校验器变成摆设而没有人会发现。
+    (result.schemaVersion >= 4 &&
       !sameModelBindings(
         result.models!,
         input.models ?? [
           { modelId: input.modelId, billingGroup: input.billingGroup },
         ],
       )) ||
-    (input.models && input.models.length > 1 && result.schemaVersion !== 4)
+    (input.models && input.models.length > 1 && result.schemaVersion < 4)
   )
     throw new Error("invalid_tool_activation_projection");
   return result;

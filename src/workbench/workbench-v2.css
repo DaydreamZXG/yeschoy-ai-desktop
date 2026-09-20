@@ -2839,6 +2839,32 @@
   color: var(--danger);
 }
 
+/* 接入成功但少写了几个模型。挂在成功那块里，但要自己的边界 ——
+   「都好了」和「这几个没配上」是两件事，糊在一段里读不出后者。 */
+.activation-skipped {
+  display: grid;
+  gap: var(--space-6);
+  margin-top: var(--space-10);
+  padding-top: var(--space-10);
+  border-top: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  color: var(--ink);
+}
+
+.activation-skipped ul {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.activation-skipped li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--text-xs);
+}
+
 .setup-apply {
   position: relative;
   width: 100%;

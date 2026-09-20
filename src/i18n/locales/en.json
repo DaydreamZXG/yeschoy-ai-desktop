@@ -922,7 +922,11 @@
     "restartDialogMessage": "This app is running. Save whatever you're editing first.\n\nAfter you continue you don't need to quit it yourself: the Yeschoy assistant asks it to quit normally, writes the settings, then reopens it. On Windows, if only a background process is left, only the process at the recognized install path is ended — nothing is killed by name. If the system still blocks the quit, no settings are changed.",
     "restartDialogConfirm": "Saved — quit and continue",
     "restartDialogCancel": "Not now",
-    "defaultGroupLabel": "Standard group"
+    "defaultGroupLabel": "Standard group",
+    "modelBlocked": "Yeschoy couldn't get access for \"{{model}}\", so this connection didn't complete. It uses the \"{{group}}\" price plan — that plan may have changed, or may not apply to your account. Remove this model and you can carry on; the others aren't affected.",
+    "removeBlockedModel": "Remove \"{{model}}\"",
+    "skippedTitle": "Some models weren't set up",
+    "skippedBody": "Everything else was written into {{app}} and works as usual. These couldn't get access and were skipped — remove them, update the connection once, and this notice goes away."
   },
   "installation": {
     "stage": {

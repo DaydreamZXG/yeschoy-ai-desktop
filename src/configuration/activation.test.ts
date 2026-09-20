@@ -90,24 +90,66 @@ describe("desktop tool activation boundary", () => {
         decodeToolActivation({ ...response, models }, "activate-test"),
       ).toBeNull();
     }
-    native.mockImplementation(async (_, args) => ({
-      ...response,
-      requestId: (args as { request: { requestId: string } }).request.requestId,
-      models: [
-        ...bindings,
-        { modelId: "not-selected", billingGroup: "default" },
-      ],
-    }));
-    await expect(
-      activateDesktopTool({
-        lineId: "mainland_optimized",
-        toolId: "codex_desktop",
-        modelId: "glm-5.3",
-        billingGroup: "国模特价分组",
-        installationId: "i0123456789abcdef",
-        models: bindings,
-      }),
-    ).rejects.toThrow("invalid_tool_activation_projection");
+    // v4 和 v5 都要拦。这条检查以前写死 `schemaVersion === 4`，升到 5 之后
+    // 就整个被跳过了 —— 校验器变成摆设，而不会有任何测试红。
+    for (const schemaVersion of [4, 5]) {
+      native.mockImplementation(async (_, args) => ({
+        ...response,
+        schemaVersion,
+        ...(schemaVersion >= 5 ? { skipped: [] } : {}),
+        requestId: (args as { request: { requestId: string } }).request
+          .requestId,
+        models: [
+          ...bindings,
+          { modelId: "not-selected", billingGroup: "default" },
+        ],
+      }));
+      await expect(
+        activateDesktopTool({
+          lineId: "mainland_optimized",
+          toolId: "codex_desktop",
+          modelId: "glm-5.3",
+          billingGroup: "国模特价分组",
+          installationId: "i0123456789abcdef",
+          models: bindings,
+        }),
+      ).rejects.toThrow("invalid_tool_activation_projection");
+    }
+  });
+  it("carries the bindings a v5 native skipped, and rejects a malformed one", () => {
+    // 原生从 schema 5 起会说清「哪个模型的分组这次配不出来」。没有这一段，
+    // 十七个不同的失败原因都只能显示同一句「稍后重试」，而重试多少次都是
+    // 同一个分组失败 —— 用户就卡在那儿了。
+    const bindings = [
+      { modelId: "glm-5.3-flash", billingGroup: "【特价】glm5.3 flash" },
+      { modelId: "kimi-k3", billingGroup: "default" },
+    ];
+    const v5 = {
+      ...projection(),
+      schemaVersion: 5,
+      modelId: "glm-5.3-flash",
+      billingGroup: "【特价】glm5.3 flash",
+      models: bindings,
+      skipped: [{ ...bindings[0], reasonCode: "server_unavailable" }],
+    };
+    expect(decodeToolActivation(v5, "activate-test")).toEqual(v5);
+    // 成功但没跳过谁，也要能过 —— 那是最常见的一条。
+    expect(
+      decodeToolActivation({ ...v5, skipped: [] }, "activate-test"),
+    ).not.toBeNull();
+    for (const skipped of [
+      undefined,
+      "not-an-array",
+      [{ modelId: "glm-5.3-flash", billingGroup: "x" }], // 少了 reasonCode
+      [{ ...bindings[0], reasonCode: "x", apiKey: "synthetic-secret" }],
+    ]) {
+      expect(
+        decodeToolActivation({ ...v5, skipped }, "activate-test"),
+      ).toBeNull();
+    }
+    // 旧原生（v4，没有 skipped）仍然要能过：升级期间两边不一定同时更新。
+    const { skipped: _skipped, ...v4 } = { ...v5, schemaVersion: 4 };
+    expect(decodeToolActivation(v4, "activate-test")).not.toBeNull();
   });
   it("accepts only the exact secret-free native projection", () => {
     expect(decodeToolActivation(projection(), "activate-test")).toEqual(

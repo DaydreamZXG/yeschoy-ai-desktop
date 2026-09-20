@@ -16,6 +16,16 @@ const scenario = new URLSearchParams(location.search).get("s") ?? "signed_in";
 const rid = (a: Args) =>
   String((a?.request as Args)?.requestId ?? (a?.requestId as string) ?? "");
 
+/**
+ * 只有 `signed_out` / `offline` 是在演登录态本身；其余场景演的是登录之后的界面，
+ * 所以都按已登录返回。
+ *
+ * 以前是拿场景名直接和 `"signed_in"` 比，于是每加一个场景都默默变成未登录 ——
+ * `?s=not_installed` 和 `?s=connected` 都撞过这个，要看的那块界面根本到不了。
+ */
+const signedIn = (scenario: string) =>
+  !["signed_out", "offline"].includes(scenario);
+
 function account(requestId: string, status: string) {
   const base = {
     requestId,
@@ -44,7 +54,7 @@ function account(requestId: string, status: string) {
     comparisonFx: "",
     reasonCode: "signed_out",
   };
-  if (status !== "signed_in") return base;
+  if (!signedIn(status)) return base;
 
   const model = (
     id: string,
@@ -106,6 +116,51 @@ function account(requestId: string, status: string) {
     ],
     comparisonFx: "1",
     reasonCode: "none",
+  };
+}
+
+// `?s=group_blocked` / `?s=group_skipped` 模拟「某个模型的计费分组这次配不出来」。
+//
+// 线上遇到过一次：五个模型里有一个的分组取不到访问权限，整次接入就失败，
+// 界面只给一句「暂时无法从野菜API获取接入信息」和一个「查看其他线路」——
+// 换线路对这件事毫无作用。没有这两个场景，改完的那两块界面在审计页里到不了。
+function activationResult(args: Args) {
+  const request = (args.request ?? {}) as Record<string, unknown>;
+  const models = (request.models as {
+    modelId: string;
+    billingGroup: string;
+  }[]) ?? [
+    {
+      modelId: String(request.modelId ?? ""),
+      billingGroup: String(request.billingGroup ?? ""),
+    },
+  ];
+  const base = {
+    requestId: String(request.requestId ?? ""),
+    schemaVersion: 5,
+    toolId: request.toolId,
+    modelId: request.modelId,
+    billingGroup: request.billingGroup,
+    observedAtEpochMs: Date.now(),
+    models,
+    skipped: models.slice(0, 1).map((m) => ({
+      ...m,
+      reasonCode: "server_unavailable",
+    })),
+  };
+  if (scenario === "group_blocked")
+    return {
+      ...base,
+      status: "server_unavailable",
+      reasonCode: "server_unavailable",
+    };
+  if (scenario === "group_skipped")
+    return { ...base, status: "ready", reasonCode: "configuration_ready" };
+  return {
+    ...base,
+    status: "ready",
+    reasonCode: "configuration_ready",
+    skipped: [],
   };
 }
 
@@ -186,6 +241,7 @@ const handlers: Record<string, (a: Args) => unknown> = {
   account_announcements_read_v2: () => ({ available: false }),
   manage_tool_connections_v1: (a) => connections(rid(a)),
   scan_activation_targets_v1: (a) => targets(rid(a)),
+  configure_desktop_tool_v2: (a) => activationResult(a),
   manage_app_installation_v2: (a) => installationInspectionFixture(a),
   read_desktop_exit_state: () => ({ closeRequested: false, shutdown: null }),
   set_window_appearance: () => null,

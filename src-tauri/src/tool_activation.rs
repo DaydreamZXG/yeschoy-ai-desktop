@@ -223,6 +223,23 @@ pub struct ToolActivationProjection {
     observed_at_epoch_ms: u64,
     reason_code: &'static str,
     models: Vec<ModelBinding>,
+    /// 这次没写进应用的模型，以及每个是因为什么。
+    ///
+    /// 一个计费分组铸不出密钥时不再拖垮整单（见 `securing_access` 那个循环），
+    /// 但界面必须说得出少了谁 —— 否则用户看到「接入完成」，而列表里那个模型
+    /// 其实不能用，比直接失败还糟。
+    skipped: Vec<SkippedBinding>,
+}
+
+/// 被跳过的一个绑定，带上它自己的原因码。
+///
+/// 原因码是常量，和失败投影里的 `reason_code` 同一套，所以界面能复用既有文案。
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SkippedBinding {
+    model_id: String,
+    billing_group: String,
+    reason_code: &'static str,
 }
 
 impl ToolActivationProjection {
@@ -233,7 +250,9 @@ impl ToolActivationProjection {
     ) -> Self {
         Self {
             request_id: request.request_id.clone(),
-            schema_version: 4,
+            // 5：新增 `skipped`。渲染层的 `exactKeys` 要求键集完全一致，所以
+            // 加字段必须升版本，不能在 4 上悄悄多带一个键。
+            schema_version: 5,
             status,
             tool_id: request.tool_id.clone(),
             model_id: request.model_id.clone(),
@@ -241,7 +260,20 @@ impl ToolActivationProjection {
             observed_at_epoch_ms: now_epoch_ms(),
             reason_code,
             models: request.bindings(),
+            skipped: Vec::new(),
         }
+    }
+
+    /// 挡住整单的那个绑定，通过 `skipped` 传出去，**不动 `model_id`**。
+    ///
+    /// 第一版是把投影的 `model_id`/`billing_group` 改写成出错的那个绑定 ——
+    /// 看着直接，但渲染层有一条反伪造检查：`result.modelId !== input.modelId`
+    /// 就整个拒收。于是用户拿到的不是「是 glm-5.3-flash 挡住了」，而是更糟的
+    /// 「暂时无法确认接入结果」。投影的 `model_id` 是「这次请求的主语」，是契约，
+    /// 不能借用来表达别的意思。界面自己从 `skipped` 里找那一个。
+    fn with_skipped(mut self, skipped: Vec<SkippedBinding>) -> Self {
+        self.skipped = skipped;
+        self
     }
 }
 
@@ -1321,15 +1353,56 @@ async fn revoke_owned_tool_tokens(
     complete
 }
 
+/// 跳过失败的分组之后，谁还留下 —— 以及谁把整单挡住。
+///
+/// 抽成纯函数，是因为外层那个 async fn 要 Tauri handle、钥匙串和真网络，测不了；
+/// 而这里每一条分支都会让用户看到完全不同的结果。`resume_if_configured` 上一轮
+/// 就是这么找出一个静默 bug 的。
+///
+/// 两种情况仍然整单失败，各有各的理由：
+///
+/// - **一个分组都没成**：没有任何东西可写，"接入完成" 会是假话。
+/// - **默认模型所在的分组没成**：默认模型是用户不选时应用实际会用的那个，价格
+///   也跟着它。悄悄换成另一个幸存模型，等于替他改了计费对象 —— 那比失败更糟。
+///   所以这里失败，但**点名是谁**，界面据此给出「移除它」的出路。
+fn surviving_bindings(
+    bindings: Vec<ModelBinding>,
+    transports: Vec<Option<ModelTransport>>,
+    leased_groups: &[String],
+    skipped: &[SkippedBinding],
+    default_model_id: &str,
+) -> Result<(Vec<ModelBinding>, Vec<Option<ModelTransport>>), SkippedBinding> {
+    if let Some(blocker) = skipped
+        .iter()
+        .find(|s| s.model_id == default_model_id)
+        .or_else(|| leased_groups.is_empty().then(|| skipped.first()).flatten())
+    {
+        return Err(blocker.clone());
+    }
+    // 绑定和 transport 一起过滤 —— 两个 Vec 按下标配对，分开过滤迟早错位，
+    // 而错位的后果是某个模型带着别人的 transport 被写进应用。
+    Ok(bindings
+        .into_iter()
+        .zip(transports)
+        .filter(|(binding, _)| {
+            leased_groups
+                .iter()
+                .any(|group| group == &binding.billing_group)
+        })
+        .unzip())
+}
+
 fn credential_for_models(
     request: &ToolActivationRequest,
     origin: &str,
+    // 存活下来的绑定，不是 `request.bindings()`：铸不出密钥的分组已经在上面被
+    // 跳过了，这里再取一遍请求里的全量，就会要求一个不存在的 lease。
+    bindings: &[ModelBinding],
     transports: &[Option<ModelTransport>],
     leases: &[(String, TokenLease)],
     previous: Option<&ToolCredential>,
 ) -> Result<ToolCredential, ActivationFailure> {
-    let models = request
-        .bindings()
+    let models = bindings
         .iter()
         .zip(transports)
         .map(|(m, transport)| {
@@ -2095,7 +2168,7 @@ pub async fn configure_desktop_tool_v2(
         return Ok(cancelled());
     }
     emit_activation_progress(&app, &request, "checking_models", 3);
-    let mut transports = match permit
+    let transports = match permit
         .cancel_safe(validate_models(
             &origin,
             &access_token,
@@ -2129,11 +2202,19 @@ pub async fn configure_desktop_tool_v2(
     };
     stage!("credentials");
     let mut leases = Vec::new();
+    // 铸不出密钥的分组。**不再拖垮整单** —— 以前第一个失败的分组就让整次接入
+    // 回滚，用户只看到一句「暂时无法从野菜API获取接入信息」，而那句话背后有
+    // 十七个不同的原因，日志里也没有任何一行说是哪个分组。于是重试一百次还是
+    // 同一个分组失败，人就卡在这儿了。
+    let mut skipped: Vec<SkippedBinding> = Vec::new();
     emit_activation_progress(&app, &request, "securing_access", 4);
     for binding in &bindings {
         if leases
             .iter()
             .any(|(group, _)| group == &binding.billing_group)
+            || skipped
+                .iter()
+                .any(|s| s.billing_group == binding.billing_group)
         {
             continue;
         }
@@ -2162,11 +2243,52 @@ pub async fn configure_desktop_tool_v2(
         {
             Ok(lease) => leases.push((binding.billing_group.clone(), lease)),
             Err(e) => {
-                delete_created_tokens(&origin, &access_token, &leases).await;
-                return Ok(e.projection(&request));
+                // 记下来，其余分组照常。分组名是中转返回的数据，不进日志；
+                // 哈希（密钥名里本来就带这一截）足够把日志和后台的密钥对上，
+                // 模型 id 与 `codex_probe` 那几行的口径一致。
+                let reason = e.projection(&request).reason_code;
+                log::warn!(
+                    "activation stage=token_group_skipped tool={} group_hash={:08x} models={} reason={reason}",
+                    request.tool_id,
+                    group_hash(&binding.billing_group),
+                    group_model_ids.join(","),
+                );
+                skipped.extend(
+                    bindings
+                        .iter()
+                        .filter(|candidate| candidate.billing_group == binding.billing_group)
+                        .map(|candidate| SkippedBinding {
+                            model_id: candidate.model_id.clone(),
+                            billing_group: candidate.billing_group.clone(),
+                            reason_code: reason,
+                        }),
+                );
             }
         }
     }
+    let leased_groups = leases
+        .iter()
+        .map(|(group, _)| group.clone())
+        .collect::<Vec<_>>();
+    let (bindings, transports) = match surviving_bindings(
+        bindings,
+        transports,
+        &leased_groups,
+        &skipped,
+        &request.model_id,
+    ) {
+        Ok(pair) => pair,
+        Err(blocker) => {
+            delete_created_tokens(&origin, &access_token, &leases).await;
+            return Ok(ToolActivationProjection::new(
+                &request,
+                "server_unavailable",
+                blocker.reason_code,
+            )
+            .with_skipped(skipped));
+        }
+    };
+    let mut transports = transports;
     if is_cancelled() || ensure_session_epoch(&account_state, session_epoch).is_err() {
         delete_created_tokens(&origin, &access_token, &leases).await;
         return Ok(if is_cancelled() {
@@ -2201,6 +2323,7 @@ pub async fn configure_desktop_tool_v2(
     let credential = match credential_for_models(
         &request,
         &origin,
+        &bindings,
         &transports,
         &leases,
         previous_record.as_ref(),
@@ -2574,13 +2697,13 @@ pub async fn configure_desktop_tool_v2(
             AdapterFailure::LaunchError(reason) => reason,
             _ => "configuration_ready_open_failed",
         };
-        return Ok(ToolActivationProjection::new(
-            &request,
-            "launch_failed",
-            reason,
-        ));
+        return Ok(
+            ToolActivationProjection::new(&request, "launch_failed", reason).with_skipped(skipped),
+        );
     }
     emit_activation_progress(&app, &request, "complete", 7);
+    // 这两条是「设置已经写进去了」的出口，所以必须带上 `skipped`：其余返回点
+    // 都已经回滚，跳过了谁不再有意义。
     Ok(ToolActivationProjection::new(
         &request,
         "ready",
@@ -2589,7 +2712,8 @@ pub async fn configure_desktop_tool_v2(
         } else {
             "configuration_ready"
         },
-    ))
+    )
+    .with_skipped(skipped))
 }
 
 const CONNECTION_TOOLS: [&str; 6] = [
@@ -3529,6 +3653,7 @@ mod tests {
         let credential = credential_for_models(
             &request,
             "https://yeschoy.com",
+            &request.bindings(),
             &[
                 Some(ModelTransport::Codex(ChatBridge)),
                 Some(ModelTransport::Codex(DirectResponses)),
@@ -3543,6 +3668,96 @@ mod tests {
         // 原生说 Responses 的那个，必须原样直连 —— 它带的是真的
         // `encrypted_content`，转一圈就是主动降级。
         assert!(!needs_chat_conversion(&credential, "gpt-5.6-sol"));
+    }
+
+    use crate::tool_adapters::codex_desktop::CodexTransport::{ChatBridge, DirectResponses};
+
+    fn binding(model: &str, group: &str) -> ModelBinding {
+        ModelBinding {
+            model_id: model.into(),
+            billing_group: group.into(),
+        }
+    }
+
+    fn skip(model: &str, group: &str) -> SkippedBinding {
+        SkippedBinding {
+            model_id: model.into(),
+            billing_group: group.into(),
+            reason_code: "server_unavailable",
+        }
+    }
+
+    #[test]
+    fn a_failed_group_is_skipped_without_taking_the_rest_of_the_activation_with_it() {
+        // 以前第一个铸不出密钥的分组就让整次接入回滚，用户只看到一句
+        // 「暂时无法从野菜API获取接入信息」—— 而那句话背后有十七个原因，
+        // 日志里一行都没有。重试多少次都是同一个分组失败。
+        let bindings = vec![
+            binding("kimi-k3", "default"),
+            binding("glm-5.3-flash", "promo"),
+            binding("gemini-3.8-flash", "default"),
+        ];
+        let transports = vec![
+            None,
+            Some(ModelTransport::Codex(ChatBridge)),
+            Some(ModelTransport::Codex(DirectResponses)),
+        ];
+        let (kept, kept_transports) = surviving_bindings(
+            bindings,
+            transports,
+            &["default".to_owned()],
+            &[skip("glm-5.3-flash", "promo")],
+            "kimi-k3",
+        )
+        .expect("默认模型还在，应当继续");
+
+        assert_eq!(
+            kept.iter().map(|b| b.model_id.as_str()).collect::<Vec<_>>(),
+            ["kimi-k3", "gemini-3.8-flash"],
+        );
+        // transport 必须跟着各自的绑定走。分开过滤的话这里会拿到 ChatBridge ——
+        // 那意味着某个模型带着别人的 transport 被写进应用。
+        assert_eq!(kept_transports.len(), kept.len());
+        assert!(kept_transports[0].is_none());
+        assert!(matches!(
+            kept_transports[1],
+            Some(ModelTransport::Codex(DirectResponses))
+        ));
+    }
+
+    #[test]
+    fn the_default_models_group_failing_stops_the_activation_and_names_it() {
+        // 默认模型是用户不选时应用实际会用的那个，价格也跟着它。悄悄换成另一个
+        // 幸存模型，等于替他改了计费对象。所以这里失败，但必须点名是谁 ——
+        // 界面据此给出「移除它」的出路，用户一次点击就能继续。
+        let blocker = surviving_bindings(
+            vec![
+                binding("glm-5.3-flash", "promo"),
+                binding("kimi-k3", "default"),
+            ],
+            vec![None, None],
+            &["default".to_owned()],
+            &[skip("glm-5.3-flash", "promo")],
+            "glm-5.3-flash",
+        )
+        .expect_err("默认模型所在的分组失败了，不该继续");
+        assert_eq!(blocker.model_id, "glm-5.3-flash");
+        assert_eq!(blocker.billing_group, "promo");
+    }
+
+    #[test]
+    fn nothing_leased_means_nothing_to_write_so_it_still_fails() {
+        let blocker = surviving_bindings(
+            vec![binding("glm-5.3-flash", "promo")],
+            vec![None],
+            &[],
+            &[skip("glm-5.3-flash", "promo")],
+            // 默认模型不在跳过名单里也一样：一个分组都没成，没有东西可写，
+            // 报「接入完成」就是假话。
+            "someone-else",
+        )
+        .expect_err("一个 lease 都没有，不该继续");
+        assert_eq!(blocker.model_id, "glm-5.3-flash");
     }
 
     #[test]
@@ -3574,14 +3789,28 @@ mod tests {
                 },
             ),
         ];
-        let c =
-            credential_for_models(&r, "https://yeschoy.com", &[None, None], &leases, None).unwrap();
+        let c = credential_for_models(
+            &r,
+            "https://yeschoy.com",
+            &r.bindings(),
+            &[None, None],
+            &leases,
+            None,
+        )
+        .unwrap();
         assert_eq!(
             c.resolve_model("b").unwrap().api_key,
             "synthetic-key-standard"
         );
-        let c2 = credential_for_models(&r, "https://yeschoy.com", &[None, None], &leases, Some(&c))
-            .unwrap();
+        let c2 = credential_for_models(
+            &r,
+            "https://yeschoy.com",
+            &r.bindings(),
+            &[None, None],
+            &leases,
+            Some(&c),
+        )
+        .unwrap();
         assert_eq!(c.local_gateway_token, c2.local_gateway_token);
         let out = serde_json::to_value(ToolActivationProjection::new(
             &r,
@@ -3589,8 +3818,10 @@ mod tests {
             "tool_request_verified",
         ))
         .unwrap();
-        assert_eq!(out["schemaVersion"], 4);
+        // 5：新增 `skipped`（跳过的绑定）。渲染层按键集精确校验，加字段必须升版本。
+        assert_eq!(out["schemaVersion"], 5);
         assert_eq!(out["models"].as_array().unwrap().len(), 2);
+        assert!(out["skipped"].as_array().unwrap().is_empty());
         assert!(!out.to_string().contains("synthetic-key"));
         for bad in [
             json!([]),

@@ -1495,8 +1495,41 @@ export function ConfigurationPreviewView({
           target.toolId === candidate.id && target.status !== "not_found",
       ),
   );
+  /**
+   * 这次被跳过的绑定，以及（失败时）挡住整单的那一个。
+   *
+   * 原生侧从 schema 5 起会说清是哪个模型的分组配不出来。在那之前，十七个不同的
+   * 原因都只能显示同一句「暂时无法从野菜API获取接入信息，请稍后重试」，而重试
+   * 多少次都是同一个分组失败 —— 人就卡在那儿了。
+   */
+  const skippedBindings = activation?.skipped ?? [];
+  // 挡住整单的那个：原生只在「默认模型的分组失败」或「一个分组都没成」时失败，
+  // 前者能按 `modelId` 认出来，后者取第一个即可 —— 它们都在 `skipped` 里。
+  // （投影的 `modelId` 是请求的主语，渲染层拿它做反伪造检查，不能借用。）
+  const blockedBinding =
+    activation && activation.status !== "ready"
+      ? (skippedBindings.find((s) => s.modelId === activation.modelId) ??
+        skippedBindings[0])
+      : undefined;
+  const removeBinding = (modelId: string) => {
+    setModelSet((items) => items.filter((x) => x.modelId !== modelId));
+    // 移除之后停在页面上，不自动重新接入：挡住的原因不一定是这个模型
+    // （另外十六个原因仍然存在），自动重试会把人带偏。
+    resetResult();
+  };
+
   const recoveryAction = (() => {
     if (!activation || activation.status === "ready") return null;
+    // 点名了是哪个模型，就给出可以真正解决问题的那一步，而不是「查看其他线路」
+    // —— 换线路对一个配不出来的计费分组毫无作用。
+    if (blockedBinding)
+      return {
+        label: g.removeBlockedModel.replace(
+          "{{model}}",
+          blockedBinding.modelId,
+        ),
+        run: () => removeBinding(blockedBinding.modelId),
+      };
     if (resultIsCurrent && AUTO_RECOVERY_REASONS.has(activation.reasonCode))
       return {
         label: t("yeschoyDesktopRecovery.retry"),
@@ -2333,7 +2366,42 @@ export function ConfigurationPreviewView({
             }
           >
             {firstActivationCelebration && <CelebrationConfetti />}
-            <p>{activationResult}</p>
+            <p>
+              {blockedBinding
+                ? g.modelBlocked
+                    .replace("{{model}}", blockedBinding.modelId)
+                    .replace(
+                      "{{group}}",
+                      groupLabel(blockedBinding.billingGroup, g.defaultGroup),
+                    )
+                : activationResult}
+            </p>
+            {/* 接入成功但少写了几个模型 —— 必须说出来。否则用户看到「接入完成」，
+                而列表里那几个其实不能用，比直接失败还糟。 */}
+            {activationSucceeded &&
+              resultIsCurrent &&
+              skippedBindings.length > 0 && (
+                <div className="activation-skipped" role="status">
+                  <strong>{g.skippedTitle}</strong>
+                  <p>
+                    {g.skippedBody.replace("{{app}}", application.displayName)}
+                  </p>
+                  <ul>
+                    {skippedBindings.map((s) => (
+                      <li key={s.modelId}>
+                        <code>{s.modelId}</code>
+                        <button
+                          type="button"
+                          className="text-button"
+                          onClick={() => removeBinding(s.modelId)}
+                        >
+                          {g.removeBlockedModel.replace("{{model}}", s.modelId)}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             {activationSucceeded && resultIsCurrent && (
               <p className="first-use-state">
                 {firstUseVerified
