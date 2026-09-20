@@ -236,41 +236,6 @@ fn valid_id(value: &str) -> bool {
             .any(|value| value.is_control() || value == '\0')
 }
 
-fn collect_session_files(dir: &Path, depth: u8, result: &mut Vec<PathBuf>) {
-    if depth > 8 || result.len() >= MAX_SESSION_FILES {
-        return;
-    }
-    let Ok(metadata) = fs::symlink_metadata(dir) else {
-        return;
-    };
-    if !metadata.is_dir() || metadata.file_type().is_symlink() {
-        return;
-    }
-    let Ok(entries) = fs::read_dir(dir) else {
-        return;
-    };
-    for entry in entries.flatten() {
-        if result.len() >= MAX_SESSION_FILES {
-            return;
-        }
-        let path = entry.path();
-        let Ok(metadata) = fs::symlink_metadata(&path) else {
-            continue;
-        };
-        if metadata.file_type().is_symlink() {
-            continue;
-        }
-        if metadata.is_dir() {
-            collect_session_files(&path, depth + 1, result);
-        } else if metadata.is_file()
-            && metadata.len() <= MAX_SESSION_BYTES
-            && path.extension().and_then(|value| value.to_str()) == Some("jsonl")
-        {
-            result.push(path);
-        }
-    }
-}
-
 fn session_meta(bytes: &[u8]) -> Option<(Value, usize, bool)> {
     let end = bytes
         .iter()
@@ -292,6 +257,9 @@ fn session_meta(bytes: &[u8]) -> Option<(Value, usize, bool)> {
 ///
 /// The single-provider `session_identity` stays for verifying a rewrite landed;
 /// discovery needs to accept whatever drawer a session happens to be in.
+/// 只剩测试在用：生产路径不再从 JSONL 建会话清单（见 `build_manifest`），
+/// 但恢复老 manifest 仍要走 `rewrite_session`，那条路的测试需要它来造夹具。
+#[cfg(test)]
 fn session_origin(bytes: &[u8]) -> Option<(String, String)> {
     let (value, _, _) = session_meta(bytes)?;
     let payload = value.get("payload")?;
@@ -506,38 +474,37 @@ fn rewrite_state(
 
 fn build_manifest(home: &Path, target: &str) -> Result<Manifest, AdapterFailure> {
     let codex_dir = codex_desktop::config_dir(home)?;
-    let mut paths = Vec::new();
-    collect_session_files(&codex_dir.join("sessions"), 0, &mut paths);
-    // 归档会话不再接管。
+    // 不再改会话 JSONL —— 一次都不改。
     //
-    // 改一个会话的 `model_provider` 要走 `atomic_replace_prefix_bounded`，而它
-    // 为了原子性会把整个文件复制一遍 —— 改第一行的一个字段，代价是重写整个
-    // JSONL。在一台真实机器上实测：sessions 7.0G / 140 个，archived_sessions
-    // 3.9G / 396 个，一次接管要复制约 11G，耗时 87 秒，撞穿前端 90 秒的激活
-    // 超时，于是整个接入被取消回滚 —— 用户看到的是「Codex 打不开」。
+    // 改一条会话的 `model_provider` 要走 `atomic_replace_prefix_bounded`，
+    // 而它为了原子性会把整个文件复制一遍：改第一行里的一个字段，代价是重写
+    // 整个 JSONL。一台真机上实测 536 个文件共 11.6 GB，87 秒，撞穿前端 90 秒
+    // 的激活超时，整个接入被取消回滚 —— 用户看到的是「Codex 打不开」。先只
+    // 跳过 archived_sessions 也只降到 7.5 GB / 56 秒，余量 34 秒，而 sessions
+    // 只会一直长。
     //
-    // 归档是用户主动归档的：它们不该出现在 Codex 的恢复列表里，所以搬不搬它们
-    // 本来也不影响「切换供应商后还能接着聊」这个目标。少搬 3.9G / 396 个文件。
+    // 但这些重写从一开始就是多余的。对着实际安装的 Codex
+    // （ChatGPT.app/Contents/Resources/codex）查证过三件事：
     //
-    // `session_path_allowed` 仍然放行 archived_sessions —— 老版本已经搬过它们
-    // 的用户，manifest 里记着那些路径，恢复必须还能把它们搬回去。
-    let mut sessions = Vec::new();
-    for path in paths {
-        let bytes = common::first_line_bounded(&path, MAX_SESSION_BYTES, MAX_SESSION_META_BYTES)
-            .map_err(|_| failure("codex_history_takeover_failed"))?;
-        // Any drawer but the one we are moving into. A session already filed
-        // under the target needs no move, and moving it would make the restore
-        // put it somewhere it never was.
-        if let Some((session_id, origin_provider)) = bytes.as_deref().and_then(session_origin) {
-            if origin_provider != target {
-                sessions.push(SessionEntry {
-                    path,
-                    session_id,
-                    origin_provider,
-                });
-            }
-        }
-    }
+    //   · 恢复列表来自 state_5.sqlite，不扫 JSONL：
+    //     `SELECT id, rollout_path, archived, source, model_provider`，
+    //     而且 `model_provider` 上建了索引（`idx_threads_provider`）。
+    //   · JSONL 只是被那一行里的 `rollout_path` 指向。
+    //   · 打开会话校验的是 **id**（`rollout session metadata id mismatch`），
+    //     不是 provider。
+    //
+    // 所以 DB 才是 provider 的事实来源，JSONL 里那份是迁移期的副本。只更新
+    // 532 行的 3.5 MB 库就够，毫秒级，而目标完全一样：换了供应商之后旧对话
+    // 仍然出现在恢复列表里。
+    //
+    // 这依赖一个前提：拿 JSONL 回填 DB 的那个流程是一次性迁移
+    //（`backfill_state` 在本机是 `status=complete`）。若将来某个 Codex 版本
+    // 重置它并重新回填，JSONL 里的旧 provider 有可能把 DB 改回去 —— 那时这
+    // 段注释就是重新考虑的入口。
+    //
+    // `rewrite_session` 与 `session_path_allowed` 都保留：老版本已经搬过
+    // JSONL 的用户，manifest 里记着那些路径，恢复必须还能把它们搬回去。
+    let sessions = Vec::new();
     let config_text = common::snapshot_bounded(&codex_dir.join("config.toml"), 2 * 1024 * 1024)
         .ok()
         .flatten()
@@ -867,6 +834,74 @@ mod tests {
         assert!(!valid_target_provider("has space"));
     }
 
+    /// 换供应商之后旧对话仍要出现在 Codex 的恢复列表里 —— 而那个列表读的是
+    /// state_5.sqlite，不是会话 JSONL。所以接管只改库。
+    ///
+    /// 这条钉住的是「一个字节都不碰 JSONL」。改一条会话的 provider 会经
+    /// `atomic_replace_prefix_bounded` 把整个文件复制一遍；真机上 536 个文件
+    /// 11.6 GB、87 秒，撞穿 90 秒激活超时，接入被取消回滚。谁要是把会话收集
+    /// 加回 `build_manifest`，这条测试会先红。
+    #[test]
+    fn a_takeover_moves_the_database_and_never_touches_a_session_file() {
+        let root = temp("codex-history-db-only");
+        let codex = root.join(".codex");
+        let live = codex.join("sessions/2026/live.jsonl");
+        let archived = codex.join("archived_sessions/2026/old.jsonl");
+        for path in [&live, &archived] {
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+        }
+        let meta = |id: &str| {
+            format!(
+                "{{\"type\":\"session_meta\",\"payload\":{{\"id\":\"{id}\",\"model_provider\":\"openai\"}}}}\n"
+            )
+            .into_bytes()
+        };
+        let live_before = meta("thread-live");
+        let archived_before = meta("thread-archived");
+        common::atomic_write_bounded(&live, &live_before, MAX_SESSION_BYTES).unwrap();
+        common::atomic_write_bounded(&archived, &archived_before, MAX_SESSION_BYTES).unwrap();
+
+        let db = codex.join("state_5.sqlite");
+        let connection = Connection::open(&db).unwrap();
+        connection
+            .execute(
+                "CREATE TABLE threads (id TEXT PRIMARY KEY, model_provider TEXT)",
+                [],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "INSERT INTO threads VALUES ('thread-live', 'openai'), ('thread-archived', 'openai')",
+                [],
+            )
+            .unwrap();
+        drop(connection);
+
+        let mut takeover = Takeover::begin(&root, "yeschoy").unwrap();
+        takeover.commit().unwrap();
+
+        let provider = |id: &str| {
+            Connection::open(&db)
+                .unwrap()
+                .query_row(
+                    "SELECT model_provider FROM threads WHERE id = ?1",
+                    [id],
+                    |row| row.get::<_, String>(0),
+                )
+                .unwrap()
+        };
+        assert_eq!(provider("thread-live"), "yeschoy", "库里要改过来");
+        assert_eq!(provider("thread-archived"), "yeschoy");
+
+        assert_eq!(fs::read(&live).unwrap(), live_before, "会话文件不能被重写");
+        assert_eq!(fs::read(&archived).unwrap(), archived_before);
+
+        takeover.rollback().unwrap();
+        assert_eq!(provider("thread-live"), "openai", "恢复要把库改回去");
+        assert_eq!(fs::read(&live).unwrap(), live_before);
+        fs::remove_dir_all(root).unwrap();
+    }
+
     #[test]
     fn state_updates_are_scoped_to_manifest_ids_and_provider() {
         let root = temp("codex-history-state");
@@ -905,70 +940,6 @@ mod tests {
         assert_eq!(provider("b"), "custom");
         assert_eq!(provider("c"), "openai");
         drop(connection);
-        fs::remove_dir_all(root).unwrap();
-    }
-
-    #[test]
-    fn begin_inventories_without_rewriting_sessions_until_commit() {
-        let root = temp("codex-history-deferred-apply");
-        let session = root.join(".codex/sessions/2026/example.jsonl");
-        fs::create_dir_all(session.parent().unwrap()).unwrap();
-        let original = b"{\"type\":\"session_meta\",\"payload\":{\"id\":\"thread-1\",\"model_provider\":\"openai\"}}\n";
-        common::atomic_write_bounded(&session, original, MAX_SESSION_BYTES).unwrap();
-        let mut takeover = Takeover::begin(&root, "yeschoy").unwrap();
-        assert_eq!(fs::read(&session).unwrap(), original);
-        takeover.commit().unwrap();
-        assert_eq!(
-            session_identity(&fs::read(&session).unwrap(), "yeschoy").as_deref(),
-            Some("thread-1")
-        );
-        takeover.rollback().unwrap();
-        assert_eq!(
-            session_identity(&fs::read(&session).unwrap(), "openai").as_deref(),
-            Some("thread-1")
-        );
-        fs::remove_dir_all(root).unwrap();
-    }
-
-    /// 接管要改的只是「这条对话属于哪个供应商」，但改法是整文件重写：
-    /// `atomic_replace_prefix_bounded` 为了原子性会把剩下的内容全部拷一遍。
-    /// 真机上 archived_sessions 有 3.9G / 396 个文件，连同 sessions 一共要复制
-    /// 约 11G，87 秒，直接撞穿前端 90 秒的激活超时 —— 表现为「Codex 打不开」。
-    ///
-    /// 归档是用户自己归档的，本来就不该出现在恢复列表里，所以不搬它们不影响
-    /// 「换了供应商还能接着聊」。
-    #[test]
-    fn archived_sessions_are_left_alone() {
-        let root = temp("codex-history-archived-untouched");
-        let live = root.join(".codex/sessions/2026/live.jsonl");
-        let archived = root.join(".codex/archived_sessions/2026/old.jsonl");
-        for path in [&live, &archived] {
-            fs::create_dir_all(path.parent().unwrap()).unwrap();
-        }
-        let meta = |id: &str| {
-            format!(
-                "{{\"type\":\"session_meta\",\"payload\":{{\"id\":\"{id}\",\"model_provider\":\"openai\"}}}}\n"
-            )
-            .into_bytes()
-        };
-        common::atomic_write_bounded(&live, &meta("thread-live"), MAX_SESSION_BYTES).unwrap();
-        let archived_before = meta("thread-archived");
-        common::atomic_write_bounded(&archived, &archived_before, MAX_SESSION_BYTES).unwrap();
-
-        let mut takeover = Takeover::begin(&root, "yeschoy").unwrap();
-        takeover.commit().unwrap();
-
-        assert_eq!(
-            session_identity(&fs::read(&live).unwrap(), "yeschoy").as_deref(),
-            Some("thread-live"),
-            "live sessions still move"
-        );
-        assert_eq!(
-            fs::read(&archived).unwrap(),
-            archived_before,
-            "an archived session must not be rewritten at all"
-        );
-        takeover.rollback().unwrap();
         fs::remove_dir_all(root).unwrap();
     }
 
