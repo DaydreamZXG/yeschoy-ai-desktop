@@ -67,6 +67,13 @@ jobs:
       - name: Verify renderer
         run: pnpm test:unit
 
+      # `generate_context!()` 在编译期就要 `frontendDist`（`../dist`）真实存在，
+      # 所以渲染层必须先产出一次 —— 否则下一步的 `cargo test` 会以
+      # “proc macro panicked … this path doesn't exist” 失败。本机看不出来，
+      # 因为工作树里早就留着上一次构建的 dist；干净检出才会暴露。
+      - name: Build renderer so the native context can be generated
+        run: pnpm run build:renderer
+
       - name: Verify native core
         run: cargo test --locked --manifest-path src-tauri/Cargo.toml
 
