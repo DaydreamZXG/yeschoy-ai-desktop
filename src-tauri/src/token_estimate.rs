@@ -129,14 +129,36 @@ fn value_centi_tokens(value: &Value) -> u64 {
     }
 }
 
-/// 认出图片/文档的 source 对象。两种形状都要认：base64 的
-/// `{type, media_type, data}`，和 URL 的 `{type: "url", url}` ——
-/// 后者字符很少，照算会把一张图当成几十个 token。
+/// 认出附件的 source 对象，给它定价。
+///
+/// **纯文本附件不走这里。** Anthropic 的文本文档长这样：
+/// `{"type": "text", "media_type": "text/plain", "data": "<全文>"}` ——
+/// 那个 `data` 就是正文本身。一个 3MB 的 .txt 拖进对话，按「一张图」计价会
+/// 少算二十多万 token，而少算正是我们最要避免的方向。所以这里返回 `None`，
+/// 让它照字数走正常的文本估算。
 fn attachment_centi_tokens(fields: &Map<String, Value>) -> Option<u64> {
-    let base64 = fields.contains_key("media_type") && fields.contains_key("data");
-    let url =
-        fields.get("type").and_then(Value::as_str) == Some("url") && fields.contains_key("url");
-    (base64 || url).then_some(PER_IMAGE_TOKENS * CENTI)
+    let source_type = fields.get("type").and_then(Value::as_str);
+    let media_type = fields.get("media_type").and_then(Value::as_str);
+    if source_type == Some("text") || media_type.is_some_and(|kind| kind.starts_with("text/")) {
+        return None;
+    }
+    // URL 形式的图字符很少，照算会把一张图当成几十个 token。
+    if source_type == Some("url") && fields.contains_key("url") {
+        return Some(PER_IMAGE_TOKENS * CENTI);
+    }
+    let data = fields.get("data").and_then(Value::as_str)?;
+    let media_type = media_type?;
+    if media_type.starts_with("image/") {
+        return Some(PER_IMAGE_TOKENS * CENTI);
+    }
+    // PDF 之类的二进制：按解码后的体积走，而不是给个固定值 —— 一份 200 页的
+    // PDF 和一张缩略图不该同价。base64 每 4 个字符还原 3 字节。
+    //
+    // 每 8 字节一个 token 是**粗糙的经验值**：Anthropic 对 PDF 按页计价
+    // （每页约一千五到三千 token），而一页通常是几 KB 到几十 KB 的 PDF 字节。
+    // 它注定不准，取它是因为它至少随体积变化，而固定值连方向都没有。
+    let bytes = (data.len() as u64 / 4).saturating_mul(3);
+    Some((bytes / 8).max(PER_IMAGE_TOKENS).saturating_mul(CENTI))
 }
 
 fn text_centi_tokens(text: &str) -> u64 {
@@ -228,6 +250,53 @@ mod tests {
         assert_eq!(small, tokens(&image(1_000_000)));
         // 而且确实按一张图计了价，不是被当成几十个字符忽略过去。
         assert!(small > super::PER_IMAGE_TOKENS, "small={small}");
+    }
+
+    /// 拖一个 .txt 进对话，它的 `data` 就是正文 —— 必须照字数算。
+    ///
+    /// 按「一张图」计价的话，三百万字符会变成 1600 token，少算二十多万。
+    /// 这正好是「验证自动压缩」这件事本身会踩的坑：用一个大文本文件把窗口
+    /// 填满，结果我们报了 1600，什么也测不出来。
+    #[test]
+    fn a_text_attachment_is_counted_by_its_words_not_as_one_image() {
+        let document = |chars: usize| {
+            json!({"messages": [{"role": "user", "content": [{
+                "type": "document",
+                "source": {
+                    "type": "text",
+                    "media_type": "text/plain",
+                    "data": "word ".repeat(chars / 5),
+                },
+            }]}]})
+        };
+        let small = tokens(&document(5_000));
+        let large = tokens(&document(500_000));
+        // 一百倍的正文，token 数就该是一百倍上下 —— 不是同一个固定值。
+        assert!(large > small * 50, "small={small} large={large}");
+        // 而且确实按 ASCII 的分量算：500000 字符 × 0.25 ≈ 125000 token。
+        assert!(
+            (120_000..150_000).contains(&large),
+            "large={large} 不在合理区间"
+        );
+    }
+
+    /// 二进制附件按体积走，而不是一个固定值 —— 两百页的 PDF 和一张缩略图
+    /// 不该同价。
+    #[test]
+    fn a_binary_attachment_scales_with_its_size() {
+        let pdf = |bytes: usize| {
+            json!({"messages": [{"role": "user", "content": [{
+                "type": "document",
+                "source": {
+                    "type": "base64",
+                    "media_type": "application/pdf",
+                    "data": "A".repeat(bytes),
+                },
+            }]}]})
+        };
+        assert!(tokens(&pdf(4_000_000)) > tokens(&pdf(40_000)));
+        // 但小附件不会掉到图片的地板价以下。
+        assert!(tokens(&pdf(64)) >= super::PER_IMAGE_TOKENS);
     }
 
     /// URL 形式的图字符很少，照算会便宜得离谱 —— 它跟 base64 一张价。
