@@ -1006,4 +1006,363 @@ mod tests {
         let body = to_bytes(response.into_body(), 1024 * 1024).await.unwrap();
         assert_eq!(std::str::from_utf8(&body).unwrap(), REFUSAL);
     }
+
+    /// # 真机验收夹具（第一层）：真 codex CLI → 真桥 → 桩中转
+    ///
+    /// 默认不跑。`cargo test --lib -- --ignored real_codex_cli` 手动触发，
+    /// 需要机器上装着 `codex`，且端口 15731 空闲（关掉野菜API）。
+    ///
+    /// **为什么必须有这一条**：上面所有断言都是拿我们自己挑的字符串去比我们
+    /// 自己的输出 —— 真客户端解析不了的话，它们一条都不会红。这条用真的
+    /// codex 0.155.1 解析我们吐的 SSE，并且能看到 **Codex 第二轮回传
+    /// reasoning / `encrypted_content` 时我们的桥转不转得动** ——
+    /// 那是整个设计里最大的未知，二进制里该符号出现 38 次。
+    ///
+    /// **绝不碰用户的 `~/.codex`**：给 CLI 单独的 `CODEX_HOME`（它只读那里的
+    /// `config.toml`）外加 `--ephemeral`（不落会话文件）；写配置前还断言
+    /// `config_dir` 落在临时目录内（它读的是登录 shell 的 `CODEX_HOME`，
+    /// 那是个随时会变的环境事实，不能让测试依赖它）。
+    #[tokio::test]
+    #[ignore = "需要本机安装 codex CLI 且端口 15731 空闲；跑法见函数文档"]
+    async fn real_codex_cli_drives_the_bridge_end_to_end() {
+        use crate::tool_adapters::{codex_desktop, common};
+        use std::path::PathBuf;
+
+        // ---- 前置守卫：不满足就带明确信息失败，不静默跳过 ----
+        let codex = std::env::var("YESCHOY_CODEX_BIN")
+            .ok()
+            .map(PathBuf::from)
+            .or_else(|| {
+                std::env::var_os("PATH").and_then(|paths| {
+                    std::env::split_paths(&paths)
+                        .map(|dir| dir.join("codex"))
+                        .find(|path| path.is_file())
+                })
+            })
+            .expect("找不到 codex 可执行文件；装上它，或用 YESCHOY_CODEX_BIN 指路");
+        assert!(
+            TcpListener::bind(codex_desktop::PROXY_ADDRESS)
+                .await
+                .is_ok(),
+            "{} 被占用了。桥的地址是常量，夹具换不了端口 —— 关掉野菜API 再跑。",
+            codex_desktop::PROXY_ADDRESS
+        );
+
+        let home = common::temporary_working_directory("codex-real-device").unwrap();
+        let codex_home = codex_desktop::config_dir(&home).expect("解析 CODEX_HOME 失败");
+        // 登录 shell 里设了 CODEX_HOME 的话，写配置会落到用户真实目录里去。
+        assert!(
+            codex_home.starts_with(&home),
+            "CODEX_HOME 把配置目录指到了临时目录之外（{}）—— \
+         再跑下去就会覆盖用户真实的 Codex 配置。先 unset CODEX_HOME。",
+            codex_home.display()
+        );
+
+        // ---- 桩中转：读请求再决定回什么 ----
+        let (origin, seen) = codex_stub_relay().await;
+
+        // ---- 配置用我们自己的写入函数造，不手写 TOML ----
+        let key = format!("sk-{}", "d".repeat(48));
+        let model = "kimi-k3";
+        let mut prepared = codex_desktop::prepare_catalog_with_provider_hint(
+            &home,
+            &origin,
+            model,
+            codex_desktop::CodexTransport::DirectResponses,
+            Some(&key),
+            &[model.to_owned()],
+            None,
+        )
+        .expect("生成 Codex 配置失败");
+        prepared.commit().expect("写入 Codex 配置失败");
+
+        // ---- 起真桥，让这个模型走转换那条路 ----
+        let local_token = format!("ycg-{}", "e".repeat(64));
+        let credential = ToolCredential {
+            api_key: key.clone(),
+            origin: origin.clone(),
+            model_id: model.into(),
+            local_gateway_token: Some(local_token),
+            codex_transport: Some("chat_bridge".into()),
+            claude_transport: None,
+            models: vec![ToolModelRoute {
+                model_id: model.into(),
+                billing_group: "cheap".into(),
+                api_key: key.clone(),
+                origin: origin.clone(),
+                claude_transport: None,
+                codex_transport: Some("chat_bridge".into()),
+            }],
+        };
+        let runtime = codex_runtime(codex_desktop::PROXY_ADDRESS, "/codex");
+        runtime.start(credential).await.expect("桥没起来");
+
+        // ---- 跑真 CLI ----
+        // 输出重定向到文件而不是管道：超时被杀掉时管道里的东西就拿不到了，
+        // 而那正是最需要看的 —— Codex 自己会说它卡在哪。
+        let log_path = home.join("codex-exec.log");
+        let log = std::fs::File::create(&log_path).unwrap();
+        let output = tokio::time::timeout(
+            Duration::from_secs(120),
+            tokio::process::Command::new(&codex)
+                .stdin(std::process::Stdio::null())
+                .stdout(std::process::Stdio::from(log.try_clone().unwrap()))
+                .stderr(std::process::Stdio::from(log))
+                .args([
+                    "exec",
+                    // **不要**加 `--ignore-user-config`：它的意思是「不加载
+                    // $CODEX_HOME/config.toml」，会把我们刚写的那份一起忽略，
+                    // Codex 于是退回默认 provider，请求根本不会到桥这儿来。
+                    // 隔离靠的是下面那个 `CODEX_HOME` —— 指到临时目录，
+                    // 用户的 ~/.codex/config.toml 自然读不到也写不着。
+                    "--ephemeral",
+                    "--skip-git-repo-check",
+                    "-s",
+                    "read-only",
+                    "-C",
+                ])
+                .arg(&home)
+                .args([
+                    "-m",
+                    model,
+                    "请运行 echo yeschoy-bridge-ok，然后告诉我结果。",
+                ])
+                .env("CODEX_HOME", &codex_home)
+                .kill_on_drop(true)
+                // `.status()` 而不是 `.output()`：后者会把 stdout/stderr
+                // 强制换成管道，把上面那两行文件重定向直接覆盖掉，
+                // 于是超时时什么都读不到（踩过一次）。
+                .status(),
+        )
+        .await;
+
+        let requests = seen.lock().unwrap().clone();
+        let transcript = home.join("bridge-transcript.txt");
+        let _ = std::fs::write(
+            &transcript,
+            requests
+                .iter()
+                .enumerate()
+                .map(|(index, (path, body))| {
+                    format!(
+                        "=== #{index} {path} ===\n{}\n",
+                        String::from_utf8_lossy(body)
+                    )
+                })
+                .collect::<String>(),
+        );
+        let stdout = std::fs::read_to_string(&log_path).unwrap_or_default();
+        let tail: String = {
+            let chars: Vec<char> = stdout.chars().collect();
+            chars[chars.len().saturating_sub(1800)..].iter().collect()
+        };
+        let context = format!(
+            "桩收到 {} 个请求；请求全文 {}；codex 输出 {}\n--- codex 说（末尾）---\n{tail}",
+            requests.len(),
+            transcript.display(),
+            log_path.display(),
+        );
+
+        let status = output
+            .unwrap_or_else(|_| panic!("codex 超时没退出。{context}"))
+            .expect("启动 codex 失败");
+        assert!(
+            status.success(),
+            "codex 退出码 {:?}。{context}",
+            status.code()
+        );
+
+        // ---- 断言 ----
+        assert!(
+            requests.len() >= 2,
+            "只看到 {} 个请求，第二轮没发生。{context}",
+            requests.len()
+        );
+        for (path, body) in &requests {
+            assert_eq!(path, "/v1/chat/completions", "{context}");
+            let value: Value = serde_json::from_slice(body).expect("请求不是 JSON");
+            assert!(value.get("messages").is_some(), "不是 Chat 形状：{value}");
+            assert!(
+                value.get("input").is_none(),
+                "Responses 的字段漏过去了：{value}"
+            );
+            assert_eq!(value["stream"], true, "{context}");
+            assert_eq!(value["model"], model, "{context}");
+        }
+
+        let first: Value = serde_json::from_slice(&requests[0].1).unwrap();
+        assert!(
+            first["tools"]
+                .as_array()
+                .is_some_and(|tools| !tools.is_empty()),
+            "第一轮没带工具定义，请求侧转换把它们丢了：{first}"
+        );
+
+        let second: Value = serde_json::from_slice(&requests[1].1).unwrap();
+        let has_tool_result = second["messages"]
+            .as_array()
+            .is_some_and(|messages| messages.iter().any(|m| m["role"] == "tool"));
+        assert!(
+            has_tool_result,
+            "第二轮里没有工具结果 —— Codex 没执行我们转出的工具调用。{context}"
+        );
+
+        assert!(
+            stdout.contains(ECHO_MARKER),
+            "最终文本没到用户眼前。{context}\n--- stdout ---\n{stdout}"
+        );
+
+        // 跑过的人要能看到到底发生了什么，而不只是一个绿点。
+        println!(
+            "真机验收通过：{} 个请求过桥；第一轮 {} 条消息 / {} 个工具；\
+             第二轮带回了工具结果（即 Codex 解析了我们转出的事件并执行了工具，\
+             它回传的那一轮我们也转换掉了）。",
+            requests.len(),
+            first["messages"].as_array().map(Vec::len).unwrap_or(0),
+            first["tools"].as_array().map(Vec::len).unwrap_or(0),
+        );
+
+        runtime.stop().await;
+        let _ = std::fs::remove_dir_all(&home);
+    }
+
+    /// 桩中转：记下每个请求的原始字节，并**按请求内容**决定回什么。
+    ///
+    /// 读请求而不是写死回复，是因为 Codex 发什么工具由它自己决定。写死一个
+    /// 名字就是在赌一个我们没验证过的假设，而赌输的表现是「工具没被调用」，
+    /// 看起来像我们的桥坏了。
+    type SeenRequests = Arc<std::sync::Mutex<Vec<(String, Bytes)>>>;
+
+    /// 桩让 Codex 去执行的命令，以及要在最终输出里找到的记号。
+    const ECHO_MARKER: &str = "yeschoy-bridge-ok";
+    const ECHO_MARKER_COMMAND: &str = "echo yeschoy-bridge-ok";
+
+    async fn codex_stub_relay() -> (String, SeenRequests) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let origin = format!("http://{}", listener.local_addr().unwrap());
+        let seen: SeenRequests = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let recorder = seen.clone();
+        let router = Router::new().route(
+            "/v1/chat/completions",
+            axum::routing::post(move |body: Bytes| {
+                let recorder = recorder.clone();
+                async move {
+                    recorder
+                        .lock()
+                        .unwrap()
+                        .push(("/v1/chat/completions".to_owned(), body.clone()));
+                    let request: Value = serde_json::from_slice(&body).unwrap_or(Value::Null);
+                    let already_ran_a_tool = request["messages"]
+                        .as_array()
+                        .is_some_and(|messages| messages.iter().any(|m| m["role"] == "tool"));
+                    let reply = if already_ran_a_tool {
+                        chat_sse_final_answer()
+                    } else {
+                        chat_sse_tool_call(&request)
+                    };
+                    ([(header::CONTENT_TYPE, "text/event-stream")], reply)
+                }
+            }),
+        );
+        tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+        (origin, seen)
+    }
+
+    fn chat_sse_chunk(delta: Value, finish: Option<&str>) -> String {
+        let mut choice = json!({"index": 0, "delta": delta});
+        if let Some(finish) = finish {
+            choice["finish_reason"] = json!(finish);
+        }
+        format!(
+            "data: {}\n\n",
+            json!({
+                "id": "chatcmpl-real-device",
+                "object": "chat.completion.chunk",
+                "created": 1,
+                "model": "kimi-k3",
+                "choices": [choice],
+            })
+        )
+    }
+
+    /// 第一轮：挑一个 Codex 真的发过来的工具，调它。
+    fn chat_sse_tool_call(request: &Value) -> String {
+        let tools = request["tools"].as_array().cloned().unwrap_or_default();
+        let name_of = |tool: &Value| {
+            tool["function"]["name"]
+                .as_str()
+                .or_else(|| tool["name"].as_str())
+                .unwrap_or_default()
+                .to_owned()
+        };
+        // 优先挑 shell 一类的工具，它的入参我们给得出合法值；否则退回第一个。
+        let shell = tools.iter().find(|tool| {
+            let name = name_of(tool);
+            name == "shell" || name.contains("shell") || name.contains("exec")
+        });
+        let (name, arguments) = match shell.or_else(|| tools.first()) {
+            Some(tool) if !name_of(tool).is_empty() => {
+                let name = name_of(tool);
+                // 参数按**工具自己声明的 schema** 填，不按我们以为的形状填。
+                // 第一版写死 `{"command": [...]}`，而 Codex 0.155.1 的
+                // `exec_command` 要的是字符串 `cmd` —— 真机上换来一句
+                // `failed to parse function arguments: missing field cmd`。
+                // 那不是桥的问题，是桩在赌一个没验证过的形状。
+                let properties = tool["function"]["parameters"]["properties"]
+                    .as_object()
+                    .or_else(|| tool["parameters"]["properties"].as_object());
+                let arguments = match properties {
+                    Some(properties) if properties.contains_key("cmd") => {
+                        json!({ "cmd": ECHO_MARKER_COMMAND }).to_string()
+                    }
+                    Some(properties) if properties.contains_key("command") => {
+                        // 有的工具要数组，有的要字符串 —— 按它声明的类型给。
+                        if properties["command"]["type"] == "array" {
+                            json!({"command": ["echo", ECHO_MARKER]}).to_string()
+                        } else {
+                            json!({ "command": ECHO_MARKER_COMMAND }).to_string()
+                        }
+                    }
+                    _ => "{}".to_owned(),
+                };
+                (name, arguments)
+            }
+            // Codex 一个工具都没发：直接给最终答案，测试会在工具断言那里说清楚。
+            _ => return chat_sse_final_answer(),
+        };
+        [
+            chat_sse_chunk(json!({"role": "assistant", "content": "这就跑。"}), None),
+            chat_sse_chunk(
+                json!({"tool_calls": [{
+                    "index": 0,
+                    "id": "call_real_device",
+                    "type": "function",
+                    "function": {"name": name, "arguments": ""}
+                }]}),
+                None,
+            ),
+            chat_sse_chunk(
+                json!({"tool_calls": [{
+                    "index": 0,
+                    "function": {"arguments": arguments}
+                }]}),
+                Some("tool_calls"),
+            ),
+            "data: [DONE]\n\n".to_owned(),
+        ]
+        .concat()
+    }
+
+    /// 第二轮：工具结果回来了，给最终文本。
+    fn chat_sse_final_answer() -> String {
+        [
+            chat_sse_chunk(
+                json!({"role": "assistant", "content": format!("结果是 {ECHO_MARKER}，桥通了。")}),
+                None,
+            ),
+            chat_sse_chunk(json!({}), Some("stop")),
+            "data: [DONE]\n\n".to_owned(),
+        ]
+        .concat()
+    }
 }

@@ -19,9 +19,9 @@ use crate::{
 };
 
 const OWNED_CATALOG: &str = "yeschoy-model-catalog.json";
-const PROXY_ADDRESS: &str = "127.0.0.1:15731";
+pub(crate) const PROXY_ADDRESS: &str = "127.0.0.1:15731";
 /// Codex 会在这个值后面接 `/responses`，所以它要以 `/v1` 结尾。
-const PROXY_BASE: &str = "http://127.0.0.1:15731/codex/v1";
+pub(crate) const PROXY_BASE: &str = "http://127.0.0.1:15731/codex/v1";
 
 #[derive(Clone)]
 pub(crate) struct CodexRuntimeState {
