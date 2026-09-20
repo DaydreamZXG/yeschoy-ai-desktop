@@ -6196,6 +6196,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-single-instance",
  "tauri-plugin-updater",
+ "thiserror 2.0.18",
  "tokio",
  "toml_edit 0.24.1+spec-1.1.0",
  "unicode-normalization",
