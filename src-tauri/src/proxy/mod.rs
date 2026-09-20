@@ -18,7 +18,11 @@ pub(crate) mod error;
 #[allow(dead_code)]
 pub(crate) mod json_canonical;
 #[allow(dead_code)]
+pub(crate) mod providers;
+#[allow(dead_code)]
 pub(crate) mod sse;
+#[allow(dead_code)]
+pub(crate) mod tool_media;
 
 #[cfg(test)]
 mod tests {
@@ -42,6 +46,21 @@ mod tests {
             "sse.rs",
             include_str!("sse.rs"),
             "d74fa5e207fa4de5f47f076b1df9a78e96522e095a2cd8c087d6eebd82217634",
+        ),
+        (
+            "tool_media.rs",
+            include_str!("tool_media.rs"),
+            "496ce69210d50a689baff3b88daeb45cd015bd35b8a4e24e97a324c4a0389706",
+        ),
+        (
+            "providers/codex_chat_common.rs",
+            include_str!("providers/codex_chat_common.rs"),
+            "41412157670fedab83a01461a9fc43acfb9a89fbfd1f9ef786929fa3343da0c8",
+        ),
+        (
+            "providers/codex_responses_sse.rs",
+            include_str!("providers/codex_responses_sse.rs"),
+            "2e4f27b66b51c60244e7a95270bae1ef884433d04bab5684f98fc505302d1057",
         ),
     ];
 

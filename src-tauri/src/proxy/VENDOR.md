@@ -17,7 +17,8 @@
 
 ```bash
 SHA=<上游新的 commit>
-for f in error.rs json_canonical.rs sse.rs; do
+for f in error.rs json_canonical.rs sse.rs tool_media.rs \
+         providers/codex_chat_common.rs providers/codex_responses_sse.rs; do
   curl -sSL "https://raw.githubusercontent.com/farion1231/cc-switch/$SHA/src-tauri/src/proxy/$f" \
     -o src-tauri/src/proxy/$f
 done
@@ -33,6 +34,9 @@ done
 | `error.rs` | `5c3a781b02321874dd2c59735c1a5121461ceeba0d6b988318f3747605d6ce88` |
 | `json_canonical.rs` | `23715ee65bd5a5bedb55c330247a3b1811f612083e0bd6deaa89bd41109c5772` |
 | `sse.rs` | `d74fa5e207fa4de5f47f076b1df9a78e96522e095a2cd8c087d6eebd82217634` |
+| `tool_media.rs` | `496ce69210d50a689baff3b88daeb45cd015bd35b8a4e24e97a324c4a0389706` |
+| `providers/codex_chat_common.rs` | `41412157670fedab83a01461a9fc43acfb9a89fbfd1f9ef786929fa3343da0c8` |
+| `providers/codex_responses_sse.rs` | `2e4f27b66b51c60244e7a95270bae1ef884433d04bab5684f98fc505302d1057` |
 
 ## 依赖
 

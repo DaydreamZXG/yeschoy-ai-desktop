@@ -24,6 +24,8 @@ tauri-build = { version = "2.4.0", features = [] }
 aes-gcm = "0.10.3"
 axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio"] }
 base64 = "0.22"
+# 同 thiserror：vendored 的 proxy/ 需要，1.11.1 本来就在 lock 与本地缓存里。
+bytes = "1.5"
 caseless = "=0.2.2"
 futures = "0.3"
 getrandom = "0.3"
