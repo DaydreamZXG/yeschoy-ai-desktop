@@ -725,6 +725,18 @@ mod tests {
     /// 「一个字节都没动」，而桩要是自己先解析一遍，把原样转发换成
     /// 「解析再序列化」这种改动它就看不出来了。
     async fn stub_upstream(
+        content_type: &'static str,
+        reply: &'static str,
+    ) -> (
+        String,
+        tokio::sync::mpsc::UnboundedReceiver<(String, Bytes)>,
+    ) {
+        stub_upstream_with_status(StatusCode::OK, content_type, reply).await
+    }
+
+    async fn stub_upstream_with_status(
+        status: StatusCode,
+        content_type: &'static str,
         reply: &'static str,
     ) -> (
         String,
@@ -739,7 +751,7 @@ mod tests {
                 let sent = sent.clone();
                 async move {
                     sent.send((path.to_owned(), body)).unwrap();
-                    ([(header::CONTENT_TYPE, "application/json")], reply)
+                    (status, [(header::CONTENT_TYPE, content_type)], reply)
                 }
             }
         };
@@ -775,6 +787,7 @@ mod tests {
     #[tokio::test]
     async fn a_chat_bridge_model_is_converted_in_both_directions() {
         let (origin, mut received) = stub_upstream(
+            "application/json",
             r#"{"id":"chatcmpl-1","object":"chat.completion","created":1,"model":"kimi-k3","choices":[{"message":{"role":"assistant","content":"你好"},"finish_reason":"stop"}]}"#,
         )
         .await;
@@ -820,8 +833,11 @@ mod tests {
     /// 而「我们不认识」正是这条路上最该保留的东西。所以这里比的是字节。
     #[tokio::test]
     async fn a_direct_model_is_forwarded_byte_for_byte() {
-        let (origin, mut received) =
-            stub_upstream(r#"{"object":"response","output":[],"status":"completed"}"#).await;
+        let (origin, mut received) = stub_upstream(
+            "application/json",
+            r#"{"object":"response","output":[],"status":"completed"}"#,
+        )
+        .await;
         let state = pointed_at(&origin);
         let token = state.local_token.clone();
         let shared = Arc::new(RwLock::new(Arc::new(state)));
@@ -850,5 +866,144 @@ mod tests {
         let (path, arrived) = received.recv().await.unwrap();
         assert_eq!(path, "/v1/responses");
         assert_eq!(std::str::from_utf8(&arrived).unwrap(), sent_body);
+    }
+    /// Codex 真实会话里的 Chat SSE：先吐正文，再吐一个带命名空间的工具调用。
+    ///
+    /// 用真形状而不是最小形状，是因为增量拼接（工具名在一个 chunk、参数在
+    /// 下一个）正是这类转换器最容易出错的地方。
+    const CHAT_SSE: &str = concat!(
+        r#"data: {"id":"chatcmpl_gmail","model":"kimi-k3","choices":[{"delta":{"content":"查一下"}}]}"#,
+        "\n\n",
+        r#"data: {"id":"chatcmpl_gmail","model":"kimi-k3","choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_gmail","type":"function","function":{"name":"mcp__codex_apps__gmail___search_emails"}}]}}]}"#,
+        "\n\n",
+        r#"data: {"id":"chatcmpl_gmail","model":"kimi-k3","choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"{\"query\":\"in:inbox\"}"}}]},"finish_reason":"tool_calls"}]}"#,
+        "\n\n",
+        "data: [DONE]\n\n",
+    );
+
+    /// 流式整条路过 `dispatch`。
+    ///
+    /// 上游自己测过 SSE 转换本身；这条测的是**我们的接线**，四件非流式那条
+    /// 测不到的事：
+    ///
+    /// 1. 路由真的选了流式分支（依据是请求里的 `stream`，判错整条响应形状就错）；
+    /// 2. `stream: true` 有转发给中转 —— 不转发的话中转回的是一个 JSON，
+    ///    而我们在等 SSE，客户端就一直挂到超时；
+    /// 3. 回给 Codex 的 `Content-Type` 是 `text/event-stream`；
+    /// 4. 工具上下文到达了**流式**那条消费路径 —— 它和非流式那条是两个入口，
+    ///    断一个另一个照样绿。
+    #[tokio::test]
+    async fn a_streamed_chat_response_becomes_responses_events_through_dispatch() {
+        let (origin, mut received) = stub_upstream("text/event-stream", CHAT_SSE).await;
+        let state = pointed_at(&origin);
+        let token = state.local_token.clone();
+        let shared = Arc::new(RwLock::new(Arc::new(state)));
+
+        let response = dispatch(
+            State(shared.clone()),
+            signed(
+                "/codex/v1/responses",
+                &token,
+                json!({
+                    "model": "kimi-k3",
+                    "stream": true,
+                    "tools": [{"type": "tool_search"}],
+                    "input": [{
+                        "type": "tool_search_output",
+                        "call_id": "call_tool_search_1",
+                        "tools": [{
+                            "type": "namespace",
+                            "name": "mcp__codex_apps__gmail",
+                            "tools": [{
+                                "type": "function",
+                                "name": "_search_emails",
+                                "description": "Search Gmail.",
+                                "parameters": {"type": "object"}
+                            }]
+                        }]
+                    }]
+                }),
+            ),
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response
+                .headers()
+                .get(header::CONTENT_TYPE)
+                .and_then(|value| value.to_str().ok()),
+            Some("text/event-stream"),
+        );
+
+        let (path, sent) = received.recv().await.unwrap();
+        assert_eq!(path, "/v1/chat/completions");
+        let sent: Value = serde_json::from_slice(&sent).unwrap();
+        // 不转发 stream，中转回的就是一个 JSON，而我们在等 SSE —— 客户端挂死。
+        assert_eq!(sent["stream"], true, "{sent}");
+
+        let body = to_bytes(response.into_body(), 1024 * 1024).await.unwrap();
+        let text = std::str::from_utf8(&body).unwrap();
+        let events: Vec<Value> = text
+            .split("\n\n")
+            .filter_map(|block| block.lines().find_map(|line| line.strip_prefix("data: ")))
+            .filter_map(|data| serde_json::from_str(data).ok())
+            .collect();
+        let kinds: Vec<&str> = events
+            .iter()
+            .filter_map(|event| event["type"].as_str())
+            .collect();
+
+        // Codex 靠这条链拿到工具调用；缺一环它就不会执行工具。
+        for expected in [
+            "response.created",
+            "response.output_text.delta",
+            "response.function_call_arguments.delta",
+            "response.function_call_arguments.done",
+            "response.output_item.done",
+            "response.completed",
+        ] {
+            assert!(kinds.contains(&expected), "缺 {expected}：{kinds:?}");
+        }
+
+        // 工具名在流里也要拆回 namespace + name。拍平的名字发回去 Codex 不认。
+        let call = events
+            .iter()
+            .filter_map(|event| event.get("item"))
+            .find(|item| item["type"] == "function_call")
+            .unwrap_or_else(|| panic!("流里没有 function_call：{text}"));
+        assert_eq!(call["call_id"], "call_gmail");
+        assert_eq!(call["namespace"], "mcp__codex_apps__gmail");
+        assert_eq!(call["name"], "_search_emails");
+    }
+
+    /// 中转拒绝时，把它的原话原样交给 Codex —— 状态码和响应体都不改写。
+    ///
+    /// 中转比我们清楚它为什么拒绝（`分组 default 下无可用渠道`、
+    /// `unknown provider for model gi/…` 这类）。替它换成一句我们自己的话，
+    /// 用户和排查的人就都少了唯一那条线索。
+    #[tokio::test]
+    async fn the_relays_own_refusal_reaches_codex_unchanged() {
+        const REFUSAL: &str =
+            r#"{"error":{"message":"分组 default 下无可用渠道","type":"new_api_error"}}"#;
+        let (origin, _received) =
+            stub_upstream_with_status(StatusCode::BAD_REQUEST, "application/json", REFUSAL).await;
+        let state = pointed_at(&origin);
+        let token = state.local_token.clone();
+        let shared = Arc::new(RwLock::new(Arc::new(state)));
+
+        let response = dispatch(
+            State(shared.clone()),
+            signed(
+                "/codex/v1/responses",
+                &token,
+                json!({"model": "kimi-k3", "input": "probe"}),
+            ),
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let body = to_bytes(response.into_body(), 1024 * 1024).await.unwrap();
+        assert_eq!(std::str::from_utf8(&body).unwrap(), REFUSAL);
     }
 }
