@@ -9,7 +9,8 @@ use tokio::process::Command;
 use toml_edit::{value, Array, DocumentMut, Item, Table};
 
 use crate::{
-    codex_bridge,
+    codex_bridge, codex_responses_bridge,
+    local_bridge::LocalBridgeRuntime,
     tool_adapters::{
         common::{self, ConfigFailure, FileTransaction},
         AdapterFailure,
@@ -18,6 +19,35 @@ use crate::{
 };
 
 const OWNED_CATALOG: &str = "yeschoy-model-catalog.json";
+const PROXY_ADDRESS: &str = "127.0.0.1:15731";
+/// Codex 会在这个值后面接 `/responses`，所以它要以 `/v1` 结尾。
+const PROXY_BASE: &str = "http://127.0.0.1:15731/codex/v1";
+
+#[derive(Clone)]
+pub(crate) struct CodexRuntimeState {
+    runtime: LocalBridgeRuntime,
+}
+
+impl Default for CodexRuntimeState {
+    fn default() -> Self {
+        Self {
+            runtime: codex_responses_bridge::codex_runtime(PROXY_ADDRESS, "/codex"),
+        }
+    }
+}
+
+impl CodexRuntimeState {
+    pub(crate) async fn start(
+        &self,
+        credential: tool_credentials::ToolCredential,
+    ) -> Result<(), AdapterFailure> {
+        self.runtime.start(credential).await.map(|_| ())
+    }
+
+    pub(crate) async fn stop(&self) {
+        self.runtime.stop().await;
+    }
+}
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum CodexTransport {
@@ -386,11 +416,18 @@ fn prepare_inner(
                 .map_err(|_| AdapterFailure::SecureStorageUnavailable)?,
         )
     };
-    // The relay serves the Responses protocol natively for every chat model,
-    // so both transports point straight at its origin. The former loopback
-    // gateway added a listener, a port, a capability token and a watchdog for
-    // no protocol benefit.
-    let base_url = format!("{}/v1", origin.trim_end_matches('/'));
+    // Codex 指向本地桥，不再直接指向中转。
+    //
+    // 不是因为中转的 Responses 不能用 —— 多数模型能用，那些**照旧原样透传**，
+    // 一个字节都不改（真的 `encrypted_content` 不能被转一圈换成我们伪造的）。
+    // 是因为有些渠道的上游只有 Chat，中转转不过去，而 Codex 0.155.1 起
+    // `wire_api = "chat"` 已被移除，改配置绕不开，转换必须有人做。
+    //
+    // 为什么不是「按模型写 base_url」：Codex 的 config.toml 是**一个 provider、
+    // 一个 base_url、一整份模型目录**，用户在 Codex 里切模型。按模型写死，
+    // 用户一切模型地址就错了。所以地址恒定，**转不转由桥按请求里的模型决定**。
+    let _ = origin;
+    let base_url = PROXY_BASE.to_owned();
     let (after, provider_id) = render_with_provider(
         before.as_deref(),
         &base_url,
@@ -420,6 +457,46 @@ fn prepare_inner(
         provider_id,
         provider_auth,
     })
+}
+
+/// 应用重启后把桥重新拉起来。
+///
+/// 不做这一步的后果很直接：Codex 的 `config.toml` 指向
+/// `127.0.0.1:15731/codex/v1`，用户重启我们的应用之后那个端口没人监听，
+/// Codex 就连不上了 —— 而用户并没有改过任何配置。
+///
+/// 只在 Codex 确实还指着我们这座桥时才起：读它自己的配置来判断，
+/// 不靠我们这边记的状态。用户手改回直连、或换了别的 provider，都不该
+/// 被我们又占一个端口。
+pub(crate) async fn resume_if_configured(state: CodexRuntimeState) {
+    let Ok(credential) = tool_credentials::load("codex_desktop") else {
+        return;
+    };
+    let Some(home) = super::user_home() else {
+        return;
+    };
+    let Ok(dir) = config_dir(&home) else {
+        return;
+    };
+    let Ok(text) = std::fs::read_to_string(dir.join("config.toml")) else {
+        return;
+    };
+    let Ok(document) = text.parse::<DocumentMut>() else {
+        return;
+    };
+    let Some(active) = document.get("model_provider").and_then(Item::as_str) else {
+        return;
+    };
+    let points_here = document
+        .get("model_providers")
+        .and_then(Item::as_table)
+        .and_then(|providers| providers.get(active))
+        .and_then(|provider| provider.get("base_url"))
+        .and_then(Item::as_str)
+        == Some(PROXY_BASE);
+    if points_here {
+        let _ = state.start(credential).await;
+    }
 }
 
 fn config_dir_from_override(
@@ -844,9 +921,11 @@ experimental_bearer_token = "sk-old-old-old-old"
             .parse::<DocumentMut>()
             .unwrap();
         assert_eq!(active["model_provider"].as_str(), Some("custom"));
+        // 地址是本地桥，不是中转 —— 见 `prepare_inner` 里那段说明。
+        // 这条测试守的是「自定义 provider 被原样保留」，不是地址本身。
         assert_eq!(
             active["model_providers"]["custom"]["base_url"].as_str(),
-            Some("https://yeschoy.com/v1")
+            Some(PROXY_BASE)
         );
         prepared.rollback().unwrap();
         assert_eq!(std::fs::read(&config_path).unwrap(), current);
@@ -881,7 +960,7 @@ experimental_bearer_token = "sk-old-old-old-old"
         prepared.commit().unwrap();
         let config = std::fs::read_to_string(home.join(".codex/config.toml")).unwrap();
         assert!(config.contains(&format!("experimental_bearer_token = \"{key}\"")));
-        assert!(config.contains("base_url = \"https://yeschoy.com/v1\""));
+        assert!(config.contains(&format!("base_url = \"{PROXY_BASE}\"")));
         assert!(!config.contains("requires_openai_auth"));
         assert!(!config.contains("credential-helper"));
         std::fs::remove_dir_all(home).unwrap();

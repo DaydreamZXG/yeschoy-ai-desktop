@@ -1,7 +1,7 @@
 //! 本地桥共用的骨架：监听、优雅停机、换凭据不打断在途请求。
 //!
 //! 每个被接入的工具有自己的一座本地桥（Claude Code → `15728/claude-code`、
-//! Claude Desktop → `15729/claude-desktop`、Codex → `15730/codex`）。
+//! Claude Desktop → `15729/claude-desktop`、Codex → `15731/codex`）。
 //! 端口、路由和协议各不相同，**但起停与状态管理完全一样**。
 //!
 //! 抽出来共用而不是各写一份，是因为这里有一段不显眼但很讲究的逻辑：

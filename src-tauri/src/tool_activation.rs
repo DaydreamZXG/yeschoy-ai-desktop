@@ -1254,11 +1254,17 @@ async fn start_local_adapter(
     credential: &ToolCredential,
     claude_code_runtime: &claude_code::ClaudeCodeRuntimeState,
     claude_runtime: &claude_desktop::ClaudeDesktopRuntimeState,
+    codex_runtime: &codex_desktop::CodexRuntimeState,
 ) -> Result<(), AdapterFailure> {
     match request.tool_id.as_str() {
         "claude_code" => claude_code_runtime.start(credential.clone()).await,
         "claude_desktop" => claude_runtime.start(credential.clone()).await.map(|_| ()),
-        "codex_desktop" => codex_desktop::ensure_credential_ready(credential).await,
+        "codex_desktop" => {
+            // 桥要先在监听，Codex 才有地方可发 —— 它的 config.toml 现在指向
+            // `127.0.0.1:15731/codex/v1`。
+            codex_runtime.start(credential.clone()).await?;
+            codex_desktop::ensure_credential_ready(credential).await
+        }
         "pi" | "dsh_web" | "workbuddy" => Ok(()),
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
@@ -1351,13 +1357,15 @@ async fn stop_helper_runtime(
     tool: &str,
     claude_code_runtime: &claude_code::ClaudeCodeRuntimeState,
     claude_runtime: &claude_desktop::ClaudeDesktopRuntimeState,
+    codex_runtime: &codex_desktop::CodexRuntimeState,
     dsh_runtime: &dsh_web::DshRuntimeState,
 ) {
     match tool {
         "claude_code" => claude_code_runtime.stop().await,
         "claude_desktop" => claude_runtime.stop().await,
         "dsh_web" => dsh_runtime.stop().await,
-        // Codex and Pi connect straight to the relay origin.
+        "codex_desktop" => codex_runtime.stop().await,
+        // Pi connects straight to the relay origin.
         _ => {}
     }
 }
@@ -1382,6 +1390,7 @@ async fn restore_after_failure(
     leases: &[(String, TokenLease)],
     claude_code_runtime: &claude_code::ClaudeCodeRuntimeState,
     claude_runtime: &claude_desktop::ClaudeDesktopRuntimeState,
+    codex_runtime: &codex_desktop::CodexRuntimeState,
     dsh_runtime: &dsh_web::DshRuntimeState,
     permit: &shutdown_coordinator::OperationPermit,
     codex_history: &mut Option<crate::codex_history_takeover::Takeover>,
@@ -1416,6 +1425,15 @@ async fn restore_after_failure(
                     credential.has_model_set() && !shutdown_coordinator::global().is_shutting_down()
                 }) {
                     claude_code_runtime.start(previous).await?;
+                }
+            }
+            if request.tool_id == "codex_desktop" {
+                codex_runtime.stop().await;
+                if let Some(previous) = previous_record
+                    .clone()
+                    .filter(|_| !shutdown_coordinator::global().is_shutting_down())
+                {
+                    codex_runtime.start(previous).await?;
                 }
             }
             if request.tool_id == "claude_desktop" {
@@ -1547,6 +1565,7 @@ pub async fn configure_desktop_tool_v2(
     installation_state: tauri::State<'_, crate::app_installation::AppInstallationState>,
     claude_code_runtime: tauri::State<'_, claude_code::ClaudeCodeRuntimeState>,
     claude_runtime: tauri::State<'_, claude_desktop::ClaudeDesktopRuntimeState>,
+    codex_runtime: tauri::State<'_, codex_desktop::CodexRuntimeState>,
     dsh_runtime: tauri::State<'_, dsh_web::DshRuntimeState>,
     request: ToolActivationRequest,
 ) -> Result<ToolActivationProjection, String> {
@@ -1738,6 +1757,7 @@ pub async fn configure_desktop_tool_v2(
                     &request.tool_id,
                     &claude_code_runtime,
                     &claude_runtime,
+                    &codex_runtime,
                     &dsh_runtime,
                 ))
                 .await
@@ -2149,6 +2169,7 @@ pub async fn configure_desktop_tool_v2(
                 &credential,
                 &claude_code_runtime,
                 &claude_runtime,
+                &codex_runtime,
             ))
             .await
         {
@@ -2226,6 +2247,7 @@ pub async fn configure_desktop_tool_v2(
                     &leases,
                     &claude_code_runtime,
                     &claude_runtime,
+                    &codex_runtime,
                     &dsh_runtime,
                     &permit,
                     &mut codex_history,
@@ -2664,6 +2686,7 @@ pub async fn manage_tool_connections_v1(
     account_state: tauri::State<'_, AccountV2State>,
     claude_code_runtime: tauri::State<'_, claude_code::ClaudeCodeRuntimeState>,
     claude_runtime: tauri::State<'_, claude_desktop::ClaudeDesktopRuntimeState>,
+    codex_runtime: tauri::State<'_, codex_desktop::CodexRuntimeState>,
     dsh_runtime: tauri::State<'_, dsh_web::DshRuntimeState>,
     request: ConnectionRequest,
 ) -> Result<ConnectionResponse, String> {
@@ -2769,6 +2792,7 @@ pub async fn manage_tool_connections_v1(
                         &request.tool_id,
                         &claude_code_runtime,
                         &claude_runtime,
+                        &codex_runtime,
                         &dsh_runtime,
                     )
                     .await;

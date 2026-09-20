@@ -18,6 +18,7 @@ mod claude_bridge;
 mod claude_login_takeover;
 mod codex_bridge;
 mod codex_history_takeover;
+mod codex_responses_bridge;
 mod config_reveal;
 mod connection_recovery;
 mod connectivity;
@@ -74,6 +75,8 @@ pub fn run() {
     let resume_claude_code_runtime = claude_code_runtime.clone();
     let claude_runtime = tool_adapters::claude_desktop::ClaudeDesktopRuntimeState::default();
     let resume_claude_runtime = claude_runtime.clone();
+    let codex_runtime = tool_adapters::codex_desktop::CodexRuntimeState::default();
+    let resume_codex_runtime = codex_runtime.clone();
     let mut builder = tauri::Builder::default();
     #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
     {
@@ -97,6 +100,7 @@ pub fn run() {
         .manage(tool_activation::ActivationOperationState::default())
         .manage(claude_code_runtime)
         .manage(claude_runtime)
+        .manage(codex_runtime)
         .manage(tool_adapters::dsh_web::DshRuntimeState::default())
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -154,7 +158,8 @@ pub fn run() {
                     // settings still point to the corresponding loopback
                     // endpoint.
                     tool_adapters::claude_code::resume_if_configured(resume_claude_code_runtime),
-                    tool_adapters::claude_desktop::resume_if_configured(resume_claude_runtime)
+                    tool_adapters::claude_desktop::resume_if_configured(resume_claude_runtime),
+                    tool_adapters::codex_desktop::resume_if_configured(resume_codex_runtime)
                 );
             });
             Ok(())
@@ -235,6 +240,10 @@ fn register_runtime_stops(app: &tauri::AppHandle) -> Result<(), std::io::Error> 
     register!(
         "claude_desktop",
         tool_adapters::claude_desktop::ClaudeDesktopRuntimeState
+    );
+    register!(
+        "codex_desktop",
+        tool_adapters::codex_desktop::CodexRuntimeState
     );
     register!("dsh_web", tool_adapters::dsh_web::DshRuntimeState);
     Ok(())
