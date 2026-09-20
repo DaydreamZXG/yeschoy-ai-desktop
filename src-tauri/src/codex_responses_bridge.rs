@@ -269,10 +269,28 @@ async fn responses(state: &BridgeState, request: Request<Body>) -> Response {
         .to_owned();
     let credential = match state.credential.resolve_model(&model) {
         Ok(credential) => credential,
-        // 中转认得的模型名由中转说了算，不由我们的目录说了算 —— 账号里有、
-        // 而目录还没收录的模型必须照样能用，所以解析不出来就原样直连，
-        // 让中转自己回答，而不是我们替它拒绝。
-        Err(_) => state.credential.clone(),
+        // 没有模型列表的旧凭据：默认路由就是历史行为。
+        Err(_) if !state.credential.has_model_set() => state.credential.clone(),
+        // 有列表、但要的模型不在里面。
+        //
+        // 这里原本回落到整份凭据，也就是**默认模型的 key**，理由是「中转认得的
+        // 模型名由中转说了算，解析不出来就让中转自己回答」。那个理由对的是
+        // 「这个模型存不存在」，而这里的问题不是存不存在 —— 每把 key 都按
+        // `model_limits` 锁在自己那个计费分组的模型上，所以拿默认的 key 去问，
+        // 换来的**必然**是中转的 403「This token has no access to model X」。
+        // 那句话技术上正确，用户拿它什么也做不了：他既不知道是分组的事，
+        // 也不知道该回哪儿改。既然结果是确定的，本地说清楚就是了。
+        Err(_) => {
+            log::warn!("codex_bridge stage=model_outside_key_scope");
+            return error_owned(
+                StatusCode::BAD_REQUEST,
+                format!(
+                    "{model} is not in the model list this app was connected with, and \
+                     each key only covers the models in its own billing group. Open \
+                     野菜API, add {model} to the list, and apply the connection again."
+                ),
+            );
+        }
     };
 
     if !needs_chat_conversion(&credential, &model) {
@@ -408,6 +426,15 @@ async fn passthrough_error(upstream: reqwest::Response) -> Response {
 ///
 /// `message` 是 `&'static str`：这条路上的错误文案只能来自代码里的常量，
 /// 借不到请求里的字节。
+/// 同 `error`，但消息里要带模型名，所以收 `String`。
+fn error_owned(status: StatusCode, message: String) -> Response {
+    (
+        status,
+        axum::Json(json!({"error": {"message": message, "type": "yeschoy_bridge_error"}})),
+    )
+        .into_response()
+}
+
 fn error(status: StatusCode, message: &'static str) -> Response {
     (
         status,
@@ -780,6 +807,119 @@ mod tests {
             .build()
             .unwrap();
         state
+    }
+
+    /// 只记 Authorization 的桩 —— 这两条测的是「发出去的是谁的 key」。
+    async fn stub_recording_authorization() -> (String, tokio::sync::mpsc::UnboundedReceiver<String>)
+    {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let origin = format!("http://{}", listener.local_addr().unwrap());
+        let (sent, received) = tokio::sync::mpsc::unbounded_channel();
+        // 两条路各回各自形状的响应，好让转换分支和透传分支都能走到底 ——
+        // 只回一种的话，走桥那个模型会在转换时 422，测不到它的 key。
+        let reply = move |body: &'static str| {
+            let sent = sent.clone();
+            move |headers: HeaderMap| {
+                let sent = sent.clone();
+                async move {
+                    sent.send(
+                        headers
+                            .get(header::AUTHORIZATION)
+                            .and_then(|v| v.to_str().ok())
+                            .unwrap_or_default()
+                            .to_owned(),
+                    )
+                    .unwrap();
+                    (
+                        StatusCode::OK,
+                        [(header::CONTENT_TYPE, "application/json")],
+                        body,
+                    )
+                }
+            }
+        };
+        let router = Router::new()
+            .route(
+                "/v1/responses",
+                axum::routing::post(reply(
+                    r#"{"id":"resp_1","object":"response","status":"completed","output":[]}"#,
+                )),
+            )
+            .route(
+                "/v1/chat/completions",
+                axum::routing::post(reply(
+                    r#"{"id":"chatcmpl-1","object":"chat.completion","created":1,"model":"kimi-k3","choices":[{"message":{"role":"assistant","content":"ok"},"finish_reason":"stop"}]}"#,
+                )),
+            );
+        tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+        (origin, received)
+    }
+
+    /// 每个模型必须带**它自己计费分组**的 key 出去。
+    ///
+    /// 中转给每把 key 设了 `model_limits`，锁死在该分组的模型上。用户在应用里
+    /// 换到别的分组的模型时若还发默认那把，中转必然回
+    /// 403 `This token has no access to model …` —— 线上就是这么炸的
+    /// （0.4.23 的 Codex 直连中转，配置里只放得下一个 bearer token，
+    /// 没有这座桥来按模型换 key）。
+    #[tokio::test]
+    async fn each_model_goes_upstream_with_its_own_billing_groups_key() {
+        let (origin, mut seen) = stub_recording_authorization().await;
+        let mut state = pointed_at(&origin);
+        // 第二个模型换到另一个分组、另一把 key —— 线上的常用模型列表就是这样。
+        state.credential.models[1].billing_group = "group-b".into();
+        state.credential.models[1].api_key = "sk-synthetic-b".into();
+        let token = state.local_token.clone();
+        let shared = Arc::new(RwLock::new(Arc::new(state)));
+
+        for (model, expected) in [
+            ("kimi-k3", "Bearer sk-synthetic-a"),
+            ("gpt-5.6-sol", "Bearer sk-synthetic-b"),
+        ] {
+            let response = dispatch(
+                State(shared.clone()),
+                signed(
+                    "/codex/v1/responses",
+                    &token,
+                    json!({"model": model, "input": "fixture"}),
+                ),
+            )
+            .await;
+            assert_eq!(response.status(), StatusCode::OK);
+            assert_eq!(seen.recv().await.unwrap(), expected, "model {model}");
+        }
+    }
+
+    /// 要的模型不在列表里：本地说清楚，而不是拿默认那把 key 去换一个
+    /// 一定会失败、且用户看不懂的 403。
+    #[tokio::test]
+    async fn a_model_outside_the_key_scope_is_refused_here_with_something_to_act_on() {
+        let (origin, mut seen) = stub_recording_authorization().await;
+        let state = pointed_at(&origin);
+        let token = state.local_token.clone();
+        let shared = Arc::new(RwLock::new(Arc::new(state)));
+
+        let response = dispatch(
+            State(shared),
+            signed(
+                "/codex/v1/responses",
+                &token,
+                json!({"model": "deepseek-v4.1-flash", "input": "fixture"}),
+            ),
+        )
+        .await;
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let body = to_bytes(response.into_body(), MAX_REQUEST_BODY_BYTES)
+            .await
+            .unwrap();
+        let text = String::from_utf8_lossy(&body);
+        // 点名是哪个模型，并说清回哪儿改 —— 中转那句「This token has no access」
+        // 技术上正确，但用户拿它什么也做不了。
+        assert!(text.contains("deepseek-v4.1-flash"), "{text}");
+        assert!(text.contains("野菜API"), "{text}");
+        // 而且根本没往上游发 —— 那一趟的结果是确定的。
+        assert!(seen.try_recv().is_err());
     }
 
     /// 标了 `chat_bridge` 的模型：请求去 `/v1/chat/completions`，

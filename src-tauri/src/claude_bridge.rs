@@ -289,10 +289,23 @@ async fn messages(state: &BridgeState, request: Request<Body>) -> Response {
     // Each catalog member may have a different scoped relay key. Resolve the
     // normalized model before forwarding; unknown unsuffixed IDs retain the
     // historical default-route behavior for user-authored configurations.
-    let upstream_credential = state
-        .credential
-        .resolve_model(&model)
-        .unwrap_or_else(|_| state.credential.clone());
+    let upstream_credential = match state.credential.resolve_model(&model) {
+        Ok(credential) => credential,
+        // 没有模型列表的旧凭据：默认路由就是历史行为，手改过的配置靠它。
+        Err(_) if !state.credential.has_model_set() => state.credential.clone(),
+        // 有列表、但要的模型不在里面。以前这里回落到整份凭据 —— 也就是**默认
+        // 模型的 key**。每把 key 都按 `model_limits` 锁在自己那个计费分组的模型
+        // 上，所以那一定换来中转的 403「This token has no access to model X」：
+        // 一句技术上正确、而用户拿它什么也做不了的话。本地说清楚更有用。
+        Err(_) => {
+            log::warn!("claude_bridge stage=model_outside_key_scope");
+            return invalid_request_owned(format!(
+                "{model} is not in the model list this app was connected with, and \
+                 each key only covers the models in its own billing group. Open \
+                 野菜API, add {model} to the list, and apply the connection again."
+            ));
+        }
+    };
     let upstream = match send_upstream(state, &upstream_credential, &forwarded, &value).await {
         Ok(response) => response,
         Err(_) => {
@@ -644,6 +657,17 @@ fn error(status: StatusCode, message: &'static str) -> Response {
     (
         status,
         axum::Json(json!({"type": "error", "error": {"type": "api_error", "message": message}})),
+    )
+        .into_response()
+}
+
+/// 同 `invalid_request_error`，但消息里要带模型名，所以收 `String`。
+fn invalid_request_owned(message: String) -> Response {
+    (
+        StatusCode::BAD_REQUEST,
+        axum::Json(
+            json!({"type": "error", "error": {"type": "invalid_request_error", "message": message}}),
+        ),
     )
         .into_response()
 }
@@ -1191,6 +1215,44 @@ mod tests {
         assert!(headers.get(header::AUTHORIZATION).is_none());
         server.abort();
         let _ = server.await;
+    }
+
+    /// 要的模型不在列表里：本地拒绝并说清回哪儿改。
+    ///
+    /// 以前这里回落到整份凭据 —— 也就是**默认模型的 key**。每把 key 都按
+    /// `model_limits` 锁在自己那个计费分组的模型上，所以那一趟的结果是确定的：
+    /// 中转回 403 `This token has no access to model …`。那句话技术上没错，
+    /// 用户拿它什么也做不了。
+    #[tokio::test]
+    async fn a_model_outside_the_key_scope_is_refused_before_the_relay_sees_it() {
+        let mut state = state();
+        state.prefix = "/claude-code";
+        let request = Request::builder()
+            .method("POST")
+            .uri("/claude-code/v1/messages")
+            .header("x-api-key", &state.local_token)
+            .header("anthropic-version", "2023-06-01")
+            .body(Body::from(
+                json!({
+                    "model":"deepseek-v4.1-flash",
+                    "max_tokens":128,
+                    "messages":[{"role":"user","content":"test"}]
+                })
+                .to_string(),
+            ))
+            .unwrap();
+
+        let response = messages(&state, request).await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        let body = to_bytes(response.into_body(), MAX_REQUEST_BODY_BYTES)
+            .await
+            .unwrap();
+        let text = String::from_utf8_lossy(&body);
+        assert!(text.contains("deepseek-v4.1-flash"), "{text}");
+        assert!(text.contains("野菜API"), "{text}");
+        // `api_error` 会被 Claude 当成上游故障去重试；这是选择的问题，
+        // 必须以 `invalid_request_error` 到达，用户才会去改而不是干等。
+        assert!(text.contains("invalid_request_error"), "{text}");
     }
 
     #[tokio::test]
