@@ -1830,6 +1830,130 @@ export function ConfigurationPreviewView({
               </span>
               <h3>{g.modelAndPriceStep}</h3>
             </div>
+            {/* 列表在前、选择器在后。写进应用的本来就是一个**模型列表**
+                （每个模型各带计费分组、其中一个是默认），用户之后在目标应用里
+                能直接切的就是它。原来的顺序把选择器摆在前面，页面看起来像在问
+                「选一个模型」（单数），而真正的产物是下面那个列表，两者的关系只在
+                一行脚注里交代（`pendingModelEditNote`）——很容易选完模型就以为选好了，
+                其实什么都没加进去。 */}
+            {signedIn && (
+              <section
+                className="model-set-editor"
+                aria-label={g.favoriteModels}
+              >
+                <header>
+                  <div>
+                    <h3>{g.favoriteModels}</h3>
+                    {/* 「接入后可以在这个应用里直接切换下面这些模型」同理：
+                        没有模型可切的时候，这句话在描述一个还不存在的东西。 */}
+                    {modelSet.length > 0 && <p>{g.favoriteModelsIntro}</p>}
+                  </div>
+                  <button
+                    type="button"
+                    className="subtle-button"
+                    onClick={addCurrentModel}
+                    disabled={
+                      !selectedModel ||
+                      !selectedBillingGroup ||
+                      applyPhase === "applying" ||
+                      session.loading ||
+                      !!session.lastError ||
+                      (modelSet.length >= 200 &&
+                        !modelSet.some((m) => m.modelId === selectedModelId))
+                    }
+                  >
+                    {modelSet.some((m) => m.modelId === selectedModelId)
+                      ? g.updateModelGroup
+                      : g.addFavoriteModel}
+                  </button>
+                </header>
+                {modelSet.length ? (
+                  <ul>
+                    {modelSet.map((m) => {
+                      const bindingModel = models.find(
+                        (a) => a.id === m.modelId,
+                      );
+                      const available = bindingModel?.billing?.groups.some(
+                        (g) => g.id === m.billingGroup,
+                      );
+                      return (
+                        <li key={m.modelId} data-unavailable={!available}>
+                          <label>
+                            <input
+                              type="radio"
+                              name="default-model"
+                              checked={defaultBinding?.modelId === m.modelId}
+                              disabled={applyPhase === "applying"}
+                              onChange={() => {
+                                setDefaultModelId(m.modelId);
+                                setSelectedModelId(m.modelId);
+                                setBillingGroup(m.billingGroup);
+                                resetResult();
+                              }}
+                              aria-label={g.defaultModelAria.replace(
+                                "{{model}}",
+                                m.modelId,
+                              )}
+                            />
+                            <span>
+                              <code>{m.modelId}</code>
+                              <small>
+                                {groupDisplayName(
+                                  m.billingGroup,
+                                  bindingModel?.billing?.groups,
+                                  g.defaultGroup,
+                                )}
+                                {!available && ` · ${g.bindingUnavailable}`}
+                              </small>
+                            </span>
+                          </label>
+                          <span className="model-default-label">
+                            {defaultBinding?.modelId === m.modelId
+                              ? g.defaultBadge
+                              : ""}
+                          </span>
+                          <button
+                            type="button"
+                            className="text-button"
+                            disabled={applyPhase === "applying"}
+                            aria-label={g.removeModelAria.replace(
+                              "{{model}}",
+                              m.modelId,
+                            )}
+                            onClick={() => {
+                              setModelSet((items) =>
+                                items.filter((x) => x.modelId !== m.modelId),
+                              );
+                              resetResult();
+                            }}
+                          >
+                            {g.removeAction}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p>{g.favoriteModelsEmpty}</p>
+                )}
+                {pendingModelEdit && (
+                  <p className="selection-warning" role="status">
+                    {g.pendingModelEditNote.replace(
+                      "{{action}}",
+                      modelSet.some((m) => m.modelId === selectedModelId)
+                        ? g.updateModelGroup
+                        : g.addFavoriteModel,
+                    )}
+                  </p>
+                )}
+                {/* 「左边的圆点是默认模型」在列表为空时无所指——那时屏幕上
+                    根本没有圆点。空态只说下一步做什么就够了。 */}
+                {modelSet.length > 0 && (
+                  <small>{g.favoriteModelsNote}</small>
+                )}
+              </section>
+            )}
+
             <div className="connection-choice-grid">
               <section
                 className="connection-choice-card model-choice-card"
@@ -1956,118 +2080,6 @@ export function ConfigurationPreviewView({
                 />
               </section>
             </div>
-
-            {signedIn && (
-              <section
-                className="model-set-editor"
-                aria-label={g.favoriteModels}
-              >
-                <header>
-                  <div>
-                    <h3>{g.favoriteModels}</h3>
-                    <p>{g.favoriteModelsIntro}</p>
-                  </div>
-                  <button
-                    type="button"
-                    className="subtle-button"
-                    onClick={addCurrentModel}
-                    disabled={
-                      !selectedModel ||
-                      !selectedBillingGroup ||
-                      applyPhase === "applying" ||
-                      session.loading ||
-                      !!session.lastError ||
-                      (modelSet.length >= 200 &&
-                        !modelSet.some((m) => m.modelId === selectedModelId))
-                    }
-                  >
-                    {modelSet.some((m) => m.modelId === selectedModelId)
-                      ? g.updateModelGroup
-                      : g.addFavoriteModel}
-                  </button>
-                </header>
-                {modelSet.length ? (
-                  <ul>
-                    {modelSet.map((m) => {
-                      const bindingModel = models.find(
-                        (a) => a.id === m.modelId,
-                      );
-                      const available = bindingModel?.billing?.groups.some(
-                        (g) => g.id === m.billingGroup,
-                      );
-                      return (
-                        <li key={m.modelId} data-unavailable={!available}>
-                          <label>
-                            <input
-                              type="radio"
-                              name="default-model"
-                              checked={defaultBinding?.modelId === m.modelId}
-                              disabled={applyPhase === "applying"}
-                              onChange={() => {
-                                setDefaultModelId(m.modelId);
-                                setSelectedModelId(m.modelId);
-                                setBillingGroup(m.billingGroup);
-                                resetResult();
-                              }}
-                              aria-label={g.defaultModelAria.replace(
-                                "{{model}}",
-                                m.modelId,
-                              )}
-                            />
-                            <span>
-                              <code>{m.modelId}</code>
-                              <small>
-                                {groupDisplayName(
-                                  m.billingGroup,
-                                  bindingModel?.billing?.groups,
-                                  g.defaultGroup,
-                                )}
-                                {!available && ` · ${g.bindingUnavailable}`}
-                              </small>
-                            </span>
-                          </label>
-                          <span className="model-default-label">
-                            {defaultBinding?.modelId === m.modelId
-                              ? g.defaultBadge
-                              : ""}
-                          </span>
-                          <button
-                            type="button"
-                            className="text-button"
-                            disabled={applyPhase === "applying"}
-                            aria-label={g.removeModelAria.replace(
-                              "{{model}}",
-                              m.modelId,
-                            )}
-                            onClick={() => {
-                              setModelSet((items) =>
-                                items.filter((x) => x.modelId !== m.modelId),
-                              );
-                              resetResult();
-                            }}
-                          >
-                            {g.removeAction}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p>{g.favoriteModelsEmpty}</p>
-                )}
-                {pendingModelEdit && (
-                  <p className="selection-warning" role="status">
-                    {g.pendingModelEditNote.replace(
-                      "{{action}}",
-                      modelSet.some((m) => m.modelId === selectedModelId)
-                        ? g.updateModelGroup
-                        : g.addFavoriteModel,
-                    )}
-                  </p>
-                )}
-                <small>{g.favoriteModelsNote}</small>
-              </section>
-            )}
           </div>
         </section>
       </section>

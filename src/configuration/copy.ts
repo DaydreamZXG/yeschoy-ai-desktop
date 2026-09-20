@@ -83,7 +83,7 @@ const zh = {
   outcomeUpstreamError: "模型服务未完成请求",
   outcomeInvalidResponse: "模型回复格式异常",
   outcomeStreamInterrupted: "回复在完成前中断",
-  outcomeUnknownModel: "这个模型尚未加入常用列表",
+  outcomeUnknownModel: "这个模型还没加进你的模型列表",
   outcomePayloadTooLarge: "请求内容超过本机安全上限",
   outcomeLocalBusy: "本机正在处理另一条大请求",
   noModelSpecified: "未指定模型",
@@ -239,7 +239,7 @@ const zh = {
     "{{app}} 的设置和本地连接已经就绪。正在运行的命令行会话不会被中断；请新开一个会话，或点击“打开终端使用”。第一次真实请求的结果会显示在“最近连接结果”里。",
   readyCodex:
     "{{app}} 的设置和野菜本地路由已经就绪。{{favorites}}Codex 仍可显示你的官方登录账号，那只是登录身份，不代表模型请求走官方计费。第一次真实请求的结果会显示在“最近野菜中转记录”里；看到完整模型 ID，才表示这次请求确实经过野菜中转。",
-  favoritesConfigured: "常用模型已一起配置。",
+  favoritesConfigured: "你的模型已一起配置。",
   readyDefault:
     "{{app}} 的设置和本地连接已经就绪。{{favorites}}请在应用中正常使用；第一次真实请求的结果会显示在“最近连接结果”里。",
   // WorkBuddy 的配置格式不支持「取密钥的命令」这种写法，所以它是六个应用里
@@ -359,7 +359,7 @@ const zh = {
   selectInstallationHint: "这台电脑上有多个安装位置，请先在上面选择一个。",
   chooseModelFirst: "先选择模型",
   chooseGroupFirst: "先选择计费分组",
-  checkModelsLabel: "检查常用模型与分组",
+  checkModelsLabel: "检查模型与分组",
   restartAppLabel: "关闭并重新打开 {{app}}",
   restartAppHint:
     "设置还没有写入。这个应用正在运行，点这里确认已保存后由助手关闭并重新打开。",
@@ -385,30 +385,30 @@ const zh = {
   missingGroupTitle: "之前的计费分组已不可用",
   missingGroupBody:
     "不在这个模型当前可用的分组中。请在上方重新选择，价格可能不同；不会自动切换。",
-  favoriteModels: "常用模型",
-  favoriteModelsIntro: "加入你会用的模型，每个模型单独选择计费分组。",
+  favoriteModels: "你的模型",
+  favoriteModelsIntro: "接入后可以在这个应用里直接切换下面这些模型，每个模型单独选计费分组。",
   updateModelGroup: "更新这个模型的分组",
-  addFavoriteModel: "加入常用模型",
+  addFavoriteModel: "加入模型",
   defaultModelAria: "默认模型 {{model}}",
   removeModelAria: "移除 {{model}}",
   bindingUnavailable: "当前不可用，请重新选择或移除",
   defaultBadge: "默认",
   removeAction: "移除",
-  favoriteModelsEmpty: "也可以只接入上面选中的一个模型，之后再添加。",
+  favoriteModelsEmpty: "先加一个模型；之后随时可以再加。",
   pendingModelEditNote:
-    "上方的选择尚未加入列表。点击“{{action}}”后，再确认接入。",
+    "下面选好的模型还没加进列表。点「{{action}}」之后再确认接入。",
   favoriteModelsNote:
-    "同一模型保留一个计费分组。已有列表里的模型可在应用内切换；新增模型、修改默认模型或分组后，需要更新接入。",
+    "左边的圆点是默认模型。加模型、改默认或换分组之后，回来更新一次接入就行。",
   networkLinePrefix: "网络线路",
   changeLine: "更换线路",
   lineIntro:
     "大陆优化优先适合中国大陆网络；全球加速使用 Cloudflare，海外可优先尝试。线路只影响连接，不改变计费分组与倍率。",
   currentConnection: "当前接入",
   configuredSummary:
-    "这些设置已经保存。日常换模型可在应用内选择；修改常用列表后，再更新接入。",
+    "这些设置已经保存。日常换模型可在应用内选择；改动这个列表后，再更新接入。",
   billingGroupLabel: "计费分组",
   selectGroupFirst: "请选择分组",
-  favoriteModelsCount: "{{count}} 个常用模型",
+  favoriteModelsCount: "{{count}} 个模型",
   modelSetNote:
     "接入时安全配置全部模型；每个模型的真实连接结果在首次使用后显示。",
   lifecycleNotePrefix: "打开使用不会改设置。",

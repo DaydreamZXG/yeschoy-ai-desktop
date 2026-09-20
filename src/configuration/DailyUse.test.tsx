@@ -971,7 +971,7 @@ describe("daily-use UX", () => {
     });
     render(setupView());
     await tick();
-    fireEvent.click(screen.getByRole("button", { name: "加入常用模型" }));
+    fireEvent.click(screen.getByRole("button", { name: "加入模型" }));
     fireEvent.click(screen.getByRole("combobox", { name: /选择模型/ }));
     fireEvent.click(screen.getByRole("option", { name: "model-b" }));
     fireEvent.click(screen.getByRole("radio", { name: /标准方案/ }));
@@ -1006,7 +1006,7 @@ describe("daily-use UX", () => {
         .map((node) => node.textContent)
         .join(" "),
     ).not.toContain("全部模型已验证");
-    expect(screen.getByText(/常用模型已一起配置/)).toBeInTheDocument();
+    expect(screen.getByText(/你的模型已一起配置/)).toBeInTheDocument();
     expect(
       screen.getByText(/官方登录账号.*只是登录身份.*不代表模型请求走官方计费/),
     ).toBeInTheDocument();
@@ -1348,11 +1348,11 @@ describe("daily-use UX", () => {
       ),
     );
     await tick();
-    expect(screen.getByRole("region", { name: "常用模型" })).toHaveTextContent(
+    expect(screen.getByRole("region", { name: "你的模型" })).toHaveTextContent(
       "old-group · 当前不可用",
     );
     expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
-      "检查常用模型与分组",
+      "检查模型与分组",
     );
     fireEvent.click(screen.getByRole("button", { name: "移除 model-b" }));
     expect(screen.getByTestId("configuration-apply-action")).toBeEnabled();
