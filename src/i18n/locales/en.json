@@ -215,7 +215,8 @@
     "advancedDetails": "View check details",
     "requestId": "Check ID",
     "retention": "Result retention",
-    "notRetained": "Not kept after leaving this page"
+    "notRetained": "Not kept after leaving this page",
+    "openHome": "Back to My apps"
   },
   "yeschoySettings": {
     "eyebrow": "Preferences",
