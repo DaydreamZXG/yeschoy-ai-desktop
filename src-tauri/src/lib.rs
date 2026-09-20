@@ -24,6 +24,7 @@ mod connectivity;
 mod connectivity_core;
 mod desktop_app_discovery;
 mod desktop_app_discovery_core;
+mod local_bridge;
 mod logging;
 mod model_catalog;
 mod open_connection;

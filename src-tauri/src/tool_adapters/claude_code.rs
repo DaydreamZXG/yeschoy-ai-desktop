@@ -3,7 +3,8 @@ use std::path::Path;
 use serde_json::{json, Map, Value};
 
 use crate::{
-    claude_bridge::{ClaudeBridgeRuntime, ClaudeTransport},
+    claude_bridge::{self, ClaudeTransport},
+    local_bridge::LocalBridgeRuntime,
     tool_adapters::{
         common::{self, ConfigFailure, FileTransaction},
         AdapterFailure,
@@ -16,13 +17,13 @@ const PROXY_BASE: &str = "http://127.0.0.1:15728/claude-code";
 
 #[derive(Clone)]
 pub(crate) struct ClaudeCodeRuntimeState {
-    runtime: ClaudeBridgeRuntime,
+    runtime: LocalBridgeRuntime,
 }
 
 impl Default for ClaudeCodeRuntimeState {
     fn default() -> Self {
         Self {
-            runtime: ClaudeBridgeRuntime::new(PROXY_ADDRESS, "/claude-code"),
+            runtime: claude_bridge::claude_runtime(PROXY_ADDRESS, "/claude-code"),
         }
     }
 }

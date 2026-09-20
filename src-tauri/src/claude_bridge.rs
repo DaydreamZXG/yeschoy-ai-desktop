@@ -9,8 +9,6 @@
 //! 已下发的模型做精确归一化并补齐对应 Beta 头。若上游提供权威的上下文计数，
 //! 转发器可以缩减过大的输出预留，但不会截断或改写用户消息。
 
-use std::{sync::Arc, time::Duration};
-
 use axum::{
     body::{to_bytes, Body},
     extract::State,
@@ -21,15 +19,15 @@ use axum::{
 };
 use futures::StreamExt;
 use serde_json::{json, Value};
-use tokio::{
-    net::TcpListener,
-    sync::{broadcast, oneshot, Mutex, RwLock},
-    task::JoinHandle,
-};
 
 use crate::{
-    codex_bridge::secure_equal, tool_adapters::AdapterFailure, tool_credentials::ToolCredential,
+    local_bridge::{locally_authorized, BridgeState, LocalBridgeRuntime, SharedState},
+    tool_credentials::ToolCredential,
 };
+
+/// 桥起来了、并且真的收到过一次成功请求。骨架搬走之后这里保留一个别名，
+/// 免得每个调用方都要改 import —— 它们要的就是「Claude 桥的验证事件」。
+pub(crate) use crate::local_bridge::VerificationEvent;
 
 /// Claude Desktop 单次请求的上限。超过时拒绝，而不是截断。
 const MAX_REQUEST_BODY_BYTES: usize = 32 * 1024 * 1024;
@@ -46,15 +44,6 @@ const FORWARDED_HEADERS: [&str; 4] = [
 ];
 const ONE_M_CONTEXT_BETA: &str = "context-1m-2025-08-07";
 
-fn upstream_client() -> Result<reqwest::Client, reqwest::Error> {
-    reqwest::Client::builder()
-        .redirect(reqwest::redirect::Policy::none())
-        .retry(reqwest::retry::never())
-        .connect_timeout(Duration::from_secs(15))
-        .read_timeout(Duration::from_secs(600))
-        .build()
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ClaudeTransport {
     DirectAnthropic,
@@ -70,118 +59,14 @@ impl ClaudeTransport {
     }
 }
 
-#[derive(Clone, Debug)]
-pub(crate) struct VerificationEvent;
-
-struct BridgeState {
-    credential: ToolCredential,
-    local_token: String,
-    prefix: &'static str,
-    client: reqwest::Client,
-    events: broadcast::Sender<VerificationEvent>,
+/// 起一座 Claude 桥。骨架、起停、换凭据都在 `local_bridge`，
+/// 这里只把 Claude 自己的路由接上去。
+pub(crate) fn claude_runtime(address: &'static str, prefix: &'static str) -> LocalBridgeRuntime {
+    LocalBridgeRuntime::new(address, prefix, router)
 }
 
-struct Running {
-    shutdown: Option<oneshot::Sender<()>>,
-    task: JoinHandle<()>,
-    credential: ToolCredential,
-    events: broadcast::Sender<VerificationEvent>,
-    state: Arc<RwLock<Arc<BridgeState>>>,
-}
-
-#[derive(Clone)]
-pub(crate) struct ClaudeBridgeRuntime {
-    address: &'static str,
-    prefix: &'static str,
-    runtime: Arc<Mutex<Option<Running>>>,
-}
-
-impl ClaudeBridgeRuntime {
-    pub(crate) fn new(address: &'static str, prefix: &'static str) -> Self {
-        Self {
-            address,
-            prefix,
-            runtime: Arc::new(Mutex::new(None)),
-        }
-    }
-
-    pub(crate) async fn start(
-        &self,
-        credential: ToolCredential,
-    ) -> Result<broadcast::Receiver<VerificationEvent>, AdapterFailure> {
-        let local_token = credential
-            .local_gateway_token
-            .clone()
-            .filter(|value| value.starts_with("ycg-") && value.len() == 68)
-            .ok_or(AdapterFailure::SecureStorageUnavailable)?;
-        // Opening an already configured app must not interrupt its requests:
-        // check, update and start all happen under the same lock as stop.
-        let mut slot = self.runtime.lock().await;
-        if let Some(running) = slot.as_mut() {
-            if !running.task.is_finished() {
-                if running.credential != credential {
-                    let previous = running.state.read().await.clone();
-                    *running.state.write().await = Arc::new(BridgeState {
-                        credential: credential.clone(),
-                        local_token,
-                        prefix: self.prefix,
-                        client: previous.client.clone(),
-                        events: running.events.clone(),
-                    });
-                    running.credential = credential;
-                }
-                return Ok(running.events.subscribe());
-            }
-        }
-        if let Some(mut previous) = slot.take() {
-            if let Some(shutdown) = previous.shutdown.take() {
-                let _ = shutdown.send(());
-            }
-            previous.task.abort();
-            let _ = previous.task.await;
-        }
-        let listener = TcpListener::bind(self.address)
-            .await
-            .map_err(|_| AdapterFailure::LaunchFailed)?;
-        let (events, receiver) = broadcast::channel(8);
-        let state = Arc::new(RwLock::new(Arc::new(BridgeState {
-            credential: credential.clone(),
-            local_token,
-            prefix: self.prefix,
-            client: upstream_client().map_err(|_| AdapterFailure::LaunchFailed)?,
-            events: events.clone(),
-        })));
-        let router = Router::new()
-            .fallback(any(dispatch))
-            .with_state(state.clone());
-        let (shutdown, shutdown_rx) = oneshot::channel::<()>();
-        let task = tokio::spawn(async move {
-            let _ = axum::serve(listener, router)
-                .with_graceful_shutdown(async move {
-                    let _ = shutdown_rx.await;
-                })
-                .await;
-        });
-        *slot = Some(Running {
-            shutdown: Some(shutdown),
-            task,
-            credential,
-            events,
-            state,
-        });
-        Ok(receiver)
-    }
-
-    pub(crate) async fn stop(&self) {
-        let runtime = self.runtime.lock().await.take();
-        if let Some(mut runtime) = runtime {
-            if let Some(shutdown) = runtime.shutdown.take() {
-                let _ = shutdown.send(());
-            }
-            runtime.task.abort();
-            let _ = runtime.task.await;
-        }
-    }
+fn router(state: SharedState) -> Router {
+    Router::new().fallback(any(dispatch)).with_state(state)
 }
 
 /// 请求路径写进日志时用的标签。
@@ -229,10 +114,7 @@ fn log_label(method: &str, path: &str) -> &'static str {
     }
 }
 
-async fn dispatch(
-    State(state): State<Arc<RwLock<Arc<BridgeState>>>>,
-    request: Request<Body>,
-) -> Response {
+async fn dispatch(State(state): State<SharedState>, request: Request<Body>) -> Response {
     let state = state.read().await.clone();
     let Some(path) = request.uri().path().strip_prefix(state.prefix) else {
         return error(StatusCode::NOT_FOUND, "unsupported Claude endpoint");
@@ -692,21 +574,6 @@ fn is_context_overflow(body: &[u8]) -> bool {
     .any(|marker| text.contains(marker))
 }
 
-fn locally_authorized(headers: &axum::http::HeaderMap, local_token: &str) -> bool {
-    let bearer = headers
-        .get(header::AUTHORIZATION)
-        .and_then(|value| value.to_str().ok())
-        .and_then(|value| value.strip_prefix("Bearer "));
-    let api_key = headers
-        .get("x-api-key")
-        .and_then(|value| value.to_str().ok());
-    !local_token.is_empty()
-        && [bearer, api_key]
-            .into_iter()
-            .flatten()
-            .any(|value| secure_equal(value, local_token))
-}
-
 fn ensure_one_m_beta(headers: &mut Vec<(header::HeaderName, String)>) {
     if let Some((_, value)) = headers
         .iter_mut()
@@ -844,7 +711,12 @@ mod tests {
     }
 
     use super::*;
-    use crate::tool_credentials::{ToolCredential, ToolModelRoute};
+    use crate::{local_bridge::upstream_client, tool_credentials::ToolModelRoute};
+    use std::{sync::Arc, time::Duration};
+    use tokio::{
+        net::TcpListener,
+        sync::{broadcast, RwLock},
+    };
 
     fn state() -> BridgeState {
         let routes = vec![

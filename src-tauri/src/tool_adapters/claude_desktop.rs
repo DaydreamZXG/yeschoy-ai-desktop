@@ -3,7 +3,8 @@ use std::path::{Path, PathBuf};
 use serde_json::{json, Map, Value};
 
 use crate::{
-    claude_bridge::ClaudeBridgeRuntime,
+    claude_bridge,
+    local_bridge::LocalBridgeRuntime,
     tool_adapters::{
         common::{self, ConfigFailure, FileTransaction},
         AdapterFailure,
@@ -19,13 +20,13 @@ const SAFE_ROUTE_MODEL: &str = "claude-sonnet-4-6";
 
 #[derive(Clone)]
 pub(crate) struct ClaudeDesktopRuntimeState {
-    runtime: ClaudeBridgeRuntime,
+    runtime: LocalBridgeRuntime,
 }
 
 impl Default for ClaudeDesktopRuntimeState {
     fn default() -> Self {
         Self {
-            runtime: ClaudeBridgeRuntime::new(PROXY_ADDRESS, "/claude-desktop"),
+            runtime: claude_bridge::claude_runtime(PROXY_ADDRESS, "/claude-desktop"),
         }
     }
 }
