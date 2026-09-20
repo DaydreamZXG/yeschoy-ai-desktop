@@ -591,6 +591,44 @@ fn probe_body(model: &str, responses: bool) -> Value {
     }
 }
 
+/// 单次探测的时间预算。
+///
+/// 共用客户端自带 20 秒超时，对一个 16 token 的请求太宽裕了：真机上
+/// `hy4-preview` 那次耗了约 18 秒才得出 `Inconclusive`，接入被它一个人拖住。
+/// 收到 8 秒，一次问不出来就换下一次问 —— 总预算反而只比原来多几秒，
+/// 却能问三遍。
+const PROBE_ATTEMPT_BUDGET: Duration = Duration::from_secs(8);
+/// 最多问几遍。只有 `Inconclusive` 才会重问。
+const PROBE_ATTEMPTS: u8 = 3;
+/// 两次之间歇一下，让瞬时抖动过去；短到不会让用户觉得卡住。
+const PROBE_RETRY_DELAY: Duration = Duration::from_millis(300);
+
+/// 问到有结论为止，最多 `PROBE_ATTEMPTS` 次。
+///
+/// **为什么要重问**：`Inconclusive` 说明的是「这次没问到」，而探测结果是
+/// **落盘的、之后不再探**。也就是说接入那一瞬间网抖了一下，这个模型就永久
+/// 停在直连 —— 而用户看到的只是「这个模型在 Codex 里用不了」，没有任何线索
+/// 指向「当时没问出结论」。保守方向（不确定就不翻转）是对的，
+/// 但「漏判之后没有第二次机会」是缺口，不是保守。
+async fn probe_until_conclusive(
+    client: &reqwest::Client,
+    origin: &str,
+    key: &str,
+    model: &str,
+    responses: bool,
+) -> (ProbeOutcome, u8) {
+    for attempt in 1..=PROBE_ATTEMPTS {
+        let outcome = probe_once(client, origin, key, model, responses).await;
+        if outcome != ProbeOutcome::Inconclusive {
+            return (outcome, attempt);
+        }
+        if attempt < PROBE_ATTEMPTS {
+            tokio::time::sleep(PROBE_RETRY_DELAY).await;
+        }
+    }
+    (ProbeOutcome::Inconclusive, PROBE_ATTEMPTS)
+}
+
 async fn probe_once(
     client: &reqwest::Client,
     origin: &str,
@@ -604,16 +642,19 @@ async fn probe_once(
         "/v1/chat/completions"
     };
     let url = format!("{}{path}", origin.trim_end_matches('/'));
-    let sent = client
-        .post(url)
-        .bearer_auth(key)
-        .json(&probe_body(model, responses))
-        .send()
-        .await;
+    let sent = tokio::time::timeout(
+        PROBE_ATTEMPT_BUDGET,
+        client
+            .post(url)
+            .bearer_auth(key)
+            .json(&probe_body(model, responses))
+            .send(),
+    )
+    .await;
     match sent {
-        Ok(response) if response.status().is_success() => ProbeOutcome::Accepted,
-        Ok(response) if response.status().is_client_error() => ProbeOutcome::Rejected,
-        // 5xx 与网络错误都归到「没问出结论」，见 `ProbeOutcome`。
+        Ok(Ok(response)) if response.status().is_success() => ProbeOutcome::Accepted,
+        Ok(Ok(response)) if response.status().is_client_error() => ProbeOutcome::Rejected,
+        // 5xx、网络错误、超时都归到「没问出结论」，见 `ProbeOutcome`。
         _ => ProbeOutcome::Inconclusive,
     }
 }
@@ -687,25 +728,40 @@ async fn probe_codex_transport(
     key: &str,
     model: &str,
 ) -> codex_desktop::CodexTransport {
-    let responses = probe_once(client, origin, key, model, true).await;
+    let (responses, responses_tries) =
+        probe_until_conclusive(client, origin, key, model, true).await;
     let chat = if responses == ProbeOutcome::Rejected {
-        Some(probe_once(client, origin, key, model, false).await)
+        Some(probe_until_conclusive(client, origin, key, model, false).await)
     } else {
         None
     };
-    let transport = transport_from_probes(responses, chat);
-    // 只记常量名与结论，不记模型之外的任何东西；报错正文一个字都不进日志。
+    let chat_outcome = chat.map(|(outcome, _)| outcome);
+    let transport = transport_from_probes(responses, chat_outcome);
+    // 只记常量名、结论与次数，不记模型之外的任何东西；
+    // 报错正文一个字都不进日志。次数要记：看日志的人得能分辨
+    // 「一问就知道」和「问了三遍还是不知道」。
     log::info!(
-        "codex_probe model={model} responses={responses:?} chat={chat:?} transport={}",
+        "codex_probe model={model} responses={responses:?} tries={responses_tries} \
+         chat={chat_outcome:?} chat_tries={} transport={}",
+        chat.map(|(_, tries)| tries).unwrap_or(0),
         transport.credential_value()
     );
+    // 问了三遍仍然没有结论 ⇒ 这个模型停在直连**不是因为它适合直连**，
+    // 而是因为我们不知道。这两件事在凭据里长得一模一样，只有这行日志能分辨。
+    // 用户回头说「这个模型用不了」时，看到这行就知道该让他重新接入一次。
+    if responses == ProbeOutcome::Inconclusive {
+        log::warn!(
+            "codex_probe model={model} result=never_answered tries={responses_tries} \
+             note=left_on_direct_because_unknown_not_because_suitable"
+        );
+    }
     // 两个端点都明确拒绝 = 这个模型对 Codex 根本不可用，桥也救不了
     // （实测有两个就是这样：定价或渠道没配，与协议无关）。
     // **不因此挡住接入** —— 我们这次只发了一个十六 token 的最小请求，
     // 拿它的失败去否决用户的选择，等于用一次猜测替用户做决定，而探测本身
     // 也可能因为请求太小被拒。但这行日志要能一眼看出来：用户回头说
     // 「这个模型在 Codex 里用不了」时，答案已经在日志里了。
-    if responses == ProbeOutcome::Rejected && chat == Some(ProbeOutcome::Rejected) {
+    if responses == ProbeOutcome::Rejected && chat_outcome == Some(ProbeOutcome::Rejected) {
         log::warn!("codex_probe model={model} result=unusable_on_both_endpoints");
     }
     transport
@@ -3100,6 +3156,69 @@ pub async fn manage_tool_connections_v1(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// 只有 `Inconclusive` 才重问，而且问到有结论就停。
+    ///
+    /// 这条守的是这次改动的全部意义：探测结果是**落盘、之后不再探**的，
+    /// 所以接入那一瞬间的一次网抖会让模型永久停在直连。不重问 = 没有第二次机会。
+    ///
+    /// 同时守「问到就停」—— 每一次探测都是一个真实请求，成功那次还会产生用量。
+    /// 已经有结论还接着问，是白花用户的钱。
+    #[tokio::test]
+    async fn an_inconclusive_probe_is_asked_again_but_a_clear_one_is_not() {
+        use std::sync::atomic::{AtomicU8, Ordering};
+
+        // `before` 次 503（归入 Inconclusive），之后 200。
+        async fn stub(before: u8) -> (String, Arc<AtomicU8>) {
+            let seen = Arc::new(AtomicU8::new(0));
+            let counter = seen.clone();
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let origin = format!("http://{}", listener.local_addr().unwrap());
+            let router = axum::Router::new().route(
+                "/v1/responses",
+                axum::routing::post(move || {
+                    let counter = counter.clone();
+                    async move {
+                        let n = counter.fetch_add(1, Ordering::SeqCst);
+                        if n < before {
+                            axum::http::StatusCode::SERVICE_UNAVAILABLE
+                        } else {
+                            axum::http::StatusCode::OK
+                        }
+                    }
+                }),
+            );
+            tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+            (origin, seen)
+        }
+
+        let client = reqwest::Client::builder()
+            .no_proxy()
+            .timeout(Duration::from_secs(5))
+            .build()
+            .unwrap();
+
+        // 一问就有结论：只发一次，不多花一个请求。
+        let (origin, seen) = stub(0).await;
+        let (outcome, tries) = probe_until_conclusive(&client, &origin, "sk-x", "m", true).await;
+        assert_eq!(outcome, ProbeOutcome::Accepted);
+        assert_eq!(tries, 1);
+        assert_eq!(seen.load(Ordering::SeqCst), 1, "有结论了还接着问");
+
+        // 前两次抖动，第三次答上来 —— 正是要救的那种情况。
+        let (origin, seen) = stub(2).await;
+        let (outcome, tries) = probe_until_conclusive(&client, &origin, "sk-x", "m", true).await;
+        assert_eq!(outcome, ProbeOutcome::Accepted, "重问之后应当拿到结论");
+        assert_eq!(tries, 3);
+        assert_eq!(seen.load(Ordering::SeqCst), 3);
+
+        // 一直抖：问满上限就放弃，落回 Inconclusive（而不是当成「被拒绝」）。
+        let (origin, seen) = stub(u8::MAX).await;
+        let (outcome, tries) = probe_until_conclusive(&client, &origin, "sk-x", "m", true).await;
+        assert_eq!(outcome, ProbeOutcome::Inconclusive);
+        assert_eq!(tries, PROBE_ATTEMPTS);
+        assert_eq!(seen.load(Ordering::SeqCst), PROBE_ATTEMPTS);
+    }
 
     /// 探测结论 → 传输方式，**穷举**。
     ///
