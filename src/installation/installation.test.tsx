@@ -186,7 +186,7 @@ describe("ru052 truthful download source", () => {
       ),
     ).toBeNull();
     expect(installationSource("none")).toBe(
-      "优先使用野菜国内加速，不可用时自动改走厂商官网；安装前校验厂商签名。",
+      "优先使用野菜国内加速，不可用时自动改走厂商官网。",
     );
     expect(installationSource("official")).toContain("厂商官网");
     expect(installationSource("mirror")).toContain("野菜国内加速");

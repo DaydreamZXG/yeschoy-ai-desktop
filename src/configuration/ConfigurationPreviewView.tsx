@@ -1948,9 +1948,7 @@ export function ConfigurationPreviewView({
                 )}
                 {/* 「左边的圆点是默认模型」在列表为空时无所指——那时屏幕上
                     根本没有圆点。空态只说下一步做什么就够了。 */}
-                {modelSet.length > 0 && (
-                  <small>{g.favoriteModelsNote}</small>
-                )}
+                {modelSet.length > 0 && <small>{g.favoriteModelsNote}</small>}
               </section>
             )}
 
@@ -2379,14 +2377,20 @@ export function ConfigurationPreviewView({
             「尚未收到该应用经野菜中转的请求」——那是在报告一件还没发生的事，
             而用户此刻要做的是接入，不是确认一个不存在的记录。
             它属于接入成功之后那一级（「首次使用已验证」）。 */}
-        {savedConnection && (
-          <RecentRequest
-            value={savedConnection.lastRequest}
-            toolId={activationToolId}
-            onRefresh={() => void connections?.refresh()}
-            loading={connections?.loading}
-          />
-        )}
+        {/* 判据是「这个应用真的有连接」，不是「连接列表里有它的条目」——
+            后者对每个工具恒为真（未接入时状态是 not_connected），
+            我上一版就是写成了 `savedConnection &&`，等于没有门控。 */}
+        {savedConnection &&
+          ["connected", "changed", "legacy"].includes(
+            savedConnection.state,
+          ) && (
+            <RecentRequest
+              value={savedConnection.lastRequest}
+              toolId={activationToolId}
+              onRefresh={() => void connections?.refresh()}
+              loading={connections?.loading}
+            />
+          )}
         <div className="configuration-actions configuration-secondary-actions">
           <RestoreConnection
             connection={savedConnection}

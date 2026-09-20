@@ -126,16 +126,22 @@ function targets(requestId: string) {
       toolId,
       displayName,
       surface: "本机应用",
-      status: "available",
-      installations: [
-        {
-          installationId: `i${String(i + 1).padStart(16, "0")}`,
-          label: "安装 1 · 系统应用",
-          version,
-          supported: true,
-          recommended: true,
-        },
-      ],
+      // `?s=not_installed` 让所有应用报未安装，用来看安装面板。
+      // 原来 mock 恒报 available，那块 359 行、152 处文案的界面
+      // 在审计页里根本显示不出来。
+      status: scenario === "not_installed" ? "not_found" : "available",
+      installations:
+        scenario === "not_installed"
+          ? []
+          : [
+              {
+                installationId: `i${String(i + 1).padStart(16, "0")}`,
+                label: "安装 1 · 系统应用",
+                version,
+                supported: true,
+                recommended: true,
+              },
+            ],
     })),
   };
 }

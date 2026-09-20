@@ -60,7 +60,10 @@ export function BillingGroupPicker({
     );
   return (
     <fieldset className="billing-group-picker" disabled={disabled}>
-      <legend>
+      {/* 视觉上隐藏：外层卡片的标题渲染的是**同一个表达式**，
+          于是「选择价格方案」（或「计费方式」）会连着出现两次。
+          legend 绑定着 fieldset，对读屏有意义，所以留着但不显示。 */}
+      <legend className="sr-only">
         {groups.length ? c.chooseGroupLegend : c.billingNoChoiceLegend}
       </legend>
       {/* 「同一个模型有不同价格方案」以前无条件渲染，于是在没有分组的模型上，

@@ -74,7 +74,9 @@ export const installationSource = (source: InstallationProgress["source"]) =>
     ? "下载来源：野菜国内加速 · 安装前校验厂商签名"
     : source === "official"
       ? "下载来源：厂商官网 · 安装前校验厂商签名"
-      : "优先使用野菜国内加速，不可用时自动改走厂商官网；安装前校验厂商签名。";
+      : // 「安装前校验厂商签名」在头部徽章「厂商原版 · 安装前验签」里
+        // 已经说过。同一条信任承诺在一屏里说两遍，第二遍不会更可信。
+        "优先使用野菜国内加速，不可用时自动改走厂商官网。";
 
 interface Props {
   tool: ActivationToolId;
@@ -137,7 +139,10 @@ export function InstallationPanel({
                   ? `${name} · 安装进度`
                   : current?.phase === "failed"
                     ? `${name} · 安装未完成`
-                    : `还没有安装 ${name}？`}
+                    : // 第 1 步的卡片刚说过「未在这台电脑找到该应用」。
+                      // 这里再问一遍「还没有安装 X？」，是把同一个事实
+                      // 在 100px 内说两遍；标题该说这块面板要做什么。
+                      `安装 ${name}`}
           </h2>
           <p>
             {other
@@ -321,9 +326,12 @@ export function InstallationPanel({
         <p className="app-install-copy">
           {canConnect
             ? "安装完成后接入当前选择的模型，不会发送收费的测试消息。"
-            : "可以先安装应用，再登录野菜、选择模型并接入。"}{" "}
-          {!current?.jobId && installationSource("none")}
+            : "可以先安装应用，再登录野菜、选择模型并接入。"}
         </p>
+      )}
+      {/* 下载从哪儿来是另一件事，不该和「接下来怎么走」连在同一句里。 */}
+      {!active && !installed && !guided && !current?.jobId && (
+        <p className="app-install-copy">{installationSource("none")}</p>
       )}
       {awaiting && !canConnect && (
         <p className="app-install-copy">
