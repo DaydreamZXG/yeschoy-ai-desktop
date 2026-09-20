@@ -995,10 +995,77 @@
   max-width: 680px;
 }
 
+/* 余额已升为主角、离开这个网格，所以是三列不是四列。 */
 .account-metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-16);
+}
+
+/* 余额 + 去充值。用户来这一页就是看它，看完唯一要做的事就在旁边。 */
+.account-balance-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-24);
+  padding: var(--space-20) var(--space-24);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius-xl);
+  background: var(--accent-soft);
+  margin-bottom: var(--space-16);
+}
+
+.account-balance-figure {
+  flex: 1;
+  min-width: 0;
+}
+
+.account-balance-figure > strong {
+  display: block;
+  font-size: var(--text-4xl);
+  line-height: 1.4;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.8px;
+  margin-top: var(--space-6);
+}
+
+.account-balance-unknown {
+  margin-top: var(--space-8);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+/* 账户身份是上下文，不是内容：一行，不是一张 152px 的卡。 */
+.account-identity-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin-bottom: var(--space-16);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.account-identity-line > svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.account-identity-line > strong {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.account-identity-label,
+.account-identity-observed {
+  font-size: var(--text-xs);
+}
+
+.account-identity-line .account-identity-actions {
+  display: flex;
+  gap: var(--space-12);
+  margin-left: auto;
 }
 
 .account-heading {
@@ -1032,30 +1099,13 @@
 }
 
 .account-state-card,
-.account-identity-card,
-.account-wallet-card {
-  display: flex;
-  align-items: center;
-  gap: var(--space-20);
-  min-height: 152px;
-  padding: var(--space-24) var(--space-28);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-
-.account-state-card h2,
-.account-identity-card h2,
-.account-wallet-card h2 {
+.account-state-card h2 {
   font-size: var(--text-xl);
   font-weight: 600;
   letter-spacing: -0.2px;
 }
 
-.account-state-card p,
-.account-identity-card p,
-.account-wallet-card p {
+.account-state-card p {
   margin-top: var(--space-6);
   color: var(--muted);
   font-size: var(--text-xs);
@@ -4323,17 +4373,16 @@
   .checked-at {
     display: none;
   }
+  /* 三张卡放进两列会剩一个孤儿，窄屏直接摞起来。 */
   .account-metrics {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
-  .account-identity-card,
-  .account-wallet-card {
-    align-items: flex-start;
+  /* 窄屏下身份那一行的操作按钮不再挤在右端，跟着内容换行。 */
+  .account-identity-line .account-identity-actions {
+    margin-left: 0;
+  }
+  .account-balance-hero {
     flex-wrap: wrap;
-  }
-  .account-identity-actions,
-  .account-wallet-card .compact-primary {
-    margin-left: 72px;
   }
 }
 

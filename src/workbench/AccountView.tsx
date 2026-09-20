@@ -9,7 +9,6 @@ import {
   LogOut,
   RefreshCw,
   ShieldCheck,
-  Wallet,
 } from "lucide-react";
 import type { ConfigurationLineId } from "../configuration/preview";
 import { creditUnit, formatMoney } from "../account/finance";
@@ -61,6 +60,10 @@ export function AccountView({
   const pending = projection?.status === "authorization_pending";
   const account = projection?.account;
   const money = signedIn ? projection.money : undefined;
+  // 余额读没读到，决定主角位置显示数字还是显示一句说明。
+  // 判据跟 `formatMoney` 一致（它读不到时返回破折号），这样两边不会打架。
+  const balanceKnown =
+    formatMoney(money?.balanceAmount, money?.currency, locale) !== "—";
   const recharge = useWalletRecharge(openWallet);
   const usageLog =
     projection?.status === "signed_in" ? projection.usageLog : undefined;
@@ -283,41 +286,29 @@ export function AccountView({
         </section>
       ) : signedIn && account ? (
         <>
-          <section className="account-identity-card">
-            <div
-              className={
-                justSignedIn
-                  ? "account-avatar-large is-entering"
-                  : "account-avatar-large"
-              }
-              aria-hidden="true"
-            >
-              <CircleUserRound />
-            </div>
-            <div
-              className={
-                justSignedIn ? "account-identity-name is-entering" : undefined
-              }
-            >
-              <span>{c.signedInAs}</span>
-              <h2>{displayName}</h2>
-              {observed && (
-                <p>
-                  {c.observedAt} {observed}
-                  {staleData ? ` · ${c.usageStale}` : ""}
-                </p>
-              )}
-            </div>
-            <div
-              className={
-                justSignedIn
-                  ? "account-identity-actions is-entering"
-                  : "account-identity-actions"
-              }
-            >
+          {/* 账户身份是**上下文**，不是这一页的内容 —— 这页叫「用量账单」。
+              原来它是一整张卡加两个大按钮，比下面真正的余额还显眼。
+              压成标题下的一行，刷新/退出降为轻按钮。 */}
+          <section
+            className={
+              justSignedIn
+                ? "account-identity-line is-entering"
+                : "account-identity-line"
+            }
+          >
+            <CircleUserRound aria-hidden="true" />
+            <span className="account-identity-label">{c.signedInAs}</span>
+            <strong>{displayName}</strong>
+            {observed && (
+              <span className="account-identity-observed">
+                {c.observedAt} {observed}
+                {staleData ? ` · ${c.usageStale}` : ""}
+              </span>
+            )}
+            <span className="account-identity-actions">
               <button
                 type="button"
-                className="secondary-action"
+                className="text-button"
                 onClick={() => void refresh()}
                 disabled={loading}
               >
@@ -326,14 +317,14 @@ export function AccountView({
               </button>
               <button
                 type="button"
-                className="secondary-action"
+                className="text-button"
                 onClick={() => setLogoutPrompt(true)}
                 disabled={loading}
               >
                 <LogOut aria-hidden="true" />
                 {c.logout}
               </button>
-            </div>
+            </span>
           </section>
 
           {sessionAge && sessionAge !== "fresh" && (
@@ -371,16 +362,38 @@ export function AccountView({
             </div>
           )}
 
-          <section className="account-metrics" aria-label={c.usage}>
-            <article className="summary-card account-balance-card">
+          {/* 用户来这一页就是看余额，而「去充值」是看完之后唯一要做的事——
+              让它们待在一起。原来余额是四张同样大小的卡里的一张，
+              「去充值」在页面最底下另一张卡里。 */}
+          <section className="account-balance-hero" aria-label={c.balance}>
+            <div className="account-balance-figure">
               <span className="summary-label">{c.balance}</span>
-              <strong>
-                {formatMoney(money?.balanceAmount, money?.currency, locale)}
-              </strong>
-              <div className="summary-bottom">
-                {creditUnit(money?.currency)}
-              </div>
-            </article>
+              {balanceKnown ? (
+                <>
+                  <strong>
+                    {formatMoney(money?.balanceAmount, money?.currency, locale)}
+                  </strong>
+                  <div className="summary-bottom">
+                    {creditUnit(money?.currency)}
+                  </div>
+                </>
+              ) : (
+                // 一个破折号加一句「金额暂不可用」占掉几百像素，说的是
+                // 「不知道」。读不到就直说读不到，并给出下一步。
+                <p className="account-balance-unknown">{c.balanceUnknown}</p>
+              )}
+            </div>
+            <button
+              type="button"
+              className="primary-action compact-primary"
+              onClick={() => void recharge()}
+            >
+              {c.rechargeNow}
+              <ArrowUpRight aria-hidden="true" />
+            </button>
+          </section>
+
+          <section className="account-metrics" aria-label={c.usage}>
             <SavingsCard
               savings={projection.savings}
               onDetails={() => {
@@ -551,23 +564,6 @@ export function AccountView({
             </details>
           )}
 
-          <section className="account-wallet-card">
-            <div className="wallet-icon">
-              <Wallet aria-hidden="true" />
-            </div>
-            <div>
-              <h2>{c.accountTitle}</h2>
-              <p>{c.accountBody}</p>
-            </div>
-            <button
-              type="button"
-              className="primary-action compact-primary"
-              onClick={() => void recharge()}
-            >
-              {c.rechargeNow}
-              <ArrowUpRight aria-hidden="true" />
-            </button>
-          </section>
         </>
       ) : (
         <section

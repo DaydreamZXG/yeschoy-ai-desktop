@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>野菜API · 接入页重做样张</title>
+<link rel="stylesheet" href="../index.css" />
+<link rel="stylesheet" href="../tokens.css" />
+<script>document.documentElement.setAttribute("data-theme","dark");document.documentElement.classList.add("dark");</script>
+<style>
+  body{background:var(--bg);color:var(--fg,#e8e6e1);font-family:var(--font-ui,system-ui);margin:0;padding:var(--space-32);}
+  .wrap{max-width:720px;margin:0 auto;}
+  .kick{font-size:var(--text-xs);color:var(--muted);letter-spacing:.04em;}
+  h1{font-size:var(--text-2xl);margin:var(--space-4) 0 var(--space-6);letter-spacing:-0.01em;}
+  .lede{color:var(--muted);font-size:var(--text-sm);margin:0 0 var(--space-8);}
+  .safe{display:inline-block;font-size:var(--text-xs);padding:var(--space-4) var(--space-10);
+    border-radius:var(--radius-full);background:var(--accent-soft);color:var(--accent);border:1px solid var(--accent-line);}
+
+  /* 步骤：编号在外，卡片在内 —— 层级只有一层 */
+  .step{margin-top:var(--space-24);}
+  .shead{display:flex;align-items:center;gap:var(--space-10);margin-bottom:var(--space-10);}
+  .num{width:22px;height:22px;border-radius:var(--radius-full);display:grid;place-items:center;flex:none;
+    font-size:var(--text-xs);font-weight:700;background:var(--accent);color:var(--on-accent);}
+  .num.done{background:var(--success-soft);color:var(--success);}
+  .shead h2{font-size:var(--text-base);font-weight:600;margin:0;}
+  .card{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius-lg);padding:var(--space-16);}
+
+  .appline{display:flex;align-items:center;gap:var(--space-12);}
+  .appline img{width:30px;height:30px;object-fit:contain;flex:none;}
+  .appline .n{font-size:var(--text-base);font-weight:600;}
+  .appline .f{font-size:var(--text-sm);color:var(--muted);margin-top:1px;}
+  .ghost{font:inherit;font-size:var(--text-sm);padding:var(--space-6) var(--space-12);border-radius:var(--radius-md);
+    background:transparent;color:var(--muted);border:1px solid var(--line-strong);cursor:pointer;margin-left:auto;}
+  .ghost:hover{color:var(--fg,#e8e6e1);border-color:var(--muted);}
+
+  /* 一行一个选择，标签左对齐成一列 */
+  .field{display:flex;align-items:flex-start;gap:var(--space-16);padding:var(--space-14) 0;}
+  .field + .field{border-top:1px solid var(--line-soft);}
+  .field > label{width:64px;flex:none;font-size:var(--text-sm);color:var(--muted);padding-top:var(--space-8);}
+  .field .body{flex:1;min-width:0;}
+  select{font:inherit;font-size:var(--text-base);width:100%;padding:var(--space-8) var(--space-12);
+    border-radius:var(--radius-md);background:var(--bg);color:inherit;border:1px solid var(--line-strong);}
+  .hint{font-size:var(--text-xs);color:var(--muted);margin-top:var(--space-6);}
+
+  .plan{display:flex;align-items:center;gap:var(--space-10);padding:var(--space-10) var(--space-12);
+    border:1px solid var(--line-strong);border-radius:var(--radius-md);cursor:pointer;margin-bottom:var(--space-6);}
+  .plan[data-sel="1"]{border-color:var(--accent);background:var(--accent-soft);}
+  .plan .r{width:14px;height:14px;border-radius:50%;border:2px solid var(--muted);flex:none;}
+  .plan[data-sel="1"] .r{border-color:var(--accent);background:var(--accent);box-shadow:inset 0 0 0 3px var(--accent-soft);}
+  .plan .pn{font-size:var(--text-sm);font-weight:500;flex:1;}
+  .plan .pp{font-size:var(--text-base);font-weight:600;font-variant-numeric:tabular-nums;}
+  .save{font-size:var(--text-xs);padding:2px var(--space-8);border-radius:var(--radius-full);
+    background:var(--success-soft);color:var(--success);flex:none;}
+
+  details{margin-top:var(--space-8);}
+  summary{font-size:var(--text-xs);color:var(--muted);cursor:pointer;}
+  details p{font-size:var(--text-xs);color:var(--muted);line-height:1.7;margin:var(--space-8) 0 0;}
+
+  .go{display:flex;align-items:center;gap:var(--space-16);}
+  .go .t{flex:1;font-size:var(--text-sm);color:var(--muted);line-height:1.6;}
+  .cta{font:inherit;font-size:var(--text-base);font-weight:600;padding:var(--space-12) var(--space-24);
+    border-radius:var(--radius-md);background:var(--accent);color:var(--on-accent);border:none;cursor:pointer;flex:none;
+    box-shadow:var(--shadow-glow-md);}
+  .cta:hover{background:var(--accent-hover);}
+
+  .after{margin-top:var(--space-16);font-size:var(--text-sm);color:var(--muted);}
+  .after b{color:var(--fg,#e8e6e1);font-weight:500;}
+
+  .lead2{font-size:var(--text-sm);color:var(--muted);margin:0 0 var(--space-12);}
+  .mlist{border:1px solid var(--line-soft);border-radius:var(--radius-md);overflow:hidden;}
+  .mrow{display:flex;align-items:center;gap:var(--space-12);padding:var(--space-10) var(--space-12);}
+  .mrow + .mrow{border-top:1px solid var(--line-soft);}
+  .mrow[data-def="1"]{background:var(--accent-soft);}
+  .mrow .r{width:14px;height:14px;border-radius:50%;border:2px solid var(--line-strong);flex:none;cursor:pointer;}
+  .mrow[data-def="1"] .r{border-color:var(--accent);background:var(--accent);box-shadow:inset 0 0 0 3px var(--accent-soft);}
+  .mrow .mn{font-size:var(--text-sm);font-weight:600;flex:1;min-width:0;}
+  .mrow .mg{font-size:var(--text-xs);color:var(--muted);flex:none;}
+  .mrow .mg em{font-style:normal;color:var(--success);background:var(--success-soft);
+    padding:1px var(--space-6);border-radius:var(--radius-full);margin-left:var(--space-4);}
+  .mrow .mp{font-size:var(--text-sm);font-variant-numeric:tabular-nums;width:72px;text-align:right;flex:none;}
+  .mrow .mdef{font-size:var(--text-xs);color:var(--accent);width:28px;text-align:right;flex:none;}
+  .mrow .x{width:28px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:var(--text-xs);
+    text-align:right;flex:none;}
+  .mrow .x:hover{color:var(--danger);}
+  .adder{margin-top:var(--space-12);}
+  .adder summary{font-size:var(--text-sm);color:var(--accent);font-weight:500;}
+  .addbox{margin-top:var(--space-10);padding:var(--space-12);border:1px dashed var(--line-strong);
+    border-radius:var(--radius-md);}
+  .arow{display:flex;gap:var(--space-8);align-items:center;}
+  .foot{font-size:var(--text-xs);color:var(--muted);line-height:1.7;margin:var(--space-14) 0 0;}
+  .foot b{color:var(--fg,#e8e6e1);font-weight:500;}
+  .note{margin-top:var(--space-32);padding:var(--space-16);border-radius:var(--radius-lg);
+    background:var(--accent-soft);border:1px solid var(--accent-line);font-size:var(--text-sm);line-height:1.8;}
+  .note b{color:var(--accent);}
+  .metric{display:flex;gap:var(--space-24);margin-top:var(--space-12);padding-top:var(--space-12);
+    border-top:1px solid var(--accent-line);}
+  .metric div{font-size:var(--text-xs);color:var(--muted);}
+  .metric strong{display:block;font-size:var(--text-xl);color:var(--fg,#e8e6e1);font-variant-numeric:tabular-nums;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kick">桌面应用</div>
+  <h1>应用接入</h1>
+  <p class="lede">把 Claude Desktop 接到野菜API。</p>
+  <span class="safe">确认前不会修改任何设置</span>
+
+  <div class="step">
+    <div class="shead"><span class="num done">✓</span><h2>应用</h2></div>
+    <div class="card">
+      <div class="appline">
+        <img src="/src/assets/icons/official-claude.png" alt="">
+        <div>
+          <div class="n">Claude Desktop</div>
+          <div class="f">已找到 · 版本 1.40609.1</div>
+        </div>
+        <button class="ghost">更换</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="shead"><span class="num">2</span><h2>你的模型</h2></div>
+    <div class="card">
+      <p class="lead2">接入后，你可以在 Claude Desktop 里直接切换下面这些模型。</p>
+
+      <div class="mlist">
+        <div class="mrow" data-def="1">
+          <span class="r" title="设为默认"></span>
+          <span class="mn">GLM-5.3</span>
+          <span class="mg">标准方案</span>
+          <span class="mp">¥100.50</span>
+          <span class="mdef">默认</span>
+        </div>
+        <div class="mrow">
+          <span class="r"></span>
+          <span class="mn">DeepSeek V4.1 Flash</span>
+          <span class="mg">国模特价分组 <em>省 30%</em></span>
+          <span class="mp">¥70.35</span>
+          <button class="x" title="移除">✕</button>
+        </div>
+        <div class="mrow">
+          <span class="r"></span>
+          <span class="mn">Claude Sonnet 5</span>
+          <span class="mg">标准方案</span>
+          <span class="mp">¥210.00</span>
+          <button class="x" title="移除">✕</button>
+        </div>
+      </div>
+
+      <details class="adder" open>
+        <summary>＋ 加入模型</summary>
+        <div class="addbox">
+          <div class="arow">
+            <select style="flex:2"><option>选一个模型…</option><option>Kimi K3</option></select>
+            <select style="flex:2"><option>标准方案 · ¥88.00</option><option>国模特价分组 · ¥61.60</option></select>
+            <button class="ghost" style="margin-left:0">加入</button>
+          </div>
+          <div class="hint">账户里有 27 个可用 · <a href="#" style="color:var(--accent)">重新检查</a> ·
+            <a href="#" style="color:var(--accent)">这个价怎么算的</a></div>
+        </div>
+      </details>
+
+      <p class="foot">左边的圆点是<b>默认模型</b>。之后要加模型、改默认或换分组，回来更新一次接入就行。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="shead"><span class="num">3</span><h2>接入</h2></div>
+    <div class="card">
+      <div class="field" style="padding-top:0">
+        <label>线路</label>
+        <div class="body">
+          <select><option>大陆优化</option><option>全球加速</option></select>
+          <div class="hint">只影响连接，不改变计费分组与倍率</div>
+        </div>
+      </div>
+      <div class="go" style="padding-top:var(--space-14);border-top:1px solid var(--line-soft)">
+        <div class="t">把这 <b style="color:var(--fg,#e8e6e1)">3 个模型</b>写进 Claude Desktop 的设置。<br>不会发送收费的测试消息。</div>
+        <button class="cta">一键接入</button>
+      </div>
+      <details><summary>连接详情</summary>
+        <p>端点、专用 Key 与写入的配置项，接入后可在「管理」里随时查看或恢复。</p>
+      </details>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>最重要的一条：把「常用模型」变成第 2 步的主体。</b><br>
+    写进应用的本来就是一个<b>模型列表</b>，每个模型各带计费分组、其中一个是默认 —— 用户之后在
+    Claude Desktop 里能直接切的就是它。而原来的页面把它做反了：上半部分长得像「选一个模型」（单数），
+    真正的产物却是下面那个列表，两者的关系只在一行脚注里交代（「上方的选择尚未加入列表」）。
+    <b>很容易选完模型就以为选好了，其实什么都没加进去。</b><br>
+    现在列表就是主体，下拉框降为「加入」的入口；默认模型是列表左边的圆点，一眼看得见也点得着。<br><br>
+    <b>其余五处：</b><br>
+    1. <b>线路进第 3 步</b> —— 它是连接设置，而第 3 步就是连接。副标题承诺的「应用、线路、模型」三样都在流程里了。<br>
+    3. <b>价格不再是全页最大的字</b> —— 方案名是决策对象，金额跟在后面；便宜的那个直接标「省 30%」，不用自己算。<br>
+    4. <b>四个折叠三角合成一个</b> —— 「这个数怎么算的」，一句话说清它是什么。<br>
+    5. <b>「最近中转记录」搬去接入之后</b> —— 还没接入就说「尚未收到请求」，是在报告一件还没发生的事。<br>
+    6. <b>一个字段一个标签</b> —— 原来「选择模型／想用哪个 AI?／选择模型」在 60px 内说了三遍。<br>
+    7. <b>按钮说清楚要写什么</b> —— 「把这 3 个模型写进 Claude Desktop 的设置」，数字跟着列表走。
+    <div class="metric">
+      <div>页面高度<strong>~1400px → ~700px</strong></div>
+      <div>折叠区<strong>4 → 2</strong></div>
+      <div>步骤外的段落<strong>3 → 0</strong></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -68,6 +68,9 @@ const zh = {
   advancedAction: "查看已安装的工具",
   privacy: "只修改你确认的应用设置",
   configurationBoundary: "随时可以恢复原设置",
+  // 余额读不到时顶替那个破折号。破折号加一句「金额暂不可用」占掉几百像素，
+  // 传达的信息只有「不知道」；这句话至少告诉用户下一步做什么。
+  balanceUnknown: "余额暂时读不到，点上面的「刷新」再试一次。",
   accountTitle: "账户充值",
   accountBody: "查看余额、用量和消费记录。",
   accountStatus: "账户功能暂未开放",

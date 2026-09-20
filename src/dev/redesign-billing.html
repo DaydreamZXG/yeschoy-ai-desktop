@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" /><title>野菜API · 用量账单重做 + 模式表</title>
+<link rel="stylesheet" href="../index.css" /><link rel="stylesheet" href="../tokens.css" />
+<script>document.documentElement.setAttribute("data-theme","dark");document.documentElement.classList.add("dark");</script>
+<style>
+  body{background:var(--bg);color:var(--fg,#e8e6e1);font-family:var(--font-ui,system-ui);margin:0;padding:var(--space-32);}
+  .wrap{max-width:760px;margin:0 auto;}
+  .tabs{display:flex;gap:var(--space-8);margin-bottom:var(--space-28);}
+  .tabs button{font:inherit;font-size:var(--text-sm);padding:var(--space-6) var(--space-14);border-radius:var(--radius-full);
+    border:1px solid var(--line-strong);background:transparent;color:var(--muted);cursor:pointer;}
+  .tabs button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent);border-color:var(--accent);}
+  h1{font-size:var(--text-2xl);margin:0 0 var(--space-4);letter-spacing:-.01em;}
+  .who{font-size:var(--text-sm);color:var(--muted);margin:0 0 var(--space-20);display:flex;align-items:center;gap:var(--space-8);}
+  .who button{font:inherit;font-size:var(--text-xs);color:var(--muted);background:transparent;
+    border:1px solid var(--line-strong);border-radius:var(--radius-full);padding:2px var(--space-10);cursor:pointer;}
+  .who button:hover{color:var(--fg,#e8e6e1);}
+
+  .hero{background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:var(--radius-lg);
+    padding:var(--space-20);display:flex;align-items:center;gap:var(--space-20);}
+  .hero .l{flex:1;}
+  .hero .cap{font-size:var(--text-xs);color:var(--muted);}
+  .hero .amt{font-size:var(--text-4xl);font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1;margin:var(--space-4) 0;}
+  .hero .est{font-size:var(--text-sm);color:var(--muted);}
+  .cta{font:inherit;font-size:var(--text-base);font-weight:600;padding:var(--space-10) var(--space-20);
+    border-radius:var(--radius-md);background:var(--accent);color:var(--on-accent);border:none;cursor:pointer;}
+
+  .stats{display:flex;gap:var(--space-12);margin:var(--space-16) 0 var(--space-28);}
+  .stat{flex:1;background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius-lg);padding:var(--space-14);}
+  .stat .k{font-size:var(--text-xs);color:var(--muted);}
+  .stat .v{font-size:var(--text-xl);font-weight:600;font-variant-numeric:tabular-nums;margin-top:var(--space-4);}
+  .stat .v.save{color:var(--success);}
+  .stat .n{font-size:var(--text-xs);color:var(--muted);margin-top:2px;}
+  .stat .v.empty{font-size:var(--text-sm);font-weight:400;color:var(--muted);}
+
+  h2{font-size:var(--text-base);font-weight:600;margin:0 0 var(--space-4);}
+  .h2n{font-size:var(--text-xs);color:var(--muted);margin:0 0 var(--space-10);}
+  .tbl{border:1px solid var(--line-soft);border-radius:var(--radius-lg);overflow:hidden;}
+  .tr{display:flex;align-items:center;gap:var(--space-12);padding:var(--space-10) var(--space-14);font-size:var(--text-sm);}
+  .tr + .tr{border-top:1px solid var(--line-soft);}
+  .tr img{width:20px;height:20px;object-fit:contain;flex:none;}
+  .tr .a{width:140px;flex:none;font-weight:500;}
+  .tr .m{flex:1;color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .tr .c{width:60px;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;flex:none;}
+  .tr .p{width:72px;text-align:right;font-variant-numeric:tabular-nums;flex:none;}
+  .empty{padding:var(--space-20);text-align:center;font-size:var(--text-sm);color:var(--muted);}
+  details{margin-top:var(--space-16);}
+  summary{font-size:var(--text-sm);color:var(--muted);cursor:pointer;}
+
+  .note{margin-top:var(--space-32);padding:var(--space-16);border-radius:var(--radius-lg);
+    background:var(--accent-soft);border:1px solid var(--accent-line);font-size:var(--text-sm);line-height:1.8;}
+  .note b{color:var(--accent);}
+  .bad{background:var(--danger-soft);border-color:var(--danger);}
+  .bad b{color:var(--danger);}
+
+  /* 模式表 */
+  .rule{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius-lg);
+    padding:var(--space-16);margin-bottom:var(--space-12);}
+  .rule h3{font-size:var(--text-base);margin:0 0 var(--space-6);}
+  .rule p{font-size:var(--text-sm);color:var(--muted);margin:0 0 var(--space-12);line-height:1.7;}
+  .ba{display:flex;gap:var(--space-12);}
+  .ba > div{flex:1;border-radius:var(--radius-md);padding:var(--space-12);font-size:var(--text-xs);line-height:1.7;}
+  .before{background:var(--danger-soft);border:1px solid var(--danger);}
+  .after{background:var(--success-soft);border:1px solid var(--success);}
+  .ba .lb{font-size:10px;letter-spacing:.08em;opacity:.8;margin-bottom:var(--space-6);}
+  .where{font-size:var(--text-xs);color:var(--muted);margin-top:var(--space-10);}
+  .where b{color:var(--fg,#e8e6e1);font-weight:500;}
+  .hidden{display:none;}
+</style></head>
+<body><div class="wrap">
+<div class="tabs">
+  <button id="t1" aria-pressed="true">用量账单 · 重做后</button>
+  <button id="t2" aria-pressed="false">用量账单 · 现在</button>
+  <button id="t3" aria-pressed="false">模式表（其余屏照此套）</button>
+</div>
+
+<div id="v1">
+  <h1>用量账单</h1>
+  <p class="who">野菜测试用户 · 更新于 01:00 <button>刷新</button> <button>退出登录</button></p>
+
+  <div class="hero">
+    <div class="l">
+      <div class="cap">可用额度</div>
+      <div class="amt">¥128.40</div>
+      <div class="est">按最近 30 天的用量，大约还能用 12 天</div>
+    </div>
+    <button class="cta">去充值</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="k">累计消费</div><div class="v">¥71.60</div><div class="n">开户至今</div></div>
+    <div class="stat"><div class="k">累计请求</div><div class="v">42</div><div class="n">次</div></div>
+    <div class="stat"><div class="k">比官网省下</div><div class="v save">¥103.20</div><div class="n">约 59%</div></div>
+  </div>
+
+  <h2>按工具与模型</h2>
+  <p class="h2n">最近 30 天</p>
+  <div class="tbl">
+    <div class="tr"><img src="/src/assets/icons/official-claude.png"><span class="a">Claude Desktop</span>
+      <span class="m">DeepSeek V4.1 Flash</span><span class="c">28 次</span><span class="p">¥42.10</span></div>
+    <div class="tr"><img src="/src/assets/icons/official-claude.png"><span class="a">Claude Code</span>
+      <span class="m">Claude Sonnet 5</span><span class="c">14 次</span><span class="p">¥29.50</span></div>
+  </div>
+
+  <details><summary>省下的钱怎么算的</summary></details>
+  <details><summary>登录与密钥安全</summary></details>
+
+  <div class="note">
+    <b>六处改动：</b><br>
+    1. <b>可用额度成为主角</b> —— 用户来这一页就是看它，「去充值」跟它待在一起。原来它是四张卡里的一张，和「累计消费」一样大。<br>
+    2. <b>账户身份降为一行副标题</b> —— 它是上下文，不是内容。原来占了一整张卡、还配两个按钮。<br>
+    3. <b>四张卡变三个数，没数据就说人话</b> —— 原来三张卡写「—」加一句「金额暂不可用」，占了约 400px 说了一句「不知道」。<br>
+    4. <b>用量明细才是账单页的正文</b> —— 原来它是最底下一个灰盒子，写着「用量明细暂时没有返回」。<br>
+    5. <b>删掉线路选择器</b> —— 它在接入页已经有一份，而且线路跟账单没关系。<b>不是搬走，是删重复。</b><br>
+    6. <b>删掉「账户充值」卡</b> —— 它那句「查看余额、用量和消费记录。」和页面副标题<b>一字不差</b>，而按钮和上面的「去充值」是同一个。
+  </div>
+</div>
+
+<div id="v2" class="hidden">
+  <h1>用量账单</h1>
+  <p class="who">查看余额、用量和消费记录。　　　　　　［大陆优化 ▾］</p>
+  <p class="who">线路只影响连接体验，不改变计费分组和倍率，也无需重新登录。</p>
+  <div class="tbl" style="margin-bottom:var(--space-12)">
+    <div class="tr" style="padding:var(--space-16)"><span class="a">当前账户<br><b style="font-size:var(--text-lg)">野菜测试用户</b><br>
+      <span style="color:var(--muted);font-size:var(--text-xs)">更新于 01:00 · 可能不是最新</span></span>
+      <span class="m"></span><span style="color:var(--muted)">［刷新数据］［退出登录］</span></div>
+  </div>
+  <div class="stats"><div class="stat"><div class="k">可用额度</div><div class="v empty">—</div><div class="n">金额暂不可用</div></div>
+    <div class="stat"><div class="k">近期费用对比</div><div class="v empty">官网 — · 野菜 —</div><div class="n">暂时无法估算</div></div></div>
+  <div class="stats"><div class="stat"><div class="k">累计消费</div><div class="v empty">—</div><div class="n">金额暂不可用</div></div>
+    <div class="stat"><div class="k">累计请求</div><div class="v">42</div><div class="n">次请求</div></div></div>
+  <div class="empty" style="border:1px solid var(--line-soft);border-radius:var(--radius-lg)">用量明细暂时没有返回，刷新账户后可重试。</div>
+  <div class="tbl" style="margin-top:var(--space-12)"><div class="tr" style="padding:var(--space-16)">
+    <span class="a">账户充值<br><span style="color:var(--muted);font-size:var(--text-xs)">查看余额、用量和消费记录。</span></span>
+    <span class="m"></span><span style="color:var(--accent)">［去充值］</span></div></div>
+  <div class="note bad">
+    <b>同一页上：</b>三张卡写「—」、一句副标题出现两次（页头 + 「账户充值」卡）、
+    线路选择器和接入页重复、而真正的账单内容（按工具与模型）是最底下一个空灰盒。
+  </div>
+</div>
+
+<div id="v3" class="hidden">
+  <h1>五条规则</h1>
+  <p class="who">二级页面（模型与价格 / 连接诊断 / 已安装的工具 / 安装面板 / 退出助手）按这五条套，不必每个都画样张。</p>
+
+  <div class="rule"><h3>1. 状态是结构，不是一行灰字</h3>
+    <p>用户在问「哪些好了、哪些没好」，那就让它决定页面的分组方式。</p>
+    <div class="ba"><div class="before"><div class="lb">现在</div>每张卡中间一行「状态待确认」，六张一样</div>
+      <div class="after"><div class="lb">重做后</div>按状态分组，徽章固定在右侧，一列扫完</div></div>
+    <p class="where">用在：<b>我的应用</b>、<b>连接诊断</b>、<b>已安装的工具</b></p></div>
+
+  <div class="rule"><h3>2. 一行只放这个状态下有用的那一个事实</h3>
+    <p>同一段说明重复六遍，等于什么都没说。不同状态该说不同的话。</p>
+    <div class="ba"><div class="before"><div class="lb">现在</div>「尚未确认接入设置，检查成功后再调整；已有设置不会因此删除。」× 6</div>
+      <div class="after"><div class="lb">重做后</div>已接入→用哪个模型、多久前用过；未接入→接了能得到什么</div></div>
+    <p class="where">用在：<b>全部列表型界面</b></p></div>
+
+  <div class="rule"><h3>3. 主操作是真按钮</h3>
+    <p>这个产品唯一的目的是「接入」。它不该是卡片右下角的灰色文字链。</p>
+    <div class="ba"><div class="before"><div class="lb">现在</div>「检查并修复 →」灰字，和旁边的说明一个颜色</div>
+      <div class="after"><div class="lb">重做后</div>实心按钮；次要动作降为描边或纯文字</div></div>
+    <p class="where">用在：<b>全部</b></p></div>
+
+  <div class="rule"><h3>4. 没数据时说人话，不画破折号</h3>
+    <p>「—」加一句「暂不可用」占掉几百像素，传达的信息是「不知道」。</p>
+    <div class="ba"><div class="before"><div class="lb">现在</div>三张卡「—」／「用量明细暂时没有返回」</div>
+      <div class="after"><div class="lb">重做后</div>「还没有用量 · 用过之后这里会有」，或者干脆不占位</div></div>
+    <p class="where">用在：<b>用量账单</b>、<b>模型与价格</b>、<b>连接诊断</b></p></div>
+
+  <div class="rule"><h3>5. 一个意思只说一遍</h3>
+    <p>同义的标题、副标题、字段标签叠在 60px 里，读者会以为它们是三件事。</p>
+    <div class="ba"><div class="before"><div class="lb">现在</div>「选择模型」＋「想用哪个 AI?」＋「选择模型」；账单页副标题出现两次</div>
+      <div class="after"><div class="lb">重做后</div>一个字段一个标签；重复的整句删掉</div></div>
+    <p class="where">用在：<b>全部</b>，尤其 <b>接入页</b>、<b>安装面板</b></p></div>
+
+  <div class="note"><b>为什么二级页面不逐个画样张：</b>它们的问题都是上面五条的实例，
+  而且文案大多已经在 i18n / copy 模块里（<b>AccountView 635 行只有 12 处内联中文、
+  DiagnosticsView 420 行 12 处、SettingsView 125 行 4 处</b>）。
+  真正需要单独设计的是<b>安装面板</b>（359 行 / 152 处中文）和<b>退出助手</b>（410 行 / 89 处）——
+  那两个我会单出样张。</div>
+</div>
+</div>
+<script>
+ const V=[v1,v2,v3],T=[t1,t2,t3];
+ T.forEach((b,i)=>b.onclick=()=>{V.forEach((v,j)=>v.classList.toggle("hidden",i!==j));T.forEach((x,j)=>x.ariaPressed=String(i===j));});
+</script>
+</body></html>
