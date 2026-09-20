@@ -27,6 +27,7 @@ mod desktop_app_discovery_core;
 mod logging;
 mod model_catalog;
 mod open_connection;
+mod provider;
 mod proxy;
 mod update_channel;
 // Client-first OAuth preparation. Deliberately dormant until the server and

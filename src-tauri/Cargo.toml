@@ -21,6 +21,9 @@ custom-protocol = ["tauri/custom-protocol"]
 tauri-build = { version = "2.4.0", features = [] }
 
 [dependencies]
+# vendored 的 proxy/providers/streaming.rs 用 async_stream::stream!。
+# 0.3.6 在本地 registry 缓存里，加它只改 lock、不产生下载。
+async-stream = "0.3"
 aes-gcm = "0.10.3"
 axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio"] }
 base64 = "0.22"
@@ -48,6 +51,8 @@ tauri-plugin-updater = { version = "=2.9.0", default-features = false, features 
 tokio = { version = "1", features = ["io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }
 toml_edit = { version = "0.24", features = ["serde"] }
 unicode-normalization = "=0.1.25"
+# vendored 的 proxy/usage/parser.rs 需要；1.22.0 已在 lock 与本地缓存里。
+uuid = { version = "1.11", features = ["v4"] }
 zip = { version = "=8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 
 [target.'cfg(windows)'.dependencies]

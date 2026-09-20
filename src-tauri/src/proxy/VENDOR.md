@@ -37,11 +37,30 @@ done
 | `tool_media.rs` | `496ce69210d50a689baff3b88daeb45cd015bd35b8a4e24e97a324c4a0389706` |
 | `providers/codex_chat_common.rs` | `41412157670fedab83a01461a9fc43acfb9a89fbfd1f9ef786929fa3343da0c8` |
 | `providers/codex_responses_sse.rs` | `2e4f27b66b51c60244e7a95270bae1ef884433d04bab5684f98fc505302d1057` |
+| `providers/streaming.rs` | `f8aac207950e415da8f14c31a0bbc0834bce6819d8075dc5faa06d8296a041b2` |
+| `providers/transform.rs` | `0058cc7988cc075d1da516f31b674563d17e4930f1d12b453bbf633b71f39dc8` |
+| `usage/parser.rs` | `8fe0554e871b223e4c9142d8e1c7060c2ebc5c9b7fea1d0bac26425b8dcb4a8d` |
 
 ## 依赖
 
-`thiserror = "2.0"` 是为这批文件加的直接依赖。2.0.18 本来就在
-`Cargo.lock` 与本地 registry 缓存里，因此不产生新下载，`--offline` 出包不受影响。
+vendored 的文件带来了四个直接依赖。**四个的对应版本都已在本地 registry 缓存里**，
+所以不产生新下载，`--offline` 出包不受影响：
+
+| crate | 谁需要 | 备注 |
+| --- | --- | --- |
+| `thiserror = "2.0"` | `error.rs` | 2.0.18 本来就在 lock 里 |
+| `bytes = "1.5"` | `providers/codex_responses_sse.rs` | 1.11.1 本来就在 lock 里 |
+| `async-stream = "0.3"` | `providers/streaming.rs` | 0.3.6 不在 lock、但在缓存里 |
+| `uuid = { "1.11", features = ["v4"] }` | `usage/parser.rs` | 1.22.0 本来就在 lock 里 |
+
+**再 vendor 新文件时预期还会冒出依赖**。判断标准：先查
+`~/.cargo/registry/cache/` 有没有，有就只改 lock、不动网络。
+
+## 刻意没取的上游文件
+
+- `proxy/usage/calculator.rs`、`proxy/usage/logger.rs` —— 成本计算与
+  **把用量写进 cc-switch 自己的存储**。野菜的用量走服务端账单，不需要，
+  也不该让它往别处写。`usage/mod.rs` 因此是我们写的子集版。
 
 ## 与 `cargo fmt` 的关系
 

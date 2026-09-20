@@ -23,6 +23,8 @@ pub(crate) mod providers;
 pub(crate) mod sse;
 #[allow(dead_code)]
 pub(crate) mod tool_media;
+#[allow(dead_code)]
+pub(crate) mod usage;
 
 #[cfg(test)]
 mod tests {
@@ -61,6 +63,21 @@ mod tests {
             "providers/codex_responses_sse.rs",
             include_str!("providers/codex_responses_sse.rs"),
             "2e4f27b66b51c60244e7a95270bae1ef884433d04bab5684f98fc505302d1057",
+        ),
+        (
+            "providers/streaming.rs",
+            include_str!("providers/streaming.rs"),
+            "f8aac207950e415da8f14c31a0bbc0834bce6819d8075dc5faa06d8296a041b2",
+        ),
+        (
+            "providers/transform.rs",
+            include_str!("providers/transform.rs"),
+            "0058cc7988cc075d1da516f31b674563d17e4930f1d12b453bbf633b71f39dc8",
+        ),
+        (
+            "usage/parser.rs",
+            include_str!("usage/parser.rs"),
+            "8fe0554e871b223e4c9142d8e1c7060c2ebc5c9b7fea1d0bac26425b8dcb4a8d",
         ),
     ];
 
