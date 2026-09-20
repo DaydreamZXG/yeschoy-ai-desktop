@@ -12,9 +12,6 @@
 use serde::{Deserialize, Serialize};
 
 /// Codex Responses -> Chat Completions 的 reasoning 能力描述。
-// 目前还没有构造点：用它的 `providers/transform_codex_chat.rs` 尚未 vendored。
-// 那个文件搬进来之后，这条 allow 应当去掉 —— 届时 clippy 会自己提醒。
-#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
 pub struct CodexChatReasoningConfig {
     #[serde(rename = "supportsThinking", skip_serializing_if = "Option::is_none")]

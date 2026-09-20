@@ -79,6 +79,21 @@ mod tests {
             include_str!("usage/parser.rs"),
             "8fe0554e871b223e4c9142d8e1c7060c2ebc5c9b7fea1d0bac26425b8dcb4a8d",
         ),
+        (
+            "providers/codex_chat_history.rs",
+            include_str!("providers/codex_chat_history.rs"),
+            "535bf8654e96b25fa4d16756636ad43aa1186a7e414763b1de3006314b13c06f",
+        ),
+        (
+            "providers/streaming_codex_chat.rs",
+            include_str!("providers/streaming_codex_chat.rs"),
+            "b32a4e41811db3df5f99e02de5569bcb1676fdd3ef857754deb53c3e456ddfb9",
+        ),
+        (
+            "providers/transform_codex_chat.rs",
+            include_str!("providers/transform_codex_chat.rs"),
+            "b6f26645059887fda09d4190546117f4908b06cfb630447aa065e67ebf9b5f16",
+        ),
     ];
 
     /// vendored 文件必须与上游逐字节相同。

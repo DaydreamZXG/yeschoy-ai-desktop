@@ -40,6 +40,9 @@ done
 | `providers/streaming.rs` | `f8aac207950e415da8f14c31a0bbc0834bce6819d8075dc5faa06d8296a041b2` |
 | `providers/transform.rs` | `0058cc7988cc075d1da516f31b674563d17e4930f1d12b453bbf633b71f39dc8` |
 | `usage/parser.rs` | `8fe0554e871b223e4c9142d8e1c7060c2ebc5c9b7fea1d0bac26425b8dcb4a8d` |
+| `providers/codex_chat_history.rs` | `535bf8654e96b25fa4d16756636ad43aa1186a7e414763b1de3006314b13c06f` |
+| `providers/streaming_codex_chat.rs` | `b32a4e41811db3df5f99e02de5569bcb1676fdd3ef857754deb53c3e456ddfb9` |
+| `providers/transform_codex_chat.rs` | `b6f26645059887fda09d4190546117f4908b06cfb630447aa065e67ebf9b5f16` |
 
 ## 依赖
 
@@ -61,6 +64,15 @@ vendored 的文件带来了四个直接依赖。**四个的对应版本都已在
 - `proxy/usage/calculator.rs`、`proxy/usage/logger.rs` —— 成本计算与
   **把用量写进 cc-switch 自己的存储**。野菜的用量走服务端账单，不需要，
   也不该让它往别处写。`usage/mod.rs` 因此是我们写的子集版。
+
+## 与 clippy 的关系
+
+我们的 clippy 可能比上游 CI 用的那版严，于是 vendored 文件会挑出 lint
+（已遇到：`transform_codex_chat.rs` 里的 `clippy::op_ref`）。
+
+**一律在 `mod.rs` 的模块声明上 `#[allow(...)]`，绝不改文件。** 改一个 lint
+看着无害，但它会让下次 `cp` 同步覆盖掉你的修改、或者制造一个假冲突 ——
+本地分叉就是这么一行一行长出来的。
 
 ## 与 `cargo fmt` 的关系
 
