@@ -378,7 +378,8 @@
   margin: 0 0 var(--space-18);
 }
 
-.appearance-picker {
+.appearance-picker,
+.language-picker {
   display: flex;
   gap: var(--space-4);
   padding: var(--space-4);
@@ -387,7 +388,8 @@
   border-radius: var(--radius-md);
 }
 
-.appearance-picker button {
+.appearance-picker button,
+.language-picker button {
   flex: 1;
   min-width: 0;
   min-height: 29px;
@@ -397,12 +399,14 @@
   color: var(--muted);
 }
 
-.appearance-picker button svg {
+.appearance-picker button svg,
+.language-picker button svg {
   width: 16px;
   height: 16px;
 }
 
-.appearance-picker button[aria-pressed="true"] {
+.appearance-picker button[aria-pressed="true"],
+.language-picker button[aria-pressed="true"] {
   background: var(--surface);
   color: var(--accent);
   box-shadow: var(--shadow-pressed);
@@ -2502,7 +2506,8 @@
 }
 
 .connection-selection-flow {
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.2fr) auto minmax(0, 1.2fr)
+  grid-template-columns:
+    minmax(0, 1fr) auto minmax(0, 1.2fr) auto minmax(0, 1.2fr)
     auto minmax(0, 1fr);
   grid-column: 1 / -1;
   grid-row: 2;
@@ -2571,7 +2576,9 @@
 /* 选择变了还没保存时，「打开使用」会用旧配置打开应用 —— 它不能再是视觉
    上最重的那个。主次交给 .has-unsaved-selection 翻转，DOM 顺序不动，
    免得读屏顺序跟着变。 */
-.connection-action-deck.has-unsaved-selection .open-connection-control > button:first-child {
+.connection-action-deck.has-unsaved-selection
+  .open-connection-control
+  > button:first-child {
   order: 2;
   background: var(--surface);
   border-color: var(--line);
@@ -2579,7 +2586,9 @@
   box-shadow: none;
 }
 
-.connection-action-deck.has-unsaved-selection .open-connection-control > button:first-child:hover:not(:disabled) {
+.connection-action-deck.has-unsaved-selection
+  .open-connection-control
+  > button:first-child:hover:not(:disabled) {
   border-color: var(--accent-line);
   background: var(--accent-soft);
   color: var(--accent);
@@ -3771,26 +3780,31 @@
   font-variant-numeric: tabular-nums;
 }
 
-.settings-appearance {
+.settings-appearance,
+.settings-language {
   margin-top: var(--space-24);
 }
 
-.settings-appearance h2 {
+.settings-appearance h2,
+.settings-language h2 {
   font-size: var(--text-sm);
   margin-bottom: var(--space-10);
 }
 
-.settings-appearance p {
+.settings-appearance p,
+.settings-language p {
   font-size: var(--text-xs);
   color: var(--muted);
   margin-top: var(--space-10);
 }
 
-.settings-appearance .appearance-picker {
+.settings-appearance .appearance-picker,
+.settings-language .language-picker {
   max-width: 360px;
 }
 
-.settings-appearance .appearance-picker button {
+.settings-appearance .appearance-picker button,
+.settings-language .language-picker button {
   flex-wrap: wrap;
 }
 
@@ -4337,7 +4351,8 @@
   .settings-hero {
     max-width: none;
   }
-  .settings-appearance .appearance-picker {
+  .settings-appearance .appearance-picker,
+  .settings-language .language-picker {
     max-width: 400px;
   }
 }

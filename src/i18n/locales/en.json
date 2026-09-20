@@ -257,7 +257,7 @@
     "versionLabel": "Version",
     "candidateStage": "Desktop app",
     "languageTitle": "Interface language",
-    "languageNote": "The preference stays on this computer and is not synchronized to an account.",
+    "languageNote": "The language is saved on this computer only, not to your account.",
     "securityEyebrow": "Your data",
     "securityTitle": "Privacy & security",
     "localPolicy": "Current settings",

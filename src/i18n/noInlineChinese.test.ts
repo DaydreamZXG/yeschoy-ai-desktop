@@ -32,6 +32,9 @@ const ALLOWED: Record<string, string> = {
     "线路 displayName 属于 IPC 形状；界面读的是 yeschoyConfiguration.lines。",
   "diagnostics/contract.ts":
     "同上，而且 displayName 的类型就是那两个中文字面量的联合，用来校验原生侧载荷。",
+  "i18n/language.ts":
+    "语言自称（endonym）。切换器要给看不懂当前语言的人用，所以「中文」在英文界面上 " +
+    "也必须是「中文」—— 这不是漏译，是反过来：这两个字符串永远不翻译。",
   "dev/mockIpc.ts": "开发期 IPC 桩的夹具数据，不进生产构建。",
 };
 
@@ -48,7 +51,7 @@ describe("界面里不许再出现内联中文", () => {
   it("每个非测试的 .ts/.tsx 都不含注释之外的中文", () => {
     const offenders = sources(SRC)
       .map((file) => ({
-        file: relative(SRC, file).replaceAll("\\", "/"),
+        file: relative(SRC, file).split("\\").join("/"),
         lines: stripComments(readFileSync(file, "utf8"))
           .split("\n")
           .map((text, index) => ({ line: index + 1, text: text.trim() }))

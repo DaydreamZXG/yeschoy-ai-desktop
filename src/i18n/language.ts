@@ -11,6 +11,21 @@ export const LANGUAGE_KEY = "yeschoy-language";
 export const SUPPORTED_LANGUAGES = ["zh", "en"] as const;
 export type Language = (typeof SUPPORTED_LANGUAGES)[number];
 
+/**
+ * 各语言自己的名字（endonym）。**这些永远不翻译。**
+ *
+ * 切换器要给「被困在一门看不懂的语言里」的人用 —— 那时候写「Chinese」帮不上忙，
+ * 他要找的是「中文」这三个字。所以两个按钮在任何界面语言下都长一样。
+ *
+ * 也因此它们不放进语言文件：那里的每个键都是「同一句话的不同语言版本」，
+ * 而这两个恰恰相反。放进去还会让「英文里没有漏译的中文」那条守卫红 ——
+ * 它红得有道理，只是这里不是漏译。
+ */
+export const LANGUAGE_NAME: Record<Language, string> = {
+  zh: "中文",
+  en: "English",
+};
+
 /** 各语言的 `<html lang>`。读屏与断词都看它。 */
 const HTML_LANG: Record<Language, string> = {
   zh: "zh-CN",
