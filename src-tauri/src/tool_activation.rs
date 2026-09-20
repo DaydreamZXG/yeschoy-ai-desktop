@@ -519,8 +519,196 @@ fn claude_transport(pricing: &Value, model_id: &str) -> Option<ClaudeTransport> 
 }
 
 fn codex_transport(pricing: &Value, model_id: &str) -> Option<codex_desktop::CodexTransport> {
+    // 接入时真探一次才知道（见 `probe_codex_transport`）。这里给的是保守
+    // 起点：直连，也就是今天的行为。探测拿不到结论时就停在这个值上。
     let _ = (pricing, model_id);
     Some(codex_desktop::CodexTransport::DirectResponses)
+}
+
+/// 一次探测请求的结论。
+///
+/// 分三档而不是「成/败」两档，是因为**只有中间那档才该改变路由**：
+/// 网络抖动、超时、5xx 说明的是「这次没问到」，不是「这个协议不行」。
+/// 拿它们去翻转传输方式，用户会在网不好的时候被永久切到桥上。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ProbeOutcome {
+    /// 端点受理了这个模型。
+    Accepted,
+    /// 端点明确拒绝（4xx）—— 路由不认、渠道没配、协议没实现。
+    Rejected,
+    /// 没问出结论：超时、网络错误、5xx。
+    Inconclusive,
+}
+
+/// 由两次探测的结论决定这个模型怎么走。
+///
+/// 抽成纯函数是因为判定规则比网络那层重要得多，而且必须能不联网测。
+///
+/// 规则只有一条能翻转路由：**Responses 被明确拒绝、而 Chat 明确可用**。
+/// 其余一律停在直连 —— 也就是今天的行为。方向是有意选的：
+///
+/// - 错判成桥，代价是把一个本来原生说 Responses 的模型转一圈，
+///   它真的 `encrypted_content` 会被我们伪造的令牌换掉，**是主动降级**。
+/// - 错判成直连，代价是这个模型维持现状（本来就不能用），**不造成回退**。
+///
+/// 两种错不对称，所以宁可漏判。
+fn transport_from_probes(
+    responses: ProbeOutcome,
+    chat: Option<ProbeOutcome>,
+) -> codex_desktop::CodexTransport {
+    if responses == ProbeOutcome::Rejected && chat == Some(ProbeOutcome::Accepted) {
+        codex_desktop::CodexTransport::ChatBridge
+    } else {
+        codex_desktop::CodexTransport::DirectResponses
+    }
+}
+
+/// 探测用的最小请求体。
+///
+/// `max_output_tokens` 取 16：Responses API 的下限就是它（上游 cc-switch
+/// 有一条 `clamp sub-floor max_tokens to the Responses API minimum` 的修复），
+/// 再小会被当成参数错误而不是路由错误，把探测本身变成噪音。
+///
+/// **这次探测会真的产生一点点用量。** 实测那几种失败（`unknown provider
+/// for model gi/…`、`分组 default 下无可用渠道`）都发生在路由阶段、还没到
+/// 上游，不计费；只有成功的那次会生成十几个 token。每个模型至多一到两次，
+/// 只在接入时发生。
+fn probe_body(model: &str, responses: bool) -> Value {
+    if responses {
+        json!({
+            "model": model,
+            "input": "hi",
+            "max_output_tokens": 16,
+            "stream": false,
+        })
+    } else {
+        json!({
+            "model": model,
+            "messages": [{"role": "user", "content": "hi"}],
+            "max_tokens": 16,
+            "stream": false,
+        })
+    }
+}
+
+async fn probe_once(
+    client: &reqwest::Client,
+    origin: &str,
+    key: &str,
+    model: &str,
+    responses: bool,
+) -> ProbeOutcome {
+    let path = if responses {
+        "/v1/responses"
+    } else {
+        "/v1/chat/completions"
+    };
+    let url = format!("{}{path}", origin.trim_end_matches('/'));
+    let sent = client
+        .post(url)
+        .bearer_auth(key)
+        .json(&probe_body(model, responses))
+        .send()
+        .await;
+    match sent {
+        Ok(response) if response.status().is_success() => ProbeOutcome::Accepted,
+        Ok(response) if response.status().is_client_error() => ProbeOutcome::Rejected,
+        // 5xx 与网络错误都归到「没问出结论」，见 `ProbeOutcome`。
+        _ => ProbeOutcome::Inconclusive,
+    }
+}
+
+/// 把探测结果写回这一批模型的传输方式。
+///
+/// 只对 Codex 做：Claude 走的是中转原生支持的 Anthropic 协议，没有这个问题。
+///
+/// 探测失败不让接入失败 —— 探不出来就停在直连，也就是今天的行为。
+/// 为了一次「问不出结论」而挡住用户接入，是拿一个可恢复的未知换一个确定的
+/// 失败，不划算。
+async fn apply_codex_probes(
+    origin: &str,
+    bindings: &[ModelBinding],
+    leases: &[(String, TokenLease)],
+    transports: &mut [Option<ModelTransport>],
+) {
+    let Ok(client) = crate::account_v2::shared_http_client() else {
+        return;
+    };
+    // 带着下标探、按下标写回。
+    //
+    // 第一版是「筛出要探的 → join_all → 再遍历一遍按同样的条件写回」，
+    // 那样两处条件必须永远一致：筛选里多一个「有 lease」的判断，
+    // 回写里没有，某个 binding 没 lease 时结果就会整体错位，
+    // **探测结论被安到别的模型头上**。今天每个 binding 都有 lease，
+    // 但那是另一个函数的不变量。按下标配对，这类错误就不可能发生。
+    let probes = bindings
+        .iter()
+        .enumerate()
+        .filter(|(index, _)| {
+            // 只探本来判成直连的。以后若有别的来源已经判成桥，不覆盖它。
+            matches!(
+                transports.get(*index),
+                Some(Some(ModelTransport::Codex(
+                    codex_desktop::CodexTransport::DirectResponses
+                )))
+            )
+        })
+        .filter_map(|(index, binding)| {
+            let lease = leases
+                .iter()
+                .find(|(group, _)| group == &binding.billing_group)?;
+            Some(async move {
+                (
+                    index,
+                    probe_codex_transport(client, origin, &lease.1.key, &binding.model_id).await,
+                )
+            })
+        });
+    // 并发探：一次接入可能绑了十几个模型，串行会把接入时间拖成十几倍。
+    for (index, probed) in futures::future::join_all(probes).await {
+        if let Some(slot) = transports.get_mut(index) {
+            *slot = Some(ModelTransport::Codex(probed));
+        }
+    }
+}
+
+/// 接入时对一个模型探一次：中转的 `/v1/responses` 到底能不能用。
+///
+/// **为什么必须探，不能查元数据**：`supported_endpoint_types` 在中转的
+/// `relay/` 下零引用，是展示元数据；实测 `/api/pricing` 的 27 个模型里
+/// 没有任何一个带 `openai-response` —— 拿它当信号会把 27 个全灰掉。
+/// 这个字段已经判错过三次，每次都是同一个方向：把不知道的当成不行。
+///
+/// Chat 那一探**只在 Responses 被明确拒绝时才发**，所以能用的模型
+/// 只花一次请求。
+async fn probe_codex_transport(
+    client: &reqwest::Client,
+    origin: &str,
+    key: &str,
+    model: &str,
+) -> codex_desktop::CodexTransport {
+    let responses = probe_once(client, origin, key, model, true).await;
+    let chat = if responses == ProbeOutcome::Rejected {
+        Some(probe_once(client, origin, key, model, false).await)
+    } else {
+        None
+    };
+    let transport = transport_from_probes(responses, chat);
+    // 只记常量名与结论，不记模型之外的任何东西；报错正文一个字都不进日志。
+    log::info!(
+        "codex_probe model={model} responses={responses:?} chat={chat:?} transport={}",
+        transport.credential_value()
+    );
+    // 两个端点都明确拒绝 = 这个模型对 Codex 根本不可用，桥也救不了
+    // （实测有两个就是这样：定价或渠道没配，与协议无关）。
+    // **不因此挡住接入** —— 我们这次只发了一个十六 token 的最小请求，
+    // 拿它的失败去否决用户的选择，等于用一次猜测替用户做决定，而探测本身
+    // 也可能因为请求太小被拒。但这行日志要能一眼看出来：用户回头说
+    // 「这个模型在 Codex 里用不了」时，答案已经在日志里了。
+    if responses == ProbeOutcome::Rejected && chat == Some(ProbeOutcome::Rejected) {
+        log::warn!("codex_probe model={model} result=unusable_on_both_endpoints");
+    }
+    transport
 }
 
 #[cfg(test)]
@@ -1851,7 +2039,7 @@ pub async fn configure_desktop_tool_v2(
         return Ok(cancelled());
     }
     emit_activation_progress(&app, &request, "checking_models", 3);
-    let transports = match permit
+    let mut transports = match permit
         .cancel_safe(validate_models(
             &origin,
             &access_token,
@@ -1930,6 +2118,28 @@ pub async fn configure_desktop_tool_v2(
         } else {
             ActivationFailure::ConfigurationFailed("account_changed").projection(&request)
         });
+    }
+    if request.tool_id == "codex_desktop" {
+        // 接入时探一次真实请求，把结论落进凭据 —— 桥之后按模型读它。
+        // 放在这里是因为要用 lease 铸出来的受限 key：`/v1/*` 不收账户令牌，
+        // 而 lease 到上一步才存在。
+        //
+        // 不另发进度事件：这一步用的就是刚铸出来的 key，本来就属于
+        // `securing_access`（上一条已经发过）。为它复用 `checking_models`
+        // 会让界面从「获取访问权限」倒退回「检查模型」，看着像出错了。
+        if permit
+            .cancel_safe(apply_codex_probes(
+                &origin,
+                &bindings,
+                &leases,
+                &mut transports,
+            ))
+            .await
+            .is_err()
+        {
+            delete_created_tokens(&origin, &access_token, &leases).await;
+            return Ok(cancelled());
+        }
     }
     stage!("tokens_start");
     let credential = match credential_for_models(
@@ -2891,6 +3101,75 @@ pub async fn manage_tool_connections_v1(
 mod tests {
     use super::*;
 
+    /// 探测结论 → 传输方式，**穷举**。
+    ///
+    /// 穷举而不是挑几个例子，是因为这张表的重点在于「只有一格会翻转」。
+    /// 挑例子写，以后有人放宽某一格（比如让 `Inconclusive` 也走桥），
+    /// 测试不会红。穷举会。
+    ///
+    /// 为什么必须偏向直连：错判成桥，是把一个原生说 Responses 的模型转一圈，
+    /// 它真的 `encrypted_content` 被我们伪造的令牌换掉 —— **主动降级**；
+    /// 错判成直连，是这个模型维持现状（本来就不能用）—— **不造成回退**。
+    /// 两种错不对称。
+    #[test]
+    fn only_a_refused_responses_with_a_working_chat_moves_a_model_onto_the_bridge() {
+        use codex_desktop::CodexTransport::{ChatBridge, DirectResponses};
+        use ProbeOutcome::{Accepted, Inconclusive, Rejected};
+        for responses in [Accepted, Rejected, Inconclusive] {
+            for chat in [None, Some(Accepted), Some(Rejected), Some(Inconclusive)] {
+                let expected = if responses == Rejected && chat == Some(Accepted) {
+                    ChatBridge
+                } else {
+                    DirectResponses
+                };
+                assert_eq!(
+                    transport_from_probes(responses, chat),
+                    expected,
+                    "responses={responses:?} chat={chat:?}"
+                );
+            }
+        }
+    }
+
+    /// 网络层的三档归类。5xx 和网络错误必须落到 `Inconclusive` ——
+    /// 归成 `Rejected` 的话，中转抖一下就会把模型永久切到桥上。
+    #[test]
+    fn a_server_side_failure_is_never_read_as_a_protocol_refusal() {
+        // 这里钉的是 `probe_once` 里那三条 match 臂的意图。状态码的分类交给
+        // reqwest 的 `is_success` / `is_client_error`，我们只钉边界。
+        for status in [200u16, 201, 204] {
+            assert!(reqwest::StatusCode::from_u16(status).unwrap().is_success());
+        }
+        for status in [400u16, 401, 404, 422, 429] {
+            let code = reqwest::StatusCode::from_u16(status).unwrap();
+            assert!(!code.is_success() && code.is_client_error(), "{status}");
+        }
+        for status in [500u16, 502, 503, 504] {
+            let code = reqwest::StatusCode::from_u16(status).unwrap();
+            assert!(!code.is_success() && !code.is_client_error(), "{status}");
+        }
+    }
+
+    /// 两个端点的请求体形状不一样，发错一个就等于探了个寂寞：
+    /// 拿 Chat 的形状去问 Responses，中转会回参数错误（4xx），
+    /// 于是每个模型都会被判成「Responses 不行」。
+    #[test]
+    fn each_endpoint_gets_the_body_shape_it_expects() {
+        let responses = probe_body("kimi-k3", true);
+        assert_eq!(responses["model"], "kimi-k3");
+        assert!(responses.get("input").is_some());
+        assert!(responses.get("messages").is_none());
+        assert_eq!(responses["max_output_tokens"], 16);
+        assert_eq!(responses["stream"], false);
+
+        let chat = probe_body("kimi-k3", false);
+        assert_eq!(chat["model"], "kimi-k3");
+        assert!(chat.get("messages").is_some());
+        assert!(chat.get("input").is_none());
+        assert_eq!(chat["max_tokens"], 16);
+        assert_eq!(chat["stream"], false);
+    }
+
     #[tokio::test]
     async fn refused_stop_does_not_restore_files_or_keys_or_delete_live_tokens() {
         assert!(matches!(
@@ -3093,6 +3372,58 @@ mod tests {
         .await;
         assert_eq!(result, Err("connection_inspection_failed"));
         assert!(LOCK.try_lock().is_ok());
+    }
+
+    /// 探测结论要一路走到桥：`transports` → 凭据的逐模型 `codex_transport`
+    /// → `needs_chat_conversion`。
+    ///
+    /// 这条缝没人钉过。中间任何一环改了字符串或字段，症状都是
+    /// **「探测明明判了走桥，桥却一直直连」** —— 没有报错、没有日志异常，
+    /// 只是那几个模型继续用不了，和没做探测时一模一样。
+    #[test]
+    fn a_probe_verdict_reaches_the_bridge() {
+        use crate::codex_responses_bridge::needs_chat_conversion;
+        use codex_desktop::CodexTransport::{ChatBridge, DirectResponses};
+
+        let request: ToolActivationRequest = serde_json::from_value(json!({
+            "requestId": "fixture",
+            "lineId": "mainland_optimized",
+            "toolId": "codex_desktop",
+            "modelId": "gemini-3.8-flash",
+            "billingGroup": "cheap",
+            "installationId": "i0123456789abcdef",
+            "models": [
+                {"modelId": "gemini-3.8-flash", "billingGroup": "cheap"},
+                {"modelId": "gpt-5.6-sol", "billingGroup": "cheap"},
+            ],
+        }))
+        .unwrap();
+        let leases = vec![(
+            "cheap".to_owned(),
+            TokenLease {
+                id: 1,
+                key: "synthetic-key".into(),
+                created: false,
+                retire_after_commit: vec![],
+            },
+        )];
+        let credential = credential_for_models(
+            &request,
+            "https://yeschoy.com",
+            &[
+                Some(ModelTransport::Codex(ChatBridge)),
+                Some(ModelTransport::Codex(DirectResponses)),
+            ],
+            &leases,
+            None,
+        )
+        .unwrap();
+
+        // 被判成桥的那个，桥要认得。
+        assert!(needs_chat_conversion(&credential, "gemini-3.8-flash"));
+        // 原生说 Responses 的那个，必须原样直连 —— 它带的是真的
+        // `encrypted_content`，转一圈就是主动降级。
+        assert!(!needs_chat_conversion(&credential, "gpt-5.6-sol"));
     }
 
     #[test]

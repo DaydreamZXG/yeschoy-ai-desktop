@@ -210,14 +210,18 @@ async fn dispatch(State(state): State<SharedState>, request: Request<Body>) -> R
 ///
 /// 原生说 Responses 的模型走这条分支原样透传，**一个字节都不碰**：它们带的是
 /// 真的 `encrypted_content`，转成 Chat 再转回来等于拿我们伪造的令牌换掉真货。
-fn needs_chat_conversion(credential: &ToolCredential, model: &str) -> bool {
+pub(crate) fn needs_chat_conversion(credential: &ToolCredential, model: &str) -> bool {
     let transport = credential
         .models
         .iter()
         .find(|route| route.model_id == model)
         .and_then(|route| route.codex_transport.as_deref())
         .or(credential.codex_transport.as_deref());
-    transport == Some("chat_bridge")
+    // 拿枚举问，不写字面量：这个字符串是接入流程写进凭据的
+    // （`CodexTransport::credential_value`），两边各写一份迟早对不上，
+    // 而对不上的症状是「探测明明判了走桥，桥却一直直连」—— 静默的。
+    transport
+        == Some(crate::tool_adapters::codex_desktop::CodexTransport::ChatBridge.credential_value())
 }
 
 /// 这座桥的门禁：本地令牌，**或**我们写进 Codex 配置的那把受限中转 key。
