@@ -947,17 +947,29 @@ mod tests {
     /// 那些路径，恢复必须还能把它们搬回去。收窄白名单会把那些人锁在新状态里。
     #[test]
     fn restoring_an_older_manifest_can_still_reach_archived_paths() {
-        let codex = Path::new("/home/u/.codex");
+        // 基准路径必须是**真**绝对路径，而不是某一个平台的写法。Windows 的
+        // 绝对路径要带盘符：前导 `/` 只表示「当前盘符下」，`is_absolute()` 是
+        // false，于是 `no_parent_components` 会照拒，白名单一条都过不了 ——
+        // 这条测试就是这么在 Windows 上红的，而生产代码并没有错。
+        let codex = if cfg!(windows) {
+            PathBuf::from(r"C:\Users\u\.codex")
+        } else {
+            PathBuf::from("/home/u/.codex")
+        };
+        assert!(
+            codex.is_absolute(),
+            "白名单只认绝对路径，基准路径写错了这条测试就失去意义"
+        );
         assert!(session_path_allowed(
-            codex,
+            &codex,
             &codex.join("archived_sessions/2026/old.jsonl")
         ));
         assert!(session_path_allowed(
-            codex,
+            &codex,
             &codex.join("sessions/2026/live.jsonl")
         ));
         assert!(!session_path_allowed(
-            codex,
+            &codex,
             &codex.join("somewhere_else/old.jsonl")
         ));
     }
