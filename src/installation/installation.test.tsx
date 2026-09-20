@@ -10,6 +10,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import i18n from "i18next";
+import en from "../i18n/locales/en.json";
 import zh from "../i18n/locales/zh.json";
 import {
   InstallationContext,
@@ -21,9 +22,11 @@ import {
   InstallationPanel,
   InstallationNotice,
   installationSource,
+  installationStage,
 } from "./InstallationPanel";
 import {
   decodeInstallation,
+  INSTALL_PHASES,
   SelectionRevision,
   type InstallationProgress,
 } from "./api";
@@ -190,6 +193,24 @@ describe("ru052 truthful download source", () => {
     );
     expect(installationSource("official")).toContain("厂商官网");
     expect(installationSource("mirror")).toContain("野菜国内加速");
+  });
+  // 阶段文字以前是个字面量对象，少写一个 phase 编译就不过。
+  // 改成 `t(\`installation.stage.${phase}\`)` 之后 TypeScript 看不见了 ——
+  // 少一个键不会报错，只会在界面上显示出键名本身。这条把那层保护补回来，
+  // 而且比原来强：它查的是语言文件，不只是代码。
+  it("names every install phase in both languages", () => {
+    for (const phase of INSTALL_PHASES) {
+      const text = installationStage({ ...progress(), phase });
+      expect(text).not.toContain("installation.stage.");
+      expect(text).not.toBe("");
+    }
+    for (const lang of ["zh", "en"] as const) {
+      const stage = (lang === "zh" ? zh : en).installation.stage as Record<
+        string,
+        string
+      >;
+      for (const phase of INSTALL_PHASES) expect(stage).toHaveProperty(phase);
+    }
   });
   it("changes the visible source when a failed mirror falls back to official bytes", () => {
     const panel = (source: InstallationProgress["source"]) => (
