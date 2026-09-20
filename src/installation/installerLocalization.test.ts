@@ -3,6 +3,17 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+/**
+ * 读安装器源文件，并把换行归一成 LF。
+ *
+ * Windows 上 git 默认 `core.autocrlf=true`，检出来的 `.nsi` / `.nsh` 是 CRLF，
+ * 于是下面那些写死 `\n` 的正则一条都匹配不上 —— 这个测试就是这么只在 Windows
+ * CI 上红的。它要验的是安装器逻辑，不是换行符政策，所以归一化之后两个平台
+ * 问的才是同一个问题。
+ */
+const readSource = (relative: string) =>
+  readFileSync(resolve(process.cwd(), relative), "utf8").replace(/\r\n/g, "\n");
+
 describe("Windows installer localization", () => {
   it("keeps both supported installer formats in Simplified Chinese", () => {
     const config = JSON.parse(
@@ -18,18 +29,9 @@ describe("Windows installer localization", () => {
   });
 
   it("stops every supported installed executable before an upgrade writes files", () => {
-    const hook = readFileSync(
-      resolve(process.cwd(), "src-tauri/windows/installer-hooks.nsh"),
-      "utf8",
-    );
-    const standalone = readFileSync(
-      resolve(process.cwd(), "src-tauri/windows/installer.nsi"),
-      "utf8",
-    );
-    const native = readFileSync(
-      resolve(process.cwd(), "src-tauri/src/lib.rs"),
-      "utf8",
-    );
+    const hook = readSource("src-tauri/windows/installer-hooks.nsh");
+    const standalone = readSource("src-tauri/windows/installer.nsi");
+    const native = readSource("src-tauri/src/lib.rs");
 
     const eventName = "Local\\YesChoyDesktopInstallerShutdown_v1";
     expect(hook).toContain(eventName);
@@ -70,10 +72,7 @@ describe("Windows installer localization", () => {
   });
 
   it("handles Tauri updater launches without an unattended directory wizard", () => {
-    const standalone = readFileSync(
-      resolve(process.cwd(), "src-tauri/windows/installer.nsi"),
-      "utf8",
-    );
+    const standalone = readSource("src-tauri/windows/installer.nsi");
     const initialization =
       standalone.match(/^Function \.onInit\n([\s\S]*?)^FunctionEnd/m)?.[1] ??
       "";
@@ -90,10 +89,7 @@ describe("Windows installer localization", () => {
   });
 
   it("always restarts the assistant after a successful standalone upgrade", () => {
-    const standalone = readFileSync(
-      resolve(process.cwd(), "src-tauri/windows/installer.nsi"),
-      "utf8",
-    );
+    const standalone = readSource("src-tauri/windows/installer.nsi");
 
     expect(standalone).toContain("Function .onInstSuccess");
     expect(standalone).toContain(
