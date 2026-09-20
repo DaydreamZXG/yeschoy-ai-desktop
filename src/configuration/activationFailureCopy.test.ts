@@ -2,6 +2,10 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import en from "../i18n/locales/en.json";
+import zh from "../i18n/locales/zh.json";
+import { OPEN_STATUSES } from "./launchApi";
+
 const root = process.cwd();
 
 function sources(directory: string, extensions: string[]): string[] {
@@ -52,7 +56,11 @@ function pipelineReasonCodes(): string[] {
 
 describe("activation failure copy", () => {
   it("gives every reason code the pipeline can emit a message of its own", () => {
-    const rendered = sources(resolve(root, "src"), [".ts", ".tsx"])
+    // `.json` 是后来加的：文案从 `copy.ts` 和各组件里的字面量表迁进了
+    // `i18n/locales/*.json`，原因码跟着走。只扫 `.ts`/`.tsx` 的话，一个码只要
+    // 还在别处的 switch 里出现过就算通过 —— 这条测试自己的注释警告的就是这种
+    // 「过了但什么也没守住」。
+    const rendered = sources(resolve(root, "src"), [".ts", ".tsx", ".json"])
       .filter((file) => !file.includes(".test."))
       .map((file) => readFileSync(file, "utf8"))
       .join("\n");
@@ -66,5 +74,16 @@ describe("activation failure copy", () => {
     // beginner who hits one is left with nothing to act on. That silent
     // fallback, not any wording preference, is what this test prevents.
     expect(codes.filter((code) => !rendered.includes(code))).toEqual([]);
+  });
+
+  // 「打开使用」的结果文案原本是 `Record<OpenStatus, string>`，少写一个状态
+  // 编译就不过。改成 `t(`openConnection.status.${status}`)` 之后 TypeScript
+  // 看不见了：少一个键不报错，只会把键名显示给用户。和安装阶段那条同一个道理，
+  // 用测试做回编译器原来做的事。
+  it("names every open outcome in both languages", () => {
+    for (const lang of [zh, en]) {
+      const status = lang.openConnection.status as Record<string, string>;
+      for (const value of OPEN_STATUSES) expect(status).toHaveProperty(value);
+    }
   });
 });

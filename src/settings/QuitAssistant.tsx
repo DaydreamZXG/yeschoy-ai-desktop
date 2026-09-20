@@ -8,6 +8,7 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { LogOut } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useConnections } from "../configuration/connections";
 import { WORKBENCH_APPS } from "../workbench/appCatalog";
 
@@ -76,20 +77,19 @@ function exitState(raw: unknown): ExitState | null {
 
 /** Settings entry point; the only dialog belongs to the always-mounted host. */
 export function QuitAssistant() {
+  const { t } = useTranslation();
   return (
     <div className="quit-assistant">
       <div>
-        <strong>后台运行</strong>
-        <p>
-          关闭时可选择后台运行，或恢复原设置并退出；也可以保留接入设置退出。
-        </p>
+        <strong>{t("quit.settingsTitle")}</strong>
+        <p>{t("quit.settingsBody")}</p>
       </div>
       <button
         type="button"
         onClick={() => window.dispatchEvent(new Event(OPEN_CHOICE_EVENT))}
       >
         <LogOut />
-        退出野菜助手
+        {t("quit.settingsAction")}
       </button>
     </div>
   );
@@ -107,6 +107,7 @@ export function ShutdownProvider({ children }: { children: ReactNode }) {
 
 /** Alternative sibling mount; do not mount both this and ShutdownProvider. */
 export function ShutdownHost() {
+  const { t } = useTranslation();
   const connections = useConnections();
   const affected =
     connections?.connections.filter(
@@ -271,7 +272,7 @@ export function ShutdownHost() {
       }}
     >
       <h2 id="quit-title">
-        {phase === "choice" ? "关闭野菜助手？" : "正在退出野菜助手"}
+        {t(phase === "choice" ? "quit.titleChoice" : "quit.titleExiting")}
       </h2>
       {phase === "choice" ? (
         <>
@@ -280,12 +281,10 @@ export function ShutdownHost() {
               连接需要助手运行」时根本不适用 —— 界面自己就那么写着。
               现在先说这次会发生什么，细则收进折叠里。 */}
           {unknown ? (
-            <p>
-              暂时无法确认哪些应用需要助手运行。退出可能中断正在使用的连接，设置不会被删除。
-            </p>
+            <p>{t("quit.unknownAffected")}</p>
           ) : affected.length ? (
             <>
-              <p>以下应用的连接需要助手运行，退出后会暂时中断：</p>
+              <p>{t("quit.affectedIntro")}</p>
               <ul>
                 {affected.map((connection) => (
                   <li key={connection.toolId}>
@@ -294,30 +293,21 @@ export function ShutdownHost() {
                   </li>
                 ))}
               </ul>
-              <p>
-                想继续用就选「后台运行」。退出后再打开助手，从应用卡片继续，不用重新接入。
-              </p>
+              <p>{t("quit.affectedHint")}</p>
             </>
           ) : (
-            <p>
-              退出会把接入前的设置恢复回去。应用设置和聊天记录都不会删除，随时可以再接入。
-            </p>
+            <p>{t("quit.noneAffected")}</p>
           )}
           <details className="quit-detail">
-            <summary>退出时具体会做什么</summary>
-            <p>
-              助手会请求 Codex、Claude 正常关闭，不会强制结束，也不会自动重新打开 ——
-              请先保存任务。命令行应用的设置下次启动生效。
-            </p>
-            <p>
-              你后来自己改过的设置和聊天记录都会保留，远端密钥不撤销。恢复之后再打开那些应用，会用回你原来的官方账号或其他服务。
-            </p>
-            <p>「后台运行」只是最小化窗口并保持连接，不退出助手。</p>
+            <summary>{t("quit.detailSummary")}</summary>
+            <p>{t("quit.detailClose")}</p>
+            <p>{t("quit.detailKeep")}</p>
+            <p>{t("quit.detailBackground")}</p>
           </details>
         </>
       ) : phase === "restore_failed" ? (
         <div role="alert">
-          <p>以下应用未能完成恢复，助手尚未退出：</p>
+          <p>{t("quit.restoreFailedIntro")}</p>
           <ul>
             {failedTools.map((tool) => (
               <li key={tool}>
@@ -325,28 +315,18 @@ export function ShutdownHost() {
               </li>
             ))}
           </ul>
-          <p>
-            请先保存并关闭相关应用，确认系统安全存储可用后重试。旧版缺少原设置时无法自动恢复。已完成的恢复不会回退；也可保留剩余设置继续退出。
-          </p>
+          <p>{t("quit.restoreFailedHint")}</p>
         </div>
       ) : phase === "restoring_settings" ? (
-        <p role="status">
-          正在正常关闭相关桌面应用并恢复设置；不会强制结束任务。若有保存提示，请先处理。完成后退出助手。
-        </p>
+        <p role="status">{t("quit.restoringSettings")}</p>
       ) : phase === "finishing_operation" ? (
-        <p role="status">
-          正在完成当前接入或账号操作，避免设置损坏。安全收尾后会自动退出；你可以收起提示或在后台等待。
-        </p>
+        <p role="status">{t("quit.finishingOperation")}</p>
       ) : phase === "exiting" ? (
-        <p role="status">
-          正在安全结束操作并关闭助手的后台连接，不会强制关闭其他应用。
-        </p>
+        <p role="status">{t("quit.exiting")}</p>
       ) : null}
       {error && (
         <p role="alert">
-          {phase === "choice"
-            ? "暂时无法切换到后台，请重试。"
-            : "暂时无法确认退出状态，请重试。不会强制中断正在保存的设置。"}
+          {t(phase === "choice" ? "quit.errorBackground" : "quit.errorExit")}
         </p>
       )}
       {/* 四个同等重量的按钮里，用户真正要选的只有两个：走还是留。
@@ -359,7 +339,7 @@ export function ShutdownHost() {
           autoFocus
           onClick={dismiss}
         >
-          {phase === "choice" ? "取消" : "收起提示"}
+          {t(phase === "choice" ? "quit.cancel" : "quit.dismiss")}
         </button>
         {(phase === "choice" || phase === "restore_failed") && (
           <button
@@ -369,11 +349,13 @@ export function ShutdownHost() {
               void confirmExit(false);
             }}
           >
-            {phase === "choice" ? "保留接入并退出" : "保留剩余设置并退出"}
+            {t(
+              phase === "choice" ? "quit.keepAndExit" : "quit.keepRestAndExit",
+            )}
           </button>
         )}
         <button type="button" className="subtle-button" onClick={background}>
-          {phase === "choice" ? "后台运行" : "在后台等待"}
+          {t(phase === "choice" ? "quit.background" : "quit.waitInBackground")}
         </button>
         {phase === "choice" ||
         phase === "restore_failed" ||
@@ -389,10 +371,10 @@ export function ShutdownHost() {
             }}
           >
             {phase === "choice"
-              ? "恢复原设置并退出"
+              ? t("quit.restoreAndExit")
               : phase === "restore_failed"
-                ? "重试恢复并退出"
-                : "重试退出"}
+                ? t("quit.retryRestoreAndExit")
+                : t("quit.retryExit")}
           </button>
         ) : (
           <button
@@ -401,7 +383,7 @@ export function ShutdownHost() {
               void refreshState();
             }}
           >
-            查看退出进度
+            {t("quit.viewProgress")}
           </button>
         )}
       </footer>

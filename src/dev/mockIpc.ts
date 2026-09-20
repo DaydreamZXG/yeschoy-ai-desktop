@@ -109,6 +109,36 @@ function account(requestId: string, status: string) {
   };
 }
 
+// `?s=connected` 把三个应用报成已接入，用来看「打开使用」和它的使用说明
+// 对话框 —— 夹具恒报 `not_connected`，那块界面在审计页里根本到不了。
+function connections(requestId: string) {
+  const base = connectionsFixture(requestId);
+  if (scenario !== "connected") return base;
+  const live = {
+    claude_code: "glm-5.3",
+    claude_desktop: "claude-sonnet-4-5-20250929",
+    pi: "gpt-5.6-codex",
+  } as Record<string, string>;
+  return {
+    ...base,
+    connections: base.connections.map((connection) =>
+      live[connection.toolId]
+        ? {
+            ...connection,
+            state: "connected" as const,
+            modelId: live[connection.toolId],
+            lineId: "mainland_optimized",
+            billingGroup: "default",
+            updatedAtEpochMs: Date.now() - 3_600_000,
+            restoreMode: "original" as const,
+            requiresBackground: connection.toolId !== "claude_code",
+            reasonCode: "connected",
+          }
+        : connection,
+    ),
+  };
+}
+
 function targets(requestId: string) {
   const defs = [
     ["claude_code", "Claude Code", "2.1.233"],
@@ -154,7 +184,7 @@ const handlers: Record<string, (a: Args) => unknown> = {
   account_logout_v2: (a) => account(rid(a), "signed_out"),
   account_open_wallet_v2: () => null,
   account_announcements_read_v2: () => ({ available: false }),
-  manage_tool_connections_v1: (a) => connectionsFixture(rid(a)),
+  manage_tool_connections_v1: (a) => connections(rid(a)),
   scan_activation_targets_v1: (a) => targets(rid(a)),
   manage_app_installation_v2: (a) => installationInspectionFixture(a),
   read_desktop_exit_state: () => ({ closeRequested: false, shutdown: null }),
