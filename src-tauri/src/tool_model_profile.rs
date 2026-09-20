@@ -113,9 +113,31 @@ pub(crate) fn claude_gateway_route_id(model_id: &str) -> String {
     } else {
         // Do not invent capabilities for an unknown account model. It remains
         // usable through an opaque safe route, without a misleading selector.
-        legacy_claude_gateway_route_id(model_id)
+        //
+        // The borrowed `sonnet` role is **only** there to satisfy Claude
+        // Desktop's naming rule -- upstream cc-switch's `is_claude_safe_model_id`
+        // requires the tail after `claude-` to begin with a known role. The
+        // `-router-` segment that follows cannot match any real model, so the
+        // app's capability lookup still misses and no effort selector appears.
+        //
+        // Decimal, never hex: the app rejects anything matching its
+        // third-party family pattern, and `abab` is in that pattern while
+        // being four valid hex digits -- a hex digest would fail roughly one
+        // model in a thousand, at random.
+        let mut route =
+            String::with_capacity(CLAUDE_SAFE_OPAQUE_FAMILY.len() + 2 + digest.len() * 3);
+        route.push_str(CLAUDE_SAFE_OPAQUE_FAMILY);
+        route.push_str("-v");
+        for byte in digest {
+            write!(&mut route, "{byte:03}").expect("writing to a String cannot fail");
+        }
+        route
     }
 }
+
+/// The role-prefixed stem of the opaque route. Borrowed purely to satisfy the
+/// naming rule; `-router` keeps it from colliding with any real model.
+const CLAUDE_SAFE_OPAQUE_FAMILY: &str = "claude-sonnet-router";
 
 pub(crate) fn legacy_claude_gateway_route_id(model_id: &str) -> String {
     let mut hasher = Sha256::new();
@@ -130,9 +152,16 @@ pub(crate) fn legacy_claude_gateway_route_id(model_id: &str) -> String {
     route
 }
 
-/// Existing 0.4.8 profiles used an opaque alias. Accept it during the update
+/// Existing profiles used an opaque alias. Accept it during the update
 /// transition so installing a fixed assistant never breaks an active Claude
 /// Desktop connection before the user next reapplies the managed profile.
+///
+/// **Recognised, no longer minted.** `claude_gateway_route_id` now mints
+/// `claude-sonnet-router-v<96 digits>` instead, because this shape's tail
+/// (`router-...`) does not begin with a known role and so fails the naming
+/// rule Claude Desktop's own check may tighten to. Changing what this function
+/// returns would strand every profile already carrying the old alias, since
+/// `claude_gateway_route_matches` resolves them by recomputing it.
 /// The prefix carried by the opaque alias form only -- see
 /// `is_claude_gateway_route`, which must also recognise the other one.
 pub(crate) const CLAUDE_GATEWAY_ROUTE_PREFIX: &str = "anthropic/claude-router-";
@@ -148,7 +177,10 @@ pub(crate) const CLAUDE_GATEWAY_ROUTE_PREFIX: &str = "anthropic/claude-router-";
 ///   `<family>-v<96 decimal digits>`        when the model maps to a Claude
 ///                                          capability family (32 digest bytes
 ///                                          written as three digits each)
-///   `anthropic/claude-router-<64 hex>`     the opaque fallback, when it does not
+///   `claude-sonnet-router-v<96 digits>`    the opaque fallback, when it does not
+///
+/// It must also still recognise `anthropic/claude-router-<64 hex>`, which
+/// earlier versions minted and existing profiles still carry.
 ///
 /// Matching on structure rather than a name list keeps this correct when the
 /// family table grows. Neither shape can collide with a real upstream id: no
@@ -734,6 +766,78 @@ mod tests {
         }
     }
 
+    /// cc-switch 的 `is_claude_safe_model_id`，逐条照搬（`claude_desktop_config.rs`）。
+    ///
+    /// 这是上游长期盯着 Claude Desktop 行为得出的规则，比我们反编译到的
+    /// 那个 `Jo()` 更严格 —— `Jo` 只要名字里含 `claude` 或 `anthropic` 就放行，
+    /// 所以旧的 `anthropic/claude-router-<hex>` 其实是**碰巧**过的。
+    /// 按上游的严格版铸名，等于不再依赖那个巧合。
+    fn upstream_is_claude_safe_model_id(model: &str) -> bool {
+        let normalized = model.trim().to_ascii_lowercase();
+        if normalized.contains("[1m]") {
+            return false;
+        }
+        let Some(tail) = normalized
+            .strip_prefix("anthropic/claude-")
+            .or_else(|| normalized.strip_prefix("claude-"))
+        else {
+            return false;
+        };
+        // 角色前缀后必须还有实际标识，拒绝 `claude-sonnet-` 这类退化值。
+        ["sonnet-", "opus-", "haiku-", "fable-"]
+            .iter()
+            .any(|prefix| {
+                tail.strip_prefix(prefix)
+                    .is_some_and(|rest| !rest.is_empty())
+            })
+    }
+
+    /// 我们铸出去的每一个名字都必须过上游那条规则。
+    ///
+    /// 两种形状都要覆盖：有能力家族的（`claude-sonnet-5-v…`）和兜底的
+    /// （`claude-sonnet-router-v…`）。后者以前是 `anthropic/claude-router-<hex>`，
+    /// 不以角色前缀开头，过不了这条规则。
+    #[test]
+    fn every_minted_route_satisfies_the_upstream_naming_rule() {
+        for model in [
+            "claude-sonnet-5",
+            "claude-fable-5",
+            "claude-opus-4-8",
+            "gpt-6-astra",
+            "gpt-5.6-sol",
+            "deepseek-v4-flash",
+            // 家族表外的，走兜底那支
+            "future-model",
+            "kimi-k3",
+            "glm-5.3",
+            "minimax-m3",
+            "qwen3.8-max",
+            "gemini-3.8-flash",
+        ] {
+            let route = claude_gateway_route_id(model);
+            assert!(
+                upstream_is_claude_safe_model_id(&route),
+                "{model} 铸出的 {route} 过不了上游规则"
+            );
+            // 结构识别也必须认得，否则桥会把它当成真实模型转发出去。
+            assert!(is_claude_gateway_route(&route), "{route}");
+        }
+    }
+
+    /// 兜底铸名绝不能用十六进制。
+    ///
+    /// Claude Desktop 用一串第三方家族正则判定「这不是 Anthropic 模型」，
+    /// 其中 `abab` 四个字符全是合法十六进制 —— 用 hex 摘要的话，约每一千个
+    /// 模型就有一个会随机撞上并被拒。十进制不可能命中其中任何一条。
+    #[test]
+    fn the_opaque_route_tail_is_decimal_so_it_cannot_look_like_another_vendor() {
+        let route = claude_gateway_route_id("future-model");
+        let (_, tail) = route.rsplit_once("-v").expect("兜底铸名带 -v 后缀");
+        assert_eq!(tail.len(), 96);
+        assert!(tail.bytes().all(|byte| byte.is_ascii_digit()), "{tail}");
+        assert!(!route.contains("abab"), "{route}");
+    }
+
     #[test]
     fn context_regression_marker_parsing_is_terminal_and_exact_route_only() {
         let id = "claude-fable-5";
@@ -817,7 +921,12 @@ mod tests {
         }
         assert_eq!(claude_capability_family("future-model"), None);
         assert_eq!(claude_code_behaves_as("future-model"), CLAUDE_BEHAVES_AS);
-        assert!(claude_gateway_route_id("future-model").starts_with("anthropic/claude-router-"));
+        assert!(claude_gateway_route_id("future-model").starts_with("claude-sonnet-router-v"));
+        // 老 profile 里的不可铸形状仍然必须被认出来，否则升级即断连。
+        assert!(claude_gateway_route_matches(
+            "future-model",
+            &legacy_claude_gateway_route_id("future-model")
+        ));
         assert_ne!(
             claude_gateway_route_id("gpt-6-astra"),
             claude_gateway_route_id("gpt-5.6-sol")

@@ -777,7 +777,13 @@ mod tests {
         assert_eq!(profile["inferenceModels"][0]["labelOverride"], "model-a");
         for row in profile["inferenceModels"].as_array().unwrap() {
             let route = row["name"].as_str().unwrap();
-            assert!(route.starts_with("anthropic/claude-router-"));
+            // 按**结构**判定是不是我们铸的路由，而不是钉死某个前缀 ——
+            // 铸名形状会随 Claude Desktop 的命名规则变，断言的意图始终是
+            // 「这是不透明路由，没泄露真实模型名」。
+            assert!(
+                crate::tool_model_profile::is_claude_gateway_route(route),
+                "{route}"
+            );
             assert!(!route.contains("model-"));
             assert_ne!(route, SAFE_ROUTE_MODEL);
         }
