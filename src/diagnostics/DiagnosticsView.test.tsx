@@ -9,6 +9,10 @@ import { DiagnosticsView } from "./DiagnosticsView";
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 const invokeMock = vi.mocked(invoke);
 
+// 这几句刚从 `diagnostics/copy.ts` 搬进语言文件。断言跟着读同一个来源，
+// 否则改文案时这里会红，而红的原因与被测行为无关。
+const D = zh.yeschoyDiagnostics;
+
 const clipboardWrite = vi.fn();
 
 beforeAll(() => {
@@ -154,13 +158,13 @@ describe("diagnostics native-to-renderer outcomes", () => {
     showView();
     fireEvent.click(screen.getByRole("button", { name: "检查两条线路" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "部分结果未能读取",
+      D.readError.partial.title,
     );
     expect(
       within(line("大陆优化")).getByText("基础连接正常"),
     ).toBeInTheDocument();
     expect(
-      within(line("全球加速")).getByText("本次结果不可用"),
+      within(line("全球加速")).getByText(D.status.unavailable),
     ).toBeInTheDocument();
     expect(screen.queryByText("无法连接线路")).not.toBeInTheDocument();
     expect(screen.queryByText("找不到线路地址")).not.toBeInTheDocument();
@@ -176,14 +180,14 @@ describe("diagnostics native-to-renderer outcomes", () => {
     showView();
     fireEvent.click(screen.getByRole("button", { name: "检查两条线路" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "暂时无法运行检查",
+      D.readError.invoke.title,
     );
     expect(screen.queryByText(/synthetic-private/)).not.toBeInTheDocument();
-    expect(screen.getAllByText("本次结果不可用")).toHaveLength(2);
+    expect(screen.getAllByText(D.status.unavailable)).toHaveLength(2);
     invokeMock.mockResolvedValueOnce(null);
     fireEvent.click(screen.getByRole("button", { name: "重新检查两条线路" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "暂时无法读取结果",
+      D.readError.invalid.title,
     );
     expect(screen.queryByText("无法连接线路")).not.toBeInTheDocument();
     replyWith(nativeFixtures.reachable);
@@ -200,10 +204,10 @@ describe("diagnostics native-to-renderer outcomes", () => {
     invokeMock.mockRejectedValueOnce(new Error("synthetic-invoke-error"));
     fireEvent.click(screen.getByRole("button", { name: "重新检查两条线路" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "暂时无法运行检查",
+      D.readError.invoke.title,
     );
     expect(screen.getAllByText("基础连接正常")).toHaveLength(2);
-    expect(screen.getAllByText("上次结果，尚未更新")).toHaveLength(2);
+    expect(screen.getAllByText(D.previousResult)).toHaveLength(2);
     replyWith({
       ...nativeFixtures.mixed,
       lines: [null, nativeFixtures.mixed.lines[1]],
@@ -214,12 +218,14 @@ describe("diagnostics native-to-renderer outcomes", () => {
       within(line("大陆优化")).getByText("基础连接正常"),
     ).toBeInTheDocument();
     expect(
-      within(line("大陆优化")).getByText("上次结果，尚未更新"),
+      within(line("大陆优化")).getByText(D.previousResult),
     ).toBeInTheDocument();
     expect(
-      within(line("全球加速")).queryByText("上次结果，尚未更新"),
+      within(line("全球加速")).queryByText(D.previousResult),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("alert")).toHaveTextContent("部分结果未能读取");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      D.readError.partial.title,
+    );
   });
 
   it("rejects a previous request's reply on retry and recovers with the current reply", async () => {
@@ -234,7 +240,7 @@ describe("diagnostics native-to-renderer outcomes", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "重新检查两条线路" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "暂时无法读取结果",
+      D.readError.invalid.title,
     );
     expect(screen.getAllByText("基础连接正常")).toHaveLength(2);
     expect(screen.queryByText("无法连接线路")).not.toBeInTheDocument();
@@ -242,7 +248,7 @@ describe("diagnostics native-to-renderer outcomes", () => {
     replyWith(nativeFixtures.failed);
     fireEvent.click(screen.getByRole("button", { name: "重新检查两条线路" }));
     expect(await screen.findByText("无法连接线路")).toBeInTheDocument();
-    expect(screen.queryByText("上次结果，尚未更新")).not.toBeInTheDocument();
+    expect(screen.queryByText(D.previousResult)).not.toBeInTheDocument();
   });
 
   it.each(["resolve", "reject"] as const)(

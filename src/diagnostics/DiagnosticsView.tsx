@@ -13,7 +13,6 @@ import type {
   ConnectivityResponse,
   LineOutcome,
 } from "./contract";
-import { diagnosticsCopy } from "./copy";
 
 interface DiagnosticsViewProps {
   onOpenSetup: () => void;
@@ -70,7 +69,6 @@ export function DiagnosticsView({
   onOpenTools,
 }: DiagnosticsViewProps) {
   const { t } = useTranslation();
-  const copy = diagnosticsCopy();
   const [phase, setPhase] = useState<DiagnosticsPhase>("idle");
   const [response, setResponse] = useState<ConnectivityResponse | null>(null);
   const [issue, setIssue] = useState<"invoke" | "invalid" | "partial" | null>(
@@ -243,7 +241,6 @@ export function DiagnosticsView({
                 ? t("yeschoyDiagnostics.checkedAt", { time: completedAt })
                 : t("yeschoyDiagnostics.previousCheckedAt", {
                     time: completedAt,
-                    defaultValue: copy.previousCheckedAt,
                   }))}
           </span>
         </div>
@@ -268,16 +265,8 @@ export function DiagnosticsView({
 
         {issue && (
           <div className="error-banner" role="alert">
-            <strong>
-              {t(`yeschoyDiagnostics.readError.${issue}.title`, {
-                defaultValue: copy[issue].title,
-              })}
-            </strong>
-            <span>
-              {t(`yeschoyDiagnostics.readError.${issue}.body`, {
-                defaultValue: copy[issue].body,
-              })}
-            </span>
+            <strong>{t(`yeschoyDiagnostics.readError.${issue}.title`)}</strong>
+            <span>{t(`yeschoyDiagnostics.readError.${issue}.body`)}</span>
           </div>
         )}
 
@@ -315,9 +304,7 @@ export function DiagnosticsView({
                   </span>
                   <span className="line-status-label">
                     {status === "unavailable"
-                      ? t("yeschoyDiagnostics.status.unavailable", {
-                          defaultValue: copy.unavailable,
-                        })
+                      ? t("yeschoyDiagnostics.status.unavailable")
                       : t(`yeschoyDiagnostics.status.${status}`)}
                   </span>
                 </div>
@@ -327,9 +314,7 @@ export function DiagnosticsView({
                 <code>{line.rootUrl}</code>
                 {stale && (
                   <p className="diagnostic-meta" role="status">
-                    {t("yeschoyDiagnostics.previousResult", {
-                      defaultValue: copy.previous,
-                    })}
+                    {t("yeschoyDiagnostics.previousResult")}
                   </p>
                 )}
                 {result ? (
@@ -381,9 +366,7 @@ export function DiagnosticsView({
                   <p className="line-waiting-copy">
                     {phase === "idle" || phase === "checking"
                       ? t("yeschoyDiagnostics.noResult")
-                      : t("yeschoyDiagnostics.noCurrentResult", {
-                          defaultValue: copy.noResult,
-                        })}
+                      : t("yeschoyDiagnostics.noCurrentResult")}
                   </p>
                 )}
               </article>

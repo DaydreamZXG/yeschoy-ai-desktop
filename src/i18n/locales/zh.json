@@ -216,7 +216,24 @@
     "requestId": "检查编号",
     "retention": "结果保存",
     "notRetained": "离开页面后不保留",
-    "openHome": "返回我的应用"
+    "openHome": "返回我的应用",
+    "previousCheckedAt": "上次完成于 {{time}}",
+    "previousResult": "上次结果，尚未更新",
+    "noCurrentResult": "未获得本次结果，请重新检查。",
+    "readError": {
+      "invoke": {
+        "title": "暂时无法运行检查",
+        "body": "检查未能完成，请重试。尚未判断线路状态。"
+      },
+      "invalid": {
+        "title": "暂时无法读取结果",
+        "body": "未获得可用的检查结果，请重新检查。"
+      },
+      "partial": {
+        "title": "部分结果未能读取",
+        "body": "已保留可用的线路结果，可重新检查。"
+      }
+    }
   },
   "yeschoySettings": {
     "eyebrow": "偏好设置",

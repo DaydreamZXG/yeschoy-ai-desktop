@@ -216,7 +216,24 @@
     "requestId": "Check ID",
     "retention": "Result retention",
     "notRetained": "Not kept after leaving this page",
-    "openHome": "Back to My apps"
+    "openHome": "Back to My apps",
+    "previousCheckedAt": "Last completed at {{time}}",
+    "previousResult": "Previous result — not updated yet",
+    "noCurrentResult": "No result this time. Run the check again.",
+    "readError": {
+      "invoke": {
+        "title": "Can’t run the check right now",
+        "body": "The check didn’t finish. Try again — no route status has been decided yet."
+      },
+      "invalid": {
+        "title": "Can’t read the result right now",
+        "body": "No usable result came back. Run the check again."
+      },
+      "partial": {
+        "title": "Some results couldn’t be read",
+        "body": "The route results that did come back are kept. You can run the check again."
+      }
+    }
   },
   "yeschoySettings": {
     "eyebrow": "Preferences",
