@@ -29,7 +29,11 @@ use crate::{
     tool_credentials::{self, CredentialFailure, ToolCredential, ToolModelRoute},
 };
 
-const TOKEN_PAGE_SIZE: &str = "100";
+/// 中转列表接口一页最多给 100 条（`common.GetPageQuery` 封顶），要多也没用。
+const TOKEN_PAGE_SIZE: usize = 100;
+/// 最多翻这么多页。中转默认每用户 1000 把密钥，20 页绰绰有余；真有账户超过
+/// 这个数，后面的就当没有 —— 宁可多铸一把，也不在接入路径上无限翻页。
+const TOKEN_PAGE_LIMIT: usize = 20;
 pub(crate) static ACTIVATION_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 const ACTIVATION_PROGRESS_EVENT: &str = "yeschoy://activation-progress";
 const ACTIVATION_PROGRESS_TOTAL: u8 = 7;
@@ -832,39 +836,80 @@ pub(crate) fn tool_for_token_name(name: &str) -> Option<&'static str> {
     })
 }
 
-fn token_search_url(origin: &str, name: &str) -> Result<String, ActivationFailure> {
-    let mut url = Url::parse(&format!("{origin}/api/token/search"))
+fn token_list_url(origin: &str, page: usize) -> Result<String, ActivationFailure> {
+    let mut url = Url::parse(&format!("{origin}/api/token/"))
         .map_err(|_| ActivationFailure::ServerUnavailable)?;
     url.query_pairs_mut()
-        .append_pair("keyword", name)
-        .append_pair("p", "1")
-        .append_pair("size", TOKEN_PAGE_SIZE);
+        .append_pair("p", &page.to_string())
+        .append_pair("size", &TOKEN_PAGE_SIZE.to_string());
     Ok(url.to_string())
 }
 
-async fn find_token_id(
+/// 账户上的全部密钥，逐页拉完，本地再认。
+///
+/// 以前拿名字前缀去 `/api/token/search?keyword=…` 找自己的密钥。中转
+/// （yeschoy/new-api `ccd535e`）把那个接口改成了两条规则：关键词不带 `%`
+/// 就按**整个名字**精确匹配；每用户每分钟只准搜 10 次，超了回 429 空响应。
+/// 于是前缀查找永远查不到 —— 每次接入都铸一把新的，旧的一把也退不掉；
+/// 一次接四个分组，每组三次搜索，第 11 次撞上 429，第四个分组就被当成
+/// `server_unavailable` 跳过。2026-09-20 22:43 真机日志里那行
+/// `token_group_skipped group_hash=915eb5e2` 就是这么来的。
+///
+/// 列表接口没有这两条：只受全局限流（每 IP 每 30 秒 300 次），返回完整的
+/// 名字、分组和模型范围。本地过滤既不依赖中转的匹配语义，也不消耗搜索配额。
+async fn list_tokens(
     api: &impl TokenApi,
     origin: &str,
+) -> Result<Vec<serde_json::Map<String, Value>>, ActivationFailure> {
+    let mut tokens = Vec::new();
+    for page in 1..=TOKEN_PAGE_LIMIT {
+        let url = token_list_url(origin, page)?;
+        let (status, value) = api.request(Method::GET, &url, None).await?;
+        if matches!(status, 401 | 403) {
+            return Err(ActivationFailure::SignedOut);
+        }
+        if !server_success(status, &value) {
+            log_token_rejection("list", status, &value);
+            return Err(ActivationFailure::ServerUnavailable);
+        }
+        let items = data(&value)
+            .and_then(Value::as_object)
+            .and_then(|page| page.get("items"))
+            .and_then(Value::as_array)
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(Value::as_object)
+                    .cloned()
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        let last_page = items.len() < TOKEN_PAGE_SIZE;
+        tokens.extend(items);
+        if last_page {
+            break;
+        }
+    }
+    // 翻页期间别处插进一把新密钥，页就会错开一位，同一把出现两次。按 id 去重，
+    // 免得退役队列里有重复的 DELETE。
+    tokens.sort_by_key(|token| token.get("id").and_then(Value::as_u64));
+    tokens.dedup_by_key(|token| token.get("id").and_then(Value::as_u64));
+    Ok(tokens)
+}
+
+/// 在拉回来的列表里认自己的密钥。纯函数，好测。
+///
+/// `exact` 为 true 时按整个名字找刚铸好的那一把；为 false 时按前缀扫，并且
+/// 只认本机的（见 `token_is_ours`）。返回选中复用的一把，以及其余该退役的。
+fn select_token(
+    tokens: &[serde_json::Map<String, Value>],
     name: &str,
     group: &str,
     model_ids: &[String],
     exact: bool,
-) -> Result<(Option<u64>, Vec<u64>), ActivationFailure> {
-    let url = token_search_url(origin, name)?;
-    let (status, value) = api.request(Method::GET, &url, None).await?;
-    if matches!(status, 401 | 403) {
-        return Err(ActivationFailure::SignedOut);
-    }
-    if !server_success(status, &value) {
-        return Err(ActivationFailure::ServerUnavailable);
-    }
-    let mut owned = data(&value)
-        .and_then(Value::as_object)
-        .and_then(|page| page.get("items"))
-        .and_then(Value::as_array)
-        .into_iter()
-        .flatten()
-        .filter_map(Value::as_object)
+) -> (Option<u64>, Vec<u64>) {
+    let mut owned = tokens
+        .iter()
         .filter(|token| owned_token(token, name, group, exact))
         // An exact lookup addresses one known name, so it is already scoped.
         // A prefix sweep is the dangerous one: it sees every computer's keys.
@@ -885,7 +930,37 @@ async fn find_token_id(
         .into_iter()
         .filter_map(|(id, _)| (Some(id) != selected).then_some(id))
         .collect();
-    Ok((selected, retire))
+    (selected, retire)
+}
+
+/// 中转拒绝一次密钥操作时，把状态码和它的原话记进日志 —— **只进日志**。
+/// 那是自由文本，会变，所以判断仍然只看 `success`；可能带账户信息，所以
+/// 界面上不出现。没有这一行，铸不出密钥的十几种原因在日志里长得一模一样。
+fn log_token_rejection(op: &str, status: u16, value: &Value) {
+    let message = value
+        .as_object()
+        .and_then(|object| object.get("message"))
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .chars()
+        .filter(|character| !character.is_control())
+        .take(200)
+        .collect::<String>();
+    log::warn!("activation stage=token_api_rejected op={op} status={status} message={message}");
+}
+
+/// 日志里给密钥操作起个名。只看方法和路径形状，不带 id，不带查询串。
+fn token_operation(method: &Method, url: &str) -> &'static str {
+    let path = Url::parse(url)
+        .map(|url| url.path().to_owned())
+        .unwrap_or_default();
+    match (method.as_str(), path.as_str()) {
+        ("GET", "/api/token/") => "list",
+        ("POST", "/api/token/") => "create",
+        ("POST", path) if path.ends_with("/key") => "key",
+        ("DELETE", _) => "delete",
+        _ => "other",
+    }
 }
 
 fn token_code(tool_id: &str) -> &'static str {
@@ -1124,6 +1199,7 @@ async fn fetch_token_key(
         return Err(ActivationFailure::SignedOut);
     }
     if !server_success(status, &value) {
+        log_token_rejection("key", status, &value);
         return Err(ActivationFailure::ServerUnavailable);
     }
     data(&value)
@@ -1170,9 +1246,15 @@ impl TokenApi for NativeTokenApi<'_> {
         url: &str,
         body: Option<Value>,
     ) -> Result<(u16, Value), ActivationFailure> {
+        let op = token_operation(&method, url);
         native_account_json(method, url, self.access_token, body)
             .await
-            .map_err(|_| ActivationFailure::ServerUnavailable)
+            .map_err(|_| {
+                // 传输层失败：网络、超时，或者中转回了个不是 JSON 的东西 ——
+                // 限流的 429 就是空响应。状态码到不了这一层，至少记下是哪一步。
+                log::warn!("activation stage=token_api_transport_failed op={op}");
+                ActivationFailure::ServerUnavailable
+            })
     }
 }
 
@@ -1184,20 +1266,22 @@ async fn acquire_token_using(
     model_ids: &[String],
 ) -> Result<TokenLease, ActivationFailure> {
     let prefix = token_prefix(tool_id, group);
-    let (mut existing, mut retire_after_commit) =
-        find_token_id(api, origin, &prefix, group, model_ids, false).await?;
-    if existing.is_none() && retire_after_commit.is_empty() {
-        // Nothing under the current name. Before minting, look under the one
-        // 0.4.22 and earlier used: the key is still good, and the name is only
-        // a label. Adopting it costs nothing, while skipping this would leave
-        // an orphaned key on the account at every upgrade and mint a duplicate
-        // beside it. Keys keep their old name until something else replaces
-        // them -- renaming is not worth a second round trip.
-        let legacy = legacy_token_prefix(tool_id, group);
-        let (found, retire) = find_token_id(api, origin, &legacy, group, model_ids, false).await?;
-        existing = found;
-        retire_after_commit = retire;
-    }
+    let tokens = list_tokens(api, origin).await?;
+    let (current, current_stale) = select_token(&tokens, &prefix, group, model_ids, false);
+    // Also look under the name 0.4.22 and earlier used: the key is still good,
+    // and the name is only a label. Adopting it costs nothing, while skipping
+    // this would leave an orphaned key on the account at every upgrade and mint
+    // a duplicate beside it. Keys keep their old name until something else
+    // replaces them -- renaming is not worth a round trip. When both shapes
+    // exist the current one wins and the legacy one is retired with the rest.
+    let legacy = legacy_token_prefix(tool_id, group);
+    let (adoptable, legacy_stale) = select_token(&tokens, &legacy, group, model_ids, false);
+    let existing = current.or(adoptable);
+    let retire_after_commit = current_stale
+        .into_iter()
+        .chain(legacy_stale)
+        .chain(adoptable.filter(|id| Some(*id) != existing))
+        .collect::<Vec<_>>();
     if let Some(id) = existing {
         // Reuse only an exact group and model scope; broad legacy keys are
         // retired after the new local transaction commits successfully.
@@ -1236,14 +1320,21 @@ async fn acquire_token_using(
         return Err(ActivationFailure::SignedOut);
     }
     if !server_success(status, &value) {
+        log_token_rejection("create", status, &value);
         return Err(ActivationFailure::ServerUnavailable);
     }
-    // Standard NewAPI returns success with no data/key. Read the exact newly
-    // created name back, including its group, then use the dedicated key API.
-    let id = find_token_id(api, origin, &name, group, model_ids, true)
-        .await?
-        .0
-        .ok_or(ActivationFailure::ServerUnavailable)?;
+    let id = match created_token_id(&value, &name) {
+        Some(id) => id,
+        None => {
+            // Standard NewAPI returns success with no data/key. Read the exact
+            // newly created name back, including its group, then use the
+            // dedicated key API.
+            let tokens = list_tokens(api, origin).await?;
+            select_token(&tokens, &name, group, model_ids, true)
+                .0
+                .ok_or(ActivationFailure::ServerUnavailable)?
+        }
+    };
     let key = match fetch_token_key(api, origin, id).await {
         Ok(key) => key,
         Err(error) => {
@@ -1259,6 +1350,15 @@ async fn acquire_token_using(
         created: true,
         retire_after_commit,
     })
+}
+
+/// 野菜的中转（yeschoy/new-api）创建密钥时把新密钥整个回传在 `data` 里，
+/// 标准 NewAPI 什么都不回。有就直接用，省一次列表；名字对不上就当没有。
+fn created_token_id(value: &Value, name: &str) -> Option<u64> {
+    let created = data(value)?.as_object()?;
+    (created.get("name").and_then(Value::as_str) == Some(name))
+        .then(|| created.get("id").and_then(Value::as_u64))
+        .flatten()
 }
 
 async fn delete_created_token(origin: &str, access_token: &str, lease: &TokenLease) {
@@ -1295,7 +1395,13 @@ fn retire_superseded_tokens(origin: &str, access_token: &str, leases: &[(String,
     // Old scoped keys are no longer on the critical path once the new local
     // transaction has committed. Retire them in the background so several
     // bounded DELETE calls cannot hold the application restart for minutes.
+    //
+    // 起止各记一行。以前只在失败时 warn，日志里零命中既可能是「从没尝试」也
+    // 可能是「全成功了」—— 2026-09-20 排查旧密钥堆积时就分不开这两种。
     tokio::spawn(async move {
+        let attempted = ids.len();
+        let mut retired_count = 0usize;
+        log::info!("tool_token_cleanup stage=retire_start count={attempted}");
         for id in ids {
             let retired = native_account_json(
                 Method::DELETE,
@@ -1304,10 +1410,13 @@ fn retire_superseded_tokens(origin: &str, access_token: &str, leases: &[(String,
                 None,
             )
             .await;
-            if !matches!(retired, Ok((status, ref value)) if server_success(status, value)) {
+            if matches!(retired, Ok((status, ref value)) if server_success(status, value)) {
+                retired_count += 1;
+            } else {
                 log::warn!("tool_token_cleanup stage=retire_failed");
             }
         }
+        log::info!("tool_token_cleanup stage=retire_done retired={retired_count} of={attempted}");
     });
 }
 
@@ -1328,18 +1437,24 @@ async fn revoke_owned_tool_tokens(
             .or_default()
             .push(model.model_id.clone());
     }
+    let Ok(tokens) = list_tokens(&api, origin).await else {
+        return false;
+    };
     let mut complete = true;
     for (group, mut model_ids) in grouped {
         model_ids.sort_unstable();
         model_ids.dedup();
-        let prefix = token_prefix(tool_id, &group);
-        let ids = match find_token_id(&api, origin, &prefix, &group, &model_ids, false).await {
-            Ok((selected, stale)) => selected.into_iter().chain(stale).collect::<Vec<_>>(),
-            Err(_) => {
-                complete = false;
-                continue;
-            }
-        };
+        // Both name shapes are this machine's; a disconnect leaves neither behind.
+        let ids = [
+            token_prefix(tool_id, &group),
+            legacy_token_prefix(tool_id, &group),
+        ]
+        .iter()
+        .flat_map(|prefix| {
+            let (selected, stale) = select_token(&tokens, prefix, &group, &model_ids, false);
+            selected.into_iter().chain(stale)
+        })
+        .collect::<Vec<_>>();
         for id in ids {
             match api
                 .request(Method::DELETE, &format!("{origin}/api/token/{id}"), None)
@@ -3863,6 +3978,25 @@ mod tests {
         tokens: std::sync::Mutex<Vec<Value>>,
         requests: std::sync::Mutex<Vec<(Method, String)>>,
         fail_keys: std::sync::atomic::AtomicBool,
+        /// 列表接口挂掉（网络、限流的 429 空响应），传输层直接报错。
+        fail_list: std::sync::atomic::AtomicBool,
+        /// 野菜的中转创建密钥时把新密钥回传在 `data` 里；标准 NewAPI 不回。
+        echo_created: std::sync::atomic::AtomicBool,
+    }
+
+    impl FakeTokens {
+        fn seed(&self, token: Value) {
+            self.tokens.lock().unwrap().push(token);
+        }
+
+        fn list_calls(&self) -> usize {
+            self.requests
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|(method, path)| method == Method::GET && path == "/api/token/")
+                .count()
+        }
     }
 
     impl TokenApi for FakeTokens {
@@ -3872,22 +4006,61 @@ mod tests {
             url: &str,
             body: Option<Value>,
         ) -> Result<(u16, Value), ActivationFailure> {
-            let path = Url::parse(url).unwrap().path().to_string();
+            let parsed = Url::parse(url).unwrap();
+            let path = parsed.path().to_string();
             self.requests
                 .lock()
                 .unwrap()
                 .push((method.clone(), path.clone()));
             let mut tokens = self.tokens.lock().unwrap();
-            if method == Method::GET && path == "/api/token/search" {
-                return Ok((200, json!({"success":true,"data":{"items":tokens.clone()}})));
+            if method == Method::GET && path == "/api/token/" {
+                if self.fail_list.load(std::sync::atomic::Ordering::Relaxed) {
+                    return Err(ActivationFailure::ServerUnavailable);
+                }
+                // Paginated like the relay: newest first, at most 100 per page.
+                let query = parsed
+                    .query_pairs()
+                    .map(|(key, value)| (key.into_owned(), value.into_owned()))
+                    .collect::<std::collections::HashMap<_, _>>();
+                let page = query
+                    .get("p")
+                    .and_then(|p| p.parse::<usize>().ok())
+                    .unwrap_or(1)
+                    .max(1);
+                let size = query
+                    .get("size")
+                    .and_then(|s| s.parse::<usize>().ok())
+                    .unwrap_or(10)
+                    .min(100);
+                let mut newest_first = tokens.clone();
+                newest_first.sort_by_key(|t| std::cmp::Reverse(t["id"].as_u64().unwrap_or(0)));
+                let items = newest_first
+                    .into_iter()
+                    .skip((page - 1) * size)
+                    .take(size)
+                    .collect::<Vec<_>>();
+                return Ok((
+                    200,
+                    json!({"success":true,"data":{"items":items,"total":tokens.len(),"page":page,"page_size":size}}),
+                ));
             }
             if method == Method::POST && path == "/api/token/" {
                 let mut token = body.unwrap();
                 assert!(token["name"].as_str().unwrap().len() <= 50);
                 assert_ne!(token["group"], "");
-                token["id"] = json!(tokens.len() + 1);
+                let next_id = tokens
+                    .iter()
+                    .filter_map(|t| t["id"].as_u64())
+                    .max()
+                    .unwrap_or(0)
+                    + 1;
+                token["id"] = json!(next_id);
                 token["status"] = json!(1);
-                tokens.push(token);
+                tokens.push(token.clone());
+                if self.echo_created.load(std::sync::atomic::Ordering::Relaxed) {
+                    token["key"] = json!("sk-****masked");
+                    return Ok((200, json!({"success":true,"message":"","data":token})));
+                }
                 // The standard server does not return a key or data here.
                 return Ok((200, json!({"success":true,"message":""})));
             }
@@ -3906,8 +4079,239 @@ mod tests {
                 tokens.retain(|t| t["id"] != id);
                 return Ok((200, json!({"success":true})));
             }
+            // In particular `/api/token/search` lands here: the relay matches a
+            // keyword without `%` against the whole name and rate-limits the
+            // endpoint to ten calls a minute, so the client must never use it.
             panic!("unexpected token operation: {method} {path}");
         }
+    }
+
+    /// 一把本机铸的、范围完全一致的密钥。
+    fn our_key(id: u64, prefix: &str, group: &str, models: &str) -> Value {
+        json!({
+            "id": id,
+            "name": format!("{prefix}-{}{:08x}", device_scope(), id as u32),
+            "group": group, "status": 1, "expired_time": -1,
+            "model_limits_enabled": true, "model_limits": models,
+        })
+    }
+
+    #[tokio::test]
+    async fn an_existing_key_is_found_by_listing_not_by_searching() {
+        // 2026-09-20: the relay's search endpoint stopped matching prefixes
+        // (exact unless the keyword carries `%`) and gained a ten-per-minute
+        // budget. Every activation then minted a fresh key, retired nothing,
+        // and the fourth billing group of one activation tripped the budget.
+        let api = FakeTokens::default();
+        let prefix = token_prefix("codex_desktop", "gpt pool");
+        api.seed(our_key(710, &prefix, "gpt pool", "gpt-5.6-sol"));
+        let lease = acquire_token_using(
+            &api,
+            "https://mock.invalid",
+            "codex_desktop",
+            "gpt pool",
+            &["gpt-5.6-sol".to_string()],
+        )
+        .await
+        .unwrap();
+        assert!(!lease.created);
+        assert_eq!(lease.id, 710);
+        assert!(lease.retire_after_commit.is_empty());
+        let requests = api.requests.lock().unwrap();
+        assert!(!requests.iter().any(|(_, path)| path.contains("search")));
+        assert_eq!(
+            requests
+                .iter()
+                .filter(|(method, path)| method == Method::POST && path == "/api/token/")
+                .count(),
+            0,
+            "a key that exists must not be minted again"
+        );
+    }
+
+    #[tokio::test]
+    async fn four_groups_cost_one_list_each_and_no_search_budget() {
+        let api = FakeTokens::default();
+        for group in [
+            "DeepSeek Flash",
+            "限时国模特价渠道",
+            "【特价】glm5.3 flash",
+            "gpt pool",
+        ] {
+            acquire_token_using(
+                &api,
+                "https://mock.invalid",
+                "codex_desktop",
+                group,
+                &["model".to_string()],
+            )
+            .await
+            .unwrap_or_else(|_| panic!("group {group} must not be skipped"));
+        }
+        // One sweep before minting, one read-back after: the standard relay
+        // returns nothing on create. Still nowhere near any per-minute budget,
+        // and none of it touches the search endpoint (the fake would panic).
+        assert_eq!(api.list_calls(), 8);
+        assert_eq!(api.tokens.lock().unwrap().len(), 4);
+    }
+
+    #[tokio::test]
+    async fn a_key_on_the_second_page_is_still_recognised() {
+        let api = FakeTokens::default();
+        let prefix = token_prefix("claude_code", "default");
+        // Oldest key is ours; a hundred newer ones (other groups) push it to
+        // page two of a newest-first listing.
+        api.seed(our_key(1, &prefix, "default", "model-a"));
+        for id in 1000..1100u64 {
+            api.seed(our_key(
+                id,
+                &token_prefix("pi", "other"),
+                "other",
+                "model-b",
+            ));
+        }
+        let lease = acquire_token_using(
+            &api,
+            "https://mock.invalid",
+            "claude_code",
+            "default",
+            &["model-a".to_string()],
+        )
+        .await
+        .unwrap();
+        assert!(!lease.created);
+        assert_eq!(lease.id, 1);
+        assert_eq!(
+            api.list_calls(),
+            2,
+            "page one was full, so page two was read"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_relay_that_echoes_the_new_key_saves_the_read_back() {
+        let api = FakeTokens::default();
+        api.echo_created
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+        let lease = acquire_token_using(
+            &api,
+            "https://mock.invalid",
+            "pi",
+            "default",
+            &["model-a".to_string()],
+        )
+        .await
+        .unwrap();
+        assert!(lease.created);
+        assert_eq!(api.list_calls(), 1, "only the sweep before minting");
+        assert_eq!(api.tokens.lock().unwrap()[0]["id"], lease.id);
+    }
+
+    #[test]
+    fn a_created_echo_is_trusted_only_when_the_name_matches() {
+        let echo =
+            json!({"success":true,"data":{"id":42,"name":"野菜API Pi-00000000-0000000000000000"}});
+        assert_eq!(
+            created_token_id(&echo, "野菜API Pi-00000000-0000000000000000"),
+            Some(42)
+        );
+        assert_eq!(
+            created_token_id(&echo, "野菜API Pi-00000000-ffffffffffffffff"),
+            None
+        );
+        assert_eq!(
+            created_token_id(&json!({"success":true,"message":""}), "x"),
+            None
+        );
+        assert_eq!(
+            created_token_id(&json!({"success":false,"data":{"id":42,"name":"x"}}), "x"),
+            None
+        );
+    }
+
+    #[tokio::test]
+    async fn a_legacy_named_key_is_adopted_and_a_stale_current_one_retired() {
+        let api = FakeTokens::default();
+        let current = token_prefix("codex_desktop", "default");
+        let legacy = legacy_token_prefix("codex_desktop", "default");
+        // The current-name key has the wrong model scope; the 0.4.22-era key
+        // is exactly right. Adopt the good one, retire the stale one.
+        api.seed(our_key(5, &current, "default", "model-old"));
+        api.seed(our_key(3, &legacy, "default", "model-a"));
+        let lease = acquire_token_using(
+            &api,
+            "https://mock.invalid",
+            "codex_desktop",
+            "default",
+            &["model-a".to_string()],
+        )
+        .await
+        .unwrap();
+        assert!(!lease.created);
+        assert_eq!(lease.id, 3);
+        assert_eq!(lease.retire_after_commit, vec![5]);
+
+        // When both shapes fit, the current name wins and the legacy one goes.
+        let api = FakeTokens::default();
+        api.seed(our_key(5, &current, "default", "model-a"));
+        api.seed(our_key(3, &legacy, "default", "model-a"));
+        let lease = acquire_token_using(
+            &api,
+            "https://mock.invalid",
+            "codex_desktop",
+            "default",
+            &["model-a".to_string()],
+        )
+        .await
+        .unwrap();
+        assert!(!lease.created);
+        assert_eq!(lease.id, 5);
+        assert_eq!(lease.retire_after_commit, vec![3]);
+    }
+
+    #[tokio::test]
+    async fn an_unreadable_list_fails_the_group_instead_of_minting_blind() {
+        // Minting without looking is exactly how keys piled up. When the list
+        // cannot be read the group is skipped (and named in the log), which the
+        // user can retry; a blind mint could not be undone.
+        let api = FakeTokens::default();
+        api.fail_list
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+        assert!(acquire_token_using(
+            &api,
+            "https://mock.invalid",
+            "pi",
+            "default",
+            &["model-a".to_string()],
+        )
+        .await
+        .is_err());
+        assert!(api.tokens.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn token_operations_are_named_without_ids_or_queries() {
+        let o = "https://mock.invalid";
+        assert_eq!(
+            token_operation(&Method::GET, &format!("{o}/api/token/?p=1&size=100")),
+            "list"
+        );
+        assert_eq!(
+            token_operation(&Method::POST, &format!("{o}/api/token/")),
+            "create"
+        );
+        assert_eq!(
+            token_operation(&Method::POST, &format!("{o}/api/token/764/key")),
+            "key"
+        );
+        assert_eq!(
+            token_operation(&Method::DELETE, &format!("{o}/api/token/764")),
+            "delete"
+        );
+        assert_eq!(
+            token_operation(&Method::GET, &format!("{o}/api/token/search?keyword=x")),
+            "other"
+        );
     }
 
     #[tokio::test]
