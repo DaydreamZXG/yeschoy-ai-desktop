@@ -1,6 +1,6 @@
 {
   "name": "yeschoy-desktop",
-  "version": "0.4.24",
+  "version": "0.4.25",
   "description": "Official beginner-friendly desktop assistant for 野菜API",
   "type": "module",
   "scripts": {
