@@ -24,32 +24,32 @@ tauri-build = { version = "2.4.0", features = [] }
 # vendored 的 proxy/providers/streaming.rs 用 async_stream::stream!。
 # 0.3.6 在本地 registry 缓存里，加它只改 lock、不产生下载。
 async-stream = "0.3"
-aes-gcm = "0.10.3"
+aes-gcm = "0.11.1"
 axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio"] }
-base64 = "0.22"
+base64 = "0.23"
 # 同 thiserror：vendored 的 proxy/ 需要，1.11.1 本来就在 lock 与本地缓存里。
 bytes = "1.5"
 caseless = "=0.2.2"
 futures = "0.3"
-getrandom = "0.3"
-json5 = "0.4"
+getrandom = "0.4"
+json5 = "1.3"
 keyring = { version = "=4.2.0", default-features = false, features = ["v1"] }
 log = "0.4"
 quick-xml = "0.42"
-reqwest = { version = "=0.13.2", default-features = false, features = ["json", "native-tls", "stream"] }
-rusqlite = { version = "=0.32.1", features = ["bundled"] }
+reqwest = { version = "=0.13.5", default-features = false, features = ["json", "native-tls", "stream"] }
+rusqlite = { version = "=0.40.2", features = ["bundled"] }
 semver = "1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_yaml = "0.9"
-sha2 = "0.10"
+sha2 = "0.11"
 # vendored 的 proxy/ 用它派生错误类型；2.0.18 本来就在 lock 与本地缓存里，
 # 加成直接依赖不产生新下载，`--offline` 出包不受影响。
 thiserror = "2.0"
 tauri = { version = "2.8.2", default-features = false, features = ["wry"] }
-tauri-plugin-updater = { version = "=2.9.0", default-features = false, features = ["native-tls", "zip"] }
+tauri-plugin-updater = { version = "=2.11.0", default-features = false, features = ["native-tls", "zip"] }
 tokio = { version = "1", features = ["io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }
-toml_edit = { version = "0.24", features = ["serde"] }
+toml_edit = { version = "0.25", features = ["serde"] }
 unicode-normalization = "=0.1.25"
 # vendored 的 proxy/usage/parser.rs 需要；1.22.0 已在 lock 与本地缓存里。
 uuid = { version = "1.11", features = ["v4"] }
@@ -58,10 +58,10 @@ zip = { version = "=8.6.0", default-features = false, features = ["deflate-flate
 [target.'cfg(windows)'.dependencies]
 winreg = "=0.56.0"
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Storage_FileSystem", "Win32_System_Diagnostics_Debug", "Win32_Storage_Packaging_Appx", "Win32_Security_Cryptography", "Win32_Security_WinTrust", "Win32_Security_Authorization", "Win32_System_Memory", "Win32_System_Threading"] }
-windows = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Com", "Win32_System_Diagnostics_ToolHelp", "Win32_System_SystemInformation", "Win32_System_Threading", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+windows = { version = "0.62", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Com", "Win32_System_Diagnostics_ToolHelp", "Win32_System_SystemInformation", "Win32_System_Threading", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
-tauri-plugin-single-instance = "=2.4.0"
+tauri-plugin-single-instance = "=2.4.4"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2-app-kit = { version = "0.3.2", default-features = false, features = ["NSRunningApplication"] }
