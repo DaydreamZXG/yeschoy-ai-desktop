@@ -1615,9 +1615,161 @@ describe("daily-use UX", () => {
     expect(
       screen.queryByRole("button", { name: "查看其他线路" }),
     ).not.toBeInTheDocument();
+    // 首次接入、列表为空：提交的是选择器里那一个，「移除」改变不了下一次
+    // 提交（以前这个按钮点了没反应、再接一次原样失败）。这时的出路是换一个
+    // 模型或价格方案。
     expect(
-      screen.getByRole("button", { name: "移除「glm-5.3-flash」" }),
+      screen.queryByRole("button", { name: "移除「glm-5.3-flash」" }),
+    ).not.toBeInTheDocument();
+    expect(alert).toHaveTextContent("换一个模型或价格方案");
+    expect(
+      screen.getByRole("button", { name: "换一个模型或价格方案" }),
     ).toBeEnabled();
+  });
+
+  it("offers to remove the blocked model only when it is in the list, and removing the default does not promote a survivor", async () => {
+    native.mockImplementation(async (command, args) => {
+      const req = (args as { request: Record<string, string> }).request;
+      if (command === "scan_activation_targets_v1") return scan(req.requestId);
+      return {
+        requestId: req.requestId,
+        schemaVersion: 5,
+        status: "server_unavailable",
+        toolId: req.toolId,
+        modelId: req.modelId,
+        billingGroup: req.billingGroup,
+        reasonCode: "server_unavailable",
+        observedAtEpochMs: 2000,
+        models: req.models,
+        skipped: [
+          {
+            modelId: "model-a",
+            billingGroup: "优惠组",
+            reasonCode: "server_unavailable",
+          },
+        ],
+      };
+    });
+    render(
+      setupView(
+        session(),
+        local({
+          models: [
+            { modelId: "model-a", billingGroup: "优惠组" },
+            { modelId: "model-b", billingGroup: "优惠组" },
+          ],
+        }),
+      ),
+    );
+    await tick();
+    applySavedOrSelected();
+    await tick();
+    const remove = screen.getByRole("button", { name: "移除「model-a」" });
+    fireEvent.click(remove);
+    // 默认模型被移走后不能悄悄让 model-b 顶上——那等于替用户改了计费对象。
+    // 默认位空着，主按钮的任务变成「要一个明确的默认」。
+    expect(
+      screen.queryByRole("radio", { name: "默认模型 model-b" }),
+    ).not.toBeChecked();
+    expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
+      "先选一个默认模型",
+    );
+    expect(
+      native.mock.calls.filter(([c]) => c === "configure_desktop_tool_v2"),
+    ).toHaveLength(1);
+    fireEvent.click(screen.getByRole("radio", { name: "默认模型 model-b" }));
+    expect(
+      screen.getByTestId("configuration-apply-action"),
+    ).not.toHaveTextContent("先选一个默认模型");
+  });
+
+  it("puts re-login ahead of removing a model when the session is gone, even if a group carries the sign-out", async () => {
+    native.mockImplementation(async (command, args) => {
+      const req = (args as { request: Record<string, string> }).request;
+      if (command === "scan_activation_targets_v1") return scan(req.requestId);
+      return {
+        requestId: req.requestId,
+        schemaVersion: 5,
+        status: "server_unavailable",
+        toolId: req.toolId,
+        modelId: req.modelId,
+        billingGroup: req.billingGroup,
+        reasonCode: "signed_out",
+        observedAtEpochMs: 2000,
+        models: req.models,
+        skipped: [
+          {
+            modelId: "model-a",
+            billingGroup: "优惠组",
+            reasonCode: "signed_out",
+          },
+        ],
+      };
+    });
+    render(
+      setupView(
+        session(),
+        local({
+          models: [
+            { modelId: "model-a", billingGroup: "优惠组" },
+            { modelId: "model-b", billingGroup: "优惠组" },
+          ],
+        }),
+      ),
+    );
+    await tick();
+    applySavedOrSelected();
+    await tick();
+    expect(
+      screen.queryByRole("button", { name: "移除「model-a」" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "查看账户并重新登录" }),
+    ).toBeEnabled();
+  });
+
+  it("keeps the launch failure explanation when settings were written but some groups were skipped", async () => {
+    native.mockImplementation(async (command, args) => {
+      const req = (args as { request: Record<string, string> }).request;
+      if (command === "scan_activation_targets_v1") return scan(req.requestId);
+      return {
+        requestId: req.requestId,
+        schemaVersion: 5,
+        status: "launch_failed",
+        toolId: req.toolId,
+        modelId: req.modelId,
+        billingGroup: req.billingGroup,
+        reasonCode: "terminal_launch_failed",
+        observedAtEpochMs: 2000,
+        models: req.models,
+        skipped: [
+          {
+            modelId: "model-b",
+            billingGroup: "优惠组",
+            reasonCode: "server_unavailable",
+          },
+        ],
+      };
+    });
+    render(
+      setupView(
+        session(),
+        local({
+          models: [
+            { modelId: "model-a", billingGroup: "优惠组" },
+            { modelId: "model-b", billingGroup: "优惠组" },
+          ],
+        }),
+      ),
+    );
+    await tick();
+    applySavedOrSelected();
+    await tick();
+    // 设置已经写进去了；被跳过的分组不能把这件事说成「接入没有完成」。
+    expect(screen.queryByText(/这次接入没有完成/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "移除「model-b」" }),
+    ).not.toBeInTheDocument();
   });
   it("keeps in-flight results bound to their submitted choice after external refresh and line change", async () => {
     let finish!: (value: unknown) => void;

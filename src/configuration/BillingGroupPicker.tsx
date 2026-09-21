@@ -355,7 +355,8 @@ export function BillingPrices({
               <p className="billing-example-formula">{c.estimateFormula}</p>
               {range?.tiered && (
                 <p className="billing-price-note">
-                  {c.estimateOfficialLabel}: {priceRange(range.official)}；
+                  {c.estimateOfficialLabel}: {priceRange(range.official)}
+                  {c.estimateRangeSeparator}
                   {c.estimateYeschoyLabel}: {priceRange(range.yeschoy)}
                 </p>
               )}
