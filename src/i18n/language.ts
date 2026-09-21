@@ -56,3 +56,19 @@ export function applyHtmlLang(value: Language): void {
     document.documentElement.lang = HTML_LANG[value];
   }
 }
+
+/**
+ * 把语言告诉原生侧（`src-tauri/src/ui_language.rs`）。
+ *
+ * 原生自己画的东西 —— Windows 关闭窗口时的 MessageBox、安装项的位置标签、
+ * OAuth 回调页 —— 不经过 i18next，只能靠这一句知道该说哪种语言。
+ * 启动时和每次切换都发一次；发不出去（比如在浏览器里预览）就当没这回事，
+ * 渲染层的语言不受影响。
+ */
+export function announceLanguageToNative(value: Language): void {
+  void import("@tauri-apps/api/core")
+    .then(({ invoke }) => invoke("set_ui_language_v1", { language: value }))
+    .catch(() => {
+      /* 原生侧不在（浏览器预览）或命令不存在（旧版壳）都不是错误。 */
+    });
+}

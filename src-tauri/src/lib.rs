@@ -51,6 +51,7 @@ mod tool_discovery_core;
 mod tool_discovery_v2;
 mod tool_model_profile;
 mod tool_selection_core;
+mod ui_language;
 mod window_appearance;
 
 pub use tool_credentials::credential_helper_exit_code;
@@ -189,6 +190,7 @@ pub fn run() {
             tool_discovery_v2::scan_tools_read_only_v2,
             model_catalog::refresh_model_catalog_v1,
             window_appearance::set_window_appearance,
+            ui_language::set_ui_language_v1,
             connectivity::check_line_connectivity_read_only,
             service_catalog::read_public_service_catalog,
             config_reveal::open_config_folder
