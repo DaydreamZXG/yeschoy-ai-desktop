@@ -26,7 +26,11 @@ import {
   type ActivationTargetScan,
   type ActivationToolId,
 } from "../configuration/activation";
-import { connectionLabel, useConnections } from "../configuration/connections";
+import {
+  connectionLabel,
+  useConnections,
+  type ToolConnection,
+} from "../configuration/connections";
 import { RestoreConnection } from "../configuration/RestoreConnection";
 import { OpenConnection } from "../configuration/OpenConnection";
 import { ConnectionStatusNotice } from "../configuration/ConnectionStatusNotice";
@@ -57,6 +61,16 @@ export function outageIsTotal(
   connections: boolean,
 ): boolean {
   return account && scan && connections;
+}
+
+/**
+ * 「已接入」只有一个定义：标题行的计数和「已接入」分组都从这里读。
+ * 以前计数用这三个状态、分组却用「不是未接入就算」——于是一个
+ * `recovery_pending` 的应用会出现在「已接入 (1)」下面，而标题写着
+ * 「0 个应用已接入」。它不算：那是一次没做完的接入，先恢复才谈得上用。
+ */
+export function isConnected(state?: ToolConnection["state"]): boolean {
+  return !!state && ["connected", "legacy", "changed"].includes(state);
 }
 
 export function AppLibraryView({
@@ -111,9 +125,7 @@ export function AppLibraryView({
     : null;
   const recharge = useWalletRecharge(accountSession.openWallet);
   const configured =
-    connections?.connections.filter((v) =>
-      ["connected", "legacy", "changed"].includes(v.state),
-    ).length ?? 0;
+    connections?.connections.filter((v) => isConnected(v.state)).length ?? 0;
   const hasConnectionSnapshot = !!connections?.connections.length;
   const partialConnections = connections?.connections.some(
     (c) => c.state === "unavailable",
@@ -234,18 +246,24 @@ export function AppLibraryView({
   // （`scanning`，装没装都还不知道）时，平铺回今天的样子才是诚实的。
   // 那个「六张卡全是状态待确认」的降级态不是设计没想清楚，
   // 那就是「读不到」应该有的样子。
-  const canGroup = !scanning && rows.every((row) => !row.unknownConnection);
+  // 扫描失败同理：`scan` 是 null，每个应用都会被算成「没装」，装好的
+  // Claude Desktop 就出现在「这台电脑上没装」下面——那不是分组，是误报。
+  const canGroup =
+    !scanning && !scanError && rows.every((row) => !row.unknownConnection);
   const groups = canGroup
     ? [
         {
           key: "active",
           title: c.libraryGroupActive,
-          apps: rows.filter((r) => r.active),
+          // 与标题行的计数用同一个定义（`isConnected`），待恢复的不算。
+          apps: rows.filter((r) => isConnected(r.connection?.state)),
         },
         {
           key: "ready",
           title: c.libraryGroupReady,
-          apps: rows.filter((r) => !r.active && r.installed),
+          apps: rows.filter(
+            (r) => !isConnected(r.connection?.state) && r.installed,
+          ),
         },
         {
           key: "missing",
@@ -306,7 +324,9 @@ export function AppLibraryView({
         >
           <CircleAlert />
           {t("yeschoyHome.offlineModelBanner", {
-            apps: offlineModels.map((app) => app.name).join("、"),
+            apps: offlineModels
+              .map((app) => app.name)
+              .join(t("workbench.appListSeparator")),
           })}
           <button onClick={() => onOpenSetup(offlineModels[0].id)}>
             {t("yeschoyHome.offlineModelAction")}
@@ -382,6 +402,7 @@ export function AppLibraryView({
         <p className="workbench-notice" role="alert">
           <CircleAlert />
           {c.libraryScanError}
+          <button onClick={() => void refresh()}>{c.retry}</button>
         </p>
       )}
       {!everythingUnavailable &&

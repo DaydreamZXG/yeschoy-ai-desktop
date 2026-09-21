@@ -1,4 +1,5 @@
 import { useMemo, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ArrowUpRight,
   CheckCircle2,
@@ -13,10 +14,7 @@ import {
 import type { ConfigurationLineId } from "../configuration/preview";
 import { creditUnit, formatMoney } from "../account/finance";
 import { aggregateUsage, type UsageRecord } from "../account/usage";
-import {
-  readSessionAgeRecord,
-  sessionAgeLevel,
-} from "../account/sessionAge";
+import { readSessionAgeRecord, sessionAgeLevel } from "../account/sessionAge";
 import { SavingsCard, SavingsDetails } from "./Savings";
 import { WORKBENCH_APPS } from "./appCatalog";
 import type { AccountSessionController } from "../account/useAccountSession";
@@ -44,8 +42,11 @@ export function AccountView({
   session: AccountSessionController;
 }) {
   const c = useWorkbenchCopy();
+  const { i18n } = useTranslation();
   const [logoutPrompt, setLogoutPrompt] = useState(false);
-  const locale = "zh-CN";
+  // 数字、金额、时间都跟着界面语言走。以前写死 `zh-CN`，英文界面上的
+  // 累计请求会显示成「12万」而不是「120K」。
+  const locale = i18n.language;
   const {
     projection,
     loading,
@@ -94,10 +95,14 @@ export function AccountView({
   const staleData =
     !!projection?.observedAtEpochMs &&
     Date.now() - projection.observedAtEpochMs > 10 * 60 * 1000;
-  const toolName = (toolId: string): string =>
-    toolId === ""
-      ? c.usageUnattributed
-      : (WORKBENCH_APPS.find((app) => app.id === toolId)?.name ?? toolId);
+  // 空 toolId 不是「不知道」：原生侧只把客户端自己签发的密钥归因到工具，
+  // 其余的（网页直用、用户自建的密钥）都落到这一桶。它有明确的含义，
+  // 就该有个明确的名字；真正认不出的（目录里没有的工具 ID）才画破折号。
+  const toolName = (toolId: string) => {
+    if (toolId === "") return c.usageUnattributed;
+    const app = WORKBENCH_APPS.find((app) => app.id === toolId);
+    return app ? app.name : <span className="usage-amount-missing">—</span>;
+  };
   const formatRecordTime = (ms: number) =>
     new Intl.DateTimeFormat(locale, {
       month: "numeric",
@@ -490,14 +495,13 @@ export function AccountView({
             ) : (
               <p className="usage-note">{c.usageUnavailableBody}</p>
             )}
-            {usageLog?.truncated && <p className="usage-note">{c.usageTruncated}</p>}
+            {usageLog?.truncated && (
+              <p className="usage-note">{c.usageTruncated}</p>
+            )}
           </section>
 
           {latestPerTool.length > 0 && (
-            <section
-              className="usage-latest"
-              aria-label={c.usageLatestPerTool}
-            >
+            <section className="usage-latest" aria-label={c.usageLatestPerTool}>
               <h2>{c.usageLatestPerTool}</h2>
               <ul>
                 {latestPerTool.map((record) => (
@@ -563,7 +567,6 @@ export function AccountView({
               </div>
             </details>
           )}
-
         </>
       ) : (
         <section

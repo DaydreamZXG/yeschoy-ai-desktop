@@ -3,7 +3,11 @@ import { initReactI18next } from "react-i18next";
 
 import en from "./locales/en.json";
 import zh from "./locales/zh.json";
-import { applyHtmlLang, readLanguage } from "./language";
+import {
+  announceLanguageToNative,
+  applyHtmlLang,
+  readLanguage,
+} from "./language";
 
 /**
  * 只注册**已经完整翻译**的语言。
@@ -31,5 +35,6 @@ i18n.use(initReactI18next).init({
 });
 
 applyHtmlLang(language);
+announceLanguageToNative(language);
 
 export default i18n;

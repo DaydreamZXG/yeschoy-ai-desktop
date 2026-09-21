@@ -293,11 +293,16 @@ mod tests {
             socket.write_all(&body).await.unwrap();
             String::from_utf8(request).unwrap()
         });
+        // Both fixtures live on 127.0.0.1. A developer machine with a system
+        // proxy configured would otherwise route "catalog.test" through it,
+        // and the `resolve` overrides never apply to a proxied request.
         let public = Client::builder()
+            .no_proxy()
             .resolve("catalog.test", "127.0.0.1:1".parse().unwrap())
             .build()
             .unwrap();
         let direct = Client::builder()
+            .no_proxy()
             .resolve("catalog.test", address)
             .build()
             .unwrap();

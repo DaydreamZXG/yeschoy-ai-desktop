@@ -32,7 +32,12 @@ import codexIcon from "../assets/icons/official-codex.png";
 import piIcon from "../assets/icons/official-pi.svg";
 import dshIcon from "../assets/icons/official-dsh.svg";
 import { ModelPicker } from "./ModelPicker";
-import { connectionLabel, useConnections } from "./connections";
+import {
+  connectionLabel,
+  useConnections,
+  type RequestObservation,
+  type ToolConnection,
+} from "./connections";
 import { RestoreConnection } from "./RestoreConnection";
 import { OpenConnection } from "./OpenConnection";
 import { RecentRequest } from "./RecentRequest";
@@ -229,6 +234,59 @@ const AUTO_RECOVERY_REASONS = new Set([
   "recovery_receipt_failed",
 ]);
 
+// 这两个码说的是「你的登录不算数了」，出路只有一条：重新登录。它们可能出现在
+// 状态里、整单的原因码里，也可能挂在某个被跳过的分组上 —— 三个位置都得认。
+const AUTH_FAILURE_REASONS = new Set(["signed_out", "authentication_failed"]);
+// 被跳过的分组带的原因码里，这些不是「这个分组配不出来」，而是整个会话或整次
+// 操作都完了。把它们当成分组问题，界面就会说「移除这个模型就能继续」——
+// 用户照做之后下一个分组照样失败。
+const GLOBAL_SKIP_REASONS = new Set([
+  ...AUTH_FAILURE_REASONS,
+  "assistant_shutting_down",
+  "account_changed",
+  "activation_cancelled",
+]);
+
+const BRIDGED_TOOLS: ReadonlySet<ActivationToolId> = new Set<ActivationToolId>([
+  "claude_code",
+  "claude_desktop",
+  "codex_desktop",
+]);
+
+/** 这个应用是否经野菜助手的本机桥接访问线路，而不是直接写线路地址。 */
+export function usesLocalBridge(toolId: ActivationToolId): boolean {
+  return BRIDGED_TOOLS.has(toolId);
+}
+
+/**
+ * 真正会写进应用设置的连接地址。
+ *
+ * 「查看连接详情」原来显示的是文档里的协议端点（`https://yeschoy.com/v1`），
+ * 底下再加一行「文档参考值，实际以写入应用设置的端点为准」—— 等于承认这个值
+ * 是假的。Claude Code / Claude Desktop / Codex 写进去的是本机桥的地址（见
+ * `src-tauri/src/tool_adapters/{claude_code,claude_desktop,codex_desktop}.rs`
+ * 的 `PROXY_BASE`），其余三个直接写线路地址加协议后缀。这三个桥地址和 Rust 常量
+ * 的一致性由 `ConfigurationPreviewView.test.tsx` 读源码校验，漂了当场红。
+ */
+export function writtenEndpoint(
+  toolId: ActivationToolId,
+  rootUrl: string,
+): string {
+  switch (toolId) {
+    case "claude_code":
+      return "http://127.0.0.1:15728/claude-code";
+    case "claude_desktop":
+      return "http://127.0.0.1:15729/claude-desktop";
+    case "codex_desktop":
+      return "http://127.0.0.1:15731/codex/v1";
+    case "workbuddy":
+      return `${rootUrl}/v1/chat/completions`;
+    case "pi":
+    case "dsh_web":
+      return `${rootUrl}/v1`;
+  }
+}
+
 type ScanPhase = "loading" | "ready" | "error";
 
 type LineSpeedtestPhase = "idle" | "running" | "done" | "error";
@@ -282,6 +340,30 @@ function targetTone(target?: ActivationTarget) {
   if (target.status === "available") return "ready";
   if (target.status === "selection_required") return "attention";
   return "muted";
+}
+
+/**
+ * 一条成功的观测是否能给**这条**接入背书。导出供测试直接断言。
+ *
+ * 模型必须对得上 —— 那是日志里真有的。分组和线路只在**双方都有值**时比较：
+ * 观测里为空是「日志没记」，不是「用的不是这个」。
+ */
+export function observationMatchesConnection(
+  observation: Pick<
+    RequestObservation,
+    "outcome" | "modelId" | "billingGroup" | "lineId"
+  >,
+  connection: Pick<ToolConnection, "modelId" | "billingGroup" | "lineId">,
+): boolean {
+  const sameOrUnknown = (observed: string, saved: string) =>
+    !observed || !saved || observed === saved;
+  return (
+    observation.outcome === "ok" &&
+    !!observation.modelId &&
+    observation.modelId === connection.modelId &&
+    sameOrUnknown(observation.billingGroup, connection.billingGroup) &&
+    sameOrUnknown(observation.lineId, connection.lineId)
+  );
 }
 
 export function ConfigurationPreviewView({
@@ -595,9 +677,14 @@ export function ConfigurationPreviewView({
     : selectedModelId && billingGroup
       ? [{ modelId: selectedModelId, billingGroup }]
       : [];
-  const defaultBinding =
-    submittedModels.find((m) => m.modelId === defaultModelId) ??
-    submittedModels[0];
+  // 列表非空时默认模型必须是用户点过的那一个。以前这里兜底到 `submittedModels[0]`，
+  // 于是把默认模型从列表里移走之后，第一个幸存者会悄悄顶上 —— 默认模型是应用
+  // 不选时真正会用的那个，价格也跟着它，这等于替用户改了计费对象。原生侧的
+  // `surviving_bindings` 正是因为这个拒绝自动顶替；渲染层不能反过来替它做。
+  // 没有列表时提交的就是选择器里那一个，它当然就是默认。
+  const defaultBinding = modelSet.length
+    ? modelSet.find((m) => m.modelId === defaultModelId)
+    : submittedModels[0];
   // 一条常用模型「不可用」，指的是那个模型确实列出了分组、而它绑的那个不在
   // 里面 —— 那是用户的旧选择失效了，要他重选。模型压根没有分组数据（不在
   // /api/pricing 里）不算，那只是我们不知道。
@@ -619,6 +706,9 @@ export function ConfigurationPreviewView({
     !!selectedModel &&
     !!selectedBillingGroup &&
     defaultBinding?.modelId !== selectedModelId;
+  // 列表里有模型、却没有一个是默认：只会在默认模型刚被移走之后出现。
+  // 这时不能提交，也不能替用户挑 —— 得他自己点一个。
+  const defaultMissing = modelSet.length > 0 && !defaultBinding;
   const addCurrentModel = () => {
     if (!selectedModel || !selectedBillingGroup) return;
     setModelSet((current) => [
@@ -652,6 +742,32 @@ export function ConfigurationPreviewView({
       { modelId: selectedModelId, billingGroup },
     ]);
     setDefaultModelId(selectedModelId);
+    resetResult();
+  };
+  /**
+   * 把一个模型从列表里拿掉 —— 列表里的「移除」和失败提示里的「移除「X」」
+   * 都走这里，两处曾经各写一份、各漏一半。
+   *
+   * 拿掉的是默认模型时，默认位空出来，不自动让幸存者顶上（理由见
+   * `defaultBinding`）。选择器正停在被拿掉的模型上时也要跟着动：留着它，
+   * 主按钮就会变成「使用所选模型」，一点又把刚移走的加回去 —— 对一个因为
+   * 分组配不出来而被移走的模型，那正是原地打转。有默认模型就把选择器
+   * 放回默认那一个，否则清空，让用户重新挑。
+   */
+  const removeBinding = (modelId: string) => {
+    const survivors = modelSet.filter((m) => m.modelId !== modelId);
+    setModelSet(survivors);
+    const removedDefault = defaultModelId === modelId;
+    if (removedDefault) setDefaultModelId("");
+    if (selectedModelId === modelId) {
+      const fallback = removedDefault
+        ? undefined
+        : survivors.find((m) => m.modelId === defaultModelId);
+      setSelectedModelId(fallback?.modelId ?? "");
+      setBillingGroup(fallback?.billingGroup ?? "");
+    }
+    // 移除之后停在页面上，不自动重新接入：挡住的原因不一定是这个模型
+    // （另外十六个原因仍然存在），自动重试会把人带偏。
     resetResult();
   };
 
@@ -728,6 +844,7 @@ export function ConfigurationPreviewView({
     bindingsAvailable &&
     !pendingModelEdit &&
     !pendingDefaultChange &&
+    !defaultMissing &&
     selectionReadyKey === selectionKey &&
     !session.loading &&
     !session.lastError &&
@@ -787,6 +904,7 @@ export function ConfigurationPreviewView({
       !bindingsAvailable ||
       pendingModelEdit ||
       pendingDefaultChange ||
+      defaultMissing ||
       selectionReadyKey !== selectionKey ||
       !targetCanActivate ||
       !selectedInstallationId ||
@@ -847,15 +965,18 @@ export function ConfigurationPreviewView({
    *
    * 证据必须属于**当前这套选择**：换了模型、分组或线路之后，上一条观测就不能
    * 再算数，否则就是拿旧成绩给新配置背书。
+   *
+   * 但「属于」只能拿观测里**有**的字段来判。原生侧的观测来自服务端用量日志
+   * （`account_finance.rs` 的 `recent_requests_from_pages`），日志行不带计费
+   * 分组，`billingGroup` 一律填空串；线路也不是记录里的，是本次读取用的
+   * origin。空值是「不知道」，不是「不一样」—— 以前按严格相等比，这一级永远
+   * 到不了，「首次使用已验证」成了一句从没显示过的话。
    */
   const firstUseObservation = savedConnection?.lastRequest;
   const firstUseVerified =
     !!firstUseObservation &&
-    firstUseObservation.outcome === "ok" &&
     !!savedConnection &&
-    firstUseObservation.modelId === savedConnection.modelId &&
-    firstUseObservation.billingGroup === savedConnection.billingGroup &&
-    firstUseObservation.lineId === savedConnection.lineId;
+    observationMatchesConnection(firstUseObservation, savedConnection);
 
   // 仪式感动效：接入成功后按钮短暂保持成功态，随后回归常态。
   // 条件失效（如外部切换使结果过期）时必须立即结束成功态，
@@ -901,6 +1022,7 @@ export function ConfigurationPreviewView({
     applyPhase !== "applying" &&
     !pendingModelEdit &&
     !pendingDefaultChange &&
+    !defaultMissing &&
     (activation
       ? activationConfigured && resultIsCurrent
       : savedConnection?.state === "connected" &&
@@ -1362,6 +1484,16 @@ export function ConfigurationPreviewView({
         hint: g.selectInstallationHint,
         run: () => appSwitchButton.current?.focus(),
       };
+    // 默认模型刚被移走、列表里还有别的模型：主按钮的任务是要一个明确的默认，
+    // 不是「先选择模型」（那句会让人以为整个列表都没了）。排在 `!selectedModel`
+    // 前面，因为移除默认模型会把选择器一并清空，两个条件同时为真。
+    if (defaultMissing)
+      return {
+        kind: "choose-default",
+        label: g.chooseDefaultFirst,
+        hint: g.chooseDefaultHint,
+        run: openAdvanced,
+      };
     if (!selectedModel)
       return {
         kind: "choose-model",
@@ -1463,7 +1595,17 @@ export function ConfigurationPreviewView({
         ? t("yeschoyDaily.selectionChangedHint", {
             model: savedConnection?.modelId ?? "",
           })
-        : "",
+        : // 列表是空的、按钮却能点 —— 那就得说清点下去接的是谁。以前空态
+          // 只写「先加一个模型」，按钮又不禁用，用户不知道接入的是选择器
+          // 里那一个。
+          !modelSet.length && defaultBinding
+          ? g.finishSingleModelHint
+              .replace("{{model}}", defaultBinding.modelId)
+              .replace(
+                "{{group}}",
+                groupLabel(defaultBinding.billingGroup, g.defaultGroup),
+              )
+          : "",
       run: () => void apply(),
     };
   })();
@@ -1503,26 +1645,53 @@ export function ConfigurationPreviewView({
    * 多少次都是同一个分组失败 —— 人就卡在那儿了。
    */
   const skippedBindings = activation?.skipped ?? [];
+  // 登录失效有三个藏身处：状态本身、整单的原因码、某个被跳过分组的原因码。
+  // 原生正在改成不再把登出记成「跳过的分组」，但渲染层不能指望它 —— 旧的原生
+  // 二进制还会这么报。
+  const authenticationLost =
+    !!activation &&
+    (activation.status === "signed_out" ||
+      AUTH_FAILURE_REASONS.has(activation.reasonCode) ||
+      skippedBindings.some((s) => AUTH_FAILURE_REASONS.has(s.reasonCode)));
   // 挡住整单的那个：原生只在「默认模型的分组失败」或「一个分组都没成」时失败，
   // 前者能按 `modelId` 认出来，后者取第一个即可 —— 它们都在 `skipped` 里。
   // （投影的 `modelId` 是请求的主语，渲染层拿它做反伪造检查，不能借用。）
+  //
+  // 只有分组自己的原因才算「这个模型挡住了」。登出、退出助手、账户切换这些是
+  // 整单的事，挂在哪个分组上都一样；按分组解释就会让用户去移除一个无辜的模型。
+  // `launch_failed` 也不算：设置已经写进去了，跳过的只是没配上，不是挡住。
   const blockedBinding =
-    activation && activation.status !== "ready"
-      ? (skippedBindings.find((s) => s.modelId === activation.modelId) ??
-        skippedBindings[0])
+    activation &&
+    activation.status !== "ready" &&
+    activation.status !== "launch_failed" &&
+    !authenticationLost
+      ? (skippedBindings.find(
+          (s) =>
+            s.modelId === activation.modelId &&
+            !GLOBAL_SKIP_REASONS.has(s.reasonCode),
+        ) ??
+        skippedBindings.find((s) => !GLOBAL_SKIP_REASONS.has(s.reasonCode)))
       : undefined;
-  const removeBinding = (modelId: string) => {
-    setModelSet((items) => items.filter((x) => x.modelId !== modelId));
-    // 移除之后停在页面上，不自动重新接入：挡住的原因不一定是这个模型
-    // （另外十六个原因仍然存在），自动重试会把人带偏。
-    resetResult();
-  };
+  // 「移除它」只在移除真能改变下一次提交时才给。列表里没有它（首次接入、
+  // 提交的是选择器里那一个）时，移除是一个空操作 —— 以前点了没反应、再接
+  // 一次原样失败。那种情况的出路是换一个模型或方案，文案和按钮都跟着换。
+  const blockedInList =
+    !!blockedBinding &&
+    modelSet.some((m) => m.modelId === blockedBinding.modelId);
+  // 首次接入被挡：选择器仍停在挡住的那个模型上。这里不替用户清空 —— 清了就
+  // 变成「先选择模型」，反而说不清是谁挡的；主按钮改说「换一个模型或价格
+  // 方案」并把焦点送到选择器上，让他自己换（见下面 `recoveryAction`）。
 
   const recoveryAction = (() => {
     if (!activation || activation.status === "ready") return null;
+    // 登录没了就只有重新登录这一条路，排最前：不管它是以哪种形式报上来的
+    // （状态、原因码、还是挂在某个分组上），先于「移除某个模型」——
+    // 移除对一个失效的会话毫无作用。
+    if (authenticationLost)
+      return { label: g.viewAccountRelogin, run: onOpenAccount };
     // 点名了是哪个模型，就给出可以真正解决问题的那一步，而不是「查看其他线路」
     // —— 换线路对一个配不出来的计费分组毫无作用。
-    if (blockedBinding)
+    if (blockedBinding && blockedInList)
       return {
         label: g.removeBlockedModel.replace(
           "{{model}}",
@@ -1530,16 +1699,13 @@ export function ConfigurationPreviewView({
         ),
         run: () => removeBinding(blockedBinding.modelId),
       };
+    if (blockedBinding)
+      return { label: g.chooseAnotherModel, run: openAdvanced };
     if (resultIsCurrent && AUTO_RECOVERY_REASONS.has(activation.reasonCode))
       return {
         label: t("yeschoyDesktopRecovery.retry"),
         run: () => void apply(),
       };
-    if (
-      activation.status === "signed_out" ||
-      activation.reasonCode === "authentication_failed"
-    )
-      return { label: g.viewAccountRelogin, run: onOpenAccount };
     if (
       activation.status === "unsupported_model" ||
       activation.reasonCode === "model_request_rejected" ||
@@ -1863,128 +2029,6 @@ export function ConfigurationPreviewView({
               </span>
               <h3>{g.modelAndPriceStep}</h3>
             </div>
-            {/* 列表在前、选择器在后。写进应用的本来就是一个**模型列表**
-                （每个模型各带计费分组、其中一个是默认），用户之后在目标应用里
-                能直接切的就是它。原来的顺序把选择器摆在前面，页面看起来像在问
-                「选一个模型」（单数），而真正的产物是下面那个列表，两者的关系只在
-                一行脚注里交代（`pendingModelEditNote`）——很容易选完模型就以为选好了，
-                其实什么都没加进去。 */}
-            {signedIn && (
-              <section
-                className="model-set-editor"
-                aria-label={g.favoriteModels}
-              >
-                <header>
-                  <div>
-                    <h3>{g.favoriteModels}</h3>
-                    {/* 「接入后可以在这个应用里直接切换下面这些模型」同理：
-                        没有模型可切的时候，这句话在描述一个还不存在的东西。 */}
-                    {modelSet.length > 0 && <p>{g.favoriteModelsIntro}</p>}
-                  </div>
-                  <button
-                    type="button"
-                    className="subtle-button"
-                    onClick={addCurrentModel}
-                    disabled={
-                      !selectedModel ||
-                      !selectedBillingGroup ||
-                      applyPhase === "applying" ||
-                      session.loading ||
-                      !!session.lastError ||
-                      (modelSet.length >= 200 &&
-                        !modelSet.some((m) => m.modelId === selectedModelId))
-                    }
-                  >
-                    {modelSet.some((m) => m.modelId === selectedModelId)
-                      ? g.updateModelGroup
-                      : g.addFavoriteModel}
-                  </button>
-                </header>
-                {modelSet.length ? (
-                  <ul>
-                    {modelSet.map((m) => {
-                      const bindingModel = models.find(
-                        (a) => a.id === m.modelId,
-                      );
-                      const available = bindingModel?.billing?.groups.some(
-                        (g) => g.id === m.billingGroup,
-                      );
-                      return (
-                        <li key={m.modelId} data-unavailable={!available}>
-                          <label>
-                            <input
-                              type="radio"
-                              name="default-model"
-                              checked={defaultBinding?.modelId === m.modelId}
-                              disabled={applyPhase === "applying"}
-                              onChange={() => {
-                                setDefaultModelId(m.modelId);
-                                setSelectedModelId(m.modelId);
-                                setBillingGroup(m.billingGroup);
-                                resetResult();
-                              }}
-                              aria-label={g.defaultModelAria.replace(
-                                "{{model}}",
-                                m.modelId,
-                              )}
-                            />
-                            <span>
-                              <code>{m.modelId}</code>
-                              <small>
-                                {groupDisplayName(
-                                  m.billingGroup,
-                                  bindingModel?.billing?.groups,
-                                  g.defaultGroup,
-                                )}
-                                {!available && ` · ${g.bindingUnavailable}`}
-                              </small>
-                            </span>
-                          </label>
-                          <span className="model-default-label">
-                            {defaultBinding?.modelId === m.modelId
-                              ? g.defaultBadge
-                              : ""}
-                          </span>
-                          <button
-                            type="button"
-                            className="text-button"
-                            disabled={applyPhase === "applying"}
-                            aria-label={g.removeModelAria.replace(
-                              "{{model}}",
-                              m.modelId,
-                            )}
-                            onClick={() => {
-                              setModelSet((items) =>
-                                items.filter((x) => x.modelId !== m.modelId),
-                              );
-                              resetResult();
-                            }}
-                          >
-                            {g.removeAction}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p>{g.favoriteModelsEmpty}</p>
-                )}
-                {pendingModelEdit && (
-                  <p className="selection-warning" role="status">
-                    {g.pendingModelEditNote.replace(
-                      "{{action}}",
-                      modelSet.some((m) => m.modelId === selectedModelId)
-                        ? g.updateModelGroup
-                        : g.addFavoriteModel,
-                    )}
-                  </p>
-                )}
-                {/* 「左边的圆点是默认模型」在列表为空时无所指——那时屏幕上
-                    根本没有圆点。空态只说下一步做什么就够了。 */}
-                {modelSet.length > 0 && <small>{g.favoriteModelsNote}</small>}
-              </section>
-            )}
-
             <div className="connection-choice-grid">
               <section
                 className="connection-choice-card model-choice-card"
@@ -2111,6 +2155,132 @@ export function ConfigurationPreviewView({
                 />
               </section>
             </div>
+            {/* 列表在选择器和价格方案**之后**。它操作的是上面选好的那个模型：
+                按钮在被操作的东西上方，用户会先点它——真机上就是这样，一进页面
+                点「加入模型」，把默认的 deepseek 加了进去。列表为空时也能接入
+                （第 3 步的文案会说清接的是上面选好的那一个），所以它是「想在
+                应用里切换多个模型」时才需要的进阶步骤，放在后面才对得上。 */}
+            {signedIn && (
+              <section
+                className="model-set-editor"
+                aria-label={g.favoriteModels}
+              >
+                <header>
+                  <div>
+                    <h3>{g.favoriteModels}</h3>
+                    {/* 「接入后可以在这个应用里直接切换下面这些模型」同理：
+                        没有模型可切的时候，这句话在描述一个还不存在的东西。 */}
+                    {modelSet.length > 0 && <p>{g.favoriteModelsIntro}</p>}
+                  </div>
+                  <button
+                    type="button"
+                    className="subtle-button"
+                    onClick={addCurrentModel}
+                    disabled={
+                      !selectedModel ||
+                      !selectedBillingGroup ||
+                      applyPhase === "applying" ||
+                      session.loading ||
+                      !!session.lastError ||
+                      (modelSet.length >= 200 &&
+                        !modelSet.some((m) => m.modelId === selectedModelId))
+                    }
+                  >
+                    {modelSet.some((m) => m.modelId === selectedModelId)
+                      ? g.updateModelGroup
+                      : g.addFavoriteModel}
+                  </button>
+                </header>
+                {modelSet.length ? (
+                  <ul>
+                    {modelSet.map((m) => {
+                      const bindingModel = models.find(
+                        (a) => a.id === m.modelId,
+                      );
+                      const available = bindingModel?.billing?.groups.some(
+                        (g) => g.id === m.billingGroup,
+                      );
+                      return (
+                        <li key={m.modelId} data-unavailable={!available}>
+                          <label>
+                            <input
+                              type="radio"
+                              name="default-model"
+                              checked={defaultBinding?.modelId === m.modelId}
+                              disabled={applyPhase === "applying"}
+                              onChange={() => {
+                                setDefaultModelId(m.modelId);
+                                setSelectedModelId(m.modelId);
+                                setBillingGroup(m.billingGroup);
+                                resetResult();
+                              }}
+                              aria-label={g.defaultModelAria.replace(
+                                "{{model}}",
+                                m.modelId,
+                              )}
+                            />
+                            <span>
+                              <code>{m.modelId}</code>
+                              <small>
+                                {groupDisplayName(
+                                  m.billingGroup,
+                                  bindingModel?.billing?.groups,
+                                  g.defaultGroup,
+                                )}
+                                {!available && ` · ${g.bindingUnavailable}`}
+                              </small>
+                            </span>
+                          </label>
+                          <span className="model-default-label">
+                            {defaultBinding?.modelId === m.modelId
+                              ? g.defaultBadge
+                              : ""}
+                          </span>
+                          <button
+                            type="button"
+                            className="text-button"
+                            disabled={applyPhase === "applying"}
+                            aria-label={g.removeModelAria.replace(
+                              "{{model}}",
+                              m.modelId,
+                            )}
+                            onClick={() => removeBinding(m.modelId)}
+                          >
+                            {g.removeAction}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p>{g.favoriteModelsEmpty}</p>
+                )}
+                {modelSet.length > 0 &&
+                  !pendingModelEdit &&
+                  !!selectedModel &&
+                  modelSet.some((m) => m.modelId === selectedModelId) && (
+                    <p className="selection-note" role="status">
+                      {g.modelAlreadyListed.replace(
+                        "{{model}}",
+                        selectedModelId,
+                      )}
+                    </p>
+                  )}
+                {pendingModelEdit && (
+                  <p className="selection-warning" role="status">
+                    {g.pendingModelEditNote.replace(
+                      "{{action}}",
+                      modelSet.some((m) => m.modelId === selectedModelId)
+                        ? g.updateModelGroup
+                        : g.addFavoriteModel,
+                    )}
+                  </p>
+                )}
+                {/* 「左边的圆点是默认模型」在列表为空时无所指——那时屏幕上
+                    根本没有圆点。空态只说下一步做什么就够了。 */}
+                {modelSet.length > 0 && <small>{g.favoriteModelsNote}</small>}
+              </section>
+            )}
           </div>
         </section>
       </section>
@@ -2288,13 +2458,16 @@ export function ConfigurationPreviewView({
               <dt>{t("yeschoyConfiguration.effectiveEndpoint")}</dt>
               <dd>
                 <code>
-                  {activationToolId === "dsh_web"
-                    ? `${preview.rootUrl}/v1`
-                    : preview.protocolEndpoint}
+                  {writtenEndpoint(activationToolId, preview.rootUrl)}
                 </code>
-                <small className="endpoint-reference-note">
-                  {g.endpointReferenceNote}
-                </small>
+                {usesLocalBridge(activationToolId) && (
+                  <small className="endpoint-reference-note">
+                    {g.bridgedEndpointNote.replace(
+                      "{{app}}",
+                      application.displayName,
+                    )}
+                  </small>
+                )}
               </dd>
             </div>
           </dl>
@@ -2368,7 +2541,7 @@ export function ConfigurationPreviewView({
             {firstActivationCelebration && <CelebrationConfetti />}
             <p>
               {blockedBinding
-                ? g.modelBlocked
+                ? (blockedInList ? g.modelBlocked : g.modelBlockedSingle)
                     .replace("{{model}}", blockedBinding.modelId)
                     .replace(
                       "{{group}}",

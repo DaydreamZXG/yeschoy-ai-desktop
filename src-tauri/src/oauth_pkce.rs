@@ -460,15 +460,41 @@ impl CallbackResponse {
         }
     }
 
-    fn message(self) -> &'static str {
+    // The browser tab is the only thing the user sees at this moment, so it
+    // has to speak the interface language. Takes the language explicitly so
+    // tests can pin one instead of racing on the process-wide setting.
+    fn message_in(self, language: crate::ui_language::Language) -> &'static str {
         match self {
-            Self::Accepted => "授权回调已接收，请返回野菜客户端查看登录结果。",
-            Self::Denied => "授权已取消，请返回野菜客户端。",
-            Self::BadRequest => "请求无效，请返回客户端重试。",
-            Self::NotFound => "页面不存在。",
-            Self::MethodNotAllowed => "请求方法不受支持。",
-            Self::Conflict => "该授权回调已经处理。",
+            Self::Accepted => language.pick(
+                "授权回调已接收，请返回野菜客户端查看登录结果。",
+                "Sign-in received. Return to the Yeschoy app to see the result.",
+            ),
+            Self::Denied => language.pick(
+                "授权已取消，请返回野菜客户端。",
+                "Sign-in cancelled. Return to the Yeschoy app.",
+            ),
+            Self::BadRequest => language.pick(
+                "请求无效，请返回客户端重试。",
+                "Invalid request. Return to the app and try again.",
+            ),
+            Self::NotFound => language.pick("页面不存在。", "Page not found."),
+            Self::MethodNotAllowed => {
+                language.pick("请求方法不受支持。", "Request method not supported.")
+            }
+            Self::Conflict => language.pick(
+                "该授权回调已经处理。",
+                "This sign-in has already been handled.",
+            ),
         }
+    }
+
+    fn page_in(self, language: crate::ui_language::Language) -> String {
+        format!(
+            "<!doctype html><html lang=\"{}\"><meta charset=\"utf-8\"><title>{}</title><body><p>{}</p></body></html>",
+            language.pick("zh-CN", "en"),
+            language.pick("野菜API 授权", "Yeschoy sign-in"),
+            self.message_in(language)
+        )
     }
 }
 
@@ -881,10 +907,7 @@ async fn write_callback_response(
     stream: &mut TcpStream,
     response: CallbackResponse,
 ) -> std::io::Result<()> {
-    let body = format!(
-        "<!doctype html><html lang=\"zh-CN\"><meta charset=\"utf-8\"><title>野菜API 授权</title><body><p>{}</p></body></html>",
-        response.message()
-    );
+    let body = response.page_in(crate::ui_language::current());
     let allow = if matches!(response, CallbackResponse::MethodNotAllowed) {
         "Allow: GET\r\n"
     } else {
@@ -1051,6 +1074,31 @@ mod tests {
         ] {
             assert!(!redirect_uri_is_allowed(rejected), "accepted {rejected}");
         }
+    }
+
+    #[test]
+    fn callback_page_speaks_the_interface_language() {
+        use crate::ui_language::Language;
+        let english = CallbackResponse::Accepted.page_in(Language::En);
+        assert!(english.starts_with("<!doctype html><html lang=\"en\">"));
+        assert!(english.contains("<title>Yeschoy sign-in</title>"));
+        assert!(english.contains("Sign-in received. Return to the Yeschoy app to see the result."));
+        // Not one Han character may leak onto an English user's screen.
+        assert!(english.is_ascii(), "{english}");
+        for response in [
+            CallbackResponse::Denied,
+            CallbackResponse::BadRequest,
+            CallbackResponse::NotFound,
+            CallbackResponse::MethodNotAllowed,
+            CallbackResponse::Conflict,
+        ] {
+            assert!(response.page_in(Language::En).is_ascii());
+        }
+
+        let chinese = CallbackResponse::Accepted.page_in(Language::Zh);
+        assert!(chinese.starts_with("<!doctype html><html lang=\"zh-CN\">"));
+        assert!(chinese.contains("<title>野菜API 授权</title>"));
+        assert!(chinese.contains("授权回调已接收，请返回野菜客户端查看登录结果。"));
     }
 
     #[tokio::test]

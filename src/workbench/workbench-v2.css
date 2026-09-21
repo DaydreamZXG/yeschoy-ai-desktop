@@ -3966,10 +3966,24 @@
 
 .advanced-connection-details > summary {
   display: grid;
-  gap: var(--space-2);
+  /* 小三角自己一列、跨两行；标题和说明在第二列。以前是单列 grid，
+     `::before` 的小三角作为第一个格子独占了一整行，标题被挤到下一行。 */
+  grid-template-columns: max-content 1fr;
+  column-gap: var(--space-8);
+  row-gap: var(--space-2);
+  align-items: baseline;
   padding: var(--space-14) var(--space-16);
   cursor: pointer;
   list-style: none;
+}
+
+.advanced-connection-details > summary::before {
+  grid-row: 1 / span 2;
+}
+
+.advanced-connection-details > summary > span,
+.advanced-connection-details > summary > small {
+  grid-column: 2;
 }
 
 .advanced-connection-details > summary::-webkit-details-marker {
@@ -6069,6 +6083,10 @@
 .billing-group-grid {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--space-10);
+  /* 展开某一张的「计费详情」时，行高被它撑大，其余三张的选项框会跟着拉长到
+     同一行高——看起来像是被选中的那张坏了。不拉伸：每张卡保持自己的高度，
+     详情只在自己那一列往下长。 */
+  align-items: start;
 }
 
 .billing-plan-card {
@@ -6086,7 +6104,7 @@
 }
 
 .billing-plan-card .billing-group-option {
-  flex: 1;
+  flex: 0 0 auto;
   align-items: flex-start;
   gap: var(--space-8);
   padding: var(--space-12) var(--space-14);

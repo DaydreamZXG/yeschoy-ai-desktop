@@ -4,6 +4,7 @@ import { Languages } from "lucide-react";
 import {
   LANGUAGE_NAME,
   SUPPORTED_LANGUAGES,
+  announceLanguageToNative,
   applyHtmlLang,
   storeLanguage,
   type Language,
@@ -31,6 +32,7 @@ export function LanguagePicker() {
     // 先落盘再切：切换过程中若渲染抛错，下次打开至少还是用户选的那个。
     storeLanguage(next);
     applyHtmlLang(next);
+    announceLanguageToNative(next);
     void i18n.changeLanguage(next);
   };
 

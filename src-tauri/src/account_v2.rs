@@ -2502,6 +2502,33 @@ mod tests {
     }
 
     #[test]
+    fn money_survives_a_missing_or_negative_used_quota() {
+        // The full path the billing page depends on: `parse_account` lets the
+        // counter through as "", and `account_money` must then still convert
+        // the balance. Before, the "" made the whole money computation fail
+        // and the page told the user to refresh — which could not help.
+        let status = json!({
+            "success": true,
+            "data": {"quota_display_type": "CNY", "quota_per_unit": 500000, "usd_exchange_rate": 7}
+        });
+        let absent = json!({"success": true, "data": {"quota": 500000}});
+        let negative = json!({"success": true, "data": {"quota": 500000, "used_quota": -1}});
+        for account in [absent, negative] {
+            let projected = parse_account(Some(&account), Some(&status));
+            assert!(projected.available, "{account}");
+            assert_eq!(projected.used_quota, "", "{account}");
+            let money = account_money(
+                Some(&status),
+                &projected.balance_quota,
+                &projected.used_quota,
+            );
+            assert_eq!(money.currency, "CNY", "{account}");
+            assert_eq!(money.balance_amount, "7", "{account}");
+            assert_eq!(money.consumed_amount, "", "{account}");
+        }
+    }
+
+    #[test]
     fn install_failures_separate_contract_from_credential_storage() {
         // These two used to collapse into one projection, which sent every
         // "cannot sign in" report at the OS keychain regardless of cause.

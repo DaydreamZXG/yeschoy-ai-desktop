@@ -482,7 +482,11 @@ pub(crate) async fn resume_if_configured(state: CodexRuntimeState) {
         return;
     };
     if config_points_at_our_bridge(&text) {
-        let _ = state.start(credential).await;
+        // 起不来要说一声：这是「Codex 连不上而用户什么都没改」的直接原因，
+        // 静默吞掉就只剩一个没人监听的端口，日志里连一行线索都没有。
+        if let Err(error) = state.start(credential).await {
+            log::warn!("codex_bridge stage=resume_start_failed reason={error:?}");
+        }
     }
 }
 

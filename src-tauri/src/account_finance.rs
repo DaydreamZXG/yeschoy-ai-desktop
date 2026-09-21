@@ -308,12 +308,21 @@ fn display_rates(status: Option<&Value>) -> Option<(&'static str, f64, f64)> {
 pub(crate) fn account_money(status: Option<&Value>, balance: &str, consumed: &str) -> AccountMoney {
     let calculate = || {
         let (currency, unit, rate) = display_rates(status)?;
+        // The balance is the only load-bearing number here. `parse_account`
+        // already lets a missing or malformed `used_quota` through as "" so
+        // that the sign-in survives; failing the whole conversion on it made
+        // the balance vanish too, the low-balance alert go quiet, and every
+        // per-row amount read "—" — all for one display-only counter.
+        // Unknown stays unknown: the renderer draws a dash for that one figure.
+        let consumed_amount = number(Some(&Value::String(consumed.into())))
+            .and_then(|value| amount(value / unit * rate))
+            .unwrap_or_default();
         Some(AccountMoney {
             currency,
             balance_amount: amount(
                 signed_number(Some(&Value::String(balance.into())))? / unit * rate,
             )?,
-            consumed_amount: amount(number(Some(&Value::String(consumed.into())))? / unit * rate)?,
+            consumed_amount,
             display_rate: amount(rate)?,
         })
     };
@@ -573,6 +582,23 @@ mod tests {
         assert_eq!(money.currency, "CNY");
         assert_eq!(money.balance_amount, "-1.75");
         assert_eq!(money.consumed_amount, "1.68");
+    }
+
+    #[test]
+    fn money_keeps_the_balance_when_cumulative_spend_is_unknown() {
+        // `parse_account` hands a missing `used_quota` over as "" and a
+        // negative one (rejected as malformed) the same way. Neither may cost
+        // the user the balance: that is the number the page exists to show.
+        for consumed in ["", "-5", "not a number"] {
+            let money = account_money(Some(&settings()), "500000", consumed);
+            assert_eq!(money.currency, "CNY", "consumed={consumed:?}");
+            assert_eq!(money.balance_amount, "7", "consumed={consumed:?}");
+            assert_eq!(money.display_rate, "7", "consumed={consumed:?}");
+            // Unknown is rendered as a dash, never as "0" spent.
+            assert_eq!(money.consumed_amount, "", "consumed={consumed:?}");
+        }
+        // The balance itself still fails closed: no balance, no money.
+        assert_eq!(account_money(Some(&settings()), "", "").currency, "");
     }
 
     #[test]

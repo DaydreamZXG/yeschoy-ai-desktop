@@ -1,6 +1,18 @@
 use super::*;
 use reqwest::{header::HeaderMap, StatusCode, Url};
 
+/// 测试里的每个 HTTP 客户端都从这里来。
+///
+/// 这些测试全部打本机 127.0.0.1 上的假服务器。reqwest 默认会读系统代理，
+/// 开着代理的开发机（macOS 上 `scutil --proxy` 里 HTTPEnable=1 的那种）
+/// 就会把这些请求转给代理，`resolve()` 的覆盖对走代理的请求根本不生效 ——
+/// 于是 3 个测试在本地红、在 CI 绿，看着像是断点续传或镜像路由坏了，其实
+/// 一个字节都没到假服务器。生产代码里直连客户端本来就是 `no_proxy()`
+/// （见 `download::build_client`），这里只是让夹具也如此。
+fn local_client() -> reqwest::ClientBuilder {
+    reqwest::Client::builder().no_proxy()
+}
+
 fn request() -> InstallRequest {
     InstallRequest {
         request_id: "fixture-1".into(),
@@ -520,7 +532,7 @@ async fn installer_real_http_interruption_resumes_only_matching_bytes() {
     };
     let root = cache::unique_dir(&std::env::temp_dir()).unwrap();
     let (_, worker, _) = fixture();
-    let client = reqwest::Client::builder()
+    let client = local_client()
         .read_timeout(Duration::from_secs(2))
         .build()
         .unwrap();
@@ -563,7 +575,7 @@ async fn installer_stalled_download_cancels_without_waiting_for_server() {
     };
     let copy = root.clone();
     let task = tokio::spawn(async move {
-        let client = reqwest::Client::new();
+        let client = local_client().build().unwrap();
         let result = worker
             .cancellable_download(download::fetch_with_client(
                 &worker,
@@ -625,7 +637,7 @@ async fn installer_mirror_hash_failure_falls_back_to_official_without_credential
     let source = catalog::source("codex_desktop", "windows", "x64").unwrap();
     let root = cache::unique_dir(&std::env::temp_dir()).unwrap();
     let (state, worker, _) = fixture();
-    let client = reqwest::Client::builder()
+    let client = local_client()
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .unwrap();
@@ -669,7 +681,7 @@ async fn installer_good_mirror_never_contacts_blocked_official_feed() {
     cache::write(&root.join("hash-fixture"), &body).unwrap();
     let hash = cache::digest(&root.join("hash-fixture")).unwrap();
     let (state, worker, _) = fixture();
-    let client = reqwest::Client::builder()
+    let client = local_client()
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .unwrap();
@@ -707,12 +719,12 @@ async fn installer_public_mirror_failure_uses_direct_route_before_official() {
     cache::write(&root.join("hash-fixture"), &body).unwrap();
     let hash = cache::digest(&root.join("hash-fixture")).unwrap();
     let (state, worker, _) = fixture();
-    let public = reqwest::Client::builder()
+    let public = local_client()
         .redirect(reqwest::redirect::Policy::none())
         .resolve("mirror.test", "127.0.0.1:1".parse().unwrap())
         .build()
         .unwrap();
-    let direct = reqwest::Client::builder()
+    let direct = local_client()
         .redirect(reqwest::redirect::Policy::none())
         .resolve("mirror.test", address)
         .build()
@@ -755,7 +767,7 @@ async fn installer_resume_is_bound_to_artifact_not_merely_etag() {
     cache::write(&root.join("installer.msix"), &[b'a'; 40]).unwrap();
     cache::write(&root.join("download.json"), &serde_json::to_vec(&serde_json::json!({"etag":"\"same\"","total":100,"sha256":"","artifact_url":format!("{base}/previous"),"expected_sha256":"","expected_size":0})).unwrap()).unwrap();
     let (_, worker, _) = fixture();
-    let client = reqwest::Client::new();
+    let client = local_client().build().unwrap();
     let target = origins::Resolved::official(&format!("{base}/new"));
     let result = download::fetch_resolved(
         &worker,
@@ -799,7 +811,7 @@ async fn installer_claude_zip_redirect_cannot_change_the_feed_release() {
     let target = origins::Resolved::official(&format!(
         "{base}/releases/darwin/universal/2.0/Claude-current.zip"
     ));
-    let client = reqwest::Client::builder()
+    let client = local_client()
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .unwrap();
@@ -853,7 +865,7 @@ async fn installer_redirect_generation_case(partial: bool) {
     let source = catalog::source("claude_desktop", "windows", "x64").unwrap();
     let root = cache::unique_dir(&std::env::temp_dir()).unwrap();
     let (_, worker, _) = fixture();
-    let client = reqwest::Client::builder()
+    let client = local_client()
         .redirect(reqwest::redirect::Policy::none())
         .read_timeout(Duration::from_secs(2))
         .build()
