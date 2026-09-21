@@ -341,11 +341,25 @@ impl Prepared {
                                     crate::tool_model_profile::claude_gateway_route_id(id) == route
                                 })
                                 .is_some_and(|id| {
-                                    model["labelOverride"].as_str()
-                                        == Some(crate::tool_model_profile::display_name(id))
-                                        && (!strict_default
-                                            || model["supports1m"].as_bool()
-                                                == Some(crate::tool_model_profile::supports_one_m_context(id)))
+                                    // The label is cosmetic; the route is what
+                                    // the bridge resolves. Read-only inspection
+                                    // only asks that a label is there, so a
+                                    // catalog refresh that renames a model
+                                    // cannot make "open" refuse a connection
+                                    // the user never touched. Write-then-
+                                    // read-back still checks the exact label.
+                                    model["labelOverride"].as_str().is_some_and(|label| {
+                                        !label.is_empty()
+                                            && (!strict_default
+                                                || label
+                                                    == crate::tool_model_profile::display_name(id))
+                                    }) && (!strict_default
+                                        || model["supports1m"].as_bool()
+                                            == Some(
+                                                crate::tool_model_profile::supports_one_m_context(
+                                                    id,
+                                                ),
+                                            ))
                                 })
                         })
                     })
@@ -796,6 +810,66 @@ mod tests {
         assert!(prepared.validate_existing().is_ok());
         assert!(prepared.validate_readback(true).is_err());
         profile["inferenceModels"][0]["name"] = "anthropic/claude-router-not-enrolled".into();
+        std::fs::write(&profile_path, serde_json::to_vec(&profile).unwrap()).unwrap();
+        assert!(prepared.validate_existing().is_err());
+        std::fs::remove_dir_all(home).unwrap();
+    }
+
+    /// 标签只是给人看的，桥认的是路由。目录刷新改了某个模型的显示名之后，
+    /// 用户什么都没动，「打开」却回 `settings_changed`。只读校验只要求标签
+    /// 在；写完回读仍然精确。
+    #[test]
+    fn a_renamed_catalog_entry_does_not_make_an_untouched_profile_look_changed() {
+        let home = common::temporary_working_directory("claude-desktop-label-drift").unwrap();
+        let normal_config_path = home.join("normal.json");
+        let threep_config_path = home.join("threep.json");
+        let profile_path = home.join("profile.json");
+        let meta_path = home.join("meta.json");
+        let ids = vec!["model-a".into(), "model-b".into()];
+        let token = "synthetic-local-token";
+        let mut transaction = FileTransaction::stage_with_snapshot(
+            normal_config_path.clone(),
+            None,
+            deployment_config(None).unwrap(),
+        )
+        .unwrap();
+        transaction
+            .push(threep_config_path.clone(), deployment_config(None).unwrap())
+            .unwrap();
+        transaction
+            .push(
+                profile_path.clone(),
+                profile_catalog("model-a", token, &ids).unwrap(),
+            )
+            .unwrap();
+        transaction
+            .push(meta_path.clone(), meta_config(None).unwrap())
+            .unwrap();
+        let mut prepared = Prepared {
+            transaction,
+            normal_config_path,
+            threep_config_path,
+            profile_path: profile_path.clone(),
+            meta_path,
+            model: "model-a".into(),
+            model_ids: ids,
+            modern: true,
+            local_token: token.into(),
+        };
+        prepared.commit().unwrap();
+        let mut profile: Value =
+            serde_json::from_slice(&std::fs::read(&profile_path).unwrap()).unwrap();
+        profile["inferenceModels"][1]["labelOverride"] = "Model B (renamed upstream)".into();
+        std::fs::write(&profile_path, serde_json::to_vec(&profile).unwrap()).unwrap();
+        assert!(
+            prepared.validate_existing().is_ok(),
+            "目录改名不是用户改了设置"
+        );
+        assert!(
+            prepared.validate_readback(true).is_err(),
+            "刚写完回读仍要精确"
+        );
+        profile["inferenceModels"][1]["labelOverride"] = "".into();
         std::fs::write(&profile_path, serde_json::to_vec(&profile).unwrap()).unwrap();
         assert!(prepared.validate_existing().is_err());
         std::fs::remove_dir_all(home).unwrap();

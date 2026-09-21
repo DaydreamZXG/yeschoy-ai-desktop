@@ -330,9 +330,18 @@ impl Prepared {
                     .is_some_and(|models| {
                         models.iter().all(|model| {
                             model["model"].as_str().is_some_and(|id| {
-                                model["label"].as_str()
-                                    == Some(crate::tool_model_profile::display_name(id))
-                                    && model["description"].as_str() == Some(id)
+                                // The label is cosmetic. Read-only inspection
+                                // only asks that one is there: a catalog
+                                // refresh that renames or drops a model must
+                                // not turn a working connection into
+                                // `settings_changed` when the user changed
+                                // nothing. Write-then-read-back still checks
+                                // the exact label we just wrote.
+                                model["label"].as_str().is_some_and(|label| {
+                                    !label.is_empty()
+                                        && (!strict_default
+                                            || label == crate::tool_model_profile::display_name(id))
+                                }) && model["description"].as_str() == Some(id)
                                     && model["behavesAs"].as_str()
                                         == Some(crate::tool_model_profile::claude_code_behaves_as(
                                             id,
@@ -489,6 +498,43 @@ mod tests {
         settings["modelPicker"]["options"][1]["behavesAs"] =
             crate::tool_model_profile::CLAUDE_BEHAVES_AS.into();
         settings["model"] = "not-enrolled".into();
+        std::fs::write(&prepared.path, serde_json::to_vec(&settings).unwrap()).unwrap();
+        assert!(prepared.validate_existing().is_err());
+        std::fs::remove_dir_all(home).unwrap();
+    }
+
+    /// 标签只是给人看的。目录刷新把某个模型改了名（或干脆删了），用户什么都
+    /// 没动，「打开」却回 `settings_changed` —— 只读校验不能拿今天的显示名去
+    /// 要求昨天写下的文件。写完回读那一路仍然严格：刚写的就该是刚写的。
+    #[test]
+    fn a_renamed_catalog_entry_does_not_make_an_untouched_connection_look_changed() {
+        let home = common::temporary_working_directory("claude-code-label-drift").unwrap();
+        let ids = vec!["model-a".into(), "org/model-b".into()];
+        let token = format!("ycg-{}", "a".repeat(64));
+        let mut prepared = prepare_catalog(
+            &home,
+            "https://yeschoy.com",
+            "model-a",
+            ClaudeTransport::DirectAnthropic,
+            Some(&token),
+            &ids,
+        )
+        .unwrap();
+        prepared.commit().unwrap();
+        let mut settings: Value =
+            serde_json::from_slice(&std::fs::read(&prepared.path).unwrap()).unwrap();
+        settings["modelPicker"]["options"][1]["label"] = "Model B (renamed upstream)".into();
+        std::fs::write(&prepared.path, serde_json::to_vec(&settings).unwrap()).unwrap();
+        assert!(
+            prepared.validate_existing().is_ok(),
+            "目录改名不是用户改了设置"
+        );
+        assert!(
+            prepared.validate_readback(true).is_err(),
+            "刚写完回读仍要精确"
+        );
+        // 但标签必须在：空标签会让选择器里出现一个没名字的项。
+        settings["modelPicker"]["options"][1]["label"] = "".into();
         std::fs::write(&prepared.path, serde_json::to_vec(&settings).unwrap()).unwrap();
         assert!(prepared.validate_existing().is_err());
         std::fs::remove_dir_all(home).unwrap();

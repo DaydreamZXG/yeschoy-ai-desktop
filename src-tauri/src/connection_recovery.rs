@@ -976,6 +976,18 @@ pub(crate) fn configuration_matches(record: &Record) -> bool {
 /// Retired Codex/Pi/DSH loopbacks move to direct relay access; previous direct
 /// Claude Code receipts move to the compatibility pass-through that normalizes
 /// native picker markers. Byte-identical stale settings must still be re-applied.
+///
+/// Two more shapes since 0.4.24, both of which pass `configuration_matches`
+/// (the live file is exactly what the old release wrote) yet fail today's
+/// `validate_settings`, so the list said "connected" and "open" answered
+/// `settings_changed` with no way out:
+///
+///   * A 0.4.23 Codex receipt points `base_url` straight at the relay origin
+///     (`https://yeschoy.com/v1`); 0.4.24 requires the local bridge.
+///   * A Claude Desktop profile minted before the route rename still carries
+///     `anthropic/claude-router-<hex>` aliases; readback recomputes the routes.
+///
+/// Reporting is all this does. The user's files are never rewritten here.
 pub(crate) fn requires_gateway_migration(tool: &str, record: &Record) -> bool {
     if tool == "claude_code" {
         return record.files.iter().any(|file| {
@@ -994,6 +1006,24 @@ pub(crate) fn requires_gateway_migration(tool: &str, record: &Record) -> bool {
                 })
         });
     }
+    if tool == "claude_desktop" {
+        return record.files.iter().any(|file| {
+            serde_json::from_slice::<Value>(&file.after)
+                .ok()
+                .and_then(|value| value["inferenceModels"].as_array().cloned())
+                .is_some_and(|models| {
+                    models.iter().any(|model| {
+                        model["name"].as_str().is_some_and(|route| {
+                            route
+                                .starts_with(crate::tool_model_profile::CLAUDE_GATEWAY_ROUTE_PREFIX)
+                        })
+                    })
+                })
+        });
+    }
+    if tool == "codex_desktop" && codex_receipt_points_at_relay_directly(record) {
+        return true;
+    }
     let needle = match tool {
         "codex_desktop" => "127.0.0.1:15722",
         "pi" | "dsh_web" => "127.0.0.1:15730",
@@ -1003,6 +1033,35 @@ pub(crate) fn requires_gateway_migration(tool: &str, record: &Record) -> bool {
         .files
         .iter()
         .any(|file| std::str::from_utf8(&file.after).is_ok_and(|text| text.contains(needle)))
+}
+
+/// The 0.4.23 Codex shape: the active provider's `base_url` is the relay
+/// origin plus `/v1`, with no local bridge in between.
+///
+/// Only the provider `model_provider` names is consulted, like
+/// `codex_desktop::config_points_at_our_bridge`: a user's config commonly keeps
+/// several providers, and the receipt is about the one we made active.
+fn codex_receipt_points_at_relay_directly(record: &Record) -> bool {
+    record
+        .files
+        .iter()
+        .filter(|file| file.path.extension().is_some_and(|ext| ext == "toml"))
+        .any(|file| {
+            let Ok(value) = document(&file.path, Some(&file.after)) else {
+                return false;
+            };
+            let Some(active) = value["model_provider"].as_str() else {
+                return false;
+            };
+            value["model_providers"][active]["base_url"]
+                .as_str()
+                .is_some_and(|base_url| {
+                    matches!(
+                        base_url,
+                        "https://yeschoy.com/v1" | "https://api.yeschoy.com/v1"
+                    )
+                })
+        })
 }
 
 fn remove_at(root: &mut Value, path: &[&str]) {
@@ -1396,6 +1455,74 @@ mod tests {
                 requires_gateway_migration("claude_code", &record),
                 expected,
                 "{origin}"
+            );
+        }
+    }
+
+    /// 0.4.23 的 Codex 回执把 `base_url` 直接写成中转地址；0.4.24 要求经过本地
+    /// 桥。文件和回执一字不差（`configuration_matches` 为真），今天的校验却过
+    /// 不了 —— 列表显示「已连接」，「打开」回 `settings_changed`，用户没有出路。
+    /// 这里只负责把它报成「需要重新接入」，不改用户的文件。
+    #[test]
+    fn a_0423_codex_receipt_pointing_straight_at_the_relay_needs_reconnecting() {
+        for (base_url, expected) in [
+            ("https://yeschoy.com/v1", true),
+            ("https://api.yeschoy.com/v1", true),
+            (crate::tool_adapters::codex_desktop::PROXY_BASE, false),
+            ("https://api.deepseek.com", false),
+        ] {
+            let fixture = Fixture::new();
+            let after = format!(
+                "model_provider = \"yeschoy\"\nmodel = \"kimi-k3\"\n\n\
+                 [model_providers.yeschoy]\nname = \"yeschoy\"\n\
+                 base_url = \"{base_url}\"\nwire_api = \"responses\"\n"
+            );
+            let file = fixture.change("config.toml", None, after.as_bytes());
+            let record = fixture
+                .0
+                .begin(receipt("codex_desktop"), &[file], None)
+                .unwrap();
+            assert_eq!(
+                requires_gateway_migration("codex_desktop", &record),
+                expected,
+                "{base_url}"
+            );
+        }
+        // 只看 `model_provider` 指向的那个 provider，和桥的恢复判定同一口径：
+        // 别的 provider 里留着一条旧地址，说明不了当前生效的连接怎么走。
+        let fixture = Fixture::new();
+        let after = "model_provider = \"openai\"\n\n\
+                     [model_providers.yeschoy]\nbase_url = \"https://yeschoy.com/v1\"\n";
+        let file = fixture.change("config.toml", None, after.as_bytes());
+        let record = fixture
+            .0
+            .begin(receipt("codex_desktop"), &[file], None)
+            .unwrap();
+        assert!(!requires_gateway_migration("codex_desktop", &record));
+    }
+
+    /// 同一类问题的 Claude Desktop 版：旧版铸的 `anthropic/claude-router-<hex>`
+    /// 别名还留在回执里，而回读用新的 `claude_gateway_route_id` 重算路由。
+    #[test]
+    fn a_claude_desktop_profile_still_carrying_the_old_alias_needs_reconnecting() {
+        let legacy = crate::tool_model_profile::legacy_claude_gateway_route_id("kimi-k3");
+        let current = crate::tool_model_profile::claude_gateway_route_id("kimi-k3");
+        for (route, expected) in [(legacy.as_str(), true), (current.as_str(), false)] {
+            let fixture = Fixture::new();
+            let after = serde_json::to_vec(&json!({
+                "inferenceProvider": "gateway",
+                "inferenceModels": [{"name": route, "labelOverride": "kimi-k3", "supports1m": false}]
+            }))
+            .unwrap();
+            let file = fixture.change("profile.json", None, &after);
+            let record = fixture
+                .0
+                .begin(receipt("claude_desktop"), &[file], None)
+                .unwrap();
+            assert_eq!(
+                requires_gateway_migration("claude_desktop", &record),
+                expected,
+                "{route}"
             );
         }
     }

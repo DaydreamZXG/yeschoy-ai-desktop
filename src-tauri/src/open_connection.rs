@@ -185,6 +185,7 @@ fn existing_credential(tool: &str) -> Result<ToolCredential, &'static str> {
 pub async fn open_tool_connection_v1(
     claude_code: tauri::State<'_, claude_code::ClaudeCodeRuntimeState>,
     claude: tauri::State<'_, claude_desktop::ClaudeDesktopRuntimeState>,
+    codex: tauri::State<'_, codex_desktop::CodexRuntimeState>,
     dsh: tauri::State<'_, dsh_web::DshRuntimeState>,
     request: OpenRequest,
 ) -> Result<OpenResponse, String> {
@@ -224,6 +225,12 @@ pub async fn open_tool_connection_v1(
                         Ok(claude_desktop::launch(&installation.path))
                     }
                     "codex_desktop" => {
+                        // Codex's config.toml points at `127.0.0.1:15731`; the
+                        // bridge must be listening before the app is opened,
+                        // exactly as activation does in `start_local_adapter`.
+                        // Opening used to skip this, so a Codex opened from
+                        // here after an app restart had nothing to talk to.
+                        codex.start(credential).await.map_err(launch_failure)?;
                         if permit.is_cancelled() {
                             return Err(st("busy"));
                         }

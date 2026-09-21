@@ -570,10 +570,31 @@ fn codex_transport(pricing: &Value, model_id: &str) -> Option<codex_desktop::Cod
 enum ProbeOutcome {
     /// 端点受理了这个模型。
     Accepted,
-    /// 端点明确拒绝（4xx）—— 路由不认、渠道没配、协议没实现。
+    /// 端点明确拒绝（4xx，429/408 除外）—— 路由不认、渠道没配、协议没实现。
     Rejected,
-    /// 没问出结论：超时、网络错误、5xx。
+    /// 没问出结论：超时、网络错误、5xx、429、408。
     Inconclusive,
+}
+
+/// 一个状态码归到哪一档。
+///
+/// 抽成纯函数是为了把 429 和 408 这两个例外钉住：它们是 4xx，说的却不是
+/// 「这个协议不行」—— 429 是「问得太急」，408 是「这次没等到」。归成 `Rejected`
+/// 的后果真发生过：十几个模型一起探，中转按用户限流回 429，Responses 被判成
+/// 拒绝，稍后发的 Chat 那一探刚好没被限、通过了，于是模型被**永久**钉到桥上
+/// （探测结果落盘、之后不再探），而用户什么都没做错。
+fn probe_outcome_for(status: reqwest::StatusCode) -> ProbeOutcome {
+    if status.is_success() {
+        ProbeOutcome::Accepted
+    } else if status == reqwest::StatusCode::TOO_MANY_REQUESTS
+        || status == reqwest::StatusCode::REQUEST_TIMEOUT
+    {
+        ProbeOutcome::Inconclusive
+    } else if status.is_client_error() {
+        ProbeOutcome::Rejected
+    } else {
+        ProbeOutcome::Inconclusive
+    }
 }
 
 /// 由两次探测的结论决定这个模型怎么走。
@@ -688,12 +709,18 @@ async fn probe_once(
     )
     .await;
     match sent {
-        Ok(Ok(response)) if response.status().is_success() => ProbeOutcome::Accepted,
-        Ok(Ok(response)) if response.status().is_client_error() => ProbeOutcome::Rejected,
-        // 5xx、网络错误、超时都归到「没问出结论」，见 `ProbeOutcome`。
+        Ok(Ok(response)) => probe_outcome_for(response.status()),
+        // 网络错误、超时都归到「没问出结论」，见 `ProbeOutcome`。
         _ => ProbeOutcome::Inconclusive,
     }
 }
+
+/// 同时在路上的探测数。
+///
+/// 第一版是全部 `join_all`：一次接入绑十几个模型就同时发十几个请求，中转按
+/// 用户限流，探测于是**自己制造**了 429 —— 而 429 当时又被读成「拒绝」。
+/// 取 2：比串行快一倍，又远在限流阈值之下；每个探测至多问三遍，总时长仍可接受。
+const PROBE_CONCURRENCY: usize = 2;
 
 /// 把探测结果写回这一批模型的传输方式。
 ///
@@ -711,6 +738,18 @@ async fn apply_codex_probes(
     let Ok(client) = crate::account_v2::shared_http_client() else {
         return;
     };
+    apply_codex_probes_with(client, origin, bindings, leases, transports).await
+}
+
+/// `apply_codex_probes` 去掉取共享客户端那一步：测试要把它指向本地桩。
+async fn apply_codex_probes_with(
+    client: &reqwest::Client,
+    origin: &str,
+    bindings: &[ModelBinding],
+    leases: &[(String, TokenLease)],
+    transports: &mut [Option<ModelTransport>],
+) {
+    use futures::StreamExt;
     // 带着下标探、按下标写回。
     //
     // 第一版是「筛出要探的 → join_all → 再遍历一遍按同样的条件写回」，
@@ -740,9 +779,18 @@ async fn apply_codex_probes(
                     probe_codex_transport(client, origin, &lease.1.key, &binding.model_id).await,
                 )
             })
-        });
-    // 并发探：一次接入可能绑了十几个模型，串行会把接入时间拖成十几倍。
-    for (index, probed) in futures::future::join_all(probes).await {
+        })
+        // 先收成 Vec：让 `filter` 里对 `transports` 的借用在 await 之前结束，
+        // 而不是被流一路带过去。
+        .collect::<Vec<_>>();
+    // 并发探，但有上限（`PROBE_CONCURRENCY`）：一次接入可能绑了十几个模型，
+    // 串行会把接入时间拖成十几倍；全放开又会撞上中转的限流，让探测自己
+    // 制造出它要判读的错误。
+    let probed = futures::stream::iter(probes)
+        .buffer_unordered(PROBE_CONCURRENCY)
+        .collect::<Vec<_>>()
+        .await;
+    for (index, probed) in probed {
         if let Some(slot) = transports.get_mut(index) {
             *slot = Some(ModelTransport::Codex(probed));
         }
@@ -1225,6 +1273,21 @@ async fn acquire_token(
         model_ids,
     )
     .await
+}
+
+/// 这个错误是整单的，不是某个分组的。
+///
+/// 分组循环把 `acquire_token` 的每个 `Err` 都记成「这个分组跳过」，其余照常。
+/// 对创建被拒、读密钥失败、中转不可用这是对的 —— 换个分组可能就好了。
+/// 但 401/403 说的是会话没了，「助手正在退出」说的是不该再动账户：换哪个
+/// 分组都一样，接着循环只会对着一个失效的会话再发几轮请求，最后把一句
+/// 「请重新登录」藏进 `skipped` 里，界面照常宣布「接入完成」。
+fn token_failure_is_global(failure: &ActivationFailure) -> bool {
+    matches!(
+        failure,
+        ActivationFailure::SignedOut
+            | ActivationFailure::ConfigurationFailed("assistant_shutting_down")
+    )
 }
 
 trait TokenApi {
@@ -1810,6 +1873,29 @@ async fn codex_history_on_worker<T: Send + 'static>(
         .map_err(|_| AdapterFailure::ConfigurationFailed("codex_history_takeover_failed"))?
 }
 
+/// 把接入时挪走的 claude.ai 登录态还回去，作为回滚的一部分。
+///
+/// 接管发生在凭据和配置落盘之前；之后每一条失败或取消的出口都会把文件和
+/// 凭据还原，唯独钥匙串里那份以前没人管 —— 用户在 Claude Code 里发现自己
+/// 被登出了，而野菜显示「未接入」，也没有任何入口能把它搬回来（restore
+/// 分支要有回执，而回执已经被 abandon 了）。
+///
+/// 还不回去只记一行 warn，不改变回滚的结论：登录态仍在备份位，下一次接入
+/// 或 restore 还能搬。真钥匙串没法在单元测试里模拟，所以这里只是把「什么
+/// 时候调」收成一个点，调用方按 `Outcome::Displaced` 传 `displaced`。
+async fn restore_displaced_login(displaced: bool) {
+    if !displaced {
+        return;
+    }
+    match tokio::task::spawn_blocking(crate::claude_login_takeover::restore).await {
+        Ok(Ok(())) => log::info!("activation stage=claude_login_restored"),
+        Ok(Err(failure)) => {
+            log::warn!("activation stage=claude_login_restore_failed reason={failure:?}")
+        }
+        Err(_) => log::warn!("activation stage=claude_login_restore_failed reason=worker_failed"),
+    }
+}
+
 #[allow(clippy::too_many_arguments)] // Explicit transaction/runtime inputs; no hidden mutable global rollback context.
 async fn restore_after_failure(
     request: &ToolActivationRequest,
@@ -1826,6 +1912,7 @@ async fn restore_after_failure(
     dsh_runtime: &dsh_web::DshRuntimeState,
     permit: &shutdown_coordinator::OperationPermit,
     codex_history: &mut Option<crate::codex_history_takeover::Takeover>,
+    login_displaced: bool,
 ) -> Option<AdapterFailure> {
     let rollback_failed = if desktop_lifecycle::requires_reload(&request.tool_id) {
         connection_recovery::restore_attempt(recovery_record).is_err()
@@ -1846,6 +1933,9 @@ async fn restore_after_failure(
     if credential_failure.is_some() {
         return restoration_failure(false, true);
     }
+    // 文件和凭据都还原了，登录态也要还。放在这两步之后：它们失败时回执仍是
+    // pending，用户之后点 restore 会连登录态一起搬回去。
+    restore_displaced_login(login_displaced).await;
     let runtime_result = permit
         .cancel_safe(async {
             if request.tool_id == "dsh_web" {
@@ -2357,6 +2447,12 @@ pub async fn configure_desktop_tool_v2(
         .await
         {
             Ok(lease) => leases.push((binding.billing_group.clone(), lease)),
+            // 会话没了 / 助手在退出：不是这个分组的事，停下来，把已经铸出的
+            // 密钥删掉，按整单失败报 —— 而不是记成一个「跳过」。
+            Err(e) if token_failure_is_global(&e) => {
+                delete_created_tokens(&origin, &access_token, &leases).await;
+                return Ok(e.projection(&request));
+            }
             Err(e) => {
                 // 记下来，其余分组照常。分组名是中转返回的数据，不进日志；
                 // 哈希（密钥名里本来就带这一截）足够把日志和后台的密钥对上，
@@ -2583,10 +2679,14 @@ pub async fn configure_desktop_tool_v2(
         };
     // 同意已经拿到了（`displace_claude_login`），这里才真的动钥匙串 —— 系统
     // 会弹一次授权框。挪走而不是删掉，`manage_tool_connections_v1` 的 restore
-    // 分支会把它搬回去。
+    // 分支会把它搬回去；在那之前若接入失败或被取消，回滚时就得搬回去
+    // （`restore_displaced_login`），所以记住这次到底有没有挪。
+    let mut login_displaced = false;
     if request.tool_id == "claude_code" && request.displace_claude_login {
         match tokio::task::spawn_blocking(crate::claude_login_takeover::take_over).await {
-            Ok(Ok(_)) => {}
+            Ok(Ok(outcome)) => {
+                login_displaced = outcome == crate::claude_login_takeover::Outcome::Displaced;
+            }
             // 用户在系统框上点了拒绝。不能当成成功继续 —— 那样会写完配置宣布
             // 「设置已完成」，而 Claude Code 依旧走 claude.ai，正是这次要修的
             // 那个不报错的错误。
@@ -2647,6 +2747,7 @@ pub async fn configure_desktop_tool_v2(
             let _ = history.rollback();
         }
         let _ = recovery.abandon(&recovery_record);
+        restore_displaced_login(login_displaced).await;
         delete_created_tokens(&origin, &access_token, &leases).await;
         return Ok(cancelled());
     }
@@ -2755,6 +2856,7 @@ pub async fn configure_desktop_tool_v2(
                     &dsh_runtime,
                     &permit,
                     &mut codex_history,
+                    login_displaced,
                 )
             },
         )
@@ -2895,6 +2997,12 @@ pub(crate) async fn restore_connection_for_exit(tool: &'static str) -> Result<()
                 if tool == "codex_desktop" {
                     let home = tool_adapters::user_home().ok_or(())?;
                     crate::codex_history_takeover::restore(&home).map_err(|_| ())?;
+                }
+                // 和 `manage_tool_connections_v1` 的 restore 分支同款：接入时挪走
+                // 的 claude.ai 登录态一起搬回去。回执里不记「挪没挪」，而没备份
+                // 时 `restore` 本来就什么都不做，所以对 claude_code 一律调。
+                if tool == "claude_code" {
+                    crate::claude_login_takeover::restore().map_err(|_| ())?;
                 }
                 tool_credentials::restore(tool, None).map_err(|_| ())?;
                 store.remove(tool).map_err(|_| ())?;
@@ -3491,20 +3599,151 @@ mod tests {
 
     /// 网络层的三档归类。5xx 和网络错误必须落到 `Inconclusive` ——
     /// 归成 `Rejected` 的话，中转抖一下就会把模型永久切到桥上。
+    ///
+    /// 429 和 408 同理：它们是 4xx，却不是「这个协议不行」。十几个模型一起探
+    /// 就会撞上中转的用户级限流，回的正是 429；把它读成拒绝，再碰上一次没被
+    /// 限的 Chat 探测，模型就被**永久**钉到桥上，而用户什么都没做错。
     #[test]
     fn a_server_side_failure_is_never_read_as_a_protocol_refusal() {
-        // 这里钉的是 `probe_once` 里那三条 match 臂的意图。状态码的分类交给
-        // reqwest 的 `is_success` / `is_client_error`，我们只钉边界。
+        use ProbeOutcome::{Accepted, Inconclusive, Rejected};
+        let outcome =
+            |status: u16| probe_outcome_for(reqwest::StatusCode::from_u16(status).unwrap());
         for status in [200u16, 201, 204] {
-            assert!(reqwest::StatusCode::from_u16(status).unwrap().is_success());
+            assert_eq!(outcome(status), Accepted, "{status}");
         }
-        for status in [400u16, 401, 404, 422, 429] {
-            let code = reqwest::StatusCode::from_u16(status).unwrap();
-            assert!(!code.is_success() && code.is_client_error(), "{status}");
+        // 真正的拒绝：参数错、没授权、路由不认、渠道没配。
+        for status in [400u16, 401, 403, 404, 422] {
+            assert_eq!(outcome(status), Rejected, "{status}");
+        }
+        // 「问得太急」和「这次没等到」不是拒绝，得重问，且绝不能翻转路由。
+        for status in [408u16, 429] {
+            assert_eq!(outcome(status), Inconclusive, "{status}");
         }
         for status in [500u16, 502, 503, 504] {
-            let code = reqwest::StatusCode::from_u16(status).unwrap();
-            assert!(!code.is_success() && !code.is_client_error(), "{status}");
+            assert_eq!(outcome(status), Inconclusive, "{status}");
+        }
+    }
+
+    /// Responses 被限流（429），Chat 通过 —— 结论必须是**留在直连**，不上桥。
+    ///
+    /// 这是 2026-09-21 复查出的那条：以前 429 → `Rejected`，于是发出 Chat 探测，
+    /// Chat 恰好没被限、通过，`transport_from_probes(Rejected, Some(Accepted))`
+    /// 就把模型钉到了桥上。全程走真实的 `probe_codex_transport`，用本地桩
+    /// 回 429，钉住的是端到端的判定，不只是分类函数。
+    #[tokio::test]
+    async fn a_rate_limited_responses_probe_never_moves_a_model_onto_the_bridge() {
+        use std::sync::atomic::{AtomicU8, Ordering};
+
+        let chat_hits = Arc::new(AtomicU8::new(0));
+        let chat_counter = chat_hits.clone();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let origin = format!("http://{}", listener.local_addr().unwrap());
+        let router = axum::Router::new()
+            .route(
+                "/v1/responses",
+                axum::routing::post(|| async { axum::http::StatusCode::TOO_MANY_REQUESTS }),
+            )
+            .route(
+                "/v1/chat/completions",
+                axum::routing::post(move || {
+                    chat_counter.fetch_add(1, Ordering::SeqCst);
+                    async { axum::http::StatusCode::OK }
+                }),
+            );
+        tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+        let client = reqwest::Client::builder()
+            .no_proxy()
+            .timeout(Duration::from_secs(5))
+            .build()
+            .unwrap();
+
+        let transport = probe_codex_transport(&client, &origin, "sk-x", "m").await;
+        assert_eq!(
+            transport,
+            codex_desktop::CodexTransport::DirectResponses,
+            "429 不是拒绝，不能因此上桥"
+        );
+        // 没有明确拒绝，就不该去问 Chat：那一探只在 Responses 被拒时才发。
+        assert_eq!(chat_hits.load(Ordering::SeqCst), 0);
+    }
+
+    /// 探测有并发上限，且结论仍按下标写回各自的模型。
+    ///
+    /// 上限本身就是修复的一部分：全部 `join_all` 时十几个请求同时到达，中转
+    /// 按用户限流，探测于是自己制造了它要判读的 429。这里用一个会数「同时
+    /// 在路上」的桩，断言峰值不超过 `PROBE_CONCURRENCY`。
+    #[tokio::test]
+    async fn probes_are_bounded_in_flight_and_still_land_on_their_own_model() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        let in_flight = Arc::new(AtomicUsize::new(0));
+        let peak = Arc::new(AtomicUsize::new(0));
+        let (flight, high) = (in_flight.clone(), peak.clone());
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let origin = format!("http://{}", listener.local_addr().unwrap());
+        let router = axum::Router::new()
+            .route(
+                "/v1/responses",
+                axum::routing::post(move |body: String| {
+                    let (flight, high) = (flight.clone(), high.clone());
+                    async move {
+                        let now = flight.fetch_add(1, Ordering::SeqCst) + 1;
+                        high.fetch_max(now, Ordering::SeqCst);
+                        tokio::time::sleep(Duration::from_millis(60)).await;
+                        flight.fetch_sub(1, Ordering::SeqCst);
+                        // 只有 `chat-only` 这个模型被 Responses 拒绝。
+                        if body.contains("chat-only") {
+                            axum::http::StatusCode::NOT_FOUND
+                        } else {
+                            axum::http::StatusCode::OK
+                        }
+                    }
+                }),
+            )
+            .route(
+                "/v1/chat/completions",
+                axum::routing::post(|| async { axum::http::StatusCode::OK }),
+            );
+        tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+        let client = reqwest::Client::builder()
+            .no_proxy()
+            .timeout(Duration::from_secs(5))
+            .build()
+            .unwrap();
+
+        let bindings = ["a", "b", "chat-only", "d", "e", "f"]
+            .into_iter()
+            .map(|model| binding(model, "default"))
+            .collect::<Vec<_>>();
+        let leases = vec![(
+            "default".to_string(),
+            TokenLease {
+                id: 1,
+                key: "sk-x".into(),
+                created: true,
+                retire_after_commit: vec![],
+            },
+        )];
+        let mut transports = vec![Some(ModelTransport::Codex(DirectResponses)); bindings.len()];
+        apply_codex_probes_with(&client, &origin, &bindings, &leases, &mut transports).await;
+
+        assert!(
+            peak.load(Ordering::SeqCst) <= PROBE_CONCURRENCY,
+            "同时在路上的探测超过了上限：{}",
+            peak.load(Ordering::SeqCst)
+        );
+        for (index, binding) in bindings.iter().enumerate() {
+            let expected = if binding.model_id == "chat-only" {
+                ChatBridge
+            } else {
+                DirectResponses
+            };
+            assert_eq!(
+                transports[index],
+                Some(ModelTransport::Codex(expected)),
+                "{}",
+                binding.model_id
+            );
         }
     }
 
@@ -3840,6 +4079,64 @@ mod tests {
         ));
     }
 
+    /// 会话失效和「助手正在退出」是整单的事，不是某个分组的。
+    ///
+    /// 分组循环以前把每个 `Err` 都记成「这个分组跳过」：401 之后接着对下一个
+    /// 分组发请求（还是 401），最后把「请重新登录」藏进 `skipped`，界面照常
+    /// 宣布「接入完成」。这里钉住分类，循环按它决定是停下还是跳过。
+    #[tokio::test]
+    async fn a_signed_out_session_stops_the_group_loop_instead_of_being_skipped() {
+        // 真正从传输层出来的 401，而不是手写的枚举：`list_tokens` 把它译成
+        // `SignedOut`，循环必须认出来。
+        let api = FakeTokens::default();
+        api.signed_out
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+        let Err(error) = acquire_token_using(
+            &api,
+            "https://mock.invalid",
+            "codex_desktop",
+            "default",
+            &["kimi-k3".to_string()],
+        )
+        .await
+        else {
+            panic!("401 不该铸出密钥");
+        };
+        assert!(matches!(error, ActivationFailure::SignedOut));
+        assert!(token_failure_is_global(&error));
+
+        // 中转不可用是这个分组的事：其余分组照常，这条不变。
+        let api = FakeTokens::default();
+        api.fail_list
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+        let Err(error) = acquire_token_using(
+            &api,
+            "https://mock.invalid",
+            "codex_desktop",
+            "default",
+            &["kimi-k3".to_string()],
+        )
+        .await
+        else {
+            panic!("列表挂了不该铸出密钥");
+        };
+        assert!(matches!(error, ActivationFailure::ServerUnavailable));
+        assert!(!token_failure_is_global(&error));
+
+        // 整张表：只有这两个是整单的。
+        assert!(token_failure_is_global(
+            &ActivationFailure::ConfigurationFailed("assistant_shutting_down")
+        ));
+        for local in [
+            ActivationFailure::ServerUnavailable,
+            ActivationFailure::UnsupportedModel,
+            ActivationFailure::ConfigurationFailed("invalid_request"),
+            ActivationFailure::Adapter(AdapterFailure::SecureStorageUnavailable),
+        ] {
+            assert!(!token_failure_is_global(&local), "{local:?}");
+        }
+    }
+
     #[test]
     fn the_default_models_group_failing_stops_the_activation_and_names_it() {
         // 默认模型是用户不选时应用实际会用的那个，价格也跟着它。悄悄换成另一个
@@ -3982,6 +4279,8 @@ mod tests {
         fail_list: std::sync::atomic::AtomicBool,
         /// 野菜的中转创建密钥时把新密钥回传在 `data` 里；标准 NewAPI 不回。
         echo_created: std::sync::atomic::AtomicBool,
+        /// 会话已失效：中转对每个请求都回 401。
+        signed_out: std::sync::atomic::AtomicBool,
     }
 
     impl FakeTokens {
@@ -4012,6 +4311,9 @@ mod tests {
                 .lock()
                 .unwrap()
                 .push((method.clone(), path.clone()));
+            if self.signed_out.load(std::sync::atomic::Ordering::Relaxed) {
+                return Ok((401, json!({"success":false,"message":"unauthorized"})));
+            }
             let mut tokens = self.tokens.lock().unwrap();
             if method == Method::GET && path == "/api/token/" {
                 if self.fail_list.load(std::sync::atomic::Ordering::Relaxed) {

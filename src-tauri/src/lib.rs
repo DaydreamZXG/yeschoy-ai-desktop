@@ -146,21 +146,32 @@ pub fn run() {
                 // launched from the Dock cannot see the exports a Terminal
                 // window would; see shell_environment for what that broke).
                 //
-                // Concurrently, not before: sourcing an interactive rc can take
-                // seconds, and neither resume reads that environment. Awaiting
-                // it first would have delayed the loopback bridges by exactly
-                // as long as the user's shell takes to start — so someone who
-                // opened the app and went straight to their terminal would find
-                // Claude Code pointing at a port nothing was listening on yet.
+                // Concurrently with the Claude resumes, not before: sourcing an
+                // interactive rc can take seconds, and neither Claude resume
+                // reads that environment. Awaiting it first would have delayed
+                // the loopback bridges by exactly as long as the user's shell
+                // takes to start — so someone who opened the app and went
+                // straight to their terminal would find Claude Code pointing at
+                // a port nothing was listening on yet.
+                //
+                // The Codex resume is the exception: it locates `config.toml`
+                // through `CODEX_HOME`, which `shell_environment::var_os` only
+                // answers correctly once the probe has finished — before that
+                // it falls back to this process's (Dock-launched, rc-less)
+                // environment and reads `~/.codex` while the user's Codex
+                // loads another directory. So that one waits for the probe.
                 tokio::join!(
-                    shell_environment::initialize(),
+                    async {
+                        shell_environment::initialize().await;
+                        tool_adapters::codex_desktop::resume_if_configured(resume_codex_runtime)
+                            .await;
+                    },
                     // Claude clients use small local pass-throughs for native
                     // model-ID compatibility. Resume only when their managed
                     // settings still point to the corresponding loopback
                     // endpoint.
                     tool_adapters::claude_code::resume_if_configured(resume_claude_code_runtime),
                     tool_adapters::claude_desktop::resume_if_configured(resume_claude_runtime),
-                    tool_adapters::codex_desktop::resume_if_configured(resume_codex_runtime)
                 );
             });
             Ok(())
@@ -437,13 +448,20 @@ fn begin_user_shutdown<R: tauri::Runtime>(
                     {
                         let _ = tauri::async_runtime::spawn_blocking(move || {
                             use windows::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_OK, MB_ICONWARNING};
-                            use windows::core::{w, HSTRING};
+                            use windows::core::HSTRING;
+                            // The renderer told us its language at startup; the
+                            // native box follows it (see ui_language).
+                            let language = ui_language::current();
                             let names = response.failed_tools.iter().map(|tool| match tool.as_str() {
                                 "codex_desktop" => "Codex Desktop", "claude_desktop" => "Claude Desktop",
                                 "claude_code" => "Claude Code", "pi" => "Pi", _ => "DSH web",
-                            }).collect::<Vec<_>>().join("、");
-                            let message = HSTRING::from(format!("未完成恢复：{names}。助手尚未退出。\n请保存并关闭相关应用后重试。若界面不可用，再点窗口关闭按钮，可选择重试恢复或保留设置退出。"));
-                            unsafe { MessageBoxW(None, &message, w!("恢复未完成"), MB_OK | MB_ICONWARNING); }
+                            }).collect::<Vec<_>>().join(language.pick("、", ", "));
+                            let message = HSTRING::from(language.pick(
+                                &format!("未完成恢复：{names}。助手尚未退出。\n请保存并关闭相关应用后重试。若界面不可用，再点窗口关闭按钮，可选择重试恢复或保留设置退出。"),
+                                &format!("Restore did not finish for: {names}. The assistant has not quit.\nSave and close those apps, then try again. If the window is unusable, click the close button again to retry the restore or quit keeping the settings."),
+                            ));
+                            let title = HSTRING::from(language.pick("恢复未完成", "Restore incomplete"));
+                            unsafe { MessageBoxW(None, &message, &title, MB_OK | MB_ICONWARNING); }
                         }).await;
                     }
                     return;
@@ -514,7 +532,7 @@ enum NativeCloseChoice {
 
 #[cfg(target_os = "windows")]
 fn windows_close_choice<R: tauri::Runtime>(window: &tauri::Window<R>) -> NativeCloseChoice {
-    use windows::core::w;
+    use windows::core::HSTRING;
     use windows::Win32::UI::WindowsAndMessaging::{
         MessageBoxW, IDNO, IDYES, MB_ICONQUESTION, MB_SETFOREGROUND, MB_YESNOCANCEL,
     };
@@ -522,22 +540,38 @@ fn windows_close_choice<R: tauri::Runtime>(window: &tauri::Window<R>) -> NativeC
     let owner = window.hwnd().ok();
     // The choice is native by design: it remains usable when WebView2 or the
     // embedded renderer fails before JavaScript can mount an exit dialog.
+    //
+    // The text follows the renderer's language (see ui_language). `w!()` only
+    // takes literals, so the picked string goes through an owned HSTRING.
+    let language = ui_language::current();
+    let body = HSTRING::from(language.pick(
+        "选择“是”：恢复原设置并退出。请先保存任务；助手会请求 Codex/Claude 正常关闭，恢复后不自动打开应用。其他命令行应用下次启动生效。\n选择“否”：选择后台运行或保留设置退出。\n选择“取消”：返回。",
+        "Yes: restore the original settings and quit. Save your work first; the assistant asks Codex/Claude to close normally and does not reopen them afterwards. Other command-line apps pick this up on their next start.\nNo: keep running in the background, or quit and keep the connections.\nCancel: go back.",
+    ));
+    let title = HSTRING::from(language.pick("关闭野菜API？", "Close Yeschoy?"));
     let result = unsafe {
         MessageBoxW(
             owner,
-            w!("选择“是”：恢复原设置并退出。请先保存任务；助手会请求 Codex/Claude 正常关闭，恢复后不自动打开应用。其他命令行应用下次启动生效。\n选择“否”：选择后台运行或保留设置退出。\n选择“取消”：返回。"),
-            w!("关闭野菜API？"),
+            &body,
+            &title,
             MB_YESNOCANCEL | MB_ICONQUESTION | MB_SETFOREGROUND,
         )
     };
     if result == IDYES {
         NativeCloseChoice::RestoreAndExit
     } else if result == IDNO {
+        let body = HSTRING::from(language.pick(
+            "选择“是”：保留接入设置并退出，依赖助手的连接会中断。\n选择“否”：后台运行，保持连接。\n选择“取消”：返回。",
+            "Yes: quit and keep the connection settings; apps that depend on the assistant will disconnect.\nNo: keep running in the background and stay connected.\nCancel: go back.",
+        ));
+        let title = HSTRING::from(language.pick("保留接入设置？", "Keep the connections?"));
         let preserve = unsafe {
-            MessageBoxW(owner,
-                w!("选择“是”：保留接入设置并退出，依赖助手的连接会中断。\n选择“否”：后台运行，保持连接。\n选择“取消”：返回。"),
-                w!("保留接入设置？"),
-                MB_YESNOCANCEL | MB_ICONQUESTION | MB_SETFOREGROUND)
+            MessageBoxW(
+                owner,
+                &body,
+                &title,
+                MB_YESNOCANCEL | MB_ICONQUESTION | MB_SETFOREGROUND,
+            )
         };
         if preserve == IDYES {
             NativeCloseChoice::Exit
