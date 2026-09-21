@@ -3,7 +3,10 @@ import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const SRC = resolve(process.cwd(), "src");
-const CJK = /[一-鿿]/;
+// 汉字之外还要抓 CJK 标点（U+3000–303F）和全角符号（U+FF00–FFEF）：
+// 顿号、全角分号这类分隔符曾经就是从这条守卫底下溜过去的，英文界面里
+// 于是出现 "Claude Desktop、Codex Desktop"。
+const CJK = /[一-鿿\u3000-\u303f\uff00-\uffef]/;
 
 /**
  * 注释里的中文要留着。

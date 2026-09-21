@@ -95,9 +95,13 @@ export function isAccountMoney(value: unknown): value is AccountMoney {
     return [value.balanceAmount, value.consumedAmount, value.displayRate].every(
       (v) => v === "",
     );
+  // The balance is the one load-bearing figure. Cumulative spend is a
+  // display-only counter the backend may omit (or send malformed); the native
+  // side then passes it through as "" and the page draws a dash for that one
+  // number. Rejecting the whole projection over it would blank the balance —
+  // and the low-balance alert with it.
   return (
     value.balanceAmount !== "" &&
-    value.consumedAmount !== "" &&
     Number(value.displayRate) > 0 &&
     (value.currency !== "USD" || value.displayRate === "1")
   );

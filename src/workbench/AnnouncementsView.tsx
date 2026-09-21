@@ -1,10 +1,12 @@
 import { Megaphone, TriangleAlert, RefreshCw } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import type { Notice } from "./announcements";
 import { useWorkbenchCopy } from "./copy";
 
-function publishedAt(epochMs: number): string {
+// 日期跟着界面语言走。以前写死 `zh-CN`，英文界面上会冒出「2026年9月21日」。
+function publishedAt(epochMs: number, locale: string): string {
   if (epochMs <= 0) return "";
-  return new Date(epochMs).toLocaleDateString("zh-CN", {
+  return new Date(epochMs).toLocaleDateString(locale, {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -23,6 +25,8 @@ export function AnnouncementsView({
   onRetry: () => void;
 }) {
   const c = useWorkbenchCopy();
+  const { i18n } = useTranslation();
+  const locale = i18n.language;
   return (
     <div className="workspace announcements-view" id="top">
       <div className="workbench-page-heading">
@@ -59,11 +63,11 @@ export function AnnouncementsView({
             >
               <div className="announcement-heading">
                 <h2>{notice.title}</h2>
-                {publishedAt(notice.publishedAtEpochMs) && (
+                {publishedAt(notice.publishedAtEpochMs, locale) && (
                   <time
                     dateTime={new Date(notice.publishedAtEpochMs).toISOString()}
                   >
-                    {publishedAt(notice.publishedAtEpochMs)}
+                    {publishedAt(notice.publishedAtEpochMs, locale)}
                   </time>
                 )}
               </div>

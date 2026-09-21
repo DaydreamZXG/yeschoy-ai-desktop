@@ -260,14 +260,22 @@ fn projections(tool_id: &str, observed: &[ObservedInstallation]) -> Vec<Installa
 }
 
 fn location_label(value: &str) -> &'static str {
+    location_label_in(crate::ui_language::current(), value)
+}
+
+// The renderer shows this label verbatim in the install picker, so it has to
+// speak the interface language: an English user was reading "系统应用 ·
+// /Applications/Claude.app". Kept separate from `location_label` so tests can
+// pin a language instead of racing on the process-wide setting.
+fn location_label_in(language: crate::ui_language::Language, value: &str) -> &'static str {
     match value {
-        "path" => "系统 PATH",
-        "common_location" => "常用目录",
-        "applications" => "系统应用",
-        "user_applications" => "用户应用",
-        "local_app_data" => "用户应用目录",
-        "program_files" => "程序目录",
-        _ => "本机",
+        "path" => language.pick("系统 PATH", "System PATH"),
+        "common_location" => language.pick("常用目录", "Common directory"),
+        "applications" => language.pick("系统应用", "System app"),
+        "user_applications" => language.pick("用户应用", "User app"),
+        "local_app_data" => language.pick("用户应用目录", "User app data"),
+        "program_files" => language.pick("程序目录", "Program Files"),
+        _ => language.pick("本机", "This computer"),
     }
 }
 
@@ -520,11 +528,56 @@ mod tests {
             "/Applications/Claude.app"
         );
         // The frontend bounds `label` at 100 code points; the location prefix
-        // plus a 64-character path has to stay under that.
-        assert!(
-            location_label("user_applications").chars().count() + 3 + 64 <= 100,
-            "label must fit the IPC contract"
+        // plus a 64-character path has to stay under that — in every language.
+        for language in [
+            crate::ui_language::Language::Zh,
+            crate::ui_language::Language::En,
+        ] {
+            for location in [
+                "path",
+                "common_location",
+                "applications",
+                "user_applications",
+                "local_app_data",
+                "program_files",
+                "unknown",
+            ] {
+                assert!(
+                    location_label_in(language, location).chars().count() + 3 + 64 <= 100,
+                    "label must fit the IPC contract: {language:?} {location}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn location_labels_follow_the_interface_language() {
+        // The picker shows this text verbatim, so it is the one place the
+        // native side must not answer in Chinese to an English interface.
+        use crate::ui_language::Language;
+        assert_eq!(location_label_in(Language::Zh, "applications"), "系统应用");
+        assert_eq!(
+            location_label_in(Language::En, "applications"),
+            "System app"
         );
+        assert_eq!(location_label_in(Language::En, "path"), "System PATH");
+        assert_eq!(
+            location_label_in(Language::En, "user_applications"),
+            "User app"
+        );
+        assert_eq!(location_label_in(Language::En, "nonsense"), "This computer");
+        for location in [
+            "path",
+            "common_location",
+            "local_app_data",
+            "program_files",
+            "x",
+        ] {
+            assert!(
+                location_label_in(Language::En, location).is_ascii(),
+                "{location}"
+            );
+        }
     }
 
     #[test]
