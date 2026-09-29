@@ -20,7 +20,9 @@
 //!
 //! Both are read from here instead. Windows has no equivalent split — a GUI
 //! process there inherits the same user/system environment a new shell gets —
-//! so resolution is a no-op and every accessor falls back to `std::env`.
+//! so resolution is a no-op and every accessor falls back to `std::env`. The
+//! one exception is `PATH` for search, which on Windows also takes the
+//! registry's current value: see `windows_cli_locations`.
 //!
 //! Resolution is deliberately *not* lazy-on-first-use: the adapters that need
 //! it are synchronous, and blocking them on a shell that sources oh-my-zsh
@@ -138,6 +140,14 @@ pub(crate) fn search_directories() -> Vec<std::path::PathBuf> {
             if seen.insert(directory.clone()) {
                 directories.push(directory);
             }
+        }
+    }
+    // Windows has no login shell to ask, but it has the same gap in time: this
+    // process's PATH is a copy taken at launch. The registry holds what a
+    // console opened now would get, including anything installed since.
+    for directory in crate::windows_cli_locations::registry_path_directories() {
+        if seen.insert(directory.clone()) {
+            directories.push(directory);
         }
     }
     directories

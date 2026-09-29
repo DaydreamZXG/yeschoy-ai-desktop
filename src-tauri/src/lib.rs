@@ -53,6 +53,7 @@ mod tool_model_profile;
 mod tool_selection_core;
 mod ui_language;
 mod window_appearance;
+mod windows_cli_locations;
 
 pub use tool_credentials::credential_helper_exit_code;
 

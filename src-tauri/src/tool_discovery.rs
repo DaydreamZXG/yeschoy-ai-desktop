@@ -140,6 +140,7 @@ pub(crate) fn discover_candidates(executable_name: &str) -> Vec<Candidate> {
     }
 
     let mut candidates: Vec<Candidate> = canonical_candidates.into_values().collect();
+    let searched = search_directories.len();
     let path_priority: Vec<PathBuf> = search_directories
         .into_iter()
         .flat_map(|dir| {
@@ -161,6 +162,13 @@ pub(crate) fn discover_candidates(executable_name: &str) -> Vec<Candidate> {
         )
     });
     candidates.truncate(MAX_CANDIDATES);
+    // Counts only, never paths: enough to tell "searched nowhere" from "searched
+    // everywhere and found nothing" in a log a user sends in.
+    log::info!(
+        "tool_discovery executable={executable_name} path_directories={} candidates={}",
+        searched,
+        candidates.len()
+    );
     candidates
 }
 
@@ -359,6 +367,10 @@ pub(crate) fn common_binary_directories() -> Vec<PathBuf> {
             directories.push(profile.join(".bun").join("bin"));
             directories.push(profile.join("scoop").join("shims"));
         }
+        // A global npm prefix moved to another drive, and the CLI that
+        // DeepSeek Harness Desktop ships inside its own installation folder.
+        directories.extend(crate::windows_cli_locations::npm_prefix_directories());
+        directories.extend(crate::windows_cli_locations::dsh_desktop_cli_directories());
     }
 
     #[cfg(not(target_os = "windows"))]
