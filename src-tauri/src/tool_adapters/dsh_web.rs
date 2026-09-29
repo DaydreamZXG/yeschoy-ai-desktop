@@ -630,6 +630,10 @@ impl ProfileLock {
                 locks.insert(0, profile.join("lock"));
             }
         }
+        Self::take_all(locks)
+    }
+
+    fn take_all(locks: Vec<PathBuf>) -> Result<Self, AdapterFailure> {
         let mut held = Self(Vec::new());
         for lock in locks {
             // A directory that does not exist yet has no DSH writing into it.
@@ -811,36 +815,27 @@ pub(crate) fn restore_profile_patch(
     if path.file_name().and_then(|name| name.to_str()) != Some(PATCH_FILENAME) {
         return None;
     }
-    let parse = |bytes: Option<&[u8]>| -> Result<Vec<JsonValue>, ()> {
-        parse_patch(bytes)?
-            .into_iter()
-            .map(|row| serde_json::to_value(row).map_err(|_| ()))
-            .collect()
-    };
     Some((|| {
-        let before = parse(before)?;
-        let after = parse(Some(after))?;
-        let mut now = parse(Some(current))?;
-        let owned = |rows: &[JsonValue], id: &str, field: &[&str]| -> Option<JsonValue> {
-            let config = rows
-                .iter()
-                .rev()
-                .find(|row| row["id"].as_str() == Some(id) && row.get("insert").is_none())
-                .map(|row| &row["config"])?;
-            let mut value = config;
-            for key in field {
-                value = value.get(*key)?;
-            }
-            Some(value.clone())
+        let before = parse_patch_json(before)?;
+        let after = parse_patch_json(Some(after))?;
+        let mut now = parse_patch_json(Some(current))?;
+        // Every configuration row of an entry is written, so each is undone
+        // against its own snapshot: the k-th `llm-pi-ai` row now against the
+        // k-th one we wrote and the k-th one that was there before.
+        let providers = |rows: &[JsonValue]| -> Vec<Option<JsonValue>> {
+            entry_rows(rows, LLM_ENTRY)
+                .map(|row| row["config"]["providers"].get("yeschoy").cloned())
+                .collect()
         };
+        let defaults = |rows: &[JsonValue]| -> Vec<JsonValue> {
+            entry_rows(rows, DEFAULT_MODEL_ENTRY)
+                .map(|row| row["config"].clone())
+                .collect()
+        };
+        let (ours, theirs) = (providers(&after), providers(&before));
+        let (default_ours, default_theirs) = (defaults(&after), defaults(&before));
         let mut preserved = false;
-        let provider = ["providers", "yeschoy"];
-        let ours = owned(&after, LLM_ENTRY, &provider);
-        let theirs = owned(&before, LLM_ENTRY, &provider);
-        let default_ours = owned(&after, DEFAULT_MODEL_ENTRY, &[]);
-        let default_theirs = owned(&before, DEFAULT_MODEL_ENTRY, &[]);
-        let had_llm_row = before.iter().any(|row| row["id"] == LLM_ENTRY);
-        let had_default_row = before.iter().any(|row| row["id"] == DEFAULT_MODEL_ENTRY);
+        let (mut llm_index, mut default_index) = (0, 0);
         let mut index = 0;
         while index < now.len() {
             let row = &mut now[index];
@@ -850,24 +845,32 @@ pub(crate) fn restore_profile_patch(
                 None
             };
             if entry.as_deref() == Some(LLM_ENTRY) {
+                let k = llm_index;
+                llm_index += 1;
+                let existed = k < theirs.len();
                 let providers = row
                     .get_mut("config")
                     .and_then(|config| config.get_mut("providers"))
                     .and_then(JsonValue::as_object_mut);
                 if let Some(providers) = providers {
-                    match (providers.get("yeschoy"), &ours) {
-                        (Some(current), Some(ours)) if current == ours => match &theirs {
-                            Some(value) => {
-                                providers.insert("yeschoy".into(), value.clone());
+                    match (
+                        providers.get("yeschoy"),
+                        ours.get(k).and_then(Option::as_ref),
+                    ) {
+                        (Some(current), Some(ours)) if current == ours => {
+                            match theirs.get(k).and_then(Option::as_ref) {
+                                Some(value) => {
+                                    providers.insert("yeschoy".into(), value.clone());
+                                }
+                                None => {
+                                    providers.remove("yeschoy");
+                                }
                             }
-                            None => {
-                                providers.remove("yeschoy");
-                            }
-                        },
+                        }
                         (Some(_), _) => preserved = true,
                         (None, _) => {}
                     }
-                    if providers.is_empty() && !had_llm_row {
+                    if providers.is_empty() && !existed {
                         if let Some(config) = row["config"].as_object_mut() {
                             config.remove("providers");
                         }
@@ -876,23 +879,25 @@ pub(crate) fn restore_profile_patch(
                 let empty_config = row["config"]
                     .as_object()
                     .is_none_or(|config| config.is_empty());
-                if empty_config && !had_llm_row {
+                if empty_config && !existed {
                     now.remove(index);
                     continue;
                 }
             } else if entry.as_deref() == Some(DEFAULT_MODEL_ENTRY) {
-                if default_ours.as_ref() == Some(&row["config"]) {
-                    match &default_theirs {
-                        Some(value) => row["config"] = value.clone(),
-                        None if !had_default_row => {
+                let k = default_index;
+                default_index += 1;
+                if default_ours.get(k) == Some(&row["config"]) {
+                    match default_theirs.get(k) {
+                        None => {
                             now.remove(index);
                             continue;
                         }
-                        None => {
+                        Some(JsonValue::Null) => {
                             if let Some(row) = row.as_object_mut() {
                                 row.remove("config");
                             }
                         }
+                        Some(value) => row["config"] = value.clone(),
                     }
                 } else if row["config"]["provider"] == "yeschoy" {
                     preserved = true;
@@ -902,6 +907,104 @@ pub(crate) fn restore_profile_patch(
         }
         Ok((now, preserved))
     })())
+}
+
+fn parse_patch_json(bytes: Option<&[u8]>) -> Result<Vec<JsonValue>, ()> {
+    parse_patch(bytes)?
+        .into_iter()
+        .map(|row| serde_json::to_value(row).map_err(|_| ()))
+        .collect()
+}
+
+/// The rows that configure `id`, in order; `insert` rows add entries instead.
+fn entry_rows<'a>(rows: &'a [JsonValue], id: &'a str) -> impl Iterator<Item = &'a JsonValue> {
+    rows.iter()
+        .filter(move |row| row["id"].as_str() == Some(id) && row.get("insert").is_none())
+}
+
+/// Remove every value in a profile patch that only this app writes: a
+/// `yeschoy` provider reading its key from `YESCHOY_DSH_API_KEY`, and a
+/// default-model row selecting that provider.
+///
+/// Used where there is no record of what the file held before we touched it:
+/// a connection from before the recovery journal, and a patch that DSH 0.2
+/// filled by importing our old `settings.yaml`. Without it that imported copy
+/// of our configuration would be taken for the user's own and put back on
+/// disconnect, after the key it needs was deleted.
+///
+/// A default-model row selecting us is removed whole: its config replaces the
+/// entry's, and `provider` and `model` are required there.
+pub(crate) fn strip_owned_patch(bytes: &[u8]) -> Result<Vec<u8>, ()> {
+    let mut rows = parse_patch(Some(bytes))?;
+    let original = rows.clone();
+    let reference = Value::String(KEY_REFERENCE.into());
+    rows.retain_mut(|row| {
+        if is_entry_row(row, LLM_ENTRY) {
+            let Some(providers) = row
+                .get_mut("config")
+                .and_then(|config| config.get_mut("providers"))
+                .and_then(Value::as_mapping_mut)
+            else {
+                return true;
+            };
+            let ours = providers
+                .get("yeschoy")
+                .and_then(|provider| provider.get("apiKeyEnv"))
+                == Some(&reference);
+            if !ours {
+                return true;
+            }
+            providers.remove("yeschoy");
+            if providers.is_empty() {
+                if let Some(config) = row.get_mut("config").and_then(Value::as_mapping_mut) {
+                    config.remove("providers");
+                }
+            }
+            row.get("config")
+                .and_then(Value::as_mapping)
+                .is_some_and(|config| !config.is_empty())
+        } else if is_entry_row(row, DEFAULT_MODEL_ENTRY) {
+            row.get("config")
+                .and_then(|config| config.get("provider"))
+                .and_then(Value::as_str)
+                != Some("yeschoy")
+        } else {
+            true
+        }
+    });
+    if rows == original {
+        return Ok(bytes.to_vec());
+    }
+    to_yaml_bytes(&Value::Sequence(rows))
+}
+
+/// DSH's writer locks for files that are about to be written outside an
+/// adapter transaction, such as a disconnect restoring them. Paths that are
+/// not DSH's are ignored.
+pub(crate) fn lock_for_restore(paths: &[PathBuf]) -> Result<impl Drop, AdapterFailure> {
+    let mut locks = Vec::new();
+    for path in paths {
+        match path.file_name().and_then(|name| name.to_str()) {
+            Some(PATCH_FILENAME) => {
+                let Some(profile) = path.parent() else {
+                    continue;
+                };
+                if profile.file_name().and_then(|name| name.to_str())
+                    == Some(DshProfile::Desktop.name())
+                {
+                    locks.push(profile.join("lock"));
+                }
+                locks.push(profile.join("package.json.lock"));
+            }
+            Some(CREDENTIALS_FILENAME) => {
+                let mut lock = path.clone().into_os_string();
+                lock.push(".lock");
+                locks.push(PathBuf::from(lock));
+            }
+            _ => {}
+        }
+    }
+    ProfileLock::take_all(locks)
 }
 
 /// Undo our key in DSH's credentials file, leaving every other ref alone.
@@ -1680,6 +1783,103 @@ mod tests {
         .unwrap()
         .commit()
         .unwrap();
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn stripping_removes_only_what_this_app_writes() {
+        let ours = render_profile_patch(
+            Some(b"- id: llm-pi-ai\n  config:\n    providers:\n      local: {baseURL: 'http://127.0.0.1:11434/v1'}\n- id: ui-settings\n  config: {theme: dark}\n"),
+            "https://yeschoy.com",
+            "m",
+            &["m".into()],
+        )
+        .unwrap();
+        let stripped: JsonValue =
+            serde_yaml::from_slice(&strip_owned_patch(&ours).unwrap()).unwrap();
+        assert_eq!(
+            stripped,
+            json!([
+                {"id": "llm-pi-ai", "config": {"providers": {"local": {"baseURL": "http://127.0.0.1:11434/v1"}}}},
+                {"id": "ui-settings", "config": {"theme": "dark"}}
+            ])
+        );
+        // A provider the user named `yeschoy` with their own key reference stays.
+        let theirs = b"- id: llm-pi-ai\n  config:\n    providers:\n      yeschoy: {apiKeyEnv: MY_KEY}\n- id: agent-default-model\n  config: {provider: deepseek-official, model: deepseek-flash}\n";
+        assert_eq!(strip_owned_patch(theirs).unwrap(), theirs.to_vec());
+        assert!(strip_owned_patch(b"llm-pi-ai: {}\n").is_err());
+    }
+
+    #[test]
+    fn repeated_rows_are_restored_against_their_own_snapshots() {
+        let before = b"- id: agent-default-model\n  config: {provider: a, model: one}\n- id: llm-pi-ai\n  config: {providers: {yeschoy: {reasoning: low}}}\n- id: agent-default-model\n  config: {provider: b, model: two}\n- id: llm-pi-ai\n  config: {providers: {yeschoy: {reasoning: high}}}\n";
+        let after =
+            render_profile_patch(Some(before), "https://yeschoy.com", "m", &["m".into()]).unwrap();
+        // Any edit elsewhere sends restore down the semantic path.
+        let mut now: JsonValue = serde_yaml::from_slice(&after).unwrap();
+        now.as_array_mut()
+            .unwrap()
+            .push(json!({"id": "ui-settings", "config": {"theme": "dark"}}));
+        let current = serde_yaml::to_string(&now).unwrap();
+        let (rows, preserved) = restored(Some(before), &after, current.as_bytes());
+        let mut expected: JsonValue = serde_yaml::from_slice(before).unwrap();
+        expected
+            .as_array_mut()
+            .unwrap()
+            .push(json!({"id": "ui-settings", "config": {"theme": "dark"}}));
+        assert_eq!(rows, expected);
+        assert!(!preserved);
+    }
+
+    #[test]
+    fn an_insert_row_is_not_a_configuration_row_we_found() {
+        let before = b"- id: llm-pi-ai\n  insert: [{name: extra}]\n";
+        let after =
+            render_profile_patch(Some(before), "https://yeschoy.com", "m", &["m".into()]).unwrap();
+        let mut now: JsonValue = serde_yaml::from_slice(&after).unwrap();
+        now.as_array_mut()
+            .unwrap()
+            .push(json!({"id": "ui-settings", "config": {"theme": "dark"}}));
+        let current = serde_yaml::to_string(&now).unwrap();
+        let (rows, _) = restored(Some(before), &after, current.as_bytes());
+        assert_eq!(
+            rows,
+            json!([
+                {"id": "llm-pi-ai", "insert": [{"name": "extra"}]},
+                {"id": "ui-settings", "config": {"theme": "dark"}}
+            ])
+        );
+    }
+
+    #[test]
+    fn restore_waits_for_dsh_writers_on_the_files_it_writes() {
+        let root = common::temporary_working_directory("dsh-restore-lock").unwrap();
+        let web = root.join("profiles/web");
+        let desktop = root.join("profiles/desktop");
+        std::fs::create_dir_all(&web).unwrap();
+        std::fs::create_dir_all(&desktop).unwrap();
+        let paths = vec![
+            web.join(PATCH_FILENAME),
+            desktop.join(PATCH_FILENAME),
+            root.join(CREDENTIALS_FILENAME),
+            root.join("settings.yaml"),
+        ];
+        {
+            let _held = lock_for_restore(&paths).unwrap();
+            for lock in [
+                web.join("package.json.lock"),
+                desktop.join("package.json.lock"),
+                desktop.join("lock"),
+                root.join(".credentials.yaml.lock"),
+            ] {
+                assert!(lock.exists(), "{}", lock.display());
+            }
+            assert!(!web.join("lock").exists());
+            // A second writer is refused while they are held.
+            assert!(lock_for_restore(&paths[..1]).is_err());
+        }
+        assert!(!web.join("package.json.lock").exists());
+        assert!(!desktop.join("lock").exists());
         std::fs::remove_dir_all(root).unwrap();
     }
 

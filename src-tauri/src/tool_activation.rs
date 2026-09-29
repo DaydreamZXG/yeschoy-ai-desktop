@@ -3275,8 +3275,15 @@ fn legacy_paths(tool: &str) -> Result<Vec<std::path::PathBuf>, AdapterFailure> {
             home.join(".pi/agent/models.json"),
             home.join(".pi/agent/settings.json"),
         ],
+        // DSH 0.2 moves `settings.yaml` into the web profile's patch and
+        // renames it, so a connection from before the journal may now live
+        // there instead. Only files that exist are taken.
         "dsh_web" => {
-            vec![dsh_web::dsh_home(&home, std::env::var_os("DSH_HOME"))?.join("settings.yaml")]
+            let root = dsh_web::dsh_home(&home, std::env::var_os("DSH_HOME"))?;
+            vec![
+                root.join("settings.yaml"),
+                root.join("profiles/web/cordis.patch.yml"),
+            ]
         }
         "workbuddy" => vec![home.join(".workbuddy/models.json")],
         // Desktop support began with the recovery journal: nothing legacy.

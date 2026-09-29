@@ -240,13 +240,15 @@ pub(crate) fn registry_path_directories() -> Vec<PathBuf> {
     let read = |key: &Option<RegKey>, name: &str| -> Option<String> {
         key.as_ref()?.get_value::<String, _>(name).ok()
     };
-    // A variable set after launch is also only in the registry. User values
-    // shadow machine values, the same order Windows builds an environment in.
+    // The registry first: a variable this process inherited may have been
+    // changed since, by the same installer that changed `Path`, and one set
+    // after launch is only there. User values shadow machine values, the order
+    // Windows builds an environment in. Dynamic names Windows never stores
+    // there (`USERPROFILE`, `SystemRoot`) fall through to this process's copy.
     let lookup = |name: &str| -> Option<String> {
-        std::env::var(name)
-            .ok()
-            .or_else(|| read(&user, name))
+        read(&user, name)
             .or_else(|| read(&machine, name))
+            .or_else(|| std::env::var(name).ok())
     };
     let mut directories = Vec::new();
     // Windows puts the machine PATH first and appends the user's.

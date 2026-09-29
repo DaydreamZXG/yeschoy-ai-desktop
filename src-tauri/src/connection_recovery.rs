@@ -475,8 +475,19 @@ impl Store {
             }
             for file in &mut files {
                 // A file this tool had not written before has no baseline to
-                // rebase: what is on disk now is the user's original.
+                // rebase: what is on disk now is the user's original, except
+                // for a DSH patch that DSH 0.2 filled by importing the
+                // `settings.yaml` we wrote. That copy of our configuration is
+                // not theirs and must not come back on disconnect.
                 let Some(original) = previous.files.iter().find(|f| f.path == file.path) else {
+                    if dsh_profile_patch(&file.path) {
+                        if let Some(before) = file.before.as_deref() {
+                            file.before = Some(
+                                crate::tool_adapters::dsh_web::strip_owned_patch(before)
+                                    .map_err(|_| Failure::Invalid)?,
+                            );
+                        }
+                    }
                     continue;
                 };
                 // Rebase unrelated or later user edits, not the old YesChoy
@@ -984,6 +995,16 @@ fn owned_values_restored(
 }
 
 fn restore_files_inner(record: &Record, require_owned_restored: bool) -> Result<bool> {
+    // DSH's own writers (its Models page, the model picker, Desktop's startup)
+    // take these locks; holding them from the first snapshot to the last write
+    // keeps a concurrent DSH edit from landing in between.
+    let paths = record
+        .files
+        .iter()
+        .map(|file| file.path.clone())
+        .collect::<Vec<_>>();
+    let _dsh_locks =
+        crate::tool_adapters::dsh_web::lock_for_restore(&paths).map_err(|_| Failure::Changed)?;
     // Plan every file before changing any. An invalid document must not cause
     // half of an otherwise valid restoration to be applied.
     let mut plan = Vec::new();
@@ -1161,6 +1182,11 @@ pub(crate) fn legacy_clean(
     let Some(bytes) = bytes else {
         return Ok(None);
     };
+    if matches!(tool, "dsh_web" | "dsh_desktop") && dsh_profile_patch(path) {
+        return crate::tool_adapters::dsh_web::strip_owned_patch(bytes)
+            .map(Some)
+            .map_err(|_| Failure::Invalid);
+    }
     let mut value = document(path, Some(bytes))?;
     let original = value.clone();
     let origin_v1 = format!("{}/v1", credential.origin);
@@ -1387,6 +1413,37 @@ mod tests {
                 {"id": "ui-settings", "config": {"theme": "dark"}}
             ])
         );
+    }
+
+    #[test]
+    fn a_patch_dsh_filled_from_our_old_settings_is_not_taken_as_the_users() {
+        let fixture = Fixture::new();
+        std::fs::create_dir_all(fixture.path("profiles/web")).unwrap();
+        let store = &fixture.0;
+        // A journaled 0.1 connection: only settings.yaml was ours.
+        let settings = fixture.change("settings.yaml", None, b"a: 1\n");
+        let mut record = store.begin(receipt("dsh_web"), &[settings], None).unwrap();
+        store.finish(&mut record).unwrap();
+        // DSH 0.2 imported it into the web patch and renamed the source.
+        let imported = b"- id: llm-pi-ai\n  config:\n    providers:\n      local: {baseURL: x}\n      yeschoy: {apiKeyEnv: YESCHOY_DSH_API_KEY, baseURL: 'https://yeschoy.com/v1'}\n- id: agent-default-model\n  config: {provider: yeschoy, model: m}\n";
+        let patch = fixture.change("profiles/web/cordis.patch.yml", Some(imported), imported);
+        let record = store.begin(receipt("dsh_web"), &[patch], None).unwrap();
+        let baseline = document(&record.files[0].path, record.files[0].before.as_deref()).unwrap();
+        assert_eq!(
+            baseline,
+            json!([{"id": "llm-pi-ai", "config": {"providers": {"local": {"baseURL": "x"}}}}])
+        );
+    }
+
+    #[test]
+    fn legacy_dsh_cleanup_covers_the_patch_dsh_imported_into() {
+        let fixture = Fixture::new();
+        let path = fixture.path("profiles/web/cordis.patch.yml");
+        let imported = b"- id: agent-default-model\n  config: {provider: yeschoy, model: m}\n";
+        let cleaned = legacy_clean("dsh_web", &path, Some(imported), &credential(), false)
+            .unwrap()
+            .unwrap();
+        assert_eq!(document(&path, Some(&cleaned)).unwrap(), json!([]));
     }
 
     #[test]
