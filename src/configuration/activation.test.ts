@@ -35,7 +35,8 @@ function targetScan(requestId = "target-scan-test") {
       | "codex_desktop"
       | "pi"
       | "dsh_web"
-      | "workbuddy",
+      | "workbuddy"
+      | "dsh_desktop",
     displayName: string,
   ) => ({
     toolId,
@@ -63,6 +64,7 @@ function targetScan(requestId = "target-scan-test") {
       target("pi", "Pi"),
       target("dsh_web", "DSH web"),
       target("workbuddy", "WorkBuddy"),
+      target("dsh_desktop", "DeepSeek Harness"),
     ],
   };
 }
@@ -175,13 +177,13 @@ describe("desktop tool activation boundary", () => {
     ).toBeNull();
   });
 
-  it("accepts only a complete six-target installation scan", () => {
+  it("accepts only a complete installation scan", () => {
     expect(
       decodeActivationTargetScan(targetScan(), "target-scan-test"),
     ).toEqual(targetScan());
     expect(
       decodeActivationTargetScan(
-        { ...targetScan(), targets: targetScan().targets.slice(0, 5) },
+        { ...targetScan(), targets: targetScan().targets.slice(0, -1) },
         "target-scan-test",
       ),
     ).toBeNull();
@@ -277,6 +279,7 @@ describe("desktop tool activation boundary", () => {
       "pi",
       "dsh_web",
       "workbuddy",
+      "dsh_desktop",
     ]);
     expect(native).toHaveBeenCalledWith("scan_activation_targets_v1", {
       request: { requestId: expect.stringMatching(/^target-scan-/) },

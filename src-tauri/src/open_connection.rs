@@ -58,7 +58,13 @@ fn valid_request(request: &OpenRequest) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_'))
         && matches!(
             request.tool_id.as_str(),
-            "claude_code" | "claude_desktop" | "codex_desktop" | "pi" | "dsh_web" | "workbuddy"
+            "claude_code"
+                | "claude_desktop"
+                | "codex_desktop"
+                | "pi"
+                | "dsh_web"
+                | "workbuddy"
+                | "dsh_desktop"
         )
 }
 
@@ -110,6 +116,14 @@ pub(crate) fn validate_settings(
                 .validate_existing(),
             "dsh_web" => dsh_web::prepare_catalog(home, &origin, &credential.model_id, &models)?
                 .validate_existing(),
+            "dsh_desktop" => dsh_web::prepare_desktop_catalog(
+                home,
+                &origin,
+                &credential.model_id,
+                &models,
+                credential.upstream_key(),
+            )?
+            .validate_existing(),
             "workbuddy" => workbuddy::prepare_catalog(home, credential)?.validate_existing(),
             _ => Err(AdapterFailure::UnsupportedProfile),
         };
@@ -159,6 +173,13 @@ pub(crate) fn validate_settings(
         "dsh_web" => {
             dsh_web::prepare(home, &credential.origin, &credential.model_id)?.validate_existing()
         }
+        "dsh_desktop" => dsh_web::prepare_desktop(
+            home,
+            &credential.origin,
+            &credential.model_id,
+            credential.upstream_key(),
+        )?
+        .validate_existing(),
         "workbuddy" => workbuddy::prepare_catalog(home, credential)?.validate_existing(),
         _ => Err(AdapterFailure::UnsupportedProfile),
     }
@@ -264,8 +285,8 @@ pub async fn open_tool_connection_v1(
                                 .await,
                         )
                     }
-                    "workbuddy" => Ok(desktop_lifecycle::open_unless_running(
-                        "workbuddy",
+                    "workbuddy" | "dsh_desktop" => Ok(desktop_lifecycle::open_unless_running(
+                        &request.tool_id,
                         &installation.path,
                     )
                     .await),
@@ -373,6 +394,7 @@ mod tests {
             "pi",
             "dsh_web",
             "workbuddy",
+            "dsh_desktop",
         ] {
             assert!(valid_request(&OpenRequest {
                 request_id: "open-fixture".into(),

@@ -115,9 +115,9 @@ impl DshRuntimeState {
     }
 }
 
-/// The profile `dsh --profile web` runs, and the one this adapter configures.
-const WEB_PROFILE: &str = "web";
 const PATCH_FILENAME: &str = "cordis.patch.yml";
+const CREDENTIALS_FILENAME: &str = ".credentials.yaml";
+const KEY_REFERENCE: &str = "YESCHOY_DSH_API_KEY";
 const LLM_ENTRY: &str = "llm-pi-ai";
 const LLM_PLUGIN: &str = "@deepseek-ai/dsh-llm-pi-ai";
 const DEFAULT_MODEL_ENTRY: &str = "agent-default-model";
@@ -127,15 +127,39 @@ const DEFAULT_MODEL_PLUGIN: &str = "@deepseek-ai/dsh-agent-default-model";
 const STALE_LOCK: Duration = Duration::from_secs(60);
 const LOCK_WAIT: Duration = Duration::from_secs(2);
 
+/// Which DSH profile a connection configures.
+///
+/// Both read the same `$DSH_HOME`; each owns its own patch. They differ in how
+/// the key arrives: `dsh --profile web` is started by this app, which puts the
+/// key in its environment, while DeepSeek Harness Desktop is started by the
+/// user and can only read it from DSH's shared credentials file.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum DshProfile {
+    Web,
+    Desktop,
+}
+
+impl DshProfile {
+    fn name(self) -> &'static str {
+        match self {
+            Self::Web => "web",
+            Self::Desktop => "desktop",
+        }
+    }
+}
+
 pub(crate) struct Prepared {
     transaction: FileTransaction,
-    /// `$DSH_HOME/profiles/web/cordis.patch.yml`, always written.
+    /// `$DSH_HOME/profiles/<profile>/cordis.patch.yml`, always written.
     patch_path: PathBuf,
+    /// `$DSH_HOME/.credentials.yaml`, written for the Desktop profile only.
+    credentials_path: Option<PathBuf>,
     /// `$DSH_HOME/settings.yaml`, written only when it already exists.
     settings_path: Option<PathBuf>,
     origin: String,
     model: String,
     model_ids: Vec<String>,
+    key: Option<String>,
 }
 
 fn config_error(error: ConfigFailure) -> AdapterFailure {
@@ -187,7 +211,7 @@ fn yeschoy_provider(
     );
     provider.insert(
         Value::String("apiKeyEnv".into()),
-        Value::String("YESCHOY_DSH_API_KEY".into()),
+        Value::String(KEY_REFERENCE.into()),
     );
     provider.insert(
         Value::String("api".into()),
@@ -383,16 +407,25 @@ pub(crate) fn dsh_home(
 /// profile patch, so a value left there would win over ours; 0.2 imports it
 /// into whichever profile boots next and renames it, so creating one would
 /// write into a profile we do not own.
-pub(crate) fn configuration_paths(home: &Path) -> Result<Vec<PathBuf>, AdapterFailure> {
+pub(crate) fn configuration_paths(
+    home: &Path,
+    profile: DshProfile,
+) -> Result<Vec<PathBuf>, AdapterFailure> {
     // `DSH_HOME` is exported from a shell rc, which a Dock-launched app never
     // sources. Reading it from this process wrote settings.yaml into ~/.dsh
     // while `dsh` itself loaded a different directory.
     let root = dsh_home(home, crate::shell_environment::var_os("DSH_HOME"))?;
-    Ok(paths_in(&root))
+    Ok(paths_in(&root, profile))
 }
 
-fn paths_in(root: &Path) -> Vec<PathBuf> {
-    let mut paths = vec![root.join("profiles").join(WEB_PROFILE).join(PATCH_FILENAME)];
+fn paths_in(root: &Path, profile: DshProfile) -> Vec<PathBuf> {
+    let mut paths = vec![root
+        .join("profiles")
+        .join(profile.name())
+        .join(PATCH_FILENAME)];
+    if profile == DshProfile::Desktop {
+        paths.push(root.join(CREDENTIALS_FILENAME));
+    }
     let settings = root.join("settings.yaml");
     if settings.is_file() {
         paths.push(settings);
@@ -401,7 +434,15 @@ fn paths_in(root: &Path) -> Vec<PathBuf> {
 }
 
 pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared, AdapterFailure> {
-    prepare_inner(home, origin, model, &[model.to_owned()])
+    let root = dsh_home(home, crate::shell_environment::var_os("DSH_HOME"))?;
+    prepare_in(
+        &root,
+        DshProfile::Web,
+        origin,
+        model,
+        &[model.to_owned()],
+        None,
+    )
 }
 
 pub(crate) fn prepare_catalog(
@@ -411,74 +452,166 @@ pub(crate) fn prepare_catalog(
     model_ids: &[String],
 ) -> Result<Prepared, AdapterFailure> {
     crate::tool_adapters::common::validate_catalog(model, model_ids)?;
-    prepare_inner(home, origin, model, model_ids)
+    let root = dsh_home(home, crate::shell_environment::var_os("DSH_HOME"))?;
+    prepare_in(&root, DshProfile::Web, origin, model, model_ids, None)
 }
 
-fn prepare_inner(
+/// DeepSeek Harness Desktop: its own profile, and the key in DSH's credentials
+/// file, because nothing this app starts stands between Desktop and the relay.
+pub(crate) fn prepare_desktop(
+    home: &Path,
+    origin: &str,
+    model: &str,
+    key: &str,
+) -> Result<Prepared, AdapterFailure> {
+    let root = dsh_home(home, crate::shell_environment::var_os("DSH_HOME"))?;
+    prepare_in(
+        &root,
+        DshProfile::Desktop,
+        origin,
+        model,
+        &[model.to_owned()],
+        Some(key),
+    )
+}
+
+pub(crate) fn prepare_desktop_catalog(
     home: &Path,
     origin: &str,
     model: &str,
     model_ids: &[String],
+    key: &str,
 ) -> Result<Prepared, AdapterFailure> {
+    crate::tool_adapters::common::validate_catalog(model, model_ids)?;
     let root = dsh_home(home, crate::shell_environment::var_os("DSH_HOME"))?;
-    prepare_in(&root, origin, model, model_ids)
+    prepare_in(
+        &root,
+        DshProfile::Desktop,
+        origin,
+        model,
+        model_ids,
+        Some(key),
+    )
 }
 
 fn prepare_in(
     root: &Path,
+    profile: DshProfile,
     origin: &str,
     model: &str,
     model_ids: &[String],
+    key: Option<&str>,
 ) -> Result<Prepared, AdapterFailure> {
-    let mut paths = paths_in(root).into_iter();
-    let patch_path = paths.next().ok_or(AdapterFailure::ConfigurationFailed(
-        "configuration_read_failed",
-    ))?;
-    let settings_path = paths.next();
+    let parse_failed = AdapterFailure::ConfigurationFailed("configuration_parse_failed");
+    if (profile == DshProfile::Desktop) != key.is_some() {
+        return Err(AdapterFailure::ConfigurationFailed("invalid_request"));
+    }
     let read = |path: &Path| {
         common::snapshot(path)
             .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_read_failed"))
     };
-    let before = read(&patch_path)?;
-    let after = render_profile_patch(before.as_deref(), origin, model, model_ids)
-        .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?;
-    let mut transaction = FileTransaction::stage_with_snapshot(patch_path.clone(), before, after)
-        .map_err(config_error)?;
-    if let Some(path) = &settings_path {
-        let before = read(path)?;
-        let after = render_catalog(before.as_deref(), origin, model, model_ids)
-            .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?;
+    let mut transaction = FileTransaction::default();
+    let (mut patch_path, mut credentials_path, mut settings_path) = (None, None, None);
+    for path in paths_in(root, profile) {
+        let before = read(&path)?;
+        let after = match path.file_name().and_then(|name| name.to_str()) {
+            Some(PATCH_FILENAME) => {
+                patch_path = Some(path.clone());
+                render_profile_patch(before.as_deref(), origin, model, model_ids)
+            }
+            Some(CREDENTIALS_FILENAME) => {
+                credentials_path = Some(path.clone());
+                render_credentials(before.as_deref(), key.unwrap_or_default())
+            }
+            _ => {
+                settings_path = Some(path.clone());
+                render_catalog(before.as_deref(), origin, model, model_ids)
+            }
+        }
+        .map_err(|_| parse_failed)?;
         transaction
-            .push_with_snapshot(path.clone(), before, after)
+            .push_with_snapshot(path, before, after)
             .map_err(config_error)?;
     }
     Ok(Prepared {
         transaction,
-        patch_path,
+        patch_path: patch_path.ok_or(parse_failed)?,
+        credentials_path,
         settings_path,
         origin: origin.to_owned(),
         model: model.to_owned(),
         model_ids: model_ids.to_vec(),
+        key: key.map(str::to_owned),
     })
 }
 
-/// DSH's cross-process writer lock: an exclusively created `<file>.lock`
+/// DSH's credentials document: `version: 1` and a `refs` map of reference name
+/// to secret. Only our reference is written; every other ref, and any
+/// `records`, stay as they are.
+///
+/// A non-empty document without `version` is the pre-release flat layout,
+/// which DSH itself refuses to start with and asks the user to migrate. It is
+/// refused here as well rather than rewritten on their behalf.
+fn render_credentials(existing: Option<&[u8]>, key: &str) -> Result<Vec<u8>, ()> {
+    if key.is_empty() {
+        return Err(());
+    }
+    let mut root = match existing {
+        Some(bytes) if !String::from_utf8_lossy(bytes).trim().is_empty() => {
+            match serde_yaml::from_slice::<Value>(bytes).map_err(|_| ())? {
+                Value::Null => Mapping::new(),
+                Value::Mapping(map) => map,
+                _ => return Err(()),
+            }
+        }
+        _ => Mapping::new(),
+    };
+    let version = Value::String("version".into());
+    match root.get(&version) {
+        None if root.is_empty() => {
+            root.insert(version, Value::Number(1.into()));
+        }
+        Some(Value::Number(number)) if number.as_u64() == Some(1) => {}
+        _ => return Err(()),
+    }
+    let refs = child_mapping(&mut root, "refs")?;
+    refs.insert(
+        Value::String(KEY_REFERENCE.into()),
+        Value::String(key.into()),
+    );
+    to_yaml_bytes(&Value::Mapping(root))
+}
+
+/// DSH's cross-process writer locks: an exclusively created `<file>.lock`
 /// holding the writer's PID, removed when the write is done. Its config editor
-/// takes `<profile>/package.json.lock` around every patch write.
-struct ProfileLock(Option<PathBuf>);
+/// takes `<profile>/package.json.lock` around every patch write, and its
+/// credentials store `.credentials.yaml.lock` around every key change.
+struct ProfileLock(Vec<PathBuf>);
 
 impl ProfileLock {
-    fn acquire(patch_path: &Path) -> Result<Self, AdapterFailure> {
+    fn acquire(prepared: &Prepared) -> Result<Self, AdapterFailure> {
         let busy = AdapterFailure::ConfigurationFailed("configuration_write_failed");
-        let Some(profile) = patch_path.parent() else {
-            return Err(busy);
-        };
-        // No profile directory means no DSH has ever opened it, so nobody
-        // else can be writing it.
-        if !profile.is_dir() {
-            return Ok(Self(None));
+        let mut targets = vec![prepared
+            .patch_path
+            .parent()
+            .ok_or(busy)?
+            .join("package.json")];
+        targets.extend(prepared.credentials_path.clone());
+        let mut held = Self(Vec::new());
+        for target in targets {
+            // A directory that does not exist yet has no DSH writing into it.
+            if target.parent().is_some_and(Path::is_dir) {
+                held.0.push(Self::take(&target)?);
+            }
         }
-        let lock = profile.join("package.json.lock");
+        Ok(held)
+    }
+
+    fn take(target: &Path) -> Result<PathBuf, AdapterFailure> {
+        let busy = AdapterFailure::ConfigurationFailed("configuration_write_failed");
+        let mut lock = target.as_os_str().to_owned();
+        lock.push(".lock");
+        let lock = PathBuf::from(lock);
         let deadline = std::time::Instant::now() + LOCK_WAIT;
         let mut stale_removed = false;
         loop {
@@ -490,7 +623,7 @@ impl ProfileLock {
                 Ok(mut file) => {
                     use std::io::Write;
                     let _ = writeln!(file, "{}", std::process::id());
-                    return Ok(Self(Some(lock)));
+                    return Ok(lock);
                 }
                 Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
                 Err(_) => return Err(busy),
@@ -515,7 +648,7 @@ impl ProfileLock {
 
 impl Drop for ProfileLock {
     fn drop(&mut self) {
-        if let Some(lock) = self.0.take() {
+        for lock in self.0.drain(..).rev() {
             let _ = std::fs::remove_file(lock);
         }
     }
@@ -536,9 +669,16 @@ impl Prepared {
     }
 
     pub(crate) fn commit(&mut self) -> Result<(), AdapterFailure> {
-        let lock = ProfileLock::acquire(&self.patch_path)?;
+        let lock = ProfileLock::acquire(self)?;
         self.transaction.commit().map_err(config_error)?;
         drop(lock);
+        // DSH refuses to start while the credentials file is readable by
+        // anyone else. A new file is already 0600; an older, wider one is not
+        // ours to leave that way once it holds our key.
+        if let Some(path) = &self.credentials_path {
+            common::narrow_third_party_file(path)
+                .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_write_failed"))?;
+        }
         self.validate_readback(true)
     }
 
@@ -547,7 +687,7 @@ impl Prepared {
     }
 
     fn provider_matches(&self, provider: &JsonValue) -> bool {
-        provider["apiKeyEnv"].as_str() == Some("YESCHOY_DSH_API_KEY")
+        provider["apiKeyEnv"].as_str() == Some(KEY_REFERENCE)
             && provider["api"].as_str() == Some("openai-completions")
             && provider["baseURL"].as_str()
                 == Some(format!("{}/v1", self.origin.trim_end_matches('/')).as_str())
@@ -586,6 +726,14 @@ impl Prepared {
         if !patch_correct {
             return Err(failed);
         }
+        if let (Some(path), Some(key)) = (&self.credentials_path, &self.key) {
+            let document = Self::read_yaml(path)?;
+            if document["version"].as_u64() != Some(1)
+                || document["refs"][KEY_REFERENCE].as_str() != Some(key.as_str())
+            {
+                return Err(failed);
+            }
+        }
         // DSH 0.2 renames `settings.yaml` to `settings.yaml.imported` once it
         // has moved it into the profile. Gone is the expected end state, not
         // a changed configuration; anything still there must agree with us,
@@ -605,7 +753,7 @@ impl Prepared {
     }
 
     pub(crate) fn rollback(&mut self) -> Result<(), AdapterFailure> {
-        let lock = ProfileLock::acquire(&self.patch_path)?;
+        let lock = ProfileLock::acquire(self)?;
         let result = self.transaction.rollback().map_err(config_error);
         drop(lock);
         result
@@ -726,6 +874,72 @@ pub(crate) fn restore_profile_patch(
     })())
 }
 
+/// Undo our key in DSH's credentials file, leaving every other ref alone.
+///
+/// The generic merge would treat `version` as ours when the file did not exist
+/// before, and drop it while a ref the user added since is still there, which
+/// DSH then refuses as the old flat layout. The whole file goes only when
+/// nothing but our own entries remains in a file we created.
+///
+/// Returns `None` when the path is not DSH's credentials file; otherwise the
+/// document to write back (`None` to delete it) and whether our key was left
+/// because it no longer holds the value we wrote.
+pub(crate) fn restore_credentials(
+    path: &Path,
+    before: Option<&[u8]>,
+    after: &[u8],
+    current: &[u8],
+) -> Option<Result<(Option<JsonValue>, bool), ()>> {
+    if path.file_name().and_then(|name| name.to_str()) != Some(CREDENTIALS_FILENAME) {
+        return None;
+    }
+    let parse = |bytes: &[u8]| -> Result<JsonValue, ()> {
+        if String::from_utf8_lossy(bytes).trim().is_empty() {
+            return Ok(JsonValue::Object(serde_json::Map::new()));
+        }
+        match serde_yaml::from_slice::<JsonValue>(bytes).map_err(|_| ())? {
+            JsonValue::Null => Ok(JsonValue::Object(serde_json::Map::new())),
+            value @ JsonValue::Object(_) => Ok(value),
+            _ => Err(()),
+        }
+    };
+    Some((|| {
+        let theirs = before
+            .map(parse)
+            .transpose()?
+            .and_then(|value| value["refs"].get(KEY_REFERENCE).cloned());
+        let ours = parse(after)?["refs"].get(KEY_REFERENCE).cloned();
+        let mut now = parse(current)?;
+        let mut preserved = false;
+        if let Some(refs) = now.get_mut("refs").and_then(JsonValue::as_object_mut) {
+            match (refs.get(KEY_REFERENCE), &ours) {
+                (Some(current), Some(ours)) if current == ours => match &theirs {
+                    Some(value) => {
+                        refs.insert(KEY_REFERENCE.into(), value.clone());
+                    }
+                    None => {
+                        refs.remove(KEY_REFERENCE);
+                    }
+                },
+                (Some(_), _) => preserved = true,
+                (None, _) => {}
+            }
+            if refs.is_empty() {
+                if let Some(document) = now.as_object_mut() {
+                    document.remove("refs");
+                }
+            }
+        }
+        let only_version = now
+            .as_object()
+            .is_some_and(|document| document.keys().all(|key| key == "version"));
+        if before.is_none() && only_version {
+            return Ok((None, preserved));
+        }
+        Ok((Some(now), preserved))
+    })())
+}
+
 fn validated_loopback_url(line: &str) -> Option<String> {
     let raw = line
         .trim()
@@ -772,7 +986,7 @@ async fn start_process(
     let mut command = Command::new(&installation.path);
     command
         .args(start_arguments())
-        .env("YESCHOY_DSH_API_KEY", key)
+        .env(KEY_REFERENCE, key)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
@@ -833,7 +1047,7 @@ pub(crate) async fn open_existing(
     // Only the location: whether the settings in it are right was decided by
     // validation before Open was offered. Requiring `settings.yaml` here is
     // what made every Open fail once DSH 0.2 had imported and renamed it.
-    let patch = configuration_paths(&home)
+    let patch = configuration_paths(&home, DshProfile::Web)
         .map_err(|_| AdapterFailure::LaunchFailed)?
         .into_iter()
         .next()
@@ -937,7 +1151,15 @@ mod tests {
     fn ru042_dsh_catalog_default_change_preserves_runtime_identity() {
         let root = common::temporary_working_directory("dsh-model-set").unwrap();
         let ids = vec!["model-a".into(), "model-b".into()];
-        let mut prepared = prepare_in(&root, "https://yeschoy.com", "model-a", &ids).unwrap();
+        let mut prepared = prepare_in(
+            &root,
+            DshProfile::Web,
+            "https://yeschoy.com",
+            "model-a",
+            &ids,
+            None,
+        )
+        .unwrap();
         prepared.commit().unwrap();
         let path = prepared.patch_path.clone();
         let installation = root.join("synthetic-dsh");
@@ -1078,9 +1300,11 @@ mod tests {
         let root = common::temporary_working_directory("dsh-existing").unwrap();
         let mut prepared = prepare_in(
             &root,
+            DshProfile::Web,
             "https://yeschoy.com",
             "test-model",
             &["test-model".into()],
+            None,
         )
         .unwrap();
         prepared.commit().unwrap();
@@ -1179,7 +1403,15 @@ mod tests {
     fn settings_yaml_is_written_only_while_it_exists_and_may_disappear() {
         let root = common::temporary_working_directory("dsh-settings-layer").unwrap();
         let ids = vec!["m".to_string()];
-        let prepared = prepare_in(&root, "https://yeschoy.com", "m", &ids).unwrap();
+        let prepared = prepare_in(
+            &root,
+            DshProfile::Web,
+            "https://yeschoy.com",
+            "m",
+            &ids,
+            None,
+        )
+        .unwrap();
         assert_eq!(prepared.changes().len(), 1);
         assert!(!root.join("settings.yaml").exists());
 
@@ -1190,7 +1422,15 @@ mod tests {
             "agent-default-model:\n  provider: deepseek-official\n  model: deepseek-flash\n",
         )
         .unwrap();
-        let mut prepared = prepare_in(&root, "https://yeschoy.com", "m", &ids).unwrap();
+        let mut prepared = prepare_in(
+            &root,
+            DshProfile::Web,
+            "https://yeschoy.com",
+            "m",
+            &ids,
+            None,
+        )
+        .unwrap();
         assert_eq!(prepared.changes().len(), 2);
         prepared.commit().unwrap();
         let value: JsonValue = serde_yaml::from_slice(&std::fs::read(&settings).unwrap()).unwrap();
@@ -1205,11 +1445,19 @@ mod tests {
     #[test]
     fn a_held_profile_lock_blocks_the_write_and_a_stale_one_does_not() {
         let root = common::temporary_working_directory("dsh-lock").unwrap();
-        let profile = root.join("profiles").join(WEB_PROFILE);
+        let profile = root.join("profiles").join(DshProfile::Web.name());
         std::fs::create_dir_all(&profile).unwrap();
         let lock = profile.join("package.json.lock");
         std::fs::write(&lock, "1\n").unwrap();
-        let mut prepared = prepare_in(&root, "https://yeschoy.com", "m", &["m".into()]).unwrap();
+        let mut prepared = prepare_in(
+            &root,
+            DshProfile::Web,
+            "https://yeschoy.com",
+            "m",
+            &["m".into()],
+            None,
+        )
+        .unwrap();
         assert!(prepared.commit().is_err());
         assert!(
             !prepared.patch_path.exists(),
@@ -1224,6 +1472,143 @@ mod tests {
         prepared.commit().unwrap();
         assert!(!lock.exists(), "the lock is released after writing");
         std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn desktop_writes_its_own_profile_and_the_shared_credentials_file() {
+        let root = common::temporary_working_directory("dsh-desktop").unwrap();
+        std::fs::write(
+            root.join(CREDENTIALS_FILENAME),
+            "version: 1\nrefs:\n  DEEPSEEK_API_KEY: sk-theirs\nrecords: {}\n",
+        )
+        .unwrap();
+        let ids = vec!["m".to_string()];
+        let mut prepared = prepare_in(
+            &root,
+            DshProfile::Desktop,
+            "https://yeschoy.com",
+            "m",
+            &ids,
+            Some("sk-ours"),
+        )
+        .unwrap();
+        assert_eq!(prepared.changes().len(), 2);
+        prepared.commit().unwrap();
+        assert!(root.join("profiles/desktop/cordis.patch.yml").is_file());
+        assert!(
+            !root.join("profiles/web").exists(),
+            "the web profile is not ours here"
+        );
+        let credentials: JsonValue =
+            serde_yaml::from_slice(&std::fs::read(root.join(CREDENTIALS_FILENAME)).unwrap())
+                .unwrap();
+        assert_eq!(credentials["version"], 1);
+        assert_eq!(credentials["refs"]["DEEPSEEK_API_KEY"], "sk-theirs");
+        assert_eq!(credentials["refs"][KEY_REFERENCE], "sk-ours");
+        assert!(credentials.get("records").is_some());
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(root.join(CREDENTIALS_FILENAME))
+                .unwrap()
+                .permissions()
+                .mode();
+            assert_eq!(
+                mode & 0o077,
+                0,
+                "DSH refuses a credentials file others can read"
+            );
+        }
+        assert!(prepared.validate_existing().is_ok());
+
+        // A rotated key is a changed configuration, not a silent success.
+        let rotated = prepare_in(
+            &root,
+            DshProfile::Desktop,
+            "https://yeschoy.com",
+            "m",
+            &ids,
+            Some("sk-new"),
+        )
+        .unwrap();
+        assert!(rotated.validate_existing().is_err());
+        // The web profile never carries a key, the desktop one always does.
+        assert!(prepare_in(
+            &root,
+            DshProfile::Desktop,
+            "https://yeschoy.com",
+            "m",
+            &ids,
+            None
+        )
+        .is_err());
+        assert!(prepare_in(
+            &root,
+            DshProfile::Web,
+            "https://yeschoy.com",
+            "m",
+            &ids,
+            Some("k")
+        )
+        .is_err());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn credentials_render_refuses_layouts_dsh_itself_refuses() {
+        let created = render_credentials(None, "sk-ours").unwrap();
+        let value: JsonValue = serde_yaml::from_slice(&created).unwrap();
+        assert_eq!(
+            value,
+            json!({"version": 1, "refs": {KEY_REFERENCE: "sk-ours"}})
+        );
+        assert!(render_credentials(Some(b"\n"), "sk-ours").is_ok());
+        // The pre-release flat layout, a future version, a non-mapping.
+        assert!(render_credentials(Some(b"DEEPSEEK_API_KEY: sk\n"), "sk-ours").is_err());
+        assert!(render_credentials(Some(b"version: 2\nrefs: {}\n"), "sk-ours").is_err());
+        assert!(render_credentials(Some(b"- a\n"), "sk-ours").is_err());
+        assert!(render_credentials(None, "").is_err());
+    }
+
+    #[test]
+    fn restoring_credentials_takes_back_only_our_ref() {
+        let path = Path::new("/x/.credentials.yaml");
+        let after = render_credentials(None, "sk-ours").unwrap();
+        // Created by us and untouched: the file goes.
+        assert_eq!(
+            restore_credentials(path, None, &after, &after)
+                .unwrap()
+                .unwrap(),
+            (None, false)
+        );
+        // The user saved a key of their own since: it and `version` stay.
+        let now =
+            b"version: 1\nrefs:\n  YESCHOY_DSH_API_KEY: sk-ours\n  DEEPSEEK_API_KEY: sk-theirs\n";
+        let (document, preserved) = restore_credentials(path, None, &after, now)
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            document,
+            Some(json!({"version": 1, "refs": {"DEEPSEEK_API_KEY": "sk-theirs"}}))
+        );
+        assert!(!preserved);
+        // A value that was there before comes back.
+        let before = b"version: 1\nrefs:\n  YESCHOY_DSH_API_KEY: sk-older\n";
+        let after = render_credentials(Some(before), "sk-ours").unwrap();
+        let (document, _) = restore_credentials(path, Some(before), &after, &after)
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            document,
+            Some(json!({"version": 1, "refs": {KEY_REFERENCE: "sk-older"}}))
+        );
+        // Someone changed our ref since: left alone, and reported.
+        let now = b"version: 1\nrefs:\n  YESCHOY_DSH_API_KEY: sk-edited\n";
+        let (_, preserved) = restore_credentials(path, Some(before), &after, now)
+            .unwrap()
+            .unwrap();
+        assert!(preserved);
+        assert!(restore_credentials(Path::new("/x/settings.yaml"), None, b"", b"").is_none());
     }
 
     fn restored(before: Option<&[u8]>, after: &[u8], current: &[u8]) -> (JsonValue, bool) {

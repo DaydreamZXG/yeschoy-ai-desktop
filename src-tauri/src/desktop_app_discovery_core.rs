@@ -144,6 +144,10 @@ pub(crate) fn windows_package_name_matches(app_id: &str, name: &str) -> bool {
             name.as_str(),
             "workbuddy" | "tencent.workbuddy" | "tencentworkbuddy"
         ),
+        "dsh_desktop" => matches!(
+            name.as_str(),
+            "deepseekharness" | "deepseek.harness" | "com.deepseek.harness"
+        ),
         _ => false,
     }
 }
@@ -159,6 +163,7 @@ pub(crate) fn windows_desktop_filename_matches(app_id: &str, path: &Path) -> boo
             name.eq_ignore_ascii_case("Codex.exe") || name.eq_ignore_ascii_case("ChatGPT.exe")
         }
         "workbuddy" => name.eq_ignore_ascii_case("WorkBuddy.exe"),
+        "dsh_desktop" => name.eq_ignore_ascii_case("DeepSeek Harness.exe"),
         _ => false,
     }
 }
@@ -194,6 +199,14 @@ pub(crate) fn windows_desktop_file_identity_matches(
         "workbuddy" => {
             matches!(product.as_str(), "workbuddy" | "tencentworkbuddy")
                 && (company.contains("tencent") || company_name.contains("腾讯"))
+        }
+        // The upstream package declares no author, so electron-builder may
+        // leave CompanyName empty; the Authenticode check still applies.
+        "dsh_desktop" => {
+            product == "deepseekharness"
+                && (company.is_empty()
+                    || company.contains("deepseek")
+                    || company_name.contains("深度求索"))
         }
         _ => false,
     };
@@ -331,13 +344,19 @@ pub const PRIMARY_DESKTOP_APP_SPECS: [DesktopAppSpec; 2] = [
     },
 ];
 
-pub const DESKTOP_APP_SPECS: [DesktopAppSpec; 3] = [
+pub const DESKTOP_APP_SPECS: [DesktopAppSpec; 4] = [
     PRIMARY_DESKTOP_APP_SPECS[0],
     PRIMARY_DESKTOP_APP_SPECS[1],
     DesktopAppSpec {
         id: "workbuddy",
         display_name: "WorkBuddy",
         expected_bundle_id: "com.tencent.workbuddy.mac",
+    },
+    DesktopAppSpec {
+        id: "dsh_desktop",
+        display_name: "DeepSeek Harness",
+        // `DSH_DESKTOP_APP_ID` in the upstream release environment.
+        expected_bundle_id: "com.deepseek.harness",
     },
 ];
 
@@ -604,6 +623,11 @@ mod tests {
             DESKTOP_APP_SPECS[2].expected_bundle_id,
             "com.tencent.workbuddy.mac"
         );
+        assert_eq!(DESKTOP_APP_SPECS[3].id, "dsh_desktop");
+        assert_eq!(
+            DESKTOP_APP_SPECS[3].expected_bundle_id,
+            "com.deepseek.harness"
+        );
         assert_eq!(
             PRIMARY_DESKTOP_APP_SPECS.map(|spec| spec.expected_bundle_id),
             ["com.anthropic.claudefordesktop", "com.openai.codex"]
@@ -683,6 +707,46 @@ mod tests {
             "WorkBuddy",
             "Contoso",
             true
+        ));
+    }
+
+    #[test]
+    fn deepseek_harness_windows_identity_is_exact_and_gui_only() {
+        let exe = Path::new("D:\\Apps\\DeepSeek Harness\\DeepSeek Harness.exe");
+        for company in ["", "DeepSeek", "杭州深度求索人工智能基础技术研究有限公司"]
+        {
+            assert!(windows_desktop_file_identity_matches(
+                "dsh_desktop",
+                exe,
+                "DeepSeek Harness",
+                company,
+                true
+            ));
+        }
+        assert!(!windows_desktop_file_identity_matches(
+            "dsh_desktop",
+            exe,
+            "DeepSeek Harness",
+            "Contoso",
+            true
+        ));
+        assert!(!windows_desktop_file_identity_matches(
+            "dsh_desktop",
+            exe,
+            "DeepSeek Harness",
+            "",
+            false
+        ));
+        assert!(!windows_desktop_file_identity_matches(
+            "dsh_desktop",
+            Path::new("D:\\Apps\\dsh.exe"),
+            "DeepSeek Harness",
+            "",
+            true
+        ));
+        assert!(windows_package_name_matches(
+            "dsh_desktop",
+            "DeepSeek.Harness"
         ));
     }
 }

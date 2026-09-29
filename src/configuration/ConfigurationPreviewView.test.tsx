@@ -27,6 +27,13 @@ describe("desktop protocol compatibility", () => {
       "在浏览器中打开",
     );
     expect(connectionLifecycleMode("workbuddy")).toBe("hot_reload_desktop");
+    expect(connectionLifecycleMode("dsh_desktop")).toBe("hot_reload_desktop");
+    expect(
+      connectionLifecycleNote("dsh_desktop", "DeepSeek Harness"),
+    ).toContain("DeepSeek Harness");
+    expect(
+      connectionLifecycleNote("dsh_desktop", "DeepSeek Harness"),
+    ).not.toContain("WorkBuddy");
     expect(connectionLifecycleNote("workbuddy", "WorkBuddy")).toContain(
       "不需要关闭或重启",
     );

@@ -66,7 +66,9 @@ pub(crate) fn requires_reload(tool_id: &str) -> bool {
 }
 
 pub(crate) fn observes_running(tool_id: &str) -> bool {
-    requires_reload(tool_id) || tool_id == "workbuddy"
+    // These reload their configuration while running, so a running copy is
+    // only ever focused, never restarted.
+    requires_reload(tool_id) || matches!(tool_id, "workbuddy" | "dsh_desktop")
 }
 
 pub(crate) async fn open_unless_running(tool_id: &str, path: &Path) -> Result<(), AdapterFailure> {
@@ -203,6 +205,7 @@ mod platform {
             "claude_desktop" => Some("com.anthropic.claudefordesktop"),
             "codex_desktop" => Some("com.openai.codex"),
             "workbuddy" => Some("com.tencent.workbuddy.mac"),
+            "dsh_desktop" => Some("com.deepseek.harness"),
             _ => None,
         }
     }
@@ -569,10 +572,11 @@ mod tests {
     fn only_desktop_targets_are_eligible_for_reload_control() {
         assert!(requires_reload("claude_desktop"));
         assert!(requires_reload("codex_desktop"));
-        for tool in ["claude_code", "pi", "dsh_web", "workbuddy"] {
+        for tool in ["claude_code", "pi", "dsh_web", "workbuddy", "dsh_desktop"] {
             assert!(!requires_reload(tool), "{tool}");
         }
         assert!(observes_running("workbuddy"));
+        assert!(observes_running("dsh_desktop"));
         assert!(!observes_running("pi"));
     }
 }

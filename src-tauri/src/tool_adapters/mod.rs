@@ -61,7 +61,7 @@ struct ObservedInstallation {
     location: &'static str,
 }
 
-const TARGETS: [(&str, &str, &str); 6] = [
+const TARGETS: [(&str, &str, &str); 7] = [
     ("claude_code", "Claude Code", "命令行与编辑器工作区"),
     ("claude_desktop", "Claude Desktop", "Claude 桌面应用"),
     (
@@ -72,6 +72,11 @@ const TARGETS: [(&str, &str, &str); 6] = [
     ("pi", "Pi", "Pi 编程助手"),
     ("dsh_web", "DSH web", "DeepSeek Harness 浏览器工作台"),
     ("workbuddy", "WorkBuddy", "腾讯 AI 办公与开发助手"),
+    (
+        "dsh_desktop",
+        "DeepSeek Harness",
+        "DeepSeek Harness 桌面应用",
+    ),
 ];
 
 pub(crate) fn user_home() -> Option<PathBuf> {
@@ -107,6 +112,7 @@ fn desktop_id_for(tool_id: &str) -> Option<&'static str> {
         "claude_desktop" => Some("claude_desktop"),
         "codex_desktop" => Some("codex_desktop"),
         "workbuddy" => Some("workbuddy"),
+        "dsh_desktop" => Some("dsh_desktop"),
         _ => None,
     }
 }
@@ -192,7 +198,9 @@ fn can_attempt(tool_id: &str, installation: &ObservedInstallation) -> bool {
     // not evidence that a configuration contract has changed. The transaction
     // parses/readbacks owned fields and the tool request proves usability.
     match tool_id {
-        "codex_desktop" | "claude_desktop" | "workbuddy" => installation.path.exists(),
+        "codex_desktop" | "claude_desktop" | "workbuddy" | "dsh_desktop" => {
+            installation.path.exists()
+        }
         "claude_code" | "pi" | "dsh_web" => installation.path.is_file(),
         _ => false,
     }
@@ -455,7 +463,12 @@ mod tests {
         for cli in ["claude_code", "pi", "dsh_web"] {
             assert!(!asks_which_installation(cli), "{cli}");
         }
-        for desktop in ["claude_desktop", "codex_desktop", "workbuddy"] {
+        for desktop in [
+            "claude_desktop",
+            "codex_desktop",
+            "workbuddy",
+            "dsh_desktop",
+        ] {
             assert!(asks_which_installation(desktop), "{desktop}");
         }
     }

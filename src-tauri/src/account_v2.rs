@@ -2081,6 +2081,7 @@ pub async fn account_logout_v2(
         "pi",
         "dsh_web",
         "workbuddy",
+        "dsh_desktop",
     ] {
         crate::request_diagnostics::clear(tool);
     }

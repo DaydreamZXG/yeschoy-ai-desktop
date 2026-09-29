@@ -144,7 +144,13 @@ pub(crate) fn operation_lock() -> Result<std::fs::File> {
 fn allowed(tool: &str) -> bool {
     matches!(
         tool,
-        "claude_code" | "claude_desktop" | "codex_desktop" | "pi" | "dsh_web" | "workbuddy"
+        "claude_code"
+            | "claude_desktop"
+            | "codex_desktop"
+            | "pi"
+            | "dsh_web"
+            | "workbuddy"
+            | "dsh_desktop"
     )
 }
 
@@ -836,6 +842,21 @@ pub(crate) fn restore_bytes(
     if current.is_none() {
         return Ok((None, true));
     } // Respect a user's deletion.
+    if let Some(restored) = crate::tool_adapters::dsh_web::restore_credentials(
+        &file.path,
+        file.before.as_deref(),
+        &file.after,
+        current.unwrap_or_default(),
+    ) {
+        let (document, preserved) = restored.map_err(|_| Failure::Invalid)?;
+        let Some(document) = document else {
+            return Ok((None, preserved));
+        };
+        if document == self::document(&file.path, current)? {
+            return Ok((current.map(Vec::from), preserved));
+        }
+        return Ok((Some(serialize(&file.path, current, &document)?), preserved));
+    }
     if let Some(restored) = crate::tool_adapters::dsh_web::restore_profile_patch(
         &file.path,
         file.before.as_deref(),

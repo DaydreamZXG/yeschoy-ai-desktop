@@ -202,6 +202,7 @@ function targets(requestId: string) {
     ["pi", "Pi", "0.84.4"],
     ["dsh_web", "DSH web", "0.1.0-rc.6"],
     ["workbuddy", "WorkBuddy", "5.5.6"],
+    ["dsh_desktop", "DeepSeek Harness", "0.2.0"],
   ] as const;
   return {
     requestId,

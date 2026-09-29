@@ -211,6 +211,7 @@ fn discover_macos_candidates(spec: DesktopAppSpec) -> Vec<Candidate> {
         "claude_desktop" => &["Claude.app"],
         "codex_desktop" => &["ChatGPT.app", "Codex.app"],
         "workbuddy" => &["WorkBuddy.app"],
+        "dsh_desktop" => &["DeepSeek Harness.app"],
         _ => &[],
     };
     let mut roots = vec![(PathBuf::from("/Applications"), LocationHint::Applications)];
@@ -335,6 +336,7 @@ fn windows_app_relative_executables(app_id: &str) -> &'static [&'static str] {
             "app\\WorkBuddy.exe",
             "WorkBuddy\\WorkBuddy.exe",
         ],
+        "dsh_desktop" => &["DeepSeek Harness.exe"],
         _ => &[],
     }
 }
@@ -760,6 +762,8 @@ fn windows_relative_paths(app_id: &str, program_files: bool) -> &'static [&'stat
             "WorkBuddy\\WorkBuddy.exe",
         ],
         ("workbuddy", true) => &["WorkBuddy\\WorkBuddy.exe"],
+        ("dsh_desktop", false) => &["Programs\\DeepSeek Harness\\DeepSeek Harness.exe"],
+        ("dsh_desktop", true) => &["DeepSeek Harness\\DeepSeek Harness.exe"],
         _ => &[],
     }
 }
@@ -836,6 +840,12 @@ fn windows_registered_name_matches(app_id: &str, name: &str, publisher: &str) ->
                 && (compact_publisher.is_empty()
                     || compact_publisher.contains("tencent")
                     || publisher.contains("腾讯"))
+        }
+        "dsh_desktop" => {
+            name == "deepseekharness"
+                && (compact_publisher.is_empty()
+                    || compact_publisher.contains("deepseek")
+                    || publisher.contains("深度求索"))
         }
         _ => false,
     }
@@ -1073,6 +1083,7 @@ fn windows_app_paths_names(app_id: &str) -> &'static [&'static str] {
         "claude_desktop" => &["Claude.exe"],
         "codex_desktop" => &["Codex.exe", "ChatGPT.exe"],
         "workbuddy" => &["WorkBuddy.exe"],
+        "dsh_desktop" => &["DeepSeek Harness.exe"],
         _ => &[],
     }
 }
@@ -1398,7 +1409,24 @@ mod tests {
             "WorkBuddy 2.3.1",
             "Contoso"
         ));
-        for app_id in ["claude_desktop", "codex_desktop", "workbuddy"] {
+        assert!(windows_registered_name_matches(
+            "dsh_desktop",
+            "DeepSeek Harness 0.2.0",
+            ""
+        ));
+        assert!(!windows_registered_name_matches(
+            "dsh_desktop",
+            "DeepSeek Harness",
+            "Contoso"
+        ));
+        assert!(windows_relative_paths("dsh_desktop", false)
+            .contains(&"Programs\\DeepSeek Harness\\DeepSeek Harness.exe"));
+        for app_id in [
+            "claude_desktop",
+            "codex_desktop",
+            "workbuddy",
+            "dsh_desktop",
+        ] {
             assert!(windows_app_paths_names(app_id).iter().all(|name| {
                 crate::desktop_app_discovery_core::windows_desktop_filename_matches(
                     app_id,

@@ -390,7 +390,13 @@ fn request_is_valid(request: &ToolActivationRequest) -> bool {
         )
         && matches!(
             request.tool_id.as_str(),
-            "claude_code" | "claude_desktop" | "codex_desktop" | "pi" | "dsh_web" | "workbuddy"
+            "claude_code"
+                | "claude_desktop"
+                | "codex_desktop"
+                | "pi"
+                | "dsh_web"
+                | "workbuddy"
+                | "dsh_desktop"
         )
         && bounded_plain_text(&request.model_id, 200)
         && bounded_plain_text(&request.billing_group, 128)
@@ -541,7 +547,13 @@ async fn validate_models(
 fn model_supports_tool(_pricing: &Value, _model_id: &str, tool_id: &str) -> bool {
     matches!(
         tool_id,
-        "claude_code" | "claude_desktop" | "codex_desktop" | "pi" | "dsh_web" | "workbuddy"
+        "claude_code"
+            | "claude_desktop"
+            | "codex_desktop"
+            | "pi"
+            | "dsh_web"
+            | "workbuddy"
+            | "dsh_desktop"
     )
 }
 
@@ -860,6 +872,7 @@ fn token_name(tool_id: &str) -> &'static str {
         "pi" => "野菜API Pi",
         "dsh_web" => "野菜API DSH web",
         "workbuddy" => "野菜API WorkBuddy",
+        "dsh_desktop" => "野菜API DSH Desktop",
         _ => "野菜API Desktop",
     }
 }
@@ -874,6 +887,7 @@ pub(crate) fn tool_for_token_name(name: &str) -> Option<&'static str> {
         "pi",
         "dsh_web",
         "workbuddy",
+        "dsh_desktop",
     ]
     .into_iter()
     // 新名字写应用名，旧名字写两字母代码。两种都要认：用量日志里它们会长期
@@ -1019,6 +1033,7 @@ fn token_code(tool_id: &str) -> &'static str {
         "pi" => "pi",
         "dsh_web" => "ds",
         "workbuddy" => "wb",
+        "dsh_desktop" => "dd",
         _ => "tool",
     }
 }
@@ -1036,6 +1051,7 @@ fn token_label(tool_id: &str) -> &'static str {
         "pi" => "Pi",
         "dsh_web" => "DSH",
         "workbuddy" => "WorkBuddy",
+        "dsh_desktop" => "DSHDesktop",
         _ => "Desktop",
     }
 }
@@ -1640,7 +1656,8 @@ enum PreparedAdapter {
     ClaudeDesktop(claude_desktop::Prepared),
     CodexDesktop(codex_desktop::Prepared),
     Pi(pi::Prepared),
-    DshWeb(dsh_web::Prepared),
+    /// Both DSH profiles: `dsh_web` and `dsh_desktop`.
+    Dsh(dsh_web::Prepared),
     WorkBuddy(workbuddy::Prepared),
 }
 
@@ -1651,7 +1668,7 @@ impl PreparedAdapter {
             Self::ClaudeDesktop(v) => v.changes(),
             Self::CodexDesktop(v) => v.changes(),
             Self::Pi(v) => v.changes(),
-            Self::DshWeb(v) => v.changes(),
+            Self::Dsh(v) => v.changes(),
             Self::WorkBuddy(v) => v.changes(),
         }
     }
@@ -1669,7 +1686,7 @@ impl PreparedAdapter {
             Self::ClaudeDesktop(value) => value.commit(),
             Self::CodexDesktop(value) => value.commit(),
             Self::Pi(value) => value.commit(),
-            Self::DshWeb(value) => value.commit(),
+            Self::Dsh(value) => value.commit(),
             Self::WorkBuddy(value) => value.commit(),
         }
     }
@@ -1680,7 +1697,7 @@ impl PreparedAdapter {
             Self::ClaudeDesktop(value) => value.rollback(),
             Self::CodexDesktop(value) => value.rollback(),
             Self::Pi(value) => value.rollback(),
-            Self::DshWeb(value) => value.rollback(),
+            Self::Dsh(value) => value.rollback(),
             Self::WorkBuddy(value) => value.rollback(),
         }
     }
@@ -1736,7 +1753,15 @@ fn prepare_adapter(
             pi::prepare_catalog(&home, &origin, &request.model_id, &models).map(PreparedAdapter::Pi)
         }
         "dsh_web" => dsh_web::prepare_catalog(&home, &origin, &request.model_id, &models)
-            .map(PreparedAdapter::DshWeb),
+            .map(PreparedAdapter::Dsh),
+        "dsh_desktop" => dsh_web::prepare_desktop_catalog(
+            &home,
+            &origin,
+            &request.model_id,
+            &models,
+            provider_key,
+        )
+        .map(PreparedAdapter::Dsh),
         "workbuddy" => {
             workbuddy::prepare_catalog(&home, credential).map(PreparedAdapter::WorkBuddy)
         }
@@ -1760,7 +1785,7 @@ async fn start_local_adapter(
             codex_runtime.start(credential.clone()).await?;
             codex_desktop::ensure_credential_ready(credential).await
         }
-        "pi" | "dsh_web" | "workbuddy" => Ok(()),
+        "pi" | "dsh_web" | "workbuddy" | "dsh_desktop" => Ok(()),
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
 }
@@ -1797,6 +1822,9 @@ async fn open_configured_adapter(
         }
         "workbuddy" => {
             desktop_lifecycle::open_unless_running("workbuddy", &installation.path).await
+        }
+        "dsh_desktop" => {
+            desktop_lifecycle::open_unless_running("dsh_desktop", &installation.path).await
         }
         "claude_code" | "pi" => {
             let home = tool_adapters::user_home()
@@ -2933,13 +2961,14 @@ pub async fn configure_desktop_tool_v2(
     .with_skipped(skipped))
 }
 
-const CONNECTION_TOOLS: [&str; 6] = [
+const CONNECTION_TOOLS: [&str; 7] = [
     "claude_code",
     "claude_desktop",
     "codex_desktop",
     "pi",
     "dsh_web",
     "workbuddy",
+    "dsh_desktop",
 ];
 
 /// Called only by the exit owner after admission closes and active operations
@@ -3216,7 +3245,8 @@ fn inspect_connections_with(
 }
 
 pub(crate) fn needs_background(tool: &str, credential: &ToolCredential) -> bool {
-    if tool == "workbuddy" {
+    // Nothing of ours has to keep running: both read their key from a file.
+    if matches!(tool, "workbuddy" | "dsh_desktop") {
         return false;
     }
     credential.has_model_set()
@@ -3249,6 +3279,8 @@ fn legacy_paths(tool: &str) -> Result<Vec<std::path::PathBuf>, AdapterFailure> {
             vec![dsh_web::dsh_home(&home, std::env::var_os("DSH_HOME"))?.join("settings.yaml")]
         }
         "workbuddy" => vec![home.join(".workbuddy/models.json")],
+        // Desktop support began with the recovery journal: nothing legacy.
+        "dsh_desktop" => Vec::new(),
         _ => return Err(AdapterFailure::UnsupportedProfile),
     })
 }
@@ -3850,7 +3882,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn inspection_regression_one_adapter_panic_keeps_five_other_results() {
+    async fn inspection_regression_one_adapter_panic_keeps_the_other_results() {
         static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
         let result = inspect_on_worker(&LOCK, Duration::from_secs(2), || {
             inspect_connections_with(|tool| {
@@ -3867,13 +3899,13 @@ mod tests {
         })
         .await
         .unwrap();
-        assert_eq!(result.len(), 6);
+        assert_eq!(result.len(), CONNECTION_TOOLS.len());
         assert_eq!(result[1].state, "connected");
         assert_eq!(result[2].state, "unavailable");
         assert_eq!(result[2].reason_code, "connection_inspection_failed");
         assert_eq!(
             result.iter().filter(|c| c.state == "not_connected").count(),
-            4
+            CONNECTION_TOOLS.len() - 2
         );
         assert!(!serde_json::to_string(&result)
             .unwrap()

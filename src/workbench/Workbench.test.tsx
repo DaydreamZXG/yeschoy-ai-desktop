@@ -123,6 +123,7 @@ function activationTargetScan(requestId: string) {
     ["pi", "Pi", "0.84.4"],
     ["dsh_web", "DSH web", "0.1.0-rc.6"],
     ["workbuddy", "WorkBuddy", "5.5.6"],
+    ["dsh_desktop", "DeepSeek Harness", "0.2.0"],
   ] as const;
   return {
     requestId,
@@ -675,7 +676,7 @@ describe("official workbench", () => {
       screen.queryByRole("region", { name: "用量账单" }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "登录野菜API" })).toBeEnabled();
-    expect(screen.getAllByRole("article")).toHaveLength(6);
+    expect(screen.getAllByRole("article")).toHaveLength(7);
     const card = screen
       .getByRole("heading", { name: "Claude Desktop" })
       .closest("article")!;
