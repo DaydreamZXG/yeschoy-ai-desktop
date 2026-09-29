@@ -464,21 +464,15 @@ impl Store {
         if let Some(previous) = &previous {
             // A relocated custom profile must be restored first. Never abandon
             // the original files silently or grow a cross-profile history.
-            if previous
-                .files
-                .iter()
-                .map(|f| &f.path)
-                .collect::<BTreeSet<_>>()
-                != files.iter().map(|f| &f.path).collect::<BTreeSet<_>>()
-            {
+            if !same_file_set(&receipt.tool_id, &previous.files, &files)? {
                 return Err(Failure::Changed);
             }
             for file in &mut files {
-                let original = previous
-                    .files
-                    .iter()
-                    .find(|f| f.path == file.path)
-                    .ok_or(Failure::Invalid)?;
+                // A file this tool had not written before has no baseline to
+                // rebase: what is on disk now is the user's original.
+                let Some(original) = previous.files.iter().find(|f| f.path == file.path) else {
+                    continue;
+                };
                 // Rebase unrelated or later user edits, not the old YesChoy
                 // values. This keeps the original owned values across switches.
                 file.before = restore_bytes(original, file.before.as_deref())?.0;
@@ -539,6 +533,35 @@ impl Store {
     }
 }
 
+/// Whether a new activation may take over the previous record's files.
+///
+/// The rule is "the same files", so that switching never silently abandons an
+/// original. DSH is the one tool whose file set legitimately moves between
+/// releases of the tool itself: this assistant used to write only
+/// `settings.yaml`, now writes the web profile's `cordis.patch.yml` as well,
+/// and DSH 0.2 renames `settings.yaml` away after importing it. So for DSH a
+/// file may be added, and one may be dropped only once it no longer exists,
+/// which means nothing of the user's is left in it to restore.
+fn same_file_set(tool: &str, previous: &[FileChange], next: &[FileChange]) -> Result<bool> {
+    let before = previous.iter().map(|f| &f.path).collect::<BTreeSet<_>>();
+    let after = next.iter().map(|f| &f.path).collect::<BTreeSet<_>>();
+    if before == after {
+        return Ok(true);
+    }
+    if tool != "dsh_web" {
+        return Ok(false);
+    }
+    for dropped in before.difference(&after) {
+        if common::snapshot(dropped)
+            .map_err(|_| Failure::Io)?
+            .is_some()
+        {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
 /// Write a break-glass file and narrow it, in that order.
 ///
 /// The narrowing has to come *after*. On unix `atomic_write` copies the
@@ -560,8 +583,10 @@ fn document(path: &Path, bytes: Option<&[u8]>) -> Result<Value> {
         Some("yaml" | "yml") => serde_yaml::from_str(source).map_err(|_| Failure::Invalid)?,
         _ => json5::from_str(source).map_err(|_| Failure::Invalid)?,
     };
-    // An object always; a bare array only for WorkBuddy's catalog file.
-    let shape_is_expected = value.is_object() || (workbuddy_catalog(path) && value.is_array());
+    // An object always; a bare array only for WorkBuddy's catalog file and a
+    // DSH profile patch, which is a list of rows by definition.
+    let shape_is_expected = value.is_object()
+        || ((workbuddy_catalog(path) || dsh_profile_patch(path)) && value.is_array());
     if !shape_is_expected {
         return Err(Failure::Invalid);
     }
@@ -675,6 +700,11 @@ fn object_contains(current: &Value, required: &Value) -> bool {
         }),
         (now, need) => now == need,
     }
+}
+
+fn dsh_profile_patch(path: &Path) -> bool {
+    path.file_name()
+        .is_some_and(|name| name == "cordis.patch.yml")
 }
 
 fn workbuddy_catalog(path: &Path) -> bool {
@@ -806,6 +836,25 @@ pub(crate) fn restore_bytes(
     if current.is_none() {
         return Ok((None, true));
     } // Respect a user's deletion.
+    if let Some(restored) = crate::tool_adapters::dsh_web::restore_profile_patch(
+        &file.path,
+        file.before.as_deref(),
+        &file.after,
+        current.unwrap_or_default(),
+    ) {
+        let (rows, preserved) = restored.map_err(|_| Failure::Invalid)?;
+        if rows.is_empty() && file.before.is_none() {
+            return Ok((None, preserved));
+        }
+        let now = document(&file.path, current)?;
+        if Value::Array(rows.clone()) == now {
+            return Ok((current.map(Vec::from), preserved));
+        }
+        return Ok((
+            Some(serialize(&file.path, current, &Value::Array(rows))?),
+            preserved,
+        ));
+    }
     let before = document(&file.path, file.before.as_deref())?;
     let after = document(&file.path, Some(&file.after))?;
     let now = document(&file.path, current)?;
@@ -1293,6 +1342,49 @@ mod tests {
     fn merged(file: &FileChange, now: Value) -> (Value, bool) {
         let (bytes, kept) = restore_bytes(file, Some(&serde_json::to_vec(&now).unwrap())).unwrap();
         (document(&file.path, bytes.as_deref()).unwrap(), kept)
+    }
+
+    #[test]
+    fn a_dsh_profile_patch_we_created_is_removed_but_the_users_rows_stay() {
+        let fixture = Fixture::new();
+        let patch = "profiles/web/cordis.patch.yml";
+        std::fs::create_dir_all(fixture.path("profiles/web")).unwrap();
+        let after = b"- id: llm-pi-ai\n  config:\n    providers:\n      yeschoy: {baseURL: https://yeschoy.com/v1}\n- id: agent-default-model\n  config: {provider: yeschoy, model: m}\n";
+        let file = fixture.change(patch, None, after);
+        // Unchanged since we wrote it: the file goes, as it never existed.
+        assert_eq!(restore_bytes(&file, Some(after)).unwrap(), (None, false));
+        // DSH rewrote it (same values, its own formatting) and the user added
+        // a provider plus a row of their own.
+        let now = b"- id: llm-pi-ai\n  config:\n    providers:\n      yeschoy:\n        baseURL: https://yeschoy.com/v1\n      local:\n        baseURL: http://127.0.0.1:11434/v1\n- id: agent-default-model\n  config:\n    provider: yeschoy\n    model: m\n- id: ui-settings\n  config: {theme: dark}\n";
+        let (bytes, preserved) = restore_bytes(&file, Some(now)).unwrap();
+        assert!(!preserved);
+        let rows = document(&file.path, bytes.as_deref()).unwrap();
+        assert_eq!(
+            rows,
+            json!([
+                {"id": "llm-pi-ai", "config": {"providers": {"local": {"baseURL": "http://127.0.0.1:11434/v1"}}}},
+                {"id": "ui-settings", "config": {"theme": "dark"}}
+            ])
+        );
+    }
+
+    #[test]
+    fn dsh_may_gain_the_profile_patch_and_lose_a_settings_file_dsh_renamed() {
+        let fixture = Fixture::new();
+        let settings = fixture.change("settings.yaml", None, b"a: 1\n");
+        let patch = fixture.change("cordis.patch.yml", None, b"[]\n");
+        let previous = vec![settings.clone()];
+        // Added: allowed for DSH only.
+        let grown = vec![settings.clone(), patch.clone()];
+        assert!(same_file_set("dsh_web", &previous, &grown).unwrap());
+        assert!(!same_file_set("pi", &previous, &grown).unwrap());
+        // Dropped while it still exists: the user's content would be abandoned.
+        std::fs::write(fixture.path("settings.yaml"), b"a: 1\n").unwrap();
+        assert!(!same_file_set("dsh_web", &previous, std::slice::from_ref(&patch)).unwrap());
+        // Dropped after DSH 0.2 renamed it away: nothing left to restore.
+        std::fs::remove_file(fixture.path("settings.yaml")).unwrap();
+        assert!(same_file_set("dsh_web", &previous, std::slice::from_ref(&patch)).unwrap());
+        assert!(!same_file_set("pi", &previous, std::slice::from_ref(&patch)).unwrap());
     }
 
     #[test]

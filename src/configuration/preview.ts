@@ -127,7 +127,7 @@ export const CONFIGURATION_TOOLS: readonly ConfigurationToolDefinition[] =
       id: "dsh" as const,
       displayName: "DSH",
       mark: "D",
-      targetFile: "~/.dsh/settings.yaml",
+      targetFile: "~/.dsh/profiles/web/cordis.patch.yml",
       ownedFields: Object.freeze([
         "llm-pi-ai.providers.yeschoy",
         "agent-default-model.provider",

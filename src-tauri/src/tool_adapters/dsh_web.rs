@@ -115,9 +115,24 @@ impl DshRuntimeState {
     }
 }
 
+/// The profile `dsh --profile web` runs, and the one this adapter configures.
+const WEB_PROFILE: &str = "web";
+const PATCH_FILENAME: &str = "cordis.patch.yml";
+const LLM_ENTRY: &str = "llm-pi-ai";
+const LLM_PLUGIN: &str = "@deepseek-ai/dsh-llm-pi-ai";
+const DEFAULT_MODEL_ENTRY: &str = "agent-default-model";
+const DEFAULT_MODEL_PLUGIN: &str = "@deepseek-ai/dsh-agent-default-model";
+/// A DSH writer holds its lock for one read-render-rename cycle. A lock older
+/// than this was left by a process that died holding it.
+const STALE_LOCK: Duration = Duration::from_secs(60);
+const LOCK_WAIT: Duration = Duration::from_secs(2);
+
 pub(crate) struct Prepared {
     transaction: FileTransaction,
-    path: PathBuf,
+    /// `$DSH_HOME/profiles/web/cordis.patch.yml`, always written.
+    patch_path: PathBuf,
+    /// `$DSH_HOME/settings.yaml`, written only when it already exists.
+    settings_path: Option<PathBuf>,
     origin: String,
     model: String,
     model_ids: Vec<String>,
@@ -153,27 +168,19 @@ fn child_mapping<'a>(parent: &'a mut Mapping, key: &str) -> Result<&'a mut Mappi
         .ok_or(())
 }
 
-#[cfg(test)]
-fn render(existing: Option<&[u8]>, origin: &str, model: &str) -> Result<Vec<u8>, ()> {
-    render_catalog(existing, origin, model, &[model.to_owned()])
-}
-
-fn render_catalog(
-    existing: Option<&[u8]>,
+/// Our provider, over whatever the user already had under the same name.
+///
+/// Fields we do not own (`reasoning`, per-model budgets) survive, the same
+/// rule `native_chat_catalog` applies to each model entry.
+fn yeschoy_provider(
+    previous: Option<&Value>,
     origin: &str,
-    model: &str,
     model_ids: &[String],
-) -> Result<Vec<u8>, ()> {
-    let mut root = match existing {
-        Some(bytes) if !bytes.is_empty() => {
-            serde_yaml::from_slice::<Value>(bytes).map_err(|_| ())?
-        }
-        _ => Value::Mapping(Mapping::new()),
+) -> Result<Value, ()> {
+    let mut provider = match previous {
+        Some(Value::Mapping(existing)) => existing.clone(),
+        _ => Mapping::new(),
     };
-    let root_map = mapping(&mut root)?;
-    let llm = child_mapping(root_map, "llm-pi-ai")?;
-    let providers = child_mapping(llm, "providers")?;
-    let provider = child_mapping(providers, "yeschoy")?;
     provider.insert(
         Value::String("displayName".into()),
         Value::String("野菜API".into()),
@@ -212,17 +219,142 @@ fn render_catalog(
         Value::String("models".into()),
         serde_yaml::to_value(models).map_err(|_| ())?,
     );
-    let defaults = child_mapping(root_map, "agent-default-model")?;
+    Ok(Value::Mapping(provider))
+}
+
+fn to_yaml_bytes(value: &Value) -> Result<Vec<u8>, ()> {
+    let mut bytes = serde_yaml::to_string(value).map_err(|_| ())?.into_bytes();
+    if !bytes.ends_with(b"\n") {
+        bytes.push(b'\n');
+    }
+    Ok(bytes)
+}
+
+#[cfg(test)]
+fn render(existing: Option<&[u8]>, origin: &str, model: &str) -> Result<Vec<u8>, ()> {
+    render_catalog(existing, origin, model, &[model.to_owned()])
+}
+
+/// DSH 0.1's `settings.yaml`: the user layer, which wins over the profile patch.
+fn render_catalog(
+    existing: Option<&[u8]>,
+    origin: &str,
+    model: &str,
+    model_ids: &[String],
+) -> Result<Vec<u8>, ()> {
+    let mut root = match existing {
+        Some(bytes) if !bytes.is_empty() => {
+            serde_yaml::from_slice::<Value>(bytes).map_err(|_| ())?
+        }
+        _ => Value::Mapping(Mapping::new()),
+    };
+    let root_map = mapping(&mut root)?;
+    let llm = child_mapping(root_map, LLM_ENTRY)?;
+    let providers = child_mapping(llm, "providers")?;
+    let previous = providers.get(Value::String("yeschoy".into())).cloned();
+    providers.insert(
+        Value::String("yeschoy".into()),
+        yeschoy_provider(previous.as_ref(), origin, model_ids)?,
+    );
+    let defaults = child_mapping(root_map, DEFAULT_MODEL_ENTRY)?;
     defaults.insert(
         Value::String("provider".into()),
         Value::String("yeschoy".into()),
     );
     defaults.insert(Value::String("model".into()), Value::String(model.into()));
-    let mut bytes = serde_yaml::to_string(&root).map_err(|_| ())?.into_bytes();
-    if !bytes.ends_with(b"\n") {
-        bytes.push(b'\n');
+    to_yaml_bytes(&root)
+}
+
+fn is_entry_row(row: &Value, id: &str) -> bool {
+    // An `insert` row adds entries rather than configuring one.
+    row.get("id").and_then(Value::as_str) == Some(id) && row.get("insert").is_none()
+}
+
+/// The row's `config` mapping, created when the row has none. Any other shape
+/// is somebody else's intent and is refused rather than overwritten.
+fn row_config(row: &mut Value) -> Result<&mut Mapping, ()> {
+    let row = mapping(row)?;
+    let key = Value::String("config".into());
+    if matches!(row.get(&key), None | Some(Value::Null)) {
+        row.insert(key.clone(), Value::Mapping(Mapping::new()));
     }
-    Ok(bytes)
+    row.get_mut(&key).and_then(Value::as_mapping_mut).ok_or(())
+}
+
+fn new_row(id: &str, plugin: &str) -> Value {
+    let mut row = Mapping::new();
+    row.insert(Value::String("id".into()), Value::String(id.into()));
+    row.insert(Value::String("name".into()), Value::String(plugin.into()));
+    row.insert(
+        Value::String("config".into()),
+        Value::Mapping(Mapping::new()),
+    );
+    Value::Mapping(row)
+}
+
+fn parse_patch(existing: Option<&[u8]>) -> Result<Vec<Value>, ()> {
+    let text = match existing {
+        None => return Ok(Vec::new()),
+        Some(bytes) => std::str::from_utf8(bytes).map_err(|_| ())?,
+    };
+    if text.trim().is_empty() {
+        return Ok(Vec::new());
+    }
+    match serde_yaml::from_str::<Value>(text).map_err(|_| ())? {
+        Value::Null => Ok(Vec::new()),
+        Value::Sequence(rows) => Ok(rows),
+        // DSH refuses anything but a sequence; so do we, without touching it.
+        _ => Err(()),
+    }
+}
+
+/// A profile's `cordis.patch.yml`, which both DSH 0.1 and 0.2 read.
+///
+/// A patch row replaces its entry's whole `config`, so the `llm-pi-ai` row is
+/// merged into, never replaced: every other provider the user added on the
+/// Models page stays. Every row configuring an entry is updated, because the
+/// last one wins and a stale earlier one would otherwise be shadowed by ours
+/// or the other way round.
+fn render_profile_patch(
+    existing: Option<&[u8]>,
+    origin: &str,
+    model: &str,
+    model_ids: &[String],
+) -> Result<Vec<u8>, ()> {
+    let mut rows = parse_patch(existing)?;
+    if !rows.iter().any(|row| is_entry_row(row, LLM_ENTRY)) {
+        rows.push(new_row(LLM_ENTRY, LLM_PLUGIN));
+    }
+    if !rows
+        .iter()
+        .any(|row| is_entry_row(row, DEFAULT_MODEL_ENTRY))
+    {
+        rows.push(new_row(DEFAULT_MODEL_ENTRY, DEFAULT_MODEL_PLUGIN));
+    }
+    for row in &mut rows {
+        if is_entry_row(row, LLM_ENTRY) {
+            let providers = child_mapping(row_config(row)?, "providers")?;
+            let previous = providers.get(Value::String("yeschoy".into())).cloned();
+            providers.insert(
+                Value::String("yeschoy".into()),
+                yeschoy_provider(previous.as_ref(), origin, model_ids)?,
+            );
+        } else if is_entry_row(row, DEFAULT_MODEL_ENTRY) {
+            let config = row_config(row)?;
+            let unchanged = config.get("provider").and_then(Value::as_str) == Some("yeschoy")
+                && config.get("model").and_then(Value::as_str) == Some(model);
+            if !unchanged {
+                // An effort chosen for some other model need not exist on ours.
+                config.remove("reasoningEffort");
+            }
+            config.insert(
+                Value::String("provider".into()),
+                Value::String("yeschoy".into()),
+            );
+            config.insert(Value::String("model".into()), Value::String(model.into()));
+        }
+    }
+    to_yaml_bytes(&Value::Sequence(rows))
 }
 
 pub(crate) fn dsh_home(
@@ -245,6 +377,29 @@ pub(crate) fn dsh_home(
     }
 }
 
+/// The files this adapter may write, in the order they are staged.
+///
+/// `settings.yaml` is listed only while it exists. DSH 0.1 layers it over the
+/// profile patch, so a value left there would win over ours; 0.2 imports it
+/// into whichever profile boots next and renames it, so creating one would
+/// write into a profile we do not own.
+pub(crate) fn configuration_paths(home: &Path) -> Result<Vec<PathBuf>, AdapterFailure> {
+    // `DSH_HOME` is exported from a shell rc, which a Dock-launched app never
+    // sources. Reading it from this process wrote settings.yaml into ~/.dsh
+    // while `dsh` itself loaded a different directory.
+    let root = dsh_home(home, crate::shell_environment::var_os("DSH_HOME"))?;
+    Ok(paths_in(&root))
+}
+
+fn paths_in(root: &Path) -> Vec<PathBuf> {
+    let mut paths = vec![root.join("profiles").join(WEB_PROFILE).join(PATCH_FILENAME)];
+    let settings = root.join("settings.yaml");
+    if settings.is_file() {
+        paths.push(settings);
+    }
+    paths
+}
+
 pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared, AdapterFailure> {
     prepare_inner(home, origin, model, &[model.to_owned()])
 }
@@ -265,22 +420,114 @@ fn prepare_inner(
     model: &str,
     model_ids: &[String],
 ) -> Result<Prepared, AdapterFailure> {
-    // `DSH_HOME` is exported from a shell rc, which a Dock-launched app never
-    // sources. Reading it from this process wrote settings.yaml into ~/.dsh
-    // while `dsh` itself loaded a different directory.
-    let path = dsh_home(home, crate::shell_environment::var_os("DSH_HOME"))?.join("settings.yaml");
-    let before = common::snapshot(&path)
-        .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_read_failed"))?;
-    let after = render_catalog(before.as_deref(), origin, model, model_ids)
+    let root = dsh_home(home, crate::shell_environment::var_os("DSH_HOME"))?;
+    prepare_in(&root, origin, model, model_ids)
+}
+
+fn prepare_in(
+    root: &Path,
+    origin: &str,
+    model: &str,
+    model_ids: &[String],
+) -> Result<Prepared, AdapterFailure> {
+    let mut paths = paths_in(root).into_iter();
+    let patch_path = paths.next().ok_or(AdapterFailure::ConfigurationFailed(
+        "configuration_read_failed",
+    ))?;
+    let settings_path = paths.next();
+    let read = |path: &Path| {
+        common::snapshot(path)
+            .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_read_failed"))
+    };
+    let before = read(&patch_path)?;
+    let after = render_profile_patch(before.as_deref(), origin, model, model_ids)
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?;
+    let mut transaction = FileTransaction::stage_with_snapshot(patch_path.clone(), before, after)
+        .map_err(config_error)?;
+    if let Some(path) = &settings_path {
+        let before = read(path)?;
+        let after = render_catalog(before.as_deref(), origin, model, model_ids)
+            .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?;
+        transaction
+            .push_with_snapshot(path.clone(), before, after)
+            .map_err(config_error)?;
+    }
     Ok(Prepared {
-        transaction: FileTransaction::stage_with_snapshot(path.clone(), before, after)
-            .map_err(config_error)?,
-        path,
+        transaction,
+        patch_path,
+        settings_path,
         origin: origin.to_owned(),
         model: model.to_owned(),
         model_ids: model_ids.to_vec(),
     })
+}
+
+/// DSH's cross-process writer lock: an exclusively created `<file>.lock`
+/// holding the writer's PID, removed when the write is done. Its config editor
+/// takes `<profile>/package.json.lock` around every patch write.
+struct ProfileLock(Option<PathBuf>);
+
+impl ProfileLock {
+    fn acquire(patch_path: &Path) -> Result<Self, AdapterFailure> {
+        let busy = AdapterFailure::ConfigurationFailed("configuration_write_failed");
+        let Some(profile) = patch_path.parent() else {
+            return Err(busy);
+        };
+        // No profile directory means no DSH has ever opened it, so nobody
+        // else can be writing it.
+        if !profile.is_dir() {
+            return Ok(Self(None));
+        }
+        let lock = profile.join("package.json.lock");
+        let deadline = std::time::Instant::now() + LOCK_WAIT;
+        let mut stale_removed = false;
+        loop {
+            match std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&lock)
+            {
+                Ok(mut file) => {
+                    use std::io::Write;
+                    let _ = writeln!(file, "{}", std::process::id());
+                    return Ok(Self(Some(lock)));
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {}
+                Err(_) => return Err(busy),
+            }
+            let stale = std::fs::metadata(&lock)
+                .and_then(|metadata| metadata.modified())
+                .ok()
+                .and_then(|modified| modified.elapsed().ok())
+                .is_some_and(|age| age > STALE_LOCK);
+            if stale && !stale_removed {
+                stale_removed = true;
+                let _ = std::fs::remove_file(&lock);
+                continue;
+            }
+            if std::time::Instant::now() >= deadline {
+                return Err(busy);
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+    }
+}
+
+impl Drop for ProfileLock {
+    fn drop(&mut self) {
+        if let Some(lock) = self.0.take() {
+            let _ = std::fs::remove_file(lock);
+        }
+    }
+}
+
+/// The last row configuring `id`, which is the one DSH applies.
+fn last_row_config<'a>(rows: &'a JsonValue, id: &str) -> Option<&'a JsonValue> {
+    rows.as_array()?
+        .iter()
+        .rev()
+        .find(|row| row["id"].as_str() == Some(id) && row.get("insert").is_none())
+        .map(|row| &row["config"])
 }
 
 impl Prepared {
@@ -289,7 +536,9 @@ impl Prepared {
     }
 
     pub(crate) fn commit(&mut self) -> Result<(), AdapterFailure> {
+        let lock = ProfileLock::acquire(&self.patch_path)?;
         self.transaction.commit().map_err(config_error)?;
+        drop(lock);
         self.validate_readback(true)
     }
 
@@ -297,16 +546,8 @@ impl Prepared {
         self.validate_readback(false)
     }
 
-    fn validate_readback(&self, strict_default: bool) -> Result<(), AdapterFailure> {
-        let bytes = common::snapshot(&self.path)
-            .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_readback_failed"))?
-            .ok_or(AdapterFailure::ConfigurationFailed(
-                "configuration_readback_failed",
-            ))?;
-        let value: JsonValue = serde_yaml::from_slice(&bytes)
-            .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_readback_failed"))?;
-        let provider = &value["llm-pi-ai"]["providers"]["yeschoy"];
-        let correct = provider["apiKeyEnv"].as_str() == Some("YESCHOY_DSH_API_KEY")
+    fn provider_matches(&self, provider: &JsonValue) -> bool {
+        provider["apiKeyEnv"].as_str() == Some("YESCHOY_DSH_API_KEY")
             && provider["api"].as_str() == Some("openai-completions")
             && provider["baseURL"].as_str()
                 == Some(format!("{}/v1", self.origin.trim_end_matches('/')).as_str())
@@ -317,25 +558,172 @@ impl Prepared {
             )
             && provider["compat"]["supportsDeveloperRole"].as_bool() == Some(false)
             && provider["compat"]["maxTokensField"].as_str() == Some("max_tokens")
-            && value["agent-default-model"]["provider"].as_str() == Some("yeschoy")
+    }
+
+    fn default_matches(&self, defaults: &JsonValue, strict_default: bool) -> bool {
+        defaults["provider"].as_str() == Some("yeschoy")
             && crate::tool_adapters::common::default_matches(
-                value["agent-default-model"]["model"].as_str(),
+                defaults["model"].as_str(),
                 &self.model,
                 &self.model_ids,
                 strict_default,
-            );
-        if correct {
-            Ok(())
-        } else {
-            Err(AdapterFailure::ConfigurationFailed(
-                "configuration_readback_failed",
-            ))
+            )
+    }
+
+    fn read_yaml(path: &Path) -> Result<JsonValue, AdapterFailure> {
+        let failed = AdapterFailure::ConfigurationFailed("configuration_readback_failed");
+        let bytes = common::snapshot(path).map_err(|_| failed)?.ok_or(failed)?;
+        serde_yaml::from_slice(&bytes).map_err(|_| failed)
+    }
+
+    fn validate_readback(&self, strict_default: bool) -> Result<(), AdapterFailure> {
+        let failed = AdapterFailure::ConfigurationFailed("configuration_readback_failed");
+        let rows = Self::read_yaml(&self.patch_path)?;
+        let patch_correct = last_row_config(&rows, LLM_ENTRY)
+            .is_some_and(|config| self.provider_matches(&config["providers"]["yeschoy"]))
+            && last_row_config(&rows, DEFAULT_MODEL_ENTRY)
+                .is_some_and(|config| self.default_matches(config, strict_default));
+        if !patch_correct {
+            return Err(failed);
         }
+        // DSH 0.2 renames `settings.yaml` to `settings.yaml.imported` once it
+        // has moved it into the profile. Gone is the expected end state, not
+        // a changed configuration; anything still there must agree with us,
+        // because on 0.1 it wins.
+        if let Some(path) = &self.settings_path {
+            if path.is_file() {
+                let value = Self::read_yaml(path)?;
+                let settings_correct = self
+                    .provider_matches(&value[LLM_ENTRY]["providers"]["yeschoy"])
+                    && self.default_matches(&value[DEFAULT_MODEL_ENTRY], strict_default);
+                if !settings_correct {
+                    return Err(failed);
+                }
+            }
+        }
+        Ok(())
     }
 
     pub(crate) fn rollback(&mut self) -> Result<(), AdapterFailure> {
-        self.transaction.rollback().map_err(config_error)
+        let lock = ProfileLock::acquire(&self.patch_path)?;
+        let result = self.transaction.rollback().map_err(config_error);
+        drop(lock);
+        result
     }
+}
+
+/// Undo our rows in a profile patch, leaving everything else as it is now.
+///
+/// The generic three-way merge in `connection_recovery` treats a row that did
+/// not exist before as wholly ours and drops it if it still contains what we
+/// wrote. For `llm-pi-ai` that would take the providers the user added on the
+/// Models page after connecting with it. Here only the values we own go back:
+/// `providers.yeschoy` and the default model, each restored to what it was
+/// (or removed) when it is still exactly what we wrote, and preserved when the
+/// user has changed it since.
+///
+/// Returns `None` when the path is not a DSH profile patch. The flag reports
+/// whether a value of ours was left in place because the user changed it.
+pub(crate) fn restore_profile_patch(
+    path: &Path,
+    before: Option<&[u8]>,
+    after: &[u8],
+    current: &[u8],
+) -> Option<Result<(Vec<JsonValue>, bool), ()>> {
+    if path.file_name().and_then(|name| name.to_str()) != Some(PATCH_FILENAME) {
+        return None;
+    }
+    let parse = |bytes: Option<&[u8]>| -> Result<Vec<JsonValue>, ()> {
+        parse_patch(bytes)?
+            .into_iter()
+            .map(|row| serde_json::to_value(row).map_err(|_| ()))
+            .collect()
+    };
+    Some((|| {
+        let before = parse(before)?;
+        let after = parse(Some(after))?;
+        let mut now = parse(Some(current))?;
+        let owned = |rows: &[JsonValue], id: &str, field: &[&str]| -> Option<JsonValue> {
+            let config = rows
+                .iter()
+                .rev()
+                .find(|row| row["id"].as_str() == Some(id) && row.get("insert").is_none())
+                .map(|row| &row["config"])?;
+            let mut value = config;
+            for key in field {
+                value = value.get(*key)?;
+            }
+            Some(value.clone())
+        };
+        let mut preserved = false;
+        let provider = ["providers", "yeschoy"];
+        let ours = owned(&after, LLM_ENTRY, &provider);
+        let theirs = owned(&before, LLM_ENTRY, &provider);
+        let default_ours = owned(&after, DEFAULT_MODEL_ENTRY, &[]);
+        let default_theirs = owned(&before, DEFAULT_MODEL_ENTRY, &[]);
+        let had_llm_row = before.iter().any(|row| row["id"] == LLM_ENTRY);
+        let had_default_row = before.iter().any(|row| row["id"] == DEFAULT_MODEL_ENTRY);
+        let mut index = 0;
+        while index < now.len() {
+            let row = &mut now[index];
+            let entry = if row.get("insert").is_none() {
+                row["id"].as_str().map(str::to_owned)
+            } else {
+                None
+            };
+            if entry.as_deref() == Some(LLM_ENTRY) {
+                let providers = row
+                    .get_mut("config")
+                    .and_then(|config| config.get_mut("providers"))
+                    .and_then(JsonValue::as_object_mut);
+                if let Some(providers) = providers {
+                    match (providers.get("yeschoy"), &ours) {
+                        (Some(current), Some(ours)) if current == ours => match &theirs {
+                            Some(value) => {
+                                providers.insert("yeschoy".into(), value.clone());
+                            }
+                            None => {
+                                providers.remove("yeschoy");
+                            }
+                        },
+                        (Some(_), _) => preserved = true,
+                        (None, _) => {}
+                    }
+                    if providers.is_empty() && !had_llm_row {
+                        if let Some(config) = row["config"].as_object_mut() {
+                            config.remove("providers");
+                        }
+                    }
+                }
+                let empty_config = row["config"]
+                    .as_object()
+                    .is_none_or(|config| config.is_empty());
+                if empty_config && !had_llm_row {
+                    now.remove(index);
+                    continue;
+                }
+            } else if entry.as_deref() == Some(DEFAULT_MODEL_ENTRY) {
+                if default_ours.as_ref() == Some(&row["config"]) {
+                    match &default_theirs {
+                        Some(value) => row["config"] = value.clone(),
+                        None if !had_default_row => {
+                            now.remove(index);
+                            continue;
+                        }
+                        None => {
+                            if let Some(row) = row.as_object_mut() {
+                                row.remove("config");
+                            }
+                        }
+                    }
+                } else if row["config"]["provider"] == "yeschoy" {
+                    preserved = true;
+                }
+            }
+            index += 1;
+        }
+        Ok((now, preserved))
+    })())
 }
 
 fn validated_loopback_url(line: &str) -> Option<String> {
@@ -442,49 +830,38 @@ pub(crate) async fn open_existing(
     key: &str,
 ) -> Result<(), AdapterFailure> {
     let home = super::user_home().ok_or(AdapterFailure::LaunchFailed)?;
-    let path = dsh_home(&home, crate::shell_environment::var_os("DSH_HOME"))?.join("settings.yaml");
-    let bytes = common::snapshot(&path)
+    // Only the location: whether the settings in it are right was decided by
+    // validation before Open was offered. Requiring `settings.yaml` here is
+    // what made every Open fail once DSH 0.2 had imported and renamed it.
+    let patch = configuration_paths(&home)
         .map_err(|_| AdapterFailure::LaunchFailed)?
+        .into_iter()
+        .next()
         .ok_or(AdapterFailure::LaunchFailed)?;
-    // Fingerprint only in native memory: a changed credential, installation,
-    // home or settings cannot accidentally reuse a stale process.
-    let identity = runtime_identity(&installation.path, &path, key, &bytes)?;
+    // Fingerprint only in native memory: a changed credential, installation
+    // or home cannot accidentally reuse a stale process.
+    let identity = runtime_identity(&installation.path, &patch, key);
     let url = state.ensure_running(installation, key, identity).await?;
     open_browser(&url)
 }
 
-fn runtime_identity(
-    installation: &Path,
-    path: &Path,
-    key: &str,
-    bytes: &[u8],
-) -> Result<[u8; 32], AdapterFailure> {
-    // DSH reloads model settings on its next request. Catalog/default changes
-    // do not change the process environment or require killing a live session.
-    let mut settings: JsonValue =
-        serde_yaml::from_slice(bytes).map_err(|_| AdapterFailure::LaunchFailed)?;
-    if settings["llm-pi-ai"]["providers"]["yeschoy"]["baseURL"].as_str()
-        == Some(format!("{}/v1", "https://yeschoy.com").as_str())
-    {
-        if let Some(provider) = settings["llm-pi-ai"]["providers"]["yeschoy"].as_object_mut() {
-            provider.remove("models");
-        }
-        if let Some(defaults) = settings["agent-default-model"].as_object_mut() {
-            defaults.remove("model");
-        }
-    }
-    let settings = serde_json::to_vec(&settings).map_err(|_| AdapterFailure::LaunchFailed)?;
+/// What a running DSH cannot pick up without a restart.
+///
+/// Both 0.1 and 0.2 watch the profile patch and reload model settings on the
+/// next request, so a catalog, default model or endpoint change does not end a
+/// live session. The key is different: it reaches DSH through the process
+/// environment, which only a new process gets.
+fn runtime_identity(installation: &Path, patch: &Path, key: &str) -> [u8; 32] {
     let mut fingerprint = Sha256::new();
     for part in [
         installation.to_string_lossy().as_bytes(),
-        path.to_string_lossy().as_bytes(),
+        patch.to_string_lossy().as_bytes(),
         key.as_bytes(),
-        settings.as_slice(),
     ] {
         fingerprint.update((part.len() as u64).to_le_bytes());
         fingerprint.update(part);
     }
-    Ok(fingerprint.finalize().into())
+    fingerprint.finalize().into()
 }
 
 #[cfg(target_os = "macos")]
@@ -552,61 +929,53 @@ mod tests {
         assert!(model.get("thinkingLevelMap").is_none());
     }
 
+    fn patch_rows(path: &Path) -> JsonValue {
+        serde_yaml::from_slice(&std::fs::read(path).unwrap()).unwrap()
+    }
+
     #[test]
     fn ru042_dsh_catalog_default_change_preserves_runtime_identity() {
-        let home = common::temporary_working_directory("dsh-model-set").unwrap();
-        let path = home.join("settings.yaml");
-        let installation = home.join("synthetic-dsh");
+        let root = common::temporary_working_directory("dsh-model-set").unwrap();
         let ids = vec!["model-a".into(), "model-b".into()];
-        let origin = "https://yeschoy.com".to_string();
-        let bytes = render_catalog(None, &origin, "model-a", &ids).unwrap();
-        let before = runtime_identity(&installation, &path, "synthetic-local", &bytes).unwrap();
-        let mut prepared = Prepared {
-            transaction: FileTransaction::stage_with_snapshot(path.clone(), None, bytes.clone())
-                .unwrap(),
-            path: path.clone(),
-            origin,
-            model: "model-a".into(),
-            model_ids: ids,
-        };
+        let mut prepared = prepare_in(&root, "https://yeschoy.com", "model-a", &ids).unwrap();
         prepared.commit().unwrap();
-        let mut settings: JsonValue = serde_yaml::from_slice(&bytes).unwrap();
-        settings["agent-default-model"]["model"] = "model-b".into();
-        let changed = serde_yaml::to_string(&settings).unwrap();
-        std::fs::write(&path, &changed).unwrap();
+        let path = prepared.patch_path.clone();
+        let installation = root.join("synthetic-dsh");
+        let before = runtime_identity(&installation, &path, "synthetic-local");
+
+        let mut rows = patch_rows(&path);
+        let default = rows
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|row| row["id"] == DEFAULT_MODEL_ENTRY)
+            .unwrap();
+        default["config"]["model"] = "model-b".into();
+        std::fs::write(&path, serde_yaml::to_string(&rows).unwrap()).unwrap();
+        // A default the user picked in DSH's own picker, among ours, is fine;
+        // it only fails the strict read-back right after our own write.
         assert!(prepared.validate_existing().is_ok());
         assert!(prepared.validate_readback(true).is_err());
+        // Catalog and default changes are reloaded live, the key is not.
         assert_eq!(
             before,
-            runtime_identity(&installation, &path, "synthetic-local", changed.as_bytes()).unwrap()
-        );
-        settings["llm-pi-ai"]["providers"]["yeschoy"]["models"] =
-            json!([{"id":"model-c","name":"model-c","input":["text"]}]);
-        let catalog_change = serde_yaml::to_string(&settings).unwrap();
-        assert_eq!(
-            before,
-            runtime_identity(
-                &installation,
-                &path,
-                "synthetic-local",
-                catalog_change.as_bytes()
-            )
-            .unwrap()
+            runtime_identity(&installation, &path, "synthetic-local")
         );
         assert_ne!(
             before,
-            runtime_identity(
-                &installation,
-                &path,
-                "rotated-local",
-                catalog_change.as_bytes()
-            )
-            .unwrap()
+            runtime_identity(&installation, &path, "rotated-local")
         );
-        settings["agent-default-model"]["model"] = "not-enrolled".into();
-        std::fs::write(&path, serde_yaml::to_string(&settings).unwrap()).unwrap();
+
+        let default = rows
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|row| row["id"] == DEFAULT_MODEL_ENTRY)
+            .unwrap();
+        default["config"]["model"] = "not-enrolled".into();
+        std::fs::write(&path, serde_yaml::to_string(&rows).unwrap()).unwrap();
         assert!(prepared.validate_existing().is_err());
-        std::fs::remove_dir_all(home).unwrap();
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[cfg(unix)]
@@ -614,18 +983,10 @@ mod tests {
     async fn ru042_dsh_catalog_update_reuses_real_fixture_process() {
         let fixture = common::test_support::Script::new("[ \"$1\" = --profile ] || exit 11\n[ \"$2\" = web ] || exit 12\n[ \"$YESCHOY_DSH_API_KEY\" = synthetic-local ] || exit 13\nprintf 'dsh web: http://127.0.0.1:3018/?token=synthetic\\n'\nexec /bin/sleep 30");
         let installation = fixture.installation();
-        let config = installation.path.with_extension("yaml");
-        let origin = "https://yeschoy.com".to_string();
-        let a = render_catalog(None, &origin, "model-a", &["model-a".into()]).unwrap();
-        let b = render_catalog(
-            None,
-            &origin,
-            "model-b",
-            &["model-a".into(), "model-b".into()],
-        )
-        .unwrap();
-        let a = runtime_identity(&installation.path, &config, "synthetic-local", &a).unwrap();
-        let b = runtime_identity(&installation.path, &config, "synthetic-local", &b).unwrap();
+        let config = installation.path.with_extension("yml");
+        // Reconnecting with another catalog keeps the same key and patch.
+        let a = runtime_identity(&installation.path, &config, "synthetic-local");
+        let b = runtime_identity(&installation.path, &config, "synthetic-local");
         let state = DshRuntimeState::default();
         state
             .ensure_running(&installation, "synthetic-local", a)
@@ -714,30 +1075,215 @@ mod tests {
 
     #[test]
     fn dsh_existing_validation_rejects_changed_destination_without_writing() {
-        let home = common::temporary_working_directory("dsh-existing").unwrap();
-        let path = home.join("settings.yaml");
-        let bytes = render(None, "https://yeschoy.com", "test-model").unwrap();
-        std::fs::write(&path, &bytes).unwrap();
-        let prepared = Prepared {
-            transaction: FileTransaction::stage_with_snapshot(
-                path.clone(),
-                Some(bytes.clone()),
-                bytes.clone(),
-            )
-            .unwrap(),
-            path: path.clone(),
-            origin: "https://yeschoy.com".into(),
-            model: "test-model".into(),
-            model_ids: vec!["test-model".into()],
-        };
+        let root = common::temporary_working_directory("dsh-existing").unwrap();
+        let mut prepared = prepare_in(
+            &root,
+            "https://yeschoy.com",
+            "test-model",
+            &["test-model".into()],
+        )
+        .unwrap();
+        prepared.commit().unwrap();
         assert!(prepared.validate_existing().is_ok());
-        let changed = String::from_utf8(bytes)
+        let path = prepared.patch_path.clone();
+        let changed = std::fs::read_to_string(&path)
             .unwrap()
             .replace("https://yeschoy.com/v1", "https://different.example/v1");
         std::fs::write(&path, &changed).unwrap();
         assert!(prepared.validate_existing().is_err());
         assert_eq!(std::fs::read_to_string(&path).unwrap(), changed);
-        std::fs::remove_dir_all(home).unwrap();
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn profile_patch_keeps_other_rows_and_providers_and_updates_every_row() {
+        let before = br#"- id: llm-pi-ai
+  name: '@deepseek-ai/dsh-llm-pi-ai'
+  config:
+    providers:
+      local:
+        baseURL: http://127.0.0.1:11434/v1
+      yeschoy:
+        reasoning: low
+- id: agent-default-model
+  config:
+    provider: deepseek-official
+    model: deepseek-flash
+    reasoningEffort: max
+- id: ui-settings
+  config:
+    theme: dark
+- id: agent-default-model
+  config:
+    provider: deepseek-official
+    model: deepseek-pro
+"#;
+        let bytes = render_profile_patch(
+            Some(before),
+            "https://yeschoy.com",
+            "glm-5.3",
+            &["glm-5.3".into()],
+        )
+        .unwrap();
+        let rows: JsonValue = serde_yaml::from_slice(&bytes).unwrap();
+        let rows = rows.as_array().unwrap();
+        assert_eq!(rows.len(), 4, "no row is added when one exists");
+        let llm = &rows[0]["config"]["providers"];
+        assert_eq!(llm["local"]["baseURL"], "http://127.0.0.1:11434/v1");
+        assert_eq!(llm["yeschoy"]["reasoning"], "low");
+        assert_eq!(llm["yeschoy"]["baseURL"], "https://yeschoy.com/v1");
+        assert_eq!(llm["yeschoy"]["apiKeyEnv"], "YESCHOY_DSH_API_KEY");
+        assert_eq!(rows[2]["config"]["theme"], "dark");
+        for index in [1, 3] {
+            assert_eq!(rows[index]["config"]["provider"], "yeschoy");
+            assert_eq!(rows[index]["config"]["model"], "glm-5.3");
+            assert!(rows[index]["config"].get("reasoningEffort").is_none());
+        }
+        assert!(!String::from_utf8(bytes).unwrap().contains("sk-"));
+    }
+
+    #[test]
+    fn profile_patch_is_created_with_named_rows_and_other_shapes_are_refused() {
+        let bytes = render_profile_patch(None, "https://yeschoy.com", "m", &["m".into()]).unwrap();
+        let rows: JsonValue = serde_yaml::from_slice(&bytes).unwrap();
+        assert_eq!(rows[0]["id"], LLM_ENTRY);
+        assert_eq!(rows[0]["name"], LLM_PLUGIN);
+        assert_eq!(rows[1]["id"], DEFAULT_MODEL_ENTRY);
+        assert_eq!(rows[1]["name"], DEFAULT_MODEL_PLUGIN);
+        for empty in [&b""[..], b"   \n", b"~\n", b"[]\n"] {
+            assert!(
+                render_profile_patch(Some(empty), "https://yeschoy.com", "m", &["m".into()])
+                    .is_ok()
+            );
+        }
+        for foreign in [
+            &b"llm-pi-ai: {}\n"[..],
+            b"- id: llm-pi-ai\n  config: [1]\n",
+            b"- [\n",
+        ] {
+            assert!(
+                render_profile_patch(Some(foreign), "https://yeschoy.com", "m", &["m".into()])
+                    .is_err()
+            );
+        }
+        // An `insert` row adds entries; it is not the entry's configuration.
+        let insert = b"- id: llm-pi-ai\n  insert: [{name: x}]\n";
+        let bytes =
+            render_profile_patch(Some(insert), "https://yeschoy.com", "m", &["m".into()]).unwrap();
+        let rows: JsonValue = serde_yaml::from_slice(&bytes).unwrap();
+        assert!(rows[0].get("config").is_none());
+        assert_eq!(rows[1]["id"], LLM_ENTRY);
+    }
+
+    #[test]
+    fn settings_yaml_is_written_only_while_it_exists_and_may_disappear() {
+        let root = common::temporary_working_directory("dsh-settings-layer").unwrap();
+        let ids = vec!["m".to_string()];
+        let prepared = prepare_in(&root, "https://yeschoy.com", "m", &ids).unwrap();
+        assert_eq!(prepared.changes().len(), 1);
+        assert!(!root.join("settings.yaml").exists());
+
+        // A 0.1 user layer holding an older default would win over the patch.
+        let settings = root.join("settings.yaml");
+        std::fs::write(
+            &settings,
+            "agent-default-model:\n  provider: deepseek-official\n  model: deepseek-flash\n",
+        )
+        .unwrap();
+        let mut prepared = prepare_in(&root, "https://yeschoy.com", "m", &ids).unwrap();
+        assert_eq!(prepared.changes().len(), 2);
+        prepared.commit().unwrap();
+        let value: JsonValue = serde_yaml::from_slice(&std::fs::read(&settings).unwrap()).unwrap();
+        assert_eq!(value["agent-default-model"]["provider"], "yeschoy");
+
+        // DSH 0.2 imports it into the booting profile and renames it.
+        std::fs::rename(&settings, root.join("settings.yaml.imported")).unwrap();
+        assert!(prepared.validate_existing().is_ok());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn a_held_profile_lock_blocks_the_write_and_a_stale_one_does_not() {
+        let root = common::temporary_working_directory("dsh-lock").unwrap();
+        let profile = root.join("profiles").join(WEB_PROFILE);
+        std::fs::create_dir_all(&profile).unwrap();
+        let lock = profile.join("package.json.lock");
+        std::fs::write(&lock, "1\n").unwrap();
+        let mut prepared = prepare_in(&root, "https://yeschoy.com", "m", &["m".into()]).unwrap();
+        assert!(prepared.commit().is_err());
+        assert!(
+            !prepared.patch_path.exists(),
+            "nothing written under a live lock"
+        );
+        assert!(lock.exists(), "another writer's lock is not ours to remove");
+
+        let file = std::fs::File::options().write(true).open(&lock).unwrap();
+        file.set_modified(std::time::SystemTime::now() - Duration::from_secs(600))
+            .unwrap();
+        drop(file);
+        prepared.commit().unwrap();
+        assert!(!lock.exists(), "the lock is released after writing");
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    fn restored(before: Option<&[u8]>, after: &[u8], current: &[u8]) -> (JsonValue, bool) {
+        let (rows, preserved) = restore_profile_patch(
+            Path::new("/x/profiles/web/cordis.patch.yml"),
+            before,
+            after,
+            current,
+        )
+        .unwrap()
+        .unwrap();
+        (JsonValue::Array(rows), preserved)
+    }
+
+    #[test]
+    fn restoring_the_patch_takes_back_only_what_we_own() {
+        let after = render_profile_patch(None, "https://yeschoy.com", "m", &["m".into()]).unwrap();
+        // Untouched since connecting: everything we added goes.
+        let (rows, preserved) = restored(None, &after, &after);
+        assert_eq!(rows, json!([]));
+        assert!(!preserved);
+
+        // The user added a provider to our row and picked a model of theirs.
+        let mut now: JsonValue = serde_yaml::from_slice(&after).unwrap();
+        now[0]["config"]["providers"]["local"] = json!({"baseURL": "http://127.0.0.1:11434/v1"});
+        now[1]["config"] = json!({"provider": "local", "model": "qwen"});
+        let current = serde_yaml::to_string(&now).unwrap();
+        let (rows, preserved) = restored(None, &after, current.as_bytes());
+        assert_eq!(
+            rows,
+            json!([
+                {"id": LLM_ENTRY, "name": LLM_PLUGIN, "config": {"providers": {"local": {"baseURL": "http://127.0.0.1:11434/v1"}}}},
+                {"id": DEFAULT_MODEL_ENTRY, "name": DEFAULT_MODEL_PLUGIN, "config": {"provider": "local", "model": "qwen"}}
+            ])
+        );
+        assert!(
+            !preserved,
+            "their values are theirs, not a conflict with ours"
+        );
+
+        // Values that were there before connecting come back.
+        let before = b"- id: agent-default-model\n  config: {provider: deepseek-official, model: deepseek-flash}\n- id: llm-pi-ai\n  config: {providers: {yeschoy: {reasoning: low}}}\n";
+        let after =
+            render_profile_patch(Some(before), "https://yeschoy.com", "m", &["m".into()]).unwrap();
+        let (rows, _) = restored(Some(before), &after, &after);
+        let expected: JsonValue = serde_yaml::from_slice(before).unwrap();
+        assert_eq!(rows, expected);
+
+        // Our provider changed since: it stays, and says so.
+        let mut now: JsonValue = serde_yaml::from_slice(&after).unwrap();
+        now[1]["config"]["providers"]["yeschoy"]["baseURL"] = "https://elsewhere/v1".into();
+        let current = serde_yaml::to_string(&now).unwrap();
+        let (rows, preserved) = restored(Some(before), &after, current.as_bytes());
+        assert_eq!(
+            rows[1]["config"]["providers"]["yeschoy"]["baseURL"],
+            "https://elsewhere/v1"
+        );
+        assert!(preserved);
+
+        assert!(restore_profile_patch(Path::new("/x/settings.yaml"), None, b"", b"").is_none());
     }
 
     #[test]
