@@ -114,14 +114,18 @@ pub(crate) fn validate_settings(
             .validate_existing(),
             "pi" => pi::prepare_catalog(home, &origin, &credential.model_id, &models)?
                 .validate_existing(),
-            "dsh_web" => dsh_web::prepare_catalog(home, &origin, &credential.model_id, &models)?
-                .validate_existing(),
+            "dsh_web" => dsh_web::prepare_catalog(
+                home,
+                &origin,
+                &credential.model_id,
+                &dsh_web::routes(credential),
+            )?
+            .validate_existing(),
             "dsh_desktop" => dsh_web::prepare_desktop_catalog(
                 home,
                 &origin,
                 &credential.model_id,
-                &models,
-                credential.upstream_key(),
+                &dsh_web::routes(credential),
             )?
             .validate_existing(),
             "workbuddy" => workbuddy::prepare_catalog(home, credential)?.validate_existing(),
@@ -170,14 +174,18 @@ pub(crate) fn validate_settings(
             codex_desktop::prepare(home, &credential.origin, &credential.model_id, transport)?
                 .validate_existing()
         }
-        "dsh_web" => {
-            dsh_web::prepare(home, &credential.origin, &credential.model_id)?.validate_existing()
-        }
-        "dsh_desktop" => dsh_web::prepare_desktop(
+        "dsh_web" => dsh_web::prepare_catalog(
             home,
             &credential.origin,
             &credential.model_id,
-            credential.upstream_key(),
+            &dsh_web::routes(credential),
+        )?
+        .validate_existing(),
+        "dsh_desktop" => dsh_web::prepare_desktop_catalog(
+            home,
+            &credential.origin,
+            &credential.model_id,
+            &dsh_web::routes(credential),
         )?
         .validate_existing(),
         "workbuddy" => workbuddy::prepare_catalog(home, credential)?.validate_existing(),
@@ -257,12 +265,7 @@ pub async fn open_tool_connection_v1(
                         }
                         Ok(codex_desktop::launch(&installation.path))
                     }
-                    "dsh_web" => {
-                        Ok(
-                            dsh_web::open_existing(&dsh, &installation, credential.upstream_key())
-                                .await,
-                        )
-                    }
+                    "dsh_web" => Ok(dsh_web::open_existing(&dsh, &installation, &credential).await),
                     "claude_code" => {
                         claude_code
                             .start(credential)

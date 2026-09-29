@@ -1752,14 +1752,19 @@ fn prepare_adapter(
         "pi" => {
             pi::prepare_catalog(&home, &origin, &request.model_id, &models).map(PreparedAdapter::Pi)
         }
-        "dsh_web" => dsh_web::prepare_catalog(&home, &origin, &request.model_id, &models)
-            .map(PreparedAdapter::Dsh),
+        // One DSH provider per billing group, each with its own scoped key.
+        "dsh_web" => dsh_web::prepare_catalog(
+            &home,
+            &origin,
+            &request.model_id,
+            &dsh_web::routes(credential),
+        )
+        .map(PreparedAdapter::Dsh),
         "dsh_desktop" => dsh_web::prepare_desktop_catalog(
             &home,
             &origin,
             &request.model_id,
-            &models,
-            provider_key,
+            &dsh_web::routes(credential),
         )
         .map(PreparedAdapter::Dsh),
         "workbuddy" => {
@@ -1817,9 +1822,7 @@ async fn open_configured_adapter(
     match request.tool_id.as_str() {
         "claude_desktop" => claude_desktop::launch(&installation.path),
         "codex_desktop" => codex_desktop::launch(&installation.path),
-        "dsh_web" => {
-            dsh_web::open_existing(dsh_runtime, installation, credential.upstream_key()).await
-        }
+        "dsh_web" => dsh_web::open_existing(dsh_runtime, installation, credential).await,
         "workbuddy" => {
             desktop_lifecycle::open_unless_running("workbuddy", &installation.path).await
         }

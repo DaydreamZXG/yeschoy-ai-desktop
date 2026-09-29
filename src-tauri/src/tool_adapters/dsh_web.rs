@@ -95,7 +95,7 @@ impl DshRuntimeState {
     async fn ensure_running(
         &self,
         installation: &ResolvedInstallation,
-        key: &str,
+        keys: &[(String, String)],
         identity: [u8; 32],
     ) -> Result<String, AdapterFailure> {
         let mut slot = self.runtime.lock().await;
@@ -108,7 +108,7 @@ impl DshRuntimeState {
             let _ = previous.child.kill().await;
             previous.stdout_task.abort();
         }
-        let runtime = start_process(installation, key, identity).await?;
+        let runtime = start_process(installation, keys, identity).await?;
         let url = runtime.url.clone();
         *slot = Some(runtime);
         Ok(url)
@@ -159,8 +159,7 @@ pub(crate) struct Prepared {
     settings_path: Option<PathBuf>,
     origin: String,
     model: String,
-    model_ids: Vec<String>,
-    key: Option<String>,
+    groups: Vec<Group>,
 }
 
 fn config_error(error: ConfigFailure) -> AdapterFailure {
@@ -193,26 +192,173 @@ fn child_mapping<'a>(parent: &'a mut Mapping, key: &str) -> Result<&'a mut Mappi
         .ok_or(())
 }
 
+/// One model of a connection, with the billing group and scoped relay key the
+/// relay issued for it.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct DshRoute {
+    pub(crate) model_id: String,
+    pub(crate) billing_group: String,
+    pub(crate) key: String,
+}
+
+/// Every model of a stored credential, as routes. A credential without a
+/// model set is its single default model.
+pub(crate) fn routes(credential: &crate::tool_credentials::ToolCredential) -> Vec<DshRoute> {
+    if credential.models.is_empty() {
+        return vec![DshRoute {
+            model_id: credential.model_id.clone(),
+            billing_group: String::new(),
+            key: credential.upstream_key().to_owned(),
+        }];
+    }
+    credential
+        .models
+        .iter()
+        .map(|route| DshRoute {
+            model_id: route.model_id.clone(),
+            billing_group: route.billing_group.clone(),
+            key: route.api_key.clone(),
+        })
+        .collect()
+}
+
+/// The models that share one relay key, as one DSH provider.
+///
+/// A DSH provider has exactly one `apiKeyEnv`, and the relay scopes each key
+/// to one billing group. One provider for the whole catalog sent the default
+/// group's key for every model, so a model from any other group was listed
+/// and then refused. The default model's group is `yeschoy` /
+/// `YESCHOY_DSH_API_KEY`, as before; each further group is `yeschoy-2` /
+/// `YESCHOY_DSH_API_KEY_2`, and so on.
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct Group {
+    provider: String,
+    reference: String,
+    label: String,
+    key: String,
+    models: Vec<String>,
+}
+
+fn groups(default_model: &str, routes: &[DshRoute]) -> Result<Vec<Group>, ()> {
+    let first = routes
+        .iter()
+        .find(|route| route.model_id == default_model)
+        .ok_or(())?;
+    let mut ordered: Vec<(&str, &str, Vec<String>)> =
+        vec![(&first.billing_group, &first.key, Vec::new())];
+    for route in routes {
+        let slot = ordered
+            .iter_mut()
+            .find(|(group, key, _)| *group == route.billing_group && *key == route.key);
+        match slot {
+            Some((_, _, models)) => models.push(route.model_id.clone()),
+            None => ordered.push((
+                &route.billing_group,
+                &route.key,
+                vec![route.model_id.clone()],
+            )),
+        }
+    }
+    Ok(ordered
+        .into_iter()
+        .enumerate()
+        .map(|(index, (group, key, models))| {
+            let (provider, reference, label) = if index == 0 {
+                (
+                    "yeschoy".to_owned(),
+                    KEY_REFERENCE.to_owned(),
+                    "野菜API".to_owned(),
+                )
+            } else {
+                let n = index + 1;
+                let label = if group.is_empty() {
+                    format!("野菜API {n}")
+                } else {
+                    format!("野菜API · {group}")
+                };
+                (
+                    format!("yeschoy-{n}"),
+                    format!("{KEY_REFERENCE}_{n}"),
+                    label,
+                )
+            };
+            Group {
+                provider,
+                reference,
+                label,
+                key: key.to_owned(),
+                models,
+            }
+        })
+        .collect())
+}
+
+/// `yeschoy`, or `yeschoy-<n>` for a further billing group.
+fn is_owned_provider_id(id: &str) -> bool {
+    id == "yeschoy"
+        || id
+            .strip_prefix("yeschoy-")
+            .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+}
+
+/// `YESCHOY_DSH_API_KEY`, or `YESCHOY_DSH_API_KEY_<n>`.
+fn is_owned_reference(reference: &str) -> bool {
+    reference == KEY_REFERENCE
+        || reference
+            .strip_prefix(KEY_REFERENCE)
+            .and_then(|rest| rest.strip_prefix('_'))
+            .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+}
+
+/// A provider this app wrote: our id, reading its key from our reference.
+fn is_owned_provider(id: &str, provider: &Value) -> bool {
+    is_owned_provider_id(id)
+        && provider
+            .get("apiKeyEnv")
+            .and_then(Value::as_str)
+            .is_some_and(is_owned_reference)
+}
+
+/// Put every group's provider into `providers`, and take out ours that the
+/// current catalog no longer has a group for.
+fn apply_providers(providers: &mut Mapping, origin: &str, groups: &[Group]) -> Result<(), ()> {
+    let stale = providers
+        .iter()
+        .filter_map(|(id, provider)| {
+            let id = id.as_str()?;
+            (is_owned_provider(id, provider) && !groups.iter().any(|g| g.provider == id))
+                .then(|| id.to_owned())
+        })
+        .collect::<Vec<_>>();
+    for id in stale {
+        providers.remove(id.as_str());
+    }
+    for group in groups {
+        let previous = providers.get(group.provider.as_str()).cloned();
+        providers.insert(
+            Value::String(group.provider.clone()),
+            yeschoy_provider(previous.as_ref(), origin, group)?,
+        );
+    }
+    Ok(())
+}
+
 /// Our provider, over whatever the user already had under the same name.
 ///
 /// Fields we do not own (`reasoning`, per-model budgets) survive, the same
 /// rule `native_chat_catalog` applies to each model entry.
-fn yeschoy_provider(
-    previous: Option<&Value>,
-    origin: &str,
-    model_ids: &[String],
-) -> Result<Value, ()> {
+fn yeschoy_provider(previous: Option<&Value>, origin: &str, group: &Group) -> Result<Value, ()> {
     let mut provider = match previous {
         Some(Value::Mapping(existing)) => existing.clone(),
         _ => Mapping::new(),
     };
     provider.insert(
         Value::String("displayName".into()),
-        Value::String("野菜API".into()),
+        Value::String(group.label.clone()),
     );
     provider.insert(
         Value::String("apiKeyEnv".into()),
-        Value::String(KEY_REFERENCE.into()),
+        Value::String(group.reference.clone()),
     );
     provider.insert(
         Value::String("api".into()),
@@ -237,7 +383,7 @@ fn yeschoy_provider(
         .map_err(|_| ())?;
     let models = crate::tool_model_profile::native_chat_catalog(
         previous_models.as_ref(),
-        model_ids,
+        &group.models,
         crate::tool_model_profile::ModelConsumer::Dsh,
     );
     provider.insert(
@@ -256,8 +402,21 @@ fn to_yaml_bytes(value: &Value) -> Result<Vec<u8>, ()> {
 }
 
 #[cfg(test)]
+fn single(model: &str) -> Vec<Group> {
+    groups(
+        model,
+        &[DshRoute {
+            model_id: model.to_owned(),
+            billing_group: String::new(),
+            key: "sk-test".to_owned(),
+        }],
+    )
+    .unwrap()
+}
+
+#[cfg(test)]
 fn render(existing: Option<&[u8]>, origin: &str, model: &str) -> Result<Vec<u8>, ()> {
-    render_catalog(existing, origin, model, &[model.to_owned()])
+    render_catalog(existing, origin, model, &single(model))
 }
 
 /// DSH 0.1's `settings.yaml`: the user layer, which wins over the profile patch.
@@ -265,7 +424,7 @@ fn render_catalog(
     existing: Option<&[u8]>,
     origin: &str,
     model: &str,
-    model_ids: &[String],
+    groups: &[Group],
 ) -> Result<Vec<u8>, ()> {
     let mut root = match existing {
         Some(bytes) if !bytes.is_empty() => {
@@ -275,12 +434,7 @@ fn render_catalog(
     };
     let root_map = mapping(&mut root)?;
     let llm = child_mapping(root_map, LLM_ENTRY)?;
-    let providers = child_mapping(llm, "providers")?;
-    let previous = providers.get(Value::String("yeschoy".into())).cloned();
-    providers.insert(
-        Value::String("yeschoy".into()),
-        yeschoy_provider(previous.as_ref(), origin, model_ids)?,
-    );
+    apply_providers(child_mapping(llm, "providers")?, origin, groups)?;
     let defaults = child_mapping(root_map, DEFAULT_MODEL_ENTRY)?;
     defaults.insert(
         Value::String("provider".into()),
@@ -344,7 +498,7 @@ fn render_profile_patch(
     existing: Option<&[u8]>,
     origin: &str,
     model: &str,
-    model_ids: &[String],
+    groups: &[Group],
 ) -> Result<Vec<u8>, ()> {
     let mut rows = parse_patch(existing)?;
     if !rows.iter().any(|row| is_entry_row(row, LLM_ENTRY)) {
@@ -358,12 +512,11 @@ fn render_profile_patch(
     }
     for row in &mut rows {
         if is_entry_row(row, LLM_ENTRY) {
-            let providers = child_mapping(row_config(row)?, "providers")?;
-            let previous = providers.get(Value::String("yeschoy".into())).cloned();
-            providers.insert(
-                Value::String("yeschoy".into()),
-                yeschoy_provider(previous.as_ref(), origin, model_ids)?,
-            );
+            apply_providers(
+                child_mapping(row_config(row)?, "providers")?,
+                origin,
+                groups,
+            )?;
         } else if is_entry_row(row, DEFAULT_MODEL_ENTRY) {
             let config = row_config(row)?;
             let unchanged = config.get("provider").and_then(Value::as_str) == Some("yeschoy")
@@ -424,37 +577,32 @@ fn paths_in(root: &Path, profile: DshProfile) -> Vec<PathBuf> {
         .join("profiles")
         .join(profile.name())
         .join(PATCH_FILENAME)];
-    if profile == DshProfile::Desktop {
-        paths.push(root.join(CREDENTIALS_FILENAME));
-    }
-    let settings = root.join("settings.yaml");
-    if settings.is_file() {
-        paths.push(settings);
+    match profile {
+        DshProfile::Desktop => paths.push(root.join(CREDENTIALS_FILENAME)),
+        // `settings.yaml` is one file shared by every profile. Only the web
+        // connection journals it: two connections recording the same file
+        // would each take the other's values for the user's original and
+        // write them back after that connection was gone. Desktop is 0.2,
+        // which never reads it as settings anyway.
+        DshProfile::Web => {
+            let settings = root.join("settings.yaml");
+            if settings.is_file() {
+                paths.push(settings);
+            }
+        }
     }
     paths
 }
 
-pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared, AdapterFailure> {
-    let root = dsh_home(home, crate::shell_environment::var_os("DSH_HOME"))?;
-    prepare_in(
-        &root,
-        DshProfile::Web,
-        origin,
-        model,
-        &[model.to_owned()],
-        None,
-    )
-}
-
+/// `dsh --profile web`, which this app starts with the keys in its environment.
 pub(crate) fn prepare_catalog(
     home: &Path,
     origin: &str,
     model: &str,
-    model_ids: &[String],
+    routes: &[DshRoute],
 ) -> Result<Prepared, AdapterFailure> {
-    crate::tool_adapters::common::validate_catalog(model, model_ids)?;
     let root = dsh_home(home, crate::shell_environment::var_os("DSH_HOME"))?;
-    prepare_in(&root, DshProfile::Web, origin, model, model_ids, None)
+    prepare_in(&root, DshProfile::Web, origin, model, routes)
 }
 
 /// The Harness home DeepSeek Harness Desktop itself resolves.
@@ -469,42 +617,16 @@ fn desktop_dsh_home(home: &Path) -> Result<PathBuf, AdapterFailure> {
     dsh_home(home, std::env::var_os("DSH_HOME"))
 }
 
-/// DeepSeek Harness Desktop: its own profile, and the key in DSH's credentials
+/// DeepSeek Harness Desktop: its own profile, and the keys in DSH's credentials
 /// file, because nothing this app starts stands between Desktop and the relay.
-pub(crate) fn prepare_desktop(
-    home: &Path,
-    origin: &str,
-    model: &str,
-    key: &str,
-) -> Result<Prepared, AdapterFailure> {
-    let root = desktop_dsh_home(home)?;
-    prepare_in(
-        &root,
-        DshProfile::Desktop,
-        origin,
-        model,
-        &[model.to_owned()],
-        Some(key),
-    )
-}
-
 pub(crate) fn prepare_desktop_catalog(
     home: &Path,
     origin: &str,
     model: &str,
-    model_ids: &[String],
-    key: &str,
+    routes: &[DshRoute],
 ) -> Result<Prepared, AdapterFailure> {
-    crate::tool_adapters::common::validate_catalog(model, model_ids)?;
     let root = desktop_dsh_home(home)?;
-    prepare_in(
-        &root,
-        DshProfile::Desktop,
-        origin,
-        model,
-        model_ids,
-        Some(key),
-    )
+    prepare_in(&root, DshProfile::Desktop, origin, model, routes)
 }
 
 fn prepare_in(
@@ -512,13 +634,19 @@ fn prepare_in(
     profile: DshProfile,
     origin: &str,
     model: &str,
-    model_ids: &[String],
-    key: Option<&str>,
+    routes: &[DshRoute],
 ) -> Result<Prepared, AdapterFailure> {
     let parse_failed = AdapterFailure::ConfigurationFailed("configuration_parse_failed");
-    if (profile == DshProfile::Desktop) != key.is_some() {
-        return Err(AdapterFailure::ConfigurationFailed("invalid_request"));
+    let invalid = AdapterFailure::ConfigurationFailed("invalid_request");
+    let model_ids = routes
+        .iter()
+        .map(|route| route.model_id.clone())
+        .collect::<Vec<_>>();
+    crate::tool_adapters::common::validate_catalog(model, &model_ids)?;
+    if routes.iter().any(|route| route.key.is_empty()) {
+        return Err(invalid);
     }
+    let groups = groups(model, routes).map_err(|_| invalid)?;
     let read = |path: &Path| {
         common::snapshot(path)
             .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_read_failed"))
@@ -530,15 +658,15 @@ fn prepare_in(
         let after = match path.file_name().and_then(|name| name.to_str()) {
             Some(PATCH_FILENAME) => {
                 patch_path = Some(path.clone());
-                render_profile_patch(before.as_deref(), origin, model, model_ids)
+                render_profile_patch(before.as_deref(), origin, model, &groups)
             }
             Some(CREDENTIALS_FILENAME) => {
                 credentials_path = Some(path.clone());
-                render_credentials(before.as_deref(), key.unwrap_or_default())
+                render_credentials(before.as_deref(), &groups)
             }
             _ => {
                 settings_path = Some(path.clone());
-                render_catalog(before.as_deref(), origin, model, model_ids)
+                render_catalog(before.as_deref(), origin, model, &groups)
             }
         }
         .map_err(|_| parse_failed)?;
@@ -554,20 +682,20 @@ fn prepare_in(
         settings_path,
         origin: origin.to_owned(),
         model: model.to_owned(),
-        model_ids: model_ids.to_vec(),
-        key: key.map(str::to_owned),
+        groups,
     })
 }
 
 /// DSH's credentials document: `version: 1` and a `refs` map of reference name
-/// to secret. Only our reference is written; every other ref, and any
+/// to secret. Only our references are written, one per billing group, and ours
+/// that no group uses any more are taken out; every other ref, and any
 /// `records`, stay as they are.
 ///
 /// A non-empty document without `version` is the pre-release flat layout,
 /// which DSH itself refuses to start with and asks the user to migrate. It is
 /// refused here as well rather than rewritten on their behalf.
-fn render_credentials(existing: Option<&[u8]>, key: &str) -> Result<Vec<u8>, ()> {
-    if key.is_empty() {
+fn render_credentials(existing: Option<&[u8]>, groups: &[Group]) -> Result<Vec<u8>, ()> {
+    if groups.is_empty() || groups.iter().any(|group| group.key.is_empty()) {
         return Err(());
     }
     let mut root = match existing {
@@ -589,10 +717,21 @@ fn render_credentials(existing: Option<&[u8]>, key: &str) -> Result<Vec<u8>, ()>
         _ => return Err(()),
     }
     let refs = child_mapping(&mut root, "refs")?;
-    refs.insert(
-        Value::String(KEY_REFERENCE.into()),
-        Value::String(key.into()),
-    );
+    let stale = refs
+        .keys()
+        .filter_map(Value::as_str)
+        .filter(|name| is_owned_reference(name) && !groups.iter().any(|g| g.reference == *name))
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+    for name in stale {
+        refs.remove(name.as_str());
+    }
+    for group in groups {
+        refs.insert(
+            Value::String(group.reference.clone()),
+            Value::String(group.key.clone()),
+        );
+    }
     to_yaml_bytes(&Value::Mapping(root))
 }
 
@@ -720,28 +859,39 @@ impl Prepared {
         self.validate_readback(false)
     }
 
-    fn provider_matches(&self, provider: &JsonValue) -> bool {
-        provider["apiKeyEnv"].as_str() == Some(KEY_REFERENCE)
+    fn provider_matches(&self, provider: &JsonValue, group: &Group) -> bool {
+        provider["apiKeyEnv"].as_str() == Some(group.reference.as_str())
             && provider["api"].as_str() == Some("openai-completions")
             && provider["baseURL"].as_str()
                 == Some(format!("{}/v1", self.origin.trim_end_matches('/')).as_str())
             && crate::tool_adapters::common::catalog_matches(
                 &provider["models"],
                 Some("id"),
-                &self.model_ids,
+                &group.models,
             )
             && provider["compat"]["supportsDeveloperRole"].as_bool() == Some(false)
             && provider["compat"]["maxTokensField"].as_str() == Some("max_tokens")
     }
 
+    fn providers_match(&self, providers: &JsonValue) -> bool {
+        self.groups
+            .iter()
+            .all(|group| self.provider_matches(&providers[group.provider.as_str()], group))
+    }
+
+    /// Right after our own write the default must be exactly ours. Later, any
+    /// model of the connection is fine, selected through the provider that
+    /// carries it: DSH's own model picker changes the default as it switches.
     fn default_matches(&self, defaults: &JsonValue, strict_default: bool) -> bool {
-        defaults["provider"].as_str() == Some("yeschoy")
-            && crate::tool_adapters::common::default_matches(
-                defaults["model"].as_str(),
-                &self.model,
-                &self.model_ids,
-                strict_default,
-            )
+        let (provider, model) = (defaults["provider"].as_str(), defaults["model"].as_str());
+        if strict_default {
+            return provider == Some(self.groups[0].provider.as_str())
+                && model == Some(self.model.as_str());
+        }
+        self.groups.iter().any(|group| {
+            provider == Some(group.provider.as_str())
+                && model.is_some_and(|model| group.models.iter().any(|id| id == model))
+        })
     }
 
     fn read_yaml(path: &Path) -> Result<JsonValue, AdapterFailure> {
@@ -754,17 +904,19 @@ impl Prepared {
         let failed = AdapterFailure::ConfigurationFailed("configuration_readback_failed");
         let rows = Self::read_yaml(&self.patch_path)?;
         let patch_correct = last_row_config(&rows, LLM_ENTRY)
-            .is_some_and(|config| self.provider_matches(&config["providers"]["yeschoy"]))
+            .is_some_and(|config| self.providers_match(&config["providers"]))
             && last_row_config(&rows, DEFAULT_MODEL_ENTRY)
                 .is_some_and(|config| self.default_matches(config, strict_default));
         if !patch_correct {
             return Err(failed);
         }
-        if let (Some(path), Some(key)) = (&self.credentials_path, &self.key) {
+        if let Some(path) = &self.credentials_path {
             let document = Self::read_yaml(path)?;
-            if document["version"].as_u64() != Some(1)
-                || document["refs"][KEY_REFERENCE].as_str() != Some(key.as_str())
-            {
+            let keys_correct = document["version"].as_u64() == Some(1)
+                && self.groups.iter().all(|group| {
+                    document["refs"][group.reference.as_str()].as_str() == Some(group.key.as_str())
+                });
+            if !keys_correct {
                 return Err(failed);
             }
         }
@@ -775,8 +927,7 @@ impl Prepared {
         if let Some(path) = &self.settings_path {
             if path.is_file() {
                 let value = Self::read_yaml(path)?;
-                let settings_correct = self
-                    .provider_matches(&value[LLM_ENTRY]["providers"]["yeschoy"])
+                let settings_correct = self.providers_match(&value[LLM_ENTRY]["providers"])
                     && self.default_matches(&value[DEFAULT_MODEL_ENTRY], strict_default);
                 if !settings_correct {
                     return Err(failed);
@@ -800,9 +951,15 @@ impl Prepared {
 /// not exist before as wholly ours and drops it if it still contains what we
 /// wrote. For `llm-pi-ai` that would take the providers the user added on the
 /// Models page after connecting with it. Here only the values we own go back:
-/// `providers.yeschoy` and the default model, each restored to what it was
-/// (or removed) when it is still exactly what we wrote, and preserved when the
-/// user has changed it since.
+/// our providers and the default model's `provider` and `model`, each restored
+/// to what it was (or removed) when it still holds what we wrote, and left in
+/// place, reported, when the user has changed it since.
+///
+/// Rows are matched by content, not only by position: a row the user or DSH
+/// inserted or deleted ahead of ours must not make every later row compare
+/// with the wrong snapshot. For each value of ours still present, the snapshot
+/// that wrote exactly it is found (the same position first), used once, and
+/// its predecessor restored.
 ///
 /// Returns `None` when the path is not a DSH profile patch. The flag reports
 /// whether a value of ours was left in place because the user changed it.
@@ -819,23 +976,44 @@ pub(crate) fn restore_profile_patch(
         let before = parse_patch_json(before)?;
         let after = parse_patch_json(Some(after))?;
         let mut now = parse_patch_json(Some(current))?;
-        // Every configuration row of an entry is written, so each is undone
-        // against its own snapshot: the k-th `llm-pi-ai` row now against the
-        // k-th one we wrote and the k-th one that was there before.
-        let providers = |rows: &[JsonValue]| -> Vec<Option<JsonValue>> {
+        let providers_of = |rows: &[JsonValue]| -> Vec<JsonValue> {
             entry_rows(rows, LLM_ENTRY)
-                .map(|row| row["config"]["providers"].get("yeschoy").cloned())
+                .map(|row| row["config"]["providers"].clone())
                 .collect()
         };
-        let defaults = |rows: &[JsonValue]| -> Vec<JsonValue> {
+        let defaults_of = |rows: &[JsonValue]| -> Vec<JsonValue> {
             entry_rows(rows, DEFAULT_MODEL_ENTRY)
                 .map(|row| row["config"].clone())
                 .collect()
         };
-        let (ours, theirs) = (providers(&after), providers(&before));
-        let (default_ours, default_theirs) = (defaults(&after), defaults(&before));
+        let (ours, theirs) = (providers_of(&after), providers_of(&before));
+        let (default_ours, default_theirs) = (defaults_of(&after), defaults_of(&before));
+        // Our provider ids: whatever we wrote under an owned id, in any row.
+        let owned_ids = ours
+            .iter()
+            .filter_map(JsonValue::as_object)
+            .flat_map(|providers| providers.keys())
+            .filter(|id| is_owned_provider_id(id))
+            .cloned()
+            .collect::<std::collections::BTreeSet<_>>();
+        let mut used_providers = std::collections::BTreeSet::new();
+        let mut used_defaults = std::collections::BTreeSet::new();
+        // The snapshot index whose value is `value`, same position first.
+        let find = |candidates: &mut dyn Iterator<Item = usize>,
+                    position: usize,
+                    matches: &dyn Fn(usize) -> bool|
+         -> Option<usize> {
+            let all = candidates.collect::<Vec<_>>();
+            all.iter()
+                .copied()
+                .find(|&j| j == position && matches(j))
+                .or_else(|| all.iter().copied().find(|&j| matches(j)))
+        };
+        let pick = |value: &JsonValue| -> (JsonValue, JsonValue) {
+            (value["provider"].clone(), value["model"].clone())
+        };
         let mut preserved = false;
-        let (mut llm_index, mut default_index) = (0, 0);
+        let (mut llm_position, mut default_position) = (0, 0);
         let mut index = 0;
         while index < now.len() {
             let row = &mut now[index];
@@ -845,32 +1023,38 @@ pub(crate) fn restore_profile_patch(
                 None
             };
             if entry.as_deref() == Some(LLM_ENTRY) {
-                let k = llm_index;
-                llm_index += 1;
-                let existed = k < theirs.len();
-                let providers = row
+                let position = llm_position;
+                llm_position += 1;
+                let mut created = false;
+                if let Some(providers) = row
                     .get_mut("config")
                     .and_then(|config| config.get_mut("providers"))
-                    .and_then(JsonValue::as_object_mut);
-                if let Some(providers) = providers {
-                    match (
-                        providers.get("yeschoy"),
-                        ours.get(k).and_then(Option::as_ref),
-                    ) {
-                        (Some(current), Some(ours)) if current == ours => {
-                            match theirs.get(k).and_then(Option::as_ref) {
-                                Some(value) => {
-                                    providers.insert("yeschoy".into(), value.clone());
-                                }
-                                None => {
-                                    providers.remove("yeschoy");
-                                }
+                    .and_then(JsonValue::as_object_mut)
+                {
+                    for id in &owned_ids {
+                        let Some(current) = providers.get(id).cloned() else {
+                            continue;
+                        };
+                        let matched = find(&mut (0..ours.len()), position, &|j| {
+                            !used_providers.contains(&(j, id.clone()))
+                                && ours[j].get(id) == Some(&current)
+                        });
+                        let Some(j) = matched else {
+                            preserved = true;
+                            continue;
+                        };
+                        used_providers.insert((j, id.clone()));
+                        created |= j >= theirs.len();
+                        match theirs.get(j).and_then(|providers| providers.get(id)) {
+                            Some(value) => {
+                                providers.insert(id.clone(), value.clone());
+                            }
+                            None => {
+                                providers.remove(id);
                             }
                         }
-                        (Some(_), _) => preserved = true,
-                        (None, _) => {}
                     }
-                    if providers.is_empty() && !existed {
+                    if providers.is_empty() && created {
                         if let Some(config) = row["config"].as_object_mut() {
                             config.remove("providers");
                         }
@@ -879,28 +1063,67 @@ pub(crate) fn restore_profile_patch(
                 let empty_config = row["config"]
                     .as_object()
                     .is_none_or(|config| config.is_empty());
-                if empty_config && !existed {
+                if empty_config && created {
                     now.remove(index);
                     continue;
                 }
             } else if entry.as_deref() == Some(DEFAULT_MODEL_ENTRY) {
-                let k = default_index;
-                default_index += 1;
-                if default_ours.get(k) == Some(&row["config"]) {
-                    match default_theirs.get(k) {
-                        None => {
-                            now.remove(index);
-                            continue;
-                        }
-                        Some(JsonValue::Null) => {
-                            if let Some(row) = row.as_object_mut() {
-                                row.remove("config");
+                let position = default_position;
+                default_position += 1;
+                let current = pick(&row["config"]);
+                // Only `provider` and `model` are ours; another field the user
+                // changed since (`reasoningEffort`) does not make it theirs.
+                let matched = find(&mut (0..default_ours.len()), position, &|j| {
+                    !used_defaults.contains(&j) && pick(&default_ours[j]) == current
+                });
+                match matched {
+                    Some(j) => {
+                        used_defaults.insert(j);
+                        match default_theirs.get(j) {
+                            // A row we added: the entry falls back to its default.
+                            None => {
+                                now.remove(index);
+                                continue;
+                            }
+                            Some(JsonValue::Null) => {
+                                if let Some(row) = row.as_object_mut() {
+                                    row.remove("config");
+                                }
+                            }
+                            Some(theirs) => {
+                                if let Some(config) = row["config"].as_object_mut() {
+                                    for field in ["provider", "model"] {
+                                        match theirs.get(field) {
+                                            Some(value) => {
+                                                config.insert(field.into(), value.clone());
+                                            }
+                                            None => {
+                                                config.remove(field);
+                                            }
+                                        }
+                                    }
+                                    // Activation dropped an effort that belonged
+                                    // to their model; it comes back unless the
+                                    // user has set one since.
+                                    if let Some(effort) = theirs.get("reasoningEffort") {
+                                        if default_ours[j].get("reasoningEffort").is_none() {
+                                            config
+                                                .entry("reasoningEffort")
+                                                .or_insert_with(|| effort.clone());
+                                        }
+                                    }
+                                }
                             }
                         }
-                        Some(value) => row["config"] = value.clone(),
                     }
-                } else if row["config"]["provider"] == "yeschoy" {
-                    preserved = true;
+                    None => {
+                        if row["config"]["provider"]
+                            .as_str()
+                            .is_some_and(is_owned_provider_id)
+                        {
+                            preserved = true;
+                        }
+                    }
                 }
             }
             index += 1;
@@ -937,7 +1160,6 @@ fn entry_rows<'a>(rows: &'a [JsonValue], id: &'a str) -> impl Iterator<Item = &'
 pub(crate) fn strip_owned_patch(bytes: &[u8]) -> Result<Vec<u8>, ()> {
     let mut rows = parse_patch(Some(bytes))?;
     let original = rows.clone();
-    let reference = Value::String(KEY_REFERENCE.into());
     rows.retain_mut(|row| {
         if is_entry_row(row, LLM_ENTRY) {
             let Some(providers) = row
@@ -948,13 +1170,18 @@ pub(crate) fn strip_owned_patch(bytes: &[u8]) -> Result<Vec<u8>, ()> {
                 return true;
             };
             let ours = providers
-                .get("yeschoy")
-                .and_then(|provider| provider.get("apiKeyEnv"))
-                == Some(&reference);
-            if !ours {
+                .iter()
+                .filter_map(|(id, provider)| {
+                    let id = id.as_str()?;
+                    is_owned_provider(id, provider).then(|| id.to_owned())
+                })
+                .collect::<Vec<_>>();
+            if ours.is_empty() {
                 return true;
             }
-            providers.remove("yeschoy");
+            for id in ours {
+                providers.remove(id.as_str());
+            }
             if providers.is_empty() {
                 if let Some(config) = row.get_mut("config").and_then(Value::as_mapping_mut) {
                     config.remove("providers");
@@ -964,10 +1191,10 @@ pub(crate) fn strip_owned_patch(bytes: &[u8]) -> Result<Vec<u8>, ()> {
                 .and_then(Value::as_mapping)
                 .is_some_and(|config| !config.is_empty())
         } else if is_entry_row(row, DEFAULT_MODEL_ENTRY) {
-            row.get("config")
+            !row.get("config")
                 .and_then(|config| config.get("provider"))
                 .and_then(Value::as_str)
-                != Some("yeschoy")
+                .is_some_and(is_owned_provider_id)
         } else {
             true
         }
@@ -1037,25 +1264,34 @@ pub(crate) fn restore_credentials(
         }
     };
     Some((|| {
-        let theirs = before
-            .map(parse)
-            .transpose()?
-            .and_then(|value| value["refs"].get(KEY_REFERENCE).cloned());
-        let ours = parse(after)?["refs"].get(KEY_REFERENCE).cloned();
+        let theirs = before.map(parse).transpose()?.unwrap_or(JsonValue::Null);
+        let ours = parse(after)?;
         let mut now = parse(current)?;
         let mut preserved = false;
+        // One reference per billing group: every one of ours we wrote.
+        let references = ours["refs"]
+            .as_object()
+            .into_iter()
+            .flat_map(|refs| refs.keys())
+            .filter(|name| is_owned_reference(name))
+            .cloned()
+            .collect::<Vec<_>>();
         if let Some(refs) = now.get_mut("refs").and_then(JsonValue::as_object_mut) {
-            match (refs.get(KEY_REFERENCE), &ours) {
-                (Some(current), Some(ours)) if current == ours => match &theirs {
-                    Some(value) => {
-                        refs.insert(KEY_REFERENCE.into(), value.clone());
+            for name in &references {
+                match (refs.get(name), ours["refs"].get(name)) {
+                    (Some(current), Some(ours)) if current == ours => {
+                        match theirs["refs"].get(name) {
+                            Some(value) => {
+                                refs.insert(name.clone(), value.clone());
+                            }
+                            None => {
+                                refs.remove(name);
+                            }
+                        }
                     }
-                    None => {
-                        refs.remove(KEY_REFERENCE);
-                    }
-                },
-                (Some(_), _) => preserved = true,
-                (None, _) => {}
+                    (Some(_), _) => preserved = true,
+                    (None, _) => {}
+                }
             }
             if refs.is_empty() {
                 if let Some(document) = now.as_object_mut() {
@@ -1113,13 +1349,13 @@ fn validated_loopback_url(line: &str) -> Option<String> {
 
 async fn start_process(
     installation: &ResolvedInstallation,
-    key: &str,
+    keys: &[(String, String)],
     identity: [u8; 32],
 ) -> Result<DshRuntime, AdapterFailure> {
     let mut command = Command::new(&installation.path);
     command
         .args(start_arguments())
-        .env(KEY_REFERENCE, key)
+        .envs(keys.iter().map(|(name, value)| (name, value)))
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
@@ -1171,11 +1407,23 @@ async fn start_process(
     })
 }
 
+/// Each billing group's reference and key, for the process environment.
+pub(crate) fn key_environment(
+    credential: &crate::tool_credentials::ToolCredential,
+) -> Result<Vec<(String, String)>, AdapterFailure> {
+    Ok(groups(&credential.model_id, &routes(credential))
+        .map_err(|_| AdapterFailure::LaunchFailed)?
+        .into_iter()
+        .map(|group| (group.reference, group.key))
+        .collect())
+}
+
 pub(crate) async fn open_existing(
     state: &DshRuntimeState,
     installation: &ResolvedInstallation,
-    key: &str,
+    credential: &crate::tool_credentials::ToolCredential,
 ) -> Result<(), AdapterFailure> {
+    let keys = key_environment(credential)?;
     let home = super::user_home().ok_or(AdapterFailure::LaunchFailed)?;
     // Only the location: whether the settings in it are right was decided by
     // validation before Open was offered. Requiring `settings.yaml` here is
@@ -1187,8 +1435,8 @@ pub(crate) async fn open_existing(
         .ok_or(AdapterFailure::LaunchFailed)?;
     // Fingerprint only in native memory: a changed credential, installation
     // or home cannot accidentally reuse a stale process.
-    let identity = runtime_identity(&installation.path, &patch, key);
-    let url = state.ensure_running(installation, key, identity).await?;
+    let identity = runtime_identity(&installation.path, &patch, &keys);
+    let url = state.ensure_running(installation, &keys, identity).await?;
     open_browser(&url)
 }
 
@@ -1196,15 +1444,19 @@ pub(crate) async fn open_existing(
 ///
 /// Both 0.1 and 0.2 watch the profile patch and reload model settings on the
 /// next request, so a catalog, default model or endpoint change does not end a
-/// live session. The key is different: it reaches DSH through the process
+/// live session. The keys are different: they reach DSH through the process
 /// environment, which only a new process gets.
-fn runtime_identity(installation: &Path, patch: &Path, key: &str) -> [u8; 32] {
+fn runtime_identity(installation: &Path, patch: &Path, keys: &[(String, String)]) -> [u8; 32] {
     let mut fingerprint = Sha256::new();
-    for part in [
-        installation.to_string_lossy().as_bytes(),
-        patch.to_string_lossy().as_bytes(),
-        key.as_bytes(),
-    ] {
+    let paths = [
+        installation.to_string_lossy().into_owned(),
+        patch.to_string_lossy().into_owned(),
+    ];
+    let parts = paths.iter().map(String::as_bytes).chain(
+        keys.iter()
+            .flat_map(|(name, value)| [name.as_bytes(), value.as_bytes()]),
+    );
+    for part in parts {
         fingerprint.update((part.len() as u64).to_le_bytes());
         fingerprint.update(part);
     }
@@ -1253,10 +1505,102 @@ fn open_browser(_url: &str) -> Result<(), AdapterFailure> {
 mod tests {
     use super::*;
 
+    fn routes_for(ids: &[String], key: &str) -> Vec<DshRoute> {
+        ids.iter()
+            .map(|id| DshRoute {
+                model_id: id.clone(),
+                billing_group: String::new(),
+                key: key.to_owned(),
+            })
+            .collect()
+    }
+
+    fn patch_ids(
+        existing: Option<&[u8]>,
+        origin: &str,
+        model: &str,
+        ids: &[String],
+    ) -> Result<Vec<u8>, ()> {
+        render_profile_patch(
+            existing,
+            origin,
+            model,
+            &groups(model, &routes_for(ids, "sk-test"))?,
+        )
+    }
+
+    fn catalog_ids(
+        existing: Option<&[u8]>,
+        origin: &str,
+        model: &str,
+        ids: &[String],
+    ) -> Result<Vec<u8>, ()> {
+        render_catalog(
+            existing,
+            origin,
+            model,
+            &groups(model, &routes_for(ids, "sk-test"))?,
+        )
+    }
+
+    fn prepare_ids(
+        root: &Path,
+        profile: DshProfile,
+        origin: &str,
+        model: &str,
+        ids: &[String],
+        key: Option<&str>,
+    ) -> Result<Prepared, AdapterFailure> {
+        prepare_in(
+            root,
+            profile,
+            origin,
+            model,
+            &routes_for(ids, key.unwrap_or("sk-test")),
+        )
+    }
+
+    fn credentials_for(existing: Option<&[u8]>, key: &str) -> Result<Vec<u8>, ()> {
+        let mut groups = single("m");
+        groups[0].key = key.to_owned();
+        render_credentials(existing, &groups)
+    }
+
+    fn one_key(key: &str) -> Vec<(String, String)> {
+        vec![(KEY_REFERENCE.to_owned(), key.to_owned())]
+    }
+
+    fn identity_for(installation: &Path, patch: &Path, key: &str) -> [u8; 32] {
+        runtime_identity(installation, patch, &one_key(key))
+    }
+
+    // The process fixtures that use these are POSIX shell scripts.
+    #[cfg(unix)]
+    impl DshRuntimeState {
+        async fn ensure_running_key(
+            &self,
+            installation: &ResolvedInstallation,
+            key: &str,
+            identity: [u8; 32],
+        ) -> Result<String, AdapterFailure> {
+            self.ensure_running(installation, &one_key(key), identity)
+                .await
+        }
+    }
+
+    #[cfg(unix)]
+    async fn start_process_key(
+        installation: &ResolvedInstallation,
+        key: &str,
+        identity: [u8; 32],
+    ) -> Result<DshRuntime, AdapterFailure> {
+        start_process(installation, &one_key(key), identity).await
+    }
+
     #[test]
     fn ru043_dsh_catalog_efforts_preserve_existing_budget() {
         let existing = b"llm-pi-ai:\n  providers:\n    yeschoy:\n      reasoning: low\n      models:\n        - id: deepseek-v4-flash\n          maxTokens: 4096\n          contextWindow: 65536\n";
-        let bytes = render_catalog(
+        let bytes = catalog_ids(
             Some(existing),
             "http://127.0.0.1:15730/dsh_web",
             "deepseek-v4-flash",
@@ -1284,7 +1628,7 @@ mod tests {
     fn ru042_dsh_catalog_default_change_preserves_runtime_identity() {
         let root = common::temporary_working_directory("dsh-model-set").unwrap();
         let ids = vec!["model-a".into(), "model-b".into()];
-        let mut prepared = prepare_in(
+        let mut prepared = prepare_ids(
             &root,
             DshProfile::Web,
             "https://yeschoy.com",
@@ -1296,7 +1640,7 @@ mod tests {
         prepared.commit().unwrap();
         let path = prepared.patch_path.clone();
         let installation = root.join("synthetic-dsh");
-        let before = runtime_identity(&installation, &path, "synthetic-local");
+        let before = identity_for(&installation, &path, "synthetic-local");
 
         let mut rows = patch_rows(&path);
         let default = rows
@@ -1314,12 +1658,9 @@ mod tests {
         // Catalog and default changes are reloaded live, the key is not.
         assert_eq!(
             before,
-            runtime_identity(&installation, &path, "synthetic-local")
+            identity_for(&installation, &path, "synthetic-local")
         );
-        assert_ne!(
-            before,
-            runtime_identity(&installation, &path, "rotated-local")
-        );
+        assert_ne!(before, identity_for(&installation, &path, "rotated-local"));
 
         let default = rows
             .as_array_mut()
@@ -1340,16 +1681,16 @@ mod tests {
         let installation = fixture.installation();
         let config = installation.path.with_extension("yml");
         // Reconnecting with another catalog keeps the same key and patch.
-        let a = runtime_identity(&installation.path, &config, "synthetic-local");
-        let b = runtime_identity(&installation.path, &config, "synthetic-local");
+        let a = identity_for(&installation.path, &config, "synthetic-local");
+        let b = identity_for(&installation.path, &config, "synthetic-local");
         let state = DshRuntimeState::default();
         state
-            .ensure_running(&installation, "synthetic-local", a)
+            .ensure_running_key(&installation, "synthetic-local", a)
             .await
             .unwrap();
         let pid = state.runtime.lock().await.as_ref().unwrap().child.id();
         state
-            .ensure_running(&installation, "synthetic-local", b)
+            .ensure_running_key(&installation, "synthetic-local", b)
             .await
             .unwrap();
         assert_eq!(state.runtime.lock().await.as_ref().unwrap().child.id(), pid);
@@ -1370,8 +1711,8 @@ mod tests {
         let installation = ResolvedInstallation { path };
         let state = DshRuntimeState::default();
         let (a, b) = tokio::join!(
-            state.ensure_running(&installation, "synthetic-key", [1; 32]),
-            state.ensure_running(&installation, "synthetic-key", [1; 32]),
+            state.ensure_running_key(&installation, "synthetic-key", [1; 32]),
+            state.ensure_running_key(&installation, "synthetic-key", [1; 32]),
         );
         assert_eq!(a.unwrap(), b.unwrap());
         let first_pid = state
@@ -1384,7 +1725,7 @@ mod tests {
             .id()
             .unwrap();
         state
-            .ensure_running(&installation, "synthetic-key", [1; 32])
+            .ensure_running_key(&installation, "synthetic-key", [1; 32])
             .await
             .unwrap();
         assert_eq!(
@@ -1402,7 +1743,7 @@ mod tests {
             .await
             .unwrap();
         state
-            .ensure_running(&installation, "synthetic-key", [1; 32])
+            .ensure_running_key(&installation, "synthetic-key", [1; 32])
             .await
             .unwrap();
         let second_pid = state
@@ -1416,7 +1757,7 @@ mod tests {
             .unwrap();
         assert_ne!(first_pid, second_pid);
         state
-            .ensure_running(&installation, "synthetic-new-key", [2; 32])
+            .ensure_running_key(&installation, "synthetic-new-key", [2; 32])
             .await
             .unwrap();
         assert_ne!(
@@ -1431,7 +1772,7 @@ mod tests {
     #[test]
     fn dsh_existing_validation_rejects_changed_destination_without_writing() {
         let root = common::temporary_working_directory("dsh-existing").unwrap();
-        let mut prepared = prepare_in(
+        let mut prepared = prepare_ids(
             &root,
             DshProfile::Web,
             "https://yeschoy.com",
@@ -1475,7 +1816,7 @@ mod tests {
     provider: deepseek-official
     model: deepseek-pro
 "#;
-        let bytes = render_profile_patch(
+        let bytes = patch_ids(
             Some(before),
             "https://yeschoy.com",
             "glm-5.3",
@@ -1501,32 +1842,25 @@ mod tests {
 
     #[test]
     fn profile_patch_is_created_with_named_rows_and_other_shapes_are_refused() {
-        let bytes = render_profile_patch(None, "https://yeschoy.com", "m", &["m".into()]).unwrap();
+        let bytes = patch_ids(None, "https://yeschoy.com", "m", &["m".into()]).unwrap();
         let rows: JsonValue = serde_yaml::from_slice(&bytes).unwrap();
         assert_eq!(rows[0]["id"], LLM_ENTRY);
         assert_eq!(rows[0]["name"], LLM_PLUGIN);
         assert_eq!(rows[1]["id"], DEFAULT_MODEL_ENTRY);
         assert_eq!(rows[1]["name"], DEFAULT_MODEL_PLUGIN);
         for empty in [&b""[..], b"   \n", b"~\n", b"[]\n"] {
-            assert!(
-                render_profile_patch(Some(empty), "https://yeschoy.com", "m", &["m".into()])
-                    .is_ok()
-            );
+            assert!(patch_ids(Some(empty), "https://yeschoy.com", "m", &["m".into()]).is_ok());
         }
         for foreign in [
             &b"llm-pi-ai: {}\n"[..],
             b"- id: llm-pi-ai\n  config: [1]\n",
             b"- [\n",
         ] {
-            assert!(
-                render_profile_patch(Some(foreign), "https://yeschoy.com", "m", &["m".into()])
-                    .is_err()
-            );
+            assert!(patch_ids(Some(foreign), "https://yeschoy.com", "m", &["m".into()]).is_err());
         }
         // An `insert` row adds entries; it is not the entry's configuration.
         let insert = b"- id: llm-pi-ai\n  insert: [{name: x}]\n";
-        let bytes =
-            render_profile_patch(Some(insert), "https://yeschoy.com", "m", &["m".into()]).unwrap();
+        let bytes = patch_ids(Some(insert), "https://yeschoy.com", "m", &["m".into()]).unwrap();
         let rows: JsonValue = serde_yaml::from_slice(&bytes).unwrap();
         assert!(rows[0].get("config").is_none());
         assert_eq!(rows[1]["id"], LLM_ENTRY);
@@ -1536,7 +1870,7 @@ mod tests {
     fn settings_yaml_is_written_only_while_it_exists_and_may_disappear() {
         let root = common::temporary_working_directory("dsh-settings-layer").unwrap();
         let ids = vec!["m".to_string()];
-        let prepared = prepare_in(
+        let prepared = prepare_ids(
             &root,
             DshProfile::Web,
             "https://yeschoy.com",
@@ -1555,7 +1889,7 @@ mod tests {
             "agent-default-model:\n  provider: deepseek-official\n  model: deepseek-flash\n",
         )
         .unwrap();
-        let mut prepared = prepare_in(
+        let mut prepared = prepare_ids(
             &root,
             DshProfile::Web,
             "https://yeschoy.com",
@@ -1582,7 +1916,7 @@ mod tests {
         std::fs::create_dir_all(&profile).unwrap();
         let lock = profile.join("package.json.lock");
         std::fs::write(&lock, "1\n").unwrap();
-        let mut prepared = prepare_in(
+        let mut prepared = prepare_ids(
             &root,
             DshProfile::Web,
             "https://yeschoy.com",
@@ -1616,7 +1950,7 @@ mod tests {
         )
         .unwrap();
         let ids = vec!["m".to_string()];
-        let mut prepared = prepare_in(
+        let mut prepared = prepare_ids(
             &root,
             DshProfile::Desktop,
             "https://yeschoy.com",
@@ -1655,7 +1989,7 @@ mod tests {
         assert!(prepared.validate_existing().is_ok());
 
         // A rotated key is a changed configuration, not a silent success.
-        let rotated = prepare_in(
+        let rotated = prepare_ids(
             &root,
             DshProfile::Desktop,
             "https://yeschoy.com",
@@ -1665,23 +1999,29 @@ mod tests {
         )
         .unwrap();
         assert!(rotated.validate_existing().is_err());
-        // The web profile never carries a key, the desktop one always does.
-        assert!(prepare_in(
-            &root,
-            DshProfile::Desktop,
-            "https://yeschoy.com",
-            "m",
-            &ids,
-            None
-        )
-        .is_err());
-        assert!(prepare_in(
+        // The web profile never writes the credentials file: its keys go into
+        // the environment of the process this app starts. An empty key is
+        // refused rather than written.
+        let web = prepare_ids(
             &root,
             DshProfile::Web,
             "https://yeschoy.com",
             "m",
             &ids,
-            Some("k")
+            None,
+        )
+        .unwrap();
+        assert!(web
+            .changes()
+            .iter()
+            .all(|change| !change.path.ends_with(CREDENTIALS_FILENAME)));
+        assert!(prepare_ids(
+            &root,
+            DshProfile::Desktop,
+            "https://yeschoy.com",
+            "m",
+            &ids,
+            Some("")
         )
         .is_err());
         std::fs::remove_dir_all(root).unwrap();
@@ -1689,24 +2029,24 @@ mod tests {
 
     #[test]
     fn credentials_render_refuses_layouts_dsh_itself_refuses() {
-        let created = render_credentials(None, "sk-ours").unwrap();
+        let created = credentials_for(None, "sk-ours").unwrap();
         let value: JsonValue = serde_yaml::from_slice(&created).unwrap();
         assert_eq!(
             value,
             json!({"version": 1, "refs": {KEY_REFERENCE: "sk-ours"}})
         );
-        assert!(render_credentials(Some(b"\n"), "sk-ours").is_ok());
+        assert!(credentials_for(Some(b"\n"), "sk-ours").is_ok());
         // The pre-release flat layout, a future version, a non-mapping.
-        assert!(render_credentials(Some(b"DEEPSEEK_API_KEY: sk\n"), "sk-ours").is_err());
-        assert!(render_credentials(Some(b"version: 2\nrefs: {}\n"), "sk-ours").is_err());
-        assert!(render_credentials(Some(b"- a\n"), "sk-ours").is_err());
-        assert!(render_credentials(None, "").is_err());
+        assert!(credentials_for(Some(b"DEEPSEEK_API_KEY: sk\n"), "sk-ours").is_err());
+        assert!(credentials_for(Some(b"version: 2\nrefs: {}\n"), "sk-ours").is_err());
+        assert!(credentials_for(Some(b"- a\n"), "sk-ours").is_err());
+        assert!(credentials_for(None, "").is_err());
     }
 
     #[test]
     fn restoring_credentials_takes_back_only_our_ref() {
         let path = Path::new("/x/.credentials.yaml");
-        let after = render_credentials(None, "sk-ours").unwrap();
+        let after = credentials_for(None, "sk-ours").unwrap();
         // Created by us and untouched: the file goes.
         assert_eq!(
             restore_credentials(path, None, &after, &after)
@@ -1727,7 +2067,7 @@ mod tests {
         assert!(!preserved);
         // A value that was there before comes back.
         let before = b"version: 1\nrefs:\n  YESCHOY_DSH_API_KEY: sk-older\n";
-        let after = render_credentials(Some(before), "sk-ours").unwrap();
+        let after = credentials_for(Some(before), "sk-ours").unwrap();
         let (document, _) = restore_credentials(path, Some(before), &after, &after)
             .unwrap()
             .unwrap();
@@ -1753,7 +2093,7 @@ mod tests {
         let lock = profile.join("lock");
         std::fs::write(&lock, "1\n").unwrap();
         let ids = vec!["m".to_string()];
-        let mut prepared = prepare_in(
+        let mut prepared = prepare_ids(
             &root,
             DshProfile::Desktop,
             "https://yeschoy.com",
@@ -1772,7 +2112,7 @@ mod tests {
         // The web profile has no such lock.
         std::fs::create_dir_all(root.join("profiles/web")).unwrap();
         std::fs::write(root.join("profiles/web/lock"), "1\n").unwrap();
-        prepare_in(
+        prepare_ids(
             &root,
             DshProfile::Web,
             "https://yeschoy.com",
@@ -1788,7 +2128,7 @@ mod tests {
 
     #[test]
     fn stripping_removes_only_what_this_app_writes() {
-        let ours = render_profile_patch(
+        let ours = patch_ids(
             Some(b"- id: llm-pi-ai\n  config:\n    providers:\n      local: {baseURL: 'http://127.0.0.1:11434/v1'}\n- id: ui-settings\n  config: {theme: dark}\n"),
             "https://yeschoy.com",
             "m",
@@ -1813,8 +2153,7 @@ mod tests {
     #[test]
     fn repeated_rows_are_restored_against_their_own_snapshots() {
         let before = b"- id: agent-default-model\n  config: {provider: a, model: one}\n- id: llm-pi-ai\n  config: {providers: {yeschoy: {reasoning: low}}}\n- id: agent-default-model\n  config: {provider: b, model: two}\n- id: llm-pi-ai\n  config: {providers: {yeschoy: {reasoning: high}}}\n";
-        let after =
-            render_profile_patch(Some(before), "https://yeschoy.com", "m", &["m".into()]).unwrap();
+        let after = patch_ids(Some(before), "https://yeschoy.com", "m", &["m".into()]).unwrap();
         // Any edit elsewhere sends restore down the semantic path.
         let mut now: JsonValue = serde_yaml::from_slice(&after).unwrap();
         now.as_array_mut()
@@ -1834,8 +2173,7 @@ mod tests {
     #[test]
     fn an_insert_row_is_not_a_configuration_row_we_found() {
         let before = b"- id: llm-pi-ai\n  insert: [{name: extra}]\n";
-        let after =
-            render_profile_patch(Some(before), "https://yeschoy.com", "m", &["m".into()]).unwrap();
+        let after = patch_ids(Some(before), "https://yeschoy.com", "m", &["m".into()]).unwrap();
         let mut now: JsonValue = serde_yaml::from_slice(&after).unwrap();
         now.as_array_mut()
             .unwrap()
@@ -1883,6 +2221,230 @@ mod tests {
         std::fs::remove_dir_all(root).unwrap();
     }
 
+    fn two_groups() -> Vec<DshRoute> {
+        [
+            ("glm-5.3", "默认分组", "sk-default"),
+            ("deepseek-v4-flash", "国模特价分组", "sk-cheap"),
+            ("glm-5.3-air", "默认分组", "sk-default"),
+        ]
+        .into_iter()
+        .map(|(model, group, key)| DshRoute {
+            model_id: model.into(),
+            billing_group: group.into(),
+            key: key.into(),
+        })
+        .collect()
+    }
+
+    #[test]
+    fn each_billing_group_is_its_own_provider_with_its_own_key() {
+        let root = common::temporary_working_directory("dsh-groups").unwrap();
+        let mut prepared = prepare_in(
+            &root,
+            DshProfile::Desktop,
+            "https://yeschoy.com",
+            "glm-5.3",
+            &two_groups(),
+        )
+        .unwrap();
+        prepared.commit().unwrap();
+        let rows = patch_rows(&prepared.patch_path);
+        let providers = &rows[0]["config"]["providers"];
+        assert_eq!(providers["yeschoy"]["apiKeyEnv"], KEY_REFERENCE);
+        let ids = |provider: &JsonValue| {
+            provider["models"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|model| model["id"].as_str().unwrap().to_owned())
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(ids(&providers["yeschoy"]), ["glm-5.3", "glm-5.3-air"]);
+        assert_eq!(providers["yeschoy-2"]["apiKeyEnv"], "YESCHOY_DSH_API_KEY_2");
+        assert_eq!(
+            providers["yeschoy-2"]["displayName"],
+            "野菜API · 国模特价分组"
+        );
+        assert_eq!(ids(&providers["yeschoy-2"]), ["deepseek-v4-flash"]);
+        assert_eq!(rows[1]["config"]["provider"], "yeschoy");
+        let credentials: JsonValue =
+            serde_yaml::from_slice(&std::fs::read(root.join(CREDENTIALS_FILENAME)).unwrap())
+                .unwrap();
+        assert_eq!(credentials["refs"][KEY_REFERENCE], "sk-default");
+        assert_eq!(credentials["refs"]["YESCHOY_DSH_API_KEY_2"], "sk-cheap");
+        // Switching models inside the connection in DSH's own picker is fine.
+        let mut rows = rows;
+        rows[1]["config"] = json!({"provider": "yeschoy-2", "model": "deepseek-v4-flash"});
+        std::fs::write(&prepared.patch_path, serde_yaml::to_string(&rows).unwrap()).unwrap();
+        assert!(prepared.validate_existing().is_ok());
+
+        // Reconnecting with one group takes the other group's provider and
+        // reference out, not just leaves them stale.
+        let single = two_groups().into_iter().take(1).collect::<Vec<_>>();
+        let mut prepared = prepare_in(
+            &root,
+            DshProfile::Desktop,
+            "https://yeschoy.com",
+            "glm-5.3",
+            &single,
+        )
+        .unwrap();
+        prepared.commit().unwrap();
+        let rows = patch_rows(&prepared.patch_path);
+        assert!(rows[0]["config"]["providers"].get("yeschoy-2").is_none());
+        let credentials: JsonValue =
+            serde_yaml::from_slice(&std::fs::read(root.join(CREDENTIALS_FILENAME)).unwrap())
+                .unwrap();
+        assert!(credentials["refs"].get("YESCHOY_DSH_API_KEY_2").is_none());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn the_web_runtime_gets_every_groups_key() {
+        let credential = crate::tool_credentials::ToolCredential {
+            api_key: "sk-default".into(),
+            origin: "https://yeschoy.com".into(),
+            model_id: "glm-5.3".into(),
+            local_gateway_token: None,
+            codex_transport: None,
+            claude_transport: None,
+            models: two_groups()
+                .into_iter()
+                .map(|route| crate::tool_credentials::ToolModelRoute {
+                    model_id: route.model_id,
+                    billing_group: route.billing_group,
+                    api_key: route.key,
+                    origin: "https://yeschoy.com".into(),
+                    claude_transport: None,
+                    codex_transport: None,
+                })
+                .collect(),
+        };
+        assert_eq!(
+            key_environment(&credential).unwrap(),
+            [
+                (KEY_REFERENCE.to_owned(), "sk-default".to_owned()),
+                ("YESCHOY_DSH_API_KEY_2".to_owned(), "sk-cheap".to_owned()),
+            ]
+        );
+    }
+
+    #[test]
+    fn desktop_never_journals_the_shared_settings_file() {
+        let root = common::temporary_working_directory("dsh-desktop-settings").unwrap();
+        std::fs::write(root.join("settings.yaml"), "a: 1\n").unwrap();
+        let desktop = prepare_ids(
+            &root,
+            DshProfile::Desktop,
+            "https://yeschoy.com",
+            "m",
+            &["m".into()],
+            Some("k"),
+        )
+        .unwrap();
+        assert!(desktop
+            .changes()
+            .iter()
+            .all(|change| !change.path.ends_with("settings.yaml")));
+        let web = prepare_ids(
+            &root,
+            DshProfile::Web,
+            "https://yeschoy.com",
+            "m",
+            &["m".into()],
+            None,
+        )
+        .unwrap();
+        assert!(web
+            .changes()
+            .iter()
+            .any(|change| change.path.ends_with("settings.yaml")));
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn restore_still_finds_our_rows_after_one_is_inserted_ahead() {
+        let before = b"- id: llm-pi-ai\n  config: {providers: {yeschoy: {reasoning: low}}}\n- id: agent-default-model\n  config: {provider: a, model: one}\n";
+        let after = patch_ids(Some(before), "https://yeschoy.com", "m", &["m".into()]).unwrap();
+        let mut now: JsonValue = serde_yaml::from_slice(&after).unwrap();
+        // DSH's Models page added a row of its own in front of ours.
+        now.as_array_mut().unwrap().insert(
+            0,
+            json!({"id": "llm-pi-ai", "config": {"providers": {"local": {"baseURL": "x"}}}}),
+        );
+        let current = serde_yaml::to_string(&now).unwrap();
+        let (rows, preserved) = restored(Some(before), &after, current.as_bytes());
+        assert!(!preserved);
+        assert_eq!(
+            rows,
+            json!([
+                {"id": "llm-pi-ai", "config": {"providers": {"local": {"baseURL": "x"}}}},
+                {"id": "llm-pi-ai", "config": {"providers": {"yeschoy": {"reasoning": "low"}}}},
+                {"id": "agent-default-model", "config": {"provider": "a", "model": "one"}}
+            ])
+        );
+    }
+
+    #[test]
+    fn restore_takes_back_our_default_even_when_the_user_changed_its_effort() {
+        let before = b"- id: agent-default-model\n  config: {provider: a, model: one, reasoningEffort: max}\n";
+        let after = patch_ids(Some(before), "https://yeschoy.com", "m", &["m".into()]).unwrap();
+        let mut now: JsonValue = serde_yaml::from_slice(&after).unwrap();
+        let default = now
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|row| row["id"] == DEFAULT_MODEL_ENTRY)
+            .unwrap();
+        default["config"]["reasoningEffort"] = "low".into();
+        let current = serde_yaml::to_string(&now).unwrap();
+        let (rows, preserved) = restored(Some(before), &after, current.as_bytes());
+        assert!(!preserved);
+        let default = rows
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["id"] == DEFAULT_MODEL_ENTRY)
+            .unwrap();
+        // Ours goes back to theirs; the effort the user just chose stays.
+        assert_eq!(
+            default["config"],
+            json!({"provider": "a", "model": "one", "reasoningEffort": "low"})
+        );
+        // Untouched since, their own effort comes back too.
+        let (rows, _) = restored(Some(before), &after, &after);
+        let default = rows
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["id"] == DEFAULT_MODEL_ENTRY)
+            .unwrap();
+        assert_eq!(default["config"]["reasoningEffort"], "max");
+    }
+
+    #[test]
+    fn stripping_and_restoring_credentials_cover_every_group() {
+        let two = patch_ids(None, "https://yeschoy.com", "glm-5.3", &["glm-5.3".into()]).unwrap();
+        let mut rows: JsonValue = serde_yaml::from_slice(&two).unwrap();
+        rows[0]["config"]["providers"]["yeschoy-2"] =
+            json!({"apiKeyEnv": "YESCHOY_DSH_API_KEY_2", "baseURL": "https://yeschoy.com/v1"});
+        rows[1]["config"]["provider"] = "yeschoy-2".into();
+        let bytes = serde_yaml::to_string(&rows).unwrap();
+        let stripped: JsonValue =
+            serde_yaml::from_slice(&strip_owned_patch(bytes.as_bytes()).unwrap()).unwrap();
+        assert_eq!(stripped, json!([]));
+
+        let groups = groups("glm-5.3", &two_groups()).unwrap();
+        let after = render_credentials(None, &groups).unwrap();
+        let (document, _) =
+            restore_credentials(Path::new("/x/.credentials.yaml"), None, &after, &after)
+                .unwrap()
+                .unwrap();
+        assert_eq!(document, None);
+        assert!(!is_owned_reference("YESCHOY_DSH_API_KEY_X"));
+        assert!(is_owned_provider_id("yeschoy-12") && !is_owned_provider_id("yeschoy-local"));
+    }
+
     fn restored(before: Option<&[u8]>, after: &[u8], current: &[u8]) -> (JsonValue, bool) {
         let (rows, preserved) = restore_profile_patch(
             Path::new("/x/profiles/web/cordis.patch.yml"),
@@ -1897,7 +2459,7 @@ mod tests {
 
     #[test]
     fn restoring_the_patch_takes_back_only_what_we_own() {
-        let after = render_profile_patch(None, "https://yeschoy.com", "m", &["m".into()]).unwrap();
+        let after = patch_ids(None, "https://yeschoy.com", "m", &["m".into()]).unwrap();
         // Untouched since connecting: everything we added goes.
         let (rows, preserved) = restored(None, &after, &after);
         assert_eq!(rows, json!([]));
@@ -1923,8 +2485,7 @@ mod tests {
 
         // Values that were there before connecting come back.
         let before = b"- id: agent-default-model\n  config: {provider: deepseek-official, model: deepseek-flash}\n- id: llm-pi-ai\n  config: {providers: {yeschoy: {reasoning: low}}}\n";
-        let after =
-            render_profile_patch(Some(before), "https://yeschoy.com", "m", &["m".into()]).unwrap();
+        let after = patch_ids(Some(before), "https://yeschoy.com", "m", &["m".into()]).unwrap();
         let (rows, _) = restored(Some(before), &after, &after);
         let expected: JsonValue = serde_yaml::from_slice(before).unwrap();
         assert_eq!(rows, expected);
@@ -2069,7 +2630,7 @@ llm-pi-ai:
         let installation = ResolvedInstallation {
             path: discovered_wrapper,
         };
-        let mut runtime = start_process(&installation, "synthetic-key", [7; 32])
+        let mut runtime = start_process_key(&installation, "synthetic-key", [7; 32])
             .await
             .unwrap();
         assert_eq!(runtime.url, "http://127.0.0.1:43127/?token=fixture_token");
