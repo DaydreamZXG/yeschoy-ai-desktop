@@ -18,7 +18,7 @@
     "verify:catalog": "node scripts/qa/verify-model-catalog.mjs"
   },
   "keywords": [],
-  "author": "Jason Young",
+  "author": "YesChoy",
   "license": "MIT",
   "packageManager": "pnpm@10.12.3",
   "devDependencies": {
