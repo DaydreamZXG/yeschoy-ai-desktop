@@ -150,6 +150,7 @@ impl DshProfile {
 
 pub(crate) struct Prepared {
     transaction: FileTransaction,
+    profile: DshProfile,
     /// `$DSH_HOME/profiles/<profile>/cordis.patch.yml`, always written.
     patch_path: PathBuf,
     /// `$DSH_HOME/.credentials.yaml`, written for the Desktop profile only.
@@ -456,6 +457,18 @@ pub(crate) fn prepare_catalog(
     prepare_in(&root, DshProfile::Web, origin, model, model_ids, None)
 }
 
+/// The Harness home DeepSeek Harness Desktop itself resolves.
+///
+/// Desktop reads `DSH_HOME` from the environment it was launched with and
+/// deliberately does not take `DSH_*` names from the login shell
+/// (`LAUNCHER_OWNED_PREFIXES` in its `login-shell-environment.ts`). A Dock or
+/// Start-menu launch inherits the same session environment as this app, so this
+/// process's own value is Desktop's. The login shell's value, which `dsh web`
+/// does honour, would send the configuration to a directory Desktop never reads.
+fn desktop_dsh_home(home: &Path) -> Result<PathBuf, AdapterFailure> {
+    dsh_home(home, std::env::var_os("DSH_HOME"))
+}
+
 /// DeepSeek Harness Desktop: its own profile, and the key in DSH's credentials
 /// file, because nothing this app starts stands between Desktop and the relay.
 pub(crate) fn prepare_desktop(
@@ -464,7 +477,7 @@ pub(crate) fn prepare_desktop(
     model: &str,
     key: &str,
 ) -> Result<Prepared, AdapterFailure> {
-    let root = dsh_home(home, crate::shell_environment::var_os("DSH_HOME"))?;
+    let root = desktop_dsh_home(home)?;
     prepare_in(
         &root,
         DshProfile::Desktop,
@@ -483,7 +496,7 @@ pub(crate) fn prepare_desktop_catalog(
     key: &str,
 ) -> Result<Prepared, AdapterFailure> {
     crate::tool_adapters::common::validate_catalog(model, model_ids)?;
-    let root = dsh_home(home, crate::shell_environment::var_os("DSH_HOME"))?;
+    let root = desktop_dsh_home(home)?;
     prepare_in(
         &root,
         DshProfile::Desktop,
@@ -535,6 +548,7 @@ fn prepare_in(
     }
     Ok(Prepared {
         transaction,
+        profile,
         patch_path: patch_path.ok_or(parse_failed)?,
         credentials_path,
         settings_path,
@@ -582,10 +596,15 @@ fn render_credentials(existing: Option<&[u8]>, key: &str) -> Result<Vec<u8>, ()>
     to_yaml_bytes(&Value::Mapping(root))
 }
 
-/// DSH's cross-process writer locks: an exclusively created `<file>.lock`
-/// holding the writer's PID, removed when the write is done. Its config editor
-/// takes `<profile>/package.json.lock` around every patch write, and its
-/// credentials store `.credentials.yaml.lock` around every key change.
+/// DSH's cross-process writer locks: an exclusively created lock file holding
+/// the writer's PID, removed when the write is done.
+///
+/// - `<profile>/package.json.lock`: DSH's config editor, around every patch
+///   write (the Models page, the model picker).
+/// - `.credentials.yaml.lock`: DSH's credentials store, around every key change.
+/// - `profiles/desktop/lock`: DeepSeek Harness Desktop's own profile lock, held
+///   while it prepares the profile at startup and while its recovery renames
+///   the patch away. Desktop owns that profile, so it is honoured as well.
 struct ProfileLock(Vec<PathBuf>);
 
 impl ProfileLock {
@@ -597,21 +616,32 @@ impl ProfileLock {
             .ok_or(busy)?
             .join("package.json")];
         targets.extend(prepared.credentials_path.clone());
+        let mut locks = targets
+            .into_iter()
+            .map(|target| {
+                let mut lock = target.into_os_string();
+                lock.push(".lock");
+                PathBuf::from(lock)
+            })
+            .collect::<Vec<_>>();
+        if prepared.profile == DshProfile::Desktop {
+            if let Some(profile) = prepared.patch_path.parent() {
+                // Taken first, as Desktop takes it before touching the profile.
+                locks.insert(0, profile.join("lock"));
+            }
+        }
         let mut held = Self(Vec::new());
-        for target in targets {
+        for lock in locks {
             // A directory that does not exist yet has no DSH writing into it.
-            if target.parent().is_some_and(Path::is_dir) {
-                held.0.push(Self::take(&target)?);
+            if lock.parent().is_some_and(Path::is_dir) {
+                held.0.push(Self::take(lock)?);
             }
         }
         Ok(held)
     }
 
-    fn take(target: &Path) -> Result<PathBuf, AdapterFailure> {
+    fn take(lock: PathBuf) -> Result<PathBuf, AdapterFailure> {
         let busy = AdapterFailure::ConfigurationFailed("configuration_write_failed");
-        let mut lock = target.as_os_str().to_owned();
-        lock.push(".lock");
-        let lock = PathBuf::from(lock);
         let deadline = std::time::Instant::now() + LOCK_WAIT;
         let mut stale_removed = false;
         loop {
@@ -1609,6 +1639,48 @@ mod tests {
             .unwrap();
         assert!(preserved);
         assert!(restore_credentials(Path::new("/x/settings.yaml"), None, b"", b"").is_none());
+    }
+
+    #[test]
+    fn desktop_waits_for_its_own_profile_lock_too() {
+        let root = common::temporary_working_directory("dsh-desktop-lock").unwrap();
+        let profile = root.join("profiles/desktop");
+        std::fs::create_dir_all(&profile).unwrap();
+        // Desktop holds this while it prepares the profile or recovers it.
+        let lock = profile.join("lock");
+        std::fs::write(&lock, "1\n").unwrap();
+        let ids = vec!["m".to_string()];
+        let mut prepared = prepare_in(
+            &root,
+            DshProfile::Desktop,
+            "https://yeschoy.com",
+            "m",
+            &ids,
+            Some("k"),
+        )
+        .unwrap();
+        assert!(prepared.commit().is_err());
+        assert!(!prepared.patch_path.exists());
+        assert!(!root.join(CREDENTIALS_FILENAME).exists());
+        assert!(lock.exists(), "Desktop's lock is not ours to remove");
+        std::fs::remove_file(&lock).unwrap();
+        prepared.commit().unwrap();
+        assert!(!lock.exists(), "our hold on it is released");
+        // The web profile has no such lock.
+        std::fs::create_dir_all(root.join("profiles/web")).unwrap();
+        std::fs::write(root.join("profiles/web/lock"), "1\n").unwrap();
+        prepare_in(
+            &root,
+            DshProfile::Web,
+            "https://yeschoy.com",
+            "m",
+            &ids,
+            None,
+        )
+        .unwrap()
+        .commit()
+        .unwrap();
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     fn restored(before: Option<&[u8]>, after: &[u8], current: &[u8]) -> (JsonValue, bool) {
