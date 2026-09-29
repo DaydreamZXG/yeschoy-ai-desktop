@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { ConfigurationLineId } from "./preview";
 
 // PRD §3.2 定案：与 Rust 侧 tool_adapters::TARGETS / CONNECTION_TOOLS 保持
-// 一致（6 个已支持工具）。遗留 hermes/openclaw 已无适配器，禁止回加；
+// 一致（7 个已支持工具）。遗留 hermes/openclaw 已无适配器，禁止回加；
 // 增删工具须先改 appCatalog 展示源并通过强校验，再同步此处与 Rust。
 export const ACTIVATION_TOOL_IDS = [
   "claude_code",
@@ -11,6 +11,7 @@ export const ACTIVATION_TOOL_IDS = [
   "pi",
   "dsh_web",
   "workbuddy",
+  "dsh_desktop",
 ] as const;
 
 export type ActivationToolId = (typeof ACTIVATION_TOOL_IDS)[number];

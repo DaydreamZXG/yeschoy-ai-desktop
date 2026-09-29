@@ -99,6 +99,7 @@ type ApplicationSurfaceKey =
   | "surfaceCodexDesktop"
   | "surfacePi"
   | "surfaceDsh"
+  | "surfaceDshDesktop"
   | "surfaceWorkBuddy";
 
 interface ApplicationChoice {
@@ -153,6 +154,13 @@ const APPLICATIONS: readonly ApplicationChoice[] = [
     surface: "surfaceDsh",
     icon: dshIcon,
   },
+  {
+    id: "dsh_desktop",
+    toolId: "dsh_desktop",
+    displayName: "DeepSeek Harness",
+    surface: "surfaceDshDesktop",
+    icon: dshIcon,
+  },
 ];
 
 export type ConnectionLifecycleMode =
@@ -167,7 +175,8 @@ export function connectionLifecycleMode(
   if (toolId === "claude_desktop" || toolId === "codex_desktop")
     return "graceful_desktop_restart";
   if (toolId === "dsh_web") return "browser_launch";
-  if (toolId === "workbuddy") return "hot_reload_desktop";
+  if (toolId === "workbuddy" || toolId === "dsh_desktop")
+    return "hot_reload_desktop";
   return "new_terminal_session";
 }
 
@@ -180,6 +189,7 @@ export function connectionLifecycleNote(
     | "lifecycleBrowserLaunch"
     | "lifecycleTerminalSession"
     | "lifecycleHotReload"
+    | "lifecycleHotReloadDsh"
   > = configurationCopies.zh,
 ) {
   switch (connectionLifecycleMode(toolId)) {
@@ -190,7 +200,9 @@ export function connectionLifecycleNote(
     case "new_terminal_session":
       return copy.lifecycleTerminalSession;
     case "hot_reload_desktop":
-      return copy.lifecycleHotReload;
+      return toolId === "dsh_desktop"
+        ? copy.lifecycleHotReloadDsh
+        : copy.lifecycleHotReload;
   }
 }
 
@@ -283,6 +295,7 @@ export function writtenEndpoint(
       return `${rootUrl}/v1/chat/completions`;
     case "pi":
     case "dsh_web":
+    case "dsh_desktop":
       return `${rootUrl}/v1`;
   }
 }
@@ -327,6 +340,7 @@ function previewTool(toolId: ActivationToolId): ConfigurationToolId {
   if (toolId === "codex_desktop") return "codex";
   if (toolId === "pi") return "pi";
   if (toolId === "dsh_web") return "dsh";
+  if (toolId === "dsh_desktop") return "dsh_desktop";
   if (toolId === "workbuddy") return "workbuddy";
   return "claude";
 }
@@ -1070,6 +1084,11 @@ export function ConfigurationPreviewView({
             "{{favorites}}",
             (activation.models?.length ?? 1) > 1 ? g.favoritesConfigured : "",
           );
+        if (activationToolId === "dsh_desktop")
+          return g.readyDshDesktop.replace(
+            "{{favorites}}",
+            (activation.models?.length ?? 1) > 1 ? g.favoritesConfigured : "",
+          );
         return g.readyDefault
           .replace("{{app}}", resultContext?.app ?? application.displayName)
           .replace(
@@ -1331,7 +1350,9 @@ export function ConfigurationPreviewView({
           ? g.verifyingDsh
           : activationToolId === "workbuddy"
             ? g.verifyingWorkBuddy
-            : g.verifying;
+            : activationToolId === "dsh_desktop"
+              ? g.verifyingDshDesktop
+              : g.verifying;
   const activationProgressText = (() => {
     switch (activationProgress?.stage) {
       case "queued":

@@ -31,6 +31,7 @@ const TOOL_INFO: Record<
   pi: { previewId: "pi", appType: "pi" },
   claude_code: { previewId: "claude", appType: "claude" },
   workbuddy: { previewId: "workbuddy" },
+  dsh_desktop: { previewId: "dsh_desktop" },
 };
 
 const CONNECTED_STATES = ["connected", "changed", "legacy"] as const;

@@ -9,13 +9,13 @@ import type { ActivationToolId } from "../configuration/activation";
 /**
  * 工具清单唯一展示源（PRD §3.2 定案）。
  *
- * - `WORKBENCH_APPS`：已支持接入的应用。Claude Code / Claude Desktop / Codex / WorkBuddy / Pi / DSH web。
+ * - `WORKBENCH_APPS`：已支持接入的应用。Claude Code / Claude Desktop / Codex / WorkBuddy / DeepSeek Harness / Pi / DSH web。
  * - `COMING_SOON_APPS`：标注「即将支持」的应用，只展示、不提供接入入口。
  *
  * 遗留工具（hermes/openclaw）不属于 V1 范围，禁止回到这两个清单
  * （一致性由 appCatalog.test.ts 强校验）。`ACTIVATION_TOOL_IDS`
  * （activation.ts）是 Rust 扫描/接入协议契约，2026-09-14 起与展示层
- * 完全一致（6 个）；增删工具必须先改这里并通过强校验，再同步协议与 Rust。
+ * 完全一致（7 个）；增删工具必须先改这里并通过强校验，再同步协议与 Rust。
  */
 export const WORKBENCH_APPS: {
   id: ActivationToolId;
@@ -37,6 +37,11 @@ export const WORKBENCH_APPS: {
     id: "workbuddy",
     name: "WorkBuddy",
     icon: workbuddyIcon,
+  },
+  {
+    id: "dsh_desktop",
+    name: "DeepSeek Harness",
+    icon: dshIcon,
   },
   {
     id: "dsh_web",

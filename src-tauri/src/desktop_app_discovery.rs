@@ -211,6 +211,7 @@ fn discover_macos_candidates(spec: DesktopAppSpec) -> Vec<Candidate> {
         "claude_desktop" => &["Claude.app"],
         "codex_desktop" => &["ChatGPT.app", "Codex.app"],
         "workbuddy" => &["WorkBuddy.app"],
+        "dsh_desktop" => &["DeepSeek Harness.app"],
         _ => &[],
     };
     let mut roots = vec![(PathBuf::from("/Applications"), LocationHint::Applications)];
@@ -278,6 +279,7 @@ fn discover_windows_candidates(spec: DesktopAppSpec) -> Vec<Candidate> {
     for candidate in discover_windows_package_candidates(spec)
         .into_iter()
         .chain(discover_windows_uninstall_candidates(spec))
+        .chain(discover_windows_app_paths_candidates(spec))
     {
         accepted.entry(candidate.path.clone()).or_insert(candidate);
     }
@@ -334,6 +336,7 @@ fn windows_app_relative_executables(app_id: &str) -> &'static [&'static str] {
             "app\\WorkBuddy.exe",
             "WorkBuddy\\WorkBuddy.exe",
         ],
+        "dsh_desktop" => &["DeepSeek Harness.exe"],
         _ => &[],
     }
 }
@@ -759,6 +762,8 @@ fn windows_relative_paths(app_id: &str, program_files: bool) -> &'static [&'stat
             "WorkBuddy\\WorkBuddy.exe",
         ],
         ("workbuddy", true) => &["WorkBuddy\\WorkBuddy.exe"],
+        ("dsh_desktop", false) => &["Programs\\DeepSeek Harness\\DeepSeek Harness.exe"],
+        ("dsh_desktop", true) => &["DeepSeek Harness\\DeepSeek Harness.exe"],
         _ => &[],
     }
 }
@@ -813,7 +818,9 @@ fn windows_package_identity_matches(app_id: &str, identity: &str) -> bool {
 
 #[cfg(any(target_os = "windows", test))]
 fn windows_registered_name_matches(app_id: &str, name: &str, publisher: &str) -> bool {
-    let name = compact_windows_name(name);
+    // NSIS installers built by electron-builder register "<Product> <version>"
+    // unless told otherwise; comparing the whole string missed all of them.
+    let name = compact_windows_name(crate::windows_cli_locations::without_version_suffix(name));
     let compact_publisher = compact_windows_name(publisher);
     match app_id {
         "claude_desktop" => {
@@ -833,6 +840,12 @@ fn windows_registered_name_matches(app_id: &str, name: &str, publisher: &str) ->
                 && (compact_publisher.is_empty()
                     || compact_publisher.contains("tencent")
                     || publisher.contains("腾讯"))
+        }
+        "dsh_desktop" => {
+            name == "deepseekharness"
+                && (compact_publisher.is_empty()
+                    || compact_publisher.contains("deepseek")
+                    || publisher.contains("深度求索"))
         }
         _ => false,
     }
@@ -1060,6 +1073,61 @@ fn collect_windows_uninstall_candidates(
             accepted.insert(path, candidate);
         }
     }
+}
+
+/// Executables an installer may register under `App Paths`. Only GUI names:
+/// the identity check below rejects anything that is not the product anyway.
+#[cfg(any(target_os = "windows", test))]
+fn windows_app_paths_names(app_id: &str) -> &'static [&'static str] {
+    match app_id {
+        "claude_desktop" => &["Claude.exe"],
+        "codex_desktop" => &["Codex.exe", "ChatGPT.exe"],
+        "workbuddy" => &["WorkBuddy.exe"],
+        "dsh_desktop" => &["DeepSeek Harness.exe"],
+        _ => &[],
+    }
+}
+
+/// `App Paths` maps an executable name to its absolute path wherever it was
+/// installed, so it finds a program on D:\ that no fixed folder list covers
+/// and whose uninstall entry is named in a way we do not recognise.
+#[cfg(target_os = "windows")]
+fn discover_windows_app_paths_candidates(spec: DesktopAppSpec) -> Vec<Candidate> {
+    const APP_PATHS: &str = "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths";
+    let mut accepted: HashMap<PathBuf, Candidate> = HashMap::new();
+    for (hive_name, hive) in [("hkcu", &HKCU), ("hklm", &HKLM)] {
+        for view in [KEY_WOW64_64KEY, KEY_WOW64_32KEY] {
+            for name in windows_app_paths_names(spec.id) {
+                let Ok(key) =
+                    hive.open_subkey_with_flags(format!("{APP_PATHS}\\{name}"), KEY_READ | view)
+                else {
+                    continue;
+                };
+                let raw: String = key.get_value("").unwrap_or_default();
+                let path = parse_windows_display_icon(&raw)
+                    .map(PathBuf::from)
+                    .filter(|path| path.is_absolute() && path.is_file())
+                    .and_then(|path| std::fs::canonicalize(&path).ok())
+                    .filter(|path| windows_standalone_identity_matches(spec.id, path));
+                let Some(path) = path else {
+                    continue;
+                };
+                let version = windows_file_version(&path).unwrap_or_default();
+                accepted.entry(path.clone()).or_insert(Candidate {
+                    path: path.clone(),
+                    location_hint: if hive_name == "hkcu" {
+                        LocationHint::LocalAppData
+                    } else {
+                        LocationHint::ProgramFiles
+                    },
+                    bundle_identifier: String::new(),
+                    version,
+                    launch_target: DesktopLaunchTarget::WindowsExecutable(path),
+                });
+            }
+        }
+    }
+    accepted.into_values().collect()
 }
 
 #[cfg(any(target_os = "windows", test))]
@@ -1320,6 +1388,52 @@ mod tests {
             "WorkBuddy Helper",
             "Tencent"
         ));
+        // electron-builder's default uninstall name carries the version.
+        assert!(windows_registered_name_matches(
+            "workbuddy",
+            "WorkBuddy 2.3.1",
+            "Tencent"
+        ));
+        assert!(windows_registered_name_matches(
+            "claude_desktop",
+            "Claude 1.4.0",
+            "Anthropic PBC"
+        ));
+        assert!(!windows_registered_name_matches(
+            "workbuddy",
+            "WorkBuddy Helper 2.3.1",
+            "Tencent"
+        ));
+        assert!(!windows_registered_name_matches(
+            "workbuddy",
+            "WorkBuddy 2.3.1",
+            "Contoso"
+        ));
+        assert!(windows_registered_name_matches(
+            "dsh_desktop",
+            "DeepSeek Harness 0.2.0",
+            ""
+        ));
+        assert!(!windows_registered_name_matches(
+            "dsh_desktop",
+            "DeepSeek Harness",
+            "Contoso"
+        ));
+        assert!(windows_relative_paths("dsh_desktop", false)
+            .contains(&"Programs\\DeepSeek Harness\\DeepSeek Harness.exe"));
+        for app_id in [
+            "claude_desktop",
+            "codex_desktop",
+            "workbuddy",
+            "dsh_desktop",
+        ] {
+            assert!(windows_app_paths_names(app_id).iter().all(|name| {
+                crate::desktop_app_discovery_core::windows_desktop_filename_matches(
+                    app_id,
+                    Path::new(name),
+                )
+            }));
+        }
 
         assert!(windows_relative_paths("claude_desktop", false)
             .contains(&"Programs\\Claude Desktop\\Claude.exe"));

@@ -4,6 +4,7 @@ export type ConfigurationToolId =
   | "opencode"
   | "pi"
   | "dsh"
+  | "dsh_desktop"
   | "workbuddy"
   | "hermes"
   | "openclaw";
@@ -127,11 +128,25 @@ export const CONFIGURATION_TOOLS: readonly ConfigurationToolDefinition[] =
       id: "dsh" as const,
       displayName: "DSH",
       mark: "D",
-      targetFile: "~/.dsh/settings.yaml",
+      targetFile: "~/.dsh/profiles/web/cordis.patch.yml",
       ownedFields: Object.freeze([
         "llm-pi-ai.providers.yeschoy",
         "agent-default-model.provider",
         "agent-default-model.model",
+      ]),
+      protocolSuffix: "/v1" as const,
+      endpointStatus: "documented_preview" as const,
+    }),
+    Object.freeze({
+      id: "dsh_desktop" as const,
+      displayName: "DeepSeek Harness",
+      mark: "D",
+      targetFile: "~/.dsh/profiles/desktop/cordis.patch.yml",
+      ownedFields: Object.freeze([
+        "llm-pi-ai.providers.yeschoy",
+        "agent-default-model.provider",
+        "agent-default-model.model",
+        "~/.dsh/.credentials.yaml: refs.YESCHOY_DSH_API_KEY",
       ]),
       protocolSuffix: "/v1" as const,
       endpointStatus: "documented_preview" as const,

@@ -13,6 +13,7 @@ describe("guided configuration preview", () => {
       "opencode",
       "pi",
       "dsh",
+      "dsh_desktop",
       "workbuddy",
       "hermes",
       "openclaw",
@@ -29,6 +30,7 @@ describe("guided configuration preview", () => {
     ["opencode", "https://yeschoy.com/v1"],
     ["pi", "https://yeschoy.com/v1"],
     ["dsh", "https://yeschoy.com/v1"],
+    ["dsh_desktop", "https://yeschoy.com/v1"],
     ["workbuddy", "https://yeschoy.com/v1/chat/completions"],
     ["hermes", "https://yeschoy.com/v1"],
     ["openclaw", "https://yeschoy.com/v1"],
@@ -56,7 +58,7 @@ describe("guided configuration preview", () => {
 
     expect(projection.rootUrl).toBe("https://api.yeschoy.com");
     expect(projection.protocolEndpoint).toBe("https://api.yeschoy.com/v1");
-    expect(projection.targetFile).toBe("~/.dsh/settings.yaml");
+    expect(projection.targetFile).toBe("~/.dsh/profiles/web/cordis.patch.yml");
     expect(projection.ownedFields).toContain("llm-pi-ai.providers.yeschoy");
     expect(projection.endpointStatus).toBe("documented_preview");
   });

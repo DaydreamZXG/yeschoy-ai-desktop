@@ -67,6 +67,15 @@ fn discover(executable: &str) -> Inventory {
                 .collect()
         })
         .unwrap_or_default();
+    // Entries added to the registry PATH after launch rank after the inherited
+    // ones, the order a freshly opened console would search them in.
+    let inherited = directories.len();
+    directories.extend(
+        crate::windows_cli_locations::registry_path_directories()
+            .into_iter()
+            .enumerate()
+            .map(|(i, p)| (p, Some(inherited + i))),
+    );
     directories.extend(common_binary_directories().into_iter().map(|p| (p, None)));
     discover_in(executable, directories)
 }
