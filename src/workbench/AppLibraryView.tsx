@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -45,6 +46,8 @@ interface Props {
   // 两份各自的 useState 会变成两个互不知情的对话框。
   onOpenCommunity: () => void;
   accountSession: AccountSessionController;
+  /** 首页顶部的公告横幅（未读、标了 banner 的那一条），由 App 决定给不给。 */
+  announcement?: ReactNode;
 }
 /**
  * 后端整个够不着的时候，账户、本机扫描、接入状态会同时失败，页面就叠出三条
@@ -78,6 +81,7 @@ export function AppLibraryView({
   onOpenSetup,
   onOpenCommunity,
   accountSession,
+  announcement,
 }: Props) {
   const { t } = useTranslation();
   const c = useWorkbenchCopy();
@@ -303,6 +307,7 @@ export function AppLibraryView({
           {checking ? c.libraryCheckingAction : c.libraryCheckAction}
         </button>
       </header>
+      {announcement}
       {pendingRecovery && (
         <p
           className="workbench-notice"

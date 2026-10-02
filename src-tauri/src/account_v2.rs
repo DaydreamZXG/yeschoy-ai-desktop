@@ -55,6 +55,9 @@ struct AccountRuntime {
     access: Option<AccessSession>,
     wallet_url: Option<String>,
     authorization_epoch: u64,
+    /// What each notice's button does, from the last read. The renderer only
+    /// ever names a notice; the destination never round-trips through it.
+    announcement_actions: BTreeMap<String, NoticeTarget>,
 }
 
 #[derive(Clone)]
@@ -2120,11 +2123,28 @@ pub struct Notice {
     body: String,
     severity: &'static str,
     published_at_epoch_ms: u64,
+    /// 0 when the notice does not expire.
+    expires_at_epoch_ms: u64,
+    /// Also shown as a banner on the home page until the user has seen it.
+    banner: bool,
+    /// The button label, empty when the notice has no button.
+    action_label: String,
+}
+
+/// Where a notice's button goes. Only these two; anything else is dropped.
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum NoticeTarget {
+    /// The account's own wallet page, the same as 「充值」 everywhere else.
+    Wallet,
+    /// A page on one of our own sites, e.g. the rules of a promotion.
+    Link(String),
 }
 
 const MAX_NOTICES: usize = 30;
 const MAX_NOTICE_TITLE: usize = 120;
 const MAX_NOTICE_BODY: usize = 2000;
+const MAX_NOTICE_ID: usize = 64;
+const MAX_ACTION_LABEL: usize = 16;
 
 /// 只保留可显示的纯文本。公告是服务端自由文本，直接渲染到界面上，
 /// 所以在这里就把控制字符和 bidi 覆盖字符去掉，并限长。
@@ -2141,8 +2161,49 @@ fn notice_text(raw: Option<&str>, maximum: usize) -> String {
         .to_owned()
 }
 
-fn parse_notices(value: &Value) -> Vec<Notice> {
-    value
+/// Notice links may only lead to our own sites, over https, without
+/// credentials or an explicit port.
+fn notice_link_is_allowed(raw: &str) -> bool {
+    let Ok(url) = Url::parse(raw) else {
+        return false;
+    };
+    let host = url.host_str().unwrap_or_default();
+    raw.len() <= 2048
+        && url.scheme() == "https"
+        && (host == "yeschoy.com" || host.ends_with(".yeschoy.com") || host == "ai.yeschoy.io")
+        && url.port().is_none()
+        && url.username().is_empty()
+        && url.password().is_none()
+}
+
+fn notice_target(action: &Value) -> Option<(String, NoticeTarget)> {
+    let label = notice_text(
+        action.get("label").and_then(Value::as_str),
+        MAX_ACTION_LABEL,
+    )
+    .replace('\n', " ");
+    if label.is_empty() {
+        return None;
+    }
+    let target = match action.get("kind").and_then(Value::as_str)? {
+        "wallet" => NoticeTarget::Wallet,
+        "link" => {
+            let url = action.get("url").and_then(Value::as_str)?;
+            if !notice_link_is_allowed(url) {
+                return None;
+            }
+            NoticeTarget::Link(url.to_owned())
+        }
+        _ => return None,
+    };
+    Some((label, target))
+}
+
+/// Parse the notices still current at `now`, and what their buttons do.
+fn parse_notices(value: &Value, now: u64) -> (Vec<Notice>, BTreeMap<String, NoticeTarget>) {
+    let mut targets = BTreeMap::new();
+    let mut seen = BTreeSet::new();
+    let notices = value
         .get("data")
         .and_then(|data| data.get("notices"))
         .and_then(Value::as_array)
@@ -2159,8 +2220,35 @@ fn parse_notices(value: &Value) -> Vec<Notice> {
             if title.is_empty() {
                 return None;
             }
+            let expires_at_epoch_ms = notice
+                .get("expiresAtEpochMs")
+                .and_then(Value::as_u64)
+                .unwrap_or_default();
+            // 活动结束了就不再显示，不必等运营去后台撤。
+            if expires_at_epoch_ms != 0 && expires_at_epoch_ms <= now {
+                return None;
+            }
+            // The id is what "already read" is remembered by, so it must be
+            // present and unique; a title stands in for a missing one.
+            let id = Some(notice_text(
+                notice.get("id").and_then(Value::as_str),
+                MAX_NOTICE_ID,
+            ))
+            .filter(|id| !id.is_empty())
+            .unwrap_or_else(|| title.chars().take(MAX_NOTICE_ID).collect());
+            if !seen.insert(id.clone()) {
+                return None;
+            }
+            let action = notice.get("action").and_then(notice_target);
+            let action_label = match action {
+                Some((label, target)) => {
+                    targets.insert(id.clone(), target);
+                    label
+                }
+                None => String::new(),
+            };
             Some(Notice {
-                id: notice_text(notice.get("id").and_then(Value::as_str), 64),
+                id,
                 title,
                 body: notice_text(notice.get("body").and_then(Value::as_str), MAX_NOTICE_BODY),
                 severity: match notice.get("severity").and_then(Value::as_str) {
@@ -2171,19 +2259,27 @@ fn parse_notices(value: &Value) -> Vec<Notice> {
                     .get("publishedAtEpochMs")
                     .and_then(Value::as_u64)
                     .unwrap_or_default(),
+                expires_at_epoch_ms,
+                banner: notice.get("banner").and_then(Value::as_bool) == Some(true),
+                action_label,
             })
         })
         .take(MAX_NOTICES)
-        .collect()
+        .collect::<Vec<_>>();
+    targets.retain(|id, _| notices.iter().any(|notice| &notice.id == id));
+    (notices, targets)
 }
 
 /// 读取服务端公告。
 ///
-/// 契约（服务端待实现）：bootstrap 增加可选字段 `announcements_path`，
-/// 形如 `/api/desktop/v2/notices`；该路径带会话令牌 GET，返回
+/// 契约（服务端待实现，完整说明见 `docs/announcements-contract-zh.md`）：
+/// bootstrap 增加可选字段 `announcements_path`，形如
+/// `/api/desktop/v2/notices`；该路径带会话令牌 GET，返回
 /// `{"success":true,"data":{"notices":[
 ///   {"id":"...","title":"...","body":"...","severity":"info|warning",
-///    "publishedAtEpochMs":1758000000000}]}}`
+///    "publishedAtEpochMs":1758000000000,
+///    "expiresAtEpochMs":0, "banner":false,
+///    "action":{"kind":"wallet|link","label":"去充值","url":"https://..."}}]}}`
 ///
 /// 服务端没宣告这个字段时返回 `available: false`，界面不显示入口 ——
 /// 客户端和服务端谁先发布都不会出错。读取失败同样只是没有公告，
@@ -2227,11 +2323,56 @@ pub async fn account_announcements_read_v2(
         );
         return Ok(unavailable);
     }
+    let (notices, actions) = parse_notices(&response.value, now_epoch_ms());
+    if let Ok(mut runtime) = state.runtime.lock() {
+        runtime.announcement_actions = actions;
+    }
     Ok(AnnouncementsProjection {
         request_id: request.request_id,
         available: true,
-        notices: parse_notices(&response.value),
+        notices,
     })
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AnnouncementActionRequest {
+    request_id: String,
+    line_id: String,
+    notice_id: String,
+}
+
+/// Follow a notice's button. The renderer names the notice; where it leads
+/// comes from the last read, so a page can never ask to open an arbitrary URL.
+#[tauri::command]
+pub async fn account_announcement_action_v2(
+    state: tauri::State<'_, AccountV2State>,
+    request: AnnouncementActionRequest,
+) -> Result<(), String> {
+    let account = AccountRequest {
+        request_id: request.request_id,
+        line_id: request.line_id,
+    };
+    if !request_is_valid(&account) || request.notice_id.len() > MAX_NOTICE_ID * 4 {
+        return Err("invalid_account_request".into());
+    }
+    let target = state
+        .runtime
+        .lock()
+        .map_err(|_| "announcement_action_unavailable".to_owned())?
+        .announcement_actions
+        .get(&request.notice_id)
+        .cloned()
+        .ok_or_else(|| "announcement_action_unavailable".to_owned())?;
+    match target {
+        NoticeTarget::Wallet => open_wallet(&state, &account.line_id).await,
+        NoticeTarget::Link(url) => {
+            if !notice_link_is_allowed(&url) {
+                return Err("announcement_action_unavailable".into());
+            }
+            open_system_browser(&url).map_err(|_| "browser_open_failed".to_owned())
+        }
+    }
 }
 
 #[tauri::command]
@@ -2239,13 +2380,17 @@ pub async fn account_open_wallet_v2(
     state: tauri::State<'_, AccountV2State>,
     request: AccountRequest,
 ) -> Result<(), String> {
-    let _permit = crate::shutdown_coordinator::global()
-        .admit_operation()
-        .map_err(|_| "assistant_shutting_down")?;
     if !request_is_valid(&request) {
         return Err("invalid_account_request".into());
     }
-    let bootstrap = fetch_bootstrap(&request.line_id)
+    open_wallet(&state, &request.line_id).await
+}
+
+async fn open_wallet(state: &AccountV2State, line_id: &str) -> Result<(), String> {
+    let _permit = crate::shutdown_coordinator::global()
+        .admit_operation()
+        .map_err(|_| "assistant_shutting_down")?;
+    let bootstrap = fetch_bootstrap(line_id)
         .await
         .map_err(|_| "wallet_unavailable".to_owned())?;
     let stored = state
@@ -2752,6 +2897,78 @@ mod tests {
             "walletUrl",
         ] {
             assert!(!serialized.contains(forbidden));
+        }
+    }
+    #[test]
+    fn notices_carry_only_safe_buttons_and_drop_what_has_ended() {
+        let payload = json!({"success": true, "data": {"notices": [
+            {"id": "recharge-1001", "title": "国庆充值加赠", "body": "充 100 送 20",
+             "severity": "warning", "banner": true, "expiresAtEpochMs": 2_000,
+             "action": {"kind": "wallet", "label": "去充值"}},
+            {"id": "rules", "title": "活动细则",
+             "action": {"kind": "link", "label": "查看", "url": "https://yeschoy.com/events/1001"}},
+            {"id": "phish", "title": "钓鱼",
+             "action": {"kind": "link", "label": "点我", "url": "https://yeschoy.com.evil.example/x"}},
+            {"id": "plain-http", "title": "明文",
+             "action": {"kind": "link", "label": "点我", "url": "http://yeschoy.com/x"}},
+            {"id": "script", "title": "脚本",
+             "action": {"kind": "link", "label": "点我", "url": "javascript:alert(1)"}},
+            {"id": "unknown-kind", "title": "未知按钮",
+             "action": {"kind": "launch", "label": "运行"}},
+            {"id": "ended", "title": "已结束的活动", "expiresAtEpochMs": 999},
+            {"id": "recharge-1001", "title": "重复的 id"},
+            {"title": "没有 id 的公告"}
+        ]}});
+        let (notices, targets) = parse_notices(&payload, 1_000);
+        let ids = notices.iter().map(|n| n.id.as_str()).collect::<Vec<_>>();
+        assert_eq!(
+            ids,
+            [
+                "recharge-1001",
+                "rules",
+                "phish",
+                "plain-http",
+                "script",
+                "unknown-kind",
+                "没有 id 的公告"
+            ]
+        );
+        assert!(notices[0].banner);
+        assert_eq!(notices[0].expires_at_epoch_ms, 2_000);
+        assert_eq!(notices[0].action_label, "去充值");
+        assert_eq!(targets.get("recharge-1001"), Some(&NoticeTarget::Wallet));
+        assert_eq!(
+            targets.get("rules"),
+            Some(&NoticeTarget::Link(
+                "https://yeschoy.com/events/1001".into()
+            ))
+        );
+        for refused in ["phish", "plain-http", "script", "unknown-kind"] {
+            assert!(!targets.contains_key(refused), "{refused}");
+            let notice = notices.iter().find(|n| n.id == refused).unwrap();
+            assert!(notice.action_label.is_empty(), "{refused}");
+        }
+        assert!(!notices[1].banner);
+    }
+
+    #[test]
+    fn notice_links_stay_on_our_own_sites() {
+        for allowed in [
+            "https://yeschoy.com/events",
+            "https://www.yeschoy.com/a?b=c#d",
+            "https://ai.yeschoy.io/promo",
+        ] {
+            assert!(notice_link_is_allowed(allowed), "{allowed}");
+        }
+        for refused in [
+            "http://yeschoy.com/events",
+            "https://yeschoy.com:8443/events",
+            "https://user:pass@yeschoy.com/",
+            "https://evilyeschoy.com/",
+            "https://yeschoy.io/",
+            "file:///etc/passwd",
+        ] {
+            assert!(!notice_link_is_allowed(refused), "{refused}");
         }
     }
 }

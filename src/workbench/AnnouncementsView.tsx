@@ -1,4 +1,11 @@
-import { Megaphone, TriangleAlert, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import {
+  ArrowUpRight,
+  Megaphone,
+  TriangleAlert,
+  RefreshCw,
+  X,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Notice } from "./announcements";
 import { useWorkbenchCopy } from "./copy";
@@ -13,20 +20,47 @@ function publishedAt(epochMs: number, locale: string): string {
   });
 }
 
+function NoticeAction({
+  notice,
+  onFollow,
+}: {
+  notice: Notice;
+  onFollow: (notice: Notice) => void;
+}) {
+  if (!notice.actionLabel) return null;
+  return (
+    <button
+      type="button"
+      className="announcement-action"
+      onClick={() => onFollow(notice)}
+    >
+      {notice.actionLabel}
+      <ArrowUpRight aria-hidden="true" />
+    </button>
+  );
+}
+
 export function AnnouncementsView({
   notices,
   loading,
   failed,
   onRetry,
+  unread,
+  onFollow,
 }: {
   notices: Notice[];
   loading: boolean;
   failed: boolean;
   onRetry: () => void;
+  /** 进入页面时还没读过的公告，标「新」。 */
+  unread: ReadonlySet<string>;
+  onFollow: (notice: Notice) => void;
 }) {
   const c = useWorkbenchCopy();
   const { i18n } = useTranslation();
   const locale = i18n.language;
+  // 一进页面就会全部记为已读；「新」的标记按进来那一刻算，看的过程中不消失。
+  const [unreadOnArrival] = useState(() => new Set(unread));
   return (
     <div className="workspace announcements-view" id="top">
       <div className="workbench-page-heading">
@@ -43,16 +77,21 @@ export function AnnouncementsView({
         </button>
       </div>
 
-      {failed ? (
+      {/* 定时刷新失败一次不该把正在看的公告清掉：提示放在上面，列表照留。 */}
+      {failed && (
         <p className="workbench-notice" role="status">
           <TriangleAlert aria-hidden="true" />
           {c.announcementsFailed}
         </p>
-      ) : notices.length === 0 && !loading ? (
-        <p className="announcements-empty">
-          <Megaphone aria-hidden="true" />
-          {c.announcementsEmpty}
-        </p>
+      )}
+      {notices.length === 0 ? (
+        !loading &&
+        !failed && (
+          <p className="announcements-empty">
+            <Megaphone aria-hidden="true" />
+            {c.announcementsEmpty}
+          </p>
+        )
       ) : (
         <ol className="announcement-list">
           {notices.map((notice) => (
@@ -62,7 +101,15 @@ export function AnnouncementsView({
               data-severity={notice.severity}
             >
               <div className="announcement-heading">
-                <h2>{notice.title}</h2>
+                <h2>
+                  {(unreadOnArrival.has(notice.id) ||
+                    unread.has(notice.id)) && (
+                    <span className="announcement-new">
+                      {c.announcementsUnread}
+                    </span>
+                  )}
+                  {notice.title}
+                </h2>
                 {publishedAt(notice.publishedAtEpochMs, locale) && (
                   <time
                     dateTime={new Date(notice.publishedAtEpochMs).toISOString()}
@@ -78,10 +125,71 @@ export function AnnouncementsView({
                 .map((line, index) => (
                   <p key={index}>{line}</p>
                 ))}
+              {(notice.actionLabel || notice.expiresAtEpochMs > 0) && (
+                <div className="announcement-footer">
+                  <NoticeAction notice={notice} onFollow={onFollow} />
+                  {notice.expiresAtEpochMs > 0 && (
+                    <small>
+                      {c.announcementEndsAt.replace(
+                        "{{date}}",
+                        publishedAt(notice.expiresAtEpochMs, locale),
+                      )}
+                    </small>
+                  )}
+                </div>
+              )}
             </li>
           ))}
         </ol>
       )}
     </div>
+  );
+}
+
+/**
+ * 首页顶部的公告横幅：只显示一条（未读里最靠前、服务端标了 banner 的），
+ * 点按钮、点「查看全部」或关掉都算读过，之后不再出现。
+ */
+export function AnnouncementBanner({
+  notice,
+  onFollow,
+  onOpenAll,
+  onDismiss,
+}: {
+  notice: Notice;
+  onFollow: (notice: Notice) => void;
+  onOpenAll: () => void;
+  onDismiss: (notice: Notice) => void;
+}) {
+  const c = useWorkbenchCopy();
+  const summary = notice.body.split("\n").find((line) => line.trim());
+  return (
+    <section
+      className="announcement-banner"
+      data-severity={notice.severity}
+      aria-label={c.announcements}
+      data-testid="announcement-banner"
+    >
+      <Megaphone aria-hidden="true" />
+      <div>
+        <strong>{notice.title}</strong>
+        {summary && <p>{summary}</p>}
+      </div>
+      <div className="announcement-banner-actions">
+        <NoticeAction notice={notice} onFollow={onFollow} />
+        <button type="button" className="text-button" onClick={onOpenAll}>
+          {c.announcementBannerMore}
+        </button>
+        <button
+          type="button"
+          className="announcement-banner-close"
+          aria-label={c.announcementBannerDismiss}
+          title={c.announcementBannerDismiss}
+          onClick={() => onDismiss(notice)}
+        >
+          <X aria-hidden="true" />
+        </button>
+      </div>
+    </section>
   );
 }
