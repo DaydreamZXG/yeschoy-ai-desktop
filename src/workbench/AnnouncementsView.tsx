@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   ArrowUpRight,
   Megaphone,
@@ -18,6 +18,25 @@ function publishedAt(epochMs: number, locale: string): string {
     month: "long",
     day: "numeric",
   });
+}
+
+/**
+ * 公告正文只认一种标记：`**加粗**`（后台运营习惯这么写）。其余一律当纯文本，
+ * 不解析 HTML、链接或别的 Markdown。`**` 不成对时，落单的那个原样显示。
+ */
+export function noticeLine(line: string): ReactNode[] {
+  const parts = line.split("**");
+  if (parts.length % 2 === 0) {
+    const tail = parts.pop() ?? "";
+    parts[parts.length - 1] += `**${tail}`;
+  }
+  return parts.map((part, index) =>
+    index % 2 === 1 ? <strong key={index}>{part}</strong> : part,
+  );
+}
+
+function noticeParagraphs(body: string): string[] {
+  return body.split("\n").filter((line) => line.trim().length > 0);
 }
 
 function NoticeAction({
@@ -118,13 +137,10 @@ export function AnnouncementsView({
                   </time>
                 )}
               </div>
-              {/* 服务端自由文本，只按换行分段渲染，绝不当成标记解析。 */}
-              {notice.body
-                .split("\n")
-                .filter((line) => line.trim().length > 0)
-                .map((line, index) => (
-                  <p key={index}>{line}</p>
-                ))}
+              {/* 服务端自由文本：按换行分段，只认 **加粗**，绝不当 HTML 解析。 */}
+              {noticeParagraphs(notice.body).map((line, index) => (
+                <p key={index}>{noticeLine(line)}</p>
+              ))}
               {(notice.actionLabel || notice.expiresAtEpochMs > 0) && (
                 <div className="announcement-footer">
                   <NoticeAction notice={notice} onFollow={onFollow} />
@@ -162,7 +178,7 @@ export function AnnouncementBanner({
   onDismiss: (notice: Notice) => void;
 }) {
   const c = useWorkbenchCopy();
-  const summary = notice.body.split("\n").find((line) => line.trim());
+  const summary = noticeParagraphs(notice.body)[0];
   return (
     <section
       className="announcement-banner"
@@ -173,7 +189,7 @@ export function AnnouncementBanner({
       <Megaphone aria-hidden="true" />
       <div>
         <strong>{notice.title}</strong>
-        {summary && <p>{summary}</p>}
+        {summary && <p>{noticeLine(summary)}</p>}
       </div>
       <div className="announcement-banner-actions">
         <NoticeAction notice={notice} onFollow={onFollow} />

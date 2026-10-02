@@ -317,6 +317,11 @@
 }
 
 /* ———— 公告 ———— */
+/* `.workspace` 在别处是左右两栏的网格；公告页是一列，否则卡片会被挤到右上角。 */
+.workspace.announcements-view {
+  display: block;
+}
+
 .announcement-list {
   display: grid;
   gap: var(--space-12);

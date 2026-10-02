@@ -2250,7 +2250,16 @@ fn parse_notices(value: &Value, now: u64) -> (Vec<Notice>, BTreeMap<String, Noti
             Some(Notice {
                 id,
                 title,
-                body: notice_text(notice.get("body").and_then(Value::as_str), MAX_NOTICE_BODY),
+                // `content` is what new-api's own announcements call it, and
+                // what the admin page saves; `body` wins when both are set.
+                body: notice_text(
+                    notice
+                        .get("body")
+                        .and_then(Value::as_str)
+                        .filter(|body| !body.trim().is_empty())
+                        .or_else(|| notice.get("content").and_then(Value::as_str)),
+                    MAX_NOTICE_BODY,
+                ),
                 severity: match notice.get("severity").and_then(Value::as_str) {
                     Some("warning") => "warning",
                     _ => "info",
@@ -2970,5 +2979,16 @@ mod tests {
         ] {
             assert!(!notice_link_is_allowed(refused), "{refused}");
         }
+    }
+    #[test]
+    fn notice_text_may_arrive_as_content() {
+        let payload = json!({"data": {"notices": [
+            {"id": "a", "title": "只有 content", "content": "国庆**双重福利**"},
+            {"id": "b", "title": "两个都有", "body": "正文", "content": "旧字段"},
+            {"id": "c", "title": "body 是空的", "body": " ", "content": "用 content"}
+        ]}});
+        let (notices, _) = parse_notices(&payload, 0);
+        let bodies = notices.iter().map(|n| n.body.as_str()).collect::<Vec<_>>();
+        assert_eq!(bodies, ["国庆**双重福利**", "正文", "用 content"]);
     }
 }
