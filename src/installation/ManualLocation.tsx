@@ -9,7 +9,7 @@ import {
   clearManualLocation,
   pickManualLocation,
   type ManualLocationOutcome,
-} from "./manualLocation";
+} from "./manualLocationApi";
 
 /**
  * 自动检测找不到时（免安装版、换过目录、安装程序没登记、命令行工具
