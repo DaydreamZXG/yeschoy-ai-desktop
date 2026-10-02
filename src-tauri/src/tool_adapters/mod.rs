@@ -52,6 +52,10 @@ pub(crate) struct TargetProjection {
     pub(crate) surface: &'static str,
     pub(crate) status: &'static str,
     pub(crate) installations: Vec<InstallationProjection>,
+    /// `none`, `in_use`, or `unavailable` when the location the user picked no
+    /// longer checks out (uninstalled, moved, a drive that is not plugged in)
+    /// and the automatic scan is being used instead.
+    pub(crate) manual_location: &'static str,
 }
 
 #[derive(Clone, Debug)]
@@ -98,7 +102,7 @@ pub(crate) fn user_home() -> Option<PathBuf> {
     }
 }
 
-fn executable_for(tool_id: &str) -> Option<&'static str> {
+pub(crate) fn executable_for(tool_id: &str) -> Option<&'static str> {
     match tool_id {
         "claude_code" => Some("claude"),
         "pi" => Some("pi"),
@@ -107,7 +111,7 @@ fn executable_for(tool_id: &str) -> Option<&'static str> {
     }
 }
 
-fn desktop_id_for(tool_id: &str) -> Option<&'static str> {
+pub(crate) fn desktop_id_for(tool_id: &str) -> Option<&'static str> {
     match tool_id {
         "claude_desktop" => Some("claude_desktop"),
         "codex_desktop" => Some("codex_desktop"),
@@ -115,6 +119,22 @@ fn desktop_id_for(tool_id: &str) -> Option<&'static str> {
         "dsh_desktop" => Some("dsh_desktop"),
         _ => None,
     }
+}
+
+/// The activation tool a CLI executable belongs to; the inverse of
+/// `executable_for`.
+pub(crate) fn cli_tool_for(executable: &str) -> Option<&'static str> {
+    TARGETS
+        .iter()
+        .map(|(tool_id, _, _)| *tool_id)
+        .find(|tool_id| executable_for(tool_id) == Some(executable))
+}
+
+pub(crate) fn display_name_for(tool_id: &str) -> Option<&'static str> {
+    TARGETS
+        .iter()
+        .find(|(id, _, _)| *id == tool_id)
+        .map(|(_, display_name, _)| *display_name)
 }
 
 /// Whether picking an installation is a question worth asking the user.
@@ -213,6 +233,16 @@ async fn observe_cli(executable: &str) -> Vec<ObservedInstallation> {
     // the beginner could even choose an app, so this scan remains read-only
     // and process-free. Exact version diagnostics remain available through the
     // dedicated tool discovery command.
+    //
+    // A location the user picked by hand wins outright: they chose it because
+    // the scan found nothing, or found the wrong copy.
+    if let Some(path) = crate::manual_locations::cli_location(executable) {
+        return vec![ObservedInstallation {
+            path,
+            version: String::new(),
+            location: "manual",
+        }];
+    }
     tool_discovery::discover_candidates(executable)
         .into_iter()
         .take(8)
@@ -283,6 +313,7 @@ fn location_label_in(language: crate::ui_language::Language, value: &str) -> &'s
         "user_applications" => language.pick("用户应用", "User app"),
         "local_app_data" => language.pick("用户应用目录", "User app data"),
         "program_files" => language.pick("程序目录", "Program Files"),
+        "manual" => language.pick("手动指定", "Chosen by you"),
         _ => language.pick("本机", "This computer"),
     }
 }
@@ -321,6 +352,13 @@ async fn scan_target(index: usize) -> TargetProjection {
         surface,
         status,
         installations: projections(tool_id, &observed),
+        manual_location: if observed.iter().any(|item| item.location == "manual") {
+            "in_use"
+        } else if crate::manual_locations::is_stored(tool_id) {
+            "unavailable"
+        } else {
+            "none"
+        },
     }
 }
 

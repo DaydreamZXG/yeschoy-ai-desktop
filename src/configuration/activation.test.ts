@@ -42,6 +42,7 @@ function targetScan(requestId = "target-scan-test") {
     toolId,
     displayName,
     surface: "本机应用",
+    manualLocation: "none",
     status: "available",
     installations: [
       {

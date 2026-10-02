@@ -371,6 +371,15 @@ pub(crate) fn common_binary_directories() -> Vec<PathBuf> {
         // DeepSeek Harness Desktop ships inside its own installation folder.
         directories.extend(crate::windows_cli_locations::npm_prefix_directories());
         directories.extend(crate::windows_cli_locations::dsh_desktop_cli_directories());
+        // ...including a copy of Desktop the user located by hand.
+        if let Some(installation) = crate::manual_locations::desktop_location("dsh_desktop")
+            .as_deref()
+            .and_then(Path::parent)
+        {
+            directories.push(crate::windows_cli_locations::dsh_desktop_cli_directory(
+                installation,
+            ));
+        }
     }
 
     #[cfg(not(target_os = "windows"))]

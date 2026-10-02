@@ -75,7 +75,7 @@ impl Inventory {
     }
 }
 
-fn is_app_component(path: &Path) -> bool {
+pub(crate) fn is_app_component(path: &Path) -> bool {
     let parts: Vec<_> = path
         .components()
         .map(|part| part.as_os_str().to_string_lossy())

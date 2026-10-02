@@ -86,12 +86,25 @@ export interface ActivationInstallation {
   recommended: boolean;
 }
 
+export const MANUAL_LOCATION_STATES = [
+  "none",
+  "in_use",
+  "unavailable",
+] as const;
+
+/**
+ * 用户手动指定的安装位置：`in_use` 正在使用；`unavailable` 是指定过、
+ * 但现在验不过（卸载了、挪走了、移动硬盘没插），此时用的是自动检测结果。
+ */
+export type ManualLocationState = (typeof MANUAL_LOCATION_STATES)[number];
+
 export interface ActivationTarget {
   toolId: ActivationToolId;
   displayName: string;
   surface: string;
   status: ActivationTargetStatus;
   installations: ActivationInstallation[];
+  manualLocation: ManualLocationState;
 }
 
 export interface ActivationTargetScan {
@@ -255,8 +268,12 @@ function decodeTarget(value: unknown): ActivationTarget | null {
       "surface",
       "status",
       "installations",
+      "manualLocation",
     ]) ||
     !ACTIVATION_TOOL_IDS.includes(value.toolId as ActivationToolId) ||
+    !MANUAL_LOCATION_STATES.includes(
+      value.manualLocation as ManualLocationState,
+    ) ||
     !safeText(value.displayName, 80, false) ||
     !safeText(value.surface, 120, false) ||
     !ACTIVATION_TARGET_STATUSES.includes(

@@ -212,6 +212,7 @@ function targets(requestId: string) {
       toolId,
       displayName,
       surface: "本机应用",
+      manualLocation: "none",
       // `?s=not_installed` 让所有应用报未安装，用来看安装面板。
       // 原来 mock 恒报 available，那块 359 行、152 处文案的界面
       // 在审计页里根本显示不出来。
@@ -242,6 +243,8 @@ const handlers: Record<string, (a: Args) => unknown> = {
   account_announcements_read_v2: () => ({ available: false }),
   manage_tool_connections_v1: (a) => connections(rid(a)),
   scan_activation_targets_v1: (a) => targets(rid(a)),
+  manual_location_pick: (a) => ({ requestId: rid(a), outcome: "cancelled" }),
+  manual_location_clear: (a) => ({ requestId: rid(a), outcome: "cleared" }),
   configure_desktop_tool_v2: (a) => activationResult(a),
   manage_app_installation_v2: (a) => installationInspectionFixture(a),
   read_desktop_exit_state: () => ({ closeRequested: false, shutdown: null }),

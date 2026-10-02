@@ -52,6 +52,7 @@ import { useActivationTask } from "./useActivationTask";
 import type { SetupIntent } from "./setupIntent";
 import { useInstallation } from "../installation/InstallationProvider";
 import { InstallationPanel } from "../installation/InstallationPanel";
+import { ManualLocationControls } from "../installation/ManualLocation";
 import {
   installationActive,
   SelectionRevision,
@@ -1985,6 +1986,15 @@ export function ConfigurationPreviewView({
                   {selectedInstallation.version || g.versionNotRead}
                 </span>
               ) : null}
+              {target && target.status !== "not_found" && (
+                <ManualLocationControls
+                  tool={activationToolId}
+                  name={application.displayName}
+                  state={target.manualLocation}
+                  disabled={applyPhase === "applying"}
+                  onChanged={() => void refreshTargets()}
+                />
+              )}
             </div>
           </details>
         </div>
@@ -2000,6 +2010,7 @@ export function ConfigurationPreviewView({
             onStart={() => void startInstallation()}
             onConfirm={() => void startInstallation(true)}
             onRefresh={() => void refreshTargets()}
+            manualLocation={target?.manualLocation}
             selectionChanged={
               installationChanged ||
               (!!installationConsent.current &&
