@@ -1171,5 +1171,22 @@
     "searchLabel": "Search models",
     "noMatch": "No model matches that. Try another keyword.",
     "footer": "{{count}} models · price and group show once you pick one"
+  },
+  "manualLocation": {
+    "pick": "Installed somewhere else? Locate it",
+    "pickOther": "Not this one? Choose a location",
+    "pickAgain": "Choose another location",
+    "reset": "Go back to automatic detection",
+    "inUse": "Using the location you chose.",
+    "unavailable": "The {{name}} you chose earlier can't be found right now (it may have been uninstalled or moved, or the external drive isn't connected). Using what automatic detection found instead.",
+    "outcome": {
+      "saved": "Location saved — checking again.",
+      "cleared": "Back to automatic detection — checking again.",
+      "unavailable": "Couldn't open the file chooser or save the location. Please try again.",
+      "wrong_file": "That isn't the {{name}} program. For a desktop app choose its .exe (its .app on a Mac); for a command-line tool choose the file or the folder it's in.",
+      "not_genuine": "The name matches, but it isn't the officially signed {{name}}, so it wasn't used.",
+      "bundled_copy": "That's a copy bundled inside another app. Choose the {{name}} you installed separately.",
+      "unsupported_platform": "Choosing a location isn't supported on this system yet."
+    }
   }
 }

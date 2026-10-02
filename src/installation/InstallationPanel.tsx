@@ -12,8 +12,12 @@ import {
 } from "lucide-react";
 import { installationActive, type InstallationProgress } from "./api";
 import { useInstallation } from "./InstallationProvider";
+import { ManualLocationMessage, useManualLocation } from "./ManualLocation";
 import { WORKBENCH_APPS } from "../workbench/appCatalog";
-import type { ActivationToolId } from "../configuration/activation";
+import type {
+  ActivationToolId,
+  ManualLocationState,
+} from "../configuration/activation";
 import "./installation.css";
 
 /**
@@ -82,6 +86,7 @@ interface Props {
   onConfirm: () => void;
   onRefresh: () => void;
   selectionChanged?: boolean;
+  manualLocation?: ManualLocationState;
 }
 export function InstallationPanel({
   tool,
@@ -91,9 +96,15 @@ export function InstallationPanel({
   onConfirm,
   onRefresh,
   selectionChanged,
+  manualLocation = "none",
 }: Props) {
   const { t } = useTranslation();
   const installer = useInstallation();
+  // 记住位置之后和「我已安装，重新检查」做同一件事。
+  const manual = useManualLocation(tool, () => {
+    void installer?.run(tool, "inspect");
+    onRefresh();
+  });
   if (!installer) return null;
   const p = installer.progress;
   const other = p && p.toolId !== tool && installationActive(p);
@@ -230,6 +241,11 @@ export function InstallationPanel({
             : t("installation.unsupportedGeneric")}
         </p>
       )}
+      {manualLocation === "unavailable" && !active && !installed && (
+        <p className="app-install-warning">
+          {t("manualLocation.unavailable", { name })}
+        </p>
+      )}
       {selectionChanged && (
         <p className="app-install-warning">
           {t("installation.selectionChanged")}
@@ -328,7 +344,20 @@ export function InstallationPanel({
             {t("installation.alreadyInstalled")}
           </button>
         )}
+        {/* 免安装版、换过目录、安装程序没登记的，自动检测看不见。 */}
+        {!active && !installed && (
+          <button
+            className="text-button"
+            disabled={manual.busy}
+            onClick={manual.pick}
+          >
+            {manualLocation === "none"
+              ? t("manualLocation.pick")
+              : t("manualLocation.pickAgain")}
+          </button>
+        )}
       </footer>
+      <ManualLocationMessage outcome={manual.outcome} name={name} />
       {!active && !installed && !guided && (
         <p className="app-install-copy">
           {canConnect

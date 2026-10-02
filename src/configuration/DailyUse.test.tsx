@@ -146,6 +146,7 @@ function scan(requestId: string): ActivationTargetScan {
       toolId,
       displayName: toolId,
       surface: "本机应用",
+      manualLocation: "none",
       status: "available",
       installations: [
         {

@@ -2067,6 +2067,32 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 手动指定位置：占满整行，排在「用的是哪个安装」下面。 */
+.manual-location {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.manual-location-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) var(--space-16);
+}
+
+.manual-location-actions .text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--text-xs);
+}
+
+.manual-location .app-install-warning,
+.manual-location .app-install-copy {
+  margin: 0;
+  font-size: var(--text-xs);
+}
+
 .billing-group-picker {
   border: 0;
   margin: 0;

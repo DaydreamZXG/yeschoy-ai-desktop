@@ -59,6 +59,15 @@ pub async fn scan_tools_read_only_v2(request: ScanRequest) -> Result<ScanRespons
 }
 
 fn discover(executable: &str) -> Inventory {
+    // The location the user picked by hand replaces the search, the same as
+    // for activation (`tool_adapters::observe_cli`).
+    if let Some(path) = crate::manual_locations::cli_location(executable) {
+        if let Ok(canonical) = std::fs::canonicalize(&path) {
+            let mut inventory = Inventory::default();
+            inventory.add(&path, canonical, None, cfg!(target_os = "macos"));
+            return inventory;
+        }
+    }
     let mut directories: Vec<(PathBuf, Option<usize>)> = env::var_os("PATH")
         .map(|value| {
             env::split_paths(&value)
