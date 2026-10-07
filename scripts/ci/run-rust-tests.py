@@ -42,6 +42,13 @@ ALLOWED_IGNORED = frozenset(
         "codex_responses_bridge::tests::real_codex_cli_drives_the_bridge_end_to_end",
     }
 )
+# 平台专属的真机 e2e（需要真装好的 DeepSeek Harness，由 dsh-*-discovery.yml 跑）。
+# 只在对应平台编译进来，所以按平台点名。
+PLATFORM_IGNORED = {
+    "win32": {"desktop_app_discovery::tests::e2e_windows_dsh_desktop_is_discovered"},
+    "darwin": {"desktop_app_discovery::tests::e2e_macos_dsh_desktop_is_discovered"},
+}
+EXPECTED_IGNORED = ALLOWED_IGNORED | PLATFORM_IGNORED.get(sys.platform, set())
 
 
 class VerificationError(RuntimeError):
@@ -156,9 +163,9 @@ def verify(root: Path = ROOT) -> int:
             flags=re.MULTILINE,
         )
     )
-    if ignored != ALLOWED_IGNORED:
+    if ignored != EXPECTED_IGNORED:
         raise VerificationError(
-            f"Ignored tests changed; expected {sorted(ALLOWED_IGNORED)}, "
+            f"Ignored tests changed; expected {sorted(EXPECTED_IGNORED)}, "
             f"found {sorted(ignored)}"
         )
     output = run_command(
