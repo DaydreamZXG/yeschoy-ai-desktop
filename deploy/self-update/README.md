@@ -53,6 +53,14 @@ python3 publish_variant.py disable --root /srv/yeschoy-download/public \
 
 边界：现有 `vendor-sync` 定时器仅把第三方构件同步到私有暂存区，现有公开第三方目录保留。本次不调用旧的第三方人工发布器；其健康协议仍要求 `updatesPublished: false`，后续再次提升第三方构件前需要迁移到共享锁和保留双通道字段的协议，不能用旧发布器覆盖当前健康状态。
 
+## GitHub Actions 发布（`.github/workflows/yeschoy-release.yml`）
+
+与上面的本地流程等价，复用同一批脚本：Windows 在 Linux 上用 cargo-xwin + Zig RC + makensis 3.12（`scripts/ci/setup-windows-cross.sh`）执行 `build-local.mjs windows`；Mac 在 macos-14 上执行 `build-local.mjs macos` → `notarize-local.mjs`（通过 `scripts/ci/notarize-wait.sh` 轮询）→ `macos-finalize`；`prepare-candidate.mjs` 汇总 12 个文件，并对以线上清单为种子的临时根目录试发布两版。`mode=dry-run` 到此为止；`mode=publish` 在 `yeschoy-release` 环境审批后经 SSH 上传到 `incoming/` 并调用服务器上 root 所有的 `/opt/yeschoy-download/bin/yeschoy-publish`，最后运行 `probe_variant_release.py`。
+
+Environment `yeschoy-signing`：`UPDATER_KEY_OFFICIAL`、`UPDATER_KEY_PARTNER`（各自私钥文件的 base64）、`APPLE_DEVELOPER_ID_P12`、`APPLE_DEVELOPER_ID_P12_PASSWORD`、`KEYCHAIN_PASSWORD`，以及公证用 `APPLE_API_KEY_P8`、`APPLE_API_KEY_ID`、`APPLE_API_ISSUER_ID`（或 `APPLE_ID`、`APPLE_APP_PASSWORD`、`APPLE_TEAM_ID`）。Environment `yeschoy-release`（需审批）：`DEPLOY_SSH_KEY`、`DEPLOY_KNOWN_HOSTS`，变量 `DEPLOY_USER`。缺少任何一项时对应任务会在第一步失败并列出缺失的名字。
+
+`build-local.mjs` 新增可选环境变量 `YESCHOY_CARGO_XWIN`、`YESCHOY_NSIS_HOME`（与已有的 `YESCHOY_ZIG` 一样，不设置时仍使用本机默认路径）。
+
 ---
 
 # 历史方案存档（0.4.15 单通道 GitHub 工作流，不再用于本次发布）
