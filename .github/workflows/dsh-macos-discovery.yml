@@ -1,0 +1,58 @@
+name: DSH macOS discovery (e2e)
+
+on:
+  push:
+    branches: [fix/dsh-windows-discovery]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dsh-discovery:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download and install DeepSeek Harness
+        run: |
+          set -euxo pipefail
+          curl -fL -o "$RUNNER_TEMP/dsh.dmg" https://download.deepseek.com/desktop/dsh-latest-macos-arm64.dmg
+          ls -l "$RUNNER_TEMP/dsh.dmg"
+          MNT=$(mktemp -d)
+          hdiutil attach -nobrowse -readonly -mountpoint "$MNT" "$RUNNER_TEMP/dsh.dmg"
+          ls -la "$MNT"
+          APP=$(find "$MNT" -maxdepth 2 -name "*.app" -type d | head -1)
+          echo "App in dmg: $APP"
+          sudo cp -R "$APP" /Applications/
+          hdiutil detach "$MNT"
+
+      - name: Diagnostics
+        run: |
+          set -x
+          ls -d /Applications/*.app | grep -i -E "deepseek|harness|dsh" || true
+          for app in /Applications/*.app; do
+            case "$(echo "$app" | tr A-Z a-z)" in *deepseek*|*harness*|*dsh*) ;; *) continue;; esac
+            echo "=== APP: $app"
+            p="$app/Contents/Info.plist"
+            for k in CFBundleIdentifier CFBundleName CFBundleDisplayName CFBundleExecutable CFBundleShortVersionString CFBundleVersion; do
+              echo "$k=$(/usr/libexec/PlistBuddy -c "Print :$k" "$p" 2>&1)"
+            done
+            file "$p"
+            codesign -dv --verbose=2 "$app" 2>&1 | head -20
+            codesign --verify --deep --strict "$app" && echo codesign-verify=ok || echo codesign-verify=FAIL
+            spctl -a -vv -t exec "$app" 2>&1 || true
+          done
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.89"
+
+      - name: Run real discovery
+        working-directory: src-tauri
+        run: |
+          mkdir -p ../dist
+          cargo test --lib e2e_macos_dsh_desktop_is_discovered -- --ignored --nocapture
