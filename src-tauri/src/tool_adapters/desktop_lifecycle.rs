@@ -205,7 +205,7 @@ mod platform {
             "claude_desktop" => Some("com.anthropic.claudefordesktop"),
             "codex_desktop" => Some("com.openai.codex"),
             "workbuddy" => Some("com.tencent.workbuddy.mac"),
-            "dsh_desktop" => Some("com.deepseek.harness"),
+            "dsh_desktop" => Some("com.deepseek.dsh"),
             _ => None,
         }
     }

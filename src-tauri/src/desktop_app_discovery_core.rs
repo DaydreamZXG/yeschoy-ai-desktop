@@ -360,8 +360,8 @@ pub const DESKTOP_APP_SPECS: [DesktopAppSpec; 4] = [
     DesktopAppSpec {
         id: "dsh_desktop",
         display_name: "DeepSeek Harness",
-        // `DSH_DESKTOP_APP_ID` in the upstream release environment.
-        expected_bundle_id: "com.deepseek.harness",
+        // Real CFBundleIdentifier of the shipped 0.2.0-rc.2 macOS app.
+        expected_bundle_id: "com.deepseek.dsh",
     },
 ];
 
@@ -631,7 +631,7 @@ mod tests {
         assert_eq!(DESKTOP_APP_SPECS[3].id, "dsh_desktop");
         assert_eq!(
             DESKTOP_APP_SPECS[3].expected_bundle_id,
-            "com.deepseek.harness"
+            "com.deepseek.dsh"
         );
         assert_eq!(
             PRIMARY_DESKTOP_APP_SPECS.map(|spec| spec.expected_bundle_id),
