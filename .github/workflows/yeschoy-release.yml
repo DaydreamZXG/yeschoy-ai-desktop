@@ -284,7 +284,19 @@ jobs:
       - name: Staple, build and notarize the DMG
         run: |
           root="$GITHUB_WORKSPACE/$OUT/macos"
-          node deploy/self-update/notarize-local.mjs "$root" "${{ matrix.variant }}" app-to-dmg
+          dmg="$root/public/yeschoy-$RELEASE_VERSION-${{ matrix.variant }}-macos-universal-installer.dmg"
+          # hdiutil on hosted runners intermittently fails with "Resource busy".
+          # app-to-dmg only re-staples the app and recreates the DMG, so retrying
+          # is safe as long as no DMG was produced by the failed attempt.
+          for attempt in 1 2 3 4; do
+            if node deploy/self-update/notarize-local.mjs "$root" "${{ matrix.variant }}" app-to-dmg; then break; fi
+            if [ -e "$dmg" ] || [ -e "$root/evidence/${{ matrix.variant }}-dmg-submission.json" ] || [ "$attempt" = 4 ]; then
+              echo "::error::app-to-dmg failed (attempt $attempt)"; exit 1
+            fi
+            echo "app-to-dmg attempt $attempt failed; retrying in 20s"
+            sudo pkill -9 XProtect 2>/dev/null || true
+            sleep 20
+          done
           scripts/ci/notarize-wait.sh "$root" "${{ matrix.variant }}" dmg
           node deploy/self-update/notarize-local.mjs "$root" "${{ matrix.variant }}" verify-dmg
       - name: build-local.mjs macos-finalize ${{ matrix.variant }}
