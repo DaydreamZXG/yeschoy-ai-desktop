@@ -45,8 +45,14 @@ ALLOWED_IGNORED = frozenset(
 # 平台专属的真机 e2e（需要真装好的 DeepSeek Harness，由 dsh-*-discovery.yml 跑）。
 # 只在对应平台编译进来，所以按平台点名。
 PLATFORM_IGNORED = {
-    "win32": {"desktop_app_discovery::tests::e2e_windows_dsh_desktop_is_discovered"},
-    "darwin": {"desktop_app_discovery::tests::e2e_macos_dsh_desktop_is_discovered"},
+    "win32": {
+        "desktop_app_discovery::tests::e2e_windows_dsh_desktop_is_discovered",
+        "desktop_app_discovery::tests::e2e_windows_workbuddy_is_discovered",
+    },
+    "darwin": {
+        "desktop_app_discovery::tests::e2e_macos_dsh_desktop_is_discovered",
+        "desktop_app_discovery::tests::e2e_macos_workbuddy_is_discovered",
+    },
 }
 EXPECTED_IGNORED = ALLOWED_IGNORED | PLATFORM_IGNORED.get(sys.platform, set())
 

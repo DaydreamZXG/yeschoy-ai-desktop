@@ -1274,6 +1274,45 @@ const fn platform_name() -> &'static str {
 mod tests {
     use super::*;
 
+    /// End-to-end check against a real WorkBuddy macOS install (CI only).
+    #[cfg(target_os = "macos")]
+    #[test]
+    #[ignore]
+    fn e2e_macos_workbuddy_is_discovered() {
+        let spec = DESKTOP_APP_SPECS
+            .into_iter()
+            .find(|spec| spec.id == "workbuddy")
+            .unwrap();
+        println!("all: {:?}", discover_macos_candidates(spec));
+        let activation = activation_candidates("workbuddy");
+        println!("activation: {activation:?}");
+        assert!(!activation.is_empty(), "WorkBuddy desktop not discovered");
+    }
+
+    /// End-to-end check against a real WorkBuddy Windows install (CI only).
+    #[cfg(target_os = "windows")]
+    #[test]
+    #[ignore]
+    fn e2e_windows_workbuddy_is_discovered() {
+        let spec = DESKTOP_APP_SPECS
+            .into_iter()
+            .find(|spec| spec.id == "workbuddy")
+            .unwrap();
+        println!("package: {:?}", discover_windows_package_candidates(spec));
+        println!(
+            "uninstall: {:?}",
+            discover_windows_uninstall_candidates(spec)
+        );
+        println!(
+            "app_paths: {:?}",
+            discover_windows_app_paths_candidates(spec)
+        );
+        println!("all: {:?}", discover_windows_candidates(spec));
+        let activation = activation_candidates("workbuddy");
+        println!("activation: {activation:?}");
+        assert!(!activation.is_empty(), "WorkBuddy desktop not discovered");
+    }
+
     /// End-to-end check against a real DeepSeek Harness macOS install (CI only).
     #[cfg(target_os = "macos")]
     #[test]
