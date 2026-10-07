@@ -55,8 +55,10 @@ if (platform === 'windows') {
   const destination = `${folder}/public/${prefix}-windows-x86_64-installer.exe`;
   assert(!existsSync(destination), 'Refusing to replace an existing installer');
   const zig = process.env.YESCHOY_ZIG || `${homedir()}/.cache/uv/archive-v0/9UrQOgeLIxroVAWO/ziglang/zig`;
-  run(`${homedir()}/.local/bin/cargo-xwin`, ['build', '--manifest-path', 'src-tauri/Cargo.toml', '--release', '--target', 'x86_64-pc-windows-msvc', '--bin', 'yeschoy-desktop', '--features', 'custom-protocol', '--locked', '--offline'], {
-    XWIN_CROSS_COMPILER: 'clang', STATIC_VCRUNTIME: 'false', RUSTFLAGS: '-C target-feature=+crt-static -C target-feature=+crt-static',
+  run(process.env.YESCHOY_CARGO_XWIN || `${homedir()}/.local/bin/cargo-xwin`, ['build', '--manifest-path', 'src-tauri/Cargo.toml', '--release', '--target', 'x86_64-pc-windows-msvc', '--bin', 'yeschoy-desktop', '--features', 'custom-protocol', '--locked', '--offline'], {
+    // Linux CI uses clang-cl: its xwin sysroot has the case-variant header links
+    // (Windows.h) that a case-insensitive Mac disk never needed.
+    XWIN_CROSS_COMPILER: process.env.YESCHOY_XWIN_CROSS_COMPILER || 'clang', STATIC_VCRUNTIME: 'false', RUSTFLAGS: '-C target-feature=+crt-static -C target-feature=+crt-static',
     CARGO_TARGET_DIR: `${repo}/src-tauri/target`, RC: `${repo}/deploy/self-update/llvm-rc`, YESCHOY_ZIG: zig,
   });
   const build = buildEvidence('x86_64-pc-windows-msvc');
@@ -70,7 +72,8 @@ if (platform === 'windows') {
   assert(binary.includes(Buffer.from(version, 'utf16le')));
   const payload = `${folder}/${prefix}-payload.exe`;
   copyFileSync(exe, payload);
-  const nsis = `${repo}/release/internal/0.4.15-partner-ai-yeschoy-04382354/tooling/makensis/3.12`;
+  // CI points these at its own pinned tools; the defaults are the local Mac paths.
+  const nsis = process.env.YESCHOY_NSIS_HOME || `${repo}/release/internal/0.4.15-partner-ai-yeschoy-04382354/tooling/makensis/3.12`;
   run(`${nsis}/bin/makensis`, [`-DAPP_EXE=${payload}`, `-DOUTPUT_EXE=${destination}`, `-DAPP_ICON=${repo}/src-tauri/icons/icon.ico`, `-DAPP_VERSION=${version}`, 'src-tauri/windows/installer.nsi'], { NSISDIR: `${nsis}/share/nsis` });
   sign(destination);
   save('build-inspection', { platform, variant, version, commit, authorizationPageOrigin: origin, build, resourceSha256: hash(resource), payloadSha256: hash(payload), installerSha256: hash(destination), codeSigned: false, updaterSignatureCreated: true, installedApplicationLaunched: false });

@@ -1,0 +1,125 @@
+name: Yeschoy release toolchain test
+
+# Proves the Linux cross-build path of yeschoy-release.yml without any real
+# secret: builds an official Windows installer with build-local.mjs, signed
+# with a throwaway updater key, then silently installs it on Windows.
+# Kept as a manual check.
+
+on:
+  # Manual check of the Linux → Windows build path; needs no secrets.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: actionlint (+ shellcheck)
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/actionlint.tar.gz"
+          curl -fsSL -o "$archive" https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          printf '%s  %s\n' 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8 "$archive" | sha256sum --check --strict
+          tar -xzf "$archive" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -color .github/workflows/yeschoy-release*.yml
+          shellcheck scripts/ci/*.sh
+
+  windows-cross-unsigned:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      OUT: release/internal/toolchain-test-${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:renderer
+      - name: Cache cross toolchain
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: |
+            ${{ runner.temp }}/tools/cargo
+            ${{ runner.temp }}/tools/nsis
+            ~/.cache/cargo-xwin
+          key: yeschoy-win-cross-v1-${{ hashFiles('scripts/ci/setup-windows-cross.sh', 'scripts/ci/build-makensis.sh') }}
+      - name: Install pinned Linux → Windows toolchain
+        run: scripts/ci/setup-windows-cross.sh "$RUNNER_TEMP/tools"
+      - name: Throwaway official key (TEST ONLY; replaces the compiled public key locally)
+        run: |
+          set -euo pipefail
+          dir="$HOME/.config/yeschoy-release/updater-v2"
+          mkdir -p "$dir" && chmod 700 "$dir"
+          pnpm exec tauri signer generate --ci -p '' -w "$dir/official.key" > /dev/null
+          node -e '
+          const fs = require("fs");
+          const p = "src-tauri/update-channels.json";
+          const r = JSON.parse(fs.readFileSync(p, "utf8"));
+          r.official.publicKey = fs.readFileSync(process.argv[1], "utf8").trim();
+          fs.writeFileSync(p, JSON.stringify(r, null, 2) + "\n");
+          ' "$dir/official.key.pub"
+          # The real path's key check, against the throwaway key.
+          scripts/ci/verify-updater-key.sh official
+      - run: cargo +1.94.0 fetch --locked --manifest-path src-tauri/Cargo.toml
+      - name: build-local.mjs windows official
+        run: node deploy/self-update/build-local.mjs windows official "$GITHUB_WORKSPACE/$OUT"
+      - name: Show build log on failure
+        if: always()
+        run: tail -n 120 "$OUT"/windows/evidence/*-build.log || true
+      - name: Inspect output
+        run: |
+          set -euo pipefail
+          ls -la "$OUT/windows/public"
+          cat "$OUT/windows/evidence/official-build-inspection.json"
+          exe="$(ls "$OUT"/windows/public/*-installer.exe)"
+          node -e '
+          const fs = require("fs");
+          const r = JSON.parse(fs.readFileSync("src-tauri/update-channels.json", "utf8"));
+          fs.writeFileSync("key.pub", Buffer.from(r.official.publicKey, "base64"));
+          '
+          base64 --decode "$exe.sig" > "$RUNNER_TEMP/exe.minisig"
+          minisign -Vm "$exe" -x "$RUNNER_TEMP/exe.minisig" -p key.pub
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: toolchain-test-windows-official
+          path: ${{ env.OUT }}/windows/public
+          if-no-files-found: error
+          retention-days: 7
+
+  windows-install-smoke:
+    needs: windows-cross-unsigned
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: toolchain-test-windows-official
+          path: installer
+      - name: Silent install and inspect
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Get-ChildItem installer -Filter '*-installer.exe' | Select-Object -First 1
+          # Start-Process -Wait would also wait for the app the installer may start.
+          $p = Start-Process $exe.FullName -ArgumentList '/S' -PassThru
+          if (-not $p.WaitForExit(300000)) { throw "installer did not exit within 5 minutes" }
+          "installer exit code $($p.ExitCode)"
+          if ($p.ExitCode -ne 0) { throw "installer failed" }
+          Start-Sleep 5
+          # installer.nsi installs to $LOCALAPPDATA\Programs\野菜API; the app exe is not named yeschoy-desktop.exe.
+          $app = Get-ChildItem "$env:LOCALAPPDATA\Programs\野菜API" -Filter '*.exe' -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -notmatch '(?i)uninst|^卸载' } | Select-Object -First 1
+          if (-not $app) { Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Depth 2 | Select-Object FullName | Out-Host; throw "app exe not found" }
+          $app.FullName
+          $app.VersionInfo | Format-List ProductName,ProductVersion,FileVersion,CompanyName
+          Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' | Where-Object { $_.DisplayName -match '野菜|yeschoy' } | Format-List DisplayName,DisplayVersion,Publisher,InstallLocation,UninstallString
+          Get-Process | Where-Object { $_.Path -eq $app.FullName } | Stop-Process -Force -ErrorAction SilentlyContinue

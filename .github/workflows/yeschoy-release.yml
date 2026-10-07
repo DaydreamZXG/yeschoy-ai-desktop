@@ -1,0 +1,453 @@
+name: Yeschoy Release
+
+# Builds both editions (official / partner) exactly like deploy/self-update:
+# Windows via cargo-xwin + custom NSIS on Linux, macOS universal app + DMG
+# signed and notarized, every updater artifact minisign-signed with the
+# edition's own key. `dry-run` stops after a verified candidate; `publish`
+# additionally pushes to ergou.qzz.io after manual approval.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact version x.y.z (must equal package.json, Cargo.toml, tauri.conf.json)
+        required: true
+        type: string
+      mode:
+        description: dry-run builds and verifies only; publish also releases to users
+        required: true
+        type: choice
+        options: [dry-run, publish]
+        default: dry-run
+      notes:
+        description: Release notes shown to users (1–600 characters, both editions)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: yeschoy-release
+  cancel-in-progress: false
+
+env:
+  RELEASE_VERSION: ${{ inputs.version }}
+  OUT: release/internal/ci-${{ inputs.version }}-${{ github.run_id }}
+
+jobs:
+  gate:
+    name: Version, notes and test gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Require release from product/yeschoy-v1
+        if: inputs.mode == 'publish'
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/product/yeschoy-v1" ]; then
+            echo "::error::Publishing is only allowed from product/yeschoy-v1 (got $GITHUB_REF)."
+            exit 1
+          fi
+      - name: Version identity and notes
+        env:
+          RELEASE_NOTES: ${{ inputs.notes }}
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs = require('fs');
+          const v = process.env.RELEASE_VERSION;
+          if (!/^\d+\.\d+\.\d+$/.test(v || '')) throw new Error(`version must be x.y.z, got "${v}"`);
+          const found = {
+            'package.json': JSON.parse(fs.readFileSync('package.json')).version,
+            'src-tauri/tauri.conf.json': JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json')).version,
+            'src-tauri/Cargo.toml': fs.readFileSync('src-tauri/Cargo.toml', 'utf8').match(/^version = "([^"]+)"/m)?.[1],
+            'src-tauri/Cargo.lock': fs.readFileSync('src-tauri/Cargo.lock', 'utf8').match(/name = "yeschoy-desktop"\nversion = "([^"]+)"/)?.[1],
+          };
+          const bad = Object.entries(found).filter(([, value]) => value !== v);
+          if (bad.length) throw new Error(`version mismatch with input ${v}: ${JSON.stringify(found)}`);
+          const notes = (process.env.RELEASE_NOTES || '').trim();
+          if (notes.length < 1 || notes.length > 600) throw new Error(`release notes must be 1-600 characters, got ${notes.length}`);
+          NODE
+      - name: Must be newer than what is live
+        run: |
+          set -euo pipefail
+          for variant in official partner; do
+            live="$(curl -fsS --retry 3 "https://ergou.qzz.io/updates/$variant/stable.json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])' || echo 0.0.0)"
+            python3 - "$RELEASE_VERSION" "$live" "$variant" <<'PY'
+          import sys
+          new, live, variant = sys.argv[1:]
+          key = lambda v: tuple(int(x) for x in v.split('.'))
+          if key(new) <= key(live):
+              sys.exit(f"::error::{variant}: {new} is not newer than the live {live}")
+          print(f"{variant}: live {live} -> {new}")
+          PY
+          done
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test:unit
+      - uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c
+        with:
+          toolchain: "1.95"
+          components: rustfmt
+      # Native tests run on Windows and macOS in YesChoy CI for every PR;
+      # here only formatting is re-checked on the exact release commit.
+      - run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+
+  renderer:
+    name: Renderer production build (shared by every edition)
+    needs: gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:renderer
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: renderer-dist
+          path: dist
+          if-no-files-found: error
+          retention-days: 3
+
+  windows:
+    name: Windows installer (${{ matrix.variant }})
+    needs: renderer
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    environment: yeschoy-signing
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - variant: official
+            key_secret: UPDATER_KEY_OFFICIAL
+          - variant: partner
+            key_secret: UPDATER_KEY_PARTNER
+    env:
+      UPDATER_KEY: ${{ secrets[matrix.key_secret] }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Require signing secrets
+        run: scripts/ci/require-secrets.sh "Windows ${{ matrix.variant }} build" UPDATER_KEY
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: renderer-dist
+          path: dist
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - run: pnpm install --frozen-lockfile
+      - name: Cache cross toolchain
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          path: |
+            ${{ runner.temp }}/tools/cargo
+            ${{ runner.temp }}/tools/nsis
+            ~/.cache/cargo-xwin
+          key: yeschoy-win-cross-v1-${{ hashFiles('scripts/ci/setup-windows-cross.sh', 'scripts/ci/build-makensis.sh') }}
+      - name: Install pinned Linux → Windows toolchain
+        run: scripts/ci/setup-windows-cross.sh "$RUNNER_TEMP/tools"
+      - name: Restore and verify the ${{ matrix.variant }} updater key
+        run: |
+          scripts/ci/restore-updater-key.sh "${{ matrix.variant }}"
+          scripts/ci/verify-updater-key.sh "${{ matrix.variant }}"
+      - name: Fetch crates (build-local builds offline)
+        run: cargo +1.94.0 fetch --locked --manifest-path src-tauri/Cargo.toml
+      - name: build-local.mjs windows ${{ matrix.variant }}
+        run: node deploy/self-update/build-local.mjs windows "${{ matrix.variant }}" "$GITHUB_WORKSPACE/$OUT"
+      - name: Show build log on failure
+        if: failure()
+        run: tail -n 200 "$OUT"/windows/evidence/*-build.log || true
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: win-${{ matrix.variant }}
+          path: |
+            ${{ env.OUT }}/windows/public
+            ${{ env.OUT }}/windows/evidence
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove key
+        if: always()
+        run: rm -rf ~/.config/yeschoy-release
+
+  macos:
+    name: macOS universal app + DMG (${{ matrix.variant }})
+    needs: renderer
+    runs-on: macos-14
+    timeout-minutes: 180
+    environment: yeschoy-signing
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - variant: official
+            key_secret: UPDATER_KEY_OFFICIAL
+          - variant: partner
+            key_secret: UPDATER_KEY_PARTNER
+    env:
+      UPDATER_KEY: ${{ secrets[matrix.key_secret] }}
+      APPLE_DEVELOPER_ID_P12: ${{ secrets.APPLE_DEVELOPER_ID_P12 }}
+      APPLE_DEVELOPER_ID_P12_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_P12_PASSWORD }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+      APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+      APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+      APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+      APPLE_ID_FALLBACK: ${{ secrets.APPLE_ID }}
+      APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+      APPLE_TEAM_ID_FALLBACK: ${{ secrets.APPLE_TEAM_ID }}
+      SIGNING_IDENTITY: "Developer ID Application: xiangguo Zheng (BRG82P5ZB7)"
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Require signing and notarization secrets
+        run: |
+          set -euo pipefail
+          scripts/ci/require-secrets.sh "macOS ${{ matrix.variant }} build" \
+            UPDATER_KEY APPLE_DEVELOPER_ID_P12 APPLE_DEVELOPER_ID_P12_PASSWORD KEYCHAIN_PASSWORD
+          if [ -n "$APPLE_API_KEY_P8" ] || [ -n "$APPLE_API_KEY_ID" ] || [ -n "$APPLE_API_ISSUER_ID" ]; then
+            scripts/ci/require-secrets.sh "Notarization (App Store Connect API key)" APPLE_API_KEY_P8 APPLE_API_KEY_ID APPLE_API_ISSUER_ID
+          else
+            scripts/ci/require-secrets.sh "Notarization (Apple ID fallback; or set APPLE_API_KEY_P8/APPLE_API_KEY_ID/APPLE_API_ISSUER_ID)" \
+              APPLE_ID_FALLBACK APPLE_APP_PASSWORD APPLE_TEAM_ID_FALLBACK
+          fi
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: renderer-dist
+          path: dist
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - run: pnpm install --frozen-lockfile
+      - name: Rust 1.94.0 with both Apple targets
+        run: |
+          rustup toolchain install 1.94.0 --profile minimal --target aarch64-apple-darwin --target x86_64-apple-darwin
+          cargo +1.94.0 fetch --locked --manifest-path src-tauri/Cargo.toml
+          brew install minisign
+      - name: Temporary keychain with the Developer ID identity and notary profile
+        run: |
+          set -euo pipefail
+          keychain="$RUNNER_TEMP/yeschoy-release.keychain-db"
+          printf '%s' "$APPLE_DEVELOPER_ID_P12" | base64 --decode > "$RUNNER_TEMP/devid.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$keychain"
+          security import "$RUNNER_TEMP/devid.p12" -P "$APPLE_DEVELOPER_ID_P12_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          rm -f "$RUNNER_TEMP/devid.p12"
+          existing=()
+          while IFS= read -r k; do existing+=("$(echo "$k" | tr -d '" ')"); done < <(security list-keychains -d user)
+          security list-keychains -d user -s "$keychain" "${existing[@]}"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$keychain" > /dev/null
+          if ! security find-identity -v -p codesigning "$keychain" | grep -qF "\"$SIGNING_IDENTITY\""; then
+            echo "::error::APPLE_DEVELOPER_ID_P12 does not contain a valid '$SIGNING_IDENTITY' identity with its private key."
+            security find-identity -v -p codesigning "$keychain" || true
+            exit 1
+          fi
+          if [ -n "$APPLE_API_KEY_P8" ]; then
+            printf '%s' "$APPLE_API_KEY_P8" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
+            xcrun notarytool store-credentials yeschoy-notary --key "$RUNNER_TEMP/AuthKey.p8" \
+              --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER_ID" --keychain "$keychain"
+            rm -f "$RUNNER_TEMP/AuthKey.p8"
+          else
+            xcrun notarytool store-credentials yeschoy-notary --apple-id "$APPLE_ID_FALLBACK" \
+              --team-id "$APPLE_TEAM_ID_FALLBACK" --password "$APPLE_APP_PASSWORD" --keychain "$keychain"
+          fi
+          echo "KEYCHAIN_PATH=$keychain" >> "$GITHUB_ENV"
+      - name: Restore and verify the ${{ matrix.variant }} updater key
+        run: |
+          scripts/ci/restore-updater-key.sh "${{ matrix.variant }}"
+          scripts/ci/verify-updater-key.sh "${{ matrix.variant }}"
+      - name: build-local.mjs macos ${{ matrix.variant }}
+        run: node deploy/self-update/build-local.mjs macos "${{ matrix.variant }}" "$GITHUB_WORKSPACE/$OUT"
+      - name: Notarize the app
+        run: |
+          root="$GITHUB_WORKSPACE/$OUT/macos"
+          node deploy/self-update/notarize-local.mjs "$root" "${{ matrix.variant }}" submit-app
+          scripts/ci/notarize-wait.sh "$root" "${{ matrix.variant }}" app
+      - name: Staple, build and notarize the DMG
+        run: |
+          root="$GITHUB_WORKSPACE/$OUT/macos"
+          node deploy/self-update/notarize-local.mjs "$root" "${{ matrix.variant }}" app-to-dmg
+          scripts/ci/notarize-wait.sh "$root" "${{ matrix.variant }}" dmg
+          node deploy/self-update/notarize-local.mjs "$root" "${{ matrix.variant }}" verify-dmg
+      - name: build-local.mjs macos-finalize ${{ matrix.variant }}
+        run: node deploy/self-update/build-local.mjs macos-finalize "${{ matrix.variant }}" "$GITHUB_WORKSPACE/$OUT"
+      - name: Show logs on failure
+        if: failure()
+        run: tail -n 200 "$OUT"/macos/evidence/*.log || true
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: mac-${{ matrix.variant }}
+          path: |
+            ${{ env.OUT }}/macos/public
+            ${{ env.OUT }}/macos/evidence
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove keychain and key
+        if: always()
+        run: |
+          if [ -n "${KEYCHAIN_PATH:-}" ]; then security delete-keychain "$KEYCHAIN_PATH" || true; fi
+          rm -rf ~/.config/yeschoy-release
+
+  candidate:
+    name: Assemble and verify the 12-file candidate
+    needs: [windows, macos]
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: win-*
+          merge-multiple: true
+          path: ${{ env.OUT }}/windows
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: mac-*
+          merge-multiple: true
+          path: ${{ env.OUT }}/macos
+      - name: prepare-candidate.mjs
+        run: node deploy/self-update/prepare-candidate.mjs "$GITHUB_WORKSPACE/$OUT"
+      - name: Trial promotion of both editions into a throwaway root seeded from live
+        env:
+          RELEASE_NOTES: ${{ inputs.notes }}
+        run: |
+          set -euo pipefail
+          brew install minisign
+          trial="$RUNNER_TEMP/trial/public"
+          mkdir -p "$trial/updates/official" "$trial/updates/partner" "$trial/releases"
+          curl -fsS --retry 3 -o "$trial/health.json" https://ergou.qzz.io/health.json
+          for v in official partner; do
+            curl -fsS --retry 3 -o "$trial/updates/$v/stable.json" "https://ergou.qzz.io/updates/$v/stable.json"
+            curl -fsS --retry 3 -o "$trial/releases/yeschoy-$v.json" "https://ergou.qzz.io/releases/yeschoy-$v.json"
+          done
+          printf '%s\n' "$RELEASE_NOTES" > "$RUNNER_TEMP/release-notes.txt"
+          cd deploy/self-update
+          for v in official partner; do
+            python3 publish_variant.py publish --root "$trial" --variant "$v" --lock "$RUNNER_TEMP/trial/publish.lock" \
+              --candidate "$GITHUB_WORKSPACE/$OUT/candidate" --version "$RELEASE_VERSION" \
+              --notes "$RUNNER_TEMP/release-notes.txt" --channel-config "$GITHUB_WORKSPACE/src-tauri/update-channels.json" \
+              --minisign "$(command -v minisign)"
+          done
+      - name: Checksums
+        run: cd "$OUT/candidate" && shasum -a 256 ./* > ../SHA256SUMS.txt && cat ../SHA256SUMS.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: candidate-${{ inputs.version }}
+          path: |
+            ${{ env.OUT }}/candidate
+            ${{ env.OUT }}/candidate-receipt.json
+            ${{ env.OUT }}/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    name: Publish to ergou.qzz.io (approval required)
+    needs: candidate
+    if: inputs.mode == 'publish'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: yeschoy-release
+    env:
+      DEPLOY_HOST: 43.134.77.210
+      DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+      RELEASE_NOTES: ${{ inputs.notes }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Require deploy secrets
+        run: scripts/ci/require-secrets.sh "Publish" DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS DEPLOY_USER
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: candidate-${{ inputs.version }}
+          path: upload
+      - name: Pinned SSH trust
+        run: |
+          set -euo pipefail
+          [[ "$DEPLOY_USER" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || { echo "::error::DEPLOY_USER is not a valid user name"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts && chmod 600 ~/.ssh/known_hosts
+          printf '%s\n' "$RELEASE_NOTES" > upload/release-notes.txt
+          cp src-tauri/update-channels.json upload/update-channels.json
+      - name: Stage files in incoming/
+        id: stage
+        run: |
+          set -euo pipefail
+          stage="/opt/yeschoy-download/incoming/ci-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          opts=(-o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          # shellcheck disable=SC2029 # values are expanded locally on purpose
+          ssh "${opts[@]}" "$DEPLOY_USER@$DEPLOY_HOST" "install -d -m 700 '$stage' '$stage/candidate'"
+          scp "${opts[@]}" upload/candidate/* "$DEPLOY_USER@$DEPLOY_HOST:$stage/candidate/"
+          scp "${opts[@]}" upload/release-notes.txt upload/update-channels.json "$DEPLOY_USER@$DEPLOY_HOST:$stage/"
+          echo "stage=$stage" >> "$GITHUB_OUTPUT"
+      - name: Publish official, then partner (root-owned wrapper on the server)
+        env:
+          STAGE: ${{ steps.stage.outputs.stage }}
+        run: |
+          set -euo pipefail
+          opts=(-o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts")
+          for v in official partner; do
+            # shellcheck disable=SC2029 # values are expanded locally on purpose
+            ssh "${opts[@]}" "$DEPLOY_USER@$DEPLOY_HOST" \
+              "sudo -n /opt/yeschoy-download/bin/yeschoy-publish $v '$STAGE/candidate' '$RELEASE_VERSION' '$STAGE/release-notes.txt' '$STAGE/update-channels.json'" \
+              | tee "receipt-$v.json"
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: publish-receipts-${{ inputs.version }}
+          path: receipt-*.json
+          if-no-files-found: ignore
+          retention-days: 90
+      - name: Remove SSH key
+        if: always()
+        run: rm -f ~/.ssh/id_ed25519
+
+  probe:
+    name: Probe the public release
+    needs: publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: candidate-${{ inputs.version }}
+          path: candidate-artifact
+      - name: probe_variant_release.py
+        run: |
+          set -euo pipefail
+          sudo apt-get update -q && sudo apt-get install -y -q minisign
+          python3 deploy/self-update/probe_variant_release.py --version "$RELEASE_VERSION" \
+            --channel-config src-tauri/update-channels.json --candidate candidate-artifact/candidate \
+            --minisign "$(command -v minisign)"
+      - name: How to roll back
+        if: failure()
+        run: |
+          echo "::error::The public probe failed. On the server, roll back each edition with the manifestSha256 from the publish-receipts artifact:"
+          echo "python3 /opt/yeschoy-download/bin/publish_variant.py rollback --root /srv/yeschoy-download/public --variant <official|partner> --lock /opt/yeschoy-download/publish.lock --expected-sha256 <manifestSha256>"
