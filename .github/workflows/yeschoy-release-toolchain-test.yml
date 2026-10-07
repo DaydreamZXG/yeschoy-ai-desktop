@@ -86,7 +86,7 @@ jobs:
           const r = JSON.parse(fs.readFileSync("src-tauri/update-channels.json", "utf8"));
           fs.writeFileSync("key.pub", Buffer.from(r.official.publicKey, "base64"));
           '
-          base64 --decode "$exe.sig" > "$RUNNER_TEMP/exe.minisig"
+          base64 --decode < "$exe.sig" > "$RUNNER_TEMP/exe.minisig"
           minisign -Vm "$exe" -x "$RUNNER_TEMP/exe.minisig" -p key.pub
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
