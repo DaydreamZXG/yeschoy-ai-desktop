@@ -1,17 +1,12 @@
-name: Yeschoy release toolchain test (temporary)
+name: Yeschoy release toolchain test
 
 # Proves the Linux cross-build path of yeschoy-release.yml without any real
 # secret: builds an official Windows installer with build-local.mjs, signed
 # with a throwaway updater key, then silently installs it on Windows.
-# Remove before merging (or keep as a manual check).
+# Kept as a manual check.
 
 on:
-  push:
-    branches: [ci/github-release-pipeline]
-    paths:
-      - .github/workflows/yeschoy-release*.yml
-      - scripts/ci/**
-      - deploy/self-update/build-local.mjs
+  # Manual check of the Linux → Windows build path; needs no secrets.
   workflow_dispatch:
 
 permissions:
@@ -120,8 +115,10 @@ jobs:
           "installer exit code $($p.ExitCode)"
           if ($p.ExitCode -ne 0) { throw "installer failed" }
           Start-Sleep 5
-          $app = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter 'yeschoy-desktop.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $app) { Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Depth 2 | Select-Object FullName; throw "app exe not found" }
+          # installer.nsi installs to $LOCALAPPDATA\Programs\野菜API; the app exe is not named yeschoy-desktop.exe.
+          $app = Get-ChildItem "$env:LOCALAPPDATA\Programs\野菜API" -Filter '*.exe' -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -notmatch '(?i)uninst|^卸载' } | Select-Object -First 1
+          if (-not $app) { Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Depth 2 | Select-Object FullName | Out-Host; throw "app exe not found" }
           $app.FullName
           $app.VersionInfo | Format-List ProductName,ProductVersion,FileVersion,CompanyName
           Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' | Where-Object { $_.DisplayName -match '野菜|yeschoy' } | Format-List DisplayName,DisplayVersion,Publisher,InstallLocation,UninstallString
