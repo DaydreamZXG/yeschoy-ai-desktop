@@ -146,6 +146,7 @@ export function WorkbenchSidebar({
       <button
         type="button"
         className="workbench-brand"
+        title={c.brand}
         onClick={() => onNavigate("home")}
         aria-label={c.brand}
       >
@@ -166,6 +167,7 @@ export function WorkbenchSidebar({
         <button
           type="button"
           className="sidebar-community"
+          title={c.joinGroup}
           onClick={onOpenCommunity}
         >
           <Users aria-hidden="true" />
