@@ -629,10 +629,7 @@ mod tests {
             "com.tencent.workbuddy.mac"
         );
         assert_eq!(DESKTOP_APP_SPECS[3].id, "dsh_desktop");
-        assert_eq!(
-            DESKTOP_APP_SPECS[3].expected_bundle_id,
-            "com.deepseek.dsh"
-        );
+        assert_eq!(DESKTOP_APP_SPECS[3].expected_bundle_id, "com.deepseek.dsh");
         assert_eq!(
             PRIMARY_DESKTOP_APP_SPECS.map(|spec| spec.expected_bundle_id),
             ["com.anthropic.claudefordesktop", "com.openai.codex"]
@@ -723,8 +720,7 @@ mod tests {
             "DeepSeek",
             "GitHub, Inc.",
             "杭州深度求索人工智能基础技术研究有限公司",
-        ]
-        {
+        ] {
             assert!(windows_desktop_file_identity_matches(
                 "dsh_desktop",
                 exe,

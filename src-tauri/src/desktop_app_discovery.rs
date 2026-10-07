@@ -1286,7 +1286,10 @@ mod tests {
         println!("all: {:?}", discover_macos_candidates(spec));
         let activation = activation_candidates("dsh_desktop");
         println!("activation: {activation:?}");
-        assert!(!activation.is_empty(), "DeepSeek Harness desktop not discovered");
+        assert!(
+            !activation.is_empty(),
+            "DeepSeek Harness desktop not discovered"
+        );
     }
 
     /// End-to-end check against a real DeepSeek Harness install (CI only).
@@ -1299,13 +1302,22 @@ mod tests {
             .find(|spec| spec.id == "dsh_desktop")
             .unwrap();
         println!("package: {:?}", discover_windows_package_candidates(spec));
-        println!("uninstall: {:?}", discover_windows_uninstall_candidates(spec));
-        println!("app_paths: {:?}", discover_windows_app_paths_candidates(spec));
+        println!(
+            "uninstall: {:?}",
+            discover_windows_uninstall_candidates(spec)
+        );
+        println!(
+            "app_paths: {:?}",
+            discover_windows_app_paths_candidates(spec)
+        );
         let all = discover_windows_candidates(spec);
         println!("all: {all:?}");
         let activation = activation_candidates("dsh_desktop");
         println!("activation: {activation:?}");
-        assert!(!activation.is_empty(), "DeepSeek Harness desktop not discovered");
+        assert!(
+            !activation.is_empty(),
+            "DeepSeek Harness desktop not discovered"
+        );
     }
 
     fn write_pe_fixture(path: &Path, subsystem: u16) {
