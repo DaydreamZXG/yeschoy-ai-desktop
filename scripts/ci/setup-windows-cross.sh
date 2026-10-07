@@ -39,4 +39,5 @@ fi
   echo "YESCHOY_CARGO_XWIN=$tools/cargo/bin/cargo-xwin"
   echo "YESCHOY_ZIG=$zig"
   echo "YESCHOY_NSIS_HOME=$tools/nsis"
+  echo "YESCHOY_XWIN_CROSS_COMPILER=clang-cl"
 } >> "${GITHUB_ENV:-/dev/stdout}"

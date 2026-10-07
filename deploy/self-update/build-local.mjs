@@ -56,7 +56,9 @@ if (platform === 'windows') {
   assert(!existsSync(destination), 'Refusing to replace an existing installer');
   const zig = process.env.YESCHOY_ZIG || `${homedir()}/.cache/uv/archive-v0/9UrQOgeLIxroVAWO/ziglang/zig`;
   run(process.env.YESCHOY_CARGO_XWIN || `${homedir()}/.local/bin/cargo-xwin`, ['build', '--manifest-path', 'src-tauri/Cargo.toml', '--release', '--target', 'x86_64-pc-windows-msvc', '--bin', 'yeschoy-desktop', '--features', 'custom-protocol', '--locked', '--offline'], {
-    XWIN_CROSS_COMPILER: 'clang', STATIC_VCRUNTIME: 'false', RUSTFLAGS: '-C target-feature=+crt-static -C target-feature=+crt-static',
+    // Linux CI uses clang-cl: its xwin sysroot has the case-variant header links
+    // (Windows.h) that a case-insensitive Mac disk never needed.
+    XWIN_CROSS_COMPILER: process.env.YESCHOY_XWIN_CROSS_COMPILER || 'clang', STATIC_VCRUNTIME: 'false', RUSTFLAGS: '-C target-feature=+crt-static -C target-feature=+crt-static',
     CARGO_TARGET_DIR: `${repo}/src-tauri/target`, RC: `${repo}/deploy/self-update/llvm-rc`, YESCHOY_ZIG: zig,
   });
   const build = buildEvidence('x86_64-pc-windows-msvc');
