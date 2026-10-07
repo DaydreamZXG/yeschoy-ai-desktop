@@ -114,7 +114,9 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $exe = Get-ChildItem installer -Filter '*-installer.exe' | Select-Object -First 1
-          $p = Start-Process $exe.FullName -ArgumentList '/S' -PassThru -Wait
+          # Start-Process -Wait would also wait for the app the installer may start.
+          $p = Start-Process $exe.FullName -ArgumentList '/S' -PassThru
+          if (-not $p.WaitForExit(300000)) { throw "installer did not exit within 5 minutes" }
           "installer exit code $($p.ExitCode)"
           if ($p.ExitCode -ne 0) { throw "installer failed" }
           Start-Sleep 5
