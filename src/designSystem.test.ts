@@ -13,6 +13,7 @@ const SHEETS = [
   "src/components/ui/dialog.css",
   "src/installation/installation.css",
   "src/theme/new-api.css",
+  "src/theme/new-api-layout.css",
 ];
 
 const sheets = SHEETS.map((path) => ({

@@ -548,9 +548,10 @@ describe("daily-use UX", () => {
       .closest("article")!;
     const overview = container.querySelector(".account-overview")!;
     expect(
-      card.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING,
+      card.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_PRECEDING,
     ).toBeTruthy();
-    expect(overview).not.toHaveAttribute("open");
+    // 改版后账户概览是首页顶部常驻的仪表盘行，不再折叠。
+    expect(overview.tagName).toBe("SECTION");
     fireEvent.click(within(card).getByRole("button", { name: "检查并修复" }));
     expect(open).toHaveBeenLastCalledWith("codex_desktop", "repair");
     expect(controller.open).not.toHaveBeenCalled();

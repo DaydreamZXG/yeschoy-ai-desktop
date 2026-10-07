@@ -14,6 +14,7 @@ import {
 import type { ConfigurationLineId } from "../configuration/preview";
 import { creditUnit, formatMoney } from "../account/finance";
 import { aggregateUsage, type UsageRecord } from "../account/usage";
+import { UsageTrend } from "./UsageTrend";
 import { readSessionAgeRecord, sessionAgeLevel } from "../account/sessionAge";
 import { SavingsCard, SavingsDetails } from "./Savings";
 import { WORKBENCH_APPS } from "./appCatalog";
@@ -427,6 +428,14 @@ export function AccountView({
             </article>
           </section>
           <SavingsDetails savings={projection.savings} />
+
+          {usageLog?.status === "available" && (
+            <UsageTrend
+              records={usageLog.records}
+              currency={money?.currency}
+              locale={locale}
+            />
+          )}
 
           <section className="usage-section" aria-label={c.usageByToolModel}>
             <div className="workbench-section-heading">

@@ -9,6 +9,7 @@ import "./index.css";
 import "./tokens.css";
 import "./workbench/workbench-v2.css";
 import "./theme/new-api.css";
+import "./theme/new-api-layout.css";
 
 const applyTitle = () => {
   document.title = i18n.t("workbench.appTitle");

@@ -631,7 +631,11 @@
     "creditCny": "CNY credit",
     "creditUsd": "USD credit",
     "creditUnavailable": "Amount unavailable",
-    "referenceFx": "Reference rate {{value}}"
+    "referenceFx": "Reference rate {{value}}",
+    "usageTrendTitle": "Spend, last 14 days",
+    "usageTrendNote": "Daily totals, as charged by YesChoy API",
+    "usageTrendEmpty": "No usage in the last 14 days",
+    "usageTrendDayLabel": "{{date}}: {{amount}}"
   },
   "configuration": {
     "defaultGroup": "Standard plan",

@@ -79,10 +79,9 @@ function account(requestId: string, status: string) {
           ],
           baseInputUsd: 2,
           baseOutputUsd: 8,
-          requestUsd: null,
           expression: "",
         }
-      : null,
+      : undefined,
   });
 
   return {
@@ -116,6 +115,69 @@ function account(requestId: string, status: string) {
     ],
     comparisonFx: "1",
     reasonCode: "none",
+    // v6：余额、节省与 30 天用量明细，让账单页能演出真实的数据形态。
+    schemaVersion: 6,
+    money: {
+      currency: "CNY",
+      balanceAmount: "86.40",
+      consumedAmount: "33.60",
+      displayRate: "7",
+    },
+    savings: {
+      status: "available",
+      reasonCode: "none",
+      officialAmount: "140",
+      siteAmount: "20",
+      savedAmount: "120",
+      referenceRate: "7",
+      priceRate: "2",
+      recordLimit: 100,
+      scannedCount: 100,
+      includedCount: 80,
+      excludedCount: 20,
+      oldestAtEpochMs: 1_786_900_000_000,
+      newestAtEpochMs: 1_788_195_600_000,
+    },
+    usageLog: mockUsageLog(),
+  };
+}
+
+function mockUsageLog() {
+  const day = 86_400_000;
+  const end = 1_788_195_600_000;
+  const pairs = [
+    ["claude_desktop", "glm-5.3"],
+    ["codex_desktop", "gpt-5.6-codex"],
+    ["claude_code", "claude-sonnet-4-5-20250929"],
+    ["", "deepseek-v4-flash"],
+  ];
+  const records = [];
+  for (let d = 0; d < 14; d++) {
+    const n = 1 + ((d * 7 + 3) % 5);
+    for (let i = 0; i < n; i++) {
+      const [toolId, modelId] = pairs[(d + i) % pairs.length];
+      const prompt = 800 + ((d * 131 + i * 977) % 4200);
+      records.push({
+        toolId,
+        modelId,
+        observedAtEpochMs: end - d * day - i * 3_600_000,
+        promptTokens: prompt,
+        completionTokens: Math.round(prompt / 3),
+        cacheTokens: (i % 2) * 400,
+        amount: (prompt / 2000).toFixed(2),
+      });
+    }
+  }
+  return {
+    status: "available",
+    reasonCode: "none",
+    recordCount: records.length,
+    scannedCount: records.length,
+    windowDays: 30,
+    truncated: false,
+    oldestAtEpochMs: records[records.length - 1].observedAtEpochMs,
+    newestAtEpochMs: end,
+    records,
   };
 }
 
@@ -240,7 +302,36 @@ const handlers: Record<string, (a: Args) => unknown> = {
   account_cancel_authorization_v2: (a) => account(rid(a), "signed_out"),
   account_logout_v2: (a) => account(rid(a), "signed_out"),
   account_open_wallet_v2: () => null,
-  account_announcements_read_v2: () => ({ available: false }),
+  // 演示用公告：`?s=no_notices` 时退回「服务端还没宣告」。
+  account_announcements_read_v2: () =>
+    scenario === "no_notices"
+      ? { available: false }
+      : {
+          available: true,
+          notices: [
+            {
+              id: "recharge-1001",
+              title: "国庆充值加赠",
+              body: "活动期间充 100 送 20，赠送额度立即到账，可用于所有模型。",
+              severity: "info",
+              publishedAtEpochMs: Date.now() - 3600_000,
+              expiresAtEpochMs: Date.now() + 5 * 86400_000,
+              banner: true,
+              actionLabel: "去充值",
+            },
+            {
+              id: "maint-1002",
+              title: "10 月 9 日凌晨线路维护",
+              body: "02:00–03:00 海外线路切换，期间请求可能短暂失败，自动重试即可。",
+              severity: "warning",
+              publishedAtEpochMs: Date.now() - 86400_000,
+              expiresAtEpochMs: 0,
+              banner: false,
+              actionLabel: "",
+            },
+          ],
+        },
+  account_announcement_action_v2: () => null,
   manage_tool_connections_v1: (a) => connections(rid(a)),
   scan_activation_targets_v1: (a) => targets(rid(a)),
   manual_location_pick: (a) => ({ requestId: rid(a), outcome: "cancelled" }),
