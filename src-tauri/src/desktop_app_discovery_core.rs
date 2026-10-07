@@ -203,11 +203,13 @@ pub(crate) fn windows_desktop_file_identity_matches(
             matches!(product.as_str(), "workbuddy" | "tencentworkbuddy")
                 && (company.contains("tencent") || company_name.contains("腾讯"))
         }
-        // The upstream package declares no author, so electron-builder may
-        // leave CompanyName empty; the Authenticode check still applies.
+        // The upstream package declares no author, so the shipped exe keeps
+        // Electron's default CompanyName "GitHub, Inc." (verified on a real
+        // 0.2.0-rc.2 install). Authenticode (DeepSeek-signed) still applies.
         "dsh_desktop" => {
             product == "deepseekharness"
                 && (company.is_empty()
+                    || company == "githubinc"
                     || company.contains("deepseek")
                     || company_name.contains("深度求索"))
         }
@@ -716,7 +718,12 @@ mod tests {
     #[test]
     fn deepseek_harness_windows_identity_is_exact_and_gui_only() {
         let exe = Path::new("D:\\Apps\\DeepSeek Harness\\DeepSeek Harness.exe");
-        for company in ["", "DeepSeek", "杭州深度求索人工智能基础技术研究有限公司"]
+        for company in [
+            "",
+            "DeepSeek",
+            "GitHub, Inc.",
+            "杭州深度求索人工智能基础技术研究有限公司",
+        ]
         {
             assert!(windows_desktop_file_identity_matches(
                 "dsh_desktop",

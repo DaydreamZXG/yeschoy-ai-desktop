@@ -516,10 +516,7 @@ fn windows_standalone_identity_matches(app_id: &str, path: &Path) -> bool {
     if is_windows_packaged_path(path) || !windows_gui_executable(path) {
         return false;
     }
-    // DSH Desktop landed without a real Windows install check. Offline
-    // WinVerifyTrust (CACHE_ONLY) often rejects a publisher whose intermediates
-    // are not cached yet; keep ProductName + filename as the gate for DSH.
-    if app_id != "dsh_desktop" && !windows_authenticode_is_trusted(path) {
+    if !windows_authenticode_is_trusted(path) {
         return false;
     }
     let Some(buffer) = windows_version_resource(path) else {
