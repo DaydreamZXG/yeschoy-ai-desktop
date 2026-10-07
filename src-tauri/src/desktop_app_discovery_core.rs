@@ -163,7 +163,10 @@ pub(crate) fn windows_desktop_filename_matches(app_id: &str, path: &Path) -> boo
             name.eq_ignore_ascii_case("Codex.exe") || name.eq_ignore_ascii_case("ChatGPT.exe")
         }
         "workbuddy" => name.eq_ignore_ascii_case("WorkBuddy.exe"),
-        "dsh_desktop" => name.eq_ignore_ascii_case("DeepSeek Harness.exe"),
+        "dsh_desktop" => {
+            name.eq_ignore_ascii_case("DeepSeek Harness.exe")
+                || name.eq_ignore_ascii_case("DeepSeekHarness.exe")
+        }
         _ => false,
     }
 }
@@ -740,6 +743,13 @@ mod tests {
         assert!(!windows_desktop_file_identity_matches(
             "dsh_desktop",
             Path::new("D:\\Apps\\dsh.exe"),
+            "DeepSeek Harness",
+            "",
+            true
+        ));
+        assert!(windows_desktop_file_identity_matches(
+            "dsh_desktop",
+            Path::new("D:\\Apps\\DeepSeekHarness\\DeepSeekHarness.exe"),
             "DeepSeek Harness",
             "",
             true

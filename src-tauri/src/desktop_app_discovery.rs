@@ -336,7 +336,7 @@ fn windows_app_relative_executables(app_id: &str) -> &'static [&'static str] {
             "app\\WorkBuddy.exe",
             "WorkBuddy\\WorkBuddy.exe",
         ],
-        "dsh_desktop" => &["DeepSeek Harness.exe"],
+        "dsh_desktop" => &["DeepSeek Harness.exe", "DeepSeekHarness.exe"],
         _ => &[],
     }
 }
@@ -513,10 +513,13 @@ fn windows_version_string(
 
 #[cfg(target_os = "windows")]
 fn windows_standalone_identity_matches(app_id: &str, path: &Path) -> bool {
-    if is_windows_packaged_path(path)
-        || !windows_gui_executable(path)
-        || !windows_authenticode_is_trusted(path)
-    {
+    if is_windows_packaged_path(path) || !windows_gui_executable(path) {
+        return false;
+    }
+    // DSH Desktop landed without a real Windows install check. Offline
+    // WinVerifyTrust (CACHE_ONLY) often rejects a publisher whose intermediates
+    // are not cached yet; keep ProductName + filename as the gate for DSH.
+    if app_id != "dsh_desktop" && !windows_authenticode_is_trusted(path) {
         return false;
     }
     let Some(buffer) = windows_version_resource(path) else {
@@ -762,8 +765,16 @@ fn windows_relative_paths(app_id: &str, program_files: bool) -> &'static [&'stat
             "WorkBuddy\\WorkBuddy.exe",
         ],
         ("workbuddy", true) => &["WorkBuddy\\WorkBuddy.exe"],
-        ("dsh_desktop", false) => &["Programs\\DeepSeek Harness\\DeepSeek Harness.exe"],
-        ("dsh_desktop", true) => &["DeepSeek Harness\\DeepSeek Harness.exe"],
+        ("dsh_desktop", false) => &[
+            "Programs\\DeepSeek Harness\\DeepSeek Harness.exe",
+            "Programs\\DeepSeekHarness\\DeepSeekHarness.exe",
+            "DeepSeekHarness\\DeepSeekHarness.exe",
+            "DeepSeek Harness\\DeepSeek Harness.exe",
+        ],
+        ("dsh_desktop", true) => &[
+            "DeepSeek Harness\\DeepSeek Harness.exe",
+            "DeepSeekHarness\\DeepSeekHarness.exe",
+        ],
         _ => &[],
     }
 }
@@ -1083,7 +1094,7 @@ fn windows_app_paths_names(app_id: &str) -> &'static [&'static str] {
         "claude_desktop" => &["Claude.exe"],
         "codex_desktop" => &["Codex.exe", "ChatGPT.exe"],
         "workbuddy" => &["WorkBuddy.exe"],
-        "dsh_desktop" => &["DeepSeek Harness.exe"],
+        "dsh_desktop" => &["DeepSeek Harness.exe", "DeepSeekHarness.exe"],
         _ => &[],
     }
 }
@@ -1421,6 +1432,8 @@ mod tests {
         ));
         assert!(windows_relative_paths("dsh_desktop", false)
             .contains(&"Programs\\DeepSeek Harness\\DeepSeek Harness.exe"));
+        assert!(windows_relative_paths("dsh_desktop", false)
+            .contains(&"DeepSeekHarness\\DeepSeekHarness.exe"));
         for app_id in [
             "claude_desktop",
             "codex_desktop",
