@@ -14,7 +14,7 @@ const fs = require("fs");
 const r = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
 fs.writeFileSync(process.argv[3], Buffer.from(r[process.argv[2]].publicKey, "base64"));
 ' "$repo/src-tauri/update-channels.json" "$variant" "$work/key.pub"
-base64 --decode "$work/probe.txt.sig" > "$work/probe.minisig"
+base64 --decode < "$work/probe.txt.sig" > "$work/probe.minisig"
 if ! minisign -Vm "$work/probe.txt" -x "$work/probe.minisig" -p "$work/key.pub" > /dev/null; then
   echo "::error::UPDATER_KEY_${variant^^} does not match the $variant public key in src-tauri/update-channels.json" >&2
   exit 1
