@@ -375,6 +375,9 @@ pub enum LocationHint {
     UserApplications,
     LocalAppData,
     ProgramFiles,
+    /// A location the user picked by hand (`manual_locations`).
+    #[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
+    Manual,
     Multiple,
     Unsupported,
 }
@@ -387,6 +390,7 @@ impl LocationHint {
             Self::UserApplications => "user_applications",
             Self::LocalAppData => "local_app_data",
             Self::ProgramFiles => "program_files",
+            Self::Manual => "manual",
             Self::Multiple => "multiple",
             Self::Unsupported => "unsupported",
         }

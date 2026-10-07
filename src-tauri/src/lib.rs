@@ -27,6 +27,7 @@ mod desktop_app_discovery;
 mod desktop_app_discovery_core;
 mod local_bridge;
 mod logging;
+mod manual_locations;
 mod model_catalog;
 mod open_connection;
 mod provider;
@@ -189,6 +190,7 @@ pub fn run() {
             account_v2::account_logout_v2,
             account_v2::account_open_wallet_v2,
             account_v2::account_announcements_read_v2,
+            account_v2::account_announcement_action_v2,
             tool_activation::scan_activation_targets_v1,
             tool_activation::configure_desktop_tool_v2,
             tool_activation::cancel_tool_activation_v1,
@@ -200,6 +202,8 @@ pub fn run() {
             background_desktop_assistant,
             tool_discovery::scan_tools_read_only,
             tool_discovery_v2::scan_tools_read_only_v2,
+            manual_locations::manual_location_pick,
+            manual_locations::manual_location_clear,
             model_catalog::refresh_model_catalog_v1,
             window_appearance::set_window_appearance,
             ui_language::set_ui_language_v1,

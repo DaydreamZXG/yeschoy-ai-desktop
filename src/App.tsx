@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 import { WorkbenchSidebar, type AppView } from "./workbench/WorkbenchChrome";
 import { refreshModelCatalog } from "./model-profiles/remoteCatalog";
 import { useAppearance } from "./workbench/appearance";
@@ -18,9 +18,19 @@ import {
 } from "./configuration/connections";
 import { DiagnosticsView } from "./diagnostics/DiagnosticsView";
 import { SettingsView } from "./settings/SettingsView";
-import { AnnouncementsView } from "./workbench/AnnouncementsView";
+import {
+  AnnouncementBanner,
+  AnnouncementsView,
+} from "./workbench/AnnouncementsView";
 import { CommunityGroupDialog } from "./workbench/QQGroupDialog";
-import { readAnnouncements, type Notice } from "./workbench/announcements";
+import {
+  followAnnouncement,
+  readAnnouncements,
+  readSeenAnnouncements,
+  rememberSeenAnnouncements,
+  type Notice,
+} from "./workbench/announcements";
+import { useWorkbenchCopy } from "./workbench/copy";
 import { ShutdownProvider } from "./settings/QuitAssistant";
 import { InstallationProvider } from "./installation/InstallationProvider";
 import { InstallationNotice } from "./installation/InstallationPanel";
@@ -38,6 +48,9 @@ import {
 // （遗留 hermes/openclaw 于 2026-09-14 移除），展示层无需再过滤。
 // opencode 属于「即将支持」（保留只读发现，无接入适配器）。
 const V1_DISCOVERY_TOOLS = TOOL_CATALOG;
+
+const ANNOUNCEMENT_REFRESH_MS = 30 * 60 * 1000;
+const ANNOUNCEMENT_FOCUS_REFRESH_MS = 5 * 60 * 1000;
 
 type ViewPhase =
   | "default"
@@ -99,10 +112,14 @@ function App() {
     }
   }, [view]);
 
-  // 公告只在登录之后读一次，失败不重试 —— 它读不到只是没有公告，
-  // 绝不能因为它让主界面转圈或报错。入口本身也只在服务端宣告了地址时才出现。
+  // 公告登录后读一次，之后每 30 分钟、以及窗口回到前台（距上次超过
+  // 5 分钟）时再读 —— 助手常常一开一整天，活动公告不能等到下次启动。
+  // 读不到只是没有公告，绝不能因为它让主界面转圈或报错。
+  // 入口本身也只在服务端宣告了地址时才出现。
   const signedIn = accountSession.projection?.status === "signed_in";
+  const announcementsReadAt = useRef(0);
   const loadAnnouncements = useCallback(async () => {
+    announcementsReadAt.current = Date.now();
     setAnnouncements((current) => ({
       ...current,
       loading: true,
@@ -129,7 +146,60 @@ function App() {
       return;
     }
     void loadAnnouncements();
+    const timer = window.setInterval(
+      () => void loadAnnouncements(),
+      ANNOUNCEMENT_REFRESH_MS,
+    );
+    const onVisible = () => {
+      if (
+        document.visibilityState === "visible" &&
+        Date.now() - announcementsReadAt.current > ANNOUNCEMENT_FOCUS_REFRESH_MS
+      )
+        void loadAnnouncements();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [signedIn, loadAnnouncements]);
+
+  const copy = useWorkbenchCopy();
+  const [seenAnnouncements, setSeenAnnouncements] = useState(
+    readSeenAnnouncements,
+  );
+  const unreadAnnouncements = useMemo(
+    () =>
+      new Set(
+        announcements.notices
+          .map((notice) => notice.id)
+          .filter((id) => !seenAnnouncements.has(id)),
+      ),
+    [announcements.notices, seenAnnouncements],
+  );
+  const markAnnouncementsSeen = useCallback((ids: string[]) => {
+    setSeenAnnouncements((current) =>
+      ids.every((id) => current.has(id))
+        ? current
+        : rememberSeenAnnouncements(current, ids),
+    );
+  }, []);
+  // 打开公告页就算全部读过；页面开着时新到的也一样。
+  useEffect(() => {
+    if (view === "announcements" && unreadAnnouncements.size > 0)
+      markAnnouncementsSeen([...unreadAnnouncements]);
+  }, [view, unreadAnnouncements, markAnnouncementsSeen]);
+  const followNotice = useCallback(
+    async (notice: Notice) => {
+      markAnnouncementsSeen([notice.id]);
+      if (!(await followAnnouncement(accountLineId, notice.id)))
+        toast.error(copy.announcementActionFailed);
+    },
+    [accountLineId, copy.announcementActionFailed, markAnnouncementsSeen],
+  );
+  const bannerNotice = announcements.notices.find(
+    (notice) => notice.banner && unreadAnnouncements.has(notice.id),
+  );
 
   const resultsById = useMemo(
     () => new Map(scan?.tools.map((tool) => [tool.toolId, tool]) ?? []),
@@ -195,6 +265,7 @@ function App() {
                 onNavigate={setView}
                 onOpenCommunity={() => setCommunityOpen(true)}
                 announcementsAvailable={announcements.available}
+                announcementsUnread={unreadAnnouncements.size}
                 appearance={appearance}
                 onAppearance={changeAppearance}
                 accountProjection={accountSession.projection}
@@ -234,6 +305,18 @@ function App() {
                     setView("setup");
                   }}
                   accountSession={accountSession}
+                  announcement={
+                    bannerNotice && (
+                      <AnnouncementBanner
+                        notice={bannerNotice}
+                        onFollow={(notice) => void followNotice(notice)}
+                        onOpenAll={() => setView("announcements")}
+                        onDismiss={(notice) =>
+                          markAnnouncementsSeen([notice.id])
+                        }
+                      />
+                    )
+                  }
                 />
               ) : view === "account" ? (
                 <AccountView
@@ -261,6 +344,8 @@ function App() {
                   loading={announcements.loading}
                   failed={announcements.failed}
                   onRetry={() => void loadAnnouncements()}
+                  unread={unreadAnnouncements}
+                  onFollow={(notice) => void followNotice(notice)}
                 />
               ) : view === "settings" ? (
                 <SettingsView

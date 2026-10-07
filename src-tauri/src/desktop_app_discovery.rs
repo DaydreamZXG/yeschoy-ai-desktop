@@ -205,8 +205,91 @@ fn classify_candidates(candidates: Vec<Candidate>) -> DesktopAppObservation {
     }
 }
 
+/// Check a location the user picked by hand with the identity rules applied
+/// to everything discovery finds itself.
+pub(crate) fn validate_manual(
+    app_id: &str,
+    path: &Path,
+) -> Result<PathBuf, crate::manual_locations::Rejection> {
+    manual_candidate_at(app_id, path).map(|candidate| candidate.path)
+}
+
+/// The application at the remembered location, if it still checks out. It
+/// replaces the scan rather than joining it: the user picked it because the
+/// scan found nothing, or the wrong copy.
+#[cfg_attr(not(any(target_os = "macos", target_os = "windows")), allow(dead_code))]
+fn manual_candidate(spec: DesktopAppSpec) -> Option<Candidate> {
+    let path = crate::manual_locations::desktop_location(spec.id)?;
+    manual_candidate_at(spec.id, &path).ok()
+}
+
+#[cfg(target_os = "macos")]
+fn manual_candidate_at(
+    app_id: &str,
+    path: &Path,
+) -> Result<Candidate, crate::manual_locations::Rejection> {
+    use crate::manual_locations::Rejection;
+    let spec = DESKTOP_APP_SPECS
+        .into_iter()
+        .find(|spec| spec.id == app_id)
+        .ok_or(Rejection::WrongFile)?;
+    if !path.is_absolute() || !activation_path_exists(path) {
+        return Err(Rejection::WrongFile);
+    }
+    let canonical = std::fs::canonicalize(path).map_err(|_| Rejection::WrongFile)?;
+    let (bundle_identifier, version) =
+        read_macos_bundle_metadata(&canonical).ok_or(Rejection::WrongFile)?;
+    if bundle_identifier != spec.expected_bundle_id {
+        return Err(Rejection::NotGenuine);
+    }
+    Ok(Candidate {
+        path: canonical.clone(),
+        location_hint: LocationHint::Manual,
+        bundle_identifier,
+        version,
+        launch_target: DesktopLaunchTarget::MacBundle(canonical),
+    })
+}
+
+#[cfg(target_os = "windows")]
+fn manual_candidate_at(
+    app_id: &str,
+    path: &Path,
+) -> Result<Candidate, crate::manual_locations::Rejection> {
+    use crate::manual_locations::Rejection;
+    if !path.is_absolute() || !path.is_file() {
+        return Err(Rejection::WrongFile);
+    }
+    let canonical = std::fs::canonicalize(path).map_err(|_| Rejection::WrongFile)?;
+    if !crate::desktop_app_discovery_core::windows_desktop_filename_matches(app_id, &canonical) {
+        return Err(Rejection::WrongFile);
+    }
+    if !windows_standalone_identity_matches(app_id, &canonical) {
+        return Err(Rejection::NotGenuine);
+    }
+    let version = windows_file_version(&canonical).unwrap_or_default();
+    Ok(Candidate {
+        path: canonical.clone(),
+        location_hint: LocationHint::Manual,
+        bundle_identifier: String::new(),
+        version,
+        launch_target: DesktopLaunchTarget::WindowsExecutable(canonical),
+    })
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
+fn manual_candidate_at(
+    _app_id: &str,
+    _path: &Path,
+) -> Result<Candidate, crate::manual_locations::Rejection> {
+    Err(crate::manual_locations::Rejection::Unsupported)
+}
+
 #[cfg(target_os = "macos")]
 fn discover_macos_candidates(spec: DesktopAppSpec) -> Vec<Candidate> {
+    if let Some(candidate) = manual_candidate(spec) {
+        return vec![candidate];
+    }
     let app_names: &[&str] = match spec.id {
         "claude_desktop" => &["Claude.app"],
         "codex_desktop" => &["ChatGPT.app", "Codex.app"],
@@ -275,6 +358,9 @@ fn plist_string(source: &str, key: &str) -> Option<String> {
 
 #[cfg(target_os = "windows")]
 fn discover_windows_candidates(spec: DesktopAppSpec) -> Vec<Candidate> {
+    if let Some(candidate) = manual_candidate(spec) {
+        return vec![candidate];
+    }
     let mut accepted = HashMap::new();
     for candidate in discover_windows_package_candidates(spec)
         .into_iter()
@@ -1203,6 +1289,10 @@ fn discover_windows_protocol_candidate(spec: DesktopAppSpec) -> Vec<Candidate> {
     let protocols: &[&str] = match spec.id {
         "claude_desktop" => &["claude"],
         "codex_desktop" => &["codex", "chatgpt"],
+        // Electron's setAsDefaultProtocolClient records the exe for `dsh://`
+        // wherever the user installed it, even when the uninstall entry lost
+        // its InstallLocation.
+        "dsh_desktop" => &["dsh"],
         _ => &[],
     };
     for protocol in protocols {

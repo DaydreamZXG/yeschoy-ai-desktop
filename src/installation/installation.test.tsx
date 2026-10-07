@@ -88,6 +88,7 @@ function targets(installed = 0): ActivationTargetScan {
       toolId,
       displayName: toolId,
       surface: "桌面应用",
+      manualLocation: "none",
       status:
         toolId === "codex_desktop" && installed
           ? installed > 1
@@ -835,5 +836,99 @@ describe("ru048 novice installer", () => {
     expect(hook.result.current?.progress?.phase).toBe(
       "awaiting_system_confirmation",
     );
+  });
+});
+
+describe("manual installation location", () => {
+  function panel(onRefresh = vi.fn(), manualLocation?: "none" | "unavailable") {
+    render(
+      <InstallationContext.Provider
+        value={{ progress: progress(), working: false, error: false, run }}
+      >
+        <InstallationPanel
+          tool="dsh_desktop"
+          name="DeepSeek Harness"
+          canConnect
+          onConfirm={noop}
+          onStart={noop}
+          onRefresh={onRefresh}
+          manualLocation={manualLocation}
+        />
+      </InstallationContext.Provider>,
+    );
+    return onRefresh;
+  }
+
+  it("rechecks once a picked location is saved, without sending a path", async () => {
+    native.mockImplementation(async (_command, args) => ({
+      requestId: (args as { request: { requestId: string } }).request.requestId,
+      outcome: "saved",
+    }));
+    const onRefresh = panel();
+    fireEvent.click(
+      screen.getByRole("button", { name: "装在别的位置？手动选择" }),
+    );
+    await tick();
+    const [command, args] = native.mock.calls[0];
+    expect(command).toBe("manual_location_pick");
+    expect(Object.keys((args as { request: object }).request).sort()).toEqual([
+      "requestId",
+      "toolId",
+    ]);
+    expect(onRefresh).toHaveBeenCalledOnce();
+    expect(run).toHaveBeenCalledWith("dsh_desktop", "inspect");
+    expect(screen.getByRole("status")).toHaveTextContent("已记住这个位置");
+  });
+
+  it("explains a refused file and does not recheck", async () => {
+    native.mockImplementation(async (_command, args) => ({
+      requestId: (args as { request: { requestId: string } }).request.requestId,
+      outcome: "not_genuine",
+    }));
+    const onRefresh = panel();
+    fireEvent.click(
+      screen.getByRole("button", { name: "装在别的位置？手动选择" }),
+    );
+    await tick();
+    expect(onRefresh).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "不是官方签名的 DeepSeek Harness",
+    );
+  });
+
+  it("treats a reply for another request as a failure", async () => {
+    native.mockResolvedValue({ requestId: "someone-else", outcome: "saved" });
+    const onRefresh = panel();
+    fireEvent.click(
+      screen.getByRole("button", { name: "装在别的位置？手动选择" }),
+    );
+    await tick();
+    expect(onRefresh).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent("请再试一次");
+  });
+
+  it("says when the location chosen earlier is gone", () => {
+    panel(vi.fn(), "unavailable");
+    expect(
+      screen.getByText(/之前指定的 DeepSeek Harness 位置现在找不到了/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "重新选择位置" }),
+    ).toBeInTheDocument();
+  });
+
+  it("refuses a target projection with an unknown manual state", async () => {
+    const { decodeActivationTargetScan } = await vi.importActual<
+      typeof import("../configuration/activation")
+    >("../configuration/activation");
+    const valid = targets();
+    expect(decodeActivationTargetScan(valid, "test")).not.toBeNull();
+    const invalid = {
+      ...valid,
+      targets: valid.targets.map((target, index) =>
+        index === 0 ? { ...target, manualLocation: "C:\\Users\\x" } : target,
+      ),
+    };
+    expect(decodeActivationTargetScan(invalid, "test")).toBeNull();
   });
 });

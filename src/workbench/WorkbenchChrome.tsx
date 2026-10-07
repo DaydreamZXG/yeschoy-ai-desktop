@@ -69,6 +69,7 @@ export function WorkbenchSidebar({
   onNavigate,
   onOpenCommunity,
   announcementsAvailable = false,
+  announcementsUnread = 0,
   appearance,
   onAppearance,
   accountProjection,
@@ -78,6 +79,8 @@ export function WorkbenchSidebar({
   onNavigate: (view: AppView) => void;
   onOpenCommunity: () => void;
   announcementsAvailable?: boolean;
+  /** 未读公告数；大于 0 时入口上显示红点。 */
+  announcementsUnread?: number;
   appearance: Appearance;
   onAppearance: (value: Appearance) => void;
   accountProjection: AccountProjection | null;
@@ -109,19 +112,35 @@ export function WorkbenchSidebar({
     view === "models" || view === "diagnostics" || view === "tools"
       ? "settings"
       : view;
-  const navButton = ({ id, label, icon: Icon }: (typeof nav)[number]) => (
-    <button
-      type="button"
-      key={id}
-      aria-label={label}
-      title={label}
-      aria-current={current === id ? "page" : undefined}
-      onClick={() => onNavigate(id)}
-    >
-      <Icon aria-hidden="true" />
-      <span>{label}</span>
-    </button>
-  );
+  const navButton = ({ id, label, icon: Icon }: (typeof nav)[number]) => {
+    const unread = id === "announcements" ? announcementsUnread : 0;
+    const name =
+      unread > 0
+        ? `${label} · ${c.announcementsUnreadCount.replace("{{count}}", String(unread))}`
+        : label;
+    return (
+      <button
+        type="button"
+        key={id}
+        aria-label={name}
+        title={name}
+        aria-current={current === id ? "page" : undefined}
+        onClick={() => onNavigate(id)}
+      >
+        <Icon aria-hidden="true" />
+        <span>{label}</span>
+        {unread > 0 && (
+          <span
+            className="workbench-nav-badge"
+            aria-hidden="true"
+            data-testid="announcements-unread"
+          >
+            {unread > 9 ? "9+" : unread}
+          </span>
+        )}
+      </button>
+    );
+  };
   return (
     <aside className="workbench-sidebar">
       <button

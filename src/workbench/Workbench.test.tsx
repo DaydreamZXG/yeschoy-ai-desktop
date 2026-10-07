@@ -133,6 +133,7 @@ function activationTargetScan(requestId: string) {
       toolId,
       displayName,
       surface: "本机应用",
+      manualLocation: "none",
       status: "available",
       installations: [
         {
@@ -1202,5 +1203,108 @@ describe("official workbench", () => {
         }
       }
     }
+  });
+});
+
+describe("announcements", () => {
+  const promotion = {
+    id: "recharge-1001",
+    title: "国庆充值加赠",
+    body: "充 100 送 20\n活动截止 10 月 7 日",
+    severity: "info",
+    publishedAtEpochMs: 1759276800000,
+    expiresAtEpochMs: 4102444800000,
+    banner: true,
+    actionLabel: "去充值",
+  };
+  const maintenance = {
+    id: "maintenance-1",
+    title: "周六凌晨维护",
+    body: "期间可能短暂断线。",
+    severity: "warning",
+    publishedAtEpochMs: 1759190400000,
+    expiresAtEpochMs: 0,
+    banner: false,
+    actionLabel: "",
+  };
+  function withNotices(followed: string[] = []) {
+    mockNativeByCommand((command, args) => {
+      const request = (args as Args).request;
+      if (command === "account_inspect_v2") return signedIn(request.requestId);
+      if (command === "account_announcements_read_v2")
+        return {
+          requestId: request.requestId,
+          available: true,
+          notices: [promotion, maintenance],
+        };
+      if (command === "account_announcement_action_v2") {
+        followed.push((request as { noticeId?: string }).noticeId ?? "");
+        return null;
+      }
+      return defaultNativeHandler(command, args);
+    });
+    return followed;
+  }
+  beforeEach(() => {
+    localStorage.removeItem("yeschoy.announcements.seen.v1");
+  });
+
+  it("puts an unread promotion on the home page and counts it in the sidebar", async () => {
+    const followed = withNotices();
+    render(<App />);
+    const banner = await screen.findByTestId("announcement-banner");
+    expect(banner).toHaveTextContent("国庆充值加赠");
+    expect(banner).toHaveTextContent("充 100 送 20");
+    expect(banner).not.toHaveTextContent("活动截止");
+    expect(screen.getByTestId("announcements-unread")).toHaveTextContent("2");
+
+    fireEvent.click(within(banner).getByRole("button", { name: "去充值" }));
+    await waitFor(() => expect(followed).toEqual(["recharge-1001"]));
+    // 点过按钮就算读过：横幅消失，未读数少一条。
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId("announcement-banner"),
+      ).not.toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("announcements-unread")).toHaveTextContent("1");
+  });
+
+  it("marks everything read once the announcements page is opened, and remembers it", async () => {
+    withNotices();
+    const view = render(<App />);
+    await screen.findByTestId("announcement-banner");
+    fireEvent.click(
+      screen.getByRole("button", { name: /^公告 · 2 条未读公告$/ }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: /国庆充值加赠/ }),
+    ).toBeInTheDocument();
+    // 进来那一刻没读过的仍然标着，直到离开页面。
+    expect(screen.getAllByText("未读")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "去充值" })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId("announcements-unread"),
+      ).not.toBeInTheDocument(),
+    );
+
+    view.unmount();
+    render(<App />);
+    await screen.findByRole("button", { name: "公告" });
+    expect(screen.queryByTestId("announcement-banner")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("announcements-unread"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("dismissing the banner only marks that one notice read", async () => {
+    withNotices();
+    render(<App />);
+    const banner = await screen.findByTestId("announcement-banner");
+    fireEvent.click(
+      within(banner).getByRole("button", { name: "关闭这条公告" }),
+    );
+    expect(screen.queryByTestId("announcement-banner")).not.toBeInTheDocument();
+    expect(screen.getByTestId("announcements-unread")).toHaveTextContent("1");
   });
 });
