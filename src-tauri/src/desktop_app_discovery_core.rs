@@ -163,7 +163,10 @@ pub(crate) fn windows_desktop_filename_matches(app_id: &str, path: &Path) -> boo
             name.eq_ignore_ascii_case("Codex.exe") || name.eq_ignore_ascii_case("ChatGPT.exe")
         }
         "workbuddy" => name.eq_ignore_ascii_case("WorkBuddy.exe"),
-        "dsh_desktop" => name.eq_ignore_ascii_case("DeepSeek Harness.exe"),
+        "dsh_desktop" => {
+            name.eq_ignore_ascii_case("DeepSeek Harness.exe")
+                || name.eq_ignore_ascii_case("DeepSeekHarness.exe")
+        }
         _ => false,
     }
 }
@@ -200,11 +203,13 @@ pub(crate) fn windows_desktop_file_identity_matches(
             matches!(product.as_str(), "workbuddy" | "tencentworkbuddy")
                 && (company.contains("tencent") || company_name.contains("腾讯"))
         }
-        // The upstream package declares no author, so electron-builder may
-        // leave CompanyName empty; the Authenticode check still applies.
+        // The upstream package declares no author, so the shipped exe keeps
+        // Electron's default CompanyName "GitHub, Inc." (verified on a real
+        // 0.2.0-rc.2 install). Authenticode (DeepSeek-signed) still applies.
         "dsh_desktop" => {
             product == "deepseekharness"
                 && (company.is_empty()
+                    || company == "githubinc"
                     || company.contains("deepseek")
                     || company_name.contains("深度求索"))
         }
@@ -355,8 +360,8 @@ pub const DESKTOP_APP_SPECS: [DesktopAppSpec; 4] = [
     DesktopAppSpec {
         id: "dsh_desktop",
         display_name: "DeepSeek Harness",
-        // `DSH_DESKTOP_APP_ID` in the upstream release environment.
-        expected_bundle_id: "com.deepseek.harness",
+        // Real CFBundleIdentifier of the shipped 0.2.0-rc.2 macOS app.
+        expected_bundle_id: "com.deepseek.dsh",
     },
 ];
 
@@ -628,10 +633,7 @@ mod tests {
             "com.tencent.workbuddy.mac"
         );
         assert_eq!(DESKTOP_APP_SPECS[3].id, "dsh_desktop");
-        assert_eq!(
-            DESKTOP_APP_SPECS[3].expected_bundle_id,
-            "com.deepseek.harness"
-        );
+        assert_eq!(DESKTOP_APP_SPECS[3].expected_bundle_id, "com.deepseek.dsh");
         assert_eq!(
             PRIMARY_DESKTOP_APP_SPECS.map(|spec| spec.expected_bundle_id),
             ["com.anthropic.claudefordesktop", "com.openai.codex"]
@@ -717,8 +719,12 @@ mod tests {
     #[test]
     fn deepseek_harness_windows_identity_is_exact_and_gui_only() {
         let exe = Path::new("D:\\Apps\\DeepSeek Harness\\DeepSeek Harness.exe");
-        for company in ["", "DeepSeek", "杭州深度求索人工智能基础技术研究有限公司"]
-        {
+        for company in [
+            "",
+            "DeepSeek",
+            "GitHub, Inc.",
+            "杭州深度求索人工智能基础技术研究有限公司",
+        ] {
             assert!(windows_desktop_file_identity_matches(
                 "dsh_desktop",
                 exe,
@@ -744,6 +750,13 @@ mod tests {
         assert!(!windows_desktop_file_identity_matches(
             "dsh_desktop",
             Path::new("D:\\Apps\\dsh.exe"),
+            "DeepSeek Harness",
+            "",
+            true
+        ));
+        assert!(windows_desktop_file_identity_matches(
+            "dsh_desktop",
+            Path::new("D:\\Apps\\DeepSeekHarness\\DeepSeekHarness.exe"),
             "DeepSeek Harness",
             "",
             true

@@ -1,0 +1,69 @@
+name: WorkBuddy macOS discovery (e2e)
+
+on:
+  push:
+    branches: [fix/dsh-windows-discovery]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dsh-discovery:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download and install WorkBuddy
+        run: |
+          set -euxo pipefail
+          FEED=$(curl -fsS "https://www.workbuddy.cn/v2/update?platform=workbuddy-darwin-arm64")
+          echo "$FEED"
+          ZIP=$(echo "$FEED" | python3 -c 'import json,sys;print(json.load(sys.stdin)["url"])')
+          DMG="${ZIP%.zip}.dmg"
+          if curl -fL -o "$RUNNER_TEMP/wb.dmg" "$DMG"; then
+            MNT=$(mktemp -d)
+            hdiutil attach -nobrowse -readonly -mountpoint "$MNT" "$RUNNER_TEMP/wb.dmg"
+            ls -la "$MNT"
+            APP=$(find "$MNT" -maxdepth 2 -name "*.app" -type d | head -1)
+            echo "App in dmg: $APP"
+            sudo cp -R "$APP" /Applications/
+            hdiutil detach "$MNT"
+          else
+            curl -fL -o "$RUNNER_TEMP/wb.zip" "$ZIP"
+            mkdir -p "$RUNNER_TEMP/wb"
+            ditto -x -k "$RUNNER_TEMP/wb.zip" "$RUNNER_TEMP/wb"
+            APP=$(find "$RUNNER_TEMP/wb" -maxdepth 2 -name "*.app" -type d | head -1)
+            echo "App in zip: $APP"
+            sudo ditto "$APP" "/Applications/$(basename "$APP")"
+          fi
+
+      - name: Diagnostics
+        run: |
+          set -x
+          ls -d /Applications/*.app | grep -i -E "workbuddy|codebuddy|tencent" || true
+          for app in /Applications/*.app; do
+            case "$(echo "$app" | tr A-Z a-z)" in *workbuddy*|*codebuddy*|*tencent*) ;; *) continue;; esac
+            echo "=== APP: $app"
+            p="$app/Contents/Info.plist"
+            for k in CFBundleIdentifier CFBundleName CFBundleDisplayName CFBundleExecutable CFBundleShortVersionString CFBundleVersion; do
+              echo "$k=$(/usr/libexec/PlistBuddy -c "Print :$k" "$p" 2>&1)"
+            done
+            file "$p"
+            codesign -dv --verbose=2 "$app" 2>&1 | head -20
+            codesign --verify --deep --strict "$app" && echo codesign-verify=ok || echo codesign-verify=FAIL
+            spctl -a -vv -t exec "$app" 2>&1 || true
+          done
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.89"
+
+      - name: Run real discovery
+        working-directory: src-tauri
+        run: |
+          mkdir -p ../dist
+          cargo test --lib e2e_macos_workbuddy_is_discovered -- --ignored --nocapture

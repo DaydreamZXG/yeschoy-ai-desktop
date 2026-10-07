@@ -422,7 +422,7 @@ fn windows_app_relative_executables(app_id: &str) -> &'static [&'static str] {
             "app\\WorkBuddy.exe",
             "WorkBuddy\\WorkBuddy.exe",
         ],
-        "dsh_desktop" => &["DeepSeek Harness.exe"],
+        "dsh_desktop" => &["DeepSeek Harness.exe", "DeepSeekHarness.exe"],
         _ => &[],
     }
 }
@@ -599,10 +599,10 @@ fn windows_version_string(
 
 #[cfg(target_os = "windows")]
 fn windows_standalone_identity_matches(app_id: &str, path: &Path) -> bool {
-    if is_windows_packaged_path(path)
-        || !windows_gui_executable(path)
-        || !windows_authenticode_is_trusted(path)
-    {
+    if is_windows_packaged_path(path) || !windows_gui_executable(path) {
+        return false;
+    }
+    if !windows_authenticode_is_trusted(path) {
         return false;
     }
     let Some(buffer) = windows_version_resource(path) else {
@@ -848,8 +848,16 @@ fn windows_relative_paths(app_id: &str, program_files: bool) -> &'static [&'stat
             "WorkBuddy\\WorkBuddy.exe",
         ],
         ("workbuddy", true) => &["WorkBuddy\\WorkBuddy.exe"],
-        ("dsh_desktop", false) => &["Programs\\DeepSeek Harness\\DeepSeek Harness.exe"],
-        ("dsh_desktop", true) => &["DeepSeek Harness\\DeepSeek Harness.exe"],
+        ("dsh_desktop", false) => &[
+            "Programs\\DeepSeek Harness\\DeepSeek Harness.exe",
+            "Programs\\DeepSeekHarness\\DeepSeekHarness.exe",
+            "DeepSeekHarness\\DeepSeekHarness.exe",
+            "DeepSeek Harness\\DeepSeek Harness.exe",
+        ],
+        ("dsh_desktop", true) => &[
+            "DeepSeek Harness\\DeepSeek Harness.exe",
+            "DeepSeekHarness\\DeepSeekHarness.exe",
+        ],
         _ => &[],
     }
 }
@@ -1169,7 +1177,7 @@ fn windows_app_paths_names(app_id: &str) -> &'static [&'static str] {
         "claude_desktop" => &["Claude.exe"],
         "codex_desktop" => &["Codex.exe", "ChatGPT.exe"],
         "workbuddy" => &["WorkBuddy.exe"],
-        "dsh_desktop" => &["DeepSeek Harness.exe"],
+        "dsh_desktop" => &["DeepSeek Harness.exe", "DeepSeekHarness.exe"],
         _ => &[],
     }
 }
@@ -1356,6 +1364,91 @@ const fn platform_name() -> &'static str {
 mod tests {
     use super::*;
 
+    /// End-to-end check against a real WorkBuddy macOS install (CI only).
+    #[cfg(target_os = "macos")]
+    #[test]
+    #[ignore]
+    fn e2e_macos_workbuddy_is_discovered() {
+        let spec = DESKTOP_APP_SPECS
+            .into_iter()
+            .find(|spec| spec.id == "workbuddy")
+            .unwrap();
+        println!("all: {:?}", discover_macos_candidates(spec));
+        let activation = activation_candidates("workbuddy");
+        println!("activation: {activation:?}");
+        assert!(!activation.is_empty(), "WorkBuddy desktop not discovered");
+    }
+
+    /// End-to-end check against a real WorkBuddy Windows install (CI only).
+    #[cfg(target_os = "windows")]
+    #[test]
+    #[ignore]
+    fn e2e_windows_workbuddy_is_discovered() {
+        let spec = DESKTOP_APP_SPECS
+            .into_iter()
+            .find(|spec| spec.id == "workbuddy")
+            .unwrap();
+        println!("package: {:?}", discover_windows_package_candidates(spec));
+        println!(
+            "uninstall: {:?}",
+            discover_windows_uninstall_candidates(spec)
+        );
+        println!(
+            "app_paths: {:?}",
+            discover_windows_app_paths_candidates(spec)
+        );
+        println!("all: {:?}", discover_windows_candidates(spec));
+        let activation = activation_candidates("workbuddy");
+        println!("activation: {activation:?}");
+        assert!(!activation.is_empty(), "WorkBuddy desktop not discovered");
+    }
+
+    /// End-to-end check against a real DeepSeek Harness macOS install (CI only).
+    #[cfg(target_os = "macos")]
+    #[test]
+    #[ignore]
+    fn e2e_macos_dsh_desktop_is_discovered() {
+        let spec = DESKTOP_APP_SPECS
+            .into_iter()
+            .find(|spec| spec.id == "dsh_desktop")
+            .unwrap();
+        println!("all: {:?}", discover_macos_candidates(spec));
+        let activation = activation_candidates("dsh_desktop");
+        println!("activation: {activation:?}");
+        assert!(
+            !activation.is_empty(),
+            "DeepSeek Harness desktop not discovered"
+        );
+    }
+
+    /// End-to-end check against a real DeepSeek Harness install (CI only).
+    #[cfg(target_os = "windows")]
+    #[test]
+    #[ignore]
+    fn e2e_windows_dsh_desktop_is_discovered() {
+        let spec = DESKTOP_APP_SPECS
+            .into_iter()
+            .find(|spec| spec.id == "dsh_desktop")
+            .unwrap();
+        println!("package: {:?}", discover_windows_package_candidates(spec));
+        println!(
+            "uninstall: {:?}",
+            discover_windows_uninstall_candidates(spec)
+        );
+        println!(
+            "app_paths: {:?}",
+            discover_windows_app_paths_candidates(spec)
+        );
+        let all = discover_windows_candidates(spec);
+        println!("all: {all:?}");
+        let activation = activation_candidates("dsh_desktop");
+        println!("activation: {activation:?}");
+        assert!(
+            !activation.is_empty(),
+            "DeepSeek Harness desktop not discovered"
+        );
+    }
+
     fn write_pe_fixture(path: &Path, subsystem: u16) {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         let mut header = vec![0u8; 256];
@@ -1511,6 +1604,8 @@ mod tests {
         ));
         assert!(windows_relative_paths("dsh_desktop", false)
             .contains(&"Programs\\DeepSeek Harness\\DeepSeek Harness.exe"));
+        assert!(windows_relative_paths("dsh_desktop", false)
+            .contains(&"DeepSeekHarness\\DeepSeekHarness.exe"));
         for app_id in [
             "claude_desktop",
             "codex_desktop",
