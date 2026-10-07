@@ -1277,6 +1277,25 @@ const fn platform_name() -> &'static str {
 mod tests {
     use super::*;
 
+    /// End-to-end check against a real DeepSeek Harness install (CI only).
+    #[cfg(target_os = "windows")]
+    #[test]
+    #[ignore]
+    fn e2e_windows_dsh_desktop_is_discovered() {
+        let spec = DESKTOP_APP_SPECS
+            .into_iter()
+            .find(|spec| spec.id == "dsh_desktop")
+            .unwrap();
+        println!("package: {:?}", discover_windows_package_candidates(spec));
+        println!("uninstall: {:?}", discover_windows_uninstall_candidates(spec));
+        println!("app_paths: {:?}", discover_windows_app_paths_candidates(spec));
+        let all = discover_windows_candidates(spec);
+        println!("all: {all:?}");
+        let activation = activation_candidates("dsh_desktop");
+        println!("activation: {activation:?}");
+        assert!(!activation.is_empty(), "DeepSeek Harness desktop not discovered");
+    }
+
     fn write_pe_fixture(path: &Path, subsystem: u16) {
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         let mut header = vec![0u8; 256];
