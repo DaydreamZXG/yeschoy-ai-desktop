@@ -12,9 +12,13 @@ const SHEETS = [
   "src/components/ui/ui-primitives.css",
   "src/components/ui/dialog.css",
   "src/installation/installation.css",
+  "src/theme/new-api.css",
 ];
 
-const sheets = SHEETS.map((path) => ({ path, css: readFileSync(path, "utf8") }));
+const sheets = SHEETS.map((path) => ({
+  path,
+  css: readFileSync(path, "utf8"),
+}));
 
 const SPACING_PROPERTIES =
   "padding|margin|gap|row-gap|column-gap|padding-top|padding-bottom|" +
@@ -61,7 +65,10 @@ describe("design system floors", () => {
     const allowed = new Set(["1", "72"]);
     const offenders: string[] = [];
     for (const { path, css } of sheets) {
-      const pattern = new RegExp(`^\\s*(?:${SPACING_PROPERTIES}):([^;]*);`, "gm");
+      const pattern = new RegExp(
+        `^\\s*(?:${SPACING_PROPERTIES}):([^;]*);`,
+        "gm",
+      );
       for (const match of css.matchAll(pattern)) {
         for (const value of match[1].matchAll(/(?<![-\w.])(\d+)px\b/g)) {
           if (!allowed.has(value[1]))
