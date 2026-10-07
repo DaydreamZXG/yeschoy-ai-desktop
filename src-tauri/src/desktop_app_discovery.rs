@@ -1274,6 +1274,21 @@ const fn platform_name() -> &'static str {
 mod tests {
     use super::*;
 
+    /// End-to-end check against a real DeepSeek Harness macOS install (CI only).
+    #[cfg(target_os = "macos")]
+    #[test]
+    #[ignore]
+    fn e2e_macos_dsh_desktop_is_discovered() {
+        let spec = DESKTOP_APP_SPECS
+            .into_iter()
+            .find(|spec| spec.id == "dsh_desktop")
+            .unwrap();
+        println!("all: {:?}", discover_macos_candidates(spec));
+        let activation = activation_candidates("dsh_desktop");
+        println!("activation: {activation:?}");
+        assert!(!activation.is_empty(), "DeepSeek Harness desktop not discovered");
+    }
+
     /// End-to-end check against a real DeepSeek Harness install (CI only).
     #[cfg(target_os = "windows")]
     #[test]
