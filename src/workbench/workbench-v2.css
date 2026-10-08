@@ -6981,13 +6981,44 @@ select {
   display: inline-flex;
   align-items: center;
   gap: var(--space-6);
-  max-width: 100%;
+  max-width: min(100%, 22rem);
   padding: var(--space-2) var(--space-8);
   border: 1px solid var(--line);
   border-radius: 999px;
   color: var(--ink);
   font-size: var(--text-xs);
   line-height: 1.7;
+  white-space: nowrap;
+}
+
+.model-menu-chip.is-editing:not(.is-default) {
+  border-color: var(--ink);
+}
+
+.model-menu-chip-select {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  min-width: 0;
+  min-height: 0;
+  max-width: 100%;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  text-align: left;
+}
+
+.model-menu-chip-select:hover:not(:disabled),
+.model-menu-chip-select:active:not(:disabled) {
+  border-color: transparent;
+  background: transparent;
+  color: inherit;
+  transform: none;
 }
 
 .model-menu-chip.is-default {
@@ -6995,14 +7026,32 @@ select {
   background: var(--accent-soft);
 }
 
+.model-menu-chip code,
+.model-menu-chip small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
 .model-menu-chip code {
   font-size: inherit;
+  max-width: 11rem;
+}
+
+.model-menu-chip small {
+  max-width: 8rem;
 }
 
 .model-menu-chip small,
 .model-menu-chip em {
   color: var(--muted);
   font-style: normal;
+}
+
+.model-menu-chip em,
+.model-menu-remove {
+  flex-shrink: 0;
 }
 
 .model-menu-chip.is-default em {
@@ -7024,6 +7073,7 @@ select {
   color: var(--accent);
   font-size: var(--text-xs);
   line-height: 1.7;
+  min-height: 0;
   padding: 0;
 }
 
@@ -7034,32 +7084,7 @@ select {
 }
 
 .model-menu-add:disabled,
-.model-menu-remove:disabled {
+.model-menu-remove:disabled,
+.model-menu-chip-select:disabled {
   opacity: 0.45;
-}
-
-.model-menu-add-form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--space-8);
-  margin-top: var(--space-10);
-}
-
-.model-menu-add-form label {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  min-width: 0;
-  color: var(--muted);
-  font-size: var(--text-xs);
-}
-
-.model-menu-add-form select {
-  min-width: 12rem;
-  color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md, 8px);
-  padding: var(--space-6) var(--space-8);
 }

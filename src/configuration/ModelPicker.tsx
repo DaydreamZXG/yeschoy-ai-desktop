@@ -37,6 +37,8 @@ export function ModelPicker({
   disabled = false,
   label,
   disabledReason,
+  open: openProp,
+  onOpenChange,
 }: {
   models: AccountModel[];
   value: string;
@@ -45,6 +47,9 @@ export function ModelPicker({
   label?: string;
   // #13 「查看全部模型」：返回文案的模型不可选（置灰+原因），返回 undefined 可选。
   disabledReason?: (model: AccountModel) => string | undefined;
+  /** Controlled open state, so another button can open this same overlay. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
   const models = useMemo(
@@ -52,7 +57,14 @@ export function ModelPicker({
     [suppliedModels],
   );
   const id = useId();
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = openProp ?? uncontrolledOpen;
+  const onOpenChangeRef = useRef(onOpenChange);
+  onOpenChangeRef.current = onOpenChange;
+  const setOpen = (next: boolean) => {
+    if (openProp === undefined) setUncontrolledOpen(next);
+    onOpenChangeRef.current?.(next);
+  };
   const [query, setQuery] = useState("");
   const [filterQuery, setFilterQuery] = useState("");
   const [activeId, setActiveId] = useState("");
@@ -87,6 +99,9 @@ export function ModelPicker({
     );
     listObserver.current.observe(element);
   }, []);
+  const valueRef = useRef(value);
+  valueRef.current = value;
+  const wasOpen = useRef(false);
   const changeOpen = (next: boolean) => {
     if (next) {
       if (disabled || !models.length) return;
@@ -94,10 +109,21 @@ export function ModelPicker({
       tabbingAway.current = false;
       setQuery("");
       setFilterQuery("");
-      setActiveId(value);
+      setActiveId(valueRef.current);
     }
     setOpen(next);
   };
+  // Opening from a button outside this field does not go through changeOpen.
+  useEffect(() => {
+    if (open && !wasOpen.current) {
+      composing.current = false;
+      tabbingAway.current = false;
+      setQuery("");
+      setFilterQuery("");
+      setActiveId(valueRef.current);
+    }
+    wasOpen.current = open;
+  }, [open]);
   const filter = (text: string) => {
     setFilterQuery(text);
     setActiveId("");
