@@ -86,6 +86,41 @@ describe("modelCapabilities is a read-only catalog lookup that never guesses", (
     expect(modelCapabilities("gpt-6-astra").defaultReasoning).toBeUndefined();
   });
 
+  it("uses the provider's published effort list for the GPT-6 and Grok ids Codex was missing", () => {
+    expect(modelCapabilities("gpt-6-sol")).toMatchObject({
+      reasoningLevels: ["none", "low", "medium", "high", "xhigh", "max"],
+      defaultReasoning: "medium",
+      contextWindow: 1050000,
+      maxOutputTokens: 128000,
+      input: ["text", "image"],
+      toolUse: true,
+    });
+    expect(modelCapabilities("gpt-6.1-sol").reasoningLevels).toEqual([
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max",
+    ]);
+    expect(modelCapabilities("gpt-6.1-sol").defaultReasoning).toBe("medium");
+    expect(modelCapabilities("gpt-6-luna").reasoningLevels?.[0]).toBe("none");
+    expect(modelCapabilities("grok-4.6")).toMatchObject({
+      reasoningLevels: ["low", "medium", "high", "xhigh"],
+      defaultReasoning: "high",
+      contextWindow: 500000,
+      input: ["text", "image"],
+      toolUse: true,
+    });
+    expect(modelCapabilities("grok-4.6").maxOutputTokens).toBeUndefined();
+    expect(modelCapabilities("grok-4.7").maxOutputTokens).toBeUndefined();
+    expect(modelCapabilities("grok-4.7").reasoningLevels).toEqual([
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+    ]);
+  });
+
   it("omits fields the catalog entry does not declare", () => {
     // Every entry in the merged catalog carries the four fields, so prove the
     // field-missing state with a defensive check: the API must only surface

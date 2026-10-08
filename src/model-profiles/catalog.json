@@ -13,6 +13,39 @@
       "toolUse": true
     },
     {
+      "id": "gpt-6-sol",
+      "displayName": "GPT-6 Sol",
+      "reasoningLevels": ["none", "low", "medium", "high", "xhigh", "max"],
+      "defaultReasoning": "medium",
+      "input": ["text", "image"],
+      "contextWindow": 1050000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://developers.openai.com/api/docs/models/gpt-6-sol"],
+      "toolUse": true
+    },
+    {
+      "id": "gpt-6.1-sol",
+      "displayName": "GPT-6.1 Sol",
+      "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
+      "defaultReasoning": "medium",
+      "input": ["text", "image"],
+      "contextWindow": 1050000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://developers.openai.com/api/docs/models/gpt-6.1-sol"],
+      "toolUse": true
+    },
+    {
+      "id": "gpt-6-luna",
+      "displayName": "GPT-6 Luna",
+      "reasoningLevels": ["none", "low", "medium", "high", "xhigh", "max"],
+      "defaultReasoning": "medium",
+      "input": ["text", "image"],
+      "contextWindow": 1050000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://developers.openai.com/api/docs/models/gpt-6-luna"],
+      "toolUse": true
+    },
+    {
       "id": "gpt-5.6-sol",
       "displayName": "GPT-5.6 Sol",
       "reasoningLevels": ["none", "low", "medium", "high", "xhigh", "max"],
@@ -791,6 +824,32 @@
       "contextWindow": 500000,
       "maxOutputTokens": 500000,
       "sources": ["https://models.dev/xai/grok-4.5"],
+      "toolUse": true
+    },
+    {
+      "id": "grok-4.6",
+      "displayName": "Grok 4.6",
+      "reasoningLevels": ["low", "medium", "high", "xhigh"],
+      "defaultReasoning": "high",
+      "input": ["text", "image"],
+      "contextWindow": 500000,
+      "sources": [
+        "https://docs.x.ai/developers/models/grok-4.6",
+        "https://docs.x.ai/developers/model-capabilities/text/reasoning"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "grok-4.7",
+      "displayName": "Grok 4.7",
+      "reasoningLevels": ["low", "medium", "high", "xhigh"],
+      "defaultReasoning": "high",
+      "input": ["text", "image"],
+      "contextWindow": 500000,
+      "sources": [
+        "https://docs.x.ai/developers/grok-4-7",
+        "https://docs.x.ai/developers/model-capabilities/text/reasoning"
+      ],
       "toolUse": true
     },
     {
