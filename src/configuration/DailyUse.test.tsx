@@ -394,7 +394,6 @@ describe("daily-use UX", () => {
     expect(steady.className).toContain("secondary-action");
     fireEvent.click(screen.getByRole("combobox", { name: /选择模型/ }));
     fireEvent.click(screen.getByRole("option", { name: "model-b" }));
-    fireEvent.click(screen.getByRole("button", { name: "使用所选模型" }));
     await tick();
     // 选择变化后仍按「已接入」呈现，但主按钮必须是保存——否则最显眼的
     // 「打开使用」会带着旧配置启动。不回退成「未接入」的「一键接入」。
@@ -452,13 +451,10 @@ describe("daily-use UX", () => {
     await tick();
     fireEvent.click(screen.getByRole("combobox", { name: /选择模型/ }));
     fireEvent.click(screen.getByRole("option", { name: "model-b" }));
-    expect(
-      screen.getByRole("radio", { name: "默认模型 model-a" }),
-    ).toBeChecked();
-    fireEvent.click(screen.getByRole("button", { name: "使用所选模型" }));
-    expect(
-      screen.getByRole("radio", { name: "默认模型 model-b" }),
-    ).toBeChecked();
+    const menu = screen.getByRole("region", { name: "你的模型" });
+    expect(menu).toHaveTextContent("model-a");
+    expect(menu).toHaveTextContent("model-b");
+    expect(menu.querySelector(".is-default")).toHaveTextContent("model-b");
     expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
       "保存并应用",
     );
@@ -973,20 +969,16 @@ describe("daily-use UX", () => {
     });
     render(setupView());
     await tick();
+    fireEvent.click(screen.getByRole("button", { name: "再加一个" }));
+    expect(screen.getByRole("combobox", { name: "要加入的模型" })).toHaveValue(
+      "model-b",
+    );
     fireEvent.click(screen.getByRole("button", { name: "加入模型" }));
     fireEvent.click(screen.getByRole("combobox", { name: /选择模型/ }));
     fireEvent.click(screen.getByRole("option", { name: "model-b" }));
-    fireEvent.click(screen.getByRole("radio", { name: /标准方案/ }));
-    expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
-      "使用所选模型",
-    );
-    applySavedOrSelected();
     expect(
       native.mock.calls.some(([c]) => c === "configure_desktop_tool_v2"),
     ).toBe(false);
-    expect(
-      screen.getByRole("radio", { name: "默认模型 model-b" }),
-    ).toBeChecked();
     applySavedOrSelected();
     await tick();
     const call = native.mock.calls.find(
@@ -1358,9 +1350,12 @@ describe("daily-use UX", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "移除 model-b" }));
     expect(screen.getByTestId("configuration-apply-action")).toBeEnabled();
+    expect(screen.getByRole("region", { name: "你的模型" })).toHaveTextContent(
+      "model-a",
+    );
     expect(
-      screen.getByRole("radio", { name: "默认模型 model-a" }),
-    ).toBeChecked();
+      screen.getByRole("region", { name: "你的模型" }).querySelector(".is-default"),
+    ).toHaveTextContent("model-a");
     expect(
       native.mock.calls.some(([c]) => c === "configure_desktop_tool_v2"),
     ).toBe(false);
@@ -1671,15 +1666,16 @@ describe("daily-use UX", () => {
     // 默认模型被移走后不能悄悄让 model-b 顶上——那等于替用户改了计费对象。
     // 默认位空着，主按钮的任务变成「要一个明确的默认」。
     expect(
-      screen.queryByRole("radio", { name: "默认模型 model-b" }),
-    ).not.toBeChecked();
+      screen.getByRole("region", { name: "你的模型" }).querySelector(".is-default"),
+    ).toBeNull();
     expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
       "先选一个默认模型",
     );
     expect(
       native.mock.calls.filter(([c]) => c === "configure_desktop_tool_v2"),
     ).toHaveLength(1);
-    fireEvent.click(screen.getByRole("radio", { name: "默认模型 model-b" }));
+    fireEvent.click(screen.getByRole("combobox", { name: /选择模型/ }));
+    fireEvent.click(screen.getByRole("option", { name: "model-b" }));
     expect(
       screen.getByTestId("configuration-apply-action"),
     ).not.toHaveTextContent("先选一个默认模型");

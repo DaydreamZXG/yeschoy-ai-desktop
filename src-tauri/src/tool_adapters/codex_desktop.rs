@@ -711,6 +711,24 @@ mod tests {
         assert_eq!(unknown["display_name"], "unknown/model");
         assert_eq!(unknown["supported_reasoning_levels"], json!([]));
         assert!(unknown["default_reasoning_level"].is_null());
+        let sol = bridge_catalog_models(&["gpt-6.1-sol".into()]).unwrap();
+        let sol_levels: Vec<_> = sol["models"][0]["supported_reasoning_levels"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v["effort"].as_str().unwrap())
+            .collect();
+        assert_eq!(sol_levels, ["low", "medium", "high", "xhigh", "max"]);
+        assert_eq!(sol["models"][0]["default_reasoning_level"], "medium");
+        let grok = bridge_catalog_models(&["grok-4.7".into()]).unwrap();
+        let grok_levels: Vec<_> = grok["models"][0]["supported_reasoning_levels"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v["effort"].as_str().unwrap())
+            .collect();
+        assert_eq!(grok_levels, ["low", "medium", "high", "xhigh"]);
+        assert_eq!(grok["models"][0]["default_reasoning_level"], "high");
         assert!(unknown["context_window"].is_null());
         let config = render(
             Some(b"model_reasoning_effort = 'low'\n"),

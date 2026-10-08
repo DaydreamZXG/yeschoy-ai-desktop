@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "verifiedAt": "2026-09-19",
+  "verifiedAt": "2026-10-08",
   "models": [
     {
       "id": "gpt-6-astra",
@@ -10,6 +10,39 @@
       "contextWindow": 1050000,
       "maxOutputTokens": 128000,
       "sources": ["https://developers.openai.com/api/docs/models/gpt-6-astra"],
+      "toolUse": true
+    },
+    {
+      "id": "gpt-6-sol",
+      "displayName": "GPT-6 Sol",
+      "reasoningLevels": ["none", "low", "medium", "high", "xhigh", "max"],
+      "defaultReasoning": "medium",
+      "input": ["text", "image"],
+      "contextWindow": 1050000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://developers.openai.com/api/docs/models/gpt-6-sol"],
+      "toolUse": true
+    },
+    {
+      "id": "gpt-6.1-sol",
+      "displayName": "GPT-6.1 Sol",
+      "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
+      "defaultReasoning": "medium",
+      "input": ["text", "image"],
+      "contextWindow": 1050000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://developers.openai.com/api/docs/models/gpt-6.1-sol"],
+      "toolUse": true
+    },
+    {
+      "id": "gpt-6-luna",
+      "displayName": "GPT-6 Luna",
+      "reasoningLevels": ["none", "low", "medium", "high", "xhigh", "max"],
+      "defaultReasoning": "medium",
+      "input": ["text", "image"],
+      "contextWindow": 1050000,
+      "maxOutputTokens": 128000,
+      "sources": ["https://developers.openai.com/api/docs/models/gpt-6-luna"],
       "toolUse": true
     },
     {
@@ -774,6 +807,34 @@
       "toolUse": true
     },
     {
+      "id": "mimo-v2.6-pro",
+      "displayName": "MiMo-V2.6-Pro",
+      "reasoningLevels": [],
+      "input": ["text", "image"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 131072,
+      "sources": [
+        "https://mimo.mi.com/docs/en-US/quick-start/summary/model",
+        "https://mimo.mi.com/models/en-US/mimo-v2.6-pro",
+        "https://mimo.mi.com/docs/en-US/quick-start/usage-guide/text-generation/deep-thinking"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "mimo-v2.6-flash",
+      "displayName": "MiMo-V2.6-Flash",
+      "reasoningLevels": [],
+      "input": ["text", "image"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 131072,
+      "sources": [
+        "https://mimo.mi.com/docs/en-US/quick-start/summary/model",
+        "https://mimo.mi.com/models/en-US/mimo-v2.6-flash",
+        "https://mimo.mi.com/docs/en-US/quick-start/usage-guide/text-generation/deep-thinking"
+      ],
+      "toolUse": true
+    },
+    {
       "id": "grok-4.3",
       "displayName": "Grok 4.3",
       "reasoningLevels": ["low", "medium", "high"],
@@ -791,6 +852,32 @@
       "contextWindow": 500000,
       "maxOutputTokens": 500000,
       "sources": ["https://models.dev/xai/grok-4.5"],
+      "toolUse": true
+    },
+    {
+      "id": "grok-4.6",
+      "displayName": "Grok 4.6",
+      "reasoningLevels": ["low", "medium", "high", "xhigh"],
+      "defaultReasoning": "high",
+      "input": ["text", "image"],
+      "contextWindow": 500000,
+      "sources": [
+        "https://docs.x.ai/developers/models/grok-4.6",
+        "https://docs.x.ai/developers/model-capabilities/text/reasoning"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "grok-4.7",
+      "displayName": "Grok 4.7",
+      "reasoningLevels": ["low", "medium", "high", "xhigh"],
+      "defaultReasoning": "high",
+      "input": ["text", "image"],
+      "contextWindow": 500000,
+      "sources": [
+        "https://docs.x.ai/developers/grok-4-7",
+        "https://docs.x.ai/developers/model-capabilities/text/reasoning"
+      ],
       "toolUse": true
     },
     {

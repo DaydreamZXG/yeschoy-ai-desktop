@@ -680,7 +680,20 @@ mod tests {
         let catalog: Catalog =
             serde_json::from_str(include_str!("../../src/model-profiles/catalog.json")).unwrap();
         assert!(!catalog.models.is_empty());
+        // xAI documents no numeric text-output cap for these two ("No text
+        // output limit" / the model card omits one). Leaving the field off
+        // keeps the chip blank and stops WorkBuddy from inventing a ceiling.
+        // Every other entry still has to declare a usable budget.
+        let undeclared_output = ["grok-4.6", "grok-4.7"];
         for model in &catalog.models {
+            if undeclared_output.contains(&model.id.as_str()) {
+                assert!(
+                    model.max_output_tokens.is_none(),
+                    "{} must not invent maxOutputTokens",
+                    model.id
+                );
+                continue;
+            }
             let declared = model.max_output_tokens.unwrap_or_else(|| {
                 panic!("{} declares no maxOutputTokens", model.id);
             });
