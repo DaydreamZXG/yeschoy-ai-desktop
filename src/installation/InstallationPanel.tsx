@@ -19,6 +19,7 @@ import type {
   ManualLocationState,
 } from "../configuration/activation";
 import "./installation.css";
+import { useCelebrateOnRise } from "../theme/motion";
 
 /**
  * 这三个是模块级函数，不是组件，拿不到 hook —— 和 `connectionLabel` 同一种情况，
@@ -105,6 +106,12 @@ export function InstallationPanel({
     void installer?.run(tool, "inspect");
     onRefresh();
   });
+  // 装好了的那一刻：大庆祝（真实路径就是原生侧把 phase 推到 installed）。
+  useCelebrateOnRise(
+    installer?.progress?.toolId === tool &&
+      installer.progress.phase === "installed",
+    ".app-install-panel",
+  );
   if (!installer) return null;
   const p = installer.progress;
   const other = p && p.toolId !== tool && installationActive(p);

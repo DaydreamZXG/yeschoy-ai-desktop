@@ -119,6 +119,13 @@ export function AnnouncementsView({
               className="announcement-card"
               data-severity={notice.severity}
             >
+              <span className="announcement-icon" aria-hidden="true">
+                {notice.severity === "warning" ? (
+                  <TriangleAlert />
+                ) : (
+                  <Megaphone />
+                )}
+              </span>
               <div className="announcement-heading">
                 <h2>
                   {(unreadOnArrival.has(notice.id) ||

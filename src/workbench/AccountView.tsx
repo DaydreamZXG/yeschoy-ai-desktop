@@ -14,6 +14,8 @@ import {
 import type { ConfigurationLineId } from "../configuration/preview";
 import { creditUnit, formatMoney } from "../account/finance";
 import { aggregateUsage, type UsageRecord } from "../account/usage";
+import { UsageTrend } from "./UsageTrend";
+import { CountUpStrong } from "../theme/motion";
 import { readSessionAgeRecord, sessionAgeLevel } from "../account/sessionAge";
 import { SavingsCard, SavingsDetails } from "./Savings";
 import { WORKBENCH_APPS } from "./appCatalog";
@@ -375,9 +377,15 @@ export function AccountView({
               <span className="summary-label">{c.balance}</span>
               {balanceKnown ? (
                 <>
-                  <strong>
+                  <CountUpStrong
+                    value={formatMoney(
+                      money?.balanceAmount,
+                      money?.currency,
+                      locale,
+                    )}
+                  >
                     {formatMoney(money?.balanceAmount, money?.currency, locale)}
-                  </strong>
+                  </CountUpStrong>
                   <div className="summary-bottom">
                     {creditUnit(money?.currency)}
                   </div>
@@ -413,20 +421,36 @@ export function AccountView({
             />
             <article className="summary-card">
               <span className="summary-label">{c.spent}</span>
-              <strong>
+              <CountUpStrong
+                value={formatMoney(
+                  money?.consumedAmount,
+                  money?.currency,
+                  locale,
+                )}
+              >
                 {formatMoney(money?.consumedAmount, money?.currency, locale)}
-              </strong>
+              </CountUpStrong>
               <div className="summary-bottom">
                 {creditUnit(money?.currency)}
               </div>
             </article>
             <article className="summary-card">
               <span className="summary-label">{c.requestCount}</span>
-              <strong>{compact(account.requestCount, locale)}</strong>
+              <CountUpStrong value={compact(account.requestCount, locale)}>
+                {compact(account.requestCount, locale)}
+              </CountUpStrong>
               <div className="summary-bottom">{c.requestUnit}</div>
             </article>
           </section>
           <SavingsDetails savings={projection.savings} />
+
+          {usageLog?.status === "available" && (
+            <UsageTrend
+              records={usageLog.records}
+              currency={money?.currency}
+              locale={locale}
+            />
+          )}
 
           <section className="usage-section" aria-label={c.usageByToolModel}>
             <div className="workbench-section-heading">

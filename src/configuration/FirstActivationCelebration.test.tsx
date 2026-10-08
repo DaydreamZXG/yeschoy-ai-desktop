@@ -23,7 +23,7 @@ describe("CelebrationConfetti", () => {
       ".celebration-particle",
     );
     expect(particle?.style.getPropertyValue("--drift")).toMatch(/px$/);
-    expect(particle?.style.background).toMatch(/var\(--(accent|success|warning|danger)\)/);
+    expect(particle?.style.background).toMatch(/var\(--(lime|lime-ink|surface)\)/);
   });
 
   it("1.5s 后自动卸载", () => {

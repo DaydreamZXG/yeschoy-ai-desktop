@@ -631,7 +631,11 @@
     "creditCny": "人民币额度",
     "creditUsd": "美元额度",
     "creditUnavailable": "金额暂不可用",
-    "referenceFx": "参考换算值 {{value}}"
+    "referenceFx": "参考换算值 {{value}}",
+    "usageTrendTitle": "近 14 天消费趋势",
+    "usageTrendNote": "按天汇总，金额以野菜API实际扣费为准",
+    "usageTrendEmpty": "最近 14 天还没有用量",
+    "usageTrendDayLabel": "{{date}}：{{amount}}"
   },
   "configuration": {
     "defaultGroup": "标准方案",

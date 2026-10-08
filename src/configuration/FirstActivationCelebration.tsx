@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 
 // 首次接入庆祝（动效优化）：彩带只播一次，ticker 打字机常驻。
+// 品牌只有青柠和近黑两色，彩带也只用这两色加白。
 const PARTICLE_COLORS = [
-  "var(--accent)",
-  "var(--success)",
-  "var(--warning)",
-  "var(--danger)",
+  "var(--lime)",
+  "var(--lime-ink)",
+  "var(--lime)",
+  "var(--surface)",
 ];
 
 function randomIn(min: number, max: number): number {

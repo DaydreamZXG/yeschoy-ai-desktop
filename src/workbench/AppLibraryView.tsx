@@ -362,6 +362,30 @@ export function AppLibraryView({
           onRecharge={() => void recharge()}
         />
       )}
+      {/* 账户概览是首页常驻的仪表盘行，而不是折叠在页脚的 <details>。 */}
+      {signedIn && (
+        <section
+          className="account-overview"
+          aria-label={t("yeschoyDaily.accountOverview")}
+        >
+          <header className="account-overview-heading">
+            <h2>{t("yeschoyDaily.accountOverview")}</h2>
+            <small>{t("yeschoyDaily.accountOverviewHint")}</small>
+          </header>
+          <AccountSummary
+            detected={detected}
+            scanning={scanning}
+            onOpenAccount={onOpenAccount}
+            onOpenApps={() =>
+              document
+                .querySelector<HTMLElement>(".connection-library")
+                ?.scrollIntoView({ block: "start" })
+            }
+            accountProjection={accountSession.projection}
+            accountLoading={accountSession.loading}
+          />
+        </section>
+      )}
       {loginRequired ? (
         <section className="welcome-strip">
           <span className="welcome-symbol">
@@ -447,6 +471,7 @@ export function AppLibraryView({
         className="connection-library"
         aria-label={c.libraryRegionLabel}
         aria-busy={scanning}
+        data-scanning={checking ? "true" : undefined}
       >
         {groups.flatMap((group, groupIndex) => [
           ...(group.title
@@ -612,26 +637,6 @@ export function AppLibraryView({
         >
           {c.libraryShowLocalOnly}
         </button>
-      )}
-      {signedIn && (
-        <details className="account-overview">
-          <summary>
-            <span>{t("yeschoyDaily.accountOverview")}</span>
-            <small>{t("yeschoyDaily.accountOverviewHint")}</small>
-          </summary>
-          <AccountSummary
-            detected={detected}
-            scanning={scanning}
-            onOpenAccount={onOpenAccount}
-            onOpenApps={() =>
-              document
-                .querySelector<HTMLElement>(".connection-library")
-                ?.scrollIntoView({ block: "start" })
-            }
-            accountProjection={accountSession.projection}
-            accountLoading={accountSession.loading}
-          />
-        </details>
       )}
       <footer className="library-footer">
         <ShieldCheck />
