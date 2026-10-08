@@ -14,7 +14,6 @@ import { useTranslation } from "react-i18next";
 import {
   BillingGroupPicker,
   BillingPrices,
-  groupDisplayName,
   groupLabel,
 } from "./BillingGroupPicker";
 import { chooseBillingGroup } from "./billing";
@@ -425,9 +424,12 @@ export function ConfigurationPreviewView({
   const [billingGroup, setBillingGroup] = useState("");
   const [modelSet, setModelSet] = useState<ModelBinding[]>([]);
   const [defaultModelId, setDefaultModelId] = useState("");
-  const [menuAddOpen, setMenuAddOpen] = useState(false);
-  const [menuAddModelId, setMenuAddModelId] = useState("");
-  const [menuAddGroup, setMenuAddGroup] = useState("");
+  // 再加一个打开的是上面那个模型浮层，不是另一套选择器。为 true 时，
+  // 在浮层里点中的模型加进名单，不替换默认。
+  const [modelPickerOpen, setModelPickerOpen] = useState(false);
+  const [pickerAdds, setPickerAdds] = useState(false);
+  // 价格卡片正在编辑的模型。空着就跟着下拉框里的默认模型。
+  const [focusedModelId, setFocusedModelId] = useState<string | null>(null);
   // This value participates in render-time readiness. Keeping it in a ref can
   // strand the action button when an account changes but the restored model
   // and group happen to be identical: the ref changes, all state setters bail
@@ -615,6 +617,9 @@ export function ConfigurationPreviewView({
       setBillingGroup("");
       setModelSet([]);
       setDefaultModelId("");
+      setFocusedModelId(null);
+      setPickerAdds(false);
+      setModelPickerOpen(false);
       setSelectionReadyKey(null);
       setShowApplications(false);
     }
@@ -684,6 +689,9 @@ export function ConfigurationPreviewView({
     );
     setModelSet(existing ? (savedConnection.models ?? []) : []);
     setDefaultModelId(existing ? savedConnection.modelId : "");
+    setFocusedModelId(null);
+    setPickerAdds(false);
+    setModelPickerOpen(false);
     if (existing && savedConnection.lineId) {
       // The global line picker visibly follows the app's last-used line;
       // announce the linkage instead of changing it silently (PRD 6.2).
@@ -756,6 +764,33 @@ export function ConfigurationPreviewView({
   // 列表里有模型、却没有一个是默认：只会在默认模型刚被移走之后出现。
   // 这时不能提交，也不能替用户挑 —— 得他自己点一个。
   const defaultMissing = modelSet.length > 0 && !defaultBinding;
+  // 下拉框始终是写进 config 的默认模型。价格卡片跟「正在编辑」的那一粒，
+  // 点别的模型不会把默认换掉。
+  const priceModelId =
+    focusedModelId && submittedModels.some((m) => m.modelId === focusedModelId)
+      ? focusedModelId
+      : selectedModelId;
+  const priceModel =
+    models.find((model) => model.id === priceModelId) ?? selectedModel;
+  const priceGroup =
+    priceModelId === selectedModelId
+      ? billingGroup
+      : (submittedModels.find((m) => m.modelId === priceModelId)
+          ?.billingGroup ?? "");
+  const updatePricedGroup = (id: string) => {
+    setSelectionReadyKey(selectionKey);
+    resetResult();
+    if (priceModelId === selectedModelId) setBillingGroup(id);
+    setModelSet((current) =>
+      current.some((m) => m.modelId === priceModelId)
+        ? current.map((m) =>
+            m.modelId === priceModelId
+              ? { modelId: priceModelId, billingGroup: id }
+              : m,
+          )
+        : current,
+    );
+  };
   /**
    * 把一个模型从列表里拿掉 —— 列表里的「移除」和失败提示里的「移除「X」」
    * 都走这里，两处曾经各写一份、各漏一半。
@@ -777,53 +812,33 @@ export function ConfigurationPreviewView({
     // （另外十六个原因仍然存在），自动重试会把人带偏。
     resetResult();
   };
-  const menuAddModel = models.find((m) => m.id === menuAddModelId);
-  const openMenuAdd = () => {
-    const initial = models.find((m) => m.id !== selectedModelId) ?? models[0];
-    const id = initial?.id ?? "";
-    setMenuAddModelId(id);
-    setMenuAddGroup(
-      chooseBillingGroup(
-        initial,
-        modelSet.find((m) => m.modelId === id)?.billingGroup ?? "",
-      ),
-    );
-    setMenuAddOpen(true);
-  };
-  const confirmMenuAdd = () => {
-    if (!menuAddModelId || !menuAddGroup || !menuAddModel) return;
-    const groups = menuAddModel.billing?.groups ?? [];
-    if (groups.length && !groups.some((group) => group.id === menuAddGroup))
-      return;
-    const enrolled = new Set(modelSet.map((m) => m.modelId));
-    if (selectedModelId) enrolled.add(selectedModelId);
-    if (!enrolled.has(menuAddModelId) && enrolled.size >= 200) return;
-    if (menuAddModelId === selectedModelId) {
-      setBillingGroup(menuAddGroup);
-      setModelSet((current) =>
-        current.map((m) =>
-          m.modelId === menuAddModelId
-            ? { modelId: menuAddModelId, billingGroup: menuAddGroup }
-            : m,
-        ),
+  // 浮层里点中一个模型：新的加进名单。分组走页面已有的 chooseBillingGroup
+  // （没有旧分组时用 default，再否则第一个），不再另做一套价格选择。
+  // 已经在名单里的，只是把它选成价格卡片正在编辑的那一个。
+  const enrollModel = (id: string) => {
+    const already =
+      id === selectedModelId || modelSet.some((m) => m.modelId === id);
+    setFocusedModelId(id);
+    if (already) return;
+    const accountModel = models.find((m) => m.id === id);
+    const group = chooseBillingGroup(accountModel, "");
+    const ids = new Set(modelSet.map((m) => m.modelId));
+    if (selectedModelId) ids.add(selectedModelId);
+    if (ids.has(id) || ids.size >= 200) return;
+    setModelSet((current) => {
+      const known = new Set(current.map((m) => m.modelId));
+      if (selectedModelId) known.add(selectedModelId);
+      if (known.has(id) || known.size >= 200) return current;
+      const rest = current.filter(
+        (m) => m.modelId !== id && m.modelId !== selectedModelId,
       );
-    } else {
-      setModelSet((current) => {
-        const rest = current.filter(
-          (m) => m.modelId !== menuAddModelId && m.modelId !== selectedModelId,
-        );
-        const keptDefault =
-          selectedModelId && billingGroup
-            ? [{ modelId: selectedModelId, billingGroup }]
-            : [];
-        return [
-          ...keptDefault,
-          ...rest,
-          { modelId: menuAddModelId, billingGroup: menuAddGroup },
-        ];
-      });
-    }
-    setMenuAddOpen(false);
+      const keptDefault =
+        selectedModelId && billingGroup
+          ? [{ modelId: selectedModelId, billingGroup }]
+          : [];
+      return [...keptDefault, ...rest, { modelId: id, billingGroup: group }];
+    });
+    setSelectionReadyKey(selectionKey);
     resetResult();
   };
 
@@ -1678,14 +1693,17 @@ export function ConfigurationPreviewView({
   // 只有「这个模型确实列出了分组，而选中的那个不在里面」才算真的不可用。
   // 一个分组都读不到（模型不在价目表里）是不知道，不是不可用 —— 对那种情况
   // 弹红色警告，等于把"我们没数据"说成"你选错了"。
+  const missingPriceGroup = priceModel?.billing?.groups.some(
+    (group) => group.id === priceGroup,
+  );
   const missingGroup =
     signedIn &&
     !session.loading &&
     !session.lastError &&
-    selectedModel &&
-    billingGroup &&
-    !!selectedModel.billing?.groups.length &&
-    !selectedBillingGroup;
+    priceModel &&
+    priceGroup &&
+    !!priceModel.billing?.groups.length &&
+    !missingPriceGroup;
   const visibleApplications = APPLICATIONS.filter(
     (candidate) =>
       showMissingApps ||
@@ -2114,8 +2132,18 @@ export function ConfigurationPreviewView({
                     <ModelPicker
                       models={accountModels}
                       value={selectedModelId}
+                      open={modelPickerOpen}
+                      onOpenChange={(next) => {
+                        setModelPickerOpen(next);
+                        if (!next) setPickerAdds(false);
+                      }}
                       onChange={(id) => {
+                        if (pickerAdds) {
+                          enrollModel(id);
+                          return;
+                        }
                         setSelectionReadyKey(selectionKey);
+                        setFocusedModelId(null);
                         setSelectedModelId(id);
                         const saved = modelSet.find((m) => m.modelId === id);
                         setBillingGroup(
@@ -2128,7 +2156,8 @@ export function ConfigurationPreviewView({
                         // 下拉框里这个就是默认。已经在名单里，或者还没到 200
                         // 的上限，才把它记成默认；超限时不改默认，避免把第
                         // 201 个悄悄写进去。
-                        if (saved || modelSet.length < 200) setDefaultModelId(id);
+                        if (saved || modelSet.length < 200)
+                          setDefaultModelId(id);
                         resetResult();
                       }}
                       disabled={session.loading || applyPhase === "applying"}
@@ -2183,26 +2212,39 @@ export function ConfigurationPreviewView({
                             const groups = bindingModel?.billing?.groups;
                             const available =
                               !groups?.length ||
-                              groups.some((group) => group.id === m.billingGroup);
+                              groups.some(
+                                (group) => group.id === m.billingGroup,
+                              );
                             const isDefault =
                               defaultBinding?.modelId === m.modelId;
+                            const isEditing = priceModelId === m.modelId;
+                            const shortGroup = groupLabel(
+                              m.billingGroup,
+                              g.defaultGroup,
+                            );
+                            const groupText = available
+                              ? shortGroup
+                              : `${shortGroup} · ${g.bindingUnavailable}`;
                             return (
                               <li key={m.modelId}>
                                 <span
-                                  className={`model-menu-chip${isDefault ? " is-default" : ""}`}
-                                  data-unavailable={available ? undefined : true}
+                                  className={`model-menu-chip${isDefault ? " is-default" : ""}${isEditing ? " is-editing" : ""}`}
+                                  data-unavailable={
+                                    available ? undefined : true
+                                  }
                                 >
-                                  <code>{m.modelId}</code>
-                                  <small>
-                                    {groupDisplayName(
-                                      m.billingGroup,
-                                      groups,
-                                      g.defaultGroup,
-                                    )}
-                                    {!available &&
-                                      ` · ${g.bindingUnavailable}`}
-                                  </small>
-                                  {isDefault && <em>{g.defaultBadge}</em>}
+                                  <button
+                                    type="button"
+                                    className="model-menu-chip-select"
+                                    aria-pressed={isEditing}
+                                    disabled={applyPhase === "applying"}
+                                    title={`${m.modelId} · ${groupText}`}
+                                    onClick={() => setFocusedModelId(m.modelId)}
+                                  >
+                                    <code>{m.modelId}</code>
+                                    <small>{groupText}</small>
+                                    {isDefault && <em>{g.defaultBadge}</em>}
+                                  </button>
                                   {!isDefault && (
                                     <button
                                       type="button"
@@ -2232,82 +2274,15 @@ export function ConfigurationPreviewView({
                                 submittedModels.length >= 200 ||
                                 models.length < 1
                               }
-                              onClick={() =>
-                                menuAddOpen ? setMenuAddOpen(false) : openMenuAdd()
-                              }
+                              onClick={() => {
+                                setPickerAdds(true);
+                                setModelPickerOpen(true);
+                              }}
                             >
                               {g.addMenuModel}
                             </button>
                           </li>
                         </ul>
-                        {menuAddOpen && (
-                          <div className="model-menu-add-form">
-                            <label>
-                              <span>{g.addMenuModelPick}</span>
-                              <select
-                                value={menuAddModelId}
-                                disabled={applyPhase === "applying"}
-                                onChange={(event) => {
-                                  const id = event.target.value;
-                                  setMenuAddModelId(id);
-                                  setMenuAddGroup(
-                                    chooseBillingGroup(
-                                      models.find((m) => m.id === id),
-                                      modelSet.find((m) => m.modelId === id)
-                                        ?.billingGroup ?? "",
-                                    ),
-                                  );
-                                }}
-                              >
-                                {models.map((m) => (
-                                  <option key={m.id} value={m.id}>
-                                    {m.id}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label>
-                              <span>{g.addMenuModelGroup}</span>
-                              <select
-                                value={menuAddGroup}
-                                disabled={applyPhase === "applying"}
-                                onChange={(event) =>
-                                  setMenuAddGroup(event.target.value)
-                                }
-                              >
-                                {(menuAddModel?.billing?.groups.length
-                                  ? menuAddModel.billing.groups
-                                  : [
-                                      {
-                                        id: menuAddGroup || "default",
-                                        description: "",
-                                      },
-                                    ]
-                                ).map((group) => (
-                                  <option key={group.id} value={group.id}>
-                                    {groupLabel(group.id, g.defaultGroup)}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <button
-                              type="button"
-                              className="subtle-button"
-                              disabled={
-                                !menuAddModelId ||
-                                !menuAddGroup ||
-                                applyPhase === "applying"
-                              }
-                              onClick={confirmMenuAdd}
-                            >
-                              {submittedModels.some(
-                                (m) => m.modelId === menuAddModelId,
-                              )
-                                ? g.updateModelGroup
-                                : g.addFavoriteModel}
-                            </button>
-                          </div>
-                        )}
                         {submittedModels.length > 1 && (
                           <small className="model-menu-footnote">
                             {g.modelSetNote}
@@ -2343,37 +2318,33 @@ export function ConfigurationPreviewView({
                 <div className="choice-card-heading">
                   <div>
                     <h3>
-                      {selectedModel?.billing?.groups.length
+                      {priceModel?.billing?.groups.length
                         ? g.chooseGroupLegend
                         : g.billingNoChoiceLegend}
                     </h3>
-                    {!!selectedModel?.billing?.groups.length && (
+                    {!!priceModel?.billing?.groups.length && (
                       <p>{g.billingCardHint}</p>
                     )}
                   </div>
                 </div>
                 <BillingGroupPicker
-                  model={selectedModel}
+                  model={priceModel}
                   fx={session.projection?.comparisonFx ?? ""}
-                  selected={billingGroup}
+                  selected={priceGroup}
                   disabled={applyPhase === "applying"}
-                  onChange={(id) => {
-                    setSelectionReadyKey(selectionKey);
-                    setBillingGroup(id);
-                    resetResult();
-                  }}
+                  onChange={updatePricedGroup}
                 />
                 {missingGroup && (
                   <div className="selection-warning" role="alert">
                     <strong>{g.missingGroupTitle}</strong>
                     <p>
-                      <b>{groupLabel(billingGroup)}</b> {g.missingGroupBody}
+                      <b>{groupLabel(priceGroup)}</b> {g.missingGroupBody}
                     </p>
                   </div>
                 )}
                 <BillingPrices
-                  model={selectedModel}
-                  selected={billingGroup}
+                  model={priceModel}
+                  selected={priceGroup}
                   fx={session.projection?.comparisonFx ?? ""}
                 />
               </section>

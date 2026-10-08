@@ -969,11 +969,21 @@ describe("daily-use UX", () => {
     });
     render(setupView());
     await tick();
+    const menu = screen.getByRole("region", { name: "你的模型" });
+    expect(menu).toHaveTextContent("这些会出现在 Codex 的模型菜单里。");
+    expect(menu).not.toHaveTextContent("思考强度");
+    // 分组用短名字，和价格卡标题一样，不把 description 写进胶囊。
+    expect(menu).toHaveTextContent("优惠组");
+    expect(menu).not.toHaveTextContent("账户价格");
+    expect(menu.querySelector("select")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "再加一个" }));
-    expect(screen.getByRole("combobox", { name: "要加入的模型" })).toHaveValue(
-      "model-b",
-    );
-    fireEvent.click(screen.getByRole("button", { name: "加入模型" }));
+    expect(screen.getByRole("searchbox")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("option", { name: "model-b" }));
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: /选择模型/ }),
+    ).toHaveTextContent("model-a");
+    expect(menu.querySelector(".is-default")).toHaveTextContent("model-a");
     fireEvent.click(screen.getByRole("combobox", { name: /选择模型/ }));
     fireEvent.click(screen.getByRole("option", { name: "model-b" }));
     expect(
@@ -1007,6 +1017,50 @@ describe("daily-use UX", () => {
     expect(
       screen.getByText(/每个模型的真实连接结果在首次使用后显示/),
     ).toBeInTheDocument();
+  });
+
+  it("edits one enrolled model's price from the existing cards without changing the default", async () => {
+    render(
+      setupView(
+        session(),
+        local({
+          models: [
+            { modelId: "model-a", billingGroup: "优惠组" },
+            { modelId: "model-b", billingGroup: "default" },
+          ],
+        }),
+      ),
+    );
+    await tick();
+    const menu = screen.getByRole("region", { name: "你的模型" });
+    expect(menu.querySelector(".is-default")).toHaveTextContent("model-a");
+    expect(menu).toHaveTextContent("标准方案");
+    expect(menu).not.toHaveTextContent("标准价");
+    fireEvent.click(screen.getByRole("button", { name: /^model-b/ }));
+    expect(
+      screen.getByRole("combobox", { name: /选择模型/ }),
+    ).toHaveTextContent("model-a");
+    expect(menu.querySelector(".is-default")).toHaveTextContent("model-a");
+    expect(screen.getByRole("radio", { name: /标准方案/ })).toBeChecked();
+    fireEvent.click(screen.getByRole("radio", { name: /优惠组/ }));
+    expect(menu).toHaveTextContent("优惠组");
+    expect(
+      native.mock.calls.some(([c]) => c === "configure_desktop_tool_v2"),
+    ).toBe(false);
+    fireEvent.click(screen.getByTestId("configuration-apply-action"));
+    await tick();
+    expect(
+      native.mock.calls.find(([c]) => c === "configure_desktop_tool_v2")?.[1],
+    ).toMatchObject({
+      request: {
+        modelId: "model-a",
+        billingGroup: "优惠组",
+        models: [
+          { modelId: "model-a", billingGroup: "优惠组" },
+          { modelId: "model-b", billingGroup: "优惠组" },
+        ],
+      },
+    });
   });
 
   it("ru056 asks before gracefully restarting a running desktop app and never grants that consent implicitly", async () => {
@@ -1354,7 +1408,9 @@ describe("daily-use UX", () => {
       "model-a",
     );
     expect(
-      screen.getByRole("region", { name: "你的模型" }).querySelector(".is-default"),
+      screen
+        .getByRole("region", { name: "你的模型" })
+        .querySelector(".is-default"),
     ).toHaveTextContent("model-a");
     expect(
       native.mock.calls.some(([c]) => c === "configure_desktop_tool_v2"),
@@ -1666,7 +1722,9 @@ describe("daily-use UX", () => {
     // 默认模型被移走后不能悄悄让 model-b 顶上——那等于替用户改了计费对象。
     // 默认位空着，主按钮的任务变成「要一个明确的默认」。
     expect(
-      screen.getByRole("region", { name: "你的模型" }).querySelector(".is-default"),
+      screen
+        .getByRole("region", { name: "你的模型" })
+        .querySelector(".is-default"),
     ).toBeNull();
     expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
       "先选一个默认模型",
