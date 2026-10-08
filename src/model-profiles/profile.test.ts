@@ -121,6 +121,19 @@ describe("modelCapabilities is a read-only catalog lookup that never guesses", (
     ]);
   });
 
+  it("labels MiMo-V2.6 from Xiaomi's model card and does not invent effort levels", () => {
+    for (const id of ["mimo-v2.6-pro", "mimo-v2.6-flash"]) {
+      expect(modelCapabilities(id)).toMatchObject({
+        reasoningLevels: [],
+        contextWindow: 1048576,
+        maxOutputTokens: 131072,
+        input: ["text", "image"],
+        toolUse: true,
+      });
+      expect(modelCapabilities(id).defaultReasoning).toBeUndefined();
+    }
+  });
+
   it("omits fields the catalog entry does not declare", () => {
     // Every entry in the merged catalog carries the four fields, so prove the
     // field-missing state with a defensive check: the API must only surface

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "verifiedAt": "2026-09-19",
+  "verifiedAt": "2026-10-08",
   "models": [
     {
       "id": "gpt-6-astra",
@@ -804,6 +804,34 @@
       "contextWindow": 1048576,
       "maxOutputTokens": 131072,
       "sources": ["https://models.dev/xiaomi/mimo-v2.5-pro"],
+      "toolUse": true
+    },
+    {
+      "id": "mimo-v2.6-pro",
+      "displayName": "MiMo-V2.6-Pro",
+      "reasoningLevels": [],
+      "input": ["text", "image"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 131072,
+      "sources": [
+        "https://mimo.mi.com/docs/en-US/quick-start/summary/model",
+        "https://mimo.mi.com/models/en-US/mimo-v2.6-pro",
+        "https://mimo.mi.com/docs/en-US/quick-start/usage-guide/text-generation/deep-thinking"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "mimo-v2.6-flash",
+      "displayName": "MiMo-V2.6-Flash",
+      "reasoningLevels": [],
+      "input": ["text", "image"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 131072,
+      "sources": [
+        "https://mimo.mi.com/docs/en-US/quick-start/summary/model",
+        "https://mimo.mi.com/models/en-US/mimo-v2.6-flash",
+        "https://mimo.mi.com/docs/en-US/quick-start/usage-guide/text-generation/deep-thinking"
+      ],
       "toolUse": true
     },
     {
