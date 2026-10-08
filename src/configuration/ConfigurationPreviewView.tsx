@@ -267,6 +267,23 @@ const BRIDGED_TOOLS: ReadonlySet<ActivationToolId> = new Set<ActivationToolId>([
   "codex_desktop",
 ]);
 
+/**
+ * 这些适配器会把名单里的每一个 id 写进应用自己的模型列表（Codex 的
+ * model catalog、Claude 的 model picker / inferenceModels、Pi 与 WorkBuddy
+ * 的 models、DSH 的 provider models）。只有它们可以承诺「应用菜单里能看到」。
+ * 只接受一个模型的应用不在这里，界面也不会说多出来的模型会出现。
+ */
+const CATALOG_MENU_TOOLS: ReadonlySet<ActivationToolId> =
+  new Set<ActivationToolId>([
+    "claude_code",
+    "claude_desktop",
+    "codex_desktop",
+    "pi",
+    "dsh_web",
+    "dsh_desktop",
+    "workbuddy",
+  ]);
+
 /** 这个应用是否经野菜助手的本机桥接访问线路，而不是直接写线路地址。 */
 export function usesLocalBridge(toolId: ActivationToolId): boolean {
   return BRIDGED_TOOLS.has(toolId);
@@ -408,6 +425,9 @@ export function ConfigurationPreviewView({
   const [billingGroup, setBillingGroup] = useState("");
   const [modelSet, setModelSet] = useState<ModelBinding[]>([]);
   const [defaultModelId, setDefaultModelId] = useState("");
+  const [menuAddOpen, setMenuAddOpen] = useState(false);
+  const [menuAddModelId, setMenuAddModelId] = useState("");
+  const [menuAddGroup, setMenuAddGroup] = useState("");
   // This value participates in render-time readiness. Keeping it in a ref can
   // strand the action button when an account changes but the restored model
   // and group happen to be identical: the ref changes, all state setters bail
@@ -688,19 +708,39 @@ export function ConfigurationPreviewView({
     if (savedConnection?.state === "not_connected") resetActivation();
   }, [savedConnection?.state, resetActivation]);
 
-  const submittedModels: ModelBinding[] = modelSet.length
-    ? modelSet
-    : selectedModelId && billingGroup
-      ? [{ modelId: selectedModelId, billingGroup }]
+  const writesModelMenu = CATALOG_MENU_TOOLS.has(activationToolId);
+  const dropdownBinding: ModelBinding | undefined =
+    selectedModelId && billingGroup
+      ? { modelId: selectedModelId, billingGroup }
+      : undefined;
+  const dropdownEnrolled = modelSet.some((m) => m.modelId === selectedModelId);
+  // 下拉框里的模型自动进菜单，不需要再点一次「加入」。已经在名单里就沿用
+  // 它的位置，只把计费分组换成当前选的；不在名单里就补到末尾。满 200 个时
+  // 不再把一个新的塞进去。
+  const menuAtCap =
+    writesModelMenu &&
+    !!dropdownBinding &&
+    !dropdownEnrolled &&
+    modelSet.length >= 200;
+  const submittedModels: ModelBinding[] = writesModelMenu
+    ? dropdownBinding && !menuAtCap
+      ? dropdownEnrolled
+        ? modelSet.map((m) =>
+            m.modelId === dropdownBinding.modelId ? dropdownBinding : m,
+          )
+        : [...modelSet, dropdownBinding]
+      : modelSet
+    : dropdownBinding
+      ? [dropdownBinding]
       : [];
-  // 列表非空时默认模型必须是用户点过的那一个。以前这里兜底到 `submittedModels[0]`，
-  // 于是把默认模型从列表里移走之后，第一个幸存者会悄悄顶上 —— 默认模型是应用
-  // 不选时真正会用的那个，价格也跟着它，这等于替用户改了计费对象。原生侧的
-  // `surviving_bindings` 正是因为这个拒绝自动顶替；渲染层不能反过来替它做。
-  // 没有列表时提交的就是选择器里那一个，它当然就是默认。
-  const defaultBinding = modelSet.length
-    ? modelSet.find((m) => m.modelId === defaultModelId)
-    : submittedModels[0];
+  // 默认就是下拉框里这一个，写进 config 的 `model`。默认被移走、选择器也清空
+  // 之后，不拿名单里的下一个顶上 —— 那会替用户改计费对象。
+  const defaultBinding =
+    writesModelMenu && dropdownBinding && !menuAtCap
+      ? dropdownBinding
+      : writesModelMenu
+        ? modelSet.find((m) => m.modelId === defaultModelId)
+        : dropdownBinding;
   // 一条常用模型「不可用」，指的是那个模型确实列出了分组、而它绑的那个不在
   // 里面 —— 那是用户的旧选择失效了，要他重选。模型压根没有分组数据（不在
   // /api/pricing 里）不算，那只是我们不知道。
@@ -710,80 +750,80 @@ export function ConfigurationPreviewView({
       const groups = models.find((a) => a.id === m.modelId)?.billing?.groups;
       return !groups?.length || groups.some((g) => g.id === m.billingGroup);
     });
-  const pendingModelEdit =
-    modelSet.length > 0 &&
-    !!selectedModel &&
-    !!selectedBillingGroup &&
-    !modelSet.some(
-      (m) => m.modelId === selectedModelId && m.billingGroup === billingGroup,
-    );
-  const pendingDefaultChange =
-    modelSet.length > 0 &&
-    !!selectedModel &&
-    !!selectedBillingGroup &&
-    defaultBinding?.modelId !== selectedModelId;
+  // 下拉框的模型和分组已经算进 `submittedModels`，不再要求先点「使用所选模型」。
+  // 唯一还要拦住的是第 201 个：那个不能自动写进去。
+  const pendingModelEdit = menuAtCap;
   // 列表里有模型、却没有一个是默认：只会在默认模型刚被移走之后出现。
   // 这时不能提交，也不能替用户挑 —— 得他自己点一个。
   const defaultMissing = modelSet.length > 0 && !defaultBinding;
-  const addCurrentModel = () => {
-    if (!selectedModel || !selectedBillingGroup) return;
-    setModelSet((current) => [
-      ...current.filter((m) => m.modelId !== selectedModelId),
-      { modelId: selectedModelId, billingGroup },
-    ]);
-    if (!modelSet.length) setDefaultModelId(selectedModelId);
-    else if (defaultBinding && defaultBinding.modelId !== selectedModelId) {
-      // Adding a favorite is not the same action as changing the default.
-      setSelectedModelId(defaultBinding.modelId);
-      setBillingGroup(defaultBinding.billingGroup);
-    }
-    resetResult();
-  };
-  const useSelectedModel = () => {
-    if (
-      !selectedModel ||
-      !selectedBillingGroup ||
-      applyInFlight.current ||
-      session.loading ||
-      session.lastError
-    )
-      return;
-    if (
-      modelSet.length >= 200 &&
-      !modelSet.some((m) => m.modelId === selectedModelId)
-    )
-      return;
-    setModelSet((current) => [
-      ...current.filter((m) => m.modelId !== selectedModelId),
-      { modelId: selectedModelId, billingGroup },
-    ]);
-    setDefaultModelId(selectedModelId);
-    resetResult();
-  };
   /**
    * 把一个模型从列表里拿掉 —— 列表里的「移除」和失败提示里的「移除「X」」
    * 都走这里，两处曾经各写一份、各漏一半。
    *
    * 拿掉的是默认模型时，默认位空出来，不自动让幸存者顶上（理由见
-   * `defaultBinding`）。选择器正停在被拿掉的模型上时也要跟着动：留着它，
-   * 主按钮就会变成「使用所选模型」，一点又把刚移走的加回去 —— 对一个因为
-   * 分组配不出来而被移走的模型，那正是原地打转。有默认模型就把选择器
-   * 放回默认那一个，否则清空，让用户重新挑。
+   * `defaultBinding`）。选择器正停在被拿掉的模型上时也要清空：留着它，
+   * 下一次提交又会把它自动加回去。
    */
   const removeBinding = (modelId: string) => {
-    const survivors = modelSet.filter((m) => m.modelId !== modelId);
-    setModelSet(survivors);
-    const removedDefault = defaultModelId === modelId;
-    if (removedDefault) setDefaultModelId("");
-    if (selectedModelId === modelId) {
-      const fallback = removedDefault
-        ? undefined
-        : survivors.find((m) => m.modelId === defaultModelId);
-      setSelectedModelId(fallback?.modelId ?? "");
-      setBillingGroup(fallback?.billingGroup ?? "");
+    setModelSet((current) => current.filter((m) => m.modelId !== modelId));
+    // 拿掉的是当前默认（下拉框里那一个）时，把选择器清空，不让幸存者顶上。
+    // 留着它的话，提交时又会把它自动加回去。
+    if (selectedModelId === modelId || defaultModelId === modelId) {
+      setDefaultModelId("");
+      setSelectedModelId("");
+      setBillingGroup("");
     }
     // 移除之后停在页面上，不自动重新接入：挡住的原因不一定是这个模型
     // （另外十六个原因仍然存在），自动重试会把人带偏。
+    resetResult();
+  };
+  const menuAddModel = models.find((m) => m.id === menuAddModelId);
+  const openMenuAdd = () => {
+    const initial = models.find((m) => m.id !== selectedModelId) ?? models[0];
+    const id = initial?.id ?? "";
+    setMenuAddModelId(id);
+    setMenuAddGroup(
+      chooseBillingGroup(
+        initial,
+        modelSet.find((m) => m.modelId === id)?.billingGroup ?? "",
+      ),
+    );
+    setMenuAddOpen(true);
+  };
+  const confirmMenuAdd = () => {
+    if (!menuAddModelId || !menuAddGroup || !menuAddModel) return;
+    const groups = menuAddModel.billing?.groups ?? [];
+    if (groups.length && !groups.some((group) => group.id === menuAddGroup))
+      return;
+    const enrolled = new Set(modelSet.map((m) => m.modelId));
+    if (selectedModelId) enrolled.add(selectedModelId);
+    if (!enrolled.has(menuAddModelId) && enrolled.size >= 200) return;
+    if (menuAddModelId === selectedModelId) {
+      setBillingGroup(menuAddGroup);
+      setModelSet((current) =>
+        current.map((m) =>
+          m.modelId === menuAddModelId
+            ? { modelId: menuAddModelId, billingGroup: menuAddGroup }
+            : m,
+        ),
+      );
+    } else {
+      setModelSet((current) => {
+        const rest = current.filter(
+          (m) => m.modelId !== menuAddModelId && m.modelId !== selectedModelId,
+        );
+        const keptDefault =
+          selectedModelId && billingGroup
+            ? [{ modelId: selectedModelId, billingGroup }]
+            : [];
+        return [
+          ...keptDefault,
+          ...rest,
+          { modelId: menuAddModelId, billingGroup: menuAddGroup },
+        ];
+      });
+    }
+    setMenuAddOpen(false);
     resetResult();
   };
 
@@ -859,7 +899,6 @@ export function ConfigurationPreviewView({
     !!defaultBinding &&
     bindingsAvailable &&
     !pendingModelEdit &&
-    !pendingDefaultChange &&
     !defaultMissing &&
     selectionReadyKey === selectionKey &&
     !session.loading &&
@@ -919,7 +958,6 @@ export function ConfigurationPreviewView({
       !defaultBinding ||
       !bindingsAvailable ||
       pendingModelEdit ||
-      pendingDefaultChange ||
       defaultMissing ||
       selectionReadyKey !== selectionKey ||
       !targetCanActivate ||
@@ -1043,7 +1081,6 @@ export function ConfigurationPreviewView({
   const configured =
     applyPhase !== "applying" &&
     !pendingModelEdit &&
-    !pendingDefaultChange &&
     !defaultMissing &&
     (activation
       ? activationConfigured && resultIsCurrent
@@ -1553,13 +1590,6 @@ export function ConfigurationPreviewView({
         label: t("yeschoyDaily.manageModels"),
         hint: t("yeschoyDaily.modelLimit"),
         run: openAdvanced,
-      };
-    if (pendingModelEdit || pendingDefaultChange)
-      return {
-        kind: "commit-model-set",
-        label: t("yeschoyDaily.useSelectedModel"),
-        hint: t("yeschoyDaily.useSelectedModelHint"),
-        run: useSelectedModel,
       };
     // 同上：只在「那个模型确实列出了分组、而这一条绑的不在里面」时拦。
     if (!bindingsAvailable)
@@ -2095,6 +2125,10 @@ export function ConfigurationPreviewView({
                               "",
                             ),
                         );
+                        // 下拉框里这个就是默认。已经在名单里，或者还没到 200
+                        // 的上限，才把它记成默认；超限时不改默认，避免把第
+                        // 201 个悄悄写进去。
+                        if (saved || modelSet.length < 200) setDefaultModelId(id);
                         resetResult();
                       }}
                       disabled={session.loading || applyPhase === "applying"}
@@ -2131,6 +2165,156 @@ export function ConfigurationPreviewView({
                         {c.refresh}
                       </button>
                     </div>
+                    {writesModelMenu && submittedModels.length > 0 && (
+                      <section
+                        className="model-menu-row"
+                        aria-label={g.favoriteModels}
+                      >
+                        <p className="model-menu-note">
+                          {activationToolId === "codex_desktop"
+                            ? g.menuModelsCodex
+                            : g.menuModelsApp}
+                        </p>
+                        <ul className="model-menu-chips">
+                          {submittedModels.map((m) => {
+                            const bindingModel = models.find(
+                              (a) => a.id === m.modelId,
+                            );
+                            const groups = bindingModel?.billing?.groups;
+                            const available =
+                              !groups?.length ||
+                              groups.some((group) => group.id === m.billingGroup);
+                            const isDefault =
+                              defaultBinding?.modelId === m.modelId;
+                            return (
+                              <li key={m.modelId}>
+                                <span
+                                  className={`model-menu-chip${isDefault ? " is-default" : ""}`}
+                                  data-unavailable={available ? undefined : true}
+                                >
+                                  <code>{m.modelId}</code>
+                                  <small>
+                                    {groupDisplayName(
+                                      m.billingGroup,
+                                      groups,
+                                      g.defaultGroup,
+                                    )}
+                                    {!available &&
+                                      ` · ${g.bindingUnavailable}`}
+                                  </small>
+                                  {isDefault && <em>{g.defaultBadge}</em>}
+                                  {!isDefault && (
+                                    <button
+                                      type="button"
+                                      className="model-menu-remove"
+                                      disabled={applyPhase === "applying"}
+                                      aria-label={g.removeModelAria.replace(
+                                        "{{model}}",
+                                        m.modelId,
+                                      )}
+                                      onClick={() => removeBinding(m.modelId)}
+                                    >
+                                      {g.removeAction}
+                                    </button>
+                                  )}
+                                </span>
+                              </li>
+                            );
+                          })}
+                          <li>
+                            <button
+                              type="button"
+                              className="model-menu-add"
+                              disabled={
+                                applyPhase === "applying" ||
+                                session.loading ||
+                                !!session.lastError ||
+                                submittedModels.length >= 200 ||
+                                models.length < 1
+                              }
+                              onClick={() =>
+                                menuAddOpen ? setMenuAddOpen(false) : openMenuAdd()
+                              }
+                            >
+                              {g.addMenuModel}
+                            </button>
+                          </li>
+                        </ul>
+                        {menuAddOpen && (
+                          <div className="model-menu-add-form">
+                            <label>
+                              <span>{g.addMenuModelPick}</span>
+                              <select
+                                value={menuAddModelId}
+                                disabled={applyPhase === "applying"}
+                                onChange={(event) => {
+                                  const id = event.target.value;
+                                  setMenuAddModelId(id);
+                                  setMenuAddGroup(
+                                    chooseBillingGroup(
+                                      models.find((m) => m.id === id),
+                                      modelSet.find((m) => m.modelId === id)
+                                        ?.billingGroup ?? "",
+                                    ),
+                                  );
+                                }}
+                              >
+                                {models.map((m) => (
+                                  <option key={m.id} value={m.id}>
+                                    {m.id}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label>
+                              <span>{g.addMenuModelGroup}</span>
+                              <select
+                                value={menuAddGroup}
+                                disabled={applyPhase === "applying"}
+                                onChange={(event) =>
+                                  setMenuAddGroup(event.target.value)
+                                }
+                              >
+                                {(menuAddModel?.billing?.groups.length
+                                  ? menuAddModel.billing.groups
+                                  : [
+                                      {
+                                        id: menuAddGroup || "default",
+                                        description: "",
+                                      },
+                                    ]
+                                ).map((group) => (
+                                  <option key={group.id} value={group.id}>
+                                    {groupLabel(group.id, g.defaultGroup)}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <button
+                              type="button"
+                              className="subtle-button"
+                              disabled={
+                                !menuAddModelId ||
+                                !menuAddGroup ||
+                                applyPhase === "applying"
+                              }
+                              onClick={confirmMenuAdd}
+                            >
+                              {submittedModels.some(
+                                (m) => m.modelId === menuAddModelId,
+                              )
+                                ? g.updateModelGroup
+                                : g.addFavoriteModel}
+                            </button>
+                          </div>
+                        )}
+                        {submittedModels.length > 1 && (
+                          <small className="model-menu-footnote">
+                            {g.modelSetNote}
+                          </small>
+                        )}
+                      </section>
+                    )}
                     {missingModel && (
                       <p className="selection-warning" role="alert">
                         {g.missingModelPrefix} <code>{selectedModelId}</code>{" "}
@@ -2194,132 +2378,6 @@ export function ConfigurationPreviewView({
                 />
               </section>
             </div>
-            {/* 列表在选择器和价格方案**之后**。它操作的是上面选好的那个模型：
-                按钮在被操作的东西上方，用户会先点它——真机上就是这样，一进页面
-                点「加入模型」，把默认的 deepseek 加了进去。列表为空时也能接入
-                （第 3 步的文案会说清接的是上面选好的那一个），所以它是「想在
-                应用里切换多个模型」时才需要的进阶步骤，放在后面才对得上。 */}
-            {signedIn && (
-              <section
-                className="model-set-editor"
-                aria-label={g.favoriteModels}
-              >
-                <header>
-                  <div>
-                    <h3>{g.favoriteModels}</h3>
-                    {/* 「接入后可以在这个应用里直接切换下面这些模型」同理：
-                        没有模型可切的时候，这句话在描述一个还不存在的东西。 */}
-                    {modelSet.length > 0 && <p>{g.favoriteModelsIntro}</p>}
-                  </div>
-                  <button
-                    type="button"
-                    className="subtle-button"
-                    onClick={addCurrentModel}
-                    disabled={
-                      !selectedModel ||
-                      !selectedBillingGroup ||
-                      applyPhase === "applying" ||
-                      session.loading ||
-                      !!session.lastError ||
-                      (modelSet.length >= 200 &&
-                        !modelSet.some((m) => m.modelId === selectedModelId))
-                    }
-                  >
-                    {modelSet.some((m) => m.modelId === selectedModelId)
-                      ? g.updateModelGroup
-                      : g.addFavoriteModel}
-                  </button>
-                </header>
-                {modelSet.length ? (
-                  <ul>
-                    {modelSet.map((m) => {
-                      const bindingModel = models.find(
-                        (a) => a.id === m.modelId,
-                      );
-                      const available = bindingModel?.billing?.groups.some(
-                        (g) => g.id === m.billingGroup,
-                      );
-                      return (
-                        <li key={m.modelId} data-unavailable={!available}>
-                          <label>
-                            <input
-                              type="radio"
-                              name="default-model"
-                              checked={defaultBinding?.modelId === m.modelId}
-                              disabled={applyPhase === "applying"}
-                              onChange={() => {
-                                setDefaultModelId(m.modelId);
-                                setSelectedModelId(m.modelId);
-                                setBillingGroup(m.billingGroup);
-                                resetResult();
-                              }}
-                              aria-label={g.defaultModelAria.replace(
-                                "{{model}}",
-                                m.modelId,
-                              )}
-                            />
-                            <span>
-                              <code>{m.modelId}</code>
-                              <small>
-                                {groupDisplayName(
-                                  m.billingGroup,
-                                  bindingModel?.billing?.groups,
-                                  g.defaultGroup,
-                                )}
-                                {!available && ` · ${g.bindingUnavailable}`}
-                              </small>
-                            </span>
-                          </label>
-                          <span className="model-default-label">
-                            {defaultBinding?.modelId === m.modelId
-                              ? g.defaultBadge
-                              : ""}
-                          </span>
-                          <button
-                            type="button"
-                            className="text-button"
-                            disabled={applyPhase === "applying"}
-                            aria-label={g.removeModelAria.replace(
-                              "{{model}}",
-                              m.modelId,
-                            )}
-                            onClick={() => removeBinding(m.modelId)}
-                          >
-                            {g.removeAction}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p>{g.favoriteModelsEmpty}</p>
-                )}
-                {modelSet.length > 0 &&
-                  !pendingModelEdit &&
-                  !!selectedModel &&
-                  modelSet.some((m) => m.modelId === selectedModelId) && (
-                    <p className="selection-note" role="status">
-                      {g.modelAlreadyListed.replace(
-                        "{{model}}",
-                        selectedModelId,
-                      )}
-                    </p>
-                  )}
-                {pendingModelEdit && (
-                  <p className="selection-warning" role="status">
-                    {g.pendingModelEditNote.replace(
-                      "{{action}}",
-                      modelSet.some((m) => m.modelId === selectedModelId)
-                        ? g.updateModelGroup
-                        : g.addFavoriteModel,
-                    )}
-                  </p>
-                )}
-                {/* 「左边的圆点是默认模型」在列表为空时无所指——那时屏幕上
-                    根本没有圆点。空态只说下一步做什么就够了。 */}
-                {modelSet.length > 0 && <small>{g.favoriteModelsNote}</small>}
-              </section>
-            )}
           </div>
         </section>
       </section>
@@ -2346,34 +2404,6 @@ export function ConfigurationPreviewView({
           {/* 「应用 → 模型 ID → 计费分组 → 线路」这一行摘要拿掉了：单栏之后
               第二步就在正上方，线路在页脚，同一屏把四件事说两遍，两边还各占
               一份视觉重量。这是这一页信息密度最直接的来源。 */}
-          {submittedModels.length > 1 && (
-            <div className="model-set-summary">
-              <strong>
-                {g.favoriteModelsCount.replace(
-                  "{{count}}",
-                  String(submittedModels.length),
-                )}
-              </strong>
-              <ul>
-                {submittedModels.map((m) => (
-                  <li key={m.modelId}>
-                    <code>{m.modelId}</code>
-                    <small>
-                      {groupDisplayName(
-                        m.billingGroup,
-                        models.find((a) => a.id === m.modelId)?.billing?.groups,
-                        g.defaultGroup,
-                      )}
-                      {m.modelId === defaultBinding?.modelId
-                        ? ` · ${g.defaultBadge}`
-                        : ""}
-                    </small>
-                  </li>
-                ))}
-              </ul>
-              <small>{g.modelSetNote}</small>
-            </div>
-          )}
           {/* #20 让已接入状态下的「保存并应用」退成次要，避免催促一个已经配好的
               用户。那在「选择没变」时是对的，但在「选择变了还没保存」时主次就
               反了：视觉最重的「打开使用」会用**旧**配置打开应用，用户以为换好了。

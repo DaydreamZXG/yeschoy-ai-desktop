@@ -6949,3 +6949,117 @@ select {
   margin: var(--space-8) 0 0;
   padding-left: var(--space-24);
 }
+
+/* 接入页：会写进应用菜单的模型。贴在模型选择器下面，不另开一张列表。 */
+.model-menu-row {
+  margin-top: var(--space-12);
+}
+
+.model-menu-note,
+.model-menu-footnote {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+}
+
+.model-menu-footnote {
+  display: block;
+  margin-top: var(--space-8);
+}
+
+.model-menu-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  margin: var(--space-8) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.model-menu-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  max-width: 100%;
+  padding: 2px var(--space-8);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: var(--text-xs);
+  line-height: 1.7;
+}
+
+.model-menu-chip.is-default {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.model-menu-chip code {
+  font-size: inherit;
+}
+
+.model-menu-chip small,
+.model-menu-chip em {
+  color: var(--muted);
+  font-style: normal;
+}
+
+.model-menu-chip.is-default em {
+  color: var(--accent);
+}
+
+.model-menu-chip[data-unavailable="true"] {
+  border-color: var(--danger, #c4554a);
+}
+
+.model-menu-chip[data-unavailable="true"] small {
+  color: var(--danger, #c4554a);
+}
+
+.model-menu-remove,
+.model-menu-add {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font-size: var(--text-xs);
+  line-height: 1.7;
+  padding: 0;
+}
+
+.model-menu-add {
+  border: 1px dashed var(--accent-line);
+  border-radius: 999px;
+  padding: 2px var(--space-10);
+}
+
+.model-menu-add:disabled,
+.model-menu-remove:disabled {
+  opacity: 0.45;
+}
+
+.model-menu-add-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-8);
+  margin-top: var(--space-10);
+}
+
+.model-menu-add-form label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.model-menu-add-form select {
+  min-width: 12rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md, 8px);
+  padding: var(--space-6) var(--space-8);
+}
