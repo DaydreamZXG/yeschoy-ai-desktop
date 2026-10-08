@@ -44,6 +44,7 @@ import { RecentRequest } from "./RecentRequest";
 import { ConnectionStatusNotice } from "./ConnectionStatusNotice";
 import { ActivationFeedback } from "./ActivationFeedback";
 import { CelebrationConfetti, TickerText } from "./FirstActivationCelebration";
+import { useCelebrateOnRise } from "../theme/motion";
 import {
   markFirstActivationCelebrated,
   shouldCelebrateFirstActivation,
@@ -997,6 +998,12 @@ export function ConfigurationPreviewView({
   // 条件失效（如外部切换使结果过期）时必须立即结束成功态，
   // 否则 cleanup 只清了定时器，按钮会永远停留在「接入成功」。
   const [applyFlash, setApplyFlash] = useState(false);
+  // 一键接入真的写成功的那一刻（applyPhase=finished 且结果是当前选择的），
+  // 从浮动条里的按钮位置炸一次彩带 + 对勾。
+  useCelebrateOnRise(
+    applyPhase === "finished" && activationSucceeded && resultIsCurrent,
+    ".configuration-preview-panel .setup-apply",
+  );
   useEffect(() => {
     if (
       !(applyPhase === "finished" && activationSucceeded && resultIsCurrent)

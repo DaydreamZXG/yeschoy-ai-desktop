@@ -1,0 +1,546 @@
+/* 第四轮：动效层。「情绪价值」都在这里。
+   规则：
+   1. 只动 transform 和 opacity（悬停辉光的 box-shadow 是唯一例外，只在悬停时）。
+   2. 进场动画一律 fill-mode: backwards —— 播完不留 transform。
+      带 fixed 后代的祖先（接入页）上永远不放 transform：
+      第三轮就是 view-enter 的 transform 把底部浮条钉到了页面里。
+   3. 系统要求减少动效时，index.css 的全局规则把动画和过渡全部关掉，
+      JS 侧（庆祝、数字滚动、聚光灯）由 motionAllowed() 关掉。 */
+
+:root {
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --enter: 420ms;
+}
+
+/* ---------- 页面切换：淡入 + 上滑 ---------- */
+.workbench-page,
+.workspace,
+.settings-workspace,
+.diagnostics-workspace {
+  animation: page-in var(--enter) var(--ease-out) backwards;
+}
+
+/* 接入页：容器本身只做透明度（不碰 transform），子元素各自上滑。 */
+.configuration-workspace {
+  animation: page-fade var(--enter) var(--ease-out) backwards;
+}
+
+.configuration-workspace > :not(.configuration-preview-panel) {
+  animation: page-in var(--enter) var(--ease-out) backwards;
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes page-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ---------- 浮动操作条：从底部滑上来；就绪时主按钮呼吸 ---------- */
+.configuration-preview-panel .connection-action-deck {
+  animation: bar-in 560ms var(--spring) 160ms backwards;
+}
+
+@keyframes bar-in {
+  from {
+    opacity: 0;
+    transform: translateY(140%);
+  }
+}
+
+.configuration-preview-panel .connection-action-deck::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: var(--space-8);
+  right: var(--space-8);
+  bottom: var(--space-8);
+  width: 160px;
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 28px 6px var(--lime);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.connection-action-deck:has(
+    > .setup-apply:not(:disabled):not(.is-applying):not(.is-success)
+  ):not(.is-configured)::after {
+  animation: breathe 2.4s var(--ease-in-out) 900ms infinite;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.12;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* ---------- 依次进场 ---------- */
+.connection-library > .connection-row {
+  animation: rise-in var(--enter) var(--ease-out) backwards;
+  animation-delay: calc(min(var(--rail-index, 0), 12) * 45ms + 120ms);
+}
+
+.workbench-stats > .summary-card,
+.account-metrics > .summary-card,
+.announcement-list > .announcement-card,
+.settings-hero > *,
+.settings-ledger > *,
+.usage-table tbody tr,
+.account-balance-hero,
+.usage-trend,
+.usage-section {
+  animation: rise-in var(--enter) var(--ease-out) backwards;
+}
+
+.workbench-stats > :nth-child(2),
+.account-metrics > :nth-child(2),
+.announcement-list > :nth-child(2),
+.settings-hero > :nth-child(2),
+.settings-ledger > :nth-child(2),
+.usage-table tbody tr:nth-child(2) {
+  animation-delay: 70ms;
+}
+
+.workbench-stats > :nth-child(3),
+.account-metrics > :nth-child(3),
+.announcement-list > :nth-child(3),
+.settings-hero > :nth-child(3),
+.settings-ledger > :nth-child(3),
+.usage-table tbody tr:nth-child(3),
+.usage-trend {
+  animation-delay: 140ms;
+}
+
+.announcement-list > :nth-child(n + 4),
+.settings-hero > :nth-child(n + 4),
+.settings-ledger > :nth-child(n + 4),
+.usage-table tbody tr:nth-child(n + 4),
+.usage-section {
+  animation-delay: 210ms;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+/* 柱状图一根根长出来 */
+.usage-trend-bar {
+  animation: trend-grow 700ms var(--spring) backwards;
+  animation-delay: calc(var(--i, 0) * 35ms + 200ms);
+}
+
+/* ---------- 按钮：悬停上浮 + 辉光，按下回弹 ---------- */
+.primary-action,
+.setup-apply,
+.subtle-button,
+.connect-app-button,
+.announcement-action,
+.text-button {
+  transition:
+    transform 260ms var(--spring),
+    box-shadow 200ms ease,
+    background 140ms ease,
+    color 140ms ease;
+}
+
+.primary-action:hover:not(:disabled),
+.setup-apply:hover:not(:disabled),
+.connect-app-button:hover:not(:disabled),
+.announcement-action:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -6px color-mix(in srgb, var(--lime) 70%, transparent);
+}
+
+.subtle-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.primary-action:active:not(:disabled),
+.setup-apply:active:not(:disabled),
+.subtle-button:active:not(:disabled),
+.connect-app-button:active:not(:disabled),
+.announcement-action:active:not(:disabled) {
+  transform: translateY(0) scale(0.96);
+  transition-duration: 80ms;
+}
+
+.connect-app-button svg,
+.primary-action svg {
+  transition: transform 260ms var(--spring);
+}
+
+.connect-app-button:hover:not(:disabled) svg,
+.primary-action:hover:not(:disabled) svg {
+  transform: translateX(3px);
+}
+
+/* 主按钮上的青柠流光（每 3.2 秒扫过一次） */
+.primary-action,
+.setup-apply {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.primary-action:not(.setup-apply):not(:disabled)::after,
+.setup-apply:not(.is-success):not(.is-applying):not(:disabled)::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    color-mix(in srgb, var(--lime) 55%, white) 50%,
+    transparent 70%
+  );
+  opacity: 0.55;
+  transform: translateX(-120%);
+  animation: shimmer 3.2s var(--ease-in-out) 1.2s infinite;
+  pointer-events: none;
+}
+
+:root[data-theme="dark"]
+  .primary-action:not(.setup-apply):not(:disabled)::after,
+:root[data-theme="dark"]
+  .setup-apply:not(.is-success):not(.is-applying):not(:disabled)::before {
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgb(255 255 255 / 85%) 50%,
+    transparent 70%
+  );
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-120%);
+  }
+  45%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+/* ---------- 状态点变青柠：弹一下 + 一圈涟漪 ---------- */
+.connection-row > .connection-state {
+  position: relative;
+}
+
+.connection-row[data-connected="true"] > .connection-state::before {
+  animation: dot-pop 620ms var(--spring) 300ms backwards;
+}
+
+.connection-row[data-connected="true"] > .connection-state::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: var(--space-8);
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: var(--radius-full);
+  background: var(--lime);
+  opacity: 0;
+  pointer-events: none;
+  animation: dot-ripple 900ms var(--ease-out) 420ms;
+}
+
+@keyframes dot-pop {
+  0% {
+    transform: scale(0);
+  }
+  60% {
+    transform: scale(1.8);
+  }
+}
+
+@keyframes dot-ripple {
+  from {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(5);
+  }
+}
+
+/* ---------- 检查应用：扫描光带扫过列表 ---------- */
+.connection-library {
+  position: relative;
+  overflow: hidden;
+}
+
+.connection-library[data-scanning="true"]::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 35%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--lime) 28%, transparent),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: scan-sweep 1.3s var(--ease-in-out) infinite;
+  pointer-events: none;
+}
+
+.connection-library[data-scanning="true"] > .connection-row {
+  opacity: 0.6;
+  transition: opacity 200ms ease;
+}
+
+@keyframes scan-sweep {
+  to {
+    transform: translateX(300%);
+  }
+}
+
+.subtle-button:has(.is-spinning) {
+  color: var(--lime-ink);
+  background: var(--lime);
+}
+
+/* 骨架屏：在原有呼吸上加一道流光 */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--lime) 22%, transparent),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: scan-sweep 1.4s var(--ease-in-out) infinite;
+}
+
+/* ---------- 侧栏：滑动的青柠胶囊、图标摇一摇、logo 调皮一下 ---------- */
+.workbench-nav {
+  position: relative;
+}
+
+.workbench-nav-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  border-radius: var(--radius-full);
+  background: var(--lime);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.workbench-nav-indicator[data-ready="true"] {
+  transition:
+    transform 480ms var(--spring),
+    opacity 200ms ease;
+}
+
+.workbench-nav button svg,
+.workbench-nav button > span:not(.workbench-nav-badge) {
+  position: relative;
+  z-index: 1;
+}
+
+.workbench-sidebar .workbench-nav button[aria-current="page"] svg {
+  background: transparent;
+}
+
+.workbench-nav button:hover:not([aria-current="page"]) svg {
+  animation: wiggle 520ms var(--ease-out);
+}
+
+@keyframes wiggle {
+  20% {
+    transform: rotate(-12deg) scale(1.08);
+  }
+  45% {
+    transform: rotate(9deg) scale(1.08);
+  }
+  70% {
+    transform: rotate(-4deg);
+  }
+}
+
+.workbench-brand-mark {
+  transition: transform 420ms var(--spring);
+}
+
+.workbench-brand:hover .workbench-brand-mark {
+  transform: rotate(-8deg) scale(1.1);
+}
+
+.workbench-brand:active .workbench-brand-mark {
+  transform: rotate(4deg) scale(0.92);
+  transition-duration: 100ms;
+}
+
+/* ---------- 卡片聚光灯（光斑只动 transform） ---------- */
+.account-overview,
+.billing-plan-card,
+.announcement-card,
+.connection-row,
+.usage-trend {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.account-overview::after,
+.billing-plan-card::after,
+.announcement-card::after,
+.connection-library > .connection-row::after,
+.usage-trend::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  left: 0;
+  width: 360px;
+  height: 360px;
+  border-radius: var(--radius-full);
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--lime) 22%, transparent),
+    transparent 65%
+  );
+  opacity: 0;
+  transform: translate(
+    calc(var(--mx, -999px) - 180px),
+    calc(var(--my, -999px) - 180px)
+  );
+  transition: opacity 240ms ease;
+  pointer-events: none;
+}
+
+.account-overview:hover::after,
+.billing-plan-card:hover::after,
+.announcement-card:hover::after,
+.connection-library > .connection-row:hover::after,
+.usage-trend:hover::after {
+  opacity: 1;
+}
+
+/* ---------- 空状态：一团柔和的青柠光 ---------- */
+.library-empty,
+.announcements-empty {
+  position: relative;
+  isolation: isolate;
+}
+
+.library-empty::before,
+.announcements-empty::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -20% 10%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--lime) 30%, transparent),
+    transparent
+  );
+  animation: breathe 3.6s var(--ease-in-out) infinite;
+  pointer-events: none;
+}
+
+/* ---------- 成功庆祝层（由 celebrate() 挂在 body 上） ---------- */
+.celebration-layer {
+  position: fixed;
+  z-index: var(--z-dialog-top);
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.celebration-bit {
+  position: absolute;
+  will-change: transform, opacity;
+  box-shadow: 0 0 0 1px rgb(17 17 17 / 8%);
+}
+
+.celebration-check {
+  position: absolute;
+  width: 96px;
+  height: 96px;
+  will-change: transform, opacity;
+}
+
+.celebration-check svg {
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 12px 30px rgb(201 250 16 / 60%));
+}
+
+.celebration-check circle {
+  fill: var(--lime);
+  stroke: #111111;
+  stroke-width: 3;
+}
+
+.celebration-check path {
+  fill: none;
+  stroke: #111111;
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 64;
+  stroke-dashoffset: 64;
+  animation: check-draw 420ms var(--ease-out) 260ms forwards;
+}
+
+.celebration-check::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 3px solid var(--lime);
+  border-radius: var(--radius-full);
+  opacity: 0;
+  animation: dot-ripple 900ms var(--ease-out) 120ms;
+}
+
+@keyframes check-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .celebration-layer,
+  .connection-action-deck::after,
+  .primary-action::after,
+  .setup-apply::before,
+  .skeleton::after,
+  .connection-library::after {
+    display: none;
+  }
+}
+
+.workbench-nav .workbench-nav-badge {
+  z-index: 2;
+}

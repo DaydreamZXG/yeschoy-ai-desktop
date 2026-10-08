@@ -14,6 +14,7 @@ const SHEETS = [
   "src/installation/installation.css",
   "src/theme/new-api.css",
   "src/theme/new-api-layout.css",
+  "src/theme/motion.css",
 ];
 
 const sheets = SHEETS.map((path) => ({

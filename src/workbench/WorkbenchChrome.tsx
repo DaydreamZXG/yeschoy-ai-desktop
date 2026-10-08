@@ -16,8 +16,9 @@ import {
   Wallet,
   ChartNoAxesCombined,
 } from "lucide-react";
+import { CountUpStrong } from "../theme/motion";
 import brandIcon from "../assets/brand/yecai-logo.png";
-import { Fragment } from "react";
+import { Fragment, useLayoutEffect, useRef } from "react";
 import type { AccountProjection } from "../account/session";
 import { creditUnit, formatMoney } from "../account/finance";
 import { CANDIDATE_VERSION } from "../candidate/readiness";
@@ -112,6 +113,32 @@ export function WorkbenchSidebar({
     view === "models" || view === "diagnostics" || view === "tools"
       ? "settings"
       : view;
+  // 当前项的青柠胶囊是一个独立元素，在导航项之间滑动（只动 transform）。
+  const navRef = useRef<HTMLElement>(null);
+  const indicatorRef = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    const indicator = indicatorRef.current;
+    if (!nav || !indicator) return;
+    const icon = nav.querySelector<SVGElement>(
+      'button[aria-current="page"] svg',
+    );
+    if (!icon) {
+      indicator.style.opacity = "0";
+      return;
+    }
+    const navBox = nav.getBoundingClientRect();
+    const box = icon.getBoundingClientRect();
+    indicator.style.opacity = "1";
+    indicator.style.width = `${box.width}px`;
+    indicator.style.height = `${box.height}px`;
+    indicator.style.transform = `translate(${box.left - navBox.left}px, ${box.top - navBox.top}px)`;
+    // 第一次落位不滑动，之后的切换才走过渡。
+    const frame = requestAnimationFrame(() => {
+      indicator.dataset.ready = "true";
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [current, nav.length]);
   const navButton = ({ id, label, icon: Icon }: (typeof nav)[number]) => {
     const unread = id === "announcements" ? announcementsUnread : 0;
     const name =
@@ -158,7 +185,12 @@ export function WorkbenchSidebar({
           <small>{c.subtitle}</small>
         </span>
       </button>
-      <nav className="workbench-nav" aria-label={c.subtitle}>
+      <nav className="workbench-nav" aria-label={c.subtitle} ref={navRef}>
+        <span
+          className="workbench-nav-indicator"
+          aria-hidden="true"
+          ref={indicatorRef}
+        />
         {nav.map(navButton)}
       </nav>
       <div className="sidebar-bottom">
@@ -256,9 +288,12 @@ export function AccountSummary({
               <Icon aria-hidden="true" />
               {label}
             </span>
-            <strong aria-label={value ? undefined : c.noAccountData}>
+            <CountUpStrong
+              value={value ?? "—"}
+              aria-label={value ? undefined : c.noAccountData}
+            >
               {value ?? "—"}
-            </strong>
+            </CountUpStrong>
             <div className="summary-bottom">
               <span>
                 {value ? unit : accountLoading ? c.checking : c.unavailable}
@@ -282,7 +317,8 @@ export function AccountSummary({
           <Blocks aria-hidden="true" />
           {c.installed}
         </span>
-        <strong
+        <CountUpStrong
+          value={String(detected ?? "—")}
           aria-label={
             detected === undefined
               ? scanning
@@ -293,7 +329,7 @@ export function AccountSummary({
         >
           {detected ?? "—"}
           {detected !== undefined && <small>{c.unit}</small>}
-        </strong>
+        </CountUpStrong>
         <div className="summary-bottom">
           <span>
             {scanning

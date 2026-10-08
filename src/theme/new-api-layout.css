@@ -501,58 +501,82 @@
   background: none;
 }
 
-/* 浮动操作条：钉在视口底部，任何宽度都看得见 */
+/* 第 3 步留在页面里（标题、结果、详情都正常排版），
+   只有操作区 .connection-action-deck 钉在视口底部，成为浮动操作条。
+   面板本身 display: contents —— 它不再是一个盒子，也就不会被浮条撑变形。 */
 .configuration-workspace > .configuration-preview-panel {
-  position: fixed;
-  z-index: var(--z-popover);
-  bottom: var(--space-24);
-  left: calc(var(--rail-width) + var(--space-24));
-  right: var(--space-24);
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
-  align-items: center;
-  gap: var(--space-16);
-  max-width: 880px;
-  margin: 0 auto;
-  padding: var(--space-8) var(--space-8) var(--space-8) var(--space-24);
-  border: 0;
-  border-radius: var(--radius-full);
-  background: var(--surface);
-  box-shadow: var(--shadow-float);
-}
-
-.configuration-preview-panel .connection-summary-row,
-.configuration-preview-panel .connection-action-deck {
   display: contents;
 }
 
-.configuration-preview-panel .connection-summary-intro {
-  order: 1;
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  min-width: 0;
-  white-space: nowrap;
+.configuration-preview-panel .connection-summary-row {
+  display: block;
+  margin-top: var(--space-40);
+  padding-top: var(--space-24);
+  border-top: 1px solid var(--line);
 }
 
-.configuration-preview-panel .connection-summary-intro .eyebrow,
-.configuration-preview-panel .connection-summary-intro p:last-child {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
+.configuration-preview-panel .connection-summary-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
 }
 
 .configuration-preview-panel .connection-summary-intro h2,
 .configuration-preview-panel .connection-summary-intro h3 {
   margin: 0;
-  font-size: var(--text-base);
+  font-size: var(--text-lg);
   font-weight: 650;
 }
 
+.configuration-preview-panel .connection-summary-intro p:not(.eyebrow) {
+  margin: var(--space-4) 0 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.configuration-preview-panel .connection-details,
+.configuration-preview-panel .connection-lifecycle-note,
+.configuration-preview-panel .setup-result,
+.configuration-preview-panel .configuration-secondary-actions {
+  margin: var(--space-16) 0 0;
+}
+
+.configuration-preview-panel .setup-result {
+  padding: var(--space-16) var(--space-24);
+  border: 0;
+  border-radius: var(--radius-xl);
+  background: var(--accent-soft);
+}
+
+.configuration-preview-panel .configuration-secondary-actions {
+  display: flex;
+  gap: var(--space-8);
+  padding: 0;
+  border: 0;
+}
+
+/* 浮动操作条 */
+.configuration-preview-panel .connection-action-deck {
+  position: fixed;
+  z-index: var(--z-popover);
+  bottom: var(--space-24);
+  left: calc(var(--rail-width) + var(--space-24));
+  right: var(--space-24);
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  width: auto;
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-8) var(--space-8) var(--space-24);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+}
+
 .configuration-preview-panel .connection-action-hint {
-  order: 2;
+  order: 0;
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   color: var(--faint);
@@ -561,80 +585,47 @@
   white-space: nowrap;
 }
 
-.configuration-preview-panel .connection-details {
-  order: 3;
-  position: relative;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-}
-
-.configuration-preview-panel .connection-details > summary {
-  padding: var(--space-8);
-  color: var(--muted);
-  font-size: var(--text-xs);
+.configuration-preview-panel .connection-action-deck > button,
+.configuration-preview-panel .open-connection-control {
+  order: 1;
+  flex: 0 0 auto;
   white-space: nowrap;
 }
 
-.configuration-preview-panel .connection-details[open] > :not(summary) {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + var(--space-16));
-  width: 420px;
-  max-height: 60vh;
-  margin: 0;
-  padding: var(--space-16) var(--space-24);
-  overflow: auto;
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  box-shadow: var(--shadow-float);
-}
-
-.configuration-preview-panel .configuration-secondary-actions {
-  order: 4;
-  display: flex;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.configuration-preview-panel .configuration-secondary-actions button {
-  min-height: 32px;
-  padding: var(--space-4) var(--space-8);
+.configuration-preview-panel .connection-action-deck .reapply-current {
+  min-height: 40px;
+  padding: 0 var(--space-8);
   border: 0;
   background: none;
-  color: var(--muted);
   font-size: var(--text-xs);
-  white-space: nowrap;
-}
-
-.configuration-preview-panel .configuration-secondary-actions > div {
-  display: flex;
-  gap: 0;
-}
-
-.configuration-preview-panel .setup-apply,
-.configuration-preview-panel .open-connection-control {
-  order: 5;
-}
-
-.configuration-preview-panel .setup-apply {
-  width: auto;
-  min-width: 160px;
-  min-height: 48px;
-  padding: var(--space-8) var(--space-24);
-  border-radius: var(--radius-full);
-  font-size: var(--text-lg);
 }
 
 .configuration-preview-panel .open-connection-control {
+  order: 2;
   display: flex;
+  align-items: center;
   gap: var(--space-8);
 }
 
-.configuration-preview-panel .open-connection-control button {
+.configuration-preview-panel .open-connection-control > button,
+.configuration-preview-panel .connection-action-deck .setup-apply {
+  width: auto;
+  min-width: 0;
+  min-height: 48px;
+  padding: var(--space-8) var(--space-24);
   border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.configuration-preview-panel .connection-action-deck .setup-apply {
+  font-size: var(--text-lg);
+}
+
+.configuration-preview-panel
+  .connection-action-deck.is-configured
+  .setup-apply {
+  min-height: 40px;
+  font-size: var(--text-sm);
 }
 
 /* 安装面板：一句标题、一个按钮 */
@@ -1056,16 +1047,10 @@
   .configuration-workspace {
     padding: var(--space-32) var(--space-24);
   }
-  .configuration-workspace > .configuration-preview-panel {
+  .configuration-preview-panel .connection-action-deck {
     left: calc(var(--rail-width) + var(--space-16));
     right: var(--space-16);
     bottom: var(--space-16);
-  }
-  .configuration-preview-panel .configuration-secondary-actions {
-    display: none;
-  }
-  .configuration-preview-panel .connection-details[open] > :not(summary) {
-    width: min(420px, 70vw);
   }
   .summary-card {
     padding: 0 var(--space-16);
@@ -1088,11 +1073,6 @@
   from {
     opacity: 0;
   }
-}
-
-.configuration-workspace > .configuration-preview-panel {
-  width: auto;
-  max-width: var(--content-width);
 }
 
 .workbench-brand-mark {

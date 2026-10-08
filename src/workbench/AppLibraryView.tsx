@@ -471,6 +471,7 @@ export function AppLibraryView({
         className="connection-library"
         aria-label={c.libraryRegionLabel}
         aria-busy={scanning}
+        data-scanning={checking ? "true" : undefined}
       >
         {groups.flatMap((group, groupIndex) => [
           ...(group.title

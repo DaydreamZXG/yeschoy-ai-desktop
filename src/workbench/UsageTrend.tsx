@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type CSSProperties } from "react";
 import type { UsageRecord } from "../account/usage";
 import { formatMoney } from "../account/finance";
 import { useWorkbenchCopy } from "./copy";
@@ -61,7 +61,7 @@ export function UsageTrend({
         <p className="usage-note">{c.usageTrendEmpty}</p>
       ) : (
         <ol className="usage-trend-bars">
-          {days.map((d) => {
+          {days.map((d, index) => {
             const label = date.format(d.start);
             const shown = byAmount
               ? formatMoney(d.amount.toFixed(2), currency, locale)
@@ -71,6 +71,7 @@ export function UsageTrend({
             return (
               <li
                 key={d.start}
+                style={{ "--i": index } as CSSProperties}
                 title={c.usageTrendDayLabel
                   .replace("{{date}}", label)
                   .replace("{{amount}}", shown)}
