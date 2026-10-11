@@ -13,14 +13,14 @@ Derived from code and `docs/station-connect-protocol.md` — not a product spec.
 | UI | **`showStationConnectWelcomeStrip`** (`src/workbench/AppLibraryView.tsx`) is true for `signed_out` / missing status → welcome strip + **`StationConnectOriginForm`**. Parallel: **`scanActivationTargets`** runs for app cards (separate from account). |
 | Official-only | **`isOfficialDistribution()`** (`src/distribution/identity.ts`) hides OSS soft-traffic CTA; form still prefills **`REFERENCE_STATION_ORIGIN`** (`src/distribution/softTraffic.ts` → `https://yeschoy.com`). |
 
-**Intended after PR #46 (remaining):** if **`account_v2::has_stored_session()`** is false, do **not** call `account_inspect_v2` on startup; set a local **`signed_out`** projection and `loading: false` immediately.
+**PR #46:** if **`account_session_snapshot_v2`** reports no keyring session, **skip** `account_inspect_v2` on startup; set **`idleSignedOutProjection`** and `loading: false` immediately. Manual **`refresh()`** still inspects.
 
 ## 2) User enters station origin on「我的应用」
 
 | Step | Code |
 |------|------|
 | Form | **`StationConnectOriginForm`** (`src/workbench/StationConnectOriginForm.tsx`): validates with **`canonicalStationHttpsOrigin`** (`connect/stationConnectPage.ts`). |
-| Open browser | **`openStationConnectPage`** (`src/account/openStationConnectPage.ts`) → IPC **`station_connect_open_connect_page_v1`** (`src-tauri/src/station_connect.rs`) opens `{origin}/desktop/connect` via **`open_system_browser`**. |
+| Open browser | **`openStationConnectPage`** → IPC **`station_connect_open_connect_page_v1`** opens `{origin}/desktop/connect?auto=1`. Page **`connect/entry.ts`** auto-issues + deep-links when the site session cookie is present; button stays for sign-in / retry. |
 | Line switch | **`onLineChange(lineIdForStationConnectOrigin(origin))`** → `App` updates **`accountLineId`** (synthetic id `station_connect:https://…` or catalog line for canonical origins — see **`line_id_for_station_connect_origin`** in Rust). |
 
 Draft origin is stored in `localStorage` key **`yeschoy.stationConnectOriginDraft`**.
@@ -87,8 +87,9 @@ Alternative: Account →「网页登录」→ approve device code in browser (ca
 
 ## PR #46 status
 
-| Done | Remaining |
-|------|-----------|
-| Form / sign-in not blocked by `accountSession.loading` | **No keyring session ⇒ skip startup `account_inspect`** (`has_stored_session` gate in `useAccountSession` + Tauri command) |
-| `AUTH_UNAUTHORIZED` → `session_required` messaging | Tests for skip-inspect; undraft PR |
-| Unit / integration tests for loading + connect mapping | Update hooks/tests that assumed inspect always on mount |
+| Item | Status |
+|------|--------|
+| No keyring session ⇒ skip startup `account_inspect` | **`account_session_snapshot_v2`** + **`useAccountSession`** |
+| Form / sign-in not blocked by `loading` | Done |
+| Relay line preference (`localStorage` + stored session line) | **`accountLinePreference.ts`**, **`App.applyAccountLine`** |
+| Connect `?auto=1` + **`AUTH_UNAUTHORIZED`** mapping | Done, **`connect.js`** rebuilt |
