@@ -227,8 +227,9 @@ impl AccountProjection {
 }
 
 #[derive(Clone)]
-struct DesktopBootstrap {
+pub(crate) struct DesktopBootstrap {
     device_authorization_available: bool,
+    oauth_loopback_pkce_available: bool,
     origin: String,
     wallet_url: String,
     /// Empty until the server advertises it. The announcements view is the
@@ -260,6 +261,8 @@ struct BootstrapData {
     contract_id: String,
     minimum_client_version: String,
     device_authorization_available: bool,
+    #[serde(default)]
+    oauth_loopback_pkce_available: bool,
     account_read: bool,
     usage_read: bool,
     models_read: bool,
@@ -532,6 +535,7 @@ async fn fetch_bootstrap_read(line_id: &str) -> Result<DesktopBootstrap, Account
     }
     Ok(DesktopBootstrap {
         device_authorization_available: data.device_authorization_available,
+        oauth_loopback_pkce_available: data.oauth_loopback_pkce_available,
         origin: origin.to_owned(),
         wallet_url: data.wallet_url,
         // A path we would fetch from the relay origin, so it has to be a
@@ -637,7 +641,7 @@ fn user_code_is_valid(value: &str) -> bool {
 }
 
 #[cfg(target_os = "macos")]
-fn open_system_browser(url: &str) -> Result<(), ()> {
+pub(crate) fn open_system_browser(url: &str) -> Result<(), ()> {
     Command::new("/usr/bin/open")
         .arg(url)
         .spawn()
@@ -646,7 +650,7 @@ fn open_system_browser(url: &str) -> Result<(), ()> {
 }
 
 #[cfg(target_os = "windows")]
-fn open_system_browser(url: &str) -> Result<(), ()> {
+pub(crate) fn open_system_browser(url: &str) -> Result<(), ()> {
     use windows::{
         core::PCWSTR,
         Win32::UI::{Shell::ShellExecuteW, WindowsAndMessaging::SW_SHOWNORMAL},
@@ -678,8 +682,22 @@ fn open_system_browser(url: &str) -> Result<(), ()> {
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-fn open_system_browser(_url: &str) -> Result<(), ()> {
+pub(crate) fn open_system_browser(_url: &str) -> Result<(), ()> {
     Err(())
+}
+
+pub(crate) async fn fetch_desktop_bootstrap(
+    line_id: &str,
+) -> Result<DesktopBootstrap, AccountProjectionFailure> {
+    fetch_bootstrap(line_id).await
+}
+
+pub(crate) fn loopback_oauth_enabled_for_bootstrap(bootstrap: &DesktopBootstrap) -> bool {
+    match std::env::var("YESCHOY_LOOPBACK_OAUTH") {
+        Ok(value) if matches!(value.as_str(), "0" | "false" | "FALSE" | "no" | "NO") => false,
+        Ok(value) if matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES") => true,
+        _ => bootstrap.oauth_loopback_pkce_available,
+    }
 }
 
 fn keyring_entry() -> Result<Entry, ()> {

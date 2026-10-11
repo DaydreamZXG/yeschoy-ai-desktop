@@ -6,6 +6,15 @@ YesChoy desktop assistant with one click — no API key paste in the main flow.
 Protocol details: [`station-connect-protocol.md`](./station-connect-protocol.md).  
 HTTP contract: [`station-connect-api.openapi.yaml`](./station-connect-api.openapi.yaml).
 
+## Loopback OAuth fallback (desktop)
+
+When a site does not embed `connect.js` or the `yeschoy://` deep link fails, the
+desktop app can fall back to **OAuth 2.0 + PKCE** on `http://127.0.0.1:<port>/oauth/callback`
+if the station bootstrap declares `oauthLoopbackPkceAvailable: true`. The UI entry
+(**Sign in in browser** / **在浏览器中登录**) stays hidden until that flag is set.
+Catalog lines (`mainland_optimized` / `global_accelerated`) keep using device-code
+sign-in; this path is for `station_connect:<https-origin>` sessions only.
+
 ## One-line script
 
 Host the official bundle at **`https://yeschoy.com/connect.js`** (source and build

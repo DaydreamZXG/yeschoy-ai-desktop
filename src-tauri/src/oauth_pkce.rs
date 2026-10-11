@@ -1,9 +1,8 @@
 //! Client-owned OAuth 2.0 Authorization Code + PKCE primitives.
 //!
-//! This module is intentionally not wired into the active account commands yet.
-//! The server token endpoint and the bearer-to-tool billing-group contract are
-//! not deployed. Keeping the protocol engine compiled but dormant lets us test
-//! the client boundary now without replacing the working device-code flow.
+//! Wired for station-connect loopback fallback only when bootstrap declares
+//! `oauth_loopback_pkce_available` (see `station_connect_loopback`). Device-code
+//! remains the primary catalog-line sign-in path.
 
 use std::{
     collections::BTreeSet,
@@ -16,6 +15,7 @@ use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use reqwest::Url;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
+use crate::station_connect::connect_origin_is_acceptable;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
@@ -25,6 +25,9 @@ use tokio::{
 pub(crate) const CLIENT_ID: &str = "yeschoy-desktop";
 pub(crate) const CALLBACK_PATH: &str = "/oauth/callback";
 pub(crate) const AUTHORIZE_PATH: &str = "/api/oauth/authorize";
+pub(crate) const TOKEN_PATH: &str = "/api/oauth/token";
+pub(crate) const USERINFO_PATH: &str = "/api/oauth/userinfo";
+pub(crate) const REVOKE_PATH: &str = "/api/oauth/revoke";
 pub(crate) const TOKEN_ENDPOINT: &str = "https://yeschoy.com/api/oauth/token";
 pub(crate) const USERINFO_ENDPOINT: &str = "https://yeschoy.com/api/oauth/userinfo";
 pub(crate) const REVOKE_ENDPOINT: &str = "https://yeschoy.com/api/oauth/revoke";
@@ -89,14 +92,22 @@ impl AuthorizationCode {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct LoopbackOAuthEndpoints {
+    pub(crate) authorize_origin: String,
+    pub(crate) token_endpoint: String,
+    pub(crate) userinfo_endpoint: String,
+    pub(crate) revoke_endpoint: String,
+}
+
 pub(crate) struct SensitiveFormRequest {
-    endpoint: &'static str,
+    endpoint: String,
     body: String,
 }
 
 impl SensitiveFormRequest {
-    pub(crate) fn endpoint(&self) -> &'static str {
-        self.endpoint
+    pub(crate) fn endpoint(&self) -> &str {
+        &self.endpoint
     }
 
     pub(crate) fn body(&self) -> &str {
@@ -190,6 +201,7 @@ pub(crate) struct PreparedAuthorization {
     state: String,
     verifier: String,
     challenge: String,
+    endpoints: LoopbackOAuthEndpoints,
     deadline: Instant,
     phase: AtomicU8,
 }
@@ -199,10 +211,12 @@ impl PreparedAuthorization {
         Self::prepare_for_origin(COMPILED_AUTHORIZATION_ORIGIN, AUTHORIZATION_WAIT).await
     }
 
+    pub(crate) async fn prepare_for_loopback_origin(origin: &str) -> Result<Self, PkceFailure> {
+        Self::prepare_for_origin(origin, AUTHORIZATION_WAIT).await
+    }
+
     async fn prepare_for_origin(origin: &str, lifetime: Duration) -> Result<Self, PkceFailure> {
-        if !authorization_origin_is_allowed(origin) {
-            return Err(PkceFailure::InvalidOrigin);
-        }
+        let endpoints = loopback_oauth_endpoints(origin)?;
 
         // Hold the operating-system-assigned socket for the entire flow. Never
         // probe, close and rebind a guessed port.
@@ -226,8 +240,13 @@ impl PreparedAuthorization {
             }
         }
         let challenge = pkce_s256(&verifier)?;
-        let browser_url =
-            authorization_url(origin, &redirect_uri, &state, &challenge, DEFAULT_SCOPE)?;
+        let browser_url = authorization_url(
+            &endpoints.authorize_origin,
+            &redirect_uri,
+            &state,
+            &challenge,
+            DEFAULT_SCOPE,
+        )?;
 
         Ok(Self {
             listener,
@@ -236,9 +255,14 @@ impl PreparedAuthorization {
             state,
             verifier,
             challenge,
+            endpoints,
             deadline: Instant::now() + lifetime,
             phase: AtomicU8::new(PHASE_WAITING),
         })
+    }
+
+    pub(crate) fn endpoints(&self) -> &LoopbackOAuthEndpoints {
+        &self.endpoints
     }
 
     pub(crate) fn browser_url(&self) -> &str {
@@ -376,7 +400,7 @@ impl PreparedAuthorization {
             ("client_version", metadata.client_version),
         ]);
         Ok(SensitiveFormRequest {
-            endpoint: TOKEN_ENDPOINT,
+            endpoint: self.endpoints.token_endpoint.clone(),
             body: form_encode(&pairs),
         })
     }
@@ -499,13 +523,14 @@ impl CallbackResponse {
 }
 
 pub(crate) fn build_refresh_request(
+    endpoints: &LoopbackOAuthEndpoints,
     refresh_token: &str,
 ) -> Result<SensitiveFormRequest, PkceFailure> {
     if !opaque_secret_is_valid(refresh_token, 32, 8192) {
         return Err(PkceFailure::InvalidCredential);
     }
     Ok(SensitiveFormRequest {
-        endpoint: TOKEN_ENDPOINT,
+        endpoint: endpoints.token_endpoint.clone(),
         body: form_encode(&[
             ("grant_type", "refresh_token"),
             ("client_id", CLIENT_ID),
@@ -515,6 +540,7 @@ pub(crate) fn build_refresh_request(
 }
 
 pub(crate) fn build_revoke_request(
+    endpoints: &LoopbackOAuthEndpoints,
     token: &str,
     token_type_hint: &str,
 ) -> Result<SensitiveFormRequest, PkceFailure> {
@@ -524,7 +550,7 @@ pub(crate) fn build_revoke_request(
         return Err(PkceFailure::InvalidCredential);
     }
     Ok(SensitiveFormRequest {
-        endpoint: REVOKE_ENDPOINT,
+        endpoint: endpoints.revoke_endpoint.clone(),
         body: form_encode(&[
             ("token", token),
             ("client_id", CLIENT_ID),
@@ -630,6 +656,37 @@ struct OAuthErrorResponse {
     request_id: Option<String>,
 }
 
+pub(crate) fn loopback_oauth_endpoints(raw: &str) -> Result<LoopbackOAuthEndpoints, PkceFailure> {
+    let authorize_origin = loopback_oauth_authorize_origin(raw)?;
+    let token_origin = token_api_origin_for_authorize(&authorize_origin)?;
+    Ok(LoopbackOAuthEndpoints {
+        authorize_origin,
+        token_endpoint: format!("{token_origin}{TOKEN_PATH}"),
+        userinfo_endpoint: format!("{token_origin}{USERINFO_PATH}"),
+        revoke_endpoint: format!("{token_origin}{REVOKE_PATH}"),
+    })
+}
+
+fn loopback_oauth_authorize_origin(raw: &str) -> Result<String, PkceFailure> {
+    if authorization_origin_is_allowed(raw) {
+        return Ok(raw.to_owned());
+    }
+    connect_origin_is_acceptable(raw).ok_or(PkceFailure::InvalidOrigin)
+}
+
+fn token_api_origin_for_authorize(authorize_origin: &str) -> Result<String, PkceFailure> {
+    if authorize_origin == CANONICAL_AUTHORIZATION_ORIGIN {
+        return Ok(CANONICAL_AUTHORIZATION_ORIGIN.to_owned());
+    }
+    if authorize_origin == PARTNER_AUTHORIZATION_ORIGIN {
+        return Ok(CANONICAL_AUTHORIZATION_ORIGIN.to_owned());
+    }
+    if connect_origin_is_acceptable(authorize_origin).as_deref() == Some(authorize_origin) {
+        return Ok(authorize_origin.to_owned());
+    }
+    Err(PkceFailure::InvalidOrigin)
+}
+
 fn authorization_origin_is_allowed(raw: &str) -> bool {
     if !matches!(
         raw,
@@ -699,7 +756,8 @@ fn authorization_url(
     challenge: &str,
     scope: &str,
 ) -> Result<String, PkceFailure> {
-    if !authorization_origin_is_allowed(origin)
+    let canonical = loopback_oauth_authorize_origin(origin)?;
+    if canonical != origin
         || !redirect_uri_is_allowed(redirect_uri)
         || !base64url_43_is_valid(state)
         || !base64url_43_is_valid(challenge)
@@ -707,8 +765,8 @@ fn authorization_url(
     {
         return Err(PkceFailure::InvalidAuthorizationInput);
     }
-    let mut url =
-        Url::parse(&format!("{origin}{AUTHORIZE_PATH}")).map_err(|_| PkceFailure::InvalidOrigin)?;
+    let mut url = Url::parse(&format!("{origin}{AUTHORIZE_PATH}"))
+        .map_err(|_| PkceFailure::InvalidOrigin)?;
     url.query_pairs_mut()
         .append_pair("response_type", "code")
         .append_pair("client_id", CLIENT_ID)
@@ -1019,6 +1077,50 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn third_party_connect_origin_targets_same_origin_token_endpoint() {
+        let prepared = PreparedAuthorization::prepare_for_origin(
+            "https://example.com",
+            AUTHORIZATION_WAIT,
+        )
+        .await
+        .unwrap();
+        assert!(prepared
+            .browser_url()
+            .starts_with("https://example.com/api/oauth/authorize?"));
+        assert_eq!(
+            prepared.endpoints().token_endpoint,
+            "https://example.com/api/oauth/token"
+        );
+        prepared.claim_valid_callback();
+        let metadata = DeviceMetadata::new(
+            "550e8400-e29b-41d4-a716-446655440000".into(),
+            None,
+        )
+        .unwrap();
+        let request = prepared
+            .build_code_exchange_request(
+                AuthorizationCode::new(TEST_CODE.into()).unwrap(),
+                &metadata,
+            )
+            .unwrap();
+        assert_eq!(request.endpoint(), "https://example.com/api/oauth/token");
+    }
+
+    #[tokio::test]
+    async fn partner_authorize_origin_uses_canonical_token_endpoint() {
+        let prepared = PreparedAuthorization::prepare_for_origin(
+            PARTNER_AUTHORIZATION_ORIGIN,
+            AUTHORIZATION_WAIT,
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            prepared.endpoints().token_endpoint,
+            "https://yeschoy.com/api/oauth/token"
+        );
+    }
+
+    #[tokio::test]
     async fn preparation_binds_before_building_the_exact_authorization_url() {
         let prepared = PreparedAuthorization::prepare_for_origin(
             PARTNER_AUTHORIZATION_ORIGIN,
@@ -1204,10 +1306,11 @@ mod tests {
             .contains("device_name=%E6%88%91%E7%9A%84+MacBook"));
         assert!(!request.body().contains("client_secret"));
 
-        let refresh = build_refresh_request(TEST_REFRESH).unwrap();
+        let endpoints = prepared.endpoints();
+        let refresh = build_refresh_request(endpoints, TEST_REFRESH).unwrap();
         assert_eq!(refresh.endpoint(), TOKEN_ENDPOINT);
         assert!(refresh.body().contains("grant_type=refresh_token"));
-        let revoke = build_revoke_request(TEST_REFRESH, "refresh_token").unwrap();
+        let revoke = build_revoke_request(endpoints, TEST_REFRESH, "refresh_token").unwrap();
         assert_eq!(revoke.endpoint(), REVOKE_ENDPOINT);
         assert!(revoke.body().contains("token_type_hint=refresh_token"));
     }

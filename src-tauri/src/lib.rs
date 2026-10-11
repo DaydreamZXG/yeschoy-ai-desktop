@@ -36,7 +36,6 @@ mod update_channel;
 // Client-first OAuth preparation. Deliberately dormant until the server and
 // local-bridge bearer/billing contract are deployed and integration-tested.
 mod exit_restore;
-#[allow(dead_code)]
 mod oauth_pkce;
 mod request_diagnostics;
 mod service_catalog;
@@ -45,6 +44,7 @@ mod shell_environment;
 mod shutdown_coordinator;
 mod station_connect;
 mod station_connect_exchange;
+mod station_connect_loopback;
 mod token_estimate;
 mod tool_activation;
 mod tool_adapters;
@@ -99,6 +99,7 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(account_v2::AccountV2State::default())
+        .manage(station_connect_loopback::StationConnectLoopbackState::default())
         .manage(app_installation::AppInstallationState::default())
         .manage(app_update::AppUpdateState::default())
         .manage(tool_activation::ActivationOperationState::default())
@@ -214,7 +215,10 @@ pub fn run() {
             ui_language::set_ui_language_v1,
             connectivity::check_line_connectivity_read_only,
             service_catalog::read_public_service_catalog,
-            config_reveal::open_config_folder
+            config_reveal::open_config_folder,
+            station_connect_loopback::station_connect_loopback_capabilities_v1,
+            station_connect_loopback::station_connect_begin_loopback_oauth_v1,
+            station_connect_loopback::station_connect_cancel_loopback_oauth_v1
         ])
         .build(tauri::generate_context!())
         .expect("failed to run the 野菜API desktop shell");

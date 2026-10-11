@@ -114,7 +114,10 @@ fn deliver_connect_urls<R: Runtime, S: AsRef<str>>(app: &AppHandle<R>, urls: &[S
     }
 }
 
-fn emit_station_connect_progress<R: Runtime>(app: &AppHandle<R>, event: StationConnectProgressEvent) {
+pub(crate) fn emit_station_connect_progress<R: Runtime>(
+    app: &AppHandle<R>,
+    event: StationConnectProgressEvent,
+) {
     if let Err(error) = app.emit(STATION_CONNECT_PROGRESS_EVENT, event) {
         log::warn!("station_connect stage=emit_progress_failed error={error}");
     }
