@@ -9,6 +9,7 @@ import { chooseBillingGroup } from "../configuration/billing";
 import type { AccountSessionController } from "../account/useAccountSession";
 import {
   CONFIGURATION_LINES,
+  type AccountLineId,
   type ConfigurationLineId,
 } from "../configuration/preview";
 import { type ActivationToolId } from "../configuration/activation";
@@ -26,7 +27,7 @@ export function ModelsView({
   session,
   onOpenAccount,
 }: {
-  line: ConfigurationLineId;
+  line: AccountLineId;
   onLineChange: (line: ConfigurationLineId) => void;
   session: AccountSessionController;
   onOpenAccount: () => void;

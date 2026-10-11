@@ -17,7 +17,7 @@ import {
   type ModelBinding,
   type ActivationToolId,
 } from "./activation";
-import type { ConfigurationLineId } from "./preview";
+import { isAccountLineId, type ConfigurationLineId } from "./preview";
 import { openConnection, type OpenResult } from "./launchApi";
 
 export const CONNECTION_INSPECTION_DEADLINE_MS = 15_000;
@@ -165,9 +165,7 @@ export function decodeConnections(
         "recovery_pending",
         "unavailable",
       ].includes(String(c.state)) ||
-      !["", "mainland_optimized", "global_accelerated"].includes(
-        String(c.lineId),
-      ) ||
+      (String(c.lineId) !== "" && !isAccountLineId(String(c.lineId))) ||
       !["original", "remove_yeschoy", "none"].includes(String(c.restoreMode)) ||
       !text(c.modelId, 200) ||
       !text(c.billingGroup, 128) ||
@@ -200,7 +198,7 @@ function validObservation(v: unknown): v is RequestObservation {
     ]) &&
     text(v.modelId, 200) &&
     text(v.billingGroup, 128) &&
-    ["mainland_optimized", "global_accelerated"].includes(String(v.lineId)) &&
+    isAccountLineId(String(v.lineId)) &&
     [
       "ok",
       "timeout",

@@ -5,10 +5,10 @@ import {
   type ActivationToolId,
   type ModelBinding,
 } from "../configuration/activation";
-import type { ConfigurationLineId } from "../configuration/preview";
+import type { AccountLineId } from "../configuration/preview";
 
 export interface InstallationIntent {
-  lineId: ConfigurationLineId;
+  lineId: AccountLineId;
   modelId: string;
   billingGroup: string;
   models: ModelBinding[];

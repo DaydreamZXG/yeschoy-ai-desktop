@@ -90,7 +90,8 @@ Release / yeschoy.com download), not third-party update CDNs.
 | **T2** | OS `yeschoy` scheme registration, single-instance / deep-link delivery |
 | **T3** | HTTPS `POST …/connect-codes/exchange` client, origin policy, session install |
 | **T4** | Issue API contract (OpenAPI), local mock station + harness (`docs/station-connect-e2e-mock.md`) |
-| T5+ | Activation UI after exchange, `connect.js`, loopback OAuth fallback |
+| **T5** | Exchange success → account inspect (signed-in UI) + tool activation line ids; progress events |
+| T6+ | Hosted `connect.js`, third-party embed docs, loopback OAuth fallback |
 
 ### Exchange endpoint (desktop T3)
 

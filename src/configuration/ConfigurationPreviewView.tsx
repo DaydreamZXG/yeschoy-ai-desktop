@@ -75,7 +75,12 @@ import {
   type ModelBinding,
 } from "./activation";
 import { CONFIGURATION_LINES, createConfigurationPreview } from "./preview";
-import type { ConfigurationLineId, ConfigurationToolId } from "./preview";
+import type {
+  AccountLineId,
+  ConfigurationLineId,
+  ConfigurationToolId,
+} from "./preview";
+import { catalogLineForPreview } from "./preview";
 import {
   decodeConnectivityProjection,
   lineNetworkHealthy,
@@ -87,7 +92,7 @@ interface ConfigurationPreviewViewProps {
   setupIntent?: SetupIntent;
   initialDesktopAppId?: ActivationToolId;
   enableLocalActivation?: boolean;
-  lineId: ConfigurationLineId;
+  lineId: AccountLineId;
   onLineChange: (lineId: ConfigurationLineId) => void;
   session: AccountSessionController;
   onOpenAccount: () => void;
@@ -632,14 +637,15 @@ export function ConfigurationPreviewView({
     resetActivation,
   ]);
 
+  const previewLineId = catalogLineForPreview(lineId);
   const preview = useMemo(
     () =>
       createConfigurationPreview({
-        requestId: `preview-${toolId}-${lineId}`,
+        requestId: `preview-${toolId}-${previewLineId}`,
         toolId,
-        lineId,
+        lineId: previewLineId,
       }),
-    [lineId, toolId],
+    [previewLineId, toolId],
   );
   const signedIn = session.projection?.status === "signed_in";
   const balanceIssue = signedIn

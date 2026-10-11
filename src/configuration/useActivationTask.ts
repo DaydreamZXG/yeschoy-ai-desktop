@@ -8,7 +8,7 @@ import {
   type ActivationProgress,
   type ToolActivationProjection,
 } from "./activation";
-import type { ConfigurationLineId } from "./preview";
+import type { AccountLineId } from "./preview";
 
 export interface ActivationContext {
   key: string;
@@ -16,7 +16,7 @@ export interface ActivationContext {
   app: string;
   model: string;
   group: string;
-  line: ConfigurationLineId;
+  line: AccountLineId;
 }
 
 type Input = Omit<Parameters<typeof activateDesktopTool>[0], "onRequestId">;

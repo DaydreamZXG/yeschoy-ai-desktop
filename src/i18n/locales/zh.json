@@ -1198,5 +1198,33 @@
       "bundled_copy": "这是其他应用内置的副本，请选择单独安装的 {{name}}。",
       "unsupported_platform": "当前系统暂不支持手动指定位置。"
     }
+  },
+  "stationConnect": {
+    "connecting": "正在通过网站连接桌面助手…",
+    "signedIn": "已连接账户，可以接入应用。",
+    "failed": "网站连接未完成",
+    "failedRecoverable": "网站连接未完成，可重试",
+    "failedGeneric": "请检查网络或重新在网页点击「打开桌面助手」。",
+    "inspectRetry": "已保存登录，正在同步账户数据",
+    "inspectRetryBody": "若侧边栏仍未显示已登录，请点「刷新数据」或稍后再试。",
+    "reason": {
+      "connect_exchange_disabled": "桌面端暂未启用连接兑换，请更新客户端。",
+      "connect_origin_not_acceptable": "连接链接中的站点地址无效。",
+      "connect_code_invalid": "连接码无效，请在网页重新获取。",
+      "connect_deep_link_invalid": "连接链接缺少参数，请在网页重新点击按钮。",
+      "connect_deep_link_malformed": "连接链接格式不正确。",
+      "connect_network_error": "暂时连不上站点，请检查网络后重试。",
+      "connect_network_timeout": "连接站点超时，请稍后重试。",
+      "connect_code_expired": "连接码已过期，请在网页重新获取。",
+      "connect_code_already_used": "连接码已使用，请在网页重新获取。",
+      "connect_origin_mismatch": "站点与连接码不匹配，请在网页重新操作。",
+      "connect_server_rejected": "站点拒绝了这次连接，请稍后再试。",
+      "connect_auth_contract": "站点返回的登录数据无效。",
+      "connect_secure_storage_unavailable": "系统安全存储不可用，无法保存登录状态。",
+      "network_error": "暂时连不上账户服务，请检查网络后重试。",
+      "backend_unavailable": "账户服务暂不可用，请稍后刷新。",
+      "invalid_response": "账户数据暂时无法加载，请刷新。",
+      "session_expired": "登录已失效，请在网页重新连接。"
+    }
   }
 }

@@ -216,6 +216,14 @@ impl AccountProjection {
         projection.expires_at_epoch_ms = pending.expires_at_epoch_ms;
         projection
     }
+
+    pub(crate) fn is_signed_in(&self) -> bool {
+        self.status == "signed_in"
+    }
+
+    pub(crate) fn reason_code(&self) -> &'static str {
+        self.reason_code
+    }
 }
 
 #[derive(Clone)]
@@ -350,8 +358,39 @@ fn line_origin(line_id: &str) -> Option<&'static str> {
         .map(|line| line.root_url)
 }
 
+pub(crate) fn account_request_line_id_is_valid(line_id: &str) -> bool {
+    line_origin(line_id).is_some() || station_connect_origin_from_line_id(line_id).is_some()
+}
+
+fn persisted_session_line_id(line_id: &str) -> bool {
+    account_request_line_id_is_valid(line_id)
+}
+
+pub(crate) fn account_line_origin(line_id: &str) -> Option<String> {
+    line_origin(line_id)
+        .map(str::to_owned)
+        .or_else(|| station_connect_origin_from_line_id(line_id).map(str::to_owned))
+}
+
 fn request_is_valid(request: &AccountRequest) -> bool {
-    request_id_is_valid(&request.request_id) && line_origin(&request.line_id).is_some()
+    request_id_is_valid(&request.request_id)
+        && account_request_line_id_is_valid(&request.line_id)
+}
+
+/// After station connect installs credentials, project the same signed-in state
+/// as a successful device-code poll (preview / activation entry point).
+pub(crate) async fn account_project_line_after_connect(
+    state: &AccountV2State,
+    line_id: &str,
+) -> Result<AccountProjection, AccountProjectionFailure> {
+    if !account_request_line_id_is_valid(line_id) {
+        return Err(AccountProjectionFailure::InvalidRequest);
+    }
+    let request = AccountRequest {
+        request_id: format!("station-connect-{}", now_epoch_ms()),
+        line_id: line_id.to_owned(),
+    };
+    inspect_inner(state, &request).await
 }
 
 async fn read_body(mut response: reqwest::Response) -> Result<JsonResponse, TransportFailure> {
@@ -429,7 +468,8 @@ async fn fetch_bootstrap(line_id: &str) -> Result<DesktopBootstrap, AccountProje
 }
 
 async fn fetch_bootstrap_read(line_id: &str) -> Result<DesktopBootstrap, AccountProjectionFailure> {
-    let origin = line_origin(line_id).ok_or(AccountProjectionFailure::InvalidRequest)?;
+    let origin =
+        account_line_origin(line_id).ok_or(AccountProjectionFailure::InvalidRequest)?;
     let response = send_json(
         Method::GET,
         &format!("{origin}/api/desktop/v2/bootstrap"),
@@ -745,7 +785,7 @@ fn install_failure(failure: InstallFailure) -> AccountProjectionFailure {
 }
 
 #[derive(Debug)]
-enum AccountProjectionFailure {
+pub(crate) enum AccountProjectionFailure {
     InvalidRequest,
     Transport(TransportFailure),
     BackendUnavailable,
@@ -753,6 +793,20 @@ enum AccountProjectionFailure {
     SecureStorage,
     SessionExpired,
     InvalidResponse,
+}
+
+pub(crate) fn station_connect_projection_failure_reason(
+    failure: AccountProjectionFailure,
+) -> (&'static str, bool) {
+    match failure {
+        AccountProjectionFailure::SessionExpired => ("session_expired", true),
+        AccountProjectionFailure::SecureStorage => ("secure_storage_unavailable", false),
+        AccountProjectionFailure::BackendUnavailable => ("backend_unavailable", true),
+        AccountProjectionFailure::IncompatibleServer => ("incompatible_server", true),
+        AccountProjectionFailure::Transport(_) => ("network_error", true),
+        AccountProjectionFailure::InvalidResponse => ("invalid_response", true),
+        AccountProjectionFailure::InvalidRequest => ("invalid_account_request", false),
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -928,8 +982,8 @@ pub(crate) async fn native_probe_access(
     let Some(stored) = stored else {
         return Err(ProbeSessionFailure::SignedOut);
     };
-    let line_id = if line_origin(&stored.line_id).is_some() {
-        stored.line_id
+    let line_id = if persisted_session_line_id(&stored.line_id) {
+        stored.line_id.clone()
     } else {
         CONNECTIVITY_LINES[0].line_id.to_owned()
     };
@@ -1030,7 +1084,7 @@ async fn refresh_access(
     // acceleration route. Refresh through the route that issued the session,
     // then use the short-lived access token with whichever route the user is
     // viewing. This keeps a mainland/global switch from looking like logout.
-    let refresh_line_id = if line_origin(&stored.line_id).is_some() {
+    let refresh_line_id = if persisted_session_line_id(&stored.line_id) {
         stored.line_id.clone()
     } else {
         line_id.to_owned()
@@ -2647,6 +2701,11 @@ mod tests {
         assert_eq!(
             station_connect_origin_from_line_id("station_connect:https://example.com"),
             Some("https://example.com")
+        );
+        assert!(account_request_line_id_is_valid("station_connect:https://example.com"));
+        assert_eq!(
+            account_line_origin("station_connect:https://example.com"),
+            Some("https://example.com".to_owned())
         );
     }
 

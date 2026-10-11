@@ -11,7 +11,7 @@ import {
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
-import type { ConfigurationLineId } from "../configuration/preview";
+import type { AccountLineId, ConfigurationLineId } from "../configuration/preview";
 import { creditUnit, formatMoney } from "../account/finance";
 import { aggregateUsage, type UsageRecord } from "../account/usage";
 import { UsageTrend } from "./UsageTrend";
@@ -39,7 +39,7 @@ export function AccountView({
   onLineChange,
   session,
 }: {
-  lineId: ConfigurationLineId;
+  lineId: AccountLineId;
   onLineChange: (lineId: ConfigurationLineId) => void;
   session: AccountSessionController;
 }) {

@@ -4,13 +4,30 @@
 //! allowlist in `account_v2` / `oauth_pkce`.
 
 use reqwest::Url;
-use tauri::{AppHandle, Manager, Runtime};
+use serde::Serialize;
+use tauri::{AppHandle, Emitter, Manager, Runtime};
 use tauri_plugin_deep_link::DeepLinkExt;
 
 use crate::account_v2::{
-    install_station_connect_session, line_id_for_station_connect_origin, AccountV2State,
+    account_project_line_after_connect, install_station_connect_session,
+    line_id_for_station_connect_origin, station_connect_projection_failure_reason, AccountV2State,
 };
 use crate::station_connect_exchange::{exchange_connect_code, station_connect_exchange_enabled};
+
+pub(crate) const STATION_CONNECT_PROGRESS_EVENT: &str = "yeschoy://station-connect-progress";
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct StationConnectProgressEvent {
+    phase: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    origin: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    line_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reason_code: Option<String>,
+    recoverable: bool,
+}
 
 pub(crate) const CONNECT_SCHEME: &str = "yeschoy";
 pub(crate) const CONNECT_HOST: &str = "connect";
@@ -82,16 +99,79 @@ fn deliver_connect_urls<R: Runtime, S: AsRef<str>>(app: &AppHandle<R>, urls: &[S
             StationConnectHandleOutcome::IgnoredNotConnectScheme => {}
             StationConnectHandleOutcome::Rejected(error) => {
                 log::warn!("station_connect stage=delivery_rejected error={error:?}");
+                emit_station_connect_progress(
+                    app,
+                    StationConnectProgressEvent {
+                        phase: "rejected",
+                        origin: None,
+                        line_id: None,
+                        reason_code: Some(parse_error_reason_code(error).to_owned()),
+                        recoverable: true,
+                    },
+                );
             }
         }
     }
 }
 
+fn emit_station_connect_progress<R: Runtime>(app: &AppHandle<R>, event: StationConnectProgressEvent) {
+    if let Err(error) = app.emit(STATION_CONNECT_PROGRESS_EVENT, event) {
+        log::warn!("station_connect stage=emit_progress_failed error={error}");
+    }
+}
+
+fn parse_error_reason_code(error: StationConnectParseError) -> &'static str {
+    match error {
+        StationConnectParseError::InvalidOrigin => "connect_origin_not_acceptable",
+        StationConnectParseError::InvalidCode => "connect_code_invalid",
+        StationConnectParseError::MissingOrigin
+        | StationConnectParseError::MissingCode
+        | StationConnectParseError::DuplicateQueryParameter
+        | StationConnectParseError::UnexpectedQueryParameter => "connect_deep_link_invalid",
+        StationConnectParseError::WrongScheme
+        | StationConnectParseError::WrongHost
+        | StationConnectParseError::InvalidDeepLinkUrl => "connect_deep_link_malformed",
+    }
+}
+
+fn exchange_error_is_recoverable(error: crate::station_connect_exchange::StationConnectExchangeError) -> bool {
+    use crate::station_connect_exchange::StationConnectExchangeError;
+    !matches!(
+        error,
+        StationConnectExchangeError::Contract | StationConnectExchangeError::Storage
+    )
+}
+
+fn install_failure_reason_is_recoverable(reason: &str) -> bool {
+    reason != "connect_auth_contract"
+}
+
 async fn run_station_connect_exchange<R: Runtime>(app: &AppHandle<R>, request: StationConnectRequest) {
+    let origin = request.origin.clone();
+    emit_station_connect_progress(
+        app,
+        StationConnectProgressEvent {
+            phase: "connecting",
+            origin: Some(origin.clone()),
+            line_id: None,
+            reason_code: None,
+            recoverable: false,
+        },
+    );
     if !station_connect_exchange_enabled() {
         log::warn!(
             "station_connect stage=exchange_skipped origin={} reason=disabled",
             request.origin
+        );
+        emit_station_connect_progress(
+            app,
+            StationConnectProgressEvent {
+                phase: "failed",
+                origin: Some(origin),
+                line_id: None,
+                reason_code: Some("connect_exchange_disabled".to_owned()),
+                recoverable: true,
+            },
         );
         return;
     }
@@ -104,23 +184,99 @@ async fn run_station_connect_exchange<R: Runtime>(app: &AppHandle<R>, request: S
         Ok(bundle) => {
             let line_id = line_id_for_station_connect_origin(&request.origin);
             match install_station_connect_session(&state, &line_id, bundle) {
-                Ok(()) => log::info!(
-                    "station_connect stage=exchange_installed origin={} line_id={}",
-                    request.origin,
-                    line_id
-                ),
-                Err(reason) => log::warn!(
-                    "station_connect stage=exchange_store_failed origin={} reason={}",
-                    request.origin,
-                    reason
-                ),
+                Ok(()) => {
+                    log::info!(
+                        "station_connect stage=exchange_installed origin={} line_id={}",
+                        request.origin,
+                        line_id
+                    );
+                    match account_project_line_after_connect(&state, &line_id).await {
+                        Ok(projection) if projection.is_signed_in() => {
+                            emit_station_connect_progress(
+                                app,
+                                StationConnectProgressEvent {
+                                    phase: "signed_in",
+                                    origin: Some(origin),
+                                    line_id: Some(line_id),
+                                    reason_code: None,
+                                    recoverable: false,
+                                },
+                            );
+                        }
+                        Ok(projection) => {
+                            log::warn!(
+                                "station_connect stage=inspect_unexpected status={} reason={}",
+                                projection.is_signed_in(),
+                                projection.reason_code()
+                            );
+                            emit_station_connect_progress(
+                                app,
+                                StationConnectProgressEvent {
+                                    phase: "failed",
+                                    origin: Some(origin),
+                                    line_id: Some(line_id),
+                                    reason_code: Some(projection.reason_code().to_owned()),
+                                    recoverable: true,
+                                },
+                            );
+                        }
+                        Err(failure) => {
+                            let (reason_code, recoverable) =
+                                station_connect_projection_failure_reason(failure);
+                            log::warn!(
+                                "station_connect stage=inspect_failed origin={} reason={}",
+                                request.origin,
+                                reason_code
+                            );
+                            emit_station_connect_progress(
+                                app,
+                                StationConnectProgressEvent {
+                                    phase: "failed",
+                                    origin: Some(origin),
+                                    line_id: Some(line_id),
+                                    reason_code: Some(reason_code.to_owned()),
+                                    recoverable,
+                                },
+                            );
+                        }
+                    }
+                }
+                Err(reason) => {
+                    log::warn!(
+                        "station_connect stage=exchange_store_failed origin={} reason={}",
+                        request.origin,
+                        reason
+                    );
+                    emit_station_connect_progress(
+                        app,
+                        StationConnectProgressEvent {
+                            phase: "failed",
+                            origin: Some(origin),
+                            line_id: None,
+                            reason_code: Some(reason.to_owned()),
+                            recoverable: install_failure_reason_is_recoverable(reason),
+                        },
+                    );
+                }
             }
         }
-        Err(error) => log::warn!(
-            "station_connect stage=exchange_failed origin={} reason={}",
-            request.origin,
-            error.reason_code()
-        ),
+        Err(error) => {
+            log::warn!(
+                "station_connect stage=exchange_failed origin={} reason={}",
+                request.origin,
+                error.reason_code()
+            );
+            emit_station_connect_progress(
+                app,
+                StationConnectProgressEvent {
+                    phase: "failed",
+                    origin: Some(origin),
+                    line_id: None,
+                    reason_code: Some(error.reason_code().to_owned()),
+                    recoverable: exchange_error_is_recoverable(error),
+                },
+            );
+        }
     }
 }
 

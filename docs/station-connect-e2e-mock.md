@@ -107,9 +107,21 @@ curl -s -H "Host: connect.localtest.me" -H 'Content-Type: application/json' \
 - Disable network exchange while testing deep-link delivery:
   `YESCHOY_STATION_CONNECT_EXCHANGE=0`
 
-## Out of scope (T5+)
+## T5 desktop acceptance (scripted)
 
-- Wiring exchange success into activation UI / tool preview (T5).
+After exchange installs a session, the desktop emits `yeschoy://station-connect-progress`
+and runs the same `account_inspect_v2` projection path as device-code login success.
+Run:
+
+```bash
+./scripts/qa/station-connect-t5-acceptance.sh
+```
+
+Full signed-in UI against the mock still needs TLS + bootstrap/account APIs on the mock
+station (or yeschoy.com production).
+
+## Out of scope (T6+)
+
 - Hosted `connect.js` and third-party embed docs (T6).
 - Loopback OAuth fallback (T7).
 - Production yeschoy.com API deployment (separate web repo).
