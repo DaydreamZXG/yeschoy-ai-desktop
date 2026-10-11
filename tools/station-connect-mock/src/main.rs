@@ -289,7 +289,10 @@ fn session_present(jar: &CookieJar, headers: &HeaderMap) -> bool {
         .is_some_and(|value| value.starts_with("Bearer ") && value.len() > 10)
 }
 
-fn resolve_issue_origin(headers: &HeaderMap, body_origin: Option<String>) -> Result<String, &'static str> {
+fn resolve_issue_origin(
+    headers: &HeaderMap,
+    body_origin: Option<String>,
+) -> Result<String, &'static str> {
     let origin = body_origin
         .or_else(|| {
             headers
