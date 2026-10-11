@@ -113,7 +113,7 @@ CODE=$(curl -s -b /tmp/mock.jar -H 'Content-Type: application/json' \
 
 # Exchange: Host must match ORIGIN host (use Host header when hitting loopback)
 curl -s -H "Host: connect.localtest.me" -H 'Content-Type: application/json' \
-  -d "{\"code\":\"$CODE\",\"deviceId\":\"00000000-0000-4000-8000-000000000001\",\"platform\":\"linux\",\"clientVersion\":\"0.4.30\"}" \
+  -d "{\"code\":\"$CODE\",\"deviceId\":\"00000000-0000-4000-8000-000000000001\",\"platform\":\"linux\",\"clientVersion\":\"0.5.0\"}" \
   "$BASE/api/desktop/v2/connect-codes/exchange" | jq .
 ```
 

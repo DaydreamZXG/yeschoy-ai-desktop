@@ -25,11 +25,11 @@ The in-app Tauri updater **still uses** `src-tauri/update-channels.json` →
 `ergou.qzz.io/updates/{official|partner}/stable.json`. This page does not change
 that channel.
 
-### GitHub `v0.4.30` draft
+### GitHub `v0.5.0` draft
 
 A **draft** GitHub release may exist without public installer URLs. Until it is
 **published**, the download page correctly falls back to ergou (currently serving
-0.4.30). Publishing the GitHub release is required before GitHub becomes the
+0.5.0). Publishing the GitHub release is required before GitHub becomes the
 primary source for end users.
 
 ## Operator checklist
