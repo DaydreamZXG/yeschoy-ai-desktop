@@ -115,6 +115,8 @@ jobs:
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
       - run: pnpm install --frozen-lockfile
       - run: pnpm build:renderer
+        env:
+          VITE_YESCHOY_DISTRIBUTION: official
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: renderer-dist

@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useWorkbenchCopy } from "./copy";
+import { showOfficialCommunityUi } from "../distribution/softTraffic";
 // 官方签发的群分享卡片（含二维码 + 群名 + 群号），直接展示，扫码即可加群。
 import qqGroupCard from "../assets/brand/qq-group-card.png";
 
@@ -109,6 +110,9 @@ export function CommunityGroupDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const c = useWorkbenchCopy();
+  if (!showOfficialCommunityUi()) {
+    return null;
+  }
   return (
     <QQGroupDialog
       open={open}

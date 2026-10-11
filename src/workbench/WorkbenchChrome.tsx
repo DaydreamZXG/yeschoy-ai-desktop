@@ -24,6 +24,7 @@ import { creditUnit, formatMoney } from "../account/finance";
 import { CANDIDATE_VERSION } from "../candidate/readiness";
 import type { Appearance } from "./appearance";
 import { useWorkbenchCopy } from "./copy";
+import { showOfficialCommunityUi } from "../distribution/softTraffic";
 
 export type AppView =
   | "home"
@@ -194,17 +195,17 @@ export function WorkbenchSidebar({
         {nav.map(navButton)}
       </nav>
       <div className="sidebar-bottom">
-        {/* 交流群本来埋在首页页脚的一个文字按钮里。对一个靠群做客服的生意，
-            用户最需要它的时刻是「哪里都点不通」的时候，而那时他多半不在首页。 */}
-        <button
-          type="button"
-          className="sidebar-community"
-          title={c.joinGroup}
-          onClick={onOpenCommunity}
-        >
-          <Users aria-hidden="true" />
-          <span>{c.joinGroup}</span>
-        </button>
+        {showOfficialCommunityUi() && (
+          <button
+            type="button"
+            className="sidebar-community"
+            title={c.joinGroup}
+            onClick={onOpenCommunity}
+          >
+            <Users aria-hidden="true" />
+            <span>{c.joinGroup}</span>
+          </button>
+        )}
         <AppearancePicker value={appearance} onChange={onAppearance} />
         <button
           type="button"

@@ -331,7 +331,7 @@ describe("official workbench", () => {
     const home = screen.getByTestId("candidate-home-view");
     expect(home).not.toHaveTextContent("登录一次，接入你的 AI 应用");
     expect(
-      within(home).queryByRole("button", { name: "登录野菜API" }),
+      within(home).queryByRole("button", { name: "登录你的站点" }),
     ).not.toBeInTheDocument();
   });
 
@@ -676,7 +676,7 @@ describe("official workbench", () => {
     expect(
       screen.queryByRole("region", { name: "用量账单" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "登录野菜API" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "登录你的站点" })).toBeEnabled();
     expect(screen.getAllByRole("article")).toHaveLength(7);
     const card = screen
       .getByRole("heading", { name: "Claude Desktop" })
