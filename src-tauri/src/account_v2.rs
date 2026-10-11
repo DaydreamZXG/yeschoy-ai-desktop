@@ -2737,7 +2737,10 @@ mod tests {
             request_id: "account-1".into(),
             line_id: "https://attacker.invalid".into(),
         }));
-        assert!(wallet_url_is_allowed("https://yeschoy.com/wallet/", "https://yeschoy.com"));
+        assert!(wallet_url_is_allowed(
+            "https://yeschoy.com/wallet/",
+            "https://yeschoy.com"
+        ));
         assert!(wallet_url_is_allowed(
             "https://connect.localtest.me/wallet/",
             "https://connect.localtest.me"
@@ -3146,8 +3149,7 @@ mod tests {
             {"id": "recharge-1001", "title": "重复的 id"},
             {"title": "没有 id 的公告"}
         ]}});
-        let (notices, targets) =
-            parse_notices(&payload, 1_000, Some("https://yeschoy.com"));
+        let (notices, targets) = parse_notices(&payload, 1_000, Some("https://yeschoy.com"));
         let ids = notices.iter().map(|n| n.id.as_str()).collect::<Vec<_>>();
         assert_eq!(
             ids,
