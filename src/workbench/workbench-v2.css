@@ -1350,6 +1350,24 @@
   margin-top: var(--space-18);
 }
 
+.account-relay-recovery-hint,
+.sign-in-station-link small,
+.welcome-strip-relay-hint {
+  display: block;
+  margin-top: var(--space-12);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.sign-in-station-link {
+  margin-top: var(--space-14);
+}
+
+.welcome-strip-relay-hint .text-button {
+  margin-top: var(--space-6);
+}
+
 .compact-primary {
   min-height: 38px;
   padding-inline: var(--space-16);

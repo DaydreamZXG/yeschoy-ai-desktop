@@ -29,6 +29,10 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { WorkbenchFooter } from "./WorkbenchChrome";
 import { useWorkbenchCopy } from "./copy";
 import { useWalletRecharge } from "./useWalletRecharge";
+import {
+  accountStatusSuggestsRelayLineRetry,
+  isRelayCatalogLine,
+} from "./accountRelayRecovery";
 
 function compact(value: string, locale: string): string {
   const number = Number(value);
@@ -42,10 +46,12 @@ function compact(value: string, locale: string): string {
 export function AccountView({
   lineId,
   onLineChange,
+  onOpenAppsHome,
   session,
 }: {
   lineId: AccountLineId;
   onLineChange: (lineId: ConfigurationLineId) => void;
+  onOpenAppsHome?: () => void;
   session: AccountSessionController;
 }) {
   const c = useWorkbenchCopy();
@@ -211,6 +217,13 @@ export function AccountView({
   const sessionAge = signedIn
     ? sessionAgeLevel(readSessionAgeRecord(), Date.now())
     : null;
+  const relayLineRecovery =
+    !signedIn &&
+    !pending &&
+    isRelayCatalogLine(lineId) &&
+    accountStatusSuggestsRelayLineRetry(projection?.status);
+  const alternateRelayLineLabel =
+    lineId === "mainland_optimized" ? c.globalLine : c.mainlandLine;
 
   return (
     <div className="workbench-page account-workspace">
@@ -664,6 +677,29 @@ export function AccountView({
                 </button>
               )}
             </div>
+            {relayLineRecovery && (
+              <p
+                className="account-relay-recovery-hint"
+                role="status"
+                data-testid="account-relay-line-recovery"
+              >
+                {t("workbench.accountRelayLineRecovery", {
+                  alternateLine: alternateRelayLineLabel,
+                })}
+              </p>
+            )}
+            {onOpenAppsHome && (
+              <div className="sign-in-station-link">
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={onOpenAppsHome}
+                >
+                  {c.accountEnterStationOrigin}
+                </button>
+                <small>{c.accountEnterStationOriginHint}</small>
+              </div>
+            )}
           </div>
         </section>
       )}

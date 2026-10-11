@@ -331,6 +331,7 @@ function App() {
                 <AccountView
                   lineId={accountLineId}
                   onLineChange={setAccountLineId}
+                  onOpenAppsHome={() => setView("home")}
                   session={accountSession}
                 />
               ) : view === "models" ? (
