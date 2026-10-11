@@ -11,11 +11,11 @@ use std::{
     time::{Duration, Instant},
 };
 
+use crate::station_connect::connect_origin_is_acceptable;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use reqwest::Url;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
-use crate::station_connect::connect_origin_is_acceptable;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::{TcpListener, TcpStream},
@@ -765,8 +765,8 @@ fn authorization_url(
     {
         return Err(PkceFailure::InvalidAuthorizationInput);
     }
-    let mut url = Url::parse(&format!("{origin}{AUTHORIZE_PATH}"))
-        .map_err(|_| PkceFailure::InvalidOrigin)?;
+    let mut url =
+        Url::parse(&format!("{origin}{AUTHORIZE_PATH}")).map_err(|_| PkceFailure::InvalidOrigin)?;
     url.query_pairs_mut()
         .append_pair("response_type", "code")
         .append_pair("client_id", CLIENT_ID)
@@ -1078,12 +1078,10 @@ mod tests {
 
     #[tokio::test]
     async fn third_party_connect_origin_targets_same_origin_token_endpoint() {
-        let prepared = PreparedAuthorization::prepare_for_origin(
-            "https://example.com",
-            AUTHORIZATION_WAIT,
-        )
-        .await
-        .unwrap();
+        let prepared =
+            PreparedAuthorization::prepare_for_origin("https://example.com", AUTHORIZATION_WAIT)
+                .await
+                .unwrap();
         assert!(prepared
             .browser_url()
             .starts_with("https://example.com/api/oauth/authorize?"));
@@ -1092,11 +1090,8 @@ mod tests {
             "https://example.com/api/oauth/token"
         );
         prepared.claim_valid_callback();
-        let metadata = DeviceMetadata::new(
-            "550e8400-e29b-41d4-a716-446655440000".into(),
-            None,
-        )
-        .unwrap();
+        let metadata =
+            DeviceMetadata::new("550e8400-e29b-41d4-a716-446655440000".into(), None).unwrap();
         let request = prepared
             .build_code_exchange_request(
                 AuthorizationCode::new(TEST_CODE.into()).unwrap(),
