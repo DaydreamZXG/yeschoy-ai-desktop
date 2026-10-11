@@ -45,6 +45,10 @@ import { OssSoftTrafficCta } from "./OssSoftTrafficCta";
 import { StationConnectOriginForm } from "./StationConnectOriginForm";
 import type { AccountLineId } from "../configuration/preview";
 import type { AccountStatus } from "../account/session";
+import {
+  accountStatusSuggestsRelayLineRetry,
+  isRelayCatalogLine,
+} from "./accountRelayRecovery";
 
 interface Props {
   onOpenAccount: () => void;
@@ -133,6 +137,12 @@ export function AppLibraryView({
   const accountStatus = accountSession.projection?.status;
   const signedIn = accountStatus === "signed_in";
   const loginRequired = showStationConnectWelcomeStrip(accountStatus);
+  const relayLineRecovery =
+    loginRequired &&
+    isRelayCatalogLine(accountLineId) &&
+    accountStatusSuggestsRelayLineRetry(accountStatus);
+  const alternateRelayLineLabel =
+    accountLineId === "mainland_optimized" ? c.globalLine : c.mainlandLine;
   const balanceIssue = signedIn
     ? balanceAlert(accountSession.projection?.money)
     : null;
@@ -407,6 +417,23 @@ export function AppLibraryView({
               onLineChange={onStationLineChange}
               disabled={accountSession.loading}
             />
+            {relayLineRecovery && (
+              <p
+                className="welcome-strip-relay-hint"
+                data-testid="library-relay-line-recovery"
+              >
+                {t("workbench.libraryRelayLineRecovery", {
+                  alternateLine: alternateRelayLineLabel,
+                })}
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={onOpenAccount}
+                >
+                  {c.libraryOpenUsageForLine}
+                </button>
+              </p>
+            )}
             <p className="welcome-strip-catalog">
               <button
                 type="button"

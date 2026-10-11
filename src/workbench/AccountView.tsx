@@ -29,6 +29,10 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { WorkbenchFooter } from "./WorkbenchChrome";
 import { useWorkbenchCopy } from "./copy";
 import { useWalletRecharge } from "./useWalletRecharge";
+import {
+  accountStatusSuggestsRelayLineRetry,
+  isRelayCatalogLine,
+} from "./accountRelayRecovery";
 
 function compact(value: string, locale: string): string {
   const number = Number(value);
@@ -213,6 +217,13 @@ export function AccountView({
   const sessionAge = signedIn
     ? sessionAgeLevel(readSessionAgeRecord(), Date.now())
     : null;
+  const relayLineRecovery =
+    !signedIn &&
+    !pending &&
+    isRelayCatalogLine(lineId) &&
+    accountStatusSuggestsRelayLineRetry(projection?.status);
+  const alternateRelayLineLabel =
+    lineId === "mainland_optimized" ? c.globalLine : c.mainlandLine;
 
   return (
     <div className="workbench-page account-workspace">
@@ -666,16 +677,28 @@ export function AccountView({
                 </button>
               )}
             </div>
+            {relayLineRecovery && (
+              <p
+                className="account-relay-recovery-hint"
+                role="status"
+                data-testid="account-relay-line-recovery"
+              >
+                {t("workbench.accountRelayLineRecovery", {
+                  alternateLine: alternateRelayLineLabel,
+                })}
+              </p>
+            )}
             {onOpenAppsHome && (
-              <p className="sign-in-station-link">
+              <div className="sign-in-station-link">
                 <button
                   type="button"
                   className="text-button"
                   onClick={onOpenAppsHome}
                 >
-                  {c.accountChangeStation}
+                  {c.accountEnterStationOrigin}
                 </button>
-              </p>
+                <small>{c.accountEnterStationOriginHint}</small>
+              </div>
             )}
           </div>
         </section>

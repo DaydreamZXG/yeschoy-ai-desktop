@@ -168,6 +168,9 @@ describe("AppLibraryView station connect welcome strip", () => {
     );
     expect(screen.getByRole("textbox")).toBeInTheDocument();
     expect(screen.getByText(zh.workbench.librarySignInTitle)).toBeInTheDocument();
+    expect(screen.getByTestId("library-relay-line-recovery")).toHaveTextContent(
+      "全球加速",
+    );
   });
 
   it("does not render the origin form when signed in", async () => {
