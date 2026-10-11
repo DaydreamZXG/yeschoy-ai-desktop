@@ -312,7 +312,7 @@ struct AuthBundle {
 }
 
 #[derive(Debug)]
-enum TransportFailure {
+pub(crate) enum TransportFailure {
     Network,
     TimedOut,
     InvalidResponse,
@@ -376,8 +376,7 @@ pub(crate) fn account_line_origin(line_id: &str) -> Option<String> {
 }
 
 fn request_is_valid(request: &AccountRequest) -> bool {
-    request_id_is_valid(&request.request_id)
-        && account_request_line_id_is_valid(&request.line_id)
+    request_id_is_valid(&request.request_id) && account_request_line_id_is_valid(&request.line_id)
 }
 
 /// After station connect installs credentials, project the same signed-in state
@@ -471,8 +470,7 @@ async fn fetch_bootstrap(line_id: &str) -> Result<DesktopBootstrap, AccountProje
 }
 
 async fn fetch_bootstrap_read(line_id: &str) -> Result<DesktopBootstrap, AccountProjectionFailure> {
-    let origin =
-        account_line_origin(line_id).ok_or(AccountProjectionFailure::InvalidRequest)?;
+    let origin = account_line_origin(line_id).ok_or(AccountProjectionFailure::InvalidRequest)?;
     let response = send_json(
         Method::GET,
         &format!("{origin}/api/desktop/v2/bootstrap"),
@@ -970,7 +968,10 @@ pub(crate) fn install_station_connect_session(
     line_id: &str,
     bundle: StationConnectAuthBundle,
 ) -> Result<(), &'static str> {
-    let mut runtime = state.runtime.lock().map_err(|_| "connect_secure_storage_unavailable")?;
+    let mut runtime = state
+        .runtime
+        .lock()
+        .map_err(|_| "connect_secure_storage_unavailable")?;
     if bundle.token_type != "Bearer"
         || bundle.access_token.len() < 32
         || bundle.refresh_token.len() < 32
@@ -2777,7 +2778,9 @@ mod tests {
             station_connect_origin_from_line_id("station_connect:https://example.com"),
             Some("https://example.com")
         );
-        assert!(account_request_line_id_is_valid("station_connect:https://example.com"));
+        assert!(account_request_line_id_is_valid(
+            "station_connect:https://example.com"
+        ));
         assert_eq!(
             account_line_origin("station_connect:https://example.com"),
             Some("https://example.com".to_owned())
