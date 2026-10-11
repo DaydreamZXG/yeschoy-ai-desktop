@@ -90,10 +90,7 @@ pub(crate) fn handle_connect_url(raw: &str) -> StationConnectHandleOutcome {
     }
     match parse_station_connect_url(raw) {
         Ok(request) => {
-            log::info!(
-                "station_connect stage=validated origin={}",
-                request.origin
-            );
+            log::info!("station_connect stage=validated origin={}", request.origin);
             StationConnectHandleOutcome::Accepted(request)
         }
         Err(error) => {
@@ -153,7 +150,9 @@ fn parse_error_reason_code(error: StationConnectParseError) -> &'static str {
     }
 }
 
-fn exchange_error_is_recoverable(error: crate::station_connect_exchange::StationConnectExchangeError) -> bool {
+fn exchange_error_is_recoverable(
+    error: crate::station_connect_exchange::StationConnectExchangeError,
+) -> bool {
     use crate::station_connect_exchange::StationConnectExchangeError;
     !matches!(
         error,
@@ -165,7 +164,10 @@ fn install_failure_reason_is_recoverable(reason: &str) -> bool {
     reason != "connect_auth_contract"
 }
 
-async fn run_station_connect_exchange<R: Runtime>(app: &AppHandle<R>, request: StationConnectRequest) {
+async fn run_station_connect_exchange<R: Runtime>(
+    app: &AppHandle<R>,
+    request: StationConnectRequest,
+) {
     let origin = request.origin.clone();
     emit_station_connect_progress(
         app,
