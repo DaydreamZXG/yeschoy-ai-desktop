@@ -8,7 +8,6 @@ import {
 } from "../account/openStationConnectPage";
 import { canonicalStationHttpsOrigin } from "../../connect/stationConnectPage";
 import type { AccountLineId } from "../configuration/preview";
-import { isOfficialDistribution } from "../distribution/identity";
 
 interface Props {
   onLineChange: (lineId: AccountLineId) => void;
@@ -17,7 +16,6 @@ interface Props {
 
 export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
   const { t } = useTranslation();
-  const official = isOfficialDistribution();
   const [draft, setDraft] = useState(readStationOriginDraftInitial);
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
@@ -64,11 +62,7 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
           inputMode="url"
           autoComplete="url"
           spellCheck={false}
-          placeholder={
-            official
-              ? t("stationConnectPage.originPlaceholderOfficial")
-              : t("stationConnectPage.originPlaceholderOss")
-          }
+          placeholder={t("stationConnectPage.originPlaceholder")}
           value={draft}
           disabled={disabled || opening}
           onChange={(event) => {
@@ -79,9 +73,7 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
           aria-describedby={describedBy}
         />
         <small className="station-connect-origin-hint" id={hintId}>
-          {official
-            ? t("stationConnectPage.originHintOfficial")
-            : t("stationConnectPage.originHintOss")}
+          {t("stationConnectPage.originHint")}
         </small>
       </label>
       {error && (

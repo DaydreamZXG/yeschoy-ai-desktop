@@ -276,6 +276,7 @@ function App() {
                 onAppearance={changeAppearance}
                 accountProjection={accountSession.projection}
                 accountLoading={accountSession.loading}
+                accountLineId={accountLineId}
               />
 
               {(view === "setup" || setupVisited) && (
@@ -298,6 +299,7 @@ function App() {
                   onOpenCommunity={() => setCommunityOpen(true)}
                   onOpenAccount={() => setView("account")}
                   onStationLineChange={setAccountLineId}
+                  accountLineId={accountLineId}
                   onOpenSetup={(appId, action = "configure") => {
                     setSelectedDesktopApp(appId);
                     setSetupIntent((previous) =>
@@ -594,6 +596,8 @@ function App() {
             <CommunityGroupDialog
               open={communityOpen}
               onOpenChange={setCommunityOpen}
+              lineId={accountLineId}
+              accountProjection={accountSession.projection}
             />
             <Toaster position="top-center" richColors theme={appearance} />
           </ShutdownProvider>

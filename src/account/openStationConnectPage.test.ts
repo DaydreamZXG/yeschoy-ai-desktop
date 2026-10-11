@@ -27,9 +27,9 @@ describe("readStationOriginDraftInitial", () => {
     expect(readStationOriginDraftInitial()).toBe("https://yeschoy.com");
   });
 
-  it("starts empty on OSS builds", () => {
+  it("defaults to the reference origin on OSS builds too", () => {
     vi.stubEnv("VITE_YESCHOY_DISTRIBUTION", "oss");
-    expect(readStationOriginDraftInitial()).toBe("");
+    expect(readStationOriginDraftInitial()).toBe("https://yeschoy.com");
   });
 });
 

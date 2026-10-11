@@ -9,11 +9,14 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useWorkbenchCopy } from "./copy";
-import { showOfficialCommunityUi } from "../distribution/softTraffic";
+import type { AccountProjection } from "../account/session";
+import type { AccountLineId } from "../configuration/preview";
+import { QQ_GROUP_ID } from "../distribution/qqCommunity";
+import { showYeschoyCommunityUi } from "../distribution/yeschoyStation";
 // 官方签发的群分享卡片（含二维码 + 群名 + 群号），直接展示，扫码即可加群。
 import qqGroupCard from "../assets/brand/qq-group-card.png";
 
-export const QQ_GROUP_ID = "1065665694";
+export { QQ_GROUP_ID };
 
 async function copyGroupId(message: string) {
   try {
@@ -105,12 +108,16 @@ export function QQGroupDialog({
 export function CommunityGroupDialog({
   open,
   onOpenChange,
+  lineId,
+  accountProjection,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  lineId: AccountLineId;
+  accountProjection: AccountProjection | null;
 }) {
   const c = useWorkbenchCopy();
-  if (!showOfficialCommunityUi()) {
+  if (!showYeschoyCommunityUi({ lineId, accountProjection })) {
     return null;
   }
   return (

@@ -1,10 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { AccountProjection } from "../account/session";
-import {
-  isCanonicalStationOrigin,
-  showOssSoftTraffic,
-  showOfficialCommunityUi,
-} from "./softTraffic";
+import { isCanonicalStationOrigin, showOssSoftTraffic } from "./softTraffic";
 
 function projection(status: AccountProjection["status"]): AccountProjection {
   return {
@@ -74,11 +70,4 @@ describe("softTraffic", () => {
     vi.unstubAllEnvs();
   });
 
-  it("gates official community UI to official distribution builds", () => {
-    vi.stubEnv("VITE_YESCHOY_DISTRIBUTION", "oss");
-    expect(showOfficialCommunityUi()).toBe(false);
-    vi.stubEnv("VITE_YESCHOY_DISTRIBUTION", "official");
-    expect(showOfficialCommunityUi()).toBe(true);
-    vi.unstubAllEnvs();
-  });
 });

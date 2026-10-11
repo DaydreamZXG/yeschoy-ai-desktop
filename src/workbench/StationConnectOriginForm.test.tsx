@@ -24,14 +24,14 @@ describe("StationConnectOriginForm", () => {
     render(<StationConnectOriginForm onLineChange={vi.fn()} />);
     const input = screen.getByRole("textbox") as HTMLInputElement;
     expect(input.value).toBe("https://yeschoy.com");
-    expect(screen.getByText(zh.stationConnectPage.originHintOfficial)).toBeTruthy();
+    expect(screen.getByText(zh.stationConnectPage.originHint)).toBeTruthy();
   });
 
-  it("starts empty on OSS builds with neutral helper copy", () => {
+  it("prefills the reference origin on OSS builds", () => {
     vi.stubEnv("VITE_YESCHOY_DISTRIBUTION", "oss");
     render(<StationConnectOriginForm onLineChange={vi.fn()} />);
     const input = screen.getByRole("textbox") as HTMLInputElement;
-    expect(input.value).toBe("");
-    expect(screen.getByText(zh.stationConnectPage.originHintOss)).toBeTruthy();
+    expect(input.value).toBe("https://yeschoy.com");
+    expect(screen.getByText(zh.stationConnectPage.originHint)).toBeTruthy();
   });
 });

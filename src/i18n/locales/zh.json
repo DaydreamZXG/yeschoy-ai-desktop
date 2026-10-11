@@ -1206,10 +1206,8 @@
   },
   "stationConnectPage": {
     "originLabel": "站点地址（HTTPS）",
-    "originPlaceholderOfficial": "https://yeschoy.com",
-    "originPlaceholderOss": "https://your-station.example",
-    "originHintOfficial": "默认示例站，可改成你的站点 HTTPS 域名。",
-    "originHintOss": "填写你使用的站点 HTTPS 地址；占位符仅为格式示例。",
+    "originPlaceholder": "https://yeschoy.com",
+    "originHint": "默认示例站，可改成你的站点 HTTPS 域名。",
     "continue": "在浏览器中继续",
     "opening": "正在打开浏览器…",
     "invalidOrigin": "请输入有效的 HTTPS 站点地址（域名，不含路径）。"

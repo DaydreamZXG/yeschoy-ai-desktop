@@ -593,6 +593,7 @@ describe("ru048 novice installer", () => {
           onOpenSetup={noop}
           onOpenCommunity={noop}
           onStationLineChange={noop}
+          accountLineId="mainland_optimized"
         />
       </ConnectionProvider>,
     );

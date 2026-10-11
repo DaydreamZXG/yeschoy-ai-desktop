@@ -5,12 +5,11 @@ import {
   stationConnectPageUrl,
 } from "../../connect/stationConnectPage";
 import type { AccountLineId } from "../configuration/preview";
-import { isOfficialDistribution } from "../distribution/identity";
 import { REFERENCE_STATION_ORIGIN } from "../distribution/softTraffic";
 
 export const STATION_ORIGIN_DRAFT_KEY = "yeschoy.stationConnectOriginDraft";
 
-/** Initial home-field value: saved draft, else official default or empty (OSS). */
+/** Initial home-field value: saved draft, else YesChoy reference origin (all distributions). */
 export function readStationOriginDraftInitial(): string {
   try {
     const saved = localStorage.getItem(STATION_ORIGIN_DRAFT_KEY);
@@ -18,7 +17,7 @@ export function readStationOriginDraftInitial(): string {
   } catch {
     /* ignore */
   }
-  return isOfficialDistribution() ? REFERENCE_STATION_ORIGIN : "";
+  return REFERENCE_STATION_ORIGIN;
 }
 
 export type OpenStationConnectPageResult =
