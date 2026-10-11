@@ -43,6 +43,7 @@ mod service_catalog;
 mod service_catalog_core;
 mod shell_environment;
 mod shutdown_coordinator;
+mod station_connect;
 mod token_estimate;
 mod tool_activation;
 mod tool_adapters;
