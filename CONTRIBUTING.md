@@ -1,18 +1,18 @@
-# Contributing to CC Switch
+# Contributing to YesChoy AI Desktop
 
 > [中文版本](#贡献指南)
 
-Thank you for your interest in contributing to CC Switch! Please read our [Code of Conduct](./CODE_OF_CONDUCT.md) before participating.
+Thank you for your interest in contributing to [YesChoy AI Desktop](https://github.com/DaydreamZXG/yeschoy-ai-desktop)! Please read our [Code of Conduct](./CODE_OF_CONDUCT.md) before participating.
 
 ## How to Contribute
 
 There are many ways to contribute:
 
-- **Report bugs** — Found something broken? [Open a bug report](https://github.com/farion1231/cc-switch/issues/new?template=bug_report.yml).
-- **Suggest features** — Have an idea? [Submit a feature request](https://github.com/farion1231/cc-switch/issues/new?template=feature_request.yml).
-- **Improve docs** — Spot a typo or missing info? [Report a doc issue](https://github.com/farion1231/cc-switch/issues/new?template=doc_issue.yml).
+- **Report bugs** — Found something broken? [Open an issue](https://github.com/DaydreamZXG/yeschoy-ai-desktop/issues/new).
+- **Suggest features** — Have an idea? [Open an issue](https://github.com/DaydreamZXG/yeschoy-ai-desktop/issues/new) and describe the use case.
+- **Improve docs** — Spot a typo or missing info? Open an issue or send a PR.
 - **Contribute code** — Fix bugs or implement features via pull requests.
-- **Translate** — Help us improve translations for English, Chinese, and Japanese.
+- **Translate** — Help improve translations (English, Simplified Chinese, Traditional Chinese, Japanese).
 
 > **Security vulnerabilities**: Please do NOT use public issues. See our [Security Policy](./SECURITY.md) instead.
 
@@ -20,17 +20,14 @@ There are many ways to contribute:
 
 ### Prerequisites
 
-- Node.js 18+ and pnpm 8+
-- Rust 1.85+ and Cargo
+- Node.js 22+ and pnpm 10+
+- Rust 1.95+ and Cargo (see `rust-toolchain.toml`)
 - [Tauri 2.0 prerequisites](https://v2.tauri.app/start/prerequisites/)
 
 > **pnpm version**: the exact version is pinned via the `packageManager` field
 > in `package.json` (and used by CI, which sets pnpm up through Corepack).
 > With Corepack enabled locally (`corepack enable`), your pnpm shim switches
-> to the pinned version automatically, with a one-time download on first use;
-> without Corepack, any pnpm 8+ keeps working (`package-manager-strict-version`
-> defaults to off). To upgrade pnpm, edit the `packageManager` field — Dependabot
-> bumps no longer cover the version.
+> to the pinned version automatically.
 
 ### Quick Start
 
@@ -60,7 +57,7 @@ For Rust backend:
 cd src-tauri
 cargo fmt        # Format Rust code
 cargo clippy     # Run linter
-cargo test       # Run tests
+cargo test --lib # Run library tests
 ```
 
 ## Code Style
@@ -73,15 +70,16 @@ Run all checks before submitting:
 
 ```bash
 pnpm typecheck && pnpm format:check && pnpm test:unit
-cd src-tauri && cargo fmt --check && cargo clippy && cargo test
+cd src-tauri && cargo fmt --check && cargo clippy && cargo test --lib
 ```
 
 ## Pull Request Guidelines
 
 1. **Open an issue first** for new features — PRs for features that are not a good fit may be closed.
-2. **Fork and branch** — Create a feature branch from `main` (e.g., `feat/my-feature` or `fix/issue-123`).
+2. **Fork and branch** — Create a feature branch from `product/yeschoy-v1` (e.g., `feat/my-feature` or `fix/issue-123`).
 3. **Keep PRs focused** — One feature or fix per PR. Avoid unrelated changes.
 4. **Follow the PR template** — Fill in the summary, related issue, and checklist.
+5. **Target `product/yeschoy-v1`** — That is the default development branch for this repository.
 
 ### PR Checklist
 
@@ -95,9 +93,9 @@ cd src-tauri && cargo fmt --check && cargo clippy && cargo test
 We use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```
-feat(provider): add support for new provider
-fix(tray): resolve menu not updating after switch
-docs(readme): update installation instructions
+feat(adapter): add support for a new app
+fix(recovery): restore only assistant-written keys
+docs(readme): point downloads to GitHub Releases
 ci: add format check workflow
 chore(deps): update dependencies
 ```
@@ -118,37 +116,38 @@ By submitting a PR, you agree to the following:
 
 ## Internationalization (i18n)
 
-CC Switch supports three languages. When modifying user-facing text:
+Locale files live under `src/i18n/locales/`. When modifying user-facing text:
 
-1. Update **all three** locale files:
-   - `src/locales/en/translation.json`
-   - `src/locales/zh/translation.json`
-   - `src/locales/ja/translation.json`
-2. Use the `t()` function from i18next for all UI text.
+1. Update the relevant locale files:
+   - `src/i18n/locales/en.json`
+   - `src/i18n/locales/zh.json`
+   - `src/i18n/locales/zh-TW.json`
+   - `src/i18n/locales/ja.json`
+2. Use the project's i18n helpers for all UI text.
 3. Never hardcode user-facing strings.
 
 ## Questions?
 
-- [Open a question](https://github.com/farion1231/cc-switch/issues/new?template=question.yml)
-- [GitHub Discussions](https://github.com/farion1231/cc-switch/discussions)
+- [Open an issue](https://github.com/DaydreamZXG/yeschoy-ai-desktop/issues/new)
+- [GitHub Discussions](https://github.com/DaydreamZXG/yeschoy-ai-desktop/discussions) (if enabled)
 
 ---
 
 # 贡献指南
 
-> [English Version](#contributing-to-cc-switch)
+> [English Version](#contributing-to-yeschoy-ai-desktop)
 
-感谢你对 CC Switch 的贡献兴趣！参与之前请阅读我们的[行为准则](./CODE_OF_CONDUCT.md)。
+感谢你对 [野菜API 桌面助手](https://github.com/DaydreamZXG/yeschoy-ai-desktop) 的贡献兴趣！参与之前请阅读我们的[行为准则](./CODE_OF_CONDUCT.md)。
 
 ## 如何贡献
 
 你可以通过多种方式参与贡献：
 
-- **报告 Bug** — 发现问题？[提交 Bug 报告](https://github.com/farion1231/cc-switch/issues/new?template=bug_report.yml)。
-- **建议功能** — 有想法？[提交功能请求](https://github.com/farion1231/cc-switch/issues/new?template=feature_request.yml)。
-- **改进文档** — 发现错误或缺失？[报告文档问题](https://github.com/farion1231/cc-switch/issues/new?template=doc_issue.yml)。
+- **报告 Bug** — 发现问题？[提交 Issue](https://github.com/DaydreamZXG/yeschoy-ai-desktop/issues/new)。
+- **建议功能** — 有想法？[提交 Issue](https://github.com/DaydreamZXG/yeschoy-ai-desktop/issues/new) 并说明使用场景。
+- **改进文档** — 发现错误或缺失？开 Issue 或直接发 PR。
 - **贡献代码** — 通过 Pull Request 修复 Bug 或实现新功能。
-- **翻译** — 帮助改进英文、中文和日文的翻译。
+- **翻译** — 帮助改进英文、简体中文、繁体中文和日文的翻译。
 
 > **安全漏洞**：请不要使用公开 Issue 报告。请参阅我们的[安全策略](./SECURITY.md)。
 
@@ -156,15 +155,13 @@ CC Switch supports three languages. When modifying user-facing text:
 
 ### 前提条件
 
-- Node.js 18+ 和 pnpm 8+
-- Rust 1.85+ 和 Cargo
+- Node.js 22+ 和 pnpm 10+
+- Rust 1.95+ 和 Cargo（见 `rust-toolchain.toml`）
 - [Tauri 2.0 开发环境](https://v2.tauri.app/start/prerequisites/)
 
 > **pnpm 版本**：确切版本由 `package.json` 的 `packageManager` 字段固定
 > （CI 通过 Corepack 按此字段安装）。本地启用 Corepack（`corepack enable`）
-> 后，pnpm shim 会自动切到该版本（首次使用需一次性下载）；未启用 Corepack
-> 时任意 pnpm 8+ 均可正常使用（`package-manager-strict-version` 默认关闭）。
-> 升级 pnpm 请直接修改 `packageManager` 字段，不再由 Dependabot 代劳。
+> 后，pnpm shim 会自动切到该版本。
 
 ### 快速开始
 
@@ -194,7 +191,7 @@ Rust 后端命令：
 cd src-tauri
 cargo fmt        # 格式化 Rust 代码
 cargo clippy     # 运行 Clippy 检查
-cargo test       # 运行测试
+cargo test --lib # 运行库测试
 ```
 
 ## 代码规范
@@ -207,15 +204,16 @@ cargo test       # 运行测试
 
 ```bash
 pnpm typecheck && pnpm format:check && pnpm test:unit
-cd src-tauri && cargo fmt --check && cargo clippy && cargo test
+cd src-tauri && cargo fmt --check && cargo clippy && cargo test --lib
 ```
 
 ## Pull Request 指南
 
 1. **先开 Issue 讨论** — 新功能请先开 Issue，不适合项目方向的 PR 可能会被关闭。
-2. **Fork 并创建分支** — 从 `main` 创建功能分支（如 `feat/my-feature` 或 `fix/issue-123`）。
+2. **Fork 并创建分支** — 从 `product/yeschoy-v1` 创建功能分支（如 `feat/my-feature` 或 `fix/issue-123`）。
 3. **保持 PR 专注** — 每个 PR 只做一件事，避免无关改动。
 4. **遵循 PR 模板** — 填写概述、关联 Issue 和检查清单。
+5. **PR 目标分支为 `product/yeschoy-v1`** — 这是本仓库的默认开发分支。
 
 ### PR 检查清单
 
@@ -229,9 +227,9 @@ cd src-tauri && cargo fmt --check && cargo clippy && cargo test
 我们使用 [Conventional Commits](https://www.conventionalcommits.org/)：
 
 ```
-feat(provider): add support for new provider
-fix(tray): resolve menu not updating after switch
-docs(readme): update installation instructions
+feat(adapter): add support for a new app
+fix(recovery): restore only assistant-written keys
+docs(readme): point downloads to GitHub Releases
 ci: add format check workflow
 chore(deps): update dependencies
 ```
@@ -252,16 +250,17 @@ chore(deps): update dependencies
 
 ## 国际化（i18n）
 
-CC Switch 支持三种语言。修改用户可见文本时：
+语言文件在 `src/i18n/locales/`。修改用户可见文本时：
 
-1. **同时更新三个**语言文件：
-   - `src/locales/en/translation.json`
-   - `src/locales/zh/translation.json`
-   - `src/locales/ja/translation.json`
-2. 所有 UI 文本使用 i18next 的 `t()` 函数。
+1. 更新相关语言文件：
+   - `src/i18n/locales/en.json`
+   - `src/i18n/locales/zh.json`
+   - `src/i18n/locales/zh-TW.json`
+   - `src/i18n/locales/ja.json`
+2. 所有 UI 文本使用项目的 i18n 辅助方法。
 3. 不要硬编码用户可见的字符串。
 
 ## 有疑问？
 
-- [提问](https://github.com/farion1231/cc-switch/issues/new?template=question.yml)
-- [GitHub 讨论区](https://github.com/farion1231/cc-switch/discussions)
+- [提问 / 开 Issue](https://github.com/DaydreamZXG/yeschoy-ai-desktop/issues/new)
+- [GitHub 讨论区](https://github.com/DaydreamZXG/yeschoy-ai-desktop/discussions)（若已开启）
