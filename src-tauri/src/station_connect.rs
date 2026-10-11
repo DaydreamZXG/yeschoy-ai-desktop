@@ -29,6 +29,22 @@ pub(crate) struct StationConnectProgressEvent {
     recoverable: bool,
 }
 
+pub(crate) fn station_connect_progress_event(
+    phase: &'static str,
+    origin: Option<String>,
+    line_id: Option<String>,
+    reason_code: Option<String>,
+    recoverable: bool,
+) -> StationConnectProgressEvent {
+    StationConnectProgressEvent {
+        phase,
+        origin,
+        line_id,
+        reason_code,
+        recoverable,
+    }
+}
+
 pub(crate) const CONNECT_SCHEME: &str = "yeschoy";
 pub(crate) const CONNECT_HOST: &str = "connect";
 
@@ -549,6 +565,15 @@ mod tests {
             ),
             Err(StationConnectParseError::DuplicateQueryParameter)
         );
+    }
+
+    #[test]
+    fn parse_accepts_third_party_origin_for_exchange_binding_not_auth_allowlist() {
+        let raw = format!(
+            "yeschoy://connect?origin=https%3A%2F%2Fthird-party.station.example&code={VALID_CODE}"
+        );
+        let parsed = parse_station_connect_url(&raw).unwrap();
+        assert_eq!(parsed.origin, "https://third-party.station.example");
     }
 
     #[test]

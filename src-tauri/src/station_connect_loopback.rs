@@ -14,14 +14,14 @@ use tauri::{AppHandle, Manager, Runtime};
 use crate::account_v2::{
     account_project_line_after_connect, fetch_desktop_bootstrap, install_station_connect_session,
     line_id_for_station_connect_origin, loopback_oauth_enabled_for_bootstrap,
-    open_system_browser, station_connect_projection_failure_reason, AccountV2State,
+    open_system_browser, station_connect_origin_from_line_id,
+    station_connect_projection_failure_reason, AccountV2State,
 };
 use crate::oauth_pkce::{
     CallbackOutcome, DeviceMetadata, PkceFailure, PreparedAuthorization, SensitiveFormRequest,
 };
 use crate::station_connect::{
-    connect_origin_is_acceptable, emit_station_connect_progress, station_connect_origin_from_line_id,
-    StationConnectProgressEvent,
+    connect_origin_is_acceptable, emit_station_connect_progress, station_connect_progress_event,
 };
 const CALLBACK_POLL: Duration = Duration::from_secs(1);
 
@@ -162,13 +162,13 @@ fn cancel_active_loopback(state: &StationConnectLoopbackState) -> Result<(), &'s
 async fn run_loopback_oauth_flow<R: Runtime>(app: AppHandle<R>, line_id: String, origin: String) {
     emit_station_connect_progress(
         &app,
-        StationConnectProgressEvent {
-            phase: "connecting",
-            origin: Some(origin.clone()),
-            line_id: None,
-            reason_code: None,
-            recoverable: false,
-        },
+        station_connect_progress_event(
+            "connecting",
+            Some(origin.clone()),
+            None,
+            None,
+            false,
+        ),
     );
     let prepared = {
         let state = app.state::<StationConnectLoopbackState>();
@@ -280,13 +280,13 @@ async fn install_and_project<R: Runtime>(
             Ok(projection) if projection.is_signed_in() => {
                 emit_station_connect_progress(
                     app,
-                    StationConnectProgressEvent {
-                        phase: "signed_in",
-                        origin: Some(origin.to_owned()),
-                        line_id: Some(line_id.to_owned()),
-                        reason_code: None,
-                        recoverable: false,
-                    },
+                    station_connect_progress_event(
+                        "signed_in",
+                        Some(origin.to_owned()),
+                        Some(line_id.to_owned()),
+                        None,
+                        false,
+                    ),
                 );
             }
             Ok(projection) => {
@@ -319,13 +319,13 @@ fn emit_failure<R: Runtime>(
 ) {
     emit_station_connect_progress(
         app,
-        StationConnectProgressEvent {
-            phase: "failed",
-            origin: Some(origin.to_owned()),
-            line_id: line_id.map(str::to_owned),
-            reason_code: Some(reason.to_owned()),
+        station_connect_progress_event(
+            "failed",
+            Some(origin.to_owned()),
+            line_id.map(str::to_owned),
+            Some(reason.to_owned()),
             recoverable,
-        },
+        ),
     );
 }
 
@@ -346,7 +346,8 @@ async fn post_oauth_token(
         .headers()
         .get(CONTENT_TYPE)
         .and_then(|value| value.to_str().ok())
-        .unwrap_or_default();
+        .unwrap_or_default()
+        .to_owned();
     let body = response
         .bytes()
         .await
@@ -354,7 +355,7 @@ async fn post_oauth_token(
     if body.len() > 2 * 1024 * 1024 {
         return Err("connect_response_too_large");
     }
-    let oauth = crate::oauth_pkce::parse_token_response(status, content_type, &body)
+    let oauth = crate::oauth_pkce::parse_token_response(status, &content_type, &body)
         .map_err(map_pkce_token_failure)?;
     oauth_bundle_to_station_connect(&oauth)
 }

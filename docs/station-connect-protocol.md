@@ -96,7 +96,8 @@ Copy-paste guide for New API / third-party stations:
 | **T4** | Issue API contract (OpenAPI), local mock station + harness (`docs/station-connect-e2e-mock.md`) |
 | **T5** | Exchange success → account inspect (signed-in UI) + tool activation line ids; progress events |
 | **T6** | Hosted `connect.js`, third-party embed docs (`station-connect-embed.md`) |
-| T7+ | Loopback OAuth fallback, extended security regression |
+| **T7** | Loopback OAuth fallback (`oauth_pkce` / `station_connect_loopback`), feature-flagged |
+| **T8** | Security regression (replay, expiry, origin tamper, HTTPS downgrade), checklist (`station-connect-security-checklist.md`) |
 
 ### Exchange endpoint (desktop T3)
 

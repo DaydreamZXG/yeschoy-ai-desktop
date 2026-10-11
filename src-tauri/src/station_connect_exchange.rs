@@ -104,8 +104,15 @@ pub(crate) async fn exchange_connect_code(
         return Err(StationConnectExchangeError::Contract);
     }
     let url = connect_exchange_url(origin)?;
+    perform_connect_exchange(&url, code).await
+}
+
+async fn perform_connect_exchange(
+    url: &str,
+    code: &str,
+) -> Result<StationConnectAuthBundle, StationConnectExchangeError> {
     let body = connect_exchange_request_body(code);
-    let response = post_json(&url, body)
+    let response = post_json(url, body)
         .await
         .map_err(map_transport_error)?;
     map_exchange_http_response(response.status, &response.value)
@@ -436,10 +443,138 @@ mod tests {
         });
         // Loopback mock uses HTTP; production exchange is HTTPS-only on the declared origin.
         let exchange_url = format!("http://127.0.0.1:{port}{CONNECT_CODES_EXCHANGE_PATH}");
-        let response = post_json(&exchange_url, connect_exchange_request_body(VALID_CODE))
+        let parsed = perform_connect_exchange(&exchange_url, VALID_CODE)
             .await
-            .expect("mock transport");
-        let parsed = map_exchange_http_response(response.status, &response.value).unwrap();
+            .expect("mock exchange");
         assert_eq!(parsed.session_id, expected_session_id);
+    }
+
+    #[tokio::test]
+    async fn exchange_connect_code_rejects_http_origin_downgrade_before_network() {
+        let err = exchange_connect_code("http://example.com", VALID_CODE)
+            .await
+            .unwrap_err();
+        assert_eq!(err, StationConnectExchangeError::OriginNotAcceptable);
+        assert_eq!(err.reason_code(), "connect_origin_not_acceptable");
+    }
+
+    #[tokio::test]
+    async fn production_exchange_client_blocks_clear_http_downgrade() {
+        let client = build_exchange_client(true).expect("https-only client");
+        let response = client
+            .get("http://example.com/api/desktop/v2/connect-codes/exchange")
+            .send()
+            .await;
+        assert!(response.is_err(), "https-only client must not follow http://");
+    }
+
+    #[tokio::test]
+    async fn mock_exchange_maps_expired_code() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let app = Router::new().route(
+            CONNECT_CODES_EXCHANGE_PATH,
+            post(|_payload: Json<Value>| async move {
+                (
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({"code": "connect_code_expired"})),
+                )
+            }),
+        );
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        let url = format!("http://127.0.0.1:{port}{CONNECT_CODES_EXCHANGE_PATH}");
+        let expired = perform_connect_exchange(&url, VALID_CODE).await.unwrap_err();
+        assert_eq!(expired, StationConnectExchangeError::CodeExpired);
+        assert_eq!(expired.reason_code(), "connect_code_expired");
+    }
+
+    #[tokio::test]
+    async fn mock_exchange_maps_origin_tamper() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let app = Router::new().route(
+            CONNECT_CODES_EXCHANGE_PATH,
+            post(|_payload: Json<Value>| async move {
+                (
+                    StatusCode::FORBIDDEN,
+                    Json(json!({"code": "connect_origin_mismatch"})),
+                )
+            }),
+        );
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        let url = format!("http://127.0.0.1:{port}{CONNECT_CODES_EXCHANGE_PATH}");
+        let tamper = perform_connect_exchange(&url, VALID_CODE).await.unwrap_err();
+        assert_eq!(tamper, StationConnectExchangeError::OriginMismatch);
+        assert_eq!(tamper.reason_code(), "connect_origin_mismatch");
+    }
+
+    #[tokio::test]
+    async fn mock_exchange_rejects_code_replay() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        use std::sync::Arc;
+
+        let bundle = sample_bundle();
+        let expected_session = bundle.session_id.clone();
+        let attempts = Arc::new(AtomicUsize::new(0));
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let app = Router::new().route(
+            CONNECT_CODES_EXCHANGE_PATH,
+            post(move |_payload: Json<Value>| {
+                let bundle = bundle.clone();
+                let attempts = Arc::clone(&attempts);
+                async move {
+                    let n = attempts.fetch_add(1, Ordering::SeqCst);
+                    if n == 0 {
+                        (
+                            StatusCode::OK,
+                            Json(json!({
+                                "success": true,
+                                "data": {
+                                    "accessToken": bundle.access_token,
+                                    "tokenType": bundle.token_type,
+                                    "accessExpiresAt": bundle.access_expires_at,
+                                    "refreshToken": bundle.refresh_token,
+                                    "refreshExpiresAt": bundle.refresh_expires_at,
+                                    "sessionId": bundle.session_id,
+                                }
+                            })),
+                        )
+                    } else {
+                        (
+                            StatusCode::CONFLICT,
+                            Json(json!({"code": "connect_code_already_used"})),
+                        )
+                    }
+                }
+            }),
+        );
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
+        let url = format!("http://127.0.0.1:{port}{CONNECT_CODES_EXCHANGE_PATH}");
+        let replay_ok = perform_connect_exchange(&url, VALID_CODE)
+            .await
+            .expect("first exchange");
+        assert_eq!(replay_ok.session_id, expected_session);
+        let replay_again = perform_connect_exchange(&url, VALID_CODE).await.unwrap_err();
+        assert_eq!(replay_again, StationConnectExchangeError::CodeAlreadyUsed);
+        assert_eq!(replay_again.reason_code(), "connect_code_already_used");
+    }
+
+    #[test]
+    fn map_exchange_classifies_reused_code_alias() {
+        assert_eq!(
+            map_exchange_http_response(
+                StatusCode::CONFLICT,
+                &json!({"code": "connect_code_reused"}),
+            )
+            .unwrap_err(),
+            StationConnectExchangeError::CodeAlreadyUsed
+        );
     }
 }
