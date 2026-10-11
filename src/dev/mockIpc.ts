@@ -296,6 +296,11 @@ function targets(requestId: string) {
 }
 
 const handlers: Record<string, (a: Args) => unknown> = {
+  account_session_snapshot_v2: () => ({
+    hasStoredSession: scenario !== "signed_out",
+    storedLineId:
+      scenario === "signed_out" ? null : "mainland_optimized",
+  }),
   account_inspect_v2: (a) => account(rid(a), scenario),
   account_poll_authorization_v2: (a) => account(rid(a), scenario),
   account_begin_authorization_v2: (a) => account(rid(a), "signed_out"),

@@ -460,6 +460,50 @@ export function nextAccountRequestId(prefix = "account"): string {
   return `${prefix}-${Date.now().toString(36)}-${sequence.toString(36)}`;
 }
 
+const EMPTY_ACCOUNT_SUMMARY: AccountSummary = {
+  available: false,
+  displayName: "",
+  username: "",
+  balanceQuota: "",
+  usedQuota: "",
+  requestCount: "",
+  quotaPerUnit: "",
+};
+
+const EMPTY_USAGE_SUMMARY: UsageSummary = {
+  available: false,
+  consumedQuota: "",
+  requestRate: "",
+  tokenCount: "",
+};
+
+/** Local placeholder when inspect is skipped (no keyring session yet). */
+export function idleSignedOutProjection(requestId = "idle"): AccountProjection {
+  return {
+    requestId,
+    schemaVersion: 3,
+    status: "signed_out",
+    userCode: "",
+    pollAfterSeconds: 0,
+    expiresAtEpochMs: 0,
+    observedAtEpochMs: 0,
+    account: EMPTY_ACCOUNT_SUMMARY,
+    usage: EMPTY_USAGE_SUMMARY,
+    models: [],
+    comparisonFx: "",
+    reasonCode: "signed_out",
+  };
+}
+
+export interface AccountSessionSnapshot {
+  hasStoredSession: boolean;
+  storedLineId: string | null;
+}
+
+export async function readAccountSessionSnapshot(): Promise<AccountSessionSnapshot> {
+  return invoke<AccountSessionSnapshot>("account_session_snapshot_v2");
+}
+
 export async function runAccountCommand(
   command: AccountCommand,
   lineId: AccountLineId,

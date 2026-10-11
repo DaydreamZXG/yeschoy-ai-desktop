@@ -936,6 +936,25 @@ pub(crate) fn has_stored_session() -> bool {
     matches!(load_stored_session(), Ok(Some(_)))
 }
 
+/// Fast local read of keyring session metadata (no network).
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AccountSessionSnapshot {
+    has_stored_session: bool,
+    stored_line_id: Option<String>,
+}
+
+#[tauri::command]
+pub fn account_session_snapshot_v2() -> AccountSessionSnapshot {
+    let stored = load_stored_session().ok().flatten();
+    AccountSessionSnapshot {
+        has_stored_session: stored.is_some(),
+        stored_line_id: stored
+            .map(|session| session.line_id)
+            .filter(|line_id| !line_id.is_empty()),
+    }
+}
+
 const STATION_CONNECT_LINE_PREFIX: &str = "station_connect:";
 
 /// Maps a connect deep-link origin to the persisted `line_id`. Known 野菜 lines

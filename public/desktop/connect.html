@@ -189,9 +189,22 @@
             generic: "Connection did not finish. Try again.",
           };
 
+      var autoLaunch =
+        new URLSearchParams(window.location.search).get("auto") === "1";
+
+      if (autoLaunch) {
+        document.getElementById("lede").textContent = zh
+          ? "已登录？正在自动连接桌面助手…"
+          : "Signed in? Connecting to the desktop app automatically…";
+      }
+
       btn.addEventListener("click", function () {
         setStatus(messages.issuing, false);
         btn.disabled = true;
+      });
+
+      document.addEventListener("yeschoy-connect-auto-start", function () {
+        setStatus(messages.issuing, false);
       });
 
       function uiReasonCode(code) {

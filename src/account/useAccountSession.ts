@@ -5,7 +5,9 @@ import {
   noteSessionActivity,
 } from "./sessionAge";
 import {
+  idleSignedOutProjection,
   openAccountWallet,
+  readAccountSessionSnapshot,
   runAccountCommand,
   type AccountCommand,
   type AccountProjection,
@@ -49,7 +51,15 @@ function waitForRetry(delayMs: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, delayMs));
 }
 
-export function useAccountSession(lineId: AccountLineId) {
+export function useAccountSession(
+  lineId: AccountLineId,
+  options?: {
+    onSessionSnapshot?: (snapshot: {
+      hasStoredSession: boolean;
+      storedLineId: string | null;
+    }) => void;
+  },
+) {
   const [projection, setProjection] = useState<AccountProjection | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastError, setLastError] = useState<string | null>(null);
@@ -141,12 +151,27 @@ export function useAccountSession(lineId: AccountLineId) {
   );
 
   useEffect(() => {
-    void execute(
-      projectionRef.current?.status === "authorization_pending"
-        ? "account_poll_authorization_v2"
-        : "account_inspect_v2",
-    );
+    let cancelled = false;
+    void (async () => {
+      const pending =
+        projectionRef.current?.status === "authorization_pending";
+      if (pending) {
+        await execute("account_poll_authorization_v2");
+        return;
+      }
+      const snapshot = await readAccountSessionSnapshot();
+      if (cancelled) return;
+      options?.onSessionSnapshot?.(snapshot);
+      if (!snapshot.hasStoredSession) {
+        setProjection(idleSignedOutProjection());
+        setLoading(false);
+        setLastError(null);
+        return;
+      }
+      await execute("account_inspect_v2");
+    })();
     return () => {
+      cancelled = true;
       latest.current += 1;
     };
   }, [execute]);

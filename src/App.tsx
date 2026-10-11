@@ -36,9 +36,18 @@ import { InstallationProvider } from "./installation/InstallationProvider";
 import { InstallationNotice } from "./installation/InstallationPanel";
 import { UpdateProvider } from "./update/UpdateProvider";
 import { UpdateNotice } from "./update/UpdateNotice";
+import {
+  catalogLineFromSnapshot,
+  initialAccountLineId,
+  readAccountLinePreference,
+  writeAccountLinePreference,
+} from "./account/accountLinePreference";
 import { useAccountSession } from "./account/useAccountSession";
 import { useStationConnect } from "./account/useStationConnect";
-import type { AccountLineId } from "./configuration/preview";
+import {
+  isAccountLineId,
+  type AccountLineId,
+} from "./configuration/preview";
 import {
   TOOL_CATALOG,
   decodeScan,
@@ -79,7 +88,16 @@ function App() {
   }, []);
   const [phase, setPhase] = useState<ViewPhase>("default");
   const [accountLineId, setAccountLineId] =
-    useState<AccountLineId>("mainland_optimized");
+    useState<AccountLineId>(initialAccountLineId);
+  const applyAccountLine = useCallback((lineId: AccountLineId) => {
+    setAccountLineId(lineId);
+    if (
+      lineId === "mainland_optimized" ||
+      lineId === "global_accelerated"
+    ) {
+      writeAccountLinePreference(lineId);
+    }
+  }, []);
   const [communityOpen, setCommunityOpen] = useState(false);
   const [announcements, setAnnouncements] = useState<{
     available: boolean;
@@ -87,10 +105,22 @@ function App() {
     loading: boolean;
     failed: boolean;
   }>({ available: false, notices: [], loading: false, failed: false });
-  const accountSession = useAccountSession(accountLineId);
+  const accountSession = useAccountSession(accountLineId, {
+    onSessionSnapshot: (snapshot) => {
+      const fromSession = catalogLineFromSnapshot(snapshot.storedLineId);
+      if (fromSession) {
+        applyAccountLine(fromSession);
+        return;
+      }
+      const preference = readAccountLinePreference();
+      if (preference && isAccountLineId(preference)) {
+        setAccountLineId(preference);
+      }
+    },
+  });
   useStationConnect({
     lineId: accountLineId,
-    onLineChange: setAccountLineId,
+    onLineChange: applyAccountLine,
     refresh: accountSession.refresh,
   });
   const [scan, setScan] = useState<ScanResponse | null>(null);
@@ -287,7 +317,7 @@ function App() {
                     enableLocalActivation
                     active={view === "setup"}
                     lineId={accountLineId}
-                    onLineChange={setAccountLineId}
+                    onLineChange={applyAccountLine}
                     session={accountSession}
                     onOpenAccount={() => setView("account")}
                     onOpenTools={() => setView("tools")}
@@ -298,7 +328,7 @@ function App() {
                 <AppLibraryView
                   onOpenCommunity={() => setCommunityOpen(true)}
                   onOpenAccount={() => setView("account")}
-                  onStationLineChange={setAccountLineId}
+                  onStationLineChange={applyAccountLine}
                   accountLineId={accountLineId}
                   onOpenSetup={(appId, action = "configure") => {
                     setSelectedDesktopApp(appId);

@@ -17,6 +17,7 @@ import { APPEARANCE_KEY, readAppearance } from "./appearance";
 import { workbenchCopies } from "./copy";
 import { readFileSync } from "node:fs";
 import { connectionsFixture } from "../configuration/connection-test-fixtures";
+import type { ConfigurationLineId } from "../configuration/preview";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 import { installationInspectionFixture } from "../installation/test-fixtures";
@@ -248,6 +249,9 @@ function mockNativeByCommand(handler: NativeHandler) {
   });
 }
 const defaultNativeHandler: NativeHandler = (command, args) => {
+  if (command === "account_session_snapshot_v2") {
+    return { hasStoredSession: false, storedLineId: null };
+  }
   const request = (args as Args).request;
   if (command === "manage_tool_connections_v1")
     return connectionsFixture(request.requestId);
@@ -260,6 +264,17 @@ const defaultNativeHandler: NativeHandler = (command, args) => {
   if (command === "account_inspect_v2") return signedOut(request.requestId);
   throw Error(`Unexpected native command: ${command}`);
 };
+function withStoredAccountSession(
+  handler: NativeHandler,
+  storedLineId: ConfigurationLineId = "mainland_optimized",
+): NativeHandler {
+  return (command, args) => {
+    if (command === "account_session_snapshot_v2") {
+      return { hasStoredSession: true, storedLineId };
+    }
+    return handler(command, args);
+  };
+}
 function mockDiscoveryOnce(make: (requestId: string) => unknown) {
   let pending = true;
   mockNativeByCommand((command, args) => {
@@ -318,12 +333,14 @@ afterEach(() => {
 
 describe("official workbench", () => {
   it("still offers station URL entry when account inspection is unavailable", async () => {
-    mockNativeByCommand((command, args) => {
-      const request = (args as Args).request;
-      if (command === "account_inspect_v2")
-        return unavailableAccount(request.requestId);
-      return defaultNativeHandler(command, args);
-    });
+    mockNativeByCommand(
+      withStoredAccountSession((command, args) => {
+        const request = (args as Args).request;
+        if (command === "account_inspect_v2")
+          return unavailableAccount(request.requestId);
+        return defaultNativeHandler(command, args);
+      }),
+    );
     render(<App />);
     expect(
       await screen.findByText("暂时无法获取账户状态，请重试。"),
@@ -337,13 +354,15 @@ describe("official workbench", () => {
   });
 
   it("ru076 never reports zero connections or ready-to-connect when the initial read fails", async () => {
-    mockNativeByCommand((command, args) => {
-      const request = (args as Args).request;
-      if (command === "account_inspect_v2") return signedIn(request.requestId);
+    mockNativeByCommand(
+      withStoredAccountSession((command, args) => {
+        const request = (args as Args).request;
+        if (command === "account_inspect_v2") return signedIn(request.requestId);
       if (command === "manage_tool_connections_v1")
         throw Error("connection_operation_busy");
       return defaultNativeHandler(command, args);
-    });
+      }),
+    );
     render(<App />);
     await screen.findByText(/正在处理另一项接入或恢复操作/);
     const home = screen.getByTestId("candidate-home-view");
@@ -358,10 +377,12 @@ describe("official workbench", () => {
       within(codex).getByRole("button", { name: "检查并修复" }),
     ).toBeEnabled();
     expect(home).toHaveTextContent(/诊断编号：connections-/);
-    mockNativeByCommand((command, args) =>
-      command === "account_inspect_v2"
-        ? signedIn((args as Args).request.requestId)
-        : defaultNativeHandler(command, args),
+    mockNativeByCommand(
+      withStoredAccountSession((command, args) =>
+        command === "account_inspect_v2"
+          ? signedIn((args as Args).request.requestId)
+          : defaultNativeHandler(command, args),
+      ),
     );
     fireEvent.click(within(home).getByRole("button", { name: "读取接入状态" }));
     await waitFor(() => expect(codex).toHaveTextContent("待接入"));
@@ -369,11 +390,12 @@ describe("official workbench", () => {
   });
   it("ru076 retains a labelled last-successful snapshot after a refresh fails", async () => {
     let fail = false;
-    mockNativeByCommand((command, args) => {
-      const request = (args as Args).request;
-      if (command === "account_inspect_v2") return signedIn(request.requestId);
-      if (command === "manage_tool_connections_v1") {
-        if (fail) throw Error("synthetic-secret-must-not-appear");
+    mockNativeByCommand(
+      withStoredAccountSession((command, args) => {
+        const request = (args as Args).request;
+        if (command === "account_inspect_v2") return signedIn(request.requestId);
+        if (command === "manage_tool_connections_v1") {
+          if (fail) throw Error("synthetic-secret-must-not-appear");
         const result = connectionsFixture(request.requestId);
         Object.assign(
           result.connections.find((c) => c.toolId === "codex_desktop")!,
@@ -386,9 +408,10 @@ describe("official workbench", () => {
           },
         );
         return result;
-      }
-      return defaultNativeHandler(command, args);
-    });
+        }
+        return defaultNativeHandler(command, args);
+      }),
+    );
     render(<App />);
     await screen.findByText("gpt-6-astra");
     fail = true;
@@ -401,9 +424,10 @@ describe("official workbench", () => {
     expect(home).not.toHaveTextContent("synthetic-secret");
   });
   it("ru076 keeps an individual unavailable result unknown and blocks setup until reread", async () => {
-    mockNativeByCommand((command, args) => {
-      const request = (args as Args).request;
-      if (command === "account_inspect_v2") return signedIn(request.requestId);
+    mockNativeByCommand(
+      withStoredAccountSession((command, args) => {
+        const request = (args as Args).request;
+        if (command === "account_inspect_v2") return signedIn(request.requestId);
       if (command === "manage_tool_connections_v1") {
         const result = connectionsFixture(request.requestId);
         Object.assign(
@@ -416,7 +440,8 @@ describe("official workbench", () => {
         return result;
       }
       return defaultNativeHandler(command, args);
-    });
+      }),
+    );
     render(<App />);
     await screen.findByText(/部分应用的接入设置暂时无法读取/);
     const codex = screen
@@ -431,7 +456,8 @@ describe("official workbench", () => {
     ).toBe(false);
   });
   it("keeps raw model descriptions off both model surfaces while retaining group choices", async () => {
-    mockNativeByCommand(async (command, args) => {
+    mockNativeByCommand(
+      withStoredAccountSession(async (command, args) => {
       const request = (args as Args).request;
       if (command === "manage_tool_connections_v1")
         return connectionsFixture(request.requestId);
@@ -448,7 +474,8 @@ describe("official workbench", () => {
         return projection;
       }
       throw Error("Not available in test");
-    });
+      }),
+    );
     render(<App />);
     await screen.findAllByText("野菜测试用户");
     for (const page of ["应用接入", "模型与价格"]) {
@@ -471,7 +498,8 @@ describe("official workbench", () => {
     }
   });
   it("lists every model for every app and greys none of them", async () => {
-    mockNativeByCommand(async (command, args) => {
+    mockNativeByCommand(
+      withStoredAccountSession(async (command, args) => {
       const request = (args as Args).request;
       if (command === "manage_tool_connections_v1")
         return connectionsFixture(request.requestId);
@@ -518,7 +546,8 @@ describe("official workbench", () => {
         return { ...projection, schemaVersion: 4, models };
       }
       throw Error("Not available in test");
-    });
+      }),
+    );
     render(<App />);
     await screen.findAllByText("野菜测试用户");
     openWorkbenchPage("模型与价格");
@@ -550,7 +579,8 @@ describe("official workbench", () => {
   });
   it("still separates unreturned model data from an empty account", async () => {
     let modelsReturned = true;
-    mockNativeByCommand(async (command, args) => {
+    mockNativeByCommand(
+      withStoredAccountSession(async (command, args) => {
       const request = (args as Args).request;
       if (command === "manage_tool_connections_v1")
         return connectionsFixture(request.requestId);
@@ -566,7 +596,8 @@ describe("official workbench", () => {
         return projection;
       }
       throw Error("Not available in test");
-    });
+      }),
+    );
     render(<App />);
     await screen.findAllByText("野菜测试用户");
     openWorkbenchPage("模型与价格");
@@ -578,8 +609,9 @@ describe("official workbench", () => {
     await screen.findByText(/部分数据暂时没有返回/);
   });
   it("restores saved selections under effect replay and keeps them across navigation", async () => {
-    mockNativeByCommand(async (command, args) => {
-      const request = (args as Args).request;
+    mockNativeByCommand(
+      withStoredAccountSession(async (command, args) => {
+        const request = (args as Args).request;
       if (command === "manage_tool_connections_v1") {
         const result = connectionsFixture(request.requestId);
         Object.assign(
@@ -599,7 +631,8 @@ describe("official workbench", () => {
         return activationTargetScan(request.requestId);
       if (command === "account_inspect_v2") return signedIn(request.requestId);
       throw Error("Unexpected command");
-    });
+      }, "global_accelerated"),
+    );
     render(
       <StrictMode>
         <App />
@@ -657,7 +690,7 @@ describe("official workbench", () => {
           "manage_app_installation_v2",
           "manage_tool_connections_v1",
           "refresh_model_catalog_v1",
-          "account_inspect_v2",
+          "account_session_snapshot_v2",
           "scan_activation_targets_v1",
           "read_desktop_exit_state",
           "refresh_model_catalog_v1",
@@ -666,7 +699,7 @@ describe("official workbench", () => {
     ).toBe(true);
     expect(
       commands.filter((command) => command === "account_inspect_v2"),
-    ).toHaveLength(1);
+    ).toHaveLength(0);
     expect(
       commands.filter((command) => command === "read_desktop_exit_state"),
     ).toHaveLength(1);
@@ -700,7 +733,7 @@ describe("official workbench", () => {
       "manage_app_installation_v2",
       "manage_tool_connections_v1",
       "refresh_model_catalog_v1",
-      "account_inspect_v2",
+      "account_session_snapshot_v2",
       "read_desktop_exit_state",
     ]);
   });
@@ -724,7 +757,7 @@ describe("official workbench", () => {
       "manage_app_installation_v2",
       "manage_tool_connections_v1",
       "refresh_model_catalog_v1",
-      "account_inspect_v2",
+      "account_session_snapshot_v2",
       "read_desktop_exit_state",
       "manage_app_installation_v2",
       "scan_activation_targets_v1",
@@ -764,7 +797,7 @@ describe("official workbench", () => {
       "manage_app_installation_v2",
       "manage_tool_connections_v1",
       "refresh_model_catalog_v1",
-      "account_inspect_v2",
+      "account_session_snapshot_v2",
       "read_desktop_exit_state",
       "manage_app_installation_v2",
       "scan_activation_targets_v1",
@@ -786,7 +819,7 @@ describe("official workbench", () => {
       "manage_app_installation_v2",
       "manage_tool_connections_v1",
       "refresh_model_catalog_v1",
-      "account_inspect_v2",
+      "account_session_snapshot_v2",
       "read_desktop_exit_state",
     ]);
     fireEvent.change(screen.getByRole("combobox", { name: "使用线路" }), {
@@ -798,10 +831,14 @@ describe("official workbench", () => {
     await act(async () => {});
     expect(
       native.mock.calls.filter((call) => call[0] === "account_inspect_v2"),
-    ).toHaveLength(2);
+    ).toHaveLength(0);
+    expect(
+      native.mock.calls.some((call) => call[0] === "account_session_snapshot_v2"),
+    ).toBe(true);
   });
   it("renders signed-in account facts and the auditable price comparison", async () => {
-    mockNativeByCommand(async (command, args) => {
+    mockNativeByCommand(
+      withStoredAccountSession(async (command, args) => {
       const request = (args as Args).request;
       if (command === "manage_tool_connections_v1")
         return connectionsFixture(request.requestId);
@@ -844,7 +881,8 @@ describe("official workbench", () => {
       if (command === "read_public_service_catalog")
         return catalogFixture(request.requestId, request.lineId);
       throw Error("Not available in test");
-    });
+      }),
+    );
     render(<App />);
     await screen.findByText("版本 1.40609.1");
     fireEvent.click(screen.getByRole("button", { name: "用量账单" }));
@@ -865,7 +903,8 @@ describe("official workbench", () => {
     expect(screen.getByText(/50%/)).toBeInTheDocument();
   });
   it("renders a legitimate negative account balance instead of rejecting the session", async () => {
-    mockNativeByCommand(async (command, args) => {
+    mockNativeByCommand(
+      withStoredAccountSession(async (command, args) => {
       const request = (args as Args).request;
       if (command === "manage_tool_connections_v1")
         return connectionsFixture(request.requestId);
@@ -906,7 +945,8 @@ describe("official workbench", () => {
       if (command === "read_public_service_catalog")
         return catalogFixture(request.requestId, request.lineId);
       throw Error("Not available in test");
-    });
+      }),
+    );
 
     render(<App />);
     await screen.findByText("版本 1.40609.1");
@@ -921,16 +961,17 @@ describe("official workbench", () => {
   it("keeps the signed-in account visible while a new route is refreshing", async () => {
     let inspections = 0;
     let finishRouteRefresh: () => void = () => {};
-    mockNativeByCommand(async (command, args) => {
-      const request = (args as Args).request;
-      if (command === "manage_tool_connections_v1")
-        return connectionsFixture(request.requestId);
-      if (command === "scan_activation_targets_v1")
-        return activationTargetScan(request.requestId);
-      if (command === "scan_desktop_apps_read_only")
-        return discovery(request.requestId);
-      if (command === "account_inspect_v2") {
-        inspections += 1;
+    mockNativeByCommand(
+      withStoredAccountSession(async (command, args) => {
+        const request = (args as Args).request;
+        if (command === "manage_tool_connections_v1")
+          return connectionsFixture(request.requestId);
+        if (command === "scan_activation_targets_v1")
+          return activationTargetScan(request.requestId);
+        if (command === "scan_desktop_apps_read_only")
+          return discovery(request.requestId);
+        if (command === "account_inspect_v2") {
+          inspections += 1;
         if (inspections === 1) return signedIn(request.requestId);
         if (inspections === 2)
           return new Promise((resolve) => {
@@ -941,9 +982,10 @@ describe("official workbench", () => {
           status: "network_error",
           reasonCode: "network_error",
         };
-      }
-      throw Error("Not available in test");
-    });
+        }
+        throw Error("Not available in test");
+      }),
+    );
     render(<App />);
     await screen.findAllByText("野菜测试用户");
     openWorkbenchPage("模型与价格");
@@ -964,19 +1006,20 @@ describe("official workbench", () => {
   it.each(["default", "国模特价分组"])(
     "configures the selected desktop app using the displayed billing group: %s",
     async (billingGroup) => {
-      mockNativeByCommand(async (command, args) => {
-        const request = (args as Args).request;
-        if (command === "manage_tool_connections_v1")
-          return connectionsFixture(request.requestId);
-        if (command === "scan_activation_targets_v1")
-          return activationTargetScan(request.requestId);
-        if (command === "scan_desktop_apps_read_only")
-          return discovery(request.requestId);
-        if (command === "account_inspect_v2")
-          return signedIn(request.requestId);
-        if (command === "scan_activation_targets_v1")
-          return activationTargetScan(request.requestId);
-        if (command === "configure_desktop_tool_v2")
+      mockNativeByCommand(
+        withStoredAccountSession(async (command, args) => {
+          const request = (args as Args).request;
+          if (command === "manage_tool_connections_v1")
+            return connectionsFixture(request.requestId);
+          if (command === "scan_activation_targets_v1")
+            return activationTargetScan(request.requestId);
+          if (command === "scan_desktop_apps_read_only")
+            return discovery(request.requestId);
+          if (command === "account_inspect_v2")
+            return signedIn(request.requestId);
+          if (command === "scan_activation_targets_v1")
+            return activationTargetScan(request.requestId);
+          if (command === "configure_desktop_tool_v2")
           return {
             requestId: request.requestId,
             schemaVersion: 3,
@@ -987,8 +1030,9 @@ describe("official workbench", () => {
             observedAtEpochMs: 1_788_195_600_000,
             reasonCode: "configuration_ready",
           };
-        throw Error("Not available in test");
-      });
+          throw Error("Not available in test");
+        }),
+      );
       render(<App />);
       await screen.findByText("版本 1.40609.1");
       const codex = screen
@@ -1028,7 +1072,8 @@ describe("official workbench", () => {
     },
   );
   it("allows setup when the group is valid but its dynamic price cannot be converted", async () => {
-    mockNativeByCommand(async (command, args) => {
+    mockNativeByCommand(
+      withStoredAccountSession(async (command, args) => {
       const request = (args as Args).request;
       if (command === "manage_tool_connections_v1")
         return connectionsFixture(request.requestId);
@@ -1067,7 +1112,8 @@ describe("official workbench", () => {
           reasonCode: "configuration_ready",
         };
       throw Error("Not available in test");
-    });
+      }),
+    );
     render(<App />);
     await screen.findByText("版本 1.40609.1");
     openWorkbenchPage("应用接入");
@@ -1108,7 +1154,7 @@ describe("official workbench", () => {
       "manage_app_installation_v2",
       "manage_tool_connections_v1",
       "refresh_model_catalog_v1",
-      "account_inspect_v2",
+      "account_session_snapshot_v2",
       "read_desktop_exit_state",
     ]);
   });
@@ -1232,9 +1278,10 @@ describe("announcements", () => {
     actionLabel: "",
   };
   function withNotices(followed: string[] = []) {
-    mockNativeByCommand((command, args) => {
-      const request = (args as Args).request;
-      if (command === "account_inspect_v2") return signedIn(request.requestId);
+    mockNativeByCommand(
+      withStoredAccountSession((command, args) => {
+        const request = (args as Args).request;
+        if (command === "account_inspect_v2") return signedIn(request.requestId);
       if (command === "account_announcements_read_v2")
         return {
           requestId: request.requestId,
@@ -1245,8 +1292,9 @@ describe("announcements", () => {
         followed.push((request as { noticeId?: string }).noticeId ?? "");
         return null;
       }
-      return defaultNativeHandler(command, args);
-    });
+        return defaultNativeHandler(command, args);
+      }),
+    );
     return followed;
   }
   beforeEach(() => {

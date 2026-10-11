@@ -1,13 +1,19 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAccountSession } from "./useAccountSession";
-import { runAccountCommand, type AccountProjection } from "./session";
+import {
+  readAccountSessionSnapshot,
+  runAccountCommand,
+  type AccountProjection,
+} from "./session";
 import type { ConfigurationLineId } from "../configuration/preview";
 vi.mock("./session", async (load) => ({
   ...(await load<typeof import("./session")>()),
   runAccountCommand: vi.fn(),
+  readAccountSessionSnapshot: vi.fn(),
 }));
 const command = vi.mocked(runAccountCommand);
+const sessionSnapshot = vi.mocked(readAccountSessionSnapshot);
 function projection(status: AccountProjection["status"]): AccountProjection {
   return {
     requestId: "fixture",
@@ -40,6 +46,11 @@ function projection(status: AccountProjection["status"]): AccountProjection {
 beforeEach(() => {
   vi.useFakeTimers();
   command.mockReset();
+  sessionSnapshot.mockReset();
+  sessionSnapshot.mockResolvedValue({
+    hasStoredSession: true,
+    storedLineId: "mainland_optimized",
+  });
   command.mockResolvedValue(projection("signed_out"));
 });
 afterEach(() => {
@@ -50,6 +61,21 @@ async function flush() {
   await act(async () => {});
 }
 describe("resilient account authorization", () => {
+  it("skips account_inspect on cold start when the keyring has no session", async () => {
+    sessionSnapshot.mockResolvedValue({
+      hasStoredSession: false,
+      storedLineId: null,
+    });
+    const { result } = renderHook(() =>
+      useAccountSession("mainland_optimized"),
+    );
+    await flush();
+    expect(command).not.toHaveBeenCalled();
+    expect(result.current.loading).toBe(false);
+    expect(result.current.projection?.status).toBe("signed_out");
+    expect(result.current.lastError).toBeNull();
+  });
+
   it("retries a transient cold-start inspection before treating it as unavailable", async () => {
     command
       .mockResolvedValueOnce(projection("network_error"))
