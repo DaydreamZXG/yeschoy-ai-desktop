@@ -599,6 +599,8 @@
     "librarySignInBody": "自动获取可用模型和账户价格，不用复制密钥。恢复设置无需登录。",
     "librarySignInAction": "登录野菜API",
     "librarySignInActionNeutral": "登录你的站点",
+    "librarySignInCatalogOfficial": "使用野菜线路设备码登录",
+    "librarySignInCatalogNeutral": "使用内置线路设备码登录",
     "ossSoftTrafficCta": "试试野菜",
     "ossReferenceAttribution": "参考实现：野菜API",
     "libraryConnectionLoading": "正在读取接入状态",
@@ -1201,6 +1203,13 @@
       "bundled_copy": "这是其他应用内置的副本，请选择单独安装的 {{name}}。",
       "unsupported_platform": "当前系统暂不支持手动指定位置。"
     }
+  },
+  "stationConnectPage": {
+    "originLabel": "站点地址（HTTPS）",
+    "originPlaceholder": "https://your-station.example",
+    "continue": "在浏览器中继续",
+    "opening": "正在打开浏览器…",
+    "invalidOrigin": "请输入有效的 HTTPS 站点地址（域名，不含路径）。"
   },
   "stationConnect": {
     "connecting": "正在通过网站连接桌面助手…",

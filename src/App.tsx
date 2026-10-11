@@ -297,6 +297,7 @@ function App() {
                 <AppLibraryView
                   onOpenCommunity={() => setCommunityOpen(true)}
                   onOpenAccount={() => setView("account")}
+                  onStationLineChange={setAccountLineId}
                   onOpenSetup={(appId, action = "configure") => {
                     setSelectedDesktopApp(appId);
                     setSetupIntent((previous) =>

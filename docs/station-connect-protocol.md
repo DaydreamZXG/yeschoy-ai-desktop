@@ -89,6 +89,12 @@ Copy-paste guide for New API / third-party stations:
 [`station-connect-embed.md`](./station-connect-embed.md). Source:
 `connect/yeschoy-connect.ts` → `public/connect.js` (`pnpm build:connect`).
 
+Station operators should host a one-button page at **`/desktop/connect`** on the
+same HTTPS origin as the session cookie (reference HTML:
+`public/desktop/connect.html`, documented in
+[`station-connect-page.md`](./station-connect-page.md)). The desktop app opens
+that URL when users enter a third-party station origin.
+
 ## Desktop implementation status
 
 | Task | Scope |

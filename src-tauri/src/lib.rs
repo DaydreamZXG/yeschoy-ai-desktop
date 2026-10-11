@@ -218,7 +218,8 @@ pub fn run() {
             config_reveal::open_config_folder,
             station_connect_loopback::station_connect_loopback_capabilities_v1,
             station_connect_loopback::station_connect_begin_loopback_oauth_v1,
-            station_connect_loopback::station_connect_cancel_loopback_oauth_v1
+            station_connect_loopback::station_connect_cancel_loopback_oauth_v1,
+            station_connect::station_connect_open_connect_page_v1
         ])
         .build(tauri::generate_context!())
         .expect("failed to run the 野菜API desktop shell");

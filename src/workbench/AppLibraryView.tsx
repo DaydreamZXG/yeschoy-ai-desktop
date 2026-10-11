@@ -41,9 +41,12 @@ import { Users } from "lucide-react";
 import { isOfficialDistribution } from "../distribution/identity";
 import { showOssSoftTraffic, showOfficialCommunityUi } from "../distribution/softTraffic";
 import { OssSoftTrafficCta } from "./OssSoftTrafficCta";
+import { StationConnectOriginForm } from "./StationConnectOriginForm";
+import type { AccountLineId } from "../configuration/preview";
 
 interface Props {
   onOpenAccount: () => void;
+  onStationLineChange: (lineId: AccountLineId) => void;
   onOpenSetup: (appId: ActivationToolId, action?: SetupAction) => void;
   // 交流群对话框的状态提到了 App：侧边栏和这里的页脚都要能打开它，
   // 两份各自的 useState 会变成两个互不知情的对话框。
@@ -83,6 +86,7 @@ export function AppLibraryView({
   onOpenAccount,
   onOpenSetup,
   onOpenCommunity,
+  onStationLineChange,
   accountSession,
   announcement,
 }: Props) {
@@ -390,20 +394,30 @@ export function AppLibraryView({
         </section>
       )}
       {loginRequired ? (
-        <section className="welcome-strip">
+        <section className="welcome-strip welcome-strip-station">
           <span className="welcome-symbol">
             <ShieldCheck />
           </span>
-          <div>
+          <div className="welcome-strip-copy">
             <h2>{c.librarySignInTitle}</h2>
             <p>{c.librarySignInBody}</p>
+            <StationConnectOriginForm
+              onLineChange={onStationLineChange}
+              disabled={accountSession.loading}
+            />
+            <p className="welcome-strip-catalog">
+              <button
+                type="button"
+                className="text-button"
+                onClick={onOpenAccount}
+              >
+                {isOfficialDistribution()
+                  ? c.librarySignInCatalogOfficial
+                  : c.librarySignInCatalogNeutral}
+                <ArrowRight aria-hidden="true" />
+              </button>
+            </p>
           </div>
-          <button className="primary-action" onClick={onOpenAccount}>
-            {isOfficialDistribution()
-              ? c.librarySignInAction
-              : c.librarySignInActionNeutral}
-            <ArrowRight />
-          </button>
           {showOssSoftTraffic({
             accountProjection: accountSession.projection,
           }) && (

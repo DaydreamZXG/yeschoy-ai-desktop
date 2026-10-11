@@ -5,6 +5,9 @@
 
 export const CONNECT_CODES_ISSUE_PATH = "/api/desktop/v2/connect-codes";
 
+/** Documented station-hosted connect UI path (see docs/station-connect-page.md). */
+export { STATION_CONNECT_PAGE_PATH } from "./stationConnectPage";
+
 /** Public download page (not ergou update CDN). */
 export const DEFAULT_DOWNLOAD_URL = "https://yeschoy.com/download";
 

@@ -10,7 +10,8 @@ use tauri_plugin_deep_link::DeepLinkExt;
 
 use crate::account_v2::{
     account_project_line_after_connect, install_station_connect_session,
-    line_id_for_station_connect_origin, station_connect_projection_failure_reason, AccountV2State,
+    line_id_for_station_connect_origin, open_system_browser,
+    station_connect_projection_failure_reason, AccountV2State,
 };
 use crate::station_connect_exchange::{exchange_connect_code, station_connect_exchange_enabled};
 
@@ -47,6 +48,9 @@ pub(crate) fn station_connect_progress_event(
 
 pub(crate) const CONNECT_SCHEME: &str = "yeschoy";
 pub(crate) const CONNECT_HOST: &str = "connect";
+
+/// Fixed path station operators host for the one-button connect page (see docs).
+pub(crate) const STATION_CONNECT_PAGE_PATH: &str = "/desktop/connect";
 
 /// Minimum length for a one-time connect `code` (bytes, UTF-8).
 pub(crate) const CONNECT_CODE_MIN_LEN: usize = 32;
@@ -329,6 +333,14 @@ pub(crate) fn wire_station_connect_deep_link<R: Runtime>(
     }
 
     Ok(())
+}
+
+#[tauri::command]
+pub fn station_connect_open_connect_page_v1(origin: String) -> Result<(), String> {
+    let canonical = connect_origin_is_acceptable(&origin)
+        .ok_or_else(|| "connect_origin_not_acceptable".to_string())?;
+    let url = format!("{}{}", canonical, STATION_CONNECT_PAGE_PATH);
+    open_system_browser(&url).map_err(|_| "connect_browser_open_failed".to_string())
 }
 
 /// Returns the canonical HTTPS origin when `raw` is acceptable for connect exchange.
