@@ -1,11 +1,16 @@
 //! Station deep-link connect protocol (`yeschoy://connect`) — parse, validation,
-//! and OS/runtime delivery. Code exchange and UI wiring land in later tasks.
+//! OS/runtime delivery, and HTTPS code exchange (T3).
 //! This module is intentionally separate from the compile-time authorization-page
 //! allowlist in `account_v2` / `oauth_pkce`.
 
 use reqwest::Url;
-use tauri::{AppHandle, Runtime};
+use tauri::{AppHandle, Manager, Runtime};
 use tauri_plugin_deep_link::DeepLinkExt;
+
+use crate::account_v2::{
+    install_station_connect_session, line_id_for_station_connect_origin, AccountV2State,
+};
+use crate::station_connect_exchange::{exchange_connect_code, station_connect_exchange_enabled};
 
 pub(crate) const CONNECT_SCHEME: &str = "yeschoy";
 pub(crate) const CONNECT_HOST: &str = "connect";
@@ -37,7 +42,7 @@ pub(crate) struct StationConnectRequest {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum StationConnectHandleOutcome {
-    /// Parsed and validated; exchange is deferred to a later task.
+    /// Parsed and validated; exchange runs asynchronously when enabled.
     Accepted(StationConnectRequest),
     /// Not a `yeschoy://` URL (other argv or schemes are ignored).
     IgnoredNotConnectScheme,
@@ -65,9 +70,57 @@ pub(crate) fn handle_connect_url(raw: &str) -> StationConnectHandleOutcome {
     }
 }
 
-fn deliver_connect_urls<S: AsRef<str>>(urls: &[S]) {
+fn deliver_connect_urls<R: Runtime, S: AsRef<str>>(app: &AppHandle<R>, urls: &[S]) {
     for url in urls {
-        handle_connect_url(url.as_ref());
+        match handle_connect_url(url.as_ref()) {
+            StationConnectHandleOutcome::Accepted(request) => {
+                let app = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    run_station_connect_exchange(&app, request).await;
+                });
+            }
+            StationConnectHandleOutcome::IgnoredNotConnectScheme => {}
+            StationConnectHandleOutcome::Rejected(error) => {
+                log::warn!("station_connect stage=delivery_rejected error={error:?}");
+            }
+        }
+    }
+}
+
+async fn run_station_connect_exchange<R: Runtime>(app: &AppHandle<R>, request: StationConnectRequest) {
+    if !station_connect_exchange_enabled() {
+        log::warn!(
+            "station_connect stage=exchange_skipped origin={} reason=disabled",
+            request.origin
+        );
+        return;
+    }
+    log::info!(
+        "station_connect stage=exchange_started origin={}",
+        request.origin
+    );
+    let state = app.state::<AccountV2State>();
+    match exchange_connect_code(&request.origin, &request.code).await {
+        Ok(bundle) => {
+            let line_id = line_id_for_station_connect_origin(&request.origin);
+            match install_station_connect_session(&state, &line_id, bundle) {
+                Ok(()) => log::info!(
+                    "station_connect stage=exchange_installed origin={} line_id={}",
+                    request.origin,
+                    line_id
+                ),
+                Err(reason) => log::warn!(
+                    "station_connect stage=exchange_store_failed origin={} reason={}",
+                    request.origin,
+                    reason
+                ),
+            }
+        }
+        Err(error) => log::warn!(
+            "station_connect stage=exchange_failed origin={} reason={}",
+            request.origin,
+            error.reason_code()
+        ),
     }
 }
 
@@ -75,13 +128,14 @@ fn deliver_connect_urls<S: AsRef<str>>(urls: &[S]) {
 pub(crate) fn wire_station_connect_deep_link<R: Runtime>(
     app: &AppHandle<R>,
 ) -> Result<(), tauri_plugin_deep_link::Error> {
+    let app_for_events = app.clone();
     app.deep_link().on_open_url(move |event| {
         let urls = event
             .urls()
             .into_iter()
             .map(|url| url.to_string())
             .collect::<Vec<_>>();
-        deliver_connect_urls(&urls);
+        deliver_connect_urls(&app_for_events, &urls);
     });
 
     if let Some(urls) = app.deep_link().get_current()? {
@@ -89,7 +143,7 @@ pub(crate) fn wire_station_connect_deep_link<R: Runtime>(
             .into_iter()
             .map(|url| url.to_string())
             .collect::<Vec<_>>();
-        deliver_connect_urls(&urls);
+        deliver_connect_urls(app, &urls);
     }
 
     #[cfg(any(target_os = "linux", target_os = "windows"))]

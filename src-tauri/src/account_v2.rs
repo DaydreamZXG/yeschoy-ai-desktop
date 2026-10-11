@@ -841,6 +841,71 @@ pub(crate) fn has_stored_session() -> bool {
     matches!(load_stored_session(), Ok(Some(_)))
 }
 
+const STATION_CONNECT_LINE_PREFIX: &str = "station_connect:";
+
+/// Maps a connect deep-link origin to the persisted `line_id`. Known 野菜 lines
+/// reuse the connectivity catalog; other HTTPS stations use a stable synthetic id
+/// until bootstrap-by-origin lands in a later task.
+pub(crate) fn line_id_for_station_connect_origin(origin: &str) -> String {
+    crate::request_diagnostics::line_for_origin(origin)
+        .map(str::to_owned)
+        .unwrap_or_else(|| format!("{STATION_CONNECT_LINE_PREFIX}{origin}"))
+}
+
+pub(crate) fn station_connect_origin_from_line_id(line_id: &str) -> Option<&str> {
+    line_id.strip_prefix(STATION_CONNECT_LINE_PREFIX)
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct StationConnectAuthBundle {
+    pub(crate) access_token: String,
+    pub(crate) token_type: String,
+    pub(crate) access_expires_at: i64,
+    pub(crate) refresh_token: String,
+    pub(crate) refresh_expires_at: i64,
+    pub(crate) session_id: String,
+}
+
+/// Install credentials from a station connect exchange (no pending device-code step).
+pub(crate) fn install_station_connect_session(
+    state: &AccountV2State,
+    line_id: &str,
+    bundle: StationConnectAuthBundle,
+) -> Result<(), &'static str> {
+    let mut runtime = state.runtime.lock().map_err(|_| "connect_secure_storage_unavailable")?;
+    if bundle.token_type != "Bearer"
+        || bundle.access_token.len() < 32
+        || bundle.refresh_token.len() < 32
+        || bundle.session_id.is_empty()
+        || bundle.access_expires_at <= now_epoch_seconds()
+        || bundle.refresh_expires_at <= bundle.access_expires_at
+    {
+        log::warn!("account stage=station_connect_bundle_rejected reason=contract");
+        return Err("connect_auth_contract");
+    }
+    let stored = StoredSession {
+        line_id: line_id.to_owned(),
+        refresh_token: bundle.refresh_token,
+        session_id: bundle.session_id,
+        refresh_expires_at: bundle.refresh_expires_at,
+    };
+    save_stored_session(&stored).map_err(|_| {
+        log::warn!(
+            "account stage=station_connect_session_store_failed bytes={}",
+            payload_len(&stored)
+        );
+        "connect_secure_storage_unavailable"
+    })?;
+    runtime.authorization_epoch += 1;
+    runtime.access = Some(AccessSession {
+        access_token: bundle.access_token,
+        access_expires_at: bundle.access_expires_at,
+    });
+    runtime.pending = None;
+    Ok(())
+}
+
 pub(crate) enum ProbeSessionFailure {
     SignedOut,
     SecureStorage,
@@ -2567,6 +2632,22 @@ mod tests {
             "https://yeschoy.com/desktop-authorize?user_code=ABCD-2345&next=x",
             "ABCD-2345"
         ));
+    }
+
+    #[test]
+    fn station_connect_line_id_maps_catalog_and_synthetic_origins() {
+        assert_eq!(
+            line_id_for_station_connect_origin("https://yeschoy.com"),
+            "mainland_optimized"
+        );
+        assert_eq!(
+            line_id_for_station_connect_origin("https://example.com"),
+            "station_connect:https://example.com"
+        );
+        assert_eq!(
+            station_connect_origin_from_line_id("station_connect:https://example.com"),
+            Some("https://example.com")
+        );
     }
 
     #[test]

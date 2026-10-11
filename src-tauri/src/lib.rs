@@ -44,6 +44,7 @@ mod service_catalog_core;
 mod shell_environment;
 mod shutdown_coordinator;
 mod station_connect;
+mod station_connect_exchange;
 mod token_estimate;
 mod tool_activation;
 mod tool_adapters;

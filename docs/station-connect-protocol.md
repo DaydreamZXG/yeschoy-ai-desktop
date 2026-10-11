@@ -70,7 +70,45 @@ Release / yeschoy.com download), not third-party update CDNs.
 | Task | Scope |
 |------|--------|
 | **T1** | Parse + validate deep link (`station_connect` Rust module), unit tests, this doc |
-| T2+ | OS scheme registration, code exchange, `connect.js`, activation UI |
+| **T2** | OS `yeschoy` scheme registration, single-instance / deep-link delivery |
+| **T3** | HTTPS `POST …/connect-codes/exchange` client, origin policy, session install |
+| T4+ | Station code issuance, activation UI, `connect.js`, loopback OAuth fallback |
+
+### Exchange endpoint (desktop T3)
+
+The desktop client posts to:
+
+```http
+POST {origin}/api/desktop/v2/connect-codes/exchange
+Content-Type: application/json
+```
+
+Example JSON body (camelCase):
+
+```json
+{
+  "code": "<one-time-code>",
+  "deviceId": "<uuid>",
+  "platform": "macos|windows|linux",
+  "clientVersion": "<semver>"
+}
+```
+
+Success envelope matches the device-code token shape (`accessToken`, `refreshToken`,
+`sessionId`, expiry fields). Error `code` values are mapped to stable desktop
+reasons such as `connect_code_expired`, `connect_code_already_used`, and
+`connect_origin_mismatch`.
+
+Set `YESCHOY_STATION_CONNECT_EXCHANGE=0` to validate deep links without calling
+the network (for example before the station API is deployed).
+
+### Local mock exchange
+
+Run any HTTP server on loopback that implements the path above and returns the
+success envelope, then point a deep link at a hostname origin that resolves to
+that server only in your test harness. Unit tests in `station_connect_exchange`
+use an axum mock on `127.0.0.1` for transport mapping; production exchange
+remains HTTPS-only on the declared canonical origin.
 
 ## Security notes
 
