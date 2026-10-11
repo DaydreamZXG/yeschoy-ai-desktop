@@ -1,0 +1,266 @@
+openapi: 3.0.3
+info:
+  title: YesChoy Desktop — Station connect codes (v2)
+  version: 0.1.0-draft
+  description: |
+    Client-facing contract for one-click connect from a logged-in station website
+    into the YesChoy desktop assistant.
+
+    - **Issue** (browser, session cookie): short-lived, single-use code bound to a
+      canonical HTTPS `origin`.
+    - **Exchange** (desktop, HTTPS): trade the code for a session token bundle.
+
+    Reference implementation for development: `tools/station-connect-mock`.
+    Protocol overview: `docs/station-connect-protocol.md`.
+
+servers:
+  - url: https://yeschoy.com
+    description: YesChoy reference station (production)
+  - url: https://connect.localtest.me
+    description: Local dev (TLS reverse proxy to mock; see E2E doc)
+
+tags:
+  - name: connect-codes
+    description: Deep-link connect issuance and exchange
+
+paths:
+  /api/desktop/v2/connect-codes:
+    post:
+      tags: [connect-codes]
+      operationId: issueConnectCode
+      summary: Issue a one-time connect code (browser session)
+      description: |
+        Called from the station origin while the user is logged in (session cookie).
+        The returned code is bound to the declared canonical HTTPS `origin` and must
+        be exchanged from a desktop client that posts to the same origin over HTTPS.
+
+        **Security**
+        - TTL ≤ 5 minutes (product constant; reference mock uses 300s).
+        - Single use; replay returns `connect_code_already_used`.
+        - Do not put long-lived tokens in URLs or in this response.
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IssueConnectCodeRequest"
+            examples:
+              explicitOrigin:
+                value:
+                  origin: https://yeschoy.com
+      responses:
+        "200":
+          description: Code issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssueConnectCodeSuccess"
+        "401":
+          description: Not logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                success: false
+                code: session_required
+        "400":
+          description: Invalid or missing origin
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                invalid:
+                  value:
+                    success: false
+                    code: connect_origin_invalid
+
+  /api/desktop/v2/connect-codes/exchange:
+    post:
+      tags: [connect-codes]
+      operationId: exchangeConnectCode
+      summary: Exchange a connect code for a desktop session bundle
+      description: |
+        Called by the YesChoy desktop app over **HTTPS** to the same `origin` that
+        was embedded in the deep link. The HTTP `Host` must match that origin's host.
+
+        Request body includes device metadata for auditing; no secrets in the deep link.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExchangeConnectCodeRequest"
+            example:
+              code: abcdefghijklmnopqrstuvwxyz0123456789ABCD
+              deviceId: 550e8400-e29b-41d4-a716-446655440000
+              platform: macos
+              clientVersion: 0.4.30
+      responses:
+        "200":
+          description: Session bundle issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExchangeConnectCodeSuccess"
+        "400":
+          description: Expired or unknown code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                success: false
+                code: connect_code_expired
+        "403":
+          description: Origin mismatch (code not issued for this host)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                success: false
+                code: connect_origin_mismatch
+        "409":
+          description: Code already used
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              example:
+                success: false
+                code: connect_code_already_used
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: yeschoy_desktop_session
+      description: |
+        Station-specific session cookie set after web login. Cookie name may differ
+        per deployment; the browser must send credentials on the issue request
+        (`credentials: "include"` / same-site rules).
+
+  schemas:
+    IssueConnectCodeRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        origin:
+          type: string
+          format: uri
+          description: |
+            Canonical HTTPS origin (`https://host`, lowercase host, no path/query).
+            If omitted, the server may derive from the `Origin` request header when
+            it is already canonical HTTPS.
+
+    IssueConnectCodeData:
+      type: object
+      required: [code, origin, expiresAt, ttlSeconds]
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          minLength: 32
+          maxLength: 512
+          pattern: "^[A-Za-z0-9_-]+$"
+          description: URL-safe one-time connect code (for deep link only).
+        origin:
+          type: string
+          description: Canonical HTTPS origin this code is bound to.
+        expiresAt:
+          type: integer
+          format: int64
+          description: Unix epoch seconds when the code expires.
+        ttlSeconds:
+          type: integer
+          maximum: 300
+          description: Issued TTL in seconds (must be ≤ 300).
+
+    StationConnectAuthBundle:
+      type: object
+      required:
+        - accessToken
+        - tokenType
+        - accessExpiresAt
+        - refreshToken
+        - refreshExpiresAt
+        - sessionId
+      additionalProperties: false
+      properties:
+        accessToken:
+          type: string
+          minLength: 32
+        tokenType:
+          type: string
+          enum: [Bearer]
+        accessExpiresAt:
+          type: integer
+          format: int64
+        refreshToken:
+          type: string
+          minLength: 32
+        refreshExpiresAt:
+          type: integer
+          format: int64
+        sessionId:
+          type: string
+
+    ExchangeConnectCodeRequest:
+      type: object
+      required: [code]
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          minLength: 32
+          maxLength: 512
+        deviceId:
+          type: string
+          format: uuid
+        platform:
+          type: string
+          enum: [macos, windows, linux, unknown]
+        clientVersion:
+          type: string
+
+    IssueConnectCodeSuccess:
+      type: object
+      required: [success, data]
+      additionalProperties: false
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: "#/components/schemas/IssueConnectCodeData"
+
+    ExchangeConnectCodeSuccess:
+      type: object
+      required: [success, data]
+      additionalProperties: false
+      properties:
+        success:
+          type: boolean
+          enum: [true]
+        data:
+          $ref: "#/components/schemas/StationConnectAuthBundle"
+
+    ApiError:
+      type: object
+      required: [success, code]
+      additionalProperties: false
+      properties:
+        success:
+          type: boolean
+          enum: [false]
+        code:
+          type: string
+          description: |
+            Stable machine codes. Desktop maps these to UI reasons, including:
+            `connect_code_expired`, `connect_code_already_used`, `connect_origin_mismatch`.

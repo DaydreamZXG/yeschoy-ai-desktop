@@ -17,6 +17,7 @@ use serde_json::{json, Value};
 use crate::account_v2::{shared_http_client, StationConnectAuthBundle};
 use crate::station_connect::{connect_origin_is_acceptable, CONNECT_CODE_MAX_LEN, CONNECT_CODE_MIN_LEN};
 
+pub(crate) const CONNECT_CODES_ISSUE_PATH: &str = "/api/desktop/v2/connect-codes";
 pub(crate) const CONNECT_CODES_EXCHANGE_PATH: &str = "/api/desktop/v2/connect-codes/exchange";
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(20);
