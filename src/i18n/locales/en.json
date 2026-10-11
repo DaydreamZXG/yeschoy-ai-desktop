@@ -1206,7 +1206,10 @@
   },
   "stationConnectPage": {
     "originLabel": "Station address (HTTPS)",
-    "originPlaceholder": "https://your-station.example",
+    "originPlaceholderOfficial": "https://yeschoy.com",
+    "originPlaceholderOss": "https://your-station.example",
+    "originHintOfficial": "Starts with the YesChoy example site — replace with your station’s HTTPS domain.",
+    "originHintOss": "Enter your station’s HTTPS address. The placeholder is only a format example.",
     "continue": "Continue in browser",
     "opening": "Opening browser…",
     "invalidOrigin": "Enter a valid HTTPS station address (domain only, no path)."

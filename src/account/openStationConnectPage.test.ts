@@ -1,10 +1,37 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import { openStationConnectPage } from "./openStationConnectPage";
+import {
+  openStationConnectPage,
+  readStationOriginDraftInitial,
+  STATION_ORIGIN_DRAFT_KEY,
+} from "./openStationConnectPage";
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
 }));
+
+describe("readStationOriginDraftInitial", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.unstubAllEnvs();
+  });
+
+  it("prefers a saved draft over distribution defaults", () => {
+    localStorage.setItem(STATION_ORIGIN_DRAFT_KEY, "https://partner.example.com");
+    vi.stubEnv("VITE_YESCHOY_DISTRIBUTION", "official");
+    expect(readStationOriginDraftInitial()).toBe("https://partner.example.com");
+  });
+
+  it("defaults to the reference YesChoy origin on official builds", () => {
+    vi.stubEnv("VITE_YESCHOY_DISTRIBUTION", "official");
+    expect(readStationOriginDraftInitial()).toBe("https://yeschoy.com");
+  });
+
+  it("starts empty on OSS builds", () => {
+    vi.stubEnv("VITE_YESCHOY_DISTRIBUTION", "oss");
+    expect(readStationOriginDraftInitial()).toBe("");
+  });
+});
 
 describe("openStationConnectPage", () => {
   beforeEach(() => {

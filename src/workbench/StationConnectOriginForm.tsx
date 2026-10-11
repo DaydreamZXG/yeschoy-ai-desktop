@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   openStationConnectPage,
+  readStationOriginDraftInitial,
   STATION_ORIGIN_DRAFT_KEY,
 } from "../account/openStationConnectPage";
 import { canonicalStationHttpsOrigin } from "../../connect/stationConnectPage";
 import type { AccountLineId } from "../configuration/preview";
+import { isOfficialDistribution } from "../distribution/identity";
 
 interface Props {
   onLineChange: (lineId: AccountLineId) => void;
@@ -15,18 +17,12 @@ interface Props {
 
 export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState("");
+  const official = isOfficialDistribution();
+  const [draft, setDraft] = useState(readStationOriginDraftInitial);
   const [error, setError] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STATION_ORIGIN_DRAFT_KEY);
-      if (saved) setDraft(saved);
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  const hintId = "station-origin-hint";
+  const describedBy = error ? `${hintId} station-origin-error` : hintId;
 
   const submit = useCallback(async () => {
     setError(null);
@@ -68,7 +64,11 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
           inputMode="url"
           autoComplete="url"
           spellCheck={false}
-          placeholder={t("stationConnectPage.originPlaceholder")}
+          placeholder={
+            official
+              ? t("stationConnectPage.originPlaceholderOfficial")
+              : t("stationConnectPage.originPlaceholderOss")
+          }
           value={draft}
           disabled={disabled || opening}
           onChange={(event) => {
@@ -76,8 +76,13 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
             if (error) setError(null);
           }}
           aria-invalid={error ? true : undefined}
-          aria-describedby={error ? "station-origin-error" : undefined}
+          aria-describedby={describedBy}
         />
+        <small className="station-connect-origin-hint" id={hintId}>
+          {official
+            ? t("stationConnectPage.originHintOfficial")
+            : t("stationConnectPage.originHintOss")}
+        </small>
       </label>
       {error && (
         <p className="station-connect-origin-error" id="station-origin-error" role="alert">

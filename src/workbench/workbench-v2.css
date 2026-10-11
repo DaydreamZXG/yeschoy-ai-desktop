@@ -5320,6 +5320,12 @@
   outline-offset: 1px;
 }
 
+.station-connect-origin-hint {
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--muted);
+}
+
 .station-connect-origin-error {
   width: 100%;
   margin: 0;
