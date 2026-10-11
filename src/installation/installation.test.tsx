@@ -679,6 +679,32 @@ describe("ru048 novice installer", () => {
       expect(activate).not.toHaveBeenCalled();
     },
   );
+  it("shows guided install steps for CLI tools", () => {
+    render(
+      <InstallationContext.Provider
+        value={{
+          progress: progress({ toolId: "claude_code", mode: "guided" }),
+          working: false,
+          error: false,
+          run,
+        }}
+      >
+        <InstallationPanel
+          tool="claude_code"
+          name="Claude Code"
+          canConnect
+          onStart={noop}
+          onConfirm={noop}
+          onRefresh={noop}
+        />
+      </InstallationContext.Provider>,
+    );
+    expect(screen.getByText(/打开 Claude Code 官方安装说明/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /打开官方安装页/ }),
+    ).toBeInTheDocument();
+  });
+
   it("explains Windows system confirmation, cancellation and unsigned-package failures", () => {
     const onConfirm = vi.fn();
     const onStart = vi.fn();

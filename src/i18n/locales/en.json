@@ -367,6 +367,8 @@
     "restarting": "Restarting…",
     "openSettings": "Update settings",
     "safety": "Every package must pass signature verification. Yeschoy stays open until download completes and never changes Codex, Claude, or other app settings during an update.",
+    "manualDownload": "You can also download the installer manually (new PC or if auto-update fails):",
+    "manualDownloadLink": "Open download page",
     "notice": {
       "available": "Yeschoy v{{version}} is ready",
       "downloading": "Downloading the update safely",
@@ -1018,6 +1020,36 @@
     "progressStale": "The install progress hasn't updated. Check it rather than starting the install again.",
     "checkProgress": "Check install progress",
     "viewOfficial": "See the official install",
+    "openOfficialDownload": "Open official install page",
+    "guidedStepsLabel": "Suggested steps",
+    "guidedAfterHelp": "After you finish on the official site, choose “I already installed it — check again” so Yeschoy can connect the model.",
+    "guidedSteps": {
+      "claude_code": [
+        "Open Claude Code’s official setup guide.",
+        "Install the CLI using the on-page instructions.",
+        "Return here and choose “I already installed it — check again”."
+      ],
+      "pi": [
+        "Open Pi’s official repository instructions and install the CLI.",
+        "Close the terminal when the install finishes.",
+        "Return here and choose “I already installed it — check again”."
+      ],
+      "dsh_web": [
+        "Open the DeepSeek Harness docs and install the CLI and web dependencies.",
+        "Launch DSH web once to confirm it runs locally.",
+        "Return here and choose “I already installed it — check again”."
+      ],
+      "dsh_desktop": [
+        "Download and install DeepSeek Harness Desktop from the official site.",
+        "Open the app once and complete any system prompts.",
+        "Return here and choose “I already installed it — check again”."
+      ],
+      "workbuddy": [
+        "Download and install WorkBuddy from the official site.",
+        "Open WorkBuddy once after install.",
+        "Return here and choose “I already installed it — check again”."
+      ]
+    },
     "confirmAndConnect": "Check and continue",
     "confirmInstall": "Check the result",
     "recheckApp": "Check the app again",
