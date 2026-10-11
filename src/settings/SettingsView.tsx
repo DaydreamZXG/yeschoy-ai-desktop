@@ -8,6 +8,8 @@ import { QuitAssistant } from "./QuitAssistant";
 import { UpdateSettingsCard } from "../update/UpdateSettingsCard";
 import { AdvancedConnectionDetails } from "./AdvancedConnectionDetails";
 import { LanguagePicker } from "../i18n/LanguagePicker";
+import { isOfficialDistribution } from "../distribution/identity";
+import { REFERENCE_STATION_ORIGIN } from "../distribution/softTraffic";
 
 interface SettingsViewProps {
   onOpenAccount: () => void;
@@ -60,6 +62,14 @@ export function SettingsView({
         {/* 语言和外观是同一类偏好：只存在这台电脑上、马上生效、随时改回去。
             放一起，用户找一次就都看见了。 */}
         <LanguagePicker />
+
+        {!isOfficialDistribution() && (
+          <p className="oss-reference-line" data-testid="oss-reference-attribution">
+            <a href={REFERENCE_STATION_ORIGIN} target="_blank" rel="noreferrer">
+              {t("workbench.ossReferenceAttribution")}
+            </a>
+          </p>
+        )}
       </section>
 
       <section className="settings-ledger" aria-labelledby="security-title">

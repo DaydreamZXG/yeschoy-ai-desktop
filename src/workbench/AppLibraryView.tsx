@@ -38,6 +38,9 @@ import { ConnectionStatusNotice } from "../configuration/ConnectionStatusNotice"
 import type { SetupAction } from "../configuration/setupIntent";
 import { useWorkbenchCopy } from "./copy";
 import { Users } from "lucide-react";
+import { isOfficialDistribution } from "../distribution/identity";
+import { showOssSoftTraffic, showOfficialCommunityUi } from "../distribution/softTraffic";
+import { OssSoftTrafficCta } from "./OssSoftTrafficCta";
 
 interface Props {
   onOpenAccount: () => void;
@@ -396,9 +399,16 @@ export function AppLibraryView({
             <p>{c.librarySignInBody}</p>
           </div>
           <button className="primary-action" onClick={onOpenAccount}>
-            {c.librarySignInAction}
+            {isOfficialDistribution()
+              ? c.librarySignInAction
+              : c.librarySignInActionNeutral}
             <ArrowRight />
           </button>
+          {showOssSoftTraffic({
+            accountProjection: accountSession.projection,
+          }) && (
+            <OssSoftTrafficCta onTryReference={onOpenAccount} />
+          )}
         </section>
       ) : signedIn ? (
         <div className="library-heading">
@@ -642,14 +652,16 @@ export function AppLibraryView({
         <ShieldCheck />
         <span>{c.libraryFooterTrust}</span>
         <span className="library-footer-actions">
-          <button
-            type="button"
-            className="text-button join-group-link"
-            onClick={onOpenCommunity}
-          >
-            <Users aria-hidden="true" />
-            {c.joinGroup}
-          </button>
+          {showOfficialCommunityUi() && (
+            <button
+              type="button"
+              className="text-button join-group-link"
+              onClick={onOpenCommunity}
+            >
+              <Users aria-hidden="true" />
+              {c.joinGroup}
+            </button>
+          )}
           <button
             className="text-button"
             onClick={() => onOpenSetup("claude_desktop")}

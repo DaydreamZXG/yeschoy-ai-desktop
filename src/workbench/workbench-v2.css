@@ -3190,6 +3190,31 @@
 /* ———— /动效优化 ———— */
 
 /* QQ 交流群对话框：窄模态，居中展示二维码 + 群号 + 复制按钮。 */
+.oss-soft-traffic {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  color: var(--muted-foreground, #6b7280);
+}
+.oss-soft-traffic a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.oss-reference-line {
+  margin: 1rem 0 0;
+  font-size: 0.875rem;
+  color: var(--muted-foreground, #6b7280);
+}
+.oss-reference-line a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .qq-group-dialog {
   width: min(360px, calc(100vw - 32px));
   padding: var(--space-24);

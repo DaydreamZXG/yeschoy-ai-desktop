@@ -23,7 +23,12 @@ mkdirSync(`${folder}/evidence`, { recursive: true });
 const log = `${folder}/evidence/${variant}-${platform}-build.log`;
 const hash = path => createHash('sha256').update(readFileSync(path)).digest('hex');
 const save = (name, value) => writeFileSync(`${folder}/evidence/${variant}-${name}.json`, JSON.stringify(value, null, 2) + '\n');
-const env = { ...process.env, RUSTUP_TOOLCHAIN: '1.94.0', YESCHOY_AUTHORIZATION_PAGE_ORIGIN: origin };
+const env = {
+  ...process.env,
+  RUSTUP_TOOLCHAIN: '1.94.0',
+  YESCHOY_AUTHORIZATION_PAGE_ORIGIN: origin,
+  VITE_YESCHOY_DISTRIBUTION: 'official',
+};
 for (const name of ['RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'CARGO_TARGET_DIR', 'TAURI_CONFIG', 'TAURI_SIGNING_PRIVATE_KEY', 'TAURI_SIGNING_PRIVATE_KEY_PASSWORD', 'APPLE_ID', 'APPLE_PASSWORD', 'APPLE_TEAM_ID', 'APPLE_API_KEY', 'APPLE_API_ISSUER', 'APPLE_API_KEY_PATH', 'APPLE_CERTIFICATE', 'APPLE_CERTIFICATE_PASSWORD', 'APPLE_SIGNING_IDENTITY']) delete env[name];
 function run(command, args, overrides = {}, timeout = 1800000) {
   const result = spawnSync(command, args, { cwd: repo, env: { ...env, ...overrides }, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024, timeout });

@@ -2,7 +2,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import i18n from "i18next";
 import zh from "../i18n/locales/zh.json";
-import { QQGroupDialog, QQ_GROUP_ID } from "./QQGroupDialog";
+import { QQGroupDialog, QQ_GROUP_ID, CommunityGroupDialog } from "./QQGroupDialog";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 // sonner toast 在 jsdom 下直接 mock，避免等待真实 DOM
@@ -28,6 +28,17 @@ beforeAll(async () => {
 });
 
 afterEach(cleanup);
+
+describe("CommunityGroupDialog", () => {
+  it("does not render in OSS distribution builds", () => {
+    vi.stubEnv("VITE_YESCHOY_DISTRIBUTION", "oss");
+    const { container } = render(
+      <CommunityGroupDialog open onOpenChange={() => {}} />,
+    );
+    expect(container.querySelector(".qq-group-dialog")).toBeNull();
+    vi.unstubAllEnvs();
+  });
+});
 
 describe("QQGroupDialog", () => {
   it("不渲染任何东西当 closed", () => {
