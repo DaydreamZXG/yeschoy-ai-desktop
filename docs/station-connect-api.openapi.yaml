@@ -99,7 +99,7 @@ paths:
               code: abcdefghijklmnopqrstuvwxyz0123456789ABCD
               deviceId: 550e8400-e29b-41d4-a716-446655440000
               platform: macos
-              clientVersion: 0.4.30
+              clientVersion: 0.5.0
       responses:
         "200":
           description: Session bundle issued

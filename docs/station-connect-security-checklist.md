@@ -22,7 +22,7 @@ Automated coverage: `scripts/qa/station-connect-t8-security-regression.sh`.
 
 ## Explicitly out of scope (need user sign-off)
 
-- [ ] Publish GitHub Release `v0.4.30` (draft exists — download page stays on ergou until published; see [`download-page.md`](./download-page.md)).
+- [ ] Publish GitHub Release `v0.5.0` (draft exists — download page stays on ergou until published; see [`download-page.md`](./download-page.md)).
 - [ ] Production deploy of yeschoy.com connect-code issue/exchange APIs.
 - [ ] Migrating official auto-update primary feed to GitHub (ergou remains official domestic fallback only).
 
