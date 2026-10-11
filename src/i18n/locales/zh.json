@@ -379,7 +379,7 @@
     "apps": "应用接入",
     "announcements": "公告",
     "announcementsTitle": "公告",
-    "announcementsIntro": "野菜API 的最新通知：价格调整、线路变化、维护安排。",
+    "announcementsIntro": "当前连接站点发布的通知：价格调整、维护与活动说明。",
     "announcementsEmpty": "暂时没有新公告。",
     "announcementsFailed": "暂时读不到公告，不影响你正常使用。稍后再看看。",
     "announcementsRetry": "重新读取",

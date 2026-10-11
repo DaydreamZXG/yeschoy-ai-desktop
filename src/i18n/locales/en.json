@@ -379,7 +379,7 @@
     "apps": "Connect an app",
     "announcements": "Announcements",
     "announcementsTitle": "Announcements",
-    "announcementsIntro": "The latest from Yeschoy: price changes, route changes, maintenance.",
+    "announcementsIntro": "Notices from your connected station: pricing, maintenance, and campaigns.",
     "announcementsEmpty": "Nothing new right now.",
     "announcementsFailed": "Can't load announcements at the moment. Everything else still works — try again later.",
     "announcementsRetry": "Load again",

@@ -29,6 +29,8 @@ const CODE_TTL_SECS: i64 = 300;
 const SESSION_COOKIE: &str = "yeschoy_desktop_session";
 const ISSUE_PATH: &str = "/api/desktop/v2/connect-codes";
 const EXCHANGE_PATH: &str = "/api/desktop/v2/connect-codes/exchange";
+const BOOTSTRAP_PATH: &str = "/api/desktop/v2/bootstrap";
+const NOTICES_PATH: &str = "/api/desktop/v2/notices";
 const MIN_CODE_LEN: usize = 32;
 
 #[derive(Clone)]
@@ -98,6 +100,8 @@ async fn main() {
     let app = Router::new()
         .route("/", get(harness_page))
         .route("/mock/login", post(mock_login))
+        .route(BOOTSTRAP_PATH, get(bootstrap))
+        .route(NOTICES_PATH, get(notices))
         .route(ISSUE_PATH, post(issue_code))
         .route(EXCHANGE_PATH, post(exchange_code))
         .layer(cors)
@@ -113,6 +117,77 @@ async fn main() {
 
 async fn harness_page() -> Html<&'static str> {
     Html(HARNESS_HTML)
+}
+
+async fn bootstrap(headers: HeaderMap) -> Response {
+    let origin = match origin_from_request_host(&headers) {
+        Ok(origin) => origin,
+        Err(code) => return api_error(StatusCode::BAD_REQUEST, code),
+    };
+    api_success(mock_bootstrap_payload(&origin))
+}
+
+async fn notices(headers: HeaderMap) -> Response {
+    if !bearer_present(&headers) {
+        return api_error(StatusCode::UNAUTHORIZED, "session_required");
+    }
+    let origin = match origin_from_request_host(&headers) {
+        Ok(origin) => origin,
+        Err(code) => return api_error(StatusCode::BAD_REQUEST, code),
+    };
+    let now_ms = now_epoch() as u64 * 1000;
+    api_success(json!({
+        "notices": [{
+            "id": "mock-station-welcome",
+            "title": "Station announcements (mock)",
+            "body": "This notice is served from the connected station origin, not hardcoded in the desktop OSS build.",
+            "severity": "info",
+            "publishedAtEpochMs": now_ms,
+            "expiresAtEpochMs": 0,
+            "banner": true,
+            "action": {
+                "kind": "link",
+                "label": "Open site",
+                "url": format!("{origin}/")
+            }
+        }]
+    }))
+}
+
+fn bearer_present(headers: &HeaderMap) -> bool {
+    headers
+        .get(header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|value| value.starts_with("Bearer ") && value.len() > 10)
+}
+
+fn mock_bootstrap_payload(origin: &str) -> serde_json::Value {
+    json!({
+        "schema_version": 2,
+        "service": "yeschoy-desktop",
+        "contract_id": "desktop-integration-v2",
+        "minimum_client_version": "0.0.1",
+        "device_authorization_available": false,
+        "oauth_loopback_pkce_available": false,
+        "account_read": true,
+        "usage_read": true,
+        "models_read": true,
+        "pricing_read": true,
+        "tool_keys_manage": true,
+        "official_usd_cny_rate": 7.0,
+        "authorization_start_path": "/api/desktop/v2/device-authorizations",
+        "authorization_token_path": "/api/desktop/v2/device-authorizations/token",
+        "session_refresh_path": "/api/desktop/v2/sessions/refresh",
+        "session_logout_path": "/api/desktop/v2/sessions/current",
+        "account_path": "/api/user/self",
+        "usage_summary_path": "/api/log/self/stat",
+        "usage_records_path": "/api/log/self",
+        "models_path": "/api/user/models",
+        "pricing_path": "/api/pricing",
+        "tool_keys_path": "/api/token/",
+        "wallet_url": format!("{origin}/wallet/"),
+        "announcements_path": NOTICES_PATH
+    })
 }
 
 async fn mock_login(jar: CookieJar) -> impl IntoResponse {
