@@ -37,7 +37,8 @@ import { InstallationNotice } from "./installation/InstallationPanel";
 import { UpdateProvider } from "./update/UpdateProvider";
 import { UpdateNotice } from "./update/UpdateNotice";
 import { useAccountSession } from "./account/useAccountSession";
-import type { ConfigurationLineId } from "./configuration/preview";
+import { useStationConnect } from "./account/useStationConnect";
+import type { AccountLineId } from "./configuration/preview";
 import {
   TOOL_CATALOG,
   decodeScan,
@@ -78,7 +79,7 @@ function App() {
   }, []);
   const [phase, setPhase] = useState<ViewPhase>("default");
   const [accountLineId, setAccountLineId] =
-    useState<ConfigurationLineId>("mainland_optimized");
+    useState<AccountLineId>("mainland_optimized");
   const [communityOpen, setCommunityOpen] = useState(false);
   const [announcements, setAnnouncements] = useState<{
     available: boolean;
@@ -87,6 +88,11 @@ function App() {
     failed: boolean;
   }>({ available: false, notices: [], loading: false, failed: false });
   const accountSession = useAccountSession(accountLineId);
+  useStationConnect({
+    lineId: accountLineId,
+    onLineChange: setAccountLineId,
+    refresh: accountSession.refresh,
+  });
   const [scan, setScan] = useState<ScanResponse | null>(null);
   const latestRequestRef = useRef("");
   const requestSequenceRef = useRef(0);

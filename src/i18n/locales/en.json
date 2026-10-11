@@ -1201,5 +1201,42 @@
       "bundled_copy": "That's a copy bundled inside another app. Choose the {{name}} you installed separately.",
       "unsupported_platform": "Choosing a location isn't supported on this system yet."
     }
+  },
+  "stationConnect": {
+    "connecting": "Connecting from the website…",
+    "signedIn": "Account connected — you can set up apps.",
+    "failed": "Website connection did not finish",
+    "failedRecoverable": "Website connection did not finish — you can retry",
+    "failedGeneric": "Check your network or click Open Desktop Assistant on the website again.",
+    "inspectRetry": "Sign-in saved — syncing account data",
+    "inspectRetryBody": "If the sidebar still doesn't show signed in, use Refresh or try again shortly.",
+    "loopbackSignIn": "Sign in in browser",
+    "loopbackSignInHint": "Fallback when the site cannot open the desktop app via a link.",
+    "reason": {
+      "connect_loopback_unavailable": "Browser sign-in is not available for this site yet.",
+      "connect_loopback_expired": "Browser sign-in timed out. Try again.",
+      "connect_loopback_cancelled": "Browser sign-in was cancelled.",
+      "connect_loopback_busy": "Another browser sign-in is already in progress.",
+      "connect_oauth_denied": "Sign-in was denied in the browser.",
+      "connect_browser_open_failed": "Could not open the system browser.",
+      "connect_invalid_response": "The site returned invalid sign-in data.",
+      "connect_exchange_disabled": "Connect exchange is disabled in this build. Update the app.",
+      "connect_origin_not_acceptable": "The site address in the link isn't valid.",
+      "connect_code_invalid": "The connect code isn't valid. Request a new one on the website.",
+      "connect_deep_link_invalid": "The link is missing parameters. Click the button on the website again.",
+      "connect_deep_link_malformed": "The connect link isn't formatted correctly.",
+      "connect_network_error": "Can't reach the site right now. Check your network and retry.",
+      "connect_network_timeout": "Connecting to the site timed out. Try again later.",
+      "connect_code_expired": "The connect code expired. Request a new one on the website.",
+      "connect_code_already_used": "This connect code was already used. Request a new one.",
+      "connect_origin_mismatch": "The site doesn't match the code. Start again on the website.",
+      "connect_server_rejected": "The site rejected this connection. Try again later.",
+      "connect_auth_contract": "The site returned invalid sign-in data.",
+      "connect_secure_storage_unavailable": "Secure storage isn't available, so sign-in couldn't be saved.",
+      "network_error": "Can't reach account services. Check your network and retry.",
+      "backend_unavailable": "Account services are unavailable. Refresh in a moment.",
+      "invalid_response": "Account data couldn't be loaded. Refresh to retry.",
+      "session_expired": "Sign-in expired. Connect again from the website."
+    }
   }
 }

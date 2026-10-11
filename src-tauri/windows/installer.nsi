@@ -81,6 +81,11 @@ Section "安装野菜API" SEC_MAIN
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop" "UninstallString" '"$INSTDIR\卸载野菜API.exe"'
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop" "NoModify" 1
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop" "NoRepair" 1
+  ; Station connect deep link (mirrors WiX deep_link_protocols registration).
+  WriteRegStr HKCU "Software\Classes\yeschoy" "" "URL:yeschoy protocol"
+  WriteRegStr HKCU "Software\Classes\yeschoy" "URL Protocol" ""
+  WriteRegStr HKCU "Software\Classes\yeschoy\DefaultIcon" "" "$INSTDIR\野菜API.exe,0"
+  WriteRegStr HKCU "Software\Classes\yeschoy\shell\open\command" "" '"$INSTDIR\野菜API.exe" "%1"'
   CreateDirectory "$SMPROGRAMS\野菜API"
   CreateShortcut "$SMPROGRAMS\野菜API\野菜API.lnk" "$INSTDIR\野菜API.exe" "" "$INSTDIR\野菜API.exe" 0
   CreateShortcut "$SMPROGRAMS\野菜API\卸载野菜API.lnk" "$INSTDIR\卸载野菜API.exe"
@@ -117,4 +122,5 @@ Section "Uninstall"
   RMDir "$INSTDIR"
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop"
   DeleteRegKey HKCU "Software\野菜API"
+  DeleteRegKey HKCU "Software\Classes\yeschoy"
 SectionEnd

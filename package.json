@@ -9,11 +9,12 @@
     "tauri": "tauri",
     "dev:renderer": "vite --host 127.0.0.1 --port 1420",
     "build:renderer": "vite build",
+    "build:connect": "vite build --config connect/vite.config.mjs",
     "build:candidate": "pnpm tauri build --config src-tauri/tauri.candidate.conf.json",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
-    "test:unit": "vitest run --dir src --exclude 'release/**' --exclude 'work/**' --exclude 'tests/**'",
+    "test:unit": "vitest run --dir src --dir connect --exclude 'release/**' --exclude 'work/**' --exclude 'tests/**'",
     "test:unit:watch": "vitest watch",
     "verify:catalog": "node scripts/qa/verify-model-catalog.mjs"
   },

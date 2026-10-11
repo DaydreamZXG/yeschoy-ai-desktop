@@ -11,6 +11,41 @@ export type ConfigurationToolId =
 
 export type ConfigurationLineId = "mainland_optimized" | "global_accelerated";
 
+export const STATION_CONNECT_LINE_PREFIX = "station_connect:";
+
+export type StationConnectLineId = `${typeof STATION_CONNECT_LINE_PREFIX}${string}`;
+
+/** Catalog lines plus deep-link station sessions (account inspect / activation). */
+export type AccountLineId = ConfigurationLineId | StationConnectLineId;
+
+export function isStationConnectLineId(
+  lineId: string,
+): lineId is StationConnectLineId {
+  return lineId.startsWith(STATION_CONNECT_LINE_PREFIX);
+}
+
+export function isAccountLineId(lineId: string): lineId is AccountLineId {
+  return (
+    lineId === "mainland_optimized" ||
+    lineId === "global_accelerated" ||
+    isStationConnectLineId(lineId)
+  );
+}
+
+/** Preview UI only knows catalog lines; map station sessions to the closest root. */
+export function catalogLineForPreview(lineId: AccountLineId): ConfigurationLineId {
+  if (lineId === "mainland_optimized" || lineId === "global_accelerated") {
+    return lineId;
+  }
+  if (lineId === "station_connect:https://yeschoy.com") {
+    return "mainland_optimized";
+  }
+  if (lineId === "station_connect:https://api.yeschoy.com") {
+    return "global_accelerated";
+  }
+  return "mainland_optimized";
+}
+
 export interface ConfigurationToolDefinition {
   id: ConfigurationToolId;
   displayName: string;

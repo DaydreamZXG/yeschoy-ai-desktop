@@ -11,7 +11,12 @@ import {
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
-import type { ConfigurationLineId } from "../configuration/preview";
+import {
+  isStationConnectLineId,
+  type AccountLineId,
+  type ConfigurationLineId,
+} from "../configuration/preview";
+import { beginStationConnectLoopbackOauth, fetchStationConnectLoopbackCapabilities } from "../account/stationConnectLoopback";
 import { creditUnit, formatMoney } from "../account/finance";
 import { aggregateUsage, type UsageRecord } from "../account/usage";
 import { UsageTrend } from "./UsageTrend";
@@ -39,13 +44,17 @@ export function AccountView({
   onLineChange,
   session,
 }: {
-  lineId: ConfigurationLineId;
+  lineId: AccountLineId;
   onLineChange: (lineId: ConfigurationLineId) => void;
   session: AccountSessionController;
 }) {
   const c = useWorkbenchCopy();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [logoutPrompt, setLogoutPrompt] = useState(false);
+  const [loopbackOauth, setLoopbackOauth] = useState({
+    loading: false,
+    available: false,
+  });
   // 数字、金额、时间都跟着界面语言走。以前写死 `zh-CN`，英文界面上的
   // 累计请求会显示成「12万」而不是「120K」。
   const locale = i18n.language;
@@ -61,6 +70,21 @@ export function AccountView({
   } = session;
   const signedIn = projection?.status === "signed_in";
   const pending = projection?.status === "authorization_pending";
+  useEffect(() => {
+    if (!isStationConnectLineId(lineId) || signedIn || pending) {
+      setLoopbackOauth({ loading: false, available: false });
+      return;
+    }
+    setLoopbackOauth({ loading: true, available: false });
+    void fetchStationConnectLoopbackCapabilities(lineId)
+      .then((capabilities) =>
+        setLoopbackOauth({
+          loading: false,
+          available: capabilities.available,
+        }),
+      )
+      .catch(() => setLoopbackOauth({ loading: false, available: false }));
+  }, [lineId, signedIn, pending]);
   const account = projection?.account;
   const money = signedIn ? projection.money : undefined;
   // 余额读没读到，决定主角位置显示数字还是显示一句说明。
@@ -619,6 +643,16 @@ export function AccountView({
                 {c.signIn}
                 <ArrowUpRight aria-hidden="true" />
               </button>
+              {loopbackOauth.available && (
+                <button
+                  type="button"
+                  className="secondary-action"
+                  onClick={() => void beginStationConnectLoopbackOauth(lineId)}
+                  disabled={signInDisabled || loopbackOauth.loading}
+                >
+                  {t("stationConnect.loopbackSignIn")}
+                </button>
+              )}
               {reason && (
                 <button
                   type="button"

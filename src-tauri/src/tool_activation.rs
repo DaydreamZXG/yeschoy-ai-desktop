@@ -15,9 +15,11 @@ use tauri::Emitter;
 
 use crate::{
     account_v2::{
-        ensure_session_epoch, native_account_json, native_session_access, native_session_epoch,
+        account_request_line_id_is_valid, ensure_session_epoch, native_account_json,
+        native_session_access, native_session_epoch, station_connect_origin_from_line_id,
         AccountV2State, NativeSessionFailure,
     },
+    station_connect::connect_origin_is_acceptable,
     claude_bridge::ClaudeTransport,
     connection_recovery::{self, Receipt, Store},
     connectivity_core::request_id_is_valid,
@@ -382,12 +384,15 @@ fn bounded_plain_text(value: &str, maximum: usize) -> bool {
         })
 }
 
+fn activation_line_id_is_valid(line_id: &str) -> bool {
+    matches!(line_id, "mainland_optimized" | "global_accelerated")
+        || station_connect_origin_from_line_id(line_id)
+            .is_some_and(|origin| connect_origin_is_acceptable(origin).is_some())
+}
+
 fn request_is_valid(request: &ToolActivationRequest) -> bool {
     request_id_is_valid(&request.request_id)
-        && matches!(
-            request.line_id.as_str(),
-            "mainland_optimized" | "global_accelerated"
-        )
+        && activation_line_id_is_valid(&request.line_id)
         && matches!(
             request.tool_id.as_str(),
             "claude_code"
@@ -5060,6 +5065,25 @@ mod tests {
         let comma = json!({"requestId":"fixture", "lineId":"mainland_optimized", "toolId":"pi", "modelId":"model,a", "billingGroup":"default", "installationId":"i0123456789abcdef"});
         let comma: ToolActivationRequest = serde_json::from_value(comma).unwrap();
         assert!(!request_is_valid(&comma));
+    }
+
+    #[test]
+    fn activation_accepts_station_connect_line_ids() {
+        let mut valid = ToolActivationRequest {
+            request_id: "activation-1".into(),
+            line_id: "station_connect:https://example.com".into(),
+            tool_id: "pi".into(),
+            model_id: "glm-5.3".into(),
+            installation_id: "i0123456789abcdef".into(),
+            billing_group: "default".into(),
+            models: None,
+            installation_job_id: None,
+            restart_running_app: false,
+            displace_claude_login: false,
+        };
+        assert!(request_is_valid(&valid));
+        valid.line_id = "station_connect:http://example.com".into();
+        assert!(!request_is_valid(&valid));
     }
 
     #[test]

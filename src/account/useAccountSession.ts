@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ConfigurationLineId } from "../configuration/preview";
+import type { AccountLineId } from "../configuration/preview";
 import {
   clearSessionAgeRecord,
   noteSessionActivity,
@@ -49,7 +49,7 @@ function waitForRetry(delayMs: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, delayMs));
 }
 
-export function useAccountSession(lineId: ConfigurationLineId) {
+export function useAccountSession(lineId: AccountLineId) {
   const [projection, setProjection] = useState<AccountProjection | null>(null);
   const [loading, setLoading] = useState(true);
   const [lastError, setLastError] = useState<string | null>(null);

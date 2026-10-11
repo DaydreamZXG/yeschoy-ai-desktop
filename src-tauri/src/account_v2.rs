@@ -216,11 +216,20 @@ impl AccountProjection {
         projection.expires_at_epoch_ms = pending.expires_at_epoch_ms;
         projection
     }
+
+    pub(crate) fn is_signed_in(&self) -> bool {
+        self.status == "signed_in"
+    }
+
+    pub(crate) fn reason_code(&self) -> &'static str {
+        self.reason_code
+    }
 }
 
 #[derive(Clone)]
-struct DesktopBootstrap {
+pub(crate) struct DesktopBootstrap {
     device_authorization_available: bool,
+    oauth_loopback_pkce_available: bool,
     origin: String,
     wallet_url: String,
     /// Empty until the server advertises it. The announcements view is the
@@ -252,6 +261,8 @@ struct BootstrapData {
     contract_id: String,
     minimum_client_version: String,
     device_authorization_available: bool,
+    #[serde(default)]
+    oauth_loopback_pkce_available: bool,
     account_read: bool,
     usage_read: bool,
     models_read: bool,
@@ -350,8 +361,39 @@ fn line_origin(line_id: &str) -> Option<&'static str> {
         .map(|line| line.root_url)
 }
 
+pub(crate) fn account_request_line_id_is_valid(line_id: &str) -> bool {
+    line_origin(line_id).is_some() || station_connect_origin_from_line_id(line_id).is_some()
+}
+
+fn persisted_session_line_id(line_id: &str) -> bool {
+    account_request_line_id_is_valid(line_id)
+}
+
+pub(crate) fn account_line_origin(line_id: &str) -> Option<String> {
+    line_origin(line_id)
+        .map(str::to_owned)
+        .or_else(|| station_connect_origin_from_line_id(line_id).map(str::to_owned))
+}
+
 fn request_is_valid(request: &AccountRequest) -> bool {
-    request_id_is_valid(&request.request_id) && line_origin(&request.line_id).is_some()
+    request_id_is_valid(&request.request_id)
+        && account_request_line_id_is_valid(&request.line_id)
+}
+
+/// After station connect installs credentials, project the same signed-in state
+/// as a successful device-code poll (preview / activation entry point).
+pub(crate) async fn account_project_line_after_connect(
+    state: &AccountV2State,
+    line_id: &str,
+) -> Result<AccountProjection, AccountProjectionFailure> {
+    if !account_request_line_id_is_valid(line_id) {
+        return Err(AccountProjectionFailure::InvalidRequest);
+    }
+    let request = AccountRequest {
+        request_id: format!("station-connect-{}", now_epoch_ms()),
+        line_id: line_id.to_owned(),
+    };
+    inspect_inner(state, &request).await
 }
 
 async fn read_body(mut response: reqwest::Response) -> Result<JsonResponse, TransportFailure> {
@@ -429,7 +471,8 @@ async fn fetch_bootstrap(line_id: &str) -> Result<DesktopBootstrap, AccountProje
 }
 
 async fn fetch_bootstrap_read(line_id: &str) -> Result<DesktopBootstrap, AccountProjectionFailure> {
-    let origin = line_origin(line_id).ok_or(AccountProjectionFailure::InvalidRequest)?;
+    let origin =
+        account_line_origin(line_id).ok_or(AccountProjectionFailure::InvalidRequest)?;
     let response = send_json(
         Method::GET,
         &format!("{origin}/api/desktop/v2/bootstrap"),
@@ -492,6 +535,7 @@ async fn fetch_bootstrap_read(line_id: &str) -> Result<DesktopBootstrap, Account
     }
     Ok(DesktopBootstrap {
         device_authorization_available: data.device_authorization_available,
+        oauth_loopback_pkce_available: data.oauth_loopback_pkce_available,
         origin: origin.to_owned(),
         wallet_url: data.wallet_url,
         // A path we would fetch from the relay origin, so it has to be a
@@ -597,7 +641,7 @@ fn user_code_is_valid(value: &str) -> bool {
 }
 
 #[cfg(target_os = "macos")]
-fn open_system_browser(url: &str) -> Result<(), ()> {
+pub(crate) fn open_system_browser(url: &str) -> Result<(), ()> {
     Command::new("/usr/bin/open")
         .arg(url)
         .spawn()
@@ -606,7 +650,7 @@ fn open_system_browser(url: &str) -> Result<(), ()> {
 }
 
 #[cfg(target_os = "windows")]
-fn open_system_browser(url: &str) -> Result<(), ()> {
+pub(crate) fn open_system_browser(url: &str) -> Result<(), ()> {
     use windows::{
         core::PCWSTR,
         Win32::UI::{Shell::ShellExecuteW, WindowsAndMessaging::SW_SHOWNORMAL},
@@ -638,8 +682,22 @@ fn open_system_browser(url: &str) -> Result<(), ()> {
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
-fn open_system_browser(_url: &str) -> Result<(), ()> {
+pub(crate) fn open_system_browser(_url: &str) -> Result<(), ()> {
     Err(())
+}
+
+pub(crate) async fn fetch_desktop_bootstrap(
+    line_id: &str,
+) -> Result<DesktopBootstrap, AccountProjectionFailure> {
+    fetch_bootstrap(line_id).await
+}
+
+pub(crate) fn loopback_oauth_enabled_for_bootstrap(bootstrap: &DesktopBootstrap) -> bool {
+    match std::env::var("YESCHOY_LOOPBACK_OAUTH") {
+        Ok(value) if matches!(value.as_str(), "0" | "false" | "FALSE" | "no" | "NO") => false,
+        Ok(value) if matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES") => true,
+        _ => bootstrap.oauth_loopback_pkce_available,
+    }
 }
 
 fn keyring_entry() -> Result<Entry, ()> {
@@ -745,7 +803,7 @@ fn install_failure(failure: InstallFailure) -> AccountProjectionFailure {
 }
 
 #[derive(Debug)]
-enum AccountProjectionFailure {
+pub(crate) enum AccountProjectionFailure {
     InvalidRequest,
     Transport(TransportFailure),
     BackendUnavailable,
@@ -753,6 +811,20 @@ enum AccountProjectionFailure {
     SecureStorage,
     SessionExpired,
     InvalidResponse,
+}
+
+pub(crate) fn station_connect_projection_failure_reason(
+    failure: AccountProjectionFailure,
+) -> (&'static str, bool) {
+    match failure {
+        AccountProjectionFailure::SessionExpired => ("session_expired", true),
+        AccountProjectionFailure::SecureStorage => ("secure_storage_unavailable", false),
+        AccountProjectionFailure::BackendUnavailable => ("backend_unavailable", true),
+        AccountProjectionFailure::IncompatibleServer => ("incompatible_server", true),
+        AccountProjectionFailure::Transport(_) => ("network_error", true),
+        AccountProjectionFailure::InvalidResponse => ("invalid_response", true),
+        AccountProjectionFailure::InvalidRequest => ("invalid_account_request", false),
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -841,6 +913,71 @@ pub(crate) fn has_stored_session() -> bool {
     matches!(load_stored_session(), Ok(Some(_)))
 }
 
+const STATION_CONNECT_LINE_PREFIX: &str = "station_connect:";
+
+/// Maps a connect deep-link origin to the persisted `line_id`. Known 野菜 lines
+/// reuse the connectivity catalog; other HTTPS stations use a stable synthetic id
+/// until bootstrap-by-origin lands in a later task.
+pub(crate) fn line_id_for_station_connect_origin(origin: &str) -> String {
+    crate::request_diagnostics::line_for_origin(origin)
+        .map(str::to_owned)
+        .unwrap_or_else(|| format!("{STATION_CONNECT_LINE_PREFIX}{origin}"))
+}
+
+pub(crate) fn station_connect_origin_from_line_id(line_id: &str) -> Option<&str> {
+    line_id.strip_prefix(STATION_CONNECT_LINE_PREFIX)
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct StationConnectAuthBundle {
+    pub(crate) access_token: String,
+    pub(crate) token_type: String,
+    pub(crate) access_expires_at: i64,
+    pub(crate) refresh_token: String,
+    pub(crate) refresh_expires_at: i64,
+    pub(crate) session_id: String,
+}
+
+/// Install credentials from a station connect exchange (no pending device-code step).
+pub(crate) fn install_station_connect_session(
+    state: &AccountV2State,
+    line_id: &str,
+    bundle: StationConnectAuthBundle,
+) -> Result<(), &'static str> {
+    let mut runtime = state.runtime.lock().map_err(|_| "connect_secure_storage_unavailable")?;
+    if bundle.token_type != "Bearer"
+        || bundle.access_token.len() < 32
+        || bundle.refresh_token.len() < 32
+        || bundle.session_id.is_empty()
+        || bundle.access_expires_at <= now_epoch_seconds()
+        || bundle.refresh_expires_at <= bundle.access_expires_at
+    {
+        log::warn!("account stage=station_connect_bundle_rejected reason=contract");
+        return Err("connect_auth_contract");
+    }
+    let stored = StoredSession {
+        line_id: line_id.to_owned(),
+        refresh_token: bundle.refresh_token,
+        session_id: bundle.session_id,
+        refresh_expires_at: bundle.refresh_expires_at,
+    };
+    save_stored_session(&stored).map_err(|_| {
+        log::warn!(
+            "account stage=station_connect_session_store_failed bytes={}",
+            payload_len(&stored)
+        );
+        "connect_secure_storage_unavailable"
+    })?;
+    runtime.authorization_epoch += 1;
+    runtime.access = Some(AccessSession {
+        access_token: bundle.access_token,
+        access_expires_at: bundle.access_expires_at,
+    });
+    runtime.pending = None;
+    Ok(())
+}
+
 pub(crate) enum ProbeSessionFailure {
     SignedOut,
     SecureStorage,
@@ -863,8 +1000,8 @@ pub(crate) async fn native_probe_access(
     let Some(stored) = stored else {
         return Err(ProbeSessionFailure::SignedOut);
     };
-    let line_id = if line_origin(&stored.line_id).is_some() {
-        stored.line_id
+    let line_id = if persisted_session_line_id(&stored.line_id) {
+        stored.line_id.clone()
     } else {
         CONNECTIVITY_LINES[0].line_id.to_owned()
     };
@@ -965,7 +1102,7 @@ async fn refresh_access(
     // acceleration route. Refresh through the route that issued the session,
     // then use the short-lived access token with whichever route the user is
     // viewing. This keeps a mainland/global switch from looking like logout.
-    let refresh_line_id = if line_origin(&stored.line_id).is_some() {
+    let refresh_line_id = if persisted_session_line_id(&stored.line_id) {
         stored.line_id.clone()
     } else {
         line_id.to_owned()
@@ -2567,6 +2704,27 @@ mod tests {
             "https://yeschoy.com/desktop-authorize?user_code=ABCD-2345&next=x",
             "ABCD-2345"
         ));
+    }
+
+    #[test]
+    fn station_connect_line_id_maps_catalog_and_synthetic_origins() {
+        assert_eq!(
+            line_id_for_station_connect_origin("https://yeschoy.com"),
+            "mainland_optimized"
+        );
+        assert_eq!(
+            line_id_for_station_connect_origin("https://example.com"),
+            "station_connect:https://example.com"
+        );
+        assert_eq!(
+            station_connect_origin_from_line_id("station_connect:https://example.com"),
+            Some("https://example.com")
+        );
+        assert!(account_request_line_id_is_valid("station_connect:https://example.com"));
+        assert_eq!(
+            account_line_origin("station_connect:https://example.com"),
+            Some("https://example.com".to_owned())
+        );
     }
 
     #[test]

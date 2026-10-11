@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { ConfigurationLineId } from "../configuration/preview";
+import type { AccountLineId } from "../configuration/preview";
 import {
   isAccountMoney,
   isRecentSavings,
@@ -462,7 +462,7 @@ export function nextAccountRequestId(prefix = "account"): string {
 
 export async function runAccountCommand(
   command: AccountCommand,
-  lineId: ConfigurationLineId,
+  lineId: AccountLineId,
 ): Promise<AccountProjection> {
   const requestId = nextAccountRequestId();
   const raw = await invoke<unknown>(command, {
@@ -474,7 +474,7 @@ export async function runAccountCommand(
 }
 
 export async function openAccountWallet(
-  lineId: ConfigurationLineId,
+  lineId: AccountLineId,
 ): Promise<void> {
   const requestId = nextAccountRequestId("wallet");
   await invoke("account_open_wallet_v2", {

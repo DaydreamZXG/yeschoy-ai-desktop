@@ -36,13 +36,15 @@ mod update_channel;
 // Client-first OAuth preparation. Deliberately dormant until the server and
 // local-bridge bearer/billing contract are deployed and integration-tested.
 mod exit_restore;
-#[allow(dead_code)]
 mod oauth_pkce;
 mod request_diagnostics;
 mod service_catalog;
 mod service_catalog_core;
 mod shell_environment;
 mod shutdown_coordinator;
+mod station_connect;
+mod station_connect_exchange;
+mod station_connect_loopback;
 mod token_estimate;
 mod tool_activation;
 mod tool_adapters;
@@ -87,17 +89,17 @@ pub fn run() {
         // second instance would only duplicate the UI. Register this before
         // every other plugin so the existing process stays the sole runtime
         // owner and a second launch just focuses the existing window.
+        // The `deep-link` feature on single-instance forwards argv to
+        // `tauri-plugin-deep-link` before this callback; do not ignore `_args`.
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.unminimize();
-                let _ = window.show();
-                let _ = window.set_focus();
-            }
+            focus_main_webview(app);
         }));
     }
     let app = builder
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(account_v2::AccountV2State::default())
+        .manage(station_connect_loopback::StationConnectLoopbackState::default())
         .manage(app_installation::AppInstallationState::default())
         .manage(app_update::AppUpdateState::default())
         .manage(tool_activation::ActivationOperationState::default())
@@ -128,6 +130,10 @@ pub fn run() {
         })
         .setup(move |app| {
             window_appearance::initialize(app)?;
+            #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
+            if let Err(error) = station_connect::wire_station_connect_deep_link(app.handle()) {
+                log::warn!("station_connect stage=wire_deep_link_failed error={error}");
+            }
             register_runtime_stops(app.handle())?;
             #[cfg(target_os = "windows")]
             register_installer_shutdown_listener(app.handle().clone())?;
@@ -209,7 +215,10 @@ pub fn run() {
             ui_language::set_ui_language_v1,
             connectivity::check_line_connectivity_read_only,
             service_catalog::read_public_service_catalog,
-            config_reveal::open_config_folder
+            config_reveal::open_config_folder,
+            station_connect_loopback::station_connect_loopback_capabilities_v1,
+            station_connect_loopback::station_connect_begin_loopback_oauth_v1,
+            station_connect_loopback::station_connect_cancel_loopback_oauth_v1
         ])
         .build(tauri::generate_context!())
         .expect("failed to run the 野菜API desktop shell");
@@ -236,6 +245,14 @@ pub fn run() {
             }
         }
     });
+}
+
+fn focus_main_webview<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
 }
 
 fn register_runtime_stops(app: &tauri::AppHandle) -> Result<(), std::io::Error> {
