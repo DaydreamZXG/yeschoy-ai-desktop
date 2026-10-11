@@ -54,8 +54,11 @@ Naming may vary per station; YesChoy reference implementation targets:
 |--------|--------|----------------|
 | Issue code (browser session) | `POST` | `/api/desktop/v2/connect-codes` |
 | Exchange code (desktop) | `POST` | `/api/desktop/v2/connect-codes/exchange` |
+| Desktop bootstrap (session capabilities) | `GET` | `/api/desktop/v2/bootstrap` |
+| Optional in-app announcements | `GET` | path from bootstrap `announcements_path` (e.g. `/api/desktop/v2/notices`) |
 
 Machine-readable contract: [`station-connect-api.openapi.yaml`](./station-connect-api.openapi.yaml).
+Announcements shape: [`station-announcements.md`](./station-announcements.md).
 Local mock + E2E harness: [`station-connect-e2e-mock.md`](./station-connect-e2e-mock.md).
 
 ### Issue endpoint (desktop T4)

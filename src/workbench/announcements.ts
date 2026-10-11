@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 /**
  * 公告读取。
  *
- * 服务端契约（待实现，完整说明见 `docs/announcements-contract-zh.md`）：
+ * 服务端契约（完整说明见 `docs/station-announcements.md` 与 `docs/announcements-contract-zh.md`）：
  * bootstrap 增加可选字段 `announcements_path`，形如 `/api/desktop/v2/notices`；
  * 该路径带会话令牌 GET，返回公告列表。每条公告可以带一个按钮
  * （去充值 / 打开我们自己网站上的活动页）、一个截止时间，

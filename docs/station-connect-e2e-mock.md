@@ -11,6 +11,7 @@ the yeschoy.com「打开桌面助手」button path.
 | OpenAPI (issue + exchange) | [`station-connect-api.openapi.yaml`](./station-connect-api.openapi.yaml) |
 | Deep-link protocol | [`station-connect-protocol.md`](./station-connect-protocol.md) |
 | Mock HTTP server + harness UI | [`../tools/station-connect-mock/`](../tools/station-connect-mock/) |
+| Mock bootstrap + sample notices | same mock: `GET /api/desktop/v2/bootstrap`, `GET /api/desktop/v2/notices` |
 
 ## Run the mock
 
@@ -83,6 +84,18 @@ On yeschoy.com (reference station), the button should:
 Hosted [`connect.js`](../public/connect.js) (see [`station-connect-embed.md`](./station-connect-embed.md))
 wraps steps 2–4 for third-party sites; the mock harness inlines the same flow for
 local TLS testing.
+
+## curl smoke tests (bootstrap + notices)
+
+```bash
+BASE=http://127.0.0.1:8787
+HOST=connect.localtest.me
+
+curl -s -H "Host: $HOST" "$BASE/api/desktop/v2/bootstrap" | jq '.data.announcements_path'
+
+curl -s -H "Host: $HOST" -H "Authorization: Bearer mock_access_token" \
+  "$BASE/api/desktop/v2/notices" | jq '.data.notices[0].title'
+```
 
 ## curl smoke tests (issue + exchange)
 

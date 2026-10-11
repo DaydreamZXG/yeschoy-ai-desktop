@@ -8,7 +8,9 @@
 
 ## 1. 宣告公告地址：bootstrap 加一个字段
 
-客户端登录后会请求 `GET {线路域名}/api/desktop/v2/bootstrap`，域名有两条线路：
+客户端登录后会请求 `GET {当前站点 API 域名}/api/desktop/v2/bootstrap`。域名是**当前会话所连接的站点**（内置线路或 station connect 深链接入的第三方 HTTPS 站点），不是客户端里写死的营销地址。英文总览见 [`station-announcements.md`](./station-announcements.md)。
+
+官方野菜线路示例：
 
 - `https://yeschoy.com`
 - `https://api.yeschoy.com`
@@ -100,6 +102,7 @@ Accept: application/json
   - 不带端口号，也不带用户名或密码；
   - 长度不超过 2048。
 - 可以带查询参数，例如 `?utm_source=desktop`。
+- 第三方站点：还可以使用与 bootstrap **同主机**的 `https` 链接（与当前连接的 `station-origin` 一致），便于活动页留在自有域名上。
 
 不满足上面条件的 `action`，或者 `kind` 不是这两种的，客户端会**只去掉按钮**，公告本身照常显示。按钮的目标地址只保存在客户端的原生层，界面层拿不到，所以网页内容没法利用它打开任意地址。
 

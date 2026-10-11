@@ -524,7 +524,7 @@ async fn fetch_bootstrap_read(line_id: &str) -> Result<DesktopBootstrap, Account
         Some("fx_rate")
     } else if !paths_match {
         Some("paths")
-    } else if !wallet_url_is_allowed(&data.wallet_url) {
+    } else if !wallet_url_is_allowed(&data.wallet_url, origin) {
         Some("wallet_url")
     } else {
         None
@@ -567,12 +567,37 @@ fn relative_api_path(raw: &str) -> Option<String> {
     Some(trimmed.to_owned())
 }
 
-fn wallet_url_is_allowed(raw: &str) -> bool {
+fn wallet_url_is_allowed(raw: &str, api_origin: &str) -> bool {
+    wallet_url_is_allowed_official(raw) || wallet_url_on_station_origin(raw, api_origin)
+}
+
+fn wallet_url_is_allowed_official(raw: &str) -> bool {
     let Ok(url) = Url::parse(raw) else {
         return false;
     };
     url.scheme() == "https"
         && url.host_str() == Some("yeschoy.com")
+        && url.port().is_none()
+        && url.username().is_empty()
+        && url.password().is_none()
+        && url.query().is_none()
+        && url.fragment().is_none()
+        && url.path().starts_with("/wallet")
+}
+
+/// Third-party stations connected via deep link use their own origin for wallet.
+fn wallet_url_on_station_origin(raw: &str, api_origin: &str) -> bool {
+    let Ok(station) = Url::parse(api_origin) else {
+        return false;
+    };
+    let Ok(url) = Url::parse(raw) else {
+        return false;
+    };
+    let station_host = station.host_str().unwrap_or_default();
+    let host = url.host_str().unwrap_or_default();
+    url.scheme() == "https"
+        && !station_host.is_empty()
+        && host == station_host
         && url.port().is_none()
         && url.username().is_empty()
         && url.password().is_none()
@@ -2298,22 +2323,36 @@ fn notice_text(raw: Option<&str>, maximum: usize) -> String {
         .to_owned()
 }
 
-/// Notice links may only lead to our own sites, over https, without
-/// credentials or an explicit port.
-fn notice_link_is_allowed(raw: &str) -> bool {
-    let Ok(url) = Url::parse(raw) else {
-        return false;
-    };
-    let host = url.host_str().unwrap_or_default();
+fn notice_link_url_is_safe(url: &Url, raw: &str) -> bool {
     raw.len() <= 2048
         && url.scheme() == "https"
-        && (host == "yeschoy.com" || host.ends_with(".yeschoy.com") || host == "ai.yeschoy.io")
         && url.port().is_none()
         && url.username().is_empty()
         && url.password().is_none()
 }
 
-fn notice_target(action: &Value) -> Option<(String, NoticeTarget)> {
+/// Notice links may only lead to official sites or the connected station host.
+fn notice_link_is_allowed(raw: &str, station_origin: Option<&str>) -> bool {
+    let Ok(url) = Url::parse(raw) else {
+        return false;
+    };
+    if !notice_link_url_is_safe(&url, raw) {
+        return false;
+    }
+    let host = url.host_str().unwrap_or_default();
+    if host == "yeschoy.com" || host.ends_with(".yeschoy.com") || host == "ai.yeschoy.io" {
+        return true;
+    }
+    let Some(origin) = station_origin else {
+        return false;
+    };
+    let Ok(station) = Url::parse(origin) else {
+        return false;
+    };
+    host == station.host_str().unwrap_or_default()
+}
+
+fn notice_target(action: &Value, station_origin: Option<&str>) -> Option<(String, NoticeTarget)> {
     let label = notice_text(
         action.get("label").and_then(Value::as_str),
         MAX_ACTION_LABEL,
@@ -2326,7 +2365,7 @@ fn notice_target(action: &Value) -> Option<(String, NoticeTarget)> {
         "wallet" => NoticeTarget::Wallet,
         "link" => {
             let url = action.get("url").and_then(Value::as_str)?;
-            if !notice_link_is_allowed(url) {
+            if !notice_link_is_allowed(url, station_origin) {
                 return None;
             }
             NoticeTarget::Link(url.to_owned())
@@ -2337,7 +2376,11 @@ fn notice_target(action: &Value) -> Option<(String, NoticeTarget)> {
 }
 
 /// Parse the notices still current at `now`, and what their buttons do.
-fn parse_notices(value: &Value, now: u64) -> (Vec<Notice>, BTreeMap<String, NoticeTarget>) {
+fn parse_notices(
+    value: &Value,
+    now: u64,
+    station_origin: Option<&str>,
+) -> (Vec<Notice>, BTreeMap<String, NoticeTarget>) {
     let mut targets = BTreeMap::new();
     let mut seen = BTreeSet::new();
     let notices = value
@@ -2376,7 +2419,9 @@ fn parse_notices(value: &Value, now: u64) -> (Vec<Notice>, BTreeMap<String, Noti
             if !seen.insert(id.clone()) {
                 return None;
             }
-            let action = notice.get("action").and_then(notice_target);
+            let action = notice
+                .get("action")
+                .and_then(|value| notice_target(value, station_origin));
             let action_label = match action {
                 Some((label, target)) => {
                     targets.insert(id.clone(), target);
@@ -2418,7 +2463,7 @@ fn parse_notices(value: &Value, now: u64) -> (Vec<Notice>, BTreeMap<String, Noti
 
 /// 读取服务端公告。
 ///
-/// 契约（服务端待实现，完整说明见 `docs/announcements-contract-zh.md`）：
+/// 契约（完整说明见 `docs/station-announcements.md` 与 `docs/announcements-contract-zh.md`）：
 /// bootstrap 增加可选字段 `announcements_path`，形如
 /// `/api/desktop/v2/notices`；该路径带会话令牌 GET，返回
 /// `{"success":true,"data":{"notices":[
@@ -2469,7 +2514,7 @@ pub async fn account_announcements_read_v2(
         );
         return Ok(unavailable);
     }
-    let (notices, actions) = parse_notices(&response.value, now_epoch_ms());
+    let (notices, actions) = parse_notices(&response.value, now_epoch_ms(), Some(&origin));
     if let Ok(mut runtime) = state.runtime.lock() {
         runtime.announcement_actions = actions;
     }
@@ -2513,7 +2558,8 @@ pub async fn account_announcement_action_v2(
     match target {
         NoticeTarget::Wallet => open_wallet(&state, &account.line_id).await,
         NoticeTarget::Link(url) => {
-            if !notice_link_is_allowed(&url) {
+            let station_origin = account_line_origin(&account.line_id);
+            if !notice_link_is_allowed(&url, station_origin.as_deref()) {
                 return Err("announcement_action_unavailable".into());
             }
             open_system_browser(&url).map_err(|_| "browser_open_failed".to_owned())
@@ -2548,7 +2594,8 @@ async fn open_wallet(state: &AccountV2State, line_id: &str) -> Result<(), String
     let wallet = stored
         .filter(|value| value == &bootstrap.wallet_url)
         .unwrap_or(bootstrap.wallet_url);
-    if !wallet_url_is_allowed(&wallet) {
+    let api_origin = account_line_origin(line_id).ok_or("wallet_unavailable")?;
+    if !wallet_url_is_allowed(&wallet, &api_origin) {
         return Err("wallet_unavailable".into());
     }
     if _permit.is_cancelled() {
@@ -2689,12 +2736,22 @@ mod tests {
             request_id: "account-1".into(),
             line_id: "https://attacker.invalid".into(),
         }));
-        assert!(wallet_url_is_allowed("https://yeschoy.com/wallet/"));
-        assert!(!wallet_url_is_allowed(
-            "https://yeschoy.com.attacker.invalid/wallet/"
+        assert!(wallet_url_is_allowed("https://yeschoy.com/wallet/", "https://yeschoy.com"));
+        assert!(wallet_url_is_allowed(
+            "https://connect.localtest.me/wallet/",
+            "https://connect.localtest.me"
         ));
         assert!(!wallet_url_is_allowed(
-            "https://yeschoy.com/wallet/?next=https://attacker.invalid"
+            "https://yeschoy.com.attacker.invalid/wallet/",
+            "https://yeschoy.com"
+        ));
+        assert!(!wallet_url_is_allowed(
+            "https://yeschoy.com/wallet/?next=https://attacker.invalid",
+            "https://yeschoy.com"
+        ));
+        assert!(!wallet_url_is_allowed(
+            "https://evil.example/wallet/",
+            "https://connect.localtest.me"
         ));
         assert!(authorization_url_is_allowed(
             "https://yeschoy.com/desktop-authorize?user_code=ABCD-2345",
@@ -3086,7 +3143,8 @@ mod tests {
             {"id": "recharge-1001", "title": "重复的 id"},
             {"title": "没有 id 的公告"}
         ]}});
-        let (notices, targets) = parse_notices(&payload, 1_000);
+        let (notices, targets) =
+            parse_notices(&payload, 1_000, Some("https://yeschoy.com"));
         let ids = notices.iter().map(|n| n.id.as_str()).collect::<Vec<_>>();
         assert_eq!(
             ids,
@@ -3119,13 +3177,15 @@ mod tests {
     }
 
     #[test]
-    fn notice_links_stay_on_our_own_sites() {
+    fn notice_links_stay_on_official_or_connected_station() {
+        let station = Some("https://connect.localtest.me");
         for allowed in [
             "https://yeschoy.com/events",
             "https://www.yeschoy.com/a?b=c#d",
             "https://ai.yeschoy.io/promo",
+            "https://connect.localtest.me/events/2026",
         ] {
-            assert!(notice_link_is_allowed(allowed), "{allowed}");
+            assert!(notice_link_is_allowed(allowed, station), "{allowed}");
         }
         for refused in [
             "http://yeschoy.com/events",
@@ -3133,10 +3193,27 @@ mod tests {
             "https://user:pass@yeschoy.com/",
             "https://evilyeschoy.com/",
             "https://yeschoy.io/",
+            "https://evil.example/phish",
             "file:///etc/passwd",
         ] {
-            assert!(!notice_link_is_allowed(refused), "{refused}");
+            assert!(!notice_link_is_allowed(refused, station), "{refused}");
         }
+        assert!(!notice_link_is_allowed(
+            "https://connect.localtest.me/page",
+            None
+        ));
+    }
+
+    #[test]
+    fn relative_api_path_rejects_absolute_and_traversal() {
+        assert_eq!(
+            relative_api_path("/api/desktop/v2/notices"),
+            Some("/api/desktop/v2/notices".into())
+        );
+        assert_eq!(relative_api_path(""), None);
+        assert_eq!(relative_api_path("https://evil.example/x"), None);
+        assert_eq!(relative_api_path("//evil.example/x"), None);
+        assert_eq!(relative_api_path("/api/../notices"), None);
     }
     #[test]
     fn notice_text_may_arrive_as_content() {
@@ -3145,7 +3222,7 @@ mod tests {
             {"id": "b", "title": "两个都有", "body": "正文", "content": "旧字段"},
             {"id": "c", "title": "body 是空的", "body": " ", "content": "用 content"}
         ]}});
-        let (notices, _) = parse_notices(&payload, 0);
+        let (notices, _) = parse_notices(&payload, 0, None);
         let bodies = notices.iter().map(|n| n.body.as_str()).collect::<Vec<_>>();
         assert_eq!(bodies, ["国庆**双重福利**", "正文", "用 content"]);
     }
