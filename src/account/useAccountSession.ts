@@ -51,6 +51,13 @@ function waitForRetry(delayMs: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, delayMs));
 }
 
+type ExecuteOptions = {
+  /** Do not flip `loading` — keeps station-connect welcome / sign-in quiet. */
+  silent?: boolean;
+  /** First inspect after a keyring snapshot: single attempt, no startup retries. */
+  startup?: boolean;
+};
+
 export function useAccountSession(
   lineId: AccountLineId,
   options?: {
@@ -71,10 +78,10 @@ export function useAccountSession(
   projectionRef.current = projection;
 
   const execute = useCallback(
-    async (command: AccountCommand) => {
+    async (command: AccountCommand, options?: ExecuteOptions) => {
       latest.current += 1;
       const current = latest.current;
-      setLoading(true);
+      if (!options?.silent) setLoading(true);
       if (command === "account_begin_authorization_v2") {
         authorizationLine.current = lineId;
         transientStreak.current = 0;
@@ -85,6 +92,7 @@ export function useAccountSession(
         const previous = projectionRef.current;
         const retryDelays =
           command === "account_inspect_v2" &&
+          !options?.startup &&
           (!previous || isTransientStatus(previous.status))
             ? INITIAL_INSPECTION_RETRY_DELAYS_MS
             : [];
@@ -140,7 +148,7 @@ export function useAccountSession(
         return result;
       } finally {
         if (latest.current === current) {
-          setLoading(false);
+          if (!options?.silent) setLoading(false);
           // Retry scheduling must not depend on a changed projection object:
           // transport exceptions and cached state can leave it identical.
           setPollRevision((value) => value + 1);
@@ -168,7 +176,8 @@ export function useAccountSession(
         setLastError(null);
         return;
       }
-      await execute("account_inspect_v2");
+      setLoading(false);
+      await execute("account_inspect_v2", { silent: true, startup: true });
     })();
     return () => {
       cancelled = true;
