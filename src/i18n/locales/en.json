@@ -508,6 +508,7 @@
     "accountAuthorizationDenied": "You declined this sign-in on the web page.",
     "accountAuthorizationExpired": "The code has expired. Please start the sign-in again.",
     "accountInvalidResponse": "The account data is in an unexpected shape, so it isn't shown.",
+    "accountChangeStation": "Change station / enter site URL",
     "browserOpenFailed": "Your browser didn't open. Use \"Open the sign-in page again\".",
     "priceSignInRequired": "Sign in to see the models and prices for your account.",
     "inputPrice": "Input",

@@ -317,7 +317,7 @@ afterEach(() => {
 });
 
 describe("official workbench", () => {
-  it("does not turn an unavailable account inspection into a login prompt", async () => {
+  it("still offers station URL entry when account inspection is unavailable", async () => {
     mockNativeByCommand((command, args) => {
       const request = (args as Args).request;
       if (command === "account_inspect_v2")
@@ -329,10 +329,11 @@ describe("official workbench", () => {
       await screen.findByText("暂时无法获取账户状态，请重试。"),
     ).toBeInTheDocument();
     const home = screen.getByTestId("candidate-home-view");
-    expect(home).not.toHaveTextContent("登录一次，接入你的 AI 应用");
+    expect(home).toHaveTextContent("登录一次，接入你的 AI 应用");
     expect(
-      within(home).queryByRole("button", { name: "登录你的站点" }),
-    ).not.toBeInTheDocument();
+      within(home).getByRole("button", { name: "在浏览器中继续" }),
+    ).toBeEnabled();
+    expect(within(home).getByRole("textbox")).toBeInTheDocument();
   });
 
   it("ru076 never reports zero connections or ready-to-connect when the initial read fails", async () => {

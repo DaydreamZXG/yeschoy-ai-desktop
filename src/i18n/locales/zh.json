@@ -508,6 +508,7 @@
     "accountAuthorizationDenied": "你已在网页拒绝这次登录。",
     "accountAuthorizationExpired": "验证码已过期，请重新发起登录。",
     "accountInvalidResponse": "账户数据格式不正确，已停止显示。",
+    "accountChangeStation": "换站点 / 输入站点地址",
     "browserOpenFailed": "浏览器没有自动打开，请点击“重新打开登录页”。",
     "priceSignInRequired": "登录后可查看当前账号可用模型和实际价格。",
     "inputPrice": "输入",

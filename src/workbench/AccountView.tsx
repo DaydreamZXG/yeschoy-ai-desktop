@@ -42,10 +42,12 @@ function compact(value: string, locale: string): string {
 export function AccountView({
   lineId,
   onLineChange,
+  onOpenAppsHome,
   session,
 }: {
   lineId: AccountLineId;
   onLineChange: (lineId: ConfigurationLineId) => void;
+  onOpenAppsHome?: () => void;
   session: AccountSessionController;
 }) {
   const c = useWorkbenchCopy();
@@ -664,6 +666,17 @@ export function AccountView({
                 </button>
               )}
             </div>
+            {onOpenAppsHome && (
+              <p className="sign-in-station-link">
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={onOpenAppsHome}
+                >
+                  {c.accountChangeStation}
+                </button>
+              </p>
+            )}
           </div>
         </section>
       )}

@@ -44,6 +44,7 @@ import { showYeschoyCommunityUi } from "../distribution/yeschoyStation";
 import { OssSoftTrafficCta } from "./OssSoftTrafficCta";
 import { StationConnectOriginForm } from "./StationConnectOriginForm";
 import type { AccountLineId } from "../configuration/preview";
+import type { AccountStatus } from "../account/session";
 
 interface Props {
   onOpenAccount: () => void;
@@ -82,6 +83,13 @@ export function outageIsTotal(
  */
 export function isConnected(state?: ToolConnection["state"]): boolean {
   return !!state && ["connected", "legacy", "changed"].includes(state);
+}
+
+/** 首页站点登录条：已登录或浏览器授权进行中时不展示。 */
+export function showStationConnectWelcomeStrip(
+  status?: AccountStatus | null,
+): boolean {
+  return status !== "signed_in" && status !== "authorization_pending";
 }
 
 export function AppLibraryView({
@@ -124,16 +132,7 @@ export function AppLibraryView({
   }, [refresh]);
   const accountStatus = accountSession.projection?.status;
   const signedIn = accountStatus === "signed_in";
-  // A failed/unfinished inspection is not evidence that the user signed out.
-  // Only explicit terminal authentication states may offer the login action;
-  // otherwise a route hiccup produces the contradictory error + login UI.
-  const loginRequired = [
-    "signed_out",
-    "session_expired",
-    "cancelled",
-    "denied",
-    "expired",
-  ].includes(accountStatus ?? "");
+  const loginRequired = showStationConnectWelcomeStrip(accountStatus);
   const balanceIssue = signedIn
     ? balanceAlert(accountSession.projection?.money)
     : null;
