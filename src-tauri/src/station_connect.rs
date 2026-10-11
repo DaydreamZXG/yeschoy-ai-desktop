@@ -1,10 +1,11 @@
-//! Station deep-link connect protocol (`yeschoy://connect`) — parse and validation only.
-//!
-//! Exchange, OS registration, and UI wiring land in later tasks. This module is
-//! intentionally separate from the compile-time authorization-page allowlist in
-//! `account_v2` / `oauth_pkce`.
+//! Station deep-link connect protocol (`yeschoy://connect`) — parse, validation,
+//! and OS/runtime delivery. Code exchange and UI wiring land in later tasks.
+//! This module is intentionally separate from the compile-time authorization-page
+//! allowlist in `account_v2` / `oauth_pkce`.
 
 use reqwest::Url;
+use tauri::{AppHandle, Runtime};
+use tauri_plugin_deep_link::DeepLinkExt;
 
 pub(crate) const CONNECT_SCHEME: &str = "yeschoy";
 pub(crate) const CONNECT_HOST: &str = "connect";
@@ -32,6 +33,71 @@ pub(crate) struct StationConnectRequest {
     /// Canonical HTTPS origin (`https://host`, lowercase host, no path/query).
     pub(crate) origin: String,
     pub(crate) code: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) enum StationConnectHandleOutcome {
+    /// Parsed and validated; exchange is deferred to a later task.
+    Accepted(StationConnectRequest),
+    /// Not a `yeschoy://` URL (other argv or schemes are ignored).
+    IgnoredNotConnectScheme,
+    /// Looked like station connect but failed validation.
+    Rejected(StationConnectParseError),
+}
+
+/// Single entry point for cold-start argv, hot-start deep-link events, and tests.
+pub(crate) fn handle_connect_url(raw: &str) -> StationConnectHandleOutcome {
+    if !raw.starts_with("yeschoy://") {
+        return StationConnectHandleOutcome::IgnoredNotConnectScheme;
+    }
+    match parse_station_connect_url(raw) {
+        Ok(request) => {
+            log::info!(
+                "station_connect stage=validated origin={}",
+                request.origin
+            );
+            StationConnectHandleOutcome::Accepted(request)
+        }
+        Err(error) => {
+            log::warn!("station_connect stage=parse_rejected error={error:?}");
+            StationConnectHandleOutcome::Rejected(error)
+        }
+    }
+}
+
+fn deliver_connect_urls<S: AsRef<str>>(urls: &[S]) {
+    for url in urls {
+        handle_connect_url(url.as_ref());
+    }
+}
+
+/// Wire `tauri-plugin-deep-link` and drain any URLs already captured at startup.
+pub(crate) fn wire_station_connect_deep_link<R: Runtime>(
+    app: &AppHandle<R>,
+) -> Result<(), tauri_plugin_deep_link::Error> {
+    app.deep_link().on_open_url(move |event| {
+        let urls = event
+            .urls()
+            .into_iter()
+            .map(|url| url.to_string())
+            .collect::<Vec<_>>();
+        deliver_connect_urls(&urls);
+    });
+
+    if let Some(urls) = app.deep_link().get_current()? {
+        let urls = urls
+            .into_iter()
+            .map(|url| url.to_string())
+            .collect::<Vec<_>>();
+        deliver_connect_urls(&urls);
+    }
+
+    #[cfg(any(target_os = "linux", target_os = "windows"))]
+    if let Err(error) = app.deep_link().register_all() {
+        log::warn!("station_connect stage=register_all_failed error={error}");
+    }
+
+    Ok(())
 }
 
 /// Returns the canonical HTTPS origin when `raw` is acceptable for connect exchange.
@@ -201,6 +267,27 @@ mod tests {
         let oversized = "a".repeat(CONNECT_CODE_MAX_LEN + 1);
         assert!(!connect_code_is_valid(&oversized));
         assert!(!connect_code_is_valid(&format!("{VALID_CODE}!")));
+    }
+
+    #[test]
+    fn handle_connect_url_accepts_valid_and_ignores_other_schemes() {
+        let raw = format!("yeschoy://connect?origin=https%3A%2F%2Fexample.com&code={VALID_CODE}");
+        let outcome = handle_connect_url(&raw);
+        assert!(matches!(
+            outcome,
+            StationConnectHandleOutcome::Accepted(StationConnectRequest {
+                origin,
+                code
+            }) if origin == "https://example.com" && code == VALID_CODE
+        ));
+        assert_eq!(
+            handle_connect_url("https://yeschoy.com"),
+            StationConnectHandleOutcome::IgnoredNotConnectScheme
+        );
+        assert!(matches!(
+            handle_connect_url("yeschoy://connect?code=only"),
+            StationConnectHandleOutcome::Rejected(StationConnectParseError::MissingOrigin)
+        ));
     }
 
     #[test]

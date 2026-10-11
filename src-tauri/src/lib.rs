@@ -88,15 +88,14 @@ pub fn run() {
         // second instance would only duplicate the UI. Register this before
         // every other plugin so the existing process stays the sole runtime
         // owner and a second launch just focuses the existing window.
+        // The `deep-link` feature on single-instance forwards argv to
+        // `tauri-plugin-deep-link` before this callback; do not ignore `_args`.
         builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.unminimize();
-                let _ = window.show();
-                let _ = window.set_focus();
-            }
+            focus_main_webview(app);
         }));
     }
     let app = builder
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(account_v2::AccountV2State::default())
         .manage(app_installation::AppInstallationState::default())
@@ -129,6 +128,10 @@ pub fn run() {
         })
         .setup(move |app| {
             window_appearance::initialize(app)?;
+            #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
+            if let Err(error) = station_connect::wire_station_connect_deep_link(app.handle()) {
+                log::warn!("station_connect stage=wire_deep_link_failed error={error}");
+            }
             register_runtime_stops(app.handle())?;
             #[cfg(target_os = "windows")]
             register_installer_shutdown_listener(app.handle().clone())?;
@@ -237,6 +240,14 @@ pub fn run() {
             }
         }
     });
+}
+
+fn focus_main_webview<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
 }
 
 fn register_runtime_stops(app: &tauri::AppHandle) -> Result<(), std::io::Error> {
