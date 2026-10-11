@@ -4420,15 +4420,26 @@
 
 .desktop-update-card > footer {
   display: flex;
-  align-items: center;
-  gap: var(--space-12);
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-8) var(--space-12);
 }
 
 .desktop-update-card > footer > p {
-  flex: 1;
+  flex: 1 1 220px;
+  margin: 0;
   color: var(--faint);
   font-size: var(--text-xs);
   line-height: 1.5;
+}
+
+.desktop-update-manual a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.desktop-update-manual a:hover {
+  text-decoration: underline;
 }
 
 .desktop-notice-stack {

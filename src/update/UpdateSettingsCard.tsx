@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useDesktopUpdate } from "./UpdateProvider";
+import { DESKTOP_DOWNLOAD_PAGE_URL } from "../distribution/desktopDownload";
 
 const STAGES = ["check", "download", "restart"] as const;
 
@@ -114,6 +115,16 @@ export function UpdateSettingsCard() {
           </button>
         )}
         <p>{t("yeschoyUpdate.safety")}</p>
+        <p className="desktop-update-manual">
+          {t("yeschoyUpdate.manualDownload")}{" "}
+          <a
+            href={DESKTOP_DOWNLOAD_PAGE_URL}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {t("yeschoyUpdate.manualDownloadLink")}
+          </a>
+        </p>
       </footer>
     </article>
   );

@@ -41,6 +41,16 @@
   font-size: var(--text-xs);
   padding-top: var(--space-4);
 }
+.app-install-guided-steps {
+  margin: var(--space-16) 0;
+  padding-left: 1.25rem;
+  font-size: var(--text-sm);
+  line-height: 1.65;
+  color: var(--ink, #24352f);
+}
+.app-install-guided-steps li {
+  margin-bottom: var(--space-8);
+}
 .app-install-steps {
   display: flex;
   padding: 0;

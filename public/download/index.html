@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>下载野菜桌面助手</title>
+  <style>
+    :root {
+      --bg: #f6f5f2;
+      --surface: #ffffff;
+      --ink: #14151a;
+      --muted: #5c5f66;
+      --line: #e3e1db;
+      --accent: #c93e22;
+      --accent-hover: #a8321b;
+      --on-accent: #ffffff;
+      --radius: 16px;
+      --shadow: 0 18px 50px rgba(20, 21, 26, 0.08);
+      font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC",
+        "Microsoft YaHei", sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0e0f12;
+        --surface: #17191e;
+        --ink: #eceef2;
+        --muted: #9aa0a8;
+        --line: #2a2d34;
+        --accent: #e8a33d;
+        --accent-hover: #f0b65a;
+        --on-accent: #1a1208;
+        --shadow: 0 22px 60px rgba(0, 0, 0, 0.45);
+      }
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: 24px 16px;
+      background: radial-gradient(
+          1200px 600px at 50% -10%,
+          color-mix(in srgb, var(--accent) 12%, transparent),
+          transparent 60%
+        ),
+        var(--bg);
+      color: var(--ink);
+    }
+    main {
+      width: min(440px, 100%);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 24px 22px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.4rem;
+      letter-spacing: -0.02em;
+    }
+    .lede {
+      margin: 0 0 20px;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 0.95rem;
+    }
+    [data-download-actions] {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .download-action {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      text-decoration: none;
+      color: var(--ink);
+      font-weight: 600;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .download-action.is-primary {
+      background: var(--accent);
+      border-color: transparent;
+      color: var(--on-accent);
+    }
+    .download-action.is-primary:hover {
+      background: var(--accent-hover);
+    }
+    .download-action:not(.is-primary):hover {
+      border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+    }
+    .download-action-meta {
+      font-size: 0.8rem;
+      font-weight: 500;
+      opacity: 0.85;
+    }
+    [data-download-note],
+    [data-download-status] {
+      margin: 0 0 12px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    footer {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      font-size: 0.82rem;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+    }
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <main data-yeschoy-download>
+    <h1>下载野菜桌面助手</h1>
+    <p class="lede">
+      支持 macOS 与 Windows。我们会根据你的电脑推荐一个主按钮；也可以手动选择另一系统。
+    </p>
+    <p data-download-status aria-live="polite"></p>
+    <p data-download-note></p>
+    <div data-download-actions></div>
+    <footer>
+      <a data-download-releases href="https://github.com/DaydreamZXG/yeschoy-ai-desktop/releases">
+        在 GitHub 查看全部版本
+      </a>
+      <a href="https://yeschoy.com">返回野菜官网</a>
+    </footer>
+  </main>
+  <script src="/download.js" defer></script>
+</body>
+</html>

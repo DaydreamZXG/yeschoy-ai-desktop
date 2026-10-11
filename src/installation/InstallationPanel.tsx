@@ -20,6 +20,7 @@ import type {
 } from "../configuration/activation";
 import "./installation.css";
 import { useCelebrateOnRise } from "../theme/motion";
+import { guidedInstallStepKey } from "./toolInstallGuide";
 
 /**
  * 这三个是模块级函数，不是组件，拿不到 hook —— 和 `connectionLabel` 同一种情况，
@@ -120,6 +121,11 @@ export function InstallationPanel({
   const awaiting = current?.phase === "awaiting_system_confirmation";
   const installed = current?.phase === "installed";
   const guided = current && ["guided", "unsupported"].includes(current.mode);
+  const guidedStepsKey = guided ? guidedInstallStepKey(tool) : null;
+  const guidedStepsRaw = guidedStepsKey
+    ? t(guidedStepsKey, { returnObjects: true })
+    : null;
+  const guidedSteps = Array.isArray(guidedStepsRaw) ? guidedStepsRaw : null;
   const step =
     current?.phase === "downloading" || current?.phase === "checking"
       ? 0
@@ -176,6 +182,19 @@ export function InstallationPanel({
               : t("installation.trustDefault")}
         </span>
       </header>
+      {guided && guidedSteps && guidedSteps.length > 0 && (
+        <ol
+          className="app-install-guided-steps"
+          aria-label={t("installation.guidedStepsLabel")}
+        >
+          {guidedSteps.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+      )}
+      {guided && (
+        <p className="app-install-copy">{t("installation.guidedAfterHelp")}</p>
+      )}
       {current && !guided && current.jobId && (
         <>
           <ol
@@ -274,7 +293,7 @@ export function InstallationPanel({
           </button>
         ) : other ? null : guided ? (
           <button className="primary-action" onClick={help}>
-            {t("installation.viewOfficial")} <ExternalLink size={15} />
+            {t("installation.openOfficialDownload")} <ExternalLink size={15} />
           </button>
         ) : awaiting ? (
           <button
