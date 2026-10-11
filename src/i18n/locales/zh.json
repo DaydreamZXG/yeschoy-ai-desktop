@@ -1247,6 +1247,7 @@
     "originHint": "默认示例站，可改成你的站点 HTTPS 域名。",
     "continue": "在浏览器中继续",
     "opening": "正在打开浏览器…",
+    "accountChecking": "正在检查账户状态，你仍可先登录或继续。",
     "invalidOrigin": "请输入有效的 HTTPS 站点地址（域名，不含路径）。"
   },
   "stationConnect": {

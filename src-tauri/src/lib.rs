@@ -188,6 +188,7 @@ pub fn run() {
             app_update::manage_desktop_update_v1,
             app_installation::manage_app_installation_v2,
             desktop_app_discovery::scan_desktop_apps_read_only,
+            account_v2::account_session_snapshot_v2,
             account_v2::account_inspect_v2,
             account_v2::account_begin_authorization_v2,
             account_v2::account_open_authorization_v2,

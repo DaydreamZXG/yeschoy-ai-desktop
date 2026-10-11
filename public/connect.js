@@ -10,6 +10,17 @@
       this.httpStatus = httpStatus;
     }
   }
+  function normalizeConnectIssueReasonCode(code, httpStatus) {
+    const raw = (code ?? "").trim();
+    const upper = raw.toUpperCase();
+    if (upper === "SESSION_REQUIRED" || upper === "AUTH_UNAUTHORIZED") {
+      return "session_required";
+    }
+    if (httpStatus === 401) {
+      return "session_required";
+    }
+    return raw || "issue_failed";
+  }
   function pageHttpsOrigin(location) {
     if (location.protocol !== "https:") {
       return null;
@@ -40,7 +51,10 @@
     }
     const envelope = body;
     if (!envelope.success) {
-      throw new YeschoyConnectError(envelope.code ?? "issue_failed", response.status);
+      throw new YeschoyConnectError(
+        normalizeConnectIssueReasonCode(envelope.code, response.status),
+        response.status
+      );
     }
     const data = envelope.data;
     if (!data || typeof data !== "object") {
@@ -130,8 +144,31 @@
     downloadUrl: downloadOverride || void 0
   });
   window.YeschoyConnect = api;
+  function shouldAutoLaunchFromDesktop() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("auto") === "1";
+  }
   function init() {
     api.bindAuto();
+    if (!shouldAutoLaunchFromDesktop()) return;
+    const button = document.querySelector("[data-yeschoy-connect]");
+    if (button) {
+      button.hidden = true;
+      button.setAttribute("aria-hidden", "true");
+    }
+    document.dispatchEvent(new CustomEvent("yeschoy-connect-auto-start"));
+    void api.open().catch((err) => {
+      if (button) {
+        button.hidden = false;
+        button.removeAttribute("aria-hidden");
+      }
+      button?.dispatchEvent(
+        new CustomEvent("yeschoy-connect-error", {
+          detail: err,
+          bubbles: true
+        })
+      );
+    });
   }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);

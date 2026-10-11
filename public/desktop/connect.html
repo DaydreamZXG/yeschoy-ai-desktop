@@ -189,17 +189,39 @@
             generic: "Connection did not finish. Try again.",
           };
 
+      var autoLaunch =
+        new URLSearchParams(window.location.search).get("auto") === "1";
+
+      if (autoLaunch) {
+        document.getElementById("lede").textContent = zh
+          ? "已登录？正在自动连接桌面助手…"
+          : "Signed in? Connecting to the desktop app automatically…";
+      }
+
       btn.addEventListener("click", function () {
         setStatus(messages.issuing, false);
         btn.disabled = true;
       });
+
+      document.addEventListener("yeschoy-connect-auto-start", function () {
+        setStatus(messages.issuing, false);
+      });
+
+      function uiReasonCode(code) {
+        if (!code) return "issue_failed";
+        var upper = String(code).toUpperCase();
+        if (upper === "AUTH_UNAUTHORIZED" || upper === "SESSION_REQUIRED") {
+          return "session_required";
+        }
+        return String(code);
+      }
 
       btn.addEventListener("yeschoy-connect-error", function (event) {
         btn.disabled = false;
         var err = event.detail;
         var code =
           err && err.reasonCode ? String(err.reasonCode) : "issue_failed";
-        var text = messages[code] || messages.generic;
+        var text = messages[uiReasonCode(code)] || messages.generic;
         setStatus(text, true);
       });
 

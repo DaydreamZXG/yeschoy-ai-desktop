@@ -31,6 +31,9 @@ function mockNativeByCommand(
     }
     if (command === "manage_app_installation_v2")
       return installationInspectionFixture(args);
+    if (command === "account_session_snapshot_v2") {
+      return { hasStoredSession: false, storedLineId: null };
+    }
     return handler(command, args);
   });
 }
@@ -268,7 +271,7 @@ describe("beginner scan recovery", () => {
       "manage_app_installation_v2",
       "manage_tool_connections_v1",
       "refresh_model_catalog_v1",
-      "account_inspect_v2",
+      "account_session_snapshot_v2",
       "read_desktop_exit_state",
       "scan_tools_read_only_v2",
     ]);
@@ -323,7 +326,7 @@ describe("beginner scan recovery", () => {
           "manage_app_installation_v2",
           "manage_tool_connections_v1",
           "refresh_model_catalog_v1",
-          "account_inspect_v2",
+          "account_session_snapshot_v2",
           "scan_tools_read_only_v2",
           "scan_activation_targets_v1",
           "read_desktop_exit_state",

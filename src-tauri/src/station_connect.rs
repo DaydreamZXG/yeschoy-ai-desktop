@@ -339,7 +339,7 @@ pub(crate) fn wire_station_connect_deep_link<R: Runtime>(
 pub fn station_connect_open_connect_page_v1(origin: String) -> Result<(), String> {
     let canonical = connect_origin_is_acceptable(&origin)
         .ok_or_else(|| "connect_origin_not_acceptable".to_string())?;
-    let url = format!("{}{}", canonical, STATION_CONNECT_PAGE_PATH);
+    let url = format!("{}{}?auto=1", canonical, STATION_CONNECT_PAGE_PATH);
     open_system_browser(&url).map_err(|_| "connect_browser_open_failed".to_string())
 }
 

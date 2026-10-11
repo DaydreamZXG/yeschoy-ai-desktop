@@ -212,7 +212,7 @@ export function AccountView({
     }
   })();
   const signInDisabled =
-    loading || projection?.reasonCode === "authorization_unavailable";
+    projection?.reasonCode === "authorization_unavailable";
   // 会话时效感知（#23，本地记账）：仅提示，不阻断主流程。
   const sessionAge = signedIn
     ? sessionAgeLevel(readSessionAgeRecord(), Date.now())
@@ -646,6 +646,11 @@ export function AccountView({
             <span className="eyebrow">{c.signInBrand}</span>
             <h2>{c.signIn}</h2>
             <p>{reason || c.signInBody}</p>
+            {loading && (
+              <p className="sign-in-checking-hint" role="status">
+                {t("stationConnectPage.accountChecking")}
+              </p>
+            )}
             <div className="sign-in-actions">
               <button
                 type="button"

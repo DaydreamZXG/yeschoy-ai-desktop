@@ -415,7 +415,7 @@ export function AppLibraryView({
             <p>{c.librarySignInBody}</p>
             <StationConnectOriginForm
               onLineChange={onStationLineChange}
-              disabled={accountSession.loading}
+              accountChecking={accountSession.loading}
             />
             {relayLineRecovery && (
               <p
