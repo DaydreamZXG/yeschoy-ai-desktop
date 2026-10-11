@@ -39,15 +39,20 @@ import type { SetupAction } from "../configuration/setupIntent";
 import { useWorkbenchCopy } from "./copy";
 import { Users } from "lucide-react";
 import { isOfficialDistribution } from "../distribution/identity";
-import { showOssSoftTraffic, showOfficialCommunityUi } from "../distribution/softTraffic";
+import { showOssSoftTraffic } from "../distribution/softTraffic";
+import { showYeschoyCommunityUi } from "../distribution/yeschoyStation";
 import { OssSoftTrafficCta } from "./OssSoftTrafficCta";
+import { StationConnectOriginForm } from "./StationConnectOriginForm";
+import type { AccountLineId } from "../configuration/preview";
 
 interface Props {
   onOpenAccount: () => void;
+  onStationLineChange: (lineId: AccountLineId) => void;
   onOpenSetup: (appId: ActivationToolId, action?: SetupAction) => void;
   // 交流群对话框的状态提到了 App：侧边栏和这里的页脚都要能打开它，
   // 两份各自的 useState 会变成两个互不知情的对话框。
   onOpenCommunity: () => void;
+  accountLineId: AccountLineId;
   accountSession: AccountSessionController;
   /** 首页顶部的公告横幅（未读、标了 banner 的那一条），由 App 决定给不给。 */
   announcement?: ReactNode;
@@ -83,6 +88,8 @@ export function AppLibraryView({
   onOpenAccount,
   onOpenSetup,
   onOpenCommunity,
+  onStationLineChange,
+  accountLineId,
   accountSession,
   announcement,
 }: Props) {
@@ -390,20 +397,30 @@ export function AppLibraryView({
         </section>
       )}
       {loginRequired ? (
-        <section className="welcome-strip">
+        <section className="welcome-strip welcome-strip-station">
           <span className="welcome-symbol">
             <ShieldCheck />
           </span>
-          <div>
+          <div className="welcome-strip-copy">
             <h2>{c.librarySignInTitle}</h2>
             <p>{c.librarySignInBody}</p>
+            <StationConnectOriginForm
+              onLineChange={onStationLineChange}
+              disabled={accountSession.loading}
+            />
+            <p className="welcome-strip-catalog">
+              <button
+                type="button"
+                className="text-button"
+                onClick={onOpenAccount}
+              >
+                {isOfficialDistribution()
+                  ? c.librarySignInCatalogOfficial
+                  : c.librarySignInCatalogNeutral}
+                <ArrowRight aria-hidden="true" />
+              </button>
+            </p>
           </div>
-          <button className="primary-action" onClick={onOpenAccount}>
-            {isOfficialDistribution()
-              ? c.librarySignInAction
-              : c.librarySignInActionNeutral}
-            <ArrowRight />
-          </button>
           {showOssSoftTraffic({
             accountProjection: accountSession.projection,
           }) && (
@@ -652,7 +669,10 @@ export function AppLibraryView({
         <ShieldCheck />
         <span>{c.libraryFooterTrust}</span>
         <span className="library-footer-actions">
-          {showOfficialCommunityUi() && (
+          {showYeschoyCommunityUi({
+            lineId: accountLineId,
+            accountProjection: accountSession.projection,
+          }) && (
             <button
               type="button"
               className="text-button join-group-link"

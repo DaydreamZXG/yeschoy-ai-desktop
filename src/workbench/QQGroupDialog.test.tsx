@@ -2,7 +2,38 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import i18n from "i18next";
 import zh from "../i18n/locales/zh.json";
+import type { AccountProjection } from "../account/session";
 import { QQGroupDialog, QQ_GROUP_ID, CommunityGroupDialog } from "./QQGroupDialog";
+
+function signedInProjection(): AccountProjection {
+  return {
+    requestId: "req",
+    schemaVersion: 3,
+    status: "signed_in",
+    userCode: "",
+    pollAfterSeconds: 0,
+    expiresAtEpochMs: 0,
+    observedAtEpochMs: 0,
+    account: {
+      available: true,
+      displayName: "u",
+      username: "u",
+      balanceQuota: "",
+      usedQuota: "",
+      requestCount: "",
+      quotaPerUnit: "",
+    },
+    usage: {
+      available: false,
+      consumedQuota: "",
+      requestRate: "",
+      tokenCount: "",
+    },
+    models: [],
+    comparisonFx: "",
+    reasonCode: "signed_in",
+  };
+}
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 // sonner toast 在 jsdom 下直接 mock，避免等待真实 DOM
@@ -30,13 +61,30 @@ beforeAll(async () => {
 afterEach(cleanup);
 
 describe("CommunityGroupDialog", () => {
-  it("does not render in OSS distribution builds", () => {
+  it("renders when signed in to YesChoy on OSS builds", () => {
     vi.stubEnv("VITE_YESCHOY_DISTRIBUTION", "oss");
+    render(
+      <CommunityGroupDialog
+        open
+        onOpenChange={() => {}}
+        lineId="mainland_optimized"
+        accountProjection={signedInProjection()}
+      />,
+    );
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    vi.unstubAllEnvs();
+  });
+
+  it("does not render for third-party station sessions", () => {
     const { container } = render(
-      <CommunityGroupDialog open onOpenChange={() => {}} />,
+      <CommunityGroupDialog
+        open
+        onOpenChange={() => {}}
+        lineId="station_connect:https://partner.example.com"
+        accountProjection={signedInProjection()}
+      />,
     );
     expect(container.querySelector(".qq-group-dialog")).toBeNull();
-    vi.unstubAllEnvs();
   });
 });
 

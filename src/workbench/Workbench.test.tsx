@@ -676,7 +676,10 @@ describe("official workbench", () => {
     expect(
       screen.queryByRole("region", { name: "用量账单" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "登录你的站点" })).toBeEnabled();
+    expect(
+      screen.getByRole("button", { name: "在浏览器中继续" }),
+    ).toBeEnabled();
+    expect(screen.getByRole("textbox")).toHaveValue("https://yeschoy.com");
     expect(screen.getAllByRole("article")).toHaveLength(7);
     const card = screen
       .getByRole("heading", { name: "Claude Desktop" })

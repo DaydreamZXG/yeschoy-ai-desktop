@@ -20,12 +20,12 @@ import { CountUpStrong } from "../theme/motion";
 import brandIcon from "../assets/brand/yecai-logo.png";
 import { Fragment, useLayoutEffect, useRef } from "react";
 import type { AccountProjection } from "../account/session";
+import type { AccountLineId } from "../configuration/preview";
+import { showYeschoyCommunityUi } from "../distribution/yeschoyStation";
 import { creditUnit, formatMoney } from "../account/finance";
 import { CANDIDATE_VERSION } from "../candidate/readiness";
 import type { Appearance } from "./appearance";
 import { useWorkbenchCopy } from "./copy";
-import { showOfficialCommunityUi } from "../distribution/softTraffic";
-
 export type AppView =
   | "home"
   | "account"
@@ -76,6 +76,7 @@ export function WorkbenchSidebar({
   onAppearance,
   accountProjection,
   accountLoading,
+  accountLineId,
 }: {
   view: AppView;
   onNavigate: (view: AppView) => void;
@@ -87,6 +88,7 @@ export function WorkbenchSidebar({
   onAppearance: (value: Appearance) => void;
   accountProjection: AccountProjection | null;
   accountLoading: boolean;
+  accountLineId: AccountLineId;
 }) {
   const c = useWorkbenchCopy();
   const signedIn = accountProjection?.status === "signed_in";
@@ -195,7 +197,10 @@ export function WorkbenchSidebar({
         {nav.map(navButton)}
       </nav>
       <div className="sidebar-bottom">
-        {showOfficialCommunityUi() && (
+        {showYeschoyCommunityUi({
+          lineId: accountLineId,
+          accountProjection,
+        }) && (
           <button
             type="button"
             className="sidebar-community"

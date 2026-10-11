@@ -4,7 +4,9 @@ Third-party **New API** stations (and yeschoy.com) can let logged-in users open 
 YesChoy desktop assistant with one click — no API key paste in the main flow.
 
 Protocol details: [`station-connect-protocol.md`](./station-connect-protocol.md).  
-HTTP contract: [`station-connect-api.openapi.yaml`](./station-connect-api.openapi.yaml).
+HTTP contract: [`station-connect-api.openapi.yaml`](./station-connect-api.openapi.yaml).  
+**Fixed connect page path** for station operators:
+[`station-connect-page.md`](./station-connect-page.md) (`/desktop/connect`).
 
 ## Loopback OAuth fallback (desktop)
 

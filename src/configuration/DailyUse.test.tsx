@@ -261,6 +261,8 @@ describe("daily-use UX", () => {
           onOpenAccount={callback}
           onOpenSetup={callback}
           onOpenCommunity={callback}
+          onStationLineChange={callback}
+          accountLineId="mainland_optimized"
         />
       </ConnectionProvider>,
     );
@@ -281,6 +283,8 @@ describe("daily-use UX", () => {
           onOpenAccount={callback}
           onOpenSetup={callback}
           onOpenCommunity={callback}
+          onStationLineChange={callback}
+          accountLineId="mainland_optimized"
         />
       </ConnectionProvider>,
     );
@@ -301,6 +305,8 @@ describe("daily-use UX", () => {
           onOpenAccount={callback}
           onOpenSetup={callback}
           onOpenCommunity={callback}
+          onStationLineChange={callback}
+          accountLineId="mainland_optimized"
         />
       </ConnectionProvider>,
     );
@@ -321,6 +327,8 @@ describe("daily-use UX", () => {
           onOpenAccount={callback}
           onOpenSetup={callback}
           onOpenCommunity={callback}
+          onStationLineChange={callback}
+          accountLineId="mainland_optimized"
         />
       </ConnectionProvider>,
     );
@@ -535,6 +543,8 @@ describe("daily-use UX", () => {
           onOpenAccount={callback}
           onOpenSetup={open}
           onOpenCommunity={open}
+          onStationLineChange={callback}
+          accountLineId="mainland_optimized"
         />
       </ConnectionProvider>,
     );
@@ -2083,8 +2093,10 @@ describe("daily-use UX", () => {
             onOpenAccount={callback}
             onOpenSetup={callback}
             onOpenCommunity={callback}
-          />
-        </ConnectionProvider>,
+          onStationLineChange={callback}
+          accountLineId="mainland_optimized"
+        />
+      </ConnectionProvider>,
       );
       await tick();
       // count=0 时仅 Claude Desktop / Codex Desktop 可见。

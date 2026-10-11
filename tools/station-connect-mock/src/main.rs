@@ -31,6 +31,7 @@ const ISSUE_PATH: &str = "/api/desktop/v2/connect-codes";
 const EXCHANGE_PATH: &str = "/api/desktop/v2/connect-codes/exchange";
 const BOOTSTRAP_PATH: &str = "/api/desktop/v2/bootstrap";
 const NOTICES_PATH: &str = "/api/desktop/v2/notices";
+const CONNECT_PAGE_PATH: &str = "/desktop/connect";
 const MIN_CODE_LEN: usize = 32;
 
 #[derive(Clone)]
@@ -99,6 +100,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(harness_page))
+        .route(CONNECT_PAGE_PATH, get(connect_page))
         .route("/mock/login", post(mock_login))
         .route(BOOTSTRAP_PATH, get(bootstrap))
         .route(NOTICES_PATH, get(notices))
@@ -117,6 +119,10 @@ async fn main() {
 
 async fn harness_page() -> Html<&'static str> {
     Html(HARNESS_HTML)
+}
+
+async fn connect_page() -> Html<&'static str> {
+    Html(include_str!("../../../public/desktop/connect.html"))
 }
 
 async fn bootstrap(headers: HeaderMap) -> Response {
@@ -283,7 +289,10 @@ fn session_present(jar: &CookieJar, headers: &HeaderMap) -> bool {
         .is_some_and(|value| value.starts_with("Bearer ") && value.len() > 10)
 }
 
-fn resolve_issue_origin(headers: &HeaderMap, body_origin: Option<String>) -> Result<String, &'static str> {
+fn resolve_issue_origin(
+    headers: &HeaderMap,
+    body_origin: Option<String>,
+) -> Result<String, &'static str> {
     let origin = body_origin
         .or_else(|| {
             headers

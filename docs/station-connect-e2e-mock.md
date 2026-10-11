@@ -12,6 +12,7 @@ the yeschoy.com「打开桌面助手」button path.
 | Deep-link protocol | [`station-connect-protocol.md`](./station-connect-protocol.md) |
 | Mock HTTP server + harness UI | [`../tools/station-connect-mock/`](../tools/station-connect-mock/) |
 | Mock bootstrap + sample notices | same mock: `GET /api/desktop/v2/bootstrap`, `GET /api/desktop/v2/notices` |
+| Reference connect page (`GET /desktop/connect`) | [`../public/desktop/connect.html`](../public/desktop/connect.html) |
 
 ## Run the mock
 

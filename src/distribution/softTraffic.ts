@@ -37,6 +37,9 @@ export function showOssSoftTraffic(session: SoftTrafficSession): boolean {
   return true;
 }
 
+/**
+ * @deprecated Use `showYeschoyCommunityUi` with account line + signed-in state.
+ */
 export function showOfficialCommunityUi(): boolean {
   return isOfficialDistribution();
 }
