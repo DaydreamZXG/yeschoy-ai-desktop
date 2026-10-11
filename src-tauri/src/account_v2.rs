@@ -522,7 +522,7 @@ async fn fetch_bootstrap_read(line_id: &str) -> Result<DesktopBootstrap, Account
         Some("fx_rate")
     } else if !paths_match {
         Some("paths")
-    } else if !wallet_url_is_allowed(&data.wallet_url, origin) {
+    } else if !wallet_url_is_allowed(&data.wallet_url, &origin) {
         Some("wallet_url")
     } else {
         None
