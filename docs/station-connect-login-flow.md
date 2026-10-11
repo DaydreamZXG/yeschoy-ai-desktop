@@ -15,6 +15,8 @@ Derived from code and `docs/station-connect-protocol.md` — not a product spec.
 
 **PR #46:** if **`account_session_snapshot_v2`** reports no keyring session, **skip** `account_inspect_v2` on startup; set **`idleSignedOutProjection`** and `loading: false` immediately. Manual **`refresh()`** still inspects.
 
+**Stale keyring follow-up:** when a session exists in the keyring, startup still runs **`account_inspect_v2`** once in the background (`silent` + `startup` options in **`useAccountSession`**): `loading` stays false so「我的应用」welcome + **`StationConnectOriginForm`** stay clean; no **`stationConnectPage.accountChecking`** hint on the origin form. Startup inspect does **not** use the bounded retry schedule (manual **`refresh()`** still retries transient failures). Native requests remain capped at **`REQUEST_TIMEOUT`** (20s) per attempt in **`account_v2.rs`**.
+
 ## 2) User enters station origin on「我的应用」
 
 | Step | Code |
@@ -52,7 +54,7 @@ Station connect (§3) and device authorization (§4) are **parallel** ways to ob
 
 | Trigger | Location |
 |---------|----------|
-| **App start** | **`useAccountSession`** mount effect → `account_inspect_v2` (with retries in **`execute`** for transient failures). |
+| **App start** | No keyring session: skip inspect (§1). Keyring session present: one silent `account_inspect_v2` (no startup retries). |
 | **Manual refresh** | `accountSession.refresh()` — library account banner, account page, station-connect failure retry, etc. |
 | **After deep link** | **`useStationConnect`** on `signed_in` progress phase. |
 | **Line change** | `execute` dependency on `lineId` re-runs mount effect. |
@@ -62,7 +64,9 @@ Station connect (§3) and device authorization (§4) are **parallel** ways to ob
 - **`AppLibraryView`** passed **`disabled={accountSession.loading}`** to **`StationConnectOriginForm`** →「在浏览器中继续」disabled while inspect (+ retries, up to ~2.5s+) ran.
 - **`AccountView`**: **`signInDisabled`** included **`loading`**; initial **`loading && !projection`** showed account skeleton instead of sign-in.
 
-**After PR #46 (merged partial):** form not disabled by loading; non-blocking **`stationConnectPage.accountChecking`** hint; sign-in not disabled by loading; **`AUTH_UNAUTHORIZED`** mapped to sign-in copy (§6).
+**After PR #46:** form not disabled by loading; sign-in not disabled by loading; **`AUTH_UNAUTHORIZED`** mapped to sign-in copy (§6).
+
+**Welcome strip:** origin form no longer shows **`stationConnectPage.accountChecking`**; startup inspect with a stored session does not set **`accountSession.loading`**. Account page may still show the same copy under sign-in while a non-silent **`refresh()`** runs.
 
 ## 6) Why live `AUTH_UNAUTHORIZED` became「连接未完成」
 
@@ -90,6 +94,7 @@ Alternative: Account →「网页登录」→ approve device code in browser (ca
 | Item | Status |
 |------|--------|
 | No keyring session ⇒ skip startup `account_inspect` | **`account_session_snapshot_v2`** + **`useAccountSession`** |
+| Stale keyring ⇒ silent single startup inspect, no welcome checking chrome | **`useAccountSession`** `silent` / `startup` |
 | Form / sign-in not blocked by `loading` | Done |
 | Relay line preference (`localStorage` + stored session line) | **`accountLinePreference.ts`**, **`App.applyAccountLine`** |
 | Connect `?auto=1` + **`AUTH_UNAUTHORIZED`** mapping | Done, **`connect.js`** rebuilt |
