@@ -13,8 +13,9 @@ use tauri::{AppHandle, Manager, Runtime};
 
 use crate::account_v2::{
     account_project_line_after_connect, fetch_desktop_bootstrap, install_station_connect_session,
-    line_id_for_station_connect_origin, loopback_oauth_enabled_for_bootstrap, open_system_browser,
-    station_connect_origin_from_line_id, station_connect_projection_failure_reason, AccountV2State,
+    line_id_for_station_connect_origin, loopback_oauth_enabled_for_bootstrap,
+    open_system_browser, station_connect_origin_from_line_id,
+    station_connect_projection_failure_reason, AccountV2State,
 };
 use crate::oauth_pkce::{
     CallbackOutcome, DeviceMetadata, PkceFailure, PreparedAuthorization, SensitiveFormRequest,
@@ -151,10 +152,7 @@ fn loopback_oauth_endpoints_check(origin: &str) -> Result<(), PkceFailure> {
 }
 
 fn cancel_active_loopback(state: &StationConnectLoopbackState) -> Result<(), &'static str> {
-    let mut active = state
-        .active
-        .lock()
-        .map_err(|_| "connect_loopback_unavailable")?;
+    let mut active = state.active.lock().map_err(|_| "connect_loopback_unavailable")?;
     if let Some(entry) = active.take() {
         entry.prepared.cancel();
     }
@@ -164,7 +162,13 @@ fn cancel_active_loopback(state: &StationConnectLoopbackState) -> Result<(), &'s
 async fn run_loopback_oauth_flow<R: Runtime>(app: AppHandle<R>, line_id: String, origin: String) {
     emit_station_connect_progress(
         &app,
-        station_connect_progress_event("connecting", Some(origin.clone()), None, None, false),
+        station_connect_progress_event(
+            "connecting",
+            Some(origin.clone()),
+            None,
+            None,
+            false,
+        ),
     );
     let prepared = {
         let state = app.state::<StationConnectLoopbackState>();
@@ -188,7 +192,13 @@ async fn run_loopback_oauth_flow<R: Runtime>(app: AppHandle<R>, line_id: String,
     let metadata = match DeviceMetadata::generate(None) {
         Ok(value) => value,
         Err(error) => {
-            emit_failure(&app, &origin, None, pkce_failure_reason_code(error), true);
+            emit_failure(
+                &app,
+                &origin,
+                None,
+                pkce_failure_reason_code(error),
+                true,
+            );
             return;
         }
     };
@@ -220,7 +230,13 @@ async fn run_loopback_oauth_flow<R: Runtime>(app: AppHandle<R>, line_id: String,
             }
             Ok(CallbackOutcome::Rejected(_)) => continue,
             Err(error) => {
-                emit_failure(&app, &origin, None, pkce_failure_reason_code(error), true);
+                emit_failure(
+                    &app,
+                    &origin,
+                    None,
+                    pkce_failure_reason_code(error),
+                    true,
+                );
                 return;
             }
         }
@@ -229,7 +245,13 @@ async fn run_loopback_oauth_flow<R: Runtime>(app: AppHandle<R>, line_id: String,
     let exchange = match prepared.build_code_exchange_request(authorization_code, &metadata) {
         Ok(value) => value,
         Err(error) => {
-            emit_failure(&app, &origin, None, pkce_failure_reason_code(error), true);
+            emit_failure(
+                &app,
+                &origin,
+                None,
+                pkce_failure_reason_code(error),
+                true,
+            );
             return;
         }
     };
@@ -268,7 +290,13 @@ async fn install_and_project<R: Runtime>(
                 );
             }
             Ok(projection) => {
-                emit_failure(app, origin, Some(line_id), projection.reason_code(), true);
+                emit_failure(
+                    app,
+                    origin,
+                    Some(line_id),
+                    projection.reason_code(),
+                    true,
+                );
             }
             Err(failure) => {
                 let (reason, recoverable) = station_connect_projection_failure_reason(failure);
@@ -304,7 +332,8 @@ fn emit_failure<R: Runtime>(
 async fn post_oauth_token(
     request: &SensitiveFormRequest,
 ) -> Result<crate::account_v2::StationConnectAuthBundle, &'static str> {
-    let client = crate::account_v2::shared_http_client().map_err(|_| "connect_network_error")?;
+    let client = crate::account_v2::shared_http_client()
+        .map_err(|_| "connect_network_error")?;
     let response = client
         .post(request.endpoint())
         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
@@ -334,8 +363,12 @@ async fn post_oauth_token(
 fn oauth_bundle_to_station_connect(
     bundle: &crate::oauth_pkce::OAuthTokenBundle,
 ) -> Result<crate::account_v2::StationConnectAuthBundle, &'static str> {
-    let refresh = bundle.refresh_token().ok_or("connect_auth_contract")?;
-    let refresh_expires = bundle.refresh_expires_in().ok_or("connect_auth_contract")?;
+    let refresh = bundle
+        .refresh_token()
+        .ok_or("connect_auth_contract")?;
+    let refresh_expires = bundle
+        .refresh_expires_in()
+        .ok_or("connect_auth_contract")?;
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()

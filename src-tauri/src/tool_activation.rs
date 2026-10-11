@@ -19,11 +19,11 @@ use crate::{
         native_session_access, native_session_epoch, station_connect_origin_from_line_id,
         AccountV2State, NativeSessionFailure,
     },
+    station_connect::connect_origin_is_acceptable,
     claude_bridge::ClaudeTransport,
     connection_recovery::{self, Receipt, Store},
     connectivity_core::request_id_is_valid,
     shutdown_coordinator,
-    station_connect::connect_origin_is_acceptable,
     tool_adapters::{
         self, claude_code, claude_desktop, codex_desktop, desktop_lifecycle, dsh_web, pi,
         workbuddy, AdapterFailure, ResolvedInstallation,

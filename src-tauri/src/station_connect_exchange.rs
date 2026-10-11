@@ -15,9 +15,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use crate::account_v2::{shared_http_client, StationConnectAuthBundle};
-use crate::station_connect::{
-    connect_origin_is_acceptable, CONNECT_CODE_MAX_LEN, CONNECT_CODE_MIN_LEN,
-};
+use crate::station_connect::{connect_origin_is_acceptable, CONNECT_CODE_MAX_LEN, CONNECT_CODE_MIN_LEN};
 
 pub(crate) const CONNECT_CODES_ISSUE_PATH: &str = "/api/desktop/v2/connect-codes";
 pub(crate) const CONNECT_CODES_EXCHANGE_PATH: &str = "/api/desktop/v2/connect-codes/exchange";
@@ -84,8 +82,7 @@ struct ExchangeEnvelope {
 
 /// Build the POST URL for connect-code exchange and ensure it matches `origin`.
 pub(crate) fn connect_exchange_url(origin: &str) -> Result<String, StationConnectExchangeError> {
-    let canonical = connect_origin_is_acceptable(origin)
-        .ok_or(StationConnectExchangeError::OriginNotAcceptable)?;
+    let canonical = connect_origin_is_acceptable(origin).ok_or(StationConnectExchangeError::OriginNotAcceptable)?;
     let url = format!("{canonical}{CONNECT_CODES_EXCHANGE_PATH}");
     if exchange_url_origin(&url) != Some(canonical) {
         return Err(StationConnectExchangeError::OriginMismatch);
@@ -115,7 +112,9 @@ async fn perform_connect_exchange(
     code: &str,
 ) -> Result<StationConnectAuthBundle, StationConnectExchangeError> {
     let body = connect_exchange_request_body(code);
-    let response = post_json(url, body).await.map_err(map_transport_error)?;
+    let response = post_json(url, body)
+        .await
+        .map_err(map_transport_error)?;
     map_exchange_http_response(response.status, &response.value)
 }
 
@@ -142,9 +141,7 @@ pub(crate) fn map_exchange_http_response(
     Err(StationConnectExchangeError::InvalidResponse)
 }
 
-fn parse_exchange_success(
-    body: &Value,
-) -> Result<StationConnectAuthBundle, StationConnectExchangeError> {
+fn parse_exchange_success(body: &Value) -> Result<StationConnectAuthBundle, StationConnectExchangeError> {
     let envelope: ExchangeEnvelope = serde_json::from_value(body.clone())
         .map_err(|_| StationConnectExchangeError::InvalidResponse)?;
     if !envelope.success {
@@ -175,14 +172,9 @@ fn classify_exchange_error_code(code: &str) -> StationConnectExchangeError {
         "expired_token" | "authorization_expired" | "connect_code_expired" | "code_expired" => {
             StationConnectExchangeError::CodeExpired
         }
-        "already_used"
-        | "authorization_already_used"
-        | "connect_code_already_used"
-        | "code_already_used"
-        | "connect_code_reused" => StationConnectExchangeError::CodeAlreadyUsed,
-        "origin_mismatch" | "connect_origin_mismatch" => {
-            StationConnectExchangeError::OriginMismatch
-        }
+        "already_used" | "authorization_already_used" | "connect_code_already_used"
+        | "code_already_used" | "connect_code_reused" => StationConnectExchangeError::CodeAlreadyUsed,
+        "origin_mismatch" | "connect_origin_mismatch" => StationConnectExchangeError::OriginMismatch,
         _ => StationConnectExchangeError::ServerRejected,
     }
 }
@@ -333,8 +325,7 @@ async fn read_body(mut response: reqwest::Response) -> Result<JsonResponse, Tran
         }
         buffer.extend_from_slice(&chunk);
     }
-    let value: Value =
-        serde_json::from_slice(&buffer).map_err(|_| TransportFailure::InvalidResponse)?;
+    let value: Value = serde_json::from_slice(&buffer).map_err(|_| TransportFailure::InvalidResponse)?;
     Ok(JsonResponse { status, value })
 }
 
@@ -474,10 +465,7 @@ mod tests {
             .get("http://example.com/api/desktop/v2/connect-codes/exchange")
             .send()
             .await;
-        assert!(
-            response.is_err(),
-            "https-only client must not follow http://"
-        );
+        assert!(response.is_err(), "https-only client must not follow http://");
     }
 
     #[tokio::test]
@@ -497,9 +485,7 @@ mod tests {
             axum::serve(listener, app).await.unwrap();
         });
         let url = format!("http://127.0.0.1:{port}{CONNECT_CODES_EXCHANGE_PATH}");
-        let expired = perform_connect_exchange(&url, VALID_CODE)
-            .await
-            .unwrap_err();
+        let expired = perform_connect_exchange(&url, VALID_CODE).await.unwrap_err();
         assert_eq!(expired, StationConnectExchangeError::CodeExpired);
         assert_eq!(expired.reason_code(), "connect_code_expired");
     }
@@ -521,9 +507,7 @@ mod tests {
             axum::serve(listener, app).await.unwrap();
         });
         let url = format!("http://127.0.0.1:{port}{CONNECT_CODES_EXCHANGE_PATH}");
-        let tamper = perform_connect_exchange(&url, VALID_CODE)
-            .await
-            .unwrap_err();
+        let tamper = perform_connect_exchange(&url, VALID_CODE).await.unwrap_err();
         assert_eq!(tamper, StationConnectExchangeError::OriginMismatch);
         assert_eq!(tamper.reason_code(), "connect_origin_mismatch");
     }
@@ -577,9 +561,7 @@ mod tests {
             .await
             .expect("first exchange");
         assert_eq!(replay_ok.session_id, expected_session);
-        let replay_again = perform_connect_exchange(&url, VALID_CODE)
-            .await
-            .unwrap_err();
+        let replay_again = perform_connect_exchange(&url, VALID_CODE).await.unwrap_err();
         assert_eq!(replay_again, StationConnectExchangeError::CodeAlreadyUsed);
         assert_eq!(replay_again.reason_code(), "connect_code_already_used");
     }
