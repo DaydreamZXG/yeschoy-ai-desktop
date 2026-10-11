@@ -80,7 +80,9 @@ On yeschoy.com (reference station), the button should:
 4. If the desktop app is not installed, **degrade** to the public download page
    (GitHub Release / yeschoy.com download) — **not** `ergou.qzz.io` update CDN.
 
-Future hosted `connect.js` (T6) will wrap steps 2–4 for third-party sites.
+Hosted [`connect.js`](../public/connect.js) (see [`station-connect-embed.md`](./station-connect-embed.md))
+wraps steps 2–4 for third-party sites; the mock harness inlines the same flow for
+local TLS testing.
 
 ## curl smoke tests (issue + exchange)
 
@@ -120,8 +122,7 @@ Run:
 Full signed-in UI against the mock still needs TLS + bootstrap/account APIs on the mock
 station (or yeschoy.com production).
 
-## Out of scope (T6+)
+## Out of scope (T7+)
 
-- Hosted `connect.js` and third-party embed docs (T6).
 - Loopback OAuth fallback (T7).
 - Production yeschoy.com API deployment (separate web repo).

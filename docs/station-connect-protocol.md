@@ -75,12 +75,16 @@ Codes are single-use and bound to `origin` at issuance.
 Exchange must use HTTPS to the same `origin` as in the deep link. The desktop
 client must verify that request host matches the declared origin.
 
-## Site embed (future)
+## Site embed
 
-Official hosted script (separate task): `https://yeschoy.com/connect.js` — one
-`<script>` tag, request code same-origin, then navigate to the deep link. If
-the desktop app is not installed, fall back to the public download page (GitHub
-Release / yeschoy.com download), not third-party update CDNs.
+Official hosted script: **`https://yeschoy.com/connect.js`** — one `<script>` tag,
+same-origin issue request, then navigate to the deep link. If the desktop app is
+not installed, fall back to the public download page (GitHub Release /
+yeschoy.com download), not third-party update CDNs.
+
+Copy-paste guide for New API / third-party stations:
+[`station-connect-embed.md`](./station-connect-embed.md). Source:
+`connect/yeschoy-connect.ts` → `public/connect.js` (`pnpm build:connect`).
 
 ## Desktop implementation status
 
@@ -91,7 +95,8 @@ Release / yeschoy.com download), not third-party update CDNs.
 | **T3** | HTTPS `POST …/connect-codes/exchange` client, origin policy, session install |
 | **T4** | Issue API contract (OpenAPI), local mock station + harness (`docs/station-connect-e2e-mock.md`) |
 | **T5** | Exchange success → account inspect (signed-in UI) + tool activation line ids; progress events |
-| T6+ | Hosted `connect.js`, third-party embed docs, loopback OAuth fallback |
+| **T6** | Hosted `connect.js`, third-party embed docs (`station-connect-embed.md`) |
+| T7+ | Loopback OAuth fallback, extended security regression |
 
 ### Exchange endpoint (desktop T3)
 
