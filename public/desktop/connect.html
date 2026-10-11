@@ -194,12 +194,21 @@
         btn.disabled = true;
       });
 
+      function uiReasonCode(code) {
+        if (!code) return "issue_failed";
+        var upper = String(code).toUpperCase();
+        if (upper === "AUTH_UNAUTHORIZED" || upper === "SESSION_REQUIRED") {
+          return "session_required";
+        }
+        return String(code);
+      }
+
       btn.addEventListener("yeschoy-connect-error", function (event) {
         btn.disabled = false;
         var err = event.detail;
         var code =
           err && err.reasonCode ? String(err.reasonCode) : "issue_failed";
-        var text = messages[code] || messages.generic;
+        var text = messages[uiReasonCode(code)] || messages.generic;
         setStatus(text, true);
       });
 

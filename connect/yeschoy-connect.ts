@@ -32,6 +32,22 @@ export class YeschoyConnectError extends Error {
   }
 }
 
+/** Map station issue API codes to stable UI reason codes (see station-connect OpenAPI). */
+export function normalizeConnectIssueReasonCode(
+  code: string | undefined,
+  httpStatus?: number,
+): string {
+  const raw = (code ?? "").trim();
+  const upper = raw.toUpperCase();
+  if (upper === "SESSION_REQUIRED" || upper === "AUTH_UNAUTHORIZED") {
+    return "session_required";
+  }
+  if (httpStatus === 401) {
+    return "session_required";
+  }
+  return raw || "issue_failed";
+}
+
 export interface YeschoyConnectOptions {
   /** Canonical HTTPS origin; defaults to current page origin. */
   origin?: string;
@@ -95,7 +111,10 @@ export async function issueConnectCode(
 
   const envelope = body as { success: boolean; code?: string; data?: unknown };
   if (!envelope.success) {
-    throw new YeschoyConnectError(envelope.code ?? "issue_failed", response.status);
+    throw new YeschoyConnectError(
+      normalizeConnectIssueReasonCode(envelope.code, response.status),
+      response.status,
+    );
   }
 
   const data = envelope.data;

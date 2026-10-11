@@ -10,6 +10,17 @@
       this.httpStatus = httpStatus;
     }
   }
+  function normalizeConnectIssueReasonCode(code, httpStatus) {
+    const raw = (code ?? "").trim();
+    const upper = raw.toUpperCase();
+    if (upper === "SESSION_REQUIRED" || upper === "AUTH_UNAUTHORIZED") {
+      return "session_required";
+    }
+    if (httpStatus === 401) {
+      return "session_required";
+    }
+    return raw || "issue_failed";
+  }
   function pageHttpsOrigin(location) {
     if (location.protocol !== "https:") {
       return null;
@@ -40,7 +51,10 @@
     }
     const envelope = body;
     if (!envelope.success) {
-      throw new YeschoyConnectError(envelope.code ?? "issue_failed", response.status);
+      throw new YeschoyConnectError(
+        normalizeConnectIssueReasonCode(envelope.code, response.status),
+        response.status
+      );
     }
     const data = envelope.data;
     if (!data || typeof data !== "object") {

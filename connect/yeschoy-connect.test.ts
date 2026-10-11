@@ -3,6 +3,7 @@ import {
   buildConnectDeepLink,
   issueConnectCode,
   navigateDeepLinkWithDownloadFallback,
+  normalizeConnectIssueReasonCode,
   pageHttpsOrigin,
   YeschoyConnectError,
 } from "./yeschoy-connect";
@@ -28,6 +29,27 @@ describe("buildConnectDeepLink", () => {
       "yeschoy://connect?origin=https%3A%2F%2Fexample.com&code=abc_def-123",
     );
     expect(url).not.toMatch(/access_token|refresh_token|api_key/i);
+  });
+});
+
+describe("normalizeConnectIssueReasonCode", () => {
+  it("maps AUTH_UNAUTHORIZED and 401 to session_required", () => {
+    expect(normalizeConnectIssueReasonCode("AUTH_UNAUTHORIZED", 401)).toBe(
+      "session_required",
+    );
+    expect(normalizeConnectIssueReasonCode("session_required", 401)).toBe(
+      "session_required",
+    );
+    expect(normalizeConnectIssueReasonCode(undefined, 401)).toBe(
+      "session_required",
+    );
+  });
+
+  it("preserves other documented issue failures", () => {
+    expect(normalizeConnectIssueReasonCode("connect_origin_invalid", 400)).toBe(
+      "connect_origin_invalid",
+    );
+    expect(normalizeConnectIssueReasonCode(undefined, 500)).toBe("issue_failed");
   });
 });
 
@@ -64,6 +86,24 @@ describe("issueConnectCode", () => {
 
     await expect(
       issueConnectCode(fetchImpl, "https://station.test", "/api/desktop/v2/connect-codes"),
+    ).rejects.toMatchObject({
+      reasonCode: "session_required",
+      httpStatus: 401,
+    });
+  });
+
+  it("normalizes live AUTH_UNAUTHORIZED to session_required", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      status: 401,
+      json: async () => ({
+        success: false,
+        code: "AUTH_UNAUTHORIZED",
+        message: "Unauthorized, invalid access token",
+      }),
+    });
+
+    await expect(
+      issueConnectCode(fetchImpl, "https://yeschoy.com", "/api/desktop/v2/connect-codes"),
     ).rejects.toMatchObject({
       reasonCode: "session_required",
       httpStatus: 401,
