@@ -5355,6 +5355,18 @@
   color: var(--muted);
 }
 
+.station-connect-origin-checking {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted, #5f6f66);
+}
+
+.sign-in-checking-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--muted, #5f6f66);
+}
+
 .station-connect-origin-error {
   width: 100%;
   margin: 0;

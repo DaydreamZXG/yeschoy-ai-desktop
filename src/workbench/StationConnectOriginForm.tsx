@@ -12,9 +12,15 @@ import type { AccountLineId } from "../configuration/preview";
 interface Props {
   onLineChange: (lineId: AccountLineId) => void;
   disabled?: boolean;
+  /** Non-blocking: account inspect still running; form stays interactive. */
+  accountChecking?: boolean;
 }
 
-export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
+export function StationConnectOriginForm({
+  onLineChange,
+  disabled,
+  accountChecking,
+}: Props) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState(readStationOriginDraftInitial);
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +85,11 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
       {error && (
         <p className="station-connect-origin-error" id="station-origin-error" role="alert">
           {error}
+        </p>
+      )}
+      {accountChecking && (
+        <p className="station-connect-origin-checking" role="status">
+          {t("stationConnectPage.accountChecking")}
         </p>
       )}
       <button

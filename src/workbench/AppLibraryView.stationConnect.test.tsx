@@ -186,4 +186,19 @@ describe("AppLibraryView station connect welcome strip", () => {
     expect(screen.queryByRole("textbox")).toBeNull();
     expect(screen.queryByText(zh.workbench.librarySignInTitle)).toBeNull();
   });
+
+  it("keeps the origin form interactive while account inspect is loading", async () => {
+    renderHome(
+      sessionFor("signed_out", {
+        loading: true,
+        projection: null,
+      }),
+    );
+    expect(
+      screen.getByRole("button", { name: zh.stationConnectPage.continue }),
+    ).toBeEnabled();
+    expect(
+      screen.getByText(zh.stationConnectPage.accountChecking),
+    ).toBeInTheDocument();
+  });
 });

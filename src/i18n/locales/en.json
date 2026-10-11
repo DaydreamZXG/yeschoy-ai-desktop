@@ -1247,6 +1247,7 @@
     "originHint": "Starts with the YesChoy example site — replace with your station’s HTTPS domain.",
     "continue": "Continue in browser",
     "opening": "Opening browser…",
+    "accountChecking": "Still checking account status — you can sign in or continue now.",
     "invalidOrigin": "Enter a valid HTTPS station address (domain only, no path)."
   },
   "stationConnect": {

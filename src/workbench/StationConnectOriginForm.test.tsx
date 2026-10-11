@@ -34,4 +34,17 @@ describe("StationConnectOriginForm", () => {
     expect(input.value).toBe("https://yeschoy.com");
     expect(screen.getByText(zh.stationConnectPage.originHint)).toBeTruthy();
   });
+
+  it("keeps continue enabled while account status is checking when draft is valid", () => {
+    vi.stubEnv("VITE_YESCHOY_DISTRIBUTION", "official");
+    render(
+      <StationConnectOriginForm onLineChange={vi.fn()} accountChecking />,
+    );
+    expect(
+      screen.getByRole("button", { name: zh.stationConnectPage.continue }),
+    ).toBeEnabled();
+    expect(
+      screen.getByText(zh.stationConnectPage.accountChecking),
+    ).toBeInTheDocument();
+  });
 });

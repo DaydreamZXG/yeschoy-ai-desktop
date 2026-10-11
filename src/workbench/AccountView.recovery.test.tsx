@@ -83,4 +83,21 @@ describe("AccountView recovery copy", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/换站点/)).toBeNull();
   });
+
+  it("keeps sign-in enabled while account inspect is loading", () => {
+    const signedOut = session("backend_unavailable");
+    render(
+      <AccountView
+        lineId="mainland_optimized"
+        onLineChange={vi.fn()}
+        session={{ ...signedOut, loading: true }}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: zh.workbench.signIn }),
+    ).toBeEnabled();
+    expect(
+      screen.getByText(zh.stationConnectPage.accountChecking),
+    ).toBeInTheDocument();
+  });
 });
