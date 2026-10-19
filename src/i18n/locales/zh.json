@@ -1249,13 +1249,13 @@
     }
   },
   "stationConnectPage": {
-    "originLabel": "站点地址（HTTPS）",
-    "originPlaceholder": "https://yeschoy.com",
-    "originHint": "默认示例站，可改成你的站点 HTTPS 域名。",
-    "continue": "在浏览器中继续",
+    "originLabel": "你的中转站网址",
+    "originPlaceholder": "https://你的中转站.com",
+    "originHint": "粘贴你平时登录的中转站网址就行，助手会自己判断怎么连接。",
+    "continue": "检测并连接",
     "opening": "正在打开浏览器…",
     "accountChecking": "正在检查账户状态，你仍可先登录或继续。",
-    "invalidOrigin": "请输入有效的 HTTPS 站点地址（域名，不含路径）。"
+    "invalidOrigin": "请粘贴站点网址，例如 https://example.com。"
   },
   "stationConnect": {
     "connecting": "正在通过网站连接桌面助手…",
@@ -1291,7 +1291,71 @@
       "network_error": "暂时连不上账户服务，请检查网络后重试。",
       "backend_unavailable": "账户服务暂不可用，请稍后刷新。",
       "invalid_response": "账户数据暂时无法加载，请刷新。",
-      "session_expired": "登录已失效，请在网页重新连接。"
+      "session_expired": "登录已失效，请在网页重新连接。",
+      "connect_origin_declined": "已取消连接这个站点。",
+      "connect_origin_untrusted": "这个站点还没被确认，请重新输入网址并确认。"
+    }
+  },
+  "stationOnboarding": {
+    "probing": "正在检测…",
+    "found": "找到站点：{{host}}",
+    "kind": {
+      "new_api": "New API 中转",
+      "one_api": "One API 中转",
+      "openai_compatible": "OpenAI 兼容接口",
+      "unknown": "中转站"
+    },
+    "oneClickBody": "这个站点支持一键登录。点下面的按钮会打开浏览器，你在网页上登录并点「授权」就好，不用复制任何密钥。",
+    "trustQuestion": "请确认这是你自己在用的中转站。连上之后，你在应用里的对话都会经过它。",
+    "trustAndLogin": "是我的站点，去浏览器登录",
+    "tokenIntro": "这个站点还没开通一键登录，没关系，用「令牌」也能连：",
+    "tokenStep1": "在浏览器里打开这个站点并登录。",
+    "tokenStep2": "进入「令牌」页面，点「添加令牌」或复制已有的令牌（以 sk- 开头）。",
+    "tokenStep3": "粘贴到下面，点「检查令牌」。",
+    "tokenLabel": "令牌",
+    "tokenCheck": "检查令牌",
+    "tokenChecking": "正在检查…",
+    "modelsLabel": "这个令牌可以用的模型",
+    "moreModels": "还有 {{count}} 个",
+    "token": {
+      "valid": "令牌可用，能用 {{count}} 个模型。令牌只用来检查，不会被保存。",
+      "invalid": "令牌不对或已被删除。请回站点「令牌」页重新复制一个，注意别多复制空格。",
+      "no_quota": "令牌是对的，但余额或额度用完了。请先到站点充值或调高令牌额度。",
+      "error": "站点暂时没有回应模型列表，请稍后再试；一直不行就联系站长。"
+    },
+    "failed": {
+      "invalid_origin": {
+        "title": "这个网址看不懂",
+        "next": "请粘贴站点的网址，例如 https://example.com。只要域名部分，后面的路径可以不要。"
+      },
+      "unreachable": {
+        "title": "连不上这个站点",
+        "next": "先在浏览器里打开这个网址试试。浏览器也打不开，说明网址写错了或站点暂时停了。"
+      },
+      "timeout": {
+        "title": "站点响应太慢",
+        "next": "过一会儿再试。如果你开了代理，换个节点试试。"
+      },
+      "not_relay": {
+        "title": "这个网址看起来不是中转站",
+        "next": "请确认复制的是中转站的地址（登录后能看到「令牌」「钱包」的那个网站），而不是聊天页面或别的网站。"
+      }
+    }
+  },
+  "stationTrust": {
+    "title": "要连接这个新站点吗？",
+    "body": "有个网页请求把桌面助手连接到上面这个站点。",
+    "point1": "连上后，助手会用这个站点的账户来配置你的 AI 应用。",
+    "point2": "你在这些应用里的对话，都会经过这个站点。",
+    "warn": "如果你不认识这个站点，或者没有刚刚在网页上点「打开桌面助手」，请点「不连接」。",
+    "decline": "不连接",
+    "accept": "我认识，继续连接",
+    "failed": "没有连接成功",
+    "reason": {
+      "connect_code_expired": "网页上的连接已经过期，请回到网页再点一次「打开桌面助手」。",
+      "connect_origin_not_acceptable": "站点地址不合规，助手不会连接它。",
+      "trust_store_full": "记住的站点太多了，请先在设置里删掉几个不用的。",
+      "generic": "请回到网页再点一次「打开桌面助手」。"
     }
   }
 }

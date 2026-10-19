@@ -42,6 +42,9 @@ export function useStationConnect(options: {
       if (!payload) return;
       const { lineId, onLineChange, refresh, onSignedIn } = optionsRef.current;
 
+      // 第一次见到的站点由 StationTrustDialog 负责询问，这里不弹提示。
+      if (payload.phase === "confirm_required") return;
+
       if (payload.phase === "connecting") {
         toast.loading(t("stationConnect.connecting"), { id: TOAST_ID });
         return;

@@ -715,3 +715,152 @@ button,
     justify-content: flex-start;
   }
 }
+
+/* ─── 通用站点接入（检测 → 一键登录 / 令牌） ─── */
+.station-onboarding {
+  display: grid;
+  gap: var(--space-12);
+  min-width: 0;
+}
+.station-onboarding-card {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: var(--space-12);
+  padding: var(--space-16);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  background: var(--subtle);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+.station-onboarding-card > svg {
+  width: 20px;
+  height: 20px;
+  margin-top: var(--space-2);
+  color: var(--accent);
+}
+.station-onboarding-card[data-tone="danger"] > svg {
+  color: var(--danger, #d14343);
+}
+.station-onboarding-card strong {
+  display: block;
+  font-size: var(--text-base);
+  overflow-wrap: anywhere;
+}
+.station-onboarding-card p {
+  margin: var(--space-4) 0 var(--space-8);
+}
+.station-onboarding-meta {
+  color: var(--faint);
+  font-size: var(--text-xs);
+}
+.station-onboarding-warn {
+  color: var(--muted);
+}
+.station-onboarding-steps {
+  margin: 0 0 var(--space-12);
+  padding-left: 1.25em;
+  display: grid;
+  gap: var(--space-4);
+}
+.station-token-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-8);
+}
+.station-token-form label {
+  display: grid;
+  gap: var(--space-4);
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+.station-token-form label > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-weight: 600;
+}
+.station-token-form label svg {
+  width: 14px;
+  height: 14px;
+}
+.station-token-form input {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 var(--space-12);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface, transparent);
+  font: inherit;
+}
+.station-token-result {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin-top: var(--space-12) !important;
+  color: var(--danger, #d14343);
+}
+.station-token-result[data-ok="true"] {
+  color: var(--success, #2f9e5b);
+}
+.station-token-result svg {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin-top: var(--space-4);
+}
+.station-model-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin: var(--space-8) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.station-model-chips li {
+  max-width: 16rem;
+  padding: var(--space-2) var(--space-8);
+  border-radius: var(--radius-full);
+  background: var(--surface, #fff);
+  border: 1px solid var(--line-soft);
+  font-size: var(--text-xs);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.station-model-chips li.more {
+  color: var(--faint);
+}
+.station-trust-dialog {
+  max-width: 28rem;
+}
+.station-trust-dialog h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+.station-trust-dialog h2 svg {
+  width: 20px;
+  height: 20px;
+  color: var(--warning, #c98a00);
+}
+.station-trust-host strong {
+  font-size: var(--text-lg);
+  overflow-wrap: anywhere;
+}
+.station-trust-points {
+  margin: 0;
+  padding-left: 1.25em;
+  display: grid;
+  gap: var(--space-4);
+}
+.station-trust-warn {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.station-trust-dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-8);
+}

@@ -1249,13 +1249,13 @@
     }
   },
   "stationConnectPage": {
-    "originLabel": "Station address (HTTPS)",
-    "originPlaceholder": "https://yeschoy.com",
-    "originHint": "Starts with the YesChoy example site — replace with your station’s HTTPS domain.",
-    "continue": "Continue in browser",
+    "originLabel": "Your relay site address",
+    "originPlaceholder": "https://your-relay.com",
+    "originHint": "Paste the relay address you normally sign in to; the assistant figures out how to connect.",
+    "continue": "Check & connect",
     "opening": "Opening browser…",
     "accountChecking": "Still checking account status — you can sign in or continue now.",
-    "invalidOrigin": "Enter a valid HTTPS station address (domain only, no path)."
+    "invalidOrigin": "Paste a site address, e.g. https://example.com."
   },
   "stationConnect": {
     "connecting": "Connecting from the website…",
@@ -1291,7 +1291,71 @@
       "network_error": "Can't reach account services. Check your network and retry.",
       "backend_unavailable": "Account services are unavailable. Refresh in a moment.",
       "invalid_response": "Account data couldn't be loaded. Refresh to retry.",
-      "session_expired": "Sign-in expired. Connect again from the website."
+      "session_expired": "Sign-in expired. Connect again from the website.",
+      "connect_origin_declined": "Connection to this site was cancelled.",
+      "connect_origin_untrusted": "This site hasn't been confirmed yet. Enter it again and confirm."
+    }
+  },
+  "stationOnboarding": {
+    "probing": "Checking…",
+    "found": "Found site: {{host}}",
+    "kind": {
+      "new_api": "New API relay",
+      "one_api": "One API relay",
+      "openai_compatible": "OpenAI-compatible API",
+      "unknown": "Relay"
+    },
+    "oneClickBody": "This site supports one-click sign-in. The button opens your browser; sign in and click Authorize. No keys to copy.",
+    "trustQuestion": "Make sure this is a relay you actually use. Once connected, your conversations in the apps go through it.",
+    "trustAndLogin": "It's mine, sign in in browser",
+    "tokenIntro": "This site doesn't offer one-click sign-in yet. You can still connect with a token:",
+    "tokenStep1": "Open this site in your browser and sign in.",
+    "tokenStep2": "Go to the Tokens page and add or copy a token (starts with sk-).",
+    "tokenStep3": "Paste it below and click Check token.",
+    "tokenLabel": "Token",
+    "tokenCheck": "Check token",
+    "tokenChecking": "Checking…",
+    "modelsLabel": "Models this token can use",
+    "moreModels": "{{count}} more",
+    "token": {
+      "valid": "Token works, {{count}} models available. It is only used for this check and is not saved.",
+      "invalid": "The token is wrong or was deleted. Copy it again from the Tokens page without extra spaces.",
+      "no_quota": "The token is right but its balance or quota is used up. Top up or raise the token quota first.",
+      "error": "The site did not return a model list. Try again later, or contact the site owner."
+    },
+    "failed": {
+      "invalid_origin": {
+        "title": "That address doesn't look right",
+        "next": "Paste the site address, e.g. https://example.com. Only the domain is needed."
+      },
+      "unreachable": {
+        "title": "Can't reach this site",
+        "next": "Try opening it in your browser. If the browser can't either, the address is wrong or the site is down."
+      },
+      "timeout": {
+        "title": "The site is responding slowly",
+        "next": "Try again in a moment. If you use a proxy, try another node."
+      },
+      "not_relay": {
+        "title": "This doesn't look like a relay site",
+        "next": "Make sure you copied the relay's address (the site with Tokens and Wallet after signing in), not a chat page or another site."
+      }
+    }
+  },
+  "stationTrust": {
+    "title": "Connect to this new site?",
+    "body": "A web page asked to connect the desktop assistant to the site above.",
+    "point1": "Once connected, the assistant configures your AI apps with this site's account.",
+    "point2": "Your conversations in those apps will go through this site.",
+    "warn": "If you don't recognize this site, or you didn't just click \"Open desktop assistant\" on a web page, choose Don't connect.",
+    "decline": "Don't connect",
+    "accept": "I know it, connect",
+    "failed": "Not connected",
+    "reason": {
+      "connect_code_expired": "The connect request expired. Go back to the web page and click \"Open desktop assistant\" again.",
+      "connect_origin_not_acceptable": "The site address is not acceptable; the assistant won't connect to it.",
+      "trust_store_full": "Too many remembered sites. Remove some unused ones in Settings first.",
+      "generic": "Go back to the web page and click \"Open desktop assistant\" again."
     }
   }
 }

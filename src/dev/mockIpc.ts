@@ -339,6 +339,24 @@ const handlers: Record<string, (a: Args) => unknown> = {
         },
   account_announcement_action_v2: () => null,
   manage_tool_connections_v1: (a) => connections(rid(a)),
+  station_trust_origin_v1: (a) => (a as { origin: string }).origin,
+  station_trust_state_v1: () => ({ trusted: [], builtin: [], pending: [] }),
+  station_probe_v1: (a) => {
+    const r = (a as { request: { origin: string; token?: string } }).request;
+    const origin = r.origin.startsWith("http") ? r.origin : `https://${r.origin}`;
+    return {
+      origin: new URL(origin).origin,
+      status: "ok",
+      kind: "new_api",
+      systemName: "小明的中转",
+      version: "v0.9.6",
+      desktopConnect: false,
+      tokenStatus: r.token ? "valid" : "not_provided",
+      models: r.token
+        ? ["claude-sonnet-4-5", "deepseek-v4", "gemini-3-pro", "glm-5.3", "gpt-6.1-sol", "kimi-k3", "qwen3-max"]
+        : [],
+    };
+  },
   open_tool_connection_v1: (a) => {
     const r = (a as { request: { requestId: string; toolId: string } }).request;
     return {

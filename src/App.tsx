@@ -43,6 +43,7 @@ import {
   writeAccountLinePreference,
 } from "./account/accountLinePreference";
 import { useAccountSession } from "./account/useAccountSession";
+import { StationTrustDialog } from "./account/StationTrustDialog";
 import { useStationConnect } from "./account/useStationConnect";
 import {
   isAccountLineId,
@@ -296,6 +297,7 @@ function App() {
               data-phase={phase}
               data-view={view}
             >
+              <StationTrustDialog />
               <WorkbenchSidebar
                 view={view}
                 onNavigate={setView}

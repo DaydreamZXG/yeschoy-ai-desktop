@@ -348,7 +348,7 @@ describe("official workbench", () => {
     const home = screen.getByTestId("candidate-home-view");
     expect(home).toHaveTextContent("登录一次，接入你的 AI 应用");
     expect(
-      within(home).getByRole("button", { name: "在浏览器中继续" }),
+      within(home).getByRole("button", { name: "检测并连接" }),
     ).toBeEnabled();
     expect(within(home).getByRole("textbox")).toBeInTheDocument();
   });
@@ -711,7 +711,7 @@ describe("official workbench", () => {
       screen.queryByRole("region", { name: "用量账单" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "在浏览器中继续" }),
+      screen.getByRole("button", { name: "检测并连接" }),
     ).toBeEnabled();
     expect(screen.getByRole("textbox")).toHaveValue("https://yeschoy.com");
     expect(screen.getAllByRole("article")).toHaveLength(7);

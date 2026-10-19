@@ -45,6 +45,8 @@ mod shutdown_coordinator;
 mod station_connect;
 mod station_connect_exchange;
 mod station_connect_loopback;
+mod station_probe;
+mod station_trust;
 mod token_estimate;
 mod tool_activation;
 mod tool_adapters;
@@ -130,6 +132,7 @@ pub fn run() {
         })
         .setup(move |app| {
             window_appearance::initialize(app)?;
+            station_trust::initialize(app.path().app_data_dir().ok());
             #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
             if let Err(error) = station_connect::wire_station_connect_deep_link(app.handle()) {
                 log::warn!("station_connect stage=wire_deep_link_failed error={error}");
@@ -220,7 +223,12 @@ pub fn run() {
             station_connect_loopback::station_connect_loopback_capabilities_v1,
             station_connect_loopback::station_connect_begin_loopback_oauth_v1,
             station_connect_loopback::station_connect_cancel_loopback_oauth_v1,
-            station_connect::station_connect_open_connect_page_v1
+            station_connect::station_connect_open_connect_page_v1,
+            station_connect::station_connect_confirm_origin_v1,
+            station_connect::station_trust_origin_v1,
+            station_connect::station_trust_state_v1,
+            station_connect::station_trust_forget_v1,
+            station_probe::station_probe_v1
         ])
         .build(tauri::generate_context!())
         .expect("failed to run the 野菜API desktop shell");
