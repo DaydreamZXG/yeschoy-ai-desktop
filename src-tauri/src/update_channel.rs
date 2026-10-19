@@ -19,13 +19,43 @@ pub(crate) struct Channel {
     pub(crate) variant: &'static str,
 }
 
+const DISTRIBUTION: &str = env!("YESCHOY_DISTRIBUTION");
+const GITHUB_REPO: &str = env!("YESCHOY_GITHUB_REPO");
+const COMMUNITY_PUBKEY: &str = env!("YESCHOY_COMMUNITY_UPDATER_PUBKEY");
+const CHANNELS_JSON: &str = include_str!(concat!(env!("OUT_DIR"), "/update-channels.json"));
+
 pub(crate) fn compiled_channel() -> Result<Channel, &'static str> {
-    channel_for_origin(env!("YESCHOY_AUTHORIZATION_PAGE_ORIGIN"))
+    match DISTRIBUTION {
+        "official" | "partner" => {
+            channel_for_origin(CHANNELS_JSON, env!("YESCHOY_AUTHORIZATION_PAGE_ORIGIN"))
+        }
+        _ => community_channel(GITHUB_REPO, COMMUNITY_PUBKEY),
+    }
 }
 
-fn channel_for_origin(origin: &str) -> Result<Channel, &'static str> {
-    let registry: Registry = serde_json::from_str(include_str!("../update-channels.json"))
-        .map_err(|_| "channel_invalid")?;
+/// 公开构建：从 GitHub Releases 的 `latest.json` 检查更新。
+/// 没有在构建时提供更新公钥时，更新功能整体不可用（而不是不验签）。
+fn community_channel(repo: &str, public_key: &str) -> Result<Channel, &'static str> {
+    let valid_repo = repo.split('/').count() == 2
+        && repo
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'/' | b'-' | b'_' | b'.'));
+    if !valid_repo {
+        return Err("channel_invalid");
+    }
+    if public_key.is_empty() {
+        return Err("updater_not_configured");
+    }
+    Ok(Channel {
+        authorization_origin: String::new(),
+        endpoint: format!("https://github.com/{repo}/releases/latest/download/latest.json"),
+        public_key: public_key.to_owned(),
+        variant: "community",
+    })
+}
+
+fn channel_for_origin(json: &str, origin: &str) -> Result<Channel, &'static str> {
+    let registry: Registry = serde_json::from_str(json).map_err(|_| "channel_invalid")?;
     if registry.schema_version != 1 || registry.official.public_key == registry.partner.public_key {
         return Err("channel_invalid");
     }
@@ -36,7 +66,8 @@ fn channel_for_origin(origin: &str) -> Result<Channel, &'static str> {
     };
     if channel.authorization_origin != origin
         || channel.public_key.is_empty()
-        || channel.endpoint != format!("https://ergou.qzz.io/updates/{variant}/stable.json")
+        || !channel.endpoint.starts_with("https://")
+        || !channel.endpoint.ends_with(&format!("/updates/{variant}/stable.json"))
     {
         return Err("channel_invalid");
     }
@@ -57,14 +88,22 @@ impl Channel {
                 self.variant
             )
         };
+        let expected_url = if self.variant == "community" {
+            // https://github.com/<repo>/releases/latest/download/latest.json
+            // → https://github.com/<repo>/releases/download/v<version>/<file>
+            let base = self.endpoint.trim_end_matches("/latest/download/latest.json");
+            format!("{base}/download/v{version}/{filename}")
+        } else {
+            // 官方源：与 endpoint 同主机的 /updates/releases/<variant>/<version>/<file>
+            let base = self
+                .endpoint
+                .trim_end_matches(&format!("/updates/{}/stable.json", self.variant));
+            format!("{base}/updates/releases/{}/{version}/{filename}", self.variant)
+        };
         manifest.get("schemaVersion").and_then(|v| v.as_u64()) == Some(2)
             && manifest.get("variant").and_then(|v| v.as_str()) == Some(self.variant)
             && manifest.get("version").and_then(|v| v.as_str()) == Some(version)
-            && url
-                == format!(
-                    "https://ergou.qzz.io/updates/releases/{}/{version}/{filename}",
-                    self.variant
-                )
+            && url == expected_url
     }
 }
 
@@ -72,6 +111,42 @@ impl Channel {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    const FIXTURE: &str = r#"{
+      "schemaVersion": 1,
+      "official": {"authorizationOrigin": "https://yeschoy.com",
+                   "endpoint": "https://updates.example/updates/official/stable.json",
+                   "publicKey": "official-key"},
+      "partner": {"authorizationOrigin": "https://ai.yeschoy.io",
+                  "endpoint": "https://updates.example/updates/partner/stable.json",
+                  "publicKey": "partner-key"}
+    }"#;
+
+    fn channel_for_origin(origin: &str) -> Result<Channel, &'static str> {
+        super::channel_for_origin(FIXTURE, origin)
+    }
+
+    #[test]
+    fn community_channel_needs_a_key_and_uses_github_release_urls() {
+        assert!(community_channel("o/r", "").is_err());
+        assert!(community_channel("bad repo", "k").is_err());
+        let channel = community_channel("o/r", "k").unwrap();
+        assert_eq!(
+            channel.endpoint,
+            "https://github.com/o/r/releases/latest/download/latest.json"
+        );
+        let suffix = if cfg!(target_os = "windows") {
+            "windows-x86_64-installer.exe"
+        } else {
+            "macos-universal.app.tar.gz"
+        };
+        let url = format!(
+            "https://github.com/o/r/releases/download/v1.2.3/yeschoy-1.2.3-community-{suffix}"
+        );
+        let manifest = json!({"schemaVersion": 2, "variant": "community", "version": "1.2.3"});
+        assert!(channel.accepts(&manifest, &url, "1.2.3"));
+        assert!(!channel.accepts(&manifest, &url.replace("o/r", "evil/r"), "1.2.3"));
+    }
 
     #[test]
     fn variants_use_disjoint_fixed_feeds_and_keys() {
@@ -91,7 +166,7 @@ mod tests {
         } else {
             "macos-universal.app.tar.gz"
         };
-        let url = format!("https://ergou.qzz.io/updates/releases/partner/{version}/yeschoy-{version}-partner-{suffix}");
+        let url = format!("https://updates.example/updates/releases/partner/{version}/yeschoy-{version}-partner-{suffix}");
         let manifest = json!({"schemaVersion": 2, "variant": "partner", "version": version});
         assert!(channel.accepts(&manifest, &url, version));
         assert!(!channel.accepts(&json!({"version": version}), &url, version));

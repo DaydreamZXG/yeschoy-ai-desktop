@@ -1,4 +1,0 @@
-# Reproducible build output; keep source fixtures and verification records.
-/renderer-dist/
-/browser-dist/
-/renderer-build-misplaced/

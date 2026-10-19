@@ -181,13 +181,17 @@ async fn check_update(
 
     let channel = match crate::update_channel::compiled_channel() {
         Ok(channel) => channel,
-        Err(_) => {
+        Err(reason) => {
             *state.available() = None;
             return AppUpdateResponse::new(
                 request_id,
                 UpdatePhase::Unavailable,
                 &current_version,
-                "manifest_invalid",
+                if reason == "updater_not_configured" {
+                    "updater_not_configured"
+                } else {
+                    "manifest_invalid"
+                },
             );
         }
     };

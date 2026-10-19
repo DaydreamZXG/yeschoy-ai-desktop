@@ -92,7 +92,7 @@ pub(super) async fn fetch(
 ) -> Result<(PathBuf, String)> {
     let public = build_client(None)?;
     // Direct client is no_proxy plus compiled resolve of MIRROR_HOST only.
-    let direct = build_client(Some(origins::MIRROR_ORIGIN))?;
+    let direct = build_client(origins::MIRROR_ORIGIN)?;
     let mirror = origins::mirror_from_routes(&public, &direct, source)
         .await
         .ok()

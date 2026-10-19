@@ -358,7 +358,7 @@
       "shutting_down": "野菜正在退出，本次更新已停止。",
       "shutdown_failed": "未能安全结束本机任务，已重新打开原版本。",
       "install_failed": "安装没有完成，已重新打开原版本。",
-      "updater_not_configured": "这个安装包没有配置更新通道。",
+      "updater_not_configured": "这个安装包没有开启自动更新。请到项目的 GitHub 发布页下载新版本。",
       "platform_unsupported": "当前系统暂不支持自动更新。",
       "endpoint_invalid": "更新地址未通过安全检查。",
       "manifest_invalid": "更新清单不完整或不适用于这台电脑。",

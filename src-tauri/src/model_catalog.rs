@@ -30,8 +30,8 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 
-const CATALOG_URL: &str = "https://ergou.qzz.io/apps/model-catalog.json";
-const SHA256_URL: &str = "https://ergou.qzz.io/apps/model-catalog.json.sha256";
+// 远程模型目录：官方包在构建期注入地址；公开构建默认只用内置目录。
+const CATALOG_URL: Option<&str> = option_env!("YESCHOY_MODEL_CATALOG_URL");
 const FETCH_TIMEOUT_SECS: u64 = 10;
 const MAX_CATALOG_BYTES: usize = 2 * 1024 * 1024;
 const MAX_SHA_BYTES: usize = 256;
@@ -239,10 +239,14 @@ pub async fn refresh_model_catalog_v1(request_id: String) -> Result<CatalogProje
     let Ok(client) = Client::builder().build() else {
         return Ok(bundled_projection(request_id, "fetch_failed"));
     };
-    let Some(body) = text(&client, CATALOG_URL, MAX_CATALOG_BYTES).await else {
+    let Some(catalog_url) = CATALOG_URL.filter(|url| url.starts_with("https://")) else {
         return Ok(bundled_projection(request_id, "fetch_failed"));
     };
-    let Some(expected) = text(&client, SHA256_URL, MAX_SHA_BYTES).await else {
+    let sha256_url = format!("{catalog_url}.sha256");
+    let Some(body) = text(&client, catalog_url, MAX_CATALOG_BYTES).await else {
+        return Ok(bundled_projection(request_id, "fetch_failed"));
+    };
+    let Some(expected) = text(&client, &sha256_url, MAX_SHA_BYTES).await else {
         return Ok(bundled_projection(request_id, "hash_unavailable"));
     };
     let digest = format!("{:x}", Sha256::digest(body.as_bytes()));

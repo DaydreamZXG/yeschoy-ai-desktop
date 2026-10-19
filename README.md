@@ -33,7 +33,7 @@
 - [野菜API 官网下载页](https://yeschoy.com/download)（自动识别系统，优先 GitHub 已发布版本，否则走官网备用地址）
 - [GitHub Releases](https://github.com/DaydreamZXG/yeschoy-ai-desktop/releases)
 
-应用内会自动检查更新（仍使用既有 ergou 更新通道，与下载页策略独立）。下载页源码与部署说明见 [`docs/download-page.md`](docs/download-page.md)。
+应用内会自动检查更新：自己编译的公开版本走 GitHub Releases，官方安装包走官方更新源（见 [`docs/OPEN_SOURCE.md`](docs/OPEN_SOURCE.md)）。下载页源码与部署说明见 [`docs/download-page.md`](docs/download-page.md)。
 
 ## 开发
 
@@ -78,10 +78,10 @@ Supported apps: Claude Code, Claude Desktop, Codex (ChatGPT desktop), WorkBuddy,
 
 ### Download
 
-- [Yeschoy download page](https://yeschoy.com/download) (OS-aware; prefers published GitHub releases, ergou fallback)
+- [Yeschoy download page](https://yeschoy.com/download) (OS-aware; prefers published GitHub releases)
 - [GitHub Releases](https://github.com/DaydreamZXG/yeschoy-ai-desktop/releases)
 
-See [`docs/download-page.md`](docs/download-page.md) for hosting notes. In-app auto-update still uses the existing ergou updater feeds.
+See [`docs/download-page.md`](docs/download-page.md) for hosting notes. In-app auto-update: community builds use GitHub Releases; official packages use the official feed (see `docs/OPEN_SOURCE.md`).
 
 ### Build
 

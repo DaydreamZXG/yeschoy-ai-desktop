@@ -358,7 +358,7 @@
       "shutting_down": "Yeschoy is closing, so this update stopped.",
       "shutdown_failed": "Local work could not finish safely. The existing version was reopened.",
       "install_failed": "Installation did not finish. The existing version was reopened.",
-      "updater_not_configured": "This build has no configured update channel.",
+      "updater_not_configured": "Auto-update isn't enabled in this build. Download new versions from the project's GitHub Releases page.",
       "platform_unsupported": "Automatic updates are not supported on this system yet.",
       "endpoint_invalid": "The update address failed its security check.",
       "manifest_invalid": "The release manifest is incomplete or not for this computer.",
