@@ -235,6 +235,7 @@ function connections(requestId: string) {
     claude_code: "glm-5.3",
     claude_desktop: "claude-sonnet-4-5-20250929",
     pi: "gpt-5.6-codex",
+    workbuddy: "gpt-6.1-sol-2026-10-preview-long-model-identifier",
   } as Record<string, string>;
   return {
     ...base,
@@ -338,6 +339,16 @@ const handlers: Record<string, (a: Args) => unknown> = {
         },
   account_announcement_action_v2: () => null,
   manage_tool_connections_v1: (a) => connections(rid(a)),
+  open_tool_connection_v1: (a) => {
+    const r = (a as { request: { requestId: string; toolId: string } }).request;
+    return {
+      schemaVersion: 2,
+      requestId: r.requestId,
+      toolId: r.toolId,
+      status: "opened",
+      reasonCode: "opened",
+    };
+  },
   scan_activation_targets_v1: (a) => targets(rid(a)),
   manual_location_pick: (a) => ({ requestId: rid(a), outcome: "cancelled" }),
   manual_location_clear: (a) => ({ requestId: rid(a), outcome: "cleared" }),

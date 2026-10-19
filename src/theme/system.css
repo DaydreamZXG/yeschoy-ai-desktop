@@ -645,3 +645,73 @@ button,
 .tool-rail {
   gap: 0;
 }
+
+/* ─── 已接入卡片：长模型名 / 打开反馈不再把中间列挤成一字一行 ───
+   旧布局 main 列是 minmax(0,1fr)，右侧 actions 是 auto；
+   「已发送打开请求…」这类反馈一出现，actions 变宽，main 被压到几乎 0，
+   模型名按 overflow-wrap:anywhere 每个字符一行并盖住「换模型与分组」。 */
+.connection-library > .connection-row {
+  grid-template-columns: 40px minmax(11rem, 1fr) auto minmax(0, auto);
+}
+.connection-row > .connection-row-actions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+  max-width: 26rem;
+}
+.connection-row-actions .open-connection-control {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-8);
+  min-width: 0;
+}
+.connection-row-actions .open-feedback {
+  flex-basis: 100%;
+  max-width: 100%;
+  white-space: normal;
+}
+.connection-row-fact {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+}
+.connection-row .connection-model-switch {
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+}
+.connection-row .connection-model-switch .connection-model {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.connection-row .connection-model-switch-hint {
+  grid-row: 1;
+  flex-shrink: 0;
+}
+.connection-row-extra {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .connection-library > .connection-row {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "icon main state"
+      "actions actions actions";
+  }
+  .connection-row > .connection-row-actions {
+    max-width: none;
+    justify-content: flex-start;
+  }
+}

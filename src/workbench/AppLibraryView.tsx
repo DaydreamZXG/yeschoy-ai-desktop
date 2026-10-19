@@ -572,7 +572,10 @@ export function AppLibraryView({
                         aria-label={t("yeschoyDaily.changeModel")}
                         onClick={() => onOpenSetup(app.id, "change-model")}
                       >
-                        <code className="connection-model">
+                        <code
+                          className="connection-model"
+                          title={connection.modelId || undefined}
+                        >
                           {connection.modelId || c.libraryModelPending}
                         </code>
                         <span className="connection-model-switch-hint">
