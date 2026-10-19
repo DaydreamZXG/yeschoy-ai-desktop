@@ -14,10 +14,7 @@ interface Props {
   disabled?: boolean;
 }
 
-export function StationConnectOriginForm({
-  onLineChange,
-  disabled,
-}: Props) {
+export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState(readStationOriginDraftInitial);
   const [error, setError] = useState<string | null>(null);
@@ -75,12 +72,13 @@ export function StationConnectOriginForm({
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
         />
-        <small className="station-connect-origin-hint" id={hintId}>
-          {t("stationConnectPage.originHint")}
-        </small>
       </label>
       {error && (
-        <p className="station-connect-origin-error" id="station-origin-error" role="alert">
+        <p
+          className="station-connect-origin-error"
+          id="station-origin-error"
+          role="alert"
+        >
           {error}
         </p>
       )}
@@ -89,9 +87,16 @@ export function StationConnectOriginForm({
         className="primary-action station-connect-origin-submit"
         disabled={disabled || opening || !draft.trim()}
       >
-        {opening ? t("stationConnectPage.opening") : t("stationConnectPage.continue")}
+        {opening
+          ? t("stationConnectPage.opening")
+          : t("stationConnectPage.continue")}
         <ArrowRight aria-hidden="true" />
       </button>
+      {/* 提示放在输入框和按钮这一整行下面：放在 label 里时，按钮按底边对齐会
+          对到提示文字上，和输入框错开半行。 */}
+      <small className="station-connect-origin-hint" id={hintId}>
+        {t("stationConnectPage.originHint")}
+      </small>
     </form>
   );
 }
