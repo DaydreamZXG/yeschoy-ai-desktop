@@ -19,7 +19,12 @@ import {
  * 等）自己不重渲染，但它们全部由调了 `useTranslation()` 的组件渲染，
  * 父组件一重渲染就会重新调用它们。
  */
-export function LanguagePicker() {
+export function LanguagePicker({
+  variant = "section",
+}: {
+  /** `control` 只渲染切换按钮组，供设置页的统一行布局使用。 */
+  variant?: "section" | "control";
+} = {}) {
   const { t, i18n } = useTranslation();
   const current = (SUPPORTED_LANGUAGES as readonly string[]).includes(
     i18n.language,
@@ -36,27 +41,33 @@ export function LanguagePicker() {
     void i18n.changeLanguage(next);
   };
 
+  const picker = (
+    <div
+      className="language-picker"
+      role="group"
+      aria-label={t("yeschoySettings.languageTitle")}
+    >
+      {SUPPORTED_LANGUAGES.map((id) => (
+        <button
+          type="button"
+          key={id}
+          lang={id}
+          aria-pressed={current === id}
+          onClick={() => change(id)}
+        >
+          <Languages aria-hidden="true" />
+          <span>{LANGUAGE_NAME[id]}</span>
+        </button>
+      ))}
+    </div>
+  );
+
+  if (variant === "control") return picker;
+
   return (
     <section className="settings-language">
       <h2>{t("yeschoySettings.languageTitle")}</h2>
-      <div
-        className="language-picker"
-        role="group"
-        aria-label={t("yeschoySettings.languageTitle")}
-      >
-        {SUPPORTED_LANGUAGES.map((id) => (
-          <button
-            type="button"
-            key={id}
-            lang={id}
-            aria-pressed={current === id}
-            onClick={() => change(id)}
-          >
-            <Languages aria-hidden="true" />
-            <span>{LANGUAGE_NAME[id]}</span>
-          </button>
-        ))}
-      </div>
+      {picker}
       <p>{t("yeschoySettings.languageNote")}</p>
     </section>
   );

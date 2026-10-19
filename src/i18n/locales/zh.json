@@ -305,7 +305,14 @@
       "copied": "已复制"
     },
     "troubleshootingTitle": "排查与高级",
-    "troubleshootingBody": "安装或接入出问题时再用，日常使用可以不管这里。"
+    "troubleshootingBody": "安装或接入出问题时再用，日常使用可以不管这里。",
+    "groupGeneral": "通用",
+    "groupGeneralNote": "只保存在这台电脑，马上生效。",
+    "groupAbout": "版本与更新",
+    "groupPrivacy": "隐私与安全",
+    "groupPrivacyNote": "这些是本版本固定的行为，不需要你设置。",
+    "groupSystem": "后台运行",
+    "groupAdvanced": "排查与高级"
   },
   "yeschoyUpdate": {
     "title": "野菜自动更新",

@@ -305,7 +305,14 @@
       "copied": "Copied"
     },
     "troubleshootingTitle": "Troubleshooting and advanced",
-    "troubleshootingBody": "For when an install or a connection goes wrong. Day to day you can ignore it."
+    "troubleshootingBody": "For when an install or a connection goes wrong. Day to day you can ignore it.",
+    "groupGeneral": "General",
+    "groupGeneralNote": "Saved on this computer only. Applies immediately.",
+    "groupAbout": "Version & updates",
+    "groupPrivacy": "Privacy & security",
+    "groupPrivacyNote": "Fixed behaviour in this version — nothing to configure.",
+    "groupSystem": "Background",
+    "groupAdvanced": "Troubleshooting & advanced"
   },
   "yeschoyUpdate": {
     "title": "Yeschoy automatic updates",
