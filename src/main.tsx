@@ -11,13 +11,12 @@ import "./workbench/workbench-v2.css";
 import "./theme/new-api.css";
 import "./theme/new-api-layout.css";
 import "./theme/motion.css";
-import { installSpotlight } from "./theme/motion";
+import "./theme/system.css";
 
 const applyTitle = () => {
   document.title = i18n.t("workbench.appTitle");
 };
 applyTitle();
-installSpotlight();
 i18n.on("languageChanged", applyTitle);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
