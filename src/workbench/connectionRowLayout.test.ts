@@ -30,4 +30,8 @@ describe("已接入卡片布局", () => {
   it("被省略的模型名可以悬停看全", () => {
     expect(view).toMatch(/title=\{connection\.modelId \|\| undefined\}/);
   });
+
+  it("卡片上优先显示可读模型名，完整 ID 放在 title", () => {
+    expect(view).toMatch(/modelDisplayName\(connection\.modelId\)/);
+  });
 });

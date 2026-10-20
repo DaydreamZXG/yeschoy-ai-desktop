@@ -245,6 +245,29 @@ button,
   grid-column: 1 / -1;
   color: var(--faint);
 }
+.station-connect-origin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+}
+.station-connect-origin-actions .text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 36px;
+  padding: 0 var(--space-8);
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.station-connect-origin-actions .text-button svg {
+  width: 14px;
+  height: 14px;
+}
+
 
 .oss-soft-traffic {
   margin: 0 0 0 auto;
@@ -684,8 +707,9 @@ button,
 .connection-row .connection-model-switch {
   grid-template-columns: minmax(0, 1fr) auto;
   min-width: 0;
-  max-width: 100%;
+  max-width: min(100%, 22rem);
   margin: 0;
+  overflow: hidden;
 }
 .connection-row .connection-model-switch .connection-model {
   min-width: 0;
@@ -742,6 +766,12 @@ button,
 .station-onboarding-card[data-tone="danger"] > svg {
   color: var(--danger, #d14343);
 }
+.station-onboarding-card[data-tone="progress"] > svg {
+  color: var(--accent);
+}
+.station-onboarding-card[data-tone="progress"] .is-spinning {
+  animation: spin 0.9s linear infinite;
+}
 .station-onboarding-card strong {
   display: block;
   font-size: var(--text-base);
@@ -749,6 +779,9 @@ button,
 }
 .station-onboarding-card p {
   margin: var(--space-4) 0 var(--space-8);
+}
+.station-onboarding-card .subtle-button {
+  margin-top: var(--space-4);
 }
 .station-onboarding-meta {
   color: var(--faint);
@@ -819,18 +852,44 @@ button,
   list-style: none;
 }
 .station-model-chips li {
-  max-width: 16rem;
-  padding: var(--space-2) var(--space-8);
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-6);
+  width: 11.5rem;
+  max-width: 100%;
+  min-width: 0;
+  padding: var(--space-4) var(--space-10);
   border-radius: var(--radius-full);
   background: var(--surface, #fff);
   border: 1px solid var(--line-soft);
   font-size: var(--text-xs);
   overflow: hidden;
   white-space: nowrap;
+}
+.station-model-chips li > strong,
+.station-model-chips li > code {
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.station-model-chips li > strong {
+  flex: 1 1 auto;
+  font-weight: 600;
+}
+.station-model-chips li > code {
+  flex: 0 1 auto;
+  max-width: 45%;
+  color: var(--muted);
+  font-weight: 400;
 }
 .station-model-chips li.more {
+  width: auto;
   color: var(--faint);
+  border-style: dashed;
 }
 .station-trust-dialog {
   max-width: 28rem;

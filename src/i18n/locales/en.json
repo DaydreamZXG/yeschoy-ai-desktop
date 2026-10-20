@@ -1310,6 +1310,10 @@
   },
   "stationOnboarding": {
     "probing": "Checking…",
+    "probingTitle": "Looking up this site",
+    "probingBody": "Usually a few seconds. Cancel anytime to edit the address; other pages stay usable.",
+    "cancelProbe": "Cancel",
+    "retryProbe": "Try again",
     "found": "Found site: {{host}}",
     "kind": {
       "new_api": "New API relay",

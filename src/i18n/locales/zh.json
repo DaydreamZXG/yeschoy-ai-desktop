@@ -1310,6 +1310,10 @@
   },
   "stationOnboarding": {
     "probing": "正在检测…",
+    "probingTitle": "正在看看这个站点",
+    "probingBody": "一般几秒就好。你可以点「取消」停下来，改网址再试；其它页面照常能用。",
+    "cancelProbe": "取消",
+    "retryProbe": "再试一次",
     "found": "找到站点：{{host}}",
     "kind": {
       "new_api": "New API 中转",

@@ -3,20 +3,34 @@
 /* RU-012: one visual system for the official desktop workbench. */
 .model-picker-identity {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-2);
   min-width: 0;
+  overflow: hidden;
 }
 
 .model-picker-identity strong,
 .model-options strong {
   display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+  word-break: normal;
   font-size: var(--text-sm);
   font-weight: 600;
 }
 
 .model-picker-identity strong + code,
 .model-options strong + code {
-  margin-top: var(--space-4);
+  display: block;
+  min-width: 0;
+  margin-top: var(--space-2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+  word-break: normal;
   color: var(--muted);
   font-weight: 400;
 }
@@ -5662,10 +5676,16 @@
 
 .connection-model {
   display: block;
+  min-width: 0;
+  max-width: 100%;
   font-size: var(--text-lg);
   font-weight: 600;
   line-height: 1.5;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+  word-break: normal;
   letter-spacing: -0.03em;
 }
 
@@ -5678,6 +5698,8 @@
   align-items: center;
   gap: 0 var(--space-10);
   width: 100%;
+  max-width: 28rem;
+  min-width: 0;
   min-height: 0;
   padding: var(--space-10) var(--space-12);
   margin: 0 0 var(--space-10);
@@ -5685,6 +5707,7 @@
   border-radius: var(--radius-md);
   background: var(--subtle);
   text-align: left;
+  overflow: hidden;
   transition: var(--tr-color);
 }
 
@@ -5694,7 +5717,12 @@
 
 .connection-model-switch .connection-model {
   grid-column: 1;
-  overflow-wrap: anywhere;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .connection-model-switch-hint {
@@ -6267,18 +6295,25 @@
 
 .model-picker-trigger {
   width: 100%;
+  min-width: 0;
   min-height: 44px;
   justify-content: space-between;
+  gap: var(--space-8);
   background: var(--subtle);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   text-align: left;
   padding: var(--space-10) var(--space-12);
+  overflow: hidden;
 }
 
 .model-picker-trigger code {
   font-size: var(--text-xs);
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+  word-break: normal;
   font-weight: 600;
 }
 
@@ -6358,8 +6393,14 @@
 
 .model-options code {
   display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+  word-break: normal;
   font-size: var(--text-xs);
-  overflow-wrap: anywhere;
 }
 
 .model-options small {
@@ -7131,16 +7172,20 @@ select {
 }
 
 .model-menu-chip {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   gap: var(--space-6);
-  max-width: min(100%, 22rem);
+  width: auto;
+  min-width: min(100%, 11rem);
+  max-width: min(100%, 18rem);
   padding: var(--space-2) var(--space-8);
   border: 1px solid var(--line);
   border-radius: 999px;
   color: var(--ink);
   font-size: var(--text-xs);
   line-height: 1.7;
+  overflow: hidden;
   white-space: nowrap;
 }
 
@@ -7185,19 +7230,23 @@ select {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
   min-width: 0;
 }
 
 .model-menu-chip strong {
+  flex: 1 1 auto;
   font-size: inherit;
   font-weight: 600;
-  max-width: 12rem;
+  max-width: 10rem;
 }
 
 .model-menu-chip code {
+  flex: 0 1 auto;
   font-size: var(--text-xs);
   color: var(--muted);
-  max-width: 9rem;
+  max-width: 6.5rem;
 }
 
 .model-menu-chip small {

@@ -12,7 +12,7 @@ use serde_json::Value;
 
 use crate::station_connect::connect_origin_is_acceptable;
 
-const TIMEOUT: Duration = Duration::from_secs(5);
+const TIMEOUT: Duration = Duration::from_secs(4);
 const MAX_BYTES: usize = 2 * 1024 * 1024;
 const MAX_MODELS: usize = 500;
 
@@ -47,6 +47,7 @@ fn client() -> Result<Client, ()> {
         .https_only(true)
         .redirect(Policy::none())
         .timeout(TIMEOUT)
+        .connect_timeout(Duration::from_secs(2))
         .user_agent(concat!("YesChoy-Desktop/", env!("CARGO_PKG_VERSION")))
         .build()
         .map_err(|_| ())

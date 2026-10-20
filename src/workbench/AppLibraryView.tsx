@@ -43,6 +43,7 @@ import { showOssSoftTraffic } from "../distribution/softTraffic";
 import { showYeschoyCommunityUi } from "../distribution/yeschoyStation";
 import { OssSoftTrafficCta } from "./OssSoftTrafficCta";
 import { StationConnectOriginForm } from "./StationConnectOriginForm";
+import { modelDisplayName } from "../model-profiles/profile";
 import type { AccountLineId } from "../configuration/preview";
 import type { AccountStatus } from "../account/session";
 import {
@@ -593,7 +594,9 @@ export function AppLibraryView({
                           className="connection-model"
                           title={connection.modelId || undefined}
                         >
-                          {connection.modelId || c.libraryModelPending}
+                          {connection.modelId
+                            ? modelDisplayName(connection.modelId)
+                            : c.libraryModelPending}
                         </code>
                         <span className="connection-model-switch-hint">
                           {t("yeschoyDaily.changeModel")}

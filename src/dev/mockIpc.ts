@@ -343,11 +343,28 @@ const handlers: Record<string, (a: Args) => unknown> = {
   manage_tool_connections_v1: (a) => connections(rid(a)),
   station_trust_origin_v1: (a) => (a as { origin: string }).origin,
   station_trust_state_v1: () => ({ trusted: [], builtin: [], pending: [] }),
-  station_probe_v1: (a) => {
+  station_probe_v1: async (a) => {
     const r = (a as { request: { origin: string; token?: string } }).request;
     const origin = r.origin.startsWith("http")
       ? r.origin
       : `https://${r.origin}`;
+    const host = new URL(origin).hostname;
+    // uxaudit 演示：fail.* 立刻失败；slow.* 拖几秒好拍「正在检测」。
+    if (host.startsWith("fail.")) {
+      return {
+        origin: new URL(origin).origin,
+        status: "unreachable",
+        kind: "unknown",
+        systemName: "",
+        version: "",
+        desktopConnect: false,
+        tokenStatus: "not_provided",
+        models: [],
+      };
+    }
+    if (host.startsWith("slow.")) {
+      await new Promise((resolve) => setTimeout(resolve, 8_000));
+    }
     return {
       origin: new URL(origin).origin,
       status: "ok",
@@ -358,11 +375,11 @@ const handlers: Record<string, (a: Args) => unknown> = {
       tokenStatus: r.token ? "valid" : "not_provided",
       models: r.token
         ? [
-            "claude-sonnet-4-5",
-            "deepseek-v4",
-            "gemini-3-pro",
+            "claude-sonnet-4-5-20250929",
+            "deepseek-chat-v4-long-preview-identifier",
+            "gemini-3-pro-preview-exp-20261001",
             "glm-5.3",
-            "gpt-6.1-sol",
+            "gpt-6.1-sol-2026-10-preview-long-model-identifier",
             "kimi-k3",
             "qwen3-max",
           ]

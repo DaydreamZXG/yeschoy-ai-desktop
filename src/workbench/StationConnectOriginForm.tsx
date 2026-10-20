@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   CheckCircle2,
@@ -6,6 +6,7 @@ import {
   KeyRound,
   LoaderCircle,
   ShieldQuestion,
+  X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -21,6 +22,7 @@ import {
   probeStation,
   type StationProbeResult,
 } from "../station/stationProbe";
+import { modelDisplayName, shortModelId } from "../model-profiles/profile";
 
 interface Props {
   onLineChange: (lineId: AccountLineId) => void;
@@ -46,12 +48,32 @@ type Stage =
   | { kind: "result"; probe: StationProbeResult }
   | { kind: "failed"; reason: string };
 
+/** 前端再加一道软时限：原生侧挂住时，界面也要能取消、能重试。 */
+const PROBE_UI_DEADLINE_MS = 4_500;
+
+async function probeWithDeadline(
+  origin: string,
+  token?: string,
+): Promise<StationProbeResult | null | "timeout"> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      probeStation(origin, token),
+      new Promise<"timeout">((resolve) => {
+        timer = setTimeout(() => resolve("timeout"), PROBE_UI_DEADLINE_MS);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 /**
  * 「接入你的中转站」：
  * 1. 粘贴网址 → 助手自己检测站点类型；
  * 2. 站点支持一键登录 → 确认后去浏览器登录；
  * 3. 不支持 → 改用令牌：贴一个 sk- 开头的令牌，助手验证并列出可用模型。
- * 站点那边不需要做任何改动。
+ * 站点那边不需要做任何改动。检测不挡其它页面操作；可取消、可重试。
  */
 export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
   const { t } = useTranslation();
@@ -61,8 +83,23 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
   const [stage, setStage] = useState<Stage>({ kind: "idle" });
   const [token, setToken] = useState("");
   const [checkingToken, setCheckingToken] = useState(false);
+  const probeGeneration = useRef(0);
   const hintId = "station-origin-hint";
   const describedBy = error ? `${hintId} station-origin-error` : hintId;
+
+  useEffect(
+    () => () => {
+      // 离开页面时作废进行中的检测，避免回来时突然弹出结果。
+      probeGeneration.current += 1;
+    },
+    [],
+  );
+
+  const cancelProbe = useCallback(() => {
+    probeGeneration.current += 1;
+    setStage({ kind: "idle" });
+    setCheckingToken(false);
+  }, []);
 
   const openLogin = useCallback(
     async (origin: string) => {
@@ -98,8 +135,14 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
       await openLogin(origin);
       return;
     }
+    const generation = ++probeGeneration.current;
     setStage({ kind: "probing" });
-    const probe = await probeStation(origin);
+    const probe = await probeWithDeadline(origin);
+    if (generation !== probeGeneration.current) return;
+    if (probe === "timeout") {
+      setStage({ kind: "failed", reason: "timeout" });
+      return;
+    }
     if (!probe) {
       setStage({ kind: "failed", reason: "unreachable" });
       return;
@@ -113,12 +156,18 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
 
   const checkToken = useCallback(async () => {
     if (stage.kind !== "result") return;
+    const generation = ++probeGeneration.current;
     setCheckingToken(true);
-    const probe = await probeStation(stage.probe.origin, token.trim());
+    const probe = await probeWithDeadline(stage.probe.origin, token.trim());
+    if (generation !== probeGeneration.current) return;
     setCheckingToken(false);
+    if (probe === "timeout" || !probe) {
+      setStage({ kind: "failed", reason: probe === "timeout" ? "timeout" : "unreachable" });
+      return;
+    }
     // 令牌验证完就从输入框清掉，不在界面上长时间露着。
-    if (probe?.tokenStatus === "valid") setToken("");
-    if (probe) setStage({ kind: "result", probe });
+    if (probe.tokenStatus === "valid") setToken("");
+    setStage({ kind: "result", probe });
   }, [stage, token]);
 
   const busy = disabled || opening || stage.kind === "probing";
@@ -143,11 +192,12 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
             spellCheck={false}
             placeholder={t("stationConnectPage.originPlaceholder")}
             value={draft}
-            disabled={busy}
+            disabled={disabled || opening}
             onChange={(event) => {
               setDraft(event.target.value);
               if (error) setError(null);
-              if (stage.kind !== "idle") setStage({ kind: "idle" });
+              if (stage.kind === "failed" || stage.kind === "result")
+                setStage({ kind: "idle" });
             }}
             aria-invalid={error ? true : undefined}
             aria-describedby={describedBy}
@@ -162,35 +212,63 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
             {error}
           </p>
         )}
-        <button
-          type="submit"
-          className="primary-action station-connect-origin-submit"
-          disabled={busy || !draft.trim()}
-        >
-          {stage.kind === "probing" ? (
-            <>
-              <LoaderCircle className="is-spinning" aria-hidden="true" />
-              {t("stationOnboarding.probing")}
-            </>
-          ) : opening ? (
-            t("stationConnectPage.opening")
-          ) : (
-            <>
-              {t("stationConnectPage.continue")}
-              <ArrowRight aria-hidden="true" />
-            </>
+        <div className="station-connect-origin-actions">
+          <button
+            type="submit"
+            className="primary-action station-connect-origin-submit"
+            disabled={busy || !draft.trim()}
+          >
+            {stage.kind === "probing" ? (
+              <>
+                <LoaderCircle className="is-spinning" aria-hidden="true" />
+                {t("stationOnboarding.probing")}
+              </>
+            ) : opening ? (
+              t("stationConnectPage.opening")
+            ) : (
+              <>
+                {t("stationConnectPage.continue")}
+                <ArrowRight aria-hidden="true" />
+              </>
+            )}
+          </button>
+          {stage.kind === "probing" && (
+            <button
+              type="button"
+              className="text-button"
+              onClick={cancelProbe}
+            >
+              <X aria-hidden="true" />
+              {t("stationOnboarding.cancelProbe")}
+            </button>
           )}
-        </button>
+        </div>
         <small className="station-connect-origin-hint" id={hintId}>
           {t("stationConnectPage.originHint")}
         </small>
       </form>
+
+      {stage.kind === "probing" && (
+        <div
+          className="station-onboarding-card"
+          data-tone="progress"
+          role="status"
+          data-testid="station-probing"
+        >
+          <LoaderCircle className="is-spinning" aria-hidden="true" />
+          <div>
+            <strong>{t("stationOnboarding.probingTitle")}</strong>
+            <p>{t("stationOnboarding.probingBody")}</p>
+          </div>
+        </div>
+      )}
 
       {stage.kind === "failed" && (
         <div
           className="station-onboarding-card"
           data-tone="danger"
           role="alert"
+          data-testid="station-probe-failed"
         >
           <CircleAlert aria-hidden="true" />
           <div>
@@ -198,6 +276,14 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
               {t(`stationOnboarding.failed.${stage.reason}.title`)}
             </strong>
             <p>{t(`stationOnboarding.failed.${stage.reason}.next`)}</p>
+            <button
+              type="button"
+              className="subtle-button"
+              disabled={disabled}
+              onClick={() => void submit()}
+            >
+              {t("stationOnboarding.retryProbe")}
+            </button>
           </div>
         </div>
       )}
@@ -299,7 +385,10 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
                   >
                     {probe.models.slice(0, 24).map((model) => (
                       <li key={model} title={model}>
-                        {model}
+                        <strong>{modelDisplayName(model)}</strong>
+                        {modelDisplayName(model) !== model && (
+                          <code>{shortModelId(model, 18)}</code>
+                        )}
                       </li>
                     ))}
                     {probe.models.length > 24 && (

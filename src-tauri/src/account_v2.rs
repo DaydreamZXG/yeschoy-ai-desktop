@@ -23,10 +23,11 @@ use crate::connectivity_core::{request_id_is_valid, CONNECTIVITY_LINES};
 
 const CLIENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const MAX_RESPONSE_BYTES: usize = 2 * 1024 * 1024;
-const REQUEST_TIMEOUT: Duration = Duration::from_secs(12);
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 /// 开机检查账户不能拖住界面：整条 inspect（bootstrap→刷新→账户）最多等这么久。
-const INSPECT_DEADLINE: Duration = Duration::from_secs(8);
-const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
+/// 5 秒够慢网完成一次往返；再长就只是让首页干等。
+const INSPECT_DEADLINE: Duration = Duration::from_secs(5);
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 const KEYRING_SERVICE: &str = "com.yeschoy.desktop.account";
 const KEYRING_USER: &str = "current-session-v2";
 const AUTHORIZATION_PATH: &str = "/api/desktop/v2/device-authorizations";
@@ -2697,9 +2698,9 @@ async fn open_wallet(state: &AccountV2State, line_id: &str) -> Result<(), String
 mod tests {
     #[test]
     fn inspect_deadline_stays_short_so_home_never_waits_a_minute() {
-        assert!(INSPECT_DEADLINE <= std::time::Duration::from_secs(8));
-        assert!(CONNECT_TIMEOUT <= std::time::Duration::from_secs(3));
-        assert!(REQUEST_TIMEOUT <= std::time::Duration::from_secs(12));
+        assert!(INSPECT_DEADLINE <= std::time::Duration::from_secs(5));
+        assert!(CONNECT_TIMEOUT <= std::time::Duration::from_secs(2));
+        assert!(REQUEST_TIMEOUT <= std::time::Duration::from_secs(10));
     }
 
     use super::*;

@@ -414,14 +414,14 @@ describe("official workbench", () => {
       }),
     );
     render(<App />);
-    await screen.findByText("gpt-6-astra");
+    await screen.findByText("GPT-6 Astra");
     fail = true;
     fireEvent.click(screen.getByRole("button", { name: "检查应用" }));
     await screen.findByText(/下方保留上次确认的结果/);
     const home = screen.getByTestId("candidate-home-view");
     expect(home).toHaveTextContent("上次确认 1 个应用已接入");
     expect(home).toHaveTextContent("上次确认 · 已接入");
-    expect(home).toHaveTextContent("gpt-6-astra");
+    expect(home).toHaveTextContent("GPT-6 Astra");
     expect(home).not.toHaveTextContent("synthetic-secret");
   });
   it("ru076 keeps an individual unavailable result unknown and blocks setup until reread", async () => {
