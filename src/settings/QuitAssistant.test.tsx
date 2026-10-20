@@ -116,7 +116,7 @@ describe("global desktop close choice and cooperative exit", () => {
       status: "restore_failed",
       failedTools: ["codex_desktop"],
     });
-    expect(screen.getByRole("alert")).toHaveTextContent("Codex Desktop");
+    expect(screen.getByRole("alert")).toHaveTextContent("Codex（桌面版 / 命令行）");
     expect(
       screen.getByRole("button", { name: "重试恢复并退出" }),
     ).toBeEnabled();
@@ -232,7 +232,7 @@ describe("global desktop close choice and cooperative exit", () => {
     } as ReturnType<typeof useConnections>);
     await openSettingsChoice();
     const list = within(screen.getByRole("dialog")).getByRole("list");
-    expect(list).toHaveTextContent("Codex Desktop");
+    expect(list).toHaveTextContent("Codex（桌面版 / 命令行）");
     expect(list).toHaveTextContent("DSH");
     expect(list).not.toHaveTextContent("Claude Code");
   });

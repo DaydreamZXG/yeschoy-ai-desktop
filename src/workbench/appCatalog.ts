@@ -30,7 +30,7 @@ export const WORKBENCH_APPS: {
   },
   {
     id: "codex_desktop",
-    name: "Codex Desktop",
+    name: "Codex",
     icon: codexIcon,
   },
   {
@@ -64,3 +64,13 @@ export const COMING_SOON_APPS: {
   icon?: string;
   mark?: string;
 }[] = [];
+
+/** 界面上的应用名。少数名字要带小白话说明，走 i18n，避免源码里写死中文。 */
+export function appDisplayName(
+  appId: string,
+  fallback: string,
+  t: (key: string) => string,
+): string {
+  if (appId === "codex_desktop") return t("workbench.appNameCodex");
+  return fallback;
+}

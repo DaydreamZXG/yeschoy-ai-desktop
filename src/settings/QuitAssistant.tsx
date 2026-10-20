@@ -10,7 +10,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { LogOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useConnections } from "../configuration/connections";
-import { WORKBENCH_APPS } from "../workbench/appCatalog";
+import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
 
 const OPEN_CHOICE_EVENT = "yeschoy:open-exit-choice";
 const CLOSE_CHOICE_EVENT = "yeschoy://close-choice";
@@ -290,8 +290,12 @@ export function ShutdownHost() {
               <ul>
                 {affected.map((connection) => (
                   <li key={connection.toolId}>
-                    {WORKBENCH_APPS.find((app) => app.id === connection.toolId)
-                      ?.name ?? connection.toolId}
+                    {appDisplayName(
+                      connection.toolId,
+                      WORKBENCH_APPS.find((app) => app.id === connection.toolId)
+                        ?.name ?? connection.toolId,
+                      t,
+                    )}
                   </li>
                 ))}
               </ul>
@@ -313,7 +317,11 @@ export function ShutdownHost() {
           <ul>
             {failedTools.map((tool) => (
               <li key={tool}>
-                {WORKBENCH_APPS.find((app) => app.id === tool)?.name ?? tool}
+                {appDisplayName(
+                  tool,
+                  WORKBENCH_APPS.find((app) => app.id === tool)?.name ?? tool,
+                  t,
+                )}
               </li>
             ))}
           </ul>

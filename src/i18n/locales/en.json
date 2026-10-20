@@ -605,8 +605,8 @@
     "libraryOfflineNotice": "Can't reach Yeschoy right now, so your account, this computer's apps and their connection status all came back empty. Nothing existing is changed or deleted.",
     "libraryRetry": "Retry",
     "libraryRetrying": "Retrying",
-    "libraryAccountStale": "Account data didn't update. Showing last time's.",
-    "libraryAccountUnavailable": "Can't read your account status right now. Try again.",
+    "libraryAccountStale": "Cannot reach the station right now. Showing your last sign-in. Retry later, or keep using apps you already connected.",
+    "libraryAccountUnavailable": "Cannot reach the station right now. Try again later. Apps you already connected still work.",
     "librarySignInTitle": "Sign in once, connect your AI apps",
     "librarySignInBody": "Models and your account's prices are fetched for you — no keys to copy. Restoring settings doesn't need a sign-in.",
     "librarySignInAction": "Sign in to Yeschoy",
@@ -654,7 +654,9 @@
     "usageTrendTitle": "Spend, last 14 days",
     "usageTrendNote": "Daily totals, as charged by YesChoy API",
     "usageTrendEmpty": "No usage in the last 14 days",
-    "usageTrendDayLabel": "{{date}}: {{amount}}"
+    "usageTrendDayLabel": "{{date}}: {{amount}}",
+    "libraryAccountChecking": "Checking your station…",
+    "appNameCodex": "Codex (desktop / CLI)"
   },
   "configuration": {
     "defaultGroup": "Standard plan",
@@ -815,7 +817,7 @@
     "automaticCompatibility": "Auto-bridged",
     "surfaceClaudeCode": "Command line and editor workspaces",
     "surfaceClaudeDesktop": "The Claude desktop app",
-    "surfaceCodexDesktop": "Codex inside the ChatGPT desktop app",
+    "surfaceCodexDesktop": "Codex desktop or command line (shared settings)",
     "surfacePi": "The Pi coding assistant",
     "surfaceOpenCode": "The OpenCode terminal coding assistant",
     "surfaceDsh": "The DeepSeek Harness browser workbench",
@@ -1063,6 +1065,11 @@
         "Download and install WorkBuddy from the official site.",
         "Open WorkBuddy once after install.",
         "Return here and choose “I already installed it — check again”."
+      ],
+      "opencode": [
+        "Open the OpenCode docs and install the CLI for your system.",
+        "When done, typing opencode in a terminal should start it.",
+        "Back in YesChoy, tap Start setup."
       ]
     },
     "confirmAndConnect": "Check and continue",

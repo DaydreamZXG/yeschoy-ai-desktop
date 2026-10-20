@@ -605,8 +605,8 @@
     "libraryOfflineNotice": "暂时连不上野菜服务，账户、本机应用和接入状态都没读到。这不会改动或删除任何已有设置。",
     "libraryRetry": "重试",
     "libraryRetrying": "正在重试",
-    "libraryAccountStale": "账户数据暂未更新，保留上次结果。",
-    "libraryAccountUnavailable": "暂时无法获取账户状态，请重试。",
+    "libraryAccountStale": "中转站暂时连不上，已保留上次登录结果。可以稍后点重试，或先用已接入的应用。",
+    "libraryAccountUnavailable": "暂时连不上中转站，请稍后重试。本地已接入的应用不受影响。",
     "librarySignInTitle": "登录一次，接入你的 AI 应用",
     "librarySignInBody": "自动获取可用模型和账户价格，不用复制密钥。恢复设置无需登录。",
     "librarySignInAction": "登录野菜API",
@@ -654,7 +654,9 @@
     "usageTrendTitle": "近 14 天消费趋势",
     "usageTrendNote": "按天汇总，金额以野菜API实际扣费为准",
     "usageTrendEmpty": "最近 14 天还没有用量",
-    "usageTrendDayLabel": "{{date}}：{{amount}}"
+    "usageTrendDayLabel": "{{date}}：{{amount}}",
+    "libraryAccountChecking": "正在检查中转站…",
+    "appNameCodex": "Codex（桌面版 / 命令行）"
   },
   "configuration": {
     "defaultGroup": "标准方案",
@@ -815,7 +817,7 @@
     "automaticCompatibility": "自动兼容",
     "surfaceClaudeCode": "命令行与编辑器工作区",
     "surfaceClaudeDesktop": "Claude 桌面应用",
-    "surfaceCodexDesktop": "ChatGPT 桌面应用中的 Codex",
+    "surfaceCodexDesktop": "Codex 桌面版或命令行（共用一份设置）",
     "surfacePi": "Pi 编程助手",
     "surfaceOpenCode": "OpenCode 终端编程助手",
     "surfaceDsh": "DeepSeek Harness 浏览器工作台",
@@ -1063,6 +1065,11 @@
         "打开 WorkBuddy 官网，下载并安装桌面版。",
         "安装后先正常打开一次 WorkBuddy。",
         "回到野菜，点「我已安装，重新检查」。"
+      ],
+      "opencode": [
+        "打开 OpenCode 官网说明，按你的系统安装命令行工具。",
+        "安装完成后在终端输入 opencode 能打开即可。",
+        "回到野菜助手，点「开始接入」。"
       ]
     },
     "confirmAndConnect": "检查安装并继续",

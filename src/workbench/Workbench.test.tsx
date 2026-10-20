@@ -120,7 +120,7 @@ function activationTargetScan(requestId: string) {
   const definitions = [
     ["claude_code", "Claude Code", "2.1.233"],
     ["claude_desktop", "Claude Desktop", "1.40609.1"],
-    ["codex_desktop", "Codex Desktop", "26.825.51511"],
+    ["codex_desktop", "Codex", "26.825.51511"],
     ["pi", "Pi", "0.84.4"],
     ["opencode", "OpenCode", "1.4.2"],
     ["dsh_web", "DSH web", "0.1.0-rc.6"],
@@ -344,7 +344,7 @@ describe("official workbench", () => {
     );
     render(<App />);
     expect(
-      await screen.findByText("暂时无法获取账户状态，请重试。"),
+      await screen.findByText("暂时连不上中转站，请稍后重试。本地已接入的应用不受影响。"),
     ).toBeInTheDocument();
     const home = screen.getByTestId("candidate-home-view");
     expect(home).toHaveTextContent("登录一次，接入你的 AI 应用");
@@ -370,7 +370,7 @@ describe("official workbench", () => {
     expect(home).toHaveTextContent("接入状态待确认");
     expect(home).not.toHaveTextContent("0 个应用已接入");
     const codex = within(home)
-      .getByRole("heading", { name: "Codex Desktop" })
+      .getByRole("heading", { name: "Codex（桌面版 / 命令行）" })
       .closest("article")!;
     expect(codex).toHaveTextContent("状态待确认");
     expect(codex).not.toHaveTextContent("待接入");
@@ -446,7 +446,7 @@ describe("official workbench", () => {
     render(<App />);
     await screen.findByText(/部分应用的接入设置暂时无法读取/);
     const codex = screen
-      .getByRole("heading", { name: "Codex Desktop" })
+      .getByRole("heading", { name: "Codex（桌面版 / 命令行）" })
       .closest("article")!;
     expect(codex).toHaveTextContent("状态待确认");
     expect(codex).not.toHaveTextContent("待接入");
@@ -641,7 +641,7 @@ describe("official workbench", () => {
     );
     await screen.findByRole("button", { name: "恢复原设置" });
     const card = screen
-      .getByRole("heading", { name: "Codex Desktop" })
+      .getByRole("heading", { name: "Codex（桌面版 / 命令行）" })
       .closest("article")!;
     fireEvent.click(within(card).getByRole("button", { name: "换模型与分组" }));
     await act(async () => {});
@@ -778,7 +778,7 @@ describe("official workbench", () => {
     render(<App />);
     await screen.findByText("版本 1.40609.1");
     const codex = screen
-      .getByRole("heading", { name: "Codex Desktop" })
+      .getByRole("heading", { name: "Codex（桌面版 / 命令行）" })
       .closest("article")!;
     const openSetup = within(codex).getByRole("button", { name: "开始接入" });
     openSetup.focus();
@@ -786,7 +786,10 @@ describe("official workbench", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
     fireEvent.click(screen.getByRole("button", { name: "更换应用" }));
     expect(
-      screen.getByRole("button", { name: /Codex Desktop ChatGPT/ }),
+      screen.getByRole("button", {
+        name: (accessibleName) =>
+          accessibleName.includes("Codex") && accessibleName.includes("桌面版"),
+      }),
     ).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("configuration-apply-action")).toBeEnabled();
     expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
@@ -1037,7 +1040,7 @@ describe("official workbench", () => {
       render(<App />);
       await screen.findByText("版本 1.40609.1");
       const codex = screen
-        .getByRole("heading", { name: "Codex Desktop" })
+        .getByRole("heading", { name: "Codex（桌面版 / 命令行）" })
         .closest("article")!;
       fireEvent.click(within(codex).getByRole("button", { name: "开始接入" }));
       await screen.findByRole("button", { name: "一键接入" });
@@ -1056,7 +1059,7 @@ describe("official workbench", () => {
       expect(await screen.findByText("设置已完成")).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Codex Desktop 的设置和野菜本地路由已经就绪。Codex 仍可显示你的官方登录账号，那只是登录身份，不代表模型请求走官方计费。第一次真实请求的结果会显示在“最近野菜中转记录”里；看到完整模型 ID，才表示这次请求确实经过野菜中转。",
+          "Codex（桌面版 / 命令行） 的设置和野菜本地路由已经就绪。Codex 仍可显示你的官方登录账号，那只是登录身份，不代表模型请求走官方计费。第一次真实请求的结果会显示在“最近野菜中转记录”里；看到完整模型 ID，才表示这次请求确实经过野菜中转。",
         ),
       ).toBeInTheDocument();
       expect(native).toHaveBeenCalledWith("configure_desktop_tool_v2", {

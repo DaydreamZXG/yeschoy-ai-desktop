@@ -493,7 +493,7 @@ fn begin_user_shutdown<R: tauri::Runtime>(
                             // native box follows it (see ui_language).
                             let language = ui_language::current();
                             let names = response.failed_tools.iter().map(|tool| match tool.as_str() {
-                                "codex_desktop" => "Codex Desktop", "claude_desktop" => "Claude Desktop",
+                                "codex_desktop" => "Codex", "claude_desktop" => "Claude Desktop",
                                 "claude_code" => "Claude Code", "pi" => "Pi", "opencode" => "OpenCode", _ => "DSH web",
                             }).collect::<Vec<_>>().join(language.pick("、", ", "));
                             let message = HSTRING::from(language.pick(

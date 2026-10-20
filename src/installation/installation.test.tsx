@@ -602,7 +602,7 @@ describe("ru048 novice installer", () => {
       2,
     );
     expect(screen.getByText("Claude Desktop")).toBeInTheDocument();
-    expect(screen.getByText("Codex Desktop")).toBeInTheDocument();
+    expect(screen.getByText("Codex（桌面版 / 命令行）")).toBeInTheDocument();
   });
   it("automatically continues once only for the exact newly installed target", async () => {
     const view = render(setup(progress()));

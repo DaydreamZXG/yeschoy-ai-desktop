@@ -62,7 +62,7 @@ function targetScan(requestId = "target-scan-test") {
     targets: [
       target("claude_code", "Claude Code"),
       target("claude_desktop", "Claude Desktop"),
-      target("codex_desktop", "Codex Desktop"),
+      target("codex_desktop", "Codex"),
       target("pi", "Pi"),
       target("opencode", "OpenCode"),
       target("dsh_web", "DSH web"),

@@ -11,6 +11,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { appDisplayName } from "../workbench/appCatalog";
 import {
   BillingGroupPicker,
   BillingPrices,
@@ -137,7 +138,7 @@ const APPLICATIONS: readonly ApplicationChoice[] = [
   {
     id: "codex_desktop",
     toolId: "codex",
-    displayName: "Codex Desktop",
+    displayName: "Codex",
     surface: "surfaceCodexDesktop",
     icon: codexIcon,
   },
@@ -548,6 +549,11 @@ export function ConfigurationPreviewView({
   const application =
     APPLICATIONS.find((candidate) => candidate.id === activationToolId) ??
     APPLICATIONS[0];
+  const applicationLabel = appDisplayName(
+    application.id,
+    application.displayName,
+    t,
+  );
   const savedConnection = connections?.connections.find(
     (item) => item.toolId === activationToolId,
   );
@@ -1019,7 +1025,7 @@ export function ConfigurationPreviewView({
       {
         key: submittedContext,
         account: session.projection?.account.username ?? "",
-        app: application.displayName,
+        app: applicationLabel,
         model: defaultBinding.modelId,
         group: defaultBinding.billingGroup,
         line: lineId,
@@ -1150,11 +1156,11 @@ export function ConfigurationPreviewView({
         if (usesNewTerminalSession(activationToolId))
           return g.readyTerminal.replace(
             "{{app}}",
-            resultContext?.app ?? application.displayName,
+            resultContext?.app ?? applicationLabel,
           );
         if (activationToolId === "codex_desktop")
           return g.readyCodex
-            .replace("{{app}}", resultContext?.app ?? application.displayName)
+            .replace("{{app}}", resultContext?.app ?? applicationLabel)
             .replace(
               "{{favorites}}",
               (activation.models?.length ?? 1) > 1 ? g.favoritesConfigured : "",
@@ -1170,7 +1176,7 @@ export function ConfigurationPreviewView({
             (activation.models?.length ?? 1) > 1 ? g.favoritesConfigured : "",
           );
         return g.readyDefault
-          .replace("{{app}}", resultContext?.app ?? application.displayName)
+          .replace("{{app}}", resultContext?.app ?? applicationLabel)
           .replace(
             "{{favorites}}",
             (activation.models?.length ?? 1) > 1 ? g.favoritesConfigured : "",
@@ -1179,11 +1185,11 @@ export function ConfigurationPreviewView({
         return activation.reasonCode === "graceful_restart_required"
           ? g.restartBlocked.replace(
               "{{app}}",
-              resultContext?.app ?? application.displayName,
+              resultContext?.app ?? applicationLabel,
             )
           : g.appRunning.replace(
               "{{app}}",
-              resultContext?.app ?? application.displayName,
+              resultContext?.app ?? applicationLabel,
             );
       case "signed_out":
         return c.setupSignedOut;
@@ -1654,7 +1660,7 @@ export function ConfigurationPreviewView({
     )
       return {
         kind: "restart-app",
-        label: g.restartAppLabel.replace("{{app}}", application.displayName),
+        label: g.restartAppLabel.replace("{{app}}", applicationLabel),
         hint: g.restartAppHint,
         run: () => setRestartPromptContext(currentContext.current),
       };
@@ -1886,7 +1892,7 @@ export function ConfigurationPreviewView({
             </span>
             <div>
               <span className="field-caption">{g.settingUpFor}</span>
-              <strong>{application.displayName}</strong>
+              <strong>{applicationLabel}</strong>
               <p>{targetSummary}</p>
             </div>
             <button
@@ -1982,7 +1988,13 @@ export function ConfigurationPreviewView({
                       )}
                     </span>
                     <span className="configuration-app-copy">
-                      <strong>{candidate.displayName}</strong>
+                      <strong>
+                        {appDisplayName(
+                          candidate.id,
+                          candidate.displayName,
+                          t,
+                        )}
+                      </strong>
                       <small>{g[candidate.surface]}</small>
                     </span>
                     <span
@@ -2064,7 +2076,7 @@ export function ConfigurationPreviewView({
               {target && target.status !== "not_found" && (
                 <ManualLocationControls
                   tool={activationToolId}
-                  name={application.displayName}
+                  name={applicationLabel}
                   state={target.manualLocation}
                   disabled={applyPhase === "applying"}
                   onChanged={() => void refreshTargets()}
@@ -2080,7 +2092,7 @@ export function ConfigurationPreviewView({
             !configured)) && (
           <InstallationPanel
             tool={activationToolId}
-            name={application.displayName}
+            name={applicationLabel}
             canConnect={!!intentReady}
             onStart={() => void startInstallation()}
             onConfirm={() => void startInstallation(true)}
@@ -2408,7 +2420,7 @@ export function ConfigurationPreviewView({
                 {(configured || connectionEstablished) && savedConnection && (
                   <OpenConnection
                     connection={savedConnection}
-                    name={application.displayName}
+                    name={applicationLabel}
                     disabled={!!connections?.restoring}
                     onAdjust={() => {
                       appSwitchButton.current?.scrollIntoView({
@@ -2485,7 +2497,7 @@ export function ConfigurationPreviewView({
               <p>
                 {connectionLifecycleNote(
                   activationToolId,
-                  application.displayName,
+                  applicationLabel,
                   g,
                 )}
               </p>
@@ -2536,7 +2548,7 @@ export function ConfigurationPreviewView({
                   <small className="endpoint-reference-note">
                     {g.bridgedEndpointNote.replace(
                       "{{app}}",
-                      application.displayName,
+                      applicationLabel,
                     )}
                   </small>
                 )}
@@ -2629,7 +2641,7 @@ export function ConfigurationPreviewView({
                 <div className="activation-skipped" role="status">
                   <strong>{g.skippedTitle}</strong>
                   <p>
-                    {g.skippedBody.replace("{{app}}", application.displayName)}
+                    {g.skippedBody.replace("{{app}}", applicationLabel)}
                   </p>
                   <ul>
                     {skippedBindings.map((s) => (
@@ -2651,11 +2663,11 @@ export function ConfigurationPreviewView({
               <p className="first-use-state">
                 {firstUseVerified
                   ? g.verifiedBody
-                      .replace("{{app}}", application.displayName)
+                      .replace("{{app}}", applicationLabel)
                       .replace("{{model}}", firstUseObservation.modelId)
                   : g.awaitingFirstUseBody.replace(
                       "{{app}}",
-                      application.displayName,
+                      applicationLabel,
                     )}
               </p>
             )}
@@ -2707,7 +2719,7 @@ export function ConfigurationPreviewView({
         <div className="configuration-actions configuration-secondary-actions">
           <RestoreConnection
             connection={savedConnection}
-            name={application.displayName}
+            name={applicationLabel}
             disabled={applyPhase === "applying"}
           />
           <div>
@@ -2826,7 +2838,7 @@ export function ConfigurationPreviewView({
         isOpen={restartPromptContext !== null}
         title={g.restartDialogTitle.replace(
           "{{app}}",
-          resultContext?.app ?? application.displayName,
+          resultContext?.app ?? applicationLabel,
         )}
         message={g.restartDialogMessage}
         confirmText={g.restartDialogConfirm}

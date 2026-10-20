@@ -72,7 +72,7 @@ const TARGETS: [(&str, &str, &str); 8] = [
     (
         "codex_desktop",
         "Codex",
-        "Codex 桌面版或命令行版（共用一份设置）",
+        "Codex desktop or CLI (one shared settings file)",
     ),
     ("pi", "Pi", "Pi 编程助手"),
     ("opencode", "OpenCode", "OpenCode 终端编程助手"),

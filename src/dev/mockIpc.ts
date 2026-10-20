@@ -263,7 +263,7 @@ function targets(requestId: string) {
   const defs = [
     ["claude_code", "Claude Code", "2.1.233"],
     ["claude_desktop", "Claude Desktop", "1.40609.1"],
-    ["codex_desktop", "Codex Desktop", "26.825.51511"],
+    ["codex_desktop", "Codex", "26.825.51511"],
     ["pi", "Pi", "0.84.4"],
     ["opencode", "OpenCode", "1.4.2"],
     ["dsh_web", "DSH web", "0.1.0-rc.6"],

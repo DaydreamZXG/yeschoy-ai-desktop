@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AccountLineId } from "../configuration/preview";
 import {
+  clearCachedSignedInProjection,
+  readCachedSignedInProjection,
+  writeCachedSignedInProjection,
+} from "./accountProjectionCache";
+import {
   clearSessionAgeRecord,
   noteSessionActivity,
 } from "./sessionAge";
@@ -69,6 +74,10 @@ export function useAccountSession(
 ) {
   const [projection, setProjection] = useState<AccountProjection | null>(null);
   const [loading, setLoading] = useState(true);
+  /** 后台在查中转站：首页先画上次结果，不空等。 */
+  const [stationCheck, setStationCheck] = useState<
+    "idle" | "checking" | "ok" | "unreachable"
+  >("idle");
   const [lastError, setLastError] = useState<string | null>(null);
   const [pollRevision, setPollRevision] = useState(0);
   const projectionRef = useRef<AccountProjection | null>(null);
@@ -130,12 +139,20 @@ export function useAccountSession(
           transientStreak.current = transient ? transientStreak.current + 1 : 0;
           setLastError(transient ? result.reasonCode : null);
           // 本地记账（#23）：signed_in 滚动最近使用时间；会话确认消失则清除。
-          if (result.status === "signed_in") noteSessionActivity();
-          else if (
+          if (result.status === "signed_in") {
+            noteSessionActivity();
+            writeCachedSignedInProjection(result);
+            setStationCheck("ok");
+          } else if (
             result.status === "signed_out" ||
             result.status === "session_expired"
-          )
+          ) {
             clearSessionAgeRecord();
+            clearCachedSignedInProjection();
+            setStationCheck("idle");
+          } else if (transient) {
+            setStationCheck("unreachable");
+          }
           setProjection((previous) =>
             transient &&
             transientStreak.current <= TRANSIENT_TOLERANCE &&
@@ -171,13 +188,24 @@ export function useAccountSession(
       if (cancelled) return;
       options?.onSessionSnapshot?.(snapshot);
       if (!snapshot.hasStoredSession) {
+        clearCachedSignedInProjection();
         setProjection(idleSignedOutProjection());
         setLoading(false);
+        setStationCheck("idle");
         setLastError(null);
         return;
       }
+      // 先画上次成功的账户状态，再后台检查中转站。站点再慢也不挡首页。
+      const cached = readCachedSignedInProjection();
+      if (cached) setProjection(cached);
       setLoading(false);
+      setStationCheck("checking");
       await execute("account_inspect_v2", { silent: true, startup: true });
+      if (!cancelled) {
+        setStationCheck((current) =>
+          current === "checking" ? "unreachable" : current,
+        );
+      }
     })();
     return () => {
       cancelled = true;
@@ -205,8 +233,12 @@ export function useAccountSession(
   return {
     projection,
     loading,
+    stationCheck,
     lastError,
-    refresh: () => execute("account_inspect_v2"),
+    refresh: () => {
+      setStationCheck("checking");
+      return execute("account_inspect_v2");
+    },
     beginAuthorization: () => execute("account_begin_authorization_v2"),
     openAuthorization: () => execute("account_open_authorization_v2"),
     cancelAuthorization: () => execute("account_cancel_authorization_v2"),
@@ -224,5 +256,8 @@ export function useAccountSession(
 
 export type AccountSessionController = Omit<
   ReturnType<typeof useAccountSession>,
-  "lastError"
-> & { lastError?: string | null };
+  "lastError" | "stationCheck"
+> & {
+  lastError?: string | null;
+  stationCheck?: "idle" | "checking" | "ok" | "unreachable";
+};

@@ -23,7 +23,10 @@ use crate::connectivity_core::{request_id_is_valid, CONNECTIVITY_LINES};
 
 const CLIENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const MAX_RESPONSE_BYTES: usize = 2 * 1024 * 1024;
-const REQUEST_TIMEOUT: Duration = Duration::from_secs(20);
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(12);
+/// 开机检查账户不能拖住界面：整条 inspect（bootstrap→刷新→账户）最多等这么久。
+const INSPECT_DEADLINE: Duration = Duration::from_secs(8);
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
 const KEYRING_SERVICE: &str = "com.yeschoy.desktop.account";
 const KEYRING_USER: &str = "current-session-v2";
 const AUTHORIZATION_PATH: &str = "/api/desktop/v2/device-authorizations";
@@ -345,7 +348,7 @@ fn client() -> Result<&'static Client, ()> {
                 .referer(false)
                 .no_proxy()
                 .timeout(REQUEST_TIMEOUT)
-                .connect_timeout(Duration::from_secs(6))
+                .connect_timeout(CONNECT_TIMEOUT)
                 .user_agent(concat!("YesChoyDesktop/", env!("CARGO_PKG_VERSION")))
                 .build()
                 .map_err(|_| ())
@@ -1830,9 +1833,22 @@ pub async fn account_inspect_v2(
         .lock()
         .map_err(|_| "account_state_unavailable")?
         .authorization_epoch;
-    Ok(match inspect_inner(&state, &request).await {
-        Ok(projection) => projection,
-        Err(AccountProjectionFailure::SessionExpired) => {
+    // 站点慢或 DNS 挂了时，绝不能不返回：整条检查最多 INSPECT_DEADLINE。
+    let inspected = tokio::time::timeout(INSPECT_DEADLINE, inspect_inner(&state, &request)).await;
+    Ok(match inspected {
+        Err(_) => {
+            log::warn!(
+                "account stage=inspect_deadline_exceeded request_id={} limit_ms={}",
+                request.request_id,
+                INSPECT_DEADLINE.as_millis()
+            );
+            failure_projection(
+                request.request_id,
+                AccountProjectionFailure::Transport(TransportFailure::TimedOut),
+            )
+        }
+        Ok(Ok(projection)) => projection,
+        Ok(Err(AccountProjectionFailure::SessionExpired)) => {
             if let Ok(mut runtime) = state.runtime.lock() {
                 if runtime.authorization_epoch == epoch {
                     let _ = delete_stored_session();
@@ -1841,7 +1857,7 @@ pub async fn account_inspect_v2(
             }
             failure_projection(request.request_id, AccountProjectionFailure::SessionExpired)
         }
-        Err(error) => failure_projection(request.request_id, error),
+        Ok(Err(error)) => failure_projection(request.request_id, error),
     })
 }
 
@@ -2679,6 +2695,13 @@ async fn open_wallet(state: &AccountV2State, line_id: &str) -> Result<(), String
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn inspect_deadline_stays_short_so_home_never_waits_a_minute() {
+        assert!(INSPECT_DEADLINE <= std::time::Duration::from_secs(8));
+        assert!(CONNECT_TIMEOUT <= std::time::Duration::from_secs(3));
+        assert!(REQUEST_TIMEOUT <= std::time::Duration::from_secs(12));
+    }
+
     use super::*;
 
     #[test]

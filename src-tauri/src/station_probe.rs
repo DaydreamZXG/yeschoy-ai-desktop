@@ -12,7 +12,7 @@ use serde_json::Value;
 
 use crate::station_connect::connect_origin_is_acceptable;
 
-const TIMEOUT: Duration = Duration::from_secs(15);
+const TIMEOUT: Duration = Duration::from_secs(5);
 const MAX_BYTES: usize = 2 * 1024 * 1024;
 const MAX_MODELS: usize = 500;
 

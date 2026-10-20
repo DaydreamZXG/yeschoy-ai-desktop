@@ -306,7 +306,7 @@ function App() {
                 appearance={appearance}
                 onAppearance={changeAppearance}
                 accountProjection={accountSession.projection}
-                accountLoading={accountSession.loading}
+                accountLoading={accountSession.loading || (accountSession.stationCheck ?? "idle") === "checking"}
                 accountLineId={accountLineId}
               />
 
