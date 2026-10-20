@@ -27,7 +27,7 @@ function openWorkbenchPage(name: string) {
   if (name === "应用接入") {
     const home = screen.queryByRole("button", { name: "我的应用" });
     if (home) fireEvent.click(home);
-    const resume = screen.queryByRole("button", { name: "换模型与分组" });
+    const resume = screen.queryByRole("button", { name: /换模型/ });
     if (resume) {
       fireEvent.click(resume);
       return;
@@ -120,8 +120,9 @@ function activationTargetScan(requestId: string) {
   const definitions = [
     ["claude_code", "Claude Code", "2.1.233"],
     ["claude_desktop", "Claude Desktop", "1.40609.1"],
-    ["codex_desktop", "Codex Desktop", "26.825.51511"],
+    ["codex_desktop", "Codex", "26.825.51511"],
     ["pi", "Pi", "0.84.4"],
+    ["opencode", "OpenCode", "1.4.2"],
     ["dsh_web", "DSH web", "0.1.0-rc.6"],
     ["workbuddy", "WorkBuddy", "5.5.6"],
     ["dsh_desktop", "DeepSeek Harness", "0.2.0"],
@@ -343,12 +344,12 @@ describe("official workbench", () => {
     );
     render(<App />);
     expect(
-      await screen.findByText("暂时无法获取账户状态，请重试。"),
+      await screen.findByText("暂时连不上中转站，请稍后重试。本地已接入的应用不受影响。"),
     ).toBeInTheDocument();
     const home = screen.getByTestId("candidate-home-view");
     expect(home).toHaveTextContent("登录一次，接入你的 AI 应用");
     expect(
-      within(home).getByRole("button", { name: "在浏览器中继续" }),
+      within(home).getByRole("button", { name: "检测并连接" }),
     ).toBeEnabled();
     expect(within(home).getByRole("textbox")).toBeInTheDocument();
   });
@@ -369,7 +370,7 @@ describe("official workbench", () => {
     expect(home).toHaveTextContent("接入状态待确认");
     expect(home).not.toHaveTextContent("0 个应用已接入");
     const codex = within(home)
-      .getByRole("heading", { name: "Codex Desktop" })
+      .getByRole("heading", { name: "Codex（桌面版 / 命令行）" })
       .closest("article")!;
     expect(codex).toHaveTextContent("状态待确认");
     expect(codex).not.toHaveTextContent("待接入");
@@ -413,14 +414,14 @@ describe("official workbench", () => {
       }),
     );
     render(<App />);
-    await screen.findByText("gpt-6-astra");
+    await screen.findByText("GPT-6 Astra");
     fail = true;
     fireEvent.click(screen.getByRole("button", { name: "检查应用" }));
     await screen.findByText(/下方保留上次确认的结果/);
     const home = screen.getByTestId("candidate-home-view");
     expect(home).toHaveTextContent("上次确认 1 个应用已接入");
     expect(home).toHaveTextContent("上次确认 · 已接入");
-    expect(home).toHaveTextContent("gpt-6-astra");
+    expect(home).toHaveTextContent("GPT-6 Astra");
     expect(home).not.toHaveTextContent("synthetic-secret");
   });
   it("ru076 keeps an individual unavailable result unknown and blocks setup until reread", async () => {
@@ -445,7 +446,7 @@ describe("official workbench", () => {
     render(<App />);
     await screen.findByText(/部分应用的接入设置暂时无法读取/);
     const codex = screen
-      .getByRole("heading", { name: "Codex Desktop" })
+      .getByRole("heading", { name: "Codex（桌面版 / 命令行）" })
       .closest("article")!;
     expect(codex).toHaveTextContent("状态待确认");
     expect(codex).not.toHaveTextContent("待接入");
@@ -481,7 +482,7 @@ describe("official workbench", () => {
     for (const page of ["应用接入", "模型与价格"]) {
       openWorkbenchPage(page);
       const picker = await screen.findByRole("combobox", {
-        name: /完整模型 ID/,
+        name: /选择模型|模型与价格|模型/,
       });
       fireEvent.click(picker);
       const option = within(screen.getByRole("listbox")).getByRole("option");
@@ -551,7 +552,7 @@ describe("official workbench", () => {
     render(<App />);
     await screen.findAllByText("野菜测试用户");
     openWorkbenchPage("模型与价格");
-    await screen.findByRole("combobox", { name: /完整模型 ID/ });
+    await screen.findByRole("combobox", { name: /选择模型|模型与价格|模型/ });
 
     // 闸门撤掉了：换哪个应用，列表都是这三个，一个不藏、一个不灰。
     for (const app of ["claude_desktop", "codex_desktop", "workbuddy"]) {
@@ -559,7 +560,7 @@ describe("official workbench", () => {
         screen.getByRole("combobox", { name: /使用应用/ }).closest("select")!,
         { target: { value: app } },
       );
-      fireEvent.click(screen.getByRole("combobox", { name: /完整模型 ID/ }));
+      fireEvent.click(screen.getByRole("combobox", { name: /选择模型|模型与价格|模型/ }));
       const options = within(await screen.findByRole("listbox")).getAllByRole(
         "option",
       );
@@ -601,7 +602,7 @@ describe("official workbench", () => {
     render(<App />);
     await screen.findAllByText("野菜测试用户");
     openWorkbenchPage("模型与价格");
-    await screen.findByRole("combobox", { name: /完整模型 ID/ });
+    await screen.findByRole("combobox", { name: /选择模型|模型与价格|模型/ });
 
     // 一个模型都没返回，仍然要说「数据没回来」，不能说成「没有能用的模型」。
     modelsReturned = false;
@@ -640,9 +641,9 @@ describe("official workbench", () => {
     );
     await screen.findByRole("button", { name: "恢复原设置" });
     const card = screen
-      .getByRole("heading", { name: "Codex Desktop" })
+      .getByRole("heading", { name: "Codex（桌面版 / 命令行）" })
       .closest("article")!;
-    fireEvent.click(within(card).getByRole("button", { name: "换模型与分组" }));
+    fireEvent.click(within(card).getByRole("button", { name: "换模型" }));
     await act(async () => {});
     expect(screen.getByRole("radio", { name: /国模特价分组/ })).toBeChecked();
     expect(
@@ -711,10 +712,10 @@ describe("official workbench", () => {
       screen.queryByRole("region", { name: "用量账单" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "在浏览器中继续" }),
+      screen.getByRole("button", { name: "检测并连接" }),
     ).toBeEnabled();
     expect(screen.getByRole("textbox")).toHaveValue("https://yeschoy.com");
-    expect(screen.getAllByRole("article")).toHaveLength(7);
+    expect(screen.getAllByRole("article")).toHaveLength(8);
     const card = screen
       .getByRole("heading", { name: "Claude Desktop" })
       .closest("article")!;
@@ -777,7 +778,7 @@ describe("official workbench", () => {
     render(<App />);
     await screen.findByText("版本 1.40609.1");
     const codex = screen
-      .getByRole("heading", { name: "Codex Desktop" })
+      .getByRole("heading", { name: "Codex（桌面版 / 命令行）" })
       .closest("article")!;
     const openSetup = within(codex).getByRole("button", { name: "开始接入" });
     openSetup.focus();
@@ -785,7 +786,10 @@ describe("official workbench", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveFocus();
     fireEvent.click(screen.getByRole("button", { name: "更换应用" }));
     expect(
-      screen.getByRole("button", { name: /Codex Desktop ChatGPT/ }),
+      screen.getByRole("button", {
+        name: (accessibleName) =>
+          accessibleName.includes("Codex") && accessibleName.includes("桌面版"),
+      }),
     ).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("configuration-apply-action")).toBeEnabled();
     expect(screen.getByTestId("configuration-apply-action")).toHaveTextContent(
@@ -1036,7 +1040,7 @@ describe("official workbench", () => {
       render(<App />);
       await screen.findByText("版本 1.40609.1");
       const codex = screen
-        .getByRole("heading", { name: "Codex Desktop" })
+        .getByRole("heading", { name: "Codex（桌面版 / 命令行）" })
         .closest("article")!;
       fireEvent.click(within(codex).getByRole("button", { name: "开始接入" }));
       await screen.findByRole("button", { name: "一键接入" });
@@ -1055,7 +1059,7 @@ describe("official workbench", () => {
       expect(await screen.findByText("设置已完成")).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Codex Desktop 的设置和野菜本地路由已经就绪。Codex 仍可显示你的官方登录账号，那只是登录身份，不代表模型请求走官方计费。第一次真实请求的结果会显示在“最近野菜中转记录”里；看到完整模型 ID，才表示这次请求确实经过野菜中转。",
+          "Codex（桌面版 / 命令行） 的设置和野菜本地路由已经就绪。Codex 仍可显示你的官方登录账号，那只是登录身份，不代表模型请求走官方计费。第一次真实请求的结果会显示在“最近野菜中转记录”里；看到完整模型 ID，才表示这次请求确实经过野菜中转。",
         ),
       ).toBeInTheDocument();
       expect(native).toHaveBeenCalledWith("configure_desktop_tool_v2", {

@@ -6,7 +6,7 @@
   "yeschoyDaily": {
     "reapplyCurrent": "Reapply current settings",
     "openUnconfirmed": "App launch is not confirmed",
-    "changeModel": "Change model and group",
+    "changeModel": "Change model",
     "checkAndRepair": "Check and repair",
     "accountOverview": "Account overview",
     "accountOverviewHint": "Balance, costs and usage",
@@ -18,13 +18,15 @@
     "useSelectedModel": "Use selected model",
     "useSelectedModelHint": "Make this the default while keeping your other models, then confirm and apply.",
     "unavailableBindingHint": "Some saved models or groups are unavailable. Remove or reselect them in Models and pricing.",
-    "changeModelHint": "Choose a model and group, then save and apply. This button does not change saved settings.",
+    "changeModelHint": "After you change the model or plan, tap Save and apply. This button alone does not change settings.",
     "saveAndApply": "Save and apply",
     "selectionChangedHint": "Connected with {{model}}; your current selection is not saved yet.",
     "modelSettings": "Models and pricing",
     "modelSettingsHint": "Default model, billing group and saved models",
     "manageModels": "Manage saved models",
-    "modelLimit": "The 200-model limit has been reached. Remove a model before adding another."
+    "modelLimit": "The 200-model limit has been reached. Remove a model before adding another.",
+    "configuredActionHint": "Change the model and plan above. After you change them, this becomes Save and apply. If nothing changed, tap Reapply current settings.",
+    "focusModelPicker": "Edit model above"
   },
   "yeschoyDesktopRecovery": {
     "configuredTitle": "Settings saved; startup checked",
@@ -305,7 +307,14 @@
       "copied": "Copied"
     },
     "troubleshootingTitle": "Troubleshooting and advanced",
-    "troubleshootingBody": "For when an install or a connection goes wrong. Day to day you can ignore it."
+    "troubleshootingBody": "For when an install or a connection goes wrong. Day to day you can ignore it.",
+    "groupGeneral": "General",
+    "groupGeneralNote": "Saved on this computer only. Applies immediately.",
+    "groupAbout": "Version & updates",
+    "groupPrivacy": "Privacy & security",
+    "groupPrivacyNote": "Fixed behaviour in this version — nothing to configure.",
+    "groupSystem": "Background",
+    "groupAdvanced": "Troubleshooting & advanced"
   },
   "yeschoyUpdate": {
     "title": "Yeschoy automatic updates",
@@ -351,7 +360,7 @@
       "shutting_down": "Yeschoy is closing, so this update stopped.",
       "shutdown_failed": "Local work could not finish safely. The existing version was reopened.",
       "install_failed": "Installation did not finish. The existing version was reopened.",
-      "updater_not_configured": "This build has no configured update channel.",
+      "updater_not_configured": "Auto-update isn't enabled in this build. Download new versions from the project's GitHub Releases page.",
       "platform_unsupported": "Automatic updates are not supported on this system yet.",
       "endpoint_invalid": "The update address failed its security check.",
       "manifest_invalid": "The release manifest is incomplete or not for this computer.",
@@ -472,7 +481,7 @@
     "selectLine": "Route",
     "readinessTitle": "Ready to connect",
     "readinessBody": "Browsing here changes nothing in your apps.",
-    "fullId": "Always show the full model ID",
+    "fullId": "Pick by name; the id is only for checking.",
     "lastChecked": "Last checked",
     "settingsTitle": "Make the assistant fit you",
     "settingsDescription": "Appearance and language, plus privacy and version details.",
@@ -598,8 +607,8 @@
     "libraryOfflineNotice": "Can't reach Yeschoy right now, so your account, this computer's apps and their connection status all came back empty. Nothing existing is changed or deleted.",
     "libraryRetry": "Retry",
     "libraryRetrying": "Retrying",
-    "libraryAccountStale": "Account data didn't update. Showing last time's.",
-    "libraryAccountUnavailable": "Can't read your account status right now. Try again.",
+    "libraryAccountStale": "Cannot reach the station right now. Showing your last sign-in. Retry later, or keep using apps you already connected.",
+    "libraryAccountUnavailable": "Cannot reach the station right now. Try again later. Apps you already connected still work.",
     "librarySignInTitle": "Sign in once, connect your AI apps",
     "librarySignInBody": "Models and your account's prices are fetched for you — no keys to copy. Restoring settings doesn't need a sign-in.",
     "librarySignInAction": "Sign in to Yeschoy",
@@ -647,7 +656,9 @@
     "usageTrendTitle": "Spend, last 14 days",
     "usageTrendNote": "Daily totals, as charged by YesChoy API",
     "usageTrendEmpty": "No usage in the last 14 days",
-    "usageTrendDayLabel": "{{date}}: {{amount}}"
+    "usageTrendDayLabel": "{{date}}: {{amount}}",
+    "libraryAccountChecking": "Checking your station…",
+    "appNameCodex": "Codex (desktop / CLI)"
   },
   "configuration": {
     "defaultGroup": "Standard plan",
@@ -661,7 +672,7 @@
     "planRatio": "Billing multiplier",
     "planDescription": "About this plan",
     "groupIntro": "The same model comes in different price plans, and you're billed on the one you pick. The costs below all assume the same token mix.",
-    "billingNoChoiceLegend": "How you're billed",
+    "billingNoChoiceLegend": "Price plan",
     "ratioPending": "Multiplier pending",
     "groupsMissing": "This model has no group pricing yet. It's billed on your account's default group, and you can connect it normally.",
     "groupsEmptyHint": "Pick a model to see its billing groups.",
@@ -808,11 +819,14 @@
     "automaticCompatibility": "Auto-bridged",
     "surfaceClaudeCode": "Command line and editor workspaces",
     "surfaceClaudeDesktop": "The Claude desktop app",
-    "surfaceCodexDesktop": "Codex inside the ChatGPT desktop app",
+    "surfaceCodexDesktop": "Codex desktop or command line (shared settings)",
     "surfacePi": "The Pi coding assistant",
+    "surfaceOpenCode": "The OpenCode terminal coding assistant",
     "surfaceDsh": "The DeepSeek Harness browser workbench",
     "surfaceDshDesktop": "The DeepSeek Harness desktop app",
     "surfaceWorkBuddy": "Tencent's AI assistant for work and development",
+    "codexSharedSettings": "The Codex desktop app and the Codex command line (codex) share one settings file. Connect once here and both use YesChoy API; Restore original settings also restores both together, so one side never stops working on its own.",
+    "opencodeKeyNote": "OpenCode's settings file only holds a local, temporary pass for this computer. Your real key stays in the system keychain. Keep the assistant open (minimised is fine) while you use OpenCode.",
     "lifecycleDesktopRestart": "If {{name}} is running, updating the connection asks you to save first. Once you confirm, the assistant asks the app to quit normally, writes the settings and reopens it. On Windows, if only a background process is left, only the process at this install path is ended.",
     "lifecycleBrowserLaunch": "Updating the connection saves the DSH config. \"Open\" only starts the local service and opens it in your browser — no model test message is sent.",
     "lifecycleTerminalSession": "Updating the connection doesn't close the command-line session you're in. New settings apply to newly opened sessions.",
@@ -910,7 +924,7 @@
     "nativeInterface": "Native endpoint",
     "missingModelPrefix": "The model you picked earlier,",
     "missingModelSuffix": "isn't available right now. Pick another one — nothing is swapped in for you.",
-    "billingCardHint": "Choose price and source. The network route stays as it is.",
+    "billingCardHint": "One model can have more than one price. Pick one.",
     "missingGroupTitle": "That billing group is no longer available",
     "missingGroupBody": "isn't among the groups this model currently offers. Pick again above — the price may differ, and nothing is switched for you.",
     "favoriteModels": "Your models",
@@ -931,7 +945,7 @@
     "lineIntro": "Mainland optimized suits networks in mainland China; Global accelerated goes through Cloudflare and is the one to try from elsewhere. The route only affects how you connect — billing groups and multipliers stay the same.",
     "currentConnection": "Current connection",
     "configuredSummary": "These settings are saved. Switch models day to day inside the app; when you change this list, update the connection again.",
-    "billingGroupLabel": "Billing group",
+    "billingGroupLabel": "How you are billed",
     "selectGroupFirst": "Pick a group",
     "favoriteModelsCount": "Models: {{count}}",
     "modelSetNote": "Every model is configured securely when you connect. Each one's real connection result appears after its first use.",
@@ -1053,6 +1067,11 @@
         "Download and install WorkBuddy from the official site.",
         "Open WorkBuddy once after install.",
         "Return here and choose “I already installed it — check again”."
+      ],
+      "opencode": [
+        "Open the OpenCode docs and install the CLI for your system.",
+        "When done, typing opencode in a terminal should start it.",
+        "Back in YesChoy, tap Start setup."
       ]
     },
     "confirmAndConnect": "Check and continue",
@@ -1216,8 +1235,8 @@
   },
   "modelPicker": {
     "label": "Choose a model",
-    "fullId": "full model ID",
-    "choose": "Pick a model",
+    "fullId": "Search by name or id",
+    "choose": "Tap to choose",
     "noModels": "No models available",
     "searchPlaceholder": "Search by name or ID, e.g. GPT 6",
     "searchLabel": "Search models",
@@ -1242,13 +1261,13 @@
     }
   },
   "stationConnectPage": {
-    "originLabel": "Station address (HTTPS)",
-    "originPlaceholder": "https://yeschoy.com",
-    "originHint": "Starts with the YesChoy example site — replace with your station’s HTTPS domain.",
-    "continue": "Continue in browser",
+    "originLabel": "Your relay site address",
+    "originPlaceholder": "https://your-relay.com",
+    "originHint": "Paste the relay address you normally sign in to; the assistant figures out how to connect.",
+    "continue": "Check & connect",
     "opening": "Opening browser…",
     "accountChecking": "Still checking account status — you can sign in or continue now.",
-    "invalidOrigin": "Enter a valid HTTPS station address (domain only, no path)."
+    "invalidOrigin": "Paste a site address, e.g. https://example.com."
   },
   "stationConnect": {
     "connecting": "Connecting from the website…",
@@ -1284,7 +1303,75 @@
       "network_error": "Can't reach account services. Check your network and retry.",
       "backend_unavailable": "Account services are unavailable. Refresh in a moment.",
       "invalid_response": "Account data couldn't be loaded. Refresh to retry.",
-      "session_expired": "Sign-in expired. Connect again from the website."
+      "session_expired": "Sign-in expired. Connect again from the website.",
+      "connect_origin_declined": "Connection to this site was cancelled.",
+      "connect_origin_untrusted": "This site hasn't been confirmed yet. Enter it again and confirm."
+    }
+  },
+  "stationOnboarding": {
+    "probing": "Checking…",
+    "probingTitle": "Looking up this site",
+    "probingBody": "Usually a few seconds. Cancel anytime to edit the address; other pages stay usable.",
+    "cancelProbe": "Cancel",
+    "retryProbe": "Try again",
+    "found": "Found site: {{host}}",
+    "kind": {
+      "new_api": "New API relay",
+      "one_api": "One API relay",
+      "openai_compatible": "OpenAI-compatible API",
+      "unknown": "Relay"
+    },
+    "oneClickBody": "This site supports one-click sign-in. The button opens your browser; sign in and click Authorize. No keys to copy.",
+    "trustQuestion": "Make sure this is a relay you actually use. Once connected, your conversations in the apps go through it.",
+    "trustAndLogin": "It's mine, sign in in browser",
+    "tokenIntro": "This site doesn't offer one-click sign-in yet. You can still connect with a token:",
+    "tokenStep1": "Open this site in your browser and sign in.",
+    "tokenStep2": "Go to the Tokens page and add or copy a token (starts with sk-).",
+    "tokenStep3": "Paste it below and click Check token.",
+    "tokenLabel": "Token",
+    "tokenCheck": "Check token",
+    "tokenChecking": "Checking…",
+    "modelsLabel": "Models this token can use",
+    "moreModels": "{{count}} more",
+    "token": {
+      "valid": "Token works, {{count}} models available. It is only used for this check and is not saved.",
+      "invalid": "The token is wrong or was deleted. Copy it again from the Tokens page without extra spaces.",
+      "no_quota": "The token is right but its balance or quota is used up. Top up or raise the token quota first.",
+      "error": "The site did not return a model list. Try again later, or contact the site owner."
+    },
+    "failed": {
+      "invalid_origin": {
+        "title": "That address doesn't look right",
+        "next": "Paste the site address, e.g. https://example.com. Only the domain is needed."
+      },
+      "unreachable": {
+        "title": "Can't reach this site",
+        "next": "Try opening it in your browser. If the browser can't either, the address is wrong or the site is down."
+      },
+      "timeout": {
+        "title": "The site is responding slowly",
+        "next": "Try again in a moment. If you use a proxy, try another node."
+      },
+      "not_relay": {
+        "title": "This doesn't look like a relay site",
+        "next": "Make sure you copied the relay's address (the site with Tokens and Wallet after signing in), not a chat page or another site."
+      }
+    }
+  },
+  "stationTrust": {
+    "title": "Connect to this new site?",
+    "body": "A web page asked to connect the desktop assistant to the site above.",
+    "point1": "Once connected, the assistant configures your AI apps with this site's account.",
+    "point2": "Your conversations in those apps will go through this site.",
+    "warn": "If you don't recognize this site, or you didn't just click \"Open desktop assistant\" on a web page, choose Don't connect.",
+    "decline": "Don't connect",
+    "accept": "I know it, connect",
+    "failed": "Not connected",
+    "reason": {
+      "connect_code_expired": "The connect request expired. Go back to the web page and click \"Open desktop assistant\" again.",
+      "connect_origin_not_acceptable": "The site address is not acceptable; the assistant won't connect to it.",
+      "trust_store_full": "Too many remembered sites. Remove some unused ones in Settings first.",
+      "generic": "Go back to the web page and click \"Open desktop assistant\" again."
     }
   }
 }

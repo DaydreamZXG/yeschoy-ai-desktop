@@ -15,6 +15,7 @@ import {
 import type { ActivationToolId } from "../configuration/activation";
 import { WORKBENCH_APPS } from "../workbench/appCatalog";
 import { RecentRequest } from "../configuration/RecentRequest";
+import { modelDisplayName, shortModelId } from "../model-profiles/profile";
 
 /**
  * #11 PRD 6.8 高级模式：设置页折叠区，展示已接入应用的实际连接参数。
@@ -29,6 +30,7 @@ const TOOL_INFO: Record<
   codex_desktop: { previewId: "codex", appType: "codex" },
   dsh_web: { previewId: "dsh" },
   pi: { previewId: "pi", appType: "pi" },
+  opencode: { previewId: "opencode" },
   claude_code: { previewId: "claude", appType: "claude" },
   workbuddy: { previewId: "workbuddy" },
   dsh_desktop: { previewId: "dsh_desktop" },
@@ -62,7 +64,11 @@ function diagnosticsText(connection: ToolConnection, requestId?: string) {
     `${d("tool")}: ${toolName(connection.toolId)} (${connection.toolId})`,
     `${d("state")}: ${connectionLabel(connection.state)} (${connection.state})`,
     `Base URL: ${baseUrlOf(connection) ?? d("noLine")}`,
-    `${d("model")}: ${connection.modelId || d("noModel")}`,
+    `${d("model")}: ${
+      connection.modelId
+        ? modelDisplayName(connection.modelId)
+        : d("noModel")
+    }`,
     `${d("billingGroup")}: ${connection.billingGroup || d("defaultGroup")}`,
     `${d("configFile")}: ${targetFile}`,
     `${d("lastWrite")}: ${
@@ -155,7 +161,20 @@ export function AdvancedConnectionDetails() {
                   <div>
                     <dt>{t("yeschoySettings.advanced.model")}</dt>
                     <dd>
-                      <code>{connection.modelId || "—"}</code>
+                      {connection.modelId ? (
+                        <>
+                          <strong>{modelDisplayName(connection.modelId)}</strong>
+                          {modelDisplayName(connection.modelId) !==
+                            connection.modelId && (
+                            <code title={connection.modelId}>
+                              {" "}
+                              {shortModelId(connection.modelId)}
+                            </code>
+                          )}
+                        </>
+                      ) : (
+                        "—"
+                      )}
                     </dd>
                   </div>
                   <div>

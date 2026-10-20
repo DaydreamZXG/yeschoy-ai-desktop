@@ -165,7 +165,7 @@ function scan(requestId: string): ActivationTargetScan {
 function applySavedOrSelected() {
   const primary = screen.getByTestId("configuration-apply-action");
   fireEvent.click(
-    primary.textContent?.trim() === "换模型与分组"
+    primary.textContent?.trim() === "去改上方的模型"
       ? screen.getByRole("button", { name: "重新应用当前设置" })
       : primary,
   );
@@ -291,7 +291,7 @@ describe("daily-use UX", () => {
     await tick();
     const banner = screen.getByTestId("recovery-banner");
     expect(banner).toHaveTextContent(
-      "上次退出时有接入操作没有完成，Codex Desktop 的原设置需要先恢复",
+      "上次退出时有接入操作没有完成，Codex（桌面版 / 命令行） 的原设置需要先恢复",
     );
     fireEvent.click(screen.getByRole("button", { name: "前往恢复" }));
     expect(callback).toHaveBeenCalledWith("codex_desktop", "repair");
@@ -313,7 +313,7 @@ describe("daily-use UX", () => {
     await tick();
     const banner = screen.getByTestId("offline-model-banner");
     expect(banner).toHaveTextContent(
-      "Codex Desktop 正在使用的模型已下线，需要重新选择模型后再继续使用。",
+      "Codex（桌面版 / 命令行） 正在使用的模型已下线，需要重新选择模型后再继续使用。",
     );
     fireEvent.click(screen.getByRole("button", { name: "重新选择模型" }));
     expect(callback).toHaveBeenCalledWith("codex_desktop");
@@ -396,9 +396,9 @@ describe("daily-use UX", () => {
       }),
     );
     await tick();
-    // 已接入且选择一致：换模型与分组（次级）。
+    // 已接入且选择一致：去改上方的模型（次级，只聚焦选择器）。
     const steady = screen.getByTestId("configuration-apply-action");
-    expect(steady).toHaveTextContent("换模型与分组");
+    expect(steady).toHaveTextContent("去改上方的模型");
     expect(steady.className).toContain("secondary-action");
     fireEvent.click(screen.getByRole("combobox", { name: /选择模型/ }));
     fireEvent.click(screen.getByRole("option", { name: "model-b" }));
@@ -550,7 +550,7 @@ describe("daily-use UX", () => {
     );
     await tick();
     const card = screen
-      .getByRole("heading", { name: "Codex Desktop" })
+      .getByRole("heading", { name: "Codex（桌面版 / 命令行）" })
       .closest("article")!;
     const overview = container.querySelector(".account-overview")!;
     expect(
@@ -562,7 +562,7 @@ describe("daily-use UX", () => {
     expect(open).toHaveBeenLastCalledWith("codex_desktop", "repair");
     expect(controller.open).not.toHaveBeenCalled();
     expect(controller.restore).not.toHaveBeenCalled();
-    fireEvent.click(within(card).getByRole("button", { name: "换模型与分组" }));
+    fireEvent.click(within(card).getByRole("button", { name: "换模型" }));
     expect(open).toHaveBeenLastCalledWith("codex_desktop", "change-model");
   });
 
@@ -586,12 +586,12 @@ describe("daily-use UX", () => {
     await tick();
     fireEvent.click(screen.getByRole("button", { name: "更换应用" }));
     fireEvent.click(
-      screen.getByRole("button", { name: /Codex Desktop.*已接入/ }),
+      screen.getByRole("button", { name: (n) => typeof n === "string" && n.includes("Codex") && n.includes("已接入") }),
     );
     await tick();
     expect(
       document.querySelector(".selected-app-bar strong"),
-    ).toHaveTextContent("Codex Desktop");
+    ).toHaveTextContent("Codex（桌面版 / 命令行）");
     view.rerender(
       setupView(account, controller, "mainland_optimized", "claude_desktop", {
         ...intent,
@@ -657,7 +657,7 @@ describe("daily-use UX", () => {
       if (queued) {
         expect(
           document.querySelector(".selected-app-bar strong"),
-        ).toHaveTextContent("Codex Desktop");
+        ).toHaveTextContent("Codex（桌面版 / 命令行）");
         expect(screen.getByTestId("configuration-apply-action")).toBeDisabled();
         await act(async () => finish());
       }
@@ -668,7 +668,7 @@ describe("daily-use UX", () => {
       expect(screen.getByRole("button", { name: "打开使用" })).toBeEnabled();
       expect(
         screen.getByTestId("configuration-apply-action"),
-      ).toHaveTextContent("换模型与分组");
+      ).toHaveTextContent("去改上方的模型");
       expect(
         screen.queryByText("配置已保存，已检查启动"),
       ).not.toBeInTheDocument();
@@ -703,7 +703,7 @@ describe("daily-use UX", () => {
           connection={
             controller.connections.find((c) => c.toolId === "codex_desktop")!
           }
-          name="Codex Desktop"
+          name="Codex（桌面版 / 命令行）"
           onAdjust={callback}
         />
       </ConnectionProvider>,
@@ -787,7 +787,7 @@ describe("daily-use UX", () => {
           connection={
             controller.connections.find((c) => c.toolId === "codex_desktop")!
           }
-          name="Codex Desktop"
+          name="Codex（桌面版 / 命令行）"
           onAdjust={callback}
         />
       </ConnectionProvider>,
@@ -1976,7 +1976,7 @@ describe("daily-use UX", () => {
             connection={
               local().connections.find((c) => c.toolId === "codex_desktop")!
             }
-            name="Codex Desktop"
+            name="Codex（桌面版 / 命令行）"
             onAdjust={callback}
           />
         </ConnectionProvider>
@@ -2038,7 +2038,7 @@ describe("daily-use UX", () => {
       <ConnectionProvider value={state}>
         <OpenConnection
           connection={codex}
-          name="Codex Desktop"
+          name="Codex（桌面版 / 命令行）"
           onAdjust={callback}
         />
       </ConnectionProvider>,
@@ -2099,7 +2099,7 @@ describe("daily-use UX", () => {
       </ConnectionProvider>,
       );
       await tick();
-      // count=0 时仅 Claude Desktop / Codex Desktop 可见。
+      // count=0 时仅 Claude Desktop / Codex（桌面版 / 命令行） 可见。
       expect(screen.queryAllByRole("article")).toHaveLength(count || 2);
       if (count === 0)
         expect(
@@ -2110,7 +2110,7 @@ describe("daily-use UX", () => {
           name: /查看其他/,
         }),
       );
-      expect(screen.getAllByRole("article")).toHaveLength(7);
+      expect(screen.getAllByRole("article")).toHaveLength(8);
       expect(
         screen.queryByRole("region", { name: "用量账单" }),
       ).not.toBeInTheDocument();
@@ -2281,7 +2281,7 @@ describe("daily-use UX", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "退出野菜助手" }));
     const dialog = screen.getByRole("dialog");
-    expect(within(dialog).getByRole("list")).toHaveTextContent("Codex Desktop");
+    expect(within(dialog).getByRole("list")).toHaveTextContent("Codex（桌面版 / 命令行）");
     expect(within(dialog).getByRole("list")).not.toHaveTextContent("Claude");
     expect(
       native.mock.calls.some(([cmd]) => cmd === "quit_desktop_assistant"),

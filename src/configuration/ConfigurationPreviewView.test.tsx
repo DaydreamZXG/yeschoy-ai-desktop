@@ -37,7 +37,7 @@ describe("desktop protocol compatibility", () => {
     expect(connectionLifecycleNote("workbuddy", "WorkBuddy")).toContain(
       "不需要关闭或重启",
     );
-    const desktop = connectionLifecycleNote("codex_desktop", "Codex Desktop");
+    const desktop = connectionLifecycleNote("codex_desktop", "Codex（桌面版 / 命令行）");
     expect(desktop).toContain("提醒你保存");
     expect(desktop).toContain("正常退出");
     expect(desktop).toContain("只剩后台进程");

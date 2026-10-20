@@ -1,0 +1,249 @@
+// DRAFT — not compiled, not tested. See README.md in this folder.
+// Target: QuantumNous/new-api. Package placement: controller/desktop_connect.go
+package controller
+
+import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"net/http"
+	"net/url"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/model"
+	"github.com/gin-gonic/gin"
+)
+
+const (
+	connectCodeTTL   = 300 * time.Second
+	desktopAccessTTL = 15 * time.Minute
+	desktopRefreshTTL = 30 * 24 * time.Hour
+)
+
+type DesktopSession struct {
+	Id               string `gorm:"primaryKey;size:36"`
+	UserId           int    `gorm:"index"`
+	AccessHash       string `gorm:"size:64;uniqueIndex"`
+	AccessExpiresAt  int64
+	RefreshHash      string `gorm:"size:64;uniqueIndex"`
+	RefreshExpiresAt int64
+	RevokedAt        int64
+	DevicePlatform   string `gorm:"size:16"`
+	ClientVersion    string `gorm:"size:32"`
+	CreatedAt        int64
+	LastSeenAt       int64
+}
+
+func randomToken(n int) string {
+	b := make([]byte, n)
+	_, _ = rand.Read(b)
+	return base64.RawURLEncoding.EncodeToString(b)
+}
+
+func hashToken(t string) string {
+	s := sha256.Sum256([]byte(t))
+	return hex.EncodeToString(s[:])
+}
+
+// ---- connect codes (Redis when enabled, else in-memory) ----
+
+type connectCode struct {
+	UserId    int    `json:"user_id"`
+	Origin    string `json:"origin"`
+	ExpiresAt int64  `json:"expires_at"`
+}
+
+var memCodes sync.Map
+
+func putConnectCode(code string, v connectCode) error {
+	key := "desktop:connect:" + hashToken(code)
+	if common.RedisEnabled {
+		raw, _ := common.Marshal(v)
+		return common.RDB.Set(common.RDB.Context(), key, raw, connectCodeTTL).Err()
+	}
+	memCodes.Store(key, v)
+	return nil
+}
+
+func takeConnectCode(code string) (connectCode, bool) {
+	key := "desktop:connect:" + hashToken(code)
+	var v connectCode
+	if common.RedisEnabled {
+		raw, err := common.RDB.GetDel(common.RDB.Context(), key).Result()
+		if err != nil || common.UnmarshalJsonStr(raw, &v) != nil {
+			return v, false
+		}
+	} else {
+		x, ok := memCodes.LoadAndDelete(key)
+		if !ok {
+			return v, false
+		}
+		v = x.(connectCode)
+	}
+	return v, v.ExpiresAt > time.Now().Unix()
+}
+
+func requestOrigin(c *gin.Context) string {
+	return "https://" + strings.ToLower(c.Request.Host)
+}
+
+// GET /api/desktop/v2/bootstrap
+func DesktopConnectBootstrap(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{
+		"schema_version":                 2,
+		"service":                        "yeschoy-desktop",
+		"contract_id":                    "desktop-integration-v2",
+		"minimum_client_version":         "0.5.0",
+		"device_authorization_available": false,
+		"oauth_loopback_pkce_available":  false,
+		"account_read": true, "usage_read": true, "models_read": true,
+		"pricing_read": true, "tool_keys_manage": true,
+		"official_usd_cny_rate":     7.0,
+		"authorization_start_path":  "/api/desktop/v2/device-authorizations",
+		"authorization_token_path":  "/api/desktop/v2/device-authorizations/token",
+		"session_refresh_path":      "/api/desktop/v2/sessions/refresh",
+		"session_logout_path":       "/api/desktop/v2/sessions/current",
+		"account_path":              "/api/user/self",
+		"usage_summary_path":        "/api/data/self",
+		"usage_records_path":        "/api/log/self",
+		"models_path":               "/api/user/models",
+		"pricing_path":              "/api/pricing",
+		"tool_keys_path":            "/api/token/",
+		"wallet_url":                requestOrigin(c) + "/wallet",
+	}})
+}
+
+// POST /api/desktop/v2/connect-codes   (UserAuth)
+func IssueDesktopConnectCode(c *gin.Context) {
+	code := randomToken(32)
+	origin := requestOrigin(c)
+	exp := time.Now().Add(connectCodeTTL).Unix()
+	if err := putConnectCode(code, connectCode{UserId: c.GetInt("id"), Origin: origin, ExpiresAt: exp}); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "code": "connect_code_store_failed"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{
+		"code": code, "origin": origin, "expiresAt": exp, "ttlSeconds": int(connectCodeTTL.Seconds()),
+	}})
+}
+
+func issueDesktopBundle(userId int, platform, version string) (gin.H, error) {
+	now := time.Now()
+	access, refresh := randomToken(32), randomToken(32)
+	s := DesktopSession{
+		Id: common.GetUUID(), UserId: userId,
+		AccessHash: hashToken(access), AccessExpiresAt: now.Add(desktopAccessTTL).Unix(),
+		RefreshHash: hashToken(refresh), RefreshExpiresAt: now.Add(desktopRefreshTTL).Unix(),
+		DevicePlatform: platform, ClientVersion: version, CreatedAt: now.Unix(), LastSeenAt: now.Unix(),
+	}
+	if err := model.DB.Create(&s).Error; err != nil {
+		return nil, err
+	}
+	return gin.H{
+		"accessToken": access, "tokenType": "Bearer", "accessExpiresAt": s.AccessExpiresAt,
+		"refreshToken": refresh, "refreshExpiresAt": s.RefreshExpiresAt, "sessionId": s.Id,
+	}, nil
+}
+
+// POST /api/desktop/v2/connect-codes/exchange
+func ExchangeDesktopConnectCode(c *gin.Context) {
+	var req struct {
+		Code          string `json:"code"`
+		DeviceId      string `json:"deviceId"`
+		Platform      string `json:"platform"`
+		ClientVersion string `json:"clientVersion"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || len(req.Code) < 32 {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "code": "connect_code_expired"})
+		return
+	}
+	v, ok := takeConnectCode(req.Code)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"success": false, "code": "connect_code_expired"})
+		return
+	}
+	if u, err := url.Parse(v.Origin); err != nil || !strings.EqualFold(u.Host, c.Request.Host) {
+		c.JSON(http.StatusForbidden, gin.H{"success": false, "code": "connect_origin_mismatch"})
+		return
+	}
+	bundle, err := issueDesktopBundle(v.UserId, req.Platform, req.ClientVersion)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "code": "server_error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": bundle})
+}
+
+// POST /api/desktop/v2/sessions/refresh
+func RefreshDesktopConnectSession(c *gin.Context) {
+	var req struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	_ = c.ShouldBindJSON(&req)
+	var s DesktopSession
+	now := time.Now()
+	if req.RefreshToken == "" ||
+		model.DB.Where("refresh_hash = ? AND revoked_at = 0 AND refresh_expires_at > ?", hashToken(req.RefreshToken), now.Unix()).First(&s).Error != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"success": false, "code": "session_expired"})
+		return
+	}
+	access, refresh := randomToken(32), randomToken(32)
+	s.AccessHash, s.AccessExpiresAt = hashToken(access), now.Add(desktopAccessTTL).Unix()
+	s.RefreshHash, s.RefreshExpiresAt = hashToken(refresh), now.Add(desktopRefreshTTL).Unix()
+	s.LastSeenAt = now.Unix()
+	model.DB.Save(&s)
+	c.JSON(http.StatusOK, gin.H{"success": true, "data": gin.H{
+		"accessToken": access, "tokenType": "Bearer", "accessExpiresAt": s.AccessExpiresAt,
+		"refreshToken": refresh, "refreshExpiresAt": s.RefreshExpiresAt, "sessionId": s.Id,
+	}})
+}
+
+// DesktopBearerAuth: lets "Authorization: Bearer <desktop access token>" act as the user
+// on the read-only account endpoints. Mount BEFORE middleware.UserAuth() on those routes,
+// and make UserAuth skip when c.GetInt("id") is already set.
+func DesktopBearerAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		h := c.GetHeader("Authorization")
+		if !strings.HasPrefix(h, "Bearer ") || c.GetHeader("New-Api-User") != "" {
+			c.Next()
+			return
+		}
+		var s DesktopSession
+		if model.DB.Where("access_hash = ? AND revoked_at = 0 AND access_expires_at > ?",
+			hashToken(strings.TrimPrefix(h, "Bearer ")), time.Now().Unix()).First(&s).Error == nil {
+			user, err := model.GetUserById(s.UserId, false)
+			if err == nil && user.Status == common.UserStatusEnabled {
+				c.Set("id", user.Id)
+				c.Set("username", user.Username)
+				c.Set("role", user.Role)
+				c.Set("group", user.Group)
+				c.Set("desktop_session_id", s.Id)
+			}
+		}
+		c.Next()
+	}
+}
+
+// DELETE /api/desktop/v2/sessions/current
+func RevokeDesktopConnectSession(c *gin.Context) {
+	id := c.GetString("desktop_session_id")
+	if id != "" {
+		model.DB.Model(&DesktopSession{}).Where("id = ?", id).Update("revoked_at", time.Now().Unix())
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+/* router/api-router.go:
+	d := apiRouter.Group("/desktop/v2")
+	d.GET("/bootstrap", controller.DesktopConnectBootstrap)
+	d.POST("/connect-codes", middleware.UserAuth(), middleware.CriticalRateLimit(), controller.IssueDesktopConnectCode)
+	d.POST("/connect-codes/exchange", middleware.CriticalRateLimit(), controller.ExchangeDesktopConnectCode)
+	d.POST("/sessions/refresh", middleware.CriticalRateLimit(), controller.RefreshDesktopConnectSession)
+	d.DELETE("/sessions/current", controller.DesktopBearerAuth(), controller.RevokeDesktopConnectSession)
+   and add controller.DesktopBearerAuth() in front of UserAuth() for
+   /api/user/self, /api/user/models, /api/token/*, /api/log/self, /api/data/self.
+*/

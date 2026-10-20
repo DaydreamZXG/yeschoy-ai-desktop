@@ -235,6 +235,9 @@ function connections(requestId: string) {
     claude_code: "glm-5.3",
     claude_desktop: "claude-sonnet-4-5-20250929",
     pi: "gpt-5.6-codex",
+    opencode: "kimi-k3",
+    codex_desktop: "gpt-6-astra",
+    workbuddy: "gpt-6.1-sol-2026-10-preview-long-model-identifier",
   } as Record<string, string>;
   return {
     ...base,
@@ -260,8 +263,9 @@ function targets(requestId: string) {
   const defs = [
     ["claude_code", "Claude Code", "2.1.233"],
     ["claude_desktop", "Claude Desktop", "1.40609.1"],
-    ["codex_desktop", "Codex Desktop", "26.825.51511"],
+    ["codex_desktop", "Codex", "26.825.51511"],
     ["pi", "Pi", "0.84.4"],
+    ["opencode", "OpenCode", "1.4.2"],
     ["dsh_web", "DSH web", "0.1.0-rc.6"],
     ["workbuddy", "WorkBuddy", "5.5.6"],
     ["dsh_desktop", "DeepSeek Harness", "0.2.0"],
@@ -298,8 +302,7 @@ function targets(requestId: string) {
 const handlers: Record<string, (a: Args) => unknown> = {
   account_session_snapshot_v2: () => ({
     hasStoredSession: scenario !== "signed_out",
-    storedLineId:
-      scenario === "signed_out" ? null : "mainland_optimized",
+    storedLineId: scenario === "signed_out" ? null : "mainland_optimized",
   }),
   account_inspect_v2: (a) => account(rid(a), scenario),
   account_poll_authorization_v2: (a) => account(rid(a), scenario),
@@ -338,6 +341,61 @@ const handlers: Record<string, (a: Args) => unknown> = {
         },
   account_announcement_action_v2: () => null,
   manage_tool_connections_v1: (a) => connections(rid(a)),
+  station_trust_origin_v1: (a) => (a as { origin: string }).origin,
+  station_trust_state_v1: () => ({ trusted: [], builtin: [], pending: [] }),
+  station_probe_v1: async (a) => {
+    const r = (a as { request: { origin: string; token?: string } }).request;
+    const origin = r.origin.startsWith("http")
+      ? r.origin
+      : `https://${r.origin}`;
+    const host = new URL(origin).hostname;
+    // uxaudit 演示：fail.* 立刻失败；slow.* 拖几秒好拍「正在检测」。
+    if (host.startsWith("fail.")) {
+      return {
+        origin: new URL(origin).origin,
+        status: "unreachable",
+        kind: "unknown",
+        systemName: "",
+        version: "",
+        desktopConnect: false,
+        tokenStatus: "not_provided",
+        models: [],
+      };
+    }
+    if (host.startsWith("slow.")) {
+      await new Promise((resolve) => setTimeout(resolve, 8_000));
+    }
+    return {
+      origin: new URL(origin).origin,
+      status: "ok",
+      kind: "new_api",
+      systemName: "小明的中转",
+      version: "v0.9.6",
+      desktopConnect: false,
+      tokenStatus: r.token ? "valid" : "not_provided",
+      models: r.token
+        ? [
+            "claude-sonnet-4-5-20250929",
+            "deepseek-chat-v4-long-preview-identifier",
+            "gemini-3-pro-preview-exp-20261001",
+            "glm-5.3",
+            "gpt-6.1-sol-2026-10-preview-long-model-identifier",
+            "kimi-k3",
+            "qwen3-max",
+          ]
+        : [],
+    };
+  },
+  open_tool_connection_v1: (a) => {
+    const r = (a as { request: { requestId: string; toolId: string } }).request;
+    return {
+      schemaVersion: 2,
+      requestId: r.requestId,
+      toolId: r.toolId,
+      status: "opened",
+      reasonCode: "opened",
+    };
+  },
   scan_activation_targets_v1: (a) => targets(rid(a)),
   manual_location_pick: (a) => ({ requestId: rid(a), outcome: "cancelled" }),
   manual_location_clear: (a) => ({ requestId: rid(a), outcome: "cleared" }),

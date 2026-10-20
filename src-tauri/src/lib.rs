@@ -30,6 +30,7 @@ mod logging;
 mod manual_locations;
 mod model_catalog;
 mod open_connection;
+mod opencode_bridge;
 mod provider;
 mod proxy;
 mod update_channel;
@@ -45,6 +46,8 @@ mod shutdown_coordinator;
 mod station_connect;
 mod station_connect_exchange;
 mod station_connect_loopback;
+mod station_probe;
+mod station_trust;
 mod token_estimate;
 mod tool_activation;
 mod tool_adapters;
@@ -130,6 +133,7 @@ pub fn run() {
         })
         .setup(move |app| {
             window_appearance::initialize(app)?;
+            station_trust::initialize(app.path().app_data_dir().ok());
             #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
             if let Err(error) = station_connect::wire_station_connect_deep_link(app.handle()) {
                 log::warn!("station_connect stage=wire_deep_link_failed error={error}");
@@ -180,6 +184,8 @@ pub fn run() {
                     // endpoint.
                     tool_adapters::claude_code::resume_if_configured(resume_claude_code_runtime),
                     tool_adapters::claude_desktop::resume_if_configured(resume_claude_runtime),
+                    // OpenCode 的配置里只有本地令牌，桥不在它就发不出请求。
+                    tool_adapters::opencode::resume_if_configured(),
                 );
             });
             Ok(())
@@ -220,7 +226,12 @@ pub fn run() {
             station_connect_loopback::station_connect_loopback_capabilities_v1,
             station_connect_loopback::station_connect_begin_loopback_oauth_v1,
             station_connect_loopback::station_connect_cancel_loopback_oauth_v1,
-            station_connect::station_connect_open_connect_page_v1
+            station_connect::station_connect_open_connect_page_v1,
+            station_connect::station_connect_confirm_origin_v1,
+            station_connect::station_trust_origin_v1,
+            station_connect::station_trust_state_v1,
+            station_connect::station_trust_forget_v1,
+            station_probe::station_probe_v1
         ])
         .build(tauri::generate_context!())
         .expect("failed to run the 野菜API desktop shell");
@@ -283,6 +294,11 @@ fn register_runtime_stops(app: &tauri::AppHandle) -> Result<(), std::io::Error> 
         tool_adapters::codex_desktop::CodexRuntimeState
     );
     register!("dsh_web", tool_adapters::dsh_web::DshRuntimeState);
+    shutdown()
+        .register_stop("opencode", || async {
+            opencode_bridge::global().stop().await;
+        })
+        .map_err(|_| std::io::Error::other("shutdown_registration_failed"))?;
     Ok(())
 }
 
@@ -477,8 +493,8 @@ fn begin_user_shutdown<R: tauri::Runtime>(
                             // native box follows it (see ui_language).
                             let language = ui_language::current();
                             let names = response.failed_tools.iter().map(|tool| match tool.as_str() {
-                                "codex_desktop" => "Codex Desktop", "claude_desktop" => "Claude Desktop",
-                                "claude_code" => "Claude Code", "pi" => "Pi", _ => "DSH web",
+                                "codex_desktop" => "Codex", "claude_desktop" => "Claude Desktop",
+                                "claude_code" => "Claude Code", "pi" => "Pi", "opencode" => "OpenCode", _ => "DSH web",
                             }).collect::<Vec<_>>().join(language.pick("、", ", "));
                             let message = HSTRING::from(language.pick(
                                 &format!("未完成恢复：{names}。助手尚未退出。\n请保存并关闭相关应用后重试。若界面不可用，再点窗口关闭按钮，可选择重试恢复或保留设置退出。"),

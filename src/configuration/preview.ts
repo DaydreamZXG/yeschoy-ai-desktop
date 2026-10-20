@@ -139,6 +139,7 @@ export const CONFIGURATION_TOOLS: readonly ConfigurationToolDefinition[] =
       ownedFields: Object.freeze([
         "provider.yeschoy.npm",
         "provider.yeschoy.options.baseURL",
+        "provider.yeschoy.options.apiKey",
         "provider.yeschoy.models",
         "model",
       ]),

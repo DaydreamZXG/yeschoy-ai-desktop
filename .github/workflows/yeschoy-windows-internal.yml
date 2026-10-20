@@ -82,6 +82,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           YESCHOY_AUTHORIZATION_PAGE_ORIGIN: https://${{ inputs.authorization_origin }}
+          YESCHOY_DISTRIBUTION: ${{ inputs.authorization_origin == 'ai.yeschoy.io' && 'partner' || 'official' }}
         # 用 CI 专用配置：不让 Tauri 造更新器构件。它只认 tauri.conf.json 里
         # 那一个 `pubkey`（本仓库故意留空），而自动更新实际走
         # `update-channels.json` 里按通道分开的两把公钥 —— 一个仓库密钥服务不了

@@ -5,7 +5,7 @@
 
 use reqwest::Url;
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager, Runtime};
+use tauri::{AppHandle, Emitter, Listener, Manager, Runtime};
 use tauri_plugin_deep_link::DeepLinkExt;
 
 use crate::account_v2::{
@@ -108,10 +108,30 @@ fn deliver_connect_urls<R: Runtime, S: AsRef<str>>(app: &AppHandle<R>, urls: &[S
     for url in urls {
         match handle_connect_url(url.as_ref()) {
             StationConnectHandleOutcome::Accepted(request) => {
-                let app = app.clone();
-                tauri::async_runtime::spawn(async move {
-                    run_station_connect_exchange(&app, request).await;
-                });
+                if crate::station_trust::is_trusted(&request.origin) {
+                    let app = app.clone();
+                    tauri::async_runtime::spawn(async move {
+                        run_station_connect_exchange(&app, request).await;
+                    });
+                } else {
+                    // 第一次见到的站点：先问用户，不静默兑换连接码。
+                    log::info!(
+                        "station_connect stage=confirm_required origin={}",
+                        request.origin
+                    );
+                    let origin = request.origin.clone();
+                    crate::station_trust::hold(request);
+                    emit_station_connect_progress(
+                        app,
+                        StationConnectProgressEvent {
+                            phase: "confirm_required",
+                            origin: Some(origin),
+                            line_id: None,
+                            reason_code: None,
+                            recoverable: true,
+                        },
+                    );
+                }
             }
             StationConnectHandleOutcome::IgnoredNotConnectScheme => {}
             StationConnectHandleOutcome::Rejected(error) => {
@@ -309,6 +329,22 @@ async fn run_station_connect_exchange<R: Runtime>(
 pub(crate) fn wire_station_connect_deep_link<R: Runtime>(
     app: &AppHandle<R>,
 ) -> Result<(), tauri_plugin_deep_link::Error> {
+    // 界面就绪后会发这个事件：把冷启动时暂存、还没问过用户的站点重发一遍。
+    let app_for_sync = app.clone();
+    app.listen("yeschoy://station-trust-sync", move |_| {
+        for origin in crate::station_trust::pending_origins() {
+            emit_station_connect_progress(
+                &app_for_sync,
+                StationConnectProgressEvent {
+                    phase: "confirm_required",
+                    origin: Some(origin),
+                    line_id: None,
+                    reason_code: None,
+                    recoverable: true,
+                },
+            );
+        }
+    });
     let app_for_events = app.clone();
     app.deep_link().on_open_url(move |event| {
         let urls = event
@@ -335,10 +371,66 @@ pub(crate) fn wire_station_connect_deep_link<R: Runtime>(
     Ok(())
 }
 
+/// 用户在确认框里的选择：`accept=true` 记住该站点并继续兑换连接码。
+#[tauri::command]
+pub async fn station_connect_confirm_origin_v1(
+    app: AppHandle,
+    origin: String,
+    accept: bool,
+) -> Result<(), String> {
+    let canonical = connect_origin_is_acceptable(&origin)
+        .ok_or_else(|| "connect_origin_not_acceptable".to_string())?;
+    let pending = crate::station_trust::take(&canonical);
+    if !accept {
+        emit_station_connect_progress(
+            &app,
+            StationConnectProgressEvent {
+                phase: "failed",
+                origin: Some(canonical),
+                line_id: None,
+                reason_code: Some("connect_origin_declined".to_owned()),
+                recoverable: false,
+            },
+        );
+        return Ok(());
+    }
+    crate::station_trust::trust(&canonical).map_err(str::to_owned)?;
+    match pending {
+        Some(request) => {
+            run_station_connect_exchange(&app, request).await;
+            Ok(())
+        }
+        None => Err("connect_code_expired".to_owned()),
+    }
+}
+
+/// 记住一个用户亲手输入并确认过的站点（首页「输入站点地址」入口）。
+#[tauri::command]
+pub fn station_trust_origin_v1(origin: String) -> Result<String, String> {
+    crate::station_trust::trust(&origin).map_err(str::to_owned)
+}
+
+#[tauri::command]
+pub fn station_trust_state_v1() -> serde_json::Value {
+    serde_json::json!({
+        "trusted": crate::station_trust::list(),
+        "builtin": crate::station_trust::BUILTIN_TRUSTED,
+        "pending": crate::station_trust::pending_origins(),
+    })
+}
+
+#[tauri::command]
+pub fn station_trust_forget_v1(origin: String) {
+    crate::station_trust::forget(&origin);
+}
+
 #[tauri::command]
 pub fn station_connect_open_connect_page_v1(origin: String) -> Result<(), String> {
     let canonical = connect_origin_is_acceptable(&origin)
         .ok_or_else(|| "connect_origin_not_acceptable".to_string())?;
+    if !crate::station_trust::is_trusted(&canonical) {
+        return Err("connect_origin_untrusted".to_string());
+    }
     let url = format!("{}{}?auto=1", canonical, STATION_CONNECT_PAGE_PATH);
     open_system_browser(&url).map_err(|_| "connect_browser_open_failed".to_string())
 }

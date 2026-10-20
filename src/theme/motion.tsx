@@ -185,31 +185,6 @@ export function CountUpStrong({
   );
 }
 
-/** 卡片上的光标聚光灯：一个全局 pointermove，把坐标写进 CSS 变量。 */
-const SPOTLIGHT =
-  ".account-overview, .billing-plan-card, .announcement-card, .connection-row, .usage-trend";
-export function installSpotlight(): void {
-  if (!motionAllowed()) return;
-  let pending: { el: HTMLElement; x: number; y: number } | null = null;
-  document.addEventListener(
-    "pointermove",
-    (event) => {
-      const el = (event.target as Element | null)?.closest?.(SPOTLIGHT);
-      if (!(el instanceof HTMLElement)) return;
-      const r = el.getBoundingClientRect();
-      if (!pending)
-        requestAnimationFrame(() => {
-          if (!pending) return;
-          pending.el.style.setProperty("--mx", `${pending.x}px`);
-          pending.el.style.setProperty("--my", `${pending.y}px`);
-          pending = null;
-        });
-      pending = { el, x: event.clientX - r.left, y: event.clientY - r.top };
-    },
-    { passive: true },
-  );
-}
-
 /**
  * 状态从「否」变成「是」的那一刻放一次庆祝。挂载时就已经是「是」的不算
  * —— 那是旧结果，不是刚刚发生的成功。

@@ -267,7 +267,14 @@
       "never": "記録なし",
       "copy": "診断情報をコピー",
       "copied": "コピーしました"
-    }
+    },
+    "groupGeneral": "一般",
+    "groupGeneralNote": "このコンピューターにのみ保存され、すぐに反映されます。",
+    "groupAbout": "バージョンと更新",
+    "groupPrivacy": "プライバシーとセキュリティ",
+    "groupPrivacyNote": "このバージョンで固定の動作です。設定は不要です。",
+    "groupSystem": "バックグラウンド",
+    "groupAdvanced": "トラブルシューティングと詳細"
   },
   "yeschoyUpdate": {
     "title": "野菜の自動更新",

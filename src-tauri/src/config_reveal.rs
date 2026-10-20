@@ -12,6 +12,7 @@ fn config_dir_for(app: &str, home: &Path) -> Option<PathBuf> {
         "claude" => Some(home.join(".claude")),
         "codex" => Some(home.join(".codex")),
         "pi" => Some(home.join(".pi").join("agent")),
+        "opencode" => Some(crate::tool_adapters::opencode::config_dir(home)),
         // The Claude Desktop profile lives in the 3p config library
         // (`Claude-3p/configLibrary`); reveal that directory.
         "claude-desktop" => {

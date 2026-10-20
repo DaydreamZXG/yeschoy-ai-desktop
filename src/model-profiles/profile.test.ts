@@ -202,10 +202,10 @@ describe("a reasoning effort baked into the model id resolves to its base model"
       "xhigh",
     ]);
     expect(modelDisplayName("qwen3.8-max")).toBe("Qwen3.8 Max");
-    // 基础型号不在目录里的，照旧什么都不猜。
+    // 能力照旧不猜；名称可以读成人话，方便小白辨认。
     expect(modelCapabilities("gemini-9.9-nonexistent-high")).toEqual({});
     expect(modelDisplayName("gemini-9.9-nonexistent-high")).toBe(
-      "gemini-9.9-nonexistent-high",
+      "Gemini 9.9 Nonexistent High",
     );
   });
 });
@@ -220,5 +220,24 @@ describe("the default pick avoids a model we cannot describe", () => {
     expect(hasReviewedCapabilities("gpt-6-astra")).toBe(true);
     // 带档位后缀的也算有资料 —— 解析后能查到基础型号。
     expect(hasReviewedCapabilities("gemini-3.7-flash-high")).toBe(true);
+  });
+});
+
+describe("humanizeModelId helps beginners read unknown API ids", () => {
+  it("strips date suffixes and titles common families", async () => {
+    const { humanizeModelId, modelDisplayName, shortModelId } = await import(
+      "./profile"
+    );
+    expect(humanizeModelId("claude-sonnet-4-5-20250929")).toBe(
+      "Claude Sonnet 4.5",
+    );
+    expect(modelDisplayName("claude-sonnet-4-5-20250929")).toBe(
+      "Claude Sonnet 4.5",
+    );
+    // Catalog wins over humanize.
+    expect(modelDisplayName("glm-5.3")).toMatch(/GLM/i);
+    expect(shortModelId("claude-sonnet-4-5-20250929", 20).includes("…")).toBe(
+      true,
+    );
   });
 });

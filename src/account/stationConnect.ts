@@ -5,7 +5,8 @@ export type StationConnectPhase =
   | "connecting"
   | "signed_in"
   | "failed"
-  | "rejected";
+  | "rejected"
+  | "confirm_required";
 
 export interface StationConnectProgressEvent {
   phase: StationConnectPhase;
@@ -28,7 +29,8 @@ export function decodeStationConnectProgress(
     phase !== "connecting" &&
     phase !== "signed_in" &&
     phase !== "failed" &&
-    phase !== "rejected"
+    phase !== "rejected" &&
+    phase !== "confirm_required"
   ) {
     return null;
   }

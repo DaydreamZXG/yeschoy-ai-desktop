@@ -6,7 +6,7 @@
   "yeschoyDaily": {
     "reapplyCurrent": "重新应用当前设置",
     "openUnconfirmed": "尚未确认应用已打开",
-    "changeModel": "换模型与分组",
+    "changeModel": "换模型",
     "checkAndRepair": "检查并修复",
     "accountOverview": "账户概览",
     "accountOverviewHint": "余额、费用与用量",
@@ -18,13 +18,15 @@
     "useSelectedModel": "使用所选模型",
     "useSelectedModelHint": "将所选模型设为默认，保留其他常用模型。之后再确认应用设置。",
     "unavailableBindingHint": "常用列表里有模型或分组已不可用，请在“模型与价格”中移除或重新选择。",
-    "changeModelHint": "先选模型和计费分组，再保存并应用；点这里不会改动现有设置。",
+    "changeModelHint": "改完模型和计费后，点「保存并应用」。点这里不会改设置。",
     "saveAndApply": "保存并应用",
     "selectionChangedHint": "已接入 {{model}}；当前选择尚未保存。",
     "modelSettings": "模型与价格",
     "modelSettingsHint": "选择默认模型、计费分组与常用模型",
     "manageModels": "管理常用模型",
-    "modelLimit": "常用模型已达 200 个。请先移除一个，再加入新的模型。"
+    "modelLimit": "常用模型已达 200 个。请先移除一个，再加入新的模型。",
+    "configuredActionHint": "模型和计费在上方改。改完后这里会变成「保存并应用」。选择没变时，可点「重新应用当前设置」。",
+    "focusModelPicker": "去改上方的模型"
   },
   "yeschoyDesktopRecovery": {
     "configuredTitle": "配置已保存，已检查启动",
@@ -305,7 +307,14 @@
       "copied": "已复制"
     },
     "troubleshootingTitle": "排查与高级",
-    "troubleshootingBody": "安装或接入出问题时再用，日常使用可以不管这里。"
+    "troubleshootingBody": "安装或接入出问题时再用，日常使用可以不管这里。",
+    "groupGeneral": "通用",
+    "groupGeneralNote": "只保存在这台电脑，马上生效。",
+    "groupAbout": "版本与更新",
+    "groupPrivacy": "隐私与安全",
+    "groupPrivacyNote": "这些是本版本固定的行为，不需要你设置。",
+    "groupSystem": "后台运行",
+    "groupAdvanced": "排查与高级"
   },
   "yeschoyUpdate": {
     "title": "野菜自动更新",
@@ -351,7 +360,7 @@
       "shutting_down": "野菜正在退出，本次更新已停止。",
       "shutdown_failed": "未能安全结束本机任务，已重新打开原版本。",
       "install_failed": "安装没有完成，已重新打开原版本。",
-      "updater_not_configured": "这个安装包没有配置更新通道。",
+      "updater_not_configured": "这个安装包没有开启自动更新。请到项目的 GitHub 发布页下载新版本。",
       "platform_unsupported": "当前系统暂不支持自动更新。",
       "endpoint_invalid": "更新地址未通过安全检查。",
       "manifest_invalid": "更新清单不完整或不适用于这台电脑。",
@@ -472,7 +481,7 @@
     "selectLine": "使用线路",
     "readinessTitle": "接入准备",
     "readinessBody": "选择仅供查看，不会修改应用设置。",
-    "fullId": "始终显示完整模型 ID",
+    "fullId": "点名称即可选择；编号可用来核对。",
     "lastChecked": "上次检查",
     "settingsTitle": "让助手更顺手",
     "settingsDescription": "调整外观与语言，查看隐私和版本信息。",
@@ -598,8 +607,8 @@
     "libraryOfflineNotice": "暂时连不上野菜服务，账户、本机应用和接入状态都没读到。这不会改动或删除任何已有设置。",
     "libraryRetry": "重试",
     "libraryRetrying": "正在重试",
-    "libraryAccountStale": "账户数据暂未更新，保留上次结果。",
-    "libraryAccountUnavailable": "暂时无法获取账户状态，请重试。",
+    "libraryAccountStale": "中转站暂时连不上，已保留上次登录结果。可以稍后点重试，或先用已接入的应用。",
+    "libraryAccountUnavailable": "暂时连不上中转站，请稍后重试。本地已接入的应用不受影响。",
     "librarySignInTitle": "登录一次，接入你的 AI 应用",
     "librarySignInBody": "自动获取可用模型和账户价格，不用复制密钥。恢复设置无需登录。",
     "librarySignInAction": "登录野菜API",
@@ -647,7 +656,9 @@
     "usageTrendTitle": "近 14 天消费趋势",
     "usageTrendNote": "按天汇总，金额以野菜API实际扣费为准",
     "usageTrendEmpty": "最近 14 天还没有用量",
-    "usageTrendDayLabel": "{{date}}：{{amount}}"
+    "usageTrendDayLabel": "{{date}}：{{amount}}",
+    "libraryAccountChecking": "正在检查中转站…",
+    "appNameCodex": "Codex（桌面版 / 命令行）"
   },
   "configuration": {
     "defaultGroup": "标准方案",
@@ -808,11 +819,14 @@
     "automaticCompatibility": "自动兼容",
     "surfaceClaudeCode": "命令行与编辑器工作区",
     "surfaceClaudeDesktop": "Claude 桌面应用",
-    "surfaceCodexDesktop": "ChatGPT 桌面应用中的 Codex",
+    "surfaceCodexDesktop": "Codex 桌面版或命令行（共用一份设置）",
     "surfacePi": "Pi 编程助手",
+    "surfaceOpenCode": "OpenCode 终端编程助手",
     "surfaceDsh": "DeepSeek Harness 浏览器工作台",
     "surfaceDshDesktop": "DeepSeek Harness 桌面应用",
     "surfaceWorkBuddy": "腾讯 AI 办公与开发助手",
+    "codexSharedSettings": "Codex 桌面版和命令行版（codex）用的是同一份设置文件。在这里接入一次，两边都会用野菜API；点「恢复原设置」也会两边一起还原。所以不会出现只恢复了一边、另一边突然连不上的情况。",
+    "opencodeKeyNote": "OpenCode 的设置文件里只写一个本机临时口令，真正的密钥留在系统钥匙串里。用 OpenCode 时请让野菜助手保持打开（可以最小化到后台）。",
     "lifecycleDesktopRestart": "若 {{name}} 正在运行，更新接入时会先提醒你保存；确认后由助手先请求应用正常退出，写入设置并重新打开。Windows 若只剩后台进程，会仅结束这个安装路径对应的进程。",
     "lifecycleBrowserLaunch": "更新接入会保存 DSH 配置；“打开使用”只会启动本地服务并在浏览器中打开，不会发送模型测试消息。",
     "lifecycleTerminalSession": "更新接入不会关闭正在使用的命令行会话；新设置从新开的终端会话生效。",
@@ -910,7 +924,7 @@
     "nativeInterface": "原生接口",
     "missingModelPrefix": "之前选择的",
     "missingModelSuffix": "当前不可用。请重新选择模型，不会自动替换。",
-    "billingCardHint": "选择价格与来源，不改变网络线路",
+    "billingCardHint": "同一个模型可以有不同价格，选一项即可。",
     "missingGroupTitle": "之前的计费分组已不可用",
     "missingGroupBody": "不在这个模型当前可用的分组中。请在上方重新选择，价格可能不同；不会自动切换。",
     "favoriteModels": "你的模型",
@@ -931,7 +945,7 @@
     "lineIntro": "大陆优化优先适合中国大陆网络；全球加速使用 Cloudflare，海外可优先尝试。线路只影响连接，不改变计费分组与倍率。",
     "currentConnection": "当前接入",
     "configuredSummary": "这些设置已经保存。日常换模型可在应用内选择；改动这个列表后，再更新接入。",
-    "billingGroupLabel": "计费分组",
+    "billingGroupLabel": "怎么计费",
     "selectGroupFirst": "请选择分组",
     "favoriteModelsCount": "{{count}} 个模型",
     "modelSetNote": "接入时安全配置全部模型；每个模型的真实连接结果在首次使用后显示。",
@@ -1053,6 +1067,11 @@
         "打开 WorkBuddy 官网，下载并安装桌面版。",
         "安装后先正常打开一次 WorkBuddy。",
         "回到野菜，点「我已安装，重新检查」。"
+      ],
+      "opencode": [
+        "打开 OpenCode 官网说明，按你的系统安装命令行工具。",
+        "安装完成后在终端输入 opencode 能打开即可。",
+        "回到野菜助手，点「开始接入」。"
       ]
     },
     "confirmAndConnect": "检查安装并继续",
@@ -1216,8 +1235,8 @@
   },
   "modelPicker": {
     "label": "选择模型",
-    "fullId": "完整模型 ID",
-    "choose": "选择一个模型",
+    "fullId": "可搜名称或编号",
+    "choose": "点这里选择",
     "noModels": "暂无可用模型",
     "searchPlaceholder": "搜索名称或 ID，例如 GPT 6",
     "searchLabel": "搜索模型",
@@ -1242,13 +1261,13 @@
     }
   },
   "stationConnectPage": {
-    "originLabel": "站点地址（HTTPS）",
-    "originPlaceholder": "https://yeschoy.com",
-    "originHint": "默认示例站，可改成你的站点 HTTPS 域名。",
-    "continue": "在浏览器中继续",
+    "originLabel": "你的中转站网址",
+    "originPlaceholder": "https://你的中转站.com",
+    "originHint": "粘贴你平时登录的中转站网址就行，助手会自己判断怎么连接。",
+    "continue": "检测并连接",
     "opening": "正在打开浏览器…",
     "accountChecking": "正在检查账户状态，你仍可先登录或继续。",
-    "invalidOrigin": "请输入有效的 HTTPS 站点地址（域名，不含路径）。"
+    "invalidOrigin": "请粘贴站点网址，例如 https://example.com。"
   },
   "stationConnect": {
     "connecting": "正在通过网站连接桌面助手…",
@@ -1284,7 +1303,75 @@
       "network_error": "暂时连不上账户服务，请检查网络后重试。",
       "backend_unavailable": "账户服务暂不可用，请稍后刷新。",
       "invalid_response": "账户数据暂时无法加载，请刷新。",
-      "session_expired": "登录已失效，请在网页重新连接。"
+      "session_expired": "登录已失效，请在网页重新连接。",
+      "connect_origin_declined": "已取消连接这个站点。",
+      "connect_origin_untrusted": "这个站点还没被确认，请重新输入网址并确认。"
+    }
+  },
+  "stationOnboarding": {
+    "probing": "正在检测…",
+    "probingTitle": "正在看看这个站点",
+    "probingBody": "一般几秒就好。你可以点「取消」停下来，改网址再试；其它页面照常能用。",
+    "cancelProbe": "取消",
+    "retryProbe": "再试一次",
+    "found": "找到站点：{{host}}",
+    "kind": {
+      "new_api": "New API 中转",
+      "one_api": "One API 中转",
+      "openai_compatible": "OpenAI 兼容接口",
+      "unknown": "中转站"
+    },
+    "oneClickBody": "这个站点支持一键登录。点下面的按钮会打开浏览器，你在网页上登录并点「授权」就好，不用复制任何密钥。",
+    "trustQuestion": "请确认这是你自己在用的中转站。连上之后，你在应用里的对话都会经过它。",
+    "trustAndLogin": "是我的站点，去浏览器登录",
+    "tokenIntro": "这个站点还没开通一键登录，没关系，用「令牌」也能连：",
+    "tokenStep1": "在浏览器里打开这个站点并登录。",
+    "tokenStep2": "进入「令牌」页面，点「添加令牌」或复制已有的令牌（以 sk- 开头）。",
+    "tokenStep3": "粘贴到下面，点「检查令牌」。",
+    "tokenLabel": "令牌",
+    "tokenCheck": "检查令牌",
+    "tokenChecking": "正在检查…",
+    "modelsLabel": "这个令牌可以用的模型",
+    "moreModels": "还有 {{count}} 个",
+    "token": {
+      "valid": "令牌可用，能用 {{count}} 个模型。令牌只用来检查，不会被保存。",
+      "invalid": "令牌不对或已被删除。请回站点「令牌」页重新复制一个，注意别多复制空格。",
+      "no_quota": "令牌是对的，但余额或额度用完了。请先到站点充值或调高令牌额度。",
+      "error": "站点暂时没有回应模型列表，请稍后再试；一直不行就联系站长。"
+    },
+    "failed": {
+      "invalid_origin": {
+        "title": "这个网址看不懂",
+        "next": "请粘贴站点的网址，例如 https://example.com。只要域名部分，后面的路径可以不要。"
+      },
+      "unreachable": {
+        "title": "连不上这个站点",
+        "next": "先在浏览器里打开这个网址试试。浏览器也打不开，说明网址写错了或站点暂时停了。"
+      },
+      "timeout": {
+        "title": "站点响应太慢",
+        "next": "过一会儿再试。如果你开了代理，换个节点试试。"
+      },
+      "not_relay": {
+        "title": "这个网址看起来不是中转站",
+        "next": "请确认复制的是中转站的地址（登录后能看到「令牌」「钱包」的那个网站），而不是聊天页面或别的网站。"
+      }
+    }
+  },
+  "stationTrust": {
+    "title": "要连接这个新站点吗？",
+    "body": "有个网页请求把桌面助手连接到上面这个站点。",
+    "point1": "连上后，助手会用这个站点的账户来配置你的 AI 应用。",
+    "point2": "你在这些应用里的对话，都会经过这个站点。",
+    "warn": "如果你不认识这个站点，或者没有刚刚在网页上点「打开桌面助手」，请点「不连接」。",
+    "decline": "不连接",
+    "accept": "我认识，继续连接",
+    "failed": "没有连接成功",
+    "reason": {
+      "connect_code_expired": "网页上的连接已经过期，请回到网页再点一次「打开桌面助手」。",
+      "connect_origin_not_acceptable": "站点地址不合规，助手不会连接它。",
+      "trust_store_full": "记住的站点太多了，请先在设置里删掉几个不用的。",
+      "generic": "请回到网页再点一次「打开桌面助手」。"
     }
   }
 }

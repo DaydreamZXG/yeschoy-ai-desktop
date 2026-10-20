@@ -56,6 +56,9 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  void import("./accountProjectionCache").then((m) =>
+    m.clearCachedSignedInProjection(),
+  );
 });
 async function flush() {
   await act(async () => {});
@@ -95,6 +98,36 @@ describe("resilient account authorization", () => {
     });
     await flush();
     expect(result.current.projection?.status).toBe("signed_in");
+  });
+
+  it("paints the cached signed-in projection before the station replies", async () => {
+    const { writeCachedSignedInProjection, clearCachedSignedInProjection } =
+      await import("./accountProjectionCache");
+    clearCachedSignedInProjection();
+    writeCachedSignedInProjection(projection("signed_in"));
+    let complete!: (value: AccountProjection) => void;
+    command.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          complete = resolve;
+        }),
+    );
+    const { result } = renderHook(() =>
+      useAccountSession("mainland_optimized"),
+    );
+    await flush();
+    expect(result.current.projection?.status).toBe("signed_in");
+    expect(result.current.projection?.account.displayName).toBe("示例用户");
+    expect(result.current.stationCheck).toBe("checking");
+    expect(result.current.loading).toBe(false);
+    await act(async () => {
+      complete(projection("network_error"));
+    });
+    await flush();
+    // 短暂失败时保留上次登录，不要闪成未登录。
+    expect(result.current.projection?.status).toBe("signed_in");
+    expect(result.current.stationCheck).toBe("unreachable");
+    clearCachedSignedInProjection();
   });
 
   it("does not retry transient failures on startup inspect", async () => {

@@ -130,6 +130,7 @@ pub(super) fn guide(tool: &str) -> Option<&'static str> {
         "claude_desktop" => "https://claude.com/download",
         "claude_code" => "https://code.claude.com/docs/en/setup",
         "pi" => "https://github.com/earendil-works/pi/tree/main/packages/coding-agent",
+        "opencode" => "https://opencode.ai/docs/",
         "dsh_web" => "https://github.com/deepseek-ai/deepseek-harness",
         "workbuddy" => "https://www.workbuddy.cn/",
         "dsh_desktop" => "https://www.deepseek.com/harness/",

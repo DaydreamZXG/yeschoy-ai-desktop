@@ -36,6 +36,9 @@ export async function openStationConnectPage(
   const pageUrl = stationConnectPageUrl(origin);
 
   try {
+    // 用户已经在表单里亲手输入并确认了这个站点，先记为信任，
+    // 否则原生侧会拒绝为未确认的来源打开授权页。
+    await invoke("station_trust_origin_v1", { origin });
     await invoke("station_connect_open_connect_page_v1", { origin });
     return { ok: true, origin, lineId, pageUrl };
   } catch {

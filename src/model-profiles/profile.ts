@@ -72,8 +72,70 @@ function resolveProfile(id: string) {
   };
 }
 
+/**
+ * 目录没有收录时，尽量把 API ID 读成人话：去掉日期尾巴、常见词首字母大写。
+ * 不猜能力，只猜「怎么念」—— 小白认得出 Claude，认不出一长串日期。
+ */
+export function humanizeModelId(id: string): string {
+  if (!id) return id;
+  const bare = id.split("/").at(-1) ?? id;
+  // 短测试夹具（model-a）和用户自定义短名保持原样；只收拾「长得像官网 API」的。
+  const looksTechnical =
+    /-\d{6,8}$/.test(bare) ||
+    /^(?:gpt|claude|sonnet|opus|haiku|deepseek|gemini|glm|kimi|qwen|llama|codex|doubao)[-_]/i.test(
+      bare,
+    );
+  if (!looksTechnical) return id;
+  // 常见：claude-sonnet-4-5-20250929 → 去掉末尾 6～8 位日期
+  const withoutDate = bare.replace(/-\d{6,8}$/, "");
+
+  const spaced = withoutDate
+    .replace(/([a-z])(\d)/gi, "$1 $2")
+    .replace(/(\d)\.(\d)/g, "$1.$2")
+    .replace(/[-_]+/g, " ")
+    .trim();
+  const tokens = spaced.split(/\s+/).filter(Boolean);
+  const pretty = tokens
+    .map((token) => {
+      const lower = token.toLowerCase();
+      const known: Record<string, string> = {
+        gpt: "GPT",
+        claude: "Claude",
+        sonnet: "Sonnet",
+        opus: "Opus",
+        haiku: "Haiku",
+        deepseek: "DeepSeek",
+        gemini: "Gemini",
+        glm: "GLM",
+        kimi: "Kimi",
+        qwen: "Qwen",
+        llama: "Llama",
+        flash: "Flash",
+        pro: "Pro",
+        mini: "Mini",
+        turbo: "Turbo",
+        codex: "Codex",
+      };
+      if (known[lower]) return known[lower];
+      // 4-5 → 4.5（版本号中间的连字符）
+      if (/^\d+$/.test(token)) return token;
+      if (/^\d+\.\d+$/.test(token)) return token;
+      return token.charAt(0).toUpperCase() + token.slice(1);
+    })
+    .join(" ");
+  // 把 "4 5" 收成 "4.5"（Claude 版本习惯）
+  return pretty.replace(/\b(\d+)\s+(\d+)\b/g, "$1.$2");
+}
+
+/** 列表里的短 ID：超长就截掉中间，保留头尾，避免芯片一行爆炸。 */
+export function shortModelId(id: string, max = 28): string {
+  if (!id || id.length <= max) return id;
+  const keep = Math.max(8, Math.floor((max - 1) / 2));
+  return `${id.slice(0, keep)}…${id.slice(-keep)}`;
+}
+
 export function modelDisplayName(id: string): string {
-  return resolveProfile(id)?.displayName ?? id;
+  return resolveProfile(id)?.displayName ?? humanizeModelId(id);
 }
 
 // Image generation is not a chat/agent model. Do not hide vision-capable chat.

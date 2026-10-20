@@ -1,2 +1,0 @@
-# Test-runner output is retained verbatim, including spaces before panic text.
-*.log -whitespace

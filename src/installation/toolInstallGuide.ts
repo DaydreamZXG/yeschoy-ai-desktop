@@ -8,6 +8,7 @@ export const TOOL_OFFICIAL_GUIDE_URL: Partial<
   claude_desktop: "https://claude.com/download",
   codex_desktop: "https://learn.chatgpt.com/docs/app",
   pi: "https://github.com/earendil-works/pi/tree/main/packages/coding-agent",
+  opencode: "https://opencode.ai/docs/",
   dsh_web: "https://github.com/deepseek-ai/deepseek-harness",
   dsh_desktop: "https://www.deepseek.com/harness/",
   workbuddy: "https://www.workbuddy.cn/",
@@ -17,6 +18,7 @@ export const TOOL_OFFICIAL_GUIDE_URL: Partial<
 export const GUIDED_INSTALL_TOOLS: ActivationToolId[] = [
   "claude_code",
   "pi",
+  "opencode",
   "dsh_web",
   "dsh_desktop",
   "workbuddy",

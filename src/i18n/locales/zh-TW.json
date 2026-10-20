@@ -267,7 +267,14 @@
       "never": "尚無記錄",
       "copy": "複製診斷資訊",
       "copied": "已複製"
-    }
+    },
+    "groupGeneral": "一般",
+    "groupGeneralNote": "只儲存在這台電腦，立即生效。",
+    "groupAbout": "版本與更新",
+    "groupPrivacy": "隱私與安全",
+    "groupPrivacyNote": "這些是本版本固定的行為，不需要你設定。",
+    "groupSystem": "背景執行",
+    "groupAdvanced": "排查與進階"
   },
   "yeschoyUpdate": {
     "title": "野菜自動更新",

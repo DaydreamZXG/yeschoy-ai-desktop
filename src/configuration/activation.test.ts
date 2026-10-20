@@ -34,6 +34,7 @@ function targetScan(requestId = "target-scan-test") {
       | "claude_desktop"
       | "codex_desktop"
       | "pi"
+      | "opencode"
       | "dsh_web"
       | "workbuddy"
       | "dsh_desktop",
@@ -61,8 +62,9 @@ function targetScan(requestId = "target-scan-test") {
     targets: [
       target("claude_code", "Claude Code"),
       target("claude_desktop", "Claude Desktop"),
-      target("codex_desktop", "Codex Desktop"),
+      target("codex_desktop", "Codex"),
       target("pi", "Pi"),
+      target("opencode", "OpenCode"),
       target("dsh_web", "DSH web"),
       target("workbuddy", "WorkBuddy"),
       target("dsh_desktop", "DeepSeek Harness"),
@@ -278,6 +280,7 @@ describe("desktop tool activation boundary", () => {
       "claude_desktop",
       "codex_desktop",
       "pi",
+      "opencode",
       "dsh_web",
       "workbuddy",
       "dsh_desktop",

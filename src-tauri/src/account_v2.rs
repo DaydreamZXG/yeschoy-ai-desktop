@@ -23,7 +23,11 @@ use crate::connectivity_core::{request_id_is_valid, CONNECTIVITY_LINES};
 
 const CLIENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 const MAX_RESPONSE_BYTES: usize = 2 * 1024 * 1024;
-const REQUEST_TIMEOUT: Duration = Duration::from_secs(20);
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
+/// 开机检查账户不能拖住界面：整条 inspect（bootstrap→刷新→账户）最多等这么久。
+/// 5 秒够慢网完成一次往返；再长就只是让首页干等。
+const INSPECT_DEADLINE: Duration = Duration::from_secs(5);
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 const KEYRING_SERVICE: &str = "com.yeschoy.desktop.account";
 const KEYRING_USER: &str = "current-session-v2";
 const AUTHORIZATION_PATH: &str = "/api/desktop/v2/device-authorizations";
@@ -345,7 +349,7 @@ fn client() -> Result<&'static Client, ()> {
                 .referer(false)
                 .no_proxy()
                 .timeout(REQUEST_TIMEOUT)
-                .connect_timeout(Duration::from_secs(6))
+                .connect_timeout(CONNECT_TIMEOUT)
                 .user_agent(concat!("YesChoyDesktop/", env!("CARGO_PKG_VERSION")))
                 .build()
                 .map_err(|_| ())
@@ -604,13 +608,25 @@ fn wallet_url_on_station_origin(raw: &str, api_origin: &str) -> bool {
         && url.path().starts_with("/wallet")
 }
 
+#[cfg(test)]
 fn authorization_url_is_allowed(raw: &str, user_code: &str) -> bool {
+    authorization_url_is_allowed_for(raw, user_code, CANONICAL_AUTHORIZATION_PAGE_ORIGIN)
+}
+
+/// 授权页必须和 `page_origin` 完全同源。`page_origin` 由
+/// `authorization_page_origin_for_line` 决定：内置线路用编译期来源，
+/// 第三方站点用它自己的来源 —— 且只在用户确认信任过之后。
+fn authorization_url_is_allowed_for(raw: &str, user_code: &str, page_origin: &str) -> bool {
     let Ok(url) = Url::parse(raw) else {
+        return false;
+    };
+    let Ok(page) = Url::parse(page_origin) else {
         return false;
     };
     let query = url.query_pairs().collect::<Vec<_>>();
     url.scheme() == "https"
-        && url.host_str() == Some("yeschoy.com")
+        && url.host_str().is_some()
+        && url.host_str() == page.host_str()
         && url.port().is_none()
         && url.username().is_empty()
         && url.password().is_none()
@@ -619,6 +635,31 @@ fn authorization_url_is_allowed(raw: &str, user_code: &str) -> bool {
         && query.len() == 1
         && query[0].0 == "user_code"
         && query[0].1 == user_code
+}
+
+/// 设备码授权页的来源。第三方站点不再被编译期白名单拒绝，
+/// 但必须是用户在桌面助手里确认信任过的来源。
+fn authorization_page_origin_for_line(line_id: &str) -> Option<String> {
+    match station_connect_origin_from_line_id(line_id) {
+        Some(origin) if crate::station_trust::is_trusted(origin) => {
+            crate::station_connect::connect_origin_is_acceptable(origin)
+        }
+        Some(_) => None,
+        None => Some(COMPILED_AUTHORIZATION_PAGE_ORIGIN.to_owned()),
+    }
+}
+
+fn browser_authorization_url_for_line(line_id: &str, user_code: &str) -> Option<String> {
+    let origin = authorization_page_origin_for_line(line_id)?;
+    if station_connect_origin_from_line_id(line_id).is_none() {
+        return browser_authorization_url_for_origin(&origin, user_code);
+    }
+    if !user_code_is_valid(user_code) {
+        return None;
+    }
+    let mut url = Url::parse(&format!("{origin}{AUTHORIZATION_PAGE_PATH}")).ok()?;
+    url.query_pairs_mut().append_pair("user_code", user_code);
+    Some(url.into())
 }
 
 fn authorization_page_origin_is_allowed(raw: &str) -> bool {
@@ -650,6 +691,7 @@ fn browser_authorization_url_for_origin(origin: &str, user_code: &str) -> Option
     Some(url.into())
 }
 
+#[cfg(test)]
 fn browser_authorization_url(user_code: &str) -> Option<String> {
     browser_authorization_url_for_origin(COMPILED_AUTHORIZATION_PAGE_ORIGIN, user_code)
 }
@@ -1792,9 +1834,22 @@ pub async fn account_inspect_v2(
         .lock()
         .map_err(|_| "account_state_unavailable")?
         .authorization_epoch;
-    Ok(match inspect_inner(&state, &request).await {
-        Ok(projection) => projection,
-        Err(AccountProjectionFailure::SessionExpired) => {
+    // 站点慢或 DNS 挂了时，绝不能不返回：整条检查最多 INSPECT_DEADLINE。
+    let inspected = tokio::time::timeout(INSPECT_DEADLINE, inspect_inner(&state, &request)).await;
+    Ok(match inspected {
+        Err(_) => {
+            log::warn!(
+                "account stage=inspect_deadline_exceeded request_id={} limit_ms={}",
+                request.request_id,
+                INSPECT_DEADLINE.as_millis()
+            );
+            failure_projection(
+                request.request_id,
+                AccountProjectionFailure::Transport(TransportFailure::TimedOut),
+            )
+        }
+        Ok(Ok(projection)) => projection,
+        Ok(Err(AccountProjectionFailure::SessionExpired)) => {
             if let Ok(mut runtime) = state.runtime.lock() {
                 if runtime.authorization_epoch == epoch {
                     let _ = delete_stored_session();
@@ -1803,7 +1858,7 @@ pub async fn account_inspect_v2(
             }
             failure_projection(request.request_id, AccountProjectionFailure::SessionExpired)
         }
-        Err(error) => failure_projection(request.request_id, error),
+        Ok(Err(error)) => failure_projection(request.request_id, error),
     })
 }
 
@@ -1909,6 +1964,13 @@ pub async fn account_begin_authorization_v2(
         }
     };
     let authorization = envelope.data;
+    // 服务器回报的 verification_uri：内置线路沿用原规则（必须是 yeschoy.com，
+    // 与旧版本行为完全一致）；第三方站点必须是它自己的、已被用户信任的来源。
+    let page_origin = if station_connect_origin_from_line_id(&request.line_id).is_some() {
+        authorization_page_origin_for_line(&request.line_id)
+    } else {
+        Some(CANONICAL_AUTHORIZATION_PAGE_ORIGIN.to_owned())
+    };
     let valid = envelope.success
         && authorization.device_code.len() >= 32
         && authorization.device_code.len() <= 128
@@ -1917,18 +1979,23 @@ pub async fn account_begin_authorization_v2(
         && authorization.expires_in <= 600
         && authorization.interval > 0
         && authorization.interval <= 60
-        && authorization.verification_uri == "https://yeschoy.com/desktop-authorize"
-        && authorization_url_is_allowed(
-            &authorization.verification_uri_complete,
-            &authorization.user_code,
-        );
+        && page_origin.as_deref().is_some_and(|origin| {
+            authorization.verification_uri == format!("{origin}{AUTHORIZATION_PAGE_PATH}")
+                && authorization_url_is_allowed_for(
+                    &authorization.verification_uri_complete,
+                    &authorization.user_code,
+                    origin,
+                )
+        });
     if !valid {
         return Ok(failure_projection(
             request.request_id,
             AccountProjectionFailure::InvalidResponse,
         ));
     }
-    let Some(browser_url) = browser_authorization_url(&authorization.user_code) else {
+    let Some(browser_url) =
+        browser_authorization_url_for_line(&request.line_id, &authorization.user_code)
+    else {
         return Ok(failure_projection(
             request.request_id,
             AccountProjectionFailure::InvalidResponse,
@@ -2008,7 +2075,9 @@ pub fn account_open_authorization_v2(
         }
         pending
     };
-    let Some(browser_url) = browser_authorization_url(&pending.user_code) else {
+    let Some(browser_url) =
+        browser_authorization_url_for_line(&pending.line_id, &pending.user_code)
+    else {
         return Ok(AccountProjection::empty(
             request.request_id,
             "invalid_response",
@@ -2264,6 +2333,7 @@ pub async fn account_logout_v2(
         "claude_desktop",
         "codex_desktop",
         "pi",
+        "opencode",
         "dsh_web",
         "workbuddy",
         "dsh_desktop",
@@ -2626,6 +2696,13 @@ async fn open_wallet(state: &AccountV2State, line_id: &str) -> Result<(), String
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn inspect_deadline_stays_short_so_home_never_waits_a_minute() {
+        assert!(INSPECT_DEADLINE <= std::time::Duration::from_secs(5));
+        assert!(CONNECT_TIMEOUT <= std::time::Duration::from_secs(2));
+        assert!(REQUEST_TIMEOUT <= std::time::Duration::from_secs(10));
+    }
+
     use super::*;
 
     #[test]
@@ -3249,5 +3326,48 @@ mod tests {
         let (notices, _) = parse_notices(&payload, 0, None);
         let bodies = notices.iter().map(|n| n.body.as_str()).collect::<Vec<_>>();
         assert_eq!(bodies, ["国庆**双重福利**", "正文", "用 content"]);
+    }
+}
+
+#[cfg(test)]
+mod third_party_authorization_tests {
+    use super::*;
+
+    #[test]
+    fn untrusted_station_line_has_no_authorization_page() {
+        let line = format!("{STATION_CONNECT_LINE_PREFIX}https://untrusted-auth.example");
+        assert!(authorization_page_origin_for_line(&line).is_none());
+        assert!(browser_authorization_url_for_line(&line, "ABCD-2345").is_none());
+    }
+
+    #[test]
+    fn trusted_station_line_uses_its_own_origin_only() {
+        crate::station_trust::trust("https://trusted-auth.example").unwrap();
+        let line = format!("{STATION_CONNECT_LINE_PREFIX}https://trusted-auth.example");
+        assert_eq!(
+            browser_authorization_url_for_line(&line, "ABCD-2345").as_deref(),
+            Some("https://trusted-auth.example/desktop-authorize?user_code=ABCD-2345")
+        );
+        let origin = authorization_page_origin_for_line(&line).unwrap();
+        assert!(authorization_url_is_allowed_for(
+            "https://trusted-auth.example/desktop-authorize?user_code=ABCD-2345",
+            "ABCD-2345",
+            &origin
+        ));
+        assert!(!authorization_url_is_allowed_for(
+            "https://evil.example/desktop-authorize?user_code=ABCD-2345",
+            "ABCD-2345",
+            &origin
+        ));
+        crate::station_trust::forget("https://trusted-auth.example");
+    }
+
+    #[test]
+    fn builtin_lines_keep_compiled_origin() {
+        let line = CONNECTIVITY_LINES[0].line_id;
+        assert_eq!(
+            authorization_page_origin_for_line(line).as_deref(),
+            Some(COMPILED_AUTHORIZATION_PAGE_ORIGIN)
+        );
     }
 }

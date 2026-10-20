@@ -20,6 +20,9 @@ const START_LIMIT: Duration = Duration::from_secs(15);
 /// authenticated, or completed a model request. Do not cancel/drop a dispatched
 /// launch: finish it before deciding whether it is safe to roll back files.
 pub(crate) async fn open_and_wait(tool_id: &str, path: &Path) -> Result<(), AdapterFailure> {
+    if requires_reload(tool_id) && !reloads_installation(tool_id, path) {
+        return Ok(());
+    }
     let tool = tool_id.to_owned();
     let target = path.to_owned();
     tokio::task::spawn_blocking(move || super::desktop_launch::launch(&tool, &target))
@@ -65,6 +68,13 @@ pub(crate) fn requires_reload(tool_id: &str) -> bool {
     matches!(tool_id, "claude_desktop" | "codex_desktop")
 }
 
+/// 这一条安装要不要「退出、重开」。Codex 记录下装的若是命令行版（它和桌面版
+/// 共用 `~/.codex/config.toml`），没有窗口可关，下次在终端里打开就读到新设置。
+pub(crate) fn reloads_installation(tool_id: &str, path: &Path) -> bool {
+    requires_reload(tool_id)
+        && !(tool_id == "codex_desktop" && super::codex_desktop::is_cli_installation(path))
+}
+
 pub(crate) fn observes_running(tool_id: &str) -> bool {
     // These reload their configuration while running, so a running copy is
     // only ever focused, never restarted.
@@ -98,7 +108,9 @@ where
 }
 
 pub(crate) async fn is_running(tool_id: &str, path: &Path) -> Result<bool, AdapterFailure> {
-    if !observes_running(tool_id) {
+    if !observes_running(tool_id)
+        || (requires_reload(tool_id) && !reloads_installation(tool_id, path))
+    {
         return Ok(false);
     }
     let tool_id = tool_id.to_owned();
@@ -154,7 +166,7 @@ pub(crate) async fn quit_for_exit_restore(
     tool_id: &str,
     path: &Path,
 ) -> Result<(), AdapterFailure> {
-    if !requires_reload(tool_id) {
+    if !reloads_installation(tool_id, path) {
         return Ok(());
     }
     blocking_normal_quit(tool_id, path).await?;
@@ -173,7 +185,7 @@ pub(crate) async fn quit_for_reconfigure(
     tool_id: &str,
     path: &Path,
 ) -> Result<bool, AdapterFailure> {
-    if !requires_reload(tool_id) {
+    if !reloads_installation(tool_id, path) {
         return Ok(false);
     }
     let requested = blocking_normal_quit(tool_id, path).await?;
@@ -572,7 +584,14 @@ mod tests {
     fn only_desktop_targets_are_eligible_for_reload_control() {
         assert!(requires_reload("claude_desktop"));
         assert!(requires_reload("codex_desktop"));
-        for tool in ["claude_code", "pi", "dsh_web", "workbuddy", "dsh_desktop"] {
+        for tool in [
+            "claude_code",
+            "pi",
+            "opencode",
+            "dsh_web",
+            "workbuddy",
+            "dsh_desktop",
+        ] {
             assert!(!requires_reload(tool), "{tool}");
         }
         assert!(observes_running("workbuddy"));

@@ -7,9 +7,25 @@ use super::{
 use reqwest::{Client, Url};
 use serde::Deserialize;
 
-pub(super) const MIRROR_HOST: &str = "ergou.qzz.io";
-pub(super) const MIRROR_ORIGIN: &str = "43.134.77.210:443";
-pub(super) const CATALOG_URL: &str = "https://ergou.qzz.io/apps/catalog.json";
+// 安装包镜像（给打不开官方下载站的用户用）。公开构建默认不启用镜像，只走官方源；
+// 官方包在 CI 里通过构建期环境变量注入，地址不写进源码。
+#[cfg(not(test))]
+pub(super) const MIRROR_HOST: &str = match option_env!("YESCHOY_APP_MIRROR_HOST") {
+    Some(host) => host,
+    None => "",
+};
+#[cfg(test)]
+pub(super) const MIRROR_HOST: &str = "mirror.example";
+/// 可选：镜像主机的固定解析地址（`ip:443`），用于绕开被污染的 DNS。
+pub(super) const MIRROR_ORIGIN: Option<&str> = option_env!("YESCHOY_APP_MIRROR_ADDR");
+
+pub(super) fn mirror_enabled() -> bool {
+    !MIRROR_HOST.is_empty()
+}
+
+fn catalog_url() -> String {
+    format!("https://{MIRROR_HOST}/apps/catalog.json")
+}
 const JSON_LIMIT: usize = 1024 * 1024;
 
 #[derive(Clone, Debug)]
@@ -98,7 +114,7 @@ fn compiled(artifact: &Artifact, schema_version: u8) -> Option<Source> {
             .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
         || artifact.url
             != format!(
-                "https://ergou.qzz.io/apps/{}/{}.{}",
+                "https://{MIRROR_HOST}/apps/{}/{}.{}",
                 artifact.source_id, artifact.sha256, artifact.format
             )
         || !Url::parse(&artifact.origin_url).is_ok_and(|url| {
@@ -231,7 +247,10 @@ pub(super) async fn mirror_from_routes(
     direct: &Client,
     source: Source,
 ) -> Result<Option<Resolved>> {
-    mirror_from_routes_at(public, direct, source, CATALOG_URL).await
+    if !mirror_enabled() {
+        return Ok(None);
+    }
+    mirror_from_routes_at(public, direct, source, &catalog_url()).await
 }
 async fn mirror_from_routes_at(
     public: &Client,
@@ -257,7 +276,7 @@ mod tests {
     use super::*;
     use serde_json::json;
     fn artifact() -> serde_json::Value {
-        json!({"sourceId":"claude-macos-universal","app":"claude","platform":"macos","architecture":"universal","format":"zip","version":"1.46388.4","url":format!("https://ergou.qzz.io/apps/claude-macos-universal/{}.zip", "a".repeat(64)),"sha256":"a".repeat(64),"size":355648442,"originUrl":"https://downloads.claude.ai/releases/darwin/universal/1.46388.4/Claude-example.zip","identity":"com.anthropic.claudefordesktop","publisher":"Q6L2SF6YDW","verifiedAt":"2026-09-06T09:00:00Z","verification":"native_verified"})
+        json!({"sourceId":"claude-macos-universal","app":"claude","platform":"macos","architecture":"universal","format":"zip","version":"1.46388.4","url":format!("https://mirror.example/apps/claude-macos-universal/{}.zip", "a".repeat(64)),"sha256":"a".repeat(64),"size":355648442,"originUrl":"https://downloads.claude.ai/releases/darwin/universal/1.46388.4/Claude-example.zip","identity":"com.anthropic.claudefordesktop","publisher":"Q6L2SF6YDW","verifiedAt":"2026-09-06T09:00:00Z","verification":"native_verified"})
     }
 
     #[tokio::test]
@@ -353,7 +372,7 @@ mod tests {
             (
                 "url",
                 json!(format!(
-                    "https://ergou.qzz.io.evil.example/apps/claude-macos-universal/{}.zip",
+                    "https://mirror.example.evil.example/apps/claude-macos-universal/{}.zip",
                     "a".repeat(64)
                 )),
             ),
@@ -384,7 +403,7 @@ mod tests {
         entry["identity"] = json!(source.identity);
         entry["publisher"] = json!(source.publisher);
         entry["url"] = json!(format!(
-            "https://ergou.qzz.io/apps/claude-windows-x64/{}.msix",
+            "https://mirror.example/apps/claude-windows-x64/{}.msix",
             "a".repeat(64)
         ));
         entry["originUrl"] =

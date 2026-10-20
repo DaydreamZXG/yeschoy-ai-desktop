@@ -27,7 +27,7 @@ const input = {
 const context: ActivationContext = {
   key: "first",
   account: "fixture",
-  app: "Codex Desktop",
+  app: "Codex（桌面版 / 命令行）",
   model: "model-a",
   group: "group-a",
   line: "mainland_optimized",

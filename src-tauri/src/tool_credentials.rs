@@ -5,11 +5,12 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 const SERVICE: &str = "com.yeschoy.desktop.tool-credential.v2";
-const ALLOWED_TOOLS: [&str; 7] = [
+const ALLOWED_TOOLS: [&str; 8] = [
     "claude_code",
     "claude_desktop",
     "codex_desktop",
     "pi",
+    "opencode",
     "dsh_web",
     "workbuddy",
     "dsh_desktop",
@@ -761,7 +762,7 @@ mod tests {
     #[test]
     fn rejects_unknown_helper_targets() {
         assert!(matches!(
-            shell_helper_command("opencode"),
+            shell_helper_command("aider"),
             Err(CredentialFailure::Invalid)
         ));
         assert!(matches!(

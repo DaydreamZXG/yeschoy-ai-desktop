@@ -1,0 +1,934 @@
+/* 第四轮：系统层（最后加载，是界面的最终约定）。
+
+   前三轮各自在上一层上打补丁，留下了：两种页面宽度（880 / 720）、三种按钮
+   形状（胶囊、圆角矩形、半胶囊）混用、等宽字体被拿来排中文旁的版本号和金额、
+   设置页每块一种标题样式、底部操作条比内容列还宽。这一层不加新花样，只把
+   这些收成一套规则：
+
+   1. 版式：所有页面同一条内容列、同一个页头；左边缘对齐。
+   2. 字体：界面一种字体；等宽只给模型 ID / 代码；数字用 tabular-nums。
+   3. 形状：按钮一律 8px 圆角矩形，三档高度 32 / 36 / 44；胶囊只留给标签、
+      徽标和分段切换。
+   4. 容器：一种卡片（白底、1px 细线、12px 圆角），列表行在卡片内用分隔线。
+   5. 颜色：青柠只标「当前位置」和「唯一主操作」，其余黑白灰。 */
+
+:root {
+  --content-width: 840px;
+  --page-pad-x: var(--space-40);
+  --control-sm: 32px;
+  --control-md: 36px;
+  --control-lg: 44px;
+  --card-pad: var(--space-20);
+}
+
+/* ================= 1. 版式 ================= */
+.workbench-page,
+.workspace,
+.settings-workspace,
+.configuration-workspace {
+  max-width: calc(var(--content-width) + var(--page-pad-x) * 2);
+  padding: var(--space-40) var(--page-pad-x) var(--space-40);
+}
+
+.workbench-page-heading,
+.settings-hero,
+.announcements-view .workbench-page-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-24);
+  margin: 0 0 var(--space-28);
+}
+
+.workbench-page-heading h1,
+.configuration-hero-copy h1,
+.settings-hero h1 {
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+/* 切页时 App.tsx 会给可见 h1 设 tabindex=-1 并 focus（方便读屏）。
+   全局 :focus-visible 的青柠 focus-ring 会画在整块级标题上，变成「标题外面
+   一个大方框」。标题不是可点控件，这块环要去掉；键盘落在按钮/链接上仍保留。 */
+:is(h1, h2, h3, h4, h5, h6)[tabindex="-1"]:focus,
+:is(h1, h2, h3, h4, h5, h6)[tabindex="-1"]:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.workbench-page-heading p:not(.eyebrow),
+.settings-hero .intro-copy {
+  margin: var(--space-6) 0 0;
+  max-width: 36em;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--faint);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* ================= 2. 字体与数字 ================= */
+/* 版本号、金额、计数一律界面字体 + 等宽数字（tabular-nums）：既对齐，又不会
+   在中文句子里突然换成一种「终端」字体。真正的标识符（模型 ID、代码）才用
+   等宽 —— 第三轮把 9 处数字排成了 Geist Mono，已在 new-api-layout.css 改回。 */
+.setting-version {
+  font-variant-numeric: tabular-nums;
+}
+
+code,
+.connection-model,
+.model-id {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+/* ================= 3. 按钮 ================= */
+button,
+.secondary-action,
+.subtle-button {
+  min-height: var(--control-md);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 550;
+}
+
+.primary-action,
+.setup-apply,
+.ui-button--primary,
+.announcement-action,
+.connect-app-button,
+.station-connect-origin-submit {
+  border-radius: var(--radius-md);
+}
+
+/* 列表行、页头里的次要按钮用小号。 */
+.workbench-page-heading button,
+.connection-row-actions button,
+.settings-troubleshooting-actions button,
+.setting-row > button {
+  min-height: var(--control-sm);
+  padding: 0 var(--space-12);
+  font-size: var(--text-sm);
+}
+
+.connection-row .connect-app-button {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  background: var(--surface);
+  font-weight: 600;
+}
+
+.connection-row .connect-app-button:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+  background: var(--surface);
+}
+
+.text-button {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.text-button:hover:not(:disabled) {
+  background: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ================= 4. 卡片与列表 ================= */
+.account-overview,
+.settings-card,
+.desktop-update-card,
+.announcements-list,
+.welcome-strip {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: none;
+}
+
+/* ================= 首页 ================= */
+.account-overview {
+  padding: var(--card-pad) var(--space-24);
+}
+
+.account-overview-heading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-8);
+  margin-bottom: var(--space-16);
+}
+
+.account-overview-heading h2 {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+
+.account-overview-heading small {
+  color: var(--faint);
+  font-size: var(--text-xs);
+}
+
+/* 未登录欢迎卡：一块安静的白卡，而不是整片青柠底 —— 青柠留给按钮本身。 */
+.welcome-strip.welcome-strip-station {
+  gap: var(--space-16);
+  padding: var(--space-24);
+  background: var(--surface);
+}
+
+.welcome-strip-station .welcome-strip-copy h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.welcome-strip-station .welcome-strip-copy > p {
+  margin: var(--space-4) 0 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.welcome-strip .welcome-symbol {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  background: var(--accent-soft);
+}
+
+.station-connect-origin-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-12);
+  row-gap: var(--space-6);
+  align-items: end;
+  max-width: 34rem;
+  margin-top: var(--space-20);
+}
+
+.station-connect-origin-label {
+  grid-column: 1;
+  grid-row: 1;
+  gap: var(--space-6);
+  color: var(--ink);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.station-connect-origin-label input,
+.station-connect-origin-submit {
+  min-height: 40px;
+}
+
+.station-connect-origin-submit {
+  grid-column: 2;
+  grid-row: 1;
+  padding: 0 var(--space-16);
+  background-image: none;
+}
+
+.station-connect-origin-error {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  color: var(--danger);
+}
+
+.station-connect-origin-hint {
+  grid-column: 1 / -1;
+  color: var(--faint);
+}
+.station-connect-origin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+}
+.station-connect-origin-actions .text-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 36px;
+  padding: 0 var(--space-8);
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.station-connect-origin-actions .text-button svg {
+  width: 14px;
+  height: 14px;
+}
+
+
+.oss-soft-traffic {
+  margin: 0 0 0 auto;
+  align-self: flex-start;
+}
+
+.oss-soft-traffic a {
+  color: var(--faint);
+  font-size: var(--text-xs);
+}
+
+/* ================= 应用接入：底部操作条与内容列同宽 ================= */
+/* 以前操作条左右各贴窗口留 24px，比内容列宽出一截，滚动时还直接压在价格卡
+   上。现在它和内容列对齐，并在上方垫一层渐隐，内容滑到下面时不会被硬切。 */
+.configuration-preview-panel .connection-action-deck {
+  left: calc(var(--rail-width) + (100vw - var(--rail-width)) / 2);
+  right: auto;
+  width: min(
+    calc(var(--content-width) - var(--space-40) * 3),
+    calc(100vw - var(--rail-width) - var(--space-40))
+  );
+  max-width: none;
+  transform: translateX(-50%);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8) var(--space-8) var(--space-8) var(--space-20);
+}
+
+.persistent-setup::after {
+  content: "";
+  position: fixed;
+  z-index: calc(var(--z-popover) - 1);
+  left: var(--rail-width);
+  right: 0;
+  bottom: 0;
+  height: 112px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--bg) 70%);
+}
+
+.persistent-setup[hidden]::after {
+  display: none;
+}
+
+.connection-action-deck .setup-apply,
+.connection-action-deck .primary-action {
+  border-radius: var(--radius-md);
+}
+
+/* ================= 设置 ================= */
+.settings-workspace {
+  display: block;
+}
+
+.settings-hero {
+  display: flex;
+  padding: 0;
+  border: 0;
+}
+
+.settings-group {
+  margin: 0 0 var(--space-32);
+  padding: 0;
+  border: 0;
+}
+
+.settings-group-heading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-12);
+  margin: 0 0 var(--space-10);
+  padding: 0 var(--space-4);
+}
+
+.settings-group-heading h2 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.settings-group-heading p {
+  margin: 0;
+  color: var(--faint);
+  font-size: var(--text-xs);
+}
+
+.settings-card {
+  overflow: hidden;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-24);
+  min-height: 64px;
+  padding: var(--space-14) var(--card-pad);
+}
+
+.setting-row + .setting-row {
+  border-top: 1px solid var(--line);
+}
+
+.setting-row-copy {
+  min-width: 0;
+}
+
+.setting-row-copy strong {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.setting-row-copy p {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.55;
+}
+
+.setting-row-block {
+  display: block;
+}
+
+.setting-version {
+  font-size: var(--text-base);
+  font-weight: 650;
+}
+
+.setting-state {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-4);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.setting-state svg {
+  width: 14px;
+  height: 14px;
+  color: var(--success);
+}
+
+.setting-row .appearance-picker,
+.setting-row .language-picker {
+  display: inline-flex;
+  flex-direction: row;
+  width: auto;
+  flex-shrink: 0;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--subtle);
+}
+
+.setting-row .appearance-picker button,
+.setting-row .language-picker button {
+  min-height: 28px;
+  padding: 0 var(--space-10);
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  background: transparent;
+  font-size: var(--text-xs);
+  font-weight: 550;
+}
+
+.setting-row .appearance-picker button {
+  flex: none;
+  width: auto;
+  height: auto;
+  gap: var(--space-6);
+}
+
+.setting-row .appearance-picker button span {
+  position: static;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  clip: auto;
+}
+
+.setting-row .appearance-picker button[aria-pressed="true"],
+.setting-row .language-picker button[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
+}
+
+:root[data-theme="dark"]
+  .setting-row
+  .appearance-picker
+  button[aria-pressed="true"],
+:root[data-theme="dark"]
+  .setting-row
+  .language-picker
+  button[aria-pressed="true"] {
+  background: var(--line-strong);
+  box-shadow: none;
+}
+
+.setting-row .appearance-picker svg,
+.setting-row .language-picker svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* 更新卡在设置卡里不再套第二层边框。 */
+.setting-row .desktop-update-card {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.setting-row .quit-assistant {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-24);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.setting-row .quit-assistant strong {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.setting-row .quit-assistant p {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.setting-row .quit-assistant button {
+  flex-shrink: 0;
+  min-height: var(--control-sm);
+}
+
+.settings-troubleshooting-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.setting-row.advanced-connection-wrap {
+  margin: 0;
+  padding-block: var(--space-12);
+}
+
+.settings-workspace .oss-reference-line {
+  margin: var(--space-8) 0 0;
+  text-align: center;
+}
+
+.settings-workspace .oss-reference-line a {
+  color: var(--faint);
+  font-size: var(--text-xs);
+}
+
+/* ================= 侧栏 ================= */
+/* 外观切换在设置里有完整入口；侧栏里只留一条安静的三段小开关。 */
+.sidebar-bottom .appearance-picker {
+  flex-direction: row;
+  width: auto;
+  gap: 0;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--subtle);
+}
+
+.sidebar-bottom .appearance-picker button {
+  min-height: 22px;
+  height: 22px;
+  width: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+}
+
+.sidebar-bottom .appearance-picker button svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* ================= 用量账单页头 ================= */
+.account-heading {
+  align-items: flex-start;
+}
+
+.account-route-control {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-4);
+}
+
+.account-route-control small,
+.account-route-note {
+  color: var(--faint);
+  font-size: var(--text-xs);
+}
+
+.account-route-note {
+  margin: calc(var(--space-20) * -1) 0 var(--space-24);
+}
+
+/* ================= 窄窗口 ================= */
+@media (max-width: 900px) {
+  :root {
+    --page-pad-x: var(--space-24);
+  }
+
+  .setting-row {
+    flex-wrap: wrap;
+  }
+}
+
+/* ================= 用量账单：图表与表格 ================= */
+.usage-trend-bar {
+  max-width: 18px;
+  border-radius: var(--radius-xs) var(--radius-xs) var(--space-2) var(--space-2);
+}
+
+/* 「各工具最近一次请求」和上面的汇总表同一种容器：一张卡、行间细线，
+   不再是一摞各自带边框的小卡片。 */
+.usage-latest ul {
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.usage-latest li {
+  padding: var(--space-12) var(--space-16);
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.usage-latest li + li {
+  border-top: 1px solid var(--line);
+}
+
+.account-line-picker {
+  min-height: var(--control-sm);
+}
+
+.account-line-picker select {
+  min-height: 30px;
+  font-size: var(--text-sm);
+}
+
+/* ================= 已安装工具 ================= */
+.tool-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.tool-title-row .status-label {
+  margin-left: auto;
+}
+
+.coming-soon-label {
+  margin: 0;
+  padding: var(--space-2) var(--space-8);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-full);
+  color: var(--muted);
+  background: none;
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+/* 白卡里不再套一层灰卡：工具列表是一张卡里的几行。 */
+.tool-rail .tool-card {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.tool-rail .tool-card + .tool-card {
+  border-top: 1px solid var(--line);
+}
+
+.tool-rail {
+  gap: 0;
+}
+
+/* ─── 已接入卡片：长模型名 / 打开反馈不再把中间列挤成一字一行 ───
+   旧布局 main 列是 minmax(0,1fr)，右侧 actions 是 auto；
+   「已发送打开请求…」这类反馈一出现，actions 变宽，main 被压到几乎 0，
+   模型名按 overflow-wrap:anywhere 每个字符一行并盖住「换模型与分组」。 */
+.connection-library > .connection-row {
+  grid-template-columns: 40px minmax(11rem, 1fr) auto minmax(0, auto);
+}
+.connection-row > .connection-row-actions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+  max-width: 26rem;
+}
+.connection-row-actions .open-connection-control {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-8);
+  min-width: 0;
+}
+.connection-row-actions .open-feedback {
+  flex-basis: 100%;
+  max-width: 100%;
+  white-space: normal;
+}
+.connection-row-fact {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+}
+.connection-row .connection-model-switch {
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-width: 0;
+  max-width: min(100%, 22rem);
+  margin: 0;
+  overflow: hidden;
+}
+.connection-row .connection-model-switch .connection-model {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.connection-row .connection-model-switch-hint {
+  grid-row: 1;
+  flex-shrink: 0;
+}
+.connection-row-extra {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .connection-library > .connection-row {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "icon main state"
+      "actions actions actions";
+  }
+  .connection-row > .connection-row-actions {
+    max-width: none;
+    justify-content: flex-start;
+  }
+}
+
+/* ─── 通用站点接入（检测 → 一键登录 / 令牌） ─── */
+.station-onboarding {
+  display: grid;
+  gap: var(--space-12);
+  min-width: 0;
+}
+.station-onboarding-card {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: var(--space-12);
+  padding: var(--space-16);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  background: var(--subtle);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+.station-onboarding-card > svg {
+  width: 20px;
+  height: 20px;
+  margin-top: var(--space-2);
+  color: var(--accent);
+}
+.station-onboarding-card[data-tone="danger"] > svg {
+  color: var(--danger, #d14343);
+}
+.station-onboarding-card[data-tone="progress"] > svg {
+  color: var(--accent);
+}
+.station-onboarding-card[data-tone="progress"] .is-spinning {
+  animation: spin 0.9s linear infinite;
+}
+.station-onboarding-card strong {
+  display: block;
+  font-size: var(--text-base);
+  overflow-wrap: anywhere;
+}
+.station-onboarding-card p {
+  margin: var(--space-4) 0 var(--space-8);
+}
+.station-onboarding-card .subtle-button {
+  margin-top: var(--space-4);
+}
+.station-onboarding-meta {
+  color: var(--faint);
+  font-size: var(--text-xs);
+}
+.station-onboarding-warn {
+  color: var(--muted);
+}
+.station-onboarding-steps {
+  margin: 0 0 var(--space-12);
+  padding-left: 1.25em;
+  display: grid;
+  gap: var(--space-4);
+}
+.station-token-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-8);
+}
+.station-token-form label {
+  display: grid;
+  gap: var(--space-4);
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+.station-token-form label > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-weight: 600;
+}
+.station-token-form label svg {
+  width: 14px;
+  height: 14px;
+}
+.station-token-form input {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 var(--space-12);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface, transparent);
+  font: inherit;
+}
+.station-token-result {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin-top: var(--space-12) !important;
+  color: var(--danger, #d14343);
+}
+.station-token-result[data-ok="true"] {
+  color: var(--success, #2f9e5b);
+}
+.station-token-result svg {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin-top: var(--space-4);
+}
+.station-model-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin: var(--space-8) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.station-model-chips li {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-6);
+  width: 11.5rem;
+  max-width: 100%;
+  min-width: 0;
+  padding: var(--space-4) var(--space-10);
+  border-radius: var(--radius-full);
+  background: var(--surface, #fff);
+  border: 1px solid var(--line-soft);
+  font-size: var(--text-xs);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.station-model-chips li > strong,
+.station-model-chips li > code {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.station-model-chips li > strong {
+  flex: 1 1 auto;
+  font-weight: 600;
+}
+.station-model-chips li > code {
+  flex: 0 1 auto;
+  max-width: 45%;
+  color: var(--muted);
+  font-weight: 400;
+}
+.station-model-chips li.more {
+  width: auto;
+  color: var(--faint);
+  border-style: dashed;
+}
+.station-trust-dialog {
+  max-width: 28rem;
+}
+.station-trust-dialog h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+.station-trust-dialog h2 svg {
+  width: 20px;
+  height: 20px;
+  color: var(--warning, #c98a00);
+}
+.station-trust-host strong {
+  font-size: var(--text-lg);
+  overflow-wrap: anywhere;
+}
+.station-trust-points {
+  margin: 0;
+  padding-left: 1.25em;
+  display: grid;
+  gap: var(--space-4);
+}
+.station-trust-warn {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.station-trust-dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-8);
+}

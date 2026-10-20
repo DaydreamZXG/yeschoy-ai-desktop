@@ -14,6 +14,7 @@ import {
 } from "../configuration/preview";
 import { type ActivationToolId } from "../configuration/activation";
 import { ModelPicker } from "../configuration/ModelPicker";
+import { modelDisplayName, shortModelId } from "../model-profiles/profile";
 import { ModelCapabilityBadges } from "../model-profiles/ModelCapabilityBadges";
 import { WORKBENCH_APPS } from "./appCatalog";
 import { useWorkbenchCopy } from "./copy";
@@ -159,11 +160,16 @@ export function ModelsView({
               models={accountModels}
               value={selectedModelId}
               onChange={setSelectedModelId}
-              label={c.fullId}
+              label={c.models}
             />
             {selected && (
               <>
-                <code className="selected-price-model">{selected.id}</code>
+                <p className="selected-price-model-note">
+                  <strong>{modelDisplayName(selected.id)}</strong>
+                  {modelDisplayName(selected.id) !== selected.id && (
+                    <code title={selected.id}>{shortModelId(selected.id)}</code>
+                  )}
+                </p>
                 <ModelCapabilityBadges id={selected.id} />
                 <BillingGroupPicker
                   model={selected}

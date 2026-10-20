@@ -1,3 +1,5 @@
+> 开源整理（2026-10-20）：下载服务器运维文件（`download-origin/`、`vendor-sync/`、部署回执）以及依赖它们的 `test_variant_release.py`、`probe_public_release.py` 已移出公开仓库，请保存在私有运维仓库。本目录只保留官方包构建与签名脚本。
+
 # 野菜桌面端本地构建与双通道发布（0.4.16 起）
 
 当前使用用户确认的本地打包流程，不依赖 GitHub Actions 额度或 Secret。主版与朋友版第一次必须手动安装各自的 0.4.16 或更新版本；0.4.15 及更早版本的共用更新地址无法区分版别，永久返回 HTTP 204。
@@ -108,7 +110,7 @@ Environment `yeschoy-signing`：`UPDATER_KEY_OFFICIAL`、`UPDATER_KEY_PARTNER`�
 
 - `DOWNLOAD_ORIGIN_USER`：仅允许安全用户名字符；
 - `DOWNLOAD_ORIGIN_SSH_KEY`：发布专用 SSH 私钥；
-- `DOWNLOAD_ORIGIN_HOST_KEY`：预先核验的 `43.134.77.210` known_hosts 行。
+- `DOWNLOAD_ORIGIN_HOST_KEY`：预先核验的下载服务器（仓库变量 `DEPLOY_HOST`）known_hosts 行。
 
 不得在工作流中使用账户密码，也不得用 `ssh-keyscan` 临时信任未知主机。
 

@@ -564,7 +564,8 @@ mod tests {
     fn only_activation_tools_can_be_located() {
         assert_eq!(kind("dsh_web"), Some(Kind::Cli("dsh")));
         assert_eq!(kind("dsh_desktop"), Some(Kind::Desktop("dsh_desktop")));
-        assert_eq!(kind("opencode"), None);
+        assert_eq!(kind("opencode"), Some(Kind::Cli("opencode")));
+        assert_eq!(kind("aider"), None);
         assert_eq!(kind("../../etc"), None);
     }
 }

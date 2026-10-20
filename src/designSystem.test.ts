@@ -15,6 +15,7 @@ const SHEETS = [
   "src/theme/new-api.css",
   "src/theme/new-api-layout.css",
   "src/theme/motion.css",
+  "src/theme/system.css",
 ];
 
 const sheets = SHEETS.map((path) => ({

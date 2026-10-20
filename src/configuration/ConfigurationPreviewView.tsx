@@ -11,6 +11,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { appDisplayName } from "../workbench/appCatalog";
 import {
   BillingGroupPicker,
   BillingPrices,
@@ -20,6 +21,8 @@ import { chooseBillingGroup } from "./billing";
 import {
   hasReviewedCapabilities,
   isImageGenerationModel,
+  modelDisplayName,
+  shortModelId,
 } from "../model-profiles/profile";
 import { modelConnectionMode } from "./modelCompatibility";
 import type { AccountSessionController } from "../account/useAccountSession";
@@ -29,6 +32,7 @@ import { useWalletRecharge } from "../workbench/useWalletRecharge";
 import claudeIcon from "../assets/icons/official-claude.png";
 import codexIcon from "../assets/icons/official-codex.png";
 import piIcon from "../assets/icons/official-pi.svg";
+import opencodeIcon from "../assets/icons/official-opencode.svg";
 import dshIcon from "../assets/icons/official-dsh.svg";
 import { ModelPicker } from "./ModelPicker";
 import {
@@ -104,6 +108,7 @@ type ApplicationSurfaceKey =
   | "surfaceClaudeDesktop"
   | "surfaceCodexDesktop"
   | "surfacePi"
+  | "surfaceOpenCode"
   | "surfaceDsh"
   | "surfaceDshDesktop"
   | "surfaceWorkBuddy";
@@ -135,7 +140,7 @@ const APPLICATIONS: readonly ApplicationChoice[] = [
   {
     id: "codex_desktop",
     toolId: "codex",
-    displayName: "Codex Desktop",
+    displayName: "Codex",
     surface: "surfaceCodexDesktop",
     icon: codexIcon,
   },
@@ -152,6 +157,13 @@ const APPLICATIONS: readonly ApplicationChoice[] = [
     displayName: "Pi",
     surface: "surfacePi",
     icon: piIcon,
+  },
+  {
+    id: "opencode",
+    toolId: "opencode",
+    displayName: "OpenCode",
+    surface: "surfaceOpenCode",
+    icon: opencodeIcon,
   },
   {
     id: "dsh_web",
@@ -269,6 +281,7 @@ const BRIDGED_TOOLS: ReadonlySet<ActivationToolId> = new Set<ActivationToolId>([
   "claude_code",
   "claude_desktop",
   "codex_desktop",
+  "opencode",
 ]);
 
 /**
@@ -283,6 +296,7 @@ const CATALOG_MENU_TOOLS: ReadonlySet<ActivationToolId> =
     "claude_desktop",
     "codex_desktop",
     "pi",
+    "opencode",
     "dsh_web",
     "dsh_desktop",
     "workbuddy",
@@ -314,6 +328,8 @@ export function writtenEndpoint(
       return "http://127.0.0.1:15729/claude-desktop";
     case "codex_desktop":
       return "http://127.0.0.1:15731/codex/v1";
+    case "opencode":
+      return "http://127.0.0.1:15732/opencode/v1";
     case "workbuddy":
       return `${rootUrl}/v1/chat/completions`;
     case "pi":
@@ -362,6 +378,7 @@ function initialToolId(
 function previewTool(toolId: ActivationToolId): ConfigurationToolId {
   if (toolId === "codex_desktop") return "codex";
   if (toolId === "pi") return "pi";
+  if (toolId === "opencode") return "opencode";
   if (toolId === "dsh_web") return "dsh";
   if (toolId === "dsh_desktop") return "dsh_desktop";
   if (toolId === "workbuddy") return "workbuddy";
@@ -369,7 +386,7 @@ function previewTool(toolId: ActivationToolId): ConfigurationToolId {
 }
 
 function usesNewTerminalSession(toolId: ActivationToolId) {
-  return ["claude_code", "pi"].includes(toolId);
+  return ["claude_code", "pi", "opencode"].includes(toolId);
 }
 
 function targetTone(target?: ActivationTarget) {
@@ -534,6 +551,11 @@ export function ConfigurationPreviewView({
   const application =
     APPLICATIONS.find((candidate) => candidate.id === activationToolId) ??
     APPLICATIONS[0];
+  const applicationLabel = appDisplayName(
+    application.id,
+    application.displayName,
+    t,
+  );
   const savedConnection = connections?.connections.find(
     (item) => item.toolId === activationToolId,
   );
@@ -1005,7 +1027,7 @@ export function ConfigurationPreviewView({
       {
         key: submittedContext,
         account: session.projection?.account.username ?? "",
-        app: application.displayName,
+        app: applicationLabel,
         model: defaultBinding.modelId,
         group: defaultBinding.billingGroup,
         line: lineId,
@@ -1136,11 +1158,11 @@ export function ConfigurationPreviewView({
         if (usesNewTerminalSession(activationToolId))
           return g.readyTerminal.replace(
             "{{app}}",
-            resultContext?.app ?? application.displayName,
+            resultContext?.app ?? applicationLabel,
           );
         if (activationToolId === "codex_desktop")
           return g.readyCodex
-            .replace("{{app}}", resultContext?.app ?? application.displayName)
+            .replace("{{app}}", resultContext?.app ?? applicationLabel)
             .replace(
               "{{favorites}}",
               (activation.models?.length ?? 1) > 1 ? g.favoritesConfigured : "",
@@ -1156,7 +1178,7 @@ export function ConfigurationPreviewView({
             (activation.models?.length ?? 1) > 1 ? g.favoritesConfigured : "",
           );
         return g.readyDefault
-          .replace("{{app}}", resultContext?.app ?? application.displayName)
+          .replace("{{app}}", resultContext?.app ?? applicationLabel)
           .replace(
             "{{favorites}}",
             (activation.models?.length ?? 1) > 1 ? g.favoritesConfigured : "",
@@ -1165,11 +1187,11 @@ export function ConfigurationPreviewView({
         return activation.reasonCode === "graceful_restart_required"
           ? g.restartBlocked.replace(
               "{{app}}",
-              resultContext?.app ?? application.displayName,
+              resultContext?.app ?? applicationLabel,
             )
           : g.appRunning.replace(
               "{{app}}",
-              resultContext?.app ?? application.displayName,
+              resultContext?.app ?? applicationLabel,
             );
       case "signed_out":
         return c.setupSignedOut;
@@ -1640,15 +1662,18 @@ export function ConfigurationPreviewView({
     )
       return {
         kind: "restart-app",
-        label: g.restartAppLabel.replace("{{app}}", application.displayName),
+        label: g.restartAppLabel.replace("{{app}}", applicationLabel),
         hint: g.restartAppHint,
         run: () => setRestartPromptContext(currentContext.current),
       };
     if (configured)
       return {
+        // 人已经在接入页上：别再说「换模型与分组」像死循环。
+        // 点这里只是把焦点送到上方选择器；真要写入用旁边的「重新应用」，
+        // 一改选择这里会自动变成「保存并应用」。
         kind: "reconfigure",
-        label: t("yeschoyDaily.changeModel"),
-        hint: t("yeschoyDaily.changeModelHint"),
+        label: t("yeschoyDaily.focusModelPicker"),
+        hint: t("yeschoyDaily.configuredActionHint"),
         run: openAdvanced,
       };
     if (
@@ -1673,14 +1698,14 @@ export function ConfigurationPreviewView({
           : c.connectNow,
       hint: connectionEstablished
         ? t("yeschoyDaily.selectionChangedHint", {
-            model: savedConnection?.modelId ?? "",
+            model: modelDisplayName(savedConnection?.modelId ?? ""),
           })
         : // 列表是空的、按钮却能点 —— 那就得说清点下去接的是谁。以前空态
           // 只写「先加一个模型」，按钮又不禁用，用户不知道接入的是选择器
           // 里那一个。
           !modelSet.length && defaultBinding
           ? g.finishSingleModelHint
-              .replace("{{model}}", defaultBinding.modelId)
+              .replace("{{model}}", modelDisplayName(defaultBinding.modelId))
               .replace(
                 "{{group}}",
                 groupLabel(defaultBinding.billingGroup, g.defaultGroup),
@@ -1872,7 +1897,7 @@ export function ConfigurationPreviewView({
             </span>
             <div>
               <span className="field-caption">{g.settingUpFor}</span>
-              <strong>{application.displayName}</strong>
+              <strong>{applicationLabel}</strong>
               <p>{targetSummary}</p>
             </div>
             <button
@@ -1968,7 +1993,13 @@ export function ConfigurationPreviewView({
                       )}
                     </span>
                     <span className="configuration-app-copy">
-                      <strong>{candidate.displayName}</strong>
+                      <strong>
+                        {appDisplayName(
+                          candidate.id,
+                          candidate.displayName,
+                          t,
+                        )}
+                      </strong>
                       <small>{g[candidate.surface]}</small>
                     </span>
                     <span
@@ -2050,7 +2081,7 @@ export function ConfigurationPreviewView({
               {target && target.status !== "not_found" && (
                 <ManualLocationControls
                   tool={activationToolId}
-                  name={application.displayName}
+                  name={applicationLabel}
                   state={target.manualLocation}
                   disabled={applyPhase === "applying"}
                   onChanged={() => void refreshTargets()}
@@ -2066,7 +2097,7 @@ export function ConfigurationPreviewView({
             !configured)) && (
           <InstallationPanel
             tool={activationToolId}
-            name={application.displayName}
+            name={applicationLabel}
             canConnect={!!intentReady}
             onStart={() => void startInstallation()}
             onConfirm={() => void startInstallation(true)}
@@ -2247,7 +2278,10 @@ export function ConfigurationPreviewView({
                                     title={`${m.modelId} · ${groupText}`}
                                     onClick={() => setFocusedModelId(m.modelId)}
                                   >
-                                    <code>{m.modelId}</code>
+                                    <strong>{modelDisplayName(m.modelId)}</strong>
+                                    {modelDisplayName(m.modelId) !== m.modelId && (
+                                      <code>{shortModelId(m.modelId)}</code>
+                                    )}
                                     <small>{groupText}</small>
                                     {isDefault && <em>{g.defaultBadge}</em>}
                                   </button>
@@ -2298,7 +2332,14 @@ export function ConfigurationPreviewView({
                     )}
                     {missingModel && (
                       <p className="selection-warning" role="alert">
-                        {g.missingModelPrefix} <code>{selectedModelId}</code>{" "}
+                        {g.missingModelPrefix}{" "}
+                        <strong>{modelDisplayName(selectedModelId)}</strong>
+                        {modelDisplayName(selectedModelId) !== selectedModelId && (
+                          <>
+                            {" "}
+                            <code>({shortModelId(selectedModelId)})</code>
+                          </>
+                        )}{" "}
                         {g.missingModelSuffix}
                       </p>
                     )}
@@ -2394,7 +2435,7 @@ export function ConfigurationPreviewView({
                 {(configured || connectionEstablished) && savedConnection && (
                   <OpenConnection
                     connection={savedConnection}
-                    name={application.displayName}
+                    name={applicationLabel}
                     disabled={!!connections?.restoring}
                     onAdjust={() => {
                       appSwitchButton.current?.scrollIntoView({
@@ -2471,11 +2512,23 @@ export function ConfigurationPreviewView({
               <p>
                 {connectionLifecycleNote(
                   activationToolId,
-                  application.displayName,
+                  applicationLabel,
                   g,
                 )}
               </p>
             </details>
+          )}
+          {activationToolId === "codex_desktop" && (
+            <p className="connection-lifecycle-note" data-note="codex-shared">
+              <Info aria-hidden="true" />
+              {g.codexSharedSettings}
+            </p>
+          )}
+          {activationToolId === "opencode" && (
+            <p className="connection-lifecycle-note" data-note="opencode-key">
+              <ShieldCheck aria-hidden="true" />
+              {g.opencodeKeyNote}
+            </p>
           )}
         </div>
 
@@ -2510,7 +2563,7 @@ export function ConfigurationPreviewView({
                   <small className="endpoint-reference-note">
                     {g.bridgedEndpointNote.replace(
                       "{{app}}",
-                      application.displayName,
+                      applicationLabel,
                     )}
                   </small>
                 )}
@@ -2603,7 +2656,7 @@ export function ConfigurationPreviewView({
                 <div className="activation-skipped" role="status">
                   <strong>{g.skippedTitle}</strong>
                   <p>
-                    {g.skippedBody.replace("{{app}}", application.displayName)}
+                    {g.skippedBody.replace("{{app}}", applicationLabel)}
                   </p>
                   <ul>
                     {skippedBindings.map((s) => (
@@ -2625,11 +2678,11 @@ export function ConfigurationPreviewView({
               <p className="first-use-state">
                 {firstUseVerified
                   ? g.verifiedBody
-                      .replace("{{app}}", application.displayName)
+                      .replace("{{app}}", applicationLabel)
                       .replace("{{model}}", firstUseObservation.modelId)
                   : g.awaitingFirstUseBody.replace(
                       "{{app}}",
-                      application.displayName,
+                      applicationLabel,
                     )}
               </p>
             )}
@@ -2681,7 +2734,7 @@ export function ConfigurationPreviewView({
         <div className="configuration-actions configuration-secondary-actions">
           <RestoreConnection
             connection={savedConnection}
-            name={application.displayName}
+            name={applicationLabel}
             disabled={applyPhase === "applying"}
           />
           <div>
@@ -2800,7 +2853,7 @@ export function ConfigurationPreviewView({
         isOpen={restartPromptContext !== null}
         title={g.restartDialogTitle.replace(
           "{{app}}",
-          resultContext?.app ?? application.displayName,
+          resultContext?.app ?? applicationLabel,
         )}
         message={g.restartDialogMessage}
         confirmText={g.restartDialogConfirm}

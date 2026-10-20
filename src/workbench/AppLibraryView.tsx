@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { AccountSummary } from "./WorkbenchChrome";
 import { AppGlyph } from "./AppGlyph";
-import { WORKBENCH_APPS } from "./appCatalog";
+import { WORKBENCH_APPS, appDisplayName } from "./appCatalog";
 import type { AccountSessionController } from "../account/useAccountSession";
 import { balanceAlert } from "../account/finance";
 import { LowBalanceBanner } from "./LowBalanceBanner";
@@ -43,6 +43,7 @@ import { showOssSoftTraffic } from "../distribution/softTraffic";
 import { showYeschoyCommunityUi } from "../distribution/yeschoyStation";
 import { OssSoftTrafficCta } from "./OssSoftTrafficCta";
 import { StationConnectOriginForm } from "./StationConnectOriginForm";
+import { modelDisplayName } from "../model-profiles/profile";
 import type { AccountLineId } from "../configuration/preview";
 import type { AccountStatus } from "../account/session";
 import {
@@ -161,9 +162,10 @@ export function AppLibraryView({
     );
     if (!pending) return null;
     const app = WORKBENCH_APPS.find((v) => v.id === pending.toolId);
+    // display name resolved where the banner is rendered
     return {
       id: pending.toolId,
-      name: app?.name ?? pending.toolId,
+      name: appDisplayName(pending.toolId, app?.name ?? pending.toolId, t),
     };
   })();
   // #18 模型下线检测：账户模型目录就绪时，校验已接入工具的模型仍可用。
@@ -181,7 +183,11 @@ export function AppLibraryView({
     if (!offline.length) return null;
     return offline.map((c) => ({
       id: c.toolId,
-      name: WORKBENCH_APPS.find((v) => v.id === c.toolId)?.name ?? c.toolId,
+      name: appDisplayName(
+        c.toolId,
+        WORKBENCH_APPS.find((v) => v.id === c.toolId)?.name ?? c.toolId,
+        t,
+      ),
     }));
   })();
   const checking = scanning || connections?.loading || connections?.refreshing;
@@ -253,8 +259,10 @@ export function AppLibraryView({
               : scanError
                 ? c.libraryNeedsCheck
                 : c.libraryNotFound;
+    const displayName = appDisplayName(app.id, app.name, t);
     return {
       app,
+      displayName,
       target,
       connection,
       active,
@@ -366,8 +374,18 @@ export function AppLibraryView({
           </button>
         </p>
       )}
-      {!everythingUnavailable && accountSession.lastError && (
-        <p className="workbench-notice" role="status">
+      {!everythingUnavailable &&
+        (accountSession.stationCheck ?? "idle") === "checking" &&
+        !accountSession.lastError && (
+          <p className="workbench-notice" role="status" data-testid="station-checking">
+            <RefreshCw className="is-spinning" />
+            {c.libraryAccountChecking}
+          </p>
+        )}
+      {!everythingUnavailable &&
+        (accountSession.lastError ||
+          (accountSession.stationCheck ?? "idle") === "unreachable") && (
+        <p className="workbench-notice" role="status" data-testid="station-unreachable">
           <CircleAlert />
           {signedIn ? c.libraryAccountStale : c.libraryAccountUnavailable}
           <button onClick={() => void accountSession.refresh()}>
@@ -401,7 +419,7 @@ export function AppLibraryView({
                 ?.scrollIntoView({ block: "start" })
             }
             accountProjection={accountSession.projection}
-            accountLoading={accountSession.loading}
+            accountLoading={accountSession.loading || (accountSession.stationCheck ?? "idle") === "checking"}
           />
         </section>
       )}
@@ -537,7 +555,7 @@ export function AppLibraryView({
             : []),
           ...group.apps.map(
             (
-              { app, target, connection, active, unknownConnection, label },
+              { app, displayName, target, connection, active, unknownConnection, label },
               index,
             ) => (
               <article
@@ -556,7 +574,7 @@ export function AppLibraryView({
                   )}
                 </span>
                 <div className="connection-row-main">
-                  <h3>{app.name}</h3>
+                  <h3>{displayName}</h3>
                   {active && connection ? (
                     <p className="connection-row-fact">
                       {/* 模型名本身可点 = 换模型。这是上一轮特意修的：
@@ -572,8 +590,13 @@ export function AppLibraryView({
                         aria-label={t("yeschoyDaily.changeModel")}
                         onClick={() => onOpenSetup(app.id, "change-model")}
                       >
-                        <code className="connection-model">
-                          {connection.modelId || c.libraryModelPending}
+                        <code
+                          className="connection-model"
+                          title={connection.modelId || undefined}
+                        >
+                          {connection.modelId
+                            ? modelDisplayName(connection.modelId)
+                            : c.libraryModelPending}
                         </code>
                         <span className="connection-model-switch-hint">
                           {t("yeschoyDaily.changeModel")}
@@ -621,7 +644,7 @@ export function AppLibraryView({
                   {label}
                 </span>
                 <div className="connection-row-actions">
-                  <RestoreConnection connection={connection} name={app.name} />
+                  <RestoreConnection connection={connection} name={displayName} />
                   {active &&
                   connection &&
                   !["recovery_pending", "changed"].includes(
@@ -629,7 +652,7 @@ export function AppLibraryView({
                   ) ? (
                     <OpenConnection
                       connection={connection}
-                      name={app.name}
+                      name={displayName}
                       onAdjust={() => onOpenSetup(app.id, "repair")}
                     />
                   ) : (
