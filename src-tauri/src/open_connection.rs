@@ -160,7 +160,7 @@ pub(crate) fn validate_settings(
         "opencode" => opencode::prepare_catalog(
             home,
             &credential.model_id,
-            &[credential.model_id.clone()],
+            std::slice::from_ref(&credential.model_id),
             credential.local_gateway_token.as_deref(),
         )?
         .validate_existing(),
