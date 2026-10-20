@@ -1,12 +1,18 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildConnectDeepLink,
+  ensureAccessToken,
   issueConnectCode,
   navigateDeepLinkWithDownloadFallback,
   normalizeConnectIssueReasonCode,
   pageHttpsOrigin,
+  resetConnectAccessTokenCache,
   YeschoyConnectError,
 } from "./yeschoy-connect";
+
+beforeEach(() => {
+  resetConnectAccessTokenCache();
+});
 
 describe("pageHttpsOrigin", () => {
   it("accepts https origins", () => {
@@ -53,24 +59,100 @@ describe("normalizeConnectIssueReasonCode", () => {
   });
 });
 
-describe("issueConnectCode", () => {
-  it("posts same-origin JSON with credentials", async () => {
+describe("ensureAccessToken", () => {
+  it("POSTs /api/user/auth/refresh and returns access_token", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
       status: 200,
       json: async () => ({
         success: true,
-        data: { code: "c1", origin: "https://station.test" },
+        data: {
+          access_token: "access-from-refresh",
+          access_expires_at: Math.floor(Date.now() / 1000) + 600,
+        },
       }),
+    });
+    await expect(ensureAccessToken(fetchImpl)).resolves.toBe("access-from-refresh");
+    expect(fetchImpl).toHaveBeenCalledWith("/api/user/auth/refresh", expect.objectContaining({
+      method: "POST",
+      credentials: "include",
+    }));
+  });
+
+  it("returns null when refresh endpoint is missing (legacy)", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({ success: false }),
+    });
+    await expect(ensureAccessToken(fetchImpl)).resolves.toBeNull();
+  });
+});
+
+describe("issueConnectCode", () => {
+  it("refreshes then posts Bearer on modern New API", async () => {
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (String(url) === "/api/user/auth/refresh") {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            data: { access_token: "bearer-token", access_expires_at: Math.floor(Date.now() / 1000) + 600 },
+          }),
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          success: true,
+          data: { code: "c1", origin: "https://station.test" },
+        }),
+      };
     });
 
     const result = await issueConnectCode(
-      fetchImpl,
+      fetchImpl as unknown as typeof fetch,
       "https://station.test",
       "/api/desktop/v2/connect-codes",
     );
 
     expect(result).toEqual({ code: "c1", origin: "https://station.test" });
-    expect(fetchImpl).toHaveBeenCalledWith("/api/desktop/v2/connect-codes", {
+    expect(fetchImpl).toHaveBeenNthCalledWith(1, "/api/user/auth/refresh", expect.any(Object));
+    expect(fetchImpl).toHaveBeenNthCalledWith(2, "/api/desktop/v2/connect-codes", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer bearer-token",
+      },
+      body: JSON.stringify({ origin: "https://station.test" }),
+    });
+  });
+
+  it("falls back to cookie-only issue when refresh is 404", async () => {
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (String(url) === "/api/user/auth/refresh") {
+        return { ok: false, status: 404, json: async () => ({}) };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          success: true,
+          data: { code: "legacy", origin: "https://station.test" },
+        }),
+      };
+    });
+
+    const result = await issueConnectCode(
+      fetchImpl as unknown as typeof fetch,
+      "https://station.test",
+      "/api/desktop/v2/connect-codes",
+    );
+    expect(result.code).toBe("legacy");
+    expect(fetchImpl).toHaveBeenNthCalledWith(2, "/api/desktop/v2/connect-codes", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -78,10 +160,11 @@ describe("issueConnectCode", () => {
     });
   });
 
-  it("maps API errors to YeschoyConnectError", async () => {
+  it("maps refresh 401 to session_required", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({
+      ok: false,
       status: 401,
-      json: async () => ({ success: false, code: "session_required" }),
+      json: async () => ({ success: false, code: "AUTH_UNAUTHORIZED" }),
     });
 
     await expect(
@@ -92,18 +175,27 @@ describe("issueConnectCode", () => {
     });
   });
 
-  it("normalizes live AUTH_UNAUTHORIZED to session_required", async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({
-      status: 401,
-      json: async () => ({
-        success: false,
-        code: "AUTH_UNAUTHORIZED",
-        message: "Unauthorized, invalid access token",
-      }),
+  it("maps issue API errors to YeschoyConnectError after successful refresh", async () => {
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (String(url) === "/api/user/auth/refresh") {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            success: true,
+            data: { access_token: "t", access_expires_at: Math.floor(Date.now() / 1000) + 600 },
+          }),
+        };
+      }
+      return {
+        ok: false,
+        status: 401,
+        json: async () => ({ success: false, code: "session_required" }),
+      };
     });
 
     await expect(
-      issueConnectCode(fetchImpl, "https://yeschoy.com", "/api/desktop/v2/connect-codes"),
+      issueConnectCode(fetchImpl as unknown as typeof fetch, "https://station.test", "/api/desktop/v2/connect-codes"),
     ).rejects.toMatchObject({
       reasonCode: "session_required",
       httpStatus: 401,

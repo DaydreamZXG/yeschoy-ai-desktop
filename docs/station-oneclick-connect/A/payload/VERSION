@@ -1,0 +1,5 @@
+desktop-connect-0.1.1
+# 已在干净 QuantumNous/new-api 验收（Asia/Shanghai 2026-10-20）
+# upstream commit: 603a5ceb55908cc24b509aca2caa6fc956c9958c
+# 验收：dry-run → 打补丁 → go build 通过 → 冒烟 bootstrap/connect/发码兑码/Bearer self
+# 配套：yeschoy-ai-desktop connect.js 需含 /api/user/auth/refresh → Bearer（本包不内嵌官网脚本）

@@ -33,17 +33,26 @@ export class YeschoyConnectError extends Error {
 }
 
 /** Map station issue API codes to stable UI reason codes (see station-connect OpenAPI). */
+const SESSION_REQUIRED_CODES = new Set([
+  "session_required",
+  "SESSION_REQUIRED",
+  "AUTH_UNAUTHORIZED",
+  "AUTH_TOKEN_EXPIRED",
+  "AUTH_SESSION_REVOKED",
+]);
+
 export function normalizeConnectIssueReasonCode(
   code: string | undefined,
   httpStatus?: number,
 ): string {
   const raw = (code ?? "").trim();
-  const upper = raw.toUpperCase();
-  if (upper === "SESSION_REQUIRED" || upper === "AUTH_UNAUTHORIZED") {
+  if (SESSION_REQUIRED_CODES.has(raw) || SESSION_REQUIRED_CODES.has(raw.toUpperCase())) {
     return "session_required";
   }
   if (httpStatus === 401) {
-    return "session_required";
+    if (!raw || raw.toUpperCase().startsWith("AUTH_")) {
+      return "session_required";
+    }
   }
   return raw || "issue_failed";
 }
@@ -63,6 +72,8 @@ export interface YeschoyConnectOptions {
 export interface YeschoyConnectApi {
   readonly issuePath: string;
   readonly downloadUrl: string;
+  /** Refresh cookie → access token (null on legacy stations without refresh). */
+  ensureAccessToken(options?: { fetchImpl?: typeof fetch }): Promise<string | null>;
   open(options?: YeschoyConnectOptions): Promise<void>;
   bindAuto(root?: ParentNode): void;
 }
@@ -86,27 +97,131 @@ export interface IssueConnectCodeResult {
   origin: string;
 }
 
+/** Modern New API refresh endpoint (HttpOnly cookie Path=/api/user/auth). */
+export const AUTH_REFRESH_PATH = "/api/user/auth/refresh";
+
+let cachedAccessToken: string | null = null;
+let cachedAccessExpiresAt = 0;
+
+/** Test helper: clear in-memory access token cache. */
+export function resetConnectAccessTokenCache(): void {
+  cachedAccessToken = null;
+  cachedAccessExpiresAt = 0;
+}
+
+function cacheAccessToken(token: string, expiresAt: number): void {
+  cachedAccessToken = token;
+  cachedAccessExpiresAt = expiresAt > 0 ? expiresAt : 0;
+}
+
+function cachedTokenStillValid(): boolean {
+  if (!cachedAccessToken) return false;
+  if (!cachedAccessExpiresAt) return true;
+  return cachedAccessExpiresAt > Math.floor(Date.now() / 1000) + 30;
+}
+
+async function parseJsonBody(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Exchange the HttpOnly refresh cookie for a short-lived dashboard access token.
+ * Returns null when the station has no refresh endpoint (legacy cookie sessions).
+ */
+export async function ensureAccessToken(
+  fetchImpl: typeof fetch = fetch,
+): Promise<string | null> {
+  if (cachedTokenStillValid()) {
+    return cachedAccessToken;
+  }
+
+  let response: Response;
+  try {
+    response = await fetchImpl(AUTH_REFRESH_PATH, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+  } catch {
+    return null;
+  }
+
+  // Older New API builds may not expose refresh — fall back to cookie-only issue.
+  if (response.status === 404 || response.status === 405) {
+    return null;
+  }
+
+  const body = await parseJsonBody(response);
+  if (!response.ok || !body || typeof body !== "object" || !("success" in body)) {
+    throw new YeschoyConnectError(
+      normalizeConnectIssueReasonCode(
+        typeof (body as { code?: string })?.code === "string"
+          ? (body as { code: string }).code
+          : undefined,
+        response.status,
+      ),
+      response.status,
+    );
+  }
+
+  const envelope = body as { success: boolean; code?: string; data?: unknown };
+  if (!envelope.success) {
+    throw new YeschoyConnectError(
+      normalizeConnectIssueReasonCode(envelope.code, response.status),
+      response.status,
+    );
+  }
+
+  const data = envelope.data;
+  if (
+    !data ||
+    typeof data !== "object" ||
+    typeof (data as { access_token?: unknown }).access_token !== "string" ||
+    !(data as { access_token: string }).access_token
+  ) {
+    throw new YeschoyConnectError("issue_invalid_response", response.status);
+  }
+
+  const token = (data as { access_token: string }).access_token;
+  const expiresAt =
+    typeof (data as { access_expires_at?: unknown }).access_expires_at === "number"
+      ? (data as { access_expires_at: number }).access_expires_at
+      : 0;
+  cacheAccessToken(token, expiresAt);
+  return token;
+}
+
 export async function issueConnectCode(
   fetchImpl: typeof fetch,
   origin: string,
   issuePath: string,
 ): Promise<IssueConnectCodeResult> {
+  const accessToken = await ensureAccessToken(fetchImpl);
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
   const response = await fetchImpl(issuePath, {
     method: "POST",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ origin }),
   });
 
-  let body: unknown;
-  try {
-    body = await response.json();
-  } catch {
-    throw new YeschoyConnectError("issue_invalid_response", response.status);
-  }
-
+  const body = await parseJsonBody(response);
   if (!body || typeof body !== "object" || !("success" in body)) {
-    throw new YeschoyConnectError("issue_invalid_response", response.status);
+    throw new YeschoyConnectError(
+      normalizeConnectIssueReasonCode(undefined, response.status),
+      response.status,
+    );
   }
 
   const envelope = body as { success: boolean; code?: string; data?: unknown };
@@ -235,6 +350,8 @@ export function createYeschoyConnect(
   return {
     issuePath,
     downloadUrl,
+    ensureAccessToken: (options = {}) =>
+      ensureAccessToken(options.fetchImpl ?? fetch),
     open,
     bindAuto,
   };

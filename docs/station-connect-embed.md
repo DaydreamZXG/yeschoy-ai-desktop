@@ -54,6 +54,15 @@ Minimal HTML:
 
 The script auto-binds every `[data-yeschoy-connect]` element after load.
 
+### Auth note (New API JWT era)
+
+Modern QuantumNous/new-api dashboard APIs need `Authorization: Bearer <access>`.
+The hosted `connect.js` first calls same-origin `POST /api/user/auth/refresh`
+(using the HttpOnly refresh cookie), then issues `POST /api/desktop/v2/connect-codes`
+with that Bearer. Stations must not block `/api/user/auth/refresh`.
+Legacy cookie-session builds without refresh still work: the script falls back to
+`credentials: "include"` only when refresh returns 404/405.
+
 ### Programmatic use
 
 ```javascript

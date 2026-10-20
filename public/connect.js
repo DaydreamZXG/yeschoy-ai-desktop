@@ -10,14 +10,22 @@
       this.httpStatus = httpStatus;
     }
   }
+  const SESSION_REQUIRED_CODES = /* @__PURE__ */ new Set([
+    "session_required",
+    "SESSION_REQUIRED",
+    "AUTH_UNAUTHORIZED",
+    "AUTH_TOKEN_EXPIRED",
+    "AUTH_SESSION_REVOKED"
+  ]);
   function normalizeConnectIssueReasonCode(code, httpStatus) {
     const raw = (code ?? "").trim();
-    const upper = raw.toUpperCase();
-    if (upper === "SESSION_REQUIRED" || upper === "AUTH_UNAUTHORIZED") {
+    if (SESSION_REQUIRED_CODES.has(raw) || SESSION_REQUIRED_CODES.has(raw.toUpperCase())) {
       return "session_required";
     }
     if (httpStatus === 401) {
-      return "session_required";
+      if (!raw || raw.toUpperCase().startsWith("AUTH_")) {
+        return "session_required";
+      }
     }
     return raw || "issue_failed";
   }
@@ -33,21 +41,89 @@
     params.set("code", code);
     return `yeschoy://connect?${params.toString()}`;
   }
+  const AUTH_REFRESH_PATH = "/api/user/auth/refresh";
+  let cachedAccessToken = null;
+  let cachedAccessExpiresAt = 0;
+  function cacheAccessToken(token, expiresAt) {
+    cachedAccessToken = token;
+    cachedAccessExpiresAt = expiresAt > 0 ? expiresAt : 0;
+  }
+  function cachedTokenStillValid() {
+    if (!cachedAccessToken) return false;
+    if (!cachedAccessExpiresAt) return true;
+    return cachedAccessExpiresAt > Math.floor(Date.now() / 1e3) + 30;
+  }
+  async function parseJsonBody(response) {
+    try {
+      return await response.json();
+    } catch {
+      return null;
+    }
+  }
+  async function ensureAccessToken(fetchImpl = fetch) {
+    if (cachedTokenStillValid()) {
+      return cachedAccessToken;
+    }
+    let response;
+    try {
+      response = await fetchImpl(AUTH_REFRESH_PATH, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: "{}"
+      });
+    } catch {
+      return null;
+    }
+    if (response.status === 404 || response.status === 405) {
+      return null;
+    }
+    const body = await parseJsonBody(response);
+    if (!response.ok || !body || typeof body !== "object" || !("success" in body)) {
+      throw new YeschoyConnectError(
+        normalizeConnectIssueReasonCode(
+          typeof body?.code === "string" ? body.code : void 0,
+          response.status
+        ),
+        response.status
+      );
+    }
+    const envelope = body;
+    if (!envelope.success) {
+      throw new YeschoyConnectError(
+        normalizeConnectIssueReasonCode(envelope.code, response.status),
+        response.status
+      );
+    }
+    const data = envelope.data;
+    if (!data || typeof data !== "object" || typeof data.access_token !== "string" || !data.access_token) {
+      throw new YeschoyConnectError("issue_invalid_response", response.status);
+    }
+    const token = data.access_token;
+    const expiresAt = typeof data.access_expires_at === "number" ? data.access_expires_at : 0;
+    cacheAccessToken(token, expiresAt);
+    return token;
+  }
   async function issueConnectCode(fetchImpl, origin, issuePath) {
+    const accessToken = await ensureAccessToken(fetchImpl);
+    const headers = {
+      "Content-Type": "application/json"
+    };
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`;
+    }
     const response = await fetchImpl(issuePath, {
       method: "POST",
       credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ origin })
     });
-    let body;
-    try {
-      body = await response.json();
-    } catch {
-      throw new YeschoyConnectError("issue_invalid_response", response.status);
-    }
+    const body = await parseJsonBody(response);
     if (!body || typeof body !== "object" || !("success" in body)) {
-      throw new YeschoyConnectError("issue_invalid_response", response.status);
+      throw new YeschoyConnectError(
+        normalizeConnectIssueReasonCode(void 0, response.status),
+        response.status
+      );
     }
     const envelope = body;
     if (!envelope.success) {
@@ -134,6 +210,7 @@
     return {
       issuePath,
       downloadUrl,
+      ensureAccessToken: (options = {}) => ensureAccessToken(options.fetchImpl ?? fetch),
       open,
       bindAuto
     };

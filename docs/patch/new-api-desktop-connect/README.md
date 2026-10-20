@@ -1,6 +1,8 @@
 # New API「桌面一键连接」最小补丁（草案，未部署）
 
-> 状态：**草案**。没有在任何生产站点上部署，也没有并入上游。
+> 状态：**站长一键安装器已在干净上游验收**（见 [`docs/station-oneclick-connect/A/VERIFIED.md`](../../station-oneclick-connect/A/VERIFIED.md)）。
+> 本目录仍是协议/草稿对照；**未部署生产站、未推 QuantumNous 上游**。
+> 站长请优先用 [`docs/station-oneclick-connect/A/`](../../station-oneclick-connect/A/) 安装脚本 + [`站长一页说明.md`](../../station-oneclick-connect/A/站长一页说明.md)。
 > 目标：一个普通的 [QuantumNous/new-api](https://github.com/QuantumNous/new-api) 站点只加这个补丁，
 > 就能让用户在网页上点一个按钮，桌面助手自动登录。
 
