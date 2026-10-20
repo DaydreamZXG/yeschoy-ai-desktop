@@ -299,8 +299,7 @@ function targets(requestId: string) {
 const handlers: Record<string, (a: Args) => unknown> = {
   account_session_snapshot_v2: () => ({
     hasStoredSession: scenario !== "signed_out",
-    storedLineId:
-      scenario === "signed_out" ? null : "mainland_optimized",
+    storedLineId: scenario === "signed_out" ? null : "mainland_optimized",
   }),
   account_inspect_v2: (a) => account(rid(a), scenario),
   account_poll_authorization_v2: (a) => account(rid(a), scenario),
@@ -343,7 +342,9 @@ const handlers: Record<string, (a: Args) => unknown> = {
   station_trust_state_v1: () => ({ trusted: [], builtin: [], pending: [] }),
   station_probe_v1: (a) => {
     const r = (a as { request: { origin: string; token?: string } }).request;
-    const origin = r.origin.startsWith("http") ? r.origin : `https://${r.origin}`;
+    const origin = r.origin.startsWith("http")
+      ? r.origin
+      : `https://${r.origin}`;
     return {
       origin: new URL(origin).origin,
       status: "ok",
@@ -353,7 +354,15 @@ const handlers: Record<string, (a: Args) => unknown> = {
       desktopConnect: false,
       tokenStatus: r.token ? "valid" : "not_provided",
       models: r.token
-        ? ["claude-sonnet-4-5", "deepseek-v4", "gemini-3-pro", "glm-5.3", "gpt-6.1-sol", "kimi-k3", "qwen3-max"]
+        ? [
+            "claude-sonnet-4-5",
+            "deepseek-v4",
+            "gemini-3-pro",
+            "glm-5.3",
+            "gpt-6.1-sol",
+            "kimi-k3",
+            "qwen3-max",
+          ]
         : [],
     };
   },

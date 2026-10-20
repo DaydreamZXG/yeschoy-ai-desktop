@@ -70,7 +70,10 @@ async fn get(client: &Client, url: &str, bearer: Option<&str>) -> Fetch {
         Err(_) => return Fetch::Unreachable,
     };
     let status = response.status();
-    if response.content_length().is_some_and(|len| len as usize > MAX_BYTES) {
+    if response
+        .content_length()
+        .is_some_and(|len| len as usize > MAX_BYTES)
+    {
         return Fetch::Status(status);
     }
     match response.bytes().await {
@@ -111,7 +114,11 @@ pub(crate) fn classify_status(value: &Value) -> Option<(&'static str, String, St
     } else {
         return None;
     };
-    Some((kind, short(data.get("system_name")), short(data.get("version"))))
+    Some((
+        kind,
+        short(data.get("system_name")),
+        short(data.get("version")),
+    ))
 }
 
 pub(crate) fn model_ids(value: &Value) -> Vec<String> {
@@ -251,7 +258,8 @@ mod tests {
     fn classifies_new_api_and_one_api() {
         let new_api = json!({"success": true, "data": {"system_name": "某某中转", "version": "v0.9", "quota_display_type": "USD"}});
         assert_eq!(classify_status(&new_api).unwrap().0, "new_api");
-        let one_api = json!({"success": true, "data": {"system_name": "One API", "version": "v0.6"}});
+        let one_api =
+            json!({"success": true, "data": {"system_name": "One API", "version": "v0.6"}});
         assert_eq!(classify_status(&one_api).unwrap().0, "one_api");
         assert!(classify_status(&json!({"success": false})).is_none());
         assert!(classify_status(&json!({"hello": "world"})).is_none());

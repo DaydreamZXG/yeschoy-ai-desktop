@@ -67,7 +67,9 @@ fn channel_for_origin(json: &str, origin: &str) -> Result<Channel, &'static str>
     if channel.authorization_origin != origin
         || channel.public_key.is_empty()
         || !channel.endpoint.starts_with("https://")
-        || !channel.endpoint.ends_with(&format!("/updates/{variant}/stable.json"))
+        || !channel
+            .endpoint
+            .ends_with(&format!("/updates/{variant}/stable.json"))
     {
         return Err("channel_invalid");
     }
@@ -91,14 +93,19 @@ impl Channel {
         let expected_url = if self.variant == "community" {
             // https://github.com/<repo>/releases/latest/download/latest.json
             // → https://github.com/<repo>/releases/download/v<version>/<file>
-            let base = self.endpoint.trim_end_matches("/latest/download/latest.json");
+            let base = self
+                .endpoint
+                .trim_end_matches("/latest/download/latest.json");
             format!("{base}/download/v{version}/{filename}")
         } else {
             // 官方源：与 endpoint 同主机的 /updates/releases/<variant>/<version>/<file>
             let base = self
                 .endpoint
                 .trim_end_matches(&format!("/updates/{}/stable.json", self.variant));
-            format!("{base}/updates/releases/{}/{version}/{filename}", self.variant)
+            format!(
+                "{base}/updates/releases/{}/{version}/{filename}",
+                self.variant
+            )
         };
         manifest.get("schemaVersion").and_then(|v| v.as_u64()) == Some(2)
             && manifest.get("variant").and_then(|v| v.as_str()) == Some(self.variant)

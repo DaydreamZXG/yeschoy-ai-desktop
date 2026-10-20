@@ -2058,7 +2058,8 @@ pub fn account_open_authorization_v2(
         }
         pending
     };
-    let Some(browser_url) = browser_authorization_url_for_line(&pending.line_id, &pending.user_code)
+    let Some(browser_url) =
+        browser_authorization_url_for_line(&pending.line_id, &pending.user_code)
     else {
         return Ok(AccountProjection::empty(
             request.request_id,

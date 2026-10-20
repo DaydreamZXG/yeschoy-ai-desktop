@@ -25,7 +25,13 @@ export interface StationProbeResult {
   models: string[];
 }
 
-const STATUSES = ["ok", "invalid_origin", "unreachable", "timeout", "not_relay"];
+const STATUSES = [
+  "ok",
+  "invalid_origin",
+  "unreachable",
+  "timeout",
+  "not_relay",
+];
 const KINDS = ["new_api", "one_api", "openai_compatible", "unknown"];
 const TOKENS = ["not_provided", "valid", "invalid", "no_quota", "error"];
 

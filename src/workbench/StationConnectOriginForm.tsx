@@ -187,10 +187,16 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
       </form>
 
       {stage.kind === "failed" && (
-        <div className="station-onboarding-card" data-tone="danger" role="alert">
+        <div
+          className="station-onboarding-card"
+          data-tone="danger"
+          role="alert"
+        >
           <CircleAlert aria-hidden="true" />
           <div>
-            <strong>{t(`stationOnboarding.failed.${stage.reason}.title`)}</strong>
+            <strong>
+              {t(`stationOnboarding.failed.${stage.reason}.title`)}
+            </strong>
             <p>{t(`stationOnboarding.failed.${stage.reason}.next`)}</p>
           </div>
         </div>
@@ -287,7 +293,10 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
                   </p>
                 )}
                 {probe.tokenStatus === "valid" && probe.models.length > 0 && (
-                  <ul className="station-model-chips" aria-label={t("stationOnboarding.modelsLabel")}>
+                  <ul
+                    className="station-model-chips"
+                    aria-label={t("stationOnboarding.modelsLabel")}
+                  >
                     {probe.models.slice(0, 24).map((model) => (
                       <li key={model} title={model}>
                         {model}

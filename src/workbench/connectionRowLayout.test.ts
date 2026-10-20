@@ -14,13 +14,17 @@ describe("已接入卡片布局", () => {
   });
   it("模型名单行省略，不按字符折行", () => {
     const rule = css.slice(
-      css.indexOf(".connection-row .connection-model-switch .connection-model {"),
+      css.indexOf(
+        ".connection-row .connection-model-switch .connection-model {",
+      ),
     );
     expect(rule).toMatch(/white-space: nowrap/);
     expect(rule).toMatch(/text-overflow: ellipsis/);
   });
   it("打开反馈换到下一行，操作区可换行", () => {
-    expect(css).toMatch(/\.connection-row-actions \.open-feedback \{\s*flex-basis: 100%/);
+    expect(css).toMatch(
+      /\.connection-row-actions \.open-feedback \{\s*flex-basis: 100%/,
+    );
     expect(css).toMatch(/flex-wrap: wrap/);
   });
   it("被省略的模型名可以悬停看全", () => {

@@ -45,13 +45,14 @@ export function StationTrustDialog() {
       const payload = decodeStationConnectProgress(event.payload);
       if (payload?.phase === "confirm_required" && payload.origin)
         enqueue(payload.origin);
-    }).then((cleanup) => {
-      if (disposed) cleanup();
-      else unlisten = cleanup;
     })
-    // 冷启动：链接可能在界面加载完之前就到了。监听就绪后请原生侧重发一次
-    // 待确认的站点（用事件而不是命令，不打扰其他依赖命令顺序的流程）。
-    .then(() => emit(STATION_TRUST_SYNC_EVENT))
+      .then((cleanup) => {
+        if (disposed) cleanup();
+        else unlisten = cleanup;
+      })
+      // 冷启动：链接可能在界面加载完之前就到了。监听就绪后请原生侧重发一次
+      // 待确认的站点（用事件而不是命令，不打扰其他依赖命令顺序的流程）。
+      .then(() => emit(STATION_TRUST_SYNC_EVENT))
       .catch(() => undefined);
     return () => {
       disposed = true;

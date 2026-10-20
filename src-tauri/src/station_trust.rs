@@ -45,7 +45,9 @@ fn state() -> &'static Mutex<State> {
 
 /// 启动时载入持久化列表。文件损坏时当作空列表（只会多问一次，不会放宽）。
 pub(crate) fn initialize(data_dir: Option<PathBuf>) {
-    let Ok(mut guard) = state().lock() else { return };
+    let Ok(mut guard) = state().lock() else {
+        return;
+    };
     let path = data_dir.map(|dir| dir.join(FILE_NAME));
     if let Some(path) = &path {
         if let Ok(text) = std::fs::read_to_string(path) {
@@ -130,9 +132,7 @@ pub(crate) fn hold(request: StationConnectRequest) {
         guard
             .pending
             .retain(|_, (_, at)| now.duration_since(*at) < PENDING_TTL);
-        guard
-            .pending
-            .insert(request.origin.clone(), (request, now));
+        guard.pending.insert(request.origin.clone(), (request, now));
     }
 }
 
