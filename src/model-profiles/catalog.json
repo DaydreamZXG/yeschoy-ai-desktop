@@ -338,6 +338,21 @@
       "toolUse": true
     },
     {
+      "id": "deepseek-v4.1-flash-offpeak",
+      "displayName": "DeepSeek V4.1 Flash Offpeak",
+      "reasoningLevels": ["none", "low", "high", "max"],
+      "defaultReasoning": "high",
+      "reasoningMode": "deepseek",
+      "input": ["text", "image"],
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "sources": [
+        "https://models.dev/deepseek/deepseek-v4.1-flash",
+        "https://api-docs.deepseek.com/guides/thinking_mode/"
+      ],
+      "toolUse": true
+    },
+    {
       "id": "deepseek-r1",
       "displayName": "DeepSeek R1",
       "reasoningLevels": ["none", "low", "high", "max"],
@@ -365,8 +380,36 @@
       "toolUse": true
     },
     {
+      "id": "claude-sonnet-4-6-fixed",
+      "displayName": "Claude Sonnet 4.6 Fixed",
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "input": ["text", "image"],
+      "reasoningLevels": ["low", "medium", "high", "max"],
+      "defaultReasoning": "high",
+      "sources": [
+        "https://platform.claude.com/docs/en/build-with-claude/effort",
+        "https://platform.claude.com/docs/en/build-with-claude/context-windows"
+      ],
+      "toolUse": true
+    },
+    {
       "id": "claude-opus-4-6",
       "displayName": "Claude Opus 4.6",
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "input": ["text", "image"],
+      "reasoningLevels": ["low", "medium", "high", "max"],
+      "defaultReasoning": "high",
+      "sources": [
+        "https://platform.claude.com/docs/en/build-with-claude/effort",
+        "https://platform.claude.com/docs/en/build-with-claude/context-windows"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "claude-opus-4-6-fixed",
+      "displayName": "Claude Opus 4.6 Fixed",
       "contextWindow": 1000000,
       "maxOutputTokens": 128000,
       "input": ["text", "image"],
@@ -421,6 +464,36 @@
       "toolUse": true
     },
     {
+      "id": "claude-opus-5-5",
+      "displayName": "Claude Opus 5.5",
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "input": ["text", "image"],
+      "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
+      "defaultReasoning": "medium",
+      "sources": [
+        "https://platform.claude.com/docs/en/models/overview",
+        "https://platform.claude.com/docs/en/build-with-claude/effort",
+        "https://platform.claude.com/docs/en/build-with-claude/context-windows"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "claude-opus-5.5",
+      "displayName": "Claude Opus 5.5",
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "input": ["text", "image"],
+      "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
+      "defaultReasoning": "medium",
+      "sources": [
+        "https://platform.claude.com/docs/en/models/overview",
+        "https://platform.claude.com/docs/en/build-with-claude/effort",
+        "https://platform.claude.com/docs/en/build-with-claude/context-windows"
+      ],
+      "toolUse": true
+    },
+    {
       "id": "claude-sonnet-5",
       "displayName": "Claude Sonnet 5",
       "contextWindow": 1000000,
@@ -429,6 +502,36 @@
       "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
       "defaultReasoning": "high",
       "sources": [
+        "https://platform.claude.com/docs/en/build-with-claude/effort",
+        "https://platform.claude.com/docs/en/build-with-claude/context-windows"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "claude-sonnet-5-5",
+      "displayName": "Claude Sonnet 5.5",
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "input": ["text", "image"],
+      "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
+      "defaultReasoning": "high",
+      "sources": [
+        "https://platform.claude.com/docs/en/models/overview",
+        "https://platform.claude.com/docs/en/build-with-claude/effort",
+        "https://platform.claude.com/docs/en/build-with-claude/context-windows"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "claude-sonnet-5.5",
+      "displayName": "Claude Sonnet 5.5",
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "input": ["text", "image"],
+      "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
+      "defaultReasoning": "high",
+      "sources": [
+        "https://platform.claude.com/docs/en/models/overview",
         "https://platform.claude.com/docs/en/build-with-claude/effort",
         "https://platform.claude.com/docs/en/build-with-claude/context-windows"
       ],
@@ -479,6 +582,20 @@
     },
     {
       "id": "claude-fable-5-1",
+      "displayName": "Claude Fable 5.1",
+      "contextWindow": 1000000,
+      "maxOutputTokens": 128000,
+      "input": ["text", "image"],
+      "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
+      "defaultReasoning": "high",
+      "sources": [
+        "https://platform.claude.com/docs/en/build-with-claude/effort",
+        "https://platform.claude.com/docs/en/build-with-claude/context-windows"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "claude-fable-5.1",
       "displayName": "Claude Fable 5.1",
       "contextWindow": 1000000,
       "maxOutputTokens": 128000,
@@ -590,10 +707,22 @@
       "sources": ["https://models.dev/google/gemini-3.8-flash"],
       "toolUse": true
     },
-
     {
       "id": "gemini-4-argon",
       "displayName": "Gemini 4 Argon",
+      "reasoningLevels": ["low", "medium", "high"],
+      "input": ["text", "image"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 65536,
+      "sources": [
+        "https://models.dev/google/gemini-4-argon",
+        "https://ai.google.dev/gemini-api/docs/models/gemini-4-argon"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "gemini-4-argon-fixed",
+      "displayName": "Gemini 4 Argon Fixed",
       "reasoningLevels": ["low", "medium", "high"],
       "input": ["text", "image"],
       "contextWindow": 1048576,
@@ -799,7 +928,6 @@
       "sources": ["https://models.dev/minimax/minimax-m3"],
       "toolUse": true
     },
-
     {
       "id": "minimax-m3.1-flash",
       "displayName": "MiniMax-M3.1-Flash",
