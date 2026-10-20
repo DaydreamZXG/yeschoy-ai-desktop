@@ -38,7 +38,12 @@ This Code of Conduct applies within all community spaces, and also applies when 
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at **farion1231@gmail.com**. All complaints will be reviewed and investigated promptly and fairly.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the YesChoy maintainers responsible for enforcement via:
+
+- [GitHub Security Advisories](https://github.com/DaydreamZXG/yeschoy-ai-desktop/security/advisories/new) for sensitive reports; or
+- a private request to maintainers (open an Issue titled `[CoC]` and ask to be contacted off-thread).
+
+All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the reporter of any incident.
 
@@ -128,7 +133,12 @@ For answers to common questions about this code of conduct, see the FAQ at [http
 
 ## 监督
 
-辱骂、骚扰或其他不可接受的行为可通过 **farion1231@gmail.com** 向负责监督的社区领袖报告。所有投诉都将得到及时和公平的审查和调查。
+辱骂、骚扰或其他不可接受的行为，请向野菜维护者报告：
+
+- 敏感内容走 [GitHub Security Advisories](https://github.com/DaydreamZXG/yeschoy-ai-desktop/security/advisories/new)；或
+- 开一个标题含 `[CoC]` 的 Issue，说明希望私下联系。
+
+所有投诉都将得到及时和公平的审查和调查。
 
 所有社区领袖都有义务尊重任何事件报告者的隐私和安全。
 
