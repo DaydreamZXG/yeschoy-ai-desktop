@@ -590,6 +590,20 @@
       "sources": ["https://models.dev/google/gemini-3.8-flash"],
       "toolUse": true
     },
+
+    {
+      "id": "gemini-4-argon",
+      "displayName": "Gemini 4 Argon",
+      "reasoningLevels": ["low", "medium", "high"],
+      "input": ["text", "image"],
+      "contextWindow": 1048576,
+      "maxOutputTokens": 65536,
+      "sources": [
+        "https://models.dev/google/gemini-4-argon",
+        "https://ai.google.dev/gemini-api/docs/models/gemini-4-argon"
+      ],
+      "toolUse": true
+    },
     {
       "id": "gemini-3.1-pro",
       "displayName": "Gemini 3.1 Pro",
@@ -783,6 +797,17 @@
       "contextWindow": 1000000,
       "maxOutputTokens": 128000,
       "sources": ["https://models.dev/minimax/minimax-m3"],
+      "toolUse": true
+    },
+
+    {
+      "id": "minimax-m3.1-flash",
+      "displayName": "MiniMax-M3.1-Flash",
+      "reasoningLevels": ["low", "medium", "high", "xhigh", "max"],
+      "input": ["text", "image"],
+      "contextWindow": 1000000,
+      "maxOutputTokens": 512000,
+      "sources": ["https://models.dev/minimax/MiniMax-M3.1-Flash"],
       "toolUse": true
     },
     {
