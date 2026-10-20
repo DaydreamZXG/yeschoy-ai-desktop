@@ -16,6 +16,7 @@ import {
   isImageGenerationModel,
   modelDisplayName,
   modelMatchesQuery,
+  shortModelId,
 } from "../model-profiles/profile";
 import { Popover, PopoverTrigger } from "../components/ui/popover";
 
@@ -143,8 +144,7 @@ export function ModelPicker({
   return (
     <div className="search-model-picker">
       <span className="field-caption" id={`${id}-label`}>
-        {label ?? t("modelPicker.label")}{" "}
-        <small>{t("modelPicker.fullId")}</small>
+        {label ?? t("modelPicker.label")}
       </span>
       <Popover open={open} onOpenChange={changeOpen} modal={false}>
         <PopoverTrigger asChild>
@@ -167,17 +167,22 @@ export function ModelPicker({
             }}
           >
             <span className="model-picker-identity">
-              {value && modelDisplayName(value) !== value && (
-                <strong>{modelDisplayName(value)}</strong>
-              )}
-              <code>
-                {value ||
-                  t(
+              {value ? (
+                <>
+                  <strong>{modelDisplayName(value)}</strong>
+                  {modelDisplayName(value) !== value && (
+                    <code title={value}>{shortModelId(value)}</code>
+                  )}
+                </>
+              ) : (
+                <code>
+                  {t(
                     models.length
                       ? "modelPicker.choose"
                       : "modelPicker.noModels",
                   )}
-              </code>
+                </code>
+              )}
             </span>
             <ChevronDown />
           </button>
@@ -312,10 +317,10 @@ export function ModelPicker({
                   onClick={() => choose(model)}
                 >
                   <span>
+                    <strong>{modelDisplayName(model.id)}</strong>
                     {modelDisplayName(model.id) !== model.id && (
-                      <strong>{modelDisplayName(model.id)}</strong>
+                      <code title={model.id}>{shortModelId(model.id)}</code>
                     )}
-                    <code>{model.id}</code>
                     <ModelCapabilityBadges id={model.id} />
                     {reason && (
                       <small className="option-disabled-note">{reason}</small>

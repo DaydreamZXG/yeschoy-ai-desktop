@@ -165,7 +165,7 @@ function scan(requestId: string): ActivationTargetScan {
 function applySavedOrSelected() {
   const primary = screen.getByTestId("configuration-apply-action");
   fireEvent.click(
-    primary.textContent?.trim() === "换模型与分组"
+    primary.textContent?.trim() === "去改上方的模型"
       ? screen.getByRole("button", { name: "重新应用当前设置" })
       : primary,
   );
@@ -396,9 +396,9 @@ describe("daily-use UX", () => {
       }),
     );
     await tick();
-    // 已接入且选择一致：换模型与分组（次级）。
+    // 已接入且选择一致：去改上方的模型（次级，只聚焦选择器）。
     const steady = screen.getByTestId("configuration-apply-action");
-    expect(steady).toHaveTextContent("换模型与分组");
+    expect(steady).toHaveTextContent("去改上方的模型");
     expect(steady.className).toContain("secondary-action");
     fireEvent.click(screen.getByRole("combobox", { name: /选择模型/ }));
     fireEvent.click(screen.getByRole("option", { name: "model-b" }));
@@ -562,7 +562,7 @@ describe("daily-use UX", () => {
     expect(open).toHaveBeenLastCalledWith("codex_desktop", "repair");
     expect(controller.open).not.toHaveBeenCalled();
     expect(controller.restore).not.toHaveBeenCalled();
-    fireEvent.click(within(card).getByRole("button", { name: "换模型与分组" }));
+    fireEvent.click(within(card).getByRole("button", { name: "换模型" }));
     expect(open).toHaveBeenLastCalledWith("codex_desktop", "change-model");
   });
 
@@ -668,7 +668,7 @@ describe("daily-use UX", () => {
       expect(screen.getByRole("button", { name: "打开使用" })).toBeEnabled();
       expect(
         screen.getByTestId("configuration-apply-action"),
-      ).toHaveTextContent("换模型与分组");
+      ).toHaveTextContent("去改上方的模型");
       expect(
         screen.queryByText("配置已保存，已检查启动"),
       ).not.toBeInTheDocument();

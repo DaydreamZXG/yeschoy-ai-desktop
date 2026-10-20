@@ -27,7 +27,7 @@ function openWorkbenchPage(name: string) {
   if (name === "应用接入") {
     const home = screen.queryByRole("button", { name: "我的应用" });
     if (home) fireEvent.click(home);
-    const resume = screen.queryByRole("button", { name: "换模型与分组" });
+    const resume = screen.queryByRole("button", { name: /换模型/ });
     if (resume) {
       fireEvent.click(resume);
       return;
@@ -482,7 +482,7 @@ describe("official workbench", () => {
     for (const page of ["应用接入", "模型与价格"]) {
       openWorkbenchPage(page);
       const picker = await screen.findByRole("combobox", {
-        name: /完整模型 ID/,
+        name: /选择模型|模型与价格|模型/,
       });
       fireEvent.click(picker);
       const option = within(screen.getByRole("listbox")).getByRole("option");
@@ -552,7 +552,7 @@ describe("official workbench", () => {
     render(<App />);
     await screen.findAllByText("野菜测试用户");
     openWorkbenchPage("模型与价格");
-    await screen.findByRole("combobox", { name: /完整模型 ID/ });
+    await screen.findByRole("combobox", { name: /选择模型|模型与价格|模型/ });
 
     // 闸门撤掉了：换哪个应用，列表都是这三个，一个不藏、一个不灰。
     for (const app of ["claude_desktop", "codex_desktop", "workbuddy"]) {
@@ -560,7 +560,7 @@ describe("official workbench", () => {
         screen.getByRole("combobox", { name: /使用应用/ }).closest("select")!,
         { target: { value: app } },
       );
-      fireEvent.click(screen.getByRole("combobox", { name: /完整模型 ID/ }));
+      fireEvent.click(screen.getByRole("combobox", { name: /选择模型|模型与价格|模型/ }));
       const options = within(await screen.findByRole("listbox")).getAllByRole(
         "option",
       );
@@ -602,7 +602,7 @@ describe("official workbench", () => {
     render(<App />);
     await screen.findAllByText("野菜测试用户");
     openWorkbenchPage("模型与价格");
-    await screen.findByRole("combobox", { name: /完整模型 ID/ });
+    await screen.findByRole("combobox", { name: /选择模型|模型与价格|模型/ });
 
     // 一个模型都没返回，仍然要说「数据没回来」，不能说成「没有能用的模型」。
     modelsReturned = false;
@@ -643,7 +643,7 @@ describe("official workbench", () => {
     const card = screen
       .getByRole("heading", { name: "Codex（桌面版 / 命令行）" })
       .closest("article")!;
-    fireEvent.click(within(card).getByRole("button", { name: "换模型与分组" }));
+    fireEvent.click(within(card).getByRole("button", { name: "换模型" }));
     await act(async () => {});
     expect(screen.getByRole("radio", { name: /国模特价分组/ })).toBeChecked();
     expect(

@@ -21,6 +21,20 @@
   font-weight: 400;
 }
 
+.selected-price-model-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-8);
+  margin: var(--space-12) 0 0;
+  font-size: var(--text-sm);
+}
+
+.selected-price-model-note code {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
 .connection-last-result {
   margin-top: var(--space-12);
   font-size: var(--text-xs);
@@ -7165,6 +7179,7 @@ select {
   background: var(--accent-soft);
 }
 
+.model-menu-chip strong,
 .model-menu-chip code,
 .model-menu-chip small {
   overflow: hidden;
@@ -7173,9 +7188,16 @@ select {
   min-width: 0;
 }
 
-.model-menu-chip code {
+.model-menu-chip strong {
   font-size: inherit;
-  max-width: 11rem;
+  font-weight: 600;
+  max-width: 12rem;
+}
+
+.model-menu-chip code {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  max-width: 9rem;
 }
 
 .model-menu-chip small {

@@ -21,6 +21,8 @@ import { chooseBillingGroup } from "./billing";
 import {
   hasReviewedCapabilities,
   isImageGenerationModel,
+  modelDisplayName,
+  shortModelId,
 } from "../model-profiles/profile";
 import { modelConnectionMode } from "./modelCompatibility";
 import type { AccountSessionController } from "../account/useAccountSession";
@@ -1666,9 +1668,12 @@ export function ConfigurationPreviewView({
       };
     if (configured)
       return {
+        // 人已经在接入页上：别再说「换模型与分组」像死循环。
+        // 点这里只是把焦点送到上方选择器；真要写入用旁边的「重新应用」，
+        // 一改选择这里会自动变成「保存并应用」。
         kind: "reconfigure",
-        label: t("yeschoyDaily.changeModel"),
-        hint: t("yeschoyDaily.changeModelHint"),
+        label: t("yeschoyDaily.focusModelPicker"),
+        hint: t("yeschoyDaily.configuredActionHint"),
         run: openAdvanced,
       };
     if (
@@ -1693,14 +1698,14 @@ export function ConfigurationPreviewView({
           : c.connectNow,
       hint: connectionEstablished
         ? t("yeschoyDaily.selectionChangedHint", {
-            model: savedConnection?.modelId ?? "",
+            model: modelDisplayName(savedConnection?.modelId ?? ""),
           })
         : // 列表是空的、按钮却能点 —— 那就得说清点下去接的是谁。以前空态
           // 只写「先加一个模型」，按钮又不禁用，用户不知道接入的是选择器
           // 里那一个。
           !modelSet.length && defaultBinding
           ? g.finishSingleModelHint
-              .replace("{{model}}", defaultBinding.modelId)
+              .replace("{{model}}", modelDisplayName(defaultBinding.modelId))
               .replace(
                 "{{group}}",
                 groupLabel(defaultBinding.billingGroup, g.defaultGroup),
@@ -2273,7 +2278,10 @@ export function ConfigurationPreviewView({
                                     title={`${m.modelId} · ${groupText}`}
                                     onClick={() => setFocusedModelId(m.modelId)}
                                   >
-                                    <code>{m.modelId}</code>
+                                    <strong>{modelDisplayName(m.modelId)}</strong>
+                                    {modelDisplayName(m.modelId) !== m.modelId && (
+                                      <code>{shortModelId(m.modelId)}</code>
+                                    )}
                                     <small>{groupText}</small>
                                     {isDefault && <em>{g.defaultBadge}</em>}
                                   </button>
@@ -2324,7 +2332,14 @@ export function ConfigurationPreviewView({
                     )}
                     {missingModel && (
                       <p className="selection-warning" role="alert">
-                        {g.missingModelPrefix} <code>{selectedModelId}</code>{" "}
+                        {g.missingModelPrefix}{" "}
+                        <strong>{modelDisplayName(selectedModelId)}</strong>
+                        {modelDisplayName(selectedModelId) !== selectedModelId && (
+                          <>
+                            {" "}
+                            <code>({shortModelId(selectedModelId)})</code>
+                          </>
+                        )}{" "}
                         {g.missingModelSuffix}
                       </p>
                     )}
