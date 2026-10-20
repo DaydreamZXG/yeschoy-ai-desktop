@@ -2110,7 +2110,7 @@ describe("daily-use UX", () => {
           name: /查看其他/,
         }),
       );
-      expect(screen.getAllByRole("article")).toHaveLength(7);
+      expect(screen.getAllByRole("article")).toHaveLength(8);
       expect(
         screen.queryByRole("region", { name: "用量账单" }),
       ).not.toBeInTheDocument();

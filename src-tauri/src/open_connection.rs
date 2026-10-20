@@ -6,7 +6,7 @@ use crate::{
     connection_recovery::{self, Store},
     tool_activation::ACTIVATION_LOCK,
     tool_adapters::{
-        self, claude_code, claude_desktop, codex_desktop, desktop_lifecycle, dsh_web, pi,
+        self, claude_code, claude_desktop, codex_desktop, desktop_lifecycle, dsh_web, opencode, pi,
         terminal_launch, workbuddy, AdapterFailure,
     },
     tool_credentials::{self, CredentialFailure, ToolCredential},
@@ -62,6 +62,7 @@ fn valid_request(request: &OpenRequest) -> bool {
                 | "claude_desktop"
                 | "codex_desktop"
                 | "pi"
+                | "opencode"
                 | "dsh_web"
                 | "workbuddy"
                 | "dsh_desktop"
@@ -114,6 +115,8 @@ pub(crate) fn validate_settings(
             .validate_existing(),
             "pi" => pi::prepare_catalog(home, &origin, &credential.model_id, &models)?
                 .validate_existing(),
+            "opencode" => opencode::prepare_catalog(home, &credential.model_id, &models, local)?
+                .validate_existing(),
             "dsh_web" => dsh_web::prepare_catalog(
                 home,
                 &origin,
@@ -154,6 +157,13 @@ pub(crate) fn validate_settings(
             .validate_existing()
         }
         "pi" => pi::prepare(home, &credential.origin, &credential.model_id)?.validate_existing(),
+        "opencode" => opencode::prepare_catalog(
+            home,
+            &credential.model_id,
+            &[credential.model_id.clone()],
+            credential.local_gateway_token.as_deref(),
+        )?
+        .validate_existing(),
         "claude_desktop" => {
             if credential.local_gateway_token.is_none() {
                 return Err(AdapterFailure::SecureStorageUnavailable);
@@ -263,11 +273,33 @@ pub async fn open_tool_connection_v1(
                         if permit.is_cancelled() {
                             return Err(st("busy"));
                         }
+                        // Codex CLI 和桌面版共用这份配置：CLI 就在终端里打开。
+                        if codex_desktop::is_cli_installation(&installation.path) {
+                            return Ok(terminal_launch::launch_async(
+                                &installation,
+                                "codex_cli",
+                                &home,
+                            )
+                            .await);
+                        }
                         Ok(codex_desktop::launch(&installation.path))
                     }
                     "dsh_web" => Ok(dsh_web::open_existing(&dsh, &installation, &credential).await),
                     "claude_code" => {
                         claude_code
+                            .start(credential)
+                            .await
+                            .map_err(launch_failure)?;
+                        if permit.is_cancelled() {
+                            return Err(st("busy"));
+                        }
+                        Ok(
+                            terminal_launch::launch_async(&installation, &request.tool_id, &home)
+                                .await,
+                        )
+                    }
+                    "opencode" => {
+                        crate::opencode_bridge::global()
                             .start(credential)
                             .await
                             .map_err(launch_failure)?;
@@ -395,6 +427,7 @@ mod tests {
             "claude_desktop",
             "codex_desktop",
             "pi",
+            "opencode",
             "dsh_web",
             "workbuddy",
             "dsh_desktop",

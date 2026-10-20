@@ -2316,6 +2316,7 @@ pub async fn account_logout_v2(
         "claude_desktop",
         "codex_desktop",
         "pi",
+        "opencode",
         "dsh_web",
         "workbuddy",
         "dsh_desktop",

@@ -31,7 +31,7 @@ describe("tool catalog single source of truth (#9)", () => {
   });
 
   it("exposes coming-soon apps without an activation adapter", () => {
-    expect(COMING_SOON_APPS.length).toBeGreaterThan(0);
+    // OpenCode 已正式接入；名单可以为空，但里面的应用一律不能有适配器。
     for (const app of COMING_SOON_APPS)
       expect(ACTIVATION_TOOL_IDS).not.toContain(app.id);
   });

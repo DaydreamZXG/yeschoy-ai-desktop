@@ -5,6 +5,7 @@ pub(crate) mod common;
 pub(crate) mod desktop_launch;
 pub(crate) mod desktop_lifecycle;
 pub(crate) mod dsh_web;
+pub(crate) mod opencode;
 pub(crate) mod pi;
 pub(crate) mod terminal_launch;
 pub(crate) mod workbuddy;
@@ -65,15 +66,16 @@ struct ObservedInstallation {
     location: &'static str,
 }
 
-const TARGETS: [(&str, &str, &str); 7] = [
+const TARGETS: [(&str, &str, &str); 8] = [
     ("claude_code", "Claude Code", "命令行与编辑器工作区"),
     ("claude_desktop", "Claude Desktop", "Claude 桌面应用"),
     (
         "codex_desktop",
-        "Codex Desktop",
-        "ChatGPT 桌面应用中的 Codex",
+        "Codex",
+        "Codex 桌面版或命令行版（共用一份设置）",
     ),
     ("pi", "Pi", "Pi 编程助手"),
+    ("opencode", "OpenCode", "OpenCode 终端编程助手"),
     ("dsh_web", "DSH web", "DeepSeek Harness 浏览器工作台"),
     ("workbuddy", "WorkBuddy", "腾讯 AI 办公与开发助手"),
     (
@@ -106,6 +108,7 @@ pub(crate) fn executable_for(tool_id: &str) -> Option<&'static str> {
     match tool_id {
         "claude_code" => Some("claude"),
         "pi" => Some("pi"),
+        "opencode" => Some("opencode"),
         "dsh_web" => Some("dsh"),
         _ => None,
     }
@@ -221,7 +224,7 @@ fn can_attempt(tool_id: &str, installation: &ObservedInstallation) -> bool {
         "codex_desktop" | "claude_desktop" | "workbuddy" | "dsh_desktop" => {
             installation.path.exists()
         }
-        "claude_code" | "pi" | "dsh_web" => installation.path.is_file(),
+        "claude_code" | "pi" | "opencode" | "dsh_web" => installation.path.is_file(),
         _ => false,
     }
 }
@@ -261,14 +264,21 @@ async fn observe(tool_id: &str) -> Vec<ObservedInstallation> {
     let Some(app_id) = desktop_id_for(tool_id) else {
         return Vec::new();
     };
-    desktop_app_discovery::activation_candidates(app_id)
-        .into_iter()
-        .map(|candidate| ObservedInstallation {
-            path: candidate.path,
-            version: candidate.version,
-            location: candidate.location_hint,
-        })
-        .collect()
+    let mut observed: Vec<ObservedInstallation> =
+        desktop_app_discovery::activation_candidates(app_id)
+            .into_iter()
+            .map(|candidate| ObservedInstallation {
+                path: candidate.path,
+                version: candidate.version,
+                location: candidate.location_hint,
+            })
+            .collect();
+    // Codex 命令行版和桌面版读同一份 `~/.codex/config.toml`，所以两者共用
+    // `codex_desktop` 这一条接入：只装了 CLI 的人也能一键接入。
+    if tool_id == "codex_desktop" {
+        observed.extend(observe_cli(codex_desktop::CLI_EXECUTABLE).await);
+    }
+    observed
 }
 
 fn projections(tool_id: &str, observed: &[ObservedInstallation]) -> Vec<InstallationProjection> {

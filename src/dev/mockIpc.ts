@@ -235,6 +235,8 @@ function connections(requestId: string) {
     claude_code: "glm-5.3",
     claude_desktop: "claude-sonnet-4-5-20250929",
     pi: "gpt-5.6-codex",
+    opencode: "kimi-k3",
+    codex_desktop: "gpt-6-astra",
     workbuddy: "gpt-6.1-sol-2026-10-preview-long-model-identifier",
   } as Record<string, string>;
   return {
@@ -263,6 +265,7 @@ function targets(requestId: string) {
     ["claude_desktop", "Claude Desktop", "1.40609.1"],
     ["codex_desktop", "Codex Desktop", "26.825.51511"],
     ["pi", "Pi", "0.84.4"],
+    ["opencode", "OpenCode", "1.4.2"],
     ["dsh_web", "DSH web", "0.1.0-rc.6"],
     ["workbuddy", "WorkBuddy", "5.5.6"],
     ["dsh_desktop", "DeepSeek Harness", "0.2.0"],

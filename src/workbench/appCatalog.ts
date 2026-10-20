@@ -49,6 +49,7 @@ export const WORKBENCH_APPS: {
     icon: dshIcon,
   },
   { id: "pi", name: "Pi", icon: piIcon },
+  { id: "opencode", name: "OpenCode", icon: opencodeIcon },
   {
     id: "claude_code",
     name: "Claude Code",
@@ -62,10 +63,4 @@ export const COMING_SOON_APPS: {
   name: string;
   icon?: string;
   mark?: string;
-}[] = [
-  {
-    id: "opencode",
-    name: "OpenCode",
-    icon: opencodeIcon,
-  },
-];
+}[] = [];

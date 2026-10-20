@@ -122,6 +122,7 @@ function activationTargetScan(requestId: string) {
     ["claude_desktop", "Claude Desktop", "1.40609.1"],
     ["codex_desktop", "Codex Desktop", "26.825.51511"],
     ["pi", "Pi", "0.84.4"],
+    ["opencode", "OpenCode", "1.4.2"],
     ["dsh_web", "DSH web", "0.1.0-rc.6"],
     ["workbuddy", "WorkBuddy", "5.5.6"],
     ["dsh_desktop", "DeepSeek Harness", "0.2.0"],
@@ -714,7 +715,7 @@ describe("official workbench", () => {
       screen.getByRole("button", { name: "检测并连接" }),
     ).toBeEnabled();
     expect(screen.getByRole("textbox")).toHaveValue("https://yeschoy.com");
-    expect(screen.getAllByRole("article")).toHaveLength(7);
+    expect(screen.getAllByRole("article")).toHaveLength(8);
     const card = screen
       .getByRole("heading", { name: "Claude Desktop" })
       .closest("article")!;

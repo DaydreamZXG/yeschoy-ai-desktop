@@ -57,7 +57,6 @@ import {
 
 // #9 工具范围定案（PRD §3.2）：协议层 TOOL_CATALOG 已与 Rust 契约一致
 // （遗留 hermes/openclaw 于 2026-09-14 移除），展示层无需再过滤。
-// opencode 属于「即将支持」（保留只读发现，无接入适配器）。
 const V1_DISCOVERY_TOOLS = TOOL_CATALOG;
 
 const ANNOUNCEMENT_REFRESH_MS = 30 * 60 * 1000;
@@ -484,7 +483,6 @@ function App() {
                           <article
                             className="tool-card"
                             data-status={status}
-                            data-coming-soon={tool.id === "opencode"}
                             key={tool.id}
                             style={{ "--rail-index": index } as CSSProperties}
                           >
@@ -498,11 +496,6 @@ function App() {
                                     ? t("yeschoyDiscovery.codexCli")
                                     : tool.displayName}
                                 </h3>
-                                {tool.id === "opencode" && (
-                                  <span className="coming-soon-label">
-                                    {t("yeschoyDiscovery.comingSoon")}
-                                  </span>
-                                )}
                                 <span className="status-label">
                                   {result?.selection === "bundled_only" &&
                                   phase !== "loading"

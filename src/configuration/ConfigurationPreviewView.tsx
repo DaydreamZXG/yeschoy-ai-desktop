@@ -29,6 +29,7 @@ import { useWalletRecharge } from "../workbench/useWalletRecharge";
 import claudeIcon from "../assets/icons/official-claude.png";
 import codexIcon from "../assets/icons/official-codex.png";
 import piIcon from "../assets/icons/official-pi.svg";
+import opencodeIcon from "../assets/icons/official-opencode.svg";
 import dshIcon from "../assets/icons/official-dsh.svg";
 import { ModelPicker } from "./ModelPicker";
 import {
@@ -104,6 +105,7 @@ type ApplicationSurfaceKey =
   | "surfaceClaudeDesktop"
   | "surfaceCodexDesktop"
   | "surfacePi"
+  | "surfaceOpenCode"
   | "surfaceDsh"
   | "surfaceDshDesktop"
   | "surfaceWorkBuddy";
@@ -152,6 +154,13 @@ const APPLICATIONS: readonly ApplicationChoice[] = [
     displayName: "Pi",
     surface: "surfacePi",
     icon: piIcon,
+  },
+  {
+    id: "opencode",
+    toolId: "opencode",
+    displayName: "OpenCode",
+    surface: "surfaceOpenCode",
+    icon: opencodeIcon,
   },
   {
     id: "dsh_web",
@@ -269,6 +278,7 @@ const BRIDGED_TOOLS: ReadonlySet<ActivationToolId> = new Set<ActivationToolId>([
   "claude_code",
   "claude_desktop",
   "codex_desktop",
+  "opencode",
 ]);
 
 /**
@@ -283,6 +293,7 @@ const CATALOG_MENU_TOOLS: ReadonlySet<ActivationToolId> =
     "claude_desktop",
     "codex_desktop",
     "pi",
+    "opencode",
     "dsh_web",
     "dsh_desktop",
     "workbuddy",
@@ -314,6 +325,8 @@ export function writtenEndpoint(
       return "http://127.0.0.1:15729/claude-desktop";
     case "codex_desktop":
       return "http://127.0.0.1:15731/codex/v1";
+    case "opencode":
+      return "http://127.0.0.1:15732/opencode/v1";
     case "workbuddy":
       return `${rootUrl}/v1/chat/completions`;
     case "pi":
@@ -362,6 +375,7 @@ function initialToolId(
 function previewTool(toolId: ActivationToolId): ConfigurationToolId {
   if (toolId === "codex_desktop") return "codex";
   if (toolId === "pi") return "pi";
+  if (toolId === "opencode") return "opencode";
   if (toolId === "dsh_web") return "dsh";
   if (toolId === "dsh_desktop") return "dsh_desktop";
   if (toolId === "workbuddy") return "workbuddy";
@@ -369,7 +383,7 @@ function previewTool(toolId: ActivationToolId): ConfigurationToolId {
 }
 
 function usesNewTerminalSession(toolId: ActivationToolId) {
-  return ["claude_code", "pi"].includes(toolId);
+  return ["claude_code", "pi", "opencode"].includes(toolId);
 }
 
 function targetTone(target?: ActivationTarget) {
@@ -2476,6 +2490,18 @@ export function ConfigurationPreviewView({
                 )}
               </p>
             </details>
+          )}
+          {activationToolId === "codex_desktop" && (
+            <p className="connection-lifecycle-note" data-note="codex-shared">
+              <Info aria-hidden="true" />
+              {g.codexSharedSettings}
+            </p>
+          )}
+          {activationToolId === "opencode" && (
+            <p className="connection-lifecycle-note" data-note="opencode-key">
+              <ShieldCheck aria-hidden="true" />
+              {g.opencodeKeyNote}
+            </p>
           )}
         </div>
 

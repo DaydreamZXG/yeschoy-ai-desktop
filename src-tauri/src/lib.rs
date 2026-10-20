@@ -30,6 +30,7 @@ mod logging;
 mod manual_locations;
 mod model_catalog;
 mod open_connection;
+mod opencode_bridge;
 mod provider;
 mod proxy;
 mod update_channel;
@@ -183,6 +184,8 @@ pub fn run() {
                     // endpoint.
                     tool_adapters::claude_code::resume_if_configured(resume_claude_code_runtime),
                     tool_adapters::claude_desktop::resume_if_configured(resume_claude_runtime),
+                    // OpenCode 的配置里只有本地令牌，桥不在它就发不出请求。
+                    tool_adapters::opencode::resume_if_configured(),
                 );
             });
             Ok(())
@@ -291,6 +294,11 @@ fn register_runtime_stops(app: &tauri::AppHandle) -> Result<(), std::io::Error> 
         tool_adapters::codex_desktop::CodexRuntimeState
     );
     register!("dsh_web", tool_adapters::dsh_web::DshRuntimeState);
+    shutdown()
+        .register_stop("opencode", || async {
+            opencode_bridge::global().stop().await;
+        })
+        .map_err(|_| std::io::Error::other("shutdown_registration_failed"))?;
     Ok(())
 }
 
@@ -486,7 +494,7 @@ fn begin_user_shutdown<R: tauri::Runtime>(
                             let language = ui_language::current();
                             let names = response.failed_tools.iter().map(|tool| match tool.as_str() {
                                 "codex_desktop" => "Codex Desktop", "claude_desktop" => "Claude Desktop",
-                                "claude_code" => "Claude Code", "pi" => "Pi", _ => "DSH web",
+                                "claude_code" => "Claude Code", "pi" => "Pi", "opencode" => "OpenCode", _ => "DSH web",
                             }).collect::<Vec<_>>().join(language.pick("、", ", "));
                             let message = HSTRING::from(language.pick(
                                 &format!("未完成恢复：{names}。助手尚未退出。\n请保存并关闭相关应用后重试。若界面不可用，再点窗口关闭按钮，可选择重试恢复或保留设置退出。"),

@@ -148,6 +148,7 @@ fn allowed(tool: &str) -> bool {
             | "claude_desktop"
             | "codex_desktop"
             | "pi"
+            | "opencode"
             | "dsh_web"
             | "workbuddy"
             | "dsh_desktop"
@@ -1275,6 +1276,21 @@ pub(crate) fn legacy_clean(
                 if value["defaultModel"] == credential.model_id {
                     remove_at(&mut value, &["defaultModel"]);
                 }
+            }
+        }
+        // 只拿走我们自己那块：指向本地转发的 `provider.yeschoy`，以及仍然
+        // 选着它的顶层 `model`。用户后来自己加的东西原样留下。
+        "opencode" => {
+            if value["provider"]["yeschoy"]["options"]["baseURL"]
+                == crate::opencode_bridge::PROXY_BASE
+            {
+                remove_at(&mut value, &["provider", "yeschoy"]);
+            }
+            if value["model"]
+                .as_str()
+                .is_some_and(|model| model.starts_with("yeschoy/"))
+            {
+                remove_at(&mut value, &["model"]);
             }
         }
         "dsh_web" => {

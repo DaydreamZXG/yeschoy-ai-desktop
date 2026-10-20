@@ -24,7 +24,7 @@ use crate::{
     shutdown_coordinator,
     station_connect::connect_origin_is_acceptable,
     tool_adapters::{
-        self, claude_code, claude_desktop, codex_desktop, desktop_lifecycle, dsh_web, pi,
+        self, claude_code, claude_desktop, codex_desktop, desktop_lifecycle, dsh_web, opencode, pi,
         workbuddy, AdapterFailure, ResolvedInstallation,
     },
     tool_credentials::{self, CredentialFailure, ToolCredential, ToolModelRoute},
@@ -398,6 +398,7 @@ fn request_is_valid(request: &ToolActivationRequest) -> bool {
                 | "claude_desktop"
                 | "codex_desktop"
                 | "pi"
+                | "opencode"
                 | "dsh_web"
                 | "workbuddy"
                 | "dsh_desktop"
@@ -555,6 +556,7 @@ fn model_supports_tool(_pricing: &Value, _model_id: &str, tool_id: &str) -> bool
             | "claude_desktop"
             | "codex_desktop"
             | "pi"
+            | "opencode"
             | "dsh_web"
             | "workbuddy"
             | "dsh_desktop"
@@ -874,6 +876,7 @@ fn token_name(tool_id: &str) -> &'static str {
         "claude_desktop" => "野菜API Claude Desktop",
         "codex_desktop" => "野菜API Codex Desktop",
         "pi" => "野菜API Pi",
+        "opencode" => "野菜API OpenCode",
         "dsh_web" => "野菜API DSH web",
         "workbuddy" => "野菜API WorkBuddy",
         "dsh_desktop" => "野菜API DSH Desktop",
@@ -889,6 +892,7 @@ pub(crate) fn tool_for_token_name(name: &str) -> Option<&'static str> {
         "claude_desktop",
         "codex_desktop",
         "pi",
+        "opencode",
         "dsh_web",
         "workbuddy",
         "dsh_desktop",
@@ -1035,6 +1039,7 @@ fn token_code(tool_id: &str) -> &'static str {
         "claude_desktop" => "cd",
         "codex_desktop" => "cx",
         "pi" => "pi",
+        "opencode" => "oc",
         "dsh_web" => "ds",
         "workbuddy" => "wb",
         "dsh_desktop" => "dd",
@@ -1053,6 +1058,7 @@ fn token_label(tool_id: &str) -> &'static str {
         "claude_desktop" => "ClaudeDesktop",
         "codex_desktop" => "Codex",
         "pi" => "Pi",
+        "opencode" => "OpenCode",
         "dsh_web" => "DSH",
         "workbuddy" => "WorkBuddy",
         "dsh_desktop" => "DSHDesktop",
@@ -1660,6 +1666,7 @@ enum PreparedAdapter {
     ClaudeDesktop(claude_desktop::Prepared),
     CodexDesktop(codex_desktop::Prepared),
     Pi(pi::Prepared),
+    OpenCode(opencode::Prepared),
     /// Both DSH profiles: `dsh_web` and `dsh_desktop`.
     Dsh(dsh_web::Prepared),
     WorkBuddy(workbuddy::Prepared),
@@ -1672,6 +1679,7 @@ impl PreparedAdapter {
             Self::ClaudeDesktop(v) => v.changes(),
             Self::CodexDesktop(v) => v.changes(),
             Self::Pi(v) => v.changes(),
+            Self::OpenCode(v) => v.changes(),
             Self::Dsh(v) => v.changes(),
             Self::WorkBuddy(v) => v.changes(),
         }
@@ -1690,6 +1698,7 @@ impl PreparedAdapter {
             Self::ClaudeDesktop(value) => value.commit(),
             Self::CodexDesktop(value) => value.commit(),
             Self::Pi(value) => value.commit(),
+            Self::OpenCode(value) => value.commit(),
             Self::Dsh(value) => value.commit(),
             Self::WorkBuddy(value) => value.commit(),
         }
@@ -1701,6 +1710,7 @@ impl PreparedAdapter {
             Self::ClaudeDesktop(value) => value.rollback(),
             Self::CodexDesktop(value) => value.rollback(),
             Self::Pi(value) => value.rollback(),
+            Self::OpenCode(value) => value.rollback(),
             Self::Dsh(value) => value.rollback(),
             Self::WorkBuddy(value) => value.rollback(),
         }
@@ -1756,6 +1766,9 @@ fn prepare_adapter(
         "pi" => {
             pi::prepare_catalog(&home, &origin, &request.model_id, &models).map(PreparedAdapter::Pi)
         }
+        // 只写本地令牌：中转站 key 留在钥匙串里，由 opencode_bridge 转发时取。
+        "opencode" => opencode::prepare_catalog(&home, &request.model_id, &models, local)
+            .map(PreparedAdapter::OpenCode),
         // One DSH provider per billing group, each with its own scoped key.
         "dsh_web" => dsh_web::prepare_catalog(
             &home,
@@ -1794,6 +1807,10 @@ async fn start_local_adapter(
             codex_runtime.start(credential.clone()).await?;
             codex_desktop::ensure_credential_ready(credential).await
         }
+        "opencode" => crate::opencode_bridge::global()
+            .start(credential.clone())
+            .await
+            .map(|_| ()),
         "pi" | "dsh_web" | "workbuddy" | "dsh_desktop" => Ok(()),
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
@@ -1825,6 +1842,11 @@ async fn open_configured_adapter(
 ) -> Result<(), AdapterFailure> {
     match request.tool_id.as_str() {
         "claude_desktop" => claude_desktop::launch(&installation.path),
+        "codex_desktop" if codex_desktop::is_cli_installation(&installation.path) => {
+            let home = tool_adapters::user_home()
+                .ok_or(AdapterFailure::ConfigurationFailed("home_unavailable"))?;
+            tool_adapters::terminal_launch::launch_async(installation, "codex_cli", &home).await
+        }
         "codex_desktop" => codex_desktop::launch(&installation.path),
         "dsh_web" => dsh_web::open_existing(dsh_runtime, installation, credential).await,
         "workbuddy" => {
@@ -1833,7 +1855,7 @@ async fn open_configured_adapter(
         "dsh_desktop" => {
             desktop_lifecycle::open_unless_running("dsh_desktop", &installation.path).await
         }
-        "claude_code" | "pi" => {
+        "claude_code" | "pi" | "opencode" => {
             let home = tool_adapters::user_home()
                 .ok_or(AdapterFailure::ConfigurationFailed("home_unavailable"))?;
             tool_adapters::terminal_launch::launch_async(installation, &request.tool_id, &home)
@@ -1895,6 +1917,7 @@ async fn stop_helper_runtime(
         "claude_desktop" => claude_runtime.stop().await,
         "dsh_web" => dsh_runtime.stop().await,
         "codex_desktop" => codex_runtime.stop().await,
+        "opencode" => crate::opencode_bridge::global().stop().await,
         // Pi connects straight to the relay origin.
         _ => {}
     }
@@ -2824,7 +2847,7 @@ pub async fn configure_desktop_tool_v2(
         configured,
         commit_codex_history_on_worker(&mut codex_history),
         async {
-            if desktop_lifecycle::requires_reload(&request.tool_id) {
+            if desktop_lifecycle::reloads_installation(&request.tool_id, &installation.path) {
                 if is_cancelled() {
                     return Err(AdapterFailure::ConfigurationFailed("activation_cancelled"));
                 }
@@ -2927,12 +2950,13 @@ pub async fn configure_desktop_tool_v2(
             ActivationFailure::Adapter(error).projection(&request)
         });
     }
-    let open_result = if desktop_lifecycle::requires_reload(&request.tool_id) {
-        Ok(()) // Already opened and observed before the transaction finished.
-    } else {
-        emit_activation_progress(&app, &request, "opening_application", 7);
-        open_configured_adapter(&request, &installation, &credential, &dsh_runtime).await
-    };
+    let open_result =
+        if desktop_lifecycle::reloads_installation(&request.tool_id, &installation.path) {
+            Ok(()) // Already opened and observed before the transaction finished.
+        } else {
+            emit_activation_progress(&app, &request, "opening_application", 7);
+            open_configured_adapter(&request, &installation, &credential, &dsh_runtime).await
+        };
     stage!("opened");
     log::info!(
         "activation stage=open tool={} ok={}",
@@ -2959,7 +2983,7 @@ pub async fn configure_desktop_tool_v2(
     Ok(ToolActivationProjection::new(
         &request,
         "ready",
-        if desktop_lifecycle::requires_reload(&request.tool_id) {
+        if desktop_lifecycle::reloads_installation(&request.tool_id, &installation.path) {
             "desktop_start_observed"
         } else {
             "configuration_ready"
@@ -2968,11 +2992,12 @@ pub async fn configure_desktop_tool_v2(
     .with_skipped(skipped))
 }
 
-const CONNECTION_TOOLS: [&str; 7] = [
+const CONNECTION_TOOLS: [&str; 8] = [
     "claude_code",
     "claude_desktop",
     "codex_desktop",
     "pi",
+    "opencode",
     "dsh_web",
     "workbuddy",
     "dsh_desktop",
@@ -3257,7 +3282,7 @@ pub(crate) fn needs_background(tool: &str, credential: &ToolCredential) -> bool 
         return false;
     }
     credential.has_model_set()
-        || matches!(tool, "claude_desktop" | "dsh_web")
+        || matches!(tool, "claude_desktop" | "dsh_web" | "opencode")
         || credential.claude_transport.as_deref() == Some("chat_bridge")
         || credential.codex_transport.as_deref() == Some("chat_bridge")
 }
@@ -3293,6 +3318,8 @@ fn legacy_paths(tool: &str) -> Result<Vec<std::path::PathBuf>, AdapterFailure> {
             ]
         }
         "workbuddy" => vec![home.join(".workbuddy/models.json")],
+        // Support began with the recovery journal: nothing legacy.
+        "opencode" => Vec::new(),
         // Desktop support began with the recovery journal: nothing legacy.
         "dsh_desktop" => Vec::new(),
         _ => return Err(AdapterFailure::UnsupportedProfile),
@@ -5058,7 +5085,7 @@ mod tests {
         invalid.restart_running_app = true;
         assert!(!request_is_valid(&invalid));
         let mut invalid = valid;
-        invalid.tool_id = "opencode".into();
+        invalid.tool_id = "aider".into();
         assert!(!request_is_valid(&invalid));
 
         let comma = json!({"requestId":"fixture", "lineId":"mainland_optimized", "toolId":"pi", "modelId":"model,a", "billingGroup":"default", "installationId":"i0123456789abcdef"});
@@ -5128,7 +5155,7 @@ mod tests {
                 );
             }
         }
-        assert!(!model_supports_tool(&pricing, "chat", "opencode"));
+        assert!(!model_supports_tool(&pricing, "chat", "aider"));
         // 传输方式仍然按目标定，因为它决定往应用配置里写什么，不再是否决权。
         assert_eq!(
             claude_transport(&pricing, "image"),

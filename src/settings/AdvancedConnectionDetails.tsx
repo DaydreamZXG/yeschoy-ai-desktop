@@ -29,6 +29,7 @@ const TOOL_INFO: Record<
   codex_desktop: { previewId: "codex", appType: "codex" },
   dsh_web: { previewId: "dsh" },
   pi: { previewId: "pi", appType: "pi" },
+  opencode: { previewId: "opencode" },
   claude_code: { previewId: "claude", appType: "claude" },
   workbuddy: { previewId: "workbuddy" },
   dsh_desktop: { previewId: "dsh_desktop" },

@@ -681,9 +681,47 @@ pub(crate) fn launch(path: &Path) -> Result<(), AdapterFailure> {
     super::desktop_launch::launch("codex_desktop", path)
 }
 
+/// Codex 命令行版的可执行文件名。CLI 和桌面版读同一份 `~/.codex/config.toml`，
+/// 所以共用 `codex_desktop` 这一条接入、一份恢复记录：接入、恢复、退出还原
+/// 对两者永远一致，不会出现「恢复了一个、另一个悄悄坏掉」。
+pub(crate) const CLI_EXECUTABLE: &str = "codex";
+
+/// 这条安装是不是命令行版（决定打开方式：终端，而不是退出重开桌面应用）。
+pub(crate) fn is_cli_installation(path: &Path) -> bool {
+    path_looks_like_cli(path)
+        && !crate::desktop_app_discovery::activation_candidates("codex_desktop")
+            .iter()
+            .any(|candidate| candidate.path == path)
+}
+
+/// 只看路径的那一半：目录（`.app`）或 `.app` 包里面的文件都不是 CLI。
+fn path_looks_like_cli(path: &Path) -> bool {
+    !path.is_dir()
+        && !path.components().any(|part| {
+            part.as_os_str()
+                .to_string_lossy()
+                .to_ascii_lowercase()
+                .ends_with(".app")
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cli_paths_are_told_apart_from_the_desktop_bundle() {
+        let root = common::temporary_working_directory("codex-cli-shape").unwrap();
+        let cli = root.join("bin").join("codex");
+        std::fs::create_dir_all(cli.parent().unwrap()).unwrap();
+        std::fs::write(&cli, b"#!/bin/sh\n").unwrap();
+        let bundle = root.join("Codex.app");
+        std::fs::create_dir_all(bundle.join("Contents/MacOS")).unwrap();
+        assert!(path_looks_like_cli(&cli));
+        assert!(!path_looks_like_cli(&bundle));
+        assert!(!path_looks_like_cli(&bundle.join("Contents/MacOS/Codex")));
+        std::fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn ru043_codex_catalog_efforts_and_unknown_defaults() {
