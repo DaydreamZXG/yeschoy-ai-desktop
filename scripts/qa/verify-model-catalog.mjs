@@ -26,7 +26,7 @@ const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../..",
 );
-const catalogPath = path.join(repoRoot, "src/model-profiles/catalog.json");
+let catalogPath = path.join(repoRoot, "src/model-profiles/catalog.json");
 
 const args = process.argv.slice(2);
 const flag = (name) => {
@@ -37,9 +37,18 @@ const has = (name) => args.includes(name);
 const pricingUrl = has("--pricing") ? flag("--pricing") : undefined;
 const pricingFile = has("--pricing-file") ? flag("--pricing-file") : undefined;
 const strictGaps = has("--strict-gaps");
+// Test hook: verify another catalog file instead of the repo one.
+if (has("--catalog")) catalogPath = path.resolve(flag("--catalog"));
 
 const problems = [];
 const allowedInputs = new Set(["text", "image"]);
+// Models whose vendor documents NO text output limit. They intentionally carry
+// no maxOutputTokens (we never invent a number), so the check is waived for
+// these ids only. Every other model must still declare it.
+//   grok-4.6: https://docs.x.ai/developers/models/grok-4.6
+//             https://docs.x.ai/developers/release-notes ("no text output limit")
+//   grok-4.7: https://docs.x.ai/developers/grok-4-7 ("Output limit: No text output limit")
+const UNLIMITED_OUTPUT_MODELS = new Set(["grok-4.6", "grok-4.7"]);
 const knownRoutingCompat = new Set([
   // Server-side routing aliases, intentionally not capability-declared.
   "codex-auto-review",
@@ -99,6 +108,8 @@ for (const [index, model] of (catalog.models ?? []).entries()) {
     ["maxOutputTokens", (v) => Number.isInteger(v) && v > 0],
   ]) {
     if (!(field in model)) {
+      if (field === "maxOutputTokens" && UNLIMITED_OUTPUT_MODELS.has(model.id))
+        continue;
       problems.push(`${at} (${model.id}): ${field} missing`);
     } else if (!check(model[field])) {
       problems.push(`${at} (${model.id}): ${field} must be a positive integer`);
