@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "verifiedAt": "2026-10-08",
+  "verifiedAt": "2026-10-20",
   "models": [
     {
       "id": "gpt-6-astra",
@@ -318,6 +318,21 @@
       "maxOutputTokens": 128000,
       "sources": [
         "https://models.dev/deepseek/deepseek-v4.1-flash",
+        "https://api-docs.deepseek.com/guides/thinking_mode/"
+      ],
+      "toolUse": true
+    },
+    {
+      "id": "deepseek-v4.1-flash-1017",
+      "displayName": "DeepSeek V4.1 Flash 1017",
+      "reasoningLevels": ["none", "low", "high", "max"],
+      "defaultReasoning": "high",
+      "reasoningMode": "deepseek",
+      "input": ["text", "image"],
+      "contextWindow": 1000000,
+      "maxOutputTokens": 384000,
+      "sources": [
+        "https://models.dev/deepseek/deepseek-v4.1-flash-1017",
         "https://api-docs.deepseek.com/guides/thinking_mode/"
       ],
       "toolUse": true
