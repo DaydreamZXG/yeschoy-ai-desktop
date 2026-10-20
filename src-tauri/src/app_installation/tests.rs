@@ -87,6 +87,24 @@ fn installer_catalog_is_closed_and_architecture_specific() {
     assert!(catalog::source("codex_desktop", "macos", "x64").is_none());
     assert_eq!(catalog::mode("pi", "macos", "x64"), "guided");
     assert!(catalog::guide("arbitrary").is_none());
+    assert_eq!(
+        catalog::guide_for("opencode", "macos", "arm64"),
+        Some("https://opencode.ai/download")
+    );
+    assert_eq!(
+        catalog::guide_for("pi", "macos", "arm64"),
+        Some(
+            "https://github.com/earendil-works/pi/releases/latest/download/pi-darwin-arm64.tar.gz"
+        )
+    );
+    assert_eq!(
+        catalog::guide_for("dsh_desktop", "windows", "x64"),
+        Some("https://download.deepseek.com/desktop/dsh-latest-windows-x64.exe")
+    );
+    assert_eq!(
+        catalog::guide_for("claude_code", "linux", "x64"),
+        Some("https://claude.com/download")
+    );
     assert!(serde_json::from_value::<InstallRequest>(serde_json::json!({"requestId":"x","toolId":"pi","action":"start","jobId":"","url":"https://evil.example"})).is_err());
 }
 

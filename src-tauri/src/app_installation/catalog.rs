@@ -124,13 +124,80 @@ pub(super) fn mode(tool: &str, os: &str, arch: &str) -> &'static str {
     }
 }
 
+/// Official download / installer URL for the current machine.
+/// Prefer a direct package (or `…/latest/download/…` redirect) over docs.
+/// Callers that only need “is this tool known?” may pass `"", ""` for os/arch
+/// and still get a hub URL when no platform-specific package exists.
 pub(super) fn guide(tool: &str) -> Option<&'static str> {
+    guide_for(tool, platform(), architecture())
+}
+
+pub(super) fn guide_for(tool: &str, os: &str, arch: &str) -> Option<&'static str> {
+    // Platform packages first (stable latest redirects where available).
+    match (tool, os, arch) {
+        ("pi", "macos", "arm64") => {
+            return Some(
+                "https://github.com/earendil-works/pi/releases/latest/download/pi-darwin-arm64.tar.gz",
+            )
+        }
+        ("pi", "macos", "x64") => {
+            return Some(
+                "https://github.com/earendil-works/pi/releases/latest/download/pi-darwin-x64.tar.gz",
+            )
+        }
+        ("pi", "linux", "arm64") => {
+            return Some(
+                "https://github.com/earendil-works/pi/releases/latest/download/pi-linux-arm64.tar.gz",
+            )
+        }
+        ("pi", "linux", "x64") => {
+            return Some(
+                "https://github.com/earendil-works/pi/releases/latest/download/pi-linux-x64.tar.gz",
+            )
+        }
+        ("pi", "windows", "arm64") => {
+            return Some(
+                "https://github.com/earendil-works/pi/releases/latest/download/pi-windows-arm64.zip",
+            )
+        }
+        ("pi", "windows", "x64") => {
+            return Some(
+                "https://github.com/earendil-works/pi/releases/latest/download/pi-windows-x64.zip",
+            )
+        }
+        ("dsh_desktop", "macos", "arm64") => {
+            return Some("https://download.deepseek.com/desktop/dsh-latest-macos-arm64.dmg")
+        }
+        ("dsh_desktop", "macos", "x64") => {
+            return Some("https://download.deepseek.com/desktop/dsh-latest-macos-x64.dmg")
+        }
+        ("dsh_desktop", "windows", _) => {
+            return Some("https://download.deepseek.com/desktop/dsh-latest-windows-x64.exe")
+        }
+        ("codex_desktop", "macos", "arm64") => {
+            return Some("https://persistent.oaistatic.com/codex-app-prod/Codex.dmg")
+        }
+        ("codex_desktop", "windows", "x64") => {
+            return Some("https://persistent.oaistatic.com/codex-app-prod/ChatGPT-x64.msix")
+        }
+        ("codex_desktop", "windows", "arm64") => {
+            return Some("https://persistent.oaistatic.com/codex-app-prod/ChatGPT-arm64.msix")
+        }
+        ("claude_desktop", "windows", "x64") => {
+            return Some("https://claude.ai/api/desktop/win32/x64/msix/latest/redirect")
+        }
+        ("claude_desktop", "windows", "arm64") => {
+            return Some("https://claude.ai/api/desktop/win32/arm64/msix/latest/redirect")
+        }
+        _ => {}
+    }
+    // Download hubs (not documentation). OpenCode’s /download lists every
+    // platform package; Claude’s /download is the installer storefront.
     Some(match tool {
-        "codex_desktop" => "https://learn.chatgpt.com/docs/app",
-        "claude_desktop" => "https://claude.com/download",
-        "claude_code" => "https://code.claude.com/docs/en/setup",
-        "pi" => "https://github.com/earendil-works/pi/tree/main/packages/coding-agent",
-        "opencode" => "https://opencode.ai/docs/",
+        "codex_desktop" => "https://chatgpt.com/codex",
+        "claude_desktop" | "claude_code" => "https://claude.com/download",
+        "pi" => "https://github.com/earendil-works/pi/releases/latest",
+        "opencode" => "https://opencode.ai/download",
         "dsh_web" => "https://github.com/deepseek-ai/deepseek-harness",
         "workbuddy" => "https://www.workbuddy.cn/",
         "dsh_desktop" => "https://www.deepseek.com/harness/",

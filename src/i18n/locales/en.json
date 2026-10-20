@@ -1044,32 +1044,32 @@
     "guidedAfterHelp": "After you finish on the official site, choose “I already installed it — check again” so Yeschoy can connect the model.",
     "guidedSteps": {
       "claude_code": [
-        "Open Claude Code’s official setup guide.",
-        "Install the CLI using the on-page instructions.",
+        "Tap below to download the official Claude / Claude Code installer for your system.",
+        "Run the installer and follow the prompts — no commands to memorize.",
         "Return here and choose “I already installed it — check again”."
       ],
       "pi": [
-        "Open Pi’s official repository instructions and install the CLI.",
-        "Close the terminal when the install finishes.",
+        "Tap below to download the Pi package for this computer.",
+        "Extract/install it, then you can close the terminal.",
         "Return here and choose “I already installed it — check again”."
       ],
       "dsh_web": [
-        "Open the DeepSeek Harness docs and install the CLI and web dependencies.",
+        "Open the DeepSeek Harness page and download/install the CLI and web stack.",
         "Launch DSH web once to confirm it runs locally.",
         "Return here and choose “I already installed it — check again”."
       ],
       "dsh_desktop": [
-        "Download and install DeepSeek Harness Desktop from the official site.",
-        "Open the app once and complete any system prompts.",
+        "Tap below to download the DeepSeek Harness Desktop installer.",
+        "Install it and open the app once to finish any system prompts.",
         "Return here and choose “I already installed it — check again”."
       ],
       "workbuddy": [
-        "Download and install WorkBuddy from the official site.",
+        "Open the WorkBuddy site and download the desktop app for your system.",
         "Open WorkBuddy once after install.",
         "Return here and choose “I already installed it — check again”."
       ],
       "opencode": [
-        "Open the OpenCode docs and install the CLI for your system.",
+        "Tap below to open the OpenCode download page and get the installer for your system.",
         "When done, typing opencode in a terminal should start it.",
         "Back in YesChoy, tap Start setup."
       ]

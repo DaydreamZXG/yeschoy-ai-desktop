@@ -699,7 +699,7 @@ describe("ru048 novice installer", () => {
         />
       </InstallationContext.Provider>,
     );
-    expect(screen.getByText(/打开 Claude Code 官方安装说明/)).toBeInTheDocument();
+    expect(screen.getByText(/下载 Claude / Claude Code 官方安装包/)).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /打开官方安装页/ }),
     ).toBeInTheDocument();
