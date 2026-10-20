@@ -38,3 +38,57 @@ scripts/oss/clean-history.sh ../yeschoy-oss product/yeschoy-v1
 | Context7 API key `ctx7sk-4ddd****` | `deplink.html`（来自上游 CC Switch #286） | 2025-11-25 引入，2026-09-29 删除（219a8c50） | 这是上游项目的 key，不是我们的，已经随 CC Switch 公开。用全新历史开源就不会带上它。如果想负责任一点，可以通知上游作废。 |
 | ccswitch 深链示例里的 `sk-…` | `deplink.html` | 同上 | 示例值，同上 |
 | 测试夹具里的 `sk-…`、`AKIA…`、JWT 形态字符串 | `src-tauri/src/**` 的测试 | — | 都是假值 |
+
+## 合作方商标图（partners）
+
+历史树里曾有 `assets/partners/logos` / `banners`（多来自上游 CC Switch 展示用物料）。产品代码**不引用**这些路径。
+
+**策略（本仓库已落地）：**
+
+1. 公开树只保留 `assets/partners/README.md`，说明不附带商标二进制。
+2. 官方/合作方发行若需展示物料，放在已获授权的**私有发行资源**里，不要提交回本公开仓库。
+3. 用 `scripts/oss/clean-history.sh` 导出新历史时，会删除上述 logos/banners 目录。
+
+## GitHub Secret scanning / Push protection（仓库设置，需维护者点一次）
+
+本仓库若对社区可见，请在 GitHub 打开防护（文档步骤；**不能**靠合并本 PR 自动打开）：
+
+1. 打开 <https://github.com/DaydreamZXG/yeschoy-ai-desktop/settings/security_analysis>
+2. 启用 **Secret scanning**
+3. 启用 **Push protection**（阻止把已知密钥形态推进仓库）
+4. （建议）启用 **Dependabot alerts** / security updates
+
+当前工作树里的 `sk-` / `AKIA` / JWT 形态字符串应只出现在测试夹具且为假值；若 scanning 报警，先当真实密钥轮换，再改夹具为明显假值。
+
+## Git 历史说明（不在本 PR 改写真实仓库）
+
+真实 `DaydreamZXG/yeschoy-ai-desktop` **不强制** `git filter-repo`。开源对外「干净起点」推荐：
+
+```bash
+scripts/oss/clean-history.sh ../yeschoy-oss product/yeschoy-v1
+# 人工检查 ../yeschoy-oss 后，再决定是否 push 到新公开仓库或替换默认分支
+```
+
+历史中曾出现的 Context7 / 示例密钥见上文「历史里出现过的密钥」。启用 secret scanning 后，即使旧提交仍在，推送新提交时的密钥会被挡住。
+
+## 社区 Release 手工步骤（本 PR 不自动发版）
+
+社区轨要让用户从 GitHub Releases 装上包，并（可选）让社区构建能打到 `latest.json`，按下列顺序**人工**操作。合并文档 PR ≠ 发版。
+
+1. **确认** `product/yeschoy-v1`（或选定发版提交）已包含本开源文档与 partners 清理；版本号已在 `package.json` / Tauri 配置中 bump。
+2. **打开** 上文 Secret scanning / Push protection。
+3. **用社区构建**打安装包（不要走官方 `YESCHOY_DISTRIBUTION=official|partner` 镜像变量，除非有意发官方包）：
+   - 本地：`pnpm build`（需要签名/公证时再准备对应证书与 `YESCHOY_COMMUNITY_UPDATER_PUBKEY`）
+   - 或按需触发仓库里的发版 workflow，但 **Release 勾选为非草稿**、面向 public。
+4. **创建 GitHub Release**（网页或 `gh release create`）：
+   - Tag：如 `v0.x.y`（与包内版本一致）
+   - 标题与说明用中文/英文简述变更
+   - 上传各平台安装包与校验文件
+   - **不要**标成 Draft；需要时勾选 Latest
+5. **更新清单（可选，为应用内检查更新）**：
+   - 生成/上传 Tauri updater 用的 `latest.json`（及签名），URL 与社区构建时写入的公钥一致
+   - 若未提供 `YESCHOY_COMMUNITY_UPDATER_PUBKEY`，社区包会关闭自动更新，界面引导用户去 GitHub 下载——这样也符合「能装上」的最低目标
+6. **验证**：匿名浏览器打开 Release 页可下载；用干净机器安装后能完成一次「选应用 → 预览 → 取消」且不误连官方镜像。
+7. **Catalog 热更新**与社区 Release 无关；模型标签 publish 另做，勿与本步骤绑死。
+
+官方 ergou / partner 发版仍按原有 `deploy/self-update` 与 `yeschoy-release.yml` 流程，与社区轨分离。

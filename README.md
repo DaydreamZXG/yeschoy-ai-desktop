@@ -17,6 +17,7 @@
 | DeepSeek Harness | 桌面应用 | 写入 `~/.dsh/profiles/desktop`，密钥放进 DSH 自己的凭据文件 |
 | DSH web | 命令行 + 浏览器 | 写入 `~/.dsh/profiles/web`，由助手启动本地工作台 |
 | Pi | 命令行 | 写入 `~/.pi/agent/models.json` |
+| OpenCode | 命令行 | 写入 `~/.config/opencode/opencode.json`，经本地转发连接；密钥留在系统钥匙串 |
 
 支持 macOS 和 Windows。
 
@@ -57,9 +58,16 @@ cd src-tauri && cargo test --lib   # Rust 测试
 - `src-tauri/src/*_discovery*.rs`：在本机查找已安装的应用
 - `src-tauri/src/proxy/`：Codex 的 Responses ↔ Chat 协议转换
 
+## 社区与隐私
+
+- 提问与 Bug：[SUPPORT.md](./SUPPORT.md)
+- 隐私说明：[PRIVACY.md](./PRIVACY.md)
+- 安全披露：[SECURITY.md](./SECURITY.md)
+- 开源发布清单（含 secret scanning、社区 Release 步骤）：[`docs/OPEN_SOURCE.md`](docs/OPEN_SOURCE.md)
+
 ## 致谢与许可
 
-以 [MIT 许可](LICENSE) 发布。感谢 [CC Switch](https://github.com/farion1231/cc-switch)（MIT，Jason Young）；部分 proxy 文件仍与上游一致，见 [`VENDOR.md`](src-tauri/src/proxy/VENDOR.md)。
+以 [MIT 许可](LICENSE) 发布。感谢 [CC Switch](https://github.com/farion1231/cc-switch)（MIT，Jason Young）；部分 proxy 文件仍与上游一致，见 [`VENDOR.md`](src-tauri/src/proxy/VENDOR.md)。本仓库不附带第三方合作方商标图（见 `assets/partners/README.md`）。
 
 ---
 
@@ -69,7 +77,7 @@ A local desktop config helper that connects common AI coding and office apps to 
 
 [Yeschoy (野菜API)](https://yeschoy.com) is the default connection source out of the box. Longer term, other compatible stations should be connectable the same way (pick a station — not paste Base URL and API Key by hand).
 
-Supported apps: Claude Code, Claude Desktop, Codex (ChatGPT desktop), WorkBuddy, DeepSeek Harness, DSH web and Pi, on macOS and Windows.
+Supported apps: Claude Code, Claude Desktop, Codex (ChatGPT desktop), WorkBuddy, DeepSeek Harness, DSH web, Pi and OpenCode, on macOS and Windows.
 
 - Nothing is written until you confirm.
 - Original settings are saved (encrypted, on this machine) before every write. Restoring undoes only what the assistant wrote and keeps your later edits.
@@ -87,4 +95,6 @@ See [`docs/download-page.md`](docs/download-page.md) for hosting notes. In-app a
 
 `pnpm install && pnpm dev`. Tests: `pnpm test:unit` and `cargo test --lib` in `src-tauri`.
 
-Released under the [MIT License](LICENSE). Thanks to [CC Switch](https://github.com/farion1231/cc-switch) (MIT, Jason Young); some proxy files remain identical to upstream — see [`VENDOR.md`](src-tauri/src/proxy/VENDOR.md).
+Community docs: [SUPPORT.md](./SUPPORT.md), [PRIVACY.md](./PRIVACY.md), [SECURITY.md](./SECURITY.md), [`docs/OPEN_SOURCE.md`](docs/OPEN_SOURCE.md).
+
+Released under the [MIT License](LICENSE). Thanks to [CC Switch](https://github.com/farion1231/cc-switch) (MIT, Jason Young); some proxy files remain identical to upstream — see [`VENDOR.md`](src-tauri/src/proxy/VENDOR.md). Third-party partner trademark artwork is not redistributed in this tree (`assets/partners/README.md`).

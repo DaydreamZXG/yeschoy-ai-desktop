@@ -21,6 +21,15 @@ rm -rf "$out/outputs" "$out/.product-governance" "$out/deploy/download-origin" \
        "$out/session-manager.md" "$out/.cursor-agent-tmp-notes.md" "$out/.tmp-agent-notes.md"
 find "$out" -name 'deployment-receipt*.json' -delete
 find "$out" -name '*.env' ! -name '*.example.env' -delete
+# 第三方商标图不进入开源快照（只保留说明）
+rm -rf "$out/assets/partners/logos" "$out/assets/partners/banners"
+if [ -d "$out/assets/partners" ]; then
+  cat > "$out/assets/partners/README.md" << 'PARTNERS_EOF'
+# Partner artwork (not shipped)
+
+第三方商标图已从开源快照中排除。说明见主仓库 `assets/partners/README.md`。
+PARTNERS_EOF
+fi
 
 # 3. 扫描：内部地址与常见密钥形态（只报文件名和行号，不打印匹配内容）
 echo "== 内部地址/密钥形态扫描（只列位置） =="
