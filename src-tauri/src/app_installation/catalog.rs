@@ -135,31 +135,23 @@ pub(super) fn guide(tool: &str) -> Option<&'static str> {
 pub(super) fn guide_for(tool: &str, os: &str, arch: &str) -> Option<&'static str> {
     // Platform packages first (stable latest redirects where available).
     match (tool, os, arch) {
-        ("pi", "macos", "arm64") => {
-            return Some(
-                "https://github.com/earendil-works/pi/releases/latest/download/pi-darwin-arm64.tar.gz",
-            )
-        }
-        ("pi", "macos", "x64") => {
-            return Some(
-                "https://github.com/earendil-works/pi/releases/latest/download/pi-darwin-x64.tar.gz",
-            )
-        }
-        ("pi", "linux", "arm64") => {
-            return Some(
-                "https://github.com/earendil-works/pi/releases/latest/download/pi-linux-arm64.tar.gz",
-            )
-        }
+        ("pi", "macos", "arm64") => return Some(
+            "https://github.com/earendil-works/pi/releases/latest/download/pi-darwin-arm64.tar.gz",
+        ),
+        ("pi", "macos", "x64") => return Some(
+            "https://github.com/earendil-works/pi/releases/latest/download/pi-darwin-x64.tar.gz",
+        ),
+        ("pi", "linux", "arm64") => return Some(
+            "https://github.com/earendil-works/pi/releases/latest/download/pi-linux-arm64.tar.gz",
+        ),
         ("pi", "linux", "x64") => {
             return Some(
                 "https://github.com/earendil-works/pi/releases/latest/download/pi-linux-x64.tar.gz",
             )
         }
-        ("pi", "windows", "arm64") => {
-            return Some(
-                "https://github.com/earendil-works/pi/releases/latest/download/pi-windows-arm64.zip",
-            )
-        }
+        ("pi", "windows", "arm64") => return Some(
+            "https://github.com/earendil-works/pi/releases/latest/download/pi-windows-arm64.zip",
+        ),
         ("pi", "windows", "x64") => {
             return Some(
                 "https://github.com/earendil-works/pi/releases/latest/download/pi-windows-x64.zip",
