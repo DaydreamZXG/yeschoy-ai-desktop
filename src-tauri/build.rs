@@ -36,6 +36,7 @@ fn main() {
     let pubkey = std::env::var("YESCHOY_COMMUNITY_UPDATER_PUBKEY").unwrap_or_default();
     println!("cargo:rerun-if-env-changed=YESCHOY_DISTRIBUTION");
     println!("cargo:rerun-if-env-changed=YESCHOY_GITHUB_REPO");
+    println!("cargo:rerun-if-env-changed=YESCHOY_MODEL_CATALOG_URL");
     println!("cargo:rerun-if-env-changed=YESCHOY_COMMUNITY_UPDATER_PUBKEY");
     println!("cargo:rerun-if-changed=update-channels.json");
     println!("cargo:rustc-env=YESCHOY_DISTRIBUTION={distribution}");

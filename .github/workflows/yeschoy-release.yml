@@ -173,6 +173,9 @@ jobs:
         run: cargo +1.94.0 fetch --locked --manifest-path src-tauri/Cargo.toml
       - name: build-local.mjs windows ${{ matrix.variant }}
         run: node deploy/self-update/build-local.mjs windows "${{ matrix.variant }}" "$GITHUB_WORKSPACE/$OUT"
+        env:
+          # 远程模型目录：只在官方仓库、且设置了仓库变量时编入；为空则客户端只用内置目录。
+          YESCHOY_MODEL_CATALOG_URL: ${{ github.repository == 'DaydreamZXG/yeschoy-ai-desktop' && vars.YESCHOY_MODEL_CATALOG_URL || '' }}
       - name: Show build log on failure
         if: failure()
         run: tail -n 200 "$OUT"/windows/evidence/*-build.log || true
@@ -278,6 +281,9 @@ jobs:
           scripts/ci/verify-updater-key.sh "${{ matrix.variant }}"
       - name: build-local.mjs macos ${{ matrix.variant }}
         run: node deploy/self-update/build-local.mjs macos "${{ matrix.variant }}" "$GITHUB_WORKSPACE/$OUT"
+        env:
+          # 远程模型目录：只在官方仓库、且设置了仓库变量时编入；为空则客户端只用内置目录。
+          YESCHOY_MODEL_CATALOG_URL: ${{ github.repository == 'DaydreamZXG/yeschoy-ai-desktop' && vars.YESCHOY_MODEL_CATALOG_URL || '' }}
       - name: Notarize the app
         run: |
           root="$GITHUB_WORKSPACE/$OUT/macos"
