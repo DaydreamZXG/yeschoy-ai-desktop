@@ -50,6 +50,15 @@
   line-height: 1.25;
 }
 
+/* 切页时 App.tsx 会给可见 h1 设 tabindex=-1 并 focus（方便读屏）。
+   全局 :focus-visible 的青柠 focus-ring 会画在整块级标题上，变成「标题外面
+   一个大方框」。标题不是可点控件，这块环要去掉；键盘落在按钮/链接上仍保留。 */
+:is(h1, h2, h3, h4, h5, h6)[tabindex="-1"]:focus,
+:is(h1, h2, h3, h4, h5, h6)[tabindex="-1"]:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
 .workbench-page-heading p:not(.eyebrow),
 .settings-hero .intro-copy {
   margin: var(--space-6) 0 0;
