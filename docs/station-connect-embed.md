@@ -1,6 +1,6 @@
 # Station connect embed (`connect.js`)
 
-Third-party **New API** stations (and yeschoy.com) can let logged-in users open the
+Third-party **New API** stations (and yeschoy.app) can let logged-in users open the
 YesChoy desktop assistant with one click — no API key paste in the main flow.
 
 Protocol details: [`station-connect-protocol.md`](./station-connect-protocol.md).  
@@ -19,11 +19,11 @@ sign-in; this path is for `station_connect:<https-origin>` sessions only.
 
 ## One-line script
 
-Host the official bundle at **`https://yeschoy.com/connect.js`** (source and build
+Host the official bundle at **`https://yeschoy.app/connect.js`** (source and build
 live in this repo under `public/connect.js`).
 
 ```html
-<script src="https://yeschoy.com/connect.js" defer></script>
+<script src="https://yeschoy.app/connect.js" defer></script>
 ```
 
 Optional: override the missing-app download target (must remain a **public** install
@@ -31,9 +31,9 @@ page — never an update CDN such as `ergou.qzz.io`):
 
 ```html
 <script
-  src="https://yeschoy.com/connect.js"
+  src="https://yeschoy.app/connect.js"
   defer
-  data-download-url="https://yeschoy.com/download"
+  data-download-url="https://yeschoy.app/download"
 ></script>
 ```
 
@@ -81,7 +81,7 @@ document.querySelector("[data-yeschoy-connect]").addEventListener(
 3. Navigates to `yeschoy://connect?origin=…&code=…` (one-time code only — **no**
    long-lived tokens in the URL).
 4. If the desktop app is probably not installed (page stays focused), redirects to
-   [`https://yeschoy.com/download`](https://yeschoy.com/download) or
+   [`https://yeschoy.app/download`](https://yeschoy.app/download) or
    [GitHub Releases](https://github.com/DaydreamZXG/yeschoy-ai-desktop/releases).
 
 ## Station backend requirements
@@ -98,7 +98,7 @@ Codes must be single-use, short TTL (≤ 5 minutes), and bound to the canonical 
 
 ## CORS and same-origin
 
-- The hosted `connect.js` file may be loaded from `yeschoy.com`, but **issue** must
+- The hosted `connect.js` file may be loaded from `yeschoy.app`, but **issue** must
   be a **same-origin** request to the station that issued the user session.
 - Do **not** call another site's issue API from the browser with a third-party
   cookie; host your own issue endpoint on the same host as your login session.
@@ -110,7 +110,7 @@ Codes must be single-use, short TTL (≤ 5 minutes), and bound to the canonical 
 
 Users without the app installed should get a **public installer** link:
 
-- Primary: [yeschoy.com/download](https://yeschoy.com/download)
+- Primary: [yeschoy.app/download](https://yeschoy.app/download)
 - Alternative: [GitHub Releases](https://github.com/DaydreamZXG/yeschoy-ai-desktop/releases)
 
 **Do not** send third-party station users to `ergou.qzz.io` or other official-only

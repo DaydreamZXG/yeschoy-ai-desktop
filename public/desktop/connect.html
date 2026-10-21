@@ -1,80 +1,34 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
-  <title>Connect desktop assistant</title>
+  <title>连接桌面助手</title>
+  <link rel="stylesheet" href="/site/theme.css" />
   <style>
-    :root {
-      --bg: #f6f5f2;
-      --surface: #ffffff;
-      --ink: #14151a;
-      --muted: #5c5f66;
-      --line: #e3e1db;
-      --accent: #c93e22;
-      --accent-hover: #a8321b;
-      --on-accent: #ffffff;
-      --error: #b42318;
-      --radius: 16px;
-      --shadow: 0 18px 50px rgba(20, 21, 26, 0.08);
-      font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC",
-        "Microsoft YaHei", sans-serif;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #0e0f12;
-        --surface: #17191e;
-        --ink: #eceef2;
-        --muted: #9aa0a8;
-        --line: #2a2d34;
-        --accent: #e8a33d;
-        --accent-hover: #f0b65a;
-        --on-accent: #1a1208;
-        --error: #f08070;
-        --shadow: 0 22px 60px rgba(0, 0, 0, 0.45);
-      }
-    }
-    * {
-      box-sizing: border-box;
-    }
     body {
-      margin: 0;
       min-height: 100dvh;
       display: grid;
       place-items: center;
       padding: 24px 16px;
-      background: radial-gradient(
-          1200px 600px at 50% -10%,
-          color-mix(in srgb, var(--accent) 12%, transparent),
-          transparent 60%
-        ),
-        var(--bg);
-      color: var(--ink);
     }
     main {
       width: min(420px, 100%);
       background: var(--surface);
       border: 1px solid var(--line);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-float);
       padding: 28px 24px 22px;
     }
-    .mark {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
-      display: grid;
-      place-items: center;
-      background: color-mix(in srgb, var(--accent) 14%, var(--surface));
-      color: var(--accent);
-      font-size: 22px;
-      margin-bottom: 16px;
+    .brand-row {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
     }
     h1 {
       margin: 0 0 8px;
-      font-size: 1.35rem;
+      font-size: 1.3rem;
       letter-spacing: -0.02em;
+      font-weight: 700;
     }
     .lede {
       margin: 0 0 22px;
@@ -85,7 +39,7 @@
     button[data-yeschoy-connect] {
       width: 100%;
       border: none;
-      border-radius: 12px;
+      border-radius: var(--radius-md);
       padding: 14px 18px;
       font-size: 1rem;
       font-weight: 650;
@@ -111,9 +65,7 @@
       color: var(--muted);
       line-height: 1.45;
     }
-    #status.is-error {
-      color: var(--error);
-    }
+    #status.is-error { color: var(--danger); }
     footer {
       margin-top: 20px;
       padding-top: 16px;
@@ -123,28 +75,33 @@
       text-align: center;
     }
     footer a {
-      color: inherit;
+      color: var(--ink);
       text-decoration: underline;
       text-underline-offset: 2px;
+      font-weight: 550;
     }
   </style>
-  <script src="https://yeschoy.com/connect.js" defer></script>
+  <script src="/connect.js" defer data-download-url="/download/"></script>
 </head>
 <body>
   <main>
-    <div class="mark" aria-hidden="true">↗</div>
-    <h1 id="title">Connect desktop assistant</h1>
+    <div class="brand-row">
+      <span class="mark" aria-hidden="true">野</span>
+      <span style="font-weight:650;font-size:14px;">野菜桌面助手</span>
+    </div>
+    <h1 id="title">连接桌面助手</h1>
     <p class="lede" id="lede">
-      Sign in on this site if you have not already, then use the button below.
-      Your browser will open the YesChoy desktop app — no API keys to copy.
+      若尚未登录，请先在本站完成登录，再点击下方按钮。浏览器会拉起野菜桌面端，无需复制 API 密钥。
     </p>
     <button type="button" data-yeschoy-connect id="connect-btn">
-      Open YesChoy desktop
+      打开桌面助手
     </button>
     <p id="status" role="status" aria-live="polite"></p>
     <footer>
-      <span id="footer-no-app">No desktop app?</span>
-      <a id="footer-download" href="https://yeschoy.com/download">Download</a>
+      <span id="footer-no-app">还没有桌面端？</span>
+      <a id="footer-download" href="/download/">下载安装</a>
+      ·
+      <a href="/">首页</a>
     </footer>
   </main>
   <script>
@@ -152,15 +109,15 @@
       var zh =
         document.documentElement.lang.startsWith("zh") ||
         (navigator.language && navigator.language.startsWith("zh"));
-      if (zh) {
-        document.documentElement.lang = "zh-CN";
-        document.getElementById("title").textContent = "连接桌面助手";
+      if (!zh) {
+        document.documentElement.lang = "en";
+        document.getElementById("title").textContent = "Connect desktop assistant";
         document.getElementById("lede").textContent =
-          "若尚未登录，请先在本站完成登录，再点击下方按钮。浏览器会拉起 YesChoy 桌面端，无需复制 API 密钥。";
-        document.getElementById("connect-btn").textContent = "打开桌面助手";
-        document.getElementById("footer-no-app").textContent = "还没有桌面端？";
-        document.getElementById("footer-download").textContent = "下载安装";
-        document.title = "连接桌面助手";
+          "Sign in on this site if you have not already, then use the button below. Your browser will open the YesChoy desktop app — no API keys to copy.";
+        document.getElementById("connect-btn").textContent = "Open YesChoy desktop";
+        document.getElementById("footer-no-app").textContent = "No desktop app?";
+        document.getElementById("footer-download").textContent = "Download";
+        document.title = "Connect desktop assistant";
       }
 
       var btn = document.getElementById("connect-btn");

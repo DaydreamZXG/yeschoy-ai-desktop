@@ -123,7 +123,7 @@ describe("navigateDeepLinkWithDownloadFallback", () => {
 
     navigateDeepLinkWithDownloadFallback(
       "yeschoy://connect?origin=https%3A%2F%2Fa.com&code=x",
-      "https://yeschoy.com/download",
+      "https://yeschoy.app/download",
       win,
       { missingAppTimeoutMs: 2000 },
     );
@@ -147,13 +147,13 @@ describe("navigateDeepLinkWithDownloadFallback", () => {
 
     navigateDeepLinkWithDownloadFallback(
       "yeschoy://connect?origin=https%3A%2F%2Fa.com&code=x",
-      "https://yeschoy.com/download",
+      "https://yeschoy.app/download",
       win,
       { missingAppTimeoutMs: 100 },
     );
 
     timeoutCb?.();
-    expect(assign).toHaveBeenCalledWith("https://yeschoy.com/download");
+    expect(assign).toHaveBeenCalledWith("https://yeschoy.app/download");
     expect(assign.mock.calls[0][0]).not.toContain("ergou");
   });
 
@@ -176,7 +176,7 @@ describe("navigateDeepLinkWithDownloadFallback", () => {
 
     navigateDeepLinkWithDownloadFallback(
       "yeschoy://connect?origin=https%3A%2F%2Fa.com&code=x",
-      "https://yeschoy.com/download",
+      "https://yeschoy.app/download",
       win,
       { missingAppTimeoutMs: 100 },
     );
