@@ -31,11 +31,11 @@ describe("StationConnectOriginForm", () => {
     expect(screen.getByText(zh.stationConnectPage.originHint)).toBeTruthy();
   });
 
-  it("prefills the reference origin on OSS builds", () => {
+  it("does not prefill an official station on OSS builds", () => {
     vi.stubEnv("VITE_YESCHOY_DISTRIBUTION", "oss");
     render(<StationConnectOriginForm onLineChange={vi.fn()} />);
     const input = screen.getByRole("textbox") as HTMLInputElement;
-    expect(input.value).toBe("https://yeschoy.com");
+    expect(input.value).toBe("");
     expect(screen.getByText(zh.stationConnectPage.originHint)).toBeTruthy();
   });
 

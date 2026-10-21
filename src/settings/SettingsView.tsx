@@ -10,6 +10,7 @@ import { UpdateSettingsCard } from "../update/UpdateSettingsCard";
 import { AdvancedConnectionDetails } from "./AdvancedConnectionDetails";
 import { LanguagePicker } from "../i18n/LanguagePicker";
 import { isOfficialDistribution } from "../distribution/identity";
+import { OfficialSitePromo } from "../distribution/OfficialSitePromoBanner";
 import { REFERENCE_STATION_ORIGIN } from "../distribution/softTraffic";
 
 interface SettingsViewProps {
@@ -156,7 +157,9 @@ export function SettingsView({
         </div>
       </section>
 
-      {!isOfficialDistribution() && (
+      {isOfficialDistribution() ? (
+        <OfficialSitePromo />
+      ) : (
         <p
           className="oss-reference-line"
           data-testid="oss-reference-attribution"

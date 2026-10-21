@@ -14,7 +14,8 @@ fn main() {
 
     // 更新通道：公开（社区）构建默认走 GitHub Releases，完全不读
     // update-channels.json；只有官方发版流程（deploy/self-update/build-local.mjs）
-    // 设 YESCHOY_DISTRIBUTION=official|partner 时才编入官方更新源。
+    // 设 YESCHOY_DISTRIBUTION=official|partner（即 OFFICIAL_BUILD）时才编入 ergou 官方更新源。
+    // 默认 community：走 GitHub / 关闭自动更新，见 docs/BRANDING.md。
     let distribution =
         std::env::var("YESCHOY_DISTRIBUTION").unwrap_or_else(|_| "community".to_owned());
     let manifest_dir = std::path::PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());

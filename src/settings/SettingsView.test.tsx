@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "i18next";
 import zh from "../i18n/locales/zh.json";
 import { invoke } from "@tauri-apps/api/core";
@@ -18,8 +18,15 @@ vi.mock("../update/UpdateSettingsCard", () => ({
 }));
 
 beforeEach(async () => {
+  localStorage.clear();
+  vi.unstubAllEnvs();
   i18n.addResourceBundle("zh", "translation", zh, true, true);
   await i18n.changeLanguage("zh");
+});
+
+afterEach(() => {
+  localStorage.clear();
+  vi.unstubAllEnvs();
 });
 
 describe("SettingsView", () => {
@@ -143,5 +150,50 @@ describe("SettingsView", () => {
     expect(
       screen.getByText("尚未接入任何应用，接入后这里会显示实际连接参数。"),
     ).toBeInTheDocument();
+  });
+
+  it("shows dismissible official site promo only on official builds", async () => {
+    vi.stubEnv("VITE_YESCHOY_DISTRIBUTION", "official");
+    const { rerender } = render(
+      <SettingsView
+        onOpenAccount={vi.fn()}
+        onOpenDiagnostics={vi.fn()}
+        onOpenTools={vi.fn()}
+        onOpenModels={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("official-site-promo")).toHaveTextContent(
+      zh.workbench.officialSitePromo,
+    );
+    expect(screen.queryByTestId("oss-reference-attribution")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("official-site-promo-dismiss"));
+    await waitFor(() =>
+      expect(screen.queryByTestId("official-site-promo")).toBeNull(),
+    );
+
+    rerender(
+      <SettingsView
+        onOpenAccount={vi.fn()}
+        onOpenDiagnostics={vi.fn()}
+        onOpenTools={vi.fn()}
+        onOpenModels={vi.fn()}
+      />,
+    );
+    expect(screen.queryByTestId("official-site-promo")).toBeNull();
+  });
+
+  it("keeps OSS attribution without official site promo", () => {
+    vi.stubEnv("VITE_YESCHOY_DISTRIBUTION", "oss");
+    render(
+      <SettingsView
+        onOpenAccount={vi.fn()}
+        onOpenDiagnostics={vi.fn()}
+        onOpenTools={vi.fn()}
+        onOpenModels={vi.fn()}
+      />,
+    );
+    expect(screen.queryByTestId("official-site-promo")).toBeNull();
+    expect(screen.getByTestId("oss-reference-attribution")).toBeTruthy();
   });
 });

@@ -658,7 +658,9 @@
     "usageTrendEmpty": "最近 14 天还没有用量",
     "usageTrendDayLabel": "{{date}}：{{amount}}",
     "libraryAccountChecking": "正在检查中转站…",
-    "appNameCodex": "Codex（桌面版 / 命令行）"
+    "appNameCodex": "Codex（桌面版 / 命令行）",
+    "officialSitePromo": "由野菜开源 · 官网",
+    "officialSitePromoDismiss": "不再显示"
   },
   "configuration": {
     "defaultGroup": "标准方案",

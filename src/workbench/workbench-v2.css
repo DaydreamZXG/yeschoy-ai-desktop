@@ -3261,6 +3261,28 @@
   text-underline-offset: 2px;
 }
 
+.official-site-promo {
+  margin: var(--space-16) 0 0;
+  padding: 0 var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-12);
+  color: var(--faint);
+  font-size: var(--text-xs);
+}
+
+.official-site-promo a {
+  color: var(--faint);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.official-site-promo .text-button {
+  color: var(--faint);
+  font-size: var(--text-xs);
+}
+
 .qq-group-dialog {
   width: min(360px, calc(100vw - 32px));
   padding: var(--space-24);
