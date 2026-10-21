@@ -348,10 +348,12 @@ describe("official workbench", () => {
     ).toBeInTheDocument();
     const home = screen.getByTestId("candidate-home-view");
     expect(home).toHaveTextContent("登录一次，接入你的 AI 应用");
+    // Community/OSS default: empty URL, so continue is disabled until typed.
+    expect(within(home).getByRole("textbox")).toBeInTheDocument();
+    expect(within(home).getByRole("textbox")).toHaveValue("");
     expect(
       within(home).getByRole("button", { name: "检测并连接" }),
-    ).toBeEnabled();
-    expect(within(home).getByRole("textbox")).toBeInTheDocument();
+    ).toBeDisabled();
   });
 
   it("ru076 never reports zero connections or ready-to-connect when the initial read fails", async () => {
@@ -713,8 +715,8 @@ describe("official workbench", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "检测并连接" }),
-    ).toBeEnabled();
-    expect(screen.getByRole("textbox")).toHaveValue("https://yeschoy.com");
+    ).toBeDisabled();
+    expect(screen.getByRole("textbox")).toHaveValue("");
     expect(screen.getAllByRole("article")).toHaveLength(8);
     const card = screen
       .getByRole("heading", { name: "Claude Desktop" })

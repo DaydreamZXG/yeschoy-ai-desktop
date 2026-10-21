@@ -193,9 +193,13 @@ describe("AppLibraryView station connect welcome strip", () => {
         loading: false,
       }),
     );
+    // OSS/community builds leave the station URL empty → continue stays disabled
+    // until the user types an origin (that is expected, not a probe lock).
+    expect(screen.getByRole("textbox")).toBeEnabled();
+    expect(screen.getByRole("textbox")).toHaveValue("");
     expect(
       screen.getByRole("button", { name: zh.stationConnectPage.continue }),
-    ).toBeEnabled();
+    ).toBeDisabled();
     expect(
       screen.queryByText(zh.stationConnectPage.accountChecking),
     ).not.toBeInTheDocument();
