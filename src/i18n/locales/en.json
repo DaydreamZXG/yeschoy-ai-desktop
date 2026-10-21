@@ -658,7 +658,9 @@
     "usageTrendEmpty": "No usage in the last 14 days",
     "usageTrendDayLabel": "{{date}}: {{amount}}",
     "libraryAccountChecking": "Checking your station…",
-    "appNameCodex": "Codex (desktop / CLI)"
+    "appNameCodex": "Codex (desktop / CLI)",
+    "officialSitePromo": "Open-source by Yeschoy · Website",
+    "officialSitePromoDismiss": "Don't show again"
   },
   "configuration": {
     "defaultGroup": "Standard plan",

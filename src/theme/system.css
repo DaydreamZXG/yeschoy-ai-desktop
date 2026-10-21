@@ -546,6 +546,28 @@ button,
   font-size: var(--text-xs);
 }
 
+.official-site-promo {
+  margin: var(--space-16) 0 0;
+  padding: 0 var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-12);
+  color: var(--faint);
+  font-size: var(--text-xs);
+}
+
+.official-site-promo a {
+  color: var(--faint);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.official-site-promo .text-button {
+  color: var(--faint);
+  font-size: var(--text-xs);
+}
+
 /* ================= 侧栏 ================= */
 /* 外观切换在设置里有完整入口；侧栏里只留一条安静的三段小开关。 */
 .sidebar-bottom .appearance-picker {
