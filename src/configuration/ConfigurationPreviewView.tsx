@@ -2524,6 +2524,18 @@ export function ConfigurationPreviewView({
               {g.codexSharedSettings}
             </p>
           )}
+          {activationToolId === "codex_desktop" && (
+            <details
+              className="connection-lifecycle-note"
+              data-note="codex-work-browser"
+            >
+              <summary>
+                <Info aria-hidden="true" />
+                {g.codexWorkBrowserFaqTitle}
+              </summary>
+              <p>{g.codexWorkBrowserFaqBody}</p>
+            </details>
+          )}
           {activationToolId === "opencode" && (
             <p className="connection-lifecycle-note" data-note="opencode-key">
               <ShieldCheck aria-hidden="true" />

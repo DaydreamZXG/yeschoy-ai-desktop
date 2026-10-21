@@ -22,6 +22,9 @@ const OWNED_CATALOG: &str = "yeschoy-model-catalog.json";
 pub(crate) const PROXY_ADDRESS: &str = "127.0.0.1:15731";
 /// Codex 会在这个值后面接 `/responses`，所以它要以 `/v1` 结尾。
 pub(crate) const PROXY_BASE: &str = "http://127.0.0.1:15731/codex/v1";
+/// Codex desktop Work / browser gate. Without an official ChatGPT login,
+/// newer Codex builds refuse Work mode unless this is STEPS_COMMANDS.
+const DESKTOP_CONVERSATION_DETAIL_MODE: &str = "STEPS_COMMANDS";
 
 #[derive(Clone)]
 pub(crate) struct CodexRuntimeState {
@@ -248,7 +251,31 @@ fn render_with_provider(
             provider.insert("experimental_bearer_token", value(key));
         }
     }
+    // Bypass Codex desktop's Work / browser gate for users who connect via
+    // YesChoy without an official ChatGPT login. Merge into [desktop] so any
+    // other desktop keys the user already has are preserved; rewriting the
+    // same STEPS_COMMANDS value is a no-op.
+    ensure_desktop_conversation_detail_mode(&mut document)?;
     Ok((document.to_string().into_bytes(), provider_id))
+}
+
+fn ensure_desktop_conversation_detail_mode(
+    document: &mut DocumentMut,
+) -> Result<(), AdapterFailure> {
+    if document.get("desktop").is_none() {
+        document.insert("desktop", Item::Table(Table::new()));
+    }
+    let desktop = document
+        .get_mut("desktop")
+        .and_then(Item::as_table_like_mut)
+        .ok_or(AdapterFailure::ConfigurationFailed(
+            "configuration_parse_failed",
+        ))?;
+    desktop.insert(
+        "conversationDetailMode",
+        value(DESKTOP_CONVERSATION_DETAIL_MODE),
+    );
+    Ok(())
 }
 
 fn catalog_value(model: &str, transport: CodexTransport) -> Result<Value, AdapterFailure> {
@@ -1416,5 +1443,85 @@ experimental_bearer_token = "sk-old-old-old-old"
              model_providers = {{ yeschoy = {{ base_url = \"{PROXY_BASE}\", wire_api = \"responses\" }} }}\n"
         );
         assert!(config_points_at_our_bridge(&text), "{text}");
+    }
+
+    #[test]
+    fn render_writes_desktop_conversation_detail_mode_on_empty_config() {
+        let bytes = render(
+            None,
+            PROXY_BASE,
+            "gpt-6-astra",
+            &ProviderAuth::Command("/synthetic/helper".into()),
+        )
+        .unwrap();
+        let document = String::from_utf8(bytes)
+            .unwrap()
+            .parse::<DocumentMut>()
+            .unwrap();
+        assert_eq!(
+            document["desktop"]["conversationDetailMode"].as_str(),
+            Some(DESKTOP_CONVERSATION_DETAIL_MODE)
+        );
+    }
+
+    #[test]
+    fn render_merges_desktop_conversation_detail_mode_preserving_other_fields() {
+        let source = b"[desktop]\nwindow_width = 1200\nconversationDetailMode = \"STEPS_PROSE\"\n";
+        let bytes = render(
+            Some(source),
+            PROXY_BASE,
+            "gpt-6-astra",
+            &ProviderAuth::ApiKey(format!("sk-{}", "e".repeat(48))),
+        )
+        .unwrap();
+        let text = String::from_utf8(bytes).unwrap();
+        let document = text.parse::<DocumentMut>().unwrap();
+        assert_eq!(
+            document["desktop"]["conversationDetailMode"].as_str(),
+            Some(DESKTOP_CONVERSATION_DETAIL_MODE)
+        );
+        assert_eq!(document["desktop"]["window_width"].as_integer(), Some(1200));
+        // Second write with the same value stays idempotent.
+        let again = render(
+            Some(text.as_bytes()),
+            PROXY_BASE,
+            "gpt-6-astra",
+            &ProviderAuth::ApiKey(format!("sk-{}", "e".repeat(48))),
+        )
+        .unwrap();
+        let again_doc = String::from_utf8(again)
+            .unwrap()
+            .parse::<DocumentMut>()
+            .unwrap();
+        assert_eq!(
+            again_doc["desktop"]["conversationDetailMode"].as_str(),
+            Some(DESKTOP_CONVERSATION_DETAIL_MODE)
+        );
+        assert_eq!(again_doc["desktop"]["window_width"].as_integer(), Some(1200));
+    }
+
+    #[test]
+    fn prepare_inner_commits_desktop_conversation_detail_mode() {
+        let home = common::temporary_working_directory("codex-desktop-work-gate").unwrap();
+        let key = format!("sk-{}", "f".repeat(48));
+        let models = vec!["gpt-6-astra".to_owned()];
+        let mut prepared = prepare_catalog(
+            &home,
+            "https://yeschoy.com",
+            "gpt-6-astra",
+            CodexTransport::DirectResponses,
+            Some(&key),
+            &models,
+        )
+        .unwrap();
+        prepared.commit().unwrap();
+        let config = std::fs::read_to_string(home.join(".codex/config.toml")).unwrap();
+        let document = config.parse::<DocumentMut>().unwrap();
+        assert_eq!(
+            document["desktop"]["conversationDetailMode"].as_str(),
+            Some(DESKTOP_CONVERSATION_DETAIL_MODE)
+        );
+        prepared.rollback().unwrap();
+        std::fs::remove_dir_all(home).unwrap();
     }
 }
