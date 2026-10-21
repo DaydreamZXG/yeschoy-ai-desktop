@@ -17,8 +17,8 @@ Automated coverage: `scripts/qa/station-connect-t8-security-regression.sh`.
 - [ ] Device-code path (`account_v2` device-authorizations) still works; compile-time authorization origins unchanged unless explicitly scoped.
 - [ ] Official updater feeds in `src-tauri/update-channels.json` still point at `ergou.qzz.io` **only** for `official` / `partner` variants.
 - [ ] Third-party / self-built docs (`docs/station-connect-embed.md`, `public/connect.js`) do **not** send users to `ergou.qzz.io` for updates or downloads.
-- [ ] `LICENSE` retains CC Switch (Jason Young) copyright line.
-- [ ] `README.md` / `CONTRIBUTING.md` CC Switch attribution and `src-tauri/src/proxy/VENDOR.md` remain while vendored proxy files exist.
+- [ ] `LICENSE` retains the Jason Young / CC Switch copyright line.
+- [ ] `README.md` keeps a one-line CC Switch thanks linking `src-tauri/src/proxy/VENDOR.md` while vendored proxy files exist.
 
 ## Explicitly out of scope (need user sign-off)
 

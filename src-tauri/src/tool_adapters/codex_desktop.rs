@@ -890,7 +890,7 @@ mod tests {
         let key = format!("sk-{}", "c".repeat(48));
         let original = br#"model_provider = "custom"
 model = "deepseek-chat"
-model_catalog_json = "cc-switch-models.json"
+model_catalog_json = "legacy-models.json"
 
 [model_providers.custom]
 name = "DeepSeek"

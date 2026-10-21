@@ -2,7 +2,7 @@
 //!
 //! Codex 只发 `/v1/responses`（CLI 0.155.1 起 `wire_api = "chat"` 已被移除），
 //! 而有些渠道的上游只有 `/v1/chat/completions`。转换本身用 vendored 的
-//! cc-switch（`crate::proxy`），**这里只放野菜特有的东西**。
+//! 上游 proxy（`crate::proxy`），**这里只放野菜特有的东西**。
 //!
 //! # 为什么是「包着调用」而不是改那些文件
 //!

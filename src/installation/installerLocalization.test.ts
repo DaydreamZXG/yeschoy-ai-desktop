@@ -45,6 +45,9 @@ describe("Windows installer localization", () => {
     expect(hook).toContain("yeschoy-desktop.exe");
     expect(hook).toContain("CC Switch.exe");
     expect(hook).toContain("cc-switch.exe");
+    // User-visible copy must stay neutral; keep legacy exe probe paths only.
+    expect(hook).not.toMatch(/显示为[“"]CC Switch[”"]/);
+    expect(hook).toContain("早期版本遗留的可执行名");
     expect(hook).toContain("hidden windows and multiple copies");
     expect(hook).toContain("尚未修改任何程序文件");
     expect(hook).toContain(

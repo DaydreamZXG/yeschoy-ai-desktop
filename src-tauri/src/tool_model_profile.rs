@@ -115,7 +115,7 @@ pub(crate) fn claude_gateway_route_id(model_id: &str) -> String {
         // usable through an opaque safe route, without a misleading selector.
         //
         // The borrowed `sonnet` role is **only** there to satisfy Claude
-        // Desktop's naming rule -- upstream cc-switch's `is_claude_safe_model_id`
+        // Desktop's naming rule -- upstream `is_claude_safe_model_id`
         // requires the tail after `claude-` to begin with a known role. The
         // `-router-` segment that follows cannot match any real model, so the
         // app's capability lookup still misses and no effort selector appears.
@@ -779,7 +779,7 @@ mod tests {
         }
     }
 
-    /// cc-switch 的 `is_claude_safe_model_id`，逐条照搬（`claude_desktop_config.rs`）。
+    /// 上游的 `is_claude_safe_model_id`，逐条照搬（`claude_desktop_config.rs`）。
     ///
     /// 这是上游长期盯着 Claude Desktop 行为得出的规则，比我们反编译到的
     /// 那个 `Jo()` 更严格 —— `Jo` 只要名字里含 `claude` 或 `anthropic` 就放行，
