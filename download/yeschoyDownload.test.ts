@@ -43,7 +43,7 @@ describe("resolveDesktopDownloads", () => {
           ok: true,
           json: async () => [
             {
-              tag_name: "v0.5.0",
+              tag_name: "v0.5.1",
               draft: true,
               published_at: null,
               assets: [],
@@ -69,7 +69,7 @@ describe("resolveDesktopDownloads", () => {
         };
       }
       if (url.includes("yeschoy-official.json")) {
-        return { ok: true, json: async () => ({ version: "0.5.0", platforms: {} }) };
+        return { ok: true, json: async () => ({ version: "0.5.1", platforms: {} }) };
       }
       throw new Error(`unexpected ${url}`);
     }) as typeof fetch;
@@ -90,7 +90,7 @@ describe("resolveDesktopDownloads", () => {
         return {
           ok: true,
           json: async () => [
-            { tag_name: "v0.5.0", draft: true, published_at: null, assets: [] },
+            { tag_name: "v0.5.1", draft: true, published_at: null, assets: [] },
           ],
         };
       }
@@ -98,15 +98,15 @@ describe("resolveDesktopDownloads", () => {
         return {
           ok: true,
           json: async () => ({
-            version: "0.5.0",
+            version: "0.5.1",
             platforms: {
               "windows-x86_64": {
                 url:
-                  "https://ergou.qzz.io/updates/releases/official/0.5.0/yeschoy-0.5.0-official-windows-x86_64-installer.exe",
+                  "https://ergou.qzz.io/updates/releases/official/0.5.1/yeschoy-0.5.1-official-windows-x86_64-installer.exe",
               },
               "macos-universal": {
                 url:
-                  "https://ergou.qzz.io/updates/releases/official/0.5.0/yeschoy-0.5.0-official-macos-universal-installer.dmg",
+                  "https://ergou.qzz.io/updates/releases/official/0.5.1/yeschoy-0.5.1-official-macos-universal-installer.dmg",
               },
             },
           }),
@@ -122,7 +122,7 @@ describe("resolveDesktopDownloads", () => {
     });
     expect(result.githubUnpublished).toBe(true);
     expect(result.primary?.source).toBe("ergou");
-    expect(result.primary?.version).toBe("0.5.0");
+    expect(result.primary?.version).toBe("0.5.1");
     expect(result.primary?.url).toContain("ergou.qzz.io");
   });
 
