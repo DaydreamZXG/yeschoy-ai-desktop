@@ -21,8 +21,8 @@ entered.
 
 Copy or proxy the template in this repository:
 
-- **HTML**: [`public/desktop/connect.html`](../public/desktop/connect.html)
-- **Script**: [`https://yeschoy.com/connect.js`](https://yeschoy.com/connect.js)
+- **HTML**: [`public/desktop/connect/index.html (also connect.html)`](../public/desktop/connect/index.html (also connect.html))
+- **Script**: [`https://yeschoy.app/connect.js`](https://yeschoy.app/connect.js)
   (see [`station-connect-embed.md`](./station-connect-embed.md))
 
 The page contains **one primary button** (`data-yeschoy-connect`). The hosted
@@ -37,7 +37,7 @@ The page contains **one primary button** (`data-yeschoy-connect`). The hosted
    ([`station-connect-api.openapi.yaml`](./station-connect-api.openapi.yaml)).
 3. Keep the page minimal: sign-in hint, one button, quiet download link in the
    footer (not a second primary CTA).
-4. Prefer loading `connect.js` from `yeschoy.com` so protocol fixes ship
+4. Prefer loading `connect.js` from `yeschoy.app` so protocol fixes ship
    without redeploying your static HTML.
 
 ### User flow

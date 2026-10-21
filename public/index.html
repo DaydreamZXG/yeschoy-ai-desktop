@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <meta name="description" content="野菜桌面助手：把常用 AI 应用一键接到兼容中转站。开源、MIT，支持 macOS 与 Windows。" />
+  <title>野菜桌面助手 · yeschoy.app</title>
+  <link rel="stylesheet" href="/site/theme.css" />
+  <style>
+    .wrap { width: min(880px, calc(100% - 32px)); margin: 0 auto; }
+    .top {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; padding: 20px 0 8px; flex-wrap: wrap;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--ink); }
+    .brand-name { font-weight: 700; font-size: 15px; letter-spacing: -0.02em; }
+    .brand-tag {
+      display: inline-flex; align-items: center; padding: 2px 8px;
+      border-radius: 999px; background: var(--accent-soft); color: var(--ink);
+      font-size: 11px; font-weight: 650; letter-spacing: 0.04em;
+    }
+    .nav { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--muted); }
+    .nav a { text-decoration: none; }
+    .nav a:hover { color: var(--ink); }
+    .hero { padding: 48px 0 28px; }
+    .eyebrow {
+      margin: 0 0 10px; color: var(--faint); font-size: 12px; font-weight: 650;
+      letter-spacing: 0.06em;
+    }
+    .hero h1 {
+      margin: 0 0 12px; font-size: clamp(28px, 5vw, 36px); font-weight: 720;
+      letter-spacing: -0.03em; line-height: 1.2;
+    }
+    .lede { margin: 0 0 24px; max-width: 36em; color: var(--muted); font-size: 16px; line-height: 1.65; }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    section { padding: 28px 0; }
+    section h2 { margin: 0 0 16px; font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+    .steps {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;
+    }
+    @media (max-width: 720px) { .steps { grid-template-columns: 1fr; } }
+    .step {
+      padding: 18px 16px; border: 1px solid var(--line); border-radius: var(--radius-xl);
+      background: var(--surface);
+    }
+    .step-num {
+      display: inline-grid; place-items: center; width: 28px; height: 28px;
+      margin-bottom: 10px; border-radius: 999px; background: var(--lime); color: var(--lime-ink);
+      font-size: 13px; font-weight: 750;
+    }
+    .step h3 { margin: 0 0 6px; font-size: 15px; font-weight: 650; }
+    .step p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .panel {
+      padding: 22px 20px; border: 1px solid var(--line); border-radius: var(--radius-xl);
+      background: var(--surface); box-shadow: var(--shadow-float);
+    }
+    .panel p.note, [data-download-note], [data-download-status] {
+      margin: 0 0 12px; color: var(--muted); font-size: 13px;
+    }
+    [data-download-actions] { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+    .panel-links { display: flex; flex-wrap: wrap; gap: 10px 16px; font-size: 13px; color: var(--muted); }
+    .panel-links a { color: var(--ink); }
+    .oss-grid {
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
+    }
+    @media (max-width: 640px) { .oss-grid { grid-template-columns: 1fr; } }
+    .oss-card {
+      padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-lg);
+      background: var(--surface); text-decoration: none; color: inherit;
+    }
+    .oss-card:hover { border-color: var(--line-strong); background: var(--subtle); }
+    .oss-card strong { display: block; margin-bottom: 4px; }
+    .oss-card span { color: var(--muted); font-size: 13px; }
+    .site-footer {
+      margin-top: 24px; padding: 28px 0 40px; border-top: 1px solid var(--line-soft);
+      color: var(--muted); font-size: 12px;
+    }
+    .site-footer nav { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-bottom: 10px; }
+    .site-footer a { color: var(--ink); text-decoration: none; }
+    .site-footer a:hover { text-decoration: underline; text-underline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <a class="brand" href="/">
+        <span class="mark" aria-hidden="true">野</span>
+        <span class="brand-name">野菜桌面助手</span>
+        <span class="brand-tag">开源</span>
+      </a>
+      <nav class="nav" aria-label="页面导航">
+        <a href="#download">下载</a>
+        <a href="/desktop/connect">一键连接</a>
+        <a href="#open-source">开源</a>
+        <a href="https://github.com/DaydreamZXG/yeschoy-ai-desktop" rel="noopener">GitHub</a>
+        <a href="https://github.com/DaydreamZXG/yeschoy-ai-desktop/blob/product/yeschoy-v1/PRIVACY.md" rel="noopener">隐私</a>
+      </nav>
+    </header>
+
+    <section class="hero" aria-labelledby="hero-title">
+      <p class="eyebrow">野菜API · 你的 AI 工作台</p>
+      <h1 id="hero-title">把常用 AI 应用，一键接到兼容中转站</h1>
+      <p class="lede">
+        选应用、选模型，助手帮你写好配置；不想用了，一键恢复原来的设置。
+        支持 macOS 与 Windows。面向小白，确认之前不会改你电脑上的任何文件。
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#download">下载桌面端</a>
+        <a class="btn btn-ghost" href="/desktop/connect">一键连接本站</a>
+      </div>
+    </section>
+
+    <section aria-labelledby="steps-title">
+      <h2 id="steps-title">三步开始用</h2>
+      <div class="steps">
+        <article class="step">
+          <span class="step-num">1</span>
+          <h3>下载安装</h3>
+          <p>按你的系统下载安装包。官方包会自动更新；也可从 GitHub Releases 获取。</p>
+        </article>
+        <article class="step">
+          <span class="step-num">2</span>
+          <h3>选应用和模型</h3>
+          <p>打开助手，选择 Claude Code、Codex、OpenCode 等已安装应用，再选要用的模型。</p>
+        </article>
+        <article class="step">
+          <span class="step-num">3</span>
+          <h3>确认后接入</h3>
+          <p>预览页只读。点「接入」才写入；随时可「恢复原设置」，只撤回助手改过的项。</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="download" aria-labelledby="download-title">
+      <h2 id="download-title">下载桌面端</h2>
+      <div class="panel" data-yeschoy-download>
+        <p class="note">我们会根据你的电脑推荐一个主按钮；也可以手动选另一系统。安装包由下载站分发，本页不托管大文件。</p>
+        <p data-download-status aria-live="polite"></p>
+        <p data-download-note></p>
+        <div data-download-actions></div>
+        <div class="panel-links">
+          <a data-download-releases href="https://github.com/DaydreamZXG/yeschoy-ai-desktop/releases">在 GitHub 查看全部版本</a>
+          <a href="/download/">精简下载页</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="connect" aria-labelledby="connect-title">
+      <h2 id="connect-title">一键连接中转站</h2>
+      <div class="panel">
+        <p class="note">
+          先在本站（或你使用的兼容中转站）登录，再点「打开桌面助手」。
+          浏览器会拉起客户端，无需复制 API 密钥。也可在客户端里填写
+          <code>https://yeschoy.app</code>。
+        </p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="/desktop/connect">打开连接页</a>
+          <a class="btn btn-ghost" href="/download/">还没安装？先下载</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="open-source" aria-labelledby="oss-title">
+      <h2 id="oss-title">开源与信任</h2>
+      <div class="oss-grid">
+        <a class="oss-card" href="https://github.com/DaydreamZXG/yeschoy-ai-desktop" rel="noopener">
+          <strong>源码 · GitHub</strong>
+          <span>MIT 许可。社区可自行编译；官方安装包走正式更新源。</span>
+        </a>
+        <a class="oss-card" href="https://github.com/DaydreamZXG/yeschoy-ai-desktop/blob/product/yeschoy-v1/docs/OPEN_SOURCE.md" rel="noopener">
+          <strong>开源说明</strong>
+          <span>构建方式、更新通道、站点接入与发布清单。</span>
+        </a>
+        <a class="oss-card" href="https://github.com/DaydreamZXG/yeschoy-ai-desktop/blob/product/yeschoy-v1/PRIVACY.md" rel="noopener">
+          <strong>隐私</strong>
+          <span>凭据留在本机钥匙串；不做后台产品分析上传。</span>
+        </a>
+        <a class="oss-card" href="https://github.com/DaydreamZXG/yeschoy-ai-desktop/blob/product/yeschoy-v1/LICENSE" rel="noopener">
+          <strong>许可证 · MIT</strong>
+          <span>可自由使用、修改与再分发，保留版权声明即可。</span>
+        </a>
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <nav aria-label="页脚链接">
+        <a href="/download/">下载</a>
+        <a href="/desktop/connect">一键连接</a>
+        <a href="https://github.com/DaydreamZXG/yeschoy-ai-desktop/blob/product/yeschoy-v1/PRIVACY.md" rel="noopener">隐私</a>
+        <a href="https://github.com/DaydreamZXG/yeschoy-ai-desktop/blob/product/yeschoy-v1/LICENSE" rel="noopener">许可证</a>
+        <a href="https://github.com/DaydreamZXG/yeschoy-ai-desktop/blob/product/yeschoy-v1/SECURITY.md" rel="noopener">安全披露</a>
+        <a href="https://github.com/DaydreamZXG/yeschoy-ai-desktop/blob/product/yeschoy-v1/SUPPORT.md" rel="noopener">支持</a>
+      </nav>
+      <p>野菜桌面助手 · yeschoy.app。安装包由 ergou 等正式下载通道分发；本站只提供落地与连接页。</p>
+    </footer>
+  </div>
+  <script src="/download.js" defer></script>
+</body>
+</html>

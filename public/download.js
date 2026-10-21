@@ -1,6 +1,6 @@
 var YeschoyDownloadBundle = (function(exports) {
   "use strict";
-  const DESKTOP_DOWNLOAD_PAGE_URL = "https://yeschoy.com/download";
+  const DESKTOP_DOWNLOAD_PAGE_URL = "https://yeschoy.app/download";
   const GITHUB_RELEASES_PAGE = "https://github.com/DaydreamZXG/yeschoy-ai-desktop/releases";
   const GITHUB_RELEASES_API = "https://api.github.com/repos/DaydreamZXG/yeschoy-ai-desktop/releases";
   const ERGOU_OFFICIAL_MANIFEST = "https://ergou.qzz.io/releases/yeschoy-official.json";

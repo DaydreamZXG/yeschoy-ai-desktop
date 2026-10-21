@@ -1,0 +1,132 @@
+/* Matches src/theme/new-api.css product UI (lime + near-black). Not the legacy warm-paper download cards. */
+:root {
+  color-scheme: light dark;
+  --lime: #c9fa10;
+  --lime-ink: #111111;
+  --bg: #fafaf8;
+  --surface: #ffffff;
+  --subtle: rgb(17 17 17 / 4%);
+  --ink: #111111;
+  --muted: rgb(17 17 17 / 64%);
+  --faint: rgb(17 17 17 / 56%);
+  --line: rgb(17 17 17 / 8%);
+  --line-soft: rgb(17 17 17 / 5%);
+  --line-strong: rgb(17 17 17 / 16%);
+  --accent: #111111;
+  --accent-hover: #000000;
+  --accent-soft: rgb(201 250 16 / 28%);
+  --on-accent: #c9fa10;
+  --danger: #c4233f;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --shadow-float: 0 8px 32px rgb(17 17 17 / 12%), 0 0 0 1px rgb(17 17 17 / 6%);
+  --focus-ring: 0 0 0 3px rgb(201 250 16 / 70%);
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei",
+    sans-serif;
+  font-family: var(--font-ui);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c0c0c;
+    --surface: #151515;
+    --subtle: rgb(255 255 255 / 5%);
+    --ink: #f2f2ee;
+    --muted: rgb(242 242 238 / 64%);
+    --faint: rgb(242 242 238 / 52%);
+    --line: rgb(255 255 255 / 8%);
+    --line-soft: rgb(255 255 255 / 5%);
+    --line-strong: rgb(255 255 255 / 16%);
+    --accent: #c9fa10;
+    --accent-hover: #d9ff4a;
+    --accent-soft: rgb(201 250 16 / 12%);
+    --on-accent: #111111;
+    --danger: #ff7a8f;
+    --shadow-float: 0 8px 32px rgb(0 0 0 / 50%), 0 0 0 1px rgb(255 255 255 / 8%);
+    --focus-ring: 0 0 0 3px rgb(201 250 16 / 40%);
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+a:focus-visible, button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--lime);
+  color: var(--lime-ink);
+  font-weight: 750;
+  font-size: 18px;
+  letter-spacing: -0.04em;
+  flex-shrink: 0;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font-weight: 650;
+  font-size: 14px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+.btn-primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: transparent;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-ghost {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+.btn-ghost:hover { background: var(--subtle); }
+.download-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  text-decoration: none;
+  color: var(--ink);
+  font-weight: 650;
+  background: var(--surface);
+  transition: border-color 140ms, background 140ms;
+}
+.download-action.is-primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--on-accent);
+}
+.download-action.is-primary:hover { background: var(--accent-hover); }
+.download-action:not(.is-primary):hover {
+  border-color: var(--line-strong);
+  background: var(--subtle);
+}
+.download-action-meta {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.8;
+}

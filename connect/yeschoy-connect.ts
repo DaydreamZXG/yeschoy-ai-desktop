@@ -1,6 +1,6 @@
 /**
  * YesChoy station connect — browser-side issue + deep-link navigation.
- * Bundled to `public/connect.js` for https://yeschoy.com/connect.js
+ * Bundled to `public/connect.js` for https://yeschoy.app/connect.js
  */
 
 export const CONNECT_CODES_ISSUE_PATH = "/api/desktop/v2/connect-codes";
@@ -9,7 +9,7 @@ export const CONNECT_CODES_ISSUE_PATH = "/api/desktop/v2/connect-codes";
 export { STATION_CONNECT_PAGE_PATH } from "./stationConnectPage";
 
 /** Public download page (not ergou update CDN). */
-export const DEFAULT_DOWNLOAD_URL = "https://yeschoy.com/download";
+export const DEFAULT_DOWNLOAD_URL = "https://yeschoy.app/download";
 
 export const GITHUB_RELEASES_URL =
   "https://github.com/DaydreamZXG/yeschoy-ai-desktop/releases";

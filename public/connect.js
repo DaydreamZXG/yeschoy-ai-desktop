@@ -1,7 +1,7 @@
 (function() {
   "use strict";
   const CONNECT_CODES_ISSUE_PATH = "/api/desktop/v2/connect-codes";
-  const DEFAULT_DOWNLOAD_URL = "https://yeschoy.com/download";
+  const DEFAULT_DOWNLOAD_URL = "https://yeschoy.app/download";
   class YeschoyConnectError extends Error {
     constructor(reasonCode, httpStatus) {
       super(reasonCode);

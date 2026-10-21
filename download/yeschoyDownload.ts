@@ -1,10 +1,10 @@
 /**
- * Public desktop download resolution for yeschoy.com/download and embeds.
+ * Public desktop download resolution for yeschoy.app/download and embeds.
  * Prefer GitHub Releases when a non-draft release exists; fall back to ergou
  * manifests and permanent installer URLs without breaking in-app ergou updates.
  */
 
-export const DESKTOP_DOWNLOAD_PAGE_URL = "https://yeschoy.com/download";
+export const DESKTOP_DOWNLOAD_PAGE_URL = "https://yeschoy.app/download";
 
 export const GITHUB_RELEASES_PAGE =
   "https://github.com/DaydreamZXG/yeschoy-ai-desktop/releases";
