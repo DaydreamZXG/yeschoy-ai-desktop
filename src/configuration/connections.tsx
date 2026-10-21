@@ -259,7 +259,7 @@ async function manage(
   }
 }
 export function useToolConnections() {
-  // Reuse CC Switch's QueryClient: one in-flight read and one last-successful
+  // Reuse the shared QueryClient: one in-flight read and one last-successful
   // snapshot. This is local state, so browser offline status must not block it.
   const query = useQuery(
     {

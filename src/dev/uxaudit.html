@@ -8,7 +8,7 @@
       (function () {
         try {
           var q = new URLSearchParams(location.search);
-          var t = q.get("theme") || localStorage.getItem("cc-switch-theme") || "system";
+          var t = q.get("theme") || localStorage.getItem("yeschoy-appearance") || localStorage.getItem("cc-switch-theme") || "system";
           var d =
             t === "dark" ||
             (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);

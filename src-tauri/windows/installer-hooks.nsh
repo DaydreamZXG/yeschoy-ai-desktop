@@ -39,8 +39,8 @@ yeschoy_probe_done:
 FunctionEnd
 
 ; Accumulates the lock state for every binary name shipped by a supported old
-; or current package. Task Manager may show the PE description "CC Switch"
-; even when the on-disk binary is yeschoy-desktop.exe, so path ownership rather
+; or current package. Early builds may still use legacy executable names on disk,
+; and Task Manager may show an older PE description, so path ownership rather
 ; than a window caption or display name is the source of truth.
 Function YeschoyProbeRootForLocks
   Push $0
@@ -194,7 +194,7 @@ yeschoy_force_exit:
   StrCmp $YeschoyLockState 0 yeschoy_stopped
 
   IfSilent yeschoy_abort
-  MessageBox MB_ICONSTOP|MB_RETRYCANCEL "安装程序无法结束正在运行的野菜API，因此尚未修改任何程序文件。请在任务管理器的“详细信息”中结束“野菜API.exe”或“yeschoy-desktop.exe”；早期版本的应用名称可能显示为“CC Switch”。完成后点击“重试”。错误代码：$YeschoyShutdownError" IDRETRY yeschoy_check_running IDCANCEL yeschoy_abort
+  MessageBox MB_ICONSTOP|MB_RETRYCANCEL "安装程序无法结束正在运行的野菜API，因此尚未修改任何程序文件。请在任务管理器的“详细信息”中结束“野菜API.exe”或“yeschoy-desktop.exe”；若列表里仍是早期版本遗留的可执行名，一并结束后点击“重试”。错误代码：$YeschoyShutdownError" IDRETRY yeschoy_check_running IDCANCEL yeschoy_abort
 
 yeschoy_cancel:
   MessageBox MB_ICONINFORMATION|MB_OK "安装已取消，正在运行的应用和现有程序文件均未修改。"

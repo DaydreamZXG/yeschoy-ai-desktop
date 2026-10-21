@@ -8,7 +8,7 @@
     <script>
       (function () {
         try {
-          var t = localStorage.getItem("cc-switch-theme") || "system";
+          var t = localStorage.getItem("yeschoy-appearance") || localStorage.getItem("cc-switch-theme") || "system";
           var d =
             t === "dark" ||
             (t === "system" &&

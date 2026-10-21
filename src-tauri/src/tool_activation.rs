@@ -640,7 +640,7 @@ fn transport_from_probes(
 
 /// 探测用的最小请求体。
 ///
-/// `max_output_tokens` 取 16：Responses API 的下限就是它（上游 cc-switch
+/// `max_output_tokens` 取 16：Responses API 的下限就是它（上游
 /// 有一条 `clamp sub-floor max_tokens to the Responses API minimum` 的修复），
 /// 再小会被当成参数错误而不是路由错误，把探测本身变成噪音。
 ///
@@ -2673,7 +2673,7 @@ pub async fn configure_desktop_tool_v2(
     // tool and sends the user into a false "higher precedence" failure.
     emit_activation_progress(&app, &request, "preparing_settings", 5);
     // A pre-0.4.19 receipt may currently show `yeschoy`, while its encrypted
-    // original snapshot still records CC Switch's provider identifier. Reuse
+    // original snapshot still records the previous provider identifier. Reuse
     // that identifier so upgrading users get the compatibility fix without
     // first restoring or touching config.toml themselves.
     let codex_provider_hint = if request.tool_id == "codex_desktop" {
@@ -3237,7 +3237,7 @@ pub(crate) async fn inspect_on_worker<T: Send + 'static>(
         let guard = tokio::time::timeout(CONNECTION_LOCK_WAIT_TIMEOUT, lock.lock())
             .await
             .map_err(|_| "connection_operation_busy")?;
-        // Same blocking-worker boundary as CC Switch's provider commands. Keep
+        // Same blocking-worker boundary as the existing provider commands. Keep
         // the write lock in the worker even if the caller times out: an OS read
         // cannot be cancelled safely, and must not overlap configuration writes.
         tauri::async_runtime::spawn_blocking(move || {

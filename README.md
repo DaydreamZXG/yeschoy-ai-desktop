@@ -67,7 +67,7 @@ cd src-tauri && cargo test --lib   # Rust 测试
 
 ## 致谢与许可
 
-以 [MIT 许可](LICENSE) 发布。感谢 [CC Switch](https://github.com/farion1231/cc-switch)（MIT，Jason Young）；部分 proxy 文件仍与上游一致，见 [`VENDOR.md`](src-tauri/src/proxy/VENDOR.md)。本仓库不附带第三方合作方商标图（见 `assets/partners/README.md`）。
+以 [MIT 许可](LICENSE) 发布。致谢 [CC Switch](https://github.com/farion1231/cc-switch)（MIT）· 详见 [`VENDOR.md`](src-tauri/src/proxy/VENDOR.md)。
 
 ---
 
@@ -97,4 +97,4 @@ See [`docs/download-page.md`](docs/download-page.md) for hosting notes. In-app a
 
 Community docs: [SUPPORT.md](./SUPPORT.md), [PRIVACY.md](./PRIVACY.md), [SECURITY.md](./SECURITY.md), [`docs/OPEN_SOURCE.md`](docs/OPEN_SOURCE.md).
 
-Released under the [MIT License](LICENSE). Thanks to [CC Switch](https://github.com/farion1231/cc-switch) (MIT, Jason Young); some proxy files remain identical to upstream — see [`VENDOR.md`](src-tauri/src/proxy/VENDOR.md). Third-party partner trademark artwork is not redistributed in this tree (`assets/partners/README.md`).
+Released under the [MIT License](LICENSE). Thanks to [CC Switch](https://github.com/farion1231/cc-switch) (MIT) — see [`VENDOR.md`](src-tauri/src/proxy/VENDOR.md).

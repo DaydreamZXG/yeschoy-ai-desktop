@@ -6,4 +6,4 @@
 - 官方发行包若需展示合作方物料，在**单独、已获授权**的发行资源中维护，不要提交回此公开树。
 - `scripts/oss/clean-history.sh` 会排除历史快照里可能残留的 `assets/partners/logos` 与 `assets/partners/banners`。
 
-If you previously vendor-copied partner banners from upstream CC Switch, treat them as third-party trademarks: do not re-add them here without written permission.
+If you previously vendor-copied partner banners from an upstream fork, treat them as third-party trademarks: do not re-add them here without written permission.

@@ -18,9 +18,10 @@ cargo test origins_redirects_and_authorization_inputs_are_closed --manifest-path
 echo "== Frontend: connect.js contract tests =="
 pnpm exec vitest run connect/yeschoy-connect.test.ts
 
-echo "== Invariants: CC Switch attribution =="
-grep -q "Jason Young" "$ROOT/LICENSE" || fail "LICENSE missing CC Switch attribution"
-grep -q "CC Switch" "$ROOT/README.md" || fail "README missing CC Switch attribution"
+echo "== Invariants: upstream attribution (LICENSE + README one-liner + VENDOR.md) =="
+grep -q "Jason Young" "$ROOT/LICENSE" || fail "LICENSE missing Jason Young / CC Switch copyright line"
+grep -q "CC Switch" "$ROOT/README.md" || fail "README missing lightweight CC Switch attribution"
+grep -q "VENDOR.md" "$ROOT/README.md" || fail "README must link VENDOR.md"
 test -f "$ROOT/src-tauri/src/proxy/VENDOR.md" || fail "VENDOR.md missing"
 grep -qi "cc-switch" "$ROOT/src-tauri/src/proxy/VENDOR.md" || fail "VENDOR.md missing upstream reference"
 

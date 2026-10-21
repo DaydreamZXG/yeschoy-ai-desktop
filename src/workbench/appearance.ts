@@ -5,7 +5,9 @@ export type Appearance = "system" | "light" | "dark";
 export const APPEARANCE_KEY = "yeschoy-appearance";
 export function readAppearance(): Appearance {
   try {
-    const value = localStorage.getItem(APPEARANCE_KEY);
+    const value =
+      localStorage.getItem(APPEARANCE_KEY) ||
+      localStorage.getItem("cc-switch-theme");
     if (value === "light" || value === "dark") return value;
   } catch {
     /* Storage is optional; never block the UI. */
