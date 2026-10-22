@@ -1497,7 +1497,10 @@ experimental_bearer_token = "sk-old-old-old-old"
             again_doc["desktop"]["conversationDetailMode"].as_str(),
             Some(DESKTOP_CONVERSATION_DETAIL_MODE)
         );
-        assert_eq!(again_doc["desktop"]["window_width"].as_integer(), Some(1200));
+        assert_eq!(
+            again_doc["desktop"]["window_width"].as_integer(),
+            Some(1200)
+        );
     }
 
     #[test]
