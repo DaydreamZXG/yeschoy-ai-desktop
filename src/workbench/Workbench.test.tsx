@@ -1061,7 +1061,9 @@ describe("official workbench", () => {
       expect(await screen.findByText("设置已完成")).toBeInTheDocument();
       expect(
         screen.getByText(
-          "Codex（桌面版 / 命令行） 的设置和野菜本地路由已经就绪。Codex 仍可显示你的官方登录账号，那只是登录身份，不代表模型请求走官方计费。第一次真实请求的结果会显示在“最近野菜中转记录”里；看到完整模型 ID，才表示这次请求确实经过野菜中转。",
+          zh.configuration.readyCodex
+            .replace("{{app}}", "Codex（桌面版 / 命令行）")
+            .replace("{{favorites}}", ""),
         ),
       ).toBeInTheDocument();
       expect(native).toHaveBeenCalledWith("configure_desktop_tool_v2", {
