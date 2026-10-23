@@ -30,7 +30,7 @@
 真实仓库不改写历史。开源时建议另建一个新的公开仓库，用全新历史：
 
 ```bash
-scripts/oss/clean-history.sh ../yeschoy-oss product/yeschoy-v1
+scripts/oss/clean-history.sh ../yeschoy-oss main
 # 人工检查 ../yeschoy-oss，确认干净后再自己 push 到新的公开仓库
 ```
 
@@ -70,7 +70,7 @@ scripts/oss/clean-history.sh ../yeschoy-oss product/yeschoy-v1
 真实 `DaydreamZXG/yeschoy-ai-desktop` **不强制** `git filter-repo`。开源对外「干净起点」推荐：
 
 ```bash
-scripts/oss/clean-history.sh ../yeschoy-oss product/yeschoy-v1
+scripts/oss/clean-history.sh ../yeschoy-oss main
 # 人工检查 ../yeschoy-oss 后，再决定是否 push 到新公开仓库或替换默认分支
 ```
 
@@ -80,7 +80,7 @@ scripts/oss/clean-history.sh ../yeschoy-oss product/yeschoy-v1
 
 社区轨要让用户从 GitHub Releases 装上包，并（可选）让社区构建能打到 `latest.json`，按下列顺序**人工**操作。合并文档 PR ≠ 发版。
 
-1. **确认** `product/yeschoy-v1`（或选定发版提交）已包含本开源文档与 partners 清理；版本号已在 `package.json` / Tauri 配置中 bump。
+1. **确认** `main`（或选定发版提交）已包含本开源文档与 partners 清理；版本号已在 `package.json` / Tauri 配置中 bump。
 2. **打开** 上文 Secret scanning / Push protection。
 3. **用社区构建**打安装包（不要走官方 `YESCHOY_DISTRIBUTION=official|partner` 镜像变量，除非有意发官方包）：
    - 本地：`pnpm build`（需要签名/公证时再准备对应证书与 `YESCHOY_COMMUNITY_UPDATER_PUBKEY`）

@@ -44,11 +44,11 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-      - name: Require release from product/yeschoy-v1
+      - name: Require release from main
         if: inputs.mode == 'publish'
         run: |
-          if [ "$GITHUB_REF" != "refs/heads/product/yeschoy-v1" ]; then
-            echo "::error::Publishing is only allowed from product/yeschoy-v1 (got $GITHUB_REF)."
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Publishing is only allowed from main (got $GITHUB_REF)."
             exit 1
           fi
       - name: Version identity and notes

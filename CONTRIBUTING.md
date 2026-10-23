@@ -76,10 +76,10 @@ cd src-tauri && cargo fmt --check && cargo clippy && cargo test --lib
 ## Pull Request Guidelines
 
 1. **Open an issue first** for new features — PRs for features that are not a good fit may be closed.
-2. **Fork and branch** — Create a feature branch from `product/yeschoy-v1` (e.g., `feat/my-feature` or `fix/issue-123`).
+2. **Fork and branch** — Create a feature branch from `main` (e.g., `feat/my-feature` or `fix/issue-123`).
 3. **Keep PRs focused** — One feature or fix per PR. Avoid unrelated changes.
 4. **Follow the PR template** — Fill in the summary, related issue, and checklist.
-5. **Target `product/yeschoy-v1`** — That is the default development branch for this repository.
+5. **Target `main`** — That is the default development branch for this repository.
 
 ### PR Checklist
 
@@ -210,10 +210,10 @@ cd src-tauri && cargo fmt --check && cargo clippy && cargo test --lib
 ## Pull Request 指南
 
 1. **先开 Issue 讨论** — 新功能请先开 Issue，不适合项目方向的 PR 可能会被关闭。
-2. **Fork 并创建分支** — 从 `product/yeschoy-v1` 创建功能分支（如 `feat/my-feature` 或 `fix/issue-123`）。
+2. **Fork 并创建分支** — 从 `main` 创建功能分支（如 `feat/my-feature` 或 `fix/issue-123`）。
 3. **保持 PR 专注** — 每个 PR 只做一件事，避免无关改动。
 4. **遵循 PR 模板** — 填写概述、关联 Issue 和检查清单。
-5. **PR 目标分支为 `product/yeschoy-v1`** — 这是本仓库的默认开发分支。
+5. **PR 目标分支为 `main`** — 这是本仓库的默认开发分支。
 
 ### PR 检查清单
 
