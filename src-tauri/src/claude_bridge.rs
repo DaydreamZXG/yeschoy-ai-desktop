@@ -42,7 +42,53 @@ const FORWARDED_HEADERS: [&str; 4] = [
     "content-type",
     "accept",
 ];
+/// Claude Code 那座桥默认**全部透传**，只拦下面这些头。
+///
+/// 中转上有「只允许 Claude Code」的渠道（new-api 参数覆盖按
+/// `request_headers.user-agent` 之类的条件 `return_error`），上游号池
+/// （CLIProxyAPI）也要同时看到 `X-App: cli`、`claude-cli/x.y.z (external, cli)`
+/// 形状的 `User-Agent` 和含 `claude-code-20250219` 的 `anthropic-beta` 才认定是
+/// Claude Code；`X-Claude-Code-Session-Id` 还决定号池的会话亲和、缓存命不命中。
+/// 以前只带上面四个头，真的 Claude Code 经过本机桥也被当成「不是 Claude Code」。
+/// 用白名单追不上 Claude Code 每个版本新加的头，所以这里反过来只列不能转的：
+///
+/// * 本地凭据：`x-api-key` / `authorization` 是本机桥的令牌，上游凭据由
+///   [`send_upstream`] 另行设置；
+/// * 逐跳头与连接本身的头（`host`、`content-length`、`connection` 等）：
+///   请求体在这里被改写过（`model`），长度和连接都是 reqwest 自己的事；
+/// * `accept-encoding`：reqwest 没开解压，回程又只带 `content-type`，
+///   转过去就会把一段压缩流原样塞给 Claude Code；
+/// * `cookie`：Claude Code 不发，发了也不该越过本地边界。
+///
+/// 这些头本来就是 Claude Code 直连时会发给上游的，带过去不多泄露什么。
+/// Claude Desktop 那座桥仍然只带 [`FORWARDED_HEADERS`]：它不是 Claude Code，
+/// 不该被认成 Claude Code。
+const CLAUDE_CODE_DROPPED_HEADERS: [&str; 14] = [
+    "x-api-key",
+    "authorization",
+    "host",
+    "content-length",
+    "transfer-encoding",
+    "connection",
+    "keep-alive",
+    "te",
+    "trailer",
+    "upgrade",
+    "expect",
+    "accept-encoding",
+    "cookie",
+    "forwarded",
+];
 const ONE_M_CONTEXT_BETA: &str = "context-1m-2025-08-07";
+
+fn forwarded_header(name: &str, desktop: bool) -> bool {
+    if desktop {
+        return FORWARDED_HEADERS.contains(&name);
+    }
+    !CLAUDE_CODE_DROPPED_HEADERS.contains(&name)
+        && !name.starts_with("proxy-")
+        && !name.starts_with("x-forwarded-")
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ClaudeTransport {
@@ -238,10 +284,11 @@ async fn messages(state: &BridgeState, request: Request<Body>) -> Response {
     if !locally_authorized(request.headers(), &state.local_token) {
         return error(StatusCode::UNAUTHORIZED, "invalid local gateway token");
     }
+    let desktop = state.prefix.contains("desktop");
     let mut forwarded: Vec<(header::HeaderName, String)> = request
         .headers()
         .iter()
-        .filter(|(name, _)| FORWARDED_HEADERS.contains(&name.as_str()))
+        .filter(|(name, _)| forwarded_header(name.as_str(), desktop))
         .filter_map(|(name, value)| {
             value
                 .to_str()
@@ -1215,6 +1262,97 @@ mod tests {
         assert!(headers.get(header::AUTHORIZATION).is_none());
         server.abort();
         let _ = server.await;
+    }
+
+    /// 「只允许 Claude Code」的渠道看的是这些头。Claude Code 桥全部透传，连以后
+    /// 新加的头（`x-future-claude-header`）也一样；Claude Desktop 桥一个都不带。
+    /// 本地令牌、cookie、压缩协商和转发链头两边都不越界。
+    #[tokio::test]
+    async fn only_the_claude_code_bridge_passes_claude_code_headers_through() {
+        for (prefix, expect_identity) in [("/claude-code", true), ("/claude-desktop", false)] {
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let origin = format!("http://{}", listener.local_addr().unwrap());
+            let (sent, mut received) = tokio::sync::mpsc::unbounded_channel();
+            let router = Router::new().route(
+                "/v1/messages",
+                axum::routing::post(move |headers: axum::http::HeaderMap| {
+                    let sent = sent.clone();
+                    async move {
+                        sent.send(headers).unwrap();
+                        axum::Json(json!({"content":[{"type":"text","text":"ok"}]}))
+                    }
+                }),
+            );
+            let server =
+                tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+            let mut state = state();
+            state.prefix = prefix;
+            state.credential.origin = origin.clone();
+            for route in &mut state.credential.models {
+                route.origin = origin.clone();
+            }
+            state.client = reqwest::Client::builder()
+                .no_proxy()
+                .timeout(Duration::from_secs(3))
+                .build()
+                .unwrap();
+            let request = Request::builder()
+                .method("POST")
+                .uri(format!("{prefix}/v1/messages"))
+                .header("x-api-key", &state.local_token)
+                .header(header::AUTHORIZATION, format!("Bearer {}", state.local_token))
+                .header("anthropic-version", "2023-06-01")
+                .header(header::USER_AGENT, "claude-cli/2.1.283 (external, cli)")
+                .header("x-app", "cli")
+                .header("anthropic-dangerous-direct-browser-access", "true")
+                .header("x-stainless-lang", "js")
+                .header("x-claude-code-session-id", "session-fixture")
+                .header("x-client-request-id", "request-fixture")
+                .header("x-future-claude-header", "future")
+                .header(header::COOKIE, "local=only")
+                .header(header::ACCEPT_ENCODING, "gzip")
+                .header("x-forwarded-for", "127.0.0.1")
+                .body(Body::from(
+                    json!({
+                        "model":"claude-sonnet-5",
+                        "max_tokens":16,
+                        "messages":[{"role":"user","content":"test"}]
+                    })
+                    .to_string(),
+                ))
+                .unwrap();
+            let response = messages(&state, request).await;
+            assert_eq!(response.status(), StatusCode::OK, "{prefix}");
+            let headers = tokio::time::timeout(Duration::from_secs(3), received.recv())
+                .await
+                .unwrap()
+                .unwrap();
+            let identity = [
+                ("user-agent", "claude-cli/2.1.283 (external, cli)"),
+                ("x-app", "cli"),
+                ("anthropic-dangerous-direct-browser-access", "true"),
+                ("x-stainless-lang", "js"),
+                ("x-claude-code-session-id", "session-fixture"),
+                ("x-client-request-id", "request-fixture"),
+                ("x-future-claude-header", "future"),
+            ];
+            for (name, value) in identity {
+                if expect_identity {
+                    assert_eq!(headers[name], value, "{prefix} {name}");
+                } else {
+                    assert!(headers.get(name).is_none(), "{prefix} {name}");
+                }
+            }
+            for name in ["cookie", "accept-encoding", "x-forwarded-for"] {
+                assert!(headers.get(name).is_none(), "{prefix} {name}");
+            }
+            assert!(
+                !format!("{headers:?}").contains(&state.local_token),
+                "{prefix} leaked the local token"
+            );
+            server.abort();
+            let _ = server.await;
+        }
     }
 
     /// 要的模型不在列表里：本地拒绝并说清回哪儿改。
