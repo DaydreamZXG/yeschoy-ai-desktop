@@ -8,7 +8,7 @@ use std::{
 
 use base64::{engine::general_purpose::STANDARD, Engine};
 
-use super::{common, AdapterFailure, ResolvedInstallation};
+use super::{AdapterFailure, ResolvedInstallation};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Platform {
@@ -196,10 +196,11 @@ fn build_plan(
     let workspace = path_text(workspace, platform)?;
     match platform {
         Platform::MacOs => {
-            let runtime_directories = common::cli_runtime_directories(&installation.path)
-                .iter()
-                .map(|path| path_text(path, platform))
-                .collect::<Result<Vec<_>, _>>()?;
+            let runtime_directories =
+                crate::infrastructure::process::cli_runtime_directories(&installation.path)
+                    .iter()
+                    .map(|path| path_text(path, platform))
+                    .collect::<Result<Vec<_>, _>>()?;
             Ok(LaunchPlan {
                 // A normal LaunchServices document-open, not AppleScript
                 // automation. Hardened candidates need no AppleEvents grant.
@@ -474,7 +475,10 @@ mod tests {
 
     #[test]
     fn activation_and_open_button_share_terminal_handoff() {
-        let activation = include_str!("../tool_activation.rs");
+        // Activation and the daily "open" button must keep using the same
+        // terminal handoff. The opener moved into the application lifecycle
+        // module during the activation refactor; keep guarding the real source.
+        let activation = include_str!("../application/activation/lifecycle.rs");
         let opener = activation
             .split("async fn open_configured_adapter(")
             .nth(1)

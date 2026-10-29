@@ -10,8 +10,8 @@ mod zip_package;
 
 use crate::{
     account_v2::{ensure_session_epoch, native_session_epoch, AccountV2State, NativeSessionEpoch},
+    domain::model::ModelBinding,
     shutdown_coordinator::{self, OperationPermit},
-    tool_activation::ModelBinding,
     tool_adapters,
 };
 use serde::{Deserialize, Serialize};
@@ -410,6 +410,78 @@ fn new_id() -> Result<String> {
     let mut bytes = [0u8; 16];
     getrandom::fill(&mut bytes).map_err(|_| "installer_unavailable")?;
     Ok(bytes.iter().map(|b| format!("{b:02x}")).collect())
+}
+
+/// What an install would do, answered without doing any of it.
+///
+/// `manage_app_installation_v2` can only report this through its `inspect`
+/// action, which lives on the same "one command does everything" surface the
+/// activation path already moved away from. This is the read-only half of the
+/// same product invariant: the renderer must be able to show the user where a
+/// package comes from and what mode it will take *before* consent, and the
+/// native side must not need a session, a job or a write to answer that.
+///
+/// It deliberately reports a closed vocabulary: the platform/architecture pair,
+/// the installation mode, whether an official package exists, and whether a
+/// mirror is compiled in. No URLs, no paths, no hostnames.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstallationPreview {
+    schema_version: u8,
+    request_id: String,
+    tool_id: String,
+    platform: &'static str,
+    architecture: &'static str,
+    mode: &'static str,
+    /// A downloadable package exists for this tool on this machine.
+    package_available: bool,
+    /// The compiled build can fall back to a mirror origin.
+    mirror_available: bool,
+    /// A built-in guide page exists for tools we cannot install for the user.
+    guide_available: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct InstallationPreviewRequest {
+    request_id: String,
+    tool_id: String,
+}
+
+/// Read-only: pure lookups against the compiled catalog. Never touches the
+/// network, the filesystem, the keychain or the installation state machine.
+#[tauri::command]
+pub fn installation_preview_read_only(
+    request: InstallationPreviewRequest,
+) -> std::result::Result<InstallationPreview, String> {
+    let valid_id = |s: &str| {
+        !s.is_empty()
+            && s.len() <= 64
+            && s.bytes()
+                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-'))
+    };
+    // The guide table is what defines "this tool can be installed at all"; an
+    // unknown id is a renderer bug, not an empty preview.
+    if !valid_id(&request.request_id) || catalog::guide(&request.tool_id).is_none() {
+        return Err("invalid_installation_preview".into());
+    }
+    let os = catalog::platform();
+    let arch = catalog::architecture();
+    log::info!(
+        "app_installation stage=preview tool={} platform={os} arch={arch}",
+        request.tool_id
+    );
+    Ok(InstallationPreview {
+        schema_version: 1,
+        platform: os,
+        architecture: arch,
+        mode: catalog::mode(&request.tool_id, os, arch),
+        package_available: catalog::source(&request.tool_id, os, arch).is_some(),
+        mirror_available: origins::mirror_enabled(),
+        guide_available: true,
+        tool_id: request.tool_id,
+        request_id: request.request_id,
+    })
 }
 
 #[tauri::command]

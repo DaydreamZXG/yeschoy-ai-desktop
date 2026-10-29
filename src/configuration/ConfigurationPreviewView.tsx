@@ -1,10 +1,48 @@
+import { ModelMenu } from "../features/activation/ModelMenu";
+import { NetworkLineSelector } from "../features/activation/NetworkLineSelector";
+import { ActivationProgress } from "../features/activation/ActivationProgress";
+import { useActivationSelection } from "../features/activation/useActivationSelection";
+import { useActivationTargets } from "../features/activation/useActivationTargets";
+import { useLineSpeedtest } from "../features/activation/useLineSpeedtest";
+import { useActivationCelebration } from "../features/activation/useActivationCelebration";
+import { activationResultMessage } from "../features/activation/activationMessages";
+import { probeRequestedFor, readCodexProbeEnabled } from "./codexProbe";
+import {
+  useAccountConnectionReadingWith,
+  useBalanceIssue,
+} from "../features/activation/useAccountConnectionReading";
+import { isSignedIn } from "../features/activation/connectionReading";
+export {
+  connectionLifecycleMode,
+  connectionLifecycleNote,
+  runningAppHandoff,
+  recoveryRetryMessage,
+  usesLocalBridge,
+  writtenEndpoint,
+  lineLatencyMs,
+  recommendedLineId,
+  observationMatchesConnection,
+  type ConnectionLifecycleMode,
+} from "../features/activation/previewRules";
+import {
+  AUTO_RECOVERY_REASONS,
+  AUTH_FAILURE_REASONS,
+  GLOBAL_SKIP_REASONS,
+  connectionLifecycleMode,
+  connectionLifecycleNote,
+  runningAppHandoff,
+  usesLocalBridge,
+  writtenEndpoint,
+  observationMatchesConnection,
+  initialToolId,
+  previewTool,
+  targetTone,
+} from "../features/activation/previewRules";
+import { APPLICATIONS } from "../features/activation/applicationChoices";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import { toast } from "sonner";
 import {
   ArrowRight,
   CheckCircle2,
-  CircleStop,
   Info,
   LoaderCircle,
   RefreshCw,
@@ -17,41 +55,19 @@ import {
   BillingPrices,
   groupLabel,
 } from "./BillingGroupPicker";
-import { chooseBillingGroup } from "./billing";
-import {
-  hasReviewedCapabilities,
-  isImageGenerationModel,
-  modelDisplayName,
-  shortModelId,
-} from "../model-profiles/profile";
+import { modelDisplayName, shortModelId } from "../model-profiles/profile";
 import { modelConnectionMode } from "./modelCompatibility";
 import type { AccountSessionController } from "../account/useAccountSession";
-import { balanceAlert } from "../account/finance";
 import { LowBalanceBanner } from "../workbench/LowBalanceBanner";
 import { useWalletRecharge } from "../workbench/useWalletRecharge";
-import claudeIcon from "../assets/icons/official-claude.png";
-import codexIcon from "../assets/icons/official-codex.png";
-import piIcon from "../assets/icons/official-pi.svg";
-import opencodeIcon from "../assets/icons/official-opencode.svg";
-import dshIcon from "../assets/icons/official-dsh.svg";
 import { ModelPicker } from "./ModelPicker";
-import {
-  connectionLabel,
-  useConnections,
-  type RequestObservation,
-  type ToolConnection,
-} from "./connections";
+import { connectionLabel, useConnections } from "./connections";
 import { RestoreConnection } from "./RestoreConnection";
 import { OpenConnection } from "./OpenConnection";
 import { RecentRequest } from "./RecentRequest";
 import { ConnectionStatusNotice } from "./ConnectionStatusNotice";
 import { ActivationFeedback } from "./ActivationFeedback";
 import { CelebrationConfetti, TickerText } from "./FirstActivationCelebration";
-import { useCelebrateOnRise } from "../theme/motion";
-import {
-  markFirstActivationCelebrated,
-  shouldCelebrateFirstActivation,
-} from "./firstActivationMilestone";
 import { useActivationTask } from "./useActivationTask";
 import type { SetupIntent } from "./setupIntent";
 import { useInstallation } from "../installation/InstallationProvider";
@@ -64,32 +80,12 @@ import {
 } from "../installation/api";
 import { AppGlyph } from "../workbench/AppGlyph";
 import { useWorkbenchCopy } from "../workbench/copy";
-import {
-  configurationCopies,
-  useConfigurationCopy,
-  type ConfigurationCopy,
-} from "./copy";
+import { useConfigurationCopy } from "./copy";
 import { ConfirmDialog } from "../components/ConfirmDialog";
-import {
-  sameModelBindings,
-  scanActivationTargets,
-  type ActivationTarget,
-  type ActivationTargetScan,
-  type ActivationToolId,
-  type ModelBinding,
-} from "./activation";
-import { CONFIGURATION_LINES, createConfigurationPreview } from "./preview";
-import type {
-  AccountLineId,
-  ConfigurationLineId,
-  ConfigurationToolId,
-} from "./preview";
+import { sameModelBindings, type ActivationToolId } from "./activation";
+import { createConfigurationPreview } from "./preview";
+import type { AccountLineId, ConfigurationLineId } from "./preview";
 import { catalogLineForPreview } from "./preview";
-import {
-  decodeConnectivityProjection,
-  lineNetworkHealthy,
-  type ConnectivityLineResult,
-} from "../diagnostics/contract";
 
 interface ConfigurationPreviewViewProps {
   active?: boolean;
@@ -101,323 +97,6 @@ interface ConfigurationPreviewViewProps {
   session: AccountSessionController;
   onOpenAccount: () => void;
   onOpenTools: () => void;
-}
-
-type ApplicationSurfaceKey =
-  | "surfaceClaudeCode"
-  | "surfaceClaudeDesktop"
-  | "surfaceCodexDesktop"
-  | "surfacePi"
-  | "surfaceOpenCode"
-  | "surfaceDsh"
-  | "surfaceDshDesktop"
-  | "surfaceWorkBuddy";
-
-interface ApplicationChoice {
-  id: ActivationToolId;
-  toolId: ConfigurationToolId;
-  displayName: string;
-  surface: ApplicationSurfaceKey;
-  icon?: string;
-  mark?: string;
-}
-
-const APPLICATIONS: readonly ApplicationChoice[] = [
-  {
-    id: "claude_code",
-    toolId: "claude",
-    displayName: "Claude Code",
-    surface: "surfaceClaudeCode",
-    icon: claudeIcon,
-  },
-  {
-    id: "claude_desktop",
-    toolId: "claude",
-    displayName: "Claude Desktop",
-    surface: "surfaceClaudeDesktop",
-    icon: claudeIcon,
-  },
-  {
-    id: "codex_desktop",
-    toolId: "codex",
-    displayName: "Codex",
-    surface: "surfaceCodexDesktop",
-    icon: codexIcon,
-  },
-  {
-    id: "workbuddy",
-    toolId: "workbuddy",
-    displayName: "WorkBuddy",
-    surface: "surfaceWorkBuddy",
-    mark: "W",
-  },
-  {
-    id: "pi",
-    toolId: "pi",
-    displayName: "Pi",
-    surface: "surfacePi",
-    icon: piIcon,
-  },
-  {
-    id: "opencode",
-    toolId: "opencode",
-    displayName: "OpenCode",
-    surface: "surfaceOpenCode",
-    icon: opencodeIcon,
-  },
-  {
-    id: "dsh_web",
-    toolId: "dsh",
-    displayName: "DSH web",
-    surface: "surfaceDsh",
-    icon: dshIcon,
-  },
-  {
-    id: "dsh_desktop",
-    toolId: "dsh_desktop",
-    displayName: "DeepSeek Harness",
-    surface: "surfaceDshDesktop",
-    icon: dshIcon,
-  },
-];
-
-export type ConnectionLifecycleMode =
-  | "graceful_desktop_restart"
-  | "new_terminal_session"
-  | "browser_launch"
-  | "hot_reload_desktop";
-
-export function connectionLifecycleMode(
-  toolId: ActivationToolId,
-): ConnectionLifecycleMode {
-  if (toolId === "claude_desktop" || toolId === "codex_desktop")
-    return "graceful_desktop_restart";
-  if (toolId === "dsh_web") return "browser_launch";
-  if (toolId === "workbuddy" || toolId === "dsh_desktop")
-    return "hot_reload_desktop";
-  return "new_terminal_session";
-}
-
-export function connectionLifecycleNote(
-  toolId: ActivationToolId,
-  name: string,
-  copy: Pick<
-    ConfigurationCopy,
-    | "lifecycleDesktopRestart"
-    | "lifecycleBrowserLaunch"
-    | "lifecycleTerminalSession"
-    | "lifecycleHotReload"
-    | "lifecycleHotReloadDsh"
-  > = configurationCopies.zh,
-) {
-  switch (connectionLifecycleMode(toolId)) {
-    case "graceful_desktop_restart":
-      return copy.lifecycleDesktopRestart.replace("{{name}}", name);
-    case "browser_launch":
-      return copy.lifecycleBrowserLaunch;
-    case "new_terminal_session":
-      return copy.lifecycleTerminalSession;
-    case "hot_reload_desktop":
-      return toolId === "dsh_desktop"
-        ? copy.lifecycleHotReloadDsh
-        : copy.lifecycleHotReload;
-  }
-}
-
-export function runningAppHandoff(
-  promptContext: string | null,
-  currentContext: string,
-) {
-  return {
-    nextPromptContext: null,
-    restart: promptContext !== null && promptContext === currentContext,
-  } as const;
-}
-
-export function recoveryRetryMessage(
-  reasonCode: string,
-  copy: Pick<
-    ConfigurationCopy,
-    "retryRollbackFailed" | "retryCredentialRestore" | "retryRecoveryPending"
-  > = configurationCopies.zh,
-): string | undefined {
-  switch (reasonCode) {
-    case "configuration_rollback_failed":
-      return copy.retryRollbackFailed;
-    case "credential_restore_failed":
-      return copy.retryCredentialRestore;
-    case "recovery_pending":
-      return copy.retryRecoveryPending;
-    default:
-      return undefined;
-  }
-}
-
-const AUTO_RECOVERY_REASONS = new Set([
-  "desktop_start_failed_restored",
-  "desktop_change_failed_restored",
-  "previous_app_reopen_failed",
-  "desktop_recovery_waiting_for_exit",
-  "previous_connection_runtime_failed",
-  "configuration_rollback_failed",
-  "credential_restore_failed",
-  "recovery_receipt_failed",
-]);
-
-// 这两个码说的是「你的登录不算数了」，出路只有一条：重新登录。它们可能出现在
-// 状态里、整单的原因码里，也可能挂在某个被跳过的分组上 —— 三个位置都得认。
-const AUTH_FAILURE_REASONS = new Set(["signed_out", "authentication_failed"]);
-// 被跳过的分组带的原因码里，这些不是「这个分组配不出来」，而是整个会话或整次
-// 操作都完了。把它们当成分组问题，界面就会说「移除这个模型就能继续」——
-// 用户照做之后下一个分组照样失败。
-const GLOBAL_SKIP_REASONS = new Set([
-  ...AUTH_FAILURE_REASONS,
-  "assistant_shutting_down",
-  "account_changed",
-  "activation_cancelled",
-]);
-
-const BRIDGED_TOOLS: ReadonlySet<ActivationToolId> = new Set<ActivationToolId>([
-  "claude_code",
-  "claude_desktop",
-  "codex_desktop",
-  "opencode",
-]);
-
-/**
- * 这些适配器会把名单里的每一个 id 写进应用自己的模型列表（Codex 的
- * model catalog、Claude 的 model picker / inferenceModels、Pi 与 WorkBuddy
- * 的 models、DSH 的 provider models）。只有它们可以承诺「应用菜单里能看到」。
- * 只接受一个模型的应用不在这里，界面也不会说多出来的模型会出现。
- */
-const CATALOG_MENU_TOOLS: ReadonlySet<ActivationToolId> =
-  new Set<ActivationToolId>([
-    "claude_code",
-    "claude_desktop",
-    "codex_desktop",
-    "pi",
-    "opencode",
-    "dsh_web",
-    "dsh_desktop",
-    "workbuddy",
-  ]);
-
-/** 这个应用是否经野菜助手的本机桥接访问线路，而不是直接写线路地址。 */
-export function usesLocalBridge(toolId: ActivationToolId): boolean {
-  return BRIDGED_TOOLS.has(toolId);
-}
-
-/**
- * 真正会写进应用设置的连接地址。
- *
- * 「查看连接详情」原来显示的是文档里的协议端点（`https://yeschoy.com/v1`），
- * 底下再加一行「文档参考值，实际以写入应用设置的端点为准」—— 等于承认这个值
- * 是假的。Claude Code / Claude Desktop / Codex 写进去的是本机桥的地址（见
- * `src-tauri/src/tool_adapters/{claude_code,claude_desktop,codex_desktop}.rs`
- * 的 `PROXY_BASE`），其余三个直接写线路地址加协议后缀。这三个桥地址和 Rust 常量
- * 的一致性由 `ConfigurationPreviewView.test.tsx` 读源码校验，漂了当场红。
- */
-export function writtenEndpoint(
-  toolId: ActivationToolId,
-  rootUrl: string,
-): string {
-  switch (toolId) {
-    case "claude_code":
-      return "http://127.0.0.1:15728/claude-code";
-    case "claude_desktop":
-      return "http://127.0.0.1:15729/claude-desktop";
-    case "codex_desktop":
-      return "http://127.0.0.1:15731/codex/v1";
-    case "opencode":
-      return "http://127.0.0.1:15732/opencode/v1";
-    case "workbuddy":
-      return `${rootUrl}/v1/chat/completions`;
-    case "pi":
-    case "dsh_web":
-    case "dsh_desktop":
-      return `${rootUrl}/v1`;
-  }
-}
-
-type ScanPhase = "loading" | "ready" | "error";
-
-type LineSpeedtestPhase = "idle" | "running" | "done" | "error";
-
-// #17 线路测速推荐：以 TLS 握手延迟为准（回落 tcp → dns），只比较网络可达的
-// 线路；不可达或无延迟数据不参与推荐。导出供测试直接断言。
-export function lineLatencyMs(
-  line: ConnectivityLineResult,
-): number | undefined {
-  const tls = line.layers.find((layer) => layer.layer === "tls")?.latencyMs;
-  if (tls !== undefined) return tls;
-  const tcp = line.layers.find((layer) => layer.layer === "tcp")?.latencyMs;
-  if (tcp !== undefined) return tcp;
-  return line.layers.find((layer) => layer.layer === "dns")?.latencyMs;
-}
-
-export function recommendedLineId(
-  lines: readonly ConnectivityLineResult[],
-): ConfigurationLineId | null {
-  const candidates = lines
-    .filter(lineNetworkHealthy)
-    .map((line) => ({ id: line.lineId, latency: lineLatencyMs(line) }))
-    .filter(
-      (line): line is { id: ConfigurationLineId; latency: number } =>
-        line.latency !== undefined,
-    );
-  if (!candidates.length) return null;
-  return candidates.sort((a, b) => a.latency - b.latency)[0].id;
-}
-
-function initialToolId(
-  initialDesktopAppId?: ActivationToolId,
-): ActivationToolId {
-  return initialDesktopAppId ?? "claude_desktop";
-}
-
-function previewTool(toolId: ActivationToolId): ConfigurationToolId {
-  if (toolId === "codex_desktop") return "codex";
-  if (toolId === "pi") return "pi";
-  if (toolId === "opencode") return "opencode";
-  if (toolId === "dsh_web") return "dsh";
-  if (toolId === "dsh_desktop") return "dsh_desktop";
-  if (toolId === "workbuddy") return "workbuddy";
-  return "claude";
-}
-
-function usesNewTerminalSession(toolId: ActivationToolId) {
-  return ["claude_code", "pi", "opencode"].includes(toolId);
-}
-
-function targetTone(target?: ActivationTarget) {
-  if (!target) return "pending";
-  if (target.status === "available") return "ready";
-  if (target.status === "selection_required") return "attention";
-  return "muted";
-}
-
-/**
- * 一条成功的观测是否能给**这条**接入背书。导出供测试直接断言。
- *
- * 模型必须对得上 —— 那是日志里真有的。分组和线路只在**双方都有值**时比较：
- * 观测里为空是「日志没记」，不是「用的不是这个」。
- */
-export function observationMatchesConnection(
-  observation: Pick<
-    RequestObservation,
-    "outcome" | "modelId" | "billingGroup" | "lineId"
-  >,
-  connection: Pick<ToolConnection, "modelId" | "billingGroup" | "lineId">,
-): boolean {
-  const sameOrUnknown = (observed: string, saved: string) =>
-    !observed || !saved || observed === saved;
-  return (
-    observation.outcome === "ok" &&
-    !!observation.modelId &&
-    observation.modelId === connection.modelId &&
-    sameOrUnknown(observation.billingGroup, connection.billingGroup) &&
-    sameOrUnknown(observation.lineId, connection.lineId)
-  );
 }
 
 export function ConfigurationPreviewView({
@@ -442,23 +121,6 @@ export function ConfigurationPreviewView({
   );
   const appliedInitialTool = useRef(initialDesktopAppId);
   const appliedIntentRevision = useRef<number>();
-  const [selectedModelId, setSelectedModelId] = useState("");
-  const [billingGroup, setBillingGroup] = useState("");
-  const [modelSet, setModelSet] = useState<ModelBinding[]>([]);
-  const [defaultModelId, setDefaultModelId] = useState("");
-  // 再加一个打开的是上面那个模型浮层，不是另一套选择器。为 true 时，
-  // 在浮层里点中的模型加进名单，不替换默认。
-  const [modelPickerOpen, setModelPickerOpen] = useState(false);
-  const [pickerAdds, setPickerAdds] = useState(false);
-  // 价格卡片正在编辑的模型。空着就跟着下拉框里的默认模型。
-  const [focusedModelId, setFocusedModelId] = useState<string | null>(null);
-  // This value participates in render-time readiness. Keeping it in a ref can
-  // strand the action button when an account changes but the restored model
-  // and group happen to be identical: the ref changes, all state setters bail
-  // out as no-ops, and React has no reason to render the now-ready state.
-  const [selectionReadyKey, setSelectionReadyKey] = useState<string | null>(
-    null,
-  );
   const task = useActivationTask(() => {
     void connections?.refresh();
   });
@@ -482,25 +144,16 @@ export function ConfigurationPreviewView({
   const [showMissingApps, setShowMissingApps] = useState(false);
   const networkDetails = useRef<HTMLDetailsElement>(null);
   const appSwitchButton = useRef<HTMLButtonElement>(null);
-  // #17 线路测速推荐：仅在用户点按测速后展示，不自动发起网络探测。
-  const [lineTestPhase, setLineTestPhase] =
-    useState<LineSpeedtestPhase>("idle");
-  const [lineTestLines, setLineTestLines] = useState<ConnectivityLineResult[]>(
-    [],
-  );
-  const lineTestSequence = useRef(0);
+  const {
+    phase: lineTestPhase,
+    run: runLineSpeedtest,
+    recommendedLine,
+    lineLatencies,
+  } = useLineSpeedtest();
   const [claudeLoginPromptOpen, setClaudeLoginPromptOpen] = useState(false);
   const [restartPromptContext, setRestartPromptContext] = useState<
     string | null
   >(null);
-  const [scanPhase, setScanPhase] = useState<ScanPhase>("loading");
-  const [targetScan, setTargetScan] = useState<ActivationTargetScan | null>(
-    null,
-  );
-  const [installations, setInstallations] = useState<
-    Partial<Record<ActivationToolId, string>>
-  >({});
-  const targetScanSequence = useRef(0);
   const installationRevision = useRef(new SelectionRevision());
   const installationConsent = useRef<{
     jobId: string;
@@ -548,6 +201,14 @@ export function ConfigurationPreviewView({
     installationTool,
   ]);
 
+  const {
+    scanPhase,
+    targetScan,
+    installations,
+    selectInstallation,
+    refreshTargets,
+  } = useActivationTargets(enableLocalActivation);
+
   const application =
     APPLICATIONS.find((candidate) => candidate.id === activationToolId) ??
     APPLICATIONS[0];
@@ -556,13 +217,56 @@ export function ConfigurationPreviewView({
     application.displayName,
     t,
   );
-  const savedConnection = connections?.connections.find(
-    (item) => item.toolId === activationToolId,
-  );
-  const connectionStateUnavailable =
-    !!connections?.loading ||
-    (!!connections?.error && connections.connections.length === 0) ||
-    savedConnection?.state === "unavailable";
+  // 账户与连接的判读收在 hook 里（`useAccountConnectionReading`）：页面只
+  // 消费结论，判据本身有纯函数单测，见 `features/activation/connectionReading.ts`。
+  const { savedConnection, connectionStateUnavailable } =
+    useAccountConnectionReadingWith(connections, {
+      toolId: activationToolId,
+      sessionStatus: session.projection?.status,
+    });
+  const resetResult = useCallback(() => {
+    resetActivation();
+    setRestartPromptContext(null);
+  }, [resetActivation]);
+  const {
+    selectedModelId,
+    billingGroup,
+    modelSet,
+    modelPickerOpen,
+    selectionReadyKey,
+    accountModels,
+    models,
+    selectedModel,
+    selectedBillingGroup,
+    selectionKey,
+    writesModelMenu,
+    submittedModels,
+    defaultBinding,
+    bindingsAvailable,
+    pendingModelEdit,
+    defaultMissing,
+    priceModelId,
+    priceModel,
+    priceGroup,
+    updatePricedGroup,
+    removeBinding,
+    chooseModel,
+    onPickerOpenChange,
+    startAddingModel,
+    focusPriceModel,
+    resetSelection,
+  } = useActivationSelection({
+    session,
+    activationToolId,
+    applyPhase,
+    savedConnection,
+    connectionStateUnavailable,
+    lineId,
+    onLineChange,
+    lineFollowedToast: c.lineFollowedToast,
+    onReset: resetResult,
+  });
+
   const toolId = previewTool(activationToolId);
   const target = targetScan?.targets.find(
     (candidate) => candidate.toolId === activationToolId,
@@ -574,52 +278,6 @@ export function ConfigurationPreviewView({
   const usableInstallations =
     target?.installations.filter((candidate) => candidate.supported).length ??
     0;
-
-  const refreshTargets = useCallback(async () => {
-    targetScanSequence.current += 1;
-    const currentScan = targetScanSequence.current;
-    setScanPhase("loading");
-    try {
-      const result = await scanActivationTargets();
-      if (targetScanSequence.current !== currentScan) return;
-      setTargetScan(result);
-      setInstallations((current) => {
-        const next = { ...current };
-        for (const candidate of result.targets) {
-          const currentId = current[candidate.toolId];
-          const currentStillWorks = candidate.installations.some(
-            (installation) =>
-              installation.installationId === currentId &&
-              installation.supported,
-          );
-          if (!currentStillWorks) {
-            next[candidate.toolId] =
-              candidate.installations.find(
-                (installation) => installation.recommended,
-              )?.installationId ??
-              candidate.installations.find(
-                (installation) => installation.supported,
-              )?.installationId ??
-              "";
-          }
-        }
-        return next;
-      });
-      setScanPhase("ready");
-    } catch {
-      if (targetScanSequence.current !== currentScan) return;
-      setTargetScan(null);
-      setScanPhase("error");
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!enableLocalActivation) {
-      setScanPhase("ready");
-      return;
-    }
-    void refreshTargets();
-  }, [enableLocalActivation, refreshTargets]);
 
   useEffect(() => {
     const newIntent =
@@ -640,14 +298,7 @@ export function ConfigurationPreviewView({
       // already-saved connection. Active tasks reach here only after finishing.
       resetActivation();
       setRestartPromptContext(null);
-      setSelectedModelId("");
-      setBillingGroup("");
-      setModelSet([]);
-      setDefaultModelId("");
-      setFocusedModelId(null);
-      setPickerAdds(false);
-      setModelPickerOpen(false);
-      setSelectionReadyKey(null);
+      resetSelection(true);
       setShowApplications(false);
     }
     setActivationToolId(next);
@@ -657,6 +308,7 @@ export function ConfigurationPreviewView({
     applyPhase,
     activationToolId,
     resetActivation,
+    resetSelection,
   ]);
 
   const previewLineId = catalogLineForPreview(lineId);
@@ -669,207 +321,12 @@ export function ConfigurationPreviewView({
       }),
     [previewLineId, toolId],
   );
-  const signedIn = session.projection?.status === "signed_in";
-  const balanceIssue = signedIn
-    ? balanceAlert(session.projection?.money)
-    : null;
+  const signedIn = isSignedIn(session.projection?.status);
+  const balanceIssue = useBalanceIssue(signedIn, session.projection?.money);
   const recharge = useWalletRecharge(session.openWallet);
-  const accountModels =
-    signedIn && session.projection
-      ? session.projection.models.filter(
-          (model) => !isImageGenerationModel(model.id),
-        )
-      : [];
-  // 不再按协议筛选。每个模型都能选，理由见 modelCompatibility.ts 顶部。
-  const models = accountModels;
-  const selectedModel = models.find((model) => model.id === selectedModelId);
-  const selectedBillingGroup = selectedModel?.billing?.groups.find(
-    (g) => g.id === billingGroup,
-  );
-  const selectionKey = `${session.projection?.account.username ?? ""}:${activationToolId}`;
-  useEffect(() => {
-    if (
-      selectionReadyKey === selectionKey ||
-      !signedIn ||
-      session.loading ||
-      session.lastError ||
-      applyPhase === "applying" ||
-      connectionStateUnavailable
-    )
-      return;
-    if (!models.length && !savedConnection?.modelId) return;
-    setSelectionReadyKey(selectionKey);
-    const existing =
-      savedConnection && savedConnection.state !== "not_connected";
-    // Retain missing IDs as visible, unselected choices. Never substitute a
-    // different price for a saved choice, including after a transient refresh.
-    // 默认项优先落在目录里有资料的模型上，见 `hasReviewedCapabilities`。
-    // 一个已保存的连接永远说了算，这里只影响第一次配置。
-    const fallback =
-      models.find((model) => hasReviewedCapabilities(model.id)) ?? models[0];
-    setSelectedModelId(
-      existing ? savedConnection.modelId : (fallback?.id ?? ""),
-    );
-    setBillingGroup(
-      existing
-        ? savedConnection.billingGroup
-        : chooseBillingGroup(fallback, ""),
-    );
-    setModelSet(existing ? (savedConnection.models ?? []) : []);
-    setDefaultModelId(existing ? savedConnection.modelId : "");
-    setFocusedModelId(null);
-    setPickerAdds(false);
-    setModelPickerOpen(false);
-    if (existing && savedConnection.lineId) {
-      // The global line picker visibly follows the app's last-used line;
-      // announce the linkage instead of changing it silently (PRD 6.2).
-      if (savedConnection.lineId !== lineId) toast(c.lineFollowedToast);
-      onLineChange(savedConnection.lineId);
-    }
-  }, [
-    selectionKey,
-    selectionReadyKey,
-    signedIn,
-    session.loading,
-    session.lastError,
-    applyPhase,
-    models,
-    savedConnection,
-    connectionStateUnavailable,
-    lineId,
-    c,
-    onLineChange,
-  ]);
   useEffect(() => {
     if (savedConnection?.state === "not_connected") resetActivation();
   }, [savedConnection?.state, resetActivation]);
-
-  const writesModelMenu = CATALOG_MENU_TOOLS.has(activationToolId);
-  const dropdownBinding: ModelBinding | undefined =
-    selectedModelId && billingGroup
-      ? { modelId: selectedModelId, billingGroup }
-      : undefined;
-  const dropdownEnrolled = modelSet.some((m) => m.modelId === selectedModelId);
-  // 下拉框里的模型自动进菜单，不需要再点一次「加入」。已经在名单里就沿用
-  // 它的位置，只把计费分组换成当前选的；不在名单里就补到末尾。满 200 个时
-  // 不再把一个新的塞进去。
-  const menuAtCap =
-    writesModelMenu &&
-    !!dropdownBinding &&
-    !dropdownEnrolled &&
-    modelSet.length >= 200;
-  const submittedModels: ModelBinding[] = writesModelMenu
-    ? dropdownBinding && !menuAtCap
-      ? dropdownEnrolled
-        ? modelSet.map((m) =>
-            m.modelId === dropdownBinding.modelId ? dropdownBinding : m,
-          )
-        : [...modelSet, dropdownBinding]
-      : modelSet
-    : dropdownBinding
-      ? [dropdownBinding]
-      : [];
-  // 默认就是下拉框里这一个，写进 config 的 `model`。默认被移走、选择器也清空
-  // 之后，不拿名单里的下一个顶上 —— 那会替用户改计费对象。
-  const defaultBinding =
-    writesModelMenu && dropdownBinding && !menuAtCap
-      ? dropdownBinding
-      : writesModelMenu
-        ? modelSet.find((m) => m.modelId === defaultModelId)
-        : dropdownBinding;
-  // 一条常用模型「不可用」，指的是那个模型确实列出了分组、而它绑的那个不在
-  // 里面 —— 那是用户的旧选择失效了，要他重选。模型压根没有分组数据（不在
-  // /api/pricing 里）不算，那只是我们不知道。
-  const bindingsAvailable =
-    submittedModels.length > 0 &&
-    submittedModels.every((m) => {
-      const groups = models.find((a) => a.id === m.modelId)?.billing?.groups;
-      return !groups?.length || groups.some((g) => g.id === m.billingGroup);
-    });
-  // 下拉框的模型和分组已经算进 `submittedModels`，不再要求先点「使用所选模型」。
-  // 唯一还要拦住的是第 201 个：那个不能自动写进去。
-  const pendingModelEdit = menuAtCap;
-  // 列表里有模型、却没有一个是默认：只会在默认模型刚被移走之后出现。
-  // 这时不能提交，也不能替用户挑 —— 得他自己点一个。
-  const defaultMissing = modelSet.length > 0 && !defaultBinding;
-  // 下拉框始终是写进 config 的默认模型。价格卡片跟「正在编辑」的那一粒，
-  // 点别的模型不会把默认换掉。
-  const priceModelId =
-    focusedModelId && submittedModels.some((m) => m.modelId === focusedModelId)
-      ? focusedModelId
-      : selectedModelId;
-  const priceModel =
-    models.find((model) => model.id === priceModelId) ?? selectedModel;
-  const priceGroup =
-    priceModelId === selectedModelId
-      ? billingGroup
-      : (submittedModels.find((m) => m.modelId === priceModelId)
-          ?.billingGroup ?? "");
-  const updatePricedGroup = (id: string) => {
-    setSelectionReadyKey(selectionKey);
-    resetResult();
-    if (priceModelId === selectedModelId) setBillingGroup(id);
-    setModelSet((current) =>
-      current.some((m) => m.modelId === priceModelId)
-        ? current.map((m) =>
-            m.modelId === priceModelId
-              ? { modelId: priceModelId, billingGroup: id }
-              : m,
-          )
-        : current,
-    );
-  };
-  /**
-   * 把一个模型从列表里拿掉 —— 列表里的「移除」和失败提示里的「移除「X」」
-   * 都走这里，两处曾经各写一份、各漏一半。
-   *
-   * 拿掉的是默认模型时，默认位空出来，不自动让幸存者顶上（理由见
-   * `defaultBinding`）。选择器正停在被拿掉的模型上时也要清空：留着它，
-   * 下一次提交又会把它自动加回去。
-   */
-  const removeBinding = (modelId: string) => {
-    setModelSet((current) => current.filter((m) => m.modelId !== modelId));
-    // 拿掉的是当前默认（下拉框里那一个）时，把选择器清空，不让幸存者顶上。
-    // 留着它的话，提交时又会把它自动加回去。
-    if (selectedModelId === modelId || defaultModelId === modelId) {
-      setDefaultModelId("");
-      setSelectedModelId("");
-      setBillingGroup("");
-    }
-    // 移除之后停在页面上，不自动重新接入：挡住的原因不一定是这个模型
-    // （另外十六个原因仍然存在），自动重试会把人带偏。
-    resetResult();
-  };
-  // 浮层里点中一个模型：新的加进名单。分组走页面已有的 chooseBillingGroup
-  // （没有旧分组时用 default，再否则第一个），不再另做一套价格选择。
-  // 已经在名单里的，只是把它选成价格卡片正在编辑的那一个。
-  const enrollModel = (id: string) => {
-    const already =
-      id === selectedModelId || modelSet.some((m) => m.modelId === id);
-    setFocusedModelId(id);
-    if (already) return;
-    const accountModel = models.find((m) => m.id === id);
-    const group = chooseBillingGroup(accountModel, "");
-    const ids = new Set(modelSet.map((m) => m.modelId));
-    if (selectedModelId) ids.add(selectedModelId);
-    if (ids.has(id) || ids.size >= 200) return;
-    setModelSet((current) => {
-      const known = new Set(current.map((m) => m.modelId));
-      if (selectedModelId) known.add(selectedModelId);
-      if (known.has(id) || known.size >= 200) return current;
-      const rest = current.filter(
-        (m) => m.modelId !== id && m.modelId !== selectedModelId,
-      );
-      const keptDefault =
-        selectedModelId && billingGroup
-          ? [{ modelId: selectedModelId, billingGroup }]
-          : [];
-      return [...keptDefault, ...rest, { modelId: id, billingGroup: group }];
-    });
-    setSelectionReadyKey(selectionKey);
-    resetResult();
-  };
-
   const contextKey = JSON.stringify([
     session.projection?.account.username ?? "",
     activationToolId,
@@ -888,48 +345,6 @@ export function ConfigurationPreviewView({
       setRestartPromptContext(null);
     }
   }, [contextKey, restartPromptContext]);
-
-  const resetResult = () => {
-    resetActivation();
-    setRestartPromptContext(null);
-  };
-
-  // #17 测速只做只读连通性探测（不写设置、不消费额度），失败仅提示、不阻断手动选线。
-  const runLineSpeedtest = async () => {
-    lineTestSequence.current += 1;
-    const current = lineTestSequence.current;
-    const requestId = `line-${Date.now().toString(36)}-${current}`;
-    setLineTestPhase("running");
-    try {
-      const next = await invoke<unknown>("check_line_connectivity_read_only", {
-        request: { requestId },
-      });
-      if (lineTestSequence.current !== current) return;
-      const decoded = decodeConnectivityProjection(next, requestId);
-      if (!decoded) {
-        setLineTestPhase("error");
-        return;
-      }
-      setLineTestLines(decoded.response.lines);
-      setLineTestPhase("done");
-    } catch {
-      if (lineTestSequence.current !== current) return;
-      setLineTestPhase("error");
-    }
-  };
-  const recommendedLine =
-    lineTestPhase === "done" ? recommendedLineId(lineTestLines) : null;
-  const lineLatencies: Partial<Record<ConfigurationLineId, number>> =
-    lineTestPhase === "done"
-      ? Object.fromEntries(
-          lineTestLines
-            .map((line) => [line.lineId, lineLatencyMs(line)] as const)
-            .filter(
-              (entry): entry is [ConfigurationLineId, number] =>
-                entry[1] !== undefined,
-            ),
-        )
-      : {};
 
   const targetCanActivate =
     scanPhase === "ready" &&
@@ -1023,6 +438,11 @@ export function ConfigurationPreviewView({
         ...(installationJobId ? { installationJobId } : {}),
         ...(restartRunningApp ? { restartRunningApp: true } : {}),
         ...(displaceClaudeLogin ? { displaceClaudeLogin: true } : {}),
+        // 每次点击时读一次偏好：用户可能刚在设置里改完就回来重新接入，
+        // 在页面挂载时缓存会让那次点击还用着旧值。
+        ...(probeRequestedFor(activationToolId, readCodexProbeEnabled())
+          ? { probeCodexTransport: true }
+          : {}),
       },
       {
         key: submittedContext,
@@ -1075,45 +495,10 @@ export function ConfigurationPreviewView({
     !!savedConnection &&
     observationMatchesConnection(firstUseObservation, savedConnection);
 
-  // 仪式感动效：接入成功后按钮短暂保持成功态，随后回归常态。
-  // 条件失效（如外部切换使结果过期）时必须立即结束成功态，
-  // 否则 cleanup 只清了定时器，按钮会永远停留在「接入成功」。
-  const [applyFlash, setApplyFlash] = useState(false);
-  // 一键接入真的写成功的那一刻（applyPhase=finished 且结果是当前选择的），
-  // 从浮动条里的按钮位置炸一次彩带 + 对勾。
-  useCelebrateOnRise(
+  const { applyFlash, firstActivationCelebration } = useActivationCelebration(
     applyPhase === "finished" && activationSucceeded && resultIsCurrent,
-    ".configuration-preview-panel .setup-apply",
+    firstUseVerified,
   );
-  useEffect(() => {
-    if (
-      !(applyPhase === "finished" && activationSucceeded && resultIsCurrent)
-    ) {
-      setApplyFlash(false);
-      return;
-    }
-    setApplyFlash(true);
-    const timer = window.setTimeout(() => setApplyFlash(false), 1500);
-    return () => window.clearTimeout(timer);
-  }, [applyPhase, activationSucceeded, resultIsCurrent]);
-
-  // 首次接入庆祝（动效优化）：只有第一次接入成功触发彩带/ticker，
-  // 之后的配置成功仍走克制反馈。旗标消费在成功时刻。
-  const [firstActivationCelebration, setFirstActivationCelebration] =
-    useState(false);
-  // 彩带庆祝的是「这东西真的能用」，不是「文件写完了」。所以它等第二级证据，
-  // 而不是等 applyPhase。一次性旗标也在这一刻才消费。
-  useEffect(() => {
-    if (!firstUseVerified) return;
-    if (!shouldCelebrateFirstActivation()) return;
-    markFirstActivationCelebrated();
-    setFirstActivationCelebration(true);
-    const timer = window.setTimeout(
-      () => setFirstActivationCelebration(false),
-      1600,
-    );
-    return () => window.clearTimeout(timer);
-  }, [firstUseVerified]);
   const activationConfigured =
     activationSucceeded ||
     (activation?.status === "launch_failed" &&
@@ -1150,196 +535,15 @@ export function ConfigurationPreviewView({
     !!savedConnection &&
     ["connected", "changed", "legacy"].includes(savedConnection.state) &&
     (activation ? resultIsCurrent : true);
-  const activationResult = (() => {
-    switch (activation?.status) {
-      case "ready":
-        if (activation.reasonCode === "desktop_start_observed")
-          return t("yeschoyDesktopRecovery.startObserved");
-        if (usesNewTerminalSession(activationToolId))
-          return g.readyTerminal.replace(
-            "{{app}}",
-            resultContext?.app ?? applicationLabel,
-          );
-        if (activationToolId === "codex_desktop")
-          return g.readyCodex
-            .replace("{{app}}", resultContext?.app ?? applicationLabel)
-            .replace(
-              "{{favorites}}",
-              (activation.models?.length ?? 1) > 1 ? g.favoritesConfigured : "",
-            );
-        if (activationToolId === "workbuddy")
-          return g.readyWorkBuddy.replace(
-            "{{favorites}}",
-            (activation.models?.length ?? 1) > 1 ? g.favoritesConfigured : "",
-          );
-        if (activationToolId === "dsh_desktop")
-          return g.readyDshDesktop.replace(
-            "{{favorites}}",
-            (activation.models?.length ?? 1) > 1 ? g.favoritesConfigured : "",
-          );
-        return g.readyDefault
-          .replace("{{app}}", resultContext?.app ?? applicationLabel)
-          .replace(
-            "{{favorites}}",
-            (activation.models?.length ?? 1) > 1 ? g.favoritesConfigured : "",
-          );
-      case "application_running":
-        return activation.reasonCode === "graceful_restart_required"
-          ? g.restartBlocked.replace(
-              "{{app}}",
-              resultContext?.app ?? applicationLabel,
-            )
-          : g.appRunning.replace(
-              "{{app}}",
-              resultContext?.app ?? applicationLabel,
-            );
-      case "signed_out":
-        return c.setupSignedOut;
-      case "tool_not_found":
-        return g.missingDuringSetup;
-      case "multiple_installations":
-        return g.selectionRequired;
-      case "missing_runtime":
-        return g.unsupported;
-      case "unsupported_profile":
-        return g.unsupportedProfile;
-      case "unsupported_model":
-        return c.setupModelUnavailable;
-      case "external_override":
-        return g.externalOverride;
-      case "secure_storage_unavailable":
-        return g.secureStoreFailed;
-      case "launch_failed":
-        if (activation.reasonCode === "desktop_state_unavailable")
-          return g.launchStateUnavailable;
-        if (activation.reasonCode === "desktop_launch_access_denied")
-          return g.launchAccessDenied;
-        if (activation.reasonCode === "desktop_launch_target_changed")
-          return g.launchTargetChanged;
-        if (
-          [
-            "desktop_launch_activation_unavailable",
-            "desktop_launch_identity_invalid",
-          ].includes(activation.reasonCode)
-        )
-          return g.launchStoreApp;
-        if (activation.reasonCode === "desktop_launch_start_failed")
-          return g.launchStartFailed;
-        if (activation.reasonCode === "desktop_start_unconfirmed")
-          return g.launchUnconfirmed;
-        if (activation.reasonCode === "desktop_launch_exit_failed")
-          return g.launchExitFailed;
-        if (activation.reasonCode === "desktop_launch_wait_failed")
-          return g.launchWaitFailed;
-        // Claude Code 和 Pi 走终端启动，失败时通用的「请手动打开应用」是错的。
-        if (activation.reasonCode === "terminal_launch_failed")
-          return g.launchTerminalFailed;
-        if (activation.reasonCode === "terminal_unavailable")
-          return g.launchTerminalUnavailable;
-        if (activation.reasonCode === "workspace_unavailable")
-          return g.launchWorkspaceUnavailable;
-        if (activation.reasonCode === "invalid_launch_target")
-          return g.launchTargetInvalid;
-        if (activation.reasonCode === "launch_target_missing")
-          return g.launchTargetMissing;
-        return g.launchNotOpened;
-      case "verification_failed":
-        switch (activation.reasonCode) {
-          case "tool_start_failed":
-            return g.verifyStartFailed;
-          case "tool_request_timed_out":
-            return g.verifyTimedOut;
-          case "tool_wait_failed":
-          case "tool_output_read_failed":
-          case "tool_output_limit_exceeded":
-            return g.verifyReadFailed;
-          case "tool_response_empty":
-          case "tool_response_invalid":
-          case "tool_request_failed":
-            return g.verifyInvalidReply;
-          case "waiting_for_desktop_request":
-            return g.desktopTimedOut;
-          case "credential_helper_failed":
-            return g.credentialHelperFailed;
-          case "local_bridge_unavailable":
-            return g.bridgeUnavailable;
-          case "local_bridge_auth_failed":
-            return g.bridgeAuthFailed;
-          case "local_bridge_catalog_invalid":
-            return g.bridgeCatalogInvalid;
-          case "authentication_failed":
-            return g.authenticationFailed;
-          case "endpoint_unavailable":
-            return g.endpointUnavailable;
-          case "provider_timed_out":
-          case "provider_unavailable":
-            return g.providerTimedOut;
-          case "provider_busy":
-            return g.providerBusy;
-          case "model_request_rejected":
-            return g.modelRequestRejected;
-          case "invalid_provider_response":
-            return g.invalidProviderResponse;
-          default:
-            return g.connectionFailed;
-        }
-      case "server_unavailable":
-        return c.setupServerUnavailable;
-      case "configuration_failed":
-        if (AUTO_RECOVERY_REASONS.has(activation.reasonCode))
-          return t(`yeschoyDesktopRecovery.${activation.reasonCode}`);
-        {
-          const recoveryMessage = recoveryRetryMessage(
-            activation.reasonCode,
-            g,
-          );
-          if (recoveryMessage) return recoveryMessage;
-        }
-        if (activation.reasonCode === "installation_confirmation_required")
-          return g.installConfirmRequired;
-        if (activation.reasonCode === "assistant_shutting_down")
-          return g.assistantShuttingDown;
-        if (activation.reasonCode === "activation_cancelled")
-          return g.activationCancelled;
-        if (activation.reasonCode === "activation_request_timed_out")
-          return g.activationTimedOut;
-        if (activation.reasonCode === "activation_already_running")
-          return g.activationAlreadyRunning;
-        if (activation.reasonCode === "account_changed")
-          return g.accountChanged;
-        if (activation.reasonCode === "invalid_response")
-          return g.invalidResponseResult;
-        if (activation.reasonCode === "recovery_storage_unavailable")
-          return g.recoveryStorageUnavailable;
-        if (activation.reasonCode === "recovery_receipt_failed")
-          return g.recoveryReceiptFailed;
-        if (activation.reasonCode === "configuration_parse_failed")
-          return g.configurationParseFailed;
-        if (activation.reasonCode === "configuration_read_failed")
-          return g.configurationReadFailed;
-        if (activation.reasonCode === "configuration_write_failed")
-          return g.configurationWriteFailed;
-        if (activation.reasonCode === "configuration_readback_failed")
-          return g.configurationReadbackFailed;
-        if (activation.reasonCode === "home_unavailable")
-          return g.homeUnavailable;
-        if (activation.reasonCode === "claude_login_not_released")
-          return g.claudeLoginNotReleased;
-        if (activation.reasonCode === "claude_login_takeover_failed")
-          return g.claudeLoginTakeoverFailed;
-        if (activation.reasonCode === "codex_history_takeover_conflict")
-          return g.codexHistoryConflict;
-        if (activation.reasonCode === "codex_history_takeover_failed")
-          return g.codexHistoryFailed;
-        if (activation.reasonCode === "codex_history_takeover_recovery_failed")
-          return g.codexHistoryRecoveryFailed;
-        return c.setupWriteFailed;
-      case "invalid_request":
-        return c.setupWriteFailed;
-      default:
-        return "";
-    }
-  })();
+  const activationResult = activationResultMessage({
+    activation,
+    activationToolId,
+    applicationLabel,
+    resultApp: resultContext?.app,
+    t,
+    c,
+    g,
+  });
 
   const installProgress = installer?.progress;
   useEffect(() => {
@@ -1971,11 +1175,7 @@ export function ConfigurationPreviewView({
                     disabled={applyPhase === "applying"}
                     onClick={() => {
                       setActivationToolId(candidate.id);
-                      setSelectedModelId("");
-                      setBillingGroup("");
-                      setModelSet([]);
-                      setDefaultModelId("");
-                      setSelectionReadyKey(null);
+                      resetSelection();
                       setShowApplications(false);
                       appSwitchButton.current?.focus();
                       resetResult();
@@ -1994,11 +1194,7 @@ export function ConfigurationPreviewView({
                     </span>
                     <span className="configuration-app-copy">
                       <strong>
-                        {appDisplayName(
-                          candidate.id,
-                          candidate.displayName,
-                          t,
-                        )}
+                        {appDisplayName(candidate.id, candidate.displayName, t)}
                       </strong>
                       <small>{g[candidate.surface]}</small>
                     </span>
@@ -2050,10 +1246,7 @@ export function ConfigurationPreviewView({
                     value={selectedInstallationId}
                     disabled={applyPhase === "applying"}
                     onChange={(event) => {
-                      setInstallations((current) => ({
-                        ...current,
-                        [activationToolId]: event.target.value,
-                      }));
+                      selectInstallation(activationToolId, event.target.value);
                       resetResult();
                     }}
                   >
@@ -2170,33 +1363,8 @@ export function ConfigurationPreviewView({
                       models={accountModels}
                       value={selectedModelId}
                       open={modelPickerOpen}
-                      onOpenChange={(next) => {
-                        setModelPickerOpen(next);
-                        if (!next) setPickerAdds(false);
-                      }}
-                      onChange={(id) => {
-                        if (pickerAdds) {
-                          enrollModel(id);
-                          return;
-                        }
-                        setSelectionReadyKey(selectionKey);
-                        setFocusedModelId(null);
-                        setSelectedModelId(id);
-                        const saved = modelSet.find((m) => m.modelId === id);
-                        setBillingGroup(
-                          saved?.billingGroup ??
-                            chooseBillingGroup(
-                              models.find((m) => m.id === id),
-                              "",
-                            ),
-                        );
-                        // 下拉框里这个就是默认。已经在名单里，或者还没到 200
-                        // 的上限，才把它记成默认；超限时不改默认，避免把第
-                        // 201 个悄悄写进去。
-                        if (saved || modelSet.length < 200)
-                          setDefaultModelId(id);
-                        resetResult();
-                      }}
+                      onOpenChange={onPickerOpenChange}
+                      onChange={chooseModel}
                       disabled={session.loading || applyPhase === "applying"}
                     />
                     <div className="model-choice-meta">
@@ -2232,109 +1400,32 @@ export function ConfigurationPreviewView({
                       </button>
                     </div>
                     {writesModelMenu && submittedModels.length > 0 && (
-                      <section
-                        className="model-menu-row"
-                        aria-label={g.favoriteModels}
-                      >
-                        <p className="model-menu-note">
-                          {activationToolId === "codex_desktop"
-                            ? g.menuModelsCodex
-                            : g.menuModelsApp}
-                        </p>
-                        <ul className="model-menu-chips">
-                          {submittedModels.map((m) => {
-                            const bindingModel = models.find(
-                              (a) => a.id === m.modelId,
-                            );
-                            const groups = bindingModel?.billing?.groups;
-                            const available =
-                              !groups?.length ||
-                              groups.some(
-                                (group) => group.id === m.billingGroup,
-                              );
-                            const isDefault =
-                              defaultBinding?.modelId === m.modelId;
-                            const isEditing = priceModelId === m.modelId;
-                            const shortGroup = groupLabel(
-                              m.billingGroup,
-                              g.defaultGroup,
-                            );
-                            const groupText = available
-                              ? shortGroup
-                              : `${shortGroup} · ${g.bindingUnavailable}`;
-                            return (
-                              <li key={m.modelId}>
-                                <span
-                                  className={`model-menu-chip${isDefault ? " is-default" : ""}${isEditing ? " is-editing" : ""}`}
-                                  data-unavailable={
-                                    available ? undefined : true
-                                  }
-                                >
-                                  <button
-                                    type="button"
-                                    className="model-menu-chip-select"
-                                    aria-pressed={isEditing}
-                                    disabled={applyPhase === "applying"}
-                                    title={`${m.modelId} · ${groupText}`}
-                                    onClick={() => setFocusedModelId(m.modelId)}
-                                  >
-                                    <strong>{modelDisplayName(m.modelId)}</strong>
-                                    {modelDisplayName(m.modelId) !== m.modelId && (
-                                      <code>{shortModelId(m.modelId)}</code>
-                                    )}
-                                    <small>{groupText}</small>
-                                    {isDefault && <em>{g.defaultBadge}</em>}
-                                  </button>
-                                  {!isDefault && (
-                                    <button
-                                      type="button"
-                                      className="model-menu-remove"
-                                      disabled={applyPhase === "applying"}
-                                      aria-label={g.removeModelAria.replace(
-                                        "{{model}}",
-                                        m.modelId,
-                                      )}
-                                      onClick={() => removeBinding(m.modelId)}
-                                    >
-                                      {g.removeAction}
-                                    </button>
-                                  )}
-                                </span>
-                              </li>
-                            );
-                          })}
-                          <li>
-                            <button
-                              type="button"
-                              className="model-menu-add"
-                              disabled={
-                                applyPhase === "applying" ||
-                                session.loading ||
-                                !!session.lastError ||
-                                submittedModels.length >= 200 ||
-                                models.length < 1
-                              }
-                              onClick={() => {
-                                setPickerAdds(true);
-                                setModelPickerOpen(true);
-                              }}
-                            >
-                              {g.addMenuModel}
-                            </button>
-                          </li>
-                        </ul>
-                        {submittedModels.length > 1 && (
-                          <small className="model-menu-footnote">
-                            {g.modelSetNote}
-                          </small>
-                        )}
-                      </section>
+                      <ModelMenu
+                        activationToolId={activationToolId}
+                        models={models}
+                        submittedModels={submittedModels}
+                        defaultBinding={defaultBinding}
+                        priceModelId={priceModelId}
+                        disabled={applyPhase === "applying"}
+                        addDisabled={
+                          applyPhase === "applying" ||
+                          session.loading ||
+                          !!session.lastError ||
+                          submittedModels.length >= 200 ||
+                          models.length < 1
+                        }
+                        focusPriceModel={focusPriceModel}
+                        removeBinding={removeBinding}
+                        startAddingModel={startAddingModel}
+                        g={g}
+                      />
                     )}
                     {missingModel && (
                       <p className="selection-warning" role="alert">
                         {g.missingModelPrefix}{" "}
                         <strong>{modelDisplayName(selectedModelId)}</strong>
-                        {modelDisplayName(selectedModelId) !== selectedModelId && (
+                        {modelDisplayName(selectedModelId) !==
+                          selectedModelId && (
                           <>
                             {" "}
                             <code>({shortModelId(selectedModelId)})</code>
@@ -2510,11 +1601,7 @@ export function ConfigurationPreviewView({
                 {g.lifecycleNotePrefix}
               </summary>
               <p>
-                {connectionLifecycleNote(
-                  activationToolId,
-                  applicationLabel,
-                  g,
-                )}
+                {connectionLifecycleNote(activationToolId, applicationLabel, g)}
               </p>
             </details>
           )}
@@ -2573,10 +1660,7 @@ export function ConfigurationPreviewView({
                 </code>
                 {usesLocalBridge(activationToolId) && (
                   <small className="endpoint-reference-note">
-                    {g.bridgedEndpointNote.replace(
-                      "{{app}}",
-                      applicationLabel,
-                    )}
+                    {g.bridgedEndpointNote.replace("{{app}}", applicationLabel)}
                   </small>
                 )}
               </dd>
@@ -2585,39 +1669,16 @@ export function ConfigurationPreviewView({
         </details>
 
         {applyPhase === "applying" && (
-          <div className="setup-progress" role="status" aria-live="polite">
-            <LoaderCircle className="is-spinning" aria-hidden="true" />
-            <p>
-              <strong>{c.settingUp}</strong>
-              <span>{activationProgressText}</span>
-              {activationProgress && (
-                <span>
-                  {g.progressStep
-                    .replace(
-                      "{{done}}",
-                      String(activationProgress.completedSteps),
-                    )
-                    .replace(
-                      "{{total}}",
-                      String(activationProgress.totalSteps),
-                    )}
-                </span>
-              )}
-              {task.cancelFailed && (
-                <span role="alert">{t("yeschoyDaily.cancelFailed")}</span>
-              )}
-              <span>{g.progressNote}</span>
-              <button
-                type="button"
-                className="subtle-button"
-                onClick={() => void cancelActivation()}
-                disabled={activationCancelRequested}
-              >
-                <CircleStop aria-hidden="true" />
-                {activationCancelRequested ? g.cancelInProgress : g.cancelSetup}
-              </button>
-            </p>
-          </div>
+          <ActivationProgress
+            activationProgress={activationProgress}
+            activationProgressText={activationProgressText}
+            activationCancelRequested={activationCancelRequested}
+            cancelFailed={task.cancelFailed}
+            cancelActivation={cancelActivation}
+            settingUp={c.settingUp}
+            t={t}
+            g={g}
+          />
         )}
 
         {activation && (
@@ -2667,9 +1728,7 @@ export function ConfigurationPreviewView({
               skippedBindings.length > 0 && (
                 <div className="activation-skipped" role="status">
                   <strong>{g.skippedTitle}</strong>
-                  <p>
-                    {g.skippedBody.replace("{{app}}", applicationLabel)}
-                  </p>
+                  <p>{g.skippedBody.replace("{{app}}", applicationLabel)}</p>
                   <ul>
                     {skippedBindings.map((s) => (
                       <li key={s.modelId}>
@@ -2692,10 +1751,7 @@ export function ConfigurationPreviewView({
                   ? g.verifiedBody
                       .replace("{{app}}", applicationLabel)
                       .replace("{{model}}", firstUseObservation.modelId)
-                  : g.awaitingFirstUseBody.replace(
-                      "{{app}}",
-                      applicationLabel,
-                    )}
+                  : g.awaitingFirstUseBody.replace("{{app}}", applicationLabel)}
               </p>
             )}
             {firstActivationCelebration && (
@@ -2763,88 +1819,21 @@ export function ConfigurationPreviewView({
       {/* 网络线路：一条页脚。它不是三步里的一步 —— 绝大多数人一次都不会
           动它，摘要行「网络线路 · 大陆优化 / 更换线路」已经说完了它的全部
           状态。原来它夹在第二步和第三步中间，把流程截成两半。 */}
-      <details
-        ref={networkDetails}
-        className="connection-choice-card line-selector network-choice"
-        aria-labelledby="setup-line-title"
-      >
-        <summary>
-          <span id="setup-line-title">
-            {g.networkLinePrefix} ·{" "}
-            {t(`yeschoyConfiguration.lines.${lineId}.name`)}
-          </span>
-          <span>{g.changeLine}</span>
-        </summary>
-        <div className="choice-card-heading">
-          <div>
-            <p>{g.lineQuestion}</p>
-            <p>{g.lineIntro}</p>
-          </div>
-        </div>
-        <div className="line-selector-grid">
-          {CONFIGURATION_LINES.map((line) => (
-            <button
-              type="button"
-              key={line.id}
-              className={lineId === line.id ? "is-selected" : undefined}
-              aria-pressed={lineId === line.id}
-              disabled={applyPhase === "applying"}
-              onClick={() => {
-                if (lineId === line.id) return;
-                onLineChange(line.id);
-                resetResult();
-              }}
-            >
-              <span className="line-selection-dot" aria-hidden="true" />
-              <span>
-                <strong>
-                  {t(`yeschoyConfiguration.lines.${line.id}.name`)}
-                </strong>
-                <small>{t(`yeschoyConfiguration.lines.${line.id}.note`)}</small>
-                {lineLatencies[line.id] !== undefined && (
-                  <small className="line-latency">
-                    {lineLatencies[line.id]} ms
-                  </small>
-                )}
-                {recommendedLine === line.id && (
-                  <span className="line-recommend-badge">
-                    {t("yeschoyConfiguration.recommendedBadge")}
-                  </span>
-                )}
-              </span>
-              {lineId === line.id && (
-                <CheckCircle2
-                  className="line-selected-check"
-                  aria-hidden="true"
-                />
-              )}
-            </button>
-          ))}
-        </div>
-        <div className="line-speedtest">
-          <button
-            type="button"
-            className="subtle-button"
-            disabled={applyPhase === "applying" || lineTestPhase === "running"}
-            onClick={() => void runLineSpeedtest()}
-          >
-            {lineTestPhase === "running" && (
-              <LoaderCircle className="is-spinning" aria-hidden="true" />
-            )}
-            {t("yeschoyConfiguration.speedtestAction")}
-          </button>
-          {lineTestPhase === "error" && (
-            <p className="line-speedtest-note" role="status">
-              {t("yeschoyConfiguration.speedtestFailed")}
-            </p>
-          )}
-          {lineTestPhase === "done" && recommendedLine && (
-            <p className="line-speedtest-note">
-              {t("yeschoyConfiguration.speedtestNote")}
-            </p>
-          )}
-        </div>
-      </details>
+      <NetworkLineSelector
+        networkDetails={networkDetails}
+        lineId={lineId}
+        disabled={applyPhase === "applying"}
+        onLineChange={(id) => {
+          onLineChange(id);
+          resetResult();
+        }}
+        lineLatencies={lineLatencies}
+        recommendedLine={recommendedLine}
+        lineTestPhase={lineTestPhase}
+        runLineSpeedtest={runLineSpeedtest}
+        t={t}
+        g={g}
+      />
       <ConfirmDialog
         isOpen={claudeLoginPromptOpen}
         title={g.claudeLoginDialogTitle}

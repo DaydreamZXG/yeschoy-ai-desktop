@@ -46,7 +46,10 @@ sha2 = "0.10"
 # vendored 的 proxy/ 用它派生错误类型；2.0.18 本来就在 lock 与本地缓存里，
 # 加成直接依赖不产生新下载，`--offline` 出包不受影响。
 thiserror = "2.0"
-tauri = { version = "2.8.2", default-features = false, features = ["wry"] }
+# `test` 只开启 `tauri::test`（mock 运行时、mock AppHandle），是空 feature，
+# 不引入任何额外依赖。接入编排的端到端回归需要一个真实的 AppHandle 才能
+# 观察进度事件；生产构建不受影响。
+tauri = { version = "2.8.2", default-features = false, features = ["wry", "test"] }
 tauri-plugin-updater = { version = "=2.9.0", default-features = false, features = ["native-tls", "zip"] }
 tokio = { version = "1", features = ["io-util", "macros", "net", "process", "rt-multi-thread", "sync", "time"] }
 toml_edit = { version = "0.24", features = ["serde"] }

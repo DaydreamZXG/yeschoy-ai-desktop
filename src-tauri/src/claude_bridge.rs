@@ -1283,8 +1283,7 @@ mod tests {
                     }
                 }),
             );
-            let server =
-                tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+            let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
             let mut state = state();
             state.prefix = prefix;
             state.credential.origin = origin.clone();
@@ -1300,7 +1299,10 @@ mod tests {
                 .method("POST")
                 .uri(format!("{prefix}/v1/messages"))
                 .header("x-api-key", &state.local_token)
-                .header(header::AUTHORIZATION, format!("Bearer {}", state.local_token))
+                .header(
+                    header::AUTHORIZATION,
+                    format!("Bearer {}", state.local_token),
+                )
                 .header("anthropic-version", "2023-06-01")
                 .header(header::USER_AGENT, "claude-cli/2.1.283 (external, cli)")
                 .header("x-app", "cli")

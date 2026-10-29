@@ -242,6 +242,37 @@ describe("desktop tool activation boundary", () => {
     });
   });
 
+  it("never asks for a Codex probe unless the caller opted in", async () => {
+    // 默认请求里连字段都不出现：探测会花用户的真实额度，只能由用户在
+    // 设置里打开后显式带出来，不能靠缺省值「顺手」打开。
+    native.mockImplementation(async (_, args) =>
+      projection(
+        (args as { request: { requestId: string } }).request.requestId,
+      ),
+    );
+    await activateDesktopTool({
+      lineId: "global_accelerated",
+      toolId: "codex_desktop",
+      modelId: "glm-5.3",
+      installationId: "i0123456789abcdef",
+      billingGroup: "国模特价分组",
+    });
+    const omitted = (native.mock.calls[0][1] as { request: object }).request;
+    expect(omitted).not.toHaveProperty("probeCodexTransport");
+
+    await activateDesktopTool({
+      lineId: "global_accelerated",
+      toolId: "codex_desktop",
+      modelId: "glm-5.3",
+      installationId: "i0123456789abcdef",
+      billingGroup: "国模特价分组",
+      probeCodexTransport: true,
+    });
+    expect(native).toHaveBeenLastCalledWith("configure_desktop_tool_v2", {
+      request: expect.objectContaining({ probeCodexTransport: true }),
+    });
+  });
+
   it("recovers the renderer and requests native cancellation after a hard deadline", async () => {
     vi.useFakeTimers();
     native.mockImplementation((command, args) => {

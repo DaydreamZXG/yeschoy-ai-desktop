@@ -17,6 +17,7 @@ import {
   useToolConnections,
 } from "./configuration/connections";
 import { DiagnosticsView } from "./diagnostics/DiagnosticsView";
+import { FeedbackView } from "./diagnostics/FeedbackView";
 import { SettingsView } from "./settings/SettingsView";
 import {
   AnnouncementBanner,
@@ -45,10 +46,7 @@ import {
 import { useAccountSession } from "./account/useAccountSession";
 import { StationTrustDialog } from "./account/StationTrustDialog";
 import { useStationConnect } from "./account/useStationConnect";
-import {
-  isAccountLineId,
-  type AccountLineId,
-} from "./configuration/preview";
+import { isAccountLineId, type AccountLineId } from "./configuration/preview";
 import {
   TOOL_CATALOG,
   decodeScan,
@@ -91,10 +89,7 @@ function App() {
     useState<AccountLineId>(initialAccountLineId);
   const applyAccountLine = useCallback((lineId: AccountLineId) => {
     setAccountLineId(lineId);
-    if (
-      lineId === "mainland_optimized" ||
-      lineId === "global_accelerated"
-    ) {
+    if (lineId === "mainland_optimized" || lineId === "global_accelerated") {
       writeAccountLinePreference(lineId);
     }
   }, []);
@@ -306,7 +301,10 @@ function App() {
                 appearance={appearance}
                 onAppearance={changeAppearance}
                 accountProjection={accountSession.projection}
-                accountLoading={accountSession.loading || (accountSession.stationCheck ?? "idle") === "checking"}
+                accountLoading={
+                  accountSession.loading ||
+                  (accountSession.stationCheck ?? "idle") === "checking"
+                }
                 accountLineId={accountLineId}
               />
 
@@ -378,6 +376,12 @@ function App() {
                   onOpenAccount={() => setView("account")}
                   onOpenHome={() => setView("home")}
                   onOpenTools={() => setView("tools")}
+                  onReportBug={() => setView("feedback")}
+                />
+              ) : view === "feedback" ? (
+                <FeedbackView
+                  onOpenDiagnostics={() => setView("diagnostics")}
+                  onOpenHome={() => setView("home")}
                 />
               ) : view === "announcements" ? (
                 <AnnouncementsView
@@ -394,6 +398,7 @@ function App() {
                   onAppearanceChange={changeAppearance}
                   onOpenAccount={() => setView("account")}
                   onOpenDiagnostics={() => setView("diagnostics")}
+                  onOpenFeedback={() => setView("feedback")}
                   onOpenTools={() => setView("tools")}
                   onOpenModels={() => setView("models")}
                 />

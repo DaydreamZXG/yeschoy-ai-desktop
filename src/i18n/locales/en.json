@@ -314,7 +314,14 @@
     "groupPrivacy": "Privacy & security",
     "groupPrivacyNote": "Fixed behaviour in this version — nothing to configure.",
     "groupSystem": "Background",
-    "groupAdvanced": "Troubleshooting & advanced"
+    "groupAdvanced": "Troubleshooting & advanced",
+    "codexProbe": {
+      "title": "Probe Codex transport",
+      "note": "Some models only work in Codex when the local bridge translates them to the Chat protocol. Turning this on sends one minimal real request per model to the relay to decide that; a successful one spends a few tokens. Off means direct only, with no test requests.",
+      "warning": "On: activating Codex will send minimal test requests that may spend a few tokens.",
+      "on": "On",
+      "off": "Off"
+    }
   },
   "yeschoyUpdate": {
     "title": "Yeschoy automatic updates",
@@ -660,7 +667,8 @@
     "libraryAccountChecking": "Checking your station…",
     "appNameCodex": "Codex (desktop / CLI)",
     "officialSitePromo": "Open-source by Yeschoy · Website",
-    "officialSitePromoDismiss": "Don't show again"
+    "officialSitePromoDismiss": "Don't show again",
+    "feedback": "Report a bug"
   },
   "configuration": {
     "defaultGroup": "Standard plan",
@@ -799,6 +807,7 @@
     "missingDuringSetup": "The app you picked is no longer there. Check again.",
     "selectionRequired": "Several installs were found. Pick the one to use.",
     "secureStoreFailed": "The system's secure storage isn't available. Unlock your keychain or credential manager, check this computer's connection status, then try again.",
+    "issuanceRecordFailed": "This setup couldn't record the key it was about to create, so nothing was requested from the relay. Make sure your home folder is writable and try again - no unused keys will be left on your account.",
     "externalOverride": "Another setup already owns this app's config directory, so nothing of yours was touched. Launch it with \"Open\" from here instead, or pick an install that isn't already taken.",
     "unsupportedProfile": "The way this app runs can't be configured automatically yet. Nothing was changed.",
     "launchFailed": "The settings were rolled back because the app didn't start. Make sure it opens by hand.",
@@ -1376,6 +1385,241 @@
       "connect_origin_not_acceptable": "The site address is not acceptable; the assistant won't connect to it.",
       "trust_store_full": "Too many remembered sites. Remove some unused ones in Settings first.",
       "generic": "Go back to the web page and click \"Open desktop assistant\" again."
+    }
+  },
+  "yeschoyHealth": {
+    "eyebrow": "Health check",
+    "title": "Find out why it is not working",
+    "description": "Combines the check above, this computer's environment and the latest stage records into one report. It never includes keys, accounts, file paths or conversation content, so you can paste it straight to the developer.",
+    "findingsTitle": "What was found",
+    "noFindings": "Both lines passed their network checks. No connection-layer problem was found.",
+    "notChecked": "Run the line check above and any problems will be listed here.",
+    "envTitle": "Environment",
+    "envReading": "Reading…",
+    "envUnavailable": "The environment could not be read right now.",
+    "logTitle": "Stage records",
+    "logReady": "Last {{count}} lines loaded (paths and keys removed)",
+    "logUnavailable": "No stage records are available on this computer.",
+    "previewTitle": "Preview the stage records this report contains",
+    "copyReport": "Copy report for the developer",
+    "reportCopied": "Copied. Paste it to the developer.",
+    "reportBug": "Report a bug",
+    "reportConsent": "The report is only built when you copy it and is never uploaded automatically. Paste it into bug feedback."
+  },
+  "yeschoyFeedback": {
+    "eyebrow": "Feedback",
+    "title": "Report a bug",
+    "description": "Bundle what happened, this computer's environment and the stage records into one report, copy it and paste it into feedback. Nothing is uploaded automatically and you can edit it before copying.",
+    "stepsTitle": "Three steps",
+    "stepsNote": "A developer needs the symptom, the environment and the stage records. These steps collect exactly that.",
+    "step1Title": "1. Copy the report",
+    "step1Body": "This already contains this computer's environment and recent stage records. Describe what you saw under \"what happened\"; anything key-like is masked automatically.",
+    "reportLabel": "Report contents",
+    "copy": "Copy report",
+    "copied": "Copied. Paste it in step 2.",
+    "redactionNote": "Only the last 120 stage records leave the machine; file paths, URLs, IPs and keys are locally replaced with [redacted], and checked once more when you copy.",
+    "step2Title": "2. Open feedback and paste",
+    "step2CommunityBody": "Choose \"Bug report\" on the issue page that opens and paste the report into the body.",
+    "step2OfficialBody": "Paste the report into the body of the feedback page that opens.",
+    "openCommunity": "Open GitHub issues",
+    "openOfficial": "Open feedback page",
+    "step3Title": "3. Try the health check first",
+    "step3Body": "When something says \"not working\", the health assistant usually names the layer that broke, faster than describing the symptom.",
+    "openDiagnostics": "Open the health assistant",
+    "openHome": "Back to my apps"
+  },
+  "yeschoyResidue": {
+    "title": "Clean up this computer before uninstalling",
+    "body": "The assistant only leaves these behind: local state, logs, local caches and a minimal set of keys. Tick and clean them before uninstalling and nothing will remain.",
+    "scanning": "Looking for leftovers…",
+    "errorTitle": "Could not scan the leftovers",
+    "errorBody": "The list could not be read. Nothing has been deleted.",
+    "partialTitle": "Some items were not cleaned",
+    "partialBody": "Items that remain usually mean the app is still running. Quit the assistant and try again.",
+    "nothingLeft": "No leftovers from the assistant remain on this computer.",
+    "clearedClean": "Everything was cleaned. No data from the assistant remains on this computer.",
+    "clearedRemaining": "The selected items were cleaned. The rest below need your attention.",
+    "previewTitle": "Show the {{count}} items that will be deleted",
+    "restoreFirst": "{{count}} app(s) are still connected. Restore their original settings under \"My apps\" first, otherwise they keep pointing at the Yeschoy endpoint.",
+    "clearAction": "Clean {{count}} selected items",
+    "confirmBody": "Deletion cannot be undone, and connected apps can no longer be restored afterwards. Continue?",
+    "confirmAction": "Delete",
+    "cancel": "Cancel",
+    "keptNote": "{{count}} item(s) are intentionally kept; see below.",
+    "scopeNote": "Only runs after you click Clean, and only deletes what the assistant created. Your apps, chat history and Claude Code's own login are never touched.",
+    "reasons": {
+      "owned_state": {
+        "note": "The device ID and encrypted restore copies all live in this one folder."
+      },
+      "restore_first": {
+        "note": "Some connections have not been restored yet.",
+        "instruction": "Restore them under \"My apps\" first, then come back."
+      },
+      "owned_logs": {
+        "note": "Stages, error categories and timings only; never conversation content."
+      },
+      "quit_then_remove": {
+        "note": "Local UI settings such as language and theme, plus caches."
+      },
+      "owned_keychain": {
+        "note": "Session and connection keys the assistant stored in the system keychain."
+      },
+      "login_taken_over": {
+        "note": "A Claude login was moved aside temporarily.",
+        "instruction": "Restore the Claude login under Advanced details first, otherwise Claude Code will need to sign in again after uninstalling."
+      },
+      "restore_via_app": {
+        "note": "Connected apps' config files belong to those apps. Restore them under \"My apps\"; the assistant will not delete them for you."
+      },
+      "os_managed": {
+        "note": "Crash reports are managed by the operating system, not by the assistant."
+      }
+    },
+    "items": {
+      "state": {
+        "title": "Local state folder",
+        "body": "Device ID, restore baseline and temporary files."
+      },
+      "logs": {
+        "title": "Run logs",
+        "body": "Stage records for support, capped at 4 MB and overwritten."
+      },
+      "webkit": {
+        "title": "Local interface data",
+        "body": "Theme, language and other UI preferences, plus WebView caches."
+      },
+      "webview2_user_data": {
+        "title": "Local interface data",
+        "body": "Theme, language and other UI preferences, plus WebView caches."
+      },
+      "caches": {
+        "title": "Local caches",
+        "body": "Cache files generated by the WebView."
+      },
+      "local_storage": {
+        "title": "Local storage",
+        "body": "UI preferences."
+      },
+      "session_storage": {
+        "title": "Session storage",
+        "body": "Interface session state."
+      },
+      "web_storage": {
+        "title": "Local storage",
+        "body": "UI preferences."
+      },
+      "file_system": {
+        "title": "Local storage",
+        "body": "UI preferences."
+      },
+      "service_worker": {
+        "title": "Local caches",
+        "body": "Background cache generated by the WebView."
+      },
+      "gpu_cache": {
+        "title": "Local caches",
+        "body": "Graphics cache generated by the WebView."
+      },
+      "keychain": {
+        "title": "System keychain entries",
+        "body": "Session and connection keys stored by the assistant."
+      },
+      "displaced_login": {
+        "title": "Moved-aside Claude login",
+        "body": "Restore the login before cleaning."
+      },
+      "app_configs": {
+        "title": "Connected apps' settings",
+        "body": "They belong to those apps; restore them under \"My apps\"."
+      },
+      "crash_reports": {
+        "title": "System crash reports",
+        "body": "Managed by the operating system."
+      }
+    }
+  },
+  "yeschoyCursor": {
+    "title": "Connect Cursor",
+    "body": "The Cursor Agent command line can be connected: the assistant edits ~/.cursor/cli-config.json and can undo it. The Cursor desktop app has no such entry point; the exact steps are below.",
+    "loading": "Reading the Cursor configuration…",
+    "readErrorTitle": "Could not read the Cursor configuration",
+    "readErrorBody": "Other apps are unaffected. Try again later; no files were changed.",
+    "cli": {
+      "title": "Cursor Agent (command line)",
+      "body": "Looks for the cursor-agent / agent command on this machine.",
+      "detected": "Detected",
+      "notDetected": "Not detected"
+    },
+    "facts": {
+      "endpoint": "Endpoint to write",
+      "model": "Default model",
+      "state": "Current state",
+      "configured": "Connected to Yeschoy",
+      "notConfigured": "Not connected"
+    },
+    "applyAction": "Connect Cursor Agent",
+    "reapplyAction": "Update connection",
+    "revertAction": "Restore original settings",
+    "confirmBody": "This writes the network section (endpoint and headers) and the default model into ~/.cursor/cli-config.json. Your other settings are kept. Continue?",
+    "confirmAction": "Write",
+    "cancel": "Cancel",
+    "howTo": "Run cursor-agent in a terminal afterwards; it will use this endpoint.",
+    "keyNote": "No key is stored here: cursor-agent signs in on its own (CURSOR_API_KEY or first-run login), so no token goes into the config file.",
+    "ide": {
+      "title": "Cursor desktop app",
+      "body": "The desktop app's chat does not read that CLI config. Pointing it at Yeschoy means entering the endpoint and key in Cursor's own settings; the assistant will not do that because it would touch Cursor's login data.",
+      "observed": "Installed",
+      "notObserved": "Not detected",
+      "step1": "Open Cursor Settings → Models → OpenAI API Key.",
+      "step2": "Enter the endpoint and key, then enable \"Use custom OpenAI endpoint\".",
+      "step3": "Try a GPT-family model in the chat; turn the switch back off if it does not work.",
+      "warning": "The assistant never edits Cursor's desktop database or keychain; those steps are yours to take, and Cursor may move them in a future release."
+    },
+    "outcomes": {
+      "configured": {
+        "title": "Connected",
+        "body": "Cursor Agent now uses the Yeschoy endpoint. Use \"Restore original settings\" to undo."
+      },
+      "reverted": {
+        "title": "Original settings restored",
+        "body": "The reference endpoint and the header the assistant added are gone."
+      },
+      "invalid_endpoint": {
+        "title": "Invalid endpoint",
+        "body": "Only https:// endpoints are accepted (http for loopback only). Nothing was written."
+      },
+      "configuration_read_failed": {
+        "title": "Could not read the config file",
+        "body": "No files were modified. Check read access to ~/.cursor and retry."
+      },
+      "configuration_parse_failed": {
+        "title": "The config file is not valid JSON",
+        "body": "Nothing was written so your hand-written content is not overwritten. Fix cli-config.json first."
+      },
+      "configuration_write_failed": {
+        "title": "Write failed",
+        "body": "Possibly the disk is full or access was denied. What is on disk is unchanged."
+      },
+      "configuration_readback_failed": {
+        "title": "Verification failed after writing",
+        "body": "The file was rolled back to its previous contents."
+      },
+      "configuration_rollback_failed": {
+        "title": "Rollback failed",
+        "body": "Please check the network section of ~/.cursor/cli-config.json manually."
+      },
+      "external_override": {
+        "title": "The config changed underneath",
+        "body": "Nothing was written so another program's change is not overwritten."
+      },
+      "model_required": {
+        "title": "No default model",
+        "body": "There is no selectable model; refresh the model list first."
+      },
+      "user_home_unavailable": {
+        "title": "Home folder not found",
+        "body": "~/.cursor could not be located. Check the system environment and retry."
+      }
     }
   }
 }

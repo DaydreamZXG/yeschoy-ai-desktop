@@ -930,3 +930,61 @@ async fn installer_redirect_cache_never_reuses_another_resource_etag() {
 async fn installer_redirect_resume_never_appends_another_resource_etag() {
     installer_redirect_generation_case(true).await;
 }
+
+#[test]
+fn preview_reports_mode_and_package_without_touching_state() {
+    let request = |tool_id: &str| InstallationPreviewRequest {
+        request_id: "install-preview-1".to_string(),
+        tool_id: tool_id.to_string(),
+    };
+    // A tool with a compiled package on this host answers mode/package truthfully.
+    let codex = installation_preview_read_only(request("codex_desktop")).unwrap();
+    assert_eq!(codex.schema_version, 1);
+    assert_eq!(codex.tool_id, "codex_desktop");
+    assert_eq!(codex.platform, catalog::platform());
+    assert_eq!(
+        codex.mode,
+        catalog::mode(
+            "codex_desktop",
+            catalog::platform(),
+            catalog::architecture()
+        )
+    );
+    assert_eq!(
+        codex.package_available,
+        catalog::source(
+            "codex_desktop",
+            catalog::platform(),
+            catalog::architecture()
+        )
+        .is_some()
+    );
+    assert!(codex.guide_available);
+    // A guided-only tool still previews: the user is told it is "guided".
+    let pi = installation_preview_read_only(request("pi")).unwrap();
+    assert_eq!(pi.mode, "guided");
+    assert!(!pi.package_available);
+}
+
+#[test]
+fn preview_rejects_unknown_tools_and_unsafe_request_ids() {
+    // An unknown tool must not come back as an empty-but-valid preview.
+    assert_eq!(
+        installation_preview_read_only(InstallationPreviewRequest {
+            request_id: "install-preview-2".to_string(),
+            tool_id: "not_a_tool".to_string(),
+        })
+        .unwrap_err(),
+        "invalid_installation_preview"
+    );
+    for bad in ["", "with space", "../escape", "a".repeat(65).as_str()] {
+        assert_eq!(
+            installation_preview_read_only(InstallationPreviewRequest {
+                request_id: bad.to_string(),
+                tool_id: "pi".to_string(),
+            })
+            .unwrap_err(),
+            "invalid_installation_preview"
+        );
+    }
+}

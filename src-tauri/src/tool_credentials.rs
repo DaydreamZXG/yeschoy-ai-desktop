@@ -1,118 +1,21 @@
+//! The credential store: keyring persistence for the per-tool keys.
+//!
+//! The credential *shape* and its pure rules live in `domain::credential`;
+//! they are re-exported here so callers that think in terms of "the store"
+//! keep one import path.
+pub(crate) use crate::domain::credential::{
+    allowed_tool, CredentialFailure, ToolCredential, ToolModelRoute, ALLOWED_TOOLS,
+};
+
 use std::io::{self, Write};
 
 use keyring::v1::{Entry, Error as KeyringError};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+use crate::domain::station::StationOrigin;
+
 const SERVICE: &str = "com.yeschoy.desktop.tool-credential.v2";
-const ALLOWED_TOOLS: [&str; 8] = [
-    "claude_code",
-    "claude_desktop",
-    "codex_desktop",
-    "pi",
-    "opencode",
-    "dsh_web",
-    "workbuddy",
-    "dsh_desktop",
-];
-
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub(crate) struct ToolCredential {
-    pub(crate) api_key: String,
-    pub(crate) origin: String,
-    pub(crate) model_id: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(crate) local_gateway_token: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(crate) codex_transport: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub(crate) claude_transport: Option<String>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub(crate) models: Vec<ToolModelRoute>,
-}
-
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub(crate) struct ToolModelRoute {
-    pub(crate) model_id: String,
-    pub(crate) billing_group: String,
-    pub(crate) api_key: String,
-    pub(crate) origin: String,
-    pub(crate) claude_transport: Option<String>,
-    pub(crate) codex_transport: Option<String>,
-}
-
-impl std::fmt::Debug for ToolCredential {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ToolCredential")
-            .field("model_count", &self.model_ids().len())
-            .field("credentials", &"[redacted]")
-            .finish()
-    }
-}
-
-impl ToolCredential {
-    pub(crate) fn has_model_set(&self) -> bool {
-        !self.models.is_empty()
-    }
-    pub(crate) fn model_ids(&self) -> Vec<String> {
-        if self.models.is_empty() {
-            vec![self.model_id.clone()]
-        } else {
-            self.models.iter().map(|r| r.model_id.clone()).collect()
-        }
-    }
-    pub(crate) fn resolve_model(&self, requested: &str) -> Result<Self, CredentialFailure> {
-        if self.models.is_empty() {
-            return (requested == self.model_id)
-                .then(|| self.clone())
-                .ok_or(CredentialFailure::Invalid);
-        }
-        let r = self
-            .models
-            .iter()
-            .find(|r| r.model_id == requested)
-            .ok_or(CredentialFailure::Invalid)?;
-        Ok(Self {
-            api_key: r.api_key.clone(),
-            origin: r.origin.clone(),
-            model_id: r.model_id.clone(),
-            local_gateway_token: self.local_gateway_token.clone(),
-            codex_transport: r.codex_transport.clone(),
-            claude_transport: r.claude_transport.clone(),
-            models: Vec::new(),
-        })
-    }
-    /// The default credential a tool presents to its configured endpoint.
-    /// Claude Desktop uses a dedicated local capability token; other tools use
-    /// their scoped relay key. Claude Code's new gateway helper is separate so
-    /// old direct receipts retain this contract.
-    pub(crate) fn client_token(&self, tool: &str) -> &str {
-        if tool == "claude_desktop" {
-            self.local_gateway_token.as_deref().unwrap_or("")
-        } else {
-            &self.api_key
-        }
-    }
-
-    /// The scoped per-tool key issued by the relay.
-    pub(crate) fn upstream_key(&self) -> &str {
-        &self.api_key
-    }
-}
-
-#[derive(Debug)]
-pub(crate) enum CredentialFailure {
-    Unavailable,
-    Missing,
-    Invalid,
-}
-
-fn allowed_tool(tool_id: &str) -> bool {
-    ALLOWED_TOOLS.contains(&tool_id)
-}
-
 fn record_is_valid(tool_id: &str, record: &ToolCredential) -> bool {
     let key = record.api_key.as_str();
     let model = record.model_id.as_str();
@@ -121,10 +24,10 @@ fn record_is_valid(tool_id: &str, record: &ToolCredential) -> bool {
         && !key
             .chars()
             .any(|value| value.is_control() || value.is_whitespace())
-        && matches!(
-            record.origin.as_str(),
-            "https://yeschoy.com" | "https://api.yeschoy.com"
-        )
+        // Valid identity is not user authorization. Never consult the trust file
+        // here: a missing/corrupt store must not strand installed credentials or
+        // prevent restoring an encrypted baseline for a third-party station.
+        && StationOrigin::parse(&record.origin).is_ok()
         && !model.is_empty()
         && model.chars().count() <= 200
         && !model.chars().any(char::is_control)
@@ -374,7 +277,14 @@ fn publish_payload(
 }
 
 pub(crate) fn load(tool_id: &str) -> Result<ToolCredential, CredentialFailure> {
-    let payload = logical_payload(&OsSecrets, tool_id)?.ok_or(CredentialFailure::Missing)?;
+    load_using(&OsSecrets, tool_id)
+}
+
+fn load_using(
+    store: &impl SecretStore,
+    tool_id: &str,
+) -> Result<ToolCredential, CredentialFailure> {
+    let payload = logical_payload(store, tool_id)?.ok_or(CredentialFailure::Missing)?;
     let record: ToolCredential =
         serde_json::from_str(&payload).map_err(|_| CredentialFailure::Invalid)?;
     record_is_valid(tool_id, &record)
@@ -395,6 +305,14 @@ pub(crate) fn store(tool_id: &str, record: &ToolCredential) -> Result<(), Creden
 }
 
 pub(crate) fn restore(tool_id: &str, before: Option<&str>) -> Result<(), CredentialFailure> {
+    restore_using(&OsSecrets, tool_id, before)
+}
+
+fn restore_using(
+    store: &impl SecretStore,
+    tool_id: &str,
+    before: Option<&str>,
+) -> Result<(), CredentialFailure> {
     if let Some(value) = before {
         let record: ToolCredential =
             serde_json::from_str(value).map_err(|_| CredentialFailure::Invalid)?;
@@ -402,7 +320,7 @@ pub(crate) fn restore(tool_id: &str, before: Option<&str>) -> Result<(), Credent
             return Err(CredentialFailure::Invalid);
         }
     }
-    publish_payload(&OsSecrets, tool_id, before)
+    publish_payload(store, tool_id, before)
 }
 
 pub(crate) fn executable_path() -> Result<String, CredentialFailure> {
@@ -746,6 +664,109 @@ mod tests {
             Some(before.as_str())
         );
         std::fs::remove_dir_all(home).unwrap();
+    }
+
+    fn station_record(origin: &str) -> ToolCredential {
+        ToolCredential {
+            api_key: "synthetic-station-key-0001".into(),
+            origin: origin.into(),
+            model_id: "fixture-model".into(),
+            local_gateway_token: None,
+            codex_transport: None,
+            claude_transport: None,
+            models: vec![],
+        }
+    }
+
+    #[test]
+    fn station_credentials_load_and_restore_without_a_trust_store() {
+        let origin = "https://credential-recovery.station.example";
+        assert!(!crate::station_trust::is_trusted(origin));
+        let secrets = FixtureStore::default();
+        let record = station_record(origin);
+        let before = serde_json::to_string(&record).unwrap();
+        // Run the production load/restore path against in-memory secrets. It
+        // must not ask trust-store authorization to recover an installed key.
+        restore_using(&secrets, "pi", Some(&before)).unwrap();
+        assert_eq!(load_using(&secrets, "pi").unwrap(), record);
+        restore_using(&secrets, "pi", None).unwrap();
+        restore_using(&secrets, "pi", Some(&before)).unwrap();
+        assert_eq!(
+            logical_payload(&secrets, "pi").unwrap().as_deref(),
+            Some(before.as_str())
+        );
+        assert_eq!(load_using(&secrets, "pi").unwrap(), record);
+        assert!(!crate::station_trust::is_trusted(origin));
+    }
+
+    #[test]
+    fn station_credentials_preserve_legacy_json_and_api_identity() {
+        for origin in ["https://yeschoy.com", "https://api.yeschoy.com"] {
+            let payload = serde_json::json!({
+                "apiKey": "synthetic-legacy-key-0001",
+                "origin": origin,
+                "modelId": "fixture-model"
+            })
+            .to_string();
+            let secrets = FixtureStore::default();
+            restore_using(&secrets, "pi", Some(&payload)).unwrap();
+            let record = load_using(&secrets, "pi").unwrap();
+            assert_eq!(record.origin, origin);
+            assert!(record.models.is_empty());
+            assert!(record.claude_transport.is_none());
+            assert!(record.codex_transport.is_none());
+            assert_eq!(
+                logical_payload(&secrets, "pi").unwrap().as_deref(),
+                Some(payload.as_str())
+            );
+        }
+    }
+
+    #[test]
+    fn station_credentials_reject_unsafe_origins_before_restore_publication() {
+        let secrets = FixtureStore::default();
+        for origin in [
+            "http://relay.example",
+            "https://user:pass@relay.example",
+            "https://relay.example:443",
+            "https://relay.example/path",
+            "https://relay.example?x=1",
+            "https://relay.example#fragment",
+            "https://RELAY.example",
+            "https://%72elay.example",
+            "https://127.0.0.1",
+            "https://127.1",
+            "https://0x7f000001",
+            "https://[::1]",
+        ] {
+            let record = station_record(origin);
+            assert!(!record_is_valid("pi", &record), "accepted {origin}");
+            let payload = serde_json::to_string(&record).unwrap();
+            assert!(matches!(
+                restore_using(&secrets, "pi", Some(&payload)),
+                Err(CredentialFailure::Invalid)
+            ));
+            assert!(secrets.values.borrow().is_empty());
+        }
+    }
+
+    #[test]
+    fn station_model_routes_support_third_party_but_cannot_cross_identity() {
+        let mut record = station_record("https://routes.station.example");
+        record.local_gateway_token = Some(format!("ycg-{}", "a".repeat(64)));
+        record.models = vec![ToolModelRoute {
+            model_id: record.model_id.clone(),
+            billing_group: "fixture-group".into(),
+            api_key: record.api_key.clone(),
+            origin: record.origin.clone(),
+            claude_transport: None,
+            codex_transport: None,
+        }];
+        assert!(record_is_valid("pi", &record));
+        record.models[0].origin = "https://other.station.example".into();
+        assert!(!record_is_valid("pi", &record));
+        record.models[0].origin = "https://user@routes.station.example".into();
+        assert!(!record_is_valid("pi", &record));
     }
 
     #[test]

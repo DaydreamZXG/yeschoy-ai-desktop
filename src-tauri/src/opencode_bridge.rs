@@ -99,7 +99,7 @@ async fn chat(state: &BridgeState, request: Request<Body>) -> Response {
     let Ok(bytes) = to_bytes(request.into_body(), MAX_REQUEST_BODY_BYTES).await else {
         return error(StatusCode::PAYLOAD_TOO_LARGE, "request too large");
     };
-    let Ok(body) = serde_json::from_slice::<Value>(&bytes) else {
+    let Ok(mut body) = serde_json::from_slice::<Value>(&bytes) else {
         return error(StatusCode::BAD_REQUEST, "request body must be JSON");
     };
     let model = body
@@ -122,6 +122,18 @@ async fn chat(state: &BridgeState, request: Request<Body>) -> Response {
             );
         }
     };
+    // 野菜提示词注入（预留，默认关闭）。只有打开时才重新序列化请求体，
+    // 关闭时原样转发收到的字节，避免无谓的格式变化。
+    let outbound: Vec<u8> =
+        if crate::prompt_injection::apply_to_chat_body(&mut body, &model).is_appended() {
+            match serde_json::to_vec(&body) {
+                Ok(rewritten) => rewritten,
+                // 序列化不应失败（刚解析过）；失败也退回原字节，绝不丢请求。
+                Err(_) => bytes.to_vec(),
+            }
+        } else {
+            bytes.to_vec()
+        };
     let url = format!(
         "{}/v1/chat/completions",
         credential.origin.trim_end_matches('/')
@@ -131,7 +143,7 @@ async fn chat(state: &BridgeState, request: Request<Body>) -> Response {
         .post(url)
         .bearer_auth(credential.upstream_key())
         .header(header::CONTENT_TYPE, "application/json")
-        .body(bytes)
+        .body(outbound)
         .send()
         .await;
     let Ok(upstream) = upstream else {

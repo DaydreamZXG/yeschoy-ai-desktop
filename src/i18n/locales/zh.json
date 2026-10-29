@@ -314,7 +314,14 @@
     "groupPrivacy": "隐私与安全",
     "groupPrivacyNote": "这些是本版本固定的行为，不需要你设置。",
     "groupSystem": "后台运行",
-    "groupAdvanced": "排查与高级"
+    "groupAdvanced": "排查与高级",
+    "codexProbe": {
+      "title": "Codex 协议探测",
+      "note": "有些模型必须经本地桥转成 Chat 协议才能在 Codex 里用。开启后会为每个模型向中转站发一次最小的真实请求来判断，成功的那次会产生少量用量。关闭时一律直连，不发任何测试请求。",
+      "warning": "已开启：接入 Codex 时会发最小的测试请求，可能产生少量用量。",
+      "on": "已开启",
+      "off": "已关闭"
+    }
   },
   "yeschoyUpdate": {
     "title": "野菜自动更新",
@@ -660,7 +667,8 @@
     "libraryAccountChecking": "正在检查中转站…",
     "appNameCodex": "Codex（桌面版 / 命令行）",
     "officialSitePromo": "由野菜开源 · 官网",
-    "officialSitePromoDismiss": "不再显示"
+    "officialSitePromoDismiss": "不再显示",
+    "feedback": "反馈 Bug"
   },
   "configuration": {
     "defaultGroup": "标准方案",
@@ -799,6 +807,7 @@
     "missingDuringSetup": "刚才选择的应用已找不到，请重新检查。",
     "selectionRequired": "发现多个安装，请明确选择要使用的一个。",
     "secureStoreFailed": "系统安全存储暂时不可用。请解锁钥匙串或凭据管理器，并检查本机接入状态后重试。",
+    "issuanceRecordFailed": "还没能记录这次要创建的密钥，所以没有向野菜申请。请确认用户目录可写后重试；账户里不会多出未使用的密钥。",
     "externalOverride": "这个应用的配置目录被其他设置占用，助手没有改动原文件。请改用助手里的「打开」启动，或换一个未被占用的安装后再试。",
     "unsupportedProfile": "这个应用的运行方式暂不能自动配置，原设置没有改动。",
     "launchFailed": "设置已经恢复，因为应用未能正常启动。请确认应用可以手动打开。",
@@ -1376,6 +1385,241 @@
       "connect_origin_not_acceptable": "站点地址不合规，助手不会连接它。",
       "trust_store_full": "记住的站点太多了，请先在设置里删掉几个不用的。",
       "generic": "请回到网页再点一次「打开桌面助手」。"
+    }
+  },
+  "yeschoyHealth": {
+    "eyebrow": "健康检查助手",
+    "title": "诊断「为什么用不了」",
+    "description": "把上面的检查结果、这台电脑的环境和最近的阶段记录汇总成一份报告。报告里不会包含密钥、账号、文件路径或聊天内容，可以直接复制给开发者。",
+    "findingsTitle": "发现的问题",
+    "noFindings": "两条线路的网络检查都通过了，没有发现连接层的问题。",
+    "notChecked": "先运行上面的线路检查，这里会列出发现的问题。",
+    "envTitle": "运行环境",
+    "envReading": "正在读取…",
+    "envUnavailable": "暂时无法读取运行环境。",
+    "logTitle": "阶段记录",
+    "logReady": "已读取最近 {{count}} 行（已去掉路径与密钥）",
+    "logUnavailable": "本机没有可读取的阶段记录。",
+    "previewTitle": "预览这份报告会包含的阶段记录",
+    "copyReport": "复制诊断报告给开发者",
+    "reportCopied": "已复制，直接粘贴给开发者即可",
+    "reportBug": "反馈 Bug",
+    "reportConsent": "报告只在点击复制时生成，不会自动上传到任何地方。复制后请粘贴到问题反馈里。"
+  },
+  "yeschoyFeedback": {
+    "eyebrow": "问题反馈",
+    "title": "反馈 Bug",
+    "description": "把发生了什么、这台电脑的环境和阶段记录整理成一份报告，复制后贴到反馈里。报告不会自动上传，复制前你可以随意修改。",
+    "stepsTitle": "三步反馈",
+    "stepsNote": "开发者需要的是「现象 + 环境 + 阶段记录」，这三步就是为了凑齐它们。",
+    "step1Title": "1. 复制报告",
+    "step1Body": "这里已经填好了这台电脑的环境和最近的阶段记录。可以在「发生了什么」下面补充你看到的现象；报告里带密钥的部分会自动打码。",
+    "reportLabel": "反馈报告内容",
+    "copy": "复制报告",
+    "copied": "已复制，去第 2 步粘贴",
+    "redactionNote": "系统只带走最近 120 行阶段记录，文件路径、网址、IP 和密钥已经在本地替换为 [redacted]；复制时会再检查一次。",
+    "step2Title": "2. 打开反馈入口并粘贴",
+    "step2CommunityBody": "在打开的问题页里选择「Bug 报告」，把报告粘贴到正文。",
+    "step2OfficialBody": "在打开的反馈页里把报告粘贴到正文。",
+    "openCommunity": "打开 GitHub 问题页",
+    "openOfficial": "打开反馈页",
+    "step3Title": "3. 先自助排查",
+    "step3Body": "如果提示「用不了」，健康检查助手通常能直接指出是哪一层断开，比描述现象更快。",
+    "openDiagnostics": "打开健康检查助手",
+    "openHome": "返回我的应用"
+  },
+  "yeschoyResidue": {
+    "title": "卸载前清理本机残留",
+    "body": "野菜助手只留下这些自己的东西：本机状态、日志、本地缓存和最少量密钥。卸载前勾选并清理，卸载后就什么都不剩。",
+    "scanning": "正在盘点本机残留…",
+    "errorTitle": "暂时无法盘点",
+    "errorBody": "没有读取到本机残留列表，请重试。助手没有删除任何东西。",
+    "partialTitle": "部分项目没有清理成功",
+    "partialBody": "已尝试的项目见下；没删掉的通常是应用还在运行，退出野菜助手后再试一次。",
+    "nothingLeft": "本机已经没有助手自己的残留了。",
+    "clearedClean": "已全部清理，这台电脑上不再有助手留下的数据。",
+    "clearedRemaining": "已清理选中项，下面还剩需要你手动处理的项目。",
+    "previewTitle": "查看会删除的 {{count}} 项",
+    "restoreFirst": "还有 {{count}} 个应用处于已接入状态。先在「我的应用」里恢复原设置，再清理，否则那些应用会继续指向野菜的接口。",
+    "clearAction": "清理选中的 {{count}} 项",
+    "confirmBody": "删除后无法恢复，也不能再撤回已接入的应用。确定继续吗？",
+    "confirmAction": "确认删除",
+    "cancel": "取消",
+    "keptNote": "另有 {{count}} 项有意保留，见下方说明。",
+    "scopeNote": "只在点击「清理」后删除，且只删助手自己创建的内容；不会动你的应用、聊天记录或 Claude Code 自己的登录态。",
+    "reasons": {
+      "owned_state": {
+        "note": "设备标识与加密的恢复副本都在这一个目录里。"
+      },
+      "restore_first": {
+        "note": "这里还有未恢复的接入记录。",
+        "instruction": "先在「我的应用」里恢复原设置，再回来清理。"
+      },
+      "owned_logs": {
+        "note": "只记录阶段、错误类别和耗时，不含对话内容。"
+      },
+      "quit_then_remove": {
+        "note": "界面语言、主题等本地设置和缓存。"
+      },
+      "owned_keychain": {
+        "note": "系统钥匙串里由助手保存的会话与接入密钥。"
+      },
+      "login_taken_over": {
+        "note": "移动端或网页版的 Claude 登录态曾被临时移开。",
+        "instruction": "先在「高级信息」里恢复 Claude 登录，否则卸载后 Claude Code 需要重新登录。"
+      },
+      "restore_via_app": {
+        "note": "已接入应用的配置文件属于那些应用，请在「我的应用」里恢复原设置，助手不代删。"
+      },
+      "os_managed": {
+        "note": "系统崩溃报告由操作系统管理，不受助手控制。"
+      }
+    },
+    "items": {
+      "state": {
+        "title": "本机状态目录",
+        "body": "设备标识、恢复基线与临时文件。"
+      },
+      "logs": {
+        "title": "运行日志",
+        "body": "排障用的阶段记录，最多 4 MB，会自动覆盖。"
+      },
+      "webkit": {
+        "title": "本地界面数据",
+        "body": "主题、语言等界面偏好，以及 WebView 缓存。"
+      },
+      "webview2_user_data": {
+        "title": "本地界面数据",
+        "body": "主题、语言等界面偏好，以及 WebView 缓存。"
+      },
+      "caches": {
+        "title": "本地缓存",
+        "body": "WebView 生成的缓存文件。"
+      },
+      "local_storage": {
+        "title": "本地存储",
+        "body": "界面偏好。"
+      },
+      "session_storage": {
+        "title": "会话存储",
+        "body": "界面会话状态。"
+      },
+      "web_storage": {
+        "title": "本地存储",
+        "body": "界面偏好。"
+      },
+      "file_system": {
+        "title": "本地存储",
+        "body": "界面偏好。"
+      },
+      "service_worker": {
+        "title": "本地缓存",
+        "body": "WebView 生成的后台缓存。"
+      },
+      "gpu_cache": {
+        "title": "本地缓存",
+        "body": "WebView 生成的图形缓存。"
+      },
+      "keychain": {
+        "title": "系统钥匙串条目",
+        "body": "由助手保存的会话与接入密钥。"
+      },
+      "displaced_login": {
+        "title": "被移开的 Claude 登录态",
+        "body": "需要先恢复登录才能清理。"
+      },
+      "app_configs": {
+        "title": "已接入应用的配置",
+        "body": "属于那些应用，请在「我的应用」里恢复。"
+      },
+      "crash_reports": {
+        "title": "系统崩溃报告",
+        "body": "由操作系统管理。"
+      }
+    }
+  },
+  "yeschoyCursor": {
+    "title": "Cursor 接入",
+    "body": "命令行版 Cursor Agent 可以接入：改的是 ~/.cursor/cli-config.json，随时能撤回。桌面版 Cursor 不提供这个入口，下面给出确切做法。",
+    "loading": "正在读取 Cursor 配置…",
+    "readErrorTitle": "没有读到 Cursor 配置",
+    "readErrorBody": "这不影响其他应用。稍后重试即可，助手没有修改任何文件。",
+    "cli": {
+      "title": "Cursor Agent（命令行）",
+      "body": "检测本机的 cursor-agent / agent 命令。",
+      "detected": "已检测到",
+      "notDetected": "未检测到"
+    },
+    "facts": {
+      "endpoint": "要写入的接口地址",
+      "model": "默认模型",
+      "state": "当前状态",
+      "configured": "已接入野菜",
+      "notConfigured": "未接入"
+    },
+    "applyAction": "接入 Cursor Agent",
+    "reapplyAction": "更新接入配置",
+    "revertAction": "恢复原设置",
+    "confirmBody": "会写入 ~/.cursor/cli-config.json 的 network 段（端点与请求头）和默认模型，原有其他设置保留。继续吗？",
+    "confirmAction": "确认写入",
+    "cancel": "取消",
+    "howTo": "之后在终端里运行 cursor-agent，它会走这个地址。",
+    "keyNote": "这里不保存你的密钥：cursor-agent 使用它自己的登录（CURSOR_API_KEY 或首次登录），所以不需要把令牌写进配置文件。",
+    "ide": {
+      "title": "Cursor 桌面版",
+      "body": "桌面版的对话不会读取上面这份 CLI 配置。要让桌面版也走野菜，需要在它自己的设置里填端点和密钥，助手代劳会动到它的登录数据，所以只说明步骤。",
+      "observed": "已安装",
+      "notObserved": "未检测到",
+      "step1": "打开 Cursor 的 设置 → Models → OpenAI API Key。",
+      "step2": "填入接口地址与密钥，并打开「使用自定义 OpenAI 接口」开关。",
+      "step3": "在对话框里选一个 GPT 系列模型验证；不走通就把那个开关关掉。",
+      "warning": "助手不会修改 Cursor 桌面版的数据库与钥匙串；那些步骤需要你自己操作，且 Cursor 升级后界面可能变化。"
+    },
+    "outcomes": {
+      "configured": {
+        "title": "已接入",
+        "body": "Cursor Agent 之后会使用野菜的接口地址。想撤回时点「恢复原设置」。"
+      },
+      "reverted": {
+        "title": "已恢复原设置",
+        "body": "配置里的参考地址和助手加的请求头都已移除。"
+      },
+      "invalid_endpoint": {
+        "title": "接口地址无效",
+        "body": "只接受 https:// 地址（本机回环可以用 http）。没有写入任何内容。"
+      },
+      "configuration_read_failed": {
+        "title": "读不到配置文件",
+        "body": "没有修改任何文件。检查 ~/.cursor 的读取权限后重试。"
+      },
+      "configuration_parse_failed": {
+        "title": "配置文件不是有效 JSON",
+        "body": "为了不覆盖你手写的内容，助手没有写入。请先修好 cli-config.json。"
+      },
+      "configuration_write_failed": {
+        "title": "写入失败",
+        "body": "可能是磁盘已满或没有权限。磁盘上的内容保持原样。"
+      },
+      "configuration_readback_failed": {
+        "title": "写入后校验不一致",
+        "body": "已把文件回滚到写入前的内容。"
+      },
+      "configuration_rollback_failed": {
+        "title": "回滚失败",
+        "body": "请手动检查 ~/.cursor/cli-config.json 的 network 段。"
+      },
+      "external_override": {
+        "title": "配置被其他程序改动",
+        "body": "为了不覆盖别人的改动，这次没有写入。"
+      },
+      "model_required": {
+        "title": "缺少默认模型",
+        "body": "没有可选的模型，请先刷新模型列表。"
+      },
+      "user_home_unavailable": {
+        "title": "找不到用户目录",
+        "body": "无法定位 ~/.cursor，请检查系统环境后重试。"
+      }
     }
   }
 }

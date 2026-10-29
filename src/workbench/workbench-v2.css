@@ -7320,3 +7320,281 @@ select {
 .model-menu-chip-select:disabled {
   opacity: 0.45;
 }
+
+/* 健康检查助手：与线路结果同页，图标不用 emoji，靠边线和色块分层。 */
+.diagnostic-assistant {
+  margin-top: var(--space-20);
+  padding: var(--space-16);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.health-findings {
+  list-style: none;
+  margin: var(--space-10) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-8);
+}
+
+.health-finding {
+  padding: var(--space-10) var(--space-12);
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+}
+
+.health-finding strong {
+  display: block;
+  font-size: var(--text-sm);
+}
+
+.health-finding span {
+  display: block;
+  margin-top: var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.health-finding p {
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.health-environment {
+  margin: var(--space-16) 0 0;
+  display: grid;
+  gap: var(--space-8);
+}
+
+.health-environment dt {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.health-environment dd {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  word-break: break-all;
+}
+
+.health-log-preview {
+  margin-top: var(--space-12);
+}
+
+.health-log-preview pre {
+  max-height: 220px;
+  overflow: auto;
+  margin: var(--space-8) 0 0;
+  padding: var(--space-10);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--subtle);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.diagnostic-assistant .diagnostics-report-actions {
+  gap: var(--space-8);
+  margin-top: var(--space-16);
+}
+
+/* 反馈 Bug：可编辑的报告 + 跳转入口。报告是普通 textarea，不拦截粘贴。 */
+.feedback-card .setting-row-block {
+  display: grid;
+  gap: var(--space-10);
+}
+
+.feedback-report-label {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.feedback-report {
+  width: 100%;
+  min-height: 240px;
+  resize: vertical;
+  padding: var(--space-12);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--subtle);
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--text-xs);
+  line-height: 1.6;
+}
+
+.feedback-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.feedback-actions .primary-action {
+  display: inline-flex;
+  text-decoration: none;
+}
+
+/* 「0 垃圾留存」：盘点列表 + 二次确认。危险动作只在确认后出现一次。 */
+.residue-card {
+  display: grid;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.residue-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-8);
+}
+
+.residue-item {
+  padding: var(--space-10) var(--space-12);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.residue-item[data-state="action"] {
+  border-color: var(--accent-line);
+  background: var(--subtle);
+}
+
+.residue-item-label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-10);
+  cursor: pointer;
+}
+
+.residue-item-static {
+  display: block;
+}
+
+.residue-item strong {
+  display: block;
+  font-size: var(--text-sm);
+}
+
+.residue-item p {
+  margin: var(--space-4) 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+}
+
+.residue-preview {
+  margin-top: var(--space-8);
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.residue-preview ul {
+  margin: var(--space-6) 0 0;
+  padding-left: var(--space-16);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  word-break: break-all;
+}
+
+.residue-warning {
+  margin: 0;
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+}
+
+.residue-success {
+  margin: 0;
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-sm);
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: var(--text-xs);
+}
+
+.residue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+/* Cursor 接入：命令行可接入，桌面版只给步骤。 */
+.cursor-card {
+  display: grid;
+  gap: var(--space-12);
+  width: 100%;
+}
+
+.cursor-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-10) var(--space-12);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.cursor-row strong {
+  display: block;
+  font-size: var(--text-sm);
+}
+
+.cursor-row p {
+  margin: var(--space-4) 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+}
+
+.cursor-status {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.cursor-status[data-detected="true"] {
+  color: var(--success);
+}
+
+.cursor-facts {
+  display: grid;
+  gap: var(--space-6);
+  margin: 0;
+  font-size: var(--text-xs);
+}
+
+.cursor-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-12);
+}
+
+.cursor-facts dt {
+  color: var(--muted);
+}
+
+.cursor-facts dd {
+  margin: 0;
+  text-align: right;
+  word-break: break-all;
+}
+
+.cursor-steps {
+  margin: 0;
+  padding-left: var(--space-16);
+  font-size: var(--text-xs);
+  color: var(--muted);
+  line-height: 1.8;
+}

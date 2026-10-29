@@ -11,7 +11,8 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-use crate::station_connect::{connect_origin_is_acceptable, StationConnectRequest};
+use crate::domain::station::StationOrigin;
+use crate::station_connect::StationConnectRequest;
 
 /// 参考站点：官方包内置信任，免确认。社区构建同样保留，作为默认示例。
 pub(crate) const BUILTIN_TRUSTED: &[&str] = &["https://yeschoy.com", "https://ai.yeschoy.io"];
@@ -56,7 +57,8 @@ pub(crate) fn initialize(data_dir: Option<PathBuf>) {
                     guard.origins = file
                         .origins
                         .into_iter()
-                        .filter_map(|origin| connect_origin_is_acceptable(&origin))
+                        .filter_map(|origin| StationOrigin::parse(&origin).ok())
+                        .map(StationOrigin::into_string)
                         .take(MAX_TRUSTED)
                         .collect();
                 }
@@ -66,22 +68,51 @@ pub(crate) fn initialize(data_dir: Option<PathBuf>) {
     guard.path = path;
 }
 
+/// User authorization is separate from structural identity validation. Callers
+/// cannot make a malformed identity trusted, even if a store entry is injected.
 pub(crate) fn is_trusted(origin: &str) -> bool {
-    if BUILTIN_TRUSTED.contains(&origin) {
+    let Ok(origin) = StationOrigin::parse(origin) else {
+        return false;
+    };
+    if BUILTIN_TRUSTED.contains(&origin.as_str()) {
         return true;
     }
     state()
         .lock()
-        .map(|guard| guard.origins.contains(origin))
+        .map(|guard| guard.origins.contains(origin.as_str()))
         .unwrap_or(false)
 }
 
-pub(crate) fn trust(origin: &str) -> Result<String, &'static str> {
-    let canonical = reqwest::Url::parse(origin.trim())
-        .ok()
-        .filter(|url| url.path() == "/" && url.query().is_none() && url.fragment().is_none())
-        .and_then(|url| connect_origin_is_acceptable(&url.origin().ascii_serialization()))
+/// Normalize only an explicitly user-typed address. Raw authority validation
+/// must precede URL/IDNA normalization, which would otherwise erase userinfo,
+/// default ports, encoded hosts, and path traversal. Canonical stored identity
+/// still goes through the same pure domain rule as connect and credentials.
+fn normalize_trust_input(raw: &str) -> Result<StationOrigin, &'static str> {
+    let input = raw.trim();
+    let (scheme, rest) = input
+        .split_once("://")
         .ok_or("connect_origin_not_acceptable")?;
+    let host = rest.strip_suffix('/').unwrap_or(rest);
+    if !scheme.eq_ignore_ascii_case("https")
+        || host.is_empty()
+        || host.chars().any(|c| {
+            c.is_control()
+                || c.is_whitespace()
+                || matches!(c, '@' | ':' | '/' | '?' | '#' | '\\' | '%' | '[' | ']')
+        })
+    {
+        return Err("connect_origin_not_acceptable");
+    }
+    // URL parsing stays at the input boundary, preserving the existing
+    // ASCII-case and Unicode-domain convenience without HTTP dependencies in
+    // StationOrigin itself. All fields discarded by origin() were rejected above.
+    let url = reqwest::Url::parse(input).map_err(|_| "connect_origin_not_acceptable")?;
+    StationOrigin::parse(&url.origin().ascii_serialization())
+        .map_err(|_| "connect_origin_not_acceptable")
+}
+
+pub(crate) fn trust(origin: &str) -> Result<String, &'static str> {
+    let canonical = normalize_trust_input(origin)?.into_string();
     if BUILTIN_TRUSTED.contains(&canonical.as_str()) {
         return Ok(canonical);
     }
@@ -179,6 +210,47 @@ mod tests {
         assert!(trust("https://1.2.3.4").is_err());
         forget("https://relay-trust.example");
         assert!(!is_trusted("https://relay-trust.example"));
+    }
+
+    #[test]
+    fn user_typed_trust_input_retains_case_and_idna_convenience() {
+        for (input, expected) in [
+            (
+                " HTTPS://Relay-Trust.Example/ ",
+                "https://relay-trust.example",
+            ),
+            ("https://bücher.example/", "https://xn--bcher-kva.example"),
+        ] {
+            assert_eq!(normalize_trust_input(input).unwrap().as_str(), expected);
+            // Native credentials and deep links must declare canonical identity,
+            // not rely on the separate explicitly user-typed input convenience.
+            assert!(StationOrigin::parse(input).is_err());
+        }
+    }
+
+    #[test]
+    fn trust_does_not_erase_unsafe_url_fields_or_grant_lookalike_authorization() {
+        for origin in [
+            "https://user:pass@trust-input.example",
+            "https://user@yeschoy.com",
+            "https://@yeschoy.com",
+            "https://yeschoy.com:443",
+            "https://trust-input.example:8443",
+            "https://trust-input.example/path",
+            "https://trust-input.example/../",
+            "https://trust-input.example?x=1",
+            "https://trust-input.example#fragment",
+            "https://%79eschoy.com",
+            "https://trust-input.example\\\\path",
+            "https://127.1",
+            "https://0x7f000001",
+            "https://[::1]",
+        ] {
+            assert!(trust(origin).is_err(), "accepted {origin:?}");
+            assert!(!is_trusted(origin), "trusted {origin:?}");
+        }
+        assert!(!is_trusted("https://trust-input.example"));
+        assert!(!is_trusted("https://yeschoy.com.evil.invalid"));
     }
 
     #[test]

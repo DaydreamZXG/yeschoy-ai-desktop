@@ -152,6 +152,8 @@ mod tests {
     #[test]
     fn exit_restore_uses_conflict_preserving_original_and_is_idempotent() {
         use crate::{connection_recovery::restore_bytes, tool_adapters::common::FileTransaction};
+        // A plain JSON file: no tool-specific restore semantics apply.
+        let hooks = crate::domain::recovery::NoHooks;
         let original = br#"{"model":"original","theme":"light"}"#;
         let applied = br#"{"model":"yeschoy","theme":"light"}"#;
         let change = FileTransaction::stage_with_snapshot(
@@ -162,17 +164,20 @@ mod tests {
         .unwrap();
         let file = &change.changes()[0];
         let later = br#"{"model":"yeschoy","theme":"dark"}"#;
-        let (restored, _) = restore_bytes(file, Some(later)).unwrap();
+        let (restored, _) = restore_bytes(file, Some(later), &hooks).unwrap();
         let restored = restored.unwrap();
         let parsed: serde_json::Value = serde_json::from_slice(&restored).unwrap();
         assert_eq!(parsed["model"], "original");
         assert_eq!(parsed["theme"], "dark");
         assert_eq!(
-            restore_bytes(file, Some(&restored)).unwrap().0.unwrap(),
+            restore_bytes(file, Some(&restored), &hooks)
+                .unwrap()
+                .0
+                .unwrap(),
             restored
         );
         let user_model = br#"{"model":"user-choice","theme":"dark"}"#;
-        let (preserved, kept) = restore_bytes(file, Some(user_model)).unwrap();
+        let (preserved, kept) = restore_bytes(file, Some(user_model), &hooks).unwrap();
         assert!(kept);
         assert_eq!(preserved.unwrap(), user_model);
     }

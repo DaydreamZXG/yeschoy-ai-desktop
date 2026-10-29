@@ -2,9 +2,11 @@ pub(crate) mod claude_code;
 pub(crate) mod claude_desktop;
 pub(crate) mod codex_desktop;
 pub(crate) mod common;
+pub(crate) mod cursor_agent;
 pub(crate) mod desktop_launch;
 pub(crate) mod desktop_lifecycle;
 pub(crate) mod dsh_web;
+pub(crate) mod jsonc;
 pub(crate) mod opencode;
 pub(crate) mod pi;
 pub(crate) mod terminal_launch;
@@ -17,18 +19,7 @@ use serde::Serialize;
 
 use crate::{desktop_app_discovery, tool_discovery};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum AdapterFailure {
-    ToolNotFound,
-    MultipleInstallations,
-    MissingRuntime,
-    UnsupportedProfile,
-    ExternalOverride,
-    SecureStorageUnavailable,
-    ConfigurationFailed(&'static str),
-    LaunchFailed,
-    LaunchError(&'static str),
-}
+pub(crate) use crate::domain::error::AdapterFailure;
 
 #[derive(Clone, Debug)]
 pub(crate) struct ResolvedInstallation {
@@ -66,7 +57,9 @@ struct ObservedInstallation {
     location: &'static str,
 }
 
-const TARGETS: [(&str, &str, &str); 8] = [
+/// The one native list of activatable tools. Every other consumer (request
+/// validation, compensation, connections) reads it through `tool_ids`.
+pub(crate) const TARGETS: [(&str, &str, &str); 8] = [
     ("claude_code", "Claude Code", "命令行与编辑器工作区"),
     ("claude_desktop", "Claude Desktop", "Claude 桌面应用"),
     (
@@ -85,24 +78,7 @@ const TARGETS: [(&str, &str, &str); 8] = [
     ),
 ];
 
-pub(crate) fn user_home() -> Option<PathBuf> {
-    #[cfg(target_os = "windows")]
-    {
-        std::env::var_os("USERPROFILE")
-            .map(PathBuf::from)
-            .or_else(|| {
-                let drive = std::env::var_os("HOMEDRIVE")?;
-                let path = std::env::var_os("HOMEPATH")?;
-                let mut home = PathBuf::from(drive);
-                home.push(path);
-                Some(home)
-            })
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        std::env::var_os("HOME").map(PathBuf::from)
-    }
-}
+pub(crate) use crate::infrastructure::home::user_home;
 
 pub(crate) fn executable_for(tool_id: &str) -> Option<&'static str> {
     match tool_id {
@@ -131,6 +107,37 @@ pub(crate) fn cli_tool_for(executable: &str) -> Option<&'static str> {
         .iter()
         .map(|(tool_id, _, _)| *tool_id)
         .find(|tool_id| executable_for(tool_id) == Some(executable))
+}
+
+/// Recovery hooks for a tool: the one place that decides which tool owns a
+/// file's restore semantics.
+///
+/// Lives here, not in `connection_recovery`, so recovery can stay free of
+/// adapter names while still reaching DSH's format knowledge. Adding a tool with
+/// per-file restore rules means adding a match arm here, next to `TARGETS`.
+pub(crate) fn recovery_hooks(tool_id: &str) -> &'static dyn crate::domain::recovery::RecoveryHooks {
+    static DSH: dsh_web::Hooks = dsh_web::Hooks;
+    static NONE: crate::domain::recovery::NoHooks = crate::domain::recovery::NoHooks;
+    match tool_id {
+        "dsh_web" | "dsh_desktop" => &DSH,
+        _ => &NONE,
+    }
+}
+
+/// Locks a tool's own writers take, so a restore cannot land between them.
+/// Only DSH publishes these today; every other tool returns a no-op guard.
+pub(crate) fn lock_for_restore(
+    tool_id: &str,
+    paths: &[std::path::PathBuf],
+) -> Result<Box<dyn std::any::Any>, AdapterFailure> {
+    match tool_id {
+        "dsh_web" | "dsh_desktop" => Ok(Box::new(dsh_web::lock_for_restore(paths)?)),
+        _ => Ok(Box::new(())),
+    }
+}
+
+pub(crate) fn tool_ids() -> impl Iterator<Item = &'static str> {
+    TARGETS.iter().map(|(tool_id, _, _)| *tool_id)
 }
 
 pub(crate) fn display_name_for(tool_id: &str) -> Option<&'static str> {

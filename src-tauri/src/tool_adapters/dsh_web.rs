@@ -938,8 +938,27 @@ impl Prepared {
     }
 
     pub(crate) fn rollback(&mut self) -> Result<(), AdapterFailure> {
+        crate::application::ports::configuration::rollback_with_plan(self)
+    }
+}
+
+impl crate::application::ports::configuration::ConfigurationPlan for Prepared {
+    fn transaction(&mut self) -> &mut dyn crate::application::ports::configuration::ConfigCommit {
+        &mut self.transaction
+    }
+
+    fn verify_written(&self) -> Result<(), AdapterFailure> {
+        self.validate_readback(true)
+    }
+}
+
+impl crate::application::ports::configuration::SharedRollback for Prepared {
+    fn rollback_with_plan(&mut self) -> Result<(), AdapterFailure> {
         let lock = ProfileLock::acquire(self)?;
-        let result = self.transaction.rollback().map_err(config_error);
+        let result = self
+            .transaction
+            .rollback()
+            .map_err(crate::domain::error::AdapterFailure::from);
         drop(lock);
         result
     }
@@ -1143,6 +1162,47 @@ fn parse_patch_json(bytes: Option<&[u8]>) -> Result<Vec<JsonValue>, ()> {
 fn entry_rows<'a>(rows: &'a [JsonValue], id: &'a str) -> impl Iterator<Item = &'a JsonValue> {
     rows.iter()
         .filter(move |row| row["id"].as_str() == Some(id) && row.get("insert").is_none())
+}
+
+/// The DSH format knowledge `connection_recovery` used to reach in for.
+///
+/// Recovery owns the journal and the merge order; these two documents are the
+/// only place where "what counts as ours" needs DSH-specific rules. Answering
+/// `None` from either hook means the generic merge handles the file, which is
+/// what every non-DSH path already gets.
+pub(crate) struct Hooks;
+
+impl crate::domain::recovery::RecoveryHooks for Hooks {
+    fn owns(&self, path: &Path) -> bool {
+        path.file_name()
+            .is_some_and(|name| name == PATCH_FILENAME || name == CREDENTIALS_FILENAME)
+    }
+
+    fn strip_owned(&self, bytes: &[u8]) -> Option<Result<Vec<u8>, ()>> {
+        Some(strip_owned_patch(bytes))
+    }
+
+    fn restore_document(
+        &self,
+        path: &Path,
+        before: Option<&[u8]>,
+        after: &[u8],
+        current: &[u8],
+    ) -> Option<Result<(Option<JsonValue>, bool), ()>> {
+        // The patch keeps its row-array shape; presenting it as a value keeps
+        // recovery's single "write this document back" path.
+        if let Some(restored) = restore_profile_patch(path, before, after, current) {
+            return Some(restored.map(|(rows, preserved)| {
+                let document = if rows.is_empty() && before.is_none() {
+                    None
+                } else {
+                    Some(JsonValue::Array(rows))
+                };
+                (document, preserved)
+            }));
+        }
+        restore_credentials(path, before, after, current)
+    }
 }
 
 /// Remove every value in a profile patch that only this app writes: a
@@ -1360,7 +1420,7 @@ async fn start_process(
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .kill_on_drop(true);
-    common::apply_cli_runtime_path(&mut command, &installation.path);
+    crate::infrastructure::process::apply_cli_runtime_path(&mut command, &installation.path);
     let mut child = command.spawn().map_err(|_| AdapterFailure::LaunchFailed)?;
     let stdout = child.stdout.take().ok_or(AdapterFailure::LaunchFailed)?;
     let mut reader = BufReader::new(stdout);

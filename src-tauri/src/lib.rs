@@ -12,8 +12,10 @@ const FRONTEND_MODE_MARKER: &str = "desktop_shell frontend_mode=dev-server";
 
 mod account_finance;
 mod account_v2;
+mod adapters;
 mod app_installation;
 mod app_update;
+mod application;
 mod claude_bridge;
 mod claude_login_takeover;
 mod codex_bridge;
@@ -25,12 +27,16 @@ mod connectivity;
 mod connectivity_core;
 mod desktop_app_discovery;
 mod desktop_app_discovery_core;
+mod domain;
+mod health_snapshot;
+mod infrastructure;
 mod local_bridge;
 mod logging;
 mod manual_locations;
 mod model_catalog;
 mod open_connection;
 mod opencode_bridge;
+mod prompt_injection;
 mod provider;
 mod proxy;
 mod update_channel;
@@ -39,6 +45,7 @@ mod update_channel;
 mod exit_restore;
 mod oauth_pkce;
 mod request_diagnostics;
+mod residue_cleanup;
 mod service_catalog;
 mod service_catalog_core;
 mod shell_environment;
@@ -146,7 +153,7 @@ pub fn run() {
                     return;
                 };
                 let Ok(_guard) = permit
-                    .cancel_safe(tool_activation::ACTIVATION_LOCK.lock())
+                    .cancel_safe(application::activation::session::activation_lock().lock())
                     .await
                 else {
                     return;
@@ -192,6 +199,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             app_update::manage_desktop_update_v1,
+            app_installation::installation_preview_read_only,
             app_installation::manage_app_installation_v2,
             desktop_app_discovery::scan_desktop_apps_read_only,
             account_v2::account_session_snapshot_v2,
@@ -206,7 +214,7 @@ pub fn run() {
             account_v2::account_announcement_action_v2,
             tool_activation::scan_activation_targets_v1,
             tool_activation::configure_desktop_tool_v2,
-            tool_activation::cancel_tool_activation_v1,
+            application::activation::session::cancel_tool_activation_v1,
             tool_activation::manage_tool_connections_v1,
             open_connection::open_tool_connection_v1,
             quit_desktop_assistant,
@@ -221,6 +229,12 @@ pub fn run() {
             window_appearance::set_window_appearance,
             ui_language::set_ui_language_v1,
             connectivity::check_line_connectivity_read_only,
+            health_snapshot::health_snapshot_read_only,
+            residue_cleanup::residue_inventory_read_only,
+            residue_cleanup::residue_clear_v1,
+            tool_adapters::cursor_agent::ipc::cursor_config_read_only,
+            tool_adapters::cursor_agent::ipc::cursor_apply_v1,
+            tool_adapters::cursor_agent::ipc::cursor_revert_v1,
             service_catalog::read_public_service_catalog,
             config_reveal::open_config_folder,
             station_connect_loopback::station_connect_loopback_capabilities_v1,

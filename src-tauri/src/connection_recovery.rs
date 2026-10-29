@@ -21,8 +21,9 @@ use keyring::v1::{Entry, Error as KeyringError};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use crate::tool_adapters::common::{self, FileChange};
-use crate::tool_credentials::ToolCredential;
+use crate::domain::configuration::FileChange;
+use crate::domain::credential::ToolCredential;
+use crate::infrastructure::config::files as common;
 
 const SERVICE: &str = "com.yeschoy.desktop.connection-recovery.v1";
 // Four config files, before/after and one in-flight predecessor, with JSON
@@ -137,7 +138,7 @@ pub(crate) fn operation_lock_at(root: &Path) -> Result<std::fs::File> {
 }
 
 pub(crate) fn operation_lock() -> Result<std::fs::File> {
-    let home = crate::tool_adapters::user_home().ok_or(Failure::Storage)?;
+    let home = crate::infrastructure::home::user_home().ok_or(Failure::Storage)?;
     operation_lock_at(&home.join(".yeschoy/connection-recovery"))
 }
 
@@ -282,7 +283,7 @@ fn recovery_store_is_uninitialized(root: &Path) -> Result<bool> {
 
 impl Store {
     pub(crate) fn open(create: bool) -> Result<Option<Self>> {
-        let home = crate::tool_adapters::user_home().ok_or(Failure::Storage)?;
+        let home = crate::infrastructure::home::user_home().ok_or(Failure::Storage)?;
         let root = home.join(".yeschoy").join("connection-recovery");
         let entry = Entry::new(SERVICE, "encryption-key").map_err(|_| Failure::Storage)?;
         let key = match entry.get_password() {
@@ -481,19 +482,20 @@ impl Store {
                 // `settings.yaml` we wrote. That copy of our configuration is
                 // not theirs and must not come back on disconnect.
                 let Some(original) = previous.files.iter().find(|f| f.path == file.path) else {
-                    if dsh_profile_patch(&file.path) {
+                    let hooks = crate::tool_adapters::recovery_hooks(&receipt.tool_id);
+                    if hooks.owns(&file.path) {
                         if let Some(before) = file.before.as_deref() {
-                            file.before = Some(
-                                crate::tool_adapters::dsh_web::strip_owned_patch(before)
-                                    .map_err(|_| Failure::Invalid)?,
-                            );
+                            if let Some(stripped) = hooks.strip_owned(before) {
+                                file.before = Some(stripped.map_err(|_| Failure::Invalid)?);
+                            }
                         }
                     }
                     continue;
                 };
                 // Rebase unrelated or later user edits, not the old YesChoy
                 // values. This keeps the original owned values across switches.
-                file.before = restore_bytes(original, file.before.as_deref())?.0;
+                let hooks = crate::tool_adapters::recovery_hooks(&receipt.tool_id);
+                file.before = restore_bytes(original, file.before.as_deref(), hooks)?.0;
             }
         } else if let Some(credential) = legacy {
             let owns_claude_mode = changes.iter().any(|file| {
@@ -501,12 +503,14 @@ impl Store {
                     .is_ok_and(|value| value["appliedId"] == "00000000-0000-4000-8000-000000157220")
             });
             for file in &mut files {
+                let hooks = crate::tool_adapters::recovery_hooks(&receipt.tool_id);
                 file.before = legacy_clean(
                     &receipt.tool_id,
                     &file.path,
                     file.before.as_deref(),
                     credential,
                     owns_claude_mode,
+                    hooks,
                 )?;
             }
         }
@@ -844,6 +848,7 @@ fn serialize(path: &Path, current: Option<&[u8]>, value: &Value) -> Result<Vec<u
 pub(crate) fn restore_bytes(
     file: &FileChange,
     current: Option<&[u8]>,
+    hooks: &dyn crate::domain::recovery::RecoveryHooks,
 ) -> Result<(Option<Vec<u8>>, bool)> {
     if current == file.before.as_deref() {
         return Ok((current.map(Vec::from), false));
@@ -854,7 +859,7 @@ pub(crate) fn restore_bytes(
     if current.is_none() {
         return Ok((None, true));
     } // Respect a user's deletion.
-    if let Some(restored) = crate::tool_adapters::dsh_web::restore_credentials(
+    if let Some(restored) = hooks.restore_document(
         &file.path,
         file.before.as_deref(),
         &file.after,
@@ -868,25 +873,6 @@ pub(crate) fn restore_bytes(
             return Ok((current.map(Vec::from), preserved));
         }
         return Ok((Some(serialize(&file.path, current, &document)?), preserved));
-    }
-    if let Some(restored) = crate::tool_adapters::dsh_web::restore_profile_patch(
-        &file.path,
-        file.before.as_deref(),
-        &file.after,
-        current.unwrap_or_default(),
-    ) {
-        let (rows, preserved) = restored.map_err(|_| Failure::Invalid)?;
-        if rows.is_empty() && file.before.is_none() {
-            return Ok((None, preserved));
-        }
-        let now = document(&file.path, current)?;
-        if Value::Array(rows.clone()) == now {
-            return Ok((current.map(Vec::from), preserved));
-        }
-        return Ok((
-            Some(serialize(&file.path, current, &Value::Array(rows))?),
-            preserved,
-        ));
     }
     let before = document(&file.path, file.before.as_deref())?;
     let after = document(&file.path, Some(&file.after))?;
@@ -1004,15 +990,16 @@ fn restore_files_inner(record: &Record, require_owned_restored: bool) -> Result<
         .iter()
         .map(|file| file.path.clone())
         .collect::<Vec<_>>();
-    let _dsh_locks =
-        crate::tool_adapters::dsh_web::lock_for_restore(&paths).map_err(|_| Failure::Changed)?;
+    let _dsh_locks = crate::tool_adapters::lock_for_restore(&record.receipt.tool_id, &paths)
+        .map_err(|_| Failure::Changed)?;
     // Plan every file before changing any. An invalid document must not cause
     // half of an otherwise valid restoration to be applied.
     let mut plan = Vec::new();
     let mut preserved = false;
     for file in &record.files {
         let current = common::snapshot(&file.path).map_err(|_| Failure::Io)?;
-        let (mut desired, kept) = restore_bytes(file, current.as_deref())?;
+        let hooks = crate::tool_adapters::recovery_hooks(&record.receipt.tool_id);
+        let (mut desired, kept) = restore_bytes(file, current.as_deref(), hooks)?;
         preserved |= kept;
         // If a switch crashed before writing this file it may still contain
         // the previous receipt, not the pending receipt.
@@ -1022,7 +1009,7 @@ fn restore_files_inner(record: &Record, require_owned_restored: bool) -> Result<
                 .as_ref()
                 .and_then(|p| p.files.iter().find(|f| f.path == file.path))
             {
-                let (previous_desired, kept) = restore_bytes(previous, desired.as_deref())?;
+                let (previous_desired, kept) = restore_bytes(previous, desired.as_deref(), hooks)?;
                 desired = previous_desired;
                 preserved |= kept;
             }
@@ -1179,14 +1166,17 @@ pub(crate) fn legacy_clean(
     bytes: Option<&[u8]>,
     credential: &ToolCredential,
     owns_claude_mode: bool,
+    hooks: &dyn crate::domain::recovery::RecoveryHooks,
 ) -> Result<Option<Vec<u8>>> {
     let Some(bytes) = bytes else {
         return Ok(None);
     };
-    if matches!(tool, "dsh_web" | "dsh_desktop") && dsh_profile_patch(path) {
-        return crate::tool_adapters::dsh_web::strip_owned_patch(bytes)
-            .map(Some)
-            .map_err(|_| Failure::Invalid);
+    // Only the owning tool knows whether this file carries a value it wrote in
+    // an earlier version; recovery just offers the bytes.
+    if hooks.owns(path) {
+        if let Some(stripped) = hooks.strip_owned(bytes) {
+            return stripped.map(Some).map_err(|_| Failure::Invalid);
+        }
     }
     let mut value = document(path, Some(bytes))?;
     let original = value.clone();
@@ -1352,13 +1342,20 @@ pub(crate) fn legacy_clean(
 
 #[cfg(test)]
 mod tests {
+    /// The DSH hooks the assertions describe; recovery resolves them by tool id
+    /// in production, and these tests name DSH files directly.
+    fn dsh_hooks() -> &'static dyn crate::domain::recovery::RecoveryHooks {
+        crate::tool_adapters::recovery_hooks("dsh_web")
+    }
+
     use super::*;
     use serde_json::json;
     struct Fixture(Store);
     impl Fixture {
         fn new() -> Self {
             Self(Store {
-                root: common::temporary_working_directory("recovery-test").unwrap(),
+                root: crate::tool_adapters::common::temporary_working_directory("recovery-test")
+                    .unwrap(),
                 key: [42; 32],
             })
         }
@@ -1366,14 +1363,11 @@ mod tests {
             self.0.root.join(name)
         }
         fn change(&self, name: &str, before: Option<&[u8]>, after: &[u8]) -> FileChange {
-            common::FileTransaction::stage_with_snapshot(
-                self.path(name),
-                before.map(Vec::from),
-                after.to_vec(),
-            )
-            .unwrap()
-            .changes()[0]
-                .clone()
+            FileChange {
+                path: self.path(name),
+                before: before.map(Vec::from),
+                after: after.to_vec(),
+            }
         }
     }
     impl Drop for Fixture {
@@ -1403,7 +1397,8 @@ mod tests {
         }
     }
     fn merged(file: &FileChange, now: Value) -> (Value, bool) {
-        let (bytes, kept) = restore_bytes(file, Some(&serde_json::to_vec(&now).unwrap())).unwrap();
+        let (bytes, kept) =
+            restore_bytes(file, Some(&serde_json::to_vec(&now).unwrap()), dsh_hooks()).unwrap();
         (document(&file.path, bytes.as_deref()).unwrap(), kept)
     }
 
@@ -1415,11 +1410,14 @@ mod tests {
         let after = b"- id: llm-pi-ai\n  config:\n    providers:\n      yeschoy: {baseURL: https://yeschoy.com/v1}\n- id: agent-default-model\n  config: {provider: yeschoy, model: m}\n";
         let file = fixture.change(patch, None, after);
         // Unchanged since we wrote it: the file goes, as it never existed.
-        assert_eq!(restore_bytes(&file, Some(after)).unwrap(), (None, false));
+        assert_eq!(
+            restore_bytes(&file, Some(after), dsh_hooks()).unwrap(),
+            (None, false)
+        );
         // DSH rewrote it (same values, its own formatting) and the user added
         // a provider plus a row of their own.
         let now = b"- id: llm-pi-ai\n  config:\n    providers:\n      yeschoy:\n        baseURL: https://yeschoy.com/v1\n      local:\n        baseURL: http://127.0.0.1:11434/v1\n- id: agent-default-model\n  config:\n    provider: yeschoy\n    model: m\n- id: ui-settings\n  config: {theme: dark}\n";
-        let (bytes, preserved) = restore_bytes(&file, Some(now)).unwrap();
+        let (bytes, preserved) = restore_bytes(&file, Some(now), dsh_hooks()).unwrap();
         assert!(!preserved);
         let rows = document(&file.path, bytes.as_deref()).unwrap();
         assert_eq!(
@@ -1456,9 +1454,16 @@ mod tests {
         let fixture = Fixture::new();
         let path = fixture.path("profiles/web/cordis.patch.yml");
         let imported = b"- id: agent-default-model\n  config: {provider: yeschoy, model: m}\n";
-        let cleaned = legacy_clean("dsh_web", &path, Some(imported), &credential(), false)
-            .unwrap()
-            .unwrap();
+        let cleaned = legacy_clean(
+            "dsh_web",
+            &path,
+            Some(imported),
+            &credential(),
+            false,
+            dsh_hooks(),
+        )
+        .unwrap()
+        .unwrap();
         assert_eq!(document(&path, Some(&cleaned)).unwrap(), json!([]));
     }
 
@@ -1837,7 +1842,7 @@ mod tests {
         }]))
         .unwrap();
         let (restored, preserved) =
-            restore_bytes(&file, Some(&current_with_only_hot_reload)).unwrap();
+            restore_bytes(&file, Some(&current_with_only_hot_reload), dsh_hooks()).unwrap();
         assert!(
             restored.is_none(),
             "the first-use catalog should be removed"
@@ -1876,6 +1881,7 @@ mod tests {
             Some(&bytes),
             &credential,
             false,
+            dsh_hooks(),
         )
         .unwrap()
         .unwrap();
@@ -2174,26 +2180,31 @@ mod tests {
         let f = Fixture::new();
         let file = f.change("settings.json", None, br#"{"model":"new"}"#);
         assert_eq!(
-            restore_bytes(&file, Some(&file.after)).unwrap(),
+            restore_bytes(&file, Some(&file.after), dsh_hooks()).unwrap(),
             (None, false)
         );
         let (value, kept) = merged(&file, json!({"model":"new","user":true}));
         assert!(kept);
         assert_eq!(value, json!({"user":true}));
-        assert_eq!(restore_bytes(&file, None).unwrap().0, None);
+        assert_eq!(restore_bytes(&file, None, dsh_hooks()).unwrap().0, None);
     }
     #[test]
     fn handles_toml_comments_and_yaml_and_rejects_invalid_document_before_any_write() {
         let f = Fixture::new();
         let file = f.change("config.toml", Some(b"model = 'old'\n"), b"model = 'new'\n");
-        let (bytes, kept) =
-            restore_bytes(&file, Some(b"# my comment\nmodel = 'new'\nuser = true\n")).unwrap();
+        let (bytes, kept) = restore_bytes(
+            &file,
+            Some(b"# my comment\nmodel = 'new'\nuser = true\n"),
+            dsh_hooks(),
+        )
+        .unwrap();
         let text = String::from_utf8(bytes.unwrap()).unwrap();
         assert!(kept);
         assert!(text.contains("# my comment"));
         assert!(text.contains("user = true"));
         let yaml = f.change("config.yaml", Some(b"model: old\n"), b"model: new\n");
-        let (bytes, kept) = restore_bytes(&yaml, Some(b"model: new\nuser: true\n")).unwrap();
+        let (bytes, kept) =
+            restore_bytes(&yaml, Some(b"model: new\nuser: true\n"), dsh_hooks()).unwrap();
         assert!(kept);
         assert_eq!(
             document(&yaml.path, bytes.as_deref()).unwrap(),
@@ -2315,7 +2326,8 @@ mod tests {
                 &f.path("config.json"),
                 Some(bytes),
                 &credential,
-                false
+                false,
+                dsh_hooks()
             )
             .unwrap(),
             Some(bytes.to_vec())
@@ -2329,6 +2341,7 @@ mod tests {
                 Some(bytes),
                 &credential,
                 false,
+                dsh_hooks(),
             )
             .unwrap()
             .as_deref(),

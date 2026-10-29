@@ -13,6 +13,7 @@ use crate::account_v2::{
     line_id_for_station_connect_origin, open_system_browser,
     station_connect_projection_failure_reason, AccountV2State,
 };
+use crate::domain::station::StationOrigin;
 use crate::station_connect_exchange::{exchange_connect_code, station_connect_exchange_enabled};
 
 pub(crate) const STATION_CONNECT_PROGRESS_EVENT: &str = "yeschoy://station-connect-progress";
@@ -440,21 +441,9 @@ pub fn station_connect_open_connect_page_v1(origin: String) -> Result<(), String
 /// This is **not** the compile-time authorization-page allowlist; third-party
 /// HTTPS origins are allowed when they pass structural checks.
 pub(crate) fn connect_origin_is_acceptable(raw: &str) -> Option<String> {
-    let Ok(url) = Url::parse(raw) else {
-        return None;
-    };
-    if !origin_url_structure_is_valid(&url) {
-        return None;
-    }
-    let host = url.host_str()?;
-    if host_is_literal_ip(host) {
-        return None;
-    }
-    let canonical = canonical_https_origin_from_host(host);
-    if raw != canonical && raw != format!("{canonical}/") {
-        return None;
-    }
-    Some(canonical)
+    StationOrigin::parse(raw)
+        .ok()
+        .map(StationOrigin::into_string)
 }
 
 pub(crate) fn connect_code_is_valid(value: &str) -> bool {
@@ -495,29 +484,6 @@ pub(crate) fn parse_station_connect_url(
         return Err(StationConnectParseError::InvalidCode);
     }
     Ok(StationConnectRequest { origin, code })
-}
-
-fn origin_url_structure_is_valid(url: &Url) -> bool {
-    url.scheme() == "https"
-        && url.port().is_none()
-        && url.username().is_empty()
-        && url.password().is_none()
-        && matches!(url.path(), "/" | "")
-        && url.query().is_none()
-        && url.fragment().is_none()
-        && url.host_str().is_some_and(|host| !host.is_empty())
-}
-
-fn canonical_https_origin_from_host(host: &str) -> String {
-    format!("https://{}", host.to_ascii_lowercase())
-}
-
-fn host_is_literal_ip(host: &str) -> bool {
-    let bare = host
-        .strip_prefix('[')
-        .and_then(|value| value.strip_suffix(']'))
-        .unwrap_or(host);
-    bare.parse::<std::net::Ipv4Addr>().is_ok() || bare.parse::<std::net::Ipv6Addr>().is_ok()
 }
 
 fn parse_connect_query(url: &Url) -> Result<(String, String), StationConnectParseError> {

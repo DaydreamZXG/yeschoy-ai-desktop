@@ -277,8 +277,7 @@ impl Prepared {
     }
 
     pub(crate) fn commit(&mut self) -> Result<(), AdapterFailure> {
-        self.transaction.commit().map_err(config_error)?;
-        self.validate_readback(true)
+        crate::application::ports::configuration::commit_with_plan(self)
     }
 
     pub(crate) fn validate_existing(&self) -> Result<(), AdapterFailure> {
@@ -389,7 +388,7 @@ impl Prepared {
     }
 
     pub(crate) fn rollback(&mut self) -> Result<(), AdapterFailure> {
-        self.transaction.rollback().map_err(config_error)
+        crate::application::ports::configuration::rollback_with_plan(self)
     }
 }
 
@@ -522,6 +521,43 @@ pub(crate) async fn resume_if_configured(state: ClaudeDesktopRuntimeState) {
 
 pub(crate) fn launch(path: &Path) -> Result<(), AdapterFailure> {
     super::desktop_launch::launch("claude_desktop", path)
+}
+
+impl crate::application::ports::configuration::ConfigurationPlan for Prepared {
+    fn transaction(&mut self) -> &mut dyn crate::application::ports::configuration::ConfigCommit {
+        &mut self.transaction
+    }
+
+    fn verify_written(&self) -> Result<(), AdapterFailure> {
+        self.validate_readback(true)
+    }
+}
+
+/// Read-back capability handed to the shared commit helper. It borrows the plan
+/// immutably while the transaction is borrowed mutably by the caller, so the
+/// commit ordering is shared without duplicating a read-back wrapper.
+struct PlanReadback<'a>(&'a Prepared);
+
+impl crate::application::ports::configuration::WrittenPlan for PlanReadback<'_> {
+    fn verify(&self) -> Result<(), AdapterFailure> {
+        self.0.validate_readback(true)
+    }
+}
+impl crate::application::ports::configuration::SharedCommit for Prepared {
+    fn commit_with_plan(&mut self) -> Result<(), AdapterFailure> {
+        self.transaction
+            .commit()
+            .map_err(crate::domain::error::AdapterFailure::from)?;
+        self.validate_readback(true)
+    }
+}
+
+impl crate::application::ports::configuration::SharedRollback for Prepared {
+    fn rollback_with_plan(&mut self) -> Result<(), AdapterFailure> {
+        self.transaction
+            .rollback()
+            .map_err(crate::domain::error::AdapterFailure::from)
+    }
 }
 
 #[cfg(test)]

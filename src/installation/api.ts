@@ -6,6 +6,7 @@ import {
   type ModelBinding,
 } from "../configuration/activation";
 import type { AccountLineId } from "../configuration/preview";
+import { invokeDecoded } from "../shared/api/invokeDecoded";
 
 export interface InstallationIntent {
   lineId: AccountLineId;
@@ -118,6 +119,75 @@ export function decodeInstallation(
   )
     return null;
   return value as InstallationProgress;
+}
+/**
+ * What an install *would* do, before the user agrees to any of it.
+ *
+ * Deliberately separate from `installationAction("inspect")`: that one shares a
+ * command with start/cancel/confirm and returns the live job projection. This is
+ * the read-only half of product invariant #1 — the native side answers from its
+ * compiled catalog and never opens a session, a job or a file.
+ */
+export interface InstallationPreview {
+  schemaVersion: 1;
+  requestId: string;
+  toolId: ActivationToolId;
+  platform: "macos" | "windows" | "linux" | "unknown";
+  architecture: "arm64" | "x64" | "unknown";
+  mode: "automatic" | "system_assisted" | "guided" | "unsupported";
+  packageAvailable: boolean;
+  mirrorAvailable: boolean;
+  guideAvailable: boolean;
+}
+const previewKeys = [
+  "schemaVersion",
+  "requestId",
+  "toolId",
+  "platform",
+  "architecture",
+  "mode",
+  "packageAvailable",
+  "mirrorAvailable",
+  "guideAvailable",
+] as const;
+export function decodeInstallationPreview(
+  value: unknown,
+  id: string,
+): InstallationPreview | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const v = value as Record<string, unknown>;
+  // Exact-key contract: an extra field means the two sides disagree about the
+  // payload, which is a bug worth failing on rather than ignoring.
+  if (
+    Object.keys(v).length !== previewKeys.length ||
+    previewKeys.some((k) => !(k in v)) ||
+    v.schemaVersion !== 1 ||
+    v.requestId !== id ||
+    !oneOf(v.toolId, ACTIVATION_TOOL_IDS) ||
+    !oneOf(v.platform, ["macos", "windows", "linux", "unknown"]) ||
+    !oneOf(v.architecture, ["arm64", "x64", "unknown"]) ||
+    !oneOf(v.mode, ["automatic", "system_assisted", "guided", "unsupported"]) ||
+    typeof v.packageAvailable !== "boolean" ||
+    typeof v.mirrorAvailable !== "boolean" ||
+    typeof v.guideAvailable !== "boolean"
+  )
+    return null;
+  // A preview that claims neither a package nor a guide leaves the user with
+  // nothing to act on; treat that contradiction as an invalid response.
+  if (!v.packageAvailable && !v.guideAvailable) return null;
+  return value as InstallationPreview;
+}
+let previewSequence = 0;
+export function installationPreview(
+  toolId: ActivationToolId,
+): Promise<InstallationPreview> {
+  const requestId = `install-preview-${Date.now().toString(36)}-${++previewSequence}`;
+  return invokeDecoded(
+    "installation_preview_read_only",
+    { request: { requestId, toolId } },
+    (value) => decodeInstallationPreview(value, requestId),
+    "invalid_installation_preview",
+  );
 }
 let sequence = 0;
 export async function installationAction(

@@ -1,4 +1,4 @@
-use crate::tool_adapters::common;
+use crate::infrastructure::process;
 use crate::tool_discovery_core::{
     classify, normalize_version_output, DiscoveryResult, LocationHint, ProbeObservation, ToolSpec,
     TOOL_SPECS,
@@ -229,7 +229,7 @@ pub(crate) async fn probe_version(candidate: &Candidate) -> ProbeObservation {
             location_hint: candidate.location_hint,
         };
     };
-    common::apply_cli_runtime_path(&mut command, &candidate.path);
+    process::apply_cli_runtime_path(&mut command, &candidate.path);
     command
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

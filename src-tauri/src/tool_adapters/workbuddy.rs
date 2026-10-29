@@ -221,8 +221,7 @@ impl Prepared {
         // would just mean WorkBuddy cannot be connected at all. The user is told
         // in `readyWorkBuddy` that this app keeps its key on disk.
         let _ = common::narrow_third_party_file(&self.path);
-        self.transaction.commit().map_err(config_error)?;
-        self.validate_existing()
+        crate::application::ports::configuration::commit_with_plan(self)
     }
 
     pub(crate) fn validate_existing(&self) -> Result<(), AdapterFailure> {
@@ -259,6 +258,43 @@ impl Prepared {
 
     pub(crate) fn rollback(&mut self) -> Result<(), AdapterFailure> {
         self.transaction.rollback().map_err(config_error)
+    }
+}
+
+impl crate::application::ports::configuration::ConfigurationPlan for Prepared {
+    fn transaction(&mut self) -> &mut dyn crate::application::ports::configuration::ConfigCommit {
+        &mut self.transaction
+    }
+
+    fn verify_written(&self) -> Result<(), AdapterFailure> {
+        self.validate_existing()
+    }
+}
+
+/// Read-back capability handed to the shared commit helper. It borrows the plan
+/// immutably while the transaction is borrowed mutably by the caller, so the
+/// commit ordering is shared without duplicating a read-back wrapper.
+struct PlanReadback<'a>(&'a Prepared);
+
+impl crate::application::ports::configuration::WrittenPlan for PlanReadback<'_> {
+    fn verify(&self) -> Result<(), AdapterFailure> {
+        self.0.validate_existing()
+    }
+}
+impl crate::application::ports::configuration::SharedCommit for Prepared {
+    fn commit_with_plan(&mut self) -> Result<(), AdapterFailure> {
+        self.transaction
+            .commit()
+            .map_err(crate::domain::error::AdapterFailure::from)?;
+        self.validate_existing()
+    }
+}
+
+impl crate::application::ports::configuration::SharedRollback for Prepared {
+    fn rollback_with_plan(&mut self) -> Result<(), AdapterFailure> {
+        self.transaction
+            .rollback()
+            .map_err(crate::domain::error::AdapterFailure::from)
     }
 }
 

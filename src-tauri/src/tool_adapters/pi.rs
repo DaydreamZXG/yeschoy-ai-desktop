@@ -7,7 +7,7 @@ use serde_json::{Map, Value};
 use crate::{
     tool_adapters::{
         common::{self, ConfigFailure, FileTransaction},
-        AdapterFailure,
+        jsonc, AdapterFailure,
     },
     tool_credentials,
 };
@@ -64,6 +64,29 @@ fn render_models(
     render_model_catalog(existing, origin, &[model.to_owned()], helper)
 }
 
+/// 先尝试在原文上做最小编辑（保留用户注释与排版），做不到再整份重排。
+///
+/// 两种写法必须产出同一份语义；这是 `render_model_catalog_keeps_user_comments`
+/// 这类格式测试在守的东西。任何解析/定位失败都静默回退 —— 写坏配置的代价
+/// 远大于丢一行注释。
+fn minimal_or_pretty(
+    existing: Option<&[u8]>,
+    original: &Value,
+    values: &[(Vec<jsonc::Segment<'static>>, Value)],
+    fallback: &Value,
+) -> Result<Vec<u8>, ()> {
+    if let Some(source) = existing.and_then(|bytes| std::str::from_utf8(bytes).ok()) {
+        if let Some(edited) = jsonc::apply_values(source, original, values) {
+            return Ok(edited.into_bytes());
+        }
+    }
+    pretty(fallback)
+}
+
+const fn jsonc_key(key: &'static str) -> jsonc::Segment<'static> {
+    jsonc::Segment::Key(key)
+}
+
 fn render_model_catalog(
     existing: Option<&[u8]>,
     origin: &str,
@@ -71,6 +94,7 @@ fn render_model_catalog(
     helper: &str,
 ) -> Result<Vec<u8>, ()> {
     let mut root = parse_document(existing)?;
+    let original = root.clone();
     let root = root.as_object_mut().ok_or(())?;
     let providers = root
         .entry("providers")
@@ -95,15 +119,32 @@ fn render_model_catalog(
         crate::tool_model_profile::ModelConsumer::Pi,
     );
     provider.insert("models".into(), models);
-    pretty(&Value::Object(root.clone()))
+    minimal_or_pretty(
+        existing,
+        &original,
+        &[(
+            vec![jsonc_key("providers"), jsonc_key("yeschoy")],
+            Value::Object(provider.clone()),
+        )],
+        &Value::Object(root.clone()),
+    )
 }
 
 fn render_settings(existing: Option<&[u8]>, model: &str) -> Result<Vec<u8>, ()> {
     let mut root = parse_document(existing)?;
+    let original = root.clone();
     let root = root.as_object_mut().ok_or(())?;
     root.insert("defaultProvider".into(), "yeschoy".into());
     root.insert("defaultModel".into(), model.into());
-    pretty(&Value::Object(root.clone()))
+    minimal_or_pretty(
+        existing,
+        &original,
+        &[
+            (vec![jsonc_key("defaultProvider")], Value::from("yeschoy")),
+            (vec![jsonc_key("defaultModel")], Value::from(model)),
+        ],
+        &Value::Object(root.clone()),
+    )
 }
 
 pub(crate) fn prepare(home: &Path, origin: &str, model: &str) -> Result<Prepared, AdapterFailure> {
@@ -169,8 +210,7 @@ impl Prepared {
     }
 
     pub(crate) fn commit(&mut self) -> Result<(), AdapterFailure> {
-        self.transaction.commit().map_err(config_error)?;
-        self.validate_readback(true)
+        crate::application::ports::configuration::commit_with_plan(self)
     }
 
     pub(crate) fn validate_existing(&self) -> Result<(), AdapterFailure> {
@@ -188,10 +228,19 @@ impl Prepared {
             .ok_or(AdapterFailure::ConfigurationFailed(
                 "configuration_readback_failed",
             ))?;
-        let models: Value = serde_json::from_slice(&models)
-            .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_readback_failed"))?;
-        let settings: Value = serde_json::from_slice(&settings)
-            .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_readback_failed"))?;
+        // 读回必须和读入同一种语法：Pi 的配置允许注释与尾随逗号，而我们
+        // 现在**保留**它们（见 `minimal_or_pretty`）。用严格 JSON 解析会把
+        // 自己刚写好的、完全正确的文件判成读回失败。
+        let parse = |bytes: &[u8]| {
+            let source = std::str::from_utf8(bytes).ok()?;
+            json5::from_str::<Value>(source).ok()
+        };
+        let models = parse(&models).ok_or(AdapterFailure::ConfigurationFailed(
+            "configuration_readback_failed",
+        ))?;
+        let settings = parse(&settings).ok_or(AdapterFailure::ConfigurationFailed(
+            "configuration_readback_failed",
+        ))?;
         let provider = &models["providers"]["yeschoy"];
         let correct = provider["baseUrl"].as_str()
             == Some(format!("{}/v1", self.origin.trim_end_matches('/')).as_str())
@@ -220,13 +269,107 @@ impl Prepared {
     }
 
     pub(crate) fn rollback(&mut self) -> Result<(), AdapterFailure> {
-        self.transaction.rollback().map_err(config_error)
+        crate::application::ports::configuration::rollback_with_plan(self)
+    }
+}
+
+impl crate::application::ports::configuration::ConfigurationPlan for Prepared {
+    fn transaction(&mut self) -> &mut dyn crate::application::ports::configuration::ConfigCommit {
+        &mut self.transaction
+    }
+
+    fn verify_written(&self) -> Result<(), AdapterFailure> {
+        self.validate_readback(true)
+    }
+}
+
+/// Read-back capability handed to the shared commit helper. It borrows the plan
+/// immutably while the transaction is borrowed mutably by the caller, so the
+/// commit ordering is shared without duplicating a read-back wrapper.
+struct PlanReadback<'a>(&'a Prepared);
+
+impl crate::application::ports::configuration::WrittenPlan for PlanReadback<'_> {
+    fn verify(&self) -> Result<(), AdapterFailure> {
+        self.0.validate_readback(true)
+    }
+}
+impl crate::application::ports::configuration::SharedCommit for Prepared {
+    fn commit_with_plan(&mut self) -> Result<(), AdapterFailure> {
+        self.transaction
+            .commit()
+            .map_err(crate::domain::error::AdapterFailure::from)?;
+        self.validate_readback(true)
+    }
+}
+
+impl crate::application::ports::configuration::SharedRollback for Prepared {
+    fn rollback_with_plan(&mut self) -> Result<(), AdapterFailure> {
+        self.transaction
+            .rollback()
+            .map_err(crate::domain::error::AdapterFailure::from)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// 用户在 `models.json` / `settings.json` 里写的注释、排版、尾随逗号，
+    /// 接入时一个字节都不该被我们抹掉 —— 我们只拥有 `providers.yeschoy`
+    /// 和两个顶层键。
+    #[test]
+    fn activation_keeps_the_users_comments_and_layout() {
+        let home = common::temporary_working_directory("pi-comments").unwrap();
+        let models_path = home.join(".pi/agent/models.json");
+        let settings_path = home.join(".pi/agent/settings.json");
+        std::fs::create_dir_all(models_path.parent().unwrap()).unwrap();
+        let models = r#"{
+  // 我自己的中转，别删
+  "providers": {
+    "other": { "api": "openai", "apiKey": "synthetic-other" } // 行尾注释
+  },
+}
+"#;
+        let settings = r#"{
+  // 思考档位：低
+  "thinkingLevel": "low",
+}
+"#;
+        std::fs::write(&models_path, models).unwrap();
+        std::fs::write(&settings_path, settings).unwrap();
+        let mut prepared = prepare_catalog(
+            &home,
+            "https://yeschoy.com",
+            "model-a",
+            &["model-a".to_owned()],
+        )
+        .unwrap();
+        prepared.commit().unwrap();
+
+        let written_models = std::fs::read_to_string(&models_path).unwrap();
+        let written_settings = std::fs::read_to_string(&settings_path).unwrap();
+        for kept in [
+            "// 我自己的中转，别删",
+            "// 行尾注释",
+            "\"other\": { \"api\": \"openai\", \"apiKey\": \"synthetic-other\" }",
+        ] {
+            assert!(
+                written_models.contains(kept),
+                "lost {kept:?} in\n{written_models}"
+            );
+        }
+        assert!(
+            written_settings.contains("// 思考档位：低"),
+            "{written_settings}"
+        );
+        // 语义仍然正确：我们那份 provider 与默认模型都写进去了。
+        let parsed: Value = json5::from_str(&written_models).unwrap();
+        assert_eq!(parsed["providers"]["yeschoy"]["api"], "openai-completions");
+        let parsed: Value = json5::from_str(&written_settings).unwrap();
+        assert_eq!(parsed["defaultProvider"], "yeschoy");
+        assert_eq!(parsed["thinkingLevel"], "low");
+        assert!(written_models.contains("// "));
+    }
 
     #[test]
     fn ru043_pi_reapply_preserves_caps_and_restores_original_bytes() {

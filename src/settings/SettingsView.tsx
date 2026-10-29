@@ -8,7 +8,10 @@ import { useWorkbenchCopy } from "../workbench/copy";
 import { QuitAssistant } from "./QuitAssistant";
 import { UpdateSettingsCard } from "../update/UpdateSettingsCard";
 import { AdvancedConnectionDetails } from "./AdvancedConnectionDetails";
+import { CursorConfigCard } from "./CursorConfigCard";
+import { ResidueCard } from "./ResidueCard";
 import { LanguagePicker } from "../i18n/LanguagePicker";
+import { CodexProbeSetting } from "./CodexProbeSetting";
 import { isOfficialDistribution } from "../distribution/identity";
 import { OfficialSitePromo } from "../distribution/OfficialSitePromoBanner";
 import { REFERENCE_STATION_ORIGIN } from "../distribution/softTraffic";
@@ -16,6 +19,8 @@ import { REFERENCE_STATION_ORIGIN } from "../distribution/softTraffic";
 interface SettingsViewProps {
   onOpenAccount: () => void;
   onOpenDiagnostics: () => void;
+  /** "反馈 Bug"; optional so tests that predate it keep rendering. */
+  onOpenFeedback?: () => void;
   onOpenTools: () => void;
   onOpenModels: () => void;
   appearance?: Appearance;
@@ -28,6 +33,7 @@ export function SettingsView({
   appearance = "system",
   onAppearanceChange,
   onOpenDiagnostics,
+  onOpenFeedback,
   onOpenTools,
   onOpenModels,
 }: SettingsViewProps) {
@@ -72,6 +78,7 @@ export function SettingsView({
             </div>
             <LanguagePicker variant="control" />
           </div>
+          <CodexProbeSetting />
         </div>
       </section>
 
@@ -113,6 +120,12 @@ export function SettingsView({
               </span>
             </div>
           ))}
+          <div className="setting-row setting-row-block">
+            <CursorConfigCard />
+          </div>
+          <div className="setting-row setting-row-block">
+            <ResidueCard />
+          </div>
         </div>
       </section>
 
@@ -146,6 +159,11 @@ export function SettingsView({
               <button type="button" onClick={onOpenDiagnostics}>
                 {c.help}
               </button>
+              {onOpenFeedback && (
+                <button type="button" onClick={onOpenFeedback}>
+                  {c.feedback}
+                </button>
+              )}
               <button type="button" onClick={onOpenTools}>
                 {c.advanced}
               </button>

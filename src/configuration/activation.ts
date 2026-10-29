@@ -400,6 +400,11 @@ export async function activateDesktopTool(input: {
   installationJobId?: string;
   restartRunningApp?: boolean;
   displaceClaudeLogin?: boolean;
+  /**
+   * 是否在接入时探测 Codex 的传输协议。缺省 false，也就是不发任何探测请求；
+   * 见 `src/configuration/codexProbe.ts`。
+   */
+  probeCodexTransport?: boolean;
   onRequestId?: (requestId: string) => void;
 }): Promise<ToolActivationProjection> {
   if (
@@ -429,6 +434,7 @@ export async function activateDesktopTool(input: {
         : {}),
       ...(input.restartRunningApp ? { restartRunningApp: true } : {}),
       ...(input.displaceClaudeLogin ? { displaceClaudeLogin: true } : {}),
+      ...(input.probeCodexTransport ? { probeCodexTransport: true } : {}),
     },
   });
   const timedOut = new Promise<never>((_, reject) => {

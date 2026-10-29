@@ -401,9 +401,99 @@ const handlers: Record<string, (a: Args) => unknown> = {
   manual_location_clear: (a) => ({ requestId: rid(a), outcome: "cleared" }),
   configure_desktop_tool_v2: (a) => activationResult(a),
   manage_app_installation_v2: (a) => installationInspectionFixture(a),
+  // 安装前的只读预览：原生侧纯查表，这里给出同样的形状。
+  installation_preview_read_only: (a) => ({
+    schemaVersion: 1,
+    requestId: rid(a),
+    toolId: (a.request as Args).toolId,
+    platform: "macos",
+    architecture: "arm64",
+    mode: "automatic",
+    packageAvailable: true,
+    mirrorAvailable: false,
+    guideAvailable: true,
+  }),
   read_desktop_exit_state: () => ({ closeRequested: false, shutdown: null }),
   set_window_appearance: () => null,
   open_config_folder: () => null,
+  // 健康检查助手 / 反馈页挂载时读取的本机快照（只读，不联网）。
+  // Cursor：假装命令行版已装、未接入；桌面版已装。
+  cursor_config_read_only: () => ({
+    toolId: "cursor_agent",
+    cliDetected: true,
+    endpoint: "https://api.example.invalid/v1",
+    customEndpointConfigured: false,
+    headerNames: [],
+    ide: {
+      observed: true,
+      customEndpointConfigured: false,
+      existingProvider: "unknown",
+    },
+  }),
+  cursor_apply_v1: () => ({
+    toolId: "cursor_agent",
+    status: "applied",
+    reasonCode: "configured",
+    modelId: "gpt-5.4",
+  }),
+  cursor_revert_v1: () => ({
+    toolId: "cursor_agent",
+    status: "reverted",
+    reasonCode: "reverted",
+    modelId: null,
+  }),
+  // 「0 垃圾留存」盘点：场景里假装还有本机状态与日志两项。
+  residue_inventory_read_only: (a) => ({
+    requestId: rid(a),
+    clean: false,
+    items: [
+      {
+        id: "state",
+        target: "state_dir",
+        state: "ready",
+        reasonCode: "owned_state",
+        selectedByDefault: true,
+        entries: ["connection-recovery", "device-id"],
+      },
+      {
+        id: "logs",
+        target: "log_dir",
+        state: "ready",
+        reasonCode: "owned_logs",
+        selectedByDefault: true,
+        entries: ["yeschoy.log"],
+      },
+      {
+        id: "app_configs",
+        target: "tool_configs",
+        state: "kept",
+        reasonCode: "restore_via_app",
+        selectedByDefault: false,
+        entries: [],
+      },
+    ],
+  }),
+  residue_clear_v1: (a) => ({
+    requestId: rid(a),
+    schemaVersion: 1,
+    removed: [],
+    remaining: { requestId: rid(a), clean: true, items: [] },
+  }),
+  health_snapshot_read_only: () => ({
+    platform: "macos",
+    arch: "aarch64",
+    appVersion: "0.5.1",
+    frontendMode: "bundled-custom-protocol",
+    distribution: "community",
+    logAvailable: true,
+    logTail: [
+      "1793171656.160 INFO yeschoy_desktop_lib::tool_discovery tool_discovery executable=claude path_directories=4 candidates=2",
+      "1793171656.162 INFO yeschoy_desktop_lib::tool_discovery tool_discovery executable=codex path_directories=4 candidates=1",
+    ],
+    markers: [
+      { element: "desktop_shell", detail: "stage=start version=0.5.1" },
+    ],
+  }),
   manage_desktop_update_v1: (a) => ({
     schemaVersion: 1,
     requestId: rid(a) || "idle",

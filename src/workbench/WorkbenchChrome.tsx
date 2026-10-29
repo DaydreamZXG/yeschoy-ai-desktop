@@ -5,6 +5,8 @@ import {
   Megaphone,
   Plug,
   Users,
+  Bug,
+  ChartNoAxesCombined,
   CircleUserRound,
   LayoutDashboard,
   Monitor,
@@ -14,7 +16,6 @@ import {
   ShieldCheck,
   Sun,
   Wallet,
-  ChartNoAxesCombined,
 } from "lucide-react";
 import { CountUpStrong } from "../theme/motion";
 import brandIcon from "../assets/brand/yecai-logo.png";
@@ -32,6 +33,7 @@ export type AppView =
   | "setup"
   | "models"
   | "diagnostics"
+  | "feedback"
   | "tools"
   | "announcements"
   | "settings";
@@ -108,6 +110,8 @@ export function WorkbenchSidebar({
           { id: "announcements", label: c.announcements, icon: Megaphone },
         ] as const)
       : []),
+    // 反馈入口常驻：用户出问题时不一定会翻到设置里的「排查」。
+    { id: "feedback", label: c.feedback, icon: Bug },
     { id: "settings", label: c.settings, icon: Settings2 },
   ] as const;
   // 连接诊断和已安装的工具是设置页的子页面，不是顶级目的地：一个是出问题时

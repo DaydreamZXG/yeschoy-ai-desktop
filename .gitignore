@@ -30,3 +30,8 @@ mainWindow.js
 # Read-only upstream/reference checkouts kept outside the governed source tree.
 /work/
 tools/station-connect-mock/target/
+# A second checkout of this same repository nested in the working tree (112 MB,
+# 98 MB of it its own .git). It is not part of the build; keeping it ignored so
+# `git status` and `git add .` do not pick it up. vitest.config.ts already
+# restricts test discovery to this checkout's own sources.
+/yeschoy-ai-desktop/

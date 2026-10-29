@@ -13,12 +13,20 @@ import type {
   ConnectivityResponse,
   LineOutcome,
 } from "./contract";
+import {
+  buildHealthReport,
+  decodeHealthSnapshot,
+  healthFindings,
+  type HealthSnapshot,
+} from "./healthReport";
 
 interface DiagnosticsViewProps {
   onOpenSetup: () => void;
   onOpenAccount: () => void;
   onOpenHome: () => void;
   onOpenTools: () => void;
+  /** Bug feedback lives beside diagnostics so both share one report. */
+  onReportBug?: () => void;
 }
 
 type DiagnosticsPhase =
@@ -67,6 +75,7 @@ export function DiagnosticsView({
   onOpenAccount,
   onOpenHome,
   onOpenTools,
+  onReportBug,
 }: DiagnosticsViewProps) {
   const { t } = useTranslation();
   const [phase, setPhase] = useState<DiagnosticsPhase>("idle");
@@ -75,21 +84,54 @@ export function DiagnosticsView({
     null,
   );
   const [copyState, setCopyState] = useState<CopyState>("idle");
+  // Health assistant: environment snapshot is read once on mount (it is a
+  // small read-only IPC); the combined report is only built when asked for.
+  const [env, setEnv] = useState<HealthSnapshot | null>(null);
+  const [envSettled, setEnvSettled] = useState(false);
+  const [reportState, setReportState] = useState<CopyState>("idle");
   const [observations, setObservations] = useState<
     ReadonlyMap<ConnectivityLineId, LineObservation>
   >(() => new Map());
   const latestRequestRef = useRef("");
   const requestSequenceRef = useRef(0);
   const copyResetRef = useRef<number | null>(null);
+  const reportResetRef = useRef<number | null>(null);
 
   useEffect(
     () => () => {
       latestRequestRef.current = "";
       if (copyResetRef.current !== null)
         window.clearTimeout(copyResetRef.current);
+      if (reportResetRef.current !== null)
+        window.clearTimeout(reportResetRef.current);
     },
     [],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    // A read failure only means the report says "environment unavailable";
+    // it must never take the diagnostics page down with it.
+    Promise.resolve(
+      invoke<unknown>("health_snapshot_read_only", {
+        request: { requestId: "health" },
+      }),
+    )
+      .then((raw) => {
+        if (cancelled) return;
+        setEnv(decodeHealthSnapshot(raw));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setEnv(null);
+      })
+      .finally(() => {
+        if (!cancelled) setEnvSettled(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const completedAt = response
     ? new Intl.DateTimeFormat("zh-CN", {
@@ -141,11 +183,37 @@ export function DiagnosticsView({
             ? "empty"
             : "partial",
       );
-    } catch {
+    } catch (e) {
       if (latestRequestRef.current !== requestId) return;
       setIssue("invoke");
       setPhase("error");
     }
+  };
+
+  const findings = response ? healthFindings(response) : [];
+
+  // The one thing a user is asked to paste to the developer. The native
+  // snapshot already scrubbed its log; `decodeHealthSnapshot` re-checks it,
+  // and a null snapshot degrades to "unavailable" instead of dropping data.
+  const copyHealthReport = async () => {
+    const text = buildHealthReport({
+      generatedAt: new Date(),
+      snapshot: env,
+      connectivity: response,
+      userNote: "",
+    });
+    try {
+      await navigator.clipboard.writeText(text);
+      setReportState("copied");
+    } catch (e) {
+      setReportState("failed");
+    }
+    if (reportResetRef.current !== null)
+      window.clearTimeout(reportResetRef.current);
+    reportResetRef.current = window.setTimeout(
+      () => setReportState("idle"),
+      2500,
+    );
   };
 
   const copyReportToClipboard = async () => {
@@ -157,7 +225,7 @@ export function DiagnosticsView({
     try {
       await navigator.clipboard.writeText(report);
       setCopyState("copied");
-    } catch {
+    } catch (e) {
       setCopyState("failed");
     }
     if (copyResetRef.current !== null)
@@ -381,6 +449,120 @@ export function DiagnosticsView({
             <p>{t("yeschoyDiagnostics.disclaimerBody")}</p>
           </div>
         </aside>
+
+        <section
+          className="diagnostic-assistant"
+          aria-labelledby="diagnostic-assistant-title"
+          data-testid="health-assistant"
+        >
+          <div className="panel-heading diagnostics-heading">
+            <div>
+              <p className="eyebrow">{t("yeschoyHealth.eyebrow")}</p>
+              <h2 id="diagnostic-assistant-title">
+                {t("yeschoyHealth.title")}
+              </h2>
+            </div>
+          </div>
+          <p className="diagnostic-consent">{t("yeschoyHealth.description")}</p>
+
+          {findings.length > 0 ? (
+            <>
+              <p className="section-kicker">
+                {t("yeschoyHealth.findingsTitle")}
+              </p>
+              <ul className="health-findings" data-testid="health-findings">
+                {findings.map((finding) => (
+                  <li
+                    key={`${finding.lineId}-${finding.layer}`}
+                    className="health-finding"
+                    data-outcome={finding.outcome}
+                  >
+                    <strong>
+                      {t(`yeschoyConfiguration.lines.${finding.lineId}.name`)}
+                    </strong>
+                    <span>
+                      {t(`yeschoyDiagnostics.layers.${finding.layer}`)} ·{" "}
+                      {t(`yeschoyDiagnostics.status.${finding.outcome}`)}
+                    </span>
+                    <p>
+                      {t(`yeschoyDiagnostics.reason.${finding.reasonCode}`)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p className="line-waiting-copy">
+              {response
+                ? t("yeschoyHealth.noFindings")
+                : t("yeschoyHealth.notChecked")}
+            </p>
+          )}
+
+          <dl className="health-environment" data-testid="health-environment">
+            <div>
+              <dt>{t("yeschoyHealth.envTitle")}</dt>
+              <dd>
+                {!envSettled
+                  ? t("yeschoyHealth.envReading")
+                  : env
+                    ? `${env.platform} · ${env.appVersion} · ${env.frontendMode} · ${env.distribution}`
+                    : t("yeschoyHealth.envUnavailable")}
+              </dd>
+            </div>
+            <div>
+              <dt>{t("yeschoyHealth.logTitle")}</dt>
+              <dd>
+                {!envSettled
+                  ? t("yeschoyHealth.envReading")
+                  : env?.logAvailable
+                    ? t("yeschoyHealth.logReady", {
+                        count: env.logTail.length,
+                      })
+                    : t("yeschoyHealth.logUnavailable")}
+              </dd>
+            </div>
+          </dl>
+
+          {env?.logAvailable && env.logTail.length > 0 && (
+            <details className="scan-details health-log-preview">
+              <summary>{t("yeschoyHealth.previewTitle")}</summary>
+              <pre data-testid="health-log-preview">
+                {env.logTail.slice(-20).join("\n")}
+              </pre>
+            </details>
+          )}
+
+          <div className="diagnostics-report-actions">
+            <button
+              type="button"
+              className="diagnostic-copy-button"
+              onClick={copyHealthReport}
+              disabled={!envSettled}
+              data-testid="copy-health-report"
+              data-copy-state={reportState}
+            >
+              {reportState === "copied"
+                ? t("yeschoyHealth.reportCopied")
+                : reportState === "failed"
+                  ? t("yeschoyDiagnostics.copyFailed")
+                  : t("yeschoyHealth.copyReport")}
+            </button>
+            {onReportBug && (
+              <button
+                type="button"
+                className="diagnostic-copy-button"
+                onClick={onReportBug}
+                data-testid="report-bug-from-health"
+              >
+                {t("yeschoyHealth.reportBug")}
+              </button>
+            )}
+          </div>
+          <p className="diagnostic-consent">
+            {t("yeschoyHealth.reportConsent")}
+          </p>
+        </section>
 
         {response && (
           <details className="scan-details diagnostic-details">

@@ -36,12 +36,38 @@ beforeEach(() => {
   clipboardWrite.mockResolvedValue(undefined);
 });
 
+const healthySnapshot = {
+  platform: "macos",
+  arch: "aarch64",
+  appVersion: "0.5.1",
+  frontendMode: "bundled-custom-protocol",
+  distribution: "community",
+  logAvailable: true,
+  logTail: ["1 INFO a::b stage=start", "2 INFO a::b stage=ready"],
+  markers: [{ element: "desktop_shell", detail: "stage=ready" }],
+};
+
 const routes = {
   setup: vi.fn(),
   account: vi.fn(),
   home: vi.fn(),
   tools: vi.fn(),
 };
+
+// 一次性失败：只让线路检查失败，挂载时的健康快照读取仍正常（它是同一条
+// invoke，不能跟着一起被拒）。
+function failNextConnectivity(error: unknown) {
+  let pending = true;
+  const previous = invokeMock.getMockImplementation();
+  invokeMock.mockImplementation((command, args) => {
+    if (pending && command === "check_line_connectivity_read_only") {
+      pending = false;
+      return Promise.reject(error);
+    }
+    if (previous) return previous(command, args);
+    return Promise.resolve(healthySnapshot);
+  });
+}
 
 function showView() {
   for (const spy of Object.values(routes)) spy.mockReset();
@@ -55,20 +81,40 @@ function showView() {
   );
 }
 
+// 线路检查专用：健康检查助手挂载时的快照读取也计入 mock.calls，所以这里
+// 只数 check_line_connectivity_read_only，下标语义与以前一致。
+function connectivityCalls() {
+  return invokeMock.mock.calls.filter(
+    ([command]) => command === "check_line_connectivity_read_only",
+  );
+}
+
 function currentRequestId(callIndex: number) {
   return (
-    invokeMock.mock.calls[callIndex][1] as { request: { requestId: string } }
+    connectivityCalls()[callIndex][1] as { request: { requestId: string } }
   ).request.requestId;
 }
 
 function replyWith(
   fixture: typeof nativeFixtures.reachable | Record<string, unknown>,
 ) {
-  invokeMock.mockImplementationOnce((_command, args) =>
-    Promise.resolve({
+  // 健康检查助手的快照读取也走同一个 invoke。以前这里用 mockImplementationOnce，
+  // 现在多了一次挂载时的读取，顺手回一份合法快照，其余命令仍按一次性回复。
+  invokeMock.mockImplementation((command, args) => {
+    if (command === "health_snapshot_read_only")
+      return Promise.resolve(healthySnapshot);
+    return Promise.resolve({
       ...structuredClone(fixture),
       requestId: (args as { request: { requestId: string } }).request.requestId,
-    }),
+    });
+  });
+}
+
+// 健康检查助手在挂载时读一次本机快照；它不是被测动作，但会占掉一次 IPC
+// 调用。攻击性用例（"出错前不调用任何命令"）必须把它排除在外。
+function invokeWithoutSnapshot() {
+  return invokeMock.mock.calls.filter(
+    ([command]) => command !== "health_snapshot_read_only",
   );
 }
 
@@ -90,7 +136,7 @@ describe("diagnostics native-to-renderer outcomes", () => {
   it("requires an explicit action and displays every layer of both successes", async () => {
     replyWith(nativeFixtures.reachable);
     showView();
-    expect(invokeMock).not.toHaveBeenCalled();
+    expect(invokeWithoutSnapshot()).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: "检查两条线路" }));
     expect(await screen.findAllByText("基础连接正常")).toHaveLength(2);
     expect(screen.getByTestId("diagnostics-view")).toHaveAttribute(
@@ -105,13 +151,13 @@ describe("diagnostics native-to-renderer outcomes", () => {
     expect(within(mainland).getByText("11 ms")).toBeInTheDocument();
     expect(within(mainland).getByText("14 ms")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(invokeMock).toHaveBeenCalledTimes(1);
-    expect(invokeMock).toHaveBeenCalledWith(
+    expect(invokeWithoutSnapshot()).toHaveLength(1);
+    expect(invokeWithoutSnapshot()[0]).toEqual([
       "check_line_connectivity_read_only",
       {
         request: { requestId: currentRequestId(0) },
       },
-    );
+    ]);
     expect(
       screen.getByText("连接正常，不代表模型一定可用"),
     ).toBeInTheDocument();
@@ -174,10 +220,10 @@ describe("diagnostics native-to-renderer outcomes", () => {
   });
 
   it("separates invoke failure from unknown response data and never renders raw errors", async () => {
-    invokeMock.mockRejectedValueOnce(
+    showView();
+    failNextConnectivity(
       new Error("synthetic-private error: invoke bridge failed"),
     );
-    showView();
     fireEvent.click(screen.getByRole("button", { name: "检查两条线路" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       D.readError.invoke.title,
@@ -201,7 +247,7 @@ describe("diagnostics native-to-renderer outcomes", () => {
     showView();
     fireEvent.click(screen.getByRole("button", { name: "检查两条线路" }));
     await screen.findAllByText("基础连接正常");
-    invokeMock.mockRejectedValueOnce(new Error("synthetic-invoke-error"));
+    failNextConnectivity(new Error("synthetic-invoke-error"));
     fireEvent.click(screen.getByRole("button", { name: "重新检查两条线路" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       D.readError.invoke.title,
@@ -256,16 +302,17 @@ describe("diagnostics native-to-renderer outcomes", () => {
     async (outcome) => {
       const older = deferred<unknown>(),
         newer = deferred<unknown>();
+      // 挂载时的快照读取排在前面；只给之后两次线路检查排队 deferred。
+      showView();
       invokeMock
         .mockReturnValueOnce(older.promise)
         .mockReturnValueOnce(newer.promise);
-      showView();
       const action = screen.getByRole("button", { name: "检查两条线路" });
       act(() => {
         action.click();
         action.click();
       });
-      expect(invokeMock).toHaveBeenCalledTimes(2);
+      expect(invokeWithoutSnapshot()).toHaveLength(2);
       await act(async () => {
         newer.resolve({
           ...nativeFixtures.reachable,

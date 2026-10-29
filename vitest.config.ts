@@ -10,6 +10,9 @@ export default defineConfig({
     },
   },
   test: {
+    // Only this checkout's sources are tests; nested reference checkouts must
+    // not share its IPC mocks, storage fixtures or test globals.
+    include: ["{src,connect,download}/**/*.{test,spec}.{ts,tsx}"],
     environment: "jsdom",
     setupFiles: ["./tests/setupGlobals.ts", "./tests/setupTests.ts"],
     globals: true,

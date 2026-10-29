@@ -1,7 +1,7 @@
 use super::{cache, catalog::Source, Result, Worker};
 #[cfg(target_os = "macos")]
 use crate::tool_adapters;
-use crate::{desktop_app_discovery, tool_adapters::common::run_bounded};
+use crate::{desktop_app_discovery, infrastructure::process::run_bounded};
 use std::{
     path::{Path, PathBuf},
     time::Duration,
@@ -18,7 +18,7 @@ pub(super) enum Installed {
 async fn run(
     command: Command,
     reason: &'static str,
-) -> Result<crate::tool_adapters::common::ProcessResult> {
+) -> Result<crate::infrastructure::process::ProcessResult> {
     let output = run_bounded(command, Duration::from_secs(180))
         .await
         .map_err(|_| reason)?;

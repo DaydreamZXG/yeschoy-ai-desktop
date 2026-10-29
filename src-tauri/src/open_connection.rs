@@ -2,9 +2,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    application::activation::session::activation_lock as ACTIVATION_LOCK,
     claude_bridge::ClaudeTransport,
     connection_recovery::{self, Store},
-    tool_activation::ACTIVATION_LOCK,
     tool_adapters::{
         self, claude_code, claude_desktop, codex_desktop, desktop_lifecycle, dsh_web, opencode, pi,
         terminal_launch, workbuddy, AdapterFailure,
@@ -235,7 +235,7 @@ pub async fn open_tool_connection_v1(
         let permit = crate::shutdown_coordinator::global()
             .admit_operation()
             .map_err(|_| st("busy"))?;
-        let _guard = ACTIVATION_LOCK.try_lock().map_err(|_| st("busy"))?;
+        let _guard = ACTIVATION_LOCK().try_lock().map_err(|_| st("busy"))?;
         let _process_guard = connection_recovery::operation_lock().map_err(|_| st("busy"))?;
         let credential = existing_credential(&request.tool_id).map_err(st)?;
         let home = tool_adapters::user_home().ok_or(st("settings_changed"))?;

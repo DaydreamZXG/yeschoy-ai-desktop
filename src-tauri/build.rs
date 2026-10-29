@@ -39,6 +39,9 @@ fn main() {
     println!("cargo:rerun-if-env-changed=YESCHOY_GITHUB_REPO");
     println!("cargo:rerun-if-env-changed=YESCHOY_MODEL_CATALOG_URL");
     println!("cargo:rerun-if-env-changed=YESCHOY_COMMUNITY_UPDATER_PUBKEY");
+    // 野菜提示词注入（预留，默认关闭），见 src/prompt_injection.rs。
+    println!("cargo:rerun-if-env-changed=YESCHOY_PROMPT_INJECTION");
+    println!("cargo:rerun-if-env-changed=YESCHOY_PROMPT_INJECTION_TEXT");
     println!("cargo:rerun-if-changed=update-channels.json");
     println!("cargo:rustc-env=YESCHOY_DISTRIBUTION={distribution}");
     println!("cargo:rustc-env=YESCHOY_GITHUB_REPO={repo}");
