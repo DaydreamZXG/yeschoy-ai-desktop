@@ -25,13 +25,13 @@ Tauri 2 桌面应用 = **一个 React 渲染层**（按功能域分成 9 个页�
 ```text
 ┌──────────────────────────── 渲染层 (src/, React 18 + TS strict) ────────────────────────────┐
 │                                                                                              │
-│  App.tsx  ── AppView 状态机（无路由库：home/account/setup/models/tools/announcements/…）    │
+│  App.tsx  ── AppView 状态机（无路由库：home/account/setup/models/announcements/…）    │
 │    │                                                                                         │
 │    ├─ workbench/       首页、我的应用、账户、模型、公告、Repair、侧边栏                       │
 │    ├─ configuration/   预览 / 接入任务 / 连接管理 / 计费分组 / 模型选择                       │
 │    ├─ features/activation/   ← 从预览页下沉的领域切片（hooks + 纯规则 + 展示件）              │
 │    ├─ account/         登录会话、余额用量投影、站点深链与信任弹窗                             │
-│    ├─ settings/ diagnostics/ installation/ update/ station/ tool-discovery/                   │
+│    ├─ settings/ diagnostics/ installation/ update/ station/                     │
 │    └─ shared/api/      统一严格解码的只读 IPC 出口                                             │
 │                                                                                              │
 │  约束：拿不到文件内容与路径；所有 IPC 响应 invoke<unknown> 后严格解码（多一个字段即判无效）   │
@@ -39,7 +39,7 @@ Tauri 2 桌面应用 = **一个 React 渲染层**（按功能域分成 9 个页�
                                         │  Tauri IPC（命令名 = Rust 函数名，载荷 camelCase）
 ┌───────────────────────────────────────┴────────────────── 原生层 (src-tauri/src/) ───────────┐
 │                                                                                              │
-│  ① 命令门面层（#[tauri::command]，共 48 个注册项）                                            │
+│  ① 命令门面层（#[tauri::command]，共 47 个注册项）                                            │
 │     lib.rs 的 generate_handler! 是唯一注册表；命令分散在 14 个模块 + 门面文件                  │
 │                                                                                              │
 │  ② 用例层（新骨架，已接入）                                                                   │
@@ -120,10 +120,10 @@ Tauri 2 桌面应用 = **一个 React 渲染层**（按功能域分成 9 个页�
 
 ## 4. 渲染层结构
 
-没有路由库，`AppView` 联合类型 + `App.tsx` 的 `useState` 就是全部路由。9 个视图：
+没有路由库，`AppView` 联合类型 + `App.tsx` 的 `useState` 就是全部路由。8 个视图：
 
 ```text
-home · account · setup · models · diagnostics · feedback · tools · announcements · settings
+home · account · setup · models · diagnostics · feedback · announcements · settings
 ```
 
 | 目录 | 近似行数 | 职责 |
@@ -135,7 +135,7 @@ home · account · setup · models · diagnostics · feedback · tools · announ
 | `theme/` | 3.0k | 主题 CSS（`new-api*`、`system`、`motion`） |
 | `settings/` `diagnostics/` `installation/` | 2.5k / 2.6k / 2.2k | 设置、诊断与反馈、安装引导 |
 | `model-profiles/` | 1.1k | 模型能力目录（`catalog.json`，与 Rust 共用） |
-| `components/` `station/` `update/` `tool-discovery/` `distribution/` `candidate/` `shared/` `i18n/` `dev/` | 合计约 3k | 基础组件、站点探测、更新、发现、发行分轨、共享 API、文案、仅开发用的假数据 |
+| `components/` `station/` `update/` `distribution/` `candidate/` `shared/` `i18n/` `dev/` | 合计约 3k | 基础组件、站点探测、更新、发行分轨、共享 API、文案、仅开发用的假数据 |
 
 **当前仍在改进的两点**：
 
@@ -291,8 +291,8 @@ recovery 的生产代码现在只剩对 `tool_adapters` **聚合注册表**的�
 | 检查 | 命令 | 结果 |
 | --- | --- | --- |
 | 前端类型 | `pnpm typecheck` | ✅ 通过 |
-| 前端单测 | `pnpm test:unit` | ✅ **80 文件 / 763 项全通过** |
-| 原生测试 | `python3 scripts/ci/run-rust-tests.py` | ✅ **856 通过，0 失败，3 个已声明真机测试忽略** |
+| 前端单测 | `pnpm test:unit` | ✅ **80 文件 / 735 项全通过** |
+| 原生测试 | `python3 scripts/ci/run-rust-tests.py` | ✅ **846 通过，0 失败，3 个已声明真机测试忽略** |
 | 原生格式 | `cargo fmt --check` | ✅ 通过 |
 | 原生 lint | `cargo clippy --locked --all-targets -- -D warnings` | ✅ 通过（本次梳理后补跑） |
 | vendored 完整性 | `git status src-tauri/src/proxy/` | ✅ 零改动 |
@@ -307,8 +307,7 @@ recovery 的生产代码现在只剩对 `tool_adapters` **聚合注册表**的�
 
 1. **`account_v2.rs` 按用例拆分**（2–3 天）：它是下一个最该上四层骨架的领域。
 2. **删掉 `ConfigurationPreviewView` 的 re-export 兼容块**（半天）：完成预览页的下沉收尾（目前只剩测试还在从预览页导入这些符号）。
-3. **收敛两套发现路径**（1–2 天）：首页 `AppLibraryView` 走 `scan_activation_targets_v1`，设置 / 诊断里的「已安装的工具」仍走 `scan_tools_read_only_v2`；两套契约、两套状态，建议合并成一份只读投影。
-4. **拆 `connection_recovery.rs`**（2–3 天）：日志编解码 / 合并 / 补偿可以各自独立，当前 2.3k 行。
+3. **拆 `connection_recovery.rs`**（2–3 天）：日志编解码 / 合并 / 补偿可以各自独立，当前 2.3k 行。
 
 ---
 
