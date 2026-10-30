@@ -8,11 +8,25 @@
       (function () {
         try {
           var q = new URLSearchParams(location.search);
-          var t = q.get("theme") || localStorage.getItem("yeschoy-appearance") || localStorage.getItem("cc-switch-theme") || "system";
+          var requested = q.get("theme");
+          var valid =
+            requested === "light" ||
+            requested === "dark" ||
+            requested === "system";
+          // The app resolves appearance from localStorage into
+          // `documentElement.dataset.theme`; a `dark` class does nothing here.
+          // Persist the query choice so React reads the same value on mount.
+          if (valid) localStorage.setItem("yeschoy-appearance", requested);
+          var t = valid
+            ? requested
+            : localStorage.getItem("yeschoy-appearance") ||
+              localStorage.getItem("cc-switch-theme") ||
+              "system";
           var d =
             t === "dark" ||
             (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
-          document.documentElement.classList.toggle("dark", d);
+          document.documentElement.dataset.theme = d ? "dark" : "light";
+          document.documentElement.style.colorScheme = d ? "dark" : "light";
         } catch (e) {}
       })();
     </script>
