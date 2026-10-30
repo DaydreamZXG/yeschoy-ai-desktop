@@ -61,7 +61,6 @@ mod tool_adapters;
 mod tool_credentials;
 mod tool_discovery;
 mod tool_discovery_core;
-mod tool_discovery_v2;
 mod tool_model_profile;
 mod tool_selection_core;
 mod ui_language;
@@ -222,7 +221,6 @@ pub fn run() {
             dismiss_desktop_exit_prompt,
             background_desktop_assistant,
             tool_discovery::scan_tools_read_only,
-            tool_discovery_v2::scan_tools_read_only_v2,
             manual_locations::manual_location_pick,
             manual_locations::manual_location_clear,
             model_catalog::refresh_model_catalog_v1,
