@@ -39,7 +39,7 @@ Tauri 2 桌面应用 = **一个 React 渲染层**（按功能域分成 9 个页�
                                         │  Tauri IPC（命令名 = Rust 函数名，载荷 camelCase）
 ┌───────────────────────────────────────┴────────────────── 原生层 (src-tauri/src/) ───────────┐
 │                                                                                              │
-│  ① 命令门面层（#[tauri::command]，共 49 个注册项）                                            │
+│  ① 命令门面层（#[tauri::command]，共 48 个注册项）                                            │
 │     lib.rs 的 generate_handler! 是唯一注册表；命令分散在 14 个模块 + 门面文件                  │
 │                                                                                              │
 │  ② 用例层（新骨架，已接入）                                                                   │
@@ -275,7 +275,7 @@ recovery 的生产代码现在只剩对 `tool_adapters` **聚合注册表**的�
 | --- | --- | --- |
 | `account_v2.rs` | 3373 | 账户会话 / 授权 / 公告 / 钱包全在一个文件 |
 | `tool_adapters/dsh_web.rs` | 2661 | DSH 格式 + profile 锁 + 工作台启动 |
-| `connection_recovery.rs` | 2361 | 见 P1 |
+| `connection_recovery.rs` | 2361 | 见 P3 的拆分方向 |
 | `desktop_app_discovery.rs` | 1817 | 平台扫描 |
 | `workbench/workbench-v2.css` | 7600 | 样式集散地 |
 | `configuration/DailyUse.test.tsx` | 2290 | 测试文件本身过大 |
@@ -291,26 +291,24 @@ recovery 的生产代码现在只剩对 `tool_adapters` **聚合注册表**的�
 | 检查 | 命令 | 结果 |
 | --- | --- | --- |
 | 前端类型 | `pnpm typecheck` | ✅ 通过 |
-| 前端单测 | `pnpm test:unit` | ✅ **79 文件 / 760 项全通过** |
-| 原生测试 | `python3 scripts/ci/run-rust-tests.py` | ✅ **854 通过，0 失败，3 个已声明真机测试忽略** |
+| 前端单测 | `pnpm test:unit` | ✅ **80 文件 / 763 项全通过** |
+| 原生测试 | `python3 scripts/ci/run-rust-tests.py` | ✅ **856 通过，0 失败，3 个已声明真机测试忽略** |
 | 原生格式 | `cargo fmt --check` | ✅ 通过 |
-| 原生 lint | `cargo clippy --locked --all-targets -- -D warnings` | ✅ 通过（在 P0 修复之后补跑） |
+| 原生 lint | `cargo clippy --locked --all-targets -- -D warnings` | ✅ 通过（本次梳理后补跑） |
 | vendored 完整性 | `git status src-tauri/src/proxy/` | ✅ 零改动 |
 | tool id 一致性 | 人工比对 `TARGETS` × `ACTIVATION_TOOL_IDS` | ✅ 8 × 8 一致 |
 
-> 第 6 节的 P0 已在本次梳理后完成修复，上表的 fmt / clippy 反映的是修复后的状态。
+> 第 6 节标记 ✅ 的项已在本次梳理后完成修复；上表的 fmt / clippy 反映修复后的状态。
 > 未对任何真实工具配置、钥匙串或付费接口做过写操作——符合产品不变量。
 
 ---
 
 ## 8. 建议的下一步（按收益排序）
 
-1. **清僵尸注释**（30 分钟，零风险）：修掉 6 处与代码不符的 `#[allow(dead_code)]` 注释和「will be wired next」的说法。收益：让文档可信。
-2. **给 Cursor 定性**（半天）：并入 `TARGETS` 走主干，或在 `docs/adding-a-tool.md` 里补一节「独立接入方式」把契约写死。
-3. **把 `tool_adapters/common.rs` 里剩下的通用工具（CLI 路径、临时目录）搬到 `infrastructure/process/`**（半天）：`tool_adapters` 就真的只剩适配器了。
-4. **拆 `connection_recovery` 对 `tool_credentials` 的依赖**（1–2 天）：把 `ToolCredential` 下沉成 `domain/credential.rs`，三角就变成单向。
-5. **`account_v2.rs` 按用例拆分**（2–3 天）：它是下一个最该上四层骨架的领域。
-6. **删掉 `ConfigurationPreviewView` 的 re-export 兼容块**（半天）：完成预览页的下沉收尾。
+1. **`account_v2.rs` 按用例拆分**（2–3 天）：它是下一个最该上四层骨架的领域。
+2. **删掉 `ConfigurationPreviewView` 的 re-export 兼容块**（半天）：完成预览页的下沉收尾（目前只剩测试还在从预览页导入这些符号）。
+3. **收敛两套发现路径**（1–2 天）：首页 `AppLibraryView` 走 `scan_activation_targets_v1`，设置 / 诊断里的「已安装的工具」仍走 `scan_tools_read_only_v2`；两套契约、两套状态，建议合并成一份只读投影。
+4. **拆 `connection_recovery.rs`**（2–3 天）：日志编解码 / 合并 / 补偿可以各自独立，当前 2.3k 行。
 
 ---
 

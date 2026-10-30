@@ -43,11 +43,11 @@
 ```bash
 pnpm install
 pnpm dev             # 启动开发版
-pnpm build           # 打包
+pnpm build           # 构建可执行文件（bundle.active=false，不产安装包）
 
 pnpm typecheck
 pnpm test:unit       # 前端测试（vitest）
-cd src-tauri && cargo test --lib   # Rust 测试
+python3 scripts/ci/run-rust-tests.py   # 全量 Rust 测试（CI 同款）
 ```
 
 目录大致如下：
@@ -93,7 +93,7 @@ See [`docs/download-page.md`](docs/download-page.md) for hosting notes. In-app a
 
 ### Build
 
-`pnpm install && pnpm dev`. Tests: `pnpm test:unit` and `cargo test --lib` in `src-tauri`.
+`pnpm install && pnpm dev`. Tests: `pnpm test:unit` and `python3 scripts/ci/run-rust-tests.py`.
 
 Community docs: [SUPPORT.md](./SUPPORT.md), [PRIVACY.md](./PRIVACY.md), [SECURITY.md](./SECURITY.md), [`docs/OPEN_SOURCE.md`](docs/OPEN_SOURCE.md).
 
