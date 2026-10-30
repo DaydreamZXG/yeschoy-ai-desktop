@@ -77,7 +77,7 @@ export function DiagnosticsView({
   onOpenTools,
   onReportBug,
 }: DiagnosticsViewProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [phase, setPhase] = useState<DiagnosticsPhase>("idle");
   const [response, setResponse] = useState<ConnectivityResponse | null>(null);
   const [issue, setIssue] = useState<"invoke" | "invalid" | "partial" | null>(
@@ -134,7 +134,7 @@ export function DiagnosticsView({
   }, []);
 
   const completedAt = response
-    ? new Intl.DateTimeFormat("zh-CN", {
+    ? new Intl.DateTimeFormat(i18n.language, {
         hour: "2-digit",
         minute: "2-digit",
         second: "2-digit",
