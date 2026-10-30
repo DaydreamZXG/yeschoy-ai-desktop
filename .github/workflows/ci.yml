@@ -50,6 +50,9 @@ jobs:
       - name: TypeScript type check
         run: pnpm typecheck
 
+      - name: Check renderer formatting
+        run: pnpm format:check
+
       - name: Check workflow formatting
         run: pnpm exec prettier --check .github/workflows/ci.yml .github/workflows/wsl2-nightly.yml
 
