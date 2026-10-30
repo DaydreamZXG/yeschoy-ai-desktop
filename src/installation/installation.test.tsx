@@ -274,7 +274,7 @@ function setup(
             onLineChange={noop}
             session={account}
             onOpenAccount={noop}
-            onOpenTools={noop}
+            onOpenHome={noop}
           />
         </InstallationContext.Provider>
       </ConnectionProvider>
@@ -312,7 +312,7 @@ function liveSetup(tool: ActivationToolId, session = account) {
           onLineChange={noop}
           session={session}
           onOpenAccount={noop}
-          onOpenTools={noop}
+          onOpenHome={noop}
         />
       </InstallationProvider>
     </ConnectionProvider>

@@ -38,7 +38,7 @@ function openWorkbenchPage(name: string) {
     );
     return;
   }
-  if (name === "模型与价格" || name === "连接诊断" || name === "已安装的工具") {
+  if (name === "模型与价格" || name === "连接诊断") {
     fireEvent.click(screen.getByRole("button", { name: "设置" }));
     fireEvent.click(screen.getByRole("button", { name }));
     return;
@@ -686,7 +686,6 @@ describe("official workbench", () => {
       if (label === c.settings) {
         expect(screen.getByRole("button", { name: c.models })).toBeEnabled();
         expect(screen.getByRole("button", { name: c.help })).toBeEnabled();
-        expect(screen.getByRole("button", { name: c.advanced })).toBeEnabled();
       }
       if (label === c.usage) {
         expect(

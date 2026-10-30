@@ -512,13 +512,6 @@ const handlers: Record<string, (a: Args) => unknown> = {
     totalBytes: 0,
     reasonCode: "idle",
   }),
-  scan_tools_read_only_v2: (a) => ({
-    requestId: rid(a),
-    schemaVersion: 2,
-    platform: "macos",
-    phase: "ready",
-    tools: [],
-  }),
 };
 
 const internals = {

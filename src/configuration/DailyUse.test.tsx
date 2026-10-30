@@ -191,7 +191,7 @@ function setupView(
           onLineChange={callback}
           session={account}
           onOpenAccount={callback}
-          onOpenTools={callback}
+          onOpenHome={callback}
         />
       </ConnectionProvider>
     </StrictMode>

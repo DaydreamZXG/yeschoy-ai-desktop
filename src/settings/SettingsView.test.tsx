@@ -35,7 +35,6 @@ describe("SettingsView", () => {
       <SettingsView
         onOpenAccount={vi.fn()}
         onOpenDiagnostics={vi.fn()}
-        onOpenTools={vi.fn()}
         onOpenModels={vi.fn()}
       />,
     );
@@ -80,7 +79,6 @@ describe("SettingsView", () => {
         <SettingsView
           onOpenAccount={vi.fn()}
           onOpenDiagnostics={vi.fn()}
-          onOpenTools={vi.fn()}
           onOpenModels={vi.fn()}
         />
       </ConnectionProvider>,
@@ -141,7 +139,6 @@ describe("SettingsView", () => {
         <SettingsView
           onOpenAccount={vi.fn()}
           onOpenDiagnostics={vi.fn()}
-          onOpenTools={vi.fn()}
           onOpenModels={vi.fn()}
         />
       </ConnectionProvider>,
@@ -158,7 +155,6 @@ describe("SettingsView", () => {
       <SettingsView
         onOpenAccount={vi.fn()}
         onOpenDiagnostics={vi.fn()}
-        onOpenTools={vi.fn()}
         onOpenModels={vi.fn()}
       />,
     );
@@ -176,7 +172,6 @@ describe("SettingsView", () => {
       <SettingsView
         onOpenAccount={vi.fn()}
         onOpenDiagnostics={vi.fn()}
-        onOpenTools={vi.fn()}
         onOpenModels={vi.fn()}
       />,
     );
@@ -189,7 +184,6 @@ describe("SettingsView", () => {
       <SettingsView
         onOpenAccount={vi.fn()}
         onOpenDiagnostics={vi.fn()}
-        onOpenTools={vi.fn()}
         onOpenModels={vi.fn()}
       />,
     );

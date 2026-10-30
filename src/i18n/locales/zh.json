@@ -69,66 +69,6 @@
     "cancel": "取消",
     "confirm": "确定"
   },
-  "yeschoyDiscovery": {
-    "codexCli": "Codex（命令行）",
-    "comingSoon": "即将支持",
-    "bundledStatus": "桌面应用组件",
-    "componentDetails": "为什么不算多处安装？",
-    "componentsIgnored": "另找到 {{count}} 个桌面应用自带的组件，它们不属于独立安装，无需选择或删除。",
-    "desktopAction": "查看桌面应用",
-    "selection": {
-      "single_installation": "已自动识别独立安装",
-      "path_precedence": "已识别当前默认版本，无需选择",
-      "bundled_only": "仅找到桌面应用自带的组件，未找到独立命令行版本。使用桌面应用无需处理这里。"
-    },
-    "eyebrow": "其他 AI 工具",
-    "title": "查看已安装的工具",
-    "description": "查找这台电脑上的命令行工具并显示版本，不会修改设置。",
-    "trustTitle": "检查说明",
-    "localOnly": "只在本机检查",
-    "noChanges": "不会修改配置",
-    "noApiKnowledge": "无需填写连接信息",
-    "scanButton": "检查我安装了哪些工具",
-    "rescanButton": "重新检查",
-    "scanning": "正在本机检查…",
-    "privacyNote": "只检查名称和版本，不联网，不更改设置。",
-    "scopeLabel": "使用提示",
-    "scopeText": "这里只检查已安装的工具，暂时不能自动配置。",
-    "railLabel": "这台电脑",
-    "toolsTitle": "工具列表",
-    "processingLocal": "正在逐项确认…",
-    "checkedAt": "检查完成 {{time}}",
-    "scanErrorTitle": "这次检查没有完成",
-    "scanErrorBody": "请重新检查。如果仍然失败，请重启应用后再试。",
-    "exactVersion": "版本",
-    "candidateCount": "发现 {{count}} 处安装",
-    "advancedDetails": "查看本次检查详情",
-    "platform": "系统",
-    "requestId": "检查编号",
-    "status": {
-      "waiting": "等待检查",
-      "checking": "正在检查",
-      "not_found": "暂未找到",
-      "detected_unverified": "已找到",
-      "probe_failed": "已找到 · 无法运行",
-      "probe_timed_out": "已找到 · 检查超时",
-      "multiple_installations": "发现多处安装"
-    },
-    "reason": {
-      "tool_not_found": "这不是错误，安装后可重新检查",
-      "exact_version_not_allowlisted": "版本已显示，尚未开放自动配置",
-      "version_command_failed": "无法获取版本，请检查工具能否正常运行。",
-      "version_command_timed_out": "获取版本超时，可以稍后重试。",
-      "multiple_executables_found": "有多个独立版本，无法确定默认版本。无需删除；可先查看桌面应用，或调整安装后重新检查。"
-    },
-    "toolDescriptions": {
-      "claude": "Anthropic 的命令行编程助手",
-      "codex": "OpenAI 的本地编程代理",
-      "opencode": "开源的终端 AI 编程工具",
-      "pi": "轻量、可扩展的编程代理",
-      "dsh": "DeepSeek Harness"
-    }
-  },
   "yeschoyConfiguration": {
     "lines": {
       "mainland_optimized": {
@@ -179,7 +119,6 @@
     "retry": "重新检查两条线路",
     "start": "检查两条线路",
     "consent": "点击后开始联网检查；如已登录，会使用本机会话验证密钥有效性，不会产生模型费用。",
-    "openTools": "查看其他工具",
     "openSetup": "选择应用",
     "resultsEyebrow": "这台电脑",
     "resultsTitle": "检查结果",
@@ -411,7 +350,6 @@
     "usage": "用量账单",
     "help": "连接诊断",
     "settings": "设置",
-    "advanced": "已安装的工具",
     "subtitle": "桌面助手",
     "guest": "账户中心",
     "accountNote": "查看登录与余额",

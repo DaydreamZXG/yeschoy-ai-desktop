@@ -21,7 +21,6 @@ interface SettingsViewProps {
   onOpenDiagnostics: () => void;
   /** "反馈 Bug"; optional so tests that predate it keep rendering. */
   onOpenFeedback?: () => void;
-  onOpenTools: () => void;
   onOpenModels: () => void;
   appearance?: Appearance;
   onAppearanceChange?: (appearance: Appearance) => void;
@@ -34,7 +33,6 @@ export function SettingsView({
   onAppearanceChange,
   onOpenDiagnostics,
   onOpenFeedback,
-  onOpenTools,
   onOpenModels,
 }: SettingsViewProps) {
   const { t } = useTranslation();
@@ -164,9 +162,6 @@ export function SettingsView({
                   {c.feedback}
                 </button>
               )}
-              <button type="button" onClick={onOpenTools}>
-                {c.advanced}
-              </button>
             </div>
           </div>
           <div className="setting-row setting-row-block advanced-connection-wrap">

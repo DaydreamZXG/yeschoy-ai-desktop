@@ -24,7 +24,6 @@ interface DiagnosticsViewProps {
   onOpenSetup: () => void;
   onOpenAccount: () => void;
   onOpenHome: () => void;
-  onOpenTools: () => void;
   /** Bug feedback lives beside diagnostics so both share one report. */
   onReportBug?: () => void;
 }
@@ -74,7 +73,6 @@ export function DiagnosticsView({
   onOpenSetup,
   onOpenAccount,
   onOpenHome,
-  onOpenTools,
   onReportBug,
 }: DiagnosticsViewProps) {
   const { t, i18n } = useTranslation();
@@ -280,9 +278,6 @@ export function DiagnosticsView({
           {/* 这个页面此前只能横向走到别的子页面，回不了首页。 */}
           <button type="button" onClick={onOpenHome}>
             {t("yeschoyDiagnostics.openHome")}
-          </button>
-          <button type="button" onClick={onOpenTools}>
-            {t("yeschoyDiagnostics.openTools")}
           </button>
           <button type="button" onClick={onOpenSetup}>
             {t("yeschoyDiagnostics.openSetup")}

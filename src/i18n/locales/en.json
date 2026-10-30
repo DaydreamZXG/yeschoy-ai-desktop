@@ -69,66 +69,6 @@
     "cancel": "Cancel",
     "confirm": "Confirm"
   },
-  "yeschoyDiscovery": {
-    "codexCli": "Codex CLI",
-    "comingSoon": "Coming soon",
-    "bundledStatus": "Desktop app component",
-    "componentDetails": "Why isn't this a duplicate?",
-    "componentsIgnored": "Also found {{count}} bundled desktop app components. They are not standalone installations and do not need to be selected or removed.",
-    "desktopAction": "View desktop apps",
-    "selection": {
-      "single_installation": "Standalone installation identified automatically",
-      "path_precedence": "Current default version identified — no selection needed",
-      "bundled_only": "Only a bundled desktop app component was found, not a standalone CLI. You can continue with the desktop app."
-    },
-    "eyebrow": "Other AI tools",
-    "title": "Find installed tools",
-    "description": "Find command-line tools on this computer and see their versions without changing settings.",
-    "trustTitle": "About this check",
-    "localOnly": "Checks this computer only",
-    "noChanges": "Does not change settings",
-    "noApiKnowledge": "No connection details needed",
-    "scanButton": "Check which tools I installed",
-    "rescanButton": "Check again",
-    "scanning": "Checking this computer…",
-    "privacyNote": "Checks names and versions only. No network access or settings changes.",
-    "scopeLabel": "Please note",
-    "scopeText": "This checks installed tools. Automatic setup is not available yet.",
-    "railLabel": "This computer",
-    "toolsTitle": "Tools",
-    "processingLocal": "Checking each tool…",
-    "checkedAt": "Checked at {{time}}",
-    "scanErrorTitle": "This check did not finish",
-    "scanErrorBody": "Try again. If the check still fails, restart the app.",
-    "exactVersion": "Version",
-    "candidateCount": "Found {{count}} installations",
-    "advancedDetails": "View check details",
-    "platform": "Platform",
-    "requestId": "Check ID",
-    "status": {
-      "waiting": "Waiting to check",
-      "checking": "Checking",
-      "not_found": "Not found yet",
-      "detected_unverified": "Found",
-      "probe_failed": "Found · Cannot run",
-      "probe_timed_out": "Found · Check timed out",
-      "multiple_installations": "Multiple installs found"
-    },
-    "reason": {
-      "tool_not_found": "This is not an error; install it separately and check again",
-      "exact_version_not_allowlisted": "Version shown; automatic setup is not enabled",
-      "version_command_failed": "Could not read the version. Check whether the tool runs normally.",
-      "version_command_timed_out": "Reading the version timed out. Try again later.",
-      "multiple_executables_found": "Multiple standalone versions have no clear default. No removal is needed; view desktop apps, or check again after adjusting your installation."
-    },
-    "toolDescriptions": {
-      "claude": "Anthropic's command-line coding assistant",
-      "codex": "OpenAI's local coding agent",
-      "opencode": "An open-source terminal coding assistant",
-      "pi": "A lightweight, extensible coding agent",
-      "dsh": "DeepSeek Harness"
-    }
-  },
   "yeschoyConfiguration": {
     "lines": {
       "mainland_optimized": {
@@ -179,7 +119,6 @@
     "retry": "Check both lines again",
     "start": "Check both lines",
     "consent": "The check connects only when you start it. If you are signed in, it verifies the key with the local session without incurring model charges.",
-    "openTools": "View other tools",
     "openSetup": "Choose an app",
     "resultsEyebrow": "This computer",
     "resultsTitle": "Results",
@@ -411,7 +350,6 @@
     "usage": "Usage and billing",
     "help": "Connection check",
     "settings": "Settings",
-    "advanced": "Installed tools",
     "subtitle": "Desktop assistant",
     "guest": "Account",
     "accountNote": "Sign-in and balance",

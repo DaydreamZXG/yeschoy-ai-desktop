@@ -96,7 +96,7 @@ interface ConfigurationPreviewViewProps {
   onLineChange: (lineId: ConfigurationLineId) => void;
   session: AccountSessionController;
   onOpenAccount: () => void;
-  onOpenTools: () => void;
+  onOpenHome: () => void;
 }
 
 export function ConfigurationPreviewView({
@@ -108,7 +108,7 @@ export function ConfigurationPreviewView({
   onLineChange,
   session,
   onOpenAccount,
-  onOpenTools,
+  onOpenHome,
 }: ConfigurationPreviewViewProps) {
   const installer = useInstallation();
   const installerRun = installer?.run;
@@ -1806,7 +1806,7 @@ export function ConfigurationPreviewView({
             disabled={applyPhase === "applying"}
           />
           <div>
-            <button type="button" onClick={onOpenTools}>
+            <button type="button" onClick={onOpenHome}>
               {c.viewOtherTools}
             </button>
             <button type="button" onClick={onOpenAccount}>

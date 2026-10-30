@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { COMING_SOON_APPS, WORKBENCH_APPS } from "./appCatalog";
 import { ACTIVATION_TOOL_IDS } from "../configuration/activation";
-import { TOOL_CATALOG } from "../tool-discovery/contract";
 import en from "../i18n/locales/en.json";
 import zh from "../i18n/locales/zh.json";
 
@@ -10,11 +9,10 @@ import zh from "../i18n/locales/zh.json";
  *
  * 事实源分工：
  * - `appCatalog.ts` 是 UI 展示清单的唯一事实源（V1 可接入 + 即将支持）；
- * - `activation.ts ACTIVATION_TOOL_IDS` 是 Rust 扫描协议契约（含遗留工具）；
- * - `tool-discovery/contract.ts TOOL_CATALOG` 是只读发现协议契约。
+ * - `activation.ts ACTIVATION_TOOL_IDS` 是归约后的接入 / 发现协议契约。
  *
- * 任何一处增删工具都会被这里的断言拦下，防止三处清单再次漂移
- * （批次 0 复盘：Hermes/OpenClaw 超 PRD 适配器混入三处清单）。
+ * 任何一处增删工具都会被这里的断言拦下，防止两处清单再次漂移
+ * （批次 0 复盘：Hermes/OpenClaw 超 PRD 适配器混入清单）。
  */
 describe("tool catalog single source of truth (#9)", () => {
   const LEGACY_TOOL_IDS = ["hermes", "openclaw"] as const;
@@ -54,15 +52,5 @@ describe("tool catalog single source of truth (#9)", () => {
       expect(zh.yeschoyCatalog.appDescription).toHaveProperty(app.id);
       expect(en.yeschoyCatalog.appDescription).toHaveProperty(app.id);
     }
-  });
-
-  it("keeps read-only discovery able to see coming-soon apps", () => {
-    const discoveryIds: string[] = TOOL_CATALOG.map((tool) => tool.id);
-    for (const app of COMING_SOON_APPS) expect(discoveryIds).toContain(app.id);
-    // 2026-09-14：Rust 侧只读发现已清理遗留工具，协议层不再含它们。
-    const legacyInDiscovery = LEGACY_TOOL_IDS.filter((id) =>
-      discoveryIds.includes(id),
-    );
-    expect(legacyInDiscovery).toEqual([]);
   });
 });

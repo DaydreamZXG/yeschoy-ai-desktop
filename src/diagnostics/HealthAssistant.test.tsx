@@ -54,7 +54,6 @@ function showView(onReportBug = vi.fn()) {
       onOpenSetup={vi.fn()}
       onOpenAccount={vi.fn()}
       onOpenHome={vi.fn()}
-      onOpenTools={vi.fn()}
       onReportBug={onReportBug}
     />,
   );
@@ -165,7 +164,6 @@ describe("health assistant", () => {
         onOpenSetup={vi.fn()}
         onOpenAccount={vi.fn()}
         onOpenHome={vi.fn()}
-        onOpenTools={vi.fn()}
       />,
     );
     await screen.findByTestId("health-environment");

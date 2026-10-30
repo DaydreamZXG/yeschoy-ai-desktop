@@ -34,7 +34,6 @@ export type AppView =
   | "models"
   | "diagnostics"
   | "feedback"
-  | "tools"
   | "announcements"
   | "settings";
 export function AppearancePicker({
@@ -114,12 +113,10 @@ export function WorkbenchSidebar({
     { id: "feedback", label: c.feedback, icon: Bug },
     { id: "settings", label: c.settings, icon: Settings2 },
   ] as const;
-  // 连接诊断和已安装的工具是设置页的子页面，不是顶级目的地：一个是出问题时
-  // 客服让你点的检查，一个跟「我的应用」显示的内容基本重复。它们高亮到设置上。
+  // 连接诊断和模型价格都是设置页的子页面，不是顶级目的地：一个是出问题时
+  // 客服让你点的检查，一个是选择模型时的参考。它们高亮到设置上。
   const current =
-    view === "models" || view === "diagnostics" || view === "tools"
-      ? "settings"
-      : view;
+    view === "models" || view === "diagnostics" ? "settings" : view;
   // 当前项的青柠胶囊是一个独立元素，在导航项之间滑动（只动 transform）。
   const navRef = useRef<HTMLElement>(null);
   const indicatorRef = useRef<HTMLSpanElement>(null);

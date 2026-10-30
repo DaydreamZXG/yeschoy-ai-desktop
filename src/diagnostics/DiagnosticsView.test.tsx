@@ -51,7 +51,6 @@ const routes = {
   setup: vi.fn(),
   account: vi.fn(),
   home: vi.fn(),
-  tools: vi.fn(),
 };
 
 // 一次性失败：只让线路检查失败，挂载时的健康快照读取仍正常（它是同一条
@@ -76,7 +75,6 @@ function showView() {
       onOpenSetup={routes.setup}
       onOpenAccount={routes.account}
       onOpenHome={routes.home}
-      onOpenTools={routes.tools}
     />,
   );
 }
