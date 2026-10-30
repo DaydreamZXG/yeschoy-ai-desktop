@@ -1621,5 +1621,12 @@
         "body": "~/.cursor could not be located. Check the system environment and retry."
       }
     }
+  },
+  "appError": {
+    "eyebrow": "Something broke in the UI",
+    "title": "This screen could not finish loading",
+    "body": "This is a temporary interface error. Your settings, balance and connected apps are unaffected.",
+    "hint": "Reloading returns to your last saved state. If this keeps happening, add diagnostics to a report from Settings → Feedback.",
+    "reload": "Reload"
   }
 }

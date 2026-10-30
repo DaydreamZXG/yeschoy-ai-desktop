@@ -5,6 +5,7 @@ import ReactDOM from "react-dom/client";
 // 排在后面就会在 init 之前跑，拿到的是键名而不是文案。
 import i18n from "./i18n";
 import App from "./App";
+import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import "./index.css";
 import "./tokens.css";
 import "./workbench/workbench-v2.css";
@@ -21,6 +22,8 @@ i18n.on("languageChanged", applyTitle);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <AppErrorBoundary>
+      <App />
+    </AppErrorBoundary>
   </React.StrictMode>,
 );

@@ -11,6 +11,7 @@ const SHEETS = [
   "src/workbench/workbench-v2.css",
   "src/components/ui/ui-primitives.css",
   "src/components/ui/dialog.css",
+  "src/components/error-boundary.css",
   "src/installation/installation.css",
   "src/theme/new-api.css",
   "src/theme/new-api-layout.css",
