@@ -415,6 +415,13 @@ const handlers: Record<string, (a: Args) => unknown> = {
   }),
   read_desktop_exit_state: () => ({ closeRequested: false, shutdown: null }),
   set_window_appearance: () => null,
+  set_ui_language_v1: () => null,
+  // 假数据页不联网：明确回「保持内置目录」，而不是让调用点落进 catch。
+  refresh_model_catalog_v1: () => ({
+    schemaVersion: 1,
+    status: "bundled",
+    reasonCode: "fetch_failed",
+  }),
   open_config_folder: () => null,
   // 健康检查助手 / 反馈页挂载时读取的本机快照（只读，不联网）。
   // Cursor：假装命令行版已装、未接入；桌面版已装。
