@@ -6,7 +6,9 @@ import zh from "../i18n/locales/zh.json";
 import { StationConnectOriginForm } from "./StationConnectOriginForm";
 
 const invoke = vi.fn();
-vi.mock("@tauri-apps/api/core", () => ({ invoke: (...a: unknown[]) => invoke(...a) }));
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: (...a: unknown[]) => invoke(...a),
+}));
 
 beforeAll(async () => {
   await i18n.init({
@@ -126,7 +128,9 @@ describe("StationConnectOriginForm", () => {
     });
     await waitFor(() => {
       expect(screen.queryByText(/晚到的结果/)).not.toBeInTheDocument();
-      expect(screen.queryByTestId("station-probe-failed")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("station-probe-failed"),
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -160,7 +164,10 @@ describe("StationConnectOriginForm", () => {
       version: "v1",
       desktopConnect: false,
       tokenStatus: "valid",
-      models: ["claude-sonnet-4-5-20250929", "gpt-6.1-sol-2026-10-preview-long-model-identifier"],
+      models: [
+        "claude-sonnet-4-5-20250929",
+        "gpt-6.1-sol-2026-10-preview-long-model-identifier",
+      ],
     });
     await user.type(screen.getByPlaceholderText("sk-..."), "sk-test-token");
     await user.click(

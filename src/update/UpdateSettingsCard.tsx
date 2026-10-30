@@ -117,11 +117,7 @@ export function UpdateSettingsCard() {
         <p>{t("yeschoyUpdate.safety")}</p>
         <p className="desktop-update-manual">
           {t("yeschoyUpdate.manualDownload")}{" "}
-          <a
-            href={DESKTOP_DOWNLOAD_PAGE_URL}
-            target="_blank"
-            rel="noreferrer"
-          >
+          <a href={DESKTOP_DOWNLOAD_PAGE_URL} target="_blank" rel="noreferrer">
             {t("yeschoyUpdate.manualDownloadLink")}
           </a>
         </p>

@@ -80,8 +80,10 @@
   --shadow-dialog: 0 16px 48px rgb(0 0 0 / 24%);
   --shadow-deep: 0 24px 100px #0004;
   --shadow-glow-sm: 0 2px 4px color-mix(in srgb, var(--accent) 12%, transparent);
-  --shadow-glow-md: 0 6px 14px color-mix(in srgb, var(--accent) 22%, transparent);
-  --shadow-glow-lg: 0 14px 34px color-mix(in srgb, var(--accent) 17%, transparent);
+  --shadow-glow-md: 0 6px 14px
+    color-mix(in srgb, var(--accent) 22%, transparent);
+  --shadow-glow-lg: 0 14px 34px
+    color-mix(in srgb, var(--accent) 17%, transparent);
 
   /* Stacking ladder — popover intentionally sits under dialog surfaces. */
   --z-base: 1;

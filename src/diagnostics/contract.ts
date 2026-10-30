@@ -72,7 +72,10 @@ export const CONNECTIVITY_LAYER_IDS = [
   "api_key",
 ] as const satisfies readonly ConnectivityLayerId[];
 
-type ReasonConstraint = { status: LayerStatus; layer: ConnectivityLayerId | "any_non_dns" };
+type ReasonConstraint = {
+  status: LayerStatus;
+  layer: ConnectivityLayerId | "any_non_dns";
+};
 
 const REASON_CONSTRAINTS: Record<LayerReasonCode, ReasonConstraint> = {
   dns_resolved: { status: "passed", layer: "dns" },
@@ -117,18 +120,26 @@ function layerMatches(value: Record<string, unknown>): boolean {
     keys.includes("layer") &&
     keys.includes("status") &&
     keys.includes("reasonCode");
-  if (!hasRequired || keys.some((key) => !["layer", "status", "latencyMs", "reasonCode"].includes(key)))
+  if (
+    !hasRequired ||
+    keys.some(
+      (key) => !["layer", "status", "latencyMs", "reasonCode"].includes(key),
+    )
+  )
     return false;
-  if (typeof value.layer !== "string" || !(CONNECTIVITY_LAYER_IDS as readonly string[]).includes(value.layer))
+  if (
+    typeof value.layer !== "string" ||
+    !(CONNECTIVITY_LAYER_IDS as readonly string[]).includes(value.layer)
+  )
     return false;
-  if (typeof value.reasonCode !== "string" || !(value.reasonCode in REASON_CONSTRAINTS))
+  if (
+    typeof value.reasonCode !== "string" ||
+    !(value.reasonCode in REASON_CONSTRAINTS)
+  )
     return false;
   const constraint = REASON_CONSTRAINTS[value.reasonCode as LayerReasonCode];
   if (value.status !== constraint.status) return false;
-  if (
-    constraint.layer !== "any_non_dns" &&
-    value.layer !== constraint.layer
-  )
+  if (constraint.layer !== "any_non_dns" && value.layer !== constraint.layer)
     return false;
   if (constraint.layer === "any_non_dns" && value.layer === "dns") return false;
   return (

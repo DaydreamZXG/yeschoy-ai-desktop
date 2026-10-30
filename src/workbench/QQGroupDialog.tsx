@@ -65,12 +65,7 @@ export function QQGroupDialog({
           {copy.body}
         </DialogDescription>
         <div className="qq-group-qr">
-          <img
-            src={qqGroupCard}
-            alt={copy.scanHint}
-            width={224}
-            height={280}
-          />
+          <img src={qqGroupCard} alt={copy.scanHint} width={224} height={280} />
           <p className="qq-group-scan-hint">{copy.scanHint}</p>
         </div>
         <span className="qq-group-id-row">

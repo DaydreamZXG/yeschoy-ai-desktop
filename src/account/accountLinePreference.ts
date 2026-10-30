@@ -1,4 +1,7 @@
-import type { AccountLineId, ConfigurationLineId } from "../configuration/preview";
+import type {
+  AccountLineId,
+  ConfigurationLineId,
+} from "../configuration/preview";
 import { isAccountLineId } from "../configuration/preview";
 
 const STORAGE_KEY = "yeschoy.accountLinePreference";
@@ -29,7 +32,10 @@ export function initialAccountLineId(): AccountLineId {
 export function catalogLineFromSnapshot(
   storedLineId: string | null | undefined,
 ): ConfigurationLineId | null {
-  if (storedLineId === "mainland_optimized" || storedLineId === "global_accelerated") {
+  if (
+    storedLineId === "mainland_optimized" ||
+    storedLineId === "global_accelerated"
+  ) {
     return storedLineId;
   }
   if (storedLineId === "station_connect:https://yeschoy.com") {

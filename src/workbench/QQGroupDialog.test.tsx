@@ -3,7 +3,11 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import i18n from "i18next";
 import zh from "../i18n/locales/zh.json";
 import type { AccountProjection } from "../account/session";
-import { QQGroupDialog, QQ_GROUP_ID, CommunityGroupDialog } from "./QQGroupDialog";
+import {
+  QQGroupDialog,
+  QQ_GROUP_ID,
+  CommunityGroupDialog,
+} from "./QQGroupDialog";
 
 function signedInProjection(): AccountProjection {
   return {
@@ -105,7 +109,9 @@ describe("QQGroupDialog", () => {
     // 群号出现在显眼位置（群名由官方卡片图自带，不再重复渲染）
     expect(screen.getByText(QQ_GROUP_ID)).toBeTruthy();
     expect(screen.getByRole("button", { name: copy.copyGroupId })).toBeTruthy();
-    expect(screen.getAllByRole("button", { name: copy.close }).length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByRole("button", { name: copy.close }).length,
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it("群号固定为 1065665694（不允许随意改动）", () => {

@@ -2,7 +2,11 @@ import { ArrowUpRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { REFERENCE_STATION_ORIGIN } from "../distribution/softTraffic";
 
-export function OssSoftTrafficCta({ onTryReference }: { onTryReference: () => void }) {
+export function OssSoftTrafficCta({
+  onTryReference,
+}: {
+  onTryReference: () => void;
+}) {
   const { t } = useTranslation();
   return (
     <p className="oss-soft-traffic" data-testid="oss-soft-traffic-cta">

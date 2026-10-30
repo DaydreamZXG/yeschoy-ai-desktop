@@ -171,10 +171,7 @@ describe("layered connectivity projection from native serialization", () => {
     ]) {
       const payload = {
         ...fixture,
-        lines: [
-          { ...line, layers: mutate(line.layers) },
-          fixture.lines[1],
-        ],
+        lines: [{ ...line, layers: mutate(line.layers) }, fixture.lines[1]],
       };
       const decoded = decodeConnectivityProjection(payload, fixture.requestId);
       expect(decoded?.complete).toBe(false);

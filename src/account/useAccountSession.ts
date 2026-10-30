@@ -5,10 +5,7 @@ import {
   readCachedSignedInProjection,
   writeCachedSignedInProjection,
 } from "./accountProjectionCache";
-import {
-  clearSessionAgeRecord,
-  noteSessionActivity,
-} from "./sessionAge";
+import { clearSessionAgeRecord, noteSessionActivity } from "./sessionAge";
 import {
   idleSignedOutProjection,
   openAccountWallet,
@@ -178,8 +175,7 @@ export function useAccountSession(
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const pending =
-        projectionRef.current?.status === "authorization_pending";
+      const pending = projectionRef.current?.status === "authorization_pending";
       if (pending) {
         await execute("account_poll_authorization_v2");
         return;

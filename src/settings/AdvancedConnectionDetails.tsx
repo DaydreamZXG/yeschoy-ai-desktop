@@ -65,9 +65,7 @@ function diagnosticsText(connection: ToolConnection, requestId?: string) {
     `${d("state")}: ${connectionLabel(connection.state)} (${connection.state})`,
     `Base URL: ${baseUrlOf(connection) ?? d("noLine")}`,
     `${d("model")}: ${
-      connection.modelId
-        ? modelDisplayName(connection.modelId)
-        : d("noModel")
+      connection.modelId ? modelDisplayName(connection.modelId) : d("noModel")
     }`,
     `${d("billingGroup")}: ${connection.billingGroup || d("defaultGroup")}`,
     `${d("configFile")}: ${targetFile}`,
@@ -163,7 +161,9 @@ export function AdvancedConnectionDetails() {
                     <dd>
                       {connection.modelId ? (
                         <>
-                          <strong>{modelDisplayName(connection.modelId)}</strong>
+                          <strong>
+                            {modelDisplayName(connection.modelId)}
+                          </strong>
                           {modelDisplayName(connection.modelId) !==
                             connection.modelId && (
                             <code title={connection.modelId}>

@@ -167,7 +167,9 @@ describe("AppLibraryView station connect welcome strip", () => {
       sessionFor("backend_unavailable", { lastError: "server_not_ready" }),
     );
     expect(screen.getByRole("textbox")).toBeInTheDocument();
-    expect(screen.getByText(zh.workbench.librarySignInTitle)).toBeInTheDocument();
+    expect(
+      screen.getByText(zh.workbench.librarySignInTitle),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("library-relay-line-recovery")).toHaveTextContent(
       "全球加速",
     );

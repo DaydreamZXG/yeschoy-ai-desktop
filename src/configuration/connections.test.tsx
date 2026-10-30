@@ -97,7 +97,7 @@ describe("reversible local connections", () => {
       await act(async () => {
         await result.current.refresh();
       });
-    await waitFor(() => expect(result.current.connections).toHaveLength(8));
+      await waitFor(() => expect(result.current.connections).toHaveLength(8));
       expect(result.current.error).toBe(false);
       expect(result.current.errorInfo).toBeUndefined();
     },
@@ -475,9 +475,7 @@ describe("reversible local connections", () => {
       );
     });
     expect(restore).toHaveBeenCalledWith("claude_code", false);
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "已按你的选择保留",
-    );
+    expect(screen.getByRole("status")).toHaveTextContent("已按你的选择保留");
   });
   it("offers the restore action as the retry entry when revocation fails", async () => {
     const connection: ToolConnection = {

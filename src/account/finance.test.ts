@@ -34,7 +34,10 @@ describe("balanceAlert (PRD 6.2 single-threshold guidance)", () => {
   });
 
   it("is depleted at or below zero, including negatives", () => {
-    expect(balanceAlert(money("0"))).toEqual({ level: "depleted", amount: "0" });
+    expect(balanceAlert(money("0"))).toEqual({
+      level: "depleted",
+      amount: "0",
+    });
     expect(balanceAlert(money("-0.50"))).toEqual({
       level: "depleted",
       amount: "-0.50",

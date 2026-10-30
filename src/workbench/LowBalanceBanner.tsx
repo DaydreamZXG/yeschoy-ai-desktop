@@ -18,7 +18,11 @@ export function LowBalanceBanner({
   const locale = "zh-CN";
   const depleted = alert.level === "depleted";
   return (
-    <p className="workbench-notice low-balance-banner" data-level={alert.level} role="status">
+    <p
+      className="workbench-notice low-balance-banner"
+      data-level={alert.level}
+      role="status"
+    >
       <CircleAlert aria-hidden="true" />
       {depleted
         ? c.balanceDepletedBody

@@ -16,7 +16,10 @@ import {
   type AccountLineId,
   type ConfigurationLineId,
 } from "../configuration/preview";
-import { beginStationConnectLoopbackOauth, fetchStationConnectLoopbackCapabilities } from "../account/stationConnectLoopback";
+import {
+  beginStationConnectLoopbackOauth,
+  fetchStationConnectLoopbackCapabilities,
+} from "../account/stationConnectLoopback";
 import { creditUnit, formatMoney } from "../account/finance";
 import { aggregateUsage, type UsageRecord } from "../account/usage";
 import { UsageTrend } from "./UsageTrend";
@@ -211,8 +214,7 @@ export function AccountView({
         return "";
     }
   })();
-  const signInDisabled =
-    projection?.reasonCode === "authorization_unavailable";
+  const signInDisabled = projection?.reasonCode === "authorization_unavailable";
   // 会话时效感知（#23，本地记账）：仅提示，不阻断主流程。
   const sessionAge = signedIn
     ? sessionAgeLevel(readSessionAgeRecord(), Date.now())

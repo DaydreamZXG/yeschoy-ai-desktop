@@ -33,7 +33,9 @@ function roundToTenth(value: number): number {
 function formatReasoningLevels(levels: readonly string[]): string {
   if (levels.length === 1) return levels[0];
   const positions = levels
-    .map((level) => REASONING_ORDER.indexOf(level as (typeof REASONING_ORDER)[number]))
+    .map((level) =>
+      REASONING_ORDER.indexOf(level as (typeof REASONING_ORDER)[number]),
+    )
     .filter((position) => position >= 0);
   if (
     positions.length === levels.length &&

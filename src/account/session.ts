@@ -303,10 +303,7 @@ export function decodeAccountProjection(
   if (object(value) && value.schemaVersion === 6) {
     // v6：新增用量账单投影（PRD 6.6，批次 3 #1）。校验后剥离，降级走 v5 链。
     if (!isUsageLogReport(value.usageLog)) return null;
-    if (
-      value.status !== "signed_in" &&
-      value.usageLog.status !== "unavailable"
-    )
+    if (value.status !== "signed_in" && value.usageLog.status !== "unavailable")
       return null;
     usageLog = value.usageLog;
     const legacy = { ...value };
@@ -517,9 +514,7 @@ export async function runAccountCommand(
   return projection;
 }
 
-export async function openAccountWallet(
-  lineId: AccountLineId,
-): Promise<void> {
+export async function openAccountWallet(lineId: AccountLineId): Promise<void> {
   const requestId = nextAccountRequestId("wallet");
   await invoke("account_open_wallet_v2", {
     request: { requestId, lineId },

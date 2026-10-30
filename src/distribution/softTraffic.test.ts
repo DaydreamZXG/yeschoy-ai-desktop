@@ -69,5 +69,4 @@ describe("softTraffic", () => {
     ).toBe(true);
     vi.unstubAllEnvs();
   });
-
 });

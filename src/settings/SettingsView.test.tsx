@@ -57,7 +57,10 @@ describe("SettingsView", () => {
       requestId: "settings-1",
       refresh: vi.fn(async () => {}),
       restore: vi.fn(async () => connectionsFixture("restore")),
-      open: vi.fn(async () => ({ status: "opened" as const, reasonCode: "opened" })),
+      open: vi.fn(async () => ({
+        status: "opened" as const,
+        reasonCode: "opened",
+      })),
     };
     Object.assign(
       connections.connections.find((c) => c.toolId === "claude_code")!,
@@ -87,9 +90,7 @@ describe("SettingsView", () => {
       "details.advanced-connection-details",
     )!;
     expect(details).not.toHaveAttribute("open");
-    fireEvent.click(
-      screen.getByText("高级信息：已接入应用的连接详情"),
-    );
+    fireEvent.click(screen.getByText("高级信息：已接入应用的连接详情"));
     expect(details).toHaveAttribute("open");
 
     const card = screen
@@ -98,9 +99,7 @@ describe("SettingsView", () => {
     expect(card).toHaveTextContent("https://yeschoy.com");
     expect(card).toHaveTextContent("~/.claude/settings.json");
     expect(card).toHaveTextContent("glm-5.3");
-    expect(card).toHaveTextContent(
-      "保存在系统安全存储，界面不显示密钥内容",
-    );
+    expect(card).toHaveTextContent("保存在系统安全存储，界面不显示密钥内容");
     // dsh_web 未接入：不出现 DSH 卡片
     expect(
       screen.queryByRole("heading", { name: "DSH web" }),
@@ -132,7 +131,10 @@ describe("SettingsView", () => {
       requestId: "settings-2",
       refresh: vi.fn(async () => {}),
       restore: vi.fn(async () => connectionsFixture("restore")),
-      open: vi.fn(async () => ({ status: "opened" as const, reasonCode: "opened" })),
+      open: vi.fn(async () => ({
+        status: "opened" as const,
+        reasonCode: "opened",
+      })),
     };
     render(
       <ConnectionProvider value={connections}>
@@ -144,9 +146,7 @@ describe("SettingsView", () => {
         />
       </ConnectionProvider>,
     );
-    fireEvent.click(
-      screen.getByText("高级信息：已接入应用的连接详情"),
-    );
+    fireEvent.click(screen.getByText("高级信息：已接入应用的连接详情"));
     expect(
       screen.getByText("尚未接入任何应用，接入后这里会显示实际连接参数。"),
     ).toBeInTheDocument();

@@ -261,13 +261,16 @@ describe("account v2 renderer boundary", () => {
       usageLog,
     };
     // 非登录态携带可用用量报告 → 拒绝。
-    expect(
-      decodeAccountProjection(signedOut, signedOut.requestId),
-    ).toBeNull();
+    expect(decodeAccountProjection(signedOut, signedOut.requestId)).toBeNull();
     // 未登录但报告为 unavailable → 通过（报告以 unavailable 状态随投影下发）。
     const unavailable = {
       ...signedOut,
-      usageLog: { ...usageLog, status: "unavailable" as const, records: [], recordCount: 0 },
+      usageLog: {
+        ...usageLog,
+        status: "unavailable" as const,
+        records: [],
+        recordCount: 0,
+      },
     };
     expect(
       decodeAccountProjection(unavailable, unavailable.requestId),
@@ -297,9 +300,7 @@ describe("account v2 renderer boundary", () => {
         ],
       },
     };
-    expect(
-      decodeAccountProjection(badAmount, badAmount.requestId),
-    ).toBeNull();
+    expect(decodeAccountProjection(badAmount, badAmount.requestId)).toBeNull();
   });
 
   it("normalizes closed schema4 optional prices without turning missing values into zero", () => {

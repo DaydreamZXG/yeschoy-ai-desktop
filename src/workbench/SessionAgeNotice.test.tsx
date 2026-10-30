@@ -1,5 +1,13 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import i18n from "i18next";
 import zh from "../i18n/locales/zh.json";
 import type { AccountProjection } from "../account/session";
@@ -131,7 +139,9 @@ describe("会话时效提示（#23：25/80 天两级，仅提示不阻断）", (
     expect(session.logout).not.toHaveBeenCalled();
     // 不阻断：身份卡与刷新入口仍在。
     expect(screen.getByText("当前账户")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "刷新数据" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "刷新数据" }),
+    ).toBeInTheDocument();
   });
 
   it("距授权 80 天：仍为过期提示级，不出现重新授权按钮", () => {

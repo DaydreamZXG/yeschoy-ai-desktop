@@ -586,7 +586,10 @@ describe("daily-use UX", () => {
     await tick();
     fireEvent.click(screen.getByRole("button", { name: "更换应用" }));
     fireEvent.click(
-      screen.getByRole("button", { name: (n) => typeof n === "string" && n.includes("Codex") && n.includes("已接入") }),
+      screen.getByRole("button", {
+        name: (n) =>
+          typeof n === "string" && n.includes("Codex") && n.includes("已接入"),
+      }),
     );
     await tick();
     expect(
@@ -2093,10 +2096,10 @@ describe("daily-use UX", () => {
             onOpenAccount={callback}
             onOpenSetup={callback}
             onOpenCommunity={callback}
-          onStationLineChange={callback}
-          accountLineId="mainland_optimized"
-        />
-      </ConnectionProvider>,
+            onStationLineChange={callback}
+            accountLineId="mainland_optimized"
+          />
+        </ConnectionProvider>,
       );
       await tick();
       // count=0 时仅 Claude Desktop / Codex（桌面版 / 命令行） 可见。
@@ -2281,7 +2284,9 @@ describe("daily-use UX", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "退出野菜助手" }));
     const dialog = screen.getByRole("dialog");
-    expect(within(dialog).getByRole("list")).toHaveTextContent("Codex（桌面版 / 命令行）");
+    expect(within(dialog).getByRole("list")).toHaveTextContent(
+      "Codex（桌面版 / 命令行）",
+    );
     expect(within(dialog).getByRole("list")).not.toHaveTextContent("Claude");
     expect(
       native.mock.calls.some(([cmd]) => cmd === "quit_desktop_assistant"),

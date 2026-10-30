@@ -136,9 +136,7 @@ export function RestoreConnection({
           />
           <span>
             {c.revokeOptionTitle}
-            <small>
-              {revokeKey ? c.revokeOnHint : c.revokeOffHint}
-            </small>
+            <small>{revokeKey ? c.revokeOnHint : c.revokeOffHint}</small>
           </span>
         </label>
         {message && (

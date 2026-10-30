@@ -377,7 +377,11 @@ export function AppLibraryView({
       {!everythingUnavailable &&
         (accountSession.stationCheck ?? "idle") === "checking" &&
         !accountSession.lastError && (
-          <p className="workbench-notice" role="status" data-testid="station-checking">
+          <p
+            className="workbench-notice"
+            role="status"
+            data-testid="station-checking"
+          >
             <RefreshCw className="is-spinning" />
             {c.libraryAccountChecking}
           </p>
@@ -385,14 +389,18 @@ export function AppLibraryView({
       {!everythingUnavailable &&
         (accountSession.lastError ||
           (accountSession.stationCheck ?? "idle") === "unreachable") && (
-        <p className="workbench-notice" role="status" data-testid="station-unreachable">
-          <CircleAlert />
-          {signedIn ? c.libraryAccountStale : c.libraryAccountUnavailable}
-          <button onClick={() => void accountSession.refresh()}>
-            {c.libraryRetry}
-          </button>
-        </p>
-      )}
+          <p
+            className="workbench-notice"
+            role="status"
+            data-testid="station-unreachable"
+          >
+            <CircleAlert />
+            {signedIn ? c.libraryAccountStale : c.libraryAccountUnavailable}
+            <button onClick={() => void accountSession.refresh()}>
+              {c.libraryRetry}
+            </button>
+          </p>
+        )}
       {balanceIssue && (
         <LowBalanceBanner
           alert={balanceIssue}
@@ -419,7 +427,10 @@ export function AppLibraryView({
                 ?.scrollIntoView({ block: "start" })
             }
             accountProjection={accountSession.projection}
-            accountLoading={accountSession.loading || (accountSession.stationCheck ?? "idle") === "checking"}
+            accountLoading={
+              accountSession.loading ||
+              (accountSession.stationCheck ?? "idle") === "checking"
+            }
           />
         </section>
       )}
@@ -464,9 +475,7 @@ export function AppLibraryView({
           </div>
           {showOssSoftTraffic({
             accountProjection: accountSession.projection,
-          }) && (
-            <OssSoftTrafficCta onTryReference={onOpenAccount} />
-          )}
+          }) && <OssSoftTrafficCta onTryReference={onOpenAccount} />}
         </section>
       ) : signedIn ? (
         <div className="library-heading">
@@ -555,7 +564,15 @@ export function AppLibraryView({
             : []),
           ...group.apps.map(
             (
-              { app, displayName, target, connection, active, unknownConnection, label },
+              {
+                app,
+                displayName,
+                target,
+                connection,
+                active,
+                unknownConnection,
+                label,
+              },
               index,
             ) => (
               <article
@@ -644,7 +661,10 @@ export function AppLibraryView({
                   {label}
                 </span>
                 <div className="connection-row-actions">
-                  <RestoreConnection connection={connection} name={displayName} />
+                  <RestoreConnection
+                    connection={connection}
+                    name={displayName}
+                  />
                   {active &&
                   connection &&
                   !["recovery_pending", "changed"].includes(

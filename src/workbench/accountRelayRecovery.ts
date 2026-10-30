@@ -1,5 +1,8 @@
 import type { AccountStatus } from "../account/session";
-import type { AccountLineId, ConfigurationLineId } from "../configuration/preview";
+import type {
+  AccountLineId,
+  ConfigurationLineId,
+} from "../configuration/preview";
 
 const RELAY_LINE_RETRY_STATUSES = new Set<AccountStatus>([
   "backend_unavailable",

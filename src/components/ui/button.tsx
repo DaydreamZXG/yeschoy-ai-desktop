@@ -4,32 +4,29 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 import "./ui-primitives.css";
 
-const buttonVariants = cva(
-  "ui-btn",
-  {
-    variants: {
-      variant: {
-        default: "ui-btn--default",
-        destructive: "ui-btn--destructive",
-        outline: "ui-btn--outline",
-        secondary: "ui-btn--secondary",
-        ghost: "ui-btn--ghost",
-        mcp: "ui-btn--mcp",
-        link: "ui-btn--link",
-      },
-      size: {
-        default: "",
-        sm: "ui-btn--sm",
-        lg: "ui-btn--lg",
-        icon: "ui-btn--icon",
-      },
+const buttonVariants = cva("ui-btn", {
+  variants: {
+    variant: {
+      default: "ui-btn--default",
+      destructive: "ui-btn--destructive",
+      outline: "ui-btn--outline",
+      secondary: "ui-btn--secondary",
+      ghost: "ui-btn--ghost",
+      mcp: "ui-btn--mcp",
+      link: "ui-btn--link",
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
+    size: {
+      default: "",
+      sm: "ui-btn--sm",
+      lg: "ui-btn--lg",
+      icon: "ui-btn--icon",
     },
   },
-);
+  defaultVariants: {
+    variant: "default",
+    size: "default",
+  },
+});
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,

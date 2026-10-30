@@ -56,12 +56,9 @@ describe("sessionAgeLevel 时效分级边界（#23）", () => {
     [79, "expiring"],
     [80, "expiring"],
     [81, "reauth"],
-  ] as const)(
-    "距授权 %i 天 → %s（>80 触发重新授权引导）",
-    (days, expected) => {
-      expect(sessionAgeLevel(record(days, 1), now)).toBe(expected);
-    },
-  );
+  ] as const)("距授权 %i 天 → %s（>80 触发重新授权引导）", (days, expected) => {
+    expect(sessionAgeLevel(record(days, 1), now)).toBe(expected);
+  });
 
   it("两口径取更严重者：上次使用 81 天 → reauth（即使授权很新）", () => {
     expect(sessionAgeLevel(record(1, 81), now)).toBe("reauth");

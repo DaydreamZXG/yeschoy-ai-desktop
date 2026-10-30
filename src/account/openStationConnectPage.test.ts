@@ -17,7 +17,10 @@ describe("readStationOriginDraftInitial", () => {
   });
 
   it("prefers a saved draft over distribution defaults", () => {
-    localStorage.setItem(STATION_ORIGIN_DRAFT_KEY, "https://partner.example.com");
+    localStorage.setItem(
+      STATION_ORIGIN_DRAFT_KEY,
+      "https://partner.example.com",
+    );
     vi.stubEnv("VITE_YESCHOY_DISTRIBUTION", "official");
     expect(readStationOriginDraftInitial()).toBe("https://partner.example.com");
   });
@@ -49,9 +52,12 @@ describe("openStationConnectPage", () => {
       lineId: "station_connect:https://ai.example.com",
       pageUrl: "https://ai.example.com/desktop/connect",
     });
-    expect(invoke).toHaveBeenCalledWith("station_connect_open_connect_page_v1", {
-      origin: "https://ai.example.com",
-    });
+    expect(invoke).toHaveBeenCalledWith(
+      "station_connect_open_connect_page_v1",
+      {
+        origin: "https://ai.example.com",
+      },
+    );
   });
 
   it("rejects invalid origins without invoking", async () => {

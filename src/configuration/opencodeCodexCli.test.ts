@@ -41,8 +41,12 @@ describe("Codex desktop + CLI share one connection", () => {
   it("documents the Work browser gate bypass in both languages", () => {
     expect(zh.configuration.codexWorkBrowserFaqTitle).toContain("Work browser");
     expect(en.configuration.codexWorkBrowserFaqTitle).toContain("Work browser");
-    expect(zh.configuration.codexWorkBrowserFaqBody).toContain("STEPS_COMMANDS");
-    expect(en.configuration.codexWorkBrowserFaqBody).toContain("STEPS_COMMANDS");
+    expect(zh.configuration.codexWorkBrowserFaqBody).toContain(
+      "STEPS_COMMANDS",
+    );
+    expect(en.configuration.codexWorkBrowserFaqBody).toContain(
+      "STEPS_COMMANDS",
+    );
     expect(zh.configuration.readyCodex).toContain("STEPS_COMMANDS");
     expect(en.configuration.readyCodex).toContain("STEPS_COMMANDS");
   });

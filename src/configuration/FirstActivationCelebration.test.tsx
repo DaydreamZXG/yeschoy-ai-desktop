@@ -1,10 +1,7 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act } from "react";
-import {
-  CelebrationConfetti,
-  TickerText,
-} from "./FirstActivationCelebration";
+import { CelebrationConfetti, TickerText } from "./FirstActivationCelebration";
 
 afterEach(cleanup);
 
@@ -23,7 +20,9 @@ describe("CelebrationConfetti", () => {
       ".celebration-particle",
     );
     expect(particle?.style.getPropertyValue("--drift")).toMatch(/px$/);
-    expect(particle?.style.background).toMatch(/var\(--(lime|lime-ink|surface)\)/);
+    expect(particle?.style.background).toMatch(
+      /var\(--(lime|lime-ink|surface)\)/,
+    );
   });
 
   it("1.5s 后自动卸载", () => {
@@ -45,7 +44,9 @@ describe("CelebrationConfetti", () => {
     for (const particle of container.querySelectorAll<HTMLElement>(
       ".celebration-particle",
     )) {
-      expect(particle.style.getPropertyValue("--rotate")).toMatch(/^-?[\d.]+deg$/);
+      expect(particle.style.getPropertyValue("--rotate")).toMatch(
+        /^-?[\d.]+deg$/,
+      );
       expect(particle.style.transform).toBe("");
     }
   });
@@ -56,7 +57,9 @@ describe("CelebrationConfetti", () => {
     vi.useFakeTimers();
     const { container } = render(<CelebrationConfetti />);
     const slowest = Math.max(
-      ...[...container.querySelectorAll<HTMLElement>(".celebration-particle")].map(
+      ...[
+        ...container.querySelectorAll<HTMLElement>(".celebration-particle"),
+      ].map(
         (particle) =>
           Number.parseFloat(particle.style.animationDelay) +
           Number.parseFloat(particle.style.animationDuration),
@@ -78,21 +81,19 @@ describe("CelebrationConfetti", () => {
 
   it("用户要求减少动效时，整层不渲染", () => {
     // 装饰性动画应该整个不做，而不是拍平成 40 个静止的 DOM 节点。
-    const matchMedia = vi
-      .spyOn(window, "matchMedia")
-      .mockImplementation(
-        (query: string) =>
-          ({
-            matches: query.includes("prefers-reduced-motion"),
-            media: query,
-            onchange: null,
-            addListener: () => {},
-            removeListener: () => {},
-            addEventListener: () => {},
-            removeEventListener: () => {},
-            dispatchEvent: () => false,
-          }) as MediaQueryList,
-      );
+    const matchMedia = vi.spyOn(window, "matchMedia").mockImplementation(
+      (query: string) =>
+        ({
+          matches: query.includes("prefers-reduced-motion"),
+          media: query,
+          onchange: null,
+          addListener: () => {},
+          removeListener: () => {},
+          addEventListener: () => {},
+          removeEventListener: () => {},
+          dispatchEvent: () => false,
+        }) as MediaQueryList,
+    );
     const { container } = render(<CelebrationConfetti />);
     expect(container.querySelector(".celebration-confetti")).toBeNull();
     expect(container.querySelectorAll(".celebration-particle").length).toBe(0);
@@ -112,7 +113,9 @@ describe("TickerText", () => {
 
   it("对外暴露完整 aria-label，字符自身 aria-hidden", () => {
     const { container } = render(<TickerText text="OK" />);
-    expect(container.querySelector(".ticker-text")?.getAttribute("aria-label")).toBe("OK");
+    expect(
+      container.querySelector(".ticker-text")?.getAttribute("aria-label"),
+    ).toBe("OK");
     for (const el of container.querySelectorAll(".ticker-char")) {
       expect(el.getAttribute("aria-hidden")).toBe("true");
     }

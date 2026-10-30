@@ -28,8 +28,8 @@ describe("accountRelayRecovery", () => {
 
   it("recognizes built-in relay line ids", () => {
     expect(isRelayCatalogLine("mainland_optimized")).toBe(true);
-    expect(
-      isRelayCatalogLine("station_connect:https://ai.example.com"),
-    ).toBe(false);
+    expect(isRelayCatalogLine("station_connect:https://ai.example.com")).toBe(
+      false,
+    );
   });
 });

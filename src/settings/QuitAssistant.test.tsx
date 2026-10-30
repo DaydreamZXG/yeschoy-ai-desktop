@@ -116,7 +116,9 @@ describe("global desktop close choice and cooperative exit", () => {
       status: "restore_failed",
       failedTools: ["codex_desktop"],
     });
-    expect(screen.getByRole("alert")).toHaveTextContent("Codex（桌面版 / 命令行）");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Codex（桌面版 / 命令行）",
+    );
     expect(
       screen.getByRole("button", { name: "重试恢复并退出" }),
     ).toBeEnabled();
@@ -298,9 +300,7 @@ describe("global desktop close choice and cooperative exit", () => {
     native.mockRejectedValueOnce(new Error("secret-fixture-path-and-key"));
     fireEvent.click(screen.getByRole("button", { name: "恢复原设置并退出" }));
     await flush();
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "暂时无法确认退出状态",
-    );
+    expect(screen.getByRole("alert")).toHaveTextContent("暂时无法确认退出状态");
     expect(screen.getByRole("button", { name: "重试退出" })).toBeEnabled();
     expect(document.body).not.toHaveTextContent("secret-fixture-path-and-key");
   });

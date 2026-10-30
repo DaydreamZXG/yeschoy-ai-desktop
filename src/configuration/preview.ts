@@ -13,7 +13,8 @@ export type ConfigurationLineId = "mainland_optimized" | "global_accelerated";
 
 export const STATION_CONNECT_LINE_PREFIX = "station_connect:";
 
-export type StationConnectLineId = `${typeof STATION_CONNECT_LINE_PREFIX}${string}`;
+export type StationConnectLineId =
+  `${typeof STATION_CONNECT_LINE_PREFIX}${string}`;
 
 /** Catalog lines plus deep-link station sessions (account inspect / activation). */
 export type AccountLineId = ConfigurationLineId | StationConnectLineId;
@@ -33,7 +34,9 @@ export function isAccountLineId(lineId: string): lineId is AccountLineId {
 }
 
 /** Preview UI only knows catalog lines; map station sessions to the closest root. */
-export function catalogLineForPreview(lineId: AccountLineId): ConfigurationLineId {
+export function catalogLineForPreview(
+  lineId: AccountLineId,
+): ConfigurationLineId {
   if (lineId === "mainland_optimized" || lineId === "global_accelerated") {
     return lineId;
   }

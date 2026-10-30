@@ -162,7 +162,10 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
     if (generation !== probeGeneration.current) return;
     setCheckingToken(false);
     if (probe === "timeout" || !probe) {
-      setStage({ kind: "failed", reason: probe === "timeout" ? "timeout" : "unreachable" });
+      setStage({
+        kind: "failed",
+        reason: probe === "timeout" ? "timeout" : "unreachable",
+      });
       return;
     }
     // 令牌验证完就从输入框清掉，不在界面上长时间露着。
@@ -233,11 +236,7 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
             )}
           </button>
           {stage.kind === "probing" && (
-            <button
-              type="button"
-              className="text-button"
-              onClick={cancelProbe}
-            >
+            <button type="button" className="text-button" onClick={cancelProbe}>
               <X aria-hidden="true" />
               {t("stationOnboarding.cancelProbe")}
             </button>

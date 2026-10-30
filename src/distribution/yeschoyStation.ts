@@ -21,7 +21,9 @@ export function accountLineUsesYeschoyStation(lineId: string): boolean {
     return false;
   }
   const origin = lineId.slice(STATION_CONNECT_LINE_PREFIX.length);
-  if ((YESCHOY_OPERATOR_STATION_ORIGINS as readonly string[]).includes(origin)) {
+  if (
+    (YESCHOY_OPERATOR_STATION_ORIGINS as readonly string[]).includes(origin)
+  ) {
     return true;
   }
   return isCanonicalStationOrigin(origin);
@@ -33,7 +35,9 @@ export type YeschoyCommunitySession = {
 };
 
 /** QQ / community entry: only while signed in to a YesChoy-operated station. */
-export function showYeschoyCommunityUi(session: YeschoyCommunitySession): boolean {
+export function showYeschoyCommunityUi(
+  session: YeschoyCommunitySession,
+): boolean {
   if (!qqCommunityConfigAvailable()) {
     return false;
   }

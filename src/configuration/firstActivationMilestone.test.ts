@@ -5,7 +5,9 @@ import {
   type MilestoneStorage,
 } from "./firstActivationMilestone";
 
-function memoryStorage(initial: Record<string, string> = {}): MilestoneStorage & {
+function memoryStorage(
+  initial: Record<string, string> = {},
+): MilestoneStorage & {
   data: Record<string, string>;
 } {
   const data: Record<string, string> = { ...initial };
@@ -57,7 +59,9 @@ describe("firstActivationMilestone", () => {
   });
 
   it("写入异常不抛出", () => {
-    expect(() => markFirstActivationCelebrated(throwingStorage())).not.toThrow();
+    expect(() =>
+      markFirstActivationCelebrated(throwingStorage()),
+    ).not.toThrow();
     expect(() => markFirstActivationCelebrated(null)).not.toThrow();
   });
 
