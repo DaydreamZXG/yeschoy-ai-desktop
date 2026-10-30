@@ -11,39 +11,27 @@ const DialogPortal = DialogPrimitive.Portal;
 
 const DialogClose = DialogPrimitive.Close;
 
+type DialogLayer = "base" | "nested" | "alert" | "top";
+
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay> & {
-    zIndex?: "base" | "nested" | "alert" | "top";
+    zIndex?: DialogLayer;
   }
->(({ className, zIndex = "base", ...props }, ref) => {
-  const zIndexMap = {
-    base: "z-40",
-    nested: "z-50",
-    alert: "z-[60]",
-    top: "z-[110]",
-  };
-
-  return (
-    <DialogPrimitive.Overlay
-      ref={ref}
-      data-dialog-layer={zIndex}
-      className={cn(
-        "yeschoy-dialog-overlay",
-        "fixed inset-0 bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-        zIndexMap[zIndex],
-        className,
-      )}
-      {...props}
-    />
-  );
-});
+>(({ className, zIndex = "base", ...props }, ref) => (
+  <DialogPrimitive.Overlay
+    ref={ref}
+    data-dialog-layer={zIndex}
+    className={cn("yeschoy-dialog-overlay", className)}
+    {...props}
+  />
+));
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
-    zIndex?: "base" | "nested" | "alert" | "top";
+    zIndex?: DialogLayer;
     variant?: "default" | "fullscreen";
     overlayClassName?: string;
   }
@@ -58,45 +46,24 @@ const DialogContent = React.forwardRef<
       ...props
     },
     ref,
-  ) => {
-    const zIndexMap = {
-      base: "z-40",
-      nested: "z-50",
-      alert: "z-[60]",
-      top: "z-[110]",
-    };
-
-    const variantClass = {
-      default:
-        "fixed left-1/2 top-1/2 flex flex-col w-full max-w-lg max-h-[90vh] translate-x-[-50%] translate-y-[-50%] border border-border-default bg-background text-foreground shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
-      fullscreen:
-        "fixed inset-0 flex flex-col w-screen h-screen translate-x-0 translate-y-0 bg-background text-foreground p-0 sm:rounded-none shadow-none",
-    }[variant];
-
-    return (
-      <DialogPortal>
-        <DialogOverlay zIndex={zIndex} className={overlayClassName} />
-        <DialogPrimitive.Content
-          ref={ref}
-          data-dialog-layer={zIndex}
-          data-dialog-variant={variant}
-          className={cn(
-            "yeschoy-dialog-content",
-            variantClass,
-            zIndexMap[zIndex],
-            className,
-          )}
-          onInteractOutside={(e) => {
-            // 防止点击遮罩层关闭对话框
-            e.preventDefault();
-          }}
-          {...props}
-        >
-          {children}
-        </DialogPrimitive.Content>
-      </DialogPortal>
-    );
-  },
+  ) => (
+    <DialogPortal>
+      <DialogOverlay zIndex={zIndex} className={overlayClassName} />
+      <DialogPrimitive.Content
+        ref={ref}
+        data-dialog-layer={zIndex}
+        data-dialog-variant={variant}
+        className={cn("yeschoy-dialog-content", className)}
+        onInteractOutside={(e) => {
+          // 防止点击遮罩层关闭对话框
+          e.preventDefault();
+        }}
+        {...props}
+      >
+        {children}
+      </DialogPrimitive.Content>
+    </DialogPortal>
+  ),
 );
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
@@ -104,14 +71,7 @@ const DialogHeader = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn(
-      "yeschoy-dialog-header",
-      "flex flex-col space-y-1.5 text-center sm:text-left px-6 py-5 border-b border-border-default bg-muted/20 flex-shrink-0",
-      className,
-    )}
-    {...props}
-  />
+  <div className={cn("yeschoy-dialog-header", className)} {...props} />
 );
 DialogHeader.displayName = "DialogHeader";
 
@@ -119,14 +79,7 @@ const DialogFooter = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn(
-      "yeschoy-dialog-footer",
-      "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:items-center px-6 py-5 border-t border-border-default bg-muted/20 flex-shrink-0",
-      className,
-    )}
-    {...props}
-  />
+  <div className={cn("yeschoy-dialog-footer", className)} {...props} />
 );
 DialogFooter.displayName = "DialogFooter";
 
@@ -136,11 +89,7 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn(
-      "yeschoy-dialog-title",
-      "text-lg font-semibold leading-tight tracking-tight",
-      className,
-    )}
+    className={cn("yeschoy-dialog-title", className)}
     {...props}
   />
 ));
@@ -152,11 +101,7 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn(
-      "yeschoy-dialog-description",
-      "text-sm text-muted-foreground",
-      className,
-    )}
+    className={cn("yeschoy-dialog-description", className)}
     {...props}
   />
 ));

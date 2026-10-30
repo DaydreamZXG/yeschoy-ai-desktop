@@ -54,8 +54,6 @@ export function ConfirmDialog({
   }, [isOpen, checkboxDefaultChecked]);
 
   const IconComponent = variant === "info" ? Info : AlertTriangle;
-  const iconClass =
-    variant === "info" ? "h-5 w-5 text-blue-500" : "h-5 w-5 text-destructive";
 
   return (
     <Dialog
@@ -67,31 +65,28 @@ export function ConfirmDialog({
       }}
     >
       <DialogContent
-        className="confirm-dialog max-w-sm"
+        className="confirm-dialog"
         data-tone={variant}
         zIndex={zIndex}
       >
-        <DialogHeader className="space-y-3 border-b-0 bg-transparent pb-0">
-          <DialogTitle className="confirm-dialog-title flex items-center gap-2 text-lg font-semibold">
-            <IconComponent className={iconClass} />
+        <DialogHeader>
+          <DialogTitle className="confirm-dialog-title">
+            <IconComponent />
             {title}
           </DialogTitle>
-          <DialogDescription className="whitespace-pre-line text-sm leading-relaxed">
-            {message}
-          </DialogDescription>
+          <DialogDescription>{message}</DialogDescription>
         </DialogHeader>
         {checkboxLabel ? (
-          <label className="confirm-dialog-checkbox flex cursor-pointer select-none items-start gap-2 px-6 pt-3">
+          <label className="confirm-dialog-checkbox">
             <Checkbox
               checked={checkboxChecked}
               disabled={pending}
               onCheckedChange={(value) => setCheckboxChecked(value === true)}
-              className="mt-0.5"
             />
-            <span className="text-sm leading-relaxed">{checkboxLabel}</span>
+            <span>{checkboxLabel}</span>
           </label>
         ) : null}
-        <DialogFooter className="flex gap-2 border-t-0 bg-transparent pt-2 sm:justify-end">
+        <DialogFooter>
           <Button variant="outline" onClick={onCancel} disabled={pending}>
             {cancelText || t("common.cancel")}
           </Button>
