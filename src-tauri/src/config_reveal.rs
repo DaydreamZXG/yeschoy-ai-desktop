@@ -23,6 +23,19 @@ fn config_dir_for(app: &str, home: &Path) -> Option<PathBuf> {
     }
 }
 
+/// Resolve a directory that already exists.
+///
+/// Revealing must not create it: a tool the user never configured has no folder
+/// worth showing, and creating one here would be the only place the assistant
+/// writes to disk before the user confirms an activation.
+fn reveal_target(app: &str, home: &Path) -> Result<PathBuf, &'static str> {
+    let dir = config_dir_for(app, home).ok_or("unsupported_app")?;
+    if !dir.is_dir() {
+        return Err("config_folder_missing");
+    }
+    Ok(dir)
+}
+
 fn reveal_command(path: &Path) -> Command {
     #[cfg(target_os = "macos")]
     let mut command = Command::new("/usr/bin/open");
@@ -35,25 +48,22 @@ fn reveal_command(path: &Path) -> Command {
 }
 
 #[tauri::command]
-pub async fn open_config_folder(_handle: AppHandle, app: String) -> Result<bool, String> {
-    let home = tool_adapters::user_home().ok_or_else(|| "user home unavailable".to_string())?;
-    let config_dir =
-        config_dir_for(&app, &home).ok_or_else(|| format!("unsupported app: {app}"))?;
-    std::fs::create_dir_all(&config_dir)
-        .map_err(|error| format!("create config dir failed: {error}"))?;
+pub async fn open_config_folder(_handle: AppHandle, app: String) -> Result<bool, &'static str> {
+    let home = tool_adapters::user_home().ok_or("config_folder_unavailable")?;
+    let config_dir = reveal_target(&app, &home)?;
     let mut command = reveal_command(&config_dir);
     tauri::async_runtime::spawn_blocking(move || command.status())
         .await
-        .map_err(|error| format!("reveal spawn failed: {error}"))?
-        .map_err(|error| format!("reveal failed: {error}"))?
+        .map_err(|_| "reveal_failed")?
+        .map_err(|_| "reveal_failed")?
         .success()
         .then_some(true)
-        .ok_or_else(|| "reveal failed".to_string())
+        .ok_or("reveal_failed")
 }
 
 #[cfg(test)]
 mod tests {
-    use super::config_dir_for;
+    use super::{config_dir_for, reveal_target};
     use std::path::Path;
 
     #[test]
@@ -88,5 +98,28 @@ mod tests {
         assert!(config_dir_for("openclaw", home).is_none());
         assert!(config_dir_for("dsh", home).is_none());
         assert!(config_dir_for("", home).is_none());
+    }
+
+    #[test]
+    fn only_reveals_existing_directories_and_never_creates_them() {
+        let root = std::env::temp_dir().join(format!(
+            "yeschoy-reveal-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(root.join(".claude")).unwrap();
+
+        assert_eq!(reveal_target("claude", &root), Ok(root.join(".claude")));
+        assert_eq!(reveal_target("codex", &root), Err("config_folder_missing"));
+        assert_eq!(reveal_target("dsh", &root), Err("unsupported_app"));
+        assert!(
+            !root.join(".codex").exists(),
+            "revealing must not create the folder"
+        );
+
+        std::fs::remove_dir_all(&root).ok();
     }
 }

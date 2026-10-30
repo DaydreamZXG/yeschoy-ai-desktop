@@ -27,6 +27,8 @@ impl log::Log for FileLogger {
         let Ok(mut file) = self.file.lock() else {
             return;
         };
+        // 启动时的 4 MB 检查不够：助手常常一开几天，这里每次写入再兜一次。
+        truncate_if_larger_than(&mut file, MAX_BYTES);
         let _ = writeln!(
             file,
             "{} {:<5} {} {}",
@@ -41,6 +43,13 @@ impl log::Log for FileLogger {
         if let Ok(mut file) = self.file.lock() {
             let _ = file.flush();
         }
+    }
+}
+
+/// 文件超过上限就从空文件重新开始；`limit` 参数只为测试能验证这条规则。
+fn truncate_if_larger_than(file: &mut std::fs::File, limit: u64) {
+    if file.metadata().is_ok_and(|meta| meta.len() > limit) {
+        let _ = file.set_len(0);
     }
 }
 
@@ -114,5 +123,36 @@ pub(crate) fn init() {
             env!("CARGO_PKG_VERSION"),
             path.display()
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::truncate_if_larger_than;
+    use std::io::Write;
+
+    #[test]
+    fn rotation_applies_to_long_running_sessions() {
+        let path = std::env::temp_dir().join(format!(
+            "yeschoy-log-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .unwrap();
+        write!(file, "0123456789abcdef").unwrap();
+        truncate_if_larger_than(&mut file, 8);
+        assert_eq!(file.metadata().unwrap().len(), 0);
+        // 上限之下不动。
+        write!(file, "keep").unwrap();
+        truncate_if_larger_than(&mut file, 8);
+        assert_eq!(file.metadata().unwrap().len(), 4);
+        std::fs::remove_file(&path).ok();
     }
 }
