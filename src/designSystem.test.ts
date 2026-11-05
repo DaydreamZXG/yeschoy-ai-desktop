@@ -16,6 +16,8 @@ const SHEETS = [
   "src/theme/new-api-layout.css",
   "src/theme/motion.css",
   "src/theme/system.css",
+  "src/theme/anime-skin.css",
+  "src/workbench/bootRitual.css",
 ];
 
 const sheets = SHEETS.map((path) => ({

@@ -314,7 +314,34 @@
     "groupPrivacy": "Privacy & security",
     "groupPrivacyNote": "Fixed behaviour in this version — nothing to configure.",
     "groupSystem": "Background",
-    "groupAdvanced": "Troubleshooting & advanced"
+    "groupAdvanced": "Troubleshooting & advanced",
+    "skinTitle": "TSUKIHANA skin & boot",
+    "skinNote": "TSUKIHANA: the character stands on a right-hand stage, the UI floats as liquid glass. Sidebar and connect flows stay the same. Switch back to Standard anytime.",
+    "skinModeTitle": "UI style",
+    "skinModeNote": "Anime is on by default with TSUKIHANA; Standard turns off wallpaper and the glass chrome.",
+    "skinMode": {
+      "anime": "Anime",
+      "standard": "Standard"
+    },
+    "skinCharacterTitle": "Wallpaper skin",
+    "skinCharacterNote": "Characters occupy the right-hand stage, never replace the app list. Default: Dafeiyu. Standee art is a placeholder until licensed.",
+    "skinCharacter": {
+      "dafeiyu": "Dafeiyu",
+      "claude": "Claude",
+      "gpt": "GPT"
+    },
+    "bootEnabledTitle": "Boot ritual",
+    "bootEnabledNote": "Four-beat TSUKIHANA ritual on cold start, anime skin only. Always skippable. Standard skin never plays it.",
+    "bootEnabledOn": "On",
+    "bootEnabledOff": "Off",
+    "bootFrequencyTitle": "Play frequency",
+    "bootFrequencyNote": "Defaults to once a day. Always is for replaying the ritual often.",
+    "bootFrequency": {
+      "daily": "Once a day",
+      "session": "Each session",
+      "always": "Always (advanced)"
+    },
+    "animeLocksWarmLight": "TSUKIHANA locks the luminous glass palette"
   },
   "yeschoyUpdate": {
     "title": "Yeschoy automatic updates",
@@ -1377,5 +1404,18 @@
       "trust_store_full": "Too many remembered sites. Remove some unused ones in Settings first.",
       "generic": "Go back to the web page and click \"Open desktop assistant\" again."
     }
+  },
+  "bootRitual": {
+    "skip": "Skip",
+    "breach": "Unveil",
+    "ticker": "YesChoy · TSUKIHANA",
+    "stage1Title": "THE MOON RISES",
+    "stage1En": "Moonlight finds the stage",
+    "stage2Title": "THE CURTAIN LIFTS",
+    "stage2En": "Step into the glass",
+    "stage3Title": "BLOOM",
+    "stage3En": "The night flowers open",
+    "stage4Title": "Sign in once, connect your AI apps",
+    "stage4En": "Sign in once · Connect your AI apps"
   }
 }

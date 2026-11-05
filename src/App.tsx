@@ -6,6 +6,9 @@ import { Toaster, toast } from "sonner";
 import { WorkbenchSidebar, type AppView } from "./workbench/WorkbenchChrome";
 import { refreshModelCatalog } from "./model-profiles/remoteCatalog";
 import { useAppearance } from "./workbench/appearance";
+import { useSkin } from "./workbench/skin";
+import { readBootPreference, shouldPlayBoot } from "./workbench/bootPrefs";
+import { BootRitual } from "./workbench/BootRitual";
 import { AccountView } from "./workbench/AccountView";
 import { ModelsView } from "./workbench/ModelsView";
 import { AppLibraryView } from "./workbench/AppLibraryView";
@@ -128,7 +131,18 @@ function App() {
   const requestSequenceRef = useRef(0);
   const shellRef = useRef<HTMLElement>(null);
   const previousView = useRef(view);
-  const { appearance, changeAppearance } = useAppearance();
+  const { skin, changeSkin } = useSkin();
+  const { appearance, changeAppearance, resolvedTheme } = useAppearance({
+    lockLight: skin.mode === "anime",
+  });
+  const [bootOpen, setBootOpen] = useState(() =>
+    shouldPlayBoot(readBootPreference(), new Date(), skin.mode),
+  );
+  useEffect(() => {
+    if (skin.mode !== "anime") {
+      setBootOpen(false);
+    }
+  }, [skin.mode]);
   useEffect(
     () => () => {
       latestRequestRef.current = "";
@@ -305,6 +319,7 @@ function App() {
                 announcementsUnread={unreadAnnouncements.size}
                 appearance={appearance}
                 onAppearance={changeAppearance}
+                appearanceLocked={skin.mode === "anime"}
                 accountProjection={accountSession.projection}
                 accountLoading={accountSession.loading || (accountSession.stationCheck ?? "idle") === "checking"}
                 accountLineId={accountLineId}
@@ -392,6 +407,8 @@ function App() {
                 <SettingsView
                   appearance={appearance}
                   onAppearanceChange={changeAppearance}
+                  skin={skin}
+                  onSkinChange={changeSkin}
                   onOpenAccount={() => setView("account")}
                   onOpenDiagnostics={() => setView("diagnostics")}
                   onOpenTools={() => setView("tools")}
@@ -625,7 +642,13 @@ function App() {
               lineId={accountLineId}
               accountProjection={accountSession.projection}
             />
-            <Toaster position="top-center" richColors theme={appearance} />
+            <Toaster position="top-center" richColors theme={resolvedTheme} />
+            {bootOpen && skin.mode === "anime" ? (
+              <BootRitual
+                character={skin.character}
+                onComplete={() => setBootOpen(false)}
+              />
+            ) : null}
           </ShutdownProvider>
         </ConnectionProvider>
       </InstallationProvider>

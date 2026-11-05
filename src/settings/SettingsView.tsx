@@ -1,9 +1,20 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check } from "lucide-react";
 import { createCandidateReadiness } from "../candidate/readiness";
 import { AppearancePicker } from "../workbench/WorkbenchChrome";
 import type { Appearance } from "../workbench/appearance";
+import {
+  type SkinCharacter,
+  type SkinMode,
+  type SkinPreference,
+} from "../workbench/skin";
+import {
+  type BootFrequency,
+  type BootPreference,
+  readBootPreference,
+  writeBootPreference,
+} from "../workbench/bootPrefs";
 import { useWorkbenchCopy } from "../workbench/copy";
 import { QuitAssistant } from "./QuitAssistant";
 import { UpdateSettingsCard } from "../update/UpdateSettingsCard";
@@ -20,13 +31,20 @@ interface SettingsViewProps {
   onOpenModels: () => void;
   appearance?: Appearance;
   onAppearanceChange?: (appearance: Appearance) => void;
+  skin?: SkinPreference;
+  onSkinChange?: (next: Partial<SkinPreference>) => void;
 }
 
 const SECURITY_ROWS = ["apiKeys", "configFiles", "telemetry"] as const;
 
+const CHARACTERS: SkinCharacter[] = ["dafeiyu", "claude", "gpt"];
+const FREQUENCIES: BootFrequency[] = ["daily", "session", "always"];
+
 export function SettingsView({
   appearance = "system",
   onAppearanceChange,
+  skin,
+  onSkinChange,
   onOpenDiagnostics,
   onOpenTools,
   onOpenModels,
@@ -34,6 +52,15 @@ export function SettingsView({
   const { t } = useTranslation();
   const c = useWorkbenchCopy();
   const readiness = useMemo(() => createCandidateReadiness(), []);
+  const [boot, setBoot] = useState<BootPreference>(readBootPreference);
+
+  function updateBoot(next: Partial<BootPreference>) {
+    setBoot((current) => {
+      const merged = { ...current, ...next };
+      writeBootPreference(merged);
+      return merged;
+    });
+  }
 
   return (
     <div className="settings-workspace" data-testid="settings-view">
@@ -54,15 +81,28 @@ export function SettingsView({
         </header>
         <div className="settings-card">
           {onAppearanceChange && (
-            <div className="setting-row">
+            <div className="setting-row" data-testid="settings-appearance-row">
               <div className="setting-row-copy">
                 <strong>{c.theme}</strong>
-                <p>{c.themeNote}</p>
+                <p>
+                  {skin?.mode === "anime"
+                    ? t("yeschoySettings.animeLocksWarmLight")
+                    : c.themeNote}
+                </p>
               </div>
-              <AppearancePicker
-                value={appearance}
-                onChange={onAppearanceChange}
-              />
+              {skin?.mode === "anime" ? (
+                <span
+                  className="setting-state"
+                  data-testid="settings-appearance-locked"
+                >
+                  {t("yeschoySettings.animeLocksWarmLight")}
+                </span>
+              ) : (
+                <AppearancePicker
+                  value={appearance}
+                  onChange={onAppearanceChange}
+                />
+              )}
             </div>
           )}
           <div className="setting-row">
@@ -74,6 +114,115 @@ export function SettingsView({
           </div>
         </div>
       </section>
+
+      {onSkinChange && skin && (
+        <section
+          className="settings-group"
+          aria-labelledby="settings-skin"
+          data-testid="settings-skin-group"
+        >
+          <header className="settings-group-heading">
+            <h2 id="settings-skin">{t("yeschoySettings.skinTitle")}</h2>
+            <p>{t("yeschoySettings.skinNote")}</p>
+          </header>
+          <div className="settings-card">
+            <div className="setting-row">
+              <div className="setting-row-copy">
+                <strong>{t("yeschoySettings.skinModeTitle")}</strong>
+                <p>{t("yeschoySettings.skinModeNote")}</p>
+              </div>
+              <div
+                className="appearance-picker"
+                role="group"
+                aria-label={t("yeschoySettings.skinModeTitle")}
+              >
+                {(["anime", "standard"] as SkinMode[]).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    aria-pressed={skin.mode === mode}
+                    data-testid={`skin-mode-${mode}`}
+                    onClick={() => onSkinChange({ mode })}
+                  >
+                    {t(`yeschoySettings.skinMode.${mode}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {skin.mode === "anime" && (
+              <div className="setting-row">
+                <div className="setting-row-copy">
+                  <strong>{t("yeschoySettings.skinCharacterTitle")}</strong>
+                  <p>{t("yeschoySettings.skinCharacterNote")}</p>
+                </div>
+                <div
+                  className="appearance-picker"
+                  role="group"
+                  aria-label={t("yeschoySettings.skinCharacterTitle")}
+                >
+                  {CHARACTERS.map((character) => (
+                    <button
+                      key={character}
+                      type="button"
+                      aria-pressed={skin.character === character}
+                      data-testid={`skin-character-${character}`}
+                      onClick={() => onSkinChange({ character })}
+                    >
+                      {t(`yeschoySettings.skinCharacter.${character}`)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="setting-row">
+              <div className="setting-row-copy">
+                <strong>{t("yeschoySettings.bootEnabledTitle")}</strong>
+                <p>{t("yeschoySettings.bootEnabledNote")}</p>
+              </div>
+              <label className="setting-toggle">
+                <input
+                  type="checkbox"
+                  checked={boot.enabled}
+                  data-testid="boot-enabled"
+                  onChange={(event) =>
+                    updateBoot({ enabled: event.target.checked })
+                  }
+                />
+                <span>
+                  {boot.enabled
+                    ? t("yeschoySettings.bootEnabledOn")
+                    : t("yeschoySettings.bootEnabledOff")}
+                </span>
+              </label>
+            </div>
+            {boot.enabled && (
+              <div className="setting-row">
+                <div className="setting-row-copy">
+                  <strong>{t("yeschoySettings.bootFrequencyTitle")}</strong>
+                  <p>{t("yeschoySettings.bootFrequencyNote")}</p>
+                </div>
+                <div
+                  className="appearance-picker"
+                  role="group"
+                  aria-label={t("yeschoySettings.bootFrequencyTitle")}
+                >
+                  {FREQUENCIES.map((frequency) => (
+                    <button
+                      key={frequency}
+                      type="button"
+                      aria-pressed={boot.frequency === frequency}
+                      data-testid={`boot-frequency-${frequency}`}
+                      onClick={() => updateBoot({ frequency })}
+                    >
+                      {t(`yeschoySettings.bootFrequency.${frequency}`)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="settings-group" aria-labelledby="settings-about">
         <header className="settings-group-heading">

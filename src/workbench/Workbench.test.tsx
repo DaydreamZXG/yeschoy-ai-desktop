@@ -14,6 +14,7 @@ import i18n from "i18next";
 import zh from "../i18n/locales/zh.json";
 import App from "../App";
 import { APPEARANCE_KEY, readAppearance } from "./appearance";
+import { SKIN_KEY } from "./skin";
 import { workbenchCopies } from "./copy";
 import { readFileSync } from "node:fs";
 import { connectionsFixture } from "../configuration/connection-test-fixtures";
@@ -302,6 +303,7 @@ beforeEach(async () => {
   i18n.addResourceBundle("zh", "translation", zh, true, true);
   await i18n.changeLanguage("zh");
   localStorage.removeItem(APPEARANCE_KEY);
+  localStorage.removeItem(SKIN_KEY);
   systemDark = false;
   appearanceListeners = [];
   vi.stubGlobal(
@@ -344,7 +346,9 @@ describe("official workbench", () => {
     );
     render(<App />);
     expect(
-      await screen.findByText("暂时连不上中转站，请稍后重试。本地已接入的应用不受影响。"),
+      await screen.findByText(
+        "暂时连不上中转站，请稍后重试。本地已接入的应用不受影响。",
+      ),
     ).toBeInTheDocument();
     const home = screen.getByTestId("candidate-home-view");
     expect(home).toHaveTextContent("登录一次，接入你的 AI 应用");
@@ -360,10 +364,11 @@ describe("official workbench", () => {
     mockNativeByCommand(
       withStoredAccountSession((command, args) => {
         const request = (args as Args).request;
-        if (command === "account_inspect_v2") return signedIn(request.requestId);
-      if (command === "manage_tool_connections_v1")
-        throw Error("connection_operation_busy");
-      return defaultNativeHandler(command, args);
+        if (command === "account_inspect_v2")
+          return signedIn(request.requestId);
+        if (command === "manage_tool_connections_v1")
+          throw Error("connection_operation_busy");
+        return defaultNativeHandler(command, args);
       }),
     );
     render(<App />);
@@ -396,21 +401,22 @@ describe("official workbench", () => {
     mockNativeByCommand(
       withStoredAccountSession((command, args) => {
         const request = (args as Args).request;
-        if (command === "account_inspect_v2") return signedIn(request.requestId);
+        if (command === "account_inspect_v2")
+          return signedIn(request.requestId);
         if (command === "manage_tool_connections_v1") {
           if (fail) throw Error("synthetic-secret-must-not-appear");
-        const result = connectionsFixture(request.requestId);
-        Object.assign(
-          result.connections.find((c) => c.toolId === "codex_desktop")!,
-          {
-            state: "connected",
-            modelId: "gpt-6-astra",
-            lineId: "mainland_optimized",
-            billingGroup: "default",
-            restoreMode: "original",
-          },
-        );
-        return result;
+          const result = connectionsFixture(request.requestId);
+          Object.assign(
+            result.connections.find((c) => c.toolId === "codex_desktop")!,
+            {
+              state: "connected",
+              modelId: "gpt-6-astra",
+              lineId: "mainland_optimized",
+              billingGroup: "default",
+              restoreMode: "original",
+            },
+          );
+          return result;
         }
         return defaultNativeHandler(command, args);
       }),
@@ -430,19 +436,20 @@ describe("official workbench", () => {
     mockNativeByCommand(
       withStoredAccountSession((command, args) => {
         const request = (args as Args).request;
-        if (command === "account_inspect_v2") return signedIn(request.requestId);
-      if (command === "manage_tool_connections_v1") {
-        const result = connectionsFixture(request.requestId);
-        Object.assign(
-          result.connections.find((c) => c.toolId === "codex_desktop")!,
-          {
-            state: "unavailable",
-            reasonCode: "secure_storage_unavailable",
-          },
-        );
-        return result;
-      }
-      return defaultNativeHandler(command, args);
+        if (command === "account_inspect_v2")
+          return signedIn(request.requestId);
+        if (command === "manage_tool_connections_v1") {
+          const result = connectionsFixture(request.requestId);
+          Object.assign(
+            result.connections.find((c) => c.toolId === "codex_desktop")!,
+            {
+              state: "unavailable",
+              reasonCode: "secure_storage_unavailable",
+            },
+          );
+          return result;
+        }
+        return defaultNativeHandler(command, args);
       }),
     );
     render(<App />);
@@ -461,22 +468,22 @@ describe("official workbench", () => {
   it("keeps raw model descriptions off both model surfaces while retaining group choices", async () => {
     mockNativeByCommand(
       withStoredAccountSession(async (command, args) => {
-      const request = (args as Args).request;
-      if (command === "manage_tool_connections_v1")
-        return connectionsFixture(request.requestId);
-      if (command === "scan_activation_targets_v1")
-        return activationTargetScan(request.requestId);
-      if (command === "scan_desktop_apps_read_only")
-        return discovery(request.requestId);
-      if (command === "read_public_service_catalog")
-        return catalogFixture(request.requestId, request.lineId);
-      if (command === "account_inspect_v2") {
-        const projection = signedIn(request.requestId);
-        projection.models[0].description =
-          "Synthetic upstream via private connector";
-        return projection;
-      }
-      throw Error("Not available in test");
+        const request = (args as Args).request;
+        if (command === "manage_tool_connections_v1")
+          return connectionsFixture(request.requestId);
+        if (command === "scan_activation_targets_v1")
+          return activationTargetScan(request.requestId);
+        if (command === "scan_desktop_apps_read_only")
+          return discovery(request.requestId);
+        if (command === "read_public_service_catalog")
+          return catalogFixture(request.requestId, request.lineId);
+        if (command === "account_inspect_v2") {
+          const projection = signedIn(request.requestId);
+          projection.models[0].description =
+            "Synthetic upstream via private connector";
+          return projection;
+        }
+        throw Error("Not available in test");
       }),
     );
     render(<App />);
@@ -503,52 +510,54 @@ describe("official workbench", () => {
   it("lists every model for every app and greys none of them", async () => {
     mockNativeByCommand(
       withStoredAccountSession(async (command, args) => {
-      const request = (args as Args).request;
-      if (command === "manage_tool_connections_v1")
-        return connectionsFixture(request.requestId);
-      if (command === "scan_activation_targets_v1")
-        return activationTargetScan(request.requestId);
-      if (command === "scan_desktop_apps_read_only")
-        return discovery(request.requestId);
-      if (command === "read_public_service_catalog")
-        return catalogFixture(request.requestId, request.lineId);
-      if (command === "account_inspect_v2") {
-        const projection = signedIn(request.requestId);
-        // 三种曾经会被判死的声明：只有 anthropic、空的、以及压根没这个字段。
-        projection.models[0].supportedEndpointTypes = ["anthropic"];
-        projection.models.push({
-          ...projection.models[0],
-          id: "glm-5.3-empty",
-          supportedEndpointTypes: [],
-        });
-        // 原生侧 `unpriced_model` 产出的就是这个形状：既没有端点声明，也没有
-        // billing。必填字段要写全 —— 解码器要求键集完全匹配，少一个 billing
-        // 又留着端点键的组合它是不认的。
-        projection.models.push({
-          id: "glm-5.3-undeclared",
-          description: "",
-          billingMode: "unknown",
-          pricingAvailable: false,
-          officialInputCnyPerMillion: "",
-          officialOutputCnyPerMillion: "",
-          actualInputCnyPerMillion: "",
-          actualOutputCnyPerMillion: "",
-          // fixture 的元素类型是从第一个模型推出来的，比线上的形状严。这里
-          // 故意造的就是「少两个可选字段」的那种 payload。
-        } as (typeof projection.models)[number]);
-        // Exercise the native v4+ decoder instead of bypassing it with the
-        // renderer's normalized v3 fixture. Rust omits absent Option values;
-        // mirror that wire shape before the v4 normalizer fills null defaults.
-        const models = projection.models.map((model) => {
-          if (!("billing" in model) || model.billing == null) return model;
-          const billing = Object.fromEntries(
-            Object.entries(model.billing).filter(([, value]) => value !== null),
-          );
-          return { ...model, billing };
-        });
-        return { ...projection, schemaVersion: 4, models };
-      }
-      throw Error("Not available in test");
+        const request = (args as Args).request;
+        if (command === "manage_tool_connections_v1")
+          return connectionsFixture(request.requestId);
+        if (command === "scan_activation_targets_v1")
+          return activationTargetScan(request.requestId);
+        if (command === "scan_desktop_apps_read_only")
+          return discovery(request.requestId);
+        if (command === "read_public_service_catalog")
+          return catalogFixture(request.requestId, request.lineId);
+        if (command === "account_inspect_v2") {
+          const projection = signedIn(request.requestId);
+          // 三种曾经会被判死的声明：只有 anthropic、空的、以及压根没这个字段。
+          projection.models[0].supportedEndpointTypes = ["anthropic"];
+          projection.models.push({
+            ...projection.models[0],
+            id: "glm-5.3-empty",
+            supportedEndpointTypes: [],
+          });
+          // 原生侧 `unpriced_model` 产出的就是这个形状：既没有端点声明，也没有
+          // billing。必填字段要写全 —— 解码器要求键集完全匹配，少一个 billing
+          // 又留着端点键的组合它是不认的。
+          projection.models.push({
+            id: "glm-5.3-undeclared",
+            description: "",
+            billingMode: "unknown",
+            pricingAvailable: false,
+            officialInputCnyPerMillion: "",
+            officialOutputCnyPerMillion: "",
+            actualInputCnyPerMillion: "",
+            actualOutputCnyPerMillion: "",
+            // fixture 的元素类型是从第一个模型推出来的，比线上的形状严。这里
+            // 故意造的就是「少两个可选字段」的那种 payload。
+          } as (typeof projection.models)[number]);
+          // Exercise the native v4+ decoder instead of bypassing it with the
+          // renderer's normalized v3 fixture. Rust omits absent Option values;
+          // mirror that wire shape before the v4 normalizer fills null defaults.
+          const models = projection.models.map((model) => {
+            if (!("billing" in model) || model.billing == null) return model;
+            const billing = Object.fromEntries(
+              Object.entries(model.billing).filter(
+                ([, value]) => value !== null,
+              ),
+            );
+            return { ...model, billing };
+          });
+          return { ...projection, schemaVersion: 4, models };
+        }
+        throw Error("Not available in test");
       }),
     );
     render(<App />);
@@ -562,7 +571,9 @@ describe("official workbench", () => {
         screen.getByRole("combobox", { name: /使用应用/ }).closest("select")!,
         { target: { value: app } },
       );
-      fireEvent.click(screen.getByRole("combobox", { name: /选择模型|模型与价格|模型/ }));
+      fireEvent.click(
+        screen.getByRole("combobox", { name: /选择模型|模型与价格|模型/ }),
+      );
       const options = within(await screen.findByRole("listbox")).getAllByRole(
         "option",
       );
@@ -584,21 +595,21 @@ describe("official workbench", () => {
     let modelsReturned = true;
     mockNativeByCommand(
       withStoredAccountSession(async (command, args) => {
-      const request = (args as Args).request;
-      if (command === "manage_tool_connections_v1")
-        return connectionsFixture(request.requestId);
-      if (command === "scan_activation_targets_v1")
-        return activationTargetScan(request.requestId);
-      if (command === "scan_desktop_apps_read_only")
-        return discovery(request.requestId);
-      if (command === "read_public_service_catalog")
-        return catalogFixture(request.requestId, request.lineId);
-      if (command === "account_inspect_v2") {
-        const projection = signedIn(request.requestId);
-        if (!modelsReturned) projection.models = [];
-        return projection;
-      }
-      throw Error("Not available in test");
+        const request = (args as Args).request;
+        if (command === "manage_tool_connections_v1")
+          return connectionsFixture(request.requestId);
+        if (command === "scan_activation_targets_v1")
+          return activationTargetScan(request.requestId);
+        if (command === "scan_desktop_apps_read_only")
+          return discovery(request.requestId);
+        if (command === "read_public_service_catalog")
+          return catalogFixture(request.requestId, request.lineId);
+        if (command === "account_inspect_v2") {
+          const projection = signedIn(request.requestId);
+          if (!modelsReturned) projection.models = [];
+          return projection;
+        }
+        throw Error("Not available in test");
       }),
     );
     render(<App />);
@@ -615,25 +626,26 @@ describe("official workbench", () => {
     mockNativeByCommand(
       withStoredAccountSession(async (command, args) => {
         const request = (args as Args).request;
-      if (command === "manage_tool_connections_v1") {
-        const result = connectionsFixture(request.requestId);
-        Object.assign(
-          result.connections.find((c) => c.toolId === "codex_desktop")!,
-          {
-            state: "connected",
-            restoreMode: "original",
-            modelId: "glm-5.3",
-            billingGroup: "国模特价分组",
-            lineId: "global_accelerated",
-            updatedAtEpochMs: 1,
-          },
-        );
-        return result;
-      }
-      if (command === "scan_activation_targets_v1")
-        return activationTargetScan(request.requestId);
-      if (command === "account_inspect_v2") return signedIn(request.requestId);
-      throw Error("Unexpected command");
+        if (command === "manage_tool_connections_v1") {
+          const result = connectionsFixture(request.requestId);
+          Object.assign(
+            result.connections.find((c) => c.toolId === "codex_desktop")!,
+            {
+              state: "connected",
+              restoreMode: "original",
+              modelId: "glm-5.3",
+              billingGroup: "国模特价分组",
+              lineId: "global_accelerated",
+              updatedAtEpochMs: 1,
+            },
+          );
+          return result;
+        }
+        if (command === "scan_activation_targets_v1")
+          return activationTargetScan(request.requestId);
+        if (command === "account_inspect_v2")
+          return signedIn(request.requestId);
+        throw Error("Unexpected command");
       }, "global_accelerated"),
     );
     render(
@@ -713,9 +725,7 @@ describe("official workbench", () => {
     expect(
       screen.queryByRole("region", { name: "用量账单" }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "检测并连接" }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "检测并连接" })).toBeDisabled();
     expect(screen.getByRole("textbox")).toHaveValue("");
     expect(screen.getAllByRole("article")).toHaveLength(8);
     const card = screen
@@ -839,54 +849,56 @@ describe("official workbench", () => {
       native.mock.calls.filter((call) => call[0] === "account_inspect_v2"),
     ).toHaveLength(0);
     expect(
-      native.mock.calls.some((call) => call[0] === "account_session_snapshot_v2"),
+      native.mock.calls.some(
+        (call) => call[0] === "account_session_snapshot_v2",
+      ),
     ).toBe(true);
   });
   it("renders signed-in account facts and the auditable price comparison", async () => {
     mockNativeByCommand(
       withStoredAccountSession(async (command, args) => {
-      const request = (args as Args).request;
-      if (command === "manage_tool_connections_v1")
-        return connectionsFixture(request.requestId);
-      if (command === "scan_activation_targets_v1")
-        return activationTargetScan(request.requestId);
-      if (command === "scan_desktop_apps_read_only")
-        return discovery(request.requestId);
-      if (command === "account_inspect_v2") {
-        const old = signedIn(request.requestId);
-        return {
-          ...old,
-          schemaVersion: 5,
-          models: old.models.map(({ billing, ...model }) => {
-            const { requestUsd: _unknown, ...known } = billing;
-            return { ...model, billing: known };
-          }),
-          money: {
-            currency: "CNY",
-            balanceAmount: "0.7",
-            consumedAmount: "0.24",
-            displayRate: "1",
-          },
-          savings: {
-            status: "empty",
-            reasonCode: "no_history",
-            officialAmount: "",
-            siteAmount: "",
-            savedAmount: "",
-            referenceRate: "",
-            priceRate: "",
-            recordLimit: 100,
-            scannedCount: 0,
-            includedCount: 0,
-            excludedCount: 0,
-            oldestAtEpochMs: 0,
-            newestAtEpochMs: 0,
-          },
-        };
-      }
-      if (command === "read_public_service_catalog")
-        return catalogFixture(request.requestId, request.lineId);
-      throw Error("Not available in test");
+        const request = (args as Args).request;
+        if (command === "manage_tool_connections_v1")
+          return connectionsFixture(request.requestId);
+        if (command === "scan_activation_targets_v1")
+          return activationTargetScan(request.requestId);
+        if (command === "scan_desktop_apps_read_only")
+          return discovery(request.requestId);
+        if (command === "account_inspect_v2") {
+          const old = signedIn(request.requestId);
+          return {
+            ...old,
+            schemaVersion: 5,
+            models: old.models.map(({ billing, ...model }) => {
+              const { requestUsd: _unknown, ...known } = billing;
+              return { ...model, billing: known };
+            }),
+            money: {
+              currency: "CNY",
+              balanceAmount: "0.7",
+              consumedAmount: "0.24",
+              displayRate: "1",
+            },
+            savings: {
+              status: "empty",
+              reasonCode: "no_history",
+              officialAmount: "",
+              siteAmount: "",
+              savedAmount: "",
+              referenceRate: "",
+              priceRate: "",
+              recordLimit: 100,
+              scannedCount: 0,
+              includedCount: 0,
+              excludedCount: 0,
+              oldestAtEpochMs: 0,
+              newestAtEpochMs: 0,
+            },
+          };
+        }
+        if (command === "read_public_service_catalog")
+          return catalogFixture(request.requestId, request.lineId);
+        throw Error("Not available in test");
       }),
     );
     render(<App />);
@@ -911,46 +923,46 @@ describe("official workbench", () => {
   it("renders a legitimate negative account balance instead of rejecting the session", async () => {
     mockNativeByCommand(
       withStoredAccountSession(async (command, args) => {
-      const request = (args as Args).request;
-      if (command === "manage_tool_connections_v1")
-        return connectionsFixture(request.requestId);
-      if (command === "scan_activation_targets_v1")
-        return activationTargetScan(request.requestId);
-      if (command === "scan_desktop_apps_read_only")
-        return discovery(request.requestId);
-      if (command === "account_inspect_v2") {
-        const account = signedIn(request.requestId);
-        return {
-          ...account,
-          schemaVersion: 5,
-          account: { ...account.account, balanceQuota: "-125000" },
-          models: [],
-          money: {
-            currency: "CNY",
-            balanceAmount: "-1.75",
-            consumedAmount: "1.68",
-            displayRate: "1",
-          },
-          savings: {
-            status: "empty",
-            reasonCode: "no_history",
-            officialAmount: "",
-            siteAmount: "",
-            savedAmount: "",
-            referenceRate: "",
-            priceRate: "",
-            recordLimit: 100,
-            scannedCount: 0,
-            includedCount: 0,
-            excludedCount: 0,
-            oldestAtEpochMs: 0,
-            newestAtEpochMs: 0,
-          },
-        };
-      }
-      if (command === "read_public_service_catalog")
-        return catalogFixture(request.requestId, request.lineId);
-      throw Error("Not available in test");
+        const request = (args as Args).request;
+        if (command === "manage_tool_connections_v1")
+          return connectionsFixture(request.requestId);
+        if (command === "scan_activation_targets_v1")
+          return activationTargetScan(request.requestId);
+        if (command === "scan_desktop_apps_read_only")
+          return discovery(request.requestId);
+        if (command === "account_inspect_v2") {
+          const account = signedIn(request.requestId);
+          return {
+            ...account,
+            schemaVersion: 5,
+            account: { ...account.account, balanceQuota: "-125000" },
+            models: [],
+            money: {
+              currency: "CNY",
+              balanceAmount: "-1.75",
+              consumedAmount: "1.68",
+              displayRate: "1",
+            },
+            savings: {
+              status: "empty",
+              reasonCode: "no_history",
+              officialAmount: "",
+              siteAmount: "",
+              savedAmount: "",
+              referenceRate: "",
+              priceRate: "",
+              recordLimit: 100,
+              scannedCount: 0,
+              includedCount: 0,
+              excludedCount: 0,
+              oldestAtEpochMs: 0,
+              newestAtEpochMs: 0,
+            },
+          };
+        }
+        if (command === "read_public_service_catalog")
+          return catalogFixture(request.requestId, request.lineId);
+        throw Error("Not available in test");
       }),
     );
 
@@ -978,16 +990,16 @@ describe("official workbench", () => {
           return discovery(request.requestId);
         if (command === "account_inspect_v2") {
           inspections += 1;
-        if (inspections === 1) return signedIn(request.requestId);
-        if (inspections === 2)
-          return new Promise((resolve) => {
-            finishRouteRefresh = () => resolve(signedIn(request.requestId));
-          });
-        return {
-          ...signedOut(request.requestId),
-          status: "network_error",
-          reasonCode: "network_error",
-        };
+          if (inspections === 1) return signedIn(request.requestId);
+          if (inspections === 2)
+            return new Promise((resolve) => {
+              finishRouteRefresh = () => resolve(signedIn(request.requestId));
+            });
+          return {
+            ...signedOut(request.requestId),
+            status: "network_error",
+            reasonCode: "network_error",
+          };
         }
         throw Error("Not available in test");
       }),
@@ -1026,16 +1038,16 @@ describe("official workbench", () => {
           if (command === "scan_activation_targets_v1")
             return activationTargetScan(request.requestId);
           if (command === "configure_desktop_tool_v2")
-          return {
-            requestId: request.requestId,
-            schemaVersion: 3,
-            status: "ready",
-            toolId: "codex_desktop",
-            modelId: "glm-5.3",
-            billingGroup,
-            observedAtEpochMs: 1_788_195_600_000,
-            reasonCode: "configuration_ready",
-          };
+            return {
+              requestId: request.requestId,
+              schemaVersion: 3,
+              status: "ready",
+              toolId: "codex_desktop",
+              modelId: "glm-5.3",
+              billingGroup,
+              observedAtEpochMs: 1_788_195_600_000,
+              reasonCode: "configuration_ready",
+            };
           throw Error("Not available in test");
         }),
       );
@@ -1082,44 +1094,44 @@ describe("official workbench", () => {
   it("allows setup when the group is valid but its dynamic price cannot be converted", async () => {
     mockNativeByCommand(
       withStoredAccountSession(async (command, args) => {
-      const request = (args as Args).request;
-      if (command === "manage_tool_connections_v1")
-        return connectionsFixture(request.requestId);
-      if (command === "scan_activation_targets_v1")
-        return activationTargetScan(request.requestId);
-      if (command === "scan_desktop_apps_read_only")
-        return discovery(request.requestId);
-      if (command === "scan_activation_targets_v1")
-        return activationTargetScan(request.requestId);
-      if (command === "account_inspect_v2") {
-        const account = signedIn(request.requestId);
-        account.models[0] = {
-          ...account.models[0],
-          billingMode: "tiered_expr",
-          pricingAvailable: false,
-          officialInputCnyPerMillion: "",
-          officialOutputCnyPerMillion: "",
-          actualInputCnyPerMillion: "",
-          actualOutputCnyPerMillion: "",
-          billing: {
-            ...account.models[0].billing,
-            expression: 'param("service_tier") == "fast" ? p * 3 : p',
-          },
-        };
-        return account;
-      }
-      if (command === "configure_desktop_tool_v2")
-        return {
-          requestId: request.requestId,
-          schemaVersion: 3,
-          status: "ready",
-          toolId: "claude_desktop",
-          modelId: "glm-5.3",
-          billingGroup: "default",
-          observedAtEpochMs: 1_788_195_600_000,
-          reasonCode: "configuration_ready",
-        };
-      throw Error("Not available in test");
+        const request = (args as Args).request;
+        if (command === "manage_tool_connections_v1")
+          return connectionsFixture(request.requestId);
+        if (command === "scan_activation_targets_v1")
+          return activationTargetScan(request.requestId);
+        if (command === "scan_desktop_apps_read_only")
+          return discovery(request.requestId);
+        if (command === "scan_activation_targets_v1")
+          return activationTargetScan(request.requestId);
+        if (command === "account_inspect_v2") {
+          const account = signedIn(request.requestId);
+          account.models[0] = {
+            ...account.models[0],
+            billingMode: "tiered_expr",
+            pricingAvailable: false,
+            officialInputCnyPerMillion: "",
+            officialOutputCnyPerMillion: "",
+            actualInputCnyPerMillion: "",
+            actualOutputCnyPerMillion: "",
+            billing: {
+              ...account.models[0].billing,
+              expression: 'param("service_tier") == "fast" ? p * 3 : p',
+            },
+          };
+          return account;
+        }
+        if (command === "configure_desktop_tool_v2")
+          return {
+            requestId: request.requestId,
+            schemaVersion: 3,
+            status: "ready",
+            toolId: "claude_desktop",
+            modelId: "glm-5.3",
+            billingGroup: "default",
+            observedAtEpochMs: 1_788_195_600_000,
+            reasonCode: "configuration_ready",
+          };
+        throw Error("Not available in test");
       }),
     );
     render(<App />);
@@ -1136,6 +1148,10 @@ describe("official workbench", () => {
   });
 
   it("syncs appearance controls, follows system changes and persists only an enum", async () => {
+    localStorage.setItem(
+      SKIN_KEY,
+      JSON.stringify({ mode: "standard", character: "dafeiyu" }),
+    );
     const save = vi.spyOn(Storage.prototype, "setItem");
     render(<App />);
     await screen.findByText("版本 1.40609.1");
@@ -1168,8 +1184,19 @@ describe("official workbench", () => {
   });
   it("keeps appearance usable when storage fails and rejects invalid preferences", async () => {
     localStorage.setItem(APPEARANCE_KEY, "unexpected-value");
+    localStorage.setItem(
+      SKIN_KEY,
+      JSON.stringify({ mode: "standard", character: "dafeiyu" }),
+    );
     expect(readAppearance()).toBe("system");
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+    const realGetItem = Storage.prototype.getItem;
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(function (
+      this: Storage,
+      key: string,
+    ) {
+      if (key === SKIN_KEY) {
+        return realGetItem.call(this, key);
+      }
       throw Error("denied");
     });
     expect(readAppearance()).toBe("system");
@@ -1180,6 +1207,22 @@ describe("official workbench", () => {
     await screen.findByText("版本 1.40609.1");
     fireEvent.click(screen.getByRole("button", { name: "深色" }));
     expect(document.documentElement.dataset.theme).toBe("dark");
+  });
+
+  it("locks warm light and hides appearance controls on anime skin", async () => {
+    localStorage.setItem(APPEARANCE_KEY, "dark");
+    localStorage.setItem(
+      SKIN_KEY,
+      JSON.stringify({ mode: "anime", character: "dafeiyu" }),
+    );
+    render(<App />);
+    await screen.findByText("版本 1.40609.1");
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(screen.queryByRole("button", { name: "深色" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "设置" }));
+    expect(
+      await screen.findByTestId("settings-appearance-locked"),
+    ).toHaveTextContent("月华皮锁定浅色澄镜");
   });
   it("defines complete localized copy, a single font system and accessible responsive themes", () => {
     const keys = Object.keys(workbenchCopies.zh).sort();
@@ -1289,17 +1332,18 @@ describe("announcements", () => {
     mockNativeByCommand(
       withStoredAccountSession((command, args) => {
         const request = (args as Args).request;
-        if (command === "account_inspect_v2") return signedIn(request.requestId);
-      if (command === "account_announcements_read_v2")
-        return {
-          requestId: request.requestId,
-          available: true,
-          notices: [promotion, maintenance],
-        };
-      if (command === "account_announcement_action_v2") {
-        followed.push((request as { noticeId?: string }).noticeId ?? "");
-        return null;
-      }
+        if (command === "account_inspect_v2")
+          return signedIn(request.requestId);
+        if (command === "account_announcements_read_v2")
+          return {
+            requestId: request.requestId,
+            available: true,
+            notices: [promotion, maintenance],
+          };
+        if (command === "account_announcement_action_v2") {
+          followed.push((request as { noticeId?: string }).noticeId ?? "");
+          return null;
+        }
         return defaultNativeHandler(command, args);
       }),
     );

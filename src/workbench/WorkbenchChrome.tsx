@@ -74,6 +74,7 @@ export function WorkbenchSidebar({
   announcementsUnread = 0,
   appearance,
   onAppearance,
+  appearanceLocked = false,
   accountProjection,
   accountLoading,
   accountLineId,
@@ -86,6 +87,8 @@ export function WorkbenchSidebar({
   announcementsUnread?: number;
   appearance: Appearance;
   onAppearance: (value: Appearance) => void;
+  /** Anime skin forces warm light; hide the theme picker. */
+  appearanceLocked?: boolean;
   accountProjection: AccountProjection | null;
   accountLoading: boolean;
   accountLineId: AccountLineId;
@@ -116,7 +119,7 @@ export function WorkbenchSidebar({
     view === "models" || view === "diagnostics" || view === "tools"
       ? "settings"
       : view;
-  // 当前项的青柠胶囊是一个独立元素，在导航项之间滑动（只动 transform）。
+  // 当前项指示器是一个独立元素，在导航项之间滑动（只动 transform）。月华皮下改成柔光圆，当前项用玻璃胶囊。
   const navRef = useRef<HTMLElement>(null);
   const indicatorRef = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
@@ -173,6 +176,10 @@ export function WorkbenchSidebar({
   };
   return (
     <aside className="workbench-sidebar">
+      <span className="workbench-slash" aria-hidden="true" />
+      <span className="workbench-slash-mark" aria-hidden="true">
+        月華
+      </span>
       <button
         type="button"
         className="workbench-brand"
@@ -211,7 +218,9 @@ export function WorkbenchSidebar({
             <span>{c.joinGroup}</span>
           </button>
         )}
-        <AppearancePicker value={appearance} onChange={onAppearance} />
+        {appearanceLocked ? null : (
+          <AppearancePicker value={appearance} onChange={onAppearance} />
+        )}
         <button
           type="button"
           className="sidebar-account"

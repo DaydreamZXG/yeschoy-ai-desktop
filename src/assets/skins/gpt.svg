@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200" viewBox="0 0 1600 1200" role="img" aria-label="GPT placeholder wallpaper">
+  <!-- PLACEHOLDER: not licensed character art. Replace after authorization. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e6eef8"/>
+      <stop offset="50%" stop-color="#d7e3f4"/>
+      <stop offset="100%" stop-color="#c5d0e6"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="74%" cy="40%" r="48%">
+      <stop offset="0%" stop-color="#7ee8f4" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#6d5cff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="halo" cx="74%" cy="28%" r="22%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.72"/>
+      <stop offset="100%" stop-color="#7ee8f4" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="1200" fill="url(#bg)"/>
+  <rect width="1600" height="1200" fill="url(#glow)"/>
+  <rect width="1600" height="1200" fill="url(#halo)"/>
+  <g opacity="0.82" fill="#3d4f72">
+    <ellipse cx="1200" cy="250" rx="108" ry="128"/>
+    <path d="M1028 410 C1080 330, 1320 330, 1374 410 C1424 530, 1450 790, 1400 1000 C1354 1120, 1060 1120, 1014 1000 C968 790, 976 530, 1028 410 Z"/>
+    <path d="M1130 1000 C1084 1070, 1060 1140, 1036 1200 L1368 1200 C1344 1140, 1320 1070, 1274 1000 Z" opacity="0.75"/>
+  </g>
+  <text x="64" y="96" fill="#1d1633" fill-opacity="0.28" font-family="ui-sans-serif, system-ui, sans-serif" font-size="28">GPT · PLACEHOLDER</text>
+</svg>

@@ -12,6 +12,7 @@ import "./theme/new-api.css";
 import "./theme/new-api-layout.css";
 import "./theme/motion.css";
 import "./theme/system.css";
+import "./theme/anime-skin.css";
 
 const applyTitle = () => {
   document.title = i18n.t("workbench.appTitle");
