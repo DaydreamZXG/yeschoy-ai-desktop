@@ -315,23 +315,23 @@
     "groupPrivacyNote": "这些是本版本固定的行为，不需要你设置。",
     "groupSystem": "后台运行",
     "groupAdvanced": "排查与高级",
-    "skinTitle": "闪切皮肤与开机",
-    "skinNote": "闪切视觉：混剪式开机、墨色侧栏与构图壁纸。侧栏入口与接入流程不变，可随时切回标准主题。",
+    "skinTitle": "月华皮肤与开机",
+    "skinNote": "月华视觉：角色站在右侧舞台，界面是澄镜玻璃。侧栏入口与接入流程不变，可随时切回标准主题。",
     "skinModeTitle": "界面风格",
-    "skinModeNote": "二次元皮默认启用闪切；标准主题关闭壁纸与冲击铬层。",
+    "skinModeNote": "二次元皮默认启用月华；标准主题关闭壁纸与澄镜铬层。",
     "skinMode": {
       "anime": "二次元",
       "standard": "标准"
     },
     "skinCharacterTitle": "壁纸皮肤",
-    "skinCharacterNote": "角色在壁纸层，不替代应用列表。默认大肥鱼。正式立绘待授权替换占位图。",
+    "skinCharacterNote": "角色占据右侧舞台，不替代应用列表。默认大肥鱼。正式立绘待授权替换占位图。",
     "skinCharacter": {
       "dafeiyu": "大肥鱼",
       "claude": "Claude大小姐",
       "gpt": "GPT小吉"
     },
     "bootEnabledTitle": "开机动画",
-    "bootEnabledNote": "仅二次元皮下冷启动播放闪切四幕；可随时跳过。切到标准皮不会播。",
+    "bootEnabledNote": "仅二次元皮下冷启动播放月华四幕；可随时跳过。切到标准皮不会播。",
     "bootEnabledOn": "已开启",
     "bootEnabledOff": "已关闭",
     "bootFrequencyTitle": "播放频率",
@@ -341,7 +341,7 @@
       "session": "每次会话",
       "always": "总是（高级）"
     },
-    "animeLocksWarmLight": "闪切皮固定暖白"
+    "animeLocksWarmLight": "月华皮锁定浅色澄镜"
   },
   "yeschoyUpdate": {
     "title": "野菜自动更新",
@@ -1407,14 +1407,14 @@
   },
   "bootRitual": {
     "skip": "跳过",
-    "breach": "切入",
-    "ticker": "野菜 · 闪切",
-    "stage1Title": "第一刀",
-    "stage1En": "THE FIRST CUT",
-    "stage2Title": "把世界切开",
-    "stage2En": "SLICE THE FRAME",
-    "stage3Title": "闪光落下",
-    "stage3En": "IMPACT FLARE",
+    "breach": "启幕",
+    "ticker": "野菜 · 月华",
+    "stage1Title": "月出",
+    "stage1En": "THE MOON RISES",
+    "stage2Title": "启幕",
+    "stage2En": "THE CURTAIN LIFTS",
+    "stage3Title": "花开",
+    "stage3En": "BLOOM",
     "stage4Title": "登录一次，接入你的 AI 应用",
     "stage4En": "Sign in once · Connect your AI apps"
   }

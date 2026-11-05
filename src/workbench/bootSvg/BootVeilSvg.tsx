@@ -1,23 +1,10 @@
 /**
- * Full-bleed AMV veil — speed lines + chromatic light beams.
+ * Full-bleed aurora veil — mist ribbons and moon rings over the character stage.
  */
 
-const FOCUS = { x: 1120, y: 360 };
+const STAGE = { x: 1080, y: 400 };
 
-const SPEED_LINES = Array.from({ length: 44 }, (_, i) => {
-  const angle = (i / 44) * Math.PI * 2 + 0.08;
-  const wobble = ((i * 17) % 13) - 6;
-  const inner = 64 + (i % 7) * 14;
-  const outer = 860 + wobble * 10;
-  return {
-    x1: +(FOCUS.x + Math.cos(angle) * inner).toFixed(1),
-    y1: +(FOCUS.y + Math.sin(angle) * inner).toFixed(1),
-    x2: +(FOCUS.x + Math.cos(angle) * outer).toFixed(1),
-    y2: +(FOCUS.y + Math.sin(angle) * outer).toFixed(1),
-    w: i % 5 === 0 ? 2.8 : i % 3 === 0 ? 1.5 : 0.7,
-    o: i % 4 === 0 ? 0.55 : 0.2,
-  };
-});
+const RINGS = [120, 220, 340, 480];
 
 export function BootVeilSvg() {
   return (
@@ -30,51 +17,73 @@ export function BootVeilSvg() {
       focusable="false"
     >
       <defs>
-        <linearGradient id="fc-veil-beam" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#c9fa10" stopOpacity="0" />
-          <stop offset="48%" stopColor="#c9fa10" stopOpacity="0.55" />
-          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+        <radialGradient id="th-veil-stage" cx="76%" cy="44%" r="46%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.42" />
+          <stop offset="48%" stopColor="#c5b8ff" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="#6d5cff" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="th-veil-iris" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#6d5cff" stopOpacity="0" />
+          <stop offset="50%" stopColor="#6d5cff" stopOpacity="0.28" />
+          <stop offset="100%" stopColor="#6d5cff" stopOpacity="0" />
         </linearGradient>
-        <linearGradient id="fc-veil-magenta" x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0%" stopColor="#ff3df0" stopOpacity="0" />
-          <stop offset="50%" stopColor="#ff3df0" stopOpacity="0.42" />
-          <stop offset="100%" stopColor="#ff3df0" stopOpacity="0" />
+        <linearGradient id="th-veil-sakura" x1="1" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ff7eb3" stopOpacity="0" />
+          <stop offset="50%" stopColor="#ff7eb3" stopOpacity="0.26" />
+          <stop offset="100%" stopColor="#ff7eb3" stopOpacity="0" />
         </linearGradient>
-        <linearGradient id="fc-veil-cyan" x1="1" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#1cf0ff" stopOpacity="0" />
-          <stop offset="50%" stopColor="#1cf0ff" stopOpacity="0.38" />
-          <stop offset="100%" stopColor="#1cf0ff" stopOpacity="0" />
+        <linearGradient id="th-veil-aqua" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0%" stopColor="#7ee8f4" stopOpacity="0" />
+          <stop offset="50%" stopColor="#7ee8f4" stopOpacity="0.22" />
+          <stop offset="100%" stopColor="#7ee8f4" stopOpacity="0" />
         </linearGradient>
       </defs>
 
-      <path
-        className="boot-svg-beam"
-        d="M -80 80 L 1520 540 L 1520 640 L -80 180 Z"
-        fill="url(#fc-veil-beam)"
-      />
-      <path
-        className="boot-svg-beam"
-        d="M -60 220 L 1540 700 L 1540 760 L -60 280 Z"
-        fill="url(#fc-veil-magenta)"
-      />
-      <path
-        className="boot-svg-beam"
-        d="M -40 -20 L 1500 420 L 1500 470 L -40 40 Z"
-        fill="url(#fc-veil-cyan)"
+      <ellipse
+        className="boot-svg-stage-glow"
+        cx={STAGE.x}
+        cy={STAGE.y}
+        rx="420"
+        ry="520"
+        fill="url(#th-veil-stage)"
       />
 
-      {SPEED_LINES.map((line, index) => (
-        <line
-          key={index}
-          className="boot-svg-speedline"
-          x1={line.x1}
-          y1={line.y1}
-          x2={line.x2}
-          y2={line.y2}
+      <path
+        className="boot-svg-ribbon"
+        d="M -40 220 C 280 80, 620 340, 980 210 S 1420 80, 1500 160"
+        fill="none"
+        stroke="url(#th-veil-iris)"
+        strokeWidth="90"
+        strokeLinecap="round"
+      />
+      <path
+        className="boot-svg-ribbon"
+        d="M -60 520 C 300 640, 640 380, 1020 560 S 1400 720, 1520 600"
+        fill="none"
+        stroke="url(#th-veil-sakura)"
+        strokeWidth="70"
+        strokeLinecap="round"
+      />
+      <path
+        className="boot-svg-ribbon"
+        d="M -20 80 C 360 180, 700 40, 1100 140 S 1460 40, 1540 90"
+        fill="none"
+        stroke="url(#th-veil-aqua)"
+        strokeWidth="52"
+        strokeLinecap="round"
+      />
+
+      {RINGS.map((radius, index) => (
+        <circle
+          key={radius}
+          className={`boot-svg-moonring boot-svg-moonring-${index + 1}`}
+          cx={STAGE.x}
+          cy={STAGE.y}
+          r={radius}
+          fill="none"
           stroke="#ffffff"
-          strokeWidth={line.w}
-          strokeOpacity={line.o}
-          style={{ animationDelay: `${(index % 8) * 40}ms` }}
+          strokeWidth={index === 0 ? 1.6 : 1}
+          strokeOpacity={0.42 - index * 0.07}
         />
       ))}
     </svg>

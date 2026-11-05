@@ -1222,7 +1222,7 @@ describe("official workbench", () => {
     fireEvent.click(screen.getByRole("button", { name: "设置" }));
     expect(
       await screen.findByTestId("settings-appearance-locked"),
-    ).toHaveTextContent("闪切皮固定暖白");
+    ).toHaveTextContent("月华皮锁定浅色澄镜");
   });
   it("defines complete localized copy, a single font system and accessible responsive themes", () => {
     const keys = Object.keys(workbenchCopies.zh).sort();

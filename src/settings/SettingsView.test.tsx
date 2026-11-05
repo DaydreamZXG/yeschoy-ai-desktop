@@ -237,7 +237,7 @@ describe("SettingsView", () => {
       screen.getByTestId("settings-appearance-locked"),
     ).toBeInTheDocument();
     expect(screen.getByTestId("settings-appearance-row")).toHaveTextContent(
-      "闪切皮固定暖白",
+      "月华皮锁定浅色澄镜",
     );
   });
 });

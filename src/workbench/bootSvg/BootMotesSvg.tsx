@@ -1,27 +1,28 @@
 /**
- * Kinetic sparks — elongated streaks, not pollen motes.
+ * Drifting petals and light motes — slow bloom, not kinetic slashes.
  */
-const STREAKS: Array<{
+const MOTES: Array<{
   x: number;
   y: number;
-  len: number;
-  angle: number;
+  r: number;
+  kind: "dot" | "petal";
   delay: string;
+  rot?: number;
 }> = [
-  { x: 8, y: 22, len: 14, angle: -28, delay: "0s" },
-  { x: 82, y: 14, len: 11, angle: -18, delay: "0.12s" },
-  { x: 16, y: 70, len: 16, angle: -34, delay: "0.08s" },
-  { x: 72, y: 62, len: 13, angle: -22, delay: "0.2s" },
-  { x: 44, y: 8, len: 10, angle: -40, delay: "0.04s" },
-  { x: 64, y: 88, len: 15, angle: -16, delay: "0.28s" },
-  { x: 6, y: 48, len: 9, angle: -30, delay: "0.16s" },
-  { x: 92, y: 40, len: 12, angle: -24, delay: "0.22s" },
-  { x: 34, y: 90, len: 11, angle: -36, delay: "0.1s" },
-  { x: 70, y: 10, len: 13, angle: -14, delay: "0.32s" },
-  { x: 28, y: 36, len: 8, angle: -26, delay: "0.06s" },
-  { x: 56, y: 54, len: 17, angle: -20, delay: "0.18s" },
-  { x: 86, y: 78, len: 10, angle: -32, delay: "0.26s" },
-  { x: 40, y: 18, len: 12, angle: -12, delay: "0.14s" },
+  { x: 12, y: 22, r: 1.4, kind: "dot", delay: "0s" },
+  { x: 78, y: 16, r: 2.1, kind: "petal", delay: "0.4s", rot: 18 },
+  { x: 24, y: 68, r: 1.1, kind: "dot", delay: "1.1s" },
+  { x: 86, y: 58, r: 1.8, kind: "petal", delay: "0.2s", rot: -24 },
+  { x: 46, y: 10, r: 1.2, kind: "dot", delay: "0.7s" },
+  { x: 62, y: 84, r: 2.4, kind: "petal", delay: "1.6s", rot: 40 },
+  { x: 8, y: 48, r: 1.6, kind: "petal", delay: "0.9s", rot: -12 },
+  { x: 92, y: 38, r: 1.0, kind: "dot", delay: "1.3s" },
+  { x: 34, y: 88, r: 1.7, kind: "petal", delay: "0.5s", rot: 8 },
+  { x: 70, y: 8, r: 1.3, kind: "dot", delay: "1.8s" },
+  { x: 18, y: 36, r: 2.0, kind: "petal", delay: "0.15s", rot: 28 },
+  { x: 54, y: 52, r: 1.5, kind: "dot", delay: "1.0s" },
+  { x: 88, y: 78, r: 1.9, kind: "petal", delay: "1.4s", rot: -32 },
+  { x: 40, y: 28, r: 1.2, kind: "dot", delay: "0.6s" },
 ];
 
 export function BootMotesSvg() {
@@ -35,26 +36,40 @@ export function BootMotesSvg() {
       focusable="false"
     >
       <defs>
-        <linearGradient id="fc-streak" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
-          <stop offset="45%" stopColor="#c9fa10" stopOpacity="1" />
-          <stop offset="100%" stopColor="#1cf0ff" stopOpacity="0" />
+        <radialGradient id="th-mote-dot" cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
+          <stop offset="100%" stopColor="#6d5cff" stopOpacity="0.15" />
+        </radialGradient>
+        <linearGradient id="th-mote-petal" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#ff7eb3" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#6d5cff" stopOpacity="0.25" />
         </linearGradient>
       </defs>
-      {STREAKS.map((streak, index) => (
-        <line
-          key={index}
-          className="boot-svg-mote"
-          x1={streak.x}
-          y1={streak.y}
-          x2={streak.x + Math.cos((streak.angle * Math.PI) / 180) * streak.len}
-          y2={streak.y + Math.sin((streak.angle * Math.PI) / 180) * streak.len}
-          stroke="url(#fc-streak)"
-          strokeWidth="0.7"
-          strokeLinecap="round"
-          style={{ animationDelay: streak.delay }}
-        />
-      ))}
+      {MOTES.map((mote, index) =>
+        mote.kind === "petal" ? (
+          <ellipse
+            key={index}
+            className="boot-svg-mote"
+            cx={mote.x}
+            cy={mote.y}
+            rx={mote.r * 0.55}
+            ry={mote.r * 1.35}
+            fill="url(#th-mote-petal)"
+            transform={`rotate(${mote.rot ?? 0} ${mote.x} ${mote.y})`}
+            style={{ animationDelay: mote.delay }}
+          />
+        ) : (
+          <circle
+            key={index}
+            className="boot-svg-mote"
+            cx={mote.x}
+            cy={mote.y}
+            r={mote.r}
+            fill="url(#th-mote-dot)"
+            style={{ animationDelay: mote.delay }}
+          />
+        ),
+      )}
     </svg>
   );
 }

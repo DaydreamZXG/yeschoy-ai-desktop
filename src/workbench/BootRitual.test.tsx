@@ -58,7 +58,7 @@ describe("BootRitual", () => {
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
-  it("BREACH advances from stage 2 after flash", async () => {
+  it("UNVEIL advances from stage 2 after bloom", async () => {
     render(
       <BootRitual
         character="dafeiyu"
@@ -77,7 +77,7 @@ describe("BootRitual", () => {
       "true",
     );
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(400);
+      await vi.advanceTimersByTimeAsync(600);
     });
     expect(screen.getByTestId("boot-ritual")).toHaveAttribute(
       "data-stage",
@@ -85,7 +85,7 @@ describe("BootRitual", () => {
     );
   });
 
-  it("Enter on stage 2 acts as BREACH", async () => {
+  it("Enter on stage 2 acts as UNVEIL", async () => {
     render(
       <BootRitual
         character="claude"
@@ -96,7 +96,7 @@ describe("BootRitual", () => {
     );
     fireEvent.keyDown(window, { key: "Enter" });
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(400);
+      await vi.advanceTimersByTimeAsync(600);
     });
     expect(screen.getByTestId("boot-ritual")).toHaveAttribute(
       "data-stage",
@@ -120,7 +120,7 @@ describe("BootRitual", () => {
     expect(pips[3]).toHaveAttribute("data-state", "todo");
   });
 
-  it("auto-advances stage 2 via BREACH after the dwell timer", async () => {
+  it("auto-advances stage 2 via UNVEIL after the dwell timer", async () => {
     render(
       <BootRitual character="dafeiyu" onComplete={vi.fn()} initialStage={2} />,
     );
@@ -132,7 +132,7 @@ describe("BootRitual", () => {
       await vi.advanceTimersByTimeAsync(5200);
     });
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(400);
+      await vi.advanceTimersByTimeAsync(600);
     });
     expect(screen.getByTestId("boot-ritual")).toHaveAttribute(
       "data-stage",
@@ -157,7 +157,7 @@ describe("BootRitual", () => {
     );
   });
 
-  it("mounts FLASHCUT SVG layers (sigil, motes, veil, refract)", () => {
+  it("mounts TSUKIHANA SVG layers (sigil, motes, veil, refract)", () => {
     render(
       <BootRitual
         character="dafeiyu"
@@ -168,7 +168,7 @@ describe("BootRitual", () => {
     );
     expect(screen.getByTestId("boot-ritual")).toHaveAttribute(
       "data-visual",
-      "flashcut",
+      "tsukihana",
     );
     expect(screen.getByTestId("boot-svg-sigil")).toBeInTheDocument();
     expect(screen.getByTestId("boot-svg-motes")).toBeInTheDocument();
@@ -179,7 +179,7 @@ describe("BootRitual", () => {
     );
   });
 
-  it("activates SVG refract burst while 切入 flashes", async () => {
+  it("activates SVG refract burst while 启幕 blooms", async () => {
     render(
       <BootRitual
         character="dafeiyu"
@@ -194,7 +194,7 @@ describe("BootRitual", () => {
       "true",
     );
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(400);
+      await vi.advanceTimersByTimeAsync(600);
     });
     expect(screen.getByTestId("boot-svg-refract")).toHaveAttribute(
       "data-active",

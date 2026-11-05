@@ -315,23 +315,23 @@
     "groupPrivacyNote": "Fixed behaviour in this version — nothing to configure.",
     "groupSystem": "Background",
     "groupAdvanced": "Troubleshooting & advanced",
-    "skinTitle": "FLASHCUT skin & boot",
-    "skinNote": "FLASHCUT: AMV-style boot, ink sidebar, and wallpaper as composition. Sidebar and connect flows stay the same. Switch back to Standard anytime.",
+    "skinTitle": "TSUKIHANA skin & boot",
+    "skinNote": "TSUKIHANA: the character stands on a right-hand stage, the UI floats as liquid glass. Sidebar and connect flows stay the same. Switch back to Standard anytime.",
     "skinModeTitle": "UI style",
-    "skinModeNote": "Anime is on by default with FLASHCUT; Standard turns off wallpaper and the impact chrome.",
+    "skinModeNote": "Anime is on by default with TSUKIHANA; Standard turns off wallpaper and the glass chrome.",
     "skinMode": {
       "anime": "Anime",
       "standard": "Standard"
     },
     "skinCharacterTitle": "Wallpaper skin",
-    "skinCharacterNote": "Characters live on the wallpaper layer, never replace the app list. Default: Dafeiyu. Standee art is a placeholder until licensed.",
+    "skinCharacterNote": "Characters occupy the right-hand stage, never replace the app list. Default: Dafeiyu. Standee art is a placeholder until licensed.",
     "skinCharacter": {
       "dafeiyu": "Dafeiyu",
       "claude": "Claude",
       "gpt": "GPT"
     },
     "bootEnabledTitle": "Boot ritual",
-    "bootEnabledNote": "Four-beat FLASHCUT ritual on cold start, anime skin only. Always skippable. Standard skin never plays it.",
+    "bootEnabledNote": "Four-beat TSUKIHANA ritual on cold start, anime skin only. Always skippable. Standard skin never plays it.",
     "bootEnabledOn": "On",
     "bootEnabledOff": "Off",
     "bootFrequencyTitle": "Play frequency",
@@ -341,7 +341,7 @@
       "session": "Each session",
       "always": "Always (advanced)"
     },
-    "animeLocksWarmLight": "FLASHCUT skin locks warm light"
+    "animeLocksWarmLight": "TSUKIHANA locks the luminous glass palette"
   },
   "yeschoyUpdate": {
     "title": "Yeschoy automatic updates",
@@ -1407,14 +1407,14 @@
   },
   "bootRitual": {
     "skip": "Skip",
-    "breach": "CUT IN",
-    "ticker": "YesChoy · FLASHCUT",
-    "stage1Title": "THE FIRST CUT",
-    "stage1En": "Cut the night open",
-    "stage2Title": "SLICE THE FRAME",
-    "stage2En": "One hard cut",
-    "stage3Title": "IMPACT FLARE",
-    "stage3En": "The flash lands",
+    "breach": "Unveil",
+    "ticker": "YesChoy · TSUKIHANA",
+    "stage1Title": "THE MOON RISES",
+    "stage1En": "Moonlight finds the stage",
+    "stage2Title": "THE CURTAIN LIFTS",
+    "stage2En": "Step into the glass",
+    "stage3Title": "BLOOM",
+    "stage3En": "The night flowers open",
     "stage4Title": "Sign in once, connect your AI apps",
     "stage4En": "Sign in once · Connect your AI apps"
   }

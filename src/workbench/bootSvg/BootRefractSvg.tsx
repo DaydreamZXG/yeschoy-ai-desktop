@@ -1,5 +1,5 @@
 /**
- * Ignite burst — chromatic slash star, not citrus petals.
+ * Unveil bloom — expanding glass rings and a six-petal burst.
  */
 export function BootRefractSvg({ active }: { active: boolean }) {
   return (
@@ -12,49 +12,57 @@ export function BootRefractSvg({ active }: { active: boolean }) {
       focusable="false"
     >
       <defs>
-        <radialGradient id="fc-burst" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.85" />
-          <stop offset="32%" stopColor="#c9fa10" stopOpacity="0.45" />
-          <stop offset="100%" stopColor="#c9fa10" stopOpacity="0" />
+        <radialGradient id="th-burst" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9" />
+          <stop offset="34%" stopColor="#ff7eb3" stopOpacity="0.38" />
+          <stop offset="100%" stopColor="#6d5cff" stopOpacity="0" />
         </radialGradient>
+        <linearGradient id="th-burst-petal" x1="0.2" y1="0" x2="0.8" y2="1">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+          <stop offset="100%" stopColor="#6d5cff" stopOpacity="0.35" />
+        </linearGradient>
       </defs>
-      <circle cx="100" cy="100" r="88" fill="url(#fc-burst)" />
-      <path
-        d="M 18 142 L 182 48"
-        fill="none"
-        stroke="#ff3df0"
-        strokeWidth="10"
-        strokeLinecap="square"
-        opacity="0.75"
-      />
-      <path
-        d="M 28 158 L 190 62"
-        fill="none"
-        stroke="#1cf0ff"
-        strokeWidth="10"
-        strokeLinecap="square"
-        opacity="0.7"
-      />
-      <path
-        d="M 22 150 L 186 54"
-        fill="none"
-        stroke="#c9fa10"
-        strokeWidth="7"
-        strokeLinecap="square"
-      />
-      <path
-        d="M 100 18 L 108 86 L 182 100 L 108 114 L 100 182 L 92 114 L 18 100 L 92 86 Z"
-        fill="#ffffff"
-        fillOpacity="0.55"
-      />
+      <circle cx="100" cy="100" r="88" fill="url(#th-burst)" />
+      <g className="boot-svg-refract-petals" fill="url(#th-burst-petal)">
+        <ellipse cx="100" cy="46" rx="10" ry="28" />
+        <ellipse
+          cx="146"
+          cy="72"
+          rx="10"
+          ry="28"
+          transform="rotate(60 146 72)"
+        />
+        <ellipse
+          cx="146"
+          cy="128"
+          rx="10"
+          ry="28"
+          transform="rotate(120 146 128)"
+        />
+        <ellipse cx="100" cy="154" rx="10" ry="28" />
+        <ellipse
+          cx="54"
+          cy="128"
+          rx="10"
+          ry="28"
+          transform="rotate(60 54 128)"
+        />
+        <ellipse
+          cx="54"
+          cy="72"
+          rx="10"
+          ry="28"
+          transform="rotate(120 54 72)"
+        />
+      </g>
       <circle
         className="boot-svg-refract-ring boot-svg-refract-ring-1"
         cx="100"
         cy="100"
         r="36"
         fill="none"
-        stroke="#c9fa10"
-        strokeWidth="2"
+        stroke="#6d5cff"
+        strokeWidth="1.6"
       />
       <circle
         className="boot-svg-refract-ring boot-svg-refract-ring-2"
@@ -62,9 +70,9 @@ export function BootRefractSvg({ active }: { active: boolean }) {
         cy="100"
         r="58"
         fill="none"
-        stroke="#ff3df0"
-        strokeOpacity="0.7"
-        strokeWidth="1.5"
+        stroke="#ff7eb3"
+        strokeOpacity="0.75"
+        strokeWidth="1.3"
       />
       <circle
         className="boot-svg-refract-ring boot-svg-refract-ring-3"
@@ -72,9 +80,9 @@ export function BootRefractSvg({ active }: { active: boolean }) {
         cy="100"
         r="82"
         fill="none"
-        stroke="#1cf0ff"
+        stroke="#7ee8f4"
         strokeOpacity="0.55"
-        strokeWidth="1.2"
+        strokeWidth="1.1"
       />
     </svg>
   );
