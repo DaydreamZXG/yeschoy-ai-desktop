@@ -1,29 +1,27 @@
 /**
- * Pollen / seed motes drifting through the lucent veil.
- * Soft citrus light, not HUD sparks.
+ * Kinetic sparks — elongated streaks, not pollen motes.
  */
-const MOTES: Array<{
-  cx: number;
-  cy: number;
-  r: number;
+const STREAKS: Array<{
+  x: number;
+  y: number;
+  len: number;
+  angle: number;
   delay: string;
-  kind: "dot" | "seed";
-  rot?: number;
 }> = [
-  { cx: 10, cy: 24, r: 1.5, delay: "0s", kind: "dot" },
-  { cx: 86, cy: 16, r: 1.2, delay: "0.5s", kind: "seed", rot: -28 },
-  { cx: 18, cy: 68, r: 1.6, delay: "0.9s", kind: "dot" },
-  { cx: 74, cy: 62, r: 1.9, delay: "1.2s", kind: "seed", rot: 18 },
-  { cx: 46, cy: 8, r: 1.1, delay: "0.3s", kind: "dot" },
-  { cx: 64, cy: 88, r: 1.4, delay: "1.6s", kind: "dot" },
-  { cx: 6, cy: 50, r: 1.0, delay: "0.7s", kind: "seed", rot: 42 },
-  { cx: 94, cy: 42, r: 1.5, delay: "1.4s", kind: "dot" },
-  { cx: 34, cy: 90, r: 1.2, delay: "1.0s", kind: "seed", rot: -12 },
-  { cx: 70, cy: 10, r: 1.3, delay: "1.8s", kind: "dot" },
-  { cx: 28, cy: 38, r: 0.9, delay: "0.2s", kind: "dot" },
-  { cx: 58, cy: 54, r: 1.1, delay: "2.1s", kind: "seed", rot: 8 },
-  { cx: 82, cy: 78, r: 1.0, delay: "0.6s", kind: "dot" },
-  { cx: 42, cy: 20, r: 1.4, delay: "1.9s", kind: "seed", rot: -36 },
+  { x: 8, y: 22, len: 14, angle: -28, delay: "0s" },
+  { x: 82, y: 14, len: 11, angle: -18, delay: "0.12s" },
+  { x: 16, y: 70, len: 16, angle: -34, delay: "0.08s" },
+  { x: 72, y: 62, len: 13, angle: -22, delay: "0.2s" },
+  { x: 44, y: 8, len: 10, angle: -40, delay: "0.04s" },
+  { x: 64, y: 88, len: 15, angle: -16, delay: "0.28s" },
+  { x: 6, y: 48, len: 9, angle: -30, delay: "0.16s" },
+  { x: 92, y: 40, len: 12, angle: -24, delay: "0.22s" },
+  { x: 34, y: 90, len: 11, angle: -36, delay: "0.1s" },
+  { x: 70, y: 10, len: 13, angle: -14, delay: "0.32s" },
+  { x: 28, y: 36, len: 8, angle: -26, delay: "0.06s" },
+  { x: 56, y: 54, len: 17, angle: -20, delay: "0.18s" },
+  { x: 86, y: 78, len: 10, angle: -32, delay: "0.26s" },
+  { x: 40, y: 18, len: 12, angle: -12, delay: "0.14s" },
 ];
 
 export function BootMotesSvg() {
@@ -37,37 +35,26 @@ export function BootMotesSvg() {
       focusable="false"
     >
       <defs>
-        <radialGradient id="qm-mote" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
-          <stop offset="40%" stopColor="#c9fa10" stopOpacity="0.9" />
-          <stop offset="100%" stopColor="#d4b36a" stopOpacity="0" />
-        </radialGradient>
+        <linearGradient id="fc-streak" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
+          <stop offset="45%" stopColor="#c9fa10" stopOpacity="1" />
+          <stop offset="100%" stopColor="#1cf0ff" stopOpacity="0" />
+        </linearGradient>
       </defs>
-      {MOTES.map((mote, index) =>
-        mote.kind === "seed" ? (
-          <ellipse
-            key={index}
-            className="boot-svg-mote"
-            cx={mote.cx}
-            cy={mote.cy}
-            rx={mote.r * 0.7}
-            ry={mote.r * 1.35}
-            fill="url(#qm-mote)"
-            transform={`rotate(${mote.rot ?? 0} ${mote.cx} ${mote.cy})`}
-            style={{ animationDelay: mote.delay }}
-          />
-        ) : (
-          <circle
-            key={index}
-            className="boot-svg-mote"
-            cx={mote.cx}
-            cy={mote.cy}
-            r={mote.r}
-            fill="url(#qm-mote)"
-            style={{ animationDelay: mote.delay }}
-          />
-        ),
-      )}
+      {STREAKS.map((streak, index) => (
+        <line
+          key={index}
+          className="boot-svg-mote"
+          x1={streak.x}
+          y1={streak.y}
+          x2={streak.x + Math.cos((streak.angle * Math.PI) / 180) * streak.len}
+          y2={streak.y + Math.sin((streak.angle * Math.PI) / 180) * streak.len}
+          stroke="url(#fc-streak)"
+          strokeWidth="0.7"
+          strokeLinecap="round"
+          style={{ animationDelay: streak.delay }}
+        />
+      ))}
     </svg>
   );
 }

@@ -1,4 +1,4 @@
-> **已替换：** 橙色准星 / HUD 框已拆除，详见 [`v2-visual-system.md`](./v2-visual-system.md)。下文仅作历史对照。
+> **已替换：** 橙色准星、青芒纹章均已拆除。现行零件是闪切光刃 / 集中线 / 星爆，详见 [`v2-visual-system.md`](./v2-visual-system.md)。下文仅作历史对照。
 
 # BootRitual SVG 炫酷层
 

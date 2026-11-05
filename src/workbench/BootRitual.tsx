@@ -22,18 +22,17 @@ interface BootRitualProps {
   disableAutoAdvance?: boolean;
 }
 
-/** Auto dwell per act. Stage 2 waits on 启明, then auto-advances. */
+/** AMV beat pacing. Stage 2 waits on 切入, then auto-advances. ~7s full run. */
 const STAGE_MS: Record<BootStage, number> = {
-  1: 1800,
-  2: 5000,
-  3: 1600,
-  4: 1600,
+  1: 1200,
+  2: 2800,
+  3: 1200,
+  4: 1500,
 };
 
-const LEAVE_MS = 420;
-const REFRACT_MS = 320;
-
-const ACT_EASE = [0.22, 1, 0.36, 1] as const;
+const LEAVE_MS = 360;
+const IMPACT_MS = 160;
+const REFRACT_MS = 280;
 
 const STAGE_COPY: Record<BootStage, { title: string; en: string }> = {
   1: { title: "bootRitual.stage1Title", en: "bootRitual.stage1En" },
@@ -42,19 +41,19 @@ const STAGE_COPY: Record<BootStage, { title: string; en: string }> = {
   4: { title: "bootRitual.stage4Title", en: "bootRitual.stage4En" },
 };
 
-const actMotion = (reduce: boolean) =>
+const hardCut = (reduce: boolean) =>
   reduce
     ? {
-        initial: { opacity: 1, y: 0, filter: "none" },
-        animate: { opacity: 1, y: 0, filter: "none" },
+        initial: { opacity: 1 },
+        animate: { opacity: 1 },
         exit: { opacity: 0 },
-        transition: { duration: 0.12 },
+        transition: { duration: 0.08 },
       }
     : {
-        initial: { opacity: 0, y: 18, filter: "blur(8px)" },
-        animate: { opacity: 1, y: 0, filter: "blur(0px)" },
-        exit: { opacity: 0, y: -12, filter: "blur(6px)" },
-        transition: { duration: 0.48, ease: ACT_EASE },
+        initial: { opacity: 1 },
+        animate: { opacity: 1 },
+        exit: { opacity: 1 },
+        transition: { duration: 0 },
       };
 
 export function BootRitual({
@@ -68,8 +67,20 @@ export function BootRitual({
   const [stage, setStage] = useState<BootStage>(initialStage);
   const [leaving, setLeaving] = useState(false);
   const [flashing, setFlashing] = useState(false);
+  const [cutting, setCutting] = useState(!reduceMotion);
   const finished = useRef(false);
   const flashTimer = useRef<number | null>(null);
+  const cutTimer = useRef<number | null>(null);
+
+  const punchCut = useCallback(() => {
+    if (reduceMotion) return;
+    setCutting(true);
+    if (cutTimer.current != null) window.clearTimeout(cutTimer.current);
+    cutTimer.current = window.setTimeout(() => {
+      setCutting(false);
+      cutTimer.current = null;
+    }, IMPACT_MS);
+  }, [reduceMotion]);
 
   const finish = useCallback(() => {
     if (finished.current) return;
@@ -78,7 +89,12 @@ export function BootRitual({
       window.clearTimeout(flashTimer.current);
       flashTimer.current = null;
     }
+    if (cutTimer.current != null) {
+      window.clearTimeout(cutTimer.current);
+      cutTimer.current = null;
+    }
     setFlashing(false);
+    setCutting(false);
     markBootPlayed(readBootPreference());
     setLeaving(true);
     window.setTimeout(() => onComplete(), LEAVE_MS);
@@ -108,6 +124,10 @@ export function BootRitual({
       reduceMotion ? 80 : REFRACT_MS,
     );
   }, [stage, flashing, advanceFrom, reduceMotion]);
+
+  useEffect(() => {
+    punchCut();
+  }, [stage, punchCut]);
 
   useEffect(() => {
     if (disableAutoAdvance) return;
@@ -141,32 +161,42 @@ export function BootRitual({
   useEffect(() => {
     return () => {
       if (flashTimer.current != null) window.clearTimeout(flashTimer.current);
+      if (cutTimer.current != null) window.clearTimeout(cutTimer.current);
     };
   }, []);
 
   const copy = STAGE_COPY[stage];
-  const motionProps = actMotion(reduceMotion);
+  const motionProps = hardCut(reduceMotion);
+  const title = t(copy.title);
 
   return (
     <div
       className="boot-ritual"
       data-testid="boot-ritual"
-      data-visual="qingmang"
+      data-visual="flashcut"
       data-stage={stage}
       data-character={character}
       data-leaving={leaving ? "true" : "false"}
       data-flashing={flashing ? "true" : "false"}
+      data-cutting={cutting ? "true" : "false"}
       role="dialog"
       aria-modal="true"
       aria-labelledby="boot-ritual-title"
     >
       <div className="boot-ritual-wallpaper" aria-hidden="true" />
-      <div className="boot-ritual-wash" aria-hidden="true" />
-      <div className="boot-ritual-bloom" aria-hidden="true" />
+      <div className="boot-ritual-grade" aria-hidden="true" />
+      <div className="boot-ritual-beams" aria-hidden="true" />
+      <div className="boot-ritual-streaks" aria-hidden="true" />
       <div className="boot-ritual-chroma" aria-hidden="true" />
       <BootVeilSvg />
       <BootMotesSvg />
       <BootRefractSvg active={flashing} />
+      <div className="boot-ritual-impact" aria-hidden="true" />
+
+      <div className="boot-ritual-letterbox" aria-hidden="true">
+        <span className="boot-ritual-letterbox-top" />
+        <span className="boot-ritual-letterbox-bottom" />
+      </div>
 
       <button
         type="button"
@@ -182,6 +212,11 @@ export function BootRitual({
           <BootSigilSvg />
         </div>
 
+        <p className="boot-ritual-index" aria-hidden="true">
+          {String(stage).padStart(2, "0")}
+          <span> / 04</span>
+        </p>
+
         <div className="boot-ritual-progress" aria-hidden="true">
           {([1, 2, 3, 4] as BootStage[]).map((step) => (
             <span
@@ -194,13 +229,7 @@ export function BootRitual({
           ))}
         </div>
 
-        <p className="boot-ritual-index" aria-hidden="true">
-          {String(stage).padStart(2, "0")}
-          <span> · </span>
-          04
-        </p>
-
-        <AnimatePresence mode="wait" initial={!reduceMotion}>
+        <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={stage}
             className="boot-ritual-act"
@@ -210,8 +239,15 @@ export function BootRitual({
             exit={motionProps.exit}
             transition={motionProps.transition}
           >
-            <h1 id="boot-ritual-title" className="boot-ritual-title">
-              {t(copy.title)}
+            <p className="boot-ritual-kicker" aria-hidden="true">
+              FLASHCUT
+            </p>
+            <h1
+              id="boot-ritual-title"
+              className="boot-ritual-title"
+              data-text={title}
+            >
+              {title}
             </h1>
             <p className="boot-ritual-en" lang="en">
               {t(copy.en)}
@@ -224,12 +260,8 @@ export function BootRitual({
                 data-testid="boot-ritual-breach"
                 onClick={ignite}
               >
-                {t("bootRitual.breach")}
+                <span>{t("bootRitual.breach")}</span>
               </button>
-            )}
-
-            {stage === 3 && (
-              <div className="boot-ritual-spectrum" aria-hidden="true" />
             )}
           </motion.div>
         </AnimatePresence>

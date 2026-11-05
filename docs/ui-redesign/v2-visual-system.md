@@ -1,56 +1,57 @@
-# 青芒 · Qingmang — visual system v2
+# 闪切 · FLASHCUT — visual system v3
 
-> 上一版开机是「暖白卡片 + 橙色准星 HUD」。看起来像把游戏准星贴在 SaaS 上，所以整套视觉（含动画）按 **青芒** 重做。
+> 上一版「青芒」仍是置中柔雾卡片 + 礼貌标题，截图像同一套 SaaS。这一版按日漫混剪（AMV）重做：硬切、冲击帧、光刃、色差、撑满屏幕的中文标题。
 > 侧栏信息架构不变：我的应用 / 接入 / 账单 / 公告 / 设置。标准主题不受影响。
 
 ## 方向
 
-**青芒**是野菜已有的电柠 `#c9fa10` 被当成一道光，而不是一层霓虹贴花。
+**闪切**把开机当成一段 6–8 秒可跳过的混剪，而不是一张对话卡片。工作台用墨色侧栏和硬边色块，让截图也看得出换皮。
 
 | 不要 | 改成 |
 |------|------|
-| 橙色准星 / 扫描弧 / HUD 括号 | 六瓣柑橘纹章（切开的青柠） |
-| 「神经链路」「击穿边界 · BREACH」 | 短中文：青芒初启 / 把光折进来 / 路径已亮；按钮「启明」 |
-| 军事大写英文 ticker | 静默署名「野菜 · 青芒」 |
-| 小玻璃对话框中央置中 | 全屏澄光纱 + 标题式字叠，径向柔雾保证可读 |
-| 工作台还是普通暖白卡 | 同一套奶油底、叶绿、电柠轨与毛玻璃 |
+| 置中柔雾卡片 + 小标题 | 全屏电影遮幅，标题按幕次撑满画面 |
+| 青芒六瓣纹章 / 橙色准星 HUD | 斜切光刃 + 集中线 + 品红/青色谱线 |
+| 「青芒初启 / 把光折进来 / 启明」 | 「第一刀 / 把世界切开 / 切入 / 闪光落下」 |
+| 奶油毛玻璃侧栏 | 近黑墨轨 + 电柠斜切当前项 |
+| 壁纸当右侧淡水印 | 壁纸参与右侧构图，左侧表单仍可读 |
 
-底板仍是暖瓷白 `#f3efe4`，不是纯黑赛博。工作台表单、密钥、诊断保持高不透明。
+开机底板是墨黑 `#07070a`，冲击帧走白闪。工作台内容区仍是暖纸色，表单、密钥、诊断保持高不透明。二次元皮继续锁暖白（关掉深浅切换），墨色只给侧栏。
 
 ## 开机四幕
 
+全程硬切（冲击白帧，不淡入滑出）。可 **跳过 / Esc**。`prefers-reduced-motion: reduce` 时去掉冲击、光束与色差。
+
 | 幕 | 中文 | 英文 | 交互 |
 |----|------|------|------|
-| 01 | 青芒初启 | The first blade of light | 自动，纹章展开 |
-| 02 | 把光折进来 | Refract the light in | 「启明」或 Enter / Space；约 5 秒无操作自动 |
-| 03 | 路径已亮 | The path is lit | 光谱条，自动 |
-| 04 | 登录一次，接入你的 AI 应用 | Sign in once · Connect your AI apps | 落地产品白话后淡出 |
+| 01 | 第一刀 | THE FIRST CUT | 自动，约 1.2s |
+| 02 | 把世界切开 | SLICE THE FRAME | 「切入」或 Enter / Space；约 2.8s 无操作自动 |
+| 03 | 闪光落下 | IMPACT FLARE | 光束拉满，自动约 1.2s |
+| 04 | 登录一次，接入你的 AI 应用 | Sign in once · Connect your AI apps | 产品白话后硬切进工作台 |
 
-全程可 **跳过 / Esc**。`prefers-reduced-motion: reduce` 时缩短时序、关掉漂浮与折光爆发。
-
-仅 `data-skin="anime"` 会播；标准皮不播。默认每天一次。
+仅 `data-skin="anime"` 会播；标准皮不播。默认每天一次。整段约 7 秒（含切入闪光），可随时跳过。
 
 ## SVG 零件
 
 | 组件 | 路径 | 作用 |
 |------|------|------|
-| `BootSigilSvg` | `src/workbench/bootSvg/BootSigilSvg.tsx` | 六瓣柑橘纹章 + 种子 + 植物轨道 |
-| `BootVeilSvg` | `src/workbench/bootSvg/BootVeilSvg.tsx` | 全屏光带与树冠焦散 |
-| `BootMotesSvg` | `src/workbench/bootSvg/BootMotesSvg.tsx` | 花粉 / 种子光点 |
-| `BootRefractSvg` | `src/workbench/bootSvg/BootRefractSvg.tsx` | 「启明」时六瓣折光爆发 |
-| 工作台光晕 | `src/assets/skins/ambient-glow.svg` | 右侧极淡柑光，不是橙环 |
+| `BootSigilSvg` | `src/workbench/bootSvg/BootSigilSvg.tsx` | 色差光刃纹章 |
+| `BootVeilSvg` | `src/workbench/bootSvg/BootVeilSvg.tsx` | 全屏集中线 + 光束 |
+| `BootMotesSvg` | `src/workbench/bootSvg/BootMotesSvg.tsx` | 飞溅光痕 |
+| `BootRefractSvg` | `src/workbench/bootSvg/BootRefractSvg.tsx` | 「切入」时的闪光星爆 |
+| 工作台光晕 | `src/assets/skins/ambient-glow.svg` | 右侧色差光刃，不是橙环 |
 
-旧的 `BootReticleSvg` / `BootHudFrameSvg` / `BootParticlesSvg` / `BootEnergyPulseSvg` 已删除。
+`data-visual="flashcut"`。旧青芒柑橘纹章与橙色 HUD 已删除。
 
 ## 工作台铬层
 
 `src/theme/anime-skin.css` 在二次元皮下：
 
-- 侧栏：澄光毛玻璃 + 左侧一道垂直青芒光轨
-- 当前导航：电柠雾胶囊（沿用已有滑动指示器，改成青芒辉光）
-- 卡片：白玻璃 + 极淡柠色描边；账单首卡略提亮
-- 壁纸：右侧水印，并向左渐隐，不盖住表单
-- 诊断 / 关于 / 高级连接：约 94% 不透明，无模糊
+- 侧栏：近黑墨轨 + 右侧电柠竖刃 + 竖排 FLASHCUT
+- 当前导航：电柠斜切色块（指示器藏掉）
+- 卡片：白底、2px 墨线、硬投影；账单首卡铺满电柠
+- 页标题：更大字号 + 斜切色条
+- 壁纸：右侧构图，对角线遮罩，不盖住左侧表单
+- 诊断 / 关于 / 高级连接：约 96% 不透明，无模糊、无硬投影
 
 ## 怎么预览
 

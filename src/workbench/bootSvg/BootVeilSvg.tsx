@@ -1,7 +1,24 @@
 /**
- * Full-stage lucent veil — citrus ribbons and canopy caustics.
- * Editorial light, not HUD brackets or tick rails.
+ * Full-bleed AMV veil — speed lines + chromatic light beams.
  */
+
+const FOCUS = { x: 1120, y: 360 };
+
+const SPEED_LINES = Array.from({ length: 44 }, (_, i) => {
+  const angle = (i / 44) * Math.PI * 2 + 0.08;
+  const wobble = ((i * 17) % 13) - 6;
+  const inner = 64 + (i % 7) * 14;
+  const outer = 860 + wobble * 10;
+  return {
+    x1: +(FOCUS.x + Math.cos(angle) * inner).toFixed(1),
+    y1: +(FOCUS.y + Math.sin(angle) * inner).toFixed(1),
+    x2: +(FOCUS.x + Math.cos(angle) * outer).toFixed(1),
+    y2: +(FOCUS.y + Math.sin(angle) * outer).toFixed(1),
+    w: i % 5 === 0 ? 2.8 : i % 3 === 0 ? 1.5 : 0.7,
+    o: i % 4 === 0 ? 0.55 : 0.2,
+  };
+});
+
 export function BootVeilSvg() {
   return (
     <svg
@@ -13,58 +30,53 @@ export function BootVeilSvg() {
       focusable="false"
     >
       <defs>
-        <linearGradient id="qm-ribbon" x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id="fc-veil-beam" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="#c9fa10" stopOpacity="0" />
-          <stop offset="38%" stopColor="#c9fa10" stopOpacity="0.42" />
-          <stop offset="68%" stopColor="#d4b36a" stopOpacity="0.28" />
-          <stop offset="100%" stopColor="#c9fa10" stopOpacity="0" />
+          <stop offset="48%" stopColor="#c9fa10" stopOpacity="0.55" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
         </linearGradient>
-        <linearGradient id="qm-ribbon-soft" x1="1" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#1c6b4a" stopOpacity="0" />
-          <stop offset="50%" stopColor="#7db82a" stopOpacity="0.22" />
-          <stop offset="100%" stopColor="#c9fa10" stopOpacity="0" />
+        <linearGradient id="fc-veil-magenta" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0%" stopColor="#ff3df0" stopOpacity="0" />
+          <stop offset="50%" stopColor="#ff3df0" stopOpacity="0.42" />
+          <stop offset="100%" stopColor="#ff3df0" stopOpacity="0" />
         </linearGradient>
-        <radialGradient id="qm-caustic" cx="72%" cy="28%" r="42%">
-          <stop offset="0%" stopColor="#c9fa10" stopOpacity="0.22" />
-          <stop offset="55%" stopColor="#e7f6a8" stopOpacity="0.08" />
-          <stop offset="100%" stopColor="#c9fa10" stopOpacity="0" />
-        </radialGradient>
+        <linearGradient id="fc-veil-cyan" x1="1" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#1cf0ff" stopOpacity="0" />
+          <stop offset="50%" stopColor="#1cf0ff" stopOpacity="0.38" />
+          <stop offset="100%" stopColor="#1cf0ff" stopOpacity="0" />
+        </linearGradient>
       </defs>
 
-      <ellipse cx="1100" cy="210" rx="380" ry="240" fill="url(#qm-caustic)" />
-      <ellipse
-        cx="280"
-        cy="640"
-        rx="260"
-        ry="180"
-        fill="#c9fa10"
-        fillOpacity="0.05"
+      <path
+        className="boot-svg-beam"
+        d="M -80 80 L 1520 540 L 1520 640 L -80 180 Z"
+        fill="url(#fc-veil-beam)"
+      />
+      <path
+        className="boot-svg-beam"
+        d="M -60 220 L 1540 700 L 1540 760 L -60 280 Z"
+        fill="url(#fc-veil-magenta)"
+      />
+      <path
+        className="boot-svg-beam"
+        d="M -40 -20 L 1500 420 L 1500 470 L -40 40 Z"
+        fill="url(#fc-veil-cyan)"
       />
 
-      <path
-        className="boot-svg-ribbon boot-svg-ribbon-a"
-        d="M-60 170 C 240 40, 520 300, 820 190 S 1260 40, 1520 230"
-        fill="none"
-        stroke="url(#qm-ribbon)"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-      />
-      <path
-        className="boot-svg-ribbon boot-svg-ribbon-b"
-        d="M-40 430 C 280 540, 560 250, 920 400 S 1280 580, 1500 390"
-        fill="none"
-        stroke="url(#qm-ribbon-soft)"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <path
-        className="boot-svg-ribbon boot-svg-ribbon-c"
-        d="M 40 760 C 360 620, 680 840, 1000 690 S 1340 800, 1540 650"
-        fill="none"
-        stroke="url(#qm-ribbon)"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
+      {SPEED_LINES.map((line, index) => (
+        <line
+          key={index}
+          className="boot-svg-speedline"
+          x1={line.x1}
+          y1={line.y1}
+          x2={line.x2}
+          y2={line.y2}
+          stroke="#ffffff"
+          strokeWidth={line.w}
+          strokeOpacity={line.o}
+          style={{ animationDelay: `${(index % 8) * 40}ms` }}
+        />
+      ))}
     </svg>
   );
 }

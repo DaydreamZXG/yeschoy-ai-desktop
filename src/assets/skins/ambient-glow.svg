@@ -1,26 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800" aria-hidden="true">
-  <!-- Qingmang workbench caustics — lime/gold light, not an orange HUD ring -->
+  <!-- FLASHCUT workbench flares — chromatic slashes, not an orange HUD ring -->
   <defs>
-    <radialGradient id="qm-amb" cx="64%" cy="34%" r="48%">
-      <stop offset="0%" stop-color="#c9fa10" stop-opacity="0.28"/>
-      <stop offset="42%" stop-color="#e7f6a8" stop-opacity="0.1"/>
-      <stop offset="100%" stop-color="#c9fa10" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="qm-amb-gold" cx="78%" cy="58%" r="34%">
-      <stop offset="0%" stop-color="#d4b36a" stop-opacity="0.12"/>
-      <stop offset="100%" stop-color="#d4b36a" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="qm-amb-arc" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="fc-amb-slash" x1="0" y1="1" x2="1" y2="0">
       <stop offset="0%" stop-color="#c9fa10" stop-opacity="0"/>
-      <stop offset="50%" stop-color="#c9fa10" stop-opacity="0.35"/>
-      <stop offset="100%" stop-color="#1c6b4a" stop-opacity="0"/>
+      <stop offset="48%" stop-color="#c9fa10" stop-opacity="0.42"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fc-amb-m" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff3df0" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#ff3df0" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#ff3df0" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="fc-amb-c" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1cf0ff" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#1cf0ff" stop-opacity="0.24"/>
+      <stop offset="100%" stop-color="#1cf0ff" stop-opacity="0"/>
     </linearGradient>
   </defs>
-  <rect width="800" height="800" fill="url(#qm-amb)"/>
-  <rect width="800" height="800" fill="url(#qm-amb-gold)"/>
-  <path d="M 280 180 C 420 80, 620 140, 700 280" fill="none" stroke="url(#qm-amb-arc)" stroke-width="1.4"/>
-  <path d="M 240 260 C 400 200, 580 300, 690 360" fill="none" stroke="#c9fa10" stroke-opacity="0.12" stroke-width="1"/>
-  <ellipse cx="540" cy="250" rx="150" ry="110" fill="none" stroke="#c9fa10" stroke-opacity="0.1" stroke-width="1"/>
-  <ellipse cx="540" cy="250" rx="210" ry="150" fill="none" stroke="#1c6b4a" stroke-opacity="0.06" stroke-width="1"/>
+  <path d="M 120 80 L 820 430 L 820 500 L 120 150 Z" fill="url(#fc-amb-slash)"/>
+  <path d="M 80 220 L 860 620 L 860 670 L 80 270 Z" fill="url(#fc-amb-m)"/>
+  <path d="M 200 -20 L 860 280 L 860 320 L 200 20 Z" fill="url(#fc-amb-c)"/>
+  <path d="M 420 40 L 760 720" fill="none" stroke="#c9fa10" stroke-opacity="0.22" stroke-width="6"/>
+  <path d="M 448 28 L 788 708" fill="none" stroke="#ff3df0" stroke-opacity="0.16" stroke-width="4"/>
+  <path d="M 396 52 L 736 732" fill="none" stroke="#1cf0ff" stroke-opacity="0.14" stroke-width="4"/>
 </svg>

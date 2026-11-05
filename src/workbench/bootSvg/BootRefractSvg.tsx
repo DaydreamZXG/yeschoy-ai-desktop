@@ -1,26 +1,6 @@
 /**
- * Ignite burst — citrus segments flare outward like light through a cut lime.
+ * Ignite burst — chromatic slash star, not citrus petals.
  */
-function polar(
-  radius: number,
-  deg: number,
-  cx = 100,
-  cy = 100,
-): [number, number] {
-  const rad = (deg * Math.PI) / 180;
-  return [cx + radius * Math.cos(rad), cy + radius * Math.sin(rad)];
-}
-
-function flarePath(index: number): string {
-  const start = index * 60 - 90 + 8;
-  const end = index * 60 - 90 + 52;
-  const [x0, y0] = polar(18, start);
-  const [x1, y1] = polar(72, start);
-  const [x2, y2] = polar(72, end);
-  const [x3, y3] = polar(18, end);
-  return `M ${x0.toFixed(1)} ${y0.toFixed(1)} L ${x1.toFixed(1)} ${y1.toFixed(1)} A 72 72 0 0 1 ${x2.toFixed(1)} ${y2.toFixed(1)} L ${x3.toFixed(1)} ${y3.toFixed(1)} Z`;
-}
-
 export function BootRefractSvg({ active }: { active: boolean }) {
   return (
     <svg
@@ -32,25 +12,41 @@ export function BootRefractSvg({ active }: { active: boolean }) {
       focusable="false"
     >
       <defs>
-        <radialGradient id="qm-refract" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.55" />
-          <stop offset="35%" stopColor="#c9fa10" stopOpacity="0.35" />
+        <radialGradient id="fc-burst" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.85" />
+          <stop offset="32%" stopColor="#c9fa10" stopOpacity="0.45" />
           <stop offset="100%" stopColor="#c9fa10" stopOpacity="0" />
         </radialGradient>
       </defs>
-      <circle cx="100" cy="100" r="86" fill="url(#qm-refract)" />
-      {Array.from({ length: 6 }, (_, index) => (
-        <path
-          key={index}
-          className={`boot-svg-flare boot-svg-flare-${index + 1}`}
-          d={flarePath(index)}
-          fill="#c9fa10"
-          fillOpacity="0.28"
-          stroke="#c9fa10"
-          strokeOpacity="0.7"
-          strokeWidth="1.2"
-        />
-      ))}
+      <circle cx="100" cy="100" r="88" fill="url(#fc-burst)" />
+      <path
+        d="M 18 142 L 182 48"
+        fill="none"
+        stroke="#ff3df0"
+        strokeWidth="10"
+        strokeLinecap="square"
+        opacity="0.75"
+      />
+      <path
+        d="M 28 158 L 190 62"
+        fill="none"
+        stroke="#1cf0ff"
+        strokeWidth="10"
+        strokeLinecap="square"
+        opacity="0.7"
+      />
+      <path
+        d="M 22 150 L 186 54"
+        fill="none"
+        stroke="#c9fa10"
+        strokeWidth="7"
+        strokeLinecap="square"
+      />
+      <path
+        d="M 100 18 L 108 86 L 182 100 L 108 114 L 100 182 L 92 114 L 18 100 L 92 86 Z"
+        fill="#ffffff"
+        fillOpacity="0.55"
+      />
       <circle
         className="boot-svg-refract-ring boot-svg-refract-ring-1"
         cx="100"
@@ -58,7 +54,7 @@ export function BootRefractSvg({ active }: { active: boolean }) {
         r="36"
         fill="none"
         stroke="#c9fa10"
-        strokeWidth="1.6"
+        strokeWidth="2"
       />
       <circle
         className="boot-svg-refract-ring boot-svg-refract-ring-2"
@@ -66,9 +62,9 @@ export function BootRefractSvg({ active }: { active: boolean }) {
         cy="100"
         r="58"
         fill="none"
-        stroke="#d4b36a"
+        stroke="#ff3df0"
         strokeOpacity="0.7"
-        strokeWidth="1.2"
+        strokeWidth="1.5"
       />
       <circle
         className="boot-svg-refract-ring boot-svg-refract-ring-3"
@@ -76,9 +72,9 @@ export function BootRefractSvg({ active }: { active: boolean }) {
         cy="100"
         r="82"
         fill="none"
-        stroke="#1c6b4a"
-        strokeOpacity="0.35"
-        strokeWidth="1"
+        stroke="#1cf0ff"
+        strokeOpacity="0.55"
+        strokeWidth="1.2"
       />
     </svg>
   );

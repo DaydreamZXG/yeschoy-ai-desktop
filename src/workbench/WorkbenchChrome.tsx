@@ -119,7 +119,7 @@ export function WorkbenchSidebar({
     view === "models" || view === "diagnostics" || view === "tools"
       ? "settings"
       : view;
-  // 当前项的青柠胶囊是一个独立元素，在导航项之间滑动（只动 transform）。
+  // 当前项指示器是一个独立元素，在导航项之间滑动（只动 transform）。闪切皮下用 CSS 藏掉，改成斜切色块。
   const navRef = useRef<HTMLElement>(null);
   const indicatorRef = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
@@ -176,6 +176,10 @@ export function WorkbenchSidebar({
   };
   return (
     <aside className="workbench-sidebar">
+      <span className="workbench-slash" aria-hidden="true" />
+      <span className="workbench-slash-mark" aria-hidden="true">
+        FLASHCUT
+      </span>
       <button
         type="button"
         className="workbench-brand"

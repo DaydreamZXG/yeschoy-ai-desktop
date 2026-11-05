@@ -157,7 +157,7 @@ describe("BootRitual", () => {
     );
   });
 
-  it("mounts Qingmang SVG layers (sigil, motes, veil, refract)", () => {
+  it("mounts FLASHCUT SVG layers (sigil, motes, veil, refract)", () => {
     render(
       <BootRitual
         character="dafeiyu"
@@ -168,7 +168,7 @@ describe("BootRitual", () => {
     );
     expect(screen.getByTestId("boot-ritual")).toHaveAttribute(
       "data-visual",
-      "qingmang",
+      "flashcut",
     );
     expect(screen.getByTestId("boot-svg-sigil")).toBeInTheDocument();
     expect(screen.getByTestId("boot-svg-motes")).toBeInTheDocument();
@@ -179,7 +179,7 @@ describe("BootRitual", () => {
     );
   });
 
-  it("activates SVG refract burst while 启明 flashes", async () => {
+  it("activates SVG refract burst while 切入 flashes", async () => {
     render(
       <BootRitual
         character="dafeiyu"

@@ -315,10 +315,10 @@
     "groupPrivacyNote": "Fixed behaviour in this version — nothing to configure.",
     "groupSystem": "Background",
     "groupAdvanced": "Troubleshooting & advanced",
-    "skinTitle": "Qingmang skin & boot",
-    "skinNote": "Qingmang: wallpaper, lucent glass, and a skippable boot. Sidebar and connect flows stay the same. Switch back to Standard anytime.",
+    "skinTitle": "FLASHCUT skin & boot",
+    "skinNote": "FLASHCUT: AMV-style boot, ink sidebar, and wallpaper as composition. Sidebar and connect flows stay the same. Switch back to Standard anytime.",
     "skinModeTitle": "UI style",
-    "skinModeNote": "Anime is on by default with Qingmang; Standard turns off wallpaper and glass.",
+    "skinModeNote": "Anime is on by default with FLASHCUT; Standard turns off wallpaper and the impact chrome.",
     "skinMode": {
       "anime": "Anime",
       "standard": "Standard"
@@ -331,7 +331,7 @@
       "gpt": "GPT"
     },
     "bootEnabledTitle": "Boot ritual",
-    "bootEnabledNote": "Four-beat Qingmang ritual on cold start, anime skin only. Always skippable. Standard skin never plays it.",
+    "bootEnabledNote": "Four-beat FLASHCUT ritual on cold start, anime skin only. Always skippable. Standard skin never plays it.",
     "bootEnabledOn": "On",
     "bootEnabledOff": "Off",
     "bootFrequencyTitle": "Play frequency",
@@ -341,7 +341,7 @@
       "session": "Each session",
       "always": "Always (advanced)"
     },
-    "animeLocksWarmLight": "Qingmang skin locks warm light"
+    "animeLocksWarmLight": "FLASHCUT skin locks warm light"
   },
   "yeschoyUpdate": {
     "title": "Yeschoy automatic updates",
@@ -1407,14 +1407,14 @@
   },
   "bootRitual": {
     "skip": "Skip",
-    "breach": "Ignite",
-    "ticker": "YesChoy · Qingmang",
-    "stage1Title": "The first blade of light",
-    "stage1En": "Qingmang awakens",
-    "stage2Title": "Refract the light in",
-    "stage2En": "Bend a blade of citrus light",
-    "stage3Title": "The path is lit",
-    "stage3En": "Every route, in focus",
+    "breach": "CUT IN",
+    "ticker": "YesChoy · FLASHCUT",
+    "stage1Title": "THE FIRST CUT",
+    "stage1En": "Cut the night open",
+    "stage2Title": "SLICE THE FRAME",
+    "stage2En": "One hard cut",
+    "stage3Title": "IMPACT FLARE",
+    "stage3En": "The flash lands",
     "stage4Title": "Sign in once, connect your AI apps",
     "stage4En": "Sign in once · Connect your AI apps"
   }
