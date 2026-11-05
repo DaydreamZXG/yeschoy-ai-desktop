@@ -60,6 +60,9 @@
 | `src/workbench/bootPrefs.ts` | 开机偏好与「该不该播」判定 |
 | `src/workbench/BootRitual.tsx` | 四幕覆盖层组件 |
 | `src/workbench/bootRitual.css` | 开机 HUD 样式 |
+| `src/workbench/bootSvg/*` | SVG 准星 / 粒子 / HUD 框 / BREACH 能量环 |
+| `src/assets/skins/ambient-glow.svg` | 工作台极淡光晕 |
+| `docs/ui-redesign/boot-svg-fx.md` | SVG 零件与调参说明 |
 | `src/theme/anime-skin.css` | 二次元皮 tokens / 壁纸 |
 | `src/assets/skins/*` | 壁纸占位 SVG + README |
 | `src/App.tsx` | 挂载仪式 + 应用皮肤 |
@@ -82,5 +85,5 @@ pnpm tauri dev   # 或 pnpm exec vite
 ## 已知缺口
 
 - 立绘授权未落地：占位 SVG，正式发版前替换。
-- 壁纸未做真正动态（Wallpaper Engine 级）；本版静态 + CSS 微动即可。
+- 壁纸未做真正动态（Wallpaper Engine 级）；本版静态 + CSS 微动 + SVG HUD 即可。详见 `boot-svg-fx.md`。
 - 不 merge / 不 deploy 生产；由 PR 审阅。

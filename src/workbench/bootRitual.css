@@ -217,6 +217,91 @@
     box-shadow 500ms var(--ease-out),
     transform 420ms var(--ease-out),
     opacity 420ms var(--ease-out);
+  overflow: visible;
+}
+
+/* SVG HUD frame sits behind card content, peeking at corners. */
+.boot-svg-hud-frame {
+  position: absolute;
+  inset: -14px -18px;
+  width: calc(100% + 36px);
+  height: calc(100% + 28px);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.85;
+}
+
+.boot-ritual-hud > :not(.boot-svg-hud-frame) {
+  position: relative;
+  z-index: 1;
+}
+
+.boot-svg-brackets {
+  animation: boot-svg-bracket-breathe 2.4s var(--ease-in-out) infinite;
+}
+
+.boot-svg-rail-ticks {
+  animation: boot-svg-tick-shimmer 2.8s var(--ease-in-out) infinite;
+}
+
+/* Soft particle field across the full overlay. */
+.boot-svg-particles {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: calc(var(--z-base) - 1);
+  opacity: 0.7;
+}
+
+.boot-svg-spark {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: boot-svg-spark-drift 3.6s var(--ease-in-out) infinite;
+}
+
+.boot-ritual[data-stage="1"] .boot-svg-particles {
+  opacity: 0.45;
+}
+
+.boot-ritual[data-stage="2"] .boot-svg-particles {
+  opacity: 0.8;
+}
+
+.boot-ritual[data-stage="3"] .boot-svg-particles,
+.boot-ritual[data-stage="4"] .boot-svg-particles {
+  opacity: 0.95;
+}
+
+/* BREACH energy rings — centered, only visible while flashing. */
+.boot-svg-energy {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: min(420px, 70vw);
+  height: min(420px, 70vw);
+  transform: translate(-50%, -50%) scale(0.55);
+  pointer-events: none;
+  z-index: calc(var(--z-base) - 1);
+  opacity: 0;
+}
+
+.boot-svg-energy[data-active="true"] {
+  opacity: 1;
+  animation: boot-svg-energy-burst 320ms var(--ease-out) both;
+}
+
+.boot-svg-energy[data-active="true"] .boot-svg-energy-ring-1 {
+  animation: boot-svg-ring-expand 320ms var(--ease-out) both;
+}
+
+.boot-svg-energy[data-active="true"] .boot-svg-energy-ring-2 {
+  animation: boot-svg-ring-expand 320ms var(--ease-out) 40ms both;
+}
+
+.boot-svg-energy[data-active="true"] .boot-svg-energy-ring-3 {
+  animation: boot-svg-ring-expand 320ms var(--ease-out) 80ms both;
 }
 
 .boot-ritual[data-stage="4"] .boot-ritual-hud {
@@ -241,41 +326,53 @@
 
 .boot-ritual-crosshair {
   position: relative;
-  width: var(--space-40);
-  height: var(--space-40);
+  width: 56px;
+  height: 56px;
   margin: 0 auto var(--space-16);
   animation: boot-crosshair-draw 640ms var(--ease-out) both;
 }
 
-.boot-ritual-reticle {
-  position: absolute;
-  inset: 0;
-  border: 2px solid color-mix(in srgb, #ff7500 70%, transparent);
-  border-radius: var(--radius-full);
-  box-shadow: 0 0 0 1px color-mix(in srgb, #ff7500 20%, transparent);
+.boot-svg-reticle {
+  display: block;
+  width: 56px;
+  height: 56px;
+  overflow: visible;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, #ff7500 35%, transparent));
+}
+
+.boot-svg-ring-outer {
+  transform-origin: 48px 48px;
+  animation: boot-svg-spin 12s linear infinite;
+}
+
+.boot-svg-ring-mid {
+  transform-origin: 48px 48px;
   animation: boot-reticle-pulse 1.6s var(--ease-in-out) infinite;
 }
 
-.boot-ritual-crosshair span {
-  position: absolute;
-  background: #ff7500;
-  box-shadow: 0 0 8px color-mix(in srgb, #ff7500 45%, transparent);
+.boot-svg-ring-inner {
+  transform-origin: 48px 48px;
+  animation: boot-reticle-pulse 1.6s var(--ease-in-out) 0.2s infinite;
 }
 
-.boot-ritual-crosshair span:first-of-type {
-  left: 50%;
-  top: 0;
-  width: 2px;
-  height: 100%;
-  transform: translateX(-50%);
+.boot-svg-scan-arc-a {
+  transform-origin: 48px 48px;
+  animation: boot-svg-spin 4.8s linear infinite;
 }
 
-.boot-ritual-crosshair span:last-of-type {
-  top: 50%;
-  left: 0;
-  height: 2px;
-  width: 100%;
-  transform: translateY(-50%);
+.boot-svg-scan-arc-b {
+  transform-origin: 48px 48px;
+  animation: boot-svg-spin-rev 6.4s linear infinite;
+}
+
+.boot-svg-glyphs {
+  transform-origin: 48px 48px;
+  animation: boot-svg-spin-rev 18s linear infinite;
+}
+
+.boot-svg-core {
+  transform-origin: 48px 48px;
+  animation: boot-svg-core-glow 1.4s var(--ease-in-out) infinite;
 }
 
 .boot-ritual[data-stage="1"] .boot-ritual-crosshair {
@@ -284,19 +381,23 @@
     boot-crosshair-spin var(--dur-spin) linear 640ms infinite;
 }
 
-.boot-ritual[data-stage="2"] .boot-ritual-reticle {
+.boot-ritual[data-stage="2"] .boot-svg-ring-mid {
   animation:
     boot-reticle-pulse 1.1s var(--ease-in-out) infinite,
     boot-reticle-aim 1.4s var(--ease-in-out) infinite;
 }
 
-.boot-ritual[data-flashing="true"] .boot-ritual-reticle {
-  animation: none;
-  border-color: #ff7500;
-  box-shadow:
-    0 0 0 2px color-mix(in srgb, #ff7500 35%, transparent),
-    0 0 24px color-mix(in srgb, #ff7500 55%, transparent);
-  transform: scale(1.18);
+.boot-ritual[data-flashing="true"] .boot-svg-reticle {
+  filter: drop-shadow(0 0 18px color-mix(in srgb, #ff7500 65%, transparent));
+  transform: scale(1.14);
+  transition: transform 180ms var(--ease-out), filter 180ms var(--ease-out);
+}
+
+.boot-ritual[data-flashing="true"] .boot-svg-ring-outer,
+.boot-ritual[data-flashing="true"] .boot-svg-scan-arc-a,
+.boot-ritual[data-flashing="true"] .boot-svg-scan-arc-b,
+.boot-ritual[data-flashing="true"] .boot-svg-glyphs {
+  animation-duration: 0.9s;
 }
 
 .boot-ritual-progress {
@@ -535,19 +636,103 @@
   }
 }
 
+
+@keyframes boot-svg-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes boot-svg-spin-rev {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes boot-svg-core-glow {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+}
+
+@keyframes boot-svg-bracket-breathe {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes boot-svg-tick-shimmer {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes boot-svg-spark-drift {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0) scale(0.85);
+  }
+  50% {
+    opacity: 0.95;
+    transform: translateY(-6px) scale(1.15);
+  }
+}
+
+@keyframes boot-svg-energy-burst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+}
+
+@keyframes boot-svg-ring-expand {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.7);
+    transform-origin: 100px 100px;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.45);
+    transform-origin: 100px 100px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .boot-ritual-wallpaper,
   .boot-ritual-glass,
   .boot-ritual-hud,
   .boot-ritual-bloom,
   .boot-ritual-progress-pip,
-  .boot-ritual-skip {
+  .boot-ritual-skip,
+  .boot-svg-reticle {
     transition: none !important;
   }
 
   .boot-ritual-hud,
   .boot-ritual-crosshair,
-  .boot-ritual-reticle,
   .boot-ritual-prism,
   .boot-ritual-breach,
   .boot-ritual-progress-pip[data-state="active"],
@@ -557,8 +742,31 @@
   .boot-ritual-chroma,
   .boot-ritual[data-stage="1"] .boot-ritual-crosshair,
   .boot-ritual[data-stage="2"] .boot-ritual-bloom,
-  .boot-ritual[data-flashing="true"] .boot-ritual-chroma {
+  .boot-ritual[data-flashing="true"] .boot-ritual-chroma,
+  .boot-svg-ring-outer,
+  .boot-svg-ring-mid,
+  .boot-svg-ring-inner,
+  .boot-svg-scan-arc-a,
+  .boot-svg-scan-arc-b,
+  .boot-svg-glyphs,
+  .boot-svg-core,
+  .boot-svg-brackets,
+  .boot-svg-rail-ticks,
+  .boot-svg-spark,
+  .boot-svg-energy,
+  .boot-svg-energy[data-active="true"],
+  .boot-svg-energy[data-active="true"] .boot-svg-energy-ring-1,
+  .boot-svg-energy[data-active="true"] .boot-svg-energy-ring-2,
+  .boot-svg-energy[data-active="true"] .boot-svg-energy-ring-3 {
     animation: none !important;
+  }
+
+  .boot-svg-particles {
+    opacity: 0.35;
+  }
+
+  .boot-svg-energy {
+    display: none;
   }
 
   .boot-ritual-wallpaper {

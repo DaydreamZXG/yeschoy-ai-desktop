@@ -156,4 +156,46 @@ describe("BootRitual", () => {
       "Sign in once · Connect your AI apps",
     );
   });
+
+  it("mounts SVG HUD layers (reticle, particles, frame, energy)", () => {
+    render(
+      <BootRitual
+        character="dafeiyu"
+        onComplete={vi.fn()}
+        initialStage={2}
+        disableAutoAdvance
+      />,
+    );
+    expect(screen.getByTestId("boot-svg-reticle")).toBeInTheDocument();
+    expect(screen.getByTestId("boot-svg-particles")).toBeInTheDocument();
+    expect(screen.getByTestId("boot-svg-hud-frame")).toBeInTheDocument();
+    expect(screen.getByTestId("boot-svg-energy")).toHaveAttribute(
+      "data-active",
+      "false",
+    );
+  });
+
+  it("activates SVG energy pulse while BREACH flashes", async () => {
+    render(
+      <BootRitual
+        character="dafeiyu"
+        onComplete={vi.fn()}
+        initialStage={2}
+        disableAutoAdvance
+      />,
+    );
+    fireEvent.click(screen.getByTestId("boot-ritual-breach"));
+    expect(screen.getByTestId("boot-svg-energy")).toHaveAttribute(
+      "data-active",
+      "true",
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400);
+    });
+    expect(screen.getByTestId("boot-svg-energy")).toHaveAttribute(
+      "data-active",
+      "false",
+    );
+  });
+
 });

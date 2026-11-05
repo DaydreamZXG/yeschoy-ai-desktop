@@ -3,6 +3,12 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import type { SkinCharacter } from "./skin";
 import { markBootPlayed, readBootPreference } from "./bootPrefs";
+import {
+  BootEnergyPulseSvg,
+  BootHudFrameSvg,
+  BootParticlesSvg,
+  BootReticleSvg,
+} from "./bootSvg";
 import "./bootRitual.css";
 
 export type BootStage = 1 | 2 | 3 | 4;
@@ -163,6 +169,8 @@ export function BootRitual({
       <div className="boot-ritual-glass" aria-hidden="true" />
       <div className="boot-ritual-bloom" aria-hidden="true" />
       <div className="boot-ritual-chroma" aria-hidden="true" />
+      <BootParticlesSvg />
+      <BootEnergyPulseSvg active={flashing} />
 
       <button
         type="button"
@@ -174,10 +182,10 @@ export function BootRitual({
       </button>
 
       <div className="boot-ritual-hud">
+        <BootHudFrameSvg />
+
         <div className="boot-ritual-crosshair" aria-hidden="true">
-          <i className="boot-ritual-reticle" />
-          <span />
-          <span />
+          <BootReticleSvg />
         </div>
 
         <div className="boot-ritual-progress" aria-hidden="true">
