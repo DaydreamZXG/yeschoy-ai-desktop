@@ -157,7 +157,7 @@ describe("BootRitual", () => {
     );
   });
 
-  it("mounts SVG HUD layers (reticle, particles, frame, energy)", () => {
+  it("mounts Qingmang SVG layers (sigil, motes, veil, refract)", () => {
     render(
       <BootRitual
         character="dafeiyu"
@@ -166,16 +166,20 @@ describe("BootRitual", () => {
         disableAutoAdvance
       />,
     );
-    expect(screen.getByTestId("boot-svg-reticle")).toBeInTheDocument();
-    expect(screen.getByTestId("boot-svg-particles")).toBeInTheDocument();
-    expect(screen.getByTestId("boot-svg-hud-frame")).toBeInTheDocument();
-    expect(screen.getByTestId("boot-svg-energy")).toHaveAttribute(
+    expect(screen.getByTestId("boot-ritual")).toHaveAttribute(
+      "data-visual",
+      "qingmang",
+    );
+    expect(screen.getByTestId("boot-svg-sigil")).toBeInTheDocument();
+    expect(screen.getByTestId("boot-svg-motes")).toBeInTheDocument();
+    expect(screen.getByTestId("boot-svg-veil")).toBeInTheDocument();
+    expect(screen.getByTestId("boot-svg-refract")).toHaveAttribute(
       "data-active",
       "false",
     );
   });
 
-  it("activates SVG energy pulse while BREACH flashes", async () => {
+  it("activates SVG refract burst while 启明 flashes", async () => {
     render(
       <BootRitual
         character="dafeiyu"
@@ -185,17 +189,16 @@ describe("BootRitual", () => {
       />,
     );
     fireEvent.click(screen.getByTestId("boot-ritual-breach"));
-    expect(screen.getByTestId("boot-svg-energy")).toHaveAttribute(
+    expect(screen.getByTestId("boot-svg-refract")).toHaveAttribute(
       "data-active",
       "true",
     );
     await act(async () => {
       await vi.advanceTimersByTimeAsync(400);
     });
-    expect(screen.getByTestId("boot-svg-energy")).toHaveAttribute(
+    expect(screen.getByTestId("boot-svg-refract")).toHaveAttribute(
       "data-active",
       "false",
     );
   });
-
 });

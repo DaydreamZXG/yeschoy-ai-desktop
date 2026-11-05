@@ -235,7 +235,7 @@ describe("SettingsView", () => {
     );
     expect(screen.getByTestId("settings-appearance-locked")).toBeInTheDocument();
     expect(screen.getByTestId("settings-appearance-row")).toHaveTextContent(
-      "二次元皮固定暖白",
+      "青芒皮固定暖白",
     );
   });
 });

@@ -4,10 +4,10 @@ import { useTranslation } from "react-i18next";
 import type { SkinCharacter } from "./skin";
 import { markBootPlayed, readBootPreference } from "./bootPrefs";
 import {
-  BootEnergyPulseSvg,
-  BootHudFrameSvg,
-  BootParticlesSvg,
-  BootReticleSvg,
+  BootMotesSvg,
+  BootRefractSvg,
+  BootSigilSvg,
+  BootVeilSvg,
 } from "./bootSvg";
 import "./bootRitual.css";
 
@@ -22,18 +22,25 @@ interface BootRitualProps {
   disableAutoAdvance?: boolean;
 }
 
-/** Auto dwell per act. Stage 2 waits on BREACH, then auto-advances. */
+/** Auto dwell per act. Stage 2 waits on 启明, then auto-advances. */
 const STAGE_MS: Record<BootStage, number> = {
-  1: 1700,
+  1: 1800,
   2: 5000,
   3: 1600,
-  4: 1500,
+  4: 1600,
 };
 
 const LEAVE_MS = 420;
-const BREACH_FLASH_MS = 320;
+const REFRACT_MS = 320;
 
 const ACT_EASE = [0.22, 1, 0.36, 1] as const;
+
+const STAGE_COPY: Record<BootStage, { title: string; en: string }> = {
+  1: { title: "bootRitual.stage1Title", en: "bootRitual.stage1En" },
+  2: { title: "bootRitual.stage2Title", en: "bootRitual.stage2En" },
+  3: { title: "bootRitual.stage3Title", en: "bootRitual.stage3En" },
+  4: { title: "bootRitual.stage4Title", en: "bootRitual.stage4En" },
+};
 
 const actMotion = (reduce: boolean) =>
   reduce
@@ -44,10 +51,10 @@ const actMotion = (reduce: boolean) =>
         transition: { duration: 0.12 },
       }
     : {
-        initial: { opacity: 0, y: 14, filter: "blur(6px)" },
+        initial: { opacity: 0, y: 18, filter: "blur(8px)" },
         animate: { opacity: 1, y: 0, filter: "blur(0px)" },
-        exit: { opacity: 0, y: -10, filter: "blur(4px)" },
-        transition: { duration: 0.42, ease: ACT_EASE },
+        exit: { opacity: 0, y: -12, filter: "blur(6px)" },
+        transition: { duration: 0.48, ease: ACT_EASE },
       };
 
 export function BootRitual({
@@ -88,15 +95,18 @@ export function BootRitual({
     [finish],
   );
 
-  const breach = useCallback(() => {
+  const ignite = useCallback(() => {
     if (stage !== 2 || finished.current || flashing) return;
     setFlashing(true);
     if (flashTimer.current != null) window.clearTimeout(flashTimer.current);
-    flashTimer.current = window.setTimeout(() => {
-      setFlashing(false);
-      flashTimer.current = null;
-      advanceFrom(2);
-    }, reduceMotion ? 80 : BREACH_FLASH_MS);
+    flashTimer.current = window.setTimeout(
+      () => {
+        setFlashing(false);
+        flashTimer.current = null;
+        advanceFrom(2);
+      },
+      reduceMotion ? 80 : REFRACT_MS,
+    );
   }, [stage, flashing, advanceFrom, reduceMotion]);
 
   useEffect(() => {
@@ -104,13 +114,13 @@ export function BootRitual({
     if (stage === 2) {
       if (flashing) return;
       const ms = reduceMotion ? 1000 : STAGE_MS[2];
-      const id = window.setTimeout(() => breach(), ms);
+      const id = window.setTimeout(() => ignite(), ms);
       return () => window.clearTimeout(id);
     }
     const ms = STAGE_MS[stage];
     const id = window.setTimeout(() => advanceFrom(stage), ms);
     return () => window.clearTimeout(id);
-  }, [stage, advanceFrom, disableAutoAdvance, flashing, breach, reduceMotion]);
+  }, [stage, advanceFrom, disableAutoAdvance, flashing, ignite, reduceMotion]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -121,12 +131,12 @@ export function BootRitual({
       }
       if (stage === 2 && (event.key === "Enter" || event.key === " ")) {
         event.preventDefault();
-        breach();
+        ignite();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [stage, finish, breach]);
+  }, [stage, finish, ignite]);
 
   useEffect(() => {
     return () => {
@@ -134,29 +144,14 @@ export function BootRitual({
     };
   }, []);
 
-  const titleKey =
-    stage === 1
-      ? "bootRitual.stage1Title"
-      : stage === 2
-        ? "bootRitual.stage2Title"
-        : stage === 3
-          ? "bootRitual.stage3Title"
-          : "bootRitual.stage4Title";
-  const enKey =
-    stage === 1
-      ? "bootRitual.stage1En"
-      : stage === 2
-        ? "bootRitual.stage2En"
-        : stage === 3
-          ? "bootRitual.stage3En"
-          : "bootRitual.stage4En";
-
+  const copy = STAGE_COPY[stage];
   const motionProps = actMotion(reduceMotion);
 
   return (
     <div
       className="boot-ritual"
       data-testid="boot-ritual"
+      data-visual="qingmang"
       data-stage={stage}
       data-character={character}
       data-leaving={leaving ? "true" : "false"}
@@ -166,11 +161,12 @@ export function BootRitual({
       aria-labelledby="boot-ritual-title"
     >
       <div className="boot-ritual-wallpaper" aria-hidden="true" />
-      <div className="boot-ritual-glass" aria-hidden="true" />
+      <div className="boot-ritual-wash" aria-hidden="true" />
       <div className="boot-ritual-bloom" aria-hidden="true" />
       <div className="boot-ritual-chroma" aria-hidden="true" />
-      <BootParticlesSvg />
-      <BootEnergyPulseSvg active={flashing} />
+      <BootVeilSvg />
+      <BootMotesSvg />
+      <BootRefractSvg active={flashing} />
 
       <button
         type="button"
@@ -181,11 +177,9 @@ export function BootRitual({
         {t("bootRitual.skip")}
       </button>
 
-      <div className="boot-ritual-hud">
-        <BootHudFrameSvg />
-
-        <div className="boot-ritual-crosshair" aria-hidden="true">
-          <BootReticleSvg />
+      <div className="boot-ritual-stage">
+        <div className="boot-ritual-sigil" aria-hidden="true">
+          <BootSigilSvg />
         </div>
 
         <div className="boot-ritual-progress" aria-hidden="true">
@@ -201,7 +195,9 @@ export function BootRitual({
         </div>
 
         <p className="boot-ritual-index" aria-hidden="true">
-          {String(stage).padStart(2, "0")} / 04
+          {String(stage).padStart(2, "0")}
+          <span> · </span>
+          04
         </p>
 
         <AnimatePresence mode="wait" initial={!reduceMotion}>
@@ -215,30 +211,30 @@ export function BootRitual({
             transition={motionProps.transition}
           >
             <h1 id="boot-ritual-title" className="boot-ritual-title">
-              {t(titleKey)}
+              {t(copy.title)}
             </h1>
             <p className="boot-ritual-en" lang="en">
-              {t(enKey)}
+              {t(copy.en)}
             </p>
 
             {stage === 2 && (
               <button
                 type="button"
-                className="boot-ritual-breach"
+                className="boot-ritual-ignite"
                 data-testid="boot-ritual-breach"
-                onClick={breach}
+                onClick={ignite}
               >
                 {t("bootRitual.breach")}
               </button>
             )}
 
             {stage === 3 && (
-              <div className="boot-ritual-prism" aria-hidden="true" />
+              <div className="boot-ritual-spectrum" aria-hidden="true" />
             )}
           </motion.div>
         </AnimatePresence>
 
-        <p className="boot-ritual-ticker" aria-hidden="true">
+        <p className="boot-ritual-mark" aria-hidden="true">
           {t("bootRitual.ticker")}
         </p>
       </div>

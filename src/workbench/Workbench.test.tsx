@@ -1211,7 +1211,7 @@ describe("official workbench", () => {
     expect(screen.queryByRole("button", { name: "深色" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "设置" }));
     expect(await screen.findByTestId("settings-appearance-locked")).toHaveTextContent(
-      "二次元皮固定暖白",
+      "青芒皮固定暖白",
     );
   });
   it("defines complete localized copy, a single font system and accessible responsive themes", () => {

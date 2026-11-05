@@ -1,5 +1,6 @@
-/* Anime skin layer — warm glass over character wallpaper.
-   Only active when <html data-skin="anime">. Navigation IA unchanged. */
+/* Qingmang / 青芒 — lucent citrus skin.
+   Active when <html data-skin="anime">. Navigation IA unchanged.
+   Boot overlay and workbench share cream mist, leaf green, and lime light. */
 
 :root {
   --skin-wallpaper: none;
@@ -19,32 +20,51 @@
 }
 
 :root[data-skin="anime"] {
-  --skin-wallpaper-opacity: 0.22;
+  --qingmang: #c9fa10;
+  --qingmang-ink: #111111;
+  --qingmang-deep: #1c6b4a;
+  --qingmang-gold: #d4b36a;
+  --qingmang-mist: #eef6c9;
+  --lime: #c9fa10;
+  --lime-ink: #111111;
+  --skin-wallpaper-opacity: 0.28;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 20px;
   --radius-2xl: 24px;
-  --surface: rgb(255 255 255 / 78%);
-  --subtle: rgb(247 244 238 / 72%);
-  --shadow: 0 8px 28px rgb(64 58 48 / 10%);
+  --bg: #f3efe4;
+  --sidebar: rgb(255 252 246 / 70%);
+  --surface: rgb(255 255 255 / 80%);
+  --subtle: rgb(247 244 234 / 74%);
+  --shadow: 0 10px 32px rgb(28 107 74 / 8%);
+  --line: rgb(214 204 178 / 70%);
+  --accent: #1c6b4a;
+  --accent-hover: #155239;
+  --accent-soft: #eef6c9;
+  --accent-line: #d5e89a;
 }
 
 :root[data-skin="anime"][data-theme="dark"] {
-  /* Keep anime on a warm-light glass wash even if appearance is dark —
-     product ruled out dark cyber boards for this skin. */
-  --bg: #f4efe6;
-  --sidebar: rgb(255 252 247 / 72%);
-  --surface: rgb(255 255 255 / 76%);
-  --subtle: rgb(247 241 232 / 70%);
+  /* Qingmang stays on warm porcelain even if appearance is dark. */
+  --bg: #f3efe4;
+  --sidebar: rgb(255 252 246 / 70%);
+  --surface: rgb(255 255 255 / 80%);
+  --subtle: rgb(247 244 234 / 74%);
   --ink: #1a1b1e;
   --muted: #5f5e58;
   --faint: #6b6a64;
-  --line: #e8e0d4;
+  --line: rgb(214 204 178 / 70%);
   --accent: #1c6b4a;
   --accent-hover: #155239;
-  --accent-soft: #e9f3ed;
-  --accent-line: #c3ddcd;
+  --accent-soft: #eef6c9;
+  --accent-line: #d5e89a;
   --on-accent: #ffffff;
+}
+
+:root[data-skin="anime"] body {
+  background:
+    radial-gradient(80% 50% at 12% 0%, rgb(201 250 16 / 10%), transparent 46%),
+    var(--bg);
 }
 
 :root[data-skin="anime"] body::before {
@@ -55,9 +75,29 @@
   pointer-events: none;
   background-image: var(--skin-wallpaper);
   background-size: cover;
-  background-position: 78% center;
+  background-position: 82% center;
   background-repeat: no-repeat;
   opacity: var(--skin-wallpaper-opacity);
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 36%,
+    #000 78%
+  );
+  mask-image: linear-gradient(90deg, transparent 0%, transparent 36%, #000 78%);
+}
+
+:root[data-skin="anime"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: url("../assets/skins/ambient-glow.svg");
+  background-size: min(980px, 74vw) min(980px, 74vw);
+  background-position: 84% 22%;
+  background-repeat: no-repeat;
+  opacity: 0.7;
 }
 
 :root[data-skin="anime"] #root,
@@ -68,28 +108,97 @@
 }
 
 :root[data-skin="anime"] .workbench-sidebar {
-  background: rgb(255 252 247 / 78%);
-  backdrop-filter: blur(14px) saturate(1.1);
-  -webkit-backdrop-filter: blur(14px) saturate(1.1);
-  border-right-color: rgb(232 224 212 / 80%);
+  position: sticky;
+  background: rgb(255 252 246 / 72%);
+  backdrop-filter: blur(20px) saturate(1.18);
+  -webkit-backdrop-filter: blur(20px) saturate(1.18);
+  border-right-color: rgb(214 204 178 / 55%);
+  box-shadow: 10px 0 36px rgb(28 107 74 / 5%);
+}
+
+:root[data-skin="anime"] .workbench-sidebar::before {
+  content: "";
+  position: absolute;
+  top: 10%;
+  bottom: 10%;
+  left: 0;
+  width: 2px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(
+    180deg,
+    transparent,
+    var(--qingmang) 18%,
+    var(--qingmang-deep) 50%,
+    var(--qingmang) 82%,
+    transparent
+  );
+  opacity: 0.9;
+}
+
+:root[data-skin="anime"] .workbench-brand-mark {
+  border-color: color-mix(in srgb, var(--qingmang) 42%, white);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--qingmang) 28%, transparent),
+    0 8px 20px rgb(28 107 74 / 10%);
+}
+
+:root[data-skin="anime"] .workbench-brand small {
+  letter-spacing: 0.14em;
+}
+
+:root[data-skin="anime"] .workbench-nav-indicator {
+  background: var(--qingmang);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--qingmang) 60%, transparent);
+}
+
+:root[data-skin="anime"] .workbench-nav button[aria-current="page"],
+:root[data-skin="anime"]
+  .workbench-nav
+  button[aria-current="page"]:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--qingmang) 22%, white);
+  color: var(--qingmang-deep);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--qingmang) 38%, transparent);
+}
+
+:root[data-skin="anime"] .sidebar-account {
+  border-top-color: rgb(214 204 178 / 55%);
 }
 
 :root[data-skin="anime"] .settings-card,
 :root[data-skin="anime"] .intro-panel,
 :root[data-skin="anime"] .discovery-panel,
 :root[data-skin="anime"] .app-library-card,
-:root[data-skin="anime"] .workbench-card {
+:root[data-skin="anime"] .workbench-card,
+:root[data-skin="anime"] .summary-card,
+:root[data-skin="anime"] .announcement-card {
   background: rgb(255 255 255 / 78%);
-  backdrop-filter: blur(12px) saturate(1.08);
-  -webkit-backdrop-filter: blur(12px) saturate(1.08);
-  border-color: rgb(255 255 255 / 65%);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  border-color: color-mix(in srgb, var(--qingmang) 16%, white);
+  box-shadow: 0 12px 28px rgb(28 107 74 / 6%);
+}
+
+:root[data-skin="anime"] .summary-card:first-child {
+  background: color-mix(in srgb, var(--qingmang) 16%, white);
+  border-color: color-mix(in srgb, var(--qingmang) 34%, white);
+}
+
+:root[data-skin="anime"] .workbench-page-heading h1,
+:root[data-skin="anime"] .intro-panel h1 {
+  letter-spacing: -0.03em;
+}
+
+:root[data-skin="anime"] .primary-action {
+  box-shadow:
+    var(--shadow-glow-sm),
+    0 0 0 1px color-mix(in srgb, var(--qingmang) 18%, transparent);
 }
 
 /* Keys / diagnostics stay denser and more opaque for trust. */
 :root[data-skin="anime"] .settings-card.settings-card-about,
 :root[data-skin="anime"] [data-testid="diagnostics-view"],
 :root[data-skin="anime"] .advanced-connection-wrap {
-  background: rgb(255 255 255 / 92%);
+  background: rgb(255 255 255 / 94%);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
@@ -111,23 +220,8 @@
   accent-color: var(--accent);
 }
 
-
-/* Subtle orange/cyan SVG glow behind character watermark — workbench only. */
-:root[data-skin="anime"] body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image: url("../assets/skins/ambient-glow.svg");
-  background-size: min(920px, 70vw) min(920px, 70vw);
-  background-position: 82% 28%;
-  background-repeat: no-repeat;
-  opacity: 0.55;
-}
-
 @media (prefers-reduced-motion: reduce) {
   :root[data-skin="anime"] body::after {
-    opacity: 0.35;
+    opacity: 0.4;
   }
 }

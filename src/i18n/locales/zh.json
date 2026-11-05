@@ -315,10 +315,10 @@
     "groupPrivacyNote": "这些是本版本固定的行为，不需要你设置。",
     "groupSystem": "后台运行",
     "groupAdvanced": "排查与高级",
-    "skinTitle": "二次元皮肤与开机",
-    "skinNote": "只换壁纸和毛玻璃质感，侧栏与接入流程不变。可随时切回标准主题。",
+    "skinTitle": "青芒皮肤与开机",
+    "skinNote": "青芒视觉：壁纸、澄光毛玻璃与开机仪典。侧栏与接入流程不变，可随时切回标准主题。",
     "skinModeTitle": "界面风格",
-    "skinModeNote": "二次元皮默认启用；标准主题关闭壁纸与毛玻璃。",
+    "skinModeNote": "二次元皮默认启用青芒；标准主题关闭壁纸与毛玻璃。",
     "skinMode": {
       "anime": "二次元",
       "standard": "标准"
@@ -331,17 +331,17 @@
       "gpt": "GPT小吉"
     },
     "bootEnabledTitle": "开机动画",
-    "bootEnabledNote": "仅二次元皮下冷启动播放四幕暖白仪式；可随时跳过。切到标准皮不会播。",
+    "bootEnabledNote": "仅二次元皮下冷启动播放青芒四幕仪典；可随时跳过。切到标准皮不会播。",
     "bootEnabledOn": "已开启",
     "bootEnabledOff": "已关闭",
     "bootFrequencyTitle": "播放频率",
-    "bootFrequencyNote": "默认每天一次。总是播放适合想反复看仪式的时候。",
+    "bootFrequencyNote": "默认每天一次。总是播放适合想反复看仪典的时候。",
     "bootFrequency": {
       "daily": "每天一次",
       "session": "每次会话",
       "always": "总是（高级）"
     },
-    "animeLocksWarmLight": "二次元皮固定暖白"
+    "animeLocksWarmLight": "青芒皮固定暖白"
   },
   "yeschoyUpdate": {
     "title": "野菜自动更新",
@@ -1406,15 +1406,15 @@
     }
   },
   "bootRitual": {
-    "skip": "SKIP",
-    "breach": "击穿边界 · BREACH",
-    "ticker": "MULTIMODEL CONSTELLATION · FREQUENCY LOCK",
-    "stage1Title": "神经链路点火",
-    "stage1En": "NEURAL LINK IGNITION",
-    "stage2Title": "穿越奇点",
-    "stage2En": "CROSSING THE SINGULARITY",
-    "stage3Title": "频率已锁定",
-    "stage3En": "FREQUENCY LOCKED",
+    "skip": "跳过",
+    "breach": "启明",
+    "ticker": "野菜 · 青芒",
+    "stage1Title": "青芒初启",
+    "stage1En": "The first blade of light",
+    "stage2Title": "把光折进来",
+    "stage2En": "Refract the light in",
+    "stage3Title": "路径已亮",
+    "stage3En": "The path is lit",
     "stage4Title": "登录一次，接入你的 AI 应用",
     "stage4En": "Sign in once · Connect your AI apps"
   }

@@ -1,3 +1,5 @@
+> **已替换：** 橙色准星 / HUD 框已拆除，详见 [`v2-visual-system.md`](./v2-visual-system.md)。下文仅作历史对照。
+
 # BootRitual SVG 炫酷层
 
 > 在暖白毛玻璃开机仪式上叠一层**纯 SVG / CSS** 动效。角色立绘仍是占位壁纸；准星、扫描弧、粒子、HUD 框用矢量自己画，可随时调参。

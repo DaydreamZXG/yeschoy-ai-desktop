@@ -1,4 +1,4 @@
-export { BootReticleSvg } from "./BootReticleSvg";
-export { BootHudFrameSvg } from "./BootHudFrameSvg";
-export { BootParticlesSvg } from "./BootParticlesSvg";
-export { BootEnergyPulseSvg } from "./BootEnergyPulseSvg";
+export { BootSigilSvg } from "./BootSigilSvg";
+export { BootVeilSvg } from "./BootVeilSvg";
+export { BootMotesSvg } from "./BootMotesSvg";
+export { BootRefractSvg } from "./BootRefractSvg";
