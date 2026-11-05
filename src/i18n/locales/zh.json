@@ -331,16 +331,17 @@
       "gpt": "GPT小吉"
     },
     "bootEnabledTitle": "开机动画",
-    "bootEnabledNote": "冷启动时播放四幕暖白仪式；可随时跳过。",
+    "bootEnabledNote": "仅二次元皮下冷启动播放四幕暖白仪式；可随时跳过。切到标准皮不会播。",
     "bootEnabledOn": "已开启",
     "bootEnabledOff": "已关闭",
     "bootFrequencyTitle": "播放频率",
-    "bootFrequencyNote": "控制开机仪式出现的次数，不影响日常工作台。",
+    "bootFrequencyNote": "默认每天一次。总是播放适合想反复看仪式的时候。",
     "bootFrequency": {
-      "session": "每次会话",
       "daily": "每天一次",
-      "always": "总是"
-    }
+      "session": "每次会话",
+      "always": "总是（高级）"
+    },
+    "animeLocksWarmLight": "二次元皮固定暖白"
   },
   "yeschoyUpdate": {
     "title": "野菜自动更新",
@@ -1414,7 +1415,7 @@
     "stage2En": "CROSSING THE SINGULARITY",
     "stage3Title": "频率已锁定",
     "stage3En": "FREQUENCY LOCKED",
-    "stage4Title": "你已站在 AGI 这一侧",
-    "stage4En": "WELCOME TO THE OTHER SIDE"
+    "stage4Title": "登录一次，接入你的 AI 应用",
+    "stage4En": "Sign in once · Connect your AI apps"
   }
 }

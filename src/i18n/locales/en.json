@@ -331,16 +331,17 @@
       "gpt": "GPT"
     },
     "bootEnabledTitle": "Boot ritual",
-    "bootEnabledNote": "Play the four-beat warm-white ritual on cold start. Always skippable.",
+    "bootEnabledNote": "Four-beat warm-white ritual on cold start, anime skin only. Always skippable. Standard skin never plays it.",
     "bootEnabledOn": "On",
     "bootEnabledOff": "Off",
     "bootFrequencyTitle": "Play frequency",
-    "bootFrequencyNote": "How often the boot ritual appears. Does not change the workbench.",
+    "bootFrequencyNote": "Defaults to once a day. Always is for replaying the ritual often.",
     "bootFrequency": {
-      "session": "Each session",
       "daily": "Once a day",
-      "always": "Always"
-    }
+      "session": "Each session",
+      "always": "Always (advanced)"
+    },
+    "animeLocksWarmLight": "Anime skin locks warm light"
   },
   "yeschoyUpdate": {
     "title": "Yeschoy automatic updates",
@@ -1414,7 +1415,7 @@
     "stage2En": "CROSSING THE SINGULARITY",
     "stage3Title": "Frequency locked",
     "stage3En": "FREQUENCY LOCKED",
-    "stage4Title": "You stand on the AGI side",
-    "stage4En": "WELCOME TO THE OTHER SIDE"
+    "stage4Title": "Sign in once, connect your AI apps",
+    "stage4En": "Sign in once · Connect your AI apps"
   }
 }

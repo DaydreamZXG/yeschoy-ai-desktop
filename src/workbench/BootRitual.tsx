@@ -16,10 +16,10 @@ interface BootRitualProps {
   disableAutoAdvance?: boolean;
 }
 
-/** Auto dwell per act. Stage 2 waits on BREACH. Total auto ≈ 5.2s + leave. */
+/** Auto dwell per act. Stage 2 waits on BREACH, then auto-advances. */
 const STAGE_MS: Record<BootStage, number> = {
   1: 1700,
-  2: 0,
+  2: 5000,
   3: 1600,
   4: 1500,
 };
@@ -95,11 +95,16 @@ export function BootRitual({
 
   useEffect(() => {
     if (disableAutoAdvance) return;
-    if (stage === 2) return;
+    if (stage === 2) {
+      if (flashing) return;
+      const ms = reduceMotion ? 1000 : STAGE_MS[2];
+      const id = window.setTimeout(() => breach(), ms);
+      return () => window.clearTimeout(id);
+    }
     const ms = STAGE_MS[stage];
     const id = window.setTimeout(() => advanceFrom(stage), ms);
     return () => window.clearTimeout(id);
-  }, [stage, advanceFrom, disableAutoAdvance]);
+  }, [stage, advanceFrom, disableAutoAdvance, flashing, breach, reduceMotion]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {

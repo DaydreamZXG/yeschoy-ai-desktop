@@ -119,4 +119,41 @@ describe("BootRitual", () => {
     expect(pips[0]).toHaveAttribute("data-state", "done");
     expect(pips[3]).toHaveAttribute("data-state", "todo");
   });
+
+  it("auto-advances stage 2 via BREACH after the dwell timer", async () => {
+    render(
+      <BootRitual character="dafeiyu" onComplete={vi.fn()} initialStage={2} />,
+    );
+    expect(screen.getByTestId("boot-ritual")).toHaveAttribute(
+      "data-stage",
+      "2",
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5200);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400);
+    });
+    expect(screen.getByTestId("boot-ritual")).toHaveAttribute(
+      "data-stage",
+      "3",
+    );
+  });
+
+  it("shows product-voice copy on stage 4", () => {
+    render(
+      <BootRitual
+        character="dafeiyu"
+        onComplete={vi.fn()}
+        initialStage={4}
+        disableAutoAdvance
+      />,
+    );
+    expect(screen.getByTestId("boot-ritual")).toHaveTextContent(
+      "登录一次，接入你的 AI 应用",
+    );
+    expect(screen.getByTestId("boot-ritual")).toHaveTextContent(
+      "Sign in once · Connect your AI apps",
+    );
+  });
 });

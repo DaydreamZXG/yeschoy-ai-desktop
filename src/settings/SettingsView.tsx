@@ -38,7 +38,7 @@ interface SettingsViewProps {
 const SECURITY_ROWS = ["apiKeys", "configFiles", "telemetry"] as const;
 
 const CHARACTERS: SkinCharacter[] = ["dafeiyu", "claude", "gpt"];
-const FREQUENCIES: BootFrequency[] = ["session", "daily", "always"];
+const FREQUENCIES: BootFrequency[] = ["daily", "session", "always"];
 
 export function SettingsView({
   appearance = "system",
@@ -81,15 +81,28 @@ export function SettingsView({
         </header>
         <div className="settings-card">
           {onAppearanceChange && (
-            <div className="setting-row">
+            <div className="setting-row" data-testid="settings-appearance-row">
               <div className="setting-row-copy">
                 <strong>{c.theme}</strong>
-                <p>{c.themeNote}</p>
+                <p>
+                  {skin?.mode === "anime"
+                    ? t("yeschoySettings.animeLocksWarmLight")
+                    : c.themeNote}
+                </p>
               </div>
-              <AppearancePicker
-                value={appearance}
-                onChange={onAppearanceChange}
-              />
+              {skin?.mode === "anime" ? (
+                <span
+                  className="setting-state"
+                  data-testid="settings-appearance-locked"
+                >
+                  {t("yeschoySettings.animeLocksWarmLight")}
+                </span>
+              ) : (
+                <AppearancePicker
+                  value={appearance}
+                  onChange={onAppearanceChange}
+                />
+              )}
             </div>
           )}
           <div className="setting-row">

@@ -12,7 +12,7 @@ export interface BootPreference {
 
 export const DEFAULT_BOOT_PREFERENCE: BootPreference = {
   enabled: true,
-  frequency: "session",
+  frequency: "daily",
   lastPlayedDay: null,
 };
 
@@ -73,10 +73,19 @@ export function markBootPlayed(
   return next;
 }
 
+/**
+ * Boot ritual only plays on the anime skin. Standard skin never starts it;
+ * switching away from anime should close an open ritual in the host.
+ * Preferences stay stored so returning to anime can honor frequency again.
+ */
 export function shouldPlayBoot(
   preference: BootPreference = readBootPreference(),
   now = new Date(),
+  skinMode: "standard" | "anime" | null | undefined = undefined,
 ): boolean {
+  if (skinMode !== undefined && skinMode !== null && skinMode !== "anime") {
+    return false;
+  }
   if (!preference.enabled) return false;
   if (preference.frequency === "always") return true;
   if (preference.frequency === "daily") {

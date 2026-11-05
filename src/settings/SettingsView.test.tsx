@@ -219,4 +219,23 @@ describe("SettingsView", () => {
     );
     expect(screen.getByTestId("boot-enabled")).toBeChecked();
   });
+
+  it("locks appearance to warm light when anime skin is active", () => {
+    render(
+      <SettingsView
+        onOpenAccount={vi.fn()}
+        onOpenDiagnostics={vi.fn()}
+        onOpenTools={vi.fn()}
+        onOpenModels={vi.fn()}
+        appearance="dark"
+        onAppearanceChange={vi.fn()}
+        skin={{ mode: "anime", character: "dafeiyu" }}
+        onSkinChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("settings-appearance-locked")).toBeInTheDocument();
+    expect(screen.getByTestId("settings-appearance-row")).toHaveTextContent(
+      "二次元皮固定暖白",
+    );
+  });
 });

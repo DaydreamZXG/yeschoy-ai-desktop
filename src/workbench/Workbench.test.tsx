@@ -14,6 +14,7 @@ import i18n from "i18next";
 import zh from "../i18n/locales/zh.json";
 import App from "../App";
 import { APPEARANCE_KEY, readAppearance } from "./appearance";
+import { SKIN_KEY } from "./skin";
 import { workbenchCopies } from "./copy";
 import { readFileSync } from "node:fs";
 import { connectionsFixture } from "../configuration/connection-test-fixtures";
@@ -302,6 +303,7 @@ beforeEach(async () => {
   i18n.addResourceBundle("zh", "translation", zh, true, true);
   await i18n.changeLanguage("zh");
   localStorage.removeItem(APPEARANCE_KEY);
+  localStorage.removeItem(SKIN_KEY);
   systemDark = false;
   appearanceListeners = [];
   vi.stubGlobal(
@@ -1136,6 +1138,10 @@ describe("official workbench", () => {
   });
 
   it("syncs appearance controls, follows system changes and persists only an enum", async () => {
+    localStorage.setItem(
+      SKIN_KEY,
+      JSON.stringify({ mode: "standard", character: "dafeiyu" }),
+    );
     const save = vi.spyOn(Storage.prototype, "setItem");
     render(<App />);
     await screen.findByText("版本 1.40609.1");
@@ -1168,8 +1174,19 @@ describe("official workbench", () => {
   });
   it("keeps appearance usable when storage fails and rejects invalid preferences", async () => {
     localStorage.setItem(APPEARANCE_KEY, "unexpected-value");
+    localStorage.setItem(
+      SKIN_KEY,
+      JSON.stringify({ mode: "standard", character: "dafeiyu" }),
+    );
     expect(readAppearance()).toBe("system");
-    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+    const realGetItem = Storage.prototype.getItem;
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(function (
+      this: Storage,
+      key: string,
+    ) {
+      if (key === SKIN_KEY) {
+        return realGetItem.call(this, key);
+      }
       throw Error("denied");
     });
     expect(readAppearance()).toBe("system");
@@ -1180,6 +1197,22 @@ describe("official workbench", () => {
     await screen.findByText("版本 1.40609.1");
     fireEvent.click(screen.getByRole("button", { name: "深色" }));
     expect(document.documentElement.dataset.theme).toBe("dark");
+  });
+
+  it("locks warm light and hides appearance controls on anime skin", async () => {
+    localStorage.setItem(APPEARANCE_KEY, "dark");
+    localStorage.setItem(
+      SKIN_KEY,
+      JSON.stringify({ mode: "anime", character: "dafeiyu" }),
+    );
+    render(<App />);
+    await screen.findByText("版本 1.40609.1");
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(screen.queryByRole("button", { name: "深色" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "设置" }));
+    expect(await screen.findByTestId("settings-appearance-locked")).toHaveTextContent(
+      "二次元皮固定暖白",
+    );
   });
   it("defines complete localized copy, a single font system and accessible responsive themes", () => {
     const keys = Object.keys(workbenchCopies.zh).sort();

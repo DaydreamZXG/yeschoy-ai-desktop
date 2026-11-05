@@ -20,10 +20,10 @@ afterEach(() => {
 });
 
 describe("boot preference", () => {
-  it("defaults to enabled + session frequency", () => {
+  it("defaults to enabled + daily frequency", () => {
     expect(readBootPreference()).toMatchObject({
       enabled: true,
-      frequency: "session",
+      frequency: "daily",
     });
   });
 
@@ -34,6 +34,20 @@ describe("boot preference", () => {
       lastPlayedDay: null,
     });
     expect(shouldPlayBoot()).toBe(false);
+  });
+
+  it("shouldPlayBoot is false on standard skin even when prefs say play", () => {
+    writeBootPreference({
+      enabled: true,
+      frequency: "always",
+      lastPlayedDay: null,
+    });
+    expect(shouldPlayBoot(readBootPreference(), new Date(), "standard")).toBe(
+      false,
+    );
+    expect(shouldPlayBoot(readBootPreference(), new Date(), "anime")).toBe(
+      true,
+    );
   });
 
   it("session frequency plays once per session", () => {

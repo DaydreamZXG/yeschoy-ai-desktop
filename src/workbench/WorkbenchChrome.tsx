@@ -74,6 +74,7 @@ export function WorkbenchSidebar({
   announcementsUnread = 0,
   appearance,
   onAppearance,
+  appearanceLocked = false,
   accountProjection,
   accountLoading,
   accountLineId,
@@ -86,6 +87,8 @@ export function WorkbenchSidebar({
   announcementsUnread?: number;
   appearance: Appearance;
   onAppearance: (value: Appearance) => void;
+  /** Anime skin forces warm light; hide the theme picker. */
+  appearanceLocked?: boolean;
   accountProjection: AccountProjection | null;
   accountLoading: boolean;
   accountLineId: AccountLineId;
@@ -211,7 +214,9 @@ export function WorkbenchSidebar({
             <span>{c.joinGroup}</span>
           </button>
         )}
-        <AppearancePicker value={appearance} onChange={onAppearance} />
+        {appearanceLocked ? null : (
+          <AppearancePicker value={appearance} onChange={onAppearance} />
+        )}
         <button
           type="button"
           className="sidebar-account"

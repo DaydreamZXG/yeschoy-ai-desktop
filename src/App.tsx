@@ -7,7 +7,7 @@ import { WorkbenchSidebar, type AppView } from "./workbench/WorkbenchChrome";
 import { refreshModelCatalog } from "./model-profiles/remoteCatalog";
 import { useAppearance } from "./workbench/appearance";
 import { useSkin } from "./workbench/skin";
-import { shouldPlayBoot } from "./workbench/bootPrefs";
+import { readBootPreference, shouldPlayBoot } from "./workbench/bootPrefs";
 import { BootRitual } from "./workbench/BootRitual";
 import { AccountView } from "./workbench/AccountView";
 import { ModelsView } from "./workbench/ModelsView";
@@ -131,9 +131,18 @@ function App() {
   const requestSequenceRef = useRef(0);
   const shellRef = useRef<HTMLElement>(null);
   const previousView = useRef(view);
-  const { appearance, changeAppearance } = useAppearance();
   const { skin, changeSkin } = useSkin();
-  const [bootOpen, setBootOpen] = useState(() => shouldPlayBoot());
+  const { appearance, changeAppearance, resolvedTheme } = useAppearance({
+    lockLight: skin.mode === "anime",
+  });
+  const [bootOpen, setBootOpen] = useState(() =>
+    shouldPlayBoot(readBootPreference(), new Date(), skin.mode),
+  );
+  useEffect(() => {
+    if (skin.mode !== "anime") {
+      setBootOpen(false);
+    }
+  }, [skin.mode]);
   useEffect(
     () => () => {
       latestRequestRef.current = "";
@@ -310,6 +319,7 @@ function App() {
                 announcementsUnread={unreadAnnouncements.size}
                 appearance={appearance}
                 onAppearance={changeAppearance}
+                appearanceLocked={skin.mode === "anime"}
                 accountProjection={accountSession.projection}
                 accountLoading={accountSession.loading || (accountSession.stationCheck ?? "idle") === "checking"}
                 accountLineId={accountLineId}
@@ -632,8 +642,8 @@ function App() {
               lineId={accountLineId}
               accountProjection={accountSession.projection}
             />
-            <Toaster position="top-center" richColors theme={appearance} />
-            {bootOpen ? (
+            <Toaster position="top-center" richColors theme={resolvedTheme} />
+            {bootOpen && skin.mode === "anime" ? (
               <BootRitual
                 character={skin.character}
                 onComplete={() => setBootOpen(false)}
