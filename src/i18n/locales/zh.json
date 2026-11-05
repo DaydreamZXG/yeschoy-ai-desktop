@@ -314,7 +314,33 @@
     "groupPrivacy": "隐私与安全",
     "groupPrivacyNote": "这些是本版本固定的行为，不需要你设置。",
     "groupSystem": "后台运行",
-    "groupAdvanced": "排查与高级"
+    "groupAdvanced": "排查与高级",
+    "skinTitle": "二次元皮肤与开机",
+    "skinNote": "只换壁纸和毛玻璃质感，侧栏与接入流程不变。可随时切回标准主题。",
+    "skinModeTitle": "界面风格",
+    "skinModeNote": "二次元皮默认启用；标准主题关闭壁纸与毛玻璃。",
+    "skinMode": {
+      "anime": "二次元",
+      "standard": "标准"
+    },
+    "skinCharacterTitle": "壁纸皮肤",
+    "skinCharacterNote": "角色在壁纸层，不替代应用列表。默认大肥鱼。正式立绘待授权替换占位图。",
+    "skinCharacter": {
+      "dafeiyu": "大肥鱼",
+      "claude": "Claude大小姐",
+      "gpt": "GPT小吉"
+    },
+    "bootEnabledTitle": "开机动画",
+    "bootEnabledNote": "冷启动时播放四幕暖白仪式；可随时跳过。",
+    "bootEnabledOn": "已开启",
+    "bootEnabledOff": "已关闭",
+    "bootFrequencyTitle": "播放频率",
+    "bootFrequencyNote": "控制开机仪式出现的次数，不影响日常工作台。",
+    "bootFrequency": {
+      "session": "每次会话",
+      "daily": "每天一次",
+      "always": "总是"
+    }
   },
   "yeschoyUpdate": {
     "title": "野菜自动更新",
@@ -1377,5 +1403,18 @@
       "trust_store_full": "记住的站点太多了，请先在设置里删掉几个不用的。",
       "generic": "请回到网页再点一次「打开桌面助手」。"
     }
+  },
+  "bootRitual": {
+    "skip": "SKIP",
+    "breach": "击穿边界 · BREACH",
+    "ticker": "MULTIMODEL CONSTELLATION · FREQUENCY LOCK",
+    "stage1Title": "神经链路点火",
+    "stage1En": "NEURAL LINK IGNITION",
+    "stage2Title": "穿越奇点",
+    "stage2En": "CROSSING THE SINGULARITY",
+    "stage3Title": "频率已锁定",
+    "stage3En": "FREQUENCY LOCKED",
+    "stage4Title": "你已站在 AGI 这一侧",
+    "stage4En": "WELCOME TO THE OTHER SIDE"
   }
 }

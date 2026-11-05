@@ -314,7 +314,33 @@
     "groupPrivacy": "Privacy & security",
     "groupPrivacyNote": "Fixed behaviour in this version — nothing to configure.",
     "groupSystem": "Background",
-    "groupAdvanced": "Troubleshooting & advanced"
+    "groupAdvanced": "Troubleshooting & advanced",
+    "skinTitle": "Anime skin & boot",
+    "skinNote": "Wallpaper and frosted glass only — sidebar and connect flows stay the same. Switch back to Standard anytime.",
+    "skinModeTitle": "UI style",
+    "skinModeNote": "Anime is on by default; Standard turns off wallpaper and glass.",
+    "skinMode": {
+      "anime": "Anime",
+      "standard": "Standard"
+    },
+    "skinCharacterTitle": "Wallpaper skin",
+    "skinCharacterNote": "Characters live on the wallpaper layer, never replace the app list. Default: Dafeiyu. Standee art is a placeholder until licensed.",
+    "skinCharacter": {
+      "dafeiyu": "Dafeiyu",
+      "claude": "Claude",
+      "gpt": "GPT"
+    },
+    "bootEnabledTitle": "Boot ritual",
+    "bootEnabledNote": "Play the four-beat warm-white ritual on cold start. Always skippable.",
+    "bootEnabledOn": "On",
+    "bootEnabledOff": "Off",
+    "bootFrequencyTitle": "Play frequency",
+    "bootFrequencyNote": "How often the boot ritual appears. Does not change the workbench.",
+    "bootFrequency": {
+      "session": "Each session",
+      "daily": "Once a day",
+      "always": "Always"
+    }
   },
   "yeschoyUpdate": {
     "title": "Yeschoy automatic updates",
@@ -1377,5 +1403,18 @@
       "trust_store_full": "Too many remembered sites. Remove some unused ones in Settings first.",
       "generic": "Go back to the web page and click \"Open desktop assistant\" again."
     }
+  },
+  "bootRitual": {
+    "skip": "SKIP",
+    "breach": "BREACH THE BOUNDARY · BREACH",
+    "ticker": "MULTIMODEL CONSTELLATION · FREQUENCY LOCK",
+    "stage1Title": "Neural link ignition",
+    "stage1En": "NEURAL LINK IGNITION",
+    "stage2Title": "Crossing the singularity",
+    "stage2En": "CROSSING THE SINGULARITY",
+    "stage3Title": "Frequency locked",
+    "stage3En": "FREQUENCY LOCKED",
+    "stage4Title": "You stand on the AGI side",
+    "stage4En": "WELCOME TO THE OTHER SIDE"
   }
 }

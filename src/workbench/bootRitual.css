@@ -1,0 +1,197 @@
+/* Warm-white cyber boot overlay. Accent #ff7500 for HUD only.
+   Spacing / type stay on the design-system ladders. */
+
+.boot-ritual {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-dialog-top) + 20);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--ink);
+  opacity: 1;
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+
+.boot-ritual[data-leaving="true"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.boot-ritual-wallpaper {
+  position: absolute;
+  inset: 0;
+  background-image: var(--skin-wallpaper);
+  background-size: cover;
+  background-position: 70% center;
+  background-repeat: no-repeat;
+  transform: scale(1.04);
+  filter: saturate(1.05);
+}
+
+.boot-ritual-glass {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      135deg,
+      rgb(255 252 247 / 78%) 0%,
+      rgb(255 248 240 / 62%) 45%,
+      rgb(255 244 232 / 70%) 100%
+    );
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+}
+
+.boot-ritual-skip {
+  position: absolute;
+  top: var(--space-20);
+  right: var(--space-24);
+  z-index: var(--z-base);
+  border: 1px solid color-mix(in srgb, #ff7500 35%, transparent);
+  background: rgb(255 255 255 / 55%);
+  color: #ff7500;
+  border-radius: var(--radius-full);
+  padding: var(--space-6) var(--space-14);
+  font-size: var(--text-sm);
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.boot-ritual-skip:hover {
+  background: rgb(255 255 255 / 78%);
+}
+
+.boot-ritual-hud {
+  position: relative;
+  z-index: var(--z-base);
+  width: min(560px, calc(100% - var(--space-40)));
+  padding: var(--space-32) var(--space-28);
+  border-radius: var(--radius-2xl);
+  border: 1px solid rgb(255 255 255 / 70%);
+  background: rgb(255 252 247 / 72%);
+  box-shadow:
+    var(--shadow-pop),
+    0 0 0 1px color-mix(in srgb, #ff7500 18%, transparent);
+  text-align: center;
+}
+
+.boot-ritual-crosshair {
+  position: relative;
+  width: var(--space-40);
+  height: var(--space-40);
+  margin: 0 auto var(--space-16);
+}
+
+.boot-ritual-crosshair span {
+  position: absolute;
+  background: #ff7500;
+}
+
+.boot-ritual-crosshair span:first-child {
+  left: 50%;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  transform: translateX(-50%);
+}
+
+.boot-ritual-crosshair span:last-child {
+  top: 50%;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  transform: translateY(-50%);
+}
+
+.boot-ritual[data-stage="1"] .boot-ritual-crosshair {
+  animation: boot-crosshair-spin var(--dur-spin) linear infinite;
+}
+
+@keyframes boot-crosshair-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.boot-ritual-index {
+  margin: 0 0 var(--space-8);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.14em;
+  color: #ff7500;
+}
+
+.boot-ritual-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0.04em;
+}
+
+.boot-ritual-en {
+  margin: var(--space-8) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.boot-ritual-breach {
+  margin-top: var(--space-24);
+  border: 0;
+  border-radius: var(--radius-full);
+  padding: var(--space-12) var(--space-28);
+  background: #ff7500;
+  color: #fff;
+  font-size: var(--text-base);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  box-shadow: 0 8px 24px color-mix(in srgb, #ff7500 35%, transparent);
+}
+
+.boot-ritual-breach:hover {
+  filter: brightness(1.05);
+}
+
+.boot-ritual-prism {
+  margin: var(--space-20) auto 0;
+  width: min(280px, 70%);
+  height: var(--space-8);
+  border-radius: var(--radius-full);
+  background: linear-gradient(
+    90deg,
+    #ff3b5c,
+    #ff7500,
+    #4cc9f0,
+    #ff3b5c
+  );
+  background-size: 200% 100%;
+  animation: boot-prism-shift var(--dur-pulse) linear infinite;
+  filter: blur(0.2px);
+}
+
+@keyframes boot-prism-shift {
+  to {
+    background-position: 200% 0;
+  }
+}
+
+.boot-ritual-ticker {
+  margin: var(--space-20) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.16em;
+  color: var(--faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot-ritual[data-stage="1"] .boot-ritual-crosshair,
+  .boot-ritual-prism {
+    animation: none;
+  }
+}

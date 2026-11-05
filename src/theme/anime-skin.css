@@ -1,0 +1,112 @@
+/* Anime skin layer — warm glass over character wallpaper.
+   Only active when <html data-skin="anime">. Navigation IA unchanged. */
+
+:root {
+  --skin-wallpaper: none;
+  --skin-wallpaper-opacity: 0;
+}
+
+:root[data-skin="anime"][data-skin-character="dafeiyu"] {
+  --skin-wallpaper: url("../assets/skins/dafeiyu.svg");
+}
+
+:root[data-skin="anime"][data-skin-character="claude"] {
+  --skin-wallpaper: url("../assets/skins/claude.svg");
+}
+
+:root[data-skin="anime"][data-skin-character="gpt"] {
+  --skin-wallpaper: url("../assets/skins/gpt.svg");
+}
+
+:root[data-skin="anime"] {
+  --skin-wallpaper-opacity: 0.22;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --surface: rgb(255 255 255 / 78%);
+  --subtle: rgb(247 244 238 / 72%);
+  --shadow: 0 8px 28px rgb(64 58 48 / 10%);
+}
+
+:root[data-skin="anime"][data-theme="dark"] {
+  /* Keep anime on a warm-light glass wash even if appearance is dark —
+     product ruled out dark cyber boards for this skin. */
+  --bg: #f4efe6;
+  --sidebar: rgb(255 252 247 / 72%);
+  --surface: rgb(255 255 255 / 76%);
+  --subtle: rgb(247 241 232 / 70%);
+  --ink: #1a1b1e;
+  --muted: #5f5e58;
+  --faint: #6b6a64;
+  --line: #e8e0d4;
+  --accent: #1c6b4a;
+  --accent-hover: #155239;
+  --accent-soft: #e9f3ed;
+  --accent-line: #c3ddcd;
+  --on-accent: #ffffff;
+}
+
+:root[data-skin="anime"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--skin-wallpaper);
+  background-size: cover;
+  background-position: 78% center;
+  background-repeat: no-repeat;
+  opacity: var(--skin-wallpaper-opacity);
+}
+
+:root[data-skin="anime"] #root,
+:root[data-skin="anime"] .app-shell {
+  position: relative;
+  z-index: var(--z-base);
+  background: transparent;
+}
+
+:root[data-skin="anime"] .workbench-sidebar {
+  background: rgb(255 252 247 / 78%);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  border-right-color: rgb(232 224 212 / 80%);
+}
+
+:root[data-skin="anime"] .settings-card,
+:root[data-skin="anime"] .intro-panel,
+:root[data-skin="anime"] .discovery-panel,
+:root[data-skin="anime"] .app-library-card,
+:root[data-skin="anime"] .workbench-card {
+  background: rgb(255 255 255 / 78%);
+  backdrop-filter: blur(12px) saturate(1.08);
+  -webkit-backdrop-filter: blur(12px) saturate(1.08);
+  border-color: rgb(255 255 255 / 65%);
+}
+
+/* Keys / diagnostics stay denser and more opaque for trust. */
+:root[data-skin="anime"] .settings-card.settings-card-about,
+:root[data-skin="anime"] [data-testid="diagnostics-view"],
+:root[data-skin="anime"] .advanced-connection-wrap {
+  background: rgb(255 255 255 / 92%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Shared settings toggle used by boot enable row (works in both skins). */
+.setting-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--text-sm);
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.setting-toggle input {
+  width: var(--space-16);
+  height: var(--space-16);
+  accent-color: var(--accent);
+}

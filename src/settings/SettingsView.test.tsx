@@ -196,4 +196,27 @@ describe("SettingsView", () => {
     expect(screen.queryByTestId("official-site-promo")).toBeNull();
     expect(screen.getByTestId("oss-reference-attribution")).toBeTruthy();
   });
+
+  it("renders anime skin and boot controls when skin props are provided", () => {
+    render(
+      <SettingsView
+        onOpenAccount={vi.fn()}
+        onOpenDiagnostics={vi.fn()}
+        onOpenTools={vi.fn()}
+        onOpenModels={vi.fn()}
+        skin={{ mode: "anime", character: "dafeiyu" }}
+        onSkinChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("settings-skin-group")).toBeInTheDocument();
+    expect(screen.getByTestId("skin-mode-anime")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByTestId("skin-character-dafeiyu")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByTestId("boot-enabled")).toBeChecked();
+  });
 });

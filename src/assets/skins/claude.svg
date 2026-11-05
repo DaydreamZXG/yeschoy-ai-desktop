@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200" viewBox="0 0 1600 1200" role="img" aria-label="Claude placeholder wallpaper">
+  <!-- PLACEHOLDER: not licensed character art. Replace after authorization. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#faf4ec"/>
+      <stop offset="55%" stop-color="#f3e0c8"/>
+      <stop offset="100%" stop-color="#ecd2b0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="72%" cy="42%" r="45%">
+      <stop offset="0%" stop-color="#d97706" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#d97706" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="1200" fill="url(#bg)"/>
+  <rect width="1600" height="1200" fill="url(#glow)"/>
+  <!-- abstract figure silhouette (right third) -->
+  <g opacity="0.55" fill="#d97706">
+    <ellipse cx="1180" cy="280" rx="90" ry="110"/>
+    <path d="M1040 420 C1080 360, 1280 360, 1320 420 C1360 520, 1380 780, 1340 980 C1300 1080, 1060 1080, 1020 980 C980 780, 1000 520, 1040 420 Z"/>
+    <path d="M1120 980 C1080 1040, 1060 1120, 1040 1180 L1320 1180 C1300 1120, 1280 1040, 1240 980 Z" opacity="0.7"/>
+  </g>
+  <text x="64" y="96" fill="#1a1b1e" fill-opacity="0.35" font-family="ui-sans-serif, system-ui, sans-serif" font-size="28">Claude · PLACEHOLDER</text>
+</svg>

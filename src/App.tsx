@@ -6,6 +6,9 @@ import { Toaster, toast } from "sonner";
 import { WorkbenchSidebar, type AppView } from "./workbench/WorkbenchChrome";
 import { refreshModelCatalog } from "./model-profiles/remoteCatalog";
 import { useAppearance } from "./workbench/appearance";
+import { useSkin } from "./workbench/skin";
+import { shouldPlayBoot } from "./workbench/bootPrefs";
+import { BootRitual } from "./workbench/BootRitual";
 import { AccountView } from "./workbench/AccountView";
 import { ModelsView } from "./workbench/ModelsView";
 import { AppLibraryView } from "./workbench/AppLibraryView";
@@ -129,6 +132,8 @@ function App() {
   const shellRef = useRef<HTMLElement>(null);
   const previousView = useRef(view);
   const { appearance, changeAppearance } = useAppearance();
+  const { skin, changeSkin } = useSkin();
+  const [bootOpen, setBootOpen] = useState(() => shouldPlayBoot());
   useEffect(
     () => () => {
       latestRequestRef.current = "";
@@ -392,6 +397,8 @@ function App() {
                 <SettingsView
                   appearance={appearance}
                   onAppearanceChange={changeAppearance}
+                  skin={skin}
+                  onSkinChange={changeSkin}
                   onOpenAccount={() => setView("account")}
                   onOpenDiagnostics={() => setView("diagnostics")}
                   onOpenTools={() => setView("tools")}
@@ -626,6 +633,12 @@ function App() {
               accountProjection={accountSession.projection}
             />
             <Toaster position="top-center" richColors theme={appearance} />
+            {bootOpen ? (
+              <BootRitual
+                character={skin.character}
+                onComplete={() => setBootOpen(false)}
+              />
+            ) : null}
           </ShutdownProvider>
         </ConnectionProvider>
       </InstallationProvider>
