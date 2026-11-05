@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "i18next";
 import zh from "../i18n/locales/zh.json";
@@ -10,9 +10,11 @@ beforeEach(async () => {
   sessionStorage.clear();
   i18n.addResourceBundle("zh", "translation", zh, true, true);
   await i18n.changeLanguage("zh");
+  vi.useFakeTimers({ shouldAdvanceTime: true });
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   localStorage.clear();
   sessionStorage.clear();
 });
@@ -33,7 +35,10 @@ describe("BootRitual", () => {
     );
     fireEvent.click(screen.getByTestId("boot-ritual-skip"));
     expect(sessionStorage.getItem(BOOT_SESSION_KEY)).toBe("1");
-    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
   it("Esc skips", async () => {
@@ -47,10 +52,13 @@ describe("BootRitual", () => {
     );
     fireEvent.keyDown(window, { key: "Escape" });
     expect(sessionStorage.getItem(BOOT_SESSION_KEY)).toBe("1");
-    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+    expect(onComplete).toHaveBeenCalledTimes(1);
   });
 
-  it("BREACH advances from stage 2", () => {
+  it("BREACH advances from stage 2 after flash", async () => {
     render(
       <BootRitual
         character="dafeiyu"
@@ -65,12 +73,19 @@ describe("BootRitual", () => {
     );
     fireEvent.click(screen.getByTestId("boot-ritual-breach"));
     expect(screen.getByTestId("boot-ritual")).toHaveAttribute(
+      "data-flashing",
+      "true",
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400);
+    });
+    expect(screen.getByTestId("boot-ritual")).toHaveAttribute(
       "data-stage",
       "3",
     );
   });
 
-  it("Enter on stage 2 acts as BREACH", () => {
+  it("Enter on stage 2 acts as BREACH", async () => {
     render(
       <BootRitual
         character="claude"
@@ -80,9 +95,28 @@ describe("BootRitual", () => {
       />,
     );
     fireEvent.keyDown(window, { key: "Enter" });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400);
+    });
     expect(screen.getByTestId("boot-ritual")).toHaveAttribute(
       "data-stage",
       "3",
     );
+  });
+
+  it("renders progress pips for the active act", () => {
+    render(
+      <BootRitual
+        character="dafeiyu"
+        onComplete={vi.fn()}
+        initialStage={3}
+        disableAutoAdvance
+      />,
+    );
+    const pips = document.querySelectorAll(".boot-ritual-progress-pip");
+    expect(pips).toHaveLength(4);
+    expect(pips[2]).toHaveAttribute("data-state", "active");
+    expect(pips[0]).toHaveAttribute("data-state", "done");
+    expect(pips[3]).toHaveAttribute("data-state", "todo");
   });
 });
