@@ -50,10 +50,36 @@ fn adopt_directory(old: &Path, current: &Path) -> bool {
     std::fs::rename(old, current).is_ok()
 }
 
+/// 搬数据目录。旧版客户端如果正在改某个应用的设置，它会一直拿着这把锁，做完
+/// 还要把结果记回旧目录；这时候搬走，那条结果就记到了一个新建的空目录里，这边
+/// 会把一次已经做完的接入当成没做完再改回去。所以它忙着就不搬，下次启动再说。
+fn adopt_home(old: &Path, current: &Path) -> bool {
+    if current.symlink_metadata().is_ok() || !is_plain_directory(old) {
+        return false;
+    }
+    let lock = old.join("connection-recovery").join("operation.lock");
+    let guard = match std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(lock)
+    {
+        Ok(file) if file.try_lock().is_ok() => Some(file),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+        Ok(_) | Err(_) => return false,
+    };
+    // Windows 上目录里有文件开着就改不了名，先放手；别的系统拿着锁改名，旧版插不进来。
+    #[cfg(windows)]
+    drop(guard);
+    let moved = adopt_directory(old, current);
+    #[cfg(not(windows))]
+    drop(guard);
+    moved
+}
+
 /// 启动最早的一步：任何模块读写数据目录、拿锁、建窗口之前。
 pub(crate) fn move_in() {
     if let Some(home) = crate::tool_adapters::user_home() {
-        let moved = adopt_directory(&home.join(OLD_HOME), &home.join(HOME));
+        let moved = adopt_home(&home.join(OLD_HOME), &home.join(HOME));
         log::info!("legacy stage=home moved={moved}");
         #[cfg(target_os = "macos")]
         adopt_directory(
@@ -363,6 +389,30 @@ mod tests {
         std::fs::create_dir_all(home.join(OLD_HOME)).unwrap();
         assert!(!adopt_directory(&home.join(OLD_HOME), &home.join(HOME)));
         assert_eq!(data_root(home), home.join(HOME));
+    }
+
+    #[test]
+    fn the_data_directory_stays_put_while_an_old_client_is_mid_operation() {
+        let home =
+            crate::tool_adapters::common::temporary_working_directory("legacy-busy").unwrap();
+        let (old, current) = (home.as_path().join(OLD_HOME), home.as_path().join(HOME));
+        let recovery = old.join("connection-recovery");
+        std::fs::create_dir_all(&recovery).unwrap();
+        std::fs::write(recovery.join("claude_code.journal"), "pending").unwrap();
+        // 旧版客户端做到一半：锁在它手里。
+        let busy = crate::connection_recovery::operation_lock_at(&recovery).unwrap();
+        assert!(!adopt_home(&old, &current));
+        assert!(recovery.join("claude_code.journal").exists());
+        assert_eq!(data_root(home.as_path()), old);
+        // 它做完了：这次搬走，记录跟着过来。
+        drop(busy);
+        assert!(adopt_home(&old, &current));
+        assert_eq!(
+            std::fs::read_to_string(current.join("connection-recovery/claude_code.journal"))
+                .unwrap(),
+            "pending"
+        );
+        assert!(!old.exists());
     }
 
     fn quote(value: &str) -> String {
