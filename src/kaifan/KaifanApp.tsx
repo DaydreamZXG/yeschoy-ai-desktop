@@ -20,6 +20,7 @@ import {
 import { refreshModelCatalog } from "../model-profiles/remoteCatalog";
 import { ShutdownHost } from "../settings/QuitAssistant";
 import { RETURNING, openClassic } from "../uiChoice";
+import { useDesktopUpdate } from "../update/UpdateProvider";
 import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
 import { Boot } from "./Boot";
 import { Connect } from "./Connect";
@@ -180,6 +181,22 @@ export function KaifanApp() {
     };
   }, [signedIn]);
 
+  // 有新版本：角色说一声，设置那一项亮个点；装不装在设置里定。
+  const update = useDesktopUpdate();
+  const updateReady =
+    update.attention && update.projection.phase === "available";
+  const newVersion = update.projection.availableVersion;
+  const told = useRef("");
+  useEffect(() => {
+    // 开机动画放完再说，同一个版本只说一次；设置上的点一直留着。
+    if (!updateReady || phase !== "home" || told.current === newVersion) return;
+    told.current = newVersion;
+    setLine({
+      text: t("kaifan.home.updateReady", { version: newVersion }),
+      at: Date.now(),
+    });
+  }, [newVersion, phase, t, updateReady]);
+
   const recharge = async () => {
     if (!(await session.openWallet()))
       setLine({
@@ -275,6 +292,7 @@ export function KaifanApp() {
           apps={apps}
           quiet={covered}
           line={line}
+          updateReady={updateReady}
           retrying={retrying}
           fx={() => fx.current}
           onPick={pick}

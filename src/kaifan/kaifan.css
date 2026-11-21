@@ -1312,3 +1312,12 @@ dialog.restore-dialog menu {
   margin-top: 20px;
   padding: 0;
 }
+/* 设置那一项上「有新版本」的小点 */
+.dot {
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  border-radius: 50%;
+  background: var(--acc);
+  box-shadow: 0 0 8px var(--acc);
+}

@@ -1,4 +1,4 @@
-import { act, render } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "../i18n";
 import type { AccountProjection } from "../account/session";
@@ -96,5 +96,27 @@ describe("开饭首页自己会做的事", () => {
     act(() => void vi.advanceTimersByTime(6_000));
     act(() => void window.dispatchEvent(new Event("focus")));
     expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("有新版本：角色说一声，设置上亮个点", async () => {
+    update.mockReturnValue({
+      ...idle,
+      attention: true,
+      projection: {
+        ...idleUpdateProjection(),
+        phase: "available",
+        availableVersion: "9.9.9",
+      },
+    });
+    render(<KaifanApp />);
+    await waitFor(() =>
+      expect(screen.getByTestId("kaifan-says").textContent).toContain("9.9.9"),
+    );
+    expect(screen.getByTitle("有新版本")).toBeInTheDocument();
+  });
+
+  it("没有新版本：不提这件事", () => {
+    render(<KaifanApp />);
+    expect(screen.queryByTitle("有新版本")).toBeNull();
   });
 });

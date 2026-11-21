@@ -1515,7 +1515,8 @@
       "stationOut": "No station yet",
       "stationOff": "Station unreachable",
       "stationChecking": "Connecting to station",
-      "stationOk": "Station connected"
+      "stationOk": "Station connected",
+      "updateReady": "Update available"
     },
     "home": {
       "cast": "The nine classmates",
@@ -1579,7 +1580,8 @@
       "fixSaysChanged": "Another tool changed {{app}}'s settings, so it no longer uses this station. Press “Fix it” and I'll help you switch it back, or keep theirs.",
       "fixSaysUnfinished": "{{app}} was left half set up last time. Press “Fix it” and I'll finish the job, no need to start over.",
       "fixGo": "Fix it",
-      "connectedNoHost": "Connected. "
+      "connectedNoHost": "Connected. ",
+      "updateReady": "Kaifan {{version}} is out. Update from Settings whenever you like, no rush."
     },
     "connect": {
       "title": "Connect a station",

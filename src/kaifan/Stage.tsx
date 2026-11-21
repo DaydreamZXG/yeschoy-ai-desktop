@@ -42,6 +42,8 @@ interface Props {
   /** 开机动画还在放、或者上面盖着面板时，不闲聊也不打字。 */
   quiet: boolean;
   line: StageLine | null;
+  /** 有新版本等着装：设置那一项亮个点。 */
+  updateReady?: boolean;
   retrying: boolean;
   fx: () => FxHandle | null;
   onPick: (id: RosterId) => void;
@@ -74,6 +76,7 @@ export function Stage({
   apps,
   quiet,
   line,
+  updateReady,
   retrying,
   fx,
   onPick,
@@ -474,6 +477,9 @@ export function Stage({
               <path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" />
             </svg>
             {t("kaifan.nav.settings")}
+            {updateReady && (
+              <i className="dot" title={t("kaifan.nav.updateReady")} />
+            )}
           </a>
         </nav>
 

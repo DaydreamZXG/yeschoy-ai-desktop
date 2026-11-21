@@ -4,9 +4,12 @@ import ReactDOM from "react-dom/client";
 import "../i18n";
 import "./kaifan.css";
 import { KaifanApp } from "./KaifanApp";
+import { UpdateProvider } from "../update/UpdateProvider";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <KaifanApp />
+    <UpdateProvider>
+      <KaifanApp />
+    </UpdateProvider>
   </React.StrictMode>,
 );
