@@ -55,6 +55,10 @@ interface Props {
   onRetry: () => void;
   onRecharge: () => void;
   onSetup: (app?: ActivationToolId) => void;
+  /** 还有几条公告没看；「公告」那一项上写个数。 */
+  unread?: number;
+  onLedger: () => void;
+  onNews: () => void;
   onNavigate: (view: ClassicView) => void;
 }
 
@@ -90,6 +94,9 @@ export function Stage({
   onRetry,
   onRecharge,
   onSetup,
+  unread = 0,
+  onLedger,
+  onNews,
   onNavigate,
 }: Props) {
   const { t } = useTranslation();
@@ -446,8 +453,9 @@ export function Stage({
             href="#ledger"
             onClick={(event) => {
               event.preventDefault();
-              onNavigate("account");
+              onLedger();
             }}
+            data-testid="kaifan-nav-ledger"
           >
             <svg viewBox="0 0 24 24">
               <path d={ICONS.ledger} />
@@ -458,13 +466,25 @@ export function Stage({
             href="#news"
             onClick={(event) => {
               event.preventDefault();
-              onNavigate("announcements");
+              onNews();
             }}
+            data-testid="kaifan-nav-news"
           >
             <svg viewBox="0 0 24 24">
               <path d={ICONS.news} />
             </svg>
             {t("kaifan.nav.news")}
+            {unread > 0 && (
+              <span
+                className="n"
+                title={t("kaifan.news.unread", { count: unread })}
+              >
+                <span aria-hidden="true">{unread > 9 ? "9+" : unread}</span>
+                <span className="sr">
+                  {t("kaifan.news.unread", { count: unread })}
+                </span>
+              </span>
+            )}
           </a>
           <span className="sp" />
           {connected && (

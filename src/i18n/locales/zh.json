@@ -1808,6 +1808,53 @@
         "one": "这个站我只有一个价格方案，{{discount}}，不用挑。",
         "many": "现在走「{{plan}}」，{{discount}}。想换就点下面。"
       }
+    },
+    "ledger": {
+      "unknown": "看不到",
+      "saysOut": "先连上站点，我才看得到账本。",
+      "saysOff": "站点现在连不上，账本我读不到。连上了我再给你看。",
+      "saysWait": "正在连接站点，等一下。",
+      "saysNothing": "这个站没把余额和账单告诉我，我看不到。",
+      "saysToday": "今天花了 {{amount}}。",
+      "saysTodayNone": "今天还没开吃。",
+      "saysTodayUnknown": "今天花了多少我看不到。",
+      "saysBalance": "余额还有 {{amount}}。",
+      "saysBalanceUnknown": "余额这个站没告诉我。",
+      "wouldShow": "这里会有：余额、每天花了多少、谁吃得最多、最近几笔。",
+      "balance": "余额",
+      "used": "一共用掉 {{amount}}",
+      "noLog": "每一笔花在哪，这个站没告诉我。",
+      "week": "最近七天",
+      "partial": "没读全",
+      "eaters": "谁吃得最多",
+      "window_one": "最近 {{count}} 天",
+      "window_other": "最近 {{count}} 天",
+      "since": "{{date}} 之后",
+      "requests_one": "{{count}} 次",
+      "requests_other": "{{count}} 次",
+      "noRecords": "这段时间还没人开吃。",
+      "latest": "最近几笔",
+      "recharge": "去充值"
+    },
+    "news": {
+      "saysOut": "先连上站点，我才收得到公告。",
+      "saysOff": "站点现在连不上，公告我读不到。",
+      "saysWait": "正在连接站点，等一下。",
+      "saysLoading": "我去看看公告栏……",
+      "saysNone": "这个站没有公告栏，有消息我也收不到。",
+      "saysFailed": "公告这次没读到，我等下再去看。",
+      "saysEmpty": "最近没有公告。",
+      "saysNew_one": "有 {{count}} 条新公告。",
+      "saysNew_other": "有 {{count}} 条新公告。",
+      "saysSeen": "没有新的，这些你都看过了。",
+      "saysStuck": "这个我没打开成，等下再点一次试试。",
+      "wouldShow": "站点发的公告会贴在这里。",
+      "tagNew": "新",
+      "until": "{{date}} 截止",
+      "retry": "再读一次",
+      "banner": "站点有新公告：{{title}}。点左边的「公告」看。",
+      "unread_one": "{{count}} 条没看",
+      "unread_other": "{{count}} 条没看"
     }
   }
 }

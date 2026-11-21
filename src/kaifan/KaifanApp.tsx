@@ -33,6 +33,9 @@ import {
 } from "./cardInfo";
 import { Connect } from "./Connect";
 import { Fx, type FxHandle } from "./Fx";
+import { Ledger } from "./Ledger";
+import { News } from "./News";
+import { useNotices } from "./useNotices";
 import { Join, type Joined } from "./Join";
 import { Reveal } from "./Reveal";
 import {
@@ -149,6 +152,14 @@ export function KaifanApp() {
     [connections.connections, t],
   );
 
+  const appName = useCallback(
+    (toolId: string) => {
+      const app = WORKBENCH_APPS.find((item) => item.id === toolId);
+      return app ? appDisplayName(app.id, app.name, t) : toolId;
+    },
+    [t],
+  );
+
   // 没连站点：开机放完就由阿青迎新，不让人对着空首页找入口。
   const greeted = useRef(false);
   useEffect(() => {
@@ -209,17 +220,19 @@ export function KaifanApp() {
   }, [newVersion, phase, t, updateReady]);
 
   const recharge = async () => {
-    if (!(await session.openWallet()))
-      setLine({
-        text: t(
-          station
-            ? "kaifan.home.rechargeManualHost"
-            : "kaifan.home.rechargeManual",
-          { station },
-        ),
-        mood: "panic",
-        at: Date.now(),
-      });
+    if (await session.openWallet()) return;
+    // 没打开成：收起账本，让她在首页把话说清楚。
+    setPanel(null);
+    setLine({
+      text: t(
+        station
+          ? "kaifan.home.rechargeManualHost"
+          : "kaifan.home.rechargeManual",
+        { station },
+      ),
+      mood: "panic",
+      at: Date.now(),
+    });
   };
 
   // 连上之后等模型读回来，再报到了几位。
@@ -349,10 +362,36 @@ export function KaifanApp() {
     if (result.status === "opened") setJoined({ ...joined, opened: true });
     setOpenFailed(result.status !== "opened");
   };
+  // —— 账本和公告 ——
+  const [panel, setPanel] = useState<"ledger" | "news" | null>(null);
+  const notices = useNotices(lineId, signedIn);
+  const reach =
+    state.cond === "out"
+      ? "out"
+      : state.cond === "off"
+        ? "off"
+        : signedIn
+          ? "ok"
+          : "wait";
+  // 要在首页顶上提一句的公告：没看过的时候由当前这位说一次。
+  const heralded = useRef("");
+  const herald = notices.notices.find(
+    (item) => item.banner && notices.unread.has(item.id),
+  );
+  useEffect(() => {
+    if (!herald || phase !== "home" || heralded.current === herald.id) return;
+    heralded.current = herald.id;
+    setLine({
+      text: t("kaifan.news.banner", { title: herald.title }),
+      at: Date.now(),
+    });
+  }, [herald, phase, t]);
+
   const covered =
     phase !== "home" ||
     connectOpen ||
     card ||
+    !!panel ||
     !!join ||
     !!joined ||
     !!link.trustOrigin;
@@ -387,6 +426,17 @@ export function KaifanApp() {
           onRetry={() => void retry()}
           onRecharge={() => void recharge()}
           onSetup={setup}
+          unread={notices.unread.size}
+          onLedger={() => {
+            sound.whoosh();
+            setPanel("ledger");
+            // 打开账本就去读一次最新的，不拿旧数给人看。
+            if (signedIn) void refresh();
+          }}
+          onNews={() => {
+            sound.whoosh();
+            setPanel("news");
+          }}
           onNavigate={(view) => openClassic(view)}
         />
         <Connect
@@ -436,6 +486,31 @@ export function KaifanApp() {
             setup();
           }}
           onClose={() => setCardOpen(false)}
+        />
+        <Ledger
+          open={panel === "ledger"}
+          who={state.current}
+          reach={reach}
+          money={signedIn ? projection?.money : undefined}
+          log={signedIn ? projection?.usageLog : undefined}
+          appName={appName}
+          onRecharge={() => void recharge()}
+          onConnect={() => {
+            setPanel(null);
+            setConnectOpen(true);
+          }}
+          onClose={() => setPanel(null)}
+        />
+        <News
+          open={panel === "news"}
+          who={state.current}
+          reach={reach}
+          notices={notices}
+          onConnect={() => {
+            setPanel(null);
+            setConnectOpen(true);
+          }}
+          onClose={() => setPanel(null)}
         />
         <Reveal
           joined={joined}

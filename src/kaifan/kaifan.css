@@ -2087,3 +2087,176 @@ dialog.restore-dialog menu {
 .bar footer .mdl:hover {
   color: #fff;
 }
+
+/* ===== 账本和公告（照样机） ===== */
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.big {
+  font: 700 40px var(--mono);
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.big small {
+  display: inline-block;
+  margin-left: 12px;
+  font: 500 12px var(--sans);
+  letter-spacing: 0;
+  color: var(--dim);
+}
+.days {
+  list-style: none;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 92px;
+}
+.days li {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+  text-align: center;
+  font: 500 10px var(--mono);
+  color: var(--faint);
+}
+.days i {
+  display: block;
+  height: max(3px, calc((100% - 18px) * var(--h, 0)));
+  border-radius: 5px 5px 2px 2px;
+  background: linear-gradient(180deg, var(--acc), rgba(255, 255, 255, 0.14));
+}
+/* 这一天花了多少看不到：画成虚框，不画成 0。 */
+.days .na i {
+  height: 26px;
+  background: none;
+  border: 1px dashed rgba(255, 255, 255, 0.28);
+}
+.days .na i::after {
+  content: "?";
+  display: block;
+  line-height: 24px;
+  font-style: normal;
+  color: var(--faint);
+}
+.rows {
+  list-style: none;
+  display: grid;
+  gap: 9px;
+}
+.rw {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+.rw img {
+  width: 40px;
+  height: 39px;
+  object-fit: contain;
+}
+.rw span small {
+  display: block;
+  font-size: 11px;
+  color: var(--faint);
+}
+.rw .br {
+  display: block;
+  height: 3px;
+  margin-top: 5px;
+  border-radius: 2px;
+  background: var(--c);
+  box-shadow: 0 0 8px var(--c);
+}
+.rw b {
+  font: 600 13px var(--mono);
+}
+.jobs em {
+  flex: none;
+  min-width: 64px;
+  font: 600 12px var(--mono);
+  font-style: normal;
+  color: #fff;
+  text-align: right;
+}
+.nws {
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+.nw {
+  padding: 13px 15px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.nw.new {
+  border-color: var(--hc);
+}
+.nw.warn {
+  border-color: #ffd27a;
+}
+.nw header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.nw header b {
+  flex: 1;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.nw header i {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-style: normal;
+  color: var(--deep);
+  background: var(--hc);
+}
+.nw time,
+.nw small {
+  flex: none;
+  font: 500 11px var(--mono);
+  color: var(--faint);
+}
+.nw p {
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--dim);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.nw footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 9px;
+}
+.nw footer .lnk {
+  margin-left: auto;
+  color: #fff;
+}
+/* 「公告」那一项上还有几条没看 */
+.side a .n {
+  margin-left: auto;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  font: 600 10px/18px var(--mono);
+  text-align: center;
+  color: var(--deep);
+  background: var(--acc);
+}
