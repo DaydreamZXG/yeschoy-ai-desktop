@@ -453,7 +453,12 @@ export function AppLibraryView({
         connectedModelIds={(connections?.connections ?? [])
           .filter((v) => isConnected(v.state) && !!v.modelId)
           .map((v) => v.modelId!)}
-        connectedCount={hasConnectionSnapshot ? configured : null}
+        // 和下面那行计数同一个判断：状态读不到时不报数，不把「不知道」说成「0 个」。
+        connectedCount={
+          !hasConnectionSnapshot || (partialConnections && configured === 0)
+            ? null
+            : configured
+        }
         balance={balanceText === "—" ? null : balanceText}
         station={stageStation}
         notice={stageNotice}

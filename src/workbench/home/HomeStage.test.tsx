@@ -90,6 +90,12 @@ describe("首页舞台", () => {
     expect(screen.queryByText(/¥/)).toBeNull();
   });
 
+  it("接入状态没读到时不报数，不说「还没接应用」", () => {
+    stage({ connectedCount: null });
+    expect(screen.queryByText(/还没接应用/)).toBeNull();
+    expect(screen.queryByText(/已经接好/)).toBeNull();
+  });
+
   it("认不出牌子的模型才多出一条转校生", () => {
     stage({ models: [model("gpt-5"), model("minimax-m2")] });
     expect(strip("转校生")).not.toHaveAttribute("data-missing");
