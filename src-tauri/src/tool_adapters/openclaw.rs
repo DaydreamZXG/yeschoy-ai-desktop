@@ -521,7 +521,9 @@ pub(crate) fn still_ours(ours: &[u8], now: &[u8]) -> Option<bool> {
     }
     let chosen = primary(effective_model(&ours)).filter(|reference| is_ours(reference))?;
     Some(parse_document(Some(now)).is_ok_and(|now| {
-        now["models"]["providers"].get(PROVIDER_ID) == Some(written)
+        // 后来改成从别的文件拼进来的：那边写了什么这里看不到，不敢说还接着。
+        !included(&now)
+            && now["models"]["providers"].get(PROVIDER_ID) == Some(written)
             && primary(effective_model(&now)) == Some(chosen)
             && allows(&now, chosen)
     }))

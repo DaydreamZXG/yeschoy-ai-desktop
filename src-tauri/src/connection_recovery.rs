@@ -2282,6 +2282,9 @@ mod tests {
         let mut blocked = value.clone();
         blocked["agents"]["defaults"]["modelPolicy"] = json!({"allow": ["openai/*"]});
         assert!(!matches(&file, &serde_json::to_vec(&blocked).unwrap()));
+        // 白名单改成从别的文件拼进来：看不到里面，不说还接着。
+        blocked["agents"]["defaults"]["modelPolicy"] = json!({"$include": "./policy.json5"});
+        assert!(!matches(&file, &serde_json::to_vec(&blocked).unwrap()));
         value["models"]["providers"][openclaw::PROVIDER_ID]["baseUrl"] =
             "https://elsewhere.example/v1".into();
         assert!(!matches(&file, &serde_json::to_vec(&value).unwrap()));
