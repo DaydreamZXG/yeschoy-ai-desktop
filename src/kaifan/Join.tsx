@@ -269,6 +269,8 @@ export function Join({
   // 没装的应用：问一下后端能怎么装（官方有可核对的安装包才能由客户端装）。
   // 上次装到一半、还停在系统安装窗口那一步的，直接接着那一步。
   const absent = scan === "ready" && (!target || target.status === "not_found");
+  // 装了，但只装在编辑器里：一键接不了，给出要手填的地址。
+  const byHand = scan === "ready" && target?.status === "manual_only";
   const peek = fetcher.peek;
   useEffect(() => {
     setMode(null);
@@ -775,13 +777,39 @@ export function Join({
                 {t("kaifan.join.otherApps")}
               </button>
             </div>
-            {other ? (
-              <OtherApps
-                lineId={lineId}
-                preset={preset}
-                modelId={modelId ?? ""}
-                viaKey={lineId.startsWith("station_key:")}
-              />
+            {other || byHand ? (
+              <>
+                <OtherApps
+                  lineId={lineId}
+                  preset={preset}
+                  modelId={modelId ?? ""}
+                  viaKey={lineId.startsWith("station_key:")}
+                  byHand={other ? undefined : appName}
+                />
+                {!other && (
+                  // 命令行版装在我没找的地方：指给我，就能一键接。
+                  <p
+                    className="mend"
+                    role="note"
+                    data-testid="kaifan-join-byhand-cli"
+                  >
+                    {t("kaifan.join.byHandCli", { app: appName })}
+                    <button
+                      type="button"
+                      className="sm"
+                      disabled={spotting}
+                      onClick={() => void pointOut()}
+                    >
+                      {t("kaifan.join.pointOut")}
+                    </button>
+                    {spot && (
+                      <span role="alert">
+                        {t(`kaifan.join.spot.${spot}`, { app: appName })}
+                      </span>
+                    )}
+                  </p>
+                )}
+              </>
             ) : (
               <>
                 {options.length > 1 && (

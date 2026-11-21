@@ -153,6 +153,15 @@ impl LocalBridgeRuntime {
         Ok(receiver)
     }
 
+    /// 桥现在替哪一份接入转发；没在跑就是 `None`。
+    #[cfg(test)]
+    pub(crate) async fn serving(&self) -> Option<ToolCredential> {
+        let slot = self.runtime.lock().await;
+        slot.as_ref()
+            .filter(|running| !running.task.is_finished())
+            .map(|running| running.credential.clone())
+    }
+
     pub(crate) async fn stop(&self) {
         let runtime = self.runtime.lock().await.take();
         if let Some(mut runtime) = runtime {

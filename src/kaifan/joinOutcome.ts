@@ -291,4 +291,7 @@ export function joinStep(stage: string | undefined): 0 | 1 | 2 | 3 {
 
 /** 这些是终端里用的，打开的是一个新终端窗口，不是应用窗口。 */
 export const usesTerminal = (toolId: ActivationToolId) =>
-  toolId === "claude_code" || toolId === "pi" || toolId === "opencode";
+  toolId === "claude_code" ||
+  toolId === "pi" ||
+  toolId === "opencode" ||
+  toolId === "cline";

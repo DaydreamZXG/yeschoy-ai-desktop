@@ -151,6 +151,7 @@ fn allowed(tool: &str) -> bool {
             | "dsh_web"
             | "workbuddy"
             | "dsh_desktop"
+            | "cline"
     )
 }
 
@@ -888,7 +889,10 @@ pub(crate) fn restore_bytes(
     }
     let before = document(&file.path, file.before.as_deref())?;
     let after = document(&file.path, Some(&file.after))?;
-    let now = document(&file.path, current)?;
+    let mut now = document(&file.path, current)?;
+    // Cline 每次运行都会改它正在用的那一项的 `updatedAt`；那不是用户的改动。
+    let touched = now.clone();
+    crate::tool_adapters::cline::forget_touch(&file.path, &after, &mut now);
     let mut preserved = false;
     // A first-time WorkBuddy catalog is written as a top-level array. Treat
     // the missing file as an empty keyed array during a later hot-reload
@@ -905,7 +909,15 @@ pub(crate) fn restore_bytes(
     if workbuddy_catalog(&file.path) {
         restored = remove_inserted_available_models(&before, &after, restored);
     }
-    if restored == now {
+    crate::tool_adapters::cline::keep_what_is_not_ours(
+        &file.path,
+        &before,
+        &after,
+        &now,
+        &mut restored,
+        &mut preserved,
+    );
+    if restored == now || restored == touched {
         return Ok((current.map(Vec::from), preserved));
     }
     if file.before.is_none()
@@ -1439,6 +1451,16 @@ pub(crate) fn legacy_clean(
                 .is_some_and(|model| model.starts_with("yeschoy/"))
             {
                 remove_at(&mut value, &["model"]);
+            }
+        }
+        // 只拿走仍指着本地转发的那一项；选中的还是它，就一并取消选中。
+        "cline" => {
+            let id = crate::tool_adapters::cline::PROVIDER_ID;
+            if value["providers"][id]["settings"]["baseUrl"] == crate::cline_bridge::PROXY_BASE {
+                remove_at(&mut value, &["providers", id]);
+                if value["lastUsedProvider"] == id {
+                    remove_at(&mut value, &["lastUsedProvider"]);
+                }
             }
         }
         "dsh_web" => {
@@ -1995,6 +2017,124 @@ mod tests {
             "the first-use catalog should be removed"
         );
         assert!(!preserved);
+    }
+
+    /// Cline 每跑一次就把它在用的那一项的 `updatedAt` 改掉。改回原样时这不算
+    /// 用户的改动：原来没有文件就删掉文件，原来有就一字不差地还回去。
+    #[test]
+    fn cline_restore_ignores_the_timestamp_cline_itself_rewrites() {
+        use crate::tool_adapters::cline;
+        let f = Fixture::new();
+        let name = ".cline/data/settings/providers.json";
+        let token = format!("ycg-{}", "a".repeat(64));
+        let touch = |bytes: &[u8]| {
+            let mut value: Value = serde_json::from_slice(bytes).unwrap();
+            value["providers"][cline::PROVIDER_ID]["updatedAt"] = "2030-01-01T00:00:00.000Z".into();
+            serde_json::to_vec_pretty(&value).unwrap()
+        };
+
+        let after = cline::render(None, "glm-5.3", &token, "2026-01-02T03:04:05.678Z").unwrap();
+        let file = f.change(name, None, &after);
+        assert_eq!(
+            restore_bytes(&file, Some(&touch(&after))).unwrap(),
+            (None, false)
+        );
+
+        let original = br#"{"version":1,"lastUsedProvider":"anthropic","modes":{},"providers":{"anthropic":{"settings":{"provider":"anthropic"},"updatedAt":"2026-01-01T00:00:00.000Z","tokenSource":"manual"}}}"#;
+        let after = cline::render(
+            Some(original),
+            "glm-5.3",
+            &token,
+            "2026-01-02T03:04:05.678Z",
+        )
+        .unwrap();
+        let file = f.change(name, Some(original), &after);
+        let (restored, kept) = restore_bytes(&file, Some(&touch(&after))).unwrap();
+        assert!(!kept);
+        assert_eq!(
+            serde_json::from_slice::<Value>(&restored.unwrap()).unwrap(),
+            serde_json::from_slice::<Value>(original).unwrap()
+        );
+
+        // 用户后来在 Cline 里换了别家：选中的那家是他的决定，留着；我们那一项拿走。
+        let mut switched: Value = serde_json::from_slice(&touch(&after)).unwrap();
+        switched["lastUsedProvider"] = "cline".into();
+        let (value, kept) = merged(&file, switched);
+        assert!(kept);
+        assert_eq!(value["lastUsedProvider"], "cline");
+        assert!(value["providers"][cline::PROVIDER_ID].is_null());
+        assert!(value["providers"]["anthropic"].is_object());
+    }
+
+    /// 第一次接入时 Cline 还没有设置文件，整个 `providers` 都是我们建的。
+    /// 用户之后自己在 Cline 里加的别家不是我们的：改回原样只拿走我们那一项，
+    /// 留下的文件还得是 Cline 认的样子（它要 `version` 和 `providers`）。
+    #[test]
+    fn cline_restore_keeps_providers_the_user_added_after_a_first_time_connection() {
+        use crate::tool_adapters::cline;
+        let f = Fixture::new();
+        let token = format!("ycg-{}", "a".repeat(64));
+        let after = cline::render(None, "glm-5.3", &token, "2026-01-02T03:04:05.678Z").unwrap();
+        let file = f.change(".cline/data/settings/providers.json", None, &after);
+        let theirs = serde_json::json!({
+            "settings": {"provider": "anthropic", "apiKey": "sk-ant-theirs"},
+            "updatedAt": "2026-02-01T00:00:00.000Z",
+            "tokenSource": "manual",
+        });
+
+        let mut added: Value = serde_json::from_slice(&after).unwrap();
+        added["providers"]["anthropic"] = theirs.clone();
+        let (value, kept) = merged(&file, added.clone());
+        assert!(kept);
+        assert_eq!(
+            value,
+            serde_json::json!({"version": 1, "providers": {"anthropic": theirs}})
+        );
+
+        // 加了别家，还把选中的换成了它：选中的那家也留着。
+        added["lastUsedProvider"] = "anthropic".into();
+        let (value, kept) = merged(&file, added);
+        assert!(kept);
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "version": 1,
+                "lastUsedProvider": "anthropic",
+                "providers": {"anthropic": theirs},
+            })
+        );
+    }
+
+    #[test]
+    fn cline_legacy_clean_removes_only_the_entry_that_points_at_our_bridge() {
+        use crate::tool_adapters::cline;
+        let f = Fixture::new();
+        let path = f.path(".cline/data/settings/providers.json");
+        let token = format!("ycg-{}", "a".repeat(64));
+        let ours = cline::render(
+            Some(br#"{"providers":{"anthropic":{"settings":{"provider":"anthropic"}}}}"#),
+            "glm-5.3",
+            &token,
+            "2026-01-02T03:04:05.678Z",
+        )
+        .unwrap();
+        let cleaned = legacy_clean("cline", &path, Some(&ours), &credential(), false)
+            .unwrap()
+            .unwrap();
+        let value: Value = serde_json::from_slice(&cleaned).unwrap();
+        assert!(value["providers"][cline::PROVIDER_ID].is_null());
+        assert!(value["lastUsedProvider"].is_null());
+        assert!(value["providers"]["anthropic"].is_object());
+
+        // 用户自己配的 OpenAI Compatible（指着别处）不是我们的，不碰。
+        let theirs = br#"{"lastUsedProvider":"openai-compatible","providers":{"openai-compatible":{"settings":{"provider":"openai-compatible","baseUrl":"https://relay.example.com/v1"}}}}"#;
+        let cleaned = legacy_clean("cline", &path, Some(theirs), &credential(), false).unwrap();
+        let value: Value = serde_json::from_slice(&cleaned.unwrap()).unwrap();
+        assert_eq!(
+            value["providers"][cline::PROVIDER_ID]["settings"]["baseUrl"],
+            "https://relay.example.com/v1"
+        );
+        assert_eq!(value["lastUsedProvider"], cline::PROVIDER_ID);
     }
 
     #[test]

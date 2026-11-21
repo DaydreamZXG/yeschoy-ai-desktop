@@ -37,7 +37,7 @@ use std::{collections::BTreeMap, ffi::OsString, sync::OnceLock};
 /// probe prints a handful of known-shaped lines instead of a whole environment,
 /// so shell banners, MOTD noise and values containing `=` cannot confuse it.
 #[cfg(not(target_os = "windows"))]
-const WANTED: [&str; 7] = [
+const WANTED: [&str; 10] = [
     "PATH",
     "ANTHROPIC_BASE_URL",
     "ANTHROPIC_AUTH_TOKEN",
@@ -45,6 +45,9 @@ const WANTED: [&str; 7] = [
     "CODEX_HOME",
     "DSH_HOME",
     "PI_CODING_AGENT_DIR",
+    "CLINE_PROVIDER_SETTINGS_PATH",
+    "CLINE_DATA_DIR",
+    "CLINE_DIR",
 ];
 
 /// The subset of [`WANTED`] the probe clears before spawning, so a development
@@ -54,13 +57,16 @@ const WANTED: [&str; 7] = [
 /// `export PATH="$PATH:/foo"` producing a leading empty entry, which means the
 /// current directory.
 #[cfg(not(target_os = "windows"))]
-const CLEARED_BEFORE_PROBE: [&str; 6] = [
+const CLEARED_BEFORE_PROBE: [&str; 9] = [
     "ANTHROPIC_BASE_URL",
     "ANTHROPIC_AUTH_TOKEN",
     "ANTHROPIC_API_KEY",
     "CODEX_HOME",
     "DSH_HOME",
     "PI_CODING_AGENT_DIR",
+    "CLINE_PROVIDER_SETTINGS_PATH",
+    "CLINE_DATA_DIR",
+    "CLINE_DIR",
 ];
 
 #[cfg(not(target_os = "windows"))]
@@ -293,6 +299,16 @@ mod tests {
         assert!(!script.contains("eval"));
         for key in WANTED {
             assert!(script.contains(&format!("\"${{{key}-}}\"")), "{key}");
+        }
+    }
+
+    /// 从 Dock 启动时，只写在 rc 文件里的变量要靠登录 shell 才看得到。
+    /// 适配器拿来判断「设置被挪走了」的变量，一个都不能漏问。
+    #[test]
+    fn the_probe_asks_for_every_variable_that_relocates_cline_settings() {
+        for key in crate::tool_adapters::cline::RELOCATING_VARIABLES {
+            assert!(WANTED.contains(&key), "{key}");
+            assert!(CLEARED_BEFORE_PROBE.contains(&key), "{key}");
         }
     }
 

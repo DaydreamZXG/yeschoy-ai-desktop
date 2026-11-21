@@ -1,5 +1,6 @@
 pub(crate) mod claude_code;
 pub(crate) mod claude_desktop;
+pub(crate) mod cline;
 pub(crate) mod codex_desktop;
 pub(crate) mod common;
 pub(crate) mod desktop_launch;
@@ -66,7 +67,7 @@ struct ObservedInstallation {
     location: &'static str,
 }
 
-const TARGETS: [(&str, &str, &str); 8] = [
+const TARGETS: [(&str, &str, &str); 9] = [
     ("claude_code", "Claude Code", "命令行与编辑器工作区"),
     ("claude_desktop", "Claude Desktop", "Claude 桌面应用"),
     (
@@ -83,6 +84,7 @@ const TARGETS: [(&str, &str, &str); 8] = [
         "DeepSeek Harness",
         "DeepSeek Harness 桌面应用",
     ),
+    ("cline", "Cline", "Cline 命令行与编辑器扩展"),
 ];
 
 pub(crate) fn user_home() -> Option<PathBuf> {
@@ -109,6 +111,7 @@ pub(crate) fn executable_for(tool_id: &str) -> Option<&'static str> {
         "claude_code" => Some("claude"),
         "pi" => Some("pi"),
         "opencode" => Some("opencode"),
+        "cline" => Some("cline"),
         "dsh_web" => Some("dsh"),
         _ => None,
     }
@@ -225,6 +228,9 @@ fn can_attempt(tool_id: &str, installation: &ObservedInstallation) -> bool {
             installation.path.exists()
         }
         "claude_code" | "pi" | "opencode" | "dsh_web" => installation.path.is_file(),
+        // 只有命令行版能一键接。编辑器扩展（文件夹，见
+        // `cline::extension_directories`）另有一份“当前厂商”，不看我们写的设置。
+        "cline" => installation.path.is_file(),
         _ => false,
     }
 }
@@ -259,7 +265,22 @@ async fn observe_cli(executable: &str) -> Vec<ObservedInstallation> {
 
 async fn observe(tool_id: &str) -> Vec<ObservedInstallation> {
     if let Some(executable) = executable_for(tool_id) {
-        return observe_cli(executable).await;
+        let mut observed = observe_cli(executable).await;
+        // Cline 多数人装的是编辑器扩展，不是命令行。扩展也报上去，但只为了
+        // 照实说“装在编辑器里，要手动填”，不拿它接入（见 `can_attempt`）。
+        // 手动指过位置的不再追加：那是用户说了算。
+        if tool_id == "cline" && !observed.iter().any(|item| item.location == "manual") {
+            if let Some(home) = user_home() {
+                observed.extend(cline::extension_directories(&home).into_iter().map(|path| {
+                    ObservedInstallation {
+                        path,
+                        version: String::new(),
+                        location: "extension",
+                    }
+                }));
+            }
+        }
+        return observed;
     }
     let Some(app_id) = desktop_id_for(tool_id) else {
         return Vec::new();
@@ -324,6 +345,7 @@ fn location_label_in(language: crate::ui_language::Language, value: &str) -> &'s
         "local_app_data" => language.pick("用户应用目录", "User app data"),
         "program_files" => language.pick("程序目录", "Program Files"),
         "manual" => language.pick("手动指定", "Chosen by you"),
+        "extension" => language.pick("编辑器扩展", "Editor extension"),
         _ => language.pick("本机", "This computer"),
     }
 }
@@ -334,6 +356,13 @@ pub(crate) async fn scan_targets() -> Vec<TargetProjection> {
         .buffered(3)
         .collect()
         .await
+}
+
+/// Cline 只装在编辑器里：没有能一键接的命令行，界面改成给出要手填的地址。
+fn only_in_editor(tool_id: &str, observed: &[ObservedInstallation]) -> bool {
+    tool_id == "cline"
+        && !observed.is_empty()
+        && observed.iter().all(|item| item.location == "extension")
 }
 
 async fn scan_target(index: usize) -> TargetProjection {
@@ -349,6 +378,8 @@ async fn scan_target(index: usize) -> TargetProjection {
     // a stale one is an answer, not a question.
     let status = if observed.is_empty() {
         "not_found"
+    } else if only_in_editor(tool_id, &observed) {
+        "manual_only"
     } else if supported_count == 0 {
         "missing_runtime"
     } else if supported_count > 1 && asks_which_installation(tool_id) {
@@ -559,6 +590,44 @@ mod tests {
         // And the two options are now told apart by something real.
         assert_ne!(projected[0].label, projected[1].label);
         assert!(projected[0].label.contains("Claude.app"));
+        std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn cline_in_an_editor_is_reported_but_only_the_command_line_can_be_connected() {
+        let directory = common::temporary_working_directory("cline-by-hand").unwrap();
+        let cli = directory.join("cline");
+        std::fs::write(&cli, b"#!/bin/sh\n").unwrap();
+        let extension = directory.join("saoudrizwan.claude-dev-4.1.27");
+        std::fs::create_dir(&extension).unwrap();
+        let in_editor = ObservedInstallation {
+            path: extension,
+            version: String::new(),
+            location: "extension",
+        };
+        let command_line = ObservedInstallation {
+            path: cli,
+            version: String::new(),
+            location: "path",
+        };
+        assert!(!can_attempt("cline", &in_editor));
+        assert!(can_attempt("cline", &command_line));
+
+        assert!(only_in_editor("cline", std::slice::from_ref(&in_editor)));
+        assert!(!only_in_editor("cline", &[]));
+        // 命令行也在：照常一键接，扩展不拿来接入。
+        let both = [command_line, in_editor];
+        assert!(!only_in_editor("cline", &both));
+        let projected = projections("cline", &both);
+        assert_eq!(
+            projected
+                .iter()
+                .map(|item| (item.supported, item.recommended))
+                .collect::<Vec<_>>(),
+            [(true, true), (false, false)]
+        );
+        // 别的应用没有这种状态。
+        assert!(!only_in_editor("opencode", &both[1..]));
         std::fs::remove_dir_all(directory).unwrap();
     }
 

@@ -16,6 +16,7 @@ mod app_installation;
 mod app_update;
 mod claude_bridge;
 mod claude_login_takeover;
+mod cline_bridge;
 mod codex_bridge;
 mod codex_history_takeover;
 mod codex_responses_bridge;
@@ -195,6 +196,8 @@ pub fn run() {
                     tool_adapters::claude_desktop::resume_if_configured(resume_claude_runtime),
                     // OpenCode 的配置里只有本地令牌，桥不在它就发不出请求。
                     tool_adapters::opencode::resume_if_configured(),
+                    // Cline 也一样。
+                    tool_adapters::cline::resume_if_configured(),
                 );
             });
             Ok(())
@@ -309,6 +312,11 @@ fn register_runtime_stops(app: &tauri::AppHandle) -> Result<(), std::io::Error> 
     shutdown()
         .register_stop("opencode", || async {
             opencode_bridge::global().stop().await;
+        })
+        .map_err(|_| std::io::Error::other("shutdown_registration_failed"))?;
+    shutdown()
+        .register_stop("cline", || async {
+            cline_bridge::global().stop().await;
         })
         .map_err(|_| std::io::Error::other("shutdown_registration_failed"))?;
     Ok(())
@@ -506,7 +514,7 @@ fn begin_user_shutdown<R: tauri::Runtime>(
                             let language = ui_language::current();
                             let names = response.failed_tools.iter().map(|tool| match tool.as_str() {
                                 "codex_desktop" => "Codex", "claude_desktop" => "Claude Desktop",
-                                "claude_code" => "Claude Code", "pi" => "Pi", "opencode" => "OpenCode", _ => "DSH web",
+                                "claude_code" => "Claude Code", "pi" => "Pi", "opencode" => "OpenCode", "cline" => "Cline", _ => "DSH web",
                             }).collect::<Vec<_>>().join(language.pick("、", ", "));
                             let message = HSTRING::from(language.pick(
                                 &format!("未完成恢复：{names}。助手尚未退出。\n请保存并关闭相关应用后重试。若界面不可用，再点窗口关闭按钮，可选择重试恢复或保留设置退出。"),

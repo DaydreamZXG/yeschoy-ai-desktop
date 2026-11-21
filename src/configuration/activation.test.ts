@@ -37,7 +37,8 @@ function targetScan(requestId = "target-scan-test") {
       | "opencode"
       | "dsh_web"
       | "workbuddy"
-      | "dsh_desktop",
+      | "dsh_desktop"
+      | "cline",
     displayName: string,
   ) => ({
     toolId,
@@ -68,6 +69,7 @@ function targetScan(requestId = "target-scan-test") {
       target("dsh_web", "DSH web"),
       target("workbuddy", "WorkBuddy"),
       target("dsh_desktop", "DeepSeek Harness"),
+      target("cline", "Cline"),
     ],
   };
 }
@@ -284,6 +286,7 @@ describe("desktop tool activation boundary", () => {
       "dsh_web",
       "workbuddy",
       "dsh_desktop",
+      "cline",
     ]);
     expect(native).toHaveBeenCalledWith("scan_activation_targets_v1", {
       request: { requestId: expect.stringMatching(/^target-scan-/) },

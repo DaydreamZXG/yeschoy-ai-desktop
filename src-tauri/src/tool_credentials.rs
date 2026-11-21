@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 const SERVICE: &str = "com.kaifan.desktop.tool-credential.v2";
-const ALLOWED_TOOLS: [&str; 8] = [
+const ALLOWED_TOOLS: [&str; 9] = [
     "claude_code",
     "claude_desktop",
     "codex_desktop",
@@ -13,6 +13,7 @@ const ALLOWED_TOOLS: [&str; 8] = [
     "dsh_web",
     "workbuddy",
     "dsh_desktop",
+    "cline",
 ];
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -116,6 +117,12 @@ pub(crate) enum CredentialFailure {
 
 fn allowed_tool(tool_id: &str) -> bool {
     ALLOWED_TOOLS.contains(&tool_id)
+}
+
+/// 能向 `credential-helper` 要到站点密钥的应用。Cline 的设置里只有本机令牌，
+/// 它从来不调这个命令，所以不给它开这个口子。
+fn helper_serves(tool_id: &str) -> bool {
+    allowed_tool(tool_id) && tool_id != "cline"
 }
 
 fn record_is_valid(tool_id: &str, record: &ToolCredential) -> bool {
@@ -429,7 +436,7 @@ pub(crate) fn shell_quote(value: &str) -> String {
 }
 
 pub(crate) fn shell_helper_command(tool_id: &str) -> Result<String, CredentialFailure> {
-    if !allowed_tool(tool_id) {
+    if !helper_serves(tool_id) {
         return Err(CredentialFailure::Invalid);
     }
     let executable = shell_quote(&executable_path()?);
@@ -505,7 +512,7 @@ pub fn credential_helper_exit_code() -> Option<i32> {
     let arguments = std::env::args().collect::<Vec<_>>();
     let code = match arguments.get(1).map(String::as_str) {
         Some("credential-helper") => match arguments.as_slice() {
-            [_, _, tool_id] if allowed_tool(tool_id) => bare_helper(tool_id),
+            [_, _, tool_id] if helper_serves(tool_id) => bare_helper(tool_id),
             _ => 64,
         },
         Some("gateway-credential-helper") => match arguments.as_slice() {
@@ -761,6 +768,20 @@ mod tests {
             shell_gateway_helper_command("pi"),
             Err(CredentialFailure::Invalid)
         ));
+    }
+
+    /// Cline 能存密钥（桥要用），但不能通过 helper 把站点密钥读出来。
+    #[test]
+    fn cline_stores_a_credential_but_the_helper_does_not_serve_it() {
+        assert!(allowed_tool("cline"));
+        assert!(!helper_serves("cline"));
+        assert!(matches!(
+            shell_helper_command("cline"),
+            Err(CredentialFailure::Invalid)
+        ));
+        for tool in ["claude_code", "pi", "codex_desktop"] {
+            assert!(helper_serves(tool), "{tool}");
+        }
     }
 
     #[test]

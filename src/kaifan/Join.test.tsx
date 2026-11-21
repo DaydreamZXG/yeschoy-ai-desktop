@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProviderPreset } from "./providers";
@@ -1010,12 +1011,13 @@ describe("接入：应用多了不堆在一起", () => {
       /^DeepSeek Harness/,
     ])
       expect(chip(name)).not.toBeNull();
-    for (const name of [/^DSH web/]) expect(chip(name)).toBeNull();
+    for (const name of [/^DSH web/, /^Cline/]) expect(chip(name)).toBeNull();
 
-    const fold = screen.getByRole("button", { name: /还有 1 个/ });
+    const fold = screen.getByRole("button", { name: /还有 2 个/ });
     expect(fold).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(fold);
-    for (const name of [/^DSH web/]) expect(chip(name)).not.toBeNull();
+    for (const name of [/^DSH web/, /^Cline/])
+      expect(chip(name)).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /收起/ }));
     expect(chip(/^DSH web/)).toBeNull();
   });
@@ -1025,7 +1027,7 @@ describe("接入：应用多了不堆在一起", () => {
     await waitFor(() =>
       expect(chip(/^DSH web/)).toHaveAttribute("aria-pressed", "true"),
     );
-    expect(screen.getByRole("button", { name: /还有 1 个/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /还有 2 个/ })).toBeTruthy();
   });
 
   it("别的应用：给出要填的地址和型号，能复制；不拿密钥出来，也不去接入", async () => {
@@ -1056,6 +1058,62 @@ describe("接入：应用多了不堆在一起", () => {
 
     // 点回名单里的应用，就回到接入。
     fireEvent.click(screen.getByRole("button", { name: /^Codex/ }));
+    expect(screen.queryByTestId("kaifan-join-other")).toBeNull();
+    expect(go()).toBeTruthy();
+  });
+
+  it("Cline 只装在编辑器里：不去接入，给出要手填的地址和型号", async () => {
+    found([
+      target("claude_desktop"),
+      target("cline", {
+        status: "manual_only",
+        installations: [
+          {
+            installationId: "cline-ext",
+            label: "编辑器扩展",
+            version: "",
+            supported: false,
+            recommended: false,
+          },
+        ],
+      }),
+    ]);
+    setup({
+      initialApp: "cline",
+      lineId: "station_key:https://relay.example.com" as never,
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId("kaifan-join-other")).toBeTruthy(),
+    );
+    const panel = screen.getByTestId("kaifan-join-other");
+    expect(panel).toHaveTextContent(/Cline 装在你的编辑器里/);
+    expect(panel).toHaveTextContent("OpenAI Compatible");
+    expect(panel).toHaveTextContent("https://relay.example.com/v1");
+    expect(panel).toHaveTextContent("claude-sonnet-4-5-20250929");
+    // Cline 只用得上 OpenAI 格式的地址：地址和型号各一个复制按钮。
+    expect(screen.getAllByRole("button", { name: "复制" })).toHaveLength(2);
+    expect(chip(/^Cline/)).toHaveAttribute("aria-pressed", "true");
+    expect(chip(/^Cline/)).not.toHaveTextContent("还没装");
+    expect(screen.queryByRole("button", { name: /去接入/ })).toBeNull();
+    expect(activate).not.toHaveBeenCalled();
+
+    // 命令行版装在没找的地方：指给客户端，重新找一遍，就能一键接。
+    pointOut.mockResolvedValue("saved");
+    found([target("claude_desktop"), target("cline")]);
+    fireEvent.click(
+      within(screen.getByTestId("kaifan-join-byhand-cli")).getByRole("button", {
+        name: "告诉我它在哪",
+      }),
+    );
+    await waitFor(() => expect(pointOut).toHaveBeenCalledWith("cline"));
+    await waitFor(() =>
+      expect(screen.queryByTestId("kaifan-join-other")).toBeNull(),
+    );
+    expect(go()).toBeTruthy();
+    expect(chip(/^Cline/)).toHaveAttribute("aria-pressed", "true");
+
+    // 换成别的应用，照常接入。
+    fireEvent.click(screen.getByRole("button", { name: /^Claude Desktop/ }));
     expect(screen.queryByTestId("kaifan-join-other")).toBeNull();
     expect(go()).toBeTruthy();
   });

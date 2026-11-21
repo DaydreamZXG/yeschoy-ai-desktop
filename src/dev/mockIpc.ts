@@ -366,6 +366,7 @@ function targets(requestId: string) {
     ["dsh_web", "DSH web", "0.1.0-rc.6"],
     ["workbuddy", "WorkBuddy", "5.5.6"],
     ["dsh_desktop", "DeepSeek Harness", "0.2.0"],
+    ["cline", "Cline", "3.0.75"],
   ] as const;
   return {
     requestId,
@@ -380,7 +381,12 @@ function targets(requestId: string) {
       // `?s=not_installed` 让所有应用报未安装，用来看安装面板。
       // 原来 mock 恒报 available，那块 359 行、152 处文案的界面
       // 在审计页里根本显示不出来。
-      status: missing(toolId) ? "not_found" : "available",
+      // `?s=cline_in_editor`：Cline 只装了编辑器扩展，看“要手填”的那一屏。
+      status: missing(toolId)
+        ? "not_found"
+        : scenario === "cline_in_editor" && toolId === "cline"
+          ? "manual_only"
+          : "available",
       installations: missing(toolId)
         ? []
         : [
@@ -515,6 +521,7 @@ const handlers: Record<string, (a: Args) => unknown> = {
         "claude_desktop",
         "claude_code",
         "pi",
+        "cline",
       ],
       keyPage: "https://example.com/keys",
       common: true,

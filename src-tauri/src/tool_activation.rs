@@ -24,8 +24,8 @@ use crate::{
     shutdown_coordinator,
     station_connect::connect_origin_is_acceptable,
     tool_adapters::{
-        self, claude_code, claude_desktop, codex_desktop, desktop_lifecycle, dsh_web, opencode, pi,
-        workbuddy, AdapterFailure, ResolvedInstallation,
+        self, claude_code, claude_desktop, cline, codex_desktop, desktop_lifecycle, dsh_web,
+        opencode, pi, workbuddy, AdapterFailure, ResolvedInstallation,
     },
     tool_credentials::{self, CredentialFailure, ToolCredential, ToolModelRoute},
 };
@@ -406,6 +406,7 @@ fn request_is_valid(request: &ToolActivationRequest) -> bool {
                 | "dsh_web"
                 | "workbuddy"
                 | "dsh_desktop"
+                | "cline"
         )
         && bounded_plain_text(&request.model_id, 200)
         && bounded_plain_text(&request.billing_group, 128)
@@ -564,6 +565,7 @@ fn model_supports_tool(_pricing: &Value, _model_id: &str, tool_id: &str) -> bool
             | "dsh_web"
             | "workbuddy"
             | "dsh_desktop"
+            | "cline"
     )
 }
 
@@ -884,6 +886,7 @@ fn token_name(tool_id: &str) -> &'static str {
         "dsh_web" => "野菜API DSH web",
         "workbuddy" => "野菜API WorkBuddy",
         "dsh_desktop" => "野菜API DSH Desktop",
+        "cline" => "野菜API Cline",
         _ => "野菜API Desktop",
     }
 }
@@ -900,6 +903,7 @@ pub(crate) fn tool_for_token_name(name: &str) -> Option<&'static str> {
         "dsh_web",
         "workbuddy",
         "dsh_desktop",
+        "cline",
     ]
     .into_iter()
     // 新名字写应用名，旧名字写两字母代码。两种都要认：用量日志里它们会长期
@@ -1047,6 +1051,7 @@ fn token_code(tool_id: &str) -> &'static str {
         "dsh_web" => "ds",
         "workbuddy" => "wb",
         "dsh_desktop" => "dd",
+        "cline" => "cl",
         _ => "tool",
     }
 }
@@ -1066,6 +1071,7 @@ fn token_label(tool_id: &str) -> &'static str {
         "dsh_web" => "DSH",
         "workbuddy" => "WorkBuddy",
         "dsh_desktop" => "DSHDesktop",
+        "cline" => "Cline",
         _ => "Desktop",
     }
 }
@@ -1672,6 +1678,7 @@ enum PreparedAdapter {
     CodexDesktop(codex_desktop::Prepared),
     Pi(pi::Prepared),
     OpenCode(opencode::Prepared),
+    Cline(cline::Prepared),
     /// Both DSH profiles: `dsh_web` and `dsh_desktop`.
     Dsh(dsh_web::Prepared),
     WorkBuddy(workbuddy::Prepared),
@@ -1685,6 +1692,7 @@ impl PreparedAdapter {
             Self::CodexDesktop(v) => v.changes(),
             Self::Pi(v) => v.changes(),
             Self::OpenCode(v) => v.changes(),
+            Self::Cline(v) => v.changes(),
             Self::Dsh(v) => v.changes(),
             Self::WorkBuddy(v) => v.changes(),
         }
@@ -1704,6 +1712,7 @@ impl PreparedAdapter {
             Self::CodexDesktop(value) => value.commit(),
             Self::Pi(value) => value.commit(),
             Self::OpenCode(value) => value.commit(),
+            Self::Cline(value) => value.commit(),
             Self::Dsh(value) => value.commit(),
             Self::WorkBuddy(value) => value.commit(),
         }
@@ -1716,6 +1725,7 @@ impl PreparedAdapter {
             Self::CodexDesktop(value) => value.rollback(),
             Self::Pi(value) => value.rollback(),
             Self::OpenCode(value) => value.rollback(),
+            Self::Cline(value) => value.rollback(),
             Self::Dsh(value) => value.rollback(),
             Self::WorkBuddy(value) => value.rollback(),
         }
@@ -1774,6 +1784,8 @@ fn prepare_adapter(
         // 只写本地令牌：中转站 key 留在钥匙串里，由 opencode_bridge 转发时取。
         "opencode" => opencode::prepare_catalog(&home, &request.model_id, &models, local)
             .map(PreparedAdapter::OpenCode),
+        // Cline 一次只用一个型号，同样只写本地令牌。
+        "cline" => cline::prepare(&home, &request.model_id, local).map(PreparedAdapter::Cline),
         // One DSH provider per billing group, each with its own scoped key.
         "dsh_web" => dsh_web::prepare_catalog(
             &home,
@@ -1813,6 +1825,10 @@ async fn start_local_adapter(
             codex_desktop::ensure_credential_ready(credential).await
         }
         "opencode" => crate::opencode_bridge::global()
+            .start(credential.clone())
+            .await
+            .map(|_| ()),
+        "cline" => crate::cline_bridge::global()
             .start(credential.clone())
             .await
             .map(|_| ()),
@@ -1860,7 +1876,7 @@ async fn open_configured_adapter(
         "dsh_desktop" => {
             desktop_lifecycle::open_unless_running("dsh_desktop", &installation.path).await
         }
-        "claude_code" | "pi" | "opencode" => {
+        "claude_code" | "pi" | "opencode" | "cline" => {
             let home = tool_adapters::user_home()
                 .ok_or(AdapterFailure::ConfigurationFailed("home_unavailable"))?;
             tool_adapters::terminal_launch::launch_async(installation, &request.tool_id, &home)
@@ -1923,6 +1939,7 @@ async fn stop_helper_runtime(
         "dsh_web" => dsh_runtime.stop().await,
         "codex_desktop" => codex_runtime.stop().await,
         "opencode" => crate::opencode_bridge::global().stop().await,
+        "cline" => crate::cline_bridge::global().stop().await,
         // Pi connects straight to the relay origin.
         _ => {}
     }
@@ -2030,6 +2047,22 @@ async fn restore_after_failure(
                     claude_runtime.start(previous).await?;
                 }
             }
+            // 设置已经还回去了，仍指着这座桥、用的还是同一把本机令牌；桥里装的
+            // 却是这次没成的站点和型号。换回上一次的，没有上一次就停掉。
+            let bridge = match request.tool_id.as_str() {
+                "opencode" => Some(crate::opencode_bridge::global()),
+                "cline" => Some(crate::cline_bridge::global()),
+                _ => None,
+            };
+            if let Some(bridge) = bridge {
+                restore_bridge(
+                    bridge,
+                    previous_record
+                        .clone()
+                        .filter(|_| !shutdown_coordinator::global().is_shutting_down()),
+                )
+                .await;
+            }
             Ok::<(), AdapterFailure>(())
         })
         .await;
@@ -2040,6 +2073,26 @@ async fn restore_after_failure(
     }
     delete_created_tokens(origin, access_token, leases).await;
     None
+}
+
+/// 接入没成之后，把本机桥换回上一次接好的那份；没有上一次就停掉。
+/// `start` 对正在跑的桥是原地换，不断开正在进行的请求。
+///
+/// 换不回去（端口被别的程序占着）不算这次回滚失败：设置和密钥已经还原，
+/// 桥起不来是接入之前就有的状况，下次打开应用时照常再起。要是算失败，
+/// 这次接入会一直挂着，再点一次就把原来好好的那份接入清掉了。
+/// 只保证一件事：桥里不留这次没成的线路。
+async fn restore_bridge(
+    bridge: &crate::local_bridge::LocalBridgeRuntime,
+    previous: Option<ToolCredential>,
+) {
+    let restored = match previous {
+        Some(previous) => bridge.start(previous).await.is_ok(),
+        None => false,
+    };
+    if !restored {
+        bridge.stop().await;
+    }
 }
 
 // Codex history must be committed after its provider config but before Codex
@@ -3049,7 +3102,7 @@ pub async fn configure_desktop_tool_v2(
     .with_skipped(skipped))
 }
 
-const CONNECTION_TOOLS: [&str; 8] = [
+const CONNECTION_TOOLS: [&str; 9] = [
     "claude_code",
     "claude_desktop",
     "codex_desktop",
@@ -3058,6 +3111,7 @@ const CONNECTION_TOOLS: [&str; 8] = [
     "dsh_web",
     "workbuddy",
     "dsh_desktop",
+    "cline",
 ];
 
 /// Called only by the exit owner after admission closes and active operations
@@ -3339,7 +3393,7 @@ pub(crate) fn needs_background(tool: &str, credential: &ToolCredential) -> bool 
         return false;
     }
     credential.has_model_set()
-        || matches!(tool, "claude_desktop" | "dsh_web" | "opencode")
+        || matches!(tool, "claude_desktop" | "dsh_web" | "opencode" | "cline")
         || credential.claude_transport.as_deref() == Some("chat_bridge")
         || credential.codex_transport.as_deref() == Some("chat_bridge")
 }
@@ -3376,7 +3430,7 @@ fn legacy_paths(tool: &str) -> Result<Vec<std::path::PathBuf>, AdapterFailure> {
         }
         "workbuddy" => vec![home.join(".workbuddy/models.json")],
         // Support began with the recovery journal: nothing legacy.
-        "opencode" => Vec::new(),
+        "opencode" | "cline" => Vec::new(),
         // Desktop support began with the recovery journal: nothing legacy.
         "dsh_desktop" => Vec::new(),
         _ => return Err(AdapterFailure::UnsupportedProfile),
@@ -3646,6 +3700,44 @@ mod tests {
     ///
     /// 同时守「问到就停」—— 每一次探测都是一个真实请求，成功那次还会产生用量。
     /// 已经有结论还接着问，是白花用户的钱。
+    /// 接入没成：桥要换回上一次的；没有上一次就停掉，端口让出来。
+    #[tokio::test]
+    async fn a_failed_switch_does_not_leave_the_bridge_on_the_new_routes() {
+        const ADDRESS: &str = "127.0.0.1:15797";
+        let credential = |origin: &str| ToolCredential {
+            api_key: "sk-test".into(),
+            origin: origin.into(),
+            model_id: "glm-5.3".into(),
+            local_gateway_token: Some(format!("ycg-{}", "a".repeat(64))),
+            codex_transport: None,
+            claude_transport: None,
+            models: Vec::new(),
+            pasted_key: false,
+        };
+        let bridge = crate::local_bridge::LocalBridgeRuntime::new(
+            ADDRESS,
+            "/cline",
+            crate::opencode_bridge::router,
+        );
+        bridge
+            .start(credential("https://new.example"))
+            .await
+            .unwrap();
+
+        let previous = credential("https://old.example");
+        restore_bridge(&bridge, Some(previous.clone())).await;
+        assert_eq!(bridge.serving().await, Some(previous.clone()));
+
+        restore_bridge(&bridge, None).await;
+        assert_eq!(bridge.serving().await, None);
+
+        // 端口被别的程序占着：桥起不来，但这不是回滚失败，也不留下任何线路。
+        let squatter = tokio::net::TcpListener::bind(ADDRESS).await.unwrap();
+        restore_bridge(&bridge, Some(previous)).await;
+        assert_eq!(bridge.serving().await, None);
+        drop(squatter);
+    }
+
     #[tokio::test]
     async fn an_inconclusive_probe_is_asked_again_but_a_clear_one_is_not() {
         use std::sync::atomic::{AtomicU8, Ordering};

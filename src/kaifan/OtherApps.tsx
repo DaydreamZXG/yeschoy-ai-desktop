@@ -12,13 +12,18 @@ interface Props {
   modelId: string;
   /** 是不是粘贴密钥连的：是的话密钥就在用户手里。 */
   viaKey: boolean;
+  /**
+   * 认识但只能手填的应用（Cline 的编辑器扩展）：开头换成针对它的说明，
+   * 只给它用得上的 OpenAI 格式地址。
+   */
+  byHand?: string;
 }
 
 /**
  * 名单之外的应用：客户端不认识它的设置文件，没法替用户改。把要填的三样东西
  * 给出来，一键复制。密钥不从密码库里读出来显示，只说去哪拿。
  */
-export function OtherApps({ lineId, preset, modelId, viaKey }: Props) {
+export function OtherApps({ lineId, preset, modelId, viaKey, byHand }: Props) {
   const { t } = useTranslation();
   const address = addressesOf(originOfLine(lineId), preset);
   const [copied, setCopied] = useState<{ what: string; ok: boolean } | null>(
@@ -36,11 +41,15 @@ export function OtherApps({ lineId, preset, modelId, viaKey }: Props) {
     { what: "openai", value: address?.openai ?? "" },
     { what: "anthropic", value: address?.anthropic ?? "" },
     { what: "model", value: modelId },
-  ].filter((row) => row.value);
+  ].filter((row) => row.value && !(byHand && row.what === "anthropic"));
 
   return (
     <div className="oth" data-testid="kaifan-join-other">
-      <p className="hint">{t("kaifan.join.other.intro")}</p>
+      <p className="hint">
+        {byHand
+          ? t("kaifan.join.other.byHand", { app: byHand })
+          : t("kaifan.join.other.intro")}
+      </p>
       {address ? (
         <dl>
           {rows.map((row) => (
