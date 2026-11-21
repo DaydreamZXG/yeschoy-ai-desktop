@@ -38,7 +38,7 @@ export type JoinKind =
   | "installUnseen"
   | "installFound";
 
-/** 这一步由谁来做：客户端再来一次，还是带用户去别处。 */
+/** 这一步由谁来做：客户端再来一次，还是回到选的那一步。 */
 export type JoinAction =
   | "none"
   | "retry"
@@ -46,7 +46,6 @@ export type JoinAction =
   | "displace"
   | "reconnect"
   | "regroup"
-  | "classic"
   | "install"
   | "look"
   | "pick";
@@ -55,7 +54,50 @@ export interface JoinOutcome {
   kind: JoinKind;
   mood: Mood;
   action: JoinAction;
+  /** 后端给的原因有自己的一句话时带上：界面说它，不说笼统的那句。 */
+  why?: string;
 }
+
+/**
+ * 有自己一句话的原因（文案在 `kaifan.why.<原因>`）。笼统的「这次没接成，再试
+ * 一次」既没说原因也没给出路，杀毒软件占着文件的人再试多少次都一样。
+ */
+const WHY = new Set([
+  "claude_login_not_released",
+  "claude_login_takeover_failed",
+  "codex_history_takeover_conflict",
+  "codex_history_takeover_failed",
+  "codex_history_takeover_recovery_failed",
+  "configuration_parse_failed",
+  "configuration_read_failed",
+  "configuration_write_failed",
+  "configuration_readback_failed",
+  "credential_helper_failed",
+  "home_unavailable",
+  "recovery_storage_unavailable",
+  "terminal_launch_failed",
+  "terminal_unavailable",
+  "workspace_unavailable",
+  "invalid_launch_target",
+  "launch_target_missing",
+  "desktop_launch_exit_failed",
+  "desktop_launch_wait_failed",
+  "desktop_start_unconfirmed",
+  "desktop_launch_target_changed",
+  "desktop_launch_start_failed",
+  "desktop_launch_access_denied",
+  // 「打开」那一下没成、而后端只给了状态没给原因的几种。
+  "open_not_connected",
+  "open_settings_changed",
+  "open_recovery_pending",
+  "open_secure_storage_unavailable",
+  "open_tool_not_found",
+  "open_busy",
+]);
+export const whyOf = (reason: string | undefined) =>
+  reason && WHY.has(reason) ? reason : undefined;
+/** 只说了「没成」「写好了」的那几种，才换成具体的原因。 */
+const VAGUE = new Set<JoinKind>(["retry", "restored", "written"]);
 
 const AUTH = new Set(["signed_out", "authentication_failed"]);
 const STATION = new Set([
@@ -92,10 +134,19 @@ const outcome = (
   mood: Mood = "panic",
 ): JoinOutcome => ({ kind, mood, action });
 
-export function joinOutcome(
-  result: Pick<ToolActivationProjection, "status" | "reasonCode" | "skipped"> &
-    Partial<Pick<ToolActivationProjection, "modelId">>,
-): JoinOutcome {
+type Result = Pick<
+  ToolActivationProjection,
+  "status" | "reasonCode" | "skipped"
+> &
+  Partial<Pick<ToolActivationProjection, "modelId">>;
+
+export function joinOutcome(result: Result): JoinOutcome {
+  const base = judge(result);
+  const why = whyOf(result.reasonCode);
+  return why && VAGUE.has(base.kind) ? { ...base, why } : base;
+}
+
+function judge(result: Result): JoinOutcome {
   const reason = result.reasonCode;
   if (
     AUTH.has(result.status) ||
@@ -118,16 +169,19 @@ export function joinOutcome(
         return outcome("closeApp", "retry");
       return outcome("askRestart", "restart", "idle");
     case "tool_not_found":
-      return outcome("notInstalled", "classic", "sleep");
+      // 回到选的那一步：那里有「替你装」「去官网」「告诉我它在哪」三条路。
+      return outcome("notInstalled", "look", "sleep");
     case "multiple_installations":
       return outcome("chooseInstall", "pick", "idle");
     case "missing_runtime":
-      return outcome("runtime", "classic");
+      return outcome("runtime", "look");
     case "unsupported_model":
     case "unsupported_profile":
       return outcome("otherModel", "pick");
     case "external_override":
-      return outcome("overridden", "classic");
+      // 用户自己（或别的工具）把这个应用的设置指到了别处。我们没有动它，也不替
+      // 他去掉那项配置；去掉以后再接一次就行。
+      return outcome("overridden", "retry");
     case "secure_storage_unavailable":
       return outcome("keychain", "retry");
     case "server_unavailable":
@@ -157,7 +211,7 @@ export function joinOutcome(
       if (reason === "activation_cancelled")
         return outcome("cancelled", "pick", "idle");
       if (reason === "installation_confirmation_required")
-        return outcome("notInstalled", "classic", "sleep");
+        return outcome("notInstalled", "look", "sleep");
       return outcome("retry", "retry");
     default:
       return outcome("retry", "retry");
@@ -177,17 +231,17 @@ const NOT_GENUINE = new Set([
 
 /**
  * 安装停在了哪：`null` 是装好了、可以接着接入；`"stopped"` 是用户自己停的；
- * `"elsewhere"` 是这一屏办不了、要去旧页面的（系统要用户点确认的那种安装）。
+ * `"waiting"` 是安装包已经交给系统的安装窗口，要等用户在那边点完。
  */
 export function installOutcome(
   result: Pick<
     InstallationProgress,
     "phase" | "disposition" | "reasonCode" | "installationId"
   > | null,
-): JoinOutcome | "stopped" | "elsewhere" | null {
+): JoinOutcome | "stopped" | "waiting" | null {
   if (!result) return outcome("installFailed", "install");
   if (result.phase === "cancelled") return "stopped";
-  if (result.phase === "awaiting_system_confirmation") return "elsewhere";
+  if (result.phase === "awaiting_system_confirmation") return "waiting";
   if (result.phase === "installed") {
     if (result.disposition === "existing")
       return outcome("installFound", "look", "idle");

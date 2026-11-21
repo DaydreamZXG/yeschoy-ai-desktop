@@ -1,13 +1,6 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { LogOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useConnections } from "../configuration/connections";
 import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
@@ -77,37 +70,11 @@ function exitState(raw: unknown): ExitState | null {
   return { closeRequested: value.closeRequested, shutdown };
 }
 
-/** Settings entry point; the only dialog belongs to the always-mounted host. */
-export function QuitAssistant() {
-  const { t } = useTranslation();
-  return (
-    <div className="quit-assistant">
-      <div>
-        <strong>{t("quit.settingsTitle")}</strong>
-        <p>{t("quit.settingsBody")}</p>
-      </div>
-      <button
-        type="button"
-        onClick={() => window.dispatchEvent(new Event(OPEN_CHOICE_EVENT))}
-      >
-        <LogOut />
-        {t("quit.settingsAction")}
-      </button>
-    </div>
-  );
-}
+/** 设置里的「退出」：只负责把那一问叫出来，问和做都在 ShutdownHost 里。 */
+export const askToQuit = () =>
+  window.dispatchEvent(new Event(OPEN_CHOICE_EVENT));
 
-/** Mount once inside ConnectionProvider, including when Settings is not open. */
-export function ShutdownProvider({ children }: { children: ReactNode }) {
-  return (
-    <>
-      {children}
-      <ShutdownHost />
-    </>
-  );
-}
-
-/** Alternative sibling mount; do not mount both this and ShutdownProvider. */
+/** 整个界面只挂一份，设置没开着时也要在：关窗口的那一问也是它接的。 */
 export function ShutdownHost() {
   const { t } = useTranslation();
   const connections = useConnections();

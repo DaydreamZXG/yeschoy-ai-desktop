@@ -13,7 +13,6 @@ import { useAccountSession } from "../account/useAccountSession";
 import { idleUpdateProjection } from "../update/contract";
 import { readAnnouncements } from "../workbench/announcements";
 import { useDesktopUpdate } from "../update/UpdateProvider";
-import { openClassic } from "../uiChoice";
 import { lookAtStation } from "./station";
 import { KaifanApp } from "./KaifanApp";
 
@@ -28,11 +27,23 @@ vi.mock("../configuration/connections", async (load) => ({
   useToolConnections: () => tools.now,
 }));
 vi.mock("../update/UpdateProvider", () => ({ useDesktopUpdate: vi.fn() }));
-vi.mock("../uiChoice", () => ({ RETURNING: true, openClassic: vi.fn() }));
+// 开机那一幕有自己的测试；这里直接到首页。
+vi.mock("./Boot", async () => {
+  const { useEffect } = await import("react");
+  return {
+    Boot: ({ onDone }: { onDone: () => void }) => {
+      useEffect(() => onDone(), [onDone]);
+      return null;
+    },
+  };
+});
 vi.mock("../model-profiles/remoteCatalog", () => ({
   refreshModelCatalog: () => Promise.resolve(),
 }));
-vi.mock("../settings/QuitAssistant", () => ({ ShutdownHost: () => null }));
+vi.mock("./Shutdown", () => ({
+  ShutdownHost: () => null,
+  askToQuit: vi.fn(),
+}));
 vi.mock("./useStationLink", () => ({
   useStationLink: () => ({ trustOrigin: null, answerTrust: vi.fn() }),
 }));
@@ -245,7 +256,6 @@ describe("开饭首页自己会做的事", () => {
     await waitFor(() => expect(ledger).not.toHaveAttribute("inert"));
     expect(home).toHaveAttribute("inert");
     expect(refresh).toHaveBeenCalledTimes(1);
-    expect(openClassic).not.toHaveBeenCalled();
     expect(screen.getByTestId("kaifan-ledger-balance")).toHaveTextContent(
       "¥86.40",
     );
@@ -262,7 +272,6 @@ describe("开饭首页自己会做的事", () => {
     expect(settings).toHaveAttribute("inert");
     fireEvent.click(screen.getByTestId("kaifan-nav-settings"));
     await waitFor(() => expect(settings).not.toHaveAttribute("inert"));
-    expect(openClassic).not.toHaveBeenCalled();
 
     refresh.mockClear();
     fireEvent.click(screen.getByTestId("kaifan-settings-check"));
@@ -336,7 +345,6 @@ describe("开饭首页自己会做的事", () => {
     await waitFor(() => expect(news).not.toHaveAttribute("inert"));
     expect(within(news).getAllByTestId("kaifan-notice")).toHaveLength(2);
     await waitFor(() => expect(nav).not.toHaveTextContent("没看"));
-    expect(openClassic).not.toHaveBeenCalled();
   });
 
   it("没连站点：再点当前这位只是逗她一下，没有名片可看", async () => {
@@ -414,7 +422,6 @@ describe("开饭首页自己会做的事", () => {
     expect(within(join).getByTestId("kaifan-join-mend")).toHaveTextContent(
       "上次接到一半停了",
     );
-    expect(openClassic).not.toHaveBeenCalled();
   });
 
   it("没有新版本：不提这件事", () => {

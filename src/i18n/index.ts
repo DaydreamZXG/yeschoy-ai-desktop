@@ -9,14 +9,7 @@ import {
   readLanguage,
 } from "./language";
 
-/**
- * 只注册**已经完整翻译**的语言。
- *
- * `ja.json` / `zh-TW.json` 也在仓库里，各有 267 键、内容是齐的——但它们只覆盖
- * 这 268 个既有键，而接下来从 `copy.ts` 迁进来的那批不会有日/繁译文。
- * 注册进去就会得到一个「切过去大半界面还是中文」的开关，
- * 比没有这个开关更糟。等它们补齐再加。
- */
+/** 只注册翻译齐了的语言：切过去大半界面还是中文的开关，比没有更糟。 */
 const language = readLanguage();
 
 i18n.use(initReactI18next).init({

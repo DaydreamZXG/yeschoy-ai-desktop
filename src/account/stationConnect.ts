@@ -64,3 +64,6 @@ export function decodeStationConnectProgress(
     recoverable: value.recoverable,
   };
 }
+
+/** 界面的监听就绪后发给原生侧：请它把还在等确认的站点重发一次。 */
+export const STATION_TRUST_SYNC_EVENT = "yeschoy://station-trust-sync";

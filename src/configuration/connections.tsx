@@ -382,13 +382,3 @@ export function ConnectionProvider({
   return <Context.Provider value={value}>{children}</Context.Provider>;
 }
 export const useConnections = () => useContext(Context);
-/**
- * 状态标签在语言文件里（`yeschoyConfiguration.connectionState`），三个视图共用。
- *
- * 这里走 i18next 的单例 `t` 而不是 `useTranslation()`：调用方之一
- * （`AdvancedConnectionDetails` 的 `diagnosticsText`）是模块级函数，不是组件，
- * 拿不到 hook。单例的代价是它自己不随语言变化重渲染——但真正渲染它的两个
- * 组件都调了 `useTranslation()`，语言一变它们重渲染、这个函数被重新调用。
- */
-export const connectionLabel = (state?: ToolConnection["state"]) =>
-  i18n.t(`yeschoyConfiguration.connectionState.${state ?? "not_connected"}`);

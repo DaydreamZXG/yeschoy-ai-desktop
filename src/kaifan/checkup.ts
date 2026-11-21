@@ -139,3 +139,25 @@ export function originOfLine(lineId: string): string | null {
   const origin = at < 0 ? "" : lineId.slice(at + 1);
   return /^https:\/\//.test(origin) ? origin : null;
 }
+
+/**
+ * 体检结果的文字版，给用户贴给帮他看问题的人。只有状态词和应用的代号：
+ * 不带站点地址、账户、密钥、文件路径，贴到群里也不会泄露什么。
+ */
+export function reportText(
+  report: CheckReport,
+  connections: Pick<ToolConnection, "toolId" | "state">[],
+  version: string | null,
+): string {
+  return [
+    "Kaifan checkup",
+    `version: ${version || "unknown"}`,
+    `station: ${report.station}`,
+    `login: ${report.login}`,
+    `apps: ${report.apps}`,
+    ...connections
+      .filter((connection) => connection.state !== "not_connected")
+      .map((connection) => `  ${connection.toolId}: ${connection.state}`),
+    `verdict: ${report.verdict}`,
+  ].join("\n");
+}

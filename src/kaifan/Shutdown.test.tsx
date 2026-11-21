@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useConnections } from "../configuration/connections";
-import { QuitAssistant, ShutdownHost, ShutdownProvider } from "./QuitAssistant";
+import { ShutdownHost, askToQuit } from "./Shutdown";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn() }));
@@ -33,13 +33,9 @@ function emit(event: string, payload: unknown = null) {
   });
 }
 async function openSettingsChoice() {
-  render(
-    <ShutdownProvider>
-      <QuitAssistant />
-    </ShutdownProvider>,
-  );
+  render(<ShutdownHost />);
   await flush();
-  fireEvent.click(screen.getByRole("button", { name: "退出野菜助手" }));
+  act(() => void askToQuit());
   await flush();
 }
 function quitCalls() {
@@ -116,7 +112,9 @@ describe("global desktop close choice and cooperative exit", () => {
       status: "restore_failed",
       failedTools: ["codex_desktop"],
     });
-    expect(screen.getByRole("alert")).toHaveTextContent("Codex（桌面版 / 命令行）");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Codex（桌面版 / 命令行）",
+    );
     expect(
       screen.getByRole("button", { name: "重试恢复并退出" }),
     ).toBeEnabled();
@@ -298,9 +296,7 @@ describe("global desktop close choice and cooperative exit", () => {
     native.mockRejectedValueOnce(new Error("secret-fixture-path-and-key"));
     fireEvent.click(screen.getByRole("button", { name: "恢复原设置并退出" }));
     await flush();
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "暂时无法确认退出状态",
-    );
+    expect(screen.getByRole("alert")).toHaveTextContent("暂时无法确认退出状态");
     expect(screen.getByRole("button", { name: "重试退出" })).toBeEnabled();
     expect(document.body).not.toHaveTextContent("secret-fixture-path-and-key");
   });

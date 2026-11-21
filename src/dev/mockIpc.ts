@@ -375,7 +375,8 @@ function targets(requestId: string) {
       toolId,
       displayName,
       surface: "本机应用",
-      manualLocation: "none",
+      // `?s=pinned`：用的是用户手动指的那一份，看“换一个位置 / 改回自己找”。
+      manualLocation: scenario === "pinned" ? "in_use" : "none",
       // `?s=not_installed` 让所有应用报未安装，用来看安装面板。
       // 原来 mock 恒报 available，那块 359 行、152 处文案的界面
       // 在审计页里根本显示不出来。

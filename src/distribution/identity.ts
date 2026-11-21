@@ -21,3 +21,6 @@ export function uiDistribution(): UiDistribution {
 export function isOfficialDistribution(): boolean {
   return uiDistribution() === "official";
 }
+
+/** 官方构建里「连接站点」默认填的那个站；开源构建不预填。 */
+export const REFERENCE_STATION_ORIGIN = "https://yeschoy.com";

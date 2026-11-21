@@ -58,6 +58,16 @@ export function Reveal({ joined, opening, openFailed, onOpen, onHome }: Props) {
   const art = portraitOf(who);
   const terminal = usesTerminal(joined.toolId);
 
+  // 后端说得出为什么没打开，就说那一句；说不出才用笼统的。
+  const note =
+    joined.why && !joined.opened
+      ? `kaifan.why.${joined.why}`
+      : `kaifan.reveal.${
+          openFailed
+            ? "openFailed"
+            : (joined.opened ? "opened" : "written") +
+              (terminal ? "Terminal" : "")
+        }`;
   return (
     <div
       className="reveal on"
@@ -92,17 +102,7 @@ export function Reveal({ joined, opening, openFailed, onOpen, onHome }: Props) {
         <div className={settled ? "rv-res glass show" : "rv-res glass"}>
           <p>
             <b>{t("kaifan.reveal.done")}</b>
-            <span>
-              {t(
-                `kaifan.reveal.${
-                  openFailed
-                    ? "openFailed"
-                    : (joined.opened ? "opened" : "written") +
-                      (terminal ? "Terminal" : "")
-                }`,
-                { app: appName },
-              )}
-            </span>
+            <span>{t(note, { app: appName })}</span>
             {joined.skipped.length > 0 && (
               <em>
                 {t("kaifan.reveal.skipped", {

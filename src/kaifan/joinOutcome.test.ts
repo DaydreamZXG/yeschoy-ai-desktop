@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import en from "../i18n/locales/en.json";
+import zh from "../i18n/locales/zh.json";
 import { joinOutcome, joinStep } from "./joinOutcome";
 
 const of = (status: string, reasonCode = "", skipped?: string[]) =>
@@ -102,6 +104,34 @@ describe("接入结果怎么说", () => {
       action: "retry",
     });
     expect(of("invalid_request").kind).toBe("retry");
+  });
+
+  it("后端说得出原因的：带上原因，界面说那一句而不是笼统的「没接成」", () => {
+    expect(of("configuration_failed", "configuration_write_failed")).toEqual({
+      kind: "retry",
+      mood: "panic",
+      action: "retry",
+      why: "configuration_write_failed",
+    });
+    expect(of("launch_failed", "terminal_unavailable").why).toBe(
+      "terminal_unavailable",
+    );
+    // 已经有专门一句话的情况不被盖掉；认不出的原因不带。
+    expect(of("configuration_failed", "credential_restore_failed").why).toBe(
+      undefined,
+    );
+    expect(of("configuration_failed", "something_new").why).toBe(undefined);
+  });
+
+  it("每个带得上的原因，中英文都有那句话", () => {
+    for (const lang of [zh, en]) {
+      const why = lang.kaifan.why as Record<string, string>;
+      for (const [code, text] of Object.entries(why)) {
+        expect(of("configuration_failed", code).why).toBe(code);
+        expect(text.length).toBeGreaterThan(0);
+      }
+    }
+    expect(Object.keys(en.kaifan.why)).toEqual(Object.keys(zh.kaifan.why));
   });
 
   it("用户自己停下的不算出错", () => {
