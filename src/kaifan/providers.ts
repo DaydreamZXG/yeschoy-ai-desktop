@@ -49,7 +49,9 @@ export function decodeProviderPresets(raw: unknown): ProviderPreset[] {
       billing: row.billing === "plan" ? "plan" : "pay_as_you_go",
       unverifiable: row.keyCheck === "unverifiable",
       onlyTools: Array.isArray(row.onlyTools)
-        ? row.onlyTools.filter((tool): tool is string => typeof tool === "string")
+        ? row.onlyTools.filter(
+            (tool): tool is string => typeof tool === "string",
+          )
         : [],
       common: row.common === true,
     });

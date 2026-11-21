@@ -49,6 +49,7 @@ import {
   chibiOf,
   type RosterId,
 } from "./roster";
+import { vendorName, type ProviderPreset } from "./providers";
 import { sound } from "./sound";
 import { undoFailed, undoKey, type UndoKey } from "./undo";
 import { useInstall } from "./useInstall";
@@ -76,6 +77,8 @@ interface Props {
   connections: ToolConnection[];
   /** 在名片上挑过的型号和方案。 */
   picks: CardPicks;
+  /** 现在连的是一家内置的云厂商时，是哪一家。 */
+  preset?: ProviderPreset | null;
   /** 从某个应用的格子点进来时，先选中它。 */
   initialApp?: ActivationToolId;
   onClose: () => void;
@@ -134,6 +137,7 @@ export function Join({
   current,
   connections,
   picks,
+  preset = null,
   initialApp,
   onClose,
   onJoined,
@@ -321,6 +325,9 @@ export function Join({
   const name = t(`roster.${who}.name`);
   const appInfo = WORKBENCH_APPS.find((item) => item.id === app);
   const appName = appDisplayName(app, appInfo?.name ?? app, t);
+  // 这一家只认某几个应用，而现在选的不在里面：后端也会拦，这里先说清楚。
+  const barred =
+    !!preset && preset.onlyTools.length > 0 && !preset.onlyTools.includes(app);
 
   // 这个应用原来的名单里还在站上的模型照旧留着，只把默认换成她。
   const bindings = (group: string): ModelBinding[] => [
@@ -786,6 +793,27 @@ export function Join({
                 );
               })}
             </div>
+            {barred ? (
+              <p className="mend" role="note" data-testid="kaifan-join-barred">
+                {t("kaifan.join.onlyTools", {
+                  vendor: vendorName(preset, t),
+                  app: appName,
+                })}
+              </p>
+            ) : (
+              preset?.billing === "plan" && (
+                <p
+                  className="mend"
+                  role="note"
+                  data-testid="kaifan-join-plan-risk"
+                >
+                  {t("kaifan.join.planRisk", {
+                    vendor: vendorName(preset, t),
+                    app: appName,
+                  })}
+                </p>
+              )
+            )}
             {broken && (
               <p className="mend" role="note" data-testid="kaifan-join-mend">
                 {t(`kaifan.join.mend.${broken}`, { app: appName })}
@@ -881,7 +909,7 @@ export function Join({
                 <button
                   type="button"
                   className="go"
-                  disabled={!modelId}
+                  disabled={!modelId || barred}
                   onClick={() => void fetchAndJoin()}
                 >
                   {t("kaifan.join.installGo", { app: appName })}
@@ -898,7 +926,9 @@ export function Join({
                 <button
                   type="button"
                   className="go"
-                  disabled={scan !== "ready" || !modelId || !installationId}
+                  disabled={
+                    scan !== "ready" || !modelId || !installationId || barred
+                  }
                   onClick={() => void run()}
                 >
                   {t(

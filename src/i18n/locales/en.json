@@ -400,6 +400,8 @@
       "accept": "I know it. Connect"
     },
     "join": {
+      "planRisk": "You're connected to {{vendor}}, a monthly plan. The provider only allows it in coding tools it approves, and Kaifan passes requests along on {{app}}'s behalf, so the provider may limit or cancel the plan.",
+      "onlyTools": "{{vendor}} doesn't work with {{app}}. Pick an app it works with, or connect a different station.",
       "title": "Who goes where?",
       "sub": "Pick an app, pick someone, and she handles the rest.",
       "whichApp": "Which app",
@@ -536,6 +538,7 @@
       "skipped": "Also, {{models}} could not be added: the station doesn't allow this account to use it. Everything else is unaffected."
     },
     "why": {
+      "provider_tool_unsupported": "The provider you're connected to doesn't work with {{app}}, so nothing was connected and {{app}} wasn't changed. Pick an app it works with, or connect a different station.",
       "claude_login_not_released": "The system didn't let me use the keychain, so the official Claude sign-in wasn't put aside. Nothing was connected and {{app}} is unchanged. Try again and choose \"Allow\" when the system asks.",
       "claude_login_takeover_failed": "I couldn't put the official Claude sign-in aside. Nothing was connected and {{app}} is unchanged. Try again; if it keeps failing, type /logout in {{app}} and come back.",
       "codex_history_takeover_conflict": "The last tidy-up of {{app}}'s conversation history hasn't finished, so I didn't connect. Your conversations are all there. Close {{app}} and try again.",

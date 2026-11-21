@@ -498,7 +498,11 @@ export function Connect({
             }}
           >
             {vendor.regions.length > 1 && (
-              <p className="seg" role="group" aria-label={t("kaifan.connect.region")}>
+              <p
+                className="seg"
+                role="group"
+                aria-label={t("kaifan.connect.region")}
+              >
                 {vendor.regions.map((item, at) => (
                   <button
                     key={item.id}
@@ -528,7 +532,11 @@ export function Connect({
               />
             </div>
             {preset.billing === "plan" ? (
-              <p className="quote warn" role="note" data-testid="kaifan-connect-risk">
+              <p
+                className="quote warn"
+                role="note"
+                data-testid="kaifan-connect-risk"
+              >
                 <b>{t("kaifan.connect.planRiskTitle")}</b>
                 <br />
                 {t("kaifan.connect.planRisk", { name: vendorName(preset, t) })}
