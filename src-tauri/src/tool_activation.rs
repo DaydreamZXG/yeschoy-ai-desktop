@@ -2064,7 +2064,7 @@ async fn restore_after_failure(
                         .clone()
                         .filter(|_| !shutdown_coordinator::global().is_shutting_down()),
                 )
-                .await?;
+                .await;
             }
             Ok::<(), AdapterFailure>(())
         })
@@ -2080,16 +2080,21 @@ async fn restore_after_failure(
 
 /// 接入没成之后，把本机桥换回上一次接好的那份；没有上一次就停掉。
 /// `start` 对正在跑的桥是原地换，不断开正在进行的请求。
+///
+/// 换不回去（端口被别的程序占着）不算这次回滚失败：设置和密钥已经还原，
+/// 桥起不来是接入之前就有的状况，下次打开应用时照常再起。要是算失败，
+/// 这次接入会一直挂着，再点一次就把原来好好的那份接入清掉了。
+/// 只保证一件事：桥里不留这次没成的线路。
 async fn restore_bridge(
     bridge: &crate::local_bridge::LocalBridgeRuntime,
     previous: Option<ToolCredential>,
-) -> Result<(), AdapterFailure> {
-    match previous {
-        Some(previous) => bridge.start(previous).await.map(|_| ()),
-        None => {
-            bridge.stop().await;
-            Ok(())
-        }
+) {
+    let restored = match previous {
+        Some(previous) => bridge.start(previous).await.is_ok(),
+        None => false,
+    };
+    if !restored {
+        bridge.stop().await;
     }
 }
 
@@ -3723,14 +3728,17 @@ mod tests {
             .unwrap();
 
         let previous = credential("https://old.example");
-        restore_bridge(&bridge, Some(previous.clone()))
-            .await
-            .unwrap();
-        assert_eq!(bridge.serving().await, Some(previous));
+        restore_bridge(&bridge, Some(previous.clone())).await;
+        assert_eq!(bridge.serving().await, Some(previous.clone()));
 
-        restore_bridge(&bridge, None).await.unwrap();
+        restore_bridge(&bridge, None).await;
         assert_eq!(bridge.serving().await, None);
-        assert!(tokio::net::TcpListener::bind(ADDRESS).await.is_ok());
+
+        // 端口被别的程序占着：桥起不来，但这不是回滚失败，也不留下任何线路。
+        let squatter = tokio::net::TcpListener::bind(ADDRESS).await.unwrap();
+        restore_bridge(&bridge, Some(previous)).await;
+        assert_eq!(bridge.serving().await, None);
+        drop(squatter);
     }
 
     #[tokio::test]
