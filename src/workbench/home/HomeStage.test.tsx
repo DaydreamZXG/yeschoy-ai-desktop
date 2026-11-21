@@ -152,6 +152,9 @@ describe("首页舞台", () => {
     expect(strip("阿青（GPT）")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText(/先连上你的站点/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Codex/ })).toBeNull();
+    // 以前接好的应用还得能恢复、能打开：面板的入口留着。
+    fireEvent.click(screen.getByRole("button", { name: "全部应用" }));
+    expect(props.onPanelOpenChange).toHaveBeenCalledWith(true);
     // 连接表单就在她的对话框里，不用再往下找。
     expect(screen.getByText("连接表单")).toBeInTheDocument();
     expect(props.onStart).not.toHaveBeenCalled();

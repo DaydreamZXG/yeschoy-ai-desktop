@@ -552,6 +552,16 @@
   white-space: nowrap;
 }
 
+/* 没连站点时不摆应用格子，只留面板入口：以前接好的应用还要能恢复、能打开。 */
+.home-apps[data-solo] {
+  justify-content: flex-end;
+}
+
+.home-apps[data-solo] .home-app-all {
+  flex: 0 0 auto;
+  padding: 0 var(--space-16);
+}
+
 .home-app[data-connected] {
   border-color: color-mix(in srgb, #8dffcf 45%, transparent);
   color: #8dffcf;

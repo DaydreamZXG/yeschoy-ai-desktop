@@ -446,9 +446,12 @@ export function HomeStage({
                 </footer>
               )}
         </div>
-        {station !== "signed_out" && apps.length > 0 && (
-          <div className="home-apps">
-            {apps.map((app) => {
+        {apps.length > 0 && (
+          <div
+            className="home-apps"
+            data-solo={station === "signed_out" || undefined}
+          >
+            {(station === "signed_out" ? [] : apps).map((app) => {
               const label = t(
                 app.connected
                   ? "homeStage.appConnected"
