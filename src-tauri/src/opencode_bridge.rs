@@ -37,7 +37,8 @@ pub(crate) fn global() -> &'static LocalBridgeRuntime {
     RUNTIME.get_or_init(opencode_runtime)
 }
 
-fn router(state: SharedState) -> Router {
+/// Cline 的那座桥（`cline_bridge`）也挂这同一套路由：两边说的都是 Chat Completions。
+pub(crate) fn router(state: SharedState) -> Router {
     Router::new().fallback(any(dispatch)).with_state(state)
 }
 
@@ -62,11 +63,12 @@ fn error(status: StatusCode, message: &str) -> Response {
 async fn dispatch(State(state): State<SharedState>, request: Request<Body>) -> Response {
     let state = state.read().await.clone();
     let Some(path) = request.uri().path().strip_prefix(state.prefix) else {
-        return error(StatusCode::NOT_FOUND, "unsupported OpenCode endpoint");
+        return error(StatusCode::NOT_FOUND, "unsupported endpoint");
     };
     let path = path.to_owned();
     log::info!(
-        "opencode_bridge request method={} path={}",
+        "chat_bridge request prefix={} method={} path={}",
+        state.prefix,
         request.method().as_str(),
         log_label(request.method().as_str(), &path),
     );
@@ -76,7 +78,7 @@ async fn dispatch(State(state): State<SharedState>, request: Request<Body>) -> R
     match (request.method().as_str(), path.as_str()) {
         ("GET", "/v1/models") => models(&state),
         ("POST", "/v1/chat/completions") => chat(&state, request).await,
-        _ => error(StatusCode::NOT_FOUND, "unsupported OpenCode endpoint"),
+        _ => error(StatusCode::NOT_FOUND, "unsupported endpoint"),
     }
 }
 
@@ -118,7 +120,7 @@ async fn chat(state: &BridgeState, request: Request<Body>) -> Response {
                 StatusCode::BAD_REQUEST,
                 &format!(
                     "{model} is not in the model list this app was connected with. Open the \
-                     desktop assistant, add {model} to the OpenCode model list and apply again."
+                     desktop assistant, add {model} to this app's model list and apply again."
                 ),
             );
         }

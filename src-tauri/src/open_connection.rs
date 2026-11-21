@@ -6,8 +6,8 @@ use crate::{
     connection_recovery::{self, Store},
     tool_activation::ACTIVATION_LOCK,
     tool_adapters::{
-        self, claude_code, claude_desktop, codex_desktop, desktop_lifecycle, dsh_web, opencode, pi,
-        terminal_launch, workbuddy, AdapterFailure,
+        self, claude_code, claude_desktop, cline, codex_desktop, desktop_lifecycle, dsh_web,
+        opencode, pi, terminal_launch, workbuddy, AdapterFailure,
     },
     tool_credentials::{self, CredentialFailure, ToolCredential},
 };
@@ -66,6 +66,7 @@ fn valid_request(request: &OpenRequest) -> bool {
                 | "dsh_web"
                 | "workbuddy"
                 | "dsh_desktop"
+                | "cline"
         )
 }
 
@@ -117,6 +118,7 @@ pub(crate) fn validate_settings(
                 .validate_existing(),
             "opencode" => opencode::prepare_catalog(home, &credential.model_id, &models, local)?
                 .validate_existing(),
+            "cline" => cline::prepare(home, &credential.model_id, local)?.validate_existing(),
             "dsh_web" => dsh_web::prepare_catalog(
                 home,
                 &origin,
@@ -161,6 +163,12 @@ pub(crate) fn validate_settings(
             home,
             &credential.model_id,
             std::slice::from_ref(&credential.model_id),
+            credential.local_gateway_token.as_deref(),
+        )?
+        .validate_existing(),
+        "cline" => cline::prepare(
+            home,
+            &credential.model_id,
             credential.local_gateway_token.as_deref(),
         )?
         .validate_existing(),
@@ -292,6 +300,23 @@ pub async fn open_tool_connection_v1(
                             .map_err(launch_failure)?;
                         if permit.is_cancelled() {
                             return Err(st("busy"));
+                        }
+                        Ok(
+                            terminal_launch::launch_async(&installation, &request.tool_id, &home)
+                                .await,
+                        )
+                    }
+                    "cline" => {
+                        crate::cline_bridge::global()
+                            .start(credential)
+                            .await
+                            .map_err(launch_failure)?;
+                        if permit.is_cancelled() {
+                            return Err(st("busy"));
+                        }
+                        // 只装了编辑器扩展：桥起来就够了，没有终端可开。
+                        if installation.path.is_dir() {
+                            return Ok(Ok(()));
                         }
                         Ok(
                             terminal_launch::launch_async(&installation, &request.tool_id, &home)
@@ -431,6 +456,7 @@ mod tests {
             "dsh_web",
             "workbuddy",
             "dsh_desktop",
+            "cline",
         ] {
             assert!(valid_request(&OpenRequest {
                 request_id: "open-fixture".into(),

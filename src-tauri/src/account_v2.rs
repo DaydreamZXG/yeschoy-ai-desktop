@@ -2352,6 +2352,7 @@ pub async fn account_logout_v2(
         "dsh_web",
         "workbuddy",
         "dsh_desktop",
+        "cline",
     ] {
         crate::request_diagnostics::clear(tool);
     }

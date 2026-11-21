@@ -591,6 +591,7 @@ mod tests {
             "dsh_web",
             "workbuddy",
             "dsh_desktop",
+            "cline",
         ] {
             assert!(!requires_reload(tool), "{tool}");
         }

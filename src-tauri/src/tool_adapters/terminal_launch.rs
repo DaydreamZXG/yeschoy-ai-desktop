@@ -194,7 +194,10 @@ fn build_plan(
     windows_root: Option<&Path>,
 ) -> Result<LaunchPlan, AdapterFailure> {
     // `codex_cli`：Codex 接入记录仍是 `codex_desktop`，装的是命令行版时在终端里开。
-    if !matches!(tool_id, "claude_code" | "pi" | "opencode" | "codex_cli") {
+    if !matches!(
+        tool_id,
+        "claude_code" | "pi" | "opencode" | "cline" | "codex_cli"
+    ) {
         return Err(failure("invalid_launch_target"));
     }
     let executable = path_text(&installation.path, platform)?;

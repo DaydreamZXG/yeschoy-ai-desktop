@@ -1,5 +1,6 @@
 pub(crate) mod claude_code;
 pub(crate) mod claude_desktop;
+pub(crate) mod cline;
 pub(crate) mod codex_desktop;
 pub(crate) mod common;
 pub(crate) mod desktop_launch;
@@ -66,7 +67,7 @@ struct ObservedInstallation {
     location: &'static str,
 }
 
-const TARGETS: [(&str, &str, &str); 8] = [
+const TARGETS: [(&str, &str, &str); 9] = [
     ("claude_code", "Claude Code", "命令行与编辑器工作区"),
     ("claude_desktop", "Claude Desktop", "Claude 桌面应用"),
     (
@@ -83,6 +84,7 @@ const TARGETS: [(&str, &str, &str); 8] = [
         "DeepSeek Harness",
         "DeepSeek Harness 桌面应用",
     ),
+    ("cline", "Cline", "Cline 命令行与编辑器扩展"),
 ];
 
 pub(crate) fn user_home() -> Option<PathBuf> {
@@ -109,6 +111,7 @@ pub(crate) fn executable_for(tool_id: &str) -> Option<&'static str> {
         "claude_code" => Some("claude"),
         "pi" => Some("pi"),
         "opencode" => Some("opencode"),
+        "cline" => Some("cline"),
         "dsh_web" => Some("dsh"),
         _ => None,
     }
@@ -225,6 +228,8 @@ fn can_attempt(tool_id: &str, installation: &ObservedInstallation) -> bool {
             installation.path.exists()
         }
         "claude_code" | "pi" | "opencode" | "dsh_web" => installation.path.is_file(),
+        // 命令行是文件；编辑器扩展是文件夹（见 `cline::extension_directories`）。
+        "cline" => installation.path.exists(),
         _ => false,
     }
 }
@@ -259,7 +264,22 @@ async fn observe_cli(executable: &str) -> Vec<ObservedInstallation> {
 
 async fn observe(tool_id: &str) -> Vec<ObservedInstallation> {
     if let Some(executable) = executable_for(tool_id) {
-        return observe_cli(executable).await;
+        let mut observed = observe_cli(executable).await;
+        // Cline 多数人装的是编辑器扩展，不是命令行。两边读同一份设置，所以
+        // 只装了扩展也算装了；命令行排在前面，「打开」时优先用它。手动指过
+        // 位置的不再追加：那是用户说了算。
+        if tool_id == "cline" && !observed.iter().any(|item| item.location == "manual") {
+            if let Some(home) = user_home() {
+                observed.extend(cline::extension_directories(&home).into_iter().map(|path| {
+                    ObservedInstallation {
+                        path,
+                        version: String::new(),
+                        location: "extension",
+                    }
+                }));
+            }
+        }
+        return observed;
     }
     let Some(app_id) = desktop_id_for(tool_id) else {
         return Vec::new();
@@ -324,6 +344,7 @@ fn location_label_in(language: crate::ui_language::Language, value: &str) -> &'s
         "local_app_data" => language.pick("用户应用目录", "User app data"),
         "program_files" => language.pick("程序目录", "Program Files"),
         "manual" => language.pick("手动指定", "Chosen by you"),
+        "extension" => language.pick("编辑器扩展", "Editor extension"),
         _ => language.pick("本机", "This computer"),
     }
 }
