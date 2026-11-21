@@ -332,6 +332,21 @@ pub(crate) fn points_at_our_bridge(bytes: &[u8]) -> bool {
     parse(Some(bytes)).is_ok_and(|document| model_points_at_bridge(&document))
 }
 
+/// 接好之后用户（或 Hermes）改了别处，`model:` 那一块还是我们写下的样子：
+/// 不算「被改过」。不是 Hermes 的文件就是 `None`。
+pub(crate) fn still_ours(path: &Path, ours: &[u8], now: &[u8]) -> Option<bool> {
+    if !is_config(path) || !points_at_our_bridge(ours) {
+        return None;
+    }
+    let written = parse(Some(ours)).ok()?;
+    Some(parse(Some(now)).is_ok_and(|now| now.get("model") == written.get("model")))
+}
+
+fn is_config(path: &Path) -> bool {
+    path.extension()
+        .is_some_and(|extension| extension == "yaml" || extension == "yml")
+}
+
 /// 改回原样，按文本做，注释留着。不是 Hermes 的文件、或者按文本做不准，就是
 /// `None`，交给通用的那条路。
 ///
@@ -346,10 +361,7 @@ pub(crate) fn restore(
     after: &[u8],
     current: &[u8],
 ) -> Option<(Option<Vec<u8>>, bool)> {
-    let yaml = path
-        .extension()
-        .is_some_and(|extension| extension == "yaml" || extension == "yml");
-    if !yaml || !points_at_our_bridge(after) {
+    if !is_config(path) || !points_at_our_bridge(after) {
         return None;
     }
     let now = parse(Some(current)).ok()?;
@@ -385,7 +397,10 @@ pub(crate) fn restore(
     if before.is_none() && restored.trim().is_empty() {
         return Some((None, false));
     }
-    Some((Some(restored.into_bytes()), false))
+    // 还回去的和接入前不一样：多出来的是用户后来在别处改的（注释也算），留下了，
+    // 要照实说。末尾补的那个换行不算。
+    let kept = restored.trim_end() != before_text.trim_end();
+    Some((Some(restored.into_bytes()), kept))
 }
 
 pub(crate) fn prepare(
@@ -595,7 +610,7 @@ terminal:
             "  backend: docker   # 换成 docker 了\n# 新加的\ncompression:\n  enabled: true\n",
         );
         let (bytes, kept) = restored(Some(THEIRS), &current).unwrap();
-        assert!(!kept);
+        assert!(kept, "别处后来的改动留下了，要说出来");
         assert_eq!(
             bytes.unwrap(),
             THEIRS.replace(
@@ -611,8 +626,15 @@ terminal:
         let after = render(Some(before.as_bytes()), "glm-5.3", &token()).unwrap();
         let current = format!("# 后来加的\n{}", text(&after));
         let (bytes, kept) = restored(Some(before), &current).unwrap();
-        assert!(!kept);
+        assert!(kept);
         assert_eq!(bytes.unwrap(), format!("# 后来加的\n{before}"));
+
+        // 只是我们那一块里多了一项、别处没动：还回去的就是原样。
+        let current = format!("{}  context_length: 200000\n", text(&after));
+        assert_eq!(
+            restored(Some(before), &current),
+            Some((Some(before.into()), false))
+        );
 
         // 文件是我们建的，后来只是在我们那一块里多了一项：拿走之后什么都不剩，删掉。
         let after = render(None, "glm-5.3", &token()).unwrap();
@@ -623,7 +645,7 @@ terminal:
         let current = format!("{}toolsets:\n  - web\n", text(&after));
         assert_eq!(
             restored(None, &current),
-            Some((Some("toolsets:\n  - web\n".into()), false))
+            Some((Some("toolsets:\n  - web\n".into()), true))
         );
     }
 

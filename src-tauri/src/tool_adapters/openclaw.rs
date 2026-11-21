@@ -498,6 +498,35 @@ pub(crate) fn points_at_our_bridge(bytes: &[u8]) -> bool {
     })
 }
 
+fn allows(root: &Value, reference: &str) -> bool {
+    root["agents"]["defaults"]["modelPolicy"]["allow"]
+        .as_array()
+        .is_none_or(|allow| {
+            allow.is_empty()
+                || allow
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .any(|entry| entry == ALLOW_ENTRY || entry == reference)
+        })
+}
+
+/// 接好之后文件和我们写下的不再一字不差，但我们那一家还原样在、主型号还是
+/// 接入时选的那个、白名单也没把它挡住：OpenClaw 自己会重写这份文件，用户也
+/// 会改别处。这都不算「被改过」。不是我们写的文件就是 `None`。
+pub(crate) fn still_ours(ours: &[u8], now: &[u8]) -> Option<bool> {
+    let ours = parse_document(Some(ours)).ok()?;
+    let written = ours["models"]["providers"].get(PROVIDER_ID)?;
+    if written["baseUrl"].as_str() != Some(PROXY_BASE) {
+        return None;
+    }
+    let chosen = primary(effective_model(&ours)).filter(|reference| is_ours(reference))?;
+    Some(parse_document(Some(now)).is_ok_and(|now| {
+        now["models"]["providers"].get(PROVIDER_ID) == Some(written)
+            && primary(effective_model(&now)) == Some(chosen)
+            && allows(&now, chosen)
+    }))
+}
+
 impl Prepared {
     pub(crate) fn changes(&self) -> &[common::FileChange] {
         self.transaction.changes()
