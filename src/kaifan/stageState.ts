@@ -3,6 +3,7 @@ import { balanceAlert, formatMoney } from "../account/finance";
 import type { AccountModel, AccountStatus } from "../account/session";
 import { catalogLineFromSnapshot } from "../account/accountLinePreference";
 import type { ToolConnection } from "../configuration/connections";
+import { isImageGenerationModel } from "../model-profiles/profile";
 import {
   characterOfModel,
   chooseCharacter,
@@ -99,7 +100,10 @@ const MOOD: Record<StageCond, Mood> = {
 export function deriveStage(input: StageInput): StageState {
   const signedIn = input.status === "signed_in";
   const models = signedIn ? input.models : undefined;
-  const cast = models?.length ? groupModels(models) : null;
+  // 画图的型号不能拿去接应用：名片和接入屏都不列它，首页点人数时也不算。
+  const cast = models?.length
+    ? groupModels(models.filter((m) => !isImageGenerationModel(m.id)))
+    : null;
   const connections = input.connections ?? [];
   const here = (c: ToolConnection) =>
     !signedIn || !onOtherStation(c, input.lineId);

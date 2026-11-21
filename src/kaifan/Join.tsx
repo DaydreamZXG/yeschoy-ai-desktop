@@ -28,12 +28,7 @@ import {
   modelDisplayName,
 } from "../model-profiles/profile";
 import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
-import {
-  chosenModel,
-  pickedModel,
-  pickedPlan,
-  type CardPicks,
-} from "./cardInfo";
+import { joinModel, pickedPlan, type CardPicks } from "./cardInfo";
 import {
   installOutcome,
   installStep,
@@ -111,24 +106,6 @@ const megabytes = (bytes: number) =>
   bytes >= 1024 ** 3
     ? `${(bytes / 1024 ** 3).toFixed(1)} GB`
     : `${Math.max(1, Math.round(bytes / 1024 ** 2))} MB`;
-
-/**
- * 她在这个应用里该用哪个型号：名片上给她挑过的优先；没挑过，接过的沿用；
- * 都没有就挑一个资料齐的。
- */
-function modelFor(
-  who: RosterId,
-  ids: string[] | undefined,
-  saved: ToolConnection | undefined,
-  picks: CardPicks,
-): string {
-  if (!ids?.length) return "";
-  const chosen = chosenModel(who, ids, picks);
-  if (chosen) return chosen;
-  if (saved && saved.state !== "not_connected" && ids.includes(saved.modelId))
-    return saved.modelId;
-  return pickedModel(who, ids, picks);
-}
 
 /**
  * 接入：选一个应用，选一个人，点一下。写设置、打开应用、出了岔子怎么办，
@@ -308,7 +285,7 @@ export function Join({
   const modelId =
     chosenModel && ids?.includes(chosenModel)
       ? chosenModel
-      : modelFor(who, ids, saved, picks);
+      : joinModel(who, ids, saved, picks);
   const model = usable.find((item) => item.id === modelId);
   // 这个应用里已经存过的型号和分组。分组决定价格，存过的原样沿用，不替用户换。
   const remembered = useMemo(
@@ -877,7 +854,7 @@ export function Join({
                         <span>
                           {here
                             ? modelDisplayName(
-                                modelFor(
+                                joinModel(
                                   id,
                                   cast[id],
                                   on ? saved : undefined,

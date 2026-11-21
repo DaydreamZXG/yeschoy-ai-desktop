@@ -39,6 +39,14 @@ describe("首页一次只演最要紧的一件事", () => {
     expect(state.balance).toContain("86.40");
   });
 
+  it("画图的型号不算在她名下：首页点的型号数和名片上列的是同一份", () => {
+    const state = deriveStage({
+      ...base,
+      models: [model("gpt-5"), model("gpt-image-2")],
+    });
+    expect(state.cast?.gpt).toEqual(["gpt-5"]);
+  });
+
   it("没连站点", () => {
     expect(cond({ status: "signed_out" })).toBe("out");
     expect(cond({ status: "session_expired" })).toBe("out");

@@ -9,7 +9,7 @@ import type { ToolConnection } from "../configuration/connections";
 import { modelDisplayName } from "../model-profiles/profile";
 import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
 import {
-  pickedModel,
+  joinModel,
   pickedPlan,
   plansOf,
   pricesOf,
@@ -57,11 +57,32 @@ export function Card({
 }: Props) {
   const { t } = useTranslation();
   const name = t(`roster.${who}.name`);
-  const modelId = pickedModel(who, ids, picks);
+  // 她在哪些应用里干活，各自用的是哪个型号和方案（接入时存下来的那份）。
+  const jobs = WORKBENCH_APPS.flatMap((app) => {
+    const saved = connections?.find((item) => item.toolId === app.id);
+    return saved && workerOf(saved) === who
+      ? [
+          {
+            id: app.id,
+            name: appDisplayName(app.id, app.name, t),
+            modelId: saved.modelId,
+            planId: saved.billingGroup,
+            saved,
+          },
+        ]
+      : [];
+  });
+  // 名片上写的是「她再去接入会用什么」，和接入屏问的是同一处：没挑过就沿用
+  // 接好的那份，不拿一个默认的出来说「要重新接入」。
+  const modelId = joinModel(who, ids, jobs[0]?.saved, picks);
   const model = models.find((item) => item.id === modelId);
   const plans = useMemo(() => plansOf(model), [model]);
+  const kept = jobs.find((job) => job.modelId === modelId)?.planId;
   const planId = model
-    ? (pickedPlan(model, picks) ?? chooseBillingGroup(model, ""))
+    ? (pickedPlan(model, picks) ??
+      (kept && plans.some((item) => item.id === kept)
+        ? kept
+        : chooseBillingGroup(model, "")))
     : "";
   const plan = plans.find((item) => item.id === planId);
   const prices = pricesOf(model, plan?.ratio);
@@ -103,24 +124,17 @@ export function Card({
                   discount: now,
                 });
 
-  // 她在哪些应用里干活，各自用的是哪个型号和方案（接入时存下来的那份）。
-  const jobs = WORKBENCH_APPS.flatMap((app) => {
-    const saved = connections?.find((item) => item.toolId === app.id);
-    return saved && workerOf(saved) === who
-      ? [
-          {
-            id: app.id,
-            name: appDisplayName(app.id, app.name, t),
-            modelId: saved.modelId,
-            planId: saved.billingGroup,
-          },
-        ]
-      : [];
+  // 名片上改的是「下次接入用什么」。已经接好的应用不会被悄悄改掉；只有
+  // 再接入一次真的会换型号或方案时才提醒。
+  const stale = jobs.some((job) => {
+    const next = joinModel(who, ids, job.saved, picks);
+    if (next !== job.modelId) return true;
+    const wanted = pickedPlan(
+      models.find((item) => item.id === next),
+      picks,
+    );
+    return !!wanted && !!job.planId && wanted !== job.planId;
   });
-  // 名片上改的是「下次接入用什么」。已经接好的应用不会被悄悄改掉。
-  const stale = jobs.some(
-    (job) => job.modelId !== modelId || (job.planId && job.planId !== planId),
-  );
 
   return (
     <Drawer

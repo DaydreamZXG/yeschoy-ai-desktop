@@ -40,6 +40,11 @@ describe("discountOf", () => {
     expect(discountOf(1)).toEqual({ kind: "full" });
     expect(discountOf(0.98)).toEqual({ kind: "full" });
     expect(discountOf(1.5)).toEqual({ kind: "over", times: 1.5 });
+    // 只贵 3%、4% 的不能写成「1 倍」。
+    expect(discountOf(1.03)).toEqual({ kind: "over", times: 1.03 });
+    expect(discountOf(1.04)).toEqual({ kind: "over", times: 1.04 });
+    expect(discountOf(1.09)).toEqual({ kind: "over", times: 1.09 });
+    expect(discountOf(1.1)).toEqual({ kind: "over", times: 1.1 });
     expect(discountOf(0)).toEqual({ kind: "free" });
   });
 
