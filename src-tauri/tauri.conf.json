@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "野菜API",
+  "productName": "开饭",
   "version": "0.5.1",
-  "identifier": "com.yeschoy.desktop",
+  "identifier": "com.kaifan.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://127.0.0.1:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "野菜API",
+        "title": "开饭",
         "titleBarStyle": "Transparent",
         "hiddenTitle": true,
         "width": 1120,
@@ -33,7 +33,7 @@
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": ["yeschoy"]
+        "schemes": ["kaifan", "yeschoy"]
       }
     },
     "updater": {

@@ -1,7 +1,4 @@
 {
-  "yeschoySettings": {
-    "languageTitle": "Interface language"
-  },
   "workbench": {
     "appNameCodex": "Codex (desktop / CLI)"
   },
@@ -9,8 +6,8 @@
     "defaultGroupLabel": "Standard group"
   },
   "quit": {
-    "titleChoice": "Close the Yeschoy assistant?",
-    "titleExiting": "Quitting the Yeschoy assistant",
+    "titleChoice": "Close Kaifan?",
+    "titleExiting": "Quitting Kaifan",
     "unknownAffected": "Can't confirm which apps need the assistant running. Quitting may interrupt a connection in use. No settings are deleted.",
     "affectedIntro": "These apps' connections need the assistant running, and will be interrupted when you quit:",
     "affectedHint": "Choose “Keep running” if you want to carry on. Once you quit, reopen the assistant and continue from the app card — there is nothing to reconnect.",

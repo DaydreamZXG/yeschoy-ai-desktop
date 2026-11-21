@@ -33,12 +33,17 @@ describe("Windows installer localization", () => {
     const standalone = readSource("src-tauri/windows/installer.nsi");
     const native = readSource("src-tauri/src/lib.rs");
 
-    const eventName = "Local\\YesChoyDesktopInstallerShutdown_v1";
+    const eventName = "Local\\KaifanDesktopInstallerShutdown_v1";
     expect(hook).toContain(eventName);
     expect(native).toContain(eventName.replace("\\", "\\\\"));
     expect(hook).toContain('!include "Win\\RestartManager.nsh"');
     expect(hook).toContain("RestartManager_ShutdownFile");
     expect(hook).toContain("CreateFileW");
+    // 改名前的客户端等的是旧名字；安装器两个都发。
+    expect(hook).toContain("Local\\YesChoyDesktopInstallerShutdown_v1");
+    expect(hook).toContain("$LOCALAPPDATA\\Programs\\开饭");
+    expect(hook).toContain("开饭.exe");
+    expect(hook).toContain("kaifan-desktop.exe");
     expect(hook).toContain("$LOCALAPPDATA\\Programs\\野菜API");
     expect(hook).toContain("$LOCALAPPDATA\\野菜API");
     expect(hook).toContain("野菜API.exe");
@@ -51,16 +56,14 @@ describe("Windows installer localization", () => {
     expect(hook).toContain("hidden windows and multiple copies");
     expect(hook).toContain("尚未修改任何程序文件");
     expect(hook).toContain(
-      "!define MUI_CUSTOMFUNCTION_GUIINIT YeschoyInstallerGuiInit",
+      "!define MUI_CUSTOMFUNCTION_GUIINIT KaifanInstallerGuiInit",
     );
     expect(hook).toContain("Tauri's reinstall page");
     expect(hook).not.toContain("FindWindow");
     expect(hook).not.toMatch(/taskkill\.exe/i);
     expect(standalone).toContain('!include "installer-hooks.nsh"');
-    const guard = standalone.indexOf("Call YeschoyEnsureStopped");
-    const firstWrite = standalone.indexOf(
-      'File /oname=野菜API.exe "${APP_EXE}"',
-    );
+    const guard = standalone.indexOf("Call KaifanEnsureStopped");
+    const firstWrite = standalone.indexOf('File /oname=开饭.exe "${APP_EXE}"');
     expect(guard).toBeGreaterThan(-1);
     expect(firstWrite).toBeGreaterThan(guard);
     const initialization = standalone.match(
@@ -74,6 +77,29 @@ describe("Windows installer localization", () => {
     );
   });
 
+  it("retires the pre-rename install only after the new files are written", () => {
+    const standalone = readSource("src-tauri/windows/installer.nsi");
+    const retire = standalone.match(
+      /^Function KaifanRetireOldName\n([\s\S]*?)^FunctionEnd/m,
+    )?.[1];
+    expect(retire).toBeDefined();
+    expect(retire).toContain('Delete "$R0\\野菜API.exe"');
+    expect(retire).toContain("Uninstall\\com.yeschoy.desktop");
+    // 只删我们自己放的文件：不递归删目录，也不碰深链登记（新旧两个都指向新程序）。
+    expect(retire).not.toMatch(/RMDir\s+\/r/);
+    expect(retire).not.toContain("Software\\Classes");
+    const main = standalone.match(
+      /^Section "安装开饭" SEC_MAIN\n([\s\S]*?)^SectionEnd/m,
+    )?.[1];
+    expect(main).toBeDefined();
+    expect(main!.trimEnd().endsWith("Call KaifanRetireOldName")).toBe(true);
+    for (const scheme of ["kaifan", "yeschoy"]) {
+      expect(main).toContain(
+        `"Software\\Classes\\${scheme}\\shell\\open\\command" "" '"$INSTDIR\\开饭.exe" "%1"'`,
+      );
+    }
+  });
+
   it("handles Tauri updater launches without an unattended directory wizard", () => {
     const standalone = readSource("src-tauri/windows/installer.nsi");
     const initialization =
@@ -83,11 +109,11 @@ describe("Windows installer localization", () => {
       initialization.indexOf("ReadRegStr"),
     );
     expect(initialization).toContain(
-      'ReadRegStr $R0 HKCU "Software\\野菜API" "InstallDir"',
+      'ReadRegStr $R0 HKCU "Software\\Kaifan" "InstallDir"',
     );
     expect(initialization).toContain('${GetOptions} $R0 "/UPDATE" $R1');
     expect(initialization).toContain(
-      "IfErrors yeschoy_manual_install\n  SetSilent silent",
+      "IfErrors kaifan_manual_install\n  SetSilent silent",
     );
   });
 
@@ -96,10 +122,10 @@ describe("Windows installer localization", () => {
 
     expect(standalone).toContain("Function .onInstSuccess");
     expect(standalone).toContain(
-      'ExecShell "open" "$INSTDIR\\野菜API.exe" "" SW_SHOWNORMAL',
+      'ExecShell "open" "$INSTDIR\\开饭.exe" "" SW_SHOWNORMAL',
     );
     expect(standalone).toContain("This also covers silent/manual upgrades");
-    expect(standalone).not.toContain("Exec '\"$INSTDIR\\野菜API.exe\"'");
+    expect(standalone).not.toContain("Exec '\"$INSTDIR\\开饭.exe\"'");
     expect(standalone).not.toContain("MUI_FINISHPAGE_RUN");
   });
 });

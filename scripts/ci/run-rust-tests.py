@@ -17,7 +17,7 @@ for stream in (sys.stdout, sys.stderr):
 
 
 ROOT = Path(__file__).resolve().parents[2]
-LIBRARY = "yeschoy_desktop_lib"
+LIBRARY = "kaifan_desktop_lib"
 REQUIRED_TESTS = frozenset(
     {
         "connectivity_core::tests::diagnostics_contract_catalog_is_exact_and_fixed_to_tls_port",

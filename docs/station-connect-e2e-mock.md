@@ -125,7 +125,7 @@ curl -s -H "Host: connect.localtest.me" -H 'Content-Type: application/json' \
 
 ## T5 desktop acceptance (scripted)
 
-After exchange installs a session, the desktop emits `yeschoy://station-connect-progress`
+After exchange installs a session, the desktop emits `kaifan://station-connect-progress`
 and runs the same `account_inspect_v2` projection path as device-code login success.
 Run:
 

@@ -10,7 +10,7 @@ import {
   REFERENCE_STATION_ORIGIN,
 } from "../distribution/identity";
 
-export const STATION_ORIGIN_DRAFT_KEY = "yeschoy.stationConnectOriginDraft";
+export const STATION_ORIGIN_DRAFT_KEY = "kaifan.stationConnectOriginDraft";
 
 /**
  * Initial home-field value: saved draft first.

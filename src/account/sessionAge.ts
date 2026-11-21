@@ -5,7 +5,7 @@ export const SESSION_WARN_AFTER_DAYS = 25;
 export const SESSION_REAUTH_AFTER_DAYS = 80;
 export const DAY_MS = 24 * 60 * 60 * 1000;
 
-const STORAGE_KEY = "yeschoy.account.sessionAge.v1";
+const STORAGE_KEY = "kaifan.account.sessionAge.v1";
 
 export interface SessionAgeRecord {
   authorizedAtEpochMs: number;

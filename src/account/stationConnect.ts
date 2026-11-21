@@ -1,5 +1,5 @@
 export const STATION_CONNECT_PROGRESS_EVENT =
-  "yeschoy://station-connect-progress";
+  "kaifan://station-connect-progress";
 
 export type StationConnectPhase =
   | "connecting"
@@ -66,4 +66,4 @@ export function decodeStationConnectProgress(
 }
 
 /** 界面的监听就绪后发给原生侧：请它把还在等确认的站点重发一次。 */
-export const STATION_TRUST_SYNC_EVENT = "yeschoy://station-trust-sync";
+export const STATION_TRUST_SYNC_EVENT = "kaifan://station-trust-sync";

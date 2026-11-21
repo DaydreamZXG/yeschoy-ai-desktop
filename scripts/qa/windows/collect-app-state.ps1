@@ -5,7 +5,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$knownExecutables = @('yeschoy-desktop.exe', 'CC Switch.exe', 'cc-switch.exe')
+$knownExecutables = @('kaifan-desktop.exe', '开饭.exe', 'yeschoy-desktop.exe', '野菜API.exe', 'CC Switch.exe', 'cc-switch.exe')
 $userProgramRoot = 'C:\Users\yeschoyqa\AppData\Local\Programs\'
 $processes = @(
     Get-CimInstance Win32_Process |

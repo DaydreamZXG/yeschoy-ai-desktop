@@ -1,7 +1,7 @@
 {
-  "name": "yeschoy-desktop",
+  "name": "kaifan-desktop",
   "version": "0.5.1",
-  "description": "Official beginner-friendly desktop assistant for 野菜API",
+  "description": "开饭 Kaifan: connect your AI apps to any relay station, no command line",
   "type": "module",
   "scripts": {
     "dev": "pnpm tauri dev",
@@ -20,7 +20,7 @@
     "verify:catalog": "node scripts/qa/verify-model-catalog.mjs"
   },
   "keywords": [],
-  "author": "YesChoy",
+  "author": "Kaifan contributors",
   "license": "MIT",
   "packageManager": "pnpm@10.12.3",
   "devDependencies": {

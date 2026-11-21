@@ -4,7 +4,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "野菜API",
+        "title": "开饭",
         "visible": true,
         "minWidth": 860,
         "minHeight": 640

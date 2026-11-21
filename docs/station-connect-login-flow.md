@@ -42,7 +42,7 @@ Draft origin is stored in `localStorage` key **`yeschoy.stationConnectOriginDraf
 | Desktop receive | **`parse_station_connect_from_argv`** / deep-link plugin (`src-tauri/src/station_connect.rs`) → **`run_station_connect_exchange`**. |
 | Exchange | **`exchange_connect_code`** (`station_connect_exchange.rs`) `POST …/connect-codes/exchange` on the station origin. |
 | Install session | **`install_station_connect_session`** (`account_v2.rs`) writes keyring + runtime; **`account_project_line_after_connect`** runs inspect for UI. |
-| Renderer feedback | Event **`yeschoy://station-connect-progress`** → **`useStationConnect`** (`src/account/useStationConnect.ts`) toast + **`accountSession.refresh()`**. |
+| Renderer feedback | Event **`kaifan://station-connect-progress`** → **`useStationConnect`** (`src/account/useStationConnect.ts`) toast + **`accountSession.refresh()`**. |
 
 ## 4)「网页登录」/ device authorization (still present)
 

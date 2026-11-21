@@ -107,7 +107,7 @@ export async function followAnnouncement(
  * 读过哪些公告只是这台电脑上的一点便利（换台电脑再看一遍无妨），
  * 所以放 localStorage；读写失败就当全部未读，绝不影响页面。
  */
-const SEEN_KEY = "yeschoy.announcements.seen.v1";
+const SEEN_KEY = "kaifan.announcements.seen.v1";
 const SEEN_LIMIT = 200;
 
 export function readSeenAnnouncements(): Set<string> {

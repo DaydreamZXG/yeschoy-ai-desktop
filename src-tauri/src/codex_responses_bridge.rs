@@ -287,7 +287,7 @@ async fn responses(state: &BridgeState, request: Request<Body>) -> Response {
                 format!(
                     "{model} is not in the model list this app was connected with, and \
                      each key only covers the models in its own billing group. Open \
-                     野菜API, add {model} to the list, and apply the connection again."
+                     Kaifan (开饭), add {model} to the list, and connect this app again."
                 ),
             );
         }
@@ -918,7 +918,7 @@ mod tests {
         // 点名是哪个模型，并说清回哪儿改 —— 中转那句「This token has no access」
         // 技术上正确，但用户拿它什么也做不了。
         assert!(text.contains("deepseek-v4.1-flash"), "{text}");
-        assert!(text.contains("野菜API"), "{text}");
+        assert!(text.contains("Kaifan"), "{text}");
         // 而且根本没往上游发 —— 那一趟的结果是确定的。
         assert!(seen.try_recv().is_err());
     }
@@ -1185,7 +1185,7 @@ mod tests {
             TcpListener::bind(codex_desktop::PROXY_ADDRESS)
                 .await
                 .is_ok(),
-            "{} 被占用了。桥的地址是常量，夹具换不了端口 —— 关掉野菜API 再跑。",
+            "{} 被占用了。桥的地址是常量，夹具换不了端口 —— 关掉开饭再跑。",
             codex_desktop::PROXY_ADDRESS
         );
 

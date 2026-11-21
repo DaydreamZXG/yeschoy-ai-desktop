@@ -4,7 +4,7 @@ import type {
 } from "../configuration/preview";
 import { isAccountLineId } from "../configuration/preview";
 
-const STORAGE_KEY = "yeschoy.accountLinePreference";
+const STORAGE_KEY = "kaifan.accountLinePreference";
 
 export function readAccountLinePreference(): AccountLineId | null {
   try {

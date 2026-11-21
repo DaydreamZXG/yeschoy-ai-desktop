@@ -103,7 +103,7 @@ describe("sessionAge 本地记账", () => {
       JSON.stringify({ authorizedAtEpochMs: -1, lastUsedAtEpochMs: -1 }),
       JSON.stringify({ authorizedAtEpochMs: 1.5, lastUsedAtEpochMs: 2 }),
     ]) {
-      storage.setItem("yeschoy.account.sessionAge.v1", bad);
+      storage.setItem("kaifan.account.sessionAge.v1", bad);
       expect(readSessionAgeRecord(storage)).toBeNull();
     }
   });

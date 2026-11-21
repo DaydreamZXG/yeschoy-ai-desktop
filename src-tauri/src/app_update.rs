@@ -13,7 +13,7 @@ use tauri_plugin_updater::{Error as UpdaterError, Update, UpdaterExt};
 
 use crate::{drain_desktop_runtimes, shutdown_coordinator::global as shutdown};
 
-const UPDATE_PROGRESS_EVENT: &str = "yeschoy://update-progress";
+const UPDATE_PROGRESS_EVENT: &str = "kaifan://update-progress";
 const CHECK_TIMEOUT: Duration = Duration::from_secs(12);
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 const PROGRESS_INTERVAL: Duration = Duration::from_millis(250);
