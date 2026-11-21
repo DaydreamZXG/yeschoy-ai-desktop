@@ -1715,7 +1715,8 @@
       "open": "Open {{app}} ➜",
       "opening": "Opening {{app}}…",
       "openedTerminal": "A terminal window is open with {{app}} in it — just start using it",
-      "openFailed": "Couldn't open {{app}} for you. It's already set up, so opening it yourself works just the same"
+      "openFailed": "Couldn't open {{app}} for you. It's already set up, so opening it yourself works just the same",
+      "skipped": "Also, {{models}} could not be added: the station doesn't allow this account to use it. Everything else is unaffected."
     }
   }
 }

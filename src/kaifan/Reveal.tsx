@@ -95,6 +95,15 @@ export function Reveal({ joined, opening, openFailed, onOpen, onHome }: Props) {
                 { app: appName },
               )}
             </span>
+            {joined.skipped.length > 0 && (
+              <em>
+                {t("kaifan.reveal.skipped", {
+                  models: joined.skipped
+                    .map(modelDisplayName)
+                    .join(t("kaifan.listSeparator")),
+                })}
+              </em>
+            )}
             <small>
               {t("kaifan.reveal.via", {
                 name,

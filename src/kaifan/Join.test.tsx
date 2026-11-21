@@ -152,6 +152,7 @@ describe("接入：选应用、选人、点一下", () => {
       who: "ds",
       modelId: "deepseek-v4-flash",
       opened: true,
+      skipped: [],
     });
     expect(props.onSettled).toHaveBeenCalled();
   });
@@ -264,6 +265,36 @@ describe("接入：选应用、选人、点一下", () => {
     fireEvent.click(screen.getByRole("button", { name: /收起官方登录/ }));
     await waitFor(() => expect(activate).toHaveBeenCalledTimes(2));
     expect(activate.mock.calls[1][0].displaceClaudeLogin).toBe(true);
+  });
+
+  it("默认的接上了、名单里另一个被站点拒了：把被拒的带给登场那一屏", async () => {
+    const props = setup();
+    await ready();
+    activate.mockImplementationOnce(
+      async (input) =>
+        ({
+          requestId: "r",
+          schemaVersion: 5,
+          toolId: input.toolId,
+          modelId: input.modelId,
+          billingGroup: input.billingGroup,
+          status: "ready",
+          reasonCode: "configuration_ready",
+          models: input.models,
+          skipped: [
+            {
+              modelId: "deepseek-v4",
+              billingGroup: "vip",
+              reasonCode: "server_unavailable",
+            },
+          ],
+        }) as unknown as ToolActivationProjection,
+    );
+    fireEvent.click(go());
+    await waitFor(() => expect(props.onJoined).toHaveBeenCalled());
+    expect(props.onJoined).toHaveBeenCalledWith(
+      expect.objectContaining({ opened: true, skipped: ["deepseek-v4"] }),
+    );
   });
 
   it("设置写好但没能打开：照样登场，但不说已经打开", async () => {
@@ -403,6 +434,7 @@ describe("角色登场", () => {
     who: "cla" as const,
     modelId: "claude-sonnet-4-5-20250929",
     opened: true,
+    skipped: [] as string[],
   };
   const show = (patch: Partial<Parameters<typeof Reveal>[0]> = {}) => {
     const props = {
@@ -448,6 +480,13 @@ describe("角色登场", () => {
   it("终端里用的应用：说的是终端窗口", () => {
     show({ joined: { ...joined, toolId: "claude_code" } });
     expect(screen.getByTestId("kaifan-reveal")).toHaveTextContent("终端窗口");
+  });
+
+  it("名单里有型号这次没接上：要说出来，不当作全成了", () => {
+    show({ joined: { ...joined, skipped: ["deepseek-v4-flash"] } });
+    expect(screen.getByTestId("kaifan-reveal")).toHaveTextContent(
+      /DeepSeek.*这次没接上/,
+    );
   });
 
   it("没有刚接好的就不出现", () => {

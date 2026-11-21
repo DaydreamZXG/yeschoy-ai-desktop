@@ -39,6 +39,8 @@ export interface Joined {
   modelId: string;
   /** 应用有没有替用户打开。没打开时照实说，不说成「已经在用了」。 */
   opened: boolean;
+  /** 名单里这次没接上的型号（站点没让用）。有就要告诉用户，不能当作全成了。 */
+  skipped: string[];
 }
 
 interface Props {
@@ -237,6 +239,9 @@ export function Join({
         who,
         modelId,
         opened: next.kind === "done",
+        skipped: [
+          ...new Set((result.skipped ?? []).map((item) => item.modelId)),
+        ],
       });
       return;
     }
