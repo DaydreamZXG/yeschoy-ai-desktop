@@ -1692,6 +1692,19 @@ dialog.restore-dialog menu {
     transform: none;
   }
 }
+/* 关了动效的人没有入场动画，登场的人和字要直接在场，不能停在动画的起点。 */
+@media (prefers-reduced-motion: reduce) {
+  .rv-bg,
+  .rv-g,
+  .rv-art img,
+  .rv-txt > * {
+    opacity: 1;
+    transform: none;
+  }
+  .rv-bar {
+    display: none;
+  }
+}
 .rv-k {
   font: 600 1.7vh var(--mono);
   letter-spacing: 0.5em;
