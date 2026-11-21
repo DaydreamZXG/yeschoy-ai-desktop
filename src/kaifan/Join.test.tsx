@@ -1015,22 +1015,36 @@ describe("接入：连的是云厂商", () => {
   });
 
   it("这家不认这个应用：说清楚，不让点，也不发给后端", async () => {
+    found([target("claude_desktop"), target("workbuddy")]);
     setup({
       preset: vendor({
         id: "opencode_go",
         family: "opencode_go",
         name: "OpenCode Go",
-        onlyTools: ["opencode"],
+        onlyTools: [
+          "opencode",
+          "codex_desktop",
+          "claude_desktop",
+          "claude_code",
+          "pi",
+        ],
       }),
+      initialApp: "workbuddy",
     });
     await waitFor(() =>
       expect(screen.getByTestId("kaifan-join-barred")).toHaveTextContent(
-        /OpenCode Go 只认 OpenCode，.*接不了/,
+        /WorkBuddy 暂时接不了 OpenCode Go.*改选 OpenCode、Codex.*、Claude Desktop、Claude Code、Pi/,
       ),
     );
     expect(go()).toBeDisabled();
     expect(screen.queryByTestId("kaifan-join-plan-risk")).toBeNull();
     expect(activate).not.toHaveBeenCalled();
+
+    // 开饭能替它带上标记的应用：照常能接。
+    fireEvent.click(screen.getByRole("button", { name: /^Claude Desktop/ }));
+    expect(screen.queryByTestId("kaifan-join-barred")).toBeNull();
+    await ready();
+    expect(screen.getByTestId("kaifan-join-plan-risk")).toBeTruthy();
   });
 });
 

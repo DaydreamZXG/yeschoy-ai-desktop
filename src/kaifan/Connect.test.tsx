@@ -73,7 +73,13 @@ const PRESETS = [
     family: "opencode_go",
     name: "OpenCode Go",
     origin: "https://opencode.ai",
-    onlyTools: ["opencode"],
+    onlyTools: [
+      "opencode",
+      "codex_desktop",
+      "claude_desktop",
+      "claude_code",
+      "pi",
+    ],
     common: false,
   }),
 ];
@@ -415,7 +421,7 @@ describe("连接站点", () => {
       expect(screen.queryByTestId("kaifan-connect-limits")).toBeNull();
     });
 
-    it("没法提前核对密钥的、只认某个应用的，连之前就说", async () => {
+    it("没法提前核对密钥的、有的应用接不了的，连之前就说", async () => {
       withVendors();
       setup();
       fireEvent.click(await vendor(/还有 2 家/));
@@ -428,7 +434,7 @@ describe("连接站点", () => {
       // 回来时刚才展开的还展开着，不用再点一次。
       fireEvent.click(screen.getByRole("button", { name: /OpenCode Go/ }));
       expect(screen.getByTestId("kaifan-connect-limits")).toHaveTextContent(
-        "只认 OpenCode",
+        "这家能接 OpenCode、Codex（桌面版 / 命令行）、Claude Desktop、Claude Code、Pi，别的应用暂时接不了",
       );
     });
 

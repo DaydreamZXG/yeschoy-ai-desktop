@@ -342,7 +342,7 @@
       "planRiskTitle": "To be clear: a plan can be suspended",
       "planRisk": "{{name}} is a monthly plan, and the provider says it may only be used in the coding tools it approves. Kaifan passes each request along on the app's behalf, so the provider may treat this as a violation and limit or cancel your plan without a refund. If that worries you, use a pay-as-you-go key instead.",
       "paygNote": "The key is stored only in this computer's system keychain. Connected straight to a provider, balance and news aren't visible, and I'll say so plainly where they aren't.",
-      "onlyTools": "This provider only works with {{apps}}; other apps can't use it.",
+      "onlyTools": "This provider works with {{apps}}; other apps can't be connected for now.",
       "listJoin": ", ",
       "unverifiable": "This provider's key can't be checked in advance: a mistyped key still shows as connected and only fails on first use. Please double-check what you paste.",
       "urlEmpty": "The address is still empty. Paste the station's address so I can take a look.",
@@ -402,7 +402,7 @@
     },
     "join": {
       "planRisk": "You're connected to {{vendor}}, a monthly plan. The provider only allows it in coding tools it approves, and Kaifan passes requests along on {{app}}'s behalf, so the provider may limit or cancel the plan.",
-      "onlyTools": "{{vendor}} only works with {{apps}}, so {{app}} can't be connected. Pick {{apps}} above, or connect a different station.",
+      "onlyTools": "{{app}} can't be connected to {{vendor}} for now: {{vendor}} requires a marker on every request, {{app}} doesn't send one, and because it talks to the provider directly Kaifan can't add it. Pick {{apps}} above, or connect a different station.",
       "title": "Who goes where?",
       "sub": "Pick an app, pick someone, and she handles the rest.",
       "whichApp": "Which app",
