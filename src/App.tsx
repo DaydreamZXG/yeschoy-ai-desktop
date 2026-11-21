@@ -6,11 +6,15 @@ import { Toaster, toast } from "sonner";
 import { WorkbenchSidebar, type AppView } from "./workbench/WorkbenchChrome";
 import { refreshModelCatalog } from "./model-profiles/remoteCatalog";
 import { useAppearance } from "./workbench/appearance";
+import { CLASSIC_START } from "./uiChoice";
 import { AccountView } from "./workbench/AccountView";
 import { ModelsView } from "./workbench/ModelsView";
 import { AppLibraryView } from "./workbench/AppLibraryView";
 import { ConfigurationPreviewView } from "./configuration/ConfigurationPreviewView";
-import type { ActivationToolId } from "./configuration/activation";
+import {
+  ACTIVATION_TOOL_IDS,
+  type ActivationToolId,
+} from "./configuration/activation";
 import type { SetupIntent } from "./configuration/setupIntent";
 import {
   ConnectionProvider,
@@ -73,9 +77,13 @@ type ViewPhase =
 
 function App() {
   const { t } = useTranslation();
-  const [view, setView] = useState<AppView>("home");
+  // 从新界面点进来时，直接落在要看的那一页。
+  const [view, setView] = useState<AppView>(CLASSIC_START.view ?? "home");
   const [selectedDesktopApp, setSelectedDesktopApp] =
-    useState<ActivationToolId>("claude_desktop");
+    useState<ActivationToolId>(
+      ACTIVATION_TOOL_IDS.find((id) => id === CLASSIC_START.app) ??
+        "claude_desktop",
+    );
   const [setupIntent, setSetupIntent] = useState<SetupIntent>();
   const connections = useToolConnections();
   const [setupVisited, setSetupVisited] = useState(false);

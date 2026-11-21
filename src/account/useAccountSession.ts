@@ -5,10 +5,7 @@ import {
   readCachedSignedInProjection,
   writeCachedSignedInProjection,
 } from "./accountProjectionCache";
-import {
-  clearSessionAgeRecord,
-  noteSessionActivity,
-} from "./sessionAge";
+import { clearSessionAgeRecord, noteSessionActivity } from "./sessionAge";
 import {
   idleSignedOutProjection,
   openAccountWallet,
@@ -178,13 +175,21 @@ export function useAccountSession(
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const pending =
-        projectionRef.current?.status === "authorization_pending";
+      const pending = projectionRef.current?.status === "authorization_pending";
       if (pending) {
         await execute("account_poll_authorization_v2");
         return;
       }
-      const snapshot = await readAccountSessionSnapshot();
+      let snapshot: Awaited<ReturnType<typeof readAccountSessionSnapshot>>;
+      try {
+        snapshot = await readAccountSessionSnapshot();
+      } catch {
+        // 连本机的后台都没回话：照实报失败，别让界面一直停在「正在检查」。
+        if (cancelled) return;
+        setLoading(false);
+        setLastError("network_error");
+        return;
+      }
       if (cancelled) return;
       options?.onSessionSnapshot?.(snapshot);
       if (!snapshot.hasStoredSession) {
