@@ -138,7 +138,8 @@ fn messages_probe_body(model: &str) -> Value {
 }
 
 /// 和真实请求用同一种认证方式探：Claude Desktop 发 Bearer，Claude Code 发
-/// `x-api-key`（见 `claude_bridge::send_upstream`）。换一种方式探出来的结论
+/// `x-api-key`，只认 Bearer 的厂商两个都发 Bearer（见
+/// `claude_bridge::send_upstream`）。换一种方式探出来的结论
 /// 不能代表应用真正发出去的那一种。
 async fn probe_messages_once(
     client: &reqwest::Client,
@@ -155,11 +156,12 @@ async fn probe_messages_once(
         .post(url)
         .header("anthropic-version", "2023-06-01")
         .json(&messages_probe_body(model));
-    let request = if tool_id == "claude_desktop" {
-        request.bearer_auth(key)
-    } else {
-        request.header("x-api-key", key)
-    };
+    let request =
+        if tool_id == "claude_desktop" || crate::provider_presets::anthropic_bearer(origin) {
+            request.bearer_auth(key)
+        } else {
+            request.header("x-api-key", key)
+        };
     match tokio::time::timeout(PROBE_ATTEMPT_BUDGET, request.send()).await {
         Ok(Ok(response)) => probe_outcome_for(response.status()),
         _ => ProbeOutcome::Inconclusive,

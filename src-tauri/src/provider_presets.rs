@@ -40,6 +40,9 @@ pub(crate) struct Preset {
     openai_path: &'static str,
     #[serde(skip)]
     anthropic_path: Option<&'static str>,
+    /// Anthropic 格式的地址只认 `Authorization: Bearer`，不认 `x-api-key`。
+    #[serde(skip)]
+    anthropic_bearer: bool,
     pub(crate) billing: Billing,
     pub(crate) key_check: KeyCheck,
     /// 站点自己就有 Codex 要的 Responses 接口。没有的由本机桥转成 Chat。
@@ -77,6 +80,7 @@ const fn preset(
         origin,
         openai_path,
         anthropic_path,
+        anthropic_bearer: false,
         billing,
         key_check: KeyCheck::Models,
         responses: false,
@@ -126,6 +130,8 @@ pub(crate) const PRESETS: &[Preset] = &[
     ),
     Preset {
         common: false,
+        // 官方接入文档在这个地址上配的就是 `openai-responses`。
+        responses: true,
         ..preset(
             "volcengine_coding",
             "volcengine_coding",
@@ -154,7 +160,10 @@ pub(crate) const PRESETS: &[Preset] = &[
         )
     },
     Preset {
-        key_check: KeyCheck::Unverifiable,
+        // 模型名单不要密钥也给看；查余额的地址只认密钥，不花钱。
+        key_check: KeyCheck::Path("/api/balance"),
+        // 官方文档：云端的 `/v1/messages` 只认 Bearer，单带 `x-api-key` 不行。
+        anthropic_bearer: true,
         ..preset(
             "ollama_cloud",
             "ollama_cloud",
@@ -288,6 +297,12 @@ pub(crate) fn anthropic_base(origin: &str) -> Option<String> {
     }
 }
 
+/// 这一家的 Anthropic 地址是不是只认 `Authorization: Bearer`。表里没有的站点
+/// 照旧：Claude Code 带 `x-api-key`。
+pub(crate) fn anthropic_bearer(origin: &str) -> bool {
+    for_origin(origin).is_some_and(|preset| preset.anthropic_bearer)
+}
+
 /// 这一家要求带的会话标记叫什么。表里没有的站点、不要求的厂商都是 `None`。
 pub(crate) fn session_header(origin: &str) -> Option<&'static str> {
     for_origin(origin.trim_end_matches('/'))?.session_header
@@ -345,6 +360,24 @@ mod tests {
                 assert!(!path.ends_with('/'), "{}", preset.id);
             }
         }
+    }
+
+    /// 对着官方文档定的三件事（2026-11）：Ollama Cloud 用查余额的地址核对
+    /// 密钥；火山方舟套餐有 Codex 要的 Responses 接口；没法核对的只剩百炼。
+    #[test]
+    fn what_the_vendors_documents_say_is_what_the_table_says() {
+        let by_id = |id: &str| PRESETS.iter().find(|preset| preset.id == id).unwrap();
+        assert_eq!(
+            by_id("ollama_cloud").key_check,
+            KeyCheck::Path("/api/balance")
+        );
+        assert!(by_id("volcengine_coding").responses);
+        let unverifiable: Vec<_> = PRESETS
+            .iter()
+            .filter(|preset| preset.key_check == KeyCheck::Unverifiable)
+            .map(|preset| preset.id)
+            .collect();
+        assert_eq!(unverifiable, ["bailian_coding"]);
     }
 
     #[test]
