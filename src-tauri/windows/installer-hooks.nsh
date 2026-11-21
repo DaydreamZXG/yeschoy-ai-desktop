@@ -15,6 +15,7 @@ Var KaifanRegisteredRoot
 Var KaifanOldRegisteredRoot
 Var KaifanTauriRegisteredRoot
 Var KaifanWaitTicks
+Var KaifanSafeExitRequested
 
 ; Returns 0 when a missing/existing file can be replaced, and 1 when Windows
 ; still has the executable mapped or the installer cannot obtain write access.
@@ -208,15 +209,25 @@ kaifan_check_running:
   MessageBox MB_ICONEXCLAMATION|MB_OKCANCEL "检测到开饭（或它改名前的旧版“野菜API”）仍在运行。请先保存正在进行的操作。点击“确定”后，安装程序会先等待应用安全退出；如果旧版不支持安全退出，会自动结束对应的已安装程序，然后继续升级。" IDOK kaifan_request_safe_exit IDCANCEL kaifan_cancel
 
 kaifan_request_safe_exit:
+  ; 开饭和改名前的旧版可能同时开着，各听各的事件：两个都要通知到。
+  StrCpy $KaifanSafeExitRequested 0
   System::Call 'kernel32::OpenEventW(i 0x0002, i 0, w "${KAIFAN_INSTALLER_SHUTDOWN_EVENT}") p.r0'
-  StrCmp $0 0 0 kaifan_signal_safe_exit
-  System::Call 'kernel32::OpenEventW(i 0x0002, i 0, w "${KAIFAN_OLD_INSTALLER_SHUTDOWN_EVENT}") p.r0'
-  StrCmp $0 0 kaifan_force_exit
-
-kaifan_signal_safe_exit:
+  StrCmp $0 0 kaifan_request_old_safe_exit
   System::Call 'kernel32::SetEvent(p r0) i.r1'
   System::Call 'kernel32::CloseHandle(p r0)'
-  StrCmp $1 0 kaifan_force_exit
+  StrCmp $1 0 kaifan_request_old_safe_exit
+  StrCpy $KaifanSafeExitRequested 1
+
+kaifan_request_old_safe_exit:
+  System::Call 'kernel32::OpenEventW(i 0x0002, i 0, w "${KAIFAN_OLD_INSTALLER_SHUTDOWN_EVENT}") p.r0'
+  StrCmp $0 0 kaifan_safe_exit_requested
+  System::Call 'kernel32::SetEvent(p r0) i.r1'
+  System::Call 'kernel32::CloseHandle(p r0)'
+  StrCmp $1 0 kaifan_safe_exit_requested
+  StrCpy $KaifanSafeExitRequested 1
+
+kaifan_safe_exit_requested:
+  StrCmp $KaifanSafeExitRequested 0 kaifan_force_exit
 
   ; Current versions may be finishing an atomic configuration write. Allow up
   ; to 25 seconds for their cooperative shutdown before using the OS fallback.

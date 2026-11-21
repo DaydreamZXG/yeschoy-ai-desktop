@@ -41,6 +41,16 @@ describe("Windows installer localization", () => {
     expect(hook).toContain("CreateFileW");
     // 改名前的客户端等的是旧名字；安装器两个都发。
     expect(hook).toContain("Local\\YesChoyDesktopInstallerShutdown_v1");
+    // 新旧两个都开着时，各自都要收到通知，不能通知了一个就不管另一个。
+    const request = hook.slice(
+      hook.indexOf("kaifan_request_safe_exit:"),
+      hook.indexOf("kaifan_safe_exit_requested:"),
+    );
+    expect(request.match(/kernel32::SetEvent/g)).toHaveLength(2);
+    expect(request.indexOf("${KAIFAN_INSTALLER_SHUTDOWN_EVENT}")).toBeLessThan(
+      request.indexOf("${KAIFAN_OLD_INSTALLER_SHUTDOWN_EVENT}"),
+    );
+    expect(request).not.toContain("kaifan_force_exit");
     expect(hook).toContain("$LOCALAPPDATA\\Programs\\开饭");
     expect(hook).toContain("开饭.exe");
     expect(hook).toContain("kaifan-desktop.exe");
