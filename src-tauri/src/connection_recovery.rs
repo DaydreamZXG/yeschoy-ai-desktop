@@ -929,7 +929,13 @@ pub(crate) fn restore_bytes(
         &mut restored,
         &mut preserved,
     );
-    crate::tool_adapters::openclaw::settle_restored(&before, &after, &mut restored);
+    crate::tool_adapters::openclaw::settle_restored(
+        &before,
+        &after,
+        &now,
+        &mut restored,
+        &mut preserved,
+    );
     if restored == now || restored == touched {
         return Ok((current.map(Vec::from), preserved));
     }
@@ -2268,6 +2274,45 @@ mod tests {
             document(&file.path, bytes.as_deref()).unwrap(),
             json!({ "gateway": { "port": 19000 } })
         );
+    }
+
+    /// 接入时这份设置里还没有 `models`、`agents`：这两段是我们建的，改回原样
+    /// 会整段拿走。用户之后加在里面的东西不是我们的，得留下。
+    #[test]
+    fn openclaw_restore_keeps_what_was_added_inside_sections_we_created() {
+        use crate::tool_adapters::openclaw;
+        let f = Fixture::new();
+        let token = format!("ycg-{}", "a".repeat(64));
+        let models = ["glm-5.3".to_owned(), "kimi-k3".to_owned()];
+        let mine = json!({ "baseUrl": "https://api.openai.com/v1", "models": [] });
+        for original in [
+            None,
+            Some(br#"{ "gateway": { "port": 18789 } }"#.as_slice()),
+        ] {
+            let after = openclaw::render(original, "glm-5.3", &models, &token).unwrap();
+            let file = f.change(".openclaw/openclaw.json", original, &after);
+            let mut expected = document(&file.path, original).unwrap();
+
+            // 加了一家别的厂商、一个工作区；我们写的那些一个字没动。
+            let mut later = document(&file.path, Some(&after)).unwrap();
+            later["models"]["providers"]["openai"] = mine.clone();
+            later["agents"]["defaults"]["workspace"] = json!("~/work");
+            let (bytes, kept) = restore_bytes(&file, Some(later.to_string().as_bytes())).unwrap();
+            assert!(kept);
+            expected["models"] = json!({ "providers": { "openai": mine } });
+            expected["agents"] = json!({ "defaults": { "workspace": "~/work" } });
+            assert_eq!(document(&file.path, bytes.as_deref()).unwrap(), expected);
+
+            // 用 `openclaw models set` 挑了我们的另一个型号：它还会记一条别名、
+            // 盖一个 `meta` 戳。别名跟着我们那一家走，`meta` 是它的，留着。
+            let mut picked = later.clone();
+            picked["agents"]["defaults"]["model"] = json!("kaifan/kimi-k3");
+            picked["agents"]["defaults"]["models"] = json!({ "kaifan/kimi-k3": {} });
+            picked["meta"] = json!({ "lastTouchedVersion": "2026.11.6" });
+            let (bytes, _) = restore_bytes(&file, Some(picked.to_string().as_bytes())).unwrap();
+            expected["meta"] = json!({ "lastTouchedVersion": "2026.11.6" });
+            assert_eq!(document(&file.path, bytes.as_deref()).unwrap(), expected);
+        }
     }
 
     #[test]

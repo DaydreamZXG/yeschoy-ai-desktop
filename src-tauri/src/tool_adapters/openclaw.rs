@@ -288,14 +288,64 @@ fn prepare_at(
     })
 }
 
-/// 改回原样时，按「我们改了什么就改回什么」合并完之后收个尾：我们那一家已经
-/// 拿走了，可用户之后在 OpenClaw 里挑过我们的另一个型号，主型号就还指着一家
-/// 不存在的厂商，OpenClaw 会起不来对话。这种就换回接入前的那个；白名单里
-/// 我们加的那一项也一并拿走。别的都不动。
-pub(crate) fn settle_restored(before: &Value, ours: &Value, restored: &mut Value) {
+/// `now` 里有、而我们从没写过的那些键（用户或 OpenClaw 之后加的），`restored`
+/// 里没了就补回去。返回有没有补。
+fn keep_added(ours: &Value, now: &Value, restored: &mut Value) -> bool {
+    let (Some(ours), Some(now)) = (ours.as_object(), now.as_object()) else {
+        return false;
+    };
+    let mut kept = false;
+    for (key, current) in now {
+        match ours.get(key) {
+            None => {
+                if let Some(result) = restored.as_object_mut() {
+                    if !result.contains_key(key) {
+                        result.insert(key.clone(), current.clone());
+                        kept = true;
+                    }
+                }
+            }
+            Some(written) => {
+                let mut inner = restored.get(key).cloned().unwrap_or(Value::Null);
+                let missing = inner.is_null();
+                if missing {
+                    inner = Value::Object(Map::new());
+                }
+                if inner.is_object() && keep_added(written, current, &mut inner) {
+                    if let Some(result) = restored.as_object_mut() {
+                        result.insert(key.clone(), inner);
+                        kept = true;
+                    }
+                }
+            }
+        }
+    }
+    kept
+}
+
+/// 改回原样时，按「我们改了什么就改回什么」合并完之后收个尾：
+/// * 接入时新建的段（原来没有 `models`、`agents`）会被整段拿走，用户之后加在
+///   里面的别家厂商、别的设置不是我们的，补回去；
+/// * 我们那一家已经拿走了，可用户之后在 OpenClaw 里挑过我们的另一个型号，
+///   主型号就还指着一家不存在的厂商，OpenClaw 会起不来对话。这种就换回接入前
+///   的那个；白名单里我们加的那一项、`openclaw models set` 顺手记下的型号别名
+///   也一并拿走。
+///
+/// 别的都不动。
+pub(crate) fn settle_restored(
+    before: &Value,
+    ours: &Value,
+    now: &Value,
+    restored: &mut Value,
+    preserved: &mut bool,
+) {
     let provider = |root: &Value| root["models"]["providers"].get(PROVIDER_ID).cloned();
     let is_this_file = provider(ours).is_some_and(|entry| entry["baseUrl"] == PROXY_BASE);
-    if !is_this_file || provider(restored).is_some() {
+    if !is_this_file {
+        return;
+    }
+    *preserved |= keep_added(ours, now, restored);
+    if provider(restored).is_some() {
         return;
     }
     let previous = before["agents"]["defaults"]["model"].clone();
@@ -336,6 +386,18 @@ pub(crate) fn settle_restored(before: &Value, ours: &Value, restored: &mut Value
             .and_then(Value::as_array_mut)
         {
             allow.retain(|entry| entry != ALLOW_ENTRY);
+        }
+    }
+    // `agents.defaults.models` 是型号的别名表，键是 `厂商/型号`。
+    let known_before = |reference: &str| {
+        before["agents"]["defaults"]["models"]
+            .get(reference)
+            .is_some()
+    };
+    if let Some(aliases) = defaults.get_mut("models").and_then(Value::as_object_mut) {
+        aliases.retain(|reference, _| !is_ours(reference) || known_before(reference));
+        if aliases.is_empty() && before["agents"]["defaults"].get("models").is_none() {
+            defaults.remove("models");
         }
     }
     if defaults.is_empty() {
