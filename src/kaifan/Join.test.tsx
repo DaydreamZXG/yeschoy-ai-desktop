@@ -993,9 +993,9 @@ describe("接入：应用多了不堆在一起", () => {
     setup({
       // 后端给的名单里每个应用都有一行，没接过的写着 not_connected。
       connections: [
-        { toolId: "workbuddy", state: "connected" } as ToolConnection,
+        { toolId: "dsh_desktop", state: "connected" } as ToolConnection,
+        { toolId: "workbuddy", state: "not_connected" } as ToolConnection,
         { toolId: "pi", state: "not_connected" } as ToolConnection,
-        { toolId: "dsh_desktop", state: "not_connected" } as ToolConnection,
         { toolId: "dsh_web", state: "not_connected" } as ToolConnection,
       ],
     });
@@ -1006,16 +1006,16 @@ describe("接入：应用多了不堆在一起", () => {
       /^OpenCode/,
       /^Claude Code/,
       /^WorkBuddy/,
+      /^Pi/,
+      /^DeepSeek Harness/,
     ])
       expect(chip(name)).not.toBeNull();
-    for (const name of [/^DeepSeek Harness/, /^DSH web/, /^Pi/])
-      expect(chip(name)).toBeNull();
+    for (const name of [/^DSH web/]) expect(chip(name)).toBeNull();
 
-    const fold = screen.getByRole("button", { name: /不常用的还有 3 个/ });
+    const fold = screen.getByRole("button", { name: /还有 1 个/ });
     expect(fold).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(fold);
-    for (const name of [/^DeepSeek Harness/, /^DSH web/, /^Pi/])
-      expect(chip(name)).not.toBeNull();
+    for (const name of [/^DSH web/]) expect(chip(name)).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /收起/ }));
     expect(chip(/^DSH web/)).toBeNull();
   });
@@ -1025,9 +1025,7 @@ describe("接入：应用多了不堆在一起", () => {
     await waitFor(() =>
       expect(chip(/^DSH web/)).toHaveAttribute("aria-pressed", "true"),
     );
-    expect(
-      screen.getByRole("button", { name: /不常用的还有 3 个/ }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: /还有 1 个/ })).toBeTruthy();
   });
 
   it("别的应用：给出要填的地址和型号，能复制；不拿密钥出来，也不去接入", async () => {

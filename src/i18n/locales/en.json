@@ -401,8 +401,8 @@
       "accept": "I know it. Connect"
     },
     "join": {
-      "moreApps_one": "{{count}} less common app ▾",
-      "moreApps_other": "{{count}} less common apps ▾",
+      "moreApps_one": "{{count}} more ▾",
+      "moreApps_other": "{{count}} more ▾",
       "lessApps": "Show fewer ▴",
       "otherApps": "Another app",
       "other": {

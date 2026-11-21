@@ -401,8 +401,8 @@
       "accept": "我认识，继续连接"
     },
     "join": {
-      "moreApps_one": "不常用的还有 {{count}} 个 ▾",
-      "moreApps_other": "不常用的还有 {{count}} 个 ▾",
+      "moreApps_one": "还有 {{count}} 个 ▾",
+      "moreApps_other": "还有 {{count}} 个 ▾",
       "lessApps": "收起 ▴",
       "otherApps": "别的应用",
       "other": {
