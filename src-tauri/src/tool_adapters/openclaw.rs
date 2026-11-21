@@ -610,12 +610,21 @@ mod tests {
         serde_json::from_slice(&bytes).unwrap()
     }
 
+    /// 测试里的路径按 unix 的样子写；Windows 上 `/srv` 不算绝对路径，补上盘符。
+    fn rooted(path: &str) -> String {
+        if cfg!(windows) && path.starts_with('/') {
+            format!("C:{path}")
+        } else {
+            path.to_owned()
+        }
+    }
+
     fn path_with(pairs: &[(&str, &str)]) -> Result<PathBuf, AdapterFailure> {
-        config_path_from(Path::new("/home/u"), |name| {
+        config_path_from(Path::new(&rooted("/home/u")), |name| {
             pairs
                 .iter()
                 .find(|(key, _)| *key == name)
-                .map(|(_, value)| OsString::from(value))
+                .map(|(_, value)| OsString::from(rooted(value)))
         })
     }
 
@@ -663,7 +672,7 @@ mod tests {
         for (variables, expected) in cases {
             assert_eq!(
                 path_with(variables).unwrap(),
-                PathBuf::from(expected),
+                PathBuf::from(rooted(expected)),
                 "{variables:?}"
             );
         }
