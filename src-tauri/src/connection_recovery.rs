@@ -1393,6 +1393,7 @@ mod tests {
     }
     fn credential() -> ToolCredential {
         ToolCredential {
+            pasted_key: false,
             api_key: "synthetic-never-a-real-key".into(),
             origin: "https://yeschoy.com".into(),
             model_id: "model-new".into(),
@@ -1849,6 +1850,7 @@ mod tests {
     fn workbuddy_legacy_clean_removes_owned_models_and_available_ids() {
         let f = Fixture::new();
         let credential = ToolCredential {
+            pasted_key: false,
             api_key: "synthetic-workbuddy-key".into(),
             origin: "https://yeschoy.com".into(),
             model_id: "gpt-6-astra".into(),

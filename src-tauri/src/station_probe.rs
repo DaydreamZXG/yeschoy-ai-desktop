@@ -141,7 +141,7 @@ pub(crate) fn model_ids(value: &Value) -> Vec<String> {
     ids
 }
 
-fn token_is_plausible(token: &str) -> bool {
+pub(crate) fn token_is_plausible(token: &str) -> bool {
     (8..=512).contains(&token.len())
         && token
             .bytes()

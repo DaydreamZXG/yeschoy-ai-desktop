@@ -14,7 +14,8 @@ export function readAccountLinePreference(): AccountLineId | null {
 }
 
 export function writeAccountLinePreference(lineId: AccountLineId): void {
-  if (lineId.startsWith("station_connect:")) return;
+  if (lineId.startsWith("station_connect:") || lineId.startsWith("station_key:"))
+    return;
   try {
     localStorage.setItem(STORAGE_KEY, lineId);
   } catch {

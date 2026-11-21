@@ -471,6 +471,7 @@ mod tests {
         let local_token = format!("ycg-{}", "a".repeat(64));
         BridgeState {
             credential: ToolCredential {
+                pasted_key: false,
                 api_key: "sk-synthetic-a".into(),
                 origin: "https://yeschoy.com".into(),
                 model_id: "kimi-k3".into(),
@@ -1219,6 +1220,7 @@ mod tests {
         // ---- 起真桥，让这个模型走转换那条路 ----
         let local_token = format!("ycg-{}", "e".repeat(64));
         let credential = ToolCredential {
+            pasted_key: false,
             api_key: key.clone(),
             origin: origin.clone(),
             model_id: model.into(),

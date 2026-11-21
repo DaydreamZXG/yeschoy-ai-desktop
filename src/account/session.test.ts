@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { decodeAccountProjection, quotaToUsd } from "./session";
+import keySession from "./fixtures/keySessionProjection.json";
+import keySessionWithBalance from "./fixtures/keySessionProjectionWithBalance.json";
 
 function signedIn(requestId = "account-test-1") {
   return {
@@ -141,6 +143,33 @@ describe("account v2 renderer boundary", () => {
         ),
       ).toBeNull();
     }
+  });
+
+  // 这两份文件由原生侧的测试逐字核对（`account_key_session.rs`）：
+  // 用令牌连接的站点没有账户数字，解码器不能因此把它当成没连上。
+  it("decodes what a pasted-key station really sends", () => {
+    const bare = decodeAccountProjection(keySession, "account-test-1");
+    expect(bare?.status).toBe("signed_in");
+    expect(bare?.reasonCode).toBe("key_session");
+    expect(bare?.models.map((model) => model.id)).toEqual([
+      "claude-sonnet-4-5",
+      "gpt-5.5",
+    ]);
+    expect(bare?.models.every((model) => !model.pricingAvailable)).toBe(true);
+    expect(bare?.account.balanceQuota).toBe("");
+    expect(bare?.money?.currency).toBe("");
+
+    const rich = decodeAccountProjection(
+      keySessionWithBalance,
+      "account-test-1",
+    );
+    expect(rich?.status).toBe("signed_in");
+    expect(rich?.account.displayName).toBe("小明的中转");
+    expect(rich?.money).toMatchObject({
+      currency: "CNY",
+      balanceAmount: "16.5",
+      consumedAmount: "3.5",
+    });
   });
 
   it("accepts a complete sanitized signed-in projection", () => {

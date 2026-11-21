@@ -517,6 +517,23 @@ export async function runAccountCommand(
   return projection;
 }
 
+/**
+ * 用粘贴的令牌连接一个站点。令牌只在这一次调用里交给原生侧，由它存进系统
+ * 密码库；返回的投影里没有令牌。
+ */
+export async function connectWithKey(
+  origin: string,
+  token: string,
+): Promise<AccountProjection> {
+  const requestId = nextAccountRequestId();
+  const raw = await invoke<unknown>("account_connect_with_key_v1", {
+    request: { requestId, origin, token },
+  });
+  const projection = decodeAccountProjection(raw, requestId);
+  if (!projection) throw new Error("invalid_account_projection");
+  return projection;
+}
+
 export async function openAccountWallet(
   lineId: AccountLineId,
 ): Promise<void> {

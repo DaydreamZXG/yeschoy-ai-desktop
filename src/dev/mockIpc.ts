@@ -305,6 +305,7 @@ const handlers: Record<string, (a: Args) => unknown> = {
     storedLineId: scenario === "signed_out" ? null : "mainland_optimized",
   }),
   account_inspect_v2: (a) => account(rid(a), scenario),
+  account_connect_with_key_v1: (a) => account(rid(a), "signed_in"),
   account_poll_authorization_v2: (a) => account(rid(a), scenario),
   account_begin_authorization_v2: (a) => account(rid(a), "signed_out"),
   account_cancel_authorization_v2: (a) => account(rid(a), "signed_out"),

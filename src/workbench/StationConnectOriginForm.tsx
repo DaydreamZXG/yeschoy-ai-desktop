@@ -16,7 +16,11 @@ import {
 } from "../account/openStationConnectPage";
 import { stationHost } from "../account/StationTrustDialog";
 import { canonicalStationHttpsOrigin } from "../../connect/stationConnectPage";
-import type { AccountLineId } from "../configuration/preview";
+import { connectWithKey } from "../account/session";
+import {
+  STATION_KEY_LINE_PREFIX,
+  type AccountLineId,
+} from "../configuration/preview";
 import {
   BUILTIN_STATION_ORIGINS,
   probeStation,
@@ -26,8 +30,12 @@ import { modelDisplayName, shortModelId } from "../model-profiles/profile";
 
 interface Props {
   onLineChange: (lineId: AccountLineId) => void;
+  /** 令牌已存好、站点已连上。此时线路可能没变（同一个站换了令牌），需要重读账户。 */
+  onKeyConnected?: () => void;
   disabled?: boolean;
 }
+
+type KeyConnectFailure = "storage" | "rejected" | "failed";
 
 /** 小白常直接粘贴后台页面地址或漏掉 https://，这里替他收拾成站点根地址。 */
 export function normalizeStationInput(raw: string): string | null {
@@ -72,10 +80,14 @@ async function probeWithDeadline(
  * 「接入你的中转站」：
  * 1. 粘贴网址 → 助手自己检测站点类型；
  * 2. 站点支持一键登录 → 确认后去浏览器登录；
- * 3. 不支持 → 改用令牌：贴一个 sk- 开头的令牌，助手验证并列出可用模型。
+ * 3. 不支持 → 改用令牌：贴一个 sk- 开头的令牌，助手验证后把它存进系统密码库，站点就连上了。
  * 站点那边不需要做任何改动。检测不挡其它页面操作；可取消、可重试。
  */
-export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
+export function StationConnectOriginForm({
+  onLineChange,
+  onKeyConnected,
+  disabled,
+}: Props) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState(readStationOriginDraftInitial);
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +95,7 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
   const [stage, setStage] = useState<Stage>({ kind: "idle" });
   const [token, setToken] = useState("");
   const [checkingToken, setCheckingToken] = useState(false);
+  const [keyFailure, setKeyFailure] = useState<KeyConnectFailure | null>(null);
   const probeGeneration = useRef(0);
   const hintId = "station-origin-hint";
   const describedBy = error ? `${hintId} station-origin-error` : hintId;
@@ -157,18 +170,53 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
   const checkToken = useCallback(async () => {
     if (stage.kind !== "result") return;
     const generation = ++probeGeneration.current;
+    const origin = stage.probe.origin;
+    const key = token.trim();
+    setKeyFailure(null);
     setCheckingToken(true);
-    const probe = await probeWithDeadline(stage.probe.origin, token.trim());
+    const probe = await probeWithDeadline(origin, key);
     if (generation !== probeGeneration.current) return;
-    setCheckingToken(false);
     if (probe === "timeout" || !probe) {
+      setCheckingToken(false);
       setStage({ kind: "failed", reason: probe === "timeout" ? "timeout" : "unreachable" });
       return;
     }
-    // 令牌验证完就从输入框清掉，不在界面上长时间露着。
-    if (probe.tokenStatus === "valid") setToken("");
     setStage({ kind: "result", probe });
-  }, [stage, token]);
+    if (probe.tokenStatus !== "valid") {
+      setCheckingToken(false);
+      return;
+    }
+    // 令牌能用：交给原生侧存进系统密码库并连上站点。失败时令牌留在输入框里，方便重试。
+    let failure: KeyConnectFailure | null = null;
+    try {
+      const projection = await connectWithKey(origin, key);
+      if (projection.status !== "signed_in") {
+        failure =
+          projection.status === "secure_storage_unavailable"
+            ? "storage"
+            : projection.reasonCode === "key_rejected"
+              ? "rejected"
+              : "failed";
+      }
+    } catch {
+      failure = "failed";
+    }
+    if (generation !== probeGeneration.current) return;
+    setCheckingToken(false);
+    if (failure) {
+      setKeyFailure(failure);
+      return;
+    }
+    // 存好之后就从输入框清掉，不在界面上长时间露着。
+    setToken("");
+    try {
+      localStorage.setItem(STATION_ORIGIN_DRAFT_KEY, origin);
+    } catch {
+      /* ignore */
+    }
+    onLineChange(`${STATION_KEY_LINE_PREFIX}${origin}`);
+    onKeyConnected?.();
+  }, [onKeyConnected, onLineChange, stage, token]);
 
   const busy = disabled || opening || stage.kind === "probing";
   const probe = stage.kind === "result" ? stage.probe : null;
@@ -349,7 +397,10 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
                       spellCheck={false}
                       placeholder="sk-..."
                       value={token}
-                      onChange={(event) => setToken(event.target.value)}
+                      onChange={(event) => {
+                        setToken(event.target.value);
+                        if (keyFailure) setKeyFailure(null);
+                      }}
                     />
                   </label>
                   <button
@@ -362,20 +413,25 @@ export function StationConnectOriginForm({ onLineChange, disabled }: Props) {
                       : t("stationOnboarding.tokenCheck")}
                   </button>
                 </form>
-                {probe.tokenStatus !== "not_provided" && (
+                <p className="station-token-note">
+                  {t("stationOnboarding.tokenKeepNote")}
+                </p>
+                {probe.tokenStatus !== "not_provided" && !checkingToken && (
                   <p
                     className="station-token-result"
-                    data-ok={probe.tokenStatus === "valid"}
+                    data-ok={probe.tokenStatus === "valid" && !keyFailure}
                     role="status"
                   >
-                    {probe.tokenStatus === "valid" ? (
+                    {probe.tokenStatus === "valid" && !keyFailure ? (
                       <CheckCircle2 aria-hidden="true" />
                     ) : (
                       <CircleAlert aria-hidden="true" />
                     )}
-                    {t(`stationOnboarding.token.${probe.tokenStatus}`, {
-                      count: probe.models.length,
-                    })}
+                    {keyFailure
+                      ? t(`stationOnboarding.keyConnect.${keyFailure}`)
+                      : t(`stationOnboarding.token.${probe.tokenStatus}`, {
+                          count: probe.models.length,
+                        })}
                   </p>
                 )}
                 {probe.tokenStatus === "valid" && probe.models.length > 0 && (

@@ -811,6 +811,7 @@ mod tests {
         let local_token = format!("ycg-{}", "a".repeat(64));
         BridgeState {
             credential: ToolCredential {
+                pasted_key: false,
                 api_key: "sk-synthetic-a".into(),
                 origin: "https://yeschoy.com".into(),
                 model_id: "claude-sonnet-5".into(),

@@ -281,6 +281,7 @@ mod tests {
             })
             .collect::<Vec<_>>();
         ToolCredential {
+            pasted_key: false,
             api_key: routes[0].api_key.clone(),
             origin: "https://yeschoy.com".into(),
             model_id: routes[0].model_id.clone(),

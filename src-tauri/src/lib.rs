@@ -196,6 +196,7 @@ pub fn run() {
             desktop_app_discovery::scan_desktop_apps_read_only,
             account_v2::account_session_snapshot_v2,
             account_v2::account_inspect_v2,
+            account_v2::key_session::account_connect_with_key_v1,
             account_v2::account_begin_authorization_v2,
             account_v2::account_open_authorization_v2,
             account_v2::account_poll_authorization_v2,

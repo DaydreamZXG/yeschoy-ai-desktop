@@ -539,6 +539,7 @@ mod tests {
             codex_transport: None,
         };
         ToolCredential {
+            pasted_key: false,
             api_key: route.api_key.clone(),
             origin: route.origin.clone(),
             model_id: route.model_id.clone(),

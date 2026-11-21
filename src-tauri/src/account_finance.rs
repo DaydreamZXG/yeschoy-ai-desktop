@@ -329,6 +329,36 @@ pub(crate) fn account_money(status: Option<&Value>, balance: &str, consumed: &st
     calculate().unwrap_or_default()
 }
 
+/// Sentinel New API / One API report for a key without a quota cap.
+const UNLIMITED_KEY_LIMIT: f64 = 100_000_000.0;
+
+/// Balance of a pasted key, from the OpenAI-compatible billing endpoints.
+///
+/// `hard_limit` is remaining + used and `used_cents` is used x 100, both
+/// already in the station's display unit. That unit is only knowable from
+/// `/api/status`; without it (or with TOKENS) the figure stays unknown rather
+/// than being shown under a guessed currency.
+pub(crate) fn key_money(status: Option<&Value>, hard_limit: f64, used_cents: f64) -> AccountMoney {
+    let calculate = || {
+        let (currency, _, rate) = display_rates(status)?;
+        if !(0.0..UNLIMITED_KEY_LIMIT).contains(&hard_limit) {
+            return None;
+        }
+        let used = if used_cents.is_finite() && used_cents >= 0.0 {
+            used_cents / 100.0
+        } else {
+            return None;
+        };
+        Some(AccountMoney {
+            currency,
+            balance_amount: amount(hard_limit - used)?,
+            consumed_amount: amount(used)?,
+            display_rate: amount(rate)?,
+        })
+    };
+    calculate().unwrap_or_default()
+}
+
 fn comparable_row(row: &Value, unit: f64, price: f64, reference: f64) -> Option<(f64, f64)> {
     if row.get("type")?.as_u64()? != 2 {
         return None;
@@ -543,6 +573,36 @@ mod tests {
     fn settings() -> Value {
         json!({"success":true,"data":{"quota_display_type":"CNY","quota_per_unit":500000,"usd_exchange_rate":7,"price":2,"custom_currency_symbol":"USD"}})
     }
+    #[test]
+    fn a_pasted_key_shows_a_balance_only_when_the_unit_is_known() {
+        // CNY 站点：额度 20、已用 3.5（接口给的是 x100）。
+        let money = key_money(Some(&settings()), 20.0, 350.0);
+        assert_eq!(
+            (
+                money.currency,
+                money.balance_amount.as_str(),
+                money.consumed_amount.as_str()
+            ),
+            ("CNY", "16.5", "3.5")
+        );
+        // 不限额的密钥、读不到站点设置、按 token 计的站点：都说不知道。
+        for unknown in [
+            key_money(Some(&settings()), 100_000_000.0, 350.0),
+            key_money(None, 20.0, 350.0),
+            key_money(
+                Some(
+                    &json!({"success":true,"data":{"quota_display_type":"TOKENS","quota_per_unit":500000}}),
+                ),
+                20.0,
+                350.0,
+            ),
+            key_money(Some(&settings()), 20.0, f64::NAN),
+        ] {
+            assert_eq!(unknown.currency, "");
+            assert_eq!(unknown.balance_amount, "");
+        }
+    }
+
     fn row(quota: u64, other: Value) -> Value {
         json!({"type":2,"quota":quota,"created_at":1788598800,"other":other.to_string(),"token_name":"synthetic-private"})
     }

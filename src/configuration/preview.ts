@@ -15,8 +15,20 @@ export const STATION_CONNECT_LINE_PREFIX = "station_connect:";
 
 export type StationConnectLineId = `${typeof STATION_CONNECT_LINE_PREFIX}${string}`;
 
-/** Catalog lines plus deep-link station sessions (account inspect / activation). */
-export type AccountLineId = ConfigurationLineId | StationConnectLineId;
+/** A station the user connected by pasting its address and an API key. */
+export const STATION_KEY_LINE_PREFIX = "station_key:";
+
+export type StationKeyLineId = `${typeof STATION_KEY_LINE_PREFIX}${string}`;
+
+/** Catalog lines plus station sessions (account inspect / activation). */
+export type AccountLineId =
+  | ConfigurationLineId
+  | StationConnectLineId
+  | StationKeyLineId;
+
+export function isStationKeyLineId(lineId: string): lineId is StationKeyLineId {
+  return lineId.startsWith(STATION_KEY_LINE_PREFIX);
+}
 
 export function isStationConnectLineId(
   lineId: string,
@@ -28,7 +40,8 @@ export function isAccountLineId(lineId: string): lineId is AccountLineId {
   return (
     lineId === "mainland_optimized" ||
     lineId === "global_accelerated" ||
-    isStationConnectLineId(lineId)
+    isStationConnectLineId(lineId) ||
+    isStationKeyLineId(lineId)
   );
 }
 
