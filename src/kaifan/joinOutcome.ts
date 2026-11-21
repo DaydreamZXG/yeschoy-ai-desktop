@@ -294,4 +294,5 @@ export const usesTerminal = (toolId: ActivationToolId) =>
   toolId === "claude_code" ||
   toolId === "pi" ||
   toolId === "opencode" ||
-  toolId === "cline";
+  toolId === "cline" ||
+  toolId === "hermes";

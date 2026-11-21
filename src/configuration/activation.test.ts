@@ -38,7 +38,8 @@ function targetScan(requestId = "target-scan-test") {
       | "dsh_web"
       | "workbuddy"
       | "dsh_desktop"
-      | "cline",
+      | "cline"
+      | "hermes",
     displayName: string,
   ) => ({
     toolId,
@@ -70,6 +71,7 @@ function targetScan(requestId = "target-scan-test") {
       target("workbuddy", "WorkBuddy"),
       target("dsh_desktop", "DeepSeek Harness"),
       target("cline", "Cline"),
+      target("hermes", "Hermes Agent"),
     ],
   };
 }
@@ -287,6 +289,7 @@ describe("desktop tool activation boundary", () => {
       "workbuddy",
       "dsh_desktop",
       "cline",
+      "hermes",
     ]);
     expect(native).toHaveBeenCalledWith("scan_activation_targets_v1", {
       request: { requestId: expect.stringMatching(/^target-scan-/) },

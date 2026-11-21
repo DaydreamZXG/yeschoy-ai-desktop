@@ -86,7 +86,6 @@ mod tests {
     #[test]
     fn rejects_unsupported_apps() {
         let home = Path::new("/home/tester");
-        assert!(config_dir_for("hermes", home).is_none());
         assert!(config_dir_for("openclaw", home).is_none());
         assert!(config_dir_for("dsh", home).is_none());
         assert!(config_dir_for("", home).is_none());

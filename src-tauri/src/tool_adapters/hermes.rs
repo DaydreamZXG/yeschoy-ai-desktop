@@ -27,8 +27,10 @@ use crate::{
     },
 };
 
-/// 这个变量设了（环境里或 Hermes 的 `.env` 里），Hermes 就不看 `model.base_url`。
-pub(crate) const OVERRIDING_VARIABLE: &str = "CUSTOM_BASE_URL";
+/// Hermes 的 `.env` 里设了这个变量，它就不看 `model.base_url`，请求去的是这个
+/// 变量指的地址。只认 `.env` 里的：写在 shell 环境里的那个 Hermes 不理
+/// （0.0.0 @15806b32 两种都实测过）。
+const OVERRIDING_VARIABLE: &str = "CUSTOM_BASE_URL";
 /// Hermes 的家挪到了哪里。和 Codex 的 `CODEX_HOME` 一样，跟着它走。
 pub(crate) const HOME_VARIABLE: &str = "HERMES_HOME";
 
@@ -320,10 +322,9 @@ pub(crate) fn prepare(
 ) -> Result<Prepared, AdapterFailure> {
     common::validate_catalog(model, std::slice::from_ref(&model.to_owned()))?;
     let directory = config_dir(home)?;
-    // 这个变量设了，Hermes 用的就是它指的地址，不是我们写的。
-    let overridden = crate::shell_environment::is_set_anywhere(OVERRIDING_VARIABLE)
-        || std::fs::read_to_string(directory.join(".env"))
-            .is_ok_and(|text| env_file_overrides(&text));
+    // `.env` 里另指了地址，Hermes 用的就是它，不是我们写的。
+    let overridden =
+        std::fs::read_to_string(directory.join(".env")).is_ok_and(|text| env_file_overrides(&text));
     if overridden {
         return Err(AdapterFailure::ExternalOverride);
     }

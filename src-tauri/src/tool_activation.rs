@@ -3411,7 +3411,10 @@ pub(crate) fn needs_background(tool: &str, credential: &ToolCredential) -> bool 
         return false;
     }
     credential.has_model_set()
-        || matches!(tool, "claude_desktop" | "dsh_web" | "opencode" | "cline")
+        || matches!(
+            tool,
+            "claude_desktop" | "dsh_web" | "opencode" | "cline" | "hermes"
+        )
         || credential.claude_transport.as_deref() == Some("chat_bridge")
         || credential.codex_transport.as_deref() == Some("chat_bridge")
 }
@@ -3448,7 +3451,7 @@ fn legacy_paths(tool: &str) -> Result<Vec<std::path::PathBuf>, AdapterFailure> {
         }
         "workbuddy" => vec![home.join(".workbuddy/models.json")],
         // Support began with the recovery journal: nothing legacy.
-        "opencode" | "cline" => Vec::new(),
+        "opencode" | "cline" | "hermes" => Vec::new(),
         // Desktop support began with the recovery journal: nothing legacy.
         "dsh_desktop" => Vec::new(),
         _ => return Err(AdapterFailure::UnsupportedProfile),
