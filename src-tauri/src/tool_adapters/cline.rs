@@ -34,7 +34,7 @@ pub(crate) const IN_EDITOR: &str = "open_in_editor";
 const EXTENSION_PREFIX: &str = "saoudrizwan.claude-dev-";
 
 /// 这几个环境变量任何一个设了，Cline 读的就不是 `~/.cline` 下面那份。
-const RELOCATING_VARIABLES: [&str; 3] = [
+pub(crate) const RELOCATING_VARIABLES: [&str; 3] = [
     "CLINE_PROVIDER_SETTINGS_PATH",
     "CLINE_DATA_DIR",
     "CLINE_DIR",
