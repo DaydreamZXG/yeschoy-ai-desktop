@@ -665,7 +665,11 @@ export function Join({
               {scan === "failed" && (
                 <>
                   {t("kaifan.join.lookFailed")}
-                  <button type="button" className="sm" onClick={() => void look()}>
+                  <button
+                    type="button"
+                    className="sm"
+                    onClick={() => void look()}
+                  >
                     {t("kaifan.join.lookAgain")}
                   </button>
                 </>
