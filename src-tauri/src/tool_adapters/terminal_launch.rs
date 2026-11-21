@@ -115,7 +115,7 @@ fn default_cli_workspace(home: &Path) -> Result<PathBuf, AdapterFailure> {
 }
 
 fn remember_workspace(home: &Path, workspace: &Path) {
-    let path = home.join(".yeschoy").join("cli-workspace");
+    let path = crate::legacy::data_root(home).join("cli-workspace");
     if std::fs::create_dir_all(path.parent().unwrap_or(home)).is_ok() {
         let _ = std::fs::write(path, workspace.to_string_lossy().as_bytes());
     }
@@ -163,7 +163,7 @@ fn pick_cli_folder() -> Option<PathBuf> {
 }
 
 pub(crate) fn select_cli_workspace(home: &Path) -> Result<PathBuf, AdapterFailure> {
-    let remembered = home.join(".yeschoy").join("cli-workspace");
+    let remembered = crate::legacy::data_root(home).join("cli-workspace");
     if let Ok(text) = std::fs::read_to_string(&remembered) {
         let path = PathBuf::from(text.trim());
         if acceptable_workspace(&path, home) {
@@ -737,7 +737,7 @@ mod tests {
         assert!(chosen.ends_with("野菜工作区"));
         assert!(chosen.is_dir());
         std::fs::write(
-            home.join(".yeschoy").join("cli-workspace"),
+            home.join(".kaifan").join("cli-workspace"),
             home.as_os_str().as_encoded_bytes(),
         )
         .ok();
@@ -746,7 +746,7 @@ mod tests {
         let project = home.join("Documents").join("my-app");
         std::fs::create_dir_all(&project).unwrap();
         std::fs::write(
-            home.join(".yeschoy").join("cli-workspace"),
+            home.join(".kaifan").join("cli-workspace"),
             project.to_string_lossy().as_bytes(),
         )
         .unwrap();

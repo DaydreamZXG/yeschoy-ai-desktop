@@ -1122,7 +1122,7 @@ static DEVICE_SCOPE: OnceLock<String> = OnceLock::new();
 fn device_scope() -> &'static str {
     DEVICE_SCOPE.get_or_init(|| {
         if let Some(home) = crate::tool_adapters::user_home() {
-            let path = home.join(".yeschoy").join("device-id");
+            let path = crate::legacy::data_root(&home).join("device-id");
             if let Some(existing) = std::fs::read_to_string(&path)
                 .ok()
                 .map(|text| text.trim().to_owned())

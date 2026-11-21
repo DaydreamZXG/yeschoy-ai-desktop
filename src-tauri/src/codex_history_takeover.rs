@@ -130,7 +130,7 @@ fn valid_provider(value: &str) -> bool {
 }
 
 fn manifest_path(home: &Path) -> PathBuf {
-    home.join(".yeschoy")
+    crate::legacy::data_root(home)
         .join("connection-recovery")
         .join(MANIFEST_NAME)
 }

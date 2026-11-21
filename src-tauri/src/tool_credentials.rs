@@ -1,10 +1,9 @@
 use std::io::{self, Write};
 
-use keyring::v1::{Entry, Error as KeyringError};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-const SERVICE: &str = "com.yeschoy.desktop.tool-credential.v2";
+const SERVICE: &str = "com.kaifan.desktop.tool-credential.v2";
 const ALLOWED_TOOLS: [&str; 8] = [
     "claude_code",
     "claude_desktop",
@@ -215,29 +214,15 @@ trait SecretStore {
 struct OsSecrets;
 impl SecretStore for OsSecrets {
     fn get(&self, name: &str) -> Result<Option<String>, CredentialFailure> {
-        match Entry::new(SERVICE, name)
-            .map_err(|_| CredentialFailure::Unavailable)?
-            .get_password()
-        {
-            Ok(v) => Ok(Some(v)),
-            Err(KeyringError::NoEntry) => Ok(None),
-            Err(_) => Err(CredentialFailure::Unavailable),
-        }
+        // 改名前接入的应用：密钥还在旧名字下面，读到哪条搬哪条。
+        crate::legacy::read_secret(SERVICE, name).map_err(|_| CredentialFailure::Unavailable)
     }
     fn set(&self, name: &str, value: &str) -> Result<(), CredentialFailure> {
-        Entry::new(SERVICE, name)
-            .map_err(|_| CredentialFailure::Unavailable)?
-            .set_password(value)
+        crate::legacy::write_secret(SERVICE, name, value)
             .map_err(|_| CredentialFailure::Unavailable)
     }
     fn delete(&self, name: &str) -> Result<(), CredentialFailure> {
-        match Entry::new(SERVICE, name)
-            .map_err(|_| CredentialFailure::Unavailable)?
-            .delete_credential()
-        {
-            Ok(()) | Err(KeyringError::NoEntry) => Ok(()),
-            Err(_) => Err(CredentialFailure::Unavailable),
-        }
+        crate::legacy::delete_secret(SERVICE, name).map_err(|_| CredentialFailure::Unavailable)
     }
 }
 fn manifest(value: &str) -> Result<Option<StorageManifest>, CredentialFailure> {

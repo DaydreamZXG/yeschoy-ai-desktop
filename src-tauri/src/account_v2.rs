@@ -5,7 +5,6 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use keyring::v1::{Entry, Error as KeyringError};
 use reqwest::{
     header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE},
     redirect::Policy,
@@ -28,7 +27,7 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 /// 5 秒够慢网完成一次往返；再长就只是让首页干等。
 const INSPECT_DEADLINE: Duration = Duration::from_secs(5);
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
-const KEYRING_SERVICE: &str = "com.yeschoy.desktop.account";
+const KEYRING_SERVICE: &str = "com.kaifan.desktop.account";
 const KEYRING_USER: &str = "current-session-v2";
 const AUTHORIZATION_PATH: &str = "/api/desktop/v2/device-authorizations";
 const TOKEN_PATH: &str = "/api/desktop/v2/device-authorizations/token";
@@ -775,10 +774,6 @@ pub(crate) fn loopback_oauth_enabled_for_bootstrap(bootstrap: &DesktopBootstrap)
     }
 }
 
-fn keyring_entry() -> Result<Entry, ()> {
-    Entry::new(KEYRING_SERVICE, KEYRING_USER).map_err(|_| ())
-}
-
 /// Serialized size of the session payload. The Windows credential store caps a
 /// single blob at 2560 bytes, so a long refresh token fails the write for some
 /// accounts and not others. The length alone separates that from a locked
@@ -791,24 +786,20 @@ fn payload_len(session: &StoredSession) -> usize {
 
 fn save_stored_session(session: &StoredSession) -> Result<(), ()> {
     let payload = serde_json::to_string(session).map_err(|_| ())?;
-    keyring_entry()?.set_password(&payload).map_err(|_| ())
+    crate::legacy::write_secret(KEYRING_SERVICE, KEYRING_USER, &payload).map_err(|_| ())
 }
 
 fn load_stored_session() -> Result<Option<StoredSession>, ()> {
-    let entry = keyring_entry()?;
-    match entry.get_password() {
-        Ok(payload) => serde_json::from_str(&payload).map(Some).map_err(|_| ()),
-        Err(KeyringError::NoEntry) => Ok(None),
+    // 改名前登录的人：登录凭据还在旧名字下面，读的时候搬过来。
+    match crate::legacy::read_secret(KEYRING_SERVICE, KEYRING_USER) {
+        Ok(Some(payload)) => serde_json::from_str(&payload).map(Some).map_err(|_| ()),
+        Ok(None) => Ok(None),
         Err(_) => Err(()),
     }
 }
 
 fn delete_stored_session() -> Result<(), ()> {
-    let entry = keyring_entry()?;
-    match entry.delete_credential() {
-        Ok(()) | Err(KeyringError::NoEntry) => Ok(()),
-        Err(_) => Err(()),
-    }
+    crate::legacy::delete_secret(KEYRING_SERVICE, KEYRING_USER).map_err(|_| ())
 }
 
 /// Why a freshly issued bundle could not be installed. A server-contract

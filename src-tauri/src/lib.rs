@@ -25,6 +25,7 @@ mod connectivity;
 mod connectivity_core;
 mod desktop_app_discovery;
 mod desktop_app_discovery_core;
+mod legacy;
 mod local_bridge;
 mod logging;
 mod manual_locations;
@@ -78,6 +79,7 @@ const EXIT_PROGRESS_EVENT: &str = "yeschoy://exit-progress";
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     logging::init();
+    legacy::move_in();
     log::info!("{FRONTEND_MODE_MARKER} selected={FRONTEND_MODE}");
     let claude_code_runtime = tool_adapters::claude_code::ClaudeCodeRuntimeState::default();
     let resume_claude_code_runtime = claude_code_runtime.clone();

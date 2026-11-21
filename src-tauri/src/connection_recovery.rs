@@ -17,14 +17,13 @@ use aes_gcm::{
     Aes256Gcm, Nonce,
 };
 use base64::{engine::general_purpose::STANDARD, Engine};
-use keyring::v1::{Entry, Error as KeyringError};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use crate::tool_adapters::common::{self, FileChange};
 use crate::tool_credentials::ToolCredential;
 
-const SERVICE: &str = "com.yeschoy.desktop.connection-recovery.v1";
+const SERVICE: &str = "com.kaifan.desktop.connection-recovery.v1";
 // Four config files, before/after and one in-flight predecessor, with JSON
 // encoding overhead. This is a bounded journal, not an unbounded history.
 const MAX_JOURNAL: u64 = 128 * 1024 * 1024;
@@ -138,7 +137,7 @@ pub(crate) fn operation_lock_at(root: &Path) -> Result<std::fs::File> {
 
 pub(crate) fn operation_lock() -> Result<std::fs::File> {
     let home = crate::tool_adapters::user_home().ok_or(Failure::Storage)?;
-    operation_lock_at(&home.join(".yeschoy/connection-recovery"))
+    operation_lock_at(&crate::legacy::data_root(&home).join("connection-recovery"))
 }
 
 fn allowed(tool: &str) -> bool {
@@ -283,15 +282,15 @@ fn recovery_store_is_uninitialized(root: &Path) -> Result<bool> {
 impl Store {
     pub(crate) fn open(create: bool) -> Result<Option<Self>> {
         let home = crate::tool_adapters::user_home().ok_or(Failure::Storage)?;
-        let root = home.join(".yeschoy").join("connection-recovery");
-        let entry = Entry::new(SERVICE, "encryption-key").map_err(|_| Failure::Storage)?;
-        let key = match entry.get_password() {
-            Ok(encoded) => STANDARD
+        let root = crate::legacy::data_root(&home).join("connection-recovery");
+        // 改名前的恢复记录是用旧名字下那把钥匙封的：读的时候搬过来，记录照样解得开。
+        let key = match crate::legacy::read_secret(SERVICE, "encryption-key") {
+            Ok(Some(encoded)) => STANDARD
                 .decode(encoded)
                 .map_err(|_| Failure::Storage)?
                 .try_into()
                 .map_err(|_| Failure::Storage)?,
-            Err(KeyringError::NoEntry) => {
+            Ok(None) => {
                 if !recovery_store_is_uninitialized(&root)? {
                     return Err(Failure::Storage);
                 }
@@ -300,8 +299,7 @@ impl Store {
                 }
                 let mut key = [0; 32];
                 getrandom::fill(&mut key).map_err(|_| Failure::Storage)?;
-                entry
-                    .set_password(&STANDARD.encode(key))
+                crate::legacy::write_secret(SERVICE, "encryption-key", &STANDARD.encode(key))
                     .map_err(|_| Failure::Storage)?;
                 key
             }

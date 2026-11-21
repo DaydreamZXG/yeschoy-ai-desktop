@@ -29,11 +29,7 @@ const MAX_ENTRIES: usize = 20_000;
 const MAX_UNPACKED: u64 = 2 * 1024 * 1024 * 1024;
 
 fn tools_root() -> Option<PathBuf> {
-    Some(
-        crate::tool_adapters::user_home()?
-            .join(".yeschoy")
-            .join("tools"),
-    )
+    Some(crate::legacy::data_root(&crate::tool_adapters::user_home()?).join("tools"))
 }
 
 /// 客户端自己装的命令行工具所在的目录，交给应用发现去找。
