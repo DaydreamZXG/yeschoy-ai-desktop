@@ -431,7 +431,10 @@ export function AppLibraryView({
           <div className="welcome-strip-copy">
             <h2>{c.librarySignInTitle}</h2>
             <p>{c.librarySignInBody}</p>
-            <StationConnectOriginForm onLineChange={onStationLineChange} />
+            <StationConnectOriginForm
+              onLineChange={onStationLineChange}
+              onKeyConnected={() => void accountSession.refresh()}
+            />
             {relayLineRecovery && (
               <p
                 className="welcome-strip-relay-hint"

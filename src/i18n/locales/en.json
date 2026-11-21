@@ -1331,17 +1331,23 @@
     "tokenIntro": "This site doesn't offer one-click sign-in yet. You can still connect with a token:",
     "tokenStep1": "Open this site in your browser and sign in.",
     "tokenStep2": "Go to the Tokens page and add or copy a token (starts with sk-).",
-    "tokenStep3": "Paste it below and click Check token.",
+    "tokenStep3": "Paste it below and click Connect.",
     "tokenLabel": "Token",
-    "tokenCheck": "Check token",
-    "tokenChecking": "Checking…",
+    "tokenCheck": "Connect",
+    "tokenChecking": "Connecting…",
+    "tokenKeepNote": "The token is stored only in this computer's system keychain. With a token, balance, prices and usage details may not be visible; where they are not, we say so.",
     "modelsLabel": "Models this token can use",
     "moreModels": "{{count}} more",
     "token": {
-      "valid": "Token works, {{count}} models available. It is only used for this check and is not saved.",
+      "valid": "Connected. {{count}} models available.",
       "invalid": "The token is wrong or was deleted. Copy it again from the Tokens page without extra spaces.",
       "no_quota": "The token is right but its balance or quota is used up. Top up or raise the token quota first.",
       "error": "The site did not return a model list. Try again later, or contact the site owner."
+    },
+    "keyConnect": {
+      "storage": "This computer's system keychain is unavailable, so the token could not be stored safely and nothing was connected. Unlock or enable the keychain, then try again.",
+      "rejected": "This token cannot be used: it is too short, too long, or the site just rejected it. Copy a new one from the site's Tokens page.",
+      "failed": "The token is fine, but the connection did not complete. Click Connect again."
     },
     "failed": {
       "invalid_origin": {

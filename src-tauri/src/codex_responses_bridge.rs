@@ -122,7 +122,7 @@ pub(crate) fn responses_to_chat(mut body: Value, model: &str) -> Result<Converte
 /// （真 `encrypted_content` 转一圈是降级）。但「哪些模型走桥」由中转的上游
 /// 决定，不由模型名决定 —— 万一某个渠道拿 Chat-only 的上游供 gpt-5，
 /// 桥就得把它发对。漏了这段，症状是一个很难查的 400。
-fn normalize_openai_reasoning_params(body: &mut Value, model: &str) {
+pub(crate) fn normalize_openai_reasoning_params(body: &mut Value, model: &str) {
     let model = model.to_ascii_lowercase();
     let o_series = crate::proxy::providers::transform::is_openai_o_series(&model);
     let gpt5_plus = model.starts_with("gpt-5") || model.starts_with("gpt-6");
@@ -471,6 +471,7 @@ mod tests {
         let local_token = format!("ycg-{}", "a".repeat(64));
         BridgeState {
             credential: ToolCredential {
+                pasted_key: false,
                 api_key: "sk-synthetic-a".into(),
                 origin: "https://yeschoy.com".into(),
                 model_id: "kimi-k3".into(),
@@ -1219,6 +1220,7 @@ mod tests {
         // ---- 起真桥，让这个模型走转换那条路 ----
         let local_token = format!("ycg-{}", "e".repeat(64));
         let credential = ToolCredential {
+            pasted_key: false,
             api_key: key.clone(),
             origin: origin.clone(),
             model_id: model.into(),

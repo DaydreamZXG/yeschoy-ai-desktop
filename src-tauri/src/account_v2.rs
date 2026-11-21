@@ -46,6 +46,9 @@ const COMPILED_AUTHORIZATION_PAGE_ORIGIN: &str = env!("YESCHOY_AUTHORIZATION_PAG
 
 static HTTP_CLIENT: OnceLock<Result<Client, ()>> = OnceLock::new();
 
+#[path = "account_key_session.rs"]
+pub(crate) mod key_session;
+
 #[derive(Default)]
 pub struct AccountV2State {
     runtime: Mutex<AccountRuntime>,
@@ -87,6 +90,10 @@ struct StoredSession {
     refresh_token: String,
     session_id: String,
     refresh_expires_at: i64,
+    /// Set only for a pasted-key session (`station_key:` lines): the station
+    /// has no account API we can sign in to, so the key itself is the session.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    api_key: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -366,7 +373,9 @@ fn line_origin(line_id: &str) -> Option<&'static str> {
 }
 
 pub(crate) fn account_request_line_id_is_valid(line_id: &str) -> bool {
-    line_origin(line_id).is_some() || station_connect_origin_from_line_id(line_id).is_some()
+    line_origin(line_id).is_some()
+        || station_connect_origin_from_line_id(line_id).is_some()
+        || key_session::origin_from_line_id(line_id).is_some()
 }
 
 fn persisted_session_line_id(line_id: &str) -> bool {
@@ -377,6 +386,7 @@ pub(crate) fn account_line_origin(line_id: &str) -> Option<String> {
     line_origin(line_id)
         .map(str::to_owned)
         .or_else(|| station_connect_origin_from_line_id(line_id).map(str::to_owned))
+        .or_else(|| key_session::origin_from_line_id(line_id).map(str::to_owned))
 }
 
 fn request_is_valid(request: &AccountRequest) -> bool {
@@ -841,6 +851,7 @@ fn install_auth_bundle(
         refresh_token: bundle.refresh_token,
         session_id: bundle.session_id,
         refresh_expires_at: bundle.refresh_expires_at,
+        api_key: None,
     };
     // A credential store that refuses the write (locked keychain, no secret
     // service, an oversized blob on Windows) fails the sign-in at the very
@@ -1048,6 +1059,7 @@ pub(crate) fn install_station_connect_session(
         refresh_token: bundle.refresh_token,
         session_id: bundle.session_id,
         refresh_expires_at: bundle.refresh_expires_at,
+        api_key: None,
     };
     save_stored_session(&stored).map_err(|_| {
         log::warn!(
@@ -1087,6 +1099,9 @@ pub(crate) async fn native_probe_access(
     let Some(stored) = stored else {
         return Err(ProbeSessionFailure::SignedOut);
     };
+    if stored.api_key.is_some() {
+        return Err(ProbeSessionFailure::ServerUnavailable);
+    }
     let line_id = if persisted_session_line_id(&stored.line_id) {
         stored.line_id.clone()
     } else {
@@ -1174,6 +1189,12 @@ async fn refresh_access(
     else {
         return Err(AccountProjectionFailure::SessionExpired);
     };
+    // A pasted-key session has no refresh token and never expires on a clock.
+    // Without this it would fall into the expiry branch below and be deleted
+    // the first time anything asked for an account token.
+    if stored.api_key.is_some() {
+        return Err(AccountProjectionFailure::BackendUnavailable);
+    }
     if stored.refresh_expires_at <= now_epoch_seconds() {
         let runtime = state
             .runtime
@@ -1792,6 +1813,9 @@ async fn inspect_inner(
     state: &AccountV2State,
     request: &AccountRequest,
 ) -> Result<AccountProjection, AccountProjectionFailure> {
+    if let Some(origin) = key_session::origin_from_line_id(&request.line_id) {
+        return key_session::inspect(request, origin).await;
+    }
     let bootstrap = fetch_bootstrap(&request.line_id).await?;
     {
         let mut runtime = state

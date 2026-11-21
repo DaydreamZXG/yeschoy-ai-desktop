@@ -29,6 +29,9 @@ use crate::{
 /// 免得每个调用方都要改 import —— 它们要的就是「Claude 桥的验证事件」。
 pub(crate) use crate::local_bridge::VerificationEvent;
 
+#[path = "claude_chat_bridge.rs"]
+mod chat;
+
 /// Claude Desktop 单次请求的上限。超过时拒绝，而不是截断。
 const MAX_REQUEST_BODY_BYTES: usize = 32 * 1024 * 1024;
 /// Only error responses are buffered so the bridge can recognize an upstream
@@ -353,6 +356,10 @@ async fn messages(state: &BridgeState, request: Request<Body>) -> Response {
             ));
         }
     };
+    // 只会说 Chat 格式的站：`/v1/messages` 在那里不存在，请求要翻译后再发。
+    if chat::applies(&upstream_credential) {
+        return chat::forward(state, &upstream_credential, value).await;
+    }
     let upstream = match send_upstream(state, &upstream_credential, &forwarded, &value).await {
         Ok(response) => response,
         Err(_) => {
@@ -811,6 +818,7 @@ mod tests {
         let local_token = format!("ycg-{}", "a".repeat(64));
         BridgeState {
             credential: ToolCredential {
+                pasted_key: false,
                 api_key: "sk-synthetic-a".into(),
                 origin: "https://yeschoy.com".into(),
                 model_id: "claude-sonnet-5".into(),
@@ -1113,6 +1121,170 @@ mod tests {
             assert_eq!(row["supports1m"], expected, "{}", row["display_name"]);
         }
         assert_eq!(value["data"].as_array().unwrap().len(), 5);
+    }
+
+    /// 只有 `/v1/chat/completions` 的站：请求要翻成 Chat 格式发出去，回复要翻回
+    /// Anthropic 格式。以前 `chat_bridge` 只是被记下来，请求照旧发 `/v1/messages`。
+    #[tokio::test]
+    async fn a_chat_only_station_gets_chat_requests_and_claude_gets_anthropic_replies() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let origin = format!("http://{}", listener.local_addr().unwrap());
+        let (sent, mut received) = tokio::sync::mpsc::unbounded_channel();
+        let router = Router::new().route(
+            "/v1/chat/completions",
+            axum::routing::post(
+                move |headers: axum::http::HeaderMap, axum::Json(body): axum::Json<Value>| {
+                    let sent = sent.clone();
+                    async move {
+                        let streaming = body["stream"] == true;
+                        let refuse = body["messages"][1]["content"] == "refuse";
+                        let fail_midway = body["messages"][1]["content"] == "fail midway";
+                        sent.send((headers, body)).unwrap();
+                        if refuse {
+                            return (
+                                StatusCode::UNAUTHORIZED,
+                                [(header::CONTENT_TYPE, "application/json")],
+                                r#"{"error":{"message":"token expired"}}"#.to_owned(),
+                            );
+                        }
+                        if fail_midway {
+                            return (
+                                StatusCode::OK,
+                                [(header::CONTENT_TYPE, "text/event-stream")],
+                                "data: {\"error\":{\"message\":\"upstream overloaded\"}}\n\ndata: [DONE]\n\n"
+                                    .to_owned(),
+                            );
+                        }
+                        if streaming {
+                            return (
+                                StatusCode::OK,
+                                [(header::CONTENT_TYPE, "text/event-stream")],
+                                concat!(
+                                    "data: {\"id\":\"c1\",\"model\":\"m\",\"choices\":[{\"index\":0,\"delta\":{\"role\":\"assistant\",\"content\":\"hi\"},\"finish_reason\":null}]}\n\n",
+                                    "data: {\"id\":\"c1\",\"model\":\"m\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n",
+                                    "data: [DONE]\n\n",
+                                )
+                                .to_owned(),
+                            );
+                        }
+                        (
+                            StatusCode::OK,
+                            [(header::CONTENT_TYPE, "application/json")],
+                            json!({
+                                "id": "c1", "model": "m",
+                                "choices": [{"index": 0, "finish_reason": "stop",
+                                    "message": {"role": "assistant", "content": "hi"}}],
+                                "usage": {"prompt_tokens": 3, "completion_tokens": 1}
+                            })
+                            .to_string(),
+                        )
+                    }
+                },
+            ),
+        );
+        let server = tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+        let mut state = state();
+        state.credential.origin = origin.clone();
+        state.credential.claude_transport = Some("chat_bridge".into());
+        for route in &mut state.credential.models {
+            route.origin = origin.clone();
+            route.claude_transport = Some("chat_bridge".into());
+        }
+        state.client = reqwest::Client::builder()
+            .no_proxy()
+            .timeout(Duration::from_secs(3))
+            .build()
+            .unwrap();
+        let alias = crate::tool_model_profile::claude_gateway_route_id("gpt-6-astra");
+        let ask = |content: &str, stream: bool| {
+            Request::builder()
+                .method("POST")
+                .uri("/claude-desktop/v1/messages")
+                .header(
+                    header::AUTHORIZATION,
+                    format!("Bearer {}", state.local_token),
+                )
+                .header("anthropic-version", "2023-06-01")
+                .body(Body::from(
+                    json!({
+                        "model": alias, "stream": stream, "max_tokens": 64,
+                        "system": "be brief",
+                        "messages": [{"role": "user", "content": content}]
+                    })
+                    .to_string(),
+                ))
+                .unwrap()
+        };
+
+        // 非流式：一问一答。
+        let response = messages(&state, ask("hello", false)).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let reply: Value =
+            serde_json::from_slice(&to_bytes(response.into_body(), 64 * 1024).await.unwrap())
+                .unwrap();
+        assert_eq!(reply["type"], "message");
+        assert_eq!(reply["role"], "assistant");
+        assert_eq!(reply["content"][0]["text"], "hi");
+        assert_eq!(reply["stop_reason"], "end_turn");
+        let (headers, sent_body) = received.recv().await.unwrap();
+        assert_eq!(headers[header::AUTHORIZATION], "Bearer sk-synthetic-b");
+        assert_eq!(sent_body["model"], "gpt-6-astra");
+        assert_eq!(sent_body["messages"][0]["role"], "system");
+        assert_eq!(sent_body["messages"][1]["content"], "hello");
+        assert!(sent_body.get("stream_options").is_none());
+
+        // 流式：Chat 的 SSE 被翻成 Anthropic 的事件。
+        let response = messages(&state, ask("hello", true)).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(
+            response.headers()[header::CONTENT_TYPE],
+            "text/event-stream"
+        );
+        let events = String::from_utf8(
+            to_bytes(response.into_body(), 64 * 1024)
+                .await
+                .unwrap()
+                .to_vec(),
+        )
+        .unwrap();
+        for expected in [
+            "event: message_start",
+            "event: content_block_delta",
+            "\"text\":\"hi\"",
+            "event: message_delta",
+            "event: message_stop",
+        ] {
+            assert!(events.contains(expected), "missing {expected} in {events}");
+        }
+        let (_, sent_body) = received.recv().await.unwrap();
+        assert_eq!(sent_body["stream_options"]["include_usage"], true);
+
+        // 200 的流里夹着错误：Claude 要看到错误，而不是一次空的成功回复。
+        let response = messages(&state, ask("fail midway", true)).await;
+        let events = String::from_utf8(
+            to_bytes(response.into_body(), 64 * 1024)
+                .await
+                .unwrap()
+                .to_vec(),
+        )
+        .unwrap();
+        assert!(events.contains("event: error"), "{events}");
+        assert!(events.contains("upstream overloaded"), "{events}");
+        assert!(!events.contains("message_stop"), "{events}");
+        received.recv().await.unwrap();
+
+        // 站点拒绝：原话留着，换成 Claude 认识的错误形状。
+        let response = messages(&state, ask("refuse", false)).await;
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        let reply: Value =
+            serde_json::from_slice(&to_bytes(response.into_body(), 64 * 1024).await.unwrap())
+                .unwrap();
+        assert_eq!(reply["type"], "error");
+        assert_eq!(reply["error"]["type"], "authentication_error");
+        assert_eq!(reply["error"]["message"], "token expired");
+
+        server.abort();
+        let _ = server.await;
     }
 
     #[tokio::test]

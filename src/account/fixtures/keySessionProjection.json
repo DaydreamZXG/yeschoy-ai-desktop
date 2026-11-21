@@ -1,0 +1,80 @@
+{
+  "account": {
+    "available": true,
+    "balanceQuota": "",
+    "displayName": "",
+    "quotaPerUnit": "",
+    "requestCount": "",
+    "usedQuota": "",
+    "username": ""
+  },
+  "comparisonFx": "",
+  "expiresAtEpochMs": 0,
+  "models": [
+    {
+      "actualInputCnyPerMillion": "",
+      "actualOutputCnyPerMillion": "",
+      "billingMode": "unknown",
+      "description": "",
+      "id": "claude-sonnet-4-5",
+      "officialInputCnyPerMillion": "",
+      "officialOutputCnyPerMillion": "",
+      "pricingAvailable": false
+    },
+    {
+      "actualInputCnyPerMillion": "",
+      "actualOutputCnyPerMillion": "",
+      "billingMode": "unknown",
+      "description": "",
+      "id": "gpt-5.5",
+      "officialInputCnyPerMillion": "",
+      "officialOutputCnyPerMillion": "",
+      "pricingAvailable": false
+    }
+  ],
+  "money": {
+    "balanceAmount": "",
+    "consumedAmount": "",
+    "currency": "",
+    "displayRate": ""
+  },
+  "observedAtEpochMs": 1,
+  "pollAfterSeconds": 0,
+  "reasonCode": "key_session",
+  "requestId": "account-test-1",
+  "savings": {
+    "excludedCount": 0,
+    "includedCount": 0,
+    "newestAtEpochMs": 0,
+    "officialAmount": "",
+    "oldestAtEpochMs": 0,
+    "priceRate": "",
+    "reasonCode": "logs_unavailable",
+    "recordLimit": 100,
+    "referenceRate": "",
+    "savedAmount": "",
+    "scannedCount": 0,
+    "siteAmount": "",
+    "status": "unavailable"
+  },
+  "schemaVersion": 6,
+  "status": "signed_in",
+  "usage": {
+    "available": false,
+    "consumedQuota": "",
+    "requestRate": "",
+    "tokenCount": ""
+  },
+  "usageLog": {
+    "newestAtEpochMs": 0,
+    "oldestAtEpochMs": 0,
+    "reasonCode": "logs_unavailable",
+    "recordCount": 0,
+    "records": [],
+    "scannedCount": 0,
+    "status": "unavailable",
+    "truncated": false,
+    "windowDays": 30
+  },
+  "userCode": ""
+}

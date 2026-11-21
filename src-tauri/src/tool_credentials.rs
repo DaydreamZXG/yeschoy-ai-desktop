@@ -30,6 +30,11 @@ pub(crate) struct ToolCredential {
     pub(crate) claude_transport: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub(crate) models: Vec<ToolModelRoute>,
+    /// The key is one the user pasted, not one this app minted on the
+    /// station. Disconnecting must leave it alone: it is theirs, other things
+    /// may be using it, and there is no account session to revoke it with.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub(crate) pasted_key: bool,
 }
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -82,6 +87,7 @@ impl ToolCredential {
             codex_transport: r.codex_transport.clone(),
             claude_transport: r.claude_transport.clone(),
             models: Vec::new(),
+            pasted_key: self.pasted_key,
         })
     }
     /// The default credential a tool presents to its configured endpoint.
@@ -121,10 +127,10 @@ fn record_is_valid(tool_id: &str, record: &ToolCredential) -> bool {
         && !key
             .chars()
             .any(|value| value.is_control() || value.is_whitespace())
-        && matches!(
-            record.origin.as_str(),
-            "https://yeschoy.com" | "https://api.yeschoy.com"
-        )
+        // Any station the user connected, not a fixed list: the record only
+        // has to name a canonical HTTPS origin (no path, no IP literal).
+        && crate::station_connect::connect_origin_is_acceptable(&record.origin).as_deref()
+            == Some(record.origin.as_str())
         && !model.is_empty()
         && model.chars().count() <= 200
         && !model.chars().any(char::is_control)
@@ -618,6 +624,7 @@ mod tests {
             })
             .collect();
         let mut c = ToolCredential {
+            pasted_key: false,
             model_id: "a".into(),
             api_key: routes[0].api_key.clone(),
             origin: routes[0].origin.clone(),
@@ -774,6 +781,7 @@ mod tests {
     #[test]
     fn transport_metadata_is_codex_only_and_backward_compatible() {
         let mut record = ToolCredential {
+            pasted_key: false,
             api_key: "synthetic-test-key-0001".into(),
             origin: "https://yeschoy.com".into(),
             model_id: "gpt-5.5".into(),
@@ -791,8 +799,47 @@ mod tests {
     }
 
     #[test]
+    fn any_canonical_https_station_is_storable_and_a_pasted_key_is_remembered_as_such() {
+        let mut record = ToolCredential {
+            pasted_key: true,
+            api_key: "synthetic-test-key-0001".into(),
+            origin: "https://relay.example.com".into(),
+            model_id: "gpt-5.5".into(),
+            local_gateway_token: None,
+            codex_transport: None,
+            claude_transport: None,
+            models: vec![],
+        };
+        assert!(record_is_valid("pi", &record));
+        let stored = serde_json::to_string(&record).unwrap();
+        assert!(stored.contains("\"pastedKey\":true"));
+        assert!(
+            serde_json::from_str::<ToolCredential>(&stored)
+                .unwrap()
+                .pasted_key
+        );
+        // Records written before this field existed still load, as not pasted.
+        let legacy = stored.replace(",\"pastedKey\":true", "");
+        assert!(
+            !serde_json::from_str::<ToolCredential>(&legacy)
+                .unwrap()
+                .pasted_key
+        );
+        for origin in [
+            "http://relay.example.com",
+            "https://relay.example.com/v1",
+            "https://relay.example.com/",
+            "https://10.0.0.1",
+        ] {
+            record.origin = origin.into();
+            assert!(!record_is_valid("pi", &record), "{origin}");
+        }
+    }
+
+    #[test]
     fn claude_transport_requires_a_local_token_only_for_bridged_code() {
         let mut record = ToolCredential {
+            pasted_key: false,
             api_key: "synthetic-test-key-0001".into(),
             origin: "https://yeschoy.com".into(),
             model_id: "claude-opus-5".into(),

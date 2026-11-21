@@ -449,6 +449,7 @@ mod tests {
     fn launch_preflight_is_read_only_and_preserves_unrelated_settings() {
         let home = tool_adapters::common::temporary_working_directory("open-preflight").unwrap();
         let credential = ToolCredential {
+            pasted_key: false,
             api_key: "synthetic-test-key-only".into(),
             origin: "https://yeschoy.com".into(),
             model_id: "test-model".into(),

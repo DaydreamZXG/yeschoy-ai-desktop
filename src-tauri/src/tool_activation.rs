@@ -387,7 +387,11 @@ fn activation_line_id_is_valid(line_id: &str) -> bool {
     matches!(line_id, "mainland_optimized" | "global_accelerated")
         || station_connect_origin_from_line_id(line_id)
             .is_some_and(|origin| connect_origin_is_acceptable(origin).is_some())
+        || crate::account_v2::key_session::origin_from_line_id(line_id).is_some()
 }
+
+#[path = "tool_activation_key.rs"]
+mod pasted_key;
 
 fn request_is_valid(request: &ToolActivationRequest) -> bool {
     request_id_is_valid(&request.request_id)
@@ -1651,6 +1655,7 @@ fn credential_for_models(
         }
     };
     Ok(ToolCredential {
+        pasted_key: false,
         model_id: default.model_id.clone(),
         api_key: default.api_key.clone(),
         origin: origin.into(),
@@ -2411,35 +2416,54 @@ pub async fn configure_desktop_tool_v2(
         return Ok(cancelled());
     }
     emit_activation_progress(&app, &request, "authenticating", 2);
-    let (origin, access_token) =
-        match native_session_access(&account_state, &request.line_id, session_epoch).await {
-            Ok(v) => v,
-            Err(NativeSessionFailure::SignedOut) => {
-                return Ok(ActivationFailure::SignedOut.projection(&request))
+    // 粘贴密钥的线路没有账户会话：密钥本身就是凭据。此时 `access_token`
+    // 留空 —— 后面只有「删我们铸的密钥」会用到它，而这条路上一把也没铸。
+    use crate::account_v2::key_session::{self, KeyAccess};
+    let user_key = match key_session::access(&request.line_id) {
+        Ok(KeyAccess::NotKeyLine) => None,
+        Ok(KeyAccess::Ready { origin, key }) => Some((origin, key)),
+        Ok(KeyAccess::SignedOut) => return Ok(ActivationFailure::SignedOut.projection(&request)),
+        Err(()) => {
+            return Ok(
+                ActivationFailure::Adapter(AdapterFailure::SecureStorageUnavailable)
+                    .projection(&request),
+            )
+        }
+    };
+    let (origin, access_token) = match &user_key {
+        Some((origin, _)) => (origin.clone(), String::new()),
+        None => {
+            match native_session_access(&account_state, &request.line_id, session_epoch).await {
+                Ok(v) => v,
+                Err(NativeSessionFailure::SignedOut) => {
+                    return Ok(ActivationFailure::SignedOut.projection(&request))
+                }
+                Err(NativeSessionFailure::ServerUnavailable) => {
+                    return Ok(ActivationFailure::ServerUnavailable.projection(&request))
+                }
+                Err(NativeSessionFailure::AccountChanged) => {
+                    return Ok(ActivationFailure::ConfigurationFailed("account_changed")
+                        .projection(&request))
+                }
             }
-            Err(NativeSessionFailure::ServerUnavailable) => {
-                return Ok(ActivationFailure::ServerUnavailable.projection(&request))
-            }
-            Err(NativeSessionFailure::AccountChanged) => {
-                return Ok(
-                    ActivationFailure::ConfigurationFailed("account_changed").projection(&request)
-                )
-            }
-        };
+        }
+    };
     let bindings = request.bindings();
     if is_cancelled() {
         return Ok(cancelled());
     }
     emit_activation_progress(&app, &request, "checking_models", 3);
-    let transports = match permit
-        .cancel_safe(validate_models(
-            &origin,
-            &access_token,
-            &bindings,
-            &request.tool_id,
-        ))
-        .await
-    {
+    let validated = permit
+        .cancel_safe(async {
+            match &user_key {
+                Some((_, key)) => {
+                    pasted_key::validate_models(&origin, key, &bindings, &request.tool_id).await
+                }
+                None => validate_models(&origin, &access_token, &bindings, &request.tool_id).await,
+            }
+        })
+        .await;
+    let transports = match validated {
         Ok(Ok(v)) => v,
         Ok(Err(e)) => return Ok(e.projection(&request)),
         Err(_) => return Ok(cancelled()),
@@ -2471,6 +2495,9 @@ pub async fn configure_desktop_tool_v2(
     // 同一个分组失败，人就卡在这儿了。
     let mut skipped: Vec<SkippedBinding> = Vec::new();
     emit_activation_progress(&app, &request, "securing_access", 4);
+    if let Some((_, key)) = &user_key {
+        leases = pasted_key::leases(&bindings, key);
+    }
     for binding in &bindings {
         if leases
             .iter()
@@ -2588,6 +2615,24 @@ pub async fn configure_desktop_tool_v2(
             return Ok(cancelled());
         }
     }
+    if let (Some((_, key)), "claude_code" | "claude_desktop") =
+        (&user_key, request.tool_id.as_str())
+    {
+        // 授权登录的站点都原生说 Anthropic 格式，不用问；随便一个中转站不一定。
+        if permit
+            .cancel_safe(pasted_key::apply_claude_probes(
+                &origin,
+                key,
+                &request.tool_id,
+                &bindings,
+                &mut transports,
+            ))
+            .await
+            .is_err()
+        {
+            return Ok(cancelled());
+        }
+    }
     stage!("tokens_start");
     let credential = match credential_for_models(
         &request,
@@ -2602,6 +2647,10 @@ pub async fn configure_desktop_tool_v2(
             delete_created_tokens(&origin, &access_token, &leases).await;
             return Ok(e.projection(&request));
         }
+    };
+    let credential = ToolCredential {
+        pasted_key: user_key.is_some(),
+        ..credential
     };
     stage!("tokens_ready");
     let default_transport = bindings
@@ -3489,7 +3538,12 @@ pub async fn manage_tool_connections_v1(
             // and the pending receipt (already saved above) stay in place so
             // the restore action remains available as the retry entry.
             let revoke_tokens = request.revoke_tokens.unwrap_or(true);
-            let token_cleanup_complete = if !revoke_tokens {
+            let token_cleanup_complete = if !revoke_tokens
+                || credential_for_cleanup
+                    .as_ref()
+                    .is_some_and(|credential| credential.pasted_key)
+            {
+                // 用户自己粘贴的密钥不归我们吊销：站点上没有我们铸的东西。
                 true
             } else {
                 match (credential_for_cleanup.as_ref(), session_epoch) {

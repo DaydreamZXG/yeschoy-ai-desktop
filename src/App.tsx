@@ -47,6 +47,7 @@ import { StationTrustDialog } from "./account/StationTrustDialog";
 import { useStationConnect } from "./account/useStationConnect";
 import {
   isAccountLineId,
+  isStationKeyLineId,
   type AccountLineId,
 } from "./configuration/preview";
 import {
@@ -110,6 +111,11 @@ function App() {
       const fromSession = catalogLineFromSnapshot(snapshot.storedLineId);
       if (fromSession) {
         applyAccountLine(fromSession);
+        return;
+      }
+      // 用令牌连接的站点没有「线路偏好」可记，登录状态本身就是依据。
+      if (snapshot.storedLineId && isStationKeyLineId(snapshot.storedLineId)) {
+        setAccountLineId(snapshot.storedLineId);
         return;
       }
       const preference = readAccountLinePreference();

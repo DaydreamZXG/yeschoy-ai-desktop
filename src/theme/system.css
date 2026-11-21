@@ -858,6 +858,11 @@ button,
   background: var(--surface, transparent);
   font: inherit;
 }
+.station-token-note {
+  margin-top: var(--space-8) !important;
+  color: var(--muted);
+  font-size: 0.875em;
+}
 .station-token-result {
   display: flex;
   align-items: flex-start;

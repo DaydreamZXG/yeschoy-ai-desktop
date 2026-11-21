@@ -2302,6 +2302,7 @@ mod tests {
     #[test]
     fn the_web_runtime_gets_every_groups_key() {
         let credential = crate::tool_credentials::ToolCredential {
+            pasted_key: false,
             api_key: "sk-default".into(),
             origin: "https://yeschoy.com".into(),
             model_id: "glm-5.3".into(),

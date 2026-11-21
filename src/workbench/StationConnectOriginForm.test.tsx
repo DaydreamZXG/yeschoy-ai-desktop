@@ -162,11 +162,15 @@ describe("StationConnectOriginForm", () => {
       tokenStatus: "valid",
       models: ["claude-sonnet-4-5-20250929", "gpt-6.1-sol-2026-10-preview-long-model-identifier"],
     });
+    // 这个测试只看模型列表；连接那一步没有返回可用的账户，所以令牌留在输入框里。
     await user.type(screen.getByPlaceholderText("sk-..."), "sk-test-token");
     await user.click(
       screen.getByRole("button", { name: zh.stationOnboarding.tokenCheck }),
     );
     expect(await screen.findByText("Claude Sonnet 4.5")).toBeTruthy();
+    expect(
+      await screen.findByText(zh.stationOnboarding.keyConnect.failed),
+    ).toBeTruthy();
     const chips = screen.getByLabelText(zh.stationOnboarding.modelsLabel);
     expect(chips.querySelectorAll("li").length).toBeGreaterThanOrEqual(2);
     for (const li of chips.querySelectorAll("li")) {

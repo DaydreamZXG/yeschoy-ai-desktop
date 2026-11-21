@@ -30,6 +30,40 @@ pub(crate) mod usage;
 mod tests {
     use sha2::{Digest, Sha256};
 
+    /// 这块代码只有两个门，一个应用家族一个：Codex 的
+    /// `codex_responses_bridge.rs`、Claude 的 `claude_chat_bridge.rs`。别的文件
+    /// 要用协议转换，走这两个文件里我们自己写的入口。这样将来把这块换成自己写
+    /// 的实现时，要改的只有这两个文件。
+    #[test]
+    fn only_the_bridges_reach_into_the_vendored_code() {
+        fn visit(dir: &std::path::Path, found: &mut Vec<String>) {
+            for entry in std::fs::read_dir(dir).unwrap().flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    if path.file_name().is_some_and(|name| name != "proxy") {
+                        visit(&path, found);
+                    }
+                } else if path.extension().is_some_and(|ext| ext == "rs")
+                    && std::fs::read_to_string(&path).unwrap().lines().any(|line| {
+                        !line.trim_start().starts_with("//") && line.contains("proxy::")
+                    })
+                {
+                    found.push(path.file_name().unwrap().to_string_lossy().into_owned());
+                }
+            }
+        }
+        let mut found = Vec::new();
+        visit(
+            &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src"),
+            &mut found,
+        );
+        found.sort();
+        assert_eq!(
+            found,
+            ["claude_chat_bridge.rs", "codex_responses_bridge.rs"]
+        );
+    }
+
     /// 每个 vendored 文件与它的 sha256，与 `VENDOR.md` 里那张表同源。
     ///
     /// 新 vendor 一个文件就在这里加一行，并同步更新 `VENDOR.md`。
