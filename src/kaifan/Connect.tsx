@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 import { openStationConnectPage } from "../account/openStationConnectPage";
 import { connectWithKey } from "../account/session";
@@ -7,6 +8,13 @@ import {
   type AccountLineId,
 } from "../configuration/preview";
 import { BUILTIN_STATION_ORIGINS } from "../station/stationProbe";
+import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
+import {
+  useProviderPresets,
+  vendorFamilies,
+  vendorName,
+  type VendorFamily,
+} from "./providers";
 import { ROSTER, chibiOf, type Mood } from "./roster";
 import { sound } from "./sound";
 import {
@@ -18,7 +26,14 @@ import {
 import type { LinkEvent } from "./useStationLink";
 import { useTyped } from "./useTyped";
 
-type Step = "url" | "checking" | "trust" | "browser" | "key" | "working";
+type Step =
+  | "url"
+  | "checking"
+  | "trust"
+  | "browser"
+  | "key"
+  | "vendor"
+  | "working";
 
 interface Props {
   open: boolean;
@@ -37,6 +52,9 @@ interface Props {
 /**
  * 连接站点：阿青带着走。填网址 → 她去看这个站 → 能一键登录就去浏览器点「允许」，
  * 不能就粘贴密钥。用户不用知道站点是哪一种，也不用自己选。
+ *
+ * 第一步分两组：中转站填网址；云厂商点名字，地址是内置的，只要粘贴密钥。
+ * 不常用的厂商收在「还有几家」里，不一上来全铺开。
  */
 export function Connect({
   open,
@@ -61,6 +79,11 @@ export function Connect({
   const urlInput = useRef<HTMLInputElement>(null);
   const keyInput = useRef<HTMLInputElement>(null);
   const typed = useTyped(line);
+  const families = vendorFamilies(useProviderPresets());
+  const [vendor, setVendor] = useState<VendorFamily | null>(null);
+  const [region, setRegion] = useState(0);
+  const [moreCloud, setMoreCloud] = useState(false);
+  const preset = step === "vendor" ? (vendor?.regions[region] ?? null) : null;
 
   const say = useCallback((text: string, face: Mood = "idle") => {
     setLine(text);
@@ -73,6 +96,7 @@ export function Connect({
     setBusy(false);
     setStep("url");
     setKey("");
+    setVendor(null);
     say(t("kaifan.connect.askUrl"));
   }, [say, t]);
 
@@ -85,8 +109,30 @@ export function Connect({
   useEffect(() => {
     if (!open) return;
     if (step === "url") urlInput.current?.focus();
-    if (step === "key") keyInput.current?.focus();
+    if (step === "key" || step === "vendor") keyInput.current?.focus();
   }, [open, step]);
+
+  const pickVendor = (family: VendorFamily, at = 0) => {
+    const picked = family.regions[at];
+    if (!picked) return;
+    run.current += 1;
+    setBusy(false);
+    setVendor(family);
+    setRegion(at);
+    setOrigin(picked.origin);
+    setStep("vendor");
+    sound.pop();
+    say(t("kaifan.connect.vendorAsk", { name: vendorName(picked, t) }));
+  };
+
+  const openKeyPage = async () => {
+    if (!preset) return;
+    try {
+      await invoke("provider_open_key_page_v1", { id: preset.id });
+    } catch {
+      say(t("kaifan.connect.keyPageFailed"), "panic");
+    }
+  };
 
   const toKey = useCallback(
     (text: string, face: Mood = "idle") => {
@@ -155,19 +201,22 @@ export function Connect({
     const current = ++run.current;
     setBusy(true);
     say(t("kaifan.connect.trying"));
-    const outcome = await lookAtStation(origin, token);
-    if (current !== run.current) return;
     const fail = (code: string) => {
       setBusy(false);
       say(t(`kaifan.connect.key.${code}`), "panic");
     };
-    if (!outcome.ok) return fail("error");
-    if (outcome.probe.tokenStatus !== "valid")
-      return fail(
-        ["invalid", "no_quota"].includes(outcome.probe.tokenStatus)
-          ? outcome.probe.tokenStatus
-          : "error",
-      );
+    // 云厂商不先探一遍：那一步问的是中转站才有的接口。连接本身就会核对密钥。
+    if (!preset) {
+      const outcome = await lookAtStation(origin, token);
+      if (current !== run.current) return;
+      if (!outcome.ok) return fail("error");
+      if (outcome.probe.tokenStatus !== "valid")
+        return fail(
+          ["invalid", "no_quota"].includes(outcome.probe.tokenStatus)
+            ? outcome.probe.tokenStatus
+            : "error",
+        );
+    }
     let failure: string | null = null;
     try {
       const projection = await connectWithKey(origin, token);
@@ -187,7 +236,10 @@ export function Connect({
     setKey("");
     setBusy(false);
     onLineChange(`${STATION_KEY_LINE_PREFIX}${origin}`);
-    onConnected({ host: hostOf(origin), viaKey: true });
+    onConnected({
+      host: preset ? vendorName(preset, t) : hostOf(origin),
+      viaKey: true,
+    });
   };
 
   // 浏览器那边有结果了。
@@ -286,35 +338,84 @@ export function Connect({
         </header>
 
         {step === "url" && (
-          <form
-            style={{ display: "contents" }}
-            onSubmit={(event) => {
-              event.preventDefault();
-              void check();
-            }}
-          >
-            <div>
-              <label htmlFor="kf-url">{t("kaifan.connect.urlLabel")}</label>
-              <input
-                id="kf-url"
-                ref={urlInput}
-                className="inp"
-                value={url}
-                onChange={(event) => setUrl(event.target.value)}
-                placeholder={t("kaifan.connect.urlPlaceholder")}
-                autoComplete="off"
-                spellCheck={false}
-                disabled={busy}
-              />
-            </div>
-            <p className="hint">{t("kaifan.connect.urlHint")}</p>
-            <div className="ft">
-              <i />
-              <button type="submit" className="go" disabled={busy}>
-                {t("kaifan.connect.next")}
-              </button>
-            </div>
-          </form>
+          <>
+            <section className="grp" aria-labelledby="kf-relay">
+              <h3 id="kf-relay">
+                {t("kaifan.connect.groupRelay")}
+                <small>{t("kaifan.connect.groupRelayNote")}</small>
+              </h3>
+              <form
+                className="row"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void check();
+                }}
+              >
+                <label htmlFor="kf-url" className="vh">
+                  {t("kaifan.connect.urlLabel")}
+                </label>
+                <input
+                  id="kf-url"
+                  ref={urlInput}
+                  className="inp"
+                  value={url}
+                  onChange={(event) => setUrl(event.target.value)}
+                  placeholder={t("kaifan.connect.urlPlaceholder")}
+                  autoComplete="off"
+                  spellCheck={false}
+                  disabled={busy}
+                />
+                <button type="submit" className="go" disabled={busy}>
+                  {t("kaifan.connect.next")}
+                </button>
+              </form>
+              <p className="hint">{t("kaifan.connect.urlHint")}</p>
+            </section>
+            {families.length > 0 && (
+              <section className="grp" aria-labelledby="kf-cloud">
+                <h3 id="kf-cloud">
+                  {t("kaifan.connect.groupCloud")}
+                  <small>{t("kaifan.connect.groupCloudNote")}</small>
+                </h3>
+                <div className="vds" data-testid="kaifan-connect-vendors">
+                  {families
+                    .filter((family) => moreCloud || family.common)
+                    .map((family) => (
+                      <button
+                        key={family.family}
+                        type="button"
+                        className="vd"
+                        onClick={() => pickVendor(family)}
+                      >
+                        <b>{vendorName(family.regions[0], t)}</b>
+                        <small>
+                          {t(
+                            family.billing === "plan"
+                              ? "kaifan.connect.tagPlan"
+                              : "kaifan.connect.tagPayg",
+                          )}
+                        </small>
+                      </button>
+                    ))}
+                </div>
+                {families.some((family) => !family.common) && (
+                  <button
+                    type="button"
+                    className="fold"
+                    aria-expanded={moreCloud}
+                    onClick={() => setMoreCloud((shown) => !shown)}
+                  >
+                    {moreCloud
+                      ? t("kaifan.connect.less")
+                      : t("kaifan.connect.more", {
+                          count: families.filter((family) => !family.common)
+                            .length,
+                        })}
+                  </button>
+                )}
+              </section>
+            )}
+          </>
         )}
 
         {step === "checking" && (
@@ -386,6 +487,86 @@ export function Connect({
               </button>
             </div>
           </>
+        )}
+
+        {step === "vendor" && vendor && preset && (
+          <form
+            style={{ display: "contents" }}
+            onSubmit={(event) => {
+              event.preventDefault();
+              void connectKey();
+            }}
+          >
+            {vendor.regions.length > 1 && (
+              <p className="seg" role="group" aria-label={t("kaifan.connect.region")}>
+                {vendor.regions.map((item, at) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    aria-pressed={at === region}
+                    disabled={busy}
+                    onClick={() => pickVendor(vendor, at)}
+                  >
+                    {t(`kaifan.connect.region_${item.region ?? "cn"}`)}
+                  </button>
+                ))}
+              </p>
+            )}
+            <div>
+              <label htmlFor="kf-key">{t("kaifan.connect.keyLabel")}</label>
+              <input
+                id="kf-key"
+                ref={keyInput}
+                className="inp"
+                type="password"
+                value={key}
+                onChange={(event) => setKey(event.target.value)}
+                placeholder={t("kaifan.connect.keyPlaceholder")}
+                autoComplete="off"
+                spellCheck={false}
+                disabled={busy}
+              />
+            </div>
+            {preset.billing === "plan" ? (
+              <p className="quote warn" role="note" data-testid="kaifan-connect-risk">
+                <b>{t("kaifan.connect.planRiskTitle")}</b>
+                <br />
+                {t("kaifan.connect.planRisk", { name: vendorName(preset, t) })}
+              </p>
+            ) : (
+              <p className="hint">{t("kaifan.connect.paygNote")}</p>
+            )}
+            {(preset.onlyTools.length > 0 || preset.unverifiable) && (
+              <p className="hint" data-testid="kaifan-connect-limits">
+                {preset.onlyTools.length > 0 &&
+                  t("kaifan.connect.onlyTools", {
+                    apps: preset.onlyTools
+                      .map((tool) => {
+                        const app = WORKBENCH_APPS.find(
+                          (item) => item.id === tool,
+                        );
+                        return app ? appDisplayName(app.id, app.name, t) : tool;
+                      })
+                      .join(t("kaifan.connect.listJoin")),
+                  })}
+                {preset.unverifiable && t("kaifan.connect.unverifiable")}
+              </p>
+            )}
+            <div className="ft">
+              {back}
+              <i />
+              <button
+                type="button"
+                className="go alt"
+                onClick={() => void openKeyPage()}
+              >
+                {t("kaifan.connect.getKey")}
+              </button>
+              <button type="submit" className="go" disabled={busy}>
+                {t(busy ? "kaifan.connect.connecting" : "kaifan.connect.go")}
+              </button>
+            </div>
+          </form>
         )}
 
         {step === "key" && (
