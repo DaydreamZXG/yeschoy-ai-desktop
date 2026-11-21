@@ -245,35 +245,34 @@ export function Card({
               {prices && <p className="nt">{t("kaifan.card.planNote")}</p>}
             </section>
           )}
-          {model && (
+          {model && prices && (
             <details>
               <summary className="lnk">{t("kaifan.card.prices")}</summary>
-              {prices ? (
-                <div className="kv" data-testid="kaifan-card-prices">
-                  <span>{t("kaifan.card.perMillion")}</span>
-                  <b>{t("kaifan.card.input")}</b>
-                  <b>{t("kaifan.card.output")}</b>
-                  <span>{t("kaifan.card.official")}</span>
-                  <b>{yuan(prices.officialInput)}</b>
-                  <b>{yuan(prices.officialOutput)}</b>
-                  <span>{t("kaifan.card.thisPlan")}</span>
-                  <b>
-                    {prices.planInput === null
-                      ? t("kaifan.card.unknown")
-                      : yuan(prices.planInput)}
-                  </b>
-                  <b>
-                    {prices.planOutput === null
-                      ? t("kaifan.card.unknown")
-                      : yuan(prices.planOutput)}
-                  </b>
-                </div>
-              ) : (
-                <p className="nt" data-testid="kaifan-card-prices">
-                  {t("kaifan.card.noPrices")}
-                </p>
-              )}
+              <div className="kv" data-testid="kaifan-card-prices">
+                <span>{t("kaifan.card.perMillion")}</span>
+                <b>{t("kaifan.card.input")}</b>
+                <b>{t("kaifan.card.output")}</b>
+                <span>{t("kaifan.card.official")}</span>
+                <b>{yuan(prices.officialInput)}</b>
+                <b>{yuan(prices.officialOutput)}</b>
+                <span>{t("kaifan.card.thisPlan")}</span>
+                <b>
+                  {prices.planInput === null
+                    ? t("kaifan.card.unknown")
+                    : yuan(prices.planInput)}
+                </b>
+                <b>
+                  {prices.planOutput === null
+                    ? t("kaifan.card.unknown")
+                    : yuan(prices.planOutput)}
+                </b>
+              </div>
             </details>
+          )}
+          {model && !prices && (
+            <p className="nt" data-testid="kaifan-card-prices">
+              {t("kaifan.card.noPrices")}
+            </p>
           )}
           <section>
             <h4>{t("kaifan.card.jobs")}</h4>
