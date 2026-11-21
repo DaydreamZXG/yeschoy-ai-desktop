@@ -1769,9 +1769,11 @@
       "openFailed": "Couldn't open {{app}} for you. It's already set up, so opening it yourself works just the same",
       "skipped": "Also, {{models}} could not be added: the station doesn't allow this account to use it. Everything else is unaffected."
     },
+    "drawer": {
+      "close": "Close"
+    },
     "card": {
       "title": "{{name}}'s card",
-      "close": "Close",
       "good": "Good at",
       "model": "Model",
       "plan": "Price plan",
