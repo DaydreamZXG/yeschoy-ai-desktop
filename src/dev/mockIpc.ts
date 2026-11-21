@@ -218,6 +218,34 @@ function activationResult(args: Args) {
     };
   if (scenario === "group_skipped")
     return { ...base, status: "ready", reasonCode: "configuration_ready" };
+  // 新接入屏要看的几种结局：`?s=join_running` 应用开着（答应重启后才成）、
+  // `join_restored` 没接成但已改回原样、`join_written` 设置写好但没能打开、
+  // `join_slow` 多等几秒，用来看进度那一屏。
+  const failed = (status: string, reasonCode: string) => ({
+    ...base,
+    status,
+    reasonCode,
+    skipped: [],
+  });
+  if (scenario === "join_running" && !request.restartRunningApp)
+    return failed("application_running", "desktop_running");
+  if (scenario === "join_restored")
+    return failed("configuration_failed", "desktop_start_failed_restored");
+  if (scenario === "join_written")
+    return failed("launch_failed", "desktop_launch_start_failed");
+  if (scenario === "join_slow")
+    return new Promise((resolve) =>
+      setTimeout(
+        () =>
+          resolve({
+            ...base,
+            status: "ready",
+            reasonCode: "configuration_ready",
+            skipped: [],
+          }),
+        6000,
+      ),
+    );
   return {
     ...base,
     status: "ready",
