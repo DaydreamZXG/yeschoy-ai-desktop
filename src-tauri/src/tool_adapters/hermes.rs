@@ -166,6 +166,62 @@ fn model_block(text: &str) -> Option<Range<usize>> {
     start.map(|start| start..end)
 }
 
+/// `model:` 块里除了 `dropped` 以外的项，原文照抄，连同它们上面的注释；缩进
+/// 统一换成 `indent`。块的写法认不出来就是 `None`。
+fn extras(block: &str, indent: &str, dropped: &Mapping) -> Option<String> {
+    let mut kept = String::new();
+    // 还没归属的空行和注释：跟着下一项走。
+    let mut pending = String::new();
+    let mut theirs: Option<&str> = None;
+    let mut keeping = false;
+    for line in block.split_inclusive('\n').skip(1) {
+        let content = line.trim_end_matches(['\n', '\r']);
+        let body = content.trim_start_matches(' ');
+        if body.is_empty() || body.starts_with('#') {
+            pending.push_str(line);
+            continue;
+        }
+        let width = content.len() - body.len();
+        let own = *theirs.get_or_insert(&content[..width]);
+        if width < own.len() {
+            return None;
+        }
+        if width == own.len() {
+            let key = body.split_once(':')?.0.trim().trim_matches(['"', '\'']);
+            keeping = !dropped.contains_key(key);
+        }
+        if keeping {
+            for line in std::mem::take(&mut pending)
+                .split_inclusive('\n')
+                .chain([line])
+            {
+                kept.push_str(indent);
+                kept.push_str(
+                    line.strip_prefix(own)
+                        .unwrap_or(line.trim_start_matches(' ')),
+                );
+            }
+        } else {
+            pending.clear();
+        }
+    }
+    if !kept.is_empty() && !kept.ends_with('\n') {
+        kept.push_str(line_ending(block));
+    }
+    Some(kept)
+}
+
+/// `model` 这张表里除了 `dropped` 以外的项。
+fn extra_values(model: Option<&Value>, dropped: &Mapping) -> Mapping {
+    model
+        .and_then(Value::as_mapping)
+        .into_iter()
+        .flatten()
+        .filter(|(key, _)| !dropped.contains_key(*key))
+        .map(|(key, value)| (key.clone(), value.clone()))
+        .collect()
+}
+
 fn line_ending(text: &str) -> &'static str {
     if text.contains("\r\n") {
         "\r\n"
@@ -233,8 +289,25 @@ pub(crate) fn render(
 ) -> Result<Vec<u8>, ()> {
     let original = parse(existing)?;
     let text = std::str::from_utf8(existing.unwrap_or_default()).map_err(|_| ())?;
-    let wanted = Value::Mapping(ours(model, local_token));
-    let edited = splice(text, &block_text(model, local_token, line_ending(text))?).into_bytes();
+    let mut wanted = ours(model, local_token);
+    let mut block = block_text(model, local_token, line_ending(text))?;
+    // 已经接着我们、只是重新接一次：用户后来加在这一块里的项留着。型号换了
+    // 就不留 `context_length`——那是给上一个型号定的，Hermes 自己换型号时也会
+    // 清掉它。原来接的是别家，那一块整块换掉：别家的 `api_mode` 之类留下来
+    // 反而连不上。
+    if model_points_at_bridge(&original) {
+        let mut dropped = wanted.clone();
+        if original["model"]["default"].as_str() != Some(model) {
+            dropped.insert("context_length".into(), Value::Null);
+        }
+        let added = extra_values(original.get("model"), &dropped);
+        block += &model_block(text)
+            .and_then(|span| extras(&text[span], "  ", &dropped))
+            .unwrap_or_default();
+        wanted.extend(added);
+    }
+    let wanted = Value::Mapping(wanted);
+    let edited = splice(text, &block).into_bytes();
     if only_model_differs(&original, &edited, Some(&wanted)) {
         return Ok(edited);
     }
@@ -551,6 +624,34 @@ terminal:
         assert_eq!(
             restored(None, &current),
             Some((Some("toolsets:\n  - web\n".into()), false))
+        );
+    }
+
+    /// 接好之后用户在我们那一块里加了几项，再点一次接入：加的项和上面的注释
+    /// 留着。换了型号，`context_length` 是给上一个型号定的，不留。
+    #[test]
+    fn reconnecting_keeps_what_the_user_added_to_our_block() {
+        let first = render(Some(THEIRS.as_bytes()), "glm-5.3", &token()).unwrap();
+        let added =
+            "  # 探测不到，手填\n  context_length: 200000\n  default_headers:\n    x-team: a\n";
+        let current = text(&first).replace("\n\n# 终端", &format!("\n{added}\n# 终端"));
+        assert_ne!(current, text(&first));
+
+        let same = render(Some(current.as_bytes()), "glm-5.3", &token()).unwrap();
+        assert_eq!(text(&same), current);
+
+        let other = render(Some(current.as_bytes()), "kimi-k3", &token()).unwrap();
+        assert_eq!(
+            text(&other),
+            current
+                .replace("\"glm-5.3\"", "\"kimi-k3\"")
+                .replace("  # 探测不到，手填\n  context_length: 200000\n", "")
+        );
+
+        // 改回原样时整块换回接入前的样子：加在我们那一块里的项跟着这次接入走。
+        assert_eq!(
+            restored(Some(THEIRS), &current),
+            Some((Some(THEIRS.into()), false))
         );
     }
 
