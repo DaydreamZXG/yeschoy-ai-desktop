@@ -205,6 +205,42 @@ describe("接入：选应用、选人、点一下", () => {
     });
   });
 
+  it("存过的分组原样沿用：把名单里的另一个型号换成默认时，不替用户换分组", async () => {
+    setup({
+      current: "cla",
+      initialApp: "codex_desktop",
+      connections: [
+        {
+          toolId: "codex_desktop",
+          state: "connected",
+          modelId: "deepseek-v4",
+          lineId: "mainland_optimized",
+          billingGroup: "vip",
+          updatedAtEpochMs: 1,
+          restoreMode: "original",
+          requiresBackground: false,
+          reasonCode: "",
+          models: [
+            { modelId: "deepseek-v4", billingGroup: "vip" },
+            { modelId: "claude-sonnet-4-5-20250929", billingGroup: "cheap" },
+          ],
+        },
+      ],
+    });
+    await ready();
+    answer("ready", "configuration_ready");
+    fireEvent.click(go());
+    await waitFor(() => expect(activate).toHaveBeenCalled());
+    expect(activate.mock.calls[0][0]).toMatchObject({
+      modelId: "claude-sonnet-4-5-20250929",
+      billingGroup: "cheap",
+      models: [
+        { modelId: "claude-sonnet-4-5-20250929", billingGroup: "cheap" },
+        { modelId: "deepseek-v4", billingGroup: "vip" },
+      ],
+    });
+  });
+
   it("应用开着：先说清楚要重启，用户点了才重启", async () => {
     const props = setup();
     await ready();

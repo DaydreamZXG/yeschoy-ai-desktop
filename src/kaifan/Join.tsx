@@ -175,10 +175,20 @@ export function Join({
       ? chosenModel
       : modelFor(ids, saved);
   const model = usable.find((item) => item.id === modelId);
-  const billingGroup = chooseBillingGroup(
-    model,
-    saved?.modelId === modelId ? saved.billingGroup : "",
+  // 这个应用里已经存过的型号和分组。分组决定价格，存过的原样沿用，不替用户换。
+  const remembered = useMemo(
+    () =>
+      !saved || saved.state === "not_connected"
+        ? []
+        : [
+            { modelId: saved.modelId, billingGroup: saved.billingGroup },
+            ...(saved.models ?? []),
+          ].filter((item) => item.modelId && item.billingGroup),
+    [saved],
   );
+  const billingGroup =
+    remembered.find((item) => item.modelId === modelId)?.billingGroup ??
+    chooseBillingGroup(model, "");
 
   const name = t(`roster.${who}.name`);
   const appInfo = WORKBENCH_APPS.find((item) => item.id === app);
@@ -191,19 +201,13 @@ export function Join({
     if (working || !modelId || !installationId) return;
     // 这个应用原来的名单里还在站上的模型照旧留着，只把默认换成她。
     const binding: ModelBinding = { modelId, billingGroup };
-    const kept = (saved?.state !== "not_connected" ? saved?.models : [])
-      ?.filter(
-        (item) =>
-          item.modelId !== modelId &&
-          usable.some((entry) => entry.id === item.modelId),
-      )
-      .map((item) => ({
-        modelId: item.modelId,
-        billingGroup: chooseBillingGroup(
-          usable.find((entry) => entry.id === item.modelId),
-          item.billingGroup,
-        ),
-      }));
+    const kept = (saved?.models ?? []).filter(
+      (item, index, all) =>
+        remembered.includes(item) &&
+        item.modelId !== modelId &&
+        all.findIndex((entry) => entry.modelId === item.modelId) === index &&
+        usable.some((entry) => entry.id === item.modelId),
+    );
     setOutcome(null);
     sound.pop(620);
     const result = await task.run(
@@ -213,7 +217,7 @@ export function Join({
         modelId,
         installationId,
         billingGroup,
-        models: [binding, ...(kept ?? [])],
+        models: [binding, ...kept],
         ...extra,
       },
       {
