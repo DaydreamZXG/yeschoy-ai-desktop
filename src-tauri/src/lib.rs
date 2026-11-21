@@ -33,6 +33,7 @@ mod model_catalog;
 mod open_connection;
 mod opencode_bridge;
 mod provider;
+mod provider_presets;
 mod proxy;
 mod update_channel;
 // Client-first OAuth preparation. Deliberately dormant until the server and
@@ -205,6 +206,7 @@ pub fn run() {
             account_v2::account_session_snapshot_v2,
             account_v2::account_inspect_v2,
             account_v2::key_session::account_connect_with_key_v1,
+            provider_presets::provider_presets_v1,
             account_v2::account_begin_authorization_v2,
             account_v2::account_open_authorization_v2,
             account_v2::account_poll_authorization_v2,
