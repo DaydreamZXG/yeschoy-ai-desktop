@@ -1605,7 +1605,7 @@
       "stripLabel": "{{name}} ({{brand}})",
       "fixHero": "One app needs a fix",
       "fixSub": "One click",
-      "fixSaysChanged": "Another tool changed {{app}}'s settings, so it no longer uses this station. Press “Fix it” and I'll help you switch it back, or keep theirs.",
+      "fixSaysChanged": "Another tool changed {{app}}'s settings, so it no longer uses this station. Press “Fix it” to connect it again or put it back how it was.",
       "fixSaysUnfinished": "{{app}} was left half set up last time. Press “Fix it” and I'll finish the job, no need to start over.",
       "fixGo": "Fix it",
       "connectedNoHost": "Connected. ",
@@ -1715,10 +1715,10 @@
         "keychain": "The system keychain wouldn't let me store the key. Unlock it and I'll try again.",
         "stationDown": "The station isn't answering right now — not your fault. I'll try again.",
         "restored": "That didn't work. {{app}} is back to how it was and nothing is broken. Try again?",
-        "unfinished": "That didn't work, and {{app}} isn't fully back to how it was yet. Let's fix that first.",
+        "unfinished": "That didn't work, and {{app}} isn't fully back to how it was yet. Try again and I'll put it back first, then connect it.",
         "cancelled": "Okay, stopped. {{app}} was not changed.",
         "retry": "That didn't work this time. {{app}} is not broken. Try again?",
-        "installOffline": "I couldn't reach the official {{app}} download, so it wasn't installed. Your network may be down, or their server may be briefly unavailable. What was already downloaded is kept and will resume next time.",
+        "installOffline": "I couldn't reach the official {{app}} download, so it wasn't installed. Your network may be down, or their server may be briefly unavailable. What was already downloaded is kept; if your network dropped, I'll carry on by myself as soon as it's back.",
         "installBad": "The {{app}} download doesn't match the checksum its publisher lists, so I didn't install it. The download was most likely damaged on the way; downloading again usually fixes it.",
         "installFull": "There isn't enough disk space, so {{app}} wasn't installed. Free up some space and try again.",
         "installFailed": "{{app}} wasn't installed this time, and I couldn't tell why. You can try again, or install it yourself from the official site.",
@@ -1742,7 +1742,7 @@
         "keychain": "Unlocked, try again",
         "stationDown": "Try again",
         "restored": "Try again",
-        "unfinished": "Fix it ➜",
+        "unfinished": "Try again",
         "cancelled": "Back to choices",
         "retry": "Try again",
         "installOffline": "Try again",
@@ -1753,7 +1753,17 @@
         "installFound": "Back to connect",
         "planGone": "Connect with “{{to}}”",
         "planBlocked": "Try again"
-      }
+      },
+      "mend": {
+        "unfinished": "{{app}} was left half set up last time. Connect it again and I'll put it back first, then set it up properly. If you'd rather not, choose “Put it back”.",
+        "changed": "Another tool changed {{app}}'s settings, so it no longer uses this station. Connecting again replaces what that tool changed. If you'd rather not, choose “Put it back” — I'll leave that tool's changes alone."
+      },
+      "mendGo": {
+        "unfinished": "Let {{name}} finish it ➜",
+        "changed": "Send {{name}} again ➜"
+      },
+      "undoing": "Putting {{app}} back how it was…",
+      "undoneOk": "OK"
     },
     "reveal": {
       "kicker": "MODEL ONLINE",

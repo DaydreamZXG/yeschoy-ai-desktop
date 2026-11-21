@@ -73,7 +73,14 @@ describe("接入结果怎么说", () => {
     ).toMatchObject({ kind: "restored", action: "retry" });
     expect(
       of("configuration_failed", "configuration_rollback_failed"),
-    ).toMatchObject({ kind: "unfinished", action: "classic" });
+    ).toMatchObject({ kind: "unfinished", action: "retry" });
+    // 有一步只有用户做得了的，说的是那一步，不是笼统的「没改回去」。
+    expect(
+      of("configuration_failed", "desktop_recovery_waiting_for_exit").kind,
+    ).toBe("closeApp");
+    expect(of("configuration_failed", "credential_restore_failed").kind).toBe(
+      "keychain",
+    );
   });
 
   it("换个人能解决的，带回去换人", () => {

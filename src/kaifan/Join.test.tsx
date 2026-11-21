@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AccountModel } from "../account/session";
 import {
@@ -148,6 +154,7 @@ function setup(patch: Partial<Parameters<typeof Join>[0]> = {}) {
     onClose: vi.fn(),
     onJoined: vi.fn(),
     onReconnect: vi.fn(),
+    onUndo: vi.fn(),
     onClassic: vi.fn(),
     onSettled: vi.fn(),
     ...patch,
@@ -805,6 +812,207 @@ describe("接入：选应用、选人、点一下", () => {
     expect(go()).toBeDisabled();
     fireEvent.click(again);
     await ready();
+  });
+});
+
+/** 一个要修的应用：`state` 是哪种坏法。 */
+const broken = (
+  state: ToolConnection["state"],
+  patch: Partial<ToolConnection> = {},
+): ToolConnection => ({
+  toolId: "codex_desktop",
+  state,
+  modelId: "deepseek-v4-flash",
+  lineId: "mainland_optimized",
+  billingGroup: "default",
+  updatedAtEpochMs: 1,
+  restoreMode: "original",
+  requiresBackground: false,
+  reasonCode: "",
+  ...patch,
+});
+const undone = (
+  status: "restored" | "restored_with_changes" | "recovery_failed",
+) => ({
+  requestId: "u",
+  schemaVersion: 2 as const,
+  status,
+  connections: [],
+  reasonCode: "",
+});
+
+describe("接入：要修的应用就在这里修", () => {
+  it("上次没做完：选回原来的人和型号，说清是怎么回事，点一下接着接好", async () => {
+    answer("ready", "ready");
+    const props = setup({
+      initialApp: "codex_desktop",
+      connections: [broken("recovery_pending")],
+    });
+    const mend = await screen.findByRole("button", { name: /接着接好/ });
+    await waitFor(() => expect(mend).toBeEnabled());
+    expect(mend).toHaveTextContent("让小鲸接着接好");
+    expect(screen.getByTestId("kaifan-join-mend")).toHaveTextContent(
+      "上次接到一半停了",
+    );
+    fireEvent.click(mend);
+    await waitFor(() => expect(props.onJoined).toHaveBeenCalled());
+    expect(activate.mock.calls[0][0]).toMatchObject({
+      toolId: "codex_desktop",
+      modelId: "deepseek-v4-flash",
+      billingGroup: "default",
+    });
+    expect(props.onClassic).not.toHaveBeenCalled();
+  });
+
+  it("被别的工具改过：说重新接入会盖掉那边的；改回原样点一下就做，做完说结果", async () => {
+    const props = setup({
+      initialApp: "codex_desktop",
+      connections: [broken("changed")],
+      onUndo: vi.fn().mockResolvedValue(undone("restored_with_changes")),
+    });
+    expect(
+      await screen.findByRole("button", { name: /重新接入/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("kaifan-join-mend")).toHaveTextContent(
+      "会盖掉那边改的",
+    );
+    fireEvent.click(screen.getByTestId("kaifan-join-undo"));
+    await waitFor(() => expect(says()).toContain("你后来自己改的那些我没动"));
+    expect(props.onUndo).toHaveBeenCalledWith("codex_desktop");
+    expect(activate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "好" }));
+    expect(props.onClose).toHaveBeenCalled();
+  });
+
+  it("没改回成：照实说，能再试一次，也能回去", async () => {
+    const onUndo = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("busy"))
+      .mockResolvedValueOnce(undone("restored"));
+    setup({
+      initialApp: "codex_desktop",
+      connections: [broken("recovery_pending")],
+      onUndo,
+    });
+    fireEvent.click(await screen.findByTestId("kaifan-join-undo"));
+    await waitFor(() => expect(says()).toContain("这次没改成"));
+    fireEvent.click(screen.getByRole("button", { name: "再试一次" }));
+    await waitFor(() => expect(says()).toContain("改回接入之前的样子了"));
+    expect(onUndo).toHaveBeenCalledTimes(2);
+  });
+
+  it("旧版本接的、没存下原设置的：按钮叫撤掉接入；好好的应用没有这个按钮", async () => {
+    setup({
+      initialApp: "codex_desktop",
+      connections: [
+        broken("changed", { restoreMode: "remove_yeschoy" }),
+        broken("connected", { toolId: "claude_desktop" }),
+      ],
+    });
+    expect(await screen.findByTestId("kaifan-join-undo")).toHaveTextContent(
+      "撤掉接入",
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^Claude Desktop/ }));
+    expect(screen.queryByTestId("kaifan-join-undo")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("kaifan-join-mend")).not.toBeInTheDocument();
+  });
+
+  it("没接成、也没改回去：再试一次就在这里做，不去旧页面", async () => {
+    answer("configuration_failed", "configuration_rollback_failed");
+    answer("ready", "ready");
+    const props = setup({ initialApp: "codex_desktop" });
+    await ready();
+    fireEvent.click(go());
+    await waitFor(() => expect(says()).toContain("还没完全改回原样"));
+    fireEvent.click(screen.getByRole("button", { name: "再试一次" }));
+    await waitFor(() => expect(props.onJoined).toHaveBeenCalled());
+    expect(activate).toHaveBeenCalledTimes(2);
+    expect(props.onClassic).not.toHaveBeenCalled();
+  });
+});
+
+describe("接入：自己能解决的不问用户", () => {
+  it("应用挪了地方：自己重新找一遍，找到了接着接", async () => {
+    answer("tool_not_found", "tool_not_found");
+    answer("ready", "ready");
+    const props = setup({ initialApp: "codex_desktop" });
+    await ready();
+    const moved = target("codex_desktop");
+    moved.installations[0].installationId = "codex_desktop-2";
+    found([moved]);
+    fireEvent.click(go());
+    await waitFor(() => expect(props.onJoined).toHaveBeenCalled());
+    expect(activate.mock.calls.map((call) => call[0].installationId)).toEqual([
+      "codex_desktop-1",
+      "codex_desktop-2",
+    ]);
+  });
+
+  it("重新找了还是老地方：只找一次，照实说没找到", async () => {
+    answer("tool_not_found", "tool_not_found");
+    setup({ initialApp: "codex_desktop" });
+    await ready();
+    fireEvent.click(go());
+    await waitFor(() => expect(says()).toContain("没找到"));
+    expect(activate).toHaveBeenCalledTimes(1);
+    expect(scan).toHaveBeenCalledTimes(2);
+  });
+
+  it("好几份里用户点名的那份不见了：不替他换成另一份", async () => {
+    const copy = (
+      installationId: string,
+      label: string,
+      recommended: boolean,
+    ) => ({
+      installationId,
+      label,
+      version: "1",
+      supported: true,
+      recommended,
+    });
+    found([
+      target("claude_desktop", {
+        status: "selection_required",
+        installations: [
+          copy("a", "系统应用", false),
+          copy("b", "用户目录", true),
+        ],
+      } as Partial<ActivationTarget>),
+    ]);
+    answer("tool_not_found", "tool_not_found");
+    const props = setup();
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: /系统应用/ }));
+    found([
+      target("claude_desktop", {
+        installations: [copy("b", "用户目录", true)],
+      } as Partial<ActivationTarget>),
+    ]);
+    fireEvent.click(go());
+    await waitFor(() => expect(says()).toContain("没找到"));
+    expect(activate.mock.calls.map((call) => call[0].installationId)).toEqual([
+      "a",
+    ]);
+    expect(props.onJoined).not.toHaveBeenCalled();
+  });
+
+  it("断网没下成：网络一恢复自己再下，不用回来再点", async () => {
+    absentClaudeCode(() =>
+      installing({
+        phase: "failed",
+        canCancel: false,
+        reasonCode: "network_unavailable",
+      }),
+    );
+    found([target("codex_desktop")]);
+    setup({ initialApp: "claude_code" });
+    fireEvent.click(await screen.findByRole("button", { name: /安装并接入/ }));
+    await waitFor(() => expect(says()).toContain("没连上"));
+    const starts = () =>
+      installer.mock.calls.filter((call) => call[1] === "start");
+    expect(starts()).toHaveLength(1);
+    act(() => void window.dispatchEvent(new Event("online")));
+    await waitFor(() => expect(starts()).toHaveLength(2));
   });
 });
 

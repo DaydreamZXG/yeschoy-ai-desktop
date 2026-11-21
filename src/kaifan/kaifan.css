@@ -2429,3 +2429,18 @@ h4 + .set,
     transition: none;
   }
 }
+
+/* 接入：这个应用要修时，先说清是哪种情况 */
+.jn .mend {
+  margin-top: 16px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+  background: color-mix(in srgb, var(--c) 10%, transparent);
+  font-size: 13px;
+  line-height: 1.6;
+  color: #fff;
+}
+.jn .mend + .pf {
+  margin-top: 14px;
+}

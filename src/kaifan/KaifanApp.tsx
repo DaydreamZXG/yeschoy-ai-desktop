@@ -59,6 +59,9 @@ import { useStationLink, type LinkEvent } from "./useStationLink";
 
 /** 站点连不上时，隔这么久自己再试一次，不等用户来点。 */
 const RETRY_MS = 20_000;
+/** 应用的情况没读到时，隔几秒自己再读，最多读这么多次。 */
+const REREAD_MS = 4_000;
+const REREAD_TIMES = 3;
 /** 切回窗口时，离上次看账户至少隔这么久才再看一次。 */
 const REFOCUS_MS = 5_000;
 const HOME_APPS = 5;
@@ -188,6 +191,42 @@ export function KaifanApp() {
     const timer = setTimeout(() => void retry(), RETRY_MS);
     return () => clearTimeout(timer);
   }, [retry, retrying, state.cond]);
+  // 网络一恢复、或者人一回到窗口，马上再试，不干等那二十秒。
+  const down = useRef({ retry, idle: false });
+  down.current = { retry, idle: state.cond === "off" && !retrying };
+  useEffect(() => {
+    const now = () => {
+      if (down.current.idle) void down.current.retry();
+    };
+    window.addEventListener("online", now);
+    window.addEventListener("focus", now);
+    return () => {
+      window.removeEventListener("online", now);
+      window.removeEventListener("focus", now);
+    };
+  }, []);
+
+  // 应用的情况没读到：自己再读几次，不让人对着「看不到」去找刷新。
+  const reread = useRef(0);
+  const unread =
+    connections.error ||
+    connections.connections.some((item) => item.state === "unavailable");
+  const readAgain = connections.refresh;
+  useEffect(() => {
+    if (!unread) {
+      reread.current = 0;
+      return;
+    }
+    if (connections.refreshing || reread.current >= REREAD_TIMES) return;
+    const timer = setTimeout(
+      () => {
+        reread.current += 1;
+        void readAgain();
+      },
+      REREAD_MS * (reread.current + 1),
+    );
+    return () => clearTimeout(timer);
+  }, [connections.refreshing, readAgain, unread]);
 
   // 从别的窗口回来（比如刚在浏览器里充完值）：自己再看一眼账户，不用人来刷新。
   const look = useRef({ refresh, at: Date.now() });
@@ -357,12 +396,8 @@ export function KaifanApp() {
   const [join, setJoin] = useState<{ app?: ActivationToolId } | null>(null);
   const [joined, setJoined] = useState<Joined | null>(null);
   const [openFailed, setOpenFailed] = useState(false);
-  const setup = (app?: ActivationToolId) => {
-    // 上次没做完、或者设置被别的工具改过的，新的一屏还修不了，先去旧页面修。
-    if (app && state.repair.some((item) => item.toolId === app))
-      return openClassic("setup", app);
-    setJoin({ app });
-  };
+  // 要修的应用也在这一屏里修：接入那一屏会选回它原来的人，说清是哪种情况。
+  const setup = (app?: ActivationToolId) => setJoin({ app });
   const onJoined = (result: Joined) => {
     setJoin(null);
     setOpenFailed(false);
@@ -526,6 +561,7 @@ export function KaifanApp() {
             setJoin(null);
             setConnectOpen(true);
           }}
+          onUndo={connections.restore}
           onClassic={(app) => openClassic("setup", app)}
           onSettled={() => void connections.refresh()}
         />

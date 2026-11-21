@@ -75,7 +75,7 @@ const RESTORED = new Set([
   "desktop_start_failed_restored",
   "desktop_change_failed_restored",
 ]);
-/** 没接成，而且原样也没改回去：下次打开会先接着恢复，现在可以去修。 */
+/** 没接成，而且原样也没改回去。再接一次时后端会先把它改回去，再重新接。 */
 const UNFINISHED = new Set([
   "previous_app_reopen_failed",
   "desktop_recovery_waiting_for_exit",
@@ -148,7 +148,12 @@ export function joinOutcome(
       return outcome("retry", "retry");
     case "configuration_failed":
       if (RESTORED.has(reason)) return outcome("restored", "retry");
-      if (UNFINISHED.has(reason)) return outcome("unfinished", "classic");
+      // 这两种有用户自己才做得了的一步（关掉应用、解锁密码库），照实说出来。
+      if (reason === "desktop_recovery_waiting_for_exit")
+        return outcome("closeApp", "retry");
+      if (reason === "credential_restore_failed")
+        return outcome("keychain", "retry");
+      if (UNFINISHED.has(reason)) return outcome("unfinished", "retry");
       if (reason === "activation_cancelled")
         return outcome("cancelled", "pick", "idle");
       if (reason === "installation_confirmation_required")

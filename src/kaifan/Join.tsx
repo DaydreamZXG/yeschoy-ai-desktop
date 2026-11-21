@@ -11,7 +11,10 @@ import {
   DEFAULT_BILLING_GROUP,
   chooseBillingGroup,
 } from "../configuration/billing";
-import type { ToolConnection } from "../configuration/connections";
+import type {
+  ConnectionResponse,
+  ToolConnection,
+} from "../configuration/connections";
 import type { AccountLineId } from "../configuration/preview";
 import { useActivationTask } from "../configuration/useActivationTask";
 import {
@@ -41,6 +44,7 @@ import {
   type RosterId,
 } from "./roster";
 import { sound } from "./sound";
+import { undoFailed, undoKey, type UndoKey } from "./undo";
 import { useInstall } from "./useInstall";
 import { useTyped } from "./useTyped";
 
@@ -70,13 +74,23 @@ interface Props {
   onJoined: (result: Joined) => void;
   /** 登录不算数了：去重新连站点。 */
   onReconnect: () => void;
-  /** 这一屏还办不了的事（要系统确认的安装、修上次没做完的）：先去旧页面办。 */
+  /** 把一个应用改回接入之前的样子（上次没做完、或者被别的工具改过时给这条路）。 */
+  onUndo: (toolId: ActivationToolId) => Promise<ConnectionResponse>;
+  /** 这一屏还办不了的事（要系统确认的安装）：先去旧页面办。 */
   onClassic: (toolId: ActivationToolId) => void;
   /** 接入做完（不管成没成）之后，让外面重新读一遍应用的状态。 */
   onSettled: () => void;
 }
 
 type Scan = "loading" | "ready" | "failed";
+
+/** 这个应用要修：上次没做完（`unfinished`），或者设置被别的工具改过（`changed`）。 */
+const brokenOf = (state: ToolConnection["state"] | undefined) =>
+  state === "recovery_pending"
+    ? "unfinished"
+    : state === "changed"
+      ? "changed"
+      : null;
 
 /** 下载了多少，写成人看的大小。 */
 const megabytes = (bytes: number) =>
@@ -117,6 +131,7 @@ export function Join({
   onClose,
   onJoined,
   onReconnect,
+  onUndo,
   onClassic,
   onSettled,
 }: Props) {
@@ -156,6 +171,9 @@ export function Join({
   const [installing, setInstalling] = useState(false);
   /** 选中的这个没装的应用，客户端能不能自己装。 */
   const [selfInstall, setSelfInstall] = useState(false);
+  /** 正在把选中的应用改回原样，以及改完之后该说的那一句。 */
+  const [undoing, setUndoing] = useState(false);
+  const [undone, setUndone] = useState<UndoKey | null>(null);
   const working = applying || installing;
 
   const touched = useRef(false);
@@ -172,8 +190,10 @@ export function Join({
         ),
       );
       if (!touched.current && first) setApp(first.id);
+      return found;
     } catch {
       setScan("failed");
+      return null;
     }
   }, []);
 
@@ -184,13 +204,26 @@ export function Join({
     setOutcome(null);
     setApproved({});
     setRefused([]);
+    setUndone(null);
     reset();
     touched.current = !!initialApp;
     setApp(initialApp ?? WORKBENCH_APPS[0].id);
+    // 来修一个应用时，先选回它原来的那一位和型号：修的是原来那次接入，不是换人。
+    const was = connections.find((item) => item.toolId === initialApp);
+    const back =
+      was &&
+      brokenOf(was.state) &&
+      usable.some((item) => item.id === was.modelId)
+        ? was.modelId
+        : "";
     setWho(
-      cast[current] ? current : (people.find((id) => cast[id]) ?? current),
+      back
+        ? characterOfModel(back)
+        : cast[current]
+          ? current
+          : (people.find((id) => cast[id]) ?? current),
     );
-    setChosenModel("");
+    setChosenModel(back);
     setInstall("");
     void look();
     // 只在打开的那一下重置：开着的时候目录刷新不该把用户选好的冲掉。
@@ -293,11 +326,16 @@ export function Join({
     group = billingGroup,
     /** 刚装好的应用：用安装报回来的位置，并带上那次安装的凭证。 */
     fresh?: { installationId: string; installationJobId: string },
+    /** 应用挪了地方：重新找到的那一处。 */
+    moved?: string,
   ) => {
-    const at = fresh?.installationId ?? installationId;
-    if (working || !modelId || !at) return;
+    const at = fresh?.installationId ?? moved ?? installationId;
+    if (working || undoing || !modelId || !at) return;
     if (askPlan(group)) return;
+    // 开始接了就算用户选定了这个应用：中途重新看电脑时不能把它换掉。
+    touched.current = true;
     setOutcome(null);
+    setUndone(null);
     sound.pop(620);
     const result = await task.run(
       {
@@ -320,6 +358,17 @@ export function Join({
       },
     );
     if (!result) return;
+    // 应用不在刚才那个位置了（升级过、挪过）：自己重新找一遍，找到了就接着接，
+    // 不让用户回去重选。只找一次，找到的还是老地方就照实说没装。电脑上有好几份、
+    // 这一份又是用户自己点名的：不替他换成另一份，照实说，让他回去重选。
+    if (result.status === "tool_not_found" && !fresh && !moved) {
+      const spots = (await look())
+        ?.find((entry) => entry.toolId === app)
+        ?.installations.filter((item) => item.supported);
+      const spot = spots?.find((item) => item.recommended) ?? spots?.[0];
+      if (spot && spot.installationId !== at && install !== at)
+        return run(extra, group, undefined, spot.installationId);
+    }
     // 应用已经装好，只是那次安装的凭证没用上（比如中途换了账户）：照常再接一次就行。
     const next: JoinOutcome =
       fresh && result.reasonCode === "installation_confirmation_required"
@@ -344,7 +393,7 @@ export function Join({
   };
   // 没装的应用：下载官方安装包、核对、装好，然后接着接入，中间不用用户再点。
   const fetchAndJoin = async (group = billingGroup) => {
-    if (working || !modelId) return;
+    if (working || undoing || !modelId) return;
     if (askPlan(group)) return;
     touched.current = true;
     setOutcome(null);
@@ -374,6 +423,23 @@ export function Join({
     } finally {
       setInstalling(false);
     }
+  };
+  // 不接了，改回接入之前的样子。上次没做完的那一半也由这一步收掉。
+  const undo = async () => {
+    if (working || undoing || !saved) return;
+    setOutcome(null);
+    setUndone(null);
+    setUndoing(true);
+    let key: UndoKey;
+    try {
+      key = undoKey(await onUndo(app), saved.restoreMode);
+    } catch {
+      key = "restoreError";
+    }
+    if (undoFailed(key)) sound.sad();
+    else sound.ok();
+    setUndoing(false);
+    setUndone(key);
   };
   const begin = (group = billingGroup) =>
     absent && selfInstall ? fetchAndJoin(group) : run(undefined, group);
@@ -411,6 +477,17 @@ export function Join({
     }
   };
 
+  // 断网没下成的：网一通就自己再下，不用回来再点一次。
+  const again = useRef(act);
+  again.current = act;
+  const offline = open && outcome?.kind === "installOffline";
+  useEffect(() => {
+    if (!offline) return;
+    const go = () => again.current();
+    window.addEventListener("online", go);
+    return () => window.removeEventListener("online", go);
+  }, [offline]);
+
   const step = joinStep(task.progress?.stage);
   // 进度条照后端报的步数走，不自己编一个假的。
   const done = task.progress?.totalSteps
@@ -426,20 +503,25 @@ export function Join({
   };
   const fetched = fetcher.progress;
   const placing = installStep(fetched?.phase);
-  const says = outcome
-    ? t(`kaifan.join.say.${outcome.kind}`, { app: appName, name, ...plan })
-    : applying
-      ? t("kaifan.join.working", { app: appName, name })
-      : installing
-        ? t(
-            placing
-              ? "kaifan.join.installPlacing"
-              : "kaifan.join.installFetching",
-            { app: appName, name },
-          )
-        : "";
+  const broken = brokenOf(saved?.state);
+  const says = undoing
+    ? t("kaifan.join.undoing", { app: appName, name })
+    : undone
+      ? t(`kaifan.settings.${undone}`, { app: appName })
+      : outcome
+        ? t(`kaifan.join.say.${outcome.kind}`, { app: appName, name, ...plan })
+        : applying
+          ? t("kaifan.join.working", { app: appName, name })
+          : installing
+            ? t(
+                placing
+                  ? "kaifan.join.installPlacing"
+                  : "kaifan.join.installFetching",
+                { app: appName, name },
+              )
+            : "";
   const typed = useTyped(says);
-  const stage = working || outcome ? "work" : "pick";
+  const stage = working || undoing || undone || outcome ? "work" : "pick";
 
   // 打开时把焦点带进面板，关掉时还给原来的按钮；换到「正在接」时也留在面板里。
   const panel = useRef<HTMLElement>(null);
@@ -589,6 +671,11 @@ export function Join({
                 );
               })}
             </div>
+            {broken && (
+              <p className="mend" role="note" data-testid="kaifan-join-mend">
+                {t(`kaifan.join.mend.${broken}`, { app: appName })}
+              </p>
+            )}
             <div className="pf">
               <p>
                 {modelId
@@ -617,6 +704,20 @@ export function Join({
                 )}
               </p>
               <i />
+              {broken && saved && saved.restoreMode !== "none" && (
+                <button
+                  type="button"
+                  className="go alt"
+                  data-testid="kaifan-join-undo"
+                  onClick={() => void undo()}
+                >
+                  {t(
+                    saved.restoreMode === "original"
+                      ? "kaifan.settings.restoreAction"
+                      : "kaifan.settings.removeAction",
+                  )}
+                </button>
+              )}
               {absent && selfInstall ? (
                 <button
                   type="button"
@@ -641,14 +742,31 @@ export function Join({
                   disabled={scan !== "ready" || !modelId || !installationId}
                   onClick={() => void run()}
                 >
-                  {t("kaifan.join.go", { name })}
+                  {t(
+                    broken ? `kaifan.join.mendGo.${broken}` : "kaifan.join.go",
+                    {
+                      name,
+                    },
+                  )}
                 </button>
               )}
             </div>
           </>
         ) : (
           <div className="work on" aria-live="polite">
-            <img src={chibiOf(who, outcome ? outcome.mood : "idle")} alt="" />
+            <img
+              src={chibiOf(
+                who,
+                undone
+                  ? undoFailed(undone)
+                    ? "panic"
+                    : "happy"
+                  : outcome
+                    ? outcome.mood
+                    : "idle",
+              )}
+              alt=""
+            />
             <h3 data-testid="kaifan-join-says">{typed}</h3>
             {installing && !applying ? (
               <>
@@ -736,6 +854,42 @@ export function Join({
                   </button>
                 </div>
               </>
+            ) : undoing ? (
+              <div className="pg">
+                <i style={{ width: "60%" }} />
+              </div>
+            ) : undone ? (
+              <div className="ft">
+                <i />
+                {undoFailed(undone) ? (
+                  <>
+                    <button
+                      type="button"
+                      className="go alt"
+                      onClick={() => setUndone(null)}
+                    >
+                      {t("kaifan.join.back")}
+                    </button>
+                    <button
+                      type="button"
+                      className="go"
+                      autoFocus
+                      onClick={() => void undo()}
+                    >
+                      {t("kaifan.join.do.retry")}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="go"
+                    autoFocus
+                    onClick={onClose}
+                  >
+                    {t("kaifan.join.undoneOk")}
+                  </button>
+                )}
+              </div>
             ) : (
               outcome && (
                 <div className="ft">
