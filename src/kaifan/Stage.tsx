@@ -335,9 +335,16 @@ export function Stage({
   const stationBad = cond === "off" || cond === "out";
   const connected = cond !== "out" && cond !== "off" && cond !== "checking";
 
+  // 上面盖着别的画面时，首页不接键盘和读屏，免得焦点跑到看不见的按钮上。
+  const hidden = quiet ? { inert: "" } : {};
   return (
     <>
-      <div className="roster" role="group" aria-label={t("kaifan.home.cast")}>
+      <div
+        className="roster"
+        role="group"
+        aria-label={t("kaifan.home.cast")}
+        {...hidden}
+      >
         <div className="rin">
           {ids.map((id) => {
             const character = ROSTER[id];
@@ -385,7 +392,7 @@ export function Stage({
         </div>
       </div>
 
-      <div className="ui">
+      <div className="ui" {...hidden}>
         <nav className="side in" aria-label={t("kaifan.nav.label")}>
           <button
             type="button"

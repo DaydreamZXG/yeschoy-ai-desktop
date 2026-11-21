@@ -25,6 +25,8 @@ import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
 import { Boot } from "./Boot";
 import { Connect } from "./Connect";
 import { Fx, type FxHandle } from "./Fx";
+import { Join, type Joined } from "./Join";
+import { Reveal } from "./Reveal";
 import {
   ROSTER,
   ROSTER_IDS,
@@ -273,8 +275,33 @@ export function KaifanApp() {
     setPicked(id);
     storePickedCharacter(id);
   };
-  const setup = (app?: ActivationToolId) => openClassic("setup", app);
-  const covered = phase !== "home" || connectOpen || !!link.trustOrigin;
+  // —— 接入：选应用、选人、点一下；接好了她登场 ——
+  const [join, setJoin] = useState<{ app?: ActivationToolId } | null>(null);
+  const [joined, setJoined] = useState<Joined | null>(null);
+  const [openFailed, setOpenFailed] = useState(false);
+  const setup = (app?: ActivationToolId) => {
+    // 上次没做完、或者设置被别的工具改过的，新的一屏还修不了，先去旧页面修。
+    if (app && state.repair.some((item) => item.toolId === app))
+      return openClassic("setup", app);
+    setJoin({ app });
+  };
+  const onJoined = (result: Joined) => {
+    setJoin(null);
+    setOpenFailed(false);
+    setJoined(result);
+    // 以后首页陪着的就是刚派出去的这一位。
+    if (result.who !== "new") pick(result.who);
+  };
+  const openJoined = async () => {
+    if (!joined) return;
+    const result = await connections
+      .open(joined.toolId)
+      .catch(() => ({ status: "launch_failed" as const }));
+    if (result.status === "opened") setJoined({ ...joined, opened: true });
+    setOpenFailed(result.status !== "opened");
+  };
+  const covered =
+    phase !== "home" || connectOpen || !!join || !!joined || !!link.trustOrigin;
 
   return (
     <ConnectionProvider value={connections}>
@@ -310,6 +337,29 @@ export function KaifanApp() {
           onLineChange={applyLine}
           onConnected={onConnected}
           onClose={() => setConnectOpen(false)}
+        />
+        <Join
+          open={!!join}
+          lineId={lineId}
+          models={projection?.models ?? []}
+          current={state.current}
+          connections={connections.connections}
+          initialApp={join?.app}
+          onClose={() => setJoin(null)}
+          onJoined={onJoined}
+          onReconnect={() => {
+            setJoin(null);
+            setConnectOpen(true);
+          }}
+          onClassic={(app) => openClassic("setup", app)}
+          onSettled={() => void connections.refresh()}
+        />
+        <Reveal
+          joined={joined}
+          opening={connections.opening === joined?.toolId}
+          openFailed={openFailed}
+          onOpen={() => void openJoined()}
+          onHome={() => setJoined(null)}
         />
         <TrustAsk origin={link.trustOrigin} onAnswer={answerTrust} />
         {phase === "boot" ? (
