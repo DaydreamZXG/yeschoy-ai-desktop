@@ -38,7 +38,7 @@ export type JoinKind =
   | "installUnseen"
   | "installFound";
 
-/** 这一步由谁来做：客户端再来一次，还是带用户去别处。 */
+/** 这一步由谁来做：客户端再来一次，还是回到选的那一步。 */
 export type JoinAction =
   | "none"
   | "retry"
@@ -46,7 +46,6 @@ export type JoinAction =
   | "displace"
   | "reconnect"
   | "regroup"
-  | "classic"
   | "install"
   | "look"
   | "pick";
@@ -118,16 +117,19 @@ export function joinOutcome(
         return outcome("closeApp", "retry");
       return outcome("askRestart", "restart", "idle");
     case "tool_not_found":
-      return outcome("notInstalled", "classic", "sleep");
+      // 回到选的那一步：那里有「替你装」「去官网」「告诉我它在哪」三条路。
+      return outcome("notInstalled", "look", "sleep");
     case "multiple_installations":
       return outcome("chooseInstall", "pick", "idle");
     case "missing_runtime":
-      return outcome("runtime", "classic");
+      return outcome("runtime", "look");
     case "unsupported_model":
     case "unsupported_profile":
       return outcome("otherModel", "pick");
     case "external_override":
-      return outcome("overridden", "classic");
+      // 用户自己（或别的工具）把这个应用的设置指到了别处。我们没有动它，也不替
+      // 他去掉那项配置；去掉以后再接一次就行。
+      return outcome("overridden", "retry");
     case "secure_storage_unavailable":
       return outcome("keychain", "retry");
     case "server_unavailable":
@@ -157,7 +159,7 @@ export function joinOutcome(
       if (reason === "activation_cancelled")
         return outcome("cancelled", "pick", "idle");
       if (reason === "installation_confirmation_required")
-        return outcome("notInstalled", "classic", "sleep");
+        return outcome("notInstalled", "look", "sleep");
       return outcome("retry", "retry");
     default:
       return outcome("retry", "retry");
@@ -177,17 +179,17 @@ const NOT_GENUINE = new Set([
 
 /**
  * 安装停在了哪：`null` 是装好了、可以接着接入；`"stopped"` 是用户自己停的；
- * `"elsewhere"` 是这一屏办不了、要去旧页面的（系统要用户点确认的那种安装）。
+ * `"waiting"` 是安装包已经交给系统的安装窗口，要等用户在那边点完。
  */
 export function installOutcome(
   result: Pick<
     InstallationProgress,
     "phase" | "disposition" | "reasonCode" | "installationId"
   > | null,
-): JoinOutcome | "stopped" | "elsewhere" | null {
+): JoinOutcome | "stopped" | "waiting" | null {
   if (!result) return outcome("installFailed", "install");
   if (result.phase === "cancelled") return "stopped";
-  if (result.phase === "awaiting_system_confirmation") return "elsewhere";
+  if (result.phase === "awaiting_system_confirmation") return "waiting";
   if (result.phase === "installed") {
     if (result.disposition === "existing")
       return outcome("installFound", "look", "idle");

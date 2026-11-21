@@ -20,7 +20,6 @@ import {
 import { isImageGenerationModel } from "../model-profiles/profile";
 import { refreshModelCatalog } from "../model-profiles/remoteCatalog";
 import { ShutdownHost } from "../settings/QuitAssistant";
-import { RETURNING, openClassic } from "../uiChoice";
 import { useDesktopUpdate } from "../update/UpdateProvider";
 import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
 import { Boot } from "./Boot";
@@ -70,9 +69,7 @@ export function KaifanApp() {
   const { t } = useTranslation();
   const stage = useRef<HTMLDivElement>(null);
   const fx = useRef<FxHandle>(null);
-  const [phase, setPhase] = useState<"boot" | "home">(
-    RETURNING ? "home" : "boot",
-  );
+  const [phase, setPhase] = useState<"boot" | "home">("boot");
   const [connectOpen, setConnectOpen] = useState(false);
   const [line, setLine] = useState<StageLine | null>(null);
   const [picked, setPicked] = useState<RosterId | null>(readPickedCharacter);
@@ -562,7 +559,6 @@ export function KaifanApp() {
             setConnectOpen(true);
           }}
           onUndo={connections.restore}
-          onClassic={(app) => openClassic("setup", app)}
           onSettled={() => void connections.refresh()}
         />
         <Card

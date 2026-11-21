@@ -17,6 +17,11 @@ import type {
 } from "../configuration/connections";
 import type { AccountLineId } from "../configuration/preview";
 import { useActivationTask } from "../configuration/useActivationTask";
+import type { InstallationProgress } from "../installation/api";
+import {
+  pickManualLocation,
+  type ManualLocationOutcome,
+} from "../installation/manualLocationApi";
 import {
   isImageGenerationModel,
   modelDisplayName,
@@ -77,7 +82,6 @@ interface Props {
   /** 把一个应用改回接入之前的样子（上次没做完、或者被别的工具改过时给这条路）。 */
   onUndo: (toolId: ActivationToolId) => Promise<ConnectionResponse>;
   /** 这一屏还办不了的事（要系统确认的安装）：先去旧页面办。 */
-  onClassic: (toolId: ActivationToolId) => void;
   /** 接入做完（不管成没成）之后，让外面重新读一遍应用的状态。 */
   onSettled: () => void;
 }
@@ -132,7 +136,6 @@ export function Join({
   onJoined,
   onReconnect,
   onUndo,
-  onClassic,
   onSettled,
 }: Props) {
   const { t } = useTranslation();
@@ -169,16 +172,22 @@ export function Join({
   const fetcher = useInstall();
   /** 正在装一个还没装的应用（装完会接着接入）。 */
   const [installing, setInstalling] = useState(false);
-  /** 选中的这个没装的应用，客户端能不能自己装。 */
-  const [selfInstall, setSelfInstall] = useState(false);
+  /** 选中的这个没装的应用，客户端能怎么装（`null` 是还没问到）。 */
+  const [mode, setMode] = useState<InstallationProgress["mode"] | null>(null);
+  /** 安装包已经交给系统的安装窗口，在等用户在那边点完。 */
+  const [waiting, setWaiting] = useState<InstallationProgress | null>(null);
+  /** 用户自己指了应用在哪：正在等他选，以及没成时该说的那一句。 */
+  const [spotting, setSpotting] = useState(false);
+  const [spot, setSpot] = useState<ManualLocationOutcome | null>(null);
   /** 正在把选中的应用改回原样，以及改完之后该说的那一句。 */
   const [undoing, setUndoing] = useState(false);
   const [undone, setUndone] = useState<UndoKey | null>(null);
   const working = applying || installing;
 
   const touched = useRef(false);
-  const look = useCallback(async () => {
-    setScan("loading");
+  /** `quiet`：用户没点、是我们自己顺手再看一遍，不闪「正在找」，没看成也不报。 */
+  const look = useCallback(async (quiet = false) => {
+    if (!quiet) setScan("loading");
     try {
       const found = (await scanActivationTargets()).targets;
       setTargets(found);
@@ -192,7 +201,7 @@ export function Join({
       if (!touched.current && first) setApp(first.id);
       return found;
     } catch {
-      setScan("failed");
+      if (!quiet) setScan("failed");
       return null;
     }
   }, []);
@@ -205,6 +214,8 @@ export function Join({
     setApproved({});
     setRefused([]);
     setUndone(null);
+    setWaiting(null);
+    setSpot(null);
     reset();
     touched.current = !!initialApp;
     setApp(initialApp ?? WORKBENCH_APPS[0].id);
@@ -243,20 +254,25 @@ export function Join({
       target.status === "not_found" ||
       target.status === "missing_runtime");
 
-  // 没装的应用：问一下后端能不能由客户端自己装（官方有可核对的安装包才行）。
+  // 没装的应用：问一下后端能怎么装（官方有可核对的安装包才能由客户端装）。
+  // 上次装到一半、还停在系统安装窗口那一步的，直接接着那一步。
   const absent = scan === "ready" && (!target || target.status === "not_found");
   const peek = fetcher.peek;
   useEffect(() => {
-    setSelfInstall(false);
+    setMode(null);
+    setSpot(null);
     if (!open || !absent) return;
     let live = true;
-    void peek(app).then((mode) => {
-      if (live) setSelfInstall(mode === "automatic");
+    void peek(app).then((now) => {
+      if (!live || !now) return;
+      setMode(now.mode);
+      if (now.phase === "awaiting_system_confirmation") setWaiting(now);
     });
     return () => {
       live = false;
     };
   }, [open, absent, app, peek]);
+  const selfInstall = mode === "automatic" || mode === "system_assisted";
 
   const ids = cast[who];
   const modelId =
@@ -391,6 +407,27 @@ export function Join({
     if (next.mood === "panic") sound.sad();
     setOutcome(next);
   };
+  // 安装停下来了：没成的照实说；交给系统安装窗口的等用户点完；装好的接着接入。
+  const afterInstall = async (
+    result: InstallationProgress | null,
+    group: string,
+  ) => {
+    const next = installOutcome(result);
+    if (next === "waiting") return setWaiting(result);
+    setWaiting(null);
+    // 不管成没成，电脑上有什么可能变了：重新看一遍。
+    await look();
+    if (next === "stopped") return;
+    if (next) {
+      if (next.mood === "panic") sound.sad();
+      return setOutcome(next);
+    }
+    if (result)
+      await run(undefined, group, {
+        installationId: result.installationId,
+        installationJobId: result.jobId,
+      });
+  };
   // 没装的应用：下载官方安装包、核对、装好，然后接着接入，中间不用用户再点。
   const fetchAndJoin = async (group = billingGroup) => {
     if (working || undoing || !modelId) return;
@@ -400,29 +437,56 @@ export function Join({
     setInstalling(true);
     sound.pop(620);
     try {
-      const result = await fetcher.run(app, {
-        lineId,
-        modelId,
-        billingGroup: group,
-        models: bindings(group),
-      });
-      const next = installOutcome(result);
-      if (next === "elsewhere") return onClassic(app);
-      // 不管成没成，电脑上有什么可能变了：重新看一遍。
-      await look();
-      if (next === "stopped") return;
-      if (next) {
-        if (next.mood === "panic") sound.sad();
-        return setOutcome(next);
-      }
-      if (result)
-        await run(undefined, group, {
-          installationId: result.installationId,
-          installationJobId: result.jobId,
-        });
+      await afterInstall(
+        await fetcher.run(app, {
+          lineId,
+          modelId,
+          billingGroup: group,
+          models: bindings(group),
+        }),
+        group,
+      );
     } finally {
       setInstalling(false);
     }
+  };
+  // 用户在系统的安装窗口里点完了：核对装好没有，装好了接着接入。
+  const confirmInstall = async () => {
+    if (working || !waiting || !modelId) return;
+    setInstalling(true);
+    sound.pop(620);
+    try {
+      await afterInstall(
+        await fetcher.confirm(waiting, {
+          lineId,
+          modelId,
+          billingGroup,
+          models: bindings(billingGroup),
+        }),
+        billingGroup,
+      );
+    } finally {
+      setInstalling(false);
+    }
+  };
+  // 不等系统那边了：回到选的那一步。已经在系统里开始的安装不归我们取消。
+  const giveUp = async () => {
+    if (!waiting) return;
+    const was = waiting;
+    setWaiting(null);
+    await fetcher.drop(was);
+    void look(true);
+  };
+  // 自动找不到（免安装版、换过目录）：让用户在系统的选择框里指一下。路径不经过
+  // 界面，后端按自动检测同一套规则验过才记住。
+  const pointOut = async () => {
+    if (spotting) return;
+    setSpotting(true);
+    setSpot(null);
+    const result = await pickManualLocation(app);
+    setSpotting(false);
+    if (result === "saved") return void look();
+    if (result !== "cancelled") setSpot(result);
   };
   // 不接了，改回接入之前的样子。上次没做完的那一半也由这一步收掉。
   const undo = async () => {
@@ -469,8 +533,6 @@ export function Join({
         return setOutcome(null);
       case "reconnect":
         return onReconnect();
-      case "classic":
-        return onClassic(app);
       default:
         task.reset();
         setOutcome(null);
@@ -504,6 +566,15 @@ export function Join({
   const fetched = fetcher.progress;
   const placing = installStep(fetched?.phase);
   const broken = brokenOf(saved?.state);
+  // 没装的应用现在能怎么办：我们替他装、只能去官网装、官方没有适合这台电脑的
+  // 安装包，或者装了但不完整。
+  const need = !absent
+    ? "incomplete"
+    : selfInstall
+      ? "fetch"
+      : mode === "unsupported"
+        ? "unsupported"
+        : "guided";
   const says = undoing
     ? t("kaifan.join.undoing", { app: appName, name })
     : undone
@@ -519,9 +590,26 @@ export function Join({
                   : "kaifan.join.installFetching",
                 { app: appName, name },
               )
-            : "";
+            : waiting
+              ? t(
+                  waiting.reasonCode === "installation_not_detected"
+                    ? "kaifan.join.systemNotYet"
+                    : "kaifan.join.systemWait",
+                  { app: appName, name },
+                )
+              : "";
   const typed = useTyped(says);
-  const stage = working || undoing || undone || outcome ? "work" : "pick";
+  const stage =
+    working || undoing || undone || outcome || waiting ? "work" : "pick";
+
+  // 用户去官网装应用了：他一回到这个窗口就自己再找一遍，不用他点「重新检查」。
+  const away = open && stage === "pick" && missing;
+  useEffect(() => {
+    if (!away) return;
+    const again = () => void look(true);
+    window.addEventListener("focus", again);
+    return () => window.removeEventListener("focus", again);
+  }, [away, look]);
 
   // 打开时把焦点带进面板，关掉时还给原来的按钮；换到「正在接」时也留在面板里。
   const panel = useRef<HTMLElement>(null);
@@ -577,7 +665,7 @@ export function Join({
               {scan === "failed" && (
                 <>
                   {t("kaifan.join.lookFailed")}
-                  <button type="button" className="sm" onClick={look}>
+                  <button type="button" className="sm" onClick={() => void look()}>
                     {t("kaifan.join.lookAgain")}
                   </button>
                 </>
@@ -676,6 +764,24 @@ export function Join({
                 {t(`kaifan.join.mend.${broken}`, { app: appName })}
               </p>
             )}
+            {missing && (
+              <p className="mend" role="note" data-testid="kaifan-join-absent">
+                {t(`kaifan.join.absentNote.${need}`, { app: appName })}
+                <button
+                  type="button"
+                  className="sm"
+                  disabled={spotting}
+                  onClick={() => void pointOut()}
+                >
+                  {t("kaifan.join.pointOut")}
+                </button>
+                {spot && (
+                  <span role="alert">
+                    {t(`kaifan.join.spot.${spot}`, { app: appName })}
+                  </span>
+                )}
+              </p>
+            )}
             <div className="pf">
               <p>
                 {modelId
@@ -731,7 +837,7 @@ export function Join({
                 <button
                   type="button"
                   className="go"
-                  onClick={() => onClassic(app)}
+                  onClick={() => fetcher.guide(app)}
                 >
                   {t("kaifan.join.install", { app: appName })}
                 </button>
@@ -854,6 +960,33 @@ export function Join({
                   </button>
                 </div>
               </>
+            ) : waiting ? (
+              <div className="ft">
+                <button
+                  type="button"
+                  className="go alt"
+                  onClick={() => void giveUp()}
+                >
+                  {t("kaifan.join.systemDrop")}
+                </button>
+                <button
+                  type="button"
+                  className="go alt"
+                  onClick={() => fetcher.reopen(waiting)}
+                >
+                  {t("kaifan.join.systemReopen")}
+                </button>
+                <i />
+                <button
+                  type="button"
+                  className="go"
+                  autoFocus
+                  disabled={!modelId}
+                  onClick={() => void confirmInstall()}
+                >
+                  {t("kaifan.join.systemDone")}
+                </button>
+              </div>
             ) : undoing ? (
               <div className="pg">
                 <i style={{ width: "60%" }} />
