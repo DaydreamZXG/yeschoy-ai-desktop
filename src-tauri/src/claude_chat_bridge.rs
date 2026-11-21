@@ -18,12 +18,17 @@ use serde_json::{json, Value};
 
 use super::{buffer_upstream, context_too_long_error, error, is_context_overflow};
 use crate::{
+    codex_responses_bridge::normalize_openai_reasoning_params,
     local_bridge::BridgeState,
     proxy::providers::{
         streaming::create_anthropic_sse_stream,
-        transform::{anthropic_to_openai, inject_openai_stream_include_usage, openai_to_anthropic},
+        transform::{
+            anthropic_to_openai_with_reasoning_content, inject_openai_stream_include_usage,
+            openai_to_anthropic, resolve_reasoning_effort,
+        },
     },
     tool_credentials::ToolCredential,
+    tool_model_profile::{apply_chat_effort, is_deepseek},
 };
 
 /// 非流式回复整段读进内存再翻译，给个上限。
@@ -34,23 +39,50 @@ pub(super) fn applies(credential: &ToolCredential) -> bool {
         == Some(super::ClaudeTransport::ChatBridge.credential_value())
 }
 
+/// Anthropic 请求 → 这个模型真正收得下的 Chat 请求。
+///
+/// 结构转换交给上游；这里补三件它不管、而各家又不一样的事，和 Codex 那座桥
+/// 用的是同一套规则：
+///
+/// * DeepSeek 开着思考做工具调用时，续轮必须把上一步的思考原样带回去
+///   （`reasoning_content`），丢了它整轮工具调用就被拒；
+/// * 思考开关和档位：DeepSeek 要 `thinking: {type}` 且只有 low/high/max，
+///   OpenAI 系按模型实际支持的档位落；
+/// * gpt-5/6 不收 `max_tokens`，要 `max_completion_tokens`。
+fn to_chat(value: Value) -> Option<Value> {
+    let model = value.get("model").and_then(Value::as_str)?.to_owned();
+    let deepseek = is_deepseek(&model);
+    // 关掉思考是显式状态，优先于界面上残留的档位。
+    let effort = match value.pointer("/thinking/type").and_then(Value::as_str) {
+        Some("disabled") => Some("none"),
+        _ => resolve_reasoning_effort(&value),
+    };
+    let mut chat = anthropic_to_openai_with_reasoning_content(value, deepseek).ok()?;
+    if let Some(effort) = effort {
+        // 只动「确实有思考档位」的模型：DeepSeek，或上游已经判定该带档位的。
+        // 别的模型多一个 `reasoning_effort` 字段，严格的后端会直接拒。
+        if deepseek || chat.get("reasoning_effort").is_some() {
+            apply_chat_effort(&mut chat, &model, effort);
+        }
+    }
+    normalize_openai_reasoning_params(&mut chat, &model);
+    inject_openai_stream_include_usage(&mut chat);
+    Some(chat)
+}
+
 pub(super) async fn forward(
     state: &BridgeState,
     credential: &ToolCredential,
     value: Value,
 ) -> Response {
     let streaming = value.get("stream").and_then(Value::as_bool) == Some(true);
-    let mut chat = match anthropic_to_openai(value) {
-        Ok(chat) => chat,
-        Err(_) => {
-            return anthropic_error(
-                StatusCode::BAD_REQUEST,
-                "invalid_request_error",
-                "This request could not be converted for a Chat Completions relay.".into(),
-            )
-        }
+    let Some(chat) = to_chat(value) else {
+        return anthropic_error(
+            StatusCode::BAD_REQUEST,
+            "invalid_request_error",
+            "This request could not be converted for a Chat Completions relay.".into(),
+        );
     };
-    inject_openai_stream_include_usage(&mut chat);
 
     let url = format!(
         "{}/v1/chat/completions",
@@ -167,6 +199,84 @@ fn anthropic_error(status: StatusCode, kind: &'static str, message: String) -> R
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn gpt5_and_newer_get_max_completion_tokens() {
+        let chat = to_chat(json!({
+            "model": "gpt-5.4", "max_tokens": 512, "temperature": 0.3,
+            "messages": [{"role": "user", "content": "hi"}]
+        }))
+        .unwrap();
+        assert_eq!(chat["max_completion_tokens"], 512);
+        assert!(chat.get("max_tokens").is_none());
+        // 别的家族要的就是 max_tokens，不能跟着改。
+        let chat = to_chat(json!({
+            "model": "deepseek-v4-pro", "max_tokens": 512,
+            "messages": [{"role": "user", "content": "hi"}]
+        }))
+        .unwrap();
+        assert_eq!(chat["max_tokens"], 512);
+    }
+
+    #[test]
+    fn deepseek_keeps_its_reasoning_across_a_tool_call_and_obeys_the_thinking_switch() {
+        let request = |extra: Value| {
+            let mut body = json!({
+                "model": "deepseek-v4-pro", "max_tokens": 64,
+                "messages": [
+                    {"role": "user", "content": "list files"},
+                    {"role": "assistant", "content": [
+                        {"type": "thinking", "thinking": "need ls", "signature": ""},
+                        {"type": "tool_use", "id": "t1", "name": "ls", "input": {}}
+                    ]},
+                    {"role": "user", "content": [
+                        {"type": "tool_result", "tool_use_id": "t1", "content": "a.txt"}
+                    ]}
+                ]
+            });
+            body.as_object_mut()
+                .unwrap()
+                .extend(extra.as_object().unwrap().clone());
+            to_chat(body).unwrap()
+        };
+
+        let chat = request(json!({"output_config": {"effort": "medium"}}));
+        let assistant = chat["messages"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|message| message["role"] == "assistant")
+            .unwrap();
+        assert_eq!(assistant["reasoning_content"], "need ls");
+        assert_eq!(chat["thinking"]["type"], "enabled");
+        // DeepSeek 没有 medium，落到 high。
+        assert_eq!(chat["reasoning_effort"], "high");
+
+        let off = request(json!({
+            "thinking": {"type": "disabled"},
+            "output_config": {"effort": "high"}
+        }));
+        assert_eq!(off["thinking"]["type"], "disabled");
+        assert!(off.get("reasoning_effort").is_none());
+
+        // 没说要不要思考：不替用户加开关。
+        let silent = request(json!({}));
+        assert!(silent.get("thinking").is_none());
+        assert!(silent.get("reasoning_effort").is_none());
+    }
+
+    #[test]
+    fn models_without_reasoning_levels_never_gain_a_reasoning_field() {
+        let chat = to_chat(json!({
+            "model": "some-relay-model", "max_tokens": 64,
+            "thinking": {"type": "enabled", "budget_tokens": 8000},
+            "messages": [{"role": "user", "content": "hi"}]
+        }))
+        .unwrap();
+        assert!(chat.get("reasoning_effort").is_none());
+        assert!(chat.get("thinking").is_none());
+        assert_eq!(chat["max_tokens"], 64);
+    }
 
     #[test]
     fn upstream_errors_keep_the_stations_words_and_a_claude_error_type() {
