@@ -236,6 +236,7 @@
       "apps": "应用",
       "appsCount_one": "接好 {{count}} 个",
       "appsCount_other": "接好 {{count}} 个",
+      "appsCountPartial": "至少 {{count}} 个",
       "unseen": "看不到",
       "stationOut": "还没连站点",
       "stationOff": "站点连不上",
@@ -270,8 +271,10 @@
       "okHero": "都接好了，去用吧",
       "okSub_one": "已接入 {{count}} 个应用",
       "okSub_other": "已接入 {{count}} 个应用",
+      "okSubPartial": "至少接入 {{count}} 个应用",
       "okSays_one": "已经接好 {{count}} 个应用。",
       "okSays_other": "已经接好 {{count}} 个应用。",
+      "okSaysPartial": "至少接好了 {{count}} 个应用，还有的没读到。",
       "okSaysStale_one": "上次确认时接好了 {{count}} 个应用。",
       "okSaysStale_other": "上次确认时接好了 {{count}} 个应用。",
       "unknownSub": "正在确认应用",
@@ -398,7 +401,8 @@
       "note": "连上之后，会用这个站点的账户来接入你的应用，你在应用里的对话都会经过它。",
       "warn": "如果你不认识这个站点，或者刚才没有在网页上点「打开桌面客户端」，请点「不连接」。",
       "decline": "不连接",
-      "accept": "我认识，继续连接"
+      "accept": "我认识，继续连接",
+      "retry": "刚才没答成，本机这边没回话。再点一次。"
     },
     "join": {
       "moreApps_one": "还有 {{count}} 个 ▾",
@@ -509,7 +513,8 @@
       },
       "mend": {
         "unfinished": "{{app}} 上次接到一半停了。再接一次，我会先把它改回去，再重新接好。不想接了就点「改回原样」。",
-        "changed": "{{app}} 的设置被别的工具改过，现在不走这个站了。重新接入会盖掉那边改的；不想接了就点「改回原样」，那边改的我不动。"
+        "changed": "{{app}} 的设置被别的工具改过，现在不走这个站了。重新接入会盖掉那边改的；不想接了就点「改回原样」，那边改的我不动。",
+        "elsewhere": "{{app}} 现在接的是另一个站。再接一次，它就改走现在这个站。"
       },
       "mendGo": {
         "unfinished": "让{{name}}接着接好 ➜",

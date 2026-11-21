@@ -49,6 +49,7 @@ import {
   chibiOf,
   type RosterId,
 } from "./roster";
+import { isConnected, onOtherStation } from "./stageState";
 import { OtherApps } from "./OtherApps";
 import { vendorName, type ProviderPreset } from "./providers";
 import { sound } from "./sound";
@@ -605,6 +606,8 @@ export function Join({
   const fetched = fetcher.progress;
   const placing = installStep(fetched?.phase);
   const broken = brokenOf(saved?.state);
+  const elsewhere =
+    !broken && isConnected(saved?.state) && onOtherStation(saved, lineId);
   // 没装的应用现在能怎么办：我们替他装、只能去官网装、官方没有适合这台电脑的
   // 安装包，或者装了但不完整。
   const need =
@@ -913,6 +916,15 @@ export function Join({
                     data-testid="kaifan-join-mend"
                   >
                     {t(`kaifan.join.mend.${broken}`, { app: appName })}
+                  </p>
+                )}
+                {elsewhere && (
+                  <p
+                    className="mend"
+                    role="note"
+                    data-testid="kaifan-join-elsewhere"
+                  >
+                    {t("kaifan.join.mend.elsewhere", { app: appName })}
                   </p>
                 )}
                 {!missing && target?.manualLocation === "in_use" && (

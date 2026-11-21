@@ -139,6 +139,19 @@ describe("不知道的不说成 0", () => {
     ).toBeNull();
   });
 
+  it("读到一部分、有确定接好的：数照报，但标明只是「至少」", () => {
+    const state = deriveStage({
+      ...base,
+      connections: [
+        tool("claude_desktop", "connected", "claude-sonnet-4-5"),
+        tool("codex_desktop", "unavailable"),
+      ],
+    });
+    expect(state.connectedCount).toBe(1);
+    expect(state.connectedPartial).toBe(true);
+    expect(deriveStage(base).connectedPartial).toBe(false);
+  });
+
   it("确实一个都没接，是 0", () => {
     expect(
       deriveStage({
@@ -189,5 +202,40 @@ describe("谁在台上", () => {
     ).toBeNull();
     expect(workerOf(tool("claude_desktop", "connected"))).toBeNull();
     expect(workerOf(undefined)).toBeNull();
+  });
+});
+
+describe("换了站点以后", () => {
+  const at = (lineId: string) =>
+    ({
+      ...tool("claude_desktop", "connected", "claude-sonnet-4-5"),
+      lineId,
+    }) as ToolConnection;
+  const other = "station_key:https://other.example.com";
+
+  it("接在原来那个站的应用，不算在现在这个站头上，哪怕型号同名", () => {
+    const state = deriveStage({
+      ...base,
+      connections: [at("mainland_optimized")],
+      lineId: other,
+    });
+    expect(state.connectedCount).toBe(0);
+    expect(state.offline).toEqual([]);
+    expect(workerOf(at("mainland_optimized"), other)).toBeNull();
+  });
+
+  it("同一个站的两种写法算同一个站；没记站点的旧接入不猜", () => {
+    expect(
+      deriveStage({
+        ...base,
+        connections: [at("mainland_optimized")],
+        lineId: "station_connect:https://yeschoy.com",
+      }).connectedCount,
+    ).toBe(1);
+    expect(
+      deriveStage({ ...base, connections: [at("")], lineId: other })
+        .connectedCount,
+    ).toBe(1);
+    expect(workerOf(at(other), other)).toBe("cla");
   });
 });

@@ -208,11 +208,18 @@ export function Stage({
         if (count > 0)
           return {
             hero: t("kaifan.home.okHero"),
-            sub: t("kaifan.home.okSub", { count }),
+            sub: t(
+              state.connectedPartial
+                ? "kaifan.home.okSubPartial"
+                : "kaifan.home.okSub",
+              { count },
+            ),
             says: `${money}${t(
               state.connectedStale
                 ? "kaifan.home.okSaysStale"
-                : "kaifan.home.okSays",
+                : state.connectedPartial
+                  ? "kaifan.home.okSaysPartial"
+                  : "kaifan.home.okSays",
               { count },
             )}`,
             go: t("kaifan.home.moreGo"),
@@ -494,7 +501,12 @@ export function Stage({
               <b>
                 {state.connectedCount === null
                   ? t("kaifan.nav.unseen")
-                  : t("kaifan.nav.appsCount", { count: state.connectedCount })}
+                  : t(
+                      state.connectedPartial
+                        ? "kaifan.nav.appsCountPartial"
+                        : "kaifan.nav.appsCount",
+                      { count: state.connectedCount },
+                    )}
               </b>
             </div>
           )}

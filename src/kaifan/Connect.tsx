@@ -154,11 +154,12 @@ export function Connect({
         toKey(t("kaifan.connect.browserFailed"), "panic");
         return;
       }
-      onLineChange(result.lineId);
+      // 线路等授权真做完了再换（`useStationLink` 收到结果时换）：现在就换的话，
+      // 本机存的还是原来那个站，界面会被拉回去，授权成功了反而报失败。
       setStep("browser");
       say(t("kaifan.connect.inBrowser"), "happy");
     },
-    [onLineChange, say, t, toKey],
+    [say, t, toKey],
   );
 
   const check = async () => {
@@ -230,11 +231,15 @@ export function Connect({
     } catch {
       failure = "failed";
     }
-    if (current !== run.current) return;
-    if (failure) return fail(failure);
-    // 存好就从输入框里清掉，不在界面上露着。
-    setKey("");
-    setBusy(false);
+    const left = current !== run.current;
+    if (failure) return left ? undefined : fail(failure);
+    // 走到这里，本机已经存好新密钥、换到这个站了。中途关了面板或者点了上一步
+    // 也一样要跟过去，不然界面还停在原来那个站上，和本机实际连的对不上。
+    if (!left) {
+      // 存好就从输入框里清掉，不在界面上露着。
+      setKey("");
+      setBusy(false);
+    }
     onLineChange(`${STATION_KEY_LINE_PREFIX}${origin}`);
     onConnected({
       host: preset ? vendorName(preset, t) : hostOf(origin),

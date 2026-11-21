@@ -7,7 +7,8 @@ import { useTyped } from "./useTyped";
 interface Props {
   /** 等着确认的站点；没有就不显示。 */
   origin: string | null;
-  onAnswer: (accept: boolean) => Promise<void>;
+  /** 没答成、还得再点一次时，返回要说的那句话。 */
+  onAnswer: (accept: boolean) => Promise<string | void>;
 }
 
 /**
@@ -17,17 +18,21 @@ interface Props {
 export function TrustAsk({ origin, onAnswer }: Props) {
   const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
+  const [retry, setRetry] = useState("");
   const decline = useRef<HTMLButtonElement>(null);
   const host = origin ? hostOf(origin) : "";
   const typed = useTyped(origin ? t("kaifan.trust.ask", { host }) : "");
 
   useEffect(() => {
+    setRetry("");
     if (origin) decline.current?.focus();
   }, [origin]);
 
   const answer = async (accept: boolean) => {
     setBusy(true);
-    await onAnswer(accept);
+    setRetry("");
+    const again = await onAnswer(accept);
+    setRetry(again || "");
     setBusy(false);
   };
 
@@ -65,6 +70,11 @@ export function TrustAsk({ origin, onAnswer }: Props) {
           {t("kaifan.trust.note")}
         </p>
         <p className="hint">{t("kaifan.trust.warn")}</p>
+        {retry && (
+          <p className="hint" role="alert" data-testid="kaifan-trust-retry">
+            {retry}
+          </p>
+        )}
         <div className="ft">
           <i />
           <button

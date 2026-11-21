@@ -236,6 +236,7 @@
       "apps": "Apps",
       "appsCount_one": "{{count}} connected",
       "appsCount_other": "{{count}} connected",
+      "appsCountPartial": "At least {{count}}",
       "unseen": "Not shown",
       "stationOut": "No station yet",
       "stationOff": "Station unreachable",
@@ -270,8 +271,10 @@
       "okHero": "All set. Go use it",
       "okSub_one": "{{count}} app connected",
       "okSub_other": "{{count}} apps connected",
+      "okSubPartial": "At least {{count}} connected",
       "okSays_one": " {{count}} app is connected.",
       "okSays_other": " {{count}} apps are connected.",
+      "okSaysPartial": " At least {{count}} connected. I couldn't read the rest.",
       "okSaysStale_one": " Last time I checked, {{count}} app was connected.",
       "okSaysStale_other": " Last time I checked, {{count}} apps were connected.",
       "unknownSub": "Checking your apps",
@@ -398,7 +401,8 @@
       "note": "Once connected, this station's account is used to set up your apps, and your conversations in those apps go through it.",
       "warn": "If you don't know this station, or you didn't just press “Open desktop client” on a web page, choose “Don't connect”.",
       "decline": "Don't connect",
-      "accept": "I know it. Connect"
+      "accept": "I know it. Connect",
+      "retry": "That didn't go through — the app didn't answer. Choose again."
     },
     "join": {
       "moreApps_one": "{{count}} more ▾",
@@ -509,7 +513,8 @@
       },
       "mend": {
         "unfinished": "{{app}} was left half set up last time. Connect it again and I'll put it back first, then set it up properly. If you'd rather not, choose “Put it back”.",
-        "changed": "Another tool changed {{app}}'s settings, so it no longer uses this station. Connecting again replaces what that tool changed. If you'd rather not, choose “Put it back” — I'll leave that tool's changes alone."
+        "changed": "Another tool changed {{app}}'s settings, so it no longer uses this station. Connecting again replaces what that tool changed. If you'd rather not, choose “Put it back” — I'll leave that tool's changes alone.",
+        "elsewhere": "{{app}} is still connected to a different station. Connect it again and it will use this one."
       },
       "mendGo": {
         "unfinished": "Let {{name}} finish it ➜",

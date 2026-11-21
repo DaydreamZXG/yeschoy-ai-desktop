@@ -1,6 +1,7 @@
 import type { AccountMoney } from "../account/finance";
 import { balanceAlert, formatMoney } from "../account/finance";
 import type { AccountModel, AccountStatus } from "../account/session";
+import { catalogLineFromSnapshot } from "../account/accountLinePreference";
 import type { ToolConnection } from "../configuration/connections";
 import {
   characterOfModel,
@@ -34,6 +35,8 @@ export interface StageInput {
   connections: ToolConnection[] | undefined;
   connectionsFailed: boolean;
   picked: RosterId | null;
+  /** 现在连着的是哪个站。没给就不分站（都当作这个站的）。 */
+  lineId?: string;
 }
 
 export interface StageState {
@@ -49,6 +52,8 @@ export interface StageState {
   connectedCount: number | null;
   /** 这次没读到、用的是上次的结果。 */
   connectedStale: boolean;
+  /** 有的应用没读到：上面那个数只是「至少」，不是确切的数。 */
+  connectedPartial: boolean;
   /** 接好了、但用的模型已经不在这个站上的应用。 */
   offline: { toolId: ToolConnection["toolId"]; modelId: string }[];
   /** 接过、但设置被改了或者上次没做完，要修一下才能用的应用。 */
@@ -62,6 +67,20 @@ const UNREACHABLE: AccountStatus[] = ["backend_unavailable", "network_error"];
 /** 真的接好了、能用的。设置被别的工具改过、或者上次没做完的，不算。 */
 export const isConnected = (state: ToolConnection["state"] | undefined) =>
   state === "connected" || state === "legacy";
+
+const sameStation = (line: string) => catalogLineFromSnapshot(line) ?? line;
+
+/**
+ * 这个应用接的是另一个站：换站以后它还指着原来那个，不能算在现在这个站头上。
+ * 旧版本接的没记是哪个站，不猜。
+ */
+export const onOtherStation = (
+  connection: Pick<ToolConnection, "lineId"> | undefined,
+  lineId: string | undefined,
+) =>
+  !!connection?.lineId &&
+  !!lineId &&
+  sameStation(connection.lineId) !== sameStation(lineId);
 
 /** 接过、但现在要修一下才能用的。 */
 const needsRepair = (state: ToolConnection["state"]) =>
@@ -82,7 +101,9 @@ export function deriveStage(input: StageInput): StageState {
   const models = signedIn ? input.models : undefined;
   const cast = models?.length ? groupModels(models) : null;
   const connections = input.connections ?? [];
-  const live = connections.filter((c) => isConnected(c.state));
+  const here = (c: ToolConnection) =>
+    !signedIn || !onOtherStation(c, input.lineId);
+  const live = connections.filter((c) => isConnected(c.state) && here(c));
   const repair = connections
     .filter((c) => needsRepair(c.state))
     .map((c) => ({
@@ -134,6 +155,7 @@ export function deriveStage(input: StageInput): StageState {
     balance: balance && balance !== "—" ? balance : null,
     connectedCount,
     connectedStale: input.connectionsFailed && known,
+    connectedPartial: partial && live.length > 0,
     repair,
     offline,
     lowAmount: alert ? formatMoney(alert.amount, input.money?.currency) : null,
@@ -156,8 +178,10 @@ export function standIn(
 /** 一个应用现在是谁在干活。没接或者认不出模型时是 null。 */
 export function workerOf(
   connection: ToolConnection | undefined,
+  lineId?: string,
 ): RosterId | null {
   if (!connection || !isConnected(connection.state) || !connection.modelId)
     return null;
+  if (onOtherStation(connection, lineId)) return null;
   return characterOfModel(connection.modelId);
 }

@@ -53,14 +53,18 @@ import {
 } from "./roster";
 import { armSound, sound } from "./sound";
 import { Stage, type StageLine } from "./Stage";
-import { deriveStage, workerOf } from "./stageState";
+import { deriveStage, onOtherStation, workerOf } from "./stageState";
 import { originOfLine, reportOf, type CheckReport } from "./checkup";
 import type { AccountStatus } from "../account/session";
 import { Settings } from "./Settings";
 import { presetOfLine, stationLabel, useProviderPresets } from "./providers";
 import { hostOfLine, lookAtStation } from "./station";
 import { TrustAsk } from "./TrustAsk";
-import { useStationLink, type LinkEvent } from "./useStationLink";
+import {
+  trustAnswerPending,
+  useStationLink,
+  type LinkEvent,
+} from "./useStationLink";
 
 /** 站点连不上时，隔这么久自己再试一次，不等用户来点。 */
 const RETRY_MS = 20_000;
@@ -102,7 +106,8 @@ export function KaifanApp() {
     onSessionSnapshot: (snapshot) => {
       const fromSession = catalogLineFromSnapshot(snapshot.storedLineId);
       if (fromSession) return applyLine(fromSession);
-      if (snapshot.storedLineId && isStationKeyLineId(snapshot.storedLineId))
+      // 第三方站不在内置名单里：浏览器授权的和粘贴密钥的，都跟着存下来的那份走。
+      if (snapshot.storedLineId && isAccountLineId(snapshot.storedLineId))
         return setLineId(snapshot.storedLineId);
       const preference = readAccountLinePreference();
       if (preference && isAccountLineId(preference)) setLineId(preference);
@@ -130,8 +135,10 @@ export function KaifanApp() {
         connections: connections.connections,
         connectionsFailed: !!connections.error,
         picked,
+        lineId,
       }),
     [
+      lineId,
       connections.connections,
       connections.error,
       picked,
@@ -163,9 +170,17 @@ export function KaifanApp() {
         icon: app.icon,
         worker: workerOf(
           connections.connections?.find((item) => item.toolId === app.id),
+          lineId,
         ),
       })),
-    [connections.connections, t],
+    [connections.connections, lineId, t],
+  );
+
+  // 名片上「她在哪些应用里干活」只算现在这个站的。
+  const hereConnections = useMemo(
+    () =>
+      connections.connections?.filter((item) => !onOtherStation(item, lineId)),
+    [connections.connections, lineId],
   );
 
   const appName = useCallback(
@@ -290,12 +305,24 @@ export function KaifanApp() {
   };
 
   // 连上之后等模型读回来，再报到了几位。
+  // 刚连上那一刻，手里的型号和余额还是上一个站的：先去读一次新站，
+  // 读回来（stationCheck 回到 ok）才开口，不拿旧站的数报。
   const [justConnected, setJustConnected] = useState<{
     host: string | null;
     viaKey: boolean;
+    asked: boolean;
   } | null>(null);
+  const refreshNow = useRef(refresh);
+  refreshNow.current = refresh;
   useEffect(() => {
-    if (!justConnected || !signedIn || !state.cast) return;
+    if (!justConnected || justConnected.asked) return;
+    void Promise.resolve(refreshNow.current()).catch(() => null);
+    setJustConnected({ ...justConnected, asked: true });
+  }, [justConnected]);
+  const stationRead = session.stationCheck === "ok";
+  useEffect(() => {
+    if (!justConnected?.asked || !stationRead || !signedIn || !state.cast)
+      return;
     const cast = state.cast;
     const gone = ROSTER_IDS.filter((id) => !cast[id]).map((id) =>
       t(`roster.${id}.name`),
@@ -315,7 +342,7 @@ export function KaifanApp() {
     ];
     setJustConnected(null);
     setLine({ text: parts.join(""), at: Date.now() });
-  }, [justConnected, signedIn, state.balance, state.cast, t]);
+  }, [justConnected, signedIn, state.balance, state.cast, stationRead, t]);
 
   // 体检探站点探到的结果；重新连上之后作废。
   const [probed, setProbed] = useState<{
@@ -334,11 +361,10 @@ export function KaifanApp() {
       setFlash((n) => n + 1);
       sound.ok();
       sound.whoosh();
-      setJustConnected(result);
-      void refresh();
+      setJustConnected({ ...result, asked: false });
       void connections.refresh();
     },
-    [connections, refresh],
+    [connections],
   );
 
   const notice = useCallback(
@@ -348,6 +374,8 @@ export function KaifanApp() {
 
   const answerTrust = async (accept: boolean) => {
     const failure = await link.answerTrust(accept);
+    // 问话还留着的：就在那一屏里说，首页被它盖着看不到。
+    if (trustAnswerPending(failure)) return t("kaifan.trust.retry");
     if (failure)
       setLine({
         text: t(`stationTrust.reason.${failure}`, {
@@ -406,20 +434,24 @@ export function KaifanApp() {
   const [join, setJoin] = useState<{ app?: ActivationToolId } | null>(null);
   const [joined, setJoined] = useState<Joined | null>(null);
   const [openFailed, setOpenFailed] = useState(false);
+  const joinedNow = useRef(joined);
+  joinedNow.current = joined;
   // 要修的应用也在这一屏里修：接入那一屏会选回它原来的人，说清是哪种情况。
   const setup = (app?: ActivationToolId) => setJoin({ app });
   const onJoined = (result: Joined) => {
     setJoin(null);
     setOpenFailed(false);
     setJoined(result);
-    // 以后首页陪着的就是刚派出去的这一位。
-    if (result.who !== "new") pick(result.who);
+    // 以后首页陪着的就是刚派出去的这一位，转校生也一样。
+    pick(result.who);
   };
   const openJoined = async () => {
     if (!joined) return;
     const result = await connections
       .open(joined.toolId)
       .catch(() => ({ status: "launch_failed" as const, reasonCode: "" }));
+    // 应用还没开起来人就回首页了（或者又接了别的）：不把登场那一屏再拉回来。
+    if (joinedNow.current !== joined) return;
     setJoined({
       ...joined,
       opened: result.status === "opened",
@@ -585,7 +617,7 @@ export function KaifanApp() {
           ids={mine}
           models={usable}
           picks={picks}
-          connections={connections.connections}
+          connections={hereConnections}
           onModel={(modelId) =>
             change({
               ...picks,

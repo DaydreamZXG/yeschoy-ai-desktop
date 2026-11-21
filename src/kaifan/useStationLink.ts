@@ -14,6 +14,17 @@ export type LinkEvent =
   | { phase: "signed_in"; lineId?: string }
   | { phase: "failed"; reasonCode: string | undefined };
 
+/** 本机后台给过明确答复的失败：那次请求已经作废，再点也没用。 */
+const TRUST_SETTLED = new Set([
+  "connect_code_expired",
+  "connect_origin_not_acceptable",
+  "trust_store_full",
+]);
+
+/** 这次没答成、但问话还留着（本机后台没回话），可以再点一次。 */
+export const trustAnswerPending = (failure: string | null) =>
+  !!failure && !TRUST_SETTLED.has(failure);
+
 /**
  * 站点在浏览器里授权完成后，原生侧会发进度过来。这里只负责听、把线路切过去、
  * 把结果交给界面；怎么说由角色决定，不弹提示条。
@@ -29,6 +40,24 @@ export function useStationLink(options: {
   const latest = useRef(options);
   latest.current = options;
   const [asking, setAsking] = useState<string[]>([]);
+  const [arrived, setArrived] = useState<{
+    lineId: AccountLineId;
+    reported: string | undefined;
+  } | null>(null);
+  const lineId = options.lineId;
+  useEffect(() => {
+    if (!arrived || arrived.lineId !== lineId) return;
+    setArrived(null);
+    void Promise.resolve(latest.current.refresh())
+      .catch(() => null)
+      .then((projection) =>
+        latest.current.onEvent(
+          projection?.status === "signed_in"
+            ? { phase: "signed_in", lineId: arrived.reported }
+            : { phase: "failed", reasonCode: projection?.status },
+        ),
+      );
+  }, [arrived, lineId]);
 
   useEffect(() => {
     let disposed = false;
@@ -36,7 +65,7 @@ export function useStationLink(options: {
     void listen(STATION_CONNECT_PROGRESS_EVENT, (event) => {
       const payload = decodeStationConnectProgress(event.payload);
       if (!payload) return;
-      const { lineId, onLineChange, refresh, onEvent } = latest.current;
+      const { lineId, onLineChange, onEvent } = latest.current;
       if (payload.phase === "confirm_required") {
         const origin = payload.origin;
         if (origin)
@@ -50,19 +79,14 @@ export function useStationLink(options: {
         return;
       }
       if (payload.phase === "signed_in") {
-        if (
-          payload.lineId &&
-          isAccountLineId(payload.lineId) &&
-          payload.lineId !== lineId
-        )
-          onLineChange(payload.lineId);
-        void refresh().then((projection) =>
-          latest.current.onEvent(
-            projection?.status === "signed_in"
-              ? { phase: "signed_in", lineId: payload.lineId }
-              : { phase: "failed", reasonCode: projection?.status },
-          ),
-        );
+        const next =
+          payload.lineId && isAccountLineId(payload.lineId)
+            ? payload.lineId
+            : lineId;
+        if (next !== lineId) onLineChange(next);
+        // 读账户要等线路真换过去以后（见下面那个 effect）：这一刻手里的
+        // `refresh` 读的还是原来那个站。
+        setArrived({ lineId: next, reported: payload.lineId });
         return;
       }
       onEvent({ phase: "failed", reasonCode: payload.reasonCode });
@@ -93,7 +117,9 @@ export function useStationLink(options: {
       } catch (error) {
         failure = String(error);
       }
-      setAsking((queue) => queue.slice(1));
+      // 没答成（本机后台没回话）：问话留着，还能再点一次；有了答复才换下一个。
+      if (!trustAnswerPending(failure))
+        setAsking((queue) => queue.filter((item) => item !== trustOrigin));
       return failure;
     },
     [trustOrigin],
