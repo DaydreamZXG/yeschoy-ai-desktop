@@ -330,17 +330,14 @@ export function Join({
   const name = t(`roster.${who}.name`);
   const appInfo = WORKBENCH_APPS.find((item) => item.id === app);
   const appName = appDisplayName(app, appInfo?.name ?? app, t);
-  // 不常用、没装、没接过、现在也没选它的，才收起来。
-  const rare = WORKBENCH_APPS.filter((item) => {
-    if (item.common || item.id === app) return false;
-    if (connections.some((entry) => entry.toolId === item.id)) return false;
-    const found = targets.find((entry) => entry.toolId === item.id);
-    return (
-      !found ||
-      found.status === "not_found" ||
-      found.status === "missing_runtime"
-    );
-  }).map((item) => item.id);
+  // 不常用的收起来；接过的、现在选着的不收。装没装不算：找应用是慢慢找到的，
+  // 按它来的话这一排会在用户眼前跳。
+  const rare = WORKBENCH_APPS.filter(
+    (item) =>
+      !item.common &&
+      item.id !== app &&
+      !connections.some((entry) => entry.toolId === item.id),
+  ).map((item) => item.id);
   // 这一家只认某几个应用，而现在选的不在里面：后端也会拦，这里先说清楚。
   const barred =
     !!preset && preset.onlyTools.length > 0 && !preset.onlyTools.includes(app);

@@ -988,7 +988,7 @@ const undone = (
 describe("接入：应用多了不堆在一起", () => {
   const chip = (name: RegExp) => screen.queryByRole("button", { name });
 
-  it("不常用又没装的收着，点一下才露出来；装了的、接过的一直露着", async () => {
+  it("不常用的收着，点一下才露出来；接过的一直露着", async () => {
     found([target("claude_desktop"), target("pi")]);
     setup({
       connections: [
@@ -1001,19 +1001,17 @@ describe("接入：应用多了不堆在一起", () => {
       /^Codex/,
       /^OpenCode/,
       /^Claude Code/,
+      /^WorkBuddy/,
     ])
       expect(chip(name)).not.toBeNull();
-    // Pi 装了、WorkBuddy 接过：不常用也露着。
-    expect(chip(/^Pi/)).not.toBeNull();
-    expect(chip(/^WorkBuddy/)).not.toBeNull();
-    expect(chip(/^DeepSeek Harness/)).toBeNull();
-    expect(chip(/^DSH web/)).toBeNull();
+    for (const name of [/^DeepSeek Harness/, /^DSH web/, /^Pi/])
+      expect(chip(name)).toBeNull();
 
-    const fold = screen.getByRole("button", { name: /不常用的还有 2 个/ });
+    const fold = screen.getByRole("button", { name: /不常用的还有 3 个/ });
     expect(fold).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(fold);
-    expect(chip(/^DeepSeek Harness/)).not.toBeNull();
-    expect(chip(/^DSH web/)).not.toBeNull();
+    for (const name of [/^DeepSeek Harness/, /^DSH web/, /^Pi/])
+      expect(chip(name)).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /收起/ }));
     expect(chip(/^DSH web/)).toBeNull();
   });
