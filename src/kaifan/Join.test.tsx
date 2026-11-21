@@ -6,6 +6,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ProviderPreset } from "./providers";
 import {
   clearManualLocation,
   pickManualLocation,
@@ -982,6 +983,55 @@ const undone = (
   status,
   connections: [],
   reasonCode: "",
+});
+
+describe("接入：连的是云厂商", () => {
+  const vendor = (patch: Partial<ProviderPreset> = {}): ProviderPreset => ({
+    id: "kimi_code_cn",
+    family: "kimi_code",
+    region: "cn",
+    name: "Kimi Code",
+    origin: "https://api.kimi.com",
+    billing: "plan",
+    unverifiable: false,
+    onlyTools: [],
+    keyPage: "https://example.com/keys",
+    common: true,
+    ...patch,
+  });
+
+  it("套餐：接入之前再说一次有被封的风险，照样能接", async () => {
+    setup({ preset: vendor() });
+    await ready();
+    expect(screen.getByTestId("kaifan-join-plan-risk")).toHaveTextContent(
+      /Kimi Code.*停掉套餐/,
+    );
+  });
+
+  it("按量付费的、中转站：不提套餐的事", async () => {
+    setup({ preset: vendor({ billing: "pay_as_you_go" }) });
+    await ready();
+    expect(screen.queryByTestId("kaifan-join-plan-risk")).toBeNull();
+  });
+
+  it("这家不认这个应用：说清楚，不让点，也不发给后端", async () => {
+    setup({
+      preset: vendor({
+        id: "opencode_go",
+        family: "opencode_go",
+        name: "OpenCode Go",
+        onlyTools: ["opencode"],
+      }),
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId("kaifan-join-barred")).toHaveTextContent(
+        /OpenCode Go不认/,
+      ),
+    );
+    expect(go()).toBeDisabled();
+    expect(screen.queryByTestId("kaifan-join-plan-risk")).toBeNull();
+    expect(activate).not.toHaveBeenCalled();
+  });
 });
 
 describe("接入：要修的应用就在这里修", () => {

@@ -1,10 +1,13 @@
+import { invoke } from "@tauri-apps/api/core";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { openStationConnectPage } from "../account/openStationConnectPage";
 import { connectWithKey } from "../account/session";
 import { Connect } from "./Connect";
+import { resetProviderPresetsForTest } from "./providers";
 import { lookAtStation } from "./station";
 
+vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("../account/openStationConnectPage", () => ({
   openStationConnectPage: vi.fn(),
 }));
@@ -25,6 +28,61 @@ vi.mock("./sound", async (original) => ({
 const look = vi.mocked(lookAtStation);
 const connect = vi.mocked(connectWithKey);
 const openPage = vi.mocked(openStationConnectPage);
+const ipc = vi.mocked(invoke);
+const preset = (patch: Record<string, unknown>) => ({
+  region: null,
+  billing: "plan",
+  keyCheck: "models",
+  onlyTools: [],
+  keyPage: "https://example.com/keys",
+  common: true,
+  ...patch,
+});
+const PRESETS = [
+  preset({
+    id: "kimi_code_cn",
+    family: "kimi_code",
+    region: "cn",
+    name: "Kimi Code",
+    origin: "https://api.kimi.com",
+  }),
+  preset({
+    id: "kimi_code_global",
+    family: "kimi_code",
+    region: "global",
+    name: "Kimi Code",
+    origin: "https://api.kimi.ai",
+  }),
+  preset({
+    id: "deepseek",
+    family: "deepseek",
+    name: "DeepSeek",
+    origin: "https://api.deepseek.com",
+    billing: "pay_as_you_go",
+  }),
+  preset({
+    id: "bailian_coding",
+    family: "bailian_coding",
+    name: "阿里云百炼 Coding Plan",
+    origin: "https://coding.dashscope.aliyuncs.com",
+    keyCheck: "unverifiable",
+    common: false,
+  }),
+  preset({
+    id: "opencode_go",
+    family: "opencode_go",
+    name: "OpenCode Go",
+    origin: "https://opencode.ai",
+    onlyTools: ["opencode"],
+    common: false,
+  }),
+];
+/** 原生侧给了厂商表。 */
+const withVendors = () =>
+  ipc.mockImplementation(async (command) =>
+    command === "provider_presets_v1" ? PRESETS : null,
+  );
+const vendor = (name: RegExp) => screen.findByRole("button", { name });
 const KEY = "sk-test-0000000000000000";
 
 const station = (patch: Record<string, unknown> = {}) =>
@@ -67,6 +125,10 @@ describe("连接站点", () => {
     look.mockReset();
     connect.mockReset();
     openPage.mockReset();
+    // 默认读不到厂商表：填网址那条路要照旧能用。
+    ipc.mockReset();
+    ipc.mockRejectedValue(new Error("unavailable"));
+    resetProviderPresetsForTest();
   });
 
   it("网址空着或看不懂：说清楚，不去探测", async () => {
@@ -282,5 +344,124 @@ describe("连接站点", () => {
     );
     fireEvent.keyDown(screen.getByTestId("kaifan-connect"), { key: "Escape" });
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  describe("云厂商", () => {
+    it("读不到厂商表：只少了云厂商那一组，填网址照旧", async () => {
+      setup();
+      await waitFor(() => expect(ipc).toHaveBeenCalled());
+      expect(screen.queryByTestId("kaifan-connect-vendors")).toBeNull();
+      expect(screen.getByLabelText("站点网址")).toBeEnabled();
+    });
+
+    it("不常用的默认收着，点一下才露出来", async () => {
+      withVendors();
+      setup();
+      await vendor(/Kimi Code/);
+      expect(screen.getByRole("button", { name: /DeepSeek/ })).toBeVisible();
+      expect(screen.queryByRole("button", { name: /百炼/ })).toBeNull();
+      const fold = screen.getByRole("button", { name: /还有 2 家/ });
+      expect(fold).toHaveAttribute("aria-expanded", "false");
+      fireEvent.click(fold);
+      expect(screen.getByRole("button", { name: /百炼/ })).toBeVisible();
+      expect(screen.getByRole("button", { name: /OpenCode Go/ })).toBeVisible();
+      fireEvent.click(screen.getByRole("button", { name: /收起/ }));
+      expect(screen.queryByRole("button", { name: /百炼/ })).toBeNull();
+    });
+
+    it("套餐：粘贴密钥之前先说清有被封的风险；不去探站点，直接连", async () => {
+      withVendors();
+      connect.mockResolvedValue({ status: "signed_in" } as never);
+      const { onLineChange, onConnected, container } = setup();
+      fireEvent.click(await vendor(/Kimi Code/));
+      expect(step()).toBe("vendor");
+      expect(screen.getByTestId("kaifan-connect-risk")).toHaveTextContent(
+        /Kimi Code.*停掉你的套餐/,
+      );
+      typeKey(` ${KEY} `);
+      await waitFor(() => expect(onConnected).toHaveBeenCalled());
+      expect(look).not.toHaveBeenCalled();
+      expect(connect).toHaveBeenCalledWith("https://api.kimi.com", KEY);
+      expect(onLineChange).toHaveBeenCalledWith(
+        "station_key:https://api.kimi.com",
+      );
+      expect(onConnected).toHaveBeenCalledWith({
+        host: "Kimi Code",
+        viaKey: true,
+      });
+      expect(container.innerHTML).not.toContain(KEY);
+    });
+
+    it("有国内站和海外站的：换一下，连的就是另一个地址", async () => {
+      withVendors();
+      connect.mockResolvedValue({ status: "signed_in" } as never);
+      const { onConnected } = setup();
+      fireEvent.click(await vendor(/Kimi Code/));
+      const abroad = screen.getByRole("button", { name: "海外站" });
+      expect(abroad).toHaveAttribute("aria-pressed", "false");
+      fireEvent.click(abroad);
+      expect(abroad).toHaveAttribute("aria-pressed", "true");
+      typeKey(KEY);
+      await waitFor(() => expect(onConnected).toHaveBeenCalled());
+      expect(connect).toHaveBeenCalledWith("https://api.kimi.ai", KEY);
+    });
+
+    it("按量付费的不吓人；没有地区可选的不出地区", async () => {
+      withVendors();
+      setup();
+      fireEvent.click(await vendor(/DeepSeek/));
+      expect(screen.queryByTestId("kaifan-connect-risk")).toBeNull();
+      expect(screen.queryByRole("button", { name: "海外站" })).toBeNull();
+      expect(screen.queryByTestId("kaifan-connect-limits")).toBeNull();
+    });
+
+    it("没法提前核对密钥的、只认某个应用的，连之前就说", async () => {
+      withVendors();
+      setup();
+      fireEvent.click(await vendor(/还有 2 家/));
+      fireEvent.click(screen.getByRole("button", { name: /百炼/ }));
+      expect(screen.getByTestId("kaifan-connect-limits")).toHaveTextContent(
+        "没法提前核对密钥",
+      );
+      fireEvent.click(screen.getByRole("button", { name: "上一步" }));
+      expect(step()).toBe("url");
+      // 回来时刚才展开的还展开着，不用再点一次。
+      fireEvent.click(screen.getByRole("button", { name: /OpenCode Go/ }));
+      expect(screen.getByTestId("kaifan-connect-limits")).toHaveTextContent(
+        "只认OpenCode",
+      );
+    });
+
+    it("去拿密钥：只告诉原生侧是哪一家；浏览器没开就说怎么办", async () => {
+      withVendors();
+      setup();
+      fireEvent.click(await vendor(/Kimi Code/));
+      fireEvent.click(screen.getByRole("button", { name: /去拿密钥/ }));
+      await waitFor(() =>
+        expect(ipc).toHaveBeenCalledWith("provider_open_key_page_v1", {
+          id: "kimi_code_cn",
+        }),
+      );
+      ipc.mockRejectedValue("browser_unavailable");
+      fireEvent.click(screen.getByRole("button", { name: /去拿密钥/ }));
+      await waitFor(() => expect(says()).toContain("浏览器没打开"));
+    });
+
+    it("密钥被拒：留在这一屏，说清楚，可以重新粘", async () => {
+      withVendors();
+      connect.mockResolvedValue({
+        status: "signed_out",
+        reasonCode: "key_rejected",
+      } as never);
+      const { onConnected } = setup();
+      fireEvent.click(await vendor(/DeepSeek/));
+      typeKey(KEY);
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: /^连接/ })).toBeEnabled(),
+      );
+      expect(step()).toBe("vendor");
+      expect(onConnected).not.toHaveBeenCalled();
+      expect(screen.getByLabelText("密钥")).toBeEnabled();
+    });
   });
 });
