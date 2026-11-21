@@ -213,7 +213,7 @@ pub(super) fn parse_claude_feed(bytes: &[u8], source: Source) -> Result<Resolved
     Ok(Resolved::official(url_text))
 }
 
-async fn json(client: &Client, url: &str) -> Result<Vec<u8>> {
+pub(super) async fn json(client: &Client, url: &str) -> Result<Vec<u8>> {
     let mut response = client
         .get(url)
         .header("accept", "application/json")

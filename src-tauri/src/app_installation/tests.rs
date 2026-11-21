@@ -85,7 +85,17 @@ fn installer_catalog_is_closed_and_architecture_specific() {
         }
     }
     assert!(catalog::source("codex_desktop", "macos", "x64").is_none());
-    assert_eq!(catalog::mode("pi", "macos", "x64"), "guided");
+    // 命令行工具由客户端自己下载官方文件装好；其余只能带去官方页面。
+    for tool in ["claude_code", "opencode", "pi"] {
+        for os in ["macos", "windows", "linux"] {
+            assert_eq!(catalog::mode(tool, os, "x64"), "automatic");
+            assert!(catalog::source(tool, os, "x64").is_none());
+        }
+        assert_eq!(catalog::mode(tool, "macos", "unknown"), "guided");
+    }
+    for tool in ["dsh_web", "dsh_desktop", "workbuddy"] {
+        assert_eq!(catalog::mode(tool, "macos", "x64"), "guided");
+    }
     assert!(catalog::guide("arbitrary").is_none());
     assert_eq!(
         catalog::guide_for("opencode", "macos", "arm64"),
@@ -929,4 +939,391 @@ async fn installer_redirect_cache_never_reuses_another_resource_etag() {
 #[tokio::test]
 async fn installer_redirect_resume_never_appends_another_resource_etag() {
     installer_redirect_generation_case(true).await;
+}
+
+mod cli_tools {
+    use super::super::{catalog, cli};
+    use reqwest::Url;
+    use std::{fs, io::Write, path::Path};
+
+    fn source(tool: &str, os: &str) -> catalog::Source {
+        catalog::cli_source(tool, os, "x64").unwrap()
+    }
+    fn temp(name: &str) -> std::path::PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "yeschoy-cli-{}-{name}-{}",
+            std::process::id(),
+            super::super::new_id().unwrap()
+        ));
+        fs::create_dir_all(&path).unwrap();
+        path
+    }
+    fn tgz(path: &Path, build: impl FnOnce(&mut tar::Builder<flate2::write::GzEncoder<fs::File>>)) {
+        let encoder =
+            flate2::write::GzEncoder::new(fs::File::create(path).unwrap(), Default::default());
+        let mut builder = tar::Builder::new(encoder);
+        build(&mut builder);
+        builder.into_inner().unwrap().finish().unwrap();
+    }
+    fn file(builder: &mut tar::Builder<impl Write>, name: &str, body: &[u8], mode: u32) {
+        let mut header = tar::Header::new_gnu();
+        header.set_size(body.len() as u64);
+        header.set_mode(mode);
+        header.set_cksum();
+        builder.append_data(&mut header, name, body).unwrap();
+    }
+
+    #[test]
+    fn only_official_release_hosts_are_reachable() {
+        let allowed = |tool: &str, url: &str| {
+            cli::allowed_url(source(tool, "macos"), &Url::parse(url).unwrap())
+        };
+        assert!(allowed(
+            "claude_code",
+            "https://downloads.claude.ai/claude-code-releases/2.1.330/darwin-x64/claude"
+        ));
+        assert!(allowed(
+            "pi",
+            "https://github.com/earendil-works/pi/releases/download/v1.6.0/SHA256SUMS"
+        ));
+        assert!(allowed(
+            "pi",
+            "https://release-assets.githubusercontent.com/github-production-release-asset/1/a?sig=x"
+        ));
+        assert!(allowed(
+            "opencode",
+            "https://registry.npmjs.org/opencode-linux-x64/-/opencode-linux-x64-1.19.6.tgz"
+        ));
+        for (tool, url) in [
+            (
+                "claude_code",
+                "http://downloads.claude.ai/claude-code-releases/latest",
+            ),
+            ("claude_code", "https://downloads.claude.ai/other/claude"),
+            (
+                "claude_code",
+                "https://github.com/earendil-works/pi/releases/download/v1/x",
+            ),
+            (
+                "claude_code",
+                "https://release-assets.githubusercontent.com/github-production-release-asset/1/a",
+            ),
+            (
+                "pi",
+                "https://github.com/someone-else/pi/releases/download/v1/pi.tar.gz",
+            ),
+            (
+                "pi",
+                "https://github.com/earendil-works/pi/releases/download/../../x",
+            ),
+            (
+                "pi",
+                "https://user@github.com/earendil-works/pi/releases/download/v1/x",
+            ),
+            (
+                "opencode",
+                "https://registry.npmjs.org/left-pad/-/left-pad-1.0.0.tgz",
+            ),
+            (
+                "opencode",
+                "https://evil.example/opencode-linux-x64/-/opencode-linux-x64-1.tgz",
+            ),
+            (
+                "pi",
+                "https://registry.npmjs.org/opencode-linux-x64/-/opencode-linux-x64-1.tgz",
+            ),
+        ] {
+            assert!(!allowed(tool, url), "{url}");
+        }
+    }
+
+    #[test]
+    fn official_metadata_must_name_this_platform_and_a_real_checksum() {
+        let sum = "a".repeat(64);
+        let manifest = serde_json::json!({"version":"2.1.330","platforms":{
+            "darwin-arm64":{"binary":"claude","checksum":sum,"size":10},
+            "win32-x64":{"binary":"claude.exe","checksum":"short","size":10}}});
+        let bytes = serde_json::to_vec(&manifest).unwrap();
+        let found = cli::parse_claude_manifest(&bytes, "2.1.330", "macos", "arm64").unwrap();
+        assert_eq!(
+            found.url,
+            "https://downloads.claude.ai/claude-code-releases/2.1.330/darwin-arm64/claude"
+        );
+        assert_eq!((found.sha256.as_str(), found.size), (sum.as_str(), 10));
+        // 版本对不上、这台电脑不在清单里、校验值不像校验值：都不装。
+        assert!(cli::parse_claude_manifest(&bytes, "2.1.331", "macos", "arm64").is_err());
+        assert!(cli::parse_claude_manifest(&bytes, "2.1.330", "linux", "x64").is_err());
+        assert!(cli::parse_claude_manifest(&bytes, "2.1.330", "windows", "x64").is_err());
+
+        let sums = format!("{sum}  pi-darwin-x64.tar.gz\nnot-a-sum  pi-linux-x64.tar.gz\n");
+        assert_eq!(cli::parse_sums(&sums, "pi-darwin-x64.tar.gz").unwrap(), sum);
+        assert!(cli::parse_sums(&sums, "pi-linux-x64.tar.gz").is_err());
+        assert!(cli::parse_sums(&sums, "pi-windows-x64.zip").is_err());
+
+        let integrity = format!("sha512-{}", "A".repeat(86) + "==");
+        let package = |integrity: &str, tarball: &str| {
+            serde_json::to_vec(
+                &serde_json::json!({"name":"opencode-darwin-x64","version":"1.19.6",
+                "dist":{"integrity":integrity,"tarball":tarball}}),
+            )
+            .unwrap()
+        };
+        let official =
+            "https://registry.npmjs.org/opencode-darwin-x64/-/opencode-darwin-x64-1.19.6.tgz";
+        let found =
+            cli::parse_npm_package(&package(&integrity, official), "opencode-darwin-x64").unwrap();
+        assert_eq!(found.target.url, official);
+        assert!(cli::allowed_url(
+            source("opencode", "macos"),
+            &Url::parse(official).unwrap()
+        ));
+        // 没有 sha512、包名不对、文件不在官方仓库里：都不装。
+        for bytes in [
+            package("sha1-abc", official),
+            package(
+                &integrity,
+                "https://evil.example/opencode-darwin-x64-1.19.6.tgz",
+            ),
+        ] {
+            assert!(cli::parse_npm_package(&bytes, "opencode-darwin-x64").is_err());
+        }
+        assert!(
+            cli::parse_npm_package(&package(&integrity, official), "opencode-linux-x64").is_err()
+        );
+    }
+
+    #[test]
+    fn opencode_picks_the_build_this_processor_can_run() {
+        // 标准版要 AVX2；没有的 x64 电脑装官方的 baseline 版，arm64 不受影响。
+        let x64 = source("opencode", "windows");
+        assert_eq!(
+            cli::opencode_package(x64, "windows", true),
+            "opencode-windows-x64"
+        );
+        assert_eq!(
+            cli::opencode_package(x64, "windows", false),
+            "opencode-windows-x64-baseline"
+        );
+        let arm = catalog::cli_source("opencode", "macos", "arm64").unwrap();
+        assert_eq!(
+            cli::opencode_package(arm, "macos", false),
+            "opencode-darwin-arm64"
+        );
+        assert!(cli::allowed_url(
+            x64,
+            &Url::parse(
+                "https://registry.npmjs.org/opencode-windows-x64-baseline/-/opencode-windows-x64-baseline-1.19.6.tgz"
+            )
+            .unwrap()
+        ));
+    }
+
+    #[test]
+    fn files_already_in_the_tool_folder_survive_a_reinstall() {
+        let root = temp("keep");
+        let folder = root.join("claude_code");
+        fs::create_dir_all(&folder).unwrap();
+        fs::write(folder.join("notes.txt"), b"mine").unwrap();
+        let kept = |root: &Path| {
+            fs::read_dir(root)
+                .unwrap()
+                .filter_map(|entry| entry.ok())
+                .map(|entry| entry.path())
+                .find(|path| {
+                    path.file_name()
+                        .and_then(|name| name.to_str())
+                        .is_some_and(|name| name.starts_with(".replaced-claude_code-"))
+                })
+        };
+        // 装不成（包是空的）：原来的文件原样留在原处。
+        let empty = root.join("empty.bin");
+        fs::write(&empty, b"").unwrap();
+        assert_eq!(
+            cli::install_at(&root, source("claude_code", "linux"), &empty),
+            Err("invalid_download")
+        );
+        assert_eq!(fs::read(folder.join("notes.txt")).unwrap(), b"mine");
+        assert!(kept(&root).is_none());
+        // 装成了：原来的文件整个挪到旁边，没有删。
+        let raw = root.join("claude.bin");
+        fs::write(&raw, b"#!/bin/sh\n").unwrap();
+        let program = cli::install_at(&root, source("claude_code", "linux"), &raw).unwrap();
+        assert!(program.is_file());
+        assert!(!folder.join("notes.txt").exists());
+        let aside = kept(&root).expect("old files are kept beside the new install");
+        assert_eq!(fs::read(aside.join("notes.txt")).unwrap(), b"mine");
+        // 空目录不留痕迹。
+        let bare = temp("bare");
+        fs::create_dir_all(bare.join("claude_code")).unwrap();
+        cli::install_at(&bare, source("claude_code", "linux"), &raw).unwrap();
+        assert!(kept(&bare).is_none());
+        let _ = fs::remove_dir_all(root);
+        let _ = fs::remove_dir_all(bare);
+    }
+
+    #[test]
+    fn a_download_counts_only_when_it_matches_the_official_checksum() {
+        use base64::Engine;
+        use sha2::Digest;
+        let root = temp("checksum");
+        let file = root.join("package");
+        fs::write(&file, b"official bytes").unwrap();
+        let sha512 = base64::engine::general_purpose::STANDARD
+            .encode(sha2::Sha512::digest(b"official bytes"));
+        let found = |sha256: &str, sha512: &str| cli::Found {
+            target: super::super::origins::Resolved {
+                url: String::new(),
+                sha256: sha256.into(),
+                size: 0,
+                mirror: false,
+            },
+            sha512: sha512.into(),
+        };
+        assert!(found("", &sha512).matches(&file, "ignored").unwrap());
+        assert!(found("abc", "").matches(&file, "abc").unwrap());
+        assert!(!found("abc", "").matches(&file, "abd").unwrap());
+        // 官方没给校验值：不算数。
+        assert!(!found("", "").matches(&file, "abc").unwrap());
+        fs::write(&file, b"tampered bytes").unwrap();
+        assert!(!found("", &sha512).matches(&file, "ignored").unwrap());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_verified_package_lands_in_the_client_owned_folder() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = temp("install");
+        // 单文件：原样放进去并可以运行。
+        let raw = root.join("claude.bin");
+        fs::write(&raw, b"#!/bin/sh\n").unwrap();
+        let program = cli::install_at(&root, source("claude_code", "linux"), &raw).unwrap();
+        assert_eq!(program, root.join("claude_code").join("claude"));
+        assert_eq!(
+            fs::metadata(&program).unwrap().permissions().mode() & 0o777,
+            0o755
+        );
+        // 已经装好的不覆盖。
+        assert_eq!(
+            cli::install_at(&root, source("claude_code", "linux"), &raw),
+            Err("already_installed")
+        );
+        // Pi 的包是一个 `pi/` 目录，主程序和它的资源一起放。
+        let package = root.join("pi.tgz");
+        tgz(&package, |builder| {
+            file(builder, "pi/pi", b"#!/bin/sh\n", 0o755);
+            file(builder, "pi/theme/dark.json", b"{}", 0o644);
+        });
+        let program = cli::install_at(&root, source("pi", "linux"), &package).unwrap();
+        assert_eq!(program, root.join("pi").join("pi"));
+        assert!(root.join("pi/theme/dark.json").is_file());
+        // 上次没装完留下的空目录：清掉重来。
+        fs::create_dir(root.join("opencode")).unwrap();
+        let package = root.join("opencode.tgz");
+        tgz(&package, |builder| {
+            file(builder, "package/package.json", b"{}", 0o644);
+            file(builder, "package/bin/opencode", b"#!/bin/sh\n", 0o755);
+        });
+        let program = cli::install_at(&root, source("opencode", "linux"), &package).unwrap();
+        assert_eq!(program, root.join("opencode").join("opencode"));
+        assert!(!root.join("opencode/package.json").exists());
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_package_that_reaches_outside_or_lacks_the_program_installs_nothing() {
+        let root = temp("reject");
+        let leftovers = |root: &Path| {
+            fs::read_dir(root)
+                .unwrap()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.path().is_dir())
+                .count()
+        };
+        let package = root.join("bad.tgz");
+        // 没有主程序。
+        tgz(&package, |builder| {
+            file(builder, "pi/readme.md", b"x", 0o644)
+        });
+        assert_eq!(
+            cli::install_at(&root, source("pi", "linux"), &package),
+            Err("invalid_download")
+        );
+        // 符号链接。
+        tgz(&package, |builder| {
+            file(builder, "pi/pi", b"x", 0o755);
+            let mut header = tar::Header::new_gnu();
+            header.set_entry_type(tar::EntryType::Symlink);
+            header.set_size(0);
+            header.set_cksum();
+            builder
+                .append_link(&mut header, "pi/link", "/etc/passwd")
+                .unwrap();
+        });
+        assert_eq!(
+            cli::install_at(&root, source("pi", "linux"), &package),
+            Err("invalid_download")
+        );
+        // 路径往外跑。tar 库不让这样写，所以直接改包头里的名字。
+        tgz(&package, |builder| {
+            let mut header = tar::Header::new_gnu();
+            header.set_size(1);
+            header.set_mode(0o755);
+            header.as_old_mut().name[..9].copy_from_slice(b"../escape");
+            header.set_cksum();
+            builder.append(&header, &b"x"[..]).unwrap();
+        });
+        assert_eq!(
+            cli::install_at(&root, source("pi", "linux"), &package),
+            Err("invalid_download")
+        );
+        assert!(!root.parent().unwrap().join("escape").exists());
+        assert_eq!(leftovers(&root), 0);
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    /// 真的连官方源装一遍并运行。要联网，平时不跑：
+    /// `cargo test -- --ignored real_official_cli`
+    #[tokio::test]
+    #[ignore]
+    async fn real_official_cli_packages_install_and_run() {
+        use super::super::download;
+        let (_state, worker, _coordinator) = super::fixture();
+        let client = download::build_client(None).unwrap();
+        let os = catalog::platform();
+        let root = temp("real");
+        for tool in ["pi", "opencode", "claude_code"] {
+            let source = catalog::cli_source(tool, os, catalog::architecture()).unwrap();
+            let found = cli::resolve(&client, source, os).await.unwrap();
+            eprintln!(
+                "{tool}: {} sha256={} sha512={}",
+                found.target.url, found.target.sha256, found.sha512
+            );
+            let folder = root.join(format!("cache-{tool}"));
+            let (file, hash) = download::fetch_resolved(
+                &worker,
+                source,
+                &folder,
+                &client,
+                cli::allowed_url,
+                &found.target,
+            )
+            .await
+            .unwrap();
+            assert!(found.matches(&file, &hash).unwrap());
+            let program = cli::install_at(&root, source, &file).unwrap();
+            let output = std::process::Command::new(&program)
+                .arg("--version")
+                .output()
+                .unwrap();
+            eprintln!(
+                "{tool}: {} -> {}",
+                program.display(),
+                String::from_utf8_lossy(&output.stdout).trim()
+            );
+            assert!(output.status.success());
+        }
+        fs::remove_dir_all(root).unwrap();
+    }
 }

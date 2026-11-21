@@ -21,6 +21,8 @@ import {
 } from "../model-profiles/profile";
 import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
 import {
+  installOutcome,
+  installStep,
   joinOutcome,
   joinStep,
   usesTerminal,
@@ -34,6 +36,7 @@ import {
   type RosterId,
 } from "./roster";
 import { sound } from "./sound";
+import { useInstall } from "./useInstall";
 import { useTyped } from "./useTyped";
 
 export interface Joined {
@@ -60,13 +63,19 @@ interface Props {
   onJoined: (result: Joined) => void;
   /** 登录不算数了：去重新连站点。 */
   onReconnect: () => void;
-  /** 这一屏还办不了的事（安装、修上次没做完的）：先去旧页面办。 */
+  /** 这一屏还办不了的事（要系统确认的安装、修上次没做完的）：先去旧页面办。 */
   onClassic: (toolId: ActivationToolId) => void;
   /** 接入做完（不管成没成）之后，让外面重新读一遍应用的状态。 */
   onSettled: () => void;
 }
 
 type Scan = "loading" | "ready" | "failed";
+
+/** 下载了多少，写成人看的大小。 */
+const megabytes = (bytes: number) =>
+  bytes >= 1024 ** 3
+    ? `${(bytes / 1024 ** 3).toFixed(1)} GB`
+    : `${Math.max(1, Math.round(bytes / 1024 ** 2))} MB`;
 
 /** 她在这个应用里该用哪个型号：接过的沿用，没接过的挑一个资料齐的。 */
 function modelFor(
@@ -126,7 +135,13 @@ export function Join({
   const settled = useRef(onSettled);
   settled.current = onSettled;
   const task = useActivationTask(() => settled.current());
-  const working = task.phase === "applying";
+  const applying = task.phase === "applying";
+  const fetcher = useInstall();
+  /** 正在装一个还没装的应用（装完会接着接入）。 */
+  const [installing, setInstalling] = useState(false);
+  /** 选中的这个没装的应用，客户端能不能自己装。 */
+  const [selfInstall, setSelfInstall] = useState(false);
+  const working = applying || installing;
 
   const touched = useRef(false);
   const look = useCallback(async () => {
@@ -180,6 +195,21 @@ export function Join({
       target.status === "not_found" ||
       target.status === "missing_runtime");
 
+  // 没装的应用：问一下后端能不能由客户端自己装（官方有可核对的安装包才行）。
+  const absent = scan === "ready" && (!target || target.status === "not_found");
+  const peek = fetcher.peek;
+  useEffect(() => {
+    setSelfInstall(false);
+    if (!open || !absent) return;
+    let live = true;
+    void peek(app).then((mode) => {
+      if (live) setSelfInstall(mode === "automatic");
+    });
+    return () => {
+      live = false;
+    };
+  }, [open, absent, app, peek]);
+
   const ids = cast[who];
   const modelId =
     chosenModel && ids?.includes(chosenModel)
@@ -221,23 +251,33 @@ export function Join({
   const appInfo = WORKBENCH_APPS.find((item) => item.id === app);
   const appName = appDisplayName(app, appInfo?.name ?? app, t);
 
-  const run = async (
-    extra?: { restartRunningApp?: boolean; displaceClaudeLogin?: boolean },
-    group = billingGroup,
-  ) => {
-    if (working || !modelId || !installationId) return;
-    // 存过的方案站点不提供了：发出去只会被拒。先问要不要换，不自己换。
-    if (gone && group === billingGroup && nextGroup)
-      return setOutcome({ kind: "planGone", mood: "idle", action: "regroup" });
-    // 这个应用原来的名单里还在站上的模型照旧留着，只把默认换成她。
-    const binding: ModelBinding = { modelId, billingGroup: group };
-    const kept = (saved?.models ?? []).filter(
+  // 这个应用原来的名单里还在站上的模型照旧留着，只把默认换成她。
+  const bindings = (group: string): ModelBinding[] => [
+    { modelId, billingGroup: group },
+    ...(saved?.models ?? []).filter(
       (item, index, all) =>
         remembered.includes(item) &&
         item.modelId !== modelId &&
         all.findIndex((entry) => entry.modelId === item.modelId) === index &&
         usable.some((entry) => entry.id === item.modelId),
-    );
+    ),
+  ];
+  // 存过的方案站点不提供了：发出去只会被拒。先问要不要换，不自己换。
+  const askPlan = (group: string) => {
+    if (!gone || group !== billingGroup || !nextGroup) return false;
+    setOutcome({ kind: "planGone", mood: "idle", action: "regroup" });
+    return true;
+  };
+
+  const run = async (
+    extra?: { restartRunningApp?: boolean; displaceClaudeLogin?: boolean },
+    group = billingGroup,
+    /** 刚装好的应用：用安装报回来的位置，并带上那次安装的凭证。 */
+    fresh?: { installationId: string; installationJobId: string },
+  ) => {
+    const at = fresh?.installationId ?? installationId;
+    if (working || !modelId || !at) return;
+    if (askPlan(group)) return;
     setOutcome(null);
     sound.pop(620);
     const result = await task.run(
@@ -245,9 +285,10 @@ export function Join({
         lineId,
         toolId: app,
         modelId,
-        installationId,
+        installationId: at,
         billingGroup: group,
-        models: [binding, ...kept],
+        models: bindings(group),
+        ...(fresh ? { installationJobId: fresh.installationJobId } : {}),
         ...extra,
       },
       {
@@ -260,7 +301,11 @@ export function Join({
       },
     );
     if (!result) return;
-    const next = joinOutcome(result);
+    // 应用已经装好，只是那次安装的凭证没用上（比如中途换了账户）：照常再接一次就行。
+    const next: JoinOutcome =
+      fresh && result.reasonCode === "installation_confirmation_required"
+        ? { kind: "retry", mood: "panic", action: "retry" }
+        : joinOutcome(result);
     if (next.kind === "done" || next.kind === "written") {
       onJoined({
         toolId: app,
@@ -278,11 +323,47 @@ export function Join({
     if (next.mood === "panic") sound.sad();
     setOutcome(next);
   };
+  // 没装的应用：下载官方安装包、核对、装好，然后接着接入，中间不用用户再点。
+  const fetchAndJoin = async (group = billingGroup) => {
+    if (working || !modelId) return;
+    if (askPlan(group)) return;
+    touched.current = true;
+    setOutcome(null);
+    setInstalling(true);
+    sound.pop(620);
+    try {
+      const result = await fetcher.run(app, {
+        lineId,
+        modelId,
+        billingGroup: group,
+        models: bindings(group),
+      });
+      const next = installOutcome(result);
+      if (next === "elsewhere") return onClassic(app);
+      // 不管成没成，电脑上有什么可能变了：重新看一遍。
+      await look();
+      if (next === "stopped") return;
+      if (next) {
+        if (next.mood === "panic") sound.sad();
+        return setOutcome(next);
+      }
+      if (result)
+        await run(undefined, group, {
+          installationId: result.installationId,
+          installationJobId: result.jobId,
+        });
+    } finally {
+      setInstalling(false);
+    }
+  };
+  const begin = (group = billingGroup) =>
+    absent && selfInstall ? fetchAndJoin(group) : run(undefined, group);
+
   // 用户点头换方案：记下来（之后重启、再试都沿用它），马上用新方案去接。
   const regroup = () => {
     if (!nextGroup) return;
     setApproved((map) => ({ ...map, [approval]: nextGroup }));
-    void run(undefined, nextGroup);
+    void begin(nextGroup);
   };
 
   const act = () => {
@@ -296,6 +377,11 @@ export function Join({
         return void run();
       case "regroup":
         return regroup();
+      case "install":
+        return void fetchAndJoin();
+      case "look":
+        task.reset();
+        return setOutcome(null);
       case "reconnect":
         return onReconnect();
       case "classic":
@@ -319,11 +405,20 @@ export function Join({
     from: planName(billingGroup),
     to: nextGroup ? planName(nextGroup) : "",
   };
+  const fetched = fetcher.progress;
+  const placing = installStep(fetched?.phase);
   const says = outcome
     ? t(`kaifan.join.say.${outcome.kind}`, { app: appName, name, ...plan })
-    : working
+    : applying
       ? t("kaifan.join.working", { app: appName, name })
-      : "";
+      : installing
+        ? t(
+            placing
+              ? "kaifan.join.installPlacing"
+              : "kaifan.join.installFetching",
+            { app: appName, name },
+          )
+        : "";
   const typed = useTyped(says);
   const stage = working || outcome ? "work" : "pick";
 
@@ -493,7 +588,16 @@ export function Join({
                 )}
               </p>
               <i />
-              {missing ? (
+              {absent && selfInstall ? (
+                <button
+                  type="button"
+                  className="go"
+                  disabled={!modelId}
+                  onClick={() => void fetchAndJoin()}
+                >
+                  {t("kaifan.join.installGo", { app: appName })}
+                </button>
+              ) : missing ? (
                 <button
                   type="button"
                   className="go"
@@ -517,7 +621,56 @@ export function Join({
           <div className="work on" aria-live="polite">
             <img src={chibiOf(who, outcome ? outcome.mood : "idle")} alt="" />
             <h3 data-testid="kaifan-join-says">{typed}</h3>
-            {working ? (
+            {installing && !applying ? (
+              <>
+                <div className="pg">
+                  <i
+                    style={{
+                      width: `${Math.round(
+                        Math.max(
+                          0.06,
+                          placing
+                            ? 1
+                            : fetched?.totalBytes
+                              ? fetched.downloadedBytes / fetched.totalBytes
+                              : 0,
+                        ) * 100,
+                      )}%`,
+                    }}
+                  />
+                </div>
+                <ol className="cl">
+                  <li className={placing > 0 ? "ok" : undefined}>
+                    {t("kaifan.join.stepFetch")}
+                    {!placing && !!fetched?.totalBytes && (
+                      <small>
+                        {megabytes(fetched.downloadedBytes)} /{" "}
+                        {megabytes(fetched.totalBytes)}
+                      </small>
+                    )}
+                  </li>
+                  <li className={placing > 1 ? "ok" : undefined}>
+                    {t("kaifan.join.stepPlace")}
+                  </li>
+                  <li>{t("kaifan.join.stepJoin", { app: appName })}</li>
+                </ol>
+                <div className="ft">
+                  <i />
+                  <button
+                    type="button"
+                    className="go alt"
+                    disabled={!fetched?.canCancel || fetcher.stopping}
+                    onClick={() => void fetcher.stop()}
+                  >
+                    {t(
+                      fetcher.stopping
+                        ? "kaifan.join.stopping"
+                        : "kaifan.join.stop",
+                    )}
+                  </button>
+                </div>
+              </>
+            ) : working ? (
               <>
                 <div className="pg">
                   <i style={{ width: `${Math.round(done * 100)}%` }} />
@@ -557,7 +710,7 @@ export function Join({
             ) : (
               outcome && (
                 <div className="ft">
-                  {outcome.action !== "pick" && outcome.action !== "none" && (
+                  {!["pick", "none", "look"].includes(outcome.action) && (
                     <button
                       type="button"
                       className="go alt"
@@ -572,6 +725,15 @@ export function Join({
                   {outcome.kind === "planBlocked" && nextGroup && (
                     <button type="button" className="go alt" onClick={regroup}>
                       {t("kaifan.join.do.planGone", plan)}
+                    </button>
+                  )}
+                  {outcome.action === "install" && (
+                    <button
+                      type="button"
+                      className="go alt"
+                      onClick={() => fetcher.guide(app)}
+                    >
+                      {t("kaifan.join.officialPage")}
                     </button>
                   )}
                   <i />

@@ -29,6 +29,14 @@ struct Metadata {
     expected_size: u64,
 }
 
+/// GitHub 的下载地址每次带一段不同的签名参数，同一个文件只有 `?` 前面一样。
+/// 续传只看 `?` 前面是不是同一个地址；内容有没有变仍由 ETag、大小和最后的
+/// SHA-256 把关。桌面应用的官方地址不许带参数，对它们这和整串比较是一回事。
+fn same_resource(left: &str, right: &str) -> bool {
+    let bare = |value: &str| value.split('?').next().unwrap_or("").to_owned();
+    !left.is_empty() && bare(left) == bare(right)
+}
+
 pub(super) fn strong_etag(value: &str) -> bool {
     value.len() >= 2
         && value.len() <= 202
@@ -58,6 +66,10 @@ pub(super) fn response_size(
         "application/vnd.ms-appx",
         "application/msix",
         "application/zip",
+        // 命令行工具：Windows 的单文件 exe 和 tar.gz 包。
+        "application/x-msdos-program",
+        "application/gzip",
+        "application/x-gzip",
     ]
     .contains(&kind)
         || !matches!(text("content-encoding"), "" | "identity")
@@ -110,7 +122,7 @@ pub(super) async fn fetch(
     .await
 }
 
-fn build_client(direct_origin: Option<&str>) -> Result<reqwest::Client> {
+pub(super) fn build_client(direct_origin: Option<&str>) -> Result<reqwest::Client> {
     let mut builder = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
         .https_only(true)
@@ -244,14 +256,16 @@ pub(super) async fn fetch_resolved(
                     url.as_str() != target.url
                 } else {
                     !url_policy(source, &url)
-                        || (source.extension == "zip" && url.as_str() != target.url)
+                        || (source.tool == "claude_desktop"
+                            && source.extension == "zip"
+                            && url.as_str() != target.url)
                 } {
                     return Err("invalid_source");
                 }
                 let mut request = client
                     .get(url.clone())
                     .header("accept-encoding", "identity");
-                let request_offset = if url.as_str() == meta.final_url {
+                let request_offset = if same_resource(url.as_str(), &meta.final_url) {
                     offset
                 } else {
                     0
@@ -311,7 +325,7 @@ pub(super) async fn fetch_resolved(
             if size == total
                 && !etag.is_empty()
                 && meta.etag == etag
-                && meta.final_url == final_url
+                && same_resource(&meta.final_url, &final_url)
                 && meta.total == total
                 && meta.sha256.len() == 64
                 && (target.sha256.is_empty() || meta.sha256 == target.sha256)

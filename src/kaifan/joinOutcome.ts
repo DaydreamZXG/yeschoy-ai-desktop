@@ -8,6 +8,7 @@ import type {
   ActivationToolId,
   ToolActivationProjection,
 } from "../configuration/activation";
+import type { InstallationProgress } from "../installation/api";
 import type { Mood } from "./roster";
 
 export type JoinKind =
@@ -29,7 +30,13 @@ export type JoinKind =
   | "restored"
   | "unfinished"
   | "cancelled"
-  | "retry";
+  | "retry"
+  | "installOffline"
+  | "installBad"
+  | "installFull"
+  | "installFailed"
+  | "installUnseen"
+  | "installFound";
 
 /** 这一步由谁来做：客户端再来一次，还是带用户去别处。 */
 export type JoinAction =
@@ -40,6 +47,8 @@ export type JoinAction =
   | "reconnect"
   | "regroup"
   | "classic"
+  | "install"
+  | "look"
   | "pick";
 
 export interface JoinOutcome {
@@ -147,6 +156,58 @@ export function joinOutcome(
       return outcome("retry", "retry");
     default:
       return outcome("retry", "retry");
+  }
+}
+
+const OFFLINE = new Set(["network_unavailable", "source_unavailable"]);
+/** 下到的东西不是官方说的那一个：没有装。 */
+const NOT_GENUINE = new Set([
+  "invalid_download",
+  "invalid_source",
+  "download_changed",
+  "download_incomplete",
+  "signature_invalid",
+  "identity_mismatch",
+]);
+
+/**
+ * 安装停在了哪：`null` 是装好了、可以接着接入；`"stopped"` 是用户自己停的；
+ * `"elsewhere"` 是这一屏办不了、要去旧页面的（系统要用户点确认的那种安装）。
+ */
+export function installOutcome(
+  result: Pick<
+    InstallationProgress,
+    "phase" | "disposition" | "reasonCode" | "installationId"
+  > | null,
+): JoinOutcome | "stopped" | "elsewhere" | null {
+  if (!result) return outcome("installFailed", "install");
+  if (result.phase === "cancelled") return "stopped";
+  if (result.phase === "awaiting_system_confirmation") return "elsewhere";
+  if (result.phase === "installed") {
+    if (result.disposition === "existing")
+      return outcome("installFound", "look", "idle");
+    return result.installationId
+      ? null
+      : outcome("installUnseen", "look", "idle");
+  }
+  const reason = result.reasonCode;
+  if (OFFLINE.has(reason)) return outcome("installOffline", "install");
+  if (NOT_GENUINE.has(reason)) return outcome("installBad", "install");
+  if (reason === "disk_full") return outcome("installFull", "install");
+  return outcome("installFailed", "install");
+}
+
+/** 安装的三步：找和下载、核对并放好、接入。 */
+export function installStep(phase: string | undefined): 0 | 1 | 2 {
+  switch (phase) {
+    case "verifying":
+    case "installing":
+      return 1;
+    case "checking_install":
+    case "installed":
+      return 2;
+    default:
+      return 0;
   }
 }
 

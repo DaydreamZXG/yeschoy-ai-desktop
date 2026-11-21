@@ -383,7 +383,7 @@ fn bounded_plain_text(value: &str, maximum: usize) -> bool {
         })
 }
 
-fn activation_line_id_is_valid(line_id: &str) -> bool {
+pub(crate) fn activation_line_id_is_valid(line_id: &str) -> bool {
     matches!(line_id, "mainland_optimized" | "global_accelerated")
         || station_connect_origin_from_line_id(line_id)
             .is_some_and(|origin| connect_origin_is_acceptable(origin).is_some())
