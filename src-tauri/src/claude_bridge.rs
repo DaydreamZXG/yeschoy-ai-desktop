@@ -512,6 +512,15 @@ async fn send_upstream(
     for (name, value) in forwarded {
         outbound = outbound.header(name, value);
     }
+    if let Some((name, mark)) = crate::local_bridge::session_mark(
+        &credential.origin,
+        forwarded
+            .iter()
+            .map(|(name, value)| (name.as_str(), value.as_str())),
+        value,
+    ) {
+        outbound = outbound.header(name, mark);
+    }
     outbound.send().await
 }
 

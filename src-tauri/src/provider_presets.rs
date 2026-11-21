@@ -47,6 +47,10 @@ pub(crate) struct Preset {
     pub(crate) responses: bool,
     /// 只有这些应用能接；空表示都能接。
     pub(crate) only_tools: &'static [&'static str],
+    /// 这家要求每段对话带的会话标记叫什么；不带的请求它直接拒绝。经过本机桥的
+    /// 应用由桥补上，直接连厂商的应用只能写进它自己的设置里。
+    #[serde(skip)]
+    pub(crate) session_header: Option<&'static str>,
     pub(crate) key_page: &'static str,
     /// 连接屏默认就露出来；不常用的收在「还有几家」里。
     pub(crate) common: bool,
@@ -77,6 +81,7 @@ const fn preset(
         key_check: KeyCheck::Models,
         responses: false,
         only_tools: &[],
+        session_header: None,
         key_page,
         // 默认露在外面；不常用的在表里单独标，收进「还有几家」。
         common: true,
@@ -163,8 +168,17 @@ pub(crate) const PRESETS: &[Preset] = &[
         )
     },
     Preset {
-        // 它的对话接口要求带 OpenCode 自己的会话标记，别的应用发过去会被拒。
-        only_tools: &["opencode"],
+        // 官方说明：别的编程工具也能用，但每个请求都要带会话标记，不带就拒绝。
+        // 过桥的应用由桥补上，Pi 写进它的设置里；剩下两个是自己直接连厂商的，
+        // 没处补，先不放行。
+        session_header: Some("x-opencode-session"),
+        only_tools: &[
+            "opencode",
+            "codex_desktop",
+            "claude_desktop",
+            "claude_code",
+            "pi",
+        ],
         ..preset(
             "opencode_go",
             "opencode_go",
@@ -274,6 +288,11 @@ pub(crate) fn anthropic_base(origin: &str) -> Option<String> {
     }
 }
 
+/// 这一家要求带的会话标记叫什么。表里没有的站点、不要求的厂商都是 `None`。
+pub(crate) fn session_header(origin: &str) -> Option<&'static str> {
+    for_origin(origin.trim_end_matches('/'))?.session_header
+}
+
 /// 这一家能不能接这个应用。表里没有的站点不在这里判断。
 pub(crate) fn allows_tool(origin: &str, tool_id: &str) -> bool {
     for_origin(origin)
@@ -355,10 +374,27 @@ mod tests {
     }
 
     #[test]
-    fn opencode_go_is_offered_to_opencode_only() {
-        assert!(allows_tool("https://opencode.ai", "opencode"));
-        assert!(!allows_tool("https://opencode.ai", "claude_code"));
+    fn opencode_go_is_offered_where_the_session_mark_can_be_sent() {
+        for tool in [
+            "opencode",
+            "codex_desktop",
+            "claude_desktop",
+            "claude_code",
+            "pi",
+        ] {
+            assert!(allows_tool("https://opencode.ai", tool), "{tool}");
+        }
+        // 这两个自己直接连厂商，桥补不上会话标记。
+        for tool in ["workbuddy", "dsh_desktop", "dsh_web"] {
+            assert!(!allows_tool("https://opencode.ai", tool), "{tool}");
+        }
         assert!(allows_tool("https://api.deepseek.com", "claude_code"));
         assert!(allows_tool("https://relay.example.com", "codex_desktop"));
+        assert_eq!(
+            session_header("https://opencode.ai"),
+            Some("x-opencode-session")
+        );
+        assert_eq!(session_header("https://api.deepseek.com"), None);
+        assert_eq!(session_header("https://relay.example.com"), None);
     }
 }

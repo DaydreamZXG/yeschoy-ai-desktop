@@ -104,6 +104,25 @@ pub(super) async fn forward(
     {
         request = request.header(name, value);
     }
+    // 厂商要的会话标记：应用带了就带它的，没带就补一个。
+    if let Some(wanted) = crate::provider_presets::session_header(&credential.origin) {
+        let sent = forwarded
+            .iter()
+            .find(|(name, _)| name.as_str().eq_ignore_ascii_case(wanted));
+        request = match sent {
+            Some((name, value)) => request.header(name, value),
+            None => match crate::local_bridge::session_mark(
+                &credential.origin,
+                forwarded
+                    .iter()
+                    .map(|(name, value)| (name.as_str(), value.as_str())),
+                &chat,
+            ) {
+                Some((name, mark)) => request.header(name, mark),
+                None => request,
+            },
+        };
+    }
     let upstream = match request
         .bearer_auth(credential.upstream_key())
         .json(&chat)

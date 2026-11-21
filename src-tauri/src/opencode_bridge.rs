@@ -127,7 +127,17 @@ async fn chat(state: &BridgeState, request: Request<Body>) -> Response {
         "{}/chat/completions",
         crate::provider_presets::openai_base(&credential.origin)
     );
-    let upstream = crate::local_bridge::with_app_headers(state.client.post(url), &app_headers)
+    let mut outbound = crate::local_bridge::with_app_headers(state.client.post(url), &app_headers);
+    if let Some((name, mark)) = crate::local_bridge::session_mark(
+        &credential.origin,
+        app_headers
+            .iter()
+            .map(|(name, value)| (name.as_str(), value.to_str().unwrap_or_default())),
+        &body,
+    ) {
+        outbound = outbound.header(name, mark);
+    }
+    let upstream = outbound
         .bearer_auth(credential.upstream_key())
         .header(header::CONTENT_TYPE, "application/json")
         .body(bytes)

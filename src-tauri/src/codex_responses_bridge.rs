@@ -294,6 +294,20 @@ async fn responses(state: &BridgeState, request: Request<Body>) -> Response {
         }
     };
 
+    // 厂商要会话标记而 Codex 这次没带：补上，后面两条路都用得着。
+    let mut app_headers = app_headers;
+    if let Some((name, mark)) = crate::local_bridge::session_mark(
+        &credential.origin,
+        app_headers
+            .iter()
+            .map(|(name, value)| (name.as_str(), value.to_str().unwrap_or_default())),
+        &body,
+    ) {
+        if let Ok(mark) = header::HeaderValue::from_str(&mark) {
+            app_headers.push((header::HeaderName::from_static(name), mark));
+        }
+    }
+
     if !needs_chat_conversion(&credential, &model) {
         return forward_verbatim(state, &credential, &app_headers, bytes, accept_sse).await;
     }
