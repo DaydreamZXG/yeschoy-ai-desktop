@@ -408,12 +408,12 @@ pub(crate) fn executable_path() -> Result<String, CredentialFailure> {
 }
 
 #[cfg(not(target_os = "windows"))]
-fn shell_quote(value: &str) -> String {
+pub(crate) fn shell_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\\''"))
 }
 
 #[cfg(target_os = "windows")]
-fn shell_quote(value: &str) -> String {
+pub(crate) fn shell_quote(value: &str) -> String {
     // The helper path is compiled into a command string consumed by cmd.exe in
     // the Windows builds of Claude Code and Pi. Reject shell metacharacters
     // instead of trying to invent another parsing dialect.

@@ -156,6 +156,12 @@ pub fn run() {
                 if permit.is_cancelled() {
                     return;
                 }
+                // 改名或挪位置之后，先把已接入应用里指向旧程序的取密钥命令改过来，
+                // 再恢复各个本地转发。
+                let _ = tauri::async_runtime::spawn_blocking(
+                    connection_recovery::follow_client_location,
+                )
+                .await;
                 // Resolve the user's login-shell environment (a macOS app
                 // launched from the Dock cannot see the exports a Terminal
                 // window would; see shell_environment for what that broke).
