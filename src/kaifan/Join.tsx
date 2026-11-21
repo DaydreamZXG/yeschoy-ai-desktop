@@ -336,7 +336,10 @@ export function Join({
     (item) =>
       !item.common &&
       item.id !== app &&
-      !connections.some((entry) => entry.toolId === item.id),
+      // 名单里每个应用都有一行，没接过的那行写着 not_connected。
+      !connections.some(
+        (entry) => entry.toolId === item.id && entry.state !== "not_connected",
+      ),
   ).map((item) => item.id);
   // 这一家只认某几个应用，而现在选的不在里面：后端也会拦，这里先说清楚。
   const barred =

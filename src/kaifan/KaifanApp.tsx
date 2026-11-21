@@ -152,7 +152,9 @@ export function KaifanApp() {
   const apps = useMemo(
     () =>
       appsForHome(
-        connections.connections?.map((item) => item.toolId) ?? [],
+        connections.connections
+          ?.filter((item) => item.state !== "not_connected")
+          .map((item) => item.toolId) ?? [],
         HOME_APPS,
       ).map((app) => ({
         id: app.id,

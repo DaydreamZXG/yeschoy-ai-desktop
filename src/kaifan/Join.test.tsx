@@ -991,8 +991,12 @@ describe("接入：应用多了不堆在一起", () => {
   it("不常用的收着，点一下才露出来；接过的一直露着", async () => {
     found([target("claude_desktop"), target("pi")]);
     setup({
+      // 后端给的名单里每个应用都有一行，没接过的写着 not_connected。
       connections: [
         { toolId: "workbuddy", state: "connected" } as ToolConnection,
+        { toolId: "pi", state: "not_connected" } as ToolConnection,
+        { toolId: "dsh_desktop", state: "not_connected" } as ToolConnection,
+        { toolId: "dsh_web", state: "not_connected" } as ToolConnection,
       ],
     });
     await ready();
