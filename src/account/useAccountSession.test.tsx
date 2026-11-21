@@ -191,6 +191,18 @@ describe("resilient account authorization", () => {
     expect(result.current.lastError).toBe("network_error");
   });
 
+  it("reports a failure instead of loading forever when the session snapshot cannot be read", async () => {
+    sessionSnapshot.mockRejectedValueOnce(new Error("ipc down"));
+    const { result } = renderHook(() =>
+      useAccountSession("mainland_optimized"),
+    );
+    await flush();
+    expect(command).not.toHaveBeenCalled();
+    expect(result.current.loading).toBe(false);
+    expect(result.current.projection).toBeNull();
+    expect(result.current.lastError).toBe("network_error");
+  });
+
   it("keeps polling after a temporary response error and then signs in", async () => {
     const { result } = renderHook(() =>
       useAccountSession("mainland_optimized"),

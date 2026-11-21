@@ -12,7 +12,7 @@ import { installationInspectionFixture } from "../installation/test-fixtures";
 import { ACTIVATION_TOOL_IDS } from "../configuration/activation";
 
 type Args = Record<string, unknown>;
-const scenario = new URLSearchParams(location.search).get("s") ?? "signed_in";
+let scenario = new URLSearchParams(location.search).get("s") ?? "signed_in";
 const rid = (a: Args) =>
   String((a?.request as Args)?.requestId ?? (a?.requestId as string) ?? "");
 
@@ -299,13 +299,22 @@ function targets(requestId: string) {
   };
 }
 
+let keyLine: string | null = null;
+
 const handlers: Record<string, (a: Args) => unknown> = {
   account_session_snapshot_v2: () => ({
     hasStoredSession: scenario !== "signed_out",
-    storedLineId: scenario === "signed_out" ? null : "mainland_optimized",
+    storedLineId:
+      keyLine ?? (scenario === "signed_out" ? null : "mainland_optimized"),
   }),
   account_inspect_v2: (a) => account(rid(a), scenario),
-  account_connect_with_key_v1: (a) => account(rid(a), "signed_in"),
+  account_connect_with_key_v1: (a) => {
+    // 连上之后就一直是连着的，这样能演到「连上 → 回首页」。
+    scenario = "signed_in";
+    keyLine = `station_key:${(a as { request: { origin: string } }).request.origin}`;
+    return account(rid(a), "signed_in");
+  },
+  station_connect_open_connect_page_v1: () => null,
   account_poll_authorization_v2: (a) => account(rid(a), scenario),
   account_begin_authorization_v2: (a) => account(rid(a), "signed_out"),
   account_cancel_authorization_v2: (a) => account(rid(a), "signed_out"),
@@ -372,7 +381,8 @@ const handlers: Record<string, (a: Args) => unknown> = {
       kind: "new_api",
       systemName: "小明的中转",
       version: "v0.9.6",
-      desktopConnect: false,
+      // auth.* 演示支持浏览器一键登录的站点。
+      desktopConnect: host.startsWith("auth."),
       tokenStatus: r.token ? "valid" : "not_provided",
       models: r.token
         ? [
