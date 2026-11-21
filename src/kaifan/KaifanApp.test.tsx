@@ -11,7 +11,9 @@ import "../i18n";
 import type { AccountProjection } from "../account/session";
 import { useAccountSession } from "../account/useAccountSession";
 import { idleUpdateProjection } from "../update/contract";
+import { readAnnouncements } from "../workbench/announcements";
 import { useDesktopUpdate } from "../update/UpdateProvider";
+import { openClassic } from "../uiChoice";
 import { KaifanApp } from "./KaifanApp";
 
 vi.mock("../account/useAccountSession", () => ({
@@ -34,11 +36,17 @@ vi.mock("../settings/QuitAssistant", () => ({ ShutdownHost: () => null }));
 vi.mock("./useStationLink", () => ({
   useStationLink: () => ({ trustOrigin: null, answerTrust: vi.fn() }),
 }));
+vi.mock("../workbench/announcements", async (load) => ({
+  ...(await load<typeof import("../workbench/announcements")>()),
+  readAnnouncements: vi.fn(),
+  followAnnouncement: vi.fn(),
+}));
 vi.mock("./Fx", async () => {
   const { forwardRef } = await import("react");
   return { Fx: forwardRef(() => null) };
 });
 
+const board = vi.mocked(readAnnouncements);
 const session = vi.mocked(useAccountSession);
 const update = vi.mocked(useDesktopUpdate);
 const refresh = vi.fn();
@@ -66,6 +74,7 @@ beforeEach(() => {
   vi.useRealTimers();
   refresh.mockReset().mockResolvedValue(signedIn);
   update.mockReturnValue(idle);
+  board.mockReset().mockResolvedValue({ available: false, notices: [] });
   session.mockReturnValue({
     projection: signedIn,
     loading: false,
@@ -216,6 +225,94 @@ describe("开饭首页自己会做的事", () => {
     );
     expect(card).toHaveAttribute("inert");
     expect(home).not.toHaveAttribute("inert");
+  });
+
+  it("点「账本」：在新界面里滑出来，读一次最新的数，不去旧页面", async () => {
+    const { container } = render(<KaifanApp />);
+    const home = container.querySelector(".ui")!;
+    await waitFor(() => expect(home).not.toHaveAttribute("inert"));
+    const ledger = screen.getByTestId("kaifan-ledger");
+    expect(ledger).toHaveAttribute("inert");
+    refresh.mockClear();
+
+    fireEvent.click(screen.getByTestId("kaifan-nav-ledger"));
+    await waitFor(() => expect(ledger).not.toHaveAttribute("inert"));
+    expect(home).toHaveAttribute("inert");
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(openClassic).not.toHaveBeenCalled();
+    expect(screen.getByTestId("kaifan-ledger-balance")).toHaveTextContent(
+      "¥86.40",
+    );
+
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    await waitFor(() => expect(ledger).toHaveAttribute("inert"));
+    expect(home).not.toHaveAttribute("inert");
+  });
+
+  it("充值页没打开成：收起账本，让她在首页说怎么办", async () => {
+    session.mockReturnValue({
+      projection: signedIn,
+      loading: false,
+      stationCheck: "ok",
+      lastError: null,
+      refresh,
+      openWallet: vi.fn(async () => false),
+    } as unknown as ReturnType<typeof useAccountSession>);
+    const { container } = render(<KaifanApp />);
+    const home = container.querySelector(".ui")!;
+    await waitFor(() => expect(home).not.toHaveAttribute("inert"));
+    fireEvent.click(screen.getByTestId("kaifan-nav-ledger"));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("kaifan-ledger-recharge"));
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId("kaifan-ledger")).toHaveAttribute("inert"),
+    );
+    expect(home).not.toHaveAttribute("inert");
+  });
+
+  it("有没看过的公告：「公告」上写几条；要提醒的那条由角色说一次；打开就算看过", async () => {
+    localStorage.clear();
+    board.mockResolvedValue({
+      available: true,
+      notices: [
+        {
+          id: "n1",
+          title: "充值加赠",
+          body: "充 100 送 20",
+          severity: "info",
+          publishedAtEpochMs: 1,
+          expiresAtEpochMs: 0,
+          banner: true,
+          actionLabel: "",
+        },
+        {
+          id: "n2",
+          title: "线路维护",
+          body: "",
+          severity: "warning",
+          publishedAtEpochMs: 1,
+          expiresAtEpochMs: 0,
+          banner: false,
+          actionLabel: "",
+        },
+      ],
+    });
+    render(<KaifanApp />);
+    const nav = screen.getByTestId("kaifan-nav-news");
+    await waitFor(() => expect(nav).toHaveTextContent("2 条没看"));
+    await waitFor(() =>
+      expect(screen.getByTestId("kaifan-says")).toHaveTextContent(
+        "站点有新公告：充值加赠。",
+      ),
+    );
+
+    fireEvent.click(nav);
+    const news = screen.getByTestId("kaifan-news");
+    await waitFor(() => expect(news).not.toHaveAttribute("inert"));
+    expect(within(news).getAllByTestId("kaifan-notice")).toHaveLength(2);
+    await waitFor(() => expect(nav).not.toHaveTextContent("没看"));
+    expect(openClassic).not.toHaveBeenCalled();
   });
 
   it("没连站点：再点当前这位只是逗她一下，没有名片可看", async () => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { AccountModel } from "../account/session";
 import {
@@ -17,10 +17,10 @@ import {
   type CardPicks,
   type Discount,
 } from "./cardInfo";
-import { ROSTER, chibiOf, type RosterId } from "./roster";
+import { Drawer } from "./Drawer";
+import type { RosterId } from "./roster";
 import { sound } from "./sound";
 import { workerOf } from "./stageState";
-import { useTyped } from "./useTyped";
 
 interface Props {
   open: boolean;
@@ -87,9 +87,8 @@ export function Card({
       : t("kaifan.card.ratio", { n: Number(ratio.toFixed(3)) });
 
   const now = discount(plan?.discount);
-  const says = !open
-    ? ""
-    : who === "new"
+  const says =
+    who === "new"
       ? t("kaifan.card.say.new")
       : !model
         ? t("kaifan.card.say.none")
@@ -103,7 +102,6 @@ export function Card({
                   plan: planName(planId),
                   discount: now,
                 });
-  const typed = useTyped(says);
 
   // 她在哪些应用里干活，各自用的是哪个型号和方案（接入时存下来的那份）。
   const jobs = WORKBENCH_APPS.flatMap((app) => {
@@ -124,189 +122,142 @@ export function Card({
     (job) => job.modelId !== modelId || (job.planId && job.planId !== planId),
   );
 
-  const panel = useRef<HTMLElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const opener = document.activeElement;
-    panel.current?.focus();
-    return () => {
-      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
-    };
-  }, [open]);
-
   return (
-    <div
-      className={open ? "drw on" : "drw"}
-      data-testid="kaifan-card"
-      {...(open ? {} : { inert: "" })}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") onClose();
-      }}
+    <Drawer
+      open={open}
+      testId="kaifan-card"
+      label={t("kaifan.card.title", { name })}
+      who={who}
+      says={says}
+      onClose={onClose}
+      foot={
+        model && (
+          <button
+            type="button"
+            className="go"
+            data-testid="kaifan-card-join"
+            onClick={onJoin}
+          >
+            {t("kaifan.card.join", { name })}
+          </button>
+        )
+      }
     >
-      <aside
-        className="dr glass"
-        role="dialog"
-        aria-modal="true"
-        aria-label={t("kaifan.card.title", { name })}
-        tabIndex={-1}
-        ref={panel}
-        style={{ ["--hc" as string]: ROSTER[who].color }}
-      >
-        <button
-          type="button"
-          className="x"
-          aria-label={t("kaifan.card.close")}
-          onClick={onClose}
-        >
-          ×
-        </button>
-        <header className="dh">
-          <img src={chibiOf(who, "happy")} alt="" />
-          <div>
-            <small className="who">
-              {name}
-              {who !== "new" && <small>{ROSTER[who].brand}</small>}
-            </small>
-            <p aria-live="polite" data-testid="kaifan-card-says">
-              {typed}
-            </p>
+      {who !== "new" && (
+        <section>
+          <h4>{t("kaifan.card.good")}</h4>
+          <div className="opts">
+            {[1, 2, 3].map((index) => (
+              <span className="chip" key={index}>
+                {t(`roster.${who}.good${index}`)}
+              </span>
+            ))}
           </div>
-        </header>
-        <div className="db">
-          {who !== "new" && (
-            <section>
-              <h4>{t("kaifan.card.good")}</h4>
-              <div className="opts">
-                {[1, 2, 3].map((index) => (
-                  <span className="chip" key={index}>
-                    {t(`roster.${who}.good${index}`)}
-                  </span>
-                ))}
-              </div>
-            </section>
-          )}
-          {ids.length > 0 && (
-            <section>
-              <h4>{t("kaifan.card.model")}</h4>
-              <div className="opts">
-                {ids.map((id) => {
-                  const note = models.find(
-                    (item) => item.id === id,
-                  )?.description;
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      className="op"
-                      aria-pressed={id === modelId}
-                      onClick={() => {
-                        sound.tick();
-                        onModel(id);
-                      }}
-                    >
-                      <b>{modelDisplayName(id)}</b>
-                      {note && <small>{note}</small>}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-          {plans.length > 0 && (
-            <section>
-              <h4>
-                {t("kaifan.card.plan")}
-                {plans.length > 1 && <small>{t("kaifan.card.planHint")}</small>}
-              </h4>
-              <div className="opts">
-                {plans.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className="op"
-                    aria-pressed={item.id === planId}
-                    disabled={plans.length === 1}
-                    onClick={() => {
-                      sound.tick();
-                      onPlan(modelId, item.id);
-                    }}
-                  >
-                    {item.cheapest && <em>{t("kaifan.card.cheapest")}</em>}
-                    <b>{planName(item.id)}</b>
-                    <small>
-                      {discount(item.discount) || multiplier(item.ratio)}
-                    </small>
-                  </button>
-                ))}
-              </div>
-              {prices && <p className="nt">{t("kaifan.card.planNote")}</p>}
-            </section>
-          )}
-          {model && prices && (
-            <details>
-              <summary className="lnk">{t("kaifan.card.prices")}</summary>
-              <div className="kv" data-testid="kaifan-card-prices">
-                <span>{t("kaifan.card.perMillion")}</span>
-                <b>{t("kaifan.card.input")}</b>
-                <b>{t("kaifan.card.output")}</b>
-                <span>{t("kaifan.card.official")}</span>
-                <b>{yuan(prices.officialInput)}</b>
-                <b>{yuan(prices.officialOutput)}</b>
-                <span>{t("kaifan.card.thisPlan")}</span>
-                <b>
-                  {prices.planInput === null
-                    ? t("kaifan.card.unknown")
-                    : yuan(prices.planInput)}
-                </b>
-                <b>
-                  {prices.planOutput === null
-                    ? t("kaifan.card.unknown")
-                    : yuan(prices.planOutput)}
-                </b>
-              </div>
-            </details>
-          )}
-          {model && !prices && (
-            <p className="nt" data-testid="kaifan-card-prices">
-              {t("kaifan.card.noPrices")}
-            </p>
-          )}
-          <section>
-            <h4>{t("kaifan.card.jobs")}</h4>
-            {jobs.length ? (
-              <ul className="jobs">
-                {jobs.map((job) => (
-                  <li key={job.id}>
-                    <b>{job.name}</b>
-                    <span>
-                      {modelDisplayName(job.modelId)}
-                      {job.planId && ` · ${planName(job.planId)}`}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="nt">{t("kaifan.card.noJobs")}</p>
-            )}
-            {stale && <p className="nt warn">{t("kaifan.card.stale")}</p>}
-          </section>
-        </div>
-        {model && (
-          <footer className="df">
-            <button
-              type="button"
-              className="go"
-              data-testid="kaifan-card-join"
-              onClick={onJoin}
-            >
-              {t("kaifan.card.join", { name })}
-            </button>
-          </footer>
+        </section>
+      )}
+      {ids.length > 0 && (
+        <section>
+          <h4>{t("kaifan.card.model")}</h4>
+          <div className="opts">
+            {ids.map((id) => {
+              const note = models.find((item) => item.id === id)?.description;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  className="op"
+                  aria-pressed={id === modelId}
+                  onClick={() => {
+                    sound.tick();
+                    onModel(id);
+                  }}
+                >
+                  <b>{modelDisplayName(id)}</b>
+                  {note && <small>{note}</small>}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
+      {plans.length > 0 && (
+        <section>
+          <h4>
+            {t("kaifan.card.plan")}
+            {plans.length > 1 && <small>{t("kaifan.card.planHint")}</small>}
+          </h4>
+          <div className="opts">
+            {plans.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className="op"
+                aria-pressed={item.id === planId}
+                disabled={plans.length === 1}
+                onClick={() => {
+                  sound.tick();
+                  onPlan(modelId, item.id);
+                }}
+              >
+                {item.cheapest && <em>{t("kaifan.card.cheapest")}</em>}
+                <b>{planName(item.id)}</b>
+                <small>
+                  {discount(item.discount) || multiplier(item.ratio)}
+                </small>
+              </button>
+            ))}
+          </div>
+          {prices && <p className="nt">{t("kaifan.card.planNote")}</p>}
+        </section>
+      )}
+      {model && prices && (
+        <details>
+          <summary className="lnk">{t("kaifan.card.prices")}</summary>
+          <div className="kv" data-testid="kaifan-card-prices">
+            <span>{t("kaifan.card.perMillion")}</span>
+            <b>{t("kaifan.card.input")}</b>
+            <b>{t("kaifan.card.output")}</b>
+            <span>{t("kaifan.card.official")}</span>
+            <b>{yuan(prices.officialInput)}</b>
+            <b>{yuan(prices.officialOutput)}</b>
+            <span>{t("kaifan.card.thisPlan")}</span>
+            <b>
+              {prices.planInput === null
+                ? t("kaifan.card.unknown")
+                : yuan(prices.planInput)}
+            </b>
+            <b>
+              {prices.planOutput === null
+                ? t("kaifan.card.unknown")
+                : yuan(prices.planOutput)}
+            </b>
+          </div>
+        </details>
+      )}
+      {model && !prices && (
+        <p className="nt" data-testid="kaifan-card-prices">
+          {t("kaifan.card.noPrices")}
+        </p>
+      )}
+      <section>
+        <h4>{t("kaifan.card.jobs")}</h4>
+        {jobs.length ? (
+          <ul className="jobs">
+            {jobs.map((job) => (
+              <li key={job.id}>
+                <b>{job.name}</b>
+                <span>
+                  {modelDisplayName(job.modelId)}
+                  {job.planId && ` · ${planName(job.planId)}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="nt">{t("kaifan.card.noJobs")}</p>
         )}
-      </aside>
-    </div>
+        {stale && <p className="nt warn">{t("kaifan.card.stale")}</p>}
+      </section>
+    </Drawer>
   );
 }

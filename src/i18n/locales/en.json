@@ -1769,9 +1769,11 @@
       "openFailed": "Couldn't open {{app}} for you. It's already set up, so opening it yourself works just the same",
       "skipped": "Also, {{models}} could not be added: the station doesn't allow this account to use it. Everything else is unaffected."
     },
+    "drawer": {
+      "close": "Close"
+    },
     "card": {
       "title": "{{name}}'s card",
-      "close": "Close",
       "good": "Good at",
       "model": "Model",
       "plan": "Price plan",
@@ -1806,6 +1808,53 @@
         "one": "I have a single price plan here, {{discount}}. Nothing to choose.",
         "many": "I'm on “{{plan}}”, {{discount}}. Pick another below if you like."
       }
+    },
+    "ledger": {
+      "unknown": "can't see",
+      "saysOut": "Connect a station first, then I can see the ledger.",
+      "saysOff": "The station is unreachable right now, so I can't read the ledger. I'll show you once it's back.",
+      "saysWait": "Connecting to the station. One moment.",
+      "saysNothing": "This station doesn't tell me the balance or the bills, so I can't see them.",
+      "saysToday": "{{amount}} spent today. ",
+      "saysTodayNone": "Nothing eaten yet today. ",
+      "saysTodayUnknown": "I can't see how much was spent today. ",
+      "saysBalance": "{{amount}} left.",
+      "saysBalanceUnknown": "This station doesn't tell me the balance.",
+      "wouldShow": "This is where you'd see: balance, daily spend, who eats the most, and the latest charges.",
+      "balance": "Balance",
+      "used": "{{amount}} used in total",
+      "noLog": "This station doesn't tell me where each charge went.",
+      "week": "Last 7 days",
+      "partial": "incomplete",
+      "eaters": "Who eats the most",
+      "window_one": "last {{count}} day",
+      "window_other": "last {{count}} days",
+      "since": "since {{date}}",
+      "requests_one": "{{count}} request",
+      "requests_other": "{{count}} requests",
+      "noRecords": "Nobody has eaten in this period.",
+      "latest": "Latest charges",
+      "recharge": "Top up"
+    },
+    "news": {
+      "saysOut": "Connect a station first, then I can get its notices.",
+      "saysOff": "The station is unreachable right now, so I can't read the notices.",
+      "saysWait": "Connecting to the station. One moment.",
+      "saysLoading": "Let me check the notice board…",
+      "saysNone": "This station has no notice board, so I can't get its news.",
+      "saysFailed": "I couldn't read the notices this time. I'll check again later.",
+      "saysEmpty": "No notices lately.",
+      "saysNew_one": "{{count}} new notice.",
+      "saysNew_other": "{{count}} new notices.",
+      "saysSeen": "Nothing new. You've seen all of these.",
+      "saysStuck": "I couldn't open that one. Try again in a moment.",
+      "wouldShow": "Notices from the station will be posted here.",
+      "tagNew": "New",
+      "until": "ends {{date}}",
+      "retry": "Read again",
+      "banner": "New notice from the station: {{title}}. Open Notices on the left to read it.",
+      "unread_one": "{{count}} unread",
+      "unread_other": "{{count}} unread"
     }
   }
 }
