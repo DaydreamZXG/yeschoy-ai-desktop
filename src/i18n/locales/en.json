@@ -1682,7 +1682,9 @@
         "restored": "That didn't work. {{app}} is back to how it was and nothing is broken. Try again?",
         "unfinished": "That didn't work, and {{app}} isn't fully back to how it was yet. Let's fix that first.",
         "cancelled": "Okay, stopped. {{app}} was not changed.",
-        "retry": "That didn't work this time. {{app}} is not broken. Try again?"
+        "retry": "That didn't work this time. {{app}} is not broken. Try again?",
+        "planGone": "{{model}} used the price plan “{{from}}”, which the station no longer offers. I can connect with “{{to}}” instead; you'll be charged at that plan's price from now on. Switch?",
+        "planBlocked": "The station didn't enable the price plan “{{from}}” for {{model}}, so this didn't go through. {{app}} was not changed. The station may be briefly unresponsive, or the plan may no longer be allowed."
       },
       "do": {
         "done": "OK",
@@ -1701,7 +1703,9 @@
         "restored": "Try again",
         "unfinished": "Fix it ➜",
         "cancelled": "Back to choices",
-        "retry": "Try again"
+        "retry": "Try again",
+        "planGone": "Connect with “{{to}}”",
+        "planBlocked": "Try again"
       }
     },
     "reveal": {

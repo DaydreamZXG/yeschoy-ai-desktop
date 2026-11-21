@@ -7,7 +7,10 @@ import {
   type ActivationToolId,
   type ModelBinding,
 } from "../configuration/activation";
-import { chooseBillingGroup } from "../configuration/billing";
+import {
+  DEFAULT_BILLING_GROUP,
+  chooseBillingGroup,
+} from "../configuration/billing";
 import type { ToolConnection } from "../configuration/connections";
 import type { AccountLineId } from "../configuration/preview";
 import { useActivationTask } from "../configuration/useActivationTask";
@@ -115,6 +118,10 @@ export function Join({
   const [scan, setScan] = useState<Scan>("loading");
   const [targets, setTargets] = useState<ActivationTarget[]>([]);
   const [outcome, setOutcome] = useState<JoinOutcome | null>(null);
+  /** 用户点头换过的价格方案（型号 → 方案），只管这一次打开。 */
+  const [approved, setApproved] = useState<Record<string, string>>({});
+  /** 这一次打开里站点没给开通的（型号 + 方案），推荐下一个时跳过。 */
+  const [refused, setRefused] = useState<string[]>([]);
 
   const settled = useRef(onSettled);
   settled.current = onSettled;
@@ -145,6 +152,8 @@ export function Join({
   useEffect(() => {
     if (!open) return;
     setOutcome(null);
+    setApproved({});
+    setRefused([]);
     reset();
     touched.current = !!initialApp;
     setApp(initialApp ?? WORKBENCH_APPS[0].id);
@@ -188,21 +197,38 @@ export function Join({
           ].filter((item) => item.modelId && item.billingGroup),
     [saved],
   );
+  // 存过的方案站点还给不给，决定了能不能原样再用。不给了也不替用户换：
+  // 先问一句，他点了头才用新的（`approved`）。
+  const offered = useMemo(
+    () => (model?.billing?.groups ?? []).map((group) => group.id),
+    [model],
+  );
+  const savedGroup = remembered.find(
+    (item) => item.modelId === modelId,
+  )?.billingGroup;
   const billingGroup =
-    remembered.find((item) => item.modelId === modelId)?.billingGroup ??
-    chooseBillingGroup(model, "");
+    approved[modelId] ?? savedGroup ?? chooseBillingGroup(model, "");
+  const gone = offered.length > 0 && !offered.includes(billingGroup);
+  const others = offered.filter(
+    (id) => id !== billingGroup && !refused.includes(`${modelId}\n${id}`),
+  );
+  const nextGroup =
+    others.find((id) => id === DEFAULT_BILLING_GROUP) ?? others[0];
 
   const name = t(`roster.${who}.name`);
   const appInfo = WORKBENCH_APPS.find((item) => item.id === app);
   const appName = appDisplayName(app, appInfo?.name ?? app, t);
 
-  const run = async (extra?: {
-    restartRunningApp?: boolean;
-    displaceClaudeLogin?: boolean;
-  }) => {
+  const run = async (
+    extra?: { restartRunningApp?: boolean; displaceClaudeLogin?: boolean },
+    group = billingGroup,
+  ) => {
     if (working || !modelId || !installationId) return;
+    // 存过的方案站点不提供了：发出去只会被拒。先问要不要换，不自己换。
+    if (gone && group === billingGroup && nextGroup)
+      return setOutcome({ kind: "planGone", mood: "idle", action: "regroup" });
     // 这个应用原来的名单里还在站上的模型照旧留着，只把默认换成她。
-    const binding: ModelBinding = { modelId, billingGroup };
+    const binding: ModelBinding = { modelId, billingGroup: group };
     const kept = (saved?.models ?? []).filter(
       (item, index, all) =>
         remembered.includes(item) &&
@@ -218,7 +244,7 @@ export function Join({
         toolId: app,
         modelId,
         installationId,
-        billingGroup,
+        billingGroup: group,
         models: [binding, ...kept],
         ...extra,
       },
@@ -227,7 +253,7 @@ export function Join({
         account: "",
         app: appName,
         model: modelId,
-        group: billingGroup,
+        group,
         line: lineId,
       },
     );
@@ -245,8 +271,16 @@ export function Join({
       });
       return;
     }
+    if (next.kind === "planBlocked")
+      setRefused((list) => [...list, `${modelId}\n${group}`]);
     if (next.mood === "panic") sound.sad();
     setOutcome(next);
+  };
+  // 用户点头换方案：记下来（之后重启、再试都沿用它），马上用新方案去接。
+  const regroup = () => {
+    if (!nextGroup) return;
+    setApproved((map) => ({ ...map, [modelId]: nextGroup }));
+    void run(undefined, nextGroup);
   };
 
   const act = () => {
@@ -258,6 +292,8 @@ export function Join({
         return void run({ displaceClaudeLogin: true });
       case "retry":
         return void run();
+      case "regroup":
+        return regroup();
       case "reconnect":
         return onReconnect();
       case "classic":
@@ -273,8 +309,16 @@ export function Join({
   const done = task.progress?.totalSteps
     ? Math.max(0.06, task.progress.completedSteps / task.progress.totalSteps)
     : 0.06;
+  // 方案的名字就是站点给的那个；只有 default 换成人话。
+  const planName = (id: string) =>
+    id === DEFAULT_BILLING_GROUP ? t("configuration.defaultGroupLabel") : id;
+  const plan = {
+    model: modelDisplayName(modelId),
+    from: planName(billingGroup),
+    to: nextGroup ? planName(nextGroup) : "",
+  };
   const says = outcome
-    ? t(`kaifan.join.say.${outcome.kind}`, { app: appName, name })
+    ? t(`kaifan.join.say.${outcome.kind}`, { app: appName, name, ...plan })
     : working
       ? t("kaifan.join.working", { app: appName, name })
       : "";
@@ -523,9 +567,17 @@ export function Join({
                       {t("kaifan.join.back")}
                     </button>
                   )}
+                  {outcome.kind === "planBlocked" && nextGroup && (
+                    <button type="button" className="go alt" onClick={regroup}>
+                      {t("kaifan.join.do.planGone", plan)}
+                    </button>
+                  )}
                   <i />
                   <button type="button" className="go" autoFocus onClick={act}>
-                    {t(`kaifan.join.do.${outcome.kind}`, { app: appName })}
+                    {t(`kaifan.join.do.${outcome.kind}`, {
+                      app: appName,
+                      ...plan,
+                    })}
                   </button>
                 </div>
               )

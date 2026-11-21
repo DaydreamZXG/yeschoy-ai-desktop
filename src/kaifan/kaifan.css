@@ -1847,8 +1847,12 @@ dialog.restore-dialog menu {
   max-width: 560px;
 }
 .work .ft {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
   width: 100%;
-  max-width: 560px;
+  max-width: 620px;
   margin-top: 14px;
 }
 .work:not(:has(.pg)) img {

@@ -242,6 +242,94 @@ describe("接入：选应用、选人、点一下", () => {
     });
   });
 
+  const priced = (id: string, groups: string[]): AccountModel => ({
+    ...model(id),
+    billing: {
+      groups: groups.map((group) => ({
+        id: group,
+        description: "",
+        ratio: null,
+      })),
+      baseInputUsd: null,
+      baseOutputUsd: null,
+    } as AccountModel["billing"],
+  });
+  const savedOn = (billingGroup: string): ToolConnection[] => [
+    {
+      toolId: "codex_desktop",
+      state: "connected",
+      modelId: "claude-sonnet-4-5-20250929",
+      lineId: "mainland_optimized",
+      billingGroup,
+      updatedAtEpochMs: 1,
+      restoreMode: "original",
+      requiresBackground: false,
+      reasonCode: "",
+    },
+  ];
+
+  it("存过的方案站点不提供了：不发出去也不自己换，先问；点了头才用新方案", async () => {
+    setup({
+      initialApp: "codex_desktop",
+      models: [priced("claude-sonnet-4-5-20250929", ["default", "promo"])],
+      connections: savedOn("vip"),
+    });
+    await ready();
+    fireEvent.click(go());
+    await waitFor(() =>
+      expect(says()).toMatch(/「vip」.*不提供了.*「标准分组」/),
+    );
+    expect(activate).not.toHaveBeenCalled();
+    answer("ready", "configuration_ready");
+    fireEvent.click(
+      screen.getByRole("button", { name: "换成「标准分组」接入" }),
+    );
+    await waitFor(() => expect(activate).toHaveBeenCalled());
+    expect(activate.mock.calls[0][0]).toMatchObject({
+      billingGroup: "default",
+      models: [
+        { modelId: "claude-sonnet-4-5-20250929", billingGroup: "default" },
+      ],
+    });
+  });
+
+  it("站点没给存过的方案开通：能再试，也能点头换成另一个方案，不会只剩再试", async () => {
+    setup({
+      initialApp: "codex_desktop",
+      models: [priced("claude-sonnet-4-5-20250929", ["vip", "promo"])],
+      connections: savedOn("vip"),
+    });
+    await ready();
+    activate.mockImplementationOnce(
+      async (input) =>
+        ({
+          requestId: "r",
+          schemaVersion: 5,
+          toolId: input.toolId,
+          modelId: input.modelId,
+          billingGroup: input.billingGroup,
+          status: "server_unavailable",
+          reasonCode: "server_unavailable",
+          models: input.models,
+          skipped: [
+            {
+              modelId: input.modelId,
+              billingGroup: input.billingGroup,
+              reasonCode: "server_unavailable",
+            },
+          ],
+        }) as unknown as ToolActivationProjection,
+    );
+    fireEvent.click(go());
+    await waitFor(() => expect(says()).toMatch(/没给.*「vip」开通/));
+    expect(activate.mock.calls[0][0]).toMatchObject({ billingGroup: "vip" });
+    expect(screen.getByRole("button", { name: "再试一次" })).toBeEnabled();
+    answer("ready", "configuration_ready");
+    fireEvent.click(screen.getByRole("button", { name: "换成「promo」接入" }));
+    await waitFor(() => expect(activate).toHaveBeenCalledTimes(2));
+    expect(activate.mock.calls[1][0]).toMatchObject({ billingGroup: "promo" });
+  });
+
   it("应用开着：先说清楚要重启，用户点了才重启", async () => {
     const props = setup();
     await ready();

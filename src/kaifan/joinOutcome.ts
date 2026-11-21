@@ -24,6 +24,8 @@ export type JoinKind =
   | "overridden"
   | "keychain"
   | "stationDown"
+  | "planGone"
+  | "planBlocked"
   | "restored"
   | "unfinished"
   | "cancelled"
@@ -36,6 +38,7 @@ export type JoinAction =
   | "restart"
   | "displace"
   | "reconnect"
+  | "regroup"
   | "classic"
   | "pick";
 
@@ -51,6 +54,12 @@ const STATION = new Set([
   "provider_timed_out",
   "provider_unavailable",
   "provider_busy",
+]);
+/** 挂在某个价格方案上、其实是整次操作的事：不能说成「这个方案没开通」。 */
+const WHOLE = new Set([
+  "assistant_shutting_down",
+  "account_changed",
+  "activation_cancelled",
 ]);
 /** 没接成，但已经替用户改回了原样。 */
 const RESTORED = new Set([
@@ -75,7 +84,8 @@ const outcome = (
 ): JoinOutcome => ({ kind, mood, action });
 
 export function joinOutcome(
-  result: Pick<ToolActivationProjection, "status" | "reasonCode" | "skipped">,
+  result: Pick<ToolActivationProjection, "status" | "reasonCode" | "skipped"> &
+    Partial<Pick<ToolActivationProjection, "modelId">>,
 ): JoinOutcome {
   const reason = result.reasonCode;
   if (
@@ -112,6 +122,15 @@ export function joinOutcome(
     case "secure_storage_unavailable":
       return outcome("keychain", "retry");
     case "server_unavailable":
+      // 站点没给默认型号的价格方案开通。再试只会原样再发一次，所以要点名是
+      // 方案的事，让界面能给出「换一个方案」这条路。
+      if (
+        result.skipped?.some(
+          (item) =>
+            item.modelId === result.modelId && !WHOLE.has(item.reasonCode),
+        )
+      )
+        return outcome("planBlocked", "retry");
       return outcome("stationDown", "retry");
     case "verification_failed":
       if (STATION.has(reason)) return outcome("stationDown", "retry");

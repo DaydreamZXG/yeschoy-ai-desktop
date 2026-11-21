@@ -53,6 +53,20 @@ describe("接入结果怎么说", () => {
     expect(of("verification_failed", "provider_busy").kind).toBe("stationDown");
   });
 
+  it("站点没给默认型号的价格方案开通：点名是方案的事，不是笼统的站点没回应", () => {
+    const blocked = (modelId: string, reasonCode: string) =>
+      joinOutcome({
+        status: "server_unavailable",
+        reasonCode,
+        modelId: "m",
+        skipped: [{ modelId, billingGroup: "vip", reasonCode }],
+      });
+    expect(blocked("m", "server_unavailable").kind).toBe("planBlocked");
+    // 被跳过的不是默认型号，或者其实是整次操作被打断：仍然按站点没回应说。
+    expect(blocked("other", "server_unavailable").kind).toBe("stationDown");
+    expect(blocked("m", "account_changed").kind).toBe("stationDown");
+  });
+
   it("没接成：改回原样了和没改回去是两句话", () => {
     expect(
       of("configuration_failed", "desktop_start_failed_restored"),
