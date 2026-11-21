@@ -1573,7 +1573,12 @@
       "connectedAll": "九位同学都在。",
       "connectedNew": "还来了一位转校生。",
       "connectedNoBalance": "余额这个站看不了，活照样能干。",
-      "stripLabel": "{{name}}（{{brand}}）"
+      "stripLabel": "{{name}}（{{brand}}）",
+      "fixHero": "有个应用要修一下",
+      "fixSub": "点一下就好",
+      "fixSaysChanged": "{{app}} 的设置被别的工具改过，现在不走这个站了。点「去修好」，我带你改回来，或者保留它的。",
+      "fixSaysUnfinished": "{{app}} 上次接到一半没做完。点「去修好」，我接着做完，不用从头来。",
+      "fixGo": "去修好"
     },
     "connect": {
       "title": "连接站点",

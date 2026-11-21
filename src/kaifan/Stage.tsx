@@ -110,6 +110,7 @@ export function Stage({
 
   // —— 一句话 ——
   const offline = state.offline[0];
+  const broken = state.repair[0];
   const offlineWho = offline ? characterOfModel(offline.modelId) : null;
   const copy = useMemo(() => {
     const money = state.balance
@@ -153,6 +154,20 @@ export function Stage({
           }),
           go: t("kaifan.home.lowGo"),
         };
+      case "fix": {
+        const app = apps.find((item) => item.id === broken?.toolId);
+        return {
+          hero: t("kaifan.home.fixHero"),
+          sub: t("kaifan.home.fixSub"),
+          says: t(
+            broken?.unfinished
+              ? "kaifan.home.fixSaysUnfinished"
+              : "kaifan.home.fixSaysChanged",
+            { app: app?.fullName ?? broken?.toolId ?? "" },
+          ),
+          go: t("kaifan.home.fixGo"),
+        };
+      }
       case "busy": {
         const app = apps.find((item) => item.id === offline?.toolId);
         return {
@@ -194,7 +209,18 @@ export function Stage({
           go: t("kaifan.home.startGo"),
         };
     }
-  }, [apps, cond, current, offline, offlineWho, retrying, state, station, t]);
+  }, [
+    apps,
+    broken,
+    cond,
+    current,
+    offline,
+    offlineWho,
+    retrying,
+    state,
+    station,
+    t,
+  ]);
 
   // 临时的话（戳一下、换人、外面塞进来的）过一会儿让回给正事。
   useEffect(() => {
@@ -297,6 +323,7 @@ export function Stage({
     if (cond === "out") onConnect();
     else if (cond === "off") onRetry();
     else if (cond === "low") onRecharge();
+    else if (cond === "fix") onSetup(broken?.toolId);
     else if (cond === "busy") onSetup(offline?.toolId);
     else onSetup();
   };

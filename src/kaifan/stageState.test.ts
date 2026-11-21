@@ -81,6 +81,34 @@ describe("首页一次只演最要紧的一件事", () => {
     ]);
   });
 
+  it("设置被别的工具改过、或者上次没做完的：不算接好，要先修", () => {
+    const state = deriveStage({
+      ...base,
+      connections: [
+        tool("claude_desktop", "changed", "claude-sonnet-4-5"),
+        tool("codex_desktop", "recovery_pending", "gpt-5"),
+      ],
+    });
+    expect(state.cond).toBe("fix");
+    expect(state.connectedCount).toBe(0);
+    expect(state.repair).toEqual([
+      { toolId: "claude_desktop", unfinished: false },
+      { toolId: "codex_desktop", unfinished: true },
+    ]);
+    expect(
+      workerOf(tool("claude_desktop", "changed", "claude-sonnet-4-5")),
+    ).toBeNull();
+  });
+
+  it("余额不足排在要修的应用前面", () => {
+    expect(
+      cond({
+        money: { ...base.money!, balanceAmount: "0" },
+        connections: [tool("claude_desktop", "changed", "gpt-5")],
+      }),
+    ).toBe("low");
+  });
+
   it("模型列表还没读到时，不说任何人请假", () => {
     expect(
       cond({

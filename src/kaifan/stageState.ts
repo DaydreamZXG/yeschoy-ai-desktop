@@ -14,7 +14,14 @@ import {
  * 首页此刻该演哪一出。全部从真实状态推出来，一次只演最要紧的一件事：
  * 没连站点 > 站点连不上 > 还在确认 > 余额不够 > 接好的应用用的模型下线了 > 一切正常。
  */
-export type StageCond = "out" | "off" | "checking" | "low" | "busy" | "ok";
+export type StageCond =
+  | "out"
+  | "off"
+  | "checking"
+  | "low"
+  | "fix"
+  | "busy"
+  | "ok";
 
 export interface StageInput {
   status: AccountStatus | undefined;
@@ -44,20 +51,28 @@ export interface StageState {
   connectedStale: boolean;
   /** 接好了、但用的模型已经不在这个站上的应用。 */
   offline: { toolId: ToolConnection["toolId"]; modelId: string }[];
+  /** 接过、但设置被改了或者上次没做完，要修一下才能用的应用。 */
+  repair: { toolId: ToolConnection["toolId"]; unfinished: boolean }[];
   /** 余额不足时，还剩多少。 */
   lowAmount: string | null;
 }
 
 const UNREACHABLE: AccountStatus[] = ["backend_unavailable", "network_error"];
 
+/** 真的接好了、能用的。设置被别的工具改过、或者上次没做完的，不算。 */
 export const isConnected = (state: ToolConnection["state"] | undefined) =>
-  !!state && !["not_connected", "unavailable"].includes(state);
+  state === "connected" || state === "legacy";
+
+/** 接过、但现在要修一下才能用的。 */
+const needsRepair = (state: ToolConnection["state"]) =>
+  state === "changed" || state === "recovery_pending";
 
 const MOOD: Record<StageCond, Mood> = {
   out: "idle",
   off: "panic",
   checking: "idle",
   low: "hungry",
+  fix: "panic",
   busy: "sleep",
   ok: "idle",
 };
@@ -68,6 +83,12 @@ export function deriveStage(input: StageInput): StageState {
   const cast = models?.length ? groupModels(models) : null;
   const connections = input.connections ?? [];
   const live = connections.filter((c) => isConnected(c.state));
+  const repair = connections
+    .filter((c) => needsRepair(c.state))
+    .map((c) => ({
+      toolId: c.toolId,
+      unfinished: c.state === "recovery_pending",
+    }));
   const known = connections.length > 0;
   const partial = connections.some((c) => c.state === "unavailable");
   const connectedCount =
@@ -93,6 +114,7 @@ export function deriveStage(input: StageInput): StageState {
   else if (!input.status || (input.loading && !signedIn)) cond = "checking";
   else if (!signedIn) cond = "out";
   else if (alert) cond = "low";
+  else if (repair.length) cond = "fix";
   else if (offline.length) cond = "busy";
   else cond = "ok";
 
@@ -112,6 +134,7 @@ export function deriveStage(input: StageInput): StageState {
     balance: balance && balance !== "—" ? balance : null,
     connectedCount,
     connectedStale: input.connectionsFailed && known,
+    repair,
     offline,
     lowAmount: alert ? formatMoney(alert.amount, input.money?.currency) : null,
   };

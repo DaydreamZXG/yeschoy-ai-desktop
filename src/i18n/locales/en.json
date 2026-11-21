@@ -1573,7 +1573,12 @@
       "connectedAll": "All nine classmates are here. ",
       "connectedNew": "A transfer student came along too. ",
       "connectedNoBalance": "This station doesn't show a balance, but everything still works.",
-      "stripLabel": "{{name}} ({{brand}})"
+      "stripLabel": "{{name}} ({{brand}})",
+      "fixHero": "One app needs a fix",
+      "fixSub": "One click",
+      "fixSaysChanged": "Another tool changed {{app}}'s settings, so it no longer uses this station. Press “Fix it” and I'll help you switch it back, or keep theirs.",
+      "fixSaysUnfinished": "{{app}} was left half set up last time. Press “Fix it” and I'll finish the job, no need to start over.",
+      "fixGo": "Fix it"
     },
     "connect": {
       "title": "Connect a station",
