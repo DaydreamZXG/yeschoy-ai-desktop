@@ -129,7 +129,7 @@ pub(super) async fn forward(
             .header(header::CONTENT_TYPE, "text/event-stream")
             .header(header::CACHE_CONTROL, "no-cache")
             .body(Body::from_stream(create_anthropic_sse_stream(
-                upstream.bytes_stream(),
+                surface_stream_errors(upstream.bytes_stream()),
             )))
             .unwrap_or_else(|_| error(StatusCode::INTERNAL_SERVER_ERROR, "response failed"));
     }
@@ -155,6 +155,59 @@ pub(super) async fn forward(
             "relay returned a reply that is not a Chat Completions response",
         ),
     }
+}
+
+/// 把「200 的流里夹着一个错误对象」变成流错误。
+///
+/// 有的中转站在已经回了 200 之后才发现上游失败，于是在流里发一条
+/// `data: {"error": {...}}` 再收尾。上游的转换器只认 `choices`，这一条会被
+/// 当成空块跳过，Claude 收到的是一次「成功但什么也没说」的回复。这里逐行看，
+/// 遇到它就以错误结束这条流，转换器会把它说成 Anthropic 的 `error` 事件。
+/// 其余字节按原样、按行放行。
+fn surface_stream_errors<E: Send + 'static>(
+    upstream: impl futures::Stream<Item = Result<bytes::Bytes, E>> + Send + 'static,
+) -> impl futures::Stream<Item = Result<bytes::Bytes, std::io::Error>> + Send {
+    async_stream::stream! {
+        futures::pin_mut!(upstream);
+        let mut pending: Vec<u8> = Vec::new();
+        while let Some(chunk) = upstream.next().await {
+            let chunk = match chunk {
+                Ok(chunk) => chunk,
+                Err(_) => {
+                    yield Err(std::io::Error::other("the relay closed the connection"));
+                    return;
+                }
+            };
+            pending.extend_from_slice(&chunk);
+            while let Some(end) = pending.iter().position(|byte| *byte == b'\n') {
+                let line: Vec<u8> = pending.drain(..=end).collect();
+                if let Some(message) = stream_error_message(&line) {
+                    yield Err(std::io::Error::other(message));
+                    return;
+                }
+                yield Ok(bytes::Bytes::from(line));
+            }
+        }
+        if !pending.is_empty() {
+            if let Some(message) = stream_error_message(&pending) {
+                yield Err(std::io::Error::other(message));
+                return;
+            }
+            yield Ok(bytes::Bytes::from(pending));
+        }
+    }
+}
+
+/// 一行 SSE 是不是「只有错误、没有内容」的数据行；是的话给出站点的原话。
+fn stream_error_message(line: &[u8]) -> Option<String> {
+    let data = line.strip_prefix(b"data:")?;
+    let value = serde_json::from_slice::<Value>(data).ok()?;
+    let failed = value.get("error").is_some_and(|error| !error.is_null())
+        && value
+            .get("choices")
+            .and_then(Value::as_array)
+            .is_none_or(Vec::is_empty);
+    failed.then(|| upstream_message(data))
 }
 
 /// Anthropic 的错误类型决定 Claude 是重试、等一等，还是让用户去处理。
@@ -276,6 +329,42 @@ mod tests {
         assert!(chat.get("reasoning_effort").is_none());
         assert!(chat.get("thinking").is_none());
         assert_eq!(chat["max_tokens"], 64);
+    }
+
+    #[tokio::test]
+    async fn an_error_object_inside_a_successful_stream_ends_it_as_an_error() {
+        let upstream = futures::stream::iter([
+            Ok::<_, std::io::Error>(bytes::Bytes::from_static(
+                b"data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}]}\n\ndata: {\"err",
+            )),
+            Ok(bytes::Bytes::from_static(
+                b"or\":{\"message\":\"upstream overloaded\"}}\n\ndata: [DONE]\n\n",
+            )),
+        ]);
+        let items: Vec<_> = surface_stream_errors(upstream).collect().await;
+        let passed: Vec<u8> = items
+            .iter()
+            .filter_map(|item| item.as_ref().ok())
+            .flat_map(|bytes| bytes.to_vec())
+            .collect();
+        assert_eq!(
+            passed,
+            b"data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}]}\n\n"
+        );
+        let failure = items.last().unwrap().as_ref().unwrap_err();
+        assert_eq!(failure.to_string(), "upstream overloaded");
+
+        // 正常的流逐字节不变，包括跨块切开的行。
+        let upstream = futures::stream::iter([
+            Ok::<_, std::io::Error>(bytes::Bytes::from_static(b"data: {\"choices\":[")),
+            Ok(bytes::Bytes::from_static(b"]}\n\ndata: [DONE]\n\n")),
+        ]);
+        let passed: Vec<u8> = surface_stream_errors(upstream)
+            .filter_map(|item| async move { item.ok() })
+            .flat_map(|bytes| futures::stream::iter(bytes.to_vec()))
+            .collect()
+            .await;
+        assert_eq!(passed, b"data: {\"choices\":[]}\n\ndata: [DONE]\n\n");
     }
 
     #[test]

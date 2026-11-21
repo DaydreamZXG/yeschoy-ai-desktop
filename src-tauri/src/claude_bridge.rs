@@ -1138,12 +1138,21 @@ mod tests {
                     async move {
                         let streaming = body["stream"] == true;
                         let refuse = body["messages"][1]["content"] == "refuse";
+                        let fail_midway = body["messages"][1]["content"] == "fail midway";
                         sent.send((headers, body)).unwrap();
                         if refuse {
                             return (
                                 StatusCode::UNAUTHORIZED,
                                 [(header::CONTENT_TYPE, "application/json")],
                                 r#"{"error":{"message":"token expired"}}"#.to_owned(),
+                            );
+                        }
+                        if fail_midway {
+                            return (
+                                StatusCode::OK,
+                                [(header::CONTENT_TYPE, "text/event-stream")],
+                                "data: {\"error\":{\"message\":\"upstream overloaded\"}}\n\ndata: [DONE]\n\n"
+                                    .to_owned(),
                             );
                         }
                         if streaming {
@@ -1249,6 +1258,20 @@ mod tests {
         }
         let (_, sent_body) = received.recv().await.unwrap();
         assert_eq!(sent_body["stream_options"]["include_usage"], true);
+
+        // 200 的流里夹着错误：Claude 要看到错误，而不是一次空的成功回复。
+        let response = messages(&state, ask("fail midway", true)).await;
+        let events = String::from_utf8(
+            to_bytes(response.into_body(), 64 * 1024)
+                .await
+                .unwrap()
+                .to_vec(),
+        )
+        .unwrap();
+        assert!(events.contains("event: error"), "{events}");
+        assert!(events.contains("upstream overloaded"), "{events}");
+        assert!(!events.contains("message_stop"), "{events}");
+        received.recv().await.unwrap();
 
         // 站点拒绝：原话留着，换成 Claude 认识的错误形状。
         let response = messages(&state, ask("refuse", false)).await;
