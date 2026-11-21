@@ -2354,6 +2354,7 @@ pub async fn account_logout_v2(
         "dsh_desktop",
         "cline",
         "hermes",
+        "openclaw",
     ] {
         crate::request_diagnostics::clear(tool);
     }

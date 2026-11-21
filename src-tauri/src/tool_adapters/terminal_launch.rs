@@ -196,7 +196,7 @@ fn build_plan(
     // `codex_cli`：Codex 接入记录仍是 `codex_desktop`，装的是命令行版时在终端里开。
     if !matches!(
         tool_id,
-        "claude_code" | "pi" | "opencode" | "cline" | "hermes" | "codex_cli"
+        "claude_code" | "pi" | "opencode" | "cline" | "hermes" | "openclaw" | "codex_cli"
     ) {
         return Err(failure("invalid_launch_target"));
     }

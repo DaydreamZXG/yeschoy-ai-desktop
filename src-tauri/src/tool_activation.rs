@@ -25,7 +25,7 @@ use crate::{
     station_connect::connect_origin_is_acceptable,
     tool_adapters::{
         self, claude_code, claude_desktop, cline, codex_desktop, desktop_lifecycle, dsh_web,
-        hermes, opencode, pi, workbuddy, AdapterFailure, ResolvedInstallation,
+        hermes, openclaw, opencode, pi, workbuddy, AdapterFailure, ResolvedInstallation,
     },
     tool_credentials::{self, CredentialFailure, ToolCredential, ToolModelRoute},
 };
@@ -408,6 +408,7 @@ fn request_is_valid(request: &ToolActivationRequest) -> bool {
                 | "dsh_desktop"
                 | "cline"
                 | "hermes"
+                | "openclaw"
         )
         && bounded_plain_text(&request.model_id, 200)
         && bounded_plain_text(&request.billing_group, 128)
@@ -568,6 +569,7 @@ fn model_supports_tool(_pricing: &Value, _model_id: &str, tool_id: &str) -> bool
             | "dsh_desktop"
             | "cline"
             | "hermes"
+            | "openclaw"
     )
 }
 
@@ -890,6 +892,7 @@ fn token_name(tool_id: &str) -> &'static str {
         "dsh_desktop" => "野菜API DSH Desktop",
         "cline" => "野菜API Cline",
         "hermes" => "野菜API Hermes",
+        "openclaw" => "野菜API OpenClaw",
         _ => "野菜API Desktop",
     }
 }
@@ -908,6 +911,7 @@ pub(crate) fn tool_for_token_name(name: &str) -> Option<&'static str> {
         "dsh_desktop",
         "cline",
         "hermes",
+        "openclaw",
     ]
     .into_iter()
     // 新名字写应用名，旧名字写两字母代码。两种都要认：用量日志里它们会长期
@@ -1057,6 +1061,7 @@ fn token_code(tool_id: &str) -> &'static str {
         "dsh_desktop" => "dd",
         "cline" => "cl",
         "hermes" => "hm",
+        "openclaw" => "oc",
         _ => "tool",
     }
 }
@@ -1078,6 +1083,7 @@ fn token_label(tool_id: &str) -> &'static str {
         "dsh_desktop" => "DSHDesktop",
         "cline" => "Cline",
         "hermes" => "Hermes",
+        "openclaw" => "OpenClaw",
         _ => "Desktop",
     }
 }
@@ -1686,6 +1692,7 @@ enum PreparedAdapter {
     OpenCode(opencode::Prepared),
     Cline(cline::Prepared),
     Hermes(hermes::Prepared),
+    OpenClaw(openclaw::Prepared),
     /// Both DSH profiles: `dsh_web` and `dsh_desktop`.
     Dsh(dsh_web::Prepared),
     WorkBuddy(workbuddy::Prepared),
@@ -1701,6 +1708,7 @@ impl PreparedAdapter {
             Self::OpenCode(v) => v.changes(),
             Self::Cline(v) => v.changes(),
             Self::Hermes(v) => v.changes(),
+            Self::OpenClaw(v) => v.changes(),
             Self::Dsh(v) => v.changes(),
             Self::WorkBuddy(v) => v.changes(),
         }
@@ -1722,6 +1730,7 @@ impl PreparedAdapter {
             Self::OpenCode(value) => value.commit(),
             Self::Cline(value) => value.commit(),
             Self::Hermes(value) => value.commit(),
+            Self::OpenClaw(value) => value.commit(),
             Self::Dsh(value) => value.commit(),
             Self::WorkBuddy(value) => value.commit(),
         }
@@ -1736,6 +1745,7 @@ impl PreparedAdapter {
             Self::OpenCode(value) => value.rollback(),
             Self::Cline(value) => value.rollback(),
             Self::Hermes(value) => value.rollback(),
+            Self::OpenClaw(value) => value.rollback(),
             Self::Dsh(value) => value.rollback(),
             Self::WorkBuddy(value) => value.rollback(),
         }
@@ -1797,6 +1807,9 @@ fn prepare_adapter(
         // Cline 一次只用一个型号，同样只写本地令牌。
         "cline" => cline::prepare(&home, &request.model_id, local).map(PreparedAdapter::Cline),
         "hermes" => hermes::prepare(&home, &request.model_id, local).map(PreparedAdapter::Hermes),
+        // OpenClaw 和 OpenCode 一样能在自己的界面里换型号：整份名单都写进去。
+        "openclaw" => openclaw::prepare_catalog(&home, &request.model_id, &models, local)
+            .map(PreparedAdapter::OpenClaw),
         // One DSH provider per billing group, each with its own scoped key.
         "dsh_web" => dsh_web::prepare_catalog(
             &home,
@@ -1847,6 +1860,10 @@ async fn start_local_adapter(
             .start(credential.clone())
             .await
             .map(|_| ()),
+        "openclaw" => crate::openclaw_bridge::global()
+            .start(credential.clone())
+            .await
+            .map(|_| ()),
         "pi" | "dsh_web" | "workbuddy" | "dsh_desktop" => Ok(()),
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
@@ -1891,7 +1908,7 @@ async fn open_configured_adapter(
         "dsh_desktop" => {
             desktop_lifecycle::open_unless_running("dsh_desktop", &installation.path).await
         }
-        "claude_code" | "pi" | "opencode" | "cline" | "hermes" => {
+        "claude_code" | "pi" | "opencode" | "cline" | "hermes" | "openclaw" => {
             let home = tool_adapters::user_home()
                 .ok_or(AdapterFailure::ConfigurationFailed("home_unavailable"))?;
             tool_adapters::terminal_launch::launch_async(installation, &request.tool_id, &home)
@@ -1956,6 +1973,7 @@ async fn stop_helper_runtime(
         "opencode" => crate::opencode_bridge::global().stop().await,
         "cline" => crate::cline_bridge::global().stop().await,
         "hermes" => crate::hermes_bridge::global().stop().await,
+        "openclaw" => crate::openclaw_bridge::global().stop().await,
         // Pi connects straight to the relay origin.
         _ => {}
     }
@@ -2069,6 +2087,7 @@ async fn restore_after_failure(
                 "opencode" => Some(crate::opencode_bridge::global()),
                 "cline" => Some(crate::cline_bridge::global()),
                 "hermes" => Some(crate::hermes_bridge::global()),
+                "openclaw" => Some(crate::openclaw_bridge::global()),
                 _ => None,
             };
             if let Some(bridge) = bridge {
@@ -3119,7 +3138,7 @@ pub async fn configure_desktop_tool_v2(
     .with_skipped(skipped))
 }
 
-const CONNECTION_TOOLS: [&str; 10] = [
+const CONNECTION_TOOLS: [&str; 11] = [
     "claude_code",
     "claude_desktop",
     "codex_desktop",
@@ -3130,6 +3149,7 @@ const CONNECTION_TOOLS: [&str; 10] = [
     "dsh_desktop",
     "cline",
     "hermes",
+    "openclaw",
 ];
 
 /// Called only by the exit owner after admission closes and active operations
@@ -3413,7 +3433,7 @@ pub(crate) fn needs_background(tool: &str, credential: &ToolCredential) -> bool 
     credential.has_model_set()
         || matches!(
             tool,
-            "claude_desktop" | "dsh_web" | "opencode" | "cline" | "hermes"
+            "claude_desktop" | "dsh_web" | "opencode" | "cline" | "hermes" | "openclaw"
         )
         || credential.claude_transport.as_deref() == Some("chat_bridge")
         || credential.codex_transport.as_deref() == Some("chat_bridge")
@@ -3451,7 +3471,7 @@ fn legacy_paths(tool: &str) -> Result<Vec<std::path::PathBuf>, AdapterFailure> {
         }
         "workbuddy" => vec![home.join(".workbuddy/models.json")],
         // Support began with the recovery journal: nothing legacy.
-        "opencode" | "cline" | "hermes" => Vec::new(),
+        "opencode" | "cline" | "hermes" | "openclaw" => Vec::new(),
         // Desktop support began with the recovery journal: nothing legacy.
         "dsh_desktop" => Vec::new(),
         _ => return Err(AdapterFailure::UnsupportedProfile),

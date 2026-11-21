@@ -593,6 +593,7 @@ mod tests {
             "dsh_desktop",
             "cline",
             "hermes",
+            "openclaw",
         ] {
             assert!(!requires_reload(tool), "{tool}");
         }

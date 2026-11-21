@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 const SERVICE: &str = "com.kaifan.desktop.tool-credential.v2";
-const ALLOWED_TOOLS: [&str; 10] = [
+const ALLOWED_TOOLS: [&str; 11] = [
     "claude_code",
     "claude_desktop",
     "codex_desktop",
@@ -15,6 +15,7 @@ const ALLOWED_TOOLS: [&str; 10] = [
     "dsh_desktop",
     "cline",
     "hermes",
+    "openclaw",
 ];
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -120,10 +121,10 @@ fn allowed_tool(tool_id: &str) -> bool {
     ALLOWED_TOOLS.contains(&tool_id)
 }
 
-/// 能向 `credential-helper` 要到站点密钥的应用。Cline 和 Hermes 的设置里只有
-/// 本机令牌，它们从来不调这个命令，所以不给它们开这个口子。
+/// 能向 `credential-helper` 要到站点密钥的应用。Cline、Hermes、OpenClaw 的设置
+/// 里只有本机令牌，它们从来不调这个命令，所以不给它们开这个口子。
 fn helper_serves(tool_id: &str) -> bool {
-    allowed_tool(tool_id) && !matches!(tool_id, "cline" | "hermes")
+    allowed_tool(tool_id) && !matches!(tool_id, "cline" | "hermes" | "openclaw")
 }
 
 fn record_is_valid(tool_id: &str, record: &ToolCredential) -> bool {
@@ -774,7 +775,7 @@ mod tests {
     /// Cline 能存密钥（桥要用），但不能通过 helper 把站点密钥读出来。
     #[test]
     fn cline_stores_a_credential_but_the_helper_does_not_serve_it() {
-        for tool in ["cline", "hermes"] {
+        for tool in ["cline", "hermes", "openclaw"] {
             assert!(allowed_tool(tool), "{tool}");
             assert!(!helper_serves(tool), "{tool}");
             assert!(matches!(

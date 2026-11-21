@@ -12,21 +12,19 @@ import { ACTIVATION_TOOL_IDS } from "../configuration/activation";
  * 任何一处增删工具都会被这里的断言拦下，防止两处清单再次漂移
  * （批次 0 复盘：Hermes/OpenClaw 超 PRD 适配器混入三处清单）。
  *
- * 2026-11-22：Hermes Agent 正式加入（有适配器、有本地转发、有改回原样），
- * 不再算遗留。OpenClaw 还没做，仍然拦着。
+ * 2026-11-22：Hermes Agent 和 OpenClaw 正式加入（有适配器、有本地转发、有
+ * 改回原样），不再算遗留。
  */
 describe("tool catalog single source of truth (#9)", () => {
-  const LEGACY_TOOL_IDS = ["openclaw"] as const;
-
   it("lists every V1 app with a unique, activation-compatible id", () => {
     const ids = WORKBENCH_APPS.map((app) => app.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const id of ids) expect(ACTIVATION_TOOL_IDS).toContain(id);
   });
 
-  it("keeps apps without an adapter out of the list (no openclaw yet)", () => {
+  it("lists exactly the apps the native side can connect", () => {
     const ids = WORKBENCH_APPS.map((app) => app.id);
-    for (const legacy of LEGACY_TOOL_IDS) expect(ids).not.toContain(legacy);
+    expect([...ids].sort()).toEqual([...ACTIVATION_TOOL_IDS].sort());
   });
 
   it("exposes coming-soon apps without an activation adapter", () => {

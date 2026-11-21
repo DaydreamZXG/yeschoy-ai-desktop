@@ -37,7 +37,7 @@ use std::{collections::BTreeMap, ffi::OsString, sync::OnceLock};
 /// probe prints a handful of known-shaped lines instead of a whole environment,
 /// so shell banners, MOTD noise and values containing `=` cannot confuse it.
 #[cfg(not(target_os = "windows"))]
-const WANTED: [&str; 11] = [
+const WANTED: [&str; 15] = [
     "PATH",
     "ANTHROPIC_BASE_URL",
     "ANTHROPIC_AUTH_TOKEN",
@@ -49,6 +49,10 @@ const WANTED: [&str; 11] = [
     "CLINE_DATA_DIR",
     "CLINE_DIR",
     "HERMES_HOME",
+    "OPENCLAW_CONFIG_PATH",
+    "OPENCLAW_STATE_DIR",
+    "OPENCLAW_HOME",
+    "OPENCLAW_PROFILE",
 ];
 
 /// The subset of [`WANTED`] the probe clears before spawning, so a development
@@ -58,7 +62,7 @@ const WANTED: [&str; 11] = [
 /// `export PATH="$PATH:/foo"` producing a leading empty entry, which means the
 /// current directory.
 #[cfg(not(target_os = "windows"))]
-const CLEARED_BEFORE_PROBE: [&str; 10] = [
+const CLEARED_BEFORE_PROBE: [&str; 14] = [
     "ANTHROPIC_BASE_URL",
     "ANTHROPIC_AUTH_TOKEN",
     "ANTHROPIC_API_KEY",
@@ -69,6 +73,10 @@ const CLEARED_BEFORE_PROBE: [&str; 10] = [
     "CLINE_DATA_DIR",
     "CLINE_DIR",
     "HERMES_HOME",
+    "OPENCLAW_CONFIG_PATH",
+    "OPENCLAW_STATE_DIR",
+    "OPENCLAW_HOME",
+    "OPENCLAW_PROFILE",
 ];
 
 #[cfg(not(target_os = "windows"))]
@@ -320,6 +328,15 @@ mod tests {
         let key = crate::tool_adapters::hermes::HOME_VARIABLE;
         assert!(WANTED.contains(&key), "{key}");
         assert!(CLEARED_BEFORE_PROBE.contains(&key), "{key}");
+    }
+
+    /// OpenClaw 的设置文件在哪由四个变量定，同样要问登录 shell。
+    #[test]
+    fn the_probe_asks_for_every_variable_the_openclaw_adapter_reads() {
+        for key in crate::tool_adapters::openclaw::PATH_VARIABLES {
+            assert!(WANTED.contains(&key), "{key}");
+            assert!(CLEARED_BEFORE_PROBE.contains(&key), "{key}");
+        }
     }
 
     #[test]

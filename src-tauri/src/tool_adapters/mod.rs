@@ -7,6 +7,7 @@ pub(crate) mod desktop_launch;
 pub(crate) mod desktop_lifecycle;
 pub(crate) mod dsh_web;
 pub(crate) mod hermes;
+pub(crate) mod openclaw;
 pub(crate) mod opencode;
 pub(crate) mod pi;
 pub(crate) mod terminal_launch;
@@ -68,7 +69,7 @@ struct ObservedInstallation {
     location: &'static str,
 }
 
-const TARGETS: [(&str, &str, &str); 10] = [
+const TARGETS: [(&str, &str, &str); 11] = [
     ("claude_code", "Claude Code", "命令行与编辑器工作区"),
     ("claude_desktop", "Claude Desktop", "Claude 桌面应用"),
     (
@@ -87,6 +88,7 @@ const TARGETS: [(&str, &str, &str); 10] = [
     ),
     ("cline", "Cline", "Cline 命令行与编辑器扩展"),
     ("hermes", "Hermes Agent", "Hermes Agent 命令行"),
+    ("openclaw", "OpenClaw", "OpenClaw 命令行"),
 ];
 
 pub(crate) fn user_home() -> Option<PathBuf> {
@@ -115,6 +117,7 @@ pub(crate) fn executable_for(tool_id: &str) -> Option<&'static str> {
         "opencode" => Some("opencode"),
         "cline" => Some("cline"),
         "hermes" => Some("hermes"),
+        "openclaw" => Some("openclaw"),
         "dsh_web" => Some("dsh"),
         _ => None,
     }
@@ -230,7 +233,9 @@ fn can_attempt(tool_id: &str, installation: &ObservedInstallation) -> bool {
         "codex_desktop" | "claude_desktop" | "workbuddy" | "dsh_desktop" => {
             installation.path.exists()
         }
-        "claude_code" | "pi" | "opencode" | "dsh_web" | "hermes" => installation.path.is_file(),
+        "claude_code" | "pi" | "opencode" | "dsh_web" | "hermes" | "openclaw" => {
+            installation.path.is_file()
+        }
         // 只有命令行版能一键接。编辑器扩展（文件夹，见
         // `cline::extension_directories`）另有一份“当前厂商”，不看我们写的设置。
         "cline" => installation.path.is_file(),
