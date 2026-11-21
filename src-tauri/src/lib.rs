@@ -188,6 +188,8 @@ pub fn run() {
                         shell_environment::initialize().await;
                         tool_adapters::codex_desktop::resume_if_configured(resume_codex_runtime)
                             .await;
+                        // Hermes 也靠 `HERMES_HOME` 找它的设置，同样要等。
+                        tool_adapters::hermes::resume_if_configured().await;
                     },
                     // Claude clients use small local pass-throughs for native
                     // model-ID compatibility. Resume only when their managed
@@ -199,7 +201,6 @@ pub fn run() {
                     tool_adapters::opencode::resume_if_configured(),
                     // Cline 也一样。
                     tool_adapters::cline::resume_if_configured(),
-                    tool_adapters::hermes::resume_if_configured(),
                 );
             });
             Ok(())
