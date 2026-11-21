@@ -26,10 +26,6 @@ use crate::{
 /// Cline 给「OpenAI Compatible」这一家起的名字，不是我们起的。
 pub(crate) const PROVIDER_ID: &str = "openai-compatible";
 
-/// 只装了编辑器扩展时「打开」给出的原因：设置写好了，但 Cline 在编辑器的侧栏里，
-/// 没有窗口可以替用户打开。
-pub(crate) const IN_EDITOR: &str = "open_in_editor";
-
 /// 编辑器扩展的目录名前缀（发布者 `saoudrizwan`，扩展名 `claude-dev`）。
 const EXTENSION_PREFIX: &str = "saoudrizwan.claude-dev-";
 

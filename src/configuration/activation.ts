@@ -75,6 +75,8 @@ export const ACTIVATION_TARGET_STATUSES = [
   "available",
   "selection_required",
   "missing_runtime",
+  // 装了，但只能由用户自己去那个应用里填（Cline 的编辑器扩展）。
+  "manual_only",
 ] as const;
 
 export type ActivationTargetStatus =

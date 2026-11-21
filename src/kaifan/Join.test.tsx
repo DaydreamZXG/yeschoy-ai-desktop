@@ -1061,6 +1061,47 @@ describe("接入：应用多了不堆在一起", () => {
     expect(go()).toBeTruthy();
   });
 
+  it("Cline 只装在编辑器里：不去接入，给出要手填的地址和型号", async () => {
+    found([
+      target("claude_desktop"),
+      target("cline", {
+        status: "manual_only",
+        installations: [
+          {
+            installationId: "cline-ext",
+            label: "编辑器扩展",
+            version: "",
+            supported: false,
+            recommended: false,
+          },
+        ],
+      }),
+    ]);
+    setup({
+      initialApp: "cline",
+      lineId: "station_key:https://relay.example.com" as never,
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId("kaifan-join-other")).toBeTruthy(),
+    );
+    const panel = screen.getByTestId("kaifan-join-other");
+    expect(panel).toHaveTextContent(/Cline 装在你的编辑器里/);
+    expect(panel).toHaveTextContent("OpenAI Compatible");
+    expect(panel).toHaveTextContent("https://relay.example.com/v1");
+    expect(panel).toHaveTextContent("claude-sonnet-4-5-20250929");
+    // Cline 只用得上 OpenAI 格式的地址：地址和型号各一个复制按钮。
+    expect(screen.getAllByRole("button", { name: "复制" })).toHaveLength(2);
+    expect(chip(/^Cline/)).toHaveAttribute("aria-pressed", "true");
+    expect(chip(/^Cline/)).not.toHaveTextContent("还没装");
+    expect(screen.queryByRole("button", { name: /去接入/ })).toBeNull();
+    expect(activate).not.toHaveBeenCalled();
+
+    // 换成能一键接的应用，就回到接入。
+    fireEvent.click(screen.getByRole("button", { name: /^Claude Desktop/ }));
+    expect(screen.queryByTestId("kaifan-join-other")).toBeNull();
+    expect(go()).toBeTruthy();
+  });
+
   it("别的应用：浏览器授权连的站，说去站点网页新建密钥；剪贴板用不了就说怎么办", async () => {
     Object.assign(navigator, {
       clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },

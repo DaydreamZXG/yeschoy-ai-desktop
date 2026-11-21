@@ -77,8 +77,6 @@ const WHY = new Set([
   "recovery_storage_unavailable",
   "terminal_launch_failed",
   "terminal_unavailable",
-  // Cline 只装在编辑器里：设置写好了，但没有窗口可以替用户打开。
-  "open_in_editor",
   "workspace_unavailable",
   "invalid_launch_target",
   "launch_target_missing",
