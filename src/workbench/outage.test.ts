@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { outageIsTotal } from "./AppLibraryView";
+import { outageIsTotal } from "./home/HomeView";
 
 describe("converging an outage notice", () => {
   it("converges only when every source is down", () => {

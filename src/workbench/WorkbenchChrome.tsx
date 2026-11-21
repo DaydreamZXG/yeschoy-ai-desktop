@@ -1,9 +1,6 @@
 import {
-  ArrowUpRight,
-  Blocks,
   ChevronRight,
   Megaphone,
-  Plug,
   Users,
   CircleUserRound,
   LayoutDashboard,
@@ -13,16 +10,12 @@ import {
   Settings2,
   ShieldCheck,
   Sun,
-  Wallet,
-  ChartNoAxesCombined,
 } from "lucide-react";
-import { CountUpStrong } from "../theme/motion";
 import brandIcon from "../assets/brand/yecai-logo.png";
-import { Fragment, useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import type { AccountProjection } from "../account/session";
 import type { AccountLineId } from "../configuration/preview";
 import { showYeschoyCommunityUi } from "../distribution/yeschoyStation";
-import { creditUnit, formatMoney } from "../account/finance";
 import { CANDIDATE_VERSION } from "../candidate/readiness";
 import type { Appearance } from "./appearance";
 import { useWorkbenchCopy } from "./copy";
@@ -97,11 +90,10 @@ export function WorkbenchSidebar({
       accountProjection.account.username ||
       c.signedInAs
     : c.guest;
-  // 接入是这个产品唯一的目的，之前却只能从首页里点进去，侧边栏没有入口。
+  // 只有四个去处。接入从首页舞台上的应用进，不占一个导航项。
   // 公告只在服务端宣告了它的地址时才出现 —— 客户端和服务端谁先发布都不会出错。
   const nav = [
     { id: "home", label: c.home, icon: LayoutDashboard },
-    { id: "setup", label: c.apps, icon: Plug },
     { id: "account", label: c.usage, icon: ReceiptText },
     ...(announcementsAvailable
       ? ([
@@ -111,11 +103,13 @@ export function WorkbenchSidebar({
     { id: "settings", label: c.settings, icon: Settings2 },
   ] as const;
   // 连接诊断和已安装的工具是设置页的子页面，不是顶级目的地：一个是出问题时
-  // 客服让你点的检查，一个跟「我的应用」显示的内容基本重复。它们高亮到设置上。
+  // 客服让你点的检查，一个跟首页「全部应用」显示的内容基本重复。它们高亮到设置上。
   const current =
     view === "models" || view === "diagnostics" || view === "tools"
       ? "settings"
-      : view;
+      : view === "setup"
+        ? "home"
+        : view;
   // 当前项的青柠胶囊是一个独立元素，在导航项之间滑动（只动 transform）。
   const navRef = useRef<HTMLElement>(null);
   const indicatorRef = useRef<HTMLSpanElement>(null);
@@ -242,117 +236,6 @@ export function WorkbenchSidebar({
         </small>
       </div>
     </aside>
-  );
-}
-export function AccountSummary({
-  detected,
-  scanning = false,
-  onOpenAccount,
-  onOpenApps,
-  accountProjection,
-  accountLoading = false,
-}: {
-  detected?: number;
-  scanning?: boolean;
-  onOpenAccount: () => void;
-  onOpenApps?: () => void;
-  accountProjection: AccountProjection | null;
-  accountLoading?: boolean;
-}) {
-  const c = useWorkbenchCopy();
-  const signedIn = accountProjection?.status === "signed_in";
-  const account = signedIn ? accountProjection.account : null;
-  const money = signedIn ? accountProjection.money : undefined;
-  const compact = (value: string) => {
-    const number = Number(value);
-    return value !== "" && Number.isFinite(number)
-      ? new Intl.NumberFormat(undefined, { notation: "compact" }).format(number)
-      : null;
-  };
-  const accountValues = [
-    {
-      label: c.balance,
-      icon: Wallet,
-      value: money?.currency
-        ? formatMoney(money.balanceAmount, money.currency)
-        : null,
-      unit: creditUnit(money?.currency),
-    },
-    {
-      label: c.requestCount,
-      icon: ChartNoAxesCombined,
-      value: account?.available ? compact(account.requestCount) : null,
-      unit: c.requestsUnit,
-    },
-  ];
-  return (
-    <section className="workbench-stats" aria-label={c.usage}>
-      {accountValues.map(({ label, icon: Icon, value, unit }, i) => (
-        <Fragment key={label}>
-          <article className="summary-card">
-            <span className="summary-label">
-              <Icon aria-hidden="true" />
-              {label}
-            </span>
-            <CountUpStrong
-              value={value ?? "—"}
-              aria-label={value ? undefined : c.noAccountData}
-            >
-              {value ?? "—"}
-            </CountUpStrong>
-            <div className="summary-bottom">
-              <span>
-                {value ? unit : accountLoading ? c.checking : c.unavailable}
-              </span>
-              {i === 0 && (
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={onOpenAccount}
-                >
-                  {c.manage}
-                  <ArrowUpRight aria-hidden="true" />
-                </button>
-              )}
-            </div>
-          </article>
-        </Fragment>
-      ))}
-      <article className="summary-card">
-        <span className="summary-label">
-          <Blocks aria-hidden="true" />
-          {c.installed}
-        </span>
-        <CountUpStrong
-          value={String(detected ?? "—")}
-          aria-label={
-            detected === undefined
-              ? scanning
-                ? c.pendingScan
-                : c.failedScan
-              : undefined
-          }
-        >
-          {detected ?? "—"}
-          {detected !== undefined && <small>{c.unit}</small>}
-        </CountUpStrong>
-        <div className="summary-bottom">
-          <span>
-            {scanning
-              ? c.pendingScan
-              : detected === undefined
-                ? c.failedScan
-                : c.localApps}
-          </span>
-          {onOpenApps && (
-            <button type="button" className="text-button" onClick={onOpenApps}>
-              {c.manage}
-              <ChevronRight aria-hidden="true" />
-            </button>
-          )}
-        </div>
-      </article>
-    </section>
   );
 }
 export function WorkbenchFooter() {

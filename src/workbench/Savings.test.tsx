@@ -15,7 +15,6 @@ import type { AccountProjection } from "../account/session";
 import type { AccountSessionController } from "../account/useAccountSession";
 import { SavingsCard, SavingsDetails } from "./Savings";
 import { AccountView } from "./AccountView";
-import { AccountSummary } from "./WorkbenchChrome";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("sonner", () => ({
@@ -95,21 +94,6 @@ function controller(): AccountSessionController {
 }
 
 describe("clear account currency and savings UX", () => {
-  it("shows RMB and recent savings on overview, not recent TPM as cumulative tokens", () => {
-    render(
-      <AccountSummary
-        detected={2}
-        onOpenAccount={vi.fn()}
-        accountProjection={projection()}
-      />,
-    );
-    expect(screen.getByText("¥26.59")).toBeInTheDocument();
-    expect(screen.queryByText("近期费用对比")).not.toBeInTheDocument();
-    expect(screen.getByText("人民币额度")).toBeInTheDocument();
-    expect(screen.getByText("累计请求")).toBeInTheDocument();
-    expect(screen.queryByText("累计用量")).not.toBeInTheDocument();
-    expect(screen.queryByText(/US\$/)).not.toBeInTheDocument();
-  });
   it("retains actual cumulative consumption and opens the calculation with keyboard focus", () => {
     render(
       <AccountView

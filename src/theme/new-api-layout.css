@@ -90,7 +90,6 @@
 }
 
 /* 统计：去掉卡片，只留数字。首页和账单共用。 */
-.workbench-stats,
 .account-metrics {
   display: grid;
   grid-auto-flow: column;
@@ -168,56 +167,6 @@
 /* ================= 首页 ================= */
 .desktop-home .workbench-page-heading {
   margin-bottom: var(--space-24);
-}
-
-.account-overview {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-16);
-  margin: 0 0 var(--space-40);
-  padding: var(--space-24);
-  border: 0;
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  box-shadow: 0 0 0 1px var(--line-soft);
-}
-
-.account-overview-heading {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-8);
-}
-
-.account-overview-heading h2 {
-  margin: 0;
-  font-size: var(--text-sm);
-  font-weight: 650;
-}
-
-.account-overview-heading small {
-  color: var(--faint);
-  font-size: var(--text-xs);
-}
-
-.announcement-banner {
-  margin: 0 0 var(--space-24);
-  padding: var(--space-16) var(--space-24);
-  border: 0;
-  border-radius: var(--radius-xl);
-  background: var(--accent-soft);
-}
-
-.library-heading {
-  margin: 0 0 var(--space-8);
-  color: var(--faint);
-  font-size: var(--text-xs);
-}
-
-.library-heading b {
-  margin-right: var(--space-4);
-  color: var(--ink);
-  font-family: var(--font-ui);
-  font-variant-numeric: tabular-nums;
 }
 
 /* 应用列表：一行一个，没有卡片，只有分隔线 */
@@ -339,14 +288,6 @@
 .connection-row .connect-app-button:hover:not(:disabled) {
   color: var(--on-accent);
   background: var(--accent);
-}
-
-.library-footer {
-  margin-top: var(--space-40);
-  padding-top: var(--space-16);
-  border-top: 0;
-  color: var(--faint);
-  font-size: var(--text-xs);
 }
 
 /* ================= 应用接入：单列向导 + 底部浮动操作条 ================= */
@@ -1096,7 +1037,6 @@
 }
 
 /* 统计列不要任何底色 */
-.workbench-stats > .summary-card,
 .account-metrics > .summary-card,
 .account-metrics > .summary-card.savings-card {
   background: none;

@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import i18n from "i18next";
 import zh from "../i18n/locales/zh.json";
 import { ConfigurationPreviewView } from "./ConfigurationPreviewView";
-import { AppLibraryView } from "../workbench/AppLibraryView";
+import { HomeView } from "../workbench/home/HomeView";
 import { OpenConnection } from "./OpenConnection";
 import { QuitAssistant, ShutdownProvider } from "../settings/QuitAssistant";
 import { ACTIVATION_TOOL_IDS, type ActivationTargetScan } from "./activation";
@@ -256,11 +256,10 @@ describe("daily-use UX", () => {
     const account = sessionWithMoney("3.20");
     render(
       <ConnectionProvider value={local()}>
-        <AppLibraryView
+        <HomeView
           accountSession={account}
           onOpenAccount={callback}
           onOpenSetup={callback}
-          onOpenCommunity={callback}
           onStationLineChange={callback}
           accountLineId="mainland_optimized"
         />
@@ -278,11 +277,10 @@ describe("daily-use UX", () => {
   it("#22 shows a recovery banner on the home page when a transaction is pending", async () => {
     render(
       <ConnectionProvider value={local({ state: "recovery_pending" })}>
-        <AppLibraryView
+        <HomeView
           accountSession={session()}
           onOpenAccount={callback}
           onOpenSetup={callback}
-          onOpenCommunity={callback}
           onStationLineChange={callback}
           accountLineId="mainland_optimized"
         />
@@ -300,11 +298,10 @@ describe("daily-use UX", () => {
   it("#18 flags retired models on the home page and routes to re-selection", async () => {
     render(
       <ConnectionProvider value={local({ modelId: "model-retired" })}>
-        <AppLibraryView
+        <HomeView
           accountSession={session()}
           onOpenAccount={callback}
           onOpenSetup={callback}
-          onOpenCommunity={callback}
           onStationLineChange={callback}
           accountLineId="mainland_optimized"
         />
@@ -322,11 +319,10 @@ describe("daily-use UX", () => {
   it("#18 keeps the home page quiet while every connected model is still listed", async () => {
     render(
       <ConnectionProvider value={local()}>
-        <AppLibraryView
+        <HomeView
           accountSession={session()}
           onOpenAccount={callback}
           onOpenSetup={callback}
-          onOpenCommunity={callback}
           onStationLineChange={callback}
           accountLineId="mainland_optimized"
         />
@@ -538,11 +534,10 @@ describe("daily-use UX", () => {
     const open = vi.fn();
     const { container } = render(
       <ConnectionProvider value={controller}>
-        <AppLibraryView
+        <HomeView
           accountSession={session()}
           onOpenAccount={callback}
           onOpenSetup={open}
-          onOpenCommunity={open}
           onStationLineChange={callback}
           accountLineId="mainland_optimized"
         />
@@ -552,12 +547,8 @@ describe("daily-use UX", () => {
     const card = screen
       .getByRole("heading", { name: "Codex（桌面版 / 命令行）" })
       .closest("article")!;
-    const overview = container.querySelector(".account-overview")!;
-    expect(
-      card.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_PRECEDING,
-    ).toBeTruthy();
-    // 改版后账户概览是首页顶部常驻的仪表盘行，不再折叠。
-    expect(overview.tagName).toBe("SECTION");
+    // 首页不再有账户概览；余额在舞台上，明细在账本。
+    expect(container.querySelector(".account-overview")).toBeNull();
     fireEvent.click(within(card).getByRole("button", { name: "检查并修复" }));
     expect(open).toHaveBeenLastCalledWith("codex_desktop", "repair");
     expect(controller.open).not.toHaveBeenCalled();
@@ -2088,11 +2079,10 @@ describe("daily-use UX", () => {
             connections: connectionsFixture("known-empty").connections,
           }}
         >
-          <AppLibraryView
+          <HomeView
             accountSession={{ ...session(), projection: null }}
             onOpenAccount={callback}
             onOpenSetup={callback}
-            onOpenCommunity={callback}
           onStationLineChange={callback}
           accountLineId="mainland_optimized"
         />
@@ -2112,7 +2102,7 @@ describe("daily-use UX", () => {
       );
       expect(screen.getAllByRole("article")).toHaveLength(8);
       expect(
-        screen.queryByRole("region", { name: "用量账单" }),
+        screen.queryByRole("region", { name: "账本" }),
       ).not.toBeInTheDocument();
     },
   );

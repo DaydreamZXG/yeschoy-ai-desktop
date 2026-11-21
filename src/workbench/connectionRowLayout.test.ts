@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 // 回归：已接入卡片里长模型名（如 gpt-6.1-sol）一字一行、盖住「换模型与分组」。
 // 根因是 main 列 minmax(0,1fr) 被右侧「打开使用」反馈挤到 0 宽。
 const css = readFileSync("src/theme/system.css", "utf8");
-const view = readFileSync("src/workbench/AppLibraryView.tsx", "utf8");
+const view = readFileSync("src/workbench/home/HomeView.tsx", "utf8");
 
 describe("已接入卡片布局", () => {
   it("中间列有最小宽度，不会被右侧操作挤成 0", () => {

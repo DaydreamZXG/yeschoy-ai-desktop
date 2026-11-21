@@ -8,7 +8,7 @@ import { refreshModelCatalog } from "./model-profiles/remoteCatalog";
 import { useAppearance } from "./workbench/appearance";
 import { AccountView } from "./workbench/AccountView";
 import { ModelsView } from "./workbench/ModelsView";
-import { AppLibraryView } from "./workbench/AppLibraryView";
+import { HomeView } from "./workbench/home/HomeView";
 import { ConfigurationPreviewView } from "./configuration/ConfigurationPreviewView";
 import type { ActivationToolId } from "./configuration/activation";
 import type { SetupIntent } from "./configuration/setupIntent";
@@ -19,7 +19,6 @@ import {
 import { DiagnosticsView } from "./diagnostics/DiagnosticsView";
 import { SettingsView } from "./settings/SettingsView";
 import {
-  AnnouncementBanner,
   AnnouncementsView,
 } from "./workbench/AnnouncementsView";
 import { CommunityGroupDialog } from "./workbench/QQGroupDialog";
@@ -326,8 +325,7 @@ function App() {
                 </div>
               )}
               {view === "home" ? (
-                <AppLibraryView
-                  onOpenCommunity={() => setCommunityOpen(true)}
+                <HomeView
                   onOpenAccount={() => setView("account")}
                   onStationLineChange={applyAccountLine}
                   accountLineId={accountLineId}
@@ -345,17 +343,11 @@ function App() {
                     setView("setup");
                   }}
                   accountSession={accountSession}
-                  announcement={
-                    bannerNotice && (
-                      <AnnouncementBanner
-                        notice={bannerNotice}
-                        onFollow={(notice) => void followNotice(notice)}
-                        onOpenAll={() => setView("announcements")}
-                        onDismiss={(notice) =>
-                          markAnnouncementsSeen([notice.id])
-                        }
-                      />
-                    )
+                  news={
+                    bannerNotice && {
+                      title: bannerNotice.title,
+                      onOpen: () => setView("announcements"),
+                    }
                   }
                 />
               ) : view === "account" ? (

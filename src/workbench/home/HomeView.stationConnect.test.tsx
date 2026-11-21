@@ -1,15 +1,12 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "i18next";
-import zh from "../i18n/locales/zh.json";
-import {
-  AppLibraryView,
-  showStationConnectWelcomeStrip,
-} from "./AppLibraryView";
-import { ConnectionProvider } from "../configuration/connections";
-import { connectionsFixture } from "../configuration/connection-test-fixtures";
-import type { AccountSessionController } from "../account/useAccountSession";
-import type { AccountProjection, AccountStatus } from "../account/session";
+import zh from "../../i18n/locales/zh.json";
+import { HomeView, showStationConnectWelcomeStrip } from "./HomeView";
+import { ConnectionProvider } from "../../configuration/connections";
+import { connectionsFixture } from "../../configuration/connection-test-fixtures";
+import type { AccountSessionController } from "../../account/useAccountSession";
+import type { AccountProjection, AccountStatus } from "../../account/session";
 
 function projection(status: AccountStatus): AccountProjection {
   const signedIn = status === "signed_in";
@@ -146,15 +143,14 @@ describe("showStationConnectWelcomeStrip", () => {
   );
 });
 
-describe("AppLibraryView station connect welcome strip", () => {
+describe("HomeView station connect welcome strip", () => {
   function renderHome(account: AccountSessionController) {
     return render(
       <ConnectionProvider value={connections}>
-        <AppLibraryView
+        <HomeView
           accountSession={account}
           onOpenAccount={vi.fn()}
           onOpenSetup={vi.fn()}
-          onOpenCommunity={vi.fn()}
           onStationLineChange={vi.fn()}
           accountLineId="mainland_optimized"
         />
@@ -167,7 +163,6 @@ describe("AppLibraryView station connect welcome strip", () => {
       sessionFor("backend_unavailable", { lastError: "server_not_ready" }),
     );
     expect(screen.getByRole("textbox")).toBeInTheDocument();
-    expect(screen.getByText(zh.workbench.librarySignInTitle)).toBeInTheDocument();
     expect(screen.getByTestId("library-relay-line-recovery")).toHaveTextContent(
       "全球加速",
     );
@@ -176,15 +171,14 @@ describe("AppLibraryView station connect welcome strip", () => {
   it("does not render the origin form when signed in", async () => {
     renderHome(sessionFor("signed_in"));
     expect(screen.queryByRole("textbox")).toBeNull();
-    expect(
-      screen.getByRole("region", { name: zh.yeschoyDaily.accountOverview }),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(zh.homeStage.signedOut)).toBeNull();
+    expect(screen.getByTestId("home-stage")).toBeInTheDocument();
   });
 
   it("does not render the origin form while authorization is pending", async () => {
     renderHome(sessionFor("authorization_pending"));
     expect(screen.queryByRole("textbox")).toBeNull();
-    expect(screen.queryByText(zh.workbench.librarySignInTitle)).toBeNull();
+    expect(screen.queryByText(zh.homeStage.signedOut)).toBeNull();
   });
 
   it("keeps the origin form interactive with idle signed-out session (no probe)", async () => {

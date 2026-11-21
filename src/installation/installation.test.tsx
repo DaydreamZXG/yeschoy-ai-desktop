@@ -31,7 +31,7 @@ import {
   type InstallationProgress,
 } from "./api";
 import { ConfigurationPreviewView } from "../configuration/ConfigurationPreviewView";
-import { AppLibraryView } from "../workbench/AppLibraryView";
+import { HomeView } from "../workbench/home/HomeView";
 import {
   ACTIVATION_TOOL_IDS,
   scanActivationTargets,
@@ -587,11 +587,10 @@ describe("ru048 novice installer", () => {
   it("offers desktop installation on an empty computer without hiding it behind filters", async () => {
     render(
       <ConnectionProvider value={connections}>
-        <AppLibraryView
+        <HomeView
           accountSession={account}
           onOpenAccount={noop}
           onOpenSetup={noop}
-          onOpenCommunity={noop}
           onStationLineChange={noop}
           accountLineId="mainland_optimized"
         />
@@ -601,8 +600,13 @@ describe("ru048 novice installer", () => {
     expect(screen.getAllByRole("button", { name: /安装并接入/ })).toHaveLength(
       2,
     );
-    expect(screen.getByText("Claude Desktop")).toBeInTheDocument();
-    expect(screen.getByText("Codex（桌面版 / 命令行）")).toBeInTheDocument();
+    // 首页舞台上的应用格子也写着应用名，这里看的是下面列表里的那一行。
+    expect(
+      screen.getByRole("heading", { name: "Claude Desktop" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Codex（桌面版 / 命令行）" }),
+    ).toBeInTheDocument();
   });
   it("automatically continues once only for the exact newly installed target", async () => {
     const view = render(setup(progress()));

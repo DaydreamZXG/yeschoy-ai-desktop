@@ -343,7 +343,7 @@ describe("diagnostics native-to-renderer outcomes", () => {
 
   it("offers a way back to the home view, not only sideways", async () => {
     showView();
-    fireEvent.click(screen.getByRole("button", { name: "返回我的应用" }));
+    fireEvent.click(screen.getByRole("button", { name: "返回首页" }));
     expect(routes.home).toHaveBeenCalledOnce();
   });
 });
