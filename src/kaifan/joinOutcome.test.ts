@@ -116,6 +116,11 @@ describe("接入结果怎么说", () => {
     expect(of("launch_failed", "terminal_unavailable").why).toBe(
       "terminal_unavailable",
     );
+    // Cline 只装在编辑器里：设置写好了，照实说去编辑器里点开，不说「已经替你打开」。
+    expect(of("launch_failed", "open_in_editor")).toMatchObject({
+      kind: "written",
+      why: "open_in_editor",
+    });
     // 已经有专门一句话的情况不被盖掉；认不出的原因不带。
     expect(of("configuration_failed", "credential_restore_failed").why).toBe(
       undefined,

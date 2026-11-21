@@ -366,6 +366,7 @@ function targets(requestId: string) {
     ["dsh_web", "DSH web", "0.1.0-rc.6"],
     ["workbuddy", "WorkBuddy", "5.5.6"],
     ["dsh_desktop", "DeepSeek Harness", "0.2.0"],
+    ["cline", "Cline", "3.0.75"],
   ] as const;
   return {
     requestId,
@@ -515,6 +516,7 @@ const handlers: Record<string, (a: Args) => unknown> = {
         "claude_desktop",
         "claude_code",
         "pi",
+        "cline",
       ],
       keyPage: "https://example.com/keys",
       common: true,

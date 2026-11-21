@@ -314,9 +314,9 @@ pub async fn open_tool_connection_v1(
                         if permit.is_cancelled() {
                             return Err(st("busy"));
                         }
-                        // 只装了编辑器扩展：桥起来就够了，没有终端可开。
+                        // 只装了编辑器扩展：桥起来就够了，没有终端可开，照实说。
                         if installation.path.is_dir() {
-                            return Ok(Ok(()));
+                            return Ok(Err(AdapterFailure::LaunchError(cline::IN_EDITOR)));
                         }
                         Ok(
                             terminal_launch::launch_async(&installation, &request.tool_id, &home)
@@ -427,6 +427,7 @@ mod tests {
             "launch_target_missing",
             "desktop_launch_exit_failed",
             "desktop_launch_wait_failed",
+            cline::IN_EDITOR,
         ] {
             assert_eq!(
                 launch_failure(AdapterFailure::LaunchError(reason)),

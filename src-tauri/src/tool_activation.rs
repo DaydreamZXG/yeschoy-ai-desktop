@@ -1877,7 +1877,8 @@ async fn open_configured_adapter(
             desktop_lifecycle::open_unless_running("dsh_desktop", &installation.path).await
         }
         // 只装了编辑器扩展：没有可以替用户打开的东西，Cline 在编辑器的侧栏里。
-        "cline" if installation.path.is_dir() => Ok(()),
+        // 照实说「设置写好了，去编辑器里点开」，不说成「已经替你打开」。
+        "cline" if installation.path.is_dir() => Err(AdapterFailure::LaunchError(cline::IN_EDITOR)),
         "claude_code" | "pi" | "opencode" | "cline" => {
             let home = tool_adapters::user_home()
                 .ok_or(AdapterFailure::ConfigurationFailed("home_unavailable"))?;

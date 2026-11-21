@@ -77,6 +77,8 @@ const WHY = new Set([
   "recovery_storage_unavailable",
   "terminal_launch_failed",
   "terminal_unavailable",
+  // Cline 只装在编辑器里：设置写好了，但没有窗口可以替用户打开。
+  "open_in_editor",
   "workspace_unavailable",
   "invalid_launch_target",
   "launch_target_missing",
@@ -291,4 +293,7 @@ export function joinStep(stage: string | undefined): 0 | 1 | 2 | 3 {
 
 /** 这些是终端里用的，打开的是一个新终端窗口，不是应用窗口。 */
 export const usesTerminal = (toolId: ActivationToolId) =>
-  toolId === "claude_code" || toolId === "pi" || toolId === "opencode";
+  toolId === "claude_code" ||
+  toolId === "pi" ||
+  toolId === "opencode" ||
+  toolId === "cline";

@@ -573,6 +573,7 @@
       "recovery_storage_unavailable": "The system keychain isn't available, so I couldn't keep a copy of {{app}}'s original settings and left it alone. Unlock the keychain and try again.",
       "terminal_launch_failed": "{{app}}'s settings are written, but I couldn't open a terminal window. Open a terminal yourself and start it there — no need to connect again.",
       "terminal_unavailable": "{{app}}'s settings are written, but I found no usable terminal program on this computer. Open a terminal yourself and start it there — no need to connect again.",
+      "open_in_editor": "{{app}}'s settings are written. It lives inside your editor, so I can't open it for you: open the editor and click {{app}} in the sidebar. If the editor was already open, reload its window.",
       "workspace_unavailable": "{{app}}'s settings are written, but its working folder won't open — it may have been moved or deleted. Open a terminal yourself and start it there — no need to connect again.",
       "invalid_launch_target": "{{app}}'s settings are written, but I can't use the place it's installed in. Install it somewhere ordinary and connect again.",
       "launch_target_missing": "{{app}}'s settings are written, but I can't find its launcher — it may have been moved or uninstalled. Go back home and I'll look for it again.",
