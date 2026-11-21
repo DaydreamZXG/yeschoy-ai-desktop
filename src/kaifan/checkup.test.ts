@@ -44,9 +44,48 @@ describe("reportOf", () => {
     expect(check({ probe: { ok: false, reason: "timeout" } }).verdict).toBe(
       "unreachable",
     );
-    expect(check({ probe: { ok: false, reason: "not_relay" } }).verdict).toBe(
-      "odd",
-    );
+    expect(
+      check({
+        probe: { ok: false, reason: "not_relay" },
+        status: "network_error",
+      }).verdict,
+    ).toBe("odd");
+  });
+
+  it("不带密钥探不出是什么站、但带密钥读到了账户：站点算通的", () => {
+    expect(check({ probe: { ok: false, reason: "not_relay" } })).toMatchObject({
+      station: "ok",
+      login: "ok",
+      verdict: "fine",
+    });
+  });
+
+  it("接好的应用用的型号站点不列了：不说都好，带去换个人", () => {
+    const report = check({
+      lineId: "mainland_optimized",
+      models: [{ id: "other" }],
+    });
+    expect(report).toMatchObject({
+      apps: "model",
+      gone: ["claude_code"],
+      verdict: "model",
+      action: "swap",
+    });
+    // 型号还在、名单没读到、应用接在别的站上：都不算。
+    expect(check({ models: [{ id: "m" }] }).verdict).toBe("fine");
+    expect(check({ models: [] }).verdict).toBe("fine");
+    expect(
+      check({
+        lineId: "station_key:https://a.example",
+        models: [{ id: "other" }],
+        connections: [
+          {
+            ...app("claude_code", "connected"),
+            lineId: "station_key:https://b.example",
+          },
+        ],
+      }).gone,
+    ).toEqual([]);
   });
 
   it("浏览器说没联网、但站点其实通了，以通了为准", () => {

@@ -1,6 +1,7 @@
-import type { AccountStatus } from "../account/session";
+import type { AccountModel, AccountStatus } from "../account/session";
 import type { ToolConnection } from "../configuration/connections";
 import { CONNECTIVITY_LINES } from "../diagnostics/contract";
+import { onOtherStation } from "./stageState";
 import type { ProbeOutcome } from "./station";
 
 /**
@@ -28,9 +29,22 @@ export type LoginFinding =
   /** 站点没通，看不了。 */
   | "skipped";
 /** `partial`：有的读到了、是接好的，有的这次没读到，不能算全都没问题。 */
-export type AppsFinding = "ok" | "repair" | "none" | "unknown" | "partial";
+export type AppsFinding =
+  | "ok"
+  | "repair"
+  /** 接好了，但它用的型号这个站现在没有了：打开也用不了。 */
+  | "model"
+  | "none"
+  | "unknown"
+  | "partial";
 
-export type CheckAction = "connect" | "again" | "repair" | "join" | null;
+export type CheckAction =
+  | "connect"
+  | "again"
+  | "repair"
+  | "swap"
+  | "join"
+  | null;
 
 export interface CheckReport {
   station: StationFinding;
@@ -40,6 +54,8 @@ export interface CheckReport {
   live: number;
   /** 要修的是哪些。 */
   repair: ToolConnection["toolId"][];
+  /** 用的型号这个站已经没有了的是哪些。 */
+  gone: ToolConnection["toolId"][];
   /** 第一处不对的地方；都对就是 `fine`。 */
   verdict:
     | "offline"
@@ -49,6 +65,7 @@ export interface CheckReport {
     | "locked"
     | "failed"
     | "repair"
+    | "model"
     | "none"
     | "fine";
   action: CheckAction;
@@ -70,16 +87,23 @@ export interface CheckInput {
   status?: AccountStatus;
   connections: ToolConnection[];
   connectionsFailed: boolean;
+  /** 现在连着的线路，和站点这次报的型号名单；用来看接好的应用用的型号还在不在。 */
+  lineId?: string;
+  models?: Pick<AccountModel, "id">[];
 }
 
 export function reportOf(input: CheckInput): CheckReport {
+  // 只认 OpenAI 格式的站不带密钥探不出是什么站。带着存好的密钥刚读到了账户，
+  // 就是这个站答的：不能一边读到账户，一边说它不像中转站。
   const station: StationFinding = input.probe.ok
     ? "ok"
     : !input.online
       ? "offline"
-      : input.probe.reason === "not_relay"
-        ? "odd"
-        : "unreachable";
+      : input.probe.reason !== "not_relay"
+        ? "unreachable"
+        : input.status === "signed_in"
+          ? "ok"
+          : "odd";
   const login: LoginFinding =
     station !== "ok"
       ? "skipped"
@@ -96,25 +120,40 @@ export function reportOf(input: CheckInput): CheckReport {
   const live = input.connections.filter(
     (c) => c.state === "connected" || c.state === "legacy",
   ).length;
+  // 和首页看的是同一件事：接在这个站上的应用，用的型号站点还列不列。
+  const gone =
+    login === "ok" && input.models?.length
+      ? input.connections
+          .filter(
+            (c) =>
+              (c.state === "connected" || c.state === "legacy") &&
+              !onOtherStation(c, input.lineId) &&
+              !!c.modelId &&
+              !input.models!.some((model) => model.id === c.modelId),
+          )
+          .map((c) => c.toolId)
+      : [];
   const unread = input.connections.some((c) => c.state === "unavailable");
   const unknown =
     input.connectionsFailed || !input.connections.length || (!live && unread);
   const apps: AppsFinding = repair.length
     ? "repair"
-    : unknown
-      ? "unknown"
-      : unread
-        ? "partial"
-        : live
-          ? "ok"
-          : "none";
+    : gone.length
+      ? "model"
+      : unknown
+        ? "unknown"
+        : unread
+          ? "partial"
+          : live
+            ? "ok"
+            : "none";
   const verdict: CheckReport["verdict"] =
     station !== "ok"
       ? station
       : login !== "ok"
         ? (login as "expired" | "locked" | "failed")
-        : apps === "repair"
-          ? "repair"
+        : apps === "repair" || apps === "model"
+          ? apps
           : apps === "none"
             ? "none"
             : "fine";
@@ -123,12 +162,14 @@ export function reportOf(input: CheckInput): CheckReport {
       ? "connect"
       : verdict === "repair"
         ? "repair"
-        : verdict === "none"
-          ? "join"
-          : verdict === "fine"
-            ? null
-            : "again";
-  return { station, login, apps, live, repair, verdict, action };
+        : verdict === "model"
+          ? "swap"
+          : verdict === "none"
+            ? "join"
+            : verdict === "fine"
+              ? null
+              : "again";
+  return { station, login, apps, live, repair, gone, verdict, action };
 }
 
 /** 线路对应的站点地址；内置的两条线路没把地址写在 id 里。 */

@@ -17,7 +17,7 @@ import {
   type ModelBinding,
   type ActivationToolId,
 } from "./activation";
-import { isAccountLineId, type ConfigurationLineId } from "./preview";
+import { isAccountLineId, type AccountLineId } from "./preview";
 import { openConnection, type OpenResult } from "./launchApi";
 
 export const CONNECTION_INSPECTION_DEADLINE_MS = 15_000;
@@ -73,7 +73,8 @@ export interface ToolConnection {
     | "recovery_pending"
     | "unavailable";
   modelId: string;
-  lineId: ConfigurationLineId | "";
+  /** 接在哪条线路上：内置的两条，或者用户自己连的站。旧版本接的没记，是空串。 */
+  lineId: AccountLineId | "";
   billingGroup: string;
   updatedAtEpochMs: number;
   restoreMode: "original" | "remove_yeschoy" | "none";
@@ -85,7 +86,7 @@ export interface ToolConnection {
 export interface RequestObservation {
   modelId: string;
   billingGroup: string;
-  lineId: ConfigurationLineId;
+  lineId: AccountLineId;
   outcome:
     | "ok"
     | "timeout"

@@ -508,9 +508,18 @@ export function KaifanApp() {
             status: probed.status,
             connections: connections.connections,
             connectionsFailed: !!connections.error,
+            lineId,
+            models: signedIn ? projection?.models : undefined,
           })
         : null,
-    [connections.connections, connections.error, lineId, probed],
+    [
+      connections.connections,
+      connections.error,
+      lineId,
+      probed,
+      projection?.models,
+      signedIn,
+    ],
   );
   useEffect(() => {
     // 换了站，上一个站还没查完的那一轮作废。

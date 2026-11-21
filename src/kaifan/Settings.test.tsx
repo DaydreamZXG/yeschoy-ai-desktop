@@ -163,6 +163,42 @@ describe("Settings", () => {
     await said("改回接入之前的样子了");
   });
 
+  it("粘贴密钥接的应用：改回时不说会停用密钥，说清要作废得去站点后台", async () => {
+    show({
+      connections: [
+        app("claude_code", { lineId: "station_key:https://a.example" }),
+      ],
+    });
+    const row = screen.getByTestId("kaifan-settings-app-claude_code");
+    fireEvent.click(row.querySelector("button")!);
+    await said("我不会去停用它");
+    expect(screen.getByTestId("kaifan-settings-says")).not.toHaveTextContent(
+      "并停用给它的那把密钥",
+    );
+  });
+
+  it("体检：应用用的型号没有了，说是哪个应用，按钮带去换人", async () => {
+    const gone = show({
+      checkup: {
+        ...idleCheck,
+        report: reportOf({
+          online: true,
+          probe: { ok: true as const, probe: {} as never },
+          status: "signed_in" as const,
+          connections: [app("pi")],
+          connectionsFailed: false,
+          models: [{ id: "other" }],
+        }),
+      },
+    });
+    await said("应用:pi 用的型号这个站现在没有了");
+    expect(screen.getByTestId("kaifan-settings-report")).toHaveTextContent(
+      "1 个应用用的型号没有了",
+    );
+    fireEvent.click(screen.getByTestId("kaifan-settings-check-act"));
+    expect(gone.props.onRepair).toHaveBeenCalledWith("pi");
+  });
+
   it("改回的几种结果各说各的，不都说成功", async () => {
     const cases: [Partial<ConnectionResponse> | Error, string][] = [
       [{ status: "recovery_failed" }, "没改回成"],
