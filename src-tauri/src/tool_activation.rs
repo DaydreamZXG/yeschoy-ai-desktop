@@ -1061,7 +1061,9 @@ fn token_code(tool_id: &str) -> &'static str {
         "dsh_desktop" => "dd",
         "cline" => "cl",
         "hermes" => "hm",
-        "openclaw" => "oc",
+        // 不能再用 `oc`：那是 OpenCode 旧密钥名里的代码，撞了就会把它的旧密钥
+        // 当成自己的收走。
+        "openclaw" => "cw",
         _ => "tool",
     }
 }
@@ -3733,6 +3735,22 @@ pub async fn manage_tool_connections_v1(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn no_two_apps_share_a_token_code_or_label() {
+        // 密钥归谁，看的就是名字里的这一截；两个应用用了同一个，一个就会把
+        // 另一个的密钥当成自己的换掉、删掉。
+        for name in [token_code, token_label] {
+            let mut seen = std::collections::BTreeSet::new();
+            for tool in CONNECTION_TOOLS {
+                assert!(seen.insert(name(tool)), "{tool} 的密钥名和别的应用撞了");
+            }
+        }
+        assert_ne!(
+            legacy_token_prefix("openclaw", "default"),
+            legacy_token_prefix("opencode", "default")
+        );
+    }
 
     /// 只有 `Inconclusive` 才重问，而且问到有结论就停。
     ///
