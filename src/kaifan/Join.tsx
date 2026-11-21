@@ -63,6 +63,8 @@ export interface Joined {
   modelId: string;
   /** 应用有没有替用户打开。没打开时照实说，不说成「已经在用了」。 */
   opened: boolean;
+  /** 打开的是终端窗口，不是应用窗口。 */
+  terminal: boolean;
   /** 没能替用户打开时，后端说得出的具体原因。 */
   why?: string;
   /** 名单里这次没接上的型号（站点没让用）。有就要告诉用户，不能当作全成了。 */
@@ -197,17 +199,30 @@ export function Join({
   const working = applying || installing;
 
   const touched = useRef(false);
+  // 同一个应用可能两种都有（Codex 的桌面版和命令行版）：看挑中的是哪一份。
+  const seen = useRef<ActivationTarget[]>([]);
+  const inTerminal = (toolId: ActivationToolId, installationId: string) =>
+    usesTerminal(toolId) ||
+    !!seen.current
+      .find((entry) => entry.toolId === toolId)
+      ?.installations.find((item) => item.installationId === installationId)
+      ?.terminal;
   /** `quiet`：用户没点、是我们自己顺手再看一遍，不闪「正在找」，没看成也不报。 */
   const look = useCallback(async (quiet = false) => {
     if (!quiet) setScan("loading");
     try {
       const found = (await scanActivationTargets()).targets;
+      seen.current = found;
       setTargets(found);
       setScan("ready");
       // 用户还没自己选过应用时，先选中电脑上已经装了的第一个。
       const first = WORKBENCH_APPS.find((item) =>
         found.some(
-          (entry) => entry.toolId === item.id && entry.status === "available",
+          (entry) =>
+            entry.toolId === item.id &&
+            // 装了好几份的也是装了，只是待会儿要挑一份。
+            (entry.status === "available" ||
+              entry.status === "selection_required"),
         ),
       );
       if (!touched.current && first) setApp(first.id);
@@ -425,6 +440,7 @@ export function Join({
         who,
         modelId,
         opened: next.kind === "done",
+        terminal: inTerminal(app, at),
         why: next.why,
         skipped: [
           ...new Set((result.skipped ?? []).map((item) => item.modelId)),
@@ -729,17 +745,16 @@ export function Join({
             <div className="pickapps">
               {WORKBENCH_APPS.map((item) => {
                 const found = targets.find((entry) => entry.toolId === item.id);
+                const partial =
+                  scan === "ready" && found?.status === "missing_runtime";
                 const absent =
-                  scan === "ready" &&
-                  (!found ||
-                    found.status === "not_found" ||
-                    found.status === "missing_runtime");
+                  scan === "ready" && (!found || found.status === "not_found");
                 if (!moreApps && rare.includes(item.id)) return null;
                 return (
                   <button
                     key={item.id}
                     type="button"
-                    className={absent ? "pa off" : "pa"}
+                    className={absent || partial ? "pa off" : "pa"}
                     aria-pressed={!other && item.id === app}
                     onClick={() => {
                       touched.current = true;
@@ -753,6 +768,7 @@ export function Join({
                     {item.icon && <img src={item.icon} alt="" />}
                     {item.name}
                     {absent && <small>{t("kaifan.join.absent")}</small>}
+                    {partial && <small>{t("kaifan.join.incomplete")}</small>}
                   </button>
                 );
               })}
@@ -1036,7 +1052,12 @@ export function Join({
                       className="go"
                       onClick={() => fetcher.guide(app)}
                     >
-                      {t("kaifan.join.install", { app: appName })}
+                      {t(
+                        absent
+                          ? "kaifan.join.install"
+                          : "kaifan.join.reinstall",
+                        { app: appName },
+                      )}
                     </button>
                   ) : (
                     <button
@@ -1143,7 +1164,7 @@ export function Join({
                   </li>
                   <li className={step > 2 ? "ok" : undefined}>
                     {t(
-                      usesTerminal(app)
+                      inTerminal(app, installationId)
                         ? "kaifan.join.stepCheck"
                         : "kaifan.join.stepOpen",
                       { app: appName },

@@ -46,6 +46,10 @@ pub(crate) struct InstallationProjection {
     pub(crate) version: String,
     pub(crate) supported: bool,
     pub(crate) recommended: bool,
+    /// 这一份打开的是终端窗口而不是应用窗口。只有同一个应用两种都有时才用得着
+    /// 分（Codex 的桌面版和命令行版共用一条接入），所以只在是的时候带上。
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub(crate) terminal: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -332,6 +336,8 @@ fn projections(tool_id: &str, observed: &[ObservedInstallation]) -> Vec<Installa
             version: installation.version.clone(),
             supported: can_attempt(tool_id, installation),
             recommended: preferred == Some(index),
+            terminal: tool_id == "codex_desktop"
+                && codex_desktop::is_cli_installation(&installation.path),
         })
         .collect()
 }

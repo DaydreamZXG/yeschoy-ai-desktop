@@ -90,6 +90,8 @@ export interface ActivationInstallation {
   version: string;
   supported: boolean;
   recommended: boolean;
+  /** 这一份打开的是终端窗口，不是应用窗口（Codex 只装了命令行版时）。 */
+  terminal?: true;
 }
 
 export const MANUAL_LOCATION_STATES = [
@@ -247,14 +249,19 @@ function safeText(
 
 function decodeInstallation(value: unknown): ActivationInstallation | null {
   if (!object(value)) return null;
+  const keys = [
+    "installationId",
+    "label",
+    "version",
+    "supported",
+    "recommended",
+  ];
+  if ("terminal" in value) {
+    if (value.terminal !== true) return null;
+    keys.push("terminal");
+  }
   if (
-    !exactKeys(value, [
-      "installationId",
-      "label",
-      "version",
-      "supported",
-      "recommended",
-    ]) ||
+    !exactKeys(value, keys) ||
     !/^i[0-9a-f]{16}$/.test(String(value.installationId)) ||
     !safeText(value.label, 100, false) ||
     !safeText(value.version, 80) ||

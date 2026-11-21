@@ -85,6 +85,13 @@ describe("接入结果怎么说", () => {
     );
   });
 
+  it("应用本身接不了：不让人换型号，带回去换应用", () => {
+    expect(of("unsupported_profile", "profile_not_supported")).toMatchObject({
+      kind: "otherApp",
+      action: "look",
+    });
+  });
+
   it("换个人能解决的，带回去换人", () => {
     expect(of("unsupported_model").action).toBe("pick");
     expect(of("verification_failed", "model_request_rejected").action).toBe(

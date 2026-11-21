@@ -320,6 +320,17 @@ describe("desktop tool activation boundary", () => {
     }
   });
 
+  it("an installation may say it opens in a terminal, and nothing else may ride along", () => {
+    const mark = (terminal: unknown) => {
+      const scan = targetScan();
+      Object.assign(scan.targets[0].installations[0], { terminal });
+      return decodeActivationTargetScan(scan, scan.requestId);
+    };
+    expect(mark(true)?.targets[0].installations[0].terminal).toBe(true);
+    expect(mark(false)).toBeNull();
+    expect(mark("yes")).toBeNull();
+  });
+
   it("does not accept success for a different billing group", async () => {
     native.mockImplementation(async (_command, args) => ({
       ...projection(
