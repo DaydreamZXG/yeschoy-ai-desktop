@@ -49,6 +49,7 @@ import {
   chibiOf,
   type RosterId,
 } from "./roster";
+import { OtherApps } from "./OtherApps";
 import { vendorName, type ProviderPreset } from "./providers";
 import { sound } from "./sound";
 import { undoFailed, undoKey, type UndoKey } from "./undo";
@@ -161,6 +162,9 @@ export function Join({
   );
 
   const [app, setApp] = useState<ActivationToolId>(WORKBENCH_APPS[0].id);
+  // 不常用的应用默认收着；「别的应用」不接入，只给要填的地址。
+  const [moreApps, setMoreApps] = useState(false);
+  const [other, setOther] = useState(false);
   const [who, setWho] = useState<RosterId>(current);
   const [chosenModel, setChosenModel] = useState("");
   const [install, setInstall] = useState("");
@@ -226,6 +230,7 @@ export function Join({
     reset();
     touched.current = !!initialApp;
     setApp(initialApp ?? WORKBENCH_APPS[0].id);
+    setOther(false);
     // 来修一个应用时，先选回它原来的那一位和型号：修的是原来那次接入，不是换人。
     const was = connections.find((item) => item.toolId === initialApp);
     const back =
@@ -325,6 +330,17 @@ export function Join({
   const name = t(`roster.${who}.name`);
   const appInfo = WORKBENCH_APPS.find((item) => item.id === app);
   const appName = appDisplayName(app, appInfo?.name ?? app, t);
+  // 不常用的收起来；接过的、现在选着的不收。装没装不算：找应用是慢慢找到的，
+  // 按它来的话这一排会在用户眼前跳。
+  const rare = WORKBENCH_APPS.filter(
+    (item) =>
+      !item.common &&
+      item.id !== app &&
+      // 名单里每个应用都有一行，没接过的那行写着 not_connected。
+      !connections.some(
+        (entry) => entry.toolId === item.id && entry.state !== "not_connected",
+      ),
+  ).map((item) => item.id);
   // 这一家只认某几个应用，而现在选的不在里面：后端也会拦，这里先说清楚。
   const barred =
     !!preset && preset.onlyTools.length > 0 && !preset.onlyTools.includes(app);
@@ -713,14 +729,16 @@ export function Join({
                   (!found ||
                     found.status === "not_found" ||
                     found.status === "missing_runtime");
+                if (!moreApps && rare.includes(item.id)) return null;
                 return (
                   <button
                     key={item.id}
                     type="button"
                     className={absent ? "pa off" : "pa"}
-                    aria-pressed={item.id === app}
+                    aria-pressed={!other && item.id === app}
                     onClick={() => {
                       touched.current = true;
+                      setOther(false);
                       setApp(item.id);
                       setInstall("");
                       setChosenModel("");
@@ -733,221 +751,278 @@ export function Join({
                   </button>
                 );
               })}
+              {rare.length > 0 && (
+                <button
+                  type="button"
+                  className="pa fold"
+                  aria-expanded={moreApps}
+                  onClick={() => setMoreApps((shown) => !shown)}
+                >
+                  {moreApps
+                    ? t("kaifan.join.lessApps")
+                    : t("kaifan.join.moreApps", { count: rare.length })}
+                </button>
+              )}
+              <button
+                type="button"
+                className="pa fold"
+                aria-pressed={other}
+                onClick={() => {
+                  setOther(true);
+                  sound.pop(520);
+                }}
+              >
+                {t("kaifan.join.otherApps")}
+              </button>
             </div>
-            {options.length > 1 && (
-              <p className="lbl pickat">
-                <b>{t("kaifan.join.whichInstall")}</b>
-                {options.map((item) => (
-                  <button
-                    key={item.installationId}
-                    type="button"
-                    className="sm"
-                    aria-pressed={item.installationId === installationId}
-                    onClick={() => setInstall(item.installationId)}
-                  >
-                    {item.label}
-                    {item.version && ` · ${item.version}`}
-                  </button>
-                ))}
-              </p>
-            )}
-            <p className="lbl">
-              <b>{t("kaifan.join.whichOne")}</b>
-            </p>
-            <div className="cards">
-              {people.map((id, index) => {
-                const here = !!cast[id];
-                const on = id === who;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    className="cd"
-                    style={{ ["--c" as string]: ROSTER[id].color }}
-                    aria-pressed={on}
-                    disabled={!here}
-                    onClick={() => {
-                      setWho(id);
-                      setChosenModel("");
-                      sound.pop(500 + index * 45);
-                    }}
-                  >
-                    <img src={chibiOf(id, on ? "happy" : "idle")} alt="" />
-                    <b>
-                      {t(`roster.${id}.name`)}
-                      <small>{ROSTER[id].brand.toUpperCase()}</small>
-                    </b>
-                    <span>
-                      {here
-                        ? modelDisplayName(
-                            modelFor(
-                              id,
-                              cast[id],
-                              on ? saved : undefined,
-                              picks,
-                            ),
-                          )
-                        : t("kaifan.join.notHere")}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            {barred ? (
-              <p className="mend" role="note" data-testid="kaifan-join-barred">
-                {t("kaifan.join.onlyTools", {
-                  vendor: vendorName(preset, t),
-                  app: appName,
-                  apps: preset.onlyTools
-                    .map((tool) => {
-                      const item = WORKBENCH_APPS.find(({ id }) => id === tool);
-                      return item
-                        ? appDisplayName(item.id, item.name, t)
-                        : tool;
-                    })
-                    .join(t("kaifan.connect.listJoin")),
-                })}
-              </p>
+            {other ? (
+              <OtherApps
+                lineId={lineId}
+                preset={preset}
+                modelId={modelId ?? ""}
+                viaKey={lineId.startsWith("station_key:")}
+              />
             ) : (
-              preset?.billing === "plan" && (
-                <p
-                  className="mend"
-                  role="note"
-                  data-testid="kaifan-join-plan-risk"
-                >
-                  {t("kaifan.join.planRisk", {
-                    vendor: vendorName(preset, t),
-                    app: appName,
-                  })}
-                </p>
-              )
-            )}
-            {broken && (
-              <p className="mend" role="note" data-testid="kaifan-join-mend">
-                {t(`kaifan.join.mend.${broken}`, { app: appName })}
-              </p>
-            )}
-            {!missing && target?.manualLocation === "in_use" && (
-              <p className="mend" role="note" data-testid="kaifan-join-pinned">
-                {t("kaifan.join.pinned", { app: appName })}
-                <button
-                  type="button"
-                  className="sm"
-                  disabled={spotting}
-                  onClick={() => void pointOut()}
-                >
-                  {t("kaifan.join.repoint")}
-                </button>
-                <button
-                  type="button"
-                  className="sm"
-                  disabled={spotting}
-                  onClick={() => void forget()}
-                >
-                  {t("kaifan.join.unpin")}
-                </button>
-                {spot && (
-                  <span role="alert">
-                    {t(`kaifan.join.spot.${spot}`, { app: appName })}
-                  </span>
-                )}
-              </p>
-            )}
-            {missing && (
-              <p className="mend" role="note" data-testid="kaifan-join-absent">
-                {t(`kaifan.join.absentNote.${need}`, { app: appName })}
-                <button
-                  type="button"
-                  className="sm"
-                  disabled={spotting}
-                  onClick={() => void pointOut()}
-                >
-                  {t("kaifan.join.pointOut")}
-                </button>
-                {spot && (
-                  <span role="alert">
-                    {t(`kaifan.join.spot.${spot}`, { app: appName })}
-                  </span>
-                )}
-              </p>
-            )}
-            <div className="pf">
-              <p>
-                {modelId
-                  ? t("kaifan.join.summary", { name, app: appName })
-                  : t("kaifan.join.nobody")}
-                {ids && ids.length > 1 ? (
-                  <select
-                    className="inp"
-                    aria-label={t("kaifan.join.model")}
-                    value={modelId}
-                    onChange={(event) => setChosenModel(event.target.value)}
-                  >
-                    {ids.map((id) => (
-                      <option key={id} value={id}>
-                        {modelDisplayName(id)}
-                      </option>
+              <>
+                {options.length > 1 && (
+                  <p className="lbl pickat">
+                    <b>{t("kaifan.join.whichInstall")}</b>
+                    {options.map((item) => (
+                      <button
+                        key={item.installationId}
+                        type="button"
+                        className="sm"
+                        aria-pressed={item.installationId === installationId}
+                        onClick={() => setInstall(item.installationId)}
+                      >
+                        {item.label}
+                        {item.version && ` · ${item.version}`}
+                      </button>
                     ))}
-                  </select>
+                  </p>
+                )}
+                <p className="lbl">
+                  <b>{t("kaifan.join.whichOne")}</b>
+                </p>
+                <div className="cards">
+                  {people.map((id, index) => {
+                    const here = !!cast[id];
+                    const on = id === who;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        className="cd"
+                        style={{ ["--c" as string]: ROSTER[id].color }}
+                        aria-pressed={on}
+                        disabled={!here}
+                        onClick={() => {
+                          setWho(id);
+                          setChosenModel("");
+                          sound.pop(500 + index * 45);
+                        }}
+                      >
+                        <img src={chibiOf(id, on ? "happy" : "idle")} alt="" />
+                        <b>
+                          {t(`roster.${id}.name`)}
+                          <small>{ROSTER[id].brand.toUpperCase()}</small>
+                        </b>
+                        <span>
+                          {here
+                            ? modelDisplayName(
+                                modelFor(
+                                  id,
+                                  cast[id],
+                                  on ? saved : undefined,
+                                  picks,
+                                ),
+                              )
+                            : t("kaifan.join.notHere")}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {barred ? (
+                  <p
+                    className="mend"
+                    role="note"
+                    data-testid="kaifan-join-barred"
+                  >
+                    {t("kaifan.join.onlyTools", {
+                      vendor: vendorName(preset, t),
+                      app: appName,
+                      apps: preset.onlyTools
+                        .map((tool) => {
+                          const item = WORKBENCH_APPS.find(
+                            ({ id }) => id === tool,
+                          );
+                          return item
+                            ? appDisplayName(item.id, item.name, t)
+                            : tool;
+                        })
+                        .join(t("kaifan.connect.listJoin")),
+                    })}
+                  </p>
                 ) : (
-                  modelId && <em>{modelDisplayName(modelId)}</em>
+                  preset?.billing === "plan" && (
+                    <p
+                      className="mend"
+                      role="note"
+                      data-testid="kaifan-join-plan-risk"
+                    >
+                      {t("kaifan.join.planRisk", {
+                        vendor: vendorName(preset, t),
+                        app: appName,
+                      })}
+                    </p>
+                  )
                 )}
-                {modelId && offered.length > 1 && !gone && (
-                  <em data-testid="kaifan-join-plan">
-                    {planName(billingGroup)}
-                  </em>
+                {broken && (
+                  <p
+                    className="mend"
+                    role="note"
+                    data-testid="kaifan-join-mend"
+                  >
+                    {t(`kaifan.join.mend.${broken}`, { app: appName })}
+                  </p>
                 )}
-              </p>
-              <i />
-              {broken && saved && saved.restoreMode !== "none" && (
-                <button
-                  type="button"
-                  className="go alt"
-                  data-testid="kaifan-join-undo"
-                  onClick={() => void undo()}
-                >
-                  {t(
-                    saved.restoreMode === "original"
-                      ? "kaifan.settings.restoreAction"
-                      : "kaifan.settings.removeAction",
+                {!missing && target?.manualLocation === "in_use" && (
+                  <p
+                    className="mend"
+                    role="note"
+                    data-testid="kaifan-join-pinned"
+                  >
+                    {t("kaifan.join.pinned", { app: appName })}
+                    <button
+                      type="button"
+                      className="sm"
+                      disabled={spotting}
+                      onClick={() => void pointOut()}
+                    >
+                      {t("kaifan.join.repoint")}
+                    </button>
+                    <button
+                      type="button"
+                      className="sm"
+                      disabled={spotting}
+                      onClick={() => void forget()}
+                    >
+                      {t("kaifan.join.unpin")}
+                    </button>
+                    {spot && (
+                      <span role="alert">
+                        {t(`kaifan.join.spot.${spot}`, { app: appName })}
+                      </span>
+                    )}
+                  </p>
+                )}
+                {missing && (
+                  <p
+                    className="mend"
+                    role="note"
+                    data-testid="kaifan-join-absent"
+                  >
+                    {t(`kaifan.join.absentNote.${need}`, { app: appName })}
+                    <button
+                      type="button"
+                      className="sm"
+                      disabled={spotting}
+                      onClick={() => void pointOut()}
+                    >
+                      {t("kaifan.join.pointOut")}
+                    </button>
+                    {spot && (
+                      <span role="alert">
+                        {t(`kaifan.join.spot.${spot}`, { app: appName })}
+                      </span>
+                    )}
+                  </p>
+                )}
+                <div className="pf">
+                  <p>
+                    {modelId
+                      ? t("kaifan.join.summary", { name, app: appName })
+                      : t("kaifan.join.nobody")}
+                    {ids && ids.length > 1 ? (
+                      <select
+                        className="inp"
+                        aria-label={t("kaifan.join.model")}
+                        value={modelId}
+                        onChange={(event) => setChosenModel(event.target.value)}
+                      >
+                        {ids.map((id) => (
+                          <option key={id} value={id}>
+                            {modelDisplayName(id)}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      modelId && <em>{modelDisplayName(modelId)}</em>
+                    )}
+                    {modelId && offered.length > 1 && !gone && (
+                      <em data-testid="kaifan-join-plan">
+                        {planName(billingGroup)}
+                      </em>
+                    )}
+                  </p>
+                  <i />
+                  {broken && saved && saved.restoreMode !== "none" && (
+                    <button
+                      type="button"
+                      className="go alt"
+                      data-testid="kaifan-join-undo"
+                      onClick={() => void undo()}
+                    >
+                      {t(
+                        saved.restoreMode === "original"
+                          ? "kaifan.settings.restoreAction"
+                          : "kaifan.settings.removeAction",
+                      )}
+                    </button>
                   )}
-                </button>
-              )}
-              {absent && selfInstall ? (
-                <button
-                  type="button"
-                  className="go"
-                  disabled={!modelId || barred}
-                  onClick={() => void fetchAndJoin()}
-                >
-                  {t("kaifan.join.installGo", { app: appName })}
-                </button>
-              ) : missing ? (
-                <button
-                  type="button"
-                  className="go"
-                  onClick={() => fetcher.guide(app)}
-                >
-                  {t("kaifan.join.install", { app: appName })}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="go"
-                  disabled={
-                    scan !== "ready" || !modelId || !installationId || barred
-                  }
-                  onClick={() => void run()}
-                >
-                  {t(
-                    broken ? `kaifan.join.mendGo.${broken}` : "kaifan.join.go",
-                    {
-                      name,
-                    },
+                  {absent && selfInstall ? (
+                    <button
+                      type="button"
+                      className="go"
+                      disabled={!modelId || barred}
+                      onClick={() => void fetchAndJoin()}
+                    >
+                      {t("kaifan.join.installGo", { app: appName })}
+                    </button>
+                  ) : missing ? (
+                    <button
+                      type="button"
+                      className="go"
+                      onClick={() => fetcher.guide(app)}
+                    >
+                      {t("kaifan.join.install", { app: appName })}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="go"
+                      disabled={
+                        scan !== "ready" ||
+                        !modelId ||
+                        !installationId ||
+                        barred
+                      }
+                      onClick={() => void run()}
+                    >
+                      {t(
+                        broken
+                          ? `kaifan.join.mendGo.${broken}`
+                          : "kaifan.join.go",
+                        {
+                          name,
+                        },
+                      )}
+                    </button>
                   )}
-                </button>
-              )}
-            </div>
+                </div>
+              </>
+            )}
           </>
         ) : (
           <div className="work on" aria-live="polite">

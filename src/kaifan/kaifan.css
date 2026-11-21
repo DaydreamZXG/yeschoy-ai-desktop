@@ -1353,11 +1353,11 @@ dialog.restore-dialog menu {
 }
 .pa {
   height: 44px;
-  padding: 0 16px 0 9px;
+  padding: 0 13px 0 8px;
   border-radius: 22px;
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 7px;
   font-size: 14px;
   color: var(--dim);
   background: rgba(255, 255, 255, 0.07);
@@ -1389,7 +1389,7 @@ dialog.restore-dialog menu {
 .cd {
   position: relative;
   flex: 1;
-  height: 250px;
+  height: 216px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -1404,12 +1404,15 @@ dialog.restore-dialog menu {
     transform 0.25s cubic-bezier(0.2, 1.5, 0.3, 1),
     box-shadow 0.25s;
   overflow: visible;
+  container-type: inline-size;
 }
 .cd img {
   position: absolute;
   left: 50%;
   bottom: 58px;
   height: 186px;
+  /* 小人跟着卡片的宽度走：窗口窄、卡片窄的时候她跟着变小，不压到旁边那张上。 */
+  height: min(186px, 140cqw);
   transform: translateX(-50%);
   transform-origin: 50% 100%;
   transition: transform 0.3s cubic-bezier(0.2, 1.6, 0.3, 1);
@@ -1439,8 +1442,9 @@ dialog.restore-dialog menu {
   box-shadow: 0 0 28px -6px var(--c);
   transform: translateY(-4px);
 }
+/* 选中的那张靠描边、发光和表情区分，不再把人放大：放大了会盖住旁边的人。 */
 .cd[aria-pressed="true"] img {
-  transform: translateX(-50%) scale(1.14);
+  transform: translateX(-50%);
 }
 .cd em {
   position: absolute;
@@ -2586,4 +2590,67 @@ h4 + .set,
   .vd:focus-visible {
     transform: none;
   }
+}
+
+/* 接入：不常用的应用收起、别的应用 */
+.pa.fold {
+  padding: 0 16px;
+  border-style: dashed;
+}
+.pa.fold[aria-pressed="true"] {
+  border-style: solid;
+}
+.oth {
+  display: grid;
+  gap: 12px;
+}
+.oth .hint {
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--dim);
+}
+.oth dl {
+  display: grid;
+  gap: 8px;
+}
+.oth dl > div {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  min-height: 46px;
+  padding: 6px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.oth dt {
+  font-size: 13px;
+  color: var(--faint);
+}
+.oth dd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: 13.5px;
+  color: #fff;
+}
+.oth dd code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 13px;
+  user-select: all;
+}
+.oth dd small {
+  flex: none;
+  font-size: 12px;
+  color: var(--faint);
+}
+.oth dd .sm {
+  flex: none;
 }

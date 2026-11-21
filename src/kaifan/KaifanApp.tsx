@@ -22,7 +22,11 @@ import { isImageGenerationModel } from "../model-profiles/profile";
 import { refreshModelCatalog } from "../model-profiles/remoteCatalog";
 import { ShutdownHost } from "./Shutdown";
 import { useDesktopUpdate } from "../update/UpdateProvider";
-import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
+import {
+  WORKBENCH_APPS,
+  appDisplayName,
+  appsForHome,
+} from "../workbench/appCatalog";
 import { Boot } from "./Boot";
 import { Card } from "./Card";
 import {
@@ -147,7 +151,12 @@ export function KaifanApp() {
 
   const apps = useMemo(
     () =>
-      WORKBENCH_APPS.slice(0, HOME_APPS).map((app) => ({
+      appsForHome(
+        connections.connections
+          ?.filter((item) => item.state !== "not_connected")
+          .map((item) => item.toolId) ?? [],
+        HOME_APPS,
+      ).map((app) => ({
         id: app.id,
         name: app.name,
         fullName: appDisplayName(app.id, app.name, t),

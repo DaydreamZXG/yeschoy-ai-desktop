@@ -22,38 +22,46 @@ export const WORKBENCH_APPS: {
   name: string;
   icon?: string;
   mark?: string;
+  /** 常用的默认露在外面；不常用的收在「还有几个」里。 */
+  common: boolean;
 }[] = [
   {
     id: "claude_desktop",
     name: "Claude Desktop",
     icon: claudeIcon,
+    common: true,
   },
   {
     id: "codex_desktop",
     name: "Codex",
     icon: codexIcon,
+    common: true,
+  },
+  { id: "opencode", name: "OpenCode", icon: opencodeIcon, common: true },
+  {
+    id: "claude_code",
+    name: "Claude Code",
+    icon: claudeIcon,
+    common: true,
   },
   {
     id: "workbuddy",
     name: "WorkBuddy",
     icon: workbuddyIcon,
+    common: true,
   },
+  { id: "pi", name: "Pi", icon: piIcon, common: true },
   {
     id: "dsh_desktop",
     name: "DeepSeek Harness",
     icon: dshIcon,
+    common: false,
   },
   {
     id: "dsh_web",
     name: "DSH web",
     icon: dshIcon,
-  },
-  { id: "pi", name: "Pi", icon: piIcon },
-  { id: "opencode", name: "OpenCode", icon: opencodeIcon },
-  {
-    id: "claude_code",
-    name: "Claude Code",
-    icon: claudeIcon,
+    common: false,
   },
 ];
 
@@ -73,4 +81,11 @@ export function appDisplayName(
 ): string {
   if (appId === "codex_desktop") return t("workbench.appNameCodex");
   return fallback;
+}
+
+/** 首页放得下的那几个：接过的排前面，然后是常用的，同一档里保持名单顺序。 */
+export function appsForHome(linked: readonly string[], limit: number) {
+  const rank = (app: (typeof WORKBENCH_APPS)[number]) =>
+    (linked.includes(app.id) ? 2 : 0) + (app.common ? 1 : 0);
+  return [...WORKBENCH_APPS].sort((a, b) => rank(b) - rank(a)).slice(0, limit);
 }

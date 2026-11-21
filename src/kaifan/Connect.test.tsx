@@ -36,6 +36,8 @@ const preset = (patch: Record<string, unknown>) => ({
   onlyTools: [],
   keyPage: "https://example.com/keys",
   common: true,
+  openaiPath: "/v1",
+  anthropicPath: null,
   ...patch,
 });
 const PRESETS = [

@@ -19,7 +19,15 @@ export interface ProviderPreset {
   onlyTools: string[];
   keyPage: string;
   common: boolean;
+  /** 别的应用里要填的两个地址。没有 Claude 格式的就是 null。 */
+  openaiBase: string;
+  anthropicBase: string | null;
+  /** 这家要求每个请求带的请求头；别的应用得自己加上。多数没有。 */
+  sessionHeader: string | null;
 }
+
+const path = (value: unknown): string | null =>
+  typeof value === "string" && /^(\/[\w.-]+)*$/.test(value) ? value : null;
 
 const text = (value: unknown): string | null =>
   typeof value === "string" && value.length > 0 ? value : null;
@@ -38,6 +46,9 @@ export function decodeProviderPresets(raw: unknown): ProviderPreset[] {
     if (!id || !family || !name || !origin || !keyPage) continue;
     if (!/^https:\/\/[^/]+$/.test(origin) || !keyPage.startsWith("https://"))
       continue;
+    const openaiPath = path(row.openaiPath);
+    if (openaiPath === null) continue;
+    const anthropicPath = path(row.anthropicPath);
     presets.push({
       id,
       family,
@@ -54,6 +65,13 @@ export function decodeProviderPresets(raw: unknown): ProviderPreset[] {
           )
         : [],
       common: row.common === true,
+      openaiBase: origin + openaiPath,
+      anthropicBase: anthropicPath === null ? null : origin + anthropicPath,
+      sessionHeader:
+        typeof row.sessionHeader === "string" &&
+        /^[a-z][a-z0-9-]*$/.test(row.sessionHeader)
+          ? row.sessionHeader
+          : null,
     });
   }
   return presets;
@@ -148,4 +166,17 @@ export function stationLabel(
   if (at < 0) return null;
   const origin = lineId.slice(at + 1);
   return /^https:\/\//.test(origin) ? hostOf(origin) : null;
+}
+
+/**
+ * 别的应用里「API 地址」那一栏该填什么。云厂商按表；其余站点按惯例：
+ * OpenAI 格式是 `站点/v1`，Claude 格式就是站点本身。
+ */
+export function addressesOf(
+  origin: string | null,
+  preset: ProviderPreset | null,
+): { openai: string; anthropic: string | null } | null {
+  if (preset)
+    return { openai: preset.openaiBase, anthropic: preset.anthropicBase };
+  return origin ? { openai: `${origin}/v1`, anthropic: origin } : null;
 }

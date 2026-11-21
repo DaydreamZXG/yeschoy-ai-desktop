@@ -401,6 +401,25 @@
       "accept": "I know it. Connect"
     },
     "join": {
+      "moreApps_one": "{{count}} more ▾",
+      "moreApps_other": "{{count}} more ▾",
+      "lessApps": "Show fewer ▴",
+      "otherApps": "Another app",
+      "other": {
+        "intro": "I can't change the settings of an app that isn't on the list, but everything you need to fill in is here. Open that app's settings, find “API address” (also called Base URL), “API Key” and “Model”, and fill them in as below.",
+        "openai": "API address (OpenAI format)",
+        "anthropic": "API address (Claude format)",
+        "model": "Model",
+        "key": "API Key",
+        "copy": "Copy",
+        "copied": "Copied",
+        "keyYours": "It's the key you pasted when you connected this station.",
+        "keyFromStation": "Create a new one under “Tokens” on the station's website and copy it over.",
+        "copyFailed": "That didn't copy: the system wouldn't let me use the clipboard. Select the text above with your mouse and copy it yourself.",
+        "noAddress": "No station is connected right now, so there's no address to give you. Go back home, connect a station, then come back here.",
+        "sessionHeader": "{{vendor}} also requires a request header named {{header}} on every request; any fixed string of letters and digits works as its value. If that app has no \"custom headers\" setting, it can't use this provider.",
+        "planRisk": "{{vendor}} is a monthly plan, and the provider only allows it in coding tools it approves. If you put the key into another app, the provider may limit or cancel the plan."
+      },
       "planRisk": "You're connected to {{vendor}}, a monthly plan. The provider only allows it in coding tools it approves, and Kaifan passes requests along on {{app}}'s behalf, so the provider may limit or cancel the plan.",
       "onlyTools": "{{app}} can't be connected to {{vendor}} for now: {{vendor}} requires a marker on every request, {{app}} doesn't send one, and because it talks to the provider directly Kaifan can't add it. Pick {{apps}} above, or connect a different station.",
       "title": "Who goes where?",

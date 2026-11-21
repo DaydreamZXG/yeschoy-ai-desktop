@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COMING_SOON_APPS, WORKBENCH_APPS } from "./appCatalog";
+import { COMING_SOON_APPS, WORKBENCH_APPS, appsForHome } from "./appCatalog";
 import { ACTIVATION_TOOL_IDS } from "../configuration/activation";
 
 /**
@@ -40,5 +40,37 @@ describe("tool catalog single source of truth (#9)", () => {
       (id) => !WORKBENCH_APPS.some((app) => app.id === id),
     );
     expect(outsideV1).toEqual([]);
+  });
+
+  it("常用的露在外面，不常用的收着", () => {
+    expect(
+      WORKBENCH_APPS.filter((app) => app.common).map((app) => app.id),
+    ).toEqual([
+      "claude_desktop",
+      "codex_desktop",
+      "opencode",
+      "claude_code",
+      "workbuddy",
+      "pi",
+    ]);
+  });
+
+  it("首页那一排：接过的排前面，然后是常用的", () => {
+    expect(appsForHome([], 5).map((app) => app.id)).toEqual([
+      "claude_desktop",
+      "codex_desktop",
+      "opencode",
+      "claude_code",
+      "workbuddy",
+    ]);
+    expect(
+      appsForHome(["dsh_web", "claude_code"], 5).map((app) => app.id),
+    ).toEqual([
+      "claude_code",
+      "dsh_web",
+      "claude_desktop",
+      "codex_desktop",
+      "opencode",
+    ]);
   });
 });

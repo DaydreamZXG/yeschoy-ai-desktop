@@ -416,6 +416,8 @@ const handlers: Record<string, (a: Args) => unknown> = {
   provider_presets_v1: () => [
     {
       id: "zhipu_coding",
+      openaiPath: "/api/coding/paas/v4",
+      anthropicPath: "/api/anthropic",
       family: "zhipu_coding",
       region: null,
       name: "智谱 GLM Coding Plan",
@@ -428,6 +430,8 @@ const handlers: Record<string, (a: Args) => unknown> = {
     },
     {
       id: "kimi_code_cn",
+      openaiPath: "/coding/v1",
+      anthropicPath: "/coding",
       family: "kimi_code",
       region: "cn",
       name: "Kimi Code",
@@ -440,6 +444,8 @@ const handlers: Record<string, (a: Args) => unknown> = {
     },
     {
       id: "kimi_code_global",
+      openaiPath: "/coding/v1",
+      anthropicPath: "/coding",
       family: "kimi_code",
       region: "global",
       name: "Kimi Code",
@@ -452,6 +458,8 @@ const handlers: Record<string, (a: Args) => unknown> = {
     },
     {
       id: "volcengine_coding",
+      openaiPath: "/api/coding/v3",
+      anthropicPath: "/api/coding",
       family: "volcengine_coding",
       region: null,
       name: "火山方舟 Coding Plan",
@@ -464,6 +472,8 @@ const handlers: Record<string, (a: Args) => unknown> = {
     },
     {
       id: "bailian_coding",
+      openaiPath: "/v1",
+      anthropicPath: "/apps/anthropic",
       family: "bailian_coding",
       region: null,
       name: "阿里云百炼 Coding Plan",
@@ -476,6 +486,8 @@ const handlers: Record<string, (a: Args) => unknown> = {
     },
     {
       id: "ollama_cloud",
+      openaiPath: "/v1",
+      anthropicPath: "",
       family: "ollama_cloud",
       region: null,
       name: "Ollama Cloud",
@@ -488,6 +500,9 @@ const handlers: Record<string, (a: Args) => unknown> = {
     },
     {
       id: "opencode_go",
+      openaiPath: "/inference/go/v1",
+      anthropicPath: "/inference/go",
+      sessionHeader: "x-opencode-session",
       family: "opencode_go",
       region: null,
       name: "OpenCode Go",
@@ -506,6 +521,8 @@ const handlers: Record<string, (a: Args) => unknown> = {
     },
     {
       id: "openrouter",
+      openaiPath: "/api/v1",
+      anthropicPath: "/api",
       family: "openrouter",
       region: null,
       name: "OpenRouter",
@@ -518,6 +535,8 @@ const handlers: Record<string, (a: Args) => unknown> = {
     },
     {
       id: "deepseek",
+      openaiPath: "/v1",
+      anthropicPath: "/anthropic",
       family: "deepseek",
       region: null,
       name: "DeepSeek",
@@ -530,6 +549,8 @@ const handlers: Record<string, (a: Args) => unknown> = {
     },
     {
       id: "moonshot_cn",
+      openaiPath: "/v1",
+      anthropicPath: "/anthropic",
       family: "moonshot",
       region: "cn",
       name: "Kimi 开放平台",
@@ -542,6 +563,8 @@ const handlers: Record<string, (a: Args) => unknown> = {
     },
     {
       id: "moonshot_global",
+      openaiPath: "/v1",
+      anthropicPath: "/anthropic",
       family: "moonshot",
       region: "global",
       name: "Kimi 开放平台",
@@ -554,6 +577,8 @@ const handlers: Record<string, (a: Args) => unknown> = {
     },
     {
       id: "openai",
+      openaiPath: "/v1",
+      anthropicPath: null,
       family: "openai",
       region: null,
       name: "OpenAI",

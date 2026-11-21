@@ -36,9 +36,8 @@ pub(crate) struct Preset {
     pub(crate) region: Option<&'static str>,
     pub(crate) name: &'static str,
     pub(crate) origin: &'static str,
-    #[serde(skip)]
+    // 两个路径界面也要：「别的应用」里把完整地址给用户照着填。
     openai_path: &'static str,
-    #[serde(skip)]
     anthropic_path: Option<&'static str>,
     /// Anthropic 格式的地址只认 `Authorization: Bearer`，不认 `x-api-key`。
     #[serde(skip)]
@@ -52,7 +51,6 @@ pub(crate) struct Preset {
     pub(crate) only_tools: &'static [&'static str],
     /// 这家要求每段对话带的会话标记叫什么；不带的请求它直接拒绝。经过本机桥的
     /// 应用由桥补上，直接连厂商的应用只能写进它自己的设置里。
-    #[serde(skip)]
     pub(crate) session_header: Option<&'static str>,
     pub(crate) key_page: &'static str,
     /// 连接屏默认就露出来；不常用的收在「还有几家」里。
@@ -336,6 +334,28 @@ pub fn provider_open_key_page_v1(id: String) -> Result<(), String> {
 mod tests {
     use super::*;
     use crate::station_connect::connect_origin_is_acceptable;
+
+    #[test]
+    fn the_table_sent_to_the_ui_carries_what_it_needs_to_show_full_addresses() {
+        let rows = serde_json::to_value(provider_presets_v1()).unwrap();
+        let row = |id: &str| {
+            rows.as_array()
+                .unwrap()
+                .iter()
+                .find(|row| row["id"] == id)
+                .unwrap()
+                .clone()
+        };
+        let go = row("opencode_go");
+        assert_eq!(go["openaiPath"], "/inference/go/v1");
+        assert_eq!(go["anthropicPath"], "/inference/go");
+        assert_eq!(go["sessionHeader"], "x-opencode-session");
+        let bailian = row("bailian_coding");
+        assert_eq!(bailian["anthropicPath"], "/apps/anthropic");
+        assert!(bailian["sessionHeader"].is_null());
+        // 界面用不着的不发。
+        assert!(go.get("responses").is_none());
+    }
 
     #[test]
     fn every_preset_is_keyed_by_an_origin_the_rest_of_the_client_already_accepts() {
