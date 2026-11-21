@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { modelDisplayName } from "../model-profiles/profile";
 import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
@@ -32,6 +32,12 @@ export function Reveal({ joined, opening, openFailed, onOpen, onHome }: Props) {
     46,
   );
 
+  const root = useRef<HTMLDivElement>(null);
+  const shown = !!joined;
+  useEffect(() => {
+    if (shown) root.current?.focus();
+  }, [shown]);
+
   useEffect(() => {
     if (!joined) return;
     setSettled(prefersCalm());
@@ -59,6 +65,8 @@ export function Reveal({ joined, opening, openFailed, onOpen, onHome }: Props) {
       aria-modal="true"
       aria-label={t("kaifan.reveal.done")}
       data-testid="kaifan-reveal"
+      ref={root}
+      tabIndex={-1}
       style={{ ["--c" as string]: character.color }}
     >
       <div className="rv-bg" style={{ backgroundImage: `url(${art})` }} />

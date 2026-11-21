@@ -281,6 +281,19 @@ export function Join({
   const typed = useTyped(says);
   const stage = working || outcome ? "work" : "pick";
 
+  // 打开时把焦点带进面板，关掉时还给原来的按钮；换到「正在接」时也留在面板里。
+  const panel = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const opener = document.activeElement;
+    return () => {
+      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
+    };
+  }, [open]);
+  useEffect(() => {
+    if (open) panel.current?.focus();
+  }, [open, stage]);
+
   return (
     <div
       className={open ? "sheet on" : "sheet"}
@@ -294,6 +307,11 @@ export function Join({
         aria-modal="true"
         aria-label={t("kaifan.join.title")}
         style={{ ["--c" as string]: ROSTER[who].color }}
+        ref={panel}
+        tabIndex={-1}
+        onKeyDown={(event) => {
+          if (event.key === "Escape" && !working) onClose();
+        }}
       >
         {!working && (
           <button

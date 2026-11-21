@@ -670,9 +670,11 @@ canvas#fx {
     opacity 0.35s,
     visibility 0.35s;
 }
+/* 打开时立刻可见（只让透明度渐变），焦点才能当场放进面板。 */
 .sheet.on {
   opacity: 1;
   visibility: visible;
+  transition: opacity 0.35s;
 }
 .panel {
   position: relative;
@@ -1163,6 +1165,10 @@ a:focus-visible,
 .inp:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 2px;
+}
+.panel:focus,
+.reveal:focus {
+  outline: none;
 }
 /* 站点名和应用格子在真客户端里是能点的 */
 button.brand {

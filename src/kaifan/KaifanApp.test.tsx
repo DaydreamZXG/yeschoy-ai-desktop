@@ -1,4 +1,10 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "../i18n";
 import type { AccountProjection } from "../account/session";
@@ -113,6 +119,24 @@ describe("开饭首页自己会做的事", () => {
       expect(screen.getByTestId("kaifan-says").textContent).toContain("9.9.9"),
     );
     expect(screen.getByTitle("有新版本")).toBeInTheDocument();
+  });
+
+  it("打开接入：焦点进面板，下面的首页不再接键盘；按 Esc 关掉后焦点回到原来的按钮", async () => {
+    const { container } = render(<KaifanApp />);
+    const home = container.querySelector(".ui")!;
+    await waitFor(() => expect(home).not.toHaveAttribute("inert"));
+    const opener = screen.getByRole("button", { name: /接入新应用/ });
+    opener.focus();
+    fireEvent.click(opener);
+    const join = screen.getByTestId("kaifan-join");
+    await waitFor(() =>
+      expect(join).toContainElement(document.activeElement as HTMLElement),
+    );
+    expect(home).toHaveAttribute("inert");
+    expect(container.querySelector(".roster")).toHaveAttribute("inert");
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    await waitFor(() => expect(home).not.toHaveAttribute("inert"));
+    expect(opener).toHaveFocus();
   });
 
   it("没有新版本：不提这件事", () => {
