@@ -493,7 +493,7 @@ const handlers: Record<string, (a: Args) => unknown> = {
       name: "Ollama Cloud",
       origin: "https://ollama.com",
       billing: "plan",
-      keyCheck: "unverifiable",
+      keyCheck: { path: "/api/balance" },
       onlyTools: [],
       keyPage: "https://example.com/keys",
       common: true,
