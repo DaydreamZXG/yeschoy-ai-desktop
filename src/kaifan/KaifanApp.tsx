@@ -646,9 +646,9 @@ export function KaifanApp() {
           onPlan={(modelId, planId) =>
             change({ ...picks, plan: { ...picks.plan, [modelId]: planId } })
           }
-          onJoin={() => {
+          onJoin={(app) => {
             setCardOpen(false);
-            setup();
+            setup(app);
           }}
           onClose={() => setCardOpen(false)}
         />

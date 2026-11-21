@@ -201,7 +201,13 @@ describe("角色名片", () => {
     const props = setup();
     expect(screen.getByText("还没接任何应用。")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("kaifan-card-join"));
-    expect(props.onJoin).toHaveBeenCalled();
+    expect(props.onJoin).toHaveBeenCalledWith(undefined);
+  });
+
+  it("已经在干活：去接入时带上名片说的那个应用，接入屏讲的是同一次接入", () => {
+    const props = setup({ connections: [saved()] });
+    fireEvent.click(screen.getByTestId("kaifan-card-join"));
+    expect(props.onJoin).toHaveBeenCalledWith(saved().toolId);
   });
 
   it("转校生：没有擅长方向可写，型号和价格照常", () => {

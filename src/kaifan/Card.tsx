@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { AccountModel } from "../account/session";
+import type { ActivationToolId } from "../configuration/activation";
 import {
   DEFAULT_BILLING_GROUP,
   chooseBillingGroup,
@@ -34,7 +35,8 @@ interface Props {
   onModel: (modelId: string) => void;
   onPlan: (modelId: string, planId: string) => void;
   /** 「让她去接入」。 */
-  onJoin: () => void;
+  /** 去接入屏。带上名片正说着的那个应用，两边讲的才是同一次接入。 */
+  onJoin: (app?: ActivationToolId) => void;
   onClose: () => void;
 }
 
@@ -74,10 +76,17 @@ export function Card({
   });
   // 名片上写的是「她再去接入会用什么」，和接入屏问的是同一处：没挑过就沿用
   // 接好的那份，不拿一个默认的出来说「要重新接入」。
-  const modelId = joinModel(who, ids, jobs[0]?.saved, picks);
+  // 她接着好几个应用时说的是头一个，点「去接入」也是带着这一个过去。
+  const first = jobs[0];
+  const modelId = joinModel(who, ids, first?.saved, picks);
   const model = models.find((item) => item.id === modelId);
   const plans = useMemo(() => plansOf(model), [model]);
-  const kept = jobs.find((job) => job.modelId === modelId)?.planId;
+  const kept = first
+    ? [
+        { modelId: first.modelId, billingGroup: first.planId },
+        ...(first.saved.models ?? []),
+      ].find((item) => item.modelId === modelId)?.billingGroup
+    : undefined;
   const planId = model
     ? (pickedPlan(model, picks) ??
       (kept && plans.some((item) => item.id === kept)
@@ -150,7 +159,7 @@ export function Card({
             type="button"
             className="go"
             data-testid="kaifan-card-join"
-            onClick={onJoin}
+            onClick={() => onJoin(first?.id)}
           >
             {t("kaifan.card.join", { name })}
           </button>
