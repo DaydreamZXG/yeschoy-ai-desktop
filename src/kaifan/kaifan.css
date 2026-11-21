@@ -2441,6 +2441,20 @@ h4 + .set,
   line-height: 1.6;
   color: #fff;
 }
+.jn .mend button {
+  margin-left: 10px;
+  font-weight: 700;
+  color: var(--c);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.jn .mend button:disabled {
+  opacity: 0.5;
+}
+.jn .mend [role="alert"] {
+  display: block;
+  margin-top: 6px;
+}
 .jn .mend + .pf {
   margin-top: 14px;
 }

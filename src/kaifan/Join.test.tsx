@@ -6,7 +6,10 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { pickManualLocation } from "../installation/manualLocationApi";
+import {
+  clearManualLocation,
+  pickManualLocation,
+} from "../installation/manualLocationApi";
 import type { AccountModel } from "../account/session";
 import {
   activateDesktopTool,
@@ -41,6 +44,7 @@ vi.mock("../installation/api", async (original) => ({
 // 关掉打字机和声音：这里只看流程。
 vi.mock("../installation/manualLocationApi", () => ({
   pickManualLocation: vi.fn(),
+  clearManualLocation: vi.fn(),
 }));
 vi.mock("./sound", async (original) => ({
   ...(await original<typeof import("./sound")>()),
@@ -631,6 +635,25 @@ describe("接入：选应用、选人、点一下", () => {
     fireEvent.click(tell);
     await waitFor(() => expect(go()).toBeEnabled());
     expect(pointOut).toHaveBeenCalledWith("claude_desktop");
+  });
+
+  it("用的是用户指的那份：能换一个位置，也能改回自己找", async () => {
+    found([
+      target("codex_desktop"),
+      target("claude_desktop", { manualLocation: "in_use" }),
+    ]);
+    vi.mocked(clearManualLocation).mockResolvedValueOnce("cleared");
+    setup({ initialApp: "claude_desktop" });
+    expect(await screen.findByTestId("kaifan-join-pinned")).toHaveTextContent(
+      "你指给我的那份",
+    );
+    expect(screen.getByRole("button", { name: "换一个位置" })).toBeEnabled();
+    found([target("codex_desktop"), target("claude_desktop")]);
+    fireEvent.click(screen.getByRole("button", { name: "改回自己找" }));
+    await waitFor(() =>
+      expect(screen.queryByTestId("kaifan-join-pinned")).toBeNull(),
+    );
+    expect(clearManualLocation).toHaveBeenCalledWith("claude_desktop");
   });
 
   it("安装包交给了系统的安装窗口：等用户点完，回来说一声就核对并接着接入", async () => {

@@ -472,6 +472,9 @@
         "gone": "The {{app}} location you showed me earlier is gone. It may have moved or been uninstalled. Show me where it is now, or install it again."
       },
       "pointOut": "Show me where it is",
+      "pinned": "Using the copy of {{app}} you pointed me to.",
+      "repoint": "Pick another location",
+      "unpin": "Go back to finding it myself",
       "spot": {
         "unavailable": "The file picker didn't open. Try once more.",
         "wrong_file": "That isn't {{app}}. For a desktop app pick its .exe (the .app on a Mac); for a terminal tool pick its file or folder.",

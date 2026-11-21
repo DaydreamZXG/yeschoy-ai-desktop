@@ -19,6 +19,7 @@ import type { AccountLineId } from "../configuration/preview";
 import { useActivationTask } from "../configuration/useActivationTask";
 import type { InstallationProgress } from "../installation/api";
 import {
+  clearManualLocation,
   pickManualLocation,
   type ManualLocationOutcome,
 } from "../installation/manualLocationApi";
@@ -491,6 +492,16 @@ export function Join({
     if (result === "saved") return void look();
     if (result !== "cancelled") setSpot(result);
   };
+  // 指错了、或者后来装了新的一份：不再用指定的位置，改回自己找。
+  const forget = async () => {
+    if (spotting) return;
+    setSpotting(true);
+    setSpot(null);
+    const result = await clearManualLocation(app);
+    setSpotting(false);
+    if (result === "cleared") return void look();
+    setSpot(result);
+  };
   // 不接了，改回接入之前的样子。上次没做完的那一半也由这一步收掉。
   const undo = async () => {
     if (working || undoing || !saved) return;
@@ -778,6 +789,32 @@ export function Join({
             {broken && (
               <p className="mend" role="note" data-testid="kaifan-join-mend">
                 {t(`kaifan.join.mend.${broken}`, { app: appName })}
+              </p>
+            )}
+            {!missing && target?.manualLocation === "in_use" && (
+              <p className="mend" role="note" data-testid="kaifan-join-pinned">
+                {t("kaifan.join.pinned", { app: appName })}
+                <button
+                  type="button"
+                  className="sm"
+                  disabled={spotting}
+                  onClick={() => void pointOut()}
+                >
+                  {t("kaifan.join.repoint")}
+                </button>
+                <button
+                  type="button"
+                  className="sm"
+                  disabled={spotting}
+                  onClick={() => void forget()}
+                >
+                  {t("kaifan.join.unpin")}
+                </button>
+                {spot && (
+                  <span role="alert">
+                    {t(`kaifan.join.spot.${spot}`, { app: appName })}
+                  </span>
+                )}
               </p>
             )}
             {missing && (
