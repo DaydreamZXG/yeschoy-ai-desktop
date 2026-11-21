@@ -944,7 +944,9 @@ async fn installer_redirect_resume_never_appends_another_resource_etag() {
 mod cli_tools {
     use super::super::{catalog, cli};
     use reqwest::Url;
-    use std::{fs, io::Write, path::Path};
+    #[cfg(unix)]
+    use std::io::Write;
+    use std::{fs, path::Path};
 
     fn source(tool: &str, os: &str) -> catalog::Source {
         catalog::cli_source(tool, os, "x64").unwrap()
@@ -958,6 +960,8 @@ mod cli_tools {
         fs::create_dir_all(&path).unwrap();
         path
     }
+    // 解包只在 unix 上测（要看可执行位），这两个帮手也只在那边用。
+    #[cfg(unix)]
     fn tgz(path: &Path, build: impl FnOnce(&mut tar::Builder<flate2::write::GzEncoder<fs::File>>)) {
         let encoder =
             flate2::write::GzEncoder::new(fs::File::create(path).unwrap(), Default::default());
@@ -965,6 +969,7 @@ mod cli_tools {
         build(&mut builder);
         builder.into_inner().unwrap().finish().unwrap();
     }
+    #[cfg(unix)]
     fn file(builder: &mut tar::Builder<impl Write>, name: &str, body: &[u8], mode: u32) {
         let mut header = tar::Header::new_gnu();
         header.set_size(body.len() as u64);
