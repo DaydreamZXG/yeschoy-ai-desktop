@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AccountModel } from "../../account/session";
 import { HomeStage } from "./HomeStage";
@@ -140,6 +146,16 @@ describe("首页舞台", () => {
     fireEvent.click(screen.getByRole("button", { name: "还有 1 件事" }));
     expect(within(root).getByRole("status")).toHaveTextContent("正在连接");
     expect(root).toHaveAttribute("data-mood", "idle");
+  });
+
+  it("把当前角色的颜色交给左边栏，离开首页就收回", () => {
+    const root = document.documentElement;
+    stage();
+    expect(root.style.getPropertyValue("--stage-acc")).toBe("#36d68a");
+    fireEvent.click(strip("小鲸（DeepSeek）"));
+    expect(root.style.getPropertyValue("--stage-acc")).toBe("#4fb8ff");
+    cleanup();
+    expect(root.style.getPropertyValue("--stage-acc")).toBe("");
   });
 
   it("没连站点时由阿青迎新，不显示应用和余额", () => {

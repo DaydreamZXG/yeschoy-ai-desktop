@@ -16,7 +16,8 @@
 
   --lime: #c9fa10;
   --lime-ink: #111111;
-  --rail-width: 80px;
+  --rail-width: 88px;
+  --rail-gap: 8px;
   --content-width: 880px;
 
   --bg: #fafaf8;
@@ -53,7 +54,8 @@
 
 /* 首页舞台始终是深色的，浅色主题下它里面的面板也用这套深色。 */
 :root[data-theme="dark"],
-.home-stage {
+.home-stage,
+.app-shell[data-view="home"] > .workbench-sidebar {
   --bg: #0c0c0c;
   --sidebar: #0c0c0c;
   --surface: #151515;
@@ -147,14 +149,55 @@ pre {
   background: var(--bg);
 }
 
+/* 左边栏是一条浮着的薄玻璃，不是贴边的实心条：和首页的对话框、面板是同一种材质。 */
 .workbench-sidebar {
-  width: var(--rail-width);
+  top: var(--rail-gap);
+  z-index: 5;
+  box-sizing: border-box;
+  width: calc(var(--rail-width) - var(--rail-gap) * 2);
   min-height: 0;
-  height: 100vh;
+  height: calc(100vh - var(--rail-gap) * 2);
+  margin: var(--rail-gap);
   align-items: center;
-  padding: var(--space-16) var(--space-8);
-  border-right: 1px solid var(--line-soft);
-  background: var(--sidebar);
+  padding: var(--space-12) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-2xl);
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  box-shadow: 0 12px 32px -18px rgb(0 0 0 / 45%);
+  transition:
+    background 0.5s,
+    border-color 0.5s;
+}
+
+/* 首页：舞台铺满整个窗口，左边栏浮在第一条竖幅上，颜色跟着当前角色走。 */
+.app-shell[data-view="home"] > .desktop-home {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+
+.app-shell[data-view="home"] > .workbench-sidebar {
+  --lime: var(--stage-acc, #c9fa10);
+  grid-column: 1;
+  grid-row: 1;
+  border-color: color-mix(
+    in srgb,
+    var(--stage-acc, #fff) 26%,
+    rgb(255 255 255 / 14%)
+  );
+  background: color-mix(
+    in srgb,
+    var(--stage-acc, #4fb8ff) 9%,
+    rgb(6 10 28 / 52%)
+  );
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workbench-sidebar {
+    transition: none;
+  }
 }
 
 .workbench-brand {

@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -142,6 +143,15 @@ export function HomeStage({
   const strips: RosterId[] = available?.new
     ? [...ROSTER_IDS, "new"]
     : [...ROSTER_IDS];
+
+  // 左边栏浮在舞台上，要跟着当前角色换颜色；离开首页就还给它原来的青柠。
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--stage-acc", current.color);
+    return () => {
+      root.style.removeProperty("--stage-acc");
+    };
+  }, [current.color]);
 
   const [noticeAt, setNoticeAt] = useState(0);
   const notice = notices.length ? notices[noticeAt % notices.length] : null;

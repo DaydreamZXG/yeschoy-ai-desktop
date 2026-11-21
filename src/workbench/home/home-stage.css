@@ -12,6 +12,8 @@
   /* 竖幅的尺寸都按舞台自己的高宽算；老内核不认容器单位时退回视口单位。 */
   --u: 1vh;
   --w: 0.86vw;
+  /* 左边栏浮在舞台上时，它占掉的那一段宽度。 */
+  --rail: 0px;
   position: relative;
   height: 100vh;
   min-height: 560px;
@@ -70,8 +72,8 @@
 }
 
 .home-strip:first-child {
-  flex-basis: calc(var(--u) * 9);
-  --shift: calc(var(--u) * 4.5);
+  flex-basis: calc(var(--u) * 9 + var(--rail));
+  --shift: calc(var(--u) * 4.5 + var(--rail) / 2);
 }
 
 .home-strip:last-child {
@@ -263,7 +265,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  padding: 0 var(--space-24) max(var(--space-24), 4.5vh);
+  padding: 0 var(--space-24) max(var(--space-24), 4.5vh)
+    calc(var(--space-24) + var(--rail));
   pointer-events: none;
 }
 
@@ -824,4 +827,8 @@
 
 .home-panel .workbench-notice {
   margin: 0 0 var(--space-12);
+}
+
+.app-shell > .desktop-home > .home-stage {
+  --rail: var(--rail-width);
 }
