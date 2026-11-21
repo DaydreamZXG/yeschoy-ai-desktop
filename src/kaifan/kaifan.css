@@ -2130,7 +2130,8 @@ dialog.restore-dialog menu {
 }
 .days i {
   display: block;
-  height: max(3px, calc((100% - 18px) * var(--h, 0)));
+  flex: none;
+  height: max(3px, calc(68px * var(--bar, 0)));
   border-radius: 5px 5px 2px 2px;
   background: linear-gradient(180deg, var(--acc), rgba(255, 255, 255, 0.14));
 }
@@ -2180,13 +2181,36 @@ dialog.restore-dialog menu {
 .rw b {
   font: 600 13px var(--mono);
 }
-.jobs em {
-  flex: none;
-  min-width: 64px;
-  font: 600 12px var(--mono);
+/* 最近几笔：左边型号，下面一行时间和应用，右边金额。 */
+.txs {
+  list-style: none;
+  display: grid;
+  gap: 9px;
+  font-size: 13px;
+}
+.txs li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: 12px;
+}
+.txs b {
+  font-weight: 600;
+  color: #fff;
+  overflow-wrap: anywhere;
+}
+.txs span {
+  grid-column: 1;
+  font-size: 11px;
+  color: var(--faint);
+  overflow-wrap: anywhere;
+}
+.txs em {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  font: 600 13px var(--mono);
   font-style: normal;
   color: #fff;
-  text-align: right;
 }
 .nws {
   list-style: none;

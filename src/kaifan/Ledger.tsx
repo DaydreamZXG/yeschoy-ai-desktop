@@ -99,9 +99,11 @@ export function Ledger({
   const top = view
     ? Math.max(0, ...view.days.map((day) => day.amount ?? 0))
     : 0;
-  const most = view
-    ? Math.max(0, ...view.eaters.map((eater) => eater.amount ?? eater.requests))
-    : 0;
+  // 有人的金额看不到时排行是按次数排的，条的长短也按次数画，不混着比。
+  const priced = !!view?.eaters.every((eater) => eater.amount !== null);
+  const weight = (eater: { amount: number | null; requests: number }) =>
+    priced ? eater.amount! : eater.requests;
+  const most = view ? Math.max(0, ...view.eaters.map(weight)) : 0;
   const date = (at: number, options: Intl.DateTimeFormatOptions) =>
     new Intl.DateTimeFormat(locale, options).format(at);
 
@@ -170,7 +172,7 @@ export function Ledger({
                         className={day.amount === null ? "na" : undefined}
                         title={`${label} · ${amount ?? unknown}`}
                         style={{
-                          ["--h" as string]:
+                          ["--bar" as string]:
                             day.amount && top ? day.amount / top : 0,
                         }}
                       >
@@ -221,7 +223,7 @@ export function Ledger({
                             className="br"
                             style={{
                               width: most
-                                ? `${Math.max(3, ((eater.amount ?? eater.requests) / most) * 100)}%`
+                                ? `${Math.max(3, (weight(eater) / most) * 100)}%`
                                 : "3%",
                             }}
                           />
@@ -237,7 +239,7 @@ export function Ledger({
               {view.latest.length > 0 && (
                 <section>
                   <h4>{t("kaifan.ledger.latest")}</h4>
-                  <ul className="jobs" data-testid="kaifan-ledger-latest">
+                  <ul className="txs" data-testid="kaifan-ledger-latest">
                     {view.latest.map((record, index) => (
                       <li key={`${record.observedAtEpochMs}-${index}`}>
                         <b>{modelDisplayName(record.modelId)}</b>

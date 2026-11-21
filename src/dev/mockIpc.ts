@@ -144,7 +144,10 @@ function account(requestId: string, status: string) {
 
 function mockUsageLog() {
   const day = 86_400_000;
-  const end = 1_788_195_600_000;
+  // 相对现在往回排，「最近七天」里才有东西可看。
+  const end = Date.now() - 20 * 60_000;
+  // `?s=ledger_partial`：明细只读到五天前，还有一笔没带金额。
+  const partial = scenario === "ledger_partial";
   const pairs = [
     ["claude_desktop", "glm-5.3"],
     ["codex_desktop", "gpt-5.6-codex"],
@@ -152,7 +155,7 @@ function mockUsageLog() {
     ["", "deepseek-v4-flash"],
   ];
   const records = [];
-  for (let d = 0; d < 14; d++) {
+  for (let d = 0; d < (partial ? 5 : 14); d++) {
     const n = 1 + ((d * 7 + 3) % 5);
     for (let i = 0; i < n; i++) {
       const [toolId, modelId] = pairs[(d + i) % pairs.length];
@@ -164,7 +167,7 @@ function mockUsageLog() {
         promptTokens: prompt,
         completionTokens: Math.round(prompt / 3),
         cacheTokens: (i % 2) * 400,
-        amount: (prompt / 2000).toFixed(2),
+        amount: partial && d === 1 && i === 0 ? "" : (prompt / 2000).toFixed(2),
       });
     }
   }
@@ -174,8 +177,8 @@ function mockUsageLog() {
     recordCount: records.length,
     scannedCount: records.length,
     windowDays: 30,
-    truncated: false,
-    oldestAtEpochMs: records[records.length - 1].observedAtEpochMs,
+    truncated: partial,
+    oldestAtEpochMs: Math.min(...records.map((r) => r.observedAtEpochMs)),
     newestAtEpochMs: end,
     records,
   };
