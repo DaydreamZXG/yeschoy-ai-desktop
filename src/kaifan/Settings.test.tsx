@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "../i18n";
@@ -320,6 +321,55 @@ describe("Settings", () => {
     );
     fireEvent.click(screen.getByTestId("kaifan-settings-check-act"));
     expect(props.onConnect).toHaveBeenCalled();
+  });
+
+  it("体检结果能复制给帮忙的人：只有状态词和应用代号，没有地址和账户", async () => {
+    const writeText = vi.fn(async (_text: string) => undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    show({
+      host: "secret.example",
+      connections: [app("claude_code", { state: "changed" }), app("pi")],
+      checkup: {
+        ...idleCheck,
+        report: reportOf({
+          online: true,
+          probe: { ok: true as const, probe: {} as never },
+          status: "signed_in",
+          connections: [app("claude_code", { state: "changed" }), app("pi")],
+          connectionsFailed: false,
+        }),
+      },
+    });
+    fireEvent.click(screen.getByTestId("kaifan-settings-check-copy"));
+    await waitFor(() => expect(writeText).toHaveBeenCalled());
+    const text = writeText.mock.calls[0][0];
+    expect(text).toContain("version: 0.6.0");
+    expect(text).toContain("claude_code: changed");
+    expect(text).toContain("verdict: repair");
+    expect(text).not.toContain("secret.example");
+    expect(await screen.findByText(/复制好了/)).toBeInTheDocument();
+    writeText.mockRejectedValueOnce(new Error("denied"));
+    fireEvent.click(screen.getByTestId("kaifan-settings-check-copy"));
+    expect(await screen.findByText(/没复制成/)).toBeInTheDocument();
+  });
+
+  it("没体检过就没有结果可复制", () => {
+    show();
+    expect(screen.queryByTestId("kaifan-settings-check-copy")).toBeNull();
+  });
+
+  it("说清数据放在哪、会不会上传；退出客户端交给那一问去办", () => {
+    const asked = vi.fn();
+    window.addEventListener("yeschoy:open-exit-choice", asked);
+    show();
+    expect(screen.getByTestId("kaifan-settings-privacy")).toHaveTextContent(
+      "密码库",
+    );
+    fireEvent.click(
+      within(screen.getByTestId("kaifan-settings-quit")).getByRole("button"),
+    );
+    expect(asked).toHaveBeenCalledOnce();
+    window.removeEventListener("yeschoy:open-exit-choice", asked);
   });
 
   it("更新：有新版本给安装，查不到给再试和官网下载", () => {

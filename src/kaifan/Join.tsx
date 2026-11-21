@@ -59,6 +59,8 @@ export interface Joined {
   modelId: string;
   /** 应用有没有替用户打开。没打开时照实说，不说成「已经在用了」。 */
   opened: boolean;
+  /** 没能替用户打开时，后端说得出的具体原因。 */
+  why?: string;
   /** 名单里这次没接上的型号（站点没让用）。有就要告诉用户，不能当作全成了。 */
   skipped: string[];
 }
@@ -396,6 +398,7 @@ export function Join({
         who,
         modelId,
         opened: next.kind === "done",
+        why: next.why,
         skipped: [
           ...new Set((result.skipped ?? []).map((item) => item.modelId)),
         ],
@@ -568,19 +571,28 @@ export function Join({
   const broken = brokenOf(saved?.state);
   // 没装的应用现在能怎么办：我们替他装、只能去官网装、官方没有适合这台电脑的
   // 安装包，或者装了但不完整。
-  const need = !absent
-    ? "incomplete"
-    : selfInstall
-      ? "fetch"
-      : mode === "unsupported"
-        ? "unsupported"
-        : "guided";
+  const need =
+    target?.manualLocation === "unavailable"
+      ? "gone"
+      : !absent
+        ? "incomplete"
+        : selfInstall
+          ? "fetch"
+          : mode === "unsupported"
+            ? "unsupported"
+            : "guided";
   const says = undoing
     ? t("kaifan.join.undoing", { app: appName, name })
     : undone
       ? t(`kaifan.settings.${undone}`, { app: appName })
       : outcome
-        ? t(`kaifan.join.say.${outcome.kind}`, { app: appName, name, ...plan })
+        ? outcome.why
+          ? t(`kaifan.why.${outcome.why}`, { app: appName })
+          : t(`kaifan.join.say.${outcome.kind}`, {
+              app: appName,
+              name,
+              ...plan,
+            })
         : applying
           ? t("kaifan.join.working", { app: appName, name })
           : installing

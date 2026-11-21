@@ -524,7 +524,10 @@ describe("接入：选应用、选人、点一下", () => {
     fireEvent.click(go());
     await waitFor(() => expect(props.onJoined).toHaveBeenCalled());
     expect(props.onJoined).toHaveBeenCalledWith(
-      expect.objectContaining({ opened: false }),
+      expect.objectContaining({
+        opened: false,
+        why: "desktop_launch_start_failed",
+      }),
     );
   });
 
@@ -538,6 +541,16 @@ describe("接入：选应用、选人、点一下", () => {
     answer("ready", "configuration_ready");
     fireEvent.click(screen.getByRole("button", { name: "再试一次" }));
     await waitFor(() => expect(props.onJoined).toHaveBeenCalled());
+  });
+
+  it("后端说得出为什么没接成：说原因和出路，不只说再试一次", async () => {
+    setup();
+    await ready();
+    answer("configuration_failed", "configuration_readback_failed");
+    fireEvent.click(go());
+    await waitFor(() => expect(says()).toContain("杀毒软件或云同步盘"));
+    expect(says()).not.toContain("这次没接成");
+    expect(screen.getByRole("button", { name: "再试一次" })).toBeEnabled();
   });
 
   it("登录不算数了：带去重新连站点", async () => {
@@ -1161,6 +1174,16 @@ describe("角色登场", () => {
       screen.getByRole("button", { name: /打开 Claude Desktop/ }),
     );
     expect(props.onOpen).toHaveBeenCalled();
+  });
+
+  it("没打开成、后端说得出原因：说那个原因和出路，不说笼统的那句", () => {
+    show({
+      joined: { ...joined, opened: false, why: "desktop_launch_access_denied" },
+      openFailed: true,
+    });
+    const text = screen.getByTestId("kaifan-reveal").textContent ?? "";
+    expect(text).toContain("系统拦住了这次启动");
+    expect(text).not.toContain("没能替你打开");
   });
 
   it("没打开成：照实说，设置还在", () => {

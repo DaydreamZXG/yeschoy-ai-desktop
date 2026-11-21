@@ -4,8 +4,8 @@ import { emit, listen } from "@tauri-apps/api/event";
 import {
   decodeStationConnectProgress,
   STATION_CONNECT_PROGRESS_EVENT,
+  STATION_TRUST_SYNC_EVENT,
 } from "../account/stationConnect";
-import { STATION_TRUST_SYNC_EVENT } from "../account/StationTrustDialog";
 import type { AccountProjection } from "../account/session";
 import { isAccountLineId, type AccountLineId } from "../configuration/preview";
 

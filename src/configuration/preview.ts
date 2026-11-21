@@ -13,7 +13,8 @@ export type ConfigurationLineId = "mainland_optimized" | "global_accelerated";
 
 export const STATION_CONNECT_LINE_PREFIX = "station_connect:";
 
-export type StationConnectLineId = `${typeof STATION_CONNECT_LINE_PREFIX}${string}`;
+export type StationConnectLineId =
+  `${typeof STATION_CONNECT_LINE_PREFIX}${string}`;
 
 /** A station the user connected by pasting its address and an API key. */
 export const STATION_KEY_LINE_PREFIX = "station_key:";
@@ -43,20 +44,6 @@ export function isAccountLineId(lineId: string): lineId is AccountLineId {
     isStationConnectLineId(lineId) ||
     isStationKeyLineId(lineId)
   );
-}
-
-/** Preview UI only knows catalog lines; map station sessions to the closest root. */
-export function catalogLineForPreview(lineId: AccountLineId): ConfigurationLineId {
-  if (lineId === "mainland_optimized" || lineId === "global_accelerated") {
-    return lineId;
-  }
-  if (lineId === "station_connect:https://yeschoy.com") {
-    return "mainland_optimized";
-  }
-  if (lineId === "station_connect:https://api.yeschoy.com") {
-    return "global_accelerated";
-  }
-  return "mainland_optimized";
 }
 
 export interface ConfigurationToolDefinition {

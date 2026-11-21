@@ -1,3 +1,4 @@
+import { whyOf } from "./joinOutcome";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -19,7 +20,7 @@ import {
 } from "../configuration/preview";
 import { isImageGenerationModel } from "../model-profiles/profile";
 import { refreshModelCatalog } from "../model-profiles/remoteCatalog";
-import { ShutdownHost } from "../settings/QuitAssistant";
+import { ShutdownHost } from "./Shutdown";
 import { useDesktopUpdate } from "../update/UpdateProvider";
 import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
 import { Boot } from "./Boot";
@@ -406,8 +407,12 @@ export function KaifanApp() {
     if (!joined) return;
     const result = await connections
       .open(joined.toolId)
-      .catch(() => ({ status: "launch_failed" as const }));
-    if (result.status === "opened") setJoined({ ...joined, opened: true });
+      .catch(() => ({ status: "launch_failed" as const, reasonCode: "" }));
+    setJoined({
+      ...joined,
+      opened: result.status === "opened",
+      why: whyOf(result.reasonCode) ?? whyOf(`open_${result.status}`),
+    });
     setOpenFailed(result.status !== "opened");
   };
   // —— 账本和公告 ——

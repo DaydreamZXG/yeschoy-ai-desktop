@@ -20,11 +20,11 @@ Rust：
 
 前端：
 - `src/configuration/activation.ts`：`ACTIVATION_TOOL_IDS`
-- `src/configuration/preview.ts`、`ConfigurationPreviewView.tsx`
+- `src/configuration/preview.ts`
+- `src/kaifan/Join.tsx`、`src/kaifan/roster.ts`：接入屏上的应用和谁能去接
 - `src/workbench/appCatalog.ts`：从「即将支持」移到正式列表
-- `src/installation/toolInstallGuide.ts`
-- `src/settings/AdvancedConnectionDetails.tsx`、`QuitAssistant.tsx`
-- `src/i18n/locales/*.json`：`yeschoyCatalog.appDescription.<id>` 等
+- `src/kaifan/Settings.tsx`、`src/kaifan/Shutdown.tsx`：改回原样和退出时的处理
+- `src/i18n/locales/*.json`：`kaifan.join.*` 里要用到应用名的句子
 - `src/dev/mockIpc.ts`
 
 ## OpenCode（估 1–1.5 天）

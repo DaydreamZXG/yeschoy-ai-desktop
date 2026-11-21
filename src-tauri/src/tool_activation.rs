@@ -290,7 +290,7 @@ enum ActivationFailure {
     /// judged a model unusable from an absent or unreliable declaration. The
     /// variants stay only so the renderer keeps its recovery copy for an older
     /// native binary; do not reach for them to add a gate back without a
-    /// signal you can trust. See src/configuration/modelCompatibility.ts.
+    /// signal you can trust. See docs/model-gate-withdrawn.md.
     UnsupportedModel,
     ServerUnavailable,
     Adapter(AdapterFailure),
@@ -518,7 +518,7 @@ async fn validate_models(
             // with nothing the user could have done differently. The relay
             // decides whether a group is valid, and says so plainly when it
             // is not. Same reasoning as the model gate; see
-            // src/configuration/modelCompatibility.ts.
+            // docs/model-gate-withdrawn.md.
             if tool_id == "codex_desktop" {
                 codex_transport(&pricing, model_id)
                     .map(ModelTransport::Codex)
@@ -540,8 +540,8 @@ async fn validate_models(
 
 /// Every model the account lists can be activated for every target.
 ///
-/// There used to be a protocol gate here, mirrored in
-/// `src/configuration/modelCompatibility.ts`. It was withdrawn: it never got
+/// There used to be a protocol gate here, mirrored in the renderer. It was
+/// withdrawn (see `docs/model-gate-withdrawn.md`): it never got
 /// a verdict right, and every error ran the same way -- treating what we did
 /// not know as something that does not work. The relay does not gate on
 /// `supported_endpoint_types` either (zero references under `relay/`; only
@@ -5183,7 +5183,7 @@ mod tests {
     fn every_listed_model_can_be_activated_for_every_target() {
         // 闸门撤掉了。这里钉住的是「撤掉」这个决定本身：无论模型声明了什么、
         // 声明了空的、还是压根不在价目表里，六个目标都不拒绝。理由和查证过的
-        // 中转事实写在 src/configuration/modelCompatibility.ts 顶部。
+        // 中转事实写在 docs/model-gate-withdrawn.md。
         let pricing = json!({
             "success": true,
             "data": [

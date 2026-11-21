@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  aggregateUsage,
-  isUsageLogReport,
-  type UsageRecord,
-} from "./usage";
+import { aggregateUsage, isUsageLogReport, type UsageRecord } from "./usage";
 
 function record(overrides: Partial<UsageRecord>): UsageRecord {
   return {
@@ -91,12 +87,10 @@ describe("usage log report boundary", () => {
     ]);
     // 0.1 + 0.2 的浮点和应为 0.30000000000000004 → EPSILON 容差收敛为 0.3。
     expect(rows.find((r) => r.modelId === "gpt-6-astra")?.amount).toBe(0.3);
-    expect(
-      rows.find((r) => r.modelId === "gpt-6-astra")?.requests,
-    ).toBe(2);
-    expect(
-      rows.find((r) => r.modelId === "gpt-6-astra")?.promptTokens,
-    ).toBe(15);
+    expect(rows.find((r) => r.modelId === "gpt-6-astra")?.requests).toBe(2);
+    expect(rows.find((r) => r.modelId === "gpt-6-astra")?.promptTokens).toBe(
+      15,
+    );
     // claude_code + claude-sonnet-4-6 与 codex_desktop + 同模型是不同行。
     expect(rows).toHaveLength(3);
     // 任一记录金额缺失 → 该行金额为 null（不显示，不猜）。

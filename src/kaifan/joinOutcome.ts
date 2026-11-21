@@ -54,7 +54,50 @@ export interface JoinOutcome {
   kind: JoinKind;
   mood: Mood;
   action: JoinAction;
+  /** 后端给的原因有自己的一句话时带上：界面说它，不说笼统的那句。 */
+  why?: string;
 }
+
+/**
+ * 有自己一句话的原因（文案在 `kaifan.why.<原因>`）。笼统的「这次没接成，再试
+ * 一次」既没说原因也没给出路，杀毒软件占着文件的人再试多少次都一样。
+ */
+const WHY = new Set([
+  "claude_login_not_released",
+  "claude_login_takeover_failed",
+  "codex_history_takeover_conflict",
+  "codex_history_takeover_failed",
+  "codex_history_takeover_recovery_failed",
+  "configuration_parse_failed",
+  "configuration_read_failed",
+  "configuration_write_failed",
+  "configuration_readback_failed",
+  "credential_helper_failed",
+  "home_unavailable",
+  "recovery_storage_unavailable",
+  "terminal_launch_failed",
+  "terminal_unavailable",
+  "workspace_unavailable",
+  "invalid_launch_target",
+  "launch_target_missing",
+  "desktop_launch_exit_failed",
+  "desktop_launch_wait_failed",
+  "desktop_start_unconfirmed",
+  "desktop_launch_target_changed",
+  "desktop_launch_start_failed",
+  "desktop_launch_access_denied",
+  // 「打开」那一下没成、而后端只给了状态没给原因的几种。
+  "open_not_connected",
+  "open_settings_changed",
+  "open_recovery_pending",
+  "open_secure_storage_unavailable",
+  "open_tool_not_found",
+  "open_busy",
+]);
+export const whyOf = (reason: string | undefined) =>
+  reason && WHY.has(reason) ? reason : undefined;
+/** 只说了「没成」「写好了」的那几种，才换成具体的原因。 */
+const VAGUE = new Set<JoinKind>(["retry", "restored", "written"]);
 
 const AUTH = new Set(["signed_out", "authentication_failed"]);
 const STATION = new Set([
@@ -91,10 +134,19 @@ const outcome = (
   mood: Mood = "panic",
 ): JoinOutcome => ({ kind, mood, action });
 
-export function joinOutcome(
-  result: Pick<ToolActivationProjection, "status" | "reasonCode" | "skipped"> &
-    Partial<Pick<ToolActivationProjection, "modelId">>,
-): JoinOutcome {
+type Result = Pick<
+  ToolActivationProjection,
+  "status" | "reasonCode" | "skipped"
+> &
+  Partial<Pick<ToolActivationProjection, "modelId">>;
+
+export function joinOutcome(result: Result): JoinOutcome {
+  const base = judge(result);
+  const why = whyOf(result.reasonCode);
+  return why && VAGUE.has(base.kind) ? { ...base, why } : base;
+}
+
+function judge(result: Result): JoinOutcome {
   const reason = result.reasonCode;
   if (
     AUTH.has(result.status) ||

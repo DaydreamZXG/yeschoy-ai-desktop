@@ -5,8 +5,10 @@ import {
   stationConnectPageUrl,
 } from "../../connect/stationConnectPage";
 import type { AccountLineId } from "../configuration/preview";
-import { isOfficialDistribution } from "../distribution/identity";
-import { REFERENCE_STATION_ORIGIN } from "../distribution/softTraffic";
+import {
+  isOfficialDistribution,
+  REFERENCE_STATION_ORIGIN,
+} from "../distribution/identity";
 
 export const STATION_ORIGIN_DRAFT_KEY = "yeschoy.stationConnectOriginDraft";
 

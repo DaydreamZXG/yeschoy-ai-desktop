@@ -8,11 +8,9 @@ frontend:
           - "index.html"
           - "vite.config.ts"
           - "vitest.config.ts"
-          - "tailwind.config.cjs"
           - "postcss.config.cjs"
           - "tsconfig.json"
           - "tsconfig.node.json"
-          - "components.json"
           - "tests/**"
 
 backend:

@@ -58,17 +58,12 @@ function safeText(
 }
 
 function nonNegativeInteger(value: unknown): value is number {
-  return (
-    typeof value === "number" &&
-    Number.isSafeInteger(value) &&
-    value >= 0
-  );
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 
 function decimalText(value: unknown): value is string {
   return (
-    typeof value === "string" &&
-    (value === "" || /^\d+(\.\d+)?$/.test(value))
+    typeof value === "string" && (value === "" || /^\d+(\.\d+)?$/.test(value))
   );
 }
 
@@ -104,9 +99,7 @@ export function isUsageLogReport(value: unknown): value is UsageLogReport {
 }
 
 /** 工具 × 模型聚合（金额用 EPSILON 容差累加，缺失即整体置 null）。 */
-export function aggregateUsage(
-  records: UsageRecord[],
-): UsageAggregateRow[] {
+export function aggregateUsage(records: UsageRecord[]): UsageAggregateRow[] {
   const rows = new Map<string, UsageAggregateRow>();
   for (const record of records) {
     const key = `${record.toolId}\u0000${record.modelId}`;
@@ -125,9 +118,7 @@ export function aggregateUsage(
     row.cacheTokens += record.cacheTokens;
     if (row.amount !== null) {
       row.amount =
-        record.amount === ""
-          ? null
-          : row.amount + Number(record.amount);
+        record.amount === "" ? null : row.amount + Number(record.amount);
     }
     rows.set(key, row);
   }

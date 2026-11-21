@@ -1,26 +1,14 @@
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  renderHook,
-  screen,
-  within,
-  waitFor,
-} from "@testing-library/react";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { StrictMode } from "react";
 import { onlineManager } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import {
   CONNECTION_INSPECTION_DEADLINE_MS,
-  ConnectionProvider,
   decodeConnections,
   useToolConnections,
-  type ToolConnection,
 } from "./connections";
 import { connectionsFixture } from "./connection-test-fixtures";
-import { RestoreConnection } from "./RestoreConnection";
 import { OPEN_REQUEST_DEADLINE_MS } from "./launchApi";
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 const native = vi.mocked(invoke);
@@ -97,7 +85,7 @@ describe("reversible local connections", () => {
       await act(async () => {
         await result.current.refresh();
       });
-    await waitFor(() => expect(result.current.connections).toHaveLength(8));
+      await waitFor(() => expect(result.current.connections).toHaveLength(8));
       expect(result.current.error).toBe(false);
       expect(result.current.errorInfo).toBeUndefined();
     },
@@ -377,147 +365,4 @@ describe("reversible local connections", () => {
       expect(result.current.error).toBe(failRestore);
     },
   );
-  it.each(["original", "remove_yeschoy"] as const)(
-    "confirms %s recovery, preserves the cancel path and describes its limit",
-    async (mode) => {
-      const connection: ToolConnection = {
-        ...connectionsFixture("one").connections[0],
-        state: mode === "original" ? "connected" : "legacy",
-        restoreMode: mode,
-        modelId: "glm-5.3",
-      };
-      const restore = vi.fn().mockResolvedValue({
-        ...connectionsFixture("one"),
-        status: "restored_with_changes",
-      });
-      render(
-        <ConnectionProvider
-          value={{
-            connections: [connection],
-            loading: false,
-            error: false,
-            restoring: null,
-            opening: null,
-            open: vi.fn(),
-            refresh: vi.fn(),
-            restore,
-          }}
-        >
-          <RestoreConnection connection={connection} name="Claude Code" />
-        </ConnectionProvider>,
-      );
-      const label = mode === "original" ? "恢复原设置" : "撤销野菜设置";
-      fireEvent.click(screen.getByRole("button", { name: label }));
-      const dialog = screen.getByRole("dialog");
-      expect(
-        within(dialog).getByRole("button", { name: "先不恢复" }),
-      ).toHaveFocus();
-      expect(restore).not.toHaveBeenCalled();
-      if (mode === "remove_yeschoy")
-        expect(dialog).toHaveTextContent("无法找回原来的值");
-      fireEvent.click(within(dialog).getByRole("button", { name: "先不恢复" }));
-      expect(restore).not.toHaveBeenCalled();
-      fireEvent.click(screen.getByRole("button", { name: label }));
-      await act(async () => {
-        fireEvent.click(
-          within(screen.getByRole("dialog")).getByRole("button", {
-            name: label,
-          }),
-        );
-      });
-      expect(restore).toHaveBeenCalledWith("claude_code", true);
-      expect(screen.getByRole("status")).toHaveTextContent(
-        "你之后修改的内容已保留",
-      );
-    },
-  );
-  it("asks about key revocation separately and keeps the key when unchecked", async () => {
-    const connection: ToolConnection = {
-      ...connectionsFixture("one").connections[0],
-      state: "connected",
-      restoreMode: "original",
-      modelId: "glm-5.3",
-    };
-    const restore = vi.fn().mockResolvedValue({
-      ...connectionsFixture("one"),
-      status: "restored",
-      reasonCode: "local_settings_restored_token_kept",
-    });
-    render(
-      <ConnectionProvider
-        value={{
-          connections: [connection],
-          loading: false,
-          error: false,
-          restoring: null,
-          opening: null,
-          open: vi.fn(),
-          refresh: vi.fn(),
-          restore,
-        }}
-      >
-        <RestoreConnection connection={connection} name="Claude Code" />
-      </ConnectionProvider>,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "恢复原设置" }));
-    const dialog = screen.getByRole("dialog");
-    const revoke = within(dialog).getByRole("checkbox", {
-      name: /同时撤销此应用的专用 Key/,
-    });
-    expect(revoke).toBeChecked();
-    expect(dialog).toHaveTextContent("立即失效，不再产生任何计费");
-    fireEvent.click(revoke);
-    expect(revoke).not.toBeChecked();
-    expect(dialog).toHaveTextContent("仍然有效且可能继续计费");
-    await act(async () => {
-      fireEvent.click(
-        within(dialog).getByRole("button", { name: "恢复原设置" }),
-      );
-    });
-    expect(restore).toHaveBeenCalledWith("claude_code", false);
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "已按你的选择保留",
-    );
-  });
-  it("offers the restore action as the retry entry when revocation fails", async () => {
-    const connection: ToolConnection = {
-      ...connectionsFixture("one").connections[0],
-      state: "connected",
-      restoreMode: "original",
-      modelId: "glm-5.3",
-    };
-    const restore = vi.fn().mockResolvedValue({
-      ...connectionsFixture("one"),
-      status: "restored",
-      reasonCode: "local_settings_restored_token_cleanup_pending",
-    });
-    render(
-      <ConnectionProvider
-        value={{
-          connections: [connection],
-          loading: false,
-          error: false,
-          restoring: null,
-          opening: null,
-          open: vi.fn(),
-          refresh: vi.fn(),
-          restore,
-        }}
-      >
-        <RestoreConnection connection={connection} name="Claude Code" />
-      </ConnectionProvider>,
-    );
-    fireEvent.click(screen.getByRole("button", { name: "恢复原设置" }));
-    await act(async () => {
-      fireEvent.click(
-        within(screen.getByRole("dialog")).getByRole("button", {
-          name: "恢复原设置",
-        }),
-      );
-    });
-    expect(restore).toHaveBeenCalledWith("claude_code", true);
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "再次点击「恢复原设置」即可重试撤销",
-    );
-  });
 });

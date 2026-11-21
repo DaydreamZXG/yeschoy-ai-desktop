@@ -3,6 +3,11 @@
 Reference for engineers debugging UX around「我的应用」、站点 `/desktop/connect`、与 `account_inspect`.
 Derived from code and `docs/station-connect-protocol.md` — not a product spec.
 
+> **Renderer note:** the classic renderer was removed. The native side (`src-tauri/`, `connect/`) described
+> below is unchanged, but `src/App.tsx`, `AppLibraryView.tsx`, `StationConnectOriginForm.tsx`, `AccountView`,
+> `useStationConnect.ts`, `stationConnectLoopback.ts` and `softTraffic.ts` no longer exist. The same steps are
+> now driven by `src/kaifan/Connect.tsx`, `src/kaifan/useStationLink.ts` and `src/account/stationConnect.ts`.
+
 ## 1) Cold start, no keyring session (official build)
 
 | Step | What happens |

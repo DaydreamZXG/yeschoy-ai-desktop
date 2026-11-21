@@ -14,9 +14,10 @@ import {
   type Language,
 } from "../i18n/language";
 import { useDesktopUpdate } from "../update/UpdateProvider";
-import type { CheckReport } from "./checkup";
+import { reportText, type CheckReport } from "./checkup";
 import { Drawer } from "./Drawer";
 import type { Mood, RosterId } from "./roster";
+import { askToQuit } from "./Shutdown";
 import { isMuted, setMuted, sound } from "./sound";
 import { undoKey } from "./undo";
 
@@ -82,10 +83,12 @@ export function Settings({
   const [asking, setAsking] = useState<"logout" | ToolId | null>(null);
   const [leaving, setLeaving] = useState(false);
   const [muted, setMute] = useState(isMuted);
+  const [copied, setCopied] = useState<"yes" | "no" | null>(null);
   useEffect(() => {
     if (open) return;
     setSaid(null);
     setAsking(null);
+    setCopied(null);
   }, [open]);
 
   const language = (SUPPORTED_LANGUAGES as readonly string[]).includes(
@@ -162,6 +165,17 @@ export function Settings({
       }),
       mood: "panic",
     };
+  };
+  const copy = async () => {
+    if (!report) return;
+    try {
+      await navigator.clipboard.writeText(
+        reportText(report, connections, update.projection.currentVersion),
+      );
+      setCopied("yes");
+    } catch {
+      setCopied("no");
+    }
   };
   const act =
     !report || checkup.running
@@ -379,6 +393,22 @@ export function Settings({
                   {act.label}
                 </button>
               )}
+              <div className="set">
+                <span>
+                  {t("kaifan.settings.check.copyNote")}
+                  <small role="status">
+                    {copied && t(`kaifan.settings.check.copied.${copied}`)}
+                  </small>
+                </span>
+                <button
+                  type="button"
+                  className="sb"
+                  data-testid="kaifan-settings-check-copy"
+                  onClick={() => void copy()}
+                >
+                  {t("kaifan.settings.check.copy")}
+                </button>
+              </div>
             </>
           )}
         </section>
@@ -482,6 +512,15 @@ export function Settings({
       )}
 
       <section>
+        <h4>{t("kaifan.settings.privacy")}</h4>
+        <ul className="chk" data-testid="kaifan-settings-privacy">
+          {(["keys", "apps", "reports"] as const).map((item) => (
+            <li key={item}>{t(`kaifan.settings.privacyNote.${item}`)}</li>
+          ))}
+        </ul>
+      </section>
+
+      <section>
         <h4>{t("kaifan.settings.about")}</h4>
         <div className="set" data-testid="kaifan-settings-update">
           <span>
@@ -527,6 +566,17 @@ export function Settings({
             </a>
           </p>
         )}
+      </section>
+      <section>
+        <div className="set" data-testid="kaifan-settings-quit">
+          <span>
+            {t("kaifan.settings.quit")}
+            <small>{t("kaifan.settings.quitNote")}</small>
+          </span>
+          <button type="button" className="sb" onClick={askToQuit}>
+            {t("kaifan.settings.quitAction")}
+          </button>
+        </div>
       </section>
     </Drawer>
   );

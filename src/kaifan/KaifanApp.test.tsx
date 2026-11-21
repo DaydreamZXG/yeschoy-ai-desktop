@@ -40,7 +40,10 @@ vi.mock("./Boot", async () => {
 vi.mock("../model-profiles/remoteCatalog", () => ({
   refreshModelCatalog: () => Promise.resolve(),
 }));
-vi.mock("../settings/QuitAssistant", () => ({ ShutdownHost: () => null }));
+vi.mock("./Shutdown", () => ({
+  ShutdownHost: () => null,
+  askToQuit: vi.fn(),
+}));
 vi.mock("./useStationLink", () => ({
   useStationLink: () => ({ trustOrigin: null, answerTrust: vi.fn() }),
 }));

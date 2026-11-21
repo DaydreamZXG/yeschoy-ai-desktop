@@ -156,16 +156,3 @@ export function installationActive(value: InstallationProgress | null) {
     !["idle", "installed", "cancelled", "failed"].includes(value.phase)
   );
 }
-
-/** Value equality alone misses A → B → A. Each observed change retires consent. */
-export class SelectionRevision {
-  private key = "";
-  private revision = 0;
-  observe(key: string) {
-    if (key !== this.key) {
-      this.key = key;
-      this.revision++;
-    }
-    return this.revision;
-  }
-}
