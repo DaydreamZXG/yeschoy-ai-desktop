@@ -35,6 +35,13 @@
   t.textContent = theme === "dark" ? "☀" : "☾";
   t.href = `?p=${page}&theme=${theme === "dark" ? "light" : "dark"}`;
   bar.append(t);
+  // 页面内的跳转链接也带上当前主题和 bare，切页时不丢。
+  for (const a of document.querySelectorAll('a[href^="?p="]')) {
+    const u = new URLSearchParams(a.getAttribute("href"));
+    if (!u.has("theme")) u.set("theme", theme);
+    if (q.get("bare")) u.set("bare", "1");
+    a.setAttribute("href", `?${u}`);
+  }
 </script>
 <style>
   body{margin:0;color:var(--ink);font-family:var(--font-ui);font-size:var(--text-base);}
