@@ -84,11 +84,24 @@ fn render_model_catalog(
         .ok_or(())?;
     provider.insert(
         "baseUrl".into(),
-        format!("{}/v1", origin.trim_end_matches('/')).into(),
+        crate::provider_presets::openai_base(origin).into(),
     );
     provider.insert("api".into(), "openai-completions".into());
     provider.insert("apiKey".into(), format!("!{helper}").into());
     provider.insert("authHeader".into(), true.into());
+    // 厂商要会话标记的（OpenCode Go）：Pi 是自己直接连厂商的，桥补不上，只能写进
+    // 它的设置里。设置里只能写固定值，所以这台电脑上一直是同一个；已经有的不换。
+    if let Some(name) = crate::provider_presets::session_header(origin) {
+        let headers = provider
+            .entry("headers")
+            .or_insert_with(|| Value::Object(Map::new()));
+        if let Some(headers) = headers.as_object_mut() {
+            headers.entry(name).or_insert_with(|| {
+                let mark = uuid::Uuid::new_v4().simple().to_string();
+                format!("ses_{}", &mark[..26]).into()
+            });
+        }
+    }
     let models = crate::tool_model_profile::native_chat_catalog(
         provider.get("models"),
         model_ids,
@@ -194,7 +207,7 @@ impl Prepared {
             .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_readback_failed"))?;
         let provider = &models["providers"]["yeschoy"];
         let correct = provider["baseUrl"].as_str()
-            == Some(format!("{}/v1", self.origin.trim_end_matches('/')).as_str())
+            == Some(crate::provider_presets::openai_base(&self.origin).as_str())
             && provider["api"].as_str() == Some("openai-completions")
             && provider["apiKey"].as_str() == Some(format!("!{}", self.helper).as_str())
             && provider["authHeader"].as_bool() == Some(true)
@@ -343,6 +356,30 @@ mod tests {
             std::fs::write(path, bytes).unwrap();
         }
         std::fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn a_vendor_that_wants_a_session_mark_gets_one_that_survives_reapplying() {
+        let render = |existing: Option<&[u8]>, origin: &str| {
+            let bytes = render_models(existing, origin, "glm-5", "helper").unwrap();
+            serde_json::from_slice::<Value>(&bytes).unwrap()["providers"]["yeschoy"].clone()
+        };
+        let first = render(None, "https://opencode.ai");
+        let mark = first["headers"]["x-opencode-session"].as_str().unwrap();
+        assert!(mark.starts_with("ses_") && mark.len() == 30, "{mark}");
+        assert_eq!(first["baseUrl"], "https://opencode.ai/inference/go/v1");
+
+        let existing = serde_json::to_vec(&serde_json::json!({
+            "providers": {"yeschoy": {"headers": {"x-opencode-session": mark, "x-mine": "1"}}}
+        }))
+        .unwrap();
+        let again = render(Some(&existing), "https://opencode.ai");
+        assert_eq!(again["headers"]["x-opencode-session"], mark);
+        assert_eq!(again["headers"]["x-mine"], "1");
+
+        assert!(render(None, "https://relay.example.com")
+            .get("headers")
+            .is_none());
     }
 
     #[test]

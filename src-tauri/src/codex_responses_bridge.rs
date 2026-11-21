@@ -251,6 +251,7 @@ async fn responses(state: &BridgeState, request: Request<Body>) -> Response {
     if !codex_authorized(request.headers(), state) {
         return error(StatusCode::UNAUTHORIZED, "local token required");
     }
+    let app_headers = crate::local_bridge::app_headers(request.headers());
     let accept_sse = request
         .headers()
         .get(header::ACCEPT)
@@ -293,8 +294,22 @@ async fn responses(state: &BridgeState, request: Request<Body>) -> Response {
         }
     };
 
+    // 厂商要会话标记而 Codex 这次没带：补上，后面两条路都用得着。
+    let mut app_headers = app_headers;
+    if let Some((name, mark)) = crate::local_bridge::session_mark(
+        &credential.origin,
+        app_headers
+            .iter()
+            .map(|(name, value)| (name.as_str(), value.to_str().unwrap_or_default())),
+        &body,
+    ) {
+        if let Ok(mark) = header::HeaderValue::from_str(&mark) {
+            app_headers.push((header::HeaderName::from_static(name), mark));
+        }
+    }
+
     if !needs_chat_conversion(&credential, &model) {
-        return forward_verbatim(state, &credential, bytes, accept_sse).await;
+        return forward_verbatim(state, &credential, &app_headers, bytes, accept_sse).await;
     }
 
     let converted = match responses_to_chat(body, &model) {
@@ -303,12 +318,10 @@ async fn responses(state: &BridgeState, request: Request<Body>) -> Response {
     };
     let stream = converted.stream;
     let url = format!(
-        "{}/v1/chat/completions",
-        credential.origin.trim_end_matches('/')
+        "{}/chat/completions",
+        crate::provider_presets::openai_base(&credential.origin)
     );
-    let upstream = state
-        .client
-        .post(url)
+    let upstream = crate::local_bridge::with_app_headers(state.client.post(url), &app_headers)
         .bearer_auth(credential.upstream_key())
         .json(&converted.chat)
         .send()
@@ -353,13 +366,15 @@ async fn responses(state: &BridgeState, request: Request<Body>) -> Response {
 async fn forward_verbatim(
     state: &BridgeState,
     credential: &ToolCredential,
+    app_headers: &crate::local_bridge::AppHeaders,
     body: Bytes,
     accept_sse: bool,
 ) -> Response {
-    let url = format!("{}/v1/responses", credential.origin.trim_end_matches('/'));
-    let upstream = state
-        .client
-        .post(url)
+    let url = format!(
+        "{}/responses",
+        crate::provider_presets::openai_base(&credential.origin)
+    );
+    let upstream = crate::local_bridge::with_app_headers(state.client.post(url), app_headers)
         .bearer_auth(credential.upstream_key())
         .header(header::CONTENT_TYPE, "application/json")
         .header(

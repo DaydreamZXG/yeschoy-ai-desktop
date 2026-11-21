@@ -1336,7 +1336,7 @@ pub(crate) fn legacy_clean(
     }
     let mut value = document(path, Some(bytes))?;
     let original = value.clone();
-    let origin_v1 = format!("{}/v1", credential.origin);
+    let origin_v1 = crate::provider_presets::openai_base(&credential.origin);
     let helper_matches = |value: &Value| {
         value.as_str().is_some_and(|s| {
             s.ends_with(&format!("credential-helper {tool}"))
@@ -1385,6 +1385,8 @@ pub(crate) fn legacy_clean(
                     let current = &value["env"][key];
                     let matches = if key == "ANTHROPIC_BASE_URL" {
                         current == &credential.origin
+                            || crate::provider_presets::anthropic_base(&credential.origin)
+                                .is_some_and(|base| current == &base)
                             || current == "http://127.0.0.1:15728/claude-code"
                     } else {
                         current == &credential.model_id
@@ -1452,7 +1454,10 @@ pub(crate) fn legacy_clean(
             }
         }
         "workbuddy" => {
-            let expected_url = format!("{}/v1/chat/completions", credential.origin);
+            let expected_url = format!(
+                "{}/chat/completions",
+                crate::provider_presets::openai_base(&credential.origin)
+            );
             let owned = |model: &Value| {
                 let Some(id) = model.get("id").and_then(Value::as_str) else {
                     return false;

@@ -358,7 +358,7 @@ async fn messages(state: &BridgeState, request: Request<Body>) -> Response {
     };
     // 只会说 Chat 格式的站：`/v1/messages` 在那里不存在，请求要翻译后再发。
     if chat::applies(&upstream_credential) {
-        return chat::forward(state, &upstream_credential, value).await;
+        return chat::forward(state, &upstream_credential, &forwarded, value).await;
     }
     let upstream = match send_upstream(state, &upstream_credential, &forwarded, &value).await {
         Ok(response) => response,
@@ -492,21 +492,40 @@ async fn count_tokens(state: &BridgeState, request: Request<Body>) -> Response {
         .into_response()
 }
 
+/// 上游密钥怎么带：Claude Desktop 一向用 `Authorization: Bearer`，Claude Code
+/// 用 `x-api-key`；有的厂商（Ollama Cloud）只认前一种，那就都用前一种。
+fn upstream_wants_bearer(prefix: &str, origin: &str) -> bool {
+    prefix.contains("desktop") || crate::provider_presets::anthropic_bearer(origin)
+}
+
 async fn send_upstream(
     state: &BridgeState,
     credential: &ToolCredential,
     forwarded: &[(header::HeaderName, String)],
     value: &Value,
 ) -> Result<reqwest::Response, reqwest::Error> {
-    let url = format!("{}/v1/messages", credential.origin.trim_end_matches('/'));
+    let url = format!(
+        "{}/v1/messages",
+        crate::provider_presets::anthropic_base(&credential.origin)
+            .unwrap_or_else(|| credential.origin.clone())
+    );
     let mut outbound = state.client.post(url).json(value);
-    if state.prefix.contains("desktop") {
+    if upstream_wants_bearer(state.prefix, &credential.origin) {
         outbound = outbound.bearer_auth(credential.upstream_key());
     } else {
         outbound = outbound.header("x-api-key", credential.upstream_key());
     }
     for (name, value) in forwarded {
         outbound = outbound.header(name, value);
+    }
+    if let Some((name, mark)) = crate::local_bridge::session_mark(
+        &credential.origin,
+        forwarded
+            .iter()
+            .map(|(name, value)| (name.as_str(), value.as_str())),
+        value,
+    ) {
+        outbound = outbound.header(name, mark);
     }
     outbound.send().await
 }
@@ -789,6 +808,26 @@ mod tests {
     }
 
     use super::*;
+
+    /// Ollama Cloud 的 `/v1/messages` 只认 `Authorization: Bearer`：Claude Code
+    /// 这条路平时带 `x-api-key`，接它时要换。别的站点照旧。
+    #[test]
+    fn the_upstream_key_goes_as_bearer_where_the_vendor_accepts_nothing_else() {
+        assert!(upstream_wants_bearer(
+            "/claude-desktop",
+            "https://example.com"
+        ));
+        assert!(!upstream_wants_bearer(
+            "/claude-code",
+            "https://example.com"
+        ));
+        assert!(!upstream_wants_bearer(
+            "/claude-code",
+            "https://api.deepseek.com"
+        ));
+        assert!(upstream_wants_bearer("/claude-code", "https://ollama.com"));
+        assert!(upstream_wants_bearer("/claude-code", "https://ollama.com/"));
+    }
     use crate::{local_bridge::upstream_client, tool_credentials::ToolModelRoute};
     use std::{sync::Arc, time::Duration};
     use tokio::{

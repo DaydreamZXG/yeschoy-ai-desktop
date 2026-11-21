@@ -93,6 +93,8 @@ const WHY = new Set([
   "open_secure_storage_unavailable",
   "open_tool_not_found",
   "open_busy",
+  // 现在连的云厂商不认这个应用。
+  "provider_tool_unsupported",
 ]);
 export const whyOf = (reason: string | undefined) =>
   reason && WHY.has(reason) ? reason : undefined;

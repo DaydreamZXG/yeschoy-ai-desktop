@@ -148,6 +148,20 @@ pub(crate) fn token_is_plausible(token: &str) -> bool {
             .all(|byte| byte.is_ascii_graphic() && byte != b'"' && byte != b'\\')
 }
 
+/// 先敲哪扇门，以及这是不是云厂商。云厂商不是中转站，没有 `/api/status`：
+/// 只看它的接口地址通不通，不去认是哪种中转站。不然不带密钥来体检时，
+/// 好好的厂商会被说成“不是中转站”。
+fn first_look(origin: &str) -> (String, bool) {
+    if crate::provider_presets::for_origin(origin).is_some() {
+        (
+            format!("{}/models", crate::provider_presets::openai_base(origin)),
+            true,
+        )
+    } else {
+        (format!("{origin}/api/status"), false)
+    }
+}
+
 #[tauri::command]
 pub async fn station_probe_v1(request: StationProbeRequest) -> StationProbeResult {
     let raw = request.origin.trim();
@@ -181,14 +195,20 @@ pub async fn station_probe_v1(request: StationProbeRequest) -> StationProbeResul
         return result;
     };
 
-    match get(&client, &format!("{origin}/api/status"), None).await {
-        Fetch::Json(_, value) => {
+    let (first_look, cloud) = first_look(&origin);
+    if cloud {
+        result.kind = "openai_compatible";
+    }
+    let relay_probe = get(&client, &first_look, None).await;
+    match relay_probe {
+        Fetch::Json(_, value) if !cloud => {
             if let Some((kind, name, version)) = classify_status(&value) {
                 result.kind = kind;
                 result.system_name = name;
                 result.version = version;
             }
         }
+        Fetch::Json(..) => {}
         Fetch::Timeout => {
             result.status = "timeout";
             return result;
@@ -200,11 +220,13 @@ pub async fn station_probe_v1(request: StationProbeRequest) -> StationProbeResul
         Fetch::Status(_) => {}
     }
 
-    if let Fetch::Json(status, value) =
-        get(&client, &format!("{origin}/api/desktop/v2/bootstrap"), None).await
-    {
-        result.desktop_connect =
-            status.is_success() && value.get("success").and_then(Value::as_bool) == Some(true);
+    if !cloud {
+        if let Fetch::Json(status, value) =
+            get(&client, &format!("{origin}/api/desktop/v2/bootstrap"), None).await
+        {
+            result.desktop_connect =
+                status.is_success() && value.get("success").and_then(Value::as_bool) == Some(true);
+        }
     }
 
     if let Some(token) = request
@@ -216,7 +238,13 @@ pub async fn station_probe_v1(request: StationProbeRequest) -> StationProbeResul
         if !token_is_plausible(token) {
             result.token_status = "invalid";
         } else {
-            match get(&client, &format!("{origin}/v1/models"), Some(token)).await {
+            match get(
+                &client,
+                &format!("{}/models", crate::provider_presets::openai_base(&origin)),
+                Some(token),
+            )
+            .await
+            {
                 Fetch::Json(status, value) if status.is_success() => {
                     result.models = model_ids(&value);
                     result.token_status = "valid";
@@ -270,6 +298,18 @@ mod tests {
     fn model_ids_are_sorted_unique_and_bounded() {
         let value = json!({"data": [{"id": "b"}, {"id": "a"}, {"id": "b"}, {"id": ""}, {"x": 1}]});
         assert_eq!(model_ids(&value), vec!["a", "b"]);
+    }
+
+    #[test]
+    fn cloud_providers_are_not_asked_whether_they_are_a_relay() {
+        assert_eq!(
+            first_look("https://openrouter.ai"),
+            ("https://openrouter.ai/api/v1/models".to_owned(), true)
+        );
+        assert_eq!(
+            first_look("https://relay.example.com"),
+            ("https://relay.example.com/api/status".to_owned(), false)
+        );
     }
 
     #[test]

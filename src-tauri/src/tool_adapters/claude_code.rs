@@ -244,7 +244,10 @@ fn prepare_inner(
     // the settings file. Catalog connections use a small local pass-through to
     // normalize Claude Code's `[1m]` picker marker before it reaches the relay.
     // Legacy single-model preparation remains direct for recovery compatibility.
-    let configured_origin = if modern { PROXY_BASE } else { origin };
+    // 直连时写的是这个站点给 Claude 的完整地址：中转站就是网址本身，云厂商各有路径。
+    let direct =
+        crate::provider_presets::anthropic_base(origin).unwrap_or_else(|| origin.to_owned());
+    let configured_origin = if modern { PROXY_BASE } else { direct.as_str() };
     let after = if modern {
         render_catalog(
             before.as_deref(),

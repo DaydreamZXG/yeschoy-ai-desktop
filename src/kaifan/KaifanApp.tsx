@@ -53,6 +53,7 @@ import { deriveStage, workerOf } from "./stageState";
 import { originOfLine, reportOf, type CheckReport } from "./checkup";
 import type { AccountStatus } from "../account/session";
 import { Settings } from "./Settings";
+import { presetOfLine, stationLabel, useProviderPresets } from "./providers";
 import { hostOfLine, lookAtStation } from "./station";
 import { TrustAsk } from "./TrustAsk";
 import { useStationLink, type LinkEvent } from "./useStationLink";
@@ -137,7 +138,9 @@ export function KaifanApp() {
     ],
   );
   const signedIn = projection?.status === "signed_in";
-  const station = state.cond === "out" ? null : hostOfLine(lineId);
+  const presets = useProviderPresets();
+  const station =
+    state.cond === "out" ? null : stationLabel(lineId, presets, t);
   const castCount = state.cast
     ? ROSTER_IDS.filter((id) => state.cast?.[id]).length
     : null;
@@ -556,6 +559,7 @@ export function KaifanApp() {
           current={state.current}
           connections={connections.connections}
           picks={picks}
+          preset={presetOfLine(lineId, presets)}
           initialApp={join?.app}
           onClose={() => setJoin(null)}
           onJoined={onJoined}
@@ -617,7 +621,7 @@ export function KaifanApp() {
           open={panel === "settings"}
           who={state.current}
           reach={reach}
-          host={hostOfLine(lineId)}
+          host={stationLabel(lineId, presets, t)}
           viaKey={isStationKeyLineId(lineId)}
           connections={connections.connections}
           restoring={connections.restoring}
@@ -657,7 +661,7 @@ export function KaifanApp() {
         <TrustAsk origin={link.trustOrigin} onAnswer={answerTrust} />
         {phase === "boot" ? (
           <Boot
-            station={hostOfLine(lineId)}
+            station={stationLabel(lineId, presets, t)}
             castCount={castCount}
             onDone={() => setPhase("home")}
           />

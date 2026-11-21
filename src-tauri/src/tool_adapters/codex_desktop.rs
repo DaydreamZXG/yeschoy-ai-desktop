@@ -89,12 +89,13 @@ enum ProviderAuth {
 
 /// Relay keys are opaque `sk-` tokens. The bound matches the credential record
 /// validator; control characters can never reach a TOML value.
+/// 不要求 `sk-` 开头：云厂商的密钥各有各的样子（智谱的中间带点，Ollama 的
+/// 没有前缀）。只拦空白、控制字符和会弄坏配置文件的引号、反斜杠。
 fn valid_provider_key(key: &str) -> bool {
     (16..=256).contains(&key.len())
-        && key.starts_with("sk-")
-        && !key
-            .chars()
-            .any(|value| value.is_control() || value.is_whitespace())
+        && key
+            .bytes()
+            .all(|byte| byte.is_ascii_graphic() && byte != b'"' && byte != b'\\')
 }
 
 fn config_error(error: ConfigFailure) -> AdapterFailure {
@@ -735,6 +736,16 @@ fn path_looks_like_cli(path: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn provider_key_need_not_start_with_sk() {
+        assert!(valid_provider_key("sk-0123456789abcdef"));
+        assert!(valid_provider_key("0123456789abcdef.ZyXwVu"));
+        assert!(!valid_provider_key("short"));
+        assert!(!valid_provider_key("0123456789abcdef with space"));
+        assert!(!valid_provider_key("0123456789abcdef\"quoted"));
+        assert!(!valid_provider_key("0123456789abcdef\nline"));
+    }
 
     #[test]
     fn cli_paths_are_told_apart_from_the_desktop_bundle() {
