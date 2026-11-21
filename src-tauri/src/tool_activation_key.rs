@@ -84,7 +84,32 @@ pub(super) async fn validate_models(
     )
     .await
     .map_err(|_| ActivationFailure::ServerUnavailable)?;
-    transports_from_catalogue(status, &catalogue, bindings, tool_id)
+    let mut transports = transports_from_catalogue(status, &catalogue, bindings, tool_id)?;
+    if let Some(known) = preset_transport(origin, tool_id) {
+        transports.fill(Some(known));
+    }
+    Ok(transports)
+}
+
+/// 云厂商说哪种格式是表里写好的，不用发一段对话去问。套餐的额度是按请求算的，
+/// 条款也只许编程工具用它：客户端自己不该拿这把密钥发任何对话。
+pub(super) fn preset_transport(origin: &str, tool_id: &str) -> Option<ModelTransport> {
+    let preset = crate::provider_presets::for_origin(origin)?;
+    match tool_id {
+        "codex_desktop" => Some(ModelTransport::Codex(if preset.responses {
+            codex_desktop::CodexTransport::DirectResponses
+        } else {
+            codex_desktop::CodexTransport::ChatBridge
+        })),
+        "claude_code" | "claude_desktop" => Some(ModelTransport::Claude(
+            if crate::provider_presets::anthropic_base(origin).is_some() {
+                ClaudeTransport::DirectAnthropic
+            } else {
+                ClaudeTransport::ChatBridge
+            },
+        )),
+        _ => None,
+    }
 }
 
 /// Claude 该直连还是过桥。
@@ -230,6 +255,38 @@ async fn apply_claude_probes_with(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_vendor_is_wired_from_the_table_and_never_probed_with_a_conversation() {
+        use codex_desktop::CodexTransport;
+        for (origin, tool, expected) in [
+            (
+                "https://open.bigmodel.cn",
+                "codex_desktop",
+                Some(ModelTransport::Codex(CodexTransport::ChatBridge)),
+            ),
+            (
+                "https://openrouter.ai",
+                "codex_desktop",
+                Some(ModelTransport::Codex(CodexTransport::DirectResponses)),
+            ),
+            (
+                "https://open.bigmodel.cn",
+                "claude_code",
+                Some(ModelTransport::Claude(ClaudeTransport::DirectAnthropic)),
+            ),
+            (
+                "https://api.openai.com",
+                "claude_desktop",
+                Some(ModelTransport::Claude(ClaudeTransport::ChatBridge)),
+            ),
+            ("https://open.bigmodel.cn", "pi", None),
+            ("https://relay.example.com", "codex_desktop", None),
+            ("https://relay.example.com", "claude_code", None),
+        ] {
+            assert_eq!(preset_transport(origin, tool), expected, "{origin} {tool}");
+        }
+    }
 
     fn binding(model: &str, group: &str) -> ModelBinding {
         ModelBinding {

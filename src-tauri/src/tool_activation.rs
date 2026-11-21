@@ -2448,6 +2448,12 @@ pub async fn configure_desktop_tool_v2(
             }
         }
     };
+    if !crate::provider_presets::allows_tool(&origin, &request.tool_id) {
+        return Ok(
+            ActivationFailure::ConfigurationFailed("provider_tool_unsupported")
+                .projection(&request),
+        );
+    }
     let bindings = request.bindings();
     if is_cancelled() {
         return Ok(cancelled());
@@ -2593,7 +2599,9 @@ pub async fn configure_desktop_tool_v2(
             ActivationFailure::ConfigurationFailed("account_changed").projection(&request)
         });
     }
-    if request.tool_id == "codex_desktop" {
+    // 云厂商说哪种格式已经从表里查好了（`pasted_key::preset_transport`），不探。
+    let probe = crate::provider_presets::for_origin(&origin).is_none();
+    if probe && request.tool_id == "codex_desktop" {
         // 接入时探一次真实请求，把结论落进凭据 —— 桥之后按模型读它。
         // 放在这里是因为要用 lease 铸出来的受限 key：`/v1/*` 不收账户令牌，
         // 而 lease 到上一步才存在。
@@ -2615,8 +2623,8 @@ pub async fn configure_desktop_tool_v2(
             return Ok(cancelled());
         }
     }
-    if let (Some((_, key)), "claude_code" | "claude_desktop") =
-        (&user_key, request.tool_id.as_str())
+    if let (true, Some((_, key)), "claude_code" | "claude_desktop") =
+        (probe, &user_key, request.tool_id.as_str())
     {
         // 授权登录的站点都原生说 Anthropic 格式，不用问；随便一个中转站不一定。
         if permit
