@@ -471,6 +471,20 @@ fn unpack_tgz(file: &Path, into: &Path, strip: &[&str]) -> Result<()> {
     Ok(())
 }
 
+/// 给新装的让出位置。空目录直接去掉；里面有东西就整个挪到旁边留着，不删。
+/// 新的没摆好之前不会走到这一步，所以装不成时原来的文件一个都不会少。
+fn make_room(root: &Path, tool: &str, destination: &Path) -> Result<()> {
+    match fs::remove_dir(destination) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(_) => fs::rename(
+            destination,
+            root.join(format!(".replaced-{tool}-{}", super::new_id()?)),
+        )
+        .map_err(cache::io_error),
+    }
+}
+
 /// 把核对过的文件放进 `root/<tool>`：先在旁边的临时目录里摆好，最后一步改名。
 /// 返回主程序的位置。
 pub(super) fn install_at(root: &Path, source: Source, file: &Path) -> Result<PathBuf> {
@@ -481,8 +495,8 @@ pub(super) fn install_at(root: &Path, source: Source, file: &Path) -> Result<Pat
             if destination.join(&name).is_file() {
                 return Err("already_installed");
             }
-            // 上次没装完留下的：是客户端自己的目录，清掉重来。
-            fs::remove_dir_all(&destination).map_err(cache::io_error)?;
+            // 目录在、主程序不在：里面的东西不是这次装的，先不碰，
+            // 等新的摆好了再给它让位（见下面的 `make_room`）。
         }
         Ok(_) => return Err("installation_location_conflict"),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
@@ -512,6 +526,7 @@ pub(super) fn install_at(root: &Path, source: Source, file: &Path) -> Result<Pat
             fs::set_permissions(&program, fs::Permissions::from_mode(0o755))
                 .map_err(cache::io_error)?;
         }
+        make_room(root, source.tool, &destination)?;
         fs::rename(&staging, &destination).map_err(cache::io_error)
     })();
     if placed.is_err() {

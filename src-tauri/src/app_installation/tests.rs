@@ -1093,6 +1093,49 @@ mod cli_tools {
     }
 
     #[test]
+    fn files_already_in_the_tool_folder_survive_a_reinstall() {
+        let root = temp("keep");
+        let folder = root.join("claude_code");
+        fs::create_dir_all(&folder).unwrap();
+        fs::write(folder.join("notes.txt"), b"mine").unwrap();
+        let kept = |root: &Path| {
+            fs::read_dir(root)
+                .unwrap()
+                .filter_map(|entry| entry.ok())
+                .map(|entry| entry.path())
+                .find(|path| {
+                    path.file_name()
+                        .and_then(|name| name.to_str())
+                        .is_some_and(|name| name.starts_with(".replaced-claude_code-"))
+                })
+        };
+        // 装不成（包是空的）：原来的文件原样留在原处。
+        let empty = root.join("empty.bin");
+        fs::write(&empty, b"").unwrap();
+        assert_eq!(
+            cli::install_at(&root, source("claude_code", "linux"), &empty),
+            Err("invalid_download")
+        );
+        assert_eq!(fs::read(folder.join("notes.txt")).unwrap(), b"mine");
+        assert!(kept(&root).is_none());
+        // 装成了：原来的文件整个挪到旁边，没有删。
+        let raw = root.join("claude.bin");
+        fs::write(&raw, b"#!/bin/sh\n").unwrap();
+        let program = cli::install_at(&root, source("claude_code", "linux"), &raw).unwrap();
+        assert!(program.is_file());
+        assert!(!folder.join("notes.txt").exists());
+        let aside = kept(&root).expect("old files are kept beside the new install");
+        assert_eq!(fs::read(aside.join("notes.txt")).unwrap(), b"mine");
+        // 空目录不留痕迹。
+        let bare = temp("bare");
+        fs::create_dir_all(bare.join("claude_code")).unwrap();
+        cli::install_at(&bare, source("claude_code", "linux"), &raw).unwrap();
+        assert!(kept(&bare).is_none());
+        let _ = fs::remove_dir_all(root);
+        let _ = fs::remove_dir_all(bare);
+    }
+
+    #[test]
     fn a_download_counts_only_when_it_matches_the_official_checksum() {
         use base64::Engine;
         use sha2::Digest;
