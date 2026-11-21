@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ProviderPreset } from "./providers";
@@ -1096,7 +1097,22 @@ describe("接入：应用多了不堆在一起", () => {
     expect(screen.queryByRole("button", { name: /去接入/ })).toBeNull();
     expect(activate).not.toHaveBeenCalled();
 
-    // 换成能一键接的应用，就回到接入。
+    // 命令行版装在没找的地方：指给客户端，重新找一遍，就能一键接。
+    pointOut.mockResolvedValue("saved");
+    found([target("claude_desktop"), target("cline")]);
+    fireEvent.click(
+      within(screen.getByTestId("kaifan-join-byhand-cli")).getByRole("button", {
+        name: "告诉我它在哪",
+      }),
+    );
+    await waitFor(() => expect(pointOut).toHaveBeenCalledWith("cline"));
+    await waitFor(() =>
+      expect(screen.queryByTestId("kaifan-join-other")).toBeNull(),
+    );
+    expect(go()).toBeTruthy();
+    expect(chip(/^Cline/)).toHaveAttribute("aria-pressed", "true");
+
+    // 换成别的应用，照常接入。
     fireEvent.click(screen.getByRole("button", { name: /^Claude Desktop/ }));
     expect(screen.queryByTestId("kaifan-join-other")).toBeNull();
     expect(go()).toBeTruthy();

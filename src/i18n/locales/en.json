@@ -407,7 +407,7 @@
       "otherApps": "Another app",
       "other": {
         "intro": "I can't change the settings of an app that isn't on the list, but everything you need to fill in is here. Open that app's settings, find “API address” (also called Base URL), “API Key” and “Model”, and fill them in as below.",
-        "byHand": "{{app}} is installed inside your editor, and I can’t set that one up for you yet. In {{app}}’s settings, choose OpenAI Compatible as the API Provider and fill in the values below. If you install the {{app}} command-line version, I can connect it in one click.",
+        "byHand": "{{app}} is installed inside your editor, and I can’t set that one up for you yet. In {{app}}’s settings, choose OpenAI Compatible as the API Provider and fill in the values below. I can connect the {{app}} command-line version in one click.",
         "openai": "API address (OpenAI format)",
         "anthropic": "API address (Claude format)",
         "model": "Model",
@@ -524,6 +524,7 @@
         "incomplete": "I found {{app}}, but it's missing something it needs to start, most likely an incomplete install. Reinstall it from its website and come back; I'll look again by myself. Have another copy elsewhere?",
         "gone": "The {{app}} location you showed me earlier is gone. It may have moved or been uninstalled. Show me where it is now, or install it again."
       },
+      "byHandCli": "Already have the {{app}} command-line version, and I just didn’t find it?",
       "pointOut": "Show me where it is",
       "pinned": "Using the copy of {{app}} you pointed me to.",
       "repoint": "Pick another location",
