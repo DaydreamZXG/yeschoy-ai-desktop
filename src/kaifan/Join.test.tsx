@@ -958,6 +958,44 @@ describe("接入：自己能解决的不问用户", () => {
     expect(scan).toHaveBeenCalledTimes(2);
   });
 
+  it("好几份里用户点名的那份不见了：不替他换成另一份", async () => {
+    const copy = (
+      installationId: string,
+      label: string,
+      recommended: boolean,
+    ) => ({
+      installationId,
+      label,
+      version: "1",
+      supported: true,
+      recommended,
+    });
+    found([
+      target("claude_desktop", {
+        status: "selection_required",
+        installations: [
+          copy("a", "系统应用", false),
+          copy("b", "用户目录", true),
+        ],
+      } as Partial<ActivationTarget>),
+    ]);
+    answer("tool_not_found", "tool_not_found");
+    const props = setup();
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: /系统应用/ }));
+    found([
+      target("claude_desktop", {
+        installations: [copy("b", "用户目录", true)],
+      } as Partial<ActivationTarget>),
+    ]);
+    fireEvent.click(go());
+    await waitFor(() => expect(says()).toContain("没找到"));
+    expect(activate.mock.calls.map((call) => call[0].installationId)).toEqual([
+      "a",
+    ]);
+    expect(props.onJoined).not.toHaveBeenCalled();
+  });
+
   it("断网没下成：网络一恢复自己再下，不用回来再点", async () => {
     absentClaudeCode(() =>
       installing({

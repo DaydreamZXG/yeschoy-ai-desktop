@@ -359,13 +359,14 @@ export function Join({
     );
     if (!result) return;
     // 应用不在刚才那个位置了（升级过、挪过）：自己重新找一遍，找到了就接着接，
-    // 不让用户回去重选。只找一次，找到的还是老地方就照实说没装。
+    // 不让用户回去重选。只找一次，找到的还是老地方就照实说没装。电脑上有好几份、
+    // 这一份又是用户自己点名的：不替他换成另一份，照实说，让他回去重选。
     if (result.status === "tool_not_found" && !fresh && !moved) {
       const spots = (await look())
         ?.find((entry) => entry.toolId === app)
         ?.installations.filter((item) => item.supported);
       const spot = spots?.find((item) => item.recommended) ?? spots?.[0];
-      if (spot && spot.installationId !== at)
+      if (spot && spot.installationId !== at && install !== at)
         return run(extra, group, undefined, spot.installationId);
     }
     // 应用已经装好，只是那次安装的凭证没用上（比如中途换了账户）：照常再接一次就行。
