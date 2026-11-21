@@ -300,6 +300,7 @@ function activationResult(args: Args) {
         6000,
       ),
     );
+  if (request.toolId === "pi") mended = "joined";
   return {
     ...base,
     status: "ready",
@@ -310,11 +311,16 @@ function activationResult(args: Args) {
 
 // `?s=connected` 把三个应用报成已接入，用来看「打开使用」和它的使用说明
 // 对话框 —— 夹具恒报 `not_connected`，那块界面在审计页里根本到不了。
-function connections(requestId: string) {
+/** 要修的那个应用后来怎么样了：重新接好了，或者改回原样了。 */
+let mended: "joined" | "undone" | null = null;
+function connections(requestId: string, restore = "") {
   const base = connectionsFixture(requestId);
-  if (scenario !== "connected" && scenario !== "settings_fix") return base;
+  const fixing = scenario === "settings_fix" || scenario === "join_fix";
+  if (scenario !== "connected" && !fixing) return base;
   // `?s=settings_fix`：其中一个应用的设置被别的工具改过，用来看体检和「去修」。
-  const broken = scenario === "settings_fix" ? "pi" : "";
+  // `?s=join_fix`：它上次接到一半没做完。
+  if (restore === "pi" && fixing) mended = "undone";
+  const broken = fixing && !mended ? "pi" : "";
   const live = {
     claude_code: "glm-5.3",
     claude_desktop: "claude-sonnet-4-5-20250929",
@@ -323,16 +329,20 @@ function connections(requestId: string) {
     codex_desktop: "gpt-6-astra",
     workbuddy: "gpt-6.1-sol-2026-10-preview-long-model-identifier",
   } as Record<string, string>;
+  if (fixing && mended === "undone") delete live.pi;
   return {
     ...base,
+    ...(restore ? { status: "restored" as const } : {}),
     connections: base.connections.map((connection) =>
       live[connection.toolId]
         ? {
             ...connection,
             state:
-              connection.toolId === broken
-                ? ("changed" as const)
-                : ("connected" as const),
+              connection.toolId !== broken
+                ? ("connected" as const)
+                : scenario === "join_fix"
+                  ? ("recovery_pending" as const)
+                  : ("changed" as const),
             modelId: live[connection.toolId],
             lineId: "mainland_optimized",
             billingGroup: "default",
@@ -436,7 +446,14 @@ const handlers: Record<string, (a: Args) => unknown> = {
           ],
         },
   account_announcement_action_v2: () => null,
-  manage_tool_connections_v1: (a) => connections(rid(a)),
+  manage_tool_connections_v1: (a) => {
+    const request = (a as { request?: { operation?: string; toolId?: string } })
+      .request;
+    return connections(
+      rid(a),
+      request?.operation === "restore" ? (request.toolId ?? "") : "",
+    );
+  },
   station_trust_origin_v1: (a) => (a as { origin: string }).origin,
   station_trust_state_v1: () => ({ trusted: [], builtin: [], pending: [] }),
   station_probe_v1: async (a) => {

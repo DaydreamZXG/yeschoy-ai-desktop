@@ -18,6 +18,7 @@ import type { CheckReport } from "./checkup";
 import { Drawer } from "./Drawer";
 import type { Mood, RosterId } from "./roster";
 import { isMuted, setMuted, sound } from "./sound";
+import { undoKey } from "./undo";
 
 type ToolId = ToolConnection["toolId"];
 
@@ -118,17 +119,7 @@ export function Settings({
     setAsking(null);
     try {
       const result = await onRestore(connection.toolId);
-      const key =
-        result.status === "recovery_failed"
-          ? "restoreFailed"
-          : result.reasonCode ===
-              "local_settings_restored_token_cleanup_pending"
-            ? "restoredKeyPending"
-            : result.status === "restored_with_changes"
-              ? "restoredKept"
-              : connection.restoreMode === "original"
-                ? "restored"
-                : "removed";
+      const key = undoKey(result, connection.restoreMode);
       setSaid({
         text: t(`kaifan.settings.${key}`, { app }),
         mood: key === "restoreFailed" ? "panic" : "happy",

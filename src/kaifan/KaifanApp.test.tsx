@@ -20,13 +20,12 @@ import { KaifanApp } from "./KaifanApp";
 vi.mock("../account/useAccountSession", () => ({
   useAccountSession: vi.fn(),
 }));
+const tools = vi.hoisted(() => ({
+  now: {} as Record<string, unknown>,
+}));
 vi.mock("../configuration/connections", async (load) => ({
   ...(await load<typeof import("../configuration/connections")>()),
-  useToolConnections: () => ({
-    connections: [],
-    error: null,
-    refresh: vi.fn(),
-  }),
+  useToolConnections: () => tools.now,
 }));
 vi.mock("../update/UpdateProvider", () => ({ useDesktopUpdate: vi.fn() }));
 vi.mock("../uiChoice", () => ({ RETURNING: true, openClassic: vi.fn() }));
@@ -78,6 +77,7 @@ const idle = {
 
 beforeEach(() => {
   vi.useRealTimers();
+  tools.now = { connections: [], error: null, refresh: vi.fn() };
   refresh.mockReset().mockResolvedValue(signedIn);
   update.mockReturnValue(idle);
   board.mockReset().mockResolvedValue({ available: false, notices: [] });
@@ -350,6 +350,71 @@ describe("开饭首页自己会做的事", () => {
     render(<KaifanApp />);
     expect(screen.queryByTestId("kaifan-model")).toBeNull();
     expect(screen.getByTestId("kaifan-card")).toHaveAttribute("inert");
+  });
+
+  it("站点连不上：网络一恢复就马上再试，不等那二十秒", async () => {
+    session.mockReturnValue({
+      projection: { status: "network_error" },
+      loading: false,
+      stationCheck: "unreachable",
+      lastError: null,
+      refresh,
+    } as unknown as ReturnType<typeof useAccountSession>);
+    render(<KaifanApp />);
+    expect(refresh).not.toHaveBeenCalled();
+    act(() => void window.dispatchEvent(new Event("online")));
+    expect(refresh).toHaveBeenCalledTimes(1);
+    // 这一次还没回来，再来一个事件也不叠着试。
+    act(() => void window.dispatchEvent(new Event("online")));
+    expect(refresh).toHaveBeenCalledTimes(1);
+    await act(async () => undefined);
+  });
+
+  it("站点好好的时候，网络事件不去打扰它", () => {
+    render(<KaifanApp />);
+    act(() => void window.dispatchEvent(new Event("online")));
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("应用的情况没读到：自己再读，最多三次，不没完没了", () => {
+    vi.useFakeTimers();
+    const again = vi.fn();
+    tools.now = { connections: [], error: true, refresh: again };
+    render(<KaifanApp />);
+    expect(again).not.toHaveBeenCalled();
+    act(() => void vi.advanceTimersByTime(4_000));
+    expect(again).toHaveBeenCalledTimes(1);
+    act(() => void vi.advanceTimersByTime(60_000));
+    expect(again).toHaveBeenCalledTimes(1);
+  });
+
+  it("要修的应用：点「去修好」在新界面里修，不去旧页面", async () => {
+    tools.now = {
+      connections: [
+        {
+          toolId: "pi",
+          state: "recovery_pending",
+          modelId: "gpt-5",
+          lineId: "mainland_optimized",
+          billingGroup: "default",
+          updatedAtEpochMs: 1,
+          restoreMode: "original",
+          requiresBackground: false,
+          reasonCode: "",
+        },
+      ],
+      error: null,
+      refresh: vi.fn(),
+      restore: vi.fn(),
+    };
+    render(<KaifanApp />);
+    fireEvent.click(await screen.findByTestId("kaifan-go"));
+    const join = screen.getByTestId("kaifan-join");
+    await waitFor(() => expect(join).not.toHaveAttribute("inert"));
+    expect(within(join).getByTestId("kaifan-join-mend")).toHaveTextContent(
+      "上次接到一半停了",
+    );
+    expect(openClassic).not.toHaveBeenCalled();
   });
 
   it("没有新版本：不提这件事", () => {
