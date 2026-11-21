@@ -1491,7 +1491,14 @@
       "cast_other": "{{count}} classmates are here",
       "castUnknown": "The class is on its way",
       "welcome": "Welcome back",
-      "skip": "SKIP · ESC"
+      "skip": "SKIP · ESC",
+      "capConnecting": "CONNECTING · {{host}}",
+      "capStarting": "STARTING UP",
+      "capChecking": "CHECKING APPS",
+      "capCast_one": "{{count}} ONLINE",
+      "capCast_other": "{{count}} ONLINE",
+      "capCastUnknown": "ROLL CALL",
+      "capWelcome": "WELCOME BACK"
     },
     "nav": {
       "label": "Menu",

@@ -1491,7 +1491,14 @@
       "cast_other": "{{count}} 位同学到齐",
       "castUnknown": "同学们正在赶来",
       "welcome": "欢迎回来",
-      "skip": "跳过 · ESC"
+      "skip": "跳过 · ESC",
+      "capConnecting": "CONNECTING · {{host}}",
+      "capStarting": "STARTING UP",
+      "capChecking": "CHECKING APPS",
+      "capCast_one": "{{count}} ONLINE",
+      "capCast_other": "{{count}} ONLINE",
+      "capCastUnknown": "ROLL CALL",
+      "capWelcome": "WELCOME BACK"
     },
     "nav": {
       "label": "导航",

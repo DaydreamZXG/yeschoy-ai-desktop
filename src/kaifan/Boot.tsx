@@ -52,7 +52,9 @@ export function Boot({ station, castCount, onDone }: Props) {
       setStep({
         index: 1,
         title: t(host ? "kaifan.boot.connecting" : "kaifan.boot.starting"),
-        caption: host ? `CONNECTING · ${host.toUpperCase()}` : "STARTING UP",
+        caption: host
+          ? t("kaifan.boot.capConnecting", { host: host.toUpperCase() })
+          : t("kaifan.boot.capStarting"),
       }),
     );
     at(1700, () => {
@@ -60,7 +62,7 @@ export function Boot({ station, castCount, onDone }: Props) {
       setStep({
         index: 2,
         title: t("kaifan.boot.checking"),
-        caption: "CHECKING APPS",
+        caption: t("kaifan.boot.capChecking"),
       });
     });
     at(2700, () => {
@@ -70,7 +72,9 @@ export function Boot({ station, castCount, onDone }: Props) {
         title: count
           ? t("kaifan.boot.cast", { count })
           : t("kaifan.boot.castUnknown"),
-        caption: count ? `${count} ONLINE` : "ROLL CALL",
+        caption: count
+          ? t("kaifan.boot.capCast", { count })
+          : t("kaifan.boot.capCastUnknown"),
       });
     });
     ROSTER_IDS.forEach((_, i) =>
@@ -84,7 +88,7 @@ export function Boot({ station, castCount, onDone }: Props) {
       setStep({
         index: 4,
         title: t("kaifan.boot.welcome"),
-        caption: "WELCOME BACK",
+        caption: t("kaifan.boot.capWelcome"),
         big: true,
       });
       sound.impact();
