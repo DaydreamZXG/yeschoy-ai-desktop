@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "../i18n";
@@ -137,6 +138,97 @@ describe("开饭首页自己会做的事", () => {
     fireEvent.keyDown(document.activeElement!, { key: "Escape" });
     await waitFor(() => expect(home).not.toHaveAttribute("inert"));
     expect(opener).toHaveFocus();
+  });
+
+  it("再点一下当前这位：打开她的名片；挑的型号记住，首页和接入都用它", async () => {
+    localStorage.clear();
+    session.mockReturnValue({
+      projection: {
+        ...signedIn,
+        models: [{ id: "gpt-5" }, { id: "gpt-5-mini" }],
+      },
+      loading: false,
+      stationCheck: "ok",
+      lastError: null,
+      refresh,
+    } as unknown as ReturnType<typeof useAccountSession>);
+    const { container } = render(<KaifanApp />);
+    const home = container.querySelector(".ui")!;
+    await waitFor(() => expect(home).not.toHaveAttribute("inert"));
+    const card = screen.getByTestId("kaifan-card");
+    expect(card).toHaveAttribute("inert");
+
+    fireEvent.click(container.querySelector(".roster [aria-pressed='true']")!);
+    await waitFor(() => expect(card).not.toHaveAttribute("inert"));
+    expect(home).toHaveAttribute("inert");
+    fireEvent.click(
+      within(card).getByRole("button", { name: "GPT-5 Mini", pressed: false }),
+    );
+    expect(
+      JSON.parse(localStorage.getItem("kaifan-card-picks")!)[""].model.gpt,
+    ).toBe("gpt-5-mini");
+
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    await waitFor(() => expect(card).toHaveAttribute("inert"));
+    expect(screen.getByTestId("kaifan-model")).toHaveTextContent("gpt-5-mini");
+
+    // 点型号也能打开名片；从名片去接入，带的是刚挑的型号。
+    fireEvent.click(screen.getByTestId("kaifan-model"));
+    await waitFor(() => expect(card).not.toHaveAttribute("inert"));
+    fireEvent.click(screen.getByTestId("kaifan-card-join"));
+    await waitFor(() => expect(card).toHaveAttribute("inert"));
+    expect(screen.getByTestId("kaifan-join")).not.toHaveAttribute("inert");
+    expect(screen.getByLabelText("型号")).toHaveValue("gpt-5-mini");
+  });
+
+  it("开着名片时站点掉线：名片收起，首页还能点，不会被一直盖着", async () => {
+    const online = {
+      projection: { ...signedIn, models: [{ id: "gpt-5" }] },
+      loading: false,
+      stationCheck: "ok",
+      lastError: null,
+      refresh,
+    } as unknown as ReturnType<typeof useAccountSession>;
+    session.mockReturnValue(online);
+    const { container, rerender } = render(<KaifanApp />);
+    const home = container.querySelector(".ui")!;
+    await waitFor(() => expect(home).not.toHaveAttribute("inert"));
+    fireEvent.click(screen.getByTestId("kaifan-model"));
+    const card = screen.getByTestId("kaifan-card");
+    await waitFor(() => expect(card).not.toHaveAttribute("inert"));
+
+    session.mockReturnValue({
+      projection: null,
+      loading: false,
+      stationCheck: "unreachable",
+      lastError: "account_http_failed",
+      refresh,
+    } as unknown as ReturnType<typeof useAccountSession>);
+    rerender(<KaifanApp />);
+    await waitFor(() => expect(card).toHaveAttribute("inert"));
+    expect(home).not.toHaveAttribute("inert");
+
+    // 站点回来了：名片不会自己又弹出来。
+    session.mockReturnValue(online);
+    rerender(<KaifanApp />);
+    await waitFor(() =>
+      expect(screen.getByTestId("kaifan-model")).toBeInTheDocument(),
+    );
+    expect(card).toHaveAttribute("inert");
+    expect(home).not.toHaveAttribute("inert");
+  });
+
+  it("没连站点：再点当前这位只是逗她一下，没有名片可看", async () => {
+    session.mockReturnValue({
+      projection: { status: "signed_out" },
+      loading: false,
+      stationCheck: "idle",
+      lastError: null,
+      refresh,
+    } as unknown as ReturnType<typeof useAccountSession>);
+    render(<KaifanApp />);
+    expect(screen.queryByTestId("kaifan-model")).toBeNull();
+    expect(screen.getByTestId("kaifan-card")).toHaveAttribute("inert");
   });
 
   it("没有新版本：不提这件事", () => {

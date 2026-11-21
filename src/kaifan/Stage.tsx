@@ -46,7 +46,11 @@ interface Props {
   updateReady?: boolean;
   retrying: boolean;
   fx: () => FxHandle | null;
+  /** 当前这位现在用的型号（名片上挑的那个）；这个站上没有她的型号时是空的。 */
+  model: string;
   onPick: (id: RosterId) => void;
+  /** 再点一下当前这位、或者点她的型号：看她的名片。 */
+  onCard: () => void;
   onConnect: () => void;
   onRetry: () => void;
   onRecharge: () => void;
@@ -79,7 +83,9 @@ export function Stage({
   updateReady,
   retrying,
   fx,
+  model,
   onPick,
+  onCard,
   onConnect,
   onRetry,
   onRecharge,
@@ -307,7 +313,8 @@ export function Stage({
 
   const pick = (id: RosterId) => {
     if (!here(id)) return speak(id, t("kaifan.home.notHere"), 2800);
-    if (id === current) return poke();
+    // 再点一下当前这位：看她的名片。还没连上站点时没有可看的，照旧逗她一下。
+    if (id === current) return model ? onCard() : poke();
     asideTimer.current.forEach(clearTimeout);
     setAside(null);
     sound.whoosh();
@@ -544,14 +551,24 @@ export function Stage({
               {typed}
             </p>
             <footer>
-              <span>
-                {models.length > 1
-                  ? t("kaifan.home.modelsMore", {
-                      model: models[0],
-                      count: models.length,
-                    })
-                  : (models[0] ?? "")}
-              </span>
+              {model ? (
+                <button
+                  type="button"
+                  className="mdl"
+                  data-testid="kaifan-model"
+                  aria-label={t("kaifan.card.open", { name })}
+                  onClick={onCard}
+                >
+                  {models.length > 1
+                    ? t("kaifan.home.modelsMore", {
+                        model,
+                        count: models.length,
+                      })
+                    : model}
+                </button>
+              ) : (
+                <span />
+              )}
               <i />
               {copy.go2 && (
                 <button type="button" className="go alt" onClick={onConnect}>

@@ -13,6 +13,7 @@ import {
   installationAction,
   type InstallationProgress,
 } from "../installation/api";
+import type { CardPicks } from "./cardInfo";
 import { Join } from "./Join";
 import { installOutcome } from "./joinOutcome";
 import { Reveal } from "./Reveal";
@@ -143,6 +144,7 @@ function setup(patch: Partial<Parameters<typeof Join>[0]> = {}) {
     models: MODELS,
     current: "cla" as const,
     connections: [] as ToolConnection[],
+    picks: { model: {}, plan: {} } as CardPicks,
     onClose: vi.fn(),
     onJoined: vi.fn(),
     onReconnect: vi.fn(),
@@ -371,6 +373,55 @@ describe("接入：选应用、选人、点一下", () => {
     fireEvent.click(screen.getByRole("button", { name: "换成「promo」接入" }));
     await waitFor(() => expect(activate).toHaveBeenCalledTimes(2));
     expect(activate.mock.calls[1][0]).toMatchObject({ billingGroup: "promo" });
+  });
+
+  it("名片上挑的型号和方案排在存过的前面：那是用户自己定的", async () => {
+    setup({
+      current: "cla",
+      initialApp: "codex_desktop",
+      models: [
+        priced("claude-sonnet-4-5-20250929", ["default", "vip", "promo"]),
+        priced("claude-opus-4-1-20250805", ["default", "promo"]),
+      ],
+      connections: savedOn("vip"),
+      picks: {
+        model: { cla: "claude-opus-4-1-20250805" },
+        plan: { "claude-opus-4-1-20250805": "promo" },
+      },
+    });
+    await ready();
+    expect(screen.getByLabelText("型号")).toHaveValue(
+      "claude-opus-4-1-20250805",
+    );
+    expect(screen.getByTestId("kaifan-join-plan")).toHaveTextContent("promo");
+    answer("ready", "configuration_ready");
+    fireEvent.click(go());
+    await waitFor(() => expect(activate).toHaveBeenCalled());
+    expect(activate.mock.calls[0][0]).toMatchObject({
+      modelId: "claude-opus-4-1-20250805",
+      billingGroup: "promo",
+    });
+  });
+
+  it("名片上挑的方案站点不提供了：不算数，存过的原样沿用", async () => {
+    setup({
+      current: "cla",
+      initialApp: "codex_desktop",
+      models: [priced("claude-sonnet-4-5-20250929", ["default", "vip"])],
+      connections: savedOn("vip"),
+      picks: {
+        model: { cla: "gone-model" },
+        plan: { "claude-sonnet-4-5-20250929": "停售" },
+      },
+    });
+    await ready();
+    answer("ready", "configuration_ready");
+    fireEvent.click(go());
+    await waitFor(() => expect(activate).toHaveBeenCalled());
+    expect(activate.mock.calls[0][0]).toMatchObject({
+      modelId: "claude-sonnet-4-5-20250929",
+      billingGroup: "vip",
+    });
   });
 
   it("在一个应用上点头换的方案，不会带到另一个应用上", async () => {
