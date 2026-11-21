@@ -316,7 +316,8 @@ export function Settings({
         )}
       </section>
 
-      {reach !== "out" && (
+      {/* 体检查出登录失效时首页会变成「没连站点」，结果和「重新连接」仍然要留着。 */}
+      {(reach !== "out" || report || checkup.running) && (
         <section>
           <h4>{t("kaifan.settings.check.title")}</h4>
           <div className="set">

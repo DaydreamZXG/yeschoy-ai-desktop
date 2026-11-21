@@ -299,6 +299,29 @@ describe("Settings", () => {
     );
   });
 
+  it("体检查出登录失效、首页变成没连站点：结果和重新连接还在", async () => {
+    const { props } = show({
+      reach: "out",
+      host: null,
+      checkup: {
+        ...idleCheck,
+        report: reportOf({
+          online: true,
+          probe: { ok: true, probe: {} as never },
+          status: "session_expired",
+          connections: [],
+          connectionsFailed: false,
+        }),
+      },
+    });
+    await said("登录失效了");
+    expect(screen.getByTestId("kaifan-settings-report")).toHaveTextContent(
+      "登录失效了",
+    );
+    fireEvent.click(screen.getByTestId("kaifan-settings-check-act"));
+    expect(props.onConnect).toHaveBeenCalled();
+  });
+
   it("更新：有新版本给安装，查不到给再试和官网下载", () => {
     const ready = updater({
       phase: "available",
