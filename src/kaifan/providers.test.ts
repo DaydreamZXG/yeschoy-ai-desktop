@@ -105,6 +105,13 @@ describe("云厂商预设", () => {
       }),
     ]);
     expect(addressesOf("https://api.openai.com", openai)?.anthropic).toBeNull();
+    expect(openai.sessionHeader).toBeNull();
+    // 要求带请求头的那家：只收像请求头名字的，别的当没有。
+    const header = (sessionHeader: unknown) =>
+      decodeProviderPresets([row({ sessionHeader })])[0].sessionHeader;
+    expect(header("x-opencode-session")).toBe("x-opencode-session");
+    expect(header("x bad\r\nheader")).toBeNull();
+    expect(header(7)).toBeNull();
     expect(addressesOf("https://my.example.com", null)).toEqual({
       openai: "https://my.example.com/v1",
       anthropic: "https://my.example.com",

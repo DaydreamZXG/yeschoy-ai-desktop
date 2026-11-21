@@ -417,6 +417,7 @@
         "keyFromStation": "Create a new one under “Tokens” on the station's website and copy it over.",
         "copyFailed": "That didn't copy: the system wouldn't let me use the clipboard. Select the text above with your mouse and copy it yourself.",
         "noAddress": "No station is connected right now, so there's no address to give you. Go back home, connect a station, then come back here.",
+        "sessionHeader": "{{vendor}} also requires a request header named {{header}} on every request; any fixed string of letters and digits works as its value. If that app has no \"custom headers\" setting, it can't use this provider.",
         "planRisk": "{{vendor}} is a monthly plan, and the provider only allows it in coding tools it approves. If you put the key into another app, the provider may limit or cancel the plan."
       },
       "planRisk": "You're connected to {{vendor}}, a monthly plan. The provider only allows it in coding tools it approves, and Kaifan passes requests along on {{app}}'s behalf, so the provider may limit or cancel the plan.",

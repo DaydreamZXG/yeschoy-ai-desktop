@@ -82,6 +82,14 @@ export function OtherApps({ lineId, preset, modelId, viaKey }: Props) {
           {t("kaifan.join.other.noAddress")}
         </p>
       )}
+      {address && preset?.sessionHeader && (
+        <p className="mend" role="note" data-testid="kaifan-join-other-header">
+          {t("kaifan.join.other.sessionHeader", {
+            vendor: vendorName(preset, t),
+            header: preset.sessionHeader,
+          })}
+        </p>
+      )}
       {copied && !copied.ok && (
         <p className="mend" role="alert">
           {t("kaifan.join.other.copyFailed")}

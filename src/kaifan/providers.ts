@@ -22,6 +22,8 @@ export interface ProviderPreset {
   /** 别的应用里要填的两个地址。没有 Claude 格式的就是 null。 */
   openaiBase: string;
   anthropicBase: string | null;
+  /** 这家要求每个请求带的请求头；别的应用得自己加上。多数没有。 */
+  sessionHeader: string | null;
 }
 
 const path = (value: unknown): string | null =>
@@ -65,6 +67,11 @@ export function decodeProviderPresets(raw: unknown): ProviderPreset[] {
       common: row.common === true,
       openaiBase: origin + openaiPath,
       anthropicBase: anthropicPath === null ? null : origin + anthropicPath,
+      sessionHeader:
+        typeof row.sessionHeader === "string" &&
+        /^[a-z][a-z0-9-]*$/.test(row.sessionHeader)
+          ? row.sessionHeader
+          : null,
     });
   }
   return presets;

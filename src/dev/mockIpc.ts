@@ -502,6 +502,7 @@ const handlers: Record<string, (a: Args) => unknown> = {
       id: "opencode_go",
       openaiPath: "/inference/go/v1",
       anthropicPath: "/inference/go",
+      sessionHeader: "x-opencode-session",
       family: "opencode_go",
       region: null,
       name: "OpenCode Go",

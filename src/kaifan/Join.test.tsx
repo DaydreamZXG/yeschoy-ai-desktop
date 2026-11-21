@@ -1089,6 +1089,7 @@ describe("接入：连的是云厂商", () => {
     common: true,
     openaiBase: "https://api.kimi.com/coding/v1",
     anthropicBase: "https://api.kimi.com/coding",
+    sessionHeader: null,
     ...patch,
   });
 
@@ -1139,6 +1140,23 @@ describe("接入：连的是云厂商", () => {
       "Claude 格式",
     );
     expect(screen.getAllByRole("button", { name: "复制" })).toHaveLength(2);
+    expect(screen.queryByTestId("kaifan-join-other-header")).toBeNull();
+  });
+
+  it("别的应用：这家还要一个请求头，说清楚叫什么、没处填就接不了", async () => {
+    setup({
+      preset: vendor({
+        id: "opencode_go",
+        family: "opencode_go",
+        name: "OpenCode Go",
+        sessionHeader: "x-opencode-session",
+      }),
+    });
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: "别的应用" }));
+    expect(screen.getByTestId("kaifan-join-other-header")).toHaveTextContent(
+      /OpenCode Go 还要求每个请求带一个请求头 x-opencode-session.*接不了这家/,
+    );
   });
 
   it("这家不认这个应用：说清楚，不让点，也不发给后端", async () => {
