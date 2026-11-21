@@ -149,12 +149,20 @@ pub(crate) fn is_ours(reference: &str) -> bool {
         .is_some_and(|rest| rest.starts_with('/'))
 }
 
-/// 我们要写的地方被别的东西管着，写了也不算数：
-/// * 这几段是用 `$include` 从别的文件拼进来的；
-/// * 主 agent 自己另外定了型号（`agents.entries.main.model`），它不看
-///   `agents.defaults`（2026.11.6 实测）。
-fn overridden(root: &Value) -> bool {
-    let included = [
+/// 主 agent 实际用的型号：它自己另外定了（`agents.entries.main.model`）就是
+/// 那个，这时它不看 `agents.defaults`（2026.11.6 实测）。
+fn effective_model(root: &Value) -> &Value {
+    let own = &root["agents"]["entries"]["main"]["model"];
+    if own.is_null() {
+        &root["agents"]["defaults"]["model"]
+    } else {
+        own
+    }
+}
+
+/// 我们要写的那几段是用 `$include` 从别的文件拼进来的，写了也不算数。
+fn included(root: &Value) -> bool {
+    [
         root,
         &root["models"],
         &root["models"]["providers"],
@@ -166,9 +174,7 @@ fn overridden(root: &Value) -> bool {
         &root["agents"]["entries"]["main"],
     ]
     .iter()
-    .any(|section| section.get("$include").is_some());
-    let own = &root["agents"]["entries"]["main"]["model"];
-    included || (!own.is_null() && !primary(own).is_some_and(is_ours))
+    .any(|section| section.get("$include").is_some())
 }
 
 fn child<'a>(
@@ -189,7 +195,12 @@ pub(crate) fn render(
     local_token: &str,
 ) -> Result<Vec<u8>, AdapterFailure> {
     let mut root = parse_document(existing).map_err(|()| PARSE_FAILED)?;
-    if overridden(&root) {
+    let reference = format!("{PROVIDER_ID}/{model}");
+    // 主 agent 自己定的型号不是我们的东西，不替用户改。它和这次选的不是同一个
+    // 时，接上去实际用的也不是选的那个（定的是我们名下已经不在的型号时还会
+    // 直接报错），所以不接。
+    let pinned = &root["agents"]["entries"]["main"]["model"];
+    if included(&root) || (!pinned.is_null() && primary(pinned) != Some(reference.as_str())) {
         return Err(AdapterFailure::ExternalOverride);
     }
     let object = root.as_object_mut().ok_or(PARSE_FAILED)?;
@@ -208,7 +219,6 @@ pub(crate) fn render(
         }),
     );
 
-    let reference = format!("{PROVIDER_ID}/{model}");
     let defaults = child(child(object, "agents")?, "defaults")?;
     match defaults.get_mut("model") {
         // `{ primary, fallbacks }`：只换主型号，备用的那串是用户的。
@@ -365,7 +375,7 @@ pub(crate) async fn resume_if_configured() {
 /// 主型号选的是不是我们这一家，且这一家还指着本地桥。
 pub(crate) fn points_at_our_bridge(bytes: &[u8]) -> bool {
     parse_document(Some(bytes)).is_ok_and(|value| {
-        primary(&value["agents"]["defaults"]["model"]).is_some_and(is_ours)
+        primary(effective_model(&value)).is_some_and(is_ours)
             && value["models"]["providers"][PROVIDER_ID]["baseUrl"].as_str() == Some(PROXY_BASE)
     })
 }
@@ -404,7 +414,7 @@ impl Prepared {
         let mut expected: Vec<&str> = self.model_ids.iter().map(String::as_str).collect();
         expected.sort_unstable();
         let defaults = &value["agents"]["defaults"];
-        let default = primary(&defaults["model"])
+        let default = primary(effective_model(&value))
             .and_then(|reference| reference.strip_prefix(PROVIDER_ID))
             .and_then(|rest| rest.strip_prefix('/'));
         let allowed = defaults["modelPolicy"]["allow"]
@@ -415,7 +425,7 @@ impl Prepared {
                         entry == ALLOW_ENTRY || entry.strip_prefix("kaifan/") == default
                     })
             });
-        let correct = !overridden(&value)
+        let correct = !included(&value)
             && provider["baseUrl"].as_str() == Some(PROXY_BASE)
             && provider["apiKey"].as_str() == Some(self.local_token.as_str())
             && provider["api"].as_str() == Some("openai-completions")
@@ -631,8 +641,36 @@ mod tests {
                 "{before}"
             );
         }
-        // 主 agent 定的就是我们这一家：不拦（上次接入后用户自己挑了别的型号）。
-        rendered(r#"{ agents: { entries: { main: { model: "kaifan/kimi-k3" } } } }"#);
+        // 主 agent 定的是我们名下的另一个型号：接上去它用的还是那个，这次的
+        // 名单里没有它时还会直接报错。同样不接。
+        assert_eq!(
+            render(
+                Some(br#"{ agents: { entries: { main: { model: "kaifan/kimi-k3" } } } }"#),
+                "glm-5.3",
+                &["glm-5.3".to_owned()],
+                &token()
+            ),
+            Err(AdapterFailure::ExternalOverride)
+        );
+        // 定的正好是这次选的：不拦，也不动它。
+        let value = rendered(r#"{ agents: { entries: { main: { model: "kaifan/glm-5.3" } } } }"#);
+        assert_eq!(
+            value["agents"]["entries"]["main"]["model"],
+            "kaifan/glm-5.3"
+        );
+    }
+
+    #[test]
+    fn a_main_agent_model_added_later_counts_as_the_one_in_use() {
+        let after = String::from_utf8(render(None, "glm-5.3", &ids(), &token()).unwrap()).unwrap();
+        let pinned = |reference: &str| {
+            let mut value: Value = serde_json::from_str(&after).unwrap();
+            value["agents"]["entries"] = json!({ "main": { "model": reference } });
+            serde_json::to_vec(&value).unwrap()
+        };
+        assert!(points_at_our_bridge(after.as_bytes()));
+        assert!(points_at_our_bridge(&pinned("kaifan/deepseek-v4")));
+        assert!(!points_at_our_bridge(&pinned("openai/gpt-5.4")));
     }
 
     #[test]
