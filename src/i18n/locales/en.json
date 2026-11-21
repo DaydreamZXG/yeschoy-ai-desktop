@@ -1377,5 +1377,128 @@
       "trust_store_full": "Too many remembered sites. Remove some unused ones in Settings first.",
       "generic": "Go back to the web page and click \"Open desktop assistant\" again."
     }
+  },
+  "homeStage": {
+    "regionLabel": "Home characters",
+    "stripLabel": "{{name}} ({{brand}})",
+    "stripNewLabel": "{{name}}",
+    "stripMissing": "Not on this station",
+    "missingSays": "This station doesn't have me. Switch to one that does and I'll be right there.",
+    "nowWithYou": "\"{{quote}}\" I'm with you now.",
+    "balanceUnknown": "I can't see the balance right now.",
+    "connectedCount": "{{count}} apps are connected.",
+    "noneConnected": "No apps connected yet. Click \"Let's start\" and I'll walk you through it.",
+    "start": "Let's start",
+    "more": "Connect another",
+    "signedOut": "Welcome. Connect your station first: enter its address below.",
+    "signedOutAction": "Enter the address",
+    "flavorRecovery": "Last time it stopped halfway…",
+    "flavorUnreachable": "Eh?! The, the line dropped?",
+    "flavorModelOffline": "…She's off today.",
+    "flavorLow": "I'm hungry…",
+    "chipConnected": "Station connected",
+    "chipChecking": "Connecting to the station",
+    "chipUnreachable": "Station unreachable",
+    "chipSignedOut": "No station yet",
+    "chipBalance": "Balance {{balance}}",
+    "modelsOne": "{{model}}",
+    "modelsMore": "{{model}} and {{count}} models in total",
+    "appConnected": "{{app}}: connected. Click to adjust it",
+    "appPending": "{{app}}: not connected yet. Click to start",
+    "allApps": "All apps",
+    "pokeLabel": "Poke {{name}}"
+  },
+  "roster": {
+    "cla": {
+      "name": "Juzi",
+      "ready": "Balance {{balance}}. All good. Ready when you are.",
+      "quote": "Leave it to me. Just say what you need.",
+      "poke1": "…I'm reading. Say it straight, please.",
+      "poke2": "You're right. …I'll still double-check.",
+      "poke3": "Okay, okay. I know you're here.",
+      "aside": "…Quiet, please. I'm reading."
+    },
+    "gpt": {
+      "name": "Aqing",
+      "ready": "You still have {{balance}}. Go ahead, I've got you.",
+      "quote": "Relax. I've got you.",
+      "poke1": "Anything you need, just ask.",
+      "poke2": "Mm. I'm always here.",
+      "poke3": "No judging. Just helping.",
+      "aside": "Call me any time."
+    },
+    "gem": {
+      "name": "Xiaoxing",
+      "ready": "Balance {{balance}}. Plenty to play with~",
+      "quote": "Ta-da! My turn to shine~",
+      "poke1": "Yay! You poked me!",
+      "poke2": "Pictures, long reads: bring them to me~",
+      "poke3": "Poke again and I'll do two peace signs!",
+      "aside": "Look at me, look at me~"
+    },
+    "grk": {
+      "name": "Xiaohei",
+      "ready": "Balance {{balance}}. Enough. Stop asking.",
+      "quote": "Tch. You had to ask? …Fine, I'll do it.",
+      "poke1": "Tch. Idle hands.",
+      "poke2": "Want to know what just happened? Ask me.",
+      "poke3": "…One more line, then.",
+      "aside": "Tch. Boring."
+    },
+    "ds": {
+      "name": "Xiaojing",
+      "ready": "{{balance}} of rice left in the pot. Enough to eat.",
+      "quote": "Dinner time! I mean, work time!",
+      "poke1": "Off to eat. Call me when the test is done.",
+      "poke2": "You really think I'm the cheap one, huh…",
+      "poke3": "Stop poking, I'll spill my rice!",
+      "aside": "Call me when dinner's ready!",
+      "low": "Sniff… the bowl is empty. Boss, a little rice, please."
+    },
+    "qw": {
+      "name": "Qianwen",
+      "ready": "Balance {{balance}}. Why haven't we started?",
+      "quote": "Why this? Why that? Leave them all to me!",
+      "poke1": "Why poke me? Why?",
+      "poke2": "I just thought of three more questions!",
+      "poke3": "Do you know why whales eat plain rice?",
+      "aside": "Why her and not me?"
+    },
+    "kimi": {
+      "name": "Yueyue",
+      "ready": "…Balance {{balance}}. Enough for a lot of pages.",
+      "quote": "…Two million words? Leave them. I'll read.",
+      "poke1": "…Hm? Is it morning?",
+      "poke2": "Five more minutes.",
+      "poke3": "I'll sleep after this stack.",
+      "aside": "…Zzz"
+    },
+    "glm": {
+      "name": "Xiaopu",
+      "ready": "Balance {{balance}}. I checked. It's correct.",
+      "quote": "This one, I'm getting full marks.",
+      "poke1": "Don't disturb my homework.",
+      "poke2": "There's a small mistake here. I marked it for you.",
+      "poke3": "Next exam, I'm first.",
+      "aside": "I'm studying. Do not disturb."
+    },
+    "dou": {
+      "name": "Doubao",
+      "ready": "To put it plainly: balance {{balance}}, enough.",
+      "quote": "To put it plainly: count on me.",
+      "poke1": "Here, here~",
+      "poke2": "To put it plainly: I'm slacking off.",
+      "poke3": "We can chat about anything.",
+      "aside": "I'm always here~"
+    },
+    "new": {
+      "name": "Transfer student",
+      "ready": "Balance {{balance}}.",
+      "quote": "I'm new here. I work like everyone else.",
+      "poke1": "…Nobody has drawn me yet.",
+      "poke2": "I'm a new model on this station.",
+      "poke3": "Could someone draw my portrait?",
+      "aside": "…Could someone draw my portrait?"
+    }
   }
 }

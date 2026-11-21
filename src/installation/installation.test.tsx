@@ -601,8 +601,13 @@ describe("ru048 novice installer", () => {
     expect(screen.getAllByRole("button", { name: /安装并接入/ })).toHaveLength(
       2,
     );
-    expect(screen.getByText("Claude Desktop")).toBeInTheDocument();
-    expect(screen.getByText("Codex（桌面版 / 命令行）")).toBeInTheDocument();
+    // 首页舞台上的应用格子也写着应用名，这里看的是下面列表里的那一行。
+    expect(
+      screen.getByRole("heading", { name: "Claude Desktop" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Codex（桌面版 / 命令行）" }),
+    ).toBeInTheDocument();
   });
   it("automatically continues once only for the exact newly installed target", async () => {
     const view = render(setup(progress()));

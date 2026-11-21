@@ -19,7 +19,12 @@ import { AccountSummary } from "./WorkbenchChrome";
 import { AppGlyph } from "./AppGlyph";
 import { WORKBENCH_APPS, appDisplayName } from "./appCatalog";
 import type { AccountSessionController } from "../account/useAccountSession";
-import { balanceAlert } from "../account/finance";
+import { balanceAlert, formatMoney } from "../account/finance";
+import {
+  HomeStage,
+  type StageNotice,
+  type StageStation,
+} from "./home/HomeStage";
 import { LowBalanceBanner } from "./LowBalanceBanner";
 import { useWalletRecharge } from "./useWalletRecharge";
 import {
@@ -304,11 +309,180 @@ export function AppLibraryView({
       ].filter((group) => group.apps.length > 0)
     : [{ key: "all", title: "", apps: rows }];
 
+  // 首页顶上原来最多会叠六条提示。现在最要紧的那一条由角色在对话框里说
+  // （文案、按钮都不变），剩下的照旧排在下面——同一件事不说两遍。
+  // 顺序就是优先级：先是会让设置停在半路的，再是整个连不上的，最后才是提醒。
+  const stationUnreachable =
+    !!accountSession.lastError ||
+    (accountSession.stationCheck ?? "idle") === "unreachable";
+  const stationChecking =
+    (accountSession.stationCheck ?? "idle") === "checking" &&
+    !accountSession.lastError;
+  const notices: (StageNotice & { key: string })[] = [];
+  if (pendingRecovery)
+    notices.push({
+      key: "recovery",
+      mood: "panic",
+      flavor: "recovery",
+      node: (
+        <p
+          key="recovery"
+          className="workbench-notice"
+          role="alert"
+          data-testid="recovery-banner"
+        >
+          <CircleAlert />
+          {t("workbench.libraryRecoveryBanner", { app: pendingRecovery.name })}
+          <button onClick={() => onOpenSetup(pendingRecovery.id, "repair")}>
+            {c.libraryRecoveryAction}
+          </button>
+        </p>
+      ),
+    });
+  if (everythingUnavailable)
+    notices.push({
+      key: "outage",
+      mood: "panic",
+      flavor: "unreachable",
+      node: (
+        <p key="outage" className="workbench-notice" role="alert">
+          <CircleAlert />
+          {c.libraryOfflineNotice}
+          <button disabled={checking} onClick={retryEverything}>
+            {checking ? c.libraryRetrying : c.libraryRetry}
+          </button>
+        </p>
+      ),
+    });
+  else if (stationUnreachable)
+    notices.push({
+      key: "unreachable",
+      mood: "panic",
+      flavor: "unreachable",
+      node: (
+        <p
+          key="unreachable"
+          className="workbench-notice"
+          role="status"
+          data-testid="station-unreachable"
+        >
+          <CircleAlert />
+          {signedIn ? c.libraryAccountStale : c.libraryAccountUnavailable}
+          <button onClick={() => void accountSession.refresh()}>
+            {c.libraryRetry}
+          </button>
+        </p>
+      ),
+    });
+  if (offlineModels)
+    notices.push({
+      key: "offline-model",
+      mood: "sleep",
+      flavor: "modelOffline",
+      node: (
+        <p
+          key="offline-model"
+          className="workbench-notice"
+          role="alert"
+          data-testid="offline-model-banner"
+        >
+          <CircleAlert />
+          {t("yeschoyHome.offlineModelBanner", {
+            apps: offlineModels
+              .map((app) => app.name)
+              .join(t("workbench.appListSeparator")),
+          })}
+          <button onClick={() => onOpenSetup(offlineModels[0].id)}>
+            {t("yeschoyHome.offlineModelAction")}
+          </button>
+        </p>
+      ),
+    });
+  if (balanceIssue)
+    notices.push({
+      key: "balance",
+      mood: "hungry",
+      flavor: "low",
+      node: (
+        <LowBalanceBanner
+          key="balance"
+          alert={balanceIssue}
+          onRecharge={() => void recharge()}
+        />
+      ),
+    });
+  if (!everythingUnavailable && stationChecking)
+    notices.push({
+      key: "checking",
+      mood: "idle",
+      flavor: null,
+      node: (
+        <p
+          key="checking"
+          className="workbench-notice"
+          role="status"
+          data-testid="station-checking"
+        >
+          <RefreshCw className="is-spinning" />
+          {c.libraryAccountChecking}
+        </p>
+      ),
+    });
+  const [stageNotice = null, ...belowNotices] = notices;
+
+  const money = signedIn ? accountSession.projection?.money : undefined;
+  const balanceText = money
+    ? formatMoney(money.balanceAmount, money.currency)
+    : "—";
+  const stageStation: StageStation = loginRequired
+    ? "signed_out"
+    : everythingUnavailable || stationUnreachable
+      ? "unreachable"
+      : signedIn && !stationChecking && !accountSession.loading
+        ? "connected"
+        : "checking";
+  const showApps = () =>
+    document
+      .querySelector<HTMLElement>(".desktop-home")
+      ?.scrollIntoView({ block: "start", behavior: "smooth" });
+
   return (
-    <div
-      className="workbench-page desktop-home"
-      data-testid="candidate-home-view"
-    >
+    <div className="desktop-home-shell">
+      <HomeStage
+        models={signedIn ? (accountSession.projection?.models ?? null) : null}
+        connectedModelIds={(connections?.connections ?? [])
+          .filter((v) => isConnected(v.state) && !!v.modelId)
+          .map((v) => v.modelId!)}
+        connectedCount={hasConnectionSnapshot ? configured : null}
+        balance={balanceText === "—" ? null : balanceText}
+        station={stageStation}
+        notice={stageNotice}
+        apps={rows.slice(0, 6).map((row) => ({
+          id: row.app.id,
+          name: row.displayName,
+          label: row.app.name,
+          icon: row.app.icon,
+          mark: row.app.mark,
+          connected: isConnected(row.connection?.state),
+        }))}
+        onOpenSetup={onOpenSetup}
+        onStart={() =>
+          onOpenSetup(
+            rows.find((row) => row.installed && !row.active)?.app.id ??
+              "claude_desktop",
+          )
+        }
+        onShowApps={showApps}
+        onSignIn={() =>
+          document
+            .querySelector<HTMLElement>(".welcome-strip-station input")
+            ?.focus()
+        }
+      />
+      <div
+        className="workbench-page desktop-home"
+        data-testid="candidate-home-view"
+      >
       <header className="workbench-page-heading">
         <div>
           <p className="eyebrow">{c.libraryEyebrow}</p>
@@ -335,70 +509,7 @@ export function AppLibraryView({
         </button>
       </header>
       {announcement}
-      {pendingRecovery && (
-        <p
-          className="workbench-notice"
-          role="alert"
-          data-testid="recovery-banner"
-        >
-          <CircleAlert />
-          {t("workbench.libraryRecoveryBanner", { app: pendingRecovery.name })}
-          <button onClick={() => onOpenSetup(pendingRecovery.id, "repair")}>
-            {c.libraryRecoveryAction}
-          </button>
-        </p>
-      )}
-      {offlineModels && (
-        <p
-          className="workbench-notice"
-          role="alert"
-          data-testid="offline-model-banner"
-        >
-          <CircleAlert />
-          {t("yeschoyHome.offlineModelBanner", {
-            apps: offlineModels
-              .map((app) => app.name)
-              .join(t("workbench.appListSeparator")),
-          })}
-          <button onClick={() => onOpenSetup(offlineModels[0].id)}>
-            {t("yeschoyHome.offlineModelAction")}
-          </button>
-        </p>
-      )}
-      {everythingUnavailable && (
-        <p className="workbench-notice" role="alert">
-          <CircleAlert />
-          {c.libraryOfflineNotice}
-          <button disabled={checking} onClick={retryEverything}>
-            {checking ? c.libraryRetrying : c.libraryRetry}
-          </button>
-        </p>
-      )}
-      {!everythingUnavailable &&
-        (accountSession.stationCheck ?? "idle") === "checking" &&
-        !accountSession.lastError && (
-          <p className="workbench-notice" role="status" data-testid="station-checking">
-            <RefreshCw className="is-spinning" />
-            {c.libraryAccountChecking}
-          </p>
-        )}
-      {!everythingUnavailable &&
-        (accountSession.lastError ||
-          (accountSession.stationCheck ?? "idle") === "unreachable") && (
-        <p className="workbench-notice" role="status" data-testid="station-unreachable">
-          <CircleAlert />
-          {signedIn ? c.libraryAccountStale : c.libraryAccountUnavailable}
-          <button onClick={() => void accountSession.refresh()}>
-            {c.libraryRetry}
-          </button>
-        </p>
-      )}
-      {balanceIssue && (
-        <LowBalanceBanner
-          alert={balanceIssue}
-          onRecharge={() => void recharge()}
-        />
-      )}
+      {belowNotices.map((notice) => notice.node)}
       {/* 账户概览是首页常驻的仪表盘行，而不是折叠在页脚的 <details>。 */}
       {signedIn && (
         <section
@@ -737,6 +848,7 @@ export function AppLibraryView({
           </button>
         </span>
       </footer>
+      </div>
     </div>
   );
 }

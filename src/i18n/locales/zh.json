@@ -1377,5 +1377,128 @@
       "trust_store_full": "记住的站点太多了，请先在设置里删掉几个不用的。",
       "generic": "请回到网页再点一次「打开桌面助手」。"
     }
+  },
+  "homeStage": {
+    "regionLabel": "首页角色",
+    "stripLabel": "{{name}}（{{brand}}）",
+    "stripNewLabel": "{{name}}",
+    "stripMissing": "这个站没有她",
+    "missingSays": "这个站没有我。换个有我的站，我马上来。",
+    "nowWithYou": "「{{quote}}」现在由我陪你。",
+    "balanceUnknown": "余额这会儿看不到。",
+    "connectedCount": "已经接好 {{count}} 个应用。",
+    "noneConnected": "还没接应用，点「开始吧」，我带你走一遍。",
+    "start": "开始吧",
+    "more": "再接一个",
+    "signedOut": "欢迎。先连上你的站点：在下面填上站点网址就行。",
+    "signedOutAction": "去填网址",
+    "flavorRecovery": "上次没弄完就断了……",
+    "flavorUnreachable": "诶？！线、线断了？",
+    "flavorModelOffline": "……她请假了。",
+    "flavorLow": "肚子饿了……",
+    "chipConnected": "站点已连接",
+    "chipChecking": "正在连接站点",
+    "chipUnreachable": "站点连不上",
+    "chipSignedOut": "还没连站点",
+    "chipBalance": "余额 {{balance}}",
+    "modelsOne": "{{model}}",
+    "modelsMore": "{{model}} 等 {{count}} 个型号",
+    "appConnected": "{{app}}：已接入，点一下调整",
+    "appPending": "{{app}}：还没接入，点一下开始",
+    "allApps": "全部应用",
+    "pokeLabel": "戳一下{{name}}"
+  },
+  "roster": {
+    "cla": {
+      "name": "橘子",
+      "ready": "余额 {{balance}}。一切正常，随时可以开始。",
+      "quote": "交给我。你只管说要什么。",
+      "poke1": "……我在看书，有事请直接说。",
+      "poke2": "你说得对。……不过我还是要先确认一下。",
+      "poke3": "好了好了，知道你在了。",
+      "aside": "……小点声，我在看书。"
+    },
+    "gpt": {
+      "name": "阿青",
+      "ready": "余额还有 {{balance}}，放心用，我接着。",
+      "quote": "放心，稳稳接住你。",
+      "poke1": "有什么需要，随时吩咐。",
+      "poke2": "嗯，我一直都在。",
+      "poke3": "不评判，只帮忙。",
+      "aside": "有需要随时叫我。"
+    },
+    "gem": {
+      "name": "小星",
+      "ready": "余额 {{balance}}，够我们玩好一阵啦～",
+      "quote": "当当！轮到我发光啦～",
+      "poke1": "耶！被戳到了！",
+      "poke2": "要看图、读长文都找我～",
+      "poke3": "再戳我就比两个耶！",
+      "aside": "看我看我～"
+    },
+    "grk": {
+      "name": "小黑",
+      "ready": "余额 {{balance}}。够用，别问了。",
+      "quote": "啧。这也要问？……行，我来。",
+      "poke1": "啧，手真闲。",
+      "poke2": "想知道刚刚发生了什么？问我。",
+      "poke3": "……再陪你聊一句。",
+      "aside": "啧，无聊。"
+    },
+    "ds": {
+      "name": "小鲸",
+      "ready": "锅里还有 {{balance}} 的饭，够吃。",
+      "quote": "开饭——不对，开工！",
+      "poke1": "我去吃饭啦，测完叫我。",
+      "poke2": "真当我是便宜货啊……",
+      "poke3": "别戳啦，饭要洒了！",
+      "aside": "饭好了叫我！",
+      "low": "呜……碗都空了。老大，喂点米吧。"
+    },
+    "qw": {
+      "name": "千问",
+      "ready": "余额 {{balance}}。为什么还不开始？",
+      "quote": "这个为什么？那个为什么？都交给我！",
+      "poke1": "为什么戳我？为什么？",
+      "poke2": "我又想到三个问题！",
+      "poke3": "你知道鲸鱼为什么吃白饭吗？",
+      "aside": "为什么是她不是我？"
+    },
+    "kimi": {
+      "name": "月月",
+      "ready": "……余额 {{balance}}。够读很多页了。",
+      "quote": "……两百万字？放着，我读。",
+      "poke1": "……嗯？天亮了吗。",
+      "poke2": "再睡五分钟。",
+      "poke3": "这摞看完就睡。",
+      "aside": "……Zzz"
+    },
+    "glm": {
+      "name": "小谱",
+      "ready": "余额 {{balance}}，我核对过了，没错。",
+      "quote": "这道题，我要拿满分。",
+      "poke1": "别打扰我做题。",
+      "poke2": "这里有个小错，我帮你标出来了。",
+      "poke3": "下次考试我第一。",
+      "aside": "我在刷题，别打扰。"
+    },
+    "dou": {
+      "name": "豆包",
+      "ready": "最直白地说：余额 {{balance}}，够用。",
+      "quote": "最直白地说：包在我身上。",
+      "poke1": "在呢在呢～",
+      "poke2": "用最直白的话说：我在摸鱼。",
+      "poke3": "想聊什么都行呀。",
+      "aside": "我一直都在哦～"
+    },
+    "new": {
+      "name": "转校生",
+      "ready": "余额 {{balance}}。",
+      "quote": "我是新来的，照常能用。",
+      "poke1": "……还没人给我画像。",
+      "poke2": "我是这个站上的新模型。",
+      "poke3": "有人能给我画张像吗？",
+      "aside": "……有人能给我画张像吗？"
+    }
   }
 }
