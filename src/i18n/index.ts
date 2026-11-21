@@ -19,7 +19,7 @@ i18n.use(initReactI18next).init({
   },
   lng: language,
   // 回落到中文而不是键名：新迁进来的键在英文补上之前，
-  // 用户看到的是一句中文，而不是 `yeschoySettings.languageTitle` 这种。
+  // 用户看到的是一句中文，而不是 `kaifan.settings.language` 这种。
   fallbackLng: "zh",
   interpolation: {
     escapeValue: false,

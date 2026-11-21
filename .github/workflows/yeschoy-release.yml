@@ -64,7 +64,7 @@ jobs:
             'package.json': JSON.parse(fs.readFileSync('package.json')).version,
             'src-tauri/tauri.conf.json': JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json')).version,
             'src-tauri/Cargo.toml': fs.readFileSync('src-tauri/Cargo.toml', 'utf8').match(/^version = "([^"]+)"/m)?.[1],
-            'src-tauri/Cargo.lock': fs.readFileSync('src-tauri/Cargo.lock', 'utf8').match(/name = "yeschoy-desktop"\nversion = "([^"]+)"/)?.[1],
+            'src-tauri/Cargo.lock': fs.readFileSync('src-tauri/Cargo.lock', 'utf8').match(/name = "kaifan-desktop"\nversion = "([^"]+)"/)?.[1],
           };
           const bad = Object.entries(found).filter(([, value]) => value !== v);
           if (bad.length) throw new Error(`version mismatch with input ${v}: ${JSON.stringify(found)}`);

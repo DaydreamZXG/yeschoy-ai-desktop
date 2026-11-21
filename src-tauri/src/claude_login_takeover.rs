@@ -33,7 +33,9 @@ use keyring::v1::{Entry, Error as KeyringError};
 /// Claude Code 自己的钥匙串条目。
 const CLAUDE_SERVICE: &str = "Claude Code-credentials";
 /// 挪走之后暂存在这里，`restore` 从这里搬回去。
-const BACKUP_SERVICE: &str = "com.yeschoy.desktop.displaced-login.v1";
+const BACKUP_SERVICE: &str = "com.kaifan.desktop.displaced-login.v1";
+/// 改名前的备份位。只在还回去的时候看一眼，新的备份不再往这里放。
+const OLD_BACKUP_SERVICE: &str = "com.yeschoy.desktop.displaced-login.v1";
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum Failure {
@@ -174,10 +176,14 @@ pub(crate) fn take_over() -> Result<Outcome, Failure> {
 /// 那条新登录态才会弹，而这里没有任何理由要读它。
 pub(crate) fn restore() -> Result<(), Failure> {
     // 没接管过，或者已经还回去了 —— 都不是错误。
-    let Some(account) = locate(BACKUP_SERVICE)? else {
-        return Ok(());
+    let (service, account) = match locate(BACKUP_SERVICE)? {
+        Some(account) => (BACKUP_SERVICE, account),
+        None => match locate(OLD_BACKUP_SERVICE)? {
+            Some(account) => (OLD_BACKUP_SERVICE, account),
+            None => return Ok(()),
+        },
     };
-    let backup = entry(BACKUP_SERVICE, &account)?;
+    let backup = entry(service, &account)?;
     let secret = backup.get_password().map_err(map_read)?;
     if present() {
         log::info!("claude_login_takeover stage=restore result=newer_login_kept backup=discarded");
@@ -204,7 +210,8 @@ mod tests {
         assert_eq!(CLAUDE_SERVICE, "Claude Code-credentials");
         assert_ne!(CLAUDE_SERVICE, BACKUP_SERVICE);
         // 备份位必须在野菜自己的命名空间下，不能污染别人的条目。
-        assert!(BACKUP_SERVICE.starts_with("com.yeschoy.desktop."));
+        assert!(BACKUP_SERVICE.starts_with("com.kaifan.desktop."));
+        assert!(OLD_BACKUP_SERVICE.starts_with("com.yeschoy.desktop."));
     }
 
     /// 「条目不存在」和「不让我读」必须分开。混在一起的话，用户点了拒绝会被

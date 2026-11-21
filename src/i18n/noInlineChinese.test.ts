@@ -32,7 +32,7 @@ const ALLOWED: Record<string, string> = {
     "计费档位名是内部推导值（grep 过：没有任何 .tsx 渲染 BillingTier.name），" +
     "外加一条匹配服务端中文分组名的正则 —— 那条必须含中文才能匹配。",
   "configuration/preview.ts":
-    "线路 displayName 属于 IPC 形状；界面读的是 yeschoyConfiguration.lines。",
+    "线路 displayName 属于 IPC 形状；界面读的是 configuration.lines。",
   "diagnostics/contract.ts":
     "同上，而且 displayName 的类型就是那两个中文字面量的联合，用来校验原生侧载荷。",
   "i18n/language.ts":

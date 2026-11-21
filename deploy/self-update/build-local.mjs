@@ -50,7 +50,7 @@ function snapshot() {
 }
 function buildEvidence(target) {
   const base = `${repo}/src-tauri/target/${target}/release/build`;
-  const outputs = readdirSync(base).filter(n => n.startsWith('yeschoy-desktop-')).map(n => join(base, n, 'output'))
+  const outputs = readdirSync(base).filter(n => n.startsWith('kaifan-desktop-')).map(n => join(base, n, 'output'))
     .filter(p => existsSync(p)).sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
   const latest = outputs[0];
   assert(latest);
@@ -67,7 +67,7 @@ if (platform === 'windows') {
   const destination = `${folder}/public/${prefix}-windows-x86_64-installer.exe`;
   assert(!existsSync(destination), 'Refusing to replace an existing installer');
   const zig = process.env.YESCHOY_ZIG || `${homedir()}/.cache/uv/archive-v0/9UrQOgeLIxroVAWO/ziglang/zig`;
-  run(process.env.YESCHOY_CARGO_XWIN || `${homedir()}/.local/bin/cargo-xwin`, ['build', '--manifest-path', 'src-tauri/Cargo.toml', '--release', '--target', 'x86_64-pc-windows-msvc', '--bin', 'yeschoy-desktop', '--features', 'custom-protocol', '--locked', '--offline'], {
+  run(process.env.YESCHOY_CARGO_XWIN || `${homedir()}/.local/bin/cargo-xwin`, ['build', '--manifest-path', 'src-tauri/Cargo.toml', '--release', '--target', 'x86_64-pc-windows-msvc', '--bin', 'kaifan-desktop', '--features', 'custom-protocol', '--locked', '--offline'], {
     // Linux CI uses clang-cl: its xwin sysroot has the case-variant header links
     // (Windows.h) that a case-insensitive Mac disk never needed.
     XWIN_CROSS_COMPILER: process.env.YESCHOY_XWIN_CROSS_COMPILER || 'clang', STATIC_VCRUNTIME: 'false', RUSTFLAGS: '-C target-feature=+crt-static -C target-feature=+crt-static',
@@ -77,7 +77,7 @@ if (platform === 'windows') {
   const resource = resolve(build.output, '../out/resource.rc');
   assert(readFileSync(resource, 'utf8').includes(`FILEVERSION ${version.split('.').join(', ')}, 0`));
   assert(statSync(resolve(resource, '../resource.lib')).size > 0);
-  const exe = `${repo}/src-tauri/target/x86_64-pc-windows-msvc/release/yeschoy-desktop.exe`;
+  const exe = `${repo}/src-tauri/target/x86_64-pc-windows-msvc/release/kaifan-desktop.exe`;
   const binary = readFileSync(exe), pe = binary.readUInt32LE(0x3c);
   assert.equal(binary.readUInt16LE(pe + 4), 0x8664);
   assert.equal(binary.readUInt16LE(pe + 24 + 68), 2);
@@ -91,21 +91,21 @@ if (platform === 'windows') {
   save('build-inspection', { platform, variant, version, commit, authorizationPageOrigin: origin, build, resourceSha256: hash(resource), payloadSha256: hash(payload), installerSha256: hash(destination), codeSigned: false, updaterSignatureCreated: true, installedApplicationLaunched: false });
 } else if (platform === 'macos') {
   const stage = `${folder}/${variant}-stage`;
-  assert(!existsSync(`${stage}/野菜API.app`));
+  assert(!existsSync(`${stage}/开饭.app`));
   const config = `${folder}/build-config.json`;
   writeFileSync(config, JSON.stringify({ bundle: { active: true, createUpdaterArtifacts: false, macOS: { hardenedRuntime: true, signingIdentity: 'Developer ID Application: xiangguo Zheng (BRG82P5ZB7)' } } }));
   run('pnpm', ['exec', 'tauri', 'build', '--ci', '--target', 'universal-apple-darwin', '--bundles', 'app', '--config', config, '--', '--locked', '--offline']);
   mkdirSync(stage, { recursive: true });
-  const app = `${stage}/野菜API.app`;
-  run('ditto', [`${repo}/src-tauri/target/universal-apple-darwin/release/bundle/macos/野菜API.app`, app]);
+  const app = `${stage}/开饭.app`;
+  run('ditto', [`${repo}/src-tauri/target/universal-apple-darwin/release/bundle/macos/开饭.app`, app]);
   symlinkSync('/Applications', `${stage}/Applications`);
   run('codesign', ['--verify', '--deep', '--strict', '--all-architectures', app]);
-  const binary = `${app}/Contents/MacOS/yeschoy-desktop`;
+  const binary = `${app}/Contents/MacOS/kaifan-desktop`;
   const architectures = run('lipo', ['-archs', binary]).trim().split(/\s+/).sort();
   assert.deepEqual(architectures, ['arm64', 'x86_64']);
   const plist = JSON.parse(run('plutil', ['-convert', 'json', '-o', '-', `${app}/Contents/Info.plist`]));
   assert.equal(plist.CFBundleShortVersionString, version);
-  assert.equal(plist.CFBundleIdentifier, 'com.yeschoy.desktop');
+  assert.equal(plist.CFBundleIdentifier, 'com.kaifan.desktop');
   save('build-inspection', { flavor: variant, variant, version, commit, authorizationPageOrigin: origin, appPath: app, architectures, binarySha256: hash(binary), builds: ['x86_64-apple-darwin', 'aarch64-apple-darwin'].map(buildEvidence), installedApplicationLaunched: false });
 } else {
   const verification = JSON.parse(readFileSync(`${folder}/evidence/${variant}-verification.json`));
@@ -113,7 +113,7 @@ if (platform === 'windows') {
   assert.equal(verification.version, version);
   const tar = `${folder}/public/${prefix}-macos-universal.app.tar.gz`;
   assert(!existsSync(tar));
-  run('/usr/bin/tar', ['-czf', tar, '-C', `${folder}/${variant}-stage`, '野菜API.app'], { COPYFILE_DISABLE: '1' });
+  run('/usr/bin/tar', ['-czf', tar, '-C', `${folder}/${variant}-stage`, '开饭.app'], { COPYFILE_DISABLE: '1' });
   sign(tar);
   sign(`${folder}/public/${prefix}-macos-universal-installer.dmg`);
 }

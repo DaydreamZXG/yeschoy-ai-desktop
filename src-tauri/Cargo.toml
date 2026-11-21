@@ -1,15 +1,15 @@
 [package]
-name = "yeschoy-desktop"
+name = "kaifan-desktop"
 version = "0.5.1"
-description = "Official beginner-friendly desktop assistant for 野菜API"
-authors = ["YesChoy"]
+description = "开饭 Kaifan: connect your AI apps to any relay station, no command line"
+authors = ["Kaifan contributors"]
 license = "MIT"
 edition = "2021"
 rust-version = "1.89.0"
 autotests = false
 
 [lib]
-name = "yeschoy_desktop_lib"
+name = "kaifan_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 doctest = false
 
@@ -27,6 +27,8 @@ async-stream = "0.3"
 aes-gcm = "0.10.3"
 axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio"] }
 base64 = "0.22"
+# 只用来找系统分给应用的数据目录；6.0.0 本来就在 lock 里（tauri 依赖它）。
+dirs = "6"
 # 同 thiserror：vendored 的 proxy/ 需要，1.11.1 本来就在 lock 与本地缓存里。
 bytes = "1.5"
 caseless = "=0.2.2"

@@ -109,13 +109,18 @@ fn acceptable_workspace(path: &Path, home: &Path) -> bool {
 }
 
 fn default_cli_workspace(home: &Path) -> Result<PathBuf, AdapterFailure> {
-    let path = home.join("Documents").join("野菜工作区");
+    // 改名前建的那个文件夹还在就接着用，不在用户的“文档”里再多建一个。
+    let old = home.join("Documents").join("野菜工作区");
+    if old.is_dir() {
+        return Ok(old);
+    }
+    let path = home.join("Documents").join("开饭工作区");
     std::fs::create_dir_all(&path).map_err(|_| failure("workspace_unavailable"))?;
     Ok(path)
 }
 
 fn remember_workspace(home: &Path, workspace: &Path) {
-    let path = home.join(".yeschoy").join("cli-workspace");
+    let path = crate::legacy::data_root(home).join("cli-workspace");
     if std::fs::create_dir_all(path.parent().unwrap_or(home)).is_ok() {
         let _ = std::fs::write(path, workspace.to_string_lossy().as_bytes());
     }
@@ -163,7 +168,7 @@ fn pick_cli_folder() -> Option<PathBuf> {
 }
 
 pub(crate) fn select_cli_workspace(home: &Path) -> Result<PathBuf, AdapterFailure> {
-    let remembered = home.join(".yeschoy").join("cli-workspace");
+    let remembered = crate::legacy::data_root(home).join("cli-workspace");
     if let Ok(text) = std::fs::read_to_string(&remembered) {
         let path = PathBuf::from(text.trim());
         if acceptable_workspace(&path, home) {
@@ -734,10 +739,14 @@ mod tests {
         std::fs::create_dir_all(home.join("Documents")).unwrap();
         let chosen = select_cli_workspace(&home).unwrap();
         assert_ne!(chosen, home);
-        assert!(chosen.ends_with("野菜工作区"));
+        assert!(chosen.ends_with("开饭工作区"));
         assert!(chosen.is_dir());
+        // 改名前建过的文件夹：接着用它，不另建一个。
+        let old = home.join("Documents").join("野菜工作区");
+        std::fs::create_dir_all(&old).unwrap();
+        assert_eq!(default_cli_workspace(&home).unwrap(), old);
         std::fs::write(
-            home.join(".yeschoy").join("cli-workspace"),
+            home.join(".kaifan").join("cli-workspace"),
             home.as_os_str().as_encoded_bytes(),
         )
         .ok();
@@ -746,7 +755,7 @@ mod tests {
         let project = home.join("Documents").join("my-app");
         std::fs::create_dir_all(&project).unwrap();
         std::fs::write(
-            home.join(".yeschoy").join("cli-workspace"),
+            home.join(".kaifan").join("cli-workspace"),
             project.to_string_lossy().as_bytes(),
         )
         .unwrap();

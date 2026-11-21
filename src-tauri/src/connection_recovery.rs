@@ -17,14 +17,13 @@ use aes_gcm::{
     Aes256Gcm, Nonce,
 };
 use base64::{engine::general_purpose::STANDARD, Engine};
-use keyring::v1::{Entry, Error as KeyringError};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use crate::tool_adapters::common::{self, FileChange};
 use crate::tool_credentials::ToolCredential;
 
-const SERVICE: &str = "com.yeschoy.desktop.connection-recovery.v1";
+const SERVICE: &str = "com.kaifan.desktop.connection-recovery.v1";
 // Four config files, before/after and one in-flight predecessor, with JSON
 // encoding overhead. This is a bounded journal, not an unbounded history.
 const MAX_JOURNAL: u64 = 128 * 1024 * 1024;
@@ -33,7 +32,7 @@ const MAX_BREAK_GLASS_FILE: u64 = 2 * 1024 * 1024;
 // A UTF-8 BOM and CRLF line endings, because the person most likely to open
 // this file is on Windows, in Notepad, after something already went wrong.
 const BREAK_GLASS_README: &str =
-    "\u{feff}这个文件夹里是野菜助手改动你的配置之前，那些文件的原始内容。\r\n\
+    "\u{feff}这个文件夹里是开饭改动你的配置之前，那些文件的原始内容。\r\n\
 \r\n\
 正常情况下你用不到它：在助手里点「恢复原设置」就行。\r\n\
 只有当助手说恢复失败（通常是系统钥匙串里的密钥没了，比如重置过登录\r\n\
@@ -138,7 +137,7 @@ pub(crate) fn operation_lock_at(root: &Path) -> Result<std::fs::File> {
 
 pub(crate) fn operation_lock() -> Result<std::fs::File> {
     let home = crate::tool_adapters::user_home().ok_or(Failure::Storage)?;
-    operation_lock_at(&home.join(".yeschoy/connection-recovery"))
+    operation_lock_at(&crate::legacy::data_root(&home).join("connection-recovery"))
 }
 
 fn allowed(tool: &str) -> bool {
@@ -283,15 +282,15 @@ fn recovery_store_is_uninitialized(root: &Path) -> Result<bool> {
 impl Store {
     pub(crate) fn open(create: bool) -> Result<Option<Self>> {
         let home = crate::tool_adapters::user_home().ok_or(Failure::Storage)?;
-        let root = home.join(".yeschoy").join("connection-recovery");
-        let entry = Entry::new(SERVICE, "encryption-key").map_err(|_| Failure::Storage)?;
-        let key = match entry.get_password() {
-            Ok(encoded) => STANDARD
+        let root = crate::legacy::data_root(&home).join("connection-recovery");
+        // 改名前的恢复记录是用旧名字下那把钥匙封的：读的时候搬过来，记录照样解得开。
+        let key = match crate::legacy::read_secret(SERVICE, "encryption-key") {
+            Ok(Some(encoded)) => STANDARD
                 .decode(encoded)
                 .map_err(|_| Failure::Storage)?
                 .try_into()
                 .map_err(|_| Failure::Storage)?,
-            Err(KeyringError::NoEntry) => {
+            Ok(None) => {
                 if !recovery_store_is_uninitialized(&root)? {
                     return Err(Failure::Storage);
                 }
@@ -300,8 +299,7 @@ impl Store {
                 }
                 let mut key = [0; 32];
                 getrandom::fill(&mut key).map_err(|_| Failure::Storage)?;
-                entry
-                    .set_password(&STANDARD.encode(key))
+                crate::legacy::write_secret(SERVICE, "encryption-key", &STANDARD.encode(key))
                     .map_err(|_| Failure::Storage)?;
                 key
             }
@@ -1062,6 +1060,154 @@ pub(crate) fn configuration_matches(record: &Record) -> bool {
     record.files.iter().all(|file| {
         common::snapshot(&file.path).ok().flatten().as_deref() == Some(file.after.as_slice())
     })
+}
+
+/// 这份配置里的取密钥命令换成客户端现在的位置之后的样子。不用换、认不出来都是
+/// `None`。除了那条路径，一个字节都不动。
+fn followed_bytes(
+    tool: &str,
+    path: &Path,
+    bytes: &[u8],
+    current: &Path,
+    quote: fn(&str) -> String,
+) -> Option<Vec<u8>> {
+    let text = std::str::from_utf8(bytes).ok()?;
+    if path.extension().and_then(|p| p.to_str()) == Some("toml") {
+        let mut document: toml_edit::DocumentMut = text.parse().ok()?;
+        let providers = document.get_mut("model_providers")?.as_table_like_mut()?;
+        let mut changed = false;
+        for (_, provider) in providers.iter_mut() {
+            let Some(auth) = provider.get_mut("auth") else {
+                continue;
+            };
+            let ours = auth
+                .get("args")
+                .and_then(toml_edit::Item::as_array)
+                .is_some_and(|args| {
+                    args.iter().map(|arg| arg.as_str()).collect::<Vec<_>>()
+                        == [Some("credential-helper"), Some(tool)]
+                });
+            let Some(old) = auth.get("command").and_then(toml_edit::Item::as_str) else {
+                continue;
+            };
+            if !ours || !crate::legacy::should_follow(Path::new(old), current) {
+                continue;
+            }
+            auth["command"] = toml_edit::value(current.to_str()?);
+            changed = true;
+        }
+        return changed.then(|| document.to_string().into_bytes());
+    }
+    let value: Value = serde_json::from_str(text).ok()?;
+    let commands: Vec<&str> = match tool {
+        "claude_code" => value["apiKeyHelper"].as_str().into_iter().collect(),
+        "pi" => value["providers"]
+            .as_object()
+            .into_iter()
+            .flat_map(|providers| providers.values())
+            .filter_map(|provider| provider["apiKey"].as_str()?.strip_prefix('!'))
+            .collect(),
+        _ => return None,
+    };
+    // 按 JSON 里实际写的样子（转义后）整段替换，文件的缩进和别的字段原样不动。
+    let written = |command: &str| {
+        let encoded = serde_json::to_string(command).ok()?;
+        Some(encoded[1..encoded.len() - 1].to_owned())
+    };
+    let mut next = text.to_owned();
+    let mut changed = false;
+    for command in commands {
+        let Some(followed) = crate::legacy::followed_command(command, tool, current, quote) else {
+            continue;
+        };
+        let (old, new) = (written(command)?, written(&followed)?);
+        if !next.contains(&old) {
+            return None;
+        }
+        next = next.replace(&old, &new);
+        changed = true;
+    }
+    changed.then(|| next.into_bytes())
+}
+
+/// 客户端改了名或挪了位置之后，把已接入应用里的取密钥命令改成现在的位置。
+///
+/// 只在“应用里现在的配置”和“我们上次写的配置”除了那条路径以外完全相同时才动：
+/// 用户或别的工具改过的文件不碰，留给界面照常报“要修”。写文件和更新记录之间
+/// 断电也没关系——下次启动两边仍然只差那条路径，会接着做完。
+fn follow_helper(
+    store: &Store,
+    tool: &str,
+    current: &Path,
+    quote: fn(&str) -> String,
+) -> Result<bool> {
+    let Some(mut record) = store.load(tool)? else {
+        return Ok(false);
+    };
+    if record.pending || record.previous.is_some() || record.rollback_checkpoint.is_some() {
+        return Ok(false);
+    }
+    let settle = |path: &Path, bytes: &[u8]| {
+        followed_bytes(tool, path, bytes, current, quote).unwrap_or_else(|| bytes.to_vec())
+    };
+    let mut writes = Vec::new();
+    let mut recorded = false;
+    for file in &mut record.files {
+        let Some(live) = common::snapshot(&file.path).map_err(|_| Failure::Io)? else {
+            return Ok(false);
+        };
+        let target = settle(&file.path, &file.after);
+        if settle(&file.path, &live) != target {
+            return Ok(false);
+        }
+        if live != target {
+            writes.push((file.path.clone(), target.clone()));
+        }
+        if file.after != target {
+            file.after = target;
+            recorded = true;
+        }
+    }
+    if writes.is_empty() && !recorded {
+        return Ok(false);
+    }
+    for (path, bytes) in &writes {
+        common::atomic_write(path, bytes).map_err(|_| Failure::Io)?;
+    }
+    if recorded {
+        store.save(&record)?;
+    }
+    Ok(true)
+}
+
+/// 启动时做一次。开发构建不做：不然在开发机上跑一下，就会把正式安装的那份
+/// 客户端接好的应用改成指向开发目录里的程序。
+pub(crate) fn follow_client_location() {
+    if cfg!(debug_assertions) {
+        return;
+    }
+    let Ok(current) = crate::tool_credentials::executable_path() else {
+        return;
+    };
+    let Ok(_lock) = operation_lock() else {
+        return;
+    };
+    let Ok(Some(store)) = Store::open(false) else {
+        return;
+    };
+    for tool in ["claude_code", "pi", "codex_desktop"] {
+        let outcome = match follow_helper(
+            &store,
+            tool,
+            Path::new(&current),
+            crate::tool_credentials::shell_quote,
+        ) {
+            Ok(true) => "followed",
+            Ok(false) => "unchanged",
+            Err(_) => "failed",
+        };
+        log::info!("legacy stage=helper tool={tool} outcome={outcome}");
+    }
 }
 
 /// Detects receipts whose endpoint architecture changed across releases.
@@ -2360,5 +2506,118 @@ mod tests {
             std::os::unix::fs::symlink(&f.0.root, f.path("alias")).unwrap();
             assert!(common::snapshot(&f.path("alias/absent/config.json")).is_err());
         }
+    }
+
+    fn unix_quote(value: &str) -> String {
+        format!("'{}'", value.replace('\'', "'\\''"))
+    }
+
+    const OLD_CLIENT: &str = "/Applications/野菜API.app/Contents/MacOS/yeschoy-desktop";
+    const NEW_CLIENT: &str = "/Applications/开饭.app/Contents/MacOS/kaifan-desktop";
+
+    fn connected(f: &Fixture, tool: &str, name: &str, after: &[u8]) -> FileChange {
+        let file = f.change(name, None, after);
+        let mut record =
+            f.0.begin(receipt(tool), std::slice::from_ref(&file), None)
+                .unwrap();
+        common::atomic_write(&file.path, after).unwrap();
+        f.0.finish(&mut record).unwrap();
+        file
+    }
+
+    fn follow(f: &Fixture, tool: &str) -> Result<bool> {
+        follow_helper(&f.0, tool, Path::new(NEW_CLIENT), unix_quote)
+    }
+
+    #[test]
+    fn a_connected_app_follows_the_renamed_client_and_stays_connected() {
+        let f = Fixture::new();
+        let settings = format!(
+            "{{\n  \"apiKeyHelper\": \"'{OLD_CLIENT}' gateway-credential-helper claude_code\",\n  \"theme\": \"dark\"\n}}"
+        );
+        let file = connected(&f, "claude_code", "settings.json", settings.as_bytes());
+        assert_eq!(follow(&f, "claude_code"), Ok(true));
+        let live = String::from_utf8(common::snapshot(&file.path).unwrap().unwrap()).unwrap();
+        // 只有那条路径变了，别的一个字节都没动。
+        assert_eq!(live, settings.replace(OLD_CLIENT, NEW_CLIENT));
+        let record = f.0.load("claude_code").unwrap().unwrap();
+        assert!(configuration_matches(&record));
+        assert!(!record.pending);
+        assert_eq!(record.receipt.model_id, "model-new");
+        // 再跑一次：已经是现在的位置，什么都不做。
+        assert_eq!(follow(&f, "claude_code"), Ok(false));
+    }
+
+    #[test]
+    fn pi_and_codex_helper_paths_follow_too() {
+        let f = Fixture::new();
+        let models = format!(
+            "{{\"providers\":{{\"yeschoy\":{{\"apiKey\":\"!'{OLD_CLIENT}' credential-helper pi\"}},\"mine\":{{\"apiKey\":\"!op read op://x\"}}}}}}"
+        );
+        let pi = connected(&f, "pi", "models.json", models.as_bytes());
+        assert_eq!(follow(&f, "pi"), Ok(true));
+        assert_eq!(
+            common::snapshot(&pi.path).unwrap().unwrap(),
+            models.replace(OLD_CLIENT, NEW_CLIENT).into_bytes()
+        );
+
+        let config = format!(
+            "# mine\nmodel_provider = \"yeschoy\"\n\n[model_providers.other.auth]\ncommand = \"/usr/bin/op\"\nargs = [\"read\"]\n\n[model_providers.yeschoy.auth]\ncommand = \"{OLD_CLIENT}\"\nargs = [\"credential-helper\", \"codex_desktop\"]\n"
+        );
+        let codex = connected(&f, "codex_desktop", "config.toml", config.as_bytes());
+        assert_eq!(follow(&f, "codex_desktop"), Ok(true));
+        assert_eq!(
+            common::snapshot(&codex.path).unwrap().unwrap(),
+            config.replace(OLD_CLIENT, NEW_CLIENT).into_bytes()
+        );
+        assert!(configuration_matches(
+            &f.0.load("codex_desktop").unwrap().unwrap()
+        ));
+    }
+
+    #[test]
+    fn settings_someone_else_changed_are_left_exactly_as_they_are() {
+        let f = Fixture::new();
+        let settings =
+            format!("{{\"apiKeyHelper\":\"'{OLD_CLIENT}' credential-helper claude_code\"}}");
+        let file = connected(&f, "claude_code", "settings.json", settings.as_bytes());
+        let edited = format!(
+            "{{\"apiKeyHelper\":\"'{OLD_CLIENT}' credential-helper claude_code\",\"x\":1}}"
+        );
+        common::atomic_write(&file.path, edited.as_bytes()).unwrap();
+        assert_eq!(follow(&f, "claude_code"), Ok(false));
+        assert_eq!(
+            common::snapshot(&file.path).unwrap().unwrap(),
+            edited.into_bytes()
+        );
+        // 没接过的应用、上次没接完的应用：也不碰。
+        assert_eq!(follow(&f, "pi"), Ok(false));
+        let half = f.change("half.json", None, settings.as_bytes());
+        f.0.begin(receipt("pi"), std::slice::from_ref(&half), None)
+            .unwrap();
+        common::atomic_write(&half.path, settings.as_bytes()).unwrap();
+        assert_eq!(follow(&f, "pi"), Ok(false));
+    }
+
+    #[test]
+    fn an_interrupted_move_is_finished_on_the_next_start() {
+        let f = Fixture::new();
+        let settings =
+            format!("{{\"apiKeyHelper\":\"'{OLD_CLIENT}' credential-helper claude_code\"}}");
+        let file = connected(&f, "claude_code", "settings.json", settings.as_bytes());
+        // 上次只来得及改了应用里的文件，记录还没更新就断了。
+        let moved = settings.replace(OLD_CLIENT, NEW_CLIENT);
+        common::atomic_write(&file.path, moved.as_bytes()).unwrap();
+        assert!(!configuration_matches(
+            &f.0.load("claude_code").unwrap().unwrap()
+        ));
+        assert_eq!(follow(&f, "claude_code"), Ok(true));
+        assert!(configuration_matches(
+            &f.0.load("claude_code").unwrap().unwrap()
+        ));
+        assert_eq!(
+            common::snapshot(&file.path).unwrap().unwrap(),
+            moved.into_bytes()
+        );
     }
 }

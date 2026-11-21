@@ -36,7 +36,7 @@ const TOKEN_PAGE_SIZE: usize = 100;
 /// 这个数，后面的就当没有 —— 宁可多铸一把，也不在接入路径上无限翻页。
 const TOKEN_PAGE_LIMIT: usize = 20;
 pub(crate) static ACTIVATION_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
-const ACTIVATION_PROGRESS_EVENT: &str = "yeschoy://activation-progress";
+const ACTIVATION_PROGRESS_EVENT: &str = "kaifan://activation-progress";
 const ACTIVATION_PROGRESS_TOTAL: u8 = 7;
 const CONNECTION_LOCK_WAIT_TIMEOUT: Duration = Duration::from_secs(8);
 // Match the renderer's existing inspection budget, including lock wait and I/O.
@@ -1122,7 +1122,7 @@ static DEVICE_SCOPE: OnceLock<String> = OnceLock::new();
 fn device_scope() -> &'static str {
     DEVICE_SCOPE.get_or_init(|| {
         if let Some(home) = crate::tool_adapters::user_home() {
-            let path = home.join(".yeschoy").join("device-id");
+            let path = crate::legacy::data_root(&home).join("device-id");
             if let Some(existing) = std::fs::read_to_string(&path)
                 .ok()
                 .map(|text| text.trim().to_owned())

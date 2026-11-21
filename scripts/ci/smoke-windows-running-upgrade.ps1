@@ -13,6 +13,8 @@ if ($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_TEMP -eq '') {
 $installer = (Resolve-Path -LiteralPath $InstallerPath).Path
 $standaloneRoot = Join-Path $env:LOCALAPPDATA 'Programs\野菜API'
 $tauriRoot = Join-Path $env:LOCALAPPDATA '野菜API'
+# After the rename the installer writes here; the two roots above are the pre-rename installs it must still stop.
+$currentRoot = Join-Path $env:LOCALAPPDATA '开饭'
 $decoyRoot = Join-Path $env:RUNNER_TEMP 'yeschoy-upgrade-decoy'
 $targets = [System.Collections.Generic.List[System.Diagnostics.Process]]::new()
 $decoys = [System.Collections.Generic.List[System.Diagnostics.Process]]::new()
@@ -59,7 +61,9 @@ try {
     $targets.Add((Start-LegacyFixture -Path (Join-Path $standaloneRoot '野菜API.exe')))
     $targets.Add((Start-LegacyFixture -Path (Join-Path $tauriRoot 'yeschoy-desktop.exe')))
     $targets.Add((Start-LegacyFixture -Path (Join-Path $tauriRoot 'yeschoy-desktop.exe')))
+    $targets.Add((Start-LegacyFixture -Path (Join-Path $currentRoot 'kaifan-desktop.exe')))
     $decoys.Add((Start-LegacyFixture -Path (Join-Path $decoyRoot '野菜API.exe')))
+    $decoys.Add((Start-LegacyFixture -Path (Join-Path $decoyRoot 'kaifan-desktop.exe')))
 
     Start-Sleep -Seconds 1
     foreach ($process in @($targets) + @($decoys)) {
@@ -83,7 +87,7 @@ try {
         }
     }
 
-    $installedBinary = Join-Path $tauriRoot 'yeschoy-desktop.exe'
+    $installedBinary = Join-Path $currentRoot 'kaifan-desktop.exe'
     if (-not (Test-Path -LiteralPath $installedBinary -PathType Leaf)) {
         throw "Installer returned success without writing $installedBinary."
     }
@@ -98,9 +102,14 @@ finally {
 
     Remove-Item -LiteralPath $standaloneRoot -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $tauriRoot -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $currentRoot -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $decoyRoot -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath 'HKCU:\Software\野菜API' -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath 'HKCU:\Software\yeschoy\野菜API' -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\野菜API' -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop' -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath 'HKCU:\Software\Kaifan' -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath 'HKCU:\Software\kaifan\开饭' -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\开饭' -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\com.kaifan.desktop' -Recurse -Force -ErrorAction SilentlyContinue
 }

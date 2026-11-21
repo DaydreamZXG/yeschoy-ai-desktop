@@ -5,7 +5,7 @@
  * 这和外观偏好（`workbench/appearance.ts`）是同一个约定，
  * 所以这里刻意照着它写：同样的 try/catch、同样的「存储坏了也不挡 UI」。
  */
-export const LANGUAGE_KEY = "yeschoy-language";
+export const LANGUAGE_KEY = "kaifan.language";
 
 /** 已经**完整**翻译、可以真正切过去的语言。 */
 export const SUPPORTED_LANGUAGES = ["zh", "en"] as const;

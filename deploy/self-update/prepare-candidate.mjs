@@ -37,11 +37,11 @@ for (const variant of ['official', 'partner']) {
   const prefix = `yeschoy-${version}-${variant}`;
   const archive = `${output}/macos/public/${prefix}-macos-universal.app.tar.gz`;
   const entries = execFileSync('tar', ['-tzf', archive], { encoding: 'utf8' }).trim().split('\n');
-  assert(entries.every(name => name.startsWith('野菜API.app/') && !name.split('/').includes('..')));
+  assert(entries.every(name => name.startsWith('开饭.app/') && !name.split('/').includes('..')));
   const extracted = mkdtempSync(`${output}/macos/${variant}-archive-check-`);
   execFileSync('tar', ['-xzf', archive, '-C', extracted]);
-  const app = `${extracted}/野菜API.app`;
-  assert.equal(hash(`${app}/Contents/MacOS/yeschoy-desktop`), mac.binarySha256);
+  const app = `${extracted}/开饭.app`;
+  assert.equal(hash(`${app}/Contents/MacOS/kaifan-desktop`), mac.binarySha256);
   execFileSync('codesign', ['--verify', '--deep', '--strict', '--all-architectures', app]);
   execFileSync('xcrun', ['stapler', 'validate', app]);
   for (const [platform, suffix] of [['windows', 'windows-x86_64-installer.exe'], ['macos', 'macos-universal.app.tar.gz'], ['macos', 'macos-universal-installer.dmg']]) {

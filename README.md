@@ -1,8 +1,10 @@
-# 野菜API 桌面助手
+# 开饭 Kaifan
+
+> 改名前叫“野菜API 桌面助手”。装过旧版的人升级后，登录和已经接好的应用会自动搬到新名字下面，不用重新登录或重新接入。
 
 本地桌面配置助手：把常用的 AI 编程和办公应用接到兼容的 API 中转。选应用、选模型，助手替你把配置写进去；不想用了，一键恢复成原来的设置。
 
-[野菜API](https://yeschoy.com) 是开箱默认的连接源；长期目标是让更多兼容站点也能被一键接入（选站连接，而不是手填 Base URL 和 API Key）。
+填上站点网址在浏览器里授权，或粘贴站点地址和密钥，就能连任意 OpenAI 兼容的中转站。[野菜API](https://yeschoy.com) 是内置的预设站点之一。
 
 [English](#english)
 
@@ -31,7 +33,7 @@
 
 ## 下载
 
-- [野菜桌面助手下载页（yeschoy.app）](https://yeschoy.app/download)（自动识别系统，优先 GitHub 已发布版本，否则走官网备用地址）
+- [开饭下载页（yeschoy.app）](https://yeschoy.app/download)（自动识别系统，优先 GitHub 已发布版本，否则走官网备用地址）
 - [GitHub Releases](https://github.com/DaydreamZXG/yeschoy-ai-desktop/releases)
 
 应用内会自动检查更新：自己编译的公开版本走 GitHub Releases，官方安装包走官方更新源（见 [`docs/OPEN_SOURCE.md`](docs/OPEN_SOURCE.md)）。下载页源码与部署说明见 [`docs/download-page.md`](docs/download-page.md)。
@@ -75,7 +77,7 @@ cd src-tauri && cargo test --lib   # Rust 测试
 
 A local desktop config helper that connects common AI coding and office apps to a compatible API relay. Pick an app and a model; it writes the configuration for you. One click restores the original settings.
 
-[Yeschoy (野菜API)](https://yeschoy.com) is the default connection source out of the box. Longer term, other compatible stations should be connectable the same way (pick a station — not paste Base URL and API Key by hand).
+Kaifan (开饭, formerly the Yeschoy desktop assistant) connects to any OpenAI-compatible relay station: enter the station address and authorize in the browser, or paste the address and an API key. [Yeschoy (野菜API)](https://yeschoy.com) is one of the built-in station presets. Upgrading from the old name keeps your sign-in and connected apps.
 
 Supported apps: Claude Code, Claude Desktop, Codex (ChatGPT desktop), WorkBuddy, DeepSeek Harness, DSH web, Pi and OpenCode, on macOS and Windows.
 
@@ -86,7 +88,7 @@ Supported apps: Claude Code, Claude Desktop, Codex (ChatGPT desktop), WorkBuddy,
 
 ### Download
 
-- [YesChoy download page (yeschoy.app)](https://yeschoy.app/download) (OS-aware; prefers published GitHub releases)
+- [Kaifan download page (yeschoy.app)](https://yeschoy.app/download) (OS-aware; prefers published GitHub releases)
 - [GitHub Releases](https://github.com/DaydreamZXG/yeschoy-ai-desktop/releases)
 
 See [`docs/download-page.md`](docs/download-page.md) for hosting notes. In-app auto-update: community builds use GitHub Releases; official packages use the official feed (see `docs/OPEN_SOURCE.md`).

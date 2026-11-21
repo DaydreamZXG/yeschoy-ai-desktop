@@ -25,6 +25,7 @@ mod connectivity;
 mod connectivity_core;
 mod desktop_app_discovery;
 mod desktop_app_discovery_core;
+mod legacy;
 mod local_bridge;
 mod logging;
 mod manual_locations;
@@ -72,12 +73,13 @@ use shutdown_coordinator::{
 };
 
 #[cfg(not(target_os = "windows"))]
-const CLOSE_CHOICE_EVENT: &str = "yeschoy://close-choice";
-const EXIT_PROGRESS_EVENT: &str = "yeschoy://exit-progress";
+const CLOSE_CHOICE_EVENT: &str = "kaifan://close-choice";
+const EXIT_PROGRESS_EVENT: &str = "kaifan://exit-progress";
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     logging::init();
+    legacy::move_in();
     log::info!("{FRONTEND_MODE_MARKER} selected={FRONTEND_MODE}");
     let claude_code_runtime = tool_adapters::claude_code::ClaudeCodeRuntimeState::default();
     let resume_claude_code_runtime = claude_code_runtime.clone();
@@ -154,6 +156,12 @@ pub fn run() {
                 if permit.is_cancelled() {
                     return;
                 }
+                // 改名或挪位置之后，先把已接入应用里指向旧程序的取密钥命令改过来，
+                // 再恢复各个本地转发。
+                let _ = tauri::async_runtime::spawn_blocking(
+                    connection_recovery::follow_client_location,
+                )
+                .await;
                 // Resolve the user's login-shell environment (a macOS app
                 // launched from the Dock cannot see the exports a Terminal
                 // window would; see shell_environment for what that broke).
@@ -235,7 +243,7 @@ pub fn run() {
             station_probe::station_probe_v1
         ])
         .build(tauri::generate_context!())
-        .expect("failed to run the 野菜API desktop shell");
+        .expect("failed to run the Kaifan desktop shell");
     app.run(|app, event| {
         if let tauri::RunEvent::ExitRequested { api, .. } = event {
             if shutdown().progress() != ShutdownProgress::ExitRequested {
@@ -322,7 +330,7 @@ fn register_installer_shutdown_listener<R: tauri::Runtime>(
             None,
             false,
             false,
-            w!("Local\\YesChoyDesktopInstallerShutdown_v1"),
+            w!("Local\\KaifanDesktopInstallerShutdown_v1"),
         )
     }
     .map_err(|error| {
@@ -589,7 +597,7 @@ fn windows_close_choice<R: tauri::Runtime>(window: &tauri::Window<R>) -> NativeC
         "选择“是”：恢复原设置并退出。请先保存任务；助手会请求 Codex/Claude 正常关闭，恢复后不自动打开应用。其他命令行应用下次启动生效。\n选择“否”：选择后台运行或保留设置退出。\n选择“取消”：返回。",
         "Yes: restore the original settings and quit. Save your work first; the assistant asks Codex/Claude to close normally and does not reopen them afterwards. Other command-line apps pick this up on their next start.\nNo: keep running in the background, or quit and keep the connections.\nCancel: go back.",
     ));
-    let title = HSTRING::from(language.pick("关闭野菜API？", "Close Yeschoy?"));
+    let title = HSTRING::from(language.pick("关闭开饭？", "Close Kaifan?"));
     let result = unsafe {
         MessageBoxW(
             owner,

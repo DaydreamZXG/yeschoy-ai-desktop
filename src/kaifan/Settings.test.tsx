@@ -360,7 +360,7 @@ describe("Settings", () => {
 
   it("说清数据放在哪、会不会上传；退出客户端交给那一问去办", () => {
     const asked = vi.fn();
-    window.addEventListener("yeschoy:open-exit-choice", asked);
+    window.addEventListener("kaifan:open-exit-choice", asked);
     show();
     expect(screen.getByTestId("kaifan-settings-privacy")).toHaveTextContent(
       "密码库",
@@ -369,7 +369,7 @@ describe("Settings", () => {
       within(screen.getByTestId("kaifan-settings-quit")).getByRole("button"),
     );
     expect(asked).toHaveBeenCalledOnce();
-    window.removeEventListener("yeschoy:open-exit-choice", asked);
+    window.removeEventListener("kaifan:open-exit-choice", asked);
   });
 
   it("更新：有新版本给安装，查不到给再试和官网下载", () => {

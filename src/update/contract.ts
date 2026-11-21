@@ -1,4 +1,4 @@
-export const UPDATE_PROGRESS_EVENT = "yeschoy://update-progress";
+export const UPDATE_PROGRESS_EVENT = "kaifan://update-progress";
 
 export type NativeUpdatePhase =
   | "checking"

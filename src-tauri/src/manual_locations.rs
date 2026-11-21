@@ -74,9 +74,7 @@ struct Store {
 
 fn store_path() -> Option<PathBuf> {
     Some(
-        crate::tool_adapters::user_home()?
-            .join(".yeschoy")
-            .join("manual-locations.json"),
+        crate::legacy::data_root(&crate::tool_adapters::user_home()?).join("manual-locations.json"),
     )
 }
 

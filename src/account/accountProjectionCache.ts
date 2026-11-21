@@ -4,7 +4,7 @@
  */
 import type { AccountProjection } from "./session";
 
-const STORAGE_KEY = "yeschoy.account.lastSignedInProjection.v1";
+const STORAGE_KEY = "kaifan.account.lastSignedInProjection.v1";
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 interface AgeStorage {

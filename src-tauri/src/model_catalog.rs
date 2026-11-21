@@ -40,11 +40,7 @@ const MAX_SHA_BYTES: usize = 256;
 const INPUT_MODALITIES: [&str; 2] = ["text", "image"];
 
 fn cache_path() -> Option<PathBuf> {
-    Some(
-        crate::tool_adapters::user_home()?
-            .join(".yeschoy")
-            .join("model-catalog.json"),
-    )
+    Some(crate::legacy::data_root(&crate::tool_adapters::user_home()?).join("model-catalog.json"))
 }
 
 /// Validate an untrusted payload against the catalog schema.

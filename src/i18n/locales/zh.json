@@ -1,7 +1,4 @@
 {
-  "yeschoySettings": {
-    "languageTitle": "界面语言"
-  },
   "workbench": {
     "appNameCodex": "Codex（桌面版 / 命令行）"
   },
@@ -9,8 +6,8 @@
     "defaultGroupLabel": "标准分组"
   },
   "quit": {
-    "titleChoice": "关闭野菜助手？",
-    "titleExiting": "正在退出野菜助手",
+    "titleChoice": "关闭开饭？",
+    "titleExiting": "正在退出开饭",
     "unknownAffected": "暂时无法确认哪些应用需要助手运行。退出可能中断正在使用的连接，设置不会被删除。",
     "affectedIntro": "以下应用的连接需要助手运行，退出后会暂时中断：",
     "affectedHint": "想继续用就选「后台运行」。退出后再打开助手，从应用卡片继续，不用重新接入。",

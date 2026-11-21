@@ -8,7 +8,7 @@ import {
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 const native = vi.mocked(invoke);
-const KEY = "yeschoy.announcements.seen.v1";
+const KEY = "kaifan.announcements.seen.v1";
 
 afterEach(() => {
   localStorage.clear();
