@@ -41,6 +41,8 @@ import { useStationLink, type LinkEvent } from "./useStationLink";
 
 /** 站点连不上时，隔这么久自己再试一次，不等用户来点。 */
 const RETRY_MS = 20_000;
+/** 切回窗口时，离上次看账户至少隔这么久才再看一次。 */
+const REFOCUS_MS = 5_000;
 const HOME_APPS = 5;
 
 export function KaifanApp() {
@@ -158,6 +160,25 @@ export function KaifanApp() {
     const timer = setTimeout(() => void retry(), RETRY_MS);
     return () => clearTimeout(timer);
   }, [retry, retrying, state.cond]);
+
+  // 从别的窗口回来（比如刚在浏览器里充完值）：自己再看一眼账户，不用人来刷新。
+  const look = useRef({ refresh, at: Date.now() });
+  look.current.refresh = refresh;
+  useEffect(() => {
+    if (!signedIn) return;
+    const again = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - look.current.at < REFOCUS_MS) return;
+      look.current.at = Date.now();
+      void look.current.refresh();
+    };
+    window.addEventListener("focus", again);
+    document.addEventListener("visibilitychange", again);
+    return () => {
+      window.removeEventListener("focus", again);
+      document.removeEventListener("visibilitychange", again);
+    };
+  }, [signedIn]);
 
   const recharge = async () => {
     if (!(await session.openWallet()))
