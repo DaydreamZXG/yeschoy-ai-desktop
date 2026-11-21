@@ -53,8 +53,14 @@ fn to_chat(value: Value) -> Option<Value> {
     let model = value.get("model").and_then(Value::as_str)?.to_owned();
     let deepseek = is_deepseek(&model);
     // 关掉思考是显式状态，优先于界面上残留的档位。
+    let asked = value
+        .pointer("/output_config/effort")
+        .and_then(Value::as_str);
     let effort = match value.pointer("/thinking/type").and_then(Value::as_str) {
         Some("disabled") => Some("none"),
+        // 上游把 Claude 的 max 说成 OpenAI 的 xhigh；DeepSeek 自己就有 max，
+        // 经 xhigh 转一道会落到 high，用户选不到最高档。
+        _ if deepseek && asked == Some("max") => Some("max"),
         _ => resolve_reasoning_effort(&value),
     };
     let mut chat = anthropic_to_openai_with_reasoning_content(value, deepseek).ok()?;
@@ -304,6 +310,11 @@ mod tests {
         assert_eq!(chat["thinking"]["type"], "enabled");
         // DeepSeek 没有 medium，落到 high。
         assert_eq!(chat["reasoning_effort"], "high");
+
+        // max 是 DeepSeek 自己有的档，不能被降成 high。
+        let max = request(json!({"output_config": {"effort": "max"}}));
+        assert_eq!(max["reasoning_effort"], "max");
+        assert_eq!(max["thinking"]["type"], "enabled");
 
         let off = request(json!({
             "thinking": {"type": "disabled"},
