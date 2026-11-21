@@ -336,6 +336,7 @@
       "region": "Region",
       "region_cn": "Mainland China",
       "region_global": "International",
+      "vendorKeyPlaceholder": "Paste the key here",
       "getKey": "Get a key ↗",
       "keyPageFailed": "The browser didn't open. Sign in on this provider's website yourself and look for “API Key” in its console.",
       "planRiskTitle": "To be clear: a plan can be suspended",

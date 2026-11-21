@@ -76,6 +76,7 @@ const fn preset(
         responses: false,
         only_tools: &[],
         key_page,
+        // 默认露在外面；不常用的在表里单独标，收进「还有几家」。
         common: true,
     }
 }
@@ -116,19 +117,23 @@ pub(crate) const PRESETS: &[Preset] = &[
         Billing::Plan,
         "https://www.kimi.ai/code/console",
     ),
-    preset(
-        "volcengine_coding",
-        "volcengine_coding",
-        None,
-        "火山方舟 Coding Plan",
-        "https://ark.cn-beijing.volces.com",
-        "/api/coding/v3",
-        Some("/api/coding"),
-        Billing::Plan,
-        "https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey",
-    ),
+    Preset {
+        common: false,
+        ..preset(
+            "volcengine_coding",
+            "volcengine_coding",
+            None,
+            "火山方舟 Coding Plan",
+            "https://ark.cn-beijing.volces.com",
+            "/api/coding/v3",
+            Some("/api/coding"),
+            Billing::Plan,
+            "https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey",
+        )
+    },
     Preset {
         key_check: KeyCheck::Unverifiable,
+        common: false,
         ..preset(
             "bailian_coding",
             "bailian_coding",
@@ -143,7 +148,6 @@ pub(crate) const PRESETS: &[Preset] = &[
     },
     Preset {
         key_check: KeyCheck::Unverifiable,
-        common: false,
         ..preset(
             "ollama_cloud",
             "ollama_cloud",
@@ -159,7 +163,6 @@ pub(crate) const PRESETS: &[Preset] = &[
     Preset {
         // 它的对话接口要求带 OpenCode 自己的会话标记，别的应用发过去会被拒。
         only_tools: &["opencode"],
-        common: false,
         ..preset(
             "opencode_go",
             "opencode_go",
@@ -187,17 +190,20 @@ pub(crate) const PRESETS: &[Preset] = &[
             "https://openrouter.ai/settings/keys",
         )
     },
-    preset(
-        "deepseek",
-        "deepseek",
-        None,
-        "DeepSeek",
-        "https://api.deepseek.com",
-        "/v1",
-        Some("/anthropic"),
-        Billing::PayAsYouGo,
-        "https://platform.deepseek.com/api_keys",
-    ),
+    Preset {
+        common: false,
+        ..preset(
+            "deepseek",
+            "deepseek",
+            None,
+            "DeepSeek",
+            "https://api.deepseek.com",
+            "/v1",
+            Some("/anthropic"),
+            Billing::PayAsYouGo,
+            "https://platform.deepseek.com/api_keys",
+        )
+    },
     Preset {
         common: false,
         ..preset(
@@ -228,7 +234,6 @@ pub(crate) const PRESETS: &[Preset] = &[
     },
     Preset {
         responses: true,
-        common: false,
         ..preset(
             "openai",
             "openai",

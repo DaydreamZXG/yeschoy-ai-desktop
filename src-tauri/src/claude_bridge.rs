@@ -358,7 +358,7 @@ async fn messages(state: &BridgeState, request: Request<Body>) -> Response {
     };
     // 只会说 Chat 格式的站：`/v1/messages` 在那里不存在，请求要翻译后再发。
     if chat::applies(&upstream_credential) {
-        return chat::forward(state, &upstream_credential, value).await;
+        return chat::forward(state, &upstream_credential, &forwarded, value).await;
     }
     let upstream = match send_upstream(state, &upstream_credential, &forwarded, &value).await {
         Ok(response) => response,

@@ -525,7 +525,7 @@ export function Connect({
                 type="password"
                 value={key}
                 onChange={(event) => setKey(event.target.value)}
-                placeholder={t("kaifan.connect.keyPlaceholder")}
+                placeholder={t("kaifan.connect.vendorKeyPlaceholder")}
                 autoComplete="off"
                 spellCheck={false}
                 disabled={busy}

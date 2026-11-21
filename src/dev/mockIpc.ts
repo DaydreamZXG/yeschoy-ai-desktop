@@ -460,7 +460,7 @@ const handlers: Record<string, (a: Args) => unknown> = {
       keyCheck: "models",
       onlyTools: [],
       keyPage: "https://example.com/keys",
-      common: true,
+      common: false,
     },
     {
       id: "bailian_coding",
@@ -472,7 +472,7 @@ const handlers: Record<string, (a: Args) => unknown> = {
       keyCheck: "unverifiable",
       onlyTools: [],
       keyPage: "https://example.com/keys",
-      common: true,
+      common: false,
     },
     {
       id: "ollama_cloud",
@@ -484,7 +484,7 @@ const handlers: Record<string, (a: Args) => unknown> = {
       keyCheck: "unverifiable",
       onlyTools: [],
       keyPage: "https://example.com/keys",
-      common: false,
+      common: true,
     },
     {
       id: "opencode_go",
@@ -496,7 +496,7 @@ const handlers: Record<string, (a: Args) => unknown> = {
       keyCheck: "models",
       onlyTools: ["opencode"],
       keyPage: "https://example.com/keys",
-      common: false,
+      common: true,
     },
     {
       id: "openrouter",
@@ -520,7 +520,7 @@ const handlers: Record<string, (a: Args) => unknown> = {
       keyCheck: "models",
       onlyTools: [],
       keyPage: "https://example.com/keys",
-      common: true,
+      common: false,
     },
     {
       id: "moonshot_cn",
@@ -556,7 +556,7 @@ const handlers: Record<string, (a: Args) => unknown> = {
       keyCheck: "models",
       onlyTools: [],
       keyPage: "https://example.com/keys",
-      common: false,
+      common: true,
     },
   ],
   provider_open_key_page_v1: () => null,

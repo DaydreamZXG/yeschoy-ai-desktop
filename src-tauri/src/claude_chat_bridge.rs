@@ -79,6 +79,7 @@ fn to_chat(value: Value) -> Option<Value> {
 pub(super) async fn forward(
     state: &BridgeState,
     credential: &ToolCredential,
+    forwarded: &[(header::HeaderName, String)],
     value: Value,
 ) -> Response {
     let streaming = value.get("stream").and_then(Value::as_bool) == Some(true);
@@ -94,9 +95,16 @@ pub(super) async fn forward(
         "{}/chat/completions",
         crate::provider_presets::openai_base(&credential.origin)
     );
-    let upstream = match state
-        .client
-        .post(url)
+    // 应用自报的名字照原样带过去。`anthropic-*` 那些头不带：对面是 Chat 接口，
+    // 用不上。
+    let mut request = state.client.post(url);
+    if let Some((name, value)) = forwarded
+        .iter()
+        .find(|(name, _)| name == header::USER_AGENT)
+    {
+        request = request.header(name, value);
+    }
+    let upstream = match request
         .bearer_auth(credential.upstream_key())
         .json(&chat)
         .send()

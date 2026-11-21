@@ -428,7 +428,7 @@ describe("连接站点", () => {
       // 回来时刚才展开的还展开着，不用再点一次。
       fireEvent.click(screen.getByRole("button", { name: /OpenCode Go/ }));
       expect(screen.getByTestId("kaifan-connect-limits")).toHaveTextContent(
-        "只认OpenCode",
+        "只认 OpenCode",
       );
     });
 
