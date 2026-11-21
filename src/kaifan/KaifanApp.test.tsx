@@ -14,6 +14,7 @@ import { idleUpdateProjection } from "../update/contract";
 import { readAnnouncements } from "../workbench/announcements";
 import { useDesktopUpdate } from "../update/UpdateProvider";
 import { openClassic } from "../uiChoice";
+import { lookAtStation } from "./station";
 import { KaifanApp } from "./KaifanApp";
 
 vi.mock("../account/useAccountSession", () => ({
@@ -41,12 +42,17 @@ vi.mock("../workbench/announcements", async (load) => ({
   readAnnouncements: vi.fn(),
   followAnnouncement: vi.fn(),
 }));
+vi.mock("./station", async (load) => ({
+  ...(await load<typeof import("./station")>()),
+  lookAtStation: vi.fn(),
+}));
 vi.mock("./Fx", async () => {
   const { forwardRef } = await import("react");
   return { Fx: forwardRef(() => null) };
 });
 
 const board = vi.mocked(readAnnouncements);
+const look = vi.mocked(lookAtStation);
 const session = vi.mocked(useAccountSession);
 const update = vi.mocked(useDesktopUpdate);
 const refresh = vi.fn();
@@ -247,6 +253,24 @@ describe("开饭首页自己会做的事", () => {
     fireEvent.keyDown(document.activeElement!, { key: "Escape" });
     await waitFor(() => expect(ledger).toHaveAttribute("inert"));
     expect(home).not.toHaveAttribute("inert");
+  });
+
+  it("点「设置」：在新界面里滑出来，不去旧页面；体检当场去探站点", async () => {
+    look.mockResolvedValue({ ok: false, reason: "timeout" });
+    render(<KaifanApp />);
+    const settings = screen.getByTestId("kaifan-settings");
+    expect(settings).toHaveAttribute("inert");
+    fireEvent.click(screen.getByTestId("kaifan-nav-settings"));
+    await waitFor(() => expect(settings).not.toHaveAttribute("inert"));
+    expect(openClassic).not.toHaveBeenCalled();
+
+    refresh.mockClear();
+    fireEvent.click(screen.getByTestId("kaifan-settings-check"));
+    const report = await screen.findByTestId("kaifan-settings-report");
+    expect(look).toHaveBeenCalledWith("https://yeschoy.com");
+    expect(refresh).toHaveBeenCalledTimes(1);
+    expect(report).toHaveTextContent("站点连不上");
+    expect(report).toHaveTextContent("站点通了才能看");
   });
 
   it("充值页没打开成：收起账本，让她在首页说怎么办", async () => {

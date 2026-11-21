@@ -312,7 +312,9 @@ function activationResult(args: Args) {
 // 对话框 —— 夹具恒报 `not_connected`，那块界面在审计页里根本到不了。
 function connections(requestId: string) {
   const base = connectionsFixture(requestId);
-  if (scenario !== "connected") return base;
+  if (scenario !== "connected" && scenario !== "settings_fix") return base;
+  // `?s=settings_fix`：其中一个应用的设置被别的工具改过，用来看体检和「去修」。
+  const broken = scenario === "settings_fix" ? "pi" : "";
   const live = {
     claude_code: "glm-5.3",
     claude_desktop: "claude-sonnet-4-5-20250929",
@@ -327,7 +329,10 @@ function connections(requestId: string) {
       live[connection.toolId]
         ? {
             ...connection,
-            state: "connected" as const,
+            state:
+              connection.toolId === broken
+                ? ("changed" as const)
+                : ("connected" as const),
             modelId: live[connection.toolId],
             lineId: "mainland_optimized",
             billingGroup: "default",
@@ -496,17 +501,24 @@ const handlers: Record<string, (a: Args) => unknown> = {
   read_desktop_exit_state: () => ({ closeRequested: false, shutdown: null }),
   set_window_appearance: () => null,
   open_config_folder: () => null,
-  manage_desktop_update_v1: (a) => ({
-    schemaVersion: 1,
-    requestId: rid(a) || "idle",
-    phase: "idle",
-    currentVersion: "0.4.22",
-    availableVersion: "",
-    notes: "",
-    downloadedBytes: 0,
-    totalBytes: 0,
-    reasonCode: "idle",
-  }),
+  manage_desktop_update_v1: (a) => {
+    // `?s=update_ready` 报有新版本；其余场景查完就是「已经是最新」。
+    const asked =
+      (a as { request?: { action?: string } }).request?.action === "check";
+    const ready = asked && scenario === "update_ready";
+    const phase = ready ? "available" : asked ? "current" : "idle";
+    return {
+      schemaVersion: 1,
+      requestId: rid(a) || "idle",
+      phase,
+      currentVersion: "0.4.22",
+      availableVersion: ready ? "0.5.0" : "",
+      notes: "",
+      downloadedBytes: 0,
+      totalBytes: 0,
+      reasonCode: phase,
+    };
+  },
   scan_tools_read_only_v2: (a) => ({
     requestId: rid(a),
     schemaVersion: 2,

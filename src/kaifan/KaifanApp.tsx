@@ -50,7 +50,10 @@ import {
 import { armSound, sound } from "./sound";
 import { Stage, type StageLine } from "./Stage";
 import { deriveStage, workerOf } from "./stageState";
-import { hostOfLine } from "./station";
+import { originOfLine, reportOf, type CheckReport } from "./checkup";
+import type { AccountStatus } from "../account/session";
+import { Settings } from "./Settings";
+import { hostOfLine, lookAtStation } from "./station";
 import { TrustAsk } from "./TrustAsk";
 import { useStationLink, type LinkEvent } from "./useStationLink";
 
@@ -162,6 +165,8 @@ export function KaifanApp() {
 
   // 没连站点：开机放完就由阿青迎新，不让人对着空首页找入口。
   const greeted = useRef(false);
+  // 自己点的退出：之后打开「连接站点」可以关掉，不像第一次那样非连不可。
+  const [left, setLeft] = useState(false);
   useEffect(() => {
     if (phase !== "home" || greeted.current || state.cond !== "out") return;
     greeted.current = true;
@@ -263,9 +268,20 @@ export function KaifanApp() {
     setLine({ text: parts.join(""), at: Date.now() });
   }, [justConnected, signedIn, state.balance, state.cast, t]);
 
+  // 体检探站点探到的结果；重新连上之后作废。
+  const [probed, setProbed] = useState<{
+    line: string;
+    online: boolean;
+    probe: Awaited<ReturnType<typeof lookAtStation>>;
+    /** 这一轮读账户读到的结果；没读回来就是 network_error。 */
+    status: AccountStatus;
+  } | null>(null);
+
   const onConnected = useCallback(
     (result: { host: string | null; viaKey: boolean }) => {
       setConnectOpen(false);
+      // 重新连上了，之前体检说的「登录失效」不作数了。
+      setProbed(null);
       setFlash((n) => n + 1);
       sound.ok();
       sound.whoosh();
@@ -363,7 +379,9 @@ export function KaifanApp() {
     setOpenFailed(result.status !== "opened");
   };
   // —— 账本和公告 ——
-  const [panel, setPanel] = useState<"ledger" | "news" | null>(null);
+  const [panel, setPanel] = useState<"ledger" | "news" | "settings" | null>(
+    null,
+  );
   const notices = useNotices(lineId, signedIn);
   const reach =
     state.cond === "out"
@@ -373,6 +391,49 @@ export function KaifanApp() {
         : signedIn
           ? "ok"
           : "wait";
+  // —— 体检：站点、登录、应用挨个看一遍 ——
+  // 站点那一步是当场去探的；登录和应用用的是刷新之后的现状，所以报告跟着现状走。
+  const [checking, setChecking] = useState(false);
+  const checkRun = useRef(0);
+  const runCheckup = useCallback(async () => {
+    const origin = originOfLine(lineId);
+    if (!origin) return;
+    const run = ++checkRun.current;
+    setChecking(true);
+    const [probe, account] = await Promise.all([
+      lookAtStation(origin),
+      Promise.resolve(refresh()).catch(() => null),
+      Promise.resolve(connections.refresh()).catch(() => undefined),
+    ]);
+    // 查到一半换了站，或者又点了一次：这一轮的结果不要了。
+    if (run !== checkRun.current) return;
+    setChecking(false);
+    setProbed({
+      line: lineId,
+      online: navigator.onLine,
+      probe,
+      status: account?.status ?? "network_error",
+    });
+  }, [connections, lineId, refresh]);
+  const report: CheckReport | null = useMemo(
+    () =>
+      probed && probed.line === lineId
+        ? reportOf({
+            online: probed.online,
+            probe: probed.probe,
+            status: probed.status,
+            connections: connections.connections,
+            connectionsFailed: !!connections.error,
+          })
+        : null,
+    [connections.connections, connections.error, lineId, probed],
+  );
+  useEffect(() => {
+    // 换了站，上一个站还没查完的那一轮作废。
+    checkRun.current += 1;
+    setChecking(false);
+  }, [lineId]);
+
   // 要在首页顶上提一句的公告：没看过的时候由当前这位说一次。
   const heralded = useRef("");
   const herald = notices.notices.find(
@@ -437,11 +498,14 @@ export function KaifanApp() {
             sound.whoosh();
             setPanel("news");
           }}
-          onNavigate={(view) => openClassic(view)}
+          onSettings={() => {
+            sound.whoosh();
+            setPanel("settings");
+          }}
         />
         <Connect
           open={connectOpen}
-          dismissible={state.cond !== "out"}
+          dismissible={state.cond !== "out" || left}
           linkEvent={linkEvent}
           onNotice={notice}
           onLineChange={applyLine}
@@ -509,6 +573,40 @@ export function KaifanApp() {
           onConnect={() => {
             setPanel(null);
             setConnectOpen(true);
+          }}
+          onClose={() => setPanel(null)}
+        />
+        <Settings
+          open={panel === "settings"}
+          who={state.current}
+          reach={reach}
+          host={hostOfLine(lineId)}
+          viaKey={isStationKeyLineId(lineId)}
+          connections={connections.connections}
+          restoring={connections.restoring}
+          appName={appName}
+          checkup={{
+            running: checking,
+            report,
+            run: () => void runCheckup(),
+          }}
+          onConnect={() => {
+            setPanel(null);
+            setConnectOpen(true);
+          }}
+          onLogout={async () => {
+            const done = (await session.logout())?.status === "signed_out";
+            if (done) setLeft(true);
+            return done;
+          }}
+          onRestore={(toolId) => connections.restore(toolId)}
+          onRepair={(toolId) => {
+            setPanel(null);
+            setup(toolId);
+          }}
+          onJoin={() => {
+            setPanel(null);
+            setup();
           }}
           onClose={() => setPanel(null)}
         />

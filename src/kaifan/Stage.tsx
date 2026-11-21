@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ActivationToolId } from "../configuration/activation";
-import type { ClassicView } from "../uiChoice";
 import type { FxHandle } from "./Fx";
 import {
   ROSTER,
@@ -59,7 +58,7 @@ interface Props {
   unread?: number;
   onLedger: () => void;
   onNews: () => void;
-  onNavigate: (view: ClassicView) => void;
+  onSettings: () => void;
 }
 
 const SAID_MS = 6000;
@@ -97,7 +96,7 @@ export function Stage({
   unread = 0,
   onLedger,
   onNews,
-  onNavigate,
+  onSettings,
 }: Props) {
   const { t } = useTranslation();
   const { cond, current, cast } = state;
@@ -501,9 +500,10 @@ export function Stage({
           )}
           <a
             href="#settings"
+            data-testid="kaifan-nav-settings"
             onClick={(event) => {
               event.preventDefault();
-              onNavigate("settings");
+              onSettings();
             }}
           >
             <svg viewBox="0 0 24 24">

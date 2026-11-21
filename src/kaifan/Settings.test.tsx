@@ -1,0 +1,315 @@
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import "../i18n";
+import type {
+  ConnectionResponse,
+  ToolConnection,
+} from "../configuration/connections";
+import { idleUpdateProjection } from "../update/contract";
+import { useDesktopUpdate } from "../update/UpdateProvider";
+import { reportOf } from "./checkup";
+import { Settings, type Checkup } from "./Settings";
+import { isMuted, setMuted } from "./sound";
+
+vi.mock("../update/UpdateProvider", () => ({ useDesktopUpdate: vi.fn() }));
+const update = vi.mocked(useDesktopUpdate);
+const updater = (projection = {}) => ({
+  projection: { ...idleUpdateProjection(), ...projection },
+  attention: false,
+  working: false,
+  check: vi.fn(),
+  install: vi.fn(),
+});
+
+const app = (
+  toolId: ToolConnection["toolId"],
+  extra: Partial<ToolConnection> = {},
+): ToolConnection => ({
+  toolId,
+  state: "connected",
+  modelId: "m",
+  lineId: "",
+  billingGroup: "",
+  updatedAtEpochMs: 0,
+  restoreMode: "original",
+  requiresBackground: false,
+  reasonCode: "",
+  ...extra,
+});
+const reply = (
+  extra: Partial<ConnectionResponse> = {},
+): ConnectionResponse => ({
+  requestId: "r",
+  schemaVersion: 2,
+  status: "restored",
+  connections: [],
+  reasonCode: "",
+  ...extra,
+});
+const idleCheck: Checkup = { running: false, report: null, run: vi.fn() };
+
+type Props = Parameters<typeof Settings>[0];
+const show = (props: Partial<Props> = {}) => {
+  const all: Props = {
+    open: true,
+    who: "gpt",
+    reach: "ok",
+    host: "a.example",
+    viaKey: false,
+    connections: [],
+    restoring: null,
+    appName: (id) => `应用:${id}`,
+    checkup: idleCheck,
+    onConnect: vi.fn(),
+    onLogout: vi.fn(async () => true),
+    onRestore: vi.fn(async () => reply()),
+    onRepair: vi.fn(),
+    onJoin: vi.fn(),
+    onClose: vi.fn(),
+    ...props,
+  };
+  return { ...render(<Settings {...all} />), props: all };
+};
+const says = () => screen.getByTestId("kaifan-settings-says");
+/** 她是一个字一个字说的，等她说到这一句。 */
+const said = (text: string) =>
+  waitFor(() => expect(says()).toHaveTextContent(text), { timeout: 8000 });
+
+beforeEach(() => {
+  localStorage.clear();
+  update.mockReturnValue(
+    updater({ phase: "current", currentVersion: "0.6.0" }),
+  );
+});
+
+describe("Settings", () => {
+  it("说清连的是哪个站、怎么连的，能换站点", () => {
+    const { props } = show({ viaKey: true });
+    const row = screen.getByTestId("kaifan-settings-station");
+    expect(row).toHaveTextContent("a.example");
+    expect(row).toHaveTextContent("粘贴密钥连的");
+    fireEvent.click(screen.getByText("换站点"));
+    expect(props.onConnect).toHaveBeenCalled();
+  });
+
+  it("没连站点：只给连接站点，不给退出和体检", () => {
+    show({ reach: "out", host: null });
+    expect(screen.getByTestId("kaifan-settings-station")).toHaveTextContent(
+      "还没连站点",
+    );
+    expect(screen.queryByTestId("kaifan-settings-logout")).toBeNull();
+    expect(screen.queryByTestId("kaifan-settings-check")).toBeNull();
+  });
+
+  it("退出登录先问一句，说清后果，点了确定才退", async () => {
+    const { props } = show();
+    fireEvent.click(screen.getByTestId("kaifan-settings-logout"));
+    expect(props.onLogout).not.toHaveBeenCalled();
+    await said("接好的应用我不会去动");
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("kaifan-settings-logout-yes"));
+    });
+    expect(props.onLogout).toHaveBeenCalledTimes(1);
+    await said("退出了");
+  });
+
+  it("退出问了之后点算了，什么都不做", () => {
+    const { props } = show();
+    fireEvent.click(screen.getByTestId("kaifan-settings-logout"));
+    fireEvent.click(screen.getByText("算了"));
+    expect(props.onLogout).not.toHaveBeenCalled();
+    expect(screen.getByTestId("kaifan-settings-logout")).toBeInTheDocument();
+  });
+
+  it("没退出成会说出来", async () => {
+    show({ onLogout: vi.fn(async () => false) });
+    fireEvent.click(screen.getByTestId("kaifan-settings-logout"));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("kaifan-settings-logout-yes"));
+    });
+    await said("没退出成");
+  });
+
+  it("声音开关记在本机", () => {
+    show();
+    const toggle = screen.getByTestId("kaifan-settings-sound");
+    expect(toggle).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    expect(isMuted()).toBe(true);
+    fireEvent.click(toggle);
+    expect(isMuted()).toBe(false);
+    setMuted(false);
+  });
+
+  it("把应用改回原样：先问，再做，做完说结果", async () => {
+    const onRestore = vi.fn(async () => reply());
+    show({ connections: [app("claude_code")], onRestore });
+    const row = screen.getByTestId("kaifan-settings-app-claude_code");
+    fireEvent.click(row.querySelector("button")!);
+    expect(onRestore).not.toHaveBeenCalled();
+    await said("停用给它的那把密钥");
+    await act(async () => {
+      fireEvent.click(screen.getByText("确定改回"));
+    });
+    expect(onRestore).toHaveBeenCalledWith("claude_code");
+    await said("改回接入之前的样子了");
+  });
+
+  it("改回的几种结果各说各的，不都说成功", async () => {
+    const cases: [Partial<ConnectionResponse> | Error, string][] = [
+      [{ status: "recovery_failed" }, "没改回成"],
+      [
+        { reasonCode: "local_settings_restored_token_cleanup_pending" },
+        "密钥还没停用",
+      ],
+      [{ status: "restored_with_changes" }, "你后来自己改的那些我没动"],
+      [new Error("busy"), "这次没改成"],
+    ];
+    for (const [result, text] of cases) {
+      const onRestore = vi.fn(async () => {
+        if (result instanceof Error) throw result;
+        return reply(result);
+      });
+      const view = show({ connections: [app("pi")], onRestore });
+      fireEvent.click(
+        screen.getByTestId("kaifan-settings-app-pi").querySelector("button")!,
+      );
+      await act(async () => {
+        fireEvent.click(screen.getByText("确定改回"));
+      });
+      await said(text);
+      view.unmount();
+    }
+  });
+
+  it("旧版本接的应用说的是撤掉，并说明原设置没存下来", async () => {
+    show({
+      connections: [app("codex_desktop", { restoreMode: "remove_yeschoy" })],
+    });
+    fireEvent.click(screen.getByText("撤掉接入"));
+    await said("原来的设置没存下来");
+  });
+
+  it("没接过、或者没东西可改回的应用不列出来", () => {
+    show({
+      connections: [
+        app("pi", { state: "not_connected" }),
+        app("opencode", { restoreMode: "none" }),
+      ],
+    });
+    expect(screen.queryByTestId("kaifan-settings-app-pi")).toBeNull();
+    expect(screen.queryByTestId("kaifan-settings-app-opencode")).toBeNull();
+  });
+
+  it("体检：点一下开始，查的时候按钮不能再点", () => {
+    const run = vi.fn();
+    const view = show({ checkup: { running: false, report: null, run } });
+    fireEvent.click(screen.getByTestId("kaifan-settings-check"));
+    expect(run).toHaveBeenCalledTimes(1);
+    view.unmount();
+    show({ checkup: { running: true, report: null, run } });
+    expect(screen.getByTestId("kaifan-settings-check")).toBeDisabled();
+    expect(screen.queryByTestId("kaifan-settings-report")).toBeNull();
+  });
+
+  it("体检说出是哪一环的问题，并给对应的按钮", async () => {
+    const base = {
+      online: true,
+      probe: { ok: true as const, probe: {} as never },
+      status: "signed_in" as const,
+      connections: [app("claude_code")],
+      connectionsFailed: false,
+    };
+    const expired = show({
+      checkup: {
+        ...idleCheck,
+        report: reportOf({ ...base, status: "session_expired" }),
+      },
+    });
+    await said("登录失效了");
+    fireEvent.click(screen.getByTestId("kaifan-settings-check-act"));
+    expect(expired.props.onConnect).toHaveBeenCalled();
+    expired.unmount();
+
+    const broken = show({
+      checkup: {
+        ...idleCheck,
+        report: reportOf({
+          ...base,
+          connections: [app("pi", { state: "changed" })],
+        }),
+      },
+    });
+    await said("应用:pi 的设置要修一下");
+    expect(screen.getByTestId("kaifan-settings-check-act")).toHaveTextContent(
+      "去修 应用:pi",
+    );
+    fireEvent.click(screen.getByTestId("kaifan-settings-check-act"));
+    expect(broken.props.onRepair).toHaveBeenCalledWith("pi");
+    broken.unmount();
+
+    const down = show({
+      checkup: {
+        ...idleCheck,
+        report: reportOf({
+          ...base,
+          probe: { ok: false, reason: "timeout" },
+        }),
+      },
+    });
+    await said("a.example 连不上");
+    expect(screen.getByTestId("kaifan-settings-report")).toHaveTextContent(
+      "站点通了才能看",
+    );
+    fireEvent.click(screen.getByTestId("kaifan-settings-check-act"));
+    expect(down.props.checkup.run).toHaveBeenCalled();
+    down.unmount();
+
+    show({ checkup: { ...idleCheck, report: reportOf(base) } });
+    await said("都没问题");
+    expect(screen.queryByTestId("kaifan-settings-check-act")).toBeNull();
+  });
+
+  it("更新：有新版本给安装，查不到给再试和官网下载", () => {
+    const ready = updater({
+      phase: "available",
+      currentVersion: "0.6.0",
+      availableVersion: "0.7.0",
+    });
+    update.mockReturnValue(ready);
+    const view = show();
+    const row = screen.getByTestId("kaifan-settings-update");
+    expect(row).toHaveTextContent("版本 0.6.0");
+    expect(row).toHaveTextContent("有新版本 0.7.0");
+    fireEvent.click(screen.getByText("安装并重启"));
+    expect(ready.install).toHaveBeenCalled();
+    view.unmount();
+
+    const stuck = updater({ phase: "unavailable" });
+    update.mockReturnValue(stuck);
+    show();
+    expect(screen.getByTestId("kaifan-settings-update")).toHaveTextContent(
+      "版本看不到",
+    );
+    fireEvent.click(screen.getByText("再试一次"));
+    expect(stuck.check).toHaveBeenCalled();
+    expect(screen.getByText("去官网下载最新版")).toHaveAttribute("href");
+  });
+
+  it("下载时显示进度", () => {
+    update.mockReturnValue(
+      updater({ phase: "downloading", downloadedBytes: 30, totalBytes: 120 }),
+    );
+    show();
+    expect(screen.getByTestId("kaifan-settings-update")).toHaveTextContent(
+      "25%",
+    );
+  });
+});
