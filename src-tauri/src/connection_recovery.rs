@@ -2243,6 +2243,15 @@ mod tests {
         value["lastUsedProvider"] = "anthropic".into();
         assert!(!matches(&file, &serde_json::to_vec(&value).unwrap()));
         value["lastUsedProvider"] = cline::PROVIDER_ID.into();
+        // `updatedAt`、`tokenSource` 少一个，Cline 就把这一项整个丢掉。
+        for field in ["updatedAt", "tokenSource"] {
+            let mut broken = value.clone();
+            broken["providers"][cline::PROVIDER_ID]
+                .as_object_mut()
+                .unwrap()
+                .remove(field);
+            assert!(!matches(&file, &serde_json::to_vec(&broken).unwrap()));
+        }
         value["providers"][cline::PROVIDER_ID]["settings"]["model"] = "other".into();
         assert!(!matches(&file, &serde_json::to_vec(&value).unwrap()));
 

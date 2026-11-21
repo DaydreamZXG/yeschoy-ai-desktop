@@ -312,8 +312,12 @@ pub(crate) fn still_ours(path: &Path, ours: &[u8], now: &[u8]) -> Option<bool> {
         return None;
     }
     Some(parse_document(Some(now)).is_ok_and(|now| {
+        let entry = &now["providers"][PROVIDER_ID];
         now["lastUsedProvider"].as_str() == Some(PROVIDER_ID)
-            && &now["providers"][PROVIDER_ID]["settings"] == written
+            && &entry["settings"] == written
+            // 这两个少一个，Cline 就把整项当坏的丢掉：那就不是接好的了。
+            && entry["updatedAt"].is_string()
+            && entry["tokenSource"].is_string()
     }))
 }
 
