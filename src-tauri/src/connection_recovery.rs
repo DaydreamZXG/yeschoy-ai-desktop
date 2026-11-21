@@ -2312,6 +2312,39 @@ mod tests {
             let (bytes, _) = restore_bytes(&file, Some(picked.to_string().as_bytes())).unwrap();
             expected["meta"] = json!({ "lastTouchedVersion": "2026.11.6" });
             assert_eq!(document(&file.path, bytes.as_deref()).unwrap(), expected);
+
+            // 往我们那一家里加了请求头、又让主 agent 自己定了我们的型号：我们那
+            // 一家整条拿走，不剩半条；主 agent 不留一个指着空厂商的型号。它别的
+            // 设置、别的 agent 都留着。
+            let mut pinned = later.clone();
+            pinned["models"]["providers"]["kaifan"]["headers"] = json!({ "x-mine": "1" });
+            pinned["agents"]["entries"] = json!({
+                "main": { "model": "kaifan/glm-5.3", "workspace": "~/main" },
+                "helper": { "model": "openai/gpt-5.4" },
+            });
+            let (bytes, _) = restore_bytes(&file, Some(pinned.to_string().as_bytes())).unwrap();
+            let mut kept = document(&file.path, original).unwrap();
+            kept["models"] = json!({ "providers": { "openai": mine } });
+            kept["agents"] = json!({
+                "defaults": { "workspace": "~/work" },
+                "entries": {
+                    "main": { "workspace": "~/main" },
+                    "helper": { "model": "openai/gpt-5.4" },
+                },
+            });
+            assert_eq!(document(&file.path, bytes.as_deref()).unwrap(), kept);
+
+            // 只定了型号、别的什么都没加：不留空壳。
+            let mut only = document(&file.path, Some(&after)).unwrap();
+            only["agents"]["entries"] = json!({ "main": { "model": "kaifan/glm-5.3" } });
+            let (bytes, _) = restore_bytes(&file, Some(only.to_string().as_bytes())).unwrap();
+            assert_eq!(bytes.is_some(), original.is_some());
+            if let Some(bytes) = bytes {
+                assert_eq!(
+                    document(&file.path, Some(&bytes)).unwrap(),
+                    document(&file.path, original).unwrap()
+                );
+            }
         }
     }
 

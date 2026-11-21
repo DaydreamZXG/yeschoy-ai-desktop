@@ -323,6 +323,56 @@ fn keep_added(ours: &Value, now: &Value, restored: &mut Value) -> bool {
     kept
 }
 
+/// `holder.model` 还指着我们那一家：换回接入前的那个，原来没有就拿掉。
+fn put_back_model(holder: &mut Map<String, Value>, previous: &Value) {
+    if !holder.get("model").and_then(primary).is_some_and(is_ours) {
+        return;
+    }
+    let earlier = primary(previous).map(str::to_owned);
+    match holder.get_mut("model") {
+        Some(Value::Object(chosen)) => {
+            match earlier {
+                Some(reference) => chosen.insert("primary".into(), reference.into()),
+                None => chosen.remove("primary"),
+            };
+            if chosen.is_empty() {
+                holder.remove("model");
+            }
+        }
+        _ if previous.is_null() => {
+            holder.remove("model");
+        }
+        _ => {
+            holder.insert("model".into(), previous.clone());
+        }
+    }
+}
+
+/// `path` 上的那一段收尾之后空了、接入前又没有它：拿掉，不留空壳。
+fn drop_if_emptied(before: &Value, restored: &mut Value, path: &[&str]) {
+    let Some((last, parents)) = path.split_last() else {
+        return;
+    };
+    let was_there = path
+        .iter()
+        .try_fold(before, |value, key| value.get(key))
+        .is_some();
+    let Some(parent) = parents
+        .iter()
+        .try_fold(restored, |value, key| value.get_mut(key))
+        .and_then(Value::as_object_mut)
+    else {
+        return;
+    };
+    let emptied = parent
+        .get(*last)
+        .and_then(Value::as_object)
+        .is_some_and(Map::is_empty);
+    if emptied && !was_there {
+        parent.remove(*last);
+    }
+}
+
 /// 改回原样时，按「我们改了什么就改回什么」合并完之后收个尾：
 /// * 接入时新建的段（原来没有 `models`、`agents`）会被整段拿走，用户之后加在
 ///   里面的别家厂商、别的设置不是我们的，补回去；
@@ -344,11 +394,36 @@ pub(crate) fn settle_restored(
     if !is_this_file {
         return;
     }
-    *preserved |= keep_added(ours, now, restored);
+    // 我们那一家整条都是我们的：用户往里加的请求头之类跟着它一起走，不单独
+    // 留下半条厂商。
+    let mut theirs = now.clone();
+    if let Some(providers) = theirs
+        .get_mut("models")
+        .and_then(|models| models.get_mut("providers"))
+        .and_then(Value::as_object_mut)
+    {
+        providers.remove(PROVIDER_ID);
+    }
+    *preserved |= keep_added(ours, &theirs, restored);
     if provider(restored).is_some() {
         return;
     }
-    let previous = before["agents"]["defaults"]["model"].clone();
+    // 主 agent 自己定的型号排在 `agents.defaults` 前面，一样不能指着空厂商。
+    if let Some(main) = restored
+        .get_mut("agents")
+        .and_then(|agents| agents.get_mut("entries"))
+        .and_then(|entries| entries.get_mut("main"))
+        .and_then(Value::as_object_mut)
+    {
+        put_back_model(main, &before["agents"]["entries"]["main"]["model"]);
+    }
+    for path in [
+        &["agents", "entries", "main"][..],
+        &["agents", "entries"],
+        &["agents"],
+    ] {
+        drop_if_emptied(before, restored, path);
+    }
     let Some(defaults) = restored
         .get_mut("agents")
         .and_then(|agents| agents.get_mut("defaults"))
@@ -356,26 +431,7 @@ pub(crate) fn settle_restored(
     else {
         return;
     };
-    if defaults.get("model").and_then(primary).is_some_and(is_ours) {
-        let earlier = primary(&previous).map(str::to_owned);
-        match defaults.get_mut("model") {
-            Some(Value::Object(chosen)) => {
-                match earlier {
-                    Some(reference) => chosen.insert("primary".into(), reference.into()),
-                    None => chosen.remove("primary"),
-                };
-                if chosen.is_empty() {
-                    defaults.remove("model");
-                }
-            }
-            _ if previous.is_null() => {
-                defaults.remove("model");
-            }
-            _ => {
-                defaults.insert("model".into(), previous);
-            }
-        }
-    }
+    put_back_model(defaults, &before["agents"]["defaults"]["model"]);
     let listed_before = before["agents"]["defaults"]["modelPolicy"]["allow"]
         .as_array()
         .is_some_and(|allow| allow.iter().any(|entry| entry == ALLOW_ENTRY));
