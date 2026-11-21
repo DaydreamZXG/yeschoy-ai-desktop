@@ -26,6 +26,7 @@ mod connectivity;
 mod connectivity_core;
 mod desktop_app_discovery;
 mod desktop_app_discovery_core;
+mod hermes_bridge;
 mod legacy;
 mod local_bridge;
 mod logging;
@@ -198,6 +199,7 @@ pub fn run() {
                     tool_adapters::opencode::resume_if_configured(),
                     // Cline 也一样。
                     tool_adapters::cline::resume_if_configured(),
+                    tool_adapters::hermes::resume_if_configured(),
                 );
             });
             Ok(())
@@ -317,6 +319,11 @@ fn register_runtime_stops(app: &tauri::AppHandle) -> Result<(), std::io::Error> 
     shutdown()
         .register_stop("cline", || async {
             cline_bridge::global().stop().await;
+        })
+        .map_err(|_| std::io::Error::other("shutdown_registration_failed"))?;
+    shutdown()
+        .register_stop("hermes", || async {
+            hermes_bridge::global().stop().await;
         })
         .map_err(|_| std::io::Error::other("shutdown_registration_failed"))?;
     Ok(())
@@ -514,7 +521,7 @@ fn begin_user_shutdown<R: tauri::Runtime>(
                             let language = ui_language::current();
                             let names = response.failed_tools.iter().map(|tool| match tool.as_str() {
                                 "codex_desktop" => "Codex", "claude_desktop" => "Claude Desktop",
-                                "claude_code" => "Claude Code", "pi" => "Pi", "opencode" => "OpenCode", "cline" => "Cline", _ => "DSH web",
+                                "claude_code" => "Claude Code", "pi" => "Pi", "opencode" => "OpenCode", "cline" => "Cline", "hermes" => "Hermes Agent", _ => "DSH web",
                             }).collect::<Vec<_>>().join(language.pick("、", ", "));
                             let message = HSTRING::from(language.pick(
                                 &format!("未完成恢复：{names}。助手尚未退出。\n请保存并关闭相关应用后重试。若界面不可用，再点窗口关闭按钮，可选择重试恢复或保留设置退出。"),

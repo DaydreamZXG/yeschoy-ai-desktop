@@ -37,7 +37,7 @@ use std::{collections::BTreeMap, ffi::OsString, sync::OnceLock};
 /// probe prints a handful of known-shaped lines instead of a whole environment,
 /// so shell banners, MOTD noise and values containing `=` cannot confuse it.
 #[cfg(not(target_os = "windows"))]
-const WANTED: [&str; 10] = [
+const WANTED: [&str; 12] = [
     "PATH",
     "ANTHROPIC_BASE_URL",
     "ANTHROPIC_AUTH_TOKEN",
@@ -48,6 +48,8 @@ const WANTED: [&str; 10] = [
     "CLINE_PROVIDER_SETTINGS_PATH",
     "CLINE_DATA_DIR",
     "CLINE_DIR",
+    "HERMES_HOME",
+    "CUSTOM_BASE_URL",
 ];
 
 /// The subset of [`WANTED`] the probe clears before spawning, so a development
@@ -57,7 +59,7 @@ const WANTED: [&str; 10] = [
 /// `export PATH="$PATH:/foo"` producing a leading empty entry, which means the
 /// current directory.
 #[cfg(not(target_os = "windows"))]
-const CLEARED_BEFORE_PROBE: [&str; 9] = [
+const CLEARED_BEFORE_PROBE: [&str; 11] = [
     "ANTHROPIC_BASE_URL",
     "ANTHROPIC_AUTH_TOKEN",
     "ANTHROPIC_API_KEY",
@@ -67,6 +69,8 @@ const CLEARED_BEFORE_PROBE: [&str; 9] = [
     "CLINE_PROVIDER_SETTINGS_PATH",
     "CLINE_DATA_DIR",
     "CLINE_DIR",
+    "HERMES_HOME",
+    "CUSTOM_BASE_URL",
 ];
 
 #[cfg(not(target_os = "windows"))]
@@ -307,6 +311,16 @@ mod tests {
     #[test]
     fn the_probe_asks_for_every_variable_that_relocates_cline_settings() {
         for key in crate::tool_adapters::cline::RELOCATING_VARIABLES {
+            assert!(WANTED.contains(&key), "{key}");
+            assert!(CLEARED_BEFORE_PROBE.contains(&key), "{key}");
+        }
+    }
+
+    /// Hermes 也一样：家挪到了哪、有没有别的地址盖过我们写的，都要问登录 shell。
+    #[test]
+    fn the_probe_asks_for_every_variable_the_hermes_adapter_reads() {
+        use crate::tool_adapters::hermes;
+        for key in [hermes::HOME_VARIABLE, hermes::OVERRIDING_VARIABLE] {
             assert!(WANTED.contains(&key), "{key}");
             assert!(CLEARED_BEFORE_PROBE.contains(&key), "{key}");
         }

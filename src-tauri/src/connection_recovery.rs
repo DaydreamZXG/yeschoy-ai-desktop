@@ -152,6 +152,7 @@ fn allowed(tool: &str) -> bool {
             | "workbuddy"
             | "dsh_desktop"
             | "cline"
+            | "hermes"
     )
 }
 
@@ -887,6 +888,16 @@ pub(crate) fn restore_bytes(
             preserved,
         ));
     }
+    // Hermes 的 `config.yaml` 是用户手写的，带注释：按文本把 `model:` 那一块
+    // 换回去。下面通用的那条路会整份重排，注释就没了。
+    if let Some(restored) = crate::tool_adapters::hermes::restore(
+        &file.path,
+        file.before.as_deref(),
+        &file.after,
+        current.unwrap_or_default(),
+    ) {
+        return Ok(restored);
+    }
     let before = document(&file.path, file.before.as_deref())?;
     let after = document(&file.path, Some(&file.after))?;
     let mut now = document(&file.path, current)?;
@@ -1449,6 +1460,14 @@ pub(crate) fn legacy_clean(
             if value["model"]
                 .as_str()
                 .is_some_and(|model| model.starts_with("yeschoy/"))
+            {
+                remove_at(&mut value, &["model"]);
+            }
+        }
+        // `model:` 还指着本地转发才拿走；用户已经换成别家的不碰。
+        "hermes" => {
+            if value["model"]["provider"] == "custom"
+                && value["model"]["base_url"] == crate::hermes_bridge::PROXY_BASE
             {
                 remove_at(&mut value, &["model"]);
             }
@@ -2102,6 +2121,65 @@ mod tests {
                 "lastUsedProvider": "anthropic",
                 "providers": {"anthropic": theirs},
             })
+        );
+    }
+
+    /// Hermes 的 `config.yaml` 带注释。接入之后用户又改了别处：改回原样只把
+    /// `model:` 那一块换回去，注释和后来的改动都留着（通用的那条路会整份重排）。
+    #[test]
+    fn hermes_restore_keeps_comments_and_later_edits() {
+        use crate::tool_adapters::hermes;
+        let f = Fixture::new();
+        let token = format!("ycg-{}", "a".repeat(64));
+        let original = "# 我的设置\nmodel:\n  provider: openrouter   # 原来用这家\n  default: x\n\nterminal:\n  backend: local\n";
+        let after = hermes::render(Some(original.as_bytes()), "glm-5.3", &token).unwrap();
+        let file = f.change(".hermes/config.yaml", Some(original.as_bytes()), &after);
+
+        // 没人动过：一字不差地还回去。
+        assert_eq!(
+            restore_bytes(&file, Some(&after)).unwrap(),
+            (Some(original.as_bytes().to_vec()), false)
+        );
+
+        let later = String::from_utf8(after.clone())
+            .unwrap()
+            .replace("backend: local", "backend: docker   # 后来换的");
+        let (bytes, kept) = restore_bytes(&file, Some(later.as_bytes())).unwrap();
+        assert!(!kept);
+        assert_eq!(
+            String::from_utf8(bytes.unwrap()).unwrap(),
+            original.replace("backend: local", "backend: docker   # 后来换的")
+        );
+
+        // 用户后来在 Hermes 里换了别家：那是他的决定，整份不动。
+        let switched = "model:\n  provider: anthropic\n  default: y\n";
+        assert_eq!(
+            restore_bytes(&file, Some(switched.as_bytes())).unwrap(),
+            (Some(switched.as_bytes().to_vec()), true)
+        );
+    }
+
+    #[test]
+    fn hermes_legacy_clean_removes_the_model_block_only_while_it_points_at_our_bridge() {
+        use crate::tool_adapters::hermes;
+        let f = Fixture::new();
+        let path = f.path(".hermes/config.yaml");
+        let token = format!("ycg-{}", "a".repeat(64));
+        let ours =
+            hermes::render(Some(b"terminal:\n  backend: local\n"), "glm-5.3", &token).unwrap();
+        let cleaned = legacy_clean("hermes", &path, Some(&ours), &credential(), false)
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            document(&path, Some(&cleaned)).unwrap(),
+            json!({"terminal": {"backend": "local"}})
+        );
+
+        let theirs = b"model:\n  provider: custom\n  base_url: https://relay.example.com/v1\n";
+        let cleaned = legacy_clean("hermes", &path, Some(theirs), &credential(), false).unwrap();
+        assert_eq!(
+            document(&path, cleaned.as_deref()).unwrap()["model"]["base_url"],
+            "https://relay.example.com/v1"
         );
     }
 
