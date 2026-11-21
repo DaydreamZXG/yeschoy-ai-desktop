@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import i18n from "../i18n";
 import {
+  addressesOf,
   decodeProviderPresets,
   presetOfLine,
   stationLabel,
@@ -88,5 +89,36 @@ describe("云厂商预设", () => {
     expect(presetOfLine("station_key:https://my.example.com", presets)).toBe(
       null,
     );
+  });
+
+  it("别的应用要填的地址：云厂商按表，别的站按惯例", () => {
+    const [kimi] = decodeProviderPresets([row()]);
+    expect(addressesOf("https://api.kimi.com", kimi)).toEqual({
+      openai: "https://api.kimi.com/coding/v1",
+      anthropic: "https://api.kimi.com/coding",
+    });
+    const [openai] = decodeProviderPresets([
+      row({
+        origin: "https://api.openai.com",
+        openaiPath: "/v1",
+        anthropicPath: null,
+      }),
+    ]);
+    expect(addressesOf("https://api.openai.com", openai)?.anthropic).toBeNull();
+    expect(addressesOf("https://my.example.com", null)).toEqual({
+      openai: "https://my.example.com/v1",
+      anthropic: "https://my.example.com",
+    });
+    expect(addressesOf(null, null)).toBeNull();
+  });
+
+  it("路径不像路径的行丢掉：不把来路不明的东西拼进地址给用户复制", () => {
+    expect(
+      decodeProviderPresets([
+        row({ openaiPath: "/v1?x=1" }),
+        row({ openaiPath: "//evil.example" }),
+        row({ openaiPath: undefined }),
+      ]),
+    ).toEqual([]);
   });
 });

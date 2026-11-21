@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { TFunction } from "i18next";
-import { CONNECTIVITY_LINES } from "../diagnostics/contract";
 import { hostOf } from "./station";
 
 /** 内置的一家云厂商。表在原生侧（provider_presets.rs），这里只是照着画。 */
@@ -162,27 +161,15 @@ export function stationLabel(
   return /^https:\/\//.test(origin) ? hostOf(origin) : null;
 }
 
-/** 这条线路的站点地址（只有协议和域名）。 */
-export function originOfLine(lineId: string): string | null {
-  const builtin = CONNECTIVITY_LINES.find((line) => line.lineId === lineId);
-  if (builtin) return builtin.rootUrl;
-  const at = lineId.indexOf(":");
-  const origin = at < 0 ? "" : lineId.slice(at + 1);
-  return /^https:\/\/[^/]+$/.test(origin) ? origin : null;
-}
-
 /**
  * 别的应用里「API 地址」那一栏该填什么。云厂商按表；其余站点按惯例：
  * OpenAI 格式是 `站点/v1`，Claude 格式就是站点本身。
  */
-export function addressesOfLine(
-  lineId: string,
-  presets: ProviderPreset[],
+export function addressesOf(
+  origin: string | null,
+  preset: ProviderPreset | null,
 ): { openai: string; anthropic: string | null } | null {
-  const origin = originOfLine(lineId);
-  if (!origin) return null;
-  const preset = presetOfOrigin(origin, presets);
-  return preset
-    ? { openai: preset.openaiBase, anthropic: preset.anthropicBase }
-    : { openai: `${origin}/v1`, anthropic: origin };
+  if (preset)
+    return { openai: preset.openaiBase, anthropic: preset.anthropicBase };
+  return origin ? { openai: `${origin}/v1`, anthropic: origin } : null;
 }

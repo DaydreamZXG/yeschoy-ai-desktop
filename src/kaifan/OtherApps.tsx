@@ -2,12 +2,8 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { AccountLineId } from "../configuration/preview";
 import { modelDisplayName } from "../model-profiles/profile";
-import {
-  addressesOfLine,
-  useProviderPresets,
-  vendorName,
-  type ProviderPreset,
-} from "./providers";
+import { originOfLine } from "./checkup";
+import { addressesOf, vendorName, type ProviderPreset } from "./providers";
 
 interface Props {
   lineId: AccountLineId;
@@ -24,8 +20,7 @@ interface Props {
  */
 export function OtherApps({ lineId, preset, modelId, viaKey }: Props) {
   const { t } = useTranslation();
-  const presets = useProviderPresets();
-  const address = addressesOfLine(lineId, presets);
+  const address = addressesOf(originOfLine(lineId), preset);
   const [copied, setCopied] = useState<{ what: string; ok: boolean } | null>(
     null,
   );

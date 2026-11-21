@@ -985,6 +985,98 @@ const undone = (
   reasonCode: "",
 });
 
+describe("接入：应用多了不堆在一起", () => {
+  const chip = (name: RegExp) => screen.queryByRole("button", { name });
+
+  it("不常用又没装的收着，点一下才露出来；装了的、接过的一直露着", async () => {
+    found([target("claude_desktop"), target("pi")]);
+    setup({
+      connections: [
+        { toolId: "workbuddy", state: "connected" } as ToolConnection,
+      ],
+    });
+    await ready();
+    for (const name of [
+      /^Claude Desktop/,
+      /^Codex/,
+      /^OpenCode/,
+      /^Claude Code/,
+    ])
+      expect(chip(name)).not.toBeNull();
+    // Pi 装了、WorkBuddy 接过：不常用也露着。
+    expect(chip(/^Pi/)).not.toBeNull();
+    expect(chip(/^WorkBuddy/)).not.toBeNull();
+    expect(chip(/^DeepSeek Harness/)).toBeNull();
+    expect(chip(/^DSH web/)).toBeNull();
+
+    const fold = screen.getByRole("button", { name: /不常用的还有 2 个/ });
+    expect(fold).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(fold);
+    expect(chip(/^DeepSeek Harness/)).not.toBeNull();
+    expect(chip(/^DSH web/)).not.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /收起/ }));
+    expect(chip(/^DSH web/)).toBeNull();
+  });
+
+  it("从首页点进来的不常用应用：选着它的时候不收它", async () => {
+    setup({ initialApp: "dsh_web" });
+    await waitFor(() =>
+      expect(chip(/^DSH web/)).toHaveAttribute("aria-pressed", "true"),
+    );
+    expect(
+      screen.getByRole("button", { name: /不常用的还有 3 个/ }),
+    ).toBeTruthy();
+  });
+
+  it("别的应用：给出要填的地址和型号，能复制；不拿密钥出来，也不去接入", async () => {
+    const writeText = vi.fn(async (_text: string) => undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    setup({ lineId: "station_key:https://relay.example.com" as never });
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: "别的应用" }));
+    const panel = screen.getByTestId("kaifan-join-other");
+    expect(panel).toHaveTextContent("https://relay.example.com/v1");
+    expect(panel).toHaveTextContent("claude-sonnet-4-5-20250929");
+    expect(panel).toHaveTextContent(/你连接这个站时粘贴的那把密钥/);
+    expect(screen.queryByRole("button", { name: /去接入/ })).toBeNull();
+    expect(screen.queryByTestId("kaifan-join-other-risk")).toBeNull();
+
+    const copies = screen.getAllByRole("button", { name: "复制" });
+    expect(copies).toHaveLength(3);
+    fireEvent.click(copies[0]);
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith("https://relay.example.com/v1"),
+    );
+    expect(await screen.findByRole("button", { name: "已复制" })).toBeTruthy();
+    fireEvent.click(screen.getAllByRole("button", { name: "复制" })[0]);
+    await waitFor(() =>
+      expect(writeText).toHaveBeenLastCalledWith("https://relay.example.com"),
+    );
+    expect(activate).not.toHaveBeenCalled();
+
+    // 点回名单里的应用，就回到接入。
+    fireEvent.click(screen.getByRole("button", { name: /^Codex/ }));
+    expect(screen.queryByTestId("kaifan-join-other")).toBeNull();
+    expect(go()).toBeTruthy();
+  });
+
+  it("别的应用：浏览器授权连的站，说去站点网页新建密钥；剪贴板用不了就说怎么办", async () => {
+    Object.assign(navigator, {
+      clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
+    });
+    setup();
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: "别的应用" }));
+    const panel = screen.getByTestId("kaifan-join-other");
+    expect(panel).toHaveTextContent("https://yeschoy.com/v1");
+    expect(panel).toHaveTextContent(/去站点网页的「令牌」里新建一把/);
+    fireEvent.click(screen.getAllByRole("button", { name: "复制" })[0]);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /没复制上.*自己复制/,
+    );
+  });
+});
+
 describe("接入：连的是云厂商", () => {
   const vendor = (patch: Partial<ProviderPreset> = {}): ProviderPreset => ({
     id: "kimi_code_cn",
@@ -1014,6 +1106,41 @@ describe("接入：连的是云厂商", () => {
     setup({ preset: vendor({ billing: "pay_as_you_go" }) });
     await ready();
     expect(screen.queryByTestId("kaifan-join-plan-risk")).toBeNull();
+  });
+
+  it("别的应用：地址按厂商表里的来；套餐再提醒一次别填进不认的应用", async () => {
+    setup({
+      lineId: "station_key:https://api.kimi.com" as never,
+      preset: vendor(),
+    });
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: "别的应用" }));
+    const panel = screen.getByTestId("kaifan-join-other");
+    expect(panel).toHaveTextContent("https://api.kimi.com/coding/v1");
+    expect(panel).toHaveTextContent("https://api.kimi.com/coding");
+    expect(screen.getByTestId("kaifan-join-other-risk")).toHaveTextContent(
+      /Kimi Code 是包月套餐.*停掉套餐/,
+    );
+  });
+
+  it("别的应用：这家没有 Claude 格式的地址就不列那一行", async () => {
+    setup({
+      lineId: "station_key:https://api.openai.com" as never,
+      preset: vendor({
+        id: "openai",
+        family: "openai",
+        name: "OpenAI",
+        billing: "pay_as_you_go",
+        openaiBase: "https://api.openai.com/v1",
+        anthropicBase: null,
+      }),
+    });
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: "别的应用" }));
+    expect(screen.getByTestId("kaifan-join-other")).not.toHaveTextContent(
+      "Claude 格式",
+    );
+    expect(screen.getAllByRole("button", { name: "复制" })).toHaveLength(2);
   });
 
   it("这家不认这个应用：说清楚，不让点，也不发给后端", async () => {
