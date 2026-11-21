@@ -18,6 +18,8 @@ const row = (patch: Record<string, unknown> = {}) => ({
   onlyTools: [],
   keyPage: "https://www.kimi.com/code/console",
   common: true,
+  openaiPath: "/coding/v1",
+  anthropicPath: "/coding",
   ...patch,
 });
 
