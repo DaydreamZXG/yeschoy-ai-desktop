@@ -24,6 +24,12 @@ const PI: &str = "earendil-works/pi";
 // OpenCode 官方把同一批程序也发在 npm 上，那里的清单带校验值而且不限次数；
 // GitHub 的发行接口每个网络出口每小时只让查 60 次，共用出口的人很容易查不到。
 const NPM: &str = "https://registry.npmjs.org";
+/// OpenCode 官方安装脚本（`opencode.ai/v2/install`）问的同一个地址：现在该装
+/// 哪一版、发在哪个 npm 包名下面。OpenCode 2 起包名从 `opencode-<平台>` 换成了
+/// `@opencode/cli-<平台>`，旧包名停在 1.x 不再更新。
+const OPENCODE_CHANNEL: &str = "https://opencode.ai/update/api/latest/cli/npm";
+/// 官方脚本认的两个包名前缀：现在的，和它自己留的那个后备。
+const OPENCODE_SCOPES: [&str; 2] = ["@opencode", "@opencode-ai"];
 const TEXT_LIMIT: usize = 64 * 1024;
 const MAX_ENTRIES: usize = 20_000;
 const MAX_UNPACKED: u64 = 2 * 1024 * 1024 * 1024;
@@ -100,9 +106,12 @@ pub(super) fn allowed_url(source: Source, url: &Url) -> bool {
         Some("registry.npmjs.org") => {
             source.tool == "opencode"
                 && url.query().is_none()
-                && url.path().starts_with("/opencode-")
                 && url.path().ends_with(".tgz")
-                && url.path().contains("/-/opencode-")
+                && OPENCODE_SCOPES.iter().any(|scope| {
+                    url.path()
+                        .strip_prefix(&format!("/{scope}/cli-"))
+                        .is_some_and(|rest| rest.contains("/-/cli-"))
+                })
         }
         Some("github.com") => {
             url.query().is_none()
@@ -252,16 +261,41 @@ fn has_avx2() -> bool {
     }
 }
 
-/// OpenCode 在 npm 上的平台包。x64 的标准版要用到 AVX2，老一些的处理器没有，
-/// 装上也一运行就退出；官方给这些电脑另发了一份 `-baseline`。
+/// OpenCode 在 npm 上的平台包（不带前缀）。x64 的标准版要用到 AVX2，老一些的
+/// 处理器没有，装上也一运行就退出；官方给这些电脑另发了一份 `-baseline`。
 pub(super) fn opencode_package(source: Source, os: &str, avx2: bool) -> String {
     let name = asset_name(source, os);
-    let name = name.trim_end_matches(".tar.gz");
+    let target = name
+        .trim_end_matches(".tar.gz")
+        .trim_start_matches("opencode-");
     if source.architecture == "x64" && !avx2 {
-        format!("{name}-baseline")
+        format!("cli-{target}-baseline")
     } else {
-        name.to_owned()
+        format!("cli-{target}")
     }
+}
+
+/// 官方说现在该装的：`(包名前缀, 版本)`。包名不是官方那两个之一的不认。
+pub(super) fn parse_opencode_channel(bytes: &[u8]) -> Result<(&'static str, String)> {
+    let channel: serde_json::Value = serde_json::from_slice(bytes).map_err(|_| "invalid_source")?;
+    let version = channel["version"].as_str().unwrap_or("");
+    let scope = channel["metadata"]["package"]
+        .as_str()
+        .and_then(|package| package.strip_suffix("/cli"))
+        .and_then(|scope| OPENCODE_SCOPES.iter().find(|known| **known == scope));
+    match scope {
+        Some(scope) if version_like(version) => Ok((scope, version.to_owned())),
+        _ => Err("invalid_source"),
+    }
+}
+
+/// 官方那个地址问不到（在有些网络里打不开）时，直接问 npm 这个包最新是哪一版。
+async fn opencode_channel(client: &Client) -> (&'static str, String) {
+    match origins::json(client, OPENCODE_CHANNEL).await {
+        Ok(bytes) => parse_opencode_channel(&bytes).ok(),
+        Err(_) => None,
+    }
+    .unwrap_or((OPENCODE_SCOPES[0], "latest".to_owned()))
 }
 
 /// `SHA256SUMS`：每行「校验值␠␠文件名」。
@@ -282,7 +316,9 @@ pub(super) fn parse_npm_package(bytes: &[u8], name: &str) -> Result<Found> {
         .as_str()
         .and_then(|integrity| integrity.strip_prefix("sha512-"))
         .unwrap_or("");
-    let url = format!("{NPM}/{name}/-/{name}-{version}.tgz");
+    // 带前缀的包（`@opencode/cli-…`），文件名里不带前缀。
+    let file = name.rsplit('/').next().unwrap_or(name);
+    let url = format!("{NPM}/{name}/-/{file}-{version}.tgz");
     // 64 字节的 base64 正好 88 个字符。
     if package["name"].as_str() != Some(name)
         || !version_like(version)
@@ -366,8 +402,9 @@ pub(super) async fn resolve(client: &Client, source: Source, os: &str) -> Result
             }))
         }
         "opencode" => {
-            let name = opencode_package(source, os, has_avx2());
-            let package = origins::json(client, &format!("{NPM}/{name}/latest")).await?;
+            let (scope, version) = opencode_channel(client).await;
+            let name = format!("{scope}/{}", opencode_package(source, os, has_avx2()));
+            let package = origins::json(client, &format!("{NPM}/{name}/{version}")).await?;
             parse_npm_package(&package, &name)
         }
         _ => Err("unsupported_platform"),
