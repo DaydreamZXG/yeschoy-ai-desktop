@@ -466,12 +466,15 @@ export function AppLibraryView({
           connected: isConnected(row.connection?.state),
         }))}
         onOpenSetup={onOpenSetup}
-        onStart={() =>
-          onOpenSetup(
-            rows.find((row) => row.installed && !row.active)?.app.id ??
-              "claude_desktop",
-          )
-        }
+        onStart={() => {
+          // 先挑装好了还没接的；都接了就挑没装的；全接好了就去看全部应用，
+          // 不把人送回一个已经接好的应用。
+          const next =
+            rows.find((row) => row.installed && !row.active) ??
+            rows.find((row) => !row.active);
+          if (next) onOpenSetup(next.app.id);
+          else showApps();
+        }}
         onShowApps={showApps}
         onSignIn={() =>
           document
