@@ -1578,7 +1578,8 @@
       "fixSub": "One click",
       "fixSaysChanged": "Another tool changed {{app}}'s settings, so it no longer uses this station. Press “Fix it” and I'll help you switch it back, or keep theirs.",
       "fixSaysUnfinished": "{{app}} was left half set up last time. Press “Fix it” and I'll finish the job, no need to start over.",
-      "fixGo": "Fix it"
+      "fixGo": "Fix it",
+      "connectedNoHost": "Connected. "
     },
     "connect": {
       "title": "Connect a station",
@@ -1627,7 +1628,8 @@
         "storage": "This computer's system keychain isn't available, so the key can't be stored safely and I didn't connect. Unlock the keychain and press “Connect” again.",
         "rejected": "The station didn't accept this key: too short, too long, or just rejected. Copy a fresh one from the station's “Tokens” page.",
         "failed": "The key is fine, but the connection didn't go through this time. Press “Connect” again."
-      }
+      },
+      "strayFailed": "The connection started from the website didn't go through. Press “Connect a station” here to try again."
     },
     "trust": {
       "title": "Connect to this new station?",

@@ -9,7 +9,12 @@ import {
 import { BUILTIN_STATION_ORIGINS } from "../station/stationProbe";
 import { ROSTER, chibiOf, type Mood } from "./roster";
 import { sound } from "./sound";
-import { hostOf, lookAtStation, normalizeStationInput } from "./station";
+import {
+  hostOf,
+  hostOfLine,
+  lookAtStation,
+  normalizeStationInput,
+} from "./station";
 import type { LinkEvent } from "./useStationLink";
 import { useTyped } from "./useTyped";
 
@@ -23,7 +28,9 @@ interface Props {
   linkEvent: (LinkEvent & { at: number }) | null;
   onLineChange: (lineId: AccountLineId) => void;
   /** 连上了。viaKey：是粘贴密钥连的，余额这些不一定看得到。 */
-  onConnected: (result: { host: string; viaKey: boolean }) => void;
+  onConnected: (result: { host: string | null; viaKey: boolean }) => void;
+  /** 面板没开着时有话要说（比如网页那边发起的连接没成），交给首页的角色说。 */
+  onNotice: (text: string, mood?: Mood) => void;
   onClose: () => void;
 }
 
@@ -37,6 +44,7 @@ export function Connect({
   linkEvent,
   onLineChange,
   onConnected,
+  onNotice,
   onClose,
 }: Props) {
   const { t } = useTranslation();
@@ -185,9 +193,25 @@ export function Connect({
   // 浏览器那边有结果了。
   const seen = useRef(0);
   useEffect(() => {
-    if (!open || !linkEvent || linkEvent.at === seen.current) return;
+    if (!linkEvent || linkEvent.at === seen.current) return;
     seen.current = linkEvent.at;
-    if (step !== "browser" && step !== "working") return;
+    if (!open || (step !== "browser" && step !== "working")) {
+      // 不是从这里发起的（比如在站点网页上点了「打开客户端」）：结果一样要让人看到。
+      if (linkEvent.phase === "signed_in")
+        return onConnected({
+          host: linkEvent.lineId ? hostOfLine(linkEvent.lineId) : null,
+          viaKey: false,
+        });
+      const failed = linkEvent.phase === "failed";
+      const text = failed
+        ? t(`stationConnect.reason.${linkEvent.reasonCode}`, {
+            defaultValue: t("kaifan.connect.strayFailed"),
+          })
+        : t("kaifan.connect.trying");
+      return open
+        ? say(text, failed ? "panic" : "idle")
+        : onNotice(text, failed ? "panic" : undefined);
+    }
     if (linkEvent.phase === "connecting") {
       setStep("working");
       say(t("kaifan.connect.trying"));
@@ -204,7 +228,7 @@ export function Connect({
         "panic",
       );
     }
-  }, [linkEvent, onConnected, open, origin, say, step, t, toKey]);
+  }, [linkEvent, onConnected, onNotice, open, origin, say, step, t, toKey]);
 
   const close = () => {
     run.current += 1;

@@ -11,7 +11,7 @@ import { isAccountLineId, type AccountLineId } from "../configuration/preview";
 
 export type LinkEvent =
   | { phase: "connecting" }
-  | { phase: "signed_in" }
+  | { phase: "signed_in"; lineId?: string }
   | { phase: "failed"; reasonCode: string | undefined };
 
 /**
@@ -59,7 +59,7 @@ export function useStationLink(options: {
         void refresh().then((projection) =>
           latest.current.onEvent(
             projection?.status === "signed_in"
-              ? { phase: "signed_in" }
+              ? { phase: "signed_in", lineId: payload.lineId }
               : { phase: "failed", reasonCode: projection?.status },
           ),
         );

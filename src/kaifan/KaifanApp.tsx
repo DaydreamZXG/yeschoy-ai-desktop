@@ -29,6 +29,7 @@ import {
   ROSTER_IDS,
   readPickedCharacter,
   storePickedCharacter,
+  type Mood,
   type RosterId,
 } from "./roster";
 import { armSound, sound } from "./sound";
@@ -174,7 +175,7 @@ export function KaifanApp() {
 
   // 连上之后等模型读回来，再报到了几位。
   const [justConnected, setJustConnected] = useState<{
-    host: string;
+    host: string | null;
     viaKey: boolean;
   } | null>(null);
   useEffect(() => {
@@ -184,7 +185,9 @@ export function KaifanApp() {
       t(`roster.${id}.name`),
     );
     const parts = [
-      t("kaifan.home.connected", { host: justConnected.host }),
+      justConnected.host
+        ? t("kaifan.home.connected", { host: justConnected.host })
+        : t("kaifan.home.connectedNoHost"),
       gone.length
         ? t("kaifan.home.connectedSome", {
             count: ROSTER_IDS.length - gone.length,
@@ -199,7 +202,7 @@ export function KaifanApp() {
   }, [justConnected, signedIn, state.balance, state.cast, t]);
 
   const onConnected = useCallback(
-    (result: { host: string; viaKey: boolean }) => {
+    (result: { host: string | null; viaKey: boolean }) => {
       setConnectOpen(false);
       setFlash((n) => n + 1);
       sound.ok();
@@ -209,6 +212,11 @@ export function KaifanApp() {
       void connections.refresh();
     },
     [connections, refresh],
+  );
+
+  const notice = useCallback(
+    (text: string, mood?: Mood) => setLine({ text, mood, at: Date.now() }),
+    [],
   );
 
   const answerTrust = async (accept: boolean) => {
@@ -259,6 +267,7 @@ export function KaifanApp() {
           open={connectOpen}
           dismissible={state.cond !== "out"}
           linkEvent={linkEvent}
+          onNotice={notice}
           onLineChange={applyLine}
           onConnected={onConnected}
           onClose={() => setConnectOpen(false)}

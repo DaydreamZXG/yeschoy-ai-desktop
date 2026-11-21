@@ -45,6 +45,7 @@ function setup(linkEvent: Parameters<typeof Connect>[0]["linkEvent"] = null) {
     linkEvent,
     onLineChange: vi.fn(),
     onConnected: vi.fn(),
+    onNotice: vi.fn(),
     onClose: vi.fn(),
   };
   const view = render(<Connect {...props} />);
@@ -194,6 +195,61 @@ describe("连接站点", () => {
     );
   });
 
+  it("网页那边发起的连接成了：不管面板停在哪一步，都回首页", async () => {
+    const { onConnected, onNotice, rerender, ...props } = setup();
+    expect(step()).toBe("url");
+    rerender(
+      <Connect
+        {...props}
+        onConnected={onConnected}
+        onNotice={onNotice}
+        linkEvent={{
+          phase: "signed_in",
+          lineId: "station_connect:https://web.example.com",
+          at: 1,
+        }}
+      />,
+    );
+    await waitFor(() =>
+      expect(onConnected).toHaveBeenCalledWith({
+        host: "web.example.com",
+        viaKey: false,
+      }),
+    );
+  });
+
+  it("网页那边发起的连接没成：面板开着就在面板里说", async () => {
+    const { onNotice, rerender, ...props } = setup();
+    rerender(
+      <Connect
+        {...props}
+        onNotice={onNotice}
+        linkEvent={{ phase: "failed", reasonCode: "whatever", at: 1 }}
+      />,
+    );
+    await waitFor(() => expect(says()).toContain("网页那边发起的连接没成"));
+    expect(step()).toBe("url");
+    expect(onNotice).not.toHaveBeenCalled();
+  });
+
+  it("网页那边发起的连接没成：面板没开就交给首页的角色说", async () => {
+    const { onNotice, rerender, ...props } = setup();
+    rerender(
+      <Connect
+        {...props}
+        open={false}
+        onNotice={onNotice}
+        linkEvent={{ phase: "failed", reasonCode: "whatever", at: 1 }}
+      />,
+    );
+    await waitFor(() =>
+      expect(onNotice).toHaveBeenCalledWith(
+        expect.stringContaining("网页那边发起的连接没成"),
+        "panic",
+      ),
+    );
+  });
+
   it("浏览器打不开：不卡住，换到密钥", async () => {
     look.mockResolvedValue(station({ desktopConnect: true }));
     openPage.mockResolvedValue({ ok: false, reason: "browser_open_failed" });
@@ -220,6 +276,7 @@ describe("连接站点", () => {
         linkEvent={null}
         onLineChange={vi.fn()}
         onConnected={vi.fn()}
+        onNotice={vi.fn()}
         onClose={onClose}
       />,
     );
