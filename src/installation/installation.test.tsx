@@ -31,7 +31,7 @@ import {
   type InstallationProgress,
 } from "./api";
 import { ConfigurationPreviewView } from "../configuration/ConfigurationPreviewView";
-import { AppLibraryView } from "../workbench/AppLibraryView";
+import { HomeView } from "../workbench/home/HomeView";
 import {
   ACTIVATION_TOOL_IDS,
   scanActivationTargets,
@@ -587,11 +587,10 @@ describe("ru048 novice installer", () => {
   it("offers desktop installation on an empty computer without hiding it behind filters", async () => {
     render(
       <ConnectionProvider value={connections}>
-        <AppLibraryView
+        <HomeView
           accountSession={account}
           onOpenAccount={noop}
           onOpenSetup={noop}
-          onOpenCommunity={noop}
           onStationLineChange={noop}
           accountLineId="mainland_optimized"
         />

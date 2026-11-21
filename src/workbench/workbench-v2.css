@@ -447,77 +447,6 @@
   height: 14px;
 }
 
-/* 首页顶部的公告横幅。 */
-.announcement-banner {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--space-12);
-  margin-bottom: var(--space-16);
-  padding: var(--space-14) var(--space-16);
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--accent);
-  border-radius: var(--radius-lg);
-  background: var(--accent-soft);
-}
-
-.announcement-banner[data-severity="warning"] {
-  border-left-color: var(--warning);
-  background: var(--warning-soft);
-}
-
-.announcement-banner > svg {
-  width: 20px;
-  height: 20px;
-  color: var(--accent);
-}
-
-.announcement-banner strong {
-  display: block;
-  font-weight: 620;
-}
-
-.announcement-banner p {
-  margin: var(--space-4) 0 0;
-  color: var(--muted);
-  font-size: var(--text-sm);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.announcement-banner-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-12);
-}
-
-.announcement-banner-close {
-  display: inline-grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--faint);
-}
-
-.announcement-banner-close svg {
-  width: 16px;
-  height: 16px;
-}
-
-@media (max-width: 900px) {
-  .announcement-banner {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-  .announcement-banner-actions {
-    grid-column: 1 / -1;
-    flex-wrap: wrap;
-  }
-}
-
 .announcements-empty {
   display: flex;
   align-items: center;
@@ -671,11 +600,6 @@
 .checked-at {
   font-size: var(--text-xs);
   color: var(--faint);
-}
-
-.workbench-stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .summary-card {
@@ -3370,25 +3294,6 @@
   background: var(--subtle);
   color: var(--ink);
 }
-/* 首页 footer 加入群入口后，保持两端对齐与间距。 */
-.library-footer {
-  display: flex;
-  align-items: center;
-  gap: var(--space-10);
-  flex-wrap: wrap;
-}
-.library-footer .library-footer-actions {
-  margin-left: auto;
-  display: inline-flex;
-  gap: var(--space-8);
-  align-items: center;
-}
-.library-footer .join-group-link {
-  color: var(--accent);
-}
-.library-footer .join-group-link:hover {
-  color: var(--accent-hover, var(--accent));
-}
 
 /* 骨架屏：唯一允许的循环动画之一（opacity pulse 1.4s），
    reduced-motion 下由全局规则拍平为静态色块，不丢失占位结构。 */
@@ -4619,9 +4524,6 @@
   .settings-workspace {
     padding: var(--space-24) var(--space-24);
   }
-  .workbench-stats {
-    gap: var(--space-10);
-  }
   .summary-card {
     padding: var(--space-14);
   }
@@ -4673,9 +4575,6 @@
   .connection-selection-flow {
     grid-column: 1 / -1;
     grid-row: 2;
-  }
-  .workbench-stats {
-    grid-template-columns: 1fr 1fr;
   }
   .desktop-app-deck {
     grid-template-columns: 1fr;
@@ -4791,29 +4690,6 @@
   min-height: 39px;
 }
 
-/* Daily use: actions lead; account numbers are available without dominating. */
-.account-overview {
-  margin-top: var(--space-24);
-  border-top: 1px solid var(--line);
-  padding-top: var(--space-18);
-}
-
-.account-overview > summary {
-  cursor: pointer;
-  color: var(--ink);
-  font-weight: 600;
-}
-
-.account-overview > summary small {
-  margin-left: var(--space-12);
-  color: var(--muted);
-  font-weight: 400;
-}
-
-.account-overview[open] > summary {
-  margin-bottom: var(--space-18);
-}
-
 .connection-manage-actions .change-model-action {
   min-height: 40px;
   color: var(--accent);
@@ -4856,8 +4732,7 @@
   margin-top: var(--space-2);
 }
 
-.setup-advanced > summary:focus-visible,
-.account-overview > summary:focus-visible {
+.setup-advanced > summary:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 4px;
   border-radius: var(--radius-xs);
@@ -5092,11 +4967,6 @@
   letter-spacing: 0.065em;
 }
 
-.workbench-stats {
-  gap: var(--space-12);
-  margin-bottom: var(--space-24);
-}
-
 .summary-card {
   padding: var(--space-16) var(--space-18) var(--space-14);
   border: 1px solid var(--line);
@@ -5315,46 +5185,6 @@
   border-color: var(--accent-hover);
 }
 
-/* 未登录时这是首页唯一要人做的事，所以它按「下一步」卡来做：
-   比周围任何东西都重，一眼就知道该点哪里。 */
-.welcome-strip {
-  display: flex;
-  align-items: center;
-  gap: var(--space-20);
-  padding: var(--space-24);
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--accent-line);
-  background: linear-gradient(
-    180deg,
-    var(--accent-soft) 0%,
-    color-mix(in srgb, var(--accent-soft) 60%, var(--surface)) 100%
-  );
-  margin-bottom: var(--space-24);
-}
-
-.welcome-strip h2 {
-  font-size: var(--text-2xl);
-  margin: 0 0 var(--space-6);
-  font-weight: 660;
-  letter-spacing: -0.01em;
-}
-
-.welcome-strip p {
-  font-size: var(--text-base);
-  color: var(--muted);
-  margin: 0;
-  max-width: 44ch;
-}
-
-.welcome-strip > .primary-action {
-  margin-left: auto;
-  flex-shrink: 0;
-  min-height: 48px;
-  padding-inline: var(--space-24);
-  font-size: var(--text-lg);
-  font-weight: 640;
-}
-
 .welcome-strip-station {
   flex-wrap: wrap;
   align-items: flex-start;
@@ -5440,7 +5270,6 @@
   gap: var(--space-4);
 }
 
-.welcome-symbol,
 .restore-symbol {
   display: grid;
   place-items: center;
@@ -5450,30 +5279,6 @@
   color: var(--accent);
   background: var(--accent-soft);
   flex-shrink: 0;
-}
-
-.welcome-symbol svg {
-  width: 20px;
-  height: 20px;
-}
-
-.library-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: var(--space-24) 0 var(--space-14);
-  font-size: var(--text-sm);
-  color: var(--muted);
-}
-
-.library-heading b {
-  color: var(--ink);
-  font-size: var(--text-lg);
-}
-
-.quiet-separator {
-  margin-inline: 9px;
-  color: var(--line);
 }
 
 /* 两列等重白卡换成一条列表：这一页要回答的是「哪些接上了、我要去哪个」，
@@ -5979,25 +5784,6 @@
   margin: var(--space-8) 0 0;
   font-size: var(--text-sm);
   line-height: 1.75;
-}
-
-.library-footer {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  color: var(--muted);
-  font-size: var(--text-xs);
-  padding: var(--space-20) 0 0;
-}
-
-.library-footer > svg {
-  width: 12px;
-  height: 12px;
-}
-
-.library-footer button {
-  margin-left: auto;
-  font-size: var(--text-xs);
 }
 
 .workbench-notice,

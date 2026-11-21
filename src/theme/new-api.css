@@ -51,7 +51,9 @@
   font-weight: 450;
 }
 
-:root[data-theme="dark"] {
+/* 首页舞台始终是深色的，浅色主题下它里面的面板也用这套深色。 */
+:root[data-theme="dark"],
+.home-stage {
   --bg: #0c0c0c;
   --sidebar: #0c0c0c;
   --surface: #151515;

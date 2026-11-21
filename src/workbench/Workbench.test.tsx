@@ -25,7 +25,7 @@ const native = vi.mocked(invoke);
 
 function openWorkbenchPage(name: string) {
   if (name === "应用接入") {
-    const home = screen.queryByRole("button", { name: "我的应用" });
+    const home = screen.queryByRole("button", { name: "首页" });
     if (home) fireEvent.click(home);
     const resume = screen.queryByRole("button", { name: /换模型/ });
     if (resume) {
@@ -347,7 +347,6 @@ describe("official workbench", () => {
       await screen.findByText("暂时连不上中转站，请稍后重试。本地已接入的应用不受影响。"),
     ).toBeInTheDocument();
     const home = screen.getByTestId("candidate-home-view");
-    expect(home).toHaveTextContent("登录一次，接入你的 AI 应用");
     // Community/OSS default: empty URL, so continue is disabled until typed.
     expect(within(home).getByRole("textbox")).toBeInTheDocument();
     expect(within(home).getByRole("textbox")).toHaveValue("");
@@ -370,7 +369,7 @@ describe("official workbench", () => {
     await screen.findByText(/正在处理另一项接入或恢复操作/);
     const home = screen.getByTestId("candidate-home-view");
     expect(home).toHaveTextContent("接入状态待确认");
-    expect(home).not.toHaveTextContent("0 个应用已接入");
+    expect(home).not.toHaveTextContent("还没接应用");
     const codex = within(home)
       .getByRole("heading", { name: "Codex（桌面版 / 命令行）" })
       .closest("article")!;
@@ -389,7 +388,7 @@ describe("official workbench", () => {
     );
     fireEvent.click(within(home).getByRole("button", { name: "读取接入状态" }));
     await waitFor(() => expect(codex).toHaveTextContent("待接入"));
-    expect(home).toHaveTextContent("0 个应用已接入");
+    expect(home).toHaveTextContent("还没接应用");
   });
   it("ru076 retains a labelled last-successful snapshot after a refresh fails", async () => {
     let fail = false;
@@ -418,10 +417,10 @@ describe("official workbench", () => {
     render(<App />);
     await screen.findByText("GPT-6 Astra");
     fail = true;
-    fireEvent.click(screen.getByRole("button", { name: "检查应用" }));
+    fireEvent.click(screen.getByRole("button", { name: "重新检查" }));
     await screen.findByText(/下方保留上次确认的结果/);
     const home = screen.getByTestId("candidate-home-view");
-    expect(home).toHaveTextContent("上次确认 1 个应用已接入");
+    expect(home).not.toHaveTextContent("已经接好 1 个应用");
     expect(home).toHaveTextContent("上次确认 · 已接入");
     expect(home).toHaveTextContent("GPT-6 Astra");
     expect(home).not.toHaveTextContent("synthetic-secret");
@@ -651,9 +650,9 @@ describe("official workbench", () => {
     expect(
       screen.getByRole("button", { name: /全球加速 Cloudflare/ }),
     ).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(screen.getByRole("button", { name: "用量账单" }));
+    fireEvent.click(screen.getByRole("button", { name: "账本" }));
     expect(
-      screen.getByRole("heading", { level: 1, name: "用量账单" }),
+      screen.getByRole("heading", { level: 1, name: "账本" }),
     ).toHaveFocus();
     openWorkbenchPage("应用接入");
     await act(async () => {});
@@ -711,7 +710,7 @@ describe("official workbench", () => {
     render(<App />);
     await screen.findByText("版本 1.40609.1");
     expect(
-      screen.queryByRole("region", { name: "用量账单" }),
+      screen.queryByRole("region", { name: "账本" }),
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "检测并连接" }),
@@ -812,7 +811,7 @@ describe("official workbench", () => {
   it("uses one shared signed-out account state across billing and pricing", async () => {
     render(<App />);
     await screen.findByText("版本 1.40609.1");
-    fireEvent.click(screen.getByRole("button", { name: "用量账单" }));
+    fireEvent.click(screen.getByRole("button", { name: "账本" }));
     expect(
       await screen.findByRole("button", { name: "网页登录" }),
     ).toBeEnabled();
@@ -891,7 +890,7 @@ describe("official workbench", () => {
     );
     render(<App />);
     await screen.findByText("版本 1.40609.1");
-    fireEvent.click(screen.getByRole("button", { name: "用量账单" }));
+    fireEvent.click(screen.getByRole("button", { name: "账本" }));
     expect(await screen.findAllByText("野菜测试用户")).toHaveLength(2);
     expect(screen.getByText("¥0.70")).toBeInTheDocument();
     expect(screen.getAllByText("人民币额度")).toHaveLength(2);
@@ -956,7 +955,7 @@ describe("official workbench", () => {
 
     render(<App />);
     await screen.findByText("版本 1.40609.1");
-    fireEvent.click(screen.getByRole("button", { name: "用量账单" }));
+    fireEvent.click(screen.getByRole("button", { name: "账本" }));
 
     expect(await screen.findAllByText("野菜测试用户")).toHaveLength(2);
     expect(screen.getByText("-¥1.75")).toBeInTheDocument();
@@ -1312,27 +1311,21 @@ describe("announcements", () => {
   it("puts an unread promotion on the home page and counts it in the sidebar", async () => {
     const followed = withNotices();
     render(<App />);
-    const banner = await screen.findByTestId("announcement-banner");
-    expect(banner).toHaveTextContent("国庆充值加赠");
-    expect(banner).toHaveTextContent("充 100 送 20");
-    expect(banner).not.toHaveTextContent("活动截止");
+    // 首页不再有横幅：只说有一条新的，内容和按钮都在公告页。
+    const news = await screen.findByTestId("home-news");
+    expect(news).toHaveTextContent("国庆充值加赠");
+    expect(news).not.toHaveTextContent("充 100 送 20");
     expect(screen.getByTestId("announcements-unread")).toHaveTextContent("2");
 
-    fireEvent.click(within(banner).getByRole("button", { name: "去充值" }));
+    fireEvent.click(news);
+    fireEvent.click(await screen.findByRole("button", { name: "去充值" }));
     await waitFor(() => expect(followed).toEqual(["recharge-1001"]));
-    // 点过按钮就算读过：横幅消失，未读数少一条。
-    await waitFor(() =>
-      expect(
-        screen.queryByTestId("announcement-banner"),
-      ).not.toBeInTheDocument(),
-    );
-    expect(screen.getByTestId("announcements-unread")).toHaveTextContent("1");
   });
 
   it("marks everything read once the announcements page is opened, and remembers it", async () => {
     withNotices();
     const view = render(<App />);
-    await screen.findByTestId("announcement-banner");
+    await screen.findByTestId("home-news");
     fireEvent.click(
       screen.getByRole("button", { name: /^公告 · 2 条未读公告$/ }),
     );
@@ -1351,20 +1344,9 @@ describe("announcements", () => {
     view.unmount();
     render(<App />);
     await screen.findByRole("button", { name: "公告" });
-    expect(screen.queryByTestId("announcement-banner")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("home-news")).not.toBeInTheDocument();
     expect(
       screen.queryByTestId("announcements-unread"),
     ).not.toBeInTheDocument();
-  });
-
-  it("dismissing the banner only marks that one notice read", async () => {
-    withNotices();
-    render(<App />);
-    const banner = await screen.findByTestId("announcement-banner");
-    fireEvent.click(
-      within(banner).getByRole("button", { name: "关闭这条公告" }),
-    );
-    expect(screen.queryByTestId("announcement-banner")).not.toBeInTheDocument();
-    expect(screen.getByTestId("announcements-unread")).toHaveTextContent("1");
   });
 });

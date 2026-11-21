@@ -151,45 +151,13 @@ button,
 }
 
 /* ================= 4. 卡片与列表 ================= */
-.account-overview,
 .settings-card,
 .desktop-update-card,
-.announcements-list,
-.welcome-strip {
+.announcements-list {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: none;
-}
-
-/* ================= 首页 ================= */
-.account-overview {
-  padding: var(--card-pad) var(--space-24);
-}
-
-.account-overview-heading {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-8);
-  margin-bottom: var(--space-16);
-}
-
-.account-overview-heading h2 {
-  margin: 0;
-  font-size: var(--text-sm);
-  font-weight: 650;
-}
-
-.account-overview-heading small {
-  color: var(--faint);
-  font-size: var(--text-xs);
-}
-
-/* 未登录欢迎卡：一块安静的白卡，而不是整片青柠底 —— 青柠留给按钮本身。 */
-.welcome-strip.welcome-strip-station {
-  gap: var(--space-16);
-  padding: var(--space-24);
-  background: var(--surface);
 }
 
 .welcome-strip-station .welcome-strip-copy h2 {
@@ -203,14 +171,6 @@ button,
   margin: var(--space-4) 0 0;
   color: var(--muted);
   font-size: var(--text-sm);
-}
-
-.welcome-strip .welcome-symbol {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
-  color: var(--ink);
-  background: var(--accent-soft);
 }
 
 .station-connect-origin-form {

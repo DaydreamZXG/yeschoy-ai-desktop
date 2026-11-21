@@ -4,7 +4,6 @@ import {
   Megaphone,
   TriangleAlert,
   RefreshCw,
-  X,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { Notice } from "./announcements";
@@ -166,53 +165,5 @@ export function AnnouncementsView({
         </ol>
       )}
     </div>
-  );
-}
-
-/**
- * 首页顶部的公告横幅：只显示一条（未读里最靠前、服务端标了 banner 的），
- * 点按钮、点「查看全部」或关掉都算读过，之后不再出现。
- */
-export function AnnouncementBanner({
-  notice,
-  onFollow,
-  onOpenAll,
-  onDismiss,
-}: {
-  notice: Notice;
-  onFollow: (notice: Notice) => void;
-  onOpenAll: () => void;
-  onDismiss: (notice: Notice) => void;
-}) {
-  const c = useWorkbenchCopy();
-  const summary = noticeParagraphs(notice.body)[0];
-  return (
-    <section
-      className="announcement-banner"
-      data-severity={notice.severity}
-      aria-label={c.announcements}
-      data-testid="announcement-banner"
-    >
-      <Megaphone aria-hidden="true" />
-      <div>
-        <strong>{notice.title}</strong>
-        {summary && <p>{noticeLine(summary)}</p>}
-      </div>
-      <div className="announcement-banner-actions">
-        <NoticeAction notice={notice} onFollow={onFollow} />
-        <button type="button" className="text-button" onClick={onOpenAll}>
-          {c.announcementBannerMore}
-        </button>
-        <button
-          type="button"
-          className="announcement-banner-close"
-          aria-label={c.announcementBannerDismiss}
-          title={c.announcementBannerDismiss}
-          onClick={() => onDismiss(notice)}
-        >
-          <X aria-hidden="true" />
-        </button>
-      </div>
-    </section>
   );
 }

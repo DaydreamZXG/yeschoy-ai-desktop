@@ -16,7 +16,14 @@ function stage(overrides: Partial<Parameters<typeof HomeStage>[0]> = {}) {
     connectedCount: 0,
     balance: "¥86.40",
     station: "connected" as const,
-    notice: null,
+    notices: [],
+    news: null,
+    signIn: <p>连接表单</p>,
+    panelOpen: false,
+    onPanelOpenChange: vi.fn(),
+    checking: false,
+    onRefresh: vi.fn(),
+    children: <p>应用列表</p>,
     apps: [
       {
         id: "claude_desktop" as const,
@@ -33,8 +40,6 @@ function stage(overrides: Partial<Parameters<typeof HomeStage>[0]> = {}) {
     ],
     onOpenSetup: vi.fn(),
     onStart: vi.fn(),
-    onShowApps: vi.fn(),
-    onSignIn: vi.fn(),
     ...overrides,
   };
   render(<HomeStage {...props} />);
@@ -90,6 +95,12 @@ describe("首页舞台", () => {
     expect(screen.queryByText(/¥/)).toBeNull();
   });
 
+  it("这次没读成时，数字说明是上次确认的", () => {
+    stage({ connectedCount: 2, connectedStale: true });
+    expect(screen.getByText(/上次确认时接好了 2 个应用/)).toBeInTheDocument();
+    expect(screen.queryByText(/已经接好/)).toBeNull();
+  });
+
   it("接入状态没读到时不报数，不说「还没接应用」", () => {
     stage({ connectedCount: null });
     expect(screen.queryByText(/还没接应用/)).toBeNull();
@@ -104,11 +115,20 @@ describe("首页舞台", () => {
   it("出状况时换表情，原来的提示搬进对话框里说", () => {
     stage({
       connectedModelIds: ["deepseek-chat"],
-      notice: {
-        mood: "hungry",
-        flavor: "low",
-        node: <p role="status">余额不足</p>,
-      },
+      notices: [
+        {
+          key: "balance",
+          mood: "hungry",
+          flavor: "low",
+          node: <p role="status">余额不足</p>,
+        },
+        {
+          key: "checking",
+          mood: "idle",
+          flavor: null,
+          node: <p role="status">正在连接</p>,
+        },
+      ],
     });
     const root = screen.getByTestId("home-stage");
     expect(root).toHaveAttribute("data-mood", "hungry");
@@ -116,6 +136,10 @@ describe("首页舞台", () => {
     // 小鲸有自己的说法；主按钮让位给提示自己的按钮。
     expect(screen.getByText(/喂点米吧/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "开始吧" })).toBeNull();
+    // 不止一条时一次说一条，点一下说下一条。
+    fireEvent.click(screen.getByRole("button", { name: "还有 1 件事" }));
+    expect(within(root).getByRole("status")).toHaveTextContent("正在连接");
+    expect(root).toHaveAttribute("data-mood", "idle");
   });
 
   it("没连站点时由阿青迎新，不显示应用和余额", () => {
@@ -128,8 +152,9 @@ describe("首页舞台", () => {
     expect(strip("阿青（GPT）")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText(/先连上你的站点/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Codex/ })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "去填网址" }));
-    expect(props.onSignIn).toHaveBeenCalled();
+    // 连接表单就在她的对话框里，不用再往下找。
+    expect(screen.getByText("连接表单")).toBeInTheDocument();
+    expect(props.onStart).not.toHaveBeenCalled();
   });
 
   it("应用格子：接好的去调整，没接的去接入", () => {
@@ -148,5 +173,7 @@ describe("首页舞台", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "开始吧" }));
     expect(props.onStart).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "全部应用" }));
+    expect(props.onPanelOpenChange).toHaveBeenCalledWith(true);
   });
 });

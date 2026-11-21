@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowDown, ArrowRight } from "lucide-react";
+import { ArrowRight, LayoutGrid, RefreshCw, X } from "lucide-react";
 import type { AccountModel } from "../../account/session";
 import type { ActivationToolId } from "../../configuration/activation";
 import type { SetupAction } from "../../configuration/setupIntent";
@@ -50,9 +50,15 @@ export type StageStation =
  * （文案、按钮、testid 都不变），只是换到对话框里说，下面不再重复一遍。
  */
 export interface StageNotice {
+  key: string;
   mood: Mood;
   flavor: "recovery" | "unreachable" | "modelOffline" | "low" | null;
   node: ReactNode;
+}
+
+export interface StageNews {
+  title: string;
+  onOpen: () => void;
 }
 
 interface Props {
@@ -61,15 +67,25 @@ interface Props {
   connectedModelIds: string[];
   /** 已接入的应用数；`null` = 状态没读到，不报数。 */
   connectedCount: number | null;
+  /** 这个数是上次读到的，这次没读成。 */
+  connectedStale?: boolean;
   /** 已经格式化好的余额；`null` = 看不到，角色会照实说。 */
   balance: string | null;
   station: StageStation;
-  notice: StageNotice | null;
+  /** 按要紧程度排好的提示；角色一次说一条。 */
+  notices: StageNotice[];
+  news: StageNews | null;
+  /** 没连站点时放进对话框的连接表单。 */
+  signIn: ReactNode;
+  panelOpen: boolean;
+  onPanelOpenChange: (open: boolean) => void;
+  checking: boolean;
+  onRefresh: () => void;
+  /** 「全部应用」面板里的内容。 */
+  children: ReactNode;
   apps: StageApp[];
   onOpenSetup: (appId: ActivationToolId, action?: SetupAction) => void;
   onStart: () => void;
-  onShowApps: () => void;
-  onSignIn: () => void;
 }
 
 const SAID_MS = 6000;
@@ -91,14 +107,20 @@ export function HomeStage({
   models,
   connectedModelIds,
   connectedCount,
+  connectedStale = false,
   balance,
   station,
-  notice,
+  notices,
+  news,
+  signIn,
+  panelOpen,
+  onPanelOpenChange,
+  checking,
+  onRefresh,
+  children,
   apps,
   onOpenSetup,
   onStart,
-  onShowApps,
-  onSignIn,
 }: Props) {
   const { t } = useTranslation();
   const available = useMemo(
@@ -120,6 +142,9 @@ export function HomeStage({
   const strips: RosterId[] = available?.new
     ? [...ROSTER_IDS, "new"]
     : [...ROSTER_IDS];
+
+  const [noticeAt, setNoticeAt] = useState(0);
+  const notice = notices.length ? notices[noticeAt % notices.length] : null;
 
   const [said, setSaid] = useState<string | null>(null);
   const [happy, setHappy] = useState(false);
@@ -199,6 +224,17 @@ export function HomeStage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quiet, currentId, available, showAside, t]);
 
+  // 有没读过的公告时小黑报一次；她不在这个站上就只留右上角那个入口。
+  const newsTitle = news?.title;
+  useEffect(() => {
+    if (!newsTitle || !quiet || (available && !available.grk)) return;
+    const timer = window.setTimeout(
+      () => showAside("grk", t("homeStage.newsSays", { title: newsTitle })),
+      1200,
+    );
+    return () => window.clearTimeout(timer);
+  }, [newsTitle, quiet, available, showAside, t]);
+
   const poke = () => {
     const n = (pokes.current++ % 3) + 1;
     say(t(`roster.${currentId}.poke${n}`));
@@ -231,9 +267,14 @@ export function HomeStage({
             ? t(`roster.${currentId}.ready`, { balance })
             : t("homeStage.balanceUnknown"),
           connectedCount === null
-            ? ""
+            ? t("homeStage.connectionsUnknown")
             : connectedCount > 0
-              ? t("homeStage.connectedCount", { count: connectedCount })
+              ? t(
+                  connectedStale
+                    ? "homeStage.connectedCountStale"
+                    : "homeStage.connectedCount",
+                  { count: connectedCount },
+                )
               : t("homeStage.noneConnected"),
         ]
           .filter(Boolean)
@@ -260,7 +301,7 @@ export function HomeStage({
     <section
       className="home-stage"
       aria-label={t("homeStage.regionLabel")}
-      data-compact={station === "signed_out" || undefined}
+      data-panel={panelOpen || undefined}
       data-mood={mood}
       data-testid="home-stage"
       style={{ "--acc": current.color } as CSSProperties}
@@ -342,6 +383,16 @@ export function HomeStage({
           {balance && station !== "signed_out" && (
             <span>{t("homeStage.chipBalance", { balance })}</span>
           )}
+          {news && (
+            <button
+              type="button"
+              data-testid="home-news"
+              title={news.title}
+              onClick={news.onOpen}
+            >
+              {t("homeStage.newsSays", { title: news.title })}
+            </button>
+          )}
         </p>
         <div className="home-dialog">
           <button
@@ -365,30 +416,35 @@ export function HomeStage({
                 </p>
               )}
               {notice.node}
+              {notices.length > 1 && (
+                <button
+                  type="button"
+                  className="home-next"
+                  onClick={() => setNoticeAt((at) => at + 1)}
+                >
+                  {t("homeStage.moreNotices", { count: notices.length - 1 })}
+                  <ArrowRight aria-hidden="true" />
+                </button>
+              )}
             </div>
           ) : (
-            <>
-              <p className="home-line" key={said ?? line} aria-live="polite">
-                {said ?? line}
-              </p>
-              <footer>
-                <span className="home-models">{modelsText}</span>
-                {station === "signed_out" ? (
-                  <button type="button" className="home-go" onClick={onSignIn}>
-                    {t("homeStage.signedOutAction")}
-                    <ArrowDown aria-hidden="true" />
-                  </button>
-                ) : (
+            <p className="home-line" key={said ?? line} aria-live="polite">
+              {said ?? line}
+            </p>
+          )}
+          {station === "signed_out"
+            ? signIn
+            : !notice && (
+                <footer>
+                  <span className="home-models">{modelsText}</span>
                   <button type="button" className="home-go" onClick={onStart}>
                     {connectedCount
                       ? t("homeStage.more")
                       : t("homeStage.start")}
                     <ArrowRight aria-hidden="true" />
                   </button>
-                )}
-              </footer>
-            </>
-          )}
+                </footer>
+              )}
         </div>
         {station !== "signed_out" && apps.length > 0 && (
           <div className="home-apps">
@@ -423,13 +479,58 @@ export function HomeStage({
                 </button>
               );
             })}
-            <button type="button" className="home-app-all" onClick={onShowApps}>
+            <button
+              type="button"
+              className="home-app-all"
+              aria-expanded={panelOpen}
+              onClick={() => onPanelOpenChange(!panelOpen)}
+            >
+              <LayoutGrid aria-hidden="true" />
               {t("homeStage.allApps")}
-              <ArrowDown aria-hidden="true" />
             </button>
           </div>
         )}
       </div>
+
+      {/* 始终挂着，关上时滑出去并且不可聚焦：里面的接入状态要一直是最新的。 */}
+      <aside
+        className="home-panel"
+        aria-label={t("homeStage.allApps")}
+        data-open={panelOpen || undefined}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") onPanelOpenChange(false);
+        }}
+        {...(panelOpen ? {} : ({ inert: "" } as object))}
+      >
+        <header>
+          <h2>{t("homeStage.allApps")}</h2>
+          <button
+            type="button"
+            disabled={checking}
+            aria-label={
+              checking
+                ? t("homeStage.panelChecking")
+                : t("homeStage.panelRefresh")
+            }
+            title={t("homeStage.panelRefresh")}
+            onClick={onRefresh}
+          >
+            <RefreshCw
+              className={checking ? "is-spinning" : ""}
+              aria-hidden="true"
+            />
+          </button>
+          <button
+            type="button"
+            aria-label={t("homeStage.panelClose")}
+            title={t("homeStage.panelClose")}
+            onClick={() => onPanelOpenChange(false)}
+          >
+            <X aria-hidden="true" />
+          </button>
+        </header>
+        <div className="home-panel-body">{children}</div>
+      </aside>
     </section>
   );
 }

@@ -1,5 +1,5 @@
 /* 首页舞台。画是深色的，所以这一块不跟浅色 / 深色主题走，始终是深色。 */
-.desktop-home-shell {
+.desktop-home {
   min-width: 0;
 }
 
@@ -20,11 +20,6 @@
   color: var(--stage-ink);
   color-scheme: dark;
   user-select: none;
-}
-
-.home-stage[data-compact] {
-  height: min(46vh, 420px);
-  min-height: 320px;
 }
 
 .home-roster {
@@ -231,10 +226,6 @@
   letter-spacing: 0.2em;
 }
 
-.home-stage[data-compact] .home-strip-label small {
-  display: none;
-}
-
 .home-aside {
   position: absolute;
   z-index: 5;
@@ -280,10 +271,6 @@
   flex: none;
   width: min(800px, 100%);
   pointer-events: auto;
-}
-
-.home-stage[data-compact] .home-stage-ui {
-  padding-bottom: var(--space-20);
 }
 
 .home-chips {
@@ -576,19 +563,8 @@
 }
 
 .home-app-all svg {
-  width: 14px;
-  height: 14px;
-}
-
-/* 没连站点时舞台只占上半屏，连接表单紧跟在下面。 */
-.home-stage[data-compact] .home-chibi {
-  left: -10px;
-  width: 150px;
-  height: 160px;
-}
-
-.home-stage[data-compact] .home-dialog {
-  padding-left: 148px;
+  width: 16px;
+  height: 16px;
 }
 
 @media (max-width: 900px) {
@@ -649,4 +625,193 @@
   .home-chips span::before {
     animation: none;
   }
+}
+
+/* 新公告入口 */
+.home-chips button {
+  height: 28px;
+  padding: 0 var(--space-12);
+  border: 1px solid color-mix(in srgb, var(--acc) 60%, transparent);
+  border-radius: var(--radius-full);
+  background: rgba(10, 24, 80, 0.6);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.home-next {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--stage-dim);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.home-next:hover {
+  color: #fff;
+}
+
+.home-next svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* 没连站点时，连接表单就在对话框里。 */
+.home-connect {
+  margin-top: var(--space-8);
+  color: var(--stage-dim);
+  font-size: var(--text-sm);
+}
+
+.home-connect p {
+  margin: 0 0 var(--space-8);
+}
+
+.home-connect input {
+  border-color: var(--stage-line);
+  background: rgba(0, 6, 30, 0.5);
+  color: #fff;
+}
+
+.home-connect .text-button {
+  color: #fff;
+}
+
+/* 「全部应用」面板：从右边滑出来，竖幅和对话框往左让。 */
+.home-panel {
+  position: absolute;
+  z-index: 6;
+  top: var(--space-16);
+  right: var(--space-16);
+  bottom: var(--space-16);
+  display: flex;
+  flex-direction: column;
+  width: min(580px, calc(100% - var(--space-32)));
+  border: 1px solid var(--stage-line);
+  border-radius: var(--radius-2xl);
+  background: rgba(8, 14, 44, 0.82);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  backdrop-filter: blur(22px) saturate(140%);
+  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.9);
+  opacity: 0;
+  transform: translateX(calc(100% + var(--space-24)));
+  transition:
+    transform 0.45s cubic-bezier(0.2, 0.9, 0.2, 1),
+    opacity 0.3s;
+  user-select: text;
+}
+
+.home-panel[data-open] {
+  opacity: 1;
+  transform: none;
+}
+
+.home-panel > header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-14) var(--space-14) var(--space-10) var(--space-20);
+}
+
+.home-panel > header h2 {
+  flex: 1;
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+.home-panel > header button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--stage-dim);
+  cursor: pointer;
+}
+
+.home-panel > header button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.home-panel > header svg {
+  width: 16px;
+  height: 16px;
+}
+
+.home-panel-body {
+  flex: 1;
+  min-height: 0;
+  padding: 0 var(--space-14) var(--space-14);
+  overflow-y: auto;
+}
+
+.home-stage-ui,
+.home-roster-in {
+  transition:
+    transform 0.45s cubic-bezier(0.2, 0.9, 0.2, 1),
+    filter 0.8s;
+}
+
+.home-stage[data-panel] .home-stage-ui {
+  transform: translateX(calc(min(580px, 100% - var(--space-32)) / -2));
+}
+
+@media (max-width: 1500px) {
+  .home-stage[data-panel] .home-stage-ui {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .home-stage[data-panel] .home-stage-ui > * {
+    pointer-events: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-panel,
+  .home-stage-ui,
+  .home-roster-in {
+    transition: none;
+  }
+}
+
+/* 面板比原来的整页窄：状态跟名字一行，按钮另起一行靠左。 */
+.home-panel .connection-library > .connection-row {
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "icon main state"
+    "icon actions actions";
+  gap: var(--space-8) var(--space-12);
+  padding: var(--space-12) var(--space-8);
+}
+
+.home-panel .connection-row > .connection-row-actions {
+  justify-content: flex-start;
+  max-width: none;
+}
+
+.home-panel .connection-row-actions .open-connection-control {
+  justify-content: flex-start;
+}
+
+.home-panel .connection-library > .connection-group-heading:first-child {
+  margin-top: var(--space-4);
+}
+
+.home-panel .workbench-notice {
+  margin: 0 0 var(--space-12);
 }

@@ -10,7 +10,7 @@ Derived from code and `docs/station-connect-protocol.md` — not a product spec.
 | Boot | `App` mounts `useAccountSession(accountLineId)` (`src/App.tsx`). Default `accountLineId` is `mainland_optimized`. |
 | Session hook | **`useAccountSession`** (`src/account/useAccountSession.ts`) runs a mount `useEffect` that calls `execute("account_inspect_v2")` unless skipped (see §5 / PR #46 follow-up). |
 | Native inspect | **`account_inspect_v2`** → **`inspect_inner`** (`src-tauri/src/account_v2.rs`): `fetch_bootstrap(line_id)` (HTTPS), then **`refresh_access`**. With no keyring entry, **`load_stored_session`** is empty → **`SessionExpired`** → projection **`signed_out`** (or **`authorization_unavailable`** if bootstrap says device auth off). |
-| UI | **`showStationConnectWelcomeStrip`** (`src/workbench/AppLibraryView.tsx`) is true for `signed_out` / missing status → welcome strip + **`StationConnectOriginForm`**. Parallel: **`scanActivationTargets`** runs for app cards (separate from account). |
+| UI | **`showStationConnectWelcomeStrip`** (`src/workbench/home/HomeView.tsx`) is true for `signed_out` / missing status → welcome strip + **`StationConnectOriginForm`**. Parallel: **`scanActivationTargets`** runs for app cards (separate from account). |
 | Official-only | **`isOfficialDistribution()`** (`src/distribution/identity.ts`) hides OSS soft-traffic CTA; form still prefills **`REFERENCE_STATION_ORIGIN`** (`src/distribution/softTraffic.ts` → `https://yeschoy.com`). |
 
 **PR #46:** if **`account_session_snapshot_v2`** reports no keyring session, **skip** `account_inspect_v2` on startup; set **`idleSignedOutProjection`** and `loading: false` immediately. Manual **`refresh()`** still inspects.
@@ -61,7 +61,7 @@ Station connect (§3) and device authorization (§4) are **parallel** ways to ob
 
 **Grey / blocked UI (before PR #46):**
 
-- **`AppLibraryView`** passed **`disabled={accountSession.loading}`** to **`StationConnectOriginForm`** →「在浏览器中继续」disabled while inspect (+ retries, up to ~2.5s+) ran.
+- **`HomeView`** passed **`disabled={accountSession.loading}`** to **`StationConnectOriginForm`** →「在浏览器中继续」disabled while inspect (+ retries, up to ~2.5s+) ran.
 - **`AccountView`**: **`signInDisabled`** included **`loading`**; initial **`loading && !projection`** showed account skeleton instead of sign-in.
 
 **After PR #46:** form not disabled by loading; sign-in not disabled by loading; **`AUTH_UNAUTHORIZED`** mapped to sign-in copy (§6).

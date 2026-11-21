@@ -4,7 +4,6 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -13,48 +12,45 @@ import {
   CircleAlert,
   Plus,
   RefreshCw,
-  ShieldCheck,
 } from "lucide-react";
-import { AccountSummary } from "./WorkbenchChrome";
-import { AppGlyph } from "./AppGlyph";
-import { WORKBENCH_APPS, appDisplayName } from "./appCatalog";
-import type { AccountSessionController } from "../account/useAccountSession";
-import { balanceAlert, formatMoney } from "../account/finance";
+import { AppGlyph } from "../AppGlyph";
+import { WORKBENCH_APPS, appDisplayName } from "../appCatalog";
+import type { AccountSessionController } from "../../account/useAccountSession";
+import { balanceAlert, formatMoney } from "../../account/finance";
 import {
   HomeStage,
+  type StageNews,
   type StageNotice,
   type StageStation,
-} from "./home/HomeStage";
-import { LowBalanceBanner } from "./LowBalanceBanner";
-import { useWalletRecharge } from "./useWalletRecharge";
+} from "./HomeStage";
+import { LowBalanceBanner } from "../LowBalanceBanner";
+import { useWalletRecharge } from "../useWalletRecharge";
 import {
   scanActivationTargets,
   type ActivationTargetScan,
   type ActivationToolId,
-} from "../configuration/activation";
+} from "../../configuration/activation";
 import {
   connectionLabel,
   useConnections,
   type ToolConnection,
-} from "../configuration/connections";
-import { RestoreConnection } from "../configuration/RestoreConnection";
-import { OpenConnection } from "../configuration/OpenConnection";
-import { ConnectionStatusNotice } from "../configuration/ConnectionStatusNotice";
-import type { SetupAction } from "../configuration/setupIntent";
-import { useWorkbenchCopy } from "./copy";
-import { Users } from "lucide-react";
-import { isOfficialDistribution } from "../distribution/identity";
-import { showOssSoftTraffic } from "../distribution/softTraffic";
-import { showYeschoyCommunityUi } from "../distribution/yeschoyStation";
-import { OssSoftTrafficCta } from "./OssSoftTrafficCta";
-import { StationConnectOriginForm } from "./StationConnectOriginForm";
-import { modelDisplayName } from "../model-profiles/profile";
-import type { AccountLineId } from "../configuration/preview";
-import type { AccountStatus } from "../account/session";
+} from "../../configuration/connections";
+import { RestoreConnection } from "../../configuration/RestoreConnection";
+import { OpenConnection } from "../../configuration/OpenConnection";
+import { ConnectionStatusNotice } from "../../configuration/ConnectionStatusNotice";
+import type { SetupAction } from "../../configuration/setupIntent";
+import { useWorkbenchCopy } from "../copy";
+import { isOfficialDistribution } from "../../distribution/identity";
+import { showOssSoftTraffic } from "../../distribution/softTraffic";
+import { OssSoftTrafficCta } from "../OssSoftTrafficCta";
+import { StationConnectOriginForm } from "../StationConnectOriginForm";
+import { modelDisplayName } from "../../model-profiles/profile";
+import type { AccountLineId } from "../../configuration/preview";
+import type { AccountStatus } from "../../account/session";
 import {
   accountStatusSuggestsRelayLineRetry,
   isRelayCatalogLine,
-} from "./accountRelayRecovery";
+} from "../accountRelayRecovery";
 
 interface Props {
   onOpenAccount: () => void;
@@ -62,11 +58,11 @@ interface Props {
   onOpenSetup: (appId: ActivationToolId, action?: SetupAction) => void;
   // 交流群对话框的状态提到了 App：侧边栏和这里的页脚都要能打开它，
   // 两份各自的 useState 会变成两个互不知情的对话框。
-  onOpenCommunity: () => void;
   accountLineId: AccountLineId;
   accountSession: AccountSessionController;
   /** 首页顶部的公告横幅（未读、标了 banner 的那一条），由 App 决定给不给。 */
-  announcement?: ReactNode;
+  /** 最新一条没读过的公告；由小黑来报。 */
+  news?: StageNews | null;
 }
 /**
  * 后端整个够不着的时候，账户、本机扫描、接入状态会同时失败，页面就叠出三条
@@ -102,14 +98,13 @@ export function showStationConnectWelcomeStrip(
   return status !== "signed_in" && status !== "authorization_pending";
 }
 
-export function AppLibraryView({
+export function HomeView({
   onOpenAccount,
   onOpenSetup,
-  onOpenCommunity,
   onStationLineChange,
   accountLineId,
   accountSession,
-  announcement,
+  news = null,
 }: Props) {
   const { t } = useTranslation();
   const c = useWorkbenchCopy();
@@ -428,7 +423,6 @@ export function AppLibraryView({
         </p>
       ),
     });
-  const [stageNotice = null, ...belowNotices] = notices;
 
   const money = signedIn ? accountSession.projection?.money : undefined;
   const balanceText = money
@@ -441,13 +435,10 @@ export function AppLibraryView({
       : signedIn && !stationChecking && !accountSession.loading
         ? "connected"
         : "checking";
-  const showApps = () =>
-    document
-      .querySelector<HTMLElement>(".desktop-home")
-      ?.scrollIntoView({ block: "start", behavior: "smooth" });
+  const [panelOpen, setPanelOpen] = useState(false);
 
   return (
-    <div className="desktop-home-shell">
+    <div className="desktop-home" data-testid="candidate-home-view">
       <HomeStage
         models={signedIn ? (accountSession.projection?.models ?? null) : null}
         connectedModelIds={(connections?.connections ?? [])
@@ -459,9 +450,9 @@ export function AppLibraryView({
             ? null
             : configured
         }
+        connectedStale={staleConnections}
         balance={balanceText === "—" ? null : balanceText}
         station={stageStation}
-        notice={stageNotice}
         apps={rows.slice(0, 6).map((row) => ({
           id: row.app.id,
           name: row.displayName,
@@ -478,385 +469,292 @@ export function AppLibraryView({
             rows.find((row) => row.installed && !row.active) ??
             rows.find((row) => !row.active);
           if (next) onOpenSetup(next.app.id);
-          else showApps();
+          else setPanelOpen(true);
         }}
-        onShowApps={showApps}
-        onSignIn={() =>
-          document
-            .querySelector<HTMLElement>(".welcome-strip-station input")
-            ?.focus()
+        panelOpen={panelOpen}
+        onPanelOpenChange={setPanelOpen}
+        notices={notices}
+        news={news}
+        checking={!!checking}
+        onRefresh={() => {
+          void refresh();
+          void connections?.refresh();
+        }}
+        signIn={
+          loginRequired ? (
+            <div className="home-connect welcome-strip-station">
+              <div className="welcome-strip-copy">
+                <p>{c.librarySignInBody}</p>
+                <StationConnectOriginForm onLineChange={onStationLineChange} />
+                {relayLineRecovery && (
+                  <p
+                    className="welcome-strip-relay-hint"
+                    data-testid="library-relay-line-recovery"
+                  >
+                    {t("workbench.libraryRelayLineRecovery", {
+                      alternateLine: alternateRelayLineLabel,
+                    })}
+                    <button
+                      type="button"
+                      className="text-button"
+                      onClick={onOpenAccount}
+                    >
+                      {c.libraryOpenUsageForLine}
+                    </button>
+                  </p>
+                )}
+                <p className="welcome-strip-catalog">
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={onOpenAccount}
+                  >
+                    {isOfficialDistribution()
+                      ? c.librarySignInCatalogOfficial
+                      : c.librarySignInCatalogNeutral}
+                    <ArrowRight aria-hidden="true" />
+                  </button>
+                </p>
+              </div>
+              {showOssSoftTraffic({
+                accountProjection: accountSession.projection,
+              }) && <OssSoftTrafficCta onTryReference={onOpenAccount} />}
+            </div>
+          ) : null
         }
-      />
-      <div
-        className="workbench-page desktop-home"
-        data-testid="candidate-home-view"
       >
-      <header className="workbench-page-heading">
-        <div>
-          <p className="eyebrow">{c.libraryEyebrow}</p>
-          <h1>{c.libraryTitle}</h1>
-          <p>
-            {!hasConnectionSnapshot
-              ? c.librarySubtitleUnknown
-              : configured
-                ? c.librarySubtitleConfigured
-                : c.librarySubtitleEmpty}
+        {!everythingUnavailable && scanError && (
+          <p className="workbench-notice" role="alert">
+            <CircleAlert />
+            {c.libraryScanError}
+            <button onClick={() => void refresh()}>{c.retry}</button>
           </p>
-        </div>
-        <button
-          className="subtle-button"
-          type="button"
-          disabled={checking}
-          onClick={() => {
-            void refresh();
-            void connections?.refresh();
-          }}
-        >
-          <RefreshCw className={checking ? "is-spinning" : ""} />
-          {checking ? c.libraryCheckingAction : c.libraryCheckAction}
-        </button>
-      </header>
-      {announcement}
-      {belowNotices.map((notice) => notice.node)}
-      {/* 账户概览是首页常驻的仪表盘行，而不是折叠在页脚的 <details>。 */}
-      {signedIn && (
-        <section
-          className="account-overview"
-          aria-label={t("yeschoyDaily.accountOverview")}
-        >
-          <header className="account-overview-heading">
-            <h2>{t("yeschoyDaily.accountOverview")}</h2>
-            <small>{t("yeschoyDaily.accountOverviewHint")}</small>
-          </header>
-          <AccountSummary
-            detected={detected}
-            scanning={scanning}
-            onOpenAccount={onOpenAccount}
-            onOpenApps={() =>
-              document
-                .querySelector<HTMLElement>(".connection-library")
-                ?.scrollIntoView({ block: "start" })
-            }
-            accountProjection={accountSession.projection}
-            accountLoading={accountSession.loading || (accountSession.stationCheck ?? "idle") === "checking"}
-          />
-        </section>
-      )}
-      {loginRequired ? (
-        <section className="welcome-strip welcome-strip-station">
-          <span className="welcome-symbol">
-            <ShieldCheck />
-          </span>
-          <div className="welcome-strip-copy">
-            <h2>{c.librarySignInTitle}</h2>
-            <p>{c.librarySignInBody}</p>
-            <StationConnectOriginForm onLineChange={onStationLineChange} />
-            {relayLineRecovery && (
-              <p
-                className="welcome-strip-relay-hint"
-                data-testid="library-relay-line-recovery"
-              >
-                {t("workbench.libraryRelayLineRecovery", {
-                  alternateLine: alternateRelayLineLabel,
-                })}
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={onOpenAccount}
-                >
-                  {c.libraryOpenUsageForLine}
-                </button>
-              </p>
-            )}
-            <p className="welcome-strip-catalog">
-              <button
-                type="button"
-                className="text-button"
-                onClick={onOpenAccount}
-              >
-                {isOfficialDistribution()
-                  ? c.librarySignInCatalogOfficial
-                  : c.librarySignInCatalogNeutral}
-                <ArrowRight aria-hidden="true" />
-              </button>
-            </p>
-          </div>
-          {showOssSoftTraffic({
-            accountProjection: accountSession.projection,
-          }) && (
-            <OssSoftTrafficCta onTryReference={onOpenAccount} />
-          )}
-        </section>
-      ) : signedIn ? (
-        <div className="library-heading">
-          <span>
-            {!hasConnectionSnapshot ||
-            (partialConnections && configured === 0) ? (
-              connections?.loading ? (
-                c.libraryConnectionLoading
-              ) : (
-                c.libraryConnectionUnknown
-              )
-            ) : (
-              <>
-                {staleConnections
-                  ? c.libraryCountStalePrefix
-                  : partialConnections
-                    ? c.libraryCountConfirmedPrefix
-                    : ""}
-                <b>{configured}</b>
-                {c.libraryCountConnected}
-                {partialConnections ? c.libraryCountPartial : ""}
-              </>
-            )}{" "}
-            <span className="quiet-separator">/</span> {detected ?? "—"}
-            {c.libraryDetected}
-          </span>
-        </div>
-      ) : null}
-      {!everythingUnavailable && scanError && (
-        <p className="workbench-notice" role="alert">
-          <CircleAlert />
-          {c.libraryScanError}
-          <button onClick={() => void refresh()}>{c.retry}</button>
-        </p>
-      )}
-      {!everythingUnavailable &&
-        connections &&
-        (connections.error || partialConnections) && (
-          <ConnectionStatusNotice
-            issue={connections.errorInfo}
-            stale={staleConnections}
-            refreshing={connections.refreshing}
-            onRetry={() => void connections.refresh()}
-          />
         )}
-      {!scanning && !scanError && visibleApps.length === 0 && (
-        <section className="library-empty">
-          <h2>{c.libraryEmptyTitle}</h2>
-          <p>{c.libraryEmptyBody}</p>
-          <button
-            className="subtle-button"
-            onClick={() => setShowAllApps(true)}
-          >
-            {c.libraryEmptyAction}
-          </button>
-        </section>
-      )}
-      {/* 用户在这一页问的是「哪些接上了、我要去哪个」。所以：
+        {!everythingUnavailable &&
+          connections &&
+          (connections.error || partialConnections) && (
+            <ConnectionStatusNotice
+              issue={connections.errorInfo}
+              stale={staleConnections}
+              refreshing={connections.refreshing}
+              onRetry={() => void connections.refresh()}
+            />
+          )}
+        {!scanning && !scanError && visibleApps.length === 0 && (
+          <section className="library-empty">
+            <h2>{c.libraryEmptyTitle}</h2>
+            <p>{c.libraryEmptyBody}</p>
+            <button
+              className="subtle-button"
+              onClick={() => setShowAllApps(true)}
+            >
+              {c.libraryEmptyAction}
+            </button>
+          </section>
+        )}
+        {/* 用户在这一页问的是「哪些接上了、我要去哪个」。所以：
           状态决定分组，而不是每张卡里一行灰字；每行只放这个状态下有用的
           那一个事实，而不是六行重复的同一段话。
           详情（线路、计费分组、最近一次请求）归「管理」——
           列表负责导航，详情归详情页。 */}
-      {/* **一个 section，标题行与 `<article>` 做兄弟**，而不是每组一个 section。
+        {/* **一个 section，标题行与 `<article>` 做兄弟**，而不是每组一个 section。
           分组只是视觉上的，DOM 上仍是一条列表：状态从「不知道」变成「知道」时
           应用会换组，若换了父节点，React 会卸载重建那个 `<article>`——
           而多处测试（含 ru076 那条回归守卫）先抓住 article 再断言后续状态，
           节点一被重建它们拿到的就是已脱离文档的旧节点。
           同一个父节点下带 key 的兄弟，React 只移动不重建。 */}
-      <section
-        className="connection-library"
-        aria-label={c.libraryRegionLabel}
-        aria-busy={scanning}
-        data-scanning={checking ? "true" : undefined}
-      >
-        {groups.flatMap((group, groupIndex) => [
-          ...(group.title
-            ? [
-                <h2
-                  key={`heading-${group.key}`}
-                  className="connection-group-heading"
+        <section
+          className="connection-library"
+          aria-label={c.libraryRegionLabel}
+          aria-busy={scanning}
+          data-scanning={checking ? "true" : undefined}
+        >
+          {groups.flatMap((group, groupIndex) => [
+            ...(group.title
+              ? [
+                  <h2
+                    key={`heading-${group.key}`}
+                    className="connection-group-heading"
+                  >
+                    {group.title}
+                    <span>{group.apps.length}</span>
+                  </h2>,
+                ]
+              : []),
+            ...group.apps.map(
+              (
+                {
+                  app,
+                  displayName,
+                  target,
+                  connection,
+                  active,
+                  unknownConnection,
+                  label,
+                },
+                index,
+              ) => (
+                <article
+                  key={app.id}
+                  className="connection-row stagger-enter"
+                  style={
+                    { "--rail-index": groupIndex * 10 + index } as CSSProperties
+                  }
+                  data-connected={!!active}
                 >
-                  {group.title}
-                  <span>{group.apps.length}</span>
-                </h2>,
-              ]
-            : []),
-          ...group.apps.map(
-            (
-              { app, displayName, target, connection, active, unknownConnection, label },
-              index,
-            ) => (
-              <article
-                key={app.id}
-                className="connection-row stagger-enter"
-                style={
-                  { "--rail-index": groupIndex * 10 + index } as CSSProperties
-                }
-                data-connected={!!active}
-              >
-                <span className="configuration-app-icon" data-app={app.id}>
-                  {app.icon ? (
-                    <AppGlyph source={app.icon} />
-                  ) : (
-                    <b>{app.mark}</b>
-                  )}
-                </span>
-                <div className="connection-row-main">
-                  <h3>{displayName}</h3>
-                  {active && connection ? (
-                    <p className="connection-row-fact">
-                      {/* 模型名本身可点 = 换模型。这是上一轮特意修的：
+                  <span className="configuration-app-icon" data-app={app.id}>
+                    {app.icon ? (
+                      <AppGlyph source={app.icon} />
+                    ) : (
+                      <b>{app.mark}</b>
+                    )}
+                  </span>
+                  <div className="connection-row-main">
+                    <h3>{displayName}</h3>
+                    {active && connection ? (
+                      <p className="connection-row-fact">
+                        {/* 模型名本身可点 = 换模型。这是上一轮特意修的：
                           换模型是接入之后最常见的需求，而当时整张卡上最弱的
                           元素才是入口。压成一行时不许把它压没。 */}
-                      <button
-                        type="button"
-                        className="connection-model-switch"
-                        // 按钮的可访问名是它**做什么**，而不是它显示什么。
-                        // 模型名 + 提示合成一个按钮之后，默认可访问名会变成
-                        // 「GLM-5.3 换模型与分组」，而多处导航靠
-                        // `getByRole("button", { name: "换模型与分组" })` 找它。
-                        aria-label={t("yeschoyDaily.changeModel")}
-                        onClick={() => onOpenSetup(app.id, "change-model")}
-                      >
-                        <code
-                          className="connection-model"
-                          title={connection.modelId || undefined}
+                        <button
+                          type="button"
+                          className="connection-model-switch"
+                          // 按钮的可访问名是它**做什么**，而不是它显示什么。
+                          // 模型名 + 提示合成一个按钮之后，默认可访问名会变成
+                          // 「GLM-5.3 换模型与分组」，而多处导航靠
+                          // `getByRole("button", { name: "换模型与分组" })` 找它。
+                          aria-label={t("yeschoyDaily.changeModel")}
+                          onClick={() => onOpenSetup(app.id, "change-model")}
                         >
-                          {connection.modelId
-                            ? modelDisplayName(connection.modelId)
-                            : c.libraryModelPending}
-                        </code>
-                        <span className="connection-model-switch-hint">
-                          {t("yeschoyDaily.changeModel")}
-                          <ChevronRight aria-hidden="true" />
-                        </span>
-                      </button>
-                      {(connection.models?.length ?? 0) > 1 && (
-                        <span className="connection-row-extra">
-                          {t("workbench.libraryMoreModels", {
-                            count: connection.models!.length - 1,
-                          })}
-                        </span>
-                      )}
-                    </p>
-                  ) : (
-                    <p className="connection-row-fact">
-                      {target?.installations[0]?.version ? (
-                        <>
-                          <span>{c.libraryInstalled}</span>
-                          {/* 版本号必须独占一个元素、并保留「版本」前缀：
+                          <code
+                            className="connection-model"
+                            title={connection.modelId || undefined}
+                          >
+                            {connection.modelId
+                              ? modelDisplayName(connection.modelId)
+                              : c.libraryModelPending}
+                          </code>
+                          <span className="connection-model-switch-hint">
+                            {t("yeschoyDaily.changeModel")}
+                            <ChevronRight aria-hidden="true" />
+                          </span>
+                        </button>
+                        {(connection.models?.length ?? 0) > 1 && (
+                          <span className="connection-row-extra">
+                            {t("workbench.libraryMoreModels", {
+                              count: connection.models!.length - 1,
+                            })}
+                          </span>
+                        )}
+                      </p>
+                    ) : (
+                      <p className="connection-row-fact">
+                        {target?.installations[0]?.version ? (
+                          <>
+                            <span>{c.libraryInstalled}</span>
+                            {/* 版本号必须独占一个元素、并保留「版本」前缀：
                               15 个测试用 `getByText("版本 1.40609.1")` 找它，
                               而 testing-library 的 getByText 比的是元素的
                               完整文本。把它并进「已安装 · 1.40609.1」
                               一行里，那 15 条会一起红。 */}
-                          <span className="connection-row-version">
-                            {t("workbench.libraryVersion", {
-                              version: target.installations[0].version,
-                            })}
+                            <span className="connection-row-version">
+                              {t("workbench.libraryVersion", {
+                                version: target.installations[0].version,
+                              })}
+                            </span>
+                          </>
+                        ) : (
+                          <span>
+                            {t(`yeschoyCatalog.appDescription.${app.id}`)}
                           </span>
-                        </>
-                      ) : (
-                        <span>
-                          {t(`yeschoyCatalog.appDescription.${app.id}`)}
-                        </span>
-                      )}
-                    </p>
-                  )}
-                </div>
-                <span
-                  className="connection-state"
-                  data-state={
-                    unknownConnection ? "unavailable" : connection?.state
-                  }
-                >
-                  {label}
-                </span>
-                <div className="connection-row-actions">
-                  <RestoreConnection connection={connection} name={displayName} />
-                  {active &&
-                  connection &&
-                  !["recovery_pending", "changed"].includes(
-                    connection.state,
-                  ) ? (
-                    <OpenConnection
+                        )}
+                      </p>
+                    )}
+                  </div>
+                  <span
+                    className="connection-state"
+                    data-state={
+                      unknownConnection ? "unavailable" : connection?.state
+                    }
+                  >
+                    {label}
+                  </span>
+                  <div className="connection-row-actions">
+                    <RestoreConnection
                       connection={connection}
                       name={displayName}
-                      onAdjust={() => onOpenSetup(app.id, "repair")}
                     />
-                  ) : (
-                    <button
-                      className={
-                        active ? "subtle-button" : "connect-app-button"
-                      }
-                      // 后端整个够不着时，这个按钮点了也只会在接入页再失败一次。
-                      // 六行给出六个一模一样的假入口，真正的重试反而被淹没；
-                      // 上面那条唯一的说明已经说清楚了怎么办。
-                      disabled={everythingUnavailable}
-                      onClick={() =>
-                        onOpenSetup(
-                          app.id,
-                          active || unknownConnection ? "repair" : "configure",
-                        )
-                      }
-                    >
-                      {active || unknownConnection
-                        ? t("yeschoyDaily.checkAndRepair")
-                        : target && target.status !== "not_found"
-                          ? c.libraryConnectAction
-                          : ["claude_desktop", "codex_desktop"].includes(app.id)
-                            ? c.libraryInstallAndConnect
-                            : c.libraryHowToInstall}
-                      <ArrowRight />
-                    </button>
-                  )}
-                </div>
-              </article>
+                    {active &&
+                    connection &&
+                    !["recovery_pending", "changed"].includes(
+                      connection.state,
+                    ) ? (
+                      <OpenConnection
+                        connection={connection}
+                        name={displayName}
+                        onAdjust={() => onOpenSetup(app.id, "repair")}
+                      />
+                    ) : (
+                      <button
+                        className={
+                          active ? "subtle-button" : "connect-app-button"
+                        }
+                        // 后端整个够不着时，这个按钮点了也只会在接入页再失败一次。
+                        // 六行给出六个一模一样的假入口，真正的重试反而被淹没；
+                        // 上面那条唯一的说明已经说清楚了怎么办。
+                        disabled={everythingUnavailable}
+                        onClick={() =>
+                          onOpenSetup(
+                            app.id,
+                            active || unknownConnection
+                              ? "repair"
+                              : "configure",
+                          )
+                        }
+                      >
+                        {active || unknownConnection
+                          ? t("yeschoyDaily.checkAndRepair")
+                          : target && target.status !== "not_found"
+                            ? c.libraryConnectAction
+                            : ["claude_desktop", "codex_desktop"].includes(
+                                  app.id,
+                                )
+                              ? c.libraryInstallAndConnect
+                              : c.libraryHowToInstall}
+                        <ArrowRight />
+                      </button>
+                    )}
+                  </div>
+                </article>
+              ),
             ),
-          ),
-        ])}
-      </section>
-      {scan &&
-        !scanError &&
-        apps.length > visibleApps.length &&
-        visibleApps.length > 0 && (
-          <button
-            className="library-expand"
-            aria-expanded="false"
-            onClick={() => setShowAllApps(true)}
-          >
-            <Plus />{" "}
-            {t("workbench.libraryShowMore", {
-              count: apps.length - visibleApps.length,
-            })}
-          </button>
-        )}
-      {showAllApps && (
-        <button
-          className="library-expand"
-          aria-expanded="true"
-          onClick={() => setShowAllApps(false)}
-        >
-          {c.libraryShowLocalOnly}
-        </button>
-      )}
-      <footer className="library-footer">
-        <ShieldCheck />
-        <span>{c.libraryFooterTrust}</span>
-        <span className="library-footer-actions">
-          {showYeschoyCommunityUi({
-            lineId: accountLineId,
-            accountProjection: accountSession.projection,
-          }) && (
+          ])}
+        </section>
+        {scan &&
+          !scanError &&
+          apps.length > visibleApps.length &&
+          visibleApps.length > 0 && (
             <button
-              type="button"
-              className="text-button join-group-link"
-              onClick={onOpenCommunity}
+              className="library-expand"
+              aria-expanded="false"
+              onClick={() => setShowAllApps(true)}
             >
-              <Users aria-hidden="true" />
-              {c.joinGroup}
+              <Plus />{" "}
+              {t("workbench.libraryShowMore", {
+                count: apps.length - visibleApps.length,
+              })}
             </button>
           )}
+        {showAllApps && (
           <button
-            className="text-button"
-            onClick={() => onOpenSetup("claude_desktop")}
+            className="library-expand"
+            aria-expanded="true"
+            onClick={() => setShowAllApps(false)}
           >
-            <Plus />
-            {c.libraryFooterConnect}
+            {c.libraryShowLocalOnly}
           </button>
-        </span>
-      </footer>
-      </div>
+        )}
+      </HomeStage>
     </div>
   );
 }
