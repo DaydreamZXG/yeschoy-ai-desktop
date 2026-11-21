@@ -1,5 +1,6 @@
 import {
   act,
+  cleanup,
   fireEvent,
   render,
   screen,
@@ -18,6 +19,7 @@ import {
   cancelDesktopToolActivation,
   scanActivationTargets,
   type ActivationTarget,
+  type ActivationTargetScan,
   type ToolActivationProjection,
 } from "../configuration/activation";
 import type { ToolConnection } from "../configuration/connections";
@@ -1105,6 +1107,73 @@ describe("接入：应用多了不堆在一起", () => {
       expect(chip(name)).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /收起/ }));
     expect(chip(/^DSH web/)).toBeNull();
+  });
+
+  it("展开过不常用的，关掉再打开：又是收着的", async () => {
+    found([target("claude_desktop")]);
+    const props = setup();
+    cleanup();
+    const view = render(<Join {...props} />);
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: /还有 \d 个/ }));
+    view.rerender(<Join {...props} open={false} />);
+    view.rerender(<Join {...props} open />);
+    await ready();
+    expect(chip(/^Cline/)).toBeNull();
+    expect(screen.getByRole("button", { name: /还有 \d 个/ })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  it("还在找应用时点了「别的应用」：找完也不把要填的型号换掉", async () => {
+    const OPUS = "claude-opus-4-1-20250805";
+    let done: (scan: ActivationTargetScan) => void = () => {};
+    scan.mockReturnValue(
+      new Promise<ActivationTargetScan>((ok) => (done = ok)),
+    );
+    setup({
+      lineId: "station_key:https://relay.example.com" as never,
+      models: [...MODELS, model(OPUS)],
+      connections: [
+        {
+          toolId: "codex_desktop",
+          state: "connected",
+          modelId: OPUS,
+          lineId: "",
+          billingGroup: "default",
+          updatedAtEpochMs: 1,
+          restoreMode: "original",
+          requiresBackground: false,
+          reasonCode: "",
+        },
+      ],
+    });
+    fireEvent.click(screen.getByRole("button", { name: "别的应用" }));
+    const panel = screen.getByTestId("kaifan-join-other");
+    expect(panel).toHaveTextContent("claude-sonnet-4-5-20250929");
+    await act(async () =>
+      done({
+        requestId: "scan",
+        schemaVersion: 1,
+        platform: "macos",
+        targets: [target("codex_desktop")],
+      }),
+    );
+    expect(panel).toHaveTextContent("claude-sonnet-4-5-20250929");
+    expect(panel).not.toHaveTextContent(OPUS);
+  });
+
+  it("别的应用：站点这次没列出型号，说清型号给不出来，不装作都齐了", async () => {
+    found([target("claude_desktop")]);
+    setup({
+      lineId: "station_key:https://relay.example.com" as never,
+      models: [],
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "别的应用" }));
+    expect(screen.getByTestId("kaifan-join-other-nomodel")).toHaveTextContent(
+      "型号这一栏现在给不出来",
+    );
   });
 
   it("从首页点进来的不常用应用：选着它的时候不收它", async () => {

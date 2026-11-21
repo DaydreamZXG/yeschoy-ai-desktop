@@ -224,6 +224,8 @@ export function Join({
     touched.current = !!initialApp;
     setApp(initialApp ?? WORKBENCH_APPS[0].id);
     setOther(false);
+    // 不常用的每次打开都先收着；上次展开过不算数。
+    setMoreApps(false);
     // 来修一个应用时，先选回它原来的那一位和型号：修的是原来那次接入，不是换人。
     const was = connections.find((item) => item.toolId === initialApp);
     const back =
@@ -766,6 +768,8 @@ export function Join({
                 className="pa fold"
                 aria-pressed={other}
                 onClick={() => {
+                  // 这也是用户自己选的：晚回来的扫描不能把它换成别的应用。
+                  touched.current = true;
                   setOther(true);
                   sound.pop(520);
                 }}
