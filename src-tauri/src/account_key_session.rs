@@ -13,7 +13,6 @@ use crate::station_connect::connect_origin_is_acceptable;
 use crate::station_probe::{classify_status, model_ids, token_is_plausible};
 
 const LINE_PREFIX: &str = "station_key:";
-const KEY_MODELS_PATH: &str = "/v1/models";
 const KEY_SUBSCRIPTION_PATH: &str = "/v1/dashboard/billing/subscription";
 const KEY_USAGE_PATH: &str = "/v1/dashboard/billing/usage";
 /// 连接是用户盯着等的一步，比开机检查宽一点，但仍然必须有头。
@@ -67,12 +66,19 @@ fn number_field(value: &Value, field: &str) -> Option<f64> {
     value.get(field).and_then(Value::as_f64)
 }
 
+fn key_was_refused(status: StatusCode) -> bool {
+    status == StatusCode::UNAUTHORIZED || status == StatusCode::FORBIDDEN
+}
+
 async fn read(
     request_id: String,
     origin: &str,
     api_key: &str,
 ) -> Result<AccountProjection, AccountProjectionFailure> {
-    let models_url = format!("{origin}{KEY_MODELS_PATH}");
+    let models_url = format!("{}/models", crate::provider_presets::openai_base(origin));
+    if let Some(preset) = crate::provider_presets::for_origin(origin) {
+        return read_preset(request_id, preset, &models_url, api_key).await;
+    }
     let status_url = format!("{origin}/api/status");
     let subscription_url = format!("{origin}{KEY_SUBSCRIPTION_PATH}");
     let usage_url = format!("{origin}{KEY_USAGE_PATH}");
@@ -83,7 +89,7 @@ async fn read(
         send_json(Method::GET, &usage_url, Some(api_key), None),
     );
     let models = models.map_err(AccountProjectionFailure::Transport)?;
-    if models.status == StatusCode::UNAUTHORIZED || models.status == StatusCode::FORBIDDEN {
+    if key_was_refused(models.status) {
         return Err(AccountProjectionFailure::SessionExpired);
     }
     if !models.status.is_success() {
@@ -102,6 +108,46 @@ async fn read(
         success(subscription).as_ref(),
         success(usage).as_ref(),
     ))
+}
+
+/// 云厂商只问两样：模型名单，和（名单不要密钥也给看的那几家）一个只认密钥的
+/// 地址。余额、站名那些中转站才有的接口一概不碰：套餐的密钥只该用来干活，
+/// 多发一个请求都是多一分被厂商当成滥用的理由。
+async fn read_preset(
+    request_id: String,
+    preset: &crate::provider_presets::Preset,
+    models_url: &str,
+    api_key: &str,
+) -> Result<AccountProjection, AccountProjectionFailure> {
+    use crate::provider_presets::KeyCheck;
+    let models = send_json(Method::GET, models_url, Some(api_key), None)
+        .await
+        .map_err(AccountProjectionFailure::Transport)?;
+    if key_was_refused(models.status) {
+        return Err(AccountProjectionFailure::SessionExpired);
+    }
+    if !models.status.is_success() {
+        return Err(AccountProjectionFailure::BackendUnavailable);
+    }
+    if let KeyCheck::Path(path) = preset.key_check {
+        let check = send_json(
+            Method::GET,
+            &format!("{}{path}", preset.origin),
+            Some(api_key),
+            None,
+        )
+        .await
+        .map_err(AccountProjectionFailure::Transport)?;
+        if key_was_refused(check.status) {
+            return Err(AccountProjectionFailure::SessionExpired);
+        }
+        if !check.status.is_success() {
+            return Err(AccountProjectionFailure::BackendUnavailable);
+        }
+    }
+    let mut projection = project(request_id, &models.value, None, None, None);
+    projection.account.display_name = preset.name.to_owned();
+    Ok(projection)
 }
 
 /// 把站点的回答变成界面看的账户投影。只有 `models` 是必需的，其余三样

@@ -216,7 +216,13 @@ pub async fn station_probe_v1(request: StationProbeRequest) -> StationProbeResul
         if !token_is_plausible(token) {
             result.token_status = "invalid";
         } else {
-            match get(&client, &format!("{origin}/v1/models"), Some(token)).await {
+            match get(
+                &client,
+                &format!("{}/models", crate::provider_presets::openai_base(&origin)),
+                Some(token),
+            )
+            .await
+            {
                 Fetch::Json(status, value) if status.is_success() => {
                     result.models = model_ids(&value);
                     result.token_status = "valid";

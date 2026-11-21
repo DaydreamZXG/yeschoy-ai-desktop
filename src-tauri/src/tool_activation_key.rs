@@ -76,10 +76,14 @@ pub(super) async fn validate_models(
     bindings: &[ModelBinding],
     tool_id: &str,
 ) -> Result<Vec<Option<ModelTransport>>, ActivationFailure> {
-    let (status, catalogue) =
-        native_account_json(Method::GET, &format!("{origin}/v1/models"), key, None)
-            .await
-            .map_err(|_| ActivationFailure::ServerUnavailable)?;
+    let (status, catalogue) = native_account_json(
+        Method::GET,
+        &format!("{}/models", crate::provider_presets::openai_base(origin)),
+        key,
+        None,
+    )
+    .await
+    .map_err(|_| ActivationFailure::ServerUnavailable)?;
     transports_from_catalogue(status, &catalogue, bindings, tool_id)
 }
 
@@ -118,7 +122,10 @@ async fn probe_messages_once(
     model: &str,
     tool_id: &str,
 ) -> ProbeOutcome {
-    let url = format!("{}/v1/messages", origin.trim_end_matches('/'));
+    let url = format!(
+        "{}/v1/messages",
+        crate::provider_presets::anthropic_base(origin).unwrap_or_else(|| origin.to_owned())
+    );
     let request = client
         .post(url)
         .header("anthropic-version", "2023-06-01")

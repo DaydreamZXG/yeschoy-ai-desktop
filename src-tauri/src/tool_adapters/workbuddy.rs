@@ -38,7 +38,10 @@ fn config_error(error: ConfigFailure) -> AdapterFailure {
 }
 
 fn endpoint(origin: &str) -> String {
-    format!("{}/v1/chat/completions", origin.trim_end_matches('/'))
+    format!(
+        "{}/chat/completions",
+        crate::provider_presets::openai_base(origin)
+    )
 }
 
 fn parse(existing: Option<&[u8]>) -> Result<Value, ()> {

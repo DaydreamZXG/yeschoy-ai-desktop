@@ -303,8 +303,8 @@ async fn responses(state: &BridgeState, request: Request<Body>) -> Response {
     };
     let stream = converted.stream;
     let url = format!(
-        "{}/v1/chat/completions",
-        credential.origin.trim_end_matches('/')
+        "{}/chat/completions",
+        crate::provider_presets::openai_base(&credential.origin)
     );
     let upstream = state
         .client
@@ -356,7 +356,10 @@ async fn forward_verbatim(
     body: Bytes,
     accept_sse: bool,
 ) -> Response {
-    let url = format!("{}/v1/responses", credential.origin.trim_end_matches('/'));
+    let url = format!(
+        "{}/responses",
+        crate::provider_presets::openai_base(&credential.origin)
+    );
     let upstream = state
         .client
         .post(url)

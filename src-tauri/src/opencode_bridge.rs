@@ -123,8 +123,8 @@ async fn chat(state: &BridgeState, request: Request<Body>) -> Response {
         }
     };
     let url = format!(
-        "{}/v1/chat/completions",
-        credential.origin.trim_end_matches('/')
+        "{}/chat/completions",
+        crate::provider_presets::openai_base(&credential.origin)
     );
     let upstream = state
         .client

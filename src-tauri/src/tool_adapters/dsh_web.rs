@@ -366,7 +366,7 @@ fn yeschoy_provider(previous: Option<&Value>, origin: &str, group: &Group) -> Re
     );
     provider.insert(
         Value::String("baseURL".into()),
-        Value::String(format!("{}/v1", origin.trim_end_matches('/'))),
+        Value::String(crate::provider_presets::openai_base(origin)),
     );
     provider.insert(
         Value::String("compat".into()),
@@ -863,7 +863,7 @@ impl Prepared {
         provider["apiKeyEnv"].as_str() == Some(group.reference.as_str())
             && provider["api"].as_str() == Some("openai-completions")
             && provider["baseURL"].as_str()
-                == Some(format!("{}/v1", self.origin.trim_end_matches('/')).as_str())
+                == Some(crate::provider_presets::openai_base(&self.origin).as_str())
             && crate::tool_adapters::common::catalog_matches(
                 &provider["models"],
                 Some("id"),

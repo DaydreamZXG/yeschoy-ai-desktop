@@ -498,7 +498,11 @@ async fn send_upstream(
     forwarded: &[(header::HeaderName, String)],
     value: &Value,
 ) -> Result<reqwest::Response, reqwest::Error> {
-    let url = format!("{}/v1/messages", credential.origin.trim_end_matches('/'));
+    let url = format!(
+        "{}/v1/messages",
+        crate::provider_presets::anthropic_base(&credential.origin)
+            .unwrap_or_else(|| credential.origin.clone())
+    );
     let mut outbound = state.client.post(url).json(value);
     if state.prefix.contains("desktop") {
         outbound = outbound.bearer_auth(credential.upstream_key());

@@ -84,7 +84,7 @@ fn render_model_catalog(
         .ok_or(())?;
     provider.insert(
         "baseUrl".into(),
-        format!("{}/v1", origin.trim_end_matches('/')).into(),
+        crate::provider_presets::openai_base(origin).into(),
     );
     provider.insert("api".into(), "openai-completions".into());
     provider.insert("apiKey".into(), format!("!{helper}").into());
@@ -194,7 +194,7 @@ impl Prepared {
             .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_readback_failed"))?;
         let provider = &models["providers"]["yeschoy"];
         let correct = provider["baseUrl"].as_str()
-            == Some(format!("{}/v1", self.origin.trim_end_matches('/')).as_str())
+            == Some(crate::provider_presets::openai_base(&self.origin).as_str())
             && provider["api"].as_str() == Some("openai-completions")
             && provider["apiKey"].as_str() == Some(format!("!{}", self.helper).as_str())
             && provider["authHeader"].as_bool() == Some(true)
