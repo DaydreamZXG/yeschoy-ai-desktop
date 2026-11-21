@@ -181,6 +181,43 @@ describe("开饭首页自己会做的事", () => {
     expect(screen.getByLabelText("型号")).toHaveValue("gpt-5-mini");
   });
 
+  it("开着名片时站点掉线：名片收起，首页还能点，不会被一直盖着", async () => {
+    const online = {
+      projection: { ...signedIn, models: [{ id: "gpt-5" }] },
+      loading: false,
+      stationCheck: "ok",
+      lastError: null,
+      refresh,
+    } as unknown as ReturnType<typeof useAccountSession>;
+    session.mockReturnValue(online);
+    const { container, rerender } = render(<KaifanApp />);
+    const home = container.querySelector(".ui")!;
+    await waitFor(() => expect(home).not.toHaveAttribute("inert"));
+    fireEvent.click(screen.getByTestId("kaifan-model"));
+    const card = screen.getByTestId("kaifan-card");
+    await waitFor(() => expect(card).not.toHaveAttribute("inert"));
+
+    session.mockReturnValue({
+      projection: null,
+      loading: false,
+      stationCheck: "unreachable",
+      lastError: "account_http_failed",
+      refresh,
+    } as unknown as ReturnType<typeof useAccountSession>);
+    rerender(<KaifanApp />);
+    await waitFor(() => expect(card).toHaveAttribute("inert"));
+    expect(home).not.toHaveAttribute("inert");
+
+    // 站点回来了：名片不会自己又弹出来。
+    session.mockReturnValue(online);
+    rerender(<KaifanApp />);
+    await waitFor(() =>
+      expect(screen.getByTestId("kaifan-model")).toBeInTheDocument(),
+    );
+    expect(card).toHaveAttribute("inert");
+    expect(home).not.toHaveAttribute("inert");
+  });
+
   it("没连站点：再点当前这位只是逗她一下，没有名片可看", async () => {
     session.mockReturnValue({
       projection: { status: "signed_out" },

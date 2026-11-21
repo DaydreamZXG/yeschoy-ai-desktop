@@ -309,6 +309,11 @@ export function KaifanApp() {
   const connected =
     state.cond !== "out" && state.cond !== "off" && state.cond !== "checking";
   const model = connected ? pickedModel(state.current, mine, picks) : "";
+  // 开着名片时站点掉线了：名片没东西可看，收起来，别把首页一直盖着。
+  const card = cardOpen && !!model;
+  useEffect(() => {
+    if (!model) setCardOpen(false);
+  }, [model]);
 
   // —— 接入：选应用、选人、点一下；接好了她登场 ——
   const [join, setJoin] = useState<{ app?: ActivationToolId } | null>(null);
@@ -338,7 +343,7 @@ export function KaifanApp() {
   const covered =
     phase !== "home" ||
     connectOpen ||
-    cardOpen ||
+    card ||
     !!join ||
     !!joined ||
     !!link.trustOrigin;
@@ -350,7 +355,7 @@ export function KaifanApp() {
         ref={stage}
         data-phase={phase}
         data-cond={state.cond}
-        data-card={cardOpen && model ? "" : undefined}
+        data-card={card ? "" : undefined}
         data-testid="kaifan"
         style={{ ["--acc" as string]: ROSTER[state.current].color }}
       >
@@ -402,7 +407,7 @@ export function KaifanApp() {
           onSettled={() => void connections.refresh()}
         />
         <Card
-          open={cardOpen && !!model}
+          open={card}
           who={state.current}
           ids={mine}
           models={usable}
