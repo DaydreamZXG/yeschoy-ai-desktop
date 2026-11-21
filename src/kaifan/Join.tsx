@@ -118,7 +118,7 @@ export function Join({
   const [scan, setScan] = useState<Scan>("loading");
   const [targets, setTargets] = useState<ActivationTarget[]>([]);
   const [outcome, setOutcome] = useState<JoinOutcome | null>(null);
-  /** 用户点头换过的价格方案（型号 → 方案），只管这一次打开。 */
+  /** 用户点头换过的价格方案（应用 + 型号 → 方案），只管这一次打开。 */
   const [approved, setApproved] = useState<Record<string, string>>({});
   /** 这一次打开里站点没给开通的（型号 + 方案），推荐下一个时跳过。 */
   const [refused, setRefused] = useState<string[]>([]);
@@ -206,8 +206,10 @@ export function Join({
   const savedGroup = remembered.find(
     (item) => item.modelId === modelId,
   )?.billingGroup;
+  // 点头只算在当时那个应用上：别的应用存的是它自己的方案，不能跟着被换。
+  const approval = `${app}\n${modelId}`;
   const billingGroup =
-    approved[modelId] ?? savedGroup ?? chooseBillingGroup(model, "");
+    approved[approval] ?? savedGroup ?? chooseBillingGroup(model, "");
   const gone = offered.length > 0 && !offered.includes(billingGroup);
   const others = offered.filter(
     (id) => id !== billingGroup && !refused.includes(`${modelId}\n${id}`),
@@ -279,7 +281,7 @@ export function Join({
   // 用户点头换方案：记下来（之后重启、再试都沿用它），马上用新方案去接。
   const regroup = () => {
     if (!nextGroup) return;
-    setApproved((map) => ({ ...map, [modelId]: nextGroup }));
+    setApproved((map) => ({ ...map, [approval]: nextGroup }));
     void run(undefined, nextGroup);
   };
 

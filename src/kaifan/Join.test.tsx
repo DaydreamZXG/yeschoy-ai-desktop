@@ -330,6 +330,33 @@ describe("接入：选应用、选人、点一下", () => {
     expect(activate.mock.calls[1][0]).toMatchObject({ billingGroup: "promo" });
   });
 
+  it("在一个应用上点头换的方案，不会带到另一个应用上", async () => {
+    setup({
+      initialApp: "codex_desktop",
+      models: [priced("claude-sonnet-4-5-20250929", ["vip", "promo"])],
+      connections: [
+        { ...savedOn("gone")[0] },
+        { ...savedOn("promo")[0], toolId: "claude_desktop" },
+      ],
+    });
+    await ready();
+    fireEvent.click(go());
+    await waitFor(() => expect(says()).toContain("不提供了"));
+    // 在 Codex 上点头换成 vip，结果它正开着，用户退回去改选 Claude。
+    answer("application_running", "desktop_running");
+    fireEvent.click(screen.getByRole("button", { name: "换成「vip」接入" }));
+    await waitFor(() => expect(says()).toContain("正开着"));
+    fireEvent.click(screen.getByRole("button", { name: "回去重选" }));
+    fireEvent.click(screen.getByRole("button", { name: /Claude Desktop/ }));
+    answer("ready", "configuration_ready");
+    fireEvent.click(go());
+    await waitFor(() => expect(activate).toHaveBeenCalledTimes(2));
+    expect(activate.mock.calls[1][0]).toMatchObject({
+      toolId: "claude_desktop",
+      billingGroup: "promo",
+    });
+  });
+
   it("应用开着：先说清楚要重启，用户点了才重启", async () => {
     const props = setup();
     await ready();
