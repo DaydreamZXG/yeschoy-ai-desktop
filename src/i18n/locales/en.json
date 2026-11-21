@@ -1393,7 +1393,10 @@
       "poke1": "…I'm reading. Say it straight, please.",
       "poke2": "You're right. …I'll still double-check.",
       "poke3": "Okay, okay. I know you're here.",
-      "aside": "…Quiet, please. I'm reading."
+      "aside": "…Quiet, please. I'm reading.",
+      "good1": "Coding",
+      "good2": "Long tasks",
+      "good3": "Clear explanations"
     },
     "gpt": {
       "name": "Aqing",
@@ -1402,7 +1405,10 @@
       "poke1": "Anything you need, just ask.",
       "poke2": "Mm. I'm always here.",
       "poke3": "No judging. Just helping.",
-      "aside": "Call me any time."
+      "aside": "Call me any time.",
+      "good1": "All-rounder",
+      "good2": "Writing",
+      "good3": "Research"
     },
     "gem": {
       "name": "Xiaoxing",
@@ -1411,7 +1417,10 @@
       "poke1": "Yay! You poked me!",
       "poke2": "Pictures, long reads: bring them to me~",
       "poke3": "Poke again and I'll do two peace signs!",
-      "aside": "Look at me, look at me~"
+      "aside": "Look at me, look at me~",
+      "good1": "Images",
+      "good2": "Long reads",
+      "good3": "Quick"
     },
     "grk": {
       "name": "Xiaohei",
@@ -1420,7 +1429,10 @@
       "poke1": "Tch. Idle hands.",
       "poke2": "Want to know what just happened? Ask me.",
       "poke3": "…One more line, then.",
-      "aside": "Tch. Boring."
+      "aside": "Tch. Boring.",
+      "good1": "Fresh news",
+      "good2": "Blunt",
+      "good3": "Web search"
     },
     "ds": {
       "name": "Xiaojing",
@@ -1430,7 +1442,10 @@
       "poke2": "You really think I'm the cheap one, huh…",
       "poke3": "Stop poking, I'll spill my rice!",
       "aside": "Call me when dinner's ready!",
-      "low": "Sniff… the bowl is empty. Boss, a little rice, please."
+      "low": "Sniff… the bowl is empty. Boss, a little rice, please.",
+      "good1": "Cheap",
+      "good2": "Coding",
+      "good3": "Chinese"
     },
     "qw": {
       "name": "Qianwen",
@@ -1439,7 +1454,10 @@
       "poke1": "Why poke me? Why?",
       "poke2": "I just thought of three more questions!",
       "poke3": "Do you know why whales eat plain rice?",
-      "aside": "Why her and not me?"
+      "aside": "Why her and not me?",
+      "good1": "Chinese",
+      "good2": "Q&A",
+      "good3": "Cheap"
     },
     "kimi": {
       "name": "Yueyue",
@@ -1448,7 +1466,10 @@
       "poke1": "…Hm? Is it morning?",
       "poke2": "Five more minutes.",
       "poke3": "I'll sleep after this stack.",
-      "aside": "…Zzz"
+      "aside": "…Zzz",
+      "good1": "Long documents",
+      "good2": "Summaries",
+      "good3": "Web search"
     },
     "glm": {
       "name": "Xiaopu",
@@ -1457,7 +1478,10 @@
       "poke1": "Don't disturb my homework.",
       "poke2": "There's a small mistake here. I marked it for you.",
       "poke3": "Next exam, I'm first.",
-      "aside": "I'm studying. Do not disturb."
+      "aside": "I'm studying. Do not disturb.",
+      "good1": "Meticulous",
+      "good2": "Coding",
+      "good3": "Chinese"
     },
     "dou": {
       "name": "Doubao",
@@ -1466,7 +1490,10 @@
       "poke1": "Here, here~",
       "poke2": "To put it plainly: I'm slacking off.",
       "poke3": "We can chat about anything.",
-      "aside": "I'm always here~"
+      "aside": "I'm always here~",
+      "good1": "Chatting",
+      "good2": "Plain talk",
+      "good3": "Voice"
     },
     "new": {
       "name": "Transfer student",
@@ -1741,6 +1768,44 @@
       "openedTerminal": "A terminal window is open with {{app}} in it — just start using it",
       "openFailed": "Couldn't open {{app}} for you. It's already set up, so opening it yourself works just the same",
       "skipped": "Also, {{models}} could not be added: the station doesn't allow this account to use it. Everything else is unaffected."
+    },
+    "card": {
+      "title": "{{name}}'s card",
+      "close": "Close",
+      "good": "Good at",
+      "model": "Model",
+      "plan": "Price plan",
+      "planHint": "Optional. The station's standard group is used by default",
+      "planNote": "Discounts come from the multiplier the station reports. Top-up bonuses are not included.",
+      "cheapest": "Cheapest",
+      "offScale": "10",
+      "off": "about {{n}}% of list price",
+      "full": "list price",
+      "free": "free",
+      "over": "{{n}}× list price",
+      "ratio": "Multiplier {{n}}",
+      "noRatio": "No multiplier given",
+      "prices": "See exact prices",
+      "perMillion": "Per million tokens",
+      "input": "Input",
+      "output": "Output",
+      "official": "List price",
+      "thisPlan": "This plan",
+      "unknown": "Unknown",
+      "noPrices": "This station doesn't provide prices for this model.",
+      "jobs": "Where she works",
+      "noJobs": "Not connected to any app yet.",
+      "stale": "An app above still uses the earlier model or plan. To switch it to what's selected now, send her to connect again.",
+      "join": "Send {{name}} to connect ➜",
+      "open": "See {{name}}'s card",
+      "say": {
+        "new": "I'm a new model on this station and nobody has drawn me yet. I work all the same.",
+        "none": "This station has no model I can use right now.",
+        "noPlans": "This station didn't tell me which price plans it has, so I won't guess at prices.",
+        "noPrice": "I'm on “{{plan}}”. This station gives no list price, so I can't work out the discount and won't guess.",
+        "one": "I have a single price plan here, {{discount}}. Nothing to choose.",
+        "many": "I'm on “{{plan}}”, {{discount}}. Pick another below if you like."
+      }
     }
   }
 }

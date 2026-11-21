@@ -1888,3 +1888,202 @@ dialog.restore-dialog menu {
   font-size: 12.5px;
   color: #ffd27a;
 }
+
+/* 名片：从右边滑出来的一张。点旁边的空处或按 Esc 收起。 */
+.drw {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  visibility: hidden;
+  transition: visibility 0.5s;
+}
+.drw.on {
+  visibility: visible;
+  transition: none;
+}
+.dr {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  bottom: 16px;
+  width: min(440px, calc(100vw - 32px));
+  border-radius: 26px;
+  padding: 22px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+  background: linear-gradient(
+    180deg,
+    rgba(22, 32, 96, 0.74),
+    rgba(6, 12, 48, 0.9)
+  );
+  transform: translateX(480px);
+  opacity: 0;
+  transition:
+    transform 0.5s cubic-bezier(0.2, 0.9, 0.2, 1),
+    opacity 0.3s;
+}
+.drw.on .dr {
+  transform: none;
+  opacity: 1;
+}
+.dr:focus {
+  outline: none;
+}
+/* 名片开着时，对话框和那排应用让开，竖幅照旧看得见。 */
+.stage[data-card] .mid {
+  opacity: 0;
+  transform: translateY(20px);
+  pointer-events: none;
+}
+.mid {
+  transition:
+    opacity 0.3s,
+    transform 0.4s;
+}
+.db {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  scrollbar-width: none;
+  padding-top: 4px;
+}
+.db h4 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--faint);
+  letter-spacing: 0.12em;
+  margin-bottom: 9px;
+}
+.db h4 small {
+  float: right;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+.opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.op {
+  position: relative;
+  min-height: 46px;
+  padding: 7px 14px;
+  border-radius: 14px;
+  text-align: left;
+  font-size: 13.5px;
+  color: var(--dim);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.op small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--dim);
+  margin-top: 1px;
+}
+.op b {
+  color: #fff;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.op[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--acc) 26%, rgba(255, 255, 255, 0.06));
+  border-color: var(--acc);
+  box-shadow: 0 0 20px -8px var(--acc);
+}
+.op:disabled {
+  cursor: default;
+}
+.op em {
+  position: absolute;
+  right: -6px;
+  top: -8px;
+  font: 700 10px var(--sans);
+  font-style: normal;
+  padding: 2px 7px;
+  border-radius: 9px;
+  background: #8dffcf;
+  color: #04102e;
+}
+.kv {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 7px 18px;
+  margin-top: 12px;
+  font-size: 12.5px;
+  color: var(--dim);
+}
+.kv b {
+  font: 600 12.5px var(--mono);
+  color: #fff;
+  text-align: right;
+}
+.lnk {
+  font-size: 12px;
+  color: var(--dim);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  list-style: none;
+}
+.lnk::-webkit-details-marker {
+  display: none;
+}
+.db .nt {
+  margin-top: 10px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--dim);
+}
+.db h4 + .nt {
+  margin-top: 0;
+}
+.db .nt.warn {
+  color: #ffd27a;
+}
+.jobs {
+  list-style: none;
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+}
+.jobs li {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.jobs b {
+  font-weight: 600;
+  color: #fff;
+}
+.jobs span {
+  font: 500 11.5px var(--mono);
+  color: var(--dim);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.df {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+/* 对话框里的型号：点它看名片。 */
+.bar footer .mdl {
+  font: 500 11px var(--mono);
+  color: var(--dim);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  text-align: left;
+}
+.bar footer .mdl:hover {
+  color: #fff;
+}

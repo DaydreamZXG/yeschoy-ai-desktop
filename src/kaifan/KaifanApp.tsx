@@ -17,12 +17,20 @@ import {
   isStationKeyLineId,
   type AccountLineId,
 } from "../configuration/preview";
+import { isImageGenerationModel } from "../model-profiles/profile";
 import { refreshModelCatalog } from "../model-profiles/remoteCatalog";
 import { ShutdownHost } from "../settings/QuitAssistant";
 import { RETURNING, openClassic } from "../uiChoice";
 import { useDesktopUpdate } from "../update/UpdateProvider";
 import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
 import { Boot } from "./Boot";
+import { Card } from "./Card";
+import {
+  pickedModel,
+  readCardPicks,
+  storeCardPicks,
+  type CardPicks,
+} from "./cardInfo";
 import { Connect } from "./Connect";
 import { Fx, type FxHandle } from "./Fx";
 import { Join, type Joined } from "./Join";
@@ -30,6 +38,7 @@ import { Reveal } from "./Reveal";
 import {
   ROSTER,
   ROSTER_IDS,
+  characterOfModel,
   readPickedCharacter,
   storePickedCharacter,
   type Mood,
@@ -275,6 +284,32 @@ export function KaifanApp() {
     setPicked(id);
     storePickedCharacter(id);
   };
+  // —— 名片：她用哪个型号、走哪个价格方案 ——
+  const [picks, setPicks] = useState(readCardPicks);
+  const [cardOpen, setCardOpen] = useState(false);
+  const change = (next: CardPicks) => {
+    setPicks(next);
+    storeCardPicks(next);
+  };
+  // 名片上只列能拿来接入的型号，和接入那一屏是同一份。
+  const usable = useMemo(
+    () =>
+      (projection?.models ?? []).filter(
+        (model) => !isImageGenerationModel(model.id),
+      ),
+    [projection?.models],
+  );
+  const mine = useMemo(
+    () =>
+      usable
+        .map((model) => model.id)
+        .filter((id) => characterOfModel(id) === state.current),
+    [usable, state.current],
+  );
+  const connected =
+    state.cond !== "out" && state.cond !== "off" && state.cond !== "checking";
+  const model = connected ? pickedModel(state.current, mine, picks) : "";
+
   // —— 接入：选应用、选人、点一下；接好了她登场 ——
   const [join, setJoin] = useState<{ app?: ActivationToolId } | null>(null);
   const [joined, setJoined] = useState<Joined | null>(null);
@@ -301,7 +336,12 @@ export function KaifanApp() {
     setOpenFailed(result.status !== "opened");
   };
   const covered =
-    phase !== "home" || connectOpen || !!join || !!joined || !!link.trustOrigin;
+    phase !== "home" ||
+    connectOpen ||
+    cardOpen ||
+    !!join ||
+    !!joined ||
+    !!link.trustOrigin;
 
   return (
     <ConnectionProvider value={connections}>
@@ -310,6 +350,7 @@ export function KaifanApp() {
         ref={stage}
         data-phase={phase}
         data-cond={state.cond}
+        data-card={cardOpen && model ? "" : undefined}
         data-testid="kaifan"
         style={{ ["--acc" as string]: ROSTER[state.current].color }}
       >
@@ -322,7 +363,12 @@ export function KaifanApp() {
           updateReady={updateReady}
           retrying={retrying}
           fx={() => fx.current}
+          model={model}
           onPick={pick}
+          onCard={() => {
+            sound.whoosh();
+            setCardOpen(true);
+          }}
           onConnect={() => setConnectOpen(true)}
           onRetry={() => void retry()}
           onRecharge={() => void recharge()}
@@ -344,6 +390,7 @@ export function KaifanApp() {
           models={projection?.models ?? []}
           current={state.current}
           connections={connections.connections}
+          picks={picks}
           initialApp={join?.app}
           onClose={() => setJoin(null)}
           onJoined={onJoined}
@@ -353,6 +400,28 @@ export function KaifanApp() {
           }}
           onClassic={(app) => openClassic("setup", app)}
           onSettled={() => void connections.refresh()}
+        />
+        <Card
+          open={cardOpen && !!model}
+          who={state.current}
+          ids={mine}
+          models={usable}
+          picks={picks}
+          connections={connections.connections}
+          onModel={(modelId) =>
+            change({
+              ...picks,
+              model: { ...picks.model, [state.current]: modelId },
+            })
+          }
+          onPlan={(modelId, planId) =>
+            change({ ...picks, plan: { ...picks.plan, [modelId]: planId } })
+          }
+          onJoin={() => {
+            setCardOpen(false);
+            setup();
+          }}
+          onClose={() => setCardOpen(false)}
         />
         <Reveal
           joined={joined}

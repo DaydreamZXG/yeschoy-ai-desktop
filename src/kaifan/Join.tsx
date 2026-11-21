@@ -15,11 +15,16 @@ import type { ToolConnection } from "../configuration/connections";
 import type { AccountLineId } from "../configuration/preview";
 import { useActivationTask } from "../configuration/useActivationTask";
 import {
-  hasReviewedCapabilities,
   isImageGenerationModel,
   modelDisplayName,
 } from "../model-profiles/profile";
 import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
+import {
+  chosenModel,
+  pickedModel,
+  pickedPlan,
+  type CardPicks,
+} from "./cardInfo";
 import {
   installOutcome,
   installStep,
@@ -57,6 +62,8 @@ interface Props {
   /** 首页现在陪着用户的人：默认就让她去。 */
   current: RosterId;
   connections: ToolConnection[];
+  /** 在名片上挑过的型号和方案。 */
+  picks: CardPicks;
   /** 从某个应用的格子点进来时，先选中它。 */
   initialApp?: ActivationToolId;
   onClose: () => void;
@@ -77,15 +84,22 @@ const megabytes = (bytes: number) =>
     ? `${(bytes / 1024 ** 3).toFixed(1)} GB`
     : `${Math.max(1, Math.round(bytes / 1024 ** 2))} MB`;
 
-/** 她在这个应用里该用哪个型号：接过的沿用，没接过的挑一个资料齐的。 */
+/**
+ * 她在这个应用里该用哪个型号：名片上给她挑过的优先；没挑过，接过的沿用；
+ * 都没有就挑一个资料齐的。
+ */
 function modelFor(
+  who: RosterId,
   ids: string[] | undefined,
   saved: ToolConnection | undefined,
+  picks: CardPicks,
 ): string {
   if (!ids?.length) return "";
+  const chosen = chosenModel(who, ids, picks);
+  if (chosen) return chosen;
   if (saved && saved.state !== "not_connected" && ids.includes(saved.modelId))
     return saved.modelId;
-  return ids.find((id) => hasReviewedCapabilities(id)) ?? ids[0];
+  return pickedModel(who, ids, picks);
 }
 
 /**
@@ -98,6 +112,7 @@ export function Join({
   models,
   current,
   connections,
+  picks,
   initialApp,
   onClose,
   onJoined,
@@ -214,7 +229,7 @@ export function Join({
   const modelId =
     chosenModel && ids?.includes(chosenModel)
       ? chosenModel
-      : modelFor(ids, saved);
+      : modelFor(who, ids, saved, picks);
   const model = usable.find((item) => item.id === modelId);
   // 这个应用里已经存过的型号和分组。分组决定价格，存过的原样沿用，不替用户换。
   const remembered = useMemo(
@@ -238,8 +253,12 @@ export function Join({
   )?.billingGroup;
   // 点头只算在当时那个应用上：别的应用存的是它自己的方案，不能跟着被换。
   const approval = `${app}\n${modelId}`;
+  // 名片上挑的方案是用户自己定的，排在存过的前面；站点不再提供的不算。
   const billingGroup =
-    approved[approval] ?? savedGroup ?? chooseBillingGroup(model, "");
+    approved[approval] ??
+    pickedPlan(model, picks) ??
+    savedGroup ??
+    chooseBillingGroup(model, "");
   const gone = offered.length > 0 && !offered.includes(billingGroup);
   const others = offered.filter(
     (id) => id !== billingGroup && !refused.includes(`${modelId}\n${id}`),
@@ -557,7 +576,12 @@ export function Join({
                     <span>
                       {here
                         ? modelDisplayName(
-                            modelFor(cast[id], on ? saved : undefined),
+                            modelFor(
+                              id,
+                              cast[id],
+                              on ? saved : undefined,
+                              picks,
+                            ),
                           )
                         : t("kaifan.join.notHere")}
                     </span>
@@ -585,6 +609,11 @@ export function Join({
                   </select>
                 ) : (
                   modelId && <em>{modelDisplayName(modelId)}</em>
+                )}
+                {modelId && offered.length > 1 && !gone && (
+                  <em data-testid="kaifan-join-plan">
+                    {planName(billingGroup)}
+                  </em>
                 )}
               </p>
               <i />
