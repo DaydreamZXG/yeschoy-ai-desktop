@@ -2050,6 +2050,22 @@ async fn restore_after_failure(
                     claude_runtime.start(previous).await?;
                 }
             }
+            // 设置已经还回去了，仍指着这座桥、用的还是同一把本机令牌；桥里装的
+            // 却是这次没成的站点和型号。换回上一次的，没有上一次就停掉。
+            let bridge = match request.tool_id.as_str() {
+                "opencode" => Some(crate::opencode_bridge::global()),
+                "cline" => Some(crate::cline_bridge::global()),
+                _ => None,
+            };
+            if let Some(bridge) = bridge {
+                restore_bridge(
+                    bridge,
+                    previous_record
+                        .clone()
+                        .filter(|_| !shutdown_coordinator::global().is_shutting_down()),
+                )
+                .await?;
+            }
             Ok::<(), AdapterFailure>(())
         })
         .await;
@@ -2060,6 +2076,21 @@ async fn restore_after_failure(
     }
     delete_created_tokens(origin, access_token, leases).await;
     None
+}
+
+/// 接入没成之后，把本机桥换回上一次接好的那份；没有上一次就停掉。
+/// `start` 对正在跑的桥是原地换，不断开正在进行的请求。
+async fn restore_bridge(
+    bridge: &crate::local_bridge::LocalBridgeRuntime,
+    previous: Option<ToolCredential>,
+) -> Result<(), AdapterFailure> {
+    match previous {
+        Some(previous) => bridge.start(previous).await.map(|_| ()),
+        None => {
+            bridge.stop().await;
+            Ok(())
+        }
+    }
 }
 
 // Codex history must be committed after its provider config but before Codex
@@ -3667,6 +3698,41 @@ mod tests {
     ///
     /// 同时守「问到就停」—— 每一次探测都是一个真实请求，成功那次还会产生用量。
     /// 已经有结论还接着问，是白花用户的钱。
+    /// 接入没成：桥要换回上一次的；没有上一次就停掉，端口让出来。
+    #[tokio::test]
+    async fn a_failed_switch_does_not_leave_the_bridge_on_the_new_routes() {
+        const ADDRESS: &str = "127.0.0.1:15797";
+        let credential = |origin: &str| ToolCredential {
+            api_key: "sk-test".into(),
+            origin: origin.into(),
+            model_id: "glm-5.3".into(),
+            local_gateway_token: Some(format!("ycg-{}", "a".repeat(64))),
+            codex_transport: None,
+            claude_transport: None,
+            models: Vec::new(),
+            pasted_key: false,
+        };
+        let bridge = crate::local_bridge::LocalBridgeRuntime::new(
+            ADDRESS,
+            "/cline",
+            crate::opencode_bridge::router,
+        );
+        bridge
+            .start(credential("https://new.example"))
+            .await
+            .unwrap();
+
+        let previous = credential("https://old.example");
+        restore_bridge(&bridge, Some(previous.clone()))
+            .await
+            .unwrap();
+        assert_eq!(bridge.serving().await, Some(previous));
+
+        restore_bridge(&bridge, None).await.unwrap();
+        assert_eq!(bridge.serving().await, None);
+        assert!(tokio::net::TcpListener::bind(ADDRESS).await.is_ok());
+    }
+
     #[tokio::test]
     async fn an_inconclusive_probe_is_asked_again_but_a_clear_one_is_not() {
         use std::sync::atomic::{AtomicU8, Ordering};
