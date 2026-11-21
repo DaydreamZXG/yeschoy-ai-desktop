@@ -53,6 +53,9 @@ toml_edit = { version = "0.24", features = ["serde"] }
 unicode-normalization = "=0.1.25"
 # vendored 的 proxy/usage/parser.rs 需要；1.22.0 已在 lock 与本地缓存里。
 uuid = { version = "1.11", features = ["v4"] }
+# 命令行工具的官方包有 tar.gz；两者本来就在 lock 与本地缓存里（更新插件在用）。
+flate2 = "1"
+tar = "0.4"
 zip = { version = "=8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 tauri-plugin-deep-link = "=2.4.10"
 

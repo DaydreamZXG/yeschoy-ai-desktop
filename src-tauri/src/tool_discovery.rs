@@ -418,6 +418,9 @@ pub(crate) fn common_binary_directories() -> Vec<PathBuf> {
         directories.push(PathBuf::from("/opt/homebrew/bin"));
     }
 
+    // 客户端自己装的命令行工具放在自己的目录里，不在 PATH 上。
+    directories.extend(crate::app_installation::owned_cli_directories());
+
     directories
 }
 

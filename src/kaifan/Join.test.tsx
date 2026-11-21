@@ -9,7 +9,12 @@ import {
   type ToolActivationProjection,
 } from "../configuration/activation";
 import type { ToolConnection } from "../configuration/connections";
+import {
+  installationAction,
+  type InstallationProgress,
+} from "../installation/api";
 import { Join } from "./Join";
+import { installOutcome } from "./joinOutcome";
 import { Reveal } from "./Reveal";
 
 vi.mock("@tauri-apps/api/event", () => ({
@@ -21,6 +26,10 @@ vi.mock("../configuration/activation", async (original) => ({
   activateDesktopTool: vi.fn(),
   cancelDesktopToolActivation: vi.fn(),
 }));
+vi.mock("../installation/api", async (original) => ({
+  ...(await original<typeof import("../installation/api")>()),
+  installationAction: vi.fn(),
+}));
 // 关掉打字机和声音：这里只看流程。
 vi.mock("./sound", async (original) => ({
   ...(await original<typeof import("./sound")>()),
@@ -30,6 +39,38 @@ vi.mock("./sound", async (original) => ({
 const scan = vi.mocked(scanActivationTargets);
 const activate = vi.mocked(activateDesktopTool);
 const cancel = vi.mocked(cancelDesktopToolActivation);
+const installer = vi.mocked(installationAction);
+
+/** 后端报回来的安装进度。 */
+const installing = (
+  patch: Partial<InstallationProgress> = {},
+): InstallationProgress => ({
+  schemaVersion: 2,
+  requestId: "i",
+  toolId: "claude_code",
+  jobId: "job-1",
+  mode: "automatic",
+  phase: "downloading",
+  downloadedBytes: 0,
+  totalBytes: 0,
+  canCancel: true,
+  reasonCode: "none",
+  source: "official",
+  platform: "macos",
+  architecture: "arm64",
+  disposition: "none",
+  installationId: "",
+  ...patch,
+});
+/** 电脑上没有 Claude Code；`mode` 是后端说它能不能由客户端自己装。 */
+const absentClaudeCode = (
+  onStart: () => InstallationProgress,
+  mode: InstallationProgress["mode"] = "automatic",
+) =>
+  installer.mockImplementation(async (toolId, action) => {
+    if (action === "start") return onStart();
+    return installing({ toolId, jobId: "", phase: "idle", mode });
+  });
 
 const model = (id: string): AccountModel => ({
   id,
@@ -118,6 +159,8 @@ const ready = () => waitFor(() => expect(go()).toBeEnabled());
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // 默认问不到安装能力：没装的应用只能带用户去装。
+  installer.mockRejectedValue(new Error("unavailable"));
   found([target("claude_desktop"), target("codex_desktop")]);
 });
 
@@ -490,6 +533,177 @@ describe("接入：选应用、选人、点一下", () => {
     fireEvent.click(install);
     expect(props.onClassic).toHaveBeenCalledWith("claude_desktop");
     expect(activate).not.toHaveBeenCalled();
+  });
+
+  it("没装、客户端能自己装的应用：点一下就装好并接着接入，不用再点", async () => {
+    absentClaudeCode(() => {
+      // 装好之后，电脑上就能找到它了。
+      found([target("codex_desktop"), target("claude_code")]);
+      return installing({
+        phase: "installed",
+        canCancel: false,
+        disposition: "created",
+        installationId: "fresh-1",
+      });
+    });
+    found([target("codex_desktop")]);
+    const props = setup({ initialApp: "claude_code" });
+    answer("ready", "configuration_ready");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /安装并接入 Claude Code/ }),
+    );
+    await waitFor(() => expect(props.onJoined).toHaveBeenCalled());
+    const start = installer.mock.calls.find((call) => call[1] === "start");
+    expect(start?.[3]).toEqual({
+      lineId: "mainland_optimized",
+      modelId: "claude-sonnet-4-5-20250929",
+      billingGroup: "default",
+      models: [
+        { modelId: "claude-sonnet-4-5-20250929", billingGroup: "default" },
+      ],
+    });
+    // 接入用的是安装报回来的那一处，并带着那次安装的凭证；内容和安装时说好的一样。
+    expect(activate.mock.calls[0][0]).toMatchObject({
+      toolId: "claude_code",
+      installationId: "fresh-1",
+      installationJobId: "job-1",
+      ...start?.[3],
+    });
+    expect(props.onClassic).not.toHaveBeenCalled();
+  });
+
+  it("安装时一直看着进度，装完才去接入", async () => {
+    let asked = 0;
+    installer.mockImplementation(async (toolId, action) => {
+      if (action === "start")
+        return installing({ downloadedBytes: 50 << 20, totalBytes: 200 << 20 });
+      if (action === "inspect" && asked++ > 0)
+        return installing({
+          phase: "installed",
+          canCancel: false,
+          disposition: "created",
+          installationId: "fresh-1",
+        });
+      return installing({ toolId, jobId: "", phase: "idle" });
+    });
+    found([target("codex_desktop")]);
+    const props = setup({ initialApp: "claude_code" });
+    answer("ready", "configuration_ready");
+    fireEvent.click(await screen.findByRole("button", { name: /安装并接入/ }));
+    await waitFor(() => expect(says()).toContain("正在下载 Claude Code"));
+    expect(screen.getByText("50 MB / 200 MB")).toBeInTheDocument();
+    expect(activate).not.toHaveBeenCalled();
+    await waitFor(() => expect(props.onJoined).toHaveBeenCalled(), {
+      timeout: 4000,
+    });
+    expect(installer).toHaveBeenCalledWith("claude_code", "inspect", "job-1");
+  });
+
+  it("官方下载地址连不上：说清楚，没装也没接；能再试，也能去官网自己装", async () => {
+    absentClaudeCode(() =>
+      installing({
+        phase: "failed",
+        canCancel: false,
+        reasonCode: "network_unavailable",
+      }),
+    );
+    found([target("codex_desktop")]);
+    setup({ initialApp: "claude_code" });
+    fireEvent.click(await screen.findByRole("button", { name: /安装并接入/ }));
+    await waitFor(() => expect(says()).toContain("没连上"));
+    expect(activate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "去官网自己装" }));
+    expect(installer).toHaveBeenCalledWith("claude_code", "help");
+    fireEvent.click(screen.getByRole("button", { name: "再试一次" }));
+    await waitFor(() =>
+      expect(
+        installer.mock.calls.filter((call) => call[1] === "start"),
+      ).toHaveLength(2),
+    );
+  });
+
+  it("下载到的和官方校验值对不上：不装，也不接", async () => {
+    absentClaudeCode(() =>
+      installing({
+        phase: "failed",
+        canCancel: false,
+        reasonCode: "invalid_download",
+      }),
+    );
+    found([target("codex_desktop")]);
+    const props = setup({ initialApp: "claude_code" });
+    fireEvent.click(await screen.findByRole("button", { name: /安装并接入/ }));
+    await waitFor(() => expect(says()).toContain("对不上"));
+    expect(screen.getByRole("button", { name: "重新下载" })).toBeVisible();
+    expect(activate).not.toHaveBeenCalled();
+    expect(props.onJoined).not.toHaveBeenCalled();
+  });
+
+  it("装到一半说停：去停掉那次安装，回到选择，不接入", async () => {
+    let stopped = false;
+    installer.mockImplementation(async (toolId, action) => {
+      if (action === "cancel") stopped = true;
+      if (action === "start" || action === "cancel") return installing();
+      if (action === "inspect" && stopped)
+        return installing({
+          phase: "cancelled",
+          canCancel: false,
+          reasonCode: "cancelled",
+        });
+      return installing({ toolId, jobId: "", phase: "idle" });
+    });
+    found([target("codex_desktop")]);
+    setup({ initialApp: "claude_code" });
+    fireEvent.click(await screen.findByRole("button", { name: /安装并接入/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "先停下" }));
+    await waitFor(() =>
+      expect(installer).toHaveBeenCalledWith("claude_code", "cancel", "job-1"),
+    );
+    await screen.findByRole(
+      "button",
+      { name: /安装并接入/ },
+      { timeout: 4000 },
+    );
+    expect(activate).not.toHaveBeenCalled();
+  });
+
+  it("客户端装不了的应用（官方没有可核对的安装包）：仍然带去安装", async () => {
+    absentClaudeCode(() => installing(), "guided");
+    found([target("codex_desktop")]);
+    const props = setup({ initialApp: "claude_code" });
+    fireEvent.click(await screen.findByRole("button", { name: /先去安装/ }));
+    expect(props.onClassic).toHaveBeenCalledWith("claude_code");
+    expect(
+      installer.mock.calls.filter((call) => call[1] === "start"),
+    ).toHaveLength(0);
+  });
+
+  it("安装的结果只在真的装好并认出位置时才往下接", () => {
+    const at = (patch: Partial<InstallationProgress>) =>
+      installOutcome(installing({ canCancel: false, ...patch }));
+    expect(
+      at({ phase: "installed", disposition: "created", installationId: "a" }),
+    ).toBeNull();
+    expect(
+      at({ phase: "installed", disposition: "unconfirmed" }),
+    ).toMatchObject({ kind: "installUnseen", action: "look" });
+    expect(at({ phase: "installed", disposition: "existing" })).toMatchObject({
+      kind: "installFound",
+    });
+    expect(at({ phase: "cancelled" })).toBe("stopped");
+    expect(at({ phase: "awaiting_system_confirmation" })).toBe("elsewhere");
+    for (const [reasonCode, kind] of [
+      ["source_unavailable", "installOffline"],
+      ["download_changed", "installBad"],
+      ["disk_full", "installFull"],
+      ["permission_denied", "installFailed"],
+    ])
+      expect(at({ phase: "failed", reasonCode })).toMatchObject({
+        kind,
+        action: "install",
+      });
+    // 连进度都问不到：当作没装成，不往下接。
+    expect(installOutcome(null)).toMatchObject({ kind: "installFailed" });
   });
 
   it("没指定应用时，先选中电脑上已经装了的那个", async () => {

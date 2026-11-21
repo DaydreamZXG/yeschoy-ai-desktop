@@ -179,7 +179,10 @@ export function InstallationPanel({
             ? t("installation.trustGuided")
             : current?.mode === "unsupported"
               ? t("installation.trustUnsupported")
-              : t("installation.trustDefault")}
+              : // 命令行工具核对的是官方公布的校验值，不是签名：照实说。
+                ["claude_code", "opencode", "pi"].includes(tool)
+                ? t("installation.trustChecksum")
+                : t("installation.trustDefault")}
         </span>
       </header>
       {guided && guidedSteps && guidedSteps.length > 0 && (

@@ -110,7 +110,40 @@ pub(super) fn source(tool: &str, os: &str, arch: &str) -> Option<Source> {
     })
 }
 
+/// 命令行工具：官方发行的是单个可执行文件或一个压缩包，装在客户端自己的目录里。
+/// `url` 留空：具体地址每次按官方的最新版本解析（见 `cli::resolve`）。
+pub(super) fn cli_source(tool: &str, os: &str, arch: &str) -> Option<Source> {
+    let tool = match tool {
+        "claude_code" => "claude_code",
+        "opencode" => "opencode",
+        "pi" => "pi",
+        _ => return None,
+    };
+    let extension = match (tool, os) {
+        ("claude_code", "macos" | "linux" | "windows") => "bin",
+        ("pi", "windows") => "zip",
+        ("opencode", "macos" | "linux" | "windows") | ("pi", "macos" | "linux") => "tgz",
+        _ => return None,
+    };
+    let architecture = match arch {
+        "arm64" => "arm64",
+        "x64" => "x64",
+        _ => return None,
+    };
+    Some(Source {
+        tool,
+        url: "",
+        extension,
+        identity: "",
+        publisher: "",
+        architecture,
+    })
+}
+
 pub(super) fn mode(tool: &str, os: &str, arch: &str) -> &'static str {
+    if cli_source(tool, os, arch).is_some() {
+        return "automatic";
+    }
     if source(tool, os, arch).is_some() {
         if os == "windows" {
             "system_assisted"

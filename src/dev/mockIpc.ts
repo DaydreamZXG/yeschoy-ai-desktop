@@ -181,6 +181,57 @@ function mockUsageLog() {
   };
 }
 
+// `?s=install` / `?s=install_offline`：Claude Code 没装，由客户端自己装。
+// 前者几秒内走完下载、核对、安装；后者下到一半报官方地址连不上。
+const installs = scenario === "install" || scenario === "install_offline";
+let installStarted = 0;
+const missing = (toolId: string) =>
+  scenario === "not_installed" ||
+  (installs && toolId === "claude_code" && installStarted >= 0);
+function installation(args: Args) {
+  if (!installs) return installationInspectionFixture(args);
+  const request = (args.request ?? {}) as Record<string, unknown>;
+  const cli = ["claude_code", "opencode", "pi"].includes(
+    String(request.toolId),
+  );
+  if (request.action === "start") installStarted = Date.now();
+  const elapsed = installStarted > 0 ? Date.now() - installStarted : -1;
+  const total = 370 * 1024 * 1024;
+  const failed = scenario === "install_offline" && elapsed > 2500;
+  const phase =
+    elapsed < 0
+      ? "idle"
+      : failed
+        ? "failed"
+        : elapsed < 4500
+          ? "downloading"
+          : elapsed < 6000
+            ? "installing"
+            : "installed";
+  // 装好之后，再看电脑上有哪些应用时它就在了。
+  if (phase === "installed") installStarted = -1;
+  return {
+    schemaVersion: 2,
+    requestId: String(request.requestId ?? ""),
+    toolId: request.toolId,
+    jobId: elapsed < 0 ? "" : "mockjob1",
+    mode: cli ? "automatic" : "guided",
+    phase,
+    downloadedBytes:
+      phase === "downloading" || failed
+        ? Math.round(total * Math.min(1, elapsed / 4500))
+        : 0,
+    totalBytes: phase === "downloading" || failed ? total : 0,
+    canCancel: phase === "downloading",
+    reasonCode: failed ? "network_unavailable" : "none",
+    source: elapsed < 0 ? "none" : "official",
+    platform: "macos",
+    architecture: "arm64",
+    disposition: phase === "installed" ? "created" : "none",
+    installationId: phase === "installed" ? "i0000000000000099" : "",
+  };
+}
+
 // `?s=group_blocked` / `?s=group_skipped` 模拟「某个模型的计费分组这次配不出来」。
 //
 // 线上遇到过一次：五个模型里有一个的分组取不到访问权限，整次接入就失败，
@@ -310,19 +361,18 @@ function targets(requestId: string) {
       // `?s=not_installed` 让所有应用报未安装，用来看安装面板。
       // 原来 mock 恒报 available，那块 359 行、152 处文案的界面
       // 在审计页里根本显示不出来。
-      status: scenario === "not_installed" ? "not_found" : "available",
-      installations:
-        scenario === "not_installed"
-          ? []
-          : [
-              {
-                installationId: `i${String(i + 1).padStart(16, "0")}`,
-                label: "安装 1 · 系统应用",
-                version,
-                supported: true,
-                recommended: true,
-              },
-            ],
+      status: missing(toolId) ? "not_found" : "available",
+      installations: missing(toolId)
+        ? []
+        : [
+            {
+              installationId: `i${String(i + 1).padStart(16, "0")}`,
+              label: "安装 1 · 系统应用",
+              version,
+              supported: true,
+              recommended: true,
+            },
+          ],
     })),
   };
 }
@@ -439,7 +489,7 @@ const handlers: Record<string, (a: Args) => unknown> = {
   manual_location_pick: (a) => ({ requestId: rid(a), outcome: "cancelled" }),
   manual_location_clear: (a) => ({ requestId: rid(a), outcome: "cleared" }),
   configure_desktop_tool_v2: (a) => activationResult(a),
-  manage_app_installation_v2: (a) => installationInspectionFixture(a),
+  manage_app_installation_v2: (a) => installation(a),
   read_desktop_exit_state: () => ({ closeRequested: false, shutdown: null }),
   set_window_appearance: () => null,
   open_config_folder: () => null,

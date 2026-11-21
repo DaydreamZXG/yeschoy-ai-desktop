@@ -1,5 +1,6 @@
 mod cache;
 mod catalog;
+mod cli;
 mod download;
 mod origins;
 mod platform;
@@ -25,6 +26,8 @@ use tokio::sync::watch;
 
 type Result<T> = std::result::Result<T, &'static str>;
 
+pub(crate) use cli::owned_directories as owned_cli_directories;
+
 #[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct Intent {
@@ -43,10 +46,9 @@ impl Intent {
                 })
         };
         let mut ids = std::collections::HashSet::new();
-        matches!(
-            self.line_id.as_str(),
-            "mainland_optimized" | "global_accelerated"
-        ) && text(&self.model_id, 200)
+        // 和接入认同一批线路：官方两条、授权登录的站、粘贴密钥的站。
+        crate::tool_activation::activation_line_id_is_valid(&self.line_id)
+            && text(&self.model_id, 200)
             && text(&self.billing_group, 128)
             && self.billing_group != "auto"
             && !self.models.is_empty()
@@ -246,6 +248,9 @@ impl Worker {
                     match work {
                         #[cfg(test)]
                         Work::FailedWorker => panic!("isolated installer worker fixture"),
+                        Work::Start(folder) if cli::owns(source.tool) => {
+                            self.execute_cli(source, folder).await
+                        }
                         Work::Start(folder) => self.execute(source, folder).await,
                         Work::Confirm(file, hash) => {
                             self.phase("checking_install", false);
@@ -307,10 +312,10 @@ impl Worker {
         self.cancellable_download(download::fetch(self, source, folder))
             .await
     }
-    async fn cancellable_download(
+    async fn cancellable_download<T>(
         &self,
-        download: impl std::future::Future<Output = Result<(PathBuf, String)>>,
-    ) -> Result<(PathBuf, String)> {
+        download: impl std::future::Future<Output = Result<T>>,
+    ) -> Result<T> {
         let mut cancel = self.cancel.clone();
         self.check_cancelled()?;
         tokio::select! {
@@ -377,6 +382,57 @@ impl Worker {
             #[cfg(target_os = "windows")]
             platform::Installed::SystemConfirmation => Ok(()),
         }
+    }
+    /// 命令行工具：找官方最新版 → 下载并核对校验值 → 放进客户端自己的目录。
+    async fn execute_cli(&self, source: catalog::Source, folder: PathBuf) -> Result<()> {
+        self.check_cancelled()?;
+        let installed = tool_adapters::scan_targets()
+            .await
+            .iter()
+            .any(|target| target.tool_id == source.tool && !target.installations.is_empty());
+        if installed {
+            return Err("already_installed");
+        }
+        self.update(|job| job.progress.source = "official");
+        let client = download::build_client(None)?;
+        let target = self
+            .cancellable_download(cli::resolve(&client, source, catalog::platform()))
+            .await?;
+        self.phase("downloading", true);
+        let (file, hash) = self
+            .cancellable_download(download::fetch_resolved(
+                self,
+                source,
+                &folder,
+                &client,
+                cli::allowed_url,
+                &target.target,
+            ))
+            .await?;
+        self.check_cancelled()?;
+        self.phase("verifying", false);
+        // 没有官方校验值、或对不上，一律不装。
+        let package = file.clone();
+        let genuine = tokio::task::spawn_blocking(move || target.matches(&package, &hash))
+            .await
+            .map_err(|_| "installation_failed")??;
+        if !genuine {
+            cache::write(&folder.join("download.json"), b"{}")?;
+            return Err("invalid_download");
+        }
+        self.phase("installing", false);
+        let package = file.clone();
+        let placed = tokio::task::spawn_blocking(move || cli::install(source, &package))
+            .await
+            .map_err(|_| "installation_failed")?;
+        if matches!(placed, Err("invalid_download")) {
+            cache::write(&folder.join("download.json"), b"{}")?;
+        }
+        let program = placed?;
+        // 装好了，下载的那份不用留着占地方。
+        let _ = std::fs::remove_file(&file);
+        let _ = cache::write(&folder.join("download.json"), b"{}");
+        self.associate(source.tool, &program, "created").await
     }
     fn finish(&self, result: Result<()>) {
         self.update(|job| {
@@ -470,7 +526,9 @@ async fn control(
         _ => return Err("invalid_installation_request"),
     }
     let plan = InstallProjection::idle(&request);
-    let Some(source) = catalog::source(&request.tool_id, plan.platform, plan.architecture) else {
+    let Some(source) = catalog::source(&request.tool_id, plan.platform, plan.architecture)
+        .or_else(|| catalog::cli_source(&request.tool_id, plan.platform, plan.architecture))
+    else {
         return Ok(plan);
     };
     let permit = shutdown_coordinator::global()

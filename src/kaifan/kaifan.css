@@ -1092,6 +1092,11 @@ canvas#fx {
 .cl li.ok::before {
   content: "●";
 }
+.cl li small {
+  margin-left: 10px;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
 .quote {
   padding: 13px 15px;
   border-radius: 14px;
