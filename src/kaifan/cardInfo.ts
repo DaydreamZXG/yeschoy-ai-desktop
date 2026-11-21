@@ -121,20 +121,42 @@ const text = (value: unknown) =>
     (item) => typeof item === "string" && item.length <= 200,
   );
 
-export function readCardPicks(): CardPicks {
+/** 最多记这么多个站点的选择，再多就丢最早的。 */
+const STATIONS = 20;
+
+function stored(): Record<string, unknown> {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? "null");
-    if (raw && text(raw.model) && text(raw.plan))
-      return { model: raw.model, plan: raw.plan };
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) return raw;
   } catch {
     // 读不了就当没挑过。
   }
-  return { model: {}, plan: {} };
+  return {};
 }
 
-export function storeCardPicks(picks: CardPicks) {
+/**
+ * 在这个站点上挑过的型号和方案。
+ *
+ * 按站点分开记：两个站可以有同名的型号，方案和价格却不是一回事，
+ * 在甲站挑的方案不能带到乙站去。`station` 是站点的主机名，内置站点是空串。
+ */
+export function readCardPicks(station: string): CardPicks {
+  const raw = stored()[station] as Partial<CardPicks> | undefined;
+  return raw && text(raw.model) && text(raw.plan)
+    ? { model: raw.model!, plan: raw.plan! }
+    : { model: {}, plan: {} };
+}
+
+export function storeCardPicks(station: string, picks: CardPicks) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(picks));
+    const all = stored();
+    // 重新放进去，让最近用的站点排在后面，超了先丢最早的。
+    delete all[station];
+    all[station] = picks;
+    localStorage.setItem(
+      KEY,
+      JSON.stringify(Object.fromEntries(Object.entries(all).slice(-STATIONS))),
+    );
   } catch {
     // 存不了只是下次要重新挑。
   }

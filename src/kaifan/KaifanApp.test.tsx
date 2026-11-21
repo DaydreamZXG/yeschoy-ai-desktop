@@ -165,7 +165,7 @@ describe("开饭首页自己会做的事", () => {
       within(card).getByRole("button", { name: "GPT-5 Mini", pressed: false }),
     );
     expect(
-      JSON.parse(localStorage.getItem("kaifan-card-picks")!).model.gpt,
+      JSON.parse(localStorage.getItem("kaifan-card-picks")!)[""].model.gpt,
     ).toBe("gpt-5-mini");
 
     fireEvent.keyDown(document.activeElement!, { key: "Escape" });

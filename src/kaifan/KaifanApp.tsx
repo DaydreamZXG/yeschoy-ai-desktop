@@ -285,11 +285,20 @@ export function KaifanApp() {
     storePickedCharacter(id);
   };
   // —— 名片：她用哪个型号、走哪个价格方案 ——
-  const [picks, setPicks] = useState(readCardPicks);
+  // 按站点分开记：在一个站上挑的方案不能带到另一个站去。
+  const scope = hostOfLine(lineId) ?? "";
+  const [held, setHeld] = useState(() => ({
+    scope,
+    picks: readCardPicks(scope),
+  }));
+  const picks = useMemo(
+    () => (held.scope === scope ? held.picks : readCardPicks(scope)),
+    [held, scope],
+  );
   const [cardOpen, setCardOpen] = useState(false);
   const change = (next: CardPicks) => {
-    setPicks(next);
-    storeCardPicks(next);
+    setHeld({ scope, picks: next });
+    storeCardPicks(scope, next);
   };
   // 名片上只列能拿来接入的型号，和接入那一屏是同一份。
   const usable = useMemo(

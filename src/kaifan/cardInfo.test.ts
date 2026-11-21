@@ -122,18 +122,43 @@ describe("card picks", () => {
   beforeEach(() => localStorage.clear());
 
   it("remembers what was picked on the card", () => {
-    storeCardPicks({ model: { cla: "claude-opus-4.1" }, plan: { m: "特价" } });
-    expect(readCardPicks()).toEqual({
+    storeCardPicks("", {
+      model: { cla: "claude-opus-4.1" },
+      plan: { m: "特价" },
+    });
+    expect(readCardPicks("")).toEqual({
       model: { cla: "claude-opus-4.1" },
       plan: { m: "特价" },
     });
   });
 
+  it("keeps each station's picks apart: same model name, different plans", () => {
+    storeCardPicks("a.example", { model: {}, plan: { "gpt-5": "特价" } });
+    storeCardPicks("b.example", { model: {}, plan: { "gpt-5": "default" } });
+    expect(readCardPicks("a.example").plan).toEqual({ "gpt-5": "特价" });
+    expect(readCardPicks("b.example").plan).toEqual({ "gpt-5": "default" });
+    expect(readCardPicks("c.example")).toEqual({ model: {}, plan: {} });
+    expect(readCardPicks("")).toEqual({ model: {}, plan: {} });
+  });
+
+  it("forgets the stations used longest ago, not the latest ones", () => {
+    for (let n = 0; n < 25; n += 1)
+      storeCardPicks(`s${n}.example`, { model: { gpt: `m${n}` }, plan: {} });
+    expect(readCardPicks("s0.example").model).toEqual({});
+    expect(readCardPicks("s24.example").model).toEqual({ gpt: "m24" });
+    expect(readCardPicks("s5.example").model).toEqual({ gpt: "m5" });
+  });
+
   it("ignores a damaged record", () => {
-    localStorage.setItem("kaifan-card-picks", '{"model":[1],"plan":{}}');
-    expect(readCardPicks()).toEqual({ model: {}, plan: {} });
+    localStorage.setItem("kaifan-card-picks", '{"":{"model":[1],"plan":{}}}');
+    expect(readCardPicks("")).toEqual({ model: {}, plan: {} });
     localStorage.setItem("kaifan-card-picks", "not json");
-    expect(readCardPicks()).toEqual({ model: {}, plan: {} });
+    expect(readCardPicks("")).toEqual({ model: {}, plan: {} });
+    localStorage.setItem("kaifan-card-picks", "[1]");
+    expect(readCardPicks("")).toEqual({ model: {}, plan: {} });
+    // 坏掉的记录不挡着新的选择存进去。
+    storeCardPicks("", { model: { gpt: "gpt-5" }, plan: {} });
+    expect(readCardPicks("").model).toEqual({ gpt: "gpt-5" });
   });
 
   it("drops a pick the station no longer offers", () => {
