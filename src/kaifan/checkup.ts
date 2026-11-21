@@ -27,7 +27,8 @@ export type LoginFinding =
   | "failed"
   /** 站点没通，看不了。 */
   | "skipped";
-export type AppsFinding = "ok" | "repair" | "none" | "unknown";
+/** `partial`：有的读到了、是接好的，有的这次没读到，不能算全都没问题。 */
+export type AppsFinding = "ok" | "repair" | "none" | "unknown" | "partial";
 
 export type CheckAction = "connect" | "again" | "repair" | "join" | null;
 
@@ -95,19 +96,18 @@ export function reportOf(input: CheckInput): CheckReport {
   const live = input.connections.filter(
     (c) => c.state === "connected" || c.state === "legacy",
   ).length;
+  const unread = input.connections.some((c) => c.state === "unavailable");
   const unknown =
-    input.connectionsFailed ||
-    !input.connections.length ||
-    (!live &&
-      !repair.length &&
-      input.connections.some((c) => c.state === "unavailable"));
+    input.connectionsFailed || !input.connections.length || (!live && unread);
   const apps: AppsFinding = repair.length
     ? "repair"
     : unknown
       ? "unknown"
-      : live
-        ? "ok"
-        : "none";
+      : unread
+        ? "partial"
+        : live
+          ? "ok"
+          : "none";
   const verdict: CheckReport["verdict"] =
     station !== "ok"
       ? station

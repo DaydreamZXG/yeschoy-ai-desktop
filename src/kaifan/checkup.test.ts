@@ -115,6 +115,17 @@ describe("reportOf", () => {
       "unknown",
     );
   });
+
+  it("有的接好了、有的没读到：不算全都没问题", () => {
+    expect(
+      check({
+        connections: [
+          app("claude_code", "connected"),
+          app("pi", "unavailable"),
+        ],
+      }),
+    ).toMatchObject({ apps: "partial", live: 1, verdict: "fine" });
+  });
 });
 
 describe("originOfLine", () => {

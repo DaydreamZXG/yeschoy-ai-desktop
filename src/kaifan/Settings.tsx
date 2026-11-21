@@ -158,7 +158,7 @@ export function Settings({
     if (report.verdict === "fine")
       return {
         text: t(
-          report.apps === "unknown"
+          report.apps === "unknown" || report.apps === "partial"
             ? "kaifan.settings.check.fineBlind"
             : "kaifan.settings.check.fine",
         ),

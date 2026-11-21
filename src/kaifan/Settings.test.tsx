@@ -277,6 +277,28 @@ describe("Settings", () => {
     expect(screen.queryByTestId("kaifan-settings-check-act")).toBeNull();
   });
 
+  it("有的应用没读到：不说都没问题", async () => {
+    show({
+      checkup: {
+        ...idleCheck,
+        report: reportOf({
+          online: true,
+          probe: { ok: true, probe: {} as never },
+          status: "signed_in",
+          connections: [
+            app("claude_code"),
+            app("pi", { state: "unavailable" }),
+          ],
+          connectionsFailed: false,
+        }),
+      },
+    });
+    await said("有应用的情况这次没读到");
+    expect(screen.getByTestId("kaifan-settings-report")).toHaveTextContent(
+      "1 个应用接好了，还有的这次没读到",
+    );
+  });
+
   it("更新：有新版本给安装，查不到给再试和官网下载", () => {
     const ready = updater({
       phase: "available",

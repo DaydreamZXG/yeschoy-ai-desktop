@@ -1905,7 +1905,7 @@
         "join": "Connect an app",
         "running": "Going through them one by one. Hang on.",
         "fine": "All checked. The station, your sign-in and your apps are fine.",
-        "fineBlind": "The station and your sign-in are fine. I couldn't read your apps this time — check again in a moment.",
+        "fineBlind": "The station and your sign-in are fine. I couldn't read some of your apps this time — check again in a moment.",
         "offline": "This computer is offline. I'll check again once it's back online.",
         "unreachable": "You're online, but {{host}} can't be reached — most likely a problem on the station's side. I'll keep retrying on my own.",
         "odd": "{{host}} answered, but not the way a station should. It may be under maintenance. Check again later.",
@@ -1932,7 +1932,9 @@
           "repair_one": "{{count}} app needs fixing",
           "repair_other": "{{count}} apps need fixing",
           "none": "No app connected yet",
-          "unknown": "Couldn't read your apps this time"
+          "unknown": "Couldn't read your apps this time",
+          "partial_one": "{{count}} app connected; some couldn't be read",
+          "partial_other": "{{count}} apps connected; some couldn't be read"
         }
       },
       "update": {
