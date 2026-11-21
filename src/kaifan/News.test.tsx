@@ -51,6 +51,25 @@ const show = (
 const says = () => screen.getByTestId("kaifan-news-says");
 
 describe("News", () => {
+  it("站点连不上时没摆出来的公告不算看过，连回来还是新的", () => {
+    const notices = board();
+    const { rerender } = show(notices, { reach: "off" });
+    expect(screen.queryByTestId("kaifan-notice")).toBeNull();
+    expect(notices.markSeen).not.toHaveBeenCalled();
+    rerender(
+      <News
+        open
+        who="gpt"
+        reach="ok"
+        notices={notices}
+        onConnect={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(notices.markSeen).toHaveBeenCalledWith(["a"]);
+    expect(screen.getAllByTestId("kaifan-notice")[0]).toHaveClass("new");
+  });
+
   it("打开就算看过，但这次新到的一直标着「新」", async () => {
     const notices = board();
     const { rerender } = show(notices);

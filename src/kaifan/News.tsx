@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Notice } from "../workbench/announcements";
 import { Drawer } from "./Drawer";
@@ -26,18 +26,22 @@ export function News({ open, who, reach, notices, onConnect, onClose }: Props) {
   const { unread, markSeen } = notices;
   const [fresh, setFresh] = useState<Set<string>>(new Set());
   const [stuck, setStuck] = useState("");
+  const all = notices.notices;
+  const list = useMemo(() => (reach === "ok" ? all : []), [reach, all]);
   useEffect(() => {
     if (!open) {
       setFresh(new Set());
       setStuck("");
       return;
     }
-    if (!unread.size) return;
-    setFresh((current) => new Set([...current, ...unread]));
-    markSeen([...unread]);
-  }, [open, unread, markSeen]);
+    // 只有真摆出来的才算看过：站点连不上时列表是空的，不能把没给人看的也记成看过。
+    const shown = list.filter((notice) => unread.has(notice.id));
+    if (!shown.length) return;
+    const ids = shown.map((notice) => notice.id);
+    setFresh((current) => new Set([...current, ...ids]));
+    markSeen(ids);
+  }, [open, list, unread, markSeen]);
 
-  const list = reach === "ok" ? notices.notices : [];
   const says =
     reach === "out"
       ? t("kaifan.news.saysOut")
