@@ -402,7 +402,7 @@
     },
     "join": {
       "planRisk": "You're connected to {{vendor}}, a monthly plan. The provider only allows it in coding tools it approves, and Kaifan passes requests along on {{app}}'s behalf, so the provider may limit or cancel the plan.",
-      "onlyTools": "{{vendor}} doesn't work with {{app}}. Pick an app it works with, or connect a different station.",
+      "onlyTools": "{{vendor}} only works with {{apps}}, so {{app}} can't be connected. Pick {{apps}} above, or connect a different station.",
       "title": "Who goes where?",
       "sub": "Pick an app, pick someone, and she handles the rest.",
       "whichApp": "Which app",

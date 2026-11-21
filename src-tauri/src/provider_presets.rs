@@ -52,6 +52,8 @@ pub(crate) struct Preset {
     pub(crate) common: bool,
 }
 
+// 表里一行一个参数，比拆成几个结构体好读。
+#[allow(clippy::too_many_arguments)]
 const fn preset(
     id: &'static str,
     family: &'static str,

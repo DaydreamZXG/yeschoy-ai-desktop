@@ -1025,7 +1025,7 @@ describe("接入：连的是云厂商", () => {
     });
     await waitFor(() =>
       expect(screen.getByTestId("kaifan-join-barred")).toHaveTextContent(
-        /OpenCode Go 不认/,
+        /OpenCode Go 只认 OpenCode，.*接不了/,
       ),
     );
     expect(go()).toBeDisabled();

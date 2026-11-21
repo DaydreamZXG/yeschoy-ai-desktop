@@ -798,6 +798,14 @@ export function Join({
                 {t("kaifan.join.onlyTools", {
                   vendor: vendorName(preset, t),
                   app: appName,
+                  apps: preset.onlyTools
+                    .map((tool) => {
+                      const item = WORKBENCH_APPS.find(({ id }) => id === tool);
+                      return item
+                        ? appDisplayName(item.id, item.name, t)
+                        : tool;
+                    })
+                    .join(t("kaifan.connect.listJoin")),
                 })}
               </p>
             ) : (
