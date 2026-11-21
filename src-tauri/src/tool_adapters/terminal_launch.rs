@@ -86,7 +86,30 @@ fn path_text(path: &Path, platform: Platform) -> Result<String, AdapterFailure> 
     Ok(value)
 }
 
-fn mac_shell_command(executable: &str, workspace: &str, runtime_directories: &[String]) -> String {
+/// 在终端里开这个应用时要跟在程序后面的固定参数，按先后试：前一种退出码不是 0
+/// 才试后一种。别的应用都是直接开，只有 OpenClaw 不是——它的终端界面默认去连
+/// Gateway，Gateway 没开就发不出消息；`--local` 不用 Gateway，但 Gateway 开着时
+/// 它会拒绝并让人去掉 `--local`（2026.11.6 两种情况都实测过）。
+fn launch_attempts(tool_id: &str) -> &'static [&'static [&'static str]] {
+    match tool_id {
+        "openclaw" => &[&["tui", "--local"], &["tui"]],
+        _ => &[&[]],
+    }
+}
+
+fn with_arguments(program: String, arguments: &[&str]) -> String {
+    std::iter::once(program.as_str())
+        .chain(arguments.iter().copied())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+fn mac_shell_command(
+    executable: &str,
+    workspace: &str,
+    runtime_directories: &[String],
+    attempts: &[&[&str]],
+) -> String {
     let prefix = runtime_directories
         .iter()
         .map(|directory| quoted_shell(directory))
@@ -97,10 +120,19 @@ fn mac_shell_command(executable: &str, workspace: &str, runtime_directories: &[S
     } else {
         format!("{prefix}:\"${{PATH:-/usr/bin:/bin:/usr/sbin:/sbin}}\"")
     };
+    let (last, earlier) = attempts.split_last().unwrap_or((&(&[] as &[&str]), &[]));
+    let invocation = earlier
+        .iter()
+        .map(|arguments| with_arguments(quoted_shell(executable), arguments))
+        .chain(std::iter::once(format!(
+            "exec {}",
+            with_arguments(quoted_shell(executable), last)
+        )))
+        .collect::<Vec<_>>()
+        .join(" || ");
     format!(
-        "cd -- {} || exit 1\nunset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY\nPATH={path}\nexport PATH\nexec {}",
+        "cd -- {} || exit 1\nunset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_API_KEY\nPATH={path}\nexport PATH\n{invocation}",
         quoted_shell(workspace),
-        quoted_shell(executable)
     )
 }
 
@@ -202,6 +234,7 @@ fn build_plan(
     }
     let executable = path_text(&installation.path, platform)?;
     let workspace = path_text(workspace, platform)?;
+    let attempts = launch_attempts(tool_id);
     match platform {
         Platform::MacOs => {
             let runtime_directories = common::cli_runtime_directories(&installation.path)
@@ -218,6 +251,7 @@ fn build_plan(
                     &executable,
                     &workspace,
                     &runtime_directories,
+                    attempts,
                 )),
                 working_directory: workspace,
             })
@@ -234,13 +268,37 @@ fn build_plan(
                 .unwrap_or("")
                 .to_ascii_lowercase();
             let invocation = match suffix.as_str() {
-                "exe" => format!("& {}", powershell_literal(&executable)),
+                // Windows PowerShell 5.1 没有 `||`，用退出码接下一种。
+                "exe" => attempts
+                    .iter()
+                    .enumerate()
+                    .map(|(index, arguments)| {
+                        let call = with_arguments(
+                            format!("& {}", powershell_literal(&executable)),
+                            arguments,
+                        );
+                        if index == 0 {
+                            call
+                        } else {
+                            format!("if ($LASTEXITCODE -ne 0) {{ {call} }}")
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join("; "),
                 "cmd" | "bat" => {
                     // Expand the target through a child-only environment value
                     // once. Literal %...% inside a path is not recursively
                     // expanded; /V:OFF also keeps ! literal. ProcessStartInfo
                     // avoids PowerShell's native argument re-quoting of /C.
-                    format!("$p = New-Object System.Diagnostics.ProcessStartInfo; $p.FileName = {}; $p.Arguments = '/D /V:OFF /S /C \"\"%YESCHOY_CLI_TARGET%\"\"'; $p.UseShellExecute = $false; $p.WorkingDirectory = {}; $p.EnvironmentVariables['YESCHOY_CLI_TARGET'] = {}; $c = [System.Diagnostics.Process]::Start($p); $c.WaitForExit()", powershell_literal(&format!("{root}\\System32\\cmd.exe")), powershell_literal(&workspace), powershell_literal(&executable))
+                    // 参数只有上面写死的几个英文词，不含引号和 cmd 的特殊字符。
+                    let command = attempts
+                        .iter()
+                        .map(|arguments| {
+                            with_arguments("\"%YESCHOY_CLI_TARGET%\"".to_owned(), arguments)
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" || ");
+                    format!("$p = New-Object System.Diagnostics.ProcessStartInfo; $p.FileName = {}; $p.Arguments = '/D /V:OFF /S /C \"{command}\"'; $p.UseShellExecute = $false; $p.WorkingDirectory = {}; $p.EnvironmentVariables['YESCHOY_CLI_TARGET'] = {}; $c = [System.Diagnostics.Process]::Start($p); $c.WaitForExit()", powershell_literal(&format!("{root}\\System32\\cmd.exe")), powershell_literal(&workspace), powershell_literal(&executable))
                 }
                 _ => return Err(failure("invalid_launch_target")),
             };
@@ -513,8 +571,13 @@ mod tests {
         assert_eq!(
             plan.mac_command.as_deref(),
             Some(
-                mac_shell_command(installation.path.to_str().unwrap(), "/native/我的项目", &[],)
-                    .as_str()
+                mac_shell_command(
+                    installation.path.to_str().unwrap(),
+                    "/native/我的项目",
+                    &[],
+                    &[&[]],
+                )
+                .as_str()
             )
         );
         // Inject a non-Mac plan so this pure dispatch test also runs on Windows.
@@ -558,6 +621,105 @@ mod tests {
             )
             .is_err());
         }
+    }
+
+    fn windows_script(plan: &LaunchPlan) -> String {
+        let bytes = STANDARD.decode(&plan.args[4]).unwrap();
+        String::from_utf16(
+            &bytes
+                .chunks_exact(2)
+                .map(|b| u16::from_le_bytes([b[0], b[1]]))
+                .collect::<Vec<_>>(),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn openclaw_opens_its_local_chat_and_falls_back_to_the_gateway_one() {
+        let mac = build_plan(
+            Platform::MacOs,
+            &ResolvedInstallation {
+                path: "/native/bin/openclaw".into(),
+            },
+            "openclaw",
+            Path::new("/native/work"),
+            None,
+        )
+        .unwrap();
+        assert!(mac
+            .mac_command
+            .as_deref()
+            .unwrap()
+            .ends_with("\n'/native/bin/openclaw' tui --local || exec '/native/bin/openclaw' tui"));
+
+        let cmd = windows_script(
+            &build_plan(
+                Platform::Windows,
+                &ResolvedInstallation {
+                    path: r"C:\native\openclaw.cmd".into(),
+                },
+                "openclaw",
+                Path::new(r"C:\native"),
+                Some(Path::new(r"C:\Windows")),
+            )
+            .unwrap(),
+        );
+        assert!(cmd.contains(
+            "/D /V:OFF /S /C \"\"%YESCHOY_CLI_TARGET%\" tui --local || \"%YESCHOY_CLI_TARGET%\" tui\"'"
+        ));
+
+        let exe = windows_script(
+            &build_plan(
+                Platform::Windows,
+                &ResolvedInstallation {
+                    path: r"C:\native\openclaw.exe".into(),
+                },
+                "openclaw",
+                Path::new(r"C:\native"),
+                Some(Path::new(r"C:\Windows")),
+            )
+            .unwrap(),
+        );
+        let target = powershell_literal(r"C:\native\openclaw.exe");
+        assert!(exe.ends_with(&format!(
+            "& {target} tui --local; if ($LASTEXITCODE -ne 0) {{ & {target} tui }}"
+        )));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn openclaw_fallback_runs_only_when_the_local_chat_refuses() {
+        use std::os::unix::fs::PermissionsExt;
+        let directory =
+            super::super::common::temporary_working_directory("terminal-openclaw").unwrap();
+        let executable = directory.join("openclaw");
+        // 仿 OpenClaw：标记文件在就当 Gateway 开着，`--local` 拒绝并以 1 退出。
+        std::fs::write(
+            &executable,
+            b"#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$0.calls\"\n[ \"$*\" = 'tui --local' ] && [ -e \"$0.gateway\" ] && exit 1\nexit 0\n",
+        )
+        .unwrap();
+        std::fs::set_permissions(&executable, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let script = mac_shell_command(
+            executable.to_str().unwrap(),
+            directory.to_str().unwrap(),
+            &[],
+            launch_attempts("openclaw"),
+        );
+        let calls = directory.join("openclaw.calls");
+        let run = || {
+            let _ = std::fs::remove_file(&calls);
+            let status = std::process::Command::new("/bin/sh")
+                .args(["-c", &script])
+                .status()
+                .unwrap();
+            assert!(status.success());
+            std::fs::read_to_string(&calls).unwrap()
+        };
+        assert_eq!(run(), "tui --local\n");
+        std::fs::write(directory.join("openclaw.gateway"), b"").unwrap();
+        assert_eq!(run(), "tui --local\ntui\n");
+        std::fs::remove_dir_all(directory).unwrap();
     }
 
     #[test]
