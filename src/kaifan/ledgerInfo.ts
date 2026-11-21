@@ -9,9 +9,15 @@ import { characterOfModel, type RosterId } from "./roster";
  * - 明细有条数上限。被截断时，比最早那一笔还早的时间段没读全，也是「不知道」。
  */
 
-/** 明细有没有读全从 `from` 起的这段时间。 */
+/**
+ * 明细有没有读全从 `from` 起的这段时间。
+ *
+ * 读满了上限、却一笔能用的都没留下（全是别的类型的记录）时，不知道读到了
+ * 哪一天：哪段时间都不算读全。
+ */
 export function covers(log: UsageLogReport, from: number): boolean {
-  return !log.truncated || log.oldestAtEpochMs <= from;
+  if (!log.truncated) return true;
+  return log.oldestAtEpochMs > 0 && log.oldestAtEpochMs <= from;
 }
 
 function sum(records: UsageRecord[]): number | null {
@@ -26,8 +32,9 @@ function sum(records: UsageRecord[]): number | null {
 
 /** 从 `from` 到现在一共花了多少；这段时间没读全、或者有记录没带金额，就是 null。 */
 export function spentSince(log: UsageLogReport, from: number): number | null {
+  if (log.status !== "available" && log.status !== "empty") return null;
+  if (!covers(log, from)) return null;
   if (log.status === "empty") return 0;
-  if (log.status !== "available" || !covers(log, from)) return null;
   return sum(log.records.filter((record) => record.observedAtEpochMs >= from));
 }
 
@@ -68,8 +75,8 @@ export function daysOf(
           )
         : [];
     const known =
-      log.status === "empty" ||
-      (log.status === "available" && covers(log, start));
+      (log.status === "empty" || log.status === "available") &&
+      covers(log, start);
     return {
       start,
       amount: known ? sum(records) : null,

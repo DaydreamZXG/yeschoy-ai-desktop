@@ -645,6 +645,7 @@
       "saysOut": "先连上站点，我才看得到账本。",
       "saysOff": "站点现在连不上，账本我读不到。连上了我再给你看。",
       "saysWait": "正在连接站点，等一下。",
+      "saysReading": "我去站点读一下最新的数，马上。",
       "saysNothing": "这个站没把余额和账单告诉我，我看不到。",
       "saysToday": "今天花了 {{amount}}。",
       "saysTodayNone": "今天还没开吃。",

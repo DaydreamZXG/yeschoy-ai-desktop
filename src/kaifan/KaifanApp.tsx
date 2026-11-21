@@ -463,6 +463,9 @@ export function KaifanApp() {
   const [panel, setPanel] = useState<"ledger" | "news" | "settings" | null>(
     null,
   );
+  // 打开账本先去读一次最新的；读回来之前账本不摆上一次的余额和花费。
+  const [ledgerReading, setLedgerReading] = useState(false);
+  const ledgerRead = useRef(0);
   const notices = useNotices(lineId, signedIn);
   const reach =
     state.cond === "out"
@@ -573,7 +576,14 @@ export function KaifanApp() {
             sound.whoosh();
             setPanel("ledger");
             // 打开账本就去读一次最新的，不拿旧数给人看。
-            if (signedIn) void refresh();
+            if (!signedIn) return;
+            const run = ++ledgerRead.current;
+            setLedgerReading(true);
+            void Promise.resolve(refresh())
+              .catch(() => undefined)
+              .finally(() => {
+                if (ledgerRead.current === run) setLedgerReading(false);
+              });
           }}
           onNews={() => {
             sound.whoosh();
@@ -637,6 +647,7 @@ export function KaifanApp() {
           open={panel === "ledger"}
           who={state.current}
           reach={reach}
+          reading={ledgerReading}
           money={signedIn ? projection?.money : undefined}
           log={signedIn ? projection?.usageLog : undefined}
           appName={appName}

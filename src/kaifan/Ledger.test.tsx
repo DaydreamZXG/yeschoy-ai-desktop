@@ -181,6 +181,13 @@ describe("Ledger", () => {
     );
   });
 
+  it("正在读最新的数：不把上一次的余额和花费摆出来", async () => {
+    show({ reading: true });
+    await waitFor(() => expect(says()).toHaveTextContent("读一下最新的数"));
+    expect(screen.queryByTestId("kaifan-ledger-balance")).toBeNull();
+    expect(screen.getByTestId("kaifan-ledger")).not.toHaveTextContent("¥");
+  });
+
   it("没连站点：不给充值，给「连接站点」", () => {
     const onConnect = vi.fn();
     show({ reach: "out", money: undefined, onConnect });

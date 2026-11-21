@@ -54,6 +54,12 @@ describe("spentSince", () => {
     expect(spentSince(log([]), today)).toBe(0);
   });
 
+  it("an empty ledger that hit the row cap is unknown, not zero", () => {
+    const capped = log([], { truncated: true, oldestAtEpochMs: 0 });
+    expect(spentSince(capped, today)).toBeNull();
+    expect(daysOf(capped, NOW).every((day) => day.amount === null)).toBe(true);
+  });
+
   it("one record without an amount makes the total unknown, not smaller", () => {
     const report = log([rec("gpt-5", at(0), "0.42"), rec("gpt-5", at(0), "")]);
     expect(spentSince(report, today)).toBeNull();

@@ -645,6 +645,7 @@
       "saysOut": "Connect a station first, then I can see the ledger.",
       "saysOff": "The station is unreachable right now, so I can't read the ledger. I'll show you once it's back.",
       "saysWait": "Connecting to the station. One moment.",
+      "saysReading": "Fetching the latest numbers from the station. One moment.",
       "saysNothing": "This station doesn't tell me the balance or the bills, so I can't see them.",
       "saysToday": "{{amount}} spent today. ",
       "saysTodayNone": "Nothing eaten yet today. ",

@@ -19,6 +19,8 @@ interface Props {
   who: RosterId;
   /** 站点现在的情况：连着、没连、连不上。 */
   reach: "ok" | "out" | "off" | "wait";
+  /** 正在读最新的数：读回来之前不把手里上一次的数当成现在的摆出来。 */
+  reading?: boolean;
   money?: AccountMoney;
   log?: UsageLogReport;
   /** 应用的名字，按应用 ID 查；最近几笔里写是哪个应用花的。 */
@@ -40,6 +42,7 @@ export function Ledger({
   open,
   who,
   reach,
+  reading = false,
   money,
   log,
   appName,
@@ -83,18 +86,20 @@ export function Ledger({
         ? t("kaifan.ledger.saysOff")
         : reach === "wait"
           ? t("kaifan.ledger.saysWait")
-          : nothing
-            ? t("kaifan.ledger.saysNothing")
-            : [
-                !view || view.today === null || !today
-                  ? t("kaifan.ledger.saysTodayUnknown")
-                  : view.today === 0
-                    ? t("kaifan.ledger.saysTodayNone")
-                    : t("kaifan.ledger.saysToday", { amount: today }),
-                balance
-                  ? t("kaifan.ledger.saysBalance", { amount: balance })
-                  : t("kaifan.ledger.saysBalanceUnknown"),
-              ].join("");
+          : reading
+            ? t("kaifan.ledger.saysReading")
+            : nothing
+              ? t("kaifan.ledger.saysNothing")
+              : [
+                  !view || view.today === null || !today
+                    ? t("kaifan.ledger.saysTodayUnknown")
+                    : view.today === 0
+                      ? t("kaifan.ledger.saysTodayNone")
+                      : t("kaifan.ledger.saysToday", { amount: today }),
+                  balance
+                    ? t("kaifan.ledger.saysBalance", { amount: balance })
+                    : t("kaifan.ledger.saysBalanceUnknown"),
+                ].join("");
 
   const top = view
     ? Math.max(0, ...view.days.map((day) => day.amount ?? 0))
@@ -113,7 +118,13 @@ export function Ledger({
       testId="kaifan-ledger"
       label={t("kaifan.nav.ledger")}
       who={who}
-      mood={reach === "ok" && !nothing ? "happy" : "panic"}
+      mood={
+        reach === "ok" && reading
+          ? "idle"
+          : reach === "ok" && !nothing
+            ? "happy"
+            : "panic"
+      }
       says={says}
       onClose={onClose}
       foot={
@@ -133,7 +144,7 @@ export function Ledger({
         ) : undefined
       }
     >
-      {reach !== "ok" || nothing ? (
+      {reach !== "ok" || reading || nothing ? (
         <p className="quote">{t("kaifan.ledger.wouldShow")}</p>
       ) : (
         <>
