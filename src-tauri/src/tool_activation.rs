@@ -750,6 +750,26 @@ async fn probe_once(
 /// 取 2：比串行快一倍，又远在限流阈值之下；每个探测至多问三遍，总时长仍可接受。
 const PROBE_CONCURRENCY: usize = 2;
 
+/// 一整批探测最多花多久。
+///
+/// 每个型号自己有上限（三遍、每遍 8 秒），但型号多的站加起来没有：两百个型号
+/// 遇上一个不回话的站，能让用户在「接入中」等上几十分钟。到点还没问出来的，
+/// 和问不出结论的一样停在直连。
+const PROBE_BATCH_BUDGET: Duration = Duration::from_secs(30);
+
+/// 限并发、限总时长地跑一批探测，返回到点前问出来的那些（带着各自的下标）。
+async fn probed_within<T>(
+    probes: Vec<impl std::future::Future<Output = (usize, T)>>,
+    budget: Duration,
+) -> Vec<(usize, T)> {
+    use futures::StreamExt;
+    futures::stream::iter(probes)
+        .buffer_unordered(PROBE_CONCURRENCY)
+        .take_until(Box::pin(tokio::time::sleep(budget)))
+        .collect()
+        .await
+}
+
 /// 把探测结果写回这一批模型的传输方式。
 ///
 /// 只对 Codex 做：Claude 走的是中转原生支持的 Anthropic 协议，没有这个问题。
@@ -777,7 +797,6 @@ async fn apply_codex_probes_with(
     leases: &[(String, TokenLease)],
     transports: &mut [Option<ModelTransport>],
 ) {
-    use futures::StreamExt;
     // 带着下标探、按下标写回。
     //
     // 第一版是「筛出要探的 → join_all → 再遍历一遍按同样的条件写回」，
@@ -814,10 +833,7 @@ async fn apply_codex_probes_with(
     // 并发探，但有上限（`PROBE_CONCURRENCY`）：一次接入可能绑了十几个模型，
     // 串行会把接入时间拖成十几倍；全放开又会撞上中转的限流，让探测自己
     // 制造出它要判读的错误。
-    let probed = futures::stream::iter(probes)
-        .buffer_unordered(PROBE_CONCURRENCY)
-        .collect::<Vec<_>>()
-        .await;
+    let probed = probed_within(probes, PROBE_BATCH_BUDGET).await;
     for (index, probed) in probed {
         if let Some(slot) = transports.get_mut(index) {
             *slot = Some(ModelTransport::Codex(probed));
@@ -3951,6 +3967,23 @@ mod tests {
         );
         // 没有明确拒绝，就不该去问 Chat：那一探只在 Responses 被拒时才发。
         assert_eq!(chat_hits.load(Ordering::SeqCst), 0);
+    }
+
+    /// 到点还没问出来的不等：先回来的照写，没回来的留着原样。
+    #[tokio::test]
+    async fn a_batch_of_probes_stops_at_its_budget_and_keeps_what_answered() {
+        let started = std::time::Instant::now();
+        let probes = (0..6usize)
+            .map(|index| async move {
+                if index != 0 {
+                    std::future::pending::<()>().await;
+                }
+                (index, "answered")
+            })
+            .collect::<Vec<_>>();
+        let probed = probed_within(probes, Duration::from_millis(80)).await;
+        assert_eq!(probed, vec![(0, "answered")]);
+        assert!(started.elapsed() < Duration::from_secs(3));
     }
 
     /// 探测有并发上限，且结论仍按下标写回各自的模型。
