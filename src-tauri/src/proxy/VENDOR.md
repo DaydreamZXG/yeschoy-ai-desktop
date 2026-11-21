@@ -15,12 +15,16 @@
 
 ## 边界
 
-这个目录是一个独立的「协议转换」模块，项目里只有 `codex_responses_bridge.rs`
-一个文件引用它（`proxy::tests::only_the_bridge_reaches_into_the_vendored_code`
-守着）。其余代码要做协议转换，调用那个文件里我们自己写的入口。
+这个目录是一个独立的「协议转换」模块，项目里只有两个文件引用它，一个应用家族
+一个（`proxy::tests::only_the_bridges_reach_into_the_vendored_code` 守着）：
+
+- `codex_responses_bridge.rs`：Codex 的 Responses 格式 ↔ Chat 格式；
+- `claude_chat_bridge.rs`：Claude 的 Anthropic 格式 ↔ Chat 格式。
+
+其余代码要做协议转换，调用这两个文件里我们自己写的入口。
 
 这样做是为了两件事：出处一目了然（来自 CC Switch 的就是这个目录，不多不少）；
-将来换成自己的实现时，只需要改那一个文件。
+将来换成自己的实现时，只需要改这两个文件。
 
 ## 怎么重新同步
 

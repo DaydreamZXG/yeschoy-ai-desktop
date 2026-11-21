@@ -25,11 +25,13 @@ OpenAI Responses、OpenAI Chat Completions、Anthropic Messages 三种格式之�
 
 **How it is used / 怎么用的**
 
-It is compiled into the app; users do not install or run CC Switch. Only one
-file of ours (`src-tauri/src/codex_responses_bridge.rs`) calls into it.
+It is compiled into the app; users do not install or run CC Switch. Only two
+files of ours call into it: `src-tauri/src/codex_responses_bridge.rs` (Codex)
+and `src-tauri/src/claude_chat_bridge.rs` (Claude).
 
-它被编译进客户端，用户不需要安装或运行 CC Switch。项目里只有
-`src-tauri/src/codex_responses_bridge.rs` 一个文件调用它。
+它被编译进客户端，用户不需要安装或运行 CC Switch。项目里只有两个文件调用它：
+`src-tauri/src/codex_responses_bridge.rs`（Codex）和
+`src-tauri/src/claude_chat_bridge.rs`（Claude）。
 
 **History / 历史**
 
