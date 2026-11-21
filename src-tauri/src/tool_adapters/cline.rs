@@ -78,6 +78,47 @@ pub(crate) fn is_provider_settings(path: &Path) -> bool {
         && parts.next().is_some_and(|name| name == ".cline")
 }
 
+/// 改回原样时，第一次接入建出来的 `providers` 会被整个拿走。用户之后自己在
+/// Cline 里加的别家不是我们的，留下；留下的文件补上 `version` 和 `providers`，
+/// 这两个少一个 Cline 就当整份文件是坏的。
+pub(crate) fn keep_what_is_not_ours(
+    path: &Path,
+    before: &Value,
+    ours: &Value,
+    now: &Value,
+    restored: &mut Value,
+    preserved: &mut bool,
+) {
+    if !is_provider_settings(path) || before["providers"].is_object() {
+        return;
+    }
+    let Some(result) = restored.as_object_mut() else {
+        return;
+    };
+    if !result.contains_key("providers") {
+        let theirs: Map<String, Value> = now["providers"]
+            .as_object()
+            .into_iter()
+            .flatten()
+            .filter(|(id, _)| ours["providers"].get(id.as_str()).is_none())
+            .map(|(id, entry)| (id.clone(), entry.clone()))
+            .collect();
+        if !theirs.is_empty() {
+            *preserved = true;
+            result.insert("providers".into(), Value::Object(theirs));
+        }
+    }
+    if result.is_empty() {
+        return;
+    }
+    result
+        .entry("providers")
+        .or_insert_with(|| Value::Object(Map::new()));
+    if let Some(version) = now.get("version") {
+        result.entry("version").or_insert_with(|| version.clone());
+    }
+}
+
 /// 各家编辑器放扩展的目录里，Cline 扩展所在的文件夹。
 ///
 /// 只装了扩展、没装命令行的人也算装了 Cline：两边读同一份设置。

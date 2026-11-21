@@ -909,6 +909,14 @@ pub(crate) fn restore_bytes(
     if workbuddy_catalog(&file.path) {
         restored = remove_inserted_available_models(&before, &after, restored);
     }
+    crate::tool_adapters::cline::keep_what_is_not_ours(
+        &file.path,
+        &before,
+        &after,
+        &now,
+        &mut restored,
+        &mut preserved,
+    );
     if restored == now || restored == touched {
         return Ok((current.map(Vec::from), preserved));
     }
@@ -2056,6 +2064,45 @@ mod tests {
         assert_eq!(value["lastUsedProvider"], "cline");
         assert!(value["providers"][cline::PROVIDER_ID].is_null());
         assert!(value["providers"]["anthropic"].is_object());
+    }
+
+    /// 第一次接入时 Cline 还没有设置文件，整个 `providers` 都是我们建的。
+    /// 用户之后自己在 Cline 里加的别家不是我们的：改回原样只拿走我们那一项，
+    /// 留下的文件还得是 Cline 认的样子（它要 `version` 和 `providers`）。
+    #[test]
+    fn cline_restore_keeps_providers_the_user_added_after_a_first_time_connection() {
+        use crate::tool_adapters::cline;
+        let f = Fixture::new();
+        let token = format!("ycg-{}", "a".repeat(64));
+        let after = cline::render(None, "glm-5.3", &token, "2026-01-02T03:04:05.678Z").unwrap();
+        let file = f.change(".cline/data/settings/providers.json", None, &after);
+        let theirs = serde_json::json!({
+            "settings": {"provider": "anthropic", "apiKey": "sk-ant-theirs"},
+            "updatedAt": "2026-02-01T00:00:00.000Z",
+            "tokenSource": "manual",
+        });
+
+        let mut added: Value = serde_json::from_slice(&after).unwrap();
+        added["providers"]["anthropic"] = theirs.clone();
+        let (value, kept) = merged(&file, added.clone());
+        assert!(kept);
+        assert_eq!(
+            value,
+            serde_json::json!({"version": 1, "providers": {"anthropic": theirs}})
+        );
+
+        // 加了别家，还把选中的换成了它：选中的那家也留着。
+        added["lastUsedProvider"] = "anthropic".into();
+        let (value, kept) = merged(&file, added);
+        assert!(kept);
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "version": 1,
+                "lastUsedProvider": "anthropic",
+                "providers": {"anthropic": theirs},
+            })
+        );
     }
 
     #[test]
