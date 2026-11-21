@@ -145,9 +145,16 @@ export function KaifanApp() {
     ? ROSTER_IDS.filter((id) => state.cast?.[id]).length
     : null;
 
-  const apps = useMemo(
-    () =>
-      WORKBENCH_APPS.slice(0, HOME_APPS).map((app) => ({
+  const apps = useMemo(() => {
+    const linked = (id: string) =>
+      connections.connections?.some((item) => item.toolId === id) ?? false;
+    const rank = (app: (typeof WORKBENCH_APPS)[number]) =>
+      (linked(app.id) ? 2 : 0) + (app.common ? 1 : 0);
+    // 首页只放得下几个：接过的排前面，然后是常用的。
+    return [...WORKBENCH_APPS]
+      .sort((a, b) => rank(b) - rank(a))
+      .slice(0, HOME_APPS)
+      .map((app) => ({
         id: app.id,
         name: app.name,
         fullName: appDisplayName(app.id, app.name, t),
@@ -155,9 +162,8 @@ export function KaifanApp() {
         worker: workerOf(
           connections.connections?.find((item) => item.toolId === app.id),
         ),
-      })),
-    [connections.connections, t],
-  );
+      }));
+  }, [connections.connections, t]);
 
   const appName = useCallback(
     (toolId: string) => {

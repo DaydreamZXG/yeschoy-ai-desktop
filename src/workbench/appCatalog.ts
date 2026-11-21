@@ -22,38 +22,46 @@ export const WORKBENCH_APPS: {
   name: string;
   icon?: string;
   mark?: string;
+  /** 常用的默认露在外面；不常用的收在「不常用的还有几个」里。 */
+  common: boolean;
 }[] = [
   {
     id: "claude_desktop",
     name: "Claude Desktop",
     icon: claudeIcon,
+    common: true,
   },
   {
     id: "codex_desktop",
     name: "Codex",
     icon: codexIcon,
+    common: true,
   },
   {
     id: "workbuddy",
     name: "WorkBuddy",
     icon: workbuddyIcon,
+    common: false,
   },
   {
     id: "dsh_desktop",
     name: "DeepSeek Harness",
     icon: dshIcon,
+    common: false,
   },
   {
     id: "dsh_web",
     name: "DSH web",
     icon: dshIcon,
+    common: false,
   },
-  { id: "pi", name: "Pi", icon: piIcon },
-  { id: "opencode", name: "OpenCode", icon: opencodeIcon },
+  { id: "pi", name: "Pi", icon: piIcon, common: false },
+  { id: "opencode", name: "OpenCode", icon: opencodeIcon, common: true },
   {
     id: "claude_code",
     name: "Claude Code",
     icon: claudeIcon,
+    common: true,
   },
 ];
 

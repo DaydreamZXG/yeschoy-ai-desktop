@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { TFunction } from "i18next";
+import { CONNECTIVITY_LINES } from "../diagnostics/contract";
 import { hostOf } from "./station";
 
 /** 内置的一家云厂商。表在原生侧（provider_presets.rs），这里只是照着画。 */
@@ -19,7 +20,13 @@ export interface ProviderPreset {
   onlyTools: string[];
   keyPage: string;
   common: boolean;
+  /** 别的应用里要填的两个地址。没有 Claude 格式的就是 null。 */
+  openaiBase: string;
+  anthropicBase: string | null;
 }
+
+const path = (value: unknown): string | null =>
+  typeof value === "string" && /^(\/[\w.-]+)*$/.test(value) ? value : null;
 
 const text = (value: unknown): string | null =>
   typeof value === "string" && value.length > 0 ? value : null;
@@ -38,6 +45,9 @@ export function decodeProviderPresets(raw: unknown): ProviderPreset[] {
     if (!id || !family || !name || !origin || !keyPage) continue;
     if (!/^https:\/\/[^/]+$/.test(origin) || !keyPage.startsWith("https://"))
       continue;
+    const openaiPath = path(row.openaiPath);
+    if (openaiPath === null) continue;
+    const anthropicPath = path(row.anthropicPath);
     presets.push({
       id,
       family,
@@ -54,6 +64,8 @@ export function decodeProviderPresets(raw: unknown): ProviderPreset[] {
           )
         : [],
       common: row.common === true,
+      openaiBase: origin + openaiPath,
+      anthropicBase: anthropicPath === null ? null : origin + anthropicPath,
     });
   }
   return presets;
@@ -148,4 +160,29 @@ export function stationLabel(
   if (at < 0) return null;
   const origin = lineId.slice(at + 1);
   return /^https:\/\//.test(origin) ? hostOf(origin) : null;
+}
+
+/** 这条线路的站点地址（只有协议和域名）。 */
+export function originOfLine(lineId: string): string | null {
+  const builtin = CONNECTIVITY_LINES.find((line) => line.lineId === lineId);
+  if (builtin) return builtin.rootUrl;
+  const at = lineId.indexOf(":");
+  const origin = at < 0 ? "" : lineId.slice(at + 1);
+  return /^https:\/\/[^/]+$/.test(origin) ? origin : null;
+}
+
+/**
+ * 别的应用里「API 地址」那一栏该填什么。云厂商按表；其余站点按惯例：
+ * OpenAI 格式是 `站点/v1`，Claude 格式就是站点本身。
+ */
+export function addressesOfLine(
+  lineId: string,
+  presets: ProviderPreset[],
+): { openai: string; anthropic: string | null } | null {
+  const origin = originOfLine(lineId);
+  if (!origin) return null;
+  const preset = presetOfOrigin(origin, presets);
+  return preset
+    ? { openai: preset.openaiBase, anthropic: preset.anthropicBase }
+    : { openai: `${origin}/v1`, anthropic: origin };
 }

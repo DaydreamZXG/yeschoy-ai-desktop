@@ -997,6 +997,8 @@ describe("接入：连的是云厂商", () => {
     onlyTools: [],
     keyPage: "https://example.com/keys",
     common: true,
+    openaiBase: "https://api.kimi.com/coding/v1",
+    anthropicBase: "https://api.kimi.com/coding",
     ...patch,
   });
 

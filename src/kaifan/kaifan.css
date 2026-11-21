@@ -2587,3 +2587,66 @@ h4 + .set,
     transform: none;
   }
 }
+
+/* 接入：不常用的应用收起、别的应用 */
+.pa.fold {
+  padding: 0 16px;
+  border-style: dashed;
+}
+.pa.fold[aria-pressed="true"] {
+  border-style: solid;
+}
+.oth {
+  display: grid;
+  gap: 12px;
+}
+.oth .hint {
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--dim);
+}
+.oth dl {
+  display: grid;
+  gap: 8px;
+}
+.oth dl > div {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  min-height: 46px;
+  padding: 6px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.oth dt {
+  font-size: 13px;
+  color: var(--faint);
+}
+.oth dd {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: 13.5px;
+  color: #fff;
+}
+.oth dd code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 13px;
+  user-select: all;
+}
+.oth dd small {
+  flex: none;
+  font-size: 12px;
+  color: var(--faint);
+}
+.oth dd .sm {
+  flex: none;
+}
