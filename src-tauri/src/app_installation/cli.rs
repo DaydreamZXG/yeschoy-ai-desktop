@@ -244,6 +244,30 @@ fn asset_name(source: Source, os: &str) -> String {
     format!("{}-{os}-{}.{extension}", source.tool, source.architecture)
 }
 
+/// 这台电脑的处理器有没有 AVX2。不是 x64 的不用问。
+fn has_avx2() -> bool {
+    #[cfg(target_arch = "x86_64")]
+    {
+        std::arch::is_x86_feature_detected!("avx2")
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    {
+        true
+    }
+}
+
+/// OpenCode 在 npm 上的平台包。x64 的标准版要用到 AVX2，老一些的处理器没有，
+/// 装上也一运行就退出；官方给这些电脑另发了一份 `-baseline`。
+pub(super) fn opencode_package(source: Source, os: &str, avx2: bool) -> String {
+    let name = asset_name(source, os);
+    let name = name.trim_end_matches(".tar.gz");
+    if source.architecture == "x64" && !avx2 {
+        format!("{name}-baseline")
+    } else {
+        name.to_owned()
+    }
+}
+
 /// `SHA256SUMS`：每行「校验值␠␠文件名」。
 pub(super) fn parse_sums(text: &str, name: &str) -> Result<String> {
     text.lines()
@@ -346,10 +370,9 @@ pub(super) async fn resolve(client: &Client, source: Source, os: &str) -> Result
             }))
         }
         "opencode" => {
-            let name = asset_name(source, os);
-            let name = name.trim_end_matches(".tar.gz");
+            let name = opencode_package(source, os, has_avx2());
             let package = origins::json(client, &format!("{NPM}/{name}/latest")).await?;
-            parse_npm_package(&package, name)
+            parse_npm_package(&package, &name)
         }
         _ => Err("unsupported_platform"),
     }

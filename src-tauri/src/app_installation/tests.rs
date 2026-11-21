@@ -1093,6 +1093,32 @@ mod cli_tools {
     }
 
     #[test]
+    fn opencode_picks_the_build_this_processor_can_run() {
+        // 标准版要 AVX2；没有的 x64 电脑装官方的 baseline 版，arm64 不受影响。
+        let x64 = source("opencode", "windows");
+        assert_eq!(
+            cli::opencode_package(x64, "windows", true),
+            "opencode-windows-x64"
+        );
+        assert_eq!(
+            cli::opencode_package(x64, "windows", false),
+            "opencode-windows-x64-baseline"
+        );
+        let arm = catalog::cli_source("opencode", "macos", "arm64").unwrap();
+        assert_eq!(
+            cli::opencode_package(arm, "macos", false),
+            "opencode-darwin-arm64"
+        );
+        assert!(cli::allowed_url(
+            x64,
+            &Url::parse(
+                "https://registry.npmjs.org/opencode-windows-x64-baseline/-/opencode-windows-x64-baseline-1.19.6.tgz"
+            )
+            .unwrap()
+        ));
+    }
+
+    #[test]
     fn files_already_in_the_tool_folder_survive_a_reinstall() {
         let root = temp("keep");
         let folder = root.join("claude_code");
