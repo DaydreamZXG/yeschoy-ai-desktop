@@ -165,6 +165,63 @@ impl LocalBridgeRuntime {
     }
 }
 
+/// 过桥时不能带给站点的头。其余的原样带过去。
+///
+/// 应用自己报的名字（`user-agent`）、会话标记这些，站点是当真的：有的厂商
+/// 明说不许改客户端标识，有的接口没有应用的会话标记就直接拒绝，中转站上也有
+/// 「只允许某个应用」的渠道。桥只是替应用换一把密钥，不该把它说成别人。
+/// 用白名单追不上各个应用每个版本新加的头，所以只列不能带的：
+///
+/// * `authorization` / `x-api-key`：那是本机桥的令牌，站点的密钥由桥另外放；
+/// * 逐跳头和 `content-length`：请求体在桥里可能被改写过；
+/// * `content-type` / `accept` / `accept-encoding`：桥按自己发出去的内容重新写，
+///   重复带一份会变成两个值；
+/// * `cookie`、各种 `proxy-`、`x-forwarded-`：不该越过本机。
+const DROPPED_APP_HEADERS: [&str; 17] = [
+    "authorization",
+    "x-api-key",
+    "host",
+    "content-length",
+    "content-type",
+    "accept",
+    "accept-encoding",
+    "transfer-encoding",
+    "connection",
+    "keep-alive",
+    "te",
+    "trailer",
+    "upgrade",
+    "expect",
+    "cookie",
+    "forwarded",
+    "origin",
+];
+
+pub(crate) type AppHeaders = Vec<(header::HeaderName, header::HeaderValue)>;
+
+pub(crate) fn app_headers(headers: &axum::http::HeaderMap) -> AppHeaders {
+    headers
+        .iter()
+        .filter(|(name, _)| {
+            let name = name.as_str();
+            !DROPPED_APP_HEADERS.contains(&name)
+                && !name.starts_with("proxy-")
+                && !name.starts_with("x-forwarded-")
+        })
+        .map(|(name, value)| (name.clone(), value.clone()))
+        .collect()
+}
+
+pub(crate) fn with_app_headers(
+    mut request: reqwest::RequestBuilder,
+    headers: &AppHeaders,
+) -> reqwest::RequestBuilder {
+    for (name, value) in headers {
+        request = request.header(name, value);
+    }
+    request
+}
+
 /// 只认本地令牌，不认中转站的 key。
 ///
 /// 这道门是这座桥存在的前提：它监听在 `127.0.0.1` 上，本机任何进程都能连。
@@ -183,4 +240,46 @@ pub(crate) fn locally_authorized(headers: &axum::http::HeaderMap, local_token: &
             .into_iter()
             .flatten()
             .any(|value| secure_equal(value, local_token))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_app_keeps_its_own_name_and_session_but_not_the_local_token() {
+        let mut incoming = axum::http::HeaderMap::new();
+        for (name, value) in [
+            ("user-agent", "opencode/1.2.3"),
+            ("x-opencode-session", "ses_1"),
+            ("authorization", "Bearer local-token"),
+            ("x-api-key", "local-token"),
+            ("content-type", "application/json"),
+            ("content-length", "12"),
+            ("accept", "text/event-stream"),
+            ("accept-encoding", "gzip"),
+            ("host", "127.0.0.1:15732"),
+            ("cookie", "a=b"),
+            ("proxy-authorization", "Basic x"),
+            ("x-forwarded-for", "10.0.0.1"),
+        ] {
+            incoming.insert(name, value.parse().unwrap());
+        }
+        let kept = app_headers(&incoming);
+        let mut names: Vec<&str> = kept.iter().map(|(name, _)| name.as_str()).collect();
+        names.sort_unstable();
+        assert_eq!(names, ["user-agent", "x-opencode-session"]);
+
+        let request = with_app_headers(
+            reqwest::Client::new().post("https://relay.example.com/v1/chat/completions"),
+            &kept,
+        )
+        .bearer_auth("upstream-key")
+        .build()
+        .unwrap();
+        assert_eq!(request.headers()["user-agent"], "opencode/1.2.3");
+        assert_eq!(request.headers()["x-opencode-session"], "ses_1");
+        assert_eq!(request.headers().get_all("authorization").iter().count(), 1);
+        assert_eq!(request.headers()["authorization"], "Bearer upstream-key");
+    }
 }

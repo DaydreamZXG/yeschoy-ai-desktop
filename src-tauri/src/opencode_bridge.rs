@@ -96,6 +96,7 @@ fn models(state: &BridgeState) -> Response {
 }
 
 async fn chat(state: &BridgeState, request: Request<Body>) -> Response {
+    let app_headers = crate::local_bridge::app_headers(request.headers());
     let Ok(bytes) = to_bytes(request.into_body(), MAX_REQUEST_BODY_BYTES).await else {
         return error(StatusCode::PAYLOAD_TOO_LARGE, "request too large");
     };
@@ -126,9 +127,7 @@ async fn chat(state: &BridgeState, request: Request<Body>) -> Response {
         "{}/chat/completions",
         crate::provider_presets::openai_base(&credential.origin)
     );
-    let upstream = state
-        .client
-        .post(url)
+    let upstream = crate::local_bridge::with_app_headers(state.client.post(url), &app_headers)
         .bearer_auth(credential.upstream_key())
         .header(header::CONTENT_TYPE, "application/json")
         .body(bytes)
