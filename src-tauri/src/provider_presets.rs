@@ -48,6 +48,8 @@ pub(crate) struct Preset {
     /// 只有这些应用能接；空表示都能接。
     pub(crate) only_tools: &'static [&'static str],
     pub(crate) key_page: &'static str,
+    /// 连接屏默认就露出来；不常用的收在「还有几家」里。
+    pub(crate) common: bool,
 }
 
 const fn preset(
@@ -74,6 +76,7 @@ const fn preset(
         responses: false,
         only_tools: &[],
         key_page,
+        common: true,
     }
 }
 
@@ -140,6 +143,7 @@ pub(crate) const PRESETS: &[Preset] = &[
     },
     Preset {
         key_check: KeyCheck::Unverifiable,
+        common: false,
         ..preset(
             "ollama_cloud",
             "ollama_cloud",
@@ -155,6 +159,7 @@ pub(crate) const PRESETS: &[Preset] = &[
     Preset {
         // 它的对话接口要求带 OpenCode 自己的会话标记，别的应用发过去会被拒。
         only_tools: &["opencode"],
+        common: false,
         ..preset(
             "opencode_go",
             "opencode_go",
@@ -193,30 +198,37 @@ pub(crate) const PRESETS: &[Preset] = &[
         Billing::PayAsYouGo,
         "https://platform.deepseek.com/api_keys",
     ),
-    preset(
-        "moonshot_cn",
-        "moonshot",
-        Some("cn"),
-        "Kimi 开放平台",
-        "https://api.moonshot.cn",
-        "/v1",
-        Some("/anthropic"),
-        Billing::PayAsYouGo,
-        "https://platform.moonshot.cn/console/api-keys",
-    ),
-    preset(
-        "moonshot_global",
-        "moonshot",
-        Some("global"),
-        "Kimi 开放平台",
-        "https://api.moonshot.ai",
-        "/v1",
-        Some("/anthropic"),
-        Billing::PayAsYouGo,
-        "https://platform.moonshot.ai/console/api-keys",
-    ),
+    Preset {
+        common: false,
+        ..preset(
+            "moonshot_cn",
+            "moonshot",
+            Some("cn"),
+            "Kimi 开放平台",
+            "https://api.moonshot.cn",
+            "/v1",
+            Some("/anthropic"),
+            Billing::PayAsYouGo,
+            "https://platform.moonshot.cn/console/api-keys",
+        )
+    },
+    Preset {
+        common: false,
+        ..preset(
+            "moonshot_global",
+            "moonshot",
+            Some("global"),
+            "Kimi 开放平台",
+            "https://api.moonshot.ai",
+            "/v1",
+            Some("/anthropic"),
+            Billing::PayAsYouGo,
+            "https://platform.moonshot.ai/console/api-keys",
+        )
+    },
     Preset {
         responses: true,
+        common: false,
         ..preset(
             "openai",
             "openai",
@@ -265,6 +277,18 @@ pub(crate) fn allows_tool(origin: &str, tool_id: &str) -> bool {
 #[tauri::command]
 pub fn provider_presets_v1() -> &'static [Preset] {
     PRESETS
+}
+
+/// 在浏览器里打开这一家拿密钥的网页。界面只能说「哪一家」，网址只从表里取：
+/// 界面不能让客户端打开任意网址。
+#[tauri::command]
+pub fn provider_open_key_page_v1(id: String) -> Result<(), String> {
+    let preset = PRESETS
+        .iter()
+        .find(|preset| preset.id == id)
+        .ok_or("unknown_provider")?;
+    crate::account_v2::open_system_browser(preset.key_page)
+        .map_err(|()| "browser_unavailable".into())
 }
 
 #[cfg(test)]

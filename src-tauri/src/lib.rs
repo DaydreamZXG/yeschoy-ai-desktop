@@ -207,6 +207,7 @@ pub fn run() {
             account_v2::account_inspect_v2,
             account_v2::key_session::account_connect_with_key_v1,
             provider_presets::provider_presets_v1,
+            provider_presets::provider_open_key_page_v1,
             account_v2::account_begin_authorization_v2,
             account_v2::account_open_authorization_v2,
             account_v2::account_poll_authorization_v2,
