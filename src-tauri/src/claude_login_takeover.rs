@@ -33,9 +33,9 @@ use keyring::v1::{Entry, Error as KeyringError};
 /// Claude Code 自己的钥匙串条目。
 const CLAUDE_SERVICE: &str = "Claude Code-credentials";
 /// 挪走之后暂存在这里，`restore` 从这里搬回去。
-const BACKUP_SERVICE: &str = "com.kaifan.desktop.displaced-login.v1";
-/// 改名前的备份位。只在还回去的时候看一眼，新的备份不再往这里放。
-const OLD_BACKUP_SERVICE: &str = "com.yeschoy.desktop.displaced-login.v1";
+const BACKUP_SERVICE: &str = "com.yeschoy.desktop.displaced-login.v1";
+/// “开饭”测试版的备份位。只在还回去的时候看一眼，新的备份不再往这里放。
+const OLD_BACKUP_SERVICE: &str = "com.kaifan.desktop.displaced-login.v1";
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum Failure {
@@ -210,8 +210,8 @@ mod tests {
         assert_eq!(CLAUDE_SERVICE, "Claude Code-credentials");
         assert_ne!(CLAUDE_SERVICE, BACKUP_SERVICE);
         // 备份位必须在野菜自己的命名空间下，不能污染别人的条目。
-        assert!(BACKUP_SERVICE.starts_with("com.kaifan.desktop."));
-        assert!(OLD_BACKUP_SERVICE.starts_with("com.yeschoy.desktop."));
+        assert!(BACKUP_SERVICE.starts_with("com.yeschoy.desktop."));
+        assert!(OLD_BACKUP_SERVICE.starts_with("com.kaifan.desktop."));
     }
 
     /// 「条目不存在」和「不让我读」必须分开。混在一起的话，用户点了拒绝会被

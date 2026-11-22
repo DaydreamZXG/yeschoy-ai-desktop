@@ -36,7 +36,7 @@ const TOKEN_PAGE_SIZE: usize = 100;
 /// 这个数，后面的就当没有 —— 宁可多铸一把，也不在接入路径上无限翻页。
 const TOKEN_PAGE_LIMIT: usize = 20;
 pub(crate) static ACTIVATION_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
-const ACTIVATION_PROGRESS_EVENT: &str = "kaifan://activation-progress";
+const ACTIVATION_PROGRESS_EVENT: &str = "yeschoy://activation-progress";
 const ACTIVATION_PROGRESS_TOTAL: u8 = 7;
 const CONNECTION_LOCK_WAIT_TIMEOUT: Duration = Duration::from_secs(8);
 // Match the renderer's existing inspection budget, including lock wait and I/O.

@@ -1,7 +1,7 @@
 {
-  "name": "kaifan-desktop",
+  "name": "yeschoy-desktop",
   "version": "0.5.1",
-  "description": "开饭 Kaifan: connect your AI apps to any relay station, no command line",
+  "description": "野菜 YesChoy: connect your AI apps to any relay station, no command line",
   "type": "module",
   "scripts": {
     "dev": "pnpm tauri dev",
@@ -20,7 +20,7 @@
     "verify:catalog": "node scripts/qa/verify-model-catalog.mjs"
   },
   "keywords": [],
-  "author": "Kaifan contributors",
+  "author": "YesChoy contributors",
   "license": "MIT",
   "packageManager": "pnpm@10.12.3",
   "devDependencies": {

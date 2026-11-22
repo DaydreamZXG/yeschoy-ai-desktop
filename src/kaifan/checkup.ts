@@ -191,7 +191,7 @@ export function reportText(
   version: string | null,
 ): string {
   return [
-    "Kaifan checkup",
+    "YesChoy checkup",
     `version: ${version || "unknown"}`,
     `station: ${report.station}`,
     `login: ${report.login}`,

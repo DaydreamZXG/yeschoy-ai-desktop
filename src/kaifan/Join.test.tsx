@@ -1661,7 +1661,7 @@ describe("角色登场", () => {
   it("WorkBuddy：我们只把型号放进它的列表，要在它那边选一下，照实说", () => {
     show({ joined: { ...joined, toolId: "workbuddy", modelId: "gpt-5" } });
     expect(screen.getByTestId("kaifan-reveal-pick")).toHaveTextContent(
-      /型号列表里选 gpt-5（开饭加进去的那一项）/,
+      /型号列表里选 gpt-5（野菜加进去的那一项）/,
     );
   });
 

@@ -23,7 +23,7 @@ use serde_json::{Map, Value};
 use crate::tool_adapters::common::{self, FileChange};
 use crate::tool_credentials::ToolCredential;
 
-const SERVICE: &str = "com.kaifan.desktop.connection-recovery.v1";
+const SERVICE: &str = "com.yeschoy.desktop.connection-recovery.v1";
 // Four config files, before/after and one in-flight predecessor, with JSON
 // encoding overhead. This is a bounded journal, not an unbounded history.
 const MAX_JOURNAL: u64 = 128 * 1024 * 1024;
@@ -32,7 +32,7 @@ const MAX_BREAK_GLASS_FILE: u64 = 2 * 1024 * 1024;
 // A UTF-8 BOM and CRLF line endings, because the person most likely to open
 // this file is on Windows, in Notepad, after something already went wrong.
 const BREAK_GLASS_README: &str =
-    "\u{feff}这个文件夹里是开饭改动你的配置之前，那些文件的原始内容。\r\n\
+    "\u{feff}这个文件夹里是野菜改动你的配置之前，那些文件的原始内容。\r\n\
 \r\n\
 正常情况下你用不到它：在助手里点「恢复原设置」就行。\r\n\
 只有当助手说恢复失败（通常是系统钥匙串里的密钥没了，比如重置过登录\r\n\
@@ -2292,7 +2292,7 @@ mod tests {
         value["channels"] = json!({"telegram": {"enabled": true}});
         assert!(matches(&file, &serde_json::to_vec(&value).unwrap()));
         let mut switched = value.clone();
-        switched["agents"]["defaults"]["model"] = json!({"primary": "kaifan/kimi-k3"});
+        switched["agents"]["defaults"]["model"] = json!({"primary": "yeschoy/kimi-k3"});
         assert!(!matches(&file, &serde_json::to_vec(&switched).unwrap()));
         let mut blocked = value.clone();
         blocked["agents"]["defaults"]["modelPolicy"] = json!({"allow": ["openai/*"]});
@@ -2346,12 +2346,12 @@ mod tests {
         // 后来在 OpenClaw 里挑了我们的另一个型号、又往白名单里加了一项：我们那
         // 一家拿走之后，主型号不能还指着它。
         let mut picked = document(&file.path, Some(&after)).unwrap();
-        picked["agents"]["defaults"]["model"]["primary"] = json!("kaifan/kimi-k3");
+        picked["agents"]["defaults"]["model"]["primary"] = json!("yeschoy/kimi-k3");
         picked["agents"]["defaults"]["modelPolicy"]["allow"] =
-            json!(["mine/*", "kaifan/*", "openai/*"]);
+            json!(["mine/*", "yeschoy/*", "openai/*"]);
         let (bytes, _) = restore_bytes(&file, Some(picked.to_string().as_bytes())).unwrap();
         let restored = document(&file.path, bytes.as_deref()).unwrap();
-        assert!(restored["models"]["providers"].get("kaifan").is_none());
+        assert!(restored["models"]["providers"].get("yeschoy").is_none());
         assert_eq!(
             restored["agents"]["defaults"]["model"],
             json!({ "primary": "mine/old", "fallbacks": ["mine/older"] })
@@ -2371,7 +2371,7 @@ mod tests {
             restored["agents"]["defaults"]["model"]["primary"],
             "openai/gpt-5.4"
         );
-        assert!(restored["models"]["providers"].get("kaifan").is_none());
+        assert!(restored["models"]["providers"].get("yeschoy").is_none());
     }
 
     /// 接入前没有这份文件：没动过就删掉；之后挑过我们别的型号的，不留下一个
@@ -2387,7 +2387,7 @@ mod tests {
         assert_eq!(restore_bytes(&file, Some(&after)).unwrap(), (None, false));
 
         let mut picked = document(&file.path, Some(&after)).unwrap();
-        picked["agents"]["defaults"]["model"] = json!("kaifan/kimi-k3");
+        picked["agents"]["defaults"]["model"] = json!("yeschoy/kimi-k3");
         picked["gateway"] = json!({ "port": 19000 });
         let (bytes, _) = restore_bytes(&file, Some(picked.to_string().as_bytes())).unwrap();
         assert_eq!(
@@ -2426,8 +2426,8 @@ mod tests {
             // 用 `openclaw models set` 挑了我们的另一个型号：它还会记一条别名、
             // 盖一个 `meta` 戳。别名跟着我们那一家走，`meta` 是它的，留着。
             let mut picked = later.clone();
-            picked["agents"]["defaults"]["model"] = json!("kaifan/kimi-k3");
-            picked["agents"]["defaults"]["models"] = json!({ "kaifan/kimi-k3": {} });
+            picked["agents"]["defaults"]["model"] = json!("yeschoy/kimi-k3");
+            picked["agents"]["defaults"]["models"] = json!({ "yeschoy/kimi-k3": {} });
             picked["meta"] = json!({ "lastTouchedVersion": "2026.11.6" });
             let (bytes, _) = restore_bytes(&file, Some(picked.to_string().as_bytes())).unwrap();
             expected["meta"] = json!({ "lastTouchedVersion": "2026.11.6" });
@@ -2437,9 +2437,9 @@ mod tests {
             // 一家整条拿走，不剩半条；主 agent 不留一个指着空厂商的型号。它别的
             // 设置、别的 agent 都留着。
             let mut pinned = later.clone();
-            pinned["models"]["providers"]["kaifan"]["headers"] = json!({ "x-mine": "1" });
+            pinned["models"]["providers"]["yeschoy"]["headers"] = json!({ "x-mine": "1" });
             pinned["agents"]["entries"] = json!({
-                "main": { "model": "kaifan/glm-5.3", "workspace": "~/main" },
+                "main": { "model": "yeschoy/glm-5.3", "workspace": "~/main" },
                 "helper": { "model": "openai/gpt-5.4" },
             });
             let (bytes, _) = restore_bytes(&file, Some(pinned.to_string().as_bytes())).unwrap();
@@ -2457,7 +2457,7 @@ mod tests {
             // 在我们那一家里删了一个型号：密钥收走之后它就是一家用不了的厂商，
             // 一样整条拿走。把它改去指别处的，已经是用户自己的，留着。
             let mut trimmed = later.clone();
-            trimmed["models"]["providers"]["kaifan"]["models"] =
+            trimmed["models"]["providers"]["yeschoy"]["models"] =
                 json!([{ "id": "glm-5.3", "name": "glm-5.3" }]);
             let (bytes, _) = restore_bytes(&file, Some(trimmed.to_string().as_bytes())).unwrap();
             let mut left = document(&file.path, original).unwrap();
@@ -2465,17 +2465,17 @@ mod tests {
             left["agents"] = json!({ "defaults": { "workspace": "~/work" } });
             assert_eq!(document(&file.path, bytes.as_deref()).unwrap(), left);
             let mut moved = trimmed.clone();
-            moved["models"]["providers"]["kaifan"]["baseUrl"] = json!("https://example.com/v1");
+            moved["models"]["providers"]["yeschoy"]["baseUrl"] = json!("https://example.com/v1");
             let (bytes, _) = restore_bytes(&file, Some(moved.to_string().as_bytes())).unwrap();
             assert_eq!(
-                document(&file.path, bytes.as_deref()).unwrap()["models"]["providers"]["kaifan"]
+                document(&file.path, bytes.as_deref()).unwrap()["models"]["providers"]["yeschoy"]
                     ["baseUrl"],
                 "https://example.com/v1"
             );
 
             // 只定了型号、别的什么都没加：不留空壳。
             let mut only = document(&file.path, Some(&after)).unwrap();
-            only["agents"]["entries"] = json!({ "main": { "model": "kaifan/glm-5.3" } });
+            only["agents"]["entries"] = json!({ "main": { "model": "yeschoy/glm-5.3" } });
             let (bytes, _) = restore_bytes(&file, Some(only.to_string().as_bytes())).unwrap();
             assert_eq!(bytes.is_some(), original.is_some());
             if let Some(bytes) = bytes {
@@ -2512,7 +2512,7 @@ mod tests {
             })
         );
 
-        let theirs = br#"{"models":{"providers":{"kaifan":{"baseUrl":"https://relay.example.com/v1"}}},"agents":{"defaults":{"model":"kaifan/x"}}}"#;
+        let theirs = br#"{"models":{"providers":{"yeschoy":{"baseUrl":"https://relay.example.com/v1"}}},"agents":{"defaults":{"model":"yeschoy/x"}}}"#;
         let cleaned = legacy_clean("openclaw", &path, Some(theirs), &credential(), false).unwrap();
         assert_eq!(
             document(&path, cleaned.as_deref()).unwrap(),
@@ -3096,8 +3096,8 @@ mod tests {
         format!("'{}'", value.replace('\'', "'\\''"))
     }
 
-    const OLD_CLIENT: &str = "/Applications/野菜API.app/Contents/MacOS/yeschoy-desktop";
-    const NEW_CLIENT: &str = "/Applications/开饭.app/Contents/MacOS/kaifan-desktop";
+    const OLD_CLIENT: &str = "/Applications/开饭.app/Contents/MacOS/kaifan-desktop";
+    const NEW_CLIENT: &str = "/Applications/野菜.app/Contents/MacOS/yeschoy-desktop";
 
     fn connected(f: &Fixture, tool: &str, name: &str, after: &[u8]) -> FileChange {
         let file = f.change(name, None, after);

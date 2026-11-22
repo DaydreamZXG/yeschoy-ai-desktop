@@ -494,12 +494,12 @@ impl CallbackResponse {
     fn message_in(self, language: crate::ui_language::Language) -> &'static str {
         match self {
             Self::Accepted => language.pick(
-                "授权回调已接收，请返回开饭查看登录结果。",
-                "Sign-in received. Return to Kaifan to see the result.",
+                "授权回调已接收，请返回野菜查看登录结果。",
+                "Sign-in received. Return to YesChoy to see the result.",
             ),
             Self::Denied => language.pick(
-                "授权已取消，请返回开饭。",
-                "Sign-in cancelled. Return to Kaifan.",
+                "授权已取消，请返回野菜。",
+                "Sign-in cancelled. Return to YesChoy.",
             ),
             Self::BadRequest => language.pick(
                 "请求无效，请返回客户端重试。",
@@ -520,7 +520,7 @@ impl CallbackResponse {
         format!(
             "<!doctype html><html lang=\"{}\"><meta charset=\"utf-8\"><title>{}</title><body><p>{}</p></body></html>",
             language.pick("zh-CN", "en"),
-            language.pick("开饭 授权", "Kaifan sign-in"),
+            language.pick("野菜 授权", "YesChoy sign-in"),
             self.message_in(language)
         )
     }
@@ -1182,8 +1182,8 @@ mod tests {
         use crate::ui_language::Language;
         let english = CallbackResponse::Accepted.page_in(Language::En);
         assert!(english.starts_with("<!doctype html><html lang=\"en\">"));
-        assert!(english.contains("<title>Kaifan sign-in</title>"));
-        assert!(english.contains("Sign-in received. Return to Kaifan to see the result."));
+        assert!(english.contains("<title>YesChoy sign-in</title>"));
+        assert!(english.contains("Sign-in received. Return to YesChoy to see the result."));
         // Not one Han character may leak onto an English user's screen.
         assert!(english.is_ascii(), "{english}");
         for response in [
@@ -1198,8 +1198,8 @@ mod tests {
 
         let chinese = CallbackResponse::Accepted.page_in(Language::Zh);
         assert!(chinese.starts_with("<!doctype html><html lang=\"zh-CN\">"));
-        assert!(chinese.contains("<title>开饭 授权</title>"));
-        assert!(chinese.contains("授权回调已接收，请返回开饭查看登录结果。"));
+        assert!(chinese.contains("<title>野菜 授权</title>"));
+        assert!(chinese.contains("授权回调已接收，请返回野菜查看登录结果。"));
     }
 
     #[tokio::test]

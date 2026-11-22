@@ -59,8 +59,8 @@ fn log_path() -> Option<PathBuf> {
             PathBuf::from(home)
                 .join("Library")
                 .join("Logs")
-                .join("Kaifan")
-                .join("kaifan.log"),
+                .join("野菜")
+                .join("yeschoy.log"),
         )
     }
     #[cfg(target_os = "windows")]
@@ -68,9 +68,9 @@ fn log_path() -> Option<PathBuf> {
         let local = std::env::var_os("LOCALAPPDATA")?;
         Some(
             PathBuf::from(local)
-                .join("Kaifan")
+                .join("野菜")
                 .join("logs")
-                .join("kaifan.log"),
+                .join("yeschoy.log"),
         )
     }
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
@@ -80,8 +80,8 @@ fn log_path() -> Option<PathBuf> {
             PathBuf::from(home)
                 .join(".local")
                 .join("state")
-                .join("Kaifan")
-                .join("kaifan.log"),
+                .join("野菜")
+                .join("yeschoy.log"),
         )
     }
 }
@@ -110,7 +110,7 @@ pub(crate) fn init() {
     if log::set_logger(logger).is_ok() {
         log::set_max_level(log::LevelFilter::Info);
         log::info!(
-            "kaifan_desktop stage=start version={} log={}",
+            "yeschoy_desktop stage=start version={} log={}",
             env!("CARGO_PKG_VERSION"),
             path.display()
         );

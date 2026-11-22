@@ -108,7 +108,7 @@ describe("global desktop close choice and cooperative exit", () => {
     await openSettingsChoice();
     fireEvent.click(screen.getByRole("button", { name: "恢复原设置并退出" }));
     await flush();
-    emit("kaifan://exit-progress", {
+    emit("yeschoy://exit-progress", {
       status: "restore_failed",
       failedTools: ["codex_desktop"],
     });
@@ -121,7 +121,7 @@ describe("global desktop close choice and cooperative exit", () => {
     fireEvent.click(screen.getByRole("button", { name: "重试恢复并退出" }));
     await flush();
     expect(quitCalls().at(-1)?.[1]).toEqual({ restoreSettings: true });
-    emit("kaifan://exit-progress", {
+    emit("yeschoy://exit-progress", {
       status: "restore_failed",
       failedTools: ["codex_desktop"],
     });
@@ -131,7 +131,7 @@ describe("global desktop close choice and cooperative exit", () => {
   });
   it("accepts and names WorkBuddy restoration failures", async () => {
     await openSettingsChoice();
-    emit("kaifan://exit-progress", {
+    emit("yeschoy://exit-progress", {
       status: "restore_failed",
       failedTools: ["workbuddy"],
     });
@@ -141,8 +141,8 @@ describe("global desktop close choice and cooperative exit", () => {
     await openSettingsChoice();
     fireEvent.click(screen.getByRole("button", { name: "恢复原设置并退出" }));
     await flush();
-    emit("kaifan://exit-progress", { status: "restoring_settings" });
-    emit("kaifan://exit-progress", {
+    emit("yeschoy://exit-progress", { status: "restoring_settings" });
+    emit("yeschoy://exit-progress", {
       status: "restore_failed",
       failedTools: ["private/path"],
     });
@@ -163,7 +163,7 @@ describe("global desktop close choice and cooperative exit", () => {
     render(<ShutdownHost />);
     await flush();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    emit("kaifan://close-choice");
+    emit("yeschoy://close-choice");
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "后台运行" })).toBeEnabled();
     expect(
@@ -182,8 +182,8 @@ describe("global desktop close choice and cooperative exit", () => {
 
   it("settings and repeated X share one dialog", async () => {
     await openSettingsChoice();
-    emit("kaifan://close-choice");
-    emit("kaifan://close-choice");
+    emit("yeschoy://close-choice");
+    emit("yeschoy://close-choice");
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
     expect(quitCalls()).toHaveLength(0);
   });
@@ -267,7 +267,7 @@ describe("global desktop close choice and cooperative exit", () => {
     await openSettingsChoice();
     fireEvent.click(screen.getByRole("button", { name: "恢复原设置并退出" }));
     await flush();
-    emit("kaifan://exit-progress", { status: "finishing_operation" });
+    emit("yeschoy://exit-progress", { status: "finishing_operation" });
     fireEvent.click(screen.getByRole("button", { name: "重试退出" }));
     await flush();
     expect(quitCalls()).toHaveLength(2);
@@ -283,10 +283,10 @@ describe("global desktop close choice and cooperative exit", () => {
       new Event("cancel", { cancelable: true }),
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    emit("kaifan://exit-progress", { status: "finishing_operation" });
+    emit("yeschoy://exit-progress", { status: "finishing_operation" });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(quitCalls()).toHaveLength(1);
-    emit("kaifan://close-choice");
+    emit("yeschoy://close-choice");
     await flush();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
@@ -329,10 +329,10 @@ describe("global desktop close choice and cooperative exit", () => {
       </StrictMode>,
     );
     await flush();
-    expect(listeners.get("kaifan://close-choice")?.size).toBe(1);
-    expect(listeners.get("kaifan://exit-progress")?.size).toBe(1);
+    expect(listeners.get("yeschoy://close-choice")?.size).toBe(1);
+    expect(listeners.get("yeschoy://exit-progress")?.size).toBe(1);
     view.unmount();
-    expect(listeners.get("kaifan://close-choice")?.size).toBe(0);
-    expect(listeners.get("kaifan://exit-progress")?.size).toBe(0);
+    expect(listeners.get("yeschoy://close-choice")?.size).toBe(0);
+    expect(listeners.get("yeschoy://exit-progress")?.size).toBe(0);
   });
 });
