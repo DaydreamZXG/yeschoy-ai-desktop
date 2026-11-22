@@ -12,7 +12,7 @@ const version = JSON.parse(readFileSync(`${root}/evidence/${flavor}-build-inspec
 assert(['official', 'partner'].includes(flavor));
 assert(['submit-app', 'status-app', 'app-to-dmg', 'status-dmg', 'verify-dmg'].includes(phase));
 const label = flavor === 'official' ? '主版本' : '朋友版';
-const app = `${root}/${flavor}-stage/开饭.app`;
+const app = `${root}/${flavor}-stage/野菜.app`;
 const dmgName = `yeschoy-${version}-${flavor}-macos-universal-installer.dmg`;
 const dmg = `${root}/public/${dmgName}`;
 const profile = 'yeschoy-notary';
@@ -58,7 +58,7 @@ function signatureMetadata(path, universal) {
 
 if (phase === 'submit-app') {
   const inspection = load('build-inspection');
-  assert.equal(sha256(`${app}/Contents/MacOS/kaifan-desktop`), inspection.binarySha256);
+  assert.equal(sha256(`${app}/Contents/MacOS/yeschoy-desktop`), inspection.binarySha256);
   run('codesign', ['--verify', '--deep', '--strict', '--all-architectures', app]);
   save('signature-metadata', signatureMetadata(app, true));
   const zip = `${root}/evidence/${flavor}-notary.zip`;
@@ -75,7 +75,7 @@ if (phase === 'submit-app') {
   const gatekeeper = run('spctl', ['--assess', '--type', 'execute', '--verbose=2', app]);
   assert((gatekeeper.stdout + gatekeeper.stderr).includes('source=Notarized Developer ID'));
   assert(!existsSync(dmg));
-  run('hdiutil', ['create', '-volname', `开饭 ${version} ${label}`, '-srcfolder', `${root}/${flavor}-stage`, '-format', 'UDZO', '-fs', 'HFS+', '-nospotlight', dmg]);
+  run('hdiutil', ['create', '-volname', `野菜 ${version} ${label}`, '-srcfolder', `${root}/${flavor}-stage`, '-format', 'UDZO', '-fs', 'HFS+', '-nospotlight', dmg]);
   run('codesign', ['--force', '--sign', identity, '--timestamp', dmg]);
   run('codesign', ['--verify', '--strict', dmg]);
   submit('dmg', dmg);
@@ -97,12 +97,12 @@ if (phase === 'submit-app') {
   try {
     run('hdiutil', ['attach', '-readonly', '-nobrowse', '-mountpoint', mount, dmg]);
     mounted = true;
-    const mountedApp = `${mount}/开饭.app`;
+    const mountedApp = `${mount}/野菜.app`;
     run('codesign', ['--verify', '--deep', '--strict', '--all-architectures', mountedApp]);
     run('xcrun', ['stapler', 'validate', mountedApp]);
-    mountedArchitecture = run('lipo', ['-archs', `${mountedApp}/Contents/MacOS/kaifan-desktop`]).stdout.trim().split(/\s+/).sort();
+    mountedArchitecture = run('lipo', ['-archs', `${mountedApp}/Contents/MacOS/yeschoy-desktop`]).stdout.trim().split(/\s+/).sort();
     assert.deepEqual(mountedArchitecture, ['arm64', 'x86_64']);
-    for (const file of ['Contents/MacOS/kaifan-desktop', 'Contents/Info.plist', 'Contents/_CodeSignature/CodeResources']) {
+    for (const file of ['Contents/MacOS/yeschoy-desktop', 'Contents/Info.plist', 'Contents/_CodeSignature/CodeResources']) {
       assert.equal(sha256(`${mountedApp}/${file}`), sha256(`${app}/${file}`));
     }
     assert.equal(readlinkSync(`${mount}/Applications`), '/Applications');
@@ -110,7 +110,7 @@ if (phase === 'submit-app') {
     if (mounted) run('hdiutil', ['detach', mount]);
   }
   const inspection = load('build-inspection');
-  assert.equal(sha256(`${app}/Contents/MacOS/kaifan-desktop`), inspection.binarySha256);
+  assert.equal(sha256(`${app}/Contents/MacOS/yeschoy-desktop`), inspection.binarySha256);
   const result = { flavor, ...inspection, appNotarySubmissionId: load('app-notarization').id, appNotaryStatus: 'Accepted', appCodeSignature: 'passed all architectures', appStaple: 'validated', appGatekeeper: 'accepted: Notarized Developer ID', appSignature: load('signature-metadata'), dmgNotarySubmissionId: load('dmg-notarization').id, dmgNotaryStatus: 'Accepted', dmgCodeSignature: 'passed', dmgStaple: 'validated', dmgGatekeeper: 'accepted: Notarized Developer ID', dmgSignature, dmgChecksum: 'verified', mountedPayloadSignature: 'passed all architectures', mountedPayloadStaple: 'validated', mountedPayloadArchitecture: mountedArchitecture, mountedPayloadMatchesStaging: true, mountedImageDetached: true, dmg: { file: dmgName, bytes: statSync(dmg).size, sha256: sha256(dmg) }, installedApplicationsLaunchedOrConfigured: false, finalRuntimeSmokeTestPerformed: false, verifiedAt: new Date().toISOString() };
   save('verification', result);
   console.log(JSON.stringify(result, null, 2));

@@ -6,8 +6,8 @@
     "defaultGroupLabel": "Standard group"
   },
   "quit": {
-    "titleChoice": "Close Kaifan?",
-    "titleExiting": "Quitting Kaifan",
+    "titleChoice": "Close YesChoy?",
+    "titleExiting": "Quitting YesChoy",
     "unknownAffected": "Can't confirm which apps need the assistant running. Quitting may interrupt a connection in use. No settings are deleted.",
     "affectedIntro": "These apps' connections need the assistant running, and will be interrupted when you quit:",
     "affectedHint": "Choose “Keep running” if you want to carry on. Once you quit, reopen the assistant and continue from the app card — there is nothing to reconnect.",
@@ -203,8 +203,8 @@
     }
   },
   "kaifan": {
-    "appName": "Kaifan",
-    "mark": "K",
+    "appName": "YesChoy",
+    "mark": "Y",
     "backHome": "Back to home",
     "close": "Close",
     "listSeparator": ", ",
@@ -309,7 +309,7 @@
       "fixSaysUnfinished": "{{app}} was left half set up last time. Press “Fix it” and I'll finish the job, no need to start over.",
       "fixGo": "Fix it",
       "connectedNoHost": "Connected. ",
-      "updateReady": "Kaifan {{version}} is out. Update from Settings whenever you like, no rush."
+      "updateReady": "YesChoy {{version}} is out. Update from Settings whenever you like, no rush."
     },
     "vendor": {
       "zhipu_coding": "Zhipu GLM Coding Plan",
@@ -343,7 +343,7 @@
       "getKey": "Get a key ↗",
       "keyPageFailed": "The browser didn't open. Sign in on this provider's website yourself and look for “API Key” in its console.",
       "planRiskTitle": "To be clear: a plan can be suspended",
-      "planRisk": "{{name}} is a monthly plan, and the provider says it may only be used in the coding tools it approves. Kaifan passes each request along on the app's behalf, so the provider may treat this as a violation and limit or cancel your plan without a refund. If that worries you, use a pay-as-you-go key instead.",
+      "planRisk": "{{name}} is a monthly plan, and the provider says it may only be used in the coding tools it approves. YesChoy passes each request along on the app's behalf, so the provider may treat this as a violation and limit or cancel your plan without a refund. If that worries you, use a pay-as-you-go key instead.",
       "paygNote": "The key is stored only in this computer's system keychain. Connected straight to a provider, balance and news aren't visible, and I'll say so plainly where they aren't.",
       "onlyTools": "This provider works with {{apps}}; other apps can't be connected for now.",
       "listJoin": ", ",
@@ -428,8 +428,8 @@
         "anthropicBearer": "{{vendor}}'s Claude-format address only accepts the key as Authorization: Bearer. If that app sends the key as x-api-key (the default in most Claude-format apps), it will report a key error; if its settings have no \"Bearer\" or \"Auth Token\" option, use the OpenAI-format address above instead.",
         "planRisk": "{{vendor}} is a monthly plan, and the provider only allows it in coding tools it approves. If you put the key into another app, the provider may limit or cancel the plan."
       },
-      "planRisk": "You're connected to {{vendor}}, a monthly plan. The provider only allows it in coding tools it approves, and Kaifan passes requests along on {{app}}'s behalf, so the provider may limit or cancel the plan.",
-      "onlyTools": "{{app}} can't be connected to {{vendor}} for now: {{vendor}} requires a marker on every request, {{app}} doesn't send one, and because it talks to the provider directly Kaifan can't add it. Pick {{apps}} above, or connect a different station.",
+      "planRisk": "You're connected to {{vendor}}, a monthly plan. The provider only allows it in coding tools it approves, and YesChoy passes requests along on {{app}}'s behalf, so the provider may limit or cancel the plan.",
+      "onlyTools": "{{app}} can't be connected to {{vendor}} for now: {{vendor}} requires a marker on every request, {{app}} doesn't send one, and because it talks to the provider directly YesChoy can't add it. Pick {{apps}} above, or connect a different station.",
       "appOnlyNone": "{{app}} can't use {{model}} here: every plan this station offers for {{model}} is an app-only price, which only applies to requests sent through this app, and {{app}} connects to the station on its own. Pick another model, or choose a different app above.",
       "appOnlySwap": "\"{{from}}\" is an app-only price. {{app}} connects to the station on its own, so it can't use it. This time it is billed on \"{{to}}\".",
       "title": "Who goes where?",
@@ -567,7 +567,7 @@
       "written": "{{app}} is set up — open it and go",
       "writtenTerminal": "{{app}} is set up — open a new terminal window and go",
       "via": "Running on {{name}} · {{model}}",
-      "pickWorkbuddy": "In WorkBuddy you choose the model yourself: pick {{model}} (the entry Kaifan added) in its model list to get {{name}}.",
+      "pickWorkbuddy": "In WorkBuddy you choose the model yourself: pick {{model}} (the entry YesChoy added) in its model list to get {{name}}.",
       "open": "Open {{app}} ➜",
       "opening": "Opening {{app}}…",
       "openedTerminal": "A terminal window is open with {{app}} in it — just start using it",

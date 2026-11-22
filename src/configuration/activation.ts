@@ -165,7 +165,7 @@ export interface ToolActivationProjection {
   skipped?: SkippedBinding[];
 }
 
-export const ACTIVATION_PROGRESS_EVENT = "kaifan://activation-progress";
+export const ACTIVATION_PROGRESS_EVENT = "yeschoy://activation-progress";
 // Discovery is read-only, but Windows package metadata and trust checks can be
 // delayed by a damaged install or security software. Never leave the setup
 // action in a permanent "checking" state when the native reply is lost.

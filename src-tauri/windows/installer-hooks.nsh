@@ -1,8 +1,8 @@
 !include "Win\RestartManager.nsh"
 
-!define KAIFAN_INSTALLER_SHUTDOWN_EVENT "Local\KaifanDesktopInstallerShutdown_v1"
-; 改名前的客户端等的是这个名字；两个都发，新旧客户端都能自己安全退出。
-!define KAIFAN_OLD_INSTALLER_SHUTDOWN_EVENT "Local\YesChoyDesktopInstallerShutdown_v1"
+!define KAIFAN_INSTALLER_SHUTDOWN_EVENT "Local\YesChoyDesktopInstallerShutdown_v1"
+; 只出过测试版的“开饭”等的是这个名字；两个都发，哪一个开着都能自己安全退出。
+!define KAIFAN_OLD_INSTALLER_SHUTDOWN_EVENT "Local\KaifanDesktopInstallerShutdown_v1"
 
 ; Current standalone packages and the earlier Tauri packages used different
 ; install directories and executable names. Treat every known combination as
@@ -13,6 +13,8 @@ Var KaifanShutdownPath
 Var KaifanShutdownError
 Var KaifanRegisteredRoot
 Var KaifanOldRegisteredRoot
+Var KaifanTestRegisteredRoot
+Var KaifanTestTauriRegisteredRoot
 Var KaifanTauriRegisteredRoot
 Var KaifanWaitTicks
 Var KaifanSafeExitRequested
@@ -49,6 +51,11 @@ FunctionEnd
 Function KaifanProbeRootForLocks
   Push $0
   StrCmp $KaifanProbeRoot "" kaifan_probe_root_done
+
+  Push "$KaifanProbeRoot\野菜.exe"
+  Call KaifanCanReplaceFile
+  Pop $0
+  StrCmp $0 1 kaifan_probe_root_locked
 
   Push "$KaifanProbeRoot\开饭.exe"
   Call KaifanCanReplaceFile
@@ -90,15 +97,25 @@ FunctionEnd
 Function KaifanRefreshLockState
   StrCpy $KaifanLockState 0
 
-  ; 改名后的安装位置（独立安装包 / Tauri 生成的安装包）。
-  StrCpy $KaifanProbeRoot "$LOCALAPPDATA\Programs\开饭"
+  ; 现在的安装位置（独立安装包 / Tauri 生成的安装包）。
+  StrCpy $KaifanProbeRoot "$LOCALAPPDATA\Programs\野菜"
   Call KaifanProbeRootForLocks
-  StrCpy $KaifanProbeRoot "$LOCALAPPDATA\开饭"
+  StrCpy $KaifanProbeRoot "$LOCALAPPDATA\野菜"
   Call KaifanProbeRootForLocks
   StrCpy $KaifanProbeRoot "$KaifanOldRegisteredRoot"
   Call KaifanProbeRootForLocks
 
-  ; 改名前：0.4.10+ standalone packages.
+  ; 只出过测试版的“开饭”。
+  StrCpy $KaifanProbeRoot "$LOCALAPPDATA\Programs\开饭"
+  Call KaifanProbeRootForLocks
+  StrCpy $KaifanProbeRoot "$LOCALAPPDATA\开饭"
+  Call KaifanProbeRootForLocks
+  StrCpy $KaifanProbeRoot "$KaifanTestRegisteredRoot"
+  Call KaifanProbeRootForLocks
+  StrCpy $KaifanProbeRoot "$KaifanTestTauriRegisteredRoot"
+  Call KaifanProbeRootForLocks
+
+  ; “野菜API”：0.4.10+ standalone packages.
   StrCpy $KaifanProbeRoot "$LOCALAPPDATA\Programs\野菜API"
   Call KaifanProbeRootForLocks
 
@@ -131,6 +148,8 @@ FunctionEnd
 Function KaifanShutdownRoot
   StrCmp $KaifanProbeRoot "" kaifan_shutdown_root_done
 
+  StrCpy $KaifanShutdownPath "$KaifanProbeRoot\野菜.exe"
+  Call KaifanShutdownOneFile
   StrCpy $KaifanShutdownPath "$KaifanProbeRoot\开饭.exe"
   Call KaifanShutdownOneFile
   StrCpy $KaifanShutdownPath "$KaifanProbeRoot\kaifan-desktop.exe"
@@ -150,11 +169,19 @@ FunctionEnd
 Function KaifanShutdownKnownInstallations
   StrCpy $KaifanShutdownError 0
 
+  StrCpy $KaifanProbeRoot "$LOCALAPPDATA\Programs\野菜"
+  Call KaifanShutdownRoot
+  StrCpy $KaifanProbeRoot "$LOCALAPPDATA\野菜"
+  Call KaifanShutdownRoot
+  StrCpy $KaifanProbeRoot "$KaifanOldRegisteredRoot"
+  Call KaifanShutdownRoot
   StrCpy $KaifanProbeRoot "$LOCALAPPDATA\Programs\开饭"
   Call KaifanShutdownRoot
   StrCpy $KaifanProbeRoot "$LOCALAPPDATA\开饭"
   Call KaifanShutdownRoot
-  StrCpy $KaifanProbeRoot "$KaifanOldRegisteredRoot"
+  StrCpy $KaifanProbeRoot "$KaifanTestRegisteredRoot"
+  Call KaifanShutdownRoot
+  StrCpy $KaifanProbeRoot "$KaifanTestTauriRegisteredRoot"
   Call KaifanShutdownRoot
   StrCpy $KaifanProbeRoot "$LOCALAPPDATA\Programs\野菜API"
   Call KaifanShutdownRoot
@@ -196,8 +223,10 @@ Function KaifanEnsureStopped
   Push $1
 
   SetRegView 64
-  ReadRegStr $KaifanRegisteredRoot HKCU "Software\Kaifan" "InstallDir"
-  ; 改名前的两种登记方式；用户当时选了别的目录也能找到。
+  ReadRegStr $KaifanRegisteredRoot HKCU "Software\野菜" "InstallDir"
+  ; 以前的名字登记过的位置；用户当时选了别的目录也能找到。
+  ReadRegStr $KaifanTestRegisteredRoot HKCU "Software\Kaifan" "InstallDir"
+  ReadRegStr $KaifanTestTauriRegisteredRoot HKCU "Software\kaifan\开饭" ""
   ReadRegStr $KaifanOldRegisteredRoot HKCU "Software\野菜API" "InstallDir"
   ReadRegStr $KaifanTauriRegisteredRoot HKCU "Software\yeschoy\野菜API" ""
 
@@ -206,10 +235,10 @@ kaifan_check_running:
   StrCmp $KaifanLockState 0 kaifan_stopped
 
   IfSilent kaifan_request_safe_exit
-  MessageBox MB_ICONEXCLAMATION|MB_OKCANCEL "检测到开饭（或它改名前的旧版“野菜API”）仍在运行。请先保存正在进行的操作。点击“确定”后，安装程序会先等待应用安全退出；如果旧版不支持安全退出，会自动结束对应的已安装程序，然后继续升级。" IDOK kaifan_request_safe_exit IDCANCEL kaifan_cancel
+  MessageBox MB_ICONEXCLAMATION|MB_OKCANCEL "检测到野菜（或旧版“野菜API”）仍在运行。请先保存正在进行的操作。点击“确定”后，安装程序会先等待应用安全退出；如果旧版不支持安全退出，会自动结束对应的已安装程序，然后继续升级。" IDOK kaifan_request_safe_exit IDCANCEL kaifan_cancel
 
 kaifan_request_safe_exit:
-  ; 开饭和改名前的旧版可能同时开着，各听各的事件：两个都要通知到。
+  ; 野菜和“开饭”测试版可能同时开着，各听各的事件：两个都要通知到。
   StrCpy $KaifanSafeExitRequested 0
   System::Call 'kernel32::OpenEventW(i 0x0002, i 0, w "${KAIFAN_INSTALLER_SHUTDOWN_EVENT}") p.r0'
   StrCmp $0 0 kaifan_request_old_safe_exit
@@ -242,7 +271,7 @@ kaifan_force_exit:
   StrCmp $KaifanLockState 0 kaifan_stopped
 
   IfSilent kaifan_abort
-  MessageBox MB_ICONSTOP|MB_RETRYCANCEL "安装程序无法结束正在运行的开饭，因此尚未修改任何程序文件。请在任务管理器的“详细信息”中结束“开饭.exe”“kaifan-desktop.exe”“野菜API.exe”或“yeschoy-desktop.exe”；若列表里仍是早期版本遗留的可执行名，一并结束后点击“重试”。错误代码：$KaifanShutdownError" IDRETRY kaifan_check_running IDCANCEL kaifan_abort
+  MessageBox MB_ICONSTOP|MB_RETRYCANCEL "安装程序无法结束正在运行的野菜，因此尚未修改任何程序文件。请在任务管理器的“详细信息”中结束“野菜.exe”“kaifan-desktop.exe”“野菜API.exe”或“yeschoy-desktop.exe”；若列表里仍是早期版本遗留的可执行名，一并结束后点击“重试”。错误代码：$KaifanShutdownError" IDRETRY kaifan_check_running IDCANCEL kaifan_abort
 
 kaifan_cancel:
   MessageBox MB_ICONINFORMATION|MB_OK "安装已取消，正在运行的应用和现有程序文件均未修改。"
@@ -270,4 +299,36 @@ FunctionEnd
 
 !macro NSIS_HOOK_PREINSTALL
   Call KaifanEnsureStopped
+!macroend
+
+; “开饭”内测版是 Tauri 生成的安装器装的：程序在 $LOCALAPPDATA\开饭（用户当时
+; 选了别的目录，就在登记的那个位置），快捷方式直接放在开始菜单和桌面上。新文件
+; 都写好之后把它清掉，免得电脑上留着两个客户端。只删它自己放的那两个文件；目录
+; 里还有别的东西就留着（RMDir 不带 /r）。登录、密钥和接入记录不在这里，由客户端
+; 第一次启动时搬。
+Function KaifanRetireTestBuild
+  Push $R0
+  ReadRegStr $R0 HKCU "Software\kaifan\开饭" ""
+  StrCmp $R0 "" 0 kaifan_retire_test_root_known
+  StrCpy $R0 "$LOCALAPPDATA\开饭"
+
+kaifan_retire_test_root_known:
+  Delete "$R0\kaifan-desktop.exe"
+  ; 装在同一个目录里时，uninstall.exe 是现在这个安装器刚写的，不能删。
+  StrCmp $R0 "$INSTDIR" kaifan_retire_test_files_done
+  Delete "$R0\uninstall.exe"
+  RMDir "$R0"
+
+kaifan_retire_test_files_done:
+  Delete "$DESKTOP\开饭.lnk"
+  Delete "$SMPROGRAMS\开饭.lnk"
+  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\开饭"
+  DeleteRegKey HKCU "Software\Classes\kaifan"
+  DeleteRegKey HKCU "Software\kaifan\开饭"
+  DeleteRegKey /ifempty HKCU "Software\kaifan"
+  Pop $R0
+FunctionEnd
+
+!macro NSIS_HOOK_POSTINSTALL
+  Call KaifanRetireTestBuild
 !macroend

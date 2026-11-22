@@ -3,7 +3,7 @@ use std::io::{self, Write};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-const SERVICE: &str = "com.kaifan.desktop.tool-credential.v2";
+const SERVICE: &str = "com.yeschoy.desktop.tool-credential.v2";
 const ALLOWED_TOOLS: [&str; 11] = [
     "claude_code",
     "claude_desktop",

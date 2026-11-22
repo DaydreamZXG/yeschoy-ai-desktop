@@ -15,7 +15,7 @@ use crate::account_v2::{
 };
 use crate::station_connect_exchange::{exchange_connect_code, station_connect_exchange_enabled};
 
-pub(crate) const STATION_CONNECT_PROGRESS_EVENT: &str = "kaifan://station-connect-progress";
+pub(crate) const STATION_CONNECT_PROGRESS_EVENT: &str = "yeschoy://station-connect-progress";
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -46,9 +46,7 @@ pub(crate) fn station_connect_progress_event(
     }
 }
 
-pub(crate) const CONNECT_SCHEME: &str = "kaifan";
-/// 改名前的写法。站点网页上“打开客户端”的按钮发的还是它，所以一直认。
-pub(crate) const OLD_CONNECT_SCHEME: &str = "yeschoy";
+pub(crate) const CONNECT_SCHEME: &str = "yeschoy";
 pub(crate) const CONNECT_HOST: &str = "connect";
 
 /// Fixed path station operators host for the one-button connect page (see docs).
@@ -83,7 +81,7 @@ pub(crate) struct StationConnectRequest {
 pub(crate) enum StationConnectHandleOutcome {
     /// Parsed and validated; exchange runs asynchronously when enabled.
     Accepted(StationConnectRequest),
-    /// Not a `kaifan://` or `yeschoy://` URL (other argv or schemes are ignored).
+    /// Not a `yeschoy://` URL (other argv or schemes are ignored).
     IgnoredNotConnectScheme,
     /// Looked like station connect but failed validation.
     Rejected(StationConnectParseError),
@@ -91,7 +89,7 @@ pub(crate) enum StationConnectHandleOutcome {
 
 /// Single entry point for cold-start argv, hot-start deep-link events, and tests.
 pub(crate) fn handle_connect_url(raw: &str) -> StationConnectHandleOutcome {
-    if !raw.starts_with("kaifan://") && !raw.starts_with("yeschoy://") {
+    if !raw.starts_with("yeschoy://") {
         return StationConnectHandleOutcome::IgnoredNotConnectScheme;
     }
     match parse_station_connect_url(raw) {
@@ -333,7 +331,7 @@ pub(crate) fn wire_station_connect_deep_link<R: Runtime>(
 ) -> Result<(), tauri_plugin_deep_link::Error> {
     // 界面就绪后会发这个事件：把冷启动时暂存、还没问过用户的站点重发一遍。
     let app_for_sync = app.clone();
-    app.listen("kaifan://station-trust-sync", move |_| {
+    app.listen("yeschoy://station-trust-sync", move |_| {
         for origin in crate::station_trust::pending_origins() {
             emit_station_connect_progress(
                 &app_for_sync,
@@ -486,7 +484,7 @@ pub(crate) fn parse_station_connect_url(
     raw: &str,
 ) -> Result<StationConnectRequest, StationConnectParseError> {
     let url = Url::parse(raw).map_err(|_| StationConnectParseError::InvalidDeepLinkUrl)?;
-    if !matches!(url.scheme(), CONNECT_SCHEME | OLD_CONNECT_SCHEME) {
+    if url.scheme() != CONNECT_SCHEME {
         return Err(StationConnectParseError::WrongScheme);
     }
     if url.host_str() != Some(CONNECT_HOST) {
@@ -756,18 +754,17 @@ mod tests {
     }
 
     #[test]
-    fn the_new_scheme_and_the_pre_rename_scheme_both_open_the_client() {
-        for scheme in ["kaifan", "yeschoy"] {
-            let raw =
-                format!("{scheme}://connect?origin=https%3A%2F%2Fexample.com&code={VALID_CODE}");
-            assert!(matches!(
-                handle_connect_url(&raw),
-                StationConnectHandleOutcome::Accepted(_)
-            ));
+    fn only_our_own_scheme_opens_the_client() {
+        let raw = format!("yeschoy://connect?origin=https%3A%2F%2Fexample.com&code={VALID_CODE}");
+        assert!(matches!(
+            handle_connect_url(&raw),
+            StationConnectHandleOutcome::Accepted(_)
+        ));
+        for other in ["yeschoys://connect?code=x", "kaifan://connect?code=x"] {
+            assert_eq!(
+                handle_connect_url(other),
+                StationConnectHandleOutcome::IgnoredNotConnectScheme
+            );
         }
-        assert_eq!(
-            handle_connect_url("kaifans://connect?code=x"),
-            StationConnectHandleOutcome::IgnoredNotConnectScheme
-        );
     }
 }

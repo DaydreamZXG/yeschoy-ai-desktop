@@ -6,8 +6,8 @@ import { useConnections } from "../configuration/connections";
 import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
 
 const OPEN_CHOICE_EVENT = "kaifan:open-exit-choice";
-const CLOSE_CHOICE_EVENT = "kaifan://close-choice";
-const EXIT_PROGRESS_EVENT = "kaifan://exit-progress";
+const CLOSE_CHOICE_EVENT = "yeschoy://close-choice";
+const EXIT_PROGRESS_EVENT = "yeschoy://exit-progress";
 // This matches the native account request bound. It is only a progress notice,
 // never a renderer instruction to interrupt a native transaction.
 const FINISHING_NOTICE_MS = 20_000;

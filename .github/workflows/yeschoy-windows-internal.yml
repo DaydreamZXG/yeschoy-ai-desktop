@@ -118,7 +118,7 @@ jobs:
           $version = (Get-Content -LiteralPath 'package.json' -Raw | ConvertFrom-Json).version
           $variant = if ('${{ inputs.authorization_origin }}' -eq 'ai.yeschoy.io') { '-朋友版' } else { '' }
           New-Item -ItemType Directory -Force -Path 'release-assets' | Out-Null
-          $fileName = "开饭-$version-Windows-x64-内测版$variant.exe"
+          $fileName = "野菜-$version-Windows-x64-内测版$variant.exe"
           $destination = "release-assets/$fileName"
           Copy-Item -LiteralPath $installer.FullName -Destination $destination
           $sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $destination).Hash.ToLowerInvariant()

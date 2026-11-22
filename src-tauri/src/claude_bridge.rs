@@ -324,7 +324,7 @@ async fn messages(state: &BridgeState, request: Request<Body>) -> Response {
             log::warn!("claude_bridge stage=stale_route_alias");
             return invalid_request_error(
                 "This profile points at a model your station account no longer provides. \
-                 Open Kaifan (开饭) and connect this app again to refresh it.",
+                 Open YesChoy (野菜) and connect this app again to refresh it.",
             );
         }
     };
@@ -353,7 +353,7 @@ async fn messages(state: &BridgeState, request: Request<Body>) -> Response {
             return invalid_request_owned(format!(
                 "{model} is not in the model list this app was connected with, and \
                  each key only covers the models in its own billing group. Open \
-                 Kaifan (开饭), add {model} to the list, and connect this app again."
+                 YesChoy (野菜), add {model} to the list, and connect this app again."
             ));
         }
     };
@@ -1603,7 +1603,7 @@ mod tests {
             .unwrap();
         let text = String::from_utf8_lossy(&body);
         assert!(text.contains("deepseek-v4.1-flash"), "{text}");
-        assert!(text.contains("Kaifan"), "{text}");
+        assert!(text.contains("YesChoy"), "{text}");
         // `api_error` 会被 Claude 当成上游故障去重试；这是选择的问题，
         // 必须以 `invalid_request_error` 到达，用户才会去改而不是干等。
         assert!(text.contains("invalid_request_error"), "{text}");

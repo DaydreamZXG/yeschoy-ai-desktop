@@ -27,7 +27,7 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 /// 5 秒够慢网完成一次往返；再长就只是让首页干等。
 const INSPECT_DEADLINE: Duration = Duration::from_secs(5);
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
-const KEYRING_SERVICE: &str = "com.kaifan.desktop.account";
+const KEYRING_SERVICE: &str = "com.yeschoy.desktop.account";
 const KEYRING_USER: &str = "current-session-v2";
 const AUTHORIZATION_PATH: &str = "/api/desktop/v2/device-authorizations";
 const TOKEN_PATH: &str = "/api/desktop/v2/device-authorizations/token";

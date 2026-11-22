@@ -1,11 +1,13 @@
-//! 改名之前（野菜API、`com.yeschoy.desktop`）留在这台电脑上的东西，搬到新名字下面。
+//! 这个客户端用过别的名字：只出过测试版的“开饭”（`com.kaifan.desktop`）。那个
+//! 名字留在这台电脑上的东西，搬回“野菜”（`com.yeschoy.desktop`）名下。
 //!
-//! 老用户升级后不该重新登录、重新接入，所以：
+//! 装过测试版的人换回来之后不该重新登录、重新接入，所以：
 //!
-//!   * 数据目录 `~/.yeschoy` 整个改名成 `~/.kaifan`。改不动（旧版还开着、文件被
-//!     占用）就这次继续用旧目录，下次启动再搬。
-//!   * 系统密码库里的条目读到时再搬：新名字下没有，就去旧名字下找；抄到新名字、
-//!     读回一致之后才删旧的。抄不过去也照样把值交出去，登录不会因此掉。
+//!   * 数据目录 `~/.kaifan` 整个改名成 `~/.yeschoy`。改不动（测试版还开着、文件
+//!     被占用）就这次继续用那个目录，下次启动再搬。`~/.yeschoy` 已经在的话它就是
+//!     数据目录，什么都不搬。
+//!   * 系统密码库里的条目读到时再搬：现在的名字下没有，就去测试版的名字下找；抄
+//!     过来、读回一致之后才删那边的。抄不过去也照样把值交出去，登录不会因此掉。
 //!   * 写进别的应用里的“取密钥命令”带着客户端自己的路径。程序改名或挪了位置，
 //!     那条命令就指向一个不存在的文件；`follow_helper` 把它改成现在的位置。
 //!
@@ -13,12 +15,12 @@
 use keyring::v1::{Entry, Error as KeyringError};
 use std::path::{Path, PathBuf};
 
-pub(crate) const IDENTIFIER: &str = "com.kaifan.desktop";
-pub(crate) const OLD_IDENTIFIER: &str = "com.yeschoy.desktop";
-const HOME: &str = ".kaifan";
-const OLD_HOME: &str = ".yeschoy";
-/// 改名前的可执行文件名（不带扩展名）。
-const OLD_BINARY: &str = "yeschoy-desktop";
+pub(crate) const IDENTIFIER: &str = "com.yeschoy.desktop";
+pub(crate) const OLD_IDENTIFIER: &str = "com.kaifan.desktop";
+const HOME: &str = ".yeschoy";
+const OLD_HOME: &str = ".kaifan";
+/// “开饭”测试版的可执行文件名（不带扩展名）。
+const OLD_BINARY: &str = "kaifan-desktop";
 
 /// 客户端自己的数据目录。旧目录还没搬过来时就是旧目录，绝不会两边各建一份。
 pub(crate) fn data_root(home: &Path) -> PathBuf {
@@ -361,8 +363,8 @@ mod tests {
         }
     }
 
-    const NEW: &str = "com.kaifan.desktop.account";
-    const OLD: &str = "com.yeschoy.desktop.account";
+    const NEW: &str = "com.yeschoy.desktop.account";
+    const OLD: &str = "com.kaifan.desktop.account";
 
     fn read(keys: &Memory) -> Option<String> {
         read_secret_in(keys, NEW, "session").ok().flatten()
@@ -507,8 +509,8 @@ mod tests {
 
     #[test]
     fn a_helper_command_follows_the_renamed_client() {
-        let current = Path::new("/Applications/开饭.app/Contents/MacOS/kaifan-desktop");
-        let old = "'/Applications/野菜API.app/Contents/MacOS/yeschoy-desktop'";
+        let current = Path::new("/Applications/野菜.app/Contents/MacOS/yeschoy-desktop");
+        let old = "'/Applications/开饭.app/Contents/MacOS/kaifan-desktop'";
         assert_eq!(
             followed_command(
                 &format!("{old} gateway-credential-helper claude_code"),
@@ -517,16 +519,16 @@ mod tests {
                 quote
             )
             .as_deref(),
-            Some("'/Applications/开饭.app/Contents/MacOS/kaifan-desktop' gateway-credential-helper claude_code")
+            Some("'/Applications/野菜.app/Contents/MacOS/yeschoy-desktop' gateway-credential-helper claude_code")
         );
         assert_eq!(
             followed_command(&format!("{old} credential-helper pi"), "pi", current, quote)
                 .as_deref(),
-            Some("'/Applications/开饭.app/Contents/MacOS/kaifan-desktop' credential-helper pi")
+            Some("'/Applications/野菜.app/Contents/MacOS/yeschoy-desktop' credential-helper pi")
         );
         // Windows 的写法。
         assert!(followed_command(
-            "\"C:\\Users\\a\\AppData\\Local\\野菜API\\yeschoy-desktop.exe\" credential-helper pi",
+            "\"C:\\Users\\a\\AppData\\Local\\开饭\\kaifan-desktop.exe\" credential-helper pi",
             "pi",
             current,
             quote
@@ -538,13 +540,18 @@ mod tests {
     fn a_helper_command_is_left_alone_when_it_is_current_foreign_or_still_valid() {
         let home =
             crate::tool_adapters::common::temporary_working_directory("legacy-helper").unwrap();
-        let other = home.join("kaifan-desktop");
+        let other = home.join("yeschoy-desktop");
         std::fs::write(&other, b"").unwrap();
-        let current = Path::new("/opt/kaifan/kaifan-desktop");
+        let current = Path::new("/opt/yeschoy/yeschoy-desktop");
         let command = |path: &str| format!("{} credential-helper pi", quote(path));
         // 已经是现在的位置。
         assert_eq!(
-            followed_command(&command("/opt/kaifan/kaifan-desktop"), "pi", current, quote),
+            followed_command(
+                &command("/opt/yeschoy/yeschoy-desktop"),
+                "pi",
+                current,
+                quote
+            ),
             None
         );
         // 另一份还在的客户端（比如同时装了两份）：不抢。
@@ -559,7 +566,7 @@ mod tests {
         );
         assert_eq!(
             followed_command(
-                &command("/gone/kaifan-desktop"),
+                &command("/gone/yeschoy-desktop"),
                 "claude_code",
                 current,
                 quote
@@ -567,6 +574,8 @@ mod tests {
             None
         );
         // 挪了位置、原处已经没有了：跟过去。
-        assert!(followed_command(&command("/gone/kaifan-desktop"), "pi", current, quote).is_some());
+        assert!(
+            followed_command(&command("/gone/yeschoy-desktop"), "pi", current, quote).is_some()
+        );
     }
 }

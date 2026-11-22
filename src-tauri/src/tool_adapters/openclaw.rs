@@ -1,7 +1,7 @@
 //! OpenClaw：写它的 `openclaw.json`（默认在 `~/.openclaw/`）。
 //!
-//! 只动我们自己的那几处：`models.providers.kaifan`、`agents.defaults.model`
-//! 里的主型号，以及（用户设了型号白名单时）白名单里的一项 `kaifan/*`。别的
+//! 只动我们自己的那几处：`models.providers.yeschoy`、`agents.defaults.model`
+//! 里的主型号，以及（用户设了型号白名单时）白名单里的一项 `yeschoy/*`。别的
 //! 厂商、频道、网关设置一律原样保留。恢复由连接恢复记录按「我们改了什么就
 //! 改回什么」处理，用户后来自己改的留着。
 //!
@@ -28,9 +28,9 @@ use crate::{
     },
 };
 
-pub(crate) const PROVIDER_ID: &str = "kaifan";
+pub(crate) const PROVIDER_ID: &str = "yeschoy";
 /// 白名单里代表「我们这一家的所有型号」的那一项。
-pub(crate) const ALLOW_ENTRY: &str = "kaifan/*";
+pub(crate) const ALLOW_ENTRY: &str = "yeschoy/*";
 
 /// OpenClaw 用来决定配置文件在哪的四个变量，先后顺序见 `config_path_from`。
 /// 测试拿它核对：登录 shell 的探测有没有把这四个都问到。
@@ -485,7 +485,7 @@ pub(crate) fn settle_restored(
     }
 }
 
-/// 重启开饭后，OpenClaw 若仍指着我们这座桥，就把桥重新起起来。
+/// 重启野菜后，OpenClaw 若仍指着我们这座桥，就把桥重新起起来。
 /// 只看 OpenClaw 自己的配置：用户已经换走了，就不占端口。
 pub(crate) async fn resume_if_configured() {
     let Ok(credential) = crate::tool_credentials::load("openclaw") else {
@@ -588,7 +588,7 @@ impl Prepared {
             .is_none_or(|allow| {
                 allow.is_empty()
                     || allow.iter().filter_map(Value::as_str).any(|entry| {
-                        entry == ALLOW_ENTRY || entry.strip_prefix("kaifan/") == default
+                        entry == ALLOW_ENTRY || entry.strip_prefix("yeschoy/") == default
                     })
             });
         let correct = !included(&value)
@@ -747,7 +747,7 @@ mod tests {
         // 对象形式：只换主型号，备用的那串还是用户的。
         assert_eq!(
             value["agents"]["defaults"]["model"],
-            json!({ "primary": "kaifan/glm-5.3", "fallbacks": ["ollama/llama"] })
+            json!({ "primary": "yeschoy/glm-5.3", "fallbacks": ["ollama/llama"] })
         );
         // 严格校验下能过的最小一组键：多写一个（比如 `name`）整份配置就作废。
         assert_eq!(
@@ -770,12 +770,12 @@ mod tests {
         for before in [None, Some(&b""[..]), Some(&b"  \n"[..]), Some(&b"{}"[..])] {
             let bytes = render(before, "glm-5.3", &ids(), &token()).unwrap();
             let value: Value = serde_json::from_slice(&bytes).unwrap();
-            assert_eq!(value["agents"]["defaults"]["model"], "kaifan/glm-5.3");
+            assert_eq!(value["agents"]["defaults"]["model"], "yeschoy/glm-5.3");
             assert!(value["agents"]["defaults"].get("modelPolicy").is_none());
             assert!(points_at_our_bridge(&bytes));
         }
         let value = rendered(r#"{ agents: { defaults: { model: "openai/gpt-5.4" } } }"#);
-        assert_eq!(value["agents"]["defaults"]["model"], "kaifan/glm-5.3");
+        assert_eq!(value["agents"]["defaults"]["model"], "yeschoy/glm-5.3");
     }
 
     /// 实测：白名单里没有我们时，OpenClaw 会把主型号换成名单里的第一个。
@@ -789,10 +789,10 @@ mod tests {
         };
         assert_eq!(policy(r#"["openai/*"]"#), json!(["openai/*", ALLOW_ENTRY]));
         assert_eq!(
-            policy(r#"["openai/*", "kaifan/*"]"#),
+            policy(r#"["openai/*", "yeschoy/*"]"#),
             json!(["openai/*", ALLOW_ENTRY])
         );
-        assert_eq!(policy(r#"["kaifan/glm-5.3"]"#), json!(["kaifan/glm-5.3"]));
+        assert_eq!(policy(r#"["yeschoy/glm-5.3"]"#), json!(["yeschoy/glm-5.3"]));
         // 空名单 = 什么都许，不用加。
         assert_eq!(policy("[]"), json!([]));
     }
@@ -820,7 +820,7 @@ mod tests {
         // 名单里没有它时还会直接报错。同样不接。
         assert_eq!(
             render(
-                Some(br#"{ agents: { entries: { main: { model: "kaifan/kimi-k3" } } } }"#),
+                Some(br#"{ agents: { entries: { main: { model: "yeschoy/kimi-k3" } } } }"#),
                 "glm-5.3",
                 &["glm-5.3".to_owned()],
                 &token()
@@ -828,10 +828,10 @@ mod tests {
             Err(AdapterFailure::ExternalOverride)
         );
         // 定的正好是这次选的：不拦，也不动它。
-        let value = rendered(r#"{ agents: { entries: { main: { model: "kaifan/glm-5.3" } } } }"#);
+        let value = rendered(r#"{ agents: { entries: { main: { model: "yeschoy/glm-5.3" } } } }"#);
         assert_eq!(
             value["agents"]["entries"]["main"]["model"],
-            "kaifan/glm-5.3"
+            "yeschoy/glm-5.3"
         );
     }
 
@@ -844,7 +844,7 @@ mod tests {
             serde_json::to_vec(&value).unwrap()
         };
         assert!(points_at_our_bridge(after.as_bytes()));
-        assert!(points_at_our_bridge(&pinned("kaifan/deepseek-v4")));
+        assert!(points_at_our_bridge(&pinned("yeschoy/deepseek-v4")));
         assert!(!points_at_our_bridge(&pinned("openai/gpt-5.4")));
     }
 
@@ -871,12 +871,12 @@ mod tests {
         let mut value: Value = serde_json::from_slice(&ours).unwrap();
         value["agents"]["defaults"]["model"] = "openai/gpt-5.4".into();
         assert!(!points_at_our_bridge(value.to_string().as_bytes()));
-        value["agents"]["defaults"]["model"] = json!({ "primary": "kaifan/kimi-k3" });
+        value["agents"]["defaults"]["model"] = json!({ "primary": "yeschoy/kimi-k3" });
         assert!(points_at_our_bridge(value.to_string().as_bytes()));
-        // 名字以 `kaifan` 开头的别家厂商不算我们。
-        value["agents"]["defaults"]["model"] = "kaifanx/glm-5.3".into();
+        // 名字以 `yeschoy` 开头的别家厂商不算我们。
+        value["agents"]["defaults"]["model"] = "yeschoyx/glm-5.3".into();
         assert!(!points_at_our_bridge(value.to_string().as_bytes()));
-        value["agents"]["defaults"]["model"] = "kaifan/glm-5.3".into();
+        value["agents"]["defaults"]["model"] = "yeschoy/glm-5.3".into();
         value["models"]["providers"][PROVIDER_ID]["baseUrl"] = "https://example.com/v1".into();
         assert!(!points_at_our_bridge(value.to_string().as_bytes()));
         assert!(!points_at_our_bridge(b"{ not json"));
@@ -912,14 +912,14 @@ mod tests {
 
         let mut value: Value = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
         // 用户在 OpenClaw 里换成我们名单里的另一个型号：仍算接着。
-        value["agents"]["defaults"]["model"] = "kaifan/kimi-k3".into();
+        value["agents"]["defaults"]["model"] = "yeschoy/kimi-k3".into();
         std::fs::write(&path, value.to_string()).unwrap();
         prepared.validate_existing().unwrap();
         // 白名单把我们挡在外面了：不算。
         value["agents"]["defaults"]["modelPolicy"] = json!({ "allow": ["openai/*"] });
         std::fs::write(&path, value.to_string()).unwrap();
         assert!(prepared.validate_existing().is_err());
-        value["agents"]["defaults"]["modelPolicy"] = json!({ "allow": ["openai/*", "kaifan/*"] });
+        value["agents"]["defaults"]["modelPolicy"] = json!({ "allow": ["openai/*", "yeschoy/*"] });
         // 主 agent 另定了型号：不算。
         value["agents"]["entries"] = json!({ "main": { "model": "openai/gpt-5.4" } });
         std::fs::write(&path, value.to_string()).unwrap();

@@ -135,4 +135,4 @@ jobs:
         run: python scripts/ci/run-rust-tests.py
 
       - name: Compile application binary (not an installer)
-        run: cargo build --locked --manifest-path src-tauri/Cargo.toml --bin kaifan-desktop
+        run: cargo build --locked --manifest-path src-tauri/Cargo.toml --bin yeschoy-desktop

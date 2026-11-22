@@ -33,15 +33,15 @@ describe("Windows installer localization", () => {
     const standalone = readSource("src-tauri/windows/installer.nsi");
     const native = readSource("src-tauri/src/lib.rs");
 
-    const eventName = "Local\\KaifanDesktopInstallerShutdown_v1";
+    const eventName = "Local\\YesChoyDesktopInstallerShutdown_v1";
     expect(hook).toContain(eventName);
     expect(native).toContain(eventName.replace("\\", "\\\\"));
     expect(hook).toContain('!include "Win\\RestartManager.nsh"');
     expect(hook).toContain("RestartManager_ShutdownFile");
     expect(hook).toContain("CreateFileW");
-    // 改名前的客户端等的是旧名字；安装器两个都发。
-    expect(hook).toContain("Local\\YesChoyDesktopInstallerShutdown_v1");
-    // 新旧两个都开着时，各自都要收到通知，不能通知了一个就不管另一个。
+    // “开饭”测试版等的是另一个名字；安装器两个都发。
+    expect(hook).toContain("Local\\KaifanDesktopInstallerShutdown_v1");
+    // 两个都开着时，各自都要收到通知，不能通知了一个就不管另一个。
     const request = hook.slice(
       hook.indexOf("kaifan_request_safe_exit:"),
       hook.indexOf("kaifan_safe_exit_requested:"),
@@ -51,7 +51,10 @@ describe("Windows installer localization", () => {
       request.indexOf("${KAIFAN_OLD_INSTALLER_SHUTDOWN_EVENT}"),
     );
     expect(request).not.toContain("kaifan_force_exit");
+    expect(hook).toContain("$LOCALAPPDATA\\Programs\\野菜");
+    expect(hook).toContain("野菜.exe");
     expect(hook).toContain("$LOCALAPPDATA\\Programs\\开饭");
+    expect(hook).toContain('HKCU "Software\\Kaifan" "InstallDir"');
     expect(hook).toContain("开饭.exe");
     expect(hook).toContain("kaifan-desktop.exe");
     expect(hook).toContain("$LOCALAPPDATA\\Programs\\野菜API");
@@ -73,7 +76,7 @@ describe("Windows installer localization", () => {
     expect(hook).not.toMatch(/taskkill\.exe/i);
     expect(standalone).toContain('!include "installer-hooks.nsh"');
     const guard = standalone.indexOf("Call KaifanEnsureStopped");
-    const firstWrite = standalone.indexOf('File /oname=开饭.exe "${APP_EXE}"');
+    const firstWrite = standalone.indexOf('File /oname=野菜.exe "${APP_EXE}"');
     expect(guard).toBeGreaterThan(-1);
     expect(firstWrite).toBeGreaterThan(guard);
     const initialization = standalone.match(
@@ -87,27 +90,69 @@ describe("Windows installer localization", () => {
     );
   });
 
-  it("retires the pre-rename install only after the new files are written", () => {
+  it("retires installs under earlier names only after the new files are written", () => {
     const standalone = readSource("src-tauri/windows/installer.nsi");
     const retire = standalone.match(
       /^Function KaifanRetireOldName\n([\s\S]*?)^FunctionEnd/m,
     )?.[1];
     expect(retire).toBeDefined();
     expect(retire).toContain('Delete "$R0\\野菜API.exe"');
-    expect(retire).toContain("Uninstall\\com.yeschoy.desktop");
-    // 只删我们自己放的文件：不递归删目录，也不碰深链登记（新旧两个都指向新程序）。
+    expect(retire).toContain('Delete "$R0\\开饭.exe"');
+    expect(retire).toContain("Uninstall\\com.kaifan.desktop");
+    expect(retire).toContain('DeleteRegKey HKCU "Software\\Classes\\kaifan"');
+    // 只删我们自己放的文件：不递归删目录；卸载列表里现在这一条和 yeschoy:// 的
+    // 登记是我们自己的，不能跟着删掉。
     expect(retire).not.toMatch(/RMDir\s+\/r/);
-    expect(retire).not.toContain("Software\\Classes");
+    expect(retire).not.toContain("com.yeschoy.desktop");
+    expect(retire).not.toContain("Software\\Classes\\yeschoy");
     const main = standalone.match(
-      /^Section "安装开饭" SEC_MAIN\n([\s\S]*?)^SectionEnd/m,
+      /^Section "安装野菜" SEC_MAIN\n([\s\S]*?)^SectionEnd/m,
     )?.[1];
     expect(main).toBeDefined();
     expect(main!.trimEnd().endsWith("Call KaifanRetireOldName")).toBe(true);
-    for (const scheme of ["kaifan", "yeschoy"]) {
-      expect(main).toContain(
-        `"Software\\Classes\\${scheme}\\shell\\open\\command" "" '"$INSTDIR\\开饭.exe" "%1"'`,
-      );
-    }
+    expect(main).toContain(
+      `"Software\\Classes\\yeschoy\\shell\\open\\command" "" '"$INSTDIR\\野菜.exe" "%1"'`,
+    );
+    expect(main).not.toContain("Software\\Classes\\kaifan");
+  });
+
+  it("clears the Tauri-installed 开饭 test build from both installers", () => {
+    const hook = readSource("src-tauri/windows/installer-hooks.nsh");
+    const retire = hook.match(
+      /^Function KaifanRetireTestBuild\n([\s\S]*?)^FunctionEnd/m,
+    )?.[1];
+    expect(retire).toBeDefined();
+    // 它装在哪由它自己的登记说了算，没登记才按默认位置。
+    expect(retire).toContain('ReadRegStr $R0 HKCU "Software\\kaifan\\开饭" ""');
+    expect(retire).toContain('StrCpy $R0 "$LOCALAPPDATA\\开饭"');
+    expect(retire).toContain('Delete "$R0\\kaifan-desktop.exe"');
+    expect(retire).toContain('Delete "$R0\\uninstall.exe"');
+    expect(retire).toContain('Delete "$SMPROGRAMS\\开饭.lnk"');
+    expect(retire).toContain('Delete "$DESKTOP\\开饭.lnk"');
+    expect(retire).toContain("Uninstall\\开饭");
+    expect(retire).toContain('DeleteRegKey HKCU "Software\\Classes\\kaifan"');
+    // 和现在装的是同一个目录时，uninstall.exe 是刚写的那个，不能删。
+    expect(retire!.indexOf('StrCmp $R0 "$INSTDIR"')).toBeLessThan(
+      retire!.indexOf('Delete "$R0\\uninstall.exe"'),
+    );
+    expect(retire).not.toMatch(/RMDir\s+\/r/);
+    expect(retire).not.toContain("野菜");
+    expect(retire).not.toContain("yeschoy");
+
+    // 内测包（Tauri 生成的安装器）在新文件写好之后清；独立安装包跟着别的旧名字一起清。
+    expect(hook).toMatch(
+      /^!macro NSIS_HOOK_POSTINSTALL\n\s+Call KaifanRetireTestBuild\n!macroend/m,
+    );
+    const standalone = readSource("src-tauri/windows/installer.nsi");
+    expect(
+      standalone.match(
+        /^Function KaifanRetireOldName\n([\s\S]*?)^FunctionEnd/m,
+      )?.[1],
+    ).toContain("Call KaifanRetireTestBuild");
+    // 它还开着就删不掉：装之前要先按它登记的位置找到它并让它退出。
+    expect(hook).toContain(
+      'ReadRegStr $KaifanTestTauriRegisteredRoot HKCU "Software\\kaifan\\开饭" ""',
+    );
   });
 
   it("handles Tauri updater launches without an unattended directory wizard", () => {
@@ -119,7 +164,7 @@ describe("Windows installer localization", () => {
       initialization.indexOf("ReadRegStr"),
     );
     expect(initialization).toContain(
-      'ReadRegStr $R0 HKCU "Software\\Kaifan" "InstallDir"',
+      'ReadRegStr $R0 HKCU "Software\\野菜" "InstallDir"',
     );
     expect(initialization).toContain('${GetOptions} $R0 "/UPDATE" $R1');
     expect(initialization).toContain(
@@ -132,10 +177,10 @@ describe("Windows installer localization", () => {
 
     expect(standalone).toContain("Function .onInstSuccess");
     expect(standalone).toContain(
-      'ExecShell "open" "$INSTDIR\\开饭.exe" "" SW_SHOWNORMAL',
+      'ExecShell "open" "$INSTDIR\\野菜.exe" "" SW_SHOWNORMAL',
     );
     expect(standalone).toContain("This also covers silent/manual upgrades");
-    expect(standalone).not.toContain("Exec '\"$INSTDIR\\开饭.exe\"'");
+    expect(standalone).not.toContain("Exec '\"$INSTDIR\\野菜.exe\"'");
     expect(standalone).not.toContain("MUI_FINISHPAGE_RUN");
   });
 });
