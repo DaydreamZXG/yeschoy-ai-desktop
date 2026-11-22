@@ -128,6 +128,10 @@ pub struct UsageSummary {
 pub struct BillingGroup {
     pub(crate) id: String,
     description: String,
+    /// Set only by stations on the neutral contract: the plan's own name and
+    /// prices, already in the station's currency.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    plan: Option<neutral::PlanPricing>,
     #[serde(skip_serializing_if = "Option::is_none")]
     ratio: Option<f64>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -247,6 +251,137 @@ pub(crate) struct DesktopBootstrap {
     /// predates the server field simply never shows the entry, and a server that
     /// predates the client does the same. Neither side has to ship first.
     announcements_path: String,
+    pub(crate) dialect: StationDialect,
+}
+
+/// Which set of data endpoints a station serves.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) enum StationDialect {
+    /// The original contract: the paths are New API's own and fixed in this file.
+    Legacy,
+    /// `desktop-connect`: the station names its paths and answers in shapes
+    /// made for this client, so any relay software can implement it.
+    Neutral(NeutralPaths),
+}
+
+#[derive(Clone, Debug, PartialEq, Default)]
+pub(crate) struct NeutralPaths {
+    pub(crate) account: String,
+    pub(crate) plans: String,
+    pub(crate) keys: String,
+    pub(crate) usage_summary: String,
+    pub(crate) usage_records: String,
+    /// Empty when the station has no client-only prices.
+    pub(crate) app_tokens: String,
+    pub(crate) app_token_header: String,
+}
+
+mod neutral;
+
+const NEUTRAL_SERVICE: &str = "desktop-connect";
+const NEUTRAL_CONTRACT_ID: &str = "desktop-connect-v1";
+
+#[derive(Debug, Deserialize)]
+struct NeutralBootstrapData {
+    schema_version: u8,
+    contract_id: String,
+    minimum_client_version: String,
+    #[serde(default)]
+    device_authorization_available: bool,
+    #[serde(default)]
+    oauth_loopback_pkce_available: bool,
+    account_read: bool,
+    usage_read: bool,
+    models_read: bool,
+    pricing_read: bool,
+    tool_keys_manage: bool,
+    session_refresh_path: String,
+    session_logout_path: String,
+    account_path: String,
+    plans_path: String,
+    keys_path: String,
+    usage_summary_path: String,
+    usage_records_path: String,
+    wallet_url: String,
+    #[serde(default)]
+    announcements_path: String,
+    #[serde(default)]
+    app_tokens_path: String,
+    #[serde(default)]
+    app_token_header: String,
+}
+
+/// The header carries a device credential to the station on every forwarded
+/// request, so the station may only name a custom `X-` header: never one that
+/// already means something to HTTP or to the tools behind the local bridge.
+fn app_token_header_is_allowed(raw: &str) -> bool {
+    raw.len() <= 64
+        && raw.len() > 2
+        && raw[..2].eq_ignore_ascii_case("x-")
+        && raw
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+        && !raw.eq_ignore_ascii_case("x-api-key")
+}
+
+fn neutral_bootstrap(data: Value, origin: &str) -> Result<DesktopBootstrap, &'static str> {
+    let data: NeutralBootstrapData = serde_json::from_value(data).map_err(|_| "shape")?;
+    let minimum = Version::parse(&data.minimum_client_version).map_err(|_| "minimum_version")?;
+    let current = Version::parse(CLIENT_VERSION).expect("compiled client version is valid");
+    if data.schema_version != 2 {
+        return Err("schema_version");
+    }
+    if data.contract_id != NEUTRAL_CONTRACT_ID {
+        return Err("contract_id");
+    }
+    if minimum > current {
+        return Err("client_too_old");
+    }
+    if !(data.account_read
+        && data.usage_read
+        && data.models_read
+        && data.pricing_read
+        && data.tool_keys_manage)
+    {
+        return Err("capabilities");
+    }
+    if data.session_refresh_path != REFRESH_PATH || data.session_logout_path != LOGOUT_PATH {
+        return Err("session_paths");
+    }
+    // The neutral contract leaves the top-up page's path to the station;
+    // it only has to be a page on the station's own host.
+    if !page_url_on_station_origin(&data.wallet_url, origin, "/") {
+        return Err("wallet_url");
+    }
+    let required = |raw: &str| relative_api_path(raw).ok_or("paths");
+    let app_tokens = relative_api_path(&data.app_tokens_path).unwrap_or_default();
+    let app_token_header =
+        if !app_tokens.is_empty() && app_token_header_is_allowed(&data.app_token_header) {
+            data.app_token_header
+        } else {
+            String::new()
+        };
+    Ok(DesktopBootstrap {
+        device_authorization_available: data.device_authorization_available,
+        oauth_loopback_pkce_available: data.oauth_loopback_pkce_available,
+        origin: origin.to_owned(),
+        wallet_url: data.wallet_url,
+        announcements_path: relative_api_path(&data.announcements_path).unwrap_or_default(),
+        dialect: StationDialect::Neutral(NeutralPaths {
+            account: required(&data.account_path)?,
+            plans: required(&data.plans_path)?,
+            keys: required(&data.keys_path)?,
+            usage_summary: required(&data.usage_summary_path)?,
+            usage_records: required(&data.usage_records_path)?,
+            // Without both halves there is no client-only price to ask for.
+            app_tokens: if app_token_header.is_empty() {
+                String::new()
+            } else {
+                app_tokens
+            },
+            app_token_header,
+        }),
+    })
 }
 
 // Server responses are read tolerantly, the way `DataEnvelope`,
@@ -505,6 +640,22 @@ async fn fetch_bootstrap_read(line_id: &str) -> Result<DesktopBootstrap, Account
     if !response.status.is_success() {
         return Err(AccountProjectionFailure::BackendUnavailable);
     }
+    // A station speaking the neutral contract says so by name; everything
+    // else is read as the original contract, exactly as before.
+    if response.value.get("success").and_then(Value::as_bool) == Some(true)
+        && response
+            .value
+            .get("data")
+            .and_then(|data| data.get("service"))
+            .and_then(Value::as_str)
+            == Some(NEUTRAL_SERVICE)
+    {
+        let data = response.value.get("data").cloned().unwrap_or(Value::Null);
+        return neutral_bootstrap(data, &origin).map_err(|reason| {
+            log::warn!("account stage=bootstrap_rejected dialect=neutral reason={reason}");
+            AccountProjectionFailure::IncompatibleServer
+        });
+    }
     let envelope: BootstrapEnvelope = serde_json::from_value(response.value)
         .map_err(|_| AccountProjectionFailure::IncompatibleServer)?;
     let data = envelope.data;
@@ -564,6 +715,7 @@ async fn fetch_bootstrap_read(line_id: &str) -> Result<DesktopBootstrap, Account
         // is dropped rather than rejected: a malformed optional field must not
         // cost the user their sign-in.
         announcements_path: relative_api_path(&data.announcements_path).unwrap_or_default(),
+        dialect: StationDialect::Legacy,
     })
 }
 
@@ -608,6 +760,11 @@ fn wallet_url_is_allowed_official(raw: &str) -> bool {
 
 /// Third-party stations connected via deep link use their own origin for wallet.
 fn wallet_url_on_station_origin(raw: &str, api_origin: &str) -> bool {
+    page_url_on_station_origin(raw, api_origin, "/wallet")
+}
+
+/// A page on the station's own host, whose path starts with `path_prefix`.
+fn page_url_on_station_origin(raw: &str, api_origin: &str, path_prefix: &str) -> bool {
     let Ok(station) = Url::parse(api_origin) else {
         return false;
     };
@@ -624,7 +781,7 @@ fn wallet_url_on_station_origin(raw: &str, api_origin: &str) -> bool {
         && url.password().is_none()
         && url.query().is_none()
         && url.fragment().is_none()
-        && url.path().starts_with("/wallet")
+        && url.path().starts_with(path_prefix)
 }
 
 #[cfg(test)]
@@ -1279,6 +1436,9 @@ async fn account_data_read(
     bootstrap: &DesktopBootstrap,
     access_token: &str,
 ) -> Result<AccountProjection, AccountProjectionFailure> {
+    if let StationDialect::Neutral(paths) = &bootstrap.dialect {
+        return account_data_read_neutral(request_id, bootstrap, paths, access_token).await;
+    }
     let account_url = format!("{}{}", bootstrap.origin, ACCOUNT_PATH);
     let usage_url = format!("{}{}", bootstrap.origin, USAGE_PATH);
     let models_url = format!("{}{}", bootstrap.origin, MODELS_PATH);
@@ -1384,6 +1544,152 @@ async fn account_data_read(
         usage: usage_summary,
         models,
         comparison_fx: comparison_fx.map(decimal).unwrap_or_default(),
+        money,
+        savings,
+        usage_log,
+        reason_code,
+    })
+}
+
+/// The same projection, read from a station on the neutral contract.
+async fn account_data_read_neutral(
+    request_id: String,
+    bootstrap: &DesktopBootstrap,
+    paths: &NeutralPaths,
+    access_token: &str,
+) -> Result<AccountProjection, AccountProjectionFailure> {
+    let url = |path: &str| format!("{}{}", bootstrap.origin, path);
+    let records_url = |page: usize| {
+        format!(
+            "{}?page={page}&pageSize={USAGE_LOG_PAGE_SIZE}",
+            url(&paths.usage_records)
+        )
+    };
+    let (account_url, plans_url, usage_url, first_records_url) = (
+        url(&paths.account),
+        url(&paths.plans),
+        url(&paths.usage_summary),
+        records_url(1),
+    );
+    let (account, plans, usage, records) = tokio::join!(
+        send_json(Method::GET, &account_url, Some(access_token), None),
+        send_json(Method::GET, &plans_url, Some(access_token), None),
+        send_json(Method::GET, &usage_url, Some(access_token), None),
+        send_json(Method::GET, &first_records_url, Some(access_token), None),
+    );
+    if [&account, &plans, &usage].iter().any(|response| {
+        matches!(response, Ok(value) if value.status == StatusCode::UNAUTHORIZED || value.status == StatusCode::FORBIDDEN)
+    }) {
+        // Same reasoning as the original reader: only refresh_access may
+        // decide the session itself is gone.
+        return Err(AccountProjectionFailure::BackendUnavailable);
+    }
+    let ok = |response: Result<JsonResponse, TransportFailure>| {
+        response
+            .ok()
+            .filter(|value| value.status.is_success())
+            .map(|value| value.value)
+    };
+    let (account, plans, usage, records) = (ok(account), ok(plans), ok(usage), ok(records));
+    let observed_now = now_epoch_ms();
+    let Some(currency) = neutral::currency(account.as_ref()) else {
+        log::warn!(
+            "account stage=account_projection_unavailable dialect=neutral http_ok={}",
+            account.is_some()
+        );
+        return Err(AccountProjectionFailure::InvalidResponse);
+    };
+    let status = neutral::status_shape(currency);
+    let account_summary = parse_account(
+        neutral::account_shape(account.as_ref()).as_ref(),
+        Some(&status),
+    );
+    if !account_summary.available {
+        log::warn!("account stage=account_projection_unavailable dialect=neutral http_ok=true");
+        return Err(AccountProjectionFailure::InvalidResponse);
+    }
+    let usage_summary = parse_usage(neutral::usage_shape(usage.as_ref()).as_ref());
+    let models = neutral::models(plans.as_ref());
+
+    // Same window rule as the original reader: more pages only while the
+    // first one is full and has not yet reached back thirty days.
+    let mut log_pages: Vec<Value> = neutral::records_shape(records.as_ref())
+        .into_iter()
+        .collect();
+    let first_is_full_and_recent = log_pages.first().is_some_and(|page| {
+        let items = page["data"]["items"]
+            .as_array()
+            .map(Vec::as_slice)
+            .unwrap_or_default();
+        let oldest_ms = items
+            .iter()
+            .filter_map(|row| row.get("created_at").and_then(Value::as_u64))
+            .map(|seconds| seconds * 1000)
+            .min()
+            .unwrap_or(0);
+        items.len() >= USAGE_LOG_PAGE_SIZE
+            && oldest_ms > observed_now.saturating_sub(USAGE_WINDOW_MS)
+    });
+    if first_is_full_and_recent {
+        let (url_2, url_3, url_4, url_5) = (
+            records_url(2),
+            records_url(3),
+            records_url(4),
+            records_url(5),
+        );
+        let (second, third, fourth, fifth) = tokio::join!(
+            send_json(Method::GET, &url_2, Some(access_token), None),
+            send_json(Method::GET, &url_3, Some(access_token), None),
+            send_json(Method::GET, &url_4, Some(access_token), None),
+            send_json(Method::GET, &url_5, Some(access_token), None),
+        );
+        for response in [second, third, fourth, fifth] {
+            match neutral::records_shape(ok(response).as_ref()) {
+                Some(page) => log_pages.push(page),
+                None => break,
+            }
+        }
+    }
+
+    let money = account_money(
+        Some(&status),
+        &account_summary.balance_quota,
+        &account_summary.used_quota,
+    );
+    let savings = recent_savings(Some(&status), log_pages.first());
+    let usage_log = usage_log_report(Some(&status), &log_pages, observed_now);
+    if let Some(line_id) = crate::request_diagnostics::line_for_origin(&bootstrap.origin) {
+        for (tool, observation) in recent_requests_from_pages(&log_pages, line_id) {
+            crate::request_diagnostics::publish(&tool, observation);
+        }
+    }
+    let reason_code = if usage_summary.available
+        && models.is_some()
+        && !money.currency.is_empty()
+        && usage_log.status != "unavailable"
+    {
+        "none"
+    } else {
+        "partial_data"
+    };
+    Ok(AccountProjection {
+        request_id,
+        schema_version: 6,
+        status: "signed_in",
+        user_code: String::new(),
+        poll_after_seconds: 0,
+        expires_at_epoch_ms: 0,
+        observed_at_epoch_ms: observed_now,
+        account: account_summary,
+        usage: usage_summary,
+        models: models.unwrap_or_default(),
+        // Prices already arrive in the station's currency. "1" tells the
+        // renderer they are yuan; empty leaves them in dollars.
+        comparison_fx: if currency == "CNY" {
+            "1".into()
+        } else {
+            String::new()
+        },
         money,
         savings,
         usage_log,
@@ -1634,6 +1940,7 @@ pub(crate) fn billing_groups(pricing: &Value, model_id: &str) -> Vec<BillingGrou
                 endpoints.extend(pricing_endpoint_types(row));
             }
             Some(BillingGroup {
+                plan: None,
                 id: id.clone(),
                 description: bounded_text(Some(description), 500),
                 ratio: nonnegative_number(pricing.get("group_ratio").and_then(|v| v.get(id))),
@@ -2798,6 +3105,7 @@ mod tests {
         );
         let billing = ModelBilling {
             groups: vec![BillingGroup {
+                plan: None,
                 id: "default".into(),
                 description: String::new(),
                 ratio: None,
