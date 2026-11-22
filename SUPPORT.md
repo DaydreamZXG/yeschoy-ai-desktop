@@ -4,7 +4,7 @@
 
 ## How to Get Help
 
-YesChoy AI Desktop（野菜API 桌面助手）is maintained by the YesChoy team and community contributors. Please use the channels below so we can respond efficiently.
+YesChoy is maintained by the YesChoy team and community contributors. Please use the channels below so we can respond efficiently.
 
 ### Before Asking
 
@@ -40,7 +40,7 @@ Desktop-helper bugs belong in this GitHub repo. Account balance, billing, or sta
 
 ## 如何获取帮助
 
-野菜API 桌面助手由野菜团队与社区贡献者维护。请使用下列渠道，方便我们高效响应。
+YesChoy 由 YesChoy 团队与社区贡献者维护。请使用下列渠道，方便我们高效响应。
 
 ### 提问之前
 
@@ -51,7 +51,7 @@ Desktop-helper bugs belong in this GitHub repo. Account balance, billing, or sta
 
 - **使用或配置**：[提交 Issue](https://github.com/DaydreamZXG/yeschoy-ai-desktop/issues/new)
 - **一般讨论**：[GitHub 讨论区](https://github.com/DaydreamZXG/yeschoy-ai-desktop/discussions)（若已开启）
-- **中文用户交流**：野菜 QQ 群 **1065665694**（登录野菜站点后可在应用内看到入口）
+- **中文用户交流**：YesChoy QQ 群 **1065665694**（登录 YesChoy 站点后可在应用内看到入口）
 
 ### 报告问题
 

@@ -141,7 +141,7 @@ export function Boot({ station, castCount, onDone }: Props) {
         <i className="cn c" />
         <i className="cn d" />
         <p className="bk tl">
-          <b>KAIFAN</b> · DESKTOP
+          <b>YESCHOY</b> · DESKTOP
           <br />
           {clock}
         </p>

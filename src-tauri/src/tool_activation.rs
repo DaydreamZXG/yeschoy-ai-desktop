@@ -1481,7 +1481,7 @@ async fn acquire_token_using(
     })
 }
 
-/// 野菜的中转（yeschoy/new-api）创建密钥时把新密钥整个回传在 `data` 里，
+/// YesChoy 的中转（yeschoy/new-api）创建密钥时把新密钥整个回传在 `data` 里，
 /// 标准 NewAPI 什么都不回。有就直接用，省一次列表；名字对不上就当没有。
 fn created_token_id(value: &Value, name: &str) -> Option<u64> {
     let created = data(value)?.as_object()?;
@@ -2009,7 +2009,7 @@ async fn codex_history_on_worker<T: Send + 'static>(
 ///
 /// 接管发生在凭据和配置落盘之前；之后每一条失败或取消的出口都会把文件和
 /// 凭据还原，唯独钥匙串里那份以前没人管 —— 用户在 Claude Code 里发现自己
-/// 被登出了，而野菜显示「未接入」，也没有任何入口能把它搬回来（restore
+/// 被登出了，而 YesChoy 显示「未接入」，也没有任何入口能把它搬回来（restore
 /// 分支要有回执，而回执已经被 abandon 了）。
 ///
 /// 还不回去只记一行 warn，不改变回滚的结论：登录态仍在备份位，下一次接入
@@ -2349,7 +2349,7 @@ pub async fn configure_desktop_tool_v2(
         Err(_) => return Ok(cancelled()),
     };
     // claude.ai 的登录态存在钥匙串里，写配置文件碰不到它。两份凭据并存时
-    // Claude Code 用 claude.ai 那份，中转从头到尾没被用上 —— 野菜显示
+    // Claude Code 用 claude.ai 那份，中转从头到尾没被用上 —— YesChoy 显示
     // 「设置已完成」，用户在 Claude Code 里看到的却是账号被限制。
     //
     // 探测不弹窗（只查属性不查数据），所以没登录 claude.ai 的人不会平白
@@ -4596,7 +4596,7 @@ mod tests {
         fail_keys: std::sync::atomic::AtomicBool,
         /// 列表接口挂掉（网络、限流的 429 空响应），传输层直接报错。
         fail_list: std::sync::atomic::AtomicBool,
-        /// 野菜的中转创建密钥时把新密钥回传在 `data` 里；标准 NewAPI 不回。
+        /// YesChoy 的中转创建密钥时把新密钥回传在 `data` 里；标准 NewAPI 不回。
         echo_created: std::sync::atomic::AtomicBool,
         /// 会话已失效：中转对每个请求都回 401。
         signed_out: std::sync::atomic::AtomicBool,

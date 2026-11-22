@@ -485,7 +485,7 @@ pub(crate) fn settle_restored(
     }
 }
 
-/// 重启野菜后，OpenClaw 若仍指着我们这座桥，就把桥重新起起来。
+/// 重启 YesChoy 后，OpenClaw 若仍指着我们这座桥，就把桥重新起起来。
 /// 只看 OpenClaw 自己的配置：用户已经换走了，就不占端口。
 pub(crate) async fn resume_if_configured() {
     let Ok(credential) = crate::tool_credentials::load("openclaw") else {

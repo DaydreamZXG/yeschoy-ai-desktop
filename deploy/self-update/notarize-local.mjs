@@ -12,7 +12,7 @@ const version = JSON.parse(readFileSync(`${root}/evidence/${flavor}-build-inspec
 assert(['official', 'partner'].includes(flavor));
 assert(['submit-app', 'status-app', 'app-to-dmg', 'status-dmg', 'verify-dmg'].includes(phase));
 const label = flavor === 'official' ? '主版本' : '朋友版';
-const app = `${root}/${flavor}-stage/野菜.app`;
+const app = `${root}/${flavor}-stage/YesChoy.app`;
 const dmgName = `yeschoy-${version}-${flavor}-macos-universal-installer.dmg`;
 const dmg = `${root}/public/${dmgName}`;
 const profile = 'yeschoy-notary';
@@ -75,7 +75,7 @@ if (phase === 'submit-app') {
   const gatekeeper = run('spctl', ['--assess', '--type', 'execute', '--verbose=2', app]);
   assert((gatekeeper.stdout + gatekeeper.stderr).includes('source=Notarized Developer ID'));
   assert(!existsSync(dmg));
-  run('hdiutil', ['create', '-volname', `野菜 ${version} ${label}`, '-srcfolder', `${root}/${flavor}-stage`, '-format', 'UDZO', '-fs', 'HFS+', '-nospotlight', dmg]);
+  run('hdiutil', ['create', '-volname', `YesChoy ${version} ${label}`, '-srcfolder', `${root}/${flavor}-stage`, '-format', 'UDZO', '-fs', 'HFS+', '-nospotlight', dmg]);
   run('codesign', ['--force', '--sign', identity, '--timestamp', dmg]);
   run('codesign', ['--verify', '--strict', dmg]);
   submit('dmg', dmg);
@@ -97,7 +97,7 @@ if (phase === 'submit-app') {
   try {
     run('hdiutil', ['attach', '-readonly', '-nobrowse', '-mountpoint', mount, dmg]);
     mounted = true;
-    const mountedApp = `${mount}/野菜.app`;
+    const mountedApp = `${mount}/YesChoy.app`;
     run('codesign', ['--verify', '--deep', '--strict', '--all-architectures', mountedApp]);
     run('xcrun', ['stapler', 'validate', mountedApp]);
     mountedArchitecture = run('lipo', ['-archs', `${mountedApp}/Contents/MacOS/yeschoy-desktop`]).stdout.trim().split(/\s+/).sort();

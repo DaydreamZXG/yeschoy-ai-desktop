@@ -14,7 +14,7 @@ $installer = (Resolve-Path -LiteralPath $InstallerPath).Path
 $standaloneRoot = Join-Path $env:LOCALAPPDATA 'Programs\野菜API'
 $tauriRoot = Join-Path $env:LOCALAPPDATA '野菜API'
 # The installer writes here; the two roots above and the test-only "开饭" root below are earlier names it must still stop.
-$currentRoot = Join-Path $env:LOCALAPPDATA '野菜'
+$currentRoot = Join-Path $env:LOCALAPPDATA 'YesChoy'
 $testRoot = Join-Path $env:LOCALAPPDATA '开饭'
 $decoyRoot = Join-Path $env:RUNNER_TEMP 'yeschoy-upgrade-decoy'
 # What the Tauri-generated "开饭" test build left on a machine besides its
@@ -143,9 +143,8 @@ finally {
     Remove-Item -LiteralPath 'HKCU:\Software\yeschoy\野菜API' -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\野菜API' -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop' -Recurse -Force -ErrorAction SilentlyContinue
-    Remove-Item -LiteralPath 'HKCU:\Software\野菜' -Recurse -Force -ErrorAction SilentlyContinue
-    Remove-Item -LiteralPath 'HKCU:\Software\yeschoy\野菜' -Recurse -Force -ErrorAction SilentlyContinue
-    Remove-Item -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\野菜' -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath 'HKCU:\Software\yeschoy\YesChoy' -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\YesChoy' -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath 'HKCU:\Software\Kaifan' -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath 'HKCU:\Software\kaifan\开饭' -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath 'HKCU:\Software\Classes\kaifan' -Recurse -Force -ErrorAction SilentlyContinue

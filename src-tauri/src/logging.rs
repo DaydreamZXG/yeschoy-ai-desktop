@@ -59,7 +59,7 @@ fn log_path() -> Option<PathBuf> {
             PathBuf::from(home)
                 .join("Library")
                 .join("Logs")
-                .join("野菜")
+                .join("YesChoy")
                 .join("yeschoy.log"),
         )
     }
@@ -68,7 +68,7 @@ fn log_path() -> Option<PathBuf> {
         let local = std::env::var_os("LOCALAPPDATA")?;
         Some(
             PathBuf::from(local)
-                .join("野菜")
+                .join("YesChoy")
                 .join("logs")
                 .join("yeschoy.log"),
         )
@@ -80,7 +80,7 @@ fn log_path() -> Option<PathBuf> {
             PathBuf::from(home)
                 .join(".local")
                 .join("state")
-                .join("野菜")
+                .join("YesChoy")
                 .join("yeschoy.log"),
         )
     }

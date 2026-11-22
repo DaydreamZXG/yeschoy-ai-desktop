@@ -32,7 +32,7 @@ const MAX_BREAK_GLASS_FILE: u64 = 2 * 1024 * 1024;
 // A UTF-8 BOM and CRLF line endings, because the person most likely to open
 // this file is on Windows, in Notepad, after something already went wrong.
 const BREAK_GLASS_README: &str =
-    "\u{feff}这个文件夹里是野菜改动你的配置之前，那些文件的原始内容。\r\n\
+    "\u{feff}这个文件夹里是 YesChoy 改动你的配置之前，那些文件的原始内容。\r\n\
 \r\n\
 正常情况下你用不到它：在助手里点「恢复原设置」就行。\r\n\
 只有当助手说恢复失败（通常是系统钥匙串里的密钥没了，比如重置过登录\r\n\
@@ -3097,7 +3097,7 @@ mod tests {
     }
 
     const OLD_CLIENT: &str = "/Applications/开饭.app/Contents/MacOS/kaifan-desktop";
-    const NEW_CLIENT: &str = "/Applications/野菜.app/Contents/MacOS/yeschoy-desktop";
+    const NEW_CLIENT: &str = "/Applications/YesChoy.app/Contents/MacOS/yeschoy-desktop";
 
     fn connected(f: &Fixture, tool: &str, name: &str, after: &[u8]) -> FileChange {
         let file = f.change(name, None, after);
