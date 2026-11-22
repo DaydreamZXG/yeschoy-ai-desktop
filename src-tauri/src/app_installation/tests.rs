@@ -286,6 +286,30 @@ fn installer_progress_survives_observation_without_relaunch_or_fake_connection()
     assert!(coordinator.request_shutdown());
 }
 
+/// 装到系统安装窗口那一步就关掉了接入屏，之后在那边装完：这条旧任务没人再来
+/// 收，不能让别的应用因此问不到自己能怎么装、也开始不了。
+#[test]
+fn installer_left_at_the_system_window_does_not_block_another_app() {
+    let (state, worker, _coordinator) = fixture();
+    let other = InstallRequest {
+        request_id: "other-1".into(),
+        tool_id: "codex_desktop".into(),
+        ..request()
+    };
+    assert_eq!(state.read(&other).tool_id, "claude_desktop");
+    worker.phase("awaiting_system_confirmation", false);
+    worker.finish(Err("installation_not_detected"));
+    let seen = state.read(&other);
+    assert_eq!(
+        (seen.tool_id.as_str(), seen.phase),
+        ("codex_desktop", "idle")
+    );
+    let guard = state.0.lock().unwrap();
+    let job = guard.as_ref().unwrap();
+    assert!(!job.blocks_start("other-1", "codex_desktop"));
+    assert!(job.blocks_start("again-1", "claude_desktop"));
+}
+
 #[tokio::test]
 async fn installer_cancel_and_shutdown_never_drop_an_owned_mutation() {
     let (state, worker, coordinator) = fixture();
@@ -424,7 +448,8 @@ async fn installer_handoff_dismissal_revokes_consent_and_worker_failure_releases
             intent: intent(),
             epoch,
         });
-        assert!(j.blocks_start("different-click"));
+        assert!(j.blocks_start("different-click", &j.progress.tool_id));
+        assert!(j.holds("some_other_app"));
         j.cancel_guidance();
         assert!(j.consent.is_none());
         assert!(j.operating);
@@ -432,8 +457,8 @@ async fn installer_handoff_dismissal_revokes_consent_and_worker_failure_releases
         j.operating = false;
         j.cancel_guidance();
         assert_eq!(j.progress.phase, "cancelled");
-        assert!(!j.blocks_start("new-click"));
-        assert!(j.blocks_start("fixture-1"));
+        assert!(!j.blocks_start("new-click", &j.progress.tool_id));
+        assert!(j.blocks_start("fixture-1", &j.progress.tool_id));
     });
     drop(worker);
     coordinator.request_shutdown();

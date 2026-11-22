@@ -154,8 +154,16 @@ impl Job {
             self.progress.reason_code = "system_handoff_dismissed";
         }
     }
-    fn blocks_start(&self, request_id: &str) -> bool {
-        self.progress.active() || self.start_request_id == request_id
+    /// 停在系统的安装窗口那一步、我们这边没有在做事。用户可能早就在那边点完了，
+    /// 也可能关掉了；不能让它一直占着，别的应用就再也装不了。
+    fn parked(&self) -> bool {
+        !self.operating && self.progress.phase == "awaiting_system_confirmation"
+    }
+    fn holds(&self, tool_id: &str) -> bool {
+        self.progress.active() && !(self.parked() && self.progress.tool_id != tool_id)
+    }
+    fn blocks_start(&self, request_id: &str, tool_id: &str) -> bool {
+        self.holds(tool_id) || self.start_request_id == request_id
     }
 }
 
@@ -167,7 +175,7 @@ impl AppInstallationState {
         if let Some(job) = state.as_ref().filter(|job| {
             request.job_id == job.progress.job_id
                 || (request.job_id.is_empty()
-                    && (job.progress.active() || job.progress.tool_id == request.tool_id))
+                    && (job.holds(&request.tool_id) || job.progress.tool_id == request.tool_id))
         }) {
             let mut result = job.progress.clone();
             result.request_id = request.request_id.clone();
@@ -594,7 +602,7 @@ async fn control(
         let mut guard = state.0.lock().map_err(|_| "installer_unavailable")?;
         if guard
             .as_ref()
-            .is_some_and(|j| j.blocks_start(&request.request_id))
+            .is_some_and(|j| j.blocks_start(&request.request_id, &request.tool_id))
         {
             drop(guard);
             return Ok(state.read(&request));
