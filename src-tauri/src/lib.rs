@@ -12,6 +12,8 @@ const FRONTEND_MODE_MARKER: &str = "desktop_shell frontend_mode=dev-server";
 
 mod account_finance;
 mod account_v2;
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+mod app_handoff_core;
 mod app_installation;
 mod app_update;
 mod claude_bridge;
