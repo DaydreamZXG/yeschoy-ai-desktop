@@ -1,9 +1,9 @@
 diff --git a/controller/desktop_connect.go b/controller/desktop_connect.go
 new file mode 100644
-index 0000000..0c859c5
+index 0000000..11ceec8
 --- /dev/null
 +++ b/controller/desktop_connect.go
-@@ -0,0 +1,905 @@
+@@ -0,0 +1,913 @@
 +package controller
 +
 +import (
@@ -540,7 +540,14 @@ index 0000000..0c859c5
 +		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
 +		return
 +	}
-+	tokens, err := model.GetAllUserTokens(c.GetInt("id"), 0, max(operation_setting.GetMaxUserTokens(), 1))
++	// Every key the account owns, not a page capped at the key limit: the limit
++	// may have been lowered since, and the client finds the keys it made here.
++	total, err := model.CountUserTokens(c.GetInt("id"))
++	if err != nil {
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	tokens, err := model.GetAllUserTokens(c.GetInt("id"), 0, int(total))
 +	if err != nil {
 +		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
 +		return
@@ -833,6 +840,7 @@ index 0000000..0c859c5
 +  function signedOut() {
 +    text.textContent = copy.signedOut;
 +    button.hidden = true;
++    button.disabled = false;
 +    login.hidden = false;
 +  }
 +  function post(path, token) {
@@ -911,10 +919,10 @@ index 0000000..0c859c5
 +}
 diff --git a/controller/desktop_connect_test.go b/controller/desktop_connect_test.go
 new file mode 100644
-index 0000000..5171fdf
+index 0000000..c2feaf2
 --- /dev/null
 +++ b/controller/desktop_connect_test.go
-@@ -0,0 +1,459 @@
+@@ -0,0 +1,466 @@
 +package controller
 +
 +import (
@@ -1260,6 +1268,13 @@ index 0000000..5171fdf
 +	status, reply = create("third", "default")
 +	assert.Equal(t, http.StatusConflict, status)
 +	assert.Equal(t, "key_limit_reached", reply.Code)
++
++	// A limit lowered below what the account already holds hides none of its keys.
++	operation_setting.GetTokenSetting().MaxUserTokens = 1
++	status, reply = desktopCall(t, router, http.MethodGet, "/api/desktop/v2/keys", desktopTestHost, browser.AccessToken, "")
++	require.Equal(t, http.StatusOK, status, reply.Code)
++	keys, _ = reply.Data["keys"].([]any)
++	assert.Len(t, keys, 2)
 +
 +	// Another account's key cannot be read or deleted.
 +	strangerPath := "/api/desktop/v2/keys/" + strconv.Itoa(stranger.Id)
