@@ -310,7 +310,8 @@ fn key_reply(call: &KeyCall, status: u16, value: &Value) -> (u16, Value) {
             }
         },
         KeyCall::Reveal => match data.get("key").and_then(Value::as_str) {
-            Some(key) => json!({"key": key}),
+            // The secret is complete as issued: no prefix is to be added.
+            Some(key) => json!({"key": key, "verbatim": true}),
             None => {
                 return (
                     502,
@@ -828,7 +829,7 @@ mod tests {
             200,
             &json!({"success": true, "data": {"key": "sk-test"}}),
         );
-        assert_eq!(value["data"]["key"], "sk-test");
+        assert_eq!(value["data"], json!({"key": "sk-test", "verbatim": true}));
 
         // A success with no key in it is not a key.
         let (status, value) =
