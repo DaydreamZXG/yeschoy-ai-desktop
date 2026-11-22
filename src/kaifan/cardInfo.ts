@@ -1,4 +1,8 @@
-import type { AccountModel, BillingGroup } from "../account/session";
+import type {
+  AccountModel,
+  BillingGroup,
+  PlanPricing,
+} from "../account/session";
 import { billingTiers } from "../configuration/billing";
 import type { ToolConnection } from "../configuration/connections";
 import { hasReviewedCapabilities } from "../model-profiles/profile";
@@ -38,8 +42,25 @@ export function discountOf(ratio: number | null | undefined): Discount | null {
   return { kind: "off", tenths: half };
 }
 
+/** 站点给方案起的名字；只有按中立约定接入的站才有，别的站方案名就是 id。 */
+export function planLabelOf(
+  models: readonly AccountModel[],
+  id: string,
+): string | null {
+  for (const model of models)
+    for (const group of model.billing?.groups ?? [])
+      if (group.id === id && group.plan?.label) return group.plan.label;
+  return null;
+}
+
 export interface Plan {
   id: string;
+  /** 月卡方案。 */
+  subscription: boolean;
+  /** 只有经过这个客户端才是这个价。 */
+  appOnly: boolean;
+  /** 站点直接给的这个方案的价；有它就不用官方价乘倍率去推。 */
+  pricing?: PlanPricing;
   ratio: number | null;
   discount: Discount | null;
   /** 几个方案里明确最便宜的那个。只有一个、或者分不出高低时都不标。 */
@@ -61,6 +82,9 @@ export function plansOf(model: AccountModel | undefined): Plan[] {
     known.filter((ratio) => ratio === lowest).length === 1;
   return groups.map((group) => ({
     id: group.id,
+    subscription: group.plan?.subscription === true,
+    appOnly: group.plan?.appOnly === true,
+    ...(group.plan ? { pricing: group.plan } : {}),
     ratio: group.ratio,
     discount: discountOf(group.ratio),
     cheapest: clear && group.ratio === lowest,
@@ -79,6 +103,7 @@ export interface Prices {
 export function pricesOf(
   model: AccountModel | undefined,
   ratio: number | null | undefined,
+  pricing?: PlanPricing,
 ): Prices | null {
   if (!model?.pricingAvailable) return null;
   const input = model.officialInputCnyPerMillion.trim();
@@ -102,8 +127,10 @@ export function pricesOf(
   return {
     officialInput,
     officialOutput,
-    planInput: usable ? officialInput * ratio : null,
-    planOutput: usable ? officialOutput * ratio : null,
+    planInput:
+      pricing?.inputPerMillion ?? (usable ? officialInput * ratio : null),
+    planOutput:
+      pricing?.outputPerMillion ?? (usable ? officialOutput * ratio : null),
   };
 }
 
@@ -170,8 +197,16 @@ export function tieredPricesOf(
   return null;
 }
 
-export function yuan(amount: number): string {
-  return `¥${new Intl.NumberFormat("zh-CN", {
+/** 名片上的价是什么货币：按中立约定接入的站自己说，别的站都换算成了人民币。 */
+export function currencyOf(model: AccountModel | undefined): "CNY" | "USD" {
+  return model?.billing?.groups.find((group) => group.plan)?.plan?.currency ===
+    "USD"
+    ? "USD"
+    : "CNY";
+}
+
+export function yuan(amount: number, currency: "CNY" | "USD" = "CNY"): string {
+  return `${currency === "USD" ? "$" : "¥"}${new Intl.NumberFormat("zh-CN", {
     minimumFractionDigits: 2,
     maximumFractionDigits: amount > 0 && amount < 0.1 ? 4 : 2,
   }).format(amount)}`;

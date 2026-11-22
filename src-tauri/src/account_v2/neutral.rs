@@ -23,6 +23,8 @@ const MAX_TIERS: usize = 8;
 #[serde(rename_all = "camelCase")]
 pub struct PlanPricing {
     label: String,
+    /// `CNY` or `USD`: what every price on this plan is in.
+    currency: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     input_per_million: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -219,6 +221,7 @@ struct Listed {
 /// is what the card shows as a discount; without an official price it is
 /// unknown, and the plan's own prices still stand.
 pub(super) fn models(payload: Option<&Value>) -> Option<Vec<AccountModel>> {
+    let currency = currency(payload)?;
     let plans = data(payload)?.get("plans")?.as_array()?;
     let mut listed: BTreeMap<String, Listed> = BTreeMap::new();
     for plan in plans.iter().take(MAX_PLANS) {
@@ -275,6 +278,7 @@ pub(super) fn models(payload: Option<&Value>) -> Option<Vec<AccountModel>> {
                 supported_endpoint_types: endpoints.clone(),
                 plan: Some(PlanPricing {
                     label: label.clone(),
+                    currency,
                     input_per_million: input,
                     output_per_million: field(own, "output"),
                     cache_read_per_million: field(own, "cacheRead"),
@@ -502,6 +506,7 @@ mod tests {
         assert_eq!(groups[1].ratio, Some(0.25));
         let standard = groups[0].plan.as_ref().unwrap();
         assert_eq!(standard.label, "Standard");
+        assert_eq!(standard.currency, "CNY");
         assert_eq!(standard.cache_read_per_million, Some(1.0));
         assert_eq!(standard.long_context[0].output_per_million, Some(75.0));
         let garden = groups[1].plan.as_ref().unwrap();

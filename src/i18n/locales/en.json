@@ -611,6 +611,8 @@
       "good": "Good at",
       "model": "Model",
       "plan": "Price plan",
+      "subscription": "Monthly pass",
+      "appOnly": "App-only price",
       "planHint": "Optional. The station's standard group is used by default",
       "planNote": "Discounts come from the multiplier the station reports. Top-up bonuses are not included.",
       "cheapest": "Cheapest",

@@ -49,11 +49,40 @@ export interface UsageSummary {
   tokenCount: string;
 }
 
+/** 站点按中立约定给的方案：自己的名字和价，已经是站点的货币、每百万 tokens。 */
+export interface PlanPricing {
+  label: string;
+  /** 这个方案上所有的价是什么货币。 */
+  currency: "CNY" | "USD";
+  inputPerMillion?: number;
+  outputPerMillion?: number;
+  cacheReadPerMillion?: number;
+  cacheWritePerMillion?: number;
+  perRequest?: number;
+  /** 只有经过这个客户端的请求才是这个价。 */
+  appOnly: boolean;
+  subscription: boolean;
+  peak?: {
+    start: string;
+    end: string;
+    multiplier: number;
+    timezone?: string;
+    weekdaysOnly: boolean;
+  }[];
+  longContext?: {
+    fromTokens: number;
+    toTokens?: number;
+    inputPerMillion?: number;
+    outputPerMillion?: number;
+  }[];
+}
+
 export interface BillingGroup {
   id: string;
   description: string;
   ratio: number | null;
   supportedEndpointTypes?: string[];
+  plan?: PlanPricing;
 }
 
 export interface ModelBilling {
