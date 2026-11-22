@@ -164,6 +164,17 @@ export function billingTiers(expression: string): BillingTier[] {
         name = node.args[0].value;
         cost = node.args[1];
       }
+      // fixed(n)：不看 tokens，每次请求一个价。
+      if (
+        cost.kind === "call" &&
+        cost.name === "fixed" &&
+        cost.args.length === 1 &&
+        cost.args[0].kind === "number"
+      ) {
+        tiers.push({ name, rates: { request: cost.args[0].value } });
+        if (tiers.length > 32) throw Error("too_many_tiers");
+        return;
+      }
       const rates = linear(cost);
       if (
         (rates.constant ?? 0) !== 0 ||

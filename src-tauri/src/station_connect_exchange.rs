@@ -223,7 +223,7 @@ fn exchange_url_origin(url: &str) -> Option<String> {
     connect_origin_is_acceptable(&origin)
 }
 
-const fn connect_platform() -> &'static str {
+pub(crate) const fn connect_platform() -> &'static str {
     if cfg!(target_os = "macos") {
         "macos"
     } else if cfg!(target_os = "windows") {
