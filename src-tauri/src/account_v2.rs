@@ -2608,7 +2608,9 @@ pub async fn account_announcements_read_v2(
     let bootstrap = match fetch_bootstrap(&request.line_id).await {
         Ok(bootstrap) => bootstrap,
         // 连不上才算这次没读到；站点答了但不是我们认识的那种，就是没有公告栏。
-        Err(AccountProjectionFailure::Transport(_)) => return Ok(missed()),
+        Err(AccountProjectionFailure::Transport(failure)) if never_answered(&failure) => {
+            return Ok(missed())
+        }
         Err(_) => return Ok(unavailable),
     };
     if bootstrap.announcements_path.is_empty() {
@@ -2622,8 +2624,10 @@ pub async fn account_announcements_read_v2(
         return Ok(unavailable);
     };
     let url = format!("{origin}{}", bootstrap.announcements_path);
-    let Ok(response) = send_json(Method::GET, &url, Some(&access_token), None).await else {
-        return Ok(missed());
+    let response = match send_json(Method::GET, &url, Some(&access_token), None).await {
+        Ok(response) => response,
+        Err(failure) if never_answered(&failure) => return Ok(missed()),
+        Err(_) => return Ok(unavailable),
     };
     if !response.status.is_success() {
         log::info!(
@@ -2646,6 +2650,15 @@ pub async fn account_announcements_read_v2(
         missed: false,
         notices,
     })
+}
+
+/// 根本没等到站点的回答（断网、超时）。站点答了一页网页之类我们不认识的东西
+/// 不算：没有桌面接口的站点就是这样答的，那是没有公告栏。
+fn never_answered(failure: &TransportFailure) -> bool {
+    matches!(
+        failure,
+        TransportFailure::Network | TransportFailure::TimedOut
+    )
 }
 
 /// 站点说公告栏在这里，这次却答了「太忙」或「出错了」：等下再读多半就好。
@@ -3272,6 +3285,11 @@ mod tests {
         for status in [400, 401, 403, 404] {
             assert!(!announcements_missed(status), "{status}");
         }
+        // 没有桌面接口的站点对那个地址答的是一页网页：不是没读到，是没有公告栏。
+        assert!(never_answered(&TransportFailure::Network));
+        assert!(never_answered(&TransportFailure::TimedOut));
+        assert!(!never_answered(&TransportFailure::InvalidResponse));
+        assert!(!never_answered(&TransportFailure::ResponseTooLarge));
         let row = serde_json::to_value(AnnouncementsProjection {
             missed: true,
             ..Default::default()
