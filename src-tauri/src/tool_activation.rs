@@ -15,8 +15,9 @@ use tauri::Emitter;
 
 use crate::{
     account_v2::{
-        ensure_session_epoch, native_account_json, native_session_access, native_session_epoch,
-        station_connect_origin_from_line_id, AccountV2State, NativeSessionFailure,
+        ensure_session_epoch, line_id_for_station_connect_origin, native_account_json,
+        native_session_access, native_session_epoch, station_connect_origin_from_line_id,
+        AccountV2State, NativeSessionFailure,
     },
     claude_bridge::ClaudeTransport,
     connection_recovery::{self, Receipt, Store},
@@ -3687,11 +3688,7 @@ pub async fn manage_tool_connections_v1(
                     (Some(credential), Some(epoch)) => {
                         match native_session_access(
                             &account_state,
-                            if credential.origin == "https://api.yeschoy.com" {
-                                "global_accelerated"
-                            } else {
-                                "mainland_optimized"
-                            },
+                            &line_id_for_station_connect_origin(&credential.origin),
                             epoch,
                         )
                         .await
