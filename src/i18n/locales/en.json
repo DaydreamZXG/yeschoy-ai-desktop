@@ -628,6 +628,8 @@
       "official": "List price",
       "thisPlan": "This plan",
       "unknown": "Unknown",
+      "perRequest": "Per request",
+      "tierNote": "This model is priced in tiers. The tier names are the station's own.",
       "noPrices": "This station doesn't provide prices for this model.",
       "jobs": "Where she works",
       "noJobs": "Not connected to any app yet.",

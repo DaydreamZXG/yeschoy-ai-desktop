@@ -291,4 +291,11 @@ describe("billing display follows the selected NewAPI group", () => {
       { name: "长上下文", rates: { p: 6 } },
     ]);
   });
+
+  it("reads a flat per-request price", () => {
+    expect(billingTiers('tier("base", fixed(0.05))')).toEqual([
+      { name: "base", rates: { request: 0.05 } },
+    ]);
+    expect(billingTiers('tier("base", fixed(p))')).toEqual([]);
+  });
 });
