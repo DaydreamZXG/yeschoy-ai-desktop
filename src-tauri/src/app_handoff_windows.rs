@@ -24,15 +24,7 @@ use windows::{
     },
 };
 
-use crate::app_handoff_core::{visible_part, Area};
-
-/// 应用的一个窗口：`outer` 带着系统那圈看不见的拖拽边，`visible` 是眼睛看到的。
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) struct Seen {
-    pub handle: isize,
-    pub outer: Area,
-    pub visible: Area,
-}
+use crate::app_handoff_core::{visible_part, Area, Seen};
 
 fn hwnd(handle: isize) -> HWND {
     HWND(handle as *mut core::ffi::c_void)

@@ -75,6 +75,20 @@ pub(crate) fn reloads_installation(tool_id: &str, path: &Path) -> bool {
         && !(tool_id == "codex_desktop" && super::codex_desktop::is_cli_installation(path))
 }
 
+/// 这个安装位置的应用现在开着的所有窗口。只给打开时的衔接找窗口用，不动它们。
+/// 只有 Windows 上找得到。
+pub(crate) fn window_handles(path: &Path) -> Vec<isize> {
+    #[cfg(target_os = "windows")]
+    {
+        platform::window_handles(path)
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = path;
+        Vec::new()
+    }
+}
+
 pub(crate) fn observes_running(tool_id: &str) -> bool {
     // These reload their configuration while running, so a running copy is
     // only ever focused, never restarted.
@@ -409,9 +423,7 @@ mod platform {
         Ok(!matching_processes(path)?.is_empty())
     }
 
-    /// 这个安装位置的应用现在开着的所有窗口。只给衔接动画找窗口用，不动它们。
-    #[allow(dead_code)]
-    pub(crate) fn window_handles(path: &Path) -> Vec<isize> {
+    pub(super) fn window_handles(path: &Path) -> Vec<isize> {
         matching_processes(path)
             .and_then(matching_windows)
             .map(|windows| windows.into_iter().map(|hwnd| hwnd.0 as isize).collect())

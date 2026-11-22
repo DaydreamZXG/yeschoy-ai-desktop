@@ -44,6 +44,14 @@ impl Area {
     }
 }
 
+/// 应用的一个窗口：`outer` 带着系统那圈看不见的拖拽边，`visible` 是眼睛看到的。
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct Seen {
+    pub handle: isize,
+    pub outer: Area,
+    pub visible: Area,
+}
+
 /// 连续几次看到同一个位置才算窗口摆好了。应用刚弹出来时常常先出一个小窗，
 /// 再跳到上次的位置和大小；那一下不能当成它最后的样子。
 pub(crate) const SETTLED_AFTER: u32 = 4;
