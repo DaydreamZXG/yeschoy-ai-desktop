@@ -14,6 +14,7 @@ fn config_dir_for(app: &str, home: &Path) -> Option<PathBuf> {
         "pi" => Some(home.join(".pi").join("agent")),
         "opencode" => Some(crate::tool_adapters::opencode::config_dir(home)),
         "cline" => Some(home.join(".cline")),
+        "hermes" => crate::tool_adapters::hermes::config_dir(home).ok(),
         // The Claude Desktop profile lives in the 3p config library
         // (`Claude-3p/configLibrary`); reveal that directory.
         "claude-desktop" => {
@@ -85,7 +86,6 @@ mod tests {
     #[test]
     fn rejects_unsupported_apps() {
         let home = Path::new("/home/tester");
-        assert!(config_dir_for("hermes", home).is_none());
         assert!(config_dir_for("openclaw", home).is_none());
         assert!(config_dir_for("dsh", home).is_none());
         assert!(config_dir_for("", home).is_none());

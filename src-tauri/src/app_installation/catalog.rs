@@ -224,6 +224,7 @@ pub(super) fn guide_for(tool: &str, os: &str, arch: &str) -> Option<&'static str
         "pi" => "https://github.com/earendil-works/pi/releases/latest",
         "opencode" => "https://opencode.ai/download",
         "cline" => "https://docs.cline.bot/getting-started/installing-cline",
+        "hermes" => "https://hermes-agent.nousresearch.com/docs/getting-started/installation",
         "dsh_web" => "https://github.com/deepseek-ai/deepseek-harness",
         "workbuddy" => "https://www.workbuddy.cn/",
         "dsh_desktop" => "https://www.deepseek.com/harness/",

@@ -2353,6 +2353,7 @@ pub async fn account_logout_v2(
         "workbuddy",
         "dsh_desktop",
         "cline",
+        "hermes",
     ] {
         crate::request_diagnostics::clear(tool);
     }

@@ -186,6 +186,7 @@ pub(crate) const PRESETS: &[Preset] = &[
             "claude_code",
             "pi",
             "cline",
+            "hermes",
         ],
         ..preset(
             "opencode_go",
@@ -436,6 +437,7 @@ mod tests {
             "claude_code",
             "pi",
             "cline",
+            "hermes",
         ] {
             assert!(allows_tool("https://opencode.ai", tool), "{tool}");
         }
