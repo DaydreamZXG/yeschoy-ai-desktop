@@ -1126,11 +1126,31 @@ async fn session_bound_step<T>(
     result
 }
 
+/// One 野菜API login serves both catalog routes; a login at any other station
+/// serves that station only.
+fn session_serves_line(session_line_id: &str, line_id: &str) -> bool {
+    let catalog = |line: &str| line_origin(line).is_some();
+    if !persisted_session_line_id(session_line_id) {
+        // Sessions saved before the line was recorded are 野菜API logins.
+        return catalog(line_id);
+    }
+    session_line_id == line_id || (catalog(session_line_id) && catalog(line_id))
+}
+
 pub(crate) async fn native_session_access(
     state: &AccountV2State,
     line_id: &str,
     epoch: NativeSessionEpoch,
 ) -> Result<(String, String), NativeSessionFailure> {
+    // The access token is cached without its origin. A caller acting for a
+    // station other than the signed-in one (a tool still connected to the
+    // previous station) must get no token, never this station's.
+    match load_stored_session() {
+        Ok(Some(stored)) if session_serves_line(&stored.line_id, line_id) => {}
+        Ok(Some(_)) => return Err(NativeSessionFailure::AccountChanged),
+        Ok(None) => return Err(NativeSessionFailure::SignedOut),
+        Err(()) => return Err(NativeSessionFailure::ServerUnavailable),
+    }
     let bootstrap = session_bound_step(state, epoch, async {
         fetch_bootstrap(line_id)
             .await
@@ -3317,6 +3337,24 @@ mod tests {
             "https://yeschoy.com/desktop-authorize?user_code=ABCD-2345&next=x",
             "ABCD-2345"
         ));
+    }
+
+    #[test]
+    fn a_session_serves_only_its_own_station() {
+        let station = "station_connect:https://example.com";
+        assert!(session_serves_line(
+            "mainland_optimized",
+            "global_accelerated"
+        ));
+        assert!(session_serves_line("", "mainland_optimized"));
+        assert!(session_serves_line(station, station));
+        assert!(!session_serves_line("mainland_optimized", station));
+        assert!(!session_serves_line(station, "mainland_optimized"));
+        assert!(!session_serves_line(
+            station,
+            "station_connect:https://other.example"
+        ));
+        assert!(!session_serves_line("", station));
     }
 
     #[test]
