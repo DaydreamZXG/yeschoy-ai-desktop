@@ -1324,6 +1324,13 @@ async fn fetch_token_key(
         .ok_or(ActivationFailure::ServerUnavailable)
 }
 
+/// 后台在退「上一个方案」的密钥时握着它。
+///
+/// 那次清理在 `ACTIVATION_LOCK` 之外跑。用户马上又换回原来的方案的话，下一次
+/// 接入会在账户里看到那把还没删掉的密钥并拿来复用，接着清理把它删了 —— 应用
+/// 刚接好就认证失败。所以取密钥之前先等清理做完，再去看账户里还剩什么。
+static DROPPED_GROUP_CLEANUP: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 async fn acquire_token(
     origin: &str,
     access_token: &str,
@@ -1331,6 +1338,7 @@ async fn acquire_token(
     group: &str,
     model_ids: &[String],
 ) -> Result<TokenLease, ActivationFailure> {
+    drop(DROPPED_GROUP_CLEANUP.lock().await);
     acquire_token_using(
         &NativeTokenApi { access_token },
         origin,
@@ -1575,7 +1583,10 @@ fn dropped_groups_credential(
 }
 
 /// 和 `retire_superseded_tokens` 一样放到后台、只在本地事务提交之后做。
-fn retire_dropped_group_tokens(
+///
+/// 锁在这里就拿到（这时还握着 `ACTIVATION_LOCK`），再带进后台任务：这样下一次
+/// 接入不可能抢在清理前面去读账户里的密钥。
+async fn retire_dropped_group_tokens(
     origin: &str,
     access_token: &str,
     tool_id: &str,
@@ -1590,7 +1601,9 @@ fn retire_dropped_group_tokens(
     let origin = origin.to_owned();
     let access_token = access_token.to_owned();
     let tool_id = tool_id.to_owned();
+    let cleaning = DROPPED_GROUP_CLEANUP.lock().await;
     tokio::spawn(async move {
+        let _cleaning = cleaning;
         let complete = revoke_owned_tool_tokens(&origin, &access_token, &tool_id, &dropped).await;
         log::info!("tool_token_cleanup stage=dropped_groups_done complete={complete}");
     });
@@ -3186,7 +3199,8 @@ pub async fn configure_desktop_tool_v2(
             &request.tool_id,
             previous_record.as_ref(),
             &bindings,
-        );
+        )
+        .await;
     }
     if let Err(error) = open_result {
         let reason = match error {
@@ -3807,6 +3821,20 @@ pub async fn manage_tool_connections_v1(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn no_key_is_picked_while_the_last_plans_keys_are_still_being_removed() {
+        // 换回原方案时，账户里那把旧密钥可能正要被后台删掉；这时去挑密钥会挑中它。
+        let cleaning = DROPPED_GROUP_CLEANUP.lock().await;
+        let picking = acquire_token("http://127.0.0.1:9", "session", "claude_code", "flash", &[]);
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(50), picking)
+                .await
+                .is_err(),
+            "the account must not be read before the cleanup is done"
+        );
+        drop(cleaning);
+    }
 
     #[test]
     fn switching_plans_gives_up_the_keys_of_the_groups_left_behind() {
