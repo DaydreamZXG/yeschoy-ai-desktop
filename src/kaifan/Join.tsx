@@ -28,7 +28,13 @@ import {
   modelDisplayName,
 } from "../model-profiles/profile";
 import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
-import { joinModel, pickedPlan, planLabelOf, type CardPicks } from "./cardInfo";
+import {
+  joinModel,
+  pickedPlan,
+  planLabelOf,
+  plansForApp,
+  type CardPicks,
+} from "./cardInfo";
 import {
   installOutcome,
   installStep,
@@ -303,21 +309,35 @@ export function Join({
   // 存过的方案站点还给不给，决定了能不能原样再用。不给了也不替用户换：
   // 先问一句，他点了头才用新的（`approved`）。
   const offered = useMemo(
-    () => (model?.billing?.groups ?? []).map((group) => group.id),
-    [model],
+    () => plansForApp(app, model).map((group) => group.id),
+    [app, model],
   );
+  // 这个应用带不上专属价要的设备凭证：专属价的方案在它这儿不算数。
+  const narrowed = offered.length < (model?.billing?.groups ?? []).length;
+  const unpriced = narrowed && offered.length === 0;
+  const fits = (id: string | undefined) =>
+    id !== undefined && (!narrowed || offered.includes(id)) ? id : undefined;
   const savedGroup = remembered.find(
     (item) => item.modelId === modelId,
   )?.billingGroup;
   // 点头只算在当时那个应用上：别的应用存的是它自己的方案，不能跟着被换。
   const approval = `${app}\n${modelId}`;
   // 名片上挑的方案是用户自己定的，排在存过的前面；站点不再提供的不算。
+  const wanted = pickedPlan(model, picks);
   const billingGroup =
     approved[approval] ??
-    pickedPlan(model, picks) ??
+    fits(wanted) ??
     savedGroup ??
-    chooseBillingGroup(model, "");
+    fits(chooseBillingGroup(model, "")) ??
+    offered[0] ??
+    DEFAULT_BILLING_GROUP;
   const gone = offered.length > 0 && !offered.includes(billingGroup);
+  // 名片上挑的是专属价，这个应用用不了：换了哪个方案要说出来，不能悄悄换。
+  // 存过的方案自己也用不了时还没换成谁，等接入时那一问。
+  const swapped =
+    !unpriced && !gone && wanted !== undefined && fits(wanted) === undefined
+      ? wanted
+      : null;
   const others = offered.filter(
     (id) => id !== billingGroup && !refused.includes(`${modelId}\n${id}`),
   );
@@ -907,6 +927,25 @@ export function Join({
                     </p>
                   )
                 )}
+                {(unpriced || swapped) && (
+                  <p
+                    className="mend"
+                    role="note"
+                    data-testid="kaifan-join-app-only"
+                  >
+                    {t(
+                      unpriced
+                        ? "kaifan.join.appOnlyNone"
+                        : "kaifan.join.appOnlySwap",
+                      {
+                        app: appName,
+                        model: modelDisplayName(modelId),
+                        from: swapped ? planName(swapped) : "",
+                        to: planName(billingGroup),
+                      },
+                    )}
+                  </p>
+                )}
                 {broken && (
                   <p
                     className="mend"
@@ -1023,7 +1062,7 @@ export function Join({
                     <button
                       type="button"
                       className="go"
-                      disabled={!modelId || barred}
+                      disabled={!modelId || barred || unpriced}
                       onClick={() => void fetchAndJoin()}
                     >
                       {t("kaifan.join.installGo", { app: appName })}
@@ -1049,7 +1088,8 @@ export function Join({
                         scan !== "ready" ||
                         !modelId ||
                         !installationId ||
-                        barred
+                        barred ||
+                        unpriced
                       }
                       onClick={() => void run()}
                     >
