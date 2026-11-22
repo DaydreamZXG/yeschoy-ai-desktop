@@ -606,6 +606,12 @@
       "open_tool_not_found": "我找不到 {{app}} 了，可能被移走或卸载了。回首页我会重新找一遍。",
       "open_busy": "{{app}} 还有一件事没做完。等它结束，再点一次。"
     },
+    "window": {
+      "minimize": "最小化",
+      "maximize": "最大化",
+      "restore": "还原",
+      "close": "关闭"
+    },
     "drawer": {
       "close": "关闭"
     },

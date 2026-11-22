@@ -5,6 +5,7 @@
       {
         "label": "main",
         "title": "野菜",
+        "decorations": false,
         "visible": true,
         "minWidth": 860,
         "minHeight": 640
