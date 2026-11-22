@@ -848,7 +848,7 @@ mod tests {
     fn a_key_the_station_names_with_any_string_is_found_again_by_its_number() {
         let uuid = "3f2b8c1e-9d4a-4c6f-8a57-0b1e2d3c4f5a";
         let number = key_number(uuid).unwrap();
-        assert!(number >= DERIVED_KEY_NUMBER && number < 1 << 53);
+        assert!((DERIVED_KEY_NUMBER..1 << 53).contains(&number));
         assert_eq!(key_number(uuid), Some(number));
         assert_ne!(
             key_number("3f2b8c1e-9d4a-4c6f-8a57-0b1e2d3c4f5b"),
