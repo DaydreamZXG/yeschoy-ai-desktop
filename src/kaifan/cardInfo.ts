@@ -340,6 +340,28 @@ export function joinModel(
   return pickedModel(who, ids, picks);
 }
 
+/**
+ * 这几个应用自己连站点，不经过本机转发，带不上客户端专属价要的设备凭证：
+ * 站点会按退路价扣，或者直接拒绝。所以专属价的方案不给它们用。
+ */
+const DIRECT_APPS: readonly string[] = [
+  "pi",
+  "workbuddy",
+  "dsh_web",
+  "dsh_desktop",
+];
+
+/** 这个应用接这个型号时能用的方案。 */
+export function plansForApp(
+  app: string,
+  model: AccountModel | undefined,
+): BillingGroup[] {
+  const groups = model?.billing?.groups ?? [];
+  return DIRECT_APPS.includes(app)
+    ? groups.filter((group) => group.plan?.appOnly !== true)
+    : groups;
+}
+
 /** 这个型号挑过的方案；站点已经不提供了就不算。 */
 export function pickedPlan(
   model: AccountModel | undefined,

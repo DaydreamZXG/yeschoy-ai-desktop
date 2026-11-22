@@ -497,6 +497,84 @@ describe("接入：选应用、选人、点一下", () => {
     });
   });
 
+  describe("客户端专属价的方案", () => {
+    const id = "claude-sonnet-4-5-20250929";
+    const withPlans = (...groups: [string, boolean][]): AccountModel => ({
+      ...model(id),
+      billing: {
+        groups: groups.map(([group, appOnly]) => ({
+          id: group,
+          description: "",
+          ratio: null,
+          plan: {
+            label: group,
+            currency: "USD",
+            appOnly,
+            subscription: false,
+          },
+        })),
+        baseInputUsd: null,
+        baseOutputUsd: null,
+      } as AccountModel["billing"],
+    });
+    const picks = { model: {}, plan: { [id]: "种菜" } } as CardPicks;
+    const note = () => screen.queryByTestId("kaifan-join-app-only");
+
+    it("自己连站点的应用用不上：换成别的方案，并且说出来", async () => {
+      found([target("pi")]);
+      setup({
+        initialApp: "pi",
+        models: [withPlans(["种菜", true], ["标准", false])],
+        picks,
+      });
+      await ready();
+      expect(note()).toHaveTextContent("「种菜」是客户端专属价");
+      expect(note()).toHaveTextContent("按「标准」的价格算");
+      answer("ready", "configuration_ready");
+      fireEvent.click(go());
+      await waitFor(() => expect(activate).toHaveBeenCalled());
+      expect(activate.mock.calls[0][0]).toMatchObject({
+        toolId: "pi",
+        billingGroup: "标准",
+      });
+    });
+
+    it("没在名片上挑过：直接用能用的那个，不多说", async () => {
+      found([target("pi")]);
+      setup({
+        initialApp: "pi",
+        models: [withPlans(["种菜", true], ["标准", false])],
+      });
+      await ready();
+      expect(note()).toBeNull();
+      answer("ready", "configuration_ready");
+      fireEvent.click(go());
+      await waitFor(() => expect(activate).toHaveBeenCalled());
+      expect(activate.mock.calls[0][0].billingGroup).toBe("标准");
+    });
+
+    it("只有专属价的方案：自己连站点的应用接不了，说清楚为什么", async () => {
+      found([target("pi")]);
+      setup({ initialApp: "pi", models: [withPlans(["种菜", true])], picks });
+      await waitFor(() => expect(note()).toHaveTextContent("接不了"));
+      expect(go()).toBeDisabled();
+    });
+
+    it("经过本机转发的应用照常用专属价", async () => {
+      setup({
+        initialApp: "codex_desktop",
+        models: [withPlans(["种菜", true], ["标准", false])],
+        picks,
+      });
+      await ready();
+      expect(note()).toBeNull();
+      answer("ready", "configuration_ready");
+      fireEvent.click(go());
+      await waitFor(() => expect(activate).toHaveBeenCalled());
+      expect(activate.mock.calls[0][0].billingGroup).toBe("种菜");
+    });
+  });
+
   it("应用开着：先说清楚要重启，用户点了才重启", async () => {
     const props = setup();
     await ready();

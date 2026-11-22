@@ -176,6 +176,12 @@ A station may charge less for requests that come through a desktop client.
    header carries a live credential of the key's owner. Without it the station
    decides: another price, or a refusal.
 
+Some tools talk to the station themselves instead of going through the client,
+so their requests never carry the header. The client does not put those tools
+on an `appOnly` plan: it uses another plan the model is listed under, and says
+so. Offer at least one plan without `appOnly` for models those tools should
+reach.
+
 The credential identifies a device, not a user: it grants nothing by itself and
 must not be accepted in place of a key or a session. Store only its hash, and
 do not pass the header on to upstream providers.
