@@ -556,6 +556,10 @@
       "systemReopen": "Reopen the install window",
       "systemDrop": "Not now"
     },
+    "handoff": {
+      "opening": "Opening {{app}}…",
+      "skip": "Click or press any key to skip"
+    },
     "reveal": {
       "kicker": "MODEL ONLINE",
       "quote": "“{{quote}}”",
@@ -710,6 +714,7 @@
       "logoutFailed": "That didn't sign out. Try again in a moment.",
       "look": "Sound and language",
       "sound": "Sound",
+      "handoff": "Scene when an app opens",
       "language": "Language",
       "apps": "Connected apps",
       "appsNote": "If an app should stop using this station, put it back the way it was before.",
