@@ -10,6 +10,7 @@ use std::collections::BTreeMap;
 
 use serde::Serialize;
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 
 use reqwest::Method;
 
@@ -209,23 +210,52 @@ pub(super) fn catalogue_reply(path: &str, status: u16, value: &Value) -> (u16, V
 enum KeyCall {
     List { page: u64 },
     Create,
-    Reveal,
-    Delete,
+    Reveal(u64),
+    Delete(u64),
+}
+
+/// Callers written for the original contract know a key by a number, while a
+/// station on the neutral contract names it with any string. A plain number is
+/// used as it is; any other identifier is stood in for by a number derived from
+/// it, always at or above this, which is how the two are told apart.
+const DERIVED_KEY_NUMBER: u64 = 1 << 52;
+const KEY_ID_MAX_LEN: usize = 128;
+
+fn key_number(id: &str) -> Option<u64> {
+    if id.is_empty() || id.len() > KEY_ID_MAX_LEN {
+        return None;
+    }
+    // "007" and "7" are different keys to the station.
+    let plain = id.bytes().all(|b| b.is_ascii_digit()) && (id == "0" || !id.starts_with('0'));
+    if let Some(number) = plain.then(|| id.parse::<u64>().ok()).flatten() {
+        if number < DERIVED_KEY_NUMBER {
+            return Some(number);
+        }
+    }
+    let digest = Sha256::digest(id.as_bytes());
+    let head = u64::from_be_bytes(digest[..8].try_into().ok()?);
+    Some(DERIVED_KEY_NUMBER | (head >> 12))
+}
+
+/// The address of one key on the station, whatever its identifier contains.
+fn key_url(keys: &str, id: &str, action: Option<&str>) -> Option<String> {
+    let mut url = reqwest::Url::parse(keys).ok()?;
+    url.path_segments_mut()
+        .ok()?
+        .pop_if_empty()
+        .push(id)
+        .extend(action);
+    Some(url.into())
 }
 
 /// A key operation written for the original contract, as this station takes it.
-fn key_call(
-    method: &Method,
-    url: &str,
-    body: Option<&Value>,
-    origin: &str,
-    keys_path: &str,
-) -> Option<(KeyCall, Method, String, Option<Value>)> {
+fn key_call(method: &Method, url: &str, body: Option<&Value>) -> Option<(KeyCall, Option<Value>)> {
     let parsed = reqwest::Url::parse(url).ok()?;
     let rest = parsed.path().strip_prefix(LEGACY_KEYS_PATH)?;
-    let keys = format!("{origin}{keys_path}");
-    let id = |raw: &str| {
-        (!raw.is_empty() && raw.bytes().all(|b| b.is_ascii_digit())).then(|| raw.to_owned())
+    let number = |raw: &str| {
+        (!raw.is_empty() && raw.bytes().all(|b| b.is_ascii_digit()))
+            .then(|| raw.parse::<u64>().ok())
+            .flatten()
     };
     if rest.is_empty() && *method == Method::GET {
         let page = parsed
@@ -233,7 +263,7 @@ fn key_call(
             .find(|(key, _)| key == "p")
             .and_then(|(_, value)| value.parse().ok())
             .unwrap_or(1);
-        return Some((KeyCall::List { page }, Method::GET, keys, None));
+        return Some((KeyCall::List { page }, None));
     }
     if rest.is_empty() && *method == Method::POST {
         let body = body?;
@@ -241,26 +271,29 @@ fn key_call(
             "name": body.get("name")?.as_str()?,
             "planId": body.get("group")?.as_str()?,
         });
-        return Some((KeyCall::Create, Method::POST, keys, Some(request)));
+        return Some((KeyCall::Create, Some(request)));
     }
     if *method == Method::POST {
-        let id = id(rest.strip_suffix("/key")?)?;
-        return Some((
-            KeyCall::Reveal,
-            Method::POST,
-            format!("{keys}/{id}/reveal"),
-            None,
-        ));
+        return Some((KeyCall::Reveal(number(rest.strip_suffix("/key")?)?), None));
     }
     if *method == Method::DELETE {
-        return Some((
-            KeyCall::Delete,
-            Method::DELETE,
-            format!("{keys}/{}", id(rest)?),
-            None,
-        ));
+        return Some((KeyCall::Delete(number(rest)?), None));
     }
     None
+}
+
+/// The station's own identifier of the key a caller knows as `number`.
+fn key_id_for(number: u64, listed: Option<&Value>) -> Option<String> {
+    if number < DERIVED_KEY_NUMBER {
+        return Some(number.to_string());
+    }
+    data(listed)?
+        .get("keys")?
+        .as_array()?
+        .iter()
+        .filter_map(|row| row.get("id")?.as_str())
+        .find(|id| key_number(id) == Some(number))
+        .map(str::to_owned)
 }
 
 /// The station's answer, in the shape the original contract's callers read.
@@ -276,7 +309,7 @@ fn key_reply(call: &KeyCall, status: u16, value: &Value) -> (u16, Value) {
         };
         return (status, json!({"success": false, "message": code}));
     };
-    let key_id = |row: &Value| row.get("id")?.as_str()?.parse::<u64>().ok();
+    let key_id = |row: &Value| key_number(row.get("id")?.as_str()?);
     let reply = match call {
         KeyCall::List { page } => {
             let items: Vec<Value> = data
@@ -309,7 +342,7 @@ fn key_reply(call: &KeyCall, status: u16, value: &Value) -> (u16, Value) {
                 )
             }
         },
-        KeyCall::Reveal => match data.get("key").and_then(Value::as_str) {
+        KeyCall::Reveal(_) => match data.get("key").and_then(Value::as_str) {
             // The secret is complete as issued: no prefix is to be added.
             Some(key) => json!({"key": key, "verbatim": true}),
             None => {
@@ -319,7 +352,7 @@ fn key_reply(call: &KeyCall, status: u16, value: &Value) -> (u16, Value) {
                 )
             }
         },
-        KeyCall::Delete => Value::Null,
+        KeyCall::Delete(_) => Value::Null,
     };
     (status, json!({"success": true, "data": reply}))
 }
@@ -332,9 +365,38 @@ pub(super) async fn key_exchange(
     paths: &NeutralPaths,
     access_token: &str,
 ) -> Result<(u16, Value), ()> {
-    let Some((call, method, url, body)) = key_call(&method, url, body, origin, &paths.keys) else {
+    let Some((call, body)) = key_call(&method, url, body) else {
         // Nothing on this station answers that operation.
         return Ok((404, json!({"success": false, "message": "unsupported"})));
+    };
+    let keys = format!("{origin}{}", paths.keys);
+    let (method, url) = match call {
+        KeyCall::List { .. } => (Method::GET, Some(keys)),
+        KeyCall::Create => (Method::POST, Some(keys)),
+        KeyCall::Reveal(number) | KeyCall::Delete(number) => {
+            // A derived number says nothing about the identifier it stands
+            // for, so the station's list is read to find it again.
+            let listed = if number < DERIVED_KEY_NUMBER {
+                None
+            } else {
+                let listed = send_json(Method::GET, &keys, Some(access_token), None)
+                    .await
+                    .map_err(|_| ())?;
+                if !listed.status.is_success() {
+                    return Ok(key_reply(&call, listed.status.as_u16(), &listed.value));
+                }
+                Some(listed.value)
+            };
+            let id = key_id_for(number, listed.as_ref());
+            let (method, action) = match call {
+                KeyCall::Reveal(_) => (Method::POST, Some("reveal")),
+                _ => (Method::DELETE, None),
+            };
+            (method, id.and_then(|id| key_url(&keys, &id, action)))
+        }
+    };
+    let Some(url) = url else {
+        return Ok((404, json!({"success": false, "message": "key_not_found"})));
     };
     let response = send_json(method, &url, Some(access_token), body)
         .await
@@ -723,64 +785,87 @@ mod tests {
         assert_eq!(only.plan.as_ref().unwrap().per_request, Some(0.2));
     }
 
-    const STATION: &str = "https://station.example";
-    const KEYS: &str = "/api/desktop/v2/keys";
+    const KEYS: &str = "https://station.example/api/desktop/v2/keys";
 
-    fn call(
-        method: Method,
-        path: &str,
-        body: Option<Value>,
-    ) -> Option<(KeyCall, Method, String, Option<Value>)> {
+    fn call(method: Method, path: &str, body: Option<Value>) -> Option<(KeyCall, Option<Value>)> {
         key_call(
             &method,
-            &format!("{STATION}{path}"),
+            &format!("https://station.example{path}"),
             body.as_ref(),
-            STATION,
-            KEYS,
         )
     }
 
     #[test]
-    fn key_operations_are_re_addressed_to_the_station_paths() {
-        let (kind, method, url, body) =
-            call(Method::GET, "/api/token/?p=2&size=100", None).unwrap();
-        assert_eq!(kind, KeyCall::List { page: 2 });
+    fn key_operations_are_read_as_what_the_neutral_contract_defines() {
         assert_eq!(
-            (method, url.as_str(), body),
-            (
-                Method::GET,
-                "https://station.example/api/desktop/v2/keys",
-                None
-            )
+            call(Method::GET, "/api/token/?p=2&size=100", None),
+            Some((KeyCall::List { page: 2 }, None))
         );
-
-        let created = call(
-            Method::POST,
-            "/api/token/",
-            Some(json!({"name": "App-1", "group": "7", "model_limits": "a,b", "unlimited_quota": true})),
-        )
-        .unwrap();
-        assert_eq!(created.0, KeyCall::Create);
         // Only what the neutral contract defines leaves the machine.
-        assert_eq!(created.3, Some(json!({"name": "App-1", "planId": "7"})));
-
-        let revealed = call(Method::POST, "/api/token/42/key", None).unwrap();
         assert_eq!(
-            (revealed.0, revealed.2.as_str()),
-            (
-                KeyCall::Reveal,
-                "https://station.example/api/desktop/v2/keys/42/reveal"
-            )
+            call(
+                Method::POST,
+                "/api/token/",
+                Some(
+                    json!({"name": "App-1", "group": "7", "model_limits": "a,b", "unlimited_quota": true})
+                ),
+            ),
+            Some((
+                KeyCall::Create,
+                Some(json!({"name": "App-1", "planId": "7"}))
+            ))
         );
-
-        let deleted = call(Method::DELETE, "/api/token/42", None).unwrap();
         assert_eq!(
-            (deleted.0, deleted.1, deleted.2.as_str()),
-            (
-                KeyCall::Delete,
-                Method::DELETE,
-                "https://station.example/api/desktop/v2/keys/42"
-            )
+            call(Method::POST, "/api/token/42/key", None),
+            Some((KeyCall::Reveal(42), None))
+        );
+        assert_eq!(
+            call(Method::DELETE, "/api/token/42", None),
+            Some((KeyCall::Delete(42), None))
+        );
+    }
+
+    #[test]
+    fn a_key_the_station_names_with_any_string_is_found_again_by_its_number() {
+        let uuid = "3f2b8c1e-9d4a-4c6f-8a57-0b1e2d3c4f5a";
+        let number = key_number(uuid).unwrap();
+        assert!(number >= DERIVED_KEY_NUMBER && number < 1 << 53);
+        assert_eq!(key_number(uuid), Some(number));
+        assert_ne!(
+            key_number("3f2b8c1e-9d4a-4c6f-8a57-0b1e2d3c4f5b"),
+            Some(number)
+        );
+        // A plain number stays itself; one that is not exactly a number does not.
+        assert_eq!(key_number("42"), Some(42));
+        assert_eq!(key_number("0"), Some(0));
+        assert!(key_number("042").unwrap() >= DERIVED_KEY_NUMBER);
+        assert!(key_number("99999999999999999999").unwrap() >= DERIVED_KEY_NUMBER);
+        assert_eq!(key_number(""), None);
+        assert_eq!(key_number(&"k".repeat(KEY_ID_MAX_LEN + 1)), None);
+
+        let listed = json!({"success": true, "data": {"keys": [
+            {"id": "42", "name": "a"},
+            {"id": uuid, "name": "b"}
+        ]}});
+        assert_eq!(key_id_for(42, None).as_deref(), Some("42"));
+        assert_eq!(key_id_for(number, Some(&listed)).as_deref(), Some(uuid));
+        assert_eq!(key_id_for(number + 1, Some(&listed)), None);
+        assert_eq!(key_id_for(number, None), None);
+    }
+
+    #[test]
+    fn a_key_identifier_cannot_reach_another_path_on_the_station() {
+        assert_eq!(
+            key_url(KEYS, "42", Some("reveal")).as_deref(),
+            Some("https://station.example/api/desktop/v2/keys/42/reveal")
+        );
+        assert_eq!(
+            key_url(KEYS, "42", None).as_deref(),
+            Some("https://station.example/api/desktop/v2/keys/42")
+        );
+        assert_eq!(
+            key_url(KEYS, "../account?x=1#y", None).as_deref(),
+            Some("https://station.example/api/desktop/v2/keys/..%2Faccount%3Fx=1%23y")
         );
     }
 
@@ -797,7 +882,7 @@ mod tests {
         let station = json!({"success": true, "data": {"keys": [
             {"id": "42", "name": "App-1", "planId": "7", "status": "active", "createdAtEpochMs": 1},
             {"id": "43", "name": "App-2", "planId": "9", "status": "disabled", "createdAtEpochMs": 2},
-            {"id": "not-a-number", "name": "x", "planId": "9", "status": "active"}
+            {"id": "", "name": "x", "planId": "9", "status": "active"}
         ]}});
         let (status, first) = key_reply(&KeyCall::List { page: 1 }, 200, &station);
         assert_eq!(status, 200);
@@ -825,15 +910,18 @@ mod tests {
         );
 
         let (_, value) = key_reply(
-            &KeyCall::Reveal,
+            &KeyCall::Reveal(42),
             200,
             &json!({"success": true, "data": {"key": "sk-test"}}),
         );
         assert_eq!(value["data"], json!({"key": "sk-test", "verbatim": true}));
 
         // A success with no key in it is not a key.
-        let (status, value) =
-            key_reply(&KeyCall::Reveal, 200, &json!({"success": true, "data": {}}));
+        let (status, value) = key_reply(
+            &KeyCall::Reveal(42),
+            200,
+            &json!({"success": true, "data": {}}),
+        );
         assert_eq!((status, value["success"].as_bool()), (502, Some(false)));
     }
 
@@ -857,7 +945,7 @@ mod tests {
         // success:false under a 200 never reads as success.
         assert_eq!(
             key_reply(
-                &KeyCall::Delete,
+                &KeyCall::Delete(42),
                 200,
                 &json!({"success": false, "code": "x"})
             )

@@ -129,7 +129,8 @@ One key belongs to one plan.
 | `POST {keys_path}/{id}/reveal` | — | `{"key": "<secret>"}` |
 | `DELETE {keys_path}/{id}` | — | — |
 
-A key is `{"id", "name", "planId", "status": "active" | …, "createdAtEpochMs"}`.
+A key is `{"id", "name", "planId", "status": "active" | …, "createdAtEpochMs"}`. `id` is any
+non-empty string of up to 128 characters; the client does not read meaning into it.
 Error codes: `plan_not_allowed` (403), `key_limit_reached` (409),
 `rate_limited` (429), `key_not_found` (404).
 
