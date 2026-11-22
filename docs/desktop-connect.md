@@ -190,6 +190,7 @@ do not pass the header on to upstream providers.
 
 - sub2api: `backend/internal/handler/desktop_*.go`, `frontend` route
   `/desktop/connect`.
-- new-api: the sign-in part is in [`patch/new-api-desktop-connect`](./patch/new-api-desktop-connect/README.md).
+- new-api: [`patch/new-api-desktop-connect`](./patch/new-api-desktop-connect/README.md), a patch
+  against upstream (no client-only pricing).
   Stations on the earlier contract (`service: "yeschoy-desktop"`,
   `contract_id: "desktop-integration-v2"`) keep working unchanged.
