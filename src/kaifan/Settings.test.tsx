@@ -155,7 +155,7 @@ describe("Settings", () => {
     const row = screen.getByTestId("kaifan-settings-app-claude_code");
     fireEvent.click(row.querySelector("button")!);
     expect(onRestore).not.toHaveBeenCalled();
-    await said("停用给它的那把密钥");
+    await said("删掉给它的那把密钥");
     await act(async () => {
       fireEvent.click(screen.getByText("确定改回"));
     });
@@ -163,7 +163,7 @@ describe("Settings", () => {
     await said("改回接入之前的样子了");
   });
 
-  it("粘贴密钥接的应用：改回时不说会停用密钥，说清要作废得去站点后台", async () => {
+  it("粘贴密钥接的应用：改回时不说会删密钥，说清要作废得去站点后台", async () => {
     show({
       connections: [
         app("claude_code", { lineId: "station_key:https://a.example" }),
@@ -171,9 +171,9 @@ describe("Settings", () => {
     });
     const row = screen.getByTestId("kaifan-settings-app-claude_code");
     fireEvent.click(row.querySelector("button")!);
-    await said("我不会去停用它");
+    await said("我不会去删它");
     expect(screen.getByTestId("kaifan-settings-says")).not.toHaveTextContent(
-      "并停用给它的那把密钥",
+      "并删掉给它的那把密钥",
     );
   });
 
@@ -204,7 +204,7 @@ describe("Settings", () => {
       [{ status: "recovery_failed" }, "没改回成"],
       [
         { reasonCode: "local_settings_restored_token_cleanup_pending" },
-        "密钥还没停用",
+        "密钥还没删掉",
       ],
       [{ status: "restored_with_changes" }, "你后来自己改的那些我没动"],
       [new Error("busy"), "这次没改成"],

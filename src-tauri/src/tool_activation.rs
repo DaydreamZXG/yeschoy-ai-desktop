@@ -15,8 +15,9 @@ use tauri::Emitter;
 
 use crate::{
     account_v2::{
-        ensure_session_epoch, native_account_json, native_session_access, native_session_epoch,
-        station_connect_origin_from_line_id, AccountV2State, NativeSessionFailure,
+        ensure_session_epoch, line_id_for_station_connect_origin, native_account_json,
+        native_session_access, native_session_epoch, station_connect_origin_from_line_id,
+        AccountV2State, NativeSessionFailure,
     },
     claude_bridge::ClaudeTransport,
     connection_recovery::{self, Receipt, Store},
@@ -578,6 +579,8 @@ fn model_supports_tool(_pricing: &Value, _model_id: &str, tool_id: &str) -> bool
 /// are usable, and the choice only records which wire format the app will
 /// speak to the relay.
 fn claude_transport(pricing: &Value, model_id: &str) -> Option<ClaudeTransport> {
+    // 和 `codex_transport` 一样只是起点：接入时真探一次才知道
+    // （`pasted_key::apply_claude_probes`），价格表里的声明不算数。
     let _ = (pricing, model_id);
     Some(ClaudeTransport::DirectAnthropic)
 }
@@ -772,7 +775,7 @@ async fn probed_within<T>(
 
 /// 把探测结果写回这一批模型的传输方式。
 ///
-/// 只对 Codex 做：Claude 走的是中转原生支持的 Anthropic 协议，没有这个问题。
+/// Claude 的那一半在 `pasted_key::apply_claude_probes`。
 ///
 /// 探测失败不让接入失败 —— 探不出来就停在直连，也就是今天的行为。
 /// 为了一次「问不出结论」而挡住用户接入，是拿一个可恢复的未知换一个确定的
@@ -1249,6 +1252,11 @@ fn reusable_token(
     model_ids: &[String],
     exact: bool,
 ) -> bool {
+    // A station on the neutral contract scopes a key by plan only: there is no
+    // model list to compare, so an active key on the right plan is reusable.
+    if token.get("plan_scoped").and_then(Value::as_bool) == Some(true) {
+        return token.get("status").and_then(Value::as_i64) == Some(1);
+    }
     let expiry = token
         .get("expired_time")
         .and_then(Value::as_i64)
@@ -1284,21 +1292,37 @@ fn token_request(name: &str, group: &str, model_ids: &[String]) -> Value {
     })
 }
 
-fn normalize_api_key(value: &str) -> Option<String> {
+/// A secret that can be written into an application's configuration.
+fn usable_api_key(value: &str) -> Option<&str> {
     let value = value.trim();
-    if value.len() < 16
-        || value.len() > 256
-        || value
+    (value.len() >= 16
+        && value.len() <= 256
+        && !value
             .chars()
-            .any(|character| character.is_control() || character.is_whitespace())
-    {
-        return None;
-    }
+            .any(|character| character.is_control() || character.is_whitespace()))
+    .then_some(value)
+}
+
+/// The original contract returns a key without its `sk-` prefix.
+fn normalize_api_key(value: &str) -> Option<String> {
+    let value = usable_api_key(value)?;
     Some(if value.starts_with("sk-") {
         value.to_owned()
     } else {
         format!("sk-{value}")
     })
+}
+
+/// The key in a reveal reply. A station on the neutral contract returns the
+/// secret exactly as applications must send it, and says so with `verbatim`.
+fn revealed_api_key(reply: &Value) -> Option<String> {
+    let reply = data(reply)?.as_object()?;
+    let key = reply.get("key")?.as_str()?;
+    if reply.get("verbatim").and_then(Value::as_bool) == Some(true) {
+        usable_api_key(key).map(str::to_owned)
+    } else {
+        normalize_api_key(key)
+    }
 }
 
 async fn fetch_token_key(
@@ -1316,13 +1340,15 @@ async fn fetch_token_key(
         log_token_rejection("key", status, &value);
         return Err(ActivationFailure::ServerUnavailable);
     }
-    data(&value)
-        .and_then(Value::as_object)
-        .and_then(|value| value.get("key"))
-        .and_then(Value::as_str)
-        .and_then(normalize_api_key)
-        .ok_or(ActivationFailure::ServerUnavailable)
+    revealed_api_key(&value).ok_or(ActivationFailure::ServerUnavailable)
 }
+
+/// 后台在退「上一个方案」的密钥时握着它。
+///
+/// 那次清理在 `ACTIVATION_LOCK` 之外跑。用户马上又换回原来的方案的话，下一次
+/// 接入会在账户里看到那把还没删掉的密钥并拿来复用，接着清理把它删了 —— 应用
+/// 刚接好就认证失败。所以取密钥之前先等清理做完，再去看账户里还剩什么。
+static DROPPED_GROUP_CLEANUP: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 async fn acquire_token(
     origin: &str,
@@ -1331,6 +1357,7 @@ async fn acquire_token(
     group: &str,
     model_ids: &[String],
 ) -> Result<TokenLease, ActivationFailure> {
+    drop(DROPPED_GROUP_CLEANUP.lock().await);
     acquire_token_using(
         &NativeTokenApi { access_token },
         origin,
@@ -1546,6 +1573,58 @@ fn retire_superseded_tokens(origin: &str, access_token: &str, leases: &[(String,
             }
         }
         log::info!("tool_token_cleanup stage=retire_done retired={retired_count} of={attempted}");
+    });
+}
+
+/// 上一次接入用过、这一次不再用的分组。
+///
+/// `acquire_token` 只退同一个分组里的旧密钥，断开时的回收只看当前凭据里的
+/// 分组。换一次价格方案，上一个分组的那把就两头都不归，一直启用着留在账户里
+/// —— 2026-11-22 实测旧站时就这样多出来一把。
+///
+/// 粘贴的密钥是用户自己的，不是我们铸的；换了站点，那些密钥在另一个账户里，
+/// 这次的会话够不着。两种都不动。
+fn dropped_groups_credential(
+    previous: &ToolCredential,
+    origin: &str,
+    bindings: &[ModelBinding],
+) -> Option<ToolCredential> {
+    if previous.pasted_key || previous.origin != origin {
+        return None;
+    }
+    let mut dropped = previous.clone();
+    dropped.models.retain(|model| {
+        !bindings
+            .iter()
+            .any(|binding| binding.billing_group == model.billing_group)
+    });
+    (!dropped.models.is_empty()).then_some(dropped)
+}
+
+/// 和 `retire_superseded_tokens` 一样放到后台、只在本地事务提交之后做。
+///
+/// 锁在这里就拿到（这时还握着 `ACTIVATION_LOCK`），再带进后台任务：这样下一次
+/// 接入不可能抢在清理前面去读账户里的密钥。
+async fn retire_dropped_group_tokens(
+    origin: &str,
+    access_token: &str,
+    tool_id: &str,
+    previous: Option<&ToolCredential>,
+    bindings: &[ModelBinding],
+) {
+    let Some(dropped) =
+        previous.and_then(|previous| dropped_groups_credential(previous, origin, bindings))
+    else {
+        return;
+    };
+    let origin = origin.to_owned();
+    let access_token = access_token.to_owned();
+    let tool_id = tool_id.to_owned();
+    let cleaning = DROPPED_GROUP_CLEANUP.lock().await;
+    tokio::spawn(async move {
+        let _cleaning = cleaning;
+        let complete = revoke_owned_tool_tokens(&origin, &access_token, &tool_id, &dropped).await;
+        log::info!("tool_token_cleanup stage=dropped_groups_done complete={complete}");
     });
 }
 
@@ -2730,21 +2809,21 @@ pub async fn configure_desktop_tool_v2(
             return Ok(cancelled());
         }
     }
-    if let (true, Some((_, key)), "claude_code" | "claude_desktop") =
-        (probe, &user_key, request.tool_id.as_str())
-    {
-        // 授权登录的站点都原生说 Anthropic 格式，不用问；随便一个中转站不一定。
+    if probe && matches!(request.tool_id.as_str(), "claude_code" | "claude_desktop") {
+        // 授权登录的站也要问：站点说某个型号支持 Anthropic 格式，分组背后的
+        // 线路不一定真的收。
         if permit
             .cancel_safe(pasted_key::apply_claude_probes(
                 &origin,
-                key,
                 &request.tool_id,
                 &bindings,
+                &leases,
                 &mut transports,
             ))
             .await
             .is_err()
         {
+            delete_created_tokens(&origin, &access_token, &leases).await;
             return Ok(cancelled());
         }
     }
@@ -3132,6 +3211,16 @@ pub async fn configure_desktop_tool_v2(
     // to a key that was deleted mid-transaction. This cleanup is deliberately
     // scheduled only after the user-facing application open has been tried.
     retire_superseded_tokens(&origin, &access_token, &leases);
+    if user_key.is_none() {
+        retire_dropped_group_tokens(
+            &origin,
+            &access_token,
+            &request.tool_id,
+            previous_record.as_ref(),
+            &bindings,
+        )
+        .await;
+    }
     if let Err(error) = open_result {
         let reason = match error {
             AdapterFailure::LaunchError(reason) => reason,
@@ -3671,11 +3760,7 @@ pub async fn manage_tool_connections_v1(
                     (Some(credential), Some(epoch)) => {
                         match native_session_access(
                             &account_state,
-                            if credential.origin == "https://api.yeschoy.com" {
-                                "global_accelerated"
-                            } else {
-                                "mainland_optimized"
-                            },
+                            &line_id_for_station_connect_origin(&credential.origin),
                             epoch,
                         )
                         .await
@@ -3751,6 +3836,75 @@ pub async fn manage_tool_connections_v1(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn no_key_is_picked_while_the_last_plans_keys_are_still_being_removed() {
+        // 换回原方案时，账户里那把旧密钥可能正要被后台删掉；这时去挑密钥会挑中它。
+        let cleaning = DROPPED_GROUP_CLEANUP.lock().await;
+        let picking = acquire_token("http://127.0.0.1:9", "session", "claude_code", "flash", &[]);
+        assert!(
+            tokio::time::timeout(std::time::Duration::from_millis(50), picking)
+                .await
+                .is_err(),
+            "the account must not be read before the cleanup is done"
+        );
+        drop(cleaning);
+    }
+
+    #[test]
+    fn switching_plans_gives_up_the_keys_of_the_groups_left_behind() {
+        let route = |model: &str, group: &str| ToolModelRoute {
+            model_id: model.into(),
+            billing_group: group.into(),
+            api_key: "sk-old".into(),
+            origin: "https://station.example".into(),
+            claude_transport: None,
+            codex_transport: None,
+        };
+        let previous = ToolCredential {
+            api_key: "sk-old".into(),
+            origin: "https://station.example".into(),
+            model_id: "a".into(),
+            local_gateway_token: None,
+            codex_transport: None,
+            claude_transport: None,
+            models: vec![route("a", "flash"), route("b", "default")],
+            pasted_key: false,
+        };
+        let now = [ModelBinding {
+            model_id: "a".into(),
+            billing_group: "default".into(),
+        }];
+
+        let dropped = dropped_groups_credential(&previous, "https://station.example", &now)
+            .expect("the flash group is no longer used");
+        assert_eq!(
+            dropped
+                .models
+                .iter()
+                .map(|model| model.billing_group.as_str())
+                .collect::<Vec<_>>(),
+            ["flash"]
+        );
+
+        // 分组都还在用：没有要退的。
+        let both = [
+            now[0].clone(),
+            ModelBinding {
+                model_id: "a".into(),
+                billing_group: "flash".into(),
+            },
+        ];
+        assert!(dropped_groups_credential(&previous, "https://station.example", &both).is_none());
+        // 换了站点：那些密钥在另一个账户里。
+        assert!(dropped_groups_credential(&previous, "https://other.example", &now).is_none());
+        // 用户自己粘贴的密钥不归我们退。
+        let pasted = ToolCredential {
+            pasted_key: true,
+            ..previous.clone()
+        };
+        assert!(dropped_groups_credential(&pasted, "https://station.example", &now).is_none());
+    }
 
     #[test]
     fn no_two_apps_share_a_token_code_or_label() {
@@ -5066,6 +5220,34 @@ mod tests {
         let tokens = api.tokens.lock().unwrap();
         assert_eq!(tokens.len(), 2, "old key stays valid until local commit");
         assert_eq!(tokens[1]["model_limits"], "model-c");
+    }
+
+    #[test]
+    fn a_key_the_station_returns_whole_is_written_as_issued() {
+        let reply = |data: Value| json!({"success": true, "data": data});
+        // The original contract strips the prefix, so it is put back.
+        assert_eq!(
+            revealed_api_key(&reply(json!({"key": "0123456789abcdef"}))).as_deref(),
+            Some("sk-0123456789abcdef")
+        );
+        // A station that issues its own prefix is authenticated with it.
+        assert_eq!(
+            revealed_api_key(&reply(
+                json!({"key": "relay_0123456789abcdef", "verbatim": true})
+            ))
+            .as_deref(),
+            Some("relay_0123456789abcdef")
+        );
+        assert_eq!(
+            revealed_api_key(&reply(json!({"key": "short", "verbatim": true}))),
+            None
+        );
+        assert_eq!(
+            revealed_api_key(&reply(
+                json!({"key": "has a space 0123456789", "verbatim": true})
+            )),
+            None
+        );
     }
 
     #[test]

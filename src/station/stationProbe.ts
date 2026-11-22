@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 export type ProbeStatus =
   | "ok"
   | "invalid_origin"
+  | "refused_station"
   | "unreachable"
   | "timeout"
   | "not_relay";
@@ -28,6 +29,7 @@ export interface StationProbeResult {
 const STATUSES = [
   "ok",
   "invalid_origin",
+  "refused_station",
   "unreachable",
   "timeout",
   "not_relay",

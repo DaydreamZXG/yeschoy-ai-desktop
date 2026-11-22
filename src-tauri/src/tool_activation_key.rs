@@ -202,25 +202,28 @@ async fn probe_claude_transport(
     transport
 }
 
+/// 粘贴密钥的站和授权登录的站都探：每个型号用它自己分组的那把密钥。站点
+/// 价格表里写的「支持 Claude 格式」不算数 —— 旧站 yeschoy.com 的 DeepSeek
+/// Flash 分组写着支持，`/v1/messages` 实际回 404。
 pub(super) async fn apply_claude_probes(
     origin: &str,
-    key: &str,
     tool_id: &str,
     bindings: &[ModelBinding],
+    leases: &[(String, TokenLease)],
     transports: &mut [Option<ModelTransport>],
 ) {
     let Ok(client) = crate::account_v2::shared_http_client() else {
         return;
     };
-    apply_claude_probes_with(client, origin, key, tool_id, bindings, transports).await
+    apply_claude_probes_with(client, origin, tool_id, bindings, leases, transports).await
 }
 
 async fn apply_claude_probes_with(
     client: &reqwest::Client,
     origin: &str,
-    key: &str,
     tool_id: &str,
     bindings: &[ModelBinding],
+    leases: &[(String, TokenLease)],
     transports: &mut [Option<ModelTransport>],
 ) {
     // 带着下标探、按下标写回，和 `apply_codex_probes_with` 同一个理由。
@@ -235,11 +238,18 @@ async fn apply_claude_probes_with(
                 )))
             )
         })
-        .map(|(index, binding)| async move {
-            (
-                index,
-                probe_claude_transport(client, origin, key, &binding.model_id, tool_id).await,
-            )
+        .filter_map(|(index, binding)| {
+            let key = &leases
+                .iter()
+                .find(|(group, _)| group == &binding.billing_group)?
+                .1
+                .key;
+            Some(async move {
+                (
+                    index,
+                    probe_claude_transport(client, origin, key, &binding.model_id, tool_id).await,
+                )
+            })
         })
         .collect::<Vec<_>>();
     let probed = probed_within(probes, PROBE_BATCH_BUDGET).await;
@@ -411,9 +421,9 @@ mod tests {
         apply_claude_probes_with(
             &client,
             &origin,
-            "sk-user-key",
             "claude_code",
             &bindings,
+            &leases(&bindings, "sk-user-key"),
             &mut transports,
         )
         .await;
@@ -430,5 +440,78 @@ mod tests {
             .unwrap()
             .iter()
             .all(|line| line == "x-api-key=true bearer=false"));
+    }
+
+    /// 授权登录的站：每个分组一把密钥，各探各的。价格表说两个型号都支持
+    /// Claude 格式，但有一个分组的线路不收 `/v1/messages` —— 只有它过桥。
+    #[tokio::test]
+    async fn an_authorized_station_probes_each_group_with_its_own_key() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let origin = format!("http://{}", listener.local_addr().unwrap());
+        let key_of = |headers: &axum::http::HeaderMap, name: &str| {
+            headers
+                .get(name)
+                .and_then(|value| value.to_str().ok())
+                .unwrap_or_default()
+                .trim_start_matches("Bearer ")
+                .to_owned()
+        };
+        let router = axum::Router::new()
+            .route(
+                "/v1/messages",
+                axum::routing::post(move |headers: axum::http::HeaderMap| async move {
+                    if key_of(&headers, "x-api-key") == "sk-default" {
+                        axum::http::StatusCode::OK
+                    } else {
+                        axum::http::StatusCode::NOT_FOUND
+                    }
+                }),
+            )
+            .route(
+                "/v1/chat/completions",
+                axum::routing::post(move |headers: axum::http::HeaderMap| async move {
+                    if key_of(&headers, "authorization") == "sk-flash" {
+                        axum::http::StatusCode::OK
+                    } else {
+                        axum::http::StatusCode::UNAUTHORIZED
+                    }
+                }),
+            );
+        tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+        let client = reqwest::Client::builder()
+            .no_proxy()
+            .timeout(Duration::from_secs(5))
+            .build()
+            .unwrap();
+
+        let bindings = [
+            binding("deepseek-flash", "flash"),
+            binding("claude-sonnet", "default"),
+            binding("no-key-for-this-group", "missing"),
+        ];
+        let leases = vec![
+            ("default".to_owned(), lease("sk-default")),
+            ("flash".to_owned(), lease("sk-flash")),
+        ];
+        let mut transports =
+            vec![Some(ModelTransport::Claude(ClaudeTransport::DirectAnthropic)); bindings.len()];
+        apply_claude_probes_with(
+            &client,
+            &origin,
+            "claude_code",
+            &bindings,
+            &leases,
+            &mut transports,
+        )
+        .await;
+
+        assert_eq!(
+            transports,
+            vec![
+                Some(ModelTransport::Claude(ClaudeTransport::ChatBridge)),
+                Some(ModelTransport::Claude(ClaudeTransport::DirectAnthropic)),
+                Some(ModelTransport::Claude(ClaudeTransport::DirectAnthropic)),
+            ]
+        );
     }
 }

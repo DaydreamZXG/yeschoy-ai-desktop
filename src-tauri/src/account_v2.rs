@@ -128,6 +128,10 @@ pub struct UsageSummary {
 pub struct BillingGroup {
     pub(crate) id: String,
     description: String,
+    /// Set only by stations on the neutral contract: the plan's own name and
+    /// prices, already in the station's currency.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    plan: Option<neutral::PlanPricing>,
     #[serde(skip_serializing_if = "Option::is_none")]
     ratio: Option<f64>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -247,6 +251,136 @@ pub(crate) struct DesktopBootstrap {
     /// predates the server field simply never shows the entry, and a server that
     /// predates the client does the same. Neither side has to ship first.
     announcements_path: String,
+    pub(crate) dialect: StationDialect,
+}
+
+/// Which set of data endpoints a station serves.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) enum StationDialect {
+    /// The original contract: the paths are New API's own and fixed in this file.
+    Legacy,
+    /// `desktop-connect`: the station names its paths and answers in shapes
+    /// made for this client, so any relay software can implement it.
+    Neutral(NeutralPaths),
+}
+
+#[derive(Clone, Debug, PartialEq, Default)]
+pub(crate) struct NeutralPaths {
+    pub(crate) account: String,
+    pub(crate) plans: String,
+    pub(crate) keys: String,
+    pub(crate) usage_summary: String,
+    pub(crate) usage_records: String,
+    /// Empty when the station has no client-only prices.
+    pub(crate) app_tokens: String,
+    pub(crate) app_token_header: String,
+}
+
+pub(crate) mod app_token;
+mod neutral;
+
+const NEUTRAL_SERVICE: &str = "desktop-connect";
+const NEUTRAL_CONTRACT_ID: &str = "desktop-connect-v1";
+
+#[derive(Debug, Deserialize)]
+struct NeutralBootstrapData {
+    schema_version: u8,
+    contract_id: String,
+    minimum_client_version: String,
+    #[serde(default)]
+    device_authorization_available: bool,
+    #[serde(default)]
+    oauth_loopback_pkce_available: bool,
+    account_read: bool,
+    usage_read: bool,
+    models_read: bool,
+    pricing_read: bool,
+    tool_keys_manage: bool,
+    session_refresh_path: String,
+    session_logout_path: String,
+    account_path: String,
+    plans_path: String,
+    keys_path: String,
+    usage_summary_path: String,
+    usage_records_path: String,
+    wallet_url: String,
+    #[serde(default)]
+    announcements_path: String,
+    #[serde(default)]
+    app_tokens_path: String,
+    #[serde(default)]
+    app_token_header: String,
+}
+
+/// The header carries a device credential to the station on every forwarded
+/// request, so the station may only name a custom `X-` header: never one that
+/// already means something to HTTP or to the tools behind the local bridge.
+fn app_token_header_is_allowed(raw: &str) -> bool {
+    raw.len() <= 64
+        && raw.len() > 2
+        && raw.as_bytes()[..2].eq_ignore_ascii_case(b"x-")
+        && raw
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+        && !raw.eq_ignore_ascii_case("x-api-key")
+}
+
+fn neutral_bootstrap(data: Value, origin: &str) -> Result<DesktopBootstrap, &'static str> {
+    let data: NeutralBootstrapData = serde_json::from_value(data).map_err(|_| "shape")?;
+    let minimum = Version::parse(&data.minimum_client_version).map_err(|_| "minimum_version")?;
+    let current = Version::parse(CLIENT_VERSION).expect("compiled client version is valid");
+    if data.schema_version != 2 {
+        return Err("schema_version");
+    }
+    if data.contract_id != NEUTRAL_CONTRACT_ID {
+        return Err("contract_id");
+    }
+    if minimum > current {
+        return Err("client_too_old");
+    }
+    if !(data.account_read
+        && data.usage_read
+        && data.models_read
+        && data.pricing_read
+        && data.tool_keys_manage)
+    {
+        return Err("capabilities");
+    }
+    if data.session_refresh_path != REFRESH_PATH || data.session_logout_path != LOGOUT_PATH {
+        return Err("session_paths");
+    }
+    if !neutral_wallet_url_is_allowed(&data.wallet_url, origin) {
+        return Err("wallet_url");
+    }
+    let required = |raw: &str| relative_api_path(raw).ok_or("paths");
+    let app_tokens = relative_api_path(&data.app_tokens_path).unwrap_or_default();
+    let app_token_header =
+        if !app_tokens.is_empty() && app_token_header_is_allowed(&data.app_token_header) {
+            data.app_token_header
+        } else {
+            String::new()
+        };
+    Ok(DesktopBootstrap {
+        device_authorization_available: data.device_authorization_available,
+        oauth_loopback_pkce_available: data.oauth_loopback_pkce_available,
+        origin: origin.to_owned(),
+        wallet_url: data.wallet_url,
+        announcements_path: relative_api_path(&data.announcements_path).unwrap_or_default(),
+        dialect: StationDialect::Neutral(NeutralPaths {
+            account: required(&data.account_path)?,
+            plans: required(&data.plans_path)?,
+            keys: required(&data.keys_path)?,
+            usage_summary: required(&data.usage_summary_path)?,
+            usage_records: required(&data.usage_records_path)?,
+            // Without both halves there is no client-only price to ask for.
+            app_tokens: if app_token_header.is_empty() {
+                String::new()
+            } else {
+                app_tokens
+            },
+            app_token_header,
+        }),
+    })
 }
 
 // Server responses are read tolerantly, the way `DataEnvelope`,
@@ -505,6 +639,24 @@ async fn fetch_bootstrap_read(line_id: &str) -> Result<DesktopBootstrap, Account
     if !response.status.is_success() {
         return Err(AccountProjectionFailure::BackendUnavailable);
     }
+    // A station speaking the neutral contract says so by name; everything
+    // else is read as the original contract, exactly as before.
+    if response.value.get("success").and_then(Value::as_bool) == Some(true)
+        && response
+            .value
+            .get("data")
+            .and_then(|data| data.get("service"))
+            .and_then(Value::as_str)
+            == Some(NEUTRAL_SERVICE)
+    {
+        let data = response.value.get("data").cloned().unwrap_or(Value::Null);
+        return neutral_bootstrap(data, &origin)
+            .inspect(remember_dialect)
+            .map_err(|reason| {
+                log::warn!("account stage=bootstrap_rejected dialect=neutral reason={reason}");
+                AccountProjectionFailure::IncompatibleServer
+            });
+    }
     let envelope: BootstrapEnvelope = serde_json::from_value(response.value)
         .map_err(|_| AccountProjectionFailure::IncompatibleServer)?;
     let data = envelope.data;
@@ -554,7 +706,7 @@ async fn fetch_bootstrap_read(line_id: &str) -> Result<DesktopBootstrap, Account
         log::warn!("account stage=bootstrap_rejected reason={reason}");
         return Err(AccountProjectionFailure::IncompatibleServer);
     }
-    Ok(DesktopBootstrap {
+    let accepted = DesktopBootstrap {
         device_authorization_available: data.device_authorization_available,
         oauth_loopback_pkce_available: data.oauth_loopback_pkce_available,
         origin: origin.to_owned(),
@@ -564,7 +716,10 @@ async fn fetch_bootstrap_read(line_id: &str) -> Result<DesktopBootstrap, Account
         // is dropped rather than rejected: a malformed optional field must not
         // cost the user their sign-in.
         announcements_path: relative_api_path(&data.announcements_path).unwrap_or_default(),
-    })
+        dialect: StationDialect::Legacy,
+    };
+    remember_dialect(&accepted);
+    Ok(accepted)
 }
 
 /// Accept only a same-origin relative API path such as `/api/desktop/v2/notices`.
@@ -592,6 +747,21 @@ fn wallet_url_is_allowed(raw: &str, api_origin: &str) -> bool {
     wallet_url_is_allowed_official(raw) || wallet_url_on_station_origin(raw, api_origin)
 }
 
+/// The neutral contract leaves the top-up page's path to the station; it only
+/// has to be a page on the station's own host.
+fn neutral_wallet_url_is_allowed(raw: &str, api_origin: &str) -> bool {
+    page_url_on_station_origin(raw, api_origin, "/")
+}
+
+/// The check a station's top-up page passed when its bootstrap was accepted,
+/// made again before the page is opened.
+fn wallet_page_is_allowed(dialect: &StationDialect, raw: &str, api_origin: &str) -> bool {
+    match dialect {
+        StationDialect::Legacy => wallet_url_is_allowed(raw, api_origin),
+        StationDialect::Neutral(_) => neutral_wallet_url_is_allowed(raw, api_origin),
+    }
+}
+
 fn wallet_url_is_allowed_official(raw: &str) -> bool {
     let Ok(url) = Url::parse(raw) else {
         return false;
@@ -608,6 +778,11 @@ fn wallet_url_is_allowed_official(raw: &str) -> bool {
 
 /// Third-party stations connected via deep link use their own origin for wallet.
 fn wallet_url_on_station_origin(raw: &str, api_origin: &str) -> bool {
+    page_url_on_station_origin(raw, api_origin, "/wallet")
+}
+
+/// A page on the station's own host, whose path starts with `path_prefix`.
+fn page_url_on_station_origin(raw: &str, api_origin: &str, path_prefix: &str) -> bool {
     let Ok(station) = Url::parse(api_origin) else {
         return false;
     };
@@ -624,7 +799,7 @@ fn wallet_url_on_station_origin(raw: &str, api_origin: &str) -> bool {
         && url.password().is_none()
         && url.query().is_none()
         && url.fragment().is_none()
-        && url.path().starts_with("/wallet")
+        && url.path().starts_with(path_prefix)
 }
 
 #[cfg(test)]
@@ -802,13 +977,36 @@ fn save_stored_session(session: &StoredSession) -> Result<(), ()> {
 fn load_stored_session() -> Result<Option<StoredSession>, ()> {
     // 改名前登录的人：登录凭据还在旧名字下面，读的时候搬过来。
     match crate::legacy::read_secret(KEYRING_SERVICE, KEYRING_USER) {
-        Ok(Some(payload)) => serde_json::from_str(&payload).map(Some).map_err(|_| ()),
+        Ok(Some(payload)) => {
+            let stored: StoredSession = serde_json::from_str(&payload).map_err(|_| ())?;
+            // 名单上不给连的站点发的登录：整份丢掉，当作没登录。留着的话，别的线路
+            // 续登录时会把它的凭据发给别的站点。
+            if line_is_refused_station(&stored.line_id) {
+                let _ = delete_stored_session();
+                return Ok(None);
+            }
+            Ok(Some(stored))
+        }
         Ok(None) => Ok(None),
         Err(_) => Err(()),
     }
 }
 
+/// The origin a line's requests go to: a catalog route's, or the station's.
+fn origin_of_line(line_id: &str) -> Option<&str> {
+    station_connect_origin_from_line_id(line_id).or_else(|| line_origin(line_id))
+}
+
+fn forget_app_token(line_id: &str) {
+    if let Some(origin) = origin_of_line(line_id) {
+        app_token::forget(origin);
+    }
+}
+
 fn delete_stored_session() -> Result<(), ()> {
+    if let Ok(Some(stored)) = load_stored_session() {
+        forget_app_token(&stored.line_id);
+    }
     crate::legacy::delete_secret(KEYRING_SERVICE, KEYRING_USER).map_err(|_| ())
 }
 
@@ -846,6 +1044,11 @@ fn install_auth_bundle(
     {
         log::warn!("account stage=auth_bundle_rejected reason=contract");
         return Err(InstallFailure::Contract);
+    }
+    // A new sign-in may be a different account; a refresh is the same one,
+    // and the device credential the station issued to it still stands.
+    if device_code.is_some() {
+        forget_app_token(line_id);
     }
     let stored = StoredSession {
         line_id: line_id.to_owned(),
@@ -945,11 +1148,31 @@ async fn session_bound_step<T>(
     result
 }
 
+/// One 野菜API login serves both catalog routes; a login at any other station
+/// serves that station only.
+fn session_serves_line(session_line_id: &str, line_id: &str) -> bool {
+    let catalog = |line: &str| line_origin(line).is_some();
+    if !persisted_session_line_id(session_line_id) {
+        // Sessions saved before the line was recorded are 野菜API logins.
+        return catalog(line_id);
+    }
+    session_line_id == line_id || (catalog(session_line_id) && catalog(line_id))
+}
+
 pub(crate) async fn native_session_access(
     state: &AccountV2State,
     line_id: &str,
     epoch: NativeSessionEpoch,
 ) -> Result<(String, String), NativeSessionFailure> {
+    // The access token is cached without its origin. A caller acting for a
+    // station other than the signed-in one (a tool still connected to the
+    // previous station) must get no token, never this station's.
+    match load_stored_session() {
+        Ok(Some(stored)) if session_serves_line(&stored.line_id, line_id) => {}
+        Ok(Some(_)) => return Err(NativeSessionFailure::AccountChanged),
+        Ok(None) => return Err(NativeSessionFailure::SignedOut),
+        Err(()) => return Err(NativeSessionFailure::ServerUnavailable),
+    }
     let bootstrap = session_bound_step(state, epoch, async {
         fetch_bootstrap(line_id)
             .await
@@ -974,10 +1197,73 @@ pub(crate) async fn native_account_json(
     access_token: &str,
     body: Option<Value>,
 ) -> Result<(u16, Value), ()> {
+    // The key operations are written against the original contract's paths.
+    // For a station on the neutral contract they are re-addressed here, so
+    // every caller keeps working unchanged.
+    if let Some((origin, paths)) = neutral_station_for(url) {
+        if url[origin.len()..].starts_with(neutral::LEGACY_KEYS_PATH) {
+            return neutral::key_exchange(
+                method,
+                url,
+                body.as_ref(),
+                &origin,
+                &paths,
+                access_token,
+            )
+            .await;
+        }
+        let path = &url[origin.len()..];
+        if method == Method::GET && neutral::LEGACY_CATALOGUE_PATHS.contains(&path) {
+            let plans = send_json(
+                Method::GET,
+                &format!("{origin}{}", paths.plans),
+                Some(access_token),
+                None,
+            )
+            .await
+            .map_err(|_| ())?;
+            return Ok(neutral::catalogue_reply(
+                path,
+                plans.status.as_u16(),
+                &plans.value,
+            ));
+        }
+    }
     let response = send_json(method, url, Some(access_token), body)
         .await
         .map_err(|_| ())?;
     Ok((response.status.as_u16(), response.value))
+}
+
+/// Stations whose last accepted bootstrap spoke the neutral contract.
+static NEUTRAL_STATIONS: std::sync::Mutex<std::collections::BTreeMap<String, NeutralPaths>> =
+    std::sync::Mutex::new(std::collections::BTreeMap::new());
+
+fn remember_dialect(bootstrap: &DesktopBootstrap) {
+    let mut stations = NEUTRAL_STATIONS
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    match &bootstrap.dialect {
+        StationDialect::Neutral(paths) => {
+            stations.insert(bootstrap.origin.clone(), paths.clone());
+        }
+        StationDialect::Legacy => {
+            stations.remove(&bootstrap.origin);
+        }
+    }
+}
+
+/// The neutral paths of the station `url` belongs to, if it is on that contract.
+pub(crate) fn neutral_station_for(url: &str) -> Option<(String, NeutralPaths)> {
+    NEUTRAL_STATIONS
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .iter()
+        .find(|(origin, _)| {
+            url.strip_prefix(origin.as_str())
+                .is_some_and(|rest| rest.is_empty() || rest.starts_with('/'))
+        })
+        .map(|(origin, paths)| (origin.clone(), paths.clone()))
 }
 
 /// 诊断层（PRD 6.7，批次 3 #2）复用的只读 HTTPS 客户端：
@@ -1021,7 +1307,22 @@ pub(crate) fn line_id_for_station_connect_origin(origin: &str) -> String {
 }
 
 pub(crate) fn station_connect_origin_from_line_id(line_id: &str) -> Option<&str> {
-    line_id.strip_prefix(STATION_CONNECT_LINE_PREFIX)
+    // 名单上不给连的站点不算一条线路：界面递过来的、之前存下的都一样。
+    line_id
+        .strip_prefix(STATION_CONNECT_LINE_PREFIX)
+        .filter(|_| !line_is_refused_station(line_id))
+}
+
+/// 这条线路指向名单上不给连的站点：浏览器授权连的、粘贴密钥连的都算。
+fn line_is_refused_station(line_id: &str) -> bool {
+    line_id
+        .strip_prefix(STATION_CONNECT_LINE_PREFIX)
+        .or_else(|| line_id.strip_prefix("station_key:"))
+        .and_then(|origin| reqwest::Url::parse(origin).ok())
+        .is_some_and(|url| {
+            url.host_str()
+                .is_some_and(crate::station_connect::station_host_is_refused)
+        })
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1055,6 +1356,7 @@ pub(crate) fn install_station_connect_session(
         log::warn!("account stage=station_connect_bundle_rejected reason=contract");
         return Err("connect_auth_contract");
     }
+    forget_app_token(line_id);
     let stored = StoredSession {
         line_id: line_id.to_owned(),
         refresh_token: bundle.refresh_token,
@@ -1279,6 +1581,9 @@ async fn account_data_read(
     bootstrap: &DesktopBootstrap,
     access_token: &str,
 ) -> Result<AccountProjection, AccountProjectionFailure> {
+    if let StationDialect::Neutral(paths) = &bootstrap.dialect {
+        return account_data_read_neutral(request_id, bootstrap, paths, access_token).await;
+    }
     let account_url = format!("{}{}", bootstrap.origin, ACCOUNT_PATH);
     let usage_url = format!("{}{}", bootstrap.origin, USAGE_PATH);
     let models_url = format!("{}{}", bootstrap.origin, MODELS_PATH);
@@ -1384,6 +1689,149 @@ async fn account_data_read(
         usage: usage_summary,
         models,
         comparison_fx: comparison_fx.map(decimal).unwrap_or_default(),
+        money,
+        savings,
+        usage_log,
+        reason_code,
+    })
+}
+
+/// The same projection, read from a station on the neutral contract.
+async fn account_data_read_neutral(
+    request_id: String,
+    bootstrap: &DesktopBootstrap,
+    paths: &NeutralPaths,
+    access_token: &str,
+) -> Result<AccountProjection, AccountProjectionFailure> {
+    let url = |path: &str| format!("{}{}", bootstrap.origin, path);
+    let records_url = |page: usize| {
+        format!(
+            "{}?page={page}&pageSize={USAGE_LOG_PAGE_SIZE}",
+            url(&paths.usage_records)
+        )
+    };
+    let (account_url, plans_url, usage_url, first_records_url) = (
+        url(&paths.account),
+        url(&paths.plans),
+        url(&paths.usage_summary),
+        records_url(1),
+    );
+    let (account, plans, usage, records) = tokio::join!(
+        send_json(Method::GET, &account_url, Some(access_token), None),
+        send_json(Method::GET, &plans_url, Some(access_token), None),
+        send_json(Method::GET, &usage_url, Some(access_token), None),
+        send_json(Method::GET, &first_records_url, Some(access_token), None),
+    );
+    if [&account, &plans, &usage].iter().any(|response| {
+        matches!(response, Ok(value) if value.status == StatusCode::UNAUTHORIZED || value.status == StatusCode::FORBIDDEN)
+    }) {
+        // Same reasoning as the original reader: only refresh_access may
+        // decide the session itself is gone.
+        return Err(AccountProjectionFailure::BackendUnavailable);
+    }
+    let ok = |response: Result<JsonResponse, TransportFailure>| {
+        response
+            .ok()
+            .filter(|value| value.status.is_success())
+            .map(|value| value.value)
+    };
+    let (account, plans, usage, records) = (ok(account), ok(plans), ok(usage), ok(records));
+    let observed_now = now_epoch_ms();
+    let Some(currency) = neutral::currency(account.as_ref()) else {
+        log::warn!(
+            "account stage=account_projection_unavailable dialect=neutral http_ok={}",
+            account.is_some()
+        );
+        return Err(AccountProjectionFailure::InvalidResponse);
+    };
+    let status = neutral::status_shape(currency);
+    let account_summary = parse_account(
+        neutral::account_shape(account.as_ref()).as_ref(),
+        Some(&status),
+    );
+    if !account_summary.available {
+        log::warn!("account stage=account_projection_unavailable dialect=neutral http_ok=true");
+        return Err(AccountProjectionFailure::InvalidResponse);
+    }
+    let usage_summary = parse_usage(neutral::usage_shape(usage.as_ref()).as_ref());
+    let models = neutral::models(plans.as_ref());
+
+    // Same window rule as the original reader: more pages only while the
+    // first one is full and has not yet reached back thirty days.
+    let mut log_pages: Vec<Value> = neutral::records_shape(records.as_ref())
+        .into_iter()
+        .collect();
+    let first_is_full_and_recent = log_pages.first().is_some_and(|page| {
+        let items = page["data"]["items"]
+            .as_array()
+            .map(Vec::as_slice)
+            .unwrap_or_default();
+        let oldest_ms = items
+            .iter()
+            .filter_map(|row| row.get("created_at").and_then(Value::as_u64))
+            .map(|seconds| seconds * 1000)
+            .min()
+            .unwrap_or(0);
+        items.len() >= USAGE_LOG_PAGE_SIZE
+            && oldest_ms > observed_now.saturating_sub(USAGE_WINDOW_MS)
+    });
+    if first_is_full_and_recent {
+        let (url_2, url_3, url_4, url_5) = (
+            records_url(2),
+            records_url(3),
+            records_url(4),
+            records_url(5),
+        );
+        let (second, third, fourth, fifth) = tokio::join!(
+            send_json(Method::GET, &url_2, Some(access_token), None),
+            send_json(Method::GET, &url_3, Some(access_token), None),
+            send_json(Method::GET, &url_4, Some(access_token), None),
+            send_json(Method::GET, &url_5, Some(access_token), None),
+        );
+        for response in [second, third, fourth, fifth] {
+            match neutral::records_shape(ok(response).as_ref()) {
+                Some(page) => log_pages.push(page),
+                None => break,
+            }
+        }
+    }
+
+    let money = account_money(
+        Some(&status),
+        &account_summary.balance_quota,
+        &account_summary.used_quota,
+    );
+    let savings = recent_savings(Some(&status), log_pages.first());
+    let usage_log = usage_log_report(Some(&status), &log_pages, observed_now);
+    if let Some(line_id) = crate::request_diagnostics::line_for_origin(&bootstrap.origin) {
+        for (tool, observation) in recent_requests_from_pages(&log_pages, line_id) {
+            crate::request_diagnostics::publish(&tool, observation);
+        }
+    }
+    let reason_code = if usage_summary.available
+        && models.is_some()
+        && !money.currency.is_empty()
+        && usage_log.status != "unavailable"
+    {
+        "none"
+    } else {
+        "partial_data"
+    };
+    app_token::ensure(&bootstrap.origin, paths, access_token).await;
+    Ok(AccountProjection {
+        request_id,
+        schema_version: 6,
+        status: "signed_in",
+        user_code: String::new(),
+        poll_after_seconds: 0,
+        expires_at_epoch_ms: 0,
+        observed_at_epoch_ms: observed_now,
+        account: account_summary,
+        usage: usage_summary,
+        models: models.unwrap_or_default(),
+        // Prices already arrive in the station's currency, which each plan
+        // names: there is nothing left to convert.
+        comparison_fx: "1".into(),
         money,
         savings,
         usage_log,
@@ -1634,6 +2082,7 @@ pub(crate) fn billing_groups(pricing: &Value, model_id: &str) -> Vec<BillingGrou
                 endpoints.extend(pricing_endpoint_types(row));
             }
             Some(BillingGroup {
+                plan: None,
                 id: id.clone(),
                 description: bounded_text(Some(description), 500),
                 ratio: nonnegative_number(pricing.get("group_ratio").and_then(|v| v.get(id))),
@@ -2748,7 +3197,7 @@ async fn open_wallet(state: &AccountV2State, line_id: &str) -> Result<(), String
         .filter(|value| value == &bootstrap.wallet_url)
         .unwrap_or(bootstrap.wallet_url);
     let api_origin = account_line_origin(line_id).ok_or("wallet_unavailable")?;
-    if !wallet_url_is_allowed(&wallet, &api_origin) {
+    if !wallet_page_is_allowed(&bootstrap.dialect, &wallet, &api_origin) {
         return Err("wallet_unavailable".into());
     }
     if _permit.is_cancelled() {
@@ -2798,6 +3247,7 @@ mod tests {
         );
         let billing = ModelBilling {
             groups: vec![BillingGroup {
+                plan: None,
                 id: "default".into(),
                 description: String::new(),
                 ratio: None,
@@ -2924,6 +3374,70 @@ mod tests {
             "https://yeschoy.com/desktop-authorize?user_code=ABCD-2345&next=x",
             "ABCD-2345"
         ));
+    }
+
+    #[test]
+    fn a_saved_browser_login_to_a_refused_station_is_no_longer_a_line() {
+        for line in [
+            "station_connect:https://open-design.ai",
+            "station_connect:https://api.open-design.ai",
+        ] {
+            assert_eq!(station_connect_origin_from_line_id(line), None, "{line}");
+            assert_eq!(account_line_origin(line), None, "{line}");
+            assert!(!account_request_line_id_is_valid(line), "{line}");
+            assert!(!persisted_session_line_id(line), "{line}");
+        }
+        assert!(persisted_session_line_id(
+            "station_connect:https://not-open-design.ai"
+        ));
+        // 存下的登录靠这个判断整份丢掉；别的站点、内置线路、认不出的旧线路都不丢。
+        assert!(line_is_refused_station(
+            "station_connect:https://API.Open-Design.ai"
+        ));
+        assert!(line_is_refused_station(
+            "station_key:https://open-design.ai"
+        ));
+        for kept in [
+            "station_connect:https://not-open-design.ai",
+            "station_connect:not a url",
+            "station_key:https://example.com",
+            "mainland_optimized",
+            "",
+        ] {
+            assert!(!line_is_refused_station(kept), "{kept}");
+        }
+    }
+
+    #[test]
+    fn app_token_header_must_be_a_plain_custom_header() {
+        assert!(app_token_header_is_allowed("X-Desktop-App-Token"));
+        assert!(app_token_header_is_allowed("x-yeschoy-app-token"));
+
+        assert!(!app_token_header_is_allowed("Authorization"));
+        assert!(!app_token_header_is_allowed("x-api-key"));
+        assert!(!app_token_header_is_allowed("X-"));
+        assert!(!app_token_header_is_allowed("X-Bad Name"));
+        // A multi-byte character across the prefix must be refused, not panic.
+        assert!(!app_token_header_is_allowed("x€-token"));
+        assert!(!app_token_header_is_allowed("é-token"));
+    }
+
+    #[test]
+    fn a_session_serves_only_its_own_station() {
+        let station = "station_connect:https://example.com";
+        assert!(session_serves_line(
+            "mainland_optimized",
+            "global_accelerated"
+        ));
+        assert!(session_serves_line("", "mainland_optimized"));
+        assert!(session_serves_line(station, station));
+        assert!(!session_serves_line("mainland_optimized", station));
+        assert!(!session_serves_line(station, "mainland_optimized"));
+        assert!(!session_serves_line(
+            station,
+            "station_connect:https://other.example"
+        ));
+        assert!(!session_serves_line("", station));
     }
 
     #[test]
