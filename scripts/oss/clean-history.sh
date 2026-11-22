@@ -17,7 +17,7 @@ git -C "$repo" archive --format=tar "$ref" | tar -x -C "$out"
 
 # 2. 再保险：删除公开仓库不该出现的内部目录/文件（即使快照里已经没有）
 rm -rf "$out/outputs" "$out/.product-governance" "$out/deploy/download-origin" \
-       "$out/deploy/vendor-sync" "$out/.cursor" "$out/.claude" \
+       "$out/deploy/vendor-sync" "$out/.cursor" "$out/.claude" "$out/.trellis" \
        "$out/session-manager.md" "$out/.cursor-agent-tmp-notes.md" "$out/.tmp-agent-notes.md"
 find "$out" -name 'deployment-receipt*.json' -delete
 find "$out" -name '*.env' ! -name '*.example.env' -delete
