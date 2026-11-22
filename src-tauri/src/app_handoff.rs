@@ -408,7 +408,6 @@ async fn present(app: &AppHandle, id: u64) -> Option<Seen> {
         let _ = app.emit_to(WINDOW_LABEL, LEAVE_EVENT, ());
         tokio::time::sleep(LEAVE).await;
     }
-    drop(picture);
     Some(seen)
 }
 
