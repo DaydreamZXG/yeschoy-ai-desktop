@@ -642,6 +642,7 @@ export function KaifanApp() {
           ids={mine}
           models={usable}
           picks={picks}
+          fx={projection?.comparisonFx}
           connections={hereConnections}
           onModel={(modelId) =>
             change({

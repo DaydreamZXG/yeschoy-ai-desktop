@@ -20,6 +20,9 @@
 | DSH web | 命令行 + 浏览器 | 写入 `~/.dsh/profiles/web`，由助手启动本地工作台 |
 | Pi | 命令行 | 写入 `~/.pi/agent/models.json` |
 | OpenCode | 命令行 | 写入 `~/.config/opencode/opencode.json`，经本地转发连接；密钥留在系统钥匙串 |
+| Cline | 命令行 + 编辑器扩展 | 写入 `~/.cline/data/settings/providers.json`（两者共用），只动自己那一项；经本地转发连接，密钥留在系统钥匙串 |
+| Hermes Agent | 命令行 | 只换 `~/.hermes/config.yaml` 里的 `model:` 一块，注释和别的设置原样保留；经本地转发连接，密钥留在系统钥匙串 |
+| OpenClaw | 命令行 | 只动 `~/.openclaw/openclaw.json` 里自己那一家和主型号；经本地转发连接，密钥留在系统钥匙串 |
 
 支持 macOS 和 Windows。
 
@@ -79,7 +82,7 @@ A local desktop config helper that connects common AI coding and office apps to 
 
 YesChoy (formerly the 野菜API desktop assistant) connects to any OpenAI-compatible relay station: enter the station address and authorize in the browser, or paste the address and an API key. [Yeschoy (野菜API)](https://yeschoy.com) is one of the built-in station presets. Upgrading from an earlier version keeps your sign-in and connected apps.
 
-Supported apps: Claude Code, Claude Desktop, Codex (ChatGPT desktop), WorkBuddy, DeepSeek Harness, DSH web, Pi and OpenCode, on macOS and Windows.
+Supported apps: Claude Code, Claude Desktop, Codex (ChatGPT desktop), WorkBuddy, DeepSeek Harness, DSH web, Pi, OpenCode, Cline, Hermes Agent and OpenClaw, on macOS and Windows.
 
 - Nothing is written until you confirm.
 - Original settings are saved (encrypted, on this machine) before every write. Restoring undoes only what the assistant wrote and keeps your later edits.

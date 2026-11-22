@@ -77,6 +77,15 @@ describe("看一眼站点", () => {
     expect(probe).toHaveBeenCalledTimes(1);
   });
 
+  it("名单上不给连的站点：照实报，不重试", async () => {
+    probe.mockResolvedValue(result("refused_station"));
+    expect(await lookAtStation("https://api.open-design.ai")).toEqual({
+      ok: false,
+      reason: "refused_station",
+    });
+    expect(probe).toHaveBeenCalledTimes(1);
+  });
+
   it("密钥原样交给探测", async () => {
     probe.mockResolvedValue(result("ok"));
     await lookAtStation("https://a.example.com", "sk-x");
