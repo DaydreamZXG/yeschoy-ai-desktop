@@ -37,7 +37,10 @@ export function handoffCast(search: string): Props | null {
   const toolId = params.get("handoff");
   if (!toolId) return null;
   const who = params.get("who") ?? "";
-  return { toolId, who: who in ROSTER ? (who as RosterId) : "new" };
+  return {
+    toolId,
+    who: Object.hasOwn(ROSTER, who) ? (who as RosterId) : "new",
+  };
 }
 
 /**
