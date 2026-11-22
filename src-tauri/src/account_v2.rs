@@ -802,7 +802,16 @@ fn save_stored_session(session: &StoredSession) -> Result<(), ()> {
 fn load_stored_session() -> Result<Option<StoredSession>, ()> {
     // 改名前登录的人：登录凭据还在旧名字下面，读的时候搬过来。
     match crate::legacy::read_secret(KEYRING_SERVICE, KEYRING_USER) {
-        Ok(Some(payload)) => serde_json::from_str(&payload).map(Some).map_err(|_| ()),
+        Ok(Some(payload)) => {
+            let stored: StoredSession = serde_json::from_str(&payload).map_err(|_| ())?;
+            // 名单上不给连的站点发的登录：整份丢掉，当作没登录。留着的话，别的线路
+            // 续登录时会把它的凭据发给别的站点。
+            if line_is_refused_station(&stored.line_id) {
+                let _ = delete_stored_session();
+                return Ok(None);
+            }
+            Ok(Some(stored))
+        }
         Ok(None) => Ok(None),
         Err(_) => Err(()),
     }
@@ -1021,13 +1030,22 @@ pub(crate) fn line_id_for_station_connect_origin(origin: &str) -> String {
 }
 
 pub(crate) fn station_connect_origin_from_line_id(line_id: &str) -> Option<&str> {
-    let origin = line_id.strip_prefix(STATION_CONNECT_LINE_PREFIX)?;
-    // 名单上不给连的站点，之前存下的登录也不再认：不然升级后还会照旧去找它。
-    let refused = reqwest::Url::parse(origin).ok().is_some_and(|url| {
-        url.host_str()
-            .is_some_and(crate::station_connect::station_host_is_refused)
-    });
-    (!refused).then_some(origin)
+    // 名单上不给连的站点不算一条线路：界面递过来的、之前存下的都一样。
+    line_id
+        .strip_prefix(STATION_CONNECT_LINE_PREFIX)
+        .filter(|_| !line_is_refused_station(line_id))
+}
+
+/// 这条线路指向名单上不给连的站点：浏览器授权连的、粘贴密钥连的都算。
+fn line_is_refused_station(line_id: &str) -> bool {
+    line_id
+        .strip_prefix(STATION_CONNECT_LINE_PREFIX)
+        .or_else(|| line_id.strip_prefix("station_key:"))
+        .and_then(|origin| reqwest::Url::parse(origin).ok())
+        .is_some_and(|url| {
+            url.host_str()
+                .is_some_and(crate::station_connect::station_host_is_refused)
+        })
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -2946,6 +2964,22 @@ mod tests {
         assert!(persisted_session_line_id(
             "station_connect:https://not-open-design.ai"
         ));
+        // 存下的登录靠这个判断整份丢掉；别的站点、内置线路、认不出的旧线路都不丢。
+        assert!(line_is_refused_station(
+            "station_connect:https://API.Open-Design.ai"
+        ));
+        assert!(line_is_refused_station(
+            "station_key:https://open-design.ai"
+        ));
+        for kept in [
+            "station_connect:https://not-open-design.ai",
+            "station_connect:not a url",
+            "station_key:https://example.com",
+            "mainland_optimized",
+            "",
+        ] {
+            assert!(!line_is_refused_station(kept), "{kept}");
+        }
     }
 
     #[test]
