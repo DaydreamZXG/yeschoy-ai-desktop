@@ -409,6 +409,15 @@ mod platform {
         Ok(!matching_processes(path)?.is_empty())
     }
 
+    /// 这个安装位置的应用现在开着的所有窗口。只给衔接动画找窗口用，不动它们。
+    #[allow(dead_code)]
+    pub(crate) fn window_handles(path: &Path) -> Vec<isize> {
+        matching_processes(path)
+            .and_then(matching_windows)
+            .map(|windows| windows.into_iter().map(|hwnd| hwnd.0 as isize).collect())
+            .unwrap_or_default()
+    }
+
     pub(super) fn startup_observed(_tool_id: &str, path: &Path) -> Result<bool, AdapterFailure> {
         let windows = matching_windows(matching_processes(path)?)?;
         Ok(windows.into_iter().any(|hwnd| unsafe {

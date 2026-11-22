@@ -14,6 +14,9 @@ mod account_finance;
 mod account_v2;
 #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 mod app_handoff_core;
+#[cfg(target_os = "windows")]
+#[allow(dead_code)]
+mod app_handoff_windows;
 mod app_installation;
 mod app_update;
 mod claude_bridge;
