@@ -24,6 +24,8 @@ export interface ProviderPreset {
   anthropicBase: string | null;
   /** 这家要求每个请求带的请求头；别的应用得自己加上。多数没有。 */
   sessionHeader: string | null;
+  /** Claude 格式的地址只认 `Authorization: Bearer`，按 `x-api-key` 带密钥会被拒。 */
+  anthropicBearer: boolean;
 }
 
 const path = (value: unknown): string | null =>
@@ -72,6 +74,7 @@ export function decodeProviderPresets(raw: unknown): ProviderPreset[] {
         /^[a-z][a-z0-9-]*$/.test(row.sessionHeader)
           ? row.sessionHeader
           : null,
+      anthropicBearer: anthropicPath !== null && row.anthropicBearer === true,
     });
   }
   return presets;

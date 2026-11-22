@@ -1304,6 +1304,7 @@ describe("接入：连的是云厂商", () => {
     openaiBase: "https://api.kimi.com/coding/v1",
     anthropicBase: "https://api.kimi.com/coding",
     sessionHeader: null,
+    anthropicBearer: false,
     ...patch,
   });
 
@@ -1355,6 +1356,7 @@ describe("接入：连的是云厂商", () => {
     );
     expect(screen.getAllByRole("button", { name: "复制" })).toHaveLength(2);
     expect(screen.queryByTestId("kaifan-join-other-header")).toBeNull();
+    expect(screen.queryByTestId("kaifan-join-other-bearer")).toBeNull();
   });
 
   it("别的应用：这家还要一个请求头，说清楚叫什么、没处填就接不了", async () => {
@@ -1370,6 +1372,22 @@ describe("接入：连的是云厂商", () => {
     fireEvent.click(screen.getByRole("button", { name: "别的应用" }));
     expect(screen.getByTestId("kaifan-join-other-header")).toHaveTextContent(
       /OpenCode Go 还要求每个请求带一个请求头 x-opencode-session.*接不了这家/,
+    );
+  });
+
+  it("别的应用：这家的 Claude 格式地址只认 Bearer，照实说，给出退路", async () => {
+    setup({
+      preset: vendor({
+        id: "ollama_cloud",
+        family: "ollama_cloud",
+        name: "Ollama Cloud",
+        anthropicBearer: true,
+      }),
+    });
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: "别的应用" }));
+    expect(screen.getByTestId("kaifan-join-other-bearer")).toHaveTextContent(
+      /Ollama Cloud 的 Claude 格式地址只认 Authorization: Bearer.*改用上面的 OpenAI 格式地址/,
     );
   });
 
@@ -1640,6 +1658,18 @@ describe("角色登场", () => {
     );
   });
 
+  it("WorkBuddy：我们只把型号放进它的列表，要在它那边选一下，照实说", () => {
+    show({ joined: { ...joined, toolId: "workbuddy", modelId: "gpt-5" } });
+    expect(screen.getByTestId("kaifan-reveal-pick")).toHaveTextContent(
+      /型号列表里选 gpt-5（开饭加进去的那一项）/,
+    );
+  });
+
+  it("别的应用不用另外选型号：不多说这一句", () => {
+    show();
+    expect(screen.queryByTestId("kaifan-reveal-pick")).toBeNull();
+  });
+
   it("终端里用的应用：说的是终端窗口", () => {
     show({ joined: { ...joined, toolId: "claude_code", terminal: true } });
     expect(screen.getByTestId("kaifan-reveal")).toHaveTextContent("终端窗口");
@@ -1658,18 +1688,6 @@ describe("角色登场", () => {
       /DeepSeek.*这次没接上/,
     );
   });
-  it("WorkBuddy：我们只把型号放进它的列表，要在它那边选一下，照实说", () => {
-    show({ joined: { ...joined, toolId: "workbuddy", modelId: "gpt-5" } });
-    expect(screen.getByTestId("kaifan-reveal-pick")).toHaveTextContent(
-      /型号列表里选 gpt-5（开饭加进去的那一项）/,
-    );
-  });
-
-  it("别的应用不用另外选型号：不多说这一句", () => {
-    show();
-    expect(screen.queryByTestId("kaifan-reveal-pick")).toBeNull();
-  });
-
 
   it("没有刚接好的就不出现", () => {
     show({ joined: null });

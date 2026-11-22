@@ -112,6 +112,12 @@ describe("云厂商预设", () => {
     expect(header("x-opencode-session")).toBe("x-opencode-session");
     expect(header("x bad\r\nheader")).toBeNull();
     expect(header(7)).toBeNull();
+    // Claude 格式只认 Bearer 的那家：照后端说的来，没说就是不用。
+    expect(openai.anthropicBearer).toBe(false);
+    expect(
+      decodeProviderPresets([row({ anthropicBearer: true })])[0]
+        .anthropicBearer,
+    ).toBe(true);
     expect(addressesOf("https://my.example.com", null)).toEqual({
       openai: "https://my.example.com/v1",
       anthropic: "https://my.example.com",
