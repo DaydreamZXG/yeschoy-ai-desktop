@@ -1021,7 +1021,13 @@ pub(crate) fn line_id_for_station_connect_origin(origin: &str) -> String {
 }
 
 pub(crate) fn station_connect_origin_from_line_id(line_id: &str) -> Option<&str> {
-    line_id.strip_prefix(STATION_CONNECT_LINE_PREFIX)
+    let origin = line_id.strip_prefix(STATION_CONNECT_LINE_PREFIX)?;
+    // 名单上不给连的站点，之前存下的登录也不再认：不然升级后还会照旧去找它。
+    let refused = reqwest::Url::parse(origin).ok().is_some_and(|url| {
+        url.host_str()
+            .is_some_and(crate::station_connect::station_host_is_refused)
+    });
+    (!refused).then_some(origin)
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -2923,6 +2929,22 @@ mod tests {
         assert!(!authorization_url_is_allowed(
             "https://yeschoy.com/desktop-authorize?user_code=ABCD-2345&next=x",
             "ABCD-2345"
+        ));
+    }
+
+    #[test]
+    fn a_saved_browser_login_to_a_refused_station_is_no_longer_a_line() {
+        for line in [
+            "station_connect:https://open-design.ai",
+            "station_connect:https://api.open-design.ai",
+        ] {
+            assert_eq!(station_connect_origin_from_line_id(line), None, "{line}");
+            assert_eq!(account_line_origin(line), None, "{line}");
+            assert!(!account_request_line_id_is_valid(line), "{line}");
+            assert!(!persisted_session_line_id(line), "{line}");
+        }
+        assert!(persisted_session_line_id(
+            "station_connect:https://not-open-design.ai"
         ));
     }
 
