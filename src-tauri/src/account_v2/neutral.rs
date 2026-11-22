@@ -516,7 +516,7 @@ pub(super) fn models(payload: Option<&Value>) -> Option<Vec<AccountModel>> {
 mod tests {
     use super::super::{
         account_money, neutral_bootstrap, parse_account, parse_usage, usage_log_report,
-        StationDialect,
+        wallet_page_is_allowed, StationDialect,
     };
     use super::*;
 
@@ -557,6 +557,28 @@ mod tests {
         assert_eq!(paths.app_tokens, "/api/desktop/v2/app-tokens");
         assert_eq!(paths.app_token_header, "X-Desktop-App-Token");
         assert_eq!(read.announcements_path, "/api/desktop/v2/notices");
+    }
+
+    #[test]
+    fn the_top_up_page_a_neutral_station_names_is_the_one_that_opens() {
+        let origin = "https://relay.example.com";
+        let read = neutral_bootstrap(bootstrap(), origin).unwrap();
+        assert!(wallet_page_is_allowed(
+            &read.dialect,
+            &read.wallet_url,
+            origin
+        ));
+        assert!(!wallet_page_is_allowed(
+            &read.dialect,
+            "https://evil.example/topup",
+            origin
+        ));
+        // The original contract still fixes the path.
+        assert!(!wallet_page_is_allowed(
+            &StationDialect::Legacy,
+            &read.wallet_url,
+            origin
+        ));
     }
 
     #[test]

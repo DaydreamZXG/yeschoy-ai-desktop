@@ -349,9 +349,7 @@ fn neutral_bootstrap(data: Value, origin: &str) -> Result<DesktopBootstrap, &'st
     if data.session_refresh_path != REFRESH_PATH || data.session_logout_path != LOGOUT_PATH {
         return Err("session_paths");
     }
-    // The neutral contract leaves the top-up page's path to the station;
-    // it only has to be a page on the station's own host.
-    if !page_url_on_station_origin(&data.wallet_url, origin, "/") {
+    if !neutral_wallet_url_is_allowed(&data.wallet_url, origin) {
         return Err("wallet_url");
     }
     let required = |raw: &str| relative_api_path(raw).ok_or("paths");
@@ -747,6 +745,21 @@ fn relative_api_path(raw: &str) -> Option<String> {
 
 fn wallet_url_is_allowed(raw: &str, api_origin: &str) -> bool {
     wallet_url_is_allowed_official(raw) || wallet_url_on_station_origin(raw, api_origin)
+}
+
+/// The neutral contract leaves the top-up page's path to the station; it only
+/// has to be a page on the station's own host.
+fn neutral_wallet_url_is_allowed(raw: &str, api_origin: &str) -> bool {
+    page_url_on_station_origin(raw, api_origin, "/")
+}
+
+/// The check a station's top-up page passed when its bootstrap was accepted,
+/// made again before the page is opened.
+fn wallet_page_is_allowed(dialect: &StationDialect, raw: &str, api_origin: &str) -> bool {
+    match dialect {
+        StationDialect::Legacy => wallet_url_is_allowed(raw, api_origin),
+        StationDialect::Neutral(_) => neutral_wallet_url_is_allowed(raw, api_origin),
+    }
 }
 
 fn wallet_url_is_allowed_official(raw: &str) -> bool {
@@ -3127,7 +3140,7 @@ async fn open_wallet(state: &AccountV2State, line_id: &str) -> Result<(), String
         .filter(|value| value == &bootstrap.wallet_url)
         .unwrap_or(bootstrap.wallet_url);
     let api_origin = account_line_origin(line_id).ok_or("wallet_unavailable")?;
-    if !wallet_url_is_allowed(&wallet, &api_origin) {
+    if !wallet_page_is_allowed(&bootstrap.dialect, &wallet, &api_origin) {
         return Err("wallet_unavailable".into());
     }
     if _permit.is_cancelled() {
