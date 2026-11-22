@@ -381,6 +381,7 @@
       "trying": "Almost there. I'm confirming with the station.",
       "failed": {
         "invalid_origin": "I can't read that address. The station's domain is enough, like example.com.",
+        "refused_station": "I don't connect to OpenDesign's station, so I stopped here. Try another station's address.",
         "unreachable": "I tried twice and couldn't reach this station. Open the address in your browser: if that fails too, the address is wrong or the station is down for now.",
         "timeout": "This station is answering too slowly; I tried twice. Try again in a while, or switch proxy node if you use one.",
         "not_relay": "That address doesn't look like a relay station. I need the website where you see “Tokens” and “Wallet” after signing in, not a chat page."
