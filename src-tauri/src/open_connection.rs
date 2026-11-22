@@ -7,7 +7,7 @@ use crate::{
     tool_activation::ACTIVATION_LOCK,
     tool_adapters::{
         self, claude_code, claude_desktop, cline, codex_desktop, desktop_lifecycle, dsh_web,
-        hermes, opencode, pi, terminal_launch, workbuddy, AdapterFailure,
+        hermes, openclaw, opencode, pi, terminal_launch, workbuddy, AdapterFailure,
     },
     tool_credentials::{self, CredentialFailure, ToolCredential},
 };
@@ -68,6 +68,7 @@ fn valid_request(request: &OpenRequest) -> bool {
                 | "dsh_desktop"
                 | "cline"
                 | "hermes"
+                | "openclaw"
         )
 }
 
@@ -121,6 +122,8 @@ pub(crate) fn validate_settings(
                 .validate_existing(),
             "cline" => cline::prepare(home, &credential.model_id, local)?.validate_existing(),
             "hermes" => hermes::prepare(home, &credential.model_id, local)?.validate_existing(),
+            "openclaw" => openclaw::prepare_catalog(home, &credential.model_id, &models, local)?
+                .validate_existing(),
             "dsh_web" => dsh_web::prepare_catalog(
                 home,
                 &origin,
@@ -177,6 +180,13 @@ pub(crate) fn validate_settings(
         "hermes" => hermes::prepare(
             home,
             &credential.model_id,
+            credential.local_gateway_token.as_deref(),
+        )?
+        .validate_existing(),
+        "openclaw" => openclaw::prepare_catalog(
+            home,
+            &credential.model_id,
+            std::slice::from_ref(&credential.model_id),
             credential.local_gateway_token.as_deref(),
         )?
         .validate_existing(),
@@ -316,6 +326,19 @@ pub async fn open_tool_connection_v1(
                     }
                     "cline" => {
                         crate::cline_bridge::global()
+                            .start(credential)
+                            .await
+                            .map_err(launch_failure)?;
+                        if permit.is_cancelled() {
+                            return Err(st("busy"));
+                        }
+                        Ok(
+                            terminal_launch::launch_async(&installation, &request.tool_id, &home)
+                                .await,
+                        )
+                    }
+                    "openclaw" => {
+                        crate::openclaw_bridge::global()
                             .start(credential)
                             .await
                             .map_err(launch_failure)?;
@@ -475,6 +498,7 @@ mod tests {
             "dsh_desktop",
             "cline",
             "hermes",
+            "openclaw",
         ] {
             assert!(valid_request(&OpenRequest {
                 request_id: "open-fixture".into(),

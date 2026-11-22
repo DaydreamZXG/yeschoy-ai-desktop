@@ -62,7 +62,7 @@ pub(crate) fn attempt() -> &'static Mutex<ExitAttempt> {
     ATTEMPT.get_or_init(Mutex::default)
 }
 
-pub(crate) const TOOLS: [&str; 10] = [
+pub(crate) const TOOLS: [&str; 11] = [
     "claude_code",
     "claude_desktop",
     "codex_desktop",
@@ -73,6 +73,7 @@ pub(crate) const TOOLS: [&str; 10] = [
     "dsh_desktop",
     "cline",
     "hermes",
+    "openclaw",
 ];
 
 /// Continue other tools after a recoverable failure; callers retain journals.

@@ -33,6 +33,7 @@ mod logging;
 mod manual_locations;
 mod model_catalog;
 mod open_connection;
+mod openclaw_bridge;
 mod opencode_bridge;
 mod provider;
 mod provider_presets;
@@ -190,6 +191,8 @@ pub fn run() {
                             .await;
                         // Hermes 也靠 `HERMES_HOME` 找它的设置，同样要等。
                         tool_adapters::hermes::resume_if_configured().await;
+                        // OpenClaw 的四个 `OPENCLAW_*` 变量也一样。
+                        tool_adapters::openclaw::resume_if_configured().await;
                     },
                     // Claude clients use small local pass-throughs for native
                     // model-ID compatibility. Resume only when their managed
@@ -325,6 +328,11 @@ fn register_runtime_stops(app: &tauri::AppHandle) -> Result<(), std::io::Error> 
     shutdown()
         .register_stop("hermes", || async {
             hermes_bridge::global().stop().await;
+        })
+        .map_err(|_| std::io::Error::other("shutdown_registration_failed"))?;
+    shutdown()
+        .register_stop("openclaw", || async {
+            openclaw_bridge::global().stop().await;
         })
         .map_err(|_| std::io::Error::other("shutdown_registration_failed"))?;
     Ok(())
@@ -522,7 +530,7 @@ fn begin_user_shutdown<R: tauri::Runtime>(
                             let language = ui_language::current();
                             let names = response.failed_tools.iter().map(|tool| match tool.as_str() {
                                 "codex_desktop" => "Codex", "claude_desktop" => "Claude Desktop",
-                                "claude_code" => "Claude Code", "pi" => "Pi", "opencode" => "OpenCode", "cline" => "Cline", "hermes" => "Hermes Agent", _ => "DSH web",
+                                "claude_code" => "Claude Code", "pi" => "Pi", "opencode" => "OpenCode", "cline" => "Cline", "hermes" => "Hermes Agent", "openclaw" => "OpenClaw", _ => "DSH web",
                             }).collect::<Vec<_>>().join(language.pick("、", ", "));
                             let message = HSTRING::from(language.pick(
                                 &format!("未完成恢复：{names}。助手尚未退出。\n请保存并关闭相关应用后重试。若界面不可用，再点窗口关闭按钮，可选择重试恢复或保留设置退出。"),

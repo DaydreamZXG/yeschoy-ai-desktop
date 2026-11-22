@@ -368,6 +368,7 @@ function targets(requestId: string) {
     ["dsh_desktop", "DeepSeek Harness", "0.2.0"],
     ["cline", "Cline", "3.0.75"],
     ["hermes", "Hermes Agent", "0.9.0"],
+    ["openclaw", "OpenClaw", "2026.11.6"],
   ] as const;
   return {
     requestId,
@@ -524,6 +525,7 @@ const handlers: Record<string, (a: Args) => unknown> = {
         "pi",
         "cline",
         "hermes",
+        "openclaw",
       ],
       keyPage: "https://example.com/keys",
       common: true,

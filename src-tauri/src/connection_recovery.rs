@@ -153,6 +153,7 @@ fn allowed(tool: &str) -> bool {
             | "dsh_desktop"
             | "cline"
             | "hermes"
+            | "openclaw"
     )
 }
 
@@ -928,6 +929,13 @@ pub(crate) fn restore_bytes(
         &mut restored,
         &mut preserved,
     );
+    crate::tool_adapters::openclaw::settle_restored(
+        &before,
+        &after,
+        &now,
+        &mut restored,
+        &mut preserved,
+    );
     if restored == now || restored == touched {
         return Ok((current.map(Vec::from), preserved));
     }
@@ -1470,6 +1478,29 @@ pub(crate) fn legacy_clean(
                 && value["model"]["base_url"] == crate::hermes_bridge::PROXY_BASE
             {
                 remove_at(&mut value, &["model"]);
+            }
+        }
+        // 只拿走仍指着本地转发的那一家；主型号还选着它、白名单里还列着它的，
+        // 一并拿走。
+        "openclaw" => {
+            use crate::tool_adapters::openclaw::{is_ours, primary, ALLOW_ENTRY, PROVIDER_ID};
+            if value["models"]["providers"][PROVIDER_ID]["baseUrl"]
+                == crate::openclaw_bridge::PROXY_BASE
+            {
+                remove_at(&mut value, &["models", "providers", PROVIDER_ID]);
+                let model = &value["agents"]["defaults"]["model"];
+                if primary(model).is_some_and(is_ours) {
+                    if model.is_object() {
+                        remove_at(&mut value, &["agents", "defaults", "model", "primary"]);
+                    } else {
+                        remove_at(&mut value, &["agents", "defaults", "model"]);
+                    }
+                }
+                if let Some(allow) =
+                    value["agents"]["defaults"]["modelPolicy"]["allow"].as_array_mut()
+                {
+                    allow.retain(|entry| entry != ALLOW_ENTRY);
+                }
             }
         }
         // 只拿走仍指着本地转发的那一项；选中的还是它，就一并取消选中。
@@ -2156,6 +2187,197 @@ mod tests {
         assert_eq!(
             restore_bytes(&file, Some(switched.as_bytes())).unwrap(),
             (Some(switched.as_bytes().to_vec()), true)
+        );
+    }
+
+    /// OpenClaw：没人动过就一字不差还回去（注释也在）；之后动过的，只把我们
+    /// 改的那几处改回去。
+    #[test]
+    fn openclaw_restore_puts_back_only_what_we_changed() {
+        use crate::tool_adapters::openclaw;
+        let f = Fixture::new();
+        let token = format!("ycg-{}", "a".repeat(64));
+        let models = ["glm-5.3".to_owned(), "kimi-k3".to_owned()];
+        let original = br#"{
+  // my settings
+  gateway: { port: 18789 },
+  models: { providers: { mine: { baseUrl: "http://127.0.0.1:11434/v1", models: [] } } },
+  agents: { defaults: { model: { primary: "mine/old", fallbacks: ["mine/older"] },
+                        modelPolicy: { allow: ["mine/*"] } } },
+}
+"#;
+        let after = openclaw::render(Some(original), "glm-5.3", &models, &token).unwrap();
+        let file = f.change(".openclaw/openclaw.json", Some(original), &after);
+        let before = document(&file.path, Some(original)).unwrap();
+
+        assert_eq!(
+            restore_bytes(&file, Some(&after)).unwrap(),
+            (Some(original.to_vec()), false)
+        );
+
+        // 后来改了别处（OpenClaw 自己保存时也会整份重排）：那一处留着。
+        let mut later = document(&file.path, Some(&after)).unwrap();
+        later["gateway"]["port"] = json!(19000);
+        let (bytes, _) = restore_bytes(&file, Some(later.to_string().as_bytes())).unwrap();
+        let mut expected = before.clone();
+        expected["gateway"]["port"] = json!(19000);
+        assert_eq!(document(&file.path, bytes.as_deref()).unwrap(), expected);
+
+        // 后来在 OpenClaw 里挑了我们的另一个型号、又往白名单里加了一项：我们那
+        // 一家拿走之后，主型号不能还指着它。
+        let mut picked = document(&file.path, Some(&after)).unwrap();
+        picked["agents"]["defaults"]["model"]["primary"] = json!("kaifan/kimi-k3");
+        picked["agents"]["defaults"]["modelPolicy"]["allow"] =
+            json!(["mine/*", "kaifan/*", "openai/*"]);
+        let (bytes, _) = restore_bytes(&file, Some(picked.to_string().as_bytes())).unwrap();
+        let restored = document(&file.path, bytes.as_deref()).unwrap();
+        assert!(restored["models"]["providers"].get("kaifan").is_none());
+        assert_eq!(
+            restored["agents"]["defaults"]["model"],
+            json!({ "primary": "mine/old", "fallbacks": ["mine/older"] })
+        );
+        assert_eq!(
+            restored["agents"]["defaults"]["modelPolicy"]["allow"],
+            json!(["mine/*", "openai/*"])
+        );
+
+        // 后来换成了别家：那是用户的决定，主型号不动。
+        let mut switched = document(&file.path, Some(&after)).unwrap();
+        switched["agents"]["defaults"]["model"]["primary"] = json!("openai/gpt-5.4");
+        let (bytes, kept) = restore_bytes(&file, Some(switched.to_string().as_bytes())).unwrap();
+        assert!(kept);
+        let restored = document(&file.path, bytes.as_deref()).unwrap();
+        assert_eq!(
+            restored["agents"]["defaults"]["model"]["primary"],
+            "openai/gpt-5.4"
+        );
+        assert!(restored["models"]["providers"].get("kaifan").is_none());
+    }
+
+    /// 接入前没有这份文件：没动过就删掉；之后挑过我们别的型号的，不留下一个
+    /// 指着空厂商的主型号。
+    #[test]
+    fn openclaw_restore_of_a_file_we_created_leaves_no_dangling_model() {
+        use crate::tool_adapters::openclaw;
+        let f = Fixture::new();
+        let token = format!("ycg-{}", "a".repeat(64));
+        let models = ["glm-5.3".to_owned(), "kimi-k3".to_owned()];
+        let after = openclaw::render(None, "glm-5.3", &models, &token).unwrap();
+        let file = f.change(".openclaw/openclaw.json", None, &after);
+        assert_eq!(restore_bytes(&file, Some(&after)).unwrap(), (None, false));
+
+        let mut picked = document(&file.path, Some(&after)).unwrap();
+        picked["agents"]["defaults"]["model"] = json!("kaifan/kimi-k3");
+        picked["gateway"] = json!({ "port": 19000 });
+        let (bytes, _) = restore_bytes(&file, Some(picked.to_string().as_bytes())).unwrap();
+        assert_eq!(
+            document(&file.path, bytes.as_deref()).unwrap(),
+            json!({ "gateway": { "port": 19000 } })
+        );
+    }
+
+    /// 接入时这份设置里还没有 `models`、`agents`：这两段是我们建的，改回原样
+    /// 会整段拿走。用户之后加在里面的东西不是我们的，得留下。
+    #[test]
+    fn openclaw_restore_keeps_what_was_added_inside_sections_we_created() {
+        use crate::tool_adapters::openclaw;
+        let f = Fixture::new();
+        let token = format!("ycg-{}", "a".repeat(64));
+        let models = ["glm-5.3".to_owned(), "kimi-k3".to_owned()];
+        let mine = json!({ "baseUrl": "https://api.openai.com/v1", "models": [] });
+        for original in [
+            None,
+            Some(br#"{ "gateway": { "port": 18789 } }"#.as_slice()),
+        ] {
+            let after = openclaw::render(original, "glm-5.3", &models, &token).unwrap();
+            let file = f.change(".openclaw/openclaw.json", original, &after);
+            let mut expected = document(&file.path, original).unwrap();
+
+            // 加了一家别的厂商、一个工作区；我们写的那些一个字没动。
+            let mut later = document(&file.path, Some(&after)).unwrap();
+            later["models"]["providers"]["openai"] = mine.clone();
+            later["agents"]["defaults"]["workspace"] = json!("~/work");
+            let (bytes, kept) = restore_bytes(&file, Some(later.to_string().as_bytes())).unwrap();
+            assert!(kept);
+            expected["models"] = json!({ "providers": { "openai": mine } });
+            expected["agents"] = json!({ "defaults": { "workspace": "~/work" } });
+            assert_eq!(document(&file.path, bytes.as_deref()).unwrap(), expected);
+
+            // 用 `openclaw models set` 挑了我们的另一个型号：它还会记一条别名、
+            // 盖一个 `meta` 戳。别名跟着我们那一家走，`meta` 是它的，留着。
+            let mut picked = later.clone();
+            picked["agents"]["defaults"]["model"] = json!("kaifan/kimi-k3");
+            picked["agents"]["defaults"]["models"] = json!({ "kaifan/kimi-k3": {} });
+            picked["meta"] = json!({ "lastTouchedVersion": "2026.11.6" });
+            let (bytes, _) = restore_bytes(&file, Some(picked.to_string().as_bytes())).unwrap();
+            expected["meta"] = json!({ "lastTouchedVersion": "2026.11.6" });
+            assert_eq!(document(&file.path, bytes.as_deref()).unwrap(), expected);
+
+            // 往我们那一家里加了请求头、又让主 agent 自己定了我们的型号：我们那
+            // 一家整条拿走，不剩半条；主 agent 不留一个指着空厂商的型号。它别的
+            // 设置、别的 agent 都留着。
+            let mut pinned = later.clone();
+            pinned["models"]["providers"]["kaifan"]["headers"] = json!({ "x-mine": "1" });
+            pinned["agents"]["entries"] = json!({
+                "main": { "model": "kaifan/glm-5.3", "workspace": "~/main" },
+                "helper": { "model": "openai/gpt-5.4" },
+            });
+            let (bytes, _) = restore_bytes(&file, Some(pinned.to_string().as_bytes())).unwrap();
+            let mut kept = document(&file.path, original).unwrap();
+            kept["models"] = json!({ "providers": { "openai": mine } });
+            kept["agents"] = json!({
+                "defaults": { "workspace": "~/work" },
+                "entries": {
+                    "main": { "workspace": "~/main" },
+                    "helper": { "model": "openai/gpt-5.4" },
+                },
+            });
+            assert_eq!(document(&file.path, bytes.as_deref()).unwrap(), kept);
+
+            // 只定了型号、别的什么都没加：不留空壳。
+            let mut only = document(&file.path, Some(&after)).unwrap();
+            only["agents"]["entries"] = json!({ "main": { "model": "kaifan/glm-5.3" } });
+            let (bytes, _) = restore_bytes(&file, Some(only.to_string().as_bytes())).unwrap();
+            assert_eq!(bytes.is_some(), original.is_some());
+            if let Some(bytes) = bytes {
+                assert_eq!(
+                    document(&file.path, Some(&bytes)).unwrap(),
+                    document(&file.path, original).unwrap()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn openclaw_legacy_clean_removes_only_what_points_at_our_bridge() {
+        use crate::tool_adapters::openclaw;
+        let f = Fixture::new();
+        let path = f.path(".openclaw/openclaw.json");
+        let token = format!("ycg-{}", "a".repeat(64));
+        let ours = openclaw::render(
+            Some(br#"{ gateway: { port: 18789 }, agents: { defaults: { modelPolicy: { allow: ["openai/*"] } } } }"#),
+            "glm-5.3",
+            &["glm-5.3".to_owned()],
+            &token,
+        )
+        .unwrap();
+        let cleaned = legacy_clean("openclaw", &path, Some(&ours), &credential(), false)
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            document(&path, Some(&cleaned)).unwrap(),
+            json!({
+                "gateway": { "port": 18789 },
+                "models": { "providers": {} },
+                "agents": { "defaults": { "modelPolicy": { "allow": ["openai/*"] } } },
+            })
+        );
+
+        let theirs = br#"{"models":{"providers":{"kaifan":{"baseUrl":"https://relay.example.com/v1"}}},"agents":{"defaults":{"model":"kaifan/x"}}}"#;
+        let cleaned = legacy_clean("openclaw", &path, Some(theirs), &credential(), false).unwrap();
+        assert_eq!(
+            document(&path, cleaned.as_deref()).unwrap(),
+            document(&path, Some(theirs)).unwrap()
         );
     }
 

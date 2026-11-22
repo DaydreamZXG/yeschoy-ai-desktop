@@ -1011,13 +1011,13 @@ describe("接入：应用多了不堆在一起", () => {
       /^DeepSeek Harness/,
     ])
       expect(chip(name)).not.toBeNull();
-    for (const name of [/^DSH web/, /^Cline/, /^Hermes Agent/])
+    for (const name of [/^DSH web/, /^Cline/, /^Hermes Agent/, /^OpenClaw/])
       expect(chip(name)).toBeNull();
 
-    const fold = screen.getByRole("button", { name: /还有 3 个/ });
+    const fold = screen.getByRole("button", { name: /还有 4 个/ });
     expect(fold).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(fold);
-    for (const name of [/^DSH web/, /^Cline/, /^Hermes Agent/])
+    for (const name of [/^DSH web/, /^Cline/, /^Hermes Agent/, /^OpenClaw/])
       expect(chip(name)).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /收起/ }));
     expect(chip(/^DSH web/)).toBeNull();
@@ -1028,7 +1028,7 @@ describe("接入：应用多了不堆在一起", () => {
     await waitFor(() =>
       expect(chip(/^DSH web/)).toHaveAttribute("aria-pressed", "true"),
     );
-    expect(screen.getByRole("button", { name: /还有 3 个/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /还有 4 个/ })).toBeTruthy();
   });
 
   it("别的应用：给出要填的地址和型号，能复制；不拿密钥出来，也不去接入", async () => {

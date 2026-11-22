@@ -31,7 +31,7 @@ function exitResponse(raw: unknown): ExitResponse | null {
     ) ||
     ("failedTools" in value &&
       (!Array.isArray(value.failedTools) ||
-        value.failedTools.length > 10 ||
+        value.failedTools.length > 11 ||
         value.failedTools.some(
           (tool) =>
             ![
@@ -45,6 +45,7 @@ function exitResponse(raw: unknown): ExitResponse | null {
               "dsh_desktop",
               "cline",
               "hermes",
+              "openclaw",
             ].includes(String(tool)),
         ))) ||
     ![
