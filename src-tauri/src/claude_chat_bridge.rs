@@ -97,7 +97,7 @@ pub(super) async fn forward(
     );
     // 应用自报的名字照原样带过去。`anthropic-*` 那些头不带：对面是 Chat 接口，
     // 用不上。
-    let mut request = state.client.post(url);
+    let mut request = crate::account_v2::app_token::attach(state.client.post(&url), &url);
     if let Some((name, value)) = forwarded
         .iter()
         .find(|(name, _)| name == header::USER_AGENT)

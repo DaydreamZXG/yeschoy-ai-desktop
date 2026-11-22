@@ -129,7 +129,10 @@ async fn chat(state: &BridgeState, request: Request<Body>) -> Response {
         "{}/chat/completions",
         crate::provider_presets::openai_base(&credential.origin)
     );
-    let mut outbound = crate::local_bridge::with_app_headers(state.client.post(url), &app_headers);
+    let mut outbound = crate::local_bridge::with_app_headers(
+        crate::account_v2::app_token::attach(state.client.post(&url), &url),
+        &app_headers,
+    );
     if let Some((name, mark)) = crate::local_bridge::session_mark(
         &credential.origin,
         app_headers

@@ -89,6 +89,7 @@ fn forwarded_header(name: &str, desktop: bool) -> bool {
         return FORWARDED_HEADERS.contains(&name);
     }
     !CLAUDE_CODE_DROPPED_HEADERS.contains(&name)
+        && !crate::account_v2::app_token::is_reserved(name)
         && !name.starts_with("proxy-")
         && !name.starts_with("x-forwarded-")
 }
@@ -509,7 +510,8 @@ async fn send_upstream(
         crate::provider_presets::anthropic_base(&credential.origin)
             .unwrap_or_else(|| credential.origin.clone())
     );
-    let mut outbound = state.client.post(url).json(value);
+    let mut outbound =
+        crate::account_v2::app_token::attach(state.client.post(&url), &url).json(value);
     if upstream_wants_bearer(state.prefix, &credential.origin) {
         outbound = outbound.bearer_auth(credential.upstream_key());
     } else {

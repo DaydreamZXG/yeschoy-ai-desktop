@@ -276,6 +276,7 @@ pub(crate) struct NeutralPaths {
     pub(crate) app_token_header: String,
 }
 
+pub(crate) mod app_token;
 mod neutral;
 
 const NEUTRAL_SERVICE: &str = "desktop-connect";
@@ -970,6 +971,7 @@ fn load_stored_session() -> Result<Option<StoredSession>, ()> {
 }
 
 fn delete_stored_session() -> Result<(), ()> {
+    app_token::forget();
     crate::legacy::delete_secret(KEYRING_SERVICE, KEYRING_USER).map_err(|_| ())
 }
 
@@ -1008,6 +1010,7 @@ fn install_auth_bundle(
         log::warn!("account stage=auth_bundle_rejected reason=contract");
         return Err(InstallFailure::Contract);
     }
+    app_token::forget();
     let stored = StoredSession {
         line_id: line_id.to_owned(),
         refresh_token: bundle.refresh_token,
@@ -1279,6 +1282,7 @@ pub(crate) fn install_station_connect_session(
         log::warn!("account stage=station_connect_bundle_rejected reason=contract");
         return Err("connect_auth_contract");
     }
+    app_token::forget();
     let stored = StoredSession {
         line_id: line_id.to_owned(),
         refresh_token: bundle.refresh_token,
@@ -1739,6 +1743,7 @@ async fn account_data_read_neutral(
     } else {
         "partial_data"
     };
+    app_token::ensure(&bootstrap.origin, paths, access_token).await;
     Ok(AccountProjection {
         request_id,
         schema_version: 6,
