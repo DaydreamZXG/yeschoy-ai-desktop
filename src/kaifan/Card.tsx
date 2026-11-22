@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { AccountModel } from "../account/session";
 import type { ActivationToolId } from "../configuration/activation";
@@ -14,6 +14,7 @@ import {
   pickedPlan,
   plansOf,
   pricesOf,
+  tieredPricesOf,
   yuan,
   type CardPicks,
   type Discount,
@@ -31,6 +32,8 @@ interface Props {
   /** 这个站上的全部模型（带价格）。 */
   models: AccountModel[];
   picks: CardPicks;
+  /** 站点报的汇率（一美元合多少元）。分档收费的型号靠它算成元；没给就是空串。 */
+  fx?: string;
   connections?: ToolConnection[];
   onModel: (modelId: string) => void;
   onPlan: (modelId: string, planId: string) => void;
@@ -51,6 +54,7 @@ export function Card({
   ids,
   models,
   picks,
+  fx = "",
   connections,
   onModel,
   onPlan,
@@ -95,12 +99,17 @@ export function Card({
     : "";
   const plan = plans.find((item) => item.id === planId);
   const prices = pricesOf(model, plan?.ratio);
+  // 站点没给单一的官方价时，看它是不是分档或者按次收费的。
+  const tiered = prices ? null : tieredPricesOf(model, plan?.ratio, fx);
+  const priced = !!prices || !!tiered;
+  const amount = (value: number | null) =>
+    value === null ? t("kaifan.card.unknown") : yuan(value);
 
   const planName = (id: string) =>
     id === DEFAULT_BILLING_GROUP ? t("configuration.defaultGroupLabel") : id;
   // 几折只在站点给了官方价时才说：没有官方价，倍率就不知道是相对什么打的折。
   const discount = (value: Discount | null | undefined) => {
-    if (!value || !prices) return "";
+    if (!value || !priced) return "";
     // 中文说「几折」（十分之几），别的语言说百分之几：倍数写在文案里。
     if (value.kind === "off")
       return t("kaifan.card.off", {
@@ -230,7 +239,7 @@ export function Card({
               </button>
             ))}
           </div>
-          {prices && <p className="nt">{t("kaifan.card.planNote")}</p>}
+          {priced && <p className="nt">{t("kaifan.card.planNote")}</p>}
         </section>
       )}
       {model && prices && (
@@ -244,20 +253,52 @@ export function Card({
             <b>{yuan(prices.officialInput)}</b>
             <b>{yuan(prices.officialOutput)}</b>
             <span>{t("kaifan.card.thisPlan")}</span>
-            <b>
-              {prices.planInput === null
-                ? t("kaifan.card.unknown")
-                : yuan(prices.planInput)}
-            </b>
-            <b>
-              {prices.planOutput === null
-                ? t("kaifan.card.unknown")
-                : yuan(prices.planOutput)}
-            </b>
+            <b>{amount(prices.planInput)}</b>
+            <b>{amount(prices.planOutput)}</b>
           </div>
         </details>
       )}
-      {model && !prices && (
+      {model && tiered && (
+        <details>
+          <summary className="lnk">{t("kaifan.card.prices")}</summary>
+          {tiered.unit === "tokens" ? (
+            <div className="kv" data-testid="kaifan-card-prices">
+              <span>{t("kaifan.card.perMillion")}</span>
+              <b>{t("kaifan.card.input")}</b>
+              <b>{t("kaifan.card.output")}</b>
+              {tiered.tiers.map((tier, index) => (
+                <Fragment key={index}>
+                  {tier.name && <i>{tier.name}</i>}
+                  <span>{t("kaifan.card.official")}</span>
+                  <b>{yuan(tier.officialInput)}</b>
+                  <b>{yuan(tier.officialOutput)}</b>
+                  <span>{t("kaifan.card.thisPlan")}</span>
+                  <b>{amount(tier.planInput)}</b>
+                  <b>{amount(tier.planOutput)}</b>
+                </Fragment>
+              ))}
+            </div>
+          ) : (
+            <div className="kv kv1" data-testid="kaifan-card-prices">
+              <span>{t("kaifan.card.perRequest")}</span>
+              <b />
+              {tiered.tiers.map((tier, index) => (
+                <Fragment key={index}>
+                  {tier.name && <i>{tier.name}</i>}
+                  <span>{t("kaifan.card.official")}</span>
+                  <b>{yuan(tier.official)}</b>
+                  <span>{t("kaifan.card.thisPlan")}</span>
+                  <b>{amount(tier.plan)}</b>
+                </Fragment>
+              ))}
+            </div>
+          )}
+          {tiered.tiers.length > 1 && (
+            <p className="nt">{t("kaifan.card.tierNote")}</p>
+          )}
+        </details>
+      )}
+      {model && !priced && (
         <p className="nt" data-testid="kaifan-card-prices">
           {t("kaifan.card.noPrices")}
         </p>

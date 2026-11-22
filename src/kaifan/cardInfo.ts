@@ -1,4 +1,5 @@
 import type { AccountModel, BillingGroup } from "../account/session";
+import { billingTiers } from "../configuration/billing";
 import type { ToolConnection } from "../configuration/connections";
 import { hasReviewedCapabilities } from "../model-profiles/profile";
 import type { RosterId } from "./roster";
@@ -104,6 +105,69 @@ export function pricesOf(
     planInput: usable ? officialInput * ratio : null,
     planOutput: usable ? officialOutput * ratio : null,
   };
+}
+
+/** 分档收费的型号：一档一个价。按 tokens 算和按次算的不会混在一个型号里。 */
+export type TieredPrices =
+  | { unit: "tokens"; tiers: ({ name: string } & Prices)[] }
+  | {
+      unit: "request";
+      tiers: { name: string; official: number; plan: number | null }[];
+    };
+
+/**
+ * 站点按档收费（高峰和平时、长对话和短对话）或者按次收费的型号的价（元）。
+ *
+ * 这种型号站点不给一个单一的官方价，给的是一条算式。算式读得懂就一档一档列出来；
+ * 读不懂、或者汇率没给，就是 null，界面照实说没有。档位的名字是站点起的，原样写。
+ */
+export function tieredPricesOf(
+  model: AccountModel | undefined,
+  ratio: number | null | undefined,
+  fx: string,
+): TieredPrices | null {
+  const billing = model?.billing;
+  const rate = Number(fx);
+  if (!billing || !fx.trim() || !Number.isFinite(rate) || rate <= 0)
+    return null;
+  const rows =
+    model.billingMode === "tiered_expr"
+      ? billingTiers(billing.expression)
+      : model.billingMode === "per_request" && billing.requestUsd !== null
+        ? [{ name: "", rates: { request: billing.requestUsd } }]
+        : [];
+  if (!rows.length) return null;
+  const usable =
+    ratio !== null &&
+    ratio !== undefined &&
+    Number.isFinite(ratio) &&
+    ratio >= 0;
+  const plan = (official: number) => (usable ? official * ratio : null);
+  // 只有一档就不用写名字。
+  const name = (row: { name: string }) => (rows.length > 1 ? row.name : "");
+  const priced = (value: number | undefined): value is number =>
+    value !== undefined && Number.isFinite(value) && value >= 0;
+  if (rows.every((row) => priced(row.rates.request)))
+    return {
+      unit: "request",
+      tiers: rows.map((row) => ({
+        name: name(row),
+        official: row.rates.request * rate,
+        plan: plan(row.rates.request * rate),
+      })),
+    };
+  if (rows.every((row) => priced(row.rates.p) && priced(row.rates.c)))
+    return {
+      unit: "tokens",
+      tiers: rows.map((row) => ({
+        name: name(row),
+        officialInput: row.rates.p * rate,
+        officialOutput: row.rates.c * rate,
+        planInput: plan(row.rates.p * rate),
+        planOutput: plan(row.rates.c * rate),
+      })),
+    };
+  return null;
 }
 
 export function yuan(amount: number): string {

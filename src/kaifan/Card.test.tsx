@@ -132,6 +132,55 @@ describe("角色名片", () => {
     expect(document.body.textContent).not.toContain("¥0");
   });
 
+  it("分档收费的型号：照样说几折，每一档的官方价和这个方案的价都列出来", () => {
+    setup({
+      models: [
+        {
+          ...model(SONNET, PLANS, null),
+          billingMode: "tiered_expr",
+          billing: {
+            ...model(SONNET, PLANS, null).billing!,
+            expression:
+              'len <= 200000 ? tier("standard", p * 2 + c * 6) : tier("long_context", p * 4 + c * 12)',
+          },
+        },
+      ],
+      ids: [SONNET],
+      fx: "1",
+    });
+    expect(option(/标准分组/)).toHaveTextContent("约 3 折");
+    expect(says()).toBe("现在走「标准分组」，约 3 折。想换就点下面。");
+    const prices = screen.getByTestId("kaifan-card-prices");
+    expect(prices).toHaveTextContent("standard");
+    expect(prices).toHaveTextContent("long_context");
+    expect(prices).toHaveTextContent("¥2.00");
+    expect(prices).toHaveTextContent("¥0.60");
+    expect(prices).toHaveTextContent("¥12.00");
+    expect(prices).toHaveTextContent("¥3.60");
+    expect(document.body.textContent).not.toContain("没有提供这个型号的价格");
+  });
+
+  it("按次收费的型号：写每次请求多少钱", () => {
+    setup({
+      models: [
+        {
+          ...model(SONNET, [["default", 0.5]], null),
+          billingMode: "tiered_expr",
+          billing: {
+            ...model(SONNET, [["default", 0.5]], null).billing!,
+            expression: 'tier("base", fixed(0.16))',
+          },
+        },
+      ],
+      ids: [SONNET],
+      fx: "1",
+    });
+    const prices = screen.getByTestId("kaifan-card-prices");
+    expect(prices).toHaveTextContent("每次请求");
+    expect(prices).toHaveTextContent("¥0.16");
+    expect(prices).toHaveTextContent("¥0.08");
+  });
+
   it("方案的倍率站点没给：说没给，这个方案的价写不知道", () => {
     setup({
       models: [model(SONNET, [["default", null]], ["21", "105"])],
