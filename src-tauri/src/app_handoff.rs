@@ -328,6 +328,16 @@ fn own_handle(_window: &tauri::WebviewWindow) -> Option<isize> {
     None
 }
 
+/// 应用一启动就把键盘拿走了，可它还被暗场盖着：按键得落回暗场上，「按任意键跳过」
+/// 才管用，也不会敲进看不见的应用里。
+fn keep_keys(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window(WINDOW_LABEL) {
+        if !window.is_focused().unwrap_or(true) {
+            let _ = window.set_focus();
+        }
+    }
+}
+
 /// 等应用的窗口摆好，把它的画面演到位。返回那个窗口；没演成也照样返回找到的窗口，
 /// 好让收场的人把它提到前面。
 async fn present(app: &AppHandle, id: u64) -> Option<Seen> {
@@ -342,12 +352,14 @@ async fn present(app: &AppHandle, id: u64) -> Option<Seen> {
         if !is_current(id) || Instant::now() >= deadline {
             return None;
         }
+        keep_keys(app);
         let seen = look(path.clone()).await;
         if settle.observe(seen.map(|seen| seen.visible)).is_some() {
             break seen?;
         }
         tokio::time::sleep(LOOK_EVERY).await;
     };
+    keep_keys(app);
     let window = app.get_webview_window(WINDOW_LABEL)?;
     let own = own_handle(&window)?;
     let (left, top) = sys::inside_origin(own)?;
