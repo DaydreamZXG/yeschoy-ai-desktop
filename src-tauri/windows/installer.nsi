@@ -24,7 +24,9 @@ SetCompressorDictSize 32
 Name "YesChoy"
 OutFile "${OUTPUT_EXE}"
 InstallDir "$LOCALAPPDATA\Programs\YesChoy"
-InstallDirRegKey HKCU "Software\yeschoy\YesChoy" "InstallDir"
+; Tauri 生成的安装包把它的安装位置记在 Software\yeschoy\YesChoy 的默认值里，
+; 这个安装包另用一个键，两种包都装着时卸载一个不会抹掉另一个的记录。
+InstallDirRegKey HKCU "Software\yeschoy\YesChoyStandalone" "InstallDir"
 BrandingText "YesChoy ${APP_VERSION}"
 Icon "${APP_ICON}"
 UninstallIcon "${APP_ICON}"
@@ -52,7 +54,7 @@ VIAddVersionKey /LANG=2052 "LegalCopyright" "Copyright (c) YesChoy contributors"
 ; registration and run without an unattended welcome/directory wizard.
 Function .onInit
   SetRegView 64
-  ReadRegStr $R0 HKCU "Software\yeschoy\YesChoy" "InstallDir"
+  ReadRegStr $R0 HKCU "Software\yeschoy\YesChoyStandalone" "InstallDir"
   StrCmp $R0 "" +2
   StrCpy $INSTDIR $R0
   ${GetParameters} $R0
@@ -108,7 +110,7 @@ Section "安装 YesChoy" SEC_MAIN
   SetOutPath "$INSTDIR"
   File /oname=YesChoy.exe "${APP_EXE}"
   WriteUninstaller "$INSTDIR\卸载 YesChoy.exe"
-  WriteRegStr HKCU "Software\yeschoy\YesChoy" "InstallDir" "$INSTDIR"
+  WriteRegStr HKCU "Software\yeschoy\YesChoyStandalone" "InstallDir" "$INSTDIR"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop" "DisplayName" "YesChoy"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop" "DisplayVersion" "${APP_VERSION}"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop" "Publisher" "YesChoy contributors"
@@ -158,7 +160,8 @@ Section "Uninstall"
   Delete "$INSTDIR\卸载 YesChoy.exe"
   RMDir "$INSTDIR"
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop"
-  DeleteRegKey HKCU "Software\yeschoy\YesChoy"
+  DeleteRegKey HKCU "Software\yeschoy\YesChoyStandalone"
+  DeleteRegKey /ifempty HKCU "Software\yeschoy"
   DeleteRegKey HKCU "Software\Classes\kaifan"
   DeleteRegKey HKCU "Software\Classes\yeschoy"
 SectionEnd

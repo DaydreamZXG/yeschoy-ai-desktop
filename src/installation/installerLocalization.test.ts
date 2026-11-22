@@ -166,7 +166,7 @@ describe("Windows installer localization", () => {
       initialization.indexOf("ReadRegStr"),
     );
     expect(initialization).toContain(
-      'ReadRegStr $R0 HKCU "Software\\yeschoy\\YesChoy" "InstallDir"',
+      'ReadRegStr $R0 HKCU "Software\\yeschoy\\YesChoyStandalone" "InstallDir"',
     );
     expect(initialization).toContain('${GetOptions} $R0 "/UPDATE" $R1');
     expect(initialization).toContain(

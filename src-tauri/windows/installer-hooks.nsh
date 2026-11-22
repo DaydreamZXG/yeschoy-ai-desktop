@@ -223,7 +223,7 @@ Function KaifanEnsureStopped
   Push $1
 
   SetRegView 64
-  ReadRegStr $KaifanRegisteredRoot HKCU "Software\yeschoy\YesChoy" "InstallDir"
+  ReadRegStr $KaifanRegisteredRoot HKCU "Software\yeschoy\YesChoyStandalone" "InstallDir"
   ; 以前的名字登记过的位置；用户当时选了别的目录也能找到。
   ReadRegStr $KaifanTestRegisteredRoot HKCU "Software\Kaifan" "InstallDir"
   ReadRegStr $KaifanTestTauriRegisteredRoot HKCU "Software\kaifan\开饭" ""
