@@ -15,7 +15,7 @@ export interface Notices {
   available: boolean;
   notices: Notice[];
   loading: boolean;
-  /** 之前读到过、这次没读到。 */
+  /** 这次没读到：之前读到过，或者原生侧说是断网、站点出错。可以再读一次。 */
   failed: boolean;
   /** 还没看过的公告。 */
   unread: Set<string>;
@@ -47,7 +47,7 @@ export function useNotices(lineId: string, signedIn: boolean): Notices {
       available: result.available || current.available,
       notices: result.available ? result.notices : current.notices,
       loading: false,
-      failed: !result.available && current.available,
+      failed: !result.available && (current.available || !!result.missed),
     }));
   }, [lineId]);
 

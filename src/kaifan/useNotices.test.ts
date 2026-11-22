@@ -67,6 +67,23 @@ describe("useNotices", () => {
     expect(result.current.notices).toHaveLength(1);
   });
 
+  it("头一次就没读到：是断网或站点出错的，标成这次没读到，能再读；站点本来就没有公告栏的不标", async () => {
+    read.mockResolvedValueOnce({ available: false, notices: [], missed: true });
+    const { result } = renderHook(() => useNotices("line", true));
+    await waitFor(() => expect(result.current.failed).toBe(true));
+    expect(result.current.available).toBe(false);
+
+    read.mockResolvedValueOnce({ available: true, notices: [notice("a")] });
+    act(() => result.current.reload());
+    await waitFor(() => expect(result.current.notices).toHaveLength(1));
+    expect(result.current.failed).toBe(false);
+
+    read.mockResolvedValue({ available: false, notices: [] });
+    const none = renderHook(() => useNotices("other", true));
+    await waitFor(() => expect(none.result.current.loading).toBe(false));
+    expect(none.result.current.failed).toBe(false);
+  });
+
   it("换了站点：上一个站的公告不留，晚到的旧结果也不要", async () => {
     let late: (
       value: Awaited<ReturnType<typeof readAnnouncements>>,
