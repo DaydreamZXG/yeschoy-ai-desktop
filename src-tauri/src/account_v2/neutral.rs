@@ -11,7 +11,9 @@ use std::collections::BTreeMap;
 use serde::Serialize;
 use serde_json::{json, Value};
 
-use super::{decimal, AccountModel, BillingGroup, ModelBilling};
+use reqwest::Method;
+
+use super::{decimal, send_json, AccountModel, BillingGroup, ModelBilling, NeutralPaths};
 
 /// One "quota" in the synthesized legacy shapes is a millionth of a currency unit.
 pub(super) const UNITS: f64 = 1_000_000.0;
@@ -160,6 +162,146 @@ pub(super) fn records_shape(payload: Option<&Value>) -> Option<Value> {
         "page": data.get("page").and_then(Value::as_u64).unwrap_or(1),
         "items": items,
     }}))
+}
+
+/// Where the original contract keeps keys; the rest of the client addresses
+/// key operations here.
+pub(super) const LEGACY_KEYS_PATH: &str = "/api/token/";
+
+#[derive(Debug, PartialEq)]
+enum KeyCall {
+    List { page: u64 },
+    Create,
+    Reveal,
+    Delete,
+}
+
+/// A key operation written for the original contract, as this station takes it.
+fn key_call(
+    method: &Method,
+    url: &str,
+    body: Option<&Value>,
+    origin: &str,
+    keys_path: &str,
+) -> Option<(KeyCall, Method, String, Option<Value>)> {
+    let parsed = reqwest::Url::parse(url).ok()?;
+    let rest = parsed.path().strip_prefix(LEGACY_KEYS_PATH)?;
+    let keys = format!("{origin}{keys_path}");
+    let id = |raw: &str| {
+        (!raw.is_empty() && raw.bytes().all(|b| b.is_ascii_digit())).then(|| raw.to_owned())
+    };
+    if rest.is_empty() && *method == Method::GET {
+        let page = parsed
+            .query_pairs()
+            .find(|(key, _)| key == "p")
+            .and_then(|(_, value)| value.parse().ok())
+            .unwrap_or(1);
+        return Some((KeyCall::List { page }, Method::GET, keys, None));
+    }
+    if rest.is_empty() && *method == Method::POST {
+        let body = body?;
+        let request = json!({
+            "name": body.get("name")?.as_str()?,
+            "planId": body.get("group")?.as_str()?,
+        });
+        return Some((KeyCall::Create, Method::POST, keys, Some(request)));
+    }
+    if *method == Method::POST {
+        let id = id(rest.strip_suffix("/key")?)?;
+        return Some((
+            KeyCall::Reveal,
+            Method::POST,
+            format!("{keys}/{id}/reveal"),
+            None,
+        ));
+    }
+    if *method == Method::DELETE {
+        return Some((
+            KeyCall::Delete,
+            Method::DELETE,
+            format!("{keys}/{}", id(rest)?),
+            None,
+        ));
+    }
+    None
+}
+
+/// The station's answer, in the shape the original contract's callers read.
+fn key_reply(call: &KeyCall, status: u16, value: &Value) -> (u16, Value) {
+    let Some(data) = data(Some(value)).filter(|_| (200..300).contains(&status)) else {
+        let code = text(value.get("code"), 64);
+        // Callers read 401/403 as "signed out". A refusal that is about the
+        // plan or the station's mode is not that: the session is fine.
+        let status = match (status, code.as_str()) {
+            (403, "plan_not_allowed" | "backend_mode") => 400,
+            (200..=299, _) => 502,
+            _ => status,
+        };
+        return (status, json!({"success": false, "message": code}));
+    };
+    let key_id = |row: &Value| row.get("id")?.as_str()?.parse::<u64>().ok();
+    let reply = match call {
+        KeyCall::List { page } => {
+            let items: Vec<Value> = data
+                .get("keys")
+                .and_then(Value::as_array)
+                .filter(|_| *page == 1)
+                .into_iter()
+                .flatten()
+                .filter_map(|row| {
+                    Some(json!({
+                        "id": key_id(row)?,
+                        "name": text(row.get("name"), 200),
+                        "group": text(row.get("planId"), 64),
+                        "status": if row.get("status").and_then(Value::as_str) == Some("active") { 1 } else { 2 },
+                        "expired_time": -1,
+                        "plan_scoped": true,
+                    }))
+                })
+                .collect();
+            json!({"total": items.len(), "items": items})
+        }
+        KeyCall::Create => match (key_id(data), data.get("key").and_then(Value::as_str)) {
+            (Some(id), Some(key)) => {
+                json!({"id": id, "name": text(data.get("name"), 200), "key": key})
+            }
+            _ => {
+                return (
+                    502,
+                    json!({"success": false, "message": "invalid_response"}),
+                )
+            }
+        },
+        KeyCall::Reveal => match data.get("key").and_then(Value::as_str) {
+            Some(key) => json!({"key": key}),
+            None => {
+                return (
+                    502,
+                    json!({"success": false, "message": "invalid_response"}),
+                )
+            }
+        },
+        KeyCall::Delete => Value::Null,
+    };
+    (status, json!({"success": true, "data": reply}))
+}
+
+pub(super) async fn key_exchange(
+    method: Method,
+    url: &str,
+    body: Option<&Value>,
+    origin: &str,
+    paths: &NeutralPaths,
+    access_token: &str,
+) -> Result<(u16, Value), ()> {
+    let Some((call, method, url, body)) = key_call(&method, url, body, origin, &paths.keys) else {
+        // Nothing on this station answers that operation.
+        return Ok((404, json!({"success": false, "message": "unsupported"})));
+    };
+    let response = send_json(method, &url, Some(access_token), body)
+        .await
+        .map_err(|_| ())?;
+    Ok(key_reply(&call, response.status.as_u16(), &response.value))
 }
 
 fn endpoint_type(format: &str) -> Option<&'static str> {
@@ -519,5 +661,148 @@ mod tests {
         let only = &image.billing.as_ref().unwrap().groups[0];
         assert_eq!(only.ratio, None);
         assert_eq!(only.plan.as_ref().unwrap().per_request, Some(0.2));
+    }
+
+    const STATION: &str = "https://station.example";
+    const KEYS: &str = "/api/desktop/v2/keys";
+
+    fn call(
+        method: Method,
+        path: &str,
+        body: Option<Value>,
+    ) -> Option<(KeyCall, Method, String, Option<Value>)> {
+        key_call(
+            &method,
+            &format!("{STATION}{path}"),
+            body.as_ref(),
+            STATION,
+            KEYS,
+        )
+    }
+
+    #[test]
+    fn key_operations_are_re_addressed_to_the_station_paths() {
+        let (kind, method, url, body) =
+            call(Method::GET, "/api/token/?p=2&size=100", None).unwrap();
+        assert_eq!(kind, KeyCall::List { page: 2 });
+        assert_eq!(
+            (method, url.as_str(), body),
+            (
+                Method::GET,
+                "https://station.example/api/desktop/v2/keys",
+                None
+            )
+        );
+
+        let created = call(
+            Method::POST,
+            "/api/token/",
+            Some(json!({"name": "App-1", "group": "7", "model_limits": "a,b", "unlimited_quota": true})),
+        )
+        .unwrap();
+        assert_eq!(created.0, KeyCall::Create);
+        // Only what the neutral contract defines leaves the machine.
+        assert_eq!(created.3, Some(json!({"name": "App-1", "planId": "7"})));
+
+        let revealed = call(Method::POST, "/api/token/42/key", None).unwrap();
+        assert_eq!(
+            (revealed.0, revealed.2.as_str()),
+            (
+                KeyCall::Reveal,
+                "https://station.example/api/desktop/v2/keys/42/reveal"
+            )
+        );
+
+        let deleted = call(Method::DELETE, "/api/token/42", None).unwrap();
+        assert_eq!(
+            (deleted.0, deleted.1, deleted.2.as_str()),
+            (
+                KeyCall::Delete,
+                Method::DELETE,
+                "https://station.example/api/desktop/v2/keys/42"
+            )
+        );
+    }
+
+    #[test]
+    fn an_operation_the_contract_does_not_define_is_not_sent_anywhere() {
+        assert!(call(Method::PUT, "/api/token/", Some(json!({"id": 1}))).is_none());
+        assert!(call(Method::GET, "/api/token/search?keyword=x", None).is_none());
+        assert!(call(Method::DELETE, "/api/token/../account", None).is_none());
+        assert!(call(Method::POST, "/api/token/", Some(json!({"name": "App-1"}))).is_none());
+    }
+
+    #[test]
+    fn the_key_list_reads_as_one_page_scoped_by_plan() {
+        let station = json!({"success": true, "data": {"keys": [
+            {"id": "42", "name": "App-1", "planId": "7", "status": "active", "createdAtEpochMs": 1},
+            {"id": "43", "name": "App-2", "planId": "9", "status": "disabled", "createdAtEpochMs": 2},
+            {"id": "not-a-number", "name": "x", "planId": "9", "status": "active"}
+        ]}});
+        let (status, first) = key_reply(&KeyCall::List { page: 1 }, 200, &station);
+        assert_eq!(status, 200);
+        assert_eq!(first["success"], true);
+        assert_eq!(
+            first["data"]["items"],
+            json!([
+                {"id": 42, "name": "App-1", "group": "7", "status": 1, "expired_time": -1, "plan_scoped": true},
+                {"id": 43, "name": "App-2", "group": "9", "status": 2, "expired_time": -1, "plan_scoped": true}
+            ])
+        );
+        // The station returns everything at once, so a second page is empty
+        // and the caller's paging loop stops.
+        let (_, second) = key_reply(&KeyCall::List { page: 2 }, 200, &station);
+        assert_eq!(second["data"]["items"], json!([]));
+    }
+
+    #[test]
+    fn a_created_or_revealed_key_comes_back_where_callers_look_for_it() {
+        let created = json!({"success": true, "data": {"id": "42", "name": "App-1", "planId": "7", "status": "active", "key": "sk-test"}});
+        let (_, value) = key_reply(&KeyCall::Create, 200, &created);
+        assert_eq!(
+            value["data"],
+            json!({"id": 42, "name": "App-1", "key": "sk-test"})
+        );
+
+        let (_, value) = key_reply(
+            &KeyCall::Reveal,
+            200,
+            &json!({"success": true, "data": {"key": "sk-test"}}),
+        );
+        assert_eq!(value["data"]["key"], "sk-test");
+
+        // A success with no key in it is not a key.
+        let (status, value) =
+            key_reply(&KeyCall::Reveal, 200, &json!({"success": true, "data": {}}));
+        assert_eq!((status, value["success"].as_bool()), (502, Some(false)));
+    }
+
+    #[test]
+    fn a_refused_plan_is_not_mistaken_for_a_lost_session() {
+        let refused = json!({"success": false, "code": "plan_not_allowed"});
+        let (status, value) = key_reply(&KeyCall::Create, 403, &refused);
+        assert_eq!((status, value["success"].as_bool()), (400, Some(false)));
+
+        let expired = json!({"success": false, "code": "session_required"});
+        assert_eq!(key_reply(&KeyCall::Create, 401, &expired).0, 401);
+        assert_eq!(
+            key_reply(
+                &KeyCall::Create,
+                409,
+                &json!({"success": false, "code": "key_limit_reached"})
+            )
+            .0,
+            409
+        );
+        // success:false under a 200 never reads as success.
+        assert_eq!(
+            key_reply(
+                &KeyCall::Delete,
+                200,
+                &json!({"success": false, "code": "x"})
+            )
+            .0,
+            502
+        );
     }
 }

@@ -1249,6 +1249,11 @@ fn reusable_token(
     model_ids: &[String],
     exact: bool,
 ) -> bool {
+    // A station on the neutral contract scopes a key by plan only: there is no
+    // model list to compare, so an active key on the right plan is reusable.
+    if token.get("plan_scoped").and_then(Value::as_bool) == Some(true) {
+        return token.get("status").and_then(Value::as_i64) == Some(1);
+    }
     let expiry = token
         .get("expired_time")
         .and_then(Value::as_i64)

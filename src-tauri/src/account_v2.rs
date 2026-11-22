@@ -651,10 +651,12 @@ async fn fetch_bootstrap_read(line_id: &str) -> Result<DesktopBootstrap, Account
             == Some(NEUTRAL_SERVICE)
     {
         let data = response.value.get("data").cloned().unwrap_or(Value::Null);
-        return neutral_bootstrap(data, &origin).map_err(|reason| {
-            log::warn!("account stage=bootstrap_rejected dialect=neutral reason={reason}");
-            AccountProjectionFailure::IncompatibleServer
-        });
+        return neutral_bootstrap(data, &origin)
+            .inspect(remember_dialect)
+            .map_err(|reason| {
+                log::warn!("account stage=bootstrap_rejected dialect=neutral reason={reason}");
+                AccountProjectionFailure::IncompatibleServer
+            });
     }
     let envelope: BootstrapEnvelope = serde_json::from_value(response.value)
         .map_err(|_| AccountProjectionFailure::IncompatibleServer)?;
@@ -705,7 +707,7 @@ async fn fetch_bootstrap_read(line_id: &str) -> Result<DesktopBootstrap, Account
         log::warn!("account stage=bootstrap_rejected reason={reason}");
         return Err(AccountProjectionFailure::IncompatibleServer);
     }
-    Ok(DesktopBootstrap {
+    let accepted = DesktopBootstrap {
         device_authorization_available: data.device_authorization_available,
         oauth_loopback_pkce_available: data.oauth_loopback_pkce_available,
         origin: origin.to_owned(),
@@ -716,7 +718,9 @@ async fn fetch_bootstrap_read(line_id: &str) -> Result<DesktopBootstrap, Account
         // cost the user their sign-in.
         announcements_path: relative_api_path(&data.announcements_path).unwrap_or_default(),
         dialect: StationDialect::Legacy,
-    })
+    };
+    remember_dialect(&accepted);
+    Ok(accepted)
 }
 
 /// Accept only a same-origin relative API path such as `/api/desktop/v2/notices`.
@@ -1131,10 +1135,57 @@ pub(crate) async fn native_account_json(
     access_token: &str,
     body: Option<Value>,
 ) -> Result<(u16, Value), ()> {
+    // The key operations are written against the original contract's paths.
+    // For a station on the neutral contract they are re-addressed here, so
+    // every caller keeps working unchanged.
+    if let Some((origin, paths)) = neutral_station_for(url) {
+        if url[origin.len()..].starts_with(neutral::LEGACY_KEYS_PATH) {
+            return neutral::key_exchange(
+                method,
+                url,
+                body.as_ref(),
+                &origin,
+                &paths,
+                access_token,
+            )
+            .await;
+        }
+    }
     let response = send_json(method, url, Some(access_token), body)
         .await
         .map_err(|_| ())?;
     Ok((response.status.as_u16(), response.value))
+}
+
+/// Stations whose last accepted bootstrap spoke the neutral contract.
+static NEUTRAL_STATIONS: std::sync::Mutex<std::collections::BTreeMap<String, NeutralPaths>> =
+    std::sync::Mutex::new(std::collections::BTreeMap::new());
+
+fn remember_dialect(bootstrap: &DesktopBootstrap) {
+    let mut stations = NEUTRAL_STATIONS
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    match &bootstrap.dialect {
+        StationDialect::Neutral(paths) => {
+            stations.insert(bootstrap.origin.clone(), paths.clone());
+        }
+        StationDialect::Legacy => {
+            stations.remove(&bootstrap.origin);
+        }
+    }
+}
+
+/// The neutral paths of the station `url` belongs to, if it is on that contract.
+pub(crate) fn neutral_station_for(url: &str) -> Option<(String, NeutralPaths)> {
+    NEUTRAL_STATIONS
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .iter()
+        .find(|(origin, _)| {
+            url.strip_prefix(origin.as_str())
+                .is_some_and(|rest| rest.is_empty() || rest.starts_with('/'))
+        })
+        .map(|(origin, paths)| (origin.clone(), paths.clone()))
 }
 
 /// 诊断层（PRD 6.7，批次 3 #2）复用的只读 HTTPS 客户端：
