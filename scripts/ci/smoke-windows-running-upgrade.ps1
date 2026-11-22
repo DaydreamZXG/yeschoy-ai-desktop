@@ -17,6 +17,18 @@ $tauriRoot = Join-Path $env:LOCALAPPDATA '野菜API'
 $currentRoot = Join-Path $env:LOCALAPPDATA '野菜'
 $testRoot = Join-Path $env:LOCALAPPDATA '开饭'
 $decoyRoot = Join-Path $env:RUNNER_TEMP 'yeschoy-upgrade-decoy'
+# What the Tauri-generated "开饭" test build left on a machine besides its
+# executable. The installer must clear all of it once the new files are written.
+$testUninstaller = Join-Path $testRoot 'uninstall.exe'
+$testShortcuts = @(
+    (Join-Path ([Environment]::GetFolderPath('DesktopDirectory')) '开饭.lnk'),
+    (Join-Path ([Environment]::GetFolderPath('Programs')) '开饭.lnk')
+)
+$testRegistryKeys = @(
+    'HKCU:\Software\kaifan\开饭',
+    'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\开饭',
+    'HKCU:\Software\Classes\kaifan'
+)
 $targets = [System.Collections.Generic.List[System.Diagnostics.Process]]::new()
 $decoys = [System.Collections.Generic.List[System.Diagnostics.Process]]::new()
 
@@ -67,6 +79,16 @@ try {
     $decoys.Add((Start-LegacyFixture -Path (Join-Path $decoyRoot '野菜API.exe')))
     $decoys.Add((Start-LegacyFixture -Path (Join-Path $decoyRoot 'kaifan-desktop.exe')))
 
+    Set-Content -LiteralPath $testUninstaller -Value 'fixture'
+    foreach ($shortcut in $testShortcuts) {
+        New-Item -ItemType Directory -Force -Path (Split-Path -Parent $shortcut) | Out-Null
+        Set-Content -LiteralPath $shortcut -Value 'fixture'
+    }
+    foreach ($key in $testRegistryKeys) {
+        New-Item -Path $key -Force | Out-Null
+    }
+    Set-Item -LiteralPath 'HKCU:\Software\kaifan\开饭' -Value $testRoot
+
     Start-Sleep -Seconds 1
     foreach ($process in @($targets) + @($decoys)) {
         if ($process.HasExited) {
@@ -93,6 +115,16 @@ try {
     if (-not (Test-Path -LiteralPath $installedBinary -PathType Leaf)) {
         throw "Installer returned success without writing $installedBinary."
     }
+
+    foreach ($leftover in @($testRoot) + $testShortcuts + $testRegistryKeys) {
+        if (Test-Path -LiteralPath $leftover) {
+            throw "The 开饭 test build was not cleared: $leftover is still there."
+        }
+    }
+    # The decoy has the same executable name outside an owned directory.
+    if (-not (Test-Path -LiteralPath (Join-Path $decoyRoot 'kaifan-desktop.exe') -PathType Leaf)) {
+        throw 'A same-named file outside an owned install directory was deleted.'
+    }
 }
 finally {
     foreach ($process in @($targets) + @($decoys)) {
@@ -116,6 +148,10 @@ finally {
     Remove-Item -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\野菜' -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath 'HKCU:\Software\Kaifan' -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath 'HKCU:\Software\kaifan\开饭' -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath 'HKCU:\Software\Classes\kaifan' -Recurse -Force -ErrorAction SilentlyContinue
+    foreach ($shortcut in $testShortcuts) {
+        Remove-Item -LiteralPath $shortcut -Force -ErrorAction SilentlyContinue
+    }
     Remove-Item -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\开饭' -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\com.kaifan.desktop' -Recurse -Force -ErrorAction SilentlyContinue
 }

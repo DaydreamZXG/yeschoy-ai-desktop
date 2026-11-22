@@ -81,6 +81,8 @@ Function KaifanRetireOldName
   Delete "$SMPROGRAMS\野菜API\卸载野菜API.lnk"
   RMDir "$SMPROGRAMS\野菜API"
   DeleteRegKey HKCU "Software\野菜API"
+  ; “开饭”有两种装法：内测包（Tauri 生成的安装器）和独立安装包，都清。
+  Call KaifanRetireTestBuild
   ReadRegStr $R0 HKCU "Software\Kaifan" "InstallDir"
   StrCmp $R0 "" 0 +2
   StrCpy $R0 "$LOCALAPPDATA\Programs\开饭"

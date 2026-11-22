@@ -14,6 +14,7 @@ Var KaifanShutdownError
 Var KaifanRegisteredRoot
 Var KaifanOldRegisteredRoot
 Var KaifanTestRegisteredRoot
+Var KaifanTestTauriRegisteredRoot
 Var KaifanTauriRegisteredRoot
 Var KaifanWaitTicks
 Var KaifanSafeExitRequested
@@ -111,6 +112,8 @@ Function KaifanRefreshLockState
   Call KaifanProbeRootForLocks
   StrCpy $KaifanProbeRoot "$KaifanTestRegisteredRoot"
   Call KaifanProbeRootForLocks
+  StrCpy $KaifanProbeRoot "$KaifanTestTauriRegisteredRoot"
+  Call KaifanProbeRootForLocks
 
   ; “野菜API”：0.4.10+ standalone packages.
   StrCpy $KaifanProbeRoot "$LOCALAPPDATA\Programs\野菜API"
@@ -178,6 +181,8 @@ Function KaifanShutdownKnownInstallations
   Call KaifanShutdownRoot
   StrCpy $KaifanProbeRoot "$KaifanTestRegisteredRoot"
   Call KaifanShutdownRoot
+  StrCpy $KaifanProbeRoot "$KaifanTestTauriRegisteredRoot"
+  Call KaifanShutdownRoot
   StrCpy $KaifanProbeRoot "$LOCALAPPDATA\Programs\野菜API"
   Call KaifanShutdownRoot
   StrCpy $KaifanProbeRoot "$LOCALAPPDATA\野菜API"
@@ -221,6 +226,7 @@ Function KaifanEnsureStopped
   ReadRegStr $KaifanRegisteredRoot HKCU "Software\野菜" "InstallDir"
   ; 以前的名字登记过的位置；用户当时选了别的目录也能找到。
   ReadRegStr $KaifanTestRegisteredRoot HKCU "Software\Kaifan" "InstallDir"
+  ReadRegStr $KaifanTestTauriRegisteredRoot HKCU "Software\kaifan\开饭" ""
   ReadRegStr $KaifanOldRegisteredRoot HKCU "Software\野菜API" "InstallDir"
   ReadRegStr $KaifanTauriRegisteredRoot HKCU "Software\yeschoy\野菜API" ""
 
@@ -293,4 +299,36 @@ FunctionEnd
 
 !macro NSIS_HOOK_PREINSTALL
   Call KaifanEnsureStopped
+!macroend
+
+; “开饭”内测版是 Tauri 生成的安装器装的：程序在 $LOCALAPPDATA\开饭（用户当时
+; 选了别的目录，就在登记的那个位置），快捷方式直接放在开始菜单和桌面上。新文件
+; 都写好之后把它清掉，免得电脑上留着两个客户端。只删它自己放的那两个文件；目录
+; 里还有别的东西就留着（RMDir 不带 /r）。登录、密钥和接入记录不在这里，由客户端
+; 第一次启动时搬。
+Function KaifanRetireTestBuild
+  Push $R0
+  ReadRegStr $R0 HKCU "Software\kaifan\开饭" ""
+  StrCmp $R0 "" 0 kaifan_retire_test_root_known
+  StrCpy $R0 "$LOCALAPPDATA\开饭"
+
+kaifan_retire_test_root_known:
+  Delete "$R0\kaifan-desktop.exe"
+  ; 装在同一个目录里时，uninstall.exe 是现在这个安装器刚写的，不能删。
+  StrCmp $R0 "$INSTDIR" kaifan_retire_test_files_done
+  Delete "$R0\uninstall.exe"
+  RMDir "$R0"
+
+kaifan_retire_test_files_done:
+  Delete "$DESKTOP\开饭.lnk"
+  Delete "$SMPROGRAMS\开饭.lnk"
+  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\开饭"
+  DeleteRegKey HKCU "Software\Classes\kaifan"
+  DeleteRegKey HKCU "Software\kaifan\开饭"
+  DeleteRegKey /ifempty HKCU "Software\kaifan"
+  Pop $R0
+FunctionEnd
+
+!macro NSIS_HOOK_POSTINSTALL
+  Call KaifanRetireTestBuild
 !macroend

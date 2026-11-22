@@ -116,6 +116,45 @@ describe("Windows installer localization", () => {
     expect(main).not.toContain("Software\\Classes\\kaifan");
   });
 
+  it("clears the Tauri-installed 开饭 test build from both installers", () => {
+    const hook = readSource("src-tauri/windows/installer-hooks.nsh");
+    const retire = hook.match(
+      /^Function KaifanRetireTestBuild\n([\s\S]*?)^FunctionEnd/m,
+    )?.[1];
+    expect(retire).toBeDefined();
+    // 它装在哪由它自己的登记说了算，没登记才按默认位置。
+    expect(retire).toContain('ReadRegStr $R0 HKCU "Software\\kaifan\\开饭" ""');
+    expect(retire).toContain('StrCpy $R0 "$LOCALAPPDATA\\开饭"');
+    expect(retire).toContain('Delete "$R0\\kaifan-desktop.exe"');
+    expect(retire).toContain('Delete "$R0\\uninstall.exe"');
+    expect(retire).toContain('Delete "$SMPROGRAMS\\开饭.lnk"');
+    expect(retire).toContain('Delete "$DESKTOP\\开饭.lnk"');
+    expect(retire).toContain("Uninstall\\开饭");
+    expect(retire).toContain('DeleteRegKey HKCU "Software\\Classes\\kaifan"');
+    // 和现在装的是同一个目录时，uninstall.exe 是刚写的那个，不能删。
+    expect(retire!.indexOf('StrCmp $R0 "$INSTDIR"')).toBeLessThan(
+      retire!.indexOf('Delete "$R0\\uninstall.exe"'),
+    );
+    expect(retire).not.toMatch(/RMDir\s+\/r/);
+    expect(retire).not.toContain("野菜");
+    expect(retire).not.toContain("yeschoy");
+
+    // 内测包（Tauri 生成的安装器）在新文件写好之后清；独立安装包跟着别的旧名字一起清。
+    expect(hook).toMatch(
+      /^!macro NSIS_HOOK_POSTINSTALL\n\s+Call KaifanRetireTestBuild\n!macroend/m,
+    );
+    const standalone = readSource("src-tauri/windows/installer.nsi");
+    expect(
+      standalone.match(
+        /^Function KaifanRetireOldName\n([\s\S]*?)^FunctionEnd/m,
+      )?.[1],
+    ).toContain("Call KaifanRetireTestBuild");
+    // 它还开着就删不掉：装之前要先按它登记的位置找到它并让它退出。
+    expect(hook).toContain(
+      'ReadRegStr $KaifanTestTauriRegisteredRoot HKCU "Software\\kaifan\\开饭" ""',
+    );
+  });
+
   it("handles Tauri updater launches without an unattended directory wizard", () => {
     const standalone = readSource("src-tauri/windows/installer.nsi");
     const initialization =
