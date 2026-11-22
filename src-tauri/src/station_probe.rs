@@ -10,7 +10,7 @@ use reqwest::{header, redirect::Policy, Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::station_connect::connect_origin_is_acceptable;
+use crate::station_connect::{connect_origin_is_acceptable, station_host_is_refused};
 
 const TIMEOUT: Duration = Duration::from_secs(4);
 const MAX_BYTES: usize = 2 * 1024 * 1024;
@@ -29,7 +29,7 @@ pub struct StationProbeRequest {
 pub struct StationProbeResult {
     /// 规范化后的站点来源；无效时为空。
     origin: String,
-    /// `ok` | `invalid_origin` | `unreachable` | `timeout` | `not_relay`
+    /// `ok` | `invalid_origin` | `refused_station` | `unreachable` | `timeout` | `not_relay`
     status: &'static str,
     /// `new_api` | `one_api` | `openai_compatible` | `unknown`
     kind: &'static str,
@@ -176,8 +176,17 @@ pub async fn station_probe_v1(request: StationProbeRequest) -> StationProbeResul
         .map(|url| url.origin().ascii_serialization())
         .and_then(|origin| connect_origin_is_acceptable(&origin));
     let Some(origin) = origin else {
+        // 名单上不给连的站点单独说，不混在「网址看不懂」里。
+        let refused = reqwest::Url::parse(&with_scheme)
+            .ok()
+            .and_then(|url| url.host_str().map(station_host_is_refused))
+            .unwrap_or(false);
         return StationProbeResult {
-            status: "invalid_origin",
+            status: if refused {
+                "refused_station"
+            } else {
+                "invalid_origin"
+            },
             kind: "unknown",
             token_status: "not_provided",
             ..Default::default()
@@ -310,6 +319,25 @@ mod tests {
             first_look("https://relay.example.com"),
             ("https://relay.example.com/api/status".to_owned(), false)
         );
+    }
+
+    #[tokio::test]
+    async fn a_refused_station_is_named_as_such_without_being_contacted() {
+        for origin in ["open-design.ai", "https://api.open-design.ai/v1"] {
+            let result = station_probe_v1(StationProbeRequest {
+                origin: origin.into(),
+                token: Some("sk-not-sent".into()),
+            })
+            .await;
+            assert_eq!(result.status, "refused_station", "{origin}");
+            assert_eq!(result.origin, "", "{origin}");
+        }
+        let unreadable = station_probe_v1(StationProbeRequest {
+            origin: "http://[".into(),
+            token: None,
+        })
+        .await;
+        assert_eq!(unreadable.status, "invalid_origin");
     }
 
     #[test]

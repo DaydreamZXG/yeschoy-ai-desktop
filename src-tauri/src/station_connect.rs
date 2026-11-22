@@ -437,6 +437,22 @@ pub fn station_connect_open_connect_page_v1(origin: String) -> Result<(), String
     open_system_browser(&url).map_err(|_| "connect_browser_open_failed".to_string())
 }
 
+/// 不给连的站点：名单上的域名和它下面的所有子域。连接、信任、探测、读已存的
+/// 接入都从 `connect_origin_is_acceptable` 过，所以拦在这一处就全拦住了。
+///
+/// OpenDesign 以应用的名义做中转站，客户端不接它。
+const REFUSED_STATION_HOSTS: &[&str] = &["open-design.ai"];
+
+pub(crate) fn station_host_is_refused(host: &str) -> bool {
+    let host = host.trim_end_matches('.').to_ascii_lowercase();
+    REFUSED_STATION_HOSTS.iter().any(|refused| {
+        host == *refused
+            || host
+                .strip_suffix(refused)
+                .is_some_and(|rest| rest.ends_with('.'))
+    })
+}
+
 /// Returns the canonical HTTPS origin when `raw` is acceptable for connect exchange.
 ///
 /// This is **not** the compile-time authorization-page allowlist; third-party
@@ -449,7 +465,7 @@ pub(crate) fn connect_origin_is_acceptable(raw: &str) -> Option<String> {
         return None;
     }
     let host = url.host_str()?;
-    if host_is_literal_ip(host) {
+    if host_is_literal_ip(host) || station_host_is_refused(host) {
         return None;
     }
     let canonical = canonical_https_origin_from_host(host);
@@ -566,6 +582,36 @@ mod tests {
             connect_origin_is_acceptable("https://ai.yeschoy.io"),
             Some("https://ai.yeschoy.io".to_owned())
         );
+    }
+
+    #[test]
+    fn connect_origin_refuses_the_listed_station_and_its_subdomains() {
+        for refused in [
+            "https://open-design.ai",
+            "https://open-design.ai/",
+            "https://api.open-design.ai",
+            "https://amr-api.open-design.ai",
+            "https://go.open-design.ai",
+            "https://a.b.open-design.ai",
+            "https://OPEN-DESIGN.AI",
+            "https://open-design.ai.",
+        ] {
+            assert_eq!(connect_origin_is_acceptable(refused), None, "{refused}");
+        }
+        assert!(station_host_is_refused("Api.Open-Design.AI."));
+        // 只是名字里带着这几个字的别家站点照常能连。
+        for other in [
+            "https://not-open-design.ai",
+            "https://open-design.ai.example.com",
+            "https://opendesign.ai",
+            "https://open-design.com",
+        ] {
+            assert_eq!(
+                connect_origin_is_acceptable(other).as_deref(),
+                Some(other),
+                "{other}"
+            );
+        }
     }
 
     #[test]
