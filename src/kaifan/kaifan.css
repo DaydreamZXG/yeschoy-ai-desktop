@@ -2654,3 +2654,58 @@ h4 + .set,
 .oth dd .sm {
   flex: none;
 }
+
+/* 窗口没有系统标题栏。别的系统上三个窗口按钮浮在右上角；macOS 用系统自己的三个圆点。 */
+.wc {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+}
+.wc button {
+  width: 44px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  color: var(--dim);
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+.wc svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.7));
+}
+.wc button:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+.wc button.shut:hover {
+  background: #e5484d;
+}
+.wc button:focus-visible {
+  outline: 1.5px solid var(--acc);
+  outline-offset: -3px;
+}
+/* 右边滑出来的面板让开窗口按钮。 */
+[data-frame="own"] .dr {
+  top: 40px;
+}
+/* 左上角是系统的三个圆点，站点名往下让一让。 */
+[data-frame="mac"] .side {
+  padding-top: 46px;
+}
+/* 开场画面四角的角标：窗口按钮占着的那一角不画，旁边的小字往下让一让。 */
+[data-frame="own"] .cn.b,
+[data-frame="mac"] .cn.a {
+  display: none;
+}
+[data-frame="own"] .skip,
+[data-frame="mac"] .bk.tl {
+  top: calc(5vh + 14px);
+}

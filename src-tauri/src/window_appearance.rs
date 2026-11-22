@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use tauri::{window::Color, Manager, Theme, Window};
+use tauri::{window::Color, Manager, Window};
 
 #[derive(Clone, Copy, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -12,7 +12,7 @@ impl Palette {
     fn color(self) -> Color {
         match self {
             Self::Light => Color(244, 246, 250, 255),
-            Self::Dark => Color(17, 28, 44, 255),
+            Self::Dark => Color(4, 8, 28, 255),
         }
     }
 }
@@ -25,12 +25,10 @@ pub struct AppearanceRequest {
 
 pub fn initialize(app: &tauri::App) -> tauri::Result<()> {
     if let Some(webview) = app.get_webview_window("main") {
+        // The interface is always dark; painting the same near-black behind
+        // it keeps resizing and the first frame from flashing another colour.
         let window = webview.as_ref().window();
-        let palette = match window.theme()? {
-            Theme::Dark => Palette::Dark,
-            _ => Palette::Light,
-        };
-        window.set_background_color(Some(palette.color()))?;
+        window.set_background_color(Some(Palette::Dark.color()))?;
     }
     Ok(())
 }

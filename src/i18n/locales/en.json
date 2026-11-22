@@ -603,6 +603,12 @@
       "open_tool_not_found": "I can't find {{app}} any more — it may have been moved or uninstalled. Go back home and I'll look for it again.",
       "open_busy": "{{app}} is still in the middle of something. Wait for it to finish, then try once more."
     },
+    "window": {
+      "minimize": "Minimize",
+      "maximize": "Maximize",
+      "restore": "Restore",
+      "close": "Close"
+    },
     "drawer": {
       "close": "Close"
     },
