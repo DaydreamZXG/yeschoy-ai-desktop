@@ -321,11 +321,14 @@ async fn responses(state: &BridgeState, request: Request<Body>) -> Response {
         "{}/chat/completions",
         crate::provider_presets::openai_base(&credential.origin)
     );
-    let upstream = crate::local_bridge::with_app_headers(state.client.post(url), &app_headers)
-        .bearer_auth(credential.upstream_key())
-        .json(&converted.chat)
-        .send()
-        .await;
+    let upstream = crate::account_v2::app_token::attach(
+        crate::local_bridge::with_app_headers(state.client.post(&url), &app_headers),
+        &url,
+    )
+    .bearer_auth(credential.upstream_key())
+    .json(&converted.chat)
+    .send()
+    .await;
     let Ok(upstream) = upstream else {
         return error(StatusCode::BAD_GATEWAY, "upstream request failed");
     };
@@ -374,20 +377,23 @@ async fn forward_verbatim(
         "{}/responses",
         crate::provider_presets::openai_base(&credential.origin)
     );
-    let upstream = crate::local_bridge::with_app_headers(state.client.post(url), app_headers)
-        .bearer_auth(credential.upstream_key())
-        .header(header::CONTENT_TYPE, "application/json")
-        .header(
-            header::ACCEPT,
-            if accept_sse {
-                "text/event-stream"
-            } else {
-                "application/json"
-            },
-        )
-        .body(body)
-        .send()
-        .await;
+    let upstream = crate::account_v2::app_token::attach(
+        crate::local_bridge::with_app_headers(state.client.post(&url), app_headers),
+        &url,
+    )
+    .bearer_auth(credential.upstream_key())
+    .header(header::CONTENT_TYPE, "application/json")
+    .header(
+        header::ACCEPT,
+        if accept_sse {
+            "text/event-stream"
+        } else {
+            "application/json"
+        },
+    )
+    .body(body)
+    .send()
+    .await;
     let Ok(upstream) = upstream else {
         return error(StatusCode::BAD_GATEWAY, "upstream request failed");
     };
