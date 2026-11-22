@@ -13,6 +13,8 @@ Var KaifanShutdownPath
 Var KaifanShutdownError
 Var KaifanRegisteredRoot
 Var KaifanOldRegisteredRoot
+Var KaifanPriorRegisteredRoot
+Var KaifanPriorTauriRegisteredRoot
 Var KaifanTestRegisteredRoot
 Var KaifanTestTauriRegisteredRoot
 Var KaifanTauriRegisteredRoot
@@ -53,6 +55,11 @@ Function KaifanProbeRootForLocks
   StrCmp $KaifanProbeRoot "" kaifan_probe_root_done
 
   Push "$KaifanProbeRoot\YesChoy.exe"
+  Call KaifanCanReplaceFile
+  Pop $0
+  StrCmp $0 1 kaifan_probe_root_locked
+
+  Push "$KaifanProbeRoot\野菜.exe"
   Call KaifanCanReplaceFile
   Pop $0
   StrCmp $0 1 kaifan_probe_root_locked
@@ -105,6 +112,16 @@ Function KaifanRefreshLockState
   StrCpy $KaifanProbeRoot "$KaifanOldRegisteredRoot"
   Call KaifanProbeRootForLocks
 
+  ; 改名 YesChoy 之前叫“野菜”的内测版。
+  StrCpy $KaifanProbeRoot "$LOCALAPPDATA\Programs\野菜"
+  Call KaifanProbeRootForLocks
+  StrCpy $KaifanProbeRoot "$LOCALAPPDATA\野菜"
+  Call KaifanProbeRootForLocks
+  StrCpy $KaifanProbeRoot "$KaifanPriorRegisteredRoot"
+  Call KaifanProbeRootForLocks
+  StrCpy $KaifanProbeRoot "$KaifanPriorTauriRegisteredRoot"
+  Call KaifanProbeRootForLocks
+
   ; 只出过测试版的“开饭”。
   StrCpy $KaifanProbeRoot "$LOCALAPPDATA\Programs\开饭"
   Call KaifanProbeRootForLocks
@@ -150,6 +167,8 @@ Function KaifanShutdownRoot
 
   StrCpy $KaifanShutdownPath "$KaifanProbeRoot\YesChoy.exe"
   Call KaifanShutdownOneFile
+  StrCpy $KaifanShutdownPath "$KaifanProbeRoot\野菜.exe"
+  Call KaifanShutdownOneFile
   StrCpy $KaifanShutdownPath "$KaifanProbeRoot\开饭.exe"
   Call KaifanShutdownOneFile
   StrCpy $KaifanShutdownPath "$KaifanProbeRoot\kaifan-desktop.exe"
@@ -174,6 +193,14 @@ Function KaifanShutdownKnownInstallations
   StrCpy $KaifanProbeRoot "$LOCALAPPDATA\YesChoy"
   Call KaifanShutdownRoot
   StrCpy $KaifanProbeRoot "$KaifanOldRegisteredRoot"
+  Call KaifanShutdownRoot
+  StrCpy $KaifanProbeRoot "$LOCALAPPDATA\Programs\野菜"
+  Call KaifanShutdownRoot
+  StrCpy $KaifanProbeRoot "$LOCALAPPDATA\野菜"
+  Call KaifanShutdownRoot
+  StrCpy $KaifanProbeRoot "$KaifanPriorRegisteredRoot"
+  Call KaifanShutdownRoot
+  StrCpy $KaifanProbeRoot "$KaifanPriorTauriRegisteredRoot"
   Call KaifanShutdownRoot
   StrCpy $KaifanProbeRoot "$LOCALAPPDATA\Programs\开饭"
   Call KaifanShutdownRoot
@@ -223,8 +250,10 @@ Function KaifanEnsureStopped
   Push $1
 
   SetRegView 64
-  ReadRegStr $KaifanRegisteredRoot HKCU "Software\yeschoy\YesChoy" "InstallDir"
+  ReadRegStr $KaifanRegisteredRoot HKCU "Software\yeschoy\YesChoyStandalone" "InstallDir"
   ; 以前的名字登记过的位置；用户当时选了别的目录也能找到。
+  ReadRegStr $KaifanPriorRegisteredRoot HKCU "Software\野菜" "InstallDir"
+  ReadRegStr $KaifanPriorTauriRegisteredRoot HKCU "Software\yeschoy\野菜" ""
   ReadRegStr $KaifanTestRegisteredRoot HKCU "Software\Kaifan" "InstallDir"
   ReadRegStr $KaifanTestTauriRegisteredRoot HKCU "Software\kaifan\开饭" ""
   ReadRegStr $KaifanOldRegisteredRoot HKCU "Software\野菜API" "InstallDir"
