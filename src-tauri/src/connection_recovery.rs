@@ -1087,10 +1087,24 @@ fn restore_files_inner(record: &Record, require_owned_restored: bool) -> Result<
     Ok(preserved)
 }
 
+/// 文件是不是还是接入时写下的那样。一字不差当然算；Cline、Hermes、OpenClaw
+/// 的设置文件它们自己和用户平时都会改，看的是我们写的那一块还在不在、还是不是
+/// 那个样子，别处动了不算。
 pub(crate) fn configuration_matches(record: &Record) -> bool {
     record.files.iter().all(|file| {
-        common::snapshot(&file.path).ok().flatten().as_deref() == Some(file.after.as_slice())
+        let Some(current) = common::snapshot(&file.path).ok().flatten() else {
+            return false;
+        };
+        current == file.after || still_ours(&file.path, &file.after, &current)
     })
+}
+
+fn still_ours(path: &Path, ours: &[u8], now: &[u8]) -> bool {
+    use crate::tool_adapters::{cline, hermes, openclaw};
+    cline::still_ours(path, ours, now)
+        .or_else(|| hermes::still_ours(path, ours, now))
+        .or_else(|| openclaw::still_ours(ours, now))
+        .unwrap_or(false)
 }
 
 /// 这份配置里的取密钥命令换成客户端现在的位置之后的样子。不用换、认不出来都是
@@ -2176,11 +2190,20 @@ mod tests {
             .unwrap()
             .replace("backend: local", "backend: docker   # 后来换的");
         let (bytes, kept) = restore_bytes(&file, Some(later.as_bytes())).unwrap();
-        assert!(!kept);
+        assert!(kept, "别处后来的改动留下了，要说出来");
         assert_eq!(
             String::from_utf8(bytes.unwrap()).unwrap(),
             original.replace("backend: local", "backend: docker   # 后来换的")
         );
+
+        // 只是 Hermes 把我们那一块重排了、别处没动：还回去的就是原样，不说留了改动。
+        let reordered = String::from_utf8(after.clone())
+            .unwrap()
+            .replace("  provider: custom\n", "")
+            .replace("model:\n", "model:\n  provider: custom\n");
+        let (bytes, kept) = restore_bytes(&file, Some(reordered.as_bytes())).unwrap();
+        assert!(!kept);
+        assert_eq!(String::from_utf8(bytes.unwrap()).unwrap(), original);
 
         // 用户后来在 Hermes 里换了别家：那是他的决定，整份不动。
         let switched = "model:\n  provider: anthropic\n  default: y\n";
@@ -2188,6 +2211,88 @@ mod tests {
             restore_bytes(&file, Some(switched.as_bytes())).unwrap(),
             (Some(switched.as_bytes().to_vec()), true)
         );
+    }
+
+    /// 接好之后，这三个应用自己和用户平时都会改设置文件。我们写的那一块还在、
+    /// 还是那个样子，就还是「接好了」；那一块被换掉才算「被改过」。
+    #[test]
+    fn a_connection_survives_edits_that_leave_our_part_alone() {
+        use crate::tool_adapters::{cline, hermes, openclaw};
+        let f = Fixture::new();
+        let token = format!("ycg-{}", "a".repeat(64));
+        let matches = |file: &FileChange, current: &[u8]| {
+            common::atomic_write(&file.path, current).unwrap();
+            configuration_matches(&Record {
+                version: 1,
+                receipt: receipt("cline"),
+                original_known: true,
+                files: vec![file.clone()],
+                pending: false,
+                previous: None,
+                rollback_checkpoint: None,
+            })
+        };
+
+        let after = cline::render(None, "glm-5.3", &token, "2026-01-02T03:04:05.678Z").unwrap();
+        let file = f.change(".cline/data/settings/providers.json", None, &after);
+        assert!(matches(&file, &after));
+        let mut value: Value = serde_json::from_slice(&after).unwrap();
+        value["providers"][cline::PROVIDER_ID]["updatedAt"] = "2030-01-01T00:00:00.000Z".into();
+        value["providers"]["anthropic"] = json!({"settings": {"apiKey": "sk-user"}});
+        assert!(matches(&file, &serde_json::to_vec(&value).unwrap()));
+        value["lastUsedProvider"] = "anthropic".into();
+        assert!(!matches(&file, &serde_json::to_vec(&value).unwrap()));
+        value["lastUsedProvider"] = cline::PROVIDER_ID.into();
+        // `updatedAt`、`tokenSource` 少一个，Cline 就把这一项整个丢掉。
+        for field in ["updatedAt", "tokenSource"] {
+            let mut broken = value.clone();
+            broken["providers"][cline::PROVIDER_ID]
+                .as_object_mut()
+                .unwrap()
+                .remove(field);
+            assert!(!matches(&file, &serde_json::to_vec(&broken).unwrap()));
+        }
+        value["providers"][cline::PROVIDER_ID]["settings"]["model"] = "other".into();
+        assert!(!matches(&file, &serde_json::to_vec(&value).unwrap()));
+
+        let original = "# 我的设置\nmodel:\n  provider: openrouter\n  default: x\n\nterminal:\n  backend: local\n";
+        let after = hermes::render(Some(original.as_bytes()), "glm-5.3", &token).unwrap();
+        let file = f.change(".hermes/config.yaml", Some(original.as_bytes()), &after);
+        let text = String::from_utf8(after.clone()).unwrap();
+        assert!(matches(
+            &file,
+            text.replace("backend: local", "backend: docker").as_bytes()
+        ));
+        assert!(!matches(
+            &file,
+            text.replace("glm-5.3", "something-else").as_bytes()
+        ));
+        assert!(!matches(&file, original.as_bytes()));
+
+        let models = ["glm-5.3".to_owned(), "kimi-k3".to_owned()];
+        let after = openclaw::render(None, "glm-5.3", &models, &token).unwrap();
+        let file = f.change(".openclaw/openclaw.json", None, &after);
+        let mut value: Value = serde_json::from_slice(&after).unwrap();
+        value["meta"] = json!({"lastTouchedAt": "2030-01-01T00:00:00.000Z"});
+        value["channels"] = json!({"telegram": {"enabled": true}});
+        assert!(matches(&file, &serde_json::to_vec(&value).unwrap()));
+        let mut switched = value.clone();
+        switched["agents"]["defaults"]["model"] = json!({"primary": "kaifan/kimi-k3"});
+        assert!(!matches(&file, &serde_json::to_vec(&switched).unwrap()));
+        let mut blocked = value.clone();
+        blocked["agents"]["defaults"]["modelPolicy"] = json!({"allow": ["openai/*"]});
+        assert!(!matches(&file, &serde_json::to_vec(&blocked).unwrap()));
+        // 白名单改成从别的文件拼进来：看不到里面，不说还接着。
+        blocked["agents"]["defaults"]["modelPolicy"] = json!({"$include": "./policy.json5"});
+        assert!(!matches(&file, &serde_json::to_vec(&blocked).unwrap()));
+        value["models"]["providers"][openclaw::PROVIDER_ID]["baseUrl"] =
+            "https://elsewhere.example/v1".into();
+        assert!(!matches(&file, &serde_json::to_vec(&value).unwrap()));
+
+        // 别的应用还是一字不差才算。
+        let file = f.change("desktop.json", None, br#"{"model":"a"}"#);
+        assert!(matches(&file, br#"{"model":"a"}"#));
+        assert!(!matches(&file, br#"{"model":"a","x":1}"#));
     }
 
     /// OpenClaw：没人动过就一字不差还回去（注释也在）；之后动过的，只把我们

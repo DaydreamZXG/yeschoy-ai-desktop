@@ -17,11 +17,21 @@ import { useDesktopUpdate } from "../update/UpdateProvider";
 import { reportText, type CheckReport } from "./checkup";
 import { Drawer } from "./Drawer";
 import type { Mood, RosterId } from "./roster";
+import { isStationKeyLineId } from "../configuration/preview";
 import { askToQuit } from "./Shutdown";
 import { isMuted, setMuted, sound } from "./sound";
 import { undoKey } from "./undo";
 
 type ToolId = ToolConnection["toolId"];
+
+/**
+ * 改回原样之前问的那句话。粘贴密钥接的应用用的是用户自己的那把密钥，
+ * 客户端不会、也不该替他去站点作废，所以不说「停用密钥」。
+ */
+const askKey = (connection: ToolConnection | undefined) =>
+  `kaifan.settings.ask${
+    connection?.restoreMode === "original" ? "Restore" : "Remove"
+  }${connection && isStationKeyLineId(connection.lineId) ? "OwnKey" : ""}`;
 
 export interface Checkup {
   running: boolean;
@@ -161,7 +171,9 @@ export function Settings({
     return {
       text: t(`kaifan.settings.check.${report.verdict}`, {
         host: host ?? t("kaifan.settings.theStation"),
-        apps: report.repair.map(appName).join(t("kaifan.listSeparator")),
+        apps: (report.verdict === "model" ? report.gone : report.repair)
+          .map(appName)
+          .join(t("kaifan.listSeparator")),
       }),
       mood: "panic",
     };
@@ -191,9 +203,16 @@ export function Settings({
                 }),
                 run: () => onRepair(report.repair[0]!),
               }
-            : report.action === "join"
-              ? { label: t("kaifan.settings.check.join"), run: onJoin }
-              : null;
+            : report.action === "swap" && report.gone[0]
+              ? {
+                  label: t("kaifan.settings.check.swapGo", {
+                    app: appName(report.gone[0]),
+                  }),
+                  run: () => onRepair(report.gone[0]!),
+                }
+              : report.action === "join"
+                ? { label: t("kaifan.settings.check.join"), run: onJoin }
+                : null;
   const mark = (state: "ok" | "bad" | "skip") => (
     <i className={`mk ${state}`} aria-hidden="true">
       {state === "ok" ? "✓" : state === "bad" ? "!" : "–"}
@@ -224,13 +243,9 @@ export function Settings({
       ? { text: t("kaifan.settings.askLogout"), mood: "idle" as Mood }
       : asking
         ? {
-            text: t(
-              joined.find((c) => c.toolId === asking)?.restoreMode ===
-                "original"
-                ? "kaifan.settings.askRestore"
-                : "kaifan.settings.askRemove",
-              { app: appName(asking) },
-            ),
+            text: t(askKey(joined.find((c) => c.toolId === asking)), {
+              app: appName(asking),
+            }),
             mood: "idle" as Mood,
           }
         : (said ??
@@ -371,7 +386,7 @@ export function Settings({
                   {mark(
                     report.apps === "ok"
                       ? "ok"
-                      : report.apps === "repair"
+                      : report.apps === "repair" || report.apps === "model"
                         ? "bad"
                         : "skip",
                   )}
@@ -379,7 +394,9 @@ export function Settings({
                     count:
                       report.apps === "repair"
                         ? report.repair.length
-                        : report.live,
+                        : report.apps === "model"
+                          ? report.gone.length
+                          : report.live,
                   })}
                 </li>
               </ul>

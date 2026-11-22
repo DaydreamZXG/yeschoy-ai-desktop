@@ -38,4 +38,21 @@ describe("第一次见的站点先问一句", () => {
     await waitFor(() => expect(onAnswer).toHaveBeenCalledWith(true));
     expect(onAnswer).toHaveBeenCalledTimes(1);
   });
+
+  it("没答成：话留在这一屏里说，按钮还能再点", async () => {
+    const onAnswer = vi
+      .fn()
+      .mockResolvedValueOnce("再点一次。")
+      .mockResolvedValue(undefined);
+    render(<TrustAsk origin="https://new.example.com" onAnswer={onAnswer} />);
+    fireEvent.click(screen.getByRole("button", { name: /我认识/ }));
+    expect(await screen.findByTestId("kaifan-trust-retry")).toHaveTextContent(
+      "再点一次。",
+    );
+    fireEvent.click(screen.getByRole("button", { name: /我认识/ }));
+    await waitFor(() => expect(onAnswer).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.queryByTestId("kaifan-trust-retry")).toBeNull(),
+    );
+  });
 });

@@ -40,6 +40,8 @@ REQUIRED_TESTS = frozenset(
 ALLOWED_IGNORED = frozenset(
     {
         "codex_responses_bridge::tests::real_codex_cli_drives_the_bridge_end_to_end",
+        # 真的连官方下载源把命令行应用装一遍再运行：要联网、要下几百兆，CI 里不跑。
+        "app_installation::tests::cli_tools::real_official_cli_packages_install_and_run",
     }
 )
 # 平台专属的真机 e2e（需要真装好的 DeepSeek Harness，由 dsh-*-discovery.yml 跑）。

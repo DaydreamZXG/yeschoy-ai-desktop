@@ -251,11 +251,16 @@ describe("开饭首页自己会做的事", () => {
     const ledger = screen.getByTestId("kaifan-ledger");
     expect(ledger).toHaveAttribute("inert");
     refresh.mockClear();
+    let done = () => {};
+    refresh.mockReturnValueOnce(new Promise<void>((ok) => (done = ok)));
 
     fireEvent.click(screen.getByTestId("kaifan-nav-ledger"));
     await waitFor(() => expect(ledger).not.toHaveAttribute("inert"));
     expect(home).toHaveAttribute("inert");
     expect(refresh).toHaveBeenCalledTimes(1);
+    // 最新的数还没读回来：手里上一次的余额不摆出来。
+    expect(screen.queryByTestId("kaifan-ledger-balance")).toBeNull();
+    await act(async () => done());
     expect(screen.getByTestId("kaifan-ledger-balance")).toHaveTextContent(
       "¥86.40",
     );

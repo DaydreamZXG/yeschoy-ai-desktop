@@ -16,6 +16,18 @@ interface Props {
 }
 
 /**
+ * 公告正文是纯文本，只认一种写法：`**加粗**`（站点接入文档里写明的）。
+ * 别的一律照原样显示，不当成 HTML 或 Markdown 解释。
+ */
+function bolded(body: string) {
+  return body
+    .split(/\*\*([^*\n]+)\*\*/)
+    .map((part, index) =>
+      index % 2 ? <strong key={index}>{part}</strong> : part,
+    );
+}
+
+/**
  * 公告栏：站点发的公告，新的标「新」。
  *
  * 打开就算看过了，但这一次打开时是新的那几条，开着的时候一直标着「新」，
@@ -129,7 +141,7 @@ export function News({ open, who, reach, notices, onConnect, onClose }: Props) {
                   </time>
                 )}
               </header>
-              {notice.body && <p>{notice.body}</p>}
+              {notice.body && <p>{bolded(notice.body)}</p>}
               {(notice.actionLabel || notice.expiresAtEpochMs > 0) && (
                 <footer>
                   {notice.expiresAtEpochMs > 0 && (

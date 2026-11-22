@@ -46,6 +46,10 @@ pub(crate) struct InstallationProjection {
     pub(crate) version: String,
     pub(crate) supported: bool,
     pub(crate) recommended: bool,
+    /// 这一份打开的是终端窗口而不是应用窗口。只有同一个应用两种都有时才用得着
+    /// 分（Codex 的桌面版和命令行版共用一条接入），所以只在是的时候带上。
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub(crate) terminal: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -262,13 +266,28 @@ async fn observe_cli(executable: &str) -> Vec<ObservedInstallation> {
     }
     tool_discovery::discover_candidates(executable)
         .into_iter()
-        .take(8)
+        .take(MAX_INSTALLATIONS)
         .map(|candidate| ObservedInstallation {
             path: candidate.path,
             version: String::new(),
             location: candidate.location_hint.as_str(),
         })
         .collect()
+}
+
+/// 一个应用最多报这么多份安装。界面那边超过这个数就整份扫描结果都不认，
+/// 所有应用都接不了，所以两边必须是同一个数（`activation.ts` 的 `decodeTarget`）。
+const MAX_INSTALLATIONS: usize = 8;
+
+/// 把编辑器里的 Cline 扩展接在命令行版后面，合起来不超过上限。命令行版在前：
+/// 能一键接入的是它，位置不够时先留它。
+fn append_extensions(observed: &mut Vec<ObservedInstallation>, extensions: Vec<PathBuf>) {
+    observed.extend(extensions.into_iter().map(|path| ObservedInstallation {
+        path,
+        version: String::new(),
+        location: "extension",
+    }));
+    observed.truncate(MAX_INSTALLATIONS);
 }
 
 async fn observe(tool_id: &str) -> Vec<ObservedInstallation> {
@@ -279,13 +298,7 @@ async fn observe(tool_id: &str) -> Vec<ObservedInstallation> {
         // 手动指过位置的不再追加：那是用户说了算。
         if tool_id == "cline" && !observed.iter().any(|item| item.location == "manual") {
             if let Some(home) = user_home() {
-                observed.extend(cline::extension_directories(&home).into_iter().map(|path| {
-                    ObservedInstallation {
-                        path,
-                        version: String::new(),
-                        location: "extension",
-                    }
-                }));
+                append_extensions(&mut observed, cline::extension_directories(&home));
             }
         }
         return observed;
@@ -332,6 +345,8 @@ fn projections(tool_id: &str, observed: &[ObservedInstallation]) -> Vec<Installa
             version: installation.version.clone(),
             supported: can_attempt(tool_id, installation),
             recommended: preferred == Some(index),
+            terminal: tool_id == "codex_desktop"
+                && codex_desktop::is_cli_installation(&installation.path),
         })
         .collect()
 }
@@ -471,6 +486,39 @@ pub(crate) async fn resolve_preferred_installation(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// 命令行版加上七个编辑器里的扩展能超过界面认的上限；超了整份扫描都作废。
+    #[test]
+    fn cline_extensions_never_push_a_target_past_the_installation_limit() {
+        let cli = |index: usize| ObservedInstallation {
+            path: PathBuf::from(format!("/bin/cline-{index}")),
+            version: String::new(),
+            location: "path",
+        };
+        let extensions = |count: usize| {
+            (0..count)
+                .map(|index| PathBuf::from(format!("/ext/{index}")))
+                .collect::<Vec<_>>()
+        };
+
+        let mut observed: Vec<_> = (0..2).map(cli).collect();
+        append_extensions(&mut observed, extensions(7));
+        assert_eq!(observed.len(), MAX_INSTALLATIONS);
+        assert_eq!(observed[0].location, "path");
+        assert_eq!(observed[1].location, "path");
+        assert!(observed[2..]
+            .iter()
+            .all(|item| item.location == "extension"));
+
+        let mut observed: Vec<_> = (0..MAX_INSTALLATIONS).map(cli).collect();
+        append_extensions(&mut observed, extensions(1));
+        assert_eq!(observed.len(), MAX_INSTALLATIONS);
+        assert!(observed.iter().all(|item| item.location == "path"));
+
+        let mut observed = vec![cli(0)];
+        append_extensions(&mut observed, extensions(2));
+        assert_eq!(observed.len(), 3);
+    }
 
     #[test]
     fn opaque_ids_are_stable_and_do_not_contain_paths() {

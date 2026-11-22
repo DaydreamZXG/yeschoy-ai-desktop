@@ -223,7 +223,6 @@ async fn apply_claude_probes_with(
     bindings: &[ModelBinding],
     transports: &mut [Option<ModelTransport>],
 ) {
-    use futures::StreamExt;
     // 带着下标探、按下标写回，和 `apply_codex_probes_with` 同一个理由。
     let probes = bindings
         .iter()
@@ -243,10 +242,7 @@ async fn apply_claude_probes_with(
             )
         })
         .collect::<Vec<_>>();
-    let probed = futures::stream::iter(probes)
-        .buffer_unordered(PROBE_CONCURRENCY)
-        .collect::<Vec<_>>()
-        .await;
+    let probed = probed_within(probes, PROBE_BATCH_BUDGET).await;
     for (index, probed) in probed {
         if let Some(slot) = transports.get_mut(index) {
             *slot = Some(ModelTransport::Claude(probed));

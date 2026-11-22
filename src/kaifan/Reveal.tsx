@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { modelDisplayName } from "../model-profiles/profile";
 import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
-import { usesTerminal } from "./joinOutcome";
 import type { Joined } from "./Join";
 import { ROSTER, portraitOf } from "./roster";
 import { prefersCalm, sound } from "./sound";
@@ -56,7 +55,7 @@ export function Reveal({ joined, opening, openFailed, onOpen, onHome }: Props) {
   const appName = appDisplayName(joined.toolId, app?.name ?? joined.toolId, t);
   const name = t(`roster.${who}.name`);
   const art = portraitOf(who);
-  const terminal = usesTerminal(joined.toolId);
+  const terminal = joined.terminal;
 
   // 后端说得出为什么没打开，就说那一句；说不出才用笼统的。
   const note =

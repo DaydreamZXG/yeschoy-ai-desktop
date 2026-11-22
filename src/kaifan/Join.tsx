@@ -28,12 +28,7 @@ import {
   modelDisplayName,
 } from "../model-profiles/profile";
 import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
-import {
-  chosenModel,
-  pickedModel,
-  pickedPlan,
-  type CardPicks,
-} from "./cardInfo";
+import { joinModel, pickedPlan, type CardPicks } from "./cardInfo";
 import {
   installOutcome,
   installStep,
@@ -49,6 +44,7 @@ import {
   chibiOf,
   type RosterId,
 } from "./roster";
+import { isConnected, onOtherStation } from "./stageState";
 import { OtherApps } from "./OtherApps";
 import { vendorName, type ProviderPreset } from "./providers";
 import { sound } from "./sound";
@@ -62,6 +58,8 @@ export interface Joined {
   modelId: string;
   /** 应用有没有替用户打开。没打开时照实说，不说成「已经在用了」。 */
   opened: boolean;
+  /** 打开的是终端窗口，不是应用窗口。 */
+  terminal: boolean;
   /** 没能替用户打开时，后端说得出的具体原因。 */
   why?: string;
   /** 名单里这次没接上的型号（站点没让用）。有就要告诉用户，不能当作全成了。 */
@@ -108,24 +106,6 @@ const megabytes = (bytes: number) =>
   bytes >= 1024 ** 3
     ? `${(bytes / 1024 ** 3).toFixed(1)} GB`
     : `${Math.max(1, Math.round(bytes / 1024 ** 2))} MB`;
-
-/**
- * 她在这个应用里该用哪个型号：名片上给她挑过的优先；没挑过，接过的沿用；
- * 都没有就挑一个资料齐的。
- */
-function modelFor(
-  who: RosterId,
-  ids: string[] | undefined,
-  saved: ToolConnection | undefined,
-  picks: CardPicks,
-): string {
-  if (!ids?.length) return "";
-  const chosen = chosenModel(who, ids, picks);
-  if (chosen) return chosen;
-  if (saved && saved.state !== "not_connected" && ids.includes(saved.modelId))
-    return saved.modelId;
-  return pickedModel(who, ids, picks);
-}
 
 /**
  * 接入：选一个应用，选一个人，点一下。写设置、打开应用、出了岔子怎么办，
@@ -196,17 +176,30 @@ export function Join({
   const working = applying || installing;
 
   const touched = useRef(false);
+  // 同一个应用可能两种都有（Codex 的桌面版和命令行版）：看挑中的是哪一份。
+  const seen = useRef<ActivationTarget[]>([]);
+  const inTerminal = (toolId: ActivationToolId, installationId: string) =>
+    usesTerminal(toolId) ||
+    !!seen.current
+      .find((entry) => entry.toolId === toolId)
+      ?.installations.find((item) => item.installationId === installationId)
+      ?.terminal;
   /** `quiet`：用户没点、是我们自己顺手再看一遍，不闪「正在找」，没看成也不报。 */
   const look = useCallback(async (quiet = false) => {
     if (!quiet) setScan("loading");
     try {
       const found = (await scanActivationTargets()).targets;
+      seen.current = found;
       setTargets(found);
       setScan("ready");
       // 用户还没自己选过应用时，先选中电脑上已经装了的第一个。
       const first = WORKBENCH_APPS.find((item) =>
         found.some(
-          (entry) => entry.toolId === item.id && entry.status === "available",
+          (entry) =>
+            entry.toolId === item.id &&
+            // 装了好几份的也是装了，只是待会儿要挑一份。
+            (entry.status === "available" ||
+              entry.status === "selection_required"),
         ),
       );
       if (!touched.current && first) setApp(first.id);
@@ -231,6 +224,8 @@ export function Join({
     touched.current = !!initialApp;
     setApp(initialApp ?? WORKBENCH_APPS[0].id);
     setOther(false);
+    // 不常用的每次打开都先收着；上次展开过不算数。
+    setMoreApps(false);
     // 来修一个应用时，先选回它原来的那一位和型号：修的是原来那次接入，不是换人。
     const was = connections.find((item) => item.toolId === initialApp);
     const back =
@@ -292,7 +287,7 @@ export function Join({
   const modelId =
     chosenModel && ids?.includes(chosenModel)
       ? chosenModel
-      : modelFor(who, ids, saved, picks);
+      : joinModel(who, ids, saved, picks);
   const model = usable.find((item) => item.id === modelId);
   // 这个应用里已经存过的型号和分组。分组决定价格，存过的原样沿用，不替用户换。
   const remembered = useMemo(
@@ -424,6 +419,7 @@ export function Join({
         who,
         modelId,
         opened: next.kind === "done",
+        terminal: inTerminal(app, at),
         why: next.why,
         skipped: [
           ...new Set((result.skipped ?? []).map((item) => item.modelId)),
@@ -605,6 +601,8 @@ export function Join({
   const fetched = fetcher.progress;
   const placing = installStep(fetched?.phase);
   const broken = brokenOf(saved?.state);
+  const elsewhere =
+    !broken && isConnected(saved?.state) && onOtherStation(saved, lineId);
   // 没装的应用现在能怎么办：我们替他装、只能去官网装、官方没有适合这台电脑的
   // 安装包，或者装了但不完整。
   const need =
@@ -726,17 +724,16 @@ export function Join({
             <div className="pickapps">
               {WORKBENCH_APPS.map((item) => {
                 const found = targets.find((entry) => entry.toolId === item.id);
+                const partial =
+                  scan === "ready" && found?.status === "missing_runtime";
                 const absent =
-                  scan === "ready" &&
-                  (!found ||
-                    found.status === "not_found" ||
-                    found.status === "missing_runtime");
+                  scan === "ready" && (!found || found.status === "not_found");
                 if (!moreApps && rare.includes(item.id)) return null;
                 return (
                   <button
                     key={item.id}
                     type="button"
-                    className={absent ? "pa off" : "pa"}
+                    className={absent || partial ? "pa off" : "pa"}
                     aria-pressed={!other && item.id === app}
                     onClick={() => {
                       touched.current = true;
@@ -750,6 +747,7 @@ export function Join({
                     {item.icon && <img src={item.icon} alt="" />}
                     {item.name}
                     {absent && <small>{t("kaifan.join.absent")}</small>}
+                    {partial && <small>{t("kaifan.join.incomplete")}</small>}
                   </button>
                 );
               })}
@@ -770,6 +768,8 @@ export function Join({
                 className="pa fold"
                 aria-pressed={other}
                 onClick={() => {
+                  // 这也是用户自己选的：晚回来的扫描不能把它换成别的应用。
+                  touched.current = true;
                   setOther(true);
                   sound.pop(520);
                 }}
@@ -858,7 +858,7 @@ export function Join({
                         <span>
                           {here
                             ? modelDisplayName(
-                                modelFor(
+                                joinModel(
                                   id,
                                   cast[id],
                                   on ? saved : undefined,
@@ -913,6 +913,15 @@ export function Join({
                     data-testid="kaifan-join-mend"
                   >
                     {t(`kaifan.join.mend.${broken}`, { app: appName })}
+                  </p>
+                )}
+                {elsewhere && (
+                  <p
+                    className="mend"
+                    role="note"
+                    data-testid="kaifan-join-elsewhere"
+                  >
+                    {t("kaifan.join.mend.elsewhere", { app: appName })}
                   </p>
                 )}
                 {!missing && target?.manualLocation === "in_use" && (
@@ -1024,7 +1033,12 @@ export function Join({
                       className="go"
                       onClick={() => fetcher.guide(app)}
                     >
-                      {t("kaifan.join.install", { app: appName })}
+                      {t(
+                        absent
+                          ? "kaifan.join.install"
+                          : "kaifan.join.reinstall",
+                        { app: appName },
+                      )}
                     </button>
                   ) : (
                     <button
@@ -1131,7 +1145,7 @@ export function Join({
                   </li>
                   <li className={step > 2 ? "ok" : undefined}>
                     {t(
-                      usesTerminal(app)
+                      inTerminal(app, installationId)
                         ? "kaifan.join.stepCheck"
                         : "kaifan.join.stepOpen",
                       { app: appName },

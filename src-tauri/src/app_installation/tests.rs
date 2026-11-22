@@ -944,7 +944,9 @@ async fn installer_redirect_resume_never_appends_another_resource_etag() {
 mod cli_tools {
     use super::super::{catalog, cli};
     use reqwest::Url;
-    use std::{fs, io::Write, path::Path};
+    #[cfg(unix)]
+    use std::io::Write;
+    use std::{fs, path::Path};
 
     fn source(tool: &str, os: &str) -> catalog::Source {
         catalog::cli_source(tool, os, "x64").unwrap()
@@ -958,6 +960,8 @@ mod cli_tools {
         fs::create_dir_all(&path).unwrap();
         path
     }
+    // 解包只在 unix 上测（要看可执行位），这两个帮手也只在那边用。
+    #[cfg(unix)]
     fn tgz(path: &Path, build: impl FnOnce(&mut tar::Builder<flate2::write::GzEncoder<fs::File>>)) {
         let encoder =
             flate2::write::GzEncoder::new(fs::File::create(path).unwrap(), Default::default());
@@ -965,6 +969,7 @@ mod cli_tools {
         build(&mut builder);
         builder.into_inner().unwrap().finish().unwrap();
     }
+    #[cfg(unix)]
     fn file(builder: &mut tar::Builder<impl Write>, name: &str, body: &[u8], mode: u32) {
         let mut header = tar::Header::new_gnu();
         header.set_size(body.len() as u64);
@@ -992,7 +997,11 @@ mod cli_tools {
         ));
         assert!(allowed(
             "opencode",
-            "https://registry.npmjs.org/opencode-linux-x64/-/opencode-linux-x64-1.19.6.tgz"
+            "https://registry.npmjs.org/@opencode/cli-linux-x64/-/cli-linux-x64-2.3.2.tgz"
+        ));
+        assert!(allowed(
+            "opencode",
+            "https://registry.npmjs.org/@opencode-ai/cli-linux-x64/-/cli-linux-x64-2.3.2.tgz"
         ));
         for (tool, url) in [
             (
@@ -1026,11 +1035,24 @@ mod cli_tools {
             ),
             (
                 "opencode",
-                "https://evil.example/opencode-linux-x64/-/opencode-linux-x64-1.tgz",
+                "https://evil.example/@opencode/cli-linux-x64/-/cli-linux-x64-2.tgz",
+            ),
+            // 别人的包名前缀、别的包、1.x 的旧包名：都不是现在官方发的那个。
+            (
+                "opencode",
+                "https://registry.npmjs.org/@someone/cli-linux-x64/-/cli-linux-x64-2.tgz",
+            ),
+            (
+                "opencode",
+                "https://registry.npmjs.org/@opencode/sdk/-/sdk-2.3.2.tgz",
+            ),
+            (
+                "opencode",
+                "https://registry.npmjs.org/opencode-linux-x64/-/opencode-linux-x64-1.tgz",
             ),
             (
                 "pi",
-                "https://registry.npmjs.org/opencode-linux-x64/-/opencode-linux-x64-1.tgz",
+                "https://registry.npmjs.org/@opencode/cli-linux-x64/-/cli-linux-x64-2.tgz",
             ),
         ] {
             assert!(!allowed(tool, url), "{url}");
@@ -1063,15 +1085,16 @@ mod cli_tools {
         let integrity = format!("sha512-{}", "A".repeat(86) + "==");
         let package = |integrity: &str, tarball: &str| {
             serde_json::to_vec(
-                &serde_json::json!({"name":"opencode-darwin-x64","version":"1.19.6",
+                &serde_json::json!({"name":"@opencode/cli-darwin-x64","version":"2.3.2",
                 "dist":{"integrity":integrity,"tarball":tarball}}),
             )
             .unwrap()
         };
         let official =
-            "https://registry.npmjs.org/opencode-darwin-x64/-/opencode-darwin-x64-1.19.6.tgz";
+            "https://registry.npmjs.org/@opencode/cli-darwin-x64/-/cli-darwin-x64-2.3.2.tgz";
         let found =
-            cli::parse_npm_package(&package(&integrity, official), "opencode-darwin-x64").unwrap();
+            cli::parse_npm_package(&package(&integrity, official), "@opencode/cli-darwin-x64")
+                .unwrap();
         assert_eq!(found.target.url, official);
         assert!(cli::allowed_url(
             source("opencode", "macos"),
@@ -1080,15 +1103,13 @@ mod cli_tools {
         // 没有 sha512、包名不对、文件不在官方仓库里：都不装。
         for bytes in [
             package("sha1-abc", official),
-            package(
-                &integrity,
-                "https://evil.example/opencode-darwin-x64-1.19.6.tgz",
-            ),
+            package(&integrity, "https://evil.example/cli-darwin-x64-2.3.2.tgz"),
         ] {
-            assert!(cli::parse_npm_package(&bytes, "opencode-darwin-x64").is_err());
+            assert!(cli::parse_npm_package(&bytes, "@opencode/cli-darwin-x64").is_err());
         }
         assert!(
-            cli::parse_npm_package(&package(&integrity, official), "opencode-linux-x64").is_err()
+            cli::parse_npm_package(&package(&integrity, official), "@opencode/cli-linux-x64")
+                .is_err()
         );
     }
 
@@ -1098,24 +1119,54 @@ mod cli_tools {
         let x64 = source("opencode", "windows");
         assert_eq!(
             cli::opencode_package(x64, "windows", true),
-            "opencode-windows-x64"
+            "cli-windows-x64"
         );
         assert_eq!(
             cli::opencode_package(x64, "windows", false),
-            "opencode-windows-x64-baseline"
+            "cli-windows-x64-baseline"
         );
         let arm = catalog::cli_source("opencode", "macos", "arm64").unwrap();
         assert_eq!(
             cli::opencode_package(arm, "macos", false),
-            "opencode-darwin-arm64"
+            "cli-darwin-arm64"
         );
         assert!(cli::allowed_url(
             x64,
             &Url::parse(
-                "https://registry.npmjs.org/opencode-windows-x64-baseline/-/opencode-windows-x64-baseline-1.19.6.tgz"
+                "https://registry.npmjs.org/@opencode/cli-windows-x64-baseline/-/cli-windows-x64-baseline-2.3.2.tgz"
             )
             .unwrap()
         ));
+    }
+
+    #[test]
+    fn opencode_installs_the_release_the_official_channel_names() {
+        // 官方安装脚本问的那个地址实际回的样子（2.3.2 时抄下来的）。
+        let channel = |package: &str, version: &str| {
+            serde_json::to_vec(&serde_json::json!({
+                "channel":"latest","name":"cli","distribution":"npm","version":version,
+                "metadata":{"package":package},"active":true,"minimum":false}))
+            .unwrap()
+        };
+        assert_eq!(
+            cli::parse_opencode_channel(&channel("@opencode/cli", "2.3.2")).unwrap(),
+            ("@opencode", "2.3.2".to_owned())
+        );
+        assert_eq!(
+            cli::parse_opencode_channel(&channel("@opencode-ai/cli", "2.0.0")).unwrap(),
+            ("@opencode-ai", "2.0.0".to_owned())
+        );
+        // 别人的包、不像版本号的版本、不是 JSON：都不照着装。
+        for bytes in [
+            channel("@someone/cli", "2.3.2"),
+            channel("@opencode/sdk", "2.3.2"),
+            channel("opencode-ai", "2.3.2"),
+            channel("@opencode/cli", "../2.3.2"),
+            channel("@opencode/cli", ""),
+            b"<html>".to_vec(),
+        ] {
+            assert!(cli::parse_opencode_channel(&bytes).is_err());
+        }
     }
 
     #[test]

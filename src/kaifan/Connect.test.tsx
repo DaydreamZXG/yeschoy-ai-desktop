@@ -192,6 +192,39 @@ describe("连接站点", () => {
     ).not.toContain(KEY);
   });
 
+  it("密钥正在存的时候关了面板：存成了照样切到这个站", async () => {
+    look
+      .mockResolvedValueOnce(station())
+      .mockResolvedValueOnce(station({ tokenStatus: "valid" }));
+    let done: (value: unknown) => void = () => undefined;
+    connect.mockReturnValue(
+      new Promise((resolve) => (done = resolve)) as never,
+    );
+    const props = {
+      onLineChange: vi.fn(),
+      onConnected: vi.fn(),
+      onNotice: vi.fn(),
+      onClose: vi.fn(),
+    };
+    render(<Connect open dismissible linkEvent={null} {...props} />);
+    await typeUrl("my.example.com");
+    await waitFor(() => expect(step()).toBe("key"));
+    typeKey(KEY);
+    await waitFor(() => expect(connect).toHaveBeenCalled());
+    fireEvent.keyDown(screen.getByTestId("kaifan-connect"), { key: "Escape" });
+    expect(props.onClose).toHaveBeenCalled();
+    done({ status: "signed_in" });
+    await waitFor(() =>
+      expect(props.onLineChange).toHaveBeenCalledWith(
+        "station_key:https://my.example.com",
+      ),
+    );
+    expect(props.onConnected).toHaveBeenCalledWith({
+      host: "my.example.com",
+      viaKey: true,
+    });
+  });
+
   it.each([
     ["invalid", "这个密钥不对"],
     ["no_quota", "余额或额度用完了"],
@@ -246,9 +279,8 @@ describe("连接站点", () => {
     await waitFor(() => expect(step()).toBe("trust"));
     fireEvent.click(screen.getByRole("button", { name: /是我的站/ }));
     await waitFor(() => expect(step()).toBe("browser"));
-    expect(onLineChange).toHaveBeenCalledWith(
-      "station_connect:https://auth.example.com",
-    );
+    // 浏览器里还没点「允许」：线路不动，免得界面和本机存的那个站对不上。
+    expect(onLineChange).not.toHaveBeenCalled();
     rerender(
       <Connect
         {...props}

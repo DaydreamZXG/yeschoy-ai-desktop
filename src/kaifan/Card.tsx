@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import type { AccountModel } from "../account/session";
+import type { ActivationToolId } from "../configuration/activation";
 import {
   DEFAULT_BILLING_GROUP,
   chooseBillingGroup,
@@ -9,7 +10,7 @@ import type { ToolConnection } from "../configuration/connections";
 import { modelDisplayName } from "../model-profiles/profile";
 import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
 import {
-  pickedModel,
+  joinModel,
   pickedPlan,
   plansOf,
   pricesOf,
@@ -34,7 +35,8 @@ interface Props {
   onModel: (modelId: string) => void;
   onPlan: (modelId: string, planId: string) => void;
   /** 「让她去接入」。 */
-  onJoin: () => void;
+  /** 去接入屏。带上名片正说着的那个应用，两边讲的才是同一次接入。 */
+  onJoin: (app?: ActivationToolId) => void;
   onClose: () => void;
 }
 
@@ -57,11 +59,39 @@ export function Card({
 }: Props) {
   const { t } = useTranslation();
   const name = t(`roster.${who}.name`);
-  const modelId = pickedModel(who, ids, picks);
+  // 她在哪些应用里干活，各自用的是哪个型号和方案（接入时存下来的那份）。
+  const jobs = WORKBENCH_APPS.flatMap((app) => {
+    const saved = connections?.find((item) => item.toolId === app.id);
+    return saved && workerOf(saved) === who
+      ? [
+          {
+            id: app.id,
+            name: appDisplayName(app.id, app.name, t),
+            modelId: saved.modelId,
+            planId: saved.billingGroup,
+            saved,
+          },
+        ]
+      : [];
+  });
+  // 名片上写的是「她再去接入会用什么」，和接入屏问的是同一处：没挑过就沿用
+  // 接好的那份，不拿一个默认的出来说「要重新接入」。
+  // 她接着好几个应用时说的是头一个，点「去接入」也是带着这一个过去。
+  const first = jobs[0];
+  const modelId = joinModel(who, ids, first?.saved, picks);
   const model = models.find((item) => item.id === modelId);
   const plans = useMemo(() => plansOf(model), [model]);
+  const kept = first
+    ? [
+        { modelId: first.modelId, billingGroup: first.planId },
+        ...(first.saved.models ?? []),
+      ].find((item) => item.modelId === modelId)?.billingGroup
+    : undefined;
   const planId = model
-    ? (pickedPlan(model, picks) ?? chooseBillingGroup(model, ""))
+    ? (pickedPlan(model, picks) ??
+      (kept && plans.some((item) => item.id === kept)
+        ? kept
+        : chooseBillingGroup(model, "")))
     : "";
   const plan = plans.find((item) => item.id === planId);
   const prices = pricesOf(model, plan?.ratio);
@@ -103,24 +133,17 @@ export function Card({
                   discount: now,
                 });
 
-  // 她在哪些应用里干活，各自用的是哪个型号和方案（接入时存下来的那份）。
-  const jobs = WORKBENCH_APPS.flatMap((app) => {
-    const saved = connections?.find((item) => item.toolId === app.id);
-    return saved && workerOf(saved) === who
-      ? [
-          {
-            id: app.id,
-            name: appDisplayName(app.id, app.name, t),
-            modelId: saved.modelId,
-            planId: saved.billingGroup,
-          },
-        ]
-      : [];
+  // 名片上改的是「下次接入用什么」。已经接好的应用不会被悄悄改掉；只有
+  // 再接入一次真的会换型号或方案时才提醒。
+  const stale = jobs.some((job) => {
+    const next = joinModel(who, ids, job.saved, picks);
+    if (next !== job.modelId) return true;
+    const wanted = pickedPlan(
+      models.find((item) => item.id === next),
+      picks,
+    );
+    return !!wanted && !!job.planId && wanted !== job.planId;
   });
-  // 名片上改的是「下次接入用什么」。已经接好的应用不会被悄悄改掉。
-  const stale = jobs.some(
-    (job) => job.modelId !== modelId || (job.planId && job.planId !== planId),
-  );
 
   return (
     <Drawer
@@ -136,7 +159,7 @@ export function Card({
             type="button"
             className="go"
             data-testid="kaifan-card-join"
-            onClick={onJoin}
+            onClick={() => onJoin(first?.id)}
           >
             {t("kaifan.card.join", { name })}
           </button>

@@ -93,6 +93,25 @@ describe("News", () => {
     expect(screen.getAllByTestId("kaifan-notice")[0]).toHaveClass("new");
   });
 
+  it("正文里的 **加粗** 显示成粗体，不露出星号；别的写法原样显示", () => {
+    show(
+      board({
+        notices: [
+          notice("a", {
+            body: "今晚 **22:00** 维护。<b>不是标签</b> 2 * 3 * 4",
+          }),
+        ],
+      }),
+    );
+    const body = screen.getByTestId("kaifan-notice").querySelector("p")!;
+    expect(body.querySelector("strong")).toHaveTextContent("22:00");
+    expect(body).toHaveTextContent(
+      "今晚 22:00 维护。<b>不是标签</b> 2 * 3 * 4",
+    );
+    expect(body.querySelectorAll("strong")).toHaveLength(1);
+    expect(body.querySelector("b")).toBeNull();
+  });
+
   it("关着的时候不把公告记成看过", () => {
     const notices = board();
     show(notices, { open: false });

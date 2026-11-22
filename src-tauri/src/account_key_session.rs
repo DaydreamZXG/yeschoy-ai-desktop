@@ -17,6 +17,22 @@ const KEY_SUBSCRIPTION_PATH: &str = "/v1/dashboard/billing/subscription";
 const KEY_USAGE_PATH: &str = "/v1/dashboard/billing/usage";
 /// 连接是用户盯着等的一步，比开机检查宽一点，但仍然必须有头。
 const CONNECT_DEADLINE: Duration = Duration::from_secs(12);
+/// 站名、余额、用量是锦上添花：站点没有这些接口、或者接口挂着不回，都不能
+/// 拖住模型名单。到点没回就当没有。
+const EXTRAS_DEADLINE: Duration = Duration::from_secs(4);
+
+/// 可有可无的那几个请求：限时、失败和非 2xx 一律当没有。
+async fn optional(
+    request: impl std::future::Future<Output = Result<JsonResponse, TransportFailure>>,
+    deadline: Duration,
+) -> Option<Value> {
+    tokio::time::timeout(deadline, request)
+        .await
+        .ok()?
+        .ok()
+        .filter(|response| response.status.is_success())
+        .map(|response| response.value)
+}
 
 pub(crate) fn origin_from_line_id(line_id: &str) -> Option<&str> {
     let origin = line_id.strip_prefix(LINE_PREFIX)?;
@@ -84,9 +100,18 @@ async fn read(
     let usage_url = format!("{origin}{KEY_USAGE_PATH}");
     let (models, status, subscription, usage) = tokio::join!(
         send_json(Method::GET, &models_url, Some(api_key), None),
-        send_json(Method::GET, &status_url, None, None),
-        send_json(Method::GET, &subscription_url, Some(api_key), None),
-        send_json(Method::GET, &usage_url, Some(api_key), None),
+        optional(
+            send_json(Method::GET, &status_url, None, None),
+            EXTRAS_DEADLINE
+        ),
+        optional(
+            send_json(Method::GET, &subscription_url, Some(api_key), None),
+            EXTRAS_DEADLINE,
+        ),
+        optional(
+            send_json(Method::GET, &usage_url, Some(api_key), None),
+            EXTRAS_DEADLINE
+        ),
     );
     let models = models.map_err(AccountProjectionFailure::Transport)?;
     if key_was_refused(models.status) {
@@ -95,18 +120,12 @@ async fn read(
     if !models.status.is_success() {
         return Err(AccountProjectionFailure::BackendUnavailable);
     }
-    let success = |response: Result<JsonResponse, TransportFailure>| {
-        response
-            .ok()
-            .filter(|response| response.status.is_success())
-            .map(|response| response.value)
-    };
     Ok(project(
         request_id,
         &models.value,
-        success(status).as_ref(),
-        success(subscription).as_ref(),
-        success(usage).as_ref(),
+        status.as_ref(),
+        subscription.as_ref(),
+        usage.as_ref(),
     ))
 }
 
@@ -311,6 +330,32 @@ mod tests {
             .join("../src/account/fixtures")
             .join(name);
         serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap()
+    }
+
+    #[tokio::test]
+    async fn an_optional_request_that_never_answers_is_dropped_not_awaited() {
+        let started = std::time::Instant::now();
+        let hung = optional(std::future::pending(), Duration::from_millis(20)).await;
+        assert!(hung.is_none());
+        assert!(started.elapsed() < Duration::from_secs(2));
+
+        let answer = |status| async move {
+            Ok(JsonResponse {
+                status,
+                value: json!({"ok": true}),
+            })
+        };
+        let deadline = Duration::from_secs(2);
+        assert_eq!(
+            optional(answer(StatusCode::OK), deadline).await,
+            Some(json!({"ok": true}))
+        );
+        assert!(optional(answer(StatusCode::NOT_FOUND), deadline)
+            .await
+            .is_none());
+        assert!(optional(async { Err(TransportFailure::Network) }, deadline)
+            .await
+            .is_none());
     }
 
     fn projected(

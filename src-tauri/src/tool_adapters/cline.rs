@@ -299,6 +299,28 @@ pub(crate) fn points_at_our_bridge(bytes: &[u8]) -> bool {
     })
 }
 
+/// 接好之后文件和我们写下的不再一字不差，但我们那一项还原样在、选中的也还是
+/// 它：Cline 每次运行都改 `updatedAt`、重排键，用户也可能加了别家。这都不算
+/// 「被改过」。不是 Cline 的文件就是 `None`。
+pub(crate) fn still_ours(path: &Path, ours: &[u8], now: &[u8]) -> Option<bool> {
+    if !is_provider_settings(path) {
+        return None;
+    }
+    let ours = parse_document(Some(ours)).ok()?;
+    let written = &ours["providers"][PROVIDER_ID]["settings"];
+    if !written.is_object() {
+        return None;
+    }
+    Some(parse_document(Some(now)).is_ok_and(|now| {
+        let entry = &now["providers"][PROVIDER_ID];
+        now["lastUsedProvider"].as_str() == Some(PROVIDER_ID)
+            && &entry["settings"] == written
+            // 这两个少一个，Cline 就把整项当坏的丢掉：那就不是接好的了。
+            && entry["updatedAt"].is_string()
+            && entry["tokenSource"].is_string()
+    }))
+}
+
 /// 改回原样之前：Cline 只是把 `updatedAt` 改成了它上次运行的时间，别的没动，
 /// 那就当它没改过。不这样做，三方合并会把这个时间当成「用户后来改的」留下，
 /// 剩一项只有时间、没有设置的空壳。

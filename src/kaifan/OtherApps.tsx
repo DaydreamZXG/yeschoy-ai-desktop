@@ -91,6 +91,11 @@ export function OtherApps({ lineId, preset, modelId, viaKey, byHand }: Props) {
           {t("kaifan.join.other.noAddress")}
         </p>
       )}
+      {address && !modelId && (
+        <p className="mend" role="note" data-testid="kaifan-join-other-nomodel">
+          {t("kaifan.join.other.noModel")}
+        </p>
+      )}
       {address && preset?.sessionHeader && (
         <p className="mend" role="note" data-testid="kaifan-join-other-header">
           {t("kaifan.join.other.sessionHeader", {

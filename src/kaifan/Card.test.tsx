@@ -174,11 +174,40 @@ describe("角色名片", () => {
     expect(screen.getByText(/再去接入一次/)).toBeInTheDocument();
   });
 
+  it("没在名片上挑过：写的就是接好的那个型号和方案，不说要重新接入", () => {
+    setup({
+      connections: [saved({ modelId: OPUS })],
+      ids: [SONNET, OPUS],
+    });
+    expect(option(/Opus/)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByText(/再去接入一次/)).toBeNull();
+  });
+
+  it("接好的应用走的不是默认方案：名片上选中的也是那个，不说要重新接入", () => {
+    setup({ connections: [saved({ billingGroup: "官转" })] });
+    expect(option(/官转/)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByText(/再去接入一次/)).toBeNull();
+  });
+
+  it("名片上换了型号：再接入一次真的会换，才提醒", () => {
+    setup({
+      connections: [saved()],
+      picks: { model: { cla: OPUS }, plan: {} },
+    });
+    expect(screen.getByText(/再去接入一次/)).toBeInTheDocument();
+  });
+
   it("还没接任何应用：照实说；点按钮让她去接入", () => {
     const props = setup();
     expect(screen.getByText("还没接任何应用。")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("kaifan-card-join"));
-    expect(props.onJoin).toHaveBeenCalled();
+    expect(props.onJoin).toHaveBeenCalledWith(undefined);
+  });
+
+  it("已经在干活：去接入时带上名片说的那个应用，接入屏讲的是同一次接入", () => {
+    const props = setup({ connections: [saved()] });
+    fireEvent.click(screen.getByTestId("kaifan-card-join"));
+    expect(props.onJoin).toHaveBeenCalledWith(saved().toolId);
   });
 
   it("转校生：没有擅长方向可写，型号和价格照常", () => {

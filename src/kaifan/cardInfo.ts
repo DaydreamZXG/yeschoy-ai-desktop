@@ -1,4 +1,5 @@
 import type { AccountModel, BillingGroup } from "../account/session";
+import type { ToolConnection } from "../configuration/connections";
 import { hasReviewedCapabilities } from "../model-profiles/profile";
 import type { RosterId } from "./roster";
 
@@ -20,8 +21,14 @@ export function discountOf(ratio: number | null | undefined): Discount | null {
   if (ratio === null || ratio === undefined) return null;
   if (!Number.isFinite(ratio) || ratio < 0) return null;
   if (ratio === 0) return { kind: "free" };
+  // 只贵一点点的（1.03、1.04）写到两位小数：取一位会写成「1 倍」，等于说原价。
   if (ratio > 1.025)
-    return { kind: "over", times: Math.round(ratio * 10) / 10 };
+    return {
+      kind: "over",
+      times:
+        Math.round(ratio * (ratio < 1.095 ? 100 : 10)) /
+        (ratio < 1.095 ? 100 : 10),
+    };
   // 取到半折；不到一折的写到小数点后一位，免得写成「0 折」。
   const half = Math.round(ratio * 20) / 2;
   if (half >= 10) return { kind: "full" };
@@ -184,6 +191,24 @@ export function pickedModel(
     ids.find((id) => hasReviewedCapabilities(id)) ??
     ids[0]
   );
+}
+
+/**
+ * 她去接入这个应用时会用哪个型号：名片上给她挑过的优先；没挑过，接过的沿用；
+ * 都没有就挑一个资料齐的。名片和接入屏都问这里，两边说的才是同一个。
+ */
+export function joinModel(
+  who: RosterId,
+  ids: string[] | undefined,
+  saved: Pick<ToolConnection, "state" | "modelId"> | undefined,
+  picks: CardPicks,
+): string {
+  if (!ids?.length) return "";
+  const chosen = chosenModel(who, ids, picks);
+  if (chosen) return chosen;
+  if (saved && saved.state !== "not_connected" && ids.includes(saved.modelId))
+    return saved.modelId;
+  return pickedModel(who, ids, picks);
 }
 
 /** 这个型号挑过的方案；站点已经不提供了就不算。 */

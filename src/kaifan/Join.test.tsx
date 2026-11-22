@@ -1,5 +1,6 @@
 import {
   act,
+  cleanup,
   fireEvent,
   render,
   screen,
@@ -18,6 +19,7 @@ import {
   cancelDesktopToolActivation,
   scanActivationTargets,
   type ActivationTarget,
+  type ActivationTargetScan,
   type ToolActivationProjection,
 } from "../configuration/activation";
 import type { ToolConnection } from "../configuration/connections";
@@ -214,9 +216,36 @@ describe("接入：选应用、选人、点一下", () => {
       who: "ds",
       modelId: "deepseek-v4-flash",
       opened: true,
+      terminal: false,
       skipped: [],
     });
     expect(props.onSettled).toHaveBeenCalled();
+  });
+
+  it("挑中的那一份是命令行版（Codex 只装了命令行）：登场时知道开的是终端", async () => {
+    found([
+      target("codex_desktop", {
+        installations: [
+          {
+            installationId: "cli",
+            label: "命令行",
+            version: "",
+            supported: true,
+            recommended: true,
+            terminal: true,
+          },
+        ],
+      }),
+    ]);
+    const props = setup({ initialApp: "codex_desktop" });
+    await ready();
+    answer("ready", "configuration_ready");
+    fireEvent.click(go());
+    await waitFor(() =>
+      expect(props.onJoined).toHaveBeenCalledWith(
+        expect.objectContaining({ toolId: "codex_desktop", terminal: true }),
+      ),
+    );
   });
 
   it("一个人有好几个型号时可以换", async () => {
@@ -614,6 +643,63 @@ describe("接入：选应用、选人、点一下", () => {
     fireEvent.click(install);
     expect(installer).toHaveBeenCalledWith("claude_desktop", "help");
     expect(activate).not.toHaveBeenCalled();
+  });
+
+  it("装了但缺东西：说「没装完整」，按钮是重新装，不说成没装", async () => {
+    found([
+      target("codex_desktop"),
+      target("claude_desktop", {
+        status: "missing_runtime",
+        installations: [
+          {
+            installationId: "a",
+            label: "系统应用",
+            version: "1",
+            supported: false,
+            recommended: false,
+          },
+        ],
+      }),
+    ]);
+    setup({ initialApp: "claude_desktop" });
+    await screen.findByRole("button", { name: /去官网重新装/ });
+    const chip = screen.getByRole("button", { name: /^Claude Desktop/ });
+    expect(chip).toHaveTextContent("没装完整");
+    expect(chip).not.toHaveTextContent("还没装");
+    expect(screen.queryByRole("button", { name: /去官网下载/ })).toBeNull();
+  });
+
+  it("装了好几份的也算装了：默认选中它，不跳过去选后面的", async () => {
+    const two = ["a", "b"].map((installationId) => ({
+      installationId,
+      label: installationId,
+      version: "1",
+      supported: true,
+      recommended: installationId === "a",
+    }));
+    found([
+      target("claude_desktop", {
+        status: "selection_required",
+        installations: two,
+      }),
+      target("codex_desktop"),
+    ]);
+    setup();
+    await ready();
+    expect(
+      screen.getByRole("button", { name: /^Claude Desktop/ }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("这个应用接不了（和型号无关）：带回去换应用，不让人换型号", async () => {
+    setup();
+    await ready();
+    answer("unsupported_profile", "profile_not_supported");
+    fireEvent.click(go());
+    await waitFor(() => expect(says()).toContain("换一个应用"));
+    expect(says()).not.toContain("换个型号");
+    fireEvent.click(screen.getByRole("button", { name: "回去换应用" }));
+    expect(screen.getByTestId("kaifan-join").dataset.stage).toBe("pick");
   });
 
   it("去官网装完回到窗口：自己再找一遍，找到了就能直接接", async () => {
@@ -1021,6 +1107,73 @@ describe("接入：应用多了不堆在一起", () => {
       expect(chip(name)).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /收起/ }));
     expect(chip(/^DSH web/)).toBeNull();
+  });
+
+  it("展开过不常用的，关掉再打开：又是收着的", async () => {
+    found([target("claude_desktop")]);
+    const props = setup();
+    cleanup();
+    const view = render(<Join {...props} />);
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: /还有 \d 个/ }));
+    view.rerender(<Join {...props} open={false} />);
+    view.rerender(<Join {...props} open />);
+    await ready();
+    expect(chip(/^Cline/)).toBeNull();
+    expect(screen.getByRole("button", { name: /还有 \d 个/ })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  it("还在找应用时点了「别的应用」：找完也不把要填的型号换掉", async () => {
+    const OPUS = "claude-opus-4-1-20250805";
+    let done: (scan: ActivationTargetScan) => void = () => {};
+    scan.mockReturnValue(
+      new Promise<ActivationTargetScan>((ok) => (done = ok)),
+    );
+    setup({
+      lineId: "station_key:https://relay.example.com" as never,
+      models: [...MODELS, model(OPUS)],
+      connections: [
+        {
+          toolId: "codex_desktop",
+          state: "connected",
+          modelId: OPUS,
+          lineId: "",
+          billingGroup: "default",
+          updatedAtEpochMs: 1,
+          restoreMode: "original",
+          requiresBackground: false,
+          reasonCode: "",
+        },
+      ],
+    });
+    fireEvent.click(screen.getByRole("button", { name: "别的应用" }));
+    const panel = screen.getByTestId("kaifan-join-other");
+    expect(panel).toHaveTextContent("claude-sonnet-4-5-20250929");
+    await act(async () =>
+      done({
+        requestId: "scan",
+        schemaVersion: 1,
+        platform: "macos",
+        targets: [target("codex_desktop")],
+      }),
+    );
+    expect(panel).toHaveTextContent("claude-sonnet-4-5-20250929");
+    expect(panel).not.toHaveTextContent(OPUS);
+  });
+
+  it("别的应用：站点这次没列出型号，说清型号给不出来，不装作都齐了", async () => {
+    found([target("claude_desktop")]);
+    setup({
+      lineId: "station_key:https://relay.example.com" as never,
+      models: [],
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "别的应用" }));
+    expect(screen.getByTestId("kaifan-join-other-nomodel")).toHaveTextContent(
+      "型号这一栏现在给不出来",
+    );
   });
 
   it("从首页点进来的不常用应用：选着它的时候不收它", async () => {
@@ -1433,6 +1586,7 @@ describe("角色登场", () => {
     who: "cla" as const,
     modelId: "claude-sonnet-4-5-20250929",
     opened: true,
+    terminal: false,
     skipped: [] as string[],
   };
   const show = (patch: Partial<Parameters<typeof Reveal>[0]> = {}) => {
@@ -1487,8 +1641,15 @@ describe("角色登场", () => {
   });
 
   it("终端里用的应用：说的是终端窗口", () => {
-    show({ joined: { ...joined, toolId: "claude_code" } });
+    show({ joined: { ...joined, toolId: "claude_code", terminal: true } });
     expect(screen.getByTestId("kaifan-reveal")).toHaveTextContent("终端窗口");
+  });
+
+  it("Codex 只装了命令行版：说的也是终端窗口，不说「Codex 已经打开」", () => {
+    show({ joined: { ...joined, toolId: "codex_desktop", terminal: true } });
+    const reveal = screen.getByTestId("kaifan-reveal");
+    expect(reveal).toHaveTextContent("终端窗口");
+    expect(reveal).not.toHaveTextContent("已经替你打开，现在可以直接用了");
   });
 
   it("名单里有型号这次没接上：要说出来，不当作全成了", () => {

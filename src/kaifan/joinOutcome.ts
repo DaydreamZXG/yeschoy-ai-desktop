@@ -22,6 +22,7 @@ export type JoinKind =
   | "chooseInstall"
   | "runtime"
   | "otherModel"
+  | "otherApp"
   | "overridden"
   | "keychain"
   | "stationDown"
@@ -178,8 +179,11 @@ function judge(result: Result): JoinOutcome {
     case "missing_runtime":
       return outcome("runtime", "look");
     case "unsupported_model":
-    case "unsupported_profile":
       return outcome("otherModel", "pick");
+    case "unsupported_profile":
+      // 是这个应用（这台电脑上的这一份）我们接不了，和型号无关：换型号、换人
+      // 再来还是同一个结果，所以让他回去换应用。
+      return outcome("otherApp", "look");
     case "external_override":
       // 用户自己（或别的工具）把这个应用的设置指到了别处。我们没有动它，也不替
       // 他去掉那项配置；去掉以后再接一次就行。
