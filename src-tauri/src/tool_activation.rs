@@ -15,8 +15,9 @@ use tauri::Emitter;
 
 use crate::{
     account_v2::{
-        ensure_session_epoch, native_account_json, native_session_access, native_session_epoch,
-        station_connect_origin_from_line_id, AccountV2State, NativeSessionFailure,
+        ensure_session_epoch, line_id_for_station_connect_origin, native_account_json,
+        native_session_access, native_session_epoch, station_connect_origin_from_line_id,
+        AccountV2State, NativeSessionFailure,
     },
     claude_bridge::ClaudeTransport,
     connection_recovery::{self, Receipt, Store},
@@ -1251,6 +1252,11 @@ fn reusable_token(
     model_ids: &[String],
     exact: bool,
 ) -> bool {
+    // A station on the neutral contract scopes a key by plan only: there is no
+    // model list to compare, so an active key on the right plan is reusable.
+    if token.get("plan_scoped").and_then(Value::as_bool) == Some(true) {
+        return token.get("status").and_then(Value::as_i64) == Some(1);
+    }
     let expiry = token
         .get("expired_time")
         .and_then(Value::as_i64)
@@ -1286,21 +1292,37 @@ fn token_request(name: &str, group: &str, model_ids: &[String]) -> Value {
     })
 }
 
-fn normalize_api_key(value: &str) -> Option<String> {
+/// A secret that can be written into an application's configuration.
+fn usable_api_key(value: &str) -> Option<&str> {
     let value = value.trim();
-    if value.len() < 16
-        || value.len() > 256
-        || value
+    (value.len() >= 16
+        && value.len() <= 256
+        && !value
             .chars()
-            .any(|character| character.is_control() || character.is_whitespace())
-    {
-        return None;
-    }
+            .any(|character| character.is_control() || character.is_whitespace()))
+    .then_some(value)
+}
+
+/// The original contract returns a key without its `sk-` prefix.
+fn normalize_api_key(value: &str) -> Option<String> {
+    let value = usable_api_key(value)?;
     Some(if value.starts_with("sk-") {
         value.to_owned()
     } else {
         format!("sk-{value}")
     })
+}
+
+/// The key in a reveal reply. A station on the neutral contract returns the
+/// secret exactly as applications must send it, and says so with `verbatim`.
+fn revealed_api_key(reply: &Value) -> Option<String> {
+    let reply = data(reply)?.as_object()?;
+    let key = reply.get("key")?.as_str()?;
+    if reply.get("verbatim").and_then(Value::as_bool) == Some(true) {
+        usable_api_key(key).map(str::to_owned)
+    } else {
+        normalize_api_key(key)
+    }
 }
 
 async fn fetch_token_key(
@@ -1318,12 +1340,7 @@ async fn fetch_token_key(
         log_token_rejection("key", status, &value);
         return Err(ActivationFailure::ServerUnavailable);
     }
-    data(&value)
-        .and_then(Value::as_object)
-        .and_then(|value| value.get("key"))
-        .and_then(Value::as_str)
-        .and_then(normalize_api_key)
-        .ok_or(ActivationFailure::ServerUnavailable)
+    revealed_api_key(&value).ok_or(ActivationFailure::ServerUnavailable)
 }
 
 async fn acquire_token(
@@ -3673,11 +3690,7 @@ pub async fn manage_tool_connections_v1(
                     (Some(credential), Some(epoch)) => {
                         match native_session_access(
                             &account_state,
-                            if credential.origin == "https://api.yeschoy.com" {
-                                "global_accelerated"
-                            } else {
-                                "mainland_optimized"
-                            },
+                            &line_id_for_station_connect_origin(&credential.origin),
                             epoch,
                         )
                         .await
@@ -5068,6 +5081,34 @@ mod tests {
         let tokens = api.tokens.lock().unwrap();
         assert_eq!(tokens.len(), 2, "old key stays valid until local commit");
         assert_eq!(tokens[1]["model_limits"], "model-c");
+    }
+
+    #[test]
+    fn a_key_the_station_returns_whole_is_written_as_issued() {
+        let reply = |data: Value| json!({"success": true, "data": data});
+        // The original contract strips the prefix, so it is put back.
+        assert_eq!(
+            revealed_api_key(&reply(json!({"key": "0123456789abcdef"}))).as_deref(),
+            Some("sk-0123456789abcdef")
+        );
+        // A station that issues its own prefix is authenticated with it.
+        assert_eq!(
+            revealed_api_key(&reply(
+                json!({"key": "relay_0123456789abcdef", "verbatim": true})
+            ))
+            .as_deref(),
+            Some("relay_0123456789abcdef")
+        );
+        assert_eq!(
+            revealed_api_key(&reply(json!({"key": "short", "verbatim": true}))),
+            None
+        );
+        assert_eq!(
+            revealed_api_key(&reply(
+                json!({"key": "has a space 0123456789", "verbatim": true})
+            )),
+            None
+        );
     }
 
     #[test]

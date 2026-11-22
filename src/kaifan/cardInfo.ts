@@ -1,4 +1,9 @@
-import type { AccountModel, BillingGroup } from "../account/session";
+import type {
+  AccountModel,
+  BillingGroup,
+  PlanPricing,
+} from "../account/session";
+import { billingTiers } from "../configuration/billing";
 import type { ToolConnection } from "../configuration/connections";
 import { hasReviewedCapabilities } from "../model-profiles/profile";
 import type { RosterId } from "./roster";
@@ -37,8 +42,25 @@ export function discountOf(ratio: number | null | undefined): Discount | null {
   return { kind: "off", tenths: half };
 }
 
+/** 站点给方案起的名字；只有按中立约定接入的站才有，别的站方案名就是 id。 */
+export function planLabelOf(
+  models: readonly AccountModel[],
+  id: string,
+): string | null {
+  for (const model of models)
+    for (const group of model.billing?.groups ?? [])
+      if (group.id === id && group.plan?.label) return group.plan.label;
+  return null;
+}
+
 export interface Plan {
   id: string;
+  /** 月卡方案。 */
+  subscription: boolean;
+  /** 只有经过这个客户端才是这个价。 */
+  appOnly: boolean;
+  /** 站点直接给的这个方案的价；有它就不用官方价乘倍率去推。 */
+  pricing?: PlanPricing;
   ratio: number | null;
   discount: Discount | null;
   /** 几个方案里明确最便宜的那个。只有一个、或者分不出高低时都不标。 */
@@ -60,6 +82,9 @@ export function plansOf(model: AccountModel | undefined): Plan[] {
     known.filter((ratio) => ratio === lowest).length === 1;
   return groups.map((group) => ({
     id: group.id,
+    subscription: group.plan?.subscription === true,
+    appOnly: group.plan?.appOnly === true,
+    ...(group.plan ? { pricing: group.plan } : {}),
     ratio: group.ratio,
     discount: discountOf(group.ratio),
     cheapest: clear && group.ratio === lowest,
@@ -67,19 +92,46 @@ export function plansOf(model: AccountModel | undefined): Plan[] {
 }
 
 export interface Prices {
-  officialInput: number;
-  officialOutput: number;
+  /** 官方价；站点直接给了方案的价、却没给官方价时是 null。 */
+  officialInput: number | null;
+  officialOutput: number | null;
   /** 选中的方案下的价；这个方案的倍率站点没给时是 null。 */
   planInput: number | null;
   planOutput: number | null;
 }
 
-/** 每百万 tokens 的价（元）。站点没给官方价就是 null，界面照实说没有。 */
+const price = (value: number | null | undefined): number | null =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? value
+    : null;
+
+/**
+ * 每百万 tokens 的价。站点没给就是 null，界面照实说没有。
+ *
+ * 按中立约定接入的站，每个方案的价是站点直接给的，官方价可给可不给：
+ * 方案的价照写，官方价没给就说没给。别的站只给官方价和倍率，方案的价是乘出来的。
+ */
 export function pricesOf(
   model: AccountModel | undefined,
   ratio: number | null | undefined,
+  pricing?: PlanPricing,
 ): Prices | null {
-  if (!model?.pricingAvailable) return null;
+  if (!model) return null;
+  if (pricing) {
+    const planInput = price(pricing.inputPerMillion);
+    const planOutput = price(pricing.outputPerMillion);
+    if (planInput === null || planOutput === null) return null;
+    const officialInput = price(model.billing?.baseInputUsd);
+    const officialOutput = price(model.billing?.baseOutputUsd);
+    const official = officialInput !== null && officialOutput !== null;
+    return {
+      officialInput: official ? officialInput : null,
+      officialOutput: official ? officialOutput : null,
+      planInput,
+      planOutput,
+    };
+  }
+  if (!model.pricingAvailable) return null;
   const input = model.officialInputCnyPerMillion.trim();
   const output = model.officialOutputCnyPerMillion.trim();
   // 空串是「没给」，不是 0。
@@ -106,8 +158,85 @@ export function pricesOf(
   };
 }
 
-export function yuan(amount: number): string {
-  return `¥${new Intl.NumberFormat("zh-CN", {
+/** 分档收费的型号：一档一个价。按 tokens 算和按次算的不会混在一个型号里。 */
+export type TieredPrices =
+  | {
+      unit: "tokens";
+      tiers: ({ name: string } & Prices & {
+          officialInput: number;
+          officialOutput: number;
+        })[];
+    }
+  | {
+      unit: "request";
+      tiers: { name: string; official: number; plan: number | null }[];
+    };
+
+/**
+ * 站点按档收费（高峰和平时、长对话和短对话）或者按次收费的型号的价（元）。
+ *
+ * 这种型号站点不给一个单一的官方价，给的是一条算式。算式读得懂就一档一档列出来；
+ * 读不懂、或者汇率没给，就是 null，界面照实说没有。档位的名字是站点起的，原样写。
+ */
+export function tieredPricesOf(
+  model: AccountModel | undefined,
+  ratio: number | null | undefined,
+  fx: string,
+): TieredPrices | null {
+  const billing = model?.billing;
+  const rate = Number(fx);
+  if (!billing || !fx.trim() || !Number.isFinite(rate) || rate <= 0)
+    return null;
+  const rows =
+    model.billingMode === "tiered_expr"
+      ? billingTiers(billing.expression)
+      : model.billingMode === "per_request" && billing.requestUsd !== null
+        ? [{ name: "", rates: { request: billing.requestUsd } }]
+        : [];
+  if (!rows.length) return null;
+  const usable =
+    ratio !== null &&
+    ratio !== undefined &&
+    Number.isFinite(ratio) &&
+    ratio >= 0;
+  const plan = (official: number) => (usable ? official * ratio : null);
+  // 只有一档就不用写名字。
+  const name = (row: { name: string }) => (rows.length > 1 ? row.name : "");
+  const priced = (value: number | undefined): value is number =>
+    value !== undefined && Number.isFinite(value) && value >= 0;
+  if (rows.every((row) => priced(row.rates.request)))
+    return {
+      unit: "request",
+      tiers: rows.map((row) => ({
+        name: name(row),
+        official: row.rates.request * rate,
+        plan: plan(row.rates.request * rate),
+      })),
+    };
+  if (rows.every((row) => priced(row.rates.p) && priced(row.rates.c)))
+    return {
+      unit: "tokens",
+      tiers: rows.map((row) => ({
+        name: name(row),
+        officialInput: row.rates.p * rate,
+        officialOutput: row.rates.c * rate,
+        planInput: plan(row.rates.p * rate),
+        planOutput: plan(row.rates.c * rate),
+      })),
+    };
+  return null;
+}
+
+/** 名片上的价是什么货币：按中立约定接入的站自己说，别的站都换算成了人民币。 */
+export function currencyOf(model: AccountModel | undefined): "CNY" | "USD" {
+  return model?.billing?.groups.find((group) => group.plan)?.plan?.currency ===
+    "USD"
+    ? "USD"
+    : "CNY";
+}
+
+export function yuan(amount: number, currency: "CNY" | "USD" = "CNY"): string {
+  return `${currency === "USD" ? "$" : "¥"}${new Intl.NumberFormat("zh-CN", {
     minimumFractionDigits: 2,
     maximumFractionDigits: amount > 0 && amount < 0.1 ? 4 : 2,
   }).format(amount)}`;

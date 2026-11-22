@@ -214,6 +214,7 @@ pub(crate) fn app_headers(headers: &axum::http::HeaderMap) -> AppHeaders {
         .filter(|(name, _)| {
             let name = name.as_str();
             !DROPPED_APP_HEADERS.contains(&name)
+                && !crate::account_v2::app_token::is_reserved(name)
                 && !name.starts_with("proxy-")
                 && !name.starts_with("x-forwarded-")
         })
