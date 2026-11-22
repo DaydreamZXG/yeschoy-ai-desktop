@@ -92,20 +92,46 @@ export function plansOf(model: AccountModel | undefined): Plan[] {
 }
 
 export interface Prices {
-  officialInput: number;
-  officialOutput: number;
+  /** 官方价；站点直接给了方案的价、却没给官方价时是 null。 */
+  officialInput: number | null;
+  officialOutput: number | null;
   /** 选中的方案下的价；这个方案的倍率站点没给时是 null。 */
   planInput: number | null;
   planOutput: number | null;
 }
 
-/** 每百万 tokens 的价（元）。站点没给官方价就是 null，界面照实说没有。 */
+const price = (value: number | null | undefined): number | null =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? value
+    : null;
+
+/**
+ * 每百万 tokens 的价。站点没给就是 null，界面照实说没有。
+ *
+ * 按中立约定接入的站，每个方案的价是站点直接给的，官方价可给可不给：
+ * 方案的价照写，官方价没给就说没给。别的站只给官方价和倍率，方案的价是乘出来的。
+ */
 export function pricesOf(
   model: AccountModel | undefined,
   ratio: number | null | undefined,
   pricing?: PlanPricing,
 ): Prices | null {
-  if (!model?.pricingAvailable) return null;
+  if (!model) return null;
+  if (pricing) {
+    const planInput = price(pricing.inputPerMillion);
+    const planOutput = price(pricing.outputPerMillion);
+    if (planInput === null || planOutput === null) return null;
+    const officialInput = price(model.billing?.baseInputUsd);
+    const officialOutput = price(model.billing?.baseOutputUsd);
+    const official = officialInput !== null && officialOutput !== null;
+    return {
+      officialInput: official ? officialInput : null,
+      officialOutput: official ? officialOutput : null,
+      planInput,
+      planOutput,
+    };
+  }
+  if (!model.pricingAvailable) return null;
   const input = model.officialInputCnyPerMillion.trim();
   const output = model.officialOutputCnyPerMillion.trim();
   // 空串是「没给」，不是 0。
@@ -127,16 +153,20 @@ export function pricesOf(
   return {
     officialInput,
     officialOutput,
-    planInput:
-      pricing?.inputPerMillion ?? (usable ? officialInput * ratio : null),
-    planOutput:
-      pricing?.outputPerMillion ?? (usable ? officialOutput * ratio : null),
+    planInput: usable ? officialInput * ratio : null,
+    planOutput: usable ? officialOutput * ratio : null,
   };
 }
 
 /** 分档收费的型号：一档一个价。按 tokens 算和按次算的不会混在一个型号里。 */
 export type TieredPrices =
-  | { unit: "tokens"; tiers: ({ name: string } & Prices)[] }
+  | {
+      unit: "tokens";
+      tiers: ({ name: string } & Prices & {
+          officialInput: number;
+          officialOutput: number;
+        })[];
+    }
   | {
       unit: "request";
       tiers: { name: string; official: number; plan: number | null }[];

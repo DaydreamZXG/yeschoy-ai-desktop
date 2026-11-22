@@ -75,6 +75,31 @@ describe("按中立约定接入的站的方案", () => {
     ).toMatchObject({ planInput: 10, planOutput: 60, officialOutput: 100 });
   });
 
+  it("站点没给官方价，方案的价照样写", () => {
+    const bare = model("CNY");
+    bare.pricingAvailable = false;
+    bare.officialInputCnyPerMillion = "";
+    bare.officialOutputCnyPerMillion = "";
+    bare.actualInputCnyPerMillion = "";
+    bare.actualOutputCnyPerMillion = "";
+    bare.billing!.baseInputUsd = null;
+    bare.billing!.baseOutputUsd = null;
+    const [standard] = plansOf(bare);
+    expect(pricesOf(bare, null, standard.pricing)).toEqual({
+      officialInput: null,
+      officialOutput: null,
+      planInput: 10,
+      planOutput: 60,
+    });
+    // 方案自己没有按 tokens 的价（比如按次收费）就没有这一栏。
+    expect(
+      pricesOf(bare, null, {
+        ...standard.pricing!,
+        inputPerMillion: undefined,
+      }),
+    ).toBeNull();
+  });
+
   it("站点用美元计价就写美元", () => {
     expect(currencyOf(model("USD"))).toBe("USD");
     expect(currencyOf(model("CNY"))).toBe("CNY");

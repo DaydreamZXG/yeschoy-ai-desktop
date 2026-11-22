@@ -257,8 +257,8 @@ export function Card({
             <b>{t("kaifan.card.input")}</b>
             <b>{t("kaifan.card.output")}</b>
             <span>{t("kaifan.card.official")}</span>
-            <b>{money(prices.officialInput)}</b>
-            <b>{money(prices.officialOutput)}</b>
+            <b>{amount(prices.officialInput)}</b>
+            <b>{amount(prices.officialOutput)}</b>
             <span>{t("kaifan.card.thisPlan")}</span>
             <b>{amount(prices.planInput)}</b>
             <b>{amount(prices.planOutput)}</b>
