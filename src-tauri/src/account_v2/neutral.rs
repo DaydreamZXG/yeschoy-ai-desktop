@@ -549,17 +549,25 @@ pub(super) fn models(payload: Option<&Value>) -> Option<Vec<AccountModel>> {
                 let first = entry.groups.first().and_then(|group| group.plan.as_ref());
                 let per_request = official_input.is_none()
                     && (request.is_some() || first.is_some_and(|plan| plan.per_request.is_some()));
-                let shown = |value: Option<f64>| value.map(decimal).unwrap_or_default();
+                // The four headline prices are given together or not at all,
+                // as on the original contract; each plan carries its own.
+                let actual = first.map(|p| (p.input_per_million, p.output_per_million));
+                let headline = match (official_input, official_output, actual) {
+                    (Some(a), Some(b), Some((Some(c), Some(d)))) => Some([a, b, c, d]),
+                    _ => None,
+                };
+                let shown =
+                    |index: usize| headline.map(|all| decimal(all[index])).unwrap_or_default();
                 AccountModel {
                     id,
                     description: String::new(),
                     billing_mode: if per_request { "per_request" } else { "ratio" },
                     supported_endpoint_types: entry.endpoints_known.then_some(entry.endpoints),
-                    pricing_available: official_input.is_some() && official_output.is_some(),
-                    official_input_cny_per_million: shown(official_input),
-                    official_output_cny_per_million: shown(official_output),
-                    actual_input_cny_per_million: shown(first.and_then(|p| p.input_per_million)),
-                    actual_output_cny_per_million: shown(first.and_then(|p| p.output_per_million)),
+                    pricing_available: headline.is_some(),
+                    official_input_cny_per_million: shown(0),
+                    official_output_cny_per_million: shown(1),
+                    actual_input_cny_per_million: shown(2),
+                    actual_output_cny_per_million: shown(3),
                     billing: Some(ModelBilling {
                         groups: entry.groups,
                         base_input_usd: official_input,
@@ -751,11 +759,12 @@ mod tests {
              "models": [
                 {"id": "claude", "price": {"input": 5.0, "output": 25.0},
                  "official": {"input": 20.0, "output": 100.0}},
-                {"id": "image", "price": {"perRequest": 0.2}}
+                {"id": "image", "price": {"perRequest": 0.2}},
+                {"id": "unlisted", "price": {"input": 2.0, "output": 8.0}}
              ]}
         ]}});
         let models = models(Some(&plans)).unwrap();
-        assert_eq!(models.len(), 2);
+        assert_eq!(models.len(), 3);
         let claude = models.iter().find(|m| m.id == "claude").unwrap();
         assert_eq!(claude.billing_mode, "ratio");
         assert!(claude.pricing_available);
@@ -776,6 +785,16 @@ mod tests {
         let garden = groups[1].plan.as_ref().unwrap();
         assert!(garden.app_only && garden.subscription);
         assert_eq!(garden.peak[0].multiplier, 1.5);
+
+        // Without a list price there is no headline to compare against; the
+        // plan still says what it charges.
+        let unlisted = models.iter().find(|m| m.id == "unlisted").unwrap();
+        assert!(!unlisted.pricing_available);
+        assert_eq!(unlisted.official_input_cny_per_million, "");
+        assert_eq!(unlisted.actual_input_cny_per_million, "");
+        let plan = unlisted.billing.as_ref().unwrap().groups[0].plan.as_ref();
+        assert_eq!(plan.unwrap().input_per_million, Some(2.0));
+        assert_eq!(plan.unwrap().output_per_million, Some(8.0));
 
         let image = models.iter().find(|m| m.id == "image").unwrap();
         assert_eq!(image.billing_mode, "per_request");

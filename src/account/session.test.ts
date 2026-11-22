@@ -240,6 +240,107 @@ describe("account v2 renderer boundary", () => {
     expect(parsed.models[1].supportedEndpointTypes).toBeUndefined();
   });
 
+  it("decodes the account of a station on the neutral contract", () => {
+    const plan = {
+      label: "Standard",
+      currency: "USD",
+      inputPerMillion: 1.5,
+      outputPerMillion: 7.5,
+      appOnly: false,
+      subscription: true,
+      peak: [
+        { start: "09:00", end: "18:00", multiplier: 1.5, weekdaysOnly: false },
+      ],
+      longContext: [{ fromTokens: 200000, inputPerMillion: 3 }],
+    };
+    // 原生侧给的样子：站点没给的字段不出现，四个标价要么全有要么全空。
+    const models = [
+      {
+        id: "priced",
+        description: "",
+        billingMode: "ratio",
+        supportedEndpointTypes: ["anthropic"],
+        pricingAvailable: true,
+        officialInputCnyPerMillion: "3",
+        officialOutputCnyPerMillion: "15",
+        actualInputCnyPerMillion: "1.5",
+        actualOutputCnyPerMillion: "7.5",
+        billing: {
+          groups: [
+            {
+              id: "7",
+              description: "",
+              plan,
+              ratio: 0.5,
+              supportedEndpointTypes: ["anthropic"],
+            },
+          ],
+          baseInputUsd: 3,
+          baseOutputUsd: 15,
+          expression: "",
+        },
+      },
+      {
+        id: "no-list-price",
+        description: "",
+        billingMode: "ratio",
+        pricingAvailable: false,
+        officialInputCnyPerMillion: "",
+        officialOutputCnyPerMillion: "",
+        actualInputCnyPerMillion: "",
+        actualOutputCnyPerMillion: "",
+        billing: {
+          groups: [{ id: "7", description: "", plan }],
+          expression: "",
+        },
+      },
+    ];
+    const account = signedIn();
+    const raw = {
+      ...account,
+      schemaVersion: 6,
+      comparisonFx: "1",
+      models,
+      usageLog: usageLogPayload(),
+      money: {
+        currency: "USD",
+        balanceAmount: "0.7",
+        consumedAmount: "1.68",
+        displayRate: "1",
+      },
+      savings: {
+        status: "unavailable",
+        reasonCode: "logs_unavailable",
+        officialAmount: "",
+        siteAmount: "",
+        savedAmount: "",
+        referenceRate: "",
+        priceRate: "",
+        recordLimit: 100,
+        scannedCount: 0,
+        includedCount: 0,
+        excludedCount: 0,
+        oldestAtEpochMs: 0,
+        newestAtEpochMs: 0,
+      },
+    };
+    const parsed = decodeAccountProjection(raw, raw.requestId)!;
+    expect(parsed).not.toBeNull();
+    expect(parsed.models[0].billing?.groups[0].plan).toEqual(plan);
+    expect(parsed.models[1].billing?.groups[0]).toMatchObject({
+      ratio: null,
+      plan: { label: "Standard" },
+    });
+
+    // 方案里多出一个不认识的字段，整份不收。
+    const tampered = structuredClone(raw);
+    Object.assign(tampered.models[0].billing.groups[0].plan, { extra: 1 });
+    expect(decodeAccountProjection(tampered, raw.requestId)).toBeNull();
+    const mispriced = structuredClone(raw);
+    mispriced.models[0].billing.groups[0].plan.inputPerMillion = -1;
+    expect(decodeAccountProjection(mispriced, raw.requestId)).toBeNull();
+  });
+
   it("rejects v6 usage logs that leak into non-signed-in states or miscount", () => {
     const usageLog = usageLogPayload();
     const signedOut = {

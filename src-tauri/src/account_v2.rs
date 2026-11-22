@@ -1772,13 +1772,9 @@ async fn account_data_read_neutral(
         account: account_summary,
         usage: usage_summary,
         models: models.unwrap_or_default(),
-        // Prices already arrive in the station's currency. "1" tells the
-        // renderer they are yuan; empty leaves them in dollars.
-        comparison_fx: if currency == "CNY" {
-            "1".into()
-        } else {
-            String::new()
-        },
+        // Prices already arrive in the station's currency, which each plan
+        // names: there is nothing left to convert.
+        comparison_fx: "1".into(),
         money,
         savings,
         usage_log,
