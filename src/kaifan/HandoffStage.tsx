@@ -39,7 +39,9 @@ export function handoffCast(search: string): Props | null {
   const who = params.get("who") ?? "";
   return {
     toolId,
-    who: Object.hasOwn(ROSTER, who) ? (who as RosterId) : "new",
+    who: Object.prototype.hasOwnProperty.call(ROSTER, who)
+      ? (who as RosterId)
+      : "new",
   };
 }
 
