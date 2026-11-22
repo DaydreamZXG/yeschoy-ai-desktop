@@ -1549,6 +1549,53 @@ fn retire_superseded_tokens(origin: &str, access_token: &str, leases: &[(String,
     });
 }
 
+/// 上一次接入用过、这一次不再用的分组。
+///
+/// `acquire_token` 只退同一个分组里的旧密钥，断开时的回收只看当前凭据里的
+/// 分组。换一次价格方案，上一个分组的那把就两头都不归，一直启用着留在账户里
+/// —— 2026-11-22 实测旧站时就这样多出来一把。
+///
+/// 粘贴的密钥是用户自己的，不是我们铸的；换了站点，那些密钥在另一个账户里，
+/// 这次的会话够不着。两种都不动。
+fn dropped_groups_credential(
+    previous: &ToolCredential,
+    origin: &str,
+    bindings: &[ModelBinding],
+) -> Option<ToolCredential> {
+    if previous.pasted_key || previous.origin != origin {
+        return None;
+    }
+    let mut dropped = previous.clone();
+    dropped.models.retain(|model| {
+        !bindings
+            .iter()
+            .any(|binding| binding.billing_group == model.billing_group)
+    });
+    (!dropped.models.is_empty()).then_some(dropped)
+}
+
+/// 和 `retire_superseded_tokens` 一样放到后台、只在本地事务提交之后做。
+fn retire_dropped_group_tokens(
+    origin: &str,
+    access_token: &str,
+    tool_id: &str,
+    previous: Option<&ToolCredential>,
+    bindings: &[ModelBinding],
+) {
+    let Some(dropped) =
+        previous.and_then(|previous| dropped_groups_credential(previous, origin, bindings))
+    else {
+        return;
+    };
+    let origin = origin.to_owned();
+    let access_token = access_token.to_owned();
+    let tool_id = tool_id.to_owned();
+    tokio::spawn(async move {
+        let complete = revoke_owned_tool_tokens(&origin, &access_token, &tool_id, &dropped).await;
+        log::info!("tool_token_cleanup stage=dropped_groups_done complete={complete}");
+    });
+}
+
 async fn revoke_owned_tool_tokens(
     origin: &str,
     access_token: &str,
@@ -3132,6 +3179,15 @@ pub async fn configure_desktop_tool_v2(
     // to a key that was deleted mid-transaction. This cleanup is deliberately
     // scheduled only after the user-facing application open has been tried.
     retire_superseded_tokens(&origin, &access_token, &leases);
+    if user_key.is_none() {
+        retire_dropped_group_tokens(
+            &origin,
+            &access_token,
+            &request.tool_id,
+            previous_record.as_ref(),
+            &bindings,
+        );
+    }
     if let Err(error) = open_result {
         let reason = match error {
             AdapterFailure::LaunchError(reason) => reason,
@@ -3751,6 +3807,61 @@ pub async fn manage_tool_connections_v1(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn switching_plans_gives_up_the_keys_of_the_groups_left_behind() {
+        let route = |model: &str, group: &str| ToolModelRoute {
+            model_id: model.into(),
+            billing_group: group.into(),
+            api_key: "sk-old".into(),
+            origin: "https://station.example".into(),
+            claude_transport: None,
+            codex_transport: None,
+        };
+        let previous = ToolCredential {
+            api_key: "sk-old".into(),
+            origin: "https://station.example".into(),
+            model_id: "a".into(),
+            local_gateway_token: None,
+            codex_transport: None,
+            claude_transport: None,
+            models: vec![route("a", "flash"), route("b", "default")],
+            pasted_key: false,
+        };
+        let now = [ModelBinding {
+            model_id: "a".into(),
+            billing_group: "default".into(),
+        }];
+
+        let dropped = dropped_groups_credential(&previous, "https://station.example", &now)
+            .expect("the flash group is no longer used");
+        assert_eq!(
+            dropped
+                .models
+                .iter()
+                .map(|model| model.billing_group.as_str())
+                .collect::<Vec<_>>(),
+            ["flash"]
+        );
+
+        // 分组都还在用：没有要退的。
+        let both = [
+            now[0].clone(),
+            ModelBinding {
+                model_id: "a".into(),
+                billing_group: "flash".into(),
+            },
+        ];
+        assert!(dropped_groups_credential(&previous, "https://station.example", &both).is_none());
+        // 换了站点：那些密钥在另一个账户里。
+        assert!(dropped_groups_credential(&previous, "https://other.example", &now).is_none());
+        // 用户自己粘贴的密钥不归我们退。
+        let pasted = ToolCredential {
+            pasted_key: true,
+            ..previous.clone()
+        };
+        assert!(dropped_groups_credential(&pasted, "https://station.example", &now).is_none());
+    }
 
     #[test]
     fn no_two_apps_share_a_token_code_or_label() {
