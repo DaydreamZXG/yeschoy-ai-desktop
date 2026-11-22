@@ -401,6 +401,64 @@ describe("开饭首页自己会做的事", () => {
     expect(again).toHaveBeenCalledTimes(1);
   });
 
+  it("重读的那一下错会先清掉：不当成读到了，三次的数不重新算", () => {
+    vi.useFakeTimers();
+    const again = vi.fn();
+    const failed = { connections: [], error: true, refresh: again };
+    tools.now = failed;
+    const { rerender } = render(<KaifanApp />);
+    for (const _ of [1, 2, 3, 4, 5]) {
+      act(() => void vi.advanceTimersByTime(20_000));
+      tools.now = {
+        connections: [],
+        error: null,
+        refreshing: true,
+        refresh: again,
+      };
+      rerender(<KaifanApp />);
+      tools.now = { ...failed };
+      rerender(<KaifanApp />);
+    }
+    act(() => void vi.advanceTimersByTime(60_000));
+    expect(again).toHaveBeenCalledTimes(3);
+  });
+
+  it("在设置里自己点退出：留在设置里听那句「已经退出」，不弹出连接站点", async () => {
+    const out = { status: "signed_out" } as unknown as AccountProjection;
+    const logout = vi.fn(async () => {
+      session.mockReturnValue({
+        projection: out,
+        loading: false,
+        stationCheck: "idle",
+        lastError: null,
+        refresh,
+        logout,
+      } as unknown as ReturnType<typeof useAccountSession>);
+      return out;
+    });
+    session.mockReturnValue({
+      projection: signedIn,
+      loading: false,
+      stationCheck: "ok",
+      lastError: null,
+      refresh,
+      logout,
+    } as unknown as ReturnType<typeof useAccountSession>);
+    const { rerender } = render(<KaifanApp />);
+    fireEvent.click(screen.getByTestId("kaifan-nav-settings"));
+    fireEvent.click(screen.getByTestId("kaifan-settings-logout"));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("kaifan-settings-logout-yes"));
+    });
+    rerender(<KaifanApp />);
+    expect(logout).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("kaifan-connect")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(screen.getByTestId("kaifan-settings")).not.toHaveAttribute("inert");
+  });
+
   it("要修的应用：点「去修好」在新界面里修，不去旧页面", async () => {
     tools.now = {
       connections: [
