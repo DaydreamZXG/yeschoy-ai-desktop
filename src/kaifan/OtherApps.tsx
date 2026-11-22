@@ -104,6 +104,13 @@ export function OtherApps({ lineId, preset, modelId, viaKey, byHand }: Props) {
           })}
         </p>
       )}
+      {address?.anthropic && preset?.anthropicBearer && !byHand && (
+        <p className="mend" role="note" data-testid="kaifan-join-other-bearer">
+          {t("kaifan.join.other.anthropicBearer", {
+            vendor: vendorName(preset, t),
+          })}
+        </p>
+      )}
       {copied && !copied.ok && (
         <p className="mend" role="alert">
           {t("kaifan.join.other.copyFailed")}

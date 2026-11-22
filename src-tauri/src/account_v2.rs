@@ -326,6 +326,8 @@ pub(crate) enum TransportFailure {
     Network,
     TimedOut,
     InvalidResponse,
+    /// 答的不是 JSON，状态码又是「太忙」「出错了」那一类：多半是网关的出错页，等下再来就好。
+    Unwell,
     ResponseTooLarge,
 }
 
@@ -423,7 +425,7 @@ async fn read_body(mut response: reqwest::Response) -> Result<JsonResponse, Tran
                 .eq_ignore_ascii_case("application/json")
         });
     if !json_type {
-        return Err(TransportFailure::InvalidResponse);
+        return Err(not_json(status.as_u16()));
     }
     if response
         .content_length()
@@ -440,6 +442,14 @@ async fn read_body(mut response: reqwest::Response) -> Result<JsonResponse, Tran
     }
     let value = serde_json::from_slice(&bytes).map_err(|_| TransportFailure::InvalidResponse)?;
     Ok(JsonResponse { status, value })
+}
+
+fn not_json(status: u16) -> TransportFailure {
+    if passing_trouble(status) {
+        TransportFailure::Unwell
+    } else {
+        TransportFailure::InvalidResponse
+    }
 }
 
 fn map_reqwest_error(error: reqwest::Error) -> TransportFailure {
@@ -1124,7 +1134,9 @@ fn failure_projection(request_id: String, failure: AccountProjectionFailure) -> 
         AccountProjectionFailure::Transport(TransportFailure::ResponseTooLarge) => {
             AccountProjection::empty(request_id, "invalid_response", "response_too_large")
         }
-        AccountProjectionFailure::Transport(TransportFailure::InvalidResponse)
+        AccountProjectionFailure::Transport(
+            TransportFailure::InvalidResponse | TransportFailure::Unwell,
+        )
         | AccountProjectionFailure::InvalidResponse => {
             AccountProjection::empty(request_id, "invalid_response", "invalid_response")
         }
@@ -2382,6 +2394,8 @@ pub async fn account_logout_v2(
 pub struct AnnouncementsProjection {
     request_id: String,
     available: bool,
+    /// 这次是没读到（网络断了、站点出错），不是这个站没有公告栏。界面据此给「再读一次」。
+    missed: bool,
     notices: Vec<Notice>,
 }
 
@@ -2598,8 +2612,18 @@ pub async fn account_announcements_read_v2(
         request_id: request.request_id.clone(),
         ..Default::default()
     };
-    let Ok(bootstrap) = fetch_bootstrap(&request.line_id).await else {
-        return Ok(unavailable);
+    let missed = || AnnouncementsProjection {
+        request_id: request.request_id.clone(),
+        missed: true,
+        ..Default::default()
+    };
+    let bootstrap = match fetch_bootstrap(&request.line_id).await {
+        Ok(bootstrap) => bootstrap,
+        // 连不上、网关出错才算这次没读到；站点好好答了却不是我们认识的那种，就是没有公告栏。
+        Err(AccountProjectionFailure::Transport(failure)) if worth_rereading(&failure) => {
+            return Ok(missed())
+        }
+        Err(_) => return Ok(unavailable),
     };
     if bootstrap.announcements_path.is_empty() {
         return Ok(unavailable);
@@ -2612,15 +2636,21 @@ pub async fn account_announcements_read_v2(
         return Ok(unavailable);
     };
     let url = format!("{origin}{}", bootstrap.announcements_path);
-    let Ok(response) = send_json(Method::GET, &url, Some(&access_token), None).await else {
-        return Ok(unavailable);
+    let response = match send_json(Method::GET, &url, Some(&access_token), None).await {
+        Ok(response) => response,
+        Err(failure) if worth_rereading(&failure) => return Ok(missed()),
+        Err(_) => return Ok(unavailable),
     };
     if !response.status.is_success() {
         log::info!(
             "account stage=announcements_unavailable http={}",
             response.status.as_u16()
         );
-        return Ok(unavailable);
+        return Ok(if passing_trouble(response.status.as_u16()) {
+            missed()
+        } else {
+            unavailable
+        });
     }
     let (notices, actions) = parse_notices(&response.value, now_epoch_ms(), Some(&origin));
     if let Ok(mut runtime) = state.runtime.lock() {
@@ -2629,8 +2659,23 @@ pub async fn account_announcements_read_v2(
     Ok(AnnouncementsProjection {
         request_id: request.request_id,
         available: true,
+        missed: false,
         notices,
     })
+}
+
+/// 这次没读到、等下再读多半就好：断网、超时，或者网关答了一页出错页。
+/// 站点好好地答了一页网页（没有桌面接口的站点就是这样答的）不算，那是没有公告栏。
+fn worth_rereading(failure: &TransportFailure) -> bool {
+    matches!(
+        failure,
+        TransportFailure::Network | TransportFailure::TimedOut | TransportFailure::Unwell
+    )
+}
+
+/// 「太忙」或「出错了」那一类状态码：是这一下的事，不是这个站没有这个地址。
+fn passing_trouble(status: u16) -> bool {
+    status == 408 || status == 429 || status >= 500
 }
 
 #[derive(Debug, Deserialize)]
@@ -3243,6 +3288,34 @@ mod tests {
             assert!(!serialized.contains(forbidden));
         }
     }
+    #[test]
+    fn announcements_tell_a_missed_read_from_a_station_without_a_board() {
+        // 太忙、出错：等下再读。没有这个地址、不让看：这个站就是没有公告栏。
+        for status in [408, 429, 500, 502, 503] {
+            assert!(passing_trouble(status), "{status}");
+        }
+        for status in [400, 401, 403, 404] {
+            assert!(!passing_trouble(status), "{status}");
+        }
+        // 没有桌面接口的站点对那个地址答的是一页网页：不是没读到，是没有公告栏。
+        assert!(worth_rereading(&TransportFailure::Network));
+        assert!(worth_rereading(&TransportFailure::TimedOut));
+        // 网关答的出错页（502 之类，不是 JSON）是这一下的事，要给「再读一次」。
+        assert!(worth_rereading(&not_json(502)));
+        assert!(!worth_rereading(&not_json(404)));
+        assert!(!worth_rereading(&not_json(200)));
+        assert!(!worth_rereading(&TransportFailure::ResponseTooLarge));
+        let row = serde_json::to_value(AnnouncementsProjection {
+            missed: true,
+            ..Default::default()
+        })
+        .unwrap();
+        assert_eq!(
+            (&row["available"], &row["missed"]),
+            (&json!(false), &json!(true))
+        );
+    }
+
     #[test]
     fn notices_carry_only_safe_buttons_and_drop_what_has_ended() {
         let payload = json!({"success": true, "data": {"notices": [

@@ -32,6 +32,8 @@ export type Notice = {
 export type AnnouncementsProjection = {
   available: boolean;
   notices: Notice[];
+  /** 这次是没读到（断网、站点出错），不是这个站没有公告栏。 */
+  missed?: boolean;
 };
 
 const UNAVAILABLE: AnnouncementsProjection = { available: false, notices: [] };
@@ -74,7 +76,11 @@ export async function readAnnouncements(
     const result = await invoke("account_announcements_read_v2", {
       request: { requestId: `announcements-${Date.now()}`, lineId },
     });
-    if (!object(result) || result.available !== true) return UNAVAILABLE;
+    if (!object(result)) return UNAVAILABLE;
+    if (result.available !== true)
+      return result.missed === true
+        ? { ...UNAVAILABLE, missed: true }
+        : UNAVAILABLE;
     const notices = Array.isArray(result.notices)
       ? result.notices.map(decodeNotice).filter((n): n is Notice => n !== null)
       : [];

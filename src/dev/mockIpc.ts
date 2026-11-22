@@ -496,6 +496,7 @@ const handlers: Record<string, (a: Args) => unknown> = {
       id: "ollama_cloud",
       openaiPath: "/v1",
       anthropicPath: "",
+      anthropicBearer: true,
       family: "ollama_cloud",
       region: null,
       name: "Ollama Cloud",

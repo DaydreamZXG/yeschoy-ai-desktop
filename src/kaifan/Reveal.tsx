@@ -111,6 +111,14 @@ export function Reveal({ joined, opening, openFailed, onOpen, onHome }: Props) {
                 })}
               </em>
             )}
+            {joined.toolId === "workbuddy" && (
+              <em data-testid="kaifan-reveal-pick">
+                {t("kaifan.reveal.pickWorkbuddy", {
+                  name,
+                  model: joined.modelId,
+                })}
+              </em>
+            )}
             <small>
               {t("kaifan.reveal.via", {
                 name,

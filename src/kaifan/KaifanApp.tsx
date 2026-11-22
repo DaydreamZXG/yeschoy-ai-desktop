@@ -238,11 +238,14 @@ export function KaifanApp() {
     connections.connections.some((item) => item.state === "unavailable");
   const readAgain = connections.refresh;
   useEffect(() => {
+    // 正在重读的那一下，上次的错会先被清掉；这时还不知道读没读到，不能当成
+    // 读到了把次数清零，不然一直读不到就一直重读下去。
+    if (connections.refreshing) return;
     if (!unread) {
       reread.current = 0;
       return;
     }
-    if (connections.refreshing || reread.current >= REREAD_TIMES) return;
+    if (reread.current >= REREAD_TIMES) return;
     const timer = setTimeout(
       () => {
         reread.current += 1;
@@ -697,8 +700,13 @@ export function KaifanApp() {
             setConnectOpen(true);
           }}
           onLogout={async () => {
+            // 自己点的退出不迎新：设置里那句「已经退出」要让人看得到，
+            // 想连别的站，设置里就有「连接站点」。
+            const before = greeted.current;
+            greeted.current = true;
             const done = (await session.logout())?.status === "signed_out";
             if (done) setLeft(true);
+            else greeted.current = before;
             return done;
           }}
           onRestore={(toolId) => connections.restore(toolId)}

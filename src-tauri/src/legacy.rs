@@ -102,6 +102,9 @@ pub(crate) trait Keys {
     fn get(&self, service: &str, account: &str) -> Result<Option<String>, KeyFault>;
     fn set(&self, service: &str, account: &str, value: &str) -> Result<(), KeyFault>;
     fn delete(&self, service: &str, account: &str) -> Result<(), KeyFault>;
+    /// 搬旧密钥、写密钥、删密钥互相错开用的锁，放手就解开。别的进程（应用来取
+    /// 密钥时起的那个）也认它。拿不到是 `None`。
+    fn hold(&self) -> Option<Box<dyn std::any::Any>>;
 }
 
 pub(crate) struct OsKeys;
@@ -132,6 +135,23 @@ impl Keys for OsKeys {
             Err(_) => Err(KeyFault),
         }
     }
+    fn hold(&self) -> Option<Box<dyn std::any::Any>> {
+        // 只用已经有的数据目录，不新建：取密钥的进程比搬目录那一步还早，它要是
+        // 先建了新目录，旧目录就再也搬不过来。
+        let root = data_root(&crate::tool_adapters::user_home()?);
+        if !is_plain_directory(&root) {
+            return None;
+        }
+        let file = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(root.join("keys.lock"))
+            .ok()?;
+        file.lock().ok()?;
+        Some(Box::new(file))
+    }
 }
 
 /// 改名前同一类条目用的名字。
@@ -156,10 +176,23 @@ pub(crate) fn read_secret_in(
     let Some(value) = keys.get(&old, account)? else {
         return Ok(None);
     };
+    // 从读到旧的到抄过去之间，别的进程可能刚写了新的、或者刚删掉：照着手里这份
+    // 旧的抄，就把人家的盖掉了。所以拿着锁再看一遍才抄；拿不到锁这次就不搬，
+    // 值照样交出去。
+    let Some(guard) = keys.hold() else {
+        return Ok(Some(value));
+    };
+    if let Some(newer) = keys.get(service, account)? {
+        return Ok(Some(newer));
+    }
+    let Some(value) = keys.get(&old, account)? else {
+        return Ok(None);
+    };
     // 旧版客户端如果还留着这条，它拿着旧的续期凭据去换新的，会把这边挤下线。
     // 所以搬完就删；但只在新的那条确实读得回来之后。
     let copied = keys.set(service, account, &value).is_ok()
         && keys.get(service, account).ok().flatten().as_deref() == Some(value.as_str());
+    drop(guard);
     if copied {
         let _ = keys.delete(&old, account);
     }
@@ -173,7 +206,9 @@ pub(crate) fn write_secret_in(
     account: &str,
     value: &str,
 ) -> Result<(), KeyFault> {
+    let guard = keys.hold();
     keys.set(service, account, value)?;
+    drop(guard);
     if let Some(old) = old_service(service) {
         let _ = keys.delete(&old, account);
     }
@@ -186,6 +221,7 @@ pub(crate) fn delete_secret_in(
     service: &str,
     account: &str,
 ) -> Result<(), KeyFault> {
+    let _guard = keys.hold();
     keys.delete(service, account)?;
     match old_service(service) {
         Some(old) => keys.delete(&old, account),
@@ -266,7 +302,12 @@ mod tests {
     struct Memory {
         entries: RefCell<BTreeMap<(String, String), String>>,
         refuse_writes_to: Option<&'static str>,
+        /// 别的进程在我们读完旧的、拿到锁之前做的事。
+        meanwhile: RefCell<Option<Meanwhile>>,
+        /// 锁拿不到。
+        locked: bool,
     }
+    type Meanwhile = Box<dyn FnOnce(&Memory)>;
 
     impl Memory {
         fn with(entries: &[(&str, &str, &str)]) -> Self {
@@ -309,6 +350,15 @@ mod tests {
                 .remove(&(service.to_owned(), account.to_owned()));
             Ok(())
         }
+        fn hold(&self) -> Option<Box<dyn std::any::Any>> {
+            if self.locked {
+                return None;
+            }
+            if let Some(act) = self.meanwhile.borrow_mut().take() {
+                act(self);
+            }
+            Some(Box::new(()))
+        }
     }
 
     const NEW: &str = "com.kaifan.desktop.account";
@@ -346,6 +396,42 @@ mod tests {
         assert_eq!(read(&keys).as_deref(), Some("new"));
         assert!(keys.has(OLD, "session"));
         assert_eq!(read(&Memory::default()), None);
+    }
+
+    /// 正要把旧的抄过去时，别的进程刚写了新的（重新接入）或刚删掉（改回原样）：
+    /// 不拿手里那份旧的去盖。
+    #[test]
+    fn adopting_never_overwrites_what_another_process_just_did() {
+        let keys = Memory::with(&[(OLD, "session", "stale")]);
+        *keys.meanwhile.borrow_mut() = Some(Box::new(|keys: &Memory| {
+            keys.entries
+                .borrow_mut()
+                .insert((NEW.to_owned(), "session".to_owned()), "fresh".to_owned());
+            keys.entries
+                .borrow_mut()
+                .remove(&(OLD.to_owned(), "session".to_owned()));
+        }));
+        assert_eq!(read(&keys).as_deref(), Some("fresh"));
+        assert_eq!(read(&keys).as_deref(), Some("fresh"));
+
+        let keys = Memory::with(&[(OLD, "session", "stale")]);
+        *keys.meanwhile.borrow_mut() = Some(Box::new(|keys: &Memory| {
+            keys.entries.borrow_mut().clear();
+        }));
+        assert_eq!(read(&keys), None);
+        assert!(!keys.has(NEW, "session"));
+    }
+
+    /// 锁拿不到（数据目录还没有）：值照样给，但不搬，等下次。
+    #[test]
+    fn adopting_waits_for_next_time_when_the_lock_is_unavailable() {
+        let mut keys = Memory::with(&[(OLD, "session", "refresh-1")]);
+        keys.locked = true;
+        assert_eq!(read(&keys).as_deref(), Some("refresh-1"));
+        assert!(keys.has(OLD, "session") && !keys.has(NEW, "session"));
+        keys.locked = false;
+        assert_eq!(read(&keys).as_deref(), Some("refresh-1"));
+        assert!(!keys.has(OLD, "session") && keys.has(NEW, "session"));
     }
 
     #[test]

@@ -40,7 +40,7 @@ pub(crate) struct Preset {
     openai_path: &'static str,
     anthropic_path: Option<&'static str>,
     /// Anthropic 格式的地址只认 `Authorization: Bearer`，不认 `x-api-key`。
-    #[serde(skip)]
+    /// 界面也要：手填到别的应用里时得照实说。
     anthropic_bearer: bool,
     pub(crate) billing: Billing,
     pub(crate) key_check: KeyCheck,
@@ -356,6 +356,8 @@ mod tests {
         let bailian = row("bailian_coding");
         assert_eq!(bailian["anthropicPath"], "/apps/anthropic");
         assert!(bailian["sessionHeader"].is_null());
+        assert_eq!(bailian["anthropicBearer"], false);
+        assert_eq!(row("ollama_cloud")["anthropicBearer"], true);
         // 界面用不着的不发。
         assert!(go.get("responses").is_none());
     }

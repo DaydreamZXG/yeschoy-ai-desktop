@@ -405,6 +405,23 @@ pub(crate) fn settle_restored(
         providers.remove(PROVIDER_ID);
     }
     *preserved |= keep_added(ours, &theirs, restored);
+    // 用户改过我们那一家里面的东西（比如删了一个型号），通用的合并会把它当成
+    // 用户的留下；可密钥已经收走，留下的是一家用不了的厂商。接入前没有它、
+    // 它也还指着本机转发，就整条拿走。改去指别处的已经是用户自己的，不碰。
+    let stranded = provider(before).is_none()
+        && provider(restored).is_some_and(|entry| entry["baseUrl"] == PROXY_BASE);
+    if stranded {
+        if let Some(providers) = restored
+            .get_mut("models")
+            .and_then(|models| models.get_mut("providers"))
+            .and_then(Value::as_object_mut)
+        {
+            providers.remove(PROVIDER_ID);
+        }
+        for path in [&["models", "providers"][..], &["models"]] {
+            drop_if_emptied(before, restored, path);
+        }
+    }
     if provider(restored).is_some() {
         return;
     }
