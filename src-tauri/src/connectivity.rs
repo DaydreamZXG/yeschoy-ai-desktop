@@ -130,7 +130,11 @@ async fn api_key_probe(
     access_token: &str,
 ) -> (LayerStatus, Option<u64>, LayerReasonCode) {
     let started = Instant::now();
-    let url = format!("{}{}", line.root_url, MODELS_PROBE_PATH);
+    // A station on the neutral contract has no such path; its account path
+    // answers the same question (is this sign-in still accepted) for free.
+    let path = account_v2::neutral_station_for(&line.root_url)
+        .map_or_else(|| MODELS_PROBE_PATH.to_owned(), |(_, paths)| paths.account);
+    let url = format!("{}{path}", line.root_url);
     let Ok(client) = account_v2::shared_http_client() else {
         return (LayerStatus::Failed, None, LayerReasonCode::ApiProbeError);
     };

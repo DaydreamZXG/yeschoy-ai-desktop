@@ -168,6 +168,43 @@ pub(super) fn records_shape(payload: Option<&Value>) -> Option<Value> {
 /// key operations here.
 pub(super) const LEGACY_KEYS_PATH: &str = "/api/token/";
 
+/// The original contract's model list and price list. A station on the
+/// neutral contract answers both from its plans.
+pub(super) const LEGACY_CATALOGUE_PATHS: [&str; 2] = ["/api/user/models", "/api/pricing"];
+
+/// The station's plans, read as the list the original contract's caller asked for.
+pub(super) fn catalogue_reply(path: &str, status: u16, value: &Value) -> (u16, Value) {
+    let Some(plans) = data(Some(value))
+        .filter(|_| (200..300).contains(&status))
+        .and_then(|data| data.get("plans"))
+        .and_then(Value::as_array)
+    else {
+        let status = if (200..300).contains(&status) {
+            502
+        } else {
+            status
+        };
+        return (
+            status,
+            json!({"success": false, "message": text(value.get("code"), 64)}),
+        );
+    };
+    if path != "/api/user/models" {
+        // Callers only need to know the price list was readable; the prices
+        // themselves are read through `models`.
+        return (status, json!({"success": true, "data": []}));
+    }
+    let mut ids: Vec<String> = plans
+        .iter()
+        .filter_map(|plan| plan.get("models")?.as_array())
+        .flatten()
+        .filter_map(|model| Some(model.get("id")?.as_str()?.to_owned()))
+        .collect();
+    ids.sort();
+    ids.dedup();
+    (status, json!({"success": true, "data": ids}))
+}
+
 #[derive(Debug, PartialEq)]
 enum KeyCall {
     List { page: u64 },
@@ -802,6 +839,27 @@ mod tests {
                 &json!({"success": false, "code": "x"})
             )
             .0,
+            502
+        );
+    }
+
+    #[test]
+    fn the_model_list_an_activation_checks_comes_from_the_plans() {
+        let plans = json!({"success": true, "data": {"currency": "CNY", "plans": [
+            {"id": "7", "models": [{"id": "b"}, {"id": "a"}]},
+            {"id": "9", "models": [{"id": "a"}]}
+        ]}});
+        let (status, models) = catalogue_reply("/api/user/models", 200, &plans);
+        assert_eq!((status, &models["data"]), (200, &json!(["a", "b"])));
+        assert_eq!(
+            catalogue_reply("/api/pricing", 200, &plans).1["success"],
+            true
+        );
+        // An expired session stays an expired session.
+        let expired = json!({"success": false, "code": "session_required"});
+        assert_eq!(catalogue_reply("/api/user/models", 401, &expired).0, 401);
+        assert_eq!(
+            catalogue_reply("/api/pricing", 200, &json!({"success": true, "data": {}})).0,
             502
         );
     }

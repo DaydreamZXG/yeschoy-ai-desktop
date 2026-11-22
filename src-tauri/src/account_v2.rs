@@ -1150,6 +1150,22 @@ pub(crate) async fn native_account_json(
             )
             .await;
         }
+        let path = &url[origin.len()..];
+        if method == Method::GET && neutral::LEGACY_CATALOGUE_PATHS.contains(&path) {
+            let plans = send_json(
+                Method::GET,
+                &format!("{origin}{}", paths.plans),
+                Some(access_token),
+                None,
+            )
+            .await
+            .map_err(|_| ())?;
+            return Ok(neutral::catalogue_reply(
+                path,
+                plans.status.as_u16(),
+                &plans.value,
+            ));
+        }
     }
     let response = send_json(method, url, Some(access_token), body)
         .await
