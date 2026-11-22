@@ -22,6 +22,7 @@ use super::{send_json, NeutralPaths, KEYRING_SERVICE};
 
 const KEYRING_ACCOUNT_PREFIX: &str = "desktop-app-token:";
 const RETRY_AFTER: Duration = Duration::from_secs(300);
+const LOOKUP_RETRY_AFTER: Duration = Duration::from_secs(30);
 const TOKEN_MAX_LEN: usize = 512;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -37,8 +38,10 @@ struct State {
     /// Stations asked for a credential recently, so a refusal is not retried
     /// on every refresh.
     attempts: Vec<(String, Instant)>,
-    /// Stations whose stored credential was already looked up this run.
-    looked_up: Vec<String>,
+    /// Stations whose stored credential was already looked up this run. A
+    /// time marks a lookup the credential store could not answer: it is asked
+    /// again later, where a plain "nothing stored" is final.
+    looked_up: Vec<(String, Option<Instant>)>,
 }
 
 static STATE: Mutex<State> = Mutex::new(State {
@@ -64,19 +67,33 @@ fn origin_of(url: &str) -> Option<&str> {
     (end > after_scheme).then(|| &url[..end])
 }
 
+/// `Err` when the credential store could not be read, which may pass.
 #[cfg(not(test))]
-fn read_stored(origin: &str) -> Option<Issued> {
-    crate::legacy::read_secret(KEYRING_SERVICE, &keyring_account(origin))
-        .ok()
-        .flatten()
+fn read_stored(origin: &str) -> Result<Option<Issued>, ()> {
+    let payload =
+        crate::legacy::read_secret(KEYRING_SERVICE, &keyring_account(origin)).map_err(|_| ())?;
+    Ok(payload
         .and_then(|payload| serde_json::from_str::<Issued>(&payload).ok())
-        .filter(|issued| issued.origin == origin)
+        .filter(|issued| issued.origin == origin))
 }
 
 // Tests never touch the OS credential store.
 #[cfg(test)]
-fn read_stored(_origin: &str) -> Option<Issued> {
-    None
+fn read_stored(_origin: &str) -> Result<Option<Issued>, ()> {
+    Ok(None)
+}
+
+fn lookup_is_due(state: &State, origin: &str, now: Instant) -> bool {
+    match state.looked_up.iter().find(|(seen, _)| seen == origin) {
+        None => true,
+        Some((_, None)) => false,
+        Some((_, Some(failed))) => now.duration_since(*failed) >= LOOKUP_RETRY_AFTER,
+    }
+}
+
+fn record_lookup(state: &mut State, origin: &str, failed: Option<Instant>) {
+    state.looked_up.retain(|(seen, _)| seen != origin);
+    state.looked_up.push((origin.to_owned(), failed));
 }
 
 fn remember(state: &mut State, issued: Issued) {
@@ -97,13 +114,19 @@ fn credential_for(url: &str) -> Option<Issued> {
     let origin = origin_of(url)?;
     {
         let mut state = state();
-        if state.looked_up.iter().any(|seen| seen == origin) {
+        let now = Instant::now();
+        if !lookup_is_due(&state, origin, now) {
             return None;
         }
-        state.looked_up.push(origin.to_owned());
+        // Marked before reading, so requests arriving meanwhile do not queue
+        // up on the credential store.
+        record_lookup(&mut state, origin, Some(now));
     }
-    let stored = read_stored(origin)?;
-    remember(&mut state(), stored.clone());
+    let stored = read_stored(origin).ok()?;
+    let mut state = state();
+    record_lookup(&mut state, origin, None);
+    let stored = stored?;
+    remember(&mut state, stored.clone());
     Some(stored)
 }
 
@@ -206,7 +229,7 @@ pub(super) async fn ensure(origin: &str, paths: &NeutralPaths, access_token: &st
         state.attempts.retain(|(at, _)| at != origin);
         state.attempts.push((origin.to_owned(), Instant::now()));
     }
-    if let Some(mut issued) = read_stored(origin) {
+    if let Some(mut issued) = read_stored(origin).ok().flatten() {
         issued.header.clone_from(&paths.app_token_header);
         remember(&mut state(), issued);
         return;
@@ -251,7 +274,7 @@ pub(super) fn forget(origin: &str) {
         let mut state = state();
         state.issued.retain(|issued| issued.origin != origin);
         state.attempts.retain(|(at, _)| at != origin);
-        state.looked_up.retain(|seen| seen != origin);
+        state.looked_up.retain(|(seen, _)| seen != origin);
     }
     let _ = crate::legacy::delete_secret(KEYRING_SERVICE, &keyring_account(origin));
 }
@@ -341,6 +364,36 @@ mod tests {
             .iter()
             .collect();
         assert_eq!(values, ["dat_synthetic"]);
+    }
+
+    #[test]
+    fn a_lookup_the_credential_store_could_not_answer_is_tried_again() {
+        let origin = "https://station.example";
+        let mut state = State {
+            issued: Vec::new(),
+            attempts: Vec::new(),
+            looked_up: Vec::new(),
+        };
+        let start = Instant::now();
+        assert!(lookup_is_due(&state, origin, start));
+
+        record_lookup(&mut state, origin, Some(start));
+        assert!(!lookup_is_due(
+            &state,
+            origin,
+            start + Duration::from_secs(1)
+        ));
+        assert!(lookup_is_due(&state, origin, start + LOOKUP_RETRY_AFTER));
+        assert!(lookup_is_due(&state, "https://other.example", start));
+
+        // "Nothing stored" is an answer: it is not asked again.
+        record_lookup(&mut state, origin, None);
+        assert!(!lookup_is_due(
+            &state,
+            origin,
+            start + LOOKUP_RETRY_AFTER * 10
+        ));
+        assert_eq!(state.looked_up.len(), 1);
     }
 
     #[test]
