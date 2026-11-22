@@ -49,11 +49,40 @@ export interface UsageSummary {
   tokenCount: string;
 }
 
+/** 站点按中立约定给的方案：自己的名字和价，已经是站点的货币、每百万 tokens。 */
+export interface PlanPricing {
+  label: string;
+  /** 这个方案上所有的价是什么货币。 */
+  currency: "CNY" | "USD";
+  inputPerMillion?: number;
+  outputPerMillion?: number;
+  cacheReadPerMillion?: number;
+  cacheWritePerMillion?: number;
+  perRequest?: number;
+  /** 只有经过这个客户端的请求才是这个价。 */
+  appOnly: boolean;
+  subscription: boolean;
+  peak?: {
+    start: string;
+    end: string;
+    multiplier: number;
+    timezone?: string;
+    weekdaysOnly: boolean;
+  }[];
+  longContext?: {
+    fromTokens: number;
+    toTokens?: number;
+    inputPerMillion?: number;
+    outputPerMillion?: number;
+  }[];
+}
+
 export interface BillingGroup {
   id: string;
   description: string;
   ratio: number | null;
   supportedEndpointTypes?: string[];
+  plan?: PlanPricing;
 }
 
 export interface ModelBilling {
@@ -195,6 +224,72 @@ function usage(value: unknown): value is UsageSummary {
   );
 }
 
+/** 站点按中立约定给的方案。多出来的字段不认，少的可选字段就是站点没给。 */
+function planPricing(value: unknown): value is PlanPricing {
+  const amount = (n: unknown) =>
+    n === undefined || (typeof n === "number" && Number.isFinite(n) && n >= 0);
+  const only = (row: RecordValue, names: string[]) =>
+    Object.keys(row).every((key) => names.includes(key));
+  const rows = (list: unknown, row: (item: RecordValue) => boolean) =>
+    list === undefined ||
+    (Array.isArray(list) &&
+      list.length <= 8 &&
+      list.every((item) => object(item) && row(item)));
+  return (
+    object(value) &&
+    only(value, [
+      "label",
+      "currency",
+      "inputPerMillion",
+      "outputPerMillion",
+      "cacheReadPerMillion",
+      "cacheWritePerMillion",
+      "perRequest",
+      "appOnly",
+      "subscription",
+      "peak",
+      "longContext",
+    ]) &&
+    safeText(value.label, 80, false) &&
+    (value.currency === "CNY" || value.currency === "USD") &&
+    amount(value.inputPerMillion) &&
+    amount(value.outputPerMillion) &&
+    amount(value.cacheReadPerMillion) &&
+    amount(value.cacheWritePerMillion) &&
+    amount(value.perRequest) &&
+    typeof value.appOnly === "boolean" &&
+    typeof value.subscription === "boolean" &&
+    rows(
+      value.peak,
+      (row) =>
+        only(row, ["start", "end", "multiplier", "timezone", "weekdaysOnly"]) &&
+        safeText(row.start, 5, false) &&
+        safeText(row.end, 5, false) &&
+        typeof row.multiplier === "number" &&
+        amount(row.multiplier) &&
+        (row.timezone === undefined || safeText(row.timezone, 64, false)) &&
+        typeof row.weekdaysOnly === "boolean",
+    ) &&
+    rows(
+      value.longContext,
+      (row) =>
+        only(row, [
+          "fromTokens",
+          "toTokens",
+          "inputPerMillion",
+          "outputPerMillion",
+        ]) &&
+        Number.isSafeInteger(row.fromTokens) &&
+        (row.fromTokens as number) >= 0 &&
+        (row.toTokens === undefined ||
+          (Number.isSafeInteger(row.toTokens) &&
+            (row.toTokens as number) >= 0)) &&
+        amount(row.inputPerMillion) &&
+        amount(row.outputPerMillion),
+    )
+  );
+}
+
 function model(value: unknown): value is AccountModel {
   const baseKeys = [
     "id",
@@ -248,13 +343,16 @@ function model(value: unknown): value is AccountModel {
       !billing.groups.every(
         (g) =>
           object(g) &&
-          (exactKeys(g, ["id", "description", "ratio"]) ||
-            exactKeys(g, [
-              "id",
-              "description",
-              "ratio",
-              "supportedEndpointTypes",
-            ])) &&
+          exactKeys(g, [
+            "id",
+            "description",
+            "ratio",
+            ...(g.supportedEndpointTypes === undefined
+              ? []
+              : ["supportedEndpointTypes"]),
+            ...(g.plan === undefined ? [] : ["plan"]),
+          ]) &&
+          (g.plan === undefined || planPricing(g.plan)) &&
           safeText(g.id, 128, false) &&
           g.id !== "auto" &&
           safeText(g.description, 500) &&

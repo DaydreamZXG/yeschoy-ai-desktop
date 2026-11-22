@@ -611,6 +611,8 @@
       "good": "她擅长",
       "model": "型号",
       "plan": "价格方案",
+      "subscription": "月卡",
+      "appOnly": "客户端专属价",
       "planHint": "不选也行，默认用站点的标准分组",
       "planNote": "几折是按站点报的倍率算的，充值时的优惠不算在内。",
       "cheapest": "最省",

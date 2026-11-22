@@ -12,6 +12,8 @@ import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
 import {
   joinModel,
   pickedPlan,
+  currencyOf,
+  planLabelOf,
   plansOf,
   pricesOf,
   tieredPricesOf,
@@ -98,15 +100,18 @@ export function Card({
         : chooseBillingGroup(model, "")))
     : "";
   const plan = plans.find((item) => item.id === planId);
-  const prices = pricesOf(model, plan?.ratio);
+  const prices = pricesOf(model, plan?.ratio, plan?.pricing);
   // 站点没给单一的官方价时，看它是不是分档或者按次收费的。
   const tiered = prices ? null : tieredPricesOf(model, plan?.ratio, fx);
   const priced = !!prices || !!tiered;
+  const currency = currencyOf(model);
+  const money = (value: number) => yuan(value, currency);
   const amount = (value: number | null) =>
-    value === null ? t("kaifan.card.unknown") : yuan(value);
+    value === null ? t("kaifan.card.unknown") : money(value);
 
   const planName = (id: string) =>
-    id === DEFAULT_BILLING_GROUP ? t("configuration.defaultGroupLabel") : id;
+    planLabelOf(models, id) ??
+    (id === DEFAULT_BILLING_GROUP ? t("configuration.defaultGroupLabel") : id);
   // 几折只在站点给了官方价时才说：没有官方价，倍率就不知道是相对什么打的折。
   const discount = (value: Discount | null | undefined) => {
     if (!value || !priced) return "";
@@ -233,6 +238,8 @@ export function Card({
               >
                 {item.cheapest && <em>{t("kaifan.card.cheapest")}</em>}
                 <b>{planName(item.id)}</b>
+                {item.subscription && <i>{t("kaifan.card.subscription")}</i>}
+                {item.appOnly && <i>{t("kaifan.card.appOnly")}</i>}
                 <small>
                   {discount(item.discount) || multiplier(item.ratio)}
                 </small>
@@ -250,8 +257,8 @@ export function Card({
             <b>{t("kaifan.card.input")}</b>
             <b>{t("kaifan.card.output")}</b>
             <span>{t("kaifan.card.official")}</span>
-            <b>{yuan(prices.officialInput)}</b>
-            <b>{yuan(prices.officialOutput)}</b>
+            <b>{amount(prices.officialInput)}</b>
+            <b>{amount(prices.officialOutput)}</b>
             <span>{t("kaifan.card.thisPlan")}</span>
             <b>{amount(prices.planInput)}</b>
             <b>{amount(prices.planOutput)}</b>
@@ -270,8 +277,8 @@ export function Card({
                 <Fragment key={index}>
                   {tier.name && <i>{tier.name}</i>}
                   <span>{t("kaifan.card.official")}</span>
-                  <b>{yuan(tier.officialInput)}</b>
-                  <b>{yuan(tier.officialOutput)}</b>
+                  <b>{money(tier.officialInput)}</b>
+                  <b>{money(tier.officialOutput)}</b>
                   <span>{t("kaifan.card.thisPlan")}</span>
                   <b>{amount(tier.planInput)}</b>
                   <b>{amount(tier.planOutput)}</b>
@@ -286,7 +293,7 @@ export function Card({
                 <Fragment key={index}>
                   {tier.name && <i>{tier.name}</i>}
                   <span>{t("kaifan.card.official")}</span>
-                  <b>{yuan(tier.official)}</b>
+                  <b>{money(tier.official)}</b>
                   <span>{t("kaifan.card.thisPlan")}</span>
                   <b>{amount(tier.plan)}</b>
                 </Fragment>
