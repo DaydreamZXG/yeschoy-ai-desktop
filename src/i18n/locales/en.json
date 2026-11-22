@@ -564,6 +564,7 @@
       "writtenTerminal": "{{app}} is set up — open a new terminal window and go",
       "via": "Running on {{name}} · {{model}}",
       "open": "Open {{app}} ➜",
+      "pickWorkbuddy": "In WorkBuddy you choose the model yourself: pick {{model}} (the entry Kaifan added) in its model list to get {{name}}.",
       "opening": "Opening {{app}}…",
       "openedTerminal": "A terminal window is open with {{app}} in it — just start using it",
       "openFailed": "Couldn't open {{app}} for you. It's already set up, so opening it yourself works just the same",

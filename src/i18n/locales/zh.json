@@ -564,6 +564,7 @@
       "writtenTerminal": "{{app}} 的设置写好了，开一个新的终端窗口就能用",
       "via": "走的是 {{name}} · {{model}}",
       "open": "打开 {{app}} ➜",
+      "pickWorkbuddy": "WorkBuddy 里用哪个型号要你自己选：在它的型号列表里选 {{model}}（开饭加进去的那一项），才是 {{name}}。",
       "opening": "正在打开 {{app}}…",
       "openedTerminal": "已经替你开了一个终端窗口，{{app}} 在里面，直接用就行",
       "openFailed": "没能替你打开 {{app}}。设置已经写好，你自己打开它也一样能用",
