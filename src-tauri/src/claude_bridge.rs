@@ -510,8 +510,7 @@ async fn send_upstream(
         crate::provider_presets::anthropic_base(&credential.origin)
             .unwrap_or_else(|| credential.origin.clone())
     );
-    let mut outbound =
-        crate::account_v2::app_token::attach(state.client.post(&url), &url).json(value);
+    let mut outbound = state.client.post(&url).json(value);
     if upstream_wants_bearer(state.prefix, &credential.origin) {
         outbound = outbound.bearer_auth(credential.upstream_key());
     } else {
@@ -529,7 +528,9 @@ async fn send_upstream(
     ) {
         outbound = outbound.header(name, mark);
     }
-    outbound.send().await
+    crate::account_v2::app_token::attach(outbound, &url)
+        .send()
+        .await
 }
 
 fn stream_upstream(upstream: reqwest::Response) -> Response {
