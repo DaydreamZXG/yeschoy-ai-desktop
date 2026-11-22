@@ -321,9 +321,9 @@ async fn responses(state: &BridgeState, request: Request<Body>) -> Response {
         "{}/chat/completions",
         crate::provider_presets::openai_base(&credential.origin)
     );
-    let upstream = crate::local_bridge::with_app_headers(
-        crate::account_v2::app_token::attach(state.client.post(&url), &url),
-        &app_headers,
+    let upstream = crate::account_v2::app_token::attach(
+        crate::local_bridge::with_app_headers(state.client.post(&url), &app_headers),
+        &url,
     )
     .bearer_auth(credential.upstream_key())
     .json(&converted.chat)
@@ -377,9 +377,9 @@ async fn forward_verbatim(
         "{}/responses",
         crate::provider_presets::openai_base(&credential.origin)
     );
-    let upstream = crate::local_bridge::with_app_headers(
-        crate::account_v2::app_token::attach(state.client.post(&url), &url),
-        app_headers,
+    let upstream = crate::account_v2::app_token::attach(
+        crate::local_bridge::with_app_headers(state.client.post(&url), app_headers),
+        &url,
     )
     .bearer_auth(credential.upstream_key())
     .header(header::CONTENT_TYPE, "application/json")

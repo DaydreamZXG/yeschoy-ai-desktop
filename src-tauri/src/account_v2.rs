@@ -318,7 +318,7 @@ struct NeutralBootstrapData {
 fn app_token_header_is_allowed(raw: &str) -> bool {
     raw.len() <= 64
         && raw.len() > 2
-        && raw[..2].eq_ignore_ascii_case("x-")
+        && raw.as_bytes()[..2].eq_ignore_ascii_case(b"x-")
         && raw
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
@@ -983,8 +983,21 @@ fn load_stored_session() -> Result<Option<StoredSession>, ()> {
     }
 }
 
+/// The origin a line's requests go to: a catalog route's, or the station's.
+fn origin_of_line(line_id: &str) -> Option<&str> {
+    station_connect_origin_from_line_id(line_id).or_else(|| line_origin(line_id))
+}
+
+fn forget_app_token(line_id: &str) {
+    if let Some(origin) = origin_of_line(line_id) {
+        app_token::forget(origin);
+    }
+}
+
 fn delete_stored_session() -> Result<(), ()> {
-    app_token::forget();
+    if let Ok(Some(stored)) = load_stored_session() {
+        forget_app_token(&stored.line_id);
+    }
     crate::legacy::delete_secret(KEYRING_SERVICE, KEYRING_USER).map_err(|_| ())
 }
 
@@ -1026,7 +1039,7 @@ fn install_auth_bundle(
     // A new sign-in may be a different account; a refresh is the same one,
     // and the device credential the station issued to it still stands.
     if device_code.is_some() {
-        app_token::forget();
+        forget_app_token(line_id);
     }
     let stored = StoredSession {
         line_id: line_id.to_owned(),
@@ -1319,7 +1332,7 @@ pub(crate) fn install_station_connect_session(
         log::warn!("account stage=station_connect_bundle_rejected reason=contract");
         return Err("connect_auth_contract");
     }
-    app_token::forget();
+    forget_app_token(line_id);
     let stored = StoredSession {
         line_id: line_id.to_owned(),
         refresh_token: bundle.refresh_token,
@@ -3337,6 +3350,20 @@ mod tests {
             "https://yeschoy.com/desktop-authorize?user_code=ABCD-2345&next=x",
             "ABCD-2345"
         ));
+    }
+
+    #[test]
+    fn app_token_header_must_be_a_plain_custom_header() {
+        assert!(app_token_header_is_allowed("X-Desktop-App-Token"));
+        assert!(app_token_header_is_allowed("x-yeschoy-app-token"));
+
+        assert!(!app_token_header_is_allowed("Authorization"));
+        assert!(!app_token_header_is_allowed("x-api-key"));
+        assert!(!app_token_header_is_allowed("X-"));
+        assert!(!app_token_header_is_allowed("X-Bad Name"));
+        // A multi-byte character across the prefix must be refused, not panic.
+        assert!(!app_token_header_is_allowed("x€-token"));
+        assert!(!app_token_header_is_allowed("é-token"));
     }
 
     #[test]
