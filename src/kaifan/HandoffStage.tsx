@@ -1,7 +1,7 @@
 import { listen } from "@tauri-apps/api/event";
 import { useEffect, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
-import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
+import { WORKBENCH_APPS } from "../workbench/appCatalog";
 import {
   HANDOFF_LAND,
   HANDOFF_LEAVE,
@@ -112,7 +112,8 @@ export function HandoffStage({ toolId, who }: Props) {
   const character = ROSTER[who];
   const art = portraitOf(who);
   const app = WORKBENCH_APPS.find((item) => item.id === toolId);
-  const appName = appDisplayName(toolId, app?.name ?? toolId, t);
+  // 暗场只为有窗口的那个版本拉起来，所以不带「桌面版 / 命令行」那个尾巴。
+  const appName = app?.name ?? toolId;
   const landed = phase === "land" || (phase === "leave" && !!screen);
   const [left, top, width, height] =
     screen && landed

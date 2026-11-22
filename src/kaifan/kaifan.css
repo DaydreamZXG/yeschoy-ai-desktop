@@ -2666,8 +2666,14 @@ html.handoff body {
   overflow: hidden;
   background: #03060f;
   cursor: default;
-  animation: fadein 0.22s both;
+  animation: hoin 0.22s;
   transition: opacity 0.24s;
+}
+/* 进场不留停住的那一帧：留着会压过下面的 opacity，暗场就淡不掉了。 */
+@keyframes hoin {
+  from {
+    opacity: 0;
+  }
 }
 .ho-leave {
   opacity: 0;
@@ -2767,7 +2773,7 @@ html.handoff body {
     0 0 0 7px rgba(255, 255, 255, 0.06),
     0 0 90px -10px var(--c),
     0 40px 120px rgba(0, 0, 0, 0.6);
-  animation: fadein 0.4s 0.35s both;
+  animation: hoin 0.4s 0.35s backwards;
   transition:
     left 0.26s,
     top 0.26s,
@@ -2820,7 +2826,9 @@ html.handoff body {
 .ho-show .ho-screen b,
 .ho-show .ho-screen i,
 .ho-land .ho-screen b,
-.ho-land .ho-screen i {
+.ho-land .ho-screen i,
+.ho-leave .ho-screen b,
+.ho-leave .ho-screen i {
   visibility: hidden;
 }
 /* 放大：屏幕框跟着画面走到应用所在的位置，人和字让开。 */
@@ -2835,7 +2843,11 @@ html.handoff body {
 .ho-land .ho-art,
 .ho-land .ho-txt,
 .ho-land .ho-screen p,
-.ho-land .ho-skip {
+.ho-land .ho-skip,
+.ho-leave .ho-art,
+.ho-leave .ho-txt,
+.ho-leave .ho-screen p,
+.ho-leave .ho-skip {
   opacity: 0;
 }
 .ho-skip {
@@ -2846,6 +2858,6 @@ html.handoff body {
   text-align: center;
   font-size: 12.5px;
   color: var(--faint);
-  animation: fadein 0.4s 1.2s both;
+  animation: hoin 0.4s 1.2s backwards;
   transition: opacity 0.2s;
 }
