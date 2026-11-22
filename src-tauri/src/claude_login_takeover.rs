@@ -1,9 +1,9 @@
 //! 让中转赢过 claude.ai 的登录态，并且能还回去。
 //!
-//! 用户在野菜里给 Claude Code 选了模型，那就是他的选择。但 Claude Code 同时
+//! 用户在 YesChoy 里给 Claude Code 选了模型，那就是他的选择。但 Claude Code 同时
 //! 看得到两份凭据：我们写进 `~/.claude/settings.json` 的 `apiKeyHelper`，和它
 //! 自己存在钥匙串里的 claude.ai 登录态。两个都在时它用后者，于是中转从头到尾
-//! 没被用到 —— 用户在野菜里看到「设置已完成」，在 Claude Code 里看到的却是
+//! 没被用到 —— 用户在 YesChoy 里看到「设置已完成」，在 Claude Code 里看到的却是
 //!
 //!     Both claude.ai and apiKeyHelper set · auth may not work as expected
 //!     Your account is on hold and can't use Claude Code.
@@ -12,7 +12,7 @@
 //! 和 `ANTHROPIC_API_KEY`，注释写明是「so Claude Code cannot bypass
 //! apiKeyHelper precedence」），但钥匙串里那份不是文件，写配置碰不到它。
 //!
-//! 所以这里把它挪走：接入时移到野菜自己的 service 下，恢复原设置时搬回去。
+//! 所以这里把它挪走：接入时移到 YesChoy 自己的 service 下，恢复原设置时搬回去。
 //! 挪走而不是删掉 —— 删掉就还不回来了，而「随时可以恢复原设置」是这个产品
 //! 承诺过的事，不能为了省一步在这上面开口子。
 //!
@@ -21,7 +21,7 @@
 //!   · 探测不需要授权。`SecItemCopyMatching` 只要属性不要数据时不弹窗，所以
 //!     「有没有登录态」可以静默判断 —— 这很重要，否则没登录 claude.ai 的人
 //!     也会平白收到一个系统弹窗。
-//!   · 真的读它一定弹窗。条目归 Claude Code 所有，野菜去读，系统必然问一次
+//!   · 真的读它一定弹窗。条目归 Claude Code 所有，YesChoy 去读，系统必然问一次
 //!     「是否允许」。这个绕不过去，所以调用方有义务在此之前把话说清楚，
 //!     否则用户面对的是一个没头没尾的系统对话框，多数人会点拒绝。
 //!
@@ -209,7 +209,7 @@ mod tests {
     fn the_service_names_are_pinned() {
         assert_eq!(CLAUDE_SERVICE, "Claude Code-credentials");
         assert_ne!(CLAUDE_SERVICE, BACKUP_SERVICE);
-        // 备份位必须在野菜自己的命名空间下，不能污染别人的条目。
+        // 备份位必须在 YesChoy 自己的命名空间下，不能污染别人的条目。
         assert!(BACKUP_SERVICE.starts_with("com.yeschoy.desktop."));
         assert!(OLD_BACKUP_SERVICE.starts_with("com.kaifan.desktop."));
     }

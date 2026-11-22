@@ -324,7 +324,7 @@ async fn messages(state: &BridgeState, request: Request<Body>) -> Response {
             log::warn!("claude_bridge stage=stale_route_alias");
             return invalid_request_error(
                 "This profile points at a model your station account no longer provides. \
-                 Open YesChoy (野菜) and connect this app again to refresh it.",
+                 Open YesChoy and connect this app again to refresh it.",
             );
         }
     };
@@ -353,7 +353,7 @@ async fn messages(state: &BridgeState, request: Request<Body>) -> Response {
             return invalid_request_owned(format!(
                 "{model} is not in the model list this app was connected with, and \
                  each key only covers the models in its own billing group. Open \
-                 YesChoy (野菜), add {model} to the list, and connect this app again."
+                 YesChoy, add {model} to the list, and connect this app again."
             ));
         }
     };

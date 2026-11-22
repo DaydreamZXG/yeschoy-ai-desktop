@@ -6,8 +6,8 @@
     "defaultGroupLabel": "标准分组"
   },
   "quit": {
-    "titleChoice": "关闭野菜？",
-    "titleExiting": "正在退出野菜",
+    "titleChoice": "关闭 YesChoy？",
+    "titleExiting": "正在退出 YesChoy",
     "unknownAffected": "暂时无法确认哪些应用需要助手运行。退出可能中断正在使用的连接，设置不会被删除。",
     "affectedIntro": "以下应用的连接需要助手运行，退出后会暂时中断：",
     "affectedHint": "想继续用就选「后台运行」。退出后再打开助手，从应用卡片继续，不用重新接入。",
@@ -203,8 +203,8 @@
     }
   },
   "kaifan": {
-    "appName": "野菜",
-    "mark": "野",
+    "appName": "YesChoy",
+    "mark": "Y",
     "backHome": "回到首页",
     "close": "关闭",
     "listSeparator": "、",
@@ -309,7 +309,7 @@
       "fixSaysUnfinished": "{{app}} 上次接到一半没做完。点「去修好」，我接着做完，不用从头来。",
       "fixGo": "去修好",
       "connectedNoHost": "连上了。",
-      "updateReady": "野菜有新版本 {{version}} 了。想更新的话去「设置」里点一下，不急。"
+      "updateReady": "YesChoy 有新版本 {{version}} 了。想更新的话去「设置」里点一下，不急。"
     },
     "vendor": {
       "zhipu_coding": "智谱 GLM Coding Plan",
@@ -343,7 +343,7 @@
       "getKey": "去拿密钥 ↗",
       "keyPageFailed": "浏览器没打开。你自己去这家的网站登录，在控制台里找「API Key」。",
       "planRiskTitle": "先说清楚：套餐有被封的风险",
-      "planRisk": "{{name}} 是包月套餐，厂商写明只许在它认可的编程工具里用。野菜是替应用转一道手再发给厂商的，厂商有可能认定这是违规，限制甚至停掉你的套餐，不退款。介意的话别用套餐密钥，改用按量付费的。",
+      "planRisk": "{{name}} 是包月套餐，厂商写明只许在它认可的编程工具里用。YesChoy 是替应用转一道手再发给厂商的，厂商有可能认定这是违规，限制甚至停掉你的套餐，不退款。介意的话别用套餐密钥，改用按量付费的。",
       "paygNote": "密钥只保存在这台电脑的系统密码库里。直连厂商时，余额和公告看不到，看不到的地方我会照实说。",
       "onlyTools": "这家能接 {{apps}}，别的应用暂时接不了。",
       "listJoin": "、",
@@ -428,8 +428,8 @@
         "anthropicBearer": "{{vendor}} 的 Claude 格式地址只认 Authorization: Bearer 这种带密钥的方式。那个应用要是按 x-api-key 带密钥（多数 Claude 格式的应用默认这样），会报密钥错误；它的设置里没有「Bearer」或「Auth Token」这类选项的话，改用上面的 OpenAI 格式地址。",
         "planRisk": "{{vendor}} 是包月套餐，厂商只许在它认可的编程工具里用。把密钥填进别的应用，厂商有可能限制或停掉套餐。"
       },
-      "planRisk": "现在连的是 {{vendor}}，是包月套餐。厂商只许在它认可的编程工具里用，野菜替 {{app}} 转一道手再发过去，厂商有可能因此限制或停掉套餐。",
-      "onlyTools": "{{app}} 暂时接不了 {{vendor}}：{{vendor}} 要求每个请求带一个标记，{{app}} 自己不带，它又是直接连厂商的，野菜没法替它带。在上面改选 {{apps}}，或者换一个站点。",
+      "planRisk": "现在连的是 {{vendor}}，是包月套餐。厂商只许在它认可的编程工具里用，YesChoy 替 {{app}} 转一道手再发过去，厂商有可能因此限制或停掉套餐。",
+      "onlyTools": "{{app}} 暂时接不了 {{vendor}}：{{vendor}} 要求每个请求带一个标记，{{app}} 自己不带，它又是直接连厂商的，YesChoy 没法替它带。在上面改选 {{apps}}，或者换一个站点。",
       "appOnlyNone": "{{app}} 接不了 {{model}}：这个站给 {{model}} 的价格方案都是客户端专属价，要经过这个客户端发请求才算数，{{app}} 是自己直接连站点的。换一个型号，或者在上面改选别的应用。",
       "appOnlySwap": "「{{from}}」是客户端专属价，{{app}} 自己直接连站点，用不上。这次按「{{to}}」的价格算。",
       "title": "让谁去哪儿干活？",
@@ -567,7 +567,7 @@
       "written": "{{app}} 的设置写好了，打开它就能用",
       "writtenTerminal": "{{app}} 的设置写好了，开一个新的终端窗口就能用",
       "via": "走的是 {{name}} · {{model}}",
-      "pickWorkbuddy": "WorkBuddy 里用哪个型号要你自己选：在它的型号列表里选 {{model}}（野菜加进去的那一项），才是 {{name}}。",
+      "pickWorkbuddy": "WorkBuddy 里用哪个型号要你自己选：在它的型号列表里选 {{model}}（YesChoy 加进去的那一项），才是 {{name}}。",
       "open": "打开 {{app}} ➜",
       "opening": "正在打开 {{app}}…",
       "openedTerminal": "已经替你开了一个终端窗口，{{app}} 在里面，直接用就行",

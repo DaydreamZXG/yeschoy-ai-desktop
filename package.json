@@ -1,7 +1,7 @@
 {
   "name": "yeschoy-desktop",
   "version": "0.5.1",
-  "description": "野菜 YesChoy: connect your AI apps to any relay station, no command line",
+  "description": "YesChoy: connect your AI apps to any relay station, no command line",
   "type": "module",
   "scripts": {
     "dev": "pnpm tauri dev",

@@ -1,13 +1,13 @@
-//! Codex 的 Responses ↔ Chat 转换：**野菜的那一层**。
+//! Codex 的 Responses ↔ Chat 转换：**YesChoy 的那一层**。
 //!
 //! Codex 只发 `/v1/responses`（CLI 0.155.1 起 `wire_api = "chat"` 已被移除），
 //! 而有些渠道的上游只有 `/v1/chat/completions`。转换本身用 vendored 的
-//! 上游 proxy（`crate::proxy`），**这里只放野菜特有的东西**。
+//! 上游 proxy（`crate::proxy`），**这里只放 YesChoy 特有的东西**。
 //!
 //! # 为什么是「包着调用」而不是改那些文件
 //!
 //! 上一次 vendoring 把这些逻辑打进了 `transform_codex_chat.rs`，于是每次同步
-//! 上游都要重打一遍补丁。现在改成：上游文件逐字节原样，野菜的行为写在这里，
+//! 上游都要重打一遍补丁。现在改成：上游文件逐字节原样，YesChoy 的行为写在这里，
 //! 调用它公开的入口。再同步就是 `cp`，见 `proxy/VENDOR.md`。
 
 use axum::{
@@ -77,7 +77,7 @@ impl Converted {
 /// `model` 是**还原后的真实模型 id**，不是写进 Codex 配置里的那个名字：
 /// 档位映射要按真实模型查目录，拿别名查不到。
 ///
-/// 转换交给上游；野菜只加一件事 —— 把 `reasoning.effort` 按**这个模型实际
+/// 转换交给上游；YesChoy 只加一件事 —— 把 `reasoning.effort` 按**这个模型实际
 /// 支持的档位**映射过去（`apply_chat_effort`）。各家的「思考」参数并不统一：
 /// DeepSeek 要 `thinking: {type}`，OpenAI 系要 `reasoning_effort`，
 /// 而且支持的档位各不相同。原样透传等于把不支持的档位发给上游。
@@ -288,7 +288,7 @@ async fn responses(state: &BridgeState, request: Request<Body>) -> Response {
                 format!(
                     "{model} is not in the model list this app was connected with, and \
                      each key only covers the models in its own billing group. Open \
-                     YesChoy (野菜), add {model} to the list, and connect this app again."
+                     YesChoy, add {model} to the list, and connect this app again."
                 ),
             );
         }
@@ -531,7 +531,7 @@ mod tests {
     ///
     /// 它守的是：Responses 的 `reasoning.effort` 到了 Chat 这边不能被静默降级
     /// 或丢掉。以前这条测试住在上游文件里，所以每次同步都要重打补丁；
-    /// 现在住在野菜自己的文件里 —— **行为一样，维护成本没了**。
+    /// 现在住在 YesChoy 自己的文件里 —— **行为一样，维护成本没了**。
     #[test]
     fn responses_reasoning_reaches_chat_without_silent_downgrade() {
         // 五档全支持的模型：原样透传，并且 max_output_tokens 换成 Chat 的拼法。
@@ -1206,7 +1206,7 @@ mod tests {
             TcpListener::bind(codex_desktop::PROXY_ADDRESS)
                 .await
                 .is_ok(),
-            "{} 被占用了。桥的地址是常量，夹具换不了端口 —— 关掉野菜再跑。",
+            "{} 被占用了。桥的地址是常量，夹具换不了端口 —— 关掉 YesChoy 再跑。",
             codex_desktop::PROXY_ADDRESS
         );
 

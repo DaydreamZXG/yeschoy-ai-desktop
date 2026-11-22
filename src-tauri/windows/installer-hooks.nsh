@@ -13,6 +13,8 @@ Var KaifanShutdownPath
 Var KaifanShutdownError
 Var KaifanRegisteredRoot
 Var KaifanOldRegisteredRoot
+Var KaifanPriorRegisteredRoot
+Var KaifanPriorTauriRegisteredRoot
 Var KaifanTestRegisteredRoot
 Var KaifanTestTauriRegisteredRoot
 Var KaifanTauriRegisteredRoot
@@ -51,6 +53,11 @@ FunctionEnd
 Function KaifanProbeRootForLocks
   Push $0
   StrCmp $KaifanProbeRoot "" kaifan_probe_root_done
+
+  Push "$KaifanProbeRoot\YesChoy.exe"
+  Call KaifanCanReplaceFile
+  Pop $0
+  StrCmp $0 1 kaifan_probe_root_locked
 
   Push "$KaifanProbeRoot\野菜.exe"
   Call KaifanCanReplaceFile
@@ -98,11 +105,21 @@ Function KaifanRefreshLockState
   StrCpy $KaifanLockState 0
 
   ; 现在的安装位置（独立安装包 / Tauri 生成的安装包）。
+  StrCpy $KaifanProbeRoot "$LOCALAPPDATA\Programs\YesChoy"
+  Call KaifanProbeRootForLocks
+  StrCpy $KaifanProbeRoot "$LOCALAPPDATA\YesChoy"
+  Call KaifanProbeRootForLocks
+  StrCpy $KaifanProbeRoot "$KaifanOldRegisteredRoot"
+  Call KaifanProbeRootForLocks
+
+  ; 改名 YesChoy 之前叫“野菜”的内测版。
   StrCpy $KaifanProbeRoot "$LOCALAPPDATA\Programs\野菜"
   Call KaifanProbeRootForLocks
   StrCpy $KaifanProbeRoot "$LOCALAPPDATA\野菜"
   Call KaifanProbeRootForLocks
-  StrCpy $KaifanProbeRoot "$KaifanOldRegisteredRoot"
+  StrCpy $KaifanProbeRoot "$KaifanPriorRegisteredRoot"
+  Call KaifanProbeRootForLocks
+  StrCpy $KaifanProbeRoot "$KaifanPriorTauriRegisteredRoot"
   Call KaifanProbeRootForLocks
 
   ; 只出过测试版的“开饭”。
@@ -148,6 +165,8 @@ FunctionEnd
 Function KaifanShutdownRoot
   StrCmp $KaifanProbeRoot "" kaifan_shutdown_root_done
 
+  StrCpy $KaifanShutdownPath "$KaifanProbeRoot\YesChoy.exe"
+  Call KaifanShutdownOneFile
   StrCpy $KaifanShutdownPath "$KaifanProbeRoot\野菜.exe"
   Call KaifanShutdownOneFile
   StrCpy $KaifanShutdownPath "$KaifanProbeRoot\开饭.exe"
@@ -169,11 +188,19 @@ FunctionEnd
 Function KaifanShutdownKnownInstallations
   StrCpy $KaifanShutdownError 0
 
+  StrCpy $KaifanProbeRoot "$LOCALAPPDATA\Programs\YesChoy"
+  Call KaifanShutdownRoot
+  StrCpy $KaifanProbeRoot "$LOCALAPPDATA\YesChoy"
+  Call KaifanShutdownRoot
+  StrCpy $KaifanProbeRoot "$KaifanOldRegisteredRoot"
+  Call KaifanShutdownRoot
   StrCpy $KaifanProbeRoot "$LOCALAPPDATA\Programs\野菜"
   Call KaifanShutdownRoot
   StrCpy $KaifanProbeRoot "$LOCALAPPDATA\野菜"
   Call KaifanShutdownRoot
-  StrCpy $KaifanProbeRoot "$KaifanOldRegisteredRoot"
+  StrCpy $KaifanProbeRoot "$KaifanPriorRegisteredRoot"
+  Call KaifanShutdownRoot
+  StrCpy $KaifanProbeRoot "$KaifanPriorTauriRegisteredRoot"
   Call KaifanShutdownRoot
   StrCpy $KaifanProbeRoot "$LOCALAPPDATA\Programs\开饭"
   Call KaifanShutdownRoot
@@ -223,8 +250,10 @@ Function KaifanEnsureStopped
   Push $1
 
   SetRegView 64
-  ReadRegStr $KaifanRegisteredRoot HKCU "Software\野菜" "InstallDir"
+  ReadRegStr $KaifanRegisteredRoot HKCU "Software\yeschoy\YesChoyStandalone" "InstallDir"
   ; 以前的名字登记过的位置；用户当时选了别的目录也能找到。
+  ReadRegStr $KaifanPriorRegisteredRoot HKCU "Software\野菜" "InstallDir"
+  ReadRegStr $KaifanPriorTauriRegisteredRoot HKCU "Software\yeschoy\野菜" ""
   ReadRegStr $KaifanTestRegisteredRoot HKCU "Software\Kaifan" "InstallDir"
   ReadRegStr $KaifanTestTauriRegisteredRoot HKCU "Software\kaifan\开饭" ""
   ReadRegStr $KaifanOldRegisteredRoot HKCU "Software\野菜API" "InstallDir"
@@ -235,10 +264,10 @@ kaifan_check_running:
   StrCmp $KaifanLockState 0 kaifan_stopped
 
   IfSilent kaifan_request_safe_exit
-  MessageBox MB_ICONEXCLAMATION|MB_OKCANCEL "检测到野菜（或旧版“野菜API”）仍在运行。请先保存正在进行的操作。点击“确定”后，安装程序会先等待应用安全退出；如果旧版不支持安全退出，会自动结束对应的已安装程序，然后继续升级。" IDOK kaifan_request_safe_exit IDCANCEL kaifan_cancel
+  MessageBox MB_ICONEXCLAMATION|MB_OKCANCEL "检测到 YesChoy（或旧版“野菜API”）仍在运行。请先保存正在进行的操作。点击“确定”后，安装程序会先等待应用安全退出；如果旧版不支持安全退出，会自动结束对应的已安装程序，然后继续升级。" IDOK kaifan_request_safe_exit IDCANCEL kaifan_cancel
 
 kaifan_request_safe_exit:
-  ; 野菜和“开饭”测试版可能同时开着，各听各的事件：两个都要通知到。
+  ; YesChoy 和“开饭”测试版可能同时开着，各听各的事件：两个都要通知到。
   StrCpy $KaifanSafeExitRequested 0
   System::Call 'kernel32::OpenEventW(i 0x0002, i 0, w "${KAIFAN_INSTALLER_SHUTDOWN_EVENT}") p.r0'
   StrCmp $0 0 kaifan_request_old_safe_exit
@@ -271,7 +300,7 @@ kaifan_force_exit:
   StrCmp $KaifanLockState 0 kaifan_stopped
 
   IfSilent kaifan_abort
-  MessageBox MB_ICONSTOP|MB_RETRYCANCEL "安装程序无法结束正在运行的野菜，因此尚未修改任何程序文件。请在任务管理器的“详细信息”中结束“野菜.exe”“kaifan-desktop.exe”“野菜API.exe”或“yeschoy-desktop.exe”；若列表里仍是早期版本遗留的可执行名，一并结束后点击“重试”。错误代码：$KaifanShutdownError" IDRETRY kaifan_check_running IDCANCEL kaifan_abort
+  MessageBox MB_ICONSTOP|MB_RETRYCANCEL "安装程序无法结束正在运行的 YesChoy，因此尚未修改任何程序文件。请在任务管理器的“详细信息”中结束“YesChoy.exe”“kaifan-desktop.exe”“野菜API.exe”或“yeschoy-desktop.exe”；若列表里仍是早期版本遗留的可执行名，一并结束后点击“重试”。错误代码：$KaifanShutdownError" IDRETRY kaifan_check_running IDCANCEL kaifan_abort
 
 kaifan_cancel:
   MessageBox MB_ICONINFORMATION|MB_OK "安装已取消，正在运行的应用和现有程序文件均未修改。"

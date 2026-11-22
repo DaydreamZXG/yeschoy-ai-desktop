@@ -1297,7 +1297,7 @@ pub fn account_session_snapshot_v2() -> AccountSessionSnapshot {
 
 const STATION_CONNECT_LINE_PREFIX: &str = "station_connect:";
 
-/// Maps a connect deep-link origin to the persisted `line_id`. Known 野菜 lines
+/// Maps a connect deep-link origin to the persisted `line_id`. Known YesChoy lines
 /// reuse the connectivity catalog; other HTTPS stations use a stable synthetic id
 /// until bootstrap-by-origin lands in a later task.
 pub(crate) fn line_id_for_station_connect_origin(origin: &str) -> String {

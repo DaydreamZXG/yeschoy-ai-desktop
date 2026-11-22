@@ -1,7 +1,7 @@
 //! 给 vendored `proxy/` 用的薄壳。
 //!
 //! 上游 fork 的 `src/provider.rs` 有 1657 行，是它自己那套 provider 模型
-//! （数据库存储、表单、多应用配置），野菜用不上。但 vendored 的
+//! （数据库存储、表单、多应用配置），YesChoy 用不上。但 vendored 的
 //! `proxy/providers/transform_codex_chat.rs` 里写的是
 //! `use crate::provider::CodexChatReasoningConfig;` —— 为了让那个文件
 //! **一个字节都不用改**，这里按同一路径提供同一个类型。

@@ -494,11 +494,11 @@ impl CallbackResponse {
     fn message_in(self, language: crate::ui_language::Language) -> &'static str {
         match self {
             Self::Accepted => language.pick(
-                "授权回调已接收，请返回野菜查看登录结果。",
+                "授权回调已接收，请返回 YesChoy 查看登录结果。",
                 "Sign-in received. Return to YesChoy to see the result.",
             ),
             Self::Denied => language.pick(
-                "授权已取消，请返回野菜。",
+                "授权已取消，请返回 YesChoy。",
                 "Sign-in cancelled. Return to YesChoy.",
             ),
             Self::BadRequest => language.pick(
@@ -520,7 +520,7 @@ impl CallbackResponse {
         format!(
             "<!doctype html><html lang=\"{}\"><meta charset=\"utf-8\"><title>{}</title><body><p>{}</p></body></html>",
             language.pick("zh-CN", "en"),
-            language.pick("野菜 授权", "YesChoy sign-in"),
+            language.pick("YesChoy 授权", "YesChoy sign-in"),
             self.message_in(language)
         )
     }
@@ -1198,8 +1198,8 @@ mod tests {
 
         let chinese = CallbackResponse::Accepted.page_in(Language::Zh);
         assert!(chinese.starts_with("<!doctype html><html lang=\"zh-CN\">"));
-        assert!(chinese.contains("<title>野菜 授权</title>"));
-        assert!(chinese.contains("授权回调已接收，请返回野菜查看登录结果。"));
+        assert!(chinese.contains("<title>YesChoy 授权</title>"));
+        assert!(chinese.contains("授权回调已接收，请返回 YesChoy 查看登录结果。"));
     }
 
     #[tokio::test]

@@ -1,12 +1,12 @@
 # 官方包与开源 / 第三方站隔离（BRANDING）
 
-本文约定「野菜」官方桌面包与社区 / 开源构建、以及各中转站网页入口之间的边界。目标：**通道分开、身份分开、广告可关且不挡路**。
+本文约定「YesChoy」官方桌面包与社区 / 开源构建、以及各中转站网页入口之间的边界。目标：**通道分开、身份分开、广告可关且不挡路**。
 
 相关实现：`YESCHOY_DISTRIBUTION` / `VITE_YESCHOY_DISTRIBUTION`（见 `src-tauri/build.rs`、`deploy/self-update/build-local.mjs`、`src/distribution/identity.ts`）。开源清单见 [`OPEN_SOURCE.md`](./OPEN_SOURCE.md)。
 
 ## 两种构建
 
-| | **官方「野菜」包** | **社区 / 开源包**（默认） |
+| | **官方「YesChoy」包** | **社区 / 开源包**（默认） |
 |---|---|---|
 | 怎么打 | `deploy/self-update/build-local.mjs`，设 `YESCHOY_DISTRIBUTION=official\|partner` 与 `VITE_YESCHOY_DISTRIBUTION=official` | `pnpm build` / CI；**不**设上述变量（默认为 `community` / OSS UI） |
 | 应用内更新 | 编入 `src-tauri/update-channels.json`，主源为 `ergou.qzz.io/updates/{official\|partner}/stable.json` | GitHub Releases（需 `YESCHOY_COMMUNITY_UPDATER_PUBKEY`）；否则关闭自动更新并引导去 GitHub |
@@ -24,7 +24,7 @@
 
 第三方不得：
 
-1. 冒充「官方野菜」安装包或更新通道；
+1. 冒充「官方 YesChoy」安装包或更新通道；
 2. 把官方中转站（如 `yeschoy.com` / `api.yeschoy.com`）写死为用户唯一默认站；
 3. 在分发包中编入官方 `update-channels.json` 或 ergou 公钥通道（除非自己是授权合作方流水线）。
 
@@ -36,7 +36,7 @@
 
 ## 轻量广告（仅官方包）
 
-- **位置**：设置页底部一行小字（例如「由野菜开源 · 官网」），链到 `https://yeschoy.app`。
+- **位置**：设置页底部一行小字（例如「由 YesChoy 开源 · 官网」），链到 `https://yeschoy.app`。
 - **可关**：用户点「不再显示」后写入本地偏好（`localStorage`），之后不再出现。
 - **不做**：弹窗、启动页霸屏、聊天 / 模型列表 / 计费路径里的推广。
 
