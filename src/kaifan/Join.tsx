@@ -331,12 +331,13 @@ export function Join({
     fits(chooseBillingGroup(model, "")) ??
     offered[0] ??
     DEFAULT_BILLING_GROUP;
+  const gone = offered.length > 0 && !offered.includes(billingGroup);
   // 名片上挑的是专属价，这个应用用不了：换了哪个方案要说出来，不能悄悄换。
+  // 存过的方案自己也用不了时还没换成谁，等接入时那一问。
   const swapped =
-    !unpriced && wanted !== undefined && fits(wanted) === undefined
+    !unpriced && !gone && wanted !== undefined && fits(wanted) === undefined
       ? wanted
       : null;
-  const gone = offered.length > 0 && !offered.includes(billingGroup);
   const others = offered.filter(
     (id) => id !== billingGroup && !refused.includes(`${modelId}\n${id}`),
   );

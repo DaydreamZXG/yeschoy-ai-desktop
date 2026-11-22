@@ -539,6 +539,27 @@ describe("接入：选应用、选人、点一下", () => {
       });
     });
 
+    it("存过的就是专属价：不说已经换了，接入时先问换不换", async () => {
+      found([target("pi")]);
+      setup({
+        initialApp: "pi",
+        models: [withPlans(["种菜", true], ["标准", false])],
+        picks,
+        connections: [
+          { ...savedOn("种菜")[0], toolId: "pi" } as ToolConnection,
+        ],
+      });
+      await ready();
+      expect(note()).toBeNull();
+      fireEvent.click(go());
+      await waitFor(() => expect(says()).toContain("不提供了"));
+      expect(activate).not.toHaveBeenCalled();
+      answer("ready", "configuration_ready");
+      fireEvent.click(screen.getByRole("button", { name: "换成「标准」接入" }));
+      await waitFor(() => expect(activate).toHaveBeenCalled());
+      expect(activate.mock.calls[0][0].billingGroup).toBe("标准");
+    });
+
     it("没在名片上挑过：直接用能用的那个，不多说", async () => {
       found([target("pi")]);
       setup({
