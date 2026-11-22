@@ -706,7 +706,11 @@ pub(crate) async fn ensure_credential_ready(
 }
 
 pub(crate) fn launch(path: &Path) -> Result<(), AdapterFailure> {
-    super::desktop_launch::launch("codex_desktop", path)
+    // 界面登记过由谁登场的话，先拉暗场再叫应用：接入、重开、单独打开都走这里。
+    let curtain = crate::app_handoff::raise("codex_desktop", path);
+    let result = super::desktop_launch::launch("codex_desktop", path);
+    curtain.after(result.is_ok());
+    result
 }
 
 /// Codex 命令行版的可执行文件名。CLI 和桌面版读同一份 `~/.codex/config.toml`，

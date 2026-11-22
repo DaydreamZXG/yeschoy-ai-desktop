@@ -148,6 +148,7 @@ pub fn run() {
         })
         .setup(move |app| {
             window_appearance::initialize(app)?;
+            app_handoff::init(app.handle());
             station_trust::initialize(app.path().app_data_dir().ok());
             #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
             if let Err(error) = station_connect::wire_station_connect_deep_link(app.handle()) {
@@ -239,8 +240,9 @@ pub fn run() {
             tool_activation::cancel_tool_activation_v1,
             tool_activation::manage_tool_connections_v1,
             open_connection::open_tool_connection_v1,
-            app_handoff::app_handoff_begin_v1,
-            app_handoff::app_handoff_follow_v1,
+            app_handoff::app_handoff_arm_v1,
+            app_handoff::app_handoff_disarm_v1,
+            app_handoff::app_handoff_ready_v1,
             app_handoff::app_handoff_end_v1,
             quit_desktop_assistant,
             read_desktop_exit_state,
