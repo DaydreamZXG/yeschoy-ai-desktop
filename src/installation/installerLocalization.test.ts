@@ -57,6 +57,11 @@ describe("Windows installer localization", () => {
     expect(hook).toContain('HKCU "Software\\Kaifan" "InstallDir"');
     expect(hook).toContain("开饭.exe");
     expect(hook).toContain("kaifan-desktop.exe");
+    // 改名 YesChoy 之前叫“野菜”的内测版还开着时，也要先让它退出。
+    expect(hook).toContain('"$LOCALAPPDATA\\Programs\\野菜"');
+    expect(hook).toContain('"$LOCALAPPDATA\\野菜"');
+    expect(hook).toContain('"$KaifanProbeRoot\\野菜.exe"');
+    expect(hook).toContain('HKCU "Software\\yeschoy\\野菜" ""');
     expect(hook).toContain("$LOCALAPPDATA\\Programs\\野菜API");
     expect(hook).toContain("$LOCALAPPDATA\\野菜API");
     expect(hook).toContain("野菜API.exe");
