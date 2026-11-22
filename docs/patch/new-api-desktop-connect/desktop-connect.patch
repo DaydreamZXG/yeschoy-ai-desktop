@@ -1,0 +1,1457 @@
+diff --git a/controller/desktop_connect.go b/controller/desktop_connect.go
+new file mode 100644
+index 0000000..0c859c5
+--- /dev/null
++++ b/controller/desktop_connect.go
+@@ -0,0 +1,905 @@
++package controller
++
++import (
++	"context"
++	"crypto/rand"
++	"crypto/sha256"
++	"encoding/base64"
++	"encoding/hex"
++	"errors"
++	"math"
++	"net"
++	"net/http"
++	"slices"
++	"strconv"
++	"strings"
++	"sync"
++	"time"
++
++	"github.com/QuantumNous/new-api/common"
++	"github.com/QuantumNous/new-api/middleware"
++	"github.com/QuantumNous/new-api/model"
++	"github.com/QuantumNous/new-api/service"
++	"github.com/QuantumNous/new-api/setting/console_setting"
++	"github.com/QuantumNous/new-api/setting/operation_setting"
++	"github.com/QuantumNous/new-api/setting/ratio_setting"
++	"github.com/gin-gonic/gin"
++	"github.com/go-redis/redis/v8"
++	"gorm.io/gorm"
++)
++
++// The desktop-connect contract (v1): a desktop client signs in through the
++// browser with a one-time connect code, then reads the account, plans, keys,
++// usage and notices of the signed-in user. The contract names no product; a
++// client recognises a station by what DesktopBootstrap declares.
++const (
++	desktopConnectService    = "desktop-connect"
++	desktopConnectContractID = "desktop-connect-v1"
++	desktopConnectBasePath   = "/api/desktop/v2"
++	desktopConnectLoginLabel = "desktop"
++
++	desktopConnectCodeTTL = 300 * time.Second
++	// desktopConnectCodeUsed replaces a consumed code until it would have
++	// expired, so a replay is told apart from a code that ran out.
++	desktopConnectCodeUsed = "used"
++	// desktopConnectCodeMemoryLimit bounds the in-process store used without Redis.
++	desktopConnectCodeMemoryLimit = 10000
++
++	desktopUsageWindowDays = 30
++	desktopUsagePageSize   = 100
++)
++
++var (
++	errDesktopConnectCodeExpired = errors.New("connect code expired")
++	errDesktopConnectCodeUsed    = errors.New("connect code already used")
++	errDesktopConnectCodeStore   = errors.New("connect code store unavailable")
++)
++
++// desktopConnectGrant is what a connect code stands for until it is exchanged.
++type desktopConnectGrant struct {
++	UserID      int    `json:"user_id"`
++	AuthVersion int64  `json:"auth_version"`
++	Origin      string `json:"origin"`
++}
++
++type desktopConnectMemoryCode struct {
++	grant     desktopConnectGrant
++	expiresAt time.Time
++	used      bool
++}
++
++var (
++	desktopConnectMemoryCodes     = map[string]*desktopConnectMemoryCode{}
++	desktopConnectMemoryCodesLock sync.Mutex
++)
++
++// desktopConnectConsumeScript hands out a stored grant once: the first caller
++// receives it and leaves a marker behind for the rest of the code's lifetime.
++const desktopConnectConsumeScript = `
++local value = redis.call('GET', KEYS[1])
++if not value then return false end
++if value ~= ARGV[1] then
++  local ttl = redis.call('PTTL', KEYS[1])
++  if ttl > 0 then
++    redis.call('SET', KEYS[1], ARGV[1], 'PX', ttl)
++  else
++    redis.call('DEL', KEYS[1])
++  end
++end
++return value`
++
++func desktopError(c *gin.Context, status int, code string) {
++	c.Header("Cache-Control", "no-store")
++	c.AbortWithStatusJSON(status, gin.H{"success": false, "code": code})
++}
++
++func desktopOK(c *gin.Context, data any) {
++	c.Header("Cache-Control", "no-store")
++	c.JSON(http.StatusOK, gin.H{"success": true, "data": data})
++}
++
++// desktopConnectOrigin is the canonical HTTPS origin the request was sent to.
++// Connect codes are bound to it, so it refuses what a desktop client refuses:
++// an address literal or an explicit port.
++func desktopConnectOrigin(c *gin.Context) (string, bool) {
++	host := strings.ToLower(strings.TrimSpace(c.Request.Host))
++	if host == "" || strings.ContainsAny(host, ":/@?#[]") || net.ParseIP(host) != nil {
++		return "", false
++	}
++	origin, err := common.NormalizeOrigin("https://" + host)
++	return origin, err == nil
++}
++
++func desktopConnectCodeKey(code string) string {
++	sum := sha256.Sum256([]byte(code))
++	return "desktop_connect_code:" + hex.EncodeToString(sum[:])
++}
++
++func storeDesktopConnectCode(code string, grant desktopConnectGrant) error {
++	key := desktopConnectCodeKey(code)
++	if common.RedisEnabled {
++		value, err := common.Marshal(grant)
++		if err != nil {
++			return err
++		}
++		return common.RedisSet(key, string(value), desktopConnectCodeTTL)
++	}
++	now := time.Now()
++	desktopConnectMemoryCodesLock.Lock()
++	defer desktopConnectMemoryCodesLock.Unlock()
++	for stored, entry := range desktopConnectMemoryCodes {
++		if !entry.expiresAt.After(now) {
++			delete(desktopConnectMemoryCodes, stored)
++		}
++	}
++	if len(desktopConnectMemoryCodes) >= desktopConnectCodeMemoryLimit {
++		return errDesktopConnectCodeStore
++	}
++	desktopConnectMemoryCodes[key] = &desktopConnectMemoryCode{grant: grant, expiresAt: now.Add(desktopConnectCodeTTL)}
++	return nil
++}
++
++// consumeDesktopConnectCode returns the grant behind code exactly once.
++func consumeDesktopConnectCode(code string) (desktopConnectGrant, error) {
++	var grant desktopConnectGrant
++	key := desktopConnectCodeKey(code)
++	if common.RedisEnabled {
++		value, err := common.RDB.Eval(context.Background(), desktopConnectConsumeScript, []string{key}, desktopConnectCodeUsed).Text()
++		if errors.Is(err, redis.Nil) {
++			return grant, errDesktopConnectCodeExpired
++		}
++		if err != nil {
++			return grant, errDesktopConnectCodeStore
++		}
++		if value == desktopConnectCodeUsed {
++			return grant, errDesktopConnectCodeUsed
++		}
++		if err := common.UnmarshalJsonStr(value, &grant); err != nil {
++			return grant, errDesktopConnectCodeStore
++		}
++		return grant, nil
++	}
++	desktopConnectMemoryCodesLock.Lock()
++	defer desktopConnectMemoryCodesLock.Unlock()
++	entry, ok := desktopConnectMemoryCodes[key]
++	if !ok || !entry.expiresAt.After(time.Now()) {
++		delete(desktopConnectMemoryCodes, key)
++		return grant, errDesktopConnectCodeExpired
++	}
++	if entry.used {
++		return grant, errDesktopConnectCodeUsed
++	}
++	entry.used = true
++	return entry.grant, nil
++}
++
++// DesktopBootstrap handles GET /api/desktop/v2/bootstrap (no sign-in).
++func DesktopBootstrap(c *gin.Context) {
++	origin, ok := desktopConnectOrigin(c)
++	if !ok {
++		desktopError(c, http.StatusBadRequest, "connect_origin_invalid")
++		return
++	}
++	desktopOK(c, gin.H{
++		"schema_version":                 2,
++		"service":                        desktopConnectService,
++		"contract_id":                    desktopConnectContractID,
++		"minimum_client_version":         "0.0.0",
++		"device_authorization_available": false,
++		"oauth_loopback_pkce_available":  false,
++		"account_read":                   true,
++		"usage_read":                     true,
++		"models_read":                    true,
++		"pricing_read":                   true,
++		"tool_keys_manage":               true,
++		"session_refresh_path":           desktopConnectBasePath + "/sessions/refresh",
++		"session_logout_path":            desktopConnectBasePath + "/sessions/current",
++		"account_path":                   desktopConnectBasePath + "/account",
++		"plans_path":                     desktopConnectBasePath + "/plans",
++		"keys_path":                      desktopConnectBasePath + "/keys",
++		"usage_summary_path":             desktopConnectBasePath + "/usage/summary",
++		"usage_records_path":             desktopConnectBasePath + "/usage/records",
++		"announcements_path":             desktopConnectBasePath + "/notices",
++		"wallet_url":                     origin + "/wallet",
++	})
++}
++
++// DesktopIssueConnectCode handles POST /api/desktop/v2/connect-codes. Only a
++// browser login session may ask for a code: an access token must not be able
++// to turn itself into a login session.
++func DesktopIssueConnectCode(c *gin.Context) {
++	identity, ok := middleware.GetSessionAuthIdentity(c)
++	if !ok {
++		desktopError(c, http.StatusForbidden, "session_required")
++		return
++	}
++	// A desktop session must not mint further sessions: revoking it has to end
++	// what it could reach.
++	session, err := model.GetUserSessionCached(identity.SessionID)
++	if err != nil || session.LoginMethod == desktopConnectLoginLabel {
++		desktopError(c, http.StatusForbidden, "session_required")
++		return
++	}
++	origin, ok := desktopConnectOrigin(c)
++	if !ok {
++		desktopError(c, http.StatusBadRequest, "connect_origin_invalid")
++		return
++	}
++	var request struct {
++		Origin string `json:"origin"`
++	}
++	if c.Request.ContentLength != 0 {
++		if err := common.DecodeJson(c.Request.Body, &request); err != nil {
++			desktopError(c, http.StatusBadRequest, "invalid_request")
++			return
++		}
++	}
++	if request.Origin != "" {
++		if requested, err := common.NormalizeOrigin(request.Origin); err != nil || requested != origin {
++			desktopError(c, http.StatusBadRequest, "connect_origin_mismatch")
++			return
++		}
++	}
++	secret := make([]byte, 32)
++	if _, err := rand.Read(secret); err != nil {
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	code := base64.RawURLEncoding.EncodeToString(secret)
++	grant := desktopConnectGrant{UserID: identity.UserID, AuthVersion: identity.UserAuthVersion, Origin: origin}
++	if err := storeDesktopConnectCode(code, grant); err != nil {
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	desktopOK(c, gin.H{
++		"code":       code,
++		"origin":     origin,
++		"expiresAt":  time.Now().Add(desktopConnectCodeTTL).Unix(),
++		"ttlSeconds": int(desktopConnectCodeTTL.Seconds()),
++	})
++}
++
++// DesktopExchangeConnectCode handles POST /api/desktop/v2/connect-codes/exchange.
++// The code is spent before anything else is checked, so a code that was seen
++// once can never be tried again. The session it opens is an ordinary login
++// session labelled "desktop": the user sees it in the session list and can
++// revoke it there.
++func DesktopExchangeConnectCode(c *gin.Context) {
++	var request struct {
++		Code string `json:"code"`
++	}
++	if err := common.DecodeJson(c.Request.Body, &request); err != nil || len(request.Code) < 32 || len(request.Code) > 512 {
++		desktopError(c, http.StatusBadRequest, "invalid_request")
++		return
++	}
++	grant, err := consumeDesktopConnectCode(request.Code)
++	switch {
++	case errors.Is(err, errDesktopConnectCodeExpired):
++		desktopError(c, http.StatusBadRequest, "connect_code_expired")
++		return
++	case errors.Is(err, errDesktopConnectCodeUsed):
++		desktopError(c, http.StatusBadRequest, "connect_code_already_used")
++		return
++	case err != nil:
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	if origin, ok := desktopConnectOrigin(c); !ok || origin != grant.Origin {
++		desktopError(c, http.StatusBadRequest, "connect_origin_mismatch")
++		return
++	}
++	bundle, err := service.CreateLoginSessionAtAuthVersion(grant.UserID, grant.AuthVersion, desktopConnectLoginLabel, c.ClientIP(), c.Request.UserAgent())
++	switch {
++	case errors.Is(err, model.ErrUserSessionLimit):
++		desktopError(c, http.StatusConflict, "session_limit_reached")
++		return
++	case errors.Is(err, model.ErrUserSessionIssuanceLimit):
++		desktopError(c, http.StatusTooManyRequests, "rate_limited")
++		return
++	case errors.Is(err, service.ErrLoginSessionInvalid), errors.Is(err, service.ErrLoginSessionRevoked):
++		// The account was disabled or its credentials changed after the code was issued.
++		desktopError(c, http.StatusBadRequest, "connect_code_expired")
++		return
++	case err != nil:
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	if user, err := model.GetUserCache(grant.UserID); err == nil {
++		model.RecordLoginLog(user.Id, user.Role, user.Username, "Logged in successfully via "+desktopConnectLoginLabel, c.ClientIP(), "login",
++			map[string]any{"method": desktopConnectLoginLabel},
++			model.AuditOther{LoginMethod: desktopConnectLoginLabel, UserAgent: c.Request.UserAgent()}, c)
++	}
++	desktopOK(c, gin.H{
++		"accessToken":      bundle.AccessToken,
++		"tokenType":        bundle.TokenType,
++		"accessExpiresAt":  bundle.AccessExpiresAt,
++		"refreshToken":     bundle.RefreshToken,
++		"refreshExpiresAt": bundle.Session.ExpiresAt,
++		"sessionId":        bundle.Session.SID,
++	})
++}
++
++// DesktopRefreshSession handles POST /api/desktop/v2/sessions/refresh. A client
++// signs the user out on 401, so 401 is kept for a session that is really over.
++func DesktopRefreshSession(c *gin.Context) {
++	var request struct {
++		RefreshToken string `json:"refresh_token"`
++		SessionID    string `json:"session_id"`
++	}
++	if err := common.DecodeJson(c.Request.Body, &request); err != nil || request.RefreshToken == "" || request.SessionID == "" {
++		desktopError(c, http.StatusBadRequest, "invalid_request")
++		return
++	}
++	bundle, _, err := service.RefreshLoginSession(request.RefreshToken, request.SessionID, c.ClientIP(), c.Request.UserAgent())
++	switch {
++	case errors.Is(err, service.ErrRefreshTokenInvalid), errors.Is(err, service.ErrLoginSessionRevoked), errors.Is(err, service.ErrLoginSessionMismatch):
++		desktopError(c, http.StatusUnauthorized, "session_expired")
++		return
++	case errors.Is(err, service.ErrRefreshRace):
++		desktopError(c, http.StatusConflict, "refresh_in_progress")
++		return
++	case err != nil:
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	desktopOK(c, gin.H{
++		"access_token":       bundle.AccessToken,
++		"token_type":         bundle.TokenType,
++		"access_expires_at":  bundle.AccessExpiresAt,
++		"refresh_token":      bundle.RefreshToken,
++		"refresh_expires_at": bundle.Session.ExpiresAt,
++		"session_id":         bundle.Session.SID,
++	})
++}
++
++// DesktopEndSession handles DELETE /api/desktop/v2/sessions/current.
++func DesktopEndSession(c *gin.Context) {
++	identity, ok := middleware.GetSessionAuthIdentity(c)
++	if !ok {
++		desktopError(c, http.StatusForbidden, "session_required")
++		return
++	}
++	if _, err := model.RevokeUserSession(identity.UserID, identity.SessionID, "logout"); err != nil {
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	desktopOK(c, gin.H{})
++}
++
++// desktopMoney turns the station's internal amounts into what the user is
++// shown. The contract knows two currencies, so a station that displays a
++// custom unit or raw quota reports US dollars.
++type desktopMoney struct {
++	Currency string
++	Rate     float64
++}
++
++func currentDesktopMoney() desktopMoney {
++	if operation_setting.GetQuotaDisplayType() == operation_setting.QuotaDisplayTypeCNY && operation_setting.USDExchangeRate > 0 {
++		return desktopMoney{Currency: "CNY", Rate: operation_setting.USDExchangeRate}
++	}
++	return desktopMoney{Currency: "USD", Rate: 1}
++}
++
++func (m desktopMoney) fromUSD(usd float64) float64 {
++	return math.Round(usd*m.Rate*1e6) / 1e6
++}
++
++func (m desktopMoney) fromQuota(quota int) float64 {
++	return m.fromUSD(float64(quota) / common.QuotaPerUnit)
++}
++
++type desktopPrice struct {
++	Input      *float64 `json:"input,omitempty"`
++	Output     *float64 `json:"output,omitempty"`
++	CacheRead  *float64 `json:"cacheRead,omitempty"`
++	CacheWrite *float64 `json:"cacheWrite,omitempty"`
++	PerRequest *float64 `json:"perRequest,omitempty"`
++}
++
++type desktopPlanModel struct {
++	ID       string        `json:"id"`
++	Price    *desktopPrice `json:"price,omitempty"`
++	Official *desktopPrice `json:"official,omitempty"`
++}
++
++type desktopPlan struct {
++	ID           string             `json:"id"`
++	Name         string             `json:"name"`
++	Description  string             `json:"description"`
++	Formats      []string           `json:"formats"`
++	Subscription bool               `json:"subscription"`
++	AppOnly      bool               `json:"appOnly"`
++	Models       []desktopPlanModel `json:"models"`
++}
++
++// desktopModelPrice prices one model per million tokens (or per request) at a
++// group ratio. Ratio 1 is the station's list price, which the client shows as
++// the official price. Models billed by an expression or only through plugin
++// variants have no single price to state and return nil.
++func desktopModelPrice(pricing model.Pricing, groupRatio float64, money desktopMoney) *desktopPrice {
++	if pricing.BillingMode != "" || (len(pricing.BillingPluginVariants) > 0 && !pricing.OrdinaryPricing) {
++		return nil
++	}
++	amount := func(usd float64) *float64 {
++		value := money.fromUSD(usd * groupRatio)
++		return &value
++	}
++	if pricing.QuotaType == 1 {
++		return &desktopPrice{PerRequest: amount(pricing.ModelPrice)}
++	}
++	// A model ratio of 1 is 500 quota per 1K tokens: 2 US dollars per million.
++	input := pricing.ModelRatio * 2
++	price := &desktopPrice{Input: amount(input), Output: amount(input * pricing.CompletionRatio)}
++	if pricing.CacheRatio != nil {
++		price.CacheRead = amount(input * *pricing.CacheRatio)
++	}
++	if pricing.CreateCacheRatio != nil {
++		price.CacheWrite = amount(input * *pricing.CreateCacheRatio)
++	}
++	return price
++}
++
++// desktopPlansForGroup lists the groups a user of userGroup may create a key
++// on, each with the models enabled for it. The "auto" group picks a group per
++// request and so has no price of its own; it is not offered as a plan.
++func desktopPlansForGroup(userGroup string, pricings []model.Pricing, money desktopMoney) []desktopPlan {
++	usable := service.GetUserUsableGroups(userGroup)
++	plans := []desktopPlan{}
++	for group := range ratio_setting.GetGroupRatioCopy() {
++		description, ok := usable[group]
++		if !ok || group == "auto" {
++			continue
++		}
++		ratio := service.GetUserGroupRatio(userGroup, group)
++		plan := desktopPlan{
++			ID:          group,
++			Name:        group,
++			Description: description,
++			Formats:     []string{"anthropic", "openai-chat", "openai-responses", "gemini"},
++			Models:      []desktopPlanModel{},
++		}
++		for _, pricing := range pricings {
++			if !slices.Contains(pricing.EnableGroup, group) {
++				continue
++			}
++			plan.Models = append(plan.Models, desktopPlanModel{
++				ID:       pricing.ModelName,
++				Price:    desktopModelPrice(pricing, ratio, money),
++				Official: desktopModelPrice(pricing, 1, money),
++			})
++		}
++		slices.SortFunc(plan.Models, func(a, b desktopPlanModel) int { return strings.Compare(a.ID, b.ID) })
++		plans = append(plans, plan)
++	}
++	slices.SortFunc(plans, func(a, b desktopPlan) int { return strings.Compare(a.ID, b.ID) })
++	return plans
++}
++
++// DesktopAccount handles GET /api/desktop/v2/account.
++func DesktopAccount(c *gin.Context) {
++	user, err := model.GetUserById(c.GetInt("id"), false)
++	if err != nil {
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	money := currentDesktopMoney()
++	desktopOK(c, gin.H{
++		"username":    user.Username,
++		"displayName": user.DisplayName,
++		"email":       user.Email,
++		"currency":    money.Currency,
++		"balance":     money.fromQuota(user.Quota),
++	})
++}
++
++// DesktopPlans handles GET /api/desktop/v2/plans.
++func DesktopPlans(c *gin.Context) {
++	userGroup, err := getTokenRequestUserGroup(c)
++	if err != nil {
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	money := currentDesktopMoney()
++	desktopOK(c, gin.H{"currency": money.Currency, "plans": desktopPlansForGroup(userGroup, model.GetPricing(), money)})
++}
++
++func desktopKeyView(token *model.Token, userGroup string) gin.H {
++	status := "disabled"
++	switch token.Status {
++	case common.TokenStatusEnabled:
++		status = "active"
++	case common.TokenStatusExpired:
++		status = "expired"
++	case common.TokenStatusExhausted:
++		status = "exhausted"
++	}
++	planID := token.Group
++	if planID == "" {
++		planID = userGroup
++	}
++	return gin.H{
++		"id":               strconv.Itoa(token.Id),
++		"name":             token.Name,
++		"planId":           planID,
++		"status":           status,
++		"createdAtEpochMs": token.CreatedTime * 1000,
++	}
++}
++
++// DesktopListKeys handles GET /api/desktop/v2/keys.
++func DesktopListKeys(c *gin.Context) {
++	userGroup, err := getTokenRequestUserGroup(c)
++	if err != nil {
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	tokens, err := model.GetAllUserTokens(c.GetInt("id"), 0, max(operation_setting.GetMaxUserTokens(), 1))
++	if err != nil {
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	keys := make([]gin.H, 0, len(tokens))
++	for _, token := range tokens {
++		keys = append(keys, desktopKeyView(token, userGroup))
++	}
++	desktopOK(c, gin.H{"keys": keys})
++}
++
++// DesktopCreateKey handles POST /api/desktop/v2/keys. The key is unlimited and
++// does not expire, like a key made in the console with the defaults.
++func DesktopCreateKey(c *gin.Context) {
++	var request struct {
++		Name   string `json:"name"`
++		PlanID string `json:"planId"`
++	}
++	if err := common.DecodeJson(c.Request.Body, &request); err != nil {
++		desktopError(c, http.StatusBadRequest, "invalid_request")
++		return
++	}
++	request.Name = strings.TrimSpace(request.Name)
++	if request.Name == "" || len(request.Name) > 50 || request.PlanID == "" {
++		desktopError(c, http.StatusBadRequest, "invalid_request")
++		return
++	}
++	userID := c.GetInt("id")
++	userGroup, err := getTokenRequestUserGroup(c)
++	if err != nil {
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	if request.PlanID == "auto" || !service.GroupInUserUsableGroups(userGroup, request.PlanID) {
++		desktopError(c, http.StatusForbidden, "plan_not_allowed")
++		return
++	}
++	count, err := model.CountUserTokens(userID)
++	if err != nil {
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	if int(count) >= operation_setting.GetMaxUserTokens() {
++		desktopError(c, http.StatusConflict, "key_limit_reached")
++		return
++	}
++	key, err := common.GenerateKey()
++	if err != nil {
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	now := common.GetTimestamp()
++	token := model.Token{
++		UserId:              userID,
++		Name:                request.Name,
++		Key:                 key,
++		CreatedTime:         now,
++		AccessedTime:        now,
++		ExpiredTime:         -1,
++		UnlimitedQuota:      true,
++		Group:               request.PlanID,
++		AllowUserQuotaQuery: true,
++	}
++	if err := token.Insert(); err != nil {
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	model.RecordOperationAuditLog(userID, c.GetInt("role"), "API token creation", c.ClientIP(), "token.create",
++		map[string]any{"id": token.Id, "name": token.Name, "via": desktopConnectLoginLabel}, nil, nil, c)
++	view := desktopKeyView(&token, userGroup)
++	view["key"] = "sk-" + token.GetFullKey()
++	desktopOK(c, view)
++}
++
++// desktopOwnedKey loads the key in the path if it belongs to the caller.
++func desktopOwnedKey(c *gin.Context) (*model.Token, bool) {
++	id, err := strconv.Atoi(c.Param("id"))
++	if err != nil || id <= 0 {
++		desktopError(c, http.StatusNotFound, "key_not_found")
++		return nil, false
++	}
++	token, err := model.GetTokenByIds(id, c.GetInt("id"))
++	if errors.Is(err, gorm.ErrRecordNotFound) {
++		desktopError(c, http.StatusNotFound, "key_not_found")
++		return nil, false
++	}
++	if err != nil {
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return nil, false
++	}
++	return token, true
++}
++
++// DesktopRevealKey handles POST /api/desktop/v2/keys/:id/reveal.
++func DesktopRevealKey(c *gin.Context) {
++	token, ok := desktopOwnedKey(c)
++	if !ok {
++		return
++	}
++	model.RecordOperationAuditLog(token.UserId, c.GetInt("role"), "API token key access", c.ClientIP(), "token.key_view",
++		map[string]any{"id": token.Id, "name": token.Name, "via": desktopConnectLoginLabel}, nil, nil, c)
++	desktopOK(c, gin.H{"key": "sk-" + token.GetFullKey()})
++}
++
++// DesktopDeleteKey handles DELETE /api/desktop/v2/keys/:id.
++func DesktopDeleteKey(c *gin.Context) {
++	token, ok := desktopOwnedKey(c)
++	if !ok {
++		return
++	}
++	if err := model.DeleteTokenById(token.Id, token.UserId); err != nil {
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	model.RecordOperationAuditLog(token.UserId, c.GetInt("role"), "API token deletion", c.ClientIP(), "token.delete",
++		map[string]any{"id": token.Id, "name": token.Name, "via": desktopConnectLoginLabel}, nil, nil, c)
++	desktopOK(c, gin.H{})
++}
++
++// desktopUsageWindowStart is how far back the desktop reads usage: thirty
++// days, or less if the station keeps a shorter range open to its users.
++func desktopUsageWindowStart() (start int64, days int) {
++	seconds := min(int64(desktopUsageWindowDays*24*60*60), operation_setting.GetLogSetting().MaxRangeSeconds())
++	return common.GetTimestamp() - seconds, int(seconds / (24 * 60 * 60))
++}
++
++// DesktopUsageSummary handles GET /api/desktop/v2/usage/summary.
++func DesktopUsageSummary(c *gin.Context) {
++	start, days := desktopUsageWindowStart()
++	username := c.GetString("username")
++	stat, err := model.SumUsedQuota(model.LogTypeConsume, start, 0, "", username, "", 0, "")
++	if err != nil {
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	_, requests, err := model.GetUserLogs(c.GetInt("id"), model.LogFilter{Type: model.LogTypeConsume, StartTimestamp: start}, 0, 1)
++	if err != nil {
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	money := currentDesktopMoney()
++	desktopOK(c, gin.H{
++		"currency":   money.Currency,
++		"windowDays": days,
++		"consumed":   money.fromQuota(stat.Quota),
++		"requests":   requests,
++		"tokens":     model.SumUsedToken(model.LogTypeConsume, start, 0, "", username, ""),
++	})
++}
++
++// DesktopUsageRecords handles GET /api/desktop/v2/usage/records.
++func DesktopUsageRecords(c *gin.Context) {
++	page, _ := strconv.Atoi(c.Query("page"))
++	page = max(page, 1)
++	pageSize, _ := strconv.Atoi(c.Query("pageSize"))
++	if pageSize <= 0 || pageSize > desktopUsagePageSize {
++		pageSize = desktopUsagePageSize
++	}
++	start, _ := desktopUsageWindowStart()
++	logs, total, err := model.GetUserLogs(c.GetInt("id"), model.LogFilter{Type: model.LogTypeConsume, StartTimestamp: start}, (page-1)*pageSize, pageSize)
++	if err != nil {
++		desktopError(c, http.StatusServiceUnavailable, "service_unavailable")
++		return
++	}
++	money := currentDesktopMoney()
++	records := make([]gin.H, 0, len(logs))
++	for _, log := range logs {
++		var other struct {
++			CacheTokens         int `json:"cache_tokens"`
++			CacheCreationTokens int `json:"cache_creation_tokens"`
++		}
++		_ = common.UnmarshalJsonStr(log.Other, &other)
++		// The list numbers its rows per page; the request id is what stays the same.
++		id := log.RequestId
++		if id == "" {
++			id = strconv.FormatInt(log.CreatedAt, 10) + "-" + strconv.Itoa(log.Id)
++		}
++		records = append(records, gin.H{
++			"id":           id,
++			"atEpochMs":    log.CreatedAt * 1000,
++			"model":        log.ModelName,
++			"planId":       log.Group,
++			"keyId":        strconv.Itoa(log.TokenId),
++			"keyName":      log.TokenName,
++			"inputTokens":  log.PromptTokens,
++			"outputTokens": log.CompletionTokens,
++			"cacheTokens":  other.CacheTokens + other.CacheCreationTokens,
++			"amount":       money.fromQuota(log.Quota),
++		})
++	}
++	desktopOK(c, gin.H{"currency": money.Currency, "records": records, "total": total, "page": page, "pageSize": pageSize})
++}
++
++// DesktopNotices handles GET /api/desktop/v2/notices. Console announcements
++// carry no title, so the first line of the text stands in for one.
++func DesktopNotices(c *gin.Context) {
++	notices := []gin.H{}
++	if !console_setting.GetConsoleSetting().AnnouncementsEnabled {
++		desktopOK(c, gin.H{"notices": notices})
++		return
++	}
++	for _, announcement := range console_setting.GetAnnouncements() {
++		content, _ := announcement["content"].(string)
++		content = strings.TrimSpace(content)
++		if content == "" {
++			continue
++		}
++		publishDate, _ := announcement["publishDate"].(string)
++		var publishedAt int64
++		if published, err := time.Parse(time.RFC3339, publishDate); err == nil {
++			publishedAt = published.UnixMilli()
++		}
++		// The body is what follows the title, unless the title had to be cut.
++		title, body, _ := strings.Cut(content, "\n")
++		title, body = strings.TrimSpace(title), strings.TrimSpace(body)
++		if runes := []rune(title); len(runes) > 40 {
++			title, body = string(runes[:40])+"…", content
++		}
++		if extra, _ := announcement["extra"].(string); strings.TrimSpace(extra) != "" {
++			body = strings.TrimSpace(body + "\n" + strings.TrimSpace(extra))
++		}
++		severity := "info"
++		if kind, _ := announcement["type"].(string); kind == "warning" || kind == "error" {
++			severity = "warning"
++		}
++		sum := sha256.Sum256([]byte(publishDate + "\n" + content))
++		notices = append(notices, gin.H{
++			"id":                 hex.EncodeToString(sum[:8]),
++			"title":              title,
++			"body":               body,
++			"severity":           severity,
++			"publishedAtEpochMs": publishedAt,
++			"expiresAtEpochMs":   0,
++			"banner":             false,
++		})
++	}
++	desktopOK(c, gin.H{"notices": notices})
++}
++
++// desktopConnectPage is the page a desktop client opens to sign in. The
++// dashboard keeps its access token in memory, so the page asks the refresh
++// endpoint for one with the browser's login cookie, the same way a newly
++// opened dashboard tab does, and then requests a connect code.
++const desktopConnectPage = `<!doctype html>
++<html lang="en">
++<head>
++<meta charset="utf-8">
++<meta name="viewport" content="width=device-width, initial-scale=1">
++<meta name="referrer" content="no-referrer">
++<title>Connect desktop app</title>
++<style>
++body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font:16px/1.6 system-ui,sans-serif;background:#f6f7f9;color:#1c1f23}
++main{width:min(420px,calc(100vw - 48px));padding:32px;border-radius:16px;background:#fff;box-shadow:0 8px 32px rgba(0,0,0,.08);text-align:center}
++h1{margin:0 0 8px;font-size:20px}
++p{margin:0 0 24px;color:#5b6168}
++button,a.button{display:inline-block;padding:10px 24px;border:0;border-radius:10px;background:#1c1f23;color:#fff;font:inherit;text-decoration:none;cursor:pointer}
++button[disabled]{opacity:.5;cursor:default}
++[hidden]{display:none!important}
++@media (prefers-color-scheme:dark){body{background:#111315;color:#f2f3f5}main{background:#1c1f23}p{color:#a5abb3}button,a.button{background:#f2f3f5;color:#111315}}
++</style>
++</head>
++<body>
++<main>
++<h1 id="title"></h1>
++<p id="text"></p>
++<button id="connect" type="button" hidden></button>
++<a id="login" class="button" href="/sign-in" target="_blank" rel="noopener" hidden></a>
++</main>
++<script nonce="{{nonce}}">
++(function () {
++  var zh = /^zh/i.test(navigator.language || '');
++  var copy = zh ? {
++    title: '连接到桌面应用', ready: '点一下，把这个账号连到你电脑上的桌面应用。', connect: '连接',
++    login: '去登录', signedOut: '请先登录这个站点（会在新标签页打开），登录后回到这一页。', working: '正在连接…',
++    opened: '已经交给桌面应用。没有反应的话，确认应用已经装好，再点一次。', failed: '没连上，请再试一次。'
++  } : {
++    title: 'Connect desktop app', ready: 'Connect this account to the desktop app on this computer.', connect: 'Connect',
++    login: 'Sign in', signedOut: 'Sign in to this site first (it opens in a new tab), then come back to this page.', working: 'Connecting…',
++    opened: 'Handed over to the desktop app. If nothing happened, check that the app is installed and try again.', failed: 'Could not connect. Please try again.'
++  };
++  var text = document.getElementById('text');
++  var button = document.getElementById('connect');
++  var login = document.getElementById('login');
++  document.documentElement.lang = zh ? 'zh' : 'en';
++  document.title = copy.title;
++  document.getElementById('title').textContent = copy.title;
++  button.textContent = copy.connect;
++  login.textContent = copy.login;
++
++  function signedOut() {
++    text.textContent = copy.signedOut;
++    button.hidden = true;
++    login.hidden = false;
++  }
++  function post(path, token) {
++    var headers = { 'Content-Type': 'application/json' };
++    if (token) headers.Authorization = 'Bearer ' + token;
++    return fetch(path, { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: headers, body: '{}' });
++  }
++  function connect() {
++    busy = true;
++    button.disabled = true;
++    text.textContent = copy.working;
++    post('/api/user/auth/refresh').then(function (response) {
++      if (response.status === 401) { signedOut(); return null; }
++      if (!response.ok) throw new Error('refresh');
++      return response.json();
++    }).then(function (session) {
++      if (!session) return null;
++      return post('/api/desktop/v2/connect-codes', session.data.access_token).then(function (response) {
++        if (!response.ok) throw new Error('code');
++        return response.json();
++      });
++    }).then(function (issued) {
++      if (!issued) return;
++      text.textContent = copy.opened;
++      button.disabled = false;
++      location.href = 'yeschoy://connect?origin=' + encodeURIComponent(issued.data.origin) + '&code=' + encodeURIComponent(issued.data.code);
++    }).catch(function () {
++      text.textContent = copy.failed;
++      button.disabled = false;
++    }).then(function () { busy = false; });
++  }
++
++  // The dashboard is a single-page app and cannot send the browser back here
++  // after sign-in, so sign-in opens in another tab and this page looks again
++  // whenever it is shown.
++  var auto = new URLSearchParams(location.search).get('auto') === '1';
++  var busy = false;
++  if (auto) history.replaceState(null, '', location.pathname);
++  function refresh() {
++    if (busy) return;
++    if (document.cookie.split('; ').indexOf('{{hint}}') < 0) { signedOut(); return; }
++    if (!button.hidden) return;
++    login.hidden = true;
++    button.hidden = false;
++    if (auto) { auto = false; connect(); return; }
++    text.textContent = copy.ready;
++  }
++  button.addEventListener('click', connect);
++  window.addEventListener('focus', refresh);
++  document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
++  refresh();
++})();
++</script>
++</body>
++</html>
++`
++
++// DesktopConnectPage handles GET /desktop/connect.
++func DesktopConnectPage(c *gin.Context) {
++	secret := make([]byte, 16)
++	if _, err := rand.Read(secret); err != nil {
++		c.AbortWithStatus(http.StatusServiceUnavailable)
++		return
++	}
++	nonce := base64.RawStdEncoding.EncodeToString(secret)
++	page := strings.NewReplacer(
++		"{{nonce}}", nonce,
++		"{{hint}}", service.SessionHintCookieName+"="+service.SessionHintCookieValue,
++	).Replace(desktopConnectPage)
++	c.Header("Cache-Control", "no-store")
++	c.Header("X-Frame-Options", "DENY")
++	c.Header("X-Content-Type-Options", "nosniff")
++	c.Header("Referrer-Policy", "no-referrer")
++	c.Header("Content-Security-Policy", "default-src 'none'; script-src 'nonce-"+nonce+"'; style-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
++	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(page))
++}
+diff --git a/controller/desktop_connect_test.go b/controller/desktop_connect_test.go
+new file mode 100644
+index 0000000..5171fdf
+--- /dev/null
++++ b/controller/desktop_connect_test.go
+@@ -0,0 +1,459 @@
++package controller
++
++import (
++	"net/http"
++	"net/http/httptest"
++	"strconv"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/QuantumNous/new-api/common"
++	"github.com/QuantumNous/new-api/i18n"
++	"github.com/QuantumNous/new-api/middleware"
++	"github.com/QuantumNous/new-api/model"
++	"github.com/QuantumNous/new-api/service"
++	"github.com/QuantumNous/new-api/setting"
++	"github.com/QuantumNous/new-api/setting/console_setting"
++	"github.com/QuantumNous/new-api/setting/operation_setting"
++	"github.com/QuantumNous/new-api/setting/ratio_setting"
++	"github.com/gin-gonic/gin"
++	"github.com/glebarez/sqlite"
++	"github.com/stretchr/testify/assert"
++	"github.com/stretchr/testify/require"
++	"gorm.io/gorm"
++)
++
++const desktopTestHost = "station.example"
++
++type desktopTestReply struct {
++	Success bool           `json:"success"`
++	Code    string         `json:"code"`
++	Data    map[string]any `json:"data"`
++}
++
++// setupDesktopConnect opens an empty station with one signed-in user and the
++// desktop routes on their production paths.
++func setupDesktopConnect(t *testing.T) (*gin.Engine, *model.User, *service.AuthBundle) {
++	t.Helper()
++	gin.SetMode(gin.TestMode)
++	previousDB, previousLogDB := model.DB, model.LOG_DB
++	previousMain, previousLog := common.MainDatabaseType(), common.LogDatabaseType()
++	previousRedis, previousSecret := common.RedisEnabled, common.SessionSecret
++	previousGroups, previousRatios := setting.UserUsableGroups2JSONString(), ratio_setting.GroupRatio2JSONString()
++	previousDisplay, previousMaxTokens := operation_setting.GetGeneralSetting().QuotaDisplayType, operation_setting.GetTokenSetting().MaxUserTokens
++	previousAnnouncements, previousAnnouncementsEnabled := console_setting.GetConsoleSetting().Announcements, console_setting.GetConsoleSetting().AnnouncementsEnabled
++
++	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
++	require.NoError(t, err)
++	sqlDB, err := db.DB()
++	require.NoError(t, err)
++	sqlDB.SetMaxOpenConns(1)
++	require.NoError(t, i18n.Init())
++	require.NoError(t, db.AutoMigrate(&model.User{}, &model.UserSession{}, &model.Token{}, &model.Log{}, &model.AuditLog{}, &model.Option{}))
++	model.DB, model.LOG_DB = db, db
++	common.SetDatabaseTypes(common.DatabaseTypeSQLite, common.DatabaseTypeSQLite)
++	common.RedisEnabled = false
++	common.SessionSecret = "desktop-connect-test-secret"
++	require.NoError(t, setting.UpdateUserUsableGroupsByJSONString(`{"default":"Standard","vip":"Priority"}`))
++	require.NoError(t, ratio_setting.UpdateGroupRatioByJSONString(`{"default":1,"vip":0.5,"staff":0.1}`))
++	operation_setting.GetGeneralSetting().QuotaDisplayType = operation_setting.QuotaDisplayTypeUSD
++	t.Cleanup(func() {
++		model.DB, model.LOG_DB = previousDB, previousLogDB
++		common.SetDatabaseTypes(previousMain, previousLog)
++		common.RedisEnabled, common.SessionSecret = previousRedis, previousSecret
++		_ = setting.UpdateUserUsableGroupsByJSONString(previousGroups)
++		_ = ratio_setting.UpdateGroupRatioByJSONString(previousRatios)
++		operation_setting.GetGeneralSetting().QuotaDisplayType = previousDisplay
++		operation_setting.GetTokenSetting().MaxUserTokens = previousMaxTokens
++		console_setting.GetConsoleSetting().Announcements = previousAnnouncements
++		console_setting.GetConsoleSetting().AnnouncementsEnabled = previousAnnouncementsEnabled
++		desktopConnectMemoryCodesLock.Lock()
++		clear(desktopConnectMemoryCodes)
++		desktopConnectMemoryCodesLock.Unlock()
++		_ = sqlDB.Close()
++	})
++
++	user := &model.User{
++		Username: "desktop-owner", Password: "unused", DisplayName: "Owner", Email: "owner@station.example",
++		Role: common.RoleCommonUser, Status: common.UserStatusEnabled, Group: "default", AuthVersion: 1,
++		AffCode: "desktop-owner", Quota: 1250000,
++	}
++	require.NoError(t, db.Create(user).Error)
++	browser, err := service.CreateLoginSession(user.Id, "password", "192.0.2.8", "browser")
++	require.NoError(t, err)
++
++	router := gin.New()
++	route := router.Group("/api/desktop/v2")
++	route.GET("/bootstrap", DesktopBootstrap)
++	route.POST("/connect-codes/exchange", DesktopExchangeConnectCode)
++	route.POST("/sessions/refresh", DesktopRefreshSession)
++	signedIn := route.Group("/", middleware.UserAuth())
++	signedIn.POST("/connect-codes", DesktopIssueConnectCode)
++	signedIn.DELETE("/sessions/current", DesktopEndSession)
++	signedIn.GET("/account", DesktopAccount)
++	signedIn.GET("/plans", DesktopPlans)
++	signedIn.GET("/keys", DesktopListKeys)
++	signedIn.POST("/keys", DesktopCreateKey)
++	signedIn.POST("/keys/:id/reveal", DesktopRevealKey)
++	signedIn.DELETE("/keys/:id", DesktopDeleteKey)
++	signedIn.GET("/usage/summary", DesktopUsageSummary)
++	signedIn.GET("/usage/records", DesktopUsageRecords)
++	signedIn.GET("/notices", DesktopNotices)
++	return router, user, browser
++}
++
++func desktopCall(t *testing.T, router http.Handler, method, path, host, token, body string) (int, desktopTestReply) {
++	t.Helper()
++	request := httptest.NewRequest(method, path, strings.NewReader(body))
++	request.Host = host
++	if token != "" {
++		request.Header.Set("Authorization", "Bearer "+token)
++	}
++	recorder := httptest.NewRecorder()
++	router.ServeHTTP(recorder, request)
++	var reply desktopTestReply
++	require.NoError(t, common.Unmarshal(recorder.Body.Bytes(), &reply), recorder.Body.String())
++	return recorder.Code, reply
++}
++
++func desktopIssueCode(t *testing.T, router http.Handler, browser *service.AuthBundle) string {
++	t.Helper()
++	status, reply := desktopCall(t, router, http.MethodPost, "/api/desktop/v2/connect-codes", desktopTestHost, browser.AccessToken, "")
++	require.Equal(t, http.StatusOK, status, reply.Code)
++	code, _ := reply.Data["code"].(string)
++	require.GreaterOrEqual(t, len(code), 32)
++	assert.Equal(t, "https://"+desktopTestHost, reply.Data["origin"])
++	assert.LessOrEqual(t, reply.Data["ttlSeconds"], float64(300))
++	return code
++}
++
++func desktopExchange(t *testing.T, router http.Handler, host, code string) (int, desktopTestReply) {
++	t.Helper()
++	body := `{"code":"` + code + `","deviceId":"7b0c6a52-0d43-4f5b-9a55-0c8f2f6f3f10","platform":"linux","clientVersion":"1.0.0"}`
++	return desktopCall(t, router, http.MethodPost, "/api/desktop/v2/connect-codes/exchange", host, "", body)
++}
++
++func TestDesktopBootstrapDeclaresTheNeutralContract(t *testing.T) {
++	router, _, _ := setupDesktopConnect(t)
++
++	status, reply := desktopCall(t, router, http.MethodGet, "/api/desktop/v2/bootstrap", desktopTestHost, "", "")
++	require.Equal(t, http.StatusOK, status)
++	assert.Equal(t, "desktop-connect", reply.Data["service"])
++	assert.Equal(t, "desktop-connect-v1", reply.Data["contract_id"])
++	assert.Equal(t, float64(2), reply.Data["schema_version"])
++	for _, capability := range []string{"account_read", "usage_read", "models_read", "pricing_read", "tool_keys_manage"} {
++		assert.Equal(t, true, reply.Data[capability], capability)
++	}
++	for _, path := range []string{"session_refresh_path", "session_logout_path", "account_path", "plans_path", "keys_path", "usage_summary_path", "usage_records_path", "announcements_path"} {
++		value, _ := reply.Data[path].(string)
++		assert.True(t, strings.HasPrefix(value, "/api/desktop/v2/"), path)
++	}
++	assert.Equal(t, "https://"+desktopTestHost+"/wallet", reply.Data["wallet_url"])
++	// This station has no client-only prices, so it must not advertise them.
++	assert.NotContains(t, reply.Data, "app_tokens_path")
++	assert.NotContains(t, reply.Data, "app_token_header")
++
++	for _, host := range []string{"192.0.2.8", "station.example:8443", "[2001:db8::1]"} {
++		status, reply = desktopCall(t, router, http.MethodGet, "/api/desktop/v2/bootstrap", host, "", "")
++		assert.Equal(t, http.StatusBadRequest, status, host)
++		assert.Equal(t, "connect_origin_invalid", reply.Code, host)
++	}
++}
++
++func TestDesktopConnectCodeIsSingleUseOriginBoundAndShortLived(t *testing.T) {
++	router, user, browser := setupDesktopConnect(t)
++
++	// A code opens one desktop session, with the token bundle the client expects.
++	code := desktopIssueCode(t, router, browser)
++	status, reply := desktopExchange(t, router, desktopTestHost, code)
++	require.Equal(t, http.StatusOK, status, reply.Code)
++	assert.Equal(t, "Bearer", reply.Data["tokenType"])
++	accessToken, _ := reply.Data["accessToken"].(string)
++	refreshToken, _ := reply.Data["refreshToken"].(string)
++	sessionID, _ := reply.Data["sessionId"].(string)
++	assert.GreaterOrEqual(t, len(accessToken), 32)
++	assert.GreaterOrEqual(t, len(refreshToken), 32)
++	assert.Greater(t, reply.Data["accessExpiresAt"], float64(time.Now().Unix()))
++	assert.Greater(t, reply.Data["refreshExpiresAt"], reply.Data["accessExpiresAt"])
++	stored, err := model.GetUserSessionBySID(sessionID)
++	require.NoError(t, err)
++	assert.Equal(t, user.Id, stored.UserID)
++	assert.Equal(t, "desktop", stored.LoginMethod)
++
++	// Replay is refused and opens nothing.
++	status, reply = desktopExchange(t, router, desktopTestHost, code)
++	assert.Equal(t, http.StatusBadRequest, status)
++	assert.Equal(t, "connect_code_already_used", reply.Code)
++
++	// A code presented to another origin is refused, and is spent by the attempt.
++	code = desktopIssueCode(t, router, browser)
++	status, reply = desktopExchange(t, router, "other.example", code)
++	assert.Equal(t, http.StatusBadRequest, status)
++	assert.Equal(t, "connect_origin_mismatch", reply.Code)
++	status, reply = desktopExchange(t, router, desktopTestHost, code)
++	assert.Equal(t, http.StatusBadRequest, status)
++	assert.Equal(t, "connect_code_already_used", reply.Code)
++
++	// A code that ran out, or was never issued, is refused.
++	code = desktopIssueCode(t, router, browser)
++	desktopConnectMemoryCodesLock.Lock()
++	desktopConnectMemoryCodes[desktopConnectCodeKey(code)].expiresAt = time.Now().Add(-time.Second)
++	desktopConnectMemoryCodesLock.Unlock()
++	for _, expired := range []string{code, strings.Repeat("a", 43)} {
++		status, reply = desktopExchange(t, router, desktopTestHost, expired)
++		assert.Equal(t, http.StatusBadRequest, status)
++		assert.Equal(t, "connect_code_expired", reply.Code)
++	}
++
++	// The code is asked for by a browser login: not anonymously, not by a desktop session.
++	status, _ = desktopCall(t, router, http.MethodPost, "/api/desktop/v2/connect-codes", desktopTestHost, "", "")
++	assert.Equal(t, http.StatusUnauthorized, status)
++	status, reply = desktopCall(t, router, http.MethodPost, "/api/desktop/v2/connect-codes", desktopTestHost, accessToken, "")
++	assert.Equal(t, http.StatusForbidden, status)
++	assert.Equal(t, "session_required", reply.Code)
++
++	// A code issued before the account's credentials changed opens nothing.
++	code = desktopIssueCode(t, router, browser)
++	require.NoError(t, model.DB.Model(&model.User{}).Where("id = ?", user.Id).Update("auth_version", 2).Error)
++	status, reply = desktopExchange(t, router, desktopTestHost, code)
++	assert.Equal(t, http.StatusBadRequest, status)
++	assert.Equal(t, "connect_code_expired", reply.Code)
++	var desktopSessions int64
++	require.NoError(t, model.DB.Model(&model.UserSession{}).Where("login_method = ?", "desktop").Count(&desktopSessions).Error)
++	assert.EqualValues(t, 1, desktopSessions)
++}
++
++func TestDesktopSessionRefreshRotatesAndSignOutEndsIt(t *testing.T) {
++	router, _, browser := setupDesktopConnect(t)
++	_, exchanged := desktopExchange(t, router, desktopTestHost, desktopIssueCode(t, router, browser))
++	firstRefresh, _ := exchanged.Data["refreshToken"].(string)
++	sessionID, _ := exchanged.Data["sessionId"].(string)
++	refresh := func(token, sid string) (int, desktopTestReply) {
++		return desktopCall(t, router, http.MethodPost, "/api/desktop/v2/sessions/refresh", desktopTestHost, "", `{"refresh_token":"`+token+`","session_id":"`+sid+`"}`)
++	}
++
++	status, reply := refresh(firstRefresh, "another-session")
++	assert.Equal(t, http.StatusUnauthorized, status)
++	assert.Equal(t, "session_expired", reply.Code)
++
++	status, reply = refresh(firstRefresh, sessionID)
++	require.Equal(t, http.StatusOK, status, reply.Code)
++	accessToken, _ := reply.Data["access_token"].(string)
++	secondRefresh, _ := reply.Data["refresh_token"].(string)
++	assert.Equal(t, "Bearer", reply.Data["token_type"])
++	assert.Equal(t, sessionID, reply.Data["session_id"])
++	assert.NotEqual(t, firstRefresh, secondRefresh)
++	assert.Greater(t, reply.Data["refresh_expires_at"], reply.Data["access_expires_at"])
++
++	status, reply = desktopCall(t, router, http.MethodGet, "/api/desktop/v2/account", desktopTestHost, accessToken, "")
++	require.Equal(t, http.StatusOK, status, reply.Code)
++	assert.Equal(t, "desktop-owner", reply.Data["username"])
++	assert.Equal(t, "Owner", reply.Data["displayName"])
++	assert.Equal(t, "USD", reply.Data["currency"])
++	assert.Equal(t, 2.5, reply.Data["balance"])
++
++	status, reply = desktopCall(t, router, http.MethodDelete, "/api/desktop/v2/sessions/current", desktopTestHost, accessToken, "")
++	require.Equal(t, http.StatusOK, status, reply.Code)
++	status, _ = desktopCall(t, router, http.MethodGet, "/api/desktop/v2/account", desktopTestHost, accessToken, "")
++	assert.Equal(t, http.StatusUnauthorized, status)
++	status, reply = refresh(secondRefresh, sessionID)
++	assert.Equal(t, http.StatusUnauthorized, status)
++	assert.Equal(t, "session_expired", reply.Code)
++	// Signing the desktop out leaves the browser signed in.
++	status, _ = desktopCall(t, router, http.MethodGet, "/api/desktop/v2/account", desktopTestHost, browser.AccessToken, "")
++	assert.Equal(t, http.StatusOK, status)
++}
++
++func TestDesktopPlansPriceWhatTheAccountPays(t *testing.T) {
++	setupDesktopConnect(t)
++	cacheRead := 0.1
++	pricings := []model.Pricing{
++		{ModelName: "text-model", ModelRatio: 1.5, CompletionRatio: 5, CacheRatio: &cacheRead, EnableGroup: []string{"default", "vip", "staff"}},
++		{ModelName: "image-model", QuotaType: 1, ModelPrice: 0.04, EnableGroup: []string{"vip"}},
++		{ModelName: "tiered-model", BillingMode: "tiered_expr", EnableGroup: []string{"vip"}},
++	}
++
++	plans := desktopPlansForGroup("default", pricings, desktopMoney{Currency: "CNY", Rate: 7})
++	// "staff" has a ratio but is not open to this user; "auto" is never a plan.
++	require.Len(t, plans, 2)
++	assert.Equal(t, "default", plans[0].ID)
++	assert.Equal(t, "Standard", plans[0].Description)
++	require.Len(t, plans[0].Models, 1)
++	assert.Equal(t, 21.0, *plans[0].Models[0].Price.Input)
++
++	vip := plans[1]
++	assert.Equal(t, "vip", vip.ID)
++	assert.False(t, vip.Subscription)
++	assert.False(t, vip.AppOnly)
++	require.Len(t, vip.Models, 3)
++	image, text, tiered := vip.Models[0], vip.Models[1], vip.Models[2]
++	// 1.5 × 2 USD per million tokens × 7 CNY, at half price on this plan.
++	assert.Equal(t, 10.5, *text.Price.Input)
++	assert.Equal(t, 52.5, *text.Price.Output)
++	assert.Equal(t, 1.05, *text.Price.CacheRead)
++	assert.Nil(t, text.Price.CacheWrite)
++	assert.Equal(t, 21.0, *text.Official.Input)
++	assert.Equal(t, 0.14, *image.Price.PerRequest)
++	assert.Nil(t, image.Price.Input)
++	// An expression-billed model is listed, without a price the station cannot state.
++	assert.Equal(t, "tiered-model", tiered.ID)
++	assert.Nil(t, tiered.Price)
++	assert.Nil(t, tiered.Official)
++}
++
++func TestDesktopKeysBelongToTheirOwnerAndAnAllowedPlan(t *testing.T) {
++	router, user, browser := setupDesktopConnect(t)
++	operation_setting.GetTokenSetting().MaxUserTokens = 2
++	stranger := model.Token{UserId: user.Id + 1, Name: "not-yours", Key: strings.Repeat("s", 48), Status: common.TokenStatusEnabled, Group: "default"}
++	require.NoError(t, model.DB.Create(&stranger).Error)
++	create := func(name, plan string) (int, desktopTestReply) {
++		return desktopCall(t, router, http.MethodPost, "/api/desktop/v2/keys", desktopTestHost, browser.AccessToken, `{"name":"`+name+`","planId":"`+plan+`"}`)
++	}
++
++	for _, plan := range []string{"staff", "auto", "missing"} {
++		status, reply := create("app", plan)
++		assert.Equal(t, http.StatusForbidden, status, plan)
++		assert.Equal(t, "plan_not_allowed", reply.Code, plan)
++	}
++
++	status, reply := create("app", "vip")
++	require.Equal(t, http.StatusOK, status, reply.Code)
++	id, _ := reply.Data["id"].(string)
++	secret, _ := reply.Data["key"].(string)
++	assert.Equal(t, "vip", reply.Data["planId"])
++	assert.Equal(t, "active", reply.Data["status"])
++	// The secret is the string the relay accepts as it stands.
++	stored, err := model.GetTokenByIds(mustAtoi(t, id), user.Id)
++	require.NoError(t, err)
++	assert.Equal(t, "sk-"+stored.Key, secret)
++	assert.True(t, stored.UnlimitedQuota)
++
++	status, reply = desktopCall(t, router, http.MethodPost, "/api/desktop/v2/keys/"+id+"/reveal", desktopTestHost, browser.AccessToken, "")
++	require.Equal(t, http.StatusOK, status, reply.Code)
++	assert.Equal(t, secret, reply.Data["key"])
++
++	status, reply = desktopCall(t, router, http.MethodGet, "/api/desktop/v2/keys", desktopTestHost, browser.AccessToken, "")
++	require.Equal(t, http.StatusOK, status, reply.Code)
++	keys, _ := reply.Data["keys"].([]any)
++	require.Len(t, keys, 1)
++	assert.NotContains(t, keys[0], "key")
++
++	_, _ = create("second", "default")
++	status, reply = create("third", "default")
++	assert.Equal(t, http.StatusConflict, status)
++	assert.Equal(t, "key_limit_reached", reply.Code)
++
++	// Another account's key cannot be read or deleted.
++	strangerPath := "/api/desktop/v2/keys/" + strconv.Itoa(stranger.Id)
++	status, reply = desktopCall(t, router, http.MethodPost, strangerPath+"/reveal", desktopTestHost, browser.AccessToken, "")
++	assert.Equal(t, http.StatusNotFound, status)
++	assert.Equal(t, "key_not_found", reply.Code)
++	status, reply = desktopCall(t, router, http.MethodDelete, strangerPath, desktopTestHost, browser.AccessToken, "")
++	assert.Equal(t, http.StatusNotFound, status)
++	assert.Equal(t, "key_not_found", reply.Code)
++	var remaining int64
++	require.NoError(t, model.DB.Model(&model.Token{}).Where("id = ?", stranger.Id).Count(&remaining).Error)
++	assert.EqualValues(t, 1, remaining)
++
++	status, reply = desktopCall(t, router, http.MethodDelete, "/api/desktop/v2/keys/"+id, desktopTestHost, browser.AccessToken, "")
++	require.Equal(t, http.StatusOK, status, reply.Code)
++	_, err = model.GetTokenByIds(mustAtoi(t, id), user.Id)
++	assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
++}
++
++func mustAtoi(t *testing.T, value string) int {
++	t.Helper()
++	number, err := strconv.Atoi(value)
++	require.NoError(t, err)
++	return number
++}
++
++func TestDesktopUsageAndNoticesAreReadyToShow(t *testing.T) {
++	router, user, browser := setupDesktopConnect(t)
++	operation_setting.GetGeneralSetting().QuotaDisplayType = operation_setting.QuotaDisplayTypeCNY
++	now := time.Now().Unix()
++	logs := []model.Log{
++		{UserId: user.Id, Username: user.Username, CreatedAt: now - 60, Type: model.LogTypeConsume, ModelName: "text-model", TokenName: "app", TokenId: 9,
++			Group: "vip", Quota: 250000, PromptTokens: 100, CompletionTokens: 20, RequestId: "req-1", Other: `{"cache_tokens":5,"cache_creation_tokens":2}`},
++		{UserId: user.Id, Username: user.Username, CreatedAt: now - 30, Type: model.LogTypeTopup, Quota: 500000},
++		{UserId: user.Id, Username: user.Username, CreatedAt: now - 90*24*60*60, Type: model.LogTypeConsume, ModelName: "old-model", Quota: 500000},
++		{UserId: user.Id + 1, Username: "someone-else", CreatedAt: now - 10, Type: model.LogTypeConsume, ModelName: "text-model", Quota: 500000},
++	}
++	require.NoError(t, model.LOG_DB.Create(&logs).Error)
++
++	status, reply := desktopCall(t, router, http.MethodGet, "/api/desktop/v2/usage/summary", desktopTestHost, browser.AccessToken, "")
++	require.Equal(t, http.StatusOK, status, reply.Code)
++	assert.Equal(t, "CNY", reply.Data["currency"])
++	assert.Equal(t, 0.5*operation_setting.USDExchangeRate, reply.Data["consumed"])
++	assert.Equal(t, float64(1), reply.Data["requests"])
++	assert.Equal(t, float64(120), reply.Data["tokens"])
++
++	status, reply = desktopCall(t, router, http.MethodGet, "/api/desktop/v2/usage/records?page=1&pageSize=500", desktopTestHost, browser.AccessToken, "")
++	require.Equal(t, http.StatusOK, status, reply.Code)
++	assert.Equal(t, float64(100), reply.Data["pageSize"])
++	assert.Equal(t, float64(1), reply.Data["total"])
++	records, _ := reply.Data["records"].([]any)
++	require.Len(t, records, 1)
++	assert.Equal(t, map[string]any{
++		"id": "req-1", "atEpochMs": float64((now - 60) * 1000), "model": "text-model", "planId": "vip", "keyId": "9", "keyName": "app",
++		"inputTokens": float64(100), "outputTokens": float64(20), "cacheTokens": float64(7), "amount": 0.5 * operation_setting.USDExchangeRate,
++	}, records[0])
++
++	console_setting.GetConsoleSetting().AnnouncementsEnabled = true
++	console_setting.GetConsoleSetting().Announcements = `[
++		{"content":"Maintenance tonight\nBack by 02:00.","publishDate":"2026-01-02T03:04:05Z","type":"warning","extra":"Status page has details."},
++		{"content":"New models are live.","publishDate":"2026-01-03T00:00:00Z","type":"success"}]`
++	status, reply = desktopCall(t, router, http.MethodGet, "/api/desktop/v2/notices", desktopTestHost, browser.AccessToken, "")
++	require.Equal(t, http.StatusOK, status, reply.Code)
++	notices, _ := reply.Data["notices"].([]any)
++	require.Len(t, notices, 2)
++	newest, _ := notices[0].(map[string]any)
++	warning, _ := notices[1].(map[string]any)
++	assert.Equal(t, "New models are live.", newest["title"])
++	assert.Equal(t, "", newest["body"])
++	assert.Equal(t, "info", newest["severity"])
++	assert.Equal(t, "Maintenance tonight", warning["title"])
++	assert.Equal(t, "Back by 02:00.\nStatus page has details.", warning["body"])
++	assert.Equal(t, "warning", warning["severity"])
++	assert.Equal(t, float64(time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC).UnixMilli()), warning["publishedAtEpochMs"])
++	assert.Equal(t, false, warning["banner"])
++	assert.NotEmpty(t, warning["id"])
++	assert.NotEqual(t, newest["id"], warning["id"])
++
++	console_setting.GetConsoleSetting().AnnouncementsEnabled = false
++	_, reply = desktopCall(t, router, http.MethodGet, "/api/desktop/v2/notices", desktopTestHost, browser.AccessToken, "")
++	assert.Empty(t, reply.Data["notices"])
++}
++
++func TestDesktopConnectPageCarriesNoCredentialAndLocksItselfDown(t *testing.T) {
++	gin.SetMode(gin.TestMode)
++	router := gin.New()
++	router.GET("/desktop/connect", DesktopConnectPage)
++
++	load := func() *httptest.ResponseRecorder {
++		recorder := httptest.NewRecorder()
++		router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/desktop/connect?auto=1", nil))
++		return recorder
++	}
++	first, second := load(), load()
++	require.Equal(t, http.StatusOK, first.Code)
++
++	assert.Equal(t, "no-store", first.Header().Get("Cache-Control"))
++	assert.Equal(t, "DENY", first.Header().Get("X-Frame-Options"))
++	assert.Equal(t, "nosniff", first.Header().Get("X-Content-Type-Options"))
++	assert.Equal(t, "no-referrer", first.Header().Get("Referrer-Policy"))
++	policy := first.Header().Get("Content-Security-Policy")
++	assert.Contains(t, policy, "default-src 'none'")
++	assert.Contains(t, policy, "connect-src 'self'")
++	assert.Contains(t, policy, "frame-ancestors 'none'")
++	assert.NotContains(t, policy, "script-src 'unsafe-inline'")
++	assert.NotEqual(t, policy, second.Header().Get("Content-Security-Policy"), "the script nonce is new on every load")
++
++	page := first.Body.String()
++	assert.NotContains(t, page, "{{")
++	assert.Contains(t, page, "yeschoy://connect?origin=")
++	// The page keeps the access token in memory only.
++	assert.NotContains(t, page, "localStorage")
++	assert.NotContains(t, page, "sessionStorage")
++}
+diff --git a/middleware/access_token_routes.go b/middleware/access_token_routes.go
+index 129338f..ff48195 100644
+--- a/middleware/access_token_routes.go
++++ b/middleware/access_token_routes.go
+@@ -58,6 +58,19 @@ var accessTokenRouteRules = map[string]accessTokenRouteRule{
+ 	"GET /api/verify/methods":             accessTokenAnyRule,
+ 	"POST /api/verify":                    accessTokenAnyRule,
+ 
++	// router/api-router.go: /api/desktop/v2 (a desktop client's login session)
++	"POST /api/desktop/v2/connect-codes":      accessTokenSessionRule,
++	"DELETE /api/desktop/v2/sessions/current": accessTokenSessionRule,
++	"GET /api/desktop/v2/account":             accessTokenSessionRule,
++	"GET /api/desktop/v2/plans":               accessTokenSessionRule,
++	"GET /api/desktop/v2/keys":                accessTokenSessionRule,
++	"POST /api/desktop/v2/keys":               accessTokenSessionRule,
++	"POST /api/desktop/v2/keys/:id/reveal":    accessTokenSessionRule,
++	"DELETE /api/desktop/v2/keys/:id":         accessTokenSessionRule,
++	"GET /api/desktop/v2/usage/summary":       accessTokenSessionRule,
++	"GET /api/desktop/v2/usage/records":       accessTokenSessionRule,
++	"GET /api/desktop/v2/notices":             accessTokenSessionRule,
++
+ 	// router/api-router.go: /api/user (self)
+ 	"GET /api/user/sessions":                       accessTokenSessionRule,
+ 	"DELETE /api/user/sessions/:sid":               accessTokenSessionRule,
+diff --git a/router/access_token_scope_test.go b/router/access_token_scope_test.go
+index d7e637e..3c0ea7b 100644
+--- a/router/access_token_scope_test.go
++++ b/router/access_token_scope_test.go
+@@ -37,6 +37,11 @@ var accessTokenExemptRoutes = []string{
+ 	"GET /api/ratio_config",
+ 	"GET /api/user/groups",
+ 
++	// Desktop client entry points; the rest of /api/desktop/v2 needs a login session.
++	"GET /api/desktop/v2/bootstrap",
++	"POST /api/desktop/v2/connect-codes/exchange",
++	"POST /api/desktop/v2/sessions/refresh",
++
+ 	// Anonymous account entry points.
+ 	"GET /api/verification",
+ 	"GET /api/reset_password",
+diff --git a/router/api-router.go b/router/api-router.go
+index 00ddf69..5b9d908 100644
+--- a/router/api-router.go
++++ b/router/api-router.go
+@@ -15,6 +15,7 @@ import (
+ )
+ 
+ func SetApiRouter(router *gin.Engine) {
++	router.GET("/desktop/connect", middleware.RouteTag("web"), controller.DesktopConnectPage)
+ 	apiRouter := router.Group("/api")
+ 	apiRouter.Use(middleware.RouteTag("api"))
+ 	apiRouter.Use(gzip.Gzip(gzip.DefaultCompression))
+@@ -289,6 +290,28 @@ func SetApiRouter(router *gin.Engine) {
+ 		}
+ 		registerChannelRoutes(apiRouter)
+ 		registerAuthzRoutes(apiRouter)
++		desktopRoute := apiRouter.Group("/desktop/v2")
++		desktopRoute.Use(middleware.DisableCache())
++		{
++			desktopRoute.GET("/bootstrap", controller.DesktopBootstrap)
++			desktopRoute.POST("/connect-codes/exchange", middleware.CriticalRateLimit(), anonymousRequestBodyLimit, controller.DesktopExchangeConnectCode)
++			desktopRoute.POST("/sessions/refresh", middleware.CriticalRateLimit(), anonymousRequestBodyLimit, controller.DesktopRefreshSession)
++			desktopUserRoute := desktopRoute.Group("/")
++			desktopUserRoute.Use(middleware.UserAuth())
++			{
++				desktopUserRoute.POST("/connect-codes", middleware.UserCriticalRateLimit("desktop-connect"), controller.DesktopIssueConnectCode)
++				desktopUserRoute.DELETE("/sessions/current", controller.DesktopEndSession)
++				desktopUserRoute.GET("/account", controller.DesktopAccount)
++				desktopUserRoute.GET("/plans", controller.DesktopPlans)
++				desktopUserRoute.GET("/keys", controller.DesktopListKeys)
++				desktopUserRoute.POST("/keys", middleware.UserCriticalRateLimit("desktop-keys"), controller.DesktopCreateKey)
++				desktopUserRoute.POST("/keys/:id/reveal", controller.DesktopRevealKey)
++				desktopUserRoute.DELETE("/keys/:id", controller.DesktopDeleteKey)
++				desktopUserRoute.GET("/usage/summary", controller.DesktopUsageSummary)
++				desktopUserRoute.GET("/usage/records", controller.DesktopUsageRecords)
++				desktopUserRoute.GET("/notices", controller.DesktopNotices)
++			}
++		}
+ 		tokenRoute := apiRouter.Group("/token")
+ 		tokenRoute.Use(middleware.UserAuth())
+ 		tokenRoute.Use(middleware.TokenOperationAudit())
