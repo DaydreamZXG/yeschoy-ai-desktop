@@ -28,7 +28,7 @@ import {
   modelDisplayName,
 } from "../model-profiles/profile";
 import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
-import { joinModel, pickedPlan, type CardPicks } from "./cardInfo";
+import { joinModel, pickedPlan, planLabelOf, type CardPicks } from "./cardInfo";
 import {
   installOutcome,
   installStep,
@@ -592,7 +592,8 @@ export function Join({
     : 0.06;
   // 方案的名字就是站点给的那个；只有 default 换成人话。
   const planName = (id: string) =>
-    id === DEFAULT_BILLING_GROUP ? t("configuration.defaultGroupLabel") : id;
+    planLabelOf(models, id) ??
+    (id === DEFAULT_BILLING_GROUP ? t("configuration.defaultGroupLabel") : id);
   const plan = {
     model: modelDisplayName(modelId),
     from: planName(billingGroup),

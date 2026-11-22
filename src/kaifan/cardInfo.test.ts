@@ -8,6 +8,7 @@ import {
   pricesOf,
   readCardPicks,
   storeCardPicks,
+  tieredPricesOf,
   yuan,
 } from "./cardInfo";
 
@@ -92,6 +93,96 @@ describe("plansOf", () => {
       ).some((plan) => plan.cheapest),
     ).toBe(false);
     expect(plansOf(undefined)).toEqual([]);
+  });
+});
+
+describe("tieredPricesOf", () => {
+  const tiered = (
+    expression: string,
+    patch: Partial<AccountModel> = {},
+  ): AccountModel => ({
+    ...model([["default", 0.7]], null),
+    billingMode: "tiered_expr",
+    ...patch,
+    billing: {
+      groups: [{ id: "default", description: "", ratio: 0.7 }],
+      baseInputUsd: null,
+      baseOutputUsd: null,
+      requestUsd: null,
+      expression,
+      ...patch.billing,
+    },
+  });
+  // 旧站真的这么报的两条。
+  const PEAK =
+    '(((weekday("Asia/Shanghai") >= 1 && weekday("Asia/Shanghai") <= 5) && ((hour("Asia/Shanghai") >= 9 && hour("Asia/Shanghai") < 12) || (hour("Asia/Shanghai") >= 14 && hour("Asia/Shanghai") < 18))) ? tier("高峰期", p * 2 + cr * 0.04 + c * 8) : tier("非高峰期", p * 1 + cr * 0.02 + c * 4))';
+
+  it("lists one price per tier, in yuan, with the plan's multiplier applied", () => {
+    expect(tieredPricesOf(tiered(PEAK), 0.5, "7")).toEqual({
+      unit: "tokens",
+      tiers: [
+        {
+          name: "高峰期",
+          officialInput: 14,
+          officialOutput: 56,
+          planInput: 7,
+          planOutput: 28,
+        },
+        {
+          name: "非高峰期",
+          officialInput: 7,
+          officialOutput: 28,
+          planInput: 3.5,
+          planOutput: 14,
+        },
+      ],
+    });
+  });
+
+  it("leaves a single tier unnamed", () => {
+    expect(
+      tieredPricesOf(tiered('tier("base", p * 5 + c * 25)'), null, "1"),
+    ).toEqual({
+      unit: "tokens",
+      tiers: [
+        {
+          name: "",
+          officialInput: 5,
+          officialOutput: 25,
+          planInput: null,
+          planOutput: null,
+        },
+      ],
+    });
+  });
+
+  it("prices a model that charges per request", () => {
+    expect(
+      tieredPricesOf(tiered('tier("base", fixed(0.05))'), 0.5, "1"),
+    ).toEqual({
+      unit: "request",
+      tiers: [{ name: "", official: 0.05, plan: 0.025 }],
+    });
+    expect(
+      tieredPricesOf(
+        tiered("", {
+          billingMode: "per_request",
+          billing: { requestUsd: 0.2 } as AccountModel["billing"] & object,
+        }),
+        1,
+        "7",
+      ),
+    ).toMatchObject({ unit: "request", tiers: [{ official: 0.2 * 7 }] });
+  });
+
+  it("says nothing when the rule can't be read or the rate is missing", () => {
+    expect(tieredPricesOf(tiered(PEAK), 0.5, "")).toBeNull();
+    expect(tieredPricesOf(tiered(PEAK), 0.5, "0")).toBeNull();
+    expect(tieredPricesOf(tiered('tier("a", p * 3 + 2)'), 0.5, "1")).toBeNull();
+    // 只报了输入价的一档：凑不出一行，整个不写。
+    expect(tieredPricesOf(tiered('tier("a", p * 3)'), 0.5, "1")).toBeNull();
+    expect(tieredPricesOf(model([["default", 0.3]]), 0.3, "1")).toBeNull();
+    expect(tieredPricesOf(undefined, 0.3, "1")).toBeNull();
   });
 });
 
