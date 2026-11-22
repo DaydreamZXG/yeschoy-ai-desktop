@@ -1023,7 +1023,11 @@ fn install_auth_bundle(
         log::warn!("account stage=auth_bundle_rejected reason=contract");
         return Err(InstallFailure::Contract);
     }
-    app_token::forget();
+    // A new sign-in may be a different account; a refresh is the same one,
+    // and the device credential the station issued to it still stands.
+    if device_code.is_some() {
+        app_token::forget();
+    }
     let stored = StoredSession {
         line_id: line_id.to_owned(),
         refresh_token: bundle.refresh_token,
