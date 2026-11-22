@@ -579,6 +579,8 @@ fn model_supports_tool(_pricing: &Value, _model_id: &str, tool_id: &str) -> bool
 /// are usable, and the choice only records which wire format the app will
 /// speak to the relay.
 fn claude_transport(pricing: &Value, model_id: &str) -> Option<ClaudeTransport> {
+    // 和 `codex_transport` 一样只是起点：接入时真探一次才知道
+    // （`pasted_key::apply_claude_probes`），价格表里的声明不算数。
     let _ = (pricing, model_id);
     Some(ClaudeTransport::DirectAnthropic)
 }
@@ -773,7 +775,7 @@ async fn probed_within<T>(
 
 /// 把探测结果写回这一批模型的传输方式。
 ///
-/// 只对 Codex 做：Claude 走的是中转原生支持的 Anthropic 协议，没有这个问题。
+/// Claude 的那一半在 `pasted_key::apply_claude_probes`。
 ///
 /// 探测失败不让接入失败 —— 探不出来就停在直连，也就是今天的行为。
 /// 为了一次「问不出结论」而挡住用户接入，是拿一个可恢复的未知换一个确定的
@@ -2747,21 +2749,21 @@ pub async fn configure_desktop_tool_v2(
             return Ok(cancelled());
         }
     }
-    if let (true, Some((_, key)), "claude_code" | "claude_desktop") =
-        (probe, &user_key, request.tool_id.as_str())
-    {
-        // 授权登录的站点都原生说 Anthropic 格式，不用问；随便一个中转站不一定。
+    if probe && matches!(request.tool_id.as_str(), "claude_code" | "claude_desktop") {
+        // 授权登录的站也要问：站点说某个型号支持 Anthropic 格式，分组背后的
+        // 线路不一定真的收。
         if permit
             .cancel_safe(pasted_key::apply_claude_probes(
                 &origin,
-                key,
                 &request.tool_id,
                 &bindings,
+                &leases,
                 &mut transports,
             ))
             .await
             .is_err()
         {
+            delete_created_tokens(&origin, &access_token, &leases).await;
             return Ok(cancelled());
         }
     }
