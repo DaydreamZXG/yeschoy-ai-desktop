@@ -1206,7 +1206,7 @@ fn follow_helper(
             return Ok(false);
         }
         if live != target {
-            writes.push((file.path.clone(), target.clone()));
+            writes.push((file.path.clone(), live, target.clone()));
         }
         if file.after != target {
             file.after = target;
@@ -1216,8 +1216,23 @@ fn follow_helper(
     if writes.is_empty() && !recorded {
         return Ok(false);
     }
-    for (path, bytes) in &writes {
-        common::atomic_write(path, bytes).map_err(|_| Failure::Io)?;
+    // 写之前再看一眼：读完之后应用自己又存过设置的，这次不动它，也不记，下次
+    // 启动再比。和接入时写文件用的是同一套（变了就不写，写到一半出错就退回）。
+    let mut staged: Option<common::FileTransaction> = None;
+    for (path, live, target) in writes {
+        match staged.as_mut() {
+            Some(transaction) => transaction.push_with_snapshot(path, Some(live), target),
+            None => common::FileTransaction::stage_with_snapshot(path, Some(live), target)
+                .map(|transaction| staged = Some(transaction)),
+        }
+        .map_err(|_| Failure::Io)?;
+    }
+    if let Some(mut transaction) = staged {
+        match transaction.commit() {
+            Ok(()) => {}
+            Err(common::ConfigFailure::ExternalChange) => return Ok(false),
+            Err(_) => return Err(Failure::Io),
+        }
     }
     if recorded {
         store.save(&record)?;
