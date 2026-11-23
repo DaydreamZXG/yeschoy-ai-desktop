@@ -2870,8 +2870,6 @@ html.handoff body {
   animation: hoin 0.4s 1.2s backwards;
   transition: opacity 0.2s;
 }
-||||||| 9d37ecc8
-
 
 /* 窗口没有系统标题栏。别的系统上三个窗口按钮浮在右上角；macOS 用系统自己的三个圆点。 */
 .wc {
