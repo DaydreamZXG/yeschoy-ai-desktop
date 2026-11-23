@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "../i18n";
 import type { AccountModel } from "../account/session";
@@ -112,6 +112,19 @@ describe("角色名片", () => {
     expect(prices).toHaveTextContent("¥105.00");
     expect(prices).toHaveTextContent("¥3.15");
     expect(prices).toHaveTextContent("¥15.75");
+  });
+
+  it("几折怎么算的那句说明：只在名片上真写了几折或几倍时才出现", () => {
+    const note = "几折是按站点报的倍率算的，充值时的优惠不算在内。";
+    setup();
+    expect(screen.getByText(note)).toBeInTheDocument();
+    cleanup();
+    setup({
+      models: [model(OPUS, [["default", 1]], ["105", "525"])],
+      picks: { model: { cla: OPUS }, plan: {} },
+    });
+    expect(option(/标准分组/)).toHaveTextContent("原价");
+    expect(screen.queryByText(note)).toBeNull();
   });
 
   it("只有一个方案：不用挑，也点不了", () => {

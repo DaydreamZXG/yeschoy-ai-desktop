@@ -196,7 +196,12 @@ describe("开饭首页自己会做的事", () => {
 
     fireEvent.keyDown(document.activeElement!, { key: "Escape" });
     await waitFor(() => expect(card).toHaveAttribute("inert"));
-    expect(screen.getByTestId("kaifan-model")).toHaveTextContent("gpt-5-mini");
+    // 首页写的名字和名片上一样；原始的型号 ID 悬停时看得到。
+    expect(screen.getByTestId("kaifan-model")).toHaveTextContent("GPT-5 Mini");
+    expect(screen.getByTestId("kaifan-model")).toHaveAttribute(
+      "title",
+      "gpt-5-mini",
+    );
 
     // 点型号也能打开名片；从名片去接入，带的是刚挑的型号。
     fireEvent.click(screen.getByTestId("kaifan-model"));
