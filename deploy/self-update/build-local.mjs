@@ -86,9 +86,15 @@ if (platform === 'windows') {
   copyFileSync(exe, payload);
   // CI points these at its own pinned tools; the defaults are the local Mac paths.
   const nsis = process.env.YESCHOY_NSIS_HOME || `${repo}/release/internal/0.4.15-partner-ai-yeschoy-04382354/tooling/makensis/3.12`;
-  run(`${nsis}/bin/makensis`, [`-DAPP_EXE=${payload}`, `-DOUTPUT_EXE=${destination}`, `-DAPP_ICON=${repo}/src-tauri/icons/icon.ico`, `-DAPP_VERSION=${version}`, 'src-tauri/windows/installer.nsi'], { NSISDIR: `${nsis}/share/nsis` });
+  // 正式包把微软的 WebView2 在线安装器一起打进去，装的时候缺了才运行。
+  const webview2 = process.env.YESCHOY_WEBVIEW2_BOOTSTRAPPER || `${folder}/MicrosoftEdgeWebview2Setup.exe`;
+  if (!existsSync(webview2)) run('curl', ['-fsSL', '--retry', '3', '-o', webview2, 'https://go.microsoft.com/fwlink/p/?LinkId=2124703']);
+  const bootstrapper = readFileSync(webview2);
+  assert.equal(bootstrapper.toString('latin1', 0, 2), 'MZ', 'WebView2 bootstrapper is not a Windows executable');
+  assert(bootstrapper.length > 500000, 'WebView2 bootstrapper looks truncated');
+  run(`${nsis}/bin/makensis`, [`-DAPP_EXE=${payload}`, `-DWEBVIEW2_BOOTSTRAPPER=${webview2}`, `-DOUTPUT_EXE=${destination}`, `-DAPP_ICON=${repo}/src-tauri/icons/icon.ico`, `-DAPP_VERSION=${version}`, 'src-tauri/windows/installer.nsi'], { NSISDIR: `${nsis}/share/nsis` });
   sign(destination);
-  save('build-inspection', { platform, variant, version, commit, authorizationPageOrigin: origin, build, resourceSha256: hash(resource), payloadSha256: hash(payload), installerSha256: hash(destination), codeSigned: false, updaterSignatureCreated: true, installedApplicationLaunched: false });
+  save('build-inspection', { platform, variant, version, commit, authorizationPageOrigin: origin, build, resourceSha256: hash(resource), payloadSha256: hash(payload), webview2BootstrapperSha256: hash(webview2), installerSha256: hash(destination), codeSigned: false, updaterSignatureCreated: true, installedApplicationLaunched: false });
 } else if (platform === 'macos') {
   const stage = `${folder}/${variant}-stage`;
   assert(!existsSync(`${stage}/YesChoy.app`));

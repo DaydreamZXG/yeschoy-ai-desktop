@@ -30,6 +30,17 @@ describe("Windows installer localization", () => {
     expect(config.bundle.windows.wix.language).toBe("zh-CN");
   });
 
+  it("installs WebView2 from the official installer when it is missing", () => {
+    const standalone = readSource("src-tauri/windows/installer.nsi");
+    const build = readSource("deploy/self-update/build-local.mjs");
+
+    expect(standalone).toContain("{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}");
+    expect(standalone).toContain('File "/oname=$PLUGINSDIR\\MicrosoftEdgeWebview2Setup.exe" "${WEBVIEW2_BOOTSTRAPPER}"');
+    const main = standalone.slice(standalone.indexOf('Section "安装 YesChoy"'));
+    expect(main.indexOf("Call KaifanEnsureWebView2")).toBeLessThan(main.indexOf("SectionEnd"));
+    expect(build).toContain("-DWEBVIEW2_BOOTSTRAPPER=");
+  });
+
   it("stops every supported installed executable before an upgrade writes files", () => {
     const hook = readSource("src-tauri/windows/installer-hooks.nsh");
     const standalone = readSource("src-tauri/windows/installer.nsi");

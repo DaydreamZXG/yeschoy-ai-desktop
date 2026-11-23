@@ -16,6 +16,9 @@ SetCompressorDictSize 32
 !ifndef APP_VERSION
   !error "APP_VERSION is required"
 !endif
+!ifndef WEBVIEW2_BOOTSTRAPPER
+  !error "WEBVIEW2_BOOTSTRAPPER is required"
+!endif
 
 !include "MUI2.nsh"
 !include "FileFunc.nsh"
@@ -103,6 +106,45 @@ Function KaifanRetireOldName
   Pop $R0
 FunctionEnd
 
+; YesChoy 的界面靠 WebView2 显示。Win11 自带，Server 和精简版系统可能没有，
+; 没有就打不开。这里和 Tauri 的包一样查三处登记，缺了就运行微软的在线安装器。
+!define WEBVIEW2_APP_GUID "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
+Function KaifanEnsureWebView2
+  Push $R0
+  Push $R1
+  ReadRegStr $R0 HKLM "SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\${WEBVIEW2_APP_GUID}" "pv"
+  Call KaifanWebView2Present
+  StrCmp $R0 "" 0 kaifan_webview2_done
+  ReadRegStr $R0 HKLM "SOFTWARE\Microsoft\EdgeUpdate\Clients\${WEBVIEW2_APP_GUID}" "pv"
+  Call KaifanWebView2Present
+  StrCmp $R0 "" 0 kaifan_webview2_done
+  ReadRegStr $R0 HKCU "SOFTWARE\Microsoft\EdgeUpdate\Clients\${WEBVIEW2_APP_GUID}" "pv"
+  Call KaifanWebView2Present
+  StrCmp $R0 "" 0 kaifan_webview2_done
+  DetailPrint "正在安装 YesChoy 需要的 WebView2 组件……"
+  InitPluginsDir
+  File "/oname=$PLUGINSDIR\MicrosoftEdgeWebview2Setup.exe" "${WEBVIEW2_BOOTSTRAPPER}"
+  ClearErrors
+  ExecWait '"$PLUGINSDIR\MicrosoftEdgeWebview2Setup.exe" /silent /install' $R1
+  IfErrors kaifan_webview2_failed
+  StrCmp $R1 "0" 0 kaifan_webview2_failed
+  DetailPrint "WebView2 组件装好了。"
+  Goto kaifan_webview2_done
+kaifan_webview2_failed:
+  DetailPrint "WebView2 组件没装上（$R1）。"
+  IfSilent kaifan_webview2_done
+  MessageBox MB_ICONEXCLAMATION|MB_OK "YesChoy 需要的 WebView2 组件没装上，YesChoy 可能打不开。请检查网络后重新运行这个安装程序，或从微软官网下载安装“Microsoft Edge WebView2 运行时”。"
+kaifan_webview2_done:
+  Pop $R1
+  Pop $R0
+FunctionEnd
+
+; 登记的版本号是空的或 0.0.0.0 都算没装，把 $R0 清空。
+Function KaifanWebView2Present
+  StrCmp $R0 "0.0.0.0" 0 +2
+  StrCpy $R0 ""
+FunctionEnd
+
 Section "安装 YesChoy" SEC_MAIN
   ; This must remain the first runtime instruction: no file, shortcut or
   ; registry mutation is allowed while an older executable is still mapped.
@@ -130,6 +172,7 @@ Section "安装 YesChoy" SEC_MAIN
   CreateShortcut "$SMPROGRAMS\YesChoy\YesChoy.lnk" "$INSTDIR\YesChoy.exe" "" "$INSTDIR\YesChoy.exe" 0
   CreateShortcut "$SMPROGRAMS\YesChoy\卸载 YesChoy.lnk" "$INSTDIR\卸载 YesChoy.exe"
   CreateShortcut "$DESKTOP\YesChoy.lnk" "$INSTDIR\YesChoy.exe" "" "$INSTDIR\YesChoy.exe" 0
+  Call KaifanEnsureWebView2
   Call KaifanRetireOldName
 SectionEnd
 
