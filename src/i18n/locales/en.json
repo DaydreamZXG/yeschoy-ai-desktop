@@ -473,6 +473,7 @@
       "stepWrite": "Write the settings",
       "stepOpen": "Open {{app}}",
       "stepCheck": "Check {{app}} works",
+      "pickFolder": "If a folder picker opened, choose a project folder. If you don't see it, it may be behind another window.",
       "stop": "Stop",
       "stopping": "Stopping…",
       "back": "Back to choices",

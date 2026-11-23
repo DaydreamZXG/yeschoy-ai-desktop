@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ACTIVATION_REQUEST_DEADLINE_MS,
@@ -12,7 +13,29 @@ import {
 } from "./activation";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
+vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn() }));
 const native = vi.mocked(invoke);
+const events = vi.mocked(listen);
+/** 假装后端报了一次进度：发给这次接入正在听的那个回调。 */
+const report = (stage: string) => {
+  const hear = events.mock.calls.at(-1)![1] as (event: {
+    payload: unknown;
+  }) => void;
+  const { requestId } = (
+    native.mock.calls.find(
+      ([command]) => command === "configure_desktop_tool_v2",
+    )![1] as { request: { requestId: string } }
+  ).request;
+  hear({
+    payload: {
+      requestId,
+      toolId: "opencode",
+      stage,
+      completedSteps: 7,
+      totalSteps: 7,
+    },
+  });
+};
 
 function projection(requestId = "activate-test") {
   return {
@@ -78,7 +101,11 @@ function targetScan(requestId = "target-scan-test") {
   };
 }
 
-beforeEach(() => native.mockReset());
+beforeEach(() => {
+  native.mockReset();
+  events.mockReset();
+  events.mockResolvedValue(() => undefined);
+});
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
@@ -275,6 +302,75 @@ describe("desktop tool activation boundary", () => {
     expect(native).toHaveBeenCalledWith("cancel_tool_activation_v1", {
       request: { requestId: expect.stringMatching(/^activate-/) },
     });
+  });
+
+  it("does not time the step that waits for the user to pick a folder, and resumes the clock after it", async () => {
+    vi.useFakeTimers();
+    let finish: (value: unknown) => void = () => undefined;
+    native.mockImplementation((command, args) => {
+      if (command === "cancel_tool_activation_v1")
+        return Promise.resolve({
+          requestId: (args as { request: { requestId: string } }).request
+            .requestId,
+          status: "cancel_requested",
+        });
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    });
+    const activation = activateDesktopTool({
+      lineId: "mainland_optimized",
+      toolId: "opencode",
+      modelId: "glm-5.3",
+      installationId: "i0123456789abcdef",
+      billingGroup: "国模特价分组",
+    });
+    const settled = vi.fn();
+    activation.then(settled, settled);
+
+    await vi.advanceTimersByTimeAsync(ACTIVATION_REQUEST_DEADLINE_MS - 1000);
+    report("opening_application");
+    await vi.advanceTimersByTimeAsync(ACTIVATION_REQUEST_DEADLINE_MS * 5);
+    expect(settled).not.toHaveBeenCalled();
+    expect(native).not.toHaveBeenCalledWith(
+      "cancel_tool_activation_v1",
+      expect.anything(),
+    );
+
+    const { requestId } = (
+      native.mock.calls[0]![1] as { request: { requestId: string } }
+    ).request;
+    finish({ ...projection(requestId), toolId: "opencode" });
+    await expect(activation).resolves.toMatchObject({ status: "ready" });
+  });
+
+  it("still gives up when a later step hangs: only the time left before the untimed step remains", async () => {
+    vi.useFakeTimers();
+    native.mockImplementation((command, args) => {
+      if (command === "cancel_tool_activation_v1")
+        return Promise.resolve({
+          requestId: (args as { request: { requestId: string } }).request
+            .requestId,
+          status: "cancel_requested",
+        });
+      return new Promise(() => undefined);
+    });
+    const activation = activateDesktopTool({
+      lineId: "mainland_optimized",
+      toolId: "opencode",
+      modelId: "glm-5.3",
+      installationId: "i0123456789abcdef",
+      billingGroup: "国模特价分组",
+    });
+    const assertion = expect(activation).rejects.toThrow(
+      "activation_request_timed_out",
+    );
+    await vi.advanceTimersByTimeAsync(ACTIVATION_REQUEST_DEADLINE_MS - 1000);
+    report("opening_application");
+    await vi.advanceTimersByTimeAsync(ACTIVATION_REQUEST_DEADLINE_MS);
+    report("checking_application_started");
+    await vi.advanceTimersByTimeAsync(1000);
+    await assertion;
   });
 
   it("scans exact local targets through the read-only native command", async () => {

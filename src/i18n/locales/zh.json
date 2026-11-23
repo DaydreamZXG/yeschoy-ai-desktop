@@ -473,6 +473,7 @@
       "stepWrite": "写好设置",
       "stepOpen": "打开 {{app}}",
       "stepCheck": "确认 {{app}} 能用",
+      "pickFolder": "如果弹出了选文件夹的窗口，选一个项目文件夹就行。没看到的话，它可能被别的窗口挡住了。",
       "stop": "先停下",
       "stopping": "正在停…",
       "back": "回去重选",

@@ -8,6 +8,7 @@ import {
   within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { listen } from "@tauri-apps/api/event";
 import type { ProviderPreset } from "./providers";
 import {
   clearManualLocation,
@@ -15,6 +16,7 @@ import {
 } from "../installation/manualLocationApi";
 import type { AccountModel } from "../account/session";
 import {
+  ACTIVATION_PROGRESS_EVENT,
   activateDesktopTool,
   cancelDesktopToolActivation,
   scanActivationTargets,
@@ -732,6 +734,43 @@ describe("接入：选应用、选人、点一下", () => {
     } as ToolActivationProjection);
     await waitFor(() => expect(says()).toContain("没有被改动"));
   });
+
+  it("终端应用停在打开那一步好几秒：提一句可能在等选文件夹；过了这一步就收起", async () => {
+    found([target("opencode")]);
+    setup({ initialApp: "opencode" });
+    await ready();
+    activate.mockImplementationOnce((input) => {
+      input.onRequestId?.("req-1");
+      return new Promise(() => undefined);
+    });
+    fireEvent.click(go());
+    await waitFor(() => expect(says()).toContain("正在帮你接入"));
+    const hear = vi
+      .mocked(listen)
+      .mock.calls.filter(([name]) => name === ACTIVATION_PROGRESS_EVENT)
+      .at(-1)![1] as (event: { payload: unknown }) => void;
+    const report = (toolId: string, stage: string) =>
+      act(() =>
+        hear({
+          payload: {
+            requestId: "req-1",
+            toolId,
+            stage,
+            completedSteps: 7,
+            totalSteps: 7,
+          },
+        }),
+      );
+    report("opencode", "applying_settings");
+    expect(screen.queryByTestId("kaifan-join-folder")).toBeNull();
+    report("opencode", "opening_application");
+    expect(screen.queryByTestId("kaifan-join-folder")).toBeNull();
+    expect(
+      await screen.findByTestId("kaifan-join-folder", {}, { timeout: 6000 }),
+    ).toHaveTextContent("选一个项目文件夹");
+    report("opencode", "complete");
+    expect(screen.queryByTestId("kaifan-join-folder")).toBeNull();
+  }, 10_000);
 
   it("没装的应用：标出来，按钮打开它的官网，不去接入", async () => {
     found([target("codex_desktop")]);

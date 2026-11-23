@@ -632,6 +632,18 @@ export function Join({
   }, [offline]);
 
   const step = joinStep(task.progress?.stage);
+  // 第一次打开命令行应用，系统会先弹一个选文件夹的窗口，这一步等人、不计时。
+  // 停在这儿好几秒了才提一句：平时一闪就过，不必说。
+  const opening =
+    applying &&
+    task.progress?.stage === "opening_application" &&
+    inTerminal(app, installationId);
+  const [lingering, setLingering] = useState(false);
+  useEffect(() => {
+    if (!opening) return setLingering(false);
+    const timer = setTimeout(() => setLingering(true), 4000);
+    return () => clearTimeout(timer);
+  }, [opening]);
   // 进度条照后端报的步数走，不自己编一个假的。
   const done = task.progress?.totalSteps
     ? Math.max(0.06, task.progress.completedSteps / task.progress.totalSteps)
@@ -1237,6 +1249,11 @@ export function Join({
                     )}
                   </li>
                 </ol>
+                {lingering && (
+                  <p className="cl-note" data-testid="kaifan-join-folder">
+                    {t("kaifan.join.pickFolder")}
+                  </p>
+                )}
                 <div className="ft">
                   <i />
                   <button
