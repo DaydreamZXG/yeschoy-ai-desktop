@@ -23,6 +23,7 @@ describe("Windows installer localization", () => {
     expect(config.bundle.windows.nsis).toEqual({
       languages: ["SimpChinese"],
       displayLanguageSelector: false,
+      installerIcon: "icons/icon.ico",
       installerHooks: "windows/installer-hooks.nsh",
     });
     expect(config.bundle.windows.wix.language).toBe("zh-CN");
