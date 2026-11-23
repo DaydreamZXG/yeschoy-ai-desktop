@@ -1841,6 +1841,28 @@ dialog.restore-dialog menu {
   -webkit-line-clamp: 2;
   overflow-wrap: anywhere;
 }
+/*
+ * 窗口缩到最小时一张卡只有七十来像素宽：名字和厂牌挤不进一行，各自折行，把字顶到小人脚上；
+ * 型号两行也写不全。窄卡一律排成「名字 / 厂牌 / 型号三行」，小人往上让出这块地方。
+ */
+@container (max-width: 92px) {
+  .cd img {
+    bottom: 96px;
+  }
+  .cd b {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.2;
+  }
+  .cd b small {
+    margin: 2px 0 0;
+  }
+  .cd span {
+    min-height: 3.75em;
+    -webkit-line-clamp: 3;
+  }
+}
 .pf p {
   display: flex;
   align-items: center;
