@@ -1101,6 +1101,12 @@ canvas#fx {
   font-size: 12.5px;
   font-variant-numeric: tabular-nums;
 }
+.cl-note {
+  padding: 0 4px 6px 28px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--faint);
+}
 .quote {
   padding: 13px 15px;
   border-radius: 14px;

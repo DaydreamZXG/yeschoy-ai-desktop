@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import type { AccountLineId } from "./preview";
 
 // PRD §3.2 定案：与 Rust 侧 tool_adapters::TARGETS / CONNECTION_TOOLS 保持
@@ -174,6 +175,11 @@ export const ACTIVATION_TARGET_SCAN_DEADLINE_MS = 15_000;
 // renderer must still recover if the OS, keychain, installer, or network stack
 // never returns. Native cancellation then performs transaction cleanup.
 export const ACTIVATION_REQUEST_DEADLINE_MS = 90_000;
+// 设置已经写好、正在替用户打开命令行应用的这一步不计时：第一次打开要先让人选
+// 一个项目文件夹，选多久由人定。计时到了去取消，取消不掉已经写好的设置，只会
+// 把一次接成了的接入报成“没接成”。出了这一步，剩下的时间接着计。
+// 只有在终端里打开的应用才这样：桌面应用这一步不等人，卡住了照旧到点放弃。
+const UNTIMED_STAGE: ActivationProgress["stage"] = "opening_application";
 export const ACTIVATION_PROGRESS_STAGES = [
   "queued",
   "checking_application",
@@ -412,6 +418,8 @@ export async function activateDesktopTool(input: {
   installationJobId?: string;
   restartRunningApp?: boolean;
   displaceClaudeLogin?: boolean;
+  /** 挑中的这一份在终端里打开：打开那一步可能在等人选文件夹。不发给后端。 */
+  opensInTerminal?: boolean;
   onRequestId?: (requestId: string) => void;
 }): Promise<ToolActivationProjection> {
   if (
@@ -443,17 +451,44 @@ export async function activateDesktopTool(input: {
       ...(input.displaceClaudeLogin ? { displaceClaudeLogin: true } : {}),
     },
   });
+  let live = true;
+  let unlisten: (() => void) | undefined;
   const timedOut = new Promise<never>((_, reject) => {
-    deadline = setTimeout(() => {
-      void cancelDesktopToolActivation(requestId).catch(() => undefined);
-      reject(new Error("activation_request_timed_out"));
-    }, ACTIVATION_REQUEST_DEADLINE_MS);
+    let left = ACTIVATION_REQUEST_DEADLINE_MS;
+    let since = 0;
+    const arm = () => {
+      since = Date.now();
+      deadline = setTimeout(() => {
+        void cancelDesktopToolActivation(requestId).catch(() => undefined);
+        reject(new Error("activation_request_timed_out"));
+      }, left);
+    };
+    const pause = () => {
+      if (deadline === undefined) return;
+      clearTimeout(deadline);
+      deadline = undefined;
+      left = Math.max(0, left - (Date.now() - since));
+    };
+    arm();
+    void listen<unknown>(ACTIVATION_PROGRESS_EVENT, ({ payload }) => {
+      const progress = decodeActivationProgress(payload);
+      if (!live || progress?.requestId !== requestId) return;
+      if (input.opensInTerminal && progress.stage === UNTIMED_STAGE) pause();
+      else if (deadline === undefined) arm();
+    })
+      .then((stop) => {
+        if (live) unlisten = stop;
+        else stop();
+      })
+      .catch(() => undefined);
   });
   let raw: unknown;
   try {
     raw = await Promise.race([nativeRequest, timedOut]);
   } finally {
-    if (deadline !== undefined) clearTimeout(deadline);
+    live = false;
+    unlisten?.();
+    clearTimeout(deadline);
   }
   const result = decodeToolActivation(raw, requestId);
   if (
