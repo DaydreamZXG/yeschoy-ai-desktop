@@ -92,6 +92,23 @@ impl LocalBridgeRuntime {
         &self,
         credential: ToolCredential,
     ) -> Result<broadcast::Receiver<VerificationEvent>, AdapterFailure> {
+        self.start_with(credential, true).await
+    }
+
+    /// 和 `start` 一样起桥，但桥已经在跑时什么都不动：后台重试拿的是磁盘上
+    /// 存的那份凭据，可能比用户刚接入、桥正在用的那份旧。
+    pub(crate) async fn start_if_idle(
+        &self,
+        credential: ToolCredential,
+    ) -> Result<(), AdapterFailure> {
+        self.start_with(credential, false).await.map(|_| ())
+    }
+
+    async fn start_with(
+        &self,
+        credential: ToolCredential,
+        replace_running: bool,
+    ) -> Result<broadcast::Receiver<VerificationEvent>, AdapterFailure> {
         let local_token = credential
             .local_gateway_token
             .clone()
@@ -102,7 +119,7 @@ impl LocalBridgeRuntime {
         let mut slot = self.runtime.lock().await;
         if let Some(running) = slot.as_mut() {
             if !running.task.is_finished() {
-                if running.credential != credential {
+                if replace_running && running.credential != credential {
                     let previous = running.state.read().await.clone();
                     *running.state.write().await = Arc::new(BridgeState {
                         credential: credential.clone(),
@@ -173,6 +190,43 @@ impl LocalBridgeRuntime {
             let _ = runtime.task.await;
         }
     }
+}
+
+pub(crate) fn is_port_busy(failure: &AdapterFailure) -> bool {
+    matches!(failure, AdapterFailure::LaunchError("local_port_busy"))
+}
+
+const PORT_RETRY_INTERVAL: Duration = Duration::from_secs(3);
+
+/// 打开应用时桥起不来、原因是端口被占着：多半是旧版接入时开的终端窗口还带着
+/// 那个端口（0.5.1 及以前的监听套接字会被子进程继承，客户端退了它也不放）。
+/// 用户关掉那个窗口端口就空出来了，不该还要再重开一次客户端。所以在后台隔几秒
+/// 再试，直到起来，或者 `wanted` 说这份接入已经不指向桥了。
+pub(crate) fn retry_while_port_busy<W>(bridge: LocalBridgeRuntime, label: &'static str, wanted: W)
+where
+    W: Fn() -> Option<ToolCredential> + Send + 'static,
+{
+    log::warn!("{label} stage=resume_start_failed reason=local_port_busy retry=background");
+    tauri::async_runtime::spawn(async move {
+        loop {
+            tokio::time::sleep(PORT_RETRY_INTERVAL).await;
+            let Some(credential) = wanted() else {
+                log::info!("{label} stage=resume_retry outcome=no_longer_configured");
+                return;
+            };
+            match bridge.start_if_idle(credential).await {
+                Ok(()) => {
+                    log::info!("{label} stage=resume_retry outcome=started");
+                    return;
+                }
+                Err(failure) if is_port_busy(&failure) => {}
+                Err(failure) => {
+                    log::warn!("{label} stage=resume_retry outcome=failed reason={failure:?}");
+                    return;
+                }
+            }
+        }
+    });
 }
 
 /// 端口被占着时单独报出来：多半是上次开的终端窗口还留着，界面要能说清楚。
@@ -361,6 +415,45 @@ pub(crate) fn locally_authorized(headers: &axum::http::HeaderMap, local_token: &
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn bridge_credential(api_key: &str) -> ToolCredential {
+        ToolCredential {
+            pasted_key: false,
+            api_key: api_key.into(),
+            origin: "https://yeschoy.com".into(),
+            model_id: "kimi-k3".into(),
+            local_gateway_token: Some(format!("ycg-{}", "a".repeat(64))),
+            claude_transport: None,
+            codex_transport: None,
+            models: Vec::new(),
+        }
+    }
+
+    /// 旧版开的终端窗口带走了端口：后台重试要能在端口空出来后接上，
+    /// 但桥已经在跑时（用户刚重新接入）不能拿磁盘上那份旧凭据把它换掉。
+    #[tokio::test]
+    async fn starting_only_when_idle_waits_for_the_port_and_never_replaces_a_running_bridge() {
+        let held = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address: &'static str =
+            Box::leak(held.local_addr().unwrap().to_string().into_boxed_str());
+        let bridge = crate::codex_responses_bridge::codex_runtime(address, "/codex");
+
+        let busy = bridge
+            .start_if_idle(bridge_credential("sk-old"))
+            .await
+            .unwrap_err();
+        assert!(is_port_busy(&busy));
+        assert!(bridge.serving().await.is_none());
+
+        drop(held);
+        bridge.start(bridge_credential("sk-new")).await.unwrap();
+        bridge
+            .start_if_idle(bridge_credential("sk-old"))
+            .await
+            .unwrap();
+        assert_eq!(bridge.serving().await.unwrap().api_key, "sk-new");
+        bridge.stop().await;
+    }
 
     #[test]
     fn a_taken_port_is_reported_on_its_own() {

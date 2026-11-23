@@ -438,23 +438,30 @@ pub(crate) fn prepare(
 /// 重启客户端后，Hermes 若仍指着我们这座桥，就把桥重新起起来。
 /// 只看 Hermes 自己的设置：用户已经换走了，就不占端口。
 pub(crate) async fn resume_if_configured() {
-    let Ok(credential) = crate::tool_credentials::load("hermes") else {
+    let Some(credential) = configured_credential() else {
         return;
     };
-    let Some(home) = super::user_home() else {
-        return;
-    };
-    let Ok(path) = config_path(&home) else {
-        return;
-    };
-    let Ok(bytes) = std::fs::read(path) else {
-        return;
-    };
-    if points_at_our_bridge(&bytes) {
-        if let Err(error) = crate::hermes_bridge::global().start(credential).await {
-            log::warn!("hermes_bridge stage=resume_start_failed reason={error:?}");
+    let bridge = crate::hermes_bridge::global();
+    match bridge.start(credential).await {
+        Ok(_) => {}
+        Err(failure) if crate::local_bridge::is_port_busy(&failure) => {
+            crate::local_bridge::retry_while_port_busy(
+                bridge.clone(),
+                "hermes_bridge",
+                configured_credential,
+            );
         }
+        Err(error) => log::warn!("hermes_bridge stage=resume_start_failed reason={error:?}"),
     }
+}
+
+/// 存着的凭据，前提是它的设置还指向本机桥。
+fn configured_credential() -> Option<crate::tool_credentials::ToolCredential> {
+    let credential = crate::tool_credentials::load("hermes").ok()?;
+    let home = super::user_home()?;
+    let path = config_path(&home).ok()?;
+    let bytes = std::fs::read(path).ok()?;
+    points_at_our_bridge(&bytes).then_some(credential)
 }
 
 impl Prepared {
