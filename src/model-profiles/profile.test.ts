@@ -49,6 +49,13 @@ describe("modelCapabilities is a read-only catalog lookup that never guesses", (
     });
   });
 
+  it("finds a catalog model whatever case the site typed it in", () => {
+    expect(modelCapabilities("DeepSeek-V4.1-Flash-1017")).toEqual(
+      modelCapabilities("deepseek-v4.1-flash-1017"),
+    );
+    expect(hasReviewedCapabilities("DeepSeek-V4.1-Flash-1017")).toBe(true);
+  });
+
   it("returns an empty object for unknown models instead of guessing", () => {
     expect(modelCapabilities("not-a-real-model")).toEqual({});
     expect(modelCapabilities("")).toEqual({});

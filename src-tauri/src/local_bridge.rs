@@ -125,7 +125,8 @@ impl LocalBridgeRuntime {
         }
         let listener = TcpListener::bind(self.address)
             .await
-            .map_err(|_| AdapterFailure::LaunchFailed)?;
+            .map_err(bind_failure)?;
+        keep_out_of_child_processes(&listener);
         let (events, receiver) = broadcast::channel(8);
         let state: SharedState = Arc::new(RwLock::new(Arc::new(BridgeState {
             credential: credential.clone(),
@@ -173,6 +174,33 @@ impl LocalBridgeRuntime {
         }
     }
 }
+
+/// 端口被占着时单独报出来：多半是上次开的终端窗口还留着，界面要能说清楚。
+fn bind_failure(error: std::io::Error) -> AdapterFailure {
+    match error.kind() {
+        std::io::ErrorKind::AddrInUse | std::io::ErrorKind::PermissionDenied => {
+            AdapterFailure::LaunchError("local_port_busy")
+        }
+        _ => AdapterFailure::LaunchFailed,
+    }
+}
+
+/// Windows 上 tokio（mio）建的监听套接字是可继承的，而 `Command::spawn` 总是让
+/// 子进程继承句柄：接入时开的终端会带走这个端口，客户端退出后端口也不放，
+/// 下次接入就起不来桥。
+#[cfg(windows)]
+fn keep_out_of_child_processes(listener: &TcpListener) {
+    use std::os::windows::io::AsRawSocket;
+    use windows_sys::Win32::Foundation::{SetHandleInformation, HANDLE, HANDLE_FLAG_INHERIT};
+    let handle = listener.as_raw_socket() as HANDLE;
+    // SAFETY: the socket is owned by `listener`, which outlives this call.
+    if unsafe { SetHandleInformation(handle, HANDLE_FLAG_INHERIT, 0) } == 0 {
+        log::warn!("local_bridge inherit_flag=unchanged");
+    }
+}
+
+#[cfg(not(windows))]
+fn keep_out_of_child_processes(_: &TcpListener) {}
 
 /// 过桥时不能带给站点的头。其余的原样带过去。
 ///
@@ -333,6 +361,19 @@ pub(crate) fn locally_authorized(headers: &axum::http::HeaderMap, local_token: &
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_taken_port_is_reported_on_its_own() {
+        use std::io::{Error, ErrorKind};
+        assert!(matches!(
+            bind_failure(Error::from(ErrorKind::AddrInUse)),
+            AdapterFailure::LaunchError("local_port_busy")
+        ));
+        assert!(matches!(
+            bind_failure(Error::from(ErrorKind::Other)),
+            AdapterFailure::LaunchFailed
+        ));
+    }
 
     #[test]
     fn the_app_keeps_its_own_name_and_session_but_not_the_local_token() {

@@ -2247,6 +2247,18 @@ where
     finish()
 }
 
+/// 已经改回原样的失败。`launch_failed` 在界面上是「设置写好了，只是没打开」，
+/// 所以本机桥没起来这种回滚过的失败不能再用它报。
+fn rolled_back(error: AdapterFailure) -> ActivationFailure {
+    match error {
+        AdapterFailure::LaunchFailed => {
+            ActivationFailure::ConfigurationFailed("local_bridge_start_failed")
+        }
+        AdapterFailure::LaunchError(reason) => ActivationFailure::ConfigurationFailed(reason),
+        other => ActivationFailure::Adapter(other),
+    }
+}
+
 async fn commit_codex_history_on_worker(
     history: &mut Option<crate::codex_history_takeover::Takeover>,
 ) -> Result<(), AdapterFailure> {
@@ -3190,7 +3202,7 @@ pub async fn configure_desktop_tool_v2(
             };
             ActivationFailure::ConfigurationFailed(reason).projection(&request)
         } else {
-            ActivationFailure::Adapter(error).projection(&request)
+            rolled_back(error).projection(&request)
         });
     }
     let open_result =

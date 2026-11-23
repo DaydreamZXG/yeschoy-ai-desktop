@@ -27,6 +27,14 @@ describe("接入结果怎么说", () => {
     expect(of("launch_failed", "desktop_state_unavailable").kind).toBe("retry");
   });
 
+  it("本机桥没起来、已经改回原样：不说成设置写好了", () => {
+    expect(of("launch_failed", "tool_launch_failed").kind).toBe("retry");
+    expect(of("configuration_failed", "local_port_busy")).toMatchObject({
+      kind: "retry",
+      why: "local_port_busy",
+    });
+  });
+
   it("应用开着：先问一句再重启；Claude 的登录冲突问的是另一件事", () => {
     expect(of("application_running", "desktop_running")).toMatchObject({
       kind: "askRestart",

@@ -296,11 +296,12 @@ fn catalog_value(model: &str, transport: CodexTransport) -> Result<Value, Adapte
     object.insert("slug".into(), serde_json::json!(model));
     object.insert(
         "display_name".into(),
-        serde_json::json!(crate::tool_model_profile::display_name(model)),
+        serde_json::json!(crate::tool_model_profile::profile_any_case(model)
+            .map_or(model, |p| p.display_name.as_str())),
     );
     object.insert("description".into(), serde_json::json!(model));
     object.insert("priority".into(), serde_json::json!(0));
-    let profile = crate::tool_model_profile::profile(model);
+    let profile = crate::tool_model_profile::profile_any_case(model);
     let levels: Vec<_> = profile
         .into_iter()
         .flat_map(|p| &p.reasoning_levels)
@@ -759,6 +760,14 @@ mod tests {
         assert!(!path_looks_like_cli(&bundle));
         assert!(!path_looks_like_cli(&bundle.join("Contents/MacOS/Codex")));
         std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn a_model_name_typed_with_capitals_keeps_its_efforts() {
+        let catalog = bridge_catalog_models(&["DeepSeek-V4.1-Flash-1017".into()]).unwrap();
+        let model = &catalog["models"][0];
+        assert_eq!(model["slug"], "DeepSeek-V4.1-Flash-1017");
+        assert_ne!(model["supported_reasoning_levels"], json!([]));
     }
 
     #[test]
