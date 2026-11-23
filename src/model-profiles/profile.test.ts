@@ -56,6 +56,12 @@ describe("modelCapabilities is a read-only catalog lookup that never guesses", (
     expect(hasReviewedCapabilities("DeepSeek-V4.1-Flash-1017")).toBe(true);
   });
 
+  it("reads an effort suffix whatever case the site typed it in", () => {
+    expect(modelCapabilities("Gemini-3.7-Flash-HIGH")).toEqual(
+      modelCapabilities("gemini-3.7-flash-high"),
+    );
+  });
+
   it("returns an empty object for unknown models instead of guessing", () => {
     expect(modelCapabilities("not-a-real-model")).toEqual({});
     expect(modelCapabilities("")).toEqual({});

@@ -52,7 +52,9 @@ const EFFORT_SUFFIXED_FAMILIES = /^(?:gpt-[a-z0-9]|o[1-9]|claude-|gemini-)/;
 function splitEffortSuffix(
   id: string,
 ): { base: string; effort: string } | null {
-  const suffix = EFFORT_SUFFIXES.find((candidate) => id.endsWith(candidate));
+  const suffix = EFFORT_SUFFIXES.find((candidate) =>
+    id.toLowerCase().endsWith(candidate),
+  );
   if (!suffix) return null;
   const base = id.slice(0, -suffix.length);
   // 命名空间前缀保持不透明，只看最后一段是不是这几族 —— 跟中转的
