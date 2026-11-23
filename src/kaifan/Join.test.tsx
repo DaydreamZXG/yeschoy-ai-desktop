@@ -744,7 +744,7 @@ describe("接入：选应用、选人、点一下", () => {
       return new Promise(() => undefined);
     });
     fireEvent.click(go());
-    await waitFor(() => expect(says()).toContain("正在帮你接入"));
+    await waitFor(() => expect(says()).toContain("正在帮你把"));
     expect(activate.mock.calls.at(-1)![0]).toMatchObject({
       toolId: "opencode",
       opensInTerminal: true,
