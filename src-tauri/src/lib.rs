@@ -28,6 +28,8 @@ mod desktop_app_discovery;
 mod desktop_app_discovery_core;
 mod hermes_bridge;
 mod legacy;
+#[cfg(target_os = "linux")]
+mod linux_renderer;
 mod local_bridge;
 mod logging;
 mod manual_locations;
@@ -82,6 +84,8 @@ const EXIT_PROGRESS_EVENT: &str = "yeschoy://exit-progress";
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(target_os = "linux")]
+    linux_renderer::prefer_cpu_painting();
     logging::init();
     legacy::move_in();
     log::info!("{FRONTEND_MODE_MARKER} selected={FRONTEND_MODE}");
@@ -139,6 +143,8 @@ pub fn run() {
         })
         .setup(move |app| {
             window_appearance::initialize(app)?;
+            #[cfg(target_os = "linux")]
+            linux_renderer::reload_when_renderer_dies(app);
             station_trust::initialize(app.path().app_data_dir().ok());
             #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
             if let Err(error) = station_connect::wire_station_connect_deep_link(app.handle()) {

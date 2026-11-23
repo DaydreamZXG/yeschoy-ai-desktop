@@ -2326,50 +2326,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "yeschoy-desktop"
-version = "0.5.1"
-dependencies = [
- "aes-gcm",
- "async-stream",
- "axum",
- "base64 0.22.1",
- "bytes",
- "caseless",
- "dirs",
- "flate2",
- "futures",
- "getrandom 0.3.4",
- "json5",
- "keyring",
- "log",
- "objc2-app-kit",
- "objc2-foundation",
- "quick-xml",
- "reqwest 0.13.2",
- "rusqlite",
- "semver",
- "serde",
- "serde_json",
- "serde_yaml",
- "sha2 0.10.9",
- "tar",
- "tauri",
- "tauri-build",
- "tauri-plugin-deep-link",
- "tauri-plugin-single-instance",
- "tauri-plugin-updater",
- "thiserror 2.0.18",
- "tokio",
- "toml_edit 0.24.1+spec-1.1.0",
- "unicode-normalization",
- "uuid",
- "windows",
- "windows-sys 0.61.2",
- "winreg 0.56.0",
- "zip 8.6.0",
-]
-
-[[package]]
 name = "keyboard-types"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6330,6 +6286,51 @@ checksum = "32e45ad4206f6d2479085147f02bc2ef834ac85886624a23575ae137c8aa8156"
 dependencies = [
  "libc",
  "rustix",
+]
+
+[[package]]
+name = "yeschoy-desktop"
+version = "0.5.1"
+dependencies = [
+ "aes-gcm",
+ "async-stream",
+ "axum",
+ "base64 0.22.1",
+ "bytes",
+ "caseless",
+ "dirs",
+ "flate2",
+ "futures",
+ "getrandom 0.3.4",
+ "json5",
+ "keyring",
+ "log",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "quick-xml",
+ "reqwest 0.13.2",
+ "rusqlite",
+ "semver",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "sha2 0.10.9",
+ "tar",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-deep-link",
+ "tauri-plugin-single-instance",
+ "tauri-plugin-updater",
+ "thiserror 2.0.18",
+ "tokio",
+ "toml_edit 0.24.1+spec-1.1.0",
+ "unicode-normalization",
+ "uuid",
+ "webkit2gtk",
+ "windows",
+ "windows-sys 0.61.2",
+ "winreg 0.56.0",
+ "zip 8.6.0",
 ]
 
 [[package]]
