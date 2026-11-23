@@ -500,25 +500,31 @@ fn prepare_inner(
 /// 不靠我们这边记的状态。用户手改回直连、或换了别的 provider，都不该
 /// 被我们又占一个端口。
 pub(crate) async fn resume_if_configured(state: CodexRuntimeState) {
-    let Ok(credential) = tool_credentials::load("codex_desktop") else {
+    let Some(credential) = configured_credential() else {
         return;
     };
-    let Some(home) = super::user_home() else {
-        return;
-    };
-    let Ok(dir) = config_dir(&home) else {
-        return;
-    };
-    let Ok(text) = std::fs::read_to_string(dir.join("config.toml")) else {
-        return;
-    };
-    if config_points_at_our_bridge(&text) {
-        // 起不来要说一声：这是「Codex 连不上而用户什么都没改」的直接原因，
-        // 静默吞掉就只剩一个没人监听的端口，日志里连一行线索都没有。
-        if let Err(error) = state.start(credential).await {
-            log::warn!("codex_bridge stage=resume_start_failed reason={error:?}");
+    // 起不来要说一声：这是「Codex 连不上而用户什么都没改」的直接原因，
+    // 静默吞掉就只剩一个没人监听的端口，日志里连一行线索都没有。
+    match state.start(credential).await {
+        Ok(()) => {}
+        Err(failure) if crate::local_bridge::is_port_busy(&failure) => {
+            crate::local_bridge::retry_while_port_busy(
+                state.runtime.clone(),
+                "codex_bridge",
+                configured_credential,
+            );
         }
+        Err(error) => log::warn!("codex_bridge stage=resume_start_failed reason={error:?}"),
     }
+}
+
+/// 存着的凭据，前提是 Codex 的 `config.toml` 还指向本机桥。
+fn configured_credential() -> Option<tool_credentials::ToolCredential> {
+    let credential = tool_credentials::load("codex_desktop").ok()?;
+    let home = super::user_home()?;
+    let dir = config_dir(&home).ok()?;
+    let text = std::fs::read_to_string(dir.join("config.toml")).ok()?;
+    config_points_at_our_bridge(&text).then_some(credential)
 }
 
 /// 这份 `config.toml` 现在还指着我们这座桥吗。

@@ -516,8 +516,29 @@ pub(crate) async fn resume_if_configured(state: ClaudeDesktopRuntimeState) {
                 Err(_) => log::warn!("claude_desktop_profile migration=stage_failed"),
             }
         }
-        let _ = state.start(credential).await;
+        if let Err(failure) = state.start(credential).await {
+            if crate::local_bridge::is_port_busy(&failure) {
+                crate::local_bridge::retry_while_port_busy(
+                    state.runtime.clone(),
+                    "claude_desktop_bridge",
+                    configured_credential,
+                );
+            }
+        }
     }
+}
+
+/// 存着的凭据，前提是 Claude 桌面版的配置还指向本机桥、用的还是这把本地令牌。
+fn configured_credential() -> Option<ToolCredential> {
+    let credential = tool_credentials::load("claude_desktop").ok()?;
+    let local_token = credential.local_gateway_token.as_deref()?;
+    let home = super::user_home()?;
+    let (_, _, profile_path, _) = current_paths(&home).ok()?;
+    let bytes = common::snapshot(&profile_path).ok()??;
+    let value = serde_json::from_slice::<Value>(&bytes).ok()?;
+    (value["inferenceGatewayBaseUrl"].as_str() == Some(PROXY_BASE)
+        && value["inferenceGatewayApiKey"].as_str() == Some(local_token))
+    .then_some(credential)
 }
 
 pub(crate) fn launch(path: &Path) -> Result<(), AdapterFailure> {

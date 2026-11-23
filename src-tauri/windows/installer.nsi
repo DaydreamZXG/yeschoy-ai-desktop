@@ -215,7 +215,70 @@ Function .onInstSuccess
 kaifan_launch_done:
 FunctionEnd
 
+; 卸载时 YesChoy 还开着，YesChoy.exe 删不掉，卸载程序却照样报成功，目录里留着它。
+; 先请它自己退出（和升级用同一个事件），不行再让 Windows 关掉这一个文件的占用者。
+Function un.KaifanStopForUninstall
+  Push $0
+  Push $1
+
+kaifan_un_check:
+  StrCpy $1 0
+  IfFileExists "$INSTDIR\YesChoy.exe" 0 kaifan_un_stopped
+  System::Call 'kernel32::CreateFileW(w "$INSTDIR\YesChoy.exe", i 0x40000000, i 0, p 0, i 3, i 0x80, p 0) p.r0'
+  StrCmp $0 -1 kaifan_un_running
+  System::Call 'kernel32::CloseHandle(p r0)'
+  Goto kaifan_un_stopped
+
+kaifan_un_running:
+  IfSilent kaifan_un_request
+  MessageBox MB_ICONEXCLAMATION|MB_OKCANCEL "YesChoy 还开着。点“确定”会先让它退出，再继续卸载。" IDOK kaifan_un_request
+  Abort
+
+kaifan_un_request:
+  System::Call 'kernel32::OpenEventW(i 0x0002, i 0, w "${KAIFAN_INSTALLER_SHUTDOWN_EVENT}") p.r0'
+  StrCmp $0 0 kaifan_un_force
+  System::Call 'kernel32::SetEvent(p r0)'
+  System::Call 'kernel32::CloseHandle(p r0)'
+  StrCpy $1 100
+
+kaifan_un_wait:
+  Sleep 250
+  System::Call 'kernel32::CreateFileW(w "$INSTDIR\YesChoy.exe", i 0x40000000, i 0, p 0, i 3, i 0x80, p 0) p.r0'
+  StrCmp $0 -1 0 kaifan_un_released
+  IntOp $1 $1 - 1
+  IntCmp $1 0 kaifan_un_force kaifan_un_force kaifan_un_wait
+
+kaifan_un_force:
+  !insertmacro RestartManager_ShutdownFile "$INSTDIR\YesChoy.exe" $0
+  StrCpy $1 40
+
+kaifan_un_force_wait:
+  Sleep 250
+  System::Call 'kernel32::CreateFileW(w "$INSTDIR\YesChoy.exe", i 0x40000000, i 0, p 0, i 3, i 0x80, p 0) p.r0'
+  StrCmp $0 -1 0 kaifan_un_released
+  IntOp $1 $1 - 1
+  IntCmp $1 0 kaifan_un_failed kaifan_un_failed kaifan_un_force_wait
+
+kaifan_un_failed:
+  IfSilent kaifan_un_abort
+  MessageBox MB_ICONSTOP|MB_RETRYCANCEL "关不掉正在运行的 YesChoy，还没删任何东西。请在任务栏右下角的 YesChoy 图标上点“退出”，或在任务管理器里结束“YesChoy.exe”，再点“重试”。" IDRETRY kaifan_un_check
+
+kaifan_un_abort:
+  Pop $1
+  Pop $0
+  Abort
+
+kaifan_un_released:
+  System::Call 'kernel32::CloseHandle(p r0)'
+  Sleep 300
+
+kaifan_un_stopped:
+  Pop $1
+  Pop $0
+FunctionEnd
+
 Section "Uninstall"
+  Call un.KaifanStopForUninstall
   SetShellVarContext current
   SetRegView 64
   Delete "$DESKTOP\YesChoy.lnk"

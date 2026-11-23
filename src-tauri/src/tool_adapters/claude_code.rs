@@ -388,17 +388,29 @@ impl ClaudeCodeRuntimeState {
 }
 
 pub(crate) async fn resume_if_configured(state: ClaudeCodeRuntimeState) {
-    let Ok(credential) = tool_credentials::load("claude_code") else {
+    let Some(credential) = configured_credential() else {
         return;
     };
+    if let Err(failure) = state.start(credential).await {
+        if crate::local_bridge::is_port_busy(&failure) {
+            crate::local_bridge::retry_while_port_busy(
+                state.runtime.clone(),
+                "claude_code_bridge",
+                configured_credential,
+            );
+        }
+    }
+}
+
+/// 存着的凭据，前提是 Claude Code 的设置还指向本机桥。
+fn configured_credential() -> Option<ToolCredential> {
+    let credential = tool_credentials::load("claude_code").ok()?;
     // Only current catalog credentials carry the local capability token and
     // are written to the pass-through endpoint.
     if !credential.has_model_set() {
-        return;
+        return None;
     }
-    let Some(home) = super::user_home() else {
-        return;
-    };
+    let home = super::user_home()?;
     let path = home.join(".claude").join("settings.json");
     let active = common::snapshot(&path)
         .ok()
@@ -410,9 +422,7 @@ pub(crate) async fn resume_if_configured(state: ClaudeCodeRuntimeState) {
                 .map(|origin| origin == PROXY_BASE)
         })
         .unwrap_or(false);
-    if active {
-        let _ = state.start(credential).await;
-    }
+    active.then_some(credential)
 }
 
 #[cfg(test)]
