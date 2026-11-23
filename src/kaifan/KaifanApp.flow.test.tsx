@@ -157,7 +157,7 @@ describe("首页和别的几屏怎么交接", () => {
     view.rerender(<KaifanApp />);
     await waitFor(() =>
       expect(screen.getByTestId("kaifan-says")).toHaveTextContent(
-        "连上 other.example.com 了。这个站有 1 位同学在",
+        "连上 other.example.com 啦。这个站有 1 位同学在岗",
       ),
     );
   });

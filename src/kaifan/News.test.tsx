@@ -77,7 +77,7 @@ describe("News", () => {
     const cards = screen.getAllByTestId("kaifan-notice");
     expect(cards[0]).toHaveClass("new");
     expect(cards[1]).not.toHaveClass("new");
-    await waitFor(() => expect(says()).toHaveTextContent("有 1 条新公告。"));
+    await waitFor(() => expect(says()).toHaveTextContent("来了 1 条新公告。"));
 
     // 记成看过之后，开着的这一次仍然标着。
     rerender(
@@ -131,7 +131,7 @@ describe("News", () => {
     });
     expect(follow).toHaveBeenCalled();
     await waitFor(() =>
-      expect(says()).toHaveTextContent("这个我没打开成，等下再点一次试试。"),
+      expect(says()).toHaveTextContent("这条没点开，过两秒再戳一下试试。"),
     );
   });
 
@@ -139,7 +139,7 @@ describe("News", () => {
     show(board({ available: false, notices: [], unread: new Set() }));
     expect(screen.queryByTestId("kaifan-notice")).toBeNull();
     await waitFor(() =>
-      expect(says()).toHaveTextContent("这个站没有公告栏，有消息我也收不到。"),
+      expect(says()).toHaveTextContent("这个站没设公告栏，有消息也收不到。"),
     );
   });
 

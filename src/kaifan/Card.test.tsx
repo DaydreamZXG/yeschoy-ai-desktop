@@ -90,7 +90,7 @@ describe("角色名片", () => {
     expect(option(/特价/)).toHaveTextContent("最省");
     expect(option(/官转/)).toHaveTextContent("约 8 折");
     expect(option(/标准分组/)).toHaveAttribute("aria-pressed", "true");
-    expect(says()).toBe("现在走「标准分组」，约 3 折。想换就点下面。");
+    expect(says()).toBe("现在走「标准分组」，约 3 折。想换在下面点就行。");
   });
 
   it("换型号、换方案都交给外面记住；挑过的下次还是它", () => {
@@ -129,7 +129,7 @@ describe("角色名片", () => {
 
   it("只有一个方案：不用挑，也点不了", () => {
     setup({ picks: { model: { cla: OPUS }, plan: {} } });
-    expect(says()).toBe("这个站我只有一个价格方案，约 5 折，不用挑。");
+    expect(says()).toBe("这个站就这一个方案，约 5 折，省得挑了。");
     expect(option(/标准分组/)).toBeDisabled();
     expect(screen.queryByText("最省")).toBeNull();
   });
@@ -138,7 +138,7 @@ describe("角色名片", () => {
     setup({ models: [model(SONNET, PLANS, null)], ids: [SONNET] });
     expect(document.body.textContent).not.toMatch(/折。|约 \d/);
     expect(option(/特价/)).toHaveTextContent("倍率 0.15");
-    expect(says()).toContain("几折我算不出来");
+    expect(says()).toContain("算不出几折");
     expect(screen.getByTestId("kaifan-card-prices")).toHaveTextContent(
       "这个站没有提供这个型号的价格。",
     );
@@ -162,7 +162,7 @@ describe("角色名片", () => {
       fx: "1",
     });
     expect(option(/标准分组/)).toHaveTextContent("约 3 折");
-    expect(says()).toBe("现在走「标准分组」，约 3 折。想换就点下面。");
+    expect(says()).toBe("现在走「标准分组」，约 3 折。想换在下面点就行。");
     const prices = screen.getByTestId("kaifan-card-prices");
     expect(prices).toHaveTextContent("standard");
     expect(prices).toHaveTextContent("long_context");
@@ -209,7 +209,7 @@ describe("角色名片", () => {
   it("站点没说有哪些方案：不列方案，也不猜价格", () => {
     setup({ models: [model(SONNET, [], null)], ids: [SONNET] });
     expect(screen.queryByText("价格方案")).toBeNull();
-    expect(says()).toContain("价格我就不乱说了");
+    expect(says()).toContain("我就不瞎猜价了");
   });
 
   it("她在哪些应用里干活：写的是接入时存下来的型号和方案", () => {
@@ -279,7 +279,7 @@ describe("角色名片", () => {
       models: [model("minimax-m2", [["default", 1]], ["2", "8"])],
     });
     expect(screen.queryByText("她擅长")).toBeNull();
-    expect(says()).toContain("还没有人给我画像");
+    expect(says()).toContain("还没来得及画头像");
     expect(option(/标准分组/)).toHaveTextContent("原价");
   });
 
