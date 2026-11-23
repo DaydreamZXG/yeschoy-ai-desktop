@@ -33,6 +33,8 @@ concurrency:
 
 env:
   RELEASE_VERSION: ${{ inputs.version }}
+  # 这个仓库的最后一次发版：官方/朋友版两条旧通道都推社区版，之后只在 DaydreamZXG/yeschoy 发版。
+  YESCHOY_BRIDGE_TO_COMMUNITY: "1"
   OUT: release/internal/ci-${{ inputs.version }}-${{ github.run_id }}
 
 jobs:
@@ -114,9 +116,8 @@ jobs:
           node-version: "22"
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
       - run: pnpm install --frozen-lockfile
+      # 桥接版：界面按社区版（不预填站点），见 build-local.mjs 的 YESCHOY_BRIDGE_TO_COMMUNITY。
       - run: pnpm build:renderer
-        env:
-          VITE_YESCHOY_DISTRIBUTION: official
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: renderer-dist

@@ -16,6 +16,11 @@ const version = JSON.parse(readFileSync(`${repo}/package.json`)).version;
 assert.equal(version, JSON.parse(readFileSync(`${repo}/src-tauri/tauri.conf.json`)).version);
 assert.match(version, /^\d+\.\d+\.\d+$/);
 const origin = variant === 'official' ? 'https://yeschoy.com' : 'https://ai.yeschoy.io';
+// 桥接版（默认）：按社区版编译，仍用旧通道的密钥签名、推到旧通道；
+// 老用户装上后改从公开仓库 DaydreamZXG/yeschoy 的 GitHub Releases 收更新。
+// 只有 YESCHOY_BRIDGE_TO_COMMUNITY=0 才打旧式官方/朋友版（不要用于发版）。
+const bridge = process.env.YESCHOY_BRIDGE_TO_COMMUNITY !== '0';
+const communityPublicKey = readFileSync(`${repo}/src-tauri/community-updater.pub`, 'utf8').trim();
 const prefix = `yeschoy-${version}-${variant}`;
 const folder = `${output}/${platform === 'windows' ? 'windows' : 'macos'}`;
 mkdirSync(`${folder}/public`, { recursive: true });
@@ -28,9 +33,12 @@ const env = {
   RUSTUP_TOOLCHAIN: '1.94.0',
   YESCHOY_AUTHORIZATION_PAGE_ORIGIN: origin,
   // 官方包才编入 update-channels.json 里的官方更新源；公开构建默认走 GitHub。
-  YESCHOY_DISTRIBUTION: variant,
-  VITE_YESCHOY_DISTRIBUTION: 'official',
+  YESCHOY_DISTRIBUTION: bridge ? 'community' : variant,
+  ...(bridge
+    ? { YESCHOY_COMMUNITY_UPDATER_PUBKEY: communityPublicKey, YESCHOY_GITHUB_REPO: 'DaydreamZXG/yeschoy' }
+    : { VITE_YESCHOY_DISTRIBUTION: 'official' }),
 };
+if (bridge) delete env.VITE_YESCHOY_DISTRIBUTION;
 // 远程模型目录地址（可选）：只接受 https://，空值或非 https 一律不编入，客户端只用内置目录。
 const catalogUrl = (process.env.YESCHOY_MODEL_CATALOG_URL || '').trim();
 if (catalogUrl && !catalogUrl.startsWith('https://')) throw new Error('YESCHOY_MODEL_CATALOG_URL must start with https://');
@@ -55,6 +63,7 @@ function buildEvidence(target) {
   const latest = outputs[0];
   assert(latest);
   assert(readFileSync(latest, 'utf8').split(/\r?\n/).includes(`cargo:rustc-env=YESCHOY_AUTHORIZATION_PAGE_ORIGIN=${origin}`));
+  assert(readFileSync(latest, 'utf8').split(/\r?\n/).includes(`cargo:rustc-env=YESCHOY_DISTRIBUTION=${bridge ? 'community' : variant}`));
   copyFileSync(latest, `${folder}/evidence/${variant}-${target}-build-output.txt`);
   return { target, authorizationPageOrigin: origin, buildOutputSha256: hash(latest), output: latest };
 }

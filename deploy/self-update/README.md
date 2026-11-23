@@ -20,6 +20,8 @@
 
 ## 当前本地流程
 
+> **0.5.2 起这里只发桥接版**：`build-local.mjs` 默认按社区版编译（renderer 构建时不要设 `VITE_YESCHOY_DISTRIBUTION`），装上后改从公开仓库 [DaydreamZXG/yeschoy](https://github.com/DaydreamZXG/yeschoy) 的 GitHub Releases 更新。以后的版本只在公开仓库发。
+
 1. 同步 `package.json`、Cargo 与 Tauri 版本，生成一次 renderer 生产构建。使用 Rust 1.94.0、已缓存的 cargo-xwin/NSIS 和 Xcode；Windows 资源由 Zig RC 当次编译，不能复用上一版资源。
 2. `node deploy/self-update/local-signing.mjs init official`（或 `partner`）只在首次生成密钥。密钥位于用户配置目录的 `yeschoy-release/updater-v2`，另有同机 `updater-v2-backup`。目录 0700、文件 0600；**这是无口令私钥的本地权限保护，不是加密备份，也不是异地备份**。不要删除、重新生成、提交或上传私钥。
 3. `node deploy/self-update/build-local.mjs windows official /绝对路径/release/internal/本次目录`；另一版换 `partner`。两版顺序构建，避免共享缓存混入不同登录域名。Windows 沿用中文自定义 NSIS；本次没有 Authenticode 证书，不能声称通过微软代码签名。Tauri 更新签名仍必须通过。
