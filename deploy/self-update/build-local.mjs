@@ -16,9 +16,10 @@ const version = JSON.parse(readFileSync(`${repo}/package.json`)).version;
 assert.equal(version, JSON.parse(readFileSync(`${repo}/src-tauri/tauri.conf.json`)).version);
 assert.match(version, /^\d+\.\d+\.\d+$/);
 const origin = variant === 'official' ? 'https://yeschoy.com' : 'https://ai.yeschoy.io';
-// 桥接版：YESCHOY_BRIDGE_TO_COMMUNITY=1 时按社区版编译（仍用旧通道的密钥签名、推到旧通道），
+// 桥接版（默认）：按社区版编译，仍用旧通道的密钥签名、推到旧通道；
 // 老用户装上后改从公开仓库 DaydreamZXG/yeschoy 的 GitHub Releases 收更新。
-const bridge = process.env.YESCHOY_BRIDGE_TO_COMMUNITY === '1';
+// 只有 YESCHOY_BRIDGE_TO_COMMUNITY=0 才打旧式官方/朋友版（不要用于发版）。
+const bridge = process.env.YESCHOY_BRIDGE_TO_COMMUNITY !== '0';
 const communityPublicKey = readFileSync(`${repo}/src-tauri/community-updater.pub`, 'utf8').trim();
 const prefix = `yeschoy-${version}-${variant}`;
 const folder = `${output}/${platform === 'windows' ? 'windows' : 'macos'}`;
