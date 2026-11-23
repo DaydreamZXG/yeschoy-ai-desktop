@@ -1,5 +1,5 @@
 import { spawnSync, execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync, copyFileSync, symlinkSync, appendFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync, copyFileSync, symlinkSync, appendFileSync, renameSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
@@ -86,9 +86,19 @@ if (platform === 'windows') {
   copyFileSync(exe, payload);
   // CI points these at its own pinned tools; the defaults are the local Mac paths.
   const nsis = process.env.YESCHOY_NSIS_HOME || `${repo}/release/internal/0.4.15-partner-ai-yeschoy-04382354/tooling/makensis/3.12`;
-  run(`${nsis}/bin/makensis`, [`-DAPP_EXE=${payload}`, `-DOUTPUT_EXE=${destination}`, `-DAPP_ICON=${repo}/src-tauri/icons/icon.ico`, `-DAPP_VERSION=${version}`, 'src-tauri/windows/installer.nsi'], { NSISDIR: `${nsis}/share/nsis` });
+  // 正式包把微软的 WebView2 在线安装器一起打进去，装的时候缺了才运行。
+  // makensis 在脚本所在目录找文件，所以给它绝对路径；先下到 .part，下完整了才改名，下载中断后重跑不会拿到半截文件。
+  const webview2 = resolve(process.env.YESCHOY_WEBVIEW2_BOOTSTRAPPER || `${folder}/MicrosoftEdgeWebview2Setup.exe`);
+  if (!existsSync(webview2)) {
+    run('curl', ['-fsSL', '--retry', '3', '-o', `${webview2}.part`, 'https://go.microsoft.com/fwlink/p/?LinkId=2124703']);
+    renameSync(`${webview2}.part`, webview2);
+  }
+  const bootstrapper = readFileSync(webview2);
+  assert.equal(bootstrapper.toString('latin1', 0, 2), 'MZ', 'WebView2 bootstrapper is not a Windows executable');
+  assert(bootstrapper.length > 500000, 'WebView2 bootstrapper looks truncated');
+  run(`${nsis}/bin/makensis`, [`-DAPP_EXE=${payload}`, `-DWEBVIEW2_BOOTSTRAPPER=${webview2}`, `-DOUTPUT_EXE=${destination}`, `-DAPP_ICON=${repo}/src-tauri/icons/icon.ico`, `-DAPP_VERSION=${version}`, 'src-tauri/windows/installer.nsi'], { NSISDIR: `${nsis}/share/nsis` });
   sign(destination);
-  save('build-inspection', { platform, variant, version, commit, authorizationPageOrigin: origin, build, resourceSha256: hash(resource), payloadSha256: hash(payload), installerSha256: hash(destination), codeSigned: false, updaterSignatureCreated: true, installedApplicationLaunched: false });
+  save('build-inspection', { platform, variant, version, commit, authorizationPageOrigin: origin, build, resourceSha256: hash(resource), payloadSha256: hash(payload), webview2BootstrapperSha256: hash(webview2), installerSha256: hash(destination), codeSigned: false, updaterSignatureCreated: true, installedApplicationLaunched: false });
 } else if (platform === 'macos') {
   const stage = `${folder}/${variant}-stage`;
   assert(!existsSync(`${stage}/YesChoy.app`));
