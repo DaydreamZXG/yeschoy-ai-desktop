@@ -1,5 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { openStationConnectPage } from "../account/openStationConnectPage";
 import { connectWithKey } from "../account/session";
@@ -392,6 +398,20 @@ describe("连接站点", () => {
       await waitFor(() => expect(ipc).toHaveBeenCalled());
       expect(screen.queryByTestId("kaifan-connect-vendors")).toBeNull();
       expect(screen.getByLabelText("站点网址")).toBeEnabled();
+    });
+
+    it("第一屏不说行话：两组叫「站点」和「AI 厂商」", async () => {
+      withVendors();
+      setup();
+      await vendor(/Kimi Code/);
+      const panel = screen.getByTestId("kaifan-connect");
+      expect(
+        within(panel).getByRole("heading", { name: /^站点/ }),
+      ).toBeVisible();
+      expect(
+        within(panel).getByRole("heading", { name: /^AI 厂商/ }),
+      ).toBeVisible();
+      expect(panel).not.toHaveTextContent(/中转站|云厂商/);
     });
 
     it("不常用的默认收着，点一下才露出来", async () => {

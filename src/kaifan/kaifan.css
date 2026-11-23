@@ -996,6 +996,11 @@ canvas#fx {
   flex-direction: column;
   gap: 20px;
   min-height: 430px;
+  /* 窗口最矮时厂商全展开会比窗口高：在面板里滚，不让上下两头伸到窗口外面。 */
+  max-height: calc(100% - 28px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
   padding: 30px 34px;
 }
 .cnp > *,
