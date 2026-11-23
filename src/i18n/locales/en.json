@@ -326,10 +326,10 @@
     },
     "connect": {
       "title": "Connect a station",
-      "askUrl": "Hi, I'm Aqing. Tell me where to connect: paste a relay station's address, or pick a cloud provider by name.",
-      "groupRelay": "Relay stations",
+      "askUrl": "Hi, I'm Aqing. Tell me where to connect: enter your station's address, or pick an AI provider.",
+      "groupRelay": "Station",
       "groupRelayNote": "enter the address",
-      "groupCloud": "Cloud providers",
+      "groupCloud": "AI providers",
       "groupCloudNote": "pick a name, paste a key",
       "tagPlan": "Plan",
       "tagPayg": "Pay as you go",
@@ -385,7 +385,7 @@
         "refused_station": "I don't connect to OpenDesign's station, so I stopped here. Try another station's address.",
         "unreachable": "I tried twice and couldn't reach this station. Open the address in your browser: if that fails too, the address is wrong or the station is down for now.",
         "timeout": "This station is answering too slowly; I tried twice. Try again in a while, or switch proxy node if you use one.",
-        "not_relay": "That address doesn't look like a relay station. I need the website where you see “Tokens” and “Wallet” after signing in, not a chat page."
+        "not_relay": "That address doesn't look like a station I can connect to. I need the website where you see “Tokens” and “Wallet” after signing in, not a chat page."
       },
       "key": {
         "invalid": "This key is wrong or has been deleted. Copy a fresh one from the station's “Tokens” page, and watch for extra spaces.",
