@@ -20,13 +20,18 @@ beforeEach(() => {
 
 describe("没有系统标题栏的窗口", () => {
   it("自己画的三个按钮各管一件事", () => {
+    const asked = vi.fn();
+    window.addEventListener("kaifan:open-exit-choice", asked);
     render(<WindowBar frame="own" />);
     fireEvent.click(screen.getByRole("button", { name: "最小化" }));
     fireEvent.click(screen.getByRole("button", { name: "最大化" }));
     fireEvent.click(screen.getByRole("button", { name: "关闭" }));
     expect(native.minimize).toHaveBeenCalledTimes(1);
     expect(native.toggleMaximize).toHaveBeenCalledTimes(1);
-    expect(native.close).toHaveBeenCalledTimes(1);
+    // 关闭问的是界面里的退出框，不是系统关窗。
+    expect(native.close).not.toHaveBeenCalled();
+    expect(asked).toHaveBeenCalledTimes(1);
+    window.removeEventListener("kaifan:open-exit-choice", asked);
   });
 
   it("窗口已经最大化时，中间那个按钮写的是还原", async () => {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getCurrentWindow, type Window } from "@tauri-apps/api/window";
 import { useTranslation } from "react-i18next";
+import { askToQuit } from "./Shutdown";
 
 // 窗口没有系统标题栏：画面顶到最上面，这一条高度以内按住就能拖动窗口。
 const GRIP_HEIGHT = 36;
@@ -138,7 +139,8 @@ export function WindowBar({ frame }: { frame: WindowFrame }) {
         type="button"
         className="shut"
         aria-label={t("kaifan.window.close")}
-        onClick={() => quiet(nativeWindow()?.close())}
+        // 直接问界面里那个退出框；不走系统关窗，否则 Windows 上弹的是系统自带的提示框。
+        onClick={askToQuit}
       >
         <svg viewBox="0 0 12 12" aria-hidden="true">
           <path d="M1.5 1.5l9 9M10.5 1.5l-9 9" />

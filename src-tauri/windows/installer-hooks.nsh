@@ -1,5 +1,8 @@
 !include "Win\RestartManager.nsh"
 
+; Tauri 的模板只给安装程序设了图标，卸载程序（uninstall.exe）还是 NSIS 默认的。
+!define MUI_UNICON "${__FILEDIR__}\..\icons\icon.ico"
+
 !define KAIFAN_INSTALLER_SHUTDOWN_EVENT "Local\YesChoyDesktopInstallerShutdown_v1"
 ; 只出过测试版的“开饭”等的是这个名字；两个都发，哪一个开着都能自己安全退出。
 !define KAIFAN_OLD_INSTALLER_SHUTDOWN_EVENT "Local\KaifanDesktopInstallerShutdown_v1"
@@ -360,4 +363,19 @@ FunctionEnd
 
 !macro NSIS_HOOK_POSTINSTALL
   Call KaifanRetireTestBuild
+!macroend
+
+; 卸载时勾了「删除应用数据」：Tauri 自己只删 $APPDATA / $LOCALAPPDATA 下按 bundle id
+; 命名的目录。日志、~/.yeschoy 和系统凭据管理器里的密钥都在别处，这里补上。
+; ~/.yeschoy/cli-workspace 是命令行应用默认的工作文件夹，里面可能有用户自己的东西，不删。
+; Claude Code 原登录的备份（displaced-login）是用户自己的登录，也不删。
+!macro NSIS_HOOK_POSTUNINSTALL
+  ${If} $DeleteAppDataCheckboxState = 1
+  ${AndIf} $UpdateMode <> 1
+    SetShellVarContext current
+    RmDir /r "$LOCALAPPDATA\YesChoy\logs"
+    RmDir "$LOCALAPPDATA\YesChoy"
+    nsExec::Exec `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$$d = Join-Path $$env:USERPROFILE '.yeschoy'; if (Test-Path -LiteralPath $$d) { Get-ChildItem -LiteralPath $$d -Force | Where-Object { $$_.Name -ne 'cli-workspace' } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue; if (-not (Get-ChildItem -LiteralPath $$d -Force)) { Remove-Item -LiteralPath $$d -Force -ErrorAction SilentlyContinue } }; cmdkey /list | ForEach-Object { if ($$_ -match 'target=(\S*com\.(yeschoy|kaifan)\.desktop\S*)' -and $$_ -notmatch 'displaced-login') { cmdkey /delete:$$($$Matches[1]) | Out-Null } }"`
+    Pop $0
+  ${EndIf}
 !macroend

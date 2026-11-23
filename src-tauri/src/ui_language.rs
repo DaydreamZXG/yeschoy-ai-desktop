@@ -56,8 +56,9 @@ pub(crate) fn set(language: Language) {
 
 /// 只认得已经完整翻译的两种；别的值当作没说，保持现状。
 #[tauri::command]
-pub(crate) fn set_ui_language_v1(language: Language) -> bool {
+pub(crate) fn set_ui_language_v1(app: tauri::AppHandle, language: Language) -> bool {
     set(language);
+    crate::native_shell::refresh_menu(&app);
     true
 }
 

@@ -34,6 +34,7 @@ mod local_bridge;
 mod logging;
 mod manual_locations;
 mod model_catalog;
+mod native_shell;
 mod open_connection;
 mod openclaw_bridge;
 mod opencode_bridge;
@@ -143,6 +144,7 @@ pub fn run() {
         })
         .setup(move |app| {
             window_appearance::initialize(app)?;
+            native_shell::refresh_menu(app.handle());
             #[cfg(target_os = "linux")]
             linux_renderer::reload_when_renderer_dies(app);
             station_trust::initialize(app.path().app_data_dir().ok());
@@ -287,7 +289,19 @@ pub fn run() {
     });
 }
 
+/// 托盘菜单里的「退出…」：和点窗口关闭按钮问的是同一个问题。
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+fn ask_how_to_close<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    #[cfg(target_os = "windows")]
+    if let Some(window) = app.get_webview_window("main") {
+        handle_windows_close(&window.as_ref().window());
+    }
+    #[cfg(not(target_os = "windows"))]
+    let _ = app;
+}
+
 fn focus_main_webview<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
+    native_shell::hide_tray(app);
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.unminimize();
         let _ = window.show();
@@ -452,6 +466,15 @@ fn dismiss_desktop_exit_prompt() {
 }
 
 fn background_desktop_window<R: tauri::Runtime>(window: &tauri::Window<R>) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    match native_shell::show_tray(window.app_handle()) {
+        Ok(()) => window.hide().map_err(|_| "window_hide_failed")?,
+        Err(error) => {
+            log::warn!("desktop_shutdown stage=tray_failed error={error}");
+            window.minimize().map_err(|_| "window_minimize_failed")?;
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
     window.minimize().map_err(|_| "window_minimize_failed")?;
     shutdown().dismiss_close_choice();
     Ok(())
@@ -614,47 +637,47 @@ enum NativeCloseChoice {
 
 #[cfg(target_os = "windows")]
 fn windows_close_choice<R: tauri::Runtime>(window: &tauri::Window<R>) -> NativeCloseChoice {
-    use windows::core::HSTRING;
-    use windows::Win32::UI::WindowsAndMessaging::{
-        MessageBoxW, IDNO, IDYES, MB_ICONQUESTION, MB_SETFOREGROUND, MB_YESNOCANCEL,
-    };
+    use native_shell::labeled_message_box::ask;
+    use windows::Win32::UI::WindowsAndMessaging::{IDNO, IDYES};
 
     let owner = window.hwnd().ok();
     // The choice is native by design: it remains usable when WebView2 or the
-    // embedded renderer fails before JavaScript can mount an exit dialog.
+    // embedded renderer fails before JavaScript can mount an exit dialog. The
+    // window's own close button asks in the renderer instead (`askToQuit`);
+    // this one is for Alt+F4, the taskbar and the tray menu.
     //
-    // The text follows the renderer's language (see ui_language). `w!()` only
-    // takes literals, so the picked string goes through an owned HSTRING.
+    // The text follows the renderer's language (see ui_language), and so do
+    // the button labels, so the body can name them.
     let language = ui_language::current();
-    let body = HSTRING::from(language.pick(
-        "选择“是”：恢复原设置并退出。请先保存任务；助手会请求 Codex/Claude 正常关闭，恢复后不自动打开应用。其他命令行应用下次启动生效。\n选择“否”：选择后台运行或保留设置退出。\n选择“取消”：返回。",
-        "Yes: restore the original settings and quit. Save your work first; the assistant asks Codex/Claude to close normally and does not reopen them afterwards. Other command-line apps pick this up on their next start.\nNo: keep running in the background, or quit and keep the connections.\nCancel: go back.",
-    ));
-    let title = HSTRING::from(language.pick("关闭 YesChoy？", "Close YesChoy?"));
-    let result = unsafe {
-        MessageBoxW(
-            owner,
-            &body,
-            &title,
-            MB_YESNOCANCEL | MB_ICONQUESTION | MB_SETFOREGROUND,
-        )
-    };
+    let result = ask(
+        owner,
+        language.pick("关闭 YesChoy？", "Close YesChoy?"),
+        language.pick(
+            "恢复并退出：把接过的应用改回原来的设置，再退出。先保存手上的活；Codex/Claude 会被正常关掉，之后不会自动打开。别的命令行应用下次启动时生效。\n更多：后台运行，或保留接入直接退出。\n取消：回去。",
+            "Restore: put connected apps back to their original settings, then quit. Save your work first; Codex/Claude are closed normally and not reopened. Other command-line apps pick this up on their next start.\nMore: keep running in the background, or quit and keep the connections.\nCancel: go back.",
+        ),
+        [
+            language.pick("恢复并退出", "Restore"),
+            language.pick("更多…", "More…"),
+            language.pick("取消", "Cancel"),
+        ],
+    );
     if result == IDYES {
         NativeCloseChoice::RestoreAndExit
     } else if result == IDNO {
-        let body = HSTRING::from(language.pick(
-            "选择“是”：保留接入设置并退出，依赖助手的连接会中断。\n选择“否”：后台运行，保持连接。\n选择“取消”：返回。",
-            "Yes: quit and keep the connection settings; apps that depend on the assistant will disconnect.\nNo: keep running in the background and stay connected.\nCancel: go back.",
-        ));
-        let title = HSTRING::from(language.pick("保留接入设置？", "Keep the connections?"));
-        let preserve = unsafe {
-            MessageBoxW(
-                owner,
-                &body,
-                &title,
-                MB_YESNOCANCEL | MB_ICONQUESTION | MB_SETFOREGROUND,
-            )
-        };
+        let preserve = ask(
+            owner,
+            language.pick("保留接入？", "Keep the connections?"),
+            language.pick(
+                "直接退出：保留接入设置并退出，靠这个客户端转发的应用会断开。\n后台运行：藏到托盘里，连接不断。\n取消：回去。",
+                "Quit: quit and keep the connection settings; apps that go through this app will disconnect.\nHide: keep running in the tray and stay connected.\nCancel: go back.",
+            ),
+            [
+                language.pick("直接退出", "Quit"),
+                language.pick("后台运行", "Hide"),
+                language.pick("取消", "Cancel"),
+            ],
+        );
         if preserve == IDYES {
             NativeCloseChoice::Exit
         } else if preserve == IDNO {
