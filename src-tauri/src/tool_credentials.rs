@@ -413,7 +413,22 @@ pub(crate) fn executable_path() -> Result<String, CredentialFailure> {
         .to_str()
         .filter(|value| !value.is_empty())
         .ok_or(CredentialFailure::Unavailable)?;
-    Ok(rendered.to_owned())
+    Ok(without_long_path_prefix(rendered)
+        .unwrap_or(rendered)
+        .to_owned())
+}
+
+/// Windows 上 `canonicalize` 给出的路径带 `\\?\` 前缀。应用是用 cmd.exe 跑取密钥
+/// 命令的，cmd.exe 不认这个前缀，报“系统找不到指定的路径”，应用就拿不到密钥。
+/// 这里返回去掉前缀后的写法；本来就没有前缀、或者去掉以后不再是同一个位置的
+/// （不是盘符开头的），返回 `None`。
+pub(crate) fn without_long_path_prefix(path: &str) -> Option<&str> {
+    let rest = path.strip_prefix(r"\\?\")?;
+    let mut letters = rest.chars();
+    let on_a_drive = letters.next().is_some_and(|c| c.is_ascii_alphabetic())
+        && letters.next() == Some(':')
+        && letters.next() == Some('\\');
+    on_a_drive.then_some(rest)
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -529,6 +544,22 @@ pub fn credential_helper_exit_code() -> Option<i32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_helper_path_is_one_cmd_can_run() {
+        assert_eq!(
+            without_long_path_prefix(r"\\?\C:\Users\me\AppData\Local\YesChoy\yeschoy.exe"),
+            Some(r"C:\Users\me\AppData\Local\YesChoy\yeschoy.exe"),
+        );
+        // 已经是普通写法的不动。
+        assert_eq!(without_long_path_prefix(r"C:\YesChoy\yeschoy.exe"), None);
+        assert_eq!(without_long_path_prefix("/opt/yeschoy/yeschoy"), None);
+        // 网络位置去掉前缀就不是原来那个位置了，留着。
+        assert_eq!(
+            without_long_path_prefix(r"\\?\UNC\server\share\yeschoy.exe"),
+            None
+        );
+    }
 
     #[derive(Default)]
     struct FixtureStore {

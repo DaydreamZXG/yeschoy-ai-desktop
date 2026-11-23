@@ -57,6 +57,7 @@
       "nsis": {
         "languages": ["SimpChinese"],
         "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico",
         "installerHooks": "windows/installer-hooks.nsh"
       },
       "wix": {

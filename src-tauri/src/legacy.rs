@@ -244,13 +244,22 @@ pub(crate) fn delete_secret(service: &str, account: &str) -> Result<(), KeyFault
 }
 
 /// 取密钥命令里的客户端路径该不该跟到 `current`：它已经不存在了，或者它是改名前
-/// 的那个程序（旧版还装着也一样——它读不到已经搬走的密钥）。
+/// 的那个程序（旧版还装着也一样——它读不到已经搬走的密钥），或者它是以前写下的
+/// 带 `\\?\` 前缀的写法（文件在，但应用跑不起来这条命令）。
 pub(crate) fn should_follow(old: &Path, current: &Path) -> bool {
     old != current
         && (!old.exists()
             || old
                 .file_stem()
-                .is_some_and(|stem| stem.eq_ignore_ascii_case(OLD_BINARY)))
+                .is_some_and(|stem| stem.eq_ignore_ascii_case(OLD_BINARY))
+            || is_long_path_spelling_of(old, current))
+}
+
+/// `old` 是不是 `current` 这同一个文件、只是写成了带 `\\?\` 前缀的样子。
+fn is_long_path_spelling_of(old: &Path, current: &Path) -> bool {
+    old.to_str()
+        .and_then(crate::tool_credentials::without_long_path_prefix)
+        .is_some_and(|plain| Path::new(plain) == current)
 }
 
 /// 拆开 `'<路径>' credential-helper <应用>` 这样的命令，取出路径。
@@ -534,6 +543,35 @@ mod tests {
             quote
         )
         .is_some());
+    }
+
+    #[test]
+    fn a_helper_command_written_with_the_long_path_prefix_is_rewritten_plainly() {
+        let current = Path::new(r"C:\Users\a\AppData\Local\YesChoy\yeschoy.exe");
+        assert!(is_long_path_spelling_of(
+            Path::new(r"\\?\C:\Users\a\AppData\Local\YesChoy\yeschoy.exe"),
+            current
+        ));
+        // 另一份客户端的，不抢；已经是普通写法的，不用动。
+        assert!(!is_long_path_spelling_of(
+            Path::new(r"\\?\D:\Other\YesChoy\yeschoy.exe"),
+            current
+        ));
+        assert!(!is_long_path_spelling_of(current, current));
+
+        let windows_quote = |value: &str| format!("\"{value}\"");
+        assert_eq!(
+            followed_command(
+                r#""\\?\C:\Users\a\AppData\Local\YesChoy\yeschoy.exe" gateway-credential-helper claude_code"#,
+                "claude_code",
+                current,
+                windows_quote
+            )
+            .as_deref(),
+            Some(
+                r#""C:\Users\a\AppData\Local\YesChoy\yeschoy.exe" gateway-credential-helper claude_code"#
+            )
+        );
     }
 
     #[test]
