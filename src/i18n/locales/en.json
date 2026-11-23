@@ -133,8 +133,8 @@
     },
     "ds": {
       "name": "Xiaojing",
-      "ready": "{{balance}} of rice left in the pot. Enough to eat.",
-      "quote": "Dinner time! I mean, work time!",
+      "ready": "Balance {{balance}}. That's plenty of meals.",
+      "quote": "Belly's full. Time to work!",
       "poke1": "Off to eat. Call me when the test is done.",
       "poke2": "You really think I'm the cheap one, huh…",
       "poke3": "Stop poking, I'll spill my rice!",
