@@ -41,6 +41,8 @@ VIAddVersionKey /LANG=2052 "LegalCopyright" "Copyright (c) YesChoy contributors"
 
 !define MUI_ABORTWARNING
 !define MUI_ICON "${APP_ICON}"
+; installer-hooks.nsh 已经给 Tauri 的包定义过一次。
+!undef MUI_UNICON
 !define MUI_UNICON "${APP_ICON}"
 !insertmacro MUI_PAGE_WELCOME
 !insertmacro MUI_PAGE_DIRECTORY
