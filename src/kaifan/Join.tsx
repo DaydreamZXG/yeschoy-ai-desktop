@@ -183,8 +183,8 @@ export function Join({
 
   const touched = useRef(false);
   // 找应用是异步的：找完那一下要看的是当时最新的接入情况。
-  const joined = useRef({ connections, lineId });
-  joined.current = { connections, lineId };
+  const joined = useRef({ connections, only: preset?.onlyTools ?? [] });
+  joined.current = { connections, only: preset?.onlyTools ?? [] };
   // 同一个应用可能两种都有（Codex 的桌面版和命令行版）：看挑中的是哪一份。
   const seen = useRef<ActivationTarget[]>([]);
   const inTerminal = (toolId: ActivationToolId, installationId: string) =>
@@ -212,13 +212,18 @@ export function Join({
               entry.status === "selection_required"),
         ),
       );
+      // 这一家不认的应用不先选：选中了也接不了，还得用户自己换一个。
+      const { connections: now, only } = joined.current;
+      const allowed = installed.filter(
+        (item) => only.length === 0 || only.includes(item.id),
+      );
       const first =
-        installed.find((item) => {
-          const was = joined.current.connections.find(
-            (entry) => entry.toolId === item.id,
-          );
+        allowed.find((item) => {
+          const was = now.find((entry) => entry.toolId === item.id);
           return !was || was.state === "not_connected";
-        }) ?? installed[0];
+        }) ??
+        allowed[0] ??
+        installed[0];
       if (!touched.current && first) setApp(first.id);
       return found;
     } catch {

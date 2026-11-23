@@ -1606,6 +1606,38 @@ describe("接入：连的是云厂商", () => {
     await ready();
     expect(screen.getByTestId("kaifan-join-plan-risk")).toBeTruthy();
   });
+
+  it("没指定应用时不先选这家不认的：跳过没接的 WorkBuddy，选没接的 Pi", async () => {
+    found([target("claude_desktop"), target("workbuddy"), target("pi")]);
+    setup({
+      preset: vendor({
+        id: "opencode_go",
+        family: "opencode_go",
+        name: "OpenCode Go",
+        onlyTools: ["opencode", "codex_desktop", "claude_desktop", "pi"],
+      }),
+      connections: [
+        {
+          toolId: "claude_desktop",
+          state: "connected",
+          modelId: "claude-sonnet-4-5-20250929",
+          lineId: "mainland_optimized",
+          billingGroup: "default",
+          updatedAtEpochMs: 1,
+          restoreMode: "original",
+          requiresBackground: false,
+          reasonCode: "",
+        },
+      ],
+    });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^Pi/ })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      ),
+    );
+    expect(screen.queryByTestId("kaifan-join-barred")).toBeNull();
+  });
 });
 
 describe("接入：要修的应用就在这里修", () => {
