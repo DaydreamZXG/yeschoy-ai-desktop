@@ -587,6 +587,7 @@ export function KaifanApp() {
           onRecharge={() => void recharge()}
           onSetup={setup}
           unread={notices.unread.size}
+          panel={panel}
           onLedger={() => {
             sound.whoosh();
             setPanel("ledger");

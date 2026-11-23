@@ -294,6 +294,7 @@
       "chipBalanceUnknown": "Balance not shown",
       "appOk": "{{app}}: connected. Click to adjust",
       "appPending": "{{app}}: not connected. Click to start",
+      "appIdle": "Not connected",
       "backOnline": "We're back. Nothing needs redoing.",
       "rechargeManual": "I couldn't open the top-up page. Open the station's website in your browser to top up; I'll notice when it's done.",
       "rechargeManualHost": "I couldn't open the top-up page. Open {{station}} in your browser to top up; I'll notice when it's done.",
