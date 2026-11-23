@@ -442,7 +442,15 @@ export function KaifanApp() {
   const joinedNow = useRef(joined);
   joinedNow.current = joined;
   // 要修的应用也在这一屏里修：接入那一屏会选回它原来的人，说清是哪种情况。
-  const setup = (app?: ActivationToolId) => setJoin({ app });
+  /** 收起右边开着的面板（名片、账本、公告、设置）。 */
+  const home = () => {
+    setPanel(null);
+    setCardOpen(false);
+  };
+  const setup = (app?: ActivationToolId) => {
+    home();
+    setJoin({ app });
+  };
   const onJoined = (result: Joined) => {
     setJoin(null);
     setOpenFailed(false);
@@ -554,6 +562,13 @@ export function KaifanApp() {
     !!join ||
     !!joined ||
     !!link.trustOrigin;
+  const drawer =
+    (card || !!panel) &&
+    phase === "home" &&
+    !connectOpen &&
+    !join &&
+    !joined &&
+    !link.trustOrigin;
 
   return (
     <ConnectionProvider value={connections}>
@@ -562,7 +577,7 @@ export function KaifanApp() {
         ref={stage}
         data-phase={phase}
         data-cond={state.cond}
-        data-card={card ? "" : undefined}
+        data-card={card || panel ? "" : undefined}
         data-frame={frame}
         data-testid="kaifan"
         style={{ ["--acc" as string]: ROSTER[state.current].color }}
@@ -572,6 +587,7 @@ export function KaifanApp() {
           station={station}
           apps={apps}
           quiet={covered}
+          drawer={drawer}
           line={line}
           updateReady={updateReady}
           retrying={retrying}
@@ -582,14 +598,19 @@ export function KaifanApp() {
             sound.whoosh();
             setCardOpen(true);
           }}
-          onConnect={() => setConnectOpen(true)}
+          onConnect={() => {
+            home();
+            setConnectOpen(true);
+          }}
           onRetry={() => void retry()}
           onRecharge={() => void recharge()}
           onSetup={setup}
           unread={notices.unread.size}
           panel={panel}
+          onHome={home}
           onLedger={() => {
             sound.whoosh();
+            setCardOpen(false);
             setPanel("ledger");
             // 打开账本就去读一次最新的，不拿旧数给人看。
             if (!signedIn) return;
@@ -603,10 +624,12 @@ export function KaifanApp() {
           }}
           onNews={() => {
             sound.whoosh();
+            setCardOpen(false);
             setPanel("news");
           }}
           onSettings={() => {
             sound.whoosh();
+            setCardOpen(false);
             setPanel("settings");
           }}
         />

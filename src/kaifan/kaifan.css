@@ -404,6 +404,8 @@ canvas#fx {
 }
 
 .mid {
+  /* 对话框和那排应用一样宽；窗口缩到最小也留够五个应用写全名字的地方。 */
+  --mid-w: min(700px, max(56vw, 600px));
   position: absolute;
   left: 218px;
   right: 0;
@@ -451,7 +453,7 @@ canvas#fx {
   margin-bottom: 5px;
 }
 .chips {
-  width: min(700px, 56vw);
+  width: var(--mid-w);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -497,7 +499,7 @@ canvas#fx {
 .bar {
   position: relative;
   margin-top: 10px;
-  width: min(700px, 56vw);
+  width: var(--mid-w);
   border-radius: 22px;
   padding: 16px 18px 14px 172px;
 }
@@ -623,7 +625,7 @@ canvas#fx {
 }
 .apps {
   margin-top: 12px;
-  width: min(700px, 56vw);
+  width: var(--mid-w);
   display: flex;
   gap: 8px;
 }
@@ -1234,6 +1236,14 @@ button.app {
 .app i {
   font-size: 10px;
   opacity: 0.8;
+}
+/* 名字一行写不下就折成两行，不截成“Claud…”——两个 Claude 要分得清。 */
+.app b {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+  line-height: 1.15;
 }
 /* 还没接的应用：第二行淡一点，和写着干活的人的那几个分得开。 */
 .app:not(.ok) i {
@@ -1928,9 +1938,10 @@ dialog.restore-dialog menu {
 }
 
 /* 名片：从右边滑出来的一张。点旁边的空处或按 Esc 收起。 */
+/* 左边栏那一条不盖：开着面板也能直接点另一项。 */
 .drw {
   position: absolute;
-  inset: 0;
+  inset: 0 0 0 218px;
   z-index: 6;
   visibility: hidden;
   transition: visibility 0.5s;
@@ -1969,7 +1980,7 @@ dialog.restore-dialog menu {
 .dr:focus {
   outline: none;
 }
-/* 名片开着时，对话框和那排应用让开，竖幅照旧看得见。 */
+/* 右边的面板开着时（名片、账本、公告、设置），对话框和那排应用让开，竖幅照旧看得见。 */
 .stage[data-card] .mid {
   opacity: 0;
   transform: translateY(20px);

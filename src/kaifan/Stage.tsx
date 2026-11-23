@@ -41,6 +41,8 @@ interface Props {
   apps: StageApp[];
   /** 开机动画还在放、或者上面盖着面板时，不闲聊也不打字。 */
   quiet: boolean;
+  /** 盖着的只是右边滑出来的面板：左边栏照常能点，从这一页直接换到另一页。 */
+  drawer?: boolean;
   line: StageLine | null;
   /** 有新版本等着装：设置那一项亮个点。 */
   updateReady?: boolean;
@@ -59,6 +61,8 @@ interface Props {
   unread?: number;
   /** 右边开着哪块面板：左边对应的那一项亮着，不再亮「首页」。 */
   panel?: "ledger" | "news" | "settings" | null;
+  /** 点「首页」：收起开着的面板。 */
+  onHome: () => void;
   onLedger: () => void;
   onNews: () => void;
   onSettings: () => void;
@@ -85,6 +89,7 @@ export function Stage({
   station,
   apps,
   quiet,
+  drawer = false,
   line,
   updateReady,
   retrying,
@@ -98,6 +103,7 @@ export function Stage({
   onSetup,
   unread = 0,
   panel = null,
+  onHome,
   onLedger,
   onNews,
   onSettings,
@@ -360,6 +366,9 @@ export function Stage({
 
   // 上面盖着别的画面时，首页不接键盘和读屏，免得焦点跑到看不见的按钮上。
   const hidden = quiet ? { inert: "" } : {};
+  // 只开着右边的面板时，左边栏不跟着停：面板没盖住它，点另一项就该换过去。
+  const whole = drawer ? {} : hidden;
+  const rest = drawer ? hidden : {};
   return (
     <>
       <div
@@ -420,7 +429,7 @@ export function Stage({
         </div>
       </div>
 
-      <div className="ui" {...hidden}>
+      <div className="ui" {...whole}>
         <nav className="side in" aria-label={t("kaifan.nav.label")}>
           <button
             type="button"
@@ -456,7 +465,11 @@ export function Stage({
             href="#home"
             className="first"
             aria-current={panel ? undefined : "page"}
-            onClick={(e) => e.preventDefault()}
+            data-testid="kaifan-nav-home"
+            onClick={(event) => {
+              event.preventDefault();
+              onHome();
+            }}
           >
             <svg viewBox="0 0 24 24">
               <path d={ICONS.home} />
@@ -540,7 +553,7 @@ export function Stage({
           </a>
         </nav>
 
-        <main className="mid">
+        <main className="mid" {...rest}>
           <div className="chips in" style={{ ["--d" as string]: "300ms" }}>
             <h1 className="hero">
               <svg viewBox="0 0 24 24" aria-hidden="true">

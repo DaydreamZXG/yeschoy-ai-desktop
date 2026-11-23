@@ -133,7 +133,7 @@
     },
     "ds": {
       "name": "Xiaojing",
-      "ready": "Balance {{balance}}. That's plenty of meals.",
+      "ready": "{{balance}} left. That's enough.",
       "quote": "Belly's full. Time to work!",
       "poke1": "Off to eat. Call me when the test is done.",
       "poke2": "You really think I'm the cheap one, huh…",

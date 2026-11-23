@@ -23,6 +23,7 @@ interface Props {
  * 从右边滑出来的面板：角色说一句话，面板办事。名片、账本、公告都用它。
  *
  * 开着时焦点进面板，Esc 或点面板外面关掉，关掉后焦点回到打开它的那个按钮；
+ * 左边栏不归它管，开着面板也能点。
  * 关着时整块 inert，键盘和读屏都进不来。
  */
 export function Drawer({
@@ -43,8 +44,13 @@ export function Drawer({
     if (!open) return;
     const opener = document.activeElement;
     panel.current?.focus();
+    const own = panel.current;
     return () => {
-      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
+      // 人已经点到别处去了（比如左边栏的另一项），就不把焦点拽回来。
+      const at = document.activeElement;
+      const moved = at && at !== document.body && !own?.contains(at);
+      if (!moved && opener instanceof HTMLElement && opener.isConnected)
+        opener.focus();
     };
   }, [open]);
 
