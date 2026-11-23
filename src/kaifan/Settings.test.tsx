@@ -434,6 +434,18 @@ describe("Settings", () => {
     expect(screen.getByText("去官网下载最新版")).toHaveAttribute("href");
   });
 
+  it("没配更新地址的版本：不说「这次没查到」，直接让人去官网", () => {
+    update.mockReturnValue(
+      updater({ phase: "unavailable", reasonCode: "updater_not_configured" }),
+    );
+    show();
+    const row = screen.getByTestId("kaifan-settings-update");
+    expect(row).toHaveTextContent("这个版本不会自己更新");
+    expect(row).not.toHaveTextContent("这次没查到");
+    expect(screen.getByText("检查更新")).toBeDisabled();
+    expect(screen.getByText("去官网下载最新版")).toHaveAttribute("href");
+  });
+
   it("下载时显示进度", () => {
     update.mockReturnValue(
       updater({ phase: "downloading", downloadedBytes: 30, totalBytes: 120 }),

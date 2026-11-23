@@ -1923,6 +1923,18 @@ describe("角色登场", () => {
     );
   });
 
+  it("Claude Code、Codex：先说一声它们第一次打开会有几屏英文设置", () => {
+    for (const toolId of ["claude_code", "codex_desktop"] as const) {
+      show({ joined: { ...joined, toolId } });
+      expect(screen.getByTestId("kaifan-reveal-first-run")).toHaveTextContent(
+        "如果是第一次打开",
+      );
+      cleanup();
+    }
+    show();
+    expect(screen.queryByTestId("kaifan-reveal-first-run")).toBeNull();
+  });
+
   it("别的应用不用另外选型号：不多说这一句", () => {
     show();
     expect(screen.queryByTestId("kaifan-reveal-pick")).toBeNull();

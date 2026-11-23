@@ -214,6 +214,12 @@ pub fn run() {
                     tool_adapters::cline::resume_if_configured(),
                 );
             });
+            // Launched by the installer or Explorer, the first window can land
+            // behind the window that started it; ask for the foreground once.
+            #[cfg(target_os = "windows")]
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_focus();
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
