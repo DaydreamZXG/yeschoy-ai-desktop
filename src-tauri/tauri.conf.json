@@ -58,6 +58,7 @@
         "languages": ["SimpChinese"],
         "displayLanguageSelector": false,
         "installerIcon": "icons/icon.ico",
+        "sidebarImage": "windows/installer-sidebar.bmp",
         "installerHooks": "windows/installer-hooks.nsh"
       },
       "wix": {

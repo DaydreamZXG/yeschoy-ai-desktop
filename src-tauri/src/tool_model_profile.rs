@@ -294,6 +294,18 @@ pub(crate) fn profile(id: &str) -> Option<&'static ModelProfile> {
     catalog.models.iter().find(|p| p.id == id)
 }
 
+/// 站点后台填的型号名大小写随人（`DeepSeek-V4.1-Flash-1017`），目录里一律小写。
+/// 只给「写给应用看的型号目录」用；按名字分族、判 1M 的地方仍然精确匹配。
+pub(crate) fn profile_any_case(id: &str) -> Option<&'static ModelProfile> {
+    profile(id).or_else(|| {
+        let catalog: &'static Catalog = *active().read().ok()?;
+        catalog
+            .models
+            .iter()
+            .find(|p| p.id.eq_ignore_ascii_case(id))
+    })
+}
+
 /// 档位后缀，长的排在前面，否则 `-xhigh` 会被 `-high` 先吃掉。
 /// 与 `src/model-profiles/profile.ts` 的 `EFFORT_SUFFIXES` 逐项对应。
 const EFFORT_SUFFIXES: [&str; 7] = [

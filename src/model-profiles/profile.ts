@@ -2,6 +2,16 @@ import catalog from "./catalog.json";
 
 // Reference metadata is not a model allowlist or a billing-route guarantee.
 let profiles = new Map(catalog.models.map((model) => [model.id, model]));
+// 站点后台填的型号名大小写随人（`DeepSeek-V4.1-Flash-1017`），目录里一律小写。
+let folded = foldCase(profiles);
+
+function foldCase<T>(byId: Map<string, T>): Map<string, T> {
+  return new Map([...byId].map(([id, model]) => [id.toLowerCase(), model]));
+}
+
+function lookup(id: string) {
+  return profiles.get(id) ?? folded.get(id.toLowerCase());
+}
 
 /**
  * Swap the lookup table for a validated remote catalog revision (M5).
@@ -14,6 +24,7 @@ export function applyModelCatalogOverride(
   profiles = new Map(
     (models ?? catalog.models).map((model) => [model.id, model]),
   );
+  folded = foldCase(profiles);
 }
 
 /**
@@ -41,7 +52,9 @@ const EFFORT_SUFFIXED_FAMILIES = /^(?:gpt-[a-z0-9]|o[1-9]|claude-|gemini-)/;
 function splitEffortSuffix(
   id: string,
 ): { base: string; effort: string } | null {
-  const suffix = EFFORT_SUFFIXES.find((candidate) => id.endsWith(candidate));
+  const suffix = EFFORT_SUFFIXES.find((candidate) =>
+    id.toLowerCase().endsWith(candidate),
+  );
   if (!suffix) return null;
   const base = id.slice(0, -suffix.length);
   // 命名空间前缀保持不透明，只看最后一段是不是这几族 —— 跟中转的
@@ -56,11 +69,11 @@ function splitEffortSuffix(
  * 后缀的完整型号名，它仍然说了算。
  */
 function resolveProfile(id: string) {
-  const exact = profiles.get(id);
+  const exact = lookup(id);
   if (exact) return exact;
   const split = splitEffortSuffix(id);
   if (!split) return undefined;
-  const base = profiles.get(split.base);
+  const base = lookup(split.base);
   if (!base) return undefined;
   // ID 已经把档位钉死了，所以这个型号的档位阶梯只有一级，也没有「默认档」
   // 可言 —— 照搬基础型号的整条阶梯会让人以为还能选。

@@ -76,6 +76,8 @@ const WHY = new Set([
   "credential_helper_failed",
   "home_unavailable",
   "recovery_storage_unavailable",
+  "local_port_busy",
+  "local_bridge_start_failed",
   "terminal_launch_failed",
   "terminal_unavailable",
   "workspace_unavailable",
@@ -162,7 +164,9 @@ function judge(result: Result): JoinOutcome {
       return outcome("done", "none", "happy");
     case "launch_failed":
       // 设置已经写好，只是没能替用户把应用打开。
-      return reason === "desktop_state_unavailable"
+      // `tool_launch_failed` 是旧版本里本机桥没起来、已经改回原样的那一种。
+      return reason === "desktop_state_unavailable" ||
+        reason === "tool_launch_failed"
         ? outcome("retry", "retry")
         : outcome("written", "none", "idle");
     case "application_running":

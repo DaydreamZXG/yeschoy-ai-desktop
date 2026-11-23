@@ -600,6 +600,8 @@
       "credential_helper_failed": "{{app}} couldn't get its key from the system keychain, so the settings are back as they were. Quit this app, open it again, then retry.",
       "home_unavailable": "I can't read this computer's user folder, so I changed nothing. Make sure it opens normally and try again.",
       "recovery_storage_unavailable": "The system keychain isn't available, so I couldn't keep a copy of {{app}}'s original settings and left it alone. Unlock the keychain and try again.",
+      "local_port_busy": "The local port {{app}} needs is taken, so {{app}} was left unchanged. Most likely a terminal window from an earlier setup is still open: close those windows and try again. If that doesn't help, restart your computer.",
+      "local_bridge_start_failed": "The local relay for {{app}} didn't start, so {{app}} was left unchanged. Quit and reopen this app, then try again.",
       "terminal_launch_failed": "{{app}}'s settings are written, but I couldn't open a terminal window. Open a terminal yourself and start it there — no need to connect again.",
       "terminal_unavailable": "{{app}}'s settings are written, but I found no usable terminal program on this computer. Open a terminal yourself and start it there — no need to connect again.",
       "workspace_unavailable": "{{app}}'s settings are written, but its working folder won't open — it may have been moved or deleted. Open a terminal yourself and start it there — no need to connect again.",
