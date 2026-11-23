@@ -33,7 +33,7 @@ interface Props {
 }
 
 /**
- * 账本：余额、最近七天、谁吃得最多、最近几笔。
+ * 账本：余额、最近七天、谁用得最多、最近几笔。
  *
  * 数全是站点给的。站点没给的（余额、某一天、某一笔的金额）写「不知道」，
  * 不写 0，也不估。
@@ -171,8 +171,9 @@ export function Ledger({
                   </small>
                 </h4>
                 <ol className="days">
-                  {view.days.map((day) => {
+                  {view.days.map((day, index) => {
                     const amount = cash(day.amount);
+                    const last = index === view.days.length - 1;
                     const label = date(day.start, {
                       month: "numeric",
                       day: "numeric",
@@ -180,19 +181,29 @@ export function Ledger({
                     return (
                       <li
                         key={day.start}
-                        className={day.amount === null ? "na" : undefined}
+                        className={
+                          [day.amount === null && "na", last && "now"]
+                            .filter(Boolean)
+                            .join(" ") || undefined
+                        }
                         title={`${label} · ${amount ?? unknown}`}
                         style={{
                           ["--bar" as string]:
                             day.amount && top ? day.amount / top : 0,
                         }}
                       >
+                        {/* 花了钱的那几天把数写在柱子上：不用把鼠标停上去才看得到。 */}
+                        {!!day.amount && amount && (
+                          <em aria-hidden="true">{amount}</em>
+                        )}
                         <i aria-hidden="true" />
                         <span>
                           <span className="sr">{label} </span>
                           <b className="sr">{amount ?? unknown}</b>
                           <span aria-hidden="true">
-                            {date(day.start, { day: "numeric" })}
+                            {last
+                              ? t("kaifan.ledger.today")
+                              : date(day.start, { day: "numeric" })}
                           </span>
                         </span>
                       </li>

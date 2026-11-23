@@ -150,14 +150,29 @@ describe("Ledger", () => {
     expect(screen.getByTestId("kaifan-ledger")).toHaveTextContent("11/19 之后");
   });
 
-  it("一笔都没有：今天是真的 0，说「还没开吃」", async () => {
+  it("七天的柱子：花了钱的那天数写在柱子上，没花的不写；最后一根写「今天」", () => {
+    show({ log: log([rec("gpt-5", at(0), "1.5"), rec("gpt-5", at(2), "2")]) });
+    const days = screen
+      .getByTestId("kaifan-ledger")
+      .querySelectorAll(".days li");
+    expect(days[6]).toHaveClass("now");
+    expect(days[6].querySelector("em")).toHaveTextContent("¥1.50");
+    expect(days[6]).toHaveTextContent("今天");
+    expect(days[4].querySelector("em")).toHaveTextContent("¥2.00");
+    expect(days[4]).not.toHaveClass("now");
+    // 没花钱的那天柱子上不写数，读屏照样读得到 0。
+    expect(days[5].querySelector("em")).toBeNull();
+    expect(days[5]).toHaveTextContent("¥0.00");
+  });
+
+  it("一笔都没有：今天是真的 0，说「还没花钱」", async () => {
     show({ log: log([]) });
     expect(screen.getByTestId("kaifan-ledger-week")).toHaveTextContent("¥0.00");
     expect(screen.getByTestId("kaifan-ledger")).toHaveTextContent(
-      "这段时间还没人开吃。",
+      "这段时间还没用过。",
     );
     await waitFor(() =>
-      expect(says()).toHaveTextContent("今天还没开吃。余额还有 ¥23.50。"),
+      expect(says()).toHaveTextContent("今天还没花钱。余额还有 ¥23.50。"),
     );
   });
 
