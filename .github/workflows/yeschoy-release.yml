@@ -195,7 +195,7 @@ jobs:
   macos:
     name: macOS universal app + DMG (${{ matrix.variant }})
     needs: renderer
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 180
     environment: yeschoy-signing
     strategy:
@@ -330,7 +330,7 @@ jobs:
   candidate:
     name: Assemble and verify the 12-file candidate
     needs: [windows, macos]
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
