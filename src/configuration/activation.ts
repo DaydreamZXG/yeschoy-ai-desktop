@@ -175,9 +175,10 @@ export const ACTIVATION_TARGET_SCAN_DEADLINE_MS = 15_000;
 // renderer must still recover if the OS, keychain, installer, or network stack
 // never returns. Native cancellation then performs transaction cleanup.
 export const ACTIVATION_REQUEST_DEADLINE_MS = 90_000;
-// 设置已经写好、正在替用户打开应用的这一步不计时：第一次打开命令行应用要先
-// 让人选一个项目文件夹，选多久由人定。计时到了去取消，取消不掉已经写好的设置，
-// 只会把一次接成了的接入报成“没接成”。出了这一步，剩下的时间接着计。
+// 设置已经写好、正在替用户打开命令行应用的这一步不计时：第一次打开要先让人选
+// 一个项目文件夹，选多久由人定。计时到了去取消，取消不掉已经写好的设置，只会
+// 把一次接成了的接入报成“没接成”。出了这一步，剩下的时间接着计。
+// 只有在终端里打开的应用才这样：桌面应用这一步不等人，卡住了照旧到点放弃。
 const UNTIMED_STAGE: ActivationProgress["stage"] = "opening_application";
 export const ACTIVATION_PROGRESS_STAGES = [
   "queued",
@@ -417,6 +418,8 @@ export async function activateDesktopTool(input: {
   installationJobId?: string;
   restartRunningApp?: boolean;
   displaceClaudeLogin?: boolean;
+  /** 挑中的这一份在终端里打开：打开那一步可能在等人选文件夹。不发给后端。 */
+  opensInTerminal?: boolean;
   onRequestId?: (requestId: string) => void;
 }): Promise<ToolActivationProjection> {
   if (
@@ -470,7 +473,7 @@ export async function activateDesktopTool(input: {
     void listen<unknown>(ACTIVATION_PROGRESS_EVENT, ({ payload }) => {
       const progress = decodeActivationProgress(payload);
       if (!live || progress?.requestId !== requestId) return;
-      if (progress.stage === UNTIMED_STAGE) pause();
+      if (input.opensInTerminal && progress.stage === UNTIMED_STAGE) pause();
       else if (deadline === undefined) arm();
     })
       .then((stop) => {

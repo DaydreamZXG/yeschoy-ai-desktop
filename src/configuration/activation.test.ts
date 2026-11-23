@@ -324,6 +324,7 @@ describe("desktop tool activation boundary", () => {
       modelId: "glm-5.3",
       installationId: "i0123456789abcdef",
       billingGroup: "国模特价分组",
+      opensInTerminal: true,
     });
     const settled = vi.fn();
     activation.then(settled, settled);
@@ -340,6 +341,9 @@ describe("desktop tool activation boundary", () => {
     const { requestId } = (
       native.mock.calls[0]![1] as { request: { requestId: string } }
     ).request;
+    expect(native.mock.calls[0]![1]).not.toHaveProperty(
+      "request.opensInTerminal",
+    );
     finish({ ...projection(requestId), toolId: "opencode" });
     await expect(activation).resolves.toMatchObject({ status: "ready" });
   });
@@ -361,6 +365,7 @@ describe("desktop tool activation boundary", () => {
       modelId: "glm-5.3",
       installationId: "i0123456789abcdef",
       billingGroup: "国模特价分组",
+      opensInTerminal: true,
     });
     const assertion = expect(activation).rejects.toThrow(
       "activation_request_timed_out",
@@ -371,6 +376,36 @@ describe("desktop tool activation boundary", () => {
     report("checking_application_started");
     await vi.advanceTimersByTimeAsync(1000);
     await assertion;
+  });
+
+  it("keeps the deadline while a desktop app is being opened: nobody is picking a folder there", async () => {
+    vi.useFakeTimers();
+    native.mockImplementation((command, args) => {
+      if (command === "cancel_tool_activation_v1")
+        return Promise.resolve({
+          requestId: (args as { request: { requestId: string } }).request
+            .requestId,
+          status: "cancel_requested",
+        });
+      return new Promise(() => undefined);
+    });
+    const activation = activateDesktopTool({
+      lineId: "mainland_optimized",
+      toolId: "workbuddy",
+      modelId: "glm-5.3",
+      installationId: "i0123456789abcdef",
+      billingGroup: "国模特价分组",
+    });
+    const assertion = expect(activation).rejects.toThrow(
+      "activation_request_timed_out",
+    );
+    await vi.advanceTimersByTimeAsync(1000);
+    report("opening_application");
+    await vi.advanceTimersByTimeAsync(ACTIVATION_REQUEST_DEADLINE_MS - 1000);
+    await assertion;
+    expect(native).toHaveBeenCalledWith("cancel_tool_activation_v1", {
+      request: { requestId: expect.stringMatching(/^activate-/) },
+    });
   });
 
   it("scans exact local targets through the read-only native command", async () => {

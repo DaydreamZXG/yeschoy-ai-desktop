@@ -431,6 +431,7 @@ export function Join({
         billingGroup: group,
         models: bindings(group),
         ...(fresh ? { installationJobId: fresh.installationJobId } : {}),
+        ...(inTerminal(app, at) ? { opensInTerminal: true } : {}),
         ...extra,
       },
       {

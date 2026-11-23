@@ -745,6 +745,10 @@ describe("接入：选应用、选人、点一下", () => {
     });
     fireEvent.click(go());
     await waitFor(() => expect(says()).toContain("正在帮你接入"));
+    expect(activate.mock.calls.at(-1)![0]).toMatchObject({
+      toolId: "opencode",
+      opensInTerminal: true,
+    });
     const hear = vi
       .mocked(listen)
       .mock.calls.filter(([name]) => name === ACTIVATION_PROGRESS_EVENT)
