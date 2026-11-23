@@ -1410,7 +1410,7 @@ dialog.restore-dialog menu {
 .cd img {
   position: absolute;
   left: 50%;
-  bottom: 58px;
+  bottom: 68px;
   height: 186px;
   /* 小人跟着卡片的宽度走：窗口窄、卡片窄的时候她跟着变小，不压到旁边那张上。 */
   height: min(186px, 140cqw);
@@ -1799,7 +1799,7 @@ dialog.restore-dialog menu {
 .pa.off {
   opacity: 0.62;
 }
-.pa.off[aria-pressed="true"] small {
+.pa[aria-pressed="true"] small {
   color: rgba(4, 16, 46, 0.6);
 }
 .lbl .sm {
@@ -1824,11 +1824,17 @@ dialog.restore-dialog menu {
 .cd:disabled:hover img {
   transform: translateX(-50%);
 }
+/* 型号名字长的折成两行写全，不截成「Claude Sonnet…」；实在太长才省略。 */
 .cd span {
-  max-width: 92%;
+  max-width: 94%;
+  min-height: 2.5em;
+  line-height: 1.25;
+  text-align: center;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
 }
 .pf p {
   display: flex;

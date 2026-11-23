@@ -174,7 +174,8 @@ function setup(patch: Partial<Parameters<typeof Join>[0]> = {}) {
   render(<Join {...props} />);
   return props;
 }
-const go = () => screen.getByRole("button", { name: /去接入/ });
+// 接好的应用上这个按钮写的是「重新接一次」「换成某某」，所以不按字找。
+const go = () => screen.getByTestId("kaifan-join-go");
 const says = () => screen.getByTestId("kaifan-join-says").textContent;
 const ready = () => waitFor(() => expect(go()).toBeEnabled());
 
@@ -1104,6 +1105,87 @@ describe("接入：选应用、选人、点一下", () => {
     );
   });
 
+  it("没指定应用时，装了的里面先选还没接的：点「接入新应用」不落在接好的上面", async () => {
+    setup({ connections: savedOn("default") });
+    await ready();
+    // 默认那两个都装了，Codex 已经接好：选中的是还没接的 Claude Desktop。
+    expect(
+      screen.getByRole("button", { name: /Claude Desktop/ }),
+    ).toHaveAttribute("aria-pressed", "true");
+    // 接好的那个小牌上写着是谁在那儿。
+    expect(screen.getByRole("button", { name: /Codex/ })).toHaveTextContent(
+      "橘子",
+    );
+    expect(go()).toHaveTextContent("让橘子去接入");
+  });
+
+  it("装了的都接好了：照旧选第一个，说清已经有人在那儿", async () => {
+    found([target("codex_desktop")]);
+    setup({ connections: savedOn("default") });
+    await ready();
+    expect(screen.getByRole("button", { name: /Codex/ })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    // 还是她、什么都没换：不说成新接入，按钮也不抢眼。
+    expect(screen.getByTestId("kaifan-join-summary")).toHaveTextContent(
+      "橘子已经在 Codex（桌面版 / 命令行） 干活了",
+    );
+    expect(go()).toHaveTextContent("重新接一次");
+    expect(go()).toHaveClass("alt");
+    expect(screen.getByText("在这儿")).toBeInTheDocument();
+  });
+
+  it("接好的应用上换一个人：说出现在是谁、换成谁，不悄悄顶掉", async () => {
+    found([target("codex_desktop")]);
+    setup({ current: "ds", connections: savedOn("default") });
+    await ready();
+    expect(screen.getByTestId("kaifan-join-summary")).toHaveTextContent(
+      "Codex（桌面版 / 命令行） 现在是橘子在干活，换成小鲸",
+    );
+    expect(go()).toHaveTextContent("换成小鲸");
+    expect(go()).not.toHaveClass("alt");
+    answer("ready", "configuration_ready");
+    fireEvent.click(go());
+    await waitFor(() => expect(activate).toHaveBeenCalled());
+    expect(activate.mock.calls[0][0]).toMatchObject({
+      toolId: "codex_desktop",
+      modelId: expect.stringMatching(/^deepseek-/),
+    });
+  });
+
+  it("接好的应用上还是她、换了型号：说这次换成什么", async () => {
+    found([target("codex_desktop")]);
+    setup({
+      models: [
+        model("claude-sonnet-4-5-20250929"),
+        model("claude-opus-4-1-20250805"),
+      ],
+      connections: savedOn("default"),
+    });
+    await ready();
+    fireEvent.change(screen.getByLabelText("型号"), {
+      target: { value: "claude-opus-4-1-20250805" },
+    });
+    expect(screen.getByTestId("kaifan-join-summary")).toHaveTextContent(
+      "橘子已经在 Codex（桌面版 / 命令行） 干活了，这次换成",
+    );
+    expect(go()).toHaveTextContent("照这个重新接");
+  });
+
+  it("接的是另一个站：不算这个站上有人在，照常说去接入", async () => {
+    found([target("codex_desktop")]);
+    setup({
+      connections: savedOn("default").map((item) => ({
+        ...item,
+        lineId: "station:other.example" as ToolConnection["lineId"],
+      })),
+    });
+    await ready();
+    expect(go()).toHaveTextContent("让橘子去接入");
+    expect(screen.queryByText("在这儿")).toBeNull();
+  });
+
   it("电脑上有好几处：默认用推荐的，可以改", async () => {
     found([
       target("claude_desktop", {
@@ -1248,7 +1330,7 @@ describe("接入：应用多了不堆在一起", () => {
         },
       ],
     });
-    fireEvent.click(screen.getByRole("button", { name: "别的应用" }));
+    fireEvent.click(screen.getByRole("button", { name: "名单外的应用" }));
     const panel = screen.getByTestId("kaifan-join-other");
     expect(panel).toHaveTextContent("claude-sonnet-4-5-20250929");
     await act(async () =>
@@ -1269,7 +1351,9 @@ describe("接入：应用多了不堆在一起", () => {
       lineId: "station_key:https://relay.example.com" as never,
       models: [],
     });
-    fireEvent.click(await screen.findByRole("button", { name: "别的应用" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "名单外的应用" }),
+    );
     expect(screen.getByTestId("kaifan-join-other-nomodel")).toHaveTextContent(
       "型号这一栏现在给不出来",
     );
@@ -1288,7 +1372,7 @@ describe("接入：应用多了不堆在一起", () => {
     Object.assign(navigator, { clipboard: { writeText } });
     setup({ lineId: "station_key:https://relay.example.com" as never });
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: "别的应用" }));
+    fireEvent.click(screen.getByRole("button", { name: "名单外的应用" }));
     const panel = screen.getByTestId("kaifan-join-other");
     expect(panel).toHaveTextContent("https://relay.example.com/v1");
     expect(panel).toHaveTextContent("claude-sonnet-4-5-20250929");
@@ -1377,7 +1461,7 @@ describe("接入：应用多了不堆在一起", () => {
     });
     setup();
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: "别的应用" }));
+    fireEvent.click(screen.getByRole("button", { name: "名单外的应用" }));
     const panel = screen.getByTestId("kaifan-join-other");
     expect(panel).toHaveTextContent("https://yeschoy.com/v1");
     expect(panel).toHaveTextContent(/去站点网页的「令牌」里新建一把/);
@@ -1427,7 +1511,7 @@ describe("接入：连的是云厂商", () => {
       preset: vendor(),
     });
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: "别的应用" }));
+    fireEvent.click(screen.getByRole("button", { name: "名单外的应用" }));
     const panel = screen.getByTestId("kaifan-join-other");
     expect(panel).toHaveTextContent("https://api.kimi.com/coding/v1");
     expect(panel).toHaveTextContent("https://api.kimi.com/coding");
@@ -1449,7 +1533,7 @@ describe("接入：连的是云厂商", () => {
       }),
     });
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: "别的应用" }));
+    fireEvent.click(screen.getByRole("button", { name: "名单外的应用" }));
     expect(screen.getByTestId("kaifan-join-other")).not.toHaveTextContent(
       "Claude 格式",
     );
@@ -1468,7 +1552,7 @@ describe("接入：连的是云厂商", () => {
       }),
     });
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: "别的应用" }));
+    fireEvent.click(screen.getByRole("button", { name: "名单外的应用" }));
     expect(screen.getByTestId("kaifan-join-other-header")).toHaveTextContent(
       /OpenCode Go 还要求每个请求带一个请求头 x-opencode-session.*接不了这家/,
     );
@@ -1484,7 +1568,7 @@ describe("接入：连的是云厂商", () => {
       }),
     });
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: "别的应用" }));
+    fireEvent.click(screen.getByRole("button", { name: "名单外的应用" }));
     expect(screen.getByTestId("kaifan-join-other-bearer")).toHaveTextContent(
       /Ollama Cloud 的 Claude 格式地址只认 Authorization: Bearer.*改用上面的 OpenAI 格式地址/,
     );
@@ -1521,6 +1605,38 @@ describe("接入：连的是云厂商", () => {
     expect(screen.queryByTestId("kaifan-join-barred")).toBeNull();
     await ready();
     expect(screen.getByTestId("kaifan-join-plan-risk")).toBeTruthy();
+  });
+
+  it("没指定应用时不先选这家不认的：跳过没接的 WorkBuddy，选没接的 Pi", async () => {
+    found([target("claude_desktop"), target("workbuddy"), target("pi")]);
+    setup({
+      preset: vendor({
+        id: "opencode_go",
+        family: "opencode_go",
+        name: "OpenCode Go",
+        onlyTools: ["opencode", "codex_desktop", "claude_desktop", "pi"],
+      }),
+      connections: [
+        {
+          toolId: "claude_desktop",
+          state: "connected",
+          modelId: "claude-sonnet-4-5-20250929",
+          lineId: "mainland_optimized",
+          billingGroup: "default",
+          updatedAtEpochMs: 1,
+          restoreMode: "original",
+          requiresBackground: false,
+          reasonCode: "",
+        },
+      ],
+    });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^Pi/ })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      ),
+    );
+    expect(screen.queryByTestId("kaifan-join-barred")).toBeNull();
   });
 });
 
