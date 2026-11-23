@@ -1,5 +1,5 @@
 //! 这个客户端用过别的名字：只出过测试版的“开饭”（`com.kaifan.desktop`）。那个
-//! 名字留在这台电脑上的东西，搬回“野菜”（`com.yeschoy.desktop`）名下。
+//! 名字留在这台电脑上的东西，搬回“YesChoy”（`com.yeschoy.desktop`）名下。
 //!
 //! 装过测试版的人换回来之后不该重新登录、重新接入，所以：
 //!
@@ -509,7 +509,7 @@ mod tests {
 
     #[test]
     fn a_helper_command_follows_the_renamed_client() {
-        let current = Path::new("/Applications/野菜.app/Contents/MacOS/yeschoy-desktop");
+        let current = Path::new("/Applications/YesChoy.app/Contents/MacOS/yeschoy-desktop");
         let old = "'/Applications/开饭.app/Contents/MacOS/kaifan-desktop'";
         assert_eq!(
             followed_command(
@@ -519,12 +519,12 @@ mod tests {
                 quote
             )
             .as_deref(),
-            Some("'/Applications/野菜.app/Contents/MacOS/yeschoy-desktop' gateway-credential-helper claude_code")
+            Some("'/Applications/YesChoy.app/Contents/MacOS/yeschoy-desktop' gateway-credential-helper claude_code")
         );
         assert_eq!(
             followed_command(&format!("{old} credential-helper pi"), "pi", current, quote)
                 .as_deref(),
-            Some("'/Applications/野菜.app/Contents/MacOS/yeschoy-desktop' credential-helper pi")
+            Some("'/Applications/YesChoy.app/Contents/MacOS/yeschoy-desktop' credential-helper pi")
         );
         // Windows 的写法。
         assert!(followed_command(

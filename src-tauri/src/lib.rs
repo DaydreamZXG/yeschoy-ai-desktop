@@ -638,7 +638,7 @@ fn windows_close_choice<R: tauri::Runtime>(window: &tauri::Window<R>) -> NativeC
         "选择“是”：恢复原设置并退出。请先保存任务；助手会请求 Codex/Claude 正常关闭，恢复后不自动打开应用。其他命令行应用下次启动生效。\n选择“否”：选择后台运行或保留设置退出。\n选择“取消”：返回。",
         "Yes: restore the original settings and quit. Save your work first; the assistant asks Codex/Claude to close normally and does not reopen them afterwards. Other command-line apps pick this up on their next start.\nNo: keep running in the background, or quit and keep the connections.\nCancel: go back.",
     ));
-    let title = HSTRING::from(language.pick("关闭野菜？", "Close YesChoy?"));
+    let title = HSTRING::from(language.pick("关闭 YesChoy？", "Close YesChoy?"));
     let result = unsafe {
         MessageBoxW(
             owner,

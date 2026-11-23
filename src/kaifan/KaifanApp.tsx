@@ -61,6 +61,7 @@ import { Settings } from "./Settings";
 import { presetOfLine, stationLabel, useProviderPresets } from "./providers";
 import { hostOfLine, lookAtStation } from "./station";
 import { TrustAsk } from "./TrustAsk";
+import { WindowBar, windowFrame } from "./WindowBar";
 import {
   trustAnswerPending,
   useStationLink,
@@ -79,6 +80,7 @@ const HOME_APPS = 5;
 export function KaifanApp() {
   const { t } = useTranslation();
   const stage = useRef<HTMLDivElement>(null);
+  const [frame] = useState(windowFrame);
   const fx = useRef<FxHandle>(null);
   const [phase, setPhase] = useState<"boot" | "home">("boot");
   const [connectOpen, setConnectOpen] = useState(false);
@@ -562,6 +564,7 @@ export function KaifanApp() {
         data-phase={phase}
         data-cond={state.cond}
         data-card={card ? "" : undefined}
+        data-frame={frame}
         data-testid="kaifan"
         style={{ ["--acc" as string]: ROSTER[state.current].color }}
       >
@@ -640,6 +643,7 @@ export function KaifanApp() {
           ids={mine}
           models={usable}
           picks={picks}
+          fx={projection?.comparisonFx}
           connections={hereConnections}
           onModel={(modelId) =>
             change({
@@ -739,6 +743,7 @@ export function KaifanApp() {
         {flash > 0 && <div className="flash go2" key={flash} />}
         <Fx ref={fx} stage={() => stage.current} />
         <ShutdownHost />
+        <WindowBar frame={frame} />
       </div>
     </ConnectionProvider>
   );

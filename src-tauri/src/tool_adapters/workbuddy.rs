@@ -13,7 +13,7 @@ use crate::{
 
 const VENDOR: &str = "野菜API";
 /// Shown in WorkBuddy's model picker ahead of the model id it appends itself.
-const VENDOR_MARK: &str = "野菜";
+const VENDOR_MARK: &str = "YesChoy";
 
 pub(crate) struct Prepared {
     transaction: FileTransaction,
@@ -59,8 +59,8 @@ fn configured_model(id: &str, key: &str, endpoint: &str, previous: Option<&Value
     model.insert("id".into(), id.into());
     // Just the vendor mark. WorkBuddy renders its picker as `<name>:<id>`, so
     // carrying a display name here said the same thing twice and truncated:
-    // "野菜 DeepSeek V4.1 Flash:deepseek-v4.1-flash". As "野菜" it reads
-    // "野菜:deepseek-v4.1-flash" -- whose model it is, and which one, with no
+    // "YesChoy DeepSeek V4.1 Flash:deepseek-v4.1-flash". As "YesChoy" it reads
+    // "YesChoy:deepseek-v4.1-flash" -- whose model it is, and which one, with no
     // room wasted on repeating it.
     model.insert("name".into(), VENDOR_MARK.into());
     model.insert("vendor".into(), VENDOR.into());
@@ -333,8 +333,8 @@ mod tests {
         assert_eq!(astra["url"], "https://yeschoy.com/v1/chat/completions");
         assert_eq!(astra["useCustomProtocol"], true);
         // WorkBuddy appends `:<id>` itself, so the name carries only the mark.
-        assert_eq!(astra["name"], "野菜");
-        assert_eq!(deepseek["name"], "野菜");
+        assert_eq!(astra["name"], "YesChoy");
+        assert_eq!(deepseek["name"], "YesChoy");
         // The id is what tells them apart, and it must stay the exact wire id.
         assert_eq!(astra["id"], "gpt-6-astra");
         assert_eq!(deepseek["id"], "deepseek-v4.1-flash");

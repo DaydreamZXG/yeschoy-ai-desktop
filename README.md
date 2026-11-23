@@ -1,4 +1,4 @@
-# 野菜 YesChoy
+# YesChoy
 
 > 以前叫“野菜API 桌面助手”。装过旧版的人升级后，登录和已经接好的应用都还在，不用重新登录或重新接入。
 
@@ -20,6 +20,9 @@
 | DSH web | 命令行 + 浏览器 | 写入 `~/.dsh/profiles/web`，由助手启动本地工作台 |
 | Pi | 命令行 | 写入 `~/.pi/agent/models.json` |
 | OpenCode | 命令行 | 写入 `~/.config/opencode/opencode.json`，经本地转发连接；密钥留在系统钥匙串 |
+| Cline | 命令行 + 编辑器扩展 | 写入 `~/.cline/data/settings/providers.json`（两者共用），只动自己那一项；经本地转发连接，密钥留在系统钥匙串 |
+| Hermes Agent | 命令行 | 只换 `~/.hermes/config.yaml` 里的 `model:` 一块，注释和别的设置原样保留；经本地转发连接，密钥留在系统钥匙串 |
+| OpenClaw | 命令行 | 只动 `~/.openclaw/openclaw.json` 里自己那一家和主型号；经本地转发连接，密钥留在系统钥匙串 |
 
 支持 macOS 和 Windows。
 
@@ -33,7 +36,7 @@
 
 ## 下载
 
-- [野菜下载页（yeschoy.app）](https://yeschoy.app/download)（自动识别系统，优先 GitHub 已发布版本，否则走官网备用地址）
+- [YesChoy 下载页（yeschoy.app）](https://yeschoy.app/download)（自动识别系统，优先 GitHub 已发布版本，否则走官网备用地址）
 - [GitHub Releases](https://github.com/DaydreamZXG/yeschoy-ai-desktop/releases)
 
 应用内会自动检查更新：自己编译的公开版本走 GitHub Releases，官方安装包走官方更新源（见 [`docs/OPEN_SOURCE.md`](docs/OPEN_SOURCE.md)）。下载页源码与部署说明见 [`docs/download-page.md`](docs/download-page.md)。
@@ -77,9 +80,9 @@ cd src-tauri && cargo test --lib   # Rust 测试
 
 A local desktop config helper that connects common AI coding and office apps to a compatible API relay. Pick an app and a model; it writes the configuration for you. One click restores the original settings.
 
-YesChoy (野菜, formerly the 野菜API desktop assistant) connects to any OpenAI-compatible relay station: enter the station address and authorize in the browser, or paste the address and an API key. [Yeschoy (野菜API)](https://yeschoy.com) is one of the built-in station presets. Upgrading from an earlier version keeps your sign-in and connected apps.
+YesChoy (formerly the 野菜API desktop assistant) connects to any OpenAI-compatible relay station: enter the station address and authorize in the browser, or paste the address and an API key. [Yeschoy (野菜API)](https://yeschoy.com) is one of the built-in station presets. Upgrading from an earlier version keeps your sign-in and connected apps.
 
-Supported apps: Claude Code, Claude Desktop, Codex (ChatGPT desktop), WorkBuddy, DeepSeek Harness, DSH web, Pi and OpenCode, on macOS and Windows.
+Supported apps: Claude Code, Claude Desktop, Codex (ChatGPT desktop), WorkBuddy, DeepSeek Harness, DSH web, Pi, OpenCode, Cline, Hermes Agent and OpenClaw, on macOS and Windows.
 
 - Nothing is written until you confirm.
 - Original settings are saved (encrypted, on this machine) before every write. Restoring undoes only what the assistant wrote and keeps your later edits.

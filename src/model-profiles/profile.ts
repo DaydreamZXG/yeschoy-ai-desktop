@@ -90,7 +90,8 @@ export function humanizeModelId(id: string): string {
   const withoutDate = bare.replace(/-\d{6,8}$/, "");
 
   const spaced = withoutDate
-    .replace(/([a-z])(\d)/gi, "$1 $2")
+    // 单个字母紧跟数字的是版本写法（V4.1、R1、K2），不拆开。
+    .replace(/([a-z]{2,})(\d)/gi, "$1 $2")
     .replace(/(\d)\.(\d)/g, "$1.$2")
     .replace(/[-_]+/g, " ")
     .trim();

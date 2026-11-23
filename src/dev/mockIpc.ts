@@ -90,7 +90,7 @@ function account(requestId: string, status: string) {
     observedAtEpochMs: 1_788_195_600_000,
     account: {
       available: true,
-      displayName: "野菜测试用户",
+      displayName: "YesChoy 测试用户",
       username: "member@example.com",
       balanceQuota: "350000",
       usedQuota: "120000",

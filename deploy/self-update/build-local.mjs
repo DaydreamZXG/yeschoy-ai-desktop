@@ -91,13 +91,13 @@ if (platform === 'windows') {
   save('build-inspection', { platform, variant, version, commit, authorizationPageOrigin: origin, build, resourceSha256: hash(resource), payloadSha256: hash(payload), installerSha256: hash(destination), codeSigned: false, updaterSignatureCreated: true, installedApplicationLaunched: false });
 } else if (platform === 'macos') {
   const stage = `${folder}/${variant}-stage`;
-  assert(!existsSync(`${stage}/野菜.app`));
+  assert(!existsSync(`${stage}/YesChoy.app`));
   const config = `${folder}/build-config.json`;
   writeFileSync(config, JSON.stringify({ bundle: { active: true, createUpdaterArtifacts: false, macOS: { hardenedRuntime: true, signingIdentity: 'Developer ID Application: xiangguo Zheng (BRG82P5ZB7)' } } }));
   run('pnpm', ['exec', 'tauri', 'build', '--ci', '--target', 'universal-apple-darwin', '--bundles', 'app', '--config', config, '--', '--locked', '--offline']);
   mkdirSync(stage, { recursive: true });
-  const app = `${stage}/野菜.app`;
-  run('ditto', [`${repo}/src-tauri/target/universal-apple-darwin/release/bundle/macos/野菜.app`, app]);
+  const app = `${stage}/YesChoy.app`;
+  run('ditto', [`${repo}/src-tauri/target/universal-apple-darwin/release/bundle/macos/YesChoy.app`, app]);
   symlinkSync('/Applications', `${stage}/Applications`);
   run('codesign', ['--verify', '--deep', '--strict', '--all-architectures', app]);
   const binary = `${app}/Contents/MacOS/yeschoy-desktop`;
@@ -113,7 +113,7 @@ if (platform === 'windows') {
   assert.equal(verification.version, version);
   const tar = `${folder}/public/${prefix}-macos-universal.app.tar.gz`;
   assert(!existsSync(tar));
-  run('/usr/bin/tar', ['-czf', tar, '-C', `${folder}/${variant}-stage`, '野菜.app'], { COPYFILE_DISABLE: '1' });
+  run('/usr/bin/tar', ['-czf', tar, '-C', `${folder}/${variant}-stage`, 'YesChoy.app'], { COPYFILE_DISABLE: '1' });
   sign(tar);
   sign(`${folder}/public/${prefix}-macos-universal-installer.dmg`);
 }

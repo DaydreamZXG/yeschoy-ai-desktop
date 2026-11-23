@@ -117,11 +117,11 @@ jobs:
           "installer exit code $($p.ExitCode)"
           if ($p.ExitCode -ne 0) { throw "installer failed" }
           Start-Sleep 5
-          # installer.nsi installs to $LOCALAPPDATA\Programs\野菜; the app exe is not named yeschoy-desktop.exe.
-          $app = Get-ChildItem "$env:LOCALAPPDATA\Programs\野菜" -Filter '*.exe' -ErrorAction SilentlyContinue |
+          # installer.nsi installs to $LOCALAPPDATA\Programs\YesChoy; the app exe is not named yeschoy-desktop.exe.
+          $app = Get-ChildItem "$env:LOCALAPPDATA\Programs\YesChoy" -Filter '*.exe' -ErrorAction SilentlyContinue |
             Where-Object { $_.Name -notmatch '(?i)uninst|^卸载' } | Select-Object -First 1
           if (-not $app) { Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Depth 2 | Select-Object FullName | Out-Host; throw "app exe not found" }
           $app.FullName
           $app.VersionInfo | Format-List ProductName,ProductVersion,FileVersion,CompanyName
-          Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' | Where-Object { $_.DisplayName -match '开饭|Kaifan|野菜|yeschoy' } | Format-List DisplayName,DisplayVersion,Publisher,InstallLocation,UninstallString
+          Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' | Where-Object { $_.DisplayName -match '开饭|Kaifan|YesChoy|yeschoy' } | Format-List DisplayName,DisplayVersion,Publisher,InstallLocation,UninstallString
           Get-Process | Where-Object { $_.Path -eq $app.FullName } | Stop-Process -Force -ErrorAction SilentlyContinue

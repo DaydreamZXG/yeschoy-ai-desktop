@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ActivationToolId } from "../configuration/activation";
+import { modelDisplayName } from "../model-profiles/profile";
 import type { FxHandle } from "./Fx";
 import {
   ROSTER,
@@ -386,6 +387,11 @@ export function Stage({
                   .join(" ")}
                 data-testid={`kaifan-strip-${id}`}
                 aria-pressed={id === current}
+                title={
+                  here(id)
+                    ? undefined
+                    : t("kaifan.home.notHereLabel", { name: label })
+                }
                 aria-label={
                   here(id)
                     ? t("kaifan.home.stripLabel", {
@@ -589,14 +595,15 @@ export function Stage({
                   className="mdl"
                   data-testid="kaifan-model"
                   aria-label={t("kaifan.card.open", { name })}
+                  title={model}
                   onClick={onCard}
                 >
                   {models.length > 1
                     ? t("kaifan.home.modelsMore", {
-                        model,
+                        model: modelDisplayName(model),
                         count: models.length,
                       })
-                    : model}
+                    : modelDisplayName(model)}
                 </button>
               ) : (
                 <span />

@@ -1,7 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "ru005-bounded-client",
-  "description": "RU-005 exposes Tauri core defaults plus bundled read-only tool discovery and fixed-host DNS and TCP-443 diagnostics.",
+  "description": "RU-005 exposes Tauri core defaults plus bundled read-only tool discovery and fixed-host DNS and TCP-443 diagnostics. The main window has no system title bar, so it may also minimize, maximize, close and drag itself.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": [
+    "core:default",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-close",
+    "core:window:allow-start-dragging"
+  ]
 }

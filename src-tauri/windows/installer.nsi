@@ -21,18 +21,20 @@ SetCompressorDictSize 32
 !include "FileFunc.nsh"
 !include "installer-hooks.nsh"
 
-Name "野菜"
+Name "YesChoy"
 OutFile "${OUTPUT_EXE}"
-InstallDir "$LOCALAPPDATA\Programs\野菜"
-InstallDirRegKey HKCU "Software\野菜" "InstallDir"
-BrandingText "野菜 ${APP_VERSION}"
+InstallDir "$LOCALAPPDATA\Programs\YesChoy"
+; Tauri 生成的安装包把它的安装位置记在 Software\yeschoy\YesChoy 的默认值里，
+; 这个安装包另用一个键，两种包都装着时卸载一个不会抹掉另一个的记录。
+InstallDirRegKey HKCU "Software\yeschoy\YesChoyStandalone" "InstallDir"
+BrandingText "YesChoy ${APP_VERSION}"
 Icon "${APP_ICON}"
 UninstallIcon "${APP_ICON}"
 
 VIProductVersion "${APP_VERSION}.0"
-VIAddVersionKey /LANG=2052 "ProductName" "野菜"
+VIAddVersionKey /LANG=2052 "ProductName" "YesChoy"
 VIAddVersionKey /LANG=2052 "CompanyName" "YesChoy contributors"
-VIAddVersionKey /LANG=2052 "FileDescription" "野菜安装程序"
+VIAddVersionKey /LANG=2052 "FileDescription" "YesChoy 安装程序"
 VIAddVersionKey /LANG=2052 "FileVersion" "${APP_VERSION}"
 VIAddVersionKey /LANG=2052 "ProductVersion" "${APP_VERSION}"
 VIAddVersionKey /LANG=2052 "LegalCopyright" "Copyright (c) YesChoy contributors"
@@ -52,7 +54,7 @@ VIAddVersionKey /LANG=2052 "LegalCopyright" "Copyright (c) YesChoy contributors"
 ; registration and run without an unattended welcome/directory wizard.
 Function .onInit
   SetRegView 64
-  ReadRegStr $R0 HKCU "Software\野菜" "InstallDir"
+  ReadRegStr $R0 HKCU "Software\yeschoy\YesChoyStandalone" "InstallDir"
   StrCmp $R0 "" +2
   StrCpy $INSTDIR $R0
   ${GetParameters} $R0
@@ -81,6 +83,8 @@ Function KaifanRetireOldName
   Delete "$SMPROGRAMS\野菜API\卸载野菜API.lnk"
   RMDir "$SMPROGRAMS\野菜API"
   DeleteRegKey HKCU "Software\野菜API"
+  ; “开饭”有两种装法：内测包（Tauri 生成的安装器）和独立安装包，都清。
+  Call KaifanRetireTestBuild
   ReadRegStr $R0 HKCU "Software\Kaifan" "InstallDir"
   StrCmp $R0 "" 0 +2
   StrCpy $R0 "$LOCALAPPDATA\Programs\开饭"
@@ -97,37 +101,37 @@ Function KaifanRetireOldName
   Pop $R0
 FunctionEnd
 
-Section "安装野菜" SEC_MAIN
+Section "安装 YesChoy" SEC_MAIN
   ; This must remain the first runtime instruction: no file, shortcut or
   ; registry mutation is allowed while an older executable is still mapped.
   Call KaifanEnsureStopped
   SetShellVarContext current
   SetRegView 64
   SetOutPath "$INSTDIR"
-  File /oname=野菜.exe "${APP_EXE}"
-  WriteUninstaller "$INSTDIR\卸载野菜.exe"
-  WriteRegStr HKCU "Software\野菜" "InstallDir" "$INSTDIR"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop" "DisplayName" "野菜"
+  File /oname=YesChoy.exe "${APP_EXE}"
+  WriteUninstaller "$INSTDIR\卸载 YesChoy.exe"
+  WriteRegStr HKCU "Software\yeschoy\YesChoyStandalone" "InstallDir" "$INSTDIR"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop" "DisplayName" "YesChoy"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop" "DisplayVersion" "${APP_VERSION}"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop" "Publisher" "YesChoy contributors"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop" "DisplayIcon" "$INSTDIR\野菜.exe"
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop" "DisplayIcon" "$INSTDIR\YesChoy.exe"
   WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop" "InstallLocation" "$INSTDIR"
-  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop" "UninstallString" '"$INSTDIR\卸载野菜.exe"'
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop" "UninstallString" '"$INSTDIR\卸载 YesChoy.exe"'
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop" "NoModify" 1
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop" "NoRepair" 1
   ; Station connect deep link (mirrors WiX deep_link_protocols registration).
   WriteRegStr HKCU "Software\Classes\yeschoy" "" "URL:yeschoy protocol"
   WriteRegStr HKCU "Software\Classes\yeschoy" "URL Protocol" ""
-  WriteRegStr HKCU "Software\Classes\yeschoy\DefaultIcon" "" "$INSTDIR\野菜.exe,0"
-  WriteRegStr HKCU "Software\Classes\yeschoy\shell\open\command" "" '"$INSTDIR\野菜.exe" "%1"'
-  CreateDirectory "$SMPROGRAMS\野菜"
-  CreateShortcut "$SMPROGRAMS\野菜\野菜.lnk" "$INSTDIR\野菜.exe" "" "$INSTDIR\野菜.exe" 0
-  CreateShortcut "$SMPROGRAMS\野菜\卸载野菜.lnk" "$INSTDIR\卸载野菜.exe"
-  CreateShortcut "$DESKTOP\野菜.lnk" "$INSTDIR\野菜.exe" "" "$INSTDIR\野菜.exe" 0
+  WriteRegStr HKCU "Software\Classes\yeschoy\DefaultIcon" "" "$INSTDIR\YesChoy.exe,0"
+  WriteRegStr HKCU "Software\Classes\yeschoy\shell\open\command" "" '"$INSTDIR\YesChoy.exe" "%1"'
+  CreateDirectory "$SMPROGRAMS\YesChoy"
+  CreateShortcut "$SMPROGRAMS\YesChoy\YesChoy.lnk" "$INSTDIR\YesChoy.exe" "" "$INSTDIR\YesChoy.exe" 0
+  CreateShortcut "$SMPROGRAMS\YesChoy\卸载 YesChoy.lnk" "$INSTDIR\卸载 YesChoy.exe"
+  CreateShortcut "$DESKTOP\YesChoy.lnk" "$INSTDIR\YesChoy.exe" "" "$INSTDIR\YesChoy.exe" 0
   Call KaifanRetireOldName
 SectionEnd
 
-; Every managed connection points at a loopback gateway hosted by 野菜.
+; Every managed connection points at a loopback gateway hosted by YesChoy.
 ; Upgrades deliberately stop the old process before replacing its executable,
 ; so a successful install must restore that gateway without relying on an
 ; optional finish-page checkbox. This also covers silent/manual upgrades.
@@ -137,10 +141,10 @@ Function .onInstSuccess
   ; which leaves the freshly restarted desktop assistant invisible after an
   ; automatic or /S upgrade. Ask Explorer to launch it explicitly in the
   ; normal shown state so the user gets an immediate, observable result.
-  ExecShell "open" "$INSTDIR\野菜.exe" "" SW_SHOWNORMAL
+  ExecShell "open" "$INSTDIR\YesChoy.exe" "" SW_SHOWNORMAL
   IfErrors 0 kaifan_launch_done
   IfSilent kaifan_launch_done
-  MessageBox MB_ICONEXCLAMATION|MB_OK "野菜 已安装完成，但未能自动启动。请从桌面或开始菜单打开野菜，再继续使用 Codex、Claude 等已接入应用。"
+  MessageBox MB_ICONEXCLAMATION|MB_OK "YesChoy 已安装完成，但未能自动启动。请从桌面或开始菜单打开 YesChoy，再继续使用 Codex、Claude 等已接入应用。"
 
 kaifan_launch_done:
 FunctionEnd
@@ -148,15 +152,16 @@ FunctionEnd
 Section "Uninstall"
   SetShellVarContext current
   SetRegView 64
-  Delete "$DESKTOP\野菜.lnk"
-  Delete "$SMPROGRAMS\野菜\野菜.lnk"
-  Delete "$SMPROGRAMS\野菜\卸载野菜.lnk"
-  RMDir "$SMPROGRAMS\野菜"
-  Delete "$INSTDIR\野菜.exe"
-  Delete "$INSTDIR\卸载野菜.exe"
+  Delete "$DESKTOP\YesChoy.lnk"
+  Delete "$SMPROGRAMS\YesChoy\YesChoy.lnk"
+  Delete "$SMPROGRAMS\YesChoy\卸载 YesChoy.lnk"
+  RMDir "$SMPROGRAMS\YesChoy"
+  Delete "$INSTDIR\YesChoy.exe"
+  Delete "$INSTDIR\卸载 YesChoy.exe"
   RMDir "$INSTDIR"
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\com.yeschoy.desktop"
-  DeleteRegKey HKCU "Software\野菜"
+  DeleteRegKey HKCU "Software\yeschoy\YesChoyStandalone"
+  DeleteRegKey /ifempty HKCU "Software\yeschoy"
   DeleteRegKey HKCU "Software\Classes\kaifan"
   DeleteRegKey HKCU "Software\Classes\yeschoy"
 SectionEnd

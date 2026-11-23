@@ -137,7 +137,7 @@ Locale files live under `src/i18n/locales/`. When modifying user-facing text:
 
 > [English Version](#contributing-to-yeschoy-ai-desktop)
 
-感谢你对 [野菜API 桌面助手](https://github.com/DaydreamZXG/yeschoy-ai-desktop) 的贡献兴趣！参与之前请阅读我们的[行为准则](./CODE_OF_CONDUCT.md)。
+感谢你对 [YesChoy](https://github.com/DaydreamZXG/yeschoy-ai-desktop) 的贡献兴趣！参与之前请阅读我们的[行为准则](./CODE_OF_CONDUCT.md)。
 
 ## 如何贡献
 

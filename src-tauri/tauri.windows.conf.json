@@ -4,7 +4,8 @@
     "windows": [
       {
         "label": "main",
-        "title": "野菜",
+        "title": "YesChoy",
+        "decorations": false,
         "visible": true,
         "minWidth": 860,
         "minHeight": 640
