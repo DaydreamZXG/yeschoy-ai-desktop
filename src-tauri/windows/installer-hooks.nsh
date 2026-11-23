@@ -3,6 +3,8 @@
 ; Tauri 的模板只给安装程序设了图标，卸载程序（uninstall.exe）还是 NSIS 默认的。
 !define MUI_UNICON "${__FILEDIR__}\..\icons\icon.ico"
 ; 欢迎页和完成页的文案，Tauri 的包和 installer.nsi 共用；installer.nsi 可以先定义自己的。
+; 顶部横幅里的小 Y 放右边；Tauri 模板默认放左边。
+!define /ifndef MUI_HEADERIMAGE_RIGHT
 !define /ifndef MUI_WELCOMEPAGE_TITLE "欢迎使用 YesChoy"
 !define /ifndef MUI_WELCOMEPAGE_TEXT "YesChoy 帮你把 Claude Code、Codex 这些 AI 应用接到野菜API。装好以后跟着提示点几下就能用，不用敲命令。$\r$\n$\r$\n点“下一步”继续。"
 !define /ifndef MUI_FINISHPAGE_TITLE "装好了"

@@ -45,7 +45,6 @@ VIAddVersionKey /LANG=2052 "LegalCopyright" "Copyright (c) YesChoy contributors"
 !define MUI_ABORTWARNING
 !define MUI_WELCOMEFINISHPAGE_BITMAP "installer-sidebar.bmp"
 !define MUI_HEADERIMAGE
-!define MUI_HEADERIMAGE_RIGHT
 !define MUI_HEADERIMAGE_BITMAP "installer-header.bmp"
 !define MUI_HEADERIMAGE_UNBITMAP "installer-header.bmp"
 !define MUI_ICON "${APP_ICON}"
