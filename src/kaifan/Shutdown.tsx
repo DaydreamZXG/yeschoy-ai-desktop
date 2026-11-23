@@ -46,6 +46,7 @@ function exitResponse(raw: unknown): ExitResponse | null {
               "cline",
               "hermes",
               "openclaw",
+              "cursorpp",
             ].includes(String(tool)),
         ))) ||
     ![

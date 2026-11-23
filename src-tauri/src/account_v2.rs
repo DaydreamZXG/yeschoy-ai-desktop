@@ -2816,6 +2816,7 @@ pub async fn account_logout_v2(
         "cline",
         "hermes",
         "openclaw",
+        "cursorpp",
     ] {
         crate::request_diagnostics::clear(tool);
     }

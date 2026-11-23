@@ -161,6 +161,9 @@ export function Join({
   const [approved, setApproved] = useState<Record<string, string>>({});
   /** 这一次打开里站点没给开通的（型号 + 方案），推荐下一个时跳过。 */
   const [refused, setRefused] = useState<string[]>([]);
+  // Cursor++ 是用户自己装的第三方插件：改它的配置前先问一句。
+  const [cursorppAllowed, setCursorppAllowed] = useState(false);
+  useEffect(() => setCursorppAllowed(false), [app]);
 
   const settled = useRef(onSettled);
   settled.current = onSettled;
@@ -666,15 +669,17 @@ export function Join({
   // 没装的应用现在能怎么办：我们替他装、只能去官网装、官方没有适合这台电脑的
   // 安装包，或者装了但不完整。
   const need =
-    target?.manualLocation === "unavailable"
-      ? "gone"
-      : !absent
-        ? "incomplete"
-        : selfInstall
-          ? "fetch"
-          : mode === "unsupported"
-            ? "unsupported"
-            : "guided";
+    app === "cursorpp"
+      ? "cursorpp"
+      : target?.manualLocation === "unavailable"
+        ? "gone"
+        : !absent
+          ? "incomplete"
+          : selfInstall
+            ? "fetch"
+            : mode === "unsupported"
+              ? "unsupported"
+              : "guided";
   const says = undoing
     ? t("kaifan.join.undoing", { app: appName, name })
     : undone
@@ -1048,14 +1053,16 @@ export function Join({
                     data-testid="kaifan-join-absent"
                   >
                     {t(`kaifan.join.absentNote.${need}`, { app: appName })}
-                    <button
-                      type="button"
-                      className="sm"
-                      disabled={spotting}
-                      onClick={() => void pointOut()}
-                    >
-                      {t("kaifan.join.pointOut")}
-                    </button>
+                    {app !== "cursorpp" && (
+                      <button
+                        type="button"
+                        className="sm"
+                        disabled={spotting}
+                        onClick={() => void pointOut()}
+                      >
+                        {t("kaifan.join.pointOut")}
+                      </button>
+                    )}
                     {spot && (
                       <span role="alert">
                         {t(`kaifan.join.spot.${spot}`, { app: appName })}
@@ -1096,6 +1103,21 @@ export function Join({
                       </em>
                     )}
                   </p>
+                  {app === "cursorpp" && !missing && (
+                    <label
+                      className="cl-note"
+                      data-testid="kaifan-join-cursorpp-consent"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={cursorppAllowed}
+                        onChange={(event) =>
+                          setCursorppAllowed(event.target.checked)
+                        }
+                      />{" "}
+                      {t("kaifan.join.cursorppConsent")}
+                    </label>
+                  )}
                   <i />
                   {broken && saved && saved.restoreMode !== "none" && (
                     <button
@@ -1120,7 +1142,7 @@ export function Join({
                     >
                       {t("kaifan.join.installGo", { app: appName })}
                     </button>
-                  ) : missing ? (
+                  ) : missing && app === "cursorpp" ? null : missing ? (
                     <button
                       type="button"
                       className="go"
@@ -1144,7 +1166,8 @@ export function Join({
                         !modelId ||
                         !installationId ||
                         barred ||
-                        unpriced
+                        unpriced ||
+                        (app === "cursorpp" && !cursorppAllowed)
                       }
                       onClick={() => void run()}
                     >

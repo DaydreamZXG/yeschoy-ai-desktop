@@ -3,7 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import type { AccountLineId } from "./preview";
 
 // PRD §3.2 定案：与 Rust 侧 tool_adapters::TARGETS / CONNECTION_TOOLS 保持
-// 一致（11 个已支持工具）。
+// 一致（12 个已支持工具）。
 // 增删工具须先改 appCatalog 展示源并通过强校验，再同步此处与 Rust。
 export const ACTIVATION_TOOL_IDS = [
   "claude_code",
@@ -17,6 +17,7 @@ export const ACTIVATION_TOOL_IDS = [
   "cline",
   "hermes",
   "openclaw",
+  "cursorpp",
 ] as const;
 
 export type ActivationToolId = (typeof ACTIVATION_TOOL_IDS)[number];

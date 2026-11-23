@@ -154,6 +154,7 @@ fn allowed(tool: &str) -> bool {
             | "cline"
             | "hermes"
             | "openclaw"
+            | "cursorpp"
     )
 }
 
@@ -1562,6 +1563,11 @@ pub(crate) fn legacy_clean(
                 }
             }
         }
+        "cursorpp" => {
+            if let Some(providers) = value.get_mut("providers").and_then(Value::as_array_mut) {
+                providers.retain(|p| !crate::tool_adapters::cursorpp::is_owned_provider(p));
+            }
+        }
         "workbuddy" => {
             let expected_url = format!(
                 "{}/chat/completions",
@@ -2104,6 +2110,40 @@ mod tests {
             "the first-use catalog should be removed"
         );
         assert!(!preserved);
+    }
+
+    #[test]
+    fn cursorpp_restore_takes_out_our_provider_and_keeps_what_the_user_added() {
+        let f = Fixture::new();
+        std::fs::create_dir_all(f.path(".ccursor")).unwrap();
+        let mine = json!({"id": "mine", "name": "Mine", "type": "anthropic", "models": []});
+        let ours = json!({
+            "id": "yeschoy",
+            "name": "野菜API",
+            "type": "openai-chat",
+            "baseUrl": "https://yeschoy.com/v1",
+            "auth": {"kind": "apiKey", "value": "synthetic-cursorpp-key"},
+            "models": [{"id": "glm-5.3-flash", "apiModel": "glm-5.3-flash"}]
+        });
+        let before =
+            serde_json::to_vec(&json!({"$schemaVersion": 1, "providers": [mine]})).unwrap();
+        let after =
+            serde_json::to_vec(&json!({"$schemaVersion": 1, "providers": [ours, mine]})).unwrap();
+        let file = f.change(".ccursor/providers.json", Some(&before), &after);
+        let later = json!({"id": "later", "name": "Later", "type": "gemini", "models": []});
+        let (restored, preserved) = merged(
+            &file,
+            json!({"$schemaVersion": 1, "providers": [ours, mine, later]}),
+        );
+        assert!(preserved);
+        assert_eq!(
+            restored,
+            json!({"$schemaVersion": 1, "providers": [mine, later]})
+        );
+
+        let first = f.change(".ccursor/providers.json", None, &after);
+        let (restored, _) = restore_bytes(&first, Some(&after)).unwrap();
+        assert!(restored.is_none(), "a file we created goes away again");
     }
 
     #[test]

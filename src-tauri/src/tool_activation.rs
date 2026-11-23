@@ -25,8 +25,8 @@ use crate::{
     shutdown_coordinator,
     station_connect::connect_origin_is_acceptable,
     tool_adapters::{
-        self, claude_code, claude_desktop, cline, codex_desktop, desktop_lifecycle, dsh_web,
-        hermes, openclaw, opencode, pi, workbuddy, AdapterFailure, ResolvedInstallation,
+        self, claude_code, claude_desktop, cline, codex_desktop, cursorpp, desktop_lifecycle,
+        dsh_web, hermes, openclaw, opencode, pi, workbuddy, AdapterFailure, ResolvedInstallation,
     },
     tool_credentials::{self, CredentialFailure, ToolCredential, ToolModelRoute},
 };
@@ -410,6 +410,7 @@ fn request_is_valid(request: &ToolActivationRequest) -> bool {
                 | "cline"
                 | "hermes"
                 | "openclaw"
+                | "cursorpp"
         )
         && bounded_plain_text(&request.model_id, 200)
         && bounded_plain_text(&request.billing_group, 128)
@@ -571,6 +572,7 @@ fn model_supports_tool(_pricing: &Value, _model_id: &str, tool_id: &str) -> bool
             | "cline"
             | "hermes"
             | "openclaw"
+            | "cursorpp"
     )
 }
 
@@ -912,6 +914,7 @@ fn token_name(tool_id: &str) -> &'static str {
         "cline" => "野菜API Cline",
         "hermes" => "野菜API Hermes",
         "openclaw" => "野菜API OpenClaw",
+        "cursorpp" => "野菜API Cursor++",
         _ => "野菜API Desktop",
     }
 }
@@ -931,6 +934,7 @@ pub(crate) fn tool_for_token_name(name: &str) -> Option<&'static str> {
         "cline",
         "hermes",
         "openclaw",
+        "cursorpp",
     ]
     .into_iter()
     // 新名字写应用名，旧名字写两字母代码。两种都要认：用量日志里它们会长期
@@ -1083,6 +1087,7 @@ fn token_code(tool_id: &str) -> &'static str {
         // 不能再用 `oc`：那是 OpenCode 旧密钥名里的代码，撞了就会把它的旧密钥
         // 当成自己的收走。
         "openclaw" => "cw",
+        "cursorpp" => "cp",
         _ => "tool",
     }
 }
@@ -1105,6 +1110,7 @@ fn token_label(tool_id: &str) -> &'static str {
         "cline" => "Cline",
         "hermes" => "Hermes",
         "openclaw" => "OpenClaw",
+        "cursorpp" => "CursorPP",
         _ => "Desktop",
     }
 }
@@ -1793,6 +1799,7 @@ enum PreparedAdapter {
     /// Both DSH profiles: `dsh_web` and `dsh_desktop`.
     Dsh(dsh_web::Prepared),
     WorkBuddy(workbuddy::Prepared),
+    CursorPP(cursorpp::Prepared),
 }
 
 impl PreparedAdapter {
@@ -1808,6 +1815,7 @@ impl PreparedAdapter {
             Self::OpenClaw(v) => v.changes(),
             Self::Dsh(v) => v.changes(),
             Self::WorkBuddy(v) => v.changes(),
+            Self::CursorPP(v) => v.changes(),
         }
     }
 
@@ -1830,6 +1838,7 @@ impl PreparedAdapter {
             Self::OpenClaw(value) => value.commit(),
             Self::Dsh(value) => value.commit(),
             Self::WorkBuddy(value) => value.commit(),
+            Self::CursorPP(value) => value.commit(),
         }
     }
 
@@ -1845,6 +1854,7 @@ impl PreparedAdapter {
             Self::OpenClaw(value) => value.rollback(),
             Self::Dsh(value) => value.rollback(),
             Self::WorkBuddy(value) => value.rollback(),
+            Self::CursorPP(value) => value.rollback(),
         }
     }
 }
@@ -1925,6 +1935,7 @@ fn prepare_adapter(
         "workbuddy" => {
             workbuddy::prepare_catalog(&home, credential).map(PreparedAdapter::WorkBuddy)
         }
+        "cursorpp" => cursorpp::prepare(&home, credential).map(PreparedAdapter::CursorPP),
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
 }
@@ -1961,7 +1972,7 @@ async fn start_local_adapter(
             .start(credential.clone())
             .await
             .map(|_| ()),
-        "pi" | "dsh_web" | "workbuddy" | "dsh_desktop" => Ok(()),
+        "pi" | "dsh_web" | "workbuddy" | "dsh_desktop" | "cursorpp" => Ok(()),
         _ => Err(AdapterFailure::ConfigurationFailed("invalid_request")),
     }
 }
@@ -2005,6 +2016,8 @@ async fn open_configured_adapter(
         "dsh_desktop" => {
             desktop_lifecycle::open_unless_running("dsh_desktop", &installation.path).await
         }
+        // 它活在 Cursor 里，自己会重读配置；接好就行，不替用户开 Cursor。
+        "cursorpp" => Ok(()),
         "claude_code" | "pi" | "opencode" | "cline" | "hermes" | "openclaw" => {
             let home = tool_adapters::user_home()
                 .ok_or(AdapterFailure::ConfigurationFailed("home_unavailable"))?;
@@ -3257,7 +3270,7 @@ pub async fn configure_desktop_tool_v2(
     .with_skipped(skipped))
 }
 
-const CONNECTION_TOOLS: [&str; 11] = [
+const CONNECTION_TOOLS: [&str; 12] = [
     "claude_code",
     "claude_desktop",
     "codex_desktop",
@@ -3269,6 +3282,7 @@ const CONNECTION_TOOLS: [&str; 11] = [
     "cline",
     "hermes",
     "openclaw",
+    "cursorpp",
 ];
 
 /// Called only by the exit owner after admission closes and active operations
@@ -3546,7 +3560,7 @@ fn inspect_connections_with(
 
 pub(crate) fn needs_background(tool: &str, credential: &ToolCredential) -> bool {
     // Nothing of ours has to keep running: both read their key from a file.
-    if matches!(tool, "workbuddy" | "dsh_desktop") {
+    if matches!(tool, "workbuddy" | "dsh_desktop" | "cursorpp") {
         return false;
     }
     credential.has_model_set()
@@ -3590,7 +3604,7 @@ fn legacy_paths(tool: &str) -> Result<Vec<std::path::PathBuf>, AdapterFailure> {
         }
         "workbuddy" => vec![home.join(".workbuddy/models.json")],
         // Support began with the recovery journal: nothing legacy.
-        "opencode" | "cline" | "hermes" | "openclaw" => Vec::new(),
+        "opencode" | "cline" | "hermes" | "openclaw" | "cursorpp" => Vec::new(),
         // Desktop support began with the recovery journal: nothing legacy.
         "dsh_desktop" => Vec::new(),
         _ => return Err(AdapterFailure::UnsupportedProfile),

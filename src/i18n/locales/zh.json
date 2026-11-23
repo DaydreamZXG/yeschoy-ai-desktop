@@ -549,7 +549,8 @@
         "guided": "我在这台电脑上没找到 {{app}}。去官网装好再回来，我会自己再找一遍。其实已经装了？",
         "unsupported": "官方现在没有适合这台电脑的 {{app}} 安装包，可以去官网看看它支持哪些电脑，或者换一个应用。其实已经装了？",
         "incomplete": "找到了 {{app}}，但它缺了启动要用的东西，多半是没装完整。去官网重新装一遍再回来，我会自己再找。装在别处还有一份？",
-        "gone": "之前你指给我的 {{app}} 位置现在找不到了，可能是挪了地方或者卸载了。重新告诉我它在哪，或者重新装一遍。"
+        "gone": "之前你指给我的 {{app}} 位置现在找不到了，可能是挪了地方或者卸载了。重新告诉我它在哪，或者重新装一遍。",
+        "cursorpp": "这台电脑上没找到 Cursor++。YesChoy 只接你自己已经装好的 Cursor++，不替你安装。"
       },
       "byHandCli": "命令行版 {{app}} 其实已经装了，只是我没找到？",
       "pointOut": "告诉我它在哪",
@@ -570,7 +571,8 @@
       "systemNotYet": "我还没看到 {{app}} 装好。系统的安装窗口里点过「安装」了吗？窗口找不到了可以重新打开。",
       "systemDone": "装好了，让{{name}}接着接入 ➜",
       "systemReopen": "重新打开安装窗口",
-      "systemDrop": "先不装了"
+      "systemDrop": "先不装了",
+      "cursorppConsent": "允许 YesChoy 修改 Cursor++ 的配置文件（~/.ccursor/providers.json）：加一项这个站点的设置，你自己原有的设置不动，断开时放回原样。"
     },
     "reveal": {
       "kicker": "MODEL ONLINE",
@@ -585,7 +587,8 @@
       "opening": "正在打开 {{app}}…",
       "openedTerminal": "已经帮你开好终端窗口了，{{app}} 就在里面，直接用吧",
       "openFailed": "没能帮你把 {{app}} 叫起来。不过设置已经写好了，你自己点开一样能用",
-      "skipped": "另外，{{models}} 这次没接上：站点没让这个账号用。别的不受影响。"
+      "skipped": "另外，{{models}} 这次没接上：站点没让这个账号用。别的不受影响。",
+      "pickCursorpp": "打开 Cursor，在 Cursor++ 的型号列表里选 {{model}}（YesChoy 加进去的那一项），才是 {{name}}。Cursor 开着的话，两三秒后它会自己读到新设置。"
     },
     "why": {
       "provider_tool_unsupported": "现在连的这家厂商不认 {{app}}，所以没接，{{app}} 没被改动。换一个它认的应用，或者换一个站点再接。",
