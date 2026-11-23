@@ -150,7 +150,7 @@ describe("连接站点", () => {
     await typeUrl("");
     expect(says()).toContain("网址还是空的");
     await typeUrl("http://example.com");
-    expect(says()).toContain("看不懂");
+    expect(says()).toContain("没认出来");
     expect(look).not.toHaveBeenCalled();
     expect(step()).toBe("url");
   });
@@ -169,7 +169,7 @@ describe("连接站点", () => {
     look.mockResolvedValue({ ok: false, reason: "unreachable" });
     setup();
     await typeUrl("down.example.com");
-    await waitFor(() => expect(says()).toContain("连不上这个站"));
+    await waitFor(() => expect(says()).toContain("敲了两次门都没回应"));
     expect(step()).toBe("url");
   });
 
@@ -232,8 +232,8 @@ describe("连接站点", () => {
   });
 
   it.each([
-    ["invalid", "这个密钥不对"],
-    ["no_quota", "余额或额度用完了"],
+    ["invalid", "这把密钥不对"],
+    ["no_quota", "额度用光啦"],
   ])("密钥 %s：不保存，告诉用户怎么办", async (tokenStatus, words) => {
     look
       .mockResolvedValueOnce(station())
@@ -366,7 +366,7 @@ describe("连接站点", () => {
     await waitFor(() => expect(step()).toBe("trust"));
     fireEvent.click(screen.getByRole("button", { name: /是我的站/ }));
     await waitFor(() => expect(step()).toBe("key"));
-    expect(says()).toContain("浏览器我没能打开");
+    expect(says()).toContain("浏览器没弹出来");
   });
 
   it("一个站点都没连时关不掉；已经连着时 Esc 能关", () => {
@@ -504,7 +504,7 @@ describe("连接站点", () => {
       );
       ipc.mockRejectedValue("browser_unavailable");
       fireEvent.click(screen.getByRole("button", { name: /去拿密钥/ }));
-      await waitFor(() => expect(says()).toContain("浏览器没打开"));
+      await waitFor(() => expect(says()).toContain("浏览器没叫起来"));
     });
 
     it("密钥被拒：留在这一屏，说清楚，可以重新粘", async () => {

@@ -117,7 +117,7 @@ describe("Settings", () => {
       fireEvent.click(screen.getByTestId("kaifan-settings-logout-yes"));
     });
     expect(props.onLogout).toHaveBeenCalledTimes(1);
-    await said("退出了");
+    await said("退好啦");
   });
 
   it("退出问了之后点算了，什么都不做", () => {
@@ -134,7 +134,7 @@ describe("Settings", () => {
     await act(async () => {
       fireEvent.click(screen.getByTestId("kaifan-settings-logout-yes"));
     });
-    await said("没退出成");
+    await said("刚才没退成");
   });
 
   it("声音开关记在本机", () => {
@@ -310,7 +310,7 @@ describe("Settings", () => {
     down.unmount();
 
     show({ checkup: { ...idleCheck, report: reportOf(base) } });
-    await said("都没问题");
+    await said("都妥妥的");
     expect(screen.queryByTestId("kaifan-settings-check-act")).toBeNull();
   });
 

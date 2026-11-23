@@ -671,7 +671,7 @@ describe("接入：选应用、选人、点一下", () => {
     await ready();
     answer("configuration_failed", "desktop_start_failed_restored");
     fireEvent.click(go());
-    await waitFor(() => expect(says()).toContain("已经改回原来的样子"));
+    await waitFor(() => expect(says()).toContain("已经恢复原样了"));
     expect(props.onJoined).not.toHaveBeenCalled();
     answer("ready", "configuration_ready");
     fireEvent.click(screen.getByRole("button", { name: "再试一次" }));
@@ -693,7 +693,7 @@ describe("接入：选应用、选人、点一下", () => {
     await ready();
     answer("signed_out", "signed_out");
     fireEvent.click(go());
-    await waitFor(() => expect(says()).toContain("重新连一下站点"));
+    await waitFor(() => expect(says()).toContain("重新连一下站"));
     fireEvent.click(screen.getByRole("button", { name: /重新连站点/ }));
     expect(props.onReconnect).toHaveBeenCalled();
   });
@@ -703,7 +703,7 @@ describe("接入：选应用、选人、点一下", () => {
     await ready();
     answer("unsupported_model", "unsupported_model");
     fireEvent.click(go());
-    await waitFor(() => expect(says()).toContain("换个人"));
+    await waitFor(() => expect(says()).toContain("换位同学"));
     fireEvent.click(screen.getByRole("button", { name: "回去换人" }));
     expect(screen.getByTestId("kaifan-join").dataset.stage).toBe("pick");
   });
@@ -718,7 +718,7 @@ describe("接入：选应用、选人、点一下", () => {
     });
     cancel.mockResolvedValue("cancel_requested");
     fireEvent.click(go());
-    await waitFor(() => expect(says()).toContain("正在帮你接入"));
+    await waitFor(() => expect(says()).toContain("正在帮你把"));
     fireEvent.click(screen.getByRole("button", { name: "先停下" }));
     await waitFor(() => expect(cancel).toHaveBeenCalledWith("req-1"));
     finish({
@@ -730,7 +730,7 @@ describe("接入：选应用、选人、点一下", () => {
       status: "configuration_failed",
       reasonCode: "activation_cancelled",
     } as ToolActivationProjection);
-    await waitFor(() => expect(says()).toContain("没有被改动"));
+    await waitFor(() => expect(says()).toContain("一点没动"));
   });
 
   it("没装的应用：标出来，按钮打开它的官网，不去接入", async () => {
@@ -1750,7 +1750,7 @@ describe("接入：自己能解决的不问用户", () => {
     setup({ initialApp: "codex_desktop" });
     await ready();
     fireEvent.click(go());
-    await waitFor(() => expect(says()).toContain("没找到"));
+    await waitFor(() => expect(says()).toContain("没翻到"));
     expect(activate).toHaveBeenCalledTimes(1);
     expect(scan).toHaveBeenCalledTimes(2);
   });
@@ -1786,7 +1786,7 @@ describe("接入：自己能解决的不问用户", () => {
       } as Partial<ActivationTarget>),
     ]);
     fireEvent.click(go());
-    await waitFor(() => expect(says()).toContain("没找到"));
+    await waitFor(() => expect(says()).toContain("没翻到"));
     expect(activate.mock.calls.map((call) => call[0].installationId)).toEqual([
       "a",
     ]);
@@ -1838,7 +1838,7 @@ describe("角色登场", () => {
   it("替用户打开了：说打开了，只留回首页", () => {
     const props = show();
     expect(screen.getByTestId("kaifan-reveal")).toHaveTextContent(
-      "Claude Desktop 已经替你打开",
+      "Claude Desktop 已经帮你打开了",
     );
     expect(screen.queryByRole("button", { name: /打开 Claude/ })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "回到首页" }));
@@ -1848,8 +1848,8 @@ describe("角色登场", () => {
   it("只写好了设置：不说已经打开，给一个打开的按钮", () => {
     const props = show({ joined: { ...joined, opened: false } });
     const text = screen.getByTestId("kaifan-reveal").textContent ?? "";
-    expect(text).toContain("设置写好了");
-    expect(text).not.toContain("已经替你打开");
+    expect(text).toContain("设置写好啦");
+    expect(text).not.toContain("已经帮你打开了");
     fireEvent.click(
       screen.getByRole("button", { name: /打开 Claude Desktop/ }),
     );
@@ -1869,7 +1869,7 @@ describe("角色登场", () => {
   it("没打开成：照实说，设置还在", () => {
     show({ joined: { ...joined, opened: false }, openFailed: true });
     expect(screen.getByTestId("kaifan-reveal")).toHaveTextContent(
-      "没能替你打开 Claude Desktop",
+      "没能帮你把 Claude Desktop 叫起来",
     );
   });
 

@@ -84,7 +84,7 @@ afterEach(() => {
 describe("global desktop close choice and cooperative exit", () => {
   it("defaults to restoring and preserving remote keys through the native owner", async () => {
     await openSettingsChoice();
-    expect(screen.getByRole("dialog")).toHaveTextContent("请先保存任务");
+    expect(screen.getByRole("dialog")).toHaveTextContent("手头有活记得先存");
     fireEvent.click(screen.getByRole("button", { name: "恢复原设置并退出" }));
     await flush();
     expect(native).toHaveBeenCalledWith("quit_desktop_assistant", {
@@ -250,9 +250,7 @@ describe("global desktop close choice and cooperative exit", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(20_000);
     });
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "安全收尾后会自动退出",
-    );
+    expect(screen.getByRole("status")).toHaveTextContent("收完我就自动退");
     expect(screen.getByRole("button", { name: "收起提示" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "在后台等待" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "重试退出" })).toBeEnabled();
@@ -260,7 +258,9 @@ describe("global desktop close choice and cooperative exit", () => {
     await act(async () => {
       finish({ status: "finishing_operation" });
     });
-    expect(screen.getByRole("status")).toHaveTextContent("当前接入或账号操作");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "手头还有一半操作没收尾",
+    );
   });
 
   it("accepts native finishing progress and allows idempotent repeat requests", async () => {
@@ -296,7 +296,7 @@ describe("global desktop close choice and cooperative exit", () => {
     native.mockRejectedValueOnce(new Error("secret-fixture-path-and-key"));
     fireEvent.click(screen.getByRole("button", { name: "恢复原设置并退出" }));
     await flush();
-    expect(screen.getByRole("alert")).toHaveTextContent("暂时无法确认退出状态");
+    expect(screen.getByRole("alert")).toHaveTextContent("刚才没确认到退出状态");
     expect(screen.getByRole("button", { name: "重试退出" })).toBeEnabled();
     expect(document.body).not.toHaveTextContent("secret-fixture-path-and-key");
   });

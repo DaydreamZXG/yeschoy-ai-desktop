@@ -90,7 +90,7 @@ describe("Ledger", () => {
     // 没法归到哪个应用的那一笔，不编一个应用名。
     expect(latest[2]).not.toHaveTextContent("应用:");
     await waitFor(() =>
-      expect(says()).toHaveTextContent("今天花了 ¥0.42。余额还有 ¥23.50。"),
+      expect(says()).toHaveTextContent("今天花了 ¥0.42。兜里还剩 ¥23.50。"),
     );
   });
 
@@ -121,7 +121,7 @@ describe("Ledger", () => {
     expect(days[4]).not.toHaveClass("na");
     expect(days[4]).toHaveTextContent("¥0.00");
     await waitFor(() =>
-      expect(says()).toHaveTextContent("今天花了多少我看不到。"),
+      expect(says()).toHaveTextContent("今天花了多少，站点没告诉我。"),
     );
   });
 
@@ -169,10 +169,10 @@ describe("Ledger", () => {
     show({ log: log([]) });
     expect(screen.getByTestId("kaifan-ledger-week")).toHaveTextContent("¥0.00");
     expect(screen.getByTestId("kaifan-ledger")).toHaveTextContent(
-      "这段时间还没用过。",
+      "这段时间挺省，还没动过手。",
     );
     await waitFor(() =>
-      expect(says()).toHaveTextContent("今天还没花钱。余额还有 ¥23.50。"),
+      expect(says()).toHaveTextContent("今天一分钱还没花呢。兜里还剩 ¥23.50。"),
     );
   });
 
@@ -191,14 +191,14 @@ describe("Ledger", () => {
     expect(screen.getByTestId("kaifan-ledger")).not.toHaveTextContent("0");
     await waitFor(() =>
       expect(says()).toHaveTextContent(
-        "这个站没把余额和账单告诉我，我看不到。",
+        "这个站没把余额和账单发给我，这边看不到。",
       ),
     );
   });
 
   it("正在读最新的数：不把上一次的余额和花费摆出来", async () => {
     show({ reading: true });
-    await waitFor(() => expect(says()).toHaveTextContent("读一下最新的数"));
+    await waitFor(() => expect(says()).toHaveTextContent("抄一下最新的账"));
     expect(screen.queryByTestId("kaifan-ledger-balance")).toBeNull();
     expect(screen.getByTestId("kaifan-ledger")).not.toHaveTextContent("¥");
   });
