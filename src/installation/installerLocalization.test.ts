@@ -25,6 +25,8 @@ describe("Windows installer localization", () => {
       displayLanguageSelector: false,
       installerIcon: "icons/icon.ico",
       sidebarImage: "windows/installer-sidebar.bmp",
+      headerImage: "windows/installer-header.bmp",
+      customLanguageFiles: { SimpChinese: "windows/SimpChinese.nsh" },
       installerHooks: "windows/installer-hooks.nsh",
     });
     expect(config.bundle.windows.wix.language).toBe("zh-CN");
