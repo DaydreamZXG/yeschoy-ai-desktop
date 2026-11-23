@@ -186,7 +186,9 @@ describe("开饭首页自己会做的事", () => {
 
     fireEvent.click(container.querySelector(".roster [aria-pressed='true']")!);
     await waitFor(() => expect(card).not.toHaveAttribute("inert"));
-    expect(home).toHaveAttribute("inert");
+    // 名片只盖住右边：对话框和那排应用停下，左边栏照常能点。
+    expect(container.querySelector(".mid")).toHaveAttribute("inert");
+    expect(home).not.toHaveAttribute("inert");
     fireEvent.click(
       within(card).getByRole("button", { name: "GPT-5 Mini", pressed: false }),
     );
@@ -270,7 +272,9 @@ describe("开饭首页自己会做的事", () => {
 
     fireEvent.click(nav);
     await waitFor(() => expect(ledger).not.toHaveAttribute("inert"));
-    expect(home).toHaveAttribute("inert");
+    // 账本只盖住右边：对话框和那排应用停下，左边栏照常能点。
+    expect(container.querySelector(".mid")).toHaveAttribute("inert");
+    expect(home).not.toHaveAttribute("inert");
     // 开着账本时，左边亮的是「账本」。
     expect(nav).toHaveAttribute("aria-current", "page");
     expect(container.querySelectorAll(".side [aria-current]")).toHaveLength(1);
@@ -286,6 +290,55 @@ describe("开饭首页自己会做的事", () => {
     await waitFor(() => expect(ledger).toHaveAttribute("inert"));
     expect(home).not.toHaveAttribute("inert");
     expect(nav).not.toHaveAttribute("aria-current");
+  });
+
+  it("账本开着时点左边栏的另一项：一下就换过去；点「首页」收起来", async () => {
+    render(<KaifanApp />);
+    const ledger = screen.getByTestId("kaifan-ledger");
+    const news = screen.getByTestId("kaifan-news");
+    const settings = screen.getByTestId("kaifan-settings");
+    fireEvent.click(screen.getByTestId("kaifan-nav-ledger"));
+    await waitFor(() => expect(ledger).not.toHaveAttribute("inert"));
+
+    fireEvent.click(screen.getByTestId("kaifan-nav-news"));
+    await waitFor(() => expect(news).not.toHaveAttribute("inert"));
+    expect(ledger).toHaveAttribute("inert");
+    expect(screen.getByTestId("kaifan-nav-news")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+
+    fireEvent.click(screen.getByTestId("kaifan-nav-settings"));
+    await waitFor(() => expect(settings).not.toHaveAttribute("inert"));
+    expect(news).toHaveAttribute("inert");
+
+    fireEvent.click(screen.getByTestId("kaifan-nav-home"));
+    await waitFor(() => expect(settings).toHaveAttribute("inert"));
+    expect(screen.getByTestId("kaifan-nav-home")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("账本开着、焦点在左边栏上：按 Esc 照样收起来；面板不自称 modal", async () => {
+    render(<KaifanApp />);
+    const ledger = screen.getByTestId("kaifan-ledger");
+    fireEvent.click(screen.getByTestId("kaifan-nav-ledger"));
+    await waitFor(() => expect(ledger).not.toHaveAttribute("inert"));
+    expect(within(ledger).getByRole("dialog")).not.toHaveAttribute(
+      "aria-modal",
+    );
+
+    // 别的弹层（比如退出确认那个原生 dialog）里按的 Esc 归它自己，不收面板。
+    const other = document.body.appendChild(document.createElement("dialog"));
+    fireEvent.keyDown(other, { key: "Escape" });
+    other.remove();
+    expect(ledger).not.toHaveAttribute("inert");
+
+    const news = screen.getByTestId("kaifan-nav-news");
+    news.focus();
+    fireEvent.keyDown(news, { key: "Escape" });
+    await waitFor(() => expect(ledger).toHaveAttribute("inert"));
   });
 
   it("点「设置」：在新界面里滑出来，不去旧页面；体检当场去探站点", async () => {
