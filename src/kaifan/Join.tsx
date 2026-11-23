@@ -50,6 +50,7 @@ import {
   chibiOf,
   type RosterId,
 } from "./roster";
+import { withHandoff } from "./handoff";
 import { isConnected, onOtherStation, workerOf } from "./stageState";
 import { OtherApps } from "./OtherApps";
 import { vendorName, type ProviderPreset } from "./providers";
@@ -422,25 +423,28 @@ export function Join({
     setOutcome(null);
     setUndone(null);
     sound.pop(620);
-    const result = await task.run(
-      {
-        lineId,
-        toolId: app,
-        modelId,
-        installationId: at,
-        billingGroup: group,
-        models: bindings(group),
-        ...(fresh ? { installationJobId: fresh.installationJobId } : {}),
-        ...extra,
-      },
-      {
-        key: `${app}:${modelId}`,
-        account: "",
-        app: appName,
-        model: modelId,
-        group,
-        line: lineId,
-      },
+    // 接入的最后一步会把应用打开；先说好到时候由谁登场。
+    const result = await withHandoff(app, who, () =>
+      task.run(
+        {
+          lineId,
+          toolId: app,
+          modelId,
+          installationId: at,
+          billingGroup: group,
+          models: bindings(group),
+          ...(fresh ? { installationJobId: fresh.installationJobId } : {}),
+          ...extra,
+        },
+        {
+          key: `${app}:${modelId}`,
+          account: "",
+          app: appName,
+          model: modelId,
+          group,
+          line: lineId,
+        },
+      ),
     );
     if (!result) return;
     // 应用不在刚才那个位置了（升级过、挪过）：自己重新找一遍，找到了就接着接，

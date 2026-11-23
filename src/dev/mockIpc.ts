@@ -702,6 +702,17 @@ const handlers: Record<string, (a: Args) => unknown> = {
       reasonCode: "opened",
     };
   },
+  // 浏览器里没有别的应用窗口可接：登记一律答「没有」，接入照原样演。
+  app_handoff_arm_v1: () => ({ status: "unavailable" }),
+  app_handoff_disarm_v1: () => null,
+  app_handoff_ready_v1: () => {
+    playHandoffDemo();
+    return null;
+  },
+  app_handoff_end_v1: () => {
+    deliver("handoff://leave", null);
+    return null;
+  },
   scan_activation_targets_v1: (a) => targets(rid(a)),
   manual_location_pick: (a) => ({ requestId: rid(a), outcome: "cancelled" }),
   manual_location_clear: (a) => ({ requestId: rid(a), outcome: "cleared" }),
@@ -737,8 +748,91 @@ const handlers: Record<string, (a: Args) => unknown> = {
   }),
 };
 
+// 界面在听的事件：桩要演后端主动发来的东西时，照着这份名单投递。
+const heard: Record<string, number[]> = {};
+function deliver(event: string, payload: unknown) {
+  for (const id of heard[event] ?? []) {
+    (window as unknown as Record<string, (message: unknown) => void>)[
+      `_${id}`
+    ]?.({ event, id: 0, payload });
+  }
+}
+
+/**
+ * 打开应用时的暗场（`?handoff=codex_desktop&who=ds`）在浏览器里的演示。
+ *
+ * 真机上应用的实时画面是系统贴在窗口上面的，浏览器里没有，这里用一块画出来的
+ * 假窗口顶替，走和后端一样的节奏：出现在屏幕里 → 停一下 → 放大到应用的位置 →
+ * 暗场淡掉，剩下「桌面」和那个窗口。只为看样子，不进生产构建。
+ */
+function playHandoffDemo() {
+  const [width, height] = [window.innerWidth, window.innerHeight];
+  const target = [width * 0.14, height * 0.1, width * 0.72, height * 0.78];
+  const scale = Math.min(
+    (width * 0.4) / target[2],
+    (height * 0.5) / target[3],
+    1,
+  );
+  const from = [
+    width * 0.64 - (target[2] * scale) / 2,
+    height * 0.5 - (target[3] * scale) / 2,
+    target[2] * scale,
+    target[3] * scale,
+  ];
+  const timing = { fadeMs: 260, holdMs: 650, growMs: 720 };
+  document.documentElement.style.background =
+    "linear-gradient(135deg,#1c3a5e,#3b2a55)";
+  const app = document.createElement("div");
+  const place = (box: number[]) =>
+    Object.assign(app.style, {
+      left: `${box[0]}px`,
+      top: `${box[1]}px`,
+      width: `${box[2]}px`,
+      height: `${box[3]}px`,
+    });
+  app.innerHTML =
+    '<div style="height:7%;min-height:14px;background:#17181c;border-bottom:1px solid #2a2b31"></div>' +
+    '<div style="display:flex;height:93%"><div style="width:22%;background:#1b1c21;border-right:1px solid #2a2b31"></div>' +
+    '<div style="flex:1;background:#101114;display:grid;place-items:center;color:#8b8d98;font:600 2.2vw system-ui">Codex</div></div>';
+  Object.assign(app.style, {
+    position: "fixed",
+    zIndex: "99",
+    overflow: "hidden",
+    opacity: "0",
+    pointerEvents: "none",
+    transition: `opacity ${timing.fadeMs}ms`,
+  });
+  place(from);
+  document.body.append(app);
+  // 应用冷启动要一会儿：这段时间暗场上只有角色和空屏幕。
+  setTimeout(() => {
+    deliver("handoff://screen", { from, to: target, ...timing });
+    app.style.opacity = "1";
+  }, 1800);
+  setTimeout(
+    () => {
+      deliver("handoff://land", null);
+      const curve = "cubic-bezier(0.65,0,0.35,1)";
+      app.style.transition = ["left", "top", "width", "height"]
+        .map((side) => `${side} ${timing.growMs}ms ${curve}`)
+        .join(",");
+      place(target);
+    },
+    1800 + timing.fadeMs + timing.holdMs,
+  );
+  setTimeout(
+    () => deliver("handoff://leave", null),
+    1800 + timing.fadeMs + timing.holdMs + timing.growMs,
+  );
+}
+
 const internals = {
   invoke: async (cmd: string, args: Args = {}) => {
+    if (cmd === "plugin:event|listen") {
+      const { event, handler } = args as { event: string; handler: number };
+      (heard[event] ??= []).push(handler);
+      return 0;
+    }
     if (cmd.startsWith("plugin:event|")) return 0;
     // `?s=offline` 让每个读取命令都失败，用来看「后端整个够不着」那一屏。
     if (scenario === "offline" && cmd !== "read_desktop_exit_state") {

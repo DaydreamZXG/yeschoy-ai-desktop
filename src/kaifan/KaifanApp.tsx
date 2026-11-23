@@ -41,6 +41,7 @@ import { Ledger } from "./Ledger";
 import { News } from "./News";
 import { useNotices } from "./useNotices";
 import { Join, type Joined } from "./Join";
+import { withHandoff } from "./handoff";
 import { Reveal } from "./Reveal";
 import {
   ROSTER,
@@ -452,9 +453,9 @@ export function KaifanApp() {
   };
   const openJoined = async () => {
     if (!joined) return;
-    const result = await connections
-      .open(joined.toolId)
-      .catch(() => ({ status: "launch_failed" as const, reasonCode: "" }));
+    const result = await withHandoff(joined.toolId, joined.who, () =>
+      connections.open(joined.toolId),
+    ).catch(() => ({ status: "launch_failed" as const, reasonCode: "" }));
     // 应用还没开起来人就回首页了（或者又接了别的）：不把登场那一屏再拉回来。
     if (joinedNow.current !== joined) return;
     setJoined({

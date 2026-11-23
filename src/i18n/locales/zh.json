@@ -571,6 +571,10 @@
       "systemReopen": "重新打开安装窗口",
       "systemDrop": "先不装了"
     },
+    "handoff": {
+      "opening": "正在打开 {{app}}…",
+      "skip": "点一下或按任意键跳过"
+    },
     "reveal": {
       "kicker": "MODEL ONLINE",
       "quote": "「{{quote}}」",
@@ -736,6 +740,7 @@
       "logoutFailed": "这次没退出成，等下再试一次。",
       "look": "声音和语言",
       "sound": "声音",
+      "handoff": "打开应用时的过场",
       "language": "语言",
       "apps": "接好的应用",
       "appsNote": "不想让哪个应用再走这个站，可以把它改回接入之前的样子。",

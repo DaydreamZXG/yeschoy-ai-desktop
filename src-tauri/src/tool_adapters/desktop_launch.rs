@@ -11,9 +11,14 @@ use crate::desktop_app_discovery_core::{DesktopLaunchTarget, WindowsPackageAppli
 use super::AdapterFailure;
 
 pub(crate) fn launch(app_id: &str, path: &Path) -> Result<(), AdapterFailure> {
-    let target = crate::desktop_app_discovery::resolve_launch_target(app_id, path)
-        .ok_or_else(|| launch_error("resolve", "desktop_launch_target_changed", None))?;
-    dispatch(&target, &mut NativeLauncher)
+    // 界面登记过由谁登场的话，先拉暗场再叫应用。接入、重开、单独打开最后都到这里，
+    // 所以钩在这一处；没登记过的应用什么都不发生。
+    let curtain = crate::app_handoff::raise(app_id, path);
+    let result = crate::desktop_app_discovery::resolve_launch_target(app_id, path)
+        .ok_or_else(|| launch_error("resolve", "desktop_launch_target_changed", None))
+        .and_then(|target| dispatch(&target, &mut NativeLauncher));
+    curtain.after(result.is_ok());
+    result
 }
 
 trait Launcher {

@@ -12,6 +12,11 @@ const FRONTEND_MODE_MARKER: &str = "desktop_shell frontend_mode=dev-server";
 
 mod account_finance;
 mod account_v2;
+mod app_handoff;
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+mod app_handoff_core;
+#[cfg(target_os = "windows")]
+mod app_handoff_windows;
 mod app_installation;
 mod app_update;
 mod claude_bridge;
@@ -122,6 +127,10 @@ pub fn run() {
         .manage(tool_adapters::dsh_web::DshRuntimeState::default())
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                // 打开应用时的那块暗场不是用户开的窗口：关它不等于要退出。
+                if window.label() == app_handoff::WINDOW_LABEL {
+                    return;
+                }
                 api.prevent_close();
                 if shutdown().is_shutting_down()
                     && !matches!(
@@ -143,6 +152,7 @@ pub fn run() {
         })
         .setup(move |app| {
             window_appearance::initialize(app)?;
+            app_handoff::init(app.handle());
             #[cfg(target_os = "linux")]
             linux_renderer::reload_when_renderer_dies(app);
             station_trust::initialize(app.path().app_data_dir().ok());
@@ -236,6 +246,10 @@ pub fn run() {
             tool_activation::cancel_tool_activation_v1,
             tool_activation::manage_tool_connections_v1,
             open_connection::open_tool_connection_v1,
+            app_handoff::app_handoff_arm_v1,
+            app_handoff::app_handoff_disarm_v1,
+            app_handoff::app_handoff_ready_v1,
+            app_handoff::app_handoff_end_v1,
             quit_desktop_assistant,
             read_desktop_exit_state,
             dismiss_desktop_exit_prompt,

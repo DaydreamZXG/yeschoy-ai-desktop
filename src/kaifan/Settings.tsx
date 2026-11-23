@@ -19,6 +19,7 @@ import { Drawer } from "./Drawer";
 import type { Mood, RosterId } from "./roster";
 import { isStationKeyLineId } from "../configuration/preview";
 import { askToQuit } from "./Shutdown";
+import { handoffEnabled, handoffExists, setHandoffEnabled } from "./handoff";
 import { isMuted, setMuted, sound } from "./sound";
 import { undoKey } from "./undo";
 
@@ -93,6 +94,7 @@ export function Settings({
   const [asking, setAsking] = useState<"logout" | ToolId | null>(null);
   const [leaving, setLeaving] = useState(false);
   const [muted, setMute] = useState(isMuted);
+  const [handoff, setHandoff] = useState(handoffEnabled);
   const [copied, setCopied] = useState<"yes" | "no" | null>(null);
   useEffect(() => {
     if (open) return;
@@ -449,6 +451,23 @@ export function Settings({
             }}
           />
         </div>
+        {handoffExists() && (
+          <div className="set">
+            <span>{t("kaifan.settings.handoff")}</span>
+            <button
+              type="button"
+              className="tg"
+              role="switch"
+              aria-checked={handoff}
+              aria-label={t("kaifan.settings.handoff")}
+              data-testid="kaifan-settings-handoff"
+              onClick={() => {
+                setHandoffEnabled(!handoff);
+                setHandoff(!handoff);
+              }}
+            />
+          </div>
+        )}
         <div className="set">
           <span>{t("kaifan.settings.language")}</span>
           <span className="ask">
