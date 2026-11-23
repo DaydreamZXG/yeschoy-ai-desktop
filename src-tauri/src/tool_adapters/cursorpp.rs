@@ -113,26 +113,30 @@ fn owned_providers(base_url: &str, credential: &ToolCredential) -> Result<Vec<Va
         .collect())
 }
 
-/// `yeschoy`, `yeschoy-2`, ... skipping any id one of the user's own
-/// providers already has: Cursor++ and the restore both key providers by id.
-fn assign_ids(owned: &mut [Value], providers: &[Value]) {
+/// Keeps the ids our providers already have, then takes `yeschoy`,
+/// `yeschoy-2`, ... skipping any id one of the user's own providers has:
+/// Cursor++ and the restore both key providers by id, and a stable id lets a
+/// later readback recognise what was written.
+fn assign_ids(owned: &mut [Value], kept: Vec<String>, providers: &[Value]) {
     let taken: Vec<&str> = providers
         .iter()
-        .filter(|provider| !is_owned_provider(provider))
         .filter_map(|provider| provider.get("id").and_then(Value::as_str))
         .collect();
-    let mut candidates = (1u32..).map(|n| {
+    let fresh = (1u32..).map(|n| {
         if n == 1 {
             PROVIDER_PREFIX.to_owned()
         } else {
             format!("{PROVIDER_PREFIX}-{n}")
         }
     });
+    let mut used: Vec<String> = Vec::new();
+    let mut candidates = kept.into_iter().chain(fresh);
     for provider in owned {
         let id = candidates
             .by_ref()
-            .find(|id| !taken.contains(&id.as_str()))
+            .find(|id| !taken.contains(&id.as_str()) && !used.contains(id))
             .unwrap_or_default();
+        used.push(id.clone());
         provider["id"] = id.into();
     }
 }
@@ -148,8 +152,14 @@ fn render(existing: Option<&[u8]>, owned: &mut [Value]) -> Result<Vec<u8>, ()> {
         .or_insert_with(|| Value::Array(Vec::new()))
         .as_array_mut()
         .ok_or(())?;
+    let kept = providers
+        .iter()
+        .filter(|provider| is_owned_provider(provider))
+        .filter_map(|provider| provider.get("id").and_then(Value::as_str))
+        .map(str::to_owned)
+        .collect();
     providers.retain(|provider| !is_owned_provider(provider));
-    assign_ids(owned, providers);
+    assign_ids(owned, kept, providers);
     // Cursor++ takes the first provider that lists a model id: ours go first,
     // so a model the user picked here is served by the key just issued.
     for (index, provider) in owned.iter().enumerate() {
@@ -332,6 +342,23 @@ mod tests {
             );
             assert_eq!(root["providers"][2]["name"], name);
         }
+    }
+
+    #[test]
+    fn keeps_our_id_after_the_user_frees_a_lower_one() {
+        let existing = serde_json::to_vec(&json!({"providers": [
+            {"id": "yeschoy", "name": "My relay", "type": "anthropic", "models": []}
+        ]}))
+        .unwrap();
+        let owned = || owned_providers("https://yeschoy.com/v1", &credential()).unwrap();
+        let first: Value =
+            serde_json::from_slice(&render(Some(&existing), &mut owned()).unwrap()).unwrap();
+        let ours = first["providers"][0].clone();
+        assert_eq!(ours["id"], "yeschoy-2");
+        let freed = serde_json::to_vec(&json!({"providers": [ours]})).unwrap();
+        let mut again = owned();
+        render(Some(&freed), &mut again).unwrap();
+        assert_eq!(again[0]["id"], "yeschoy-2");
     }
 
     #[test]
