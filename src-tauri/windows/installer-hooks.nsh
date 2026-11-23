@@ -369,15 +369,15 @@ FunctionEnd
 ; 命名的目录。日志、~/.yeschoy 和系统凭据管理器里的密钥都在别处，这里补上。
 ; ~/.yeschoy/cli-workspace 是命令行应用默认的工作文件夹，里面可能有用户自己的东西，不删。
 ; Claude Code 原登录的备份（displaced-login）是用户自己的登录，也不删。
-; 还有应用没恢复（connection-recovery 里有 .sealed）时，原设置的备份和它的密钥也留着：
-; 那些应用的设置还是改过的样子，删了备份就再也恢复不了。
+; 还有应用没恢复（connection-recovery 里有 .sealed）时，~/.yeschoy 和凭据都不动，只删日志：
+; 那些应用的设置还是改过的样子，重装后要靠这些备份恢复，并收回站点发的密钥。
 !macro NSIS_HOOK_POSTUNINSTALL
   ${If} $DeleteAppDataCheckboxState = 1
   ${AndIf} $UpdateMode <> 1
     SetShellVarContext current
     RmDir /r "$LOCALAPPDATA\YesChoy\logs"
     RmDir "$LOCALAPPDATA\YesChoy"
-    nsExec::Exec `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$$d = Join-Path $$env:USERPROFILE '.yeschoy'; $$k = [bool](Get-ChildItem -LiteralPath (Join-Path $$d 'connection-recovery') -Filter '*.sealed' -Force -ErrorAction SilentlyContinue); if (Test-Path -LiteralPath $$d) { Get-ChildItem -LiteralPath $$d -Force | Where-Object { $$_.Name -ne 'cli-workspace' -and -not ($$k -and $$_.Name -eq 'connection-recovery') } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue; if (-not (Get-ChildItem -LiteralPath $$d -Force)) { Remove-Item -LiteralPath $$d -Force -ErrorAction SilentlyContinue } }; cmdkey /list | ForEach-Object { if ($$_ -match 'target=(\S*com\.(yeschoy|kaifan)\.desktop\S*)' -and $$_ -notmatch 'displaced-login' -and -not ($$k -and $$_ -match 'connection-recovery')) { cmdkey /delete:$$($$Matches[1]) | Out-Null } }"`
+    nsExec::Exec `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$$d = Join-Path $$env:USERPROFILE '.yeschoy'; $$k = [bool](Get-ChildItem -LiteralPath (Join-Path $$d 'connection-recovery') -Filter '*.sealed' -Force -ErrorAction SilentlyContinue); if (-not $$k -and (Test-Path -LiteralPath $$d)) { Get-ChildItem -LiteralPath $$d -Force | Where-Object { $$_.Name -ne 'cli-workspace' } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue; if (-not (Get-ChildItem -LiteralPath $$d -Force)) { Remove-Item -LiteralPath $$d -Force -ErrorAction SilentlyContinue } }; if (-not $$k) { cmdkey /list | ForEach-Object { if ($$_ -match 'target=(\S*com\.(yeschoy|kaifan)\.desktop\S*)' -and $$_ -notmatch 'displaced-login') { cmdkey /delete:$$($$Matches[1]) | Out-Null } } }"`
     Pop $0
   ${EndIf}
 !macroend
