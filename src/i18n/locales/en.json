@@ -698,6 +698,7 @@
       "requests_other": "{{count}} requests",
       "noRecords": "Quiet stretch — nothing spent yet.",
       "latest": "Latest charges",
+      "probe": "connection check",
       "recharge": "Top up"
     },
     "news": {

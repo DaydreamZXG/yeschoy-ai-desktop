@@ -1653,11 +1653,12 @@ async fn account_data_read(
         status_value.as_ref().map(|v| &v.value),
         logs_value.as_ref().map(|v| &v.value),
     );
-    let usage_log = usage_log_report(
+    let mut usage_log = usage_log_report(
         status_value.as_ref().map(|v| &v.value),
         &log_pages,
         observed_now,
     );
+    crate::probe_marks::label(&mut usage_log.records);
     // 直连后本地不再观测请求，"最近中转记录"改由服务端消费日志提供，
     // 按客户端为每个工具创建的 token 名称归因。
     if let Some(line_id) = crate::request_diagnostics::line_for_origin(&bootstrap.origin) {
@@ -1802,7 +1803,8 @@ async fn account_data_read_neutral(
         &account_summary.used_quota,
     );
     let savings = recent_savings(Some(&status), log_pages.first());
-    let usage_log = usage_log_report(Some(&status), &log_pages, observed_now);
+    let mut usage_log = usage_log_report(Some(&status), &log_pages, observed_now);
+    crate::probe_marks::label(&mut usage_log.records);
     if let Some(line_id) = crate::request_diagnostics::line_for_origin(&bootstrap.origin) {
         for (tool, observation) in recent_requests_from_pages(&log_pages, line_id) {
             crate::request_diagnostics::publish(&tool, observation);

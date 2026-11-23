@@ -698,6 +698,7 @@
       "requests_other": "{{count}} 次",
       "noRecords": "这段时间挺省，还没动过手。",
       "latest": "最近几笔",
+      "probe": "接入时的检查",
       "recharge": "去充值"
     },
     "news": {
