@@ -916,8 +916,16 @@ pub(crate) fn restore_bytes(
         } else {
             Some(&before)
         };
-    let mut restored =
-        undo(semantic_before, Some(&after), Some(&now), &mut preserved).ok_or(Failure::Invalid)?;
+    // `None` from `undo` means "there was no file": WorkBuddy reformats its
+    // first-use catalog (drops the trailing newline), so the bytes differ from
+    // ours while the content is still exactly what we wrote.
+    let Some(mut restored) = undo(semantic_before, Some(&after), Some(&now), &mut preserved) else {
+        return if file.before.is_none() {
+            Ok((None, preserved))
+        } else {
+            Err(Failure::Invalid)
+        };
+    };
     if workbuddy_catalog(&file.path) {
         restored = remove_inserted_available_models(&before, &after, restored);
     }
@@ -2091,6 +2099,30 @@ mod tests {
         .unwrap();
         let (restored, preserved) =
             restore_bytes(&file, Some(&current_with_only_hot_reload)).unwrap();
+        assert!(
+            restored.is_none(),
+            "the first-use catalog should be removed"
+        );
+        assert!(!preserved);
+    }
+
+    #[test]
+    fn workbuddy_first_array_restore_removes_a_catalog_only_reformatted_by_workbuddy() {
+        let f = Fixture::new();
+        std::fs::create_dir_all(f.path(".workbuddy")).unwrap();
+        let catalog = json!([{
+            "id": "glm-5.3",
+            "name": "YesChoy",
+            "vendor": "野菜API",
+            "url": "https://yeschoy.com/v1/chat/completions",
+            "apiKey": "synthetic-workbuddy-key",
+            "useCustomProtocol": true
+        }]);
+        let mut after = serde_json::to_vec_pretty(&catalog).unwrap();
+        after.push(b'\n');
+        let file = f.change(".workbuddy/models.json", None, &after);
+        let rewritten = &after[..after.len() - 1];
+        let (restored, preserved) = restore_bytes(&file, Some(rewritten)).unwrap();
         assert!(
             restored.is_none(),
             "the first-use catalog should be removed"
