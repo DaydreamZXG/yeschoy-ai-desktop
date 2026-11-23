@@ -234,6 +234,10 @@ describe("humanizeModelId helps beginners read unknown API ids", () => {
     expect(modelDisplayName("claude-sonnet-4-5-20250929")).toBe(
       "Claude Sonnet 4.5",
     );
+    // 单个字母紧跟数字的是版本写法，不拆开。
+    expect(modelDisplayName("DeepSeek-V4.1-Flash-1017")).toBe(
+      "DeepSeek V4.1 Flash 1017",
+    );
     // Catalog wins over humanize.
     expect(modelDisplayName("glm-5.3")).toMatch(/GLM/i);
     expect(shortModelId("claude-sonnet-4-5-20250929", 20).includes("…")).toBe(

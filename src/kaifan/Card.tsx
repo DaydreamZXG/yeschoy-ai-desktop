@@ -246,7 +246,11 @@ export function Card({
               </button>
             ))}
           </div>
-          {priced && <p className="nt">{t("kaifan.card.planNote")}</p>}
+          {priced &&
+            plans.some(
+              (item) =>
+                item.discount?.kind === "off" || item.discount?.kind === "over",
+            ) && <p className="nt">{t("kaifan.card.planNote")}</p>}
         </section>
       )}
       {model && prices && (
