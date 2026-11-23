@@ -369,6 +369,7 @@ function targets(requestId: string) {
     ["cline", "Cline", "3.0.75"],
     ["hermes", "Hermes Agent", "0.9.0"],
     ["openclaw", "OpenClaw", "2026.11.6"],
+    ["cursorpp", "Cursor++", ""],
   ] as const;
   return {
     requestId,

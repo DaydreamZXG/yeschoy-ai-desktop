@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 const SERVICE: &str = "com.yeschoy.desktop.tool-credential.v2";
-const ALLOWED_TOOLS: [&str; 11] = [
+const ALLOWED_TOOLS: [&str; 12] = [
     "claude_code",
     "claude_desktop",
     "codex_desktop",
@@ -16,6 +16,7 @@ const ALLOWED_TOOLS: [&str; 11] = [
     "cline",
     "hermes",
     "openclaw",
+    "cursorpp",
 ];
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]

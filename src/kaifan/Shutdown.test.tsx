@@ -1,3 +1,4 @@
+import { ACTIVATION_TOOL_IDS } from "../configuration/activation";
 import { StrictMode } from "react";
 import {
   act,
@@ -128,6 +129,17 @@ describe("global desktop close choice and cooperative exit", () => {
     fireEvent.click(screen.getByRole("button", { name: "保留剩余设置并退出" }));
     await flush();
     expect(quitCalls().at(-1)?.[1]).toEqual({ restoreSettings: false });
+  });
+  it("accepts a failure that lists every app", async () => {
+    await openSettingsChoice();
+    emit("yeschoy://exit-progress", {
+      status: "restore_failed",
+      failedTools: [...ACTIVATION_TOOL_IDS],
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent("Cursor++");
+    expect(
+      screen.getByRole("button", { name: "保留剩余设置并退出" }),
+    ).toBeEnabled();
   });
   it("accepts and names WorkBuddy restoration failures", async () => {
     await openSettingsChoice();

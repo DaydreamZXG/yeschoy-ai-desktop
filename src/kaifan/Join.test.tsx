@@ -1321,13 +1321,25 @@ describe("接入：应用多了不堆在一起", () => {
       /^DeepSeek Harness/,
     ])
       expect(chip(name)).not.toBeNull();
-    for (const name of [/^DSH web/, /^Cline/, /^Hermes Agent/, /^OpenClaw/])
+    for (const name of [
+      /^DSH web/,
+      /^Cline/,
+      /^Hermes Agent/,
+      /^OpenClaw/,
+      /^Cursor\+\+/,
+    ])
       expect(chip(name)).toBeNull();
 
-    const fold = screen.getByRole("button", { name: /还有 4 个/ });
+    const fold = screen.getByRole("button", { name: /还有 5 个/ });
     expect(fold).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(fold);
-    for (const name of [/^DSH web/, /^Cline/, /^Hermes Agent/, /^OpenClaw/])
+    for (const name of [
+      /^DSH web/,
+      /^Cline/,
+      /^Hermes Agent/,
+      /^OpenClaw/,
+      /^Cursor\+\+/,
+    ])
       expect(chip(name)).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /收起/ }));
     expect(chip(/^DSH web/)).toBeNull();
@@ -1407,7 +1419,7 @@ describe("接入：应用多了不堆在一起", () => {
     await waitFor(() =>
       expect(chip(/^DSH web/)).toHaveAttribute("aria-pressed", "true"),
     );
-    expect(screen.getByRole("button", { name: /还有 4 个/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /还有 5 个/ })).toBeTruthy();
   });
 
   it("别的应用：给出要填的地址和型号，能复制；不拿密钥出来，也不去接入", async () => {
@@ -1962,5 +1974,34 @@ describe("角色登场", () => {
   it("没有刚接好的就不出现", () => {
     show({ joined: null });
     expect(screen.queryByTestId("kaifan-reveal")).toBeNull();
+  });
+});
+
+describe("接入 Cursor++", () => {
+  it("改它的配置前先问一句，勾上才能接", async () => {
+    found([target("cursorpp")]);
+    setup({ initialApp: "cursorpp" });
+    const consent = await screen.findByTestId("kaifan-join-cursorpp-consent");
+    expect(consent.textContent).toContain("~/.ccursor/providers.json");
+    const box = consent.querySelector("input") as HTMLInputElement;
+    expect(box.checked).toBe(false);
+    expect(go()).toBeDisabled();
+    fireEvent.click(box);
+    await ready();
+    answer("connected", "connected");
+    fireEvent.click(go());
+    await waitFor(() => expect(activate).toHaveBeenCalledTimes(1));
+    expect(activate.mock.calls[0][0].toolId).toBe("cursorpp");
+  });
+
+  it("没装就照实说，不替他装也不给安装入口", async () => {
+    found([target("cursorpp", { status: "not_found", installations: [] })]);
+    setup({ initialApp: "cursorpp" });
+    const note = await screen.findByTestId("kaifan-join-absent");
+    expect(note.textContent).toContain("不替你安装");
+    expect(note.querySelector("button")).toBeNull();
+    expect(screen.queryByTestId("kaifan-join-go")).toBeNull();
+    expect(screen.queryByTestId("kaifan-join-cursorpp-consent")).toBeNull();
+    expect(activate).not.toHaveBeenCalled();
   });
 });

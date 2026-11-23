@@ -7,6 +7,7 @@ import piIcon from "../assets/icons/official-pi.svg";
 import dshIcon from "../assets/icons/official-dsh.svg";
 import opencodeIcon from "../assets/icons/official-opencode.svg";
 import workbuddyIcon from "../assets/icons/official-workbuddy.svg";
+import cursorppIcon from "../assets/icons/cursorpp.svg";
 import type { ActivationToolId } from "../configuration/activation";
 
 /**
@@ -68,6 +69,7 @@ export const WORKBENCH_APPS: {
   { id: "cline", name: "Cline", icon: clineIcon, common: false },
   { id: "hermes", name: "Hermes Agent", icon: hermesIcon, common: false },
   { id: "openclaw", name: "OpenClaw", icon: openclawIcon, common: false },
+  { id: "cursorpp", name: "Cursor++", icon: cursorppIcon, common: false },
 ];
 
 /** 「即将支持」的应用：仅展示，无适配器、无接入入口（PRD §3.2）。 */

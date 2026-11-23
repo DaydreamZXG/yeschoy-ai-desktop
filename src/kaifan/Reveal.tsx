@@ -111,6 +111,14 @@ export function Reveal({ joined, opening, openFailed, onOpen, onHome }: Props) {
                 })}
               </em>
             )}
+            {joined.toolId === "cursorpp" && (
+              <em data-testid="kaifan-reveal-pick">
+                {t("kaifan.reveal.pickCursorpp", {
+                  name,
+                  model: joined.modelId,
+                })}
+              </em>
+            )}
             {(joined.toolId === "claude_code" ||
               joined.toolId === "codex_desktop") && (
               <em data-testid="kaifan-reveal-first-run">

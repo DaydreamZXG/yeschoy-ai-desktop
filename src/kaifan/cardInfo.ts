@@ -349,6 +349,7 @@ const DIRECT_APPS: readonly string[] = [
   "workbuddy",
   "dsh_web",
   "dsh_desktop",
+  "cursorpp",
 ];
 
 /** 这个应用接这个型号时能用的方案。 */

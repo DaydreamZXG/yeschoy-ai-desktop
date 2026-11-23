@@ -3,6 +3,7 @@ pub(crate) mod claude_desktop;
 pub(crate) mod cline;
 pub(crate) mod codex_desktop;
 pub(crate) mod common;
+pub(crate) mod cursorpp;
 pub(crate) mod desktop_launch;
 pub(crate) mod desktop_lifecycle;
 pub(crate) mod dsh_web;
@@ -73,7 +74,7 @@ struct ObservedInstallation {
     location: &'static str,
 }
 
-const TARGETS: [(&str, &str, &str); 11] = [
+const TARGETS: [(&str, &str, &str); 12] = [
     ("claude_code", "Claude Code", "命令行与编辑器工作区"),
     ("claude_desktop", "Claude Desktop", "Claude 桌面应用"),
     (
@@ -93,6 +94,7 @@ const TARGETS: [(&str, &str, &str); 11] = [
     ("cline", "Cline", "Cline 命令行与编辑器扩展"),
     ("hermes", "Hermes Agent", "Hermes Agent 命令行"),
     ("openclaw", "OpenClaw", "OpenClaw 命令行"),
+    ("cursorpp", "Cursor++", "已经装好的 Cursor++"),
 ];
 
 pub(crate) fn user_home() -> Option<PathBuf> {
@@ -243,6 +245,8 @@ fn can_attempt(tool_id: &str, installation: &ObservedInstallation) -> bool {
         // 只有命令行版能一键接。编辑器扩展（文件夹，见
         // `cline::extension_directories`）另有一份“当前厂商”，不看我们写的设置。
         "cline" => installation.path.is_file(),
+        // 只接用户自己装好的 Cursor++：它的配置目录在，才算装了。
+        "cursorpp" => installation.path.is_dir(),
         _ => false,
     }
 }
@@ -291,6 +295,18 @@ fn append_extensions(observed: &mut Vec<ObservedInstallation>, extensions: Vec<P
 }
 
 async fn observe(tool_id: &str) -> Vec<ObservedInstallation> {
+    if tool_id == "cursorpp" {
+        return user_home()
+            .map(|home| cursorpp::config_dir(&home))
+            .filter(|dir| dir.is_dir())
+            .map(|path| ObservedInstallation {
+                path,
+                version: String::new(),
+                location: "user_config",
+            })
+            .into_iter()
+            .collect();
+    }
     if let Some(executable) = executable_for(tool_id) {
         let mut observed = observe_cli(executable).await;
         // Cline 多数人装的是编辑器扩展，不是命令行。扩展也报上去，但只为了

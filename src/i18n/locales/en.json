@@ -549,7 +549,8 @@
         "guided": "I couldn't find {{app}} on this computer. Install it from its website and come back; I'll look again by myself. Already have it?",
         "unsupported": "There's no official {{app}} installer for this computer right now. Check its website for supported computers, or pick another app. Already have it?",
         "incomplete": "I found {{app}}, but it's missing something it needs to start, most likely an incomplete install. Reinstall it from its website and come back; I'll look again by myself. Have another copy elsewhere?",
-        "gone": "The {{app}} location you showed me earlier is gone. It may have moved or been uninstalled. Show me where it is now, or install it again."
+        "gone": "The {{app}} location you showed me earlier is gone. It may have moved or been uninstalled. Show me where it is now, or install it again.",
+        "cursorpp": "Cursor++ isn't on this computer. YesChoy only connects a Cursor++ you've already installed yourself; it doesn't install it for you."
       },
       "byHandCli": "Already have the {{app}} command-line version, and I just didn’t find it?",
       "pointOut": "Show me where it is",
@@ -570,7 +571,8 @@
       "systemNotYet": "I can't see {{app}} installed yet. Did you click “Install” in the system window? You can reopen it if it's gone.",
       "systemDone": "Installed, let {{name}} connect it ➜",
       "systemReopen": "Reopen the install window",
-      "systemDrop": "Not now"
+      "systemDrop": "Not now",
+      "cursorppConsent": "Allow YesChoy to edit Cursor++'s settings file (~/.ccursor/providers.json): it adds one entry for this station, leaves your own settings alone, and puts everything back when you disconnect."
     },
     "reveal": {
       "kicker": "MODEL ONLINE",
@@ -586,7 +588,8 @@
       "opening": "Opening {{app}}…",
       "openedTerminal": "A terminal window is open with {{app}} in it — just start using it",
       "openFailed": "Couldn't open {{app}} for you. It's already set up, so opening it yourself works just the same",
-      "skipped": "Also, {{models}} could not be added: the station doesn't allow this account to use it. Everything else is unaffected."
+      "skipped": "Also, {{models}} could not be added: the station doesn't allow this account to use it. Everything else is unaffected.",
+      "pickCursorpp": "Open Cursor and pick {{model}} (the entry YesChoy added) in Cursor++'s model list to get {{name}}. If Cursor is already open, it picks up the new settings in a few seconds."
     },
     "why": {
       "provider_tool_unsupported": "The provider you're connected to doesn't work with {{app}}, so nothing was connected and {{app}} wasn't changed. Pick an app it works with, or connect a different station.",

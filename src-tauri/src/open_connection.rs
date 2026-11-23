@@ -6,8 +6,8 @@ use crate::{
     connection_recovery::{self, Store},
     tool_activation::ACTIVATION_LOCK,
     tool_adapters::{
-        self, claude_code, claude_desktop, cline, codex_desktop, desktop_lifecycle, dsh_web,
-        hermes, openclaw, opencode, pi, terminal_launch, workbuddy, AdapterFailure,
+        self, claude_code, claude_desktop, cline, codex_desktop, cursorpp, desktop_lifecycle,
+        dsh_web, hermes, openclaw, opencode, pi, terminal_launch, workbuddy, AdapterFailure,
     },
     tool_credentials::{self, CredentialFailure, ToolCredential},
 };
@@ -69,6 +69,7 @@ fn valid_request(request: &OpenRequest) -> bool {
                 | "cline"
                 | "hermes"
                 | "openclaw"
+                | "cursorpp"
         )
 }
 
@@ -139,6 +140,7 @@ pub(crate) fn validate_settings(
             )?
             .validate_existing(),
             "workbuddy" => workbuddy::prepare_catalog(home, credential)?.validate_existing(),
+            "cursorpp" => cursorpp::prepare(home, credential)?.validate_existing(),
             _ => Err(AdapterFailure::UnsupportedProfile),
         };
     }
@@ -225,6 +227,7 @@ pub(crate) fn validate_settings(
         )?
         .validate_existing(),
         "workbuddy" => workbuddy::prepare_catalog(home, credential)?.validate_existing(),
+        "cursorpp" => cursorpp::prepare(home, credential)?.validate_existing(),
         _ => Err(AdapterFailure::UnsupportedProfile),
     }
 }
@@ -390,6 +393,7 @@ pub async fn open_tool_connection_v1(
                         &installation.path,
                     )
                     .await),
+                    "cursorpp" => Ok(Ok(())),
                     _ => unreachable!(),
                 }
             })
