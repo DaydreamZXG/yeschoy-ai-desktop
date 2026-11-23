@@ -250,9 +250,7 @@ describe("global desktop close choice and cooperative exit", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(20_000);
     });
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "收完我就自动退",
-    );
+    expect(screen.getByRole("status")).toHaveTextContent("收完我就自动退");
     expect(screen.getByRole("button", { name: "收起提示" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "在后台等待" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "重试退出" })).toBeEnabled();
@@ -260,7 +258,9 @@ describe("global desktop close choice and cooperative exit", () => {
     await act(async () => {
       finish({ status: "finishing_operation" });
     });
-    expect(screen.getByRole("status")).toHaveTextContent("手头还有一半操作没收尾");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "手头还有一半操作没收尾",
+    );
   });
 
   it("accepts native finishing progress and allows idempotent repeat requests", async () => {

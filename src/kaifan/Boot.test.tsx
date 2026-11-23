@@ -31,7 +31,9 @@ describe("开机", () => {
       <Boot station="my.example.com" castCount={7} onDone={vi.fn()} />,
     );
     act(() => void vi.advanceTimersByTime(800));
-    expect(screen.getByTestId("kaifan-boot")).toHaveTextContent("正在敲站点的门");
+    expect(screen.getByTestId("kaifan-boot")).toHaveTextContent(
+      "正在敲站点的门",
+    );
     act(() => void vi.advanceTimersByTime(2000));
     expect(screen.getByTestId("kaifan-boot")).toHaveTextContent("7 位同学就位");
     unmount();
@@ -39,7 +41,9 @@ describe("开机", () => {
     render(<Boot station={null} castCount={null} onDone={vi.fn()} />);
     act(() => void vi.advanceTimersByTime(800));
     expect(screen.getByTestId("kaifan-boot")).toHaveTextContent("正在热身");
-    expect(screen.getByTestId("kaifan-boot")).not.toHaveTextContent("敲站点的门");
+    expect(screen.getByTestId("kaifan-boot")).not.toHaveTextContent(
+      "敲站点的门",
+    );
     act(() => void vi.advanceTimersByTime(2000));
     expect(screen.getByTestId("kaifan-boot")).toHaveTextContent(
       "同学们正往这边赶",
