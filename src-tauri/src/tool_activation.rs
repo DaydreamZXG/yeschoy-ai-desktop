@@ -3728,7 +3728,12 @@ pub async fn manage_tool_connections_v1(
             if let Some(record) = &mut record {
                 record.pending = true;
                 store.save(record).map_err(|_| ())?;
-                kept = connection_recovery::restore_files(record).map_err(|_| ())?;
+                kept = connection_recovery::restore_files(record).map_err(|failure| {
+                    log::warn!(
+                        "restore files failed tool={} failure={failure:?}",
+                        request.tool_id
+                    );
+                })?;
                 if request.tool_id == "codex_desktop" {
                     let home = tool_adapters::user_home().ok_or(())?;
                     crate::codex_history_takeover::restore(&home).map_err(|_| ())?;
