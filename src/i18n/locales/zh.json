@@ -294,6 +294,7 @@
       "chipBalanceUnknown": "余额看不到",
       "appOk": "{{app}}：已接入，点一下调整",
       "appPending": "{{app}}：还没接入，点一下开始",
+      "appIdle": "还没接",
       "backOnline": "连上了。刚才的事不用重做。",
       "rechargeManual": "充值页我打不开。请在浏览器里打开站点的网页充值，充完我会自己发现。",
       "rechargeManualHost": "充值页我打不开。请在浏览器里打开 {{station}} 充值，充完我会自己发现。",

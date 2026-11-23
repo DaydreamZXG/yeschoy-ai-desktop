@@ -57,6 +57,8 @@ interface Props {
   onSetup: (app?: ActivationToolId) => void;
   /** 还有几条公告没看；「公告」那一项上写个数。 */
   unread?: number;
+  /** 右边开着哪块面板：左边对应的那一项亮着，不再亮「首页」。 */
+  panel?: "ledger" | "news" | "settings" | null;
   onLedger: () => void;
   onNews: () => void;
   onSettings: () => void;
@@ -95,6 +97,7 @@ export function Stage({
   onRecharge,
   onSetup,
   unread = 0,
+  panel = null,
   onLedger,
   onNews,
   onSettings,
@@ -353,7 +356,6 @@ export function Stage({
   };
 
   const models = cast?.[current] ?? [];
-  const stationBad = cond === "off" || cond === "out";
   const connected = cond !== "out" && cond !== "off" && cond !== "checking";
 
   // 上面盖着别的画面时，首页不接键盘和读屏，免得焦点跑到看不见的按钮上。
@@ -450,10 +452,10 @@ export function Stage({
           >
             {t(connected ? "kaifan.nav.add" : "kaifan.home.outGo")}
           </button>
-          <p className="cap">{t("kaifan.nav.label")}</p>
           <a
             href="#home"
-            aria-current="page"
+            className="first"
+            aria-current={panel ? undefined : "page"}
             onClick={(e) => e.preventDefault()}
           >
             <svg viewBox="0 0 24 24">
@@ -463,6 +465,7 @@ export function Stage({
           </a>
           <a
             href="#ledger"
+            aria-current={panel === "ledger" ? "page" : undefined}
             onClick={(event) => {
               event.preventDefault();
               onLedger();
@@ -476,6 +479,7 @@ export function Stage({
           </a>
           <a
             href="#news"
+            aria-current={panel === "news" ? "page" : undefined}
             onClick={(event) => {
               event.preventDefault();
               onNews();
@@ -518,6 +522,7 @@ export function Stage({
           )}
           <a
             href="#settings"
+            aria-current={panel === "settings" ? "page" : undefined}
             data-testid="kaifan-nav-settings"
             onClick={(event) => {
               event.preventDefault();
@@ -545,20 +550,9 @@ export function Stage({
               {copy.sub && <small>{copy.sub}</small>}
             </h1>
             <span className="fl" />
-            <span className={stationBad ? "chip bad" : "chip"}>
-              <i />
-              {t(
-                cond === "out"
-                  ? "kaifan.nav.stationOut"
-                  : cond === "off"
-                    ? "kaifan.nav.stationOff"
-                    : cond === "checking"
-                      ? "kaifan.nav.stationChecking"
-                      : "kaifan.nav.stationOk",
-              )}
-            </span>
-            {connected && (
-              <span className={cond === "low" ? "chip bad" : "chip"}>
+            {/* 站点和余额左边栏一直写着，站点出事时大标题也会说；这里只在余额要人留意时再写一遍。 */}
+            {connected && (cond === "low" || !state.balance) && (
+              <span className="chip bad">
                 <i />
                 {state.balance
                   ? t("kaifan.home.chipBalance", { balance: state.balance })
@@ -643,7 +637,11 @@ export function Stage({
                 {app.icon && <img src={app.icon} alt="" />}
                 <span>
                   <b>{app.name}</b>
-                  {app.worker && <i>{t(`roster.${app.worker}.name`)}</i>}
+                  <i>
+                    {app.worker
+                      ? t(`roster.${app.worker}.name`)
+                      : t("kaifan.home.appIdle")}
+                  </i>
                 </span>
               </button>
             ))}

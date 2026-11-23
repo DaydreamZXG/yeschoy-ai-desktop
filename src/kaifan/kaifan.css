@@ -338,11 +338,8 @@ canvas#fx {
   justify-content: center;
   gap: 8px;
 }
-.cap {
-  margin: 22px 8px 8px;
-  font-size: 11px;
-  color: var(--faint);
-  letter-spacing: 0.1em;
+.side a.first {
+  margin-top: 22px;
 }
 .side a {
   display: flex;
@@ -1232,6 +1229,10 @@ button.app {
 .app i {
   font-size: 10px;
   opacity: 0.8;
+}
+/* 还没接的应用：第二行淡一点，和写着干活的人的那几个分得开。 */
+.app:not(.ok) i {
+  opacity: 0.5;
 }
 .chips {
   flex-wrap: nowrap;
