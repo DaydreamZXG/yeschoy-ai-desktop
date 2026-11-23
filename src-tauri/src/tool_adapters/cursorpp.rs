@@ -30,6 +30,7 @@ pub(crate) fn providers_path(home: &Path) -> PathBuf {
 
 pub(crate) fn is_owned_provider(provider: &Value) -> bool {
     provider.get("name").and_then(Value::as_str) == Some(VENDOR)
+        && provider.get("type").and_then(Value::as_str) == Some("openai-chat")
         && provider
             .get("id")
             .and_then(Value::as_str)
@@ -99,15 +100,9 @@ fn owned_providers(base_url: &str, credential: &ToolCredential) -> Result<Vec<Va
     }
     Ok(groups
         .into_iter()
-        .enumerate()
-        .map(|(index, (key, models))| {
-            let id = if index == 0 {
-                PROVIDER_PREFIX.to_owned()
-            } else {
-                format!("{PROVIDER_PREFIX}-{}", index + 1)
-            };
+        .map(|(key, models)| {
             json!({
-                "id": id,
+                "id": PROVIDER_PREFIX,
                 "name": VENDOR,
                 "type": "openai-chat",
                 "baseUrl": base_url,
@@ -118,7 +113,31 @@ fn owned_providers(base_url: &str, credential: &ToolCredential) -> Result<Vec<Va
         .collect())
 }
 
-fn render(existing: Option<&[u8]>, owned: &[Value]) -> Result<Vec<u8>, ()> {
+/// `yeschoy`, `yeschoy-2`, ... skipping any id one of the user's own
+/// providers already has: Cursor++ and the restore both key providers by id.
+fn assign_ids(owned: &mut [Value], providers: &[Value]) {
+    let taken: Vec<&str> = providers
+        .iter()
+        .filter(|provider| !is_owned_provider(provider))
+        .filter_map(|provider| provider.get("id").and_then(Value::as_str))
+        .collect();
+    let mut candidates = (1u32..).map(|n| {
+        if n == 1 {
+            PROVIDER_PREFIX.to_owned()
+        } else {
+            format!("{PROVIDER_PREFIX}-{n}")
+        }
+    });
+    for provider in owned {
+        let id = candidates
+            .by_ref()
+            .find(|id| !taken.contains(&id.as_str()))
+            .unwrap_or_default();
+        provider["id"] = id.into();
+    }
+}
+
+fn render(existing: Option<&[u8]>, owned: &mut [Value]) -> Result<Vec<u8>, ()> {
     let mut root = match existing {
         None | Some([]) => json!({"$schemaVersion": 1, "providers": []}),
         Some(bytes) => serde_json::from_slice::<Value>(bytes).map_err(|_| ())?,
@@ -130,6 +149,7 @@ fn render(existing: Option<&[u8]>, owned: &[Value]) -> Result<Vec<u8>, ()> {
         .as_array_mut()
         .ok_or(())?;
     providers.retain(|provider| !is_owned_provider(provider));
+    assign_ids(owned, providers);
     // Cursor++ takes the first provider that lists a model id: ours go first,
     // so a model the user picked here is served by the key just issued.
     for (index, provider) in owned.iter().enumerate() {
@@ -153,9 +173,9 @@ pub(crate) fn prepare(
     let before = common::snapshot(&path)
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_read_failed"))?;
     let base_url = crate::provider_presets::openai_base(&credential.origin);
-    let expected = owned_providers(&base_url, credential)
+    let mut expected = owned_providers(&base_url, credential)
         .map_err(|_| AdapterFailure::ConfigurationFailed("invalid_request"))?;
-    let after = render(before.as_deref(), &expected)
+    let after = render(before.as_deref(), &mut expected)
         .map_err(|_| AdapterFailure::ConfigurationFailed("configuration_parse_failed"))?;
     let transaction =
         FileTransaction::stage_with_snapshot(path.clone(), before, after).map_err(config_error)?;
@@ -282,23 +302,42 @@ mod tests {
 
     #[test]
     fn reconnecting_replaces_ours_instead_of_stacking() {
-        let first = render(
-            None,
-            &owned_providers("https://yeschoy.com/v1", &credential()).unwrap(),
-        )
-        .unwrap();
-        let again = render(
-            Some(&first),
-            &owned_providers("https://yeschoy.com/v1", &credential()).unwrap(),
-        )
-        .unwrap();
+        let owned = || owned_providers("https://yeschoy.com/v1", &credential()).unwrap();
+        let first = render(None, &mut owned()).unwrap();
+        let again = render(Some(&first), &mut owned()).unwrap();
         assert_eq!(first, again);
     }
 
     #[test]
+    fn never_takes_an_id_one_of_the_users_providers_has() {
+        for name in ["My relay", VENDOR] {
+            let existing = serde_json::to_vec(&json!({"providers": [
+                {"id": "yeschoy", "name": name, "type": "anthropic", "models": []},
+                {"id": "yeschoy-3", "name": "Other", "type": "gemini", "models": []}
+            ]}))
+            .unwrap();
+            let mut owned = owned_providers("https://yeschoy.com/v1", &credential()).unwrap();
+            let root: Value =
+                serde_json::from_slice(&render(Some(&existing), &mut owned).unwrap()).unwrap();
+            let ids: Vec<&str> = root["providers"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|p| p["id"].as_str().unwrap())
+                .collect();
+            assert_eq!(
+                ids,
+                ["yeschoy-2", "yeschoy-4", "yeschoy", "yeschoy-3"],
+                "{name}"
+            );
+            assert_eq!(root["providers"][2]["name"], name);
+        }
+    }
+
+    #[test]
     fn unreadable_file_is_left_alone() {
-        assert!(render(Some(b"{not json"), &[]).is_err());
-        assert!(render(Some(br#"{"providers":{}}"#), &[]).is_err());
-        assert!(render(Some(b"[]"), &[]).is_err());
+        assert!(render(Some(b"{not json"), &mut []).is_err());
+        assert!(render(Some(br#"{"providers":{}}"#), &mut []).is_err());
+        assert!(render(Some(b"[]"), &mut []).is_err());
     }
 }

@@ -163,7 +163,7 @@ export function Join({
   const [refused, setRefused] = useState<string[]>([]);
   // Cursor++ 是用户自己装的第三方插件：改它的配置前先问一句。
   const [cursorppAllowed, setCursorppAllowed] = useState(false);
-  useEffect(() => setCursorppAllowed(false), [app]);
+  useEffect(() => setCursorppAllowed(false), [app, open]);
 
   const settled = useRef(onSettled);
   settled.current = onSettled;

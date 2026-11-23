@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useTranslation } from "react-i18next";
+import { ACTIVATION_TOOL_IDS } from "../configuration/activation";
 import { useConnections } from "../configuration/connections";
 import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
 
@@ -31,23 +32,10 @@ function exitResponse(raw: unknown): ExitResponse | null {
     ) ||
     ("failedTools" in value &&
       (!Array.isArray(value.failedTools) ||
-        value.failedTools.length > 11 ||
+        value.failedTools.length > ACTIVATION_TOOL_IDS.length ||
         value.failedTools.some(
           (tool) =>
-            ![
-              "claude_code",
-              "claude_desktop",
-              "codex_desktop",
-              "pi",
-              "opencode",
-              "dsh_web",
-              "workbuddy",
-              "dsh_desktop",
-              "cline",
-              "hermes",
-              "openclaw",
-              "cursorpp",
-            ].includes(String(tool)),
+            !(ACTIVATION_TOOL_IDS as readonly string[]).includes(String(tool)),
         ))) ||
     ![
       "exiting",
