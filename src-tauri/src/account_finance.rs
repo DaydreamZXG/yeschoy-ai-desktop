@@ -85,6 +85,8 @@ pub(crate) struct UsageRecord {
     pub cache_tokens: u64,
     /// 展示货币金额（quota 经 quota_per_unit 与汇率换算）；换算参数缺失时为空串。
     pub amount: String,
+    /// 接入时客户端自己发的探测（见 `probe_marks`）。
+    pub probe: bool,
 }
 
 /// PRD 6.6 用量账单投影：30 天窗口内逐条明细（供前端做工具×模型聚合）。
@@ -220,6 +222,7 @@ pub(crate) fn usage_log_report(
                 completion_tokens,
                 cache_tokens: usage_cache_tokens(row),
                 amount: amount_text,
+                probe: false,
             });
             oldest = Some(oldest.map_or(created_at, |value| value.min(created_at)));
             newest = Some(newest.map_or(created_at, |value| value.max(created_at)));

@@ -94,6 +94,23 @@ describe("Ledger", () => {
     );
   });
 
+  it("接入时探测记的那一笔：标出来是接入时的检查", () => {
+    show({
+      log: log([
+        {
+          ...rec("glm-5.3-flash", at(0, 12), "0.0001", "codex_desktop"),
+          probe: true,
+        },
+        rec("glm-5.3-flash", at(0, 11), "0.02", "codex_desktop"),
+      ]),
+    });
+    const latest = within(
+      screen.getByTestId("kaifan-ledger-latest"),
+    ).getAllByRole("listitem");
+    expect(latest[0]).toHaveTextContent("接入时的检查");
+    expect(latest[1]).not.toHaveTextContent("接入时的检查");
+  });
+
   it("没带金额的记录：写「看不到」，不写 0，合计也不装作知道", async () => {
     show({
       log: log([

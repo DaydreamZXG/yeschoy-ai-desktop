@@ -273,6 +273,7 @@ export function Ledger({
                             minute: "2-digit",
                           })}
                           {record.toolId && ` · ${appName(record.toolId)}`}
+                          {record.probe && ` · ${t("kaifan.ledger.probe")}`}
                         </span>
                         <em>{cash(record.amount) ?? unknown}</em>
                       </li>
