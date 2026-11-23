@@ -196,6 +196,8 @@ fn render_with_provider(
     document["model_provider"] = value(&provider_id);
     document["model"] = value(model);
     document["model_catalog_json"] = value(OWNED_CATALOG);
+    // Codex 默认带上托管的 `web_search` 工具，中转大多不认，整轮请求直接被拒。
+    document["web_search"] = value("disabled");
 
     if document.get("model_providers").is_none() {
         let mut table = Table::new();
@@ -1463,6 +1465,22 @@ experimental_bearer_token = "sk-old-old-old-old"
              model_providers = {{ yeschoy = {{ base_url = \"{PROXY_BASE}\", wire_api = \"responses\" }} }}\n"
         );
         assert!(config_points_at_our_bridge(&text), "{text}");
+    }
+
+    #[test]
+    fn render_turns_off_hosted_web_search() {
+        let bytes = render(
+            Some(b"web_search = \"live\"\n"),
+            PROXY_BASE,
+            "glm-5.3",
+            &ProviderAuth::ApiKey(format!("sk-{}", "e".repeat(48))),
+        )
+        .unwrap();
+        let document = String::from_utf8(bytes)
+            .unwrap()
+            .parse::<DocumentMut>()
+            .unwrap();
+        assert_eq!(document["web_search"].as_str(), Some("disabled"));
     }
 
     #[test]
