@@ -996,6 +996,11 @@ canvas#fx {
   flex-direction: column;
   gap: 20px;
   min-height: 430px;
+  /* 窗口最矮时厂商全展开会比窗口高：在面板里滚，不让上下两头伸到窗口外面。 */
+  max-height: calc(100% - 28px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.28) transparent;
   padding: 30px 34px;
 }
 .cnp > *,
@@ -1836,6 +1841,28 @@ dialog.restore-dialog menu {
   -webkit-line-clamp: 2;
   overflow-wrap: anywhere;
 }
+/*
+ * 窗口缩到最小时一张卡只有七十来像素宽：名字和厂牌挤不进一行，各自折行，把字顶到小人脚上；
+ * 型号两行也写不全。窄卡一律排成「名字 / 厂牌 / 型号三行」，小人往上让出这块地方。
+ */
+@container (max-width: 92px) {
+  .cd img {
+    bottom: 96px;
+  }
+  .cd b {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.2;
+  }
+  .cd b small {
+    margin: 2px 0 0;
+  }
+  .cd span {
+    min-height: 3.75em;
+    -webkit-line-clamp: 3;
+  }
+}
 .pf p {
   display: flex;
   align-items: center;
@@ -1960,7 +1987,9 @@ dialog.restore-dialog menu {
   flex-direction: column;
   gap: 18px;
   scrollbar-width: none;
-  padding-top: 4px;
+  /* 下面还有内容时，最底下一条淡出去：看得出能往下滚。 */
+  padding: 4px 0 22px;
+  mask-image: linear-gradient(#000 calc(100% - 22px), transparent);
 }
 .db h4 {
   font-size: 12px;
@@ -2134,7 +2163,7 @@ dialog.restore-dialog menu {
   display: flex;
   align-items: flex-end;
   gap: 8px;
-  height: 92px;
+  height: 106px;
 }
 .days li {
   position: relative;
@@ -2154,6 +2183,22 @@ dialog.restore-dialog menu {
   height: max(3px, calc(68px * var(--bar, 0)));
   border-radius: 5px 5px 2px 2px;
   background: linear-gradient(180deg, var(--acc), rgba(255, 255, 255, 0.14));
+}
+/* 柱子上的数：花了钱的那几天才写。 */
+.days em {
+  font: 500 9.5px var(--mono);
+  font-style: normal;
+  white-space: nowrap;
+  color: var(--dim);
+  margin-bottom: -2px;
+}
+/* 今天那根最亮，别的天退后一点。 */
+.days li:not(.now) i {
+  opacity: 0.55;
+}
+.days .now,
+.days .now em {
+  color: #fff;
 }
 /* 这一天花了多少看不到：画成虚框，不画成 0。 */
 .days .na i {
