@@ -530,6 +530,41 @@ describe("开饭首页自己会做的事", () => {
     expect(screen.getByTestId("kaifan-settings")).not.toHaveAttribute("inert");
   });
 
+  it("退出登录后：退出前的体检结果不再留着，不会还说登录有效", async () => {
+    look.mockResolvedValue({ ok: false, reason: "timeout" });
+    const out = { status: "signed_out" } as unknown as AccountProjection;
+    const logout = vi.fn(async () => {
+      session.mockReturnValue({
+        projection: out,
+        loading: false,
+        stationCheck: "idle",
+        lastError: null,
+        refresh,
+        logout,
+      } as unknown as ReturnType<typeof useAccountSession>);
+      return out;
+    });
+    session.mockReturnValue({
+      projection: signedIn,
+      loading: false,
+      stationCheck: "ok",
+      lastError: null,
+      refresh,
+      logout,
+    } as unknown as ReturnType<typeof useAccountSession>);
+    const { rerender } = render(<KaifanApp />);
+    fireEvent.click(screen.getByTestId("kaifan-nav-settings"));
+    fireEvent.click(screen.getByTestId("kaifan-settings-check"));
+    await screen.findByTestId("kaifan-settings-report");
+    fireEvent.click(screen.getByTestId("kaifan-settings-logout"));
+    await act(async () => {
+      fireEvent.click(screen.getByTestId("kaifan-settings-logout-yes"));
+    });
+    rerender(<KaifanApp />);
+    expect(logout).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId("kaifan-settings-report")).toBeNull();
+  });
+
   it("要修的应用：点「去修好」在新界面里修，不去旧页面", async () => {
     tools.now = {
       connections: [

@@ -733,8 +733,13 @@ export function KaifanApp() {
             const before = greeted.current;
             greeted.current = true;
             const done = (await session.logout())?.status === "signed_out";
-            if (done) setLeft(true);
-            else greeted.current = before;
+            if (done) {
+              setLeft(true);
+              // 体检说的「登录有效」是退出前的事了；还在跑的那一轮也作废。
+              checkRun.current++;
+              setChecking(false);
+              setProbed(null);
+            } else greeted.current = before;
             return done;
           }}
           onRestore={(toolId) => connections.restore(toolId)}

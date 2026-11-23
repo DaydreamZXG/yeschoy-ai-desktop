@@ -225,8 +225,12 @@ export function Settings({
     p.phase === "downloading" && p.totalBytes > 0
       ? Math.min(100, Math.round((p.downloadedBytes / p.totalBytes) * 100))
       : null;
-  const updateNote =
-    p.phase === "available"
+  // 自己打的测试版没有更新地址，「再试一次」也查不到，直接让人去官网。
+  const unconfigured =
+    p.phase === "unavailable" && p.reasonCode === "updater_not_configured";
+  const updateNote = unconfigured
+    ? t("kaifan.settings.update.notConfigured")
+    : p.phase === "available"
       ? t("kaifan.settings.update.available", { version: p.availableVersion })
       : p.phase === "downloading"
         ? percent === null
@@ -556,11 +560,11 @@ export function Settings({
             <button
               type="button"
               className="sb"
-              disabled={update.working || p.phase === "idle"}
+              disabled={update.working || p.phase === "idle" || unconfigured}
               onClick={update.check}
             >
               {t(
-                stuck
+                stuck && !unconfigured
                   ? "kaifan.settings.update.retry"
                   : "kaifan.settings.update.check",
               )}
@@ -572,7 +576,7 @@ export function Settings({
         )}
         {stuck && (
           <p className="nt">
-            {t("kaifan.settings.update.manual")}{" "}
+            {unconfigured ? "" : `${t("kaifan.settings.update.manual")} `}
             <a
               className="lnk"
               href={DESKTOP_DOWNLOAD_PAGE_URL}

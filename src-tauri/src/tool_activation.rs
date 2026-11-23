@@ -2812,6 +2812,7 @@ pub async fn configure_desktop_tool_v2(
     }
     // 云厂商说哪种格式已经从表里查好了（`pasted_key::preset_transport`），不探。
     let probe = crate::provider_presets::for_origin(&origin).is_none();
+    let probe_started = crate::probe_marks::now_ms();
     if probe && request.tool_id == "codex_desktop" {
         // 接入时探一次真实请求，把结论落进凭据 —— 桥之后按模型读它。
         // 放在这里是因为要用 lease 铸出来的受限 key：`/v1/*` 不收账户令牌，
@@ -2851,6 +2852,19 @@ pub async fn configure_desktop_tool_v2(
             delete_created_tokens(&origin, &access_token, &leases).await;
             return Ok(cancelled());
         }
+    }
+    if probe
+        && matches!(
+            request.tool_id.as_str(),
+            "codex_desktop" | "claude_code" | "claude_desktop"
+        )
+    {
+        crate::probe_marks::record(
+            &request.tool_id,
+            bindings.iter().map(|b| b.model_id.clone()).collect(),
+            probe_started,
+            crate::probe_marks::now_ms(),
+        );
     }
     stage!("tokens_start");
     let credential = match credential_for_models(

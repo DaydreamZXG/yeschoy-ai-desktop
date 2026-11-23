@@ -582,6 +582,7 @@
       "written": "{{app}} is all wired up — open it whenever",
       "writtenTerminal": "{{app}} is all wired up — open a new terminal to start",
       "via": "On duty: {{name}} · {{model}}",
+      "firstRun": "The first time you open {{app}}, it asks a few setup questions in English (like a color theme, or whether to trust this folder). The defaults are fine, just keep going.",
       "pickWorkbuddy": "In WorkBuddy you choose the model yourself: pick {{model}} (the entry YesChoy added) in its model list to get {{name}}.",
       "open": "Open {{app}} ➜",
       "opening": "Opening {{app}}…",
@@ -701,6 +702,7 @@
       "requests_other": "{{count}} requests",
       "noRecords": "Quiet stretch — nothing spent yet.",
       "latest": "Latest charges",
+      "probe": "connection check",
       "recharge": "Top up"
     },
     "news": {
@@ -826,6 +828,7 @@
         "downloadingPercent": "Downloading the new version {{percent}}%",
         "restarting": "Installed. Reopening…",
         "unavailable": "Couldn't check for a new version this time",
+        "notConfigured": "This build doesn't update itself. Get new versions from the website.",
         "failed": "The new version didn't install. Your current version is untouched.",
         "check": "Check for updates",
         "retry": "Try again",

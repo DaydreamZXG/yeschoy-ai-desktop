@@ -143,6 +143,9 @@ Function .onInstSuccess
   ; which leaves the freshly restarted desktop assistant invisible after an
   ; automatic or /S upgrade. Ask Explorer to launch it explicitly in the
   ; normal shown state so the user gets an immediate, observable result.
+  ; The installer owns the foreground; without handing that right on, the
+  ; new window opens behind Explorer when "Run YesChoy" is ticked.
+  System::Call "user32::AllowSetForegroundWindow(i -1)"
   ExecShell "open" "$INSTDIR\YesChoy.exe" "" SW_SHOWNORMAL
   IfErrors 0 kaifan_launch_done
   IfSilent kaifan_launch_done

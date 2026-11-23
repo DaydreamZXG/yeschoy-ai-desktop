@@ -12,6 +12,8 @@ export interface UsageRecord {
   cacheTokens: number;
   /** 展示货币金额；换算参数缺失时为空串（不显示金额，不显示 0）。 */
   amount: string;
+  /** 接入时客户端自己发的探测，站点照样记了一小笔。 */
+  probe?: boolean;
 }
 
 export interface UsageLogReport {
@@ -94,7 +96,8 @@ export function isUsageLogReport(value: unknown): value is UsageLogReport {
       nonNegativeInteger(row.promptTokens) &&
       nonNegativeInteger(row.completionTokens) &&
       nonNegativeInteger(row.cacheTokens) &&
-      decimalText(row.amount),
+      decimalText(row.amount) &&
+      (row.probe === undefined || typeof row.probe === "boolean"),
   );
 }
 

@@ -582,6 +582,7 @@
       "written": "{{app}} 的设置写好啦，打开就能用",
       "writtenTerminal": "{{app}} 的设置写好啦，开个新终端就能用",
       "via": "这次派上场的是 {{name}} · {{model}}",
+      "firstRun": "如果是第一次打开 {{app}}，它会先用英文问几个设置（比如配色、要不要信任这个文件夹），按默认一路往下点就行。",
       "pickWorkbuddy": "WorkBuddy 里用哪个型号要你自己选：在它的型号列表里选 {{model}}（YesChoy 加进去的那一项），才是 {{name}}。",
       "open": "打开 {{app}} ➜",
       "opening": "正在打开 {{app}}…",
@@ -701,6 +702,7 @@
       "requests_other": "{{count}} 次",
       "noRecords": "这段时间挺省，还没动过手。",
       "latest": "最近几笔",
+      "probe": "接入时的检查",
       "recharge": "去充值"
     },
     "news": {
@@ -826,6 +828,7 @@
         "downloadingPercent": "正在下载新版本 {{percent}}%",
         "restarting": "装好啦，马上重开",
         "unavailable": "这次没查到有没有新版本",
+        "notConfigured": "这个版本不会自己更新，新版本要从官网下载",
         "failed": "新版本没装成，现在的版本没受影响",
         "check": "检查更新",
         "retry": "再试一次",

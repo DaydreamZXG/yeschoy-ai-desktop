@@ -119,6 +119,12 @@ export function Reveal({ joined, opening, openFailed, onOpen, onHome }: Props) {
                 })}
               </em>
             )}
+            {(joined.toolId === "claude_code" ||
+              joined.toolId === "codex_desktop") && (
+              <em data-testid="kaifan-reveal-first-run">
+                {t("kaifan.reveal.firstRun", { app: appName })}
+              </em>
+            )}
             {joined.toolId === "workbuddy" && (
               <em data-testid="kaifan-reveal-pick">
                 {t("kaifan.reveal.pickWorkbuddy", {

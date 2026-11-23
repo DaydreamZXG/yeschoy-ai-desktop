@@ -38,6 +38,7 @@ mod native_shell;
 mod open_connection;
 mod openclaw_bridge;
 mod opencode_bridge;
+mod probe_marks;
 mod provider;
 mod provider_presets;
 mod proxy;
@@ -148,6 +149,7 @@ pub fn run() {
             #[cfg(target_os = "linux")]
             linux_renderer::reload_when_renderer_dies(app);
             station_trust::initialize(app.path().app_data_dir().ok());
+            probe_marks::initialize(app.path().app_data_dir().ok());
             #[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
             if let Err(error) = station_connect::wire_station_connect_deep_link(app.handle()) {
                 log::warn!("station_connect stage=wire_deep_link_failed error={error}");
@@ -214,6 +216,12 @@ pub fn run() {
                     tool_adapters::cline::resume_if_configured(),
                 );
             });
+            // Launched by the installer or Explorer, the first window can land
+            // behind the window that started it; ask for the foreground once.
+            #[cfg(target_os = "windows")]
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_focus();
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
