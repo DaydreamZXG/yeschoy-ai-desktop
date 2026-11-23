@@ -60,7 +60,9 @@ export function Drawer({
       if (event.key !== "Escape") return;
       const at =
         event.target instanceof Element
-          ? event.target.closest('[role="dialog"], [role="alertdialog"]')
+          ? event.target.closest(
+              'dialog, [role="dialog"], [role="alertdialog"]',
+            )
           : null;
       if (at && at !== panel.current) return;
       onClose();

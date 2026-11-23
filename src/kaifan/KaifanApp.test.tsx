@@ -329,6 +329,12 @@ describe("开饭首页自己会做的事", () => {
       "aria-modal",
     );
 
+    // 别的弹层（比如退出确认那个原生 dialog）里按的 Esc 归它自己，不收面板。
+    const other = document.body.appendChild(document.createElement("dialog"));
+    fireEvent.keyDown(other, { key: "Escape" });
+    other.remove();
+    expect(ledger).not.toHaveAttribute("inert");
+
     const news = screen.getByTestId("kaifan-nav-news");
     news.focus();
     fireEvent.keyDown(news, { key: "Escape" });
