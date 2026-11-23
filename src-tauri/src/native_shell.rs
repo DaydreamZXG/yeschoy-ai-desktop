@@ -83,8 +83,10 @@ pub(crate) fn refresh_menu<R: Runtime>(app: &AppHandle<R>) {
 /// 「后台运行」在 Windows 上把窗口藏进托盘：任务栏里不占位置，托盘里点一下就回来。
 #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 pub(crate) fn show_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
-    if app.tray_by_id(TRAY_ID).is_some() {
-        return Ok(());
+    // 托盘只建一次，之后只切换显示。这里可能正跑在托盘自己的菜单回调里（退出… → 更多 → 后台），
+    // Tauri 那时还攥着菜单回调表的锁；再 build 一个带 on_menu_event 的托盘会去抢同一把锁，界面就卡死。
+    if let Some(tray) = app.tray_by_id(TRAY_ID) {
+        return tray.set_visible(true);
     }
     let language = ui_language::current();
     let open = MenuItem::with_id(
@@ -131,7 +133,9 @@ pub(crate) fn show_tray<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 }
 
 pub(crate) fn hide_tray<R: Runtime>(app: &AppHandle<R>) {
-    let _ = app.remove_tray_by_id(TRAY_ID);
+    if let Some(tray) = app.tray_by_id(TRAY_ID) {
+        let _ = tray.set_visible(false);
+    }
 }
 
 /// 系统提示框的按钮文字跟着系统语言走：英文 Windows 上正文写「是/否」，按钮却是 Yes/No。
