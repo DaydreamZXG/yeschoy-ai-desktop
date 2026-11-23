@@ -294,6 +294,7 @@
       "chipBalanceUnknown": "余额看不到",
       "appOk": "{{app}}：已接入，点一下调整",
       "appPending": "{{app}}：还没接入，点一下开始",
+      "appIdle": "还没接",
       "backOnline": "连上了。刚才的事不用重做。",
       "rechargeManual": "充值页我打不开。请在浏览器里打开站点的网页充值，充完我会自己发现。",
       "rechargeManualHost": "充值页我打不开。请在浏览器里打开 {{station}} 充值，充完我会自己发现。",
@@ -409,7 +410,7 @@
       "moreApps_one": "还有 {{count}} 个 ▾",
       "moreApps_other": "还有 {{count}} 个 ▾",
       "lessApps": "收起 ▴",
-      "otherApps": "别的应用",
+      "otherApps": "名单外的应用",
       "other": {
         "intro": "名单外的应用我没法替你改设置，但要填的东西都在这儿。打开那个应用的设置，找「API 地址」（也叫 Base URL）、「API Key」和「模型」，照下面填。",
         "byHand": "{{app}} 装在你的编辑器里，这次还不能一键接，要你自己填一下。在 {{app}} 的设置里把厂商（API Provider）选成 OpenAI Compatible，照下面填。命令行版 {{app}} 我可以一键接。",
@@ -444,6 +445,17 @@
       "whichOne": "让谁去",
       "notHere": "这个站没有她",
       "summary": "{{name}} 去 {{app}} 干活",
+      "onDuty": "在这儿",
+      "already": {
+        "same": "{{name}}已经在 {{app}} 干活了",
+        "swap": "{{app}} 现在是{{was}}在干活，换成{{name}}",
+        "retune": "{{name}}已经在 {{app}} 干活了，这次换成"
+      },
+      "alreadyGo": {
+        "same": "重新接一次 ➜",
+        "swap": "换成{{name}} ➜",
+        "retune": "照这个重新接 ➜"
+      },
       "nobody": "这个站上还没有能去的人",
       "model": "型号",
       "install": "去官网下载 {{app}} ➜",

@@ -259,9 +259,21 @@ describe("开饭首页自己会做的事", () => {
     let done = () => {};
     refresh.mockReturnValueOnce(new Promise<void>((ok) => (done = ok)));
 
-    fireEvent.click(screen.getByTestId("kaifan-nav-ledger"));
+    // 平时左边亮的是「首页」；站点和余额左边已经写着，对话框上面不再重复。
+    const nav = screen.getByTestId("kaifan-nav-ledger");
+    expect(nav).not.toHaveAttribute("aria-current");
+    expect(container.querySelector(".chips .chip")).toBeNull();
+    // 应用那一排：每个下面都写着谁在干活，没接的写「还没接」。
+    expect(screen.getByTestId("kaifan-app-claude_code")).toHaveTextContent(
+      "Claude Code还没接",
+    );
+
+    fireEvent.click(nav);
     await waitFor(() => expect(ledger).not.toHaveAttribute("inert"));
     expect(home).toHaveAttribute("inert");
+    // 开着账本时，左边亮的是「账本」。
+    expect(nav).toHaveAttribute("aria-current", "page");
+    expect(container.querySelectorAll(".side [aria-current]")).toHaveLength(1);
     expect(refresh).toHaveBeenCalledTimes(1);
     // 最新的数还没读回来：手里上一次的余额不摆出来。
     expect(screen.queryByTestId("kaifan-ledger-balance")).toBeNull();
@@ -273,6 +285,7 @@ describe("开饭首页自己会做的事", () => {
     fireEvent.keyDown(document.activeElement!, { key: "Escape" });
     await waitFor(() => expect(ledger).toHaveAttribute("inert"));
     expect(home).not.toHaveAttribute("inert");
+    expect(nav).not.toHaveAttribute("aria-current");
   });
 
   it("点「设置」：在新界面里滑出来，不去旧页面；体检当场去探站点", async () => {

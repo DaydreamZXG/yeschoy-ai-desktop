@@ -294,6 +294,7 @@
       "chipBalanceUnknown": "Balance not shown",
       "appOk": "{{app}}: connected. Click to adjust",
       "appPending": "{{app}}: not connected. Click to start",
+      "appIdle": "Not connected",
       "backOnline": "We're back. Nothing needs redoing.",
       "rechargeManual": "I couldn't open the top-up page. Open the station's website in your browser to top up; I'll notice when it's done.",
       "rechargeManualHost": "I couldn't open the top-up page. Open {{station}} in your browser to top up; I'll notice when it's done.",
@@ -409,7 +410,7 @@
       "moreApps_one": "{{count}} more ▾",
       "moreApps_other": "{{count}} more ▾",
       "lessApps": "Show fewer ▴",
-      "otherApps": "Another app",
+      "otherApps": "Not listed",
       "other": {
         "intro": "I can't change the settings of an app that isn't on the list, but everything you need to fill in is here. Open that app's settings, find “API address” (also called Base URL), “API Key” and “Model”, and fill them in as below.",
         "byHand": "{{app}} is installed inside your editor, and I can’t set that one up for you yet. In {{app}}’s settings, choose OpenAI Compatible as the API Provider and fill in the values below. I can connect the {{app}} command-line version in one click.",
@@ -444,6 +445,17 @@
       "whichOne": "Who goes",
       "notHere": "Not on this station",
       "summary": "{{name}} works in {{app}}",
+      "onDuty": "Here now",
+      "already": {
+        "same": "{{name}} already works in {{app}}",
+        "swap": "{{was}} works in {{app}} now. Switch to {{name}}",
+        "retune": "{{name}} already works in {{app}}. Change to"
+      },
+      "alreadyGo": {
+        "same": "Connect again ➜",
+        "swap": "Switch to {{name}} ➜",
+        "retune": "Reconnect with this ➜"
+      },
       "nobody": "Nobody on this station can go yet",
       "model": "Model",
       "install": "Get {{app}} from its website ➜",

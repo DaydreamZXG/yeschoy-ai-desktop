@@ -51,7 +51,7 @@ import {
   type RosterId,
 } from "./roster";
 import { withHandoff } from "./handoff";
-import { isConnected, onOtherStation } from "./stageState";
+import { isConnected, onOtherStation, workerOf } from "./stageState";
 import { OtherApps } from "./OtherApps";
 import { vendorName, type ProviderPreset } from "./providers";
 import { sound } from "./sound";
@@ -183,6 +183,9 @@ export function Join({
   const working = applying || installing;
 
   const touched = useRef(false);
+  // 找应用是异步的：找完那一下要看的是当时最新的接入情况。
+  const joined = useRef({ connections, only: preset?.onlyTools ?? [] });
+  joined.current = { connections, only: preset?.onlyTools ?? [] };
   // 同一个应用可能两种都有（Codex 的桌面版和命令行版）：看挑中的是哪一份。
   const seen = useRef<ActivationTarget[]>([]);
   const inTerminal = (toolId: ActivationToolId, installationId: string) =>
@@ -199,8 +202,9 @@ export function Join({
       seen.current = found;
       setTargets(found);
       setScan("ready");
-      // 用户还没自己选过应用时，先选中电脑上已经装了的第一个。
-      const first = WORKBENCH_APPS.find((item) =>
+      // 用户还没自己选过应用时，先选中电脑上已经装了的第一个；
+      // 装了的里面有还没接的，就先选没接的：点「接入新应用」不该落在接好的上面。
+      const installed = WORKBENCH_APPS.filter((item) =>
         found.some(
           (entry) =>
             entry.toolId === item.id &&
@@ -209,6 +213,18 @@ export function Join({
               entry.status === "selection_required"),
         ),
       );
+      // 这一家不认的应用不先选：选中了也接不了，还得用户自己换一个。
+      const { connections: now, only } = joined.current;
+      const allowed = installed.filter(
+        (item) => only.length === 0 || only.includes(item.id),
+      );
+      const first =
+        allowed.find((item) => {
+          const was = now.find((entry) => entry.toolId === item.id);
+          return !was || was.state === "not_connected";
+        }) ??
+        allowed[0] ??
+        installed[0];
       if (!touched.current && first) setApp(first.id);
       return found;
     } catch {
@@ -346,6 +362,16 @@ export function Join({
     others.find((id) => id === DEFAULT_BILLING_GROUP) ?? others[0];
 
   const name = t(`roster.${who}.name`);
+  // 这个应用在现在这个站上已经接好了：是谁在干活，这次点下去会变什么。
+  const worker = workerOf(saved, lineId);
+  const change = !worker
+    ? null
+    : worker !== who
+      ? "swap"
+      : saved?.modelId !== modelId ||
+          (!!saved.billingGroup && saved.billingGroup !== billingGroup)
+        ? "retune"
+        : "same";
   const appInfo = WORKBENCH_APPS.find((item) => item.id === app);
   const appName = appDisplayName(app, appInfo?.name ?? app, t);
   // 不常用的收起来；接过的、现在选着的不收。装没装不算：找应用是慢慢找到的，
@@ -753,6 +779,10 @@ export function Join({
                   scan === "ready" && found?.status === "missing_runtime";
                 const absent =
                   scan === "ready" && (!found || found.status === "not_found");
+                const there = workerOf(
+                  connections.find((entry) => entry.toolId === item.id),
+                  lineId,
+                );
                 if (!moreApps && rare.includes(item.id)) return null;
                 return (
                   <button
@@ -773,6 +803,9 @@ export function Join({
                     {item.name}
                     {absent && <small>{t("kaifan.join.absent")}</small>}
                     {partial && <small>{t("kaifan.join.incomplete")}</small>}
+                    {there && !absent && !partial && (
+                      <small>{t(`roster.${there}.name`)}</small>
+                    )}
                   </button>
                 );
               })}
@@ -876,6 +909,7 @@ export function Join({
                         }}
                       >
                         <img src={chibiOf(id, on ? "happy" : "idle")} alt="" />
+                        {id === worker && <em>{t("kaifan.join.onDuty")}</em>}
                         <b>
                           {t(`roster.${id}.name`)}
                           <small>{ROSTER[id].brand.toUpperCase()}</small>
@@ -1021,10 +1055,16 @@ export function Join({
                   </p>
                 )}
                 <div className="pf">
-                  <p>
-                    {modelId
-                      ? t("kaifan.join.summary", { name, app: appName })
-                      : t("kaifan.join.nobody")}
+                  <p data-testid="kaifan-join-summary">
+                    {!modelId
+                      ? t("kaifan.join.nobody")
+                      : change && !broken
+                        ? t(`kaifan.join.already.${change}`, {
+                            name,
+                            app: appName,
+                            was: worker ? t(`roster.${worker}.name`) : "",
+                          })
+                        : t("kaifan.join.summary", { name, app: appName })}
                     {ids && ids.length > 1 ? (
                       <select
                         className="inp"
@@ -1087,7 +1127,9 @@ export function Join({
                   ) : (
                     <button
                       type="button"
-                      className="go"
+                      // 已经是她在干活、什么都没换：再接一次只是备着，不抢眼。
+                      className={change === "same" && !broken ? "go alt" : "go"}
+                      data-testid="kaifan-join-go"
                       disabled={
                         scan !== "ready" ||
                         !modelId ||
@@ -1100,7 +1142,9 @@ export function Join({
                       {t(
                         broken
                           ? `kaifan.join.mendGo.${broken}`
-                          : "kaifan.join.go",
+                          : change
+                            ? `kaifan.join.alreadyGo.${change}`
+                            : "kaifan.join.go",
                         {
                           name,
                         },
