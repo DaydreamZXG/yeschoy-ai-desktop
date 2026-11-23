@@ -23,7 +23,7 @@ interface Props {
  * 从右边滑出来的面板：角色说一句话，面板办事。名片、账本、公告都用它。
  *
  * 开着时焦点进面板，Esc 或点面板外面关掉，关掉后焦点回到打开它的那个按钮；
- * 左边栏不归它管，开着面板也能点。
+ * 左边栏不归它管，开着面板也能点、读屏也能到，所以它不自称 modal。
  * 关着时整块 inert，键盘和读屏都进不来。
  */
 export function Drawer({
@@ -53,6 +53,21 @@ export function Drawer({
         opener.focus();
     };
   }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    // 焦点可能已经到了左边栏上，所以在窗口上听 Esc；别的弹层自己管自己的 Esc。
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      const at =
+        event.target instanceof Element
+          ? event.target.closest('[role="dialog"], [role="alertdialog"]')
+          : null;
+      if (at && at !== panel.current) return;
+      onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
 
   return (
     <div
@@ -62,14 +77,10 @@ export function Drawer({
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
-      onKeyDown={(event) => {
-        if (event.key === "Escape") onClose();
-      }}
     >
       <aside
         className="dr glass"
         role="dialog"
-        aria-modal="true"
         aria-label={label}
         tabIndex={-1}
         ref={panel}

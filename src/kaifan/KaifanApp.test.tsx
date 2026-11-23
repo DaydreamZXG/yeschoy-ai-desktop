@@ -320,6 +320,21 @@ describe("开饭首页自己会做的事", () => {
     );
   });
 
+  it("账本开着、焦点在左边栏上：按 Esc 照样收起来；面板不自称 modal", async () => {
+    render(<KaifanApp />);
+    const ledger = screen.getByTestId("kaifan-ledger");
+    fireEvent.click(screen.getByTestId("kaifan-nav-ledger"));
+    await waitFor(() => expect(ledger).not.toHaveAttribute("inert"));
+    expect(within(ledger).getByRole("dialog")).not.toHaveAttribute(
+      "aria-modal",
+    );
+
+    const news = screen.getByTestId("kaifan-nav-news");
+    news.focus();
+    fireEvent.keyDown(news, { key: "Escape" });
+    await waitFor(() => expect(ledger).toHaveAttribute("inert"));
+  });
+
   it("点「设置」：在新界面里滑出来，不去旧页面；体检当场去探站点", async () => {
     look.mockResolvedValue({ ok: false, reason: "timeout" });
     render(<KaifanApp />);
