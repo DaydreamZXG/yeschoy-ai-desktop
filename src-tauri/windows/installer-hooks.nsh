@@ -2,6 +2,12 @@
 
 ; Tauri 的模板只给安装程序设了图标，卸载程序（uninstall.exe）还是 NSIS 默认的。
 !define MUI_UNICON "${__FILEDIR__}\..\icons\icon.ico"
+; 欢迎页和完成页的文案，Tauri 的包和 installer.nsi 共用；installer.nsi 可以先定义自己的。
+!define /ifndef MUI_WELCOMEPAGE_TITLE "欢迎使用 YesChoy"
+!define /ifndef MUI_WELCOMEPAGE_TEXT "YesChoy 帮你把 Claude Code、Codex 这些 AI 应用接到野菜API。装好以后跟着提示点几下就能用，不用敲命令。$\r$\n$\r$\n点“下一步”继续。"
+!define /ifndef MUI_FINISHPAGE_TITLE "装好了"
+!define /ifndef MUI_FINISHPAGE_TEXT "YesChoy 已经装到这台电脑上。"
+!define /ifndef MUI_FINISHPAGE_RUN_TEXT "现在打开 YesChoy"
 
 !define KAIFAN_INSTALLER_SHUTDOWN_EVENT "Local\YesChoyDesktopInstallerShutdown_v1"
 ; 只出过测试版的“开饭”等的是这个名字；两个都发，哪一个开着都能自己安全退出。

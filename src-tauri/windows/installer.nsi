@@ -1,5 +1,6 @@
 Unicode true
 ManifestSupportedOS all
+ManifestDPIAware true
 RequestExecutionLevel user
 SetCompressor /SOLID lzma
 SetCompressorDictSize 32
@@ -19,6 +20,8 @@ SetCompressorDictSize 32
 
 !include "MUI2.nsh"
 !include "FileFunc.nsh"
+; 完成页之后 .onInstSuccess 会自己打开 YesChoy，这个包没有“运行”勾选框。
+!define MUI_FINISHPAGE_TEXT "YesChoy 已经装到这台电脑上，点“完成”就会打开它。"
 !include "installer-hooks.nsh"
 
 Name "YesChoy"
@@ -40,17 +43,33 @@ VIAddVersionKey /LANG=2052 "ProductVersion" "${APP_VERSION}"
 VIAddVersionKey /LANG=2052 "LegalCopyright" "Copyright (c) YesChoy contributors"
 
 !define MUI_ABORTWARNING
+!define MUI_WELCOMEFINISHPAGE_BITMAP "installer-sidebar.bmp"
+!define MUI_HEADERIMAGE
+!define MUI_HEADERIMAGE_RIGHT
+!define MUI_HEADERIMAGE_BITMAP "installer-header.bmp"
+!define MUI_HEADERIMAGE_UNBITMAP "installer-header.bmp"
 !define MUI_ICON "${APP_ICON}"
 ; installer-hooks.nsh 已经给 Tauri 的包定义过一次。
 !undef MUI_UNICON
 !define MUI_UNICON "${APP_ICON}"
 !insertmacro MUI_PAGE_WELCOME
+!define MUI_PAGE_HEADER_TEXT "装在哪里"
+!define MUI_PAGE_HEADER_SUBTEXT "一般用默认位置就好。"
+!define MUI_DIRECTORYPAGE_TEXT_TOP "YesChoy 会装到下面这个文件夹。一般不用改，直接点“安装”。"
 !insertmacro MUI_PAGE_DIRECTORY
+!define MUI_PAGE_HEADER_TEXT "正在安装"
+!define MUI_PAGE_HEADER_SUBTEXT "一般十几秒就好，别关这个窗口。"
 !insertmacro MUI_PAGE_INSTFILES
 !insertmacro MUI_PAGE_FINISH
+!define MUI_PAGE_HEADER_TEXT "卸载 YesChoy"
+!define MUI_PAGE_HEADER_SUBTEXT "从这台电脑上删掉 YesChoy。"
+!define MUI_UNCONFIRMPAGE_TEXT_TOP "如果还有应用接着野菜API，建议先在 YesChoy 里把它们放回去再卸载，原来的设置才会恢复。"
 !insertmacro MUI_UNPAGE_CONFIRM
+!define MUI_PAGE_HEADER_TEXT "正在卸载"
+!define MUI_PAGE_HEADER_SUBTEXT "马上就好。"
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "SimpChinese"
+SetFont /LANG=${LANG_SIMPCHINESE} "Microsoft YaHei UI" 9
 
 ; Tauri v2 passes /UPDATE for updater launches. Reuse the actual 64-bit
 ; registration and run without an unattended welcome/directory wizard.
