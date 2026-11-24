@@ -23,10 +23,10 @@ index 2835089f9..d7580380d 100644
  	adminAuthMiddleware := middleware.NewAdminAuthMiddleware(authService, userService, settingService, auditLogService)
 diff --git a/backend/internal/handler/desktop_data_handler.go b/backend/internal/handler/desktop_data_handler.go
 new file mode 100644
-index 000000000..05298b5c9
+index 000000000..7b4eaa551
 --- /dev/null
 +++ b/backend/internal/handler/desktop_data_handler.go
-@@ -0,0 +1,615 @@
+@@ -0,0 +1,624 @@
 +package handler
 +
 +import (
@@ -299,10 +299,19 @@ index 000000000..05298b5c9
 +				model.Price.PerRequest = &v
 +			}
 +			// 按 Token 计费的上下文分档受分组开关控制；按次计费总是按上下文选档（calculatePerRequestCost）。
-+			perRequestTiers := p.BillingMode == service.BillingModePerRequest && len(p.Intervals) > 0
++			// 带 tier_label 的按次档（音频模式等）按标签选，不是上下文分档，不列出。
++			perRequestTiers := false
++			if p.BillingMode == service.BillingModePerRequest {
++				for j := range p.Intervals {
++					perRequestTiers = perRequestTiers || p.Intervals[j].TierLabel == ""
++				}
++			}
 +			if perRequestTiers || (g.LongContextPricingEnabled && p.BillingMode != service.BillingModeImage && len(p.Intervals) > 1) {
 +				for j := range p.Intervals {
 +					tier := &p.Intervals[j]
++					if perRequestTiers && tier.TierLabel != "" {
++						continue
++					}
 +					price := desktopPrice{
 +						Input:      desktopPerMillion(tier.InputPrice, money.charged, rate),
 +						Output:     desktopPerMillion(tier.OutputPrice, money.charged, rate),
@@ -644,10 +653,10 @@ index 000000000..05298b5c9
 +}
 diff --git a/backend/internal/handler/desktop_data_handler_test.go b/backend/internal/handler/desktop_data_handler_test.go
 new file mode 100644
-index 000000000..db42e0c21
+index 000000000..96e88ece8
 --- /dev/null
 +++ b/backend/internal/handler/desktop_data_handler_test.go
-@@ -0,0 +1,270 @@
+@@ -0,0 +1,290 @@
 +package handler
 +
 +import (
@@ -917,6 +926,26 @@ index 000000000..db42e0c21
 +	require.Equal(t, 0.025, *model.LongContext[0].Price.PerRequest)
 +	require.Equal(t, 128_000, model.LongContext[1].FromTokens)
 +	require.Equal(t, 0.05, *model.LongContext[1].Price.PerRequest)
++}
++
++func TestToDesktopPlanLeavesLabelledPerRequestRatesOutOfContextTiers(t *testing.T) {
++	group := &service.PlazaGroup{
++		ID:       10,
++		Platform: domain.PlatformOpenAI,
++		Models: []service.PlazaModel{{
++			Name: "speech",
++			Pricing: &service.ChannelModelPricing{
++				BillingMode:     service.BillingModePerRequest,
++				PerRequestPrice: desktopFloat(0.01),
++				Intervals:       []service.PricingInterval{{TierLabel: "hd", PerRequestPrice: desktopFloat(0.02)}},
++			},
++		}},
++	}
++
++	plan := toDesktopPlan(group, 1, desktopMoney{Currency: "CNY"})
++
++	require.Equal(t, 0.01, *plan.Models[0].Price.PerRequest)
++	require.Empty(t, plan.Models[0].LongContext)
 +}
 diff --git a/backend/internal/handler/desktop_handler.go b/backend/internal/handler/desktop_handler.go
 new file mode 100644
