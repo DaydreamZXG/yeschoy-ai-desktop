@@ -23,10 +23,10 @@ index 2835089f9..d7580380d 100644
  	adminAuthMiddleware := middleware.NewAdminAuthMiddleware(authService, userService, settingService, auditLogService)
 diff --git a/backend/internal/handler/desktop_data_handler.go b/backend/internal/handler/desktop_data_handler.go
 new file mode 100644
-index 000000000..83be8bffe
+index 000000000..95378c2af
 --- /dev/null
 +++ b/backend/internal/handler/desktop_data_handler.go
-@@ -0,0 +1,591 @@
+@@ -0,0 +1,606 @@
 +package handler
 +
 +import (
@@ -248,6 +248,17 @@ index 000000000..83be8bffe
 +	return &v
 +}
 +
++// desktopDefaultImagePrice is the per-image price billed when a request names no size: the 2K tier,
++// as Group.GetImagePrice. Resolution tiers carry the group's overrides; the flat price is the fallback.
++func desktopDefaultImagePrice(p *service.ChannelModelPricing) *float64 {
++	for i := range p.Intervals {
++		if p.Intervals[i].TierLabel == "2K" && p.Intervals[i].PerRequestPrice != nil {
++			return p.Intervals[i].PerRequestPrice
++		}
++	}
++	return p.PerRequestPrice
++}
++
 +func toDesktopPlan(g *service.PlazaGroup, rate float64, money desktopMoney) desktopPlan {
 +	plan := desktopPlan{
 +		ID:           strconv.FormatInt(g.ID, 10),
@@ -274,16 +285,20 @@ index 000000000..83be8bffe
 +				CacheRead:  desktopPerMillion(p.CacheReadPrice, money.charged, rate),
 +				CacheWrite: desktopPerMillion(p.CacheWritePrice, money.charged, rate),
 +			}
-+			if p.PerRequestPrice != nil {
++			perRequest := p.PerRequestPrice
++			if p.BillingMode == service.BillingModeImage {
++				perRequest = desktopDefaultImagePrice(p)
++			}
++			if perRequest != nil {
 +				// 图片倍率独立时，按次价乘图片倍率而不是分组/用户倍率，与计费一致。
 +				requestRate := rate
 +				if p.BillingMode == service.BillingModeImage && g.ImageRateIndependent {
 +					requestRate = g.ImageRateMultiplier
 +				}
-+				v := money.charged(*p.PerRequestPrice * requestRate)
++				v := money.charged(*perRequest * requestRate)
 +				model.Price.PerRequest = &v
 +			}
-+			if g.LongContextPricingEnabled && len(p.Intervals) > 1 {
++			if g.LongContextPricingEnabled && p.BillingMode != service.BillingModeImage && len(p.Intervals) > 1 {
 +				for j := range p.Intervals {
 +					tier := &p.Intervals[j]
 +					model.LongContext = append(model.LongContext, desktopLongContextTier{
@@ -620,10 +635,10 @@ index 000000000..83be8bffe
 +}
 diff --git a/backend/internal/handler/desktop_data_handler_test.go b/backend/internal/handler/desktop_data_handler_test.go
 new file mode 100644
-index 000000000..1988bff57
+index 000000000..f46769693
 --- /dev/null
 +++ b/backend/internal/handler/desktop_data_handler_test.go
-@@ -0,0 +1,221 @@
+@@ -0,0 +1,242 @@
 +package handler
 +
 +import (
@@ -844,6 +859,27 @@ index 000000000..1988bff57
 +		require.Equal(t, http.StatusBadRequest, rec.Code, payload)
 +		require.JSONEq(t, `{"success":false,"code":"invalid_request"}`, rec.Body.String())
 +	}
++}
++
++func TestToDesktopPlanPricesImagesAtTheDefaultResolutionTier(t *testing.T) {
++	plan := toDesktopPlan(&service.PlazaGroup{
++		ID:                        1,
++		LongContextPricingEnabled: true,
++		Models: []service.PlazaModel{{
++			Name: "image-model",
++			Pricing: &service.ChannelModelPricing{
++				BillingMode:     service.BillingModeImage,
++				PerRequestPrice: desktopFloat(0.1),
++				Intervals: []service.PricingInterval{
++					{TierLabel: "1K", PerRequestPrice: desktopFloat(0.02)},
++					{TierLabel: "2K", PerRequestPrice: desktopFloat(0.05)},
++				},
++			},
++		}},
++	}, 2, desktopMoney{Currency: "USD"})
++
++	require.Equal(t, 0.1, *plan.Models[0].Price.PerRequest, "the 2K tier is what an unsized request is billed")
++	require.Nil(t, plan.Models[0].LongContext, "resolution tiers are not context-length tiers")
 +}
 diff --git a/backend/internal/handler/desktop_handler.go b/backend/internal/handler/desktop_handler.go
 new file mode 100644
