@@ -13,7 +13,7 @@ import type { ActivationToolId } from "../configuration/activation";
 /**
  * 工具清单唯一展示源（PRD §3.2 定案）。
  *
- * - `WORKBENCH_APPS`：已支持接入的应用。Claude Code / Claude Desktop / Codex / WorkBuddy / DeepSeek Harness / Pi / DSH web / OpenCode / Cline / Hermes Agent / OpenClaw。
+ * - `WORKBENCH_APPS`：已支持接入的应用。Claude Code / Claude Desktop / Codex / WorkBuddy / DeepSeek Harness / Pi / OpenCode / Cline / Hermes Agent / OpenClaw。
  * - `COMING_SOON_APPS`：标注「即将支持」的应用，只展示、不提供接入入口。
  *
  * 这份清单和 `ACTIVATION_TOOL_IDS`（activation.ts，Rust 扫描/接入协议契约）
@@ -60,12 +60,6 @@ export const WORKBENCH_APPS: {
     icon: dshIcon,
     common: false,
   },
-  {
-    id: "dsh_web",
-    name: "DSH web",
-    icon: dshIcon,
-    common: false,
-  },
   { id: "cline", name: "Cline", icon: clineIcon, common: false },
   { id: "hermes", name: "Hermes Agent", icon: hermesIcon, common: false },
   { id: "openclaw", name: "OpenClaw", icon: openclawIcon, common: false },
@@ -90,9 +84,40 @@ export function appDisplayName(
   return fallback;
 }
 
+/**
+ * 不再让人新接的应用。DSH 改成桌面应用（`dsh_desktop`）以后网页版退役了：
+ * 名单里不列它，也不能新接；以前接过的照样露在首页，能「放回去」。
+ */
+export const RETIRED_APPS = [
+  {
+    id: "dsh_web",
+    name: "DSH web",
+    icon: dshIcon,
+    common: false,
+  },
+] as const satisfies readonly {
+  id: ActivationToolId;
+  name: string;
+  icon: string;
+  common: boolean;
+}[];
+
+export function isRetiredApp(appId: string): boolean {
+  return RETIRED_APPS.some((app) => app.id === appId);
+}
+
+/** 按 id 找应用，退役的也找得到：已经接过的还要显示名字。 */
+export function findApp(appId: string) {
+  return [...WORKBENCH_APPS, ...RETIRED_APPS].find((app) => app.id === appId);
+}
+
 /** 首页放得下的那几个：接过的排前面，然后是常用的，同一档里保持名单顺序。 */
 export function appsForHome(linked: readonly string[], limit: number) {
-  const rank = (app: (typeof WORKBENCH_APPS)[number]) =>
+  const apps = [
+    ...WORKBENCH_APPS,
+    ...RETIRED_APPS.filter((app) => linked.includes(app.id)),
+  ];
+  const rank = (app: (typeof apps)[number]) =>
     (linked.includes(app.id) ? 2 : 0) + (app.common ? 1 : 0);
-  return [...WORKBENCH_APPS].sort((a, b) => rank(b) - rank(a)).slice(0, limit);
+  return apps.sort((a, b) => rank(b) - rank(a)).slice(0, limit);
 }

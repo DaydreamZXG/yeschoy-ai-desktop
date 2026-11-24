@@ -8,7 +8,7 @@ import {
   type AccountLineId,
 } from "../configuration/preview";
 import { BUILTIN_STATION_ORIGINS } from "../station/stationProbe";
-import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
+import { appDisplayName, findApp } from "../workbench/appCatalog";
 import {
   useProviderPresets,
   vendorFamilies,
@@ -555,9 +555,7 @@ export function Connect({
                   t("kaifan.connect.onlyTools", {
                     apps: preset.onlyTools
                       .map((tool) => {
-                        const app = WORKBENCH_APPS.find(
-                          (item) => item.id === tool,
-                        );
+                        const app = findApp(tool);
                         return app ? appDisplayName(app.id, app.name, t) : tool;
                       })
                       .join(t("kaifan.connect.listJoin")),

@@ -4,7 +4,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { useTranslation } from "react-i18next";
 import { ACTIVATION_TOOL_IDS } from "../configuration/activation";
 import { useConnections } from "../configuration/connections";
-import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
+import { appDisplayName, findApp } from "../workbench/appCatalog";
 
 const OPEN_CHOICE_EVENT = "kaifan:open-exit-choice";
 const CLOSE_CHOICE_EVENT = "yeschoy://close-choice";
@@ -251,8 +251,7 @@ export function ShutdownHost() {
                   <li key={connection.toolId}>
                     {appDisplayName(
                       connection.toolId,
-                      WORKBENCH_APPS.find((app) => app.id === connection.toolId)
-                        ?.name ?? connection.toolId,
+                      findApp(connection.toolId)?.name ?? connection.toolId,
                       t,
                     )}
                   </li>
@@ -276,11 +275,7 @@ export function ShutdownHost() {
           <ul>
             {failedTools.map((tool) => (
               <li key={tool}>
-                {appDisplayName(
-                  tool,
-                  WORKBENCH_APPS.find((app) => app.id === tool)?.name ?? tool,
-                  t,
-                )}
+                {appDisplayName(tool, findApp(tool)?.name ?? tool, t)}
               </li>
             ))}
           </ul>

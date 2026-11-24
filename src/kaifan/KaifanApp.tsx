@@ -22,11 +22,7 @@ import { isImageGenerationModel } from "../model-profiles/profile";
 import { refreshModelCatalog } from "../model-profiles/remoteCatalog";
 import { ShutdownHost } from "./Shutdown";
 import { useDesktopUpdate } from "../update/UpdateProvider";
-import {
-  WORKBENCH_APPS,
-  appDisplayName,
-  appsForHome,
-} from "../workbench/appCatalog";
+import { appDisplayName, appsForHome, findApp } from "../workbench/appCatalog";
 import { Boot } from "./Boot";
 import { Card } from "./Card";
 import {
@@ -187,7 +183,7 @@ export function KaifanApp() {
 
   const appName = useCallback(
     (toolId: string) => {
-      const app = WORKBENCH_APPS.find((item) => item.id === toolId);
+      const app = findApp(toolId);
       return app ? appDisplayName(app.id, app.name, t) : toolId;
     },
     [t],
@@ -658,6 +654,7 @@ export function KaifanApp() {
             setConnectOpen(true);
           }}
           onUndo={connections.restore}
+          onOpen={connections.open}
           onSettled={() => void connections.refresh()}
         />
         <Card

@@ -8,7 +8,12 @@ import {
 } from "../configuration/billing";
 import type { ToolConnection } from "../configuration/connections";
 import { modelDisplayName } from "../model-profiles/profile";
-import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
+import {
+  RETIRED_APPS,
+  WORKBENCH_APPS,
+  appDisplayName,
+  isRetiredApp,
+} from "../workbench/appCatalog";
 import {
   joinModel,
   pickedPlan,
@@ -66,7 +71,7 @@ export function Card({
   const { t } = useTranslation();
   const name = t(`roster.${who}.name`);
   // 她在哪些应用里干活，各自用的是哪个型号和方案（接入时存下来的那份）。
-  const jobs = WORKBENCH_APPS.flatMap((app) => {
+  const jobs = [...WORKBENCH_APPS, ...RETIRED_APPS].flatMap((app) => {
     const saved = connections?.find((item) => item.toolId === app.id);
     return saved && workerOf(saved) === who
       ? [
@@ -83,7 +88,8 @@ export function Card({
   // 名片上写的是「她再去接入会用什么」，和接入屏问的是同一处：没挑过就沿用
   // 接好的那份，不拿一个默认的出来说「要重新接入」。
   // 她接着好几个应用时说的是头一个，点「去接入」也是带着这一个过去。
-  const first = jobs[0];
+  // 退役的应用接不了，「去接入」不往那儿带。
+  const first = jobs.find((job) => !isRetiredApp(job.id));
   const modelId = joinModel(who, ids, first?.saved, picks);
   const model = models.find((item) => item.id === modelId);
   const plans = useMemo(() => plansOf(model), [model]);

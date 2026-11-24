@@ -404,7 +404,6 @@ fn request_is_valid(request: &ToolActivationRequest) -> bool {
                 | "codex_desktop"
                 | "pi"
                 | "opencode"
-                | "dsh_web"
                 | "workbuddy"
                 | "dsh_desktop"
                 | "cline"
@@ -4688,6 +4687,13 @@ mod tests {
         )
         .expect_err("一个 lease 都没有，不该继续");
         assert_eq!(blocker.model_id, "glm-5.3-flash");
+    }
+
+    #[test]
+    fn retired_dsh_web_cannot_be_connected_again() {
+        let json = json!({"requestId":"fixture", "lineId":"mainland_optimized", "toolId":"dsh_web", "modelId":"a", "billingGroup":"cheap", "installationId":"i0123456789abcdef"});
+        let request: ToolActivationRequest = serde_json::from_value(json).unwrap();
+        assert!(!request_is_valid(&request));
     }
 
     #[test]
