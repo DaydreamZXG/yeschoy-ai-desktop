@@ -35,6 +35,7 @@ git apply /path/to/desktop-connect.patch
 - 对外是 HTTPS、标准端口、域名（不是 IP）。客户端只连这样的站，补丁也只给这样的地址发连接码。
 - 反向代理要把用户访问的域名原样放在 `Host` 里。连接码绑定在这个域名上。
 - 要有 Redis（sub2api 本来就需要）。连接码存在 Redis 里，多实例也能用。
+- 要在后台「渠道管理」里配好渠道，并把渠道关联到分组。客户端的方案和模型列表来自模型广场，没有渠道的分组在模型广场里看不到，客户端里也不会出现。没配渠道的站，用户仍可以用“粘贴网址 + 密钥”。
 
 ## 加了什么
 
@@ -73,7 +74,7 @@ git apply /path/to/desktop-connect.patch
 - 连接码是 32 字节随机数，300 秒过期，只能用一次，绑定站点域名。Redis 里只存它的 SHA-256。
 - 连接码一出示就作废，再检查别的。在别的域名上出示过的码，回到正确的域名也不能再用。
 - 改过密码之后，之前发出的连接码全部失效。
-- 换码、续登录、发码、建密钥都有限流，用的是 sub2api 原有的限流器，Redis 不可用时拒绝请求。
+- 换码、续登录、发码、建密钥都有限流，用的是 sub2api 原有的限流器，Redis 不可用时拒绝请求。两个用量接口和 `/api/v1/usage` 一样，走控制台的重查询限流。
 - 长期凭证不进网址。
 
 ## 没做的
@@ -87,7 +88,7 @@ git apply /path/to/desktop-connect.patch
 验证过的：
 
 - 补丁能干净地打在 `v0.2.25` 上；`go build ./...`、`go vet` 通过；前端 `vue-tsc` 和 `eslint` 通过。
-- 补丁自带 15 个测试（`go test -tags unit ./internal/handler ./internal/service -run Desktop`），`internal/server`、`internal/server/routes`、`cmd/server` 原有测试也都通过。
+- 补丁自带 16 个测试（`go test -tags unit ./internal/handler ./internal/service -run Desktop`），`internal/server`、`internal/server/routes`、`cmd/server` 原有测试也都通过。
 - 这套接口的原版一直跑在 yeschoy.us 上（那里多了客户端专属价和人民币显示），客户端日常就是连它。
 
 没验证的：
