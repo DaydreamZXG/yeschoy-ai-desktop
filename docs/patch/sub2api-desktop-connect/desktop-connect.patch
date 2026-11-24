@@ -23,7 +23,7 @@ index 2835089f9..d7580380d 100644
  	adminAuthMiddleware := middleware.NewAdminAuthMiddleware(authService, userService, settingService, auditLogService)
 diff --git a/backend/internal/handler/desktop_data_handler.go b/backend/internal/handler/desktop_data_handler.go
 new file mode 100644
-index 000000000..b4be11989
+index 000000000..83be8bffe
 --- /dev/null
 +++ b/backend/internal/handler/desktop_data_handler.go
 @@ -0,0 +1,591 @@
@@ -53,7 +53,7 @@ index 000000000..b4be11989
 +	desktopService       = "desktop-connect"
 +	desktopContractID    = "desktop-connect-v1"
 +	desktopBasePath      = "/api/desktop/v2"
-+	desktopWalletPath    = "/topup"
++	desktopWalletPath    = "/purchase"
 +	desktopUsageDays     = 30
 +	desktopMaxPageSize   = 100
 +	desktopKeyNameMaxLen = 100
@@ -620,7 +620,7 @@ index 000000000..b4be11989
 +}
 diff --git a/backend/internal/handler/desktop_data_handler_test.go b/backend/internal/handler/desktop_data_handler_test.go
 new file mode 100644
-index 000000000..7749ac098
+index 000000000..1988bff57
 --- /dev/null
 +++ b/backend/internal/handler/desktop_data_handler_test.go
 @@ -0,0 +1,221 @@
@@ -823,7 +823,7 @@ index 000000000..7749ac098
 +	require.Equal(t, "desktop-connect", body.Data["service"])
 +	require.Equal(t, "desktop-connect-v1", body.Data["contract_id"])
 +	require.Equal(t, float64(2), body.Data["schema_version"])
-+	require.Equal(t, "https://relay.example.com/topup", body.Data["wallet_url"])
++	require.Equal(t, "https://relay.example.com/purchase", body.Data["wallet_url"])
 +	for key, value := range body.Data {
 +		if strings.HasSuffix(key, "_path") {
 +			path, ok := value.(string)
