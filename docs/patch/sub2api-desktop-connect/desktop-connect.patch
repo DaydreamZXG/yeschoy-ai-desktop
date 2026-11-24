@@ -23,10 +23,10 @@ index 2835089f9..d7580380d 100644
  	adminAuthMiddleware := middleware.NewAdminAuthMiddleware(authService, userService, settingService, auditLogService)
 diff --git a/backend/internal/handler/desktop_data_handler.go b/backend/internal/handler/desktop_data_handler.go
 new file mode 100644
-index 000000000..7b4eaa551
+index 000000000..019bf6a24
 --- /dev/null
 +++ b/backend/internal/handler/desktop_data_handler.go
-@@ -0,0 +1,624 @@
+@@ -0,0 +1,631 @@
 +package handler
 +
 +import (
@@ -318,9 +318,16 @@ index 000000000..7b4eaa551
 +						CacheRead:  desktopPerMillion(tier.CacheReadPrice, money.charged, rate),
 +						CacheWrite: desktopPerMillion(tier.CacheWritePrice, money.charged, rate),
 +					}
-+					if perRequestTiers && tier.PerRequestPrice != nil {
-+						v := money.charged(*tier.PerRequestPrice * rate)
-+						price.PerRequest = &v
++					if perRequestTiers {
++						// 档价为空或 0 时计费回退到默认按次价（calculatePerRequestCost）。
++						unit := tier.PerRequestPrice
++						if unit == nil || *unit == 0 {
++							unit = p.PerRequestPrice
++						}
++						if unit != nil {
++							v := money.charged(*unit * rate)
++							price.PerRequest = &v
++						}
 +					}
 +					model.LongContext = append(model.LongContext, desktopLongContextTier{
 +						FromTokens: tier.MinTokens,
@@ -653,10 +660,10 @@ index 000000000..7b4eaa551
 +}
 diff --git a/backend/internal/handler/desktop_data_handler_test.go b/backend/internal/handler/desktop_data_handler_test.go
 new file mode 100644
-index 000000000..96e88ece8
+index 000000000..c64e32074
 --- /dev/null
 +++ b/backend/internal/handler/desktop_data_handler_test.go
-@@ -0,0 +1,290 @@
+@@ -0,0 +1,292 @@
 +package handler
 +
 +import (
@@ -901,7 +908,7 @@ index 000000000..96e88ece8
 +}
 +
 +func TestToDesktopPlanListsPerRequestContextTiers(t *testing.T) {
-+	maxTokens := 128_000
++	maxTokens, maxTokens2 := 128_000, 256_000
 +	group := &service.PlazaGroup{
 +		ID:       9,
 +		Platform: domain.PlatformOpenAI,
@@ -912,7 +919,8 @@ index 000000000..96e88ece8
 +				PerRequestPrice: desktopFloat(0.05),
 +				Intervals: []service.PricingInterval{
 +					{MinTokens: 0, MaxTokens: &maxTokens, PerRequestPrice: desktopFloat(0.05)},
-+					{MinTokens: 128_000, PerRequestPrice: desktopFloat(0.10)},
++					{MinTokens: 128_000, MaxTokens: &maxTokens2, PerRequestPrice: desktopFloat(0.10)},
++					{MinTokens: 256_000, PerRequestPrice: desktopFloat(0)},
 +				},
 +			},
 +		}},
@@ -922,8 +930,9 @@ index 000000000..96e88ece8
 +
 +	model := plan.Models[0]
 +	require.Equal(t, 0.025, *model.Price.PerRequest)
-+	require.Len(t, model.LongContext, 2)
++	require.Len(t, model.LongContext, 3)
 +	require.Equal(t, 0.025, *model.LongContext[0].Price.PerRequest)
++	require.Equal(t, 0.025, *model.LongContext[2].Price.PerRequest)
 +	require.Equal(t, 128_000, model.LongContext[1].FromTokens)
 +	require.Equal(t, 0.05, *model.LongContext[1].Price.PerRequest)
 +}
