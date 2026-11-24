@@ -83,6 +83,23 @@ beforeEach(() => {
 });
 
 describe("角色名片", () => {
+  it("退役的 DSH 网页版接过的照样列出来，「去接入」不往那儿带", () => {
+    const props = setup({
+      connections: [
+        {
+          toolId: "dsh_web",
+          state: "connected",
+          modelId: SONNET,
+          billingGroup: "特价",
+          restoreMode: "original",
+        } as ToolConnection,
+      ],
+    });
+    expect(screen.getByText(/DSH web/)).toBeTruthy();
+    fireEvent.click(screen.getByTestId("kaifan-card-join"));
+    expect(props.onJoin).toHaveBeenCalledWith(undefined);
+  });
+
   it("每个价格方案写成几折，最便宜的那个标出来，她说现在走哪个", () => {
     setup();
     expect(option(/标准分组/)).toHaveTextContent("约 3 折");

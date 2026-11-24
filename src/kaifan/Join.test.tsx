@@ -1330,19 +1330,15 @@ describe("接入：应用多了不堆在一起", () => {
     ])
       expect(chip(name)).toBeNull();
 
-    const fold = screen.getByRole("button", { name: /还有 5 个/ });
+    const fold = screen.getByRole("button", { name: /还有 4 个/ });
     expect(fold).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(fold);
-    for (const name of [
-      /^DSH web/,
-      /^Cline/,
-      /^Hermes Agent/,
-      /^OpenClaw/,
-      /^Cursor\+\+/,
-    ])
+    for (const name of [/^Cline/, /^Hermes Agent/, /^OpenClaw/, /^Cursor\+\+/])
       expect(chip(name)).not.toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: /收起/ }));
+    // 退役的网页版没接过就不露，展开也不露。
     expect(chip(/^DSH web/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /收起/ }));
+    expect(chip(/^Cline/)).toBeNull();
   });
 
   it("展开过不常用的，关掉再打开：又是收着的", async () => {
@@ -1415,11 +1411,42 @@ describe("接入：应用多了不堆在一起", () => {
   });
 
   it("从首页点进来的不常用应用：选着它的时候不收它", async () => {
-    setup({ initialApp: "dsh_web" });
+    setup({ initialApp: "cline" });
+    await waitFor(() =>
+      expect(chip(/^Cline/)).toHaveAttribute("aria-pressed", "true"),
+    );
+    expect(screen.getByRole("button", { name: /还有 4 个/ })).toBeTruthy();
+  });
+
+  it("DSH 网页版退役：接过的点进来看得到，能打开、能放回去，不能再接", async () => {
+    const onOpen = vi.fn(async () => ({
+      status: "launch_failed" as const,
+      reasonCode: "",
+    }));
+    const onUndo = vi.fn(async () => ({}) as never);
+    setup({
+      initialApp: "dsh_web",
+      onOpen,
+      onUndo,
+      connections: [
+        {
+          toolId: "dsh_web",
+          state: "connected",
+          restoreMode: "original",
+        } as ToolConnection,
+      ],
+    });
     await waitFor(() =>
       expect(chip(/^DSH web/)).toHaveAttribute("aria-pressed", "true"),
     );
-    expect(screen.getByRole("button", { name: /还有 5 个/ })).toBeTruthy();
+    expect(screen.getByTestId("kaifan-join-retired")).toHaveTextContent(
+      "DeepSeek Harness",
+    );
+    fireEvent.click(screen.getByTestId("kaifan-join-open-retired"));
+    await waitFor(() => expect(onOpen).toHaveBeenCalledWith("dsh_web"));
+    expect(await screen.findByText(/没打开，可以先「放回去」/)).toBeTruthy();
+    fireEvent.click(screen.getByTestId("kaifan-join-undo"));
+    await waitFor(() => expect(onUndo).toHaveBeenCalledWith("dsh_web"));
   });
 
   it("别的应用：给出要填的地址和型号，能复制；不拿密钥出来，也不去接入", async () => {

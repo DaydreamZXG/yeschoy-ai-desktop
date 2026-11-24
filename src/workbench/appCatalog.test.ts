@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { COMING_SOON_APPS, WORKBENCH_APPS, appsForHome } from "./appCatalog";
+import {
+  COMING_SOON_APPS,
+  RETIRED_APPS,
+  WORKBENCH_APPS,
+  appsForHome,
+  findApp,
+} from "./appCatalog";
 import { ACTIVATION_TOOL_IDS } from "../configuration/activation";
 
 /**
@@ -23,8 +29,17 @@ describe("tool catalog single source of truth (#9)", () => {
   });
 
   it("lists exactly the apps the native side can connect", () => {
-    const ids = WORKBENCH_APPS.map((app) => app.id);
+    // 退役的应用还在协议里：以前接过的要扫得到、能放回去。
+    const ids = [...WORKBENCH_APPS, ...RETIRED_APPS].map((app) => app.id);
     expect([...ids].sort()).toEqual([...ACTIVATION_TOOL_IDS].sort());
+  });
+
+  it("DSH 网页版退役：不在名单里，接过的照样在首页、找得到名字", () => {
+    expect(WORKBENCH_APPS.map((app) => app.id)).not.toContain("dsh_web");
+    expect(WORKBENCH_APPS.map((app) => app.id)).toContain("dsh_desktop");
+    expect(appsForHome([], 99).map((app) => app.id)).not.toContain("dsh_web");
+    expect(appsForHome(["dsh_web"], 5)[0].id).toBe("dsh_web");
+    expect(findApp("dsh_web")?.name).toBe("DSH web");
   });
 
   it("exposes coming-soon apps without an activation adapter", () => {
@@ -38,7 +53,9 @@ describe("tool catalog single source of truth (#9)", () => {
     // 一致（6 个）。新增工具必须先进 appCatalog（展示源），再同步协议
     // 与 Rust；任何一处漂移都会被此断言拦截。
     const outsideV1 = ACTIVATION_TOOL_IDS.filter(
-      (id) => !WORKBENCH_APPS.some((app) => app.id === id),
+      (id) =>
+        !WORKBENCH_APPS.some((app) => app.id === id) &&
+        !RETIRED_APPS.some((app) => app.id === id),
     );
     expect(outsideV1).toEqual([]);
   });

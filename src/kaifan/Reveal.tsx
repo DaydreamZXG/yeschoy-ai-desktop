@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { modelDisplayName } from "../model-profiles/profile";
-import { WORKBENCH_APPS, appDisplayName } from "../workbench/appCatalog";
+import { appDisplayName, findApp } from "../workbench/appCatalog";
 import type { Joined } from "./Join";
 import { ROSTER, portraitOf } from "./roster";
 import { prefersCalm, sound } from "./sound";
@@ -51,7 +51,7 @@ export function Reveal({ joined, opening, openFailed, onOpen, onHome }: Props) {
 
   if (!joined) return null;
   const character = ROSTER[who];
-  const app = WORKBENCH_APPS.find((item) => item.id === joined.toolId);
+  const app = findApp(joined.toolId);
   const appName = appDisplayName(joined.toolId, app?.name ?? joined.toolId, t);
   const name = t(`roster.${who}.name`);
   const art = portraitOf(who);
